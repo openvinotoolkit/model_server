@@ -38,7 +38,7 @@ ovms --add_to_config models --model_name OpenVINO/bge-reranker-base-fp16-ov --mo
 
 :::{tab-item} Windows service
 **Required:** OpenVINO Model Server package - see [deployment instructions](../../../docs/deploying_server_baremetal.md) for details.
-
+**Assumption:** install_ovms_service.bat was called without additional parameters - using default c:\models config path.
 ```bat
 mkdir c:\models
 

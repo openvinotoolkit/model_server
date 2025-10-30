@@ -19,8 +19,6 @@
 #include <cstdlib>
 #include <iostream>
 #include <memory>
-#include <fstream>
-#include <chrono>
 #include <sstream>
 #include <string>
 #include <utility>
@@ -414,49 +412,6 @@ static int statusToExitCode(const Status& status) {
 }
 
 // OVMS Start
-int Server::startService() {
-    int result = OVMS_EX_OK;
-
-    try {
-        Status ret = start(&this->serverSettings, &this->modelsSettings);
-        ModulesShutdownGuard shutdownGuard(*this);
-        if (!ret.ok()) {
-            return statusToExitCode(ret);
-        }
-        while (!shutdown_request &&
-               (this->serverSettings.serverMode == HF_PULL_AND_START_MODE || this->serverSettings.serverMode == SERVING_MODELS_MODE)) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(200));
-        }
-        if (shutdown_request == 2) {
-            SPDLOG_ERROR("Illegal operation. OVMS started on unsupported device");
-        }
-    } catch (const std::exception& e) {
-        SPDLOG_ERROR("Exception; {}", e.what());
-        result = OVMS_EX_FAILURE;
-        return result;
-    }
-
-    return EXIT_SUCCESS;
-}
-
-int Server::prepareService(int argc, char** argv) {
-    installSignalHandlers();
-    int result = OVMS_EX_OK;
-
-    try {
-        CLIParser parser;
-        parser.parse(argc, argv);
-        parser.prepare(&this->serverSettings, &this->modelsSettings);
-    } catch (const std::exception& e) {
-        SPDLOG_ERROR("Exception; {}", e.what());
-        result = OVMS_EX_FAILURE;
-        return result;
-    }
-
-    return EXIT_SUCCESS;
-}
-
-// OVMS Start
 int Server::start(int argc, char** argv) {
     installSignalHandlers();
     int result = OVMS_EX_OK;
@@ -465,9 +420,9 @@ int Server::start(int argc, char** argv) {
         CLIParser parser;
         ServerSettingsImpl serverSettings;
         ModelsSettingsImpl modelsSettings;
-
         parser.parse(argc, argv);
         parser.prepare(&serverSettings, &modelsSettings);
+        
         Status ret = start(&serverSettings, &modelsSettings);
         ModulesShutdownGuard shutdownGuard(*this);
         if (!ret.ok()) {

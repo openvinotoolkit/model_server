@@ -25,6 +25,6 @@ int main(int argc, char** argv) {
 #include "main_windows.hpp"
 
 int main(int argc, char** argv) {
-    return main_windows(argc, argv);
+    return ovms_service::main_windows(argc, argv);
 }
 #endif

@@ -1,4 +1,4 @@
-# OpenVINO Model Server as service on Windows {#ovms_docs_deploying_server_service}
+# OpenVINO Model Server as service on Windows (preview functionality) {#ovms_docs_deploying_server_service}
 
 ## This document describes installation and usage of OpenVINO Model Server as a service on Windows
 
@@ -26,6 +26,35 @@ sc stop ovms
 ### Delete the service
 ```bat
 sc delete ovms
+```
+
+## Demo
+You can find a RAG demo with the service in the [demo documentation](../demos/continuous_batching/rag/README.md) in the service section.
+
+## Service interaction
+You can change the default config.json location from c:\models to you own path. Make sure you are passing the full path to the directory.
+```bat
+.\ovms\install_ovms_service.bat c:\my_own_path\to_directory
+```
+
+### List models
+```bat
+ovms --model_repository_path c:\models --list_models
+```
+
+### Pull models
+```bat
+ovms --pull --model_repository_path c:\models --source_model OpenVINO/Qwen3-8B-int4-ov --task text_generation
+```
+
+### Start a model by adding it to the config.json
+```bat
+ovms --add_to_config c:\models --model_name OpenVINO/Qwen3-8B-int4-ov --model_path OpenVINO/Qwen3-8B-int4-ov
+```
+
+### Stop a model by removing it from the config.json
+```bat
+ovms --remove_from_config c:\models --model_name OpenVINO/Qwen3-8B-int4-ov
 ```
 
 ## Service status gui

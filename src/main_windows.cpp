@@ -36,6 +36,7 @@
 #include "server.hpp"
 #include "main_windows.hpp"
 
+namespace ovms_service {
 std::string OvmsWindowsServiceManager::getCurrentTimeString() {
     auto now = std::chrono::system_clock::now();
     auto time_t = std::chrono::system_clock::to_time_t(now);
@@ -45,9 +46,9 @@ std::string OvmsWindowsServiceManager::getCurrentTimeString() {
     return oss.str();
 }
 
-#define DEBUG_LOG_ENABLE 0
+#define DEBUG_LOG_ENABLE 1
 // TODO: Implement windows logging mechanism with events
-std::ofstream logFile("C:\\temp\\ovms.log", std::ios::app);
+static std::ofstream logFile("C:\\temp\\ovms.log", std::ios::app);
 #define DEBUG_LOG(msg)                                                                   \
     {                                                                                    \
         if (DEBUG_LOG_ENABLE) {                                                          \
@@ -110,7 +111,7 @@ int main_windows(int argc, char** argv) {
     OvmsWindowsServiceManager::logParameters(argc, argv, "OVMS Main Argument");
 
     // Install service with ovms.exe
-    if (CompareString(LOCALE_INVARIANT, NORM_IGNORECASE, argv[1], -1, TEXT("install"), -1) == CSTR_EQUAL) {
+    if (argc > 1 && CompareString(LOCALE_INVARIANT, NORM_IGNORECASE, argv[1], -1, TEXT("install"), -1) == CSTR_EQUAL) {
         if (!OvmsWindowsServiceManager::serviceSetDescription()) {
             DEBUG_LOG("serviceSetDescription returned failure");
             return -1;
@@ -239,7 +240,7 @@ struct WinSCHandleDeleter {
 // Use sc create ... instead
 // Cannot be used as it does not create the registry entry for the service
 // Registry entry required to add ovms\python to PATH
-// TODO: add serviceReportEvent to the stanrad main path
+// TODO: add serviceReportEvent to the standard main path
 void OvmsWindowsServiceManager::serviceInstall() {
     TCHAR szUnquotedPath[MAX_PATH];
     DEBUG_LOG("Installing Openvino Model Server service");
@@ -417,16 +418,6 @@ DWORD WINAPI OvmsWindowsServiceManager::serviceWorkerThread(LPVOID lpParam) {
     ovmsService->error = 0;
     ovmsService->started = false;
 
-    bool SERVER_READY = false;
-    bool PROFILER_MODULE_LIVE = false;
-    bool GRPC_SERVER_MODULE_LIVE = false;
-    bool HTTP_SERVER_MODULE_LIVE = false;
-    bool SERVABLE_MANAGER_MODULE_LIVE = false;
-    bool HF_MODEL_PULL_MODULE_LIVE = false;
-    bool METRICS_MODULE_LIVE = false;
-    bool PYTHON_INTERPRETER_MODULE_LIVE = false;
-    bool CAPI_MODULE_LIVE = false;
-    bool SERVABLES_CONFIG_MANAGER_MODULE_LIVE = false;
     //  Start OVMS and check for stop
     while (WaitForSingleObject(serviceStopEvent->handle, 0) != WAIT_OBJECT_0) {
         if (!ovmsService->started) {
@@ -441,47 +432,13 @@ DWORD WINAPI OvmsWindowsServiceManager::serviceWorkerThread(LPVOID lpParam) {
                 break;
             }
         }
-        if (!SERVABLE_MANAGER_MODULE_LIVE && ovmsService->isLive(ovms::SERVABLE_MANAGER_MODULE_NAME)) {
-            DEBUG_LOG("serviceWorkerThread: Ovms service SERVABLE_MANAGER_MODULE is live.");
-            SERVABLE_MANAGER_MODULE_LIVE = true;
+        // Check thread not exited
+        if (ovmsService->started && !ovmsService->isRunning()) {
+            DEBUG_LOG("serviceWorkerThread: Server thread is not running.")
+            break;
         }
-        // TODO: Add timeout for server ready ?
-        if (!SERVER_READY && ovmsService->isReady()) {
-            DEBUG_LOG("serviceWorkerThread: Ovms service is ready and running.");
-            SERVER_READY = true;
-        }
-        if (!PROFILER_MODULE_LIVE && ovmsService->isLive(ovms::PROFILER_MODULE_NAME)) {
-            DEBUG_LOG("serviceWorkerThread: Ovms service PROFILER_MODULE is live.");
-            PROFILER_MODULE_LIVE = true;
-        }
-        if (!GRPC_SERVER_MODULE_LIVE && ovmsService->isLive(ovms::GRPC_SERVER_MODULE_NAME)) {
-            DEBUG_LOG("serviceWorkerThread: Ovms service GRPC_SERVER_MODULE is live.");
-            GRPC_SERVER_MODULE_LIVE = true;
-        }
-        if (!HTTP_SERVER_MODULE_LIVE && ovmsService->isLive(ovms::HTTP_SERVER_MODULE_NAME)) {
-            DEBUG_LOG("serviceWorkerThread: Ovms service HTTP_SERVER_MODULE is live.");
-            HTTP_SERVER_MODULE_LIVE = true;
-        }
-        if (!METRICS_MODULE_LIVE && ovmsService->isLive(ovms::METRICS_MODULE_NAME)) {
-            DEBUG_LOG("serviceWorkerThread: Ovms service METRICS_MODULE is live.");
-            METRICS_MODULE_LIVE = true;
-        }
-        if (!PYTHON_INTERPRETER_MODULE_LIVE && ovmsService->isLive(ovms::PYTHON_INTERPRETER_MODULE_NAME)) {
-            DEBUG_LOG("serviceWorkerThread: Ovms service PYTHON_INTERPRETER_MODULE is live.");
-            PYTHON_INTERPRETER_MODULE_LIVE = true;
-        }
-        if (!CAPI_MODULE_LIVE && ovmsService->isLive(ovms::CAPI_MODULE_NAME)) {
-            DEBUG_LOG("serviceWorkerThread: Ovms service CAPI_MODULE is live.");
-            CAPI_MODULE_LIVE = true;
-        }
-        if (!HF_MODEL_PULL_MODULE_LIVE && ovmsService->isLive(ovms::HF_MODEL_PULL_MODULE_NAME)) {
-            DEBUG_LOG("serviceWorkerThread: Ovms service HF_MODEL_PULL_MODULE is live.");
-            HF_MODEL_PULL_MODULE_LIVE = true;
-        }
-        if (!SERVABLES_CONFIG_MANAGER_MODULE_LIVE && ovmsService->isLive(ovms::SERVABLES_CONFIG_MANAGER_MODULE_NAME)) {
-            DEBUG_LOG("serviceWorkerThread: Ovms service SERVABLES_CONFIG_MANAGER_MODULE is live.");
-            SERVABLES_CONFIG_MANAGER_MODULE_LIVE = true;
-        }
+
+        ovmsService->checkModulesStarted();
     }
 
     if (ovmsService->started) {
@@ -555,13 +512,13 @@ void OvmsWindowsServiceManager::setPythonPathRegistry() {
         for (const auto& s : subKeyNames) {
             DEBUG_LOG(wstringToString(s));
         }
-        std::vector<std::pair<std::wstring, DWORD>> values = key.EnumValues();
+        /*std::vector<std::pair<std::wstring, DWORD>> values = key.EnumValues();
         DEBUG_LOG("Values:");
         for (const auto& [valueName, valueType] : values) {
-            std::stringstream ss2;
+            //std::stringstream ss2;
             // TODO: ss2 << "  [" << wstringToString(valueName) << "](" << wstringToString(winreg::RegKey::RegTypeToString(valueType)) << ")";
-            DEBUG_LOG(ss2.rdbuf());
-        }
+            //DEBUG_LOG(ss2.rdbuf());
+        } */
 
         TCHAR szUnquotedPath[MAX_PATH];
         if (!GetModuleFileName(NULL, szUnquotedPath, MAX_PATH)) {
@@ -580,7 +537,7 @@ void OvmsWindowsServiceManager::setPythonPathRegistry() {
         key.SetMultiStringValue(L"Environment", multiString);
         key.Close();
     } catch (const std::exception& e) {
-        DEBUG_LOG("setPythonPathRegistry: Add python path variableFailed:");
+        DEBUG_LOG("setPythonPathRegistry: Add python path variable Failed:");
         DEBUG_LOG(e.what());
         std::cout << "Installing Openvino Model Server service PATH environment variable failed." << std::endl;
     }
@@ -635,8 +592,71 @@ bool OvmsService::isReady() {
     return server.isReady();
 }
 
+bool OvmsService::isRunning() {
+    return (t && t->joinable());
+}
+
 bool OvmsService::isLive(const std::string& moduleName) {
     return server.isLive(moduleName);
+}
+
+bool OvmsService::checkModulesStarted() {
+    // TODO:Set false for required modules, add logic for start control - timeout?
+    // Currently we return true on isReady = true;
+    static bool SERVER_READY = false;
+    static bool PROFILER_MODULE_LIVE = false;
+    static bool GRPC_SERVER_MODULE_LIVE = false;
+    static bool HTTP_SERVER_MODULE_LIVE = false;
+    static bool SERVABLE_MANAGER_MODULE_LIVE = false;
+    static bool HF_MODEL_PULL_MODULE_LIVE = false;
+    static bool METRICS_MODULE_LIVE = false;
+    static bool PYTHON_INTERPRETER_MODULE_LIVE = false;
+    static bool CAPI_MODULE_LIVE = false;
+    static bool SERVABLES_CONFIG_MANAGER_MODULE_LIVE = false;
+
+    if (!SERVABLE_MANAGER_MODULE_LIVE && this->isLive(ovms::SERVABLE_MANAGER_MODULE_NAME)) {
+        DEBUG_LOG("serviceWorkerThread: Ovms service SERVABLE_MANAGER_MODULE is live.");
+        SERVABLE_MANAGER_MODULE_LIVE = true;
+    }
+    // TODO: Add timeout for server ready ?
+    if (!SERVER_READY && this->isReady()) {
+        DEBUG_LOG("serviceWorkerThread: Ovms service is ready and running.");
+        SERVER_READY = true;
+    }
+    if (!PROFILER_MODULE_LIVE && this->isLive(ovms::PROFILER_MODULE_NAME)) {
+        DEBUG_LOG("serviceWorkerThread: Ovms service PROFILER_MODULE is live.");
+        PROFILER_MODULE_LIVE = true;
+    }
+    if (!GRPC_SERVER_MODULE_LIVE && this->isLive(ovms::GRPC_SERVER_MODULE_NAME)) {
+        DEBUG_LOG("serviceWorkerThread: Ovms service GRPC_SERVER_MODULE is live.");
+        GRPC_SERVER_MODULE_LIVE = true;
+    }
+    if (!HTTP_SERVER_MODULE_LIVE && this->isLive(ovms::HTTP_SERVER_MODULE_NAME)) {
+        DEBUG_LOG("serviceWorkerThread: Ovms service HTTP_SERVER_MODULE is live.");
+        HTTP_SERVER_MODULE_LIVE = true;
+    }
+    if (!METRICS_MODULE_LIVE && this->isLive(ovms::METRICS_MODULE_NAME)) {
+        DEBUG_LOG("serviceWorkerThread: Ovms service METRICS_MODULE is live.");
+        METRICS_MODULE_LIVE = true;
+    }
+    if (!PYTHON_INTERPRETER_MODULE_LIVE && this->isLive(ovms::PYTHON_INTERPRETER_MODULE_NAME)) {
+        DEBUG_LOG("serviceWorkerThread: Ovms service PYTHON_INTERPRETER_MODULE is live.");
+        PYTHON_INTERPRETER_MODULE_LIVE = true;
+    }
+    if (!CAPI_MODULE_LIVE && this->isLive(ovms::CAPI_MODULE_NAME)) {
+        DEBUG_LOG("serviceWorkerThread: Ovms service CAPI_MODULE is live.");
+        CAPI_MODULE_LIVE = true;
+    }
+    if (!HF_MODEL_PULL_MODULE_LIVE && this->isLive(ovms::HF_MODEL_PULL_MODULE_NAME)) {
+        DEBUG_LOG("serviceWorkerThread: Ovms service HF_MODEL_PULL_MODULE is live.");
+        HF_MODEL_PULL_MODULE_LIVE = true;
+    }
+    if (!SERVABLES_CONFIG_MANAGER_MODULE_LIVE && this->isLive(ovms::SERVABLES_CONFIG_MANAGER_MODULE_NAME)) {
+        DEBUG_LOG("serviceWorkerThread: Ovms service SERVABLES_CONFIG_MANAGER_MODULE is live.");
+        SERVABLES_CONFIG_MANAGER_MODULE_LIVE = true;
+    }
+
+    return SERVER_READY;
 }
 
 WinServiceStatusWrapper::WinServiceStatusWrapper() {
@@ -658,3 +678,5 @@ WinServiceEventWrapper::~WinServiceEventWrapper() {
         CloseHandle(handle);
     }
 }
+
+} // namespace ovms_service

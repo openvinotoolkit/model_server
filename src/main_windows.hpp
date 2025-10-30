@@ -24,6 +24,7 @@
 #include <tchar.h>
 
 #include "server.hpp"
+namespace ovms_service {
 using ovms::Server;
 
 int main_windows(int argc, char** argv);
@@ -44,7 +45,9 @@ public:
     void TearDown();
     int SetUp(int argc, char** argv);
     bool isReady();
+    bool isRunning();
     bool isLive(const std::string& moduleName);
+    bool checkModulesStarted();
 };
 
 struct WinServiceStatusWrapper {
@@ -100,3 +103,5 @@ private:
     void setServiceStopStatusWithError();
     void setServiceRunningStatus();
 };
+
+} // namespace ovms_service
