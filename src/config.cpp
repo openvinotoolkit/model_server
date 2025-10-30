@@ -71,8 +71,9 @@ bool Config::is_ipv6(const std::string& s) {
     hints.ai_flags = AI_NUMERICHOST;
     addrinfo* res = nullptr;
     const int rc = getaddrinfo(s.c_str(), nullptr, &hints, &res);
-    if (res)
+    if (res) {
         freeaddrinfo(res);
+    }
     return rc == 0;
 }
 
