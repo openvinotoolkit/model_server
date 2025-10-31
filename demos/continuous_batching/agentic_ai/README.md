@@ -670,12 +670,12 @@ input_num_tokens    50.0  2298.92   973.02   520.00  1556.50  2367.00  3100.75  
 
 Testing model accuracy is critical for a successful adoption in AI application. The recommended methodology is to use BFCL tool like describe in the [testing guide](../accuracy/README.md#running-the-tests-for-agentic-models-with-function-calls).
 Here is example of the response from the OpenVINO/Qwen3-8B-int4-ov model:
-#TODO correct these metrics to show labels 
+
 ```
-{"accuracy": 0.9525, "correct_count": 381, "total_count": 400}
-{"accuracy": 0.89, "correct_count": 178, "total_count": 200}
-{"accuracy": 0.89, "correct_count": 178, "total_count": 200}
-{"accuracy": 0.825, "correct_count": 198, "total_count": 240}
+Simple: {"accuracy": 0.9525, "correct_count": 381, "total_count": 400}
+Multiple: {"accuracy": 0.89, "correct_count": 178, "total_count": 200}
+Simple - streaming: {"accuracy": 0.89, "correct_count": 178, "total_count": 200}
+Multiple - streaming: {"accuracy": 0.825, "correct_count": 198, "total_count": 240}
 ```
 
 Models can be also compared using the [leaderboard reports](https://gorilla.cs.berkeley.edu/leaderboard.html#leaderboard).
