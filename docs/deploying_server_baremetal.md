@@ -161,6 +161,8 @@ You can also build model server from source by following the [developer guide](w
 :::
 ::::
 
+> **NOTE**: You can also access [public drops of the development version](https://storage.openvinotoolkit.org/repositories/openvino_model_server/packages/weekly/) of the model server, which are built from the main branch. These builds allow you to evaluate the latest features ahead of official releases.
+
 ## Test the Deployment
 
 Download ResNet50 model:

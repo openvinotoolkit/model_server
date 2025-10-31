@@ -1,7 +1,5 @@
 # Agentic AI with OpenVINO Model Server {#ovms_demos_continuous_batching_agent}
 
-This demo version requires OVMS version 2025.3. Build it from [source](../../../docs/build_from_source.md) before it is published.
-
 OpenVINO Model Server can be used to serve language models for AI Agents. It supports the usage of tools in the context of content generation.
 It can be integrated with MCP servers and AI agent frameworks. 
 You can learn more about [tools calling based on OpenAI API](https://platform.openai.com/docs/guides/function-calling?api-mode=responses)
