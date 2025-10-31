@@ -224,55 +224,55 @@ ovms.exe --rest_port 8000 --source_model models/OpenVINO/Phi-4-mini-instruct-int
 :::{tab-item} Qwen3-8B
 :sync: Qwen3-8B
 ```bat
-ovms.exe --rest_port 8000 --source_model Qwen/Qwen3-8B --model_repository_path models --tool_parser hermes3 --target_device NPU --cache_size 2 --task text_generation --max_num_batched_tokens 99999 --enable_prefix_caching true --ov_cache .cache --max_prompt_len 4000
+ovms.exe --rest_port 8000 --source_model Qwen/Qwen3-8B --model_repository_path models --tool_parser hermes3 --target_device NPU --cache_size 2 --task text_generation --max_num_batched_tokens 99999 --enable_prefix_caching true --cache_dir .cache --max_prompt_len 4000
 ```
 :::
 :::{tab-item} Qwen3-4B
 :sync: Qwen3-4B
 ```bat
-ovms.exe --rest_port 8000 --source_model Qwen/Qwen3-4B --model_repository_path models --tool_parser hermes3 --target_device NPU --cache_size 2 --task text_generation --max_num_batched_tokens 99999 --enable_prefix_caching true --ov_cache .cache --max_prompt_len 4000
+ovms.exe --rest_port 8000 --source_model Qwen/Qwen3-4B --model_repository_path models --tool_parser hermes3 --target_device NPU --cache_size 2 --task text_generation --max_num_batched_tokens 99999 --enable_prefix_caching true --cache_dir .cache --max_prompt_len 4000
 ```
 :::
 :::{tab-item} Llama-3.1-8B-Instruct
 :sync: Llama-3.1-8B-Instruct
 ```bat
-ovms.exe --rest_port 8000 --source_model meta-llama/Llama-3.1-8B-Instruct --model_repository_path models --tool_parser llama3 --target_device NPU --cache_size 2 --task text_generation --max_num_batched_tokens 99999 --enable_tool_guided_generation true --enable_prefix_caching true --ov_cache .cache --max_prompt_len 4000
+ovms.exe --rest_port 8000 --source_model meta-llama/Llama-3.1-8B-Instruct --model_repository_path models --tool_parser llama3 --target_device NPU --cache_size 2 --task text_generation --max_num_batched_tokens 99999 --enable_tool_guided_generation true --enable_prefix_caching true --cache_dir .cache --max_prompt_len 4000
 ```
 :::
 :::{tab-item} Llama-3.2-3B-Instruct
 :sync: Llama-3.2-3B-Instruct
 ```bat
-ovms.exe --rest_port 8000 --source_model meta-llama/Llama-3.2-3B-Instruct --model_repository_path models --tool_parser llama3 --target_device NPU --cache_size 2 --task text_generation --max_num_batched_tokens 99999 --enable_tool_guided_generation true --enable_prefix_caching true --ov_cache .cache --max_prompt_len 4000
+ovms.exe --rest_port 8000 --source_model meta-llama/Llama-3.2-3B-Instruct --model_repository_path models --tool_parser llama3 --target_device NPU --cache_size 2 --task text_generation --max_num_batched_tokens 99999 --enable_tool_guided_generation true --enable_prefix_caching true --cache_dir .cache --max_prompt_len 4000
 ```
 :::
 :::{tab-item} Mistral-7B-Instruct-v0.3
 :sync: Mistral-7B-Instruct-v0.3
 ```bat
-ovms.exe --rest_port 8000 --source_model mistralai/Mistral-7B-Instruct-v0.3 --model_repository_path models --tool_parser mistral --target_device NPU --cache_size 2 --task text_generation --max_num_batched_tokens 99999 --enable_prefix_caching true --ov_cache .cache --max_prompt_len 4000
+ovms.exe --rest_port 8000 --source_model mistralai/Mistral-7B-Instruct-v0.3 --model_repository_path models --tool_parser mistral --target_device NPU --cache_size 2 --task text_generation --max_num_batched_tokens 99999 --enable_prefix_caching true --cache_dir .cache --max_prompt_len 4000
 ```
 :::
 :::{tab-item} Phi-4-mini-instruct
 :sync: Phi-4-mini-instruct
 ```bat
-ovms.exe --rest_port 8000 --source_model microsoft/Phi-4-mini-instruct --model_repository_path models --tool_parser phi4 --target_device NPU --cache_size 2 --task text_generation --max_num_batched_tokens 99999 --enable_tool_guided_generation true --enable_prefix_caching true --ov_cache .cache --max_prompt_len 4000
+ovms.exe --rest_port 8000 --source_model microsoft/Phi-4-mini-instruct --model_repository_path models --tool_parser phi4 --target_device NPU --cache_size 2 --task text_generation --max_num_batched_tokens 99999 --enable_tool_guided_generation true --enable_prefix_caching true --cache_dir .cache --max_prompt_len 4000
 ```
 :::
 :::{tab-item} Qwen3-4B-int4-ov
 :sync: Qwen3-4B-int4-ov
 ```bat
-ovms.exe --rest_port 8000 --source_model OpenVINO/Qwen3-4B-int4-ov --model_repository_path models --tool_parser hermes3 --target_device NPU --cache_size 2 --task text_generation --max_num_batched_tokens 99999 --enable_prefix_caching true --ov_cache .cache --max_prompt_len 4000
+ovms.exe --rest_port 8000 --source_model OpenVINO/Qwen3-4B-int4-ov --model_repository_path models --tool_parser hermes3 --target_device NPU --cache_size 2 --task text_generation --max_num_batched_tokens 99999 --enable_prefix_caching true --cache_dir .cache --max_prompt_len 4000
 ```
 :::
 :::{tab-item} Mistral-7B-Instruct-v0.3-cw-int4-ov
 :sync: Mistral-7B-Instruct-v0.3-cw-int4-ov
 ```bat
-ovms.exe --rest_port 8000 --source_model OpenVINO/Mistral-7B-Instruct-v0.3-int4-cw-ov --model_repository_path models --tool_parser mistral --target_device NPU --cache_size 2 --task text_generation --max_num_batched_tokens 99999 --enable_prefix_caching true --ov_cache .cache --max_prompt_len 4000
+ovms.exe --rest_port 8000 --source_model OpenVINO/Mistral-7B-Instruct-v0.3-int4-cw-ov --model_repository_path models --tool_parser mistral --target_device NPU --cache_size 2 --task text_generation --max_num_batched_tokens 99999 --enable_prefix_caching true --cache_dir .cache --max_prompt_len 4000
 ```
 :::
 :::{tab-item} Phi-3-mini-4k-instruct-int4-cw-ov
 :sync: Phi-3-mini-4k-instruct-int4-cw-ov
 ```bat
-ovms.exe --rest_port 8000 --source_model models/OpenVINO/Phi-3-mini-4k-instruct-int4-cw-ov --model_repository_path models --tool_parser phi4 --target_device NPU --cache_size 2 --task text_generation --max_num_batched_tokens 99999 --enable_tool_guided_generation true --enable_prefix_caching true --ov_cache .cache --max_prompt_len 4000
+ovms.exe --rest_port 8000 --source_model models/OpenVINO/Phi-3-mini-4k-instruct-int4-cw-ov --model_repository_path models --tool_parser phi4 --target_device NPU --cache_size 2 --task text_generation --max_num_batched_tokens 99999 --enable_tool_guided_generation true --enable_prefix_caching true --cache_dir .cache --max_prompt_len 4000
 ```
 :::
 ::::
@@ -289,7 +289,7 @@ docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/model
 --rest_port 8000 --model_repository_path models --source_model Qwen/Qwen3-8B --tool_parser hermes3 --cache_size 2 --task text_generation --enable_prefix_caching true
 ```
 :::
-:::{tab-item} Qwen3-8B
+:::{tab-item} Qwen3-4B
 :sync: Qwen3-4B
 ```bash
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models openvino/model_server:latest \
@@ -430,6 +430,78 @@ docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/model
 ```bash
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:latest-gpu \
 --rest_port 8000 --model_repository_path models --source_model OpenVINO/Phi-4-mini-instruct-int4-ov --tool_parser phi4 --target_device GPU --cache_size 2 --task text_generation --max_num_batched_tokens 99999 --enable_tool_guided_generation true
+```
+:::
+::::
+
+### Deploying in a docker container on NPU
+
+The case of NPU is similar to GPU, but `--device` should be set to `/dev/accel`, `--group-add` parameter should be the same.
+Running `docker run` command, use the image with GPU support. Export the models with precision matching the [NPU capacity](https://docs.openvino.ai/nightly/openvino-workflow-generative/inference-with-genai/inference-with-genai-on-npu.html) and adjust pipeline configuration.
+It can be applied using the commands below:
+
+::::{tab-set}
+:::{tab-item} Qwen3-8B
+:sync: Qwen3-8B
+```bash
+docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models --device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render*  | head -1) openvino/model_server:latest-gpu \
+--rest_port 8000 --model_repository_path models --source_model Qwen/Qwen3-8B --tool_parser hermes3 --target_device NPU --cache_size 2 --task text_generation --max_num_batched_tokens 99999 --enable_prefix_caching true --cache_dir .cache --max_prompt_len 4000
+```
+:::
+:::{tab-item} Qwen3-4B
+:sync: Qwen3-4B
+```bash
+docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models --device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:latest-gpu \
+--rest_port 8000 --model_repository_path models --source_model Qwen/Qwen3-4B --tool_parser hermes3 --target_device NPU --cache_size 2 --task text_generation --max_num_batched_tokens 99999 --enable_prefix_caching true --cache_dir .cache --max_prompt_len 4000
+```
+:::
+:::{tab-item} Llama-3.1-8B-Instruct
+:sync: Llama-3.1-8B-Instruct
+```bash
+docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models --device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:latest-gpu \
+--rest_port 8000 --model_repository_path models --source_model meta-llama/Llama-3.1-8B-Instruct --tool_parser llama3 --target_device NPU --cache_size 2 --task text_generation --max_num_batched_tokens 99999 --enable_tool_guided_generation true --enable_prefix_caching true --cache_dir .cache --max_prompt_len 4000
+```
+:::
+:::{tab-item} Llama-3.2-3B-Instruct
+:sync: Llama-3.2-3B-Instruct
+```bash
+docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models --device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:latest-gpu \
+--rest_port 8000 --model_repository_path models --source_model meta-llama/Llama-3.2-3B-Instruct --tool_parser llama3 --target_device NPU --cache_size 2 --task text_generation --max_num_batched_tokens 99999 --enable_tool_guided_generation true --enable_prefix_caching true --cache_dir .cache --max_prompt_len 4000
+```
+:::
+:::{tab-item} Mistral-7B-Instruct-v0.3
+:sync: Mistral-7B-Instruct-v0.3
+```bash
+docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000  -v $(pwd)/models:/models --device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:latest-gpu \
+--rest_port 8000 --model_repository_path models --source_model mistralai/Mistral-7B-Instruct-v0.3 --tool_parser mistral --target_device NPU --cache_size 2 --task text_generation --max_num_batched_tokens 99999 --enable_prefix_caching true --cache_dir .cache --max_prompt_len 4000
+```
+:::
+:::{tab-item} Phi-4-mini-instruct
+:sync: Phi-4-mini-instruct
+```bash
+docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000  -v $(pwd)/models:/models --device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:latest-gpu \
+--rest_port 8000 --model_repository_path models --source_model microsoft/Phi-4-mini-instruct --tool_parser phi4 --target_device NPU --cache_size 2 --task text_generation --max_num_batched_tokens 99999 --enable_prefix_caching true --cache_dir .cache --max_prompt_len 4000
+```
+:::
+:::{tab-item} Qwen3-4B-int4-ov
+:sync: Qwen3-4B-int4-ov
+```bash
+docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models --device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:latest-gpu \
+--rest_port 8000 --model_repository_path models --source_model OpenVINO/Qwen3-4B-int4-ov --tool_parser hermes3 --target_device NPU --cache_size 2 --task text_generation --max_num_batched_tokens 99999 --enable_prefix_caching true --cache_dir .cache --max_prompt_len 4000
+```
+:::
+:::{tab-item} Mistral-7B-Instruct-v0.3-int4-ov
+:sync: Mistral-7B-Instruct-v0.3-int4-ov
+```bash
+docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models --device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:latest-gpu \
+--rest_port 8000 --model_repository_path models --source_model OpenVINO/Mistral-7B-Instruct-v0.3-int4-ov --tool_parser phi4 --target_device NPU --cache_size 2 --task text_generation --max_num_batched_tokens 99999 --enable_prefix_caching true --cache_dir .cache --max_prompt_len 4000
+```
+:::
+:::{tab-item} Phi-3-mini-instruct-int4-cw-ov
+:sync: Phi-3-mini-instruct-int4-cw-ov
+```bash
+docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models --device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:latest-gpu \
+--rest_port 8000 --model_repository_path models --source_model OpenVINO/Phi-3-mini-instruct-int4-cw-ov --tool_parser phi4 --target_device NPU --cache_size 2 --task text_generation --max_num_batched_tokens 99999 --enable_tool_guided_generation true --enable_prefix_caching true --cache_dir .cache --max_prompt_len 4000
 ```
 :::
 ::::
