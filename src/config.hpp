@@ -92,6 +92,7 @@ public:
          * @return bool
          */
     static bool check_hostname_or_ip(const std::string& input);
+    static bool is_ipv6(const std::string& input);
 
     /**
          * @brief Get the config path
