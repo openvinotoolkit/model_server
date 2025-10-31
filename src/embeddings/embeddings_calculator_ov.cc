@@ -172,7 +172,7 @@ public:
                     params["max_length"] = max_context_length;
                 }
 
-                absl::Status tokenizationStatus = this->tokenizeStrings(embeddings_session->getTokenizer(), *strings, params, tokens, max_context_length);
+                absl::Status tokenizationStatus = this->tokenizeStrings(embeddings_session->getTokenizer(), *strings, params, tokens);
                 if (!tokenizationStatus.ok()) {
                     return tokenizationStatus;
                 }
