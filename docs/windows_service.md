@@ -33,7 +33,7 @@ You can find a RAG demo with the service in the [demo documentation](../demos/co
 
 ## Service interaction
 You can change the default config.json location from c:\models\config.json to you own path. Make sure you are passing the full path to the file.
-```bat
+```text
 .\ovms\install_ovms_service.bat c:\my_own_path\to_directory\config.json
 ```
 
