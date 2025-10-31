@@ -1038,9 +1038,15 @@ TEST(OvmsGraphConfigTest, positiveAllChanged) {
         (char*)"--tool_parser",
         (char*)"toolParserName",
         (char*)"--enable_tool_guided_generation",
-        (char*)"true"};
+        (char*)"true",
+        (char*)"--model_distribution_policy",
+        (char*)"TENSOR_PARALLEL",
+        (char*)"--max_prompt_len",
+        (char*)"2048",
+        (char*)"--kv_cache_precision",
+        (char*)"u8"};
 
-    int arg_count = 30;
+    int arg_count = 36;
     ConstructorEnabledConfig config;
     config.parse(arg_count, n_argv);
 
@@ -1053,7 +1059,8 @@ TEST(OvmsGraphConfigTest, positiveAllChanged) {
     ASSERT_EQ(graphSettings.modelPath, "./");
     ASSERT_EQ(graphSettings.maxNumSeqs, 128);
     ASSERT_EQ(graphSettings.targetDevice, "GPU");
-    ASSERT_EQ(graphSettings.pluginConfig.kvCachePrecision.has_value(), false);
+    ASSERT_EQ(graphSettings.pluginConfig.kvCachePrecision.has_value(), true);
+    ASSERT_EQ(graphSettings.pluginConfig.kvCachePrecision.value(), "u8");
     ASSERT_EQ(graphSettings.enablePrefixCaching, "false");
     ASSERT_EQ(graphSettings.cacheSize, 20);
     ASSERT_EQ(graphSettings.maxNumBatchedTokens.value(), 16);
@@ -1062,6 +1069,10 @@ TEST(OvmsGraphConfigTest, positiveAllChanged) {
     ASSERT_EQ(graphSettings.reasoningParser.value(), "reasoningParserName");
     ASSERT_EQ(graphSettings.toolParser.value(), "toolParserName");
     ASSERT_EQ(graphSettings.enableToolGuidedGeneration, "true");
+    ASSERT_EQ(graphSettings.pluginConfig.modelDistributionPolicy.has_value(), true);
+    ASSERT_EQ(graphSettings.pluginConfig.modelDistributionPolicy.value(), "TENSOR_PARALLEL");
+    ASSERT_EQ(graphSettings.pluginConfig.maxPromptLength.has_value(), true);
+    ASSERT_EQ(graphSettings.pluginConfig.maxPromptLength.value(), 2048);
 }
 
 TEST(OvmsGraphConfigTest, positiveSomeChanged) {
@@ -1218,13 +1229,17 @@ TEST(OvmsExportHfSettingsTest, allChanged) {
         (char*)"NPU",
         (char*)"--task",
         (char*)"text_generation",
-    };
+        (char*)"--plugin_config",
+        (char*)"{\"NUM_STREAMS\":\"2\"}",
+        (char*)"--cache_dir",
+        (char*)"/tmp/cache_dir_with_gold"};
 
-    int arg_count = 15;
+    int arg_count = 19;
     ConstructorEnabledConfig config;
     config.parse(arg_count, n_argv);
 
-    auto& hfSettings = config.getServerSettings().hfSettings;
+    auto& serverSettings = config.getServerSettings();
+    auto& hfSettings = serverSettings.hfSettings;
     ASSERT_EQ(hfSettings.sourceModel, modelName);
     ASSERT_EQ(hfSettings.downloadPath, downloadPath);
     ASSERT_EQ(hfSettings.overwriteModels, true);
@@ -1232,6 +1247,10 @@ TEST(OvmsExportHfSettingsTest, allChanged) {
     ASSERT_EQ(hfSettings.exportSettings.targetDevice, "NPU");
     ASSERT_EQ(hfSettings.downloadType, ovms::OPTIMUM_CLI_DOWNLOAD);
     ASSERT_EQ(hfSettings.exportSettings.extraQuantizationParams.value(), "--sym --ratio 1.0");
+    ASSERT_EQ(hfSettings.exportSettings.cacheDir.value(), "/tmp/cache_dir_with_gold");
+    // here we expect only what is passed by user not all plugin parameters passed to genai
+    ASSERT_EQ(hfSettings.exportSettings.pluginConfig, "{\"NUM_STREAMS\":\"2\"}");
+    ASSERT_EQ(serverSettings.cacheDir, "/tmp/cache_dir_with_gold");
     ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_MODE);
 }
 
@@ -1255,9 +1274,12 @@ TEST(OvmsExportHfSettingsTest, allChangedPullAndStart) {
         (char*)"NPU",
         (char*)"--task",
         (char*)"text_generation",
-    };
+        (char*)"--plugin_config",
+        (char*)"{\"NUM_STREAMS\":\"2\"}",
+        (char*)"--cache_dir",
+        (char*)"/tmp/cache_dir_with_gold"};
 
-    int arg_count = 16;
+    int arg_count = 20;
     ConstructorEnabledConfig config;
     config.parse(arg_count, n_argv);
 
@@ -1270,6 +1292,8 @@ TEST(OvmsExportHfSettingsTest, allChangedPullAndStart) {
     ASSERT_EQ(hfSettings.downloadType, ovms::OPTIMUM_CLI_DOWNLOAD);
     ASSERT_EQ(hfSettings.exportSettings.extraQuantizationParams.value(), "--sym --ratio 1.0");
     ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_AND_START_MODE);
+    ASSERT_EQ(hfSettings.exportSettings.pluginConfig, "{\"NUM_STREAMS\":\"2\"}");
+    ASSERT_EQ(hfSettings.exportSettings.cacheDir.value(), "/tmp/cache_dir_with_gold");
 }
 
 TEST(OvmsGraphConfigTest, positiveDefault) {

@@ -130,6 +130,7 @@ Task specific parameters for different tasks (text generation/image generation/e
 | `--dynamic_split_fuse`                | `bool`       | Enables dynamic split fuse algorithm. Default: true.                                                                       |
 | `--max_prompt_len`                    | `integer`    | Sets NPU specific property for maximum number of tokens in the prompt.                                                     |
 | `--kv_cache_precision`                | `string`     | Reduced kv cache precision to `u8` lowers the cache size consumption. Accepted values: `u8` or empty (default).            |
+| `--model_distribution_policy`         | `string`     | TENSOR_PARALLEL distributes tensor to multiple sockets/devices and processes it in parallel. PIPELINE_PARALLEL distributes different tensors to process by each device. Accepted values: `TENSOR_PARALLEL`, `PIPELINE_PARALLEL` or empty (default). |
 | `--reasoning_parser`                  | `string`     | Type of parser to use for reasoning content extraction from model output. Currently supported: [qwen3]                     |
 | `--tool_parser`                       | `string`     | Type of parser to use for tool calls extraction from model output. Currently supported: [llama3, hermes3, phi4]            |
 | `--enable_tool_guided_generation`     | `bool`       | Enables enforcing tool schema during generation. Requires setting response parser. Default: false.                         |

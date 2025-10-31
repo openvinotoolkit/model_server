@@ -40,6 +40,7 @@ enum class StatusCode {
     LAYOUT_WRONG_FORMAT,                  /*!< The provided layout param is in wrong format */
     DIM_WRONG_FORMAT,                     /*!< The provided dimension param is in wrong format */
     PLUGIN_CONFIG_WRONG_FORMAT,           /*!< Plugin config is in wrong format */
+    PLUGIN_CONFIG_CONFLICTING_PARAMETERS, /*!< Tried to set the same key twice in plugin config */
     MODEL_VERSION_POLICY_WRONG_FORMAT,    /*!< Model version policy is in wrong format */
     MODEL_VERSION_POLICY_UNSUPPORTED_KEY, /*!< Model version policy contains invalid key */
     GRPC_CHANNEL_ARG_WRONG_FORMAT,

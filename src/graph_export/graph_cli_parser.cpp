@@ -89,7 +89,11 @@ void GraphCLIParser::createOptions() {
         ("kv_cache_precision",
             "u8 or empty (model default). Reduced kv cache precision to u8 lowers the cache size consumption.",
             cxxopts::value<std::string>()->default_value(""),
-            "KV_CACHE_PRECISION");
+            "KV_CACHE_PRECISION")
+        ("model_distribution_policy",
+            "TENSOR_PARALLEL, PIPELINE_PARALLEL or empty (model default). Sets model distribution policy for inference with multiple sockets/devices.",
+            cxxopts::value<std::string>(),
+            "MODEL_DISTRIBUTION_POLICY");
 }
 
 void GraphCLIParser::printHelp() {
@@ -155,7 +159,9 @@ void GraphCLIParser::prepare(OvmsServerMode serverMode, HFSettingsImpl& hfSettin
         if (result->count("max_prompt_len")) {
             graphSettings.pluginConfig.maxPromptLength = result->operator[]("max_prompt_len").as<uint32_t>();
         }
-
+        if (result->count("model_distribution_policy")) {
+            graphSettings.pluginConfig.modelDistributionPolicy = result->operator[]("model_distribution_policy").as<std::string>();
+        }
         if (result->count("kv_cache_precision")) {
             graphSettings.pluginConfig.kvCachePrecision = result->operator[]("kv_cache_precision").as<std::string>();
         }

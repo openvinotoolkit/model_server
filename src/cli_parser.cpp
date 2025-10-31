@@ -574,6 +574,7 @@ void CLIParser::prepareModel(ModelsSettingsImpl& modelsSettings, HFSettingsImpl&
 
     if (result->count("plugin_config")) {
         modelsSettings.pluginConfig = result->operator[]("plugin_config").as<std::string>();
+        hfSettings.exportSettings.pluginConfig = modelsSettings.pluginConfig;
         modelsSettings.userSetSingleModelArguments.push_back("plugin_config");
     }
 
@@ -683,6 +684,9 @@ void CLIParser::prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl&
             } else {
                 throw std::logic_error("Tried to prepare graph settings without graph parser initialization");
             }
+        }
+        if (!serverSettings.cacheDir.empty()) {
+            hfSettings.exportSettings.cacheDir = serverSettings.cacheDir;
         }
     // No pull nor pull and start mode
     } else {
