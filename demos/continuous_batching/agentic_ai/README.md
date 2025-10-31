@@ -489,7 +489,7 @@ Using LLM models with AI agents has a unique load characteristics with multi-tur
 To simulate such type of load, we should use a dedicated tool [multi_turn benchmark](https://github.com/vllm-project/vllm/tree/main/benchmarks/multi_turn).
 ```bash
 git clone -b v0.10.2 https://github.com/vllm-project/vllm
-cd vllm/benchmarks/multi-turn
+cd vllm/benchmarks/multi_turn
 pip install -r requirements.txt
 sed -i -e 's/if not os.path.exists(args.model)/if 1 == 0/g' benchmark_serving_multi_turn.py
 # Testing single client scenario, for example with GPU execution
