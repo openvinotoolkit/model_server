@@ -109,7 +109,7 @@ node {
     [type.googleapis.com / mediapipe.TtsCalculatorOptions]: {
       models_path: "{{model_path}}",
       plugin_config: '{ "NUM_STREAMS": "{{num_streams|default(1, true)}}" }',
-      device: "{{target_device|default("CPU", true)}}"
+      target_device: "{{target_device|default("CPU", true)}}"
     }
   }
 }
@@ -128,7 +128,7 @@ node {
     [type.googleapis.com / mediapipe.SttCalculatorOptions]: {
       models_path: "{{model_path}}",
       plugin_config: '{ "NUM_STREAMS": "{{num_streams|default(1, true)}}" }',
-      device: "{{target_device|default("CPU", true)}}"
+      target_device: "{{target_device|default("CPU", true)}}"
     }
   }
 }

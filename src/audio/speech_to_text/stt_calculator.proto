@@ -29,6 +29,6 @@ message SttCalculatorOptions {
 
     // fields required for GenAI pipeline initialization
     required string models_path = 1;
-    optional string device = 2;
+    optional string target_device = 2;
     optional string plugin_config = 3;
 }
