@@ -387,9 +387,9 @@ docker run -d --rm -p 8000:8000 -v $(pwd)/models:/models:ro openvino/model_serve
 ### Linux
 ```bash
 git clone https://github.com/isdaniel/mcp_weather_server
-cd mcp_weather_server
-docker build . -t mcp_weather_server
-docker run -d -v $(pwd)/src/mcp_weather_server:/mcp_weather_server  -p 8080:8080 mcp_weather_server bash -c ". .venv/bin/activate ; python /mcp_weather_server/server-see.py"
+cd mcp_weather_server && git checkout v0.5.0
+docker build -t mcp-weather-server:sse .
+docker run -d -p 8080:8080 -e PORT=8080 mcp-weather-server:sse uv run python -m mcp_weather_server --mode sse
 ```
 
 > **Note:** On Windows the MCP server will be demonstrated as an instance with stdio interface inside the agent application
