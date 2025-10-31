@@ -104,6 +104,8 @@ if exist %cd%\bazel-out\x64_windows-opt\bin\src\core_tokenizers.dll (
 
 copy %cd%\setupvars.* dist\windows\ovms
 if !errorlevel! neq 0 exit /b !errorlevel!
+copy %cd%\install_ovms_service.bat dist\windows\ovms
+if !errorlevel! neq 0 exit /b !errorlevel!
 
 :: Adding licenses
 set "license_dest=%cd%\dist\windows\ovms\thirdparty-licenses\"
