@@ -510,7 +510,7 @@ mteb run -m thenlper/gte-small -t Banking77Classification --output_folder result
 
 # Usage of tokenize endpoint (release 2025.4 or weekly)
 
-The `tokenize` endpoint provides a simple API for tokenizing input text using the same tokenizer as the deployed embeddings model. This allows you to see how your text will be split into tokens before feature extraction or inference. The endpoint accepts a string or list of strings and returns the corresponding token IDs and tokenized text.
+The `tokenize` endpoint provides a simple API for tokenizing input text using the same tokenizer as the deployed embeddings model. This allows you to see how your text will be split into tokens before feature extraction or inference. The endpoint accepts a string or list of strings and returns the corresponding token IDs.
 
 Example usage:
 ```console
@@ -524,10 +524,10 @@ Response:
 ```
 
 It's possible to use additional parameters:
- - pad_to_max_length - whether to pad the sequence to the maximum length. Default is False. 
- - max_length - maximum length of the sequence. If None (default), the value will be taken from the IR (where default value from original HF/GGUF model is stored).
- - padding_side - side to pad the sequence, can be ‘left’ or ‘right’. Default is None.
- - add_special_tokens - whether to add special tokens like BOS, EOS, PAD. Default is True. 
+ - `pad_to_max_length` - whether to pad the sequence to the maximum length. Default is False. 
+ - `max_length` - maximum length of the sequence. If None (default), unlimited. 
+ - `padding_side` - side to pad the sequence, can be ‘left’ or ‘right’. Default is None.
+ - `add_special_tokens` - whether to add special tokens like BOS, EOS, PAD. Default is True. 
 
  Example usage:
 ```console
