@@ -160,7 +160,7 @@ TEST_F(MistralOutputParserTest, ParseToolCallOutputWithContentAndNoToolCalls) {
 }
 
 TEST_F(MistralOutputParserTest, ParseToolCallOutputWithContentAndSingleToolCall) {
-    std::string input = "This is a content part and next will be a tool call.\n\n[TOOL_CALLS][{\"name\": \"example_tool\", \"arguments\": {\"arg1\": \"value1\", \"arg2\": 42}}]</s>";
+    std::string input = "This is a content part and next will be a tool call.\n\n [TOOL_CALLS][{\"name\": \"example_tool\", \"arguments\": {\"arg1\": \"value1\", \"arg2\": 42}}]</s>";
     for (bool immediateParsing : {false, true}) {
         auto generatedTensor = mistralTokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
         std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
@@ -171,7 +171,7 @@ TEST_F(MistralOutputParserTest, ParseToolCallOutputWithContentAndSingleToolCall)
     }
 }
 TEST_F(MistralOutputParserTest, ParseToolCallOutputWithContentOnBothSidesAndSingleToolCall) {
-    std::string input = "This is a content part and next will be a tool call.\n\n[TOOL_CALLS][{\"name\": \"example_tool\", \"arguments\": {\"arg1\": \"value1\", \"arg2\": 42}}]</s> This is a content part after tool call.";
+    std::string input = "This is a content part and next will be a tool call.\n\n [TOOL_CALLS][{\"name\": \"example_tool\", \"arguments\": {\"arg1\": \"value1\", \"arg2\": 42}}]</s> This is a content part after tool call.";
     for (bool immediateParsing : {false, true}) {
         auto generatedTensor = mistralTokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
         std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
@@ -182,7 +182,7 @@ TEST_F(MistralOutputParserTest, ParseToolCallOutputWithContentOnBothSidesAndSing
     }
 }
 TEST_F(MistralOutputParserTest, ParseToolCallOutputWithMultipleToolCallsReturnsContentOnly) {
-    std::string input = "[TOOL_CALLS][{\"name\": \"tool1\", \"arguments\": {\"a\": 1}}]</s> \n\nThis is some content\n\n[TOOL_CALLS][{\"name\": \"tool2\", \"arguments\": {\"b\": 2}}]</s>";
+    std::string input = "[TOOL_CALLS][{\"name\": \"tool1\", \"arguments\": {\"a\": 1}}]</s> \n\nThis is some content\n\n [TOOL_CALLS][{\"name\": \"tool2\", \"arguments\": {\"b\": 2}}]</s>";
     for (bool immediateParsing : {false, true}) {
         std::string testInput = input;
         if (immediateParsing) {
