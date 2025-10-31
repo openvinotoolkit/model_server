@@ -106,6 +106,10 @@ if [ "$ov_use_binary" == "0" ] ; then cp -rf /openvino/LICENSE /ovms/release_fil
 mkdir -vp /ovms_release/include && cp /ovms/src/ovms.h /ovms_release/include
 ls -lahR /ovms_release/
 
+# removing 29MB of cpython packages for unsupported python versions
+rls_python=cpython-"$(python3 --version 2>&1 | awk '{gsub(/\./, "", $2); print $2}' | cut -c1-3)"
+find /ovms_release/ovms/lib/python/openvino -name *cpython* | grep -vZ $rls_python | xargs rm -rf --
+
 mkdir -p /ovms_pkg/${BASE_OS}
 cd /ovms_pkg/${BASE_OS}
 tar czf ovms.tar.gz --transform 's/ovms_release/ovms/' /ovms_release/
