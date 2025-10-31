@@ -45,8 +45,8 @@ const std::map<GraphExportType, std::string> typeToString = {
     {RERANK_GRAPH, "rerank"},
     {EMBEDDINGS_GRAPH, "embeddings"},
     {IMAGE_GENERATION_GRAPH, "image_generation"},
-    {TEXT_TO_SPEECH_GRAPH, "text_to_speech"},
-    {SPEECH_TO_TEXT_GRAPH, "speech_to_text"},
+    {TEXT_TO_SPEECH_GRAPH, "text2speech"},
+    {SPEECH_TO_TEXT_GRAPH, "speech2text"},
     {UNKNOWN_GRAPH, "unknown_graph"}};
 
 const std::map<std::string, GraphExportType> stringToType = {
@@ -54,8 +54,8 @@ const std::map<std::string, GraphExportType> stringToType = {
     {"rerank", RERANK_GRAPH},
     {"embeddings", EMBEDDINGS_GRAPH},
     {"image_generation", IMAGE_GENERATION_GRAPH},
-    {"text_to_speech", TEXT_TO_SPEECH_GRAPH},
-    {"speech_to_text", SPEECH_TO_TEXT_GRAPH},
+    {"text2speech", TEXT_TO_SPEECH_GRAPH},
+    {"speech2text", SPEECH_TO_TEXT_GRAPH},
     {"unknown_graph", UNKNOWN_GRAPH}};
 
 std::string enumToString(GraphExportType type);
@@ -138,14 +138,12 @@ struct TextToSpeechGraphSettingsImpl {
     uint32_t numStreams = 1;
 };
 
-
 struct SpeechToTextGraphSettingsImpl {
     std::string modelPath = "./";
     std::string targetDevice = "CPU";
     std::string modelName = "";
     uint32_t numStreams = 1;
 };
-
 
 struct RerankGraphSettingsImpl {
     uint64_t maxAllowedChunks = 10000;

@@ -43,6 +43,7 @@ ovms_demo_universal-sentence-encoder
 ovms_demo_benchmark_client
 ovms_string_output_model_demo
 ovms_demos_gguf
+ovms_demos_audio
 
 ```
 

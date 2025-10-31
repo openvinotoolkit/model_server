@@ -307,17 +307,17 @@ input_stream: "HTTP_REQUEST_PAYLOAD:input"
 output_stream: "HTTP_RESPONSE_PAYLOAD:output"
 node {
     name: ")"
-    << graphSettings.modelName << R"(",
-    calculator: "TtsCalculator"
-    input_side_packet: "TTS_NODE_RESOURCES:tts_servable"
+    << graphSettings.modelName << R"("
+    calculator: "T2sCalculator"
+    input_side_packet: "TTS_NODE_RESOURCES:t2s_servable"
     input_stream: "HTTP_REQUEST_PAYLOAD:input"
     output_stream: "HTTP_RESPONSE_PAYLOAD:output"
     node_options: {
-        [type.googleapis.com / mediapipe.TtsCalculatorOptions]: {
+        [type.googleapis.com / mediapipe.T2sCalculatorOptions]: {
             models_path: ")"
-            << graphOkPath << R"(",
-            target_device: ")" << graphSettings.targetDevice << R"(",
-            plugin_config: '{ "NUM_STREAMS": ")" << graphSettings.numStreams << R"("}',
+            << graphOkPath << R"("
+            target_device: ")" << graphSettings.targetDevice << R"("
+            plugin_config: '{ "NUM_STREAMS": ")" << graphSettings.numStreams << R"("}'
         }
     }
 })";
@@ -326,7 +326,7 @@ node {
     ::mediapipe::CalculatorGraphConfig config;
     bool success = ::google::protobuf::TextFormat::ParseFromString(oss.str(), &config);
     if (!success) {
-        SPDLOG_ERROR("Created embeddings graph config couldn't be parsed.");
+        SPDLOG_ERROR("Created text2speech graph config couldn't be parsed.");
         return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
     }
 #endif
@@ -350,17 +350,17 @@ input_stream: "HTTP_REQUEST_PAYLOAD:input"
 output_stream: "HTTP_RESPONSE_PAYLOAD:output"
 node {
     name: ")"
-    << graphSettings.modelName << R"(",
-    calculator: "SttCalculator"
-    input_side_packet: "STT_NODE_RESOURCES:stt_servable"
+    << graphSettings.modelName << R"("
+    calculator: "S2tCalculator"
+    input_side_packet: "STT_NODE_RESOURCES:s2t_servable"
     input_stream: "HTTP_REQUEST_PAYLOAD:input"
     output_stream: "HTTP_RESPONSE_PAYLOAD:output"
     node_options: {
-        [type.googleapis.com / mediapipe.SttCalculatorOptions]: {
+        [type.googleapis.com / mediapipe.S2tCalculatorOptions]: {
             models_path: ")"
-            << graphOkPath << R"(",
-            target_device: ")" << graphSettings.targetDevice << R"(",
-            plugin_config: '{ "NUM_STREAMS": ")" << graphSettings.numStreams << R"("}',
+            << graphOkPath << R"("
+            target_device: ")" << graphSettings.targetDevice << R"("
+            plugin_config: '{ "NUM_STREAMS": ")" << graphSettings.numStreams << R"("}'
         }
     }
 })";
@@ -369,7 +369,7 @@ node {
     ::mediapipe::CalculatorGraphConfig config;
     bool success = ::google::protobuf::TextFormat::ParseFromString(oss.str(), &config);
     if (!success) {
-        SPDLOG_ERROR("Created embeddings graph config couldn't be parsed.");
+        SPDLOG_ERROR("Created speech2text graph config couldn't be parsed.");
         return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
     }
 #endif
@@ -377,7 +377,6 @@ node {
     std::string fullPath = FileSystem::joinPath({directoryPath, "graph.pbtxt"});
     return FileSystem::createFileOverwrite(fullPath, oss.str());
 }
-
 
 static Status createImageGenerationGraphTemplate(const std::string& directoryPath, const HFSettingsImpl& hfSettings) {
     if (!std::holds_alternative<ImageGenerationGraphSettingsImpl>(hfSettings.graphSettings)) {

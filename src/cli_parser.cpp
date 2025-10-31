@@ -26,8 +26,8 @@
 #include "graph_export/graph_cli_parser.hpp"
 #include "graph_export/rerank_graph_cli_parser.hpp"
 #include "graph_export/embeddings_graph_cli_parser.hpp"
-#include "graph_export/tts_graph_cli_parser.hpp"
-#include "graph_export/stt_graph_cli_parser.hpp"
+#include "graph_export/t2s_graph_cli_parser.hpp"
+#include "graph_export/s2t_graph_cli_parser.hpp"
 #include "graph_export/image_generation_graph_cli_parser.hpp"
 #include "ovms_exit_codes.hpp"
 #include "filesystem.hpp"
@@ -211,7 +211,7 @@ void CLIParser::parse(int argc, char** argv) {
                 cxxopts::value<std::string>(),
                 "MODEL_REPOSITORY_PATH")
             ("task",
-                "Choose type of model export: text_generation - chat and completion endpoints, embeddings - embeddings endpoint, rerank - rerank endpoint, image_generation - image generation/edit/inpainting endpoints, text_to_speech - audio/speech endpoint, speech_to_text - audio/transcriptions endpoint.",
+                "Choose type of model export: text_generation - chat and completion endpoints, embeddings - embeddings endpoint, rerank - rerank endpoint, image_generation - image generation/edit/inpainting endpoints, text2speech - audio/speech endpoint, speech2text - audio/transcriptions endpoint.",
                 cxxopts::value<std::string>(),
                 "TASK")
             ("weight-format",

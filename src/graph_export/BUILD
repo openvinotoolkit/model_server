@@ -99,9 +99,9 @@ ovms_cc_library(
 )
 
 ovms_cc_library(
-    name = "tts_graph_cli_parser",
-    srcs = ["tts_graph_cli_parser.cpp"],
-    hdrs = ["tts_graph_cli_parser.hpp"],
+    name = "t2s_graph_cli_parser",
+    srcs = ["t2s_graph_cli_parser.cpp"],
+    hdrs = ["t2s_graph_cli_parser.hpp"],
     deps =  [
         "@ovms//src/graph_export:graph_cli_parser",
         "@ovms//src:cpp_headers",
@@ -113,9 +113,9 @@ ovms_cc_library(
 )
 
 ovms_cc_library(
-    name = "stt_graph_cli_parser",
-    srcs = ["stt_graph_cli_parser.cpp"],
-    hdrs = ["stt_graph_cli_parser.hpp"],
+    name = "s2t_graph_cli_parser",
+    srcs = ["s2t_graph_cli_parser.cpp"],
+    hdrs = ["s2t_graph_cli_parser.hpp"],
     deps =  [
         "@ovms//src/graph_export:graph_cli_parser",
         "@ovms//src:cpp_headers",

@@ -24,8 +24,8 @@
 #include "graph_export/graph_cli_parser.hpp"
 #include "graph_export/rerank_graph_cli_parser.hpp"
 #include "graph_export/embeddings_graph_cli_parser.hpp"
-#include "graph_export/tts_graph_cli_parser.hpp"
-#include "graph_export/stt_graph_cli_parser.hpp"
+#include "graph_export/t2s_graph_cli_parser.hpp"
+#include "graph_export/s2t_graph_cli_parser.hpp"
 #include "graph_export/image_generation_graph_cli_parser.hpp"
 
 namespace ovms {

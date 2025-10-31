@@ -64,10 +64,10 @@ std::string OptimumDownloader::getExportCmdTextToSpeech() {
     std::ostringstream oss;
     // clang-format off
     oss << this->OPTIMUM_CLI_EXPORT_COMMAND;
-    if(this->exportSettings.vocoder.has_value()){
-        oss << "--model-kwargs \"{{\"vocoder\":\"" << this->exportSettings.vocoder.value() << "\"}}\"";
+    if (this->exportSettings.vocoder.has_value()){
+        oss << "--model-kwargs \"{\"vocoder\": \"" << this->exportSettings.vocoder.value() << "\"}\" ";
     }
-    oss << " --model " << this->sourceModel << " --trust-remote-code ";
+    oss << "--model " << this->sourceModel << " --trust-remote-code ";
     oss << " --weight-format " << this->exportSettings.precision;
     oss << " " << this->downloadPath;
     // clang-format on
@@ -79,7 +79,7 @@ std::string OptimumDownloader::getExportCmdSpeechToText() {
     std::ostringstream oss;
     // clang-format off
     oss << this->OPTIMUM_CLI_EXPORT_COMMAND;
-    oss << " --model " << this->sourceModel << " --trust-remote-code ";
+    oss << "--model " << this->sourceModel << " --trust-remote-code ";
     oss << " --weight-format " << this->exportSettings.precision;
     oss << " " << this->downloadPath;
     // clang-format on
