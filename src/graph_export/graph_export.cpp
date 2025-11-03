@@ -82,6 +82,14 @@ std::string GraphExport::getDraftModelDirectoryPath(const std::string& directory
     std::string fullPath = FileSystem::joinPath({directoryPath, GraphExport::getDraftModelDirectoryName(draftModel)});
     return fullPath;
 }
+#define GET_PLUGIN_CONFIG_OPT_OR_FAIL_AND_RETURN(PLUGIN_SETTINGS_IMPL, EXPORT_SETTINGS)                 \
+    auto pluginConfigOrStatus = GraphExport::createPluginString(PLUGIN_SETTINGS_IMPL, EXPORT_SETTINGS); \
+    if (std::holds_alternative<Status>(pluginConfigOrStatus)) {                                         \
+        auto status = std::get<Status>(pluginConfigOrStatus);                                           \
+        SPDLOG_ERROR("Failed to create plugin config: {}", status.string());                            \
+        return status;                                                                                  \
+    }                                                                                                   \
+    auto pluginConfigOpt = std::get<std::optional<std::string>>(pluginConfigOrStatus)
 
 static Status createTextGenerationGraphTemplate(const std::string& directoryPath, const HFSettingsImpl& hfSettings) {
     if (!std::holds_alternative<TextGenGraphSettingsImpl>(hfSettings.graphSettings)) {
@@ -96,12 +104,7 @@ static Status createTextGenerationGraphTemplate(const std::string& directoryPath
     oss << OVMS_VERSION_GRAPH_LINE;
     std::string modelsPath = constructModelsPath(graphSettings.modelPath, ggufFilename);
     SPDLOG_TRACE("modelsPath: {}, directoryPath: {}, ggufFilename: {}", modelsPath, directoryPath, ggufFilename.value_or("std::nullopt"));
-    auto pluginConfigOrStatus = GraphExport::createPluginString(graphSettings.pluginConfig, exportSettings);
-    if (std::holds_alternative<Status>(pluginConfigOrStatus)) {
-        auto status = std::get<Status>(pluginConfigOrStatus);
-        SPDLOG_ERROR("Failed to create plugin config: {}", status.string());
-        return status;
-    }
+    GET_PLUGIN_CONFIG_OPT_OR_FAIL_AND_RETURN(graphSettings.pluginConfig, exportSettings);
     // clang-format off
     oss << R"(
     input_stream: "HTTP_REQUEST_PAYLOAD:input"
@@ -126,9 +129,13 @@ static Status createTextGenerationGraphTemplate(const std::string& directoryPath
         << graphSettings.targetDevice << R"(",
             models_path: ")"
         << modelsPath << R"(",
-            plugin_config: ')"
-        << std::get<std::string>(pluginConfigOrStatus) << R"(',
-            enable_prefix_caching: )"
+            )";
+    if (pluginConfigOpt.has_value()) {
+        oss << R"(plugin_config: ')"
+        << pluginConfigOpt.value() << R"(',
+            )";
+    }
+    oss << R"(enable_prefix_caching: )"
         << graphSettings.enablePrefixCaching << R"(,
             cache_size: )"
         << graphSettings.cacheSize << R"(,)";
@@ -204,12 +211,7 @@ static Status createRerankGraphTemplate(const std::string& directoryPath, const 
     // Windows path creation - graph parser needs forward slashes in paths
     std::string modelsPath = constructModelsPath(graphSettings.modelPath, ggufFilename);
     SPDLOG_TRACE("modelsPath: {}, directoryPath: {}, ggufFilename: {}", modelsPath, directoryPath, ggufFilename.value_or("std::nullopt"));
-    auto pluginConfigOrStatus = GraphExport::createPluginString(graphSettings.pluginConfig, exportSettings);
-    if (std::holds_alternative<Status>(pluginConfigOrStatus)) {
-        auto status = std::get<Status>(pluginConfigOrStatus);
-        SPDLOG_ERROR("Failed to create plugin config: {}", status.string());
-        return status;
-    }
+    GET_PLUGIN_CONFIG_OPT_OR_FAIL_AND_RETURN(graphSettings.pluginConfig, exportSettings);
     // clang-format off
     oss << R"(
 input_stream: "REQUEST_PAYLOAD:input"
@@ -228,7 +230,11 @@ node {
             max_allowed_chunks: )"
             << graphSettings.maxAllowedChunks << R"(,
             target_device: ")" << graphSettings.targetDevice << R"(",
-            plugin_config: ')" << std::get<std::string>(pluginConfigOrStatus) << R"(',
+            )";
+    if (pluginConfigOpt.has_value()) {
+        oss << R"(plugin_config: ')" << pluginConfigOpt.value()  << R"(',)";
+    }
+    oss << R"(
         }
     }
 })";
@@ -259,12 +265,7 @@ static Status createEmbeddingsGraphTemplate(const std::string& directoryPath, co
     oss << OVMS_VERSION_GRAPH_LINE;
     std::string modelsPath = constructModelsPath(graphSettings.modelPath, ggufFilename);
     SPDLOG_TRACE("modelsPath: {}, directoryPath: {}, ggufFilename: {}", modelsPath, directoryPath, ggufFilename.value_or("std::nullopt"));
-    auto pluginConfigOrStatus = GraphExport::createPluginString(graphSettings.pluginConfig, exportSettings);
-    if (std::holds_alternative<Status>(pluginConfigOrStatus)) {
-        auto status = std::get<Status>(pluginConfigOrStatus);
-        SPDLOG_ERROR("Failed to create plugin config: {}", status.string());
-        return status;
-    }
+    GET_PLUGIN_CONFIG_OPT_OR_FAIL_AND_RETURN(graphSettings.pluginConfig, exportSettings);
     // clang-format off
     oss << R"(
 input_stream: "REQUEST_PAYLOAD:input"
@@ -287,8 +288,12 @@ node {
             pooling: )"
             << graphSettings.pooling << R"(,
             target_device: ")" << graphSettings.targetDevice << R"(",
-            plugin_config: ')" << std::get<std::string>(pluginConfigOrStatus) << R"(',
-        }
+            )";
+    if (pluginConfigOpt.has_value()) {
+        oss << R"(plugin_config: ')" << pluginConfigOpt.value() << R"(',
+        )";
+    }
+    oss << R"(}
     }
 })";
 
@@ -315,13 +320,7 @@ static Status createImageGenerationGraphTemplate(const std::string& directoryPat
     auto& ggufFilename = hfSettings.ggufFilename;
     std::string modelsPath = constructModelsPath(graphSettings.modelPath, ggufFilename);
     SPDLOG_TRACE("modelsPath: {}, directoryPath: {}, ggufFilename: {}", modelsPath, directoryPath, ggufFilename.value_or("std::nullopt"));
-    auto pluginConfigOrStatus = GraphExport::createPluginString(graphSettings.pluginConfig, exportSettings);
-    if (std::holds_alternative<Status>(pluginConfigOrStatus)) {
-        auto status = std::get<Status>(pluginConfigOrStatus);
-        SPDLOG_ERROR("Failed to create plugin config: {}", status.string());
-        return status;
-    }
-    const std::string pluginConfig = std::get<std::string>(pluginConfigOrStatus);
+    GET_PLUGIN_CONFIG_OPT_OR_FAIL_AND_RETURN(graphSettings.pluginConfig, exportSettings);
 
     std::ostringstream oss;
     oss << OVMS_VERSION_GRAPH_LINE;
@@ -340,10 +339,9 @@ node: {
       [type.googleapis.com / mediapipe.ImageGenCalculatorOptions]: {
           models_path: ")" << graphSettings.modelPath << R"("
           device: ")" << graphSettings.targetDevice << R"(")";
-    // TODO by default our utility generates empty plugin config which may differ in behavior to nto setting it at all
-    if (pluginConfig.size() > 4) {
+    if (pluginConfigOpt.has_value()) {
         oss << R"(
-          plugin_config: ')" << std::get<std::string>(pluginConfigOrStatus) << R"(')";
+          plugin_config: ')" << pluginConfigOpt.value() << R"(')";
     }
 
     if (graphSettings.resolution.size()) {
@@ -436,7 +434,7 @@ Status GraphExport::createServableConfig(const std::string& directoryPath, const
     return StatusCode::INTERNAL_ERROR;
 }
 
-std::variant<std::string, Status> GraphExport::createPluginString(const PluginConfigSettingsImpl& pluginConfig, const ExportSettings& exportSettings) {
+std::variant<std::optional<std::string>, Status> GraphExport::createPluginString(const PluginConfigSettingsImpl& pluginConfig, const ExportSettings& exportSettings) {
     auto& stringPluginConfig = exportSettings.pluginConfig;
     rapidjson::Document d;
     d.SetObject();
@@ -446,7 +444,6 @@ std::variant<std::string, Status> GraphExport::createPluginString(const PluginCo
         }
     }
     bool configNotEmpty = false;
-
     if (pluginConfig.kvCachePrecision.has_value()) {
         rapidjson::Value name;
         name.SetString(pluginConfig.kvCachePrecision.value().c_str(), d.GetAllocator());
@@ -457,7 +454,6 @@ std::variant<std::string, Status> GraphExport::createPluginString(const PluginCo
         d.AddMember("KV_CACHE_PRECISION", name, d.GetAllocator());
         configNotEmpty = true;
     }
-
     if (pluginConfig.maxPromptLength.has_value()) {
         rapidjson::Value value;
         value.SetUint(pluginConfig.maxPromptLength.value());
@@ -468,7 +464,6 @@ std::variant<std::string, Status> GraphExport::createPluginString(const PluginCo
         d.AddMember("MAX_PROMPT_LEN", value, d.GetAllocator());
         configNotEmpty = true;
     }
-
     if (pluginConfig.modelDistributionPolicy.has_value()) {
         rapidjson::Value value;
         value.SetString(pluginConfig.modelDistributionPolicy.value().c_str(), d.GetAllocator());
@@ -477,6 +472,16 @@ std::variant<std::string, Status> GraphExport::createPluginString(const PluginCo
             return Status(StatusCode::PLUGIN_CONFIG_CONFLICTING_PARAMETERS, "Doubled MODEL_DISTRIBUTION_POLICY parameter in plugin config.");
         }
         d.AddMember("MODEL_DISTRIBUTION_POLICY", value, d.GetAllocator());
+        configNotEmpty = true;
+    }
+    if (pluginConfig.numStreams.has_value()) {
+        rapidjson::Value value;
+        value.SetUint(pluginConfig.numStreams.value());
+        auto itr = d.FindMember("NUM_STREAMS");
+        if (itr != d.MemberEnd()) {
+            return Status(StatusCode::PLUGIN_CONFIG_CONFLICTING_PARAMETERS, "Doubled NUM_STREAMS parameter in plugin config.");
+        }
+        d.AddMember("NUM_STREAMS", value, d.GetAllocator());
         configNotEmpty = true;
     }
     if (exportSettings.cacheDir.has_value()) {
@@ -489,9 +494,6 @@ std::variant<std::string, Status> GraphExport::createPluginString(const PluginCo
         d.AddMember("CACHE_DIR", value, d.GetAllocator());
         configNotEmpty = true;
     }
-
-    std::string pluginString = "{ }";
-
     if (configNotEmpty) {
         // Serialize the document to a JSON string
         rapidjson::StringBuffer buffer;
@@ -499,10 +501,10 @@ std::variant<std::string, Status> GraphExport::createPluginString(const PluginCo
         d.Accept(writer);
 
         // Output the JSON string
-        pluginString = buffer.GetString();
+        return buffer.GetString();
+    } else {
+        return std::nullopt;
     }
-
-    return pluginString;
 }
 
 }  // namespace ovms

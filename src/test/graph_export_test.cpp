@@ -123,7 +123,6 @@ const std::string expectedGraphContentsWithResponseParser = R"(
             max_num_seqs:256,
             device: "CPU",
             models_path: "./",
-            plugin_config: '{ }',
             enable_prefix_caching: true,
             cache_size: 10,
             reasoning_parser: "REASONING_PARSER",
@@ -164,7 +163,6 @@ const std::string expectedDefaultGraphContents = R"(
             max_num_seqs:256,
             device: "CPU",
             models_path: "./",
-            plugin_config: '{ }',
             enable_prefix_caching: true,
             cache_size: 10,
         }
@@ -202,7 +200,6 @@ const std::string expectedDraftAndFuseGraphContents = R"(
             max_num_seqs:256,
             device: "CPU",
             models_path: "./",
-            plugin_config: '{ }',
             enable_prefix_caching: true,
             cache_size: 10,
             dynamic_split_fuse: false,
@@ -243,7 +240,6 @@ const std::string expectedGGUFGraphContents = R"(
             max_num_seqs:256,
             device: "CPU",
             models_path: "./PRETTY_GOOD_GGUF_MODEL.gguf",
-            plugin_config: '{ }',
             enable_prefix_caching: true,
             cache_size: 10,
         }
@@ -281,7 +277,6 @@ const std::string expectedGGUFGraphContents2 = R"(
             max_num_seqs:256,
             device: "CPU",
             models_path: "./PRETTY_GOOD_GGUF_MODEL_Q8-00001-of-20000.gguf",
-            plugin_config: '{ }',
             enable_prefix_caching: true,
             cache_size: 10,
         }
@@ -313,7 +308,7 @@ node {
             models_path: "/some/path",
             max_allowed_chunks: 18,
             target_device: "GPU",
-            plugin_config: '{ "NUM_STREAMS": "2"}',
+            plugin_config: '{"NUM_STREAMS":2}',
         }
     }
 }
@@ -333,7 +328,7 @@ node {
             models_path: "./",
             max_allowed_chunks: 10000,
             target_device: "CPU",
-            plugin_config: '{ "NUM_STREAMS": "1"}',
+            plugin_config: '{"NUM_STREAMS":1}',
         }
     }
 }
@@ -355,7 +350,7 @@ node {
             truncate: true,
             pooling: LAST,
             target_device: "GPU",
-            plugin_config: '{ "NUM_STREAMS": "2"}',
+            plugin_config: '{"NUM_STREAMS":2}',
         }
     }
 }
@@ -377,7 +372,7 @@ node {
             truncate: false,
             pooling: CLS,
             target_device: "CPU",
-            plugin_config: '{ "NUM_STREAMS": "1"}',
+            plugin_config: '{"NUM_STREAMS":1}',
         }
     }
 }
@@ -818,12 +813,11 @@ TEST_F(GraphCreationTest, pluginConfigAsString) {
     pluginConfig.maxPromptLength = 256;
     pluginConfig.modelDistributionPolicy = "TENSOR_PARALLEL";
     ovms::ExportSettings exportSettings;
-    exportSettings.pluginConfig = "{\"NUM_STREAMS\":\"4\"}";
+    exportSettings.pluginConfig = "{\"NUM_STREAMS\":4}";
     auto res = ovms::GraphExport::createPluginString(pluginConfig, exportSettings);
-    ASSERT_TRUE(std::holds_alternative<std::string>(res));
-    ASSERT_EQ(std::get<std::string>(res),
-        "{\"NUM_STREAMS\":\"4\",\"KV_CACHE_PRECISION\":\"u8\",\"MAX_PROMPT_LEN\":256,\"MODEL_DISTRIBUTION_POLICY\":\"TENSOR_PARALLEL\"}");
-    //   ovms::Model
+    ASSERT_TRUE(std::holds_alternative<std::optional<std::string>>(res));
+    ASSERT_EQ(std::get<std::optional<std::string>>(res).value(),
+        "{\"NUM_STREAMS\":4,\"KV_CACHE_PRECISION\":\"u8\",\"MAX_PROMPT_LEN\":256,\"MODEL_DISTRIBUTION_POLICY\":\"TENSOR_PARALLEL\"}");
 }
 TEST_F(GraphCreationTest, pluginConfigNegative) {
     using ovms::Status;
@@ -837,20 +831,20 @@ TEST_F(GraphCreationTest, pluginConfigNegative) {
     exportSettings.pluginConfig = "{\"KV_CACHE_PRECISION\":\"fp16\"}";
     exportSettings.cacheDir = "/cache";
     auto res = ovms::GraphExport::createPluginString(pluginConfig, exportSettings);
-    ASSERT_FALSE(std::holds_alternative<std::string>(res));
+    ASSERT_TRUE(std::holds_alternative<ovms::Status>(res));
     ASSERT_EQ(std::get<Status>(res), ovms::StatusCode::PLUGIN_CONFIG_CONFLICTING_PARAMETERS);
 
     exportSettings.pluginConfig = "{\"MAX_PROMPT_LEN\":512}";
     res = ovms::GraphExport::createPluginString(pluginConfig, exportSettings);
-    ASSERT_FALSE(std::holds_alternative<std::string>(res));
+    ASSERT_TRUE(std::holds_alternative<ovms::Status>(res));
     ASSERT_EQ(std::get<Status>(res), ovms::StatusCode::PLUGIN_CONFIG_CONFLICTING_PARAMETERS);
 
     exportSettings.pluginConfig = "{\"CACHE_DIR\":\"/cache\"}";
     res = ovms::GraphExport::createPluginString(pluginConfig, exportSettings);
-    ASSERT_FALSE(std::holds_alternative<std::string>(res));
+    ASSERT_TRUE(std::holds_alternative<ovms::Status>(res));
     ASSERT_EQ(std::get<Status>(res), ovms::StatusCode::PLUGIN_CONFIG_CONFLICTING_PARAMETERS);
     exportSettings.pluginConfig = "{\"MODEL_DISTRIBUTION_POLICY\":\"PIPELINE_PARALLEL\"}";
     res = ovms::GraphExport::createPluginString(pluginConfig, exportSettings);
-    ASSERT_FALSE(std::holds_alternative<std::string>(res));
+    ASSERT_TRUE(std::holds_alternative<ovms::Status>(res));
     ASSERT_EQ(std::get<Status>(res), ovms::StatusCode::PLUGIN_CONFIG_CONFLICTING_PARAMETERS);
 }

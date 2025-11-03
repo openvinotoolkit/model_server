@@ -130,7 +130,7 @@ struct EmbeddingsGraphSettingsImpl {
 };
 
 struct RerankGraphSettingsImpl {
-    RerankGraphSettingsImpl::RerankGraphSettingsImpl() :
+    RerankGraphSettingsImpl() :
         pluginConfig{std::nullopt, std::nullopt, std::nullopt, 1} {}
     std::string modelPath = "./";
     std::string targetDevice = "CPU";

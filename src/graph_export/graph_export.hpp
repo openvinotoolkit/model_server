@@ -28,7 +28,7 @@ class GraphExport {
 public:
     GraphExport();
     Status createServableConfig(const std::string& directoryPath, const HFSettingsImpl& graphSettings);
-    static std::variant<std::string, Status> createPluginString(const PluginConfigSettingsImpl& pluginConfig, const ExportSettings& exportSettings);
+    static std::variant<std::optional<std::string>, Status> createPluginString(const PluginConfigSettingsImpl& pluginConfig, const ExportSettings& exportSettings);
     static std::string getDraftModelDirectoryName(std::string draftModel);
     static std::string getDraftModelDirectoryPath(const std::string& directoryPath, const std::string& draftModel);
 };
