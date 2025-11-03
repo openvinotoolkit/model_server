@@ -51,7 +51,7 @@
 namespace ovms {
 
 static const std::string CHAT_TEMPLATE_WARNING_MESSAGE = "Warning: Chat template has not been loaded properly. Servable will not respond to /chat/completions endpoint.";
-static const std::string DEFAULT_CHAT_TEMPLATE = R"({% if messages|length != 1 %} {{ raise_exception('This servable accepts only single message requests') }}{% endif %}{{ messages[0]['content'] }})";
+static const std::string DEFAULT_CHAT_TEMPLATE = R"({% for message in messages %}{% if message['role'] == 'user' %}{{ 'User: ' + message['content'] }}{% elif message['role'] == 'system' %}{{ '<|system|>\n' + message['content'] + eos_token }}{% elif message['role'] == 'assistant' %}{{ message['content'] + eos_token }}{% endif %}{% endfor %})";
 
 void GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServableProperties> properties, const std::string& chatTemplateDirectory) {
 #if (PYTHON_DISABLE == 0)
@@ -164,6 +164,12 @@ void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServ
 
             def raise_exception(message):
                 raise jinja2.exceptions.TemplateError(message)
+
+            # Appears in some of mistral chat templates and gpt-oss chat templates
+            def strftime_now(format):
+                import datetime as _dt
+                return _dt.datetime.now().strftime(format)
+
             # Following the logic from:
             # https://github.com/huggingface/transformers/blob/7188e2e28c6d663284634732564143b820a03f8b/src/transformers/utils/chat_template_utils.py#L398
             class AssistantTracker(Extension):
@@ -211,7 +217,7 @@ void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServ
 
             # Default chat template accepts only single message and outputs only it's 'content'
             # effectively turning it into a regular prompt. 
-            default_chat_template = "{% if messages|length != 1 %} {{ raise_exception('This servable accepts only single message requests') }}{% endif %}{{ messages[0]['content'] }}"
+            default_chat_template = "{% for message in messages %}{% if message['role'] == 'user' %}{{ 'User: ' + message['content'] }}{% elif message['role'] == 'system' %}{{ '<|system|>\n' + message['content'] + eos_token }}{% elif message['role'] == 'assistant' %}{{ message['content'] + eos_token }}{% endif %}{% endfor %}"
 
             bos_token = ""
             eos_token = ""
@@ -228,6 +234,8 @@ void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServ
             jinja_env = ImmutableSandboxedEnvironment(trim_blocks=True, lstrip_blocks=True, extensions=[AssistantTracker, jinja2.ext.loopcontrols], loader=template_loader)
             jinja_env.policies["json.dumps_kwargs"]["ensure_ascii"] = False
             jinja_env.globals["raise_exception"] = raise_exception
+            jinja_env.globals["strftime_now"] = strftime_now
+            jinja_env.filters["from_json"] = json.loads
             if jinja_file.is_file():
                 template = jinja_env.get_template("chat_template.jinja")
             elif jinja_file_legacy.is_file():

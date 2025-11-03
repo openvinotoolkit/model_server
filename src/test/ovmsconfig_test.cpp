@@ -24,6 +24,7 @@
 #include "spdlog/spdlog.h"
 
 #include "../capi_frontend/server_settings.hpp"
+#include "./env_guard.hpp"
 #include "../config.hpp"
 #include "../filesystem.hpp"
 #include "../ovms_exit_codes.hpp"
@@ -323,6 +324,12 @@ TEST_F(OvmsConfigDeathTest, NegativeListModelsWithoutModelRepositoryPath) {
     char* n_argv[] = {"ovms", "--list_models"};
     int arg_count = 2;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "Use --list_models with --model_repository_path");
+}
+
+TEST_F(OvmsConfigDeathTest, NegativeInvalidAPIKeyFile) {
+    char* n_argv[] = {"ovms", "--config_path", "/path1", "--api_key_file", "/wrong/dir", "--port", "44"};
+    int arg_count = 7;
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "Error reading API key file: Unable to open file \"/wrong/dir\"");
 }
 
 TEST_F(OvmsConfigDeathTest, negativeMissingDashes) {
@@ -1167,6 +1174,30 @@ TEST(OvmsExportHfSettingsTest, positiveDefault) {
     ASSERT_EQ(hfSettings.exportSettings.extraQuantizationParams.has_value(), false);
     ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_MODE);
 }
+TEST(OvmsExportHfSettingsTest, pullFromHfOutsideOvOrg) {
+    std::string modelName = "NonOpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
+    std::string downloadPath = "test/repository";
+    char* n_argv[] = {
+        (char*)"ovms",
+        (char*)"--pull",
+        (char*)"--source_model",
+        (char*)modelName.c_str(),
+        (char*)"--model_repository_path",
+        (char*)downloadPath.c_str(),
+        (char*)"--task",
+        (char*)"text_generation",
+    };
+
+    int arg_count = 8;
+    ConstructorEnabledConfig config;
+    config.parse(arg_count, n_argv);
+
+    auto& hfSettings = config.getServerSettings().hfSettings;
+    ASSERT_EQ(hfSettings.sourceModel, modelName);
+    ASSERT_EQ(hfSettings.downloadPath, downloadPath);
+    ASSERT_EQ(hfSettings.downloadType, ovms::GIT_CLONE_DOWNLOAD);
+    ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_MODE);
+}
 
 TEST(OvmsExportHfSettingsTest, allChanged) {
     std::string modelName = "NonOpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
@@ -1339,6 +1370,30 @@ TEST(OvmsGraphConfigTest, positiveTargetDeviceHetero) {
     auto& hfSettings = config.getServerSettings().hfSettings;
     ovms::TextGenGraphSettingsImpl graphSettings = std::get<ovms::TextGenGraphSettingsImpl>(hfSettings.graphSettings);
     ASSERT_EQ(graphSettings.targetDevice, "HETERO");
+}
+
+TEST(OvmsGraphConfigTest, positiveTargetDeviceSpecificGPU) {
+    std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
+    std::string downloadPath = "test/repository";
+    char* n_argv[] = {
+        (char*)"ovms",
+        (char*)"--pull",
+        (char*)"--source_model",
+        (char*)modelName.c_str(),
+        (char*)"--model_repository_path",
+        (char*)downloadPath.c_str(),
+        (char*)"--task",
+        (char*)"text_generation",
+        (char*)"--target_device",
+        (char*)"GPU.1",
+    };
+
+    int arg_count = 10;
+    ConstructorEnabledConfig config;
+    config.parse(arg_count, n_argv);
+    auto& hfSettings = config.getServerSettings().hfSettings;
+    ovms::TextGenGraphSettingsImpl graphSettings = std::get<ovms::TextGenGraphSettingsImpl>(hfSettings.graphSettings);
+    ASSERT_EQ(graphSettings.targetDevice, "GPU.1");
 }
 
 TEST(OvmsGraphConfigTest, negativePipelineType) {
@@ -1852,6 +1907,60 @@ TEST(OvmsGraphConfigTest, negativeEmbeddingsInvalidNormalize) {
     int arg_count = 10;
 
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "normalize: INVALID is not allowed. Supported values: true, false");
+}
+
+TEST(OvmsAPIKeyConfig, positiveAPIKeyFile) {
+    // Create a temporary API key file
+    std::ofstream apiKeyFileTmp("api_key.txt");
+    apiKeyFileTmp << "1234";
+    apiKeyFileTmp.close();
+    std::string modelName = "test_name";
+    std::string modelPath = "model_path";
+    std::string apiKeyFile = "api_key.txt";
+    std::string rest_port = "8080";
+    char* n_argv[] = {
+        (char*)"ovms",
+        (char*)"--model_path",
+        (char*)modelPath.c_str(),
+        (char*)"--model_name",
+        (char*)modelName.c_str(),
+        (char*)"--api_key_file",
+        (char*)apiKeyFile.c_str(),
+        (char*)"--rest_port",
+        (char*)rest_port.c_str(),
+    };
+
+    int arg_count = 9;
+    ConstructorEnabledConfig config;
+    config.parse(arg_count, n_argv);
+
+    ASSERT_EQ(config.getServerSettings().apiKey, "1234");
+    // Clean up the temporary file
+    std::remove("api_key.txt");
+}
+
+TEST(OvmsAPIKeyConfig, positiveAPIKeyEnv) {
+    EnvGuard envGuard;
+    envGuard.set("API_KEY", "ABCD");
+    std::string modelName = "test_name";
+    std::string modelPath = "model_path";
+    std::string apiKeyFile = "api_key.txt";
+    std::string rest_port = "8080";
+    char* n_argv[] = {
+        (char*)"ovms",
+        (char*)"--model_path",
+        (char*)modelPath.c_str(),
+        (char*)"--model_name",
+        (char*)modelName.c_str(),
+        (char*)"--rest_port",
+        (char*)rest_port.c_str(),
+    };
+
+    int arg_count = 7;
+    ConstructorEnabledConfig config;
+    config.parse(arg_count, n_argv);
+
+    ASSERT_EQ(config.getServerSettings().apiKey, "ABCD");
 }
 
 class OvmsParamsTest : public ::testing::Test {

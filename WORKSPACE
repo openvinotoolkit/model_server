@@ -490,10 +490,6 @@ rules_pkg_dependencies()
 load("@ovms//third_party/aws-sdk-cpp:aws-sdk-cpp.bzl", "aws_sdk_cpp")
 aws_sdk_cpp()
 
-### OpenVINO GenAI
-load("@ovms//third_party/llm_engine:llm_engine.bzl", "llm_engine")
-llm_engine()
-
 ### Libgit2
 load("@ovms//third_party/libgit2:libgit2_engine.bzl", "libgit2_engine")
 libgit2_engine()
@@ -640,3 +636,33 @@ cc_library(
 )
 """,
 )
+
+new_git_repository(
+    name = "dr_libs",
+    remote = "https://github.com/mackron/dr_libs",
+    commit = "24d738be2349fd4b6fe50eeaa81f5bd586267fd0",
+    build_file_content = """
+cc_library(
+    name = "dr",
+    hdrs = ["dr_flac.h", "dr_mp3.h", "dr_wav.h"],
+    visibility = ["//visibility:public"],
+    local_defines = [
+    ],
+)
+""",
+)
+
+new_git_repository(
+    name = "winreg",
+    remote = "https://github.com/GiovanniDicanio/WinReg.git",
+    commit = "4e1fab61959ca7a43c2627251ba306ebbbec7f7a", # master Aug 22 2025
+    build_file_content = """
+cc_library(
+    name = "winreg",
+    hdrs = glob(["WinReg/WinReg.hpp"]),
+    visibility = ["//visibility:public"],
+    local_defines = [],
+)
+""",
+)
+

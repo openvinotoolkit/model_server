@@ -67,12 +67,10 @@ absl::Status VisualLanguageModelServable::prepareInputs(std::shared_ptr<GenAiSer
     if (executionContext->endpoint == Endpoint::CHAT_COMPLETIONS) {
         ov::genai::ChatHistory& chatHistory = vlmExecutionContext->apiHandler->getChatHistory();
 
-        // Validate chat history for restricted tags
-        for (const auto& historyEntry : chatHistory) {
-            for (const auto& [_, content] : historyEntry) {
-                if (content.find("<ov_genai_image_") != std::string::npos) {
-                    return absl::InvalidArgumentError("Message contains restricted <ov_genai_image> tag");
-                }
+        for (size_t i = 0; i < chatHistory.size(); i++) {
+            const auto& message = chatHistory[i];
+            if (message["content"].as_string().value_or("").find("<ov_genai_image_") != std::string::npos) {
+                return absl::InvalidArgumentError("Message contains restricted <ov_genai_image> tag");
             }
         }
 
@@ -85,9 +83,12 @@ absl::Status VisualLanguageModelServable::prepareInputs(std::shared_ptr<GenAiSer
             imageTags[chatTurnIndex] = imageTags[chatTurnIndex] + imageTag;
             vlmExecutionContext->inputImages.push_back(imageTensor);
         }
+
         for (const auto& [chatTurnIndex, imageTagString] : imageTags) {
-            chatHistory[chatTurnIndex]["content"] = imageTagString + chatHistory[chatTurnIndex]["content"];
+            std::string messageContent = chatHistory[chatTurnIndex]["content"].as_string().value_or("");
+            chatHistory[chatTurnIndex]["content"] = imageTagString + messageContent;
         }
+
         constexpr bool add_generation_prompt = true;  // confirm it should be hardcoded
         vlmExecutionContext->inputText = properties->tokenizer.apply_chat_template(chatHistory, add_generation_prompt);
     } else {

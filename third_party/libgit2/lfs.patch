@@ -514,7 +514,7 @@ index 000000000..0ac7b40a2
 +		rate_unit_idx++;
 +	}
 +
-+	printf(" [%.2f %s] ", rate, sizeUnits[rate_unit_idx]);
++	printf(" [%.2f %s/s] ", rate, sizeUnits[rate_unit_idx]);
 +}
 +
 +void print_progress(

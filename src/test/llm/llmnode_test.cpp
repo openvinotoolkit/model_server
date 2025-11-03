@@ -108,8 +108,12 @@ public:
         }
     }
 
-    int generateExpectedText(std::string prompt, bool addSpecialTokens = true) {
+    int generateExpectedText(std::string prompt, bool addSpecialTokens = true, bool applyChatTemplate = false) {
         try {
+            if (applyChatTemplate) {
+                ov::genai::ChatHistory chatHistory({{{"role", "user"}, {"content", prompt}}});
+                prompt = cbPipe->get_tokenizer().apply_chat_template(chatHistory, true);
+            }
             ov::Tensor promptIds = cbPipe->get_tokenizer().encode(prompt, ov::genai::add_special_tokens(addSpecialTokens)).input_ids;
             std::cout << "Generated prompt ids: " << getPromptTokensString(promptIds) << std::endl;
             auto generationHandle = cbPipe->add_request(
@@ -737,6 +741,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsJsonNFail) {
 }
 
 TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsJsonN) {
+    GTEST_SKIP();  // TODO: Temporary skip to synchronize CI workers
     auto params = GetParam();
     config.max_new_tokens = 5;
     config.rng_seed = 1;
@@ -744,7 +749,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsJsonN) {
     config.num_return_sequences = 8;
     config.echo = false;
     if (params.generateExpectedOutput) {
-        ASSERT_EQ(generateExpectedText("What is OpenVINO?", false), 0);
+        ASSERT_EQ(generateExpectedText("What is OpenVINO?", false, true), 0);
         ASSERT_EQ(config.num_return_sequences, expectedMessages.size());
     }
     std::string requestBody = R"(
@@ -1118,6 +1123,68 @@ TEST_P(LLMFlowHttpTestParameterized, unaryStructuredOutputBadSchema) {
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
+}
+
+TEST_P(LLMFlowHttpTestParameterized, unaryStructuredOutputNonOpenAI) {
+    auto params = GetParam();
+    std::string requestBody = R"(
+        {
+            "model": ")" + params.modelName +
+                              R"(",
+            "stream": false,
+            "seed" : 1,
+            "temperature": 0.0,
+            "messages": [
+            {"role": "user",  "content": "Extract the name and age of the person from the text and structure the output in JSON format. Margaret is 20 years old."}
+            ],
+                "response_format": {
+                    "type": "sequence",
+                    "elements": [
+                        {
+                            "type": "json_schema",
+                            "json_schema": {
+                                "type": "object",
+                                "properties": {
+                                    "name": {
+                                    "type": "string"
+                                    },
+                                    "age": {
+                                    "type": "integer"
+                                    }
+                                },
+                                "required": ["name", "age"]
+                            }
+                        },
+                        {
+                            "type": "const_string",
+                            "value": "\n\nYou're welcome!"
+                        }
+                    ]
+                }
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK);
+    parsedResponse.Parse(response.c_str());
+    ASSERT_TRUE(parsedResponse["choices"].IsArray());
+    for (auto& choice : parsedResponse["choices"].GetArray()) {
+        ASSERT_TRUE(choice["message"]["content"].IsString());
+        std::string content = choice["message"]["content"].GetString();
+        // Check if content ends with "\n\nYou're welcome!" and extract JSON part
+        const std::string suffix = "\n\nYou're welcome!";
+        ASSERT_TRUE(content.size() >= suffix.size());
+        ASSERT_EQ(content.compare(content.size() - suffix.size(), suffix.size(), suffix), 0);
+        std::string jsonPart = content.substr(0, content.size() - suffix.size());
+        rapidjson::Document parsedContent;
+        parsedContent.Parse(jsonPart.c_str());
+        ASSERT_TRUE(parsedContent.IsObject());
+        ASSERT_TRUE(parsedContent.HasMember("name"));
+        ASSERT_TRUE(parsedContent["name"].IsString());
+        ASSERT_TRUE(parsedContent.HasMember("age"));
+        ASSERT_TRUE(parsedContent["age"].IsInt());
+    }
 }
 
 TEST_P(LLMFlowHttpTestParameterized, unaryToolBadSchema) {
@@ -2754,34 +2821,7 @@ TEST_P(LLMHttpParametersValidationTest, missingContentInMessage) {
     )";
 
     ovms::Status status = handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser);
-#if (PYTHON_DISABLE == 0)
-    bool genAiTemplateParsing = false;  // With Python enabled, we use native Jinja2 template parsing
-#else
-    bool genAiTemplateParsing = true;  // With Python disabled, we use GenAI template parsing
-#endif
-
-    if (params.modelName.find("vlm") != std::string::npos) {
-        ASSERT_EQ(status.getCode(), ovms::StatusCode::OK);  // GenAI accepts such messages, so we expect a successful response
-        return;
-    }
-
-    if (genAiTemplateParsing) {
-        /*
-            This test checks if API handler validation allows messages without content.
-            The reason why we expect generic error here is that with GenAI template rendering missing content is unexpected.
-            On the API handler level this is a positive path as this test confirms that request reaches template processing phase.
-        */
-        ASSERT_EQ(status.getCode(), ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
-        ASSERT_NE(status.string().find("Response generation failed"), std::string::npos);
-    } else {
-        /*
-            This test checks if API handler validation allows messages without content.
-            The reason why we expect error here is that for the tested LLM model, lack of content means that pipeline input is empty.
-            On the API handler level this is a positive path as this test confirms that request reaches template processing phase.
-        */
-        ASSERT_EQ(status.getCode(), ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
-        ASSERT_NE(status.string().find("Final prompt after applying chat template is empty"), std::string::npos);
-    }
+    ASSERT_EQ(status.getCode(), ovms::StatusCode::OK);
 }
 
 TEST_P(LLMHttpParametersValidationTest, roleNotAString) {
@@ -3267,19 +3307,13 @@ TEST_P(LLMHttpParametersValidationTest, MessagesWithOnlyRole) {
         {
             "model": ")" + params.modelName +
                               R"(",
-            "messages": [{"role": "abc"}]
+            "messages": [{"role": "user"}]
         }
     )";
 
-    if (params.modelName.find("vlm") != std::string::npos) {
-        ASSERT_EQ(
-            handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
-            ovms::StatusCode::OK);  // GenAI supports such messages
-    } else {
-        ASSERT_EQ(
-            handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
-            ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
-    }
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK);  // GenAI supports such messages
 }
 
 TEST_P(LLMHttpParametersValidationTest, SpeculativeDecodingNoSDSpecificParametersProvided) {
@@ -3345,7 +3379,7 @@ TEST_P(LLMHttpParametersValidationTest, MessagesWithMoreMessageFields) {
             "model": ")" + params.modelName +
                               R"(",
             "max_tokens": 1,
-            "messages": [{"role": "123", "content": "def", "unexpected": "123"}]
+            "messages": [{"role": "user", "content": "def", "unexpected": "123"}]
         }
     )";
 
