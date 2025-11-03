@@ -31,7 +31,7 @@ public:
 #ifdef _WIN32
         const std::string& convertCheckCmd = "where convert_tokenizer");
 #else
-        const std::string& convertCheckCmd = "which convert_tokenizer");
+        const std::string& convertCheckCmd = "convert_tokenizer -h");
 #endif
     Status downloadModel() override;
 

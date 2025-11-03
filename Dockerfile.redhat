@@ -120,7 +120,6 @@ RUN dnf install -y https://rpmfind.net/linux/almalinux/8.10/PowerTools/x86_64/os
             libusbx \
             libtool \
             openssl-devel \
-            which \
             unzip \
             vim \
             xz \
