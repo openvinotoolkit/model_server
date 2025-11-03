@@ -125,23 +125,20 @@ void Hermes3ToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int6
 
     // If immediate parsing is enabled, we assume tool calls start from the beginning of the content.
     // Otherwise, we search for the first occurrence of the tool call start tag.
-    if (!immediateParsingEnabled) {
-        firstToolCallPos = parsedOutput.content.find(startTag, pos);
+
+    // Read first tool call without opening tag
+    firstToolCallPos = 0;
+    size_t end = parsedOutput.content.find(endTag, firstToolCallPos);
+    std::string tool;
+    if (end != std::string::npos) {
+        tool = parsedOutput.content.substr(0, end);
+        pos = end + endTag.length();
     } else {
-        // Read first tool call without opening tag
-        firstToolCallPos = 0;
-        size_t end = parsedOutput.content.find(endTag, firstToolCallPos);
-        std::string tool;
-        if (end != std::string::npos) {
-            tool = parsedOutput.content.substr(0, end);
-            pos = end + endTag.length();
-        } else {
-            tool = parsedOutput.content;
-            pos = parsedOutput.content.length();
-        }
-        if (!tool.empty()) {
-            tools.push_back(tool);
-        }
+        tool = parsedOutput.content;
+        pos = parsedOutput.content.length();
+    }
+    if (!tool.empty()) {
+        tools.push_back(tool);
     }
 
     while (true) {

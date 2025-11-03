@@ -31,13 +31,15 @@ namespace ovms {
 class BaseGenerationConfigBuilder {
 protected:
     ov::genai::GenerationConfig config;
+    bool enableToolGuidedGeneration;
     void setStructuralTagsConfig(const ov::genai::StructuredOutputConfig::StructuralTag& structuralTag);
 
 public:
     BaseGenerationConfigBuilder() = delete;
     // Initializes the builder with a base generation config read from model generation_config.json
-    explicit BaseGenerationConfigBuilder(ov::genai::GenerationConfig& baseConfig) :
-        config(baseConfig) {}
+    explicit BaseGenerationConfigBuilder(ov::genai::GenerationConfig& baseConfig, bool enableToolGuidedGeneration = false) :
+        config(baseConfig),
+        enableToolGuidedGeneration(enableToolGuidedGeneration) {}
     virtual ~BaseGenerationConfigBuilder() = default;
 
     ov::genai::GenerationConfig& getConfig() { return config; }

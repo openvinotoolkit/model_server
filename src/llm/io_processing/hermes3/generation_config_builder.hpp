@@ -25,8 +25,8 @@ namespace ovms {
 class Hermes3GenerationConfigBuilder : public BaseGenerationConfigBuilder {
 public:
     Hermes3GenerationConfigBuilder() = delete;
-    explicit Hermes3GenerationConfigBuilder(ov::genai::GenerationConfig& baseConfig) :
-        BaseGenerationConfigBuilder(baseConfig) {}
+    explicit Hermes3GenerationConfigBuilder(ov::genai::GenerationConfig& baseConfig, bool enableToolGuidedGeneration = false) :
+        BaseGenerationConfigBuilder(baseConfig, enableToolGuidedGeneration) {}
 
     void parseConfigFromRequest(const OpenAIChatCompletionsRequest& request) override;
 };
