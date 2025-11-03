@@ -503,10 +503,40 @@ Results will be stored in `results` folder:
   "kg_co2_emissions": null
 }
 ```
-
 Compare against local HuggingFace execution for reference:
 ```console
 mteb run -m thenlper/gte-small -t Banking77Classification --output_folder results
+``` 
+
+# Usage of tokenize endpoint (release 2025.4 or weekly)
+
+The `tokenize` endpoint provides a simple API for tokenizing input text using the same tokenizer as the deployed embeddings model. This allows you to see how your text will be split into tokens before feature extraction or inference. The endpoint accepts a string or list of strings and returns the corresponding token IDs and tokenized text.
+
+Example usage:
+```console
+curl http://localhost:8000/v3/tokenize -H "Content-Type: application/json" -d "{ \"model\": \"BAAI/bge-large-en-v1.5\", \"text\": \"hello world\" }"
+```
+Response:
+```json
+{
+  "tokens": [101,7592,2088,102]
+}
 ```
 
+It's possible to use additional parameters:
+ - pad_to_max_length - whether to pad the sequence to the maximum length. Default is False. 
+ - max_length - maximum length of the sequence. If None (default), the value will be taken from the IR (where default value from original HF/GGUF model is stored).
+ - padding_side - side to pad the sequence, can be ‘left’ or ‘right’. Default is None.
+ - add_special_tokens - whether to add special tokens like BOS, EOS, PAD. Default is True. 
 
+ Example usage:
+```console
+curl http://localhost:8000/v3/tokenize -H "Content-Type: application/json" -d "{ \"model\": \"BAAI/bge-large-en-v1.5\", \"text\": \"hello world\", \"max_length\": 10, \"pad_to_max_length\": true, \"padding_side\": \"left\", \"add_special_tokens\": true }"
+```
+
+Response:
+```json
+{
+  "tokens":[0,0,0,0,0,0,101,7592,2088,102]
+}
+```

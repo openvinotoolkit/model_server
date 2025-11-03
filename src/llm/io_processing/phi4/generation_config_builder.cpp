@@ -14,6 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 
+#include <memory>
 #include <string>
 #include <utility>
 #include <openvino/genai/generation_config.hpp>
@@ -34,10 +35,11 @@ void Phi4GenerationConfigBuilder::parseConfigFromRequest(const OpenAIChatComplet
 
     // Set tool guided generation config specific to Phi-4 model as described in template from:
     // https://github.com/vllm-project/vllm/blob/v0.9.2/examples/tool_chat_template_phi4_mini.jinja
-    ov::genai::StructuralTagsConfig structuralTagsConfig;
+
     static const std::string beginOfToolsString = "functools";
-    structuralTagsConfig.triggers.push_back(beginOfToolsString);
-    ov::genai::StructuralTagItem tagItem;
+    auto triggeredTags = std::make_shared<ov::genai::StructuredOutputConfig::TriggeredTags>();
+    triggeredTags->triggers.push_back(beginOfToolsString);
+    ov::genai::StructuredOutputConfig::Tag tagItem;
     tagItem.begin = beginOfToolsString;
 
     // Build the "anyOf" array for each tool
@@ -68,16 +70,18 @@ void Phi4GenerationConfigBuilder::parseConfigFromRequest(const OpenAIChatComplet
     }
     anyOfArray += "]";
 
-    tagItem.schema = R"({
+    std::string schema = R"({
         "type": "array",
         "items": {
             "anyOf": )" +
-                     anyOfArray + R"(
+                         anyOfArray + R"(
         }
     })";
 
-    structuralTagsConfig.structural_tags.push_back(tagItem);
-    setStructuralTagsConfig(structuralTagsConfig);
+    tagItem.content = ov::genai::StructuredOutputConfig::JSONSchema(schema);
+    triggeredTags->tags.push_back(tagItem);
+    ov::genai::StructuredOutputConfig::StructuralTag structuralTag = triggeredTags;
+    setStructuralTagsConfig(structuralTag);
 }
 
 }  // namespace ovms
