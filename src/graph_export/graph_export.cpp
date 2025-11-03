@@ -85,11 +85,13 @@ std::string GraphExport::getDraftModelDirectoryPath(const std::string& directory
 
 static Status createTextGenerationGraphTemplate(const std::string& directoryPath, const HFSettingsImpl& hfSettings) {
     if (!std::holds_alternative<TextGenGraphSettingsImpl>(hfSettings.graphSettings)) {
+        SPDLOG_ERROR("Graph options not initialized for text generation.");
         return StatusCode::INTERNAL_ERROR;
     }
     auto& graphSettings = std::get<TextGenGraphSettingsImpl>(hfSettings.graphSettings);
     auto& ggufFilename = hfSettings.ggufFilename;
     auto& exportSettings = hfSettings.exportSettings;
+
     std::ostringstream oss;
     oss << OVMS_VERSION_GRAPH_LINE;
     std::string modelsPath = constructModelsPath(graphSettings.modelPath, ggufFilename);
@@ -188,13 +190,25 @@ static Status createTextGenerationGraphTemplate(const std::string& directoryPath
     return FileSystem::createFileOverwrite(fullPath, oss.str());
 }
 
-static Status createRerankGraphTemplate(const std::string& directoryPath, const RerankGraphSettingsImpl& graphSettings) {
+static Status createRerankGraphTemplate(const std::string& directoryPath, const HFSettingsImpl& hfSettings) {
+    if (!std::holds_alternative<RerankGraphSettingsImpl>(hfSettings.graphSettings)) {
+        SPDLOG_ERROR("Graph options not initialized for reranking.");
+        return StatusCode::INTERNAL_ERROR;
+    }
+    auto& graphSettings = std::get<RerankGraphSettingsImpl>(hfSettings.graphSettings);
+    auto& ggufFilename = hfSettings.ggufFilename;
+    auto& exportSettings = hfSettings.exportSettings;
+
     std::ostringstream oss;
     oss << OVMS_VERSION_GRAPH_LINE;
     // Windows path creation - graph parser needs forward slashes in paths
-    std::string graphOkPath = graphSettings.modelPath;
-    if (FileSystem::getOsSeparator() != "/") {
-        std::replace(graphOkPath.begin(), graphOkPath.end(), '\\', '/');
+    std::string modelsPath = constructModelsPath(graphSettings.modelPath, ggufFilename);
+    SPDLOG_TRACE("modelsPath: {}, directoryPath: {}, ggufFilename: {}", modelsPath, directoryPath, ggufFilename.value_or("std::nullopt"));
+    auto pluginConfigOrStatus = GraphExport::createPluginString(graphSettings.pluginConfig, exportSettings);
+    if (std::holds_alternative<Status>(pluginConfigOrStatus)) {
+        auto status = std::get<Status>(pluginConfigOrStatus);
+        SPDLOG_ERROR("Failed to create plugin config: {}", status.string());
+        return status;
     }
     // clang-format off
     oss << R"(
@@ -210,11 +224,11 @@ node {
     node_options: {
         [type.googleapis.com / mediapipe.RerankCalculatorOVOptions]: {
             models_path: ")"
-            << graphOkPath << R"(",
+            << modelsPath << R"(",
             max_allowed_chunks: )"
             << graphSettings.maxAllowedChunks << R"(,
             target_device: ")" << graphSettings.targetDevice << R"(",
-            plugin_config: '{ "NUM_STREAMS": ")" << graphSettings.numStreams << R"("}',
+            plugin_config: ')" << std::get<std::string>(pluginConfigOrStatus) << R"(',
         }
     }
 })";
@@ -232,15 +246,25 @@ node {
     return FileSystem::createFileOverwrite(fullPath, oss.str());
 }
 
-static Status createEmbeddingsGraphTemplate(const std::string& directoryPath, const EmbeddingsGraphSettingsImpl& graphSettings) {
+static Status createEmbeddingsGraphTemplate(const std::string& directoryPath, const HFSettingsImpl& hfSettings) {
+    if (!std::holds_alternative<EmbeddingsGraphSettingsImpl>(hfSettings.graphSettings)) {
+        SPDLOG_ERROR("Graph options not initialized for embeddings.");
+        return StatusCode::INTERNAL_ERROR;
+    }
+    auto& graphSettings = std::get<EmbeddingsGraphSettingsImpl>(hfSettings.graphSettings);
+    auto& ggufFilename = hfSettings.ggufFilename;
+    auto& exportSettings = hfSettings.exportSettings;
+
     std::ostringstream oss;
     oss << OVMS_VERSION_GRAPH_LINE;
-    // Windows path creation - graph parser needs forward slashes in paths
-    std::string graphOkPath = graphSettings.modelPath;
-    if (FileSystem::getOsSeparator() != "/") {
-        std::replace(graphOkPath.begin(), graphOkPath.end(), '\\', '/');
+    std::string modelsPath = constructModelsPath(graphSettings.modelPath, ggufFilename);
+    SPDLOG_TRACE("modelsPath: {}, directoryPath: {}, ggufFilename: {}", modelsPath, directoryPath, ggufFilename.value_or("std::nullopt"));
+    auto pluginConfigOrStatus = GraphExport::createPluginString(graphSettings.pluginConfig, exportSettings);
+    if (std::holds_alternative<Status>(pluginConfigOrStatus)) {
+        auto status = std::get<Status>(pluginConfigOrStatus);
+        SPDLOG_ERROR("Failed to create plugin config: {}", status.string());
+        return status;
     }
-
     // clang-format off
     oss << R"(
 input_stream: "REQUEST_PAYLOAD:input"
@@ -255,7 +279,7 @@ node {
     node_options: {
         [type.googleapis.com / mediapipe.EmbeddingsCalculatorOVOptions]: {
             models_path: ")"
-            << graphOkPath << R"(",
+            << modelsPath << R"(",
             normalize_embeddings: )"
             << graphSettings.normalize << R"(,
             truncate: )"
@@ -263,7 +287,7 @@ node {
             pooling: )"
             << graphSettings.pooling << R"(,
             target_device: ")" << graphSettings.targetDevice << R"(",
-            plugin_config: '{ "NUM_STREAMS": ")" << graphSettings.numStreams << R"("}',
+            plugin_config: ')" << std::get<std::string>(pluginConfigOrStatus) << R"(',
         }
     }
 })";
@@ -281,7 +305,24 @@ node {
     return FileSystem::createFileOverwrite(fullPath, oss.str());
 }
 
-static Status createImageGenerationGraphTemplate(const std::string& directoryPath, const ImageGenerationGraphSettingsImpl& graphSettings) {
+static Status createImageGenerationGraphTemplate(const std::string& directoryPath, const HFSettingsImpl& hfSettings) {
+    if (!std::holds_alternative<ImageGenerationGraphSettingsImpl>(hfSettings.graphSettings)) {
+        SPDLOG_ERROR("Graph options not initialized for image generation.");
+        return StatusCode::INTERNAL_ERROR;
+    }
+    auto& graphSettings = std::get<ImageGenerationGraphSettingsImpl>(hfSettings.graphSettings);
+    auto& exportSettings = hfSettings.exportSettings;
+    auto& ggufFilename = hfSettings.ggufFilename;
+    std::string modelsPath = constructModelsPath(graphSettings.modelPath, ggufFilename);
+    SPDLOG_TRACE("modelsPath: {}, directoryPath: {}, ggufFilename: {}", modelsPath, directoryPath, ggufFilename.value_or("std::nullopt"));
+    auto pluginConfigOrStatus = GraphExport::createPluginString(graphSettings.pluginConfig, exportSettings);
+    if (std::holds_alternative<Status>(pluginConfigOrStatus)) {
+        auto status = std::get<Status>(pluginConfigOrStatus);
+        SPDLOG_ERROR("Failed to create plugin config: {}", status.string());
+        return status;
+    }
+    const std::string pluginConfig = std::get<std::string>(pluginConfigOrStatus);
+
     std::ostringstream oss;
     oss << OVMS_VERSION_GRAPH_LINE;
     // clang-format off
@@ -299,10 +340,10 @@ node: {
       [type.googleapis.com / mediapipe.ImageGenCalculatorOptions]: {
           models_path: ")" << graphSettings.modelPath << R"("
           device: ")" << graphSettings.targetDevice << R"(")";
-
-    if (graphSettings.pluginConfig.size()) {
+    // TODO by default our utility generates empty plugin config which may differ in behavior to nto setting it at all
+    if (pluginConfig.size() > 4) {
         oss << R"(
-          plugin_config: ')" << graphSettings.pluginConfig << R"(')";
+          plugin_config: ')" << std::get<std::string>(pluginConfigOrStatus) << R"(')";
     }
 
     if (graphSettings.resolution.size()) {
@@ -383,26 +424,11 @@ Status GraphExport::createServableConfig(const std::string& directoryPath, const
     if (hfSettings.task == TEXT_GENERATION_GRAPH) {
         return createTextGenerationGraphTemplate(directoryPath, hfSettings);
     } else if (hfSettings.task == EMBEDDINGS_GRAPH) {
-        if (std::holds_alternative<EmbeddingsGraphSettingsImpl>(hfSettings.graphSettings)) {
-            return createEmbeddingsGraphTemplate(directoryPath, std::get<EmbeddingsGraphSettingsImpl>(hfSettings.graphSettings));
-        } else {
-            SPDLOG_ERROR("Graph options not initialized for embeddings.");
-            return StatusCode::INTERNAL_ERROR;
-        }
+        return createEmbeddingsGraphTemplate(directoryPath, hfSettings);
     } else if (hfSettings.task == RERANK_GRAPH) {
-        if (std::holds_alternative<RerankGraphSettingsImpl>(hfSettings.graphSettings)) {
-            return createRerankGraphTemplate(directoryPath, std::get<RerankGraphSettingsImpl>(hfSettings.graphSettings));
-        } else {
-            SPDLOG_ERROR("Graph options not initialized for rerank.");
-            return StatusCode::INTERNAL_ERROR;
-        }
+        return createRerankGraphTemplate(directoryPath, hfSettings);
     } else if (hfSettings.task == IMAGE_GENERATION_GRAPH) {
-        if (std::holds_alternative<ImageGenerationGraphSettingsImpl>(hfSettings.graphSettings)) {
-            return createImageGenerationGraphTemplate(directoryPath, std::get<ImageGenerationGraphSettingsImpl>(hfSettings.graphSettings));
-        } else {
-            SPDLOG_ERROR("Graph options not initialized for image generation.");
-            return StatusCode::INTERNAL_ERROR;
-        }
+        return createImageGenerationGraphTemplate(directoryPath, hfSettings);
     } else if (hfSettings.task == UNKNOWN_GRAPH) {
         SPDLOG_ERROR("Graph options not initialized.");
         return StatusCode::INTERNAL_ERROR;

@@ -93,7 +93,7 @@ void EmbeddingsGraphCLIParser::prepare(OvmsServerMode serverMode, HFSettingsImpl
             throw std::logic_error("Tried to prepare server and model settings without graph parse result");
         }
     } else {
-        embeddingsGraphSettings.numStreams = result->operator[]("num_streams").as<uint32_t>();
+        embeddingsGraphSettings.pluginConfig.numStreams = result->operator[]("num_streams").as<uint32_t>();
         embeddingsGraphSettings.normalize = result->operator[]("normalize").as<std::string>();
         embeddingsGraphSettings.truncate = result->operator[]("truncate").as<std::string>();
         embeddingsGraphSettings.pooling = result->operator[]("pooling").as<std::string>();

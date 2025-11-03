@@ -106,6 +106,7 @@ Status MediapipeGraphDefinition::validateForConfigLoadableness() {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Trying to parse mediapipe graph definition: {} failed", this->getName(), this->chosenConfig);
         return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
     }
+    SPDLOG_TRACE("Will try to load pbtxt config: {}", this->chosenConfig);
     return StatusCode::OK;
 }
 

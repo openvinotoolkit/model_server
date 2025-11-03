@@ -1534,7 +1534,7 @@ TEST(OvmsGraphConfigTest, positiveAllChangedRerank) {
     ASSERT_EQ(hfSettings.task, ovms::RERANK_GRAPH);
     ovms::RerankGraphSettingsImpl rerankGraphSettings = std::get<ovms::RerankGraphSettingsImpl>(hfSettings.graphSettings);
     ASSERT_EQ(rerankGraphSettings.maxAllowedChunks, 1002);
-    ASSERT_EQ(rerankGraphSettings.numStreams, 2);
+    ASSERT_EQ(rerankGraphSettings.pluginConfig.numStreams, 2);
     ASSERT_EQ(rerankGraphSettings.targetDevice, "GPU");
     ASSERT_EQ(rerankGraphSettings.modelName, servingName);
     ASSERT_EQ(rerankGraphSettings.modelPath, "./");
@@ -1575,7 +1575,7 @@ TEST(OvmsGraphConfigTest, positiveAllChangedRerankStart) {
     ASSERT_EQ(hfSettings.task, ovms::RERANK_GRAPH);
     ovms::RerankGraphSettingsImpl rerankGraphSettings = std::get<ovms::RerankGraphSettingsImpl>(hfSettings.graphSettings);
     ASSERT_EQ(rerankGraphSettings.maxAllowedChunks, 1002);
-    ASSERT_EQ(rerankGraphSettings.numStreams, 2);
+    ASSERT_EQ(rerankGraphSettings.pluginConfig.numStreams, 2);
     ASSERT_EQ(rerankGraphSettings.targetDevice, "GPU");
     ASSERT_EQ(rerankGraphSettings.modelName, servingName);
     ASSERT_EQ(rerankGraphSettings.modelPath, "./");
@@ -1607,7 +1607,7 @@ TEST(OvmsGraphConfigTest, positiveDefaultRerank) {
     ASSERT_EQ(hfSettings.task, ovms::RERANK_GRAPH);
     ovms::RerankGraphSettingsImpl rerankGraphSettings = std::get<ovms::RerankGraphSettingsImpl>(hfSettings.graphSettings);
     ASSERT_EQ(rerankGraphSettings.maxAllowedChunks, 10000);
-    ASSERT_EQ(rerankGraphSettings.numStreams, 1);
+    ASSERT_EQ(rerankGraphSettings.pluginConfig.numStreams, 1);
     ASSERT_EQ(rerankGraphSettings.targetDevice, "CPU");
     ASSERT_EQ(rerankGraphSettings.modelName, modelName);
     ASSERT_EQ(rerankGraphSettings.modelPath, "./");
@@ -1645,7 +1645,7 @@ TEST(OvmsGraphConfigTest, positiveSomeChangedRerank) {
     ASSERT_EQ(hfSettings.task, ovms::RERANK_GRAPH);
     ovms::RerankGraphSettingsImpl rerankGraphSettings = std::get<ovms::RerankGraphSettingsImpl>(hfSettings.graphSettings);
     ASSERT_EQ(rerankGraphSettings.maxAllowedChunks, 2);
-    ASSERT_EQ(rerankGraphSettings.numStreams, 1);
+    ASSERT_EQ(rerankGraphSettings.pluginConfig.numStreams, 1);
     ASSERT_EQ(rerankGraphSettings.targetDevice, "GPU");
     ASSERT_EQ(rerankGraphSettings.modelName, servingName);
     ASSERT_EQ(rerankGraphSettings.modelPath, "./");
@@ -1710,7 +1710,8 @@ TEST(OvmsGraphConfigTest, positiveAllChangedImageGeneration) {
     ASSERT_EQ(imageGenerationGraphSettings.defaultNumInferenceSteps.value(), 2);
     ASSERT_TRUE(imageGenerationGraphSettings.maxNumInferenceSteps.has_value());
     ASSERT_EQ(imageGenerationGraphSettings.maxNumInferenceSteps.value(), 3);
-    ASSERT_EQ(imageGenerationGraphSettings.pluginConfig, "{\"NUM_STREAMS\":14,\"CACHE_DIR\":\"/cache\"}");
+    ASSERT_EQ(imageGenerationGraphSettings.pluginConfig.numStreams, 14);
+    ASSERT_EQ(hfSettings.exportSettings.cacheDir.value(), "/cache");
 }
 
 TEST(OvmsGraphConfigTest, positiveDefaultImageGeneration) {
@@ -1786,7 +1787,7 @@ TEST(OvmsGraphConfigTest, positiveAllChangedEmbeddings) {
     ASSERT_EQ(embeddingsGraphSettings.normalize, "false");
     ASSERT_EQ(embeddingsGraphSettings.truncate, "true");
     ASSERT_EQ(embeddingsGraphSettings.pooling, "CLS");
-    ASSERT_EQ(embeddingsGraphSettings.numStreams, 2);
+    ASSERT_EQ(embeddingsGraphSettings.pluginConfig.numStreams, 2);
     ASSERT_EQ(embeddingsGraphSettings.targetDevice, "GPU");
     ASSERT_EQ(embeddingsGraphSettings.modelName, servingName);
     ASSERT_EQ(embeddingsGraphSettings.modelPath, "./");
@@ -1833,7 +1834,7 @@ TEST(OvmsGraphConfigTest, positiveAllChangedEmbeddingsStart) {
     ASSERT_EQ(embeddingsGraphSettings.normalize, "false");
     ASSERT_EQ(embeddingsGraphSettings.truncate, "true");
     ASSERT_EQ(embeddingsGraphSettings.pooling, "LAST");
-    ASSERT_EQ(embeddingsGraphSettings.numStreams, 2);
+    ASSERT_EQ(embeddingsGraphSettings.pluginConfig.numStreams, 2);
     ASSERT_EQ(embeddingsGraphSettings.targetDevice, "GPU");
     ASSERT_EQ(embeddingsGraphSettings.modelName, servingName);
     ASSERT_EQ(embeddingsGraphSettings.modelPath, "./");
@@ -1866,7 +1867,7 @@ TEST(OvmsGraphConfigTest, positiveDefaultEmbeddings) {
     ASSERT_EQ(embeddingsGraphSettings.normalize, "true");
     ASSERT_EQ(embeddingsGraphSettings.truncate, "false");
     ASSERT_EQ(embeddingsGraphSettings.pooling, "CLS");
-    ASSERT_EQ(embeddingsGraphSettings.numStreams, 1);
+    ASSERT_EQ(embeddingsGraphSettings.pluginConfig.numStreams, 1);
     ASSERT_EQ(embeddingsGraphSettings.targetDevice, "CPU");
     ASSERT_EQ(embeddingsGraphSettings.modelName, modelName);
 }
@@ -1905,7 +1906,7 @@ TEST(OvmsGraphConfigTest, positiveSomeChangedEmbeddings) {
     ASSERT_EQ(hfSettings.task, ovms::EMBEDDINGS_GRAPH);
     ovms::EmbeddingsGraphSettingsImpl embeddingsGraphSettings = std::get<ovms::EmbeddingsGraphSettingsImpl>(hfSettings.graphSettings);
     ASSERT_EQ(embeddingsGraphSettings.pooling, "LAST");
-    ASSERT_EQ(embeddingsGraphSettings.numStreams, 1);
+    ASSERT_EQ(embeddingsGraphSettings.pluginConfig.numStreams, 1);
     ASSERT_EQ(embeddingsGraphSettings.normalize, "false");
     ASSERT_EQ(embeddingsGraphSettings.targetDevice, "GPU");
     ASSERT_EQ(embeddingsGraphSettings.modelName, servingName);

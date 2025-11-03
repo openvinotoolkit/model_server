@@ -24,14 +24,6 @@
 #include <utility>
 #include <vector>
 
-#pragma warning(push)
-#pragma warning(disable : 6313)
-#include <rapidjson/document.h>
-#include <rapidjson/istreamwrapper.h>
-#include <rapidjson/stringbuffer.h>
-#include <rapidjson/writer.h>
-#pragma warning(pop)
-
 #include "../capi_frontend/server_settings.hpp"
 #include "../ovms_exit_codes.hpp"
 #include "../status.hpp"
@@ -159,25 +151,17 @@ void ImageGenerationGraphCLIParser::prepare(ServerSettingsImpl& serverSettings, 
         }
 
         if (result->count("num_streams") || serverSettings.cacheDir != "") {
-            rapidjson::Document pluginConfigDoc;
-            pluginConfigDoc.SetObject();
-            rapidjson::Document::AllocatorType& allocator = pluginConfigDoc.GetAllocator();
             if (result->count("num_streams")) {
                 uint32_t numStreams = result->operator[]("num_streams").as<uint32_t>();
                 if (numStreams == 0) {
                     throw std::invalid_argument("num_streams must be greater than 0");
                 }
-                pluginConfigDoc.AddMember("NUM_STREAMS", numStreams, allocator);
+                imageGenerationGraphSettings.pluginConfig.numStreams = result->operator[]("num_streams").as<uint32_t>();
             }
 
             if (!serverSettings.cacheDir.empty()) {
-                pluginConfigDoc.AddMember("CACHE_DIR", rapidjson::Value(serverSettings.cacheDir.c_str(), allocator), allocator);
+                hfSettings.exportSettings.cacheDir = serverSettings.cacheDir;
             }
-
-            rapidjson::StringBuffer buffer;
-            rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-            pluginConfigDoc.Accept(writer);
-            imageGenerationGraphSettings.pluginConfig = buffer.GetString();
         }
     }
 

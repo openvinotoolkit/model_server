@@ -86,7 +86,7 @@ void RerankGraphCLIParser::prepare(OvmsServerMode serverMode, HFSettingsImpl& hf
             throw std::logic_error("Tried to prepare server and model settings without graph parse result");
         }
     } else {
-        rerankGraphSettings.numStreams = result->operator[]("num_streams").as<uint32_t>();
+        rerankGraphSettings.pluginConfig.numStreams = result->operator[]("num_streams").as<uint32_t>();
         rerankGraphSettings.maxAllowedChunks = result->operator[]("max_allowed_chunks").as<uint64_t>();
     }
 

@@ -3574,6 +3574,8 @@ TEST_F(LLMConfigHttpTest, LLMNodeNonExistantModelsPath) {
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, nullptr);
     mediapipeDummy.inputConfig = testPbtxt;
     ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::LLM_NODE_DIRECTORY_DOES_NOT_EXIST);
+    auto status = mediapipeDummy.validate(manager);
+    ASSERT_EQ(status, StatusCode::LLM_NODE_DIRECTORY_DOES_NOT_EXIST);
 }
 
 TEST_F(LLMConfigHttpTest, LLMNodeBadWorkspacePathEmpty) {
@@ -3615,7 +3617,8 @@ TEST_F(LLMConfigHttpTest, LLMNodeBadWorkspacePathEmpty) {
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, nullptr);
     mediapipeDummy.inputConfig = testPbtxt;
-    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::LLM_NODE_DIRECTORY_DOES_NOT_EXIST);
+    auto status = mediapipeDummy.validate(manager);
+    ASSERT_EQ(status, StatusCode::LLM_NODE_DIRECTORY_DOES_NOT_EXIST) << status.string();
 }
 
 TEST_F(LLMConfigHttpTest, LLMNodeWorkspacePathToFileNotDir) {
@@ -3657,7 +3660,8 @@ TEST_F(LLMConfigHttpTest, LLMNodeWorkspacePathToFileNotDir) {
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, nullptr);
     mediapipeDummy.inputConfig = testPbtxt;
-    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::LLM_NODE_PATH_DOES_NOT_EXIST_AND_NOT_GGUFFILE);
+    auto status = mediapipeDummy.validate(manager);
+    ASSERT_EQ(status, StatusCode::LLM_NODE_PATH_DOES_NOT_EXIST_AND_NOT_GGUFFILE) << status.string();
 }
 
 class LLMConfigHttpTestParameterized : public ::testing::Test, public ::testing::WithParamInterface<std::tuple<std::string, ovms::StatusCode>> {
@@ -3710,7 +3714,8 @@ TEST_P(LLMConfigHttpTestParameterized, LLMNodeResourceInitFailed) {
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, nullptr);
     mediapipeDummy.inputConfig = testPbtxt;
-    ASSERT_EQ(mediapipeDummy.validate(manager), expectedStatusCode);
+    auto status = mediapipeDummy.validate(manager);
+    ASSERT_EQ(status, expectedStatusCode);
     ASSERT_EQ(mediapipeDummy.getGenAiServable("llmNode"), nullptr);
 }
 

@@ -571,7 +571,7 @@ TEST_F(GraphCreationTest, rerankPositiveNonDefault) {
     rerankGraphSettings.targetDevice = "GPU";
     rerankGraphSettings.modelName = "myModel";
     rerankGraphSettings.modelPath = "/some/path";
-    rerankGraphSettings.numStreams = 2;
+    rerankGraphSettings.pluginConfig.numStreams = 2;
     rerankGraphSettings.maxAllowedChunks = 18;
     hfSettings.graphSettings = std::move(rerankGraphSettings);
 
@@ -605,7 +605,7 @@ TEST_F(GraphCreationTest, rerankCreatedPbtxtInvalid) {
     ovms::RerankGraphSettingsImpl rerankGraphSettings;
     rerankGraphSettings.targetDevice = "GPU";
     rerankGraphSettings.modelName = "myModel\"";
-    rerankGraphSettings.numStreams = 2;
+    rerankGraphSettings.pluginConfig.numStreams = 2;
     hfSettings.graphSettings = std::move(rerankGraphSettings);
     std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
     std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
@@ -624,7 +624,7 @@ TEST_F(GraphCreationTest, embeddingsPositiveNonDefault) {
     embeddingsGraphSettings.targetDevice = "GPU";
     embeddingsGraphSettings.modelName = "myModel";
     embeddingsGraphSettings.modelPath = "/model1/path";
-    embeddingsGraphSettings.numStreams = 2;
+    embeddingsGraphSettings.pluginConfig.numStreams = 2;
     embeddingsGraphSettings.normalize = "false";
     embeddingsGraphSettings.truncate = "true";
     embeddingsGraphSettings.pooling = "LAST";
@@ -658,7 +658,7 @@ TEST_F(GraphCreationTest, embeddingsCreatedPbtxtInvalid) {
     ovms::EmbeddingsGraphSettingsImpl embeddingsGraphSettings;
     embeddingsGraphSettings.targetDevice = "GPU";
     embeddingsGraphSettings.modelName = "myModel\"";
-    embeddingsGraphSettings.numStreams = 2;
+    embeddingsGraphSettings.pluginConfig.numStreams = 2;
     embeddingsGraphSettings.normalize = "true";
     embeddingsGraphSettings.pooling = "CLS";
     hfSettings.graphSettings = std::move(embeddingsGraphSettings);
@@ -794,7 +794,8 @@ TEST_F(GraphCreationTest, imageGenerationPositiveFull) {
     ovms::HFSettingsImpl hfSettings;
     hfSettings.task = ovms::IMAGE_GENERATION_GRAPH;
     ovms::ImageGenerationGraphSettingsImpl imageGenerationGraphSettings;
-    imageGenerationGraphSettings.pluginConfig = "{\"NUM_STREAMS\":14,\"CACHE_DIR\":\"/cache\"}";
+    imageGenerationGraphSettings.pluginConfig.numStreams = 14;
+    hfSettings.exportSettings.cacheDir = "/cache";
     imageGenerationGraphSettings.targetDevice = "GPU";
     imageGenerationGraphSettings.defaultResolution = "300x400";
     imageGenerationGraphSettings.maxResolution = "3000x4000";

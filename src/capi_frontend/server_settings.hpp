@@ -91,7 +91,13 @@ struct PluginConfigSettingsImpl {
     std::optional<std::string> kvCachePrecision;
     std::optional<uint32_t> maxPromptLength;
     std::optional<std::string> modelDistributionPolicy;
-    //std::optional<std::string> cacheDir;
+    std::optional<uint32_t> numStreams;
+    bool empty() const {
+        return !kvCachePrecision.has_value() &&
+               !maxPromptLength.has_value() &&
+               !modelDistributionPolicy.has_value() &&
+               !numStreams.has_value();
+    }
 };
 
 struct TextGenGraphSettingsImpl {
@@ -112,21 +118,23 @@ struct TextGenGraphSettingsImpl {
 };
 
 struct EmbeddingsGraphSettingsImpl {
+    EmbeddingsGraphSettingsImpl();
     std::string modelPath = "./";
     std::string targetDevice = "CPU";
     std::string modelName = "";
-    uint32_t numStreams = 1;
     std::string normalize = "true";
     std::string truncate = "false";
     std::string pooling = "CLS";
+    PluginConfigSettingsImpl pluginConfig;
 };
 
 struct RerankGraphSettingsImpl {
+    RerankGraphSettingsImpl();
     std::string modelPath = "./";
     std::string targetDevice = "CPU";
     std::string modelName = "";
-    uint32_t numStreams = 1;
     uint64_t maxAllowedChunks = 10000;
+    PluginConfigSettingsImpl pluginConfig;
 };
 
 struct ImageGenerationGraphSettingsImpl {
@@ -141,7 +149,7 @@ struct ImageGenerationGraphSettingsImpl {
     std::optional<uint32_t> maxNumberImagesPerPrompt;
     std::optional<uint32_t> defaultNumInferenceSteps;
     std::optional<uint32_t> maxNumInferenceSteps;
-    std::string pluginConfig;
+    PluginConfigSettingsImpl pluginConfig;
 };
 
 struct ExportSettings {
