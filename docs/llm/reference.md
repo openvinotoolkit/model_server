@@ -158,13 +158,13 @@ When using models with more complex templates and support for `tools` or `reason
 __Tool parsers:__
 - `hermes3` (also works for Qwen3 models)
 - `llama3`
-- `phi4` (no streaming support)
+- `phi4`
 - `mistral` (no streaming support)
+- `gptoss`
+- `qwen3coder`
 
 __Reasoning parsers:__
 - `qwen3`
-
-Those are the only acceptable values at the moment since OVMS supports `tools` handling in these particular models and `reasoning` in `Qwen3`.
 
 Note that using `tools` might require a chat template other than the original. 
 We recommend using templates from [vLLM repository](https://github.com/vllm-project/vllm/tree/main/examples) for `hermes3`, `llama3`, `phi4` and `mistral` models. Save selected template as `chat_template.jinja` in model directory and it will be used instead of the default one.
@@ -214,10 +214,10 @@ In node configuration we set `models_path` indicating location of the directory 
 ├── openvino_tokenizer.bin
 ├── openvino_tokenizer.xml
 ├── tokenizer_config.json
-├── template.jinja
+├── chat_template.jinja
 ```
 
-Main model as well as tokenizer and detokenizer are loaded from `.xml` and `.bin` files and all of them are required. `tokenizer_config.json` and `template.jinja` are loaded to read information required for chat template processing. Model directory may also contain `generation_config.json` which specifies recommended generation parameters.
+Main model as well as tokenizer and detokenizer are loaded from `.xml` and `.bin` files and all of them are required. `tokenizer_config.json` and `chat_template.jinja` are loaded to read information required for chat template processing. Model directory may also contain `generation_config.json` which specifies recommended generation parameters.
 If such file exists, model server will use it to load default generation configuration for processing request to that model.
 
 Additionally, Visual Language Models have encoder and decoder models for text and vision and potentially other auxiliary models.
@@ -239,20 +239,13 @@ When sending a request to `/completions` endpoint, model server adds `bos_token_
 When sending a request to `/chat/completions` endpoint, model server will try to apply chat template to request `messages` contents.
 
 Loading chat template proceeds as follows:
-1. If `tokenizer.jinja` is present, try to load template from it.
-2. If there is no `tokenizer.jinja` and `tokenizer_config.json` exists, try to read template from its `chat_template` field. If it's not present, use default template.
+1. If `chat_template.jinja` is present, try to load template from it.
+2. If there is no `chat_template.jinja` and `tokenizer_config.json` exists, try to read template from its `chat_template` field. If it's not present, use default template.
 3. If `tokenizer_config.json` exists try to read `eos_token` and `bos_token` fields. If they are not present, both values are set to empty string.
 
-**Note**: If both `template.jinja` file and `chat_completion` field from `tokenizer_config.json` are successfully loaded, `template.jinja` takes precedence over `tokenizer_config.json`.
+If both `chat_template.jinja` file and `chat_template` field from `tokenizer_config.json` are successfully loaded, `chat_template.jinja` takes precedence over `tokenizer_config.json`.
 
-If no chat template has been specified, default template is applied. The template looks as follows:
-```
-"{% if messages|length != 1 %} {{ raise_exception('This servable accepts only single message requests') }}{% endif %}{{ messages[0]['content'] }}"
-```
-
-When default template is loaded, servable accepts `/chat/completions` calls when `messages` list contains only single element (otherwise returns error) and treats `content` value of that single message as an input prompt for the model.
-
-**Note:** Template is not applied for calls to `/completions`, so it doesn't have to exist, if you plan to work only with `/completions`.
+Template is not applied for calls to `/completions`, so it doesn't have to exist, if you plan to work only with `/completions`.
 
 Errors during configuration files processing (access issue, corrupted file, incorrect content) result in servable loading failure.
 
@@ -276,9 +269,6 @@ There are several known limitations which are expected to be addressed in the co
 
 - Metrics related to text generation are not exposed via `metrics` endpoint. Key metrics from LLM calculators are included in the server logs with information about active requests, scheduled for text generation and KV Cache usage. It is possible to track in the metrics the number of active generation requests using metric called `ovms_current_graphs`. Also tracking statistics for request and responses is possible. [Learn more](../metrics.md)
 - `logprobs` parameter is not supported currently in streaming mode. It includes only a single logprob and do not include values for input tokens
-- Server logs might sporadically include a message "PCRE2 substitution failed with error code -55" - this message can be safely ignored. It will be removed in next version
-- using `tools` is supported only for Hermes3, Llama3, Phi4 and Qwen3 models
-- using `tools` is not supported in streaming mode
 - using `tools` is not supported in configuration without Python
 
 Some servable types introduce additional limitations:
