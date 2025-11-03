@@ -27,6 +27,8 @@ or [RedHat Ecosystem Catalog](https://catalog.redhat.com/software/containers/int
 docker pull registry.connect.redhat.com/intel/openvino-model-server:latest
 ```
 
+> **NOTE**: You can also pull public image `openvino/model_server:weekly` with development version of the model server, which is built from the main branch. It allow you to evaluate the latest features ahead of official releases.
+
 #### Step 2. Prepare Data for Serving
 
 ##### 2.1 Start the container with the model
