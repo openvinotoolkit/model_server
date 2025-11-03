@@ -118,7 +118,8 @@ struct TextGenGraphSettingsImpl {
 };
 
 struct EmbeddingsGraphSettingsImpl {
-    EmbeddingsGraphSettingsImpl();
+    EmbeddingsGraphSettingsImpl() :
+        pluginConfig{std::nullopt, std::nullopt, std::nullopt, 1} {}
     std::string modelPath = "./";
     std::string targetDevice = "CPU";
     std::string modelName = "";
@@ -129,7 +130,8 @@ struct EmbeddingsGraphSettingsImpl {
 };
 
 struct RerankGraphSettingsImpl {
-    RerankGraphSettingsImpl();
+    RerankGraphSettingsImpl::RerankGraphSettingsImpl() :
+        pluginConfig{std::nullopt, std::nullopt, std::nullopt, 1} {}
     std::string modelPath = "./";
     std::string targetDevice = "CPU";
     std::string modelName = "";

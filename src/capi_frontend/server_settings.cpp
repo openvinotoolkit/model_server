@@ -20,11 +20,6 @@
 #include "../stringutils.hpp"
 
 namespace ovms {
-EmbeddingsGraphSettingsImpl::EmbeddingsGraphSettingsImpl() :
-    pluginConfig{std::nullopt, std::nullopt, std::nullopt, 1} {}
-RerankGraphSettingsImpl::RerankGraphSettingsImpl() :
-    pluginConfig{std::nullopt, std::nullopt, std::nullopt, 1} {}
-
 std::string enumToString(ConfigExportType type) {
     auto it = configExportTypeToString.find(type);
     return (it != configExportTypeToString.end()) ? it->second : "UNKNOWN_MODEL";

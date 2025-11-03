@@ -1005,7 +1005,7 @@ TEST_F(OvmsConfigDeathTest, simultaneousPullAndRemove) {
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "--remove_from_config cannot be used with --pull or --task") << createCmd(arg_count, n_argv) << buffer.str();
 }
 
-TEST(OvmsGraphConfigTest, positiveAllChanged) {
+TEST(OvmsGraphConfigTest, positiveAllChangedTextGeneration) {
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string downloadPath = "test/repository";
     char* n_argv[] = {
@@ -1075,7 +1075,7 @@ TEST(OvmsGraphConfigTest, positiveAllChanged) {
     ASSERT_EQ(graphSettings.pluginConfig.maxPromptLength.value(), 2048);
 }
 
-TEST(OvmsGraphConfigTest, positiveSomeChanged) {
+TEST(OvmsGraphConfigTest, positiveSomeChangedTextGeneration) {
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string downloadPath = "test/repository";
     char* n_argv[] = {
@@ -1521,9 +1521,12 @@ TEST(OvmsGraphConfigTest, positiveAllChangedRerank) {
         (char*)"2",
         (char*)"--model_name",
         (char*)servingName.c_str(),
-    };
+        (char*)"--plugin_config",
+        (char*)"{\"SOME_KEY\":\"SOME_VALUE\"}",
+        (char*)"--cache_dir",
+        (char*)"/tmp/cache_dir_with_emptiness"};
 
-    int arg_count = 16;
+    int arg_count = 20;
     ConstructorEnabledConfig config;
     config.parse(arg_count, n_argv);
 
@@ -1538,6 +1541,8 @@ TEST(OvmsGraphConfigTest, positiveAllChangedRerank) {
     ASSERT_EQ(rerankGraphSettings.targetDevice, "GPU");
     ASSERT_EQ(rerankGraphSettings.modelName, servingName);
     ASSERT_EQ(rerankGraphSettings.modelPath, "./");
+    ASSERT_EQ(hfSettings.exportSettings.cacheDir.value(), "/tmp/cache_dir_with_emptiness");
+    ASSERT_EQ(hfSettings.exportSettings.pluginConfig.value(), "{\"SOME_KEY\":\"SOME_VALUE\"}");
 }
 
 TEST(OvmsGraphConfigTest, positiveAllChangedRerankStart) {
@@ -1685,9 +1690,11 @@ TEST(OvmsGraphConfigTest, positiveAllChangedImageGeneration) {
         (char*)"2",
         (char*)"--max_num_inference_steps",
         (char*)"3",
+        (char*)"--plugin_config",
+        (char*)"{\"SOME_KEY\":\"SOME_VALUE\"}",
     };
 
-    int arg_count = 30;
+    int arg_count = 32;
     ConstructorEnabledConfig config;
     config.parse(arg_count, n_argv);
 
@@ -1712,6 +1719,7 @@ TEST(OvmsGraphConfigTest, positiveAllChangedImageGeneration) {
     ASSERT_EQ(imageGenerationGraphSettings.maxNumInferenceSteps.value(), 3);
     ASSERT_EQ(imageGenerationGraphSettings.pluginConfig.numStreams, 14);
     ASSERT_EQ(hfSettings.exportSettings.cacheDir.value(), "/cache");
+    ASSERT_EQ(hfSettings.exportSettings.pluginConfig.value(), "{\"SOME_KEY\":\"SOME_VALUE\"}");
 }
 
 TEST(OvmsGraphConfigTest, positiveDefaultImageGeneration) {
@@ -1772,9 +1780,12 @@ TEST(OvmsGraphConfigTest, positiveAllChangedEmbeddings) {
         (char*)"2",
         (char*)"--model_name",
         (char*)servingName.c_str(),
-    };
+        (char*)"--plugin_config",
+        (char*)"{\"SOME_KEY\":\"SOME_VALUE\"}",
+        (char*)"--cache_dir",
+        (char*)"/tmp/cache_dir_with_emptiness"};
 
-    int arg_count = 20;
+    int arg_count = 24;
     ConstructorEnabledConfig config;
     config.parse(arg_count, n_argv);
 
@@ -1791,6 +1802,8 @@ TEST(OvmsGraphConfigTest, positiveAllChangedEmbeddings) {
     ASSERT_EQ(embeddingsGraphSettings.targetDevice, "GPU");
     ASSERT_EQ(embeddingsGraphSettings.modelName, servingName);
     ASSERT_EQ(embeddingsGraphSettings.modelPath, "./");
+    ASSERT_EQ(hfSettings.exportSettings.cacheDir.value(), "/tmp/cache_dir_with_emptiness");
+    ASSERT_EQ(hfSettings.exportSettings.pluginConfig.value(), "{\"SOME_KEY\":\"SOME_VALUE\"}");
 }
 
 TEST(OvmsGraphConfigTest, positiveAllChangedEmbeddingsStart) {

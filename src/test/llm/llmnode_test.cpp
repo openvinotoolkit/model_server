@@ -3573,9 +3573,8 @@ TEST_F(LLMConfigHttpTest, LLMNodeNonExistantModelsPath) {
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, nullptr);
     mediapipeDummy.inputConfig = testPbtxt;
-    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::LLM_NODE_DIRECTORY_DOES_NOT_EXIST);
     auto status = mediapipeDummy.validate(manager);
-    ASSERT_EQ(status, StatusCode::LLM_NODE_DIRECTORY_DOES_NOT_EXIST);
+    ASSERT_EQ(status, StatusCode::LLM_NODE_DIRECTORY_DOES_NOT_EXIST) << status.string();
 }
 
 TEST_F(LLMConfigHttpTest, LLMNodeBadWorkspacePathEmpty) {
