@@ -46,7 +46,7 @@ std::string OvmsWindowsServiceManager::getCurrentTimeString() {
     return oss.str();
 }
 
-#define DEBUG_LOG_ENABLE 0
+#define DEBUG_LOG_ENABLE 1
 // TODO: Implement windows logging mechanism with events
 static std::ofstream logFile("C:\\temp\\ovms.log", std::ios::app);
 #define DEBUG_LOG(msg)                                                                   \
@@ -438,6 +438,7 @@ DWORD WINAPI OvmsWindowsServiceManager::serviceWorkerThread(LPVOID lpParam) {
             break;
         }
 
+        DEBUG_LOG("serviceWorkerThread: checkModulesStarted...");
         ovmsService->checkModulesStarted();
     }
 
@@ -501,34 +502,94 @@ void OvmsWindowsServiceManager::setServiceRunningStatus() {
     DEBUG_LOG("ServiceMain: SetServiceStatus running");
 }
 
+std::string OvmsWindowsServiceManager::getRegValue(const winreg::RegKey& key,const std::wstring& name,const DWORD& regType) {
+    std::string retStr = "";
+    switch (regType)
+    {
+        case REG_SZ: {
+            if (auto testVal = key.TryGetStringValue(name)) {
+                retStr = wstringToString(testVal.GetValue());
+            }
+
+            return retStr;
+        }
+        case REG_EXPAND_SZ:{
+            if (auto testVal = key.TryGetExpandStringValue(name)) {
+                retStr = wstringToString(testVal.GetValue());
+            }
+
+            return retStr;
+        }
+        case REG_MULTI_SZ:{
+            if (auto testVal = key.TryGetMultiStringValue(name)) {
+                for(auto elem : testVal.GetValue()) {
+                    retStr += wstringToString(elem) + ",";
+                }
+            }
+
+            return retStr;
+        }
+        case REG_DWORD: {
+            if (auto testVal = key.TryGetDwordValue(name)) {
+                retStr = std::to_string(testVal.GetValue());
+            }
+
+            return retStr;
+        }
+        case REG_QWORD: {
+            if (auto testVal = key.TryGetQwordValue(name)) {
+                retStr = std::to_string(testVal.GetValue());
+            }
+
+            return retStr;
+        }
+        case REG_BINARY: {
+            if (auto testVal = key.TryGetBinaryValue(name)) {
+                for(auto elem : testVal.GetValue()) {
+                    retStr += std::to_string(elem) + ",";
+                }
+            }
+
+            return retStr;
+        }
+        default:            return retStr;
+    }
+    return retStr;    
+}
+
+void OvmsWindowsServiceManager::logRegistryEntry(HKEY keyType, const std::wstring& keyPath) {
+    DEBUG_LOG(wstringToString(keyPath));
+    winreg::RegKey key{keyType, keyPath};
+    std::vector<std::wstring> subKeyNames = key.EnumSubKeys();
+    DEBUG_LOG("SubKeys:");
+    for (const auto& s : subKeyNames) {
+        DEBUG_LOG(wstringToString(s));
+    }
+    std::vector<std::pair<std::wstring, DWORD>> values = key.EnumValues();
+    DEBUG_LOG("Values:");
+    for (const auto& [valueName, valueType] : values) {
+        std::stringstream ss2;
+        // Try string reg value
+        ss2 << "  [" << wstringToString(valueName) << "](" << wstringToString(winreg::RegKey::RegTypeToString(valueType)) << "): " << getRegValue(key, valueName, valueType);
+        DEBUG_LOG(ss2.rdbuf());
+    }
+}
+
 // Computer\HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\ovms
 void OvmsWindowsServiceManager::setPythonPathRegistry() {
     try {
         const std::wstring ovmsServiceKey = L"SYSTEM\\CurrentControlSet\\Services\\ovms";
         winreg::RegKey key{HKEY_LOCAL_MACHINE, ovmsServiceKey};
-        DEBUG_LOG(wstringToString(ovmsServiceKey));
-        std::vector<std::wstring> subKeyNames = key.EnumSubKeys();
-        DEBUG_LOG("SubKeys:");
-        for (const auto& s : subKeyNames) {
-            DEBUG_LOG(wstringToString(s));
-        }
-        /*std::vector<std::pair<std::wstring, DWORD>> values = key.EnumValues();
-        DEBUG_LOG("Values:");
-        for (const auto& [valueName, valueType] : values) {
-            //std::stringstream ss2;
-            // TODO: ss2 << "  [" << wstringToString(valueName) << "](" << wstringToString(winreg::RegKey::RegTypeToString(valueType)) << ")";
-            //DEBUG_LOG(ss2.rdbuf());
-        } */
-
+        
         TCHAR szUnquotedPath[MAX_PATH];
         if (!GetModuleFileName(NULL, szUnquotedPath, MAX_PATH)) {
             DEBUG_LOG("setPythonPathRegistry, GetModuleFileName failed.");
             return;
         }
-
         //  create PATH=c:\test2\ovms\python;%PATH%
         std::string ovmsDirectory = std::filesystem::path(szUnquotedPath).parent_path().string();
         std::stringstream ss3;
+        DEBUG_LOG("Adding Service Environment setting:")
         ss3 << "PATH=" << ovmsDirectory << "\\python;%PATH%";
         DEBUG_LOG(ss3.str());
         std::vector<std::wstring> multiString;
@@ -536,6 +597,7 @@ void OvmsWindowsServiceManager::setPythonPathRegistry() {
         key.Open(HKEY_LOCAL_MACHINE, ovmsServiceKey);
         key.SetMultiStringValue(L"Environment", multiString);
         key.Close();
+        OvmsWindowsServiceManager::logRegistryEntry(HKEY_LOCAL_MACHINE, ovmsServiceKey);
     } catch (const std::exception& e) {
         DEBUG_LOG("setPythonPathRegistry: Add python path variable Failed:");
         DEBUG_LOG(e.what());

@@ -22,6 +22,10 @@
 #include <utility>
 #include <Windows.h>
 #include <tchar.h>
+#pragma warning(push)
+#pragma warning(disable : 6553)
+#include <WinReg/WinReg.hpp>
+#pragma warning(pop)
 
 #include "server.hpp"
 namespace ovms_service {
@@ -102,6 +106,10 @@ private:
     void setServiceStopStatusWithSuccess();
     void setServiceStopStatusWithError();
     void setServiceRunningStatus();
+
+    // Registry manipulation
+    static std::string getRegValue(const winreg::RegKey& key,const std::wstring& name,const DWORD& type);
+    static void logRegistryEntry(HKEY keyType, const std::wstring& keyPath);
 };
 
 }  // namespace ovms_service

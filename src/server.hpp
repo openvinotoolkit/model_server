@@ -41,7 +41,7 @@ protected:
 public:
     static Server& instance();
     int start(int argc, char** argv);
-    Status start(ServerSettingsImpl*, ModelsSettingsImpl*);
+    Status startFromSettings(ServerSettingsImpl*, ModelsSettingsImpl*);
     ModuleState getModuleState(const std::string& name) const;
     const Module* getModule(const std::string& name) const;
     bool isReady() const;

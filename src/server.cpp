@@ -423,7 +423,7 @@ int Server::start(int argc, char** argv) {
         parser.parse(argc, argv);
         parser.prepare(&serverSettings, &modelsSettings);
 
-        Status ret = start(&serverSettings, &modelsSettings);
+        Status ret = startFromSettings(&serverSettings, &modelsSettings);
         ModulesShutdownGuard shutdownGuard(*this);
         if (!ret.ok()) {
             return statusToExitCode(ret);
@@ -445,7 +445,7 @@ int Server::start(int argc, char** argv) {
 }
 
 // C-API Start
-Status Server::start(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* modelsSettings) {
+Status Server::startFromSettings(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* modelsSettings) {
     try {
         std::unique_lock lock{this->startMtx, std::defer_lock};
         auto locked = lock.try_lock();
