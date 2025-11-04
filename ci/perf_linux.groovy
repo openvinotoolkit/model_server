@@ -51,36 +51,32 @@ pipeline {
             defaultValue: true,
             description: "Agentic accuracy"
         )
-        group(
-            title: 'Agentic Accuracy',
-            contents: [
-            booleanParam(
-                defaultValue: true, 
-                description: 'Use tool guided generation in agentic accuracy test', 
-                name: 'USE_TOOL_GUIDED_GENERATION'
-            ),
-            booleanParam(
-                defaultValue: true, 
-                description: 'Use thinking in agentic accuracy test', 
-                name: 'USE_THINKING'
-            ),
-            string(
-                defaultValue: '--tool_parser hermes3 --reasoning_parser qwen3', 
-                description: 'parsers to be applied in agentic accuracy test', 
-                name: 'PARSERS'
-            ),
-            string(
-                defaultValue: '', 
-                description: 'Optional chat template URL for agentic tests', 
-                name: 'CHAT_TEMPLATE_URL'
-            )
-            ]
+        booleanParam(
+            defaultValue: true, 
+            description: 'Use tool guided generation in agentic accuracy test', 
+            name: 'USE_TOOL_GUIDED_GENERATION'
+        )
+        booleanParam(
+            defaultValue: true, 
+            description: 'Use thinking in agentic accuracy test', 
+            name: 'USE_THINKING',
+
+        )
+        string(
+            defaultValue: '--tool_parser hermes3 --reasoning_parser qwen3', 
+            description: 'parsers to be applied in agentic accuracy test', 
+            name: 'PARSERS'
+        )
+        string(
+            defaultValue: '', 
+            description: 'Optional chat template URL for agentic tests', 
+            name: 'CHAT_TEMPLATE_URL'
         )
         string (
             name: "MODELS_REPOSITORY_PATH",
             defaultValue: "",
             description: "Path to models repository. Defines where to copy the model for load execution. By default in jenkins workspace/models"
-        )        
+        )
         booleanParam(
             name: "SAVE_REFERENCE",
             defaultValue: false,
