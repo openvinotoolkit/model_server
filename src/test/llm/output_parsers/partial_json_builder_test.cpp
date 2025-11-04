@@ -262,7 +262,8 @@ TEST_F(PartialJsonBuilderTest, escapedCharactersSanityCheck) {
     ASSERT_EQ(parsedJson["arguments"].GetString(), std::string("{\"impl\": \"TYPE MQTT_Config AS\\n    VAR\\n  \\\"txt\\\"      BrokerIP : STRING := '127.0.0.1';\"}"));
 }
 
-TEST_F(PartialJsonBuilderTest, tmptest) {
+TEST_F(PartialJsonBuilderTest, doubleBackslashBeforeQuote) {
+    // Check that double backslash before quote is handled correctly (final quote is not escaped)
     std::string targetJson = R"({"name": "set_status", "arguments": "{\"status\": \"CONNECTED,\\"})";
     PartialJsonBuilder builder;
     rapidjson::Document parsedJson;
