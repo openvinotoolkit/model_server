@@ -14,12 +14,12 @@ pipeline {
         string (
             name: "DOCKER_IMAGE_NAME",
             defaultValue: "registry.toolbox.iotg.sclab.intel.com/openvino/model_server-gpu:ubuntu24_main",
-            description: "Name of the image to be scanned. Can't be empty. Registry/image/tag format."
+            description: "Name of the image to be scanned. Can't be empty. Registry/image:tag format."
         )
         string (
             name: "MODEL",
             defaultValue: "OpenVINO/Qwen3-4B-int4-ov",
-            description: "Model to use in tests"
+            description: "Model to use in tests. Can be a local path or a model name from HF hub."
         )
         string (
             name: "TARGET_ENV",
@@ -29,7 +29,7 @@ pipeline {
         string (
             name: "DEVICE",
             defaultValue: "CPU",
-            description: "Device to use in tests"
+            description: "Device to use in tests. GPU or CPU"
         )
         booleanParam(
             defaultValue: true, 
@@ -51,20 +51,35 @@ pipeline {
             defaultValue: true,
             description: "Agentic accuracy"
         )
-        booleanParam(
-            defaultValue: true, 
-            description: 'Use tool guided generation in agentic accuracy test', 
-            name: 'USE_TOOL_GUIDED_GENERATION'
+        group(
+            title: 'Agentic Accuracy',
+            contents: [
+            booleanParam(
+                defaultValue: true, 
+                description: 'Use tool guided generation in agentic accuracy test', 
+                name: 'USE_TOOL_GUIDED_GENERATION'
+            ),
+            booleanParam(
+                defaultValue: true, 
+                description: 'Use thinking in agentic accuracy test', 
+                name: 'USE_THINKING'
+            ),
+            string(
+                defaultValue: '--tool_parser hermes3 --reasoning_parser qwen3', 
+                description: 'parsers to be applied in agentic accuracy test', 
+                name: 'PARSERS'
+            ),
+            string(
+                defaultValue: '', 
+                description: 'Optional chat template URL for agentic tests', 
+                name: 'CHAT_TEMPLATE_URL'
+            )
+            ]
         )
-        booleanParam(
-            defaultValue: true, 
-            description: 'Use thinking in agentic accuracy test', 
-            name: 'USE_THINKING'
-        )                
         string (
             name: "MODELS_REPOSITORY_PATH",
             defaultValue: "",
-            description: "Path to models repository"
+            description: "Path to models repository. Defines where to copy the model for load execution. By default in jenkins workspace/models"
         )        
         booleanParam(
             name: "SAVE_REFERENCE",
@@ -86,7 +101,9 @@ pipeline {
             steps {
                 script {    
                     def gpuFlags = "--device /dev/dri --group-add=\$(stat -c \"%g\" /dev/dri/render* | head -n 1)"
-                    modelsPath = params.MODELS_REPOSITORY_PATH?.trim() ? params.MODELS_REPOSITORY_PATH : "${env.WORKSPACE}/models"
+                    modelsPath = params.M
+                    
+                    ?.trim() ? params.MODELS_REPOSITORY_PATH : "${env.WORKSPACE}/models"
                     model_name = params.MODEL
                     sh "mkdir -p ${modelsPath}"
                     if (fileExists(params.MODEL) ) {
@@ -311,9 +328,13 @@ pipeline {
                             sh "cp -R ${params.MODEL} ${modelsPath}"
                             model_need_copy = false
                         }
-                    }               
+                    }
+                    if (params.CHAT_TEMPLATE_URL?.trim()) {
+                        def chatTemplateFile = "${modelsPath}/${model_name}/chat_template.json"
+                        sh "curl -sSL '${params.CHAT_TEMPLATE_URL}' -o '${chatTemplateFile}'"
+                    }
                     sh "docker pull ${params.DOCKER_IMAGE_NAME} && \
-                    docker run --rm -d --user \$(id -u):\$(id -g) ${gpuFlags} -e https_proxy=${env.HTTPS_PROXY} --name model_server_${BUILD_NUMBER} -p 9000:9000 -v ${modelsPath}:/models ${params.DOCKER_IMAGE_NAME} --source_model ${model_name} --rest_port 9000 --task text_generation --enable_tool_guided_generation ${params.USE_TOOL_GUIDED_GENERATION} --tool_parser hermes3 --reasoning_parser qwen3 --model_repository_path /models --model_name ovms-model --target_device ${params.DEVICE} --cache_size 3 --log_level INFO && \
+                    docker run --rm -d --user \$(id -u):\$(id -g) ${gpuFlags} -e https_proxy=${env.HTTPS_PROXY} --name model_server_${BUILD_NUMBER} -p 9000:9000 -v ${modelsPath}:/models ${params.DOCKER_IMAGE_NAME} --source_model ${model_name} --rest_port 9000 --task text_generation --enable_tool_guided_generation ${params.USE_TOOL_GUIDED_GENERATION} ${params.PARSERS} --model_repository_path /models --model_name ovms-model --target_device ${params.DEVICE} --cache_size 3 --log_level INFO && \
                     echo wait for model server to be ready && \
                     while [ \"\$(curl -s http://localhost:9000/v3/models | jq -r '.data[0].id')\" != \"ovms-model\" ] ; do echo waiting for LLM model; sleep 1; done"
                 }
