@@ -31,7 +31,7 @@ namespace ovms {
 class BaseGenerationConfigBuilder {
 protected:
     ov::genai::GenerationConfig config;
-    bool enableToolGuidedGeneration;
+    const bool enableToolGuidedGeneration;
     void setStructuralTagsConfig(const ov::genai::StructuredOutputConfig::StructuralTag& structuralTag);
 
 public:
