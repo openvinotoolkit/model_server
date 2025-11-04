@@ -37,7 +37,7 @@ protected:
 public:
     BaseGenerationConfigBuilder() = delete;
     // Initializes the builder with a base generation config read from model generation_config.json
-    explicit BaseGenerationConfigBuilder(ov::genai::GenerationConfig& baseConfig, bool enableToolGuidedGeneration = false) :
+    explicit BaseGenerationConfigBuilder(ov::genai::GenerationConfig& baseConfig, bool enableToolGuidedGeneration) :
         config(baseConfig),
         enableToolGuidedGeneration(enableToolGuidedGeneration) {}
     virtual ~BaseGenerationConfigBuilder() = default;

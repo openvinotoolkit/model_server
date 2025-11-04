@@ -34,7 +34,7 @@ class GenerationConfigBuilder {
 public:
     GenerationConfigBuilder() = delete;
     // Using tool parser name to select appropriate builder implementation to avoid introducing additional parameters. Might be insufficient in the future.
-    explicit GenerationConfigBuilder(ov::genai::GenerationConfig baseConfig, std::string toolParserName = "", bool enableToolGuidedGeneration = false) {
+    explicit GenerationConfigBuilder(ov::genai::GenerationConfig baseConfig, bool enableToolGuidedGeneration, std::string toolParserName = "") {
         if (toolParserName == "llama3") {
             builder_impl = std::make_unique<Llama3GenerationConfigBuilder>(baseConfig, enableToolGuidedGeneration);
         } else if (toolParserName == "qwen3") {

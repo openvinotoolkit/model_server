@@ -25,7 +25,7 @@ namespace ovms {
 class Phi4GenerationConfigBuilder : public BaseGenerationConfigBuilder {
 public:
     Phi4GenerationConfigBuilder() = delete;
-    explicit Phi4GenerationConfigBuilder(ov::genai::GenerationConfig& baseConfig, bool enableToolGuidedGeneration = false) :
+    explicit Phi4GenerationConfigBuilder(ov::genai::GenerationConfig& baseConfig, bool enableToolGuidedGeneration) :
         BaseGenerationConfigBuilder(baseConfig, enableToolGuidedGeneration) {}
 
     void parseConfigFromRequest(const OpenAIChatCompletionsRequest& request) override;
