@@ -574,7 +574,7 @@ void CLIParser::prepareModel(ModelsSettingsImpl& modelsSettings, HFSettingsImpl&
 
     if (result->count("plugin_config")) {
         modelsSettings.pluginConfig = result->operator[]("plugin_config").as<std::string>();
-        hfSettings.exportSettings.pluginConfig = modelsSettings.pluginConfig;
+        hfSettings.exportSettings.pluginConfig.manualString = modelsSettings.pluginConfig;
         modelsSettings.userSetSingleModelArguments.push_back("plugin_config");
     }
 
@@ -686,7 +686,7 @@ void CLIParser::prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl&
             }
         }
         if (!serverSettings.cacheDir.empty()) {
-            hfSettings.exportSettings.cacheDir = serverSettings.cacheDir;
+            hfSettings.exportSettings.pluginConfig.cacheDir = serverSettings.cacheDir;
         }
     // No pull nor pull and start mode
     } else {

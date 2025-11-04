@@ -88,27 +88,27 @@ enum OvmsServerMode : int {
 };
 
 struct PluginConfigSettingsImpl {
+    std::optional<std::string> manualString;
     std::optional<std::string> kvCachePrecision;
     std::optional<uint32_t> maxPromptLength;
     std::optional<std::string> modelDistributionPolicy;
     std::optional<uint32_t> numStreams;
+    std::optional<std::string> cacheDir;
     bool empty() const {
         return !kvCachePrecision.has_value() &&
                !maxPromptLength.has_value() &&
                !modelDistributionPolicy.has_value() &&
-               !numStreams.has_value();
+               !numStreams.has_value() &&
+               !cacheDir.has_value() &&
+               (!manualString.has_value() || manualString.value().empty());
     }
 };
 
 struct TextGenGraphSettingsImpl {
-    std::string modelPath = "./";
-    std::string modelName = "";
     uint32_t maxNumSeqs = 256;
-    std::string targetDevice = "CPU";
     std::string enablePrefixCaching = "true";
     uint32_t cacheSize = 10;
     std::string dynamicSplitFuse = "true";
-    PluginConfigSettingsImpl pluginConfig;
     std::optional<uint32_t> maxNumBatchedTokens;
     std::optional<std::string> draftModelDirName;
     std::optional<std::string> pipelineType;
@@ -118,31 +118,16 @@ struct TextGenGraphSettingsImpl {
 };
 
 struct EmbeddingsGraphSettingsImpl {
-    EmbeddingsGraphSettingsImpl() :
-        pluginConfig{std::nullopt, std::nullopt, std::nullopt, 1} {}
-    std::string modelPath = "./";
-    std::string targetDevice = "CPU";
-    std::string modelName = "";
     std::string normalize = "true";
     std::string truncate = "false";
     std::string pooling = "CLS";
-    PluginConfigSettingsImpl pluginConfig;
 };
 
 struct RerankGraphSettingsImpl {
-    RerankGraphSettingsImpl() :
-        pluginConfig{std::nullopt, std::nullopt, std::nullopt, 1} {}
-    std::string modelPath = "./";
-    std::string targetDevice = "CPU";
-    std::string modelName = "";
     uint64_t maxAllowedChunks = 10000;
-    PluginConfigSettingsImpl pluginConfig;
 };
 
 struct ImageGenerationGraphSettingsImpl {
-    std::string modelName = "";
-    std::string modelPath = "./";
-    std::string targetDevice = "CPU";
     std::string resolution = "";
     std::string maxResolution = "";
     std::string defaultResolution = "";
@@ -151,15 +136,15 @@ struct ImageGenerationGraphSettingsImpl {
     std::optional<uint32_t> maxNumberImagesPerPrompt;
     std::optional<uint32_t> defaultNumInferenceSteps;
     std::optional<uint32_t> maxNumInferenceSteps;
-    PluginConfigSettingsImpl pluginConfig;
 };
 
 struct ExportSettings {
+    std::string modelName = "";
+    std::string modelPath = "./";
     std::string targetDevice = "CPU";
     std::optional<std::string> extraQuantizationParams;
     std::string precision = "int8";
-    std::optional<std::string> pluginConfig;
-    std::optional<std::string> cacheDir;
+    PluginConfigSettingsImpl pluginConfig;
 };
 
 struct HFSettingsImpl {

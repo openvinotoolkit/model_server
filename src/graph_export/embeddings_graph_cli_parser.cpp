@@ -81,11 +81,11 @@ std::vector<std::string> EmbeddingsGraphCLIParser::parse(const std::vector<std::
 
 void EmbeddingsGraphCLIParser::prepare(OvmsServerMode serverMode, HFSettingsImpl& hfSettings, const std::string& modelName) {
     EmbeddingsGraphSettingsImpl embeddingsGraphSettings = EmbeddingsGraphCLIParser::defaultGraphSettings();
-    embeddingsGraphSettings.targetDevice = hfSettings.exportSettings.targetDevice;
+    hfSettings.exportSettings.targetDevice = hfSettings.exportSettings.targetDevice;
     if (modelName != "") {
-        embeddingsGraphSettings.modelName = modelName;
+        hfSettings.exportSettings.modelName = modelName;
     } else {
-        embeddingsGraphSettings.modelName = hfSettings.sourceModel;
+        hfSettings.exportSettings.modelName = hfSettings.sourceModel;
     }
     if (nullptr == result) {
         // Pull with default arguments - no arguments from user
@@ -93,7 +93,7 @@ void EmbeddingsGraphCLIParser::prepare(OvmsServerMode serverMode, HFSettingsImpl
             throw std::logic_error("Tried to prepare server and model settings without graph parse result");
         }
     } else {
-        embeddingsGraphSettings.pluginConfig.numStreams = result->operator[]("num_streams").as<uint32_t>();
+        hfSettings.exportSettings.pluginConfig.numStreams = result->operator[]("num_streams").as<uint32_t>();
         embeddingsGraphSettings.normalize = result->operator[]("normalize").as<std::string>();
         embeddingsGraphSettings.truncate = result->operator[]("truncate").as<std::string>();
         embeddingsGraphSettings.pooling = result->operator[]("pooling").as<std::string>();

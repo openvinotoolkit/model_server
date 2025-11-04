@@ -119,12 +119,12 @@ std::vector<std::string> GraphCLIParser::parse(const std::vector<std::string>& u
 
 void GraphCLIParser::prepare(OvmsServerMode serverMode, HFSettingsImpl& hfSettings, const std::string& modelName) {
     TextGenGraphSettingsImpl graphSettings = GraphCLIParser::defaultGraphSettings();
-    graphSettings.targetDevice = hfSettings.exportSettings.targetDevice;
+    hfSettings.exportSettings.targetDevice = hfSettings.exportSettings.targetDevice;
     // Deduct model name
     if (modelName != "") {
-        graphSettings.modelName = modelName;
+        hfSettings.exportSettings.modelName = modelName;
     } else {
-        graphSettings.modelName = hfSettings.sourceModel;
+        hfSettings.exportSettings.modelName = hfSettings.sourceModel;
     }
 
     if (nullptr == result) {
@@ -157,13 +157,13 @@ void GraphCLIParser::prepare(OvmsServerMode serverMode, HFSettingsImpl& hfSettin
 
         // Plugin configuration
         if (result->count("max_prompt_len")) {
-            graphSettings.pluginConfig.maxPromptLength = result->operator[]("max_prompt_len").as<uint32_t>();
+            hfSettings.exportSettings.pluginConfig.maxPromptLength = result->operator[]("max_prompt_len").as<uint32_t>();
         }
         if (result->count("model_distribution_policy")) {
-            graphSettings.pluginConfig.modelDistributionPolicy = result->operator[]("model_distribution_policy").as<std::string>();
+            hfSettings.exportSettings.pluginConfig.modelDistributionPolicy = result->operator[]("model_distribution_policy").as<std::string>();
         }
         if (result->count("kv_cache_precision")) {
-            graphSettings.pluginConfig.kvCachePrecision = result->operator[]("kv_cache_precision").as<std::string>();
+            hfSettings.exportSettings.pluginConfig.kvCachePrecision = result->operator[]("kv_cache_precision").as<std::string>();
         }
     }
 

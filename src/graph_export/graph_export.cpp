@@ -82,13 +82,13 @@ std::string GraphExport::getDraftModelDirectoryPath(const std::string& directory
     std::string fullPath = FileSystem::joinPath({directoryPath, GraphExport::getDraftModelDirectoryName(draftModel)});
     return fullPath;
 }
-#define GET_PLUGIN_CONFIG_OPT_OR_FAIL_AND_RETURN(PLUGIN_SETTINGS_IMPL, EXPORT_SETTINGS)                 \
-    auto pluginConfigOrStatus = GraphExport::createPluginString(PLUGIN_SETTINGS_IMPL, EXPORT_SETTINGS); \
-    if (std::holds_alternative<Status>(pluginConfigOrStatus)) {                                         \
-        auto status = std::get<Status>(pluginConfigOrStatus);                                           \
-        SPDLOG_ERROR("Failed to create plugin config: {}", status.string());                            \
-        return status;                                                                                  \
-    }                                                                                                   \
+#define GET_PLUGIN_CONFIG_OPT_OR_FAIL_AND_RETURN(EXPORT_SETTINGS)                 \
+    auto pluginConfigOrStatus = GraphExport::createPluginString(EXPORT_SETTINGS); \
+    if (std::holds_alternative<Status>(pluginConfigOrStatus)) {                   \
+        auto status = std::get<Status>(pluginConfigOrStatus);                     \
+        SPDLOG_ERROR("Failed to create plugin config: {}", status.string());      \
+        return status;                                                            \
+    }                                                                             \
     auto pluginConfigOpt = std::get<std::optional<std::string>>(pluginConfigOrStatus)
 
 static Status createTextGenerationGraphTemplate(const std::string& directoryPath, const HFSettingsImpl& hfSettings) {
@@ -102,9 +102,9 @@ static Status createTextGenerationGraphTemplate(const std::string& directoryPath
 
     std::ostringstream oss;
     oss << OVMS_VERSION_GRAPH_LINE;
-    std::string modelsPath = constructModelsPath(graphSettings.modelPath, ggufFilename);
+    std::string modelsPath = constructModelsPath(exportSettings.modelPath, ggufFilename);
     SPDLOG_TRACE("modelsPath: {}, directoryPath: {}, ggufFilename: {}", modelsPath, directoryPath, ggufFilename.value_or("std::nullopt"));
-    GET_PLUGIN_CONFIG_OPT_OR_FAIL_AND_RETURN(graphSettings.pluginConfig, exportSettings);
+    GET_PLUGIN_CONFIG_OPT_OR_FAIL_AND_RETURN(exportSettings);
     // clang-format off
     oss << R"(
     input_stream: "HTTP_REQUEST_PAYLOAD:input"
@@ -126,7 +126,7 @@ static Status createTextGenerationGraphTemplate(const std::string& directoryPath
             max_num_seqs:)"
         << graphSettings.maxNumSeqs << R"(,
             device: ")"
-        << graphSettings.targetDevice << R"(",
+        << exportSettings.targetDevice << R"(",
             models_path: ")"
         << modelsPath << R"(",
             )";
@@ -209,16 +209,16 @@ static Status createRerankGraphTemplate(const std::string& directoryPath, const 
     std::ostringstream oss;
     oss << OVMS_VERSION_GRAPH_LINE;
     // Windows path creation - graph parser needs forward slashes in paths
-    std::string modelsPath = constructModelsPath(graphSettings.modelPath, ggufFilename);
+    std::string modelsPath = constructModelsPath(exportSettings.modelPath, ggufFilename);
     SPDLOG_TRACE("modelsPath: {}, directoryPath: {}, ggufFilename: {}", modelsPath, directoryPath, ggufFilename.value_or("std::nullopt"));
-    GET_PLUGIN_CONFIG_OPT_OR_FAIL_AND_RETURN(graphSettings.pluginConfig, exportSettings);
+    GET_PLUGIN_CONFIG_OPT_OR_FAIL_AND_RETURN(exportSettings);
     // clang-format off
     oss << R"(
 input_stream: "REQUEST_PAYLOAD:input"
 output_stream: "RESPONSE_PAYLOAD:output"
 node {
     name: ")"
-    << graphSettings.modelName << R"(",
+    << exportSettings.modelName << R"(",
     calculator: "RerankCalculatorOV"
     input_side_packet: "RERANK_NODE_RESOURCES:rerank_servable"
     input_stream: "REQUEST_PAYLOAD:input"
@@ -229,7 +229,7 @@ node {
             << modelsPath << R"(",
             max_allowed_chunks: )"
             << graphSettings.maxAllowedChunks << R"(,
-            target_device: ")" << graphSettings.targetDevice << R"(",
+            target_device: ")" << exportSettings.targetDevice << R"(",
             )";
     if (pluginConfigOpt.has_value()) {
         oss << R"(plugin_config: ')" << pluginConfigOpt.value()  << R"(',)";
@@ -263,16 +263,16 @@ static Status createEmbeddingsGraphTemplate(const std::string& directoryPath, co
 
     std::ostringstream oss;
     oss << OVMS_VERSION_GRAPH_LINE;
-    std::string modelsPath = constructModelsPath(graphSettings.modelPath, ggufFilename);
+    std::string modelsPath = constructModelsPath(exportSettings.modelPath, ggufFilename);
     SPDLOG_TRACE("modelsPath: {}, directoryPath: {}, ggufFilename: {}", modelsPath, directoryPath, ggufFilename.value_or("std::nullopt"));
-    GET_PLUGIN_CONFIG_OPT_OR_FAIL_AND_RETURN(graphSettings.pluginConfig, exportSettings);
+    GET_PLUGIN_CONFIG_OPT_OR_FAIL_AND_RETURN(exportSettings);
     // clang-format off
     oss << R"(
 input_stream: "REQUEST_PAYLOAD:input"
 output_stream: "RESPONSE_PAYLOAD:output"
 node {
     name: ")"
-    << graphSettings.modelName << R"(",
+    << exportSettings.modelName << R"(",
     calculator: "EmbeddingsCalculatorOV"
     input_side_packet: "EMBEDDINGS_NODE_RESOURCES:embeddings_servable"
     input_stream: "REQUEST_PAYLOAD:input"
@@ -287,7 +287,7 @@ node {
             << graphSettings.truncate << R"(,
             pooling: )"
             << graphSettings.pooling << R"(,
-            target_device: ")" << graphSettings.targetDevice << R"(",
+            target_device: ")" << exportSettings.targetDevice << R"(",
             )";
     if (pluginConfigOpt.has_value()) {
         oss << R"(plugin_config: ')" << pluginConfigOpt.value() << R"(',
@@ -318,9 +318,9 @@ static Status createImageGenerationGraphTemplate(const std::string& directoryPat
     auto& graphSettings = std::get<ImageGenerationGraphSettingsImpl>(hfSettings.graphSettings);
     auto& exportSettings = hfSettings.exportSettings;
     auto& ggufFilename = hfSettings.ggufFilename;
-    std::string modelsPath = constructModelsPath(graphSettings.modelPath, ggufFilename);
+    std::string modelsPath = constructModelsPath(exportSettings.modelPath, ggufFilename);
     SPDLOG_TRACE("modelsPath: {}, directoryPath: {}, ggufFilename: {}", modelsPath, directoryPath, ggufFilename.value_or("std::nullopt"));
-    GET_PLUGIN_CONFIG_OPT_OR_FAIL_AND_RETURN(graphSettings.pluginConfig, exportSettings);
+    GET_PLUGIN_CONFIG_OPT_OR_FAIL_AND_RETURN(exportSettings);
 
     std::ostringstream oss;
     oss << OVMS_VERSION_GRAPH_LINE;
@@ -337,8 +337,8 @@ node: {
   output_stream: "HTTP_RESPONSE_PAYLOAD:output"
   node_options: {
       [type.googleapis.com / mediapipe.ImageGenCalculatorOptions]: {
-          models_path: ")" << graphSettings.modelPath << R"("
-          device: ")" << graphSettings.targetDevice << R"(")";
+          models_path: ")" << modelsPath << R"("
+          device: ")" << exportSettings.targetDevice << R"(")";
     if (pluginConfigOpt.has_value()) {
         oss << R"(
           plugin_config: ')" << pluginConfigOpt.value() << R"(')";
@@ -434,8 +434,9 @@ Status GraphExport::createServableConfig(const std::string& directoryPath, const
     return StatusCode::INTERNAL_ERROR;
 }
 
-std::variant<std::optional<std::string>, Status> GraphExport::createPluginString(const PluginConfigSettingsImpl& pluginConfig, const ExportSettings& exportSettings) {
-    auto& stringPluginConfig = exportSettings.pluginConfig;
+std::variant<std::optional<std::string>, Status> GraphExport::createPluginString(const ExportSettings& exportSettings) {
+    auto& stringPluginConfig = exportSettings.pluginConfig.manualString;
+    auto& pluginConfig = exportSettings.pluginConfig;
     rapidjson::Document d;
     d.SetObject();
     if (stringPluginConfig.has_value() && !stringPluginConfig.value().empty()) {
@@ -484,9 +485,9 @@ std::variant<std::optional<std::string>, Status> GraphExport::createPluginString
         d.AddMember("NUM_STREAMS", value, d.GetAllocator());
         configNotEmpty = true;
     }
-    if (exportSettings.cacheDir.has_value()) {
+    if (exportSettings.pluginConfig.cacheDir.has_value()) {
         rapidjson::Value value;
-        value.SetString(exportSettings.cacheDir.value().c_str(), d.GetAllocator());
+        value.SetString(exportSettings.pluginConfig.cacheDir.value().c_str(), d.GetAllocator());
         auto itr = d.FindMember("CACHE_DIR");
         if (itr != d.MemberEnd()) {
             return Status(StatusCode::PLUGIN_CONFIG_CONFLICTING_PARAMETERS, "Doubled CACHE_DIR parameter in plugin config.");
