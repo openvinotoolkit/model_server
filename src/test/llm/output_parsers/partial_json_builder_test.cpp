@@ -262,6 +262,23 @@ TEST_F(PartialJsonBuilderTest, escapedCharactersSanityCheck) {
     ASSERT_EQ(parsedJson["arguments"].GetString(), std::string("{\"impl\": \"TYPE MQTT_Config AS\\n    VAR\\n  \\\"txt\\\"      BrokerIP : STRING := '127.0.0.1';\"}"));
 }
 
+TEST_F(PartialJsonBuilderTest, tmptest) {
+    std::string targetJson = R"({"name": "set_status", "arguments": "{\"status\": \"CONNECTED,\\"})";
+    PartialJsonBuilder builder;
+    rapidjson::Document parsedJson;
+    for (size_t i = 0; i < targetJson.size(); ++i) {
+        std::string partialInput(1, targetJson[i]);
+        parsedJson = builder.add(partialInput);
+    }
+    ASSERT_TRUE(parsedJson.IsObject());
+    ASSERT_TRUE(parsedJson.HasMember("name"));
+    ASSERT_TRUE(parsedJson["name"].IsString());
+    ASSERT_EQ(parsedJson["name"].GetString(), std::string("set_status"));
+    ASSERT_TRUE(parsedJson.HasMember("arguments"));
+    ASSERT_TRUE(parsedJson["arguments"].IsString());
+    ASSERT_EQ(parsedJson["arguments"].GetString(), std::string("{\"status\": \"CONNECTED,\\"));
+}
+
 TEST_F(PartialJsonBuilderTest, complexJsonIncrementalParsingSanityCheck) {
     std::string targetJson = R"(
     

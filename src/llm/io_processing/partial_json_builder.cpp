@@ -185,9 +185,21 @@ Document PartialJsonBuilder::add(const std::string& chunk) {
             }
         } else {
             if (c == '"') {
-                if (it != buffer.begin() && *(it - 1) == '\\') {
-                    continue;
+                // Count consecutive backslashes before the quote to determine if the quote is escaped
+                int backslashCount = 0;
+                auto tmpIt = it;
+                while (tmpIt != buffer.begin()) {
+                    --tmpIt;
+                    if (*tmpIt == '\\') {
+                        ++backslashCount;
+                    } else {
+                        break;
+                    }
+                }
+                if (backslashCount % 2 == 1) {
+                    continue;  // Quote is escaped, we can move on
                 } else {
+                    // Quote is not escaped, so we close the string/key
                     if (state == IteratorState::PROCESSING_KEY) {
                         // We processed a key, now we expect a colon
                         state = IteratorState::AWAITING_COLON;
