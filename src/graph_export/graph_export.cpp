@@ -435,16 +435,18 @@ Status GraphExport::createServableConfig(const std::string& directoryPath, const
 }
 
 std::variant<std::optional<std::string>, Status> GraphExport::createPluginString(const ExportSettings& exportSettings) {
+    bool configNotEmpty = false;
     auto& stringPluginConfig = exportSettings.pluginConfig.manualString;
     auto& pluginConfig = exportSettings.pluginConfig;
+    SPDLOG_TRACE("Creating plugin config string from export settings. Manual string: {}, pluginConfig.numStreams: {}, pluginConfig.kvCachePrecision: {}, pluginConfig.maxPromptLength: {}, pluginConfig.modelDistributionPolicy: {}, pluginConfig.cacheDir: {}", pluginConfig.manualString.value_or("std::nullopt"), pluginConfig.numStreams.value_or(0), pluginConfig.kvCachePrecision.value_or("std::nullopt"), pluginConfig.maxPromptLength.value_or(0), pluginConfig.modelDistributionPolicy.value_or("std::nullopt"), exportSettings.pluginConfig.cacheDir.value_or("std::nullopt"));
     rapidjson::Document d;
     d.SetObject();
     if (stringPluginConfig.has_value() && !stringPluginConfig.value().empty()) {
+        configNotEmpty = true;
         if (d.Parse(stringPluginConfig.value().c_str()).HasParseError()) {
             return StatusCode::PLUGIN_CONFIG_WRONG_FORMAT;
         }
     }
-    bool configNotEmpty = false;
     if (pluginConfig.kvCachePrecision.has_value()) {
         rapidjson::Value name;
         name.SetString(pluginConfig.kvCachePrecision.value().c_str(), d.GetAllocator());

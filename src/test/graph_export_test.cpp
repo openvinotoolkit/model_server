@@ -813,13 +813,14 @@ TEST_F(GraphCreationTest, imageGenerationPositiveFull) {
     ASSERT_EQ(expectedImageGenerationGraphContents, removeVersionString(graphContents)) << graphContents;
 }
 TEST_F(GraphCreationTest, pluginConfigAsString) {
-    ovms::PluginConfigSettingsImpl pluginConfig;
+    ovms::ExportSettings exportSettings;
+
+    auto& pluginConfig = exportSettings.pluginConfig;
     std::optional<std::string> stringPluginConfig;
     pluginConfig.kvCachePrecision = "u8";
     pluginConfig.maxPromptLength = 256;
     pluginConfig.modelDistributionPolicy = "TENSOR_PARALLEL";
-    ovms::ExportSettings exportSettings;
-    exportSettings.pluginConfig.manualString = "{\"NUM_STREAMS\":4}";
+    pluginConfig.manualString = "{\"NUM_STREAMS\":4}";
     auto res = ovms::GraphExport::createPluginString(exportSettings);
     ASSERT_TRUE(std::holds_alternative<std::optional<std::string>>(res));
     ASSERT_EQ(std::get<std::optional<std::string>>(res).value(),

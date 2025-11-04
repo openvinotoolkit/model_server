@@ -1750,9 +1750,7 @@ TEST(OvmsGraphConfigTest, positiveDefaultImageGeneration) {
 
     int arg_count = 8;
     ConstructorEnabledConfig config;
-    SPDLOG_ERROR("ER");
     config.parse(arg_count, n_argv);
-    SPDLOG_ERROR("ER");
 
     auto& hfSettings = config.getServerSettings().hfSettings;
     auto& exportSettings = hfSettings.exportSettings;
@@ -1767,9 +1765,7 @@ TEST(OvmsGraphConfigTest, positiveDefaultImageGeneration) {
     ASSERT_FALSE(imageGenerationGraphSettings.maxNumberImagesPerPrompt.has_value());
     ASSERT_FALSE(imageGenerationGraphSettings.defaultNumInferenceSteps.has_value());
     ASSERT_FALSE(imageGenerationGraphSettings.maxNumInferenceSteps.has_value());
-    SPDLOG_ERROR("ER");
     ASSERT_TRUE(exportSettings.pluginConfig.empty());
-    SPDLOG_ERROR("ER");
 }
 
 TEST(OvmsGraphConfigTest, positiveAllChangedEmbeddings) {
