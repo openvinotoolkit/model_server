@@ -130,7 +130,7 @@ python export_model.py embeddings_ov --source_model BAAI/bge-large-zh-v1.5 --poo
 :::{tab-item} OpenVINO/bge-base-en-v1.5-int8-ov
 :sync: bge-base-en-v1.5-int8-ov
 ```console
-docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --pull --model_repository_path /models --source_model OpenVINO/bge-base-en-v1.5-int8-ov --task pooling CLS --target_device GPU --task embeddings
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --pull --model_repository_path /models --source_model OpenVINO/bge-base-en-v1.5-int8-ov --pooling CLS --target_device GPU --task embeddings
 ```
 :::
 :::{tab-item} thenlper/gte-small
@@ -142,7 +142,7 @@ python export_model.py embeddings_ov --source_model thenlper/gte-small --pooling
 :::{tab-item} OpenVINO/Qwen3-Embedding-0.6B-int8-ov
 :sync: Qwen3-Embedding-0.6B-int8-ov
 ```console
-docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --pull --model_repository_path /models --source_model OpenVINO/Qwen3-Embedding-0.6B-int8-ov --task pooling LAST --target_device GPU --task embeddings
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --pull --model_repository_path /models --source_model OpenVINO/Qwen3-Embedding-0.6B-int8-ov --pooling LAST --target_device GPU --task embeddings
 ```
 :::
 :::{tab-item} sentence-transformers/all-MiniLM-L12-v2
