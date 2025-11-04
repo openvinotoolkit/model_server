@@ -202,7 +202,7 @@ if not exist "%~1\%MISTRAL_MODEL%\%TOKENIZER_FILE%" (
 if exist "%~1\%GPTOSS_MODEL%\%TOKENIZER_FILE%" (
   echo Models file %~1\%GPTOSS_MODEL%\%TOKENIZER_FILE% exists. Skipping downloading models.
 ) else (
-  echo Downloading tokenizer and detokenizer for Mistral model to %~1\%GPTOSS_MODEL% directory.
+  echo Downloading tokenizer and detokenizer for GPT-OSS model to %~1\%GPTOSS_MODEL% directory.
   mkdir "%~1\%GPTOSS_MODEL%"
   convert_tokenizer "%GPTOSS_MODEL%" --with_detokenizer -o "%~1\%GPTOSS_MODEL%"
   if !errorlevel! neq 0 exit /b !errorlevel!
