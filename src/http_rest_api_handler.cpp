@@ -15,6 +15,7 @@
 //*****************************************************************************
 #include "http_rest_api_handler.hpp"
 
+#include <algorithm>
 #include <cctype>
 #include <iomanip>
 #include <memory>
@@ -123,7 +124,8 @@ const std::string HttpRestApiHandler::v3_RegexExp =
 
 const std::string HttpRestApiHandler::metricsRegexExp = R"((.?)\/metrics(\?(.*))?)";
 
-HttpRestApiHandler::HttpRestApiHandler(ovms::Server& ovmsServer, int timeout_in_ms) :
+HttpRestApiHandler::HttpRestApiHandler(ovms::Server& ovmsServer, int timeout_in_ms, const std::string& apiKey) :
+    apiKey(apiKey),
     predictionRegex(predictionRegexExp),
     modelstatusRegex(modelstatusRegexExp),
     configReloadRegex(configReloadRegexExp),
@@ -224,7 +226,7 @@ void HttpRestApiHandler::registerAll() {
         return processV3(uri, request_components, response, request_body, std::move(serverReaderWriter), std::move(multiPartParser));
     });
     registerHandler(Metrics, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser) -> Status {
-        return processMetrics(request_components, response, request_body);
+        return processMetrics(request_components, response_components, response, request_body);
     });
     registerHandler(Options, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser) -> Status {
         return processOptions(request_components, response, request_body);
@@ -668,6 +670,24 @@ Status HttpRestApiHandler::processListModelsRequest(std::string& response) {
     return StatusCode::OK;
 }
 
+bool HttpRestApiHandler::isAuthorized(const std::unordered_map<std::string, std::string>& headers, const std::string& apiKey) {
+    std::unordered_map<std::string, std::string> lowercaseHeaders;
+    for (const auto& [key, value] : headers) {
+        std::string lowercaseKey = key;
+        std::transform(lowercaseKey.begin(), lowercaseKey.end(), lowercaseKey.begin(), ::tolower);
+        if (lowercaseKey == "authorization") {
+            if (value == "Bearer " + apiKey) {
+                return true;
+            } else {
+                SPDLOG_DEBUG("Unauthorized request - invalid API key provided.");
+                return false;
+            }
+        }
+    }
+    SPDLOG_DEBUG("Unauthorized request - missing API key");
+    return false;
+}
+
 Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser) {
 #if (MEDIAPIPE_DISABLE == 0)
     OVMS_PROFILE_FUNCTION();
@@ -675,7 +695,11 @@ Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpReque
     HttpPayload request;
     std::string modelName;
     bool streamFieldVal = false;
-
+    if (!this->apiKey.empty()) {
+        if (!isAuthorized(request_components.headers, this->apiKey)) {
+            return StatusCode::UNAUTHORIZED;
+        }
+    }
     auto status = createV3HttpPayload(uri, request_components, response, request_body, serverReaderWriter, std::move(multiPartParser), request, modelName, streamFieldVal);
     if (!status.ok()) {
         SPDLOG_DEBUG("Failed to create V3 payload: {}", status.string());
@@ -717,13 +741,15 @@ Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpReque
 #endif
 }
 
-Status HttpRestApiHandler::processMetrics(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) {
+Status HttpRestApiHandler::processMetrics(const HttpRequestComponents& request_components, HttpResponseComponents& response_components, std::string& response, const std::string& request_body) {
     auto module = this->ovmsServer.getModule(METRICS_MODULE_NAME);
     if (nullptr == module) {
         SPDLOG_ERROR("Failed to process metrics - metrics module is missing");
         return StatusCode::INTERNAL_ERROR;
     }
     auto& metricConfig = this->modelManager.getMetricConfig();
+
+    response_components.contentType = ContentType::PLAIN_TEXT;  // Prometheus exposition format, since v3 does not ignore quietly
 
     if (!metricConfig.metricsEnabled) {
         return StatusCode::REST_INVALID_URL;

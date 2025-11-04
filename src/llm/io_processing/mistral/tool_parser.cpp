@@ -19,12 +19,7 @@
 #include <vector>
 #include <regex>
 
-#pragma warning(push)
-#pragma warning(disable : 6313)
-#include <rapidjson/document.h>
-#include <rapidjson/stringbuffer.h>
-#include <rapidjson/writer.h>
-#pragma warning(pop)
+#include "src/port/rapidjson_document.hpp"
 
 #include "../../../logging.hpp"
 #include "tool_parser.hpp"
@@ -43,8 +38,12 @@ void MistralToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int6
     // In regular parsing, the parser will consume entire model output only if the first generated token is the beginning of tools token.
     // In immediate parsing, the parser will consume entire model output regardless of the first token.
     if (generatedTokens[0] != this->botTokenId && !immediateParsingEnabled) {
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Begin of tools token has not been found in the model output. Exiting parser.");
-        return;
+        if (parsedOutput.content.size() >= 2 && parsedOutput.content[0] == '[' && parsedOutput.content[1] == '{') {
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Model output starts with '[{' but begin of tools token is missing. Proceeding with parsing.");
+        } else {
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Begin of tools token or '[{' has not been found in the model output. Exiting parser.");
+            return;
+        }
     }
 
     rapidjson::Document toolsDoc;

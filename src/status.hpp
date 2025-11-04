@@ -176,6 +176,7 @@ enum class StatusCode {
     UNKNOWN_REQUEST_COMPONENTS_TYPE,        /*!< Components type not recognized */
     FAILED_TO_PARSE_MULTIPART_CONTENT_TYPE, /*!< Request of multipart type but failed to parse */
     FAILED_TO_DEDUCE_MODEL_NAME_FROM_URI,   /*!< Failed to deduce model name from all possible ways */
+    UNAUTHORIZED,                           /*!< Unauthorized request due to invalid or missing api-key*/
 
     // REST Parse
     REST_BODY_IS_NOT_AN_OBJECT,                    /*!< REST body should be JSON object */
@@ -353,6 +354,7 @@ enum class StatusCode {
     HF_FAILED_TO_INIT_LIBGIT2,
     HF_FAILED_TO_INIT_OPTIMUM_CLI,
     HF_RUN_OPTIMUM_CLI_EXPORT_FAILED,
+    HF_RUN_CONVERT_TOKENIZER_EXPORT_FAILED,
     HF_GIT_CLONE_FAILED,
 
     PARTIAL_END,

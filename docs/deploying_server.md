@@ -7,6 +7,7 @@ hidden:
 ---
 ovms_docs_deploying_server_docker
 ovms_docs_deploying_server_baremetal
+ovms_docs_deploying_server_service
 ovms_docs_deploying_server_kubernetes
 ovms_docs_serving_model
 ovms_docs_parameters

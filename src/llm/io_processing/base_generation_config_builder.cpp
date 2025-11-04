@@ -20,12 +20,12 @@
 #include "base_generation_config_builder.hpp"
 
 namespace ovms {
-void BaseGenerationConfigBuilder::setStructuralTagsConfig(const ov::genai::StructuralTagsConfig& structuralTagsConfig) {
+void BaseGenerationConfigBuilder::setStructuralTagsConfig(const ov::genai::StructuredOutputConfig::StructuralTag& structuralTag) {
     if (config.structured_output_config) {
-        config.structured_output_config->structural_tags_config = structuralTagsConfig;
+        config.structured_output_config->structural_tags_config = structuralTag;
     } else {
         ov::genai::StructuredOutputConfig structuredOutputConfig;
-        structuredOutputConfig.structural_tags_config = structuralTagsConfig;
+        structuredOutputConfig.structural_tags_config = structuralTag;
         config.structured_output_config = structuredOutputConfig;
     }
 }
@@ -104,9 +104,9 @@ void BaseGenerationConfigBuilder::parseConfigFromRequest(const OpenAIChatComplet
         config.max_ngram_size = request.maxNgramSize.value();
 
     // Response format handling
-    if (request.responseSchema.has_value()) {
+    if (request.responseFormat.has_value()) {
         ov::genai::StructuredOutputConfig structuredOutputConfig;
-        structuredOutputConfig.json_schema = request.responseSchema.value();
+        structuredOutputConfig.structural_tags_config = request.responseFormat.value();
         config.structured_output_config = structuredOutputConfig;
         config.stop_strings.insert("#");
     }

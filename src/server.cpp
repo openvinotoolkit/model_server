@@ -123,6 +123,7 @@ static void logConfig(const Config& config) {
     SPDLOG_DEBUG("gRPC channel arguments: {}", config.grpcChannelArguments());
     SPDLOG_DEBUG("log level: {}", config.logLevel());
     SPDLOG_DEBUG("log path: {}", config.logPath());
+    SPDLOG_TRACE("API key: {}", config.getServerSettings().apiKey);
     SPDLOG_DEBUG("file system poll wait milliseconds: {}", config.filesystemPollWaitMilliseconds());
     SPDLOG_DEBUG("sequence cleaner poll wait minutes: {}", config.sequenceCleanerPollWaitMinutes());
     SPDLOG_DEBUG("model_repository_path: {}", config.getServerSettings().hfSettings.downloadPath);

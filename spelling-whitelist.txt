@@ -17,7 +17,6 @@ src/test/modelconfig_test.cpp:497: OptionA
 src/test/modelconfig_test.cpp:503: OptionA
 src/test/modelinstance_test.cpp:1093: THROUGHTPUT
 third_party/aws-sdk-cpp/aws-sdk-cpp.bz
-third_party/llm_engine/llm_engine.bzl
 WORKSPACE:98: thirdparty
 demos/classification_using_paddlepaddle_model/python/utils/imagenet_class_index.json
 release_files/thirdparty-licenses/icu.LICENSE.txt:146: TaBE ==> table, tab
@@ -25,3 +24,4 @@ release_files/thirdparty-licenses/icu.LICENSE.txt:160: TaBE ==> table, tab
 release_files/thirdparty-licenses/libgt2.LICENSE.txt:1040: aheared ==> adhered
 release_files/thirdparty-licenses/libgt2.LICENSE.txt:1065: rouines ==> routines
 release_files/thirdparty-licenses/libgt2.LICENSE.txt:1083: publically ==> publicly
+src/test/llm/output_parsers/qwen3coder_output_parser_test.cpp
