@@ -326,7 +326,7 @@ pipeline {
                         }
                     }
                     if (params.CHAT_TEMPLATE_URL?.trim()) {
-                        def chatTemplateFile = "${modelsPath}/${model_name}/chat_template.json"
+                        def chatTemplateFile = "${modelsPath}/${model_name}/chat_template.jinja"
                         sh "curl -sSL '${params.CHAT_TEMPLATE_URL}' -o '${chatTemplateFile}'"
                     }
                     sh "docker pull ${params.DOCKER_IMAGE_NAME} && \
