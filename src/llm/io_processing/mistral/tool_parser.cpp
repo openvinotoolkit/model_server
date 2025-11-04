@@ -82,7 +82,6 @@ void MistralToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int6
     }
 }
 
-
 void MistralToolParser::movePostColonContentToUnprocessedBuffer(std::string& chunk) {
     size_t colonPos = chunk.find(':');
     if (colonPos != std::string::npos) {
@@ -166,7 +165,7 @@ void MistralToolParser::clearState() {
 
 std::optional<rapidjson::Document> MistralToolParser::parseChunk(const std::string& chunk, ov::genai::GenerationFinishReason finishReason) {
     /* 
-    Phi4 with vLLM template produces tool calls in the format (beginning [TOOL_CALL] is skipped by the mode or just not visible during streaming):
+    Mistral with vLLM template produces tool calls in the format (beginning [TOOL_CALL] is skipped by the mode or just not visible during streaming):
     [{"name": [function name], "arguments": [function arguments as JSON]}, ...]
 
     Due to the tool call format used by Mistral, we need to track the state of parsing more closely.
