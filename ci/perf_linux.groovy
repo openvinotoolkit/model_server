@@ -267,7 +267,7 @@ pipeline {
                 test -d vllm || git clone -b v0.10.2 https://github.com/vllm-project/vllm && \
                 sed -i -e 's/if not os.path.exists(args.model)/if 1 == 0/g' vllm/benchmarks/multi_turn/benchmark_serving_multi_turn.py && \
                 test -f pg1184.txt || curl https://www.gutenberg.org/ebooks/1184.txt.utf-8 -o pg1184.txt"
-                sh ". .venv/bin/activate && pip install -r vllm/benchmarks/multi_turn/requirements.txt && \
+                sh ". .venv/bin/activate && pip install -r vllm/benchmarks/multi_turn/requirements.txt sentencepiece && \
                 python vllm/benchmarks/multi_turn/benchmark_serving_multi_turn.py -m ${modelsPath}/${model_name} --url http://localhost:9000/v3 -i vllm/benchmarks/multi_turn/generate_multi_turn.json --served-model-name ${model_name} --num-clients 1 -n 20 > results_agentic_latency.txt && \
                 cat results_agentic_latency.txt"
                 script {
