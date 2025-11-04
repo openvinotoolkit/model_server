@@ -702,7 +702,7 @@ if __name__ == "__main__":
                 ASSERT_NE(docJsonIt, doc->MemberEnd());
                 auto toolCallsIt = docJsonIt->value.FindMember("tool_calls");
                 ASSERT_NE(toolCallsIt, docJsonIt->value.MemberEnd());
-                for (auto& toolCall : toolCallsIt->value.GetArray()) {
+                for (const auto& toolCall : toolCallsIt->value.GetArray()) {
                     auto functionIt = toolCall.FindMember("function");
                     ASSERT_NE(functionIt, toolCall.MemberEnd());
                     auto argumentsIt = functionIt->value.FindMember("arguments");
