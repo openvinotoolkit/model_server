@@ -11,25 +11,53 @@ With the rise of AI PC capabilities, hosting own Visual Studio code assistant is
 ## Prepare Code Chat/Edit Model 
 We need to use medium size model to get reliable responses but also to fit it to the available memory on the host or discrete GPU.
 
-Download export script, install its dependencies and create directory for the models:
+Create directory for the models:
 ```console
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/demos/common/export_models/export_model.py -o export_model.py
-pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/demos/common/export_models/requirements.txt
 mkdir models
 ```
 > **Note:** The users in China need to set environment variable HF_ENDPOINT="https://hf-mirror.com" before running the export script to connect to the HF Hub.
 
-Export `codellama/CodeLlama-7b-Instruct-hf`:
-```console
-python export_model.py text_generation --source_model codellama/CodeLlama-7b-Instruct-hf --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device GPU --cache_size 2 --overwrite_models
-```
+Pull and add `ulkaa/CodeLlama-7b-hf-OpenVINO-sym-int4`:
+::::{tab-set}
+:::{tab-item} Linux
+:sync: Linux
+```bash
+docker run -it --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
+    -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy=$no_proxy \
+    openvino/model_server:weekly \
+    --pull \
+    --task text_generation \
+    --model_repository_path /models \
+    --source_model ulkaa/CodeLlama-7b-hf-OpenVINO-sym-int4 \
+    --target_device GPU \
+    --tool_parser llama3 \
+    --cache_size 2
 
-> **Note:** Use `--target_device NPU` for Intel NPU or omit this parameter to run on Intel CPU
+docker run -it --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
+    -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy=$no_proxy \
+    openvino/model_server:weekly \
+    --add_to_config /models/config_all.json \
+    --model_name ulkaa/CodeLlama-7b-hf-OpenVINO-sym-int4 \
+    --model_path ulkaa/CodeLlama-7b-hf-OpenVINO-sym-int4
+```
+:::
+::: {tab-item} Windows
+:sync: Windows
+```bat
+ovms --pull --task text_generation --model_repository_path models --source_model ulkaa/CodeLlama-7b-hf-OpenVINO-sym-int4 --target_device GPU --tool_parser llama3 --cache_size 2
+
+ovms --add_to_config models/config_all.json --model_name ulkaa/CodeLlama-7b-hf-OpenVINO-sym-int4 --model_path ulkaa/CodeLlama-7b-hf-OpenVINO-sym-int4s
+```
+:::
+::::
 
 ## Prepare Agentic Model 
 We need specialized model that is able to produce tool calls. For this task we will use Qwen3-8B quantized to int4. We will use automatic pulling of HF models, so export script is not required.
 
-Pull and add `OpenVINO/Qwen3-8B-int4-ov` (Linux):
+Pull and add `OpenVINO/Qwen3-8B-int4-ov`:
+::::{tab-set}
+:::{tab-item} Linux
+:sync: Linux
 ```bash
 docker run -it --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
     -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy=$no_proxy \
@@ -49,22 +77,17 @@ docker run -it --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
     --model_name OpenVINO/Qwen3-8B-int4-ov \
     --model_path OpenVINO/Qwen3-8B-int4-ov
 ```
-
+:::
+::: {tab-item} Windows
+:sync: Windows
 Or, when running on Windows, pull and add `OpenVINO/Qwen3-8B-int4-ov`:
 ```bat
-ovms --pull ^
-  --task text_generation ^
-  --model_repository_path ./models ^
-  --source_model OpenVINO/Qwen3-8B-int4-ov ^
-  --target_device GPU ^
-  --tool_parser hermes3 ^
-  --cache_size 2
+ovms --pull --task text_generation --model_repository_path models --source_model OpenVINO/Qwen3-8B-int4-ov --target_device GPU   --tool_parser hermes3 --cache_size 2
 
-ovms --add_to_config ./models/config_all.json ^
-  --model_name OpenVINO/Qwen3-8B-int4-ov ^
-  --model_path OpenVINO/Qwen3-8B-int4-ov
+ovms --add_to_config models/config_all.json --model_name OpenVINO/Qwen3-8B-int4-ov --model_path OpenVINO/Qwen3-8B-int4-ov
 ```
-
+:::
+::::
 
 > **Note:** Use `--target_device NPU` for Intel NPU or omit this parameter to run on Intel CPU
 
@@ -73,33 +96,65 @@ For this task we need smaller, lighter model that will produce code quicker than
 Since we do not want to wait for the code to appear, we need to use smaller model. It should be responsive enough to generate multi-line blocks of code ahead of time as we type.
 Code completion works in non-streaming, unary mode. Do not use instruct model, there is no chat involved in the process.
 
-Export `Qwen/Qwen2.5-Coder-1.5B`:
-```console
-python export_model.py text_generation --source_model Qwen/Qwen2.5-Coder-1.5B --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device NPU --cache_size 2 --overwrite_models
+Pull and add `OpenVINO/Qwen2.5-Coder-0.5B-Instruct-int4-ov`:
+::::{tab-set}
+:::{tab-item} Linux
+:sync: Linux
+```bash
+docker run -it --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
+    -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy=$no_proxy \
+    openvino/model_server:latest-gpu \
+    --pull \
+    --task text_generation \
+    --model_repository_path /models \
+    --source_model OpenVINO/Qwen2.5-Coder-0.5B-Instruct-int4-ov \
+    --target_device GPU \
+    --tool_parser hermes3 \
+    --cache_size 2
+
+docker run -it --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
+    -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy=$no_proxy \
+    openvino/model_server:latest-gpu \
+    --add_to_config /models/config_all.json \
+    --model_name OpenVINO/Qwen2.5-Coder-0.5B-Instruct-int4-ov \
+    --model_path OpenVINO/Qwen2.5-Coder-0.5B-Instruct-int4-ov
 ```
+:::
+::: {tab-item} Windows
+:sync: Windows
+```bat
+ovms --pull --task text_generation --model_repository_path models --source_model OpenVINO/Qwen2.5-Coder-0.5B-Instruct-int4-ov --target_device GPU --tool_parser hermes3 --cache_size 2
+ovms --add_to_config ./models/config_all.json --model_name OpenVINO/Qwen2.5-Coder-0.5B-Instruct-int4-ov --model_path OpenVINO/Qwen2.5-Coder-0.5B-Instruct-int4-ov
+```
+:::
+::::
 
 Examine that workspace is set up properly `models/config_all.json`:
 ```
 {
-    "mediapipe_config_list": [
-        {
-            "name": "codellama/CodeLlama-7b-Instruct-hf",
-            "base_path": "codellama/CodeLlama-7b-Instruct-hf"
-        },
-        {
-            "name": "Qwen/Qwen2.5-Coder-1.5B",
-            "base_path": "Qwen/Qwen2.5-Coder-1.5B"
-        }
-    ],
     "model_config_list": [
+        {
+            "config": {
+                "name": "ulkaa/CodeLlama-7b-hf-OpenVINO-sym-int4",
+                "base_path": "ulkaa/CodeLlama-7b-hf-OpenVINO-sym-int4"
+            }
+        },
         {
             "config": {
                 "name": "OpenVINO/Qwen3-8B-int4-ov",
                 "base_path": "OpenVINO/Qwen3-8B-int4-ov"
             }
+        },
+        {
+            "config": {
+                "name": "OpenVINO/Qwen2.5-Coder-0.5B-Instruct-int4-ov",
+                "base_path": "OpenVINO/Qwen2.5-Coder-0.5B-Instruct-int4-ov"
+            }
         }
     ]
 }
+
+
 ```
 
 ```bash
@@ -169,21 +224,30 @@ Run OpenVINO Model Server with both models loaded at the same time:
 ### Windows: deploying on bare metal
 Please refer to OpenVINO Model Server installation first: [link](../../docs/deploying_server_baremetal.md)
 
+::::{tab-set}
+:::{tab-item} Windows
+:sync: Windows
 ```bat
 ovms --rest_port 8000 --config_path ./models/config_all.json
 ```
-
+:::
+:::{tab-item} Linux GPU
+:sync: Linux
 ### Linux: via Docker with GPU
 ```bash
 docker run -d --rm --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
   -p 8000:8000 -v $(pwd)/:/workspace/ openvino/model_server:latest-gpu --rest_port 8000 --config_path /workspace/models/config_all.json
 ```
-
+:::
+::: {tab-item} Linux NPU
+:sync: Linux NPU
 ### Linux: via Docker with NPU
 ```bash
 docker run -d --rm --device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
   -p 8000:8000 -v $(pwd)/:/workspace/ openvino/model_server:latest-gpu --rest_port 8000 --config_path /workspace/models/config_all.json
 ```
+:::
+::::
 
 ## Set Up Visual Studio Code
 
