@@ -38,7 +38,7 @@ class CLIParser {
 
 public:
     CLIParser() = default;
-    void parse(int argc, char** argv);
+    std::variant<bool, std::pair<int, std::string>> parse(int argc, char** argv);
     void prepare(ServerSettingsImpl*, ModelsSettingsImpl*);
 
 protected:

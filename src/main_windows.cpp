@@ -195,7 +195,28 @@ void WINAPI OvmsWindowsServiceManager::serviceMain(DWORD argc, LPTSTR* argv) {
         manager.ovmsParams.argv = argv;
     }
 
-    std::unique_ptr<HANDLE, WinHandleDeleter> mainThread(CreateThread(NULL, 0, OvmsWindowsServiceManager::serviceWorkerThread, &manager.ovmsParams, 0, NULL));
+    // Parse arguments before server start
+    auto paramsOrExit = ovms::Server::parseArgs(manager.ovmsParams.argc, manager.ovmsParams.argv);
+    // Check for error in parsing
+    if (std::holds_alternative<std::pair<int, std::string>>(paramsOrExit)) {
+        auto printAndExit = std::get<std::pair<int, std::string>>(paramsOrExit);
+        // Check retcode other than success [--help, --version]
+        if (printAndExit.first > 0) {
+            DEBUG_LOG("ServiceMain: Server::parseArgs returned error");
+            serviceReportEvent(printAndExit.second.c_str());
+            this->setServiceStopStatusWithError();
+        } else {
+            DEBUG_LOG("ServiceMain: Server::parseArgs returned success, no valid parameters to start the service provided.");
+            serviceReportEvent(printAndExit.second.c_str());
+            this->setServiceStopStatusWithError();
+        } 
+
+        return;
+    } else {
+        manager.parsedParameters = std::get<std::pair<ovms::ServerSettingsImpl, ovms::ModelsSettingsImpl>>(paramsOrExit);
+    }
+
+    std::unique_ptr<HANDLE, WinHandleDeleter> mainThread(CreateThread(NULL, 0, OvmsWindowsServiceManager::serviceWorkerThread, &manager.parsedParameters, 0, NULL));
     if (mainThread.get() == NULL || mainThread.get() == INVALID_HANDLE_VALUE) {
         // Handle error
         DEBUG_LOG("ServiceMain: mainThread == NULL || mainThread == INVALID_HANDLE_VALUE");
@@ -421,11 +442,10 @@ DWORD WINAPI OvmsWindowsServiceManager::serviceWorkerThread(LPVOID lpParam) {
     //  Start OVMS and check for stop
     while (WaitForSingleObject(serviceStopEvent->handle, 0) != WAIT_OBJECT_0) {
         if (!ovmsService->started) {
-            ConsoleParameters* params = (ConsoleParameters*)lpParam;
+            std::pair<ovms::ServerSettingsImpl, ovms::ModelsSettingsImpl>* params = (std::pair<ovms::ServerSettingsImpl, ovms::ModelsSettingsImpl>*)lpParam;
             if (params && params->argc > 1) {
-                DEBUG_LOG("serviceWorkerThread: Starting ovms from start parameters.");
-                OvmsWindowsServiceManager::logParameters(params->argc, params->argv, "OVMS Main Argument");
-                ovmsService->SetUp(params->argc, params->argv);
+                DEBUG_LOG("serviceWorkerThread: Starting ovms from parameters.");
+                ovmsService->SetUp(params);
                 DEBUG_LOG("serviceWorkerThread: Ovms starting. Waiting for SERVABLE_MANAGER_MODULE to be live ...")
             } else {
                 DEBUG_LOG("serviceWorkerThread: Error - No parameters passed to ovms service.");
@@ -641,11 +661,11 @@ void OvmsService::TearDown() {
     this->started = false;
 }
 
-int OvmsService::SetUp(int argc, char** argv) {
+int OvmsService::SetUp(std::pair<ServerSettingsImpl, ModelsSettingsImpl>* parameters) {
     DEBUG_LOG("OvmsService::SetUp");
     this->started = true;
     t.reset(new std::thread([argc, argv, this]() {
-        this->error = server.start(argc, argv);
+        this->error = server.startServerFromSettings(parameters.first, parameters.second);
     }));
     return 0;
 }

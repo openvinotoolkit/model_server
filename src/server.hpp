@@ -20,14 +20,13 @@
 #include <string>
 #include <unordered_map>
 
+#include "capi_frontend/server_settings.hpp"
 #include "module.hpp"
 #include "module_names.hpp"
 
 namespace ovms {
 class Config;
 class Status;
-struct ServerSettingsImpl;
-struct ModelsSettingsImpl;
 
 class Server {
     mutable std::shared_mutex modulesMtx;
@@ -41,6 +40,8 @@ protected:
 public:
     static Server& instance();
     int start(int argc, char** argv);
+    static std::variant<std::pair<ServerSettingsImpl, ModelsSettingsImpl>, std::pair<int, std::string>> Server::parseArgs(int argc, char** argv);
+    int startServerFromSettings(ServerSettingsImpl& serverSettings, ModelsSettingsImpl& modelsSettings);
     Status startFromSettings(ServerSettingsImpl*, ModelsSettingsImpl*);
     ModuleState getModuleState(const std::string& name) const;
     const Module* getModule(const std::string& name) const;

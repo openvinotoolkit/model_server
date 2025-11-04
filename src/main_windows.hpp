@@ -27,6 +27,7 @@
 #include <WinReg/WinReg.hpp>
 #pragma warning(pop)
 
+#include "capi_frontend/server_settings.hpp"
 #include "server.hpp"
 namespace ovms_service {
 using ovms::Server;
@@ -47,6 +48,7 @@ public:
     bool started;
     int error;
     void TearDown();
+
     int SetUp(int argc, char** argv);
     bool isReady();
     bool isRunning();
@@ -73,6 +75,7 @@ public:
 
     // Members
     ConsoleParameters ovmsParams;
+    std::pair<ovms::ServerSettingsImpl, ovms::ModelsSettingsImpl> parsedParameters;
     static LPSTR serviceName;
     static LPSTR serviceDisplayName;
     static LPSTR serviceDesc;

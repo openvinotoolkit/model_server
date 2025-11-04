@@ -411,6 +411,50 @@ static int statusToExitCode(const Status& status) {
     return OVMS_EX_FAILURE;
 }
 
+std::variant<std::pair<ServerSettingsImpl, ModelsSettingsImpl>, std::pair<int, std::string>> Server::parseArgs(int argc, char** argv) {
+    try {
+        CLIParser parser;
+        ServerSettingsImpl serverSettings;
+        ModelsSettingsImpl modelsSettings;
+        auto successOrExit = parser.parse(argc, argv);
+        // Check for error in parsing
+        if (!std::holds_alternative<bool>(successOrExit)) {
+            auto printAndExit = std::get<std::pair<int, std::string>>(successOrExit);
+            return printAndExit;
+        }
+        parser.prepare(&serverSettings, &modelsSettings);
+        return std::make_pair(serverSettings, modelsSettings);
+    } catch (const std::exception& e) {
+        return std::make_pair(OVMS_EX_USAGE, e.what());
+    }
+}
+
+int Server::startServerFromSettings(ServerSettingsImpl& serverSettings, ModelsSettingsImpl& modelsSettings) {
+    installSignalHandlers();
+    int result = OVMS_EX_OK;
+
+    try {
+        Status ret = startFromSettings(&serverSettings, &modelsSettings);
+        ModulesShutdownGuard shutdownGuard(*this);
+        if (!ret.ok()) {
+            return statusToExitCode(ret);
+        }
+        while (!shutdown_request &&
+               (serverSettings.serverMode == HF_PULL_AND_START_MODE || serverSettings.serverMode == SERVING_MODELS_MODE)) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(200));
+        }
+        if (shutdown_request == 2) {
+            SPDLOG_ERROR("Illegal operation. OVMS started on unsupported device");
+        }
+    } catch (const std::exception& e) {
+        SPDLOG_ERROR("Exception; {}", e.what());
+        result = OVMS_EX_FAILURE;
+        return result;
+    }
+
+    return EXIT_SUCCESS;
+}
+
 // OVMS Start
 int Server::start(int argc, char** argv) {
     installSignalHandlers();
@@ -420,7 +464,17 @@ int Server::start(int argc, char** argv) {
         CLIParser parser;
         ServerSettingsImpl serverSettings;
         ModelsSettingsImpl modelsSettings;
-        parser.parse(argc, argv);
+        auto successOrExit = parser.parse(argc, argv);
+        // Check for error in parsing
+        if (std::holds_alternative<std::pair<int, std::string>>(successOrExit)) {
+            auto printAndExit = std::get<std::pair<int, std::string>>(successOrExit);
+            if (printAndExit.first > 0) {
+                std::cerr << printAndExit.second;
+            } else {
+                std::cout << printAndExit.second;
+            }
+            exit(printAndExit.first);
+        }
         parser.prepare(&serverSettings, &modelsSettings);
 
         Status ret = startFromSettings(&serverSettings, &modelsSettings);

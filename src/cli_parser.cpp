@@ -50,8 +50,10 @@ std::string getConfigPath(const std::string& configPath) {
     return configPath;
 }
 
-void CLIParser::parse(int argc, char** argv) {
+std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char** argv) {
+    std::stringstream ss;
     try {
+
         options = std::make_unique<cxxopts::Options>(argv[0], "OpenVINO Model Server");
         auto configOptions = std::make_unique<cxxopts::Options>("ovms --model_name <MODEL_NAME> --add_to_config <CONFIG_PATH> --model_repository_path <MODEL_REPO_PATH> \n  ovms --model_path <MODEL_PATH> --model_name <MODEL_NAME> --add_to_config <CONFIG_PATH> \n  ovms --remove_from_config <CONFIG_PATH> --model_name <MODEL_NAME>", "config management commands:");
         // Adding this option to parse unrecognised options in another parser
@@ -335,78 +337,78 @@ void CLIParser::parse(int argc, char** argv) {
                         break;
                     }
                     case UNKNOWN_GRAPH: {
-                        std::cerr << "error parsing options - --task parameter unsupported value: " + result->operator[]("task").as<std::string>();
-                        exit(OVMS_EX_USAGE);
+                        ss << "error parsing options - --task parameter unsupported value: " + result->operator[]("task").as<std::string>();
+                        return std::make_pair(OVMS_EX_USAGE, ss.str());
                     }
                 }
             } else {
-                std::cerr << "error parsing options - --task parameter wasn't passed";
-                exit(OVMS_EX_USAGE);
+                ss << "error parsing options - --task parameter wasn't passed";
+                return std::make_pair(OVMS_EX_USAGE, ss.str());
             }
 
             if (unmatchedOptions.size()) {
-                std::cerr << "task: " << enumToString(task) << " - error parsing options - unmatched arguments : ";
+                ss << "task: " << enumToString(task) << " - error parsing options - unmatched arguments : ";
                 for (auto& argument : unmatchedOptions) {
-                    std::cerr << argument << ", ";
+                    ss << argument << ", ";
                 }
-                std::cerr << std::endl;
-                exit(OVMS_EX_USAGE);
+                ss << std::endl;
+                return std::make_pair(OVMS_EX_USAGE, ss.str());
             }
         } else if (result->unmatched().size()){
-            std::cerr << "error parsing options - unmatched arguments: ";
+            ss << "error parsing options - unmatched arguments: ";
             for (auto& argument : result->unmatched()) {
-                std::cerr << argument << ", ";
+                ss << argument << ", ";
             }
-            std::cerr << std::endl;
-            exit(OVMS_EX_USAGE);
+            ss << std::endl;
+            return std::make_pair(OVMS_EX_USAGE, ss.str());
         }
         if (isHFPullOrPullAndStart(this->result) && result->count("list_models")) {
-            std::cerr << "error parsing options - --list_models cannot be used with --pull or --task" << std::endl;
-            exit(OVMS_EX_USAGE);
+            ss << "error parsing options - --list_models cannot be used with --pull or --task" << std::endl;
+            return std::make_pair(OVMS_EX_USAGE, ss.str());
         }
         if (isHFPullOrPullAndStart(this->result) && result->count("remove_from_config")) {
-            std::cerr << "error parsing options - --remove_from_config cannot be used with --pull or --task" << std::endl;
-            exit(OVMS_EX_USAGE);
+            ss << "error parsing options - --remove_from_config cannot be used with --pull or --task" << std::endl;
+            return std::make_pair(OVMS_EX_USAGE, ss.str());
         }
         if (isHFPullOrPullAndStart(this->result) && result->count("add_to_config")) {
-            std::cerr << "error parsing options - --add_to_config cannot be used with --pull or --task" << std::endl;
-            exit(OVMS_EX_USAGE);
+            ss << "error parsing options - --add_to_config cannot be used with --pull or --task" << std::endl;
+            return std::make_pair(OVMS_EX_USAGE, ss.str());
         }
         if (result->count("add_to_config") && result->count("list_models")) {
-            std::cerr << "error parsing options - --list_models cannot be used with --add_to_config" << std::endl;
-            exit(OVMS_EX_USAGE);
+            ss << "error parsing options - --list_models cannot be used with --add_to_config" << std::endl;
+            return std::make_pair(OVMS_EX_USAGE, ss.str());
         }
         if (result->count("remove_from_config") && result->count("list_models")) {
-            std::cerr << "error parsing options - --list_models cannot be used with --remove_from_config" << std::endl;
-            exit(OVMS_EX_USAGE);
+            ss << "error parsing options - --list_models cannot be used with --remove_from_config" << std::endl;
+            return std::make_pair(OVMS_EX_USAGE, ss.str());
         }
         if (result->count("add_to_config") && result->count("model_repository_path") && result->count("model_path")) {
-            std::cerr << "error parsing options - --model_repository_path cannot be used with --model_path" << std::endl;
-            exit(OVMS_EX_USAGE);
+            ss << "error parsing options - --model_repository_path cannot be used with --model_path" << std::endl;
+            return std::make_pair(OVMS_EX_USAGE, ss.str());
         }
         if (result->count("remove_from_config") && result->count("model_repository_path")) {
-            std::cerr << "error parsing options - --model_repository_path cannot be used with --remove_from_config" << std::endl;
-            exit(OVMS_EX_USAGE);
+            ss << "error parsing options - --model_repository_path cannot be used with --remove_from_config" << std::endl;
+            return std::make_pair(OVMS_EX_USAGE, ss.str());
         }
         if (result->count("remove_from_config") && result->count("model_path")) {
-            std::cerr << "error parsing options - --model_path cannot be used with --remove_from_config" << std::endl;
-            exit(OVMS_EX_USAGE);
+            ss << "error parsing options - --model_path cannot be used with --remove_from_config" << std::endl;
+            return std::make_pair(OVMS_EX_USAGE, ss.str());
         }
 #pragma warning(push)
 #pragma warning(disable : 4129)
         if (result->count("version")) {
             std::string project_name(PROJECT_NAME);
             std::string project_version(PROJECT_VERSION);
-            std::cout << project_name + " " + project_version << std::endl;
-            std::cout << "OpenVINO backend " << OPENVINO_NAME << std::endl;
-            std::cout << "Bazel build flags: " << BAZEL_BUILD_FLAGS << std::endl;
+            ss << project_name + " " + project_version << std::endl;
+            ss << "OpenVINO backend " << OPENVINO_NAME << std::endl;
+            ss << "Bazel build flags: " << BAZEL_BUILD_FLAGS << std::endl;
 #pragma warning(pop)
-            exit(OVMS_EX_OK);
+            return std::make_pair(OVMS_EX_USAGE, ss.str());
         }
 
         if (result->count("help") || result->arguments().size() == 0) {
-            std::cout << options->help({"", "multi model", "single model", "pull hf model"}) << std::endl;
-            std::cout << configOptions->help({CONFIG_MANAGEMENT_HELP_GROUP}) << std::endl;
+            ss << options->help({"", "multi model", "single model", "pull hf model"}) << std::endl;
+            ss << configOptions->help({CONFIG_MANAGEMENT_HELP_GROUP}) << std::endl;
             GraphCLIParser parser1;
             RerankGraphCLIParser parser2;
             EmbeddingsGraphCLIParser parser3;
@@ -415,11 +417,13 @@ void CLIParser::parse(int argc, char** argv) {
             parser2.printHelp();
             parser3.printHelp();
             imageGenParser.printHelp();
-            exit(OVMS_EX_OK);
+            return std::make_pair(OVMS_EX_USAGE, ss.str());
         }
+
+        return true;
     } catch (const std::exception& e) {
-        std::cerr << "error parsing options: " << e.what() << std::endl;
-        exit(OVMS_EX_USAGE);
+        ss << "error parsing options: " << e.what() << std::endl;
+        return std::make_pair(OVMS_EX_USAGE, ss.str());
     }
 }
 
@@ -512,8 +516,7 @@ void CLIParser::prepareServer(ServerSettingsImpl& serverSettings) {
             }
             file.close();
         } else {
-            std::cerr << "Error reading API key file: Unable to open file " << apiKeyFile << std::endl;
-            exit(OVMS_EX_USAGE);
+            throw std::filesystem::filesystem_error("Error reading API key file: Unable to open file ", apiKeyFile, std::error_code(2, std::generic_category()));
         }
     } else {
         const char* envApiKey = std::getenv(API_KEY_ENV_VAR);
