@@ -64,9 +64,6 @@ using ToolsParameterTypeMap_t = std::unordered_map<std::string, ParametersTypeMa
 class BaseOutputParser {
 protected:
     ov::genai::Tokenizer tokenizer;
-    // Flag indicating whether parsing start tag has been injected into the prompt
-    // if true, parser should assume start tag already appeared and start parsing immediately
-    bool immediateParsingEnabled = false;
 
 public:
     BaseOutputParser() = delete;
@@ -80,11 +77,6 @@ public:
     // Common function to wrap subsequent deltas in a JSON object that conforms to OpenAI API response format
     // {"tool_calls":[{"index":0,"function":<delta>}]}
     static rapidjson::Document wrapDelta(const rapidjson::Document& delta, int toolCallIndex);
-
-    // Calling this method should put parser into immediate parsing mode where it starts parsing immediately, without seeking the start tag.
-    void enableImmediateParsing();
-
-    bool isImmediateParsingEnabled() const;
 
     // --- Specialized output parsers interface ---
 
