@@ -49,7 +49,7 @@ public:
     int error;
     void TearDown();
 
-    int SetUp(int argc, char** argv);
+    int SetUp(std::pair<ovms::ServerSettingsImpl, ovms::ModelsSettingsImpl>* parameters);
     bool isReady();
     bool isRunning();
     bool isLive(const std::string& moduleName);
@@ -84,6 +84,12 @@ public:
     static std::string getCurrentTimeString();
     static void logParameters(DWORD argc, LPTSTR* argv, const std::string& logText);
     static void serviceReportEvent(LPSTR szFunction);
+    static void serviceReportEvent(const std::string& szFunction);
+    static void serviceReportEventWithExitCode(const std::string& szFunction, const std::string& message, const int& exitCode);
+    static void serviceReportEventWithExitCode(LPSTR szFunction, const std::string& message, const int& exitCode);
+    static void serviceReportEventSuccess(const std::string& szFunction, const std::string& message);
+    static void serviceReportEventSuccess(LPSTR szFunction, const std::string& message);
+
     void WINAPI serviceMain(DWORD argc, LPTSTR* argv);
 
     // Registry manipulation
@@ -108,6 +114,7 @@ private:
     void setServiceStartStatus();
     void setServiceStopStatusWithSuccess();
     void setServiceStopStatusWithError();
+    void setServiceStopStatusWithExitCode(const int& exitCode);
     void setServiceRunningStatus();
 
     // Registry manipulation
