@@ -88,6 +88,8 @@ ovms_cc_library(
     srcs = ["io_processing/partial_json_builder.cpp"],
     deps = [
         "@com_github_tencent_rapidjson//:rapidjson",
+        "//src/port:rapidjson_stringbuffer",
+        "//src/port:rapidjson_writer",
     ],
     visibility = ["//visibility:public"],
 )
@@ -105,6 +107,8 @@ ovms_cc_library(
     srcs = ["io_processing/base_output_parser.cpp"],
     deps = [
         "@com_github_tencent_rapidjson//:rapidjson",
+        "//src/port:rapidjson_stringbuffer",
+        "//src/port:rapidjson_writer",
         ":io_processing_utils",
         "//third_party:genai",
     ],

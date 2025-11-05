@@ -36,6 +36,8 @@
 #include "absl/strings/str_cat.h"
 #pragma warning(pop)
 
+#include "src/port/rapidjson_writer.hpp"
+#include "src/port/rapidjson_stringbuffer.hpp"
 #include "stt_servable.hpp"
 
 #ifdef _WIN32
@@ -55,7 +57,7 @@ enum Endpoint{
     UNSUPPORTED
 };
 
-Endpoint getEndpoint(std::string url){
+Endpoint getEndpoint(const std::string& url){
     if (absl::StartsWith(url, "/v3/audio/transcriptions")){
         return Endpoint::TRANSCRIPTIONS;
     }
@@ -65,6 +67,7 @@ Endpoint getEndpoint(std::string url){
     return Endpoint::UNSUPPORTED;
 }
 
+size_t ISO_LANG_CODE_MAX = 3;
 
 class SttCalculator : public CalculatorBase {
     static const std::string INPUT_TAG_NAME;
@@ -128,25 +131,33 @@ public:
         } catch (std::exception&) {
             return absl::InvalidArgumentError("Received input file is not valid wav nor mp3 audio file");
         }
-        std::string result = "{\"text\": \"";
+        rapidjson::StringBuffer buffer;
+        rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+        writer.StartObject();
+        writer.String("text");
         if(endpoint == Endpoint::TRANSCRIPTIONS){
             std::string_view language = payload.multipartParser->getFileContentByFieldName("language");
             std::unique_lock lock(pipe->sttPipelineMutex);
             if (!language.empty()) {
+                if(language.size() > ISO_LANG_CODE_MAX){
+                    return absl::InvalidArgumentError("Invalid language code.");
+                }
                 std::string genaiLanguage = "<|" + std::string(language) +"|>";
-                result += pipe->sttPipeline->generate(rawSpeech,ov::genai::language(genaiLanguage.c_str()));
+                std::string generatedText = pipe->sttPipeline->generate(rawSpeech,ov::genai::language(genaiLanguage.c_str()));
+                writer.String(generatedText.c_str());
             }
             else {
-                result += pipe->sttPipeline->generate(rawSpeech);
+                std::string generatedText = pipe->sttPipeline->generate(rawSpeech);
+                writer.String(generatedText.c_str());
             }
         }
         if(endpoint == Endpoint::TRANSLATIONS){
             std::unique_lock lock(pipe->sttPipelineMutex);
-            result += pipe->sttPipeline->generate(rawSpeech, ov::genai::task("translate"));
+            std::string generatedText = pipe->sttPipeline->generate(rawSpeech, ov::genai::task("translate"));
+            writer.String(generatedText.c_str());
         }
-
-        result.append("\"}");
-        std::unique_ptr<std::string> output = std::make_unique<std::string>(result);
+        writer.EndObject();
+        std::unique_ptr<std::string> output = std::make_unique<std::string>(buffer.GetString());
 
         cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(output.release(), cc->InputTimestamp());
         SPDLOG_LOGGER_DEBUG(stt_calculator_logger, "SpeechToTextCalculator  [Node: {}] Process end", cc->NodeName());

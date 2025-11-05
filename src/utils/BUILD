@@ -21,6 +21,8 @@ ovms_cc_library(
     srcs = ["rapidjson_utils.cpp"],
     deps = [
             "//src/port:rapidjson_document",
+            "//src/port:rapidjson_writer",
+            "//src/port:rapidjson_stringbuffer",
     ],
     visibility = ["//visibility:public",],
 )

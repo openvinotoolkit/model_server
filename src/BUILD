@@ -1127,6 +1127,7 @@ ovms_cc_library(
         "libovmsfilesystem",
         "libovmsstatus",
         "libovmslogging",
+        "//src/port:rapidjson_stringbuffer",
     ],
     visibility = ["//visibility:public"],
     additional_copts = COPTS_MEDIAPIPE + COPTS_DROGON,
@@ -1151,6 +1152,8 @@ ovms_cc_library(
     deps = [
         "@com_github_jupp0r_prometheus_cpp//core",
         "@com_github_tencent_rapidjson//:rapidjson",
+        "//src/port:rapidjson_stringbuffer",
+        "//src/port:rapidjson_writer",
         "cpp_headers",
         "libovms_module",
         "libovmslogging",
@@ -1606,6 +1609,8 @@ ovms_cc_library(
             "libovmsstring_utils",
             "libmodelconfigjsonparser",
             "anonymous_input_name",
+            "//src/port:rapidjson_stringbuffer",
+            "//src/port:rapidjson_writer",
     ],
     visibility = ["//visibility:public"],
 )

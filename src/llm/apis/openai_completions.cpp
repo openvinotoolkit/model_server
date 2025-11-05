@@ -20,8 +20,8 @@
 #include <memory>
 #pragma warning(push)
 #pragma warning(disable : 6313)
-#include <rapidjson/stringbuffer.h>
-#include <rapidjson/writer.h>
+#include "src/port/rapidjson_stringbuffer.hpp"
+#include "src/port/rapidjson_writer.hpp"
 #pragma warning(pop)
 #include <set>
 

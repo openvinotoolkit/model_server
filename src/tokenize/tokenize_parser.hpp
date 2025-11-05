@@ -33,7 +33,7 @@
 #pragma warning(push)
 #pragma warning(disable : 6313)
 #include <rapidjson/document.h>
-#include <rapidjson/stringbuffer.h>
+#include "src/port/rapidjson_stringbuffer.hpp"
 #pragma warning(pop)
 #pragma warning(push)
 #pragma warning(disable : 6001 6385 6386)

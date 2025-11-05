@@ -24,8 +24,8 @@
 #pragma warning(push)
 #pragma warning(disable : 6313)
 #include <rapidjson/document.h>
-#include <rapidjson/stringbuffer.h>
-#include <rapidjson/writer.h>
+#include "src/port/rapidjson_stringbuffer.hpp"
+#include "src/port/rapidjson_writer.hpp"
 #include <rapidjson/istreamwrapper.h>
 #include <rapidjson/prettywriter.h>
 #pragma warning(pop)

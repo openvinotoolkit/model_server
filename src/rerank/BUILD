@@ -94,6 +94,8 @@ ovms_cc_library(
         "@mediapipe//mediapipe/framework:calculator_framework", # required for absl status
         "//src:libovmsprofiler",
         "//third_party:openvino",
+        "//src/port:rapidjson_stringbuffer",
+        "//src/port:rapidjson_writer",
     ],
     visibility = ["//visibility:public"],
     alwayslink = 1,

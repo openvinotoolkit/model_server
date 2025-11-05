@@ -33,6 +33,8 @@ ovms_cc_library(
         "//src:libovmslogging",
         "stt_calculator_cc_proto",
         "//src/port:dr_audio",
+        "//src/port:rapidjson_stringbuffer",
+        "//src/port:rapidjson_writer",
         ":stt_servable",
         "//third_party:genai",
         "//src/audio:audio_utils",

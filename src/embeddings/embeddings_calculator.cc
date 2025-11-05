@@ -29,7 +29,7 @@
 #include <adapters/inference_adapter.h>
 #pragma warning(push)
 #pragma warning(disable : 6313)
-#include <rapidjson/writer.h>
+#include "src/port/rapidjson_writer.hpp"
 #pragma warning(pop)
 
 #include "../http_payload.hpp"
