@@ -252,7 +252,7 @@ TEST(EmbeddingsDeserialization, invalidEncoding) {
         {
             "model": "embeddings",
             "input": ["one", "three"],
-"encoding_format": "dummy"
+            "encoding_format": "dummy"
         }
     )";
     rapidjson::Document d;
@@ -269,7 +269,7 @@ TEST(EmbeddingsDeserialization, invalidEncodingType) {
         {
             "model": "embeddings",
             "input": ["one", "three"],
-"encoding_format": 42
+            "encoding_format": 42
         }
     )";
     rapidjson::Document d;
@@ -340,7 +340,7 @@ TEST(EmbeddingsDeserialization, multipleStringInputFloat) {
         {
             "model": "embeddings",
             "input": ["one", "two", "three"],
-"encoding_format": "float"
+            "encoding_format": "float"
         }
     )";
     rapidjson::Document d;
@@ -375,39 +375,23 @@ TEST(EmbeddingsDeserialization, emptyInputArray) {
     ASSERT_EQ(error, "input array should not be empty");
 }
 
-TEST(EmbeddingsSerialization, simplePositive) {
-    bool normalieEmbeddings = false;
+TEST(EmbeddingsSerializationNew, simplePositive) {
     rapidjson::StringBuffer buffer;
-    std::vector<float> tensorsData{1, 2, 3, 1, 2, 3, 1, 2, 3, 1, 2, 3, 1, 2, 3, 1, 2, 3};
-    std::vector<size_t> shape{2, 3, 3};
+    std::vector<float> tensorsData{1, 2, 3, 1, 2, 3};
+    std::vector<size_t> shape{2, 3};
     ov::Tensor embeddingsTensor = ov::Tensor(ov::element::Type_t::f32, shape, tensorsData.data());
     rapidjson::Document notUsed;
     ovms::EmbeddingsHandler handler(notUsed);
-    auto status = handler.parseResponse(buffer, embeddingsTensor, normalieEmbeddings);
+    auto status = handler.parseResponse(buffer, embeddingsTensor);
     ASSERT_TRUE(status.ok());
     std::string expectedResponse = R"({"object":"list","data":[{"object":"embedding","embedding":[1.0,2.0,3.0],"index":0},{"object":"embedding","embedding":[1.0,2.0,3.0],"index":1}],"usage":{"prompt_tokens":0,"total_tokens":0}})";
     EXPECT_STREQ(buffer.GetString(), expectedResponse.c_str());
 }
 
-TEST(EmbeddingsSerialization, positiveNormalization) {
-    bool normalieEmbeddings = true;
+TEST(EmbeddingsSerializationNew, positiveBase64) {
     rapidjson::StringBuffer buffer;
-    std::vector<float> tensorsData{1, 2, 3, 1, 2, 3, 1, 2, 3, 1, 2, 3, 1, 2, 3, 1, 2, 3};
-    std::vector<size_t> shape{2, 3, 3};
-    ov::Tensor embeddingsTensor = ov::Tensor(ov::element::Type_t::f32, shape, tensorsData.data());
-    rapidjson::Document notUsed;
-    ovms::EmbeddingsHandler handler(notUsed);
-    auto status = handler.parseResponse(buffer, embeddingsTensor, normalieEmbeddings);
-    ASSERT_TRUE(status.ok());
-    std::string expectedResponse = R"({"object":"list","data":[{"object":"embedding","embedding":[0.26726123690605164,0.5345224738121033,0.8017837405204773],"index":0},{"object":"embedding","embedding":[0.26726123690605164,0.5345224738121033,0.8017837405204773],"index":1}],"usage":{"prompt_tokens":0,"total_tokens":0}})";
-    EXPECT_STREQ(buffer.GetString(), expectedResponse.c_str());
-}
-
-TEST(EmbeddingsSerialization, positiveBase64) {
-    bool normalieEmbeddings = false;
-    rapidjson::StringBuffer buffer;
-    std::vector<float> tensorsData{1, 2, 3, 1, 2, 3, 1, 2, 3, 1, 2, 3, 1, 2, 3, 1, 2, 3};
-    std::vector<size_t> shape{2, 3, 3};
+    std::vector<float> tensorsData{1, 2, 3, 1, 2, 3};
+    std::vector<size_t> shape{2, 3};
     ov::Tensor embeddingsTensor = ov::Tensor(ov::element::Type_t::f32, shape, tensorsData.data());
     std::string requestBody = R"(
         {
@@ -422,67 +406,34 @@ TEST(EmbeddingsSerialization, positiveBase64) {
     ovms::EmbeddingsHandler handler(document);
     auto status = handler.parseRequest();
     ASSERT_TRUE(status.ok());
-    status = handler.parseResponse(buffer, embeddingsTensor, normalieEmbeddings);
+    status = handler.parseResponse(buffer, embeddingsTensor);
     ASSERT_TRUE(status.ok());
     std::string expectedResponse = R"({"object":"list","data":[{"object":"embedding","embedding":"AACAPwAAAEAAAEBA","index":0},{"object":"embedding","embedding":"AACAPwAAAEAAAEBA","index":1}],"usage":{"prompt_tokens":0,"total_tokens":0}})";
     EXPECT_STREQ(buffer.GetString(), expectedResponse.c_str());
 }
 
-TEST(EmbeddingsSerialization, positiveUsage) {
-    bool normalieEmbeddings = false;
+TEST(EmbeddingsSerializationNew, positiveUsage) {
     rapidjson::StringBuffer buffer;
-    std::vector<float> tensorsData{1, 2, 3, 1, 2, 3, 1, 2, 3, 1, 2, 3, 1, 2, 3, 1, 2, 3};
-    std::vector<size_t> shape{2, 3, 3};
+    std::vector<float> tensorsData{1, 2, 3, 1, 2, 3};
+    std::vector<size_t> shape{2, 3};
     ov::Tensor embeddingsTensor = ov::Tensor(ov::element::Type_t::f32, shape, tensorsData.data());
     rapidjson::Document notUsed;
     ovms::EmbeddingsHandler handler(notUsed);
     handler.setPromptTokensUsage(50);
-    auto status = handler.parseResponse(buffer, embeddingsTensor, normalieEmbeddings);
+    auto status = handler.parseResponse(buffer, embeddingsTensor);
     ASSERT_TRUE(status.ok());
     std::string expectedResponse = R"({"object":"list","data":[{"object":"embedding","embedding":[1.0,2.0,3.0],"index":0},{"object":"embedding","embedding":[1.0,2.0,3.0],"index":1}],"usage":{"prompt_tokens":50,"total_tokens":50}})";
     EXPECT_STREQ(buffer.GetString(), expectedResponse.c_str());
 }
 
-TEST(EmbeddingsSerialization, positiveLastTokenPooling) {
-    bool normalieEmbeddings = false;
+TEST(EmbeddingsSerializationNew, negativeShapeMismatch) {
     rapidjson::StringBuffer buffer;
-    std::vector<float> tensorsData{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27};
-    std::vector<size_t> embeddingsTensorShape{3, 3, 3};
-    ov::Tensor embeddingsTensor = ov::Tensor(ov::element::Type_t::f32, embeddingsTensorShape, tensorsData.data());
-    std::vector<int8_t> attentionMaskData{1, 1, 0, 1, 1, 1, 1, 0, 0};
-    std::vector<size_t> attentionMaskShape{3, 3};
-    ov::Tensor attentionMask = ov::Tensor(ov::element::Type_t::i8, attentionMaskShape, attentionMaskData.data());
-    rapidjson::Document notUsed;
-    ovms::EmbeddingsHandler handler(notUsed);
-    auto status = handler.parseResponse(buffer, embeddingsTensor, normalieEmbeddings, ovms::PoolingMode::LAST, attentionMask);
-    ASSERT_TRUE(status.ok());
-    std::string expectedResponse = R"({"object":"list","data":[{"object":"embedding","embedding":[4.0,5.0,6.0],"index":0},{"object":"embedding","embedding":[16.0,17.0,18.0],"index":1},{"object":"embedding","embedding":[19.0,20.0,21.0],"index":2}],"usage":{"prompt_tokens":0,"total_tokens":0}})";
-    EXPECT_STREQ(buffer.GetString(), expectedResponse.c_str());
-}
-
-TEST(EmbeddingsSerialization, lastTokenPoolingMissingAttentionMask) {
-    bool normalieEmbeddings = false;
-    rapidjson::StringBuffer buffer;
-    std::vector<float> tensorsData{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18};
+    std::vector<float> tensorsData{1, 2, 3, 1, 2, 3, 1, 2, 3, 1, 2, 3, 1, 2, 3, 1, 2, 3, 1, 2, 3, 1, 2, 3};
     std::vector<size_t> shape{2, 3, 3};
     ov::Tensor embeddingsTensor = ov::Tensor(ov::element::Type_t::f32, shape, tensorsData.data());
     rapidjson::Document notUsed;
     ovms::EmbeddingsHandler handler(notUsed);
-    auto status = handler.parseResponse(buffer, embeddingsTensor, normalieEmbeddings, ovms::PoolingMode::LAST);
-    ASSERT_EQ(status, absl::InvalidArgumentError("Last token pooling mode requires attention mask"));
-}
-
-TEST(EmbeddingsSerialization, lastTokenPoolingInvalidAttentionMask) {
-    bool normalieEmbeddings = false;
-    rapidjson::StringBuffer buffer;
-    std::vector<float> tensorsData{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27};
-    std::vector<size_t> embeddingsTensorShape{3, 3, 3};
-    ov::Tensor embeddingsTensor = ov::Tensor(ov::element::Type_t::f32, embeddingsTensorShape, tensorsData.data());
-    std::vector<int8_t> attentionMaskData{1, 1, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0};
-    std::vector<size_t> attentionMaskShape{3, 5};
-    ov::Tensor attentionMask = ov::Tensor(ov::element::Type_t::i8, attentionMaskShape, attentionMaskData.data());
-    rapidjson::Document notUsed;
-    ovms::EmbeddingsHandler handler(notUsed);
-    auto status = handler.parseResponse(buffer, embeddingsTensor, normalieEmbeddings, ovms::PoolingMode::LAST, attentionMask);
-    ASSERT_EQ(status, absl::InternalError("Embeddings output and attention mask shape mismatch"));
+    handler.setPromptTokensUsage(50);
+    auto status = handler.parseResponse(buffer, embeddingsTensor);
+    ASSERT_FALSE(status.ok());
 }

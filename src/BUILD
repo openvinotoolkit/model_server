@@ -558,9 +558,11 @@ ovms_cc_library(
             "//conditions:default": [],
             "//:not_disable_mediapipe" : [
                 "//src/image_gen:image_gen_calculator",
+                "//src/audio/speech_to_text:stt_calculator",
+                "//src/audio/text_to_speech:tts_calculator",
+                "//src/audio:audio_utils",
                 "//src/image_gen:imagegen_init",
                 "//src/llm:openai_completions_api_handler",
-                "//src/embeddings:embeddingscalculator",
                 "//src/embeddings:embeddingscalculator_ov",
                 "//src/rerank:rerankcalculator",
                 "//src/rerank:rerankcalculator_ov",
@@ -2372,7 +2374,9 @@ cc_binary(
     name = "ovms",
     srcs = [
         "main.cpp",
-    ],
+    ] + select({
+        "//conditions:default": [],
+        "//src:windows" : ["main_windows.hpp", "main_windows.cpp",],}),
     linkopts = LINKOPTS_ADJUSTED,
     copts = COMMON_STATIC_LIBS_COPTS,
     deps = [
@@ -2386,7 +2390,7 @@ cc_binary(
                 "//src:libcustom_node_model_zoo_intel_object_detection.so",
                 "//src:libcustom_node_image_transformation.so",
             ],
-            "//src:windows" : [],
+            "//src:windows" : ["@winreg//:winreg"],
         })
      + select({
             "//conditions:default": [
@@ -2660,6 +2664,7 @@ cc_test(
             ":test_platform_utils",
             "//src/rerank:rerank_api_handler",
             ":embeddings_handler_tests",
+            ":tokenize_parser_tests",
             ":inferencerequest_test",
             ":libtest_environment",
             ":libtest_gpuenvironment",
@@ -3107,6 +3112,21 @@ cc_library(
     copts = COPTS_TESTS,
     linkopts = [],
 )
+
+cc_library(
+    name = "tokenize_parser_tests",
+    linkstatic = 1,
+    alwayslink = True,
+    srcs = ["test/tokenize_parser_test.cpp"],
+    data = [],
+    deps = [
+        "//src/tokenize:tokenize_parser",
+        "@com_google_googletest//:gtest",
+    ],
+    copts = COPTS_TESTS,
+    linkopts = [],
+)
+
 
 cc_library(
     name = "test_llm_output_parser_tests",

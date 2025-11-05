@@ -16,15 +16,14 @@ python export_model.py --help
 ```
 Expected Output:
 ```console
-usage: export_model.py [-h] {text_generation,embeddings,embeddings_ov,rerank,rerank_ov,image_generation} ...
+usage: export_model.py [-h] {text_generation,embeddings_ov,rerank,rerank_ov,image_generation} ...
 
 Export Hugging face models to OVMS models repository including all configuration for deployments
 
 positional arguments:
-  {text_generation,embeddings,embeddings_ov,rerank,rerank_ov,image_generation}
+  {text_generation,embeddings_ov,rerank,rerank_ov,image_generation}
                         subcommand help
     text_generation     export model for chat and completion endpoints
-    embeddings          [deprecated] export model for embeddings endpoint with models split into separate, versioned directories
     embeddings_ov       export model for embeddings endpoint with directory structure aligned with OpenVINO tools
     rerank              [deprecated] export model for rerank endpoint with models split into separate, versioned directories
     rerank_ov           export model for rerank endpoint with directory structure aligned with OpenVINO tools
@@ -134,25 +133,36 @@ It will ensure, the generation stops after eos token.
 
 #### Embeddings with deployment on a single CPU host:
 ```console
-python export_model.py embeddings_ov --source_model Alibaba-NLP/gte-large-en-v1.5 --weight-format int8 --config_file_path models/config_all.json
+python export_model.py embeddings_ov --source_model BAAI/bge-large-en-v1.5 --weight-format int8 --config_file_path models/config_all.json
 ```
 
 #### Embeddings with deployment on a dual CPU host:
 ```console
-python export_model.py embeddings_ov --source_model Alibaba-NLP/gte-large-en-v1.5 --weight-format int8 --config_file_path models/config_all.json --num_streams 2
+python export_model.py embeddings_ov --source_model BAAI/bge-large-en-v1.5 --weight-format int8 --config_file_path models/config_all.json --num_streams 2
 ```
 
 #### Embeddings with pooling parameter
+Supported poolings: `LAST`, `MEAN`, `CLS` (default).
 ```console
-python export_model.py embeddings_ov --source_model Qwen/Qwen3-Embedding-0.6B --weight-format fp16 --config_file_path models/config_all.json
+python export_model.py embeddings_ov --source_model Qwen/Qwen3-Embedding-0.6B --pooling LAST --weight-format fp16 --config_file_path models/config_all.json
 ```
+
+#### Embeddings with `sentence_transformers` library
+Some embedding models require special handling during export. For example:
+```console
+python export_model.py embeddings_ov --source_model Alibaba-NLP/gte-large-en-v1.5 --extra_quantization_params "--library sentence_transformers" --weight-format fp16 --config_file_path models/config_all.json
+```
+Known models that require it:
+- Alibaba-NLP/gte-large-en-v1.5
+- nomic-ai/nomic-embed-text-v1.5
+
 
 
 #### With Input Truncation
 By default, embeddings endpoint returns an error when the input exceed the maximum model context length.
 It is possible to change the behavior to truncate prompts automatically to fit the model. Add `--truncate` option in the export command.
 ```console
-python export_model.py embeddings \
+python export_model.py embeddings_ov \
     --source_model BAAI/bge-large-en-v1.5 \
     --weight-format int8 \
     --config_file_path models/config_all.json \
