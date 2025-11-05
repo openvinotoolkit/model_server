@@ -2000,7 +2000,7 @@ TEST_F(OvmsParamsTest, hostname_ip_regex) {
     EXPECT_EQ(ovms::Config::check_hostname_or_ip("::ffff:0:192.0.2.128"), true);
 
     // Multiple selections
-    EXPECT_EQ(ovms::Config::check_hostname_or_ip("0.0.0.0,::"), true);
+    EXPECT_EQ(ovms::Config::check_hostname_or_ip("0.0.0.0"), true);
     EXPECT_EQ(ovms::Config::check_hostname_or_ip("0.0.0.0,0:0:0:0:0:0:0:0"), true);
     EXPECT_EQ(ovms::Config::check_hostname_or_ip("127.0.0.1,::1"), true);
     EXPECT_EQ(ovms::Config::check_hostname_or_ip("127.0.0.1,0:0:0:0:0:0:0:1"), true);

@@ -164,10 +164,10 @@ struct ServerSettingsImpl {
     uint32_t grpcPort = 0;
     uint32_t restPort = 0;
     uint32_t grpcWorkers = 1;
-    std::string grpcBindAddress = "0.0.0.0,::";
+    std::string grpcBindAddress = "0.0.0.0";
     std::optional<uint32_t> restWorkers;
     std::optional<uint32_t> grpcMaxThreads;
-    std::string restBindAddress = "0.0.0.0,::";
+    std::string restBindAddress = "0.0.0.0";
     bool metricsEnabled = false;
     std::string metricsList;
     std::string cpuExtensionLibraryPath;
