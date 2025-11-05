@@ -2375,7 +2375,9 @@ cc_binary(
     name = "ovms",
     srcs = [
         "main.cpp",
-    ],
+    ] + select({
+        "//conditions:default": [],
+        "//src:windows" : ["main_windows.hpp", "main_windows.cpp",],}),
     linkopts = LINKOPTS_ADJUSTED,
     copts = COMMON_STATIC_LIBS_COPTS,
     deps = [
@@ -2389,7 +2391,7 @@ cc_binary(
                 "//src:libcustom_node_model_zoo_intel_object_detection.so",
                 "//src:libcustom_node_image_transformation.so",
             ],
-            "//src:windows" : [],
+            "//src:windows" : ["@winreg//:winreg"],
         })
      + select({
             "//conditions:default": [

@@ -141,6 +141,8 @@ void configure_logger(const std::string& log_level, const std::string& log_path)
         sinks.push_back(std::make_shared<spdlog::sinks::basic_file_sink_mt>(log_path));
     }
     register_loggers(log_level, sinks);
+    const int OVMS_SPDLOG_FLUSH_EVERY_SECONDS = 1;
+    spdlog::flush_every(std::chrono::seconds(OVMS_SPDLOG_FLUSH_EVERY_SECONDS));
 #if (MEDIAPIPE_DISABLE == 0)
 #ifdef __linux__
     if (log_level == "DEBUG" || log_level == "TRACE")
