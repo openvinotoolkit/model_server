@@ -117,15 +117,11 @@ void Phi4ToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t
 
     std::string toolsStartString = "functools";
     size_t toolsStartPos = 0;
-    // If "functools" has been injected we assume the whole generated output is an array with tool calls,
-    // otherwise we search for the "functools" tag in the content.
-    if (!immediateParsingEnabled) {
-        toolsStartPos = parsedOutput.content.find(toolsStartString);
-    }
+    toolsStartPos = parsedOutput.content.find(toolsStartString);
 
     if (toolsStartPos != std::string::npos) {
-        // Extract the tools part, assuming it's all the remaining content after "functools" or entire content if immediate parsing is enabled
-        std::string toolsString = immediateParsingEnabled ? parsedOutput.content : parsedOutput.content.substr(toolsStartPos + toolsStartString.length());
+        // Extract the tools part, assuming it's all the remaining content after "functools"
+        std::string toolsString = parsedOutput.content.substr(toolsStartPos + toolsStartString.length());
         rapidjson::Document toolsDoc;
         toolsDoc.Parse(toolsString.c_str());
         if (!toolsDoc.HasParseError() && toolsDoc.IsArray()) {
