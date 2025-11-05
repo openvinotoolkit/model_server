@@ -220,7 +220,7 @@ pipeline {
         stage("Additional tests on other hosts in parallel") {
           when { expression { perf_test_needed == "1" || docs_test_needed == "1" } }
           options {
-            timeout(time: 120, unit: 'MINUTES')
+            timeout(time: 30, unit: 'MINUTES')
           }
           parallel {
             stage("Run performance tests CPU") {
@@ -248,7 +248,7 @@ pipeline {
               when { expression { docs_test_needed == "1" } }
               steps {
                 sh 'echo Running documentation tests...'
-                build job: "ovmsc/job/testing_ci_changes/job/test-demos", parameters: [
+                build job: "ovmsc/testing_ci_changes/test-demos", parameters: [
                   [$class: 'StringParameterValue', name: 'TT_OVMS_IMAGE_NAME', value: "registry.toolbox.iotg.sclab.intel.com/model_server:${shortCommit}"],
                   [$class: 'StringParameterValue', name: 'CORE_BRANCH', value: "${BRANCH_NAME}"],
                   [$class: 'StringParameterValue', name: 'PATTERN', value: "demos/continuous_batching/agentic_ai/README.md"]
