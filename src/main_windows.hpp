@@ -18,7 +18,6 @@
 #endif  // SRC_MAIN_WINDOWS_HPP_
 
 #include <memory>
-#include <pair>
 #include <string>
 #include <utility>
 #include <Windows.h>
