@@ -72,12 +72,4 @@ rapidjson::Document BaseOutputParser::wrapDelta(const rapidjson::Document& delta
     return wrappedDelta;
 }
 
-void BaseOutputParser::enableImmediateParsing() {
-    immediateParsingEnabled = true;
-}
-
-bool BaseOutputParser::isImmediateParsingEnabled() const {
-    return immediateParsingEnabled;
-}
-
 }  // namespace ovms
