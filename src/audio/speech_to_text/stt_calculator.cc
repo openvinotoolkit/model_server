@@ -49,6 +49,23 @@ namespace mediapipe {
 
 const std::string STT_SESSION_SIDE_PACKET_TAG = "STT_NODE_RESOURCES";
 
+enum Endpoint{
+    TRANSCRIPTIONS,
+    TRANSLATIONS,
+    UNSUPPORTED
+};
+
+Endpoint getEndpoint(std::string url){
+    if (absl::StartsWith(url, "/v3/audio/transcriptions")){
+        return Endpoint::TRANSCRIPTIONS;
+    }
+    if (absl::StartsWith(url, "/v3/audio/translations")){
+        return Endpoint::TRANSLATIONS;
+    }
+    return Endpoint::UNSUPPORTED;
+}
+
+
 class SttCalculator : public CalculatorBase {
     static const std::string INPUT_TAG_NAME;
     static const std::string OUTPUT_TAG_NAME;
@@ -82,41 +99,49 @@ public:
         auto pipe = it->second;
 
         auto payload = cc->Inputs().Tag(INPUT_TAG_NAME).Get<ovms::HttpPayload>();
-
-        std::unique_ptr<std::string> output;
-        if (absl::StartsWith(payload.uri, "/v3/audio/transcriptions")) {
-            if (payload.multipartParser->hasParseError())
-                return absl::InvalidArgumentError("Failed to parse multipart data");
-
-            std::string_view stream = payload.multipartParser->getFileContentByFieldName("stream");
-            if (!stream.empty()) {
-                return absl::InvalidArgumentError("streaming is not supported");
-            }
-            std::string_view file = payload.multipartParser->getFileContentByFieldName("file");
-            if (file.empty()) {
-                return absl::InvalidArgumentError(absl::StrCat("File parsing fails"));
-            }
-
-            std::vector<float> rawSpeech;
-            try {
-                if (isWavBuffer(std::string(file))) {
-                    SPDLOG_DEBUG("Received file format: wav");
-                    rawSpeech = readWav(file);
-                } else {
-                    rawSpeech = readMp3(file);
-                    SPDLOG_DEBUG("Received file format: mp3");
-                }
-            } catch (std::exception&) {
-                return absl::InvalidArgumentError("Received input file is not valid wav nor mp3 audio file");
-            }
-            std::string result = "{\"text\": \"";
-            std::unique_lock lock(pipe->sttPipelineMutex);
-            result += pipe->sttPipeline->generate(rawSpeech);
-            result.append("\"}");
-            output = std::make_unique<std::string>(result);
-        } else {
+        auto endpoint = getEndpoint(payload.uri);
+        if(endpoint == Endpoint::UNSUPPORTED){
             return absl::InvalidArgumentError(absl::StrCat("Unsupported URI: ", payload.uri));
         }
+
+        std::unique_ptr<std::string> output;
+        if (payload.multipartParser->hasParseError())
+            return absl::InvalidArgumentError("Failed to parse multipart data");
+
+        std::string_view stream = payload.multipartParser->getFileContentByFieldName("stream");
+        if (!stream.empty()) {
+            return absl::InvalidArgumentError("streaming is not supported");
+        }
+        std::string_view file = payload.multipartParser->getFileContentByFieldName("file");
+        if (file.empty()) {
+            return absl::InvalidArgumentError(absl::StrCat("File parsing fails"));
+        }
+
+        std::vector<float> rawSpeech;
+        try {
+            if (isWavBuffer(std::string(file))) {
+                SPDLOG_DEBUG("Received file format: wav");
+                rawSpeech = readWav(file);
+            } else {
+                rawSpeech = readMp3(file);
+                SPDLOG_DEBUG("Received file format: mp3");
+            }
+        } catch (std::exception&) {
+            return absl::InvalidArgumentError("Received input file is not valid wav nor mp3 audio file");
+        }
+        std::string result = "{\"text\": \"";
+        std::unique_lock lock(pipe->sttPipelineMutex);
+
+        std::string_view language = payload.multipartParser->getFileContentByFieldName("language");
+        if (!language.empty()) {
+            std::string genaiLanguage = "<|" + std::string(language) +"|>";
+            result += pipe->sttPipeline->generate(rawSpeech,ov::genai::language(genaiLanguage.c_str()));
+        }
+        else {
+            result += pipe->sttPipeline->generate(rawSpeech);
+        }
+        result.append("\"}");
+        output = std::make_unique<std::string>(result);
 
         cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(output.release(), cc->InputTimestamp());
         SPDLOG_LOGGER_DEBUG(stt_calculator_logger, "SpeechToTextCalculator  [Node: {}] Process end", cc->NodeName());
