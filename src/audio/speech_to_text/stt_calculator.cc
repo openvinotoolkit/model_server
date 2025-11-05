@@ -51,17 +51,17 @@ namespace mediapipe {
 
 const std::string STT_SESSION_SIDE_PACKET_TAG = "STT_NODE_RESOURCES";
 
-enum Endpoint{
+enum Endpoint {
     TRANSCRIPTIONS,
     TRANSLATIONS,
     UNSUPPORTED
 };
 
-Endpoint getEndpoint(const std::string& url){
-    if (absl::StartsWith(url, "/v3/audio/transcriptions")){
+Endpoint getEndpoint(const std::string& url) {
+    if (absl::StartsWith(url, "/v3/audio/transcriptions")) {
         return Endpoint::TRANSCRIPTIONS;
     }
-    if (absl::StartsWith(url, "/v3/audio/translations")){
+    if (absl::StartsWith(url, "/v3/audio/translations")) {
         return Endpoint::TRANSLATIONS;
     }
     return Endpoint::UNSUPPORTED;
@@ -103,7 +103,7 @@ public:
 
         auto payload = cc->Inputs().Tag(INPUT_TAG_NAME).Get<ovms::HttpPayload>();
         auto endpoint = getEndpoint(payload.uri);
-        if(endpoint == Endpoint::UNSUPPORTED){
+        if (endpoint == Endpoint::UNSUPPORTED) {
             return absl::InvalidArgumentError(absl::StrCat("Unsupported URI: ", payload.uri));
         }
 
@@ -135,23 +135,22 @@ public:
         rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
         writer.StartObject();
         writer.String("text");
-        if(endpoint == Endpoint::TRANSCRIPTIONS){
+        if (endpoint == Endpoint::TRANSCRIPTIONS) {
             std::string_view language = payload.multipartParser->getFileContentByFieldName("language");
             std::unique_lock lock(pipe->sttPipelineMutex);
             if (!language.empty()) {
-                if(language.size() > ISO_LANG_CODE_MAX){
+                if (language.size() > ISO_LANG_CODE_MAX) {
                     return absl::InvalidArgumentError("Invalid language code.");
                 }
-                std::string genaiLanguage = "<|" + std::string(language) +"|>";
-                std::string generatedText = pipe->sttPipeline->generate(rawSpeech,ov::genai::language(genaiLanguage.c_str()));
+                std::string genaiLanguage = "<|" + std::string(language) + "|>";
+                std::string generatedText = pipe->sttPipeline->generate(rawSpeech, ov::genai::language(genaiLanguage.c_str()));
                 writer.String(generatedText.c_str());
-            }
-            else {
+            } else {
                 std::string generatedText = pipe->sttPipeline->generate(rawSpeech);
                 writer.String(generatedText.c_str());
             }
         }
-        if(endpoint == Endpoint::TRANSLATIONS){
+        if (endpoint == Endpoint::TRANSLATIONS) {
             std::unique_lock lock(pipe->sttPipelineMutex);
             std::string generatedText = pipe->sttPipeline->generate(rawSpeech, ov::genai::task("translate"));
             writer.String(generatedText.c_str());
