@@ -534,7 +534,7 @@ DWORD WINAPI OvmsWindowsServiceManager::serviceWorkerThread(LPVOID lpParam) {
     if (ovmsService->error) {
         DEBUG_LOG("serviceWorkerThread: Ovms start returned error.");
         DEBUG_LOG(ovmsService->error);
-        serviceReportEvent("Ovms start returned error.");
+        serviceReportEventWithExitCode("serviceWorkerThread", "Ovms exited with error.", ovmsService->error);
         return ovmsService->error;
     }
 

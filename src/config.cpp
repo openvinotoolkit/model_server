@@ -43,11 +43,21 @@ const size_t DEFAULT_GRPC_MEMORY_QUOTA = (size_t)2 * 1024 * 1024 * 1024;  // 2GB
 const uint64_t MAX_REST_WORKERS = 10'000;
 
 Config& Config::parse(int argc, char** argv) {
-    ovms::CLIParser p;
+    ovms::CLIParser parser;
     ovms::ServerSettingsImpl serverSettings;
     ovms::ModelsSettingsImpl modelsSettings;
-    p.parse(argc, argv);
-    p.prepare(&serverSettings, &modelsSettings);
+    auto successOrExit = parser.parse(argc, argv);
+    // Check for error in parsing
+    if (std::holds_alternative<std::pair<int, std::string>>(successOrExit)) {
+        auto printAndExit = std::get<std::pair<int, std::string>>(successOrExit);
+        if (printAndExit.first > 0) {
+            std::cerr << printAndExit.second;
+        } else {
+            std::cout << printAndExit.second;
+        }
+        exit(printAndExit.first);
+    }
+    parser.prepare(&serverSettings, &modelsSettings);
     if (!this->parse(&serverSettings, &modelsSettings))
         exit(OVMS_EX_USAGE);
     return *this;

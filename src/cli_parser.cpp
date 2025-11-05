@@ -403,7 +403,7 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
             ss << "OpenVINO backend " << OPENVINO_NAME << std::endl;
             ss << "Bazel build flags: " << BAZEL_BUILD_FLAGS << std::endl;
 #pragma warning(pop)
-            return std::make_pair(OVMS_EX_USAGE, ss.str());
+            return std::make_pair(OVMS_EX_OK, ss.str());
         }
 
         if (result->count("help") || result->arguments().size() == 0) {
@@ -417,7 +417,7 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
             parser2.printHelp();
             parser3.printHelp();
             imageGenParser.printHelp();
-            return std::make_pair(OVMS_EX_USAGE, ss.str());
+            return std::make_pair(OVMS_EX_OK, ss.str());
         }
 
         return true;
