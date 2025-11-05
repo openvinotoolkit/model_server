@@ -17,7 +17,7 @@ mkdir models
 ```
 > **Note:** The users in China need to set environment variable HF_ENDPOINT="https://hf-mirror.com" before running the export script to connect to the HF Hub.
 
-Pull and add `ulkaa/CodeLlama-7b-hf-OpenVINO-sym-int4`:
+Pull and add `llmware/codegemma-7b-it-ov`:
 ::::{tab-set}
 :::{tab-item} Linux
 :sync: Linux
@@ -28,25 +28,24 @@ docker run -it --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
     --pull \
     --task text_generation \
     --model_repository_path /models \
-    --source_model ulkaa/CodeLlama-7b-hf-OpenVINO-sym-int4 \
+    --source_model llmware/codegemma-7b-it-ov \
     --target_device GPU \
-    --tool_parser llama3 \
     --cache_size 2
 
 docker run -it --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
     -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy=$no_proxy \
     openvino/model_server:weekly \
     --add_to_config /models/config_all.json \
-    --model_name ulkaa/CodeLlama-7b-hf-OpenVINO-sym-int4 \
-    --model_path ulkaa/CodeLlama-7b-hf-OpenVINO-sym-int4
+    --model_name llmware/codegemma-7b-it-ov \
+    --model_path llmware/codegemma-7b-it-ov
 ```
 :::
 ::: {tab-item} Windows
 :sync: Windows
 ```bat
-ovms --pull --task text_generation --model_repository_path models --source_model ulkaa/CodeLlama-7b-hf-OpenVINO-sym-int4 --target_device GPU --tool_parser llama3 --cache_size 2
+ovms --pull --task text_generation --model_repository_path models --source_model llmware/codegemma-7b-it-ov --target_device GPU --cache_size 2
 
-ovms --add_to_config models/config_all.json --model_name ulkaa/CodeLlama-7b-hf-OpenVINO-sym-int4 --model_path ulkaa/CodeLlama-7b-hf-OpenVINO-sym-int4s
+ovms --add_to_config models/config_all.json --model_name llmware/codegemma-7b-it-ov --model_path llmware/codegemma-7b-it-ov
 ```
 :::
 ::::
@@ -82,7 +81,7 @@ docker run -it --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
 :sync: Windows
 Or, when running on Windows, pull and add `OpenVINO/Qwen3-8B-int4-ov`:
 ```bat
-ovms --pull --task text_generation --model_repository_path models --source_model OpenVINO/Qwen3-8B-int4-ov --target_device GPU   --tool_parser hermes3 --cache_size 2
+ovms --pull --task text_generation --model_repository_path models --source_model OpenVINO/Qwen3-8B-int4-ov --target_device GPU --tool_parser hermes3 --cache_size 2
 
 ovms --add_to_config models/config_all.json --model_name OpenVINO/Qwen3-8B-int4-ov --model_path OpenVINO/Qwen3-8B-int4-ov
 ```
@@ -135,8 +134,8 @@ Examine that workspace is set up properly `models/config_all.json`:
     "model_config_list": [
         {
             "config": {
-                "name": "ulkaa/CodeLlama-7b-hf-OpenVINO-sym-int4",
-                "base_path": "ulkaa/CodeLlama-7b-hf-OpenVINO-sym-int4"
+                "name": "llmware/codegemma-7b-it-ov",
+                "base_path": "llmware/codegemma-7b-it-ov"
             }
         },
         {
@@ -153,15 +152,14 @@ Examine that workspace is set up properly `models/config_all.json`:
         }
     ]
 }
-
-
 ```
 
+#TODO change it on but display on linux
 ```bash
 tree models
 models
-├── codellama
-│   └── CodeLlama-7b-Instruct-hf
+├── llmware
+│   └──codegemma-7b-it-ov
 │       ├── chat_template.jinja
 │       ├── config.json
 │       ├── generation_config.json
