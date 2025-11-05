@@ -13,208 +13,190 @@ We need to use medium size model to get reliable responses but also to fit it to
 
 Create directory for the models:
 ```console
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/demos/common/export_models/export_model.py -o export_model.py
+pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/demos/common/export_models/requirements.txt
 mkdir models
 ```
 > **Note:** The users in China need to set environment variable HF_ENDPOINT="https://hf-mirror.com" before running the export script to connect to the HF Hub.
 
-Pull and add `llmware/codegemma-7b-it-ov`:
+Pull and add the model on Linux:
 ::::{tab-set}
-:::{tab-item} Linux
-:sync: Linux
+:::{tab-item} Qwen/Qwen3-Coder-30B-A3B-Instruct
+:sync: Qwen/Qwen3-Coder-30B-A3B-Instruct
 ```bash
-docker run -it --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
-    -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy=$no_proxy \
-    openvino/model_server:weekly \
-    --pull \
-    --task text_generation \
-    --model_repository_path /models \
-    --source_model llmware/codegemma-7b-it-ov \
-    --target_device GPU \
-    --cache_size 2
+python export_model.py text_generation --source_model Qwen/Qwen3-Coder-30B-A3B-Instruct --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device GPU --cache_size 2 --overwrite_models
 
-docker run -it --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
+docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
+    openvino/model_server:weekly \
+    --add_to_config /models/config_all.json \
+    --model_name Qwen/Qwen3-Coder-30B-A3B-Instruct \
+    --model_path Qwen/Qwen3-Coder-30B-A3B-Instruct
+```
+> **Note:** This model requires ~64GB disk space and same amount of VRAM on the iGPU, it is recommended to use B60.
+:::
+:::{tab-item} openai/gpt-oss-20b
+:sync: openai/gpt-oss-20b
+```bash
+python export_model.py text_generation --source_model openai/gpt-oss-20b --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device GPU --cache_size 2 --overwrite_models
+
+docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
+    openvino/model_server:weekly \
+    --add_to_config /models/config_all.json \
+    --model_name openai/gpt-oss-20b \
+    --model_path openai/gpt-oss-20b
+```
+> **Note:** This model requires ~15GB disk space and same amount of VRAM on the iGPU.
+:::
+:::{tab-item} mistralai/Codestral-22B-v0.1 
+:sync: mistralai/Codestral-22B-v0.1
+```bash
+python export_model.py text_generation --source_model mistralai/Codestral-22B-v0.1 --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device GPU --cache_size 2 --overwrite_models
+
+docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
     -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy=$no_proxy \
     openvino/model_server:weekly \
     --add_to_config /models/config_all.json \
-    --model_name llmware/codegemma-7b-it-ov \
-    --model_path llmware/codegemma-7b-it-ov
+    --model_name mistralai/Codestral-22B-v0.1 \
+    --model_path mistralai/Codestral-22B-v0.1
 ```
+> **Note:** This model requires ~45GB disk space and same amount of VRAM on the iGPU, it is recommended to use B60.
 :::
-::: {tab-item} Windows
-:sync: Windows
-```bat
-ovms --pull --task text_generation --model_repository_path models --source_model llmware/codegemma-7b-it-ov --target_device GPU --cache_size 2
-
-ovms --add_to_config models/config_all.json --model_name llmware/codegemma-7b-it-ov --model_path llmware/codegemma-7b-it-ov
-```
-:::
-::::
-
-## Prepare Agentic Model 
-We need specialized model that is able to produce tool calls. For this task we will use Qwen3-8B quantized to int4. We will use automatic pulling of HF models, so export script is not required.
-
-Pull and add `OpenVINO/Qwen3-8B-int4-ov`:
-::::{tab-set}
-:::{tab-item} Linux
-:sync: Linux
+:::{tab-item} OpenVINO/Qwen3-8B-int4-ov
+:sync: OpenVINO/Qwen3-8B-int4-ov
 ```bash
-docker run -it --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
-    -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy=$no_proxy \
-    openvino/model_server:latest-gpu \
+docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
     --pull \
-    --task text_generation \
-    --model_repository_path /models \
     --source_model OpenVINO/Qwen3-8B-int4-ov \
-    --target_device GPU \
-    --tool_parser hermes3 \
-    --cache_size 2
+    --model_repository_path /models \
+    --model_name OpenVINO/Qwen3-8B-int4-ov
 
-docker run -it --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
+docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
     -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy=$no_proxy \
-    openvino/model_server:latest-gpu \
+    openvino/model_server:weekly \
     --add_to_config /models/config_all.json \
     --model_name OpenVINO/Qwen3-8B-int4-ov \
     --model_path OpenVINO/Qwen3-8B-int4-ov
 ```
 :::
-::: {tab-item} Windows
-:sync: Windows
-Or, when running on Windows, pull and add `OpenVINO/Qwen3-8B-int4-ov`:
-```bat
-ovms --pull --task text_generation --model_repository_path models --source_model OpenVINO/Qwen3-8B-int4-ov --target_device GPU --tool_parser hermes3 --cache_size 2
-
-ovms --add_to_config models/config_all.json --model_name OpenVINO/Qwen3-8B-int4-ov --model_path OpenVINO/Qwen3-8B-int4-ov
-```
-:::
-::::
-
-> **Note:** Use `--target_device NPU` for Intel NPU or omit this parameter to run on Intel CPU
-
-## Prepare Code Completion Model
-For this task we need smaller, lighter model that will produce code quicker than chat task.
-Since we do not want to wait for the code to appear, we need to use smaller model. It should be responsive enough to generate multi-line blocks of code ahead of time as we type.
-Code completion works in non-streaming, unary mode. Do not use instruct model, there is no chat involved in the process.
-
-Pull and add `OpenVINO/Qwen2.5-Coder-0.5B-Instruct-int4-ov`:
-::::{tab-set}
-:::{tab-item} Linux
-:sync: Linux
+:::{tab-item} OpenVINO/Qwen3-4B-int4-ov
+:sync: OpenVINO/Qwen3-4B-int4-ov
 ```bash
-docker run -it --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
-    -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy=$no_proxy \
-    openvino/model_server:latest-gpu \
+docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
     --pull \
-    --task text_generation \
+    --source_model OpenVINO/Qwen3-4B-int4-ov \
     --model_repository_path /models \
-    --source_model OpenVINO/Qwen2.5-Coder-0.5B-Instruct-int4-ov \
-    --target_device GPU \
-    --tool_parser hermes3 \
-    --cache_size 2
-
-docker run -it --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
+    --model_name OpenVINO/Qwen3-4B-int4-ov
+    
+docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
     -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy=$no_proxy \
-    openvino/model_server:latest-gpu \
+    openvino/model_server:weekly \
     --add_to_config /models/config_all.json \
-    --model_name OpenVINO/Qwen2.5-Coder-0.5B-Instruct-int4-ov \
-    --model_path OpenVINO/Qwen2.5-Coder-0.5B-Instruct-int4-ov
+    --model_name OpenVINO/Qwen3-4B-int4-ov \
+    --model_path OpenVINO/Qwen3-4B-int4-ov
 ```
 :::
-::: {tab-item} Windows
-:sync: Windows
-```bat
-ovms --pull --task text_generation --model_repository_path models --source_model OpenVINO/Qwen2.5-Coder-0.5B-Instruct-int4-ov --target_device GPU --tool_parser hermes3 --cache_size 2
-ovms --add_to_config ./models/config_all.json --model_name OpenVINO/Qwen2.5-Coder-0.5B-Instruct-int4-ov --model_path OpenVINO/Qwen2.5-Coder-0.5B-Instruct-int4-ov
+:::{tab-item} OpenVINO/starcoder2-7b-int4-ov
+:sync: OpenVINO/starcoder2-7b-int4-ov
+```bash
+docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
+    --pull \
+    --source_model OpenVINO/starcoder2-7b-int4-ov \
+    --model_repository_path /models \
+    --model_name OpenVINO/starcoder2-7b-int4-ov
+    
+docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
+    -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy=$no_proxy \
+    openvino/model_server:weekly \
+    --add_to_config /models/config_all.json \
+    --model_name OpenVINO/starcoder2-7b-int4-ov \
+    --model_path OpenVINO/starcoder2-7b-int4-ov
 ```
+:::
+:::{tab-item} OpenVINO/Qwen2.5-Coder-3B-Instruct-int4-ov
+:sync: OpenVINO/Qwen2.5-Coder-3B-Instruct-int4-ov
+```bash
+docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
+    --pull \
+    --source_model OpenVINO/Qwen2.5-Coder-3B-Instruct-int4-ov \
+    --model_repository_path /models \
+    --model_name OpenVINO/Qwen2.5-Coder-3B-Instruct-int4-ov
+    
+docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
+    -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy=$no_proxy \
+    openvino/model_server:weekly \
+    --add_to_config /models/config_all.json \
+    --model_name OpenVINO/Qwen2.5-Coder-3B-Instruct-int4-ov \
+    --model_path OpenVINO/Qwen2.5-Coder-3B-Instruct-int4-ov
+```
+
+> **Note:** `Qwen2.5-Coder` models are avaliable on [HuggingFace OpenVINO repository](https://huggingface.co/OpenVINO/models?search=qwen2.5-coder) in different sizes and precisions. It is possible to choose it for any use and hardware. 
 :::
 ::::
 
-Examine that workspace is set up properly `models/config_all.json`:
-```
-{
-    "model_config_list": [
-        {
-            "config": {
-                "name": "llmware/codegemma-7b-it-ov",
-                "base_path": "llmware/codegemma-7b-it-ov"
-            }
-        },
-        {
-            "config": {
-                "name": "OpenVINO/Qwen3-8B-int4-ov",
-                "base_path": "OpenVINO/Qwen3-8B-int4-ov"
-            }
-        },
-        {
-            "config": {
-                "name": "OpenVINO/Qwen2.5-Coder-0.5B-Instruct-int4-ov",
-                "base_path": "OpenVINO/Qwen2.5-Coder-0.5B-Instruct-int4-ov"
-            }
-        }
-    ]
-}
-```
-
-#TODO change it on but display on linux
+Pull and add the model on Windows:
+::::{tab-set}
+:::{tab-item} Qwen/Qwen3-Coder-30B-A3B-Instruct
+:sync: Qwen/Qwen3-Coder-30B-A3B-Instruct
 ```bash
-tree models
-models
-├── llmware
-│   └──codegemma-7b-it-ov
-│       ├── chat_template.jinja
-│       ├── config.json
-│       ├── generation_config.json
-│       ├── graph.pbtxt
-│       ├── openvino_detokenizer.bin
-│       ├── openvino_detokenizer.xml
-│       ├── openvino_model.bin
-│       ├── openvino_model.xml
-│       ├── openvino_tokenizer.bin
-│       ├── openvino_tokenizer.xml
-│       ├── special_tokens_map.json
-│       ├── tokenizer_config.json
-│       ├── tokenizer.json
-│       └── tokenizer.model
-├── config_all.json
-├── OpenVINO
-│   └── Qwen3-8B-int4-ov
-│       ├── added_tokens.json
-│       ├── config.json
-│       ├── generation_config.json
-│       ├── graph.pbtxt
-│       ├── merges.txt
-│       ├── openvino_config.json
-│       ├── openvino_detokenizer.bin
-│       ├── openvino_detokenizer.xml
-│       ├── openvino_model.bin
-│       ├── openvino_model.xml
-│       ├── openvino_tokenizer.bin
-│       ├── openvino_tokenizer.xml
-│       ├── README.md
-│       ├── special_tokens_map.json
-│       ├── tokenizer_config.json
-│       ├── tokenizer.json
-│       └── vocab.json
-└── Qwen
-    └── Qwen2.5-Coder-1.5B
-        ├── added_tokens.json
-        ├── chat_template.jinja
-        ├── config.json
-        ├── generation_config.json
-        ├── graph.pbtxt
-        ├── merges.txt
-        ├── openvino_detokenizer.bin
-        ├── openvino_detokenizer.xml
-        ├── openvino_model.bin
-        ├── openvino_model.xml
-        ├── openvino_tokenizer.bin
-        ├── openvino_tokenizer.xml
-        ├── special_tokens_map.json
-        ├── tokenizer_config.json
-        ├── tokenizer.json
-        └── vocab.json
+python export_model.py text_generation --source_model Qwen/Qwen3-Coder-30B-A3B-Instruct --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device GPU --cache_size 2 --overwrite_models
 
-7 directories, 48 files
+ovms.exe --add_to_config models/config_all.json --model_name Qwen/Qwen3-Coder-30B-A3B-Instruct --model_path Qwen/Qwen3-Coder-30B-A3B-Instruct
 ```
+> **Note:** This model requires ~64GB disk space and same amount of VRAM on the iGPU, it is recommended to use B60.
+:::
+:::{tab-item} openai/gpt-oss-20b
+:sync: openai/gpt-oss-20b
+```bash
+python export_model.py text_generation --source_model openai/gpt-oss-20b --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device GPU --cache_size 2 --overwrite_models
+
+ovms.exe --add_to_config /models/config_all.json --model_name openai/gpt-oss-20b --model_path openai/gpt-oss-20b
+```
+> **Note:** This model requires ~15GB disk space and same amount of VRAM on the iGPU.
+:::
+:::{tab-item} mistralai/Codestral-22B-v0.1 
+:sync: mistralai/Codestral-22B-v0.1
+```bash
+python export_model.py text_generation --source_model mistralai/Codestral-22B-v0.1 --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device GPU --cache_size 2 --overwrite_models
+
+ovms.exe --add_to_config /models/config_all.json --model_name mistralai/Codestral-22B-v0.1 --model_path mistralai/Codestral-22B-v0.1
+```
+> **Note:** This model requires ~45GB disk space and same amount of VRAM on the iGPU, it is recommended to use B60.
+:::
+:::{tab-item} OpenVINO/Qwen3-8B-int4-ov
+:sync: OpenVINO/Qwen3-8B-int4-ov
+```bash
+ovms.exe --pull --source_model OpenVINO/Qwen3-8B-int4-ov --model_repository_path /models --model_name OpenVINO/Qwen3-8B-int4-ov --target_device GPU --task text_generation
+
+ovms.exe --add_to_config /models/config_all.json --model_name OpenVINO/Qwen3-8B-int4-ov --model_path OpenVINO/Qwen3-8B-int4-ov
+```
+:::
+:::{tab-item} OpenVINO/Qwen3-4B-int4-ov
+:sync: OpenVINO/Qwen3-4B-int4-ov
+```bash
+ovms.exe --pull --source_model OpenVINO/Qwen3-4B-int4-ov --model_repository_path /models --model_name OpenVINO/Qwen3-4B-int4-ov --target_device GPU --task text_generation
+    
+ovms.exe --add_to_config /models/config_all.json --model_name OpenVINO/Qwen3-4B-int4-ov --model_path OpenVINO/Qwen3-4B-int4-ov
+```
+:::
+:::{tab-item} OpenVINO/starcoder2-7b-int4-ov
+:sync: OpenVINO/starcoder2-7b-int4-ov
+```bash
+ovms.exe --pull --source_model OpenVINO/starcoder2-7b-int4-ov --model_repository_path /models --model_name OpenVINO/starcoder2-7b-int4-ov --target_device GPU --task text_generation
+    
+ovms.exe --add_to_config /models/config_all.json --model_name OpenVINO/starcoder2-7b-int4-ov --model_path OpenVINO/starcoder2-7b-int4-ov
+```
+:::
+:::{tab-item} OpenVINO/Qwen2.5-Coder-3B-Instruct-int4-ov
+:sync: OpenVINO/Qwen2.5-Coder-3B-Instruct-int4-ov
+```bash
+ovms.exe --pull --source_model OpenVINO/Qwen2.5-Coder-3B-Instruct-int4-ov --model_repository_path /models --model_name OpenVINO/Qwen2.5-Coder-3B-Instruct-int4-ov --target_device GPU --task text_generation
+    
+ovms.exe --add_to_config /models/config_all.json --model_name OpenVINO/Qwen2.5-Coder-3B-Instruct-int4-ov --model_path OpenVINO/Qwen2.5-Coder-3B-Instruct-int4-ov
+```
+
+> **Note:** `Qwen2.5-Coder` models are avaliable on [HuggingFace OpenVINO repository](https://huggingface.co/OpenVINO/models?search=qwen2.5-coder) in different sizes and precisions. It is possible to choose it for any use and hardware. 
+:::
+::::
 
 ## Set Up Server
 Run OpenVINO Model Server with both models loaded at the same time:
@@ -237,14 +219,6 @@ docker run -d --rm --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render*
   -p 8000:8000 -v $(pwd)/:/workspace/ openvino/model_server:latest-gpu --rest_port 8000 --config_path /workspace/models/config_all.json
 ```
 :::
-::: {tab-item} Linux NPU
-:sync: Linux NPU
-### Linux: via Docker with NPU
-```bash
-docker run -d --rm --device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
-  -p 8000:8000 -v $(pwd)/:/workspace/ openvino/model_server:latest-gpu --rest_port 8000 --config_path /workspace/models/config_all.json
-```
-:::
 ::::
 
 ## Set Up Visual Studio Code
@@ -252,6 +226,7 @@ docker run -d --rm --device /dev/accel --group-add=$(stat -c "%g" /dev/dri/rende
 ### Download [Continue plugin](https://www.continue.dev/)
 
 ![search_continue_plugin](search_continue_plugin.png)
+#TODO add step between
 
 ### Setup Local Assistant
 
@@ -260,45 +235,32 @@ Open configuration file:
 
 ![setup_local_assistant](setup_local_assistant.png)
 
-Add both models. Specify roles:
+Prepare a config:
+
+::::{tab-set}
+:::{tab-item} Qwen/Qwen3-Coder-30B-A3B-Instruct
+:sync: Qwen/Qwen3-Coder-30B-A3B-Instruct
 ```
 name: Local Assistant
 version: 1.0.0
 schema: v1
 models:
-  -
-    name: OVMS CodeLlama-7b-Instruct-hf
-    provider: openai
-    model: codellama/CodeLlama-7b-Instruct-hf
-    apiKey: unused
-    apiBase: http://localhost:8000/v3
-    roles:
-      - chat
-      - edit
-      - apply
   - name: OVMS Qwen/Qwen3-8B
     provider: openai
-    model: OpenVINO/Qwen3-8B-int4-ov
+    model: Qwen/Qwen3-Coder-30B-A3B-Instruct
     apiKey: unused
     apiBase: http://localhost:8000/v3
     roles:
       - chat
       - edit
       - apply
+      - autocomplete
     capabilities:
       - tool_use
     requestOptions:
       extraBodyProperties:
         chat_template_kwargs:
           enable_thinking: false
-  -
-    name: OVMS Qwen2.5-Coder-1.5B
-    provider: openai
-    model: Qwen/Qwen2.5-Coder-1.5B
-    apiKey: unused
-    apiBase: http://localhost:8000/v3
-    roles:
-      - autocomplete
 context:
   - provider: code
   - provider: docs
@@ -308,6 +270,208 @@ context:
   - provider: folder
   - provider: codebase
 ```
+:::
+:::{tab-item} openai/gpt-oss-20b
+:sync: openai/gpt-oss-20b
+```
+name: Local Assistant
+version: 1.0.0
+schema: v1
+models:
+  - name: OVMS openai/gpt-oss-20b
+    provider: openai
+    model: openai/gpt-oss-20b
+    apiKey: unused
+    apiBase: http://localhost:8000/v3
+    roles:
+      - chat
+      - edit
+      - apply
+      - autocomplete
+    capabilities:
+      - tool_use
+    requestOptions:
+      extraBodyProperties:
+        chat_template_kwargs:
+          enable_thinking: false
+context:
+  - provider: code
+  - provider: docs
+  - provider: diff
+  - provider: terminal
+  - provider: problems
+  - provider: folder
+  - provider: codebase
+```
+:::
+:::{tab-item} mistralai/Codestral-22B-v0.1 
+:sync: mistralai/Codestral-22B-v0.1
+```
+name: Local Assistant
+version: 1.0.0
+schema: v1
+models:
+  - name: OVMS mistralai/Codestral-22B-v0.1 
+    provider: openai
+    model: mistralai/Codestral-22B-v0.1 
+    apiKey: unused
+    apiBase: http://localhost:8000/v3
+    roles:
+      - chat
+      - edit
+      - apply
+      - autocomplete
+    capabilities:
+      - tool_use
+    requestOptions:
+      extraBodyProperties:
+        chat_template_kwargs:
+          enable_thinking: false
+context:
+  - provider: code
+  - provider: docs
+  - provider: diff
+  - provider: terminal
+  - provider: problems
+  - provider: folder
+  - provider: codebase
+```
+:::
+:::{tab-item} OpenVINO/Qwen3-8B-int4-ov
+:sync: OpenVINO/Qwen3-8B-int4-ov
+```
+name: Local Assistant
+version: 1.0.0
+schema: v1
+models:
+  - name: OVMS Qwen/Qwen3-8B
+    provider: openai
+    model: OpenVINO/Qwen3-8B-int4-ov
+    apiKey: unused
+    apiBase: http://localhost:8000/v3
+    roles:
+      - chat
+      - edit
+      - apply
+      - autocomplete
+    capabilities:
+      - tool_use
+    requestOptions:
+      extraBodyProperties:
+        chat_template_kwargs:
+          enable_thinking: false
+context:
+  - provider: code
+  - provider: docs
+  - provider: diff
+  - provider: terminal
+  - provider: problems
+  - provider: folder
+  - provider: codebase
+```
+:::
+:::{tab-item} OpenVINO/Qwen3-4B-int4-ov
+:sync: OpenVINO/Qwen3-4B-int4-ov
+```
+name: Local Assistant
+version: 1.0.0
+schema: v1
+models:
+  - name: OVMS OpenVINO/Qwen3-4B
+    provider: openai
+    model: OpenVINO/Qwen3-4B-int4-ov
+    apiKey: unused
+    apiBase: http://localhost:8000/v3
+    roles:
+      - chat
+      - edit
+      - apply
+      - autocomplete
+    capabilities:
+      - tool_use
+    requestOptions:
+      extraBodyProperties:
+        chat_template_kwargs:
+          enable_thinking: false
+context:
+  - provider: code
+  - provider: docs
+  - provider: diff
+  - provider: terminal
+  - provider: problems
+  - provider: folder
+  - provider: codebase
+```
+:::
+:::{tab-item} OpenVINO/starcoder2-7b-int4-ov
+:sync: OpenVINO/starcoder2-7b-int4-ov
+```
+name: Local Assistant
+version: 1.0.0
+schema: v1
+models:
+  - name: OVMS OpenVINO/starcoder2-7b-int4-ov
+    provider: openai
+    model: OpenVINO/starcoder2-7b-int4-ov
+    apiKey: unused
+    apiBase: http://localhost:8000/v3
+    roles:
+      - chat
+      - edit
+      - apply
+      - autocomplete
+    capabilities:
+      - tool_use
+    requestOptions:
+      extraBodyProperties:
+        chat_template_kwargs:
+          enable_thinking: false
+context:
+  - provider: code
+  - provider: docs
+  - provider: diff
+  - provider: terminal
+  - provider: problems
+  - provider: folder
+  - provider: codebase
+```
+:::
+:::{tab-item} OpenVINO/Qwen2.5-Coder-3B-Instruct-int4-ov
+:sync: OpenVINO/Qwen2.5-Coder-3B-Instruct-int4-ov
+```
+name: Local Assistant
+version: 1.0.0
+schema: v1
+models:
+  - name: OVMS OpenVINO/Qwen2.5-Coder-3B-Instruct-int4-ov
+    provider: openai
+    model: OpenVINO/Qwen2.5-Coder-3B-Instruct-int4-ov
+    apiKey: unused
+    apiBase: http://localhost:8000/v3
+    roles:
+      - chat
+      - edit
+      - apply
+      - autocomplete
+    capabilities:
+      - tool_use
+    requestOptions:
+      extraBodyProperties:
+        chat_template_kwargs:
+          enable_thinking: false
+context:
+  - provider: code
+  - provider: docs
+  - provider: diff
+  - provider: terminal
+  - provider: problems
+  - provider: folder
+  - provider: codebase
+```
+:::
+::::
+
+> **Note:** For more information about this config, see [configuration reference](https://docs.continue.dev/reference#models).
 
 ## Chatting, code editing and autocompletion in action
 
