@@ -23,6 +23,22 @@
 namespace ovms {
 
 /*
+* DecodingMethod enum is used to properly set defaults and validate GenerationConfig depending on whether pipeline has been
+* configured to use standard sampling strategies like greedy, beam search or multinomial or non-standard strategies like 
+* speculative decoding with draft model or prompt lookup technique.
+*
+* STANDARD: Standard decoding methods such as greedy, beam search, and multinomial sampling. No special pipeline configuration.
+* SPECULATIVE_DECODING: A decoding method that uses smaller draft model to generate draft tokens which are then verified and completed by the main model.
+*                       Pipeline with such decoding is configured with draft model.
+* PROMPT_LOOKUP: A decoding method that utilizes prompt lookup technique for generation. Pipeline with such decoding is configured with {prompt lookup: true} entry in pluginConfig.
+*/
+enum DecodingMethod {
+    STANDARD,
+    SPECULATIVE_DECODING,
+    PROMPT_LOOKUP
+};
+
+/*
  * BaseGenerationConfigBuilder is a class that helps in building the base generation configuration
  * for OpenVINO GenAI pipeline based on OpenAI API request. 
  * This class provides functionalities common for different models and pipeline types.
@@ -32,14 +48,16 @@ class BaseGenerationConfigBuilder {
 protected:
     ov::genai::GenerationConfig config;
     const bool enableToolGuidedGeneration;
+    DecodingMethod decodingMethod;
     void setStructuralTagsConfig(const ov::genai::StructuredOutputConfig::StructuralTag& structuralTag);
 
 public:
     BaseGenerationConfigBuilder() = delete;
     // Initializes the builder with a base generation config read from model generation_config.json
-    explicit BaseGenerationConfigBuilder(ov::genai::GenerationConfig& baseConfig, bool enableToolGuidedGeneration) :
+    explicit BaseGenerationConfigBuilder(ov::genai::GenerationConfig& baseConfig, bool enableToolGuidedGeneration, DecodingMethod decodingMethod) :
         config(baseConfig),
-        enableToolGuidedGeneration(enableToolGuidedGeneration) {}
+        enableToolGuidedGeneration(enableToolGuidedGeneration),
+        decodingMethod(decodingMethod) {}
     virtual ~BaseGenerationConfigBuilder() = default;
 
     ov::genai::GenerationConfig& getConfig() { return config; }
