@@ -41,7 +41,7 @@ protected:
 public:
     static Server& instance();
     int start(int argc, char** argv);
-    static std::variant<std::pair<ServerSettingsImpl, ModelsSettingsImpl>, std::pair<int, std::string>> Server::parseArgs(int argc, char** argv);
+    static std::variant<std::pair<ServerSettingsImpl, ModelsSettingsImpl>, std::pair<int, std::string>> parseArgs(int argc, char** argv);
     int startServerFromSettings(ServerSettingsImpl& serverSettings, ModelsSettingsImpl& modelsSettings);
     Status startFromSettings(ServerSettingsImpl*, ModelsSettingsImpl*);
     ModuleState getModuleState(const std::string& name) const;
