@@ -37,7 +37,6 @@
 #include "ovms_exit_codes.hpp"
 #include "server.hpp"
 
-
 namespace ovms_service {
 std::string OvmsWindowsServiceManager::getCurrentTimeString() {
     auto now = std::chrono::system_clock::now();
@@ -210,11 +209,11 @@ void WINAPI OvmsWindowsServiceManager::serviceMain(DWORD argc, LPTSTR* argv) {
             serviceReportEventWithExitCode("ovms::Server::parseArgs", printAndExit.second, printAndExit.first);
             this->setServiceStopStatusWithExitCode(printAndExit.first);
         } else {
-        // Check retcode 0 but service not started [--help, --version] arguments
+            // Check retcode 0 but service not started [--help, --version] arguments
             DEBUG_LOG("ServiceMain: Server::parseArgs returned success, no valid parameters to start the service provided.");
             serviceReportEventWithExitCode("ovms::Server::parseArgs", printAndExit.second, printAndExit.first);
             this->setServiceStopStatusWithExitCode(printAndExit.first);
-        } 
+        }
 
         return;
     } else {
@@ -574,24 +573,25 @@ void OvmsWindowsServiceManager::setServiceStopStatusWithExitCode(const int& exit
     DWORD exitToError = static_cast<DWORD>(exitCode);
     // Map known exit code to known win errors for proper service status report on error
     // Check https://learn.microsoft.com/en-us/windows/win32/debug/system-error-codes--0-499- for details
-    switch(exitCode) {
-        case OVMS_EX_USAGE: {
-            exitToError = ERROR_BAD_ARGUMENTS;
-            break;
-        }
-        case OVMS_EX_OK: {
-            exitToError = ERROR_BAD_ARGUMENTS;
-            break;
-        }
-        case OVMS_EX_FAILURE: {
-            exitToError = ERROR_INVALID_FUNCTION;
-            break;
-        }
-        case OVMS_EX_WARNING: {
-            exitToError = ERROR_INVALID_FUNCTION;
-            break;
-        }
-        default: exitToError = ERROR_INVALID_FUNCTION;
+    switch (exitCode) {
+    case OVMS_EX_USAGE: {
+        exitToError = ERROR_BAD_ARGUMENTS;
+        break;
+    }
+    case OVMS_EX_OK: {
+        exitToError = ERROR_BAD_ARGUMENTS;
+        break;
+    }
+    case OVMS_EX_FAILURE: {
+        exitToError = ERROR_INVALID_FUNCTION;
+        break;
+    }
+    case OVMS_EX_WARNING: {
+        exitToError = ERROR_INVALID_FUNCTION;
+        break;
+    }
+    default:
+        exitToError = ERROR_INVALID_FUNCTION;
     }
 
     serviceStatus.dwControlsAccepted = 0;
@@ -618,59 +618,59 @@ void OvmsWindowsServiceManager::setServiceRunningStatus() {
     DEBUG_LOG("ServiceMain: SetServiceStatus running");
 }
 
-std::string OvmsWindowsServiceManager::getRegValue(const winreg::RegKey& key,const std::wstring& name,const DWORD& regType) {
+std::string OvmsWindowsServiceManager::getRegValue(const winreg::RegKey& key, const std::wstring& name, const DWORD& regType) {
     std::string retStr = "";
-    switch (regType)
-    {
-        case REG_SZ: {
-            if (auto testVal = key.TryGetStringValue(name)) {
-                retStr = wstringToString(testVal.GetValue());
-            }
-
-            return retStr;
+    switch (regType) {
+    case REG_SZ: {
+        if (auto testVal = key.TryGetStringValue(name)) {
+            retStr = wstringToString(testVal.GetValue());
         }
-        case REG_EXPAND_SZ:{
-            if (auto testVal = key.TryGetExpandStringValue(name)) {
-                retStr = wstringToString(testVal.GetValue());
-            }
 
-            return retStr;
-        }
-        case REG_MULTI_SZ:{
-            if (auto testVal = key.TryGetMultiStringValue(name)) {
-                for(auto elem : testVal.GetValue()) {
-                    retStr += wstringToString(elem) + ",";
-                }
-            }
-
-            return retStr;
-        }
-        case REG_DWORD: {
-            if (auto testVal = key.TryGetDwordValue(name)) {
-                retStr = std::to_string(testVal.GetValue());
-            }
-
-            return retStr;
-        }
-        case REG_QWORD: {
-            if (auto testVal = key.TryGetQwordValue(name)) {
-                retStr = std::to_string(testVal.GetValue());
-            }
-
-            return retStr;
-        }
-        case REG_BINARY: {
-            if (auto testVal = key.TryGetBinaryValue(name)) {
-                for(auto elem : testVal.GetValue()) {
-                    retStr += std::to_string(elem) + ",";
-                }
-            }
-
-            return retStr;
-        }
-        default:            return retStr;
+        return retStr;
     }
-    return retStr;    
+    case REG_EXPAND_SZ: {
+        if (auto testVal = key.TryGetExpandStringValue(name)) {
+            retStr = wstringToString(testVal.GetValue());
+        }
+
+        return retStr;
+    }
+    case REG_MULTI_SZ: {
+        if (auto testVal = key.TryGetMultiStringValue(name)) {
+            for (auto elem : testVal.GetValue()) {
+                retStr += wstringToString(elem) + ",";
+            }
+        }
+
+        return retStr;
+    }
+    case REG_DWORD: {
+        if (auto testVal = key.TryGetDwordValue(name)) {
+            retStr = std::to_string(testVal.GetValue());
+        }
+
+        return retStr;
+    }
+    case REG_QWORD: {
+        if (auto testVal = key.TryGetQwordValue(name)) {
+            retStr = std::to_string(testVal.GetValue());
+        }
+
+        return retStr;
+    }
+    case REG_BINARY: {
+        if (auto testVal = key.TryGetBinaryValue(name)) {
+            for (auto elem : testVal.GetValue()) {
+                retStr += std::to_string(elem) + ",";
+            }
+        }
+
+        return retStr;
+    }
+    default:
+        return retStr;
+    }
+    return retStr;
 }
 
 void OvmsWindowsServiceManager::logRegistryEntry(HKEY keyType, const std::wstring& keyPath) {
@@ -696,7 +696,7 @@ void OvmsWindowsServiceManager::setPythonPathRegistry() {
     try {
         const std::wstring ovmsServiceKey = L"SYSTEM\\CurrentControlSet\\Services\\ovms";
         winreg::RegKey key{HKEY_LOCAL_MACHINE, ovmsServiceKey};
-        
+
         TCHAR szUnquotedPath[MAX_PATH];
         if (!GetModuleFileName(NULL, szUnquotedPath, MAX_PATH)) {
             DEBUG_LOG("setPythonPathRegistry, GetModuleFileName failed.");

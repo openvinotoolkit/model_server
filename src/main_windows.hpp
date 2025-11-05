@@ -118,7 +118,7 @@ private:
     void setServiceRunningStatus();
 
     // Registry manipulation
-    static std::string getRegValue(const winreg::RegKey& key,const std::wstring& name,const DWORD& type);
+    static std::string getRegValue(const winreg::RegKey& key, const std::wstring& name, const DWORD& type);
     static void logRegistryEntry(HKEY keyType, const std::wstring& keyPath);
 };
 
