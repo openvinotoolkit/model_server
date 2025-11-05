@@ -104,7 +104,6 @@ public:
             return absl::InvalidArgumentError(absl::StrCat("Unsupported URI: ", payload.uri));
         }
 
-        std::unique_ptr<std::string> output;
         if (payload.multipartParser->hasParseError())
             return absl::InvalidArgumentError("Failed to parse multipart data");
 
@@ -130,18 +129,24 @@ public:
             return absl::InvalidArgumentError("Received input file is not valid wav nor mp3 audio file");
         }
         std::string result = "{\"text\": \"";
-        std::unique_lock lock(pipe->sttPipelineMutex);
+        if(endpoint == Endpoint::TRANSCRIPTIONS){
+            std::string_view language = payload.multipartParser->getFileContentByFieldName("language");
+            std::unique_lock lock(pipe->sttPipelineMutex);
+            if (!language.empty()) {
+                std::string genaiLanguage = "<|" + std::string(language) +"|>";
+                result += pipe->sttPipeline->generate(rawSpeech,ov::genai::language(genaiLanguage.c_str()));
+            }
+            else {
+                result += pipe->sttPipeline->generate(rawSpeech);
+            }
+        }
+        if(endpoint == Endpoint::TRANSLATIONS){
+            std::unique_lock lock(pipe->sttPipelineMutex);
+            result += pipe->sttPipeline->generate(rawSpeech, ov::genai::task("translate"));
+        }
 
-        std::string_view language = payload.multipartParser->getFileContentByFieldName("language");
-        if (!language.empty()) {
-            std::string genaiLanguage = "<|" + std::string(language) +"|>";
-            result += pipe->sttPipeline->generate(rawSpeech,ov::genai::language(genaiLanguage.c_str()));
-        }
-        else {
-            result += pipe->sttPipeline->generate(rawSpeech);
-        }
         result.append("\"}");
-        output = std::make_unique<std::string>(result);
+        std::unique_ptr<std::string> output = std::make_unique<std::string>(result);
 
         cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(output.release(), cc->InputTimestamp());
         SPDLOG_LOGGER_DEBUG(stt_calculator_logger, "SpeechToTextCalculator  [Node: {}] Process end", cc->NodeName());
