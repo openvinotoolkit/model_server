@@ -29,9 +29,21 @@ class Status;
  * with shape [N, H, W, C] where N is the number of frames.
  * 
  * @param filePath Path to the video file
- * @param outputTensor Reference to tensor that will contain the video frames
- * @return Status indicating success or failure with error details
+ * @param outputTensor Reference to the output tensor that will be populated
+ * @return Status indicating success or failure
  */
 Status makeVideoTensorFromPath(const std::string& filePath, ov::Tensor& outputTensor);
+
+/**
+ * @brief Creates an OpenVINO tensor from video data in memory
+ * 
+ * This function reads all frames from video data stored in memory and creates a tensor
+ * with shape [N, H, W, C] where N is the number of frames.
+ * 
+ * @param videoData Video file content stored in memory as a string
+ * @param outputTensor Reference to the output tensor that will be populated
+ * @return Status indicating success or failure
+ */
+Status makeVideoTensorFromMemory(const std::string& videoData, ov::Tensor& outputTensor);
 
 }  // namespace ovms

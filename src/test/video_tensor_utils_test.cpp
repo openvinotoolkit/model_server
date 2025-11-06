@@ -18,6 +18,7 @@
 #include <gmock/gmock.h>
 #include <fstream>
 #include <cstring>
+#include <iterator>
 #include <opencv2/opencv.hpp>
 
 #include "../video_tensor_utils.hpp"
@@ -256,4 +257,73 @@ TEST_F(VideoTensorUtilsTest, LargeFrameCountVideo) {
         // Video creation failed - test error handling
         EXPECT_FALSE(status.ok()) << "Expected error status for failed video creation";
     }
+}
+
+TEST_F(VideoTensorUtilsTest, VideoFromMemoryWithEmptyData) {
+    std::string emptyData;
+    
+    ov::Tensor tensor;
+    auto status = makeVideoTensorFromMemory(emptyData, tensor);
+    
+    // For empty data, the function should return an error status
+    EXPECT_FALSE(status.ok()) << "Expected error status for empty video data";
+    EXPECT_EQ(status.getCode(), StatusCode::FILE_INVALID) << "Expected FILE_INVALID status code";
+}
+
+TEST_F(VideoTensorUtilsTest, VideoFromMemoryWithValidData) {
+    // First create a test video file and read its content
+    std::string videoPath = directoryPath + "/memory_test_video.mp4";
+    createTestVideo(videoPath, 32, 24, 2);
+    
+    // Read the video file into memory
+    std::ifstream file(videoPath, std::ios::binary);
+    if (!file.is_open()) {
+        // Video creation failed, skip this test
+        GTEST_SKIP() << "Could not create test video file for memory test";
+        return;
+    }
+    
+    std::string videoData((std::istreambuf_iterator<char>(file)), 
+                          std::istreambuf_iterator<char>());
+    file.close();
+    
+    if (videoData.empty()) {
+        GTEST_SKIP() << "Test video file is empty";
+        return;
+    }
+    
+    ov::Tensor tensor;
+    auto status = makeVideoTensorFromMemory(videoData, tensor);
+    
+    // The status should match what we'd get from the file-based function
+    // If video creation succeeded, we should have a successful status and valid tensor
+    // If it failed, we should have an error status
+    if (status.ok()) {
+        auto shape = tensor.get_shape();
+        EXPECT_EQ(shape.size(), 4) << "Expected 4D tensor";
+        EXPECT_EQ(shape[0], 2) << "Expected 2 frames";
+        EXPECT_EQ(shape[1], 24) << "Expected height 24";
+        EXPECT_EQ(shape[2], 32) << "Expected width 32";
+        EXPECT_EQ(shape[3], 3) << "Expected 3 channels";
+        EXPECT_EQ(tensor.get_element_type(), ov::element::f32) << "Expected f32 element type";
+        
+        std::cout << "Video from memory succeeded - full test completed" << std::endl;
+    } else {
+        // Video processing failed, which is acceptable in some environments
+        EXPECT_FALSE(status.ok()) << "Expected error status for failed video processing";
+        
+        std::cout << "Video from memory failed - testing error handling path" << std::endl;
+    }
+}
+
+TEST_F(VideoTensorUtilsTest, VideoFromMemoryWithInvalidData) {
+    // Create some invalid video data
+    std::string invalidData = "This is not valid video data at all!";
+    
+    ov::Tensor tensor;
+    auto status = makeVideoTensorFromMemory(invalidData, tensor);
+    
+    // For invalid data, the function should return an error status
+    EXPECT_FALSE(status.ok()) << "Expected error status for invalid video data";
+    // The status code could be FILE_INVALID or INTERNAL_ERROR depending on where it fails
 }

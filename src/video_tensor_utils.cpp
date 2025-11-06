@@ -17,6 +17,8 @@
 
 #include <vector>
 #include <cstring>
+#include <unistd.h>
+#include <sys/stat.h>
 #include <opencv2/opencv.hpp>
 #include <openvino/openvino.hpp>
 
@@ -100,6 +102,52 @@ Status makeVideoTensorFromPath(const std::string& filePath, ov::Tensor& outputTe
     } catch (const std::exception& e) {
         SPDLOG_DEBUG("Error creating tensor from video frames: {}", e.what());
         return Status(StatusCode::INTERNAL_ERROR, "Failed to create tensor from video frames: " + std::string(e.what()));
+    }
+}
+
+Status makeVideoTensorFromMemory(const std::string& videoData, ov::Tensor& outputTensor) {
+    OVMS_PROFILE_FUNCTION();
+    
+    if (videoData.empty()) {
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Empty video data provided");
+        return Status(StatusCode::FILE_INVALID, "Empty video data provided");
+    }
+
+    try {
+        // Create a temporary file to write the video data
+        // OpenCV doesn't support reading video directly from memory buffer
+        // so we need to create a temporary file
+        char tempFileName[] = "/tmp/ovms_video_XXXXXX.mp4";
+        int fd = mkstemps(tempFileName, 4);  // 4 for ".mp4" extension
+        if (fd == -1) {
+            SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Failed to create temporary file for video data");
+            return Status(StatusCode::INTERNAL_ERROR, "Failed to create temporary file");
+        }
+        
+        // Write video data to temporary file
+        ssize_t bytesWritten = write(fd, videoData.data(), videoData.size());
+        close(fd);
+        
+        if (bytesWritten != static_cast<ssize_t>(videoData.size())) {
+            unlink(tempFileName);  // Clean up temporary file
+            SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Failed to write video data to temporary file");
+            return Status(StatusCode::INTERNAL_ERROR, "Failed to write video data to temporary file");
+        }
+        
+        // Use the existing function to process the temporary file
+        Status status = makeVideoTensorFromPath(std::string(tempFileName), outputTensor);
+        
+        // Clean up temporary file
+        unlink(tempFileName);
+        
+        return status;
+        
+    } catch (const cv::Exception& e) {
+        SPDLOG_LOGGER_ERROR(llm_calculator_logger, "OpenCV exception in makeVideoTensorFromMemory: {}", e.what());
+        return Status(StatusCode::INTERNAL_ERROR, "OpenCV error during video processing");
+    } catch (const std::exception& e) {
+        SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Exception in makeVideoTensorFromMemory: {}", e.what());
+        return Status(StatusCode::INTERNAL_ERROR, "Error during video processing");
     }
 }
 
