@@ -1022,9 +1022,9 @@ TEST(OvmsGraphConfigTest, positiveAllChangedTextGeneration) {
         (char*)"--max_num_seqs",
         (char*)"128",
         (char*)"--target_device",
-        (char*)"GPU",
+        (char*)"NPU",
         (char*)"--enable_prefix_caching",
-        (char*)"false",
+        (char*)"true",
         (char*)"--cache_size",
         (char*)"20",
         (char*)"--max_num_batched_tokens",
@@ -1059,10 +1059,10 @@ TEST(OvmsGraphConfigTest, positiveAllChangedTextGeneration) {
     ASSERT_EQ(graphSettings.pipelineType.value(), "VLM");
     ASSERT_EQ(exportSettings.modelPath, "./");
     ASSERT_EQ(graphSettings.maxNumSeqs, 128);
-    ASSERT_EQ(exportSettings.targetDevice, "GPU");
+    ASSERT_EQ(exportSettings.targetDevice, "NPU");
     ASSERT_EQ(exportSettings.pluginConfig.kvCachePrecision.has_value(), true);
     ASSERT_EQ(exportSettings.pluginConfig.kvCachePrecision.value(), "u8");
-    ASSERT_EQ(graphSettings.enablePrefixCaching, "false");
+    ASSERT_EQ(graphSettings.enablePrefixCaching, "true");
     ASSERT_EQ(graphSettings.cacheSize, 20);
     ASSERT_EQ(graphSettings.maxNumBatchedTokens.value(), 16);
     ASSERT_EQ(graphSettings.dynamicSplitFuse, "true");
@@ -1074,6 +1074,8 @@ TEST(OvmsGraphConfigTest, positiveAllChangedTextGeneration) {
     ASSERT_EQ(exportSettings.pluginConfig.modelDistributionPolicy.value(), "TENSOR_PARALLEL");
     ASSERT_EQ(exportSettings.pluginConfig.maxPromptLength.has_value(), true);
     ASSERT_EQ(exportSettings.pluginConfig.maxPromptLength.value(), 2048);
+    ASSERT_EQ(exportSettings.pluginConfig.kvCachePrecision.value(), "u8");
+    ASSERT_EQ(exportSettings.pluginConfig.useNpuPrefixCaching.value(), true);
 }
 
 TEST(OvmsGraphConfigTest, positiveSomeChangedTextGeneration) {

@@ -486,6 +486,16 @@ std::variant<std::optional<std::string>, Status> GraphExport::createPluginString
         d.AddMember("CACHE_DIR", value, d.GetAllocator());
         configNotEmpty = true;
     }
+    if (pluginConfig.useNpuPrefixCaching.has_value()) {
+        rapidjson::Value value;
+        value.SetBool(pluginConfig.useNpuPrefixCaching.value());
+        auto itr = d.FindMember("NPUW_LLM_ENABLE_PREFIX_CACHING");
+        if (itr != d.MemberEnd()) {
+            return Status(StatusCode::PLUGIN_CONFIG_CONFLICTING_PARAMETERS, "Doubled NPUW_LLM_ENABLE_PREFIX_CACHING parameter in plugin config.");
+        }
+        d.AddMember("NPUW_LLM_ENABLE_PREFIX_CACHING", value, d.GetAllocator());
+        configNotEmpty = true;
+    }
     if (configNotEmpty) {
         // Serialize the document to a JSON string
         rapidjson::StringBuffer buffer;

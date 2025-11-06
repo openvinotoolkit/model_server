@@ -94,12 +94,14 @@ struct PluginConfigSettingsImpl {
     std::optional<std::string> modelDistributionPolicy;
     std::optional<uint32_t> numStreams;
     std::optional<std::string> cacheDir;
+    std::optional<bool> useNpuPrefixCaching;
     bool empty() const {
         return !kvCachePrecision.has_value() &&
                !maxPromptLength.has_value() &&
                !modelDistributionPolicy.has_value() &&
                !numStreams.has_value() &&
                !cacheDir.has_value() &&
+               !useNpuPrefixCaching.has_value() &&
                (!manualString.has_value() || manualString.value().empty());
     }
 };

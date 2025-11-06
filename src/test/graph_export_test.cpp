@@ -455,7 +455,7 @@ TEST_F(GraphCreationTest, positiveDefaultWithVersionString) {
     ASSERT_EQ(expected, graphContents) << graphContents;
 }
 
-TEST_F(GraphCreationTest, positiveReranktWithVersionString) {
+TEST_F(GraphCreationTest, positiveRerankWithVersionString) {
     ovms::HFSettingsImpl hfSettings;
     hfSettings.exportSettings.pluginConfig.numStreams = 1;
     hfSettings.task = ovms::RERANK_GRAPH;
@@ -797,6 +797,19 @@ TEST_F(GraphCreationTest, negativeCreatedPbtxtInvalid) {
 #else
     ASSERT_EQ(status, ovms::StatusCode::OK);
 #endif
+}
+TEST_F(GraphCreationTest, positiveTextGeneration) {
+    ovms::HFSettingsImpl hfSettings;
+    hfSettings.task = ovms::TEXT_GENERATION_GRAPH;
+    ovms::TextGenGraphSettingsImpl graphSettings;
+    hfSettings.graphSettings = std::move(graphSettings);
+    hfSettings.exportSettings.targetDevice = "NPU";
+    hfSettings.exportSettings.pluginConfig.useNpuPrefixCaching = true;
+    std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
+    std::string subconfigPath = ovms::FileSystem::appendSlash(this->directoryPath) + "subconfig.json";
+    std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
+    auto status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
+    ASSERT_EQ(status, ovms::StatusCode::OK);
 }
 
 TEST_F(GraphCreationTest, imageGenerationPositiveDefault) {

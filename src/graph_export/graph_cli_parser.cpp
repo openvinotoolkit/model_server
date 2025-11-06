@@ -135,6 +135,9 @@ void GraphCLIParser::prepare(OvmsServerMode serverMode, HFSettingsImpl& hfSettin
     } else {
         graphSettings.maxNumSeqs = result->operator[]("max_num_seqs").as<uint32_t>();
         graphSettings.enablePrefixCaching = result->operator[]("enable_prefix_caching").as<std::string>();
+        if (graphSettings.enablePrefixCaching == "true" && hfSettings.exportSettings.targetDevice == "NPU") {
+            hfSettings.exportSettings.pluginConfig.useNpuPrefixCaching = true;
+        }
         graphSettings.cacheSize = result->operator[]("cache_size").as<uint32_t>();
         graphSettings.dynamicSplitFuse = result->operator[]("dynamic_split_fuse").as<std::string>();
         if (result->count("draft_source_model")) {
