@@ -33,6 +33,7 @@ docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
     --model_path Qwen/Qwen3-Coder-30B-A3B-Instruct
 ```
 > **Note:** This model requires ~64GB disk space and same amount of VRAM on the iGPU, it is recommended to use B60.
+
 :::
 :::{tab-item} openai/gpt-oss-20b
 :sync: openai/gpt-oss-20b
@@ -46,6 +47,7 @@ docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
     --model_path openai/gpt-oss-20b
 ```
 > **Note:** This model requires ~15GB disk space and same amount of VRAM on the iGPU.
+
 :::
 :::{tab-item} mistralai/Codestral-22B-v0.1 
 :sync: mistralai/Codestral-22B-v0.1
@@ -59,7 +61,8 @@ docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
     --model_name mistralai/Codestral-22B-v0.1 \
     --model_path mistralai/Codestral-22B-v0.1
 ```
-> **Note:** This model requires ~45GB disk space and same amount of VRAM on the iGPU, it is recommended to use B60.
+> **Note:** This model requires ~12GB disk space and same amount of VRAM on the iGPU.
+
 :::
 :::{tab-item} OpenVINO/Qwen3-8B-int4-ov
 :sync: OpenVINO/Qwen3-8B-int4-ov
@@ -116,6 +119,7 @@ docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
 ```
 
 > **Note:** `Qwen2.5-Coder` models are avaliable on [HuggingFace OpenVINO repository](https://huggingface.co/OpenVINO/models?search=qwen2.5-coder) in different sizes and precisions. It is possible to choose it for any use and hardware. 
+
 :::
 ::::
 
@@ -129,6 +133,7 @@ python export_model.py text_generation --source_model Qwen/Qwen3-Coder-30B-A3B-I
 ovms.exe --add_to_config models/config_all.json --model_name Qwen/Qwen3-Coder-30B-A3B-Instruct --model_path Qwen/Qwen3-Coder-30B-A3B-Instruct
 ```
 > **Note:** This model requires ~64GB disk space and same amount of VRAM on the iGPU, it is recommended to use B60.
+
 :::
 :::{tab-item} openai/gpt-oss-20b
 :sync: openai/gpt-oss-20b
@@ -136,6 +141,7 @@ ovms.exe --add_to_config models/config_all.json --model_name Qwen/Qwen3-Coder-30
 python export_model.py text_generation --source_model openai/gpt-oss-20b --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device GPU --cache_size 2 --overwrite_models
 ```
 > **Note:** This model requires ~15GB disk space and same amount of VRAM on the iGPU.
+
 :::
 :::{tab-item} mistralai/Codestral-22B-v0.1 
 :sync: mistralai/Codestral-22B-v0.1
@@ -143,6 +149,7 @@ python export_model.py text_generation --source_model openai/gpt-oss-20b --weigh
 python export_model.py text_generation --source_model mistralai/Codestral-22B-v0.1 --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device GPU --cache_size 2 --overwrite_models
 ```
 > **Note:** This model requires ~45GB disk space and same amount of VRAM on the iGPU, it is recommended to use B60.
+
 :::
 :::{tab-item} OpenVINO/Qwen3-8B-int4-ov
 :sync: OpenVINO/Qwen3-8B-int4-ov
@@ -169,6 +176,7 @@ ovms.exe --add_to_config models/config_all.json --model_name OpenVINO/Qwen2.5-Co
 ```
 
 > **Note:** `Qwen2.5-Coder` models are avaliable on [HuggingFace OpenVINO repository](https://huggingface.co/OpenVINO/models?search=qwen2.5-coder) in different sizes and precisions. It is possible to choose it for any use and hardware. 
+
 :::
 ::::
 
@@ -200,7 +208,6 @@ docker run -d --rm --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render*
 ### Download [Continue plugin](https://www.continue.dev/)
 
 ![search_continue_plugin](search_continue_plugin.png)
-#TODO add step between
 
 ### Setup Local Assistant
 
@@ -289,7 +296,7 @@ models:
     provider: openai
     model: mistralai/Codestral-22B-v0.1 
     apiKey: unused
-    apiBase: http://localhost:8000/v3
+    apiBase: http://ov-spr-19.sclab.intel.com:8000/v3
     roles:
       - chat
       - edit
@@ -300,7 +307,13 @@ models:
     requestOptions:
       extraBodyProperties:
         chat_template_kwargs:
-          enable_thinking: false
+          enable_thinking: true
+
+    autocompleteOptions:
+      maxPromptTokens: 500
+      debounceDelay: 124
+      useCache: true
+      modelTimeout: 200
 context:
   - provider: code
   - provider: docs
