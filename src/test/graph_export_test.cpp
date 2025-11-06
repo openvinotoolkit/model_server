@@ -671,6 +671,28 @@ TEST_F(GraphCreationTest, embeddingsCreatedPbtxtInvalid) {
     ASSERT_EQ(status, ovms::StatusCode::OK);
 #endif
 }
+TEST_F(GraphCreationTest, embeddingsDoubleSetNumStreams) {
+    // by default for embeddings we set numStreams=1 in CLI
+    // we should ignore double setting & check if equals the one from `--plugin_config`
+    // if both `--num_streams` is used to change from 1 and `--plugin_config` is used with
+    // num streams we trigger error
+    ovms::HFSettingsImpl hfSettings;
+    hfSettings.task = ovms::EMBEDDINGS_GRAPH;
+    ovms::EmbeddingsGraphSettingsImpl embeddingsGraphSettings;
+    hfSettings.exportSettings.targetDevice = "GPU";
+    hfSettings.exportSettings.modelName = "myModel";
+    hfSettings.exportSettings.pluginConfig.numStreams = 1;  // imitates default from CLI
+    hfSettings.exportSettings.pluginConfig.manualString = "{\"NUM_STREAMS\":1}";
+    embeddingsGraphSettings.normalize = "true";
+    embeddingsGraphSettings.pooling = "CLS";
+    hfSettings.graphSettings = std::move(embeddingsGraphSettings);
+    std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
+    auto status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
+    ASSERT_EQ(status, ovms::StatusCode::OK);
+    hfSettings.exportSettings.pluginConfig.numStreams = 2;  // non-default value - it should fail
+    status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
+    ASSERT_EQ(status, ovms::StatusCode::PLUGIN_CONFIG_CONFLICTING_PARAMETERS) << status.string();
+}
 
 TEST_F(GraphCreationTest, positivePluginConfigAll) {
     ovms::HFSettingsImpl hfSettings;

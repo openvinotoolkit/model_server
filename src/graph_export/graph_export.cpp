@@ -91,6 +91,21 @@ std::string GraphExport::getDraftModelDirectoryPath(const std::string& directory
     }                                                                             \
     auto pluginConfigOpt = std::get<std::optional<std::string>>(pluginConfigOrStatus)
 
+static Status createPbtxtFile(const std::string& directoryPath, const std::string& pbtxtContent) {
+#if (MEDIAPIPE_DISABLE == 0)
+    ::mediapipe::CalculatorGraphConfig config;
+    SPDLOG_TRACE("Generated pbtxt: {}", pbtxtContent);
+    bool success = ::google::protobuf::TextFormat::ParseFromString(pbtxtContent, &config);
+    if (!success) {
+        SPDLOG_ERROR("Created graph config file couldn't be parsed - check used task parameters values.");
+        return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
+    }
+#endif
+    // clang-format on
+    std::string fullPath = FileSystem::joinPath({directoryPath, "graph.pbtxt"});
+    return FileSystem::createFileOverwrite(fullPath, pbtxtContent);
+}
+
 static Status createTextGenerationGraphTemplate(const std::string& directoryPath, const HFSettingsImpl& hfSettings) {
     if (!std::holds_alternative<TextGenGraphSettingsImpl>(hfSettings.graphSettings)) {
         SPDLOG_ERROR("Graph options not initialized for text generation.");
@@ -183,18 +198,7 @@ static Status createTextGenerationGraphTemplate(const std::string& directoryPath
         }
     }
     })";
-#if (MEDIAPIPE_DISABLE == 0)
-    ::mediapipe::CalculatorGraphConfig config;
-    bool success = ::google::protobuf::TextFormat::ParseFromString(oss.str(), &config);
-    SPDLOG_TRACE("Generated pbtxt: {}", oss.str());
-    if (!success) {
-        SPDLOG_ERROR("Created graph config file couldn't be parsed - check used task parameters values.");
-        return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
-    }
-#endif
-    // clang-format on
-    std::string fullPath = FileSystem::joinPath({directoryPath, "graph.pbtxt"});
-    return FileSystem::createFileOverwrite(fullPath, oss.str());
+    return createPbtxtFile(directoryPath, oss.str());
 }
 
 static Status createRerankGraphTemplate(const std::string& directoryPath, const HFSettingsImpl& hfSettings) {
@@ -238,18 +242,7 @@ node {
         }
     }
 })";
-
-#if (MEDIAPIPE_DISABLE == 0)
-    ::mediapipe::CalculatorGraphConfig config;
-    bool success = ::google::protobuf::TextFormat::ParseFromString(oss.str(), &config);
-    if (!success) {
-        SPDLOG_ERROR("Created rerank graph config couldn't be parsed.");
-        return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
-    }
-#endif
-    // clang-format on
-    std::string fullPath = FileSystem::joinPath({directoryPath, "graph.pbtxt"});
-    return FileSystem::createFileOverwrite(fullPath, oss.str());
+    return createPbtxtFile(directoryPath, oss.str());
 }
 
 static Status createEmbeddingsGraphTemplate(const std::string& directoryPath, const HFSettingsImpl& hfSettings) {
@@ -296,18 +289,7 @@ node {
     oss << R"(}
     }
 })";
-
-#if (MEDIAPIPE_DISABLE == 0)
-    ::mediapipe::CalculatorGraphConfig config;
-    bool success = ::google::protobuf::TextFormat::ParseFromString(oss.str(), &config);
-    if (!success) {
-        SPDLOG_ERROR("Created embeddings graph config couldn't be parsed.");
-        return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
-    }
-#endif
-    // clang-format on
-    std::string fullPath = FileSystem::joinPath({directoryPath, "graph.pbtxt"});
-    return FileSystem::createFileOverwrite(fullPath, oss.str());
+    return createPbtxtFile(directoryPath, oss.str());
 }
 
 static Status createImageGenerationGraphTemplate(const std::string& directoryPath, const HFSettingsImpl& hfSettings) {
@@ -389,10 +371,8 @@ node: {
   }
 }
 )";
-
     // clang-format on
-    std::string fullPath = FileSystem::joinPath({directoryPath, "graph.pbtxt"});
-    return FileSystem::createFileOverwrite(fullPath, oss.str());
+    return createPbtxtFile(directoryPath, oss.str());
 }
 
 GraphExport::GraphExport() {
@@ -411,9 +391,10 @@ Status GraphExport::createServableConfig(const std::string& directoryPath, const
     if (!hfSettings.ggufFilename.has_value()) {
         bool is_dir = false;
         status = LocalFileSystem::isDir(directoryPath, &is_dir);
-        if (!status.ok())
+        if (!status.ok()) {
+            SPDLOG_ERROR("Failed to check if graph path is directory: {}: {}", directoryPath, status.string());
             return status;
-
+        }
         if (!is_dir) {
             SPDLOG_ERROR("Graph path is not a directory: {}", directoryPath);
             return StatusCode::PATH_INVALID;
@@ -431,6 +412,7 @@ Status GraphExport::createServableConfig(const std::string& directoryPath, const
         SPDLOG_ERROR("Graph options not initialized.");
         return StatusCode::INTERNAL_ERROR;
     }
+    SPDLOG_ERROR("Graph options not initialized.");
     return StatusCode::INTERNAL_ERROR;
 }
 
@@ -482,10 +464,17 @@ std::variant<std::optional<std::string>, Status> GraphExport::createPluginString
         value.SetUint(pluginConfig.numStreams.value());
         auto itr = d.FindMember("NUM_STREAMS");
         if (itr != d.MemberEnd()) {
-            return Status(StatusCode::PLUGIN_CONFIG_CONFLICTING_PARAMETERS, "Doubled NUM_STREAMS parameter in plugin config.");
+            if (pluginConfig.numStreams.value() == 1) {
+                // ignoring double setting NUM_STREAMS is required for embeddings & rerank
+                // since 1 is default value coming from CLI
+                SPDLOG_DEBUG("Doubled NUM_STREAMS parameter in plugin config. Will ignore `--num_streams` CLI parameter.");
+            } else {
+                return Status(StatusCode::PLUGIN_CONFIG_CONFLICTING_PARAMETERS, "Doubled NUM_STREAMS parameter in plugin config.");
+            }
+        } else {
+            d.AddMember("NUM_STREAMS", value, d.GetAllocator());
+            configNotEmpty = true;
         }
-        d.AddMember("NUM_STREAMS", value, d.GetAllocator());
-        configNotEmpty = true;
     }
     if (exportSettings.pluginConfig.cacheDir.has_value()) {
         rapidjson::Value value;
