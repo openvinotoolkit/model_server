@@ -340,9 +340,8 @@ pipeline {
                 sh "test -d .venv || python3 -m venv .venv && \
                 . .venv/bin/activate && pip install -e ./gorilla/berkeley-function-call-leaderboard && \
                 echo Running agentic accuracy test && \
-                export OPENAI_BASE_URL=http://localhost:9000/v3 && \
-                ${params.USE_THINKING ? 'export ENABLE_THINKING=true && \\' : ''} \
-                bfcl generate --model ovms-model --test-category simple --temperature 0.0 --num-threads 100 -o --result-dir bfcl_results && bfcl evaluate --model ovms-model --result-dir bfcl_results --score-dir bfcl_scores && \
+                OPENAI_BASE_URL=http://localhost:9000/v3 ENABLE_THINKING=${params.USE_THINKING} bfcl generate --model ovms-model --test-category simple --temperature 0.0 --num-threads 100 -o --result-dir bfcl_results && \
+                bfcl evaluate --model ovms-model --result-dir bfcl_results --score-dir bfcl_scores && \
                 cat gorilla/berkeley-function-call-leaderboard/bfcl_scores/ovms-model/BFCL_v3_simple_score.json | head -1 | jq ."
                 script {
                     def accuracy = sh(script: "cat gorilla/berkeley-function-call-leaderboard/bfcl_scores/ovms-model/BFCL_v3_simple_score.json | head -1 | jq -r '.accuracy'", returnStdout: true).trim()
