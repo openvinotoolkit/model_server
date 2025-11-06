@@ -19,6 +19,9 @@
 #include <openvino/openvino.hpp>
 
 namespace ovms {
+
+class Status;
+
 /**
  * @brief Creates an OpenVINO tensor from a video file path
  * 
@@ -26,8 +29,9 @@ namespace ovms {
  * with shape [N, H, W, C] where N is the number of frames.
  * 
  * @param filePath Path to the video file
- * @return ov::Tensor containing all video frames, or empty tensor on failure
+ * @param outputTensor Reference to tensor that will contain the video frames
+ * @return Status indicating success or failure with error details
  */
-ov::Tensor makeVideoTensorFromPath(const std::string& filePath);
+Status makeVideoTensorFromPath(const std::string& filePath, ov::Tensor& outputTensor);
 
 }  // namespace ovms

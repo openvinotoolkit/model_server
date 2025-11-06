@@ -877,6 +877,7 @@ ovms_cc_library(
         "opencv_dep",
         "libovmslogging",
         "libovmsprofiler",
+        "libovmsstatus",
     ],
     visibility = ["//visibility:public",],
 )

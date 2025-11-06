@@ -17,21 +17,27 @@
 
 #include <vector>
 #include <cstring>
-#include "deps/opencv.hpp"
+#include <opencv2/opencv.hpp>
+#include <openvino/openvino.hpp>
 
 #include "profiler.hpp"
 #include "logging.hpp"
+#include "status.hpp"
 
 namespace ovms {
 
-ov::Tensor makeVideoTensorFromPath(const std::string& filePath) {
+Status makeVideoTensorFromPath(const std::string& filePath, ov::Tensor& outputTensor) {
     OVMS_PROFILE_FUNCTION();
+    
+    if (filePath.empty()) {
+        SPDLOG_DEBUG("Empty file path provided");
+        return Status(StatusCode::FILE_INVALID, "Video file path is empty");
+    }
     
     cv::VideoCapture cap(filePath);
     if (!cap.isOpened()) {
         SPDLOG_DEBUG("Error opening video file: {}", filePath);
-        // Return a properly initialized empty tensor
-        return ov::Tensor(ov::element::f32, ov::Shape{0});
+        return Status(StatusCode::FILE_INVALID, "Cannot open video file: " + filePath);
     }
     
     std::vector<cv::Mat> frames;
@@ -49,48 +55,52 @@ ov::Tensor makeVideoTensorFromPath(const std::string& filePath) {
     } catch (const cv::Exception& e) {
         SPDLOG_DEBUG("Error during video frame reading: {}", e.what());
         cap.release();
-        // Return a properly initialized empty tensor
-        return ov::Tensor(ov::element::f32, ov::Shape{0});
+        return Status(StatusCode::INTERNAL_ERROR, "OpenCV error during video reading: " + std::string(e.what()));
     }
     
     cap.release();
     
     if (frames.empty()) {
         SPDLOG_DEBUG("No frames found in video file: {}", filePath);
-        // Return a properly initialized empty tensor
-        return ov::Tensor(ov::element::f32, ov::Shape{0});
+        return Status(StatusCode::FILE_INVALID, "Video file contains no frames: " + filePath);
     }
     
-    // Create tensor shape [N, H, W, C]
-    ov::Shape shape = {
-        frames.size(),                        // N - number of frames
-        static_cast<size_t>(frames[0].rows),  // H - height
-        static_cast<size_t>(frames[0].cols),  // W - width
-        static_cast<size_t>(frames[0].channels()) // C - channels
-    };
-    
-    // Use FP32 precision as default (can be modified based on requirements)
-    ov::element::Type precision = ov::element::f32;
-    ov::Tensor tensor(precision, shape);
-    
-    // Copy frame data to tensor
-    char* ptr = (char*)tensor.data();
-    for (const cv::Mat& img : frames) {
-        // Convert to float if needed
-        cv::Mat floatImg;
-        if (img.type() != CV_32FC3 && img.channels() == 3) {
-            img.convertTo(floatImg, CV_32FC3, 1.0/255.0); // Normalize to [0,1] range
-        } else if (img.type() != CV_32FC1 && img.channels() == 1) {
-            img.convertTo(floatImg, CV_32FC1, 1.0/255.0); // Normalize to [0,1] range
-        } else {
-            floatImg = img;
+    try {
+        // Create tensor shape [N, H, W, C]
+        ov::Shape shape = {
+            frames.size(),                        // N - number of frames
+            static_cast<size_t>(frames[0].rows),  // H - height
+            static_cast<size_t>(frames[0].cols),  // W - width
+            static_cast<size_t>(frames[0].channels()) // C - channels
+        };
+        
+        // Use FP32 precision as default (can be modified based on requirements)
+        ov::element::Type precision = ov::element::f32;
+        outputTensor = ov::Tensor(precision, shape);
+        
+        // Copy frame data to tensor
+        char* ptr = (char*)outputTensor.data();
+        for (const cv::Mat& img : frames) {
+            // Convert to float if needed
+            cv::Mat floatImg;
+            if (img.type() != CV_32FC3 && img.channels() == 3) {
+                img.convertTo(floatImg, CV_32FC3, 1.0/255.0); // Normalize to [0,1] range
+            } else if (img.type() != CV_32FC1 && img.channels() == 1) {
+                img.convertTo(floatImg, CV_32FC1, 1.0/255.0); // Normalize to [0,1] range
+            } else {
+                floatImg = img;
+            }
+            
+            memcpy(ptr, (char*)floatImg.data, floatImg.total() * floatImg.elemSize());
+            ptr += (floatImg.total() * floatImg.elemSize());
         }
         
-        memcpy(ptr, (char*)floatImg.data, floatImg.total() * floatImg.elemSize());
-        ptr += (floatImg.total() * floatImg.elemSize());
+        return Status(StatusCode::OK);
+        
+    } catch (const std::exception& e) {
+        SPDLOG_DEBUG("Error creating tensor from video frames: {}", e.what());
+        return Status(StatusCode::INTERNAL_ERROR, "Failed to create tensor from video frames: " + std::string(e.what()));
     }
-    
-    return tensor;
 }
 
 }  // namespace ovms
