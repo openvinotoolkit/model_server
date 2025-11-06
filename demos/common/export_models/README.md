@@ -16,19 +16,20 @@ python export_model.py --help
 ```
 Expected Output:
 ```console
-usage: export_model.py [-h] {text_generation,embeddings_ov,rerank,rerank_ov,image_generation} ...
-
+usage: export_model.py [-h]
+                       {text_generation,embeddings_ov,rerank,rerank_ov,image_generation,text2speech,speech2text}
+                       ...
 Export Hugging face models to OVMS models repository including all configuration for deployments
-
 positional arguments:
-  {text_generation,embeddings_ov,rerank,rerank_ov,image_generation}
+  {text_generation,embeddings_ov,rerank,rerank_ov,image_generation,text2speech,speech2text}
                         subcommand help
     text_generation     export model for chat and completion endpoints
     embeddings_ov       export model for embeddings endpoint with directory structure aligned with OpenVINO tools
     rerank              [deprecated] export model for rerank endpoint with models split into separate, versioned directories
     rerank_ov           export model for rerank endpoint with directory structure aligned with OpenVINO tools
     image_generation    export model for image generation endpoint
-
+    text2speech         export model for text2speech endpoint
+    speech2text         export model for speech2text endpoint
 options:
   -h, --help            show this help message and exit
 ```
@@ -39,13 +40,30 @@ python export_model.py text_generation --help
 ```
 Expected Output:
 ```console
-usage: export_model.py text_generation [-h] [--model_repository_path MODEL_REPOSITORY_PATH] --source_model SOURCE_MODEL [--model_name MODEL_NAME] [--weight-format PRECISION]
-                                       [--config_file_path CONFIG_FILE_PATH] [--overwrite_models] [--target_device TARGET_DEVICE] [--ov_cache_dir OV_CACHE_DIR]
-                                       [--extra_quantization_params EXTRA_QUANTIZATION_PARAMS] [--pipeline_type {LM,LM_CB,VLM,VLM_CB,AUTO}] [--kv_cache_precision {u8}] [--enable_prefix_caching]   
-                                       [--disable_dynamic_split_fuse] [--max_num_batched_tokens MAX_NUM_BATCHED_TOKENS] [--max_num_seqs MAX_NUM_SEQS] [--cache_size CACHE_SIZE]
-                                       [--draft_source_model DRAFT_SOURCE_MODEL] [--draft_model_name DRAFT_MODEL_NAME] [--max_prompt_len MAX_PROMPT_LEN] [--prompt_lookup_decoding]
-                                       [--reasoning_parser {qwen3}] [--tool_parser {llama3,phi4,hermes3,mistral}] [--enable_tool_guided_generation]
-
+usage: export_model.py text_generation [-h]
+                                       [--model_repository_path MODEL_REPOSITORY_PATH]
+                                       --source_model SOURCE_MODEL
+                                       [--model_name MODEL_NAME]
+                                       [--weight-format PRECISION]
+                                       [--config_file_path CONFIG_FILE_PATH]
+                                       [--overwrite_models]
+                                       [--target_device TARGET_DEVICE]
+                                       [--ov_cache_dir OV_CACHE_DIR]
+                                       [--extra_quantization_params EXTRA_QUANTIZATION_PARAMS]
+                                       [--pipeline_type {LM,LM_CB,VLM,VLM_CB,AUTO}]
+                                       [--kv_cache_precision {u8}]
+                                       [--enable_prefix_caching]
+                                       [--disable_dynamic_split_fuse]
+                                       [--max_num_batched_tokens MAX_NUM_BATCHED_TOKENS]
+                                       [--max_num_seqs MAX_NUM_SEQS]
+                                       [--cache_size CACHE_SIZE]
+                                       [--draft_source_model DRAFT_SOURCE_MODEL]
+                                       [--draft_model_name DRAFT_MODEL_NAME]
+                                       [--max_prompt_len MAX_PROMPT_LEN]
+                                       [--prompt_lookup_decoding]
+                                       [--reasoning_parser {qwen3,gptoss}]
+                                       [--tool_parser {llama3,phi4,hermes3,mistral,qwen3coder,gptoss}]
+                                       [--enable_tool_guided_generation]
 options:
   -h, --help            show this help message and exit
   --model_repository_path MODEL_REPOSITORY_PATH
@@ -82,14 +100,14 @@ options:
   --draft_source_model DRAFT_SOURCE_MODEL
                         HF model name or path to the local folder with PyTorch or OpenVINO draft model. Using this option will create configuration for speculative decoding
   --draft_model_name DRAFT_MODEL_NAME
-                        Draft model name that should be used in the deployment. Equal to draft_source_model if HF model name is used. Available only in draft_source_model has been specified.      
+                        Draft model name that should be used in the deployment. Equal to draft_source_model if HF model name is used. Available only in draft_source_model has been specified.
   --max_prompt_len MAX_PROMPT_LEN
                         Sets NPU specific property for maximum number of tokens in the prompt. Not effective if target device is not NPU
   --prompt_lookup_decoding
                         Set pipeline to use prompt lookup decoding
-  --reasoning_parser {qwen3}
+  --reasoning_parser {qwen3,gptoss}
                         Set the type of the reasoning parser for reasoning content extraction
-  --tool_parser {llama3,phi4,hermes3,mistral}
+  --tool_parser {llama3,phi4,hermes3,mistral,qwen3coder,gptoss}
                         Set the type of the tool parser for tool calls extraction
   --enable_tool_guided_generation
                         Enables enforcing tool schema during generation. Requires setting tool_parser
