@@ -1167,6 +1167,9 @@ public:
         manager = &(dynamic_cast<const ovms::ServableManagerModule*>(server.getModule(SERVABLE_MANAGER_MODULE_NAME))->getServableManager());
     }
     void SetUp() override {
+        #ifdef _WIN32
+            GTEST_SKIP() << "Skipping test on Windows, sporadic"; // CVS-176244
+        #endif
         SetUpCAPIServerInstance(createStressTestPipelineOneDummyConfig());
     }
     void TearDown() override {

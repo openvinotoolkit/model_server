@@ -200,6 +200,9 @@ protected:
     }
 
     void SetUp() override {
+        #ifdef _WIN32
+            GTEST_SKIP() << "Skipping test on Windows"; // CVS-176245
+        #endif
         TestWithTempDir::SetUp();
         std::string port = "9000";
         randomizeAndEnsureFree(port);
@@ -213,9 +216,6 @@ protected:
 };
 
 TEST_F(MetricFlowTest, GrpcPredict) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Skipping test on Windows";
-#endif
     PredictionServiceImpl impl(server);
     tensorflow::serving::PredictRequest request;
     tensorflow::serving::PredictResponse response;
