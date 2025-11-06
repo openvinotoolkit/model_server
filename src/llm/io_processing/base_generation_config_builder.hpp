@@ -63,6 +63,12 @@ public:
     ov::genai::GenerationConfig& getConfig() { return config; }
 
     /*
+    * Adjusts generation config based on the decoding method used in the pipeline.
+    * This includes setting defaults for parameters required by the selected decoding method if they are not already set.
+    */
+    void adjustConfigForDecodingMethod();
+
+    /*
     * Add stop string to generation config. Used when model server needs to add additional stop string that has not been provided in the request.
     */
     void addStopString(const std::string& decodedStopString);

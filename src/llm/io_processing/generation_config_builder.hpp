@@ -56,6 +56,10 @@ public:
         return builder_impl->getConfig();
     }
 
+    void adjustConfigForDecodingMethod() {
+        builder_impl->adjustConfigForDecodingMethod();
+    }
+
     void validateStructuredOutputConfig(ov::genai::Tokenizer& tokenizer) {
         builder_impl->validateStructuredOutputConfig(tokenizer);
     }

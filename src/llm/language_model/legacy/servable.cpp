@@ -38,7 +38,6 @@
 #include "../../py_jinja_template_processor.hpp"
 #endif
 #include "servable.hpp"
-#include "io_processing/generation_config_builder.hpp"
 
 namespace ovms {
 
@@ -100,12 +99,12 @@ absl::Status LegacyServable::parseRequest(std::shared_ptr<GenAiServableExecution
         }
         legacyExecutionContext->textStreamer = std::make_shared<ov::genai::TextStreamer>(getProperties()->tokenizer, callback, streamerConfig);
     }
-    DecodingMethod decodingMethod = determineDecodingMethod(getProperties()->pluginConfig);
-    legacyExecutionContext->generationConfigBuilder = std::make_shared<GenerationConfigBuilder>(getProperties()->baseGenerationConfig, 
-                                                                                                getProperties()->toolParserName, 
-                                                                                                getProperties()->enableToolGuidedGeneration,
-                                                                                                decodingMethod);
+    legacyExecutionContext->generationConfigBuilder = std::make_shared<GenerationConfigBuilder>(getProperties()->baseGenerationConfig,
+        getProperties()->toolParserName,
+        getProperties()->enableToolGuidedGeneration,
+        getProperties()->decodingMethod);
     legacyExecutionContext->generationConfigBuilder->parseConfigFromRequest(legacyExecutionContext->apiHandler->getRequest());
+    legacyExecutionContext->generationConfigBuilder->adjustConfigForDecodingMethod();
     try {
         legacyExecutionContext->generationConfigBuilder->validateStructuredOutputConfig(getProperties()->tokenizer);
     } catch (const std::exception& e) {
