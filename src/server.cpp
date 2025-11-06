@@ -76,9 +76,6 @@
 using grpc::ServerBuilder;
 
 namespace ovms {
-namespace {
-volatile sig_atomic_t shutdown_request = 0;
-}
 
 Server& Server::instance() {
     static Server global;
@@ -449,9 +446,11 @@ int Server::startServerFromSettings(ServerSettingsImpl& serverSettings, ModelsSe
     } catch (const std::exception& e) {
         SPDLOG_ERROR("Exception; {}", e.what());
         result = OVMS_EX_FAILURE;
+        shutdown_request = 3;
         return result;
     }
 
+    shutdown_request = 3;
     return EXIT_SUCCESS;
 }
 

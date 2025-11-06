@@ -24,7 +24,9 @@
 #include "capi_frontend/server_settings.hpp"
 #include "module.hpp"
 #include "module_names.hpp"
-
+namespace {
+volatile sig_atomic_t shutdown_request = 0;
+}
 namespace ovms {
 class Config;
 class Status;

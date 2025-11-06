@@ -519,7 +519,6 @@ DWORD WINAPI OvmsWindowsServiceManager::serviceWorkerThread(LPVOID lpParam) {
             break;
         }
 
-        DEBUG_LOG("serviceWorkerThread: checkModulesStarted...");
         ovmsService->checkModulesStarted();
     }
 
@@ -773,7 +772,8 @@ bool OvmsService::isReady() {
 }
 
 bool OvmsService::isRunning() {
-    return (t && t->joinable());
+    // Check if server thread exited and if we have new error value
+    return (t && t->joinable() && shutdown_request == 0);
 }
 
 bool OvmsService::isLive(const std::string& moduleName) {
@@ -797,7 +797,6 @@ bool OvmsService::checkModulesStarted() {
     if (!SERVABLE_MANAGER_MODULE_LIVE && this->isLive(ovms::SERVABLE_MANAGER_MODULE_NAME)) {
         DEBUG_LOG("serviceWorkerThread: Ovms service SERVABLE_MANAGER_MODULE is live.");
         SERVABLE_MANAGER_MODULE_LIVE = true;
-        OvmsWindowsServiceManager::serviceReportEventSuccess("[INFO]Modules", "Openvino Model Server is live.");
     }
     // TODO: Add timeout for server ready ?
     if (!SERVER_READY && this->isReady()) {
@@ -812,10 +811,12 @@ bool OvmsService::checkModulesStarted() {
     if (!GRPC_SERVER_MODULE_LIVE && this->isLive(ovms::GRPC_SERVER_MODULE_NAME)) {
         DEBUG_LOG("serviceWorkerThread: Ovms service GRPC_SERVER_MODULE is live.");
         GRPC_SERVER_MODULE_LIVE = true;
+        OvmsWindowsServiceManager::serviceReportEventSuccess("[INFO]Modules", "Openvino Model Server GRPC module is live.");
     }
     if (!HTTP_SERVER_MODULE_LIVE && this->isLive(ovms::HTTP_SERVER_MODULE_NAME)) {
         DEBUG_LOG("serviceWorkerThread: Ovms service HTTP_SERVER_MODULE is live.");
         HTTP_SERVER_MODULE_LIVE = true;
+        OvmsWindowsServiceManager::serviceReportEventSuccess("[INFO]Modules", "Openvino Model Server HTTP module is live.");
     }
     if (!METRICS_MODULE_LIVE && this->isLive(ovms::METRICS_MODULE_NAME)) {
         DEBUG_LOG("serviceWorkerThread: Ovms service METRICS_MODULE is live.");
