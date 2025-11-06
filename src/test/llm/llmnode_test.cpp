@@ -4034,6 +4034,14 @@ void LLMNodeOptionsCheckNonDefault(std::string& modelsPath) {
     ASSERT_EQ(properties->schedulerConfig.cache_eviction_config.apply_rotation, true);
 }
 
+TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckNonDefault) {
+    LLMNodeOptionsCheckNonDefault(modelsPath);
+}
+
+TEST_F(LLMVLMOptionsHttpTest, LLMVLMNodeOptionsCheckNonDefault) {
+    LLMNodeOptionsCheckNonDefault(modelsPath);
+}
+
 void LLMNodeOptionsCheckDefaultSparseAttentionConfig(std::string& modelsPath) {
     std::string testPbtxt = R"(
         input_stream: "HTTP_REQUEST_PAYLOAD:input"
@@ -4078,14 +4086,228 @@ void LLMNodeOptionsCheckDefaultSparseAttentionConfig(std::string& modelsPath) {
     auto properties = std::static_pointer_cast<ContinuousBatchingServableProperties>(servable->getProperties());
 
     ASSERT_EQ(properties->schedulerConfig.sparse_attention_config.mode, ov::genai::SparseAttentionMode::TRISHAPE);
+    ASSERT_EQ(properties->schedulerConfig.sparse_attention_config.num_last_dense_tokens_in_prefill, 100);
+    ASSERT_EQ(properties->schedulerConfig.sparse_attention_config.num_retained_start_tokens_in_cache, 128);
+    ASSERT_EQ(properties->schedulerConfig.sparse_attention_config.num_retained_recent_tokens_in_cache, 1920);
+    ASSERT_NEAR(properties->schedulerConfig.sparse_attention_config.xattention_threshold, 0.8, 1e-6);
+    ASSERT_EQ(properties->schedulerConfig.sparse_attention_config.xattention_block_size, 64);
+    ASSERT_EQ(properties->schedulerConfig.sparse_attention_config.xattention_stride, 8);
 }
 
-
-TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckNonDefault) {
-    LLMNodeOptionsCheckNonDefault(modelsPath);
+TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckDefaultSparseAttentionConfig) {
+    LLMNodeOptionsCheckDefaultSparseAttentionConfig(modelsPath);
 }
-TEST_F(LLMVLMOptionsHttpTest, LLMVLMNodeOptionsCheckNonDefault) {
-    LLMNodeOptionsCheckNonDefault(modelsPath);
+
+TEST_F(LLMVLMOptionsHttpTest, LLMVLMNodeOptionsCheckDefaultSparseAttentionConfig) {
+    LLMNodeOptionsCheckDefaultSparseAttentionConfig(modelsPath);
+}
+
+void LLMNodeOptionsCheckNonDefaultSparseAttentionConfig(std::string& modelsPath) {
+    std::string testPbtxt = R"(
+        input_stream: "HTTP_REQUEST_PAYLOAD:input"
+        output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+
+        node: {
+        name: "llmNode"
+        calculator: "HttpLLMCalculator"
+        input_stream: "LOOPBACK:loopback"
+        input_stream: "HTTP_REQUEST_PAYLOAD:input"
+        input_side_packet: "LLM_NODE_RESOURCES:llm"
+        output_stream: "LOOPBACK:loopback"
+        output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+        input_stream_info: {
+            tag_index: 'LOOPBACK:0',
+            back_edge: true
+        }
+        node_options: {
+            [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
+                models_path: ")" +
+                            modelsPath + R"("
+               sparse_attention_config: {
+                   mode: XATTENTION
+                   num_last_dense_tokens_in_prefill: 101
+                   num_retained_start_tokens_in_cache: 129
+                   num_retained_recent_tokens_in_cache: 1921
+                   xattention_threshold: 0.9
+                   xattention_block_size: 65
+                   xattention_stride: 9
+               }
+            }
+        }
+        input_stream_handler {
+            input_stream_handler: "SyncSetInputStreamHandler",
+            options {
+            [mediapipe.SyncSetInputStreamHandlerOptions.ext] {
+                sync_set {
+                tag_index: "LOOPBACK:0"
+                }
+            }
+            }
+        }
+        }
+    )";
+    adjustConfigForTargetPlatform(testPbtxt);
+    ::mediapipe::CalculatorGraphConfig config;
+    ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(testPbtxt, &config));
+    std::shared_ptr<GenAiServable> servable;
+    ASSERT_EQ(initializeGenAiServable(servable, config.node(0), ""), StatusCode::OK);
+    auto properties = std::static_pointer_cast<ContinuousBatchingServableProperties>(servable->getProperties());
+
+    ASSERT_EQ(properties->schedulerConfig.sparse_attention_config.mode, ov::genai::SparseAttentionMode::XATTENTION);
+    ASSERT_EQ(properties->schedulerConfig.sparse_attention_config.num_last_dense_tokens_in_prefill, 101);
+    ASSERT_EQ(properties->schedulerConfig.sparse_attention_config.num_retained_start_tokens_in_cache, 129);
+    ASSERT_EQ(properties->schedulerConfig.sparse_attention_config.num_retained_recent_tokens_in_cache, 1921);
+    ASSERT_NEAR(properties->schedulerConfig.sparse_attention_config.xattention_threshold, 0.9, 1e-6);
+    ASSERT_EQ(properties->schedulerConfig.sparse_attention_config.xattention_block_size, 65);
+    ASSERT_EQ(properties->schedulerConfig.sparse_attention_config.xattention_stride, 9);
+}
+
+TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckNonDefaultSparseAttentionConfig) {
+    LLMNodeOptionsCheckNonDefaultSparseAttentionConfig(modelsPath);
+}
+
+TEST_F(LLMVLMOptionsHttpTest, LLMVLMNodeOptionsCheckNonDefaultSparseAttentionConfig) {
+    LLMNodeOptionsCheckNonDefaultSparseAttentionConfig(modelsPath);
+}
+
+void LLMNodeOptionsCheckDefaultCacheEvictionConfig(std::string& modelsPath) {
+    std::string testPbtxt = R"(
+        input_stream: "HTTP_REQUEST_PAYLOAD:input"
+        output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+
+        node: {
+        name: "llmNode"
+        calculator: "HttpLLMCalculator"
+        input_stream: "LOOPBACK:loopback"
+        input_stream: "HTTP_REQUEST_PAYLOAD:input"
+        input_side_packet: "LLM_NODE_RESOURCES:llm"
+        output_stream: "LOOPBACK:loopback"
+        output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+        input_stream_info: {
+            tag_index: 'LOOPBACK:0',
+            back_edge: true
+        }
+        node_options: {
+            [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
+                models_path: ")" +
+                            modelsPath + R"("
+               cache_eviction_config: {
+                   start_size: 1
+                   recent_size: 2
+                   max_cache_size: 4
+               }
+            }
+        }
+        input_stream_handler {
+            input_stream_handler: "SyncSetInputStreamHandler",
+            options {
+            [mediapipe.SyncSetInputStreamHandlerOptions.ext] {
+                sync_set {
+                tag_index: "LOOPBACK:0"
+                }
+            }
+            }
+        }
+        }
+    )";
+    adjustConfigForTargetPlatform(testPbtxt);
+    ::mediapipe::CalculatorGraphConfig config;
+    ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(testPbtxt, &config));
+    std::shared_ptr<GenAiServable> servable;
+    ASSERT_EQ(initializeGenAiServable(servable, config.node(0), ""), StatusCode::OK);
+    auto properties = std::static_pointer_cast<ContinuousBatchingServableProperties>(servable->getProperties());
+
+    ASSERT_EQ(properties->schedulerConfig.cache_eviction_config.aggregation_mode, ov::genai::AggregationMode::NORM_SUM);
+    ASSERT_EQ(properties->schedulerConfig.cache_eviction_config.get_start_size(), 1);
+    ASSERT_EQ(properties->schedulerConfig.cache_eviction_config.get_recent_size(), 2);
+    ASSERT_EQ(properties->schedulerConfig.cache_eviction_config.get_max_cache_size(), 4);
+    ASSERT_EQ(properties->schedulerConfig.cache_eviction_config.apply_rotation, false);
+    ASSERT_EQ(properties->schedulerConfig.cache_eviction_config.snapkv_window_size, 8);
+    ASSERT_EQ(properties->schedulerConfig.cache_eviction_config.kvcrush_config.anchor_point_mode, ov::genai::KVCrushAnchorPointMode::RANDOM);
+    ASSERT_EQ(properties->schedulerConfig.cache_eviction_config.kvcrush_config.budget, 0);
+    ASSERT_EQ(properties->schedulerConfig.cache_eviction_config.kvcrush_config.rng_seed, 0);
+}
+
+TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckDefaultCacheEvictionConfig) {
+    LLMNodeOptionsCheckDefaultCacheEvictionConfig(modelsPath);
+}
+
+TEST_F(LLMVLMOptionsHttpTest, LLMVLMNodeOptionsCheckDefaultCacheEvictionConfig) {
+    LLMNodeOptionsCheckDefaultCacheEvictionConfig(modelsPath);
+}
+
+void LLMNodeOptionsCheckNonDefaultCacheEvictionConfig(std::string& modelsPath) {
+    std::string testPbtxt = R"(
+        input_stream: "HTTP_REQUEST_PAYLOAD:input"
+        output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+
+        node: {
+        name: "llmNode"
+        calculator: "HttpLLMCalculator"
+        input_stream: "LOOPBACK:loopback"
+        input_stream: "HTTP_REQUEST_PAYLOAD:input"
+        input_side_packet: "LLM_NODE_RESOURCES:llm"
+        output_stream: "LOOPBACK:loopback"
+        output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+        input_stream_info: {
+            tag_index: 'LOOPBACK:0',
+            back_edge: true
+        }
+        node_options: {
+            [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
+                models_path: ")" +
+                            modelsPath + R"("
+                cache_eviction_config: {
+                    start_size: 32
+                    recent_size: 128
+                    max_cache_size: 672
+                    aggregation_mode: SUM
+                    apply_rotation: true
+                    snapkv_window_size: 16
+                    kv_crush_config: {
+                        anchor_point_mode: ONES
+                        budget: 1
+                        rng_seed: 42
+                    }
+                }
+            }
+        }
+        input_stream_handler {
+            input_stream_handler: "SyncSetInputStreamHandler",
+            options {
+            [mediapipe.SyncSetInputStreamHandlerOptions.ext] {
+                sync_set {
+                tag_index: "LOOPBACK:0"
+                }
+            }
+            }
+        }
+        }
+    )";
+    adjustConfigForTargetPlatform(testPbtxt);
+    ::mediapipe::CalculatorGraphConfig config;
+    ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(testPbtxt, &config));
+    std::shared_ptr<GenAiServable> servable;
+    ASSERT_EQ(initializeGenAiServable(servable, config.node(0), ""), StatusCode::OK);
+    auto properties = std::static_pointer_cast<ContinuousBatchingServableProperties>(servable->getProperties());
+
+    ASSERT_EQ(properties->schedulerConfig.cache_eviction_config.aggregation_mode, ov::genai::AggregationMode::SUM);
+    ASSERT_EQ(properties->schedulerConfig.cache_eviction_config.get_start_size(), 32);
+    ASSERT_EQ(properties->schedulerConfig.cache_eviction_config.get_recent_size(), 128);
+    ASSERT_EQ(properties->schedulerConfig.cache_eviction_config.get_max_cache_size(), 672);
+    ASSERT_EQ(properties->schedulerConfig.cache_eviction_config.apply_rotation, true);
+    ASSERT_EQ(properties->schedulerConfig.cache_eviction_config.snapkv_window_size, 16);
+    ASSERT_EQ(properties->schedulerConfig.cache_eviction_config.kvcrush_config.anchor_point_mode, ov::genai::KVCrushAnchorPointMode::ONES);
+    ASSERT_EQ(properties->schedulerConfig.cache_eviction_config.kvcrush_config.budget, 1);
+    ASSERT_EQ(properties->schedulerConfig.cache_eviction_config.kvcrush_config.rng_seed, 42);
+}
+
+TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckNonDefaultCacheEvictionConfig) {
+    LLMNodeOptionsCheckNonDefaultCacheEvictionConfig(modelsPath);
+}
+
+TEST_F(LLMVLMOptionsHttpTest, LLMVLMNodeOptionsCheckNonDefaultCacheEvictionConfig) {
+    LLMNodeOptionsCheckNonDefaultCacheEvictionConfig(modelsPath);
 }
 
 // Speculative decoding is not supported in VLM pipelines, currently not using parameters for this test

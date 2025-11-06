@@ -53,22 +53,22 @@ ov::genai::SparseAttentionConfig prepareSparseAttentionConfig(const mediapipe::L
     ov::genai::SparseAttentionConfig sparseAttentionConfig;
     sparseAttentionConfig.mode = mode;
     if (nodeOptions.sparse_attention_config().has_num_last_dense_tokens_in_prefill()) {
-        sparseAttentionConfig.numLastDenseTokensInPrefill = nodeOptions.sparse_attention_config().num_last_dense_tokens_in_prefill();
+        sparseAttentionConfig.num_last_dense_tokens_in_prefill = nodeOptions.sparse_attention_config().num_last_dense_tokens_in_prefill();
     }
     if (nodeOptions.sparse_attention_config().has_num_retained_start_tokens_in_cache()) {
-        sparseAttentionConfig.numRetainedStartTokensInCache = nodeOptions.sparse_attention_config().num_retained_start_tokens_in_cache();
+        sparseAttentionConfig.num_retained_start_tokens_in_cache = nodeOptions.sparse_attention_config().num_retained_start_tokens_in_cache();
     }
     if (nodeOptions.sparse_attention_config().has_num_retained_recent_tokens_in_cache()) {
-        sparseAttentionConfig.numRetainedRecentTokensInCache = nodeOptions.sparse_attention_config().num_retained_recent_tokens_in_cache();
+        sparseAttentionConfig.num_retained_recent_tokens_in_cache = nodeOptions.sparse_attention_config().num_retained_recent_tokens_in_cache();
     }
     if (nodeOptions.sparse_attention_config().has_xattention_threshold()) {
-        sparseAttentionConfig.xattentionThreshold = nodeOptions.sparse_attention_config().xattention_threshold();
+        sparseAttentionConfig.xattention_threshold = nodeOptions.sparse_attention_config().xattention_threshold();
     }
     if (nodeOptions.sparse_attention_config().has_xattention_block_size()) {
-        sparseAttentionConfig.xattentionBlockSize = nodeOptions.sparse_attention_config().xattention_block_size();
+        sparseAttentionConfig.xattention_block_size = nodeOptions.sparse_attention_config().xattention_block_size();
     }
     if (nodeOptions.sparse_attention_config().has_xattention_stride()) {
-        sparseAttentionConfig.xattentionStride = nodeOptions.sparse_attention_config().xattention_stride();
+        sparseAttentionConfig.xattention_stride = nodeOptions.sparse_attention_config().xattention_stride();
     }
 
     return sparseAttentionConfig;
