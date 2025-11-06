@@ -44,12 +44,12 @@ message LLMCalculatorOptions {
       SUM = 0; // In this mode the importance scores of each token will be summed after each step of generation
       NORM_SUM = 1; // Same as SUM, but the importance scores are additionally divided by the lifetime (in tokens generated) of a given token in cache
       }
-      optional AggregationMode aggregation_mode = 1 [default = SUM];
+      optional AggregationMode aggregation_mode = 1 [default = NORM_SUM];
       required uint64 start_size = 2;
       required uint64 recent_size = 3;
       required uint64 max_cache_size = 4;
       optional bool apply_rotation = 5 [default = false];
-      required uint64 snapkv_window_size = 6;
+      optional uint64 snapkv_window_size = 6 [default = 8];
       optional KVCrushConfig kv_crush_config = 7;
 
     }

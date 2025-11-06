@@ -49,20 +49,29 @@ ov::genai::SparseAttentionConfig prepareSparseAttentionConfig(const mediapipe::L
     } else {
         mode = ov::genai::SparseAttentionMode::XATTENTION;
     }
-    size_t numLastDenseTokensInPrefill = nodeOptions.sparse_attention_config().num_last_dense_tokens_in_prefill();
-    size_t numRetainedStartTokensInCache = nodeOptions.sparse_attention_config().num_retained_start_tokens_in_cache();
-    size_t numRetainedRecentTokensInCache = nodeOptions.sparse_attention_config().num_retained_recent_tokens_in_cache();
-    float xattentionThreshold = nodeOptions.sparse_attention_config().xattention_threshold();
-    size_t xattentionBlockSize = nodeOptions.sparse_attention_config().xattention_block_size();
-    size_t xattentionStride = nodeOptions.sparse_attention_config().xattention_stride();
+    // Use default constructor to rely on GenAI defined defaults if user did not set specific fields
+    ov::genai::SparseAttentionConfig sparseAttentionConfig;
+    sparseAttentionConfig.mode = mode;
+    if (nodeOptions.sparse_attention_config().has_num_last_dense_tokens_in_prefill()) {
+        sparseAttentionConfig.numLastDenseTokensInPrefill = nodeOptions.sparse_attention_config().num_last_dense_tokens_in_prefill();
+    }
+    if (nodeOptions.sparse_attention_config().has_num_retained_start_tokens_in_cache()) {
+        sparseAttentionConfig.numRetainedStartTokensInCache = nodeOptions.sparse_attention_config().num_retained_start_tokens_in_cache();
+    }
+    if (nodeOptions.sparse_attention_config().has_num_retained_recent_tokens_in_cache()) {
+        sparseAttentionConfig.numRetainedRecentTokensInCache = nodeOptions.sparse_attention_config().num_retained_recent_tokens_in_cache();
+    }
+    if (nodeOptions.sparse_attention_config().has_xattention_threshold()) {
+        sparseAttentionConfig.xattentionThreshold = nodeOptions.sparse_attention_config().xattention_threshold();
+    }
+    if (nodeOptions.sparse_attention_config().has_xattention_block_size()) {
+        sparseAttentionConfig.xattentionBlockSize = nodeOptions.sparse_attention_config().xattention_block_size();
+    }
+    if (nodeOptions.sparse_attention_config().has_xattention_stride()) {
+        sparseAttentionConfig.xattentionStride = nodeOptions.sparse_attention_config().xattention_stride();
+    }
 
-    return ov::genai::SparseAttentionConfig(mode,
-        numLastDenseTokensInPrefill,
-        numRetainedStartTokensInCache,
-        numRetainedRecentTokensInCache,
-        xattentionThreshold,
-        xattentionBlockSize,
-        xattentionStride);
+    return sparseAttentionConfig;
 }
 
 ov::genai::CacheEvictionConfig prepareCacheEvictionConfig(const mediapipe::LLMCalculatorOptions& nodeOptions) {
@@ -78,7 +87,7 @@ ov::genai::CacheEvictionConfig prepareCacheEvictionConfig(const mediapipe::LLMCa
     bool applyRotation = nodeOptions.cache_eviction_config().apply_rotation();
     size_t snapkvWindowSize = nodeOptions.cache_eviction_config().snapkv_window_size();
 
-    ov::genai::KVCrushConfig kvcrushConfig;
+    ov::genai::KVCrushConfig kvCrushConfig;
     if (nodeOptions.cache_eviction_config().has_kv_crush_config()) {
         ov::genai::KVCrushAnchorPointMode anchorPointMode;
         switch (nodeOptions.cache_eviction_config().kv_crush_config().anchor_point_mode()) {
@@ -98,14 +107,15 @@ ov::genai::CacheEvictionConfig prepareCacheEvictionConfig(const mediapipe::LLMCa
             anchorPointMode = ov::genai::KVCrushAnchorPointMode::ALTERNATE;
             break;
         default:
+            // Unreachable due to default definition in the proto
             anchorPointMode = ov::genai::KVCrushAnchorPointMode::RANDOM;
             break;
         }
         size_t budget = nodeOptions.cache_eviction_config().kv_crush_config().budget();
         size_t rngSeed = nodeOptions.cache_eviction_config().kv_crush_config().rng_seed();
-        kvcrushConfig = ov::genai::KVCrushConfig(budget, anchorPointMode, rngSeed);
+        kvCrushConfig = ov::genai::KVCrushConfig(budget, anchorPointMode, rngSeed);
     }
-    return ov::genai::CacheEvictionConfig(startSize, recentSize, maxCacheSize, aggregationMode, applyRotation, snapkvWindowSize, kvcrushConfig);
+    return ov::genai::CacheEvictionConfig(startSize, recentSize, maxCacheSize, aggregationMode, applyRotation, snapkvWindowSize, kvCrushConfig);
 }
 
 ov::genai::SchedulerConfig ContinuousBatchingServableInitializer::prepareDraftPipelineSchedulerConfig(const mediapipe::LLMCalculatorOptions& nodeOptions) {
