@@ -16,10 +16,10 @@ python export_model.py --help
 ```
 Expected Output:
 ```console
-usage: export_model.py [-h]
-                       {text_generation,embeddings_ov,rerank,rerank_ov,image_generation,text2speech,speech2text}
-                       ...
+usage: export_model.py [-h] {text_generation,embeddings_ov,rerank,rerank_ov,image_generation,text2speech,speech2text} ...
+
 Export Hugging face models to OVMS models repository including all configuration for deployments
+
 positional arguments:
   {text_generation,embeddings_ov,rerank,rerank_ov,image_generation,text2speech,speech2text}
                         subcommand help
@@ -30,6 +30,7 @@ positional arguments:
     image_generation    export model for image generation endpoint
     text2speech         export model for text2speech endpoint
     speech2text         export model for speech2text endpoint
+
 options:
   -h, --help            show this help message and exit
 ```
