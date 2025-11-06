@@ -867,6 +867,20 @@ ovms_cc_library(
     ],
     visibility = ["//visibility:public",],
 )
+
+ovms_cc_library(
+    name = "video_tensor_utils",
+    hdrs = ["video_tensor_utils.hpp"],
+    srcs = ["video_tensor_utils.cpp"],
+    deps = [
+        "//third_party:openvino",
+        "opencv_dep",
+        "libovmslogging",
+        "libovmsprofiler",
+    ],
+    visibility = ["//visibility:public",],
+)
+
 load("@pip_deps//:requirements.bzl", "all_requirements")
 
 cc_binary(
@@ -2471,6 +2485,7 @@ cc_test(
         "test/tensor_conversion_test.cpp",
         "test/tensorinfo_test.cpp",
         "test/tensorutils_test.cpp",
+        "test/video_tensor_utils_test.cpp",
         "test/test_http_utils.hpp",
         "test/tfs_rest_parser_binary_inputs_test.cpp",
         "test/tfs_rest_parser_column_test.cpp",
@@ -2658,6 +2673,7 @@ cc_test(
             "optimum-cli",
             "//src:ovms_lib",
             "//src:libovmsfilesystemfactory",
+            "//src:video_tensor_utils",
             "@cpp_httplib//:cpp_httplib", # server_test.cpp
             ":test_utils",
             ":test_test_with_temp_dir",
