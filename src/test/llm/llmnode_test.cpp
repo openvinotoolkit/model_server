@@ -4033,6 +4033,54 @@ void LLMNodeOptionsCheckNonDefault(std::string& modelsPath) {
     ASSERT_EQ(properties->schedulerConfig.cache_eviction_config.aggregation_mode, ov::genai::AggregationMode::NORM_SUM);
     ASSERT_EQ(properties->schedulerConfig.cache_eviction_config.apply_rotation, true);
 }
+
+void LLMNodeOptionsCheckDefaultSparseAttentionConfig(std::string& modelsPath) {
+    std::string testPbtxt = R"(
+        input_stream: "HTTP_REQUEST_PAYLOAD:input"
+        output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+
+        node: {
+        name: "llmNode"
+        calculator: "HttpLLMCalculator"
+        input_stream: "LOOPBACK:loopback"
+        input_stream: "HTTP_REQUEST_PAYLOAD:input"
+        input_side_packet: "LLM_NODE_RESOURCES:llm"
+        output_stream: "LOOPBACK:loopback"
+        output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+        input_stream_info: {
+            tag_index: 'LOOPBACK:0',
+            back_edge: true
+        }
+        node_options: {
+            [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
+                models_path: ")" +
+                            modelsPath + R"("
+               sparse_attention_config: {}
+            }
+        }
+        input_stream_handler {
+            input_stream_handler: "SyncSetInputStreamHandler",
+            options {
+            [mediapipe.SyncSetInputStreamHandlerOptions.ext] {
+                sync_set {
+                tag_index: "LOOPBACK:0"
+                }
+            }
+            }
+        }
+        }
+    )";
+    adjustConfigForTargetPlatform(testPbtxt);
+    ::mediapipe::CalculatorGraphConfig config;
+    ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(testPbtxt, &config));
+    std::shared_ptr<GenAiServable> servable;
+    ASSERT_EQ(initializeGenAiServable(servable, config.node(0), ""), StatusCode::OK);
+    auto properties = std::static_pointer_cast<ContinuousBatchingServableProperties>(servable->getProperties());
+
+    ASSERT_EQ(properties->schedulerConfig.sparse_attention_config.mode, ov::genai::SparseAttentionMode::TRISHAPE);
+}
+
+
 TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckNonDefault) {
     LLMNodeOptionsCheckNonDefault(modelsPath);
 }
