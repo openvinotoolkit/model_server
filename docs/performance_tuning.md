@@ -144,6 +144,38 @@ To save power, the OS can decrease the CPU frequency and increase a volatility o
 $ cpupower frequency-set --min 3.1GHz
 ```
 
+## Network Configuration for Optimal Performance
+
+When clients connect to the server using hostname resolution (particularly "localhost"), the system may attempt IPv6 resolution first before falling back to IPv4. If IPv6 is disabled, misconfigured, or unavailable, this can cause connection timeouts and delays before the IPv4 fallback occurs, which is especially noticeable when minimizing time to first token in generative AI applications.
+
+To optimize network connection performance:
+
+**For local secured environments (restricted to localhost only):**
+- If dual-stack networking is configured properly, binding to IPv6 localhost is sufficient: `--grpc_bind_address ::1 --rest_bind_address ::1` (both IPv4 and IPv6 will work)
+- For systems without proper dual-stack support, specify both addresses to avoid resolution delays when clients use "localhost": `--grpc_bind_address 127.0.0.1,::1 --rest_bind_address 127.0.0.1,::1`
+- If IPv6 is disabled or not available in the environment, bind only to IPv4: `--grpc_bind_address 127.0.0.1 --rest_bind_address 127.0.0.1`
+
+**For public deployments:**
+- If dual-stack networking is configured properly, binding to IPv6 is sufficient: `--grpc_bind_address :: --rest_bind_address ::` (both IPv4 and IPv6 will work)
+- For systems without proper dual-stack support, specify both addresses: `--grpc_bind_address 0.0.0.0,:: --rest_bind_address 0.0.0.0,::`
+- Or just configure clients to connect directly to specific IP addresses (127.0.0.1 or ::1) rather than using "localhost" hostname
+
+Example for local secured access using OpenVINO Model Server binary:
+
+Linux/macOS:
+```bash
+./ovms --model_path /path/to/model --model_name resnet --port 9001 \
+--grpc_bind_address 127.0.0.1,::1 --rest_bind_address 127.0.0.1,::1 \
+--rest_port 8001
+```
+
+Windows:
+```cmd
+ovms.exe --model_path C:\path\to\model --model_name resnet --port 9001 ^
+--grpc_bind_address 127.0.0.1,::1 --rest_bind_address 127.0.0.1,::1 ^
+--rest_port 8001
+```
+
 ## Tuning Model Server configuration parameters
 
 OpenVINO Model Server in C++ implementation is using scalable multithreaded gRPC and REST interface, however in some hardware configuration it might become a bottleneck for high performance backend with OpenVINO.
