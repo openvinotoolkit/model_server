@@ -251,7 +251,7 @@ models:
         chat_template_kwargs:
           enable_thinking: false
     autocompleteOptions:
-      maxPromptTokens: 400
+      maxPromptTokens: 500
       debounceDelay: 124
       modelTimeout: 400
       onlyMyCode: true
@@ -327,7 +327,8 @@ models:
       maxPromptTokens: 500
       debounceDelay: 124
       useCache: true
-      modelTimeout: 200
+      onlyMyCode: true
+      modelTimeout: 400
 context:
   - provider: code
   - provider: docs
