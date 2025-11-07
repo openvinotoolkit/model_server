@@ -168,7 +168,9 @@ OvmsWindowsServiceManager::~OvmsWindowsServiceManager() {
 struct WinHandleDeleter {
     typedef HANDLE pointer;
     void operator()(HANDLE h) {
-        DEBUG_LOG("WinHandleDeleter: closing handle");
+        std::stringstream ss2;
+        ss2 << "WinHandleDeleter: closing handle: " << h;
+        DEBUG_LOG(ss2.str());
         if (h != NULL && h != INVALID_HANDLE_VALUE) {
             CloseHandle(h);
         }
@@ -237,9 +239,6 @@ void WINAPI OvmsWindowsServiceManager::serviceMain(DWORD argc, LPTSTR* argv) {
         return;
     }
 
-    // Tell the service controller we are started
-    this->setServiceRunningStatus();
-
     DEBUG_LOG("ServiceMain: Waiting for Worker Thread to complete");
 
     WaitForSingleObject(mainThread.get(), INFINITE);
@@ -254,7 +253,9 @@ void WINAPI OvmsWindowsServiceManager::serviceMain(DWORD argc, LPTSTR* argv) {
 struct WinSCHandleDeleter {
     typedef SC_HANDLE pointer;
     void operator()(SC_HANDLE h) {
-        DEBUG_LOG("WinSCHandleDeleter: closing handle");
+        std::stringstream ss2;
+        ss2 << "WinSCHandleDeleter: closing handle: " << h;
+        DEBUG_LOG(ss2.str());
         if (h != NULL && h != INVALID_HANDLE_VALUE) {
             CloseServiceHandle(h);
         }
@@ -370,14 +371,16 @@ void OvmsWindowsServiceManager::logParameters(DWORD argc, LPTSTR* argv, const st
     for (int i = 0; i < (int)manager.ovmsParams.argc; ++i) {
         std::stringstream ss2;
         ss2 << logText << " " << i << ": " << manager.ovmsParams.argv[i];
-        DEBUG_LOG(ss2.rdbuf());
+        DEBUG_LOG(ss2.str());
     }
 }
 
 struct WinESHandleDeleter {
     typedef HANDLE pointer;
     void operator()(HANDLE h) {
-        DEBUG_LOG("WinESHandleDeleter: closing handle");
+        std::stringstream ss2;
+        ss2 << "WinESHandleDeleter: closing handle: " << h;
+        DEBUG_LOG(ss2.str());
         if (h != NULL && h != INVALID_HANDLE_VALUE) {
             DeregisterEventSource(h);
         }
@@ -504,11 +507,12 @@ DWORD WINAPI OvmsWindowsServiceManager::serviceWorkerThread(LPVOID lpParam) {
     std::unique_ptr<OvmsService> ovmsService = std::make_unique<OvmsService>();
     ovmsService->error = 0;
     ovmsService->started = false;
+    ovmsService->setup = false;
 
     //  Start OVMS and check for stop
     while (WaitForSingleObject(serviceStopEvent->handle, 0) != WAIT_OBJECT_0) {
         // Already started
-        if (!ovmsService->started) {
+        if (!ovmsService->setup) {
             std::pair<ovms::ServerSettingsImpl, ovms::ModelsSettingsImpl>* params = (std::pair<ovms::ServerSettingsImpl, ovms::ModelsSettingsImpl>*)lpParam;
             DEBUG_LOG("serviceWorkerThread: Starting ovms from parameters.");
             ovmsService->SetUp(params);
@@ -519,10 +523,14 @@ DWORD WINAPI OvmsWindowsServiceManager::serviceWorkerThread(LPVOID lpParam) {
             break;
         }
 
-        ovmsService->checkModulesStarted();
+        if (!ovmsService->started && ovmsService->checkModulesStarted()) {
+            // Tell the service controller we are started
+            OvmsWindowsServiceManager::setServiceRunningStatus();
+            ovmsService->started = true;
+        }
     }
 
-    if (ovmsService->started) {
+    if (ovmsService->started || ovmsService->setup) {
         ovmsService->TearDown();
         DEBUG_LOG("serviceWorkerThread: Stopping ovms service.");
     } else {
@@ -605,16 +613,16 @@ void OvmsWindowsServiceManager::setServiceStopStatusWithExitCode(const int& exit
 }
 
 void OvmsWindowsServiceManager::setServiceRunningStatus() {
-    serviceStatus.dwControlsAccepted = SERVICE_ACCEPT_STOP;
-    serviceStatus.dwCurrentState = SERVICE_RUNNING;
-    serviceStatus.dwWin32ExitCode = 0;
-    serviceStatus.dwCheckPoint = 0;
+    OvmsWindowsServiceManager::serviceStatus.dwControlsAccepted = SERVICE_ACCEPT_STOP;
+    OvmsWindowsServiceManager::serviceStatus.dwCurrentState = SERVICE_RUNNING;
+    OvmsWindowsServiceManager::serviceStatus.dwWin32ExitCode = 0;
+    OvmsWindowsServiceManager::serviceStatus.dwCheckPoint = 0;
 
-    if (SetServiceStatus(this->statusHandle->handle, &serviceStatus) == FALSE) {
-        DEBUG_LOG("ServiceMain: SetServiceStatus returned error");
+    if (SetServiceStatus(OvmsWindowsServiceManager::statusHandle->handle, &OvmsWindowsServiceManager::serviceStatus) == FALSE) {
+        DEBUG_LOG("OvmsWindowsServiceManager: SetServiceStatus returned error");
         serviceReportEvent("SetServiceStatus");
     }
-    DEBUG_LOG("ServiceMain: SetServiceStatus running");
+    DEBUG_LOG("OvmsWindowsServiceManager: SetServiceStatus running");
 }
 
 std::string OvmsWindowsServiceManager::getRegValue(const winreg::RegKey& key, const std::wstring& name, const DWORD& regType) {
@@ -754,13 +762,14 @@ void OvmsService::TearDown() {
         t->join();
     server.setShutdownRequest(0);
     this->started = false;
+    this->setup= false;
     OvmsWindowsServiceManager::serviceReportEventSuccess("[INFO]Modules", "Openvino Model Server is stopped.");
 }
 
 int OvmsService::SetUp(std::pair<ovms::ServerSettingsImpl, ovms::ModelsSettingsImpl>* parameters) {
     DEBUG_LOG("OvmsService::SetUp");
+    this->setup = true;
     OvmsWindowsServiceManager::serviceReportEventSuccess("[INFO]Modules", "Openvino Model Server is starting ...");
-    this->started = true;
     t.reset(new std::thread([parameters, this]() {
         this->error = server.startServerFromSettings(parameters->first, parameters->second);
     }));
@@ -772,7 +781,7 @@ bool OvmsService::isReady() {
 }
 
 bool OvmsService::isRunning() {
-    // Check if server thread exited and if we have new error value
+    // Check if server thread exited
     return (t && t->joinable() && shutdown_request == 0);
 }
 
@@ -781,8 +790,10 @@ bool OvmsService::isLive(const std::string& moduleName) {
 }
 
 bool OvmsService::checkModulesStarted() {
-    // TODO: Set false for required modules, add logic for start control - timeout?
+    // TODO: HF_MODEL_PULL_MODULE_LIVE - add logic for pull and start - now we are ready when pull starts in pull and start
     // Currently we return true on isReady = true;
+    // Currently we return true on HF_MODEL_PULL_MODULE_LIVE = true;
+    // Currently we return true on SERVABLES_CONFIG_MANAGER_MODULE_LIVE = true;
     static bool SERVER_READY = false;
     static bool PROFILER_MODULE_LIVE = false;
     static bool GRPC_SERVER_MODULE_LIVE = false;
@@ -833,10 +844,12 @@ bool OvmsService::checkModulesStarted() {
     if (!HF_MODEL_PULL_MODULE_LIVE && this->isLive(ovms::HF_MODEL_PULL_MODULE_NAME)) {
         DEBUG_LOG("serviceWorkerThread: Ovms service HF_MODEL_PULL_MODULE is live.");
         HF_MODEL_PULL_MODULE_LIVE = true;
+        return true;
     }
     if (!SERVABLES_CONFIG_MANAGER_MODULE_LIVE && this->isLive(ovms::SERVABLES_CONFIG_MANAGER_MODULE_NAME)) {
         DEBUG_LOG("serviceWorkerThread: Ovms service SERVABLES_CONFIG_MANAGER_MODULE is live.");
         SERVABLES_CONFIG_MANAGER_MODULE_LIVE = true;
+        return true;
     }
 
     return SERVER_READY;
@@ -846,7 +859,9 @@ WinServiceStatusWrapper::WinServiceStatusWrapper() {
     handle = NULL;
 }
 WinServiceStatusWrapper::~WinServiceStatusWrapper() {
-    DEBUG_LOG("WinServiceStatusWrapper: closing handle");
+    std::stringstream ss2;
+    ss2 << "WinServiceStatusWrapper: closing handle: " << handle;
+    DEBUG_LOG(ss2.str());
     if (handle != NULL && handle != INVALID_HANDLE_VALUE) {
         CloseHandle(handle);
     }
@@ -856,7 +871,9 @@ WinServiceEventWrapper::WinServiceEventWrapper() {
     handle = INVALID_HANDLE_VALUE;
 }
 WinServiceEventWrapper::~WinServiceEventWrapper() {
-    DEBUG_LOG("WinServiceEventWrapper: closing handle");
+    std::stringstream ss2;
+    ss2 << "WinServiceEventWrapper: closing handle: " << handle;
+    DEBUG_LOG(ss2.str());
     if (handle != NULL && handle != INVALID_HANDLE_VALUE) {
         CloseHandle(handle);
     }

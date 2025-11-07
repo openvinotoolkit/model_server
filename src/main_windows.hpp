@@ -46,6 +46,7 @@ private:
 
 public:
     bool started;
+    bool setup;
     int error;
     void TearDown();
 
@@ -115,7 +116,7 @@ private:
     void setServiceStopStatusWithSuccess();
     void setServiceStopStatusWithError();
     void setServiceStopStatusWithExitCode(const int& exitCode);
-    void setServiceRunningStatus();
+    static void setServiceRunningStatus();
 
     // Registry manipulation
     static std::string getRegValue(const winreg::RegKey& key, const std::wstring& name, const DWORD& type);
