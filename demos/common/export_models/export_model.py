@@ -85,7 +85,54 @@ parser_image_generation.add_argument('--default_resolution', default="", help='D
 parser_image_generation.add_argument('--max_num_images_per_prompt', type=int, default=0, help='Max allowed number of images client is allowed to request for a given prompt', dest='max_num_images_per_prompt')
 parser_image_generation.add_argument('--default_num_inference_steps', type=int, default=0, help='Default number of inference steps when not specified by client', dest='default_num_inference_steps')
 parser_image_generation.add_argument('--max_num_inference_steps', type=int, default=0, help='Max allowed number of inference steps client is allowed to request for a given prompt', dest='max_num_inference_steps')
+
+parser_text2speech = subparsers.add_parser('text2speech', help='export model for text2speech endpoint')
+add_common_arguments(parser_text2speech)
+parser_text2speech.add_argument('--num_streams', default=0, type=int, help='The number of parallel execution streams to use for the models in the pipeline.', dest='num_streams')
+parser_text2speech.add_argument('--vocoder', type=str, help='The vocoder model to use for text2speech. For example microsoft/speecht5_hifigan', dest='vocoder')
+
+parser_speech2text = subparsers.add_parser('speech2text', help='export model for speech2text endpoint')
+add_common_arguments(parser_speech2text)
+parser_speech2text.add_argument('--num_streams', default=0, type=int, help='The number of parallel execution streams to use for the models in the pipeline.', dest='num_streams')
 args = vars(parser.parse_args())
+
+tts_graph_template = """
+input_stream: "HTTP_REQUEST_PAYLOAD:input"
+output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+node {
+  name: "TtsExecutor"
+  input_side_packet: "TTS_NODE_RESOURCES:tts_servable"
+  calculator: "TtsCalculator"
+  input_stream: "HTTP_REQUEST_PAYLOAD:input"
+  output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+  node_options: {
+    [type.googleapis.com / mediapipe.TtsCalculatorOptions]: {
+      models_path: "{{model_path}}",
+      plugin_config: '{ "NUM_STREAMS": "{{num_streams|default(1, true)}}" }',
+      device: "{{target_device|default("CPU", true)}}"
+    }
+  }
+}
+"""
+
+stt_graph_template = """
+input_stream: "HTTP_REQUEST_PAYLOAD:input"
+output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+node {
+  name: "SttExecutor"
+  input_side_packet: "STT_NODE_RESOURCES:stt_servable"
+  calculator: "SttCalculator"
+  input_stream: "HTTP_REQUEST_PAYLOAD:input"
+  output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+  node_options: {
+    [type.googleapis.com / mediapipe.SttCalculatorOptions]: {
+      models_path: "{{model_path}}",
+      plugin_config: '{ "NUM_STREAMS": "{{num_streams|default(1, true)}}" }',
+      device: "{{target_device|default("CPU", true)}}"
+    }
+  }
+}
+"""
 
 embedding_graph_ov_template = """
 input_stream: "REQUEST_PAYLOAD:input"
@@ -457,7 +504,34 @@ def export_embeddings_model_ov(model_repository_path, source_model, model_name, 
     with open(os.path.join(model_repository_path, model_name, 'graph.pbtxt'), 'w') as f:
         f.write(graph_content)
     print("Created graph {}".format(os.path.join(model_repository_path, model_name, 'graph.pbtxt')))
-    add_servable_to_config(config_file_path, model_name, os.path.relpath(os.path.join(model_repository_path, model_name), os.path.dirname(config_file_path)))
+
+def export_text2speech_model(model_repository_path, source_model, model_name, precision, task_parameters, config_file_path):
+    destination_path = os.path.join(model_repository_path, model_name)
+    print("Exporting text2speech model to ",destination_path)
+    if not os.path.isdir(destination_path) or args['overwrite_models']:
+        optimum_command = "optimum-cli export openvino --model {} --weight-format {} --trust-remote-code --model-kwargs \"{{\\\"vocoder\\\": \\\"{}\\\"}}\" {}".format(source_model, precision, task_parameters['vocoder'], destination_path)
+        if os.system(optimum_command):
+            raise ValueError("Failed to export text2speech model", source_model)
+    gtemplate = jinja2.Environment(loader=jinja2.BaseLoader).from_string(tts_graph_template)
+    graph_content = gtemplate.render(model_path="./", **task_parameters)
+    with open(os.path.join(model_repository_path, model_name, 'graph.pbtxt'), 'w') as f:
+        f.write(graph_content)
+    print("Created graph {}".format(os.path.join(model_repository_path, model_name, 'graph.pbtxt')))
+    add_servable_to_config(config_file_path, model_name, os.path.relpath( os.path.join(model_repository_path, model_name), os.path.dirname(config_file_path)))
+
+def export_speech2text_model(model_repository_path, source_model, model_name, precision, task_parameters, config_file_path):
+    destination_path = os.path.join(model_repository_path, model_name)
+    print("Exporting speech2text model to ",destination_path)
+    if not os.path.isdir(destination_path) or args['overwrite_models']:
+        optimum_command = "optimum-cli export openvino --model {} --weight-format {} --trust-remote-code {}".format(source_model, precision, destination_path)
+        if os.system(optimum_command):
+            raise ValueError("Failed to export speech2text model", source_model)
+    gtemplate = jinja2.Environment(loader=jinja2.BaseLoader).from_string(stt_graph_template)
+    graph_content = gtemplate.render(model_path="./", **task_parameters)
+    with open(os.path.join(model_repository_path, model_name, 'graph.pbtxt'), 'w') as f:
+        f.write(graph_content)
+    print("Created graph {}".format(os.path.join(model_repository_path, model_name, 'graph.pbtxt')))
+    add_servable_to_config(config_file_path, model_name, os.path.relpath( os.path.join(model_repository_path, model_name), os.path.dirname(config_file_path)))
 
 def export_rerank_model_ov(model_repository_path, source_model, model_name, precision, task_parameters, config_file_path, max_doc_length):
     destination_path = os.path.join(model_repository_path, model_name)
@@ -593,6 +667,11 @@ elif args['task'] == 'rerank':
 elif args['task'] == 'rerank_ov':
     export_rerank_model_ov(args['model_repository_path'], args['source_model'], args['model_name'] ,args['precision'], template_parameters, args['config_file_path'], args['max_doc_length'])
 
+elif args['task'] == 'text2speech':
+    export_text2speech_model(args['model_repository_path'], args['source_model'], args['model_name'], args['precision'], template_parameters, args['config_file_path'])
+
+elif args['task'] == 'speech2text':
+    export_speech2text_model(args['model_repository_path'], args['source_model'], args['model_name'] ,args['precision'], template_parameters, args['config_file_path'])
 elif args['task'] == 'image_generation':
     template_parameters = {k: v for k, v in args.items() if k in [
         'ov_cache_dir',

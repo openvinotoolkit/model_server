@@ -34,6 +34,8 @@
 #include <rapidjson/stringbuffer.h>
 #pragma warning(pop)
 
+#include "../tokenize/tokenize_parser.hpp"
+
 namespace ovms {
 
 enum class PoolingMode {
@@ -41,12 +43,11 @@ enum class PoolingMode {
     LAST
 };
 
-struct EmbeddingsRequest {
+struct EmbeddingsRequest : TokenizeRequest {
     enum class EncodingFormat {
         FLOAT,
         BASE64
     };
-    std::variant<std::vector<std::string>, std::vector<std::vector<int64_t>>> input;
     EncodingFormat encoding_format;
 
     static std::variant<EmbeddingsRequest, std::string> fromJson(rapidjson::Document* request);
@@ -61,8 +62,9 @@ public:
     EmbeddingsHandler(rapidjson::Document& document) :
         doc(document) {}
 
-    std::variant<std::vector<std::string>, std::vector<std::vector<int64_t>>>& getInput();
+    TokenizeRequest::InputDataType& getInput();
     EmbeddingsRequest::EncodingFormat getEncodingFormat() const;
+    ov::AnyMap& getParameters();
 
     absl::Status parseRequest();
 

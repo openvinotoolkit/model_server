@@ -61,7 +61,7 @@ curl http://localhost:8000/v3/chat/completions -H "Content-Type: application/jso
 Install Open WebUI:
 
 ```bash
-pip install open-webui
+pip install --no-cache-dir open-webui
 ```
 
 Running Open WebUI:

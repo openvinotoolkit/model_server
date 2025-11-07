@@ -35,7 +35,7 @@ docker run -d --rm --user $(id -u):$(id -g) -p 8000:8000 -v $(pwd)/models:/model
 ```bat
 mkdir models
 ovms --rest_port 8000 ^
-  --model_repository_path /models/ ^
+  --model_repository_path ./models/ ^
   --task text_generation ^
   --source_model "Qwen/Qwen2.5-3B-Instruct-GGUF" ^
   --gguf_filename qwen2.5-3b-instruct-q4_k_m.gguf ^

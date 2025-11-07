@@ -21,3 +21,10 @@ ovms_cc_library(
     deps = ["@com_github_tencent_rapidjson//:rapidjson"],
     visibility = ["//visibility:public",],
 )
+
+ovms_cc_library(
+    name = "dr_audio",
+    hdrs = ["dr_audio.hpp"],
+    deps = ["@dr_libs//:dr"],
+    visibility = ["//visibility:public",],
+)
