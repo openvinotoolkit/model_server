@@ -297,14 +297,14 @@ static Status createTextToSpeechGraphTemplate(const std::string& directoryPath, 
         SPDLOG_ERROR("Graph options not initialized for speech generation.");
         return StatusCode::INTERNAL_ERROR;
     }
+    auto& graphSettings = std::get<EmbeddingsGraphSettingsImpl>(hfSettings.graphSettings);
+    auto& ggufFilename = hfSettings.ggufFilename;
     auto& exportSettings = hfSettings.exportSettings;
+
     std::ostringstream oss;
     oss << OVMS_VERSION_GRAPH_LINE;
-    // Windows path creation - graph parser needs forward slashes in paths
-    std::string graphOkPath = exportSettings.modelPath;
-    if (FileSystem::getOsSeparator() != "/") {
-        std::replace(graphOkPath.begin(), graphOkPath.end(), '\\', '/');
-    }
+    std::string modelsPath = constructModelsPath(exportSettings.modelPath, ggufFilename);
+    SPDLOG_TRACE("modelsPath: {}, directoryPath: {}, ggufFilename: {}", modelsPath, directoryPath, ggufFilename.value_or("std::nullopt"));
     GET_PLUGIN_CONFIG_OPT_OR_FAIL_AND_RETURN(exportSettings);
     // clang-format off
     oss << R"(
@@ -320,7 +320,7 @@ node {
     node_options: {
         [type.googleapis.com / mediapipe.T2sCalculatorOptions]: {
             models_path: ")"
-            << graphOkPath << R"("
+            << modelsPath << R"("
             target_device: ")" << exportSettings.targetDevice << R"("
             )";
     if (pluginConfigOpt.has_value()) {
@@ -349,14 +349,14 @@ static Status createSpeechToTextGraphTemplate(const std::string& directoryPath, 
         SPDLOG_ERROR("Graph options not initialized for speech to text.");
         return StatusCode::INTERNAL_ERROR;
     }
+    auto& graphSettings = std::get<EmbeddingsGraphSettingsImpl>(hfSettings.graphSettings);
+    auto& ggufFilename = hfSettings.ggufFilename;
     auto& exportSettings = hfSettings.exportSettings;
+
     std::ostringstream oss;
     oss << OVMS_VERSION_GRAPH_LINE;
-    // Windows path creation - graph parser needs forward slashes in paths
-    std::string graphOkPath = exportSettings.modelPath;
-    if (FileSystem::getOsSeparator() != "/") {
-        std::replace(graphOkPath.begin(), graphOkPath.end(), '\\', '/');
-    }
+    std::string modelsPath = constructModelsPath(exportSettings.modelPath, ggufFilename);
+    SPDLOG_TRACE("modelsPath: {}, directoryPath: {}, ggufFilename: {}", modelsPath, directoryPath, ggufFilename.value_or("std::nullopt"));
     GET_PLUGIN_CONFIG_OPT_OR_FAIL_AND_RETURN(exportSettings);
     // clang-format off
     oss << R"(
@@ -372,7 +372,7 @@ node {
     node_options: {
         [type.googleapis.com / mediapipe.S2tCalculatorOptions]: {
             models_path: ")"
-            << graphOkPath << R"("
+            << modelsPath << R"("
             target_device: ")" << exportSettings.targetDevice << R"("
             )";
     if (pluginConfigOpt.has_value()) {
