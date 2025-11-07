@@ -762,7 +762,7 @@ void OvmsService::TearDown() {
         t->join();
     server.setShutdownRequest(0);
     this->started = false;
-    this->setup= false;
+    this->setup = false;
     OvmsWindowsServiceManager::serviceReportEventSuccess("[INFO]Modules", "Openvino Model Server is stopped.");
 }
 
