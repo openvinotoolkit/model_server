@@ -24,7 +24,7 @@ Specific OVMS pull mode example for models requiring conversion is described in 
 
 Or you can use the python export_model.py script described below.
 
-Here, the original TTS model will be converted to IR format and optionally quantized.
+Here, the original Text to Speech model will be converted to IR format and optionally quantized.
 That ensures faster initialization time, better performance and lower memory consumption.
 Execution parameters will be defined inside the `graph.pbtxt` file.
 
