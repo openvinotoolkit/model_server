@@ -1144,9 +1144,6 @@ public:
     }
     // we setup the OVMS so that it does not have any models loaded but also prepare the fixture to have ovmsConfig & configFilePath set up
     void SetUpCAPIServerInstance(const std::string& initialConfigContent) {
-#ifdef _WIN32
-        GTEST_SKIP() << "Skipping test on Windows, sporadic";  // CVS-176244
-#endif
         TestWithTempDir::SetUp();
         std::string port = "9178";
         std::string restPort = "9178";
@@ -1170,16 +1167,14 @@ public:
         manager = &(dynamic_cast<const ovms::ServableManagerModule*>(server.getModule(SERVABLE_MANAGER_MODULE_NAME))->getServableManager());
     }
     void SetUp() override {
-#ifdef _WIN32
-        GTEST_SKIP() << "Skipping test on Windows, sporadic";  // CVS-176244
-#endif
         SetUpCAPIServerInstance(createStressTestPipelineOneDummyConfig());
     }
     void TearDown() override {
         OVMS_Server* cserver;
         ASSERT_CAPI_STATUS_NULL(OVMS_ServerNew(&cserver));
         ovms::Server& server = ovms::Server::instance();
-        manager->join();
+        if(manager)
+            manager->join();
         server.setShutdownRequest(1);
         OVMS_ServerDelete(cserver);
         server.setShutdownRequest(0);
