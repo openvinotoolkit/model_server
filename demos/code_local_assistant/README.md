@@ -193,8 +193,16 @@ Please refer to OpenVINO Model Server installation first: [link](../../docs/depl
 ovms --rest_port 8000 --config_path ./models/config_all.json
 ```
 :::
-:::{tab-item} Linux
-:sync: Linux
+:::{tab-item} Linux CPU
+:sync: Linux CPU
+### Linux: via Docker with CPU
+```bash
+docker run -d --rm -u $(id -u):$(id -g) \
+  -p 8000:8000 -v $(pwd)/:/workspace/ openvino/model_server:latest --rest_port 8000 --config_path /workspace/models/config_all.json
+```
+:::
+:::{tab-item} Linux GPU
+:sync: Linux GPU
 ### Linux: via Docker with GPU
 ```bash
 docker run -d --rm --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
@@ -226,7 +234,7 @@ name: Local Assistant
 version: 1.0.0
 schema: v1
 models:
-  - name: OVMS Qwen/Qwen3-8B
+  - name: OVMS Qwen/Qwen3-30B
     provider: openai
     model: Qwen/Qwen3-Coder-30B-A3B-Instruct
     apiKey: unused
@@ -242,6 +250,12 @@ models:
       extraBodyProperties:
         chat_template_kwargs:
           enable_thinking: false
+    autocompleteOptions:
+      maxPromptTokens: 400
+      debounceDelay: 124
+      modelTimeout: 400
+      onlyMyCode: true
+      useCache: true
 context:
   - provider: code
   - provider: docs
