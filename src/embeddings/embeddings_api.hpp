@@ -28,11 +28,8 @@
 #pragma warning(pop)
 
 #include <openvino/runtime/tensor.hpp>
-#pragma warning(push)
-#pragma warning(disable : 6313)
-#include <rapidjson/document.h>
-#include "src/port/rapidjson_stringbuffer.hpp"
-#pragma warning(pop)
+#include "src/port/rapidjson_document.hpp"
+#include "src/port/rapidjson_writer.hpp"
 
 #include "../tokenize/tokenize_parser.hpp"
 

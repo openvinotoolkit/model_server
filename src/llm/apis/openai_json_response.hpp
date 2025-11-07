@@ -15,11 +15,8 @@
 //*****************************************************************************
 
 #pragma once
-#pragma warning(push)
-#pragma warning(disable : 6313)
 #include "src/port/rapidjson_stringbuffer.hpp"
 #include "src/port/rapidjson_writer.hpp"
-#pragma warning(pop)
 
 #include <string>
 #include "openai_completions.hpp"

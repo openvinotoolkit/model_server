@@ -137,15 +137,16 @@ public:
         writer.String("text");
         if (endpoint == Endpoint::TRANSCRIPTIONS) {
             std::string_view language = payload.multipartParser->getFileContentByFieldName("language");
-            std::unique_lock lock(pipe->sttPipelineMutex);
             if (!language.empty()) {
                 if (language.size() > ISO_LANG_CODE_MAX) {
                     return absl::InvalidArgumentError("Invalid language code.");
                 }
                 std::string genaiLanguage = "<|" + std::string(language) + "|>";
+                std::unique_lock lock(pipe->sttPipelineMutex);
                 std::string generatedText = pipe->sttPipeline->generate(rawSpeech, ov::genai::language(genaiLanguage.c_str()));
                 writer.String(generatedText.c_str());
             } else {
+                std::unique_lock lock(pipe->sttPipelineMutex);
                 std::string generatedText = pipe->sttPipeline->generate(rawSpeech);
                 writer.String(generatedText.c_str());
             }
