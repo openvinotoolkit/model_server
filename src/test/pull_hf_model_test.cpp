@@ -91,7 +91,6 @@ const std::string expectedGraphContents = R"(
             max_num_seqs:256,
             device: "CPU",
             models_path: "./",
-            plugin_config: '{ }',
             enable_prefix_caching: true,
             cache_size: 10,
         }
@@ -129,7 +128,6 @@ const std::string expectedGraphContentsDraft = R"(
             max_num_seqs:256,
             device: "CPU",
             models_path: "./",
-            plugin_config: '{ }',
             enable_prefix_caching: true,
             cache_size: 10,
             # Speculative decoding configuration

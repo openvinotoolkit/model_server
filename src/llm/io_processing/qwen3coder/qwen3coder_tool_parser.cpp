@@ -127,8 +127,21 @@ static const ParametersTypeMap_t parseToolSchema(const std::string& functionName
     return result;
 }
 
-// helper function to escape \n
-static std::string escapeString(const std::string& input) {
+static std::string escapeQuotes(const std::string& input) {
+    std::string output;
+    output.reserve(input.size());
+    for (char c : input) {
+        switch (c) {
+        case '"':
+            output += "\\\"";
+            break;
+        default:
+            output += c;
+        }
+    }
+    return output;
+}
+static std::string escapeNewline(const std::string& input) {
     std::string output;
     output.reserve(input.size());
     for (char c : input) {
@@ -150,7 +163,7 @@ static std::string setCorrectValueType(std::string& inputValue, const std::strin
         return inputValue;
     }
     if (paramIt->second == ParameterType::STRING) {
-        inputValue = "\"" + inputValue + "\"";
+        inputValue = "\"" + escapeQuotes(inputValue) + "\"";
         return inputValue;
     }
     if (paramIt->second == ParameterType::BOOLEAN) {
@@ -236,7 +249,8 @@ bool Qwen3CoderToolParserImpl::parseUntilStateChange(ToolCalls_t& toolCalls) {
         if (paramIt == this->toolsParametersTypeMap.end()) {
             SPDLOG_DEBUG("Tool schema not found for tool: {}, leaving parameter: {} as string", this->currentFunction.name, this->currentParameterName);
         } else {
-            parameterValue = escapeString(setCorrectValueType(parameterValue, this->currentParameterName, paramIt->second));
+            // we don't want to escape entry/exit " for string parameters
+            parameterValue = escapeNewline(setCorrectValueType(parameterValue, this->currentParameterName, paramIt->second));
         }
         auto res = this->currentFunction.parameters.try_emplace(this->currentParameterName, parameterValue);
         if (!res.second)
@@ -356,6 +370,7 @@ std::optional<rapidjson::Document> Qwen3CoderToolParser::sendFullDelta(std::opti
     // now we need to add string toolCall.arguments to argumentsWrapper under "arguments" key
     rapidjson::Value toolCallsString(rapidjson::kStringType);
     toolCallsString.SetString(toolCall.arguments.c_str(), allocator);
+    SPDLOG_TRACE("Tool call arguments string: {}", toolCall.arguments);
     argumentsWrapper.AddMember("arguments", toolCallsString, allocator);
     auto currentDelta = wrapDelta(argumentsWrapper, this->toolCallIndex);
     SPDLOG_DEBUG("First delta doc: {}", documentToString(currentDelta));

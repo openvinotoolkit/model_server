@@ -85,7 +85,7 @@ const std::string expectedFullPluginGraphContents = R"(
             max_num_seqs:256,
             device: "CPU",
             models_path: "./",
-            plugin_config: '{"KV_CACHE_PRECISION":"u8","MAX_PROMPT_LEN":"123","MODEL_DISTRIBUTION_POLICY":"PIPELINE_PARALLEL"}',
+            plugin_config: '{"KV_CACHE_PRECISION":"u8","MAX_PROMPT_LEN":123,"MODEL_DISTRIBUTION_POLICY":"PIPELINE_PARALLEL"}',
             enable_prefix_caching: true,
             cache_size: 10,
         }
@@ -123,7 +123,6 @@ const std::string expectedGraphContentsWithResponseParser = R"(
             max_num_seqs:256,
             device: "CPU",
             models_path: "./",
-            plugin_config: '{ }',
             enable_prefix_caching: true,
             cache_size: 10,
             reasoning_parser: "REASONING_PARSER",
@@ -164,7 +163,6 @@ const std::string expectedDefaultGraphContents = R"(
             max_num_seqs:256,
             device: "CPU",
             models_path: "./",
-            plugin_config: '{ }',
             enable_prefix_caching: true,
             cache_size: 10,
         }
@@ -202,7 +200,6 @@ const std::string expectedDraftAndFuseGraphContents = R"(
             max_num_seqs:256,
             device: "CPU",
             models_path: "./",
-            plugin_config: '{ }',
             enable_prefix_caching: true,
             cache_size: 10,
             dynamic_split_fuse: false,
@@ -243,7 +240,6 @@ const std::string expectedGGUFGraphContents = R"(
             max_num_seqs:256,
             device: "CPU",
             models_path: "./PRETTY_GOOD_GGUF_MODEL.gguf",
-            plugin_config: '{ }',
             enable_prefix_caching: true,
             cache_size: 10,
         }
@@ -281,7 +277,6 @@ const std::string expectedGGUFGraphContents2 = R"(
             max_num_seqs:256,
             device: "CPU",
             models_path: "./PRETTY_GOOD_GGUF_MODEL_Q8-00001-of-20000.gguf",
-            plugin_config: '{ }',
             enable_prefix_caching: true,
             cache_size: 10,
         }
@@ -313,7 +308,7 @@ node {
             models_path: "/some/path",
             max_allowed_chunks: 18,
             target_device: "GPU",
-            plugin_config: '{ "NUM_STREAMS": "2"}',
+            plugin_config: '{"NUM_STREAMS":2}',
         }
     }
 }
@@ -333,7 +328,7 @@ node {
             models_path: "./",
             max_allowed_chunks: 10000,
             target_device: "CPU",
-            plugin_config: '{ "NUM_STREAMS": "1"}',
+            plugin_config: '{"NUM_STREAMS":1}',
         }
     }
 }
@@ -355,7 +350,7 @@ node {
             truncate: true,
             pooling: LAST,
             target_device: "GPU",
-            plugin_config: '{ "NUM_STREAMS": "2"}',
+            plugin_config: '{"NUM_STREAMS":2}',
         }
     }
 }
@@ -377,7 +372,7 @@ node {
             truncate: false,
             pooling: CLS,
             target_device: "CPU",
-            plugin_config: '{ "NUM_STREAMS": "1"}',
+            plugin_config: '{"NUM_STREAMS":1}',
         }
     }
 }
@@ -460,8 +455,9 @@ TEST_F(GraphCreationTest, positiveDefaultWithVersionString) {
     ASSERT_EQ(expected, graphContents) << graphContents;
 }
 
-TEST_F(GraphCreationTest, positiveReranktWithVersionString) {
+TEST_F(GraphCreationTest, positiveRerankWithVersionString) {
     ovms::HFSettingsImpl hfSettings;
+    hfSettings.exportSettings.pluginConfig.numStreams = 1;
     hfSettings.task = ovms::RERANK_GRAPH;
     ovms::RerankGraphSettingsImpl rerankGraphSettings;
     hfSettings.graphSettings = std::move(rerankGraphSettings);
@@ -477,6 +473,7 @@ TEST_F(GraphCreationTest, positiveReranktWithVersionString) {
 
 TEST_F(GraphCreationTest, positiveEmbeddingsWithVersionString) {
     ovms::HFSettingsImpl hfSettings;
+    hfSettings.exportSettings.pluginConfig.numStreams = 1;
     hfSettings.task = ovms::EMBEDDINGS_GRAPH;
     ovms::EmbeddingsGraphSettingsImpl embeddingsGraphSettings;
     hfSettings.graphSettings = std::move(embeddingsGraphSettings);
@@ -566,12 +563,13 @@ TEST_F(GraphCreationTest, WillOverwriteExistingGraphPbtxtGGUF) {
 
 TEST_F(GraphCreationTest, rerankPositiveNonDefault) {
     ovms::HFSettingsImpl hfSettings;
+    auto& exportSettings = hfSettings.exportSettings;
     hfSettings.task = ovms::RERANK_GRAPH;
     ovms::RerankGraphSettingsImpl rerankGraphSettings;
-    rerankGraphSettings.targetDevice = "GPU";
-    rerankGraphSettings.modelName = "myModel";
-    rerankGraphSettings.modelPath = "/some/path";
-    rerankGraphSettings.numStreams = 2;
+    exportSettings.targetDevice = "GPU";
+    exportSettings.modelName = "myModel";
+    exportSettings.modelPath = "/some/path";
+    exportSettings.pluginConfig.numStreams = 2;
     rerankGraphSettings.maxAllowedChunks = 18;
     hfSettings.graphSettings = std::move(rerankGraphSettings);
 
@@ -586,6 +584,7 @@ TEST_F(GraphCreationTest, rerankPositiveNonDefault) {
 
 TEST_F(GraphCreationTest, rerankPositiveDefault) {
     ovms::HFSettingsImpl hfSettings;
+    hfSettings.exportSettings.pluginConfig.numStreams = 1;
     hfSettings.task = ovms::RERANK_GRAPH;
     ovms::RerankGraphSettingsImpl rerankGraphSettings;
     hfSettings.graphSettings = std::move(rerankGraphSettings);
@@ -601,11 +600,12 @@ TEST_F(GraphCreationTest, rerankPositiveDefault) {
 
 TEST_F(GraphCreationTest, rerankCreatedPbtxtInvalid) {
     ovms::HFSettingsImpl hfSettings;
+    auto& exportSettings = hfSettings.exportSettings;
     hfSettings.task = ovms::RERANK_GRAPH;
     ovms::RerankGraphSettingsImpl rerankGraphSettings;
-    rerankGraphSettings.targetDevice = "GPU";
-    rerankGraphSettings.modelName = "myModel\"";
-    rerankGraphSettings.numStreams = 2;
+    exportSettings.targetDevice = "GPU";
+    exportSettings.modelName = "myModel\"";
+    exportSettings.pluginConfig.numStreams = 2;
     hfSettings.graphSettings = std::move(rerankGraphSettings);
     std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
     std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
@@ -621,10 +621,10 @@ TEST_F(GraphCreationTest, embeddingsPositiveNonDefault) {
     ovms::HFSettingsImpl hfSettings;
     hfSettings.task = ovms::EMBEDDINGS_GRAPH;
     ovms::EmbeddingsGraphSettingsImpl embeddingsGraphSettings;
-    embeddingsGraphSettings.targetDevice = "GPU";
-    embeddingsGraphSettings.modelName = "myModel";
-    embeddingsGraphSettings.modelPath = "/model1/path";
-    embeddingsGraphSettings.numStreams = 2;
+    hfSettings.exportSettings.targetDevice = "GPU";
+    hfSettings.exportSettings.modelName = "myModel";
+    hfSettings.exportSettings.modelPath = "/model1/path";
+    hfSettings.exportSettings.pluginConfig.numStreams = 2;
     embeddingsGraphSettings.normalize = "false";
     embeddingsGraphSettings.truncate = "true";
     embeddingsGraphSettings.pooling = "LAST";
@@ -643,6 +643,7 @@ TEST_F(GraphCreationTest, embeddingsPositiveDefault) {
     hfSettings.task = ovms::EMBEDDINGS_GRAPH;
     ovms::EmbeddingsGraphSettingsImpl embeddingsGraphSettings;
     hfSettings.graphSettings = std::move(embeddingsGraphSettings);
+    hfSettings.exportSettings.pluginConfig.numStreams = 1;
     std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
     std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
     auto status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
@@ -656,9 +657,9 @@ TEST_F(GraphCreationTest, embeddingsCreatedPbtxtInvalid) {
     ovms::HFSettingsImpl hfSettings;
     hfSettings.task = ovms::EMBEDDINGS_GRAPH;
     ovms::EmbeddingsGraphSettingsImpl embeddingsGraphSettings;
-    embeddingsGraphSettings.targetDevice = "GPU";
-    embeddingsGraphSettings.modelName = "myModel\"";
-    embeddingsGraphSettings.numStreams = 2;
+    hfSettings.exportSettings.targetDevice = "GPU";
+    hfSettings.exportSettings.modelName = "myModel\"";
+    hfSettings.exportSettings.pluginConfig.numStreams = 2;
     embeddingsGraphSettings.normalize = "true";
     embeddingsGraphSettings.pooling = "CLS";
     hfSettings.graphSettings = std::move(embeddingsGraphSettings);
@@ -670,13 +671,35 @@ TEST_F(GraphCreationTest, embeddingsCreatedPbtxtInvalid) {
     ASSERT_EQ(status, ovms::StatusCode::OK);
 #endif
 }
+TEST_F(GraphCreationTest, embeddingsDoubleSetNumStreams) {
+    // by default for embeddings we set numStreams=1 in CLI
+    // we should ignore double setting & check if equals the one from `--plugin_config`
+    // if both `--num_streams` is used to change from 1 and `--plugin_config` is used with
+    // num streams we trigger error
+    ovms::HFSettingsImpl hfSettings;
+    hfSettings.task = ovms::EMBEDDINGS_GRAPH;
+    ovms::EmbeddingsGraphSettingsImpl embeddingsGraphSettings;
+    hfSettings.exportSettings.targetDevice = "GPU";
+    hfSettings.exportSettings.modelName = "myModel";
+    hfSettings.exportSettings.pluginConfig.numStreams = 1;  // imitates default from CLI
+    hfSettings.exportSettings.pluginConfig.manualString = "{\"NUM_STREAMS\":1}";
+    embeddingsGraphSettings.normalize = "true";
+    embeddingsGraphSettings.pooling = "CLS";
+    hfSettings.graphSettings = std::move(embeddingsGraphSettings);
+    std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
+    auto status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
+    ASSERT_EQ(status, ovms::StatusCode::OK);
+    hfSettings.exportSettings.pluginConfig.numStreams = 2;  // non-default value - it should fail
+    status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
+    ASSERT_EQ(status, ovms::StatusCode::PLUGIN_CONFIG_CONFLICTING_PARAMETERS) << status.string();
+}
 
 TEST_F(GraphCreationTest, positivePluginConfigAll) {
     ovms::HFSettingsImpl hfSettings;
     ovms::TextGenGraphSettingsImpl graphSettings;
-    graphSettings.pluginConfig.kvCachePrecision = "u8";
-    graphSettings.pluginConfig.maxPromptLength = 123;
-    graphSettings.pluginConfig.modelDistributionPolicy = "PIPELINE_PARALLEL";
+    hfSettings.exportSettings.pluginConfig.kvCachePrecision = "u8";
+    hfSettings.exportSettings.pluginConfig.maxPromptLength = 123;
+    hfSettings.exportSettings.pluginConfig.modelDistributionPolicy = "PIPELINE_PARALLEL";
 
     hfSettings.graphSettings = std::move(graphSettings);
 
@@ -710,7 +733,7 @@ TEST_F(GraphCreationTest, positiveWithParsersAndToolGuidedGeneration) {
 TEST_F(GraphCreationTest, positivePluginConfigOne) {
     ovms::HFSettingsImpl hfSettings;
     ovms::TextGenGraphSettingsImpl graphSettings;
-    graphSettings.pluginConfig.kvCachePrecision = "u8";
+    hfSettings.exportSettings.pluginConfig.kvCachePrecision = "u8";
     hfSettings.graphSettings = std::move(graphSettings);
 
     std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
@@ -763,7 +786,7 @@ TEST_F(GraphCreationTest, negativeCreatedPbtxtInvalid) {
     ovms::HFSettingsImpl hfSettings;
     hfSettings.task = ovms::TEXT_GENERATION_GRAPH;
     ovms::TextGenGraphSettingsImpl graphSettings;
-    graphSettings.modelPath = "invalid\"";
+    hfSettings.exportSettings.modelPath = "invalid\"";
     hfSettings.graphSettings = std::move(graphSettings);
     std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
     std::string subconfigPath = ovms::FileSystem::appendSlash(this->directoryPath) + "subconfig.json";
@@ -774,6 +797,19 @@ TEST_F(GraphCreationTest, negativeCreatedPbtxtInvalid) {
 #else
     ASSERT_EQ(status, ovms::StatusCode::OK);
 #endif
+}
+TEST_F(GraphCreationTest, positiveTextGeneration) {
+    ovms::HFSettingsImpl hfSettings;
+    hfSettings.task = ovms::TEXT_GENERATION_GRAPH;
+    ovms::TextGenGraphSettingsImpl graphSettings;
+    hfSettings.graphSettings = std::move(graphSettings);
+    hfSettings.exportSettings.targetDevice = "NPU";
+    hfSettings.exportSettings.pluginConfig.useNpuPrefixCaching = true;
+    std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
+    std::string subconfigPath = ovms::FileSystem::appendSlash(this->directoryPath) + "subconfig.json";
+    std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
+    auto status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
+    ASSERT_EQ(status, ovms::StatusCode::OK);
 }
 
 TEST_F(GraphCreationTest, imageGenerationPositiveDefault) {
@@ -794,8 +830,9 @@ TEST_F(GraphCreationTest, imageGenerationPositiveFull) {
     ovms::HFSettingsImpl hfSettings;
     hfSettings.task = ovms::IMAGE_GENERATION_GRAPH;
     ovms::ImageGenerationGraphSettingsImpl imageGenerationGraphSettings;
-    imageGenerationGraphSettings.pluginConfig = "{\"NUM_STREAMS\":14,\"CACHE_DIR\":\"/cache\"}";
-    imageGenerationGraphSettings.targetDevice = "GPU";
+    hfSettings.exportSettings.pluginConfig.numStreams = 14;
+    hfSettings.exportSettings.pluginConfig.cacheDir = "/cache";
+    hfSettings.exportSettings.targetDevice = "GPU";
     imageGenerationGraphSettings.defaultResolution = "300x400";
     imageGenerationGraphSettings.maxResolution = "3000x4000";
     imageGenerationGraphSettings.maxNumberImagesPerPrompt = 7;
@@ -809,4 +846,48 @@ TEST_F(GraphCreationTest, imageGenerationPositiveFull) {
 
     std::string graphContents = GetFileContents(graphPath);
     ASSERT_EQ(expectedImageGenerationGraphContents, removeVersionString(graphContents)) << graphContents;
+}
+TEST_F(GraphCreationTest, pluginConfigAsString) {
+    ovms::ExportSettings exportSettings;
+
+    auto& pluginConfig = exportSettings.pluginConfig;
+    std::optional<std::string> stringPluginConfig;
+    pluginConfig.kvCachePrecision = "u8";
+    pluginConfig.maxPromptLength = 256;
+    pluginConfig.modelDistributionPolicy = "TENSOR_PARALLEL";
+    pluginConfig.manualString = "{\"NUM_STREAMS\":4}";
+    auto res = ovms::GraphExport::createPluginString(exportSettings);
+    ASSERT_TRUE(std::holds_alternative<std::optional<std::string>>(res));
+    ASSERT_EQ(std::get<std::optional<std::string>>(res).value(),
+        "{\"NUM_STREAMS\":4,\"KV_CACHE_PRECISION\":\"u8\",\"MAX_PROMPT_LEN\":256,\"MODEL_DISTRIBUTION_POLICY\":\"TENSOR_PARALLEL\"}");
+}
+TEST_F(GraphCreationTest, pluginConfigNegative) {
+    using ovms::Status;
+    ovms::PluginConfigSettingsImpl pluginConfig;
+    ovms::ExportSettings exportSettings;
+    std::optional<std::string> stringPluginConfig;
+    pluginConfig.kvCachePrecision = "u8";
+    pluginConfig.maxPromptLength = 256;
+    pluginConfig.modelDistributionPolicy = "TENSOR_PARALLEL";
+    pluginConfig.cacheDir = "/cache";
+
+    exportSettings.pluginConfig = pluginConfig;
+    exportSettings.pluginConfig.manualString = "{\"KV_CACHE_PRECISION\":\"fp16\"}";
+    auto res = ovms::GraphExport::createPluginString(exportSettings);
+    ASSERT_TRUE(std::holds_alternative<ovms::Status>(res));
+    ASSERT_EQ(std::get<Status>(res), ovms::StatusCode::PLUGIN_CONFIG_CONFLICTING_PARAMETERS);
+
+    exportSettings.pluginConfig.manualString = "{\"MAX_PROMPT_LEN\":512}";
+    res = ovms::GraphExport::createPluginString(exportSettings);
+    ASSERT_TRUE(std::holds_alternative<ovms::Status>(res));
+    ASSERT_EQ(std::get<Status>(res), ovms::StatusCode::PLUGIN_CONFIG_CONFLICTING_PARAMETERS);
+
+    exportSettings.pluginConfig.manualString = "{\"CACHE_DIR\":\"/cache\"}";
+    res = ovms::GraphExport::createPluginString(exportSettings);
+    ASSERT_TRUE(std::holds_alternative<ovms::Status>(res));
+    ASSERT_EQ(std::get<Status>(res), ovms::StatusCode::PLUGIN_CONFIG_CONFLICTING_PARAMETERS);
+    exportSettings.pluginConfig.manualString = "{\"MODEL_DISTRIBUTION_POLICY\":\"PIPELINE_PARALLEL\"}";
+    res = ovms::GraphExport::createPluginString(exportSettings);
+    ASSERT_TRUE(std::holds_alternative<ovms::Status>(res));
+    ASSERT_EQ(std::get<Status>(res), ovms::StatusCode::PLUGIN_CONFIG_CONFLICTING_PARAMETERS);
 }
