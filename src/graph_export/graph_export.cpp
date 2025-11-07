@@ -297,7 +297,6 @@ static Status createTextToSpeechGraphTemplate(const std::string& directoryPath, 
         SPDLOG_ERROR("Graph options not initialized for speech generation.");
         return StatusCode::INTERNAL_ERROR;
     }
-    auto& graphSettings = std::get<EmbeddingsGraphSettingsImpl>(hfSettings.graphSettings);
     auto& ggufFilename = hfSettings.ggufFilename;
     auto& exportSettings = hfSettings.exportSettings;
 
@@ -349,7 +348,6 @@ static Status createSpeechToTextGraphTemplate(const std::string& directoryPath, 
         SPDLOG_ERROR("Graph options not initialized for speech to text.");
         return StatusCode::INTERNAL_ERROR;
     }
-    auto& graphSettings = std::get<EmbeddingsGraphSettingsImpl>(hfSettings.graphSettings);
     auto& ggufFilename = hfSettings.ggufFilename;
     auto& exportSettings = hfSettings.exportSettings;
 
