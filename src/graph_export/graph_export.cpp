@@ -342,7 +342,7 @@ node {
 }
 
 static Status createSpeechToTextGraphTemplate(const std::string& directoryPath, const HFSettingsImpl& hfSettings) {
-    if (std::holds_alternative<SpeechToTextGraphSettingsImpl>(hfSettings.graphSettings)) {
+    if (!std::holds_alternative<SpeechToTextGraphSettingsImpl>(hfSettings.graphSettings)) {
         SPDLOG_ERROR("Graph options not initialized for speech to text.");
         return StatusCode::INTERNAL_ERROR;
     }
