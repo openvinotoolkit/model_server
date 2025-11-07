@@ -297,7 +297,6 @@ static Status createTextToSpeechGraphTemplate(const std::string& directoryPath, 
         SPDLOG_ERROR("Graph options not initialized for speech generation.");
         return StatusCode::INTERNAL_ERROR;
     }
-    const TextToSpeechGraphSettingsImpl& graphSettings = std::get<TextToSpeechGraphSettingsImpl>(hfSettings.graphSettings);
     auto& exportSettings = hfSettings.exportSettings;
     std::ostringstream oss;
     oss << OVMS_VERSION_GRAPH_LINE;
@@ -306,7 +305,7 @@ static Status createTextToSpeechGraphTemplate(const std::string& directoryPath, 
     if (FileSystem::getOsSeparator() != "/") {
         std::replace(graphOkPath.begin(), graphOkPath.end(), '\\', '/');
     }
-
+    GET_PLUGIN_CONFIG_OPT_OR_FAIL_AND_RETURN(exportSettings);
     // clang-format off
     oss << R"(
 input_stream: "HTTP_REQUEST_PAYLOAD:input"
@@ -323,8 +322,12 @@ node {
             models_path: ")"
             << graphOkPath << R"("
             target_device: ")" << exportSettings.targetDevice << R"("
-            plugin_config: '{ "NUM_STREAMS": ")" << graphSettings.numStreams << R"("}'
-        }
+            )";
+    if (pluginConfigOpt.has_value()) {
+        oss << R"(plugin_config: ')" << pluginConfigOpt.value() << R"(',
+        )";
+    }
+    oss << R"(}
     }
 })";
 
@@ -346,7 +349,6 @@ static Status createSpeechToTextGraphTemplate(const std::string& directoryPath, 
         SPDLOG_ERROR("Graph options not initialized for speech to text.");
         return StatusCode::INTERNAL_ERROR;
     }
-    const SpeechToTextGraphSettingsImpl& graphSettings = std::get<SpeechToTextGraphSettingsImpl>(hfSettings.graphSettings);
     auto& exportSettings = hfSettings.exportSettings;
     std::ostringstream oss;
     oss << OVMS_VERSION_GRAPH_LINE;
@@ -355,7 +357,7 @@ static Status createSpeechToTextGraphTemplate(const std::string& directoryPath, 
     if (FileSystem::getOsSeparator() != "/") {
         std::replace(graphOkPath.begin(), graphOkPath.end(), '\\', '/');
     }
-
+    GET_PLUGIN_CONFIG_OPT_OR_FAIL_AND_RETURN(exportSettings);
     // clang-format off
     oss << R"(
 input_stream: "HTTP_REQUEST_PAYLOAD:input"
@@ -372,11 +374,14 @@ node {
             models_path: ")"
             << graphOkPath << R"("
             target_device: ")" << exportSettings.targetDevice << R"("
-            plugin_config: '{ "NUM_STREAMS": ")" << graphSettings.numStreams << R"("}'
-        }
+            )";
+    if (pluginConfigOpt.has_value()) {
+        oss << R"(plugin_config: ')" << pluginConfigOpt.value() << R"(',
+        )";
+    }
+    oss << R"(}
     }
 })";
-
 #if (MEDIAPIPE_DISABLE == 0)
     ::mediapipe::CalculatorGraphConfig config;
     bool success = ::google::protobuf::TextFormat::ParseFromString(oss.str(), &config);

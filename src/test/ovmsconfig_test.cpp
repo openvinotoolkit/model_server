@@ -1975,8 +1975,7 @@ TEST(OvmsGraphConfigTest, positiveAllChangedTextToSpeech) {
     ASSERT_EQ(hfSettings.downloadPath, downloadPath);
     ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_MODE);
     ASSERT_EQ(hfSettings.task, ovms::TEXT_TO_SPEECH_GRAPH);
-    ovms::TextToSpeechGraphSettingsImpl textToSpeechGraphSettings = std::get<ovms::TextToSpeechGraphSettingsImpl>(hfSettings.graphSettings);
-    ASSERT_EQ(textToSpeechGraphSettings.numStreams, 2);
+    ASSERT_EQ(hfSettings.exportSettings.pluginConfig.numStreams, 2);
     ASSERT_EQ(hfSettings.exportSettings.targetDevice, "GPU");
     ASSERT_EQ(hfSettings.exportSettings.modelName, servingName);
     ASSERT_EQ(hfSettings.exportSettings.modelPath, "./");
@@ -2013,8 +2012,7 @@ TEST(OvmsGraphConfigTest, positiveAllChangedTextToSpeechStart) {
     ASSERT_EQ(hfSettings.downloadPath, downloadPath);
     ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_AND_START_MODE);
     ASSERT_EQ(hfSettings.task, ovms::TEXT_TO_SPEECH_GRAPH);
-    ovms::TextToSpeechGraphSettingsImpl textToSpeechGraphSettings = std::get<ovms::TextToSpeechGraphSettingsImpl>(hfSettings.graphSettings);
-    ASSERT_EQ(textToSpeechGraphSettings.numStreams, 2);
+    ASSERT_EQ(hfSettings.exportSettings.pluginConfig.numStreams, 2);
     ASSERT_EQ(hfSettings.exportSettings.targetDevice, "GPU");
     ASSERT_EQ(hfSettings.exportSettings.modelName, servingName);
     ASSERT_EQ(hfSettings.exportSettings.modelPath, "./");
@@ -2043,8 +2041,7 @@ TEST(OvmsGraphConfigTest, positiveDefaultTextToSpeech) {
     ASSERT_EQ(hfSettings.downloadPath, downloadPath);
     ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_MODE);
     ASSERT_EQ(hfSettings.task, ovms::TEXT_TO_SPEECH_GRAPH);
-    ovms::TextToSpeechGraphSettingsImpl textToSpeechGraphSettings = std::get<ovms::TextToSpeechGraphSettingsImpl>(hfSettings.graphSettings);
-    ASSERT_EQ(textToSpeechGraphSettings.numStreams, 1);
+    ASSERT_EQ(hfSettings.exportSettings.pluginConfig.numStreams, 1);
     ASSERT_EQ(hfSettings.exportSettings.targetDevice, "CPU");
     ASSERT_EQ(hfSettings.exportSettings.modelName, modelName);
 }
@@ -2077,8 +2074,7 @@ TEST(OvmsGraphConfigTest, positiveSomeChangedTextToSpeech) {
     ASSERT_EQ(hfSettings.downloadPath, downloadPath);
     ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_MODE);
     ASSERT_EQ(hfSettings.task, ovms::TEXT_TO_SPEECH_GRAPH);
-    ovms::TextToSpeechGraphSettingsImpl textToSpeechGraphSettings = std::get<ovms::TextToSpeechGraphSettingsImpl>(hfSettings.graphSettings);
-    ASSERT_EQ(textToSpeechGraphSettings.numStreams, 1);
+    ASSERT_EQ(hfSettings.exportSettings.pluginConfig.numStreams, 1);
     ASSERT_EQ(hfSettings.exportSettings.targetDevice, "GPU");
     ASSERT_EQ(hfSettings.exportSettings.modelName, servingName);
     ASSERT_EQ(hfSettings.exportSettings.modelPath, "./");
@@ -2114,8 +2110,7 @@ TEST(OvmsGraphConfigTest, positiveAllChangedSpeechToText) {
     ASSERT_EQ(hfSettings.downloadPath, downloadPath);
     ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_MODE);
     ASSERT_EQ(hfSettings.task, ovms::SPEECH_TO_TEXT_GRAPH);
-    ovms::SpeechToTextGraphSettingsImpl speechToTextGraphSettings = std::get<ovms::SpeechToTextGraphSettingsImpl>(hfSettings.graphSettings);
-    ASSERT_EQ(speechToTextGraphSettings.numStreams, 2);
+    ASSERT_EQ(hfSettings.exportSettings.pluginConfig.numStreams, 2);
     ASSERT_EQ(hfSettings.exportSettings.targetDevice, "GPU");
     ASSERT_EQ(hfSettings.exportSettings.modelName, servingName);
     ASSERT_EQ(hfSettings.exportSettings.modelPath, "./");
@@ -2152,8 +2147,7 @@ TEST(OvmsGraphConfigTest, positiveAllChangedSpeechToTextStart) {
     ASSERT_EQ(hfSettings.downloadPath, downloadPath);
     ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_AND_START_MODE);
     ASSERT_EQ(hfSettings.task, ovms::SPEECH_TO_TEXT_GRAPH);
-    ovms::SpeechToTextGraphSettingsImpl speechToTextGraphSettings = std::get<ovms::SpeechToTextGraphSettingsImpl>(hfSettings.graphSettings);
-    ASSERT_EQ(speechToTextGraphSettings.numStreams, 2);
+    ASSERT_EQ(hfSettings.exportSettings.pluginConfig.numStreams, 2);
     ASSERT_EQ(hfSettings.exportSettings.targetDevice, "GPU");
     ASSERT_EQ(hfSettings.exportSettings.modelName, servingName);
     ASSERT_EQ(hfSettings.exportSettings.modelPath, "./");
@@ -2182,8 +2176,7 @@ TEST(OvmsGraphConfigTest, positiveDefaultSpeechToText) {
     ASSERT_EQ(hfSettings.downloadPath, downloadPath);
     ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_MODE);
     ASSERT_EQ(hfSettings.task, ovms::SPEECH_TO_TEXT_GRAPH);
-    ovms::SpeechToTextGraphSettingsImpl speechToTextGraphSettings = std::get<ovms::SpeechToTextGraphSettingsImpl>(hfSettings.graphSettings);
-    ASSERT_EQ(speechToTextGraphSettings.numStreams, 1);
+    ASSERT_EQ(hfSettings.exportSettings.pluginConfig.numStreams, 1);
     ASSERT_EQ(hfSettings.exportSettings.targetDevice, "CPU");
     ASSERT_EQ(hfSettings.exportSettings.modelName, modelName);
 }
@@ -2216,8 +2209,7 @@ TEST(OvmsGraphConfigTest, positiveSomeChangedSpeechToText) {
     ASSERT_EQ(hfSettings.downloadPath, downloadPath);
     ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_MODE);
     ASSERT_EQ(hfSettings.task, ovms::SPEECH_TO_TEXT_GRAPH);
-    ovms::SpeechToTextGraphSettingsImpl speechToTextGraphSettings = std::get<ovms::SpeechToTextGraphSettingsImpl>(hfSettings.graphSettings);
-    ASSERT_EQ(speechToTextGraphSettings.numStreams, 1);
+    ASSERT_EQ(hfSettings.exportSettings.pluginConfig.numStreams, 1);
     ASSERT_EQ(hfSettings.exportSettings.targetDevice, "GPU");
     ASSERT_EQ(hfSettings.exportSettings.modelName, servingName);
     ASSERT_EQ(hfSettings.exportSettings.modelPath, "./");

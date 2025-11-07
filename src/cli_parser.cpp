@@ -225,7 +225,7 @@ void CLIParser::parse(int argc, char** argv) {
             ("vocoder",
                 "The vocoder model to use for text2speech. For example microsoft/speecht5_hifigan",
                 cxxopts::value<std::string>(),
-                "EXTRA_QUANTIZATION_PARAMS");
+                "VOCODER");
 
         options->add_options("single model")
             ("model_name",

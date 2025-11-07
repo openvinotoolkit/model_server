@@ -15,10 +15,7 @@ Check supported [Speech Recognition Models](https://openvinotoolkit.github.io/op
 
 **Client**: curl or Python for using OpenAI client package
 
-## Speech generation
-
----
-
+## **Speech generation**
 ### Model preparation
 Supported models should use the topology of [microsoft/speecht5_tts](https://huggingface.co/microsoft/speecht5_tts)which is needs to be converted to IR format before using in OVMS.
 
@@ -103,10 +100,7 @@ print("Generation finished")
 
 Play speech.wav file to check generated speech.
 
-## Transcription
-
----
-
+## **Transcription**
 ### Model preparation
 Whisper models can be deployed in a single command by using pre-configured models from [OpenVINO HuggingFace organization](https://huggingface.co/collections/OpenVINO/speech-to-text)
 Here is an example of OpenVINO/whisper-base-fp16-ov deployment:
@@ -139,11 +133,11 @@ If you run on GPU make sure to have appropriate drivers installed, so the device
 
 ```bat
 mkdir models
-ovms --rest_port 8000 --source_model OpenVINO/whisper-base-fp16-ov --model_repository_path models --model_name OpenVINO/whisper-base-fp16-ov --task text2speech --target_device CPU
+ovms --rest_port 8000 --source_model OpenVINO/whisper-base-fp16-ov --model_repository_path models --model_name OpenVINO/whisper-base-fp16-ov --task speech2text --target_device CPU
 ```
 or
 ```bat
-ovms --rest_port 8000 --source_model OpenVINO/whisper-base-fp16-ov --model_repository_path models --model_name OpenVINO/whisper-base-fp16-ov --task text2speech --target_device GPU
+ovms --rest_port 8000 --source_model OpenVINO/whisper-base-fp16-ov --model_repository_path models --model_name OpenVINO/whisper-base-fp16-ov --task speech2text --target_device GPU
 ```
 :::
 

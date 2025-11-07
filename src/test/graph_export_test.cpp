@@ -807,7 +807,7 @@ TEST_F(GraphCreationTest, textToSpeechPositiveNonDefault) {
     hfSettings.exportSettings.targetDevice = "GPU";
     hfSettings.exportSettings.modelName = "myModel";
     hfSettings.exportSettings.modelPath = "/model1/path";
-    textToSpeechGraphSettings.numStreams = 2;
+    hfSettings.exportSettings.pluginConfig.numStreams = 2;
     hfSettings.graphSettings = std::move(textToSpeechGraphSettings);
     std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
     std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
@@ -838,7 +838,7 @@ TEST_F(GraphCreationTest, textToSpeechCreatedPbtxtInvalid) {
     ovms::TextToSpeechGraphSettingsImpl textToSpeechGraphSettings;
     hfSettings.exportSettings.targetDevice = "GPU";
     hfSettings.exportSettings.modelName = "myModel\"";
-    textToSpeechGraphSettings.numStreams = 2;
+    hfSettings.exportSettings.pluginConfig.numStreams = 2;
     hfSettings.graphSettings = std::move(textToSpeechGraphSettings);
     std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
     auto status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
@@ -856,7 +856,7 @@ TEST_F(GraphCreationTest, speechToTextPositiveNonDefault) {
     hfSettings.exportSettings.targetDevice = "GPU";
     hfSettings.exportSettings.modelName = "myModel";
     hfSettings.exportSettings.modelPath = "/model1/path";
-    speechToTextGraphSettings.numStreams = 2;
+    hfSettings.exportSettings.pluginConfig.numStreams = 2;
     hfSettings.graphSettings = std::move(speechToTextGraphSettings);
     std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
     std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
@@ -887,7 +887,7 @@ TEST_F(GraphCreationTest, speechToTextCreatedPbtxtInvalid) {
     ovms::SpeechToTextGraphSettingsImpl speechToTextGraphSettings;
     hfSettings.exportSettings.targetDevice = "GPU";
     hfSettings.exportSettings.modelName = "myModel\"";
-    speechToTextGraphSettings.numStreams = 2;
+    hfSettings.exportSettings.pluginConfig.numStreams = 2;
     hfSettings.graphSettings = std::move(speechToTextGraphSettings);
     std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
     auto status = graphExporter->createServableConfig(this->directoryPath, hfSettings);

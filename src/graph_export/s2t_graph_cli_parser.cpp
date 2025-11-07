@@ -35,7 +35,7 @@ SpeechToTextGraphSettingsImpl& SpeechToTextGraphCLIParser::defaultGraphSettings(
 }
 
 void SpeechToTextGraphCLIParser::createOptions() {
-    this->options = std::make_unique<cxxopts::Options>("ovms --pull [PULL OPTIONS ... ]", "-pull --task text2speech graph options");
+    this->options = std::make_unique<cxxopts::Options>("ovms --pull [PULL OPTIONS ... ]", "-pull --task speech2text graph options");
     options->allow_unrecognised_options();
 
     // clang-format off
@@ -81,7 +81,7 @@ void SpeechToTextGraphCLIParser::prepare(OvmsServerMode serverMode, HFSettingsIm
             throw std::logic_error("Tried to prepare server and model settings without graph parse result");
         }
     } else {
-        speechToTextGraphSettings.numStreams = result->operator[]("num_streams").as<uint32_t>();
+        hfSettings.exportSettings.pluginConfig.numStreams = result->operator[]("num_streams").as<uint32_t>();
     }
     hfSettings.graphSettings = std::move(speechToTextGraphSettings);
 }
