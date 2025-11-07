@@ -122,6 +122,19 @@ utilization of resource will be lower. Old cache will be cleared automatically b
 
 Another cache related option is `cache_eviction_config` which can help with latency of the long generation, but at the cost of accuracy. It's type is defined as follows:
 ```
+    message KVCrushConfig {
+      enum AnchorPointMode {
+        RANDOM = 0;
+        ZEROS = 1;
+        ONES = 2;
+        MEAN = 3;
+        ALTERNATING = 4;
+      }
+      optional uint64 budget = 2 [default = 0];
+      optional AnchorPointMode anchor_point_mode = 3 [default = RANDOM];
+      optional uint64 rng_seed = 4 [default = 0];
+    }
+
     message CacheEvictionConfig {
       enum AggregationMode {
       SUM = 0; // In this mode the importance scores of each token will be summed after each step of generation
@@ -133,6 +146,8 @@ Another cache related option is `cache_eviction_config` which can help with late
       required uint64 recent_size = 3;
       required uint64 max_cache_size = 4;
       optional bool apply_rotation = 5 [default = false];
+      optional uint64 snapkv_window_size = 6 [default = 8]
+      optional KVCrushConfig kv_crush_config = 7;
     }
 ```
 Learn more about the algorithm and above parameters from [GenAI docs](https://github.com/openvinotoolkit/openvino.genai/blob/master/site/docs/concepts/optimization-techniques/kvcache-eviction-algorithm.md). 
@@ -142,12 +157,27 @@ Example of cache eviction config in the node options:
 ### Scheduling settings
 In different use cases and load specification, requests and tokens scheduling might play a role when it comes to performance.
 
-`dynamic_split_fuse` [algorithm](https://github.com/microsoft/DeepSpeed/tree/master/blogs/deepspeed-fastgen#b-dynamic-splitfuse-) is enabled by default to boost the throughput by splitting the tokens to even chunks. In some conditions like with very low concurrency or with very short prompts, it might be beneficial to disable this algorithm. 
+- `dynamic_split_fuse` [algorithm](https://github.com/microsoft/DeepSpeed/tree/master/blogs/deepspeed-fastgen#b-dynamic-splitfuse-) is enabled by default to boost the throughput by splitting the tokens to even chunks. In some conditions like with very low concurrency or with very short prompts, it might be beneficial to disable this algorithm. 
 
-Since `max_num_batched_tokens` defines how many tokens can a pipeline process in one step, when `dynamic_split_fuse` is disabled, `max_num_batched_tokens` should be set to match the model max context length since the prompt is not split and must get processed fully in one step.
+- Since `max_num_batched_tokens` defines how many tokens can a pipeline process in one step, when `dynamic_split_fuse` is disabled, `max_num_batched_tokens` should be set to match the model max context length since the prompt is not split and must get processed fully in one step.
 
-Setting `max_num_seqs` might also be useful in providing certain level of generation speed of requests already in the pipeline. This value should not be higher than `max_num_batched_tokens`.
+- Setting `max_num_seqs` might also be useful in providing certain level of generation speed of requests already in the pipeline. This value should not be higher than `max_num_batched_tokens`.
 
+- Scheduler configuration also accept sparse attention config with following options in `graph.pbtxt`:
+    ```
+    enum SparseAttentionMode {
+      TRISHAPE = 0;
+      XATTENTION = 1;
+    }
+    optional SparseAttentionMode mode = 1 [default = TRISHAPE];
+    optional uint64 num_last_dense_tokens_in_prefill = 2;
+    optional uint64 num_retained_start_tokens_in_cache = 3;
+    optional uint64 num_retained_recent_tokens_in_cache = 4;
+    optional float xattention_threshold = 5;
+    optional uint64 xattention_block_size = 6;
+    optional uint64 xattention_stride = 7;
+    ```
+    Description of parameters in that config can be found in GenAI docs about [SparseAttentionConfig](https://docs.openvino.ai/2025/api/genai_api/_autosummary/openvino_genai.SparseAttentionConfig.html#openvino-genai-sparseattentionconfig).
 
 **Note that the following options are ignored in Stateful servables (so in deployments on NPU): cache_size, dynamic_split_fuse, max_num_batched_tokens, max_num_seq, enable_prefix_caching**
 
@@ -159,7 +189,7 @@ __Tool parsers:__
 - `hermes3` (also works for Qwen3 models)
 - `llama3`
 - `phi4`
-- `mistral` (no streaming support)
+- `mistral`
 - `gptoss`
 - `qwen3coder`
 
