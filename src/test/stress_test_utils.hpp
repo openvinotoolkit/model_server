@@ -1144,9 +1144,9 @@ public:
     }
     // we setup the OVMS so that it does not have any models loaded but also prepare the fixture to have ovmsConfig & configFilePath set up
     void SetUpCAPIServerInstance(const std::string& initialConfigContent) {
-        #ifdef _WIN32
+#ifdef _WIN32
             GTEST_SKIP() << "Skipping test on Windows, sporadic";  // CVS-176244
-        #endif
+#endif
         TestWithTempDir::SetUp();
         std::string port = "9178";
         std::string restPort = "9178";
