@@ -132,11 +132,11 @@ struct EmbeddingsGraphSettingsImpl {
 };
 
 struct TextToSpeechGraphSettingsImpl {
-    uint32_t unused = 1; // will be added
+    uint32_t unused = 1;  // will be added
 };
 
 struct SpeechToTextGraphSettingsImpl {
-    uint32_t unused = 1; // will be added
+    uint32_t unused = 1;  // will be added
 };
 
 struct RerankGraphSettingsImpl {
