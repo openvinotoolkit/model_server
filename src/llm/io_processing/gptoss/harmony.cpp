@@ -110,7 +110,7 @@ ToolCalls_t Harmony::getToolCalls() {
                 }
                 toolCall.arguments = msg.getContent();
                 toolCall.id = generateRandomId();
-                toolCalls.push_back(toolCall);
+                toolCalls.push_back(std::move(toolCall));
             } else {
                 SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Skipping tool call. Could not find tool name in channel [{}]", msg.getChannel());
             }
