@@ -292,11 +292,17 @@ node {
     return createPbtxtFile(directoryPath, oss.str());
 }
 
-static Status createTextToSpeechGraphTemplate(const std::string& directoryPath, const TextToSpeechGraphSettingsImpl& graphSettings) {
+static Status createTextToSpeechGraphTemplate(const std::string& directoryPath, const HFSettingsImpl& hfSettings) {
+    if (!std::holds_alternative<TextToSpeechGraphSettingsImpl>(hfSettings.graphSettings)) {
+        SPDLOG_ERROR("Graph options not initialized for speech generation.");
+        return StatusCode::INTERNAL_ERROR;
+    }
+    const TextToSpeechGraphSettingsImpl& graphSettings = std::get<TextToSpeechGraphSettingsImpl>(hfSettings.graphSettings);
+    auto& exportSettings = hfSettings.exportSettings;
     std::ostringstream oss;
     oss << OVMS_VERSION_GRAPH_LINE;
     // Windows path creation - graph parser needs forward slashes in paths
-    std::string graphOkPath = graphSettings.modelPath;
+    std::string graphOkPath = exportSettings.modelPath;
     if (FileSystem::getOsSeparator() != "/") {
         std::replace(graphOkPath.begin(), graphOkPath.end(), '\\', '/');
     }
@@ -307,7 +313,7 @@ input_stream: "HTTP_REQUEST_PAYLOAD:input"
 output_stream: "HTTP_RESPONSE_PAYLOAD:output"
 node {
     name: ")"
-    << graphSettings.modelName << R"("
+    << exportSettings.modelName << R"("
     calculator: "T2sCalculator"
     input_side_packet: "TTS_NODE_RESOURCES:t2s_servable"
     input_stream: "HTTP_REQUEST_PAYLOAD:input"
@@ -316,7 +322,7 @@ node {
         [type.googleapis.com / mediapipe.T2sCalculatorOptions]: {
             models_path: ")"
             << graphOkPath << R"("
-            target_device: ")" << graphSettings.targetDevice << R"("
+            target_device: ")" << exportSettings.targetDevice << R"("
             plugin_config: '{ "NUM_STREAMS": ")" << graphSettings.numStreams << R"("}'
         }
     }
@@ -335,11 +341,17 @@ node {
     return FileSystem::createFileOverwrite(fullPath, oss.str());
 }
 
-static Status createSpeechToTextGraphTemplate(const std::string& directoryPath, const SpeechToTextGraphSettingsImpl& graphSettings) {
+static Status createSpeechToTextGraphTemplate(const std::string& directoryPath, const HFSettingsImpl& hfSettings) {
+    if (std::holds_alternative<SpeechToTextGraphSettingsImpl>(hfSettings.graphSettings)) {
+        SPDLOG_ERROR("Graph options not initialized for speech to text.");
+        return StatusCode::INTERNAL_ERROR;
+    }
+    const SpeechToTextGraphSettingsImpl& graphSettings = std::get<SpeechToTextGraphSettingsImpl>(hfSettings.graphSettings);
+    auto& exportSettings = hfSettings.exportSettings;
     std::ostringstream oss;
     oss << OVMS_VERSION_GRAPH_LINE;
     // Windows path creation - graph parser needs forward slashes in paths
-    std::string graphOkPath = graphSettings.modelPath;
+    std::string graphOkPath = exportSettings.modelPath;
     if (FileSystem::getOsSeparator() != "/") {
         std::replace(graphOkPath.begin(), graphOkPath.end(), '\\', '/');
     }
@@ -350,7 +362,7 @@ input_stream: "HTTP_REQUEST_PAYLOAD:input"
 output_stream: "HTTP_RESPONSE_PAYLOAD:output"
 node {
     name: ")"
-    << graphSettings.modelName << R"("
+    << exportSettings.modelName << R"("
     calculator: "S2tCalculator"
     input_side_packet: "STT_NODE_RESOURCES:s2t_servable"
     input_stream: "HTTP_REQUEST_PAYLOAD:input"
@@ -359,7 +371,7 @@ node {
         [type.googleapis.com / mediapipe.S2tCalculatorOptions]: {
             models_path: ")"
             << graphOkPath << R"("
-            target_device: ")" << graphSettings.targetDevice << R"("
+            target_device: ")" << exportSettings.targetDevice << R"("
             plugin_config: '{ "NUM_STREAMS": ")" << graphSettings.numStreams << R"("}'
         }
     }
@@ -495,19 +507,9 @@ Status GraphExport::createServableConfig(const std::string& directoryPath, const
     } else if (hfSettings.task == IMAGE_GENERATION_GRAPH) {
         return createImageGenerationGraphTemplate(directoryPath, hfSettings);
     } else if (hfSettings.task == TEXT_TO_SPEECH_GRAPH) {
-        if (std::holds_alternative<TextToSpeechGraphSettingsImpl>(hfSettings.graphSettings)) {
-            return createTextToSpeechGraphTemplate(directoryPath, std::get<TextToSpeechGraphSettingsImpl>(hfSettings.graphSettings));
-        } else {
-            SPDLOG_ERROR("Graph options not initialized for image generation.");
-            return StatusCode::INTERNAL_ERROR;
-        }
+        return createTextToSpeechGraphTemplate(directoryPath, hfSettings);
     } else if (hfSettings.task == SPEECH_TO_TEXT_GRAPH) {
-        if (std::holds_alternative<SpeechToTextGraphSettingsImpl>(hfSettings.graphSettings)) {
-            return createSpeechToTextGraphTemplate(directoryPath, std::get<SpeechToTextGraphSettingsImpl>(hfSettings.graphSettings));
-        } else {
-            SPDLOG_ERROR("Graph options not initialized for image generation.");
-            return StatusCode::INTERNAL_ERROR;
-        }
+        return createSpeechToTextGraphTemplate(directoryPath, hfSettings);
     } else if (hfSettings.task == UNKNOWN_GRAPH) {
         SPDLOG_ERROR("Graph options not initialized.");
         return StatusCode::INTERNAL_ERROR;

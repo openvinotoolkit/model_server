@@ -804,9 +804,9 @@ TEST_F(GraphCreationTest, textToSpeechPositiveNonDefault) {
     ovms::HFSettingsImpl hfSettings;
     hfSettings.task = ovms::TEXT_TO_SPEECH_GRAPH;
     ovms::TextToSpeechGraphSettingsImpl textToSpeechGraphSettings;
-    textToSpeechGraphSettings.targetDevice = "GPU";
-    textToSpeechGraphSettings.modelName = "myModel";
-    textToSpeechGraphSettings.modelPath = "/model1/path";
+    hfSettings.exportSettings.targetDevice = "GPU";
+    hfSettings.exportSettings.modelName = "myModel";
+    hfSettings.exportSettings.modelPath = "/model1/path";
     textToSpeechGraphSettings.numStreams = 2;
     hfSettings.graphSettings = std::move(textToSpeechGraphSettings);
     std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
@@ -836,8 +836,8 @@ TEST_F(GraphCreationTest, textToSpeechCreatedPbtxtInvalid) {
     ovms::HFSettingsImpl hfSettings;
     hfSettings.task = ovms::TEXT_TO_SPEECH_GRAPH;
     ovms::TextToSpeechGraphSettingsImpl textToSpeechGraphSettings;
-    textToSpeechGraphSettings.targetDevice = "GPU";
-    textToSpeechGraphSettings.modelName = "myModel\"";
+    hfSettings.exportSettings.targetDevice = "GPU";
+    hfSettings.exportSettings.modelName = "myModel\"";
     textToSpeechGraphSettings.numStreams = 2;
     hfSettings.graphSettings = std::move(textToSpeechGraphSettings);
     std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
@@ -853,9 +853,9 @@ TEST_F(GraphCreationTest, speechToTextPositiveNonDefault) {
     ovms::HFSettingsImpl hfSettings;
     hfSettings.task = ovms::SPEECH_TO_TEXT_GRAPH;
     ovms::SpeechToTextGraphSettingsImpl speechToTextGraphSettings;
-    speechToTextGraphSettings.targetDevice = "GPU";
-    speechToTextGraphSettings.modelName = "myModel";
-    speechToTextGraphSettings.modelPath = "/model1/path";
+    hfSettings.exportSettings.targetDevice = "GPU";
+    hfSettings.exportSettings.modelName = "myModel";
+    hfSettings.exportSettings.modelPath = "/model1/path";
     speechToTextGraphSettings.numStreams = 2;
     hfSettings.graphSettings = std::move(speechToTextGraphSettings);
     std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
@@ -885,8 +885,8 @@ TEST_F(GraphCreationTest, speechToTextCreatedPbtxtInvalid) {
     ovms::HFSettingsImpl hfSettings;
     hfSettings.task = ovms::SPEECH_TO_TEXT_GRAPH;
     ovms::SpeechToTextGraphSettingsImpl speechToTextGraphSettings;
-    speechToTextGraphSettings.targetDevice = "GPU";
-    speechToTextGraphSettings.modelName = "myModel\"";
+    hfSettings.exportSettings.targetDevice = "GPU";
+    hfSettings.exportSettings.modelName = "myModel\"";
     speechToTextGraphSettings.numStreams = 2;
     hfSettings.graphSettings = std::move(speechToTextGraphSettings);
     std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();

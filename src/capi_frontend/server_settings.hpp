@@ -132,16 +132,10 @@ struct EmbeddingsGraphSettingsImpl {
 };
 
 struct TextToSpeechGraphSettingsImpl {
-    std::string modelPath = "./";
-    std::string targetDevice = "CPU";
-    std::string modelName = "";
     uint32_t numStreams = 1;
 };
 
 struct SpeechToTextGraphSettingsImpl {
-    std::string modelPath = "./";
-    std::string targetDevice = "CPU";
-    std::string modelName = "";
     uint32_t numStreams = 1;
 };
 
