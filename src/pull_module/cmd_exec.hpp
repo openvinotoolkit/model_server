@@ -19,4 +19,5 @@
 
 namespace ovms {
 std::string exec_cmd(const std::string& command, int& returnCode);
+void exec_cmd_ret_only(const std::string& command, int& returnCode);
 }  // namespace ovms

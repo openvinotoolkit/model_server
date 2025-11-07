@@ -22,7 +22,6 @@
 
 namespace ovms {
 std::string exec_cmd(const std::string& command, int& returnCode) {
-    char buffer[200];
     std::string result = "";
     try {
         // Open pipe to file
@@ -56,6 +55,36 @@ std::string exec_cmd(const std::string& command, int& returnCode) {
     }
 
     return result;
+}
+
+void exec_cmd_ret_only(const std::string& command, int& returnCode) {
+    try {
+        // Open pipe to file
+#ifdef _WIN32
+        auto pcloseDeleter = [&returnCode](FILE* ptr) {
+            if (ptr) {
+                returnCode = _pclose(ptr);
+            }
+        };
+        std::shared_ptr<FILE> pipe(_popen(command.c_str(), "r"), pcloseDeleter);
+#elif __linux__
+        auto pcloseDeleter = [&returnCode](FILE* ptr) {
+            if (ptr) {
+                returnCode = pclose(ptr);
+            }
+        };
+        std::shared_ptr<FILE> pipe(popen(command.c_str(), "r"), pcloseDeleter);
+#endif
+        if (!pipe) {
+            return "Error: popen failed.";
+        }
+    } catch (const std::exception& e) {
+        return std::string("Error occurred when running command: ") + e.what();
+    } catch (...) {
+        return "Error occurred when running command: ";
+    }
+
+    return;
 }
 
 }  // namespace ovms
