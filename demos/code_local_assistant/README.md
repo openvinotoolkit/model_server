@@ -307,7 +307,7 @@ models:
     requestOptions:
       extraBodyProperties:
         chat_template_kwargs:
-          enable_thinking: true
+          enable_thinking: false
 
     autocompleteOptions:
       maxPromptTokens: 500
