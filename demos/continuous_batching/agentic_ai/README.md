@@ -626,6 +626,11 @@ git clone -b v0.10.2 https://github.com/vllm-project/vllm
 cd vllm/benchmarking/multi-turn
 pip install -r requirements.txt
 sed -i -e 's/if not os.path.exists(args.model)/if 1 == 0/g' benchmark_serving_multi_turn.py
+
+#Download the following text file (used for generation of synthetic conversations)
+wget https://www.gutenberg.org/ebooks/1184.txt.utf-8
+mv 1184.txt.utf-8 pg1184.txt
+
 # Testing single client scenario, for example with GPU execution
 docker run -d --name ovms --user $(id -u):$(id -g) --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) --rm -p 8000:8000 -v $(pwd)/models:/models openvino/model_server:latest-gpu \
 --rest_port 8000 --model_repository_path /models --source_model OpenVINO/Qwen3-8B-int4-ov --enable_prefix_caching true --cache_size 2 --task text_generation --target_device GPU
