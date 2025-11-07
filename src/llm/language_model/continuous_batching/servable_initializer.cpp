@@ -103,11 +103,10 @@ ov::genai::CacheEvictionConfig prepareCacheEvictionConfig(const mediapipe::LLMCa
         case mediapipe::LLMCalculatorOptions::KVCrushConfig::MEAN:
             anchorPointMode = ov::genai::KVCrushAnchorPointMode::MEAN;
             break;
-        case mediapipe::LLMCalculatorOptions::KVCrushConfig::ALTERNATE:
-            anchorPointMode = ov::genai::KVCrushAnchorPointMode::ALTERNATE;
+        case mediapipe::LLMCalculatorOptions::KVCrushConfig::ALTERNATING:
+            anchorPointMode = ov::genai::KVCrushAnchorPointMode::ALTERNATING;
             break;
         default:
-            // Unreachable due to default definition in the proto
             anchorPointMode = ov::genai::KVCrushAnchorPointMode::RANDOM;
             break;
         }

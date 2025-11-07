@@ -32,7 +32,7 @@ message LLMCalculatorOptions {
         ZEROS = 1;
         ONES = 2;
         MEAN = 3;
-        ALTERNATE = 4;
+        ALTERNATING = 4;
       }
       optional uint64 budget = 2 [default = 0];
       optional AnchorPointMode anchor_point_mode = 3 [default = RANDOM];
