@@ -16,7 +16,7 @@ Check supported [Speech Recognition Models](https://openvinotoolkit.github.io/op
 **Client**: curl or Python for using OpenAI client package
 
 ## Speech generation
---
+====
 ### Model preparation
 Supported models should use the topology of [microsoft/speecht5_tts](https://huggingface.co/microsoft/speecht5_tts)which is needs to be converted to IR format before using in OVMS.
 
@@ -102,7 +102,7 @@ print("Generation finished")
 Play speech.wav file to check generated speech.
 
 ## Transcription
---
+====
 ### Model preparation
 Whisper models can be deployed in a single command by using pre-configured models from [OpenVINO HuggingFace organization](https://huggingface.co/collections/OpenVINO/speech-to-text)
 Here is an example of OpenVINO/whisper-base-fp16-ov deployment:
