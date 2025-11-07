@@ -1,6 +1,6 @@
 # How to serve audio models via OpenAI API {#ovms_demos_audio}
 
-This demo shows how to deploy audio in the OpenVINO Model Server.
+This demo shows how to deploy audio models in the OpenVINO Model Server.
 Speech generation and speech recognition models are exposed via OpenAI API `audio/speech` end `audio/transcriptions` endpoints.
 
 Check supported [Speech Recognition Models](https://openvinotoolkit.github.io/openvino.genai/docs/supported-models/#speech-recognition-models-whisper-based) and [Speech Generation Models](https://openvinotoolkit.github.io/openvino.genai/docs/supported-models/#speech-generation-models).
