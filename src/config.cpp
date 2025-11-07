@@ -155,40 +155,41 @@ bool Config::validate() {
                 std::cerr << "Graph options not initialized for text generation.";
                 return false;
             }
-            auto settings = std::get<TextGenGraphSettingsImpl>(this->serverSettings.hfSettings.graphSettings);
+            const auto& exportSettings = this->serverSettings.hfSettings.exportSettings;
+            auto textGenSettings = std::get<TextGenGraphSettingsImpl>(this->serverSettings.hfSettings.graphSettings);
             std::vector allowedPipelineTypes = {"LM", "LM_CB", "VLM", "VLM_CB", "AUTO"};
-            if (settings.pipelineType.has_value() && std::find(allowedPipelineTypes.begin(), allowedPipelineTypes.end(), settings.pipelineType) == allowedPipelineTypes.end()) {
-                std::cerr << "pipeline_type: " << settings.pipelineType.value() << " is not allowed. Supported types: LM, LM_CB, VLM, VLM_CB, AUTO" << std::endl;
+            if (textGenSettings.pipelineType.has_value() && std::find(allowedPipelineTypes.begin(), allowedPipelineTypes.end(), textGenSettings.pipelineType) == allowedPipelineTypes.end()) {
+                std::cerr << "pipeline_type: " << textGenSettings.pipelineType.value() << " is not allowed. Supported types: LM, LM_CB, VLM, VLM_CB, AUTO" << std::endl;
                 return false;
             }
 
             std::vector allowedTargetDevices = {"CPU", "GPU", "NPU", "AUTO"};
             bool validDeviceSelected = false;
-            if (settings.targetDevice.rfind("GPU.", 0) == 0) {
+            if (exportSettings.targetDevice.rfind("GPU.", 0) == 0) {
                 // Accept GPU.x where x is a number to select specific GPU card
-                std::string indexPart = settings.targetDevice.substr(4);
+                std::string indexPart = exportSettings.targetDevice.substr(4);
                 validDeviceSelected = !indexPart.empty() && std::all_of(indexPart.begin(), indexPart.end(), ::isdigit);
-            } else if (settings.targetDevice.rfind("HETERO", 0) == 0) {
-                // Accept HETERO:<device1>,<device2>,... to select specific devices in the list
+            } else if ((exportSettings.targetDevice.rfind("HETERO", 0) == 0) || (exportSettings.targetDevice.rfind("AUTO", 0) == 0)) {
+                // Accept HETERO:<device1>,<device2>,... AUTO:<device1>,<device2>,... to select specific devices in the list
                 validDeviceSelected = true;
-            } else if (std::find(allowedTargetDevices.begin(), allowedTargetDevices.end(), settings.targetDevice) != allowedTargetDevices.end()) {
+            } else if (std::find(allowedTargetDevices.begin(), allowedTargetDevices.end(), exportSettings.targetDevice) != allowedTargetDevices.end()) {
                 // Accept CPU, GPU, NPU, AUTO as valid devices
                 validDeviceSelected = true;
             }
 
             if (!validDeviceSelected) {
-                std::cerr << "target_device: " << settings.targetDevice << " is not allowed. Supported devices: CPU, GPU, NPU, HETERO, AUTO" << std::endl;
+                std::cerr << "target_device: " << exportSettings.targetDevice << " is not allowed. Supported devices: CPU, GPU, NPU, HETERO, AUTO" << std::endl;
                 return false;
             }
 
             std::vector allowedBoolValues = {"false", "true"};
-            if (std::find(allowedBoolValues.begin(), allowedBoolValues.end(), settings.enablePrefixCaching) == allowedBoolValues.end()) {
-                std::cerr << "enable_prefix_caching: " << settings.enablePrefixCaching << " is not allowed. Supported values: true, false" << std::endl;
+            if (std::find(allowedBoolValues.begin(), allowedBoolValues.end(), textGenSettings.enablePrefixCaching) == allowedBoolValues.end()) {
+                std::cerr << "enable_prefix_caching: " << textGenSettings.enablePrefixCaching << " is not allowed. Supported values: true, false" << std::endl;
                 return false;
             }
 
-            if (std::find(allowedBoolValues.begin(), allowedBoolValues.end(), settings.dynamicSplitFuse) == allowedBoolValues.end()) {
-                std::cerr << "dynamic_split_fuse: " << settings.dynamicSplitFuse << " is not allowed. Supported values: true, false" << std::endl;
+            if (std::find(allowedBoolValues.begin(), allowedBoolValues.end(), textGenSettings.dynamicSplitFuse) == allowedBoolValues.end()) {
+                std::cerr << "dynamic_split_fuse: " << textGenSettings.dynamicSplitFuse << " is not allowed. Supported values: true, false" << std::endl;
                 return false;
             }
         }
@@ -198,16 +199,16 @@ bool Config::validate() {
                 std::cerr << "Graph options not initialized for embeddings.";
                 return false;
             }
-            auto settings = std::get<EmbeddingsGraphSettingsImpl>(this->serverSettings.hfSettings.graphSettings);
+            auto embedSettings = std::get<EmbeddingsGraphSettingsImpl>(this->serverSettings.hfSettings.graphSettings);
 
             std::vector allowedBoolValues = {"false", "true"};
-            if (std::find(allowedBoolValues.begin(), allowedBoolValues.end(), settings.normalize) == allowedBoolValues.end()) {
-                std::cerr << "normalize: " << settings.normalize << " is not allowed. Supported values: true, false" << std::endl;
+            if (std::find(allowedBoolValues.begin(), allowedBoolValues.end(), embedSettings.normalize) == allowedBoolValues.end()) {
+                std::cerr << "normalize: " << embedSettings.normalize << " is not allowed. Supported values: true, false" << std::endl;
                 return false;
             }
 
-            if (std::find(allowedBoolValues.begin(), allowedBoolValues.end(), settings.truncate) == allowedBoolValues.end()) {
-                std::cerr << "truncate: " << settings.truncate << " is not allowed. Supported values: true, false" << std::endl;
+            if (std::find(allowedBoolValues.begin(), allowedBoolValues.end(), embedSettings.truncate) == allowedBoolValues.end()) {
+                std::cerr << "truncate: " << embedSettings.truncate << " is not allowed. Supported values: true, false" << std::endl;
                 return false;
             }
         }
