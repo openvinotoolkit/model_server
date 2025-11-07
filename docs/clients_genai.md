@@ -67,7 +67,7 @@ print(response.choices[0].message)
 import requests
 payload = {"model": "meta-llama/Llama-2-7b-chat-hf", "messages": [ {"role": "user","content": "Say this is a test" }]}
 headers = {"Content-Type": "application/json", "Authorization": "not used"}
-response = requests.post("http://localhost:8000/v3/chat/completions", json=payload, headers=headers)
+response = requests.post("http://127.0.0.1:8000/v3/chat/completions", json=payload, headers=headers)
 print(response.text)
 ```
 :::
@@ -147,7 +147,7 @@ print(response.choices[0].text)
 import requests
 payload = {"model": "meta-llama/Llama-2-7b", "prompt": "Say this is a test"}
 headers = {"Content-Type": "application/json", "Authorization": "not used"}
-response = requests.post("http://localhost:8000/v3/completions", json=payload, headers=headers)
+response = requests.post("http://127.0.0.1:8000/v3/completions", json=payload, headers=headers)
 print(response.text)
 ```
 :::
@@ -280,7 +280,7 @@ for data in responses.data:
 import requests
 payload = {"model": "Alibaba-NLP/gte-large-en-v1.5", "input": "hello world"}
 headers = {"Content-Type": "application/json", "Authorization": "not used"}
-response = requests.post("http://localhost:8000/v3/embeddings", json=payload, headers=headers)
+response = requests.post("http://127.0.0.1:8000/v3/embeddings", json=payload, headers=headers)
 print(response.text)
 ```
 :::
@@ -435,7 +435,7 @@ for res in responses.results:
 import requests
 payload = {"model": "BAAI/bge-reranker-large", "query": "Hello", "documents":["Welcome","Farewell"]}
 headers = {"Content-Type": "application/json", "Authorization": "not used"}
-response = requests.post("http://localhost:8000/v3/rerank", json=payload, headers=headers)
+response = requests.post("http://127.0.0.1:8000/v3/rerank", json=payload, headers=headers)
 print(response.text)
 ```
 :::
