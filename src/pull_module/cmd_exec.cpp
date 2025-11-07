@@ -63,6 +63,7 @@ std::string exec_cmd(const std::string& command, int& returnCode) {
     return result;
 }
 
+#ifdef _WIN32
 struct CodePageGuard {
     UINT cocp;
     UINT ccp;
@@ -81,6 +82,7 @@ struct CodePageGuard {
         SetConsoleCP(CP_UTF8);  // Also set input code page to UTF-8
     }
 };
+#endif
 
 std::string exec_cmd_utf8(const std::string& command, int& returnCode) {
     std::string result = "";
