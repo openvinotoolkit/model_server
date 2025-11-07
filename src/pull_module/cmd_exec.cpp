@@ -63,37 +63,14 @@ std::string exec_cmd(const std::string& command, int& returnCode) {
     return result;
 }
 
-#ifdef _WIN32
-struct CodePageGuard {
-    UINT cocp;
-    UINT ccp;
-    CodePageGuard() {
-        cocp = GetConsoleOutputCP();
-        ccp = GetConsoleCP();
-    }
-    ~CodePageGuard() {
-        // Restore original console code pages
-        SetConsoleCP(ccp);
-        SetConsoleOutputCP(cocp);
-    }
-    void setUtf8Codepage() {
-        // Set the console output code page to UTF-8
-        SetConsoleOutputCP(65001);
-        SetConsoleCP(CP_UTF8);  // Also set input code page to UTF-8
-    }
-};
-#endif
-
 std::string exec_cmd_utf8(const std::string& command, int& returnCode) {
     std::string result = "";
     char buffer[200];
-    EnvGuard guard;
-    guard.set("PYTHONIOENCODING", "utf-8");
     try {
         // Open pipe to file
 #ifdef _WIN32
-        CodePageGuard codePage;
-        codePage.setUtf8Codepage();
+        EnvGuard guard;
+        guard.set("PYTHONIOENCODING", "utf-8");
         auto pcloseDeleter = [&returnCode](FILE* ptr) {
             if (ptr) {
                 returnCode = _pclose(ptr);
