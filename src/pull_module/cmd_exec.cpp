@@ -66,11 +66,11 @@ std::string exec_cmd(const std::string& command, int& returnCode) {
 std::string exec_cmd_utf8(const std::string& command, int& returnCode) {
     std::string result = "";
     char buffer[200];
+    EnvGuard guard;
+    guard.set("PYTHONIOENCODING", "utf-8");
     try {
         // Open pipe to file
 #ifdef _WIN32
-        EnvGuard guard;
-        guard.set("PYTHONIOENCODING", "utf-8");
         auto pcloseDeleter = [&returnCode](FILE* ptr) {
             if (ptr) {
                 returnCode = _pclose(ptr);
