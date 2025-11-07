@@ -200,9 +200,9 @@ protected:
     }
 
     void SetUp() override {
-        #ifdef _WIN32
-            GTEST_SKIP() << "Skipping test on Windows"; // CVS-176245
-        #endif
+#ifdef _WIN32
+        GTEST_SKIP() << "Skipping test on Windows";  // CVS-176245
+#endif
         TestWithTempDir::SetUp();
         std::string port = "9000";
         randomizeAndEnsureFree(port);
