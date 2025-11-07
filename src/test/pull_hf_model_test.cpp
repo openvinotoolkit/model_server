@@ -20,7 +20,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "src/test/env_guard.hpp"
+#include "src/utils/env_guard.hpp"
 #include "src/test/light_test_utils.hpp"
 #include "src/test/test_utils.hpp"
 #include "src/test/test_with_temp_dir.hpp"
