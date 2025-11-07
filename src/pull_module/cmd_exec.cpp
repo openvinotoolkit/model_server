@@ -70,7 +70,7 @@ struct CodePageGuard {
         cocp = GetConsoleOutputCP();
         ccp = GetConsoleCP();
     }
-    ~CodePageGuard(){
+    ~CodePageGuard() {
         // Restore original console code pages
         SetConsoleCP(ccp);
         SetConsoleOutputCP(cocp);
@@ -78,7 +78,7 @@ struct CodePageGuard {
     void setUtf8Codepage() {
         // Set the console output code page to UTF-8
         SetConsoleOutputCP(65001);
-        SetConsoleCP(CP_UTF8); // Also set input code page to UTF-8
+        SetConsoleCP(CP_UTF8);  // Also set input code page to UTF-8
     }
 };
 
@@ -98,7 +98,7 @@ std::string exec_cmd_utf8(const std::string& command, int& returnCode) {
             }
         };
         std::shared_ptr<FILE> pipe(_popen(command.c_str(), "r"), pcloseDeleter);
-        
+
 #elif __linux__
         auto pcloseDeleter = [&returnCode](FILE* ptr) {
             if (ptr) {
