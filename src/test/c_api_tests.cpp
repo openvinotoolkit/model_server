@@ -284,6 +284,35 @@ TEST(CAPIStartTest, StartFlow) {
     OVMS_ServerDelete(srv);
 }
 
+TEST(CAPIStartTest, StartWithLoopbackIpv4Ipv6Addresses) {
+    OVMS_Server* srv = nullptr;
+    OVMS_ServerSettings* serverSettings = nullptr;
+    OVMS_ModelsSettings* modelsSettings = nullptr;
+
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerNew(nullptr), StatusCode::NONEXISTENT_PTR);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerSettingsNew(nullptr), StatusCode::NONEXISTENT_PTR);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ModelsSettingsNew(nullptr), StatusCode::NONEXISTENT_PTR);
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerNew(&srv));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsNew(&serverSettings));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsNew(&modelsSettings));
+
+    ASSERT_NE(srv, nullptr);
+    ASSERT_NE(serverSettings, nullptr);
+    ASSERT_NE(modelsSettings, nullptr);
+
+    // Cannot start due to configuration error
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetGrpcPort(serverSettings, 5555));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetGrpcBindAddress(serverSettings, "127.0.0.1,::1"));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, getGenericFullPathForSrcTest("/ovms/src/test/configs/config.json").c_str()));
+
+    // Expect OK
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerStartFromConfigurationFile(srv, serverSettings, modelsSettings));
+
+    OVMS_ModelsSettingsDelete(modelsSettings);
+    OVMS_ServerSettingsDelete(serverSettings);
+    OVMS_ServerDelete(srv);
+}
+
 TEST(CAPIStatusTest, GetCodeAndDetails) {
     std::unique_ptr<Status> s = std::make_unique<Status>(
         StatusCode::INTERNAL_ERROR, "custom message");
