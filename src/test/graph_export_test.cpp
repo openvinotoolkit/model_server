@@ -391,7 +391,7 @@ node {
         [type.googleapis.com / mediapipe.T2sCalculatorOptions]: {
             models_path: "/model1/path"
             target_device: "GPU"
-            plugin_config: '{ "NUM_STREAMS": "2"}'
+            plugin_config: '{"NUM_STREAMS":2}'
         }
     }
 }
@@ -410,8 +410,7 @@ node {
         [type.googleapis.com / mediapipe.T2sCalculatorOptions]: {
             models_path: "./"
             target_device: "CPU"
-            plugin_config: '{ "NUM_STREAMS": "1"}'
-        }
+            }
     }
 }
 )";
@@ -429,7 +428,7 @@ node {
         [type.googleapis.com / mediapipe.S2tCalculatorOptions]: {
             models_path: "/model1/path"
             target_device: "GPU"
-            plugin_config: '{ "NUM_STREAMS": "2"}'
+            plugin_config: '{"NUM_STREAMS":2}'
         }
     }
 }
@@ -448,8 +447,7 @@ node {
         [type.googleapis.com / mediapipe.S2tCalculatorOptions]: {
             models_path: "./"
             target_device: "CPU"
-            plugin_config: '{ "NUM_STREAMS": "1"}'
-        }
+            }
     }
 }
 )";

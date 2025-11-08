@@ -323,7 +323,7 @@ node {
             target_device: ")" << exportSettings.targetDevice << R"("
             )";
     if (pluginConfigOpt.has_value()) {
-        oss << R"(plugin_config: ')" << pluginConfigOpt.value() << R"(',
+        oss << R"(plugin_config: ')" << pluginConfigOpt.value() << R"('
         )";
     }
     oss << R"(}
@@ -374,7 +374,7 @@ node {
             target_device: ")" << exportSettings.targetDevice << R"("
             )";
     if (pluginConfigOpt.has_value()) {
-        oss << R"(plugin_config: ')" << pluginConfigOpt.value() << R"(',
+        oss << R"(plugin_config: ')" << pluginConfigOpt.value() << R"('
         )";
     }
     oss << R"(}
