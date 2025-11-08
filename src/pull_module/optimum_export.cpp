@@ -196,7 +196,7 @@ Status OptimumDownloader::checkRequiredToolsArePresent() {
 
     SPDLOG_DEBUG("Optimum-cli executable is present");
 
-    output = exec_cmd(this->CONVERT_TOKENIZER_CHECK_COMMAND, retCode);
+    output = exec_cmd_utf8(this->CONVERT_TOKENIZER_CHECK_COMMAND, retCode);
     if (retCode != 0) {
         SPDLOG_DEBUG("Command output {}", output);
         SPDLOG_ERROR("Trying to pull {} from HuggingFace but missing convert_tokenizer. This is likely because you are using OVMS without Python support which is required for pulling with conversion.", this->sourceModel);
