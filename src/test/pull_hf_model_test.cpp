@@ -92,7 +92,7 @@ const std::string expectedGraphContents = R"(
             device: "CPU",
             models_path: "./",
             enable_prefix_caching: true,
-            cache_size: 10,
+            cache_size: 0,
         }
     }
     input_stream_handler {
@@ -129,7 +129,7 @@ const std::string expectedGraphContentsDraft = R"(
             device: "CPU",
             models_path: "./",
             enable_prefix_caching: true,
-            cache_size: 10,
+            cache_size: 0,
             # Speculative decoding configuration
             draft_models_path: "OpenVINO-distil-small.en-int4-ov",
         }
