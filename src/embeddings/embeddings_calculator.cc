@@ -28,7 +28,6 @@
 
 #include <adapters/inference_adapter.h>
 #include "src/port/rapidjson_writer.hpp"
-
 #include "../http_payload.hpp"
 #include "../logging.hpp"
 #include "../precision.hpp"

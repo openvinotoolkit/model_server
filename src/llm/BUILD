@@ -90,6 +90,7 @@ ovms_cc_library(
         "@com_github_tencent_rapidjson//:rapidjson",
         "//src/port:rapidjson_stringbuffer",
         "//src/port:rapidjson_writer",
+        "//src/port:rapidjson_document",
     ],
     visibility = ["//visibility:public"],
 )
@@ -109,6 +110,7 @@ ovms_cc_library(
         "@com_github_tencent_rapidjson//:rapidjson",
         "//src/port:rapidjson_stringbuffer",
         "//src/port:rapidjson_writer",
+        "//src/port:rapidjson_document",
         ":io_processing_utils",
         "//third_party:genai",
     ],

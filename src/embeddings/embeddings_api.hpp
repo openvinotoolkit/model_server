@@ -30,7 +30,6 @@
 #include <openvino/runtime/tensor.hpp>
 #include "src/port/rapidjson_document.hpp"
 #include "src/port/rapidjson_writer.hpp"
-
 #include "../tokenize/tokenize_parser.hpp"
 
 namespace ovms {

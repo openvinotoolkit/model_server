@@ -38,7 +38,7 @@
 
 #include "src/port/rapidjson_writer.hpp"
 #include "src/port/rapidjson_stringbuffer.hpp"
-#include "stt_servable.hpp"
+#include "s2t_servable.hpp"
 
 #ifdef _WIN32
 #include <fcntl.h>
@@ -69,7 +69,7 @@ Endpoint getEndpoint(const std::string& url) {
 
 size_t ISO_LANG_CODE_MAX = 3;
 
-class SttCalculator : public CalculatorBase {
+class S2tCalculator : public CalculatorBase {
     static const std::string INPUT_TAG_NAME;
     static const std::string OUTPUT_TAG_NAME;
 
@@ -84,17 +84,17 @@ public:
     }
 
     absl::Status Close(CalculatorContext* cc) final {
-        SPDLOG_LOGGER_DEBUG(stt_calculator_logger, "SpeechToTextCalculator [Node: {} ] Close", cc->NodeName());
+        SPDLOG_LOGGER_DEBUG(s2t_calculator_logger, "SpeechToTextCalculator [Node: {} ] Close", cc->NodeName());
         return absl::OkStatus();
     }
 
     absl::Status Open(CalculatorContext* cc) final {
-        SPDLOG_LOGGER_DEBUG(stt_calculator_logger, "SpeechToTextCalculator  [Node: {}] Open start", cc->NodeName());
+        SPDLOG_LOGGER_DEBUG(s2t_calculator_logger, "SpeechToTextCalculator  [Node: {}] Open start", cc->NodeName());
         return absl::OkStatus();
     }
 
     absl::Status Process(CalculatorContext* cc) final {
-        SPDLOG_LOGGER_DEBUG(stt_calculator_logger, "SpeechToTextCalculator  [Node: {}] Process start", cc->NodeName());
+        SPDLOG_LOGGER_DEBUG(s2t_calculator_logger, "SpeechToTextCalculator  [Node: {}] Process start", cc->NodeName());
 
         SttServableMap pipelinesMap = cc->InputSidePackets().Tag(STT_SESSION_SIDE_PACKET_TAG).Get<SttServableMap>();
         auto it = pipelinesMap.find(cc->NodeName());
@@ -160,15 +160,14 @@ public:
         std::unique_ptr<std::string> output = std::make_unique<std::string>(buffer.GetString());
 
         cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(output.release(), cc->InputTimestamp());
-        SPDLOG_LOGGER_DEBUG(stt_calculator_logger, "SpeechToTextCalculator  [Node: {}] Process end", cc->NodeName());
+        SPDLOG_LOGGER_DEBUG(s2t_calculator_logger, "SpeechToTextCalculator  [Node: {}] Process end", cc->NodeName());
 
         return absl::OkStatus();
     }
 };
 
-const std::string SttCalculator::INPUT_TAG_NAME{"HTTP_REQUEST_PAYLOAD"};
-const std::string SttCalculator::OUTPUT_TAG_NAME{"HTTP_RESPONSE_PAYLOAD"};
+const std::string S2tCalculator::INPUT_TAG_NAME{"HTTP_REQUEST_PAYLOAD"};
+const std::string S2tCalculator::OUTPUT_TAG_NAME{"HTTP_RESPONSE_PAYLOAD"};
 
-REGISTER_CALCULATOR(SttCalculator);
-
+REGISTER_CALCULATOR(S2tCalculator);
 }  // namespace mediapipe

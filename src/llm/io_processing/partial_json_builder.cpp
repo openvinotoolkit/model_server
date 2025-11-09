@@ -20,7 +20,6 @@
 #include "src/port/rapidjson_document.hpp"
 #include "src/port/rapidjson_stringbuffer.hpp"
 #include "src/port/rapidjson_writer.hpp"
-
 #include "partial_json_builder.hpp"
 
 using namespace rapidjson;
