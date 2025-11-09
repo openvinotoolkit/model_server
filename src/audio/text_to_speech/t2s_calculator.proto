@@ -20,15 +20,15 @@ package mediapipe;
 import "mediapipe/framework/calculator.proto";
 
 
-message SttCalculatorOptions {
+message T2sCalculatorOptions {
   extend mediapipe.CalculatorOptions {
     // https://github.com/google/mediapipe/issues/634 have to be unique in app
     // no rule to obtain this
-    optional SttCalculatorOptions ext = 116423757;
+    optional T2sCalculatorOptions ext = 116423755;
     }
 
     // fields required for GenAI pipeline initialization
     required string models_path = 1;
-    optional string device = 2;
+    optional string target_device = 2;
     optional string plugin_config = 3;
 }
