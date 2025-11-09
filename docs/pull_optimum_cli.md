@@ -6,6 +6,12 @@ You have to use docker image with optimum-cli `openvino/model_server:latest-py` 
 
 > **Note:** This procedure might increase memory usage during the model conversion and requires downloading the original model. Expect memory usage at least to the level of original model size during the conversion.
 
+## Prepare models folder
+
+```console
+mkdir models
+```
+
 ## Add optimum-cli to OVMS installation on windows
 
 ```bat

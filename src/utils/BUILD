@@ -26,3 +26,14 @@ ovms_cc_library(
     ],
     visibility = ["//visibility:public",],
 )
+
+ovms_cc_library(
+    name = "env_guard",
+    hdrs = ["env_guard.hpp",],
+    srcs = ["env_guard.cpp",],
+    deps = [
+        "@ovms//src:libovmslogging",
+        "@com_google_googletest//:gtest",
+    ],
+    visibility = ["//visibility:public"],
+)

@@ -20,7 +20,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "src/test/env_guard.hpp"
+#include "src/utils/env_guard.hpp"
 #include "src/test/light_test_utils.hpp"
 #include "src/test/test_utils.hpp"
 #include "src/test/test_with_temp_dir.hpp"
@@ -91,7 +91,6 @@ const std::string expectedGraphContents = R"(
             max_num_seqs:256,
             device: "CPU",
             models_path: "./",
-            plugin_config: '{ }',
             enable_prefix_caching: true,
             cache_size: 10,
         }
@@ -129,7 +128,6 @@ const std::string expectedGraphContentsDraft = R"(
             max_num_seqs:256,
             device: "CPU",
             models_path: "./",
-            plugin_config: '{ }',
             enable_prefix_caching: true,
             cache_size: 10,
             # Speculative decoding configuration

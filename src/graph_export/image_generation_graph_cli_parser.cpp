@@ -31,7 +31,6 @@
 #include "src/port/rapidjson_stringbuffer.hpp"
 #include "src/port/rapidjson_writer.hpp"
 #pragma warning(pop)
-
 #include "../capi_frontend/server_settings.hpp"
 #include "../ovms_exit_codes.hpp"
 #include "../status.hpp"
@@ -115,12 +114,11 @@ std::vector<std::string> ImageGenerationGraphCLIParser::parse(const std::vector<
 
 void ImageGenerationGraphCLIParser::prepare(ServerSettingsImpl& serverSettings, HFSettingsImpl& hfSettings, const std::string& modelName) {
     ImageGenerationGraphSettingsImpl imageGenerationGraphSettings = ImageGenerationGraphCLIParser::defaultGraphSettings();
-    imageGenerationGraphSettings.targetDevice = hfSettings.exportSettings.targetDevice;
     // Deduct model name
     if (modelName != "") {
-        imageGenerationGraphSettings.modelName = modelName;
+        hfSettings.exportSettings.modelName = modelName;
     } else {
-        imageGenerationGraphSettings.modelName = hfSettings.sourceModel;
+        hfSettings.exportSettings.modelName = hfSettings.sourceModel;
     }
     if (nullptr == result) {
         // Pull with default arguments - no arguments from user
@@ -159,25 +157,17 @@ void ImageGenerationGraphCLIParser::prepare(ServerSettingsImpl& serverSettings, 
         }
 
         if (result->count("num_streams") || serverSettings.cacheDir != "") {
-            rapidjson::Document pluginConfigDoc;
-            pluginConfigDoc.SetObject();
-            rapidjson::Document::AllocatorType& allocator = pluginConfigDoc.GetAllocator();
             if (result->count("num_streams")) {
                 uint32_t numStreams = result->operator[]("num_streams").as<uint32_t>();
                 if (numStreams == 0) {
                     throw std::invalid_argument("num_streams must be greater than 0");
                 }
-                pluginConfigDoc.AddMember("NUM_STREAMS", numStreams, allocator);
+                hfSettings.exportSettings.pluginConfig.numStreams = result->operator[]("num_streams").as<uint32_t>();
             }
 
             if (!serverSettings.cacheDir.empty()) {
-                pluginConfigDoc.AddMember("CACHE_DIR", rapidjson::Value(serverSettings.cacheDir.c_str(), allocator), allocator);
+                hfSettings.exportSettings.pluginConfig.cacheDir = serverSettings.cacheDir;
             }
-
-            rapidjson::StringBuffer buffer;
-            rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-            pluginConfigDoc.Accept(writer);
-            imageGenerationGraphSettings.pluginConfig = buffer.GetString();
         }
     }
 

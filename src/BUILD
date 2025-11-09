@@ -2714,19 +2714,7 @@ cc_test(
     local_defines = COMMON_LOCAL_DEFINES,
     linkopts = LINKOPTS_ADJUSTED,
 )
-cc_library(
-    name = "test_env_guard",
-    hdrs = ["test/env_guard.hpp",],
-    srcs = ["test/env_guard.cpp",],
-    deps = [
-        "libovmslogging",
-        "@com_google_googletest//:gtest",
-    ],
-    linkstatic = 1,
-    local_defines = COMMON_LOCAL_DEFINES,
-    copts = COPTS_TESTS,
-    linkopts = COMMON_STATIC_LIBS_LINKOPTS,
-)
+
 cc_library(
     name = "test_constructor_enabled_model_manager",
     hdrs = ["test/constructor_enabled_model_manager.hpp",],
@@ -2903,7 +2891,7 @@ cc_library(
     linkopts = [],
     deps = [
         "//src/servables_config_manager_module:listmodels",
-        ":test_env_guard",
+        "//src/utils:env_guard",
         ":test_utils",
         ":test_platform_utils",
         ":test_test_with_temp_dir",
@@ -2929,7 +2917,7 @@ cc_library(
         ":test_utils",
         ":test_test_with_temp_dir",
         ":test_gguf_environment",
-        ":test_env_guard",
+        "//src/utils:env_guard",
         "//src/pull_module:gguf_downloader",
         "//src:ovms_lib",
         "libovmsstring_utils",

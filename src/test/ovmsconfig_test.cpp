@@ -24,7 +24,7 @@
 #include "spdlog/spdlog.h"
 
 #include "../capi_frontend/server_settings.hpp"
-#include "./env_guard.hpp"
+#include "../utils/env_guard.hpp"
 #include "../config.hpp"
 #include "../filesystem.hpp"
 #include "../ovms_exit_codes.hpp"
@@ -1005,7 +1005,7 @@ TEST_F(OvmsConfigDeathTest, simultaneousPullAndRemove) {
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "--remove_from_config cannot be used with --pull or --task") << createCmd(arg_count, n_argv) << buffer.str();
 }
 
-TEST(OvmsGraphConfigTest, positiveAllChanged) {
+TEST(OvmsGraphConfigTest, positiveAllChangedTextGeneration) {
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string downloadPath = "test/repository";
     char* n_argv[] = {
@@ -1022,9 +1022,9 @@ TEST(OvmsGraphConfigTest, positiveAllChanged) {
         (char*)"--max_num_seqs",
         (char*)"128",
         (char*)"--target_device",
-        (char*)"GPU",
+        (char*)"NPU",
         (char*)"--enable_prefix_caching",
-        (char*)"false",
+        (char*)"true",
         (char*)"--cache_size",
         (char*)"20",
         (char*)"--max_num_batched_tokens",
@@ -1038,23 +1038,31 @@ TEST(OvmsGraphConfigTest, positiveAllChanged) {
         (char*)"--tool_parser",
         (char*)"toolParserName",
         (char*)"--enable_tool_guided_generation",
-        (char*)"true"};
+        (char*)"true",
+        (char*)"--model_distribution_policy",
+        (char*)"TENSOR_PARALLEL",
+        (char*)"--max_prompt_len",
+        (char*)"2048",
+        (char*)"--kv_cache_precision",
+        (char*)"u8"};
 
-    int arg_count = 30;
+    int arg_count = 36;
     ConstructorEnabledConfig config;
     config.parse(arg_count, n_argv);
 
     auto& hfSettings = config.getServerSettings().hfSettings;
+    auto& exportSettings = hfSettings.exportSettings;
     ASSERT_EQ(hfSettings.sourceModel, modelName);
     ASSERT_EQ(hfSettings.downloadPath, downloadPath);
     ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_MODE);
     ovms::TextGenGraphSettingsImpl graphSettings = std::get<ovms::TextGenGraphSettingsImpl>(hfSettings.graphSettings);
     ASSERT_EQ(graphSettings.pipelineType.value(), "VLM");
-    ASSERT_EQ(graphSettings.modelPath, "./");
+    ASSERT_EQ(exportSettings.modelPath, "./");
     ASSERT_EQ(graphSettings.maxNumSeqs, 128);
-    ASSERT_EQ(graphSettings.targetDevice, "GPU");
-    ASSERT_EQ(graphSettings.pluginConfig.kvCachePrecision.has_value(), false);
-    ASSERT_EQ(graphSettings.enablePrefixCaching, "false");
+    ASSERT_EQ(exportSettings.targetDevice, "NPU");
+    ASSERT_EQ(exportSettings.pluginConfig.kvCachePrecision.has_value(), true);
+    ASSERT_EQ(exportSettings.pluginConfig.kvCachePrecision.value(), "u8");
+    ASSERT_EQ(graphSettings.enablePrefixCaching, "true");
     ASSERT_EQ(graphSettings.cacheSize, 20);
     ASSERT_EQ(graphSettings.maxNumBatchedTokens.value(), 16);
     ASSERT_EQ(graphSettings.dynamicSplitFuse, "true");
@@ -1062,9 +1070,15 @@ TEST(OvmsGraphConfigTest, positiveAllChanged) {
     ASSERT_EQ(graphSettings.reasoningParser.value(), "reasoningParserName");
     ASSERT_EQ(graphSettings.toolParser.value(), "toolParserName");
     ASSERT_EQ(graphSettings.enableToolGuidedGeneration, "true");
+    ASSERT_EQ(exportSettings.pluginConfig.modelDistributionPolicy.has_value(), true);
+    ASSERT_EQ(exportSettings.pluginConfig.modelDistributionPolicy.value(), "TENSOR_PARALLEL");
+    ASSERT_EQ(exportSettings.pluginConfig.maxPromptLength.has_value(), true);
+    ASSERT_EQ(exportSettings.pluginConfig.maxPromptLength.value(), 2048);
+    ASSERT_EQ(exportSettings.pluginConfig.kvCachePrecision.value(), "u8");
+    ASSERT_EQ(exportSettings.pluginConfig.useNpuPrefixCaching.value(), true);
 }
 
-TEST(OvmsGraphConfigTest, positiveSomeChanged) {
+TEST(OvmsGraphConfigTest, positiveSomeChangedTextGeneration) {
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string downloadPath = "test/repository";
     char* n_argv[] = {
@@ -1090,17 +1104,18 @@ TEST(OvmsGraphConfigTest, positiveSomeChanged) {
     config.parse(arg_count, n_argv);
 
     auto& hfSettings = config.getServerSettings().hfSettings;
+    auto& exportSettings = hfSettings.exportSettings;
     ASSERT_EQ(hfSettings.sourceModel, modelName);
     ASSERT_EQ(hfSettings.downloadPath, downloadPath);
     ASSERT_EQ(hfSettings.overwriteModels, true);
     ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_MODE);
     ovms::TextGenGraphSettingsImpl graphSettings = std::get<ovms::TextGenGraphSettingsImpl>(hfSettings.graphSettings);
-    ASSERT_EQ(graphSettings.modelName, modelName);
+    ASSERT_EQ(exportSettings.modelName, modelName);
     ASSERT_EQ(graphSettings.pipelineType.value(), "VLM");
-    ASSERT_EQ(graphSettings.modelPath, "./");
+    ASSERT_EQ(exportSettings.modelPath, "./");
     ASSERT_EQ(graphSettings.maxNumSeqs, 128);
-    ASSERT_EQ(graphSettings.targetDevice, "NPU");
-    ASSERT_EQ(graphSettings.pluginConfig.kvCachePrecision.has_value(), false);
+    ASSERT_EQ(exportSettings.targetDevice, "NPU");
+    ASSERT_EQ(exportSettings.pluginConfig.kvCachePrecision.has_value(), false);
     ASSERT_EQ(graphSettings.enablePrefixCaching, "true");
     ASSERT_EQ(graphSettings.cacheSize, 10);
     ASSERT_EQ(graphSettings.maxNumBatchedTokens.has_value(), false);
@@ -1126,16 +1141,17 @@ TEST(OvmsGraphConfigTest, positiveTaskTextGen) {
     ConstructorEnabledConfig config;
     config.parse(arg_count, n_argv);
     auto& hfSettings = config.getServerSettings().hfSettings;
+    auto& exportSettings = hfSettings.exportSettings;
     ASSERT_EQ(hfSettings.sourceModel, modelName);
     ASSERT_EQ(hfSettings.downloadPath, downloadPath);
     ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_MODE);
     ovms::TextGenGraphSettingsImpl graphSettings = std::get<ovms::TextGenGraphSettingsImpl>(hfSettings.graphSettings);
-    ASSERT_EQ(graphSettings.modelName, modelName);
+    ASSERT_EQ(exportSettings.modelName, modelName);
     ASSERT_EQ(graphSettings.pipelineType.has_value(), false);
-    ASSERT_EQ(graphSettings.modelPath, "./");
+    ASSERT_EQ(exportSettings.modelPath, "./");
     ASSERT_EQ(graphSettings.maxNumSeqs, 256);
-    ASSERT_EQ(graphSettings.targetDevice, "CPU");
-    ASSERT_EQ(graphSettings.pluginConfig.kvCachePrecision.has_value(), false);
+    ASSERT_EQ(exportSettings.targetDevice, "CPU");
+    ASSERT_EQ(exportSettings.pluginConfig.kvCachePrecision.has_value(), false);
     ASSERT_EQ(graphSettings.enablePrefixCaching, "true");
     ASSERT_EQ(graphSettings.cacheSize, 10);
     ASSERT_EQ(graphSettings.maxNumBatchedTokens.has_value(), false);
@@ -1218,20 +1234,29 @@ TEST(OvmsExportHfSettingsTest, allChanged) {
         (char*)"NPU",
         (char*)"--task",
         (char*)"text_generation",
-    };
+        (char*)"--plugin_config",
+        (char*)"{\"NUM_STREAMS\":\"2\"}",
+        (char*)"--cache_dir",
+        (char*)"/tmp/cache_dir_with_gold"};
 
-    int arg_count = 15;
+    int arg_count = 19;
     ConstructorEnabledConfig config;
     config.parse(arg_count, n_argv);
 
-    auto& hfSettings = config.getServerSettings().hfSettings;
+    auto& serverSettings = config.getServerSettings();
+    auto& hfSettings = serverSettings.hfSettings;
+    auto& exportSettings = hfSettings.exportSettings;
     ASSERT_EQ(hfSettings.sourceModel, modelName);
     ASSERT_EQ(hfSettings.downloadPath, downloadPath);
     ASSERT_EQ(hfSettings.overwriteModels, true);
-    ASSERT_EQ(hfSettings.exportSettings.precision, "fp64");
-    ASSERT_EQ(hfSettings.exportSettings.targetDevice, "NPU");
+    ASSERT_EQ(exportSettings.precision, "fp64");
+    ASSERT_EQ(exportSettings.targetDevice, "NPU");
     ASSERT_EQ(hfSettings.downloadType, ovms::OPTIMUM_CLI_DOWNLOAD);
-    ASSERT_EQ(hfSettings.exportSettings.extraQuantizationParams.value(), "--sym --ratio 1.0");
+    ASSERT_EQ(exportSettings.extraQuantizationParams.value(), "--sym --ratio 1.0");
+    ASSERT_EQ(exportSettings.pluginConfig.cacheDir.value(), "/tmp/cache_dir_with_gold");
+    // here we expect only what is passed by user not all plugin parameters passed to genai
+    ASSERT_EQ(hfSettings.exportSettings.pluginConfig.manualString.value(), "{\"NUM_STREAMS\":\"2\"}");
+    ASSERT_EQ(serverSettings.cacheDir, "/tmp/cache_dir_with_gold");
     ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_MODE);
 }
 
@@ -1255,21 +1280,27 @@ TEST(OvmsExportHfSettingsTest, allChangedPullAndStart) {
         (char*)"NPU",
         (char*)"--task",
         (char*)"text_generation",
-    };
+        (char*)"--plugin_config",
+        (char*)"{\"NUM_STREAMS\":\"2\"}",
+        (char*)"--cache_dir",
+        (char*)"/tmp/cache_dir_with_gold"};
 
-    int arg_count = 16;
+    int arg_count = 20;
     ConstructorEnabledConfig config;
     config.parse(arg_count, n_argv);
 
     auto& hfSettings = config.getServerSettings().hfSettings;
+    auto& exportSettings = hfSettings.exportSettings;
     ASSERT_EQ(hfSettings.sourceModel, modelName);
     ASSERT_EQ(hfSettings.downloadPath, downloadPath);
     ASSERT_EQ(hfSettings.overwriteModels, true);
-    ASSERT_EQ(hfSettings.exportSettings.precision, "fp64");
-    ASSERT_EQ(hfSettings.exportSettings.targetDevice, "NPU");
+    ASSERT_EQ(exportSettings.precision, "fp64");
+    ASSERT_EQ(exportSettings.targetDevice, "NPU");
     ASSERT_EQ(hfSettings.downloadType, ovms::OPTIMUM_CLI_DOWNLOAD);
-    ASSERT_EQ(hfSettings.exportSettings.extraQuantizationParams.value(), "--sym --ratio 1.0");
+    ASSERT_EQ(exportSettings.extraQuantizationParams.value(), "--sym --ratio 1.0");
     ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_AND_START_MODE);
+    ASSERT_EQ(exportSettings.pluginConfig.manualString.value(), "{\"NUM_STREAMS\":\"2\"}");
+    ASSERT_EQ(exportSettings.pluginConfig.cacheDir.value(), "/tmp/cache_dir_with_gold");
 }
 
 TEST(OvmsGraphConfigTest, positiveDefault) {
@@ -1290,16 +1321,17 @@ TEST(OvmsGraphConfigTest, positiveDefault) {
     ConstructorEnabledConfig config;
     config.parse(arg_count, n_argv);
     auto& hfSettings = config.getServerSettings().hfSettings;
+    auto& exportSettings = hfSettings.exportSettings;
     ASSERT_EQ(hfSettings.sourceModel, modelName);
     ASSERT_EQ(hfSettings.downloadPath, downloadPath);
     ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_MODE);
     ASSERT_EQ(hfSettings.task, ovms::TEXT_GENERATION_GRAPH);
     ovms::TextGenGraphSettingsImpl graphSettings = std::get<ovms::TextGenGraphSettingsImpl>(hfSettings.graphSettings);
     ASSERT_EQ(graphSettings.pipelineType.has_value(), false);
-    ASSERT_EQ(graphSettings.modelPath, "./");
+    ASSERT_EQ(exportSettings.modelPath, "./");
     ASSERT_EQ(graphSettings.maxNumSeqs, 256);
-    ASSERT_EQ(graphSettings.targetDevice, "CPU");
-    ASSERT_EQ(graphSettings.pluginConfig.kvCachePrecision.has_value(), false);
+    ASSERT_EQ(exportSettings.targetDevice, "CPU");
+    ASSERT_EQ(exportSettings.pluginConfig.kvCachePrecision.has_value(), false);
     ASSERT_EQ(graphSettings.enablePrefixCaching, "true");
     ASSERT_EQ(graphSettings.cacheSize, 10);
     ASSERT_EQ(graphSettings.maxNumBatchedTokens.has_value(), false);
@@ -1328,6 +1360,7 @@ TEST(OvmsGraphConfigTest, positiveDefaultStart) {
     ConstructorEnabledConfig config;
     config.parse(arg_count, n_argv);
     auto& hfSettings = config.getServerSettings().hfSettings;
+    auto& exportSettings = hfSettings.exportSettings;
     ASSERT_EQ(hfSettings.sourceModel, modelName);
     ASSERT_EQ(hfSettings.downloadPath, downloadPath);
     ASSERT_EQ(hfSettings.overwriteModels, false);
@@ -1335,10 +1368,10 @@ TEST(OvmsGraphConfigTest, positiveDefaultStart) {
     ASSERT_EQ(hfSettings.task, ovms::TEXT_GENERATION_GRAPH);
     ovms::TextGenGraphSettingsImpl graphSettings = std::get<ovms::TextGenGraphSettingsImpl>(hfSettings.graphSettings);
     ASSERT_EQ(graphSettings.pipelineType.has_value(), false);
-    ASSERT_EQ(graphSettings.modelPath, "./");
+    ASSERT_EQ(exportSettings.modelPath, "./");
     ASSERT_EQ(graphSettings.maxNumSeqs, 256);
-    ASSERT_EQ(graphSettings.targetDevice, "CPU");
-    ASSERT_EQ(graphSettings.pluginConfig.kvCachePrecision.has_value(), false);
+    ASSERT_EQ(exportSettings.targetDevice, "CPU");
+    ASSERT_EQ(exportSettings.pluginConfig.kvCachePrecision.has_value(), false);
     ASSERT_EQ(graphSettings.enablePrefixCaching, "true");
     ASSERT_EQ(graphSettings.cacheSize, 10);
     ASSERT_EQ(graphSettings.maxNumBatchedTokens.has_value(), false);
@@ -1369,7 +1402,7 @@ TEST(OvmsGraphConfigTest, positiveTargetDeviceHetero) {
     config.parse(arg_count, n_argv);
     auto& hfSettings = config.getServerSettings().hfSettings;
     ovms::TextGenGraphSettingsImpl graphSettings = std::get<ovms::TextGenGraphSettingsImpl>(hfSettings.graphSettings);
-    ASSERT_EQ(graphSettings.targetDevice, "HETERO");
+    ASSERT_EQ(hfSettings.exportSettings.targetDevice, "HETERO");
 }
 
 TEST(OvmsGraphConfigTest, positiveTargetDeviceSpecificGPU) {
@@ -1393,7 +1426,7 @@ TEST(OvmsGraphConfigTest, positiveTargetDeviceSpecificGPU) {
     config.parse(arg_count, n_argv);
     auto& hfSettings = config.getServerSettings().hfSettings;
     ovms::TextGenGraphSettingsImpl graphSettings = std::get<ovms::TextGenGraphSettingsImpl>(hfSettings.graphSettings);
-    ASSERT_EQ(graphSettings.targetDevice, "GPU.1");
+    ASSERT_EQ(hfSettings.exportSettings.targetDevice, "GPU.1");
 }
 
 TEST(OvmsGraphConfigTest, negativePipelineType) {
@@ -1497,23 +1530,29 @@ TEST(OvmsGraphConfigTest, positiveAllChangedRerank) {
         (char*)"2",
         (char*)"--model_name",
         (char*)servingName.c_str(),
-    };
+        (char*)"--plugin_config",
+        (char*)"{\"SOME_KEY\":\"SOME_VALUE\"}",
+        (char*)"--cache_dir",
+        (char*)"/tmp/cache_dir_with_emptiness"};
 
-    int arg_count = 16;
+    int arg_count = 20;
     ConstructorEnabledConfig config;
     config.parse(arg_count, n_argv);
 
     auto& hfSettings = config.getServerSettings().hfSettings;
+    auto& exportSettings = hfSettings.exportSettings;
     ASSERT_EQ(hfSettings.sourceModel, modelName);
     ASSERT_EQ(hfSettings.downloadPath, downloadPath);
     ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_MODE);
     ASSERT_EQ(hfSettings.task, ovms::RERANK_GRAPH);
     ovms::RerankGraphSettingsImpl rerankGraphSettings = std::get<ovms::RerankGraphSettingsImpl>(hfSettings.graphSettings);
     ASSERT_EQ(rerankGraphSettings.maxAllowedChunks, 1002);
-    ASSERT_EQ(rerankGraphSettings.numStreams, 2);
-    ASSERT_EQ(rerankGraphSettings.targetDevice, "GPU");
-    ASSERT_EQ(rerankGraphSettings.modelName, servingName);
-    ASSERT_EQ(rerankGraphSettings.modelPath, "./");
+    ASSERT_EQ(exportSettings.pluginConfig.numStreams, 2);
+    ASSERT_EQ(exportSettings.targetDevice, "GPU");
+    ASSERT_EQ(exportSettings.modelName, servingName);
+    ASSERT_EQ(exportSettings.modelPath, "./");
+    ASSERT_EQ(hfSettings.exportSettings.pluginConfig.cacheDir.value(), "/tmp/cache_dir_with_emptiness");
+    ASSERT_EQ(hfSettings.exportSettings.pluginConfig.manualString.value(), "{\"SOME_KEY\":\"SOME_VALUE\"}");
 }
 
 TEST(OvmsGraphConfigTest, positiveAllChangedRerankStart) {
@@ -1545,16 +1584,17 @@ TEST(OvmsGraphConfigTest, positiveAllChangedRerankStart) {
     config.parse(arg_count, n_argv);
 
     auto& hfSettings = config.getServerSettings().hfSettings;
+    auto& exportSettings = hfSettings.exportSettings;
     ASSERT_EQ(hfSettings.sourceModel, modelName);
     ASSERT_EQ(hfSettings.downloadPath, downloadPath);
     ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_AND_START_MODE);
     ASSERT_EQ(hfSettings.task, ovms::RERANK_GRAPH);
     ovms::RerankGraphSettingsImpl rerankGraphSettings = std::get<ovms::RerankGraphSettingsImpl>(hfSettings.graphSettings);
     ASSERT_EQ(rerankGraphSettings.maxAllowedChunks, 1002);
-    ASSERT_EQ(rerankGraphSettings.numStreams, 2);
-    ASSERT_EQ(rerankGraphSettings.targetDevice, "GPU");
-    ASSERT_EQ(rerankGraphSettings.modelName, servingName);
-    ASSERT_EQ(rerankGraphSettings.modelPath, "./");
+    ASSERT_EQ(exportSettings.pluginConfig.numStreams, 2);
+    ASSERT_EQ(exportSettings.targetDevice, "GPU");
+    ASSERT_EQ(exportSettings.modelName, servingName);
+    ASSERT_EQ(exportSettings.modelPath, "./");
 }
 
 TEST(OvmsGraphConfigTest, positiveDefaultRerank) {
@@ -1577,16 +1617,17 @@ TEST(OvmsGraphConfigTest, positiveDefaultRerank) {
     config.parse(arg_count, n_argv);
 
     auto& hfSettings = config.getServerSettings().hfSettings;
+    auto& exportSettings = hfSettings.exportSettings;
     ASSERT_EQ(hfSettings.sourceModel, modelName);
     ASSERT_EQ(hfSettings.downloadPath, downloadPath);
     ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_MODE);
     ASSERT_EQ(hfSettings.task, ovms::RERANK_GRAPH);
     ovms::RerankGraphSettingsImpl rerankGraphSettings = std::get<ovms::RerankGraphSettingsImpl>(hfSettings.graphSettings);
     ASSERT_EQ(rerankGraphSettings.maxAllowedChunks, 10000);
-    ASSERT_EQ(rerankGraphSettings.numStreams, 1);
-    ASSERT_EQ(rerankGraphSettings.targetDevice, "CPU");
-    ASSERT_EQ(rerankGraphSettings.modelName, modelName);
-    ASSERT_EQ(rerankGraphSettings.modelPath, "./");
+    ASSERT_EQ(exportSettings.pluginConfig.numStreams, 1);
+    ASSERT_EQ(exportSettings.targetDevice, "CPU");
+    ASSERT_EQ(exportSettings.modelName, modelName);
+    ASSERT_EQ(exportSettings.modelPath, "./");
 }
 
 TEST(OvmsGraphConfigTest, positiveSomeChangedRerank) {
@@ -1615,16 +1656,17 @@ TEST(OvmsGraphConfigTest, positiveSomeChangedRerank) {
     config.parse(arg_count, n_argv);
 
     auto& hfSettings = config.getServerSettings().hfSettings;
+    auto& exportSettings = hfSettings.exportSettings;
     ASSERT_EQ(hfSettings.sourceModel, modelName);
     ASSERT_EQ(hfSettings.downloadPath, downloadPath);
     ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_MODE);
     ASSERT_EQ(hfSettings.task, ovms::RERANK_GRAPH);
     ovms::RerankGraphSettingsImpl rerankGraphSettings = std::get<ovms::RerankGraphSettingsImpl>(hfSettings.graphSettings);
     ASSERT_EQ(rerankGraphSettings.maxAllowedChunks, 2);
-    ASSERT_EQ(rerankGraphSettings.numStreams, 1);
-    ASSERT_EQ(rerankGraphSettings.targetDevice, "GPU");
-    ASSERT_EQ(rerankGraphSettings.modelName, servingName);
-    ASSERT_EQ(rerankGraphSettings.modelPath, "./");
+    ASSERT_EQ(exportSettings.pluginConfig.numStreams, 1);
+    ASSERT_EQ(exportSettings.targetDevice, "GPU");
+    ASSERT_EQ(exportSettings.modelName, servingName);
+    ASSERT_EQ(exportSettings.modelPath, "./");
 }
 
 TEST(OvmsGraphConfigTest, positiveAllChangedImageGeneration) {
@@ -1661,19 +1703,22 @@ TEST(OvmsGraphConfigTest, positiveAllChangedImageGeneration) {
         (char*)"2",
         (char*)"--max_num_inference_steps",
         (char*)"3",
+        (char*)"--plugin_config",
+        (char*)"{\"SOME_KEY\":\"SOME_VALUE\"}",
     };
 
-    int arg_count = 30;
+    int arg_count = 32;
     ConstructorEnabledConfig config;
     config.parse(arg_count, n_argv);
 
     auto& hfSettings = config.getServerSettings().hfSettings;
+    auto& exportSettings = hfSettings.exportSettings;
     ASSERT_EQ(hfSettings.sourceModel, modelName);
     ASSERT_EQ(hfSettings.downloadPath, downloadPath);
     ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_MODE);
     ASSERT_EQ(hfSettings.task, ovms::IMAGE_GENERATION_GRAPH);
     ovms::ImageGenerationGraphSettingsImpl imageGenerationGraphSettings = std::get<ovms::ImageGenerationGraphSettingsImpl>(hfSettings.graphSettings);
-    ASSERT_EQ(imageGenerationGraphSettings.targetDevice, "GPU GPU NPU");
+    ASSERT_EQ(exportSettings.targetDevice, "GPU GPU NPU");
     ASSERT_EQ(imageGenerationGraphSettings.resolution, " 3000x4000 200x700 100x200");
     ASSERT_TRUE(imageGenerationGraphSettings.guidanceScale.has_value());
     ASSERT_NEAR(imageGenerationGraphSettings.guidanceScale.value(), 8.2, 1e-5);
@@ -1686,7 +1731,9 @@ TEST(OvmsGraphConfigTest, positiveAllChangedImageGeneration) {
     ASSERT_EQ(imageGenerationGraphSettings.defaultNumInferenceSteps.value(), 2);
     ASSERT_TRUE(imageGenerationGraphSettings.maxNumInferenceSteps.has_value());
     ASSERT_EQ(imageGenerationGraphSettings.maxNumInferenceSteps.value(), 3);
-    ASSERT_EQ(imageGenerationGraphSettings.pluginConfig, "{\"NUM_STREAMS\":14,\"CACHE_DIR\":\"/cache\"}");
+    ASSERT_EQ(exportSettings.pluginConfig.numStreams, 14);
+    ASSERT_EQ(exportSettings.pluginConfig.cacheDir.value(), "/cache");
+    ASSERT_EQ(exportSettings.pluginConfig.manualString.value(), "{\"SOME_KEY\":\"SOME_VALUE\"}");
 }
 
 TEST(OvmsGraphConfigTest, positiveDefaultImageGeneration) {
@@ -1708,18 +1755,19 @@ TEST(OvmsGraphConfigTest, positiveDefaultImageGeneration) {
     config.parse(arg_count, n_argv);
 
     auto& hfSettings = config.getServerSettings().hfSettings;
+    auto& exportSettings = hfSettings.exportSettings;
     ASSERT_EQ(hfSettings.sourceModel, modelName);
     ASSERT_EQ(hfSettings.downloadPath, downloadPath);
     ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_MODE);
     ASSERT_EQ(hfSettings.task, ovms::IMAGE_GENERATION_GRAPH);
     ovms::ImageGenerationGraphSettingsImpl imageGenerationGraphSettings = std::get<ovms::ImageGenerationGraphSettingsImpl>(hfSettings.graphSettings);
-    ASSERT_EQ(imageGenerationGraphSettings.targetDevice, "CPU");
+    ASSERT_EQ(exportSettings.targetDevice, "CPU");
     ASSERT_TRUE(imageGenerationGraphSettings.maxResolution.empty());
     ASSERT_TRUE(imageGenerationGraphSettings.defaultResolution.empty());
     ASSERT_FALSE(imageGenerationGraphSettings.maxNumberImagesPerPrompt.has_value());
     ASSERT_FALSE(imageGenerationGraphSettings.defaultNumInferenceSteps.has_value());
     ASSERT_FALSE(imageGenerationGraphSettings.maxNumInferenceSteps.has_value());
-    ASSERT_TRUE(imageGenerationGraphSettings.pluginConfig.empty());
+    ASSERT_TRUE(exportSettings.pluginConfig.empty());
 }
 
 TEST(OvmsGraphConfigTest, positiveAllChangedEmbeddings) {
@@ -1747,13 +1795,17 @@ TEST(OvmsGraphConfigTest, positiveAllChangedEmbeddings) {
         (char*)"2",
         (char*)"--model_name",
         (char*)servingName.c_str(),
-    };
+        (char*)"--plugin_config",
+        (char*)"{\"SOME_KEY\":\"SOME_VALUE\"}",
+        (char*)"--cache_dir",
+        (char*)"/tmp/cache_dir_with_emptiness"};
 
-    int arg_count = 20;
+    int arg_count = 24;
     ConstructorEnabledConfig config;
     config.parse(arg_count, n_argv);
 
     auto& hfSettings = config.getServerSettings().hfSettings;
+    auto& exportSettings = hfSettings.exportSettings;
     ASSERT_EQ(hfSettings.sourceModel, modelName);
     ASSERT_EQ(hfSettings.downloadPath, downloadPath);
     ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_MODE);
@@ -1762,10 +1814,12 @@ TEST(OvmsGraphConfigTest, positiveAllChangedEmbeddings) {
     ASSERT_EQ(embeddingsGraphSettings.normalize, "false");
     ASSERT_EQ(embeddingsGraphSettings.truncate, "true");
     ASSERT_EQ(embeddingsGraphSettings.pooling, "CLS");
-    ASSERT_EQ(embeddingsGraphSettings.numStreams, 2);
-    ASSERT_EQ(embeddingsGraphSettings.targetDevice, "GPU");
-    ASSERT_EQ(embeddingsGraphSettings.modelName, servingName);
-    ASSERT_EQ(embeddingsGraphSettings.modelPath, "./");
+    ASSERT_EQ(exportSettings.pluginConfig.numStreams, 2);
+    ASSERT_EQ(exportSettings.targetDevice, "GPU");
+    ASSERT_EQ(exportSettings.modelName, servingName);
+    ASSERT_EQ(exportSettings.modelPath, "./");
+    ASSERT_EQ(exportSettings.pluginConfig.cacheDir.value(), "/tmp/cache_dir_with_emptiness");
+    ASSERT_EQ(exportSettings.pluginConfig.manualString.value(), "{\"SOME_KEY\":\"SOME_VALUE\"}");
 }
 
 TEST(OvmsGraphConfigTest, positiveAllChangedEmbeddingsStart) {
@@ -1801,6 +1855,7 @@ TEST(OvmsGraphConfigTest, positiveAllChangedEmbeddingsStart) {
     config.parse(arg_count, n_argv);
 
     auto& hfSettings = config.getServerSettings().hfSettings;
+    auto& exportSettings = hfSettings.exportSettings;
     ASSERT_EQ(hfSettings.sourceModel, modelName);
     ASSERT_EQ(hfSettings.downloadPath, downloadPath);
     ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_AND_START_MODE);
@@ -1809,10 +1864,10 @@ TEST(OvmsGraphConfigTest, positiveAllChangedEmbeddingsStart) {
     ASSERT_EQ(embeddingsGraphSettings.normalize, "false");
     ASSERT_EQ(embeddingsGraphSettings.truncate, "true");
     ASSERT_EQ(embeddingsGraphSettings.pooling, "LAST");
-    ASSERT_EQ(embeddingsGraphSettings.numStreams, 2);
-    ASSERT_EQ(embeddingsGraphSettings.targetDevice, "GPU");
-    ASSERT_EQ(embeddingsGraphSettings.modelName, servingName);
-    ASSERT_EQ(embeddingsGraphSettings.modelPath, "./");
+    ASSERT_EQ(exportSettings.pluginConfig.numStreams, 2);
+    ASSERT_EQ(exportSettings.targetDevice, "GPU");
+    ASSERT_EQ(exportSettings.modelName, servingName);
+    ASSERT_EQ(exportSettings.modelPath, "./");
 }
 
 TEST(OvmsGraphConfigTest, positiveDefaultEmbeddings) {
@@ -1834,6 +1889,7 @@ TEST(OvmsGraphConfigTest, positiveDefaultEmbeddings) {
     config.parse(arg_count, n_argv);
 
     auto& hfSettings = config.getServerSettings().hfSettings;
+    auto& exportSettings = hfSettings.exportSettings;
     ASSERT_EQ(hfSettings.sourceModel, modelName);
     ASSERT_EQ(hfSettings.downloadPath, downloadPath);
     ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_MODE);
@@ -1842,9 +1898,9 @@ TEST(OvmsGraphConfigTest, positiveDefaultEmbeddings) {
     ASSERT_EQ(embeddingsGraphSettings.normalize, "true");
     ASSERT_EQ(embeddingsGraphSettings.truncate, "false");
     ASSERT_EQ(embeddingsGraphSettings.pooling, "CLS");
-    ASSERT_EQ(embeddingsGraphSettings.numStreams, 1);
-    ASSERT_EQ(embeddingsGraphSettings.targetDevice, "CPU");
-    ASSERT_EQ(embeddingsGraphSettings.modelName, modelName);
+    ASSERT_EQ(exportSettings.pluginConfig.numStreams, 1);
+    ASSERT_EQ(exportSettings.targetDevice, "CPU");
+    ASSERT_EQ(exportSettings.modelName, modelName);
 }
 
 TEST(OvmsGraphConfigTest, positiveSomeChangedEmbeddings) {
@@ -1875,17 +1931,18 @@ TEST(OvmsGraphConfigTest, positiveSomeChangedEmbeddings) {
     config.parse(arg_count, n_argv);
 
     auto& hfSettings = config.getServerSettings().hfSettings;
+    auto& exportSettings = config.getServerSettings().hfSettings.exportSettings;
     ASSERT_EQ(hfSettings.sourceModel, modelName);
     ASSERT_EQ(hfSettings.downloadPath, downloadPath);
     ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_MODE);
     ASSERT_EQ(hfSettings.task, ovms::EMBEDDINGS_GRAPH);
     ovms::EmbeddingsGraphSettingsImpl embeddingsGraphSettings = std::get<ovms::EmbeddingsGraphSettingsImpl>(hfSettings.graphSettings);
     ASSERT_EQ(embeddingsGraphSettings.pooling, "LAST");
-    ASSERT_EQ(embeddingsGraphSettings.numStreams, 1);
+    ASSERT_EQ(exportSettings.pluginConfig.numStreams, 1);
     ASSERT_EQ(embeddingsGraphSettings.normalize, "false");
-    ASSERT_EQ(embeddingsGraphSettings.targetDevice, "GPU");
-    ASSERT_EQ(embeddingsGraphSettings.modelName, servingName);
-    ASSERT_EQ(embeddingsGraphSettings.modelPath, "./");
+    ASSERT_EQ(exportSettings.targetDevice, "GPU");
+    ASSERT_EQ(exportSettings.modelName, servingName);
+    ASSERT_EQ(exportSettings.modelPath, "./");
 }
 
 TEST(OvmsGraphConfigTest, negativeEmbeddingsInvalidNormalize) {
