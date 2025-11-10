@@ -207,7 +207,7 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
                 "OVERWRITE_MODELS")
             ("model_repository_path",
                 "HF model destination download path",
-                cxxopts::value<std::string>(),
+                cxxopts::value<std::string>()->default_value(std::getenv("OVMS_MODEL_REPOSITORY_PATH")),
                 "MODEL_REPOSITORY_PATH")
             ("task",
                 "Choose type of model export: text_generation - chat and completion endpoints, embeddings - embeddings endpoint, rerank - rerank endpoint, image_generation - image generation/edit/inpainting endpoints.",
@@ -291,7 +291,7 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
                 "REMOVE_FROM_CONFIG")
             ("model_repository_path",
                 "Absolute or relative path from the config directory to the model repository",
-                cxxopts::value<std::string>(),
+                cxxopts::value<std::string>()->default_value(std::getenv("OVMS_MODEL_REPOSITORY_PATH")),
                 "MODEL_REPOSITORY_PATH")
             ("model_path",
                 "Absolute or relative path from the config directory to the model. By default is a combination of the model_repository_path and model_name.",
@@ -379,14 +379,6 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
         }
         if (result->count("remove_from_config") && result->count("list_models")) {
             ss << "error parsing options - --list_models cannot be used with --remove_from_config" << std::endl;
-            return std::make_pair(OVMS_EX_USAGE, ss.str());
-        }
-        if (result->count("add_to_config") && result->count("model_repository_path") && result->count("model_path")) {
-            ss << "error parsing options - --model_repository_path cannot be used with --model_path" << std::endl;
-            return std::make_pair(OVMS_EX_USAGE, ss.str());
-        }
-        if (result->count("remove_from_config") && result->count("model_repository_path")) {
-            ss << "error parsing options - --model_repository_path cannot be used with --remove_from_config" << std::endl;
             return std::make_pair(OVMS_EX_USAGE, ss.str());
         }
         if (result->count("remove_from_config") && result->count("model_path")) {
