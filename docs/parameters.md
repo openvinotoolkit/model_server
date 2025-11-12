@@ -125,7 +125,7 @@ Task specific parameters for different tasks (text generation/image generation/e
 | `--pipeline_type`                     | `string`     | Type of the pipeline to be used. Choices: `LM`, `LM_CB`, `VLM`, `VLM_CB`, `AUTO`. Default: `AUTO`.                         |
 | `--enable_prefix_caching`             | `bool`       | Enables algorithm to cache the prompt tokens. Default: true.                                                               |
 | `--max_num_batched_tokens`            | `integer`    | The maximum number of tokens that can be batched together.                                                                 |
-| `--cache_size`                        | `integer`    | Cache size in GB. Default: 0 which is a dynamic allocation.                                                                  |
+| `--cache_size`                        | `integer`    | KV Cache size in GB. Default: 0 which is a dynamic allocation.                              |
 | `--draft_source_model`                | `string`     | HF model name or path to the local folder with PyTorch or OpenVINO draft model.                                            |
 | `--dynamic_split_fuse`                | `bool`       | Enables dynamic split fuse algorithm. Default: true.                                                                       |
 | `--max_prompt_len`                    | `integer`    | Sets NPU specific property for maximum number of tokens in the prompt.                                                     |
