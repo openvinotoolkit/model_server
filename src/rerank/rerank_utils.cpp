@@ -19,11 +19,8 @@
 #include <algorithm>
 #include <cmath>
 #include <numeric>
-#pragma warning(push)
-#pragma warning(disable : 6313)
-#include <rapidjson/document.h>
-#include <rapidjson/writer.h>
-#pragma warning(pop)
+#include "src/port/rapidjson_document.hpp"
+#include "src/port/rapidjson_writer.hpp"
 
 #include "../logging.hpp"
 #include "../profiler.hpp"

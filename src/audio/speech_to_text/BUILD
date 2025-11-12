@@ -18,22 +18,24 @@ load("@mediapipe//mediapipe/framework/port:build_config.bzl", "mediapipe_cc_prot
 load("//:common_settings.bzl", "ovms_cc_library")
 
 ovms_cc_library(
-    name = "stt_servable",
-    hdrs = ["stt_servable.hpp"],
+    name = "s2t_servable",
+    hdrs = ["s2t_servable.hpp"],
     visibility = ["//visibility:public"],
     alwayslink = 1,
 )
 
 ovms_cc_library(
-    name = "stt_calculator",
-    srcs = ["stt_calculator.cc"],
+    name = "s2t_calculator",
+    srcs = ["s2t_calculator.cc"],
     deps = [
         "@mediapipe//mediapipe/framework:calculator_framework",
         "//src:httppayload",
         "//src:libovmslogging",
-        "stt_calculator_cc_proto",
+        "s2t_calculator_cc_proto",
         "//src/port:dr_audio",
-        ":stt_servable",
+        "//src/port:rapidjson_stringbuffer",
+        "//src/port:rapidjson_writer",
+        ":s2t_servable",
         "//third_party:genai",
         "//src/audio:audio_utils",
     ],
@@ -42,8 +44,8 @@ ovms_cc_library(
 )
 
 mediapipe_proto_library(
-    name = "stt_calculator_proto",
-    srcs = ["stt_calculator.proto"],
+    name = "s2t_calculator_proto",
+    srcs = ["s2t_calculator.proto"],
     visibility = ["//visibility:private"],
     deps = [
         "@mediapipe//mediapipe/framework:calculator_options_proto",
