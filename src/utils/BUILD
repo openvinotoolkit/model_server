@@ -20,7 +20,18 @@ ovms_cc_library(
     hdrs = ["rapidjson_utils.hpp"],
     srcs = ["rapidjson_utils.cpp"],
     deps = [
-            "//src/port:rapidjson_document",
+            "@ovms//src/port:rapidjson_document",
     ],
     visibility = ["//visibility:public",],
+)
+
+ovms_cc_library(
+    name = "env_guard",
+    hdrs = ["env_guard.hpp",],
+    srcs = ["env_guard.cpp",],
+    deps = [
+        "@ovms//src:libovmslogging",
+        "@com_google_googletest//:gtest",
+    ],
+    visibility = ["//visibility:public"],
 )
