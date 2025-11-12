@@ -80,7 +80,6 @@ ovms_cc_library(
         "@ovms//src:libovms_server_settings",
         "@ovms//src:ovms_exit_codes",
         "@com_github_jarro2783_cxxopts//:cxxopts",
-        "@com_github_tencent_rapidjson//:rapidjson",
     ],
     visibility = ["//visibility:public"],
 )
@@ -89,6 +88,34 @@ ovms_cc_library(
     name = "embeddings_graph_cli_parser",
     srcs = ["embeddings_graph_cli_parser.cpp"],
     hdrs = ["embeddings_graph_cli_parser.hpp"],
+    deps =  [
+        "@ovms//src/graph_export:graph_cli_parser",
+        "@ovms//src:cpp_headers",
+        "@ovms//src:libovms_server_settings",
+        "@ovms//src:ovms_exit_codes",
+        "@com_github_jarro2783_cxxopts//:cxxopts",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
+    name = "t2s_graph_cli_parser",
+    srcs = ["t2s_graph_cli_parser.cpp"],
+    hdrs = ["t2s_graph_cli_parser.hpp"],
+    deps =  [
+        "@ovms//src/graph_export:graph_cli_parser",
+        "@ovms//src:cpp_headers",
+        "@ovms//src:libovms_server_settings",
+        "@ovms//src:ovms_exit_codes",
+        "@com_github_jarro2783_cxxopts//:cxxopts",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
+    name = "s2t_graph_cli_parser",
+    srcs = ["s2t_graph_cli_parser.cpp"],
+    hdrs = ["s2t_graph_cli_parser.hpp"],
     deps =  [
         "@ovms//src/graph_export:graph_cli_parser",
         "@ovms//src:cpp_headers",
