@@ -27,6 +27,8 @@
 #include "graph_export/graph_cli_parser.hpp"
 #include "graph_export/rerank_graph_cli_parser.hpp"
 #include "graph_export/embeddings_graph_cli_parser.hpp"
+#include "graph_export/t2s_graph_cli_parser.hpp"
+#include "graph_export/s2t_graph_cli_parser.hpp"
 #include "graph_export/image_generation_graph_cli_parser.hpp"
 #include "ovms_exit_codes.hpp"
 #include "filesystem.hpp"
@@ -220,17 +222,21 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
             cxxopts::value<std::string>()->default_value(defaultModelRepoPath),
             "MODEL_REPOSITORY_PATH")
             ("task",
-            "Choose type of model export: text_generation - chat and completion endpoints, embeddings - embeddings endpoint, rerank - rerank endpoint, image_generation - image generation/edit/inpainting endpoints.",
-            cxxopts::value<std::string>(),
-            "TASK")
+                "Choose type of model export: text_generation - chat and completion endpoints, embeddings - embeddings endpoint, rerank - rerank endpoint, image_generation - image generation/edit/inpainting endpoints, text2speech - audio/speech endpoint, speech2text - audio/transcriptions endpoint.",
+                cxxopts::value<std::string>(),
+                "TASK")
             ("weight-format",
             "Model precision used in optimum-cli export with conversion",
             cxxopts::value<std::string>()->default_value("int8"),
             "WEIGHT_FORMAT")
             ("extra_quantization_params",
-            "Model quantization parameters used in optimum-cli export with conversion for text generation models",
-            cxxopts::value<std::string>(),
-            "EXTRA_QUANTIZATION_PARAMS");
+                "Model quantization parameters used in optimum-cli export with conversion for text generation models",
+                cxxopts::value<std::string>(),
+                "EXTRA_QUANTIZATION_PARAMS")
+            ("vocoder",
+                "The vocoder model to use for text2speech. For example microsoft/speecht5_hifigan",
+                cxxopts::value<std::string>(),
+                "VOCODER");
 
         options->add_options("single model")
             ("model_name",
@@ -349,6 +355,18 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
                         this->graphOptionsParser = std::move(cliParser);
                         break;
                     }
+                    case TEXT_TO_SPEECH_GRAPH: {
+                        TextToSpeechGraphCLIParser cliParser;
+                        unmatchedOptions = cliParser.parse(result->unmatched());
+                        this->graphOptionsParser = std::move(cliParser);
+                        break;
+                    }
+                    case SPEECH_TO_TEXT_GRAPH: {
+                        SpeechToTextGraphCLIParser cliParser;
+                        unmatchedOptions = cliParser.parse(result->unmatched());
+                        this->graphOptionsParser = std::move(cliParser);
+                        break;
+                    }
                     case UNKNOWN_GRAPH: {
                         ss << "error parsing options - --task parameter unsupported value: " + result->operator[]("task").as<std::string>();
                         return std::make_pair(OVMS_EX_USAGE, ss.str());
@@ -418,6 +436,8 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
             RerankGraphCLIParser parser2;
             EmbeddingsGraphCLIParser parser3;
             ImageGenerationGraphCLIParser imageGenParser;
+            TextToSpeechGraphCLIParser ttsParser;
+            SpeechToTextGraphCLIParser sttParser;
             parser1.printHelp();
             parser2.printHelp();
             parser3.printHelp();
@@ -650,6 +670,8 @@ void CLIParser::prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl&
             hfSettings.exportSettings.precision = result->operator[]("weight-format").as<std::string>();
         if (result->count("extra_quantization_params"))
             hfSettings.exportSettings.extraQuantizationParams = result->operator[]("extra_quantization_params").as<std::string>();
+        if (result->count("vocoder"))
+            hfSettings.exportSettings.vocoder = result->operator[]("vocoder").as<std::string>();
         if (result->count("model_repository_path"))
             hfSettings.downloadPath = result->operator[]("model_repository_path").as<std::string>();
         if (result->count("task")) {
@@ -682,6 +704,22 @@ void CLIParser::prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl&
                 case IMAGE_GENERATION_GRAPH: {
                     if (std::holds_alternative<ImageGenerationGraphCLIParser>(this->graphOptionsParser)) {
                         std::get<ImageGenerationGraphCLIParser>(this->graphOptionsParser).prepare(serverSettings, hfSettings, modelName);
+                    } else {
+                        throw std::logic_error("Tried to prepare graph settings without graph parser initialization");
+                    }
+                    break;
+                }
+                case TEXT_TO_SPEECH_GRAPH: {
+                    if (std::holds_alternative<TextToSpeechGraphCLIParser>(this->graphOptionsParser)) {
+                        std::get<TextToSpeechGraphCLIParser>(this->graphOptionsParser).prepare(serverSettings.serverMode, hfSettings, modelName);
+                    } else {
+                        throw std::logic_error("Tried to prepare graph settings without graph parser initialization");
+                    }
+                    break;
+                }
+                case SPEECH_TO_TEXT_GRAPH: {
+                    if (std::holds_alternative<SpeechToTextGraphCLIParser>(this->graphOptionsParser)) {
+                        std::get<SpeechToTextGraphCLIParser>(this->graphOptionsParser).prepare(serverSettings.serverMode, hfSettings, modelName);
                     } else {
                         throw std::logic_error("Tried to prepare graph settings without graph parser initialization");
                     }

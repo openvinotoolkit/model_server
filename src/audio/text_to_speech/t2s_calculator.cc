@@ -38,7 +38,7 @@
 
 #include "src/port/dr_audio.hpp"
 
-#include "tts_servable.hpp"
+#include "t2s_servable.hpp"
 
 #ifdef _WIN32
 #include <fcntl.h>
@@ -51,7 +51,7 @@ namespace mediapipe {
 
 const std::string TTS_SESSION_SIDE_PACKET_TAG = "TTS_NODE_RESOURCES";
 
-class TtsCalculator : public CalculatorBase {
+class T2sCalculator : public CalculatorBase {
     static const std::string INPUT_TAG_NAME;
     static const std::string OUTPUT_TAG_NAME;
 
@@ -66,23 +66,22 @@ public:
     }
 
     absl::Status Close(CalculatorContext* cc) final {
-        SPDLOG_LOGGER_DEBUG(tts_calculator_logger, "TtsCalculator [Node: {} ] Close", cc->NodeName());
+        SPDLOG_LOGGER_DEBUG(t2s_calculator_logger, "T2sCalculator [Node: {} ] Close", cc->NodeName());
         return absl::OkStatus();
     }
 
     absl::Status Open(CalculatorContext* cc) final {
-        SPDLOG_LOGGER_DEBUG(tts_calculator_logger, "TtsCalculator  [Node: {}] Open start", cc->NodeName());
+        SPDLOG_LOGGER_DEBUG(t2s_calculator_logger, "T2sCalculator  [Node: {}] Open start", cc->NodeName());
         return absl::OkStatus();
     }
 
     absl::Status Process(CalculatorContext* cc) final {
-        SPDLOG_LOGGER_DEBUG(tts_calculator_logger, "TtsCalculator  [Node: {}] Process start", cc->NodeName());
+        SPDLOG_LOGGER_DEBUG(t2s_calculator_logger, "T2sCalculator  [Node: {}] Process start", cc->NodeName());
 
         TtsServableMap pipelinesMap = cc->InputSidePackets().Tag(TTS_SESSION_SIDE_PACKET_TAG).Get<TtsServableMap>();
         auto it = pipelinesMap.find(cc->NodeName());
         RET_CHECK(it != pipelinesMap.end()) << "Could not find initialized TTS node named: " << cc->NodeName();
         auto pipe = it->second;
-
         auto payload = cc->Inputs().Tag(INPUT_TAG_NAME).Get<ovms::HttpPayload>();
 
         std::unique_ptr<std::string> output;
@@ -116,21 +115,21 @@ public:
             size_t pDataSize;
             prepareAudioOutput(&ppData, pDataSize, bitsPerSample, speechSize, cpuTensor.data<const float>());
             output = std::make_unique<std::string>(reinterpret_cast<char*>(ppData), pDataSize);
-            // drwav_free(ppData, NULL); TODO: is needed?
+            drwav_free(ppData, NULL);
         } else {
             return absl::InvalidArgumentError(absl::StrCat("Unsupported URI: ", payload.uri));
         }
 
         cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(output.release(), cc->InputTimestamp());
-        SPDLOG_LOGGER_DEBUG(tts_calculator_logger, "TtsCalculator  [Node: {}] Process end", cc->NodeName());
+        SPDLOG_LOGGER_DEBUG(t2s_calculator_logger, "T2sCalculator  [Node: {}] Process end", cc->NodeName());
 
         return absl::OkStatus();
     }
 };
 
-const std::string TtsCalculator::INPUT_TAG_NAME{"HTTP_REQUEST_PAYLOAD"};
-const std::string TtsCalculator::OUTPUT_TAG_NAME{"HTTP_RESPONSE_PAYLOAD"};
+const std::string T2sCalculator::INPUT_TAG_NAME{"HTTP_REQUEST_PAYLOAD"};
+const std::string T2sCalculator::OUTPUT_TAG_NAME{"HTTP_RESPONSE_PAYLOAD"};
 
-REGISTER_CALCULATOR(TtsCalculator);
+REGISTER_CALCULATOR(T2sCalculator);
 
 }  // namespace mediapipe

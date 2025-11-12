@@ -26,7 +26,8 @@
 #include "module_names.hpp"
 namespace {
 volatile sig_atomic_t shutdown_request = 0;
-}
+volatile sig_atomic_t ovms_exited = 0;
+}  // namespace
 namespace ovms {
 class Config;
 class Status;
@@ -34,6 +35,8 @@ class Status;
 class Server {
     mutable std::shared_mutex modulesMtx;
     mutable std::mutex startMtx;
+    mutable std::mutex exitMtx;
+    mutable std::mutex shutdownMtx;
 
 protected:
     std::unordered_map<std::string, std::unique_ptr<Module>> modules;
@@ -51,7 +54,10 @@ public:
     bool isReady() const;
     bool isLive(const std::string& moduleName) const;
 
+    int getShutdownStatus();
     void setShutdownRequest(int i);
+    int getExitStatus();
+    void setExitStatus(int i);
     virtual ~Server();
     Status startModules(ovms::Config& config);
     void shutdownModules();

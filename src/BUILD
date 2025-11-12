@@ -305,6 +305,8 @@ ovms_cc_library(
         "//src/graph_export:graph_cli_parser",
         "//src/graph_export:rerank_graph_cli_parser",
         "//src/graph_export:embeddings_graph_cli_parser",
+        "//src/graph_export:t2s_graph_cli_parser",
+        "//src/graph_export:s2t_graph_cli_parser",
         "//src/graph_export:image_generation_graph_cli_parser",
     ],
     visibility = ["//visibility:public",],
@@ -558,8 +560,8 @@ ovms_cc_library(
             "//conditions:default": [],
             "//:not_disable_mediapipe" : [
                 "//src/image_gen:image_gen_calculator",
-                "//src/audio/speech_to_text:stt_calculator",
-                "//src/audio/text_to_speech:tts_calculator",
+                "//src/audio/speech_to_text:s2t_calculator",
+                "//src/audio/text_to_speech:t2s_calculator",
                 "//src/audio:audio_utils",
                 "//src/image_gen:imagegen_init",
                 "//src/llm:openai_completions_api_handler",
@@ -1127,6 +1129,7 @@ ovms_cc_library(
         "libovmsfilesystem",
         "libovmsstatus",
         "libovmslogging",
+        "//src/port:rapidjson_stringbuffer",
     ],
     visibility = ["//visibility:public"],
     additional_copts = COPTS_MEDIAPIPE + COPTS_DROGON,
@@ -1151,6 +1154,8 @@ ovms_cc_library(
     deps = [
         "@com_github_jupp0r_prometheus_cpp//core",
         "@com_github_tencent_rapidjson//:rapidjson",
+        "//src/port:rapidjson_stringbuffer",
+        "//src/port:rapidjson_writer",
         "cpp_headers",
         "libovms_module",
         "libovmslogging",
@@ -1606,6 +1611,8 @@ ovms_cc_library(
             "libovmsstring_utils",
             "libmodelconfigjsonparser",
             "anonymous_input_name",
+            "//src/port:rapidjson_stringbuffer",
+            "//src/port:rapidjson_writer",
     ],
     visibility = ["//visibility:public"],
 )
@@ -2278,7 +2285,8 @@ ovms_cc_library(
         "libovmslogging",
         "libovmsstatus",
         "libhttp_status_code",
-        "libovms_config"
+        "libovms_config",
+        "libovmsstring_utils",
     ],
     visibility = ["//visibility:public",],
 )

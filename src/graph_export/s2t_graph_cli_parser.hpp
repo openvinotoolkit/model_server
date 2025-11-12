@@ -13,22 +13,34 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include "rapidjson_utils.hpp"
+#pragma once
 
+#include <memory>
 #include <string>
+#include <vector>
 
-#pragma warning(push)
-#pragma warning(disable : 6313)
-#include <rapidjson/document.h>
-#include "src/port/rapidjson_stringbuffer.hpp"
-#include "src/port/rapidjson_writer.hpp"
-#pragma warning(pop)
+#include <cxxopts.hpp>
+
+#include "graph_cli_parser.hpp"
 
 namespace ovms {
-std::string documentToString(const rapidjson::Document& doc) {
-    rapidjson::StringBuffer buffer;
-    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-    doc.Accept(writer);
-    return buffer.GetString();
-}
+
+struct HFSettingsImpl;
+struct SpeechToTextGraphSettingsImpl;
+class Status;
+enum OvmsServerMode : int;
+
+class SpeechToTextGraphCLIParser : public GraphCLIParser {
+public:
+    SpeechToTextGraphCLIParser() = default;
+    std::vector<std::string> parse(const std::vector<std::string>& unmatchedOptions);
+    void prepare(OvmsServerMode serverMode, HFSettingsImpl& hfSettings, const std::string& modelName);
+
+    void printHelp();
+    void createOptions();
+
+private:
+    static SpeechToTextGraphSettingsImpl& defaultGraphSettings();
+};
+
 }  // namespace ovms

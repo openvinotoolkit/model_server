@@ -20,7 +20,9 @@ ovms_cc_library(
     hdrs = ["rapidjson_utils.hpp"],
     srcs = ["rapidjson_utils.cpp"],
     deps = [
-            "@ovms//src/port:rapidjson_document",
+            "//src/port:rapidjson_document",
+            "//src/port:rapidjson_writer",
+            "//src/port:rapidjson_stringbuffer",
     ],
     visibility = ["//visibility:public",],
 )
