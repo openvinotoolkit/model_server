@@ -19,11 +19,16 @@
 #include <cstdio>
 #include <memory>
 #include <string>
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
+#include "../utils/env_guard.hpp"
 
 namespace ovms {
 std::string exec_cmd(const std::string& command, int& returnCode) {
-    char buffer[200];
     std::string result = "";
+    char buffer[200];
     try {
         // Open pipe to file
 #ifdef _WIN32
@@ -33,6 +38,46 @@ std::string exec_cmd(const std::string& command, int& returnCode) {
             }
         };
         std::shared_ptr<FILE> pipe(_popen(command.c_str(), "r"), pcloseDeleter);
+#elif __linux__
+        auto pcloseDeleter = [&returnCode](FILE* ptr) {
+            if (ptr) {
+                returnCode = pclose(ptr);
+            }
+        };
+        std::shared_ptr<FILE> pipe(popen(command.c_str(), "r"), pcloseDeleter);
+#endif
+        if (!pipe) {
+            return "Error: popen failed.";
+        }
+
+        // Read until end of process:
+        while (fgets(buffer, sizeof(buffer), pipe.get()) != NULL) {
+            result += buffer;
+        }
+    } catch (const std::exception& e) {
+        return std::string("Error occurred when running command: ") + e.what();
+    } catch (...) {
+        return "Error occurred when running command: ";
+    }
+
+    return result;
+}
+
+std::string exec_cmd_utf8(const std::string& command, int& returnCode) {
+    std::string result = "";
+    char buffer[200];
+    EnvGuard guard;
+    guard.set("PYTHONIOENCODING", "utf-8");
+    try {
+        // Open pipe to file
+#ifdef _WIN32
+        auto pcloseDeleter = [&returnCode](FILE* ptr) {
+            if (ptr) {
+                returnCode = _pclose(ptr);
+            }
+        };
+        std::shared_ptr<FILE> pipe(_popen(command.c_str(), "r"), pcloseDeleter);
+
 #elif __linux__
         auto pcloseDeleter = [&returnCode](FILE* ptr) {
             if (ptr) {
