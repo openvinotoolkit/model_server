@@ -27,7 +27,7 @@
 namespace {
 volatile sig_atomic_t shutdown_request = 0;
 volatile sig_atomic_t ovms_exited = 0;
-}
+}  // namespace
 namespace ovms {
 class Config;
 class Status;

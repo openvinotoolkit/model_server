@@ -474,7 +474,7 @@ int Server::start(int argc, char** argv) {
         exit(printAndExit.first);
     }
     std::pair<ovms::ServerSettingsImpl, ovms::ModelsSettingsImpl> parameters = std::get<std::pair<ovms::ServerSettingsImpl, ovms::ModelsSettingsImpl>>(paramsOrExit);
-    return  startServerFromSettings(parameters.first, parameters.second);
+    return startServerFromSettings(parameters.first, parameters.second);
 }
 
 // C-API Start
