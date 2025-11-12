@@ -25,7 +25,7 @@
 #include <rapidjson/error/en.h>
 #include <rapidjson/error/error.h>
 #include <rapidjson/schema.h>
-#include <rapidjson/stringbuffer.h>
+#include "src/port/rapidjson_stringbuffer.hpp"
 #pragma warning(pop)
 #ifdef _WIN32
 #include <windows.h>
