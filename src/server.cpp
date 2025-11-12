@@ -413,7 +413,6 @@ static int statusToExitCode(const Status& status) {
 }
 
 std::variant<std::pair<ServerSettingsImpl, ModelsSettingsImpl>, std::pair<int, std::string>> Server::parseArgs(int argc, char** argv) {
-    Server::setExitStatus(0);
     try {
         CLIParser parser;
         ServerSettingsImpl serverSettings;

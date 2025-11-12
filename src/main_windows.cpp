@@ -521,7 +521,7 @@ DWORD WINAPI OvmsWindowsServiceManager::serviceWorkerThread(LPVOID lpParam) {
             ovmsService->SetUp(params);
         }
         // Check thread not exited
-        if (ovmsService->started && !ovmsService->isRunning()) {
+        if (!ovmsService->isRunning()) {
             DEBUG_LOG("serviceWorkerThread: Server thread is not running.")
             break;
         }
