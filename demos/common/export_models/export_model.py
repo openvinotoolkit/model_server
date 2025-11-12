@@ -108,7 +108,7 @@ node {
   node_options: {
     [type.googleapis.com / mediapipe.T2sCalculatorOptions]: {
       models_path: "{{model_path}}",
-      plugin_config: '{ "NUM_STREAMS": "{{num_streams|default(1, true)}}" }',
+      plugin_config: '{ "NUM_STREAMS": {{num_streams|default(1, true)}} }',
       target_device: "{{target_device|default("CPU", true)}}"
     }
   }
@@ -127,7 +127,7 @@ node {
   node_options: {
     [type.googleapis.com / mediapipe.S2tCalculatorOptions]: {
       models_path: "{{model_path}}",
-      plugin_config: '{ "NUM_STREAMS": "{{num_streams|default(1, true)}}" }',
+      plugin_config: '{ "NUM_STREAMS": {{num_streams|default(1, true)}} }',
       target_device: "{{target_device|default("CPU", true)}}"
     }
   }
@@ -271,7 +271,7 @@ embeddings_subconfig_template = """{
                 "name": "{{model_name}}_embeddings_model",
                 "base_path": "embeddings",
                 "target_device": "{{target_device|default("CPU", true)}}",
-                "plugin_config": { "NUM_STREAMS": "{{num_streams|default(1, true)}}" }
+                "plugin_config": { "NUM_STREAMS": {{num_streams|default(1, true)}} }
             }
 	}
    ]
@@ -290,7 +290,7 @@ rerank_subconfig_template = """{
                 "name": "{{model_name}}_rerank_model",
                 "base_path": "rerank",
                 "target_device": "{{target_device|default("CPU", true)}}",
-                "plugin_config": { "NUM_STREAMS": "{{num_streams|default(1, true)}}" }
+                "plugin_config": { "NUM_STREAMS": {{num_streams|default(1, true)}} }
             }
 	}
    ]
