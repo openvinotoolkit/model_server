@@ -233,7 +233,22 @@ void Server::setShutdownRequest(int i) {
     shutdown_request = i;
 }
 
+int Server::getExitStatus() {
+    std::unique_lock lock{Server::exitMtx, std::defer_lock};
+    auto locked = lock.try_lock();
+    if (!locked) {
+        return 0;
+    }
+
+    return ovms_exited;
+}
+
 void Server::setExitStatus(int i) {
+    std::unique_lock lock{Server::exitMtx, std::defer_lock};
+    auto locked = lock.try_lock();
+    if (!locked) {
+        return;
+    }
     ovms_exited = i;
 }
 

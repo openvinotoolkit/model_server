@@ -35,6 +35,7 @@ class Status;
 class Server {
     mutable std::shared_mutex modulesMtx;
     mutable std::mutex startMtx;
+    mutable std::mutex exitMtx;
 
 protected:
     std::unordered_map<std::string, std::unique_ptr<Module>> modules;
@@ -53,7 +54,8 @@ public:
     bool isLive(const std::string& moduleName) const;
 
     void setShutdownRequest(int i);
-    static void setExitStatus(int i);
+    int getExitStatus();
+    void setExitStatus(int i);
     virtual ~Server();
     Status startModules(ovms::Config& config);
     void shutdownModules();

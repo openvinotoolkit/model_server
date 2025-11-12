@@ -785,7 +785,7 @@ bool OvmsService::isReady() {
 
 bool OvmsService::isRunning() {
     // Check if server thread exited
-    return (t && t->joinable() && shutdown_request == 0 && ovms_exited == 0);
+    return (t && t->joinable() && shutdown_request == 0 && server.getExitStatus() == 0);
 }
 
 bool OvmsService::isLive(const std::string& moduleName) {
