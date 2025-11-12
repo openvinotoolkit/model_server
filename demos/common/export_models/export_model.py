@@ -65,13 +65,13 @@ parser_embeddings_ov.add_argument('--num_streams', default=1,type=int, help='The
 
 parser_rerank = subparsers.add_parser('rerank', help='[deprecated] export model for rerank endpoint with models split into separate, versioned directories')
 add_common_arguments(parser_rerank)
-parser_rerank.add_argument('--num_streams', default="1", help='The number of parallel execution streams to use for the model. Use at least 2 on 2 socket CPU systems.', dest='num_streams')
+parser_rerank.add_argument('--num_streams', default="1", type=int, help='The number of parallel execution streams to use for the model. Use at least 2 on 2 socket CPU systems.', dest='num_streams')
 parser_rerank.add_argument('--max_doc_length', default=16000, type=int, help='Maximum length of input documents in tokens', dest='max_doc_length')
 parser_rerank.add_argument('--version', default="1", help='version of the model', dest='version')
 
 parser_rerank_ov = subparsers.add_parser('rerank_ov', help='export model for rerank endpoint with directory structure aligned with OpenVINO tools')
 add_common_arguments(parser_rerank_ov)
-parser_rerank_ov.add_argument('--num_streams', default="1", help='The number of parallel execution streams to use for the model. Use at least 2 on 2 socket CPU systems.', dest='num_streams')
+parser_rerank_ov.add_argument('--num_streams', default="1", type=int, help='The number of parallel execution streams to use for the model. Use at least 2 on 2 socket CPU systems.', dest='num_streams')
 parser_rerank_ov.add_argument('--max_doc_length', default=16000, type=int, help='Maximum length of input documents in tokens', dest='max_doc_length')
 
 parser_image_generation = subparsers.add_parser('image_generation', help='export model for image generation endpoint')
@@ -271,7 +271,7 @@ embeddings_subconfig_template = """{
                 "name": "{{model_name}}_embeddings_model",
                 "base_path": "embeddings",
                 "target_device": "{{target_device|default("CPU", true)}}",
-                "plugin_config": { "NUM_STREAMS": {{num_streams|default(1, true)}} }
+                "plugin_config": '{ "NUM_STREAMS": {{num_streams|default(1, true)}} }'
             }
 	}
    ]
@@ -290,7 +290,7 @@ rerank_subconfig_template = """{
                 "name": "{{model_name}}_rerank_model",
                 "base_path": "rerank",
                 "target_device": "{{target_device|default("CPU", true)}}",
-                "plugin_config": { "NUM_STREAMS": {{num_streams|default(1, true)}} }
+                "plugin_config": '{ "NUM_STREAMS": {{num_streams|default(1, true)}} }'
             }
 	}
    ]
