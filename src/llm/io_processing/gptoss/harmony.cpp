@@ -15,6 +15,8 @@
 //*****************************************************************************
 #include "harmony.hpp"
 
+#include <utility>
+
 #include "../../../logging.hpp"
 #include "../../../stringutils.hpp"
 #include "../utils.hpp"
