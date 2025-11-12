@@ -233,7 +233,7 @@ void Server::setShutdownRequest(int i) {
     std::unique_lock lock{Server::shutdownMtx, std::defer_lock};
     int counter = 11;
     // 2 seconds to try to lock exit mutex
-    while(counter-- && !lock.try_lock()){
+    while (counter-- && !lock.try_lock()) {
         std::this_thread::sleep_for(std::chrono::milliseconds(200));
     }
     if (counter) {
@@ -269,7 +269,7 @@ void Server::setExitStatus(int i) {
     std::unique_lock lock{Server::exitMtx, std::defer_lock};
     int counter = 11;
     // 2 seconds to try to lock exit mutex
-    while(counter-- && !lock.try_lock()){
+    while (counter-- && !lock.try_lock()) {
         std::this_thread::sleep_for(std::chrono::milliseconds(200));
     }
     if (counter) {
