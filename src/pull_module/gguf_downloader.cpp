@@ -175,6 +175,9 @@ void print_progress(size_t count, size_t max, bool first_run, size_t elapsed_tim
 struct FtpFile {
     const char* filename;
     FILE* stream;
+    FtpFile() = delete;
+    FtpFile(const FtpFile&) = delete;
+    FtpFile& operator=(const FtpFile&) = delete;
     FtpFile(const char* fname, FILE* str) :
         filename(fname),
         stream(str) {}
