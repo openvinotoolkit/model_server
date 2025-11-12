@@ -84,6 +84,13 @@ python export_model.py text_generation --source_model microsoft/Phi-4-mini-instr
 curl -L -o models/microsoft/Phi-4-mini-instruct/chat_template.jinja https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/extras/chat_template_examples/chat_template_phi4_mini.jinja
 ```
 :::
+:::{tab-item} Qwen3-Coder-30B-A3B-Instruct
+:sync: Qwen3-Coder-30B-A3B-Instruct
+```console
+python export_model.py text_generation --source_model Qwen/Qwen3-Coder-30B-A3B-Instruct --weight-format int8 --config_file_path models/config.json --model_repository_path models --tool_parser qwen3coder --cache_size 2
+curl -L -o models/Qwen/Qwen3-Coder-30B-A3B-Instruct/chat_template.jinja https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/extras/chat_template_examples/chat_template_qwen3coder_instruct.jinja
+```
+:::
 ::::
 
 ### Direct pulling of pre-configured HuggingFace models from docker containers
@@ -108,6 +115,13 @@ curl -L -o models/OpenVINO/Mistral-7B-Instruct-v0.3-int4-ov/chat_template.jinja 
 ```bash
 docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --pull --model_repository_path /models --source_model OpenVINO/Phi-4-mini-instruct-int4-ov --task text_generation --tool_parser phi4
 curl -L -o models/OpenVINO/Phi-4-mini-instruct-int4-ov/chat_template.jinja https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/extras/chat_template_examples/chat_template_phi4_mini.jinja
+```
+:::
+:::{tab-item} Qwen3-Coder-30B-A3B-Instruct
+:sync: Qwen3-Coder-30B-A3B-Instruct
+```bash
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --pull --model_repository_path /models --source_model Qwen3/Qwen3-Coder-30B-A3B-Instruct --task text_generation --weight-format int8 --tool_parser qwen3coder
+curl -L -o models/Qwen3-Coder-30B-A3B-Instruct/chat_template.jinja
 ```
 :::
 ::::
@@ -137,6 +151,13 @@ curl -L -o models\OpenVINO\Mistral-7B-Instruct-v0.3-int4-ov\chat_template.jinja 
 ```bat
 ovms.exe --pull --model_repository_path models --source_model OpenVINO/Phi-4-mini-instruct-int4-ov --task text_generation --tool_parser phi4
 curl -L -o models\OpenVINO\Phi-4-mini-instruct-int4-ov\chat_template.jinja https://raw.githubusercontent.com/vllm-project/vllm/refs/tags/v0.9.0/examples/tool_chat_template_phi4_mini.jinja
+```
+:::
+:::{tab-item} Qwen3-Coder-30B-A3B-Instruct
+:sync: Qwen3-Coder-30B-A3B-Instruct
+```bash
+ovms.exe --pull --model_repository_path models --source_model Qwen3/Qwen3-Coder-30B-A3B-Instruct --task text_generation --tool_parser qwen3coder --weight-format int8
+curl -L -o models\Qwen3-Coder-30B-A3B-Instruct\chat_template.jinja https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/extras/chat_template_examples/chat_template_qwen3coder_instruct.jinja
 ```
 :::
 ::::
@@ -376,6 +397,7 @@ Those steps deploy all the models exported earlier. The python script added the 
 docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:weekly --add_to_config --model_name OpenVINO/Qwen3-8B-int4-ov --model_path OpenVINO/Qwen3-8B-int4-ov --config_path /models/config.json
 docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:weekly --add_to_config --model_name OpenVINO/Phi-4-mini-instruct-int4-ov --model_path OpenVINO/Phi-4-mini-instruct-int4-ov --config_path /models/config.json
 docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:weekly --add_to_config --model_name OpenVINO/Mistral-7B-Instruct-v0.3-int4-ov --model_path OpenVINO/Mistral-7B-Instruct-v0.3-int4-ov--config_path /models/config.json
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --add_to_config --model_name Qwen3-Coder-30B-A3B-Instruct  --model_path Qwen3-Coder-30B-A3B-Instruct
 docker run -d --rm -p 8000:8000 -v $(pwd)/models:/models:ro openvino/model_server:weekly --rest_port 8000 --config_path /models/config.json
 ```
 
@@ -464,6 +486,12 @@ python openai_agent.py --query "What is the current weather in Tokyo?" --model O
 :sync: Phi-4-mini-instruct-int4-ov
 ```bash
 python openai_agent.py --query "What is the current weather in Tokyo?" --model OpenVINO/Phi-4-mini-instruct-int4-ov --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather
+```
+:::
+:::{tab-item} Qwen3-Coder-30B-A3B-Instruct
+:sync: Qwen3-Coder-30B-A3B-Instruct
+```bash
+python openai_agent.py --query "What is the current weather in Tokyo?" --model Qwen3/Qwen3-Coder-30B-A3B-Instruct --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather
 ```
 :::
 ::::
