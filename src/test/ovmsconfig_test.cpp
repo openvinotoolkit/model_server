@@ -2289,6 +2289,7 @@ TEST_F(OvmsParamsTest, hostname_ip_regex) {
     EXPECT_EQ(ovms::Config::check_hostname_or_ip(
                   "2001:db8:85a3::8a2e:370:7334"),
         true);
+    EXPECT_EQ(ovms::Config::check_hostname_or_ip("0:0:0:0:0:0:0:0"), true);
     EXPECT_EQ(ovms::Config::check_hostname_or_ip("::1"), true);
     EXPECT_EQ(ovms::Config::check_hostname_or_ip("::"), true);
     // Link-local IPv6 with zone index (RFC 4007 § 11) - unsupported
@@ -2303,6 +2304,30 @@ TEST_F(OvmsParamsTest, hostname_ip_regex) {
     EXPECT_EQ(ovms::Config::check_hostname_or_ip("::ffff:192.0.2.128"), true);
     //  IPv4-translated IPv6 addresses
     EXPECT_EQ(ovms::Config::check_hostname_or_ip("::ffff:0:192.0.2.128"), true);
+
+    // Multiple selections
+    EXPECT_EQ(ovms::Config::check_hostname_or_ip("0.0.0.0"), true);
+    EXPECT_EQ(ovms::Config::check_hostname_or_ip("0.0.0.0,0:0:0:0:0:0:0:0"), true);
+    EXPECT_EQ(ovms::Config::check_hostname_or_ip("127.0.0.1,::1"), true);
+    EXPECT_EQ(ovms::Config::check_hostname_or_ip("127.0.0.1,0:0:0:0:0:0:0:1"), true);
+    EXPECT_EQ(ovms::Config::check_hostname_or_ip("192.0.2.33,fe80::1234"), true);
+    EXPECT_EQ(ovms::Config::check_hostname_or_ip("192.0.2.33,fe80::1234,192.0.2.34,192.0.2.35,fe80::1235,fe80::1236"), true);
+}
+
+TEST_F(OvmsParamsTest, check_is_ipv6_address) {
+    EXPECT_EQ(ovms::Config::is_ipv6("fe80:0000:0000:0000:0202:b3ff:fe1e:8329"), true);
+    EXPECT_EQ(ovms::Config::is_ipv6("2001:db8:85a3::8a2e:370:7334"), true);
+    EXPECT_EQ(ovms::Config::is_ipv6("0:0:0:0:0:0:0:0"), true);
+    EXPECT_EQ(ovms::Config::is_ipv6("::1"), true);
+    EXPECT_EQ(ovms::Config::is_ipv6("::"), true);
+    EXPECT_EQ(ovms::Config::is_ipv6("64:ff9b::192.0.2.33"), true);
+    EXPECT_EQ(ovms::Config::is_ipv6("2001:db8:122:344::192.0.2.33"), true);
+    EXPECT_EQ(ovms::Config::is_ipv6("::ffff:192.0.2.128"), true);
+    EXPECT_EQ(ovms::Config::is_ipv6("::ffff:0:192.0.2.128"), true);
+
+    EXPECT_EQ(ovms::Config::is_ipv6("127.0.0.1"), false);
+    EXPECT_EQ(ovms::Config::is_ipv6("192.0.2.33"), false);
+    EXPECT_EQ(ovms::Config::is_ipv6("10.0.0.255"), false);
 }
 
 TEST(OvmsConfigTest, positiveMulti) {
