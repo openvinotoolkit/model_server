@@ -95,7 +95,7 @@ bool Config::check_hostname_or_ip(const std::string& input) {
 }
 
 bool Config::validateUserSettingsInConfigAddRemoveModel(const ModelsSettingsImpl& modelsSettings) {
-    static const std::vector<std::string> allowedUserSettings = {"model_name", "model_path"};
+    static const std::vector<std::string> allowedUserSettings = {"model_name", "model_path", "config_path"};
     std::vector<std::string> usedButDisallowedUserSettings;
     for (const std::string& userSetting : modelsSettings.userSetSingleModelArguments) {
         bool isAllowed = false;
@@ -253,16 +253,16 @@ bool Config::validate() {
         if (modelName().empty()) {
             std::cerr << "Set model_name with add_to_config/remove_from_config" << std::endl
                       << "Usage: " << std::endl
-                      << "  ovms --model_name <model_name> --model_repository_path <repo_path> --add_to_config <config_path>" << std::endl
-                      << "  ovms --model_name <model_name> --model_path <model_path> --add_to_config <config_path>" << std::endl
-                      << "  ovms --model_name <model_name> --remove_from_config <config_path>" << std::endl;
+                      << "  ovms --add_to_config --model_name <model_name> --model_repository_path <repo_path>--config_path <config_path>" << std::endl
+                      << "  ovms  --add_to_config --model_name <model_name> --model_path <model_path> --config_path <config_path>" << std::endl
+                      << "  ovms --remove_from_config --model_name <model_name> --config_path <config_path>" << std::endl;
             return false;
         }
-        if (modelPath().empty() && this->serverSettings.exportConfigType == ENABLE_MODEL) {
+        if (modelPath().empty()  && this->serverSettings.exportConfigType == ENABLE_MODEL) {
             std::cerr << "Set model_name either with model_path or model_repository_path with add_to_config" << std::endl
                       << "Usage: " << std::endl
-                      << "  ovms --model_name <model_name> --model_repository_path <repo_path> --add_to_config <config_path>" << std::endl
-                      << "  ovms --model_name <model_name> --model_path <model_path> --add_to_config <config_path>" << std::endl;
+                      << "  ovms --add_to_config --model_name <model_name> --model_repository_path <repo_path>  --config_path <config_path>" << std::endl
+                      << "  ovms --add_to_config --model_name <model_name> --model_path <model_path> --config_path <config_path>" << std::endl;
             return false;
         }
 

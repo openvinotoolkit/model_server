@@ -475,6 +475,7 @@ int Server::start(int argc, char** argv) {
             exit(printAndExit.first);
         }
         parser.prepare(&serverSettings, &modelsSettings);
+        std::cout << "config_path: " << modelsSettings.configPath << std::endl;
 
         Status ret = startFromSettings(&serverSettings, &modelsSettings);
         ModulesShutdownGuard shutdownGuard(*this);
