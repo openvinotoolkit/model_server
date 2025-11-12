@@ -82,6 +82,7 @@ public:
     static LPSTR serviceDesc;
 
     // Methods
+    static OvmsWindowsServiceManager& instance();
     static std::string getCurrentTimeString();
     static void logParameters(DWORD argc, LPTSTR* argv, const std::string& logText);
     static void serviceReportEvent(LPSTR szFunction);

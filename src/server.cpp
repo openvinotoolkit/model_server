@@ -233,6 +233,10 @@ void Server::setShutdownRequest(int i) {
     shutdown_request = i;
 }
 
+void Server::setExitStatus(int i) {
+    ovms_exited = i;
+}
+
 Server::~Server() {
     this->shutdownModules();
 }
@@ -409,6 +413,7 @@ static int statusToExitCode(const Status& status) {
 }
 
 std::variant<std::pair<ServerSettingsImpl, ModelsSettingsImpl>, std::pair<int, std::string>> Server::parseArgs(int argc, char** argv) {
+    Server::setExitStatus(0);
     try {
         CLIParser parser;
         ServerSettingsImpl serverSettings;
@@ -429,6 +434,7 @@ std::variant<std::pair<ServerSettingsImpl, ModelsSettingsImpl>, std::pair<int, s
 int Server::startServerFromSettings(ServerSettingsImpl& serverSettings, ModelsSettingsImpl& modelsSettings) {
     installSignalHandlers();
     int result = OVMS_EX_OK;
+    Server::setExitStatus(0);
 
     try {
         Status ret = startFromSettings(&serverSettings, &modelsSettings);
@@ -446,55 +452,29 @@ int Server::startServerFromSettings(ServerSettingsImpl& serverSettings, ModelsSe
     } catch (const std::exception& e) {
         SPDLOG_ERROR("Exception; {}", e.what());
         result = OVMS_EX_FAILURE;
-        shutdown_request = 3;
+        Server::setExitStatus(1);
         return result;
     }
 
-    shutdown_request = 3;
+    Server::setExitStatus(1);
     return EXIT_SUCCESS;
 }
 
 // OVMS Start
 int Server::start(int argc, char** argv) {
-    installSignalHandlers();
-    int result = OVMS_EX_OK;
-
-    try {
-        CLIParser parser;
-        ServerSettingsImpl serverSettings;
-        ModelsSettingsImpl modelsSettings;
-        auto successOrExit = parser.parse(argc, argv);
-        // Check for error in parsing
-        if (std::holds_alternative<std::pair<int, std::string>>(successOrExit)) {
-            auto printAndExit = std::get<std::pair<int, std::string>>(successOrExit);
-            if (printAndExit.first > 0) {
-                std::cerr << printAndExit.second;
-            } else {
-                std::cout << printAndExit.second;
-            }
-            exit(printAndExit.first);
+    auto paramsOrExit = parseArgs(argc, argv);
+    // Check for error in parsing
+    if (std::holds_alternative<std::pair<int, std::string>>(paramsOrExit)) {
+        auto printAndExit = std::get<std::pair<int, std::string>>(paramsOrExit);
+        if (printAndExit.first > 0) {
+            std::cerr << printAndExit.second;
+        } else {
+            std::cout << printAndExit.second;
         }
-        parser.prepare(&serverSettings, &modelsSettings);
-
-        Status ret = startFromSettings(&serverSettings, &modelsSettings);
-        ModulesShutdownGuard shutdownGuard(*this);
-        if (!ret.ok()) {
-            return statusToExitCode(ret);
-        }
-        while (!shutdown_request &&
-               (serverSettings.serverMode == HF_PULL_AND_START_MODE || serverSettings.serverMode == SERVING_MODELS_MODE)) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(200));
-        }
-        if (shutdown_request == 2) {
-            SPDLOG_ERROR("Illegal operation. OVMS started on unsupported device");
-        }
-    } catch (const std::exception& e) {
-        SPDLOG_ERROR("Exception; {}", e.what());
-        result = OVMS_EX_FAILURE;
-        return result;
+        exit(printAndExit.first);
     }
-
-    return EXIT_SUCCESS;
+    std::pair<ovms::ServerSettingsImpl, ovms::ModelsSettingsImpl> parameters = std::get<std::pair<ovms::ServerSettingsImpl, ovms::ModelsSettingsImpl>>(paramsOrExit);
+    return  startServerFromSettings(parameters.first, parameters.second);
 }
 
 // C-API Start

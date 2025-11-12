@@ -62,11 +62,14 @@ static std::ofstream logFile("C:\\temp\\ovms.log", std::ios::app);
 
 using ovms::Server;
 
-OvmsWindowsServiceManager manager;
+OvmsWindowsServiceManager& OvmsWindowsServiceManager::instance() {
+    static OvmsWindowsServiceManager global;
+    return global;
+}
 
 // Need this original function pointer type expected by the Windows Service API (LPSERVICE_MAIN_FUNCTIONA),
 void WINAPI WinServiceMain(DWORD argc, LPTSTR* argv) {
-    manager.serviceMain(argc, argv);
+    OvmsWindowsServiceManager::instance().serviceMain(argc, argv);
 }
 
 std::string wstringToString(const std::wstring& wstr) {
@@ -107,8 +110,8 @@ inline std::wstring stringToWstring(const std::string& str, UINT codePage = CP_T
 
 int main_windows(int argc, char** argv) {
     DEBUG_LOG("Windows Main - Entry");
-    manager.ovmsParams.argc = argc;
-    manager.ovmsParams.argv = argv;
+    OvmsWindowsServiceManager::instance().ovmsParams.argc = argc;
+    OvmsWindowsServiceManager::instance().ovmsParams.argv = argv;
     OvmsWindowsServiceManager::logParameters(argc, argv, "OVMS Main Argument");
 
     // Install service with ovms.exe
@@ -195,13 +198,13 @@ void WINAPI OvmsWindowsServiceManager::serviceMain(DWORD argc, LPTSTR* argv) {
     // argc = 1 equals ovms.exe
     if (argv && argc > 1) {
         DEBUG_LOG("ServiceMain: Setting new parameters for service after service start.");
-        manager.ovmsParams.argc = argc;
-        manager.ovmsParams.argv = argv;
+        OvmsWindowsServiceManager::instance().ovmsParams.argc = argc;
+        OvmsWindowsServiceManager::instance().ovmsParams.argv = argv;
     }
     OvmsWindowsServiceManager::logParameters(argc, argv, "ServiceMain Argument");
 
     // Parse arguments before server start
-    auto paramsOrExit = ovms::Server::parseArgs(manager.ovmsParams.argc, manager.ovmsParams.argv);
+    auto paramsOrExit = ovms::Server::parseArgs(OvmsWindowsServiceManager::instance().ovmsParams.argc, OvmsWindowsServiceManager::instance().ovmsParams.argv);
     // Check for error in parsing
     if (std::holds_alternative<std::pair<int, std::string>>(paramsOrExit)) {
         auto printAndExit = std::get<std::pair<int, std::string>>(paramsOrExit);
@@ -219,10 +222,10 @@ void WINAPI OvmsWindowsServiceManager::serviceMain(DWORD argc, LPTSTR* argv) {
 
         return;
     } else {
-        manager.parsedParameters = std::get<std::pair<ovms::ServerSettingsImpl, ovms::ModelsSettingsImpl>>(paramsOrExit);
+        OvmsWindowsServiceManager::instance().parsedParameters = std::get<std::pair<ovms::ServerSettingsImpl, ovms::ModelsSettingsImpl>>(paramsOrExit);
     }
 
-    std::unique_ptr<HANDLE, WinHandleDeleter> mainThread(CreateThread(NULL, 0, OvmsWindowsServiceManager::serviceWorkerThread, &manager.parsedParameters, 0, NULL));
+    std::unique_ptr<HANDLE, WinHandleDeleter> mainThread(CreateThread(NULL, 0, OvmsWindowsServiceManager::serviceWorkerThread, &OvmsWindowsServiceManager::instance().parsedParameters, 0, NULL));
     if (mainThread.get() == NULL || mainThread.get() == INVALID_HANDLE_VALUE) {
         // Handle error
         DEBUG_LOG("ServiceMain: mainThread == NULL || mainThread == INVALID_HANDLE_VALUE");
@@ -368,9 +371,9 @@ bool OvmsWindowsServiceManager::serviceSetDescription() {
 }
 
 void OvmsWindowsServiceManager::logParameters(DWORD argc, LPTSTR* argv, const std::string& logText) {
-    for (int i = 0; i < (int)manager.ovmsParams.argc; ++i) {
+    for (int i = 0; i < (int)OvmsWindowsServiceManager::instance().ovmsParams.argc; ++i) {
         std::stringstream ss2;
-        ss2 << logText << " " << i << ": " << manager.ovmsParams.argv[i];
+        ss2 << logText << " " << i << ": " << OvmsWindowsServiceManager::instance().ovmsParams.argv[i];
         DEBUG_LOG(ss2.str());
     }
 }
@@ -782,7 +785,7 @@ bool OvmsService::isReady() {
 
 bool OvmsService::isRunning() {
     // Check if server thread exited
-    return (t && t->joinable() && shutdown_request == 0);
+    return (t && t->joinable() && shutdown_request == 0 && ovms_exited == 0);
 }
 
 bool OvmsService::isLive(const std::string& moduleName) {

@@ -26,6 +26,7 @@
 #include "module_names.hpp"
 namespace {
 volatile sig_atomic_t shutdown_request = 0;
+volatile sig_atomic_t ovms_exited = 0;
 }
 namespace ovms {
 class Config;
@@ -52,6 +53,7 @@ public:
     bool isLive(const std::string& moduleName) const;
 
     void setShutdownRequest(int i);
+    static void setExitStatus(int i);
     virtual ~Server();
     Status startModules(ovms::Config& config);
     void shutdownModules();
