@@ -48,7 +48,6 @@ std::string OvmsWindowsServiceManager::getCurrentTimeString() {
 }
 
 #define DEBUG_LOG_ENABLE 0
-// TODO: Implement windows logging mechanism with events
 static std::ofstream logFile("C:\\temp\\ovms.log", std::ios::app);
 #define DEBUG_LOG(msg)                                                                   \
     {                                                                                    \
@@ -269,7 +268,6 @@ struct WinSCHandleDeleter {
 // Use sc create ... instead
 // Cannot be used as it does not create the registry entry for the service
 // Registry entry required to add ovms\python to PATH
-// TODO: add serviceReportEvent to the standard main path
 void OvmsWindowsServiceManager::serviceInstall() {
     TCHAR szUnquotedPath[MAX_PATH];
     DEBUG_LOG("Installing Openvino Model Server service");
