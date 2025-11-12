@@ -21,11 +21,8 @@
 #include <vector>
 
 #include <openvino/openvino.hpp>
-#pragma warning(push)
-#pragma warning(disable : 6313)
-#include <rapidjson/document.h>
+#include "src/port/rapidjson_document.hpp"
 #include "src/port/rapidjson_stringbuffer.hpp"
-#pragma warning(pop)
 
 #pragma warning(push)
 #pragma warning(disable : 6001 6385 6386)

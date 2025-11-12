@@ -18,10 +18,7 @@
 
 #include <utility>
 
-#pragma warning(push)
-#pragma warning(disable : 6313)
 #include "src/port/rapidjson_writer.hpp"
-#pragma warning(pop)
 
 namespace ovms {
 absl::Status TokenizeParser::parseTokenizeResponse(rapidjson::StringBuffer& buffer, const ov::genai::TokenizedInputs& tokens, const ov::AnyMap& parameters) {

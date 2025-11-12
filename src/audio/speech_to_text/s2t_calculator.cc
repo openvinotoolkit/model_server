@@ -144,16 +144,19 @@ public:
                 std::string genaiLanguage = "<|" + std::string(language) + "|>";
                 std::unique_lock lock(pipe->sttPipelineMutex);
                 std::string generatedText = pipe->sttPipeline->generate(rawSpeech, ov::genai::language(genaiLanguage.c_str()));
+                lock.unlock();
                 writer.String(generatedText.c_str());
             } else {
                 std::unique_lock lock(pipe->sttPipelineMutex);
                 std::string generatedText = pipe->sttPipeline->generate(rawSpeech);
+                lock.unlock();
                 writer.String(generatedText.c_str());
             }
         }
         if (endpoint == Endpoint::TRANSLATIONS) {
             std::unique_lock lock(pipe->sttPipelineMutex);
             std::string generatedText = pipe->sttPipeline->generate(rawSpeech, ov::genai::task("translate"));
+            lock.unlock();
             writer.String(generatedText.c_str());
         }
         writer.EndObject();
