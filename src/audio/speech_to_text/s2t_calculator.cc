@@ -36,6 +36,8 @@
 #include "absl/strings/str_cat.h"
 #pragma warning(pop)
 
+#include "src/port/rapidjson_writer.hpp"
+#include "src/port/rapidjson_stringbuffer.hpp"
 #include "s2t_servable.hpp"
 
 #ifdef _WIN32
@@ -48,6 +50,24 @@ using namespace ovms;
 namespace mediapipe {
 
 const std::string STT_SESSION_SIDE_PACKET_TAG = "STT_NODE_RESOURCES";
+
+enum Endpoint {
+    TRANSCRIPTIONS,
+    TRANSLATIONS,
+    UNSUPPORTED
+};
+
+Endpoint getEndpoint(const std::string& url) {
+    if (absl::StartsWith(url, "/v3/audio/transcriptions")) {
+        return Endpoint::TRANSCRIPTIONS;
+    }
+    if (absl::StartsWith(url, "/v3/audio/translations")) {
+        return Endpoint::TRANSLATIONS;
+    }
+    return Endpoint::UNSUPPORTED;
+}
+
+size_t ISO_LANG_CODE_MAX = 3;
 
 class S2tCalculator : public CalculatorBase {
     static const std::string INPUT_TAG_NAME;
@@ -82,41 +102,65 @@ public:
         auto pipe = it->second;
 
         auto payload = cc->Inputs().Tag(INPUT_TAG_NAME).Get<ovms::HttpPayload>();
-
-        std::unique_ptr<std::string> output;
-        if (absl::StartsWith(payload.uri, "/v3/audio/transcriptions")) {
-            if (payload.multipartParser->hasParseError())
-                return absl::InvalidArgumentError("Failed to parse multipart data");
-
-            std::string_view stream = payload.multipartParser->getFileContentByFieldName("stream");
-            if (!stream.empty()) {
-                return absl::InvalidArgumentError("streaming is not supported");
-            }
-            std::string_view file = payload.multipartParser->getFileContentByFieldName("file");
-            if (file.empty()) {
-                return absl::InvalidArgumentError(absl::StrCat("File parsing fails"));
-            }
-
-            std::vector<float> rawSpeech;
-            try {
-                if (isWavBuffer(std::string(file))) {
-                    SPDLOG_DEBUG("Received file format: wav");
-                    rawSpeech = readWav(file);
-                } else {
-                    rawSpeech = readMp3(file);
-                    SPDLOG_DEBUG("Received file format: mp3");
-                }
-            } catch (std::exception&) {
-                return absl::InvalidArgumentError("Received input file is not valid wav nor mp3 audio file");
-            }
-            std::string result = "{\"text\": \"";
-            std::unique_lock lock(pipe->sttPipelineMutex);
-            result += pipe->sttPipeline->generate(rawSpeech);
-            result.append("\"}");
-            output = std::make_unique<std::string>(result);
-        } else {
+        auto endpoint = getEndpoint(payload.uri);
+        if (endpoint == Endpoint::UNSUPPORTED) {
             return absl::InvalidArgumentError(absl::StrCat("Unsupported URI: ", payload.uri));
         }
+
+        if (payload.multipartParser->hasParseError())
+            return absl::InvalidArgumentError("Failed to parse multipart data");
+
+        std::string_view stream = payload.multipartParser->getFileContentByFieldName("stream");
+        if (!stream.empty()) {
+            return absl::InvalidArgumentError("streaming is not supported");
+        }
+        std::string_view file = payload.multipartParser->getFileContentByFieldName("file");
+        if (file.empty()) {
+            return absl::InvalidArgumentError(absl::StrCat("File parsing fails"));
+        }
+
+        std::vector<float> rawSpeech;
+        try {
+            if (isWavBuffer(std::string(file))) {
+                SPDLOG_DEBUG("Received file format: wav");
+                rawSpeech = readWav(file);
+            } else {
+                rawSpeech = readMp3(file);
+                SPDLOG_DEBUG("Received file format: mp3");
+            }
+        } catch (std::exception&) {
+            return absl::InvalidArgumentError("Received input file is not valid wav nor mp3 audio file");
+        }
+        rapidjson::StringBuffer buffer;
+        rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+        writer.StartObject();
+        writer.String("text");
+        if (endpoint == Endpoint::TRANSCRIPTIONS) {
+            std::string_view language = payload.multipartParser->getFileContentByFieldName("language");
+            if (!language.empty()) {
+                if (language.size() > ISO_LANG_CODE_MAX) {
+                    return absl::InvalidArgumentError("Invalid language code.");
+                }
+                std::string genaiLanguage = "<|" + std::string(language) + "|>";
+                std::unique_lock lock(pipe->sttPipelineMutex);
+                std::string generatedText = pipe->sttPipeline->generate(rawSpeech, ov::genai::language(genaiLanguage.c_str()));
+                lock.unlock();
+                writer.String(generatedText.c_str());
+            } else {
+                std::unique_lock lock(pipe->sttPipelineMutex);
+                std::string generatedText = pipe->sttPipeline->generate(rawSpeech);
+                lock.unlock();
+                writer.String(generatedText.c_str());
+            }
+        }
+        if (endpoint == Endpoint::TRANSLATIONS) {
+            std::unique_lock lock(pipe->sttPipelineMutex);
+            std::string generatedText = pipe->sttPipeline->generate(rawSpeech, ov::genai::task("translate"));
+            lock.unlock();
+            writer.String(generatedText.c_str());
+        }
+        writer.EndObject();
+        std::unique_ptr<std::string> output = std::make_unique<std::string>(buffer.GetString());
 
         cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(output.release(), cc->InputTimestamp());
         SPDLOG_LOGGER_DEBUG(s2t_calculator_logger, "SpeechToTextCalculator  [Node: {}] Process end", cc->NodeName());
@@ -129,5 +173,4 @@ const std::string S2tCalculator::INPUT_TAG_NAME{"HTTP_REQUEST_PAYLOAD"};
 const std::string S2tCalculator::OUTPUT_TAG_NAME{"HTTP_RESPONSE_PAYLOAD"};
 
 REGISTER_CALCULATOR(S2tCalculator);
-
 }  // namespace mediapipe

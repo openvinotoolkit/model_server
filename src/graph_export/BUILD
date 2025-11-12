@@ -32,6 +32,8 @@ ovms_cc_library(
         "@com_github_tencent_rapidjson//:rapidjson",
         "@ovms//src:libovmsschema",
         "@ovms//src:libovms_version",
+        "//src/port:rapidjson_stringbuffer",
+        "//src/port:rapidjson_writer",
     ] + select({
             "//:not_disable_mediapipe": [
                 "@mediapipe//mediapipe/framework/port:parse_text_proto",
@@ -80,6 +82,9 @@ ovms_cc_library(
         "@ovms//src:libovms_server_settings",
         "@ovms//src:ovms_exit_codes",
         "@com_github_jarro2783_cxxopts//:cxxopts",
+        "@com_github_tencent_rapidjson//:rapidjson",
+        "//src/port:rapidjson_stringbuffer",
+        "//src/port:rapidjson_writer",
     ],
     visibility = ["//visibility:public"],
 )
