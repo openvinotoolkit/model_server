@@ -47,7 +47,7 @@ std::string OvmsWindowsServiceManager::getCurrentTimeString() {
     return oss.str();
 }
 
-#define DEBUG_LOG_ENABLE 1
+#define DEBUG_LOG_ENABLE 0
 // TODO: Implement windows logging mechanism with events
 static std::ofstream logFile("C:\\temp\\ovms.log", std::ios::app);
 #define DEBUG_LOG(msg)                                                                   \
@@ -785,7 +785,7 @@ bool OvmsService::isReady() {
 
 bool OvmsService::isRunning() {
     // Check if server thread exited
-    return (t && t->joinable() && shutdown_request == 0 && server.getExitStatus() == 0);
+    return (t && t->joinable() && server.getShutdownStatus() == 0 && server.getExitStatus() == 0);
 }
 
 bool OvmsService::isLive(const std::string& moduleName) {

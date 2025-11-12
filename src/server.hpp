@@ -36,6 +36,7 @@ class Server {
     mutable std::shared_mutex modulesMtx;
     mutable std::mutex startMtx;
     mutable std::mutex exitMtx;
+    mutable std::mutex shutdownMtx;
 
 protected:
     std::unordered_map<std::string, std::unique_ptr<Module>> modules;
@@ -53,6 +54,7 @@ public:
     bool isReady() const;
     bool isLive(const std::string& moduleName) const;
 
+    int getShutdownStatus();
     void setShutdownRequest(int i);
     int getExitStatus();
     void setExitStatus(int i);

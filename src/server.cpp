@@ -127,15 +127,15 @@ static void logConfig(const Config& config) {
 }
 
 static void onInterrupt(int status) {
-    shutdown_request = 1;
+    Server::instance().setShutdownRequest(1);
 }
 
 static void onTerminate(int status) {
-    shutdown_request = 1;
+    Server::instance().setShutdownRequest(1);
 }
 
 static void onIllegal(int status) {
-    shutdown_request = 2;
+    Server::instance().setShutdownRequest(2);
 }
 
 #ifdef __linux__
@@ -230,12 +230,34 @@ const Module* Server::getModule(const std::string& name) const {
 }
 
 void Server::setShutdownRequest(int i) {
-    shutdown_request = i;
+    std::unique_lock lock{Server::shutdownMtx, std::defer_lock};
+    int counter = 11;
+    // 2 seconds to try to lock exit mutex
+    while(counter-- && !lock.try_lock()){
+        std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    }
+    if (counter) {
+        shutdown_request = i;
+    } else {
+        SPDLOG_ERROR("Server shutdown mutex lock failed.");
+    }
+}
+
+int Server::getShutdownStatus() {
+    std::unique_lock lock{Server::shutdownMtx, std::defer_lock};
+    auto locked = lock.try_lock();
+    // Wait in windows thread until we can get the lock and check if ovms exited
+    if (!locked) {
+        return 0;
+    }
+
+    return shutdown_request;
 }
 
 int Server::getExitStatus() {
     std::unique_lock lock{Server::exitMtx, std::defer_lock};
     auto locked = lock.try_lock();
+    // Wait in windows thread until we can get the lock and check if ovms exited
     if (!locked) {
         return 0;
     }
@@ -245,11 +267,16 @@ int Server::getExitStatus() {
 
 void Server::setExitStatus(int i) {
     std::unique_lock lock{Server::exitMtx, std::defer_lock};
-    auto locked = lock.try_lock();
-    if (!locked) {
-        return;
+    int counter = 11;
+    // 2 seconds to try to lock exit mutex
+    while(counter-- && !lock.try_lock()){
+        std::this_thread::sleep_for(std::chrono::milliseconds(200));
     }
-    ovms_exited = i;
+    if (counter) {
+        ovms_exited = i;
+    } else {
+        SPDLOG_ERROR("Server shutdown mutex lock failed.");
+    }
 }
 
 Server::~Server() {
@@ -456,11 +483,11 @@ int Server::startServerFromSettings(ServerSettingsImpl& serverSettings, ModelsSe
         if (!ret.ok()) {
             return statusToExitCode(ret);
         }
-        while (!shutdown_request &&
+        while (!getShutdownStatus() &&
                (serverSettings.serverMode == HF_PULL_AND_START_MODE || serverSettings.serverMode == SERVING_MODELS_MODE)) {
             std::this_thread::sleep_for(std::chrono::milliseconds(200));
         }
-        if (shutdown_request == 2) {
+        if (getShutdownStatus() == 2) {
             SPDLOG_ERROR("Illegal operation. OVMS started on unsupported device");
         }
     } catch (const std::exception& e) {
