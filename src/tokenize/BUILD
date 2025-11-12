@@ -26,7 +26,8 @@ ovms_cc_library(
             "//third_party:openvino",
             "@com_github_tencent_rapidjson//:rapidjson",
             "//src/port:rapidjson_stringbuffer",
-            "//src/port:rapidjson_writer",],
+            "//src/port:rapidjson_writer",
+            "//src/port:rapidjson_document",],
     visibility = ["//visibility:public"],
     alwayslink = 1,
 )
