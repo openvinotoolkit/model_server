@@ -19,19 +19,24 @@
 #include <shared_mutex>
 #include <string>
 #include <unordered_map>
+#include <utility>
 
+#include "capi_frontend/server_settings.hpp"
 #include "module.hpp"
 #include "module_names.hpp"
-
+namespace {
+volatile sig_atomic_t shutdown_request = 0;
+volatile sig_atomic_t ovms_exited = 0;
+}  // namespace
 namespace ovms {
 class Config;
 class Status;
-struct ServerSettingsImpl;
-struct ModelsSettingsImpl;
 
 class Server {
     mutable std::shared_mutex modulesMtx;
     mutable std::mutex startMtx;
+    mutable std::mutex exitMtx;
+    mutable std::mutex shutdownMtx;
 
 protected:
     std::unordered_map<std::string, std::unique_ptr<Module>> modules;
@@ -41,13 +46,18 @@ protected:
 public:
     static Server& instance();
     int start(int argc, char** argv);
-    Status start(ServerSettingsImpl*, ModelsSettingsImpl*);
+    static std::variant<std::pair<ServerSettingsImpl, ModelsSettingsImpl>, std::pair<int, std::string>> parseArgs(int argc, char** argv);
+    int startServerFromSettings(ServerSettingsImpl& serverSettings, ModelsSettingsImpl& modelsSettings);
+    Status startFromSettings(ServerSettingsImpl*, ModelsSettingsImpl*);
     ModuleState getModuleState(const std::string& name) const;
     const Module* getModule(const std::string& name) const;
     bool isReady() const;
     bool isLive(const std::string& moduleName) const;
 
+    int getShutdownStatus();
     void setShutdownRequest(int i);
+    int getExitStatus();
+    void setExitStatus(int i);
     virtual ~Server();
     Status startModules(ovms::Config& config);
     void shutdownModules();
