@@ -48,22 +48,22 @@ Status JsonParser::parsePluginConfig(const rapidjson::Value& node, plugin_config
     for (auto it = node.MemberBegin(); it != node.MemberEnd(); ++it) {
         if (it->value.IsObject() && it->name.GetString() == std::string("DEVICE_PROPERTIES")) {
             pluginConfig[it->name.GetString()] = ov::AnyMap{};
-            auto& devicePropertiesMap = pluginConfig[it->name.GetString()].as<ov::AnyMap>();
-            auto devicesProperties = it->value.GetObject();
-            for (auto propertiesIt = devicesProperties.MemberBegin(); propertiesIt != devicesProperties.MemberEnd(); ++propertiesIt) {
-                devicePropertiesMap[propertiesIt->name.GetString()] = ov::AnyMap{};
-                auto& propertiesMap = devicePropertiesMap[propertiesIt->name.GetString()].as<ov::AnyMap>();
+            auto& deviceProperties = pluginConfig[it->name.GetString()].as<ov::AnyMap>();
+            auto devices = it->value.GetObject();
+            for (auto propertiesIt = devices.MemberBegin(); propertiesIt != devices.MemberEnd(); ++propertiesIt) {
+                deviceProperties[propertiesIt->name.GetString()] = ov::AnyMap{};
+                auto& properties = deviceProperties[propertiesIt->name.GetString()].as<ov::AnyMap>();
                 if(propertiesIt->value.IsObject()){
                     auto deviceProperties = propertiesIt->value.GetObject();
                     for (auto propertyIt = deviceProperties.MemberBegin(); propertyIt != deviceProperties.MemberEnd(); ++propertyIt) {
                         if(propertyIt->value.IsString()){
-                            propertiesMap[propertyIt->name.GetString()] = propertyIt->value.GetString();
+                            properties[propertyIt->name.GetString()] = propertyIt->value.GetString();
                         }
                         if(propertyIt->value.IsInt64()){
-                            propertiesMap[propertyIt->name.GetString()] = propertyIt->value.GetInt64();
+                            properties[propertyIt->name.GetString()] = propertyIt->value.GetInt64();
                         }
                         if(propertyIt->value.IsDouble()){
-                            propertiesMap[propertyIt->name.GetString()] = propertyIt->value.GetDouble();
+                            properties[propertyIt->name.GetString()] = propertyIt->value.GetDouble();
                         }
                     }
                 }
