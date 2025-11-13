@@ -308,7 +308,7 @@ node {
             models_path: "/some/path",
             max_allowed_chunks: 18,
             target_device: "GPU",
-            plugin_config: '{"NUM_STREAMS":2}',
+            plugin_config: '{"NUM_STREAMS":"2"}',
         }
     }
 }
@@ -328,7 +328,7 @@ node {
             models_path: "./",
             max_allowed_chunks: 10000,
             target_device: "CPU",
-            plugin_config: '{"NUM_STREAMS":1}',
+            plugin_config: '{"NUM_STREAMS":"1"}',
         }
     }
 }
@@ -350,7 +350,7 @@ node {
             truncate: true,
             pooling: LAST,
             target_device: "GPU",
-            plugin_config: '{"NUM_STREAMS":2}',
+            plugin_config: '{"NUM_STREAMS":"2"}',
         }
     }
 }
@@ -372,7 +372,7 @@ node {
             truncate: false,
             pooling: CLS,
             target_device: "CPU",
-            plugin_config: '{"NUM_STREAMS":1}',
+            plugin_config: '{"NUM_STREAMS":"1"}',
         }
     }
 }
@@ -391,7 +391,7 @@ node {
         [type.googleapis.com / mediapipe.T2sCalculatorOptions]: {
             models_path: "/model1/path"
             target_device: "GPU"
-            plugin_config: '{"NUM_STREAMS":2}'
+            plugin_config: '{"NUM_STREAMS":"2"}'
         }
     }
 }
@@ -428,7 +428,7 @@ node {
         [type.googleapis.com / mediapipe.S2tCalculatorOptions]: {
             models_path: "/model1/path"
             target_device: "GPU"
-            plugin_config: '{"NUM_STREAMS":2}'
+            plugin_config: '{"NUM_STREAMS":"2"}'
         }
     }
 }
@@ -466,7 +466,7 @@ node: {
       [type.googleapis.com / mediapipe.ImageGenCalculatorOptions]: {
           models_path: "./"
           device: "GPU"
-          plugin_config: '{"NUM_STREAMS":14,"CACHE_DIR":"/cache"}'
+          plugin_config: '{"NUM_STREAMS":"14","CACHE_DIR":"/cache"}'
           max_resolution: "3000x4000"
           default_resolution: "300x400"
           max_num_images_per_prompt: 7
@@ -786,6 +786,7 @@ TEST_F(GraphCreationTest, embeddingsDoubleSetNumStreams) {
     hfSettings.exportSettings.targetDevice = "GPU";
     hfSettings.exportSettings.modelName = "myModel";
     hfSettings.exportSettings.pluginConfig.numStreams = 1;  // imitates default from CLI
+    // note here we use int not string num_streams so this shows way to overwrite type
     hfSettings.exportSettings.pluginConfig.manualString = "{\"NUM_STREAMS\":1}";
     embeddingsGraphSettings.normalize = "true";
     embeddingsGraphSettings.pooling = "CLS";
@@ -1065,6 +1066,7 @@ TEST_F(GraphCreationTest, pluginConfigAsString) {
     pluginConfig.kvCachePrecision = "u8";
     pluginConfig.maxPromptLength = 256;
     pluginConfig.modelDistributionPolicy = "TENSOR_PARALLEL";
+    // note here we use int not string num_streams so this shows way to overwrite type
     pluginConfig.manualString = "{\"NUM_STREAMS\":4}";
     auto res = ovms::GraphExport::createPluginString(exportSettings);
     ASSERT_TRUE(std::holds_alternative<std::optional<std::string>>(res));
