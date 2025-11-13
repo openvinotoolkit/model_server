@@ -561,6 +561,16 @@ TEST(ModelConfig, plugin_config_legacy_gpu_num) {
     EXPECT_EQ(actualPluginConfig["NUM_STREAMS"], (int64_t)5);
 }
 
+TEST(ModelConfig, plugin_config_device_properties_1) {
+    ovms::ModelConfig config;
+    std::string pluginConfig_str = "{\"DEVICE_PROPERTIES\": { \"DEVICE\": {\"STRING\": \"STRING\", \"BOOL\": false, \"INT\": 2048}}}";
+    auto status = config.parsePluginConfig(pluginConfig_str, config.getPluginConfig());
+    auto actualPluginConfig = config.getPluginConfig();
+    EXPECT_EQ(status, ovms::StatusCode::OK);
+    auto deviceProperties = actualPluginConfig["DEVICE_PROPERTIES"];
+    EXPECT_EQ(actualPluginConfig["DEVICE_PROPERTIES"], (int64_t)5);
+}
+
 TEST(ModelConfig, mappingInputs) {
     ovms::ModelConfig config;
     ovms::mapping_config_t mapping{

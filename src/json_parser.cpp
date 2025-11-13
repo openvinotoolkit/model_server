@@ -47,12 +47,9 @@ Status JsonParser::parsePluginConfig(const rapidjson::Value& node, plugin_config
 
     for (auto it = node.MemberBegin(); it != node.MemberEnd(); ++it) {
         if (it->value.IsObject() && it->name.GetString() == std::string("DEVICE_PROPERTIES")) {
-            pluginConfig[it->name.GetString()] = ov::AnyMap{};
-            auto& deviceProperties = pluginConfig[it->name.GetString()].as<ov::AnyMap>();
-            auto devices = it->value.GetObject();
-            for (auto propertiesIt = devices.MemberBegin(); propertiesIt != devices.MemberEnd(); ++propertiesIt) {
-                deviceProperties[propertiesIt->name.GetString()] = ov::AnyMap{};
-                auto& properties = deviceProperties[propertiesIt->name.GetString()].as<ov::AnyMap>();
+            auto devicesProperties = ov::AnyMap{};
+            for (auto propertiesIt = it->value.GetObject().MemberBegin(); propertiesIt != it->value.GetObject().MemberEnd(); ++propertiesIt) {
+                auto properties = ov::AnyMap{};
                 if(propertiesIt->value.IsObject()){
                     auto deviceProperties = propertiesIt->value.GetObject();
                     for (auto propertyIt = deviceProperties.MemberBegin(); propertyIt != deviceProperties.MemberEnd(); ++propertyIt) {
@@ -65,9 +62,14 @@ Status JsonParser::parsePluginConfig(const rapidjson::Value& node, plugin_config
                         if(propertyIt->value.IsDouble()){
                             properties[propertyIt->name.GetString()] = propertyIt->value.GetDouble();
                         }
+                        if(propertyIt->value.IsBool()){
+                            properties[propertyIt->name.GetString()] = propertyIt->value.GetBool();
+                        }
                     }
                 }
+                devicesProperties[propertiesIt->name.GetString()] = properties;
             }
+            pluginConfig[it->name.GetString()] = devicesProperties;
         }
         else if (it->value.IsString()) {
             if (((it->name.GetString() == std::string("CPU_THROUGHPUT_STREAMS")) && (it->value.GetString() == std::string("CPU_THROUGHPUT_AUTO"))) || ((it->name.GetString() == std::string("GPU_THROUGHPUT_STREAMS")) && (it->value.GetString() == std::string("GPU_THROUGHPUT_AUTO")))) {
