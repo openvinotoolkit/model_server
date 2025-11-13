@@ -566,7 +566,9 @@ std::variant<std::optional<std::string>, Status> GraphExport::createPluginString
     }
     if (pluginConfig.numStreams.has_value()) {
         rapidjson::Value value;
-        value.SetUint(pluginConfig.numStreams.value());
+        // convert pluginConfig.numStreams.value() to string
+        std::string numStreamsStr = std::to_string(pluginConfig.numStreams.value());
+        value.SetString(numStreamsStr.c_str(), d.GetAllocator());
         auto itr = d.FindMember("NUM_STREAMS");
         if (itr != d.MemberEnd()) {
             if (pluginConfig.numStreams.value() == 1) {
