@@ -336,5 +336,35 @@ mcpo --port 9000 -- python -m mcp_weather_server
 
 ![chat with AI Agent demo](./chat_with_AI_Agent_demo.png)
 
+## Audio
+
+### Step 1: Models Preparation
+
+Start by downloading `export_models.py` script and run it to downlaod and quantize the model for speech generation:
+```console 
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/export_model.py -o export_model.py
+pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
+python export_model.py text2speech --source_model microsoft/speecht5_tts --weight-format fp32 --model_name microsoft/speecht5_tts --config_file_path models/config.json --model_repository_path models --vocoder microsoft/speecht5_hifigan
+```
+
+Next, download and add to config model for transcription:
+
+::::{tab-set}
+:::{tab-item} Windows
+:sync: Windows
+```bat
+ovms.exe --pull --source_model OpenVINO/whisper-base-fp16-ov --model_repository_path models --task speech2text
+ovms.exe --add_to_config models --model_path OpenVINO\whisper-base-fp16-ov --model_name OpenVINO/whisper-base-fp16-ov
+```
+:::
+:::{tab-item} Linux (using Docker)
+:sync: Linux
+```bash
+docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models openvino/model_server:weekly --pull --source_model OpenVINO/whisper-base-fp16-ov --model_repository_path /models --task speech2text
+docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models openvino/model_server:weekly --add_to_config /models --model_path OpenVINO/whisper-base-fp16-ov --model_name OpenVINO/whisper-base-fp16-ov
+```
+:::
+:::: 
+
 ### Reference
 [https://docs.openwebui.com/openapi-servers/open-webui](https://docs.openwebui.com/openapi-servers/open-webui/#step-2-connect-tool-server-in-open-webui)
