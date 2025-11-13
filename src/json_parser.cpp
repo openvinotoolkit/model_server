@@ -31,6 +31,10 @@ namespace ovms {
 
 using plugin_config_t = std::map<std::string, ov::Any>;
 
+bool validType(const rapidjson::Value::ConstMemberIterator& node){
+    return (node->value.IsString() || node->value.IsBool() || node->value.IsInt64() || node->value.IsDouble());
+}
+
 /**
 * @brief Parses json node for plugin config keys and values
 * 
@@ -53,6 +57,9 @@ Status JsonParser::parsePluginConfig(const rapidjson::Value& node, plugin_config
                 if(propertiesIt->value.IsObject()){
                     auto deviceProperties = propertiesIt->value.GetObject();
                     for (auto propertyIt = deviceProperties.MemberBegin(); propertyIt != deviceProperties.MemberEnd(); ++propertyIt) {
+                        if(!validType(propertyIt)){
+                            return StatusCode::PLUGIN_CONFIG_WRONG_FORMAT;
+                        }
                         if(propertyIt->value.IsString()){
                             properties[propertyIt->name.GetString()] = propertyIt->value.GetString();
                         }
@@ -67,11 +74,18 @@ Status JsonParser::parsePluginConfig(const rapidjson::Value& node, plugin_config
                         }
                     }
                 }
+                else{
+                    return StatusCode::PLUGIN_CONFIG_WRONG_FORMAT;
+                }
                 devicesProperties[propertiesIt->name.GetString()] = properties;
             }
             pluginConfig[it->name.GetString()] = devicesProperties;
+            continue;
         }
-        else if (it->value.IsString()) {
+        if(!validType(it)){
+            return StatusCode::PLUGIN_CONFIG_WRONG_FORMAT;
+        }
+        if (it->value.IsString()) {
             if (((it->name.GetString() == std::string("CPU_THROUGHPUT_STREAMS")) && (it->value.GetString() == std::string("CPU_THROUGHPUT_AUTO"))) || ((it->name.GetString() == std::string("GPU_THROUGHPUT_STREAMS")) && (it->value.GetString() == std::string("GPU_THROUGHPUT_AUTO")))) {
                 pluginConfig["PERFORMANCE_HINT"] = "THROUGHPUT";
                 SPDLOG_WARN("{} plugin config key is deprecated. Use PERFORMANCE_HINT instead", it->name.GetString());
@@ -87,24 +101,25 @@ Status JsonParser::parsePluginConfig(const rapidjson::Value& node, plugin_config
                 }
             }
 
-        } else if (it->value.IsInt64()) {
+        }
+        if (it->value.IsInt64()) {
             if (it->name.GetString() == std::string("CPU_THROUGHPUT_STREAMS") || it->name.GetString() == std::string("GPU_THROUGHPUT_STREAMS")) {
                 pluginConfig["NUM_STREAMS"] = it->value.GetInt64();
                 SPDLOG_WARN("{} plugin config key is deprecated. Use  NUM_STREAMS instead", it->name.GetString());
             } else {
                 pluginConfig[it->name.GetString()] = it->value.GetInt64();
             }
-        } else if (it->value.IsDouble()) {
+        }
+        if (it->value.IsDouble()) {
             if (it->name.GetString() == std::string("CPU_THROUGHPUT_STREAMS") || it->name.GetString() == std::string("GPU_THROUGHPUT_STREAMS")) {
                 pluginConfig["NUM_STREAMS"] = it->value.GetDouble();
                 SPDLOG_WARN("{} plugin config key is deprecated. Use  NUM_STREAMS instead", it->name.GetString());
             } else {
                 pluginConfig[it->name.GetString()] = it->value.GetDouble();
             }
-        } else if (it->value.IsBool()) {
+        }
+        if (it->value.IsBool()) {
             pluginConfig[it->name.GetString()] = bool(it->value.GetBool());
-        } else {
-            return StatusCode::PLUGIN_CONFIG_WRONG_FORMAT;
         }
     }
 
