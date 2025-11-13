@@ -1,4 +1,3 @@
-#pragma once
 //*****************************************************************************
 // Copyright 2025 Intel Corporation
 //
@@ -15,9 +14,33 @@
 // limitations under the License.
 //*****************************************************************************
 #pragma once
+
+#include <memory>
 #include <string>
+#include <vector>
+
+#include <cxxopts.hpp>
+
+#include "graph_cli_parser.hpp"
 
 namespace ovms {
-std::string exec_cmd(const std::string& command, int& returnCode);
-std::string exec_cmd_utf8(const std::string& command, int& returnCode);
+
+struct HFSettingsImpl;
+struct TextToSpeechGraphSettingsImpl;
+class Status;
+enum OvmsServerMode : int;
+
+class TextToSpeechGraphCLIParser : public GraphCLIParser {
+public:
+    TextToSpeechGraphCLIParser() = default;
+    std::vector<std::string> parse(const std::vector<std::string>& unmatchedOptions);
+    void prepare(OvmsServerMode serverMode, HFSettingsImpl& hfSettings, const std::string& modelName);
+
+    void printHelp();
+    void createOptions();
+
+private:
+    static TextToSpeechGraphSettingsImpl& defaultGraphSettings();
+};
+
 }  // namespace ovms

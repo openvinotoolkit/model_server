@@ -1173,7 +1173,8 @@ public:
         OVMS_Server* cserver;
         ASSERT_CAPI_STATUS_NULL(OVMS_ServerNew(&cserver));
         ovms::Server& server = ovms::Server::instance();
-        manager->join();
+        if (manager)
+            manager->join();
         server.setShutdownRequest(1);
         OVMS_ServerDelete(cserver);
         server.setShutdownRequest(0);

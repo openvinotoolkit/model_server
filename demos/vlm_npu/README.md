@@ -168,7 +168,7 @@ curl http://localhost:8000/v3/chat/completions  -H "Content-Type: application/js
 ```python
 import requests
 import base64
-base_url='http://localhost:8000/v3'
+base_url='http://127.0.0.1:8000/v3'
 model_name = "microsoft/Phi-3.5-vision-instruct"
 
 def convert_image(Image):

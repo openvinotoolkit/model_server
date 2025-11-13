@@ -60,6 +60,33 @@ std::string OptimumDownloader::getExportCmdEmbeddings() {
     return oss.str();
 }
 
+std::string OptimumDownloader::getExportCmdTextToSpeech() {
+    std::ostringstream oss;
+    // clang-format off
+    oss << this->OPTIMUM_CLI_EXPORT_COMMAND;
+    if (this->exportSettings.vocoder.has_value()){
+        oss << "--model-kwargs \"{\"vocoder\": \"" << this->exportSettings.vocoder.value() << "\"}\" ";
+    }
+    oss << "--model " << this->sourceModel << " --trust-remote-code ";
+    oss << " --weight-format " << this->exportSettings.precision;
+    oss << " " << this->downloadPath;
+    // clang-format on
+
+    return oss.str();
+}
+
+std::string OptimumDownloader::getExportCmdSpeechToText() {
+    std::ostringstream oss;
+    // clang-format off
+    oss << this->OPTIMUM_CLI_EXPORT_COMMAND;
+    oss << "--model " << this->sourceModel << " --trust-remote-code ";
+    oss << " --weight-format " << this->exportSettings.precision;
+    oss << " " << this->downloadPath;
+    // clang-format on
+
+    return oss.str();
+}
+
 std::string OptimumDownloader::getExportCmdRerank() {
     std::ostringstream oss;
     // clang-format off
@@ -105,6 +132,14 @@ std::string OptimumDownloader::getExportCmd() {
         cmd = getExportCmdImageGeneration();
         break;
     }
+    case TEXT_TO_SPEECH_GRAPH: {
+        cmd = getExportCmdTextToSpeech();
+        break;
+    }
+    case SPEECH_TO_TEXT_GRAPH: {
+        cmd = getExportCmdSpeechToText();
+        break;
+    }
     case UNKNOWN_GRAPH: {
         SPDLOG_ERROR("Optimum cli task options not initialised.");
         break;
@@ -126,6 +161,14 @@ std::string OptimumDownloader::getConvertCmd() {
         break;
     }
     case RERANK_GRAPH: {
+        cmd = getConvertCmdOnlyTokenizer();
+        break;
+    }
+    case TEXT_TO_SPEECH_GRAPH: {
+        cmd = getConvertCmdOnlyTokenizer();
+        break;
+    }
+    case SPEECH_TO_TEXT_GRAPH: {
         cmd = getConvertCmdOnlyTokenizer();
         break;
     }
@@ -196,7 +239,7 @@ Status OptimumDownloader::checkRequiredToolsArePresent() {
 
     SPDLOG_DEBUG("Optimum-cli executable is present");
 
-    output = exec_cmd(this->CONVERT_TOKENIZER_CHECK_COMMAND, retCode);
+    output = exec_cmd_utf8(this->CONVERT_TOKENIZER_CHECK_COMMAND, retCode);
     if (retCode != 0) {
         SPDLOG_DEBUG("Command output {}", output);
         SPDLOG_ERROR("Trying to pull {} from HuggingFace but missing convert_tokenizer. This is likely because you are using OVMS without Python support which is required for pulling with conversion.", this->sourceModel);

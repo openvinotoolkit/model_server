@@ -305,6 +305,8 @@ ovms_cc_library(
         "//src/graph_export:graph_cli_parser",
         "//src/graph_export:rerank_graph_cli_parser",
         "//src/graph_export:embeddings_graph_cli_parser",
+        "//src/graph_export:t2s_graph_cli_parser",
+        "//src/graph_export:s2t_graph_cli_parser",
         "//src/graph_export:image_generation_graph_cli_parser",
     ],
     visibility = ["//visibility:public",],
@@ -558,8 +560,8 @@ ovms_cc_library(
             "//conditions:default": [],
             "//:not_disable_mediapipe" : [
                 "//src/image_gen:image_gen_calculator",
-                "//src/audio/speech_to_text:stt_calculator",
-                "//src/audio/text_to_speech:tts_calculator",
+                "//src/audio/speech_to_text:s2t_calculator",
+                "//src/audio/text_to_speech:t2s_calculator",
                 "//src/audio:audio_utils",
                 "//src/image_gen:imagegen_init",
                 "//src/llm:openai_completions_api_handler",
@@ -1127,6 +1129,7 @@ ovms_cc_library(
         "libovmsfilesystem",
         "libovmsstatus",
         "libovmslogging",
+        "//src/port:rapidjson_stringbuffer",
     ],
     visibility = ["//visibility:public"],
     additional_copts = COPTS_MEDIAPIPE + COPTS_DROGON,
@@ -1151,6 +1154,8 @@ ovms_cc_library(
     deps = [
         "@com_github_jupp0r_prometheus_cpp//core",
         "@com_github_tencent_rapidjson//:rapidjson",
+        "//src/port:rapidjson_stringbuffer",
+        "//src/port:rapidjson_writer",
         "cpp_headers",
         "libovms_module",
         "libovmslogging",
@@ -1606,6 +1611,8 @@ ovms_cc_library(
             "libovmsstring_utils",
             "libmodelconfigjsonparser",
             "anonymous_input_name",
+            "//src/port:rapidjson_stringbuffer",
+            "//src/port:rapidjson_writer",
     ],
     visibility = ["//visibility:public"],
 )
@@ -2278,7 +2285,8 @@ ovms_cc_library(
         "libovmslogging",
         "libovmsstatus",
         "libhttp_status_code",
-        "libovms_config"
+        "libovms_config",
+        "libovmsstring_utils",
     ],
     visibility = ["//visibility:public",],
 )
@@ -2709,19 +2717,7 @@ cc_test(
     local_defines = COMMON_LOCAL_DEFINES,
     linkopts = LINKOPTS_ADJUSTED,
 )
-cc_library(
-    name = "test_env_guard",
-    hdrs = ["test/env_guard.hpp",],
-    srcs = ["test/env_guard.cpp",],
-    deps = [
-        "libovmslogging",
-        "@com_google_googletest//:gtest",
-    ],
-    linkstatic = 1,
-    local_defines = COMMON_LOCAL_DEFINES,
-    copts = COPTS_TESTS,
-    linkopts = COMMON_STATIC_LIBS_LINKOPTS,
-)
+
 cc_library(
     name = "test_constructor_enabled_model_manager",
     hdrs = ["test/constructor_enabled_model_manager.hpp",],
@@ -2898,7 +2894,7 @@ cc_library(
     linkopts = [],
     deps = [
         "//src/servables_config_manager_module:listmodels",
-        ":test_env_guard",
+        "//src/utils:env_guard",
         ":test_utils",
         ":test_platform_utils",
         ":test_test_with_temp_dir",
@@ -2924,7 +2920,7 @@ cc_library(
         ":test_utils",
         ":test_test_with_temp_dir",
         ":test_gguf_environment",
-        ":test_env_guard",
+        "//src/utils:env_guard",
         "//src/pull_module:gguf_downloader",
         "//src:ovms_lib",
         "libovmsstring_utils",

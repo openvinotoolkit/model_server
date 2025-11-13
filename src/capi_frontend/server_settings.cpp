@@ -20,7 +20,6 @@
 #include "../stringutils.hpp"
 
 namespace ovms {
-
 std::string enumToString(ConfigExportType type) {
     auto it = configExportTypeToString.find(type);
     return (it != configExportTypeToString.end()) ? it->second : "UNKNOWN_MODEL";
