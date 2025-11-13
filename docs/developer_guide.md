@@ -69,7 +69,7 @@ In-case of problems, see [Debugging](#debugging).
 
 5. From the container, run a single unit test (choose distro `ubuntu` or `redhat` depending on the image type):
 	```bash
-	bazel test --//:distro=ubuntu --config=mp_on_py_on --test_env=http_proxy=http://proxy:port --test_summary=detailed --test_output=all --test_filter='ModelVersionStatus.*' //src:ovms_test
+	bazel test --//:distro=ubuntu --config=mp_on_py_on --test_summary=detailed --test_output=all --test_filter='ModelVersionStatus.*' //src:ovms_test
 	```
 
 | Argument      | Description |
