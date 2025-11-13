@@ -31,7 +31,7 @@ namespace ovms {
 
 using plugin_config_t = std::map<std::string, ov::Any>;
 
-bool validType(const rapidjson::Value::ConstMemberIterator& node){
+bool validType(const rapidjson::Value::ConstMemberIterator& node) {
     return (node->value.IsString() || node->value.IsBool() || node->value.IsInt64() || node->value.IsDouble());
 }
 
@@ -54,27 +54,26 @@ Status JsonParser::parsePluginConfig(const rapidjson::Value& node, plugin_config
             auto devicesProperties = ov::AnyMap{};
             for (auto propertiesIt = it->value.GetObject().MemberBegin(); propertiesIt != it->value.GetObject().MemberEnd(); ++propertiesIt) {
                 auto properties = ov::AnyMap{};
-                if(propertiesIt->value.IsObject()){
+                if (propertiesIt->value.IsObject()) {
                     auto deviceProperties = propertiesIt->value.GetObject();
                     for (auto propertyIt = deviceProperties.MemberBegin(); propertyIt != deviceProperties.MemberEnd(); ++propertyIt) {
-                        if(!validType(propertyIt)){
+                        if (!validType(propertyIt)) {
                             return StatusCode::PLUGIN_CONFIG_WRONG_FORMAT;
                         }
-                        if(propertyIt->value.IsString()){
+                        if (propertyIt->value.IsString()) {
                             properties[propertyIt->name.GetString()] = propertyIt->value.GetString();
                         }
-                        if(propertyIt->value.IsInt64()){
+                        if (propertyIt->value.IsInt64()) {
                             properties[propertyIt->name.GetString()] = propertyIt->value.GetInt64();
                         }
-                        if(propertyIt->value.IsDouble()){
+                        if (propertyIt->value.IsDouble()) {
                             properties[propertyIt->name.GetString()] = propertyIt->value.GetDouble();
                         }
-                        if(propertyIt->value.IsBool()){
+                        if (propertyIt->value.IsBool()) {
                             properties[propertyIt->name.GetString()] = propertyIt->value.GetBool();
                         }
                     }
-                }
-                else{
+                } else {
                     return StatusCode::PLUGIN_CONFIG_WRONG_FORMAT;
                 }
                 devicesProperties[propertiesIt->name.GetString()] = properties;
@@ -82,7 +81,7 @@ Status JsonParser::parsePluginConfig(const rapidjson::Value& node, plugin_config
             pluginConfig[it->name.GetString()] = devicesProperties;
             continue;
         }
-        if(!validType(it)){
+        if (!validType(it)) {
             return StatusCode::PLUGIN_CONFIG_WRONG_FORMAT;
         }
         if (it->value.IsString()) {
@@ -100,7 +99,6 @@ Status JsonParser::parsePluginConfig(const rapidjson::Value& node, plugin_config
                     pluginConfig[it->name.GetString()] = it->value.GetString();
                 }
             }
-
         }
         if (it->value.IsInt64()) {
             if (it->name.GetString() == std::string("CPU_THROUGHPUT_STREAMS") || it->name.GetString() == std::string("GPU_THROUGHPUT_STREAMS")) {
