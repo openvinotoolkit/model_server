@@ -14,10 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#pragma once
-#include <string>
-
-namespace ovms {
-std::string exec_cmd(const std::string& command, int& returnCode);
-std::string exec_cmd_utf8(const std::string& command, int& returnCode);
-}  // namespace ovms
+#pragma warning(push)
+#pragma warning(disable : 6313)
+#include <rapidjson/stringbuffer.h>
+#pragma warning(pop)

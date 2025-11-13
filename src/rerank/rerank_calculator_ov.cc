@@ -31,11 +31,8 @@
 #pragma warning(pop)
 
 #include <adapters/inference_adapter.h>
-#pragma warning(push)
-#pragma warning(disable : 6313)
-#include <rapidjson/stringbuffer.h>
-#include <rapidjson/writer.h>
-#pragma warning(pop)
+#include "src/port/rapidjson_stringbuffer.hpp"
+#include "src/port/rapidjson_writer.hpp"
 
 #include "../http_payload.hpp"
 #include "../logging.hpp"

@@ -30,25 +30,25 @@
 
 #include "openvino/genai/whisper_pipeline.hpp"
 #include "openvino/genai/speech_generation/text2speech_pipeline.hpp"
-#include "src/audio/text_to_speech/tts_calculator.pb.h"
+#include "src/audio/speech_to_text/s2t_calculator.pb.h"
 
 namespace ovms {
 
-struct TtsServable {
+struct SttServable {
     std::filesystem::path parsedModelsPath;
-    std::shared_ptr<ov::genai::Text2SpeechPipeline> ttsPipeline;
-    std::mutex ttsPipelineMutex;
+    std::shared_ptr<ov::genai::WhisperPipeline> sttPipeline;
+    std::mutex sttPipelineMutex;
 
-    TtsServable(const std::string& modelDir, const std::string& targetDevice, const std::string& graphPath) {
+    SttServable(const std::string& modelDir, const std::string& targetDevice, const std::string& graphPath) {
         auto fsModelsPath = std::filesystem::path(modelDir);
         if (fsModelsPath.is_relative()) {
             parsedModelsPath = (std::filesystem::path(graphPath) / fsModelsPath);
         } else {
             parsedModelsPath = fsModelsPath.string();
         }
-        ttsPipeline = std::make_shared<ov::genai::Text2SpeechPipeline>(parsedModelsPath.string(), targetDevice);
+        sttPipeline = std::make_shared<ov::genai::WhisperPipeline>(parsedModelsPath.string(), targetDevice);
     }
 };
 
-using TtsServableMap = std::unordered_map<std::string, std::shared_ptr<TtsServable>>;
+using SttServableMap = std::unordered_map<std::string, std::shared_ptr<SttServable>>;
 }  // namespace ovms
