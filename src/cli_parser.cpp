@@ -627,10 +627,9 @@ void CLIParser::prepareModel(ModelsSettingsImpl& modelsSettings, HFSettingsImpl&
         modelsSettings.userSetSingleModelArguments.push_back("low_latency_transformation");
     }
     if (result->count("config_path")) {
-            modelsSettings.configPath= result->operator[]("config_path").as<std::string>();
+            modelsSettings.configPath = result->operator[]("config_path").as<std::string>();
             modelsSettings.userSetSingleModelArguments.push_back("config_path");
     }
-
 }
 
 bool CLIParser::isHFPullOrPullAndStart(const std::unique_ptr<cxxopts::ParseResult>& result) {
@@ -766,9 +765,9 @@ void CLIParser::prepareConfigExport(ModelsSettingsImpl& modelsSettings) {
     if (envModelRepoPath != nullptr && std::string(envModelRepoPath).length() > 0) {
         defaultConfigPath = std::string(envModelRepoPath) + "/config.json";
     }
-    if (result->count("add_to_config") or result->count("remove_from_config")) {
+    if (result->count("add_to_config") || result->count("remove_from_config")) {
         if (result->count("config_path")) {
-            modelsSettings.configPath= result->operator[]("config_path").as<std::string>();
+            modelsSettings.configPath = result->operator[]("config_path").as<std::string>();
             modelsSettings.userSetSingleModelArguments.push_back("config_path");
         } else {
             modelsSettings.configPath = defaultConfigPath;
