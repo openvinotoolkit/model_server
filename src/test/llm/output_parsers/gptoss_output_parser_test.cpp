@@ -288,6 +288,36 @@ TEST_F(GptOssOutputUnaryParserTest, SingleToolCallWithConstrain) {
     }
 }
 
+// This does not conform to OpenAI Harmony format, however tests show that sometimes model produces tools in analysis channel
+TEST_F(GptOssOutputUnaryParserTest, SingleToolCallWithConstrainInAnalysisChannel) {
+    for (auto closureToken : std::vector<Harmony::TokenID>{
+             Harmony::TokenID::RETURN,   // ending with <|return|>
+             Harmony::TokenID::END,      // ending with <|end|>
+             Harmony::TokenID::CALL}) {  // ending with <|call|>
+        for (auto functionDeclaration : std::vector<std::string>{
+                 "analysis to=functions.hello",  // valid channel with to=
+                 "analysis to=functions.hello ",
+                 "analysis   to=functions.hello",
+                 "analysis  ANYTHING IN BETWEEN to=functions.hello",
+             }) {  // spaces after hello
+            builder
+                .clear()
+                .add(Harmony::TokenID::CHANNEL)
+                .add(functionDeclaration)
+                .add(Harmony::TokenID::MESSAGE)
+                .add(R"({"Hello": "world!"})")
+                .add(closureToken);
+            Harmony harmony(*gptOssTokenizer, builder.build());
+            ASSERT_TRUE(harmony.parse()) << "Failed for closure token: " << static_cast<int64_t>(closureToken) << " function declaration: " << functionDeclaration;
+            ASSERT_EQ(harmony.getContent(), "") << "Failed for closure token: " << static_cast<int64_t>(closureToken) << " function declaration: " << functionDeclaration;
+            ASSERT_EQ(harmony.getReasoning(), "") << "Failed for closure token: " << static_cast<int64_t>(closureToken) << " function declaration: " << functionDeclaration;
+            ASSERT_EQ(harmony.getToolCalls().size(), 1) << "Failed for closure token: " << static_cast<int64_t>(closureToken) << " function declaration: " << functionDeclaration;
+            ASSERT_EQ(harmony.getToolCalls()[0].name, "hello") << "Failed for closure token: " << static_cast<int64_t>(closureToken) << " function declaration: " << functionDeclaration;
+            ASSERT_EQ(harmony.getToolCalls()[0].arguments, R"({"Hello": "world!"})") << "Failed for closure token: " << static_cast<int64_t>(closureToken) << " function declaration: " << functionDeclaration;
+        }
+    }
+}
+
 TEST_F(GptOssOutputUnaryParserTest, InvalidSingleToolCallWithConstrain) {
     for (auto closureToken : std::vector<Harmony::TokenID>{
              Harmony::TokenID::RETURN,   // ending with <|return|>
