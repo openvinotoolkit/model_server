@@ -634,7 +634,7 @@ void CLIParser::prepareModel(ModelsSettingsImpl& modelsSettings, HFSettingsImpl&
 }
 
 bool CLIParser::isHFPullOrPullAndStart(const std::unique_ptr<cxxopts::ParseResult>& result) {
-    return (result->count("pull") || result->count("source_model") || result->count("task"));
+    return (result->count("pull") || result->count("task"));
 }
 
 void CLIParser::prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl& hfSettings, const std::string& modelName) {
@@ -654,11 +654,12 @@ void CLIParser::prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl&
         }
         if (result->count("source_model")) {
             hfSettings.sourceModel = result->operator[]("source_model").as<std::string>();
-            if ((result->count("weight-format") || result->count("extra_quantization_params")) && isOptimumCliDownload(hfSettings.sourceModel, hfSettings.ggufFilename)) {
-                hfSettings.downloadType = OPTIMUM_CLI_DOWNLOAD;
-            }
+        } else if (result->count("model_name")) {
+            hfSettings.sourceModel = result->operator[]("model_name").as<std::string>();
         }
-
+        if ((result->count("weight-format") || result->count("extra_quantization_params")) && isOptimumCliDownload(hfSettings.sourceModel, hfSettings.ggufFilename)) {
+            hfSettings.downloadType = OPTIMUM_CLI_DOWNLOAD;
+        }
         if (result->count("weight-format") && hfSettings.downloadType == GIT_CLONE_DOWNLOAD) {
             throw std::logic_error("--weight-format parameter unsupported for OpenVINO models.");
         }
@@ -672,8 +673,7 @@ void CLIParser::prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl&
             hfSettings.exportSettings.extraQuantizationParams = result->operator[]("extra_quantization_params").as<std::string>();
         if (result->count("vocoder"))
             hfSettings.exportSettings.vocoder = result->operator[]("vocoder").as<std::string>();
-        if (result->count("model_repository_path"))
-            hfSettings.downloadPath = result->operator[]("model_repository_path").as<std::string>();
+        hfSettings.downloadPath = result->operator[]("model_repository_path").as<std::string>();
         if (result->count("task")) {
             hfSettings.task = stringToEnum(result->operator[]("task").as<std::string>());
             switch (hfSettings.task) {
