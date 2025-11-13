@@ -284,7 +284,7 @@ bool Config::validate() {
                       << "  ovms --remove_from_config --model_name <model_name> --config_path <config_path>" << std::endl;
             return false;
         }
-        if (modelPath().empty()  && this->serverSettings.exportConfigType == ENABLE_MODEL) {
+        if (modelPath().empty() && this->serverSettings.exportConfigType == ENABLE_MODEL) {
             std::cerr << "Set model_name either with model_path or model_repository_path with add_to_config" << std::endl
                       << "Usage: " << std::endl
                       << "  ovms --add_to_config --model_name <model_name> --model_repository_path <repo_path>  --config_path <config_path>" << std::endl
