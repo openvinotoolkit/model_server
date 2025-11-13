@@ -677,10 +677,10 @@ Testing model accuracy is critical for a successful adoption in AI application. 
 Here is example of the response from the OpenVINO/Qwen3-8B-int4-ov model:
 
 ```
-Simple: {"accuracy": 0.9525, "correct_count": 381, "total_count": 400}
-Multiple: {"accuracy": 0.89, "correct_count": 178, "total_count": 200}
-Parallel: {"accuracy": 0.89, "correct_count": 178, "total_count": 200}
-Irrelevance: {"accuracy": 0.825, "correct_count": 198, "total_count": 240}
+Simple:         {"accuracy": 0.9525, "correct_count": 381, "total_count": 400}
+Multiple:       {"accuracy": 0.89, "correct_count": 178, "total_count": 200}
+Parallel:       {"accuracy": 0.89, "correct_count": 178, "total_count": 200}
+Irrelevance:    {"accuracy": 0.825, "correct_count": 198, "total_count": 240}
 ```
 
 Models can be also compared using the [leaderboard reports](https://gorilla.cs.berkeley.edu/leaderboard.html#leaderboard).
