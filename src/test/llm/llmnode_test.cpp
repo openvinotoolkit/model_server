@@ -3800,7 +3800,7 @@ void TestLLMNodeOptionsCheckDefault(std::string& modelsPath) {
     ASSERT_EQ(initializeGenAiServable(servable, config.node(0), ""), StatusCode::OK);
     auto properties = std::static_pointer_cast<ContinuousBatchingServableProperties>(servable->getProperties());
     ASSERT_EQ(properties->schedulerConfig.max_num_batched_tokens, 256);
-    ASSERT_EQ(properties->schedulerConfig.cache_size, 8);
+    ASSERT_EQ(properties->schedulerConfig.cache_size, 0);
     ASSERT_EQ(properties->schedulerConfig.dynamic_split_fuse, true);
     ASSERT_EQ(properties->schedulerConfig.max_num_seqs, 256);
     ASSERT_EQ(properties->schedulerConfig.enable_prefix_caching, false);
