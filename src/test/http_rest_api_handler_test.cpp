@@ -1315,7 +1315,7 @@ TEST_F(ConfigStatus, isAuthorized) {
     ovms::Server& ovmsServer = ovms::Server::instance();
     std::string contents;
     auto fs = std::make_shared<ovms::LocalFileSystem>();
-    fs->readTextFile(getGenericFullPathForSrcTest("/ovms/src/test/mediapipe/config_mediapipe_add_adapter_full.json"), &contents);
+    fs->readTextFile(getGenericFullPathForSrcTest("/ovms/src/test/configs/config_cpu_dummy.json"), &contents);
     TestHelper1 t(*this, contents.c_str());
     auto handler = ovms::HttpRestApiHandler(ovmsServer, 10);
     std::unordered_map<std::string, std::string> headers = {{"X-Api-Key", "12345"},
