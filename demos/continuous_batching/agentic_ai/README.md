@@ -213,7 +213,7 @@ ovms.exe --rest_port 8000 --source_model OpenVINO/Mistral-7B-Instruct-v0.3-int4-
 :::{tab-item} Phi-4-mini-instruct-int4-ov
 :sync: Phi-4-mini-instruct-int4-ov
 ```bat
-ovms.exe --rest_port 8000 --source_model models/OpenVINO/Phi-4-mini-instruct-int4-ov --model_repository_path models --tool_parser phi4 --target_device GPU --cache_size 2 --task text_generation --max_num_batched_tokens 99999  --enable_tool_guided_generation true
+ovms.exe --rest_port 8000 --source_model OpenVINO/Phi-4-mini-instruct-int4-ov --model_repository_path models --tool_parser phi4 --target_device GPU --cache_size 2 --task text_generation --max_num_batched_tokens 99999  --enable_tool_guided_generation true
 ```
 :::
 ::::
@@ -272,7 +272,7 @@ ovms.exe --rest_port 8000 --source_model OpenVINO/Mistral-7B-Instruct-v0.3-int4-
 :::{tab-item} Phi-3-mini-4k-instruct-int4-cw-ov
 :sync: Phi-3-mini-4k-instruct-int4-cw-ov
 ```bat
-ovms.exe --rest_port 8000 --source_model models/OpenVINO/Phi-3-mini-4k-instruct-int4-cw-ov --model_repository_path models --tool_parser phi4 --target_device NPU --cache_size 2 --task text_generation --max_num_batched_tokens 99999 --enable_tool_guided_generation true --enable_prefix_caching true --cache_dir .cache --max_prompt_len 4000
+ovms.exe --rest_port 8000 --source_model OpenVINO/Phi-3-mini-4k-instruct-int4-cw-ov --model_repository_path models --tool_parser phi4 --target_device NPU --cache_size 2 --task text_generation --max_num_batched_tokens 99999 --enable_tool_guided_generation true --enable_prefix_caching true --cache_dir .cache --max_prompt_len 4000
 ```
 :::
 ::::
