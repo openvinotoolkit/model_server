@@ -32,6 +32,8 @@ ARG LTO_LD_FLAGS="-Wl,-z,relro"
 
 # hadolint ignore=DL3041
 RUN echo -e "max_parallel_downloads=8\nretries=50" >> /etc/dnf/dnf.conf && \
+    dnf install -y 'dnf-command(versionlock)' && \
+    dnf versionlock add \*redhat-release\* && \
     dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm && dnf update -d6 -y && dnf install -d6 -y \
             libuuid-devel \
             bc \
