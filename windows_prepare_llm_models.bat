@@ -99,7 +99,12 @@ if not exist "%~1\%EMBEDDING_MODEL%\ov\%TOKENIZER_FILE%" (
 ) 
 
 if exist "%~1\%RERANK_MODEL%\rerank\%LEGACY_MODEL_FILE%" (
-  echo Models file %~1\%RERANK_MODEL%\rerank\%LEGACY_MODEL_FILE% exists. Skipping downloading models.
+  :: echo Models file %~1\%RERANK_MODEL%\rerank\%LEGACY_MODEL_FILE% exists. Skipping downloading models.
+  :: We want to always recreate RERANK_MODEL due to previous bug so remove it
+  rmdir /S /Q "%~1\%RERANK_MODEL%"
+  echo Downloading rerank model to %~1\%RERANK_MODEL% directory.
+  python demos\common\export_models\export_model.py rerank --source_model "%RERANK_MODEL%" --weight-format int8 --model_repository_path %~1
+  if !errorlevel! neq 0 exit /b !errorlevel!
 ) else (
   echo Downloading rerank model to %~1\%RERANK_MODEL% directory.
   python demos\common\export_models\export_model.py rerank --source_model "%RERANK_MODEL%" --weight-format int8 --model_repository_path %~1

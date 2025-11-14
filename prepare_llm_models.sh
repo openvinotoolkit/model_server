@@ -39,6 +39,11 @@ MODELS=("$CB_MODEL/$TOKENIZER_FILE" "$RERANK_MODEL/rerank/$LEGACY_MODEL_FILE" "$
 
 all_exist=true
 for model in "${MODELS[@]}"; do
+# make that so RERANK_MODEL is always deleted first
+# so check if model eq model then delete the $1/$model
+  if [ "$model" = "$RERANK_MODEL/rerank/$LEGACY_MODEL_FILE" ]; then
+    rm -rf "$1/$RERANK_MODEL"
+  fi
   if [ ! -f "$1/$model" ]; then
     echo "Model file does not exist $1/$model"
     all_exist=false
