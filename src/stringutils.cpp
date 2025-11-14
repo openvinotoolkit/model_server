@@ -285,7 +285,7 @@ void escapeSpecialCharacters(std::string& text) {
             escaped += c;
         }
     }
-    text = escaped;
+    text = std::move(escaped);
 }
 
 }  // namespace ovms
