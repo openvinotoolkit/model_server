@@ -192,7 +192,7 @@ http_archive(
 git_repository(
     name = "mediapipe",
     remote = "https://github.com/openvinotoolkit/mediapipe",
-    commit = "742e351997b339ad50fc59bca6d9a73a596bd5ed", # main as of 28/08/2025
+    commit = "b2dccf07dc3cd8ae23040d20a8ca68d35d6c75db", # main as of 06/11/2025
 )
 
 # DEV mediapipe 1 source - adjust local repository path for build
@@ -648,6 +648,20 @@ cc_library(
     visibility = ["//visibility:public"],
     local_defines = [
     ],
+)
+""",
+)
+
+new_git_repository(
+    name = "winreg",
+    remote = "https://github.com/GiovanniDicanio/WinReg.git",
+    commit = "4e1fab61959ca7a43c2627251ba306ebbbec7f7a", # master Aug 22 2025
+    build_file_content = """
+cc_library(
+    name = "winreg",
+    hdrs = glob(["WinReg/WinReg.hpp"]),
+    visibility = ["//visibility:public"],
+    local_defines = [],
 )
 """,
 )

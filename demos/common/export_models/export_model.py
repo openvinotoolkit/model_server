@@ -65,13 +65,13 @@ parser_embeddings_ov.add_argument('--num_streams', default=1,type=int, help='The
 
 parser_rerank = subparsers.add_parser('rerank', help='[deprecated] export model for rerank endpoint with models split into separate, versioned directories')
 add_common_arguments(parser_rerank)
-parser_rerank.add_argument('--num_streams', default="1", help='The number of parallel execution streams to use for the model. Use at least 2 on 2 socket CPU systems.', dest='num_streams')
+parser_rerank.add_argument('--num_streams', default=1, type=int, help='The number of parallel execution streams to use for the model. Use at least 2 on 2 socket CPU systems.', dest='num_streams')
 parser_rerank.add_argument('--max_doc_length', default=16000, type=int, help='Maximum length of input documents in tokens', dest='max_doc_length')
 parser_rerank.add_argument('--version', default="1", help='version of the model', dest='version')
 
 parser_rerank_ov = subparsers.add_parser('rerank_ov', help='export model for rerank endpoint with directory structure aligned with OpenVINO tools')
 add_common_arguments(parser_rerank_ov)
-parser_rerank_ov.add_argument('--num_streams', default="1", help='The number of parallel execution streams to use for the model. Use at least 2 on 2 socket CPU systems.', dest='num_streams')
+parser_rerank_ov.add_argument('--num_streams', default=1, type=int, help='The number of parallel execution streams to use for the model. Use at least 2 on 2 socket CPU systems.', dest='num_streams')
 parser_rerank_ov.add_argument('--max_doc_length', default=16000, type=int, help='Maximum length of input documents in tokens', dest='max_doc_length')
 
 parser_image_generation = subparsers.add_parser('image_generation', help='export model for image generation endpoint')
@@ -96,39 +96,39 @@ add_common_arguments(parser_speech2text)
 parser_speech2text.add_argument('--num_streams', default=0, type=int, help='The number of parallel execution streams to use for the models in the pipeline.', dest='num_streams')
 args = vars(parser.parse_args())
 
-tts_graph_template = """
+t2s_graph_template = """
 input_stream: "HTTP_REQUEST_PAYLOAD:input"
 output_stream: "HTTP_RESPONSE_PAYLOAD:output"
 node {
-  name: "TtsExecutor"
-  input_side_packet: "TTS_NODE_RESOURCES:tts_servable"
-  calculator: "TtsCalculator"
+  name: "T2sExecutor"
+  input_side_packet: "TTS_NODE_RESOURCES:t2s_servable"
+  calculator: "T2sCalculator"
   input_stream: "HTTP_REQUEST_PAYLOAD:input"
   output_stream: "HTTP_RESPONSE_PAYLOAD:output"
   node_options: {
-    [type.googleapis.com / mediapipe.TtsCalculatorOptions]: {
+    [type.googleapis.com / mediapipe.T2sCalculatorOptions]: {
       models_path: "{{model_path}}",
       plugin_config: '{ "NUM_STREAMS": "{{num_streams|default(1, true)}}" }',
-      device: "{{target_device|default("CPU", true)}}"
+      target_device: "{{target_device|default("CPU", true)}}"
     }
   }
 }
 """
 
-stt_graph_template = """
+s2t_graph_template = """
 input_stream: "HTTP_REQUEST_PAYLOAD:input"
 output_stream: "HTTP_RESPONSE_PAYLOAD:output"
 node {
-  name: "SttExecutor"
-  input_side_packet: "STT_NODE_RESOURCES:stt_servable"
-  calculator: "SttCalculator"
+  name: "S2tExecutor"
+  input_side_packet: "STT_NODE_RESOURCES:s2t_servable"
+  calculator: "S2tCalculator"
   input_stream: "HTTP_REQUEST_PAYLOAD:input"
   output_stream: "HTTP_RESPONSE_PAYLOAD:output"
   node_options: {
-    [type.googleapis.com / mediapipe.SttCalculatorOptions]: {
+    [type.googleapis.com / mediapipe.S2tCalculatorOptions]: {
       models_path: "{{model_path}}",
       plugin_config: '{ "NUM_STREAMS": "{{num_streams|default(1, true)}}" }',
-      device: "{{target_device|default("CPU", true)}}"
+      target_device: "{{target_device|default("CPU", true)}}"
     }
   }
 }
@@ -146,7 +146,7 @@ node {
   node_options: {
     [type.googleapis.com / mediapipe.EmbeddingsCalculatorOVOptions]: {
       models_path: "{{model_path}}",
-      plugin_config: '{"NUM_STREAMS": {{num_streams}}}',
+      plugin_config: '{"NUM_STREAMS": "{{num_streams}}" }',
       normalize_embeddings: {% if not normalize %}false{% else %}true{% endif%},
       {%- if pooling %}
       pooling: {{pooling}},{% endif %}
@@ -170,7 +170,7 @@ node {
   node_options: {
     [type.googleapis.com / mediapipe.RerankCalculatorOVOptions]: {
       models_path: "{{model_path}}",
-      plugin_config: '{"NUM_STREAMS": {{num_streams}}}',
+      plugin_config: '{"NUM_STREAMS": "{{num_streams}}" }',
       target_device: "{{target_device|default("CPU", true)}}"
     }
   }
@@ -258,25 +258,6 @@ node: {
   }
 }"""
 
-embeddings_subconfig_template = """{
-    "model_config_list": [
-    { "config": 
-	    {
-                "name": "{{model_name}}_tokenizer_model",
-                "base_path": "tokenizer"
-            }
-	},
-    { "config": 
-	    {
-                "name": "{{model_name}}_embeddings_model",
-                "base_path": "embeddings",
-                "target_device": "{{target_device|default("CPU", true)}}",
-                "plugin_config": { "NUM_STREAMS": "{{num_streams|default(1, true)}}" }
-            }
-	}
-   ]
-}"""
-
 rerank_subconfig_template = """{
     "model_config_list": [
     { "config": 
@@ -290,7 +271,7 @@ rerank_subconfig_template = """{
                 "name": "{{model_name}}_rerank_model",
                 "base_path": "rerank",
                 "target_device": "{{target_device|default("CPU", true)}}",
-                "plugin_config": { "NUM_STREAMS": "{{num_streams|default(1, true)}}" }
+                "plugin_config": '{ "NUM_STREAMS": "{{num_streams|default(1, true)}}" }'
             }
 	}
    ]
@@ -512,7 +493,7 @@ def export_text2speech_model(model_repository_path, source_model, model_name, pr
         optimum_command = "optimum-cli export openvino --model {} --weight-format {} --trust-remote-code --model-kwargs \"{{\\\"vocoder\\\": \\\"{}\\\"}}\" {}".format(source_model, precision, task_parameters['vocoder'], destination_path)
         if os.system(optimum_command):
             raise ValueError("Failed to export text2speech model", source_model)
-    gtemplate = jinja2.Environment(loader=jinja2.BaseLoader).from_string(tts_graph_template)
+    gtemplate = jinja2.Environment(loader=jinja2.BaseLoader).from_string(t2s_graph_template)
     graph_content = gtemplate.render(model_path="./", **task_parameters)
     with open(os.path.join(model_repository_path, model_name, 'graph.pbtxt'), 'w') as f:
         f.write(graph_content)
@@ -526,7 +507,7 @@ def export_speech2text_model(model_repository_path, source_model, model_name, pr
         optimum_command = "optimum-cli export openvino --model {} --weight-format {} --trust-remote-code {}".format(source_model, precision, destination_path)
         if os.system(optimum_command):
             raise ValueError("Failed to export speech2text model", source_model)
-    gtemplate = jinja2.Environment(loader=jinja2.BaseLoader).from_string(stt_graph_template)
+    gtemplate = jinja2.Environment(loader=jinja2.BaseLoader).from_string(s2t_graph_template)
     graph_content = gtemplate.render(model_path="./", **task_parameters)
     with open(os.path.join(model_repository_path, model_name, 'graph.pbtxt'), 'w') as f:
         f.write(graph_content)
@@ -659,7 +640,7 @@ if args['task'] == 'text_generation':
     export_text_generation_model(args['model_repository_path'], args['source_model'], args['model_name'], args['precision'], template_parameters, args['config_file_path'])
 
 elif args['task'] == 'embeddings_ov':
-    export_embeddings_model_ov(args['model_repository_path'], args['source_model'], args['model_name'],  args['precision'], template_parameters)
+    export_embeddings_model_ov(args['model_repository_path'], args['source_model'], args['model_name'],  args['precision'], template_parameters, args['config_file_path'], args['truncate'])
 
 elif args['task'] == 'rerank':
     export_rerank_model(args['model_repository_path'], args['source_model'], args['model_name'] ,args['precision'], template_parameters, str(args['version']), args['config_file_path'], args['max_doc_length'])

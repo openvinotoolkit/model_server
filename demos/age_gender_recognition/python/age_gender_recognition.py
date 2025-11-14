@@ -21,7 +21,7 @@ import requests
 import argparse
 
 parser = argparse.ArgumentParser(description='Client for age gender recognition')
-parser.add_argument('--rest_address', required=False, default='localhost',  help='Specify url to REST API service. default:localhost')
+parser.add_argument('--rest_address', required=False, default='127.0.0.1',  help='Specify url to REST API service. default:127.0.0.1')
 parser.add_argument('--rest_port', required=False, default=9001, help='Specify port to REST API service. default: 9178')
 parser.add_argument('--model_name', required=False, default='age_gender', help='Model name to request. default: age_gender')
 parser.add_argument('--image_input_path', required=True, help='Input image path.')

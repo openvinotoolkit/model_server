@@ -48,9 +48,23 @@ using namespace tensorflow::serving;
 using testing::_;
 using testing::Return;
 
-class StressCapiConfigChanges : public ConfigChangeStressTest {};
+class StressCapiConfigChanges : public ConfigChangeStressTest {
+public:
+    static void SetUpTestSuite() {
+#ifdef _WIN32
+        GTEST_SKIP() << "Skipping test on Windows, sporadic";  // CVS-176244
+#endif
+    }
+};
 
-class ConfigChangeStressTestSingleModel : public ConfigChangeStressTestAsync {};
+class ConfigChangeStressTestSingleModel : public ConfigChangeStressTestAsync {
+public:
+    static void SetUpTestSuite() {
+#ifdef _WIN32
+        GTEST_SKIP() << "Skipping test on Windows, sporadic";  // CVS-176244
+#endif
+    }
+};
 
 class StressModelCapiConfigChanges : public StressCapiConfigChanges {
     const std::string modelName = "dummy";

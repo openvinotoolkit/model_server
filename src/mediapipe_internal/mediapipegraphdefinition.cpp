@@ -61,8 +61,8 @@ const std::string MediapipeGraphDefinition::SCHEDULER_CLASS_NAME{"Mediapipe"};
 const std::string MediapipeGraphDefinition::PYTHON_NODE_CALCULATOR_NAME{"PythonExecutorCalculator"};
 const std::string MediapipeGraphDefinition::LLM_NODE_CALCULATOR_NAME{"LLMCalculator"};
 const std::string MediapipeGraphDefinition::IMAGE_GEN_CALCULATOR_NAME{"ImageGenCalculator"};
-const std::string MediapipeGraphDefinition::STT_NODE_CALCULATOR_NAME{"SttCalculator"};
-const std::string MediapipeGraphDefinition::TTS_NODE_CALCULATOR_NAME{"TtsCalculator"};
+const std::string MediapipeGraphDefinition::STT_NODE_CALCULATOR_NAME{"S2tCalculator"};
+const std::string MediapipeGraphDefinition::TTS_NODE_CALCULATOR_NAME{"T2sCalculator"};
 const std::string MediapipeGraphDefinition::EMBEDDINGS_NODE_CALCULATOR_NAME{"EmbeddingsCalculatorOV"};
 const std::string MediapipeGraphDefinition::RERANK_NODE_CALCULATOR_NAME{"RerankCalculatorOV"};
 
@@ -100,7 +100,7 @@ Status MediapipeGraphDefinition::validateForConfigLoadableness() {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Trying to parse empty mediapipe graph definition: {} failed", this->getName(), this->chosenConfig);
         return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
     }
-
+    SPDLOG_TRACE("Will try to load pbtxt config: {}", this->chosenConfig);
     bool success = ::google::protobuf::TextFormat::ParseFromString(chosenConfig, &this->config);
     if (!success) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Trying to parse mediapipe graph definition: {} failed", this->getName(), this->chosenConfig);
@@ -584,9 +584,9 @@ Status MediapipeGraphDefinition::initializeNodes() {
                 SPDLOG_LOGGER_ERROR(modelmanager_logger, "SpeechToText node name: {} already used in graph: {}. ", nodeName, this->name);
                 return StatusCode::LLM_NODE_NAME_ALREADY_EXISTS;
             }
-            mediapipe::SttCalculatorOptions nodeOptions;
+            mediapipe::S2tCalculatorOptions nodeOptions;
             config.node(i).node_options(0).UnpackTo(&nodeOptions);
-            std::shared_ptr<SttServable> servable = std::make_shared<SttServable>(nodeOptions.models_path(), nodeOptions.device(), mgconfig.getBasePath());
+            std::shared_ptr<SttServable> servable = std::make_shared<SttServable>(nodeOptions.models_path(), nodeOptions.target_device(), mgconfig.getBasePath());
             sttServableMap.insert(std::pair<std::string, std::shared_ptr<SttServable>>(nodeName, std::move(servable)));
             sttServablesCleaningGuard.disableCleaning();
         }
@@ -606,9 +606,9 @@ Status MediapipeGraphDefinition::initializeNodes() {
                 SPDLOG_LOGGER_ERROR(modelmanager_logger, "TextToSpeech node name: {} already used in graph: {}. ", nodeName, this->name);
                 return StatusCode::LLM_NODE_NAME_ALREADY_EXISTS;
             }
-            mediapipe::TtsCalculatorOptions nodeOptions;
+            mediapipe::T2sCalculatorOptions nodeOptions;
             config.node(i).node_options(0).UnpackTo(&nodeOptions);
-            std::shared_ptr<TtsServable> servable = std::make_shared<TtsServable>(nodeOptions.models_path(), nodeOptions.device(), mgconfig.getBasePath());
+            std::shared_ptr<TtsServable> servable = std::make_shared<TtsServable>(nodeOptions.models_path(), nodeOptions.target_device(), mgconfig.getBasePath());
             ttsServableMap.insert(std::pair<std::string, std::shared_ptr<TtsServable>>(nodeName, std::move(servable)));
             ttsServablesCleaningGuard.disableCleaning();
         }

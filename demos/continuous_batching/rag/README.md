@@ -35,6 +35,23 @@ ovms --add_to_config models --model_name OpenVINO/bge-base-en-v1.5-fp16-ov --mod
 ovms --add_to_config models --model_name OpenVINO/bge-reranker-base-fp16-ov --model_path OpenVINO/bge-reranker-base-fp16-ov
 ```
 :::
+
+:::{tab-item} Windows service
+**Required:** OpenVINO Model Server package - see [deployment instructions](../../../docs/deploying_server_baremetal.md) for details.
+**Assumption:** install_ovms_service.bat was called without additional parameters - using default c:\models config path.
+```bat
+mkdir c:\models
+
+ovms --pull --model_repository_path c:\models --source_model OpenVINO/Qwen3-8B-int4-ov --task text_generation
+ovms --pull --model_repository_path c:\models --source_model OpenVINO/bge-base-en-v1.5-fp16-ov --task embeddings
+ovms --pull --model_repository_path c:\models --source_model OpenVINO/bge-reranker-base-fp16-ov --task rerank
+
+ovms --add_to_config c:\models --model_name OpenVINO/Qwen3-8B-int4-ov --model_path OpenVINO/Qwen3-8B-int4-ov
+ovms --add_to_config c:\models --model_name OpenVINO/bge-base-en-v1.5-fp16-ov --model_path OpenVINO/bge-base-en-v1.5-fp16-ov
+ovms --add_to_config c:\models --model_name OpenVINO/bge-reranker-base-fp16-ov --model_path OpenVINO/bge-reranker-base-fp16-ov
+```
+:::
+::::
 ::::
 
 ### 2. Download the preconfigured models using ovms --pull option for models outside [HugginFaces Hub OpenVINO organization](https://huggingface.co/OpenVINO) in HuggingFace Hub. (Advanced usage)
@@ -106,6 +123,10 @@ ovms --rest_port 8000 --config_path models/config.json
 ovms --rest_port 8000 --config_path models\config.json
 ```
 
+### Server as Windows Service
+```bat
+sc start ovms
+```
 ## Using RAG
 
 When the model server is deployed and serving all 3 endpoints, run the [jupyter notebook](https://github.com/openvinotoolkit/model_server/blob/main/demos/continuous_batching/rag/rag_demo.ipynb) to use RAG chain with a fully remote execution.

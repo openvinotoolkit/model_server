@@ -18,8 +18,15 @@
 #include <filesystem>
 #include <limits>
 #include <regex>
+#include <utility>
 #include <thread>
 #include <vector>
+
+#ifdef _WIN32
+#include <ws2tcpip.h>
+#else
+#include <netdb.h>
+#endif
 
 #include "logging.hpp"
 #include "ovms_exit_codes.hpp"
@@ -43,11 +50,21 @@ const size_t DEFAULT_GRPC_MEMORY_QUOTA = (size_t)2 * 1024 * 1024 * 1024;  // 2GB
 const uint64_t MAX_REST_WORKERS = 10'000;
 
 Config& Config::parse(int argc, char** argv) {
-    ovms::CLIParser p;
+    ovms::CLIParser parser;
     ovms::ServerSettingsImpl serverSettings;
     ovms::ModelsSettingsImpl modelsSettings;
-    p.parse(argc, argv);
-    p.prepare(&serverSettings, &modelsSettings);
+    auto successOrExit = parser.parse(argc, argv);
+    // Check for error in parsing
+    if (std::holds_alternative<std::pair<int, std::string>>(successOrExit)) {
+        auto printAndExit = std::get<std::pair<int, std::string>>(successOrExit);
+        if (printAndExit.first > 0) {
+            std::cerr << printAndExit.second;
+        } else {
+            std::cout << printAndExit.second;
+        }
+        exit(printAndExit.first);
+    }
+    parser.prepare(&serverSettings, &modelsSettings);
     if (!this->parse(&serverSettings, &modelsSettings))
         exit(OVMS_EX_USAGE);
     return *this;
@@ -59,7 +76,29 @@ bool Config::parse(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* model
     return validate();
 }
 
+bool Config::is_ipv6(const std::string& s) {
+    addrinfo hints{};
+    hints.ai_family = AF_INET6;
+    hints.ai_flags = AI_NUMERICHOST;
+    addrinfo* res = nullptr;
+    const int rc = getaddrinfo(s.c_str(), nullptr, &hints, &res);
+    if (res) {
+        freeaddrinfo(res);
+    }
+    return rc == 0;
+}
+
 bool Config::check_hostname_or_ip(const std::string& input) {
+    auto split = ovms::tokenize(input, ',');
+    if (split.size() > 1) {
+        for (const auto& part : split) {
+            if (!check_hostname_or_ip(part)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     if (input.size() > 255) {
         return false;
     }
@@ -74,9 +113,7 @@ bool Config::check_hostname_or_ip(const std::string& input) {
     }
     if (all_numeric) {
         static const std::regex valid_ipv4_regex("^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$");
-        static const std::regex valid_ipv6_regex(R"(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))");
-        return std::regex_match(input, valid_ipv4_regex) ||
-               std::regex_match(input, valid_ipv6_regex);
+        return std::regex_match(input, valid_ipv4_regex) || is_ipv6(input);
     } else {
         std::regex valid_hostname_regex("^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\\-]*[a-zA-Z0-9])\\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\\-]*[A-Za-z0-9])$");
         return std::regex_match(input, valid_hostname_regex);
@@ -129,40 +166,41 @@ bool Config::validate() {
                 std::cerr << "Graph options not initialized for text generation.";
                 return false;
             }
-            auto settings = std::get<TextGenGraphSettingsImpl>(this->serverSettings.hfSettings.graphSettings);
+            const auto& exportSettings = this->serverSettings.hfSettings.exportSettings;
+            auto textGenSettings = std::get<TextGenGraphSettingsImpl>(this->serverSettings.hfSettings.graphSettings);
             std::vector allowedPipelineTypes = {"LM", "LM_CB", "VLM", "VLM_CB", "AUTO"};
-            if (settings.pipelineType.has_value() && std::find(allowedPipelineTypes.begin(), allowedPipelineTypes.end(), settings.pipelineType) == allowedPipelineTypes.end()) {
-                std::cerr << "pipeline_type: " << settings.pipelineType.value() << " is not allowed. Supported types: LM, LM_CB, VLM, VLM_CB, AUTO" << std::endl;
+            if (textGenSettings.pipelineType.has_value() && std::find(allowedPipelineTypes.begin(), allowedPipelineTypes.end(), textGenSettings.pipelineType) == allowedPipelineTypes.end()) {
+                std::cerr << "pipeline_type: " << textGenSettings.pipelineType.value() << " is not allowed. Supported types: LM, LM_CB, VLM, VLM_CB, AUTO" << std::endl;
                 return false;
             }
 
             std::vector allowedTargetDevices = {"CPU", "GPU", "NPU", "AUTO"};
             bool validDeviceSelected = false;
-            if (settings.targetDevice.rfind("GPU.", 0) == 0) {
+            if (exportSettings.targetDevice.rfind("GPU.", 0) == 0) {
                 // Accept GPU.x where x is a number to select specific GPU card
-                std::string indexPart = settings.targetDevice.substr(4);
+                std::string indexPart = exportSettings.targetDevice.substr(4);
                 validDeviceSelected = !indexPart.empty() && std::all_of(indexPart.begin(), indexPart.end(), ::isdigit);
-            } else if (settings.targetDevice.rfind("HETERO", 0) == 0) {
-                // Accept HETERO:<device1>,<device2>,... to select specific devices in the list
+            } else if ((exportSettings.targetDevice.rfind("HETERO", 0) == 0) || (exportSettings.targetDevice.rfind("AUTO", 0) == 0)) {
+                // Accept HETERO:<device1>,<device2>,... AUTO:<device1>,<device2>,... to select specific devices in the list
                 validDeviceSelected = true;
-            } else if (std::find(allowedTargetDevices.begin(), allowedTargetDevices.end(), settings.targetDevice) != allowedTargetDevices.end()) {
+            } else if (std::find(allowedTargetDevices.begin(), allowedTargetDevices.end(), exportSettings.targetDevice) != allowedTargetDevices.end()) {
                 // Accept CPU, GPU, NPU, AUTO as valid devices
                 validDeviceSelected = true;
             }
 
             if (!validDeviceSelected) {
-                std::cerr << "target_device: " << settings.targetDevice << " is not allowed. Supported devices: CPU, GPU, NPU, HETERO, AUTO" << std::endl;
+                std::cerr << "target_device: " << exportSettings.targetDevice << " is not allowed. Supported devices: CPU, GPU, NPU, HETERO, AUTO" << std::endl;
                 return false;
             }
 
             std::vector allowedBoolValues = {"false", "true"};
-            if (std::find(allowedBoolValues.begin(), allowedBoolValues.end(), settings.enablePrefixCaching) == allowedBoolValues.end()) {
-                std::cerr << "enable_prefix_caching: " << settings.enablePrefixCaching << " is not allowed. Supported values: true, false" << std::endl;
+            if (std::find(allowedBoolValues.begin(), allowedBoolValues.end(), textGenSettings.enablePrefixCaching) == allowedBoolValues.end()) {
+                std::cerr << "enable_prefix_caching: " << textGenSettings.enablePrefixCaching << " is not allowed. Supported values: true, false" << std::endl;
                 return false;
             }
 
-            if (std::find(allowedBoolValues.begin(), allowedBoolValues.end(), settings.dynamicSplitFuse) == allowedBoolValues.end()) {
-                std::cerr << "dynamic_split_fuse: " << settings.dynamicSplitFuse << " is not allowed. Supported values: true, false" << std::endl;
+            if (std::find(allowedBoolValues.begin(), allowedBoolValues.end(), textGenSettings.dynamicSplitFuse) == allowedBoolValues.end()) {
+                std::cerr << "dynamic_split_fuse: " << textGenSettings.dynamicSplitFuse << " is not allowed. Supported values: true, false" << std::endl;
                 return false;
             }
         }
@@ -172,16 +210,16 @@ bool Config::validate() {
                 std::cerr << "Graph options not initialized for embeddings.";
                 return false;
             }
-            auto settings = std::get<EmbeddingsGraphSettingsImpl>(this->serverSettings.hfSettings.graphSettings);
+            auto embedSettings = std::get<EmbeddingsGraphSettingsImpl>(this->serverSettings.hfSettings.graphSettings);
 
             std::vector allowedBoolValues = {"false", "true"};
-            if (std::find(allowedBoolValues.begin(), allowedBoolValues.end(), settings.normalize) == allowedBoolValues.end()) {
-                std::cerr << "normalize: " << settings.normalize << " is not allowed. Supported values: true, false" << std::endl;
+            if (std::find(allowedBoolValues.begin(), allowedBoolValues.end(), embedSettings.normalize) == allowedBoolValues.end()) {
+                std::cerr << "normalize: " << embedSettings.normalize << " is not allowed. Supported values: true, false" << std::endl;
                 return false;
             }
 
-            if (std::find(allowedBoolValues.begin(), allowedBoolValues.end(), settings.truncate) == allowedBoolValues.end()) {
-                std::cerr << "truncate: " << settings.truncate << " is not allowed. Supported values: true, false" << std::endl;
+            if (std::find(allowedBoolValues.begin(), allowedBoolValues.end(), embedSettings.truncate) == allowedBoolValues.end()) {
+                std::cerr << "truncate: " << embedSettings.truncate << " is not allowed. Supported values: true, false" << std::endl;
                 return false;
             }
         }

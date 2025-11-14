@@ -144,6 +144,23 @@ To save power, the OS can decrease the CPU frequency and increase a volatility o
 $ cpupower frequency-set --min 3.1GHz
 ```
 
+## Network Configuration for Optimal Performance
+
+By default, OVMS endpoints are bound to all ipv4 addresses. On same systems, which route localhost name to ipv6 address, it might cause extra time on the client side to switch to ipv4. It can effectively results with extra 1-2s latency.
+It can be overcome by switching the API URL to `http://127.0.0.1` on the client side.
+
+To optimize network connection performance:
+
+Alternatively ipv6 can be enabled in the model server using `--grpc_bind_address` and `--rest_bind_address`.
+For example:
+```
+--grpc_bind_address 127.0.0.1,::1 --rest_bind_address 127.0.0.1,::1
+```
+or
+```
+--grpc_bind_address 0.0.0.0,:: --rest_bind_address 0.0.0.0,::
+```
+
 ## Tuning Model Server configuration parameters
 
 OpenVINO Model Server in C++ implementation is using scalable multithreaded gRPC and REST interface, however in some hardware configuration it might become a bottleneck for high performance backend with OpenVINO.

@@ -259,7 +259,7 @@ signature = "serving_default"
 request_body = json.dumps({"signature_name": signature,'inputs': inputs})
 
 # Send request to OVMS and get response
-response = requests.post("localhost:5555/v1/models/stateful_model:predict", data=request_body)
+response = requests.post("127.0.0.1:5555/v1/models/stateful_model:predict", data=request_body)
 
 # Parse response
 response_body = json.loads(response.text)
