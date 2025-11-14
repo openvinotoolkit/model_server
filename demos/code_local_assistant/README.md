@@ -45,7 +45,8 @@ docker run -it --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
 docker run -it --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
     -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy=$no_proxy \
     openvino/model_server:latest-gpu \
-    --add_to_config /models/config_all.json \
+    --add_to_config 
+    --config_path /models/config_all.json \
     --model_name OpenVINO/Qwen3-8B-int4-ov \
     --model_path OpenVINO/Qwen3-8B-int4-ov
 ```
@@ -60,7 +61,7 @@ ovms --pull ^
   --tool_parser hermes3 ^
   --cache_size 2
 
-ovms --add_to_config ./models/config_all.json ^
+ovms --add_to_config --config_path ./models/config_all.json ^
   --model_name OpenVINO/Qwen3-8B-int4-ov ^
   --model_path OpenVINO/Qwen3-8B-int4-ov
 ```

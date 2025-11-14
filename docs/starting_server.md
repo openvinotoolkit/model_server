@@ -256,16 +256,17 @@ To add model to ovms configuration file you can either do it manually or use:
 
 ```text
 docker run -d --rm -v <model_repository_path>:/models openvino/model_server:latest \
---model_repository_path /models/<model_path> --add_to_config <config_file_directory_path> --model_name <name>
+--model_repository_path /models/ --add_to_config --config_path <config_file_path> --model_name <name>
 ```
 :::
 
 :::{tab-item} On Baremetal Host
 :sync: baremetal
 **Required:** OpenVINO Model Server package - see [deployment instructions](./deploying_server_baremetal.md) for details.
-
+Note: environment variable OVMS_MODEL_REPOSITORY_PATH can determine default value for --model_repository_path and --config_path which would be config.json inside model repository path.
 ```text
-ovms --model_repository_path /models/<model_path> --add_to_config <config_file_directory_path> --model_name <name>
+export OVMS_MODEL_REPOSITORY_PATH=/models
+ovms --add_to_config --model_name <name>
 ```
 :::
 ::::
@@ -277,14 +278,15 @@ If you want to add model with specific path you can use ```--model_path``` param
 
 ```text
 docker run -d --rm -v <model_repository_path>:/models openvino/model_server:latest \
---add_to_config <config_file_directory_path> --model_name <name> --model_path <model_path>
+--add_to_config --config_path <config_file_path> --model_name <name> --model_path <model_path>
 ```
 
-*Note:* Use relative paths to make the config.json transferable in model_repository across ovms instances.
+*Note:* Use relative or absolute paths. `config_path` is relative to the current folder. `model_path` is relative to the config file. With `model_repository_path`, `model_name` represents a folder relative to model repository path. 
 For example:
 ```text
-cd model_repository_path
-ovms --add_to_config . --model_name OpenVINO/DeepSeek-R1-Distill-Qwen-1.5B-int4-ov --model_repository_path .
+ovms --add_to_config --config_path models/config.json --model_name OpenVINO/DeepSeek-R1-Distill-Qwen-1.5B-int4-ov --model_repository_path models
+or
+ovms --add_to_config --config_path models/config.json --model_name OpenVINO/DeepSeek-R1-Distill-Qwen-1.5B-int4-ov --model_path OpenVINO/DeepSeek-R1-Distill-Qwen-1.5B-int4-ov
 ```
 
 #### Disable model
