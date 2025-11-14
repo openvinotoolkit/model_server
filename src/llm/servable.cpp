@@ -141,7 +141,12 @@ absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecution
 #else
         ov::genai::ChatHistory& chatHistory = executionContext->apiHandler->getChatHistory();
         constexpr bool add_generation_prompt = true;  // confirm it should be hardcoded
-        inputText = getProperties()->tokenizer.apply_chat_template(chatHistory, add_generation_prompt);
+        try {
+            inputText = getProperties()->tokenizer.apply_chat_template(chatHistory, add_generation_prompt);
+        } catch (const std::exception& e) {
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Failed to apply chat template: {}", e.what());
+            return absl::Status(absl::StatusCode::kInvalidArgument, "Failed to apply chat template. The model either does not have chat template or has an invalid one.");
+        }
 #endif
         if (inputText.size() == 0) {
             return absl::Status(absl::StatusCode::kInvalidArgument, "Final prompt after applying chat template is empty");
