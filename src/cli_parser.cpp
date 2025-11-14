@@ -183,11 +183,11 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
                 cxxopts::value<bool>()->default_value("false"),
                 "LIST_MODELS")
             ("add_to_config",
-                "Either path to directory containing config.json file for OVMS, or path to ovms configuration file, to add specific model to",
+                "Directive to add a model to configuration file. This parameter should be executed with --model_name, --config_path and either with --model_path or --model_repository_path.",
                 cxxopts::value<bool>()->default_value("false"),
                 "ADD_TO_CONFIG")
             ("remove_from_config",
-                "Either path to directory containing config.json file for OVMS, or path to ovms configuration file, to remove specific model from",
+                "Directive to remove a model from configuration file. This parameter should be executed with --config_path and --model_name to specify which model to remove.",
                 cxxopts::value<bool>()->default_value("false"),
                 "REMOVE_FROM_CONFIG");
 
