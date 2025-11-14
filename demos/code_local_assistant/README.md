@@ -32,22 +32,9 @@ docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
     --model_name Qwen/Qwen3-Coder-30B-A3B-Instruct \
     --model_path Qwen/Qwen3-Coder-30B-A3B-Instruct
 ```
-> **Note:** This model requires ~64GB disk space and same amount of VRAM on the iGPU, it is recommended to use B60.
+> **Note:** This model requires ~16GB disk space and same amount of VRAM on the iGPU, it is recommended to use B60.
 
 :::
-:::{tab-item} openai/gpt-oss-20b
-:sync: openai/gpt-oss-20b
-```bash
-python export_model.py text_generation --source_model openai/gpt-oss-20b --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device GPU --cache_size 2 --overwrite_models
-
-docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
-    openvino/model_server:weekly \
-    --add_to_config /models/config_all.json \
-    --model_name openai/gpt-oss-20b \
-    --model_path openai/gpt-oss-20b
-```
-> **Note:** This model requires ~15GB disk space and same amount of VRAM on the iGPU.
-
 :::
 :::{tab-item} mistralai/Codestral-22B-v0.1 
 :sync: mistralai/Codestral-22B-v0.1
@@ -132,15 +119,7 @@ python export_model.py text_generation --source_model Qwen/Qwen3-Coder-30B-A3B-I
 
 ovms.exe --add_to_config models/config_all.json --model_name Qwen/Qwen3-Coder-30B-A3B-Instruct --model_path Qwen/Qwen3-Coder-30B-A3B-Instruct
 ```
-> **Note:** This model requires ~64GB disk space and same amount of VRAM on the iGPU, it is recommended to use B60.
-
-:::
-:::{tab-item} openai/gpt-oss-20b
-:sync: openai/gpt-oss-20b
-```bash
-python export_model.py text_generation --source_model openai/gpt-oss-20b --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device GPU --cache_size 2 --overwrite_models
-```
-> **Note:** This model requires ~15GB disk space and same amount of VRAM on the iGPU.
+> **Note:** This model requires ~16GB disk space and same amount of VRAM on the iGPU.
 
 :::
 :::{tab-item} mistralai/Codestral-22B-v0.1 
@@ -148,7 +127,7 @@ python export_model.py text_generation --source_model openai/gpt-oss-20b --weigh
 ```bash
 python export_model.py text_generation --source_model mistralai/Codestral-22B-v0.1 --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device GPU --cache_size 2 --overwrite_models
 ```
-> **Note:** This model requires ~45GB disk space and same amount of VRAM on the iGPU, it is recommended to use B60.
+> **Note:** This model requires ~12GB disk space and same amount of VRAM on the iGPU.
 
 :::
 :::{tab-item} OpenVINO/Qwen3-8B-int4-ov
@@ -250,45 +229,13 @@ models:
       extraBodyProperties:
         chat_template_kwargs:
           enable_thinking: false
+
     autocompleteOptions:
       maxPromptTokens: 500
       debounceDelay: 124
       modelTimeout: 400
       onlyMyCode: true
       useCache: true
-context:
-  - provider: code
-  - provider: docs
-  - provider: diff
-  - provider: terminal
-  - provider: problems
-  - provider: folder
-  - provider: codebase
-```
-:::
-:::{tab-item} openai/gpt-oss-20b
-:sync: openai/gpt-oss-20b
-```
-name: Local Assistant
-version: 1.0.0
-schema: v1
-models:
-  - name: OVMS openai/gpt-oss-20b
-    provider: openai
-    model: openai/gpt-oss-20b
-    apiKey: unused
-    apiBase: http://localhost:8000/v3
-    roles:
-      - chat
-      - edit
-      - apply
-      - autocomplete
-    capabilities:
-      - tool_use
-    requestOptions:
-      extraBodyProperties:
-        chat_template_kwargs:
-          enable_thinking: false
 context:
   - provider: code
   - provider: docs
@@ -362,6 +309,13 @@ models:
       extraBodyProperties:
         chat_template_kwargs:
           enable_thinking: false
+
+    autocompleteOptions:
+      maxPromptTokens: 500
+      debounceDelay: 124
+      useCache: true
+      onlyMyCode: true
+      modelTimeout: 1000
 context:
   - provider: code
   - provider: docs
@@ -395,6 +349,13 @@ models:
       extraBodyProperties:
         chat_template_kwargs:
           enable_thinking: false
+
+    autocompleteOptions:
+      maxPromptTokens: 500
+      debounceDelay: 124
+      useCache: true
+      onlyMyCode: true
+      modelTimeout: 1000
 context:
   - provider: code
   - provider: docs
@@ -428,6 +389,12 @@ models:
       extraBodyProperties:
         chat_template_kwargs:
           enable_thinking: false
+    autocompleteOptions:
+      maxPromptTokens: 500
+      debounceDelay: 124
+      useCache: true
+      onlyMyCode: true
+      modelTimeout: 700
 context:
   - provider: code
   - provider: docs
