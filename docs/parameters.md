@@ -69,7 +69,7 @@ Configuration options for the config management mode, which is used to manage co
 | `model_name`            | `string`     | Name of the model as visible in serving. If `--model_path` is not provided, path is deduced from name.                                              |
 | `model_path`            | `string`     | Optional. Path to the model repository. If path is relative then it is prefixed with `--model_repository_path`.                                     |
 | `add_to_config`         | `NA`         | Directive to add new model to the config file.                                                                                                      |
-| `remove_from_config`    | `string`     | Directive to remove model from the config file.                                                                                                     |
+| `remove_from_config`    | `NA`     | Directive to remove model from the config file.                                                                                                     |
 | `config_path`           | `string`     | Path to the configuration file.                                                                                                                     |
 
 ## Pull mode configuration options

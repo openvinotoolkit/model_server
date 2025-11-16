@@ -763,7 +763,7 @@ void CLIParser::prepareConfigExport(ModelsSettingsImpl& modelsSettings) {
     std::string defaultConfigPath = "";
     const char* envModelRepoPath = std::getenv("OVMS_MODEL_REPOSITORY_PATH");
     if (envModelRepoPath != nullptr && std::string(envModelRepoPath).length() > 0) {
-        defaultConfigPath = std::string(envModelRepoPath) + "/config.json";
+        defaultConfigPath = FileSystem::joinPath({std::string(envModelRepoPath), "config.json"});
     }
     if (result->count("add_to_config") || result->count("remove_from_config")) {
         if (result->count("config_path")) {
