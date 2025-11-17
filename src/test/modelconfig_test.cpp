@@ -561,6 +561,90 @@ TEST(ModelConfig, plugin_config_legacy_gpu_num) {
     EXPECT_EQ(actualPluginConfig["NUM_STREAMS"], (int64_t)5);
 }
 
+TEST(ModelConfig, plugin_config_device_properties_int) {
+    ovms::ModelConfig config;
+    std::string pluginConfig_str = "{\"DEVICE_PROPERTIES\": { \"DEVICE\": {\"INT\": 2048}}}";
+    auto status = config.parsePluginConfig(pluginConfig_str, config.getPluginConfig());
+    auto actualPluginConfig = config.getPluginConfig();
+    EXPECT_EQ(status, ovms::StatusCode::OK);
+    auto devices = actualPluginConfig["DEVICE_PROPERTIES"].as<ov::AnyMap>();
+    auto properties = devices["DEVICE"].as<ov::AnyMap>();
+    EXPECT_EQ(properties["INT"], (int64_t)2048);
+}
+
+TEST(ModelConfig, plugin_config_device_properties_string) {
+    ovms::ModelConfig config;
+    std::string pluginConfig_str = "{\"DEVICE_PROPERTIES\": { \"DEVICE\": {\"STRING\": \"STRING\"}}}";
+    auto status = config.parsePluginConfig(pluginConfig_str, config.getPluginConfig());
+    auto actualPluginConfig = config.getPluginConfig();
+    EXPECT_EQ(status, ovms::StatusCode::OK);
+    auto devices = actualPluginConfig["DEVICE_PROPERTIES"].as<ov::AnyMap>();
+    auto properties = devices["DEVICE"].as<ov::AnyMap>();
+    EXPECT_EQ(properties["STRING"], "STRING");
+}
+
+TEST(ModelConfig, plugin_config_device_properties_double) {
+    ovms::ModelConfig config;
+    std::string pluginConfig_str = "{\"DEVICE_PROPERTIES\": { \"DEVICE\": {\"DOUBLE\": 2048.5}}}";
+    auto status = config.parsePluginConfig(pluginConfig_str, config.getPluginConfig());
+    auto actualPluginConfig = config.getPluginConfig();
+    EXPECT_EQ(status, ovms::StatusCode::OK);
+    auto devices = actualPluginConfig["DEVICE_PROPERTIES"].as<ov::AnyMap>();
+    auto properties = devices["DEVICE"].as<ov::AnyMap>();
+    EXPECT_EQ(properties["DOUBLE"], (double)2048.5);
+}
+
+TEST(ModelConfig, plugin_config_device_properties_bool) {
+    ovms::ModelConfig config;
+    std::string pluginConfig_str = "{\"DEVICE_PROPERTIES\": { \"DEVICE\": {\"BOOL\": false}}}";
+    auto status = config.parsePluginConfig(pluginConfig_str, config.getPluginConfig());
+    auto actualPluginConfig = config.getPluginConfig();
+    EXPECT_EQ(status, ovms::StatusCode::OK);
+    auto devices = actualPluginConfig["DEVICE_PROPERTIES"].as<ov::AnyMap>();
+    auto properties = devices["DEVICE"].as<ov::AnyMap>();
+    EXPECT_EQ(properties["BOOL"], false);
+}
+
+TEST(ModelConfig, plugin_config_device_properties_invalid_1) {
+    ovms::ModelConfig config;
+    std::string pluginConfig_str = "{\"DEVICE_PROPERTIES\": { \"DEVICE\": {\"MEMBER\": INVALID}}}";
+    auto status = config.parsePluginConfig(pluginConfig_str, config.getPluginConfig());
+    auto actualPluginConfig = config.getPluginConfig();
+    EXPECT_EQ(status, ovms::StatusCode::PLUGIN_CONFIG_WRONG_FORMAT);
+}
+
+TEST(ModelConfig, plugin_config_device_properties_invalid_2) {
+    ovms::ModelConfig config;
+    std::string pluginConfig_str = "{\"DEVICE_PROPERTIES\": { \"DEVICE\": {\"MEMBER\": {}}}}";
+    auto status = config.parsePluginConfig(pluginConfig_str, config.getPluginConfig());
+    auto actualPluginConfig = config.getPluginConfig();
+    EXPECT_EQ(status, ovms::StatusCode::PLUGIN_CONFIG_WRONG_FORMAT);
+}
+
+TEST(ModelConfig, plugin_config_device_properties_invalid_3) {
+    ovms::ModelConfig config;
+    std::string pluginConfig_str = "{\"DEVICE_PROPERTIES\": { \"DEVICE\": {\"MEMBER\": []}}}";
+    auto status = config.parsePluginConfig(pluginConfig_str, config.getPluginConfig());
+    auto actualPluginConfig = config.getPluginConfig();
+    EXPECT_EQ(status, ovms::StatusCode::PLUGIN_CONFIG_WRONG_FORMAT);
+}
+
+TEST(ModelConfig, plugin_config_device_properties_invalid_4) {
+    ovms::ModelConfig config;
+    std::string pluginConfig_str = "{\"DEVICE_PROPERTIES\": { \"DEVICE\": \"INVALID\"}}";
+    auto status = config.parsePluginConfig(pluginConfig_str, config.getPluginConfig());
+    auto actualPluginConfig = config.getPluginConfig();
+    EXPECT_EQ(status, ovms::StatusCode::PLUGIN_CONFIG_WRONG_FORMAT);
+}
+
+TEST(ModelConfig, plugin_config_device_properties_invalid_5) {
+    ovms::ModelConfig config;
+    std::string pluginConfig_str = "{\"DEVICE_PROPERTIES\": { \"DEVICE\": []}}";
+    auto status = config.parsePluginConfig(pluginConfig_str, config.getPluginConfig());
+    auto actualPluginConfig = config.getPluginConfig();
+    EXPECT_EQ(status, ovms::StatusCode::PLUGIN_CONFIG_WRONG_FORMAT);
+}
+
 TEST(ModelConfig, mappingInputs) {
     ovms::ModelConfig config;
     ovms::mapping_config_t mapping{
