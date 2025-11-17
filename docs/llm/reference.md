@@ -120,7 +120,7 @@ When set as static, it is recommended to set a value which doesn't lead to 100% 
 The dynamic allocation reserves as much as required to prevent preemption. In such way it should be most efficient to get optimal performance. In some cases it could lead however to consuming all available RAM.  
 
 `enable_prefix_caching` can improve generation performance when the initial prompt content is repeated. That is the case with chat applications which resend the history of the conversations. Thanks to prefix caching, there is no need to reevaluate the same sequence of tokens. Thanks to that, first token will be generated much quicker and the overall
-utilization of resource will be lower. Old cache will be cleared automatically all free cache is is consumed so it is recommended to increase cache_size to get better performance advantage and store longer history of previous requests.
+utilization of resource will be lower. Old cache will be cleared automatically when entire free cache is consumed, so it is recommended to increase `cache_size` to get better performance advantage and store longer history of previous requests.
 
 Another cache related option is `cache_eviction_config` which can help with latency of the long generation, but at the cost of accuracy. It's type is defined as follows:
 ```
