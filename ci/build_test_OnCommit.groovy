@@ -105,7 +105,7 @@ pipeline {
                       sh "echo build --remote_cache=${env.OVMS_BAZEL_REMOTE_CACHE_URL} > .user.bazelrc"
                       sh "echo test:linux --test_env https_proxy=${env.HTTPS_PROXY} >> .user.bazelrc"
                       sh "echo test:linux --test_env http_proxy=${env.HTTP_PROXY} >> .user.bazelrc"
-                      sh "make ovms_builder_image RUN_TESTS=0 OPTIMIZE_BUILDING_TESTS=1 OV_USE_BINARY=0 BASE_OS=redhat OVMS_CPP_IMAGE_TAG=${shortCommit} BUILD_IMAGE=openvino/model_server-build:${shortCommit}"
+                      sh "make ovms_builder_image RUN_TESTS=0 OPTIMIZE_BUILDING_TESTS=1 OV_USE_BINARY=0 BASE_OS=ubuntu24 OVMS_CPP_IMAGE_TAG=${shortCommit} BUILD_IMAGE=openvino/model_server-build:${shortCommit}"
                     }
             }
             stage('Build windows') {
@@ -152,7 +152,7 @@ pipeline {
               script {
               println "Running unit tests: NODE_NAME = ${env.NODE_NAME}"
               try {
-                  sh "make run_unit_tests TEST_LLM_PATH=${HOME}/ovms_models/llm_models_ovms/INT8 BASE_OS=redhat OVMS_CPP_IMAGE_TAG=${shortCommit}"
+                  sh "make run_unit_tests TEST_LLM_PATH=${HOME}/ovms_models/llm_models_ovms/INT8 BASE_OS=ubuntu24 OVMS_CPP_IMAGE_TAG=${shortCommit}"
               }
               finally {
                   archiveArtifacts allowEmptyArchive: true, artifacts: "test_logs.tar.gz"
@@ -166,8 +166,8 @@ pipeline {
                 label "${agent_name_linux}"
               }
               steps {
-                sh "make release_image RUN_TESTS=0 OV_USE_BINARY=0 BASE_OS=redhat OVMS_CPP_IMAGE_TAG=${shortCommit} BUILD_IMAGE=openvino/model_server-build:${shortCommit}"
-                sh "make run_lib_files_test BASE_OS=redhat OVMS_CPP_IMAGE_TAG=${shortCommit}"
+                sh "make release_image RUN_TESTS=0 OV_USE_BINARY=0 BASE_OS=ubuntu24 OVMS_CPP_IMAGE_TAG=${shortCommit} BUILD_IMAGE=openvino/model_server-build:${shortCommit}"
+                sh "make run_lib_files_test BASE_OS=ubuntu24 OVMS_CPP_IMAGE_TAG=${shortCommit}"
                 script {
                   dir ('internal_tests'){ 
                     checkout scmGit(
@@ -175,7 +175,7 @@ pipeline {
                     userRemoteConfigs: [[credentialsId: 'workflow-lab',
                     url: 'https://github.com/intel-innersource/frameworks.ai.openvino.model-server.tests.git']])
                     sh 'pwd'
-                    sh "make create-venv && TT_ON_COMMIT_TESTS=True TT_XDIST_WORKERS=10 TT_BASE_OS=redhat TT_OVMS_IMAGE_NAME=openvino/model_server:${shortCommit} TT_OVMS_IMAGE_LOCAL=True make tests"
+                    sh "make create-venv && TT_ON_COMMIT_TESTS=True TT_XDIST_WORKERS=10 TT_BASE_OS=ubuntu24 TT_OVMS_IMAGE_NAME=openvino/model_server:${shortCommit} TT_OVMS_IMAGE_LOCAL=True make tests"
                   }
                 }
               }            
