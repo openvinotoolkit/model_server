@@ -45,7 +45,6 @@ RUN echo -e "max_parallel_downloads=8\nretries=50" >> /etc/dnf/dnf.conf && \
             openssl-devel \
             patch \
             pkg-config \
-            vim \
             wget && \
             dnf clean all
 
@@ -123,6 +122,7 @@ RUN dnf install -y https://rpmfind.net/linux/almalinux/8.10/PowerTools/x86_64/os
             openssl-devel \
             which \
             unzip \
+            vim \
             xz \
             python3-devel \ 
             libicu-devel && \
@@ -313,6 +313,7 @@ ARG OPTIMIZE_BUILDING_TESTS=0
 # Builds unit tests together with ovms server in one step
 # It speeds up CI when tests are executed outside of the image building
 # hadolint ignore=SC2046
+RUN rm -f /usr/lib64/cmake/OpenSSL/OpenSSLConfig.cmake
 RUN bazel build --jobs=$JOBS ${debug_bazel_flags} ${minitrace_flags} //src:ovms $(if [ "$OPTIMIZE_BUILDING_TESTS" == "1" ] ; then echo -n //src:ovms_test; fi)
 
 # Tests execution
