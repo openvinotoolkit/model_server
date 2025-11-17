@@ -82,7 +82,7 @@ public:
         auto it = pipelinesMap.find(cc->NodeName());
         RET_CHECK(it != pipelinesMap.end()) << "Could not find initialized TTS node named: " << cc->NodeName();
         auto pipe = it->second;
-        auto& payload = cc->Inputs().Tag(INPUT_TAG_NAME).Get<ovms::HttpPayload>();
+        const auto& payload = cc->Inputs().Tag(INPUT_TAG_NAME).Get<ovms::HttpPayload>();
 
         std::unique_ptr<std::string> output;
         if (absl::StartsWith(payload.uri, "/v3/audio/speech")) {

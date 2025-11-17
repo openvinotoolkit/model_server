@@ -101,7 +101,7 @@ public:
         RET_CHECK(it != pipelinesMap.end()) << "Could not find initialized STT node named: " << cc->NodeName();
         auto pipe = it->second;
 
-        auto& payload = cc->Inputs().Tag(INPUT_TAG_NAME).Get<ovms::HttpPayload>();
+        const auto& payload = cc->Inputs().Tag(INPUT_TAG_NAME).Get<ovms::HttpPayload>();
         auto endpoint = getEndpoint(payload.uri);
         if (endpoint == Endpoint::UNSUPPORTED) {
             return absl::InvalidArgumentError(absl::StrCat("Unsupported URI: ", payload.uri));
