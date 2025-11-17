@@ -45,6 +45,7 @@ RUN echo -e "max_parallel_downloads=8\nretries=50" >> /etc/dnf/dnf.conf && \
             openssl-devel \
             patch \
             pkg-config \
+            vim \
             wget && \
             dnf clean all
 
@@ -122,7 +123,6 @@ RUN dnf install -y https://rpmfind.net/linux/almalinux/8.10/PowerTools/x86_64/os
             openssl-devel \
             which \
             unzip \
-            vim \
             xz \
             python3-devel \ 
             libicu-devel && \
