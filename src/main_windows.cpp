@@ -47,7 +47,7 @@ std::string OvmsWindowsServiceManager::getCurrentTimeString() {
     return oss.str();
 }
 
-#define DEBUG_LOG_ENABLE 1
+#define DEBUG_LOG_ENABLE 0
 static std::ofstream logFile("C:\\temp\\ovms.log", std::ios::app);
 #define DEBUG_LOG(msg)                                                                   \
     {                                                                                    \
@@ -541,7 +541,7 @@ DWORD WINAPI OvmsWindowsServiceManager::serviceWorkerThread(LPVOID lpParam) {
     if (ovmsService->error) {
         DEBUG_LOG("serviceWorkerThread: Ovms start returned error.");
         DEBUG_LOG(ovmsService->error);
-        serviceReportEventWithExitCode("serviceWorkerThread", "Ovms exited with error.", ovmsService->error);
+        serviceReportEventWithExitCode("serviceWorkerThread", "Ovms exited with error. Check windows events log and ovms server log for details.", ovmsService->error);
         return ovmsService->error;
     }
 
