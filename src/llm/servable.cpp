@@ -38,6 +38,19 @@
 #include "text_utils.hpp"
 
 namespace ovms {
+
+void GenAiServable::determineDecodingMethod() {
+    getProperties()->decodingMethod = DecodingMethod::STANDARD;
+    auto& pluginConfig = getProperties()->pluginConfig;
+    if (pluginConfig.find("draft_model") != pluginConfig.end()) {
+        getProperties()->decodingMethod = DecodingMethod::SPECULATIVE_DECODING;
+    }
+    auto it = pluginConfig.find("prompt_lookup");
+    if (it != pluginConfig.end() && it->second.as<bool>() == true) {
+        getProperties()->decodingMethod = DecodingMethod::PROMPT_LOOKUP;
+    }
+}
+
 absl::Status GenAiServable::loadRequest(std::shared_ptr<GenAiServableExecutionContext>& executionContext, const ovms::HttpPayload& payload) {
     if (spdlog::default_logger_raw()->level() <= spdlog::level::debug) {
         logRequestDetails(payload);
@@ -86,8 +99,12 @@ absl::Status GenAiServable::parseRequest(std::shared_ptr<GenAiServableExecutionC
         }
         executionContext->textStreamer = std::make_shared<ov::genai::TextStreamer>(getProperties()->tokenizer, callback, streamerConfig);
     }
-    executionContext->generationConfigBuilder = std::make_shared<GenerationConfigBuilder>(getProperties()->baseGenerationConfig, getProperties()->enableToolGuidedGeneration, getProperties()->toolParserName);
+    executionContext->generationConfigBuilder = std::make_shared<GenerationConfigBuilder>(getProperties()->baseGenerationConfig,
+        getProperties()->toolParserName,
+        getProperties()->enableToolGuidedGeneration,
+        getProperties()->decodingMethod);
     executionContext->generationConfigBuilder->parseConfigFromRequest(executionContext->apiHandler->getRequest());
+    executionContext->generationConfigBuilder->adjustConfigForDecodingMethod();
     try {
         executionContext->generationConfigBuilder->validateStructuredOutputConfig(getProperties()->tokenizer);
     } catch (const std::exception& e) {
