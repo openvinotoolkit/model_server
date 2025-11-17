@@ -24,8 +24,8 @@
 #pragma warning(push)
 #pragma warning(disable : 6313)
 #include <rapidjson/document.h>
-#include <rapidjson/stringbuffer.h>
-#include <rapidjson/writer.h>
+#include "src/port/rapidjson_stringbuffer.hpp"
+#include "src/port/rapidjson_writer.hpp"
 #include <rapidjson/istreamwrapper.h>
 #include <rapidjson/prettywriter.h>
 #pragma warning(pop)
@@ -292,6 +292,107 @@ node {
     return createPbtxtFile(directoryPath, oss.str());
 }
 
+static Status createTextToSpeechGraphTemplate(const std::string& directoryPath, const HFSettingsImpl& hfSettings) {
+    if (!std::holds_alternative<TextToSpeechGraphSettingsImpl>(hfSettings.graphSettings)) {
+        SPDLOG_ERROR("Graph options not initialized for speech generation.");
+        return StatusCode::INTERNAL_ERROR;
+    }
+    auto& ggufFilename = hfSettings.ggufFilename;
+    auto& exportSettings = hfSettings.exportSettings;
+
+    std::ostringstream oss;
+    oss << OVMS_VERSION_GRAPH_LINE;
+    std::string modelsPath = constructModelsPath(exportSettings.modelPath, ggufFilename);
+    SPDLOG_TRACE("modelsPath: {}, directoryPath: {}, ggufFilename: {}", modelsPath, directoryPath, ggufFilename.value_or("std::nullopt"));
+    GET_PLUGIN_CONFIG_OPT_OR_FAIL_AND_RETURN(exportSettings);
+    // clang-format off
+    oss << R"(
+input_stream: "HTTP_REQUEST_PAYLOAD:input"
+output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+node {
+    name: ")"
+    << exportSettings.modelName << R"("
+    calculator: "T2sCalculator"
+    input_side_packet: "TTS_NODE_RESOURCES:t2s_servable"
+    input_stream: "HTTP_REQUEST_PAYLOAD:input"
+    output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+    node_options: {
+        [type.googleapis.com / mediapipe.T2sCalculatorOptions]: {
+            models_path: ")"
+            << modelsPath << R"("
+            target_device: ")" << exportSettings.targetDevice << R"("
+            )";
+    if (pluginConfigOpt.has_value()) {
+        oss << R"(plugin_config: ')" << pluginConfigOpt.value() << R"('
+        )";
+    }
+    oss << R"(}
+    }
+})";
+
+#if (MEDIAPIPE_DISABLE == 0)
+    ::mediapipe::CalculatorGraphConfig config;
+    bool success = ::google::protobuf::TextFormat::ParseFromString(oss.str(), &config);
+    if (!success) {
+        SPDLOG_ERROR("Created text2speech graph config couldn't be parsed.");
+        return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
+    }
+#endif
+    // clang-format on
+    std::string fullPath = FileSystem::joinPath({directoryPath, "graph.pbtxt"});
+    return FileSystem::createFileOverwrite(fullPath, oss.str());
+}
+
+static Status createSpeechToTextGraphTemplate(const std::string& directoryPath, const HFSettingsImpl& hfSettings) {
+    if (!std::holds_alternative<SpeechToTextGraphSettingsImpl>(hfSettings.graphSettings)) {
+        SPDLOG_ERROR("Graph options not initialized for speech to text.");
+        return StatusCode::INTERNAL_ERROR;
+    }
+    auto& ggufFilename = hfSettings.ggufFilename;
+    auto& exportSettings = hfSettings.exportSettings;
+
+    std::ostringstream oss;
+    oss << OVMS_VERSION_GRAPH_LINE;
+    std::string modelsPath = constructModelsPath(exportSettings.modelPath, ggufFilename);
+    SPDLOG_TRACE("modelsPath: {}, directoryPath: {}, ggufFilename: {}", modelsPath, directoryPath, ggufFilename.value_or("std::nullopt"));
+    GET_PLUGIN_CONFIG_OPT_OR_FAIL_AND_RETURN(exportSettings);
+    // clang-format off
+    oss << R"(
+input_stream: "HTTP_REQUEST_PAYLOAD:input"
+output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+node {
+    name: ")"
+    << exportSettings.modelName << R"("
+    calculator: "S2tCalculator"
+    input_side_packet: "STT_NODE_RESOURCES:s2t_servable"
+    input_stream: "HTTP_REQUEST_PAYLOAD:input"
+    output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+    node_options: {
+        [type.googleapis.com / mediapipe.S2tCalculatorOptions]: {
+            models_path: ")"
+            << modelsPath << R"("
+            target_device: ")" << exportSettings.targetDevice << R"("
+            )";
+    if (pluginConfigOpt.has_value()) {
+        oss << R"(plugin_config: ')" << pluginConfigOpt.value() << R"('
+        )";
+    }
+    oss << R"(}
+    }
+})";
+#if (MEDIAPIPE_DISABLE == 0)
+    ::mediapipe::CalculatorGraphConfig config;
+    bool success = ::google::protobuf::TextFormat::ParseFromString(oss.str(), &config);
+    if (!success) {
+        SPDLOG_ERROR("Created speech2text graph config couldn't be parsed.");
+        return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
+    }
+#endif
+    // clang-format on
+    std::string fullPath = FileSystem::joinPath({directoryPath, "graph.pbtxt"});
+    return FileSystem::createFileOverwrite(fullPath, oss.str());
+}
+
 static Status createImageGenerationGraphTemplate(const std::string& directoryPath, const HFSettingsImpl& hfSettings) {
     if (!std::holds_alternative<ImageGenerationGraphSettingsImpl>(hfSettings.graphSettings)) {
         SPDLOG_ERROR("Graph options not initialized for image generation.");
@@ -408,6 +509,10 @@ Status GraphExport::createServableConfig(const std::string& directoryPath, const
         return createRerankGraphTemplate(directoryPath, hfSettings);
     } else if (hfSettings.task == IMAGE_GENERATION_GRAPH) {
         return createImageGenerationGraphTemplate(directoryPath, hfSettings);
+    } else if (hfSettings.task == TEXT_TO_SPEECH_GRAPH) {
+        return createTextToSpeechGraphTemplate(directoryPath, hfSettings);
+    } else if (hfSettings.task == SPEECH_TO_TEXT_GRAPH) {
+        return createSpeechToTextGraphTemplate(directoryPath, hfSettings);
     } else if (hfSettings.task == UNKNOWN_GRAPH) {
         SPDLOG_ERROR("Graph options not initialized.");
         return StatusCode::INTERNAL_ERROR;
@@ -461,7 +566,9 @@ std::variant<std::optional<std::string>, Status> GraphExport::createPluginString
     }
     if (pluginConfig.numStreams.has_value()) {
         rapidjson::Value value;
-        value.SetUint(pluginConfig.numStreams.value());
+        // convert pluginConfig.numStreams.value() to string
+        std::string numStreamsStr = std::to_string(pluginConfig.numStreams.value());
+        value.SetString(numStreamsStr.c_str(), d.GetAllocator());
         auto itr = d.FindMember("NUM_STREAMS");
         if (itr != d.MemberEnd()) {
             if (pluginConfig.numStreams.value() == 1) {

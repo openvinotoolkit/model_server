@@ -24,7 +24,7 @@
 #include "spdlog/spdlog.h"
 
 #include "../capi_frontend/server_settings.hpp"
-#include "./env_guard.hpp"
+#include "../utils/env_guard.hpp"
 #include "../config.hpp"
 #include "../filesystem.hpp"
 #include "../ovms_exit_codes.hpp"
@@ -329,7 +329,7 @@ TEST_F(OvmsConfigDeathTest, NegativeListModelsWithoutModelRepositoryPath) {
 TEST_F(OvmsConfigDeathTest, NegativeInvalidAPIKeyFile) {
     char* n_argv[] = {"ovms", "--config_path", "/path1", "--api_key_file", "/wrong/dir", "--port", "44"};
     int arg_count = 7;
-    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "Error reading API key file: Unable to open file \"/wrong/dir\"");
+    EXPECT_THROW(ovms::Config::instance().parse(arg_count, n_argv), std::filesystem::filesystem_error);
 }
 
 TEST_F(OvmsConfigDeathTest, negativeMissingDashes) {
@@ -1117,7 +1117,7 @@ TEST(OvmsGraphConfigTest, positiveSomeChangedTextGeneration) {
     ASSERT_EQ(exportSettings.targetDevice, "NPU");
     ASSERT_EQ(exportSettings.pluginConfig.kvCachePrecision.has_value(), false);
     ASSERT_EQ(graphSettings.enablePrefixCaching, "true");
-    ASSERT_EQ(graphSettings.cacheSize, 10);
+    ASSERT_EQ(graphSettings.cacheSize, 0);
     ASSERT_EQ(graphSettings.maxNumBatchedTokens.has_value(), false);
     ASSERT_EQ(graphSettings.dynamicSplitFuse, "true");
     ASSERT_EQ(graphSettings.draftModelDirName.has_value(), false);
@@ -1153,7 +1153,7 @@ TEST(OvmsGraphConfigTest, positiveTaskTextGen) {
     ASSERT_EQ(exportSettings.targetDevice, "CPU");
     ASSERT_EQ(exportSettings.pluginConfig.kvCachePrecision.has_value(), false);
     ASSERT_EQ(graphSettings.enablePrefixCaching, "true");
-    ASSERT_EQ(graphSettings.cacheSize, 10);
+    ASSERT_EQ(graphSettings.cacheSize, 0);
     ASSERT_EQ(graphSettings.maxNumBatchedTokens.has_value(), false);
     ASSERT_EQ(graphSettings.dynamicSplitFuse, "true");
     ASSERT_EQ(graphSettings.draftModelDirName.has_value(), false);
@@ -1333,7 +1333,7 @@ TEST(OvmsGraphConfigTest, positiveDefault) {
     ASSERT_EQ(exportSettings.targetDevice, "CPU");
     ASSERT_EQ(exportSettings.pluginConfig.kvCachePrecision.has_value(), false);
     ASSERT_EQ(graphSettings.enablePrefixCaching, "true");
-    ASSERT_EQ(graphSettings.cacheSize, 10);
+    ASSERT_EQ(graphSettings.cacheSize, 0);
     ASSERT_EQ(graphSettings.maxNumBatchedTokens.has_value(), false);
     ASSERT_EQ(graphSettings.dynamicSplitFuse, "true");
     ASSERT_EQ(graphSettings.draftModelDirName.has_value(), false);
@@ -1373,7 +1373,7 @@ TEST(OvmsGraphConfigTest, positiveDefaultStart) {
     ASSERT_EQ(exportSettings.targetDevice, "CPU");
     ASSERT_EQ(exportSettings.pluginConfig.kvCachePrecision.has_value(), false);
     ASSERT_EQ(graphSettings.enablePrefixCaching, "true");
-    ASSERT_EQ(graphSettings.cacheSize, 10);
+    ASSERT_EQ(graphSettings.cacheSize, 0);
     ASSERT_EQ(graphSettings.maxNumBatchedTokens.has_value(), false);
     ASSERT_EQ(graphSettings.dynamicSplitFuse, "true");
     ASSERT_EQ(graphSettings.draftModelDirName.has_value(), false);
@@ -1945,7 +1945,80 @@ TEST(OvmsGraphConfigTest, positiveSomeChangedEmbeddings) {
     ASSERT_EQ(exportSettings.modelPath, "./");
 }
 
-TEST(OvmsGraphConfigTest, negativeEmbeddingsInvalidNormalize) {
+TEST(OvmsGraphConfigTest, positiveAllChangedTextToSpeech) {
+    std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
+    std::string downloadPath = "test/repository";
+    std::string servingName = "FastDraft";
+    char* n_argv[] = {
+        (char*)"ovms",
+        (char*)"--pull",
+        (char*)"--source_model",
+        (char*)modelName.c_str(),
+        (char*)"--model_repository_path",
+        (char*)downloadPath.c_str(),
+        (char*)"--task",
+        (char*)"text2speech",
+        (char*)"--target_device",
+        (char*)"GPU",
+        (char*)"--num_streams",
+        (char*)"2",
+        (char*)"--model_name",
+        (char*)servingName.c_str(),
+    };
+
+    int arg_count = 14;
+    ConstructorEnabledConfig config;
+    config.parse(arg_count, n_argv);
+
+    auto& hfSettings = config.getServerSettings().hfSettings;
+    ASSERT_EQ(hfSettings.sourceModel, modelName);
+    ASSERT_EQ(hfSettings.downloadPath, downloadPath);
+    ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_MODE);
+    ASSERT_EQ(hfSettings.task, ovms::TEXT_TO_SPEECH_GRAPH);
+    ASSERT_EQ(hfSettings.exportSettings.pluginConfig.numStreams, 2);
+    ASSERT_EQ(hfSettings.exportSettings.targetDevice, "GPU");
+    ASSERT_EQ(hfSettings.exportSettings.modelName, servingName);
+    ASSERT_EQ(hfSettings.exportSettings.modelPath, "./");
+}
+
+TEST(OvmsGraphConfigTest, positiveAllChangedTextToSpeechStart) {
+    std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
+    std::string downloadPath = "test/repository";
+    std::string servingName = "FastDraft";
+    char* n_argv[] = {
+        (char*)"ovms",
+        (char*)"--source_model",
+        (char*)modelName.c_str(),
+        (char*)"--model_repository_path",
+        (char*)downloadPath.c_str(),
+        (char*)"--task",
+        (char*)"text2speech",
+        (char*)"--target_device",
+        (char*)"GPU",
+        (char*)"--num_streams",
+        (char*)"2",
+        (char*)"--model_name",
+        (char*)servingName.c_str(),
+        (char*)"--port",
+        (char*)"8080",
+    };
+
+    int arg_count = 15;
+    ConstructorEnabledConfig config;
+    config.parse(arg_count, n_argv);
+
+    auto& hfSettings = config.getServerSettings().hfSettings;
+    ASSERT_EQ(hfSettings.sourceModel, modelName);
+    ASSERT_EQ(hfSettings.downloadPath, downloadPath);
+    ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_AND_START_MODE);
+    ASSERT_EQ(hfSettings.task, ovms::TEXT_TO_SPEECH_GRAPH);
+    ASSERT_EQ(hfSettings.exportSettings.pluginConfig.numStreams, 2);
+    ASSERT_EQ(hfSettings.exportSettings.targetDevice, "GPU");
+    ASSERT_EQ(hfSettings.exportSettings.modelName, servingName);
+    ASSERT_EQ(hfSettings.exportSettings.modelPath, "./");
+}
+
+TEST(OvmsGraphConfigTest, positiveDefaultTextToSpeech) {
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string downloadPath = "test/repository";
     char* n_argv[] = {
@@ -1956,14 +2029,190 @@ TEST(OvmsGraphConfigTest, negativeEmbeddingsInvalidNormalize) {
         (char*)"--model_repository_path",
         (char*)downloadPath.c_str(),
         (char*)"--task",
-        (char*)"embeddings",
-        (char*)"--normalize",
-        (char*)"INVALID",
+        (char*)"text2speech",
     };
 
-    int arg_count = 10;
+    int arg_count = 8;
+    ConstructorEnabledConfig config;
+    config.parse(arg_count, n_argv);
 
-    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "normalize: INVALID is not allowed. Supported values: true, false");
+    auto& hfSettings = config.getServerSettings().hfSettings;
+    ASSERT_EQ(hfSettings.sourceModel, modelName);
+    ASSERT_EQ(hfSettings.downloadPath, downloadPath);
+    ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_MODE);
+    ASSERT_EQ(hfSettings.task, ovms::TEXT_TO_SPEECH_GRAPH);
+    ASSERT_EQ(hfSettings.exportSettings.pluginConfig.numStreams, 1);
+    ASSERT_EQ(hfSettings.exportSettings.targetDevice, "CPU");
+    ASSERT_EQ(hfSettings.exportSettings.modelName, modelName);
+}
+
+TEST(OvmsGraphConfigTest, positiveSomeChangedTextToSpeech) {
+    std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
+    std::string downloadPath = "test/repository";
+    std::string servingName = "FastDraft";
+    char* n_argv[] = {
+        (char*)"ovms",
+        (char*)"--pull",
+        (char*)"--source_model",
+        (char*)modelName.c_str(),
+        (char*)"--model_repository_path",
+        (char*)downloadPath.c_str(),
+        (char*)"--task",
+        (char*)"text2speech",
+        (char*)"--target_device",
+        (char*)"GPU",
+        (char*)"--model_name",
+        (char*)servingName.c_str(),
+    };
+
+    int arg_count = 12;
+    ConstructorEnabledConfig config;
+    config.parse(arg_count, n_argv);
+
+    auto& hfSettings = config.getServerSettings().hfSettings;
+    ASSERT_EQ(hfSettings.sourceModel, modelName);
+    ASSERT_EQ(hfSettings.downloadPath, downloadPath);
+    ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_MODE);
+    ASSERT_EQ(hfSettings.task, ovms::TEXT_TO_SPEECH_GRAPH);
+    ASSERT_EQ(hfSettings.exportSettings.pluginConfig.numStreams, 1);
+    ASSERT_EQ(hfSettings.exportSettings.targetDevice, "GPU");
+    ASSERT_EQ(hfSettings.exportSettings.modelName, servingName);
+    ASSERT_EQ(hfSettings.exportSettings.modelPath, "./");
+}
+
+TEST(OvmsGraphConfigTest, positiveAllChangedSpeechToText) {
+    std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
+    std::string downloadPath = "test/repository";
+    std::string servingName = "FastDraft";
+    char* n_argv[] = {
+        (char*)"ovms",
+        (char*)"--pull",
+        (char*)"--source_model",
+        (char*)modelName.c_str(),
+        (char*)"--model_repository_path",
+        (char*)downloadPath.c_str(),
+        (char*)"--task",
+        (char*)"speech2text",
+        (char*)"--target_device",
+        (char*)"GPU",
+        (char*)"--num_streams",
+        (char*)"2",
+        (char*)"--model_name",
+        (char*)servingName.c_str(),
+    };
+
+    int arg_count = 14;
+    ConstructorEnabledConfig config;
+    config.parse(arg_count, n_argv);
+
+    auto& hfSettings = config.getServerSettings().hfSettings;
+    ASSERT_EQ(hfSettings.sourceModel, modelName);
+    ASSERT_EQ(hfSettings.downloadPath, downloadPath);
+    ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_MODE);
+    ASSERT_EQ(hfSettings.task, ovms::SPEECH_TO_TEXT_GRAPH);
+    ASSERT_EQ(hfSettings.exportSettings.pluginConfig.numStreams, 2);
+    ASSERT_EQ(hfSettings.exportSettings.targetDevice, "GPU");
+    ASSERT_EQ(hfSettings.exportSettings.modelName, servingName);
+    ASSERT_EQ(hfSettings.exportSettings.modelPath, "./");
+}
+
+TEST(OvmsGraphConfigTest, positiveAllChangedSpeechToTextStart) {
+    std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
+    std::string downloadPath = "test/repository";
+    std::string servingName = "FastDraft";
+    char* n_argv[] = {
+        (char*)"ovms",
+        (char*)"--source_model",
+        (char*)modelName.c_str(),
+        (char*)"--model_repository_path",
+        (char*)downloadPath.c_str(),
+        (char*)"--task",
+        (char*)"speech2text",
+        (char*)"--target_device",
+        (char*)"GPU",
+        (char*)"--num_streams",
+        (char*)"2",
+        (char*)"--model_name",
+        (char*)servingName.c_str(),
+        (char*)"--port",
+        (char*)"8080",
+    };
+
+    int arg_count = 15;
+    ConstructorEnabledConfig config;
+    config.parse(arg_count, n_argv);
+
+    auto& hfSettings = config.getServerSettings().hfSettings;
+    ASSERT_EQ(hfSettings.sourceModel, modelName);
+    ASSERT_EQ(hfSettings.downloadPath, downloadPath);
+    ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_AND_START_MODE);
+    ASSERT_EQ(hfSettings.task, ovms::SPEECH_TO_TEXT_GRAPH);
+    ASSERT_EQ(hfSettings.exportSettings.pluginConfig.numStreams, 2);
+    ASSERT_EQ(hfSettings.exportSettings.targetDevice, "GPU");
+    ASSERT_EQ(hfSettings.exportSettings.modelName, servingName);
+    ASSERT_EQ(hfSettings.exportSettings.modelPath, "./");
+}
+
+TEST(OvmsGraphConfigTest, positiveDefaultSpeechToText) {
+    std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
+    std::string downloadPath = "test/repository";
+    char* n_argv[] = {
+        (char*)"ovms",
+        (char*)"--pull",
+        (char*)"--source_model",
+        (char*)modelName.c_str(),
+        (char*)"--model_repository_path",
+        (char*)downloadPath.c_str(),
+        (char*)"--task",
+        (char*)"speech2text",
+    };
+
+    int arg_count = 8;
+    ConstructorEnabledConfig config;
+    config.parse(arg_count, n_argv);
+
+    auto& hfSettings = config.getServerSettings().hfSettings;
+    ASSERT_EQ(hfSettings.sourceModel, modelName);
+    ASSERT_EQ(hfSettings.downloadPath, downloadPath);
+    ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_MODE);
+    ASSERT_EQ(hfSettings.task, ovms::SPEECH_TO_TEXT_GRAPH);
+    ASSERT_EQ(hfSettings.exportSettings.pluginConfig.numStreams, 1);
+    ASSERT_EQ(hfSettings.exportSettings.targetDevice, "CPU");
+    ASSERT_EQ(hfSettings.exportSettings.modelName, modelName);
+}
+
+TEST(OvmsGraphConfigTest, positiveSomeChangedSpeechToText) {
+    std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
+    std::string downloadPath = "test/repository";
+    std::string servingName = "FastDraft";
+    char* n_argv[] = {
+        (char*)"ovms",
+        (char*)"--pull",
+        (char*)"--source_model",
+        (char*)modelName.c_str(),
+        (char*)"--model_repository_path",
+        (char*)downloadPath.c_str(),
+        (char*)"--task",
+        (char*)"speech2text",
+        (char*)"--target_device",
+        (char*)"GPU",
+        (char*)"--model_name",
+        (char*)servingName.c_str(),
+    };
+
+    int arg_count = 12;
+    ConstructorEnabledConfig config;
+    config.parse(arg_count, n_argv);
+
+    auto& hfSettings = config.getServerSettings().hfSettings;
+    ASSERT_EQ(hfSettings.sourceModel, modelName);
+    ASSERT_EQ(hfSettings.downloadPath, downloadPath);
+    ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_MODE);
+    ASSERT_EQ(hfSettings.task, ovms::SPEECH_TO_TEXT_GRAPH);
+    ASSERT_EQ(hfSettings.exportSettings.pluginConfig.numStreams, 1);
+    ASSERT_EQ(hfSettings.exportSettings.targetDevice, "GPU");
+    ASSERT_EQ(hfSettings.exportSettings.modelName, servingName);
+    ASSERT_EQ(hfSettings.exportSettings.modelPath, "./");
 }
 
 TEST(OvmsAPIKeyConfig, positiveAPIKeyFile) {
@@ -2040,6 +2289,7 @@ TEST_F(OvmsParamsTest, hostname_ip_regex) {
     EXPECT_EQ(ovms::Config::check_hostname_or_ip(
                   "2001:db8:85a3::8a2e:370:7334"),
         true);
+    EXPECT_EQ(ovms::Config::check_hostname_or_ip("0:0:0:0:0:0:0:0"), true);
     EXPECT_EQ(ovms::Config::check_hostname_or_ip("::1"), true);
     EXPECT_EQ(ovms::Config::check_hostname_or_ip("::"), true);
     // Link-local IPv6 with zone index (RFC 4007 § 11) - unsupported
@@ -2054,6 +2304,30 @@ TEST_F(OvmsParamsTest, hostname_ip_regex) {
     EXPECT_EQ(ovms::Config::check_hostname_or_ip("::ffff:192.0.2.128"), true);
     //  IPv4-translated IPv6 addresses
     EXPECT_EQ(ovms::Config::check_hostname_or_ip("::ffff:0:192.0.2.128"), true);
+
+    // Multiple selections
+    EXPECT_EQ(ovms::Config::check_hostname_or_ip("0.0.0.0"), true);
+    EXPECT_EQ(ovms::Config::check_hostname_or_ip("0.0.0.0,0:0:0:0:0:0:0:0"), true);
+    EXPECT_EQ(ovms::Config::check_hostname_or_ip("127.0.0.1,::1"), true);
+    EXPECT_EQ(ovms::Config::check_hostname_or_ip("127.0.0.1,0:0:0:0:0:0:0:1"), true);
+    EXPECT_EQ(ovms::Config::check_hostname_or_ip("192.0.2.33,fe80::1234"), true);
+    EXPECT_EQ(ovms::Config::check_hostname_or_ip("192.0.2.33,fe80::1234,192.0.2.34,192.0.2.35,fe80::1235,fe80::1236"), true);
+}
+
+TEST_F(OvmsParamsTest, check_is_ipv6_address) {
+    EXPECT_EQ(ovms::Config::is_ipv6("fe80:0000:0000:0000:0202:b3ff:fe1e:8329"), true);
+    EXPECT_EQ(ovms::Config::is_ipv6("2001:db8:85a3::8a2e:370:7334"), true);
+    EXPECT_EQ(ovms::Config::is_ipv6("0:0:0:0:0:0:0:0"), true);
+    EXPECT_EQ(ovms::Config::is_ipv6("::1"), true);
+    EXPECT_EQ(ovms::Config::is_ipv6("::"), true);
+    EXPECT_EQ(ovms::Config::is_ipv6("64:ff9b::192.0.2.33"), true);
+    EXPECT_EQ(ovms::Config::is_ipv6("2001:db8:122:344::192.0.2.33"), true);
+    EXPECT_EQ(ovms::Config::is_ipv6("::ffff:192.0.2.128"), true);
+    EXPECT_EQ(ovms::Config::is_ipv6("::ffff:0:192.0.2.128"), true);
+
+    EXPECT_EQ(ovms::Config::is_ipv6("127.0.0.1"), false);
+    EXPECT_EQ(ovms::Config::is_ipv6("192.0.2.33"), false);
+    EXPECT_EQ(ovms::Config::is_ipv6("10.0.0.255"), false);
 }
 
 TEST(OvmsConfigTest, positiveMulti) {

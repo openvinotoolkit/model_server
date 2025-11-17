@@ -36,8 +36,8 @@ Configuration options for the server are defined only via command-line options a
 |---|---|---|
 | `port` | `integer` | Number of the port used by gRPC sever. |
 | `rest_port` | `integer` | Number of the port used by HTTP server (if not provided or set to 0, HTTP server will not be launched). |
-| `grpc_bind_address` | `string` | Network interface address or a hostname, to which gRPC server will bind to. Default: all interfaces: 0.0.0.0 |
-| `rest_bind_address` | `string` | Network interface address or a hostname, to which REST server will bind to. Default: all interfaces: 0.0.0.0 |
+| `grpc_bind_address` | `string` | Comma separated list of ipv4/ipv6 network interface addresses or hostnames, to which gRPC server will bind to. Default: all interfaces: 0.0.0.0 |
+| `rest_bind_address` | `string` | Comma separated list of ipv4/ipv6 network interface addresses or hostnames, to which REST server will bind to. Default: all interfaces: 0.0.0.0 |
 | `grpc_workers` | `integer` | Number of the gRPC server instances (must be from 1 to CPU core count). Default value is 1 and it's optimal for most use cases. Consider setting higher value while expecting heavy load. |
 | `rest_workers` | `integer` | Number of HTTP server threads. Effective when `rest_port` > 0. Default value is set based on the number of CPUs. |
 | `file_system_poll_wait_seconds` | `integer` | Time interval between config and model versions changes detection in seconds. Default value is 1. Zero value disables changes monitoring. |
@@ -125,7 +125,7 @@ Task specific parameters for different tasks (text generation/image generation/e
 | `--pipeline_type`                     | `string`     | Type of the pipeline to be used. Choices: `LM`, `LM_CB`, `VLM`, `VLM_CB`, `AUTO`. Default: `AUTO`.                         |
 | `--enable_prefix_caching`             | `bool`       | Enables algorithm to cache the prompt tokens. Default: true.                                                               |
 | `--max_num_batched_tokens`            | `integer`    | The maximum number of tokens that can be batched together.                                                                 |
-| `--cache_size`                        | `integer`    | Cache size in GB. Default: 10.                                                                                             |
+| `--cache_size`                        | `integer`    | KV Cache size in GB. Default: 0 which is a dynamic allocation.                              |
 | `--draft_source_model`                | `string`     | HF model name or path to the local folder with PyTorch or OpenVINO draft model.                                            |
 | `--dynamic_split_fuse`                | `bool`       | Enables dynamic split fuse algorithm. Default: true.                                                                       |
 | `--max_prompt_len`                    | `integer`    | Sets NPU specific property for maximum number of tokens in the prompt.                                                     |

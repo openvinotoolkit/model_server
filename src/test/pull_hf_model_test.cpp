@@ -20,7 +20,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "src/test/env_guard.hpp"
+#include "src/utils/env_guard.hpp"
 #include "src/test/light_test_utils.hpp"
 #include "src/test/test_utils.hpp"
 #include "src/test/test_with_temp_dir.hpp"
@@ -42,15 +42,15 @@ protected:
     ovms::Server& server = ovms::Server::instance();
     std::unique_ptr<std::thread> t;
 
-    void ServerPullHfModel(std::string& sourceModel, std::string& downloadPath, std::string& task, int expected_code = 0, int timeoutSeconds = 15) {
+    void ServerPullHfModel(std::string& sourceModel, std::string& downloadPath, std::string& task, int expected_code = 0, int timeoutSeconds = 60) {
         ::SetUpServerForDownload(this->t, this->server, sourceModel, downloadPath, task, expected_code, timeoutSeconds);
     }
 
-    void ServerPullHfModelWithDraft(std::string& draftModel, std::string& sourceModel, std::string& downloadPath, std::string& task, int expected_code = 0, int timeoutSeconds = 30) {
+    void ServerPullHfModelWithDraft(std::string& draftModel, std::string& sourceModel, std::string& downloadPath, std::string& task, int expected_code = 0, int timeoutSeconds = 60) {
         ::SetUpServerForDownloadWithDraft(this->t, this->server, draftModel, sourceModel, downloadPath, task, expected_code, timeoutSeconds);
     }
 
-    void SetUpServerForDownloadAndStart(std::string& sourceModel, std::string& downloadPath, std::string& task, int timeoutSeconds = 15) {
+    void SetUpServerForDownloadAndStart(std::string& sourceModel, std::string& downloadPath, std::string& task, int timeoutSeconds = 60) {
         ::SetUpServerForDownloadAndStart(this->t, this->server, sourceModel, downloadPath, task, timeoutSeconds);
     }
 
@@ -92,7 +92,7 @@ const std::string expectedGraphContents = R"(
             device: "CPU",
             models_path: "./",
             enable_prefix_caching: true,
-            cache_size: 10,
+            cache_size: 0,
         }
     }
     input_stream_handler {
@@ -129,7 +129,7 @@ const std::string expectedGraphContentsDraft = R"(
             device: "CPU",
             models_path: "./",
             enable_prefix_caching: true,
-            cache_size: 10,
+            cache_size: 0,
             # Speculative decoding configuration
             draft_models_path: "OpenVINO-distil-small.en-int4-ov",
         }
@@ -408,6 +408,33 @@ TEST_F(TestOptimumDownloaderSetup, EmbeddingsExportCmd) {
     inHfSettings.task = ovms::EMBEDDINGS_GRAPH;
     std::unique_ptr<TestOptimumDownloader> optimumDownloader = std::make_unique<TestOptimumDownloader>(inHfSettings);
     std::string expectedCmd = "optimum-cli export openvino --disable-convert-tokenizer --task feature-extraction --library sentence_transformers --model model/name --trust-remote-code  --weight-format fp64 \\path\\to\\Download\\model\\name";
+    std::string expectedCmd2 = "convert_tokenizer model/name -o \\path\\to\\Download\\model\\name";
+#ifdef __linux__
+    std::replace(expectedCmd.begin(), expectedCmd.end(), '\\', '/');
+    std::replace(expectedCmd2.begin(), expectedCmd2.end(), '\\', '/');
+#endif
+    ASSERT_EQ(optimumDownloader->getExportCmd(), expectedCmd);
+    ASSERT_EQ(optimumDownloader->getConvertCmd(), expectedCmd2);
+}
+
+TEST_F(TestOptimumDownloaderSetup, TextToSpeechExportCmd) {
+    inHfSettings.task = ovms::TEXT_TO_SPEECH_GRAPH;
+    inHfSettings.exportSettings.vocoder = "microsoft/speecht5_hifigan";
+    std::unique_ptr<TestOptimumDownloader> optimumDownloader = std::make_unique<TestOptimumDownloader>(inHfSettings);
+    std::string expectedCmd = "optimum-cli export openvino --model-kwargs \"{\"vocoder\": \"microsoft/speecht5_hifigan\"}\" --model model/name --trust-remote-code  --weight-format fp64 \\path\\to\\Download\\model\\name";
+    std::string expectedCmd2 = "convert_tokenizer model/name -o \\path\\to\\Download\\model\\name";
+#ifdef __linux__
+    std::replace(expectedCmd.begin(), expectedCmd.end(), '\\', '/');
+    std::replace(expectedCmd2.begin(), expectedCmd2.end(), '\\', '/');
+#endif
+    ASSERT_EQ(optimumDownloader->getExportCmd(), expectedCmd);
+    ASSERT_EQ(optimumDownloader->getConvertCmd(), expectedCmd2);
+}
+
+TEST_F(TestOptimumDownloaderSetup, SpeechToTextExportCmd) {
+    inHfSettings.task = ovms::SPEECH_TO_TEXT_GRAPH;
+    std::unique_ptr<TestOptimumDownloader> optimumDownloader = std::make_unique<TestOptimumDownloader>(inHfSettings);
+    std::string expectedCmd = "optimum-cli export openvino --model model/name --trust-remote-code  --weight-format fp64 \\path\\to\\Download\\model\\name";
     std::string expectedCmd2 = "convert_tokenizer model/name -o \\path\\to\\Download\\model\\name";
 #ifdef __linux__
     std::replace(expectedCmd.begin(), expectedCmd.end(), '\\', '/');

@@ -22,7 +22,10 @@ int main(int argc, char** argv) {
     return server.start(argc, argv);
 }
 #elif _WIN32
+#pragma warning(push)
+#pragma warning(disable : 6553)
 #include "main_windows.hpp"
+#pragma warning(pop)
 
 int main(int argc, char** argv) {
     return ovms_service::main_windows(argc, argv);

@@ -308,7 +308,7 @@ node {
             models_path: "/some/path",
             max_allowed_chunks: 18,
             target_device: "GPU",
-            plugin_config: '{"NUM_STREAMS":2}',
+            plugin_config: '{"NUM_STREAMS":"2"}',
         }
     }
 }
@@ -328,7 +328,7 @@ node {
             models_path: "./",
             max_allowed_chunks: 10000,
             target_device: "CPU",
-            plugin_config: '{"NUM_STREAMS":1}',
+            plugin_config: '{"NUM_STREAMS":"1"}',
         }
     }
 }
@@ -350,7 +350,7 @@ node {
             truncate: true,
             pooling: LAST,
             target_device: "GPU",
-            plugin_config: '{"NUM_STREAMS":2}',
+            plugin_config: '{"NUM_STREAMS":"2"}',
         }
     }
 }
@@ -372,8 +372,82 @@ node {
             truncate: false,
             pooling: CLS,
             target_device: "CPU",
-            plugin_config: '{"NUM_STREAMS":1}',
+            plugin_config: '{"NUM_STREAMS":"1"}',
         }
+    }
+}
+)";
+
+const std::string expectedTextToSpeechGraphContents = R"(
+input_stream: "HTTP_REQUEST_PAYLOAD:input"
+output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+node {
+    name: "myModel"
+    calculator: "T2sCalculator"
+    input_side_packet: "TTS_NODE_RESOURCES:t2s_servable"
+    input_stream: "HTTP_REQUEST_PAYLOAD:input"
+    output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+    node_options: {
+        [type.googleapis.com / mediapipe.T2sCalculatorOptions]: {
+            models_path: "/model1/path"
+            target_device: "GPU"
+            plugin_config: '{"NUM_STREAMS":"2"}'
+        }
+    }
+}
+)";
+
+const std::string expectedTextToSpeechGraphContentsDefault = R"(
+input_stream: "HTTP_REQUEST_PAYLOAD:input"
+output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+node {
+    name: ""
+    calculator: "T2sCalculator"
+    input_side_packet: "TTS_NODE_RESOURCES:t2s_servable"
+    input_stream: "HTTP_REQUEST_PAYLOAD:input"
+    output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+    node_options: {
+        [type.googleapis.com / mediapipe.T2sCalculatorOptions]: {
+            models_path: "./"
+            target_device: "CPU"
+            }
+    }
+}
+)";
+
+const std::string expectedSpeechToTextGraphContents = R"(
+input_stream: "HTTP_REQUEST_PAYLOAD:input"
+output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+node {
+    name: "myModel"
+    calculator: "S2tCalculator"
+    input_side_packet: "STT_NODE_RESOURCES:s2t_servable"
+    input_stream: "HTTP_REQUEST_PAYLOAD:input"
+    output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+    node_options: {
+        [type.googleapis.com / mediapipe.S2tCalculatorOptions]: {
+            models_path: "/model1/path"
+            target_device: "GPU"
+            plugin_config: '{"NUM_STREAMS":"2"}'
+        }
+    }
+}
+)";
+
+const std::string expectedSpeechToTextGraphContentsDefault = R"(
+input_stream: "HTTP_REQUEST_PAYLOAD:input"
+output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+node {
+    name: ""
+    calculator: "S2tCalculator"
+    input_side_packet: "STT_NODE_RESOURCES:s2t_servable"
+    input_stream: "HTTP_REQUEST_PAYLOAD:input"
+    output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+    node_options: {
+        [type.googleapis.com / mediapipe.S2tCalculatorOptions]: {
+            models_path: "./"
+            target_device: "CPU"
+            }
     }
 }
 )";
@@ -392,7 +466,7 @@ node: {
       [type.googleapis.com / mediapipe.ImageGenCalculatorOptions]: {
           models_path: "./"
           device: "GPU"
-          plugin_config: '{"NUM_STREAMS":14,"CACHE_DIR":"/cache"}'
+          plugin_config: '{"NUM_STREAMS":"14","CACHE_DIR":"/cache"}'
           max_resolution: "3000x4000"
           default_resolution: "300x400"
           max_num_images_per_prompt: 7
@@ -484,6 +558,36 @@ TEST_F(GraphCreationTest, positiveEmbeddingsWithVersionString) {
 
     std::string graphContents = GetFileContents(graphPath);
     std::string expected = getVersionString() + expectedEmbeddingsGraphContentsDefault;
+    ASSERT_EQ(expected, graphContents) << graphContents;
+}
+
+TEST_F(GraphCreationTest, positiveTextToSpeechWithVersionString) {
+    ovms::HFSettingsImpl hfSettings;
+    hfSettings.task = ovms::TEXT_TO_SPEECH_GRAPH;
+    ovms::TextToSpeechGraphSettingsImpl textToSpeechGraphSettings;
+    hfSettings.graphSettings = std::move(textToSpeechGraphSettings);
+    std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
+    std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
+    auto status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
+    ASSERT_EQ(status, ovms::StatusCode::OK);
+
+    std::string graphContents = GetFileContents(graphPath);
+    std::string expected = getVersionString() + expectedTextToSpeechGraphContentsDefault;
+    ASSERT_EQ(expected, graphContents) << graphContents;
+}
+
+TEST_F(GraphCreationTest, positiveSTTWithVersionString) {
+    ovms::HFSettingsImpl hfSettings;
+    hfSettings.task = ovms::SPEECH_TO_TEXT_GRAPH;
+    ovms::SpeechToTextGraphSettingsImpl speechToTextGraphSettings;
+    hfSettings.graphSettings = std::move(speechToTextGraphSettings);
+    std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
+    std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
+    auto status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
+    ASSERT_EQ(status, ovms::StatusCode::OK);
+
+    std::string graphContents = GetFileContents(graphPath);
+    std::string expected = getVersionString() + expectedSpeechToTextGraphContentsDefault;
     ASSERT_EQ(expected, graphContents) << graphContents;
 }
 
@@ -682,6 +786,7 @@ TEST_F(GraphCreationTest, embeddingsDoubleSetNumStreams) {
     hfSettings.exportSettings.targetDevice = "GPU";
     hfSettings.exportSettings.modelName = "myModel";
     hfSettings.exportSettings.pluginConfig.numStreams = 1;  // imitates default from CLI
+    // note here we use int not string num_streams so this shows way to overwrite type
     hfSettings.exportSettings.pluginConfig.manualString = "{\"NUM_STREAMS\":1}";
     embeddingsGraphSettings.normalize = "true";
     embeddingsGraphSettings.pooling = "CLS";
@@ -692,6 +797,104 @@ TEST_F(GraphCreationTest, embeddingsDoubleSetNumStreams) {
     hfSettings.exportSettings.pluginConfig.numStreams = 2;  // non-default value - it should fail
     status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
     ASSERT_EQ(status, ovms::StatusCode::PLUGIN_CONFIG_CONFLICTING_PARAMETERS) << status.string();
+}
+
+TEST_F(GraphCreationTest, textToSpeechPositiveNonDefault) {
+    ovms::HFSettingsImpl hfSettings;
+    hfSettings.task = ovms::TEXT_TO_SPEECH_GRAPH;
+    ovms::TextToSpeechGraphSettingsImpl textToSpeechGraphSettings;
+    hfSettings.exportSettings.targetDevice = "GPU";
+    hfSettings.exportSettings.modelName = "myModel";
+    hfSettings.exportSettings.modelPath = "/model1/path";
+    hfSettings.exportSettings.pluginConfig.numStreams = 2;
+    hfSettings.graphSettings = std::move(textToSpeechGraphSettings);
+    std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
+    std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
+    auto status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
+    ASSERT_EQ(status, ovms::StatusCode::OK);
+
+    std::string graphContents = GetFileContents(graphPath);
+    ASSERT_EQ(expectedTextToSpeechGraphContents, removeVersionString(graphContents)) << graphContents;
+}
+
+TEST_F(GraphCreationTest, textToSpeechPositiveDefault) {
+    ovms::HFSettingsImpl hfSettings;
+    hfSettings.task = ovms::TEXT_TO_SPEECH_GRAPH;
+    ovms::TextToSpeechGraphSettingsImpl textToSpeechGraphSettings;
+    hfSettings.graphSettings = std::move(textToSpeechGraphSettings);
+    std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
+    std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
+    auto status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
+    ASSERT_EQ(status, ovms::StatusCode::OK);
+
+    std::string graphContents = GetFileContents(graphPath);
+    ASSERT_EQ(expectedTextToSpeechGraphContentsDefault, removeVersionString(graphContents)) << graphContents;
+}
+
+TEST_F(GraphCreationTest, textToSpeechCreatedPbtxtInvalid) {
+    ovms::HFSettingsImpl hfSettings;
+    hfSettings.task = ovms::TEXT_TO_SPEECH_GRAPH;
+    ovms::TextToSpeechGraphSettingsImpl textToSpeechGraphSettings;
+    hfSettings.exportSettings.targetDevice = "GPU";
+    hfSettings.exportSettings.modelName = "myModel\"";
+    hfSettings.exportSettings.pluginConfig.numStreams = 2;
+    hfSettings.graphSettings = std::move(textToSpeechGraphSettings);
+    std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
+    auto status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
+#if (MEDIAPIPE_DISABLE == 0)
+    ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID);
+#else
+    ASSERT_EQ(status, ovms::StatusCode::OK);
+#endif
+}
+
+TEST_F(GraphCreationTest, speechToTextPositiveNonDefault) {
+    ovms::HFSettingsImpl hfSettings;
+    hfSettings.task = ovms::SPEECH_TO_TEXT_GRAPH;
+    ovms::SpeechToTextGraphSettingsImpl speechToTextGraphSettings;
+    hfSettings.exportSettings.targetDevice = "GPU";
+    hfSettings.exportSettings.modelName = "myModel";
+    hfSettings.exportSettings.modelPath = "/model1/path";
+    hfSettings.exportSettings.pluginConfig.numStreams = 2;
+    hfSettings.graphSettings = std::move(speechToTextGraphSettings);
+    std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
+    std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
+    auto status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
+    ASSERT_EQ(status, ovms::StatusCode::OK);
+
+    std::string graphContents = GetFileContents(graphPath);
+    ASSERT_EQ(expectedSpeechToTextGraphContents, removeVersionString(graphContents)) << graphContents;
+}
+
+TEST_F(GraphCreationTest, speechToTextPositiveDefault) {
+    ovms::HFSettingsImpl hfSettings;
+    hfSettings.task = ovms::SPEECH_TO_TEXT_GRAPH;
+    ovms::SpeechToTextGraphSettingsImpl speechToTextGraphSettings;
+    hfSettings.graphSettings = std::move(speechToTextGraphSettings);
+    std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
+    std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
+    auto status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
+    ASSERT_EQ(status, ovms::StatusCode::OK);
+
+    std::string graphContents = GetFileContents(graphPath);
+    ASSERT_EQ(expectedSpeechToTextGraphContentsDefault, removeVersionString(graphContents)) << graphContents;
+}
+
+TEST_F(GraphCreationTest, speechToTextCreatedPbtxtInvalid) {
+    ovms::HFSettingsImpl hfSettings;
+    hfSettings.task = ovms::SPEECH_TO_TEXT_GRAPH;
+    ovms::SpeechToTextGraphSettingsImpl speechToTextGraphSettings;
+    hfSettings.exportSettings.targetDevice = "GPU";
+    hfSettings.exportSettings.modelName = "myModel\"";
+    hfSettings.exportSettings.pluginConfig.numStreams = 2;
+    hfSettings.graphSettings = std::move(speechToTextGraphSettings);
+    std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
+    auto status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
+#if (MEDIAPIPE_DISABLE == 0)
+    ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID);
+#else
+    ASSERT_EQ(status, ovms::StatusCode::OK);
+#endif
 }
 
 TEST_F(GraphCreationTest, positivePluginConfigAll) {
@@ -765,6 +968,14 @@ TEST_F(GraphCreationTest, negativeGraphOptionsNotInitialized) {
     ASSERT_EQ(status, ovms::StatusCode::INTERNAL_ERROR);
 
     hfSettings.task = ovms::EMBEDDINGS_GRAPH;
+    status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
+    ASSERT_EQ(status, ovms::StatusCode::INTERNAL_ERROR);
+
+    hfSettings.task = ovms::TEXT_TO_SPEECH_GRAPH;
+    status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
+    ASSERT_EQ(status, ovms::StatusCode::INTERNAL_ERROR);
+
+    hfSettings.task = ovms::SPEECH_TO_TEXT_GRAPH;
     status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
     ASSERT_EQ(status, ovms::StatusCode::INTERNAL_ERROR);
 
@@ -855,6 +1066,7 @@ TEST_F(GraphCreationTest, pluginConfigAsString) {
     pluginConfig.kvCachePrecision = "u8";
     pluginConfig.maxPromptLength = 256;
     pluginConfig.modelDistributionPolicy = "TENSOR_PARALLEL";
+    // note here we use int not string num_streams so this shows way to overwrite type
     pluginConfig.manualString = "{\"NUM_STREAMS\":4}";
     auto res = ovms::GraphExport::createPluginString(exportSettings);
     ASSERT_TRUE(std::holds_alternative<std::optional<std::string>>(res));

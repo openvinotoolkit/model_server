@@ -239,7 +239,7 @@ curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/m
 ```python
 import requests
 import base64
-base_url='http://localhost:8000/v3'
+base_url='http://127.0.0.1:8000/v3'
 model_name = "OpenGVLab/InternVL2-2B"
 
 def convert_image(Image):

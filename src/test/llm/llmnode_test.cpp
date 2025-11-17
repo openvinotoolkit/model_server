@@ -1046,6 +1046,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryStructuredOutput) {
                               R"(",
             "stream": false,
             "seed" : 1,
+            "max_tokens": 100,
             "temperature": 0.0,
             "messages": [
             {"role": "user",  "content": "Extract the name and age of the person from the text and structure the output in JSON format. Margaret is 20 years old."}
@@ -1095,6 +1096,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryStructuredOutputBadSchema) {
                               R"(",
             "stream": false,
             "seed" : 1,
+            "max_tokens": 5,
             "temperature": 0.0,
             "messages": [
             {"role": "user",  "content": "Extract the name and age of the person from the text and structure the output in JSON format. Margaret is 20 years old."}
@@ -1133,6 +1135,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryStructuredOutputNonOpenAI) {
                               R"(",
             "stream": false,
             "seed" : 1,
+            "max_tokens": 150,
             "temperature": 0.0,
             "messages": [
             {"role": "user",  "content": "Extract the name and age of the person from the text and structure the output in JSON format. Margaret is 20 years old."}
@@ -1193,6 +1196,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryToolBadSchema) {
         "model": "lm_cb_with_tool_parser",
         "stream": false,
         "temperature": 0,
+        "max_tokens": 5,
         "tools": [
             {
                 "type": "function",
@@ -1593,6 +1597,7 @@ TEST_P(LLMFlowHttpTestParameterized, streamBeamSearchChatCompletionsFail) {
                               R"(",
             "stream": true,
             "best_of": 2,
+            "max_tokens": 5,
             "messages": [
             {
                 "role": "user",
@@ -3307,7 +3312,8 @@ TEST_P(LLMHttpParametersValidationTest, MessagesWithOnlyRole) {
         {
             "model": ")" + params.modelName +
                               R"(",
-            "messages": [{"role": "user"}]
+            "messages": [{"role": "user"}],
+            "max_tokens": 10
         }
     )";
 
@@ -3794,7 +3800,7 @@ void TestLLMNodeOptionsCheckDefault(std::string& modelsPath) {
     ASSERT_EQ(initializeGenAiServable(servable, config.node(0), ""), StatusCode::OK);
     auto properties = std::static_pointer_cast<ContinuousBatchingServableProperties>(servable->getProperties());
     ASSERT_EQ(properties->schedulerConfig.max_num_batched_tokens, 256);
-    ASSERT_EQ(properties->schedulerConfig.cache_size, 8);
+    ASSERT_EQ(properties->schedulerConfig.cache_size, 0);
     ASSERT_EQ(properties->schedulerConfig.dynamic_split_fuse, true);
     ASSERT_EQ(properties->schedulerConfig.max_num_seqs, 256);
     ASSERT_EQ(properties->schedulerConfig.enable_prefix_caching, false);
