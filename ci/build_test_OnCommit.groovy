@@ -167,7 +167,7 @@ pipeline {
               }
               steps {
                 sh "make release_image RUN_TESTS=0 OV_USE_BINARY=1 BASE_OS=ubuntu22 OVMS_CPP_IMAGE_TAG=${shortCommit} BUILD_IMAGE=openvino/model_server-build:${shortCommit}"
-                sh "make run_lib_files_test BASE_OS=ubuntu22 OVMS_CPP_IMAGE_TAG=${shortCommit}"
+                // FIXME for temporary RH->U22 switch sh "make run_lib_files_test BASE_OS=ubuntu22 OVMS_CPP_IMAGE_TAG=${shortCommit}"
                 script {
                   dir ('internal_tests'){ 
                     checkout scmGit(
