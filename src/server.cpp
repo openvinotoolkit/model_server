@@ -275,7 +275,7 @@ void Server::setExitStatus(int i) {
     }
     if (counter) {
         ovms_exited = i;
-        SPDLOG_INFO("Ovms exit status guard set to: {}", ovms_exited);
+        SPDLOG_INFO("Ovms exit status set to: {}", ovms_exited);
     } else {
         SPDLOG_ERROR("Server shutdown mutex lock failed.");
     }
@@ -484,7 +484,7 @@ std::variant<std::pair<ServerSettingsImpl, ModelsSettingsImpl>, std::pair<int, s
 }
 
 int Server::startServerFromSettings(ServerSettingsImpl& serverSettings, ModelsSettingsImpl& modelsSettings) {
-    OvmsExitGuard exitGuard(*this);
+    OvmsExitGuard exitStatusGuard(*this);
     installSignalHandlers();
     int result = OVMS_EX_OK;
 
