@@ -238,6 +238,7 @@ void Server::setShutdownRequest(int i) {
     }
     if (counter) {
         shutdown_request = i;
+        SPDLOG_DEBUG("Ovms shutdown request set to: {}", shutdown_request);
     } else {
         SPDLOG_ERROR("Server shutdown mutex lock failed.");
     }
@@ -274,6 +275,7 @@ void Server::setExitStatus(int i) {
     }
     if (counter) {
         ovms_exited = i;
+        SPDLOG_DEBUG("Ovms exit status set to: {}", ovms_exited);
     } else {
         SPDLOG_ERROR("Server shutdown mutex lock failed.");
     }

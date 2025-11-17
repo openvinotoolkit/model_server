@@ -47,7 +47,7 @@ std::string OvmsWindowsServiceManager::getCurrentTimeString() {
     return oss.str();
 }
 
-#define DEBUG_LOG_ENABLE 0
+#define DEBUG_LOG_ENABLE 1
 static std::ofstream logFile("C:\\temp\\ovms.log", std::ios::app);
 #define DEBUG_LOG(msg)                                                                   \
     {                                                                                    \
