@@ -81,7 +81,7 @@ The service settings after installation are available at the `Computer\HKEY_LOCA
 ![Service Status](windows_service_registry1.jpg)
 
 ## Service log and events
-You can monitor the service log with the --log_level [INFO,DEBUG,TRACE] option during the service creation and the --log_path path_to_file parameter. By default, tt will be saved in the ovms installation folder.
+You can monitor the service log with the --log_level [INFO,DEBUG,TRACE] option during the service creation and the --log_path path_to_file parameter. By default, it will be saved in the ovms installation folder.
 
 Additionally you can review the service events and errors in the native windows event viewer application.
 Start it by writing event viewer in the windows start search bar.

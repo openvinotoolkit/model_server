@@ -34,21 +34,30 @@ IF "%~1"=="" (
 pushd "%CD%"
 cd /d "!OVMS_MODEL_REPOSITORY_PATH!" 2>nul
 if errorlevel 1 (
-    echo [ERROR] model repository path !OVMS_MODEL_REPOSITORY_PATH! does not exist
-    exit /b 1
+    echo [INFO] Creating model repository path !OVMS_MODEL_REPOSITORY_PATH!
+    mkdir !OVMS_MODEL_REPOSITORY_PATH!
+    if !errorlevel! neq 0 exit /b !errorlevel!
 )
 set "OVMS_MODEL_REPOSITORY_PATH=%CD%"
+set "config_path=!OVMS_MODEL_REPOSITORY_PATH!\config.json"
+IF /I EXIST !config_path! (
+    echo [INFO] config exists !config_path!
+) ELSE (
+    echo {"model_config_list":[]} > !config_path!
+    if !errorlevel! neq 0 exit /b !errorlevel!
+    echo [INFO] created empty server config !config_path!
+)
 popd
 
-echo Using model repository path %OVMS_MODEL_REPOSITORY_PATH%
+echo Using model repository path !OVMS_MODEL_REPOSITORY_PATH!
 
 set "OVMS_DIR=%~dp0"
 ::::::::::::::::::::::: Add persistent OVMS_DIR to PATH
 setx "PATH" "%OVMS_DIR%;%PATH%"
-setx "OVMS_MODEL_REPOSITORY_PATH" %OVMS_MODEL_REPOSITORY_PATH%
+setx "OVMS_MODEL_REPOSITORY_PATH" !OVMS_MODEL_REPOSITORY_PATH!
 
 ::::::::::::::::::::::: Create the service
-sc create ovms binPath= "%OVMS_DIR%\ovms.exe --rest_port 8000 --config_path %OVMS_MODEL_REPOSITORY_PATH%\config.json --log_level INFO --log_path !OVMS_DIR!\ovms_server.log" DisplayName= "OpenVino Model Server"
+sc create ovms binPath= "%OVMS_DIR%\ovms.exe --rest_port 8000 --config_path !config_path! --log_level INFO --log_path !OVMS_DIR!\ovms_server.log" DisplayName= "OpenVino Model Server"
 if !errorlevel! neq 0 (
     echo [ERROR] sc create ovms failed !errorlevel!
     exit /b !errorlevel!
