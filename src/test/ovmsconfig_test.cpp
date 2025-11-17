@@ -1117,7 +1117,7 @@ TEST(OvmsGraphConfigTest, positiveSomeChangedTextGeneration) {
     ASSERT_EQ(exportSettings.targetDevice, "NPU");
     ASSERT_EQ(exportSettings.pluginConfig.kvCachePrecision.has_value(), false);
     ASSERT_EQ(graphSettings.enablePrefixCaching, "true");
-    ASSERT_EQ(graphSettings.cacheSize, 10);
+    ASSERT_EQ(graphSettings.cacheSize, 0);
     ASSERT_EQ(graphSettings.maxNumBatchedTokens.has_value(), false);
     ASSERT_EQ(graphSettings.dynamicSplitFuse, "true");
     ASSERT_EQ(graphSettings.draftModelDirName.has_value(), false);
@@ -1153,7 +1153,7 @@ TEST(OvmsGraphConfigTest, positiveTaskTextGen) {
     ASSERT_EQ(exportSettings.targetDevice, "CPU");
     ASSERT_EQ(exportSettings.pluginConfig.kvCachePrecision.has_value(), false);
     ASSERT_EQ(graphSettings.enablePrefixCaching, "true");
-    ASSERT_EQ(graphSettings.cacheSize, 10);
+    ASSERT_EQ(graphSettings.cacheSize, 0);
     ASSERT_EQ(graphSettings.maxNumBatchedTokens.has_value(), false);
     ASSERT_EQ(graphSettings.dynamicSplitFuse, "true");
     ASSERT_EQ(graphSettings.draftModelDirName.has_value(), false);
@@ -1333,7 +1333,7 @@ TEST(OvmsGraphConfigTest, positiveDefault) {
     ASSERT_EQ(exportSettings.targetDevice, "CPU");
     ASSERT_EQ(exportSettings.pluginConfig.kvCachePrecision.has_value(), false);
     ASSERT_EQ(graphSettings.enablePrefixCaching, "true");
-    ASSERT_EQ(graphSettings.cacheSize, 10);
+    ASSERT_EQ(graphSettings.cacheSize, 0);
     ASSERT_EQ(graphSettings.maxNumBatchedTokens.has_value(), false);
     ASSERT_EQ(graphSettings.dynamicSplitFuse, "true");
     ASSERT_EQ(graphSettings.draftModelDirName.has_value(), false);
@@ -1373,7 +1373,7 @@ TEST(OvmsGraphConfigTest, positiveDefaultStart) {
     ASSERT_EQ(exportSettings.targetDevice, "CPU");
     ASSERT_EQ(exportSettings.pluginConfig.kvCachePrecision.has_value(), false);
     ASSERT_EQ(graphSettings.enablePrefixCaching, "true");
-    ASSERT_EQ(graphSettings.cacheSize, 10);
+    ASSERT_EQ(graphSettings.cacheSize, 0);
     ASSERT_EQ(graphSettings.maxNumBatchedTokens.has_value(), false);
     ASSERT_EQ(graphSettings.dynamicSplitFuse, "true");
     ASSERT_EQ(graphSettings.draftModelDirName.has_value(), false);

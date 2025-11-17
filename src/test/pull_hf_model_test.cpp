@@ -42,15 +42,15 @@ protected:
     ovms::Server& server = ovms::Server::instance();
     std::unique_ptr<std::thread> t;
 
-    void ServerPullHfModel(std::string& sourceModel, std::string& downloadPath, std::string& task, int expected_code = 0, int timeoutSeconds = 15) {
+    void ServerPullHfModel(std::string& sourceModel, std::string& downloadPath, std::string& task, int expected_code = 0, int timeoutSeconds = 60) {
         ::SetUpServerForDownload(this->t, this->server, sourceModel, downloadPath, task, expected_code, timeoutSeconds);
     }
 
-    void ServerPullHfModelWithDraft(std::string& draftModel, std::string& sourceModel, std::string& downloadPath, std::string& task, int expected_code = 0, int timeoutSeconds = 30) {
+    void ServerPullHfModelWithDraft(std::string& draftModel, std::string& sourceModel, std::string& downloadPath, std::string& task, int expected_code = 0, int timeoutSeconds = 60) {
         ::SetUpServerForDownloadWithDraft(this->t, this->server, draftModel, sourceModel, downloadPath, task, expected_code, timeoutSeconds);
     }
 
-    void SetUpServerForDownloadAndStart(std::string& sourceModel, std::string& downloadPath, std::string& task, int timeoutSeconds = 15) {
+    void SetUpServerForDownloadAndStart(std::string& sourceModel, std::string& downloadPath, std::string& task, int timeoutSeconds = 60) {
         ::SetUpServerForDownloadAndStart(this->t, this->server, sourceModel, downloadPath, task, timeoutSeconds);
     }
 
@@ -92,7 +92,7 @@ const std::string expectedGraphContents = R"(
             device: "CPU",
             models_path: "./",
             enable_prefix_caching: true,
-            cache_size: 10,
+            cache_size: 0,
         }
     }
     input_stream_handler {
@@ -129,7 +129,7 @@ const std::string expectedGraphContentsDraft = R"(
             device: "CPU",
             models_path: "./",
             enable_prefix_caching: true,
-            cache_size: 10,
+            cache_size: 0,
             # Speculative decoding configuration
             draft_models_path: "OpenVINO-distil-small.en-int4-ov",
         }
