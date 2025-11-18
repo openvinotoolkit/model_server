@@ -54,7 +54,7 @@ protected:
 public:
     BaseGenerationConfigBuilder() = delete;
     // Initializes the builder with a base generation config read from model generation_config.json
-    explicit BaseGenerationConfigBuilder(ov::genai::GenerationConfig& baseConfig, bool enableToolGuidedGeneration, DecodingMethod decodingMethod) :
+    explicit BaseGenerationConfigBuilder(const ov::genai::GenerationConfig& baseConfig, bool enableToolGuidedGeneration, DecodingMethod decodingMethod) :
         config(baseConfig),
         enableToolGuidedGeneration(enableToolGuidedGeneration),
         decodingMethod(decodingMethod) {}
