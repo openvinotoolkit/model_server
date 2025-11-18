@@ -10,7 +10,7 @@ Here are presented required steps to deploy language models trained for tools su
 The application employing OpenAI agent SDK is using MCP server. It is equipped with a set of tools to providing context for the content generation.
 The tools can also be used for automation purposes based on input in text format.  
 
-> **Note:** For Windows, weekly or release 2025.4 packages are needed to work properly. 
+> **Note:** On Windows, make sure to use the weekly or 2025.4 release packages for proper functionality.
 
 ## Export LLM model
 Currently supported models:
