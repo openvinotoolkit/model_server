@@ -490,6 +490,8 @@ To simulate such type of load, we should use a dedicated tool [multi_turn benchm
 ```bash
 git clone -b v0.10.2 https://github.com/vllm-project/vllm
 cd vllm/benchmarks/multi_turn
+wget https://www.gutenberg.org/ebooks/1184.txt.utf-8
+mv 1184.txt.utf-8 pg1184.txt
 pip install -r requirements.txt
 sed -i -e 's/if not os.path.exists(args.model)/if 1 == 0/g' benchmark_serving_multi_turn.py
 # Testing single client scenario, for example with GPU execution
