@@ -28,7 +28,8 @@ python export_model.py text_generation --source_model Qwen/Qwen3-Coder-30B-A3B-I
 
 docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
     openvino/model_server:weekly \
-    --add_to_config /models/config_all.json \
+    --add_to_config \
+    --config_path /models/config_all.json \
     --model_name Qwen/Qwen3-Coder-30B-A3B-Instruct \
     --model_path Qwen/Qwen3-Coder-30B-A3B-Instruct
 ```
@@ -44,7 +45,8 @@ python export_model.py text_generation --source_model mistralai/Codestral-22B-v0
 docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
     -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy=$no_proxy \
     openvino/model_server:weekly \
-    --add_to_config /models/config_all.json \
+    --add_to_config \
+    --config_path /models/config_all.json \
     --model_name mistralai/Codestral-22B-v0.1 \
     --model_path mistralai/Codestral-22B-v0.1
 ```
@@ -64,7 +66,8 @@ docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
 docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
     -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy=$no_proxy \
     openvino/model_server:weekly \
-    --add_to_config /models/config_all.json \
+    --add_to_config \
+    --config_path /models/config_all.json \
     --model_name OpenVINO/Qwen3-8B-int4-ov \
     --model_path OpenVINO/Qwen3-8B-int4-ov
 ```
@@ -82,7 +85,7 @@ docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
 docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
     -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy=$no_proxy \
     openvino/model_server:weekly \
-    --add_to_config /models/config_all.json \
+    --add_to_config --config_path /models/config_all.json \
     --model_name OpenVINO/Qwen3-4B-int4-ov \
     --model_path OpenVINO/Qwen3-4B-int4-ov
 ```
@@ -100,7 +103,8 @@ docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
 docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
     -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy=$no_proxy \
     openvino/model_server:weekly \
-    --add_to_config /models/config_all.json \
+    --add_to_config \
+    --config_path /models/config_all.json \
     --model_name OpenVINO/Qwen2.5-Coder-3B-Instruct-int4-ov \
     --model_path OpenVINO/Qwen2.5-Coder-3B-Instruct-int4-ov
 ```
@@ -117,7 +121,7 @@ Pull and add the model on Windows:
 ```bash
 python export_model.py text_generation --source_model Qwen/Qwen3-Coder-30B-A3B-Instruct --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device GPU --cache_size 2 --overwrite_models
 
-ovms.exe --add_to_config models/config_all.json --model_name Qwen/Qwen3-Coder-30B-A3B-Instruct --model_path Qwen/Qwen3-Coder-30B-A3B-Instruct
+ovms.exe --add_to_config --config_path models/config_all.json --model_name Qwen/Qwen3-Coder-30B-A3B-Instruct --model_path Qwen/Qwen3-Coder-30B-A3B-Instruct
 ```
 > **Note:** This model requires ~16GB disk space and same amount of VRAM on the iGPU.
 
@@ -135,7 +139,7 @@ python export_model.py text_generation --source_model mistralai/Codestral-22B-v0
 ```bash
 ovms.exe --pull --source_model OpenVINO/Qwen3-8B-int4-ov --model_repository_path models --model_name OpenVINO/Qwen3-8B-int4-ov --target_device GPU --task text_generation
 
-ovms.exe --add_to_config models/config_all.json --model_name OpenVINO/Qwen3-8B-int4-ov --model_path OpenVINO/Qwen3-8B-int4-ov
+ovms.exe --add_to_config --config_path models/config_all.json --model_name OpenVINO/Qwen3-8B-int4-ov --model_path OpenVINO/Qwen3-8B-int4-ov
 ```
 :::
 :::{tab-item} OpenVINO/Qwen3-4B-int4-ov
@@ -143,7 +147,7 @@ ovms.exe --add_to_config models/config_all.json --model_name OpenVINO/Qwen3-8B-i
 ```bash
 ovms.exe --pull --source_model OpenVINO/Qwen3-4B-int4-ov --model_repository_path models --model_name OpenVINO/Qwen3-4B-int4-ov --target_device GPU --task text_generation
     
-ovms.exe --add_to_config models/config_all.json --model_name OpenVINO/Qwen3-4B-int4-ov --model_path OpenVINO/Qwen3-4B-int4-ov
+ovms.exe --add_to_config --config_path models/config_all.json --model_name OpenVINO/Qwen3-4B-int4-ov --model_path OpenVINO/Qwen3-4B-int4-ov
 ```
 :::
 :::{tab-item} OpenVINO/Qwen2.5-Coder-3B-Instruct-int4-ov
@@ -151,7 +155,7 @@ ovms.exe --add_to_config models/config_all.json --model_name OpenVINO/Qwen3-4B-i
 ```bash
 ovms.exe --pull --source_model OpenVINO/Qwen2.5-Coder-3B-Instruct-int4-ov --model_repository_path models --model_name OpenVINO/Qwen2.5-Coder-3B-Instruct-int4-ov --target_device GPU --task text_generation
 
-ovms.exe --add_to_config models/config_all.json --model_name OpenVINO/Qwen2.5-Coder-3B-Instruct-int4-ov --model_path OpenVINO/Qwen2.5-Coder-3B-Instruct-int4-ov
+ovms.exe --add_to_config --config_path models/config_all.json --model_name OpenVINO/Qwen2.5-Coder-3B-Instruct-int4-ov --model_path OpenVINO/Qwen2.5-Coder-3B-Instruct-int4-ov
 ```
 
 > **Note:** `Qwen2.5-Coder` models are avaliable on [HuggingFace OpenVINO repository](https://huggingface.co/OpenVINO/models?search=qwen2.5-coder) in different sizes and precisions. It is possible to choose it for any use and hardware. 
