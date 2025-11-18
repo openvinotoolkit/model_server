@@ -58,7 +58,10 @@ public:
     std::optional<rapidjson::Document> parseChunk(const std::string& chunk, ov::genai::GenerationFinishReason finishReason) override;
 
     const std::vector<std::string>& getParsingStartTags() const override {
-        static const std::vector<std::string> parsingStartTags{parsingStartTag};
+        static const std::vector<std::string> parsingStartTags{
+            parsingStartTag,
+            "<|channel|>analysis to=",  // THIS IS A HACK: This does not conform to OpenAI Harmony format, however tests show that sometimes model produces tools in analysis channel
+        };
         return parsingStartTags;
     }
 
