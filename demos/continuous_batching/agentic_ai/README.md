@@ -40,47 +40,47 @@ Run `export_model.py` script to download and quantize the model:
 :::{tab-item} Qwen3-8B
 :sync: Qwen3-8B
 ```console
-python export_model.py text_generation --source_model Qwen/Qwen3-8B --weight-format int8 --config_file_path models/config.json --model_repository_path models --tool_parser hermes3 --cache_size 2
+python export_model.py text_generation --source_model Qwen/Qwen3-8B --weight-format int8 --config_file_path models/config.json --model_repository_path models --tool_parser hermes3
 ```
 :::
 :::{tab-item} Qwen3-4B
 :sync: Qwen3-4B
 ```console
-python export_model.py text_generation --source_model Qwen/Qwen3-4B --weight-format int8 --config_file_path models/config.json --model_repository_path models --tool_parser hermes3 --cache_size 2
+python export_model.py text_generation --source_model Qwen/Qwen3-4B --weight-format int8 --config_file_path models/config.json --model_repository_path models --tool_parser hermes3
 ```
 :::
 :::{tab-item} Llama-3.1-8B-Instruct
 :sync: Llama-3.1-8B-Instruct
 ```console
-python export_model.py text_generation --source_model meta-llama/Llama-3.1-8B-Instruct --weight-format int8 --config_file_path models/config.json --model_repository_path models --tool_parser llama3 --cache_size 2
+python export_model.py text_generation --source_model meta-llama/Llama-3.1-8B-Instruct --weight-format int8 --config_file_path models/config.json --model_repository_path models --tool_parser llama3
 curl -L -o models/meta-llama/Llama-3.1-8B-Instruct/chat_template.jinja https://raw.githubusercontent.com/vllm-project/vllm/refs/tags/v0.9.0/examples/tool_chat_template_llama3.1_json.jinja
 ```
 :::
 :::{tab-item} Llama-3.2-3B-Instruct
 :sync: Llama-3.2-3B-Instruct
 ```console
-python export_model.py text_generation --source_model meta-llama/Llama-3.2-3B-Instruct --weight-format int8 --config_file_path models/config.json --model_repository_path models --tool_parser llama3 --cache_size 2
+python export_model.py text_generation --source_model meta-llama/Llama-3.2-3B-Instruct --weight-format int8 --config_file_path models/config.json --model_repository_path models --tool_parser llama3
 curl -L -o models/meta-llama/Llama-3.2-3B-Instruct/chat_template.jinja https://raw.githubusercontent.com/vllm-project/vllm/refs/tags/v0.9.0/examples/tool_chat_template_llama3.2_json.jinja
 ```
 :::
 :::{tab-item} Hermes-3-Llama-3.1-8B
 :sync: Hermes-3-Llama-3.1-8B
 ```console
-python export_model.py text_generation --source_model NousResearch/Hermes-3-Llama-3.1-8B --weight-format int8 --config_file_path models/config.json --model_repository_path models --tool_parser hermes3 --cache_size 2
+python export_model.py text_generation --source_model NousResearch/Hermes-3-Llama-3.1-8B --weight-format int8 --config_file_path models/config.json --model_repository_path models --tool_parser hermes3
 curl -L -o models/NousResearch/Hermes-3-Llama-3.1-8B/chat_template.jinja https://raw.githubusercontent.com/vllm-project/vllm/refs/tags/v0.9.0/examples/tool_chat_template_hermes.jinja
 ```
 :::
 :::{tab-item} Mistral-7B-Instruct-v0.3
 :sync: Mistral-7B-Instruct-v0.3
 ```console
-python export_model.py text_generation --source_model mistralai/Mistral-7B-Instruct-v0.3 --weight-format int8 --config_file_path models/config.json --model_repository_path models --tool_parser mistral --cache_size 2 --extra_quantization_params "--task text-generation-with-past"
+python export_model.py text_generation --source_model mistralai/Mistral-7B-Instruct-v0.3 --weight-format int8 --config_file_path models/config.json --model_repository_path models --tool_parser mistral --extra_quantization_params "--task text-generation-with-past"
 curl -L -o models/mistralai/Mistral-7B-Instruct-v0.3/chat_template.jinja https://raw.githubusercontent.com/vllm-project/vllm/refs/tags/v0.10.1.1/examples/tool_chat_template_mistral_parallel.jinja
 ```
 :::
 :::{tab-item} Phi-4-mini-instruct 
 :sync: microsoft/Phi-4-mini-instruct 
 ```console
-python export_model.py text_generation --source_model microsoft/Phi-4-mini-instruct --weight-format int8 --config_file_path models/config.json --model_repository_path models --tool_parser phi4 --cache_size 2
+python export_model.py text_generation --source_model microsoft/Phi-4-mini-instruct --weight-format int8 --config_file_path models/config.json --model_repository_path models --tool_parser phi4
 curl -L -o models/microsoft/Phi-4-mini-instruct/chat_template.jinja https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/extras/chat_template_examples/chat_template_phi4_mini.jinja
 ```
 :::
@@ -163,55 +163,55 @@ as mentioned in [deployment guide](../../../docs/deploying_server_baremetal.md),
 :::{tab-item} Qwen3-8B
 :sync: Qwen3-8B
 ```bat
-ovms.exe --rest_port 8000 --source_model Qwen/Qwen3-8B --model_repository_path models --tool_parser hermes3 --target_device GPU --cache_size 2 --task text_generation
+ovms.exe --rest_port 8000 --source_model Qwen/Qwen3-8B --model_repository_path models --tool_parser hermes3 --target_device GPU --task text_generation --cache_dir .cache
 ```
 :::
 :::{tab-item} Qwen3-4B
 :sync: Qwen3-4B
 ```bat
-ovms.exe --rest_port 8000 --source_model Qwen/Qwen3-4B --model_repository_path models --tool_parser hermes3 --target_device GPU --cache_size 2 --task text_generation
+ovms.exe --rest_port 8000 --source_model Qwen/Qwen3-4B --model_repository_path models --tool_parser hermes3 --target_device GPU --task text_generation --cache_dir .cache
 ```
 :::
 :::{tab-item} Llama-3.1-8B-Instruct
 :sync: Llama-3.1-8B-Instruct
 ```bat
-ovms.exe --rest_port 8000 --source_model meta-llama/Llama-3.1-8B-Instruct --model_repository_path models --tool_parser llama3 --target_device GPU --cache_size 2 --task text_generation --enable_tool_guided_generation true
+ovms.exe --rest_port 8000 --source_model meta-llama/Llama-3.1-8B-Instruct --model_repository_path models --tool_parser llama3 --target_device GPU --task text_generation --enable_tool_guided_generation true --cache_dir .cache
 ```
 :::
 :::{tab-item} Llama-3.2-3B-Instruct
 :sync: Llama-3.2-3B-Instruct
 ```bat
-ovms.exe --rest_port 8000 --source_model meta-llama/Llama-3.2-3B-Instruct --model_repository_path models --tool_parser llama3 --target_device GPU --cache_size 2 --task text_generation --enable_tool_guided_generation true
+ovms.exe --rest_port 8000 --source_model meta-llama/Llama-3.2-3B-Instruct --model_repository_path models --tool_parser llama3 --target_device GPU --task text_generation --enable_tool_guided_generation true --cache_dir .cache
 ```
 :::
 :::{tab-item} Mistral-7B-Instruct-v0.3
 :sync: Mistral-7B-Instruct-v0.3
 ```bat
-ovms.exe --rest_port 8000 --source_model mistralai/Mistral-7B-Instruct-v0.3 --model_repository_path models --tool_parser mistral --target_device GPU --cache_size 2 --task text_generation
+ovms.exe --rest_port 8000 --source_model mistralai/Mistral-7B-Instruct-v0.3 --model_repository_path models --tool_parser mistral --target_device GPU --task text_generation --cache_dir .cache
 ```
 :::
 :::{tab-item} Phi-4-mini-instruct
 :sync: Phi-4-mini-instruct
 ```bat
-ovms.exe --rest_port 8000 --source_model microsoft/Phi-4-mini-instruct --model_repository_path models --tool_parser phi4 --target_device GPU --cache_size 2 --task text_generation --enable_tool_guided_generation true
+ovms.exe --rest_port 8000 --source_model microsoft/Phi-4-mini-instruct --model_repository_path models --tool_parser phi4 --target_device GPU --task text_generation --enable_tool_guided_generation true --cache_dir .cache
 ```
 :::
 :::{tab-item} Qwen3-8B-int4-ov
 :sync: Qwen3-8B-int4-ov
 ```bat
-ovms.exe --rest_port 8000 --source_model OpenVINO/Qwen3-8B-int4-ov --model_repository_path models --tool_parser hermes3 --target_device GPU --cache_size 2 --task text_generation
+ovms.exe --rest_port 8000 --source_model OpenVINO/Qwen3-8B-int4-ov --model_repository_path models --tool_parser hermes3 --target_device GPU --task text_generation --cache_dir .cache
 ```
 :::
 :::{tab-item} Mistral-7B-Instruct-v0.3-int4-ov
 :sync: Mistral-7B-Instruct-v0.3-int4-ov
 ```bat
-ovms.exe --rest_port 8000 --source_model OpenVINO/Mistral-7B-Instruct-v0.3-int4-ov --model_repository_path models --tool_parser mistral --target_device GPU --cache_size 2 --task text_generation  
+ovms.exe --rest_port 8000 --source_model OpenVINO/Mistral-7B-Instruct-v0.3-int4-ov --model_repository_path models --tool_parser mistral --target_device GPU --task text_generation --cache_dir .cache
 ```
 :::
 :::{tab-item} Phi-4-mini-instruct-int4-ov
 :sync: Phi-4-mini-instruct-int4-ov
 ```bat
-ovms.exe --rest_port 8000 --source_model OpenVINO/Phi-4-mini-instruct-int4-ov --model_repository_path models --tool_parser phi4 --target_device GPU --cache_size 2 --task text_generation --enable_tool_guided_generation true
+ovms.exe --rest_port 8000 --source_model OpenVINO/Phi-4-mini-instruct-int4-ov --model_repository_path models --tool_parser phi4 --target_device GPU --task text_generation --enable_tool_guided_generation true --cache_dir .cache
 ```
 :::
 ::::
@@ -222,55 +222,55 @@ ovms.exe --rest_port 8000 --source_model OpenVINO/Phi-4-mini-instruct-int4-ov --
 :::{tab-item} Qwen3-8B
 :sync: Qwen3-8B
 ```bat
-ovms.exe --rest_port 8000 --source_model Qwen/Qwen3-8B --model_repository_path models --tool_parser hermes3 --target_device NPU --cache_size 2 --task text_generation --enable_prefix_caching true --cache_dir .cache --max_prompt_len 4000
+ovms.exe --rest_port 8000 --source_model Qwen/Qwen3-8B --model_repository_path models --tool_parser hermes3 --target_device NPU --task text_generation --enable_prefix_caching true --cache_dir .cache --max_prompt_len 4000
 ```
 :::
 :::{tab-item} Qwen3-4B
 :sync: Qwen3-4B
 ```bat
-ovms.exe --rest_port 8000 --source_model Qwen/Qwen3-4B --model_repository_path models --tool_parser hermes3 --target_device NPU --cache_size 2 --task text_generation --enable_prefix_caching true --cache_dir .cache --max_prompt_len 4000
+ovms.exe --rest_port 8000 --source_model Qwen/Qwen3-4B --model_repository_path models --tool_parser hermes3 --target_device NPU --task text_generation --enable_prefix_caching true --cache_dir .cache --max_prompt_len 4000
 ```
 :::
 :::{tab-item} Llama-3.1-8B-Instruct
 :sync: Llama-3.1-8B-Instruct
 ```bat
-ovms.exe --rest_port 8000 --source_model meta-llama/Llama-3.1-8B-Instruct --model_repository_path models --tool_parser llama3 --target_device NPU --cache_size 2 --task text_generation --enable_tool_guided_generation true --enable_prefix_caching true --cache_dir .cache --max_prompt_len 4000
+ovms.exe --rest_port 8000 --source_model meta-llama/Llama-3.1-8B-Instruct --model_repository_path models --tool_parser llama3 --target_device NPU --task text_generation --enable_tool_guided_generation true --enable_prefix_caching true --cache_dir .cache --max_prompt_len 4000
 ```
 :::
 :::{tab-item} Llama-3.2-3B-Instruct
 :sync: Llama-3.2-3B-Instruct
 ```bat
-ovms.exe --rest_port 8000 --source_model meta-llama/Llama-3.2-3B-Instruct --model_repository_path models --tool_parser llama3 --target_device NPU --cache_size 2 --task text_generation --enable_tool_guided_generation true --enable_prefix_caching true --cache_dir .cache --max_prompt_len 4000
+ovms.exe --rest_port 8000 --source_model meta-llama/Llama-3.2-3B-Instruct --model_repository_path models --tool_parser llama3 --target_device NPU --task text_generation --enable_tool_guided_generation true --enable_prefix_caching true --cache_dir .cache --max_prompt_len 4000
 ```
 :::
 :::{tab-item} Mistral-7B-Instruct-v0.3
 :sync: Mistral-7B-Instruct-v0.3
 ```bat
-ovms.exe --rest_port 8000 --source_model mistralai/Mistral-7B-Instruct-v0.3 --model_repository_path models --tool_parser mistral --target_device NPU --cache_size 2 --task text_generation --enable_prefix_caching true --cache_dir .cache --max_prompt_len 4000
+ovms.exe --rest_port 8000 --source_model mistralai/Mistral-7B-Instruct-v0.3 --model_repository_path models --tool_parser mistral --target_device NPU --task text_generation --enable_prefix_caching true --cache_dir .cache --max_prompt_len 4000
 ```
 :::
 :::{tab-item} Phi-4-mini-instruct
 :sync: Phi-4-mini-instruct
 ```bat
-ovms.exe --rest_port 8000 --source_model microsoft/Phi-4-mini-instruct --model_repository_path models --tool_parser phi4 --target_device NPU --cache_size 2 --task text_generation --enable_tool_guided_generation true --enable_prefix_caching true --cache_dir .cache --max_prompt_len 4000
+ovms.exe --rest_port 8000 --source_model microsoft/Phi-4-mini-instruct --model_repository_path models --tool_parser phi4 --target_device NPU --task text_generation --enable_tool_guided_generation true --enable_prefix_caching true --cache_dir .cache --max_prompt_len 4000
 ```
 :::
 :::{tab-item} Qwen3-4B-int4-ov
 :sync: Qwen3-4B-int4-ov
 ```bat
-ovms.exe --rest_port 8000 --source_model OpenVINO/Qwen3-4B-int4-ov --model_repository_path models --tool_parser hermes3 --target_device NPU --cache_size 2 --task text_generation --enable_prefix_caching true --cache_dir .cache --max_prompt_len 4000
+ovms.exe --rest_port 8000 --source_model OpenVINO/Qwen3-4B-int4-ov --model_repository_path models --tool_parser hermes3 --target_device NPU --task text_generation --enable_prefix_caching true --cache_dir .cache --max_prompt_len 4000
 ```
 :::
 :::{tab-item} Mistral-7B-Instruct-v0.3-cw-int4-ov
 :sync: Mistral-7B-Instruct-v0.3-cw-int4-ov
 ```bat
-ovms.exe --rest_port 8000 --source_model OpenVINO/Mistral-7B-Instruct-v0.3-int4-cw-ov --model_repository_path models --tool_parser mistral --target_device NPU --cache_size 2 --task text_generation --enable_prefix_caching true --cache_dir .cache --max_prompt_len 4000
+ovms.exe --rest_port 8000 --source_model OpenVINO/Mistral-7B-Instruct-v0.3-int4-cw-ov --model_repository_path models --tool_parser mistral --target_device NPU --task text_generation --enable_prefix_caching true --cache_dir .cache --max_prompt_len 4000
 ```
 :::
 :::{tab-item} Phi-3-mini-4k-instruct-int4-cw-ov
 :sync: Phi-3-mini-4k-instruct-int4-cw-ov
 ```bat
-ovms.exe --rest_port 8000 --source_model OpenVINO/Phi-3-mini-4k-instruct-int4-cw-ov --model_repository_path models --tool_parser phi4 --target_device NPU --cache_size 2 --task text_generation --enable_tool_guided_generation true --enable_prefix_caching true --cache_dir .cache --max_prompt_len 4000
+ovms.exe --rest_port 8000 --source_model OpenVINO/Phi-3-mini-4k-instruct-int4-cw-ov --model_repository_path models --tool_parser phi4 --target_device NPU --task text_generation --enable_tool_guided_generation true --enable_prefix_caching true --cache_dir .cache --max_prompt_len 4000
 ```
 :::
 ::::
@@ -284,70 +284,70 @@ ovms.exe --rest_port 8000 --source_model OpenVINO/Phi-3-mini-4k-instruct-int4-cw
 :sync: Qwen3-8B
 ```bash
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models openvino/model_server:latest \
---rest_port 8000 --model_repository_path models --source_model Qwen/Qwen3-8B --tool_parser hermes3 --cache_size 2 --task text_generation --enable_prefix_caching true
+--rest_port 8000 --model_repository_path models --source_model Qwen/Qwen3-8B --tool_parser hermes3 --task text_generation --enable_prefix_caching true 
 ```
 :::
 :::{tab-item} Qwen3-4B
 :sync: Qwen3-4B
 ```bash
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models openvino/model_server:latest \
---rest_port 8000 --model_repository_path models --source_model Qwen/Qwen3-4B --tool_parser hermes3 --cache_size 2 --task text_generation --enable_prefix_caching true
+--rest_port 8000 --model_repository_path models --source_model Qwen/Qwen3-4B --tool_parser hermes3 --task text_generation --enable_prefix_caching true
 ```
 :::
 :::{tab-item} Llama-3.1-8B-Instruct
 :sync: Llama-3.1-8B-Instruct
 ```bash
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models openvino/model_server:latest \
---rest_port 8000 --model_repository_path models --source_model meta-llama/Llama-3.1-8B-Instruct --tool_parser llama3 --cache_size 2 --task text_generation --enable_prefix_caching true
+--rest_port 8000 --model_repository_path models --source_model meta-llama/Llama-3.1-8B-Instruct --tool_parser llama3 --task text_generation --enable_prefix_caching true
 ```
 :::
 :::{tab-item} Llama-3.2-3B-Instruct
 :sync: Llama-3.2-3B-Instruct
 ```bash
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models openvino/model_server:latest \
---rest_port 8000 --model_repository_path models --source_model meta-llama/Llama-3.2-3B-Instruct --tool_parser llama3 --cache_size 2 --task text_generation --enable_prefix_caching true
+--rest_port 8000 --model_repository_path models --source_model meta-llama/Llama-3.2-3B-Instruct --tool_parser llama3 --task text_generation --enable_prefix_caching true
 ```
 :::
 :::{tab-item} Hermes-3-Llama-3.1-8B
 :sync: Hermes-3-Llama-3.1-8B
 ```bash
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models openvino/model_server:latest \
---rest_port 8000 --model_repository_path models --source_model NousResearch/Hermes-3-Llama-3.1-8B --tool_parser hermes3 --cache_size 2 --task text_generation --enable_prefix_caching true
+--rest_port 8000 --model_repository_path models --source_model NousResearch/Hermes-3-Llama-3.1-8B --tool_parser hermes3 --task text_generation --enable_prefix_caching true
 ```
 :::
 :::{tab-item} Mistral-7B-Instruct-v0.3
 :sync: Mistral-7B-Instruct-v0.3
 ```bash
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000  -v $(pwd)/models:/models openvino/model_server:latest \
---rest_port 8000 --model_repository_path models --source_model mistralai/Mistral-7B-Instruct-v0.3 --tool_parser mistral --cache_size 2 --task text_generation --enable_prefix_caching true
+--rest_port 8000 --model_repository_path models --source_model mistralai/Mistral-7B-Instruct-v0.3 --tool_parser mistral --task text_generation --enable_prefix_caching true
 ```
 :::
 :::{tab-item} Phi-4-mini-instruct
 :sync: Phi-4-mini-instruct
 ```bash
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000  -v $(pwd)/models:/models openvino/model_server:latest \
---rest_port 8000 --model_repository_path models --source_model microsoft/Phi-4-mini-instruct --tool_parser phi4 --cache_size 2 --task text_generation --enable_prefix_caching true
+--rest_port 8000 --model_repository_path models --source_model microsoft/Phi-4-mini-instruct --tool_parser phi4 --task text_generation --enable_prefix_caching true
 ```
 :::
 :::{tab-item} Qwen3-8B-int4-ov
 :sync: Qwen3-8B-int4-ov
 ```bash
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models openvino/model_server:latest \
---rest_port 8000 --model_repository_path models --source_model OpenVINO/Qwen3-8B-int4-ov --tool_parser hermes3 --cache_size 2 --task text_generation --enable_prefix_caching true
+--rest_port 8000 --model_repository_path models --source_model OpenVINO/Qwen3-8B-int4-ov --tool_parser hermes3 --task text_generation --enable_prefix_caching true
 ```
 :::
 :::{tab-item} Mistral-7B-Instruct-v0.3-int4-ov
 :sync: Mistral-7B-Instruct-v0.3-int4-ov
 ```bash
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models openvino/model_server:latest \
---rest_port 8000 --model_repository_path models --source_model OpenVINO/Mistral-7B-Instruct-v0.3-int4-ov --tool_parser mistral --cache_size 2 --task text_generation --enable_prefix_caching true
+--rest_port 8000 --model_repository_path models --source_model OpenVINO/Mistral-7B-Instruct-v0.3-int4-ov --tool_parser mistral --task text_generation --enable_prefix_caching true
 ```
 :::
 :::{tab-item} Phi-4-mini-instruct-int4-ov
 :sync: Phi-4-mini-instruct-int4-ov
 ```bash
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models openvino/model_server:latest \
---rest_port 8000 --model_repository_path models --source_model OpenVINO/Phi-4-mini-instruct-int4-ov --tool_parser phi4 --cache_size 2 --task text_generation --enable_prefix_caching true
+--rest_port 8000 --model_repository_path models --source_model OpenVINO/Phi-4-mini-instruct-int4-ov --tool_parser phi4 --task text_generation --enable_prefix_caching true
 ```
 :::
 ::::
@@ -364,70 +364,70 @@ It can be applied using the commands below:
 :sync: Qwen3-8B
 ```bash
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:latest-gpu \
---rest_port 8000 --model_repository_path models --source_model Qwen/Qwen3-8B --tool_parser hermes3 --target_device GPU --cache_size 2 --task text_generation
+--rest_port 8000 --model_repository_path models --source_model Qwen/Qwen3-8B --tool_parser hermes3 --target_device GPU --task text_generation
 ```
 :::
 :::{tab-item} Qwen3-4B
 :sync: Qwen3-4B
 ```bash
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:latest-gpu \
---rest_port 8000 --model_repository_path models --source_model Qwen/Qwen3-4B --tool_parser hermes3 --target_device GPU --cache_size 2 --task text_generation
+--rest_port 8000 --model_repository_path models --source_model Qwen/Qwen3-4B --tool_parser hermes3 --target_device GPU --task text_generation
 ```
 :::
 :::{tab-item} Llama-3.1-8B-Instruct
 :sync: Llama-3.1-8B-Instruct
 ```bash
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:latest-gpu \
---rest_port 8000 --model_repository_path models --source_model meta-llama/Llama-3.1-8B-Instruct --tool_parser llama3 --target_device GPU --cache_size 2 --task text_generation --enable_tool_guided_generation true
+--rest_port 8000 --model_repository_path models --source_model meta-llama/Llama-3.1-8B-Instruct --tool_parser llama3 --target_device GPU --task text_generation --enable_tool_guided_generation true
 ```
 :::
 :::{tab-item} Llama-3.2-3B-Instruct
 :sync: Llama-3.2-3B-Instruct
 ```bash
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:latest-gpu \
---rest_port 8000 --model_repository_path models --source_model meta-llama/Llama-3.2-3B-Instruct --tool_parser llama3 --target_device GPU --cache_size 2 --task text_generation --enable_tool_guided_generation true
+--rest_port 8000 --model_repository_path models --source_model meta-llama/Llama-3.2-3B-Instruct --tool_parser llama3 --target_device GPU --task text_generation --enable_tool_guided_generation true
 ```
 :::
 :::{tab-item} Hermes-3-Llama-3.1-8B
 :sync: Hermes-3-Llama-3.1-8B
 ```bash
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:latest-gpu \
---rest_port 8000 --model_repository_path models --source_model NousResearch/Hermes-3-Llama-3.1-8B --tool_parser llama3 --target_device GPU --cache_size 2 --task text_generation --enable_tool_guided_generation true
+--rest_port 8000 --model_repository_path models --source_model NousResearch/Hermes-3-Llama-3.1-8B --tool_parser llama3 --target_device GPU --task text_generation --enable_tool_guided_generation true
 ```
 :::
 :::{tab-item} Mistral-7B-Instruct-v0.3
 :sync: Mistral-7B-Instruct-v0.3
 ```bash
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000  -v $(pwd)/models:/models --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:latest-gpu \
---rest_port 8000 --model_repository_path models --source_model mistralai/Mistral-7B-Instruct-v0.3 --tool_parser mistral --target_device GPU --cache_size 2 --task text_generation
+--rest_port 8000 --model_repository_path models --source_model mistralai/Mistral-7B-Instruct-v0.3 --tool_parser mistral --target_device GPU --task text_generation
 ```
 :::
 :::{tab-item} Phi-4-mini-instruct
 :sync: Phi-4-mini-instruct
 ```bash
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000  -v $(pwd)/models:/models --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:latest-gpu \
---rest_port 8000 --model_repository_path models --source_model microsoft/Phi-4-mini-instruct --tool_parser phi4 --target_device GPU --cache_size 2 --task text_generation
+--rest_port 8000 --model_repository_path models --source_model microsoft/Phi-4-mini-instruct --tool_parser phi4 --target_device GPU --task text_generation
 ```
 :::
 :::{tab-item} Qwen3-8B-int4-ov
 :sync: Qwen3-8B-int4-ov
 ```bash
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:latest-gpu \
---rest_port 8000 --model_repository_path models --source_model OpenVINO/Qwen3-8B-int4-ov --tool_parser hermes3 --target_device GPU --cache_size 2 --task text_generation
+--rest_port 8000 --model_repository_path models --source_model OpenVINO/Qwen3-8B-int4-ov --tool_parser hermes3 --target_device GPU --task text_generation
 ```
 :::
 :::{tab-item} Mistral-7B-Instruct-v0.3-int4-ov
 :sync: Mistral-7B-Instruct-v0.3-int4-ov
 ```bash
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:latest-gpu \
---rest_port 8000 --model_repository_path models --source_model OpenVINO/Mistral-7B-Instruct-v0.3-int4-ov --tool_parser phi4 --target_device GPU --cache_size 2 --task text_generation
+--rest_port 8000 --model_repository_path models --source_model OpenVINO/Mistral-7B-Instruct-v0.3-int4-ov --tool_parser phi4 --target_device GPU --task text_generation
 ```
 :::
 :::{tab-item} Phi-4-mini-instruct-int4-ov
 :sync: Phi-4-mini-instruct-int4-ov
 ```bash
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:latest-gpu \
---rest_port 8000 --model_repository_path models --source_model OpenVINO/Phi-4-mini-instruct-int4-ov --tool_parser phi4 --target_device GPU --cache_size 2 --task text_generation --enable_tool_guided_generation true
+--rest_port 8000 --model_repository_path models --source_model OpenVINO/Phi-4-mini-instruct-int4-ov --tool_parser phi4 --target_device GPU --task text_generation --enable_tool_guided_generation true
 ```
 :::
 ::::
@@ -443,63 +443,63 @@ It can be applied using the commands below:
 :sync: Qwen3-8B
 ```bash
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models --device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render*  | head -1) openvino/model_server:latest-gpu \
---rest_port 8000 --model_repository_path models --source_model Qwen/Qwen3-8B --tool_parser hermes3 --target_device NPU --cache_size 2 --task text_generation --enable_prefix_caching true --cache_dir .cache --max_prompt_len 4000
+--rest_port 8000 --model_repository_path models --source_model Qwen/Qwen3-8B --tool_parser hermes3 --target_device NPU --task text_generation --enable_prefix_caching true --max_prompt_len 4000
 ```
 :::
 :::{tab-item} Qwen3-4B
 :sync: Qwen3-4B
 ```bash
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models --device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:latest-gpu \
---rest_port 8000 --model_repository_path models --source_model Qwen/Qwen3-4B --tool_parser hermes3 --target_device NPU --cache_size 2 --task text_generation --enable_prefix_caching true --cache_dir .cache --max_prompt_len 4000
+--rest_port 8000 --model_repository_path models --source_model Qwen/Qwen3-4B --tool_parser hermes3 --target_device NPU --task text_generation --enable_prefix_caching true --max_prompt_len 4000
 ```
 :::
 :::{tab-item} Llama-3.1-8B-Instruct
 :sync: Llama-3.1-8B-Instruct
 ```bash
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models --device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:latest-gpu \
---rest_port 8000 --model_repository_path models --source_model meta-llama/Llama-3.1-8B-Instruct --tool_parser llama3 --target_device NPU --cache_size 2 --task text_generation --enable_tool_guided_generation true --enable_prefix_caching true --cache_dir .cache --max_prompt_len 4000
+--rest_port 8000 --model_repository_path models --source_model meta-llama/Llama-3.1-8B-Instruct --tool_parser llama3 --target_device NPU --task text_generation --enable_tool_guided_generation true --enable_prefix_caching true --max_prompt_len 4000
 ```
 :::
 :::{tab-item} Llama-3.2-3B-Instruct
 :sync: Llama-3.2-3B-Instruct
 ```bash
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models --device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:latest-gpu \
---rest_port 8000 --model_repository_path models --source_model meta-llama/Llama-3.2-3B-Instruct --tool_parser llama3 --target_device NPU --cache_size 2 --task text_generation --enable_tool_guided_generation true --enable_prefix_caching true --cache_dir .cache --max_prompt_len 4000
+--rest_port 8000 --model_repository_path models --source_model meta-llama/Llama-3.2-3B-Instruct --tool_parser llama3 --target_device NPU --task text_generation --enable_tool_guided_generation true --enable_prefix_caching true --max_prompt_len 4000
 ```
 :::
 :::{tab-item} Mistral-7B-Instruct-v0.3
 :sync: Mistral-7B-Instruct-v0.3
 ```bash
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000  -v $(pwd)/models:/models --device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:latest-gpu \
---rest_port 8000 --model_repository_path models --source_model mistralai/Mistral-7B-Instruct-v0.3 --tool_parser mistral --target_device NPU --cache_size 2 --task text_generation --enable_prefix_caching true --cache_dir .cache --max_prompt_len 4000
+--rest_port 8000 --model_repository_path models --source_model mistralai/Mistral-7B-Instruct-v0.3 --tool_parser mistral --target_device NPU --task text_generation --enable_prefix_caching true --max_prompt_len 4000
 ```
 :::
 :::{tab-item} Phi-4-mini-instruct
 :sync: Phi-4-mini-instruct
 ```bash
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000  -v $(pwd)/models:/models --device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:latest-gpu \
---rest_port 8000 --model_repository_path models --source_model microsoft/Phi-4-mini-instruct --tool_parser phi4 --target_device NPU --cache_size 2 --task text_generation --enable_prefix_caching true --cache_dir .cache --max_prompt_len 4000
+--rest_port 8000 --model_repository_path models --source_model microsoft/Phi-4-mini-instruct --tool_parser phi4 --target_device NPU --task text_generation --enable_prefix_caching true --max_prompt_len 4000
 ```
 :::
 :::{tab-item} Qwen3-4B-int4-ov
 :sync: Qwen3-4B-int4-ov
 ```bash
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models --device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:latest-gpu \
---rest_port 8000 --model_repository_path models --source_model OpenVINO/Qwen3-4B-int4-ov --tool_parser hermes3 --target_device NPU --cache_size 2 --task text_generation --enable_prefix_caching true --cache_dir .cache --max_prompt_len 4000
+--rest_port 8000 --model_repository_path models --source_model OpenVINO/Qwen3-4B-int4-ov --tool_parser hermes3 --target_device NPU --task text_generation --enable_prefix_caching true --max_prompt_len 4000
 ```
 :::
 :::{tab-item} Mistral-7B-Instruct-v0.3-int4-ov
 :sync: Mistral-7B-Instruct-v0.3-int4-ov
 ```bash
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models --device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:latest-gpu \
---rest_port 8000 --model_repository_path models --source_model OpenVINO/Mistral-7B-Instruct-v0.3-int4-ov --tool_parser phi4 --target_device NPU --cache_size 2 --task text_generation --enable_prefix_caching true --cache_dir .cache --max_prompt_len 4000
+--rest_port 8000 --model_repository_path models --source_model OpenVINO/Mistral-7B-Instruct-v0.3-int4-ov --tool_parser phi4 --target_device NPU --task text_generation --enable_prefix_caching true --max_prompt_len 4000
 ```
 :::
 :::{tab-item} Phi-3-mini-4k-instruct-int4-cw-ov
 :sync: Phi-3-mini-4k-instruct-int4-cw-ov
 ```bash
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models --device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:latest-gpu \
---rest_port 8000 --model_repository_path models --source_model OpenVINO/Phi-3-mini-4k-instruct-int4-cw-ov --tool_parser phi4 --target_device NPU --cache_size 2 --task text_generation --enable_tool_guided_generation true --enable_prefix_caching true --cache_dir .cache --max_prompt_len 4000
+--rest_port 8000 --model_repository_path models --source_model OpenVINO/Phi-3-mini-4k-instruct-int4-cw-ov --tool_parser phi4 --target_device NPU --task text_generation --enable_tool_guided_generation true --enable_prefix_caching true --max_prompt_len 4000
 ```
 :::
 ::::
@@ -631,7 +631,7 @@ mv 1184.txt.utf-8 pg1184.txt
 
 # Testing single client scenario, for example with GPU execution
 docker run -d --name ovms --user $(id -u):$(id -g) --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) --rm -p 8000:8000 -v $(pwd)/models:/models openvino/model_server:latest-gpu \
---rest_port 8000 --model_repository_path /models --source_model OpenVINO/Qwen3-8B-int4-ov --enable_prefix_caching true --cache_size 2 --task text_generation --target_device GPU
+--rest_port 8000 --model_repository_path /models --source_model OpenVINO/Qwen3-8B-int4-ov --enable_prefix_caching true --task text_generation --target_device GPU
 
 python benchmark_serving_multi_turn.py -m Qwen/Qwen3-8B --url http://localhost:8000/v3 -i generate_multi_turn.json --served-model-name OpenVINO/Qwen3-8B-int4-ov --num-clients 1 -n 50
 
