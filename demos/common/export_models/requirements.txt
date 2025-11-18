@@ -5,12 +5,13 @@
 optimum-intel@git+https://github.com/huggingface/optimum-intel.git
 openvino-tokenizers==2025.4.0.0rc2
 openvino==2025.4.0rc2
-nncf>=2.11.0 
+nncf==2.18.0
 sentence_transformers
-sentencepiece==0.2.0
+sentencepiece==0.2.1
 openai
-transformers<4.54
-einops
+transformers==4.55
+einops==0.8.1
 torchvision
-timm==1.0.15
-diffusers==0.33.1  # for image generation
+timm==1.0.22
+diffusers==0.35.2  # for image generation
+
