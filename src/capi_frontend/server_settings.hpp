@@ -28,6 +28,8 @@ enum GraphExportType : unsigned int {
     RERANK_GRAPH,
     EMBEDDINGS_GRAPH,
     IMAGE_GENERATION_GRAPH,
+    TEXT_TO_SPEECH_GRAPH,
+    SPEECH_TO_TEXT_GRAPH,
     UNKNOWN_GRAPH
 };
 
@@ -43,6 +45,8 @@ const std::map<GraphExportType, std::string> typeToString = {
     {RERANK_GRAPH, "rerank"},
     {EMBEDDINGS_GRAPH, "embeddings"},
     {IMAGE_GENERATION_GRAPH, "image_generation"},
+    {TEXT_TO_SPEECH_GRAPH, "text2speech"},
+    {SPEECH_TO_TEXT_GRAPH, "speech2text"},
     {UNKNOWN_GRAPH, "unknown_graph"}};
 
 const std::map<std::string, GraphExportType> stringToType = {
@@ -50,6 +54,8 @@ const std::map<std::string, GraphExportType> stringToType = {
     {"rerank", RERANK_GRAPH},
     {"embeddings", EMBEDDINGS_GRAPH},
     {"image_generation", IMAGE_GENERATION_GRAPH},
+    {"text2speech", TEXT_TO_SPEECH_GRAPH},
+    {"speech2text", SPEECH_TO_TEXT_GRAPH},
     {"unknown_graph", UNKNOWN_GRAPH}};
 
 std::string enumToString(GraphExportType type);
@@ -88,20 +94,29 @@ enum OvmsServerMode : int {
 };
 
 struct PluginConfigSettingsImpl {
+    std::optional<std::string> manualString;
     std::optional<std::string> kvCachePrecision;
     std::optional<uint32_t> maxPromptLength;
     std::optional<std::string> modelDistributionPolicy;
+    std::optional<uint32_t> numStreams;
+    std::optional<std::string> cacheDir;
+    std::optional<bool> useNpuPrefixCaching;
+    bool empty() const {
+        return !kvCachePrecision.has_value() &&
+               !maxPromptLength.has_value() &&
+               !modelDistributionPolicy.has_value() &&
+               !numStreams.has_value() &&
+               !cacheDir.has_value() &&
+               !useNpuPrefixCaching.has_value() &&
+               (!manualString.has_value() || manualString.value().empty());
+    }
 };
 
 struct TextGenGraphSettingsImpl {
-    std::string modelPath = "./";
-    std::string modelName = "";
     uint32_t maxNumSeqs = 256;
-    std::string targetDevice = "CPU";
     std::string enablePrefixCaching = "true";
     uint32_t cacheSize = 10;
     std::string dynamicSplitFuse = "true";
-    PluginConfigSettingsImpl pluginConfig;
     std::optional<uint32_t> maxNumBatchedTokens;
     std::optional<std::string> draftModelDirName;
     std::optional<std::string> pipelineType;
@@ -111,27 +126,24 @@ struct TextGenGraphSettingsImpl {
 };
 
 struct EmbeddingsGraphSettingsImpl {
-    std::string modelPath = "./";
-    std::string targetDevice = "CPU";
-    std::string modelName = "";
-    uint32_t numStreams = 1;
     std::string normalize = "true";
     std::string truncate = "false";
     std::string pooling = "CLS";
 };
 
+struct TextToSpeechGraphSettingsImpl {
+    uint32_t unused = 1;  // will be added
+};
+
+struct SpeechToTextGraphSettingsImpl {
+    uint32_t unused = 1;  // will be added
+};
+
 struct RerankGraphSettingsImpl {
-    std::string modelPath = "./";
-    std::string targetDevice = "CPU";
-    std::string modelName = "";
-    uint32_t numStreams = 1;
     uint64_t maxAllowedChunks = 10000;
 };
 
 struct ImageGenerationGraphSettingsImpl {
-    std::string modelName = "";
-    std::string modelPath = "./";
-    std::string targetDevice = "CPU";
     std::string resolution = "";
     std::string maxResolution = "";
     std::string defaultResolution = "";
@@ -140,13 +152,16 @@ struct ImageGenerationGraphSettingsImpl {
     std::optional<uint32_t> maxNumberImagesPerPrompt;
     std::optional<uint32_t> defaultNumInferenceSteps;
     std::optional<uint32_t> maxNumInferenceSteps;
-    std::string pluginConfig;
 };
 
 struct ExportSettings {
+    std::string modelName = "";
+    std::string modelPath = "./";
     std::string targetDevice = "CPU";
     std::optional<std::string> extraQuantizationParams;
+    std::optional<std::string> vocoder;
     std::string precision = "int8";
+    PluginConfigSettingsImpl pluginConfig;
 };
 
 struct HFSettingsImpl {
@@ -157,7 +172,7 @@ struct HFSettingsImpl {
     bool overwriteModels = false;
     ModelDownlaodType downloadType = GIT_CLONE_DOWNLOAD;
     GraphExportType task = TEXT_GENERATION_GRAPH;
-    std::variant<TextGenGraphSettingsImpl, RerankGraphSettingsImpl, EmbeddingsGraphSettingsImpl, ImageGenerationGraphSettingsImpl> graphSettings;
+    std::variant<TextGenGraphSettingsImpl, RerankGraphSettingsImpl, EmbeddingsGraphSettingsImpl, TextToSpeechGraphSettingsImpl, SpeechToTextGraphSettingsImpl, ImageGenerationGraphSettingsImpl> graphSettings;
 };
 
 struct ServerSettingsImpl {

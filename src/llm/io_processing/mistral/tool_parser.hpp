@@ -23,10 +23,47 @@
 #include "src/port/rapidjson_document.hpp"
 
 #include "src/llm/io_processing/base_output_parser.hpp"
+#include "src/llm/io_processing/partial_json_builder.hpp"
 
 namespace ovms {
 class MistralToolParser : public BaseOutputParser {
     const int64_t botTokenId = 5;  // [TOOL_CALLS]
+
+    // [TOOL_CALLS] is not visible during streaming, because it is special token
+    // Instead we base on the expected JSON structure start
+    const std::string streamingParsingStartTag = "[{\"";
+
+    /////////////////////////////////////////////////
+    // FIXME: Duplicated from Phi4 with slight change
+    // Streaming required members
+    enum InternalState {
+        AWAITING_START_TAG,
+        AWAITING_TOOL_CALLS_OPENING_BRACKET,
+        AWAITING_TOOL_CALL_OPENING_BRACE,
+        PROCESSING_TOOL_CALL
+    };
+
+    InternalState internalState = AWAITING_START_TAG;
+    rapidjson::Document lastJson;
+    PartialJsonBuilder jsonBuilder;
+    // Index to track the current tool call being processed (-1 means no tool call has been started yet)
+    int toolCallIndex = -1;
+    // Flag to indicate if double quote has been added at the beginning of arguments
+    bool argumentsQuotesOpened = false;
+    std::string unprocessedBuffer;
+
+    // Stack of opened braces to track nested structures while in arguments collection phase
+    // Starting with 1, since we count the tool call opening brace and expect it to be closed as arguments end
+    size_t openBracesCount = 1;
+
+    void movePostColonContentToUnprocessedBuffer(std::string& chunk);
+    void movePostToolCallEndContentToUnprocessedBuffer();
+    void updateOpenBracesCount(const std::string& chunk);
+    void handleGenerationFinish(std::string& chunk) const;
+    void handleEndOfToolCall(std::string& chunk);
+    void openArgumentsString(std::string& chunk) const;
+    void clearState();
+    ///////////////////////////////////////////////////////////
 
 public:
     MistralToolParser() = delete;
@@ -36,7 +73,7 @@ public:
     void parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) override;
     std::optional<rapidjson::Document> parseChunk(const std::string& chunk, ov::genai::GenerationFinishReason finishReason) override;
     const std::vector<std::string>& getParsingStartTags() const override {
-        static const std::vector<std::string> toolCallStartTags{"[TOOL_CALLS]"};
+        static const std::vector<std::string> toolCallStartTags{"[TOOL_CALLS]", streamingParsingStartTag};
         return toolCallStartTags;
     }
     const std::vector<std::string>& getSpecialParsingStartTags() const override {

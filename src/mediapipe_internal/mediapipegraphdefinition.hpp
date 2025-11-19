@@ -46,8 +46,8 @@
 #include "../sidepacket_servable.hpp"
 #include "../embeddings/embeddings_servable.hpp"
 #include "../rerank/rerank_servable.hpp"
-#include "../audio/speech_to_text/stt_servable.hpp"
-#include "../audio/text_to_speech/tts_servable.hpp"
+#include "../audio/speech_to_text/s2t_servable.hpp"
+#include "../audio/text_to_speech/t2s_servable.hpp"
 
 namespace ovms {
 class MediapipeGraphDefinitionUnloadGuard;
