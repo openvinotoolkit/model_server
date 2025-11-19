@@ -80,7 +80,7 @@ curl -L -o models/mistralai/Mistral-7B-Instruct-v0.3/chat_template.jinja https:/
 :::{tab-item} Phi-4-mini-instruct 
 :sync: microsoft/Phi-4-mini-instruct 
 ```console
-python export_model.py text_generation --source_model microsoft/Phi-4-mini-instruct --weight-format int8 --config_file_path models/config.json --model_repository_path models --tool_parser phi4
+python export_model.py text_generation --source_model microsoft/Phi-4-mini-instruct --weight-format int8 --config_file_path models/config.json --model_repository_path models --tool_parser phi4 --max_num_batched_tokens 99999
 curl -L -o models/microsoft/Phi-4-mini-instruct/chat_template.jinja https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/extras/chat_template_examples/chat_template_phi4_mini.jinja
 ```
 :::
@@ -193,7 +193,7 @@ ovms.exe --rest_port 8000 --source_model mistralai/Mistral-7B-Instruct-v0.3 --mo
 :::{tab-item} Phi-4-mini-instruct
 :sync: Phi-4-mini-instruct
 ```bat
-ovms.exe --rest_port 8000 --source_model microsoft/Phi-4-mini-instruct --model_repository_path models --tool_parser phi4 --target_device GPU --task text_generation --enable_tool_guided_generation true --cache_dir .cache
+ovms.exe --rest_port 8000 --source_model microsoft/Phi-4-mini-instruct --model_repository_path models --tool_parser phi4 --target_device GPU --task text_generation --enable_tool_guided_generation true --cache_dir .cache --max_num_batched_tokens 99999
 ```
 :::
 :::{tab-item} Qwen3-8B-int4-ov
@@ -326,7 +326,7 @@ docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000  -v $(pwd)/models:/mode
 :sync: Phi-4-mini-instruct
 ```bash
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000  -v $(pwd)/models:/models openvino/model_server:weekly \
---rest_port 8000 --model_repository_path models --source_model microsoft/Phi-4-mini-instruct --tool_parser phi4 --task text_generation --enable_prefix_caching true
+--rest_port 8000 --model_repository_path models --source_model microsoft/Phi-4-mini-instruct --tool_parser phi4 --task text_generation --enable_prefix_caching true --max_num_batched_tokens 99999
 ```
 :::
 :::{tab-item} Qwen3-8B-int4-ov
@@ -406,7 +406,7 @@ docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000  -v $(pwd)/models:/mode
 :sync: Phi-4-mini-instruct
 ```bash
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000  -v $(pwd)/models:/models --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:weekly \
---rest_port 8000 --model_repository_path models --source_model microsoft/Phi-4-mini-instruct --tool_parser phi4 --target_device GPU --task text_generation
+--rest_port 8000 --model_repository_path models --source_model microsoft/Phi-4-mini-instruct --tool_parser phi4 --target_device GPU --task text_generation --max_num_batched_tokens 99999
 ```
 :::
 :::{tab-item} Qwen3-8B-int4-ov
