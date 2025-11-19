@@ -75,9 +75,9 @@ FUZZER_BUILD ?= 0
 #         - uncomment source build section, comment binary section
 #         - adjust binary version path - version variable is not passed to WORKSPACE file!
 
-OV_SOURCE_BRANCH ?= 7a975177ff432c687e5619e8fb22e4bf265e48b7 # releases/2025/4
-OV_TOKENIZERS_BRANCH ?= 3694f87878edab6cf08cd3624f08df205dc39713 # releases/2025/4
-OV_GENAI_BRANCH ?= b7a5a802ccfb6a3085c973364b5cf6935efbd455 # releases/2025/4
+OV_SOURCE_BRANCH ?= f090a9a6c1cc3dffe2cc538cc946f3934953a466 # main 2025/11/18
+OV_TOKENIZERS_BRANCH ?= 6dc4c39823fdcd503d26bf1670cafcceff25f869 # main 2025/11/14
+OV_GENAI_BRANCH ?= b4dcd8c873e7634d161530df4a1c1160520e9f1d # main 2025/11/18
 
 OV_SOURCE_ORG ?= openvinotoolkit
 OV_GENAI_ORG ?= openvinotoolkit
