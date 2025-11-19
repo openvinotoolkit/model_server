@@ -31,7 +31,7 @@ This demo was tested on CPU but most of the models could be also run on Intel ac
 ```bat
 mkdir models
 ovms.exe --pull --source_model Godreign/llama-3.2-3b-instruct-openvino-int4-model --model_repository_path models --task text_generation
-ovms.exe --add_to_config models --model_path Godreign\llama-3.2-3b-instruct-openvino-int4-model --model_name Godreign/llama-3.2-3b-instruct-openvino-int4-model
+ovms.exe --add_to_config --config_path  models\config.json --model_path Godreign\llama-3.2-3b-instruct-openvino-int4-model --model_name Godreign/llama-3.2-3b-instruct-openvino-int4-model
 ovms.exe --rest_port 8000 --config_path models\config.json
 ```
 :::
@@ -40,7 +40,7 @@ ovms.exe --rest_port 8000 --config_path models\config.json
 ```bash
 mkdir models
 docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models openvino/model_server:weekly --pull --source_model Godreign/llama-3.2-3b-instruct-openvino-int4-model --model_repository_path /models --task text_generation
-docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models openvino/model_server:weekly --add_to_config /models --model_path Godreign/llama-3.2-3b-instruct-openvino-int4-model --model_name Godreign/llama-3.2-3b-instruct-openvino-int4-model
+docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models openvino/model_server:weekly --add_to_config --config_path  /models/config.json --model_path Godreign/llama-3.2-3b-instruct-openvino-int4-model --model_name Godreign/llama-3.2-3b-instruct-openvino-int4-model
 docker run -d -u $(id -u):$(id -g) -v $PWD/models:/models -p 8000:8000 openvino/model_server:weekly --rest_port 8000 --config_path /models/config.json
 ```
 :::
@@ -110,18 +110,18 @@ In addition to text generation, endpoints for embedding and reranking in Retriev
 :sync: Windows
 ```bat
 ovms.exe --pull --source_model OpenVINO/Qwen3-Embedding-0.6B-fp16-ov --model_repository_path models --task embeddings
-ovms.exe --add_to_config models --model_path OpenVINO\Qwen3-Embedding-0.6B-fp16-ov --model_name OpenVINO/Qwen3-Embedding-0.6B-fp16-ov
+ovms.exe --add_to_config --config_path models\config.json --model_path OpenVINO\Qwen3-Embedding-0.6B-fp16-ov --model_name OpenVINO/Qwen3-Embedding-0.6B-fp16-ov
 ovms.exe --pull --source_model OpenVINO/Qwen3-Reranker-0.6B-seq-cls-fp16-ov --model_repository_path models --task rerank
-ovms.exe --add_to_config models --model_path OpenVINO\Qwen3-Reranker-0.6B-seq-cls-fp16-ov --model_name OpenVINO/Qwen3-Reranker-0.6B-seq-cls-fp16-ov
+ovms.exe --add_to_config --config_path models\config.json --model_path OpenVINO\Qwen3-Reranker-0.6B-seq-cls-fp16-ov --model_name OpenVINO/Qwen3-Reranker-0.6B-seq-cls-fp16-ov
 ```
 :::
 :::{tab-item} Linux (using Docker)
 :sync: Linux
 ```bash
 docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models openvino/model_server:weekly --pull --source_model OpenVINO/Qwen3-Embedding-0.6B-fp16-ov --model_repository_path models --task embeddings
-docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models openvino/model_server:weekly --add_to_config models --model_path OpenVINO/Qwen3-Embedding-0.6B-fp16-ov --model_name OpenVINO/Qwen3-Embedding-0.6B-fp16-ov
+docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models openvino/model_server:weekly --add_to_config --config_path /models/config.json  --model_path OpenVINO/Qwen3-Embedding-0.6B-fp16-ov --model_name OpenVINO/Qwen3-Embedding-0.6B-fp16-ov
 docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models openvino/model_server:weekly --pull --source_model OpenVINO/Qwen3-Reranker-0.6B-seq-cls-fp16-ov --model_repository_path models --task rerank
-docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models openvino/model_server:weekly --add_to_config models --model_path OpenVINO/Qwen3-Reranker-0.6B-seq-cls-fp16-ov --model_name OpenVINO/Qwen3-Reranker-0.6B-seq-cls-fp16-ov
+docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models openvino/model_server:weekly --add_to_config --config_path /models/config.json  --model_path OpenVINO/Qwen3-Reranker-0.6B-seq-cls-fp16-ov --model_name OpenVINO/Qwen3-Reranker-0.6B-seq-cls-fp16-ov
 ```
 :::
 ::::
@@ -207,14 +207,14 @@ The image generation model used in this demo is [OpenVINO/FLUX.1-schnell-int4-ov
 :sync: Windows
 ```bat
 ovms.exe --pull --source_model OpenVINO/FLUX.1-schnell-int4-ov --model_repository_path models --model_name OpenVINO/FLUX.1-schnell-int4-ov --task image_generation --default_num_inference_steps 3
-ovms.exe --add_to_config models --model_path OpenVINO\FLUX.1-schnell-int4-ov --model_name OpenVINO/FLUX.1-schnell-int4-ov
+ovms.exe --add_to_config --config_path models\config.json --model_path OpenVINO\FLUX.1-schnell-int4-ov --model_name OpenVINO/FLUX.1-schnell-int4-ov
 ```
 :::
 :::{tab-item} Linux (using Docker)
 :sync: Linux
 ```bash
 docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models openvino/model_server:weekly --pull --source_model OpenVINO/FLUX.1-schnell-int4-ov --model_repository_path models --model_name OpenVINO/FLUX.1-schnell-int4-ov --task image_generation --default_num_inference_steps 3
-docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models openvino/model_server:weekly  --add_to_config models --model_path OpenVINO/FLUX.1-schnell-int4-ov --model_name OpenVINO/FLUX.1-schnell-int4-ov
+docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models openvino/model_server:weekly  --add_to_config --config_path /models/config.json  --model_path OpenVINO/FLUX.1-schnell-int4-ov --model_name OpenVINO/FLUX.1-schnell-int4-ov
 ```
 :::
 ::::
@@ -271,14 +271,14 @@ The vision language model used in this demo is [OpenVINO/InternVL2-2B-int4-ov](h
 :sync: Windows
 ```bat
 ovms.exe --pull --source_model OpenVINO/InternVL2-2B-int4-ov --model_repository_path models --model_name OpenVINO/InternVL2-2B-int4-ov --task text_generation
-ovms.exe --add_to_config models --model_path OpenVINO\InternVL2-2B-int4-ov --model_name OpenVINO/InternVL2-2B-int4-ov
+ovms.exe --add_to_config --config_path models\config.json --model_path OpenVINO\InternVL2-2B-int4-ov --model_name OpenVINO/InternVL2-2B-int4-ov
 ```
 :::
 :::{tab-item} Linux (using Docker)
 :sync: Linux
 ```bash
 docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models openvino/model_server:weekly --pull --source_model OpenVINO/InternVL2-2B-int4-ov --model_repository_path models --model_name OpenVINO/InternVL2-2B-int4-ov --task text_generation
-docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models openvino/model_server:weekly --add_to_config models --model_path OpenVINO/InternVL2-2B-int4-ov --model_name OpenVINO/InternVL2-2B-int4-ov
+docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models openvino/model_server:weekly --add_to_config --config_path /models/config.json  --model_path OpenVINO/InternVL2-2B-int4-ov --model_name OpenVINO/InternVL2-2B-int4-ov
 ```
 :::
 ::::
@@ -338,6 +338,8 @@ mcpo --port 9000 -- python -m mcp_weather_server
 
 ## Audio
 
+> **Note:** To ensure audio features work correctly, download [FFmpeg](https://ffmpeg.org/download.html) and add its executable directory to your system's `PATH` environment variable.
+
 ### Step 1: Models Preparation
 
 Start by downloading `export_models.py` script and run it to downlaod and quantize the model for speech generation:
@@ -354,17 +356,37 @@ Next, download and add to config model for transcription:
 :sync: Windows
 ```bat
 ovms.exe --pull --source_model OpenVINO/whisper-base-fp16-ov --model_repository_path models --task speech2text
-ovms.exe --add_to_config models --model_path OpenVINO\whisper-base-fp16-ov --model_name OpenVINO/whisper-base-fp16-ov
+ovms.exe --add_to_config --config_path  models\config.json --model_path OpenVINO\whisper-base-fp16-ov --model_name OpenVINO/whisper-base-fp16-ov
 ```
 :::
 :::{tab-item} Linux (using Docker)
 :sync: Linux
 ```bash
 docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models openvino/model_server:weekly --pull --source_model OpenVINO/whisper-base-fp16-ov --model_repository_path /models --task speech2text
-docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models openvino/model_server:weekly --add_to_config /models --model_path OpenVINO/whisper-base-fp16-ov --model_name OpenVINO/whisper-base-fp16-ov
+docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models openvino/model_server:weekly --add_to_config --config_path /models/config.json --model_path OpenVINO/whisper-base-fp16-ov --model_name OpenVINO/whisper-base-fp16-ov
 ```
 :::
 :::: 
+
+### Step 2: Audio Settings
+
+1. Go to **Admin Panel** → **Settings** → **Audio** 
+2. Select **OpenAI** for both engines
+   * URL: `http://localhost:8000/v3`
+   * Set Engine type to `OpenAI` 
+   * STT Model: `OpenVINO/whisper-base-fp16-ov`
+   * TTS Model: `microsoft/speecht5_tts`
+   * Put anything in API key
+3. Click **Save**
+
+![audio settings](./audio_configuration.png)
+
+### Step 3: Chat with AI Agent
+
+1. Click **Voice mode** icon.
+2. Start talking.
+
+![voice mode](./voice_mode.png)
 
 ### Reference
 [https://docs.openwebui.com/openapi-servers/open-webui](https://docs.openwebui.com/openapi-servers/open-webui/#step-2-connect-tool-server-in-open-webui)
