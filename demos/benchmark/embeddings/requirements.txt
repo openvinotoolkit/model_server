@@ -3,3 +3,6 @@ dataclasses
 transformers
 numpy
 tqdm
+sentencepiece
+soundfile
+librosa

@@ -31,6 +31,8 @@ from typing import AsyncGenerator, List, Optional, Union
 from transformers import AutoTokenizer
 import argparse
 import aiohttp
+import io
+import soundfile
 
 AIOHTTP_TIMEOUT = aiohttp.ClientTimeout(total=6 * 60 * 60)
 
@@ -38,7 +40,9 @@ default_url_description = "Default value depends on the backend: \
     ovms-embeddings: http://localhost:8000/v3/embeddings ;\
     ovms_rerank: http://localhost:8000/v3/rerank ;\
     tei_embed: http://localhost:8080/embed ;\
-    infinity-embeddings: http://localhost:7997/embeddings"
+    infinity-embeddings: http://localhost:7997/embeddings ;\
+    text2speech: http://localhost:8000/v3/audio/speech ;\
+    speech2text: http://localhost:8000/v3/audio/translations"
 
 parser = argparse.ArgumentParser(description='Run benchmark for embeddings endpoints', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument('--dataset', required=False, default='Cohere/wikipedia-22-12-simple-embeddings', help='Dataset for load generation from HF or a keyword "synthetic"', dest='dataset')
@@ -47,7 +51,7 @@ parser.add_argument('--api_url', required=False, help='API URL for embeddings en
 parser.add_argument('--model', required=False, default='Alibaba-NLP/gte-large-en-v1.5', help='HF model name', dest='model')
 parser.add_argument('--request_rate', required=False, default='inf', help='Average amount of requests per seconds in random distribution', dest='request_rate')
 parser.add_argument('--batch_size', required=False, type=int, default=16, help='Number of strings in every requests', dest='batch_size')
-parser.add_argument('--backend', required=False, default='ovms-embeddings', choices=['ovms-embeddings','tei-embed','infinity-embeddings','ovms_rerank'], help='Backend serving API type', dest='backend')
+parser.add_argument('--backend', required=False, default='ovms-embeddings', choices=['ovms-embeddings','tei-embed','infinity-embeddings','ovms_rerank','text2speech','speech2text'], help='Backend serving API type', dest='backend')
 parser.add_argument('--limit', required=False, type=int, default=1000, help='Number of documents to use in testing', dest='limit')
 
 args = vars(parser.parse_args())
@@ -61,7 +65,7 @@ if args["dataset"] == 'synthetic':
     for i in range(args["limit"]):
         docs = docs.add_item({"text":dummy_text})
 else:
-    filter = f"train[:{args['limit']}]"
+    filter = f"test[:{args['limit']}]"
     docs = load_dataset(args["dataset"], split=filter)
 
 print("Number of documents:",len(docs))
@@ -94,6 +98,101 @@ application_json_headers = {
             "Content-Type": "application/json",
             "Authorization": f"Bearer {os.environ.get('OPENAI_API_KEY')}",
         }
+
+application_multipart_headers = {
+            "Authorization": f"Bearer {os.environ.get('OPENAI_API_KEY')}",
+        }
+
+
+async def async_request_text2speech(
+    request_func_input: RequestFuncInput,
+    pbar: Optional[tqdm] = None,
+) -> RequestFuncOutput:
+    api_url = request_func_input.api_url
+
+    async with aiohttp.ClientSession(timeout=AIOHTTP_TIMEOUT, read_bufsize=100000) as session:
+        payload = {
+            "model": request_func_input.model,
+            "input": request_func_input.documents[0],
+        }
+        headers = application_json_headers
+
+        output = RequestFuncOutput()
+        st = time.perf_counter()
+        try:
+            async with session.post(url=api_url, json=payload,
+                                    headers=headers) as response:
+                if response.status == 200:
+                    async for chunk_bytes in response.content:
+                        if not chunk_bytes:
+                            continue
+                        # uncomment for response debugging
+                        # chunk_bytes = chunk_bytes.decode("utf-8")
+                        # data = json.loads(chunk_bytes)
+                        # TBD: saving response to file
+                        timestamp = time.perf_counter()
+                        output.success = True
+                        output.latency =  timestamp - st
+                else:
+                    output.error = response.reason or ""
+                    output.success = False
+                    print("ERROR", response.reason)
+
+        except Exception:
+            output.success = False
+            exc_info = sys.exc_info()
+            output.error = "".join(traceback.format_exception(*exc_info))
+
+    if pbar:
+        pbar.update(1)
+    return output
+
+async def async_request_speech2text(
+    request_func_input: RequestFuncInput,
+    pbar: Optional[tqdm] = None,
+) -> RequestFuncOutput:
+    api_url = request_func_input.api_url
+
+    async with aiohttp.ClientSession(timeout=AIOHTTP_TIMEOUT, read_bufsize=100000) as session:
+        headers = application_multipart_headers
+        def to_bytes(y, sr):
+            buffer = io.BytesIO()
+            soundfile.write(buffer, y, sr, format="WAV")
+            buffer.seek(0)
+            return buffer
+        y, sr = request_func_input.documents[0]["array"], request_func_input.documents[0]["sampling_rate"]
+        with to_bytes(y,sr) as f:
+            form = aiohttp.FormData()
+            form.add_field('file', f, content_type='audio/wav')
+            form.add_field('model', 'openai/whisper-large-v2')
+            output = RequestFuncOutput()
+            try:
+                async with session.post(url=api_url, data=form,
+                                        headers=headers) as response:
+                    if response.status == 200:
+                        async for chunk_bytes in response.content:
+                            if not chunk_bytes:
+                                continue
+                            # uncomment for response debugging
+                            # chunk_bytes = chunk_bytes.decode("utf-8")
+                            # data = json.loads(chunk_bytes)
+                            # TBD: saving response to file
+                            timestamp = time.perf_counter()
+                            output.success = True
+                            output.latency =  timestamp - st
+                    else:
+                        output.error = response.reason or ""
+                        output.success = False
+                        print("ERROR", response.reason)
+
+            except Exception:
+                output.success = False
+                exc_info = sys.exc_info()
+                output.error = "".join(traceback.format_exception(*exc_info))
+
+    if pbar:
+        pbar.update(1)
+    return output
 
 async def async_request_embeddings(
     request_func_input: RequestFuncInput,
@@ -231,7 +330,7 @@ async def get_request(
 ) -> AsyncGenerator[List[str], None]:
     documents = documents_all.iter(batch_size=batch_size)
     for request in documents:
-        yield request["text"]
+        yield request["audio"]
         if request_rate == float("inf"):
             # If the request rate is infinity, then we don't need to wait.
             continue
@@ -280,6 +379,18 @@ elif args["backend"] == "tei-embed":
 elif args["backend"] == "infinity-embeddings":
     backend_function = async_request_embeddings
     default_api_url = "http://localhost:7997/embeddings"
+elif args["backend"] == "text2speech":
+    if(batch_size != 1):
+        print("ERROR: Only batch_size=1 supported in audio/speech endpoint")
+        exit()
+    backend_function = async_request_text2speech
+    default_api_url = "http://localhost:8000/v3/audio/speech"
+elif args["backend"] == "speech2text":
+    if(batch_size != 1):
+        print("ERROR: Only batch_size=1 supported in audio/transcriptions endpoint")
+        exit()
+    backend_function = async_request_speech2text
+    default_api_url = "http://localhost:8000/v3/audio/transcriptions"
 else:
     print("invalid backend")
     exit()
