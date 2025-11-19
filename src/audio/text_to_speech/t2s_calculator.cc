@@ -86,7 +86,6 @@ public:
 
         std::unique_ptr<std::string> output;
         if (absl::StartsWith(payload.uri, "/v3/audio/speech")) {
-            SPDLOG_ERROR("{}", payload.body);
             if (payload.parsedJson->HasParseError())
                 return absl::InvalidArgumentError("Failed to parse JSON");
 

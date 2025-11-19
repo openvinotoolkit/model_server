@@ -53,6 +53,7 @@ parser.add_argument('--request_rate', required=False, default='inf', help='Avera
 parser.add_argument('--batch_size', required=False, type=int, default=16, help='Number of strings in every requests', dest='batch_size')
 parser.add_argument('--backend', required=False, default='ovms-embeddings', choices=['ovms-embeddings','tei-embed','infinity-embeddings','ovms_rerank','text2speech','speech2text'], help='Backend serving API type', dest='backend')
 parser.add_argument('--limit', required=False, type=int, default=1000, help='Number of documents to use in testing', dest='limit')
+parser.add_argument('--split', required=False, default='train', help='Dataset split', dest='split')
 
 args = vars(parser.parse_args())
 
@@ -65,7 +66,7 @@ if args["dataset"] == 'synthetic':
     for i in range(args["limit"]):
         docs = docs.add_item({"text":dummy_text})
 else:
-    filter = f"test[:{args['limit']}]"
+    filter = f"{args['split']}[:{args['limit']}]"
     docs = load_dataset(args["dataset"], split=filter)
 
 print("Number of documents:",len(docs))
@@ -155,40 +156,35 @@ async def async_request_speech2text(
 
     async with aiohttp.ClientSession(timeout=AIOHTTP_TIMEOUT, read_bufsize=100000) as session:
         headers = application_multipart_headers
-        def to_bytes(y, sr):
-            buffer = io.BytesIO()
-            soundfile.write(buffer, y, sr, format="WAV")
-            buffer.seek(0)
-            return buffer
-        y, sr = request_func_input.documents[0]["array"], request_func_input.documents[0]["sampling_rate"]
-        with to_bytes(y,sr) as f:
-            form = aiohttp.FormData()
-            form.add_field('file', f, content_type='audio/wav')
-            form.add_field('model', 'openai/whisper-large-v2')
-            output = RequestFuncOutput()
-            try:
-                async with session.post(url=api_url, data=form,
-                                        headers=headers) as response:
-                    if response.status == 200:
-                        async for chunk_bytes in response.content:
-                            if not chunk_bytes:
-                                continue
-                            # uncomment for response debugging
-                            # chunk_bytes = chunk_bytes.decode("utf-8")
-                            # data = json.loads(chunk_bytes)
-                            # TBD: saving response to file
-                            timestamp = time.perf_counter()
-                            output.success = True
-                            output.latency =  timestamp - st
-                    else:
-                        output.error = response.reason or ""
-                        output.success = False
-                        print("ERROR", response.reason)
 
-            except Exception:
-                output.success = False
-                exc_info = sys.exc_info()
-                output.error = "".join(traceback.format_exception(*exc_info))
+        y, sr = request_func_input.documents[0]["array"], request_func_input.documents[0]["sampling_rate"]
+        buffer = io.BytesIO()
+        soundfile.write(buffer, y, sr, format="WAV")
+        buffer.seek(0)
+
+        form = aiohttp.FormData()
+        form.add_field('file', buffer, content_type='audio/wav')
+        form.add_field('model', request_func_input.model)
+        output = RequestFuncOutput()
+        st = time.perf_counter()
+        try:
+            async with session.post(url=api_url, data=form,
+                                    headers=headers) as response:                
+                if response.status == 200:
+                    async for chunk_bytes in response.content:
+                        if not chunk_bytes:
+                            continue
+                        timestamp = time.perf_counter()
+                        output.success = True
+                        output.latency =  timestamp - st
+                else:
+                    output.error = response.reason or ""
+                    output.success = False
+
+        except Exception:
+            output.success = False
+            exc_info = sys.exc_info()
+            output.error = "".join(traceback.format_exception(*exc_info))
 
     if pbar:
         pbar.update(1)
@@ -330,7 +326,10 @@ async def get_request(
 ) -> AsyncGenerator[List[str], None]:
     documents = documents_all.iter(batch_size=batch_size)
     for request in documents:
-        yield request["audio"]
+        if args["backend"] == "speech2text":
+            yield request["audio"]
+        else:
+            yield request["text"]
         if request_rate == float("inf"):
             # If the request rate is infinity, then we don't need to wait.
             continue
