@@ -371,9 +371,9 @@ An asynchronous benchmarking client can be used to access the model server perfo
 ```console
 git clone https://github.com/openvinotoolkit/model_server
 pushd .
-cd model_server/demos/benchmark/embeddings/
+cd model_server/demos/benchmark/v3/
 pip install -r requirements.txt
-python benchmark_embeddings.py --api_url http://localhost:8000/v3/embeddings --dataset synthetic --synthetic_length 5 --request_rate 10 --batch_size 1 --model BAAI/bge-large-en-v1.5
+python benchmark.py --api_url http://localhost:8000/v3/embeddings --dataset synthetic --synthetic_length 5 --request_rate 10 --batch_size 1 --model BAAI/bge-large-en-v1.5
 Number of documents: 1000
 100%|████████████████████████████████████████████████████████████████| 1000/1000 [01:44<00:00,  9.56it/s]
 Tokens: 5000
@@ -384,7 +384,7 @@ Median latency: 13.97 ms
 Average document length: 5.0 tokens
 
 
-python benchmark_embeddings.py --api_url http://localhost:8000/v3/embeddings --request_rate inf --batch_size 32 --dataset synthetic --synthetic_length 510 --model BAAI/bge-large-en-v1.5
+python benchmark.py --api_url http://localhost:8000/v3/embeddings --request_rate inf --batch_size 32 --dataset synthetic --synthetic_length 510 --model BAAI/bge-large-en-v1.5
 Number of documents: 1000
 100%|████████████████████████████████████████████████████████████████| 32/32 [00:17<00:00,  1.82it/s]
 Tokens: 510000
@@ -395,7 +395,7 @@ Median latency: 9905.79 ms
 Average document length: 510.0 tokens
 
 
-python benchmark_embeddings.py --api_url http://localhost:8000/v3/embeddings --request_rate inf --batch_size 1 --dataset Cohere/wikipedia-22-12-simple-embeddings --model BAAI/bge-large-en-v1.5
+python benchmark.py --api_url http://localhost:8000/v3/embeddings --request_rate inf --batch_size 1 --dataset Cohere/wikipedia-22-12-simple-embeddings --model BAAI/bge-large-en-v1.5
 Number of documents: 1000
 100%|████████████████████████████████████████████████████████████████| 1000/1000 [00:15<00:00, 64.02it/s]
 Tokens: 83208
