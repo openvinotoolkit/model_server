@@ -24,7 +24,7 @@ Pull and add the model on Linux:
 :::{tab-item} Qwen/Qwen3-Coder-30B-A3B-Instruct
 :sync: Qwen/Qwen3-Coder-30B-A3B-Instruct
 ```bash
-python export_model.py text_generation --source_model Qwen/Qwen3-Coder-30B-A3B-Instruct --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device GPU --cache_size 2 --overwrite_models
+python export_model.py text_generation --source_model Qwen/Qwen3-Coder-30B-A3B-Instruct --weight-format int4 --config_file_path models/config.json --model_repository_path models --tool_parser qwen3coder --cache_size 2 --target_device GPU
 
 docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
     openvino/model_server:weekly \
@@ -33,7 +33,7 @@ docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
     --model_name Qwen/Qwen3-Coder-30B-A3B-Instruct \
     --model_path Qwen/Qwen3-Coder-30B-A3B-Instruct
 ```
-> **Note:** This model requires ~16GB disk space and same amount of VRAM on the iGPU, it is recommended to use B60.
+> **Note:** This model requires ~15GB disk space and same amount of VRAM on the iGPU.
 
 :::
 :::
@@ -119,7 +119,7 @@ Pull and add the model on Windows:
 :::{tab-item} Qwen/Qwen3-Coder-30B-A3B-Instruct
 :sync: Qwen/Qwen3-Coder-30B-A3B-Instruct
 ```bash
-python export_model.py text_generation --source_model Qwen/Qwen3-Coder-30B-A3B-Instruct --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device GPU --cache_size 2 --overwrite_models
+python export_model.py text_generation --source_model Qwen/Qwen3-Coder-30B-A3B-Instruct --weight-format int4 --config_file_path models/config.json --model_repository_path models --tool_parser qwen3coder --cache_size 2 --target_device GPU
 
 ovms.exe --add_to_config --config_path models/config_all.json --model_name Qwen/Qwen3-Coder-30B-A3B-Instruct --model_path Qwen/Qwen3-Coder-30B-A3B-Instruct
 ```
