@@ -226,7 +226,7 @@ void HttpRestApiHandler::registerAll() {
         return processV3(uri, request_components, response, request_body, std::move(serverReaderWriter), std::move(multiPartParser));
     });
     registerHandler(Metrics, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser) -> Status {
-        return processMetrics(request_components, response, request_body);
+        return processMetrics(request_components, response_components, response, request_body);
     });
     registerHandler(Options, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser) -> Status {
         return processOptions(request_components, response, request_body);
@@ -741,13 +741,15 @@ Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpReque
 #endif
 }
 
-Status HttpRestApiHandler::processMetrics(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) {
+Status HttpRestApiHandler::processMetrics(const HttpRequestComponents& request_components, HttpResponseComponents& response_components, std::string& response, const std::string& request_body) {
     auto module = this->ovmsServer.getModule(METRICS_MODULE_NAME);
     if (nullptr == module) {
         SPDLOG_ERROR("Failed to process metrics - metrics module is missing");
         return StatusCode::INTERNAL_ERROR;
     }
     auto& metricConfig = this->modelManager.getMetricConfig();
+
+    response_components.contentType = ContentType::PLAIN_TEXT;  // Prometheus exposition format, since v3 does not ignore quietly
 
     if (!metricConfig.metricsEnabled) {
         return StatusCode::REST_INVALID_URL;
