@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include "rerank_graph_cli_parser.hpp"
+#include "t2s_graph_cli_parser.hpp"
 
 #include <algorithm>
 #include <iostream>
@@ -29,35 +29,31 @@
 
 namespace ovms {
 
-RerankGraphSettingsImpl& RerankGraphCLIParser::defaultGraphSettings() {
-    static RerankGraphSettingsImpl instance;
+TextToSpeechGraphSettingsImpl& TextToSpeechGraphCLIParser::defaultGraphSettings() {
+    static TextToSpeechGraphSettingsImpl instance;
     return instance;
 }
 
-void RerankGraphCLIParser::createOptions() {
-    this->options = std::make_unique<cxxopts::Options>("ovms --pull [PULL OPTIONS ... ]", "-pull --task rerank graph options");
+void TextToSpeechGraphCLIParser::createOptions() {
+    this->options = std::make_unique<cxxopts::Options>("ovms --pull [PULL OPTIONS ... ]", "-pull --task text2speech graph options");
     options->allow_unrecognised_options();
 
     // clang-format off
-    options->add_options("rerank")
+    options->add_options("TextToSpeech")
         ("num_streams",
             "The number of parallel execution streams to use for the model. Use at least 2 on 2 socket CPU systems.",
             cxxopts::value<uint32_t>()->default_value("1"),
-            "NUM_STREAMS")
-        ("max_allowed_chunks",
-            "Maximum allowed chunks.",
-            cxxopts::value<uint64_t>()->default_value("10000"),
-            "MAX_ALLOWED_CHUNKS");
+            "NUM_STREAMS");
 }
 
-void RerankGraphCLIParser::printHelp() {
+void TextToSpeechGraphCLIParser::printHelp() {
     if (!this->options) {
         this->createOptions();
     }
-    std::cout << options->help({"rerank"}) << std::endl;
+    std::cout << options->help({"TextToSpeech"}) << std::endl;
 }
 
-std::vector<std::string> RerankGraphCLIParser::parse(const std::vector<std::string>& unmatchedOptions) {
+std::vector<std::string> TextToSpeechGraphCLIParser::parse(const std::vector<std::string>& unmatchedOptions) {
     if (!this->options) {
         this->createOptions();
     }
@@ -71,10 +67,9 @@ std::vector<std::string> RerankGraphCLIParser::parse(const std::vector<std::stri
     return  result->unmatched();
 }
 
-void RerankGraphCLIParser::prepare(OvmsServerMode serverMode, HFSettingsImpl& hfSettings, const std::string& modelName) {
-    ovms::RerankGraphSettingsImpl rerankGraphSettings = RerankGraphCLIParser::defaultGraphSettings();
+void TextToSpeechGraphCLIParser::prepare(OvmsServerMode serverMode, HFSettingsImpl& hfSettings, const std::string& modelName) {
+    TextToSpeechGraphSettingsImpl textToSpeechGraphSettings = TextToSpeechGraphCLIParser::defaultGraphSettings();
     hfSettings.exportSettings.targetDevice = hfSettings.exportSettings.targetDevice;
-    // Deduct model name
     if (modelName != "") {
         hfSettings.exportSettings.modelName = modelName;
     } else {
@@ -87,10 +82,8 @@ void RerankGraphCLIParser::prepare(OvmsServerMode serverMode, HFSettingsImpl& hf
         }
     } else {
         hfSettings.exportSettings.pluginConfig.numStreams = result->operator[]("num_streams").as<uint32_t>();
-        rerankGraphSettings.maxAllowedChunks = result->operator[]("max_allowed_chunks").as<uint64_t>();
     }
-
-    hfSettings.graphSettings = std::move(rerankGraphSettings);
+    hfSettings.graphSettings = std::move(textToSpeechGraphSettings);
 }
 
 }  // namespace ovms

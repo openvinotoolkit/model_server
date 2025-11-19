@@ -80,6 +80,7 @@ TEST_F(ConfigCreationFullTest, positiveEndToEndEnableDisable) {
     char* argv[] = {
         (char*)"ovms",
         (char*)"--add_to_config",
+        (char*)"--config_path",
         (char*)this->modelsSettings.configPath.c_str(),
         (char*)"--model_name",
         (char*)this->modelsSettings.modelName.c_str(),
@@ -87,7 +88,7 @@ TEST_F(ConfigCreationFullTest, positiveEndToEndEnableDisable) {
         (char*)this->modelsSettings.modelPath.c_str(),
     };
 
-    int argc = 7;
+    int argc = 8;
     t.reset(new std::thread([&argc, &argv, &server]() {
         ASSERT_EQ(EXIT_SUCCESS, server.start(argc, argv));
     }));
@@ -109,12 +110,13 @@ TEST_F(ConfigCreationFullTest, positiveEndToEndEnableDisable) {
     char* argv2[] = {
         (char*)"ovms",
         (char*)"--remove_from_config",
+        (char*)"--config_path",
         (char*)this->modelsSettings.configPath.c_str(),
         (char*)"--model_name",
         (char*)this->modelsSettings.modelName.c_str(),
     };
 
-    argc = 5;
+    argc = 6;
     t.reset(new std::thread([&argc, &argv2, &server]() {
         ASSERT_EQ(EXIT_SUCCESS, server.start(argc, argv2));
     }));

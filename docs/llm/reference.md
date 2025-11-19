@@ -96,7 +96,7 @@ Above node configuration should be used as a template since user is not expected
 The calculator supports the following `node_options` for tuning the pipeline configuration:
 -    `required string models_path` - location of the model directory (can be relative);
 -    `optional uint64 max_num_batched_tokens` - max number of tokens processed in a single iteration [default = 256];
--    `optional uint64 cache_size` - memory size in GB for storing KV cache [default = 8];
+-    `optional uint64 cache_size` - memory size in GB for storing KV cache [default = 0];
 -    `optional uint64 max_num_seqs` - max number of sequences actively processed by the engine [default = 256];
 -    `optional bool dynamic_split_fuse` - use Dynamic Split Fuse token scheduling [default = true];
 -    `optional string device` - device to load models to. Supported values: "CPU", "GPU" [default = "CPU"]
@@ -115,13 +115,28 @@ You can track the actual usage of the cache in the server logs. You can observe 
 ```
 [2024-07-30 14:28:02.536][624][llm_executor][info][llm_executor.hpp:65] All requests: 50; Scheduled requests: 25; Cache usage 23.9%;
 ```
-Consider increasing the `cache_size` parameter in case the logs report the usage getting close to 100%. When the cache is consumed, some of the running requests might be preempted to free cache for other requests to finish their generations (preemption will likely have negative impact on performance since preempted request cache will need to be recomputed when it gets processed again). When preemption is not possible i.e. `cache size` is very small and there is a single, long running request that consumes it all, then the request gets terminated when no more cache can be assigned to it, even before reaching stopping criteria.
+The logs represent the cache usage for the current generation cycles. By default, the allocation is increased dynamically, which mean more space is added when the context for all batched requests require more space.
+When set as static, it is recommended to set a value which doesn't lead to 100% usage. When the cache is consumed, some of the running requests might be preempted to free cache for other requests to finish their generations (preemption will likely have negative impact on performance since preempted request cache will need to be recomputed when it gets processed again). When preemption is not possible i.e. `cache size` is very small and there is a single, long running request that consumes it all, then the request gets terminated when no more cache can be assigned to it, even before reaching stopping criteria.
+The dynamic allocation reserves as much as required to prevent preemption. In such way it should be most efficient to get optimal performance. In some cases it could lead however to consuming all available RAM.  
 
 `enable_prefix_caching` can improve generation performance when the initial prompt content is repeated. That is the case with chat applications which resend the history of the conversations. Thanks to prefix caching, there is no need to reevaluate the same sequence of tokens. Thanks to that, first token will be generated much quicker and the overall
-utilization of resource will be lower. Old cache will be cleared automatically but it is recommended to increase cache_size to take bigger performance advantage.
+utilization of resource will be lower. Old cache will be cleared automatically when entire free cache is consumed, so it is recommended to increase `cache_size` to get better performance advantage and store longer history of previous requests.
 
 Another cache related option is `cache_eviction_config` which can help with latency of the long generation, but at the cost of accuracy. It's type is defined as follows:
 ```
+    message KVCrushConfig {
+      enum AnchorPointMode {
+        RANDOM = 0;
+        ZEROS = 1;
+        ONES = 2;
+        MEAN = 3;
+        ALTERNATING = 4;
+      }
+      optional uint64 budget = 2 [default = 0];
+      optional AnchorPointMode anchor_point_mode = 3 [default = RANDOM];
+      optional uint64 rng_seed = 4 [default = 0];
+    }
+
     message CacheEvictionConfig {
       enum AggregationMode {
       SUM = 0; // In this mode the importance scores of each token will be summed after each step of generation
@@ -133,6 +148,8 @@ Another cache related option is `cache_eviction_config` which can help with late
       required uint64 recent_size = 3;
       required uint64 max_cache_size = 4;
       optional bool apply_rotation = 5 [default = false];
+      optional uint64 snapkv_window_size = 6 [default = 8]
+      optional KVCrushConfig kv_crush_config = 7;
     }
 ```
 Learn more about the algorithm and above parameters from [GenAI docs](https://github.com/openvinotoolkit/openvino.genai/blob/master/site/docs/concepts/optimization-techniques/kvcache-eviction-algorithm.md). 
@@ -142,12 +159,27 @@ Example of cache eviction config in the node options:
 ### Scheduling settings
 In different use cases and load specification, requests and tokens scheduling might play a role when it comes to performance.
 
-`dynamic_split_fuse` [algorithm](https://github.com/microsoft/DeepSpeed/tree/master/blogs/deepspeed-fastgen#b-dynamic-splitfuse-) is enabled by default to boost the throughput by splitting the tokens to even chunks. In some conditions like with very low concurrency or with very short prompts, it might be beneficial to disable this algorithm. 
+- `dynamic_split_fuse` [algorithm](https://github.com/microsoft/DeepSpeed/tree/master/blogs/deepspeed-fastgen#b-dynamic-splitfuse-) is enabled by default to boost the throughput by splitting the tokens to even chunks. In some conditions like with very low concurrency or with very short prompts, it might be beneficial to disable this algorithm. 
 
-Since `max_num_batched_tokens` defines how many tokens can a pipeline process in one step, when `dynamic_split_fuse` is disabled, `max_num_batched_tokens` should be set to match the model max context length since the prompt is not split and must get processed fully in one step.
+- Since `max_num_batched_tokens` defines how many tokens can a pipeline process in one step, when `dynamic_split_fuse` is disabled, `max_num_batched_tokens` should be set to match the model max context length since the prompt is not split and must get processed fully in one step.
 
-Setting `max_num_seqs` might also be useful in providing certain level of generation speed of requests already in the pipeline. This value should not be higher than `max_num_batched_tokens`.
+- Setting `max_num_seqs` might also be useful in providing certain level of generation speed of requests already in the pipeline. This value should not be higher than `max_num_batched_tokens`.
 
+- Scheduler configuration also accept sparse attention config with following options in `graph.pbtxt`:
+    ```
+    enum SparseAttentionMode {
+      TRISHAPE = 0;
+      XATTENTION = 1;
+    }
+    optional SparseAttentionMode mode = 1 [default = TRISHAPE];
+    optional uint64 num_last_dense_tokens_in_prefill = 2;
+    optional uint64 num_retained_start_tokens_in_cache = 3;
+    optional uint64 num_retained_recent_tokens_in_cache = 4;
+    optional float xattention_threshold = 5;
+    optional uint64 xattention_block_size = 6;
+    optional uint64 xattention_stride = 7;
+    ```
+    Description of parameters in that config can be found in GenAI docs about [SparseAttentionConfig](https://docs.openvino.ai/2025/api/genai_api/_autosummary/openvino_genai.SparseAttentionConfig.html#openvino-genai-sparseattentionconfig).
 
 **Note that the following options are ignored in Stateful servables (so in deployments on NPU): cache_size, dynamic_split_fuse, max_num_batched_tokens, max_num_seq, enable_prefix_caching**
 
@@ -159,7 +191,7 @@ __Tool parsers:__
 - `hermes3` (also works for Qwen3 models)
 - `llama3`
 - `phi4`
-- `mistral` (no streaming support)
+- `mistral`
 - `gptoss`
 - `qwen3coder`
 
@@ -184,7 +216,7 @@ The LLM calculator config can also restrict the range of sampling parameters in 
 As mentioned above, in LLM pipelines, `plugin_config` map holds not only OpenVINO device plugin options, but also additional pipeline configuration. Those additional options are:
 
 - `prompt_lookup` - if set to `true`, pipeline will use [prompt lookup decoding](https://github.com/apoorvumang/prompt-lookup-decoding) technique for sampling new tokens. Example: `plugin_config: '{"prompt_lookup": true}'`. With prompt lookup enabled it is recommended to disable `dynamic_split_fuse` and set `max_num_batched_tokens` to be higher than model context length.
-- `MAX_PROMPT_LEN` (**important for NPU users**) - NPU plugin sets a limitation on prompt (1024 tokens by default), this options allows modifying this value. Example: `plugin_config: '{"MAX_PROMPT_LEN": 2048}'`
+- `MAX_PROMPT_LEN` (**important for NPU users**) - NPU plugin sets a limitation on prompt (1024 tokens by default), this options allows modifying this value. Example: `plugin_config: '{"DEVICE_PROPERTIES": { "NPU": {"MAX_PROMPT_LEN": 2048}}}'`
 
 
 ## Canceling the generation

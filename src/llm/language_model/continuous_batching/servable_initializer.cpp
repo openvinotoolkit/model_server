@@ -19,6 +19,7 @@
 #include <string>
 #include <vector>
 #include <openvino/genai/cache_eviction.hpp>
+#include <openvino/genai/sparse_attention.hpp>
 #include <openvino/genai/continuous_batching_pipeline.hpp>
 #include <openvino/openvino.hpp>
 #include <spdlog/spdlog.h>
@@ -41,6 +42,38 @@
 
 namespace ovms {
 
+ov::genai::SparseAttentionConfig prepareSparseAttentionConfig(const mediapipe::LLMCalculatorOptions& nodeOptions) {
+    ov::genai::SparseAttentionMode mode;
+    if (nodeOptions.sparse_attention_config().mode() == mediapipe::LLMCalculatorOptions::SparseAttentionConfig::TRISHAPE) {
+        mode = ov::genai::SparseAttentionMode::TRISHAPE;
+    } else {
+        mode = ov::genai::SparseAttentionMode::XATTENTION;
+    }
+    // Use default constructor to rely on GenAI defined defaults if user did not set specific fields
+    ov::genai::SparseAttentionConfig sparseAttentionConfig;
+    sparseAttentionConfig.mode = mode;
+    if (nodeOptions.sparse_attention_config().has_num_last_dense_tokens_in_prefill()) {
+        sparseAttentionConfig.num_last_dense_tokens_in_prefill = nodeOptions.sparse_attention_config().num_last_dense_tokens_in_prefill();
+    }
+    if (nodeOptions.sparse_attention_config().has_num_retained_start_tokens_in_cache()) {
+        sparseAttentionConfig.num_retained_start_tokens_in_cache = nodeOptions.sparse_attention_config().num_retained_start_tokens_in_cache();
+    }
+    if (nodeOptions.sparse_attention_config().has_num_retained_recent_tokens_in_cache()) {
+        sparseAttentionConfig.num_retained_recent_tokens_in_cache = nodeOptions.sparse_attention_config().num_retained_recent_tokens_in_cache();
+    }
+    if (nodeOptions.sparse_attention_config().has_xattention_threshold()) {
+        sparseAttentionConfig.xattention_threshold = nodeOptions.sparse_attention_config().xattention_threshold();
+    }
+    if (nodeOptions.sparse_attention_config().has_xattention_block_size()) {
+        sparseAttentionConfig.xattention_block_size = nodeOptions.sparse_attention_config().xattention_block_size();
+    }
+    if (nodeOptions.sparse_attention_config().has_xattention_stride()) {
+        sparseAttentionConfig.xattention_stride = nodeOptions.sparse_attention_config().xattention_stride();
+    }
+
+    return sparseAttentionConfig;
+}
+
 ov::genai::CacheEvictionConfig prepareCacheEvictionConfig(const mediapipe::LLMCalculatorOptions& nodeOptions) {
     ov::genai::AggregationMode aggregationMode;
     if (nodeOptions.cache_eviction_config().aggregation_mode() == mediapipe::LLMCalculatorOptions::CacheEvictionConfig::SUM) {
@@ -52,7 +85,36 @@ ov::genai::CacheEvictionConfig prepareCacheEvictionConfig(const mediapipe::LLMCa
     size_t recentSize = nodeOptions.cache_eviction_config().recent_size();
     size_t maxCacheSize = nodeOptions.cache_eviction_config().max_cache_size();
     bool applyRotation = nodeOptions.cache_eviction_config().apply_rotation();
-    return ov::genai::CacheEvictionConfig(startSize, recentSize, maxCacheSize, aggregationMode, applyRotation);
+    size_t snapkvWindowSize = nodeOptions.cache_eviction_config().snapkv_window_size();
+
+    ov::genai::KVCrushConfig kvCrushConfig;
+    if (nodeOptions.cache_eviction_config().has_kv_crush_config()) {
+        ov::genai::KVCrushAnchorPointMode anchorPointMode;
+        switch (nodeOptions.cache_eviction_config().kv_crush_config().anchor_point_mode()) {
+        case mediapipe::LLMCalculatorOptions::KVCrushConfig::RANDOM:
+            anchorPointMode = ov::genai::KVCrushAnchorPointMode::RANDOM;
+            break;
+        case mediapipe::LLMCalculatorOptions::KVCrushConfig::ZEROS:
+            anchorPointMode = ov::genai::KVCrushAnchorPointMode::ZEROS;
+            break;
+        case mediapipe::LLMCalculatorOptions::KVCrushConfig::ONES:
+            anchorPointMode = ov::genai::KVCrushAnchorPointMode::ONES;
+            break;
+        case mediapipe::LLMCalculatorOptions::KVCrushConfig::MEAN:
+            anchorPointMode = ov::genai::KVCrushAnchorPointMode::MEAN;
+            break;
+        case mediapipe::LLMCalculatorOptions::KVCrushConfig::ALTERNATING:
+            anchorPointMode = ov::genai::KVCrushAnchorPointMode::ALTERNATING;
+            break;
+        default:
+            anchorPointMode = ov::genai::KVCrushAnchorPointMode::RANDOM;
+            break;
+        }
+        size_t budget = nodeOptions.cache_eviction_config().kv_crush_config().budget();
+        size_t rngSeed = nodeOptions.cache_eviction_config().kv_crush_config().rng_seed();
+        kvCrushConfig = ov::genai::KVCrushConfig(budget, anchorPointMode, rngSeed);
+    }
+    return ov::genai::CacheEvictionConfig(startSize, recentSize, maxCacheSize, aggregationMode, applyRotation, snapkvWindowSize, kvCrushConfig);
 }
 
 ov::genai::SchedulerConfig ContinuousBatchingServableInitializer::prepareDraftPipelineSchedulerConfig(const mediapipe::LLMCalculatorOptions& nodeOptions) {
@@ -95,6 +157,13 @@ Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiSe
         properties->schedulerConfig.use_cache_eviction = true;
     } else {
         properties->schedulerConfig.use_cache_eviction = false;
+    }
+
+    if (nodeOptions.has_sparse_attention_config()) {
+        properties->schedulerConfig.use_sparse_attention = true;
+        properties->schedulerConfig.sparse_attention_config = prepareSparseAttentionConfig(nodeOptions);
+    } else {
+        properties->schedulerConfig.use_sparse_attention = false;
     }
 
     properties->device = nodeOptions.device();
