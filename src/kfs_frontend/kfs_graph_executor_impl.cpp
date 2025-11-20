@@ -36,7 +36,7 @@
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "mediapipe/framework/calculator_graph.h"
 #include "mediapipe/framework/formats/image_frame.h"
-#include "mediapipe/framework/formats/image_frame_opencv.h"
+//#include "mediapipe/framework/formats/image_frame_opencv.h"
 #pragma GCC diagnostic pop
 #pragma warning(pop)
 #pragma GCC diagnostic push
@@ -219,7 +219,7 @@ Status receiveAndSerializePacket<ov::Tensor>(const ::mediapipe::Packet& packet, 
         for (const auto& dim : received.get_shape()) {
             output->add_shape(dim);
         }
-        response.add_raw_output_contents()->assign(reinterpret_cast<char*>(received.data()), received.get_byte_size());
+        response.add_raw_output_contents()->assign(reinterpret_cast<const char*>(received.data()), received.get_byte_size());
         return StatusCode::OK;
     }
     HANDLE_PACKET_RECEIVAL_EXCEPTIONS();
@@ -265,9 +265,9 @@ Status receiveAndSerializePacket<mediapipe::ImageFrame>(const ::mediapipe::Packe
         output->add_shape(received.Height());
         output->add_shape(received.Width());
         output->add_shape(received.NumberOfChannels());
-        cv::Mat image = mediapipe::formats::MatView(&received);
+        //cv::Mat image = mediapipe::formats::MatView(&received);
 
-        response.add_raw_output_contents()->assign(reinterpret_cast<char*>(image.data), image.cols * image.rows * image.channels() * image.elemSize1());
+        //response.add_raw_output_contents()->assign(reinterpret_cast<char*>(image.data), image.cols * image.rows * image.channels() * image.elemSize1());
         return StatusCode::OK;
     }
     HANDLE_PACKET_RECEIVAL_EXCEPTIONS();

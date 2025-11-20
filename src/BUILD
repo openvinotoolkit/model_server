@@ -103,8 +103,8 @@ cc_shared_library(
     ] + select({
         "//:not_disable_mediapipe": [
             "@mediapipe//:__subpackages__",
-            "@mediapipe_calculators//:__subpackages__",
-            "@model_api//:__subpackages__",
+            #"@mediapipe_calculators//:__subpackages__",
+            #"@model_api//:__subpackages__",
             "@arm_neon_2_x86_sse//:__subpackages__",
             "@ruy//:__subpackages__",
             "@cpuinfo//:__subpackages__",
@@ -565,9 +565,9 @@ ovms_cc_library(
                 "//src/audio:audio_utils",
                 "//src/image_gen:imagegen_init",
                 "//src/llm:openai_completions_api_handler",
-                "//src/embeddings:embeddingscalculator_ov",
-                "//src/rerank:rerankcalculator",
-                "//src/rerank:rerankcalculator_ov",
+                #"//src/embeddings:embeddingscalculator_ov",
+                #"//src/rerank:rerankcalculator",
+                #"//src/rerank:rerankcalculator_ov",
                 "//src/llm:llmcalculator",],
         }) + select({
             "//:enable_drogon": [
@@ -679,16 +679,16 @@ ovms_cc_library(
                 })
             + select({
             "//conditions:default": [
-                "@mediapipe_calculators//:mediapipe_calculators", # Need this dependencies here because we use ovms/src - cannot add in ovms_dependencies because we copy src directory later in Dockerfile
-                "@mediapipe//mediapipe/graphs/holistic_tracking:holistic_tracking_to_render_data",
-                "@mediapipe//mediapipe/graphs/iris_tracking:iris_tracking_cpu_deps",
+                #"@mediapipe_calculators//:mediapipe_calculators", # Need this dependencies here because we use ovms/src - cannot add in ovms_dependencies because we copy src directory later in Dockerfile
+                #"@mediapipe//mediapipe/graphs/holistic_tracking:holistic_tracking_to_render_data",
+                #"@mediapipe//mediapipe/graphs/iris_tracking:iris_tracking_cpu_deps",
                 "@mediapipe//mediapipe/calculators/tensor:image_to_tensor_calculator",
-                "@mediapipe//mediapipe/modules/holistic_landmark:holistic_landmark_cpu",
+                #"@mediapipe//mediapipe/modules/holistic_landmark:holistic_landmark_cpu",
                 "libovmsmediapipe_utils",
-                "@mediapipe//mediapipe/calculators/geti/inference:inference_calculators",
-                "@mediapipe//mediapipe/calculators/geti/utils:utils",
-                "@mediapipe//mediapipe/calculators/geti/utils:emptylabel_calculators",
-                "@mediapipe//mediapipe/calculators/geti/serialization:calculators",
+                #"@mediapipe//mediapipe/calculators/geti/inference:inference_calculators",
+                #"@mediapipe//mediapipe/calculators/geti/utils:utils",
+                #"@mediapipe//mediapipe/calculators/geti/utils:emptylabel_calculators",
+                #"@mediapipe//mediapipe/calculators/geti/serialization:calculators",
             ],
             "//:disable_mediapipe" : [],
         }),
@@ -2402,7 +2402,7 @@ cc_binary(
         })
      + select({
             "//conditions:default": [
-                "@mediapipe//mediapipe/calculators/ovms:ovms_calculator",
+                #"@mediapipe//mediapipe/calculators/ovms:ovms_calculator",
             ],
             "//:disable_mediapipe" : [],
         }),
@@ -2704,7 +2704,7 @@ cc_test(
                 ":test_llm_output_parser_tests",
                 "//src/test/mediapipe/calculators:mediapipe_test_calculators",
                 "//src/test/mediapipe/calculators:dependency_free_http_test_calculators",
-                "@mediapipe//mediapipe/calculators/ovms:ovms_calculator",
+                #"@mediapipe//mediapipe/calculators/ovms:ovms_calculator",
                 "@mediapipe//mediapipe/framework:calculator_runner",
                 ":text2image_test",
             ],

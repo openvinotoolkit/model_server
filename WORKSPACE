@@ -599,9 +599,9 @@ http_archive(
 load("@com_github_jupp0r_prometheus_cpp//bazel:repositories.bzl", "prometheus_cpp_repositories")
 prometheus_cpp_repositories()
 
-load("@rules_foreign_cc//foreign_cc:cmake.bzl", "cmake")
-load("@mediapipe//third_party/model_api:model_api.bzl", "workspace_model_api")
-workspace_model_api()
+#load("@rules_foreign_cc//foreign_cc:cmake.bzl", "cmake")
+#load("@mediapipe//third_party/model_api:model_api.bzl", "workspace_model_api")
+#workspace_model_api()
 
 new_local_repository(
     name = "mediapipe_calculators",

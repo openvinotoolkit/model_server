@@ -26,7 +26,7 @@
 #pragma GCC diagnostic pop
 #pragma warning(pop)
 
-#include <adapters/inference_adapter.h>
+// #include <adapters/inference_adapter.h>
 #include "src/port/rapidjson_writer.hpp"
 
 #include "../http_payload.hpp"

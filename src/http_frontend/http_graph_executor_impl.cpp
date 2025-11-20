@@ -23,7 +23,7 @@
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "mediapipe/framework/calculator_graph.h"
 #include "mediapipe/framework/formats/image_frame.h"
-#include "mediapipe/framework/formats/image_frame_opencv.h"
+//#include "mediapipe/framework/formats/image_frame_opencv.h"
 #pragma GCC diagnostic pop
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"

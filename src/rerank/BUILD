@@ -20,7 +20,7 @@ load("//:common_settings.bzl", "ovms_cc_library")
 mediapipe_proto_library(
     name = "rerank_calculator_proto", # rerank_calculator_cc_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
     srcs = ["rerank_calculator.proto"],
-    visibility = ["//visibility:private"],
+    visibility = ["//visibility:public"],
     deps = [
         "@mediapipe//mediapipe/framework:calculator_options_proto",
         "@mediapipe//mediapipe/framework:calculator_proto",
@@ -38,7 +38,7 @@ ovms_cc_library(
 mediapipe_proto_library(
     name = "rerank_calculator_ov_proto", # rerank_calculator_cc_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
     srcs = ["rerank_calculator_ov.proto"],
-    visibility = ["//visibility:private"],
+    visibility = ["//visibility:public"],
     deps = [
         "@mediapipe//mediapipe/framework:calculator_options_proto",
         "@mediapipe//mediapipe/framework:calculator_proto",
@@ -51,7 +51,7 @@ ovms_cc_library(
     deps = [
         "@mediapipe//mediapipe/framework:calculator_framework",
         "@com_github_tencent_rapidjson//:rapidjson",
-        "@model_api//:model_api",
+        #"@model_api//:model_api",
         "//src:httppayload",
         "//src:libhttpclientconnection",
         "//src:libovmslogging",
@@ -69,7 +69,7 @@ ovms_cc_library(
     deps = [
         "@mediapipe//mediapipe/framework:calculator_framework",
         "@com_github_tencent_rapidjson//:rapidjson",
-        "@model_api//:model_api",
+        #"@model_api//:model_api",
         "//src:httppayload",
         "//src:libhttpclientconnection",
         "//src:libovmslogging",

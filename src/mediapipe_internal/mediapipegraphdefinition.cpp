@@ -47,8 +47,8 @@
 #include "mediapipe/framework/port/status.h"
 #include "mediapipe_utils.hpp"
 #include "mediapipegraphexecutor.hpp"
-#include "src/embeddings/embeddings_calculator_ov.pb.h"
-#include "src/rerank/rerank_calculator_ov.pb.h"
+//#include "src/embeddings/embeddings_calculator_ov.pb.h"
+//#include "src/rerank/rerank_calculator_ov.pb.h"
 
 #include "src/image_gen/pipelines.hpp"
 #include "src/image_gen/imagegen_init.hpp"
