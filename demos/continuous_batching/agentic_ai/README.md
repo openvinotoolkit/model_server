@@ -249,12 +249,6 @@ ovms.exe --rest_port 8000 --source_model meta-llama/Llama-3.2-3B-Instruct --mode
 ovms.exe --rest_port 8000 --source_model mistralai/Mistral-7B-Instruct-v0.3 --model_repository_path models --tool_parser mistral --target_device NPU --task text_generation --enable_prefix_caching true --cache_dir .cache --max_prompt_len 4000
 ```
 :::
-:::{tab-item} Phi-4-mini-instruct
-:sync: Phi-4-mini-instruct
-```bat
-ovms.exe --rest_port 8000 --source_model microsoft/Phi-4-mini-instruct --model_repository_path models --tool_parser phi4 --target_device NPU --task text_generation --enable_tool_guided_generation true --enable_prefix_caching true --cache_dir .cache --max_prompt_len 4000
-```
-:::
 :::{tab-item} Qwen3-4B-int4-ov
 :sync: Qwen3-4B-int4-ov
 ```bat
@@ -472,13 +466,6 @@ docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/model
 ```bash
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000  -v $(pwd)/models:/models --device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:weekly \
 --rest_port 8000 --model_repository_path models --source_model mistralai/Mistral-7B-Instruct-v0.3 --tool_parser mistral --target_device NPU --task text_generation --enable_prefix_caching true --max_prompt_len 4000
-```
-:::
-:::{tab-item} Phi-4-mini-instruct
-:sync: Phi-4-mini-instruct
-```bash
-docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000  -v $(pwd)/models:/models --device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:weekly \
---rest_port 8000 --model_repository_path models --source_model microsoft/Phi-4-mini-instruct --tool_parser phi4 --target_device NPU --task text_generation --enable_prefix_caching true --max_prompt_len 4000
 ```
 :::
 :::{tab-item} Qwen3-4B-int4-ov
