@@ -11,7 +11,7 @@ Check supported [Speech Recognition Models](https://openvinotoolkit.github.io/op
 
 **Model preparation**: Python 3.10 or higher with pip
 
-**Model Server deployment**: Installed Docker Engine or OVMS binary package according to the [baremetal deployment guide](../../../docs/deploying_server_baremetal.md)
+**Model Server deployment**: Installed Docker Engine or OVMS binary package according to the [baremetal deployment guide](../../docs/deploying_server_baremetal.md)
 
 **Client**: curl or Python for using OpenAI client package
 
