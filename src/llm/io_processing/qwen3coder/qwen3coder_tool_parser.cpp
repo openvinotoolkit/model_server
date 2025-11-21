@@ -149,6 +149,9 @@ static std::string escapeNewline(const std::string& input) {
         case '\n':
             output += "\\n";
             break;
+        case '\r':
+            output += "\\r";
+            break;
         default:
             output += c;
         }
