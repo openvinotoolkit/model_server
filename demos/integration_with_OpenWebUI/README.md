@@ -257,7 +257,7 @@ Method 2:
 ### Reference
 [https://docs.openvino.ai/2025/model-server/ovms_demos_image_generation.html](https://docs.openvino.ai/2025/model-server/ovms_demos_image_generation.html#export-model-for-cpu)
 
-[https://docs.openwebui.com/tutorials/images](https://docs.openwebui.com/tutorials/images/#using-image-generation)
+[https://docs.openwebui.com/features/image-generation-and-editing](https://docs.openwebui.com/features/image-generation-and-editing/openai)
 
 ---
 ## VLM
@@ -336,6 +336,10 @@ mcpo --port 9000 -- python -m mcp_weather_server
 
 ![chat with AI Agent demo](./chat_with_AI_Agent_demo.png)
 
+### Reference
+[https://docs.openwebui.com/features/plugin/tools/openapi-servers/open-webui](https://docs.openwebui.com/features/plugin/tools/openapi-servers/open-webui#step-2-connect-tool-server-in-open-webui)
+
+
 ## Audio
 
 > **Note:** To ensure audio features work correctly, download [FFmpeg](https://ffmpeg.org/download.html) and add its executable directory to your system's `PATH` environment variable.
@@ -387,6 +391,3 @@ docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models openvino/model_serve
 2. Start talking.
 
 ![voice mode](./voice_mode.png)
-
-### Reference
-[https://docs.openwebui.com/openapi-servers/open-webui](https://docs.openwebui.com/openapi-servers/open-webui/#step-2-connect-tool-server-in-open-webui)
