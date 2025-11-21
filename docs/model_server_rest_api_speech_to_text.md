@@ -35,7 +35,7 @@ curl -X POST http://localhost:8000/v3/audio/translations \
 
 ## Request
 ### Transcription
-| Param | OpenVINO Model Server | OpenAI /images/generations API | Type | Description |
+| Param | OpenVINO Model Server | OpenAI /audio/transcriptions API | Type | Description |
 |-----|----------|----------|---------|-----|
 | model | ✅ | ✅ | string (required) | Name of the model to use. **Note**: This can also be omitted to fall back to URI based routing. Read more on routing topic **TODO** |
 | file | ⚠️ | ✅ | file (required) | The audio file object to transcribe, in one of these formats: flac, mp3, mp4, mpeg, mpga, m4a, ogg, wav, or webm. (⚠️**Note**: For now supported formats are mp3 and wav) |
@@ -52,7 +52,7 @@ curl -X POST http://localhost:8000/v3/audio/translations \
 
 
 ### Translation
-| Param | OpenVINO Model Server | OpenAI /images/generations API | Type | Description |
+| Param | OpenVINO Model Server | OpenAI /audio/transcriptions API | Type | Description |
 |-----|----------|----------|---------|-----|
 | model | ✅ | ✅ | string (required) | Name of the model to use. **Note**: This can also be omitted to fall back to URI based routing. Read more on routing topic **TODO** |
 | file | ⚠️ | ✅ | file (required) | The audio file object to transcribe, in one of these formats: flac, mp3, mp4, mpeg, mpga, m4a, ogg, wav, or webm. (⚠️**Note**: For now supported formats are mp3 and wav) |
@@ -62,13 +62,13 @@ curl -X POST http://localhost:8000/v3/audio/translations \
 
 ## Response
 ### Transcription
-| Param | OpenVINO Model Server | OpenAI /images/generations API | Type | Description |
+| Param | OpenVINO Model Server | OpenAI /audio/transcriptions API | Type | Description |
 |-----|----------|----------|---------|-----|
 | text | ✅ | ✅ | string | The transcribed text. |
 | logprobs | ❌ | ✅ |  array | The log probabilities of the tokens in the transcription. |
 | usage| ❌ | ✅ | object | Token usage statistics for the request. |
 ### Translation
-| Param | OpenVINO Model Server | OpenAI /images/generations API | Type | Description |
+| Param | OpenVINO Model Server | OpenAI /audio/transcriptions API | Type | Description |
 |-----|----------|----------|---------|-----|
 | text | ✅ | ✅ | string | The translated text. |
 
@@ -78,6 +78,7 @@ Endpoint can raise an error related to incorrect request in the following condit
 
 ## References
 
-[End to end demo with image generation endpoint](../demos/audio/README.md)
+[End to end demo with transcription endpoint](../demos/audio/README.md#transcription)
+[End to end demo with translation endpoint](../demos/audio/README.md#translation)
 
 [Code snippets](./clients_genai.md)

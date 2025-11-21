@@ -365,7 +365,7 @@ $base64 = ($response.Content | ConvertFrom-Json).data[0].b64_json
 
 Check [image generation end to end demo](../demos/image_generation/README.md).
 
-### Text to speech
+### Speech to text 
 #### Transcription
 ::::{tab-set}
 :::{tab-item} python [OpenAI] 
@@ -420,7 +420,7 @@ speech_file_path = Path(__file__).parent / filename
 client = OpenAI(base_url=url, api_key="not_used")
 
 audio_file = open(filename, "rb")
-transcript = client.audio.translations.create(
+translation = client.audio.translations.create(
   model="OpenVINO/whisper-large-v3-fp16-ov",
   file=audio_file
 )
@@ -442,7 +442,7 @@ curl http://localhost:8000/v3/audio/translations \
 
 Check [Translation demo](../demos/audio/README.md#Translation).
 
-### Speech to text
+### Text to speech
 ::::{tab-set}
 :::{tab-item} python [OpenAI] 
 :sync: python-openai

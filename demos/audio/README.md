@@ -140,7 +140,7 @@ Select deployment option depending on how you prepared models in the previous st
 
 Running this command starts the container with CPU only target device:
 ```bash
-mkdir -p modelsspeech2text
+mkdir -p models
 docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models:rw openvino/model_server:latest --rest_port 8000 --source_model openai/whisper-large-v3-turbo --model_repository_path /models --model_name openai/whisper-large-v3-turbo --task speech2text
 ```
 **GPU**

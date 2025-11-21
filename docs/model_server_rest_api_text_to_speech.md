@@ -29,7 +29,7 @@ curl http://localhost:8000/v3/audio/speech \
 
 ## Request
 
-| Param | OpenVINO Model Server | OpenAI /images/generations API | Type | Description |
+| Param | OpenVINO Model Server | OpenAI /audio//speech API | Type | Description |
 |-----|----------|----------|---------|-----|
 | model | ✅ | ✅ | string (required) | Name of the model to use. Name assigned to a MediaPipe graph configured to schedule generation using desired embedding model. **Note**: This can also be omitted to fall back to URI based routing. Read more on routing topic **TODO** |
 | input | ✅ | ✅ | string (required) | The text to generate audio for. |
