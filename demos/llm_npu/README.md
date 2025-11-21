@@ -11,16 +11,14 @@ It is targeted on client machines equipped with NPU accelerator.
 
 ## Prerequisites
 
-**OVMS 2025.1 or higher**
-
-**Model preparation**: Python 3.9 or higher with pip and HuggingFace account
+**Model preparation**: Python 3.12 or higher with pip and HuggingFace account
 
 **Model Server deployment**: Installed Docker Engine or OVMS binary package according to the [baremetal deployment guide](../../docs/deploying_server_baremetal.md)
 
 **(Optional) Client**: git and Python for using OpenAI client package and vLLM benchmark app
 
 
-## Model preparation
+## Model preparation - using export model script
 Here, the original Pytorch LLM model and the tokenizer will be converted to IR format and optionally quantized.
 That ensures faster initialization time, better performance and lower memory consumption.
 LLM engine parameters will be defined inside the `graph.pbtxt` file.
@@ -38,45 +36,51 @@ Run `export_model.py` script to download and quantize the model:
 
 **LLM**
 ```console
-python export_model.py text_generation --source_model meta-llama/Llama-3.1-8B-Instruct --target_device NPU --config_file_path models/config.json --ov_cache_dir ./models/.ov_cache --model_repository_path models --overwrite_models
+python export_model.py text_generation --source_model meta-llama/Llama-3.1-8B-Instruct --target_device NPU --config_file_path models/config.json --cache_dir ./models/.ov_cache --model_repository_path models --overwrite_models
 ```
-**Note:** The parameter `--ov_cache` stores the model compilation cache to speedup initialization time for sequential startup. Drop this parameter if you don't want to store the compilation cache.
+**Note:** The parameter `--cache_dir` stores the model compilation cache to speedup initialization time for sequential startup. Drop this parameter if you don't want to store the compilation cache.
 
 Below is a list of tested models:
-- meta-llama/Meta-Llama-3-8B-Instruct
-- meta-llama/Llama-3.1-8B
+- Qwen/Qwen3-8B
+- meta/LLama3.1-8B-instruct
+- mistralai/Mistral-7B-instruct-v0.3
+- NousResearch/Hermes-3-Llama-3.1-8B
 - microsoft/Phi-3-mini-4k-instruct
-- Qwen/Qwen2-7B
-- mistralai/Mistral-7B-Instruct-v0.2
-- openbmb/MiniCPM-1B-sft-bf16
-- TinyLlama/TinyLlama-1.1B-Chat-v1.0
-- TheBloke/Llama-2-7B-Chat-GPTQ
-- Qwen/Qwen2-7B-Instruct-GPTQ-Int4
-
-You should have a model folder like below:
-```
-tree models
-models
-├── config.json
-└── mistralai
-    └── Mistral-7B-Instruct-v0.2
-        ├── config.json
-        ├── generation_config.json
-        ├── graph.pbtxt
-        ├── openvino_detokenizer.bin
-        ├── openvino_detokenizer.xml
-        ├── openvino_model.bin
-        ├── openvino_model.xml
-        ├── openvino_tokenizer.bin
-        ├── openvino_tokenizer.xml
-        ├── special_tokens_map.json
-        ├── tokenizer_config.json
-        └── tokenizer.json
-```
 
 The default configuration should work in most cases but the parameters can be tuned via `export_model.py` script arguments. 
 Note that by default, NPU sets limitation on the prompt length to 1024 tokens. You can modify that limit by using `--max_prompt_len` parameter.
 Run the script with `--help` argument to check available parameters and see the [LLM calculator documentation](../../docs/llm/reference.md) to learn more about configuration options.
+
+## Model preparation - using ovms
+Another way to downlaod models is using `--pull` parameter with ovms command.
+
+There are multiple [OpenVINO models](https://huggingface.co/collections/OpenVINO/llms-optimized-for-npu) recommended to use with NPU:
+- OpenVINO/Qwen3-8B-int4-cw-ov
+- OpenVINO/Phi-3.5-mini-instruct-int4-cw-ov
+- OpenVINO/Mistral-7B-Instruct-v0.2-int4-cw-ov
+- OpenVINO/Mistral-7B-Instruct-v0.3-int4-cw-ov
+- OpenVINO/falcon-7b-instruct-int4-cw-ov
+- OpenVINO/gpt-j-6b-int4-cw-ov
+
+
+### Pulling model
+
+:::{tab-set}
+::{tab-item} Linux
+:sync: Linux
+```bash
+docker run -d --rm -u $(id -u):$(id -g) -v $(pwd)/models:/models:rw openvino/model_server:latest-gpu --pull --source_model OpenVINO/Qwen3-8B-int4-cw-ov --model_repository_path /models --target_device NPU --task text_generation --tool_parser hermes3 --cache_dir .ov_cache --enable_prefix_caching true --max_prompt_len 4000
+docker run -d --rm -u $(id -u):$(id -g) -v $(pwd)/models:/models:rw openvino/model_server:latest-gpu --add_to_config --config_path /models/config.json --model_name OpenVINO/Qwen3-8B-int4-cw-ov --model_path /models/OpenVINO/Qwen3-8B-int4-cw-ov
+```
+:: 
+::{tab-item} Windows
+:sync: Windows
+```bat
+ovms.exe --pull --source_model OpenVINO/Qwen3-8B-int4-cw-ov --model_repository_path models --target_device NPU --task text_generation --tool_parser hermes3 --cache_dir .ov_cache --enable_prefix_caching true --max_prompt_len 4000 
+ovms.exe --add_to_config --config_path models\config.json --model_name OpenVINO/Qwen3-8B-int4-cw-ov --model_path OpenVINO\Qwen3-8B-int4-cw-ov
+```
+::
+:::
 
 ## Server Deployment
 
@@ -102,7 +106,7 @@ as mentioned in [deployment guide](../../docs/deploying_server_baremetal.md), in
 Depending on how you prepared models in the first step of this demo, they are deployed to either CPU or GPU (it's defined in `config.json`). If you run on GPU make sure to have appropriate drivers installed, so the device is accessible for the model server.
 
 ```bat
-ovms --rest_port 8000 --config_path ./models/config.json
+ovms --rest_port 8000 --config_path models\config.json
 ```
 :::
 
@@ -114,18 +118,18 @@ curl http://localhost:8000/v1/config
 ```
 ```json
 {
-    "meta-llama/Llama-3.1-8B-Instruct": {
-        "model_version_status": [
-            {
-                "version": "1",
-                "state": "AVAILABLE",
-                "status": {
-                    "error_code": "OK",
-                    "error_message": "OK"
-                }
-            }
-        ]
-    }
+  "OpenVINO/Qwen3-8B-int4-cw-ov": {
+    "model_version_status": [
+      {
+        "version": "1",
+        "state": "AVAILABLE",
+        "status": {
+          "error_code": "OK",
+          "error_message": "OK"
+        }
+      }
+    ]
+  }
 }
 ```
 
@@ -137,52 +141,55 @@ Completion endpoint should be used to pass the prompt directly by the client and
 
 :::{dropdown} **Unary call with cURL**
 ```console
-curl http://localhost:8000/v3/chat/completions -H "Content-Type: application/json" -d "{\"model\": \"meta-llama/Llama-3.1-8B-Instruct\", \"max_tokens\":30,\"stream\":false, \"messages\": [{\"role\": \"system\", \"content\": \"You are a helpful assistant.\"},{\"role\": \"user\",\"content\": \"What is OpenVINO?\"}]}"
+curl http://localhost:8000/v3/chat/completions -H "Content-Type: application/json" -d "{\"model\": \"OpenVINO/Qwen3-8B-int4-cw-ov\", \"max_tokens\":50, \"stream\":false, \"chat_template_kwargs\":{\"enable_thinking\":false}, \"messages\": [{\"role\": \"system\", \"content\": \"You are a helpful assistant.\"},{\"role\": \"user\",\"content\": \"What is OpenVINO Model Server?\"}]}"
 ```
 ```json
 {
-  "choices": [
-    {
-      "finish_reason": "stop",
-      "index": 0,
-      "message": {
-        "content": "OpenVINO (Open Visual Inference and Optimization for computational resources) is an open-source toolkit that automates neural network model computations across various platforms and",
-        "role": "assistant"
+   "choices":[
+      {
+         "finish_reason":"stop",
+         "index":0,
+         "message":{
+            "content":"**OpenVINO Model Server** (also known as **Model Server** or **OVMS**) is a high-performance, open-source inference server that allows you to deploy and serve deep learning models as RESTful or gRPC endpoints. It is part",
+            "role":"assistant",
+            "tool_calls":[
+               
+            ]
+         }
       }
-    }
-  ],
-  "created": 1742944805,
-  "model": "meta-llama/Llama-3.1-8B-Instruct",
-  "object": "chat.completion",
-  "usage": {
-    "prompt_tokens": 47,
-    "completion_tokens": 30,
-    "total_tokens": 77
-  }
+   ],
+   "created":1763718082,
+   "model":"OpenVINO/Qwen3-8B-int4-cw-ov",
+   "object":"chat.completion",
+   "usage":{
+      "prompt_tokens":31,
+      "completion_tokens":50,
+      "total_tokens":81
+   }
 }
 ```
 
 A similar call can be made with a `completion` endpoint:
 ```console
-curl http://localhost:8000/v3/completions -H "Content-Type: application/json" -d "{\"model\": \"meta-llama/Llama-3.1-8B-Instruct\",\"max_tokens\":30,\"stream\":false,\"prompt\": \"You are a helpful assistant. What is OpenVINO? \"}"
+curl http://localhost:8000/v3/completions -H "Content-Type: application/json" -d "{\"model\": \"OpenVINO/Qwen3-8B-int4-cw-ov\", \"max_tokens\":50, \"stream\":false, \"prompt\": \"What is OpenVINO Model Server?\"}"
 ```
 ```json
 {
-  "choices": [
-    {
-      "finish_reason": "stop",
-      "index": 0,
-      "text": " Introduction\nOpenVINO can be used in automation of various business processes, which brings timely assistance in operations with these models. Additionally OpenVINO simpl"
-    }
-  ],
-  "created": 1742944929,
-  "model": "meta-llama/Llama-3.1-8B-Instruct",
-  "object": "text_completion",
-  "usage": {
-    "prompt_tokens": 14,
-    "completion_tokens": 30,
-    "total_tokens": 44
-  }
+   "choices":[
+      {
+         "finish_reason":"stop",
+         "index":0,
+         "text":" OpenVINO Model Server (OVS) is a high-performance, open-source model serving framework that allows developers to deploy and manage deep learning models on edge devices. It is built by the Intel AI team and is designed to work seamlessly with the Intel"
+      }
+   ],
+   "created":1763718630,
+   "model":"OpenVINO/Qwen3-8B-int4-cw-ov",
+   "object":"text_completion",
+   "usage":{
+      "prompt_tokens":8,
+      "completion_tokens":50,
+      "total_tokens":58
+   }
 }
 ```
 
@@ -205,17 +212,24 @@ client = OpenAI(
 )
 
 response = client.chat.completions.create(
-    model="meta-llama/Llama-3.1-8B-Instruct",
-    messages=[{"role": "user", "content": "Say this is a test"}],
+    model="OpenVINO/Qwen3-8B-int4-cw-ov",
+    messages=[{"role": "user", "content": "What is OpenVINO Model Server?"}],
     max_tokens=100,
     stream=False,
+    extra_body={"chat_template_kwargs":{"enable_thinking": False}}
 )
 print(response.choices[0].message.content)
 ```
 
 Output:
 ```
-This is only a test.
+**OpenVINO™ Model Server** is a high-performance, open-source inference server that allows you to deploy and serve deep learning models as a RESTful API. It is part of the **Intel® OpenVINO™ toolkit**, which is a comprehensive development toolkit for optimizing and deploying deep learning models on Intel®-based hardware.
+
+---
+
+## ✅ What is OpenVINO Model Server?
+
+The **OpenVINO Model Server** is a **lightweight**, **highly optimized** and ...
 ```
 
 A similar code can be applied for the completion endpoint:
@@ -231,8 +245,8 @@ client = OpenAI(
 )
 
 response = client.completions.create(
-    model="meta-llama/Llama-3.1-8B-Instruct",
-    prompt="Say this is a test.",
+    model="OpenVINO/Qwen3-8B-int4-cw-ov",
+    prompt="What is OpenVINO Model Server?",
     max_tokens=100,
     stream=False,
 )
@@ -241,7 +255,7 @@ print(response.choices[0].text)
 
 Output:
 ```
-This is only a test.
+OpenVINO Model Server (OVS) is a high-performance, scalable, and secure model serving solution for AI models. It is part of the Intel® oneAPI. OVS allows users to deploy and serve machine learning models as microservices, enabling efficient and low-latency inference. OVS supports a wide range of models, including those from the ONNX, TensorFlow, and PyTorch frameworks, and it can run on a variety of hardware, including CPUs, GPUs, and VPU...
 ```
 :::
 
@@ -262,10 +276,11 @@ client = OpenAI(
 )
 
 stream = client.chat.completions.create(
-    model="meta-llama/Llama-3.1-8B-Instruct",
-    messages=[{"role": "user", "content": "Say this is a test"}],
+    model="OpenVINO/Qwen3-8B-int4-cw-ov",
+    messages=[{"role": "user", "content": "What is OpenVINO Model Server?"}],
     max_tokens=100,
     stream=True,
+    extra_body={"chat_template_kwargs":{"enable_thinking": False}}
 )
 for chunk in stream:
     if chunk.choices[0].delta.content is not None:
@@ -274,7 +289,13 @@ for chunk in stream:
 
 Output:
 ```
-This is only a test.
+**OpenVINO™ Model Server** (formerly known as **OpenVINO™ Toolkit Model Server**) is a high-performance, open-source server that allows you to deploy and serve deep learning models in a production environment. It is part of the **Intel® OpenVINO™ Toolkit**, which is designed to optimize and deploy deep learning models for inference on Intel hardware.
+
+---
+
+## 📌 What is OpenVINO Model Server?
+
+The **OpenVINO Model Server** is a **lightweight**...
 ```
 
 A similar code can be applied for the completion endpoint:
@@ -290,8 +311,8 @@ client = OpenAI(
 )
 
 stream = client.completions.create(
-    model="meta-llama/Llama-3.1-8B-Instruct",
-    prompt="Say this is a test.",
+    model="OpenVINO/Qwen3-8B-int4-cw-ov",
+    prompt="What is OpenVINO Model Server?",
     max_tokens=100,
     stream=True,
 )
@@ -302,7 +323,7 @@ for chunk in stream:
 
 Output:
 ```
-This is only a test.
+OpenVINO Model Server (OVS) is a high-performance, open-source server that provides a way to serve deep learning models as a RESTful API. It is developed by Intel as a part of the OpenVINO toolkit, which is a comprehensive solution for developing and deploying deep learning applications on Intel hardware. OVS allows developers to deploy their trained models on various devices and enables them to be accessed by other applications or services through a standardized interface. This makes it easier to integrate AI models into...
 ```
 :::
 
@@ -316,7 +337,7 @@ cd vllm
 pip3 install -r requirements-cpu.txt --extra-index-url https://download.pytorch.org/whl/cpu
 cd benchmarks
 curl -L https://huggingface.co/datasets/anon8231489123/ShareGPT_Vicuna_unfiltered/resolve/main/ShareGPT_V3_unfiltered_cleaned_split.json -o ShareGPT_V3_unfiltered_cleaned_split.json # sample dataset
-python benchmark_serving.py --host localhost --port 8000 --endpoint /v3/chat/completions --backend openai-chat --model meta-llama/Llama-3.1-8B-Instruct --dataset-path ShareGPT_V3_unfiltered_cleaned_split.json --num-prompts 30 --max-concurrency 1
+python benchmark_serving.py --host localhost --port 8000 --endpoint /v3/chat/completions --backend openai-chat --model OpenVINO/Qwen3-8B-int4-cw-ov --dataset-path ShareGPT_V3_unfiltered_cleaned_split.json --num-prompts 30 --max-concurrency 1
 Maximum request concurrency: 1
 
 ============ Serving Benchmark Result ============
