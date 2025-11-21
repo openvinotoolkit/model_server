@@ -1,4 +1,4 @@
-# OpenAI API speech to text endpoints {#ovms_docs_rest_api_t2s}
+# OpenAI API text to speech endpoints {#ovms_docs_rest_api_t2s}
 
 ## API Reference
 OpenVINO Model Server includes now the `audio/speech` endpoint using OpenAI API.
