@@ -308,7 +308,7 @@ curl http://localhost:8000/v3/chat/completions  -H "Content-Type: application/js
 
 ### Step 1: Start Tool Server
 
-Start a OpenAPI tool server available in the [openapi-servers repo](https://github.com/open-webui/openapi-servers). The server used in this demo is [https://github.com/open-webui/openapi-servers/tree/main/servers/time](https://github.com/open-webui/openapi-servers/tree/main/servers/time). Run it locally at `http://localhost:18000`:
+Start a OpenAPI tool server available in the [openapi-servers repo](https://github.com/open-webui/openapi-servers). The server used in this demo is [https://github.com/open-webui/openapi-servers/tree/main/servers/weather](https://github.com/open-webui/openapi-servers/tree/main/servers/weather). Run it locally at `http://localhost:9000`:
 
 ```console
 pip install mcpo
