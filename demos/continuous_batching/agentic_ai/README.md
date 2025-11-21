@@ -83,6 +83,22 @@ curl -L -o models/mistralai/Mistral-7B-Instruct-v0.3/chat_template.jinja https:/
 python export_model.py text_generation --source_model microsoft/Phi-4-mini-instruct --weight-format int8 --config_file_path models/config.json --model_repository_path models --tool_parser phi4 --cache_size 2
 curl -L -o models/microsoft/Phi-4-mini-instruct/chat_template.jinja https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/extras/chat_template_examples/chat_template_phi4_mini.jinja
 ```
+**Note**: Recommended Phi4-mini-instruct template for tool calling does not include system message passed in masseges with role "system". If you want to set specific system message, you can do it via chat template argument `system_message` set in the request body. For example:
+```bash
+curl http://localhost:8000/v3/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "microsoft/Phi-4-mini-instruct",
+    "tools":[<tool_spec>, <tool_spec>, ..., <tool_spec>],
+    "chat_template_kwargs": {"system_message": "You are a helpful assistant observing US stock market.\n\n"},
+    "messages": [
+      {
+        "role": "user",
+        "content": "What is the current price of INTC?"
+      }
+    ]
+  }'| jq .
+```
 :::
 ::::
 
@@ -108,6 +124,23 @@ curl -L -o models/OpenVINO/Mistral-7B-Instruct-v0.3-int4-ov/chat_template.jinja 
 ```bash
 docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --pull --model_repository_path /models --source_model OpenVINO/Phi-4-mini-instruct-int4-ov --task text_generation --tool_parser phi4
 curl -L -o models/OpenVINO/Phi-4-mini-instruct-int4-ov/chat_template.jinja https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/extras/chat_template_examples/chat_template_phi4_mini.jinja
+```
+
+**Note**: Recommended Phi4-mini-instruct template for tool calling does not include system message passed in masseges with role "system". If you want to set specific system message, you can do it via chat template argument `system_message` set in the request body. For example:
+```bash
+curl http://localhost:8000/v3/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "microsoft/Phi-4-mini-instruct",
+    "tools":[<tool_spec>, <tool_spec>, ..., <tool_spec>],
+    "chat_template_kwargs": {"system_message": "You are a helpful assistant observing US stock market.\n\n"},
+    "messages": [
+      {
+        "role": "user",
+        "content": "What is the current price of INTC?"
+      }
+    ]
+  }'| jq .
 ```
 :::
 ::::
