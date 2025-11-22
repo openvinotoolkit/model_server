@@ -18,11 +18,8 @@
 
 #include <cmath>
 #include <memory>
-#pragma warning(push)
-#pragma warning(disable : 6313)
-#include <rapidjson/stringbuffer.h>
-#include <rapidjson/writer.h>
-#pragma warning(pop)
+#include "src/port/rapidjson_stringbuffer.hpp"
+#include "src/port/rapidjson_writer.hpp"
 #include <set>
 
 #include "openai_json_response.hpp"
@@ -134,6 +131,34 @@ static absl::Status downloadImage(const char* url, std::string& image, const int
     return absl::OkStatus();
 }
 
+absl::Status OpenAIChatCompletionsHandler::ensureArgumentsInToolCalls(Value& messageObj, bool& jsonChanged) {
+    auto& allocator = doc.GetAllocator();
+    auto toolCallsIt = messageObj.FindMember("tool_calls");
+    if (toolCallsIt != messageObj.MemberEnd() && toolCallsIt->value.IsArray()) {
+        const auto& toolCallsArray = toolCallsIt->value.GetArray();
+        for (rapidjson::SizeType j = 0; j < toolCallsArray.Size(); ++j) {
+            auto& toolCall = toolCallsArray[j];
+            if (!toolCall.IsObject()) {
+                return absl::InvalidArgumentError("Each tool_call must be an object");
+            }
+            auto functionIt = toolCall.FindMember("function");
+            if (functionIt == toolCall.MemberEnd() || !functionIt->value.IsObject()) {
+                return absl::InvalidArgumentError("Each tool_call must have a 'function' object");
+            }
+            const auto& functionObj = functionIt->value.GetObject();
+            if (functionObj.FindMember("arguments") == functionObj.MemberEnd()) {
+                // Add "arguments": "{}"
+                rapidjson::Value argumentsKey("arguments", allocator);
+                rapidjson::Value argumentsValue;
+                argumentsValue.SetString("{}", allocator);
+                functionIt->value.GetObject().AddMember(argumentsKey, argumentsValue, allocator);
+                jsonChanged = true;
+            }
+        }
+    }
+    return absl::OkStatus();
+}
+
 absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::string> allowedLocalMediaPath) {
     auto it = doc.FindMember("messages");
     if (it == doc.MemberEnd())
@@ -156,7 +181,7 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
             if (member->value.IsString() && (member->name.GetString() == std::string("role") || member->name.GetString() == std::string("content"))) {
                 // Add new field to the last message in history
                 // tools handing to be done later
-                request.chatHistory.back().insert({member->name.GetString(), member->value.GetString()});
+                request.chatHistory.last()[member->name.GetString()] = member->value.GetString();
                 continue;
             } else {
                 if (member->name.GetString() == std::string("content") && member->value.IsArray()) {
@@ -259,14 +284,25 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
                     member->value = contentText;
                     // Add new field to the last message in history if content is text
                     if (member->value.IsString()) {
-                        request.chatHistory.back().insert({member->name.GetString(), member->value.GetString()});
+                        request.chatHistory.last()[member->name.GetString()] = member->value.GetString();
                     }
                 }
             }
         }
-        const auto& lastMessage = request.chatHistory.back();
-        if (lastMessage.find("role") == lastMessage.end()) {
+        auto lastMessage = request.chatHistory.last();
+        if (!lastMessage.contains("role")) {
             return absl::InvalidArgumentError("Every message must have 'role' field");
+        }
+        if (!lastMessage.contains("content")) {
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Message does not have content field which might be an issue for some chat templates. Adding empty content.");
+            lastMessage["content"] = "";
+            obj.AddMember("content", Value().SetString("", doc.GetAllocator()), doc.GetAllocator());
+            jsonChanged = true;
+        }
+        // If message has tool calls, make sure each tool call has "arguments" field
+        auto status = ensureArgumentsInToolCalls(obj, jsonChanged);
+        if (status != absl::OkStatus()) {
+            return status;
         }
     }
     if (jsonChanged) {
@@ -275,6 +311,7 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
         doc.Accept(writer);
         request.processedJson = buffer.GetString();
     }
+    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Parsed messages successfully");
     return absl::OkStatus();
 }
 
@@ -331,12 +368,16 @@ absl::Status OpenAIChatCompletionsHandler::parseTools() {
                         // If we keep the tool, add tool name and schema to the request
                         auto parametersIt = functionIt->value.GetObject().FindMember("parameters");
                         if (parametersIt != functionIt->value.GetObject().MemberEnd() && parametersIt->value.IsObject()) {
+                            // now we want to insert to a mapping of
+                            // tool name -> tool schema representations struct
                             // Dump parameters object to string since this is the schema format expected by GenAI
+                            // Keep the rapidjson::Value object as well to avoid re-parsing in outputParsers
                             rapidjson::StringBuffer buffer;
                             rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
                             parametersIt->value.Accept(writer);
                             std::string parametersStr = buffer.GetString();
-                            request.toolNameSchemaMap[nameIt->value.GetString()] = parametersStr;
+                            ToolSchemaWrapper schemaReprs{&parametersIt->value, std::move(parametersStr)};
+                            request.toolNameSchemaMap[nameIt->value.GetString()] = std::move(schemaReprs);
                         }
                     }
                 } else {
@@ -383,8 +424,49 @@ std::optional<int> OpenAIChatCompletionsHandler::getMaxTokens() const {
     return request.maxTokens;
 }
 
-std::optional<std::string> OpenAIChatCompletionsHandler::getResponseSchema() const {
-    return request.responseSchema;
+std::optional<std::string> OpenAIChatCompletionsHandler::getResponseFormat() const {
+    return request.responseFormat;
+}
+
+std::string convertOpenAIResponseFormatToStructuralTagStringFormat(const rapidjson::Value& openAIFormat) {
+    // Build the new object: {"type": "structural_tag", "format": <openAIFormat>}
+    // If response_format has {"json_schema": {"schema": {...}}}, flatten it to {"json_schema": {...}}
+    rapidjson::Document flatFormatDoc;
+    flatFormatDoc.CopyFrom(openAIFormat, flatFormatDoc.GetAllocator());
+
+    if (flatFormatDoc.HasMember("json_schema") && flatFormatDoc["json_schema"].IsObject()) {
+        auto& jsonSchema = flatFormatDoc["json_schema"];
+        if (jsonSchema.HasMember("schema") && jsonSchema["schema"].IsObject()) {
+            // Move all members from "schema" to "json_schema"
+            rapidjson::Value schemaObjCopy;
+            schemaObjCopy.CopyFrom(jsonSchema["schema"], flatFormatDoc.GetAllocator());  // Make a copy as we will modify jsonSchema
+            for (auto itr = schemaObjCopy.MemberBegin(); itr != schemaObjCopy.MemberEnd(); ++itr) {
+                rapidjson::Value key;
+                key.CopyFrom(itr->name, flatFormatDoc.GetAllocator());
+                rapidjson::Value value;
+                value.CopyFrom(itr->value, flatFormatDoc.GetAllocator());
+                jsonSchema.AddMember(key, value, flatFormatDoc.GetAllocator());
+            }
+            // Remove the "schema" member
+            jsonSchema.RemoveMember("schema");
+        }
+    }
+
+    // Serialize the flattened response_format object
+    rapidjson::StringBuffer formatBuffer;
+    rapidjson::Writer<rapidjson::StringBuffer> formatWriter(formatBuffer);
+    flatFormatDoc.Accept(formatWriter);
+
+    // Build the new object: {"type": "structural_tag", "format": <flattened>}
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+    writer.StartObject();
+    writer.Key("type");
+    writer.String("structural_tag");
+    writer.Key("format");
+    writer.RawValue(formatBuffer.GetString(), formatBuffer.GetSize(), rapidjson::kObjectType);
+    writer.EndObject();
+    return buffer.GetString();
 }
 
 absl::Status OpenAIChatCompletionsHandler::parseChatCompletionsPart(std::optional<uint32_t> maxTokensLimit, std::optional<std::string> allowedLocalMediaPath) {
@@ -431,36 +513,8 @@ absl::Status OpenAIChatCompletionsHandler::parseChatCompletionsPart(std::optiona
             return absl::OkStatus();
         if (!it->value.IsObject())
             return absl::InvalidArgumentError("response_format is not an object");
-        auto responseFormat = it->value.GetObject();
-        auto typeIt = responseFormat.FindMember("type");
-        if (typeIt != responseFormat.MemberEnd()) {
-            if (!typeIt->value.IsString())
-                return absl::InvalidArgumentError("response_format.type is not a string");
-            if (std::string(typeIt->value.GetString()) != "json_schema") {
-                return absl::InvalidArgumentError("response_format.type can be only json_schema");
-            } else {
-                auto jsonSchemaIt = responseFormat.FindMember("json_schema");
-                if (jsonSchemaIt != responseFormat.MemberEnd()) {
-                    if (!jsonSchemaIt->value.IsObject())
-                        return absl::InvalidArgumentError("response_format.json_schema is not an object");
-                    auto jsonSchema = jsonSchemaIt->value.GetObject();
-                    auto schemaIt = jsonSchema.FindMember("schema");
-                    if (schemaIt == jsonSchema.MemberEnd())
-                        return absl::InvalidArgumentError("response_format.json_schema.schema is missing");
-                    if (!schemaIt->value.IsObject())
-                        return absl::InvalidArgumentError("response_format.json_schema.schema is not an object");
-                    // Convert schema value to a JSON string and assign to optional string responseSchema
-                    StringBuffer schemaBuffer;
-                    Writer<StringBuffer> schemaWriter(schemaBuffer);
-                    schemaIt->value.Accept(schemaWriter);
-                    request.responseSchema = std::make_optional<std::string>(schemaBuffer.GetString());
-                } else {
-                    return absl::InvalidArgumentError("response_format.json_schema is missing");
-                }
-            }
-        } else {
-            return absl::InvalidArgumentError("response_format.type is missing");
-        }
+        const rapidjson::Value& responseFormat = it->value;
+        request.responseFormat = convertOpenAIResponseFormatToStructuralTagStringFormat(responseFormat);
     }
 
     return absl::OkStatus();
@@ -739,10 +793,8 @@ void OpenAIChatCompletionsHandler::incrementProcessedTokens(size_t numTokens) {
 
 absl::Status OpenAIChatCompletionsHandler::parseRequest(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength, std::optional<std::string> allowedLocalMediaPath) {
     absl::Status status = parseCommonPart(maxTokensLimit, bestOfLimit, maxModelLength);
-
     if (status != absl::OkStatus())
         return status;
-
     if (endpoint == Endpoint::COMPLETIONS)
         status = parseCompletionsPart();
     else
@@ -762,9 +814,9 @@ ParsedOutput OpenAIChatCompletionsHandler::parseOutputIfNeeded(const std::vector
     OVMS_PROFILE_FUNCTION();
     ParsedOutput parsedOutput;
     if (endpoint != Endpoint::CHAT_COMPLETIONS || outputParser == nullptr) {
-        parsedOutput.content = tokenizer.decode(generatedIds);
+        parsedOutput.content = this->tokenizer.decode(generatedIds);
     } else {
-        parsedOutput = outputParser->parse(generatedIds, areToolsAvailable());
+        parsedOutput = outputParser->parse(generatedIds, this->areToolsAvailable());
     }
     return parsedOutput;
 }

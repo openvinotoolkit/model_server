@@ -245,6 +245,41 @@ TEST_F(PartialJsonBuilderTest, complexJsonWithIncompleteKey) {
     }
 }
 
+TEST_F(PartialJsonBuilderTest, escapedCharactersSanityCheck) {
+    std::string targetJson = R"({"name": "super-platform--create_object", "arguments": "{\"impl\": \"TYPE MQTT_Config AS\\n    VAR\\n  \\\"txt\\\"      BrokerIP : STRING := '127.0.0.1';\"})";
+    PartialJsonBuilder builder;
+    rapidjson::Document parsedJson;
+    for (size_t i = 0; i < targetJson.size(); ++i) {
+        std::string partialInput(1, targetJson[i]);
+        parsedJson = builder.add(partialInput);
+    }
+    ASSERT_TRUE(parsedJson.IsObject());
+    ASSERT_TRUE(parsedJson.HasMember("name"));
+    ASSERT_TRUE(parsedJson["name"].IsString());
+    ASSERT_EQ(parsedJson["name"].GetString(), std::string("super-platform--create_object"));
+    ASSERT_TRUE(parsedJson.HasMember("arguments"));
+    ASSERT_TRUE(parsedJson["arguments"].IsString());
+    ASSERT_EQ(parsedJson["arguments"].GetString(), std::string("{\"impl\": \"TYPE MQTT_Config AS\\n    VAR\\n  \\\"txt\\\"      BrokerIP : STRING := '127.0.0.1';\"}"));
+}
+
+TEST_F(PartialJsonBuilderTest, doubleBackslashBeforeQuote) {
+    // Check that double backslash before quote is handled correctly (final quote is not escaped)
+    std::string targetJson = R"({"name": "set_status", "arguments": "{\"status\": \"CONNECTED,\\"})";
+    PartialJsonBuilder builder;
+    rapidjson::Document parsedJson;
+    for (size_t i = 0; i < targetJson.size(); ++i) {
+        std::string partialInput(1, targetJson[i]);
+        parsedJson = builder.add(partialInput);
+    }
+    ASSERT_TRUE(parsedJson.IsObject());
+    ASSERT_TRUE(parsedJson.HasMember("name"));
+    ASSERT_TRUE(parsedJson["name"].IsString());
+    ASSERT_EQ(parsedJson["name"].GetString(), std::string("set_status"));
+    ASSERT_TRUE(parsedJson.HasMember("arguments"));
+    ASSERT_TRUE(parsedJson["arguments"].IsString());
+    ASSERT_EQ(parsedJson["arguments"].GetString(), std::string("{\"status\": \"CONNECTED,\\"));
+}
+
 TEST_F(PartialJsonBuilderTest, complexJsonIncrementalParsingSanityCheck) {
     std::string targetJson = R"(
     
@@ -399,19 +434,25 @@ TEST_F(PartialJsonBuilderTest, simpleJsonIncrementalParsing) {
     ASSERT_EQ(parsedJson["arguments"].GetString(), std::string("{\"location\": \"Tokyo\", \"date\": \"2025-01-01\"}"));
 }
 
-TEST_F(PartialJsonBuilderTest, NegativeCases) {
+TEST_F(PartialJsonBuilderTest, negativeCases) {
     std::vector<std::pair<std::string, std::string>> negativeCases = {
         {R"(a)", "Invalid JSON: Expected '{' or '[' at the beginning."},
         {R"({"name",)", "Invalid JSON: Expected ':' after key."},
         {R"({"object": {"string":"1", "string",)", "Invalid JSON: Expected ':' after key."},
         {R"({"name": "get_weather",  1)", "Invalid JSON: Expected key to start with a quote or a proper object closure."},
         {R"({"name": a)", "Invalid JSON: Expected value to start with '{', '[', '\"', digit, 't', 'f', or 'n'."},
-        {R"({"numbers": []])", "Invalid JSON. Content:\n{\"numbers\": []]}"},                    // invalid closure
-        {R"({"numbers": [1, 2, 3})", "Invalid JSON. Content:\n{\"numbers\": [1, 2, 3}]}"},       // invalid closure
-        {R"({"numbers": [1, 2, 3b)", "Invalid JSON. Content:\n{\"numbers\": [1, 2, 3b]}"},       // invalid value
-        {R"({"numbers": [1, 2, 3")", "Invalid JSON. Content:\n{\"numbers\": [1, 2, 3\"\"]}"},    // invalid value
-        {R"({"string": "string\""1)", "Invalid JSON. Content:\n{\"string\": \"string\\\"\"1}"},  // invalid value
-        {R"({"bool": tak,)", "Invalid JSON. Content:\n{\"bool\": tak}"},                         // invalid special value
+        // invalid closure
+        {R"({"numbers": []])", "Invalid JSON. Content with closure attempt:\n{\"numbers\": []]}\nOriginal content:\n{\"numbers\": []]"},
+        // invalid closure
+        {R"({"numbers": [1, 2, 3})", "Invalid JSON. Content with closure attempt:\n{\"numbers\": [1, 2, 3}]}\nOriginal content:\n{\"numbers\": [1, 2, 3}"},
+        // invalid value
+        {R"({"numbers": [1, 2, 3b)", "Invalid JSON. Content with closure attempt:\n{\"numbers\": [1, 2, 3b]}\nOriginal content:\n{\"numbers\": [1, 2, 3b"},
+        // invalid value
+        {R"({"numbers": [1, 2, 3")", "Invalid JSON. Content with closure attempt:\n{\"numbers\": [1, 2, 3\"\"]}\nOriginal content:\n{\"numbers\": [1, 2, 3\""},
+        // invalid value
+        {R"({"string": "string\""1)", "Invalid JSON. Content with closure attempt:\n{\"string\": \"string\\\"\"1}\nOriginal content:\n{\"string\": \"string\\\"\"1"},
+        // invalid special value
+        {R"({"bool": tak,)", "Invalid JSON. Content with closure attempt:\n{\"bool\": tak}\nOriginal content:\n{\"bool\": tak,"},
     };
 
     for (const auto& [json, expectedError] : negativeCases) {
@@ -430,6 +471,20 @@ TEST_F(PartialJsonBuilderTest, NegativeCases) {
             }
         }
     }
+}
+
+TEST_F(PartialJsonBuilderTest, postJsonEndAdditions) {
+    PartialJsonBuilder builder;
+    rapidjson::Document parsedJson;
+    builder.add("{\"name\": \"get_weather\"");
+    ASSERT_FALSE(builder.isComplete());
+    parsedJson = builder.add("}, {");
+    ASSERT_TRUE(builder.isComplete());
+    ASSERT_EQ(builder.getUnprocessedBuffer(), ", {");
+    ASSERT_TRUE(parsedJson.IsObject());
+    ASSERT_TRUE(parsedJson.HasMember("name"));
+    ASSERT_TRUE(parsedJson["name"].IsString());
+    ASSERT_EQ(parsedJson["name"].GetString(), std::string("get_weather"));
 }
 
 TEST_F(PartialJsonBuilderTest, computeDeltaWithEmptyJson) {

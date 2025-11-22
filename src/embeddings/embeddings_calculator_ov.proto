@@ -32,6 +32,7 @@ message EmbeddingsCalculatorOVOptions {
     enum Pooling {
       CLS = 0;
       LAST = 1;
+      MEAN = 2;
     }
     optional Pooling pooling = 5 [default = CLS];
     optional bool truncate = 6 [default = false];

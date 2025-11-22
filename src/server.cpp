@@ -76,9 +76,6 @@
 using grpc::ServerBuilder;
 
 namespace ovms {
-namespace {
-volatile sig_atomic_t shutdown_request = 0;
-}
 
 Server& Server::instance() {
     static Server global;
@@ -123,21 +120,22 @@ static void logConfig(const Config& config) {
     SPDLOG_DEBUG("gRPC channel arguments: {}", config.grpcChannelArguments());
     SPDLOG_DEBUG("log level: {}", config.logLevel());
     SPDLOG_DEBUG("log path: {}", config.logPath());
+    SPDLOG_TRACE("API key: {}", config.getServerSettings().apiKey);
     SPDLOG_DEBUG("file system poll wait milliseconds: {}", config.filesystemPollWaitMilliseconds());
     SPDLOG_DEBUG("sequence cleaner poll wait minutes: {}", config.sequenceCleanerPollWaitMinutes());
     SPDLOG_DEBUG("model_repository_path: {}", config.getServerSettings().hfSettings.downloadPath);
 }
 
 static void onInterrupt(int status) {
-    shutdown_request = 1;
+    Server::instance().setShutdownRequest(1);
 }
 
 static void onTerminate(int status) {
-    shutdown_request = 1;
+    Server::instance().setShutdownRequest(1);
 }
 
 static void onIllegal(int status) {
-    shutdown_request = 2;
+    Server::instance().setShutdownRequest(2);
 }
 
 #ifdef __linux__
@@ -232,7 +230,55 @@ const Module* Server::getModule(const std::string& name) const {
 }
 
 void Server::setShutdownRequest(int i) {
-    shutdown_request = i;
+    std::unique_lock lock{Server::shutdownMtx, std::defer_lock};
+    int counter = 11;
+    // 2 seconds to try to lock exit mutex
+    while (counter-- && !lock.try_lock()) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    }
+    if (counter) {
+        shutdown_request = i;
+        SPDLOG_TRACE("Ovms shutdown request set to: {}", shutdown_request);
+    } else {
+        SPDLOG_ERROR("Server shutdown mutex lock failed.");
+    }
+}
+
+int Server::getShutdownStatus() {
+    std::unique_lock lock{Server::shutdownMtx, std::defer_lock};
+    auto locked = lock.try_lock();
+    // Wait in windows thread until we can get the lock and check if ovms exited
+    if (!locked) {
+        return 0;
+    }
+
+    return shutdown_request;
+}
+
+int Server::getExitStatus() {
+    std::unique_lock lock{Server::exitMtx, std::defer_lock};
+    auto locked = lock.try_lock();
+    // Wait in windows thread until we can get the lock and check if ovms exited
+    if (!locked) {
+        return 0;
+    }
+
+    return ovms_exited;
+}
+
+void Server::setExitStatus(int i) {
+    std::unique_lock lock{Server::exitMtx, std::defer_lock};
+    int counter = 11;
+    // 2 seconds to try to lock exit mutex
+    while (counter-- && !lock.try_lock()) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    }
+    if (counter) {
+        ovms_exited = i;
+        SPDLOG_TRACE("Ovms exit status set to: {}", ovms_exited);
+    } else {
+        SPDLOG_ERROR("Server shutdown mutex lock failed.");
+    }
 }
 
 Server::~Server() {
@@ -382,6 +428,15 @@ public:
     }
 };
 
+class OvmsExitGuard {
+    Server& server;
+
+public:
+    OvmsExitGuard(Server& server) :
+        server(server) { server.setExitStatus(0); }
+    ~OvmsExitGuard() { server.setExitStatus(1); }
+};
+
 void Server::shutdownModules() {
     // we want very precise order of modules shutdown
     // first we should stop incoming new requests
@@ -410,28 +465,40 @@ static int statusToExitCode(const Status& status) {
     return OVMS_EX_FAILURE;
 }
 
-// OVMS Start
-int Server::start(int argc, char** argv) {
-    installSignalHandlers();
-    int result = OVMS_EX_OK;
-
+std::variant<std::pair<ServerSettingsImpl, ModelsSettingsImpl>, std::pair<int, std::string>> Server::parseArgs(int argc, char** argv) {
     try {
         CLIParser parser;
         ServerSettingsImpl serverSettings;
         ModelsSettingsImpl modelsSettings;
-        parser.parse(argc, argv);
+        auto successOrExit = parser.parse(argc, argv);
+        // Check for error in parsing
+        if (!std::holds_alternative<bool>(successOrExit)) {
+            auto printAndExit = std::get<std::pair<int, std::string>>(successOrExit);
+            return printAndExit;
+        }
         parser.prepare(&serverSettings, &modelsSettings);
+        return std::make_pair(serverSettings, modelsSettings);
+    } catch (const std::exception& e) {
+        return std::make_pair(OVMS_EX_USAGE, e.what());
+    }
+}
 
-        Status ret = start(&serverSettings, &modelsSettings);
+int Server::startServerFromSettings(ServerSettingsImpl& serverSettings, ModelsSettingsImpl& modelsSettings) {
+    OvmsExitGuard exitStatusGuard(*this);
+    installSignalHandlers();
+    int result = OVMS_EX_OK;
+
+    try {
+        Status ret = startFromSettings(&serverSettings, &modelsSettings);
         ModulesShutdownGuard shutdownGuard(*this);
         if (!ret.ok()) {
             return statusToExitCode(ret);
         }
-        while (!shutdown_request &&
+        while (!getShutdownStatus() &&
                (serverSettings.serverMode == HF_PULL_AND_START_MODE || serverSettings.serverMode == SERVING_MODELS_MODE)) {
             std::this_thread::sleep_for(std::chrono::milliseconds(200));
         }
-        if (shutdown_request == 2) {
+        if (getShutdownStatus() == 2) {
             SPDLOG_ERROR("Illegal operation. OVMS started on unsupported device");
         }
     } catch (const std::exception& e) {
@@ -443,8 +510,25 @@ int Server::start(int argc, char** argv) {
     return EXIT_SUCCESS;
 }
 
+// OVMS Start
+int Server::start(int argc, char** argv) {
+    auto paramsOrExit = parseArgs(argc, argv);
+    // Check for error in parsing
+    if (std::holds_alternative<std::pair<int, std::string>>(paramsOrExit)) {
+        auto printAndExit = std::get<std::pair<int, std::string>>(paramsOrExit);
+        if (printAndExit.first > 0) {
+            std::cerr << printAndExit.second;
+        } else {
+            std::cout << printAndExit.second;
+        }
+        exit(printAndExit.first);
+    }
+    std::pair<ovms::ServerSettingsImpl, ovms::ModelsSettingsImpl> parameters = std::get<std::pair<ovms::ServerSettingsImpl, ovms::ModelsSettingsImpl>>(paramsOrExit);
+    return startServerFromSettings(parameters.first, parameters.second);
+}
+
 // C-API Start
-Status Server::start(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* modelsSettings) {
+Status Server::startFromSettings(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* modelsSettings) {
     try {
         std::unique_lock lock{this->startMtx, std::defer_lock};
         auto locked = lock.try_lock();

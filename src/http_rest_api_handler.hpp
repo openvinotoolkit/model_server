@@ -74,8 +74,14 @@ struct HttpRequestComponents {
     std::unordered_map<std::string, std::string> headers;
 };
 
+enum class ContentType {
+    JSON,
+    PLAIN_TEXT
+};
+
 struct HttpResponseComponents {
     std::optional<int> inferenceHeaderContentLength;
+    ContentType contentType = ContentType::JSON;
 };
 
 using HandlerCallbackFn = std::function<Status(
@@ -115,7 +121,7 @@ public:
      *
      * @param timeout_in_ms
      */
-    HttpRestApiHandler(ovms::Server& ovmsServer, int timeout_in_ms);
+    HttpRestApiHandler(ovms::Server& ovmsServer, int timeout_in_ms, const std::string& apiKey = "");
 
     Status parseRequestComponents(HttpRequestComponents& components,
         const std::string_view http_method,
@@ -231,7 +237,7 @@ public:
     Status processModelMetadataKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
     Status processModelReadyKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
     Status processInferKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, std::optional<int>& inferenceHeaderContentLength);
-    Status processMetrics(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
+    Status processMetrics(const HttpRequestComponents& request_components, HttpResponseComponents& response_components, std::string& response, const std::string& request_body);
     Status processOptions(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
 
     Status processServerReadyKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
@@ -241,6 +247,8 @@ public:
     Status processV3(const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser);
     Status processListModelsRequest(std::string& response);
     Status processRetrieveModelRequest(const std::string& name, std::string& response);
+    bool isAuthorized(const std::unordered_map<std::string, std::string>& headers, const std::string& apiKey);
+    const std::string apiKey;
 
 private:
     const std::regex predictionRegex;

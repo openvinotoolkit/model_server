@@ -17,13 +17,9 @@
 #include <string>
 #include <vector>
 
-#pragma warning(push)
-#pragma warning(disable : 6313)
-#include <rapidjson/document.h>
-#include <rapidjson/stringbuffer.h>
-#include <rapidjson/writer.h>
-#pragma warning(pop)
-
+#include "src/port/rapidjson_document.hpp"
+#include "src/port/rapidjson_stringbuffer.hpp"
+#include "src/port/rapidjson_writer.hpp"
 #include "partial_json_builder.hpp"
 
 using namespace rapidjson;
@@ -102,7 +98,7 @@ Document PartialJsonBuilder::add(const std::string& chunk) {
     auto beginIt = buffer.begin() + currentPosition;
     auto endIt = buffer.end();
 
-    for (auto it = beginIt; it != endIt; ++it, currentPosition++) {
+    for (auto it = beginIt; it != endIt && state != IteratorState::END; ++it, ++currentPosition) {
         finishedWithEscapeCharacter = false;
         char c = *it;
 
@@ -185,9 +181,21 @@ Document PartialJsonBuilder::add(const std::string& chunk) {
             }
         } else {
             if (c == '"') {
-                if (it != buffer.begin() && *(it - 1) == '\\') {
-                    continue;
+                // Count consecutive backslashes before the quote to determine if the quote is escaped
+                int backslashCount = 0;
+                auto tmpIt = it;
+                while (tmpIt != buffer.begin()) {
+                    --tmpIt;
+                    if (*tmpIt == '\\') {
+                        ++backslashCount;
+                    } else {
+                        break;
+                    }
+                }
+                if (backslashCount % 2 == 1) {
+                    continue;  // Quote is escaped, we can move on
                 } else {
+                    // Quote is not escaped, so we close the string/key
                     if (state == IteratorState::PROCESSING_KEY) {
                         // We processed a key, now we expect a colon
                         state = IteratorState::AWAITING_COLON;
@@ -202,14 +210,30 @@ Document PartialJsonBuilder::add(const std::string& chunk) {
                     }
                 }
             } else if (c == '\\') {
-                finishedWithEscapeCharacter = true;
+                // Count consecutive backslashes before current position
+                auto backslashIt = it;
+                // Start with 1 since we found one backslash already
+                int backslashCount = 1;
+                while (backslashIt != buffer.begin() && *(backslashIt - 1) == '\\') {
+                    --backslashIt;
+                    ++backslashCount;
+                }
+                if (backslashCount % 2 != 0) {
+                    // Odd number of backslashes finishing the buffer: current backslash is escaping the next character
+                    finishedWithEscapeCharacter = true;
+                }
             }
         }
     }
 
     Document doc;
     if (state == IteratorState::END && openCloseStack.empty()) {
-        doc.Parse(buffer.c_str());
+        if (currentPosition == buffer.size()) {
+            doc.Parse(buffer.c_str());
+        } else {
+            doc.Parse(buffer.c_str(), currentPosition);
+        }
+
         if (doc.HasParseError()) {
             throw std::runtime_error("Invalid JSON. Content:\n" + buffer);
         }
@@ -259,9 +283,20 @@ Document PartialJsonBuilder::add(const std::string& chunk) {
     }
     doc.Parse(closedInput.c_str());
     if (doc.HasParseError()) {
-        throw std::runtime_error("Invalid JSON. Content:\n" + closedInput);
+        throw std::runtime_error("Invalid JSON. Content with closure attempt:\n" + closedInput + "\nOriginal content:\n" + buffer);
     }
     return doc;
+}
+
+bool PartialJsonBuilder::isComplete() const {
+    return state == IteratorState::END;
+}
+
+std::string PartialJsonBuilder::getUnprocessedBuffer() const {
+    if (currentPosition < buffer.size()) {
+        return buffer.substr(currentPosition);
+    }
+    return "";
 }
 
 }  // namespace ovms

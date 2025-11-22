@@ -28,8 +28,8 @@ NUMA node5 CPU(s):                    160-191,352-383
 
 Download the export_model.py script and install python dependencies:
 ```bash
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/demos/common/export_models/export_model.py -o export_model.py
-pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/demos/common/export_models/requirements.txt
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/export_model.py -o export_model.py
+pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
 mkdir models
 ```
 Use the export_model.py script:
@@ -204,8 +204,6 @@ P99 TPOT (ms):                           122.52
 
 It is possible to load models bigger in size from the single GPU card capacity. 
 Below is an example of the deployment 32B parameters LLM model on 2 BMG cards.
-This configuration currently doesn't support continuous batching. It process the requests sequentially so it can be use effectively with a single client use case.
-Continuous batching with Multi GPU configuration will be added soon.
 
 ### Start the Model Server instances
 

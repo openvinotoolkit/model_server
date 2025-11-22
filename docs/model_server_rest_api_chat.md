@@ -166,7 +166,7 @@ Some parameters, especially related to sampling (like `temperature`, `top_p` etc
 | logprobs | ⚠️ | ✅ | ✅ | bool (default: `false`) | Include the log probabilities on the logprob of the returned output token. **_ in stream mode logprobs are not returned. Only info about selected tokens is returned _** |
 | tools | ✅ | ✅ | ✅ | array | A list of tools the model may call. Currently, only functions are supported as a tool. Use this to provide a list of functions the model may generate JSON inputs for. See [OpenAI API reference](https://platform.openai.com/docs/api-reference/chat/create#chat-create-tools) for more details. |
 | tool_choice | ✅ | ✅ | ✅ | string or object | Controls which (if any) tool is called by the model. `none` means the model will not call any tool and instead generates a message. `auto` means the model can pick between generating a message or calling one or more tools. `required` means that model should call at least one tool. Specifying a particular tool via `{"type": "function", "function": {"name": "my_function"}}` forces the model to call that tool. See [OpenAI API reference](https://platform.openai.com/docs/api-reference/chat/create#chat-create-tool_choice) for more details. |
-| response_format | ✅ | ✅ | ✅ | object | An object specifying the format that the model must output. Setting to { "type": "json_schema", "json_schema": {...} } enables Structured Outputs which ensures the model will match your supplied JSON schema. Learn more in the [Structured Outputs demo](../demos/continuous_batching/structured_output/README.md). **Note** that if model server fails to load the schema, the request will still be processed, but the schema will not be applied. |
+| response_format | ✅ | ✅ | ✅ | object | An object specifying the format that the model must output. Setting to `{ "type": "json_schema", "json_schema": {...} }` enables Structured Outputs which ensures the model will match your supplied JSON schema according to [OpenAI reference](https://platform.openai.com/docs/api-reference/chat/create#chat-create-response_format). Learn more in the [Structured Outputs demo](../demos/continuous_batching/structured_output/README.md). Additionally, `response_format` can accept [XGrammar structural tags format](https://github.com/mlc-ai/xgrammar/blob/main/docs/tutorials/structural_tag.md#format-types) (not part of OpenAI API). For example: `{ "type": "const_string", "value": "Hello World!" }`. **Note** that if model server fails to process the format, the request will still be processed, but the format will not be imposed. |
 | chat_template_kwargs | ✅ | ❌ | ✅ |  object | Enables passing additional parameters to chat template engine. Example `{"enable_thinking": false}`. Note that values like `messages`, `eos_token`, `bos_token` etc. are provided natively to the template engine, so including them in `chat_template_kwargs` will cause error. **Effective only in configuration with Python support**. |
 
 #### Beam search sampling specific
@@ -196,6 +196,8 @@ Note that below parameters are valid only for speculative pipeline. See [specula
 | num_assistant_tokens | ✅ | ❌ | ⚠️ | int | This value defines how many tokens should a draft model generate before main model validates them. Equivalent of `num_speculative_tokens` in vLLM. Cannot be used with `assistant_confidence_threshold`. |
 | assistant_confidence_threshold | ✅ | ❌ | ❌ | float | This parameter determines confidence level for continuing generation. If draft model generates token with confidence below that threshold, it stops generation for the current cycle and main model starts validation. Cannot be used with `num_assistant_tokens`. |
 
+If none of those parameters are specified and request is made to Speculative Decoding pipeline, then the default `num_assistant_tokens = 5` is set.
+
 #### Prompt lookup decoding specific
 
 Note that below parameters are valid only for prompt lookup pipeline. Add `"prompt_lookup": true` to `plugin_config` in your graph config node options to serve it.
@@ -204,6 +206,10 @@ Note that below parameters are valid only for prompt lookup pipeline. Add `"prom
 |-------|----------|----------|----------|---------|-----|
 | num_assistant_tokens | ✅ | ❌ | ❌ | int | Number of candidate tokens proposed after ngram match is found |
 | max_ngram_size | ✅ | ❌ | ❌ | int | The maximum ngram to use when looking for matches in the prompt |
+
+If any of those parameters is not specified and request is made to Prompt Lookup Decoding pipeline, then defaults are set as follows for missing parameters:
+  - `num_assistant_tokens = 5`
+  - `max_ngram_size = 3`
 
 **Note**: vLLM does not support those parameters as sampling parameters, but enables prompt lookup decoding, by setting them in [LLM config](https://docs.vllm.ai/en/stable/features/spec_decode.html#speculating-by-matching-n-grams-in-the-prompt)
 

@@ -25,8 +25,8 @@ namespace ovms {
 class Llama3GenerationConfigBuilder : public BaseGenerationConfigBuilder {
 public:
     Llama3GenerationConfigBuilder() = delete;
-    explicit Llama3GenerationConfigBuilder(ov::genai::GenerationConfig& baseConfig) :
-        BaseGenerationConfigBuilder(baseConfig) {}
+    explicit Llama3GenerationConfigBuilder(const ov::genai::GenerationConfig& baseConfig, bool enableToolGuidedGeneration, DecodingMethod decodingMethod) :
+        BaseGenerationConfigBuilder(baseConfig, enableToolGuidedGeneration, decodingMethod) {}
 
     void parseConfigFromRequest(const OpenAIChatCompletionsRequest& request) override;
 };

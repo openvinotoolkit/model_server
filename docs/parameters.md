@@ -36,8 +36,8 @@ Configuration options for the server are defined only via command-line options a
 |---|---|---|
 | `port` | `integer` | Number of the port used by gRPC sever. |
 | `rest_port` | `integer` | Number of the port used by HTTP server (if not provided or set to 0, HTTP server will not be launched). |
-| `grpc_bind_address` | `string` | Network interface address or a hostname, to which gRPC server will bind to. Default: all interfaces: 0.0.0.0 |
-| `rest_bind_address` | `string` | Network interface address or a hostname, to which REST server will bind to. Default: all interfaces: 0.0.0.0 |
+| `grpc_bind_address` | `string` | Comma separated list of ipv4/ipv6 network interface addresses or hostnames, to which gRPC server will bind to. Default: all interfaces: 0.0.0.0 |
+| `rest_bind_address` | `string` | Comma separated list of ipv4/ipv6 network interface addresses or hostnames, to which REST server will bind to. Default: all interfaces: 0.0.0.0 |
 | `grpc_workers` | `integer` | Number of the gRPC server instances (must be from 1 to CPU core count). Default value is 1 and it's optimal for most use cases. Consider setting higher value while expecting heavy load. |
 | `rest_workers` | `integer` | Number of HTTP server threads. Effective when `rest_port` > 0. Default value is set based on the number of CPUs. |
 | `file_system_poll_wait_seconds` | `integer` | Time interval between config and model versions changes detection in seconds. Default value is 1. Zero value disables changes monitoring. |
@@ -56,6 +56,7 @@ Configuration options for the server are defined only via command-line options a
 | `allowed_headers` | `string` (default: *) | Comma-separated list of allowed headers in CORS requests. |
 | `allowed_methods` | `string` (default: *) | Comma-separated list of allowed methods in CORS requests. |
 | `allowed_origins` | `string` (default: *) | Comma-separated list of allowed origins in CORS requests. |
+| `api_key_file` | `string` | Path to the text file with the API key for generative endpoints `/v3/`. The value of first line is used. If not specified, server is using environment variable API_KEY. If not set, requests will not require authorization.| 
 
 ## Config management mode options
 
@@ -67,8 +68,9 @@ Configuration options for the config management mode, which is used to manage co
 | `list_models`           | `NA`         | List all models paths in the model repository.                                                                                                      |
 | `model_name`            | `string`     | Name of the model as visible in serving. If `--model_path` is not provided, path is deduced from name.                                              |
 | `model_path`            | `string`     | Optional. Path to the model repository. If path is relative then it is prefixed with `--model_repository_path`.                                     |
-| `add_to_config`         | `string`     | Either path to directory containing config.json file for OVMS, or path to ovms configuration file, to add specific model to.                        |
-| `remove_from_config`    | `string`     | Either path to directory containing config.json file for OVMS, or path to ovms configuration file, to remove specific model from.                   |
+| `add_to_config`         | `NA`         | Directive to add new model to the config file.                                                                                                      |
+| `remove_from_config`    | `NA`     | Directive to remove model from the config file.                                                                                                     |
+| `config_path`           | `string`     | Path to the configuration file.                                                                                                                     |
 
 ## Pull mode configuration options
 
@@ -79,12 +81,15 @@ Shared configuration options for the pull, and pull & start mode. In the presenc
 | Option                      | Value format | Description                                                                                                   |
 |-----------------------------|--------------|---------------------------------------------------------------------------------------------------------------|
 | `--pull`                    | `NA`         | Runs the server in pull mode to download the model from the Hugging Face repository.                          |
-| `--source_model`            | `string`     | Name of the model in the Hugging Face repository. If not set, `model_name` is used. `Required`                |
+| `--source_model`            | `string`     | Name of the model in the Hugging Face repository. If not set, `model_name` is used.                           |
 | `--model_repository_path`   | `string`     | Directory where all required model files will be saved.                                                       |
 | `--model_name`              | `string`     | Name of the model as exposed externally by the server.                                                        |
 | `--target_device`           | `string`     | Device name to be used to execute inference operations. Accepted values are: `"CPU"/"GPU"/"MULTI"/"HETERO"`   |
 | `--task`                    | `string`     | Task type the model will support (`text_generation`, `embeddings`, `rerank`, `image_generation`).              |
 | `--overwrite_models`        | `NA`         | If set, an existing model with the same name will be overwritten. If not set, the server will use existing model files if available. |
+| `--gguf_filename`           | `string`     | Filename of the wanted quantization type from Hugging Face GGUF repository.                                        |
+
+> **NOTE:** If you want to use model that is split into several `.gguf` files, you should specify the filename of the first part only, e.g. `--gguf_filename model-name-00001-of-00002.gguf`.
 
 ## Pull Mode Options for optimum-cli mode
 
@@ -104,6 +109,7 @@ There are also additional environment variables that may change the behavior of 
 | `HF_ENDPOINT`   | `string`     | Default: `https://huggingface.co`. For users in China, set to `https://www.modelscope.cn/models` or `https://hf-mirror.com` if needed.                                 |
 | `HF_TOKEN`      | `string`     | Authentication token required for accessing some models from Hugging Face.                                               |
 | `https_proxy`   | `string`     | If set, model downloads will use this proxy.                                                                             |
+| `OVMS_MODEL_REPOSITORY_PATH`   | `string`     | If set, it defines default value for `--model_repository_path` and `--config_path` as config.json in the model repository path   |
 
 ### Advanced Environment Variables for Pull Mode
 | Variable                            | Format  | Description                                                                                                |
@@ -121,11 +127,12 @@ Task specific parameters for different tasks (text generation/image generation/e
 | `--pipeline_type`                     | `string`     | Type of the pipeline to be used. Choices: `LM`, `LM_CB`, `VLM`, `VLM_CB`, `AUTO`. Default: `AUTO`.                         |
 | `--enable_prefix_caching`             | `bool`       | Enables algorithm to cache the prompt tokens. Default: true.                                                               |
 | `--max_num_batched_tokens`            | `integer`    | The maximum number of tokens that can be batched together.                                                                 |
-| `--cache_size`                        | `integer`    | Cache size in GB. Default: 10.                                                                                             |
+| `--cache_size`                        | `integer`    | KV Cache size in GB. Default: 0 which is a dynamic allocation.                              |
 | `--draft_source_model`                | `string`     | HF model name or path to the local folder with PyTorch or OpenVINO draft model.                                            |
 | `--dynamic_split_fuse`                | `bool`       | Enables dynamic split fuse algorithm. Default: true.                                                                       |
 | `--max_prompt_len`                    | `integer`    | Sets NPU specific property for maximum number of tokens in the prompt.                                                     |
 | `--kv_cache_precision`                | `string`     | Reduced kv cache precision to `u8` lowers the cache size consumption. Accepted values: `u8` or empty (default).            |
+| `--model_distribution_policy`         | `string`     | TENSOR_PARALLEL distributes tensor to multiple sockets/devices and processes it in parallel. PIPELINE_PARALLEL distributes different tensors to process by each device. Accepted values: `TENSOR_PARALLEL`, `PIPELINE_PARALLEL` or empty (default). |
 | `--reasoning_parser`                  | `string`     | Type of parser to use for reasoning content extraction from model output. Currently supported: [qwen3]                     |
 | `--tool_parser`                       | `string`     | Type of parser to use for tool calls extraction from model output. Currently supported: [llama3, hermes3, phi4]            |
 | `--enable_tool_guided_generation`     | `bool`       | Enables enforcing tool schema during generation. Requires setting response parser. Default: false.                         |

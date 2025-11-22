@@ -94,8 +94,12 @@ public:
         }
     }
 
-    int generateExpectedText(std::string prompt, bool addSpecialTokens) {
+    int generateExpectedText(std::string prompt, bool addSpecialTokens, bool applyChatTemplate) {
         try {
+            if (applyChatTemplate) {
+                ov::genai::ChatHistory chatHistory({{{"role", "user"}, {"content", prompt}}});
+                prompt = cbPipe->get_tokenizer().apply_chat_template(chatHistory, true);
+            }
             ov::Tensor promptIds = cbPipe->get_tokenizer().encode(prompt, ov::genai::add_special_tokens(addSpecialTokens)).input_ids;
             std::cout << "Generated prompt ids: " << getPromptTokensString(promptIds) << std::endl;
             auto generationHandle = cbPipe->add_request(
@@ -162,7 +166,7 @@ TEST_F(AssistedDecodingPipelinesHttpTest, unaryCompletionsJsonSpeculativeDecodin
     // Generate reference from the base model (unassisted generation)
     config.max_new_tokens = 10;
     config.temperature = 0;
-    ASSERT_EQ(generateExpectedText("What is OpenVINO?", true), 0);
+    ASSERT_EQ(generateExpectedText("What is OpenVINO?", true, false), 0);
     ASSERT_EQ(config.num_return_sequences, expectedMessages.size());
 
     // Static number of candidates
@@ -185,8 +189,7 @@ TEST_F(AssistedDecodingPipelinesHttpTest, unaryCompletionsJsonSpeculativeDecodin
     ASSERT_EQ(parsedResponse["choices"].Capacity(), 1);
     auto& choice = parsedResponse["choices"].GetArray()[0];
     ASSERT_TRUE(choice["text"].IsString());
-    // TODO: awaiting OV/GenAI fix, uncomment when fixed
-    // EXPECT_STREQ(choice["text"].GetString(), expectedMessages[0].c_str());
+    EXPECT_STREQ(choice["text"].GetString(), expectedMessages[0].c_str());
 
     // Dynamic number of candidates
     requestBody = R"(
@@ -208,15 +211,36 @@ TEST_F(AssistedDecodingPipelinesHttpTest, unaryCompletionsJsonSpeculativeDecodin
     ASSERT_EQ(parsedResponse["choices"].Capacity(), 1);
     choice = parsedResponse["choices"].GetArray()[0];
     ASSERT_TRUE(choice["text"].IsString());
-    // TODO: awaiting OV/GenAI fix, uncomment when fixed
-    // EXPECT_STREQ(choice["text"].GetString(), expectedMessages[0].c_str());
+    EXPECT_STREQ(choice["text"].GetString(), expectedMessages[0].c_str());
+
+    // Default setting
+    requestBody = R"(
+        {
+            "model": "lm_cb_speculative",
+            "stream": false,
+            "temperature": 0,
+            "max_tokens": 10,
+            "prompt": "What is OpenVINO?"
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK);
+    parsedResponse.Parse(response.c_str());
+    ASSERT_TRUE(parsedResponse["choices"].IsArray());
+    ASSERT_EQ(parsedResponse["choices"].Capacity(), 1);
+    choice = parsedResponse["choices"].GetArray()[0];
+    ASSERT_TRUE(choice["text"].IsString());
+    EXPECT_STREQ(choice["text"].GetString(), expectedMessages[0].c_str());
 }
 
 TEST_F(AssistedDecodingPipelinesHttpTest, unaryChatCompletionsJsonSpeculativeDecoding) {
+    GTEST_SKIP();  // TODO: Temporary skip to synchronize CI workers
     // Generate reference from the base model (unassisted generation)
     config.max_new_tokens = 10;
     config.temperature = 0;
-    ASSERT_EQ(generateExpectedText("What is OpenVINO?", false), 0);
+    ASSERT_EQ(generateExpectedText("What is OpenVINO?", false, true), 0);
     ASSERT_EQ(config.num_return_sequences, expectedMessages.size());
 
     // Static number of candidates
@@ -247,8 +271,7 @@ TEST_F(AssistedDecodingPipelinesHttpTest, unaryChatCompletionsJsonSpeculativeDec
     ASSERT_TRUE(choice["message"]["content"].IsString());
     ASSERT_TRUE(choice["finish_reason"].IsString());
     ASSERT_FALSE(choice["logprobs"].IsObject());
-    // TODO: awaiting OV/GenAI fix, uncomment when fixed
-    // ASSERT_EQ(choice["message"]["content"].GetString(), expectedMessages[0]);
+    ASSERT_EQ(choice["message"]["content"].GetString(), expectedMessages[0]);
 
     // Dynamic number of candidates
     requestBody = R"(
@@ -278,8 +301,36 @@ TEST_F(AssistedDecodingPipelinesHttpTest, unaryChatCompletionsJsonSpeculativeDec
     ASSERT_TRUE(choice["message"]["content"].IsString());
     ASSERT_TRUE(choice["finish_reason"].IsString());
     ASSERT_FALSE(choice["logprobs"].IsObject());
-    // TODO: awaiting OV/GenAI fix, uncomment when fixed
-    // ASSERT_EQ(choice["message"]["content"].GetString(), expectedMessages[0]);
+    ASSERT_EQ(choice["message"]["content"].GetString(), expectedMessages[0]);
+
+    // Default setting
+    requestBody = R"(
+        {
+            "model": "lm_cb_speculative",
+            "stream": false,
+            "temperature": 0,
+            "max_tokens": 10,
+            "messages": [
+            {
+                "role": "user",
+                "content": "What is OpenVINO?"
+            }
+            ]
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK);
+    parsedResponse.Parse(response.c_str());
+    ASSERT_TRUE(parsedResponse["choices"].IsArray());
+    ASSERT_EQ(parsedResponse["choices"].Capacity(), 1);
+    choice = parsedResponse["choices"].GetArray()[0];
+    ASSERT_TRUE(choice["message"].IsObject());
+    ASSERT_TRUE(choice["message"]["content"].IsString());
+    ASSERT_TRUE(choice["finish_reason"].IsString());
+    ASSERT_FALSE(choice["logprobs"].IsObject());
+    ASSERT_EQ(choice["message"]["content"].GetString(), expectedMessages[0]);
 }
 
 TEST_F(AssistedDecodingPipelinesHttpTest, speculativeDecodingExclusiveParametersProvided) {
@@ -318,7 +369,7 @@ TEST_F(AssistedDecodingPipelinesHttpTest, unaryCompletionsJsonPromptLookupDecodi
     // Generate reference from the base model (unassisted generation)
     config.max_new_tokens = 10;
     config.temperature = 0;
-    ASSERT_EQ(generateExpectedText("What is OpenVINO?", true), 0);
+    ASSERT_EQ(generateExpectedText("What is OpenVINO?", true, false), 0);
     ASSERT_EQ(config.num_return_sequences, expectedMessages.size());
 
     std::string requestBody = R"(
@@ -341,15 +392,36 @@ TEST_F(AssistedDecodingPipelinesHttpTest, unaryCompletionsJsonPromptLookupDecodi
     ASSERT_EQ(parsedResponse["choices"].Capacity(), 1);
     auto& choice = parsedResponse["choices"].GetArray()[0];
     ASSERT_TRUE(choice["text"].IsString());
-    // TODO: awaiting OV/GenAI fix, uncomment when fixed
-    // EXPECT_STREQ(choice["text"].GetString(), expectedMessages[0].c_str());
+    EXPECT_STREQ(choice["text"].GetString(), expectedMessages[0].c_str());
+
+    // Default setting
+    requestBody = R"(
+        {
+            "model": "lm_cb_prompt_lookup",
+            "stream": false,
+            "temperature" : 0,
+            "max_tokens": 10,
+            "prompt": "What is OpenVINO?"
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK);
+    parsedResponse.Parse(response.c_str());
+    ASSERT_TRUE(parsedResponse["choices"].IsArray());
+    ASSERT_EQ(parsedResponse["choices"].Capacity(), 1);
+    choice = parsedResponse["choices"].GetArray()[0];
+    ASSERT_TRUE(choice["text"].IsString());
+    EXPECT_STREQ(choice["text"].GetString(), expectedMessages[0].c_str());
 }
 
 TEST_F(AssistedDecodingPipelinesHttpTest, unaryChatCompletionsJsonPromptLookupDecoding) {
+    GTEST_SKIP();  // TODO: Temporary skip to synchronize CI workers
     // Generate reference from the base model (unassisted generation)
     config.max_new_tokens = 10;
     config.temperature = 0;
-    ASSERT_EQ(generateExpectedText("What is OpenVINO?", false), 0);
+    ASSERT_EQ(generateExpectedText("What is OpenVINO?", false, true), 0);
     ASSERT_EQ(config.num_return_sequences, expectedMessages.size());
 
     auto requestBody = R"(
@@ -380,11 +452,39 @@ TEST_F(AssistedDecodingPipelinesHttpTest, unaryChatCompletionsJsonPromptLookupDe
     ASSERT_TRUE(choice["message"]["content"].IsString());
     ASSERT_TRUE(choice["finish_reason"].IsString());
     ASSERT_FALSE(choice["logprobs"].IsObject());
-    // TODO: awaiting OV/GenAI fix, uncomment when fixed
-    // ASSERT_EQ(choice["message"]["content"].GetString(), expectedMessages[0]);
+    ASSERT_EQ(choice["message"]["content"].GetString(), expectedMessages[0]);
+
+    // Default setting
+    requestBody = R"(
+        {
+            "model": "lm_cb_prompt_lookup",
+            "stream": false,
+            "temperature": 0,
+            "max_tokens": 10,
+            "messages": [
+            {
+                "role": "user",
+                "content": "What is OpenVINO?"
+            }
+            ]
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK);
+    parsedResponse.Parse(response.c_str());
+    ASSERT_TRUE(parsedResponse["choices"].IsArray());
+    ASSERT_EQ(parsedResponse["choices"].Capacity(), 1);
+    choice = parsedResponse["choices"].GetArray()[0];
+    ASSERT_TRUE(choice["message"].IsObject());
+    ASSERT_TRUE(choice["message"]["content"].IsString());
+    ASSERT_TRUE(choice["finish_reason"].IsString());
+    ASSERT_FALSE(choice["logprobs"].IsObject());
+    ASSERT_EQ(choice["message"]["content"].GetString(), expectedMessages[0]);
 }
 
-// Consider parametrization of negative tests with request body and endpoint as parameters
+// Missing parameters are okay - defaults will be used
 TEST_F(AssistedDecodingPipelinesHttpTest, promptLookupDecodingMissingParameterCompletions) {
     std::string requestBody = R"(
         {
@@ -396,7 +496,7 @@ TEST_F(AssistedDecodingPipelinesHttpTest, promptLookupDecodingMissingParameterCo
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
-        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+        ovms::StatusCode::OK);
 
     requestBody = R"(
         {
@@ -408,31 +508,31 @@ TEST_F(AssistedDecodingPipelinesHttpTest, promptLookupDecodingMissingParameterCo
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
-        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+        ovms::StatusCode::OK);
 }
 
 TEST_F(AssistedDecodingPipelinesHttpTest, promptLookupDecodingMissingParameterChatCompletions) {
     std::string requestBody = R"(
         {
             "model": "lm_cb_prompt_lookup",
-            "messages": [{"content": "def"}],
+            "messages": [{"role": "user", "content": "def"}],
             "num_assistant_tokens": 5
         }
     )";
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
-        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+        ovms::StatusCode::OK);
 
     requestBody = R"(
         {
             "model": "lm_cb_prompt_lookup",
-            "messages": [{"content": "def"}],
+            "messages": [{"role": "user", "content": "def"}],
             "max_ngram_size": 3
         }
     )";
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
-        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+        ovms::StatusCode::OK);
 }

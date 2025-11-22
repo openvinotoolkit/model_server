@@ -19,46 +19,37 @@
 #include <vector>
 #include <utility>
 
-#pragma warning(push)
-#pragma warning(disable : 6313)
-#include <rapidjson/document.h>
-#include <rapidjson/stringbuffer.h>
-#include <rapidjson/writer.h>
-#pragma warning(pop)
+#include "src/port/rapidjson_document.hpp"
 
 #include "../../../logging.hpp"
 #include "tool_parser.hpp"
 #include "../utils.hpp"
+#include "src/stringutils.hpp"
 
 namespace ovms {
 void Llama3ToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) {
     // TODO: check if we can rely on decoded <|python_tag|> token to be present in the content, so we can drop multiple detokenizations and copies
     // and just extract substrings from the content and modify content in-place
 
-    // If immediate trigger parsing is enabled, we assume botTokenId has been injected into the prompt and whole output are tool calls,
-    // otherwise we search for botTokenId in the generatedTokens to find tool calls start or check if the content starts with "{" (llama3 sometimes does not generate botTokenId)
+    // We search for botTokenId in the generatedTokens to find tool calls start or check if the content starts with "{" (llama3 sometimes does not generate botTokenId)
     auto toolCallsStartPosition = generatedTokens.begin();
-    if (!immediateParsingEnabled) {
-        toolCallsStartPosition = generatedTokens.end();
-        // Find botTokenId in generated_ids
-        auto botTokenIt = std::find(generatedTokens.begin(), generatedTokens.end(), botTokenId);
+    toolCallsStartPosition = generatedTokens.end();
+    // Find botTokenId in generated_ids
+    auto botTokenIt = std::find(generatedTokens.begin(), generatedTokens.end(), botTokenId);
 
-        if (botTokenIt != generatedTokens.end()) {
-            // Decode the content before botTokenId
-            std::vector<int64_t> contentTokens(generatedTokens.begin(), botTokenIt);
-            parsedOutput.content = tokenizer.decode(contentTokens);
-            // Tokens after botTokenId will be treated as tool calls
-            toolCallsStartPosition = botTokenIt + 1;
-        } else {
-            // If botTokenId is not found, check if model output starts with "{" and if so, assume it's a tool call"
-            if (!parsedOutput.content.empty() && parsedOutput.content[0] == '{') {
-                // If model output starts with "{", treat it as a tool call
-                toolCallsStartPosition = generatedTokens.begin();
-                parsedOutput.content.clear();
-            }
-        }
+    if (botTokenIt != generatedTokens.end()) {
+        // Decode the content before botTokenId
+        std::vector<int64_t> contentTokens(generatedTokens.begin(), botTokenIt);
+        parsedOutput.content = tokenizer.decode(contentTokens);
+        // Tokens after botTokenId will be treated as tool calls
+        toolCallsStartPosition = botTokenIt + 1;
     } else {
-        parsedOutput.content.clear();
+        // If botTokenId is not found, check if model output starts with "{" and if so, assume it's a tool call"
+        if (!parsedOutput.content.empty() && parsedOutput.content[0] == '{') {
+            // If model output starts with "{", treat it as a tool call
+            toolCallsStartPosition = generatedTokens.begin();
+            parsedOutput.content.clear();
+        }
     }
 
     if (toolCallsStartPosition != generatedTokens.end()) {
@@ -158,10 +149,8 @@ std::optional<rapidjson::Document> Llama3ToolParser::parseChunk(const std::strin
     // JSON already contains 'parameters'/'arguments' (they cannot be null at this point). Apply modifications to the input chunk if needed to keep the format valid.
     if (jsonHasArgumentsOrParameters(lastJson)) {
         std::string modifiedChunk = chunk;
-        // Escaping all double quotes in the parameters/arguments string
-        for (size_t pos = 0; (pos = modifiedChunk.find("\"", pos)) != std::string::npos; pos += 2) {
-            modifiedChunk.insert(pos, "\\");
-        }
+        // Since inside a string, we need to escape characters like quotes, new lines, tabs, etc.
+        escapeSpecialCharacters(modifiedChunk);
 
         // Handle the case when we are starting to collect parameters/arguments.
         // Force parameters/arguments string type and fill first element of the delay array.

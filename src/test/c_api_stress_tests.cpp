@@ -48,9 +48,23 @@ using namespace tensorflow::serving;
 using testing::_;
 using testing::Return;
 
-class StressCapiConfigChanges : public ConfigChangeStressTest {};
+class StressCapiConfigChanges : public ConfigChangeStressTest {
+public:
+    static void SetUpTestSuite() {
+#ifdef _WIN32
+        GTEST_SKIP() << "Skipping test on Windows, sporadic";  // CVS-176244
+#endif
+    }
+};
 
-class ConfigChangeStressTestSingleModel : public ConfigChangeStressTestAsync {};
+class ConfigChangeStressTestSingleModel : public ConfigChangeStressTestAsync {
+public:
+    static void SetUpTestSuite() {
+#ifdef _WIN32
+        GTEST_SKIP() << "Skipping test on Windows, sporadic";  // CVS-176244
+#endif
+    }
+};
 
 class StressModelCapiConfigChanges : public StressCapiConfigChanges {
     const std::string modelName = "dummy";
@@ -160,11 +174,8 @@ TEST_F(StressCapiConfigChanges, KFSAddNewVersionDuringPredictLoad) {
         requiredLoadResults,
         allowedLoadResults);
 }
-#if (USE_DROGON == 0)
-TEST_F(StressCapiConfigChanges, GetMetricsDuringLoad) {
-#else
+
 TEST_F(StressCapiConfigChanges, DISABLED_GetMetricsDuringLoad) {
-#endif
     bool performWholeConfigReload = false;                        // we just need to have all model versions rechecked
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuity of operation
     std::set<StatusCode> allowedLoadResults = {};

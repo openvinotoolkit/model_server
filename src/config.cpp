@@ -18,8 +18,15 @@
 #include <filesystem>
 #include <limits>
 #include <regex>
+#include <utility>
 #include <thread>
 #include <vector>
+
+#ifdef _WIN32
+#include <ws2tcpip.h>
+#else
+#include <netdb.h>
+#endif
 
 #include "logging.hpp"
 #include "ovms_exit_codes.hpp"
@@ -37,21 +44,27 @@ const uint32_t WIN_MAX_GRPC_WORKERS = 1;
 const uint32_t MAX_PORT_NUMBER = std::numeric_limits<uint16_t>::max();
 
 // For drogon, we need to minimize the number of default workers since this value is set for both: unary and streaming (making it always double)
-#if (USE_DROGON == 0)
-const uint64_t DEFAULT_REST_WORKERS = AVAILABLE_CORES * 4.0;
-#else
 const uint64_t DEFAULT_REST_WORKERS = AVAILABLE_CORES;
-#endif
 const uint32_t DEFAULT_GRPC_MAX_THREADS = AVAILABLE_CORES * 8.0;
 const size_t DEFAULT_GRPC_MEMORY_QUOTA = (size_t)2 * 1024 * 1024 * 1024;  // 2GB
 const uint64_t MAX_REST_WORKERS = 10'000;
 
 Config& Config::parse(int argc, char** argv) {
-    ovms::CLIParser p;
+    ovms::CLIParser parser;
     ovms::ServerSettingsImpl serverSettings;
     ovms::ModelsSettingsImpl modelsSettings;
-    p.parse(argc, argv);
-    p.prepare(&serverSettings, &modelsSettings);
+    auto successOrExit = parser.parse(argc, argv);
+    // Check for error in parsing
+    if (std::holds_alternative<std::pair<int, std::string>>(successOrExit)) {
+        auto printAndExit = std::get<std::pair<int, std::string>>(successOrExit);
+        if (printAndExit.first > 0) {
+            std::cerr << printAndExit.second;
+        } else {
+            std::cout << printAndExit.second;
+        }
+        exit(printAndExit.first);
+    }
+    parser.prepare(&serverSettings, &modelsSettings);
     if (!this->parse(&serverSettings, &modelsSettings))
         exit(OVMS_EX_USAGE);
     return *this;
@@ -63,7 +76,29 @@ bool Config::parse(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* model
     return validate();
 }
 
+bool Config::is_ipv6(const std::string& s) {
+    addrinfo hints{};
+    hints.ai_family = AF_INET6;
+    hints.ai_flags = AI_NUMERICHOST;
+    addrinfo* res = nullptr;
+    const int rc = getaddrinfo(s.c_str(), nullptr, &hints, &res);
+    if (res) {
+        freeaddrinfo(res);
+    }
+    return rc == 0;
+}
+
 bool Config::check_hostname_or_ip(const std::string& input) {
+    auto split = ovms::tokenize(input, ',');
+    if (split.size() > 1) {
+        for (const auto& part : split) {
+            if (!check_hostname_or_ip(part)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     if (input.size() > 255) {
         return false;
     }
@@ -78,9 +113,7 @@ bool Config::check_hostname_or_ip(const std::string& input) {
     }
     if (all_numeric) {
         static const std::regex valid_ipv4_regex("^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$");
-        static const std::regex valid_ipv6_regex(R"(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))");
-        return std::regex_match(input, valid_ipv4_regex) ||
-               std::regex_match(input, valid_ipv6_regex);
+        return std::regex_match(input, valid_ipv4_regex) || is_ipv6(input);
     } else {
         std::regex valid_hostname_regex("^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\\-]*[a-zA-Z0-9])\\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\\-]*[A-Za-z0-9])$");
         return std::regex_match(input, valid_hostname_regex);
@@ -88,7 +121,7 @@ bool Config::check_hostname_or_ip(const std::string& input) {
 }
 
 bool Config::validateUserSettingsInConfigAddRemoveModel(const ModelsSettingsImpl& modelsSettings) {
-    static const std::vector<std::string> allowedUserSettings = {"model_name", "model_path"};
+    static const std::vector<std::string> allowedUserSettings = {"model_name", "model_path", "config_path"};
     std::vector<std::string> usedButDisallowedUserSettings;
     for (const std::string& userSetting : modelsSettings.userSetSingleModelArguments) {
         bool isAllowed = false;
@@ -128,36 +161,46 @@ bool Config::validate() {
             std::cerr << "Error: --task parameter not set." << std::endl;
             return false;
         }
-        if (serverSettings.hfSettings.downloadType == GIT_CLONE_DOWNLOAD && !startsWith(toLower(serverSettings.hfSettings.sourceModel), toLower("OpenVINO/"))) {
-            std::cerr << "For now only OpenVINO models are supported in pulling mode with git clone. Please use optimum download or gguf models instead." << std::endl;
-            return false;
-        }
         if (this->serverSettings.hfSettings.task == TEXT_GENERATION_GRAPH) {
             if (!std::holds_alternative<TextGenGraphSettingsImpl>(this->serverSettings.hfSettings.graphSettings)) {
                 std::cerr << "Graph options not initialized for text generation.";
                 return false;
             }
-            auto settings = std::get<TextGenGraphSettingsImpl>(this->serverSettings.hfSettings.graphSettings);
+            const auto& exportSettings = this->serverSettings.hfSettings.exportSettings;
+            auto textGenSettings = std::get<TextGenGraphSettingsImpl>(this->serverSettings.hfSettings.graphSettings);
             std::vector allowedPipelineTypes = {"LM", "LM_CB", "VLM", "VLM_CB", "AUTO"};
-            if (settings.pipelineType.has_value() && std::find(allowedPipelineTypes.begin(), allowedPipelineTypes.end(), settings.pipelineType) == allowedPipelineTypes.end()) {
-                std::cerr << "pipeline_type: " << settings.pipelineType.value() << " is not allowed. Supported types: LM, LM_CB, VLM, VLM_CB, AUTO" << std::endl;
+            if (textGenSettings.pipelineType.has_value() && std::find(allowedPipelineTypes.begin(), allowedPipelineTypes.end(), textGenSettings.pipelineType) == allowedPipelineTypes.end()) {
+                std::cerr << "pipeline_type: " << textGenSettings.pipelineType.value() << " is not allowed. Supported types: LM, LM_CB, VLM, VLM_CB, AUTO" << std::endl;
                 return false;
             }
 
             std::vector allowedTargetDevices = {"CPU", "GPU", "NPU", "AUTO"};
-            if (std::find(allowedTargetDevices.begin(), allowedTargetDevices.end(), settings.targetDevice) == allowedTargetDevices.end() && settings.targetDevice.rfind("HETERO", 0) != 0) {
-                std::cerr << "target_device: " << settings.targetDevice << " is not allowed. Supported devices: CPU, GPU, NPU, HETERO, AUTO" << std::endl;
+            bool validDeviceSelected = false;
+            if (exportSettings.targetDevice.rfind("GPU.", 0) == 0) {
+                // Accept GPU.x where x is a number to select specific GPU card
+                std::string indexPart = exportSettings.targetDevice.substr(4);
+                validDeviceSelected = !indexPart.empty() && std::all_of(indexPart.begin(), indexPart.end(), ::isdigit);
+            } else if ((exportSettings.targetDevice.rfind("HETERO", 0) == 0) || (exportSettings.targetDevice.rfind("AUTO", 0) == 0)) {
+                // Accept HETERO:<device1>,<device2>,... AUTO:<device1>,<device2>,... to select specific devices in the list
+                validDeviceSelected = true;
+            } else if (std::find(allowedTargetDevices.begin(), allowedTargetDevices.end(), exportSettings.targetDevice) != allowedTargetDevices.end()) {
+                // Accept CPU, GPU, NPU, AUTO as valid devices
+                validDeviceSelected = true;
+            }
+
+            if (!validDeviceSelected) {
+                std::cerr << "target_device: " << exportSettings.targetDevice << " is not allowed. Supported devices: CPU, GPU, NPU, HETERO, AUTO" << std::endl;
                 return false;
             }
 
             std::vector allowedBoolValues = {"false", "true"};
-            if (std::find(allowedBoolValues.begin(), allowedBoolValues.end(), settings.enablePrefixCaching) == allowedBoolValues.end()) {
-                std::cerr << "enable_prefix_caching: " << settings.enablePrefixCaching << " is not allowed. Supported values: true, false" << std::endl;
+            if (std::find(allowedBoolValues.begin(), allowedBoolValues.end(), textGenSettings.enablePrefixCaching) == allowedBoolValues.end()) {
+                std::cerr << "enable_prefix_caching: " << textGenSettings.enablePrefixCaching << " is not allowed. Supported values: true, false" << std::endl;
                 return false;
             }
 
-            if (std::find(allowedBoolValues.begin(), allowedBoolValues.end(), settings.dynamicSplitFuse) == allowedBoolValues.end()) {
-                std::cerr << "dynamic_split_fuse: " << settings.dynamicSplitFuse << " is not allowed. Supported values: true, false" << std::endl;
+            if (std::find(allowedBoolValues.begin(), allowedBoolValues.end(), textGenSettings.dynamicSplitFuse) == allowedBoolValues.end()) {
+                std::cerr << "dynamic_split_fuse: " << textGenSettings.dynamicSplitFuse << " is not allowed. Supported values: true, false" << std::endl;
                 return false;
             }
         }
@@ -167,16 +210,16 @@ bool Config::validate() {
                 std::cerr << "Graph options not initialized for embeddings.";
                 return false;
             }
-            auto settings = std::get<EmbeddingsGraphSettingsImpl>(this->serverSettings.hfSettings.graphSettings);
+            auto embedSettings = std::get<EmbeddingsGraphSettingsImpl>(this->serverSettings.hfSettings.graphSettings);
 
             std::vector allowedBoolValues = {"false", "true"};
-            if (std::find(allowedBoolValues.begin(), allowedBoolValues.end(), settings.normalize) == allowedBoolValues.end()) {
-                std::cerr << "normalize: " << settings.normalize << " is not allowed. Supported values: true, false" << std::endl;
+            if (std::find(allowedBoolValues.begin(), allowedBoolValues.end(), embedSettings.normalize) == allowedBoolValues.end()) {
+                std::cerr << "normalize: " << embedSettings.normalize << " is not allowed. Supported values: true, false" << std::endl;
                 return false;
             }
 
-            if (std::find(allowedBoolValues.begin(), allowedBoolValues.end(), settings.truncate) == allowedBoolValues.end()) {
-                std::cerr << "truncate: " << settings.truncate << " is not allowed. Supported values: true, false" << std::endl;
+            if (std::find(allowedBoolValues.begin(), allowedBoolValues.end(), embedSettings.truncate) == allowedBoolValues.end()) {
+                std::cerr << "truncate: " << embedSettings.truncate << " is not allowed. Supported values: true, false" << std::endl;
                 return false;
             }
         }
@@ -236,16 +279,16 @@ bool Config::validate() {
         if (modelName().empty()) {
             std::cerr << "Set model_name with add_to_config/remove_from_config" << std::endl
                       << "Usage: " << std::endl
-                      << "  ovms --model_name <model_name> --model_repository_path <repo_path> --add_to_config <config_path>" << std::endl
-                      << "  ovms --model_name <model_name> --model_path <model_path> --add_to_config <config_path>" << std::endl
-                      << "  ovms --model_name <model_name> --remove_from_config <config_path>" << std::endl;
+                      << "  ovms --add_to_config --model_name <model_name> --model_repository_path <repo_path>--config_path <config_path>" << std::endl
+                      << "  ovms  --add_to_config --model_name <model_name> --model_path <model_path> --config_path <config_path>" << std::endl
+                      << "  ovms --remove_from_config --model_name <model_name> --config_path <config_path>" << std::endl;
             return false;
         }
         if (modelPath().empty() && this->serverSettings.exportConfigType == ENABLE_MODEL) {
             std::cerr << "Set model_name either with model_path or model_repository_path with add_to_config" << std::endl
                       << "Usage: " << std::endl
-                      << "  ovms --model_name <model_name> --model_repository_path <repo_path> --add_to_config <config_path>" << std::endl
-                      << "  ovms --model_name <model_name> --model_path <model_path> --add_to_config <config_path>" << std::endl;
+                      << "  ovms --add_to_config --model_name <model_name> --model_repository_path <repo_path>  --config_path <config_path>" << std::endl
+                      << "  ovms --add_to_config --model_name <model_name> --model_path <model_path> --config_path <config_path>" << std::endl;
             return false;
         }
 
@@ -361,5 +404,6 @@ const std::string& Config::allowedOrigins() const { return this->serverSettings.
 const std::string& Config::allowedMethods() const { return this->serverSettings.allowedMethods; }
 const std::string& Config::allowedHeaders() const { return this->serverSettings.allowedHeaders; }
 const std::string Config::cacheDir() const { return this->serverSettings.cacheDir; }
+const std::string& Config::apiKey() const { return this->serverSettings.apiKey; }
 
 }  // namespace ovms

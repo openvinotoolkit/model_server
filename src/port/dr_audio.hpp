@@ -1,5 +1,6 @@
+#pragma once
 //*****************************************************************************
-// Copyright 2024 Intel Corporation
+// Copyright 2025 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,16 +15,11 @@
 // limitations under the License.
 //*****************************************************************************
 
-syntax = "proto2";
-package mediapipe;
-
-import "mediapipe/framework/calculator.proto";
-
-message EmbeddingsCalculatorOptions {
-  extend mediapipe.CalculatorOptions {
-    // https://github.com/google/mediapipe/issues/634 have to be unique in app
-    // no rule to obtain this
-    optional EmbeddingsCalculatorOptions ext = 1134737;
-    }
-    optional bool normalize_embeddings = 1 [default = true];
-}
+#pragma warning(push)
+#pragma warning(disable : 4245 4220)
+#include "dr_wav.h"  // NOLINT
+#pragma warning(pop)
+#pragma warning(push)
+#pragma warning(disable : 6386 6262)
+#include "dr_mp3.h"  // NOLINT
+#pragma warning(pop)

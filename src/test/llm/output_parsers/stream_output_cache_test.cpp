@@ -18,7 +18,7 @@
 #include <string>
 #include <vector>
 #include <optional>
-#include "../../../llm/io_processing/output_parser.hpp"
+#include "src/llm/io_processing/output_parser.hpp"
 
 using namespace ovms;
 

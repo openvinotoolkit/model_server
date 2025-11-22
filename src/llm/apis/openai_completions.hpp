@@ -29,11 +29,8 @@
 #include <openvino/genai/llm_pipeline.hpp>
 #include <openvino/genai/tokenizer.hpp>
 #include <openvino/genai/visual_language/pipeline.hpp>
-#pragma warning(push)
-#pragma warning(disable : 6313)
-#include <rapidjson/document.h>
-#include <rapidjson/writer.h>
-#pragma warning(pop)
+#include "src/port/rapidjson_document.hpp"
+#include "src/port/rapidjson_writer.hpp"
 #pragma warning(push)
 #pragma warning(disable : 6001 4324 6385 6386)
 #include "absl/status/status.h"
@@ -78,6 +75,7 @@ class OpenAIChatCompletionsHandler {
     absl::Status parseCommonPart(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength);
 
     ParsedOutput parseOutputIfNeeded(const std::vector<int64_t>& generatedIds);
+    absl::Status ensureArgumentsInToolCalls(Value& messageObj, bool& jsonChanged);
 
 public:
     OpenAIChatCompletionsHandler(Document& doc, Endpoint endpoint, std::chrono::time_point<std::chrono::system_clock> creationTime,
@@ -86,8 +84,10 @@ public:
         endpoint(endpoint),
         created(creationTime),
         tokenizer(tokenizer) {
+        // TODO we should delay creating output parser until we have request with toolNameSchemaMap parsed
+        // now we pass it now but it has to be populated first before first use
         if (!toolParserName.empty() || !reasoningParserName.empty()) {
-            outputParser = std::make_unique<OutputParser>(tokenizer, toolParserName, reasoningParserName);
+            outputParser = std::make_unique<OutputParser>(tokenizer, toolParserName, reasoningParserName, this->request.toolNameSchemaMap);
         }
     }
 
@@ -100,7 +100,7 @@ public:
     // User input might be modified by the servable logic, so it is not const
     ov::genai::ChatHistory& getChatHistory();
     std::optional<int> getMaxTokens() const;
-    std::optional<std::string> getResponseSchema() const;
+    std::optional<std::string> getResponseFormat() const;
 
     bool isStream() const;
     std::string getModel() const;

@@ -20,12 +20,37 @@
 #include "base_generation_config_builder.hpp"
 
 namespace ovms {
-void BaseGenerationConfigBuilder::setStructuralTagsConfig(const ov::genai::StructuralTagsConfig& structuralTagsConfig) {
+
+void BaseGenerationConfigBuilder::adjustConfigForDecodingMethod() {
+    switch (decodingMethod) {
+    case DecodingMethod::STANDARD:
+        // No special adjustments needed for standard decoding
+        break;
+    case DecodingMethod::SPECULATIVE_DECODING:
+        // Set num_assistant_tokens to a default value if neither num_assistant_tokens nor assistant_confidence_threshold are set
+        if (config.num_assistant_tokens == 0 && config.assistant_confidence_threshold == 0) {
+            config.num_assistant_tokens = 5;  // default value for speculative decoding
+        }
+        break;
+    case DecodingMethod::PROMPT_LOOKUP:
+        // Set num_assistant_tokens to a default value if not already set
+        if (config.num_assistant_tokens == 0) {
+            config.num_assistant_tokens = 5;  // default value for prompt lookup
+        }
+        // Set max_ngram_size to a default value if not already set
+        if (config.max_ngram_size == 0) {
+            config.max_ngram_size = 3;  // default value for prompt lookup
+        }
+        break;
+    }
+}
+
+void BaseGenerationConfigBuilder::setStructuralTagsConfig(const ov::genai::StructuredOutputConfig::StructuralTag& structuralTag) {
     if (config.structured_output_config) {
-        config.structured_output_config->structural_tags_config = structuralTagsConfig;
+        config.structured_output_config->structural_tags_config = structuralTag;
     } else {
         ov::genai::StructuredOutputConfig structuredOutputConfig;
-        structuredOutputConfig.structural_tags_config = structuralTagsConfig;
+        structuredOutputConfig.structural_tags_config = structuralTag;
         config.structured_output_config = structuredOutputConfig;
     }
 }
@@ -104,9 +129,9 @@ void BaseGenerationConfigBuilder::parseConfigFromRequest(const OpenAIChatComplet
         config.max_ngram_size = request.maxNgramSize.value();
 
     // Response format handling
-    if (request.responseSchema.has_value()) {
+    if (request.responseFormat.has_value()) {
         ov::genai::StructuredOutputConfig structuredOutputConfig;
-        structuredOutputConfig.json_schema = request.responseSchema.value();
+        structuredOutputConfig.structural_tags_config = request.responseFormat.value();
         config.structured_output_config = structuredOutputConfig;
         config.stop_strings.insert("#");
     }

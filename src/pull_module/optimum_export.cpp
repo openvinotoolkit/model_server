@@ -60,6 +60,33 @@ std::string OptimumDownloader::getExportCmdEmbeddings() {
     return oss.str();
 }
 
+std::string OptimumDownloader::getExportCmdTextToSpeech() {
+    std::ostringstream oss;
+    // clang-format off
+    oss << this->OPTIMUM_CLI_EXPORT_COMMAND;
+    if (this->exportSettings.vocoder.has_value()){
+        oss << "--model-kwargs \"{\"vocoder\": \"" << this->exportSettings.vocoder.value() << "\"}\" ";
+    }
+    oss << "--model " << this->sourceModel << " --trust-remote-code ";
+    oss << " --weight-format " << this->exportSettings.precision;
+    oss << " " << this->downloadPath;
+    // clang-format on
+
+    return oss.str();
+}
+
+std::string OptimumDownloader::getExportCmdSpeechToText() {
+    std::ostringstream oss;
+    // clang-format off
+    oss << this->OPTIMUM_CLI_EXPORT_COMMAND;
+    oss << "--model " << this->sourceModel << " --trust-remote-code ";
+    oss << " --weight-format " << this->exportSettings.precision;
+    oss << " " << this->downloadPath;
+    // clang-format on
+
+    return oss.str();
+}
+
 std::string OptimumDownloader::getExportCmdRerank() {
     std::ostringstream oss;
     // clang-format off
@@ -105,6 +132,14 @@ std::string OptimumDownloader::getExportCmd() {
         cmd = getExportCmdImageGeneration();
         break;
     }
+    case TEXT_TO_SPEECH_GRAPH: {
+        cmd = getExportCmdTextToSpeech();
+        break;
+    }
+    case SPEECH_TO_TEXT_GRAPH: {
+        cmd = getExportCmdSpeechToText();
+        break;
+    }
     case UNKNOWN_GRAPH: {
         SPDLOG_ERROR("Optimum cli task options not initialised.");
         break;
@@ -114,23 +149,104 @@ std::string OptimumDownloader::getExportCmd() {
     return cmd;
 }
 
-OptimumDownloader::OptimumDownloader(const ExportSettings& inExportSettings, const GraphExportType& inTask, const std::string& inSourceModel, const std::string& inDownloadPath, bool inOverwrite, const std::string& cliExportCmd, const std::string& cliCheckCmd) :
+std::string OptimumDownloader::getConvertCmd() {
+    std::string cmd = "";
+    switch (this->task) {
+    case TEXT_GENERATION_GRAPH: {
+        cmd = getConvertCmdWithDetokenizer();
+        break;
+    }
+    case EMBEDDINGS_GRAPH: {
+        cmd = getConvertCmdOnlyTokenizer();
+        break;
+    }
+    case RERANK_GRAPH: {
+        cmd = getConvertCmdOnlyTokenizer();
+        break;
+    }
+    case TEXT_TO_SPEECH_GRAPH: {
+        cmd = getConvertCmdOnlyTokenizer();
+        break;
+    }
+    case SPEECH_TO_TEXT_GRAPH: {
+        cmd = getConvertCmdOnlyTokenizer();
+        break;
+    }
+    case IMAGE_GENERATION_GRAPH: {
+        cmd = "";
+        break;
+    }
+    case UNKNOWN_GRAPH: {
+        SPDLOG_ERROR("Optimum cli task options not initialised.");
+        break;
+    }
+    }
+
+    return cmd;
+}
+
+std::string OptimumDownloader::getConvertCmdWithDetokenizer() {
+    std::ostringstream oss;
+    // clang-format off
+    oss << this->CONVERT_TOKENIZER_EXPORT_COMMAND;
+    oss << this->sourceModel;
+    oss << " --with-detokenizer -o ";
+    oss << this->downloadPath;
+    // clang-format on
+
+    return oss.str();
+}
+
+std::string OptimumDownloader::getConvertCmdOnlyTokenizer() {
+    std::ostringstream oss;
+    // clang-format off
+    oss << this->CONVERT_TOKENIZER_EXPORT_COMMAND;
+    oss << this->sourceModel;
+    oss << " -o ";
+    oss << this->downloadPath;
+    // clang-format on
+
+    return oss.str();
+}
+
+bool OptimumDownloader::checkIfDetokenizerFileIsExported() {
+    return std::filesystem::exists(FileSystem::joinPath({this->downloadPath, "openvino_detokenizer.xml"}));
+}
+
+bool OptimumDownloader::checkIfTokenizerFileIsExported() {
+    return std::filesystem::exists(FileSystem::joinPath({this->downloadPath, "openvino_tokenizer.xml"}));
+}
+
+OptimumDownloader::OptimumDownloader(const ExportSettings& inExportSettings, const GraphExportType& inTask,
+    const std::string& inSourceModel, const std::string& inDownloadPath, bool inOverwrite, const std::string& cliExportCmd,
+    const std::string& cliCheckCmd, const std::string& convertExportCmd, const std::string& convertCheckCmd) :
     IModelDownloader(inSourceModel, inDownloadPath, inOverwrite),
     exportSettings(inExportSettings),
     task(inTask),
     OPTIMUM_CLI_CHECK_COMMAND(cliCheckCmd),
-    OPTIMUM_CLI_EXPORT_COMMAND(cliExportCmd) {}
+    OPTIMUM_CLI_EXPORT_COMMAND(cliExportCmd),
+    CONVERT_TOKENIZER_CHECK_COMMAND(convertCheckCmd),
+    CONVERT_TOKENIZER_EXPORT_COMMAND(convertExportCmd) {}
 
 Status OptimumDownloader::checkRequiredToolsArePresent() {
     int retCode = -1;
     std::string output = exec_cmd(this->OPTIMUM_CLI_CHECK_COMMAND, retCode);
     if (retCode != 0) {
         SPDLOG_DEBUG("Command output {}", output);
-        SPDLOG_ERROR("Trying to pull {} from HuggingFace but missing optimum-intel. Use the ovms package with optimum-intel.", this->sourceModel);
+        SPDLOG_ERROR("Trying to pull {} from HuggingFace but missing optimum-intel. Use the ovms package with optimum-intel installed.", this->sourceModel);
         return StatusCode::HF_FAILED_TO_INIT_OPTIMUM_CLI;
     }
 
     SPDLOG_DEBUG("Optimum-cli executable is present");
+
+    output = exec_cmd_utf8(this->CONVERT_TOKENIZER_CHECK_COMMAND, retCode);
+    if (retCode != 0) {
+        SPDLOG_DEBUG("Command output {}", output);
+        SPDLOG_ERROR("Trying to pull {} from HuggingFace but missing convert_tokenizer. This is likely because you are using OVMS without Python support which is required for pulling with conversion.", this->sourceModel);
+        return StatusCode::HF_FAILED_TO_INIT_OPTIMUM_CLI;
+    }
+
+    SPDLOG_DEBUG("Convert_tokenizer executable is present");
     return StatusCode::OK;
 }
 
@@ -169,6 +285,23 @@ Status OptimumDownloader::downloadModel() {
         SPDLOG_DEBUG("Command output {}", output);
         SPDLOG_ERROR("optimum-cli command failed.");
         return StatusCode::HF_RUN_OPTIMUM_CLI_EXPORT_FAILED;
+    }
+
+    if (!this->checkIfTokenizerFileIsExported()) {
+        cmd = getConvertCmd();
+        retCode = -1;
+        // Tokenizer, detokenizer not required for image generation
+        if (cmd != "") {
+            SPDLOG_DEBUG("Tokenizer not found in the exported model. Exporting tokenizer and detokenizer from HF model.");
+            output = exec_cmd(cmd, retCode);
+            if (retCode != 0) {
+                SPDLOG_DEBUG("Command output {}", output);
+                SPDLOG_ERROR("convert_tokenizer command failed.");
+                return StatusCode::HF_RUN_CONVERT_TOKENIZER_EXPORT_FAILED;
+            }
+        }
+    } else {
+        SPDLOG_DEBUG("Tokenizer is found in the exported model directory. Convert_tokenizer command not required.");
     }
 
     return StatusCode::OK;

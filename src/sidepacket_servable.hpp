@@ -51,6 +51,7 @@ struct SidepacketServable {
 
 public:
     SidepacketServable(const std::string& modelDir, const std::string& targetDevice, const std::string& pluginConfig, const std::string& graphPath);
+    void initialize(const std::string& modelDir, const std::string& targetDevice, const std::string& pluginConfig, const std::string& graphPath);
     OVInferRequestsQueue& getInferRequestsQueue() {
         return *inferRequestsQueue;
     }
@@ -74,6 +75,12 @@ public:
     }
     const size_t getNumberOfModelInputs() {
         return compiledModel.inputs().size();
+    }
+
+protected:
+    virtual std::shared_ptr<ov::Model> applyPrePostProcessing(std::shared_ptr<ov::Model> model) {
+        // No custom postprocessing by default
+        return model;
     }
 };
 }  // namespace ovms

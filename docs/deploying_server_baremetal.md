@@ -147,12 +147,21 @@ Run `setupvars` script to set required environment variables.
 .\ovms\setupvars.ps1
 ```
 
+Additionally you can install [ovms as a windows service](windows_service.md)
+
+**Windows install service**
+```bat
+.\ovms\install_ovms_service.bat
+```
+
 > **Note**: If package contains Python, running this script changes Python settings for the shell that runs it. Environment variables are set only for the current shell so make sure you rerun the script before using model server in a new shell. 
 
 You can also build model server from source by following the [developer guide](windows_developer_guide.md).
 
 :::
 ::::
+
+> **NOTE**: You can also access [public drops of the development version](https://storage.openvinotoolkit.org/repositories/openvino_model_server/packages/weekly/) of the model server, which are built from the main branch. These builds allow you to evaluate the latest features ahead of official releases.
 
 ## Test the Deployment
 
