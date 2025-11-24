@@ -37,6 +37,13 @@ ovms_cc_library(
 )
 
 ovms_cc_library(
+    name = "rapidjson_prettywriter",
+    hdrs = ["rapidjson_prettywriter.hpp"],
+    deps = ["@com_github_tencent_rapidjson//:rapidjson"],
+    visibility = ["//visibility:public",],
+)
+
+ovms_cc_library(
     name = "dr_audio",
     hdrs = ["dr_audio.hpp"],
     deps = ["@dr_libs//:dr"],

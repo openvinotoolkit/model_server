@@ -37,7 +37,7 @@
 #include "src/port/rapidjson_document.hpp"
 #include <rapidjson/error/en.h>
 #include <rapidjson/istreamwrapper.h>
-#include <rapidjson/prettywriter.h>
+#include "src/port/rapidjson_prettywriter.hpp"
 #include <sys/stat.h>
 
 #include "cleaner_utils.hpp"

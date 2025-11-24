@@ -35,6 +35,7 @@ ovms_cc_library(
         "//src/port:rapidjson_stringbuffer",
         "//src/port:rapidjson_writer",
         "//src/port:rapidjson_document",
+        "//src/port:rapidjson_prettywriter",
     ] + select({
             "//:not_disable_mediapipe": [
                 "@mediapipe//mediapipe/framework/port:parse_text_proto",

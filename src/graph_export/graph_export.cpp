@@ -25,7 +25,7 @@
 #include "src/port/rapidjson_stringbuffer.hpp"
 #include "src/port/rapidjson_writer.hpp"
 #include <rapidjson/istreamwrapper.h>
-#include <rapidjson/prettywriter.h>
+#include "src/port/rapidjson_prettywriter.hpp"
 
 #include "../capi_frontend/server_settings.hpp"
 #include "../config.hpp"

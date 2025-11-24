@@ -15,10 +15,11 @@
 //*****************************************************************************
 #include "config_export.hpp"
 
-#include "src/port/rapidjson_document.hpp"
+
+#include "src/port/rapidjson_prettywriter.hpp"
 #include <rapidjson/error/en.h>
 #include <rapidjson/istreamwrapper.h>
-#include <rapidjson/prettywriter.h>
+#include "src/port/rapidjson_document.hpp"
 
 #include "../capi_frontend/server_settings.hpp"
 #include "src/filesystem.hpp"

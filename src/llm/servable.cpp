@@ -27,7 +27,7 @@
 #pragma warning(pop)
 
 #include "src/port/rapidjson_document.hpp"
-#include <rapidjson/prettywriter.h>
+#include "src/port/rapidjson_prettywriter.hpp"
 
 #include "../config.hpp"
 #include "../http_payload.hpp"
