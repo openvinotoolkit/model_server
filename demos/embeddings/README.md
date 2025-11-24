@@ -21,15 +21,33 @@ This procedure can be used to pull preconfigured models from OpenVINO organizati
 :::{tab-item} OpenVINO/Qwen3-Embedding-0.6B-int8-ov
 :sync: Qwen3-Embedding-0.6B-int8-ov
 ```console
-docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --pull --model_repository_path /models --source_model OpenVINO/Qwen3-Embedding-0.6B-int8-ov --task pooling LAST --task embeddings
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --pull --model_repository_path /models --source_model OpenVINO/Qwen3-Embedding-0.6B-int8-ov --pooling LAST --task embeddings
+
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --add_to_config --config_path /models/config.json --model_name OpenVINO/Qwen3-Embedding-0.6B-int8-ov --model_path OpenVINO/Qwen3-Embedding-0.6B-int8-ov
+```
+
+**On Bare Metal (Windows/Linux)**
+```console
+ovms --pull --model_repository_path /models --source_model OpenVINO/Qwen3-Embedding-0.6B-int8-ov --pooling LAST --task embeddings
+
+ovms --add_to_config --config_path /models/config.json --model_name OpenVINO/Qwen3-Embedding-0.6B-int8-ov --model_path OpenVINO/Qwen3-Embedding-0.6B-int8-ov
 ```
 :::
-:::{tab-item} OpenVINO/Qwen3-Embedding-0.6B-fp16-ov
-:sync: Qwen3-Embedding-0.6B-fp16-ov
+:::{tab-item} OpenVINO/bge-base-en-v1.5-int8-ov
+:sync: bge-base-en-v1.5-int8-ov
 ```console
-docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --pull --model_repository_path /models --source_model OpenVINO/Qwen3-Embedding-0.6B-fp16-ov --task pooling LAST --task embeddings
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --pull --model_repository_path /models --source_model OpenVINO/bge-base-en-v1.5-int8-ov --pooling CLS --task embeddings
+
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --add_to_config --config_path /models/config.json --model_name OpenVINO/bge-base-en-v1.5-int8-ov --model_path OpenVINO/bge-base-en-v1.5-int8-ov
 ```
-:::OpenVINO/Qwen3-Embedding-0.6B-fp16-ov
+
+**On Bare Metal (Windows/Linux)**
+```console
+ovms --pull --model_repository_path /models --source_model OpenVINO/bge-base-en-v1.5-int8-ov --pooling CLS --task embeddings
+
+ovms --add_to_config --config_path /models/config.json --model_name OpenVINO/bge-base-en-v1.5-int8-ov --model_path OpenVINO/bge-base-en-v1.5-int8-ov
+```
+:::
 ::::
 
 **GPU**
@@ -37,15 +55,33 @@ docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/mo
 :::{tab-item} OpenVINO/Qwen3-Embedding-0.6B-int8-ov
 :sync: Qwen3-Embedding-0.6B-int8-ov
 ```console
-docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --pull --model_repository_path /models --source_model OpenVINO/Qwen3-Embedding-0.6B-int8-ov --task pooling LAST --target_device GPU --task embeddings
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --pull --model_repository_path /models --source_model OpenVINO/Qwen3-Embedding-0.6B-int8-ov --pooling LAST --target_device GPU --task embeddings
+
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --add_to_config --config_path /models/config.json --model_name OpenVINO/Qwen3-Embedding-0.6B-int8-ov --model_path OpenVINO/Qwen3-Embedding-0.6B-int8-ov
+```
+
+**On Bare Metal (Windows/Linux)**
+```console
+ovms --pull --model_repository_path /models --source_model OpenVINO/Qwen3-Embedding-0.6B-int8-ov --pooling LAST --target_device GPU --task embeddings
+
+ovms --add_to_config --config_path /models/config.json --model_name OpenVINO/Qwen3-Embedding-0.6B-int8-ov --model_path OpenVINO/Qwen3-Embedding-0.6B-int8-ov
 ```
 :::
-:::{tab-item} OpenVINO/Qwen3-Embedding-0.6B-fp16-ov
-:sync: Qwen3-Embedding-0.6B-fp16-ov
+:::{tab-item} OpenVINO/bge-base-en-v1.5-int8-ov
+:sync: OpenVINO/bge-base-en-v1.5-int8-ov
 ```console
-docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --pull --model_repository_path /models --source_model OpenVINO/Qwen3-Embedding-0.6B-fp16-ov --task pooling LAST --target_device GPU --task embeddings
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --pull --model_repository_path /models --source_model OpenVINO/bge-base-en-v1.5-int8-ov --pooling CLS --target_device GPU --task embeddings
+
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --add_to_config --config_path /models/config.json --model_name OpenVINO/bge-base-en-v1.5-int8-ov --model_path OpenVINO/bge-base-en-v1.5-int8-ov
 ```
-:::OpenVINO/Qwen3-Embedding-0.6B-fp16-ov
+
+**On Bare Metal (Windows/Linux)**
+```console
+ovms --pull --model_repository_path /models --source_model OpenVINO/bge-base-en-v1.5-int8-ov --pooling CLS --target_device GPU --task embeddings
+
+ovms --add_to_config --config_path /models/config.json --model_name OpenVINO/bge-base-en-v1.5-int8-ov --model_path OpenVINO/bge-base-en-v1.5-int8-ov
+```
+:::
 ::::
 
 ### Export model
@@ -64,18 +100,6 @@ Run `export_model.py` script to download and quantize the model:
 
 **CPU**
 ::::{tab-set}
-:::{tab-item} nomic-ai/nomic-embed-text-v1.5
-:sync: nomic-embed-text-v1.5
-```console
-python export_model.py embeddings_ov --source_model nomic-ai/nomic-embed-text-v1.5 --extra_quantization_params "--library sentence_transformers" --pooling MEAN --weight-format int8 --config_file_path models/config.json --model_repository_path models
-```
-:::
-:::{tab-item} Alibaba-NLP/gte-large-en-v1.5
-:sync: gte-large-en-v1.5
-```console
-python export_model.py embeddings_ov --source_model Alibaba-NLP/gte-large-en-v1.5 --extra_quantization_params "--library sentence_transformers" --pooling CLS --weight-format int8 --config_file_path models/config.json --model_repository_path models
-```
-:::
 :::{tab-item} BAAI/bge-large-en-v1.5
 :sync: bge-large-en-v1.5
 ```console
@@ -87,19 +111,12 @@ python export_model.py embeddings_ov --source_model BAAI/bge-large-en-v1.5 --poo
 ```console
 python export_model.py embeddings_ov --source_model BAAI/bge-large-zh-v1.5 --pooling CLS --weight-format int8 --config_file_path models/config.json --model_repository_path models
 ```
-
+:::
 :::{tab-item} thenlper/gte-small
 :sync: gte-small
 ```console
 python export_model.py embeddings_ov --source_model thenlper/gte-small --pooling CLS --weight-format int8 --config_file_path models/config.json --model_repository_path models
 ```
-:::
-:::{tab-item} OpenVINO/Qwen3-Embedding-0.6B-int8-ov
-:sync: Qwen3-Embedding-0.6B-int8-ov
-```console
-docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --pull --model_repository_path /models --source_model OpenVINO/Qwen3-Embedding-0.6B-int8-ov --pooling LAST --task embeddings
-```
-:::
 :::{tab-item} sentence-transformers/all-MiniLM-L12-v2
 :sync: all-MiniLM-L12-v2
 ```console
@@ -135,18 +152,6 @@ python export_model.py embeddings_ov --source_model intfloat/multilingual-e5-lar
 
 **GPU**
 ::::{tab-set}
-:::{tab-item} nomic-ai/nomic-embed-text-v1.5
-:sync: nomic-embed-text-v1.5
-```console
-python export_model.py embeddings_ov --source_model nomic-ai/nomic-embed-text-v1.5 --extra_quantization_params "--library sentence_transformers" --pooling MEAN --weight-format int8 --target_device GPU --config_file_path models/config.json --model_repository_path models
-```
-:::
-:::{tab-item} Alibaba-NLP/gte-large-en-v1.5
-:sync: gte-large-en-v1.5
-```console
-python export_model.py embeddings_ov --source_model Alibaba-NLP/gte-large-en-v1.5 --extra_quantization_params "--library sentence_transformers" --pooling CLS --weight-format int8 --target_device GPU --config_file_path models/config.json --model_repository_path models
-```
-:::
 :::{tab-item} BAAI/bge-large-en-v1.5
 :sync: bge-large-en-v1.5
 ```console
@@ -158,13 +163,6 @@ python export_model.py embeddings_ov --source_model BAAI/bge-large-en-v1.5 --poo
 ```console
 python export_model.py embeddings_ov --source_model BAAI/bge-large-zh-v1.5 --pooling CLS --weight-format int8 --target_device GPU --config_file_path models/config.json --model_repository_path models
 ```
-:::
-:::{tab-item} OpenVINO/bge-base-en-v1.5-int8-ov
-:sync: bge-base-en-v1.5-int8-ov
-```console
-docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --pull --model_repository_path /models --source_model OpenVINO/bge-base-en-v1.5-int8-ov --task pooling CLS --target_device GPU --task embeddings
-```
-:::
 :::{tab-item} thenlper/gte-small
 :sync: gte-small
 ```console
@@ -238,14 +236,14 @@ python export_model.py embeddings_ov --source_model Qwen/Qwen3-Embedding-0.6B --
 ```
 
 ## Tested models
-All models supported by [optimum-intel](https://github.com/huggingface/optimum-intel) should be compatible. In serving validation are included Hugging Face models:
+All models supported by [optimum-intel](https://github.com/huggingface/optimum-intel) should be compatible. The demo is validated against following Hugging Face models:
 
 |Model name|Pooling|
 |---|---|
-|Qwen/Qwen3-Embedding-0.6B|LAST|
+|OpenVINO/Qwen3-Embedding-0.6B-int8-ov|LAST|
+|OpenVINO/bge-base-en-v1.5-int8-ov|CLS|
 |BAAI/bge-large-en-v1.5|CLS|
 |BAAI/bge-large-zh-v1.5|CLS|
-|OpenVINO/bge-base-en-v1.5-int8-ov|CLS|
 |thenlper/gte-small|CLS|
 |sentence-transformers/all-MiniLM-L12-v2|MEAN|
 |sentence-transformers/all-distilroberta-v1|MEAN|
@@ -413,7 +411,7 @@ Check this demo to see the langchain code example which is using OpenVINO Model 
 
 A simple method of testing the response accuracy is via comparing the response for a sample prompt from the model server and with local python execution based on HuggingFace python code.
 
-The script [compare_results.py](./compare_results.py) can assist with such experiment.
+The script [compare_results.py](https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/embeddings/compare_results.py) can assist with such experiment.
 ```bash
 popd
 cd model_server/demos/embeddings
