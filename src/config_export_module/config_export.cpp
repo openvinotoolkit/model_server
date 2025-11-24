@@ -15,7 +15,6 @@
 //*****************************************************************************
 #include "config_export.hpp"
 
-
 #include "src/port/rapidjson_prettywriter.hpp"
 #include <rapidjson/error/en.h>
 #include <rapidjson/istreamwrapper.h>
