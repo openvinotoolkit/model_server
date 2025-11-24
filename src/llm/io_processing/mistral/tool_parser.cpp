@@ -31,6 +31,8 @@ namespace ovms {
 void MistralToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) {
     std::vector<std::string> tools;
 
+    SPDLOG_INFO("GGGGGGGGGGG: [{}]", parsedOutput.content);
+
     if (parsedOutput.content.empty() || generatedTokens.size() <= 0) {
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "No content to parse for tool calls");
         return;

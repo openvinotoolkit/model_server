@@ -41,7 +41,7 @@ void MistralGenerationConfigBuilder::parseConfigFromRequest(const OpenAIChatComp
         // https://github.com/vllm-project/vllm/blob/v0.10.2/examples/tool_chat_template_mistral_parallel.jinja
 
         //static const std::string beginOfToolsString = "functools";
-        static const std::string beginOfToolsString = "[TOOL_CALLZ]";
+        static const std::string beginOfToolsString = "[TOOL_CALLS] ";
         auto triggeredTags = std::make_shared<ov::genai::StructuredOutputConfig::TriggeredTags>();
         triggeredTags->triggers.push_back(beginOfToolsString);
         ov::genai::StructuredOutputConfig::Tag tagItem;
