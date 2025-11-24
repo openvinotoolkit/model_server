@@ -40,47 +40,60 @@ void MistralGenerationConfigBuilder::parseConfigFromRequest(const OpenAIChatComp
         // Set tool guided generation config specific to Mistral model as described in template from:
         // https://github.com/vllm-project/vllm/blob/v0.10.2/examples/tool_chat_template_mistral_parallel.jinja
 
-        //static const std::string beginOfToolsString = "functools";
-        static const std::string beginOfToolsString = "[TOOL_CALLS] ";
+        static const std::string beginOfToolsString = "[TOOL_CALLS] [";
         auto triggeredTags = std::make_shared<ov::genai::StructuredOutputConfig::TriggeredTags>();
         triggeredTags->triggers.push_back(beginOfToolsString);
         ov::genai::StructuredOutputConfig::Tag tagItem;
         tagItem.begin = beginOfToolsString;
 
-        // Build the "anyOf" array for each tool
-        std::string anyOfArray = "[";
+        // Add [TOOL_CALLS] as a stop string to prevent it from being generated multiple times
+        addStopString("[TOOL_CALLS]");
+
+        // Build schema for a single tool call object
+        std::string toolCallSchema = R"({
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "enum": [)";
+        
         bool first = true;
+        for (const auto& [toolName, _] : request.toolNameSchemaMap) {
+            if (!first) {
+                toolCallSchema += ",";
+            }
+            first = false;
+            toolCallSchema += "\"" + toolName + "\"";
+        }
+        
+        toolCallSchema += R"(]
+                },
+                "arguments": {
+                    "type": "object",
+                    "oneOf": [)";
+        
+        first = true;
         for (const auto& [toolName, toolSchemaWrapper] : request.toolNameSchemaMap) {
             const auto& toolSchema = toolSchemaWrapper.stringRepr;
             if (!first) {
-                anyOfArray += ",";
+                toolCallSchema += ",";
             }
             first = false;
-            anyOfArray += R"({
-                "type": "object",
-                "properties": {
-                    "name": {
-                        "type": "string",
-                        "enum": [")" +
-                          toolName + R"("]
-                    },
-                    "arguments": )" +
-                          toolSchema + R"(
-                },
-                "required": [
-                    "name",
-                    "arguments"
-                ]
-            })";
+            toolCallSchema += toolSchema;
         }
-        anyOfArray += "]";
+        
+        toolCallSchema += R"(]
+                }
+            },
+            "required": ["name", "arguments"],
+            "additionalProperties": false
+        })";
 
+        // Schema for array of tool calls
         std::string schema = R"({
             "type": "array",
-            "items": {
-                "anyOf": )" +
-                             anyOfArray + R"(
-            }
+            "items": )" + toolCallSchema + R"(,
+            "minItems": 1
         })";
 
         tagItem.content = ov::genai::StructuredOutputConfig::JSONSchema(schema);
