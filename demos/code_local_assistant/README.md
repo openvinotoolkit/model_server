@@ -24,7 +24,8 @@ Pull and add the model on Linux:
 :::{tab-item} Qwen/Qwen3-Coder-30B-A3B-Instruct
 :sync: Qwen/Qwen3-Coder-30B-A3B-Instruct
 ```bash
-python export_model.py text_generation --source_model Qwen/Qwen3-Coder-30B-A3B-Instruct --weight-format int4 --config_file_path models/config.json --model_repository_path models --tool_parser qwen3coder --cache_size 2 --target_device GPU
+python export_model.py text_generation --source_model Qwen/Qwen3-Coder-30B-A3B-Instruct --weight-format int8 --config_file_path models/config_all.json --model_repository_path models --target_device GPU --tool_parser qwen3coder --cache_size 2 --overwrite_models
+curl -L -o models/Qwen/Qwen3-Coder-30B-A3B-Instruct/chat_template.jinja https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/extras/chat_template_examples/chat_template_qwen3coder_instruct.jinja
 
 docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
     openvino/model_server:weekly \
@@ -119,7 +120,8 @@ Pull and add the model on Windows:
 :::{tab-item} Qwen/Qwen3-Coder-30B-A3B-Instruct
 :sync: Qwen/Qwen3-Coder-30B-A3B-Instruct
 ```bash
-python export_model.py text_generation --source_model Qwen/Qwen3-Coder-30B-A3B-Instruct --weight-format int4 --config_file_path models/config.json --model_repository_path models --tool_parser qwen3coder --cache_size 2 --target_device GPU
+python export_model.py text_generation --source_model Qwen/Qwen3-Coder-30B-A3B-Instruct --weight-format int8 --config_file_path models/config_all.json --model_repository_path models --target_device GPU --tool_parser qwen3coder --cache_size 2 --overwrite_models
+curl -L -o models/Qwen/Qwen3-Coder-30B-A3B-Instruct/chat_template.jinja https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/extras/chat_template_examples/chat_template_qwen3coder_instruct.jinja
 
 ovms.exe --add_to_config --config_path models/config_all.json --model_name Qwen/Qwen3-Coder-30B-A3B-Instruct --model_path Qwen/Qwen3-Coder-30B-A3B-Instruct
 ```
