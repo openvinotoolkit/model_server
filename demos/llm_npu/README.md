@@ -17,6 +17,36 @@ It is targeted on client machines equipped with NPU accelerator.
 
 **(Optional) Client**: git and Python for using OpenAI client package and vLLM benchmark app
 
+## Model preparation - using ovms
+Another way to downlaod models is using `--pull` parameter with ovms command.
+
+There are multiple [OpenVINO models](https://huggingface.co/collections/OpenVINO/llms-optimized-for-npu) recommended to use with NPU:
+- OpenVINO/Qwen3-8B-int4-cw-ov
+- OpenVINO/Phi-3.5-mini-instruct-int4-cw-ov
+- OpenVINO/Mistral-7B-Instruct-v0.2-int4-cw-ov
+- OpenVINO/Mistral-7B-Instruct-v0.3-int4-cw-ov
+- OpenVINO/falcon-7b-instruct-int4-cw-ov
+- OpenVINO/gpt-j-6b-int4-cw-ov
+
+
+### Pulling model
+
+:::{tab-set}
+::{tab-item} Linux
+:sync: Linux
+```bash
+docker run -d --rm -u $(id -u):$(id -g) -v $(pwd)/models:/models:rw openvino/model_server:latest-gpu --pull --source_model OpenVINO/Qwen3-8B-int4-cw-ov --model_repository_path /models --target_device NPU --task text_generation --tool_parser hermes3 --cache_dir .ov_cache --enable_prefix_caching true --max_prompt_len 4000
+docker run -d --rm -u $(id -u):$(id -g) -v $(pwd)/models:/models:rw openvino/model_server:latest-gpu --add_to_config --config_path /models/config.json --model_name OpenVINO/Qwen3-8B-int4-cw-ov --model_path /models/OpenVINO/Qwen3-8B-int4-cw-ov
+```
+:: 
+::{tab-item} Windows
+:sync: Windows
+```bat
+ovms.exe --pull --source_model OpenVINO/Qwen3-8B-int4-cw-ov --model_repository_path models --target_device NPU --task text_generation --tool_parser hermes3 --cache_dir .ov_cache --enable_prefix_caching true --max_prompt_len 4000 
+ovms.exe --add_to_config --config_path models\config.json --model_name OpenVINO/Qwen3-8B-int4-cw-ov --model_path OpenVINO\Qwen3-8B-int4-cw-ov
+```
+::
+:::
 
 ## Model preparation - using export model script
 Here, the original Pytorch LLM model and the tokenizer will be converted to IR format and optionally quantized.
@@ -51,41 +81,9 @@ The default configuration should work in most cases but the parameters can be tu
 Note that by default, NPU sets limitation on the prompt length to 1024 tokens. You can modify that limit by using `--max_prompt_len` parameter.
 Run the script with `--help` argument to check available parameters and see the [LLM calculator documentation](../../docs/llm/reference.md) to learn more about configuration options.
 
-## Model preparation - using ovms
-Another way to downlaod models is using `--pull` parameter with ovms command.
-
-There are multiple [OpenVINO models](https://huggingface.co/collections/OpenVINO/llms-optimized-for-npu) recommended to use with NPU:
-- OpenVINO/Qwen3-8B-int4-cw-ov
-- OpenVINO/Phi-3.5-mini-instruct-int4-cw-ov
-- OpenVINO/Mistral-7B-Instruct-v0.2-int4-cw-ov
-- OpenVINO/Mistral-7B-Instruct-v0.3-int4-cw-ov
-- OpenVINO/falcon-7b-instruct-int4-cw-ov
-- OpenVINO/gpt-j-6b-int4-cw-ov
-
-
-### Pulling model
-
-:::{tab-set}
-::{tab-item} Linux
-:sync: Linux
-```bash
-docker run -d --rm -u $(id -u):$(id -g) -v $(pwd)/models:/models:rw openvino/model_server:latest-gpu --pull --source_model OpenVINO/Qwen3-8B-int4-cw-ov --model_repository_path /models --target_device NPU --task text_generation --tool_parser hermes3 --cache_dir .ov_cache --enable_prefix_caching true --max_prompt_len 4000
-docker run -d --rm -u $(id -u):$(id -g) -v $(pwd)/models:/models:rw openvino/model_server:latest-gpu --add_to_config --config_path /models/config.json --model_name OpenVINO/Qwen3-8B-int4-cw-ov --model_path /models/OpenVINO/Qwen3-8B-int4-cw-ov
-```
-:: 
-::{tab-item} Windows
-:sync: Windows
-```bat
-ovms.exe --pull --source_model OpenVINO/Qwen3-8B-int4-cw-ov --model_repository_path models --target_device NPU --task text_generation --tool_parser hermes3 --cache_dir .ov_cache --enable_prefix_caching true --max_prompt_len 4000 
-ovms.exe --add_to_config --config_path models\config.json --model_name OpenVINO/Qwen3-8B-int4-cw-ov --model_path OpenVINO\Qwen3-8B-int4-cw-ov
-```
-::
-:::
-
 ## Server Deployment
 
 :::{dropdown} **Deploying with Docker**
-
 
 Running this command starts the container with NPU enabled:
 ```bash
@@ -171,7 +169,7 @@ curl http://localhost:8000/v3/chat/completions -H "Content-Type: application/jso
 
 A similar call can be made with a `completion` endpoint:
 ```console
-curl http://localhost:8000/v3/completions -H "Content-Type: application/json" -d "{\"model\": \"OpenVINO/Qwen3-8B-int4-cw-ov\", \"max_tokens\":50, \"stream\":false, \"prompt\": \"What is OpenVINO Model Server?\"}"
+curl http://localhost:8000/v3/completions -H "Content-Type: application/json" -d "{\"model\": \"OpenVINO/Qwen3-8B-int4-cw-ov\", \"max_tokens\":50, \"stream\":false, \"prompt\": \"What are the 3 main tourist attractions in Paris?\"}"
 ```
 ```json
 {
@@ -179,16 +177,16 @@ curl http://localhost:8000/v3/completions -H "Content-Type: application/json" -d
       {
          "finish_reason":"stop",
          "index":0,
-         "text":" OpenVINO Model Server (OVS) is a high-performance, open-source model serving framework that allows developers to deploy and manage deep learning models on edge devices. It is built by the Intel AI team and is designed to work seamlessly with the Intel"
+         "text":" The three main tourist attractions in Paris are the Eiffel Tower, the Louvre, and the Notre-Dame de Paris. The Eiffel Tower is one of the most iconic landmarks in Paris and is a must-see for most visitors."
       }
    ],
-   "created":1763718630,
+   "created":1763976213,
    "model":"OpenVINO/Qwen3-8B-int4-cw-ov",
    "object":"text_completion",
    "usage":{
-      "prompt_tokens":8,
+      "prompt_tokens":11,
       "completion_tokens":50,
-      "total_tokens":58
+      "total_tokens":61
    }
 }
 ```
@@ -246,7 +244,7 @@ client = OpenAI(
 
 response = client.completions.create(
     model="OpenVINO/Qwen3-8B-int4-cw-ov",
-    prompt="What is OpenVINO Model Server?",
+    prompt="What are the 3 main tourist attractions in Paris?",
     max_tokens=100,
     stream=False,
 )
@@ -255,7 +253,7 @@ print(response.choices[0].text)
 
 Output:
 ```
-OpenVINO Model Server (OVS) is a high-performance, scalable, and secure model serving solution for AI models. It is part of the Intel® oneAPI. OVS allows users to deploy and serve machine learning models as microservices, enabling efficient and low-latency inference. OVS supports a wide range of models, including those from the ONNX, TensorFlow, and PyTorch frameworks, and it can run on a variety of hardware, including CPUs, GPUs, and VPU...
+The three main tourist attractions in Paris are the Eiffel Tower, the Louvre Museum, and the Notre-Dame de Paris. The Eiffel Tower is a symbol of Paris and one of the most visited landmarks in the world. The Louvre Museum is home to the Mona Lisa and other famous artworks. The Notre-Dame de Paris is a famous cathedral and a symbol of the city's rich history and architecture. These three attractions are the most popular among tourists visiting Paris.
 ```
 :::
 
@@ -312,7 +310,7 @@ client = OpenAI(
 
 stream = client.completions.create(
     model="OpenVINO/Qwen3-8B-int4-cw-ov",
-    prompt="What is OpenVINO Model Server?",
+    prompt="What are the 3 main tourist attractions in Paris?",
     max_tokens=100,
     stream=True,
 )
@@ -323,7 +321,7 @@ for chunk in stream:
 
 Output:
 ```
-OpenVINO Model Server (OVS) is a high-performance, open-source server that provides a way to serve deep learning models as a RESTful API. It is developed by Intel as a part of the OpenVINO toolkit, which is a comprehensive solution for developing and deploying deep learning applications on Intel hardware. OVS allows developers to deploy their trained models on various devices and enables them to be accessed by other applications or services through a standardized interface. This makes it easier to integrate AI models into...
+The three main tourist attractions in Paris are the Eiffel Tower, the Louvre, and the Notre-Dame de Paris. The Eiffel Tower is the most iconic landmark and offers a great view of the city. The Louvre is a world-famous art museum that houses the Mona Lisa and other famous artworks. The Notre-Dame de Paris is a stunning example of French Gothic architecture and is the cathedral of the city. These three attractions are the most visited and most famous in Paris,
 ```
 :::
 
