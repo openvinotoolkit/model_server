@@ -56,7 +56,7 @@ The input also includes a side packet with a reference to `LLM_NODE_RESOURCES` w
 
 On the output the calculator creates an std::string with the json content, which is returned to the client as one response or in chunks with streaming.
 
-Let's have a look at the graph from the graph configuration from the quickstart:
+Let's have a look at the simplest graph:
 ```protobuf
 input_stream: "HTTP_REQUEST_PAYLOAD:input"
 output_stream: "HTTP_RESPONSE_PAYLOAD:output"
@@ -107,7 +107,8 @@ The calculator supports the following `node_options` for tuning the pipeline con
 -    `optional CacheEvictionConfig cache_eviction_config` - KV cache eviction configuration. Disabled if not specified.
 -    `optional string reasoning_parser` - name of the parser to use for reasoning content extraction from model output before creating a response;
 -    `optional string tool_parser` - name of the parser to use for tool calls extraction from model output before creating a response;
--    `optional bool enable_tool_guided_generation` - enable enforcing tool schema during generation. Requires setting response parser. [default = false]; 
+-    `optional bool enable_tool_guided_generation` - enable enforcing tool schema during generation. Requires setting response parser. [default = false];
+-    `optional SparseAttentionConfig sparse_attention_config` - Sparse attention configuration. Disabled if not specified.
 
 ### Caching settings
 The value of `cache_size` might have performance and stability implications. It is used for storing LLM model KV cache data. Adjust it based on your environment capabilities, model size and expected level of concurrency.
@@ -143,7 +144,7 @@ Another cache related option is `cache_eviction_config` which can help with late
       NORM_SUM = 1; // Same as SUM, but the importance scores are additionally divided by the lifetime (in tokens generated) of a given token in cache
       }
 
-      optional AggregationMode aggregation_mode = 1 [default = SUM];
+      optional AggregationMode aggregation_mode = 1 [default = NORM_SUM];
       required uint64 start_size = 2;
       required uint64 recent_size = 3;
       required uint64 max_cache_size = 4;
@@ -153,8 +154,51 @@ Another cache related option is `cache_eviction_config` which can help with late
     }
 ```
 Learn more about the algorithm and above parameters from [GenAI docs](https://github.com/openvinotoolkit/openvino.genai/blob/master/site/docs/concepts/optimization-techniques/kvcache-eviction-algorithm.md). 
-Example of cache eviction config in the node options:
-`cache_eviction_config: {start_size: 32, recent_size: 128, max_cache_size: 672}`
+Example of a graph with cache eviction configured:
+
+```protobuf
+input_stream: "HTTP_REQUEST_PAYLOAD:input"
+output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+
+node: {
+  name: "LLMExecutor"
+  calculator: "HttpLLMCalculator"
+  input_stream: "LOOPBACK:loopback"
+  input_stream: "HTTP_REQUEST_PAYLOAD:input"
+  input_side_packet: "LLM_NODE_RESOURCES:llm"
+  output_stream: "LOOPBACK:loopback"
+  output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+  input_stream_info: {
+    tag_index: 'LOOPBACK:0',
+    back_edge: true
+  }
+  node_options: {
+      [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
+          models_path: "./",
+          cache_eviction_config: {
+            start_size: 32,
+            recent_size: 128,
+            max_cache_size: 672,
+            kv_crush_config: {
+              anchor_point_mode: RANDOM
+              budget: 8
+              rng_seed: 42
+            }
+          }
+      }
+  }
+  input_stream_handler {
+    input_stream_handler: "SyncSetInputStreamHandler",
+    options {
+      [mediapipe.SyncSetInputStreamHandlerOptions.ext] {
+        sync_set {
+          tag_index: "LOOPBACK:0"
+        }
+      }
+    }
+  }
+}
+```
 
 ### Scheduling settings
 In different use cases and load specification, requests and tokens scheduling might play a role when it comes to performance.
@@ -181,7 +225,52 @@ In different use cases and load specification, requests and tokens scheduling mi
     ```
     Description of parameters in that config can be found in GenAI docs about [SparseAttentionConfig](https://docs.openvino.ai/2025/api/genai_api/_autosummary/openvino_genai.SparseAttentionConfig.html#openvino-genai-sparseattentionconfig).
 
-**Note that the following options are ignored in Stateful servables (so in deployments on NPU): cache_size, dynamic_split_fuse, max_num_batched_tokens, max_num_seq, enable_prefix_caching**
+    Example of graph with sparse attention configured:
+
+    ```protobuf
+    input_stream: "HTTP_REQUEST_PAYLOAD:input"
+    output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+
+    node: {
+      name: "LLMExecutor"
+      calculator: "HttpLLMCalculator"
+      input_stream: "LOOPBACK:loopback"
+      input_stream: "HTTP_REQUEST_PAYLOAD:input"
+      input_side_packet: "LLM_NODE_RESOURCES:llm"
+      output_stream: "LOOPBACK:loopback"
+      output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+      input_stream_info: {
+        tag_index: 'LOOPBACK:0',
+        back_edge: true
+      }
+      node_options: {
+          [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
+              models_path: "./",
+              sparse_attention_config: {
+                mode: TRISHAPE
+                num_last_dense_tokens_in_prefill: 100
+                num_retained_start_tokens_in_cache: 128
+                num_retained_recent_tokens_in_cache: 1920
+                xattention_threshold: 0.8
+                xattention_block_size: 64
+                xattention_stride: 8
+              }
+          }
+      }
+      input_stream_handler {
+        input_stream_handler: "SyncSetInputStreamHandler",
+        options {
+          [mediapipe.SyncSetInputStreamHandlerOptions.ext] {
+            sync_set {
+              tag_index: "LOOPBACK:0"
+            }
+          }
+        }
+      }
+    }
+    ```
+
+**Note that the following options are ignored in Stateful servables (so in deployments on NPU): cache_size, dynamic_split_fuse, max_num_batched_tokens, max_num_seq, enable_prefix_caching, cache_eviction_config, sparse_attention_config**
 
 ### Output parsing settings
 
