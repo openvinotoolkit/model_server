@@ -196,8 +196,8 @@ std::unique_ptr<DrogonHttpServer> createAndStartDrogonHttpServer(const std::stri
             &headers,
             &output,
             responseComponents,
-            writer,
-            multiPartParser);
+            std::move(writer),
+            std::move(multiPartParser));
         if (status == StatusCode::PARTIAL_END) {
             // No further messaging is required.
             // Partial responses were delivered via "req" object.

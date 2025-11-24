@@ -13,8 +13,8 @@ We need to use medium size model to get reliable responses but also to fit it to
 
 Download export script, install its dependencies and create directory for the models:
 ```console
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/demos/common/export_models/export_model.py -o export_model.py
-pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/demos/common/export_models/requirements.txt
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/export_model.py -o export_model.py
+pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
 mkdir models
 ```
 > **Note:** The users in China need to set environment variable HF_ENDPOINT="https://hf-mirror.com" before running the export script to connect to the HF Hub.
@@ -45,7 +45,8 @@ docker run -it --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
 docker run -it --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
     -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy=$no_proxy \
     openvino/model_server:latest-gpu \
-    --add_to_config /models/config_all.json \
+    --add_to_config 
+    --config_path /models/config_all.json \
     --model_name OpenVINO/Qwen3-8B-int4-ov \
     --model_path OpenVINO/Qwen3-8B-int4-ov
 ```
@@ -60,7 +61,7 @@ ovms --pull ^
   --tool_parser hermes3 ^
   --cache_size 2
 
-ovms --add_to_config ./models/config_all.json ^
+ovms --add_to_config --config_path ./models/config_all.json ^
   --model_name OpenVINO/Qwen3-8B-int4-ov ^
   --model_path OpenVINO/Qwen3-8B-int4-ov
 ```
