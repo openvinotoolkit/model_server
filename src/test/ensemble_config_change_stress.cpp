@@ -143,7 +143,14 @@ void mediacreate<KFSRequest, KFSResponse>(std::shared_ptr<MediapipeGraphExecutor
 }
 #endif
 
-class StressPipelineConfigChanges : public ConfigChangeStressTest {};
+class StressPipelineConfigChanges : public ConfigChangeStressTest {
+public:
+    static void SetUpTestSuite() {
+#ifdef _WIN32
+        GTEST_SKIP() << "Skipping test on Windows, sporadic";  // CVS-176244
+#endif
+    }
+};
 
 class StressModelConfigChanges : public StressPipelineConfigChanges {
     const std::string modelName = "dummy";
