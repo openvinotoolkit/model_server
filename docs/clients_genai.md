@@ -25,6 +25,10 @@ OpenAI compatible endpoints:
 - [embeddings](./model_server_rest_api_embeddings.md)
 - [images/generations](./model_server_rest_api_image_generation.md)
 - [images/edit](./model_server_rest_api_image_edit.md)
+- [audio/transcriptions](./model_server_rest_api_speech_to_text.md#transcription)
+- [audio/translations](./model_server_rest_api_speech_to_text.md#translation)
+- [audio/speech](./model_server_rest_api_text_to_speech.md)
+- [images/edit](./model_server_rest_api_image_edit.md)
 - /models
 - /models/{model}
 
