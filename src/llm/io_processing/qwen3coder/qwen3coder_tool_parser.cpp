@@ -141,7 +141,7 @@ static std::string escapeQuotes(const std::string& input) {
     }
     return output;
 }
-static std::string escapeNewline(const std::string& input) {
+static std::string escapeWithoutQuotes(const std::string& input) {
     std::string output;
     output.reserve(input.size());
     for (char c : input) {
@@ -151,6 +151,18 @@ static std::string escapeNewline(const std::string& input) {
             break;
         case '\r':
             output += "\\r";
+            break;
+        /*case '\\':
+            output += "\\\\";
+            break;*/
+        case '\b':
+            output += "\\b";
+            break;
+        case '\f':
+            output += "\\f";
+            break;
+        case '\t':
+            output += "\\t";
             break;
         default:
             output += c;
@@ -253,7 +265,7 @@ bool Qwen3CoderToolParserImpl::parseUntilStateChange(ToolCalls_t& toolCalls) {
             SPDLOG_DEBUG("Tool schema not found for tool: {}, leaving parameter: {} as string", this->currentFunction.name, this->currentParameterName);
         } else {
             // we don't want to escape entry/exit " for string parameters
-            parameterValue = escapeNewline(setCorrectValueType(parameterValue, this->currentParameterName, paramIt->second));
+            parameterValue = escapeWithoutQuotes(setCorrectValueType(parameterValue, this->currentParameterName, paramIt->second));
         }
         auto res = this->currentFunction.parameters.try_emplace(this->currentParameterName, parameterValue);
         if (!res.second)
