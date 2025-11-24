@@ -117,15 +117,7 @@ docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/mo
 curl -L -o models/OpenVINO/Phi-4-mini-instruct-int4-ov/chat_template.jinja https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/extras/chat_template_examples/chat_template_phi4_mini.jinja
 ```
 :::
-:::{tab-item} Qwen3-Coder-30B-A3B-Instruct
-:sync: Qwen3-Coder-30B-A3B-Instruct
-```bash
-docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --pull --model_repository_path /models --source_model Qwen3/Qwen3-Coder-30B-A3B-Instruct --task text_generation --weight-format int8 --tool_parser qwen3coder
-curl -L -o models/Qwen3-Coder-30B-A3B-Instruct/chat_template.jinja
-```
-:::
 ::::
-
 
 ### Direct pulling of pre-configured HuggingFace models on Windows
 
@@ -151,13 +143,6 @@ curl -L -o models\OpenVINO\Mistral-7B-Instruct-v0.3-int4-ov\chat_template.jinja 
 ```bat
 ovms.exe --pull --model_repository_path models --source_model OpenVINO/Phi-4-mini-instruct-int4-ov --task text_generation --tool_parser phi4
 curl -L -o models\OpenVINO\Phi-4-mini-instruct-int4-ov\chat_template.jinja https://raw.githubusercontent.com/vllm-project/vllm/refs/tags/v0.9.0/examples/tool_chat_template_phi4_mini.jinja
-```
-:::
-:::{tab-item} Qwen3-Coder-30B-A3B-Instruct
-:sync: Qwen3-Coder-30B-A3B-Instruct
-```bash
-ovms.exe --pull --model_repository_path models --source_model Qwen3/Qwen3-Coder-30B-A3B-Instruct --task text_generation --tool_parser qwen3coder --weight-format int8
-curl -L -o models\Qwen3-Coder-30B-A3B-Instruct\chat_template.jinja https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/extras/chat_template_examples/chat_template_qwen3coder_instruct.jinja
 ```
 :::
 ::::
