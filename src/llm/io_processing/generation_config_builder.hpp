@@ -22,6 +22,7 @@
 #include <openvino/genai/tokenizer.hpp>
 #include "base_generation_config_builder.hpp"
 #include "phi4/generation_config_builder.hpp"
+#include "mistral/generation_config_builder.hpp"
 #include "llama3/generation_config_builder.hpp"
 #include "hermes3/generation_config_builder.hpp"
 #include "../apis/openai_request.hpp"
@@ -44,6 +45,8 @@ public:
             builder_impl = std::make_unique<Hermes3GenerationConfigBuilder>(baseConfig, enableToolGuidedGeneration, decodingMethod);
         } else if (toolParserName == "phi4") {
             builder_impl = std::make_unique<Phi4GenerationConfigBuilder>(baseConfig, enableToolGuidedGeneration, decodingMethod);
+        } else if (toolParserName == "mistral") {
+            builder_impl = std::make_unique<MistralGenerationConfigBuilder>(baseConfig, enableToolGuidedGeneration, decodingMethod);
         } else {
             if (enableToolGuidedGeneration) {
                 SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Option enable_tool_guided_generation is set, but will not be effective since no valid tool parser has been provided.");
