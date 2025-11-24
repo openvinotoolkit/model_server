@@ -24,10 +24,7 @@
 #include <tuple>
 #include <unordered_map>
 #include <vector>
-#pragma warning(push)
-#pragma warning(disable : 6313)
-#include <rapidjson/document.h>
-#pragma warning(pop)
+#include "src/port/rapidjson_document.hpp"
 
 #include "anonymous_input_name.hpp"
 #include "layout_configuration.hpp"

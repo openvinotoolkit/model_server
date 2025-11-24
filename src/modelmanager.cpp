@@ -34,13 +34,10 @@
 #endif
 
 #include <errno.h>
-#pragma warning(push)
-#pragma warning(disable : 6313)
-#include <rapidjson/document.h>
+#include "src/port/rapidjson_document.hpp"
 #include <rapidjson/error/en.h>
 #include <rapidjson/istreamwrapper.h>
 #include <rapidjson/prettywriter.h>
-#pragma warning(pop)
 #include <sys/stat.h>
 
 #include "cleaner_utils.hpp"

@@ -21,14 +21,11 @@
 #include <string>
 #include <utility>
 
-#pragma warning(push)
-#pragma warning(disable : 6313)
-#include <rapidjson/document.h>
+#include "src/port/rapidjson_document.hpp"
 #include "src/port/rapidjson_stringbuffer.hpp"
 #include "src/port/rapidjson_writer.hpp"
 #include <rapidjson/istreamwrapper.h>
 #include <rapidjson/prettywriter.h>
-#pragma warning(pop)
 
 #include "../capi_frontend/server_settings.hpp"
 #include "../config.hpp"

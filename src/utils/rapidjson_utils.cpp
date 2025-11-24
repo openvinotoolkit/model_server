@@ -17,12 +17,9 @@
 
 #include <string>
 
-#pragma warning(push)
-#pragma warning(disable : 6313)
-#include <rapidjson/document.h>
+#include "../port/rapidjson_document.hpp"
 #include "src/port/rapidjson_stringbuffer.hpp"
 #include "src/port/rapidjson_writer.hpp"
-#pragma warning(pop)
 
 namespace ovms {
 std::string documentToString(const rapidjson::Document& doc) {

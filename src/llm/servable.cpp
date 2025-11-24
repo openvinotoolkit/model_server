@@ -23,10 +23,11 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "mediapipe/framework/calculator_graph.h"
-#include <rapidjson/document.h>
-#include <rapidjson/prettywriter.h>
 #pragma GCC diagnostic pop
 #pragma warning(pop)
+
+#include "src/port/rapidjson_document.hpp"
+#include <rapidjson/prettywriter.h>
 
 #include "../config.hpp"
 #include "../http_payload.hpp"
