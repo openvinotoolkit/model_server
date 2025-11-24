@@ -1,7 +1,7 @@
 # Visual Studio Code Local Assistant {#ovms_demos_code_completion_vsc}
 
 ## Intro
-With the rise of AI PC capabilities, hosting own Visual Studio code assistant is at your reach. In this demo, we will showcase how to deploy local LLM serving with OVMS and integrate it with Continue extension. It will employ iGPU or NPU acceleration.
+With the rise of AI PC capabilities, hosting own Visual Studio code assistant is at your reach. In this demo, we will showcase how to deploy local LLM serving with OVMS and integrate it with Continue extension. It will employ iGPU acceleration.
 
 # Requirements
 - Windows (for standalone app) or Linux (using Docker)
@@ -33,7 +33,7 @@ docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
     --model_name Qwen/Qwen3-Coder-30B-A3B-Instruct \
     --model_path Qwen/Qwen3-Coder-30B-A3B-Instruct
 ```
-> **Note:** This model requires ~15GB disk space and same amount of VRAM on the iGPU.
+> **Note:** This model requires ~15GB disk space and same amount of VRAM on the GPU.
 
 :::
 :::
@@ -50,7 +50,7 @@ docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
     --model_name mistralai/Codestral-22B-v0.1 \
     --model_path mistralai/Codestral-22B-v0.1
 ```
-> **Note:** This model requires ~12GB disk space and same amount of VRAM on the iGPU.
+> **Note:** This model requires ~12GB disk space and same amount of VRAM on the GPU.
 
 :::
 :::{tab-item} OpenVINO/Qwen3-8B-int4-ov
@@ -123,7 +123,7 @@ python export_model.py text_generation --source_model Qwen/Qwen3-Coder-30B-A3B-I
 
 ovms.exe --add_to_config --config_path models/config_all.json --model_name Qwen/Qwen3-Coder-30B-A3B-Instruct --model_path Qwen/Qwen3-Coder-30B-A3B-Instruct
 ```
-> **Note:** This model requires ~16GB disk space and same amount of VRAM on the iGPU.
+> **Note:** This model requires ~16GB disk space and same amount of VRAM on the GPU.
 
 :::
 :::{tab-item} mistralai/Codestral-22B-v0.1 
@@ -131,7 +131,7 @@ ovms.exe --add_to_config --config_path models/config_all.json --model_name Qwen/
 ```bash
 python export_model.py text_generation --source_model mistralai/Codestral-22B-v0.1 --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device GPU --cache_size 2 --overwrite_models
 ```
-> **Note:** This model requires ~12GB disk space and same amount of VRAM on the iGPU.
+> **Note:** This model requires ~12GB disk space and same amount of VRAM on the GPU.
 
 :::
 :::{tab-item} OpenVINO/Qwen3-8B-int4-ov
