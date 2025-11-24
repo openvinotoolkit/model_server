@@ -61,6 +61,7 @@ docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models:rw
 mkdir models
 ovms --rest_port 8000 --source_model microsoft/speecht5_tts --model_repository_path models --model_name microsoft/speecht5_tts --task text2speech --target_device CPU
 ```
+> **Note:** microsoft/speecht5_tts model works only on CPU right now.
 
 ### Request Generation 
 
@@ -99,7 +100,7 @@ print("Generation finished")
 :::
 
 Play speech.wav file to check generated speech.
-
+> **Note:** For now speech generation requests are processed synchronously.
 ## Transcription
 ### Model preparation
 Many Whisper models can be deployed in a single command by using pre-configured models from [OpenVINO HuggingFace organization](https://huggingface.co/collections/OpenVINO/speech-to-text) and used both for translations and transcriptions endpoints.
@@ -207,7 +208,7 @@ print(transcript.text)
 The quick brown fox jumped over the lazy dog.
 ```
 :::
-
+> **Note:** For now speech recognition requests are processed synchronously.
 ## Translation
 To test translations endpoint we first need to prepare audio file with speech in language other than english, e.g. spanish. To generate such sample we will use finetuned version of microsoft/speecht5_tts model.
 
@@ -298,3 +299,4 @@ print(translation.text)
 Madrid is the capital of Spain.
 ```
 :::
+> **Note:** For now speech translation requests are processed synchronously.
