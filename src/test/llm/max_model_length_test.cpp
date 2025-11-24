@@ -15,7 +15,7 @@
 //*****************************************************************************
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
-#include "../port/rapidjson_document.hpp"
+#include "../../port/rapidjson_document.hpp"
 
 #include <openvino/genai/tokenizer.hpp>
 
