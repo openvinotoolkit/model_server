@@ -152,7 +152,7 @@ static std::string escapeWithoutQuotes(const std::string& input) {
         case '\r':
             output += "\\r";
             break;
-// escaping '/' is for now omitted as its creating issues in Continue
+            // escaping '/' is for now omitted as its creating issues in Continue
 
         /*case '\\':
             output += "\\\\";
