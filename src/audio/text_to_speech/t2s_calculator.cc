@@ -51,6 +51,27 @@ namespace mediapipe {
 
 const std::string TTS_SESSION_SIDE_PACKET_TAG = "TTS_NODE_RESOURCES";
 
+ov::Tensor read_speaker_embedding(const std::filesystem::path& file_path) {
+    std::ifstream input(file_path, std::ios::binary);
+    OPENVINO_ASSERT(input, "Failed to open file: " + file_path.string());
+
+    // Get file size
+    input.seekg(0, std::ios::end);
+    size_t buffer_size = static_cast<size_t>(input.tellg());
+    input.seekg(0, std::ios::beg);
+
+    // Check size is multiple of float
+    OPENVINO_ASSERT(buffer_size % sizeof(float) == 0, "File size is not a multiple of float size.");
+    size_t num_floats = buffer_size / sizeof(float);
+    OPENVINO_ASSERT(num_floats == 512, "File must contain speaker embedding including 512 32-bit floats.");
+
+    OPENVINO_ASSERT(input, "Failed to read all data from file.");
+    ov::Tensor floats_tensor(ov::element::f32, ov::Shape{1, num_floats});
+    input.read(reinterpret_cast<char*>(floats_tensor.data()), buffer_size);
+
+    return floats_tensor;
+}
+
 class T2sCalculator : public CalculatorBase {
     static const std::string INPUT_TAG_NAME;
     static const std::string OUTPUT_TAG_NAME;
@@ -103,8 +124,18 @@ public:
             if (streamIt != payload.parsedJson->MemberEnd()) {
                 return absl::InvalidArgumentError("streaming is not supported");
             }
+            ov::genai::Text2SpeechDecodedResults generatedSpeech;
+            std::string voiceEmbeddingsPath = std::string(pipe->parsedModelsPath.c_str()) + std::string("speaker_embedding.bin");
             std::unique_lock lock(pipe->ttsPipelineMutex);
-            auto generatedSpeech = pipe->ttsPipeline->generate(inputIt->value.GetString());
+            if(std::filesystem::exists(voiceEmbeddingsPath)){
+                SPDLOG_LOGGER_DEBUG(t2s_calculator_logger, "Voice embeddings file found");
+                auto speakerEmbedding = read_speaker_embedding(voiceEmbeddingsPath);
+                generatedSpeech = pipe->ttsPipeline->generate(inputIt->value.GetString(), speakerEmbedding);
+            }
+            else{
+                SPDLOG_LOGGER_DEBUG(t2s_calculator_logger, "Voice embeddings not found");
+                generatedSpeech = pipe->ttsPipeline->generate(inputIt->value.GetString());
+            }
             auto bitsPerSample = generatedSpeech.speeches[0].get_element_type().bitwidth();
             auto speechSize = generatedSpeech.speeches[0].get_size();
             ov::Tensor cpuTensor(generatedSpeech.speeches[0].get_element_type(), generatedSpeech.speeches[0].get_shape());
