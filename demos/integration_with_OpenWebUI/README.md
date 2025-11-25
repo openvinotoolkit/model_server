@@ -94,6 +94,18 @@ Click **New Chat** and select the model to start chatting
 
 ![chat demo](./chat_demo.png)
 
+### (optional) Step 3: Set request parameters
+
+There are multiple configurable parameters in OVMS, all of them for `/v3/chat/completions` endpoint are accesible in [chat api documentation](https://github.com/openvinotoolkit/model_server/blob/main/docs/model_server_rest_api_chat.md#request).
+
+To configure them in *OpenWebUI* with an example of turning off reasoning:
+1. Go to **Admin Panel** -> **Settings** -> **Models** ([http://localhost:8080/admin/settings/models](http://localhost:8080/admin/settings/models))
+2. Click on desired model, unfold **Advanced Params**.
+3. Click **+ Add Custom Parameter**.
+4. Change paramter name to `chat_template_kwargs` and content to `{"enable_thinking": false}`.
+
+![parameter set](./set_chat_template_parameter.png)
+
 ### Reference
 [https://docs.openwebui.com/getting-started/quick-start/starting-with-openai-compatible](https://docs.openwebui.com/getting-started/quick-start/starting-with-openai-compatible/#step-2-connect-your-server-to-open-webui)
 
