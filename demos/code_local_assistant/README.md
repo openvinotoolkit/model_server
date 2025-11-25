@@ -26,13 +26,6 @@ Pull and add the model on Linux:
 ```bash
 python export_model.py text_generation --source_model Qwen/Qwen3-Coder-30B-A3B-Instruct --weight-format int8 --config_file_path models/config_all.json --model_repository_path models --target_device GPU --tool_parser qwen3coder --cache_size 2 --overwrite_models
 curl -L -o models/Qwen/Qwen3-Coder-30B-A3B-Instruct/chat_template.jinja https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/extras/chat_template_examples/chat_template_qwen3coder_instruct.jinja
-
-docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
-    openvino/model_server:weekly \
-    --add_to_config \
-    --config_path /models/config_all.json \
-    --model_name Qwen/Qwen3-Coder-30B-A3B-Instruct \
-    --model_path Qwen/Qwen3-Coder-30B-A3B-Instruct
 ```
 > **Note:** This model requires ~15GB disk space and same amount of VRAM on the GPU.
 
@@ -41,15 +34,9 @@ docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
 :::{tab-item} mistralai/Codestral-22B-v0.1 
 :sync: mistralai/Codestral-22B-v0.1
 ```bash
-python export_model.py text_generation --source_model mistralai/Codestral-22B-v0.1 --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device GPU --cache_size 2 --overwrite_models
+python export_model.py text_generation --source_model mistralai/Codestral-22B-v0.1 --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device GPU --tool_parser mistral --cache_size 2 --overwrite_models
+curl -L -o models/mistralai/Codestral-22B-v0.1/chat_template.jinja https://raw.githubusercontent.com/vllm-project/vllm/refs/tags/v0.10.1.1/examples/tool_chat_template_mistral_parallel.jinja
 
-docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
-    -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy=$no_proxy \
-    openvino/model_server:weekly \
-    --add_to_config \
-    --config_path /models/config_all.json \
-    --model_name mistralai/Codestral-22B-v0.1 \
-    --model_path mistralai/Codestral-22B-v0.1
 ```
 > **Note:** This model requires ~12GB disk space and same amount of VRAM on the GPU.
 
