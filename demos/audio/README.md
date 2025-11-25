@@ -11,7 +11,7 @@ Check supported [Speech Recognition Models](https://openvinotoolkit.github.io/op
 
 **Model preparation**: Python 3.10 or higher with pip
 
-**Model Server deployment**: Installed Docker Engine or OVMS binary package according to the [baremetal deployment guide](../../../docs/deploying_server_baremetal.md)
+**Model Server deployment**: Installed Docker Engine or OVMS binary package according to the [baremetal deployment guide](../../docs/deploying_server_baremetal.md)
 
 **Client**: curl or Python for using OpenAI client package
 
@@ -45,7 +45,7 @@ python export_model.py text2speech --source_model microsoft/speecht5_tts --weigh
 
 > **Note:** Change the `--weight-format` to quantize the model to `int8` precision to reduce memory consumption and improve performance.
 
-The default configuration should work in most cases but the parameters can be tuned via `export_model.py` script arguments. Run the script with `--help` argument to check available parameters and see the [Speech Generation calculator documentation](../../docs/speech_generation/reference.md) to learn more about configuration options and limitations.
+The default configuration should work in most cases but the parameters can be tuned via `export_model.py` script arguments. Run the script with `--help` argument to check available parameters and see the [T2s calculator documentation](../../docs/speech_generation/reference.md) to learn more about configuration options and limitations.
 
 ### Deployment
 
@@ -168,7 +168,7 @@ ovms --rest_port 8000 --source_model openai/whisper-large-v3-turbo --model_repos
 ```
 :::
 
-The default configuration should work in most cases but the parameters can be tuned via `export_model.py` script arguments. Run the script with `--help` argument to check available parameters and see the [Speech Recognition calculator documentation](../../docs/speech_recognition/reference.md) to learn more about configuration options and limitations.
+The default configuration should work in most cases but the parameters can be tuned via `export_model.py` script arguments. Run the script with `--help` argument to check available parameters and see the [S2t calculator documentation](../../docs/speech_recognition/reference.md) to learn more about configuration options and limitations.
 
 ### Request Generation 
 Transcript file that was previously generated with audio/speech endpoint.
