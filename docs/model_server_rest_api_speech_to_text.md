@@ -82,3 +82,5 @@ Endpoint can raise an error related to incorrect request in the following condit
 [End to end demo with translation endpoint](../demos/audio/README.md#translation)
 
 [Code snippets](./clients_genai.md)
+
+[Speech Recognition calculator configuration and limitations](speech_recognition/reference.md)

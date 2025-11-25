@@ -48,3 +48,5 @@ Endpoint can raise an error related to incorrect request in the following condit
 [End to end demo with speech generation endpoint](../demos/audio/README.md#speech-generation)
 
 [Code snippets](./clients_genai.md)
+
+[Speech Generation calculator configuration and limitations](speech_generation/reference.md)

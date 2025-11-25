@@ -40,10 +40,12 @@ Run `export_model.py` script to download and quantize the model:
 
 **CPU**
 ```console
-python export_model.py text2speech --source_model microsoft/speecht5_tts --weight-format fp32 --model_name microsoft/speecht5_tts --config_file_path models/config.json --model_repository_path models --overwrite_models --vocoder microsoft/speecht5_hifigan
+python export_model.py text2speech --source_model microsoft/speecht5_tts --weight-format fp16 --model_name microsoft/speecht5_tts --config_file_path models/config.json --model_repository_path models --overwrite_models --vocoder microsoft/speecht5_hifigan
 ```
 
-> **Note:** Change the `--weight-format` to quantize the model to `fp16` or `int8` precision to reduce memory consumption and improve performance.
+> **Note:** Change the `--weight-format` to quantize the model to `int8` precision to reduce memory consumption and improve performance.
+
+The default configuration should work in most cases but the parameters can be tuned via `export_model.py` script arguments. Run the script with `--help` argument to check available parameters and see the [Speech Generation calculator documentation](../../docs/speech_generation/reference.md) to learn more about configuration options and limitations.
 
 ### Deployment
 
@@ -61,7 +63,6 @@ docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models:rw
 mkdir models
 ovms --rest_port 8000 --source_model microsoft/speecht5_tts --model_repository_path models --model_name microsoft/speecht5_tts --task text2speech --target_device CPU
 ```
-> **Note:** microsoft/speecht5_tts model works only on CPU right now.
 
 ### Request Generation 
 
@@ -100,14 +101,12 @@ print("Generation finished")
 :::
 
 Play speech.wav file to check generated speech.
-> **Note:** For now speech generation requests are processed synchronously.
+
 ## Transcription
 ### Model preparation
-Many Whisper models can be deployed in a single command by using pre-configured models from [OpenVINO HuggingFace organization](https://huggingface.co/collections/OpenVINO/speech-to-text) and used both for translations and transcriptions endpoints.
+Many variances of Whisper models can be deployed in a single command by using pre-configured models from [OpenVINO HuggingFace organization](https://huggingface.co/collections/OpenVINO/speech-to-text) and used both for translations and transcriptions endpoints.
 However in this demo we will use openai/whisper-large-v3-turbo which needs to be converted to IR format before using in OVMS.
 Specific OVMS pull mode example for models requiring conversion is described in the [Ovms pull mode](../../docs/pull_hf_models.md#pulling-models-outside-openvino-organization)
-
-Or you can use the python export_model.py script described below.
 
 Here, the original Speech to Text model will be converted to IR format and optionally quantized.
 That ensures faster initialization time, better performance and lower memory consumption.
@@ -126,10 +125,10 @@ Run `export_model.py` script to download and quantize the model:
 
 **CPU**
 ```console
-python export_model.py speech2text --source_model openai/whisper-large-v3-turbo --weight-format fp32 --model_name openai/whisper-large-v3-turbo --config_file_path models/config.json --model_repository_path models --overwrite_models
+python export_model.py speech2text --source_model openai/whisper-large-v3-turbo --weight-format fp16 --model_name openai/whisper-large-v3-turbo --config_file_path models/config.json --model_repository_path models --overwrite_models
 ```
 
-> **Note:** Change the `--weight-format` to quantize the model to `fp16` or `int8` precision to reduce memory consumption and improve performance.
+> **Note:** Change the `--weight-format` to quantize the model to `int8` precision to reduce memory consumption and improve performance.
 
 ### Deployment
 
@@ -168,6 +167,8 @@ or
 ovms --rest_port 8000 --source_model openai/whisper-large-v3-turbo --model_repository_path models --model_name openai/whisper-large-v3-turbo --task speech2text --target_device GPU
 ```
 :::
+
+The default configuration should work in most cases but the parameters can be tuned via `export_model.py` script arguments. Run the script with `--help` argument to check available parameters and see the [Speech Recognition calculator documentation](../../docs/speech_recognition/reference.md) to learn more about configuration options and limitations.
 
 ### Request Generation 
 Transcript file that was previously generated with audio/speech endpoint.
@@ -208,12 +209,11 @@ print(transcript.text)
 The quick brown fox jumped over the lazy dog.
 ```
 :::
-> **Note:** For now speech recognition requests are processed synchronously.
 ## Translation
 To test translations endpoint we first need to prepare audio file with speech in language other than english, e.g. spanish. To generate such sample we will use finetuned version of microsoft/speecht5_tts model.
 
 ```console
-python export_model.py text2speech --source_model Sandiago21/speecht5_finetuned_facebook_voxpopuli_spanish --weight-format fp32 --model_name speecht5_tts_spanish --config_file_path models/config.json --model_repository_path models --overwrite_models --vocoder microsoft/speecht5_hifigan
+python export_model.py text2speech --source_model Sandiago21/speecht5_finetuned_facebook_voxpopuli_spanish --weight-format fp16 --model_name speecht5_tts_spanish --config_file_path models/config.json --model_repository_path models --overwrite_models --vocoder microsoft/speecht5_hifigan
 
 docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models:rw openvino/model_server:latest --rest_port 8000 --model_path /models/Sandiago21/speecht5_finetuned_facebook_voxpopuli_spanish --model_name speecht5_tts_spanish
 
@@ -299,4 +299,3 @@ print(translation.text)
 Madrid is the capital of Spain.
 ```
 :::
-> **Note:** For now speech translation requests are processed synchronously.
