@@ -34,6 +34,10 @@ struct ContinuousBatchingServableProperties : public GenAiServableProperties {
     ov::genai::SchedulerConfig schedulerConfig;
     std::shared_ptr<ov::genai::ContinuousBatchingPipeline> pipeline;
     std::shared_ptr<LLMExecutorWrapper> llmExecutorWrapper;
+
+    ~ContinuousBatchingServableProperties() {
+        std::cout <<"TEST ContinuousBatchingServableProperties destructor" << std::endl;
+    }
 };
 
 class ContinuousBatchingServable : public GenAiServable {
@@ -43,7 +47,12 @@ protected:
 
 public:
     ContinuousBatchingServable() {
+        std::cout <<"TEST ContinuousBatchingServable constructor" << std::endl;
         properties = std::make_shared<ContinuousBatchingServableProperties>();
+    }
+
+    ~ContinuousBatchingServable() {
+        std::cout <<"TEST ContinuousBatchingServable destructor" << std::endl;
     }
 
     // addRequestToPipeline implementation can be specific for different servables with Continuous Batching engine

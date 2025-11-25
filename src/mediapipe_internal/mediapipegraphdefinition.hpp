@@ -79,12 +79,26 @@ struct GraphSidePackets {
     TtsServableMap ttsServableMap;
     void clear() {
         pythonNodeResourcesMap.clear();
-        genAiServableMap.clear();
+        if (genAiServableMap.empty()) {
+            std::cout << "GraphSidePackets genAiServableMap empty: " << std::endl; 
+        } else {
+            auto value = genAiServableMap.begin()->second;
+            std::cout << "GraphSidePackets Reference count: " << value.use_count() << std::endl; 
+        }
+        
         imageGenPipelinesMap.clear();
         embeddingsServableMap.clear();
         rerankServableMap.clear();
         sttServableMap.clear();
         ttsServableMap.clear();
+
+        if (genAiServableMap.empty()) {
+            std::cout << "TEST Clear END GraphSidePackets genAiServableMap empty: " << std::endl; 
+        } else {
+            auto value = genAiServableMap.begin()->second;
+            std::cout << "TEST Clear END GraphSidePackets Reference count: " << value.use_count() << std::endl; 
+        }
+        genAiServableMap.clear();
     }
     bool empty() {
         return (pythonNodeResourcesMap.empty() &&

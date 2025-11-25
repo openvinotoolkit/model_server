@@ -48,6 +48,9 @@ class HttpLLMCalculator : public CalculatorBase {
     mediapipe::Timestamp iterationBeginTimestamp{0};
 
 public:
+    ~HttpLLMCalculator(){
+        std::cout << "HttpLLMCalculator destructor servable count: " << servable.use_count() << std::endl; 
+    }
     static absl::Status GetContract(CalculatorContract* cc) {
         RET_CHECK(!cc->Inputs().GetTags().empty());
         RET_CHECK(!cc->Outputs().GetTags().empty());
@@ -62,6 +65,14 @@ public:
     absl::Status Close(CalculatorContext* cc) final {
         OVMS_PROFILE_FUNCTION();
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "LLMCalculator [Node: {} ] Close", cc->NodeName());
+        ovms::GenAiServableMap servableMap = cc->InputSidePackets().Tag(LLM_SESSION_SIDE_PACKET_TAG).Get<ovms::GenAiServableMap>();
+        auto it = servableMap.find(cc->NodeName());
+        if (it == servableMap.end()) {
+            std::cout << "TEST Could not find initialized LLM node named: " << cc->NodeName() << std::endl;
+            return absl::OkStatus();
+        } else {
+            std::cout << "HttpLLMCalculator Close servable count: " << it->second.use_count() << std::endl; 
+        }
         return absl::OkStatus();
     }
 
