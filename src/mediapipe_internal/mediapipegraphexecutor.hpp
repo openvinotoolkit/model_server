@@ -97,6 +97,14 @@ public:
     static const std::string TTS_SESSION_SIDE_PACKET_TAG;
     static const ::mediapipe::Timestamp STARTING_TIMESTAMP;
 
+    ~MediapipeGraphExecutor() {
+        if (sidePacketMaps.genAiServableMap.empty()) {
+            std::cout << "MediapipeGraphExecutor sidePacketMaps empty: " << std::endl; 
+        } else {
+            auto value = sidePacketMaps.genAiServableMap.begin()->second;
+            std::cout << "MediapipeGraphExecutor sidePacketMaps Reference count: " << value.use_count() << std::endl; 
+        }
+    }
     MediapipeGraphExecutor(const std::string& name, const std::string& version, const ::mediapipe::CalculatorGraphConfig& config,
         stream_types_mapping_t inputTypes,
         stream_types_mapping_t outputTypes,

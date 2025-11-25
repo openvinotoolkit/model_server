@@ -45,15 +45,19 @@ void DrogonHttpAsyncWriterImpl::PartialReplyWithStatus(std::string message, HTTP
 void DrogonHttpAsyncWriterImpl::PartialReplyBegin(std::function<void()> actualWorkloadCallback) {
     this->responsePtr = drogon::HttpResponse::newAsyncStreamResponse(
         [this, actualWorkloadCallback = std::move(actualWorkloadCallback)](drogon::ResponseStreamPtr stream) {
+            std::cout << "DrogonHttpAsyncWriterImpl PartialReplyBegin lambda start " << std::endl; 
             this->stream = std::move(stream);
             this->pool.Schedule([actualWorkloadCallback = std::move(actualWorkloadCallback)] {
                 SPDLOG_DEBUG("DrogonHttpAsyncWriterImpl::PartialReplyBegin::Schedule begin");
                 try {
+                    std::cout << "DrogonHttpAsyncWriterImpl actualWorkloadCallback start " << std::endl; 
                     actualWorkloadCallback();  // run actual workload (mediapipe executor inferStream) which uses PartialReply
                 } catch (...) {
                     SPDLOG_ERROR("Exception caught in REST request streaming handler");
                 }
                 SPDLOG_DEBUG("DrogonHttpAsyncWriterImpl::PartialReplyBegin::Schedule end");
+
+                std::cout << "DrogonHttpAsyncWriterImpl PartialReplyBegin lambda end " << std::endl; 
             });
         });
 
@@ -69,6 +73,8 @@ void DrogonHttpAsyncWriterImpl::PartialReplyBegin(std::function<void()> actualWo
     // Originally this also sent http response header (with status code)
     // We have drogon patch that delays it till first streaming response
     this->drogonResponseInitializeCallback(this->responsePtr);
+
+    std::cout << "DrogonHttpAsyncWriterImpl PartialReplyBegin function end " << std::endl; 
 }
 void DrogonHttpAsyncWriterImpl::PartialReplyEnd() {
     this->stream->close();

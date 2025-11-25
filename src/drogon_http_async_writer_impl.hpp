@@ -45,7 +45,13 @@ public:
         const drogon::HttpRequestPtr& requestPtr) :
         drogonResponseInitializeCallback(std::move(callback)),
         pool(pool),
-        requestPtr(requestPtr) {}
+        requestPtr(requestPtr) {
+            std::cout << "DrogonHttpAsyncWriterImpl construct " << std::endl; 
+        }
+
+    ~DrogonHttpAsyncWriterImpl(){
+        std::cout << "DrogonHttpAsyncWriterImpl DEstruct " << std::endl; 
+    }
 
     // Used by V3 handler
     void OverwriteResponseHeader(const std::string& key, const std::string& value) override;
