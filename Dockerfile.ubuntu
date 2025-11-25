@@ -326,133 +326,132 @@ ARG OPTIMIZE_BUILDING_TESTS=0
 # Builds unit tests together with ovms server in one step
 # It speeds up CI when tests are executed outside of the image building
 # hadolint ignore=SC2046
-#RUN if [ "$FUZZER_BUILD" == "0" ]; then bazel build --jobs=$JOBS ${debug_bazel_flags} ${minitrace_flags} //src:ovms $(if [ "${OPTIMIZE_BUILDING_TESTS}" == "1" ] ; then echo -n //src:ovms_test; fi); fi;
-#
-#ARG RUN_TESTS=0
-#RUN if [ "$RUN_TESTS" == "1" ] ; then mkdir -p demos/common/export_models/ && mv export_model.py demos/common/export_models/ && ./prepare_llm_models.sh /ovms/src/test/llm_testing docker && ./run_unit_tests.sh ; fi
-#
-#RUN if [ "$FUZZER_BUILD" == "0" ]; then /ovms/bazel-bin/src/ovms --version && /ovms/bazel-bin/src/ovms; fi;
-#
-#COPY release_files/thirdparty-licenses/ /ovms/release_files/thirdparty-licenses/
-#COPY release_files/LICENSE /ovms/release_files/LICENSE
-#COPY client /client
-#RUN python3 -c "import json; m={'PROJECT_VERSION':'${PROJECT_VERSION}','OPENVINO backend':'$(/ovms/bazel-bin/src/ovms --version | grep backend | cut -d' ' -f3)', \
-#    'BAZEL_BUILD_FLAGS':'${debug_bazel_flags}${minitrace_flags}','BASE_IMAGE':'${BASE_IMAGE}' }; \
-#    print(json.dumps(m,indent=4))" > /ovms/release_files/metadata.json
-## ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
-#
-#FROM $BUILD_IMAGE as capi-build
-#SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
-## C api shared library
-## hadolint ignore=DL3059
-#ARG CAPI_FLAGS="--strip=always --config mp_off_py_off --//:distro=ubuntu"
-#ARG JOBS=40
-#ARG FUZZER_BUILD=0
-#WORKDIR /ovms
-#RUN bazel build --jobs=$JOBS ${CAPI_FLAGS} //src:ovms_shared
-#
-## C-API benchmark app
-#RUN if [ "$FUZZER_BUILD" == "0" ]; then bazel build --jobs=$JOBS ${CAPI_FLAGS} //src:capi_benchmark && ./bazel-bin/src/capi_benchmark --niter 2 --nstreams 1 --servable_name "dummy"; fi;
-#
-#ARG FUZZER_BUILD=0
-## C api app with bazel
-## hadolint ignore=DL3059
-#RUN if [ "$FUZZER_BUILD" == "0" ]; then bazel build ${CAPI_FLAGS} --jobs $JOBS //src:capi_cpp_example; fi;
-#
-## C-api C/C++ app with gcc
-#COPY MakefileCapi /ovms/
-#RUN if [ "$FUZZER_BUILD" == "0" ]; then  CAPI_FLAGS=${CAPI_FLAGS} make -f MakefileCapi cpp && \
-#                                         CAPI_FLAGS=${CAPI_FLAGS} make -f MakefileCapi c; fi ;
-#RUN mkdir -p /ovms_release/lib/ ; find /ovms/bazel-out/k8-*/bin -iname 'libovms_shared.so' -exec cp -v {} /ovms_release/lib/ \; \
-#    && find /ovms/bazel-out/k8-*/bin -iname 'libgit2.so' -exec cp -v {} /ovms_release/lib/ \;
-#
-## ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
-#
-#FROM $BUILD_IMAGE as pkg
-#
-#COPY --from=build /usr/local/bin/patchelf /usr/local/bin/patchelf
-#
-#WORKDIR /
-#ARG BASE_OS=ubuntu
-#ARG ov_use_binary=0
-#ARG FUZZER_BUILD=0
-#ARG debug_bazel_flags=--strip=never\ --copt="-g "\ -c\ dbg
-#COPY --from=capi-build /ovms_release/lib/libovms_shared.so /ovms_release/lib/
-#COPY --from=capi-build /ovms_release/lib/libgit2.so /ovms_release/lib/
-#
-#COPY create_package.sh /
-#RUN ./create_package.sh
-#
-#RUN chown -R ovms:ovms /ovms_release && \
-#    mkdir /licenses && ln -s /ovms_release/LICENSE /licenses && ln -s /ovms_release/thirdparty-licenses /licenses/thirdparty-licenses
-## Remove capi library
-#RUN if [ -f /ovms_release/lib/libovms_shared.so ] ; then mv /ovms_release/lib/libovms_shared.so / ; fi ;
-#
-## ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
-#
-#FROM $BASE_IMAGE as release
-#ARG INSTALL_RPMS_FROM_URL=
-#ARG INSTALL_DRIVER_VERSION="24.26.30049"
-#ARG GPU=0
-#ARG NPU=0
-#ENV DEBIAN_FRONTEND=noninteractive
-#ARG debug_bazel_flags=
-#LABEL bazel-build-flags=${debug_bazel_flags}
-#LABEL supported-devices="CPU=1 GPU=${GPU} NPU=${NPU}"
-#ARG BASE_IMAGE
-#LABEL base-image=${BASE_IMAGE}
-#ENV PYTHONPATH=/ovms/lib/python:/ovms/python_deps
-#SHELL ["/bin/bash", "-c"]
-#
-#WORKDIR /
-#
-#COPY release_files/drivers /drivers
-#SHELL ["/bin/bash", "-o", "pipefail", "-c"]
-#ARG INSTALL_DRIVER_VERSION="24.39.31294"
-#COPY ./install_ubuntu_gpu_drivers.sh /tmp/install_gpu_drivers.sh
-## hadolint ignore=DL3003,SC2164
-#RUN apt-get update ; \
-#    apt-get install -y --no-install-recommends curl ca-certificates libxml2 || exit 1; \
-#    if [ "$GPU" == "1" ] ; then \
-#	/tmp/install_gpu_drivers.sh ; \
-#    fi ; \
-#    if [ "$NPU" == "1" ] ; then \
-#        mkdir /tmp/npu_deps && cd /tmp/npu_deps ; \
-#        apt-get update && apt-get install -y --no-install-recommends libtbb12 && \
-#        if [[ "$BASE_IMAGE" == *"22.04"* ]] ; then \
-#            curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.24.0/linux-npu-driver-v1.24.0.20251003-18218973328-ubuntu2204.tar.gz && \
-#            tar -xf linux-npu-driver-v1.24.0.20251003-18218973328-ubuntu2204.tar.gz && \
-#            curl -L -O https://github.com/oneapi-src/level-zero/releases/download/v1.24.2/level-zero_1.24.2+u22.04_amd64.deb ; \
-#        else \
-#            curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.24.0/linux-npu-driver-v1.24.0.20251003-18218973328-ubuntu2404.tar.gz && \
-#            tar -xf linux-npu-driver-v1.24.0.20251003-18218973328-ubuntu2404.tar.gz && \
-#            curl -L -O https://github.com/oneapi-src/level-zero/releases/download/v1.24.2/level-zero_1.24.2+u24.04_amd64.deb ; \
-#        fi ; \      
-#        dpkg -i ./*.deb && rm -Rf /tmp/npu_deps ; \
-#    fi ; \
-#    apt-get clean ; \
-#    rm -rf /tmp/install_gpu_drivers.sh && \
-#    rm -rf /var/lib/apt/lists/* && rm -rf /tmp/* && \
-#    groupadd --gid 5000 ovms && \
-#    useradd --home-dir /home/ovms --create-home --uid 5000 --gid 5000 --groups 39,44 --shell /bin/bash --skel /dev/null ovms
-#
-#COPY --from=pkg /ovms_release /ovms
-#COPY --from=build /usr/local/lib/python3.*/dist-packages/MarkupSafe-3.0.2.dist-info /ovms/python_deps/MarkupSafe-3.0.2.dist-info
-#COPY --from=build /usr/local/lib/python3.*/dist-packages/jinja2 /ovms/python_deps/jinja2
-#COPY --from=build /usr/local/lib/python3.*/dist-packages/jinja2-3.1.6.dist-info /ovms/python_deps/jinja2-3.1.6.dist-info
-#COPY --from=build /usr/local/lib/python3.*/dist-packages/markupsafe /ovms/python_deps/markupsafe
-#
-## For image with Python enabled install Python library
-#RUN if ! [[ $debug_bazel_flags == *"py_off"* ]]; then true ; else exit 0 ; fi ; \
-#    apt-get update -y ; \
-#    if [[ "$BASE_IMAGE" == *"22.04"* ]] ; then python_version=3.10; else python_version=3.12; fi; \
-#    apt-get install libpython$python_version --no-install-recommends -y && \
-#    apt-get clean && rm -rf /var/lib/apt/lists/* && rm -rf /tmp/*
-#
-#ENV LD_LIBRARY_PATH=/ovms/lib
-#ENV PATH="$PATH:/ovms/bin"
-#
-#RUN echo "The source code of added GPL components is stored in https://storage.openvinotoolkit.org/repositories/openvino/ci_dependencies/container_gpl_sources/" > /ovms/thirdparty-licenses/GPL.txt
-#USER ovms
-#ENTRYPOINT ["/ovms/bin/ovms"]
-#
+RUN if [ "$FUZZER_BUILD" == "0" ]; then bazel build --jobs=$JOBS ${debug_bazel_flags} ${minitrace_flags} //src:ovms $(if [ "${OPTIMIZE_BUILDING_TESTS}" == "1" ] ; then echo -n //src:ovms_test; fi); fi;
+
+ARG RUN_TESTS=0
+RUN if [ "$RUN_TESTS" == "1" ] ; then mkdir -p demos/common/export_models/ && mv export_model.py demos/common/export_models/ && ./prepare_llm_models.sh /ovms/src/test/llm_testing docker && ./run_unit_tests.sh ; fi
+
+RUN if [ "$FUZZER_BUILD" == "0" ]; then /ovms/bazel-bin/src/ovms --version && /ovms/bazel-bin/src/ovms; fi;
+
+COPY release_files/thirdparty-licenses/ /ovms/release_files/thirdparty-licenses/
+COPY release_files/LICENSE /ovms/release_files/LICENSE
+COPY client /client
+RUN python3 -c "import json; m={'PROJECT_VERSION':'${PROJECT_VERSION}','OPENVINO backend':'$(/ovms/bazel-bin/src/ovms --version | grep backend | cut -d' ' -f3)', \
+    'BAZEL_BUILD_FLAGS':'${debug_bazel_flags}${minitrace_flags}','BASE_IMAGE':'${BASE_IMAGE}' }; \
+    print(json.dumps(m,indent=4))" > /ovms/release_files/metadata.json
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+
+FROM $BUILD_IMAGE as capi-build
+SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
+# C api shared library
+# hadolint ignore=DL3059
+ARG CAPI_FLAGS="--strip=always --config mp_off_py_off --//:distro=ubuntu"
+ARG JOBS=40
+ARG FUZZER_BUILD=0
+WORKDIR /ovms
+RUN bazel build --jobs=$JOBS ${CAPI_FLAGS} //src:ovms_shared
+
+# C-API benchmark app
+RUN if [ "$FUZZER_BUILD" == "0" ]; then bazel build --jobs=$JOBS ${CAPI_FLAGS} //src:capi_benchmark && ./bazel-bin/src/capi_benchmark --niter 2 --nstreams 1 --servable_name "dummy"; fi;
+
+ARG FUZZER_BUILD=0
+# C api app with bazel
+# hadolint ignore=DL3059
+RUN if [ "$FUZZER_BUILD" == "0" ]; then bazel build ${CAPI_FLAGS} --jobs $JOBS //src:capi_cpp_example; fi;
+
+# C-api C/C++ app with gcc
+COPY MakefileCapi /ovms/
+RUN if [ "$FUZZER_BUILD" == "0" ]; then  CAPI_FLAGS=${CAPI_FLAGS} make -f MakefileCapi cpp && \
+                                         CAPI_FLAGS=${CAPI_FLAGS} make -f MakefileCapi c; fi ;
+RUN mkdir -p /ovms_release/lib/ ; find /ovms/bazel-out/k8-*/bin -iname 'libovms_shared.so' -exec cp -v {} /ovms_release/lib/ \; \
+    && find /ovms/bazel-out/k8-*/bin -iname 'libgit2.so' -exec cp -v {} /ovms_release/lib/ \;
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+
+FROM $BUILD_IMAGE as pkg
+
+COPY --from=build /usr/local/bin/patchelf /usr/local/bin/patchelf
+
+WORKDIR /
+ARG BASE_OS=ubuntu
+ARG ov_use_binary=0
+ARG FUZZER_BUILD=0
+ARG debug_bazel_flags=--strip=never\ --copt="-g "\ -c\ dbg
+COPY --from=capi-build /ovms_release/lib/libovms_shared.so /ovms_release/lib/
+COPY --from=capi-build /ovms_release/lib/libgit2.so /ovms_release/lib/
+
+COPY create_package.sh /
+RUN ./create_package.sh
+
+RUN chown -R ovms:ovms /ovms_release && \
+    mkdir /licenses && ln -s /ovms_release/LICENSE /licenses && ln -s /ovms_release/thirdparty-licenses /licenses/thirdparty-licenses
+# Remove capi library
+RUN if [ -f /ovms_release/lib/libovms_shared.so ] ; then mv /ovms_release/lib/libovms_shared.so / ; fi ;
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+
+FROM $BASE_IMAGE as release
+ARG INSTALL_RPMS_FROM_URL=
+ARG INSTALL_DRIVER_VERSION="24.26.30049"
+ARG GPU=0
+ARG NPU=0
+ENV DEBIAN_FRONTEND=noninteractive
+ARG debug_bazel_flags=
+LABEL bazel-build-flags=${debug_bazel_flags}
+LABEL supported-devices="CPU=1 GPU=${GPU} NPU=${NPU}"
+ARG BASE_IMAGE
+LABEL base-image=${BASE_IMAGE}
+ENV PYTHONPATH=/ovms/lib/python:/ovms/python_deps
+SHELL ["/bin/bash", "-c"]
+
+WORKDIR /
+
+COPY release_files/drivers /drivers
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+ARG INSTALL_DRIVER_VERSION="24.39.31294"
+COPY ./install_ubuntu_gpu_drivers.sh /tmp/install_gpu_drivers.sh
+# hadolint ignore=DL3003,SC2164
+RUN apt-get update ; \
+    apt-get install -y --no-install-recommends curl ca-certificates libxml2 || exit 1; \
+    if [ "$GPU" == "1" ] ; then \
+	/tmp/install_gpu_drivers.sh ; \
+    fi ; \
+    if [ "$NPU" == "1" ] ; then \
+        mkdir /tmp/npu_deps && cd /tmp/npu_deps ; \
+        apt-get update && apt-get install -y --no-install-recommends libtbb12 && \
+        if [[ "$BASE_IMAGE" == *"22.04"* ]] ; then \
+            curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.24.0/linux-npu-driver-v1.24.0.20251003-18218973328-ubuntu2204.tar.gz && \
+            tar -xf linux-npu-driver-v1.24.0.20251003-18218973328-ubuntu2204.tar.gz && \
+            curl -L -O https://github.com/oneapi-src/level-zero/releases/download/v1.24.2/level-zero_1.24.2+u22.04_amd64.deb ; \
+        else \
+            curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.24.0/linux-npu-driver-v1.24.0.20251003-18218973328-ubuntu2404.tar.gz && \
+            tar -xf linux-npu-driver-v1.24.0.20251003-18218973328-ubuntu2404.tar.gz && \
+            curl -L -O https://github.com/oneapi-src/level-zero/releases/download/v1.24.2/level-zero_1.24.2+u24.04_amd64.deb ; \
+        fi ; \      
+        dpkg -i ./*.deb && rm -Rf /tmp/npu_deps ; \
+    fi ; \
+    apt-get clean ; \
+    rm -rf /tmp/install_gpu_drivers.sh && \
+    rm -rf /var/lib/apt/lists/* && rm -rf /tmp/* && \
+    groupadd --gid 5000 ovms && \
+    useradd --home-dir /home/ovms --create-home --uid 5000 --gid 5000 --groups 39,44 --shell /bin/bash --skel /dev/null ovms
+
+COPY --from=pkg /ovms_release /ovms
+COPY --from=build /usr/local/lib/python3.*/dist-packages/MarkupSafe-3.0.2.dist-info /ovms/python_deps/MarkupSafe-3.0.2.dist-info
+COPY --from=build /usr/local/lib/python3.*/dist-packages/jinja2 /ovms/python_deps/jinja2
+COPY --from=build /usr/local/lib/python3.*/dist-packages/jinja2-3.1.6.dist-info /ovms/python_deps/jinja2-3.1.6.dist-info
+COPY --from=build /usr/local/lib/python3.*/dist-packages/markupsafe /ovms/python_deps/markupsafe
+
+# For image with Python enabled install Python library
+RUN if ! [[ $debug_bazel_flags == *"py_off"* ]]; then true ; else exit 0 ; fi ; \
+    apt-get update -y ; \
+    if [[ "$BASE_IMAGE" == *"22.04"* ]] ; then python_version=3.10; else python_version=3.12; fi; \
+    apt-get install libpython$python_version --no-install-recommends -y && \
+    apt-get clean && rm -rf /var/lib/apt/lists/* && rm -rf /tmp/*
+
+ENV LD_LIBRARY_PATH=/ovms/lib
+ENV PATH="$PATH:/ovms/bin"
+
+RUN echo "The source code of added GPL components is stored in https://storage.openvinotoolkit.org/repositories/openvino/ci_dependencies/container_gpl_sources/" > /ovms/thirdparty-licenses/GPL.txt
+USER ovms
+ENTRYPOINT ["/ovms/bin/ovms"]
