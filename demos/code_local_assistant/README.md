@@ -147,7 +147,7 @@ ovms.exe --pull --source_model OpenVINO/Qwen2.5-Coder-3B-Instruct-int4-ov --mode
 ovms.exe --add_to_config --config_path models/config_all.json --model_name OpenVINO/Qwen2.5-Coder-3B-Instruct-int4-ov --model_path OpenVINO/Qwen2.5-Coder-3B-Instruct-int4-ov
 ```
 
-> **Note:** `Qwen2.5-Coder` models are avaliable on [HuggingFace OpenVINO repository](https://huggingface.co/OpenVINO/models?search=qwen2.5-coder) in different sizes and precisions. It is possible to choose it for any use and hardware. 
+> **Note:** `Qwen2.5-Coder` models are available on [HuggingFace OpenVINO repository](https://huggingface.co/OpenVINO/models?search=qwen2.5-coder) in different sizes and precisions. It is possible to choose it for any use and hardware. 
 
 :::
 ::::
