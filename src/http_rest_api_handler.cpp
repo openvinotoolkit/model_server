@@ -703,7 +703,8 @@ Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpReque
         return status;
     }
 
-    std::shared_ptr<MediapipeGraphExecutor> executor;
+    std::shared_ptr<MediapipeGraphExecutorHolder> executorHolder = std::make_shared<MediapipeGraphExecutorHolder>();
+    auto& executor = executorHolder->getExecutor();
     status = this->modelManager.createPipeline(executor, modelName);
     if (!status.ok()) {
         return status;
@@ -716,8 +717,10 @@ Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpReque
         serverReaderWriter->OverwriteResponseHeader("Content-Type", "text/event-stream");
         serverReaderWriter->OverwriteResponseHeader("Cache-Control", "no-cache");
         serverReaderWriter->OverwriteResponseHeader("Connection", "keep-alive");
-        serverReaderWriter->PartialReplyBegin([executor = std::move(executor), serverReaderWriter, request = std::move(request)] {
+        MediapipeGraphExecutorWrapper executorWrapper(executorHolder);
+        serverReaderWriter->PartialReplyBegin([executorWrapper = executorWrapper, serverReaderWriter, request = std::move(request)] () mutable {
             ExecutionContext executionContext{ExecutionContext::Interface::REST, ExecutionContext::Method::V3Stream};
+            auto& executor = executorWrapper.getHolder()->getExecutor();
             auto status = executor->inferStream(request, *serverReaderWriter, executionContext);
             if (!status.ok()) {
                 rapidjson::StringBuffer buffer;
@@ -728,6 +731,7 @@ Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpReque
                 writer.EndObject();
                 serverReaderWriter->PartialReplyWithStatus(buffer.GetString(), HTTPStatusCode::BAD_REQUEST);
             }
+            executor.reset();
             serverReaderWriter->PartialReplyEnd();
         });
         return StatusCode::PARTIAL_END;

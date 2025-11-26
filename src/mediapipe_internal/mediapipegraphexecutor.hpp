@@ -393,4 +393,28 @@ public:
         }
     }
 };
+
+struct MediapipeGraphExecutorHolder {
+    std::unique_ptr<MediapipeGraphExecutor> executor;
+
+    std::unique_ptr<MediapipeGraphExecutor>& getExecutor() {
+        return executor;
+    }
+
+    void reset() {
+        executor.reset();
+    }
+};
+
+struct MediapipeGraphExecutorWrapper {
+    std::shared_ptr<MediapipeGraphExecutorHolder> executorHolder;
+
+    explicit MediapipeGraphExecutorWrapper(std::shared_ptr<MediapipeGraphExecutorHolder> executorHolder) :
+        executorHolder(std::move(executorHolder)) {}
+
+    std::shared_ptr<MediapipeGraphExecutorHolder>& getHolder() {
+        return executorHolder;
+    }
+};
+
 }  // namespace ovms
