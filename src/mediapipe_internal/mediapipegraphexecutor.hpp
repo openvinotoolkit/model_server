@@ -393,4 +393,5 @@ public:
         }
     }
 };
+
 }  // namespace ovms
