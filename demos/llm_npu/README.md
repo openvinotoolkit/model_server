@@ -72,7 +72,7 @@ python export_model.py text_generation --source_model meta-llama/Llama-3.1-8B-In
 
 Below is a list of tested models:
 - Qwen/Qwen3-8B
-- meta/LLama3.1-8B-instruct
+- meta/Llama3.1-8B-instruct
 - mistralai/Mistral-7B-instruct-v0.3
 - NousResearch/Hermes-3-Llama-3.1-8B
 - microsoft/Phi-3-mini-4k-instruct
