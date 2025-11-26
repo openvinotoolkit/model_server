@@ -9,8 +9,8 @@ einops==0.8.1
 nncf==2.18.0
 numpy==2.2.6
 openai
-openvino-tokenizers==2025.4.0.0rc2
-openvino==2025.4.0rc2
+openvino-tokenizers==2025.4.0.0rc3
+openvino==2025.4.0rc3
 #optimum is in dependency list of optimum-intel
 pillow==12.0.0
 sentence_transformers
