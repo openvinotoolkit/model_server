@@ -307,8 +307,8 @@ client = OpenAI(base_url=base_url, api_key="unused")
 completion = client.beta.chat.completions.parse(
     model=model_name,
     messages=[
-         {"role": "system", "content": "Classify sentiments of given prompts"},
-         {"role": "user", "content": "OVMS is fantastic!"},
+      {"role": "system", "content": "You are responsible for generating email address for new empoyees. Address should have a format '<first_name>.<last_name>@company.com'. Replace <first_name> and <last_name> with data from user prompt."},
+      {"role":"user", "content":"Generate email address for Jane Doe."}
     ],
     temperature=0.0,
     max_tokens=100,
