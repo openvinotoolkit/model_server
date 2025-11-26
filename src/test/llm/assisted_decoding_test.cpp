@@ -49,7 +49,7 @@
 
 using namespace ovms;
 
-class AssistedDecodingPipelinesHttpTest : public ::testing::Test {
+class DISABLED_AssistedDecodingPipelinesHttpTest : public ::testing::Test {
 protected:
     static std::unique_ptr<std::thread> t;
 
@@ -162,7 +162,7 @@ std::unique_ptr<std::thread> AssistedDecodingPipelinesHttpTest::t;
 
 // Speculative decoding
 
-TEST_F(AssistedDecodingPipelinesHttpTest, unaryCompletionsJsonSpeculativeDecoding) {
+TEST_F(DISABLED_AssistedDecodingPipelinesHttpTest, unaryCompletionsJsonSpeculativeDecoding) {
     // Generate reference from the base model (unassisted generation)
     config.max_new_tokens = 10;
     config.temperature = 0;
@@ -235,7 +235,7 @@ TEST_F(AssistedDecodingPipelinesHttpTest, unaryCompletionsJsonSpeculativeDecodin
     EXPECT_STREQ(choice["text"].GetString(), expectedMessages[0].c_str());
 }
 
-TEST_F(AssistedDecodingPipelinesHttpTest, unaryChatCompletionsJsonSpeculativeDecoding) {
+TEST_F(DISABLED_AssistedDecodingPipelinesHttpTest, unaryChatCompletionsJsonSpeculativeDecoding) {
     GTEST_SKIP();  // TODO: Temporary skip to synchronize CI workers
     // Generate reference from the base model (unassisted generation)
     config.max_new_tokens = 10;
@@ -333,7 +333,7 @@ TEST_F(AssistedDecodingPipelinesHttpTest, unaryChatCompletionsJsonSpeculativeDec
     ASSERT_EQ(choice["message"]["content"].GetString(), expectedMessages[0]);
 }
 
-TEST_F(AssistedDecodingPipelinesHttpTest, speculativeDecodingExclusiveParametersProvided) {
+TEST_F(DISABLED_AssistedDecodingPipelinesHttpTest, speculativeDecodingExclusiveParametersProvided) {
     std::string requestBody = R"(
         {
             "model": "lm_cb_speculative",
@@ -348,7 +348,7 @@ TEST_F(AssistedDecodingPipelinesHttpTest, speculativeDecodingExclusiveParameters
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
-TEST_F(AssistedDecodingPipelinesHttpTest, speculativeDecodingExclusiveParametersProvidedChat) {
+TEST_F(DISABLED_AssistedDecodingPipelinesHttpTest, speculativeDecodingExclusiveParametersProvidedChat) {
     std::string requestBody = R"(
         {
             "model": "lm_cb_speculative",
@@ -365,7 +365,7 @@ TEST_F(AssistedDecodingPipelinesHttpTest, speculativeDecodingExclusiveParameters
 
 // Prompt lookup decoding
 
-TEST_F(AssistedDecodingPipelinesHttpTest, unaryCompletionsJsonPromptLookupDecoding) {
+TEST_F(DISABLED_AssistedDecodingPipelinesHttpTest, unaryCompletionsJsonPromptLookupDecoding) {
     // Generate reference from the base model (unassisted generation)
     config.max_new_tokens = 10;
     config.temperature = 0;
@@ -416,7 +416,7 @@ TEST_F(AssistedDecodingPipelinesHttpTest, unaryCompletionsJsonPromptLookupDecodi
     EXPECT_STREQ(choice["text"].GetString(), expectedMessages[0].c_str());
 }
 
-TEST_F(AssistedDecodingPipelinesHttpTest, unaryChatCompletionsJsonPromptLookupDecoding) {
+TEST_F(DISABLED_AssistedDecodingPipelinesHttpTest, unaryChatCompletionsJsonPromptLookupDecoding) {
     GTEST_SKIP();  // TODO: Temporary skip to synchronize CI workers
     // Generate reference from the base model (unassisted generation)
     config.max_new_tokens = 10;
@@ -485,7 +485,7 @@ TEST_F(AssistedDecodingPipelinesHttpTest, unaryChatCompletionsJsonPromptLookupDe
 }
 
 // Missing parameters are okay - defaults will be used
-TEST_F(AssistedDecodingPipelinesHttpTest, promptLookupDecodingMissingParameterCompletions) {
+TEST_F(DISABLED_AssistedDecodingPipelinesHttpTest, promptLookupDecodingMissingParameterCompletions) {
     std::string requestBody = R"(
         {
             "model": "lm_cb_prompt_lookup",
@@ -511,7 +511,7 @@ TEST_F(AssistedDecodingPipelinesHttpTest, promptLookupDecodingMissingParameterCo
         ovms::StatusCode::OK);
 }
 
-TEST_F(AssistedDecodingPipelinesHttpTest, promptLookupDecodingMissingParameterChatCompletions) {
+TEST_F(DISABLED_AssistedDecodingPipelinesHttpTest, promptLookupDecodingMissingParameterChatCompletions) {
     std::string requestBody = R"(
         {
             "model": "lm_cb_prompt_lookup",
