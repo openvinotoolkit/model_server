@@ -20,7 +20,7 @@ It is targeted on client machines equipped with NPU accelerator.
 ## Model preparation - using ovms
 Another way to download models is using `--pull` parameter with ovms command.
 
-There are multiple [OpenVINO models](https://huggingface.co/collections/OpenVINO/llms-optimized-for-npu) recommended to use with NPU:
+There are multiple [OpenVINO models](https://huggingface.co/collections/OpenVINO/llms-optimized-for-npu) preconfigured to use with NPU.
 - OpenVINO/Qwen3-8B-int4-cw-ov
 - OpenVINO/Phi-3.5-mini-instruct-int4-cw-ov
 - OpenVINO/Mistral-7B-Instruct-v0.2-int4-cw-ov
@@ -35,14 +35,14 @@ There are multiple [OpenVINO models](https://huggingface.co/collections/OpenVINO
 ::{tab-item} Linux
 :sync: Linux
 ```bash
-docker run -d --rm -u $(id -u):$(id -g) -v $(pwd)/models:/models:rw openvino/model_server:latest-gpu --pull --source_model OpenVINO/Qwen3-8B-int4-cw-ov --model_repository_path /models --target_device NPU --task text_generation --tool_parser hermes3 --cache_dir .ov_cache --enable_prefix_caching true --max_prompt_len 4000
+docker run -d --rm -u $(id -u):$(id -g) -v $(pwd)/models:/models:rw openvino/model_server:latest-gpu --pull --source_model OpenVINO/Qwen3-8B-int4-cw-ov --model_repository_path /models --target_device NPU --task text_generation --tool_parser hermes3 --cache_dir .ov_cache --enable_prefix_caching true --max_prompt_len 2000
 docker run -d --rm -u $(id -u):$(id -g) -v $(pwd)/models:/models:rw openvino/model_server:latest-gpu --add_to_config --config_path /models/config.json --model_name OpenVINO/Qwen3-8B-int4-cw-ov --model_path /models/OpenVINO/Qwen3-8B-int4-cw-ov
 ```
 :: 
 ::{tab-item} Windows
 :sync: Windows
 ```bat
-ovms.exe --pull --source_model OpenVINO/Qwen3-8B-int4-cw-ov --model_repository_path models --target_device NPU --task text_generation --tool_parser hermes3 --cache_dir .ov_cache --enable_prefix_caching true --max_prompt_len 4000 
+ovms.exe --pull --source_model OpenVINO/Qwen3-8B-int4-cw-ov --model_repository_path models --target_device NPU --task text_generation --tool_parser hermes3 --cache_dir .ov_cache --enable_prefix_caching true --max_prompt_len 2000 
 ovms.exe --add_to_config --config_path models\config.json --model_name OpenVINO/Qwen3-8B-int4-cw-ov --model_path OpenVINO\Qwen3-8B-int4-cw-ov
 ```
 ::
