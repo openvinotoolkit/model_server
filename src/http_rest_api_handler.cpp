@@ -730,7 +730,7 @@ Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpReque
             }
             serverReaderWriter->PartialReplyEnd();
             // Release executor resources after the work is done - for example CB pipeline object
-            executor.reset()
+            executor.reset();
         });
         return StatusCode::PARTIAL_END;
     }
