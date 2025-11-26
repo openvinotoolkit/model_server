@@ -61,7 +61,14 @@ MediapipeGraphExecutor::MediapipeGraphExecutor(
     sidePacketMaps({pythonNodeResourcesMap, llmNodeResourcesMap, {}, embeddingsServableMap, rerankServableMap, sttServableMap, ttsServableMap}),
     pythonBackend(pythonBackend),
     currentStreamTimestamp(STARTING_TIMESTAMP),
-    mediapipeServableMetricReporter(mediapipeServableMetricReporter) {}
+    mediapipeServableMetricReporter(mediapipeServableMetricReporter) {
+        if (llmNodeResourcesMap.empty()) {
+            std::cout << "MediapipeGraphExecutor constructor llmNodeResourcesMap empty: " << std::endl; 
+        } else {
+            auto value = llmNodeResourcesMap.begin()->second;
+            std::cout << "MediapipeGraphExecutor constructor llmNodeResourcesMap Reference count: " << value.use_count() << std::endl; 
+        }
+    }
 MediapipeGraphExecutor::MediapipeGraphExecutor(
     const std::string& name,
     const std::string& version,
@@ -83,7 +90,9 @@ MediapipeGraphExecutor::MediapipeGraphExecutor(
     sidePacketMaps(sidePacketMaps),
     pythonBackend(pythonBackend),
     currentStreamTimestamp(STARTING_TIMESTAMP),
-    mediapipeServableMetricReporter(mediapipeServableMetricReporter) {}
+    mediapipeServableMetricReporter(mediapipeServableMetricReporter) {
+        std::cout << "MediapipeGraphExecutor constructor sidePacketMaps: " << std::endl; 
+    }
 
 const std::string MediapipeGraphExecutor::PYTHON_SESSION_SIDE_PACKET_TAG = "py";
 const std::string MediapipeGraphExecutor::LLM_SESSION_SIDE_PACKET_TAG = "llm";

@@ -169,7 +169,7 @@ std::unique_ptr<DrogonHttpServer> createAndStartDrogonHttpServer(const std::stri
     auto server = std::make_unique<DrogonHttpServer>(num_threads, num_threads, port, address);
     auto handler = std::make_shared<HttpRestApiHandler>(ovmsServer, timeout_in_ms, config.apiKey());
     auto& pool = server->getPool();
-    server->registerRequestDispatcher([handler, &pool](const drogon::HttpRequestPtr& req, std::function<void(const drogon::HttpResponsePtr&)> drogonResponseInitializeCallback) {
+    server->registerRequestDispatcher([handler = std::move(handler), &pool](const drogon::HttpRequestPtr& req, std::function<void(const drogon::HttpResponsePtr&)> drogonResponseInitializeCallback) {
         SPDLOG_DEBUG("REST request {}", req->getOriginalPath());
 
         std::unordered_map<std::string, std::string> headers;

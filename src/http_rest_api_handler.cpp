@@ -716,7 +716,9 @@ Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpReque
         serverReaderWriter->OverwriteResponseHeader("Content-Type", "text/event-stream");
         serverReaderWriter->OverwriteResponseHeader("Cache-Control", "no-cache");
         serverReaderWriter->OverwriteResponseHeader("Connection", "keep-alive");
-        serverReaderWriter->PartialReplyBegin([executor = std::move(executor), serverReaderWriter, request = std::move(request)] {
+        std::cout << "1 LAMBDA executor count: " << executor.use_count() << std::endl;
+        serverReaderWriter->PartialReplyBegin([executor = std::move(executor), serverReaderWriter, request = std::move(request)]() mutable {
+            std::cout << "serverReaderWriter->PartialReplyBegin( start " << std::endl; 
             ExecutionContext executionContext{ExecutionContext::Interface::REST, ExecutionContext::Method::V3Stream};
             auto status = executor->inferStream(request, *serverReaderWriter, executionContext);
             if (!status.ok()) {
@@ -729,7 +731,12 @@ Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpReque
                 serverReaderWriter->PartialReplyWithStatus(buffer.GetString(), HTTPStatusCode::BAD_REQUEST);
             }
             serverReaderWriter->PartialReplyEnd();
+            std::cout << "serverReaderWriter->PartialReplyBegin( end " << std::endl;
+            executor.reset();
+            std::cout << "2 LAMBDA executor count: " << executor.use_count() << std::endl; 
         });
+        std::cout << std::endl << "3 LAMBDA executor count: " << executor.use_count() << std::endl;
+        std::cout << "serverReaderWriter->PartialReplyBegin( PARTIAL_END " << std::endl; 
         return StatusCode::PARTIAL_END;
     }
 #else

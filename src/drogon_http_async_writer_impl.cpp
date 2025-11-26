@@ -47,11 +47,13 @@ void DrogonHttpAsyncWriterImpl::PartialReplyBegin(std::function<void()> actualWo
         [this, actualWorkloadCallback = std::move(actualWorkloadCallback)](drogon::ResponseStreamPtr stream) {
             std::cout << "DrogonHttpAsyncWriterImpl PartialReplyBegin lambda start " << std::endl; 
             this->stream = std::move(stream);
-            this->pool.Schedule([actualWorkloadCallback = std::move(actualWorkloadCallback)] {
+            this->pool.Schedule([&actualWorkloadCallback] {
                 SPDLOG_DEBUG("DrogonHttpAsyncWriterImpl::PartialReplyBegin::Schedule begin");
                 try {
                     std::cout << "DrogonHttpAsyncWriterImpl actualWorkloadCallback start " << std::endl; 
                     actualWorkloadCallback();  // run actual workload (mediapipe executor inferStream) which uses PartialReply
+                } catch (const std::exception& e) {
+                    SPDLOG_ERROR("Exception caught in REST request streaming handler", e.what());
                 } catch (...) {
                     SPDLOG_ERROR("Exception caught in REST request streaming handler");
                 }
