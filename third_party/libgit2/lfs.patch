@@ -198,7 +198,7 @@ index a7d3c7ca4..13e9dfc37 100644
  		target_compile_definitions(libgit2package PRIVATE LIBGIT2_FILENAME=\"${LIBGIT2_FILENAME}\")
  		set_target_properties(libgit2package PROPERTIES OUTPUT_NAME ${LIBGIT2_FILENAME})
 diff --git a/src/libgit2/clone.c b/src/libgit2/clone.c
-index 237efc0ba..d9674dbf6 100644
+index 237efc0ba..d439d01cc 100644
 --- a/src/libgit2/clone.c
 +++ b/src/libgit2/clone.c
 @@ -24,6 +24,7 @@
@@ -231,20 +231,18 @@ index 237efc0ba..d9674dbf6 100644
  	/* enforce some behavior on fetch */
  	options.fetch_opts.update_fetchhead = 0;
  
-@@ -626,6 +642,7 @@ static int clone_repo(
- 	if (git_fs_path_exists(local_path) && !use_existing && !git_fs_path_is_empty_dir(local_path)) {
- 		git_error_set(GIT_ERROR_INVALID,
- 			"'%s' exists and is not an empty directory", local_path);
-+		cli_progress_dispose(&progress);
- 		return GIT_EEXISTS;
- 	}
- 
-@@ -639,13 +656,16 @@ static int clone_repo(
+@@ -638,14 +654,22 @@ static int clone_repo(
+ 	else
  		repository_cb = default_repository_create;
  
- 	if ((error = repository_cb(&repo, local_path, options.bare, options.repository_cb_payload)) < 0)
+-	if ((error = repository_cb(&repo, local_path, options.bare, options.repository_cb_payload)) < 0)
++	if ((error = repository_cb(
++	             &repo, local_path, options.bare,
++	             options.repository_cb_payload)) < 0) {
++		cli_progress_abort(&progress);
 +		cli_progress_dispose(&progress);
  		return error;
++	}
  
 +	repo->url = git__strdup(url);
  	if (!(error = create_and_configure_origin(&origin, repo, url, &options))) {
@@ -252,23 +250,16 @@ index 237efc0ba..d9674dbf6 100644
  
  		if ((error = git_clone__should_clone_local(&clone_local, url, options.local)) < 0) {
  			git_remote_free(origin);
++			cli_progress_abort(&progress);
 +			cli_progress_dispose(&progress);
  			return error;
  		}
  
-@@ -657,6 +677,8 @@ static int clone_repo(
- 		git_remote_free(origin);
- 	}
- 
-+	cli_progress_finish(&progress);
-+
- 	if (error != 0) {
- 		git_error *last_error;
- 		git_error_save(&last_error);
-@@ -669,6 +691,7 @@ static int clone_repo(
+@@ -669,6 +693,8 @@ static int clone_repo(
  		git_error_restore(last_error);
  	}
  
++	cli_progress_finish(&progress);
 +	cli_progress_dispose(&progress);
  	*out = repo;
  	return error;
