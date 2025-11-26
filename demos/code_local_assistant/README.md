@@ -11,7 +11,7 @@ With the rise of AI PC capabilities, hosting own Visual Studio code assistant is
 ## Prepare Code Chat/Edit Model 
 We need to use medium size model to get reliable responses but also to fit it to the available memory on the host or discrete GPU.
 
-Create directory for the models:
+Download export script, install its dependencies and create directory for the models:
 ```console
 curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/export_model.py -o export_model.py
 pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
