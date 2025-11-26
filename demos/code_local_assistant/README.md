@@ -206,7 +206,7 @@ name: Local Assistant
 version: 1.0.0
 schema: v1
 models:
-  - name: OVMS Qwen/Qwen3-30B
+  - name: OVMS Qwen/Qwen3-Coder-30B-A3B
     provider: openai
     model: Qwen/Qwen3-Coder-30B-A3B-Instruct
     apiKey: unused
