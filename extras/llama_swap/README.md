@@ -42,7 +42,7 @@ Thanks to cache_dir which stored model compilation result, reloading of the mode
 
 Here is an example of a complete [config.yaml](./)
 
-Modes which should act togather in a workflow should be grouped to minimize impact from model loading time. Check llama_swap documentation about it. Be aware that model reloading is clearing KV cache.
+Models which should act together in a workflow, should be grouped to minimize impact from model loading time. Check llama_swap documentation about it. Be aware that model reloading is clearing KV cache.
 
 ## Connect from the client
 
