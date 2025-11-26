@@ -1,7 +1,7 @@
 # OpenVINO Model Server service integration with llama_swap
 
 
-In scenario when OVMS is installed on a client plaform, it might be common that the host doen't have capacity to load all the desired models at the same time.
+In scenario when OVMS is installed on a client platform, it might be common that the host doesn't have capacity to load all the desired models at the same time.
 
 [Llama_swap](https://github.com/mostlygeek/llama-swap) provides capabilities to load the models on-demand and unload them when not needed.
 
@@ -42,8 +42,7 @@ Thanks to cache_dir which stored model compilation result, reloading of the mode
 
 Here is an example of a complete [config.yaml](./)
 
-Modes which should act togather in a workflow should be grouped togather to minimize impact from model loading time. Be aware that model reloading is clearing KV cache.
-
+Modes which should act togather in a workflow should be grouped to minimize impact from model loading time. Check llama_swap documentation about it. Be aware that model reloading is clearing KV cache.
 
 ## Connect from the client
 
@@ -74,7 +73,7 @@ for chunk in stream:
 ```
 
 
-## Limitaitons
+## Limitations
 
 Currently, llama_cpp doesn't support `audio` and `rerank` endpoints. It can be used for `chat/completions`, `embeddings` and `audio`.
 
