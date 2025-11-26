@@ -108,7 +108,7 @@ std::vector<std::string> saveImagesStbi(const ov::Tensor& tensor) {
         throw std::runtime_error{"Tensor batch size cannot be zero"};
     }
 
-    unsigned char* imageData = tensor.data<unsigned char>();
+    const unsigned char* imageData = tensor.data<unsigned char>();
 
     // Create a memory buffer to hold the PNG data
     std::vector<std::vector<unsigned char>> pngBuffers(batchSize);

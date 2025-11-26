@@ -1303,8 +1303,8 @@ void printNHWCOVTensor(const ov::Tensor& tensor) {
     ASSERT_EQ(tensorShape[1], 4);
     ASSERT_EQ(tensorShape[2], 4);
     ASSERT_EQ(tensorShape[3], 3);
-    auto* dataR = tensor.data();
-    uint8_t* data = static_cast<uint8_t*>(dataR);
+    const auto* dataR = tensor.data();
+    const uint8_t* data = static_cast<const uint8_t*>(dataR);
     std::ostringstream oss;
     // print shape
     oss << "Tensor shape: (";

@@ -87,6 +87,7 @@ std::unique_ptr<struct CustomNodeTensor[]> createCustomNodeTensorArray(const Ten
     auto inputTensors = std::make_unique<struct CustomNodeTensor[]>(tensorMap.size());
     int i = 0;
     for (const auto& [name, tensor] : tensorMap) {
+        auto& c_tensor = const_cast<ov::Tensor&>(tensor);
         auto dimsIt = tensorsDims.find(name);
         if (dimsIt == tensorsDims.end()) {
             return nullptr;
@@ -94,7 +95,7 @@ std::unique_ptr<struct CustomNodeTensor[]> createCustomNodeTensorArray(const Ten
         static_assert(sizeof(size_t) == sizeof(uint64_t));
         const auto& dims = dimsIt->second;
         inputTensors[i].name = static_cast<const char*>(name.c_str());
-        inputTensors[i].data = static_cast<uint8_t*>(tensor.data());
+        inputTensors[i].data = static_cast<uint8_t*>(c_tensor.data());
         inputTensors[i].dataBytes = static_cast<uint64_t>(tensor.get_byte_size());
         inputTensors[i].dims = const_cast<uint64_t*>(dims.data());
         inputTensors[i].dimsCount = static_cast<uint64_t>(dims.size());

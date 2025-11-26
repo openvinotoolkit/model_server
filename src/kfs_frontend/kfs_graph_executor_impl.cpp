@@ -208,7 +208,7 @@ Status receiveAndSerializePacket<::mediapipe::Tensor>(const ::mediapipe::Packet&
 template <>
 Status receiveAndSerializePacket<ov::Tensor>(const ::mediapipe::Packet& packet, KFSResponse& response, const std::string& outputStreamName) {
     try {
-        const auto& received = packet.Get<ov::Tensor>();
+        const ov::Tensor& received = packet.Get<ov::Tensor>();  // packet is const, therefore tensor is const, therefore data underneath is const, thats why const cast for now
         auto* output = response.add_outputs();
         output->set_name(outputStreamName);
         output->set_datatype(
@@ -219,7 +219,7 @@ Status receiveAndSerializePacket<ov::Tensor>(const ::mediapipe::Packet& packet, 
         for (const auto& dim : received.get_shape()) {
             output->add_shape(dim);
         }
-        response.add_raw_output_contents()->assign(reinterpret_cast<char*>(received.data()), received.get_byte_size());
+        response.add_raw_output_contents()->assign(reinterpret_cast<const char*>(const_cast<const void*>(received.data())), received.get_byte_size());
         return StatusCode::OK;
     }
     HANDLE_PACKET_RECEIVAL_EXCEPTIONS();
