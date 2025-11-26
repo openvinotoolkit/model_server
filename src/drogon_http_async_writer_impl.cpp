@@ -46,7 +46,7 @@ void DrogonHttpAsyncWriterImpl::PartialReplyBegin(std::function<void()> actualWo
     this->responsePtr = drogon::HttpResponse::newAsyncStreamResponse(
         [this, actualWorkloadCallback = std::move(actualWorkloadCallback)](drogon::ResponseStreamPtr stream) {
             this->stream = std::move(stream);
-            this->pool.Schedule([actualWorkloadCallback = std::move(actualWorkloadCallback)] {
+            this->pool.Schedule([&actualWorkloadCallback] {
                 SPDLOG_DEBUG("DrogonHttpAsyncWriterImpl::PartialReplyBegin::Schedule begin");
                 try {
                     actualWorkloadCallback();  // run actual workload (mediapipe executor inferStream) which uses PartialReply
