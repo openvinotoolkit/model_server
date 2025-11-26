@@ -208,7 +208,7 @@ Status receiveAndSerializePacket<::mediapipe::Tensor>(const ::mediapipe::Packet&
 template <>
 Status receiveAndSerializePacket<ov::Tensor>(const ::mediapipe::Packet& packet, KFSResponse& response, const std::string& outputStreamName) {
     try {
-        const ov::Tensor& received = packet.Get<ov::Tensor>();  // packet is const, therefore tensor is const, therefore data underneath is const, thats why const cast for now
+        const ov::Tensor& received = packet.Get<ov::Tensor>();  // packet is const, therefore tensor is const, therefore data underneath is const, that is why const cast for now
         auto* output = response.add_outputs();
         output->set_name(outputStreamName);
         output->set_datatype(
