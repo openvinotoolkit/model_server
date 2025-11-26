@@ -15,7 +15,7 @@ It is targeted on client machines equipped with NPU accelerator.
 
 **Model Server deployment**: Installed Docker Engine or OVMS binary package according to the [baremetal deployment guide](../../docs/deploying_server_baremetal.md)
 
-**(Optional) Client**: git and Python for using OpenAI client package and vLLM benchmark app
+**(Optional) Client**: git and Python for using OpenAI client package
 
 ## Model preparation - using ovms
 Another way to downlaod models is using `--pull` parameter with ovms command.
@@ -324,42 +324,6 @@ Output:
 The three main tourist attractions in Paris are the Eiffel Tower, the Louvre, and the Notre-Dame de Paris. The Eiffel Tower is the most iconic landmark and offers a great view of the city. The Louvre is a world-famous art museum that houses the Mona Lisa and other famous artworks. The Notre-Dame de Paris is a stunning example of French Gothic architecture and is the cathedral of the city. These three attractions are the most visited and most famous in Paris,
 ```
 :::
-
-## Benchmarking text generation with high concurrency
-
-OpenVINO Model Server employs efficient parallelization for text generation. It can be used to generate text also in high concurrency in the environment shared by multiple clients.
-It can be demonstrated using benchmarking app from vLLM repository:
-```console
-git clone --branch v0.7.3 --depth 1 https://github.com/vllm-project/vllm
-cd vllm
-pip3 install -r requirements-cpu.txt --extra-index-url https://download.pytorch.org/whl/cpu
-cd benchmarks
-curl -L https://huggingface.co/datasets/anon8231489123/ShareGPT_Vicuna_unfiltered/resolve/main/ShareGPT_V3_unfiltered_cleaned_split.json -o ShareGPT_V3_unfiltered_cleaned_split.json # sample dataset
-python benchmark_serving.py --host localhost --port 8000 --endpoint /v3/chat/completions --backend openai-chat --model OpenVINO/Qwen3-8B-int4-cw-ov --dataset-path ShareGPT_V3_unfiltered_cleaned_split.json --num-prompts 30 --max-concurrency 1
-Maximum request concurrency: 1
-
-============ Serving Benchmark Result ============
-Successful requests:                     30
-Benchmark duration (s):                  480.20
-Total input tokens:                      6434
-Total generated tokens:                  6113
-Request throughput (req/s):              0.06
-Output token throughput (tok/s):         12.73
-Total Token throughput (tok/s):          26.13
----------------Time to First Token----------------
-Mean TTFT (ms):                          1922.09
-Median TTFT (ms):                        1920.85
-P99 TTFT (ms):                           1952.11
------Time per Output Token (excl. 1st token)------
-Mean TPOT (ms):                          65.74
-Median TPOT (ms):                        68.95
-P99 TPOT (ms):                           70.40
----------------Inter-token Latency----------------
-Mean ITL (ms):                           83.65
-Median ITL (ms):                         70.11
-P99 ITL (ms):                            212.48
-==================================================
-```
 
 ## Testing the model accuracy over serving API
 
