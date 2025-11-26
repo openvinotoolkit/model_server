@@ -21,13 +21,6 @@ It is targeted on client machines equipped with NPU accelerator.
 Another way to download models is using `--pull` parameter with ovms command.
 
 There are multiple [OpenVINO models](https://huggingface.co/collections/OpenVINO/llms-optimized-for-npu) preconfigured to use with NPU.
-- OpenVINO/Qwen3-8B-int4-cw-ov
-- OpenVINO/Phi-3.5-mini-instruct-int4-cw-ov
-- OpenVINO/Mistral-7B-Instruct-v0.2-int4-cw-ov
-- OpenVINO/Mistral-7B-Instruct-v0.3-int4-cw-ov
-- OpenVINO/falcon-7b-instruct-int4-cw-ov
-- OpenVINO/gpt-j-6b-int4-cw-ov
-
 
 ### Pulling model
 
@@ -47,39 +40,6 @@ ovms.exe --add_to_config --config_path models\config.json --model_name OpenVINO/
 ```
 ::
 :::
-
-## Model preparation - using export model script
-Here, the original Pytorch LLM model and the tokenizer will be converted to IR format and optionally quantized.
-That ensures faster initialization time, better performance and lower memory consumption.
-LLM engine parameters will be defined inside the `graph.pbtxt` file.
-
-Download export script, install it's dependencies and create directory for the models:
-```console
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/export_model.py -o export_model.py
-pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
-mkdir models
-```
-
-Run `export_model.py` script to download and quantize the model:
-
-> **Note:** The users in China need to set environment variable HF_ENDPOINT="https://hf-mirror.com" before running the export script to connect to the HF Hub.
-
-**LLM**
-```console
-python export_model.py text_generation --source_model meta-llama/Llama-3.1-8B-Instruct --target_device NPU --config_file_path models/config.json --cache_dir ./models/.ov_cache --model_repository_path models --overwrite_models
-```
-**Note:** The parameter `--cache_dir` stores the model compilation cache to speedup initialization time for sequential startup. Drop this parameter if you don't want to store the compilation cache.
-
-Below is a list of tested models:
-- Qwen/Qwen3-8B
-- meta/Llama3.1-8B-instruct
-- mistralai/Mistral-7B-instruct-v0.3
-- NousResearch/Hermes-3-Llama-3.1-8B
-- microsoft/Phi-3-mini-4k-instruct
-
-The default configuration should work in most cases but the parameters can be tuned via `export_model.py` script arguments. 
-Note that by default, NPU sets limitation on the prompt length to 1024 tokens. You can modify that limit by using `--max_prompt_len` parameter.
-Run the script with `--help` argument to check available parameters and see the [LLM calculator documentation](../../docs/llm/reference.md) to learn more about configuration options.
 
 ## Server Deployment
 
