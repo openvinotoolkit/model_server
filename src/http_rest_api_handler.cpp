@@ -716,7 +716,7 @@ Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpReque
         serverReaderWriter->OverwriteResponseHeader("Content-Type", "text/event-stream");
         serverReaderWriter->OverwriteResponseHeader("Cache-Control", "no-cache");
         serverReaderWriter->OverwriteResponseHeader("Connection", "keep-alive");
-        serverReaderWriter->PartialReplyBegin([executor = std::move(executor), serverReaderWriter, request = std::move(request)] {
+        serverReaderWriter->PartialReplyBegin([executor = std::move(executor), serverReaderWriter, request = std::move(request)]() mutable {
             ExecutionContext executionContext{ExecutionContext::Interface::REST, ExecutionContext::Method::V3Stream};
             auto status = executor->inferStream(request, *serverReaderWriter, executionContext);
             if (!status.ok()) {
@@ -729,6 +729,8 @@ Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpReque
                 serverReaderWriter->PartialReplyWithStatus(buffer.GetString(), HTTPStatusCode::BAD_REQUEST);
             }
             serverReaderWriter->PartialReplyEnd();
+            // Release executor resources after the work is done - for example CB pipeline object
+            executor.reset()
         });
         return StatusCode::PARTIAL_END;
     }
