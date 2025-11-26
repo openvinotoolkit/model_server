@@ -46,6 +46,7 @@ ov::Tensor loadImageStbi(unsigned char* image, const int x, const int y, const i
     struct SharedImageAllocator {
         unsigned char* image;
         int channels, height, width;
+        SharedImageAllocator(unsigned char* img, int ch, int h, int w) : image(img), channels(ch), height(h), width(w) {}
         void* allocate(size_t bytes, size_t) const {
             if (image && channels * height * width == bytes) {
                 return image;
@@ -66,7 +67,7 @@ ov::Tensor loadImageStbi(unsigned char* image, const int x, const int y, const i
     return ov::Tensor(
         ov::element::u8,
         ov::Shape{1, size_t(y), size_t(x), size_t(desiredChannels)},
-        SharedImageAllocator{image, desiredChannels, y, x});
+        SharedImageAllocator(image, desiredChannels, y, x));
 }
 
 ov::Tensor loadImageStbiFromMemory(const std::string& imageBytes) {
