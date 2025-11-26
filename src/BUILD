@@ -477,6 +477,7 @@ ovms_cc_library(
         "capi_frontend/capi.cpp",
         "cleaner_utils.cpp",
         "cleaner_utils.hpp",
+        "copyable_object_wrapper.hpp",
         "customloaderconfig.hpp",
         "customloaders.hpp",
         "customloaders.cpp",
