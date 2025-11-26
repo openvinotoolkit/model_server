@@ -82,7 +82,7 @@ payload = {
          "content":"Alice and Bob are going to a science fair on Friday."
       }
    ],
-   "response_format":{
+   "response_format": {
       "type":"json_schema",
       "json_schema":{
          "schema":{
@@ -183,7 +183,7 @@ payload = {
          "content":"OVMS is fantastic!"
       }
    ],
-   "response_format":{
+   "response_format": {
       "type":"or",
       "elements": [
          {
@@ -275,7 +275,7 @@ payload = {
          "content":"Generate email address for Jane Doe."
       }
    ],
-   "response_format":{
+   "response_format": {
       "type": "regex",
       "pattern": "\\w+\\.\\w+@company\\.com"
    }
@@ -288,7 +288,7 @@ json_response = response.json()
 print(json_response["choices"][0]["message"]["content"])
 ```
 ```
-positive
+jane.doe@company.com
 ```
 :::
 :::{tab-item} With Python OpenAI Library
@@ -313,23 +313,14 @@ completion = client.beta.chat.completions.parse(
     temperature=0.0,
     max_tokens=100,
     response_format={
-      "type":"or",
-      "elements": [
-         {
-            "type": "const_string",
-            "value": "positive"
-         },
-         {
-            "type": "const_string",
-            "value": "negative"
-         }
-      ]
+      "type": "regex",
+      "pattern": "\\w+\\.\\w+@company\\.com"
    }
 )
 print(completion.choices[0].message.content)
 ```
 ```
-positive
+jane.doe@company.com
 ```
 :::
 ::::
