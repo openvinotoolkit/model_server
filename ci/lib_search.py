@@ -151,6 +151,7 @@ def check_dir(start_dir):
         "results.txt",
         "windows_bdba.bat",
         "windows_sign.bat",
+        "config.yaml",
         ]
 
     exclude_directories = ['/dist/', 'release_files/thirdparty-licenses', 'extras/chat_template_examples']
