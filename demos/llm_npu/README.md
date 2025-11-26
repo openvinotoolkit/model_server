@@ -17,10 +17,9 @@ It is targeted on client machines equipped with NPU accelerator.
 
 **(Optional) Client**: git and Python for using OpenAI client package
 
-## Model preparation - using ovms
-Another way to download models is using `--pull` parameter with ovms command.
+## Model preparation
 
-There are multiple [OpenVINO models](https://huggingface.co/collections/OpenVINO/llms-optimized-for-npu) preconfigured to use with NPU.
+Multiple [OpenVINO models optimized for NPU](https://huggingface.co/collections/OpenVINO/llms-optimized-for-npu) are available and can be downloaded directly using OVMS with the `--pull` parameter.
 
 ### Pulling model
 
