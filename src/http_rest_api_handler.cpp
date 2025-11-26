@@ -718,7 +718,7 @@ Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpReque
         serverReaderWriter->OverwriteResponseHeader("Cache-Control", "no-cache");
         serverReaderWriter->OverwriteResponseHeader("Connection", "keep-alive");
         MediapipeGraphExecutorWrapper executorWrapper(executorHolder);
-        serverReaderWriter->PartialReplyBegin([executorWrapper = executorWrapper, serverReaderWriter, request = std::move(request)] () mutable {
+        serverReaderWriter->PartialReplyBegin([executorWrapper = executorWrapper, serverReaderWriter, request = std::move(request)]() mutable {
             ExecutionContext executionContext{ExecutionContext::Interface::REST, ExecutionContext::Method::V3Stream};
             auto& executor = executorWrapper.getHolder()->getExecutor();
             auto status = executor->inferStream(request, *serverReaderWriter, executionContext);
