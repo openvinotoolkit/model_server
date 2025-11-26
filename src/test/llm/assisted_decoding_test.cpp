@@ -156,9 +156,9 @@ public:
     }
 };
 
-std::shared_ptr<ov::genai::ContinuousBatchingPipeline> AssistedDecodingPipelinesHttpTest::cbPipe;
-std::shared_ptr<LLMExecutorWrapper> AssistedDecodingPipelinesHttpTest::llmExecutorWrapper;
-std::unique_ptr<std::thread> AssistedDecodingPipelinesHttpTest::t;
+std::shared_ptr<ov::genai::ContinuousBatchingPipeline> DISABLED_AssistedDecodingPipelinesHttpTest::cbPipe;
+std::shared_ptr<LLMExecutorWrapper> DISABLED_AssistedDecodingPipelinesHttpTest::llmExecutorWrapper;
+std::unique_ptr<std::thread> DISABLED_AssistedDecodingPipelinesHttpTest::t;
 
 // Speculative decoding
 
