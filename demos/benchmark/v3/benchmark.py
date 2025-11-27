@@ -56,6 +56,7 @@ parser.add_argument('--backend', required=False, default='ovms-embeddings', choi
 parser.add_argument('--limit', required=False, type=int, default=1000, help='Number of documents to use in testing', dest='limit')
 parser.add_argument('--split', required=False, default='train', help='Dataset split', dest='split')
 parser.add_argument('--hf-subset', required=False, help='Hf dataset subset', dest='subset')
+parser.add_argument('--trust-remote-code', required=False, type=bool, default=False, help='Trust remote code from huggingface', dest='trust_remote_code')
 
 args = vars(parser.parse_args())
 
@@ -70,9 +71,9 @@ if args["dataset"] == 'synthetic':
 else:
     filter = f"{args['split']}[:{args['limit']}]"
     if args["subset"] == None:
-        docs = load_dataset(args["dataset"], split=filter)
+        docs = load_dataset(args["dataset"], trust_remote_code=args['trust_remote_code'], split=filter)
     else:
-        docs = load_dataset(args["dataset"], args["subset"], split=filter)
+        docs = load_dataset(args["dataset"], args["subset"], trust_remote_code=args['trust_remote_code'], split=filter)
 
 print("Number of documents:",len(docs))
 
