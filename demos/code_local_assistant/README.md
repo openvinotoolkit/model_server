@@ -24,7 +24,7 @@ Pull and add the model on Linux:
 :::{tab-item} Qwen/Qwen3-Coder-30B-A3B-Instruct
 :sync: Qwen/Qwen3-Coder-30B-A3B-Instruct
 ```bash
-python export_model.py text_generation --source_model Qwen/Qwen3-Coder-30B-A3B-Instruct --weight-format int8 --config_file_path models/config_all.json --model_repository_path models --target_device GPU --tool_parser qwen3coder --cache_size 2 --overwrite_models
+python export_model.py text_generation --source_model Qwen/Qwen3-Coder-30B-A3B-Instruct --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device GPU --tool_parser qwen3coder --overwrite_models
 curl -L -o models/Qwen/Qwen3-Coder-30B-A3B-Instruct/chat_template.jinja https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/extras/chat_template_examples/chat_template_qwen3coder_instruct.jinja
 ```
 > **Note:** This model requires ~15GB disk space and same amount of VRAM on the GPU.
