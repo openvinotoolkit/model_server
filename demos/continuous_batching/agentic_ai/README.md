@@ -504,7 +504,7 @@ docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/model
 --rest_port 8000 --model_repository_path models --source_model OpenVINO/Qwen3-8B-int4-cw-ov --tool_parser hermes3 --target_device NPU --task text_generation --enable_prefix_caching true --max_prompt_len 4000
 ```
 :::
-:::{tab-item}Mistral-7B-Instruct-v0.3-int4-cw-ov
+:::{tab-item} Mistral-7B-Instruct-v0.3-int4-cw-ov
 :sync: Mistral-7B-Instruct-v0.3-int4-cw-ov
 ```bash
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models --device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:weekly \
