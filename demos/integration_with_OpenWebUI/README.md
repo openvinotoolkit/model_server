@@ -403,3 +403,6 @@ docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models openvino/model_serve
 2. Start talking.
 
 ![voice mode](./voice_mode.png)
+
+### Reference
+[https://docs.openwebui.com/getting-started/env-configuration#audio](https://docs.openwebui.com/getting-started/env-configuration#audio)
