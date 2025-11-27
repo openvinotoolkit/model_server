@@ -87,7 +87,7 @@ message LLMCalculatorOptions {
     optional uint64 max_num_batched_tokens = 2 [default = 256];
 
     // model memory cache to allocate in GB
-    optional uint64 cache_size  = 3 [default = 8];
+    optional uint64 cache_size  = 3 [default = 0];
 
     optional uint64 max_num_seqs = 4 [default = 256];
 

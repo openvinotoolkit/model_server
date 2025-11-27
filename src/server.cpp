@@ -238,6 +238,7 @@ void Server::setShutdownRequest(int i) {
     }
     if (counter) {
         shutdown_request = i;
+        SPDLOG_TRACE("Ovms shutdown request set to: {}", shutdown_request);
     } else {
         SPDLOG_ERROR("Server shutdown mutex lock failed.");
     }
@@ -274,6 +275,7 @@ void Server::setExitStatus(int i) {
     }
     if (counter) {
         ovms_exited = i;
+        SPDLOG_TRACE("Ovms exit status set to: {}", ovms_exited);
     } else {
         SPDLOG_ERROR("Server shutdown mutex lock failed.");
     }
@@ -426,6 +428,15 @@ public:
     }
 };
 
+class OvmsExitGuard {
+    Server& server;
+
+public:
+    OvmsExitGuard(Server& server) :
+        server(server) { server.setExitStatus(0); }
+    ~OvmsExitGuard() { server.setExitStatus(1); }
+};
+
 void Server::shutdownModules() {
     // we want very precise order of modules shutdown
     // first we should stop incoming new requests
@@ -473,9 +484,9 @@ std::variant<std::pair<ServerSettingsImpl, ModelsSettingsImpl>, std::pair<int, s
 }
 
 int Server::startServerFromSettings(ServerSettingsImpl& serverSettings, ModelsSettingsImpl& modelsSettings) {
+    OvmsExitGuard exitStatusGuard(*this);
     installSignalHandlers();
     int result = OVMS_EX_OK;
-    Server::setExitStatus(0);
 
     try {
         Status ret = startFromSettings(&serverSettings, &modelsSettings);
@@ -493,11 +504,9 @@ int Server::startServerFromSettings(ServerSettingsImpl& serverSettings, ModelsSe
     } catch (const std::exception& e) {
         SPDLOG_ERROR("Exception; {}", e.what());
         result = OVMS_EX_FAILURE;
-        Server::setExitStatus(1);
         return result;
     }
 
-    Server::setExitStatus(1);
     return EXIT_SUCCESS;
 }
 

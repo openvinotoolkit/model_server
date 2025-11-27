@@ -30,7 +30,7 @@ Use those steps to convert the model from HugginFace Hub to OpenVINO format and 
 ```console
 # Download export script, install its dependencies and create directory for the models
 curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/export_model.py -o export_model.py
-pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/demos/common/export_models/requirements.txt
+pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
 mkdir models
 ```
 Run `export_model.py` script to download and quantize the model:
@@ -523,9 +523,9 @@ docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/model
 ### Deploy all models in a single container
 Those steps deploy all the models exported earlier. The python script added the models to `models/config.json` so just the remaining models pulled directly from HuggingFace Hub are to be added:
 ```bash
-docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:weekly --add_to_config --config_path /models --model_name OpenVINO/Qwen3-8B-int4-ov --model_path OpenVINO/Qwen3-8B-int4-ov
-docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:weekly --add_to_config --config_path /models --model_name OpenVINO/Phi-4-mini-instruct-int4-ov  --model_path OpenVINO/Phi-4-mini-instruct-int4-ov
-docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:weekly --add_to_config --config_path /models --model_name OpenVINO/Mistral-7B-Instruct-v0.3-int4-ov  --model_path OpenVINO/Mistral-7B-Instruct-v0.3-int4-ov
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:weekly --add_to_config --model_name OpenVINO/Qwen3-8B-int4-ov --model_path OpenVINO/Qwen3-8B-int4-ov --config_path /models/config.json
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:weekly --add_to_config --model_name OpenVINO/Phi-4-mini-instruct-int4-ov --model_path OpenVINO/Phi-4-mini-instruct-int4-ov --config_path /models/config.json
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:weekly --add_to_config --model_name OpenVINO/Mistral-7B-Instruct-v0.3-int4-ov --model_path OpenVINO/Mistral-7B-Instruct-v0.3-int4-ov--config_path /models/config.json
 docker run -d --rm -p 8000:8000 -v $(pwd)/models:/models:ro openvino/model_server:weekly --rest_port 8000 --config_path /models/config.json
 ```
 
