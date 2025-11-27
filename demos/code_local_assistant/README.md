@@ -37,7 +37,7 @@ python export_model.py text_generation --source_model mistralai/Codestral-22B-v0
 curl -L -o models/mistralai/Codestral-22B-v0.1/chat_template.jinja https://raw.githubusercontent.com/vllm-project/vllm/refs/tags/v0.10.1.1/examples/tool_chat_template_mistral_parallel.jinja
 
 ```
-> **Note:** This model requires ~12GB disk space and same amount of VRAM on the GPU.
+> **Note:** This model requires ~12GB disk space and same amount of VRAM on the GPU for deployment. For conversion, the original model will be pulled and quantization will require the amount of RAM of the model size.
 
 :::
 :::{tab-item} OpenVINO/Qwen3-8B-int4-ov
