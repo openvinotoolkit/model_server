@@ -46,32 +46,25 @@ ov::Tensor loadImageStbi(unsigned char* image, const int x, const int y, const i
     struct SharedImageAllocator {
         unsigned char* image;
         int channels, height, width;
-        SharedImageAllocator(unsigned char* img, int ch, int h, int w) :
-            image(img),
-            channels(ch),
-            height(h),
-            width(w) {}
-        void* allocate(size_t bytes, size_t) const {
+        void* allocate(const size_t bytes, const size_t) const {
             if (image && channels * height * width == bytes) {
                 return image;
             }
             throw std::runtime_error{"Unexpected number of bytes was requested to allocate."};
         }
-        void deallocate(void*, size_t bytes, size_t) {
-            if (channels * height * width != bytes) {
-                throw std::runtime_error{"Unexpected number of bytes was requested to deallocate."};
-            }
+        void deallocate(void*, const size_t bytes, const size_t) noexcept {
+            // TODO: channels * height * width != bytes ?
             if (image != nullptr) {
                 stbi_image_free(image);
                 image = nullptr;
             }
         }
-        bool is_equal(const SharedImageAllocator& other) const noexcept { return this == &other; }
+        bool is_equal(const SharedImageAllocator& other) const { return this == &other; }
     };
     return ov::Tensor(
         ov::element::u8,
         ov::Shape{1, size_t(y), size_t(x), size_t(desiredChannels)},
-        SharedImageAllocator(image, desiredChannels, y, x));
+        SharedImageAllocator{image, desiredChannels, y, x});
 }
 
 ov::Tensor loadImageStbiFromMemory(const std::string& imageBytes) {
