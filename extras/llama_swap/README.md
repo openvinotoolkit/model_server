@@ -5,8 +5,7 @@ In scenario when OVMS is installed on a client platform, it might be common that
 
 [Llama_swap](https://github.com/mostlygeek/llama-swap) provides capabilities to load the models on-demand and unload them when not needed.
 
-
-While this tool was implemented for llama-cpp project, it can be easily enabled also for OpenVINO Model Server
+While this tool was implemented for llama-cpp project, it can be easily enabled also for OpenVINO Model Server.
 
 
 ## Prerequisites
@@ -40,7 +39,7 @@ The important elements for OVMS integrations are for each model are:
 This configuration adds and removes a model on demand from OVMS config.json. That automatically loads or unloads the model from the service serving.
 Thanks to cache_dir which stored model compilation result, reloading of the model is faster.
 
-Here is an example of a complete [config.yaml](./)
+Here is an example of a complete [config.yaml](./config.yaml)
 
 Models which should act together in a workflow, should be grouped to minimize impact from model loading time. Check llama_swap documentation about it. Be aware that model reloading is clearing KV cache.
 
@@ -75,5 +74,5 @@ for chunk in stream:
 
 ## Limitations
 
-Currently, llama_cpp doesn't support `audio` and `rerank` endpoints. It can be used for `chat/completions`, `embeddings` and `audio`.
+Currently, llama_cpp doesn't support `image` and `rerank` endpoints. It can be used for `chat/completions` `embeddings` and `audio` endpoints.
 
