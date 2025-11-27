@@ -366,10 +366,12 @@ async def benchmark(docs, model, api_url, request_rate, backend_function):
     outputs: List[RequestFuncOutput] = await asyncio.gather(*tasks)
     benchmark_duration = time.perf_counter() - benchmark_start_time
     pbar.close()
-    tokenizer = AutoTokenizer.from_pretrained(model)
-    for output in outputs:
-        data = json.loads(output.text)
-        output.tokens_len +=  len(tokenizer(data['text'],add_special_tokens=False)["input_ids"])
+    if args["backend"] == "speech2text" or args["backend"] == "translations":
+        tokenizer = AutoTokenizer.from_pretrained(model)
+        for output in outputs:
+            data = json.loads(output.text)
+            output.tokens_len +=  len(tokenizer(data['text'],add_special_tokens=False)["input_ids"])
+
     result = {
         "duration": benchmark_duration,
         "errors": [output.error for output in outputs],
