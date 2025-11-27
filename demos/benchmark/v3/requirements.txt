@@ -1,4 +1,4 @@
-datasets
+datasets==3.6.0
 dataclasses
 transformers
 numpy

@@ -42,7 +42,8 @@ default_url_description = "Default value depends on the backend: \
     tei_embed: http://localhost:8080/embed ;\
     infinity-embeddings: http://localhost:7997/embeddings ;\
     text2speech: http://localhost:8000/v3/audio/speech ;\
-    speech2text: http://localhost:8000/v3/audio/translations"
+    speech2text: http://localhost:8000/v3/audio/transcriptions ;\
+    translations: http://localhost:8000/v3/audio/translations"
 
 parser = argparse.ArgumentParser(description='Run benchmark for embeddings endpoints', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument('--dataset', required=False, default='Cohere/wikipedia-22-12-simple-embeddings', help='Dataset for load generation from HF or a keyword "synthetic"', dest='dataset')
@@ -51,9 +52,10 @@ parser.add_argument('--api_url', required=False, help='API URL for embeddings en
 parser.add_argument('--model', required=False, default='Alibaba-NLP/gte-large-en-v1.5', help='HF model name', dest='model')
 parser.add_argument('--request_rate', required=False, default='inf', help='Average amount of requests per seconds in random distribution', dest='request_rate')
 parser.add_argument('--batch_size', required=False, type=int, default=16, help='Number of strings in every requests', dest='batch_size')
-parser.add_argument('--backend', required=False, default='ovms-embeddings', choices=['ovms-embeddings','tei-embed','infinity-embeddings','ovms_rerank','text2speech','speech2text'], help='Backend serving API type', dest='backend')
+parser.add_argument('--backend', required=False, default='ovms-embeddings', choices=['ovms-embeddings','tei-embed','infinity-embeddings','ovms_rerank','text2speech','speech2text', 'translations'], help='Backend serving API type', dest='backend')
 parser.add_argument('--limit', required=False, type=int, default=1000, help='Number of documents to use in testing', dest='limit')
 parser.add_argument('--split', required=False, default='train', help='Dataset split', dest='split')
+parser.add_argument('--hf-subset', required=False, help='Hf dataset subset', dest='subset')
 
 args = vars(parser.parse_args())
 
@@ -67,7 +69,10 @@ if args["dataset"] == 'synthetic':
         docs = docs.add_item({"text":dummy_text})
 else:
     filter = f"{args['split']}[:{args['limit']}]"
-    docs = load_dataset(args["dataset"], split=filter)
+    if args["subset"] == None:
+        docs = load_dataset(args["dataset"], split=filter)
+    else:
+        docs = load_dataset(args["dataset"], args["subset"], split=filter)
 
 print("Number of documents:",len(docs))
 
@@ -94,6 +99,7 @@ class RequestFuncOutput:
     latency: float = 0.0
     tokens_len: int = 0
     error: str = ""
+    text: str = ""
 
 application_json_headers = {
             "Content-Type": "application/json",
@@ -177,6 +183,7 @@ async def async_request_speech2text(
                         timestamp = time.perf_counter()
                         output.success = True
                         output.latency =  timestamp - st
+                        output.text = chunk_bytes.decode("utf-8")
                 else:
                     output.error = response.reason or ""
                     output.success = False
@@ -326,7 +333,7 @@ async def get_request(
 ) -> AsyncGenerator[List[str], None]:
     documents = documents_all.iter(batch_size=batch_size)
     for request in documents:
-        if args["backend"] == "speech2text":
+        if args["backend"] == "speech2text" or args["backend"] == "translations":
             yield request["audio"]
         else:
             yield request["text"]
@@ -358,11 +365,16 @@ async def benchmark(docs, model, api_url, request_rate, backend_function):
     outputs: List[RequestFuncOutput] = await asyncio.gather(*tasks)
     benchmark_duration = time.perf_counter() - benchmark_start_time
     pbar.close()
+    tokenizer = AutoTokenizer.from_pretrained(model)
+    for output in outputs:
+        data = json.loads(output.text)
+        output.tokens_len +=  len(tokenizer(data['text'],add_special_tokens=False)["input_ids"])
     result = {
         "duration": benchmark_duration,
         "errors": [output.error for output in outputs],
         "latencies": [output.latency for output in outputs],
         "successes": [output.success for output in outputs],
+        "token_count": [output.tokens_len for output in outputs],
     }
     return result
 
@@ -390,6 +402,12 @@ elif args["backend"] == "speech2text":
         exit()
     backend_function = async_request_speech2text
     default_api_url = "http://localhost:8000/v3/audio/transcriptions"
+elif args["backend"] == "translations":
+    if(batch_size != 1):
+        print("ERROR: Only batch_size=1 supported in audio/translations endpoint")
+        exit()
+    backend_function = async_request_speech2text
+    default_api_url = "http://localhost:8000/v3/audio/translations"
 else:
     print("invalid backend")
     exit()
@@ -398,8 +416,10 @@ if args["api_url"] is None:
     args["api_url"] = default_api_url
 
 benchmark_results = asyncio.run(benchmark(docs=docs, model=args["model"], api_url=args["api_url"], request_rate=float(args["request_rate"]), backend_function=backend_function))
-
-num_tokens = count_tokens(docs=docs,model=args["model"])
+if args["backend"] == "speech2text" or args["backend"] == "translations":
+    num_tokens = sum(benchmark_results['token_count'])
+else:
+    num_tokens = count_tokens(docs=docs,model=args["model"])
 #print(benchmark_results)
 print("Tokens:",num_tokens)
 print(f"Success rate: {sum(benchmark_results['successes'])/len(benchmark_results['successes'])*100}%. ({sum(benchmark_results['successes'])}/{len(benchmark_results['successes'])})")
