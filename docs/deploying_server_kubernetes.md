@@ -61,7 +61,7 @@ Note that using s3 or minio bucket requires configuring credentials like describ
 
 ## Deprecation notice about OpenVINO operator
 
-The dedicated [operator for OpenVINO]((https://operatorhub.io/operator/ovms-operator)) is now deprecated. KServe operator can now support all OVMS use cases including generative models. It provides wider set of features and configuration options. Because KServe is commonly used fir other serving runtimes, it gives easier transition and transparent migration.
+The dedicated [operator for OpenVINO]((https://operatorhub.io/operator/ovms-operator)) is now deprecated. KServe operator can now support all OVMS use cases including generative models. It provides wider set of features and configuration options. Because KServe is commonly used for other serving runtimes, it gives easier transition and transparent migration.
 
 ## Additional Resources
 
