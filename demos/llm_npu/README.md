@@ -11,7 +11,7 @@ It is targeted on client machines equipped with NPU accelerator.
 
 ## Prerequisites
 
-**Model preparation**: Python 3.12 or higher with pip and HuggingFace account
+**Model preparation**: HuggingFace account
 
 **Model Server deployment**: Installed Docker Engine or OVMS binary package according to the [baremetal deployment guide](../../docs/deploying_server_baremetal.md)
 
