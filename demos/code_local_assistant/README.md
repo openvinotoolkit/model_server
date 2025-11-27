@@ -30,7 +30,6 @@ curl -L -o models/Qwen/Qwen3-Coder-30B-A3B-Instruct/chat_template.jinja https://
 > **Note:** This model requires ~15GB disk space and same amount of VRAM on the GPU.
 
 :::
-:::
 :::{tab-item} mistralai/Codestral-22B-v0.1 
 :sync: mistralai/Codestral-22B-v0.1
 ```bash
