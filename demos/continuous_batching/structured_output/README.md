@@ -2,7 +2,7 @@
 
 OpenVINO Model Server can enforce the LLM models to generate the output with a specific structure for example as JSON object.
 That functionality can be applied in automation tasks where content needs to be created based on the text passed in the request.
-JSON format is a standard for communication and data exchange between applications and microservices, but structure format could also be multi choice (when we want the model to generate content from predefined subset), regex or another format [among available ones](https://github.com/mlc-ai/xgrammar/blob/v0.1.26/docs/tutorials/structural_tag.md#format-types).
+JSON format is a standard for communication and data exchange between applications and microservices, but structured format could also be multi choice (when we want the model to generate content from predefined subset), regex or another format [among available ones](https://github.com/mlc-ai/xgrammar/blob/v0.1.26/docs/tutorials/structural_tag.md#format-types).
 
 Below are a few examples of using structured output to get result in desired format.
 
@@ -268,7 +268,7 @@ payload = {
    "messages":[
       {
          "role": "system", 
-         "content": "You are responsible for generating email address for new empoyees. Address should have a format '<first_name>.<last_name>@company.com'. Replace <first_name> and <last_name> with data from user prompt."
+         "content": "You are responsible for generating email address for new employees. Address should have a format '<first_name>.<last_name>@company.com'. Replace <first_name> and <last_name> with data from user prompt."
       },
       {
          "role":"user",
