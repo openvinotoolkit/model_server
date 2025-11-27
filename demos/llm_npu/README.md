@@ -11,8 +11,6 @@ It is targeted on client machines equipped with NPU accelerator.
 
 ## Prerequisites
 
-**Model preparation**: HuggingFace account
-
 **Model Server deployment**: Installed Docker Engine or OVMS binary package according to the [baremetal deployment guide](../../docs/deploying_server_baremetal.md)
 
 **(Optional) Client**: git and Python for using OpenAI client package
