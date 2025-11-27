@@ -151,6 +151,7 @@ def check_dir(start_dir):
         "results.txt",
         "windows_bdba.bat",
         "windows_sign.bat",
+        "config.yaml",
         "kserve-openvino.yaml",
         ]
 
