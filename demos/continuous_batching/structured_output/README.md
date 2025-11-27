@@ -1,19 +1,15 @@
 # Structured response in LLM models {#ovms_structured_output}
 
-OpenVINO Model Server can enforce the LLM models to generate the output according to a specific json schema.
-That functionality can be applied in automation tasks where json content needs to be created based on the text passed in the request.
-Json format is a standard for communication and data exchange between applications and microservices.
+OpenVINO Model Server can enforce the LLM models to generate the output with a specific structure for example as JSON object.
+That functionality can be applied in automation tasks where content needs to be created based on the text passed in the request.
+JSON format is a standard for communication and data exchange between applications and microservices, but structured format could also be multi choice (when we want the model to generate content from predefined subset), regex or another format [among available ones](https://github.com/mlc-ai/xgrammar/blob/v0.1.26/docs/tutorials/structural_tag.md#format-types).
 
-Below is an example how this capability can be used with an testing procedure to show accuracy gain.
-
-<b>Requirements: OVMS version 2025.3 built from main branch </b>
+Below are a few examples of using structured output to get result in desired format.
 
 ## Deploy LLM model
 
 There are no extra steps needed to use structured output. Whole behavior is triggered based on the client request.
 
-
-### 1. Deploy the Model
 ::::{tab-set}
 :::{tab-item} With Docker on GPU
 **Required:** Docker Engine installed
@@ -63,10 +59,10 @@ ovms.exe --source_model OpenVINO/Mistral-7B-Instruct-v0.3-int4-cw-ov --model_rep
 ::::
 
 
-## Client usage
+## Request output in JSON format
 
 ::::{tab-set}
-:::{tab-item} With python requests library
+:::{tab-item} With Python Requests Library
 
 ```console
 pip install requests
@@ -86,7 +82,7 @@ payload = {
          "content":"Alice and Bob are going to a science fair on Friday."
       }
    ],
-   "response_format":{
+   "response_format": {
       "type":"json_schema",
       "json_schema":{
          "schema":{
@@ -129,7 +125,7 @@ print(json_response["choices"][0]["message"]["content"])
 {"event_name":"Science Fair","date":"Friday","participants":["Alice","Bob"]}
 ```
 :::
-:::{tab-item} With python openai library
+:::{tab-item} With Python OpenAI Library
 
 ```console
 pip install openai
@@ -164,26 +160,167 @@ print(completion.choices[0].message.content)
 :::
 ::::
 
-## Testing accuracy impact
+## Request output in specified subset (choice)
 
-The script accuracy_test.py is using the dataset [isaiahbjork/json-mode-agentic](https://huggingface.co/datasets/isaiahbjork/json-mode-agentic)
-to assess model response and its compliance with the expected schema and also the json response content with the expected output. 
-
-It will be executed with the response_format request field including the schema and with the schema passed in the system message.
+::::{tab-set}
+:::{tab-item} With Python Requests Library
 
 ```console
-pip install datasets tqdm openai jsonschema
-curl -L https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/continuous_batching/structured_output/accuracy_test.py -O 
-python accuracy_test.py --base_url http://127.0.0.1:8000/v3 --model OpenVINO/Mistral-7B-Instruct-v0.3-int4-cw-ov --concurrency 50 --limit 1000
-```
-```
-Requests: 1000, Successful responses: 1000, Exact matches: 135, Schema matches: 435 Invalid inputs: 0
+pip install requests
 ```
 
+```python
+import requests
+payload = {
+   "model":"OpenVINO/Mistral-7B-Instruct-v0.3-int4-cw-ov",
+   "messages":[
+      {
+         "role": "system", 
+         "content": "Classify sentiments of given prompts"
+      },
+      {
+         "role":"user",
+         "content":"OVMS is fantastic!"
+      }
+   ],
+   "response_format": {
+      "type":"or",
+      "elements": [
+         {
+            "type": "const_string",
+            "value": "positive"
+         },
+         {
+            "type": "const_string",
+            "value": "negative"
+         }
+      ]
+   }
+}
+
+headers = {"Content-Type": "application/json", "Authorization": "not used"}
+response = requests.post("http://127.0.0.1:8000/v3/chat/completions", json=payload, headers=headers)
+json_response = response.json()
+
+print(json_response["choices"][0]["message"]["content"])
+```
+```
+positive
+```
+:::
+:::{tab-item} With Python OpenAI Library
+
 ```console
-python accuracy_test.py --base_url http://127.0.0.1:8000/v3 --model OpenVINO/Mistral-7B-Instruct-v0.3-int4-cw-ov --enable_response_format --concurrency 50 --limit 1000
+pip install openai
+```
+
+```python
+from openai import OpenAI
+from pydantic import BaseModel
+base_url = "http://127.0.0.1:8000/v3"
+model_name = "OpenVINO/Mistral-7B-Instruct-v0.3-int4-cw-ov"
+client = OpenAI(base_url=base_url, api_key="unused")
+
+completion = client.beta.chat.completions.parse(
+    model=model_name,
+    messages=[
+         {"role": "system", "content": "Classify sentiments of given prompts"},
+         {"role": "user", "content": "OVMS is fantastic!"},
+    ],
+    temperature=0.0,
+    max_tokens=100,
+    response_format={
+      "type":"or",
+      "elements": [
+         {
+            "type": "const_string",
+            "value": "positive"
+         },
+         {
+            "type": "const_string",
+            "value": "negative"
+         }
+      ]
+   }
+)
+print(completion.choices[0].message.content)
 ```
 ```
-Requests: 1000, Successful responses: 1000, Exact matches: 217, Schema matches: 828 Invalid inputs: 0
+positive
 ```
-Generally the quality of the responses depend on the model size and topology. The results above proves that the accuracy can be increased even without changing the model via adding the mechanism of guided generation and using the field `response_format`
+:::
+::::
+
+
+## Request output in matching RegEx
+
+::::{tab-set}
+:::{tab-item} With Python Requests Library
+
+```console
+pip install requests
+```
+
+```python
+import requests
+payload = {
+   "model":"OpenVINO/Mistral-7B-Instruct-v0.3-int4-cw-ov",
+   "messages":[
+      {
+         "role": "system", 
+         "content": "You are responsible for generating email address for new employees. Address should have a format '<first_name>.<last_name>@company.com'. Replace <first_name> and <last_name> with data from user prompt."
+      },
+      {
+         "role":"user",
+         "content":"Generate email address for Jane Doe."
+      }
+   ],
+   "response_format": {
+      "type": "regex",
+      "pattern": "\\w+\\.\\w+@company\\.com"
+   }
+}
+
+headers = {"Content-Type": "application/json", "Authorization": "not used"}
+response = requests.post("http://127.0.0.1:8000/v3/chat/completions", json=payload, headers=headers)
+json_response = response.json()
+
+print(json_response["choices"][0]["message"]["content"])
+```
+```
+jane.doe@company.com
+```
+:::
+:::{tab-item} With Python OpenAI Library
+
+```console
+pip install openai
+```
+
+```python
+from openai import OpenAI
+from pydantic import BaseModel
+base_url = "http://127.0.0.1:8000/v3"
+model_name = "OpenVINO/Mistral-7B-Instruct-v0.3-int4-cw-ov"
+client = OpenAI(base_url=base_url, api_key="unused")
+
+completion = client.beta.chat.completions.parse(
+    model=model_name,
+    messages=[
+      {"role": "system", "content": "You are responsible for generating email address for new empoyees. Address should have a format '<first_name>.<last_name>@company.com'. Replace <first_name> and <last_name> with data from user prompt."},
+      {"role":"user", "content":"Generate email address for Jane Doe."}
+    ],
+    temperature=0.0,
+    max_tokens=100,
+    response_format={
+      "type": "regex",
+      "pattern": "\\w+\\.\\w+@company\\.com"
+   }
+)
+print(completion.choices[0].message.content)
+```
+```
+jane.doe@company.com
+```
+:::
+::::

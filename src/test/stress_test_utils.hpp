@@ -1074,12 +1074,12 @@ static const std::string basicMediapipeConfigWithNewGraphPath = R"({
 
 #if (MEDIAPIPE_DISABLE == 0)
 template <typename Request, typename Response>
-static void mediaexec(std::shared_ptr<MediapipeGraphExecutor>& executorPtr, ovms::ModelManager& manager, Request&, Response&, ovms::Status& status) {
+static void mediaexec(std::unique_ptr<MediapipeGraphExecutor>& executorPtr, ovms::ModelManager& manager, Request&, Response&, ovms::Status& status) {
     throw std::string("Unsupported");
 }
 
 template <typename Request, typename Response>
-static void mediacreate(std::shared_ptr<MediapipeGraphExecutor>& executorPtr, ovms::ModelManager& manager, Request&, Response&, ovms::Status& status) {
+static void mediacreate(std::unique_ptr<MediapipeGraphExecutor>& executorPtr, ovms::ModelManager& manager, Request&, Response&, ovms::Status& status) {
     throw std::string("Unsupported");
 }
 #endif
@@ -1717,7 +1717,7 @@ public:
             }
             std::unique_ptr<Pipeline> pipelinePtr;
 #if (MEDIAPIPE_DISABLE == 0)
-            std::shared_ptr<MediapipeGraphExecutor> executorPtr;
+            std::unique_ptr<MediapipeGraphExecutor> executorPtr;
 #endif
             ResponseType response;
             // little hack - we can't use noninitializad object to call function

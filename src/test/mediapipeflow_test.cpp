@@ -2439,7 +2439,7 @@ public:
     static const std::string pbtxtContentNonexistentCalc;
     template <typename Request, typename Response>
     static void checkStatus(ModelManager& manager, ovms::StatusCode code) {
-        std::shared_ptr<MediapipeGraphExecutor> executor;
+        std::unique_ptr<MediapipeGraphExecutor> executor;
         Request request;
         Response response;
         auto status = manager.createPipeline(executor, mgdName);
@@ -3322,7 +3322,7 @@ protected:
         }
         const ServableManagerModule* smm = dynamic_cast<const ServableManagerModule*>(this->server.getModule(SERVABLE_MANAGER_MODULE_NAME));
         ModelManager& modelManager = smm->getServableManager();
-        std::shared_ptr<MediapipeGraphExecutor> executor;
+        std::unique_ptr<MediapipeGraphExecutor> executor;
         ASSERT_EQ(modelManager.createPipeline(executor, this->request.model_name()), ovms::StatusCode::OK);
         using ovms::ExecutionContext;
         ExecutionContext executionContext{ExecutionContext::Interface::GRPC, ExecutionContext::Method::ModelInfer};

@@ -152,6 +152,7 @@ def check_dir(start_dir):
         "windows_bdba.bat",
         "windows_sign.bat",
         "config.yaml",
+        "kserve-openvino.yaml",
         ]
 
     exclude_directories = ['/dist/', 'release_files/thirdparty-licenses', 'extras/chat_template_examples']
