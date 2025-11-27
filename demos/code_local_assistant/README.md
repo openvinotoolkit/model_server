@@ -186,6 +186,8 @@ docker run -d --rm --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render*
 
 ### Download [Continue plugin](https://www.continue.dev/)
 
+> **Note:** This demo has been tested with Continue plugin version `1.2.11`. While newer versions should work, some configuration options may vary.
+
 ![search_continue_plugin](search_continue_plugin.png)
 
 ### Setup Local Assistant
