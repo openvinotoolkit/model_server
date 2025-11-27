@@ -21,6 +21,7 @@ Currently supported models:
 - NousResearch/Hermes-3-Llama-3.1-8B
 - mistralai/Mistral-7B-Instruct-v0.3
 - microsoft/Phi-4-mini-instruct
+- Qwen/Qwen3-Coder-30B-A3B-Instruct
 
 ### Export using python script
 
@@ -82,6 +83,13 @@ curl -L -o models/mistralai/Mistral-7B-Instruct-v0.3/chat_template.jinja https:/
 ```console
 python export_model.py text_generation --source_model microsoft/Phi-4-mini-instruct --weight-format int8 --config_file_path models/config.json --model_repository_path models --tool_parser phi4 --max_num_batched_tokens 99999
 curl -L -o models/microsoft/Phi-4-mini-instruct/chat_template.jinja https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/extras/chat_template_examples/chat_template_phi4_mini.jinja
+```
+:::
+:::{tab-item} Qwen3-Coder-30B-A3B-Instruct
+:sync: Qwen3-Coder-30B-A3B-Instruct
+```console
+python export_model.py text_generation --source_model Qwen/Qwen3-Coder-30B-A3B-Instruct --weight-format int8 --config_file_path models/config.json --model_repository_path models --tool_parser qwen3coder
+curl -L -o models/Qwen/Qwen3-Coder-30B-A3B-Instruct/chat_template.jinja https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/extras/chat_template_examples/chat_template_qwen3coder_instruct.jinja
 ```
 :::
 ::::
@@ -214,6 +222,12 @@ ovms.exe --rest_port 8000 --source_model OpenVINO/Mistral-7B-Instruct-v0.3-int4-
 ovms.exe --rest_port 8000 --source_model OpenVINO/Phi-4-mini-instruct-int4-ov --model_repository_path models --tool_parser phi4 --target_device GPU --task text_generation --enable_tool_guided_generation true --cache_dir .cache
 ```
 :::
+:::{tab-item} Qwen3-Coder-30B-A3B-Instruct
+:sync: Qwen3-Coder-30B-A3B-Instruct
+```bat
+ovms.exe --rest_port 8000 --source_model Qwen/Qwen3-Coder-30B-A3B-Instruct --model_repository_path models --tool_parser qwen3coder --target_device GPU --task text_generation --enable_tool_guided_generation true --cache_dir .cache
+```
+:::
 ::::
 
 ### Deploying on Windows with NPU
@@ -344,6 +358,14 @@ docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/model
 --rest_port 8000 --model_repository_path models --source_model OpenVINO/Phi-4-mini-instruct-int4-ov --tool_parser phi4 --task text_generation --enable_prefix_caching true
 ```
 :::
+:::{tab-item} Qwen3-Coder-30B-A3B-Instruct
+:sync: Qwen3-Coder-30B-A3B-Instruct
+```bash
+docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models openvino/model_server:weekly \
+--rest_port 8000 --source_model Qwen/Qwen3-Coder-30B-A3B-Instruct --model_repository_path models --tool_parser qwen3coder --task text_generation --enable_tool_guided_generation true --cache_dir .cache
+```
+
+:::
 ::::
 
 
@@ -422,6 +444,13 @@ docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/model
 ```bash
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:weekly \
 --rest_port 8000 --model_repository_path models --source_model OpenVINO/Phi-4-mini-instruct-int4-ov --tool_parser phi4 --target_device GPU --task text_generation --enable_tool_guided_generation true
+```
+:::
+:::{tab-item} Qwen3-Coder-30B-A3B-Instruct
+:sync: Qwen3-Coder-30B-A3B-Instruct
+```bash
+docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:weekly \
+--rest_port 8000 --source_model Qwen/Qwen3-Coder-30B-A3B-Instruct --model_repository_path models --tool_parser qwen3coder --target_device GPU --task text_generation --enable_tool_guided_generation true --cache_dir .cache
 ```
 :::
 ::::
@@ -585,6 +614,12 @@ python openai_agent.py --query "What is the current weather in Tokyo?" --model O
 :sync: Phi-4-mini-instruct-int4-ov
 ```bash
 python openai_agent.py --query "What is the current weather in Tokyo?" --model OpenVINO/Phi-4-mini-instruct-int4-ov --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather
+```
+:::
+:::{tab-item} Qwen3-Coder-30B-A3B-Instruct
+:sync: Qwen3-Coder-30B-A3B-Instruct
+```bash
+python openai_agent.py --query "What is the current weather in Tokyo?" --model Qwen3/Qwen3-Coder-30B-A3B-Instruct --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather
 ```
 :::
 ::::
