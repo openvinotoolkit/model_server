@@ -106,9 +106,8 @@ Play speech.wav file to check generated speech.
 ### Model preparation
 Many variances of Whisper models can be deployed in a single command by using pre-configured models from [OpenVINO HuggingFace organization](https://huggingface.co/collections/OpenVINO/speech-to-text) and used both for translations and transcriptions endpoints.
 However in this demo we will use openai/whisper-large-v3-turbo which needs to be converted to IR format before using in OVMS.
-Specific OVMS pull mode example for models requiring conversion is described in the [Ovms pull mode](../../docs/pull_hf_models.md#pulling-models-outside-openvino-organization)
 
-Here, the original Speech to Text model will be converted to IR format and optionally quantized.
+Here, the original Speech to Text model will be converted to IR format and quantized.
 That ensures faster initialization time, better performance and lower memory consumption.
 Execution parameters will be defined inside the `graph.pbtxt` file.
 
@@ -210,7 +209,7 @@ The quick brown fox jumped over the lazy dog.
 ```
 :::
 ## Translation
-To test translations endpoint we first need to prepare audio file with speech in language other than english, e.g. spanish. To generate such sample we will use finetuned version of microsoft/speecht5_tts model.
+To test translations endpoint we first need to prepare audio file with speech in language other than English, e.g. Spanish. To generate such sample we will use finetuned version of microsoft/speecht5_tts model.
 
 ```console
 python export_model.py text2speech --source_model Sandiago21/speecht5_finetuned_facebook_voxpopuli_spanish --weight-format fp16 --model_name speecht5_tts_spanish --config_file_path models/config.json --model_repository_path models --overwrite_models --vocoder microsoft/speecht5_hifigan
