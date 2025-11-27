@@ -32,9 +32,10 @@
 #include <tchar.h>
 #include <errors.h>
 
-#include "module_names.hpp"
-#include "server.hpp"
 #include "main_windows.hpp"
+#include "module_names.hpp"
+#include "ovms_exit_codes.hpp"
+#include "server.hpp"
 
 namespace ovms_service {
 std::string OvmsWindowsServiceManager::getCurrentTimeString() {
@@ -47,7 +48,6 @@ std::string OvmsWindowsServiceManager::getCurrentTimeString() {
 }
 
 #define DEBUG_LOG_ENABLE 0
-// TODO: Implement windows logging mechanism with events
 static std::ofstream logFile("C:\\temp\\ovms.log", std::ios::app);
 #define DEBUG_LOG(msg)                                                                   \
     {                                                                                    \
@@ -61,11 +61,14 @@ static std::ofstream logFile("C:\\temp\\ovms.log", std::ios::app);
 
 using ovms::Server;
 
-OvmsWindowsServiceManager manager;
+OvmsWindowsServiceManager& OvmsWindowsServiceManager::instance() {
+    static OvmsWindowsServiceManager global;
+    return global;
+}
 
 // Need this original function pointer type expected by the Windows Service API (LPSERVICE_MAIN_FUNCTIONA),
 void WINAPI WinServiceMain(DWORD argc, LPTSTR* argv) {
-    manager.serviceMain(argc, argv);
+    OvmsWindowsServiceManager::instance().serviceMain(argc, argv);
 }
 
 std::string wstringToString(const std::wstring& wstr) {
@@ -106,8 +109,8 @@ inline std::wstring stringToWstring(const std::string& str, UINT codePage = CP_T
 
 int main_windows(int argc, char** argv) {
     DEBUG_LOG("Windows Main - Entry");
-    manager.ovmsParams.argc = argc;
-    manager.ovmsParams.argv = argv;
+    OvmsWindowsServiceManager::instance().ovmsParams.argc = argc;
+    OvmsWindowsServiceManager::instance().ovmsParams.argv = argv;
     OvmsWindowsServiceManager::logParameters(argc, argv, "OVMS Main Argument");
 
     // Install service with ovms.exe
@@ -167,13 +170,17 @@ OvmsWindowsServiceManager::~OvmsWindowsServiceManager() {
 struct WinHandleDeleter {
     typedef HANDLE pointer;
     void operator()(HANDLE h) {
-        DEBUG_LOG("WinHandleDeleter: closing handle");
+        std::stringstream ss2;
+        ss2 << "WinHandleDeleter: closing handle: " << h;
+        DEBUG_LOG(ss2.str());
         if (h != NULL && h != INVALID_HANDLE_VALUE) {
             CloseHandle(h);
         }
     }
 };
 
+// Arguments for this function are the arguments from sc start ovms
+// When no arguments are passed we use those from sc create ovms - during install service, and overwrite the parameters
 void WINAPI OvmsWindowsServiceManager::serviceMain(DWORD argc, LPTSTR* argv) {
     DEBUG_LOG("ServiceMain: Entry");
 
@@ -187,15 +194,37 @@ void WINAPI OvmsWindowsServiceManager::serviceMain(DWORD argc, LPTSTR* argv) {
     this->setServiceStartStatus();
 
     DEBUG_LOG("ServiceMain: Performing Service Start Operations");
-    OvmsWindowsServiceManager::logParameters(argc, argv, "ServiceMain Argument");
-
+    // argc = 1 equals ovms.exe
     if (argv && argc > 1) {
         DEBUG_LOG("ServiceMain: Setting new parameters for service after service start.");
-        manager.ovmsParams.argc = argc;
-        manager.ovmsParams.argv = argv;
+        OvmsWindowsServiceManager::instance().ovmsParams.argc = argc;
+        OvmsWindowsServiceManager::instance().ovmsParams.argv = argv;
+    }
+    OvmsWindowsServiceManager::logParameters(argc, argv, "ServiceMain Argument");
+
+    // Parse arguments before server start
+    auto paramsOrExit = ovms::Server::parseArgs(OvmsWindowsServiceManager::instance().ovmsParams.argc, OvmsWindowsServiceManager::instance().ovmsParams.argv);
+    // Check for error in parsing
+    if (std::holds_alternative<std::pair<int, std::string>>(paramsOrExit)) {
+        auto printAndExit = std::get<std::pair<int, std::string>>(paramsOrExit);
+        // Check retcode other than success
+        if (printAndExit.first > 0) {
+            DEBUG_LOG("ServiceMain: Server::parseArgs returned error");
+            serviceReportEventWithExitCode("ovms::Server::parseArgs", printAndExit.second, printAndExit.first);
+            this->setServiceStopStatusWithExitCode(printAndExit.first);
+        } else {
+            // Check retcode 0 but service not started [--help, --version] arguments
+            DEBUG_LOG("ServiceMain: Server::parseArgs returned success, no valid parameters to start the service provided.");
+            serviceReportEventWithExitCode("ovms::Server::parseArgs", printAndExit.second, printAndExit.first);
+            this->setServiceStopStatusWithExitCode(printAndExit.first);
+        }
+
+        return;
+    } else {
+        OvmsWindowsServiceManager::instance().parsedParameters = std::get<std::pair<ovms::ServerSettingsImpl, ovms::ModelsSettingsImpl>>(paramsOrExit);
     }
 
-    std::unique_ptr<HANDLE, WinHandleDeleter> mainThread(CreateThread(NULL, 0, OvmsWindowsServiceManager::serviceWorkerThread, &manager.ovmsParams, 0, NULL));
+    std::unique_ptr<HANDLE, WinHandleDeleter> mainThread(CreateThread(NULL, 0, OvmsWindowsServiceManager::serviceWorkerThread, &OvmsWindowsServiceManager::instance().parsedParameters, 0, NULL));
     if (mainThread.get() == NULL || mainThread.get() == INVALID_HANDLE_VALUE) {
         // Handle error
         DEBUG_LOG("ServiceMain: mainThread == NULL || mainThread == INVALID_HANDLE_VALUE");
@@ -212,9 +241,6 @@ void WINAPI OvmsWindowsServiceManager::serviceMain(DWORD argc, LPTSTR* argv) {
         return;
     }
 
-    // Tell the service controller we are started
-    this->setServiceRunningStatus();
-
     DEBUG_LOG("ServiceMain: Waiting for Worker Thread to complete");
 
     WaitForSingleObject(mainThread.get(), INFINITE);
@@ -229,7 +255,9 @@ void WINAPI OvmsWindowsServiceManager::serviceMain(DWORD argc, LPTSTR* argv) {
 struct WinSCHandleDeleter {
     typedef SC_HANDLE pointer;
     void operator()(SC_HANDLE h) {
-        DEBUG_LOG("WinSCHandleDeleter: closing handle");
+        std::stringstream ss2;
+        ss2 << "WinSCHandleDeleter: closing handle: " << h;
+        DEBUG_LOG(ss2.str());
         if (h != NULL && h != INVALID_HANDLE_VALUE) {
             CloseServiceHandle(h);
         }
@@ -240,7 +268,6 @@ struct WinSCHandleDeleter {
 // Use sc create ... instead
 // Cannot be used as it does not create the registry entry for the service
 // Registry entry required to add ovms\python to PATH
-// TODO: add serviceReportEvent to the standard main path
 void OvmsWindowsServiceManager::serviceInstall() {
     TCHAR szUnquotedPath[MAX_PATH];
     DEBUG_LOG("Installing Openvino Model Server service");
@@ -342,22 +369,28 @@ bool OvmsWindowsServiceManager::serviceSetDescription() {
 }
 
 void OvmsWindowsServiceManager::logParameters(DWORD argc, LPTSTR* argv, const std::string& logText) {
-    for (int i = 0; i < (int)manager.ovmsParams.argc; ++i) {
+    for (int i = 0; i < (int)OvmsWindowsServiceManager::instance().ovmsParams.argc; ++i) {
         std::stringstream ss2;
-        ss2 << logText << " " << i << ": " << manager.ovmsParams.argv[i];
-        DEBUG_LOG(ss2.rdbuf());
+        ss2 << logText << " " << i << ": " << OvmsWindowsServiceManager::instance().ovmsParams.argv[i];
+        DEBUG_LOG(ss2.str());
     }
 }
 
 struct WinESHandleDeleter {
     typedef HANDLE pointer;
     void operator()(HANDLE h) {
-        DEBUG_LOG("WinESHandleDeleter: closing handle");
+        std::stringstream ss2;
+        ss2 << "WinESHandleDeleter: closing handle: " << h;
+        DEBUG_LOG(ss2.str());
         if (h != NULL && h != INVALID_HANDLE_VALUE) {
             DeregisterEventSource(h);
         }
     }
 };
+
+void OvmsWindowsServiceManager::serviceReportEvent(const std::string& szFunction) {
+    serviceReportEvent(const_cast<LPSTR>(szFunction.c_str()));
+}
 
 void OvmsWindowsServiceManager::serviceReportEvent(LPSTR szFunction) {
     LPCTSTR lpszStrings[2];
@@ -371,6 +404,64 @@ void OvmsWindowsServiceManager::serviceReportEvent(LPSTR szFunction) {
         lpszStrings[1] = Buffer;
         ReportEvent(hEventSource.get(),  // event log handle
             EVENTLOG_ERROR_TYPE,         // event type
+            0,                           // event category
+            0,                           // event identifier
+            NULL,                        // no security identifier
+            2,                           // size of lpszStrings array
+            0,                           // no binary data
+            lpszStrings,                 // array of strings
+            NULL);                       // no binary data
+
+    } else {
+        DEBUG_LOG("RegisterEventSource failed");
+        DEBUG_LOG(std::system_category().message(GetLastError()));
+    }
+}
+
+void OvmsWindowsServiceManager::serviceReportEventWithExitCode(const std::string& szFunction, const std::string& message, const int& exitCode) {
+    serviceReportEventWithExitCode(const_cast<LPSTR>(szFunction.c_str()), message, exitCode);
+}
+
+void OvmsWindowsServiceManager::serviceReportEventWithExitCode(LPSTR szFunction, const std::string& message, const int& exitCode) {
+    // TODO: Write message file for ovms: https://learn.microsoft.com/en-us/windows/win32/eventlog/sample-message-text-file
+    LPCTSTR lpszStrings[2];
+    TCHAR Buffer[200];
+    std::unique_ptr<SC_HANDLE, WinESHandleDeleter> hEventSource(RegisterEventSource(NULL, OvmsWindowsServiceManager::serviceName));
+    if (hEventSource.get() != NULL) {
+        StringCchPrintf(Buffer, 200, TEXT("%s failed with %d error: %s"), szFunction, exitCode, message.c_str());
+        lpszStrings[0] = OvmsWindowsServiceManager::serviceName;
+        lpszStrings[1] = Buffer;
+        ReportEvent(hEventSource.get(),  // event log handle
+            EVENTLOG_ERROR_TYPE,         // event type
+            exitCode,                    // event category
+            0,                           // event identifier
+            NULL,                        // no security identifier
+            2,                           // size of lpszStrings array
+            0,                           // no binary data
+            lpszStrings,                 // array of strings
+            NULL);                       // no binary data
+
+    } else {
+        DEBUG_LOG("RegisterEventSource failed");
+        DEBUG_LOG(std::system_category().message(GetLastError()));
+    }
+}
+
+void OvmsWindowsServiceManager::serviceReportEventSuccess(const std::string& szFunction, const std::string& message) {
+    serviceReportEventSuccess(const_cast<LPSTR>(szFunction.c_str()), message);
+}
+
+void OvmsWindowsServiceManager::serviceReportEventSuccess(LPSTR szFunction, const std::string& message) {
+    // TODO: Write message file for ovms: https://learn.microsoft.com/en-us/windows/win32/eventlog/sample-message-text-file
+    LPCTSTR lpszStrings[2];
+    TCHAR Buffer[200];
+    std::unique_ptr<SC_HANDLE, WinESHandleDeleter> hEventSource(RegisterEventSource(NULL, OvmsWindowsServiceManager::serviceName));
+    if (hEventSource.get() != NULL) {
+        StringCchPrintf(Buffer, 200, TEXT("%s success. Status: %s"), szFunction, message.c_str());
+        lpszStrings[0] = OvmsWindowsServiceManager::serviceName;
+        lpszStrings[1] = Buffer;
+        ReportEvent(hEventSource.get(),  // event log handle
+            EVENTLOG_SUCCESS,            // event type
             0,                           // event category
             0,                           // event identifier
             NULL,                        // no security identifier
@@ -417,31 +508,30 @@ DWORD WINAPI OvmsWindowsServiceManager::serviceWorkerThread(LPVOID lpParam) {
     std::unique_ptr<OvmsService> ovmsService = std::make_unique<OvmsService>();
     ovmsService->error = 0;
     ovmsService->started = false;
+    ovmsService->setup = false;
 
     //  Start OVMS and check for stop
     while (WaitForSingleObject(serviceStopEvent->handle, 0) != WAIT_OBJECT_0) {
-        if (!ovmsService->started) {
-            ConsoleParameters* params = (ConsoleParameters*)lpParam;
-            if (params && params->argc > 1) {
-                DEBUG_LOG("serviceWorkerThread: Starting ovms from start parameters.");
-                OvmsWindowsServiceManager::logParameters(params->argc, params->argv, "OVMS Main Argument");
-                ovmsService->SetUp(params->argc, params->argv);
-                DEBUG_LOG("serviceWorkerThread: Ovms starting. Waiting for SERVABLE_MANAGER_MODULE to be live ...")
-            } else {
-                DEBUG_LOG("serviceWorkerThread: Error - No parameters passed to ovms service.");
-                break;
-            }
+        // Already started
+        if (!ovmsService->setup) {
+            std::pair<ovms::ServerSettingsImpl, ovms::ModelsSettingsImpl>* params = (std::pair<ovms::ServerSettingsImpl, ovms::ModelsSettingsImpl>*)lpParam;
+            DEBUG_LOG("serviceWorkerThread: Starting ovms from parameters.");
+            ovmsService->SetUp(params);
         }
         // Check thread not exited
-        if (ovmsService->started && !ovmsService->isRunning()) {
+        if (!ovmsService->isRunning()) {
             DEBUG_LOG("serviceWorkerThread: Server thread is not running.")
             break;
         }
 
-        ovmsService->checkModulesStarted();
+        if (!ovmsService->started && ovmsService->checkModulesStarted()) {
+            // Tell the service controller we are started
+            OvmsWindowsServiceManager::setServiceRunningStatus();
+            ovmsService->started = true;
+        }
     }
 
-    if (ovmsService->started) {
+    if (ovmsService->started || ovmsService->setup) {
         ovmsService->TearDown();
         DEBUG_LOG("serviceWorkerThread: Stopping ovms service.");
     } else {
@@ -449,10 +539,9 @@ DWORD WINAPI OvmsWindowsServiceManager::serviceWorkerThread(LPVOID lpParam) {
     }
 
     if (ovmsService->error) {
-        // TODO: Catch parsing errors from OVMS - currently we do not have this info
         DEBUG_LOG("serviceWorkerThread: Ovms start returned error.");
         DEBUG_LOG(ovmsService->error);
-        serviceReportEvent("Ovms start returned error.");
+        serviceReportEventWithExitCode("serviceWorkerThread", "Ovms exited with error. Check windows events log and ovms server log for details.", ovmsService->error);
         return ovmsService->error;
     }
 
@@ -488,17 +577,126 @@ void OvmsWindowsServiceManager::setServiceStopStatusWithError() {
     DEBUG_LOG("ServiceMain: SetServiceStatus stop with error");
 }
 
-void OvmsWindowsServiceManager::setServiceRunningStatus() {
-    serviceStatus.dwControlsAccepted = SERVICE_ACCEPT_STOP;
-    serviceStatus.dwCurrentState = SERVICE_RUNNING;
-    serviceStatus.dwWin32ExitCode = 0;
-    serviceStatus.dwCheckPoint = 0;
+void OvmsWindowsServiceManager::setServiceStopStatusWithExitCode(const int& exitCode) {
+    DWORD exitToError = static_cast<DWORD>(exitCode);
+    // Map known exit code to known win errors for proper service status report on error
+    // Check https://learn.microsoft.com/en-us/windows/win32/debug/system-error-codes--0-499- for details
+    switch (exitCode) {
+    case OVMS_EX_USAGE: {
+        exitToError = ERROR_BAD_ARGUMENTS;
+        break;
+    }
+    case OVMS_EX_OK: {
+        exitToError = ERROR_BAD_ARGUMENTS;
+        break;
+    }
+    case OVMS_EX_FAILURE: {
+        exitToError = ERROR_INVALID_FUNCTION;
+        break;
+    }
+    case OVMS_EX_WARNING: {
+        exitToError = ERROR_INVALID_FUNCTION;
+        break;
+    }
+    default:
+        exitToError = ERROR_INVALID_FUNCTION;
+    }
 
+    serviceStatus.dwControlsAccepted = 0;
+    serviceStatus.dwCurrentState = SERVICE_STOPPED;
+    serviceStatus.dwWin32ExitCode = exitToError;
+    serviceStatus.dwCheckPoint = 1;
     if (SetServiceStatus(this->statusHandle->handle, &serviceStatus) == FALSE) {
         DEBUG_LOG("ServiceMain: SetServiceStatus returned error");
         serviceReportEvent("SetServiceStatus");
     }
-    DEBUG_LOG("ServiceMain: SetServiceStatus running");
+    DEBUG_LOG("ServiceMain: SetServiceStatus stop with exit code");
+}
+
+void OvmsWindowsServiceManager::setServiceRunningStatus() {
+    OvmsWindowsServiceManager::serviceStatus.dwControlsAccepted = SERVICE_ACCEPT_STOP;
+    OvmsWindowsServiceManager::serviceStatus.dwCurrentState = SERVICE_RUNNING;
+    OvmsWindowsServiceManager::serviceStatus.dwWin32ExitCode = 0;
+    OvmsWindowsServiceManager::serviceStatus.dwCheckPoint = 0;
+
+    if (SetServiceStatus(OvmsWindowsServiceManager::statusHandle->handle, &OvmsWindowsServiceManager::serviceStatus) == FALSE) {
+        DEBUG_LOG("OvmsWindowsServiceManager: SetServiceStatus returned error");
+        serviceReportEvent("SetServiceStatus");
+    }
+    DEBUG_LOG("OvmsWindowsServiceManager: SetServiceStatus running");
+}
+
+std::string OvmsWindowsServiceManager::getRegValue(const winreg::RegKey& key, const std::wstring& name, const DWORD& regType) {
+    std::string retStr = "";
+    switch (regType) {
+    case REG_SZ: {
+        if (auto testVal = key.TryGetStringValue(name)) {
+            retStr = wstringToString(testVal.GetValue());
+        }
+
+        return retStr;
+    }
+    case REG_EXPAND_SZ: {
+        if (auto testVal = key.TryGetExpandStringValue(name)) {
+            retStr = wstringToString(testVal.GetValue());
+        }
+
+        return retStr;
+    }
+    case REG_MULTI_SZ: {
+        if (auto testVal = key.TryGetMultiStringValue(name)) {
+            for (auto elem : testVal.GetValue()) {
+                retStr += wstringToString(elem) + ",";
+            }
+        }
+
+        return retStr;
+    }
+    case REG_DWORD: {
+        if (auto testVal = key.TryGetDwordValue(name)) {
+            retStr = std::to_string(testVal.GetValue());
+        }
+
+        return retStr;
+    }
+    case REG_QWORD: {
+        if (auto testVal = key.TryGetQwordValue(name)) {
+            retStr = std::to_string(testVal.GetValue());
+        }
+
+        return retStr;
+    }
+    case REG_BINARY: {
+        if (auto testVal = key.TryGetBinaryValue(name)) {
+            for (auto elem : testVal.GetValue()) {
+                retStr += std::to_string(elem) + ",";
+            }
+        }
+
+        return retStr;
+    }
+    default:
+        return retStr;
+    }
+    return retStr;
+}
+
+void OvmsWindowsServiceManager::logRegistryEntry(HKEY keyType, const std::wstring& keyPath) {
+    DEBUG_LOG(wstringToString(keyPath));
+    winreg::RegKey key{keyType, keyPath};
+    std::vector<std::wstring> subKeyNames = key.EnumSubKeys();
+    DEBUG_LOG("SubKeys:");
+    for (const auto& s : subKeyNames) {
+        DEBUG_LOG(wstringToString(s));
+    }
+    std::vector<std::pair<std::wstring, DWORD>> values = key.EnumValues();
+    DEBUG_LOG("Values:");
+    for (const auto& [valueName, valueType] : values) {
+        std::stringstream ss2;
+        // Try string reg value
+        ss2 << "  [" << wstringToString(valueName) << "](" << wstringToString(winreg::RegKey::RegTypeToString(valueType)) << "): " << getRegValue(key, valueName, valueType);
+        DEBUG_LOG(ss2.rdbuf());
+    }
 }
 
 // Computer\HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\ovms
@@ -506,29 +704,16 @@ void OvmsWindowsServiceManager::setPythonPathRegistry() {
     try {
         const std::wstring ovmsServiceKey = L"SYSTEM\\CurrentControlSet\\Services\\ovms";
         winreg::RegKey key{HKEY_LOCAL_MACHINE, ovmsServiceKey};
-        DEBUG_LOG(wstringToString(ovmsServiceKey));
-        std::vector<std::wstring> subKeyNames = key.EnumSubKeys();
-        DEBUG_LOG("SubKeys:");
-        for (const auto& s : subKeyNames) {
-            DEBUG_LOG(wstringToString(s));
-        }
-        /*std::vector<std::pair<std::wstring, DWORD>> values = key.EnumValues();
-        DEBUG_LOG("Values:");
-        for (const auto& [valueName, valueType] : values) {
-            //std::stringstream ss2;
-            // TODO: ss2 << "  [" << wstringToString(valueName) << "](" << wstringToString(winreg::RegKey::RegTypeToString(valueType)) << ")";
-            //DEBUG_LOG(ss2.rdbuf());
-        } */
 
         TCHAR szUnquotedPath[MAX_PATH];
         if (!GetModuleFileName(NULL, szUnquotedPath, MAX_PATH)) {
             DEBUG_LOG("setPythonPathRegistry, GetModuleFileName failed.");
             return;
         }
-
         //  create PATH=c:\test2\ovms\python;%PATH%
         std::string ovmsDirectory = std::filesystem::path(szUnquotedPath).parent_path().string();
         std::stringstream ss3;
+        DEBUG_LOG("Adding Service Environment setting:")
         ss3 << "PATH=" << ovmsDirectory << "\\python;%PATH%";
         DEBUG_LOG(ss3.str());
         std::vector<std::wstring> multiString;
@@ -536,6 +721,7 @@ void OvmsWindowsServiceManager::setPythonPathRegistry() {
         key.Open(HKEY_LOCAL_MACHINE, ovmsServiceKey);
         key.SetMultiStringValue(L"Environment", multiString);
         key.Close();
+        OvmsWindowsServiceManager::logRegistryEntry(HKEY_LOCAL_MACHINE, ovmsServiceKey);
     } catch (const std::exception& e) {
         DEBUG_LOG("setPythonPathRegistry: Add python path variable Failed:");
         DEBUG_LOG(e.what());
@@ -577,13 +763,16 @@ void OvmsService::TearDown() {
         t->join();
     server.setShutdownRequest(0);
     this->started = false;
+    this->setup = false;
+    OvmsWindowsServiceManager::serviceReportEventSuccess("[INFO]Modules", "Openvino Model Server is stopped.");
 }
 
-int OvmsService::SetUp(int argc, char** argv) {
+int OvmsService::SetUp(std::pair<ovms::ServerSettingsImpl, ovms::ModelsSettingsImpl>* parameters) {
     DEBUG_LOG("OvmsService::SetUp");
-    this->started = true;
-    t.reset(new std::thread([argc, argv, this]() {
-        this->error = server.start(argc, argv);
+    this->setup = true;
+    OvmsWindowsServiceManager::serviceReportEventSuccess("[INFO]Modules", "Openvino Model Server is starting ...");
+    t.reset(new std::thread([parameters, this]() {
+        this->error = server.startServerFromSettings(parameters->first, parameters->second);
     }));
     return 0;
 }
@@ -593,7 +782,8 @@ bool OvmsService::isReady() {
 }
 
 bool OvmsService::isRunning() {
-    return (t && t->joinable());
+    // Check if server thread exited
+    return (t && t->joinable() && server.getShutdownStatus() == 0 && server.getExitStatus() == 0);
 }
 
 bool OvmsService::isLive(const std::string& moduleName) {
@@ -601,8 +791,10 @@ bool OvmsService::isLive(const std::string& moduleName) {
 }
 
 bool OvmsService::checkModulesStarted() {
-    // TODO: Set false for required modules, add logic for start control - timeout?
+    // TODO: HF_MODEL_PULL_MODULE_LIVE - add logic for pull and start - now we are ready when pull starts in pull and start
     // Currently we return true on isReady = true;
+    // Currently we return true on HF_MODEL_PULL_MODULE_LIVE = true;
+    // Currently we return true on SERVABLES_CONFIG_MANAGER_MODULE_LIVE = true;
     static bool SERVER_READY = false;
     static bool PROFILER_MODULE_LIVE = false;
     static bool GRPC_SERVER_MODULE_LIVE = false;
@@ -622,6 +814,7 @@ bool OvmsService::checkModulesStarted() {
     if (!SERVER_READY && this->isReady()) {
         DEBUG_LOG("serviceWorkerThread: Ovms service is ready and running.");
         SERVER_READY = true;
+        OvmsWindowsServiceManager::serviceReportEventSuccess("[INFO]Modules", "Openvino Model Server is ready.");
     }
     if (!PROFILER_MODULE_LIVE && this->isLive(ovms::PROFILER_MODULE_NAME)) {
         DEBUG_LOG("serviceWorkerThread: Ovms service PROFILER_MODULE is live.");
@@ -630,10 +823,12 @@ bool OvmsService::checkModulesStarted() {
     if (!GRPC_SERVER_MODULE_LIVE && this->isLive(ovms::GRPC_SERVER_MODULE_NAME)) {
         DEBUG_LOG("serviceWorkerThread: Ovms service GRPC_SERVER_MODULE is live.");
         GRPC_SERVER_MODULE_LIVE = true;
+        OvmsWindowsServiceManager::serviceReportEventSuccess("[INFO]Modules", "Openvino Model Server GRPC module is live.");
     }
     if (!HTTP_SERVER_MODULE_LIVE && this->isLive(ovms::HTTP_SERVER_MODULE_NAME)) {
         DEBUG_LOG("serviceWorkerThread: Ovms service HTTP_SERVER_MODULE is live.");
         HTTP_SERVER_MODULE_LIVE = true;
+        OvmsWindowsServiceManager::serviceReportEventSuccess("[INFO]Modules", "Openvino Model Server HTTP module is live.");
     }
     if (!METRICS_MODULE_LIVE && this->isLive(ovms::METRICS_MODULE_NAME)) {
         DEBUG_LOG("serviceWorkerThread: Ovms service METRICS_MODULE is live.");
@@ -650,10 +845,12 @@ bool OvmsService::checkModulesStarted() {
     if (!HF_MODEL_PULL_MODULE_LIVE && this->isLive(ovms::HF_MODEL_PULL_MODULE_NAME)) {
         DEBUG_LOG("serviceWorkerThread: Ovms service HF_MODEL_PULL_MODULE is live.");
         HF_MODEL_PULL_MODULE_LIVE = true;
+        return true;
     }
     if (!SERVABLES_CONFIG_MANAGER_MODULE_LIVE && this->isLive(ovms::SERVABLES_CONFIG_MANAGER_MODULE_NAME)) {
         DEBUG_LOG("serviceWorkerThread: Ovms service SERVABLES_CONFIG_MANAGER_MODULE is live.");
         SERVABLES_CONFIG_MANAGER_MODULE_LIVE = true;
+        return true;
     }
 
     return SERVER_READY;
@@ -663,7 +860,9 @@ WinServiceStatusWrapper::WinServiceStatusWrapper() {
     handle = NULL;
 }
 WinServiceStatusWrapper::~WinServiceStatusWrapper() {
-    DEBUG_LOG("WinServiceStatusWrapper: closing handle");
+    std::stringstream ss2;
+    ss2 << "WinServiceStatusWrapper: closing handle: " << handle;
+    DEBUG_LOG(ss2.str());
     if (handle != NULL && handle != INVALID_HANDLE_VALUE) {
         CloseHandle(handle);
     }
@@ -673,7 +872,9 @@ WinServiceEventWrapper::WinServiceEventWrapper() {
     handle = INVALID_HANDLE_VALUE;
 }
 WinServiceEventWrapper::~WinServiceEventWrapper() {
-    DEBUG_LOG("WinServiceEventWrapper: closing handle");
+    std::stringstream ss2;
+    ss2 << "WinServiceEventWrapper: closing handle: " << handle;
+    DEBUG_LOG(ss2.str());
     if (handle != NULL && handle != INVALID_HANDLE_VALUE) {
         CloseHandle(handle);
     }

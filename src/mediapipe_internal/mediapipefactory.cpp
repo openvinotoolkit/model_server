@@ -104,7 +104,7 @@ Status MediapipeFactory::reloadDefinition(const std::string& name,
     return mgd->reload(manager, config);
 }
 
-Status MediapipeFactory::create(std::shared_ptr<MediapipeGraphExecutor>& pipeline,
+Status MediapipeFactory::create(std::unique_ptr<MediapipeGraphExecutor>& pipeline,
     const std::string& name,
     ModelManager& manager) const {
     std::shared_lock lock(definitionsMtx);

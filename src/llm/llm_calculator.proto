@@ -26,17 +26,47 @@ message LLMCalculatorOptions {
     optional LLMCalculatorOptions ext = 113473750;
     }
 
+    message KVCrushConfig {
+      enum AnchorPointMode {
+        RANDOM = 0;
+        ZEROS = 1;
+        ONES = 2;
+        MEAN = 3;
+        ALTERNATING = 4;
+      }
+      optional uint64 budget = 2 [default = 0];
+      optional AnchorPointMode anchor_point_mode = 3 [default = RANDOM];
+      optional uint64 rng_seed = 4 [default = 0];
+    }
+
     message CacheEvictionConfig {
       enum AggregationMode {
       SUM = 0; // In this mode the importance scores of each token will be summed after each step of generation
       NORM_SUM = 1; // Same as SUM, but the importance scores are additionally divided by the lifetime (in tokens generated) of a given token in cache
       }
-
-      optional AggregationMode aggregation_mode = 1 [default = SUM];
+      optional AggregationMode aggregation_mode = 1 [default = NORM_SUM];
       required uint64 start_size = 2;
       required uint64 recent_size = 3;
       required uint64 max_cache_size = 4;
       optional bool apply_rotation = 5 [default = false];
+      optional uint64 snapkv_window_size = 6 [default = 8];
+      optional KVCrushConfig kv_crush_config = 7;
+    }
+
+    message SparseAttentionConfig {
+      enum SparseAttentionMode {
+        TRISHAPE = 0;
+        XATTENTION = 1;
+      }
+      optional SparseAttentionMode mode = 1 [default = TRISHAPE];
+      // As for parameters below, if they are not set, default values are set on GenAI level
+      // https://docs.openvino.ai/2025/api/genai_api/_autosummary/openvino_genai.SparseAttentionConfig.html#openvino_genai.SparseAttentionConfig.__init__
+      optional uint64 num_last_dense_tokens_in_prefill = 2;
+      optional uint64 num_retained_start_tokens_in_cache = 3;
+      optional uint64 num_retained_recent_tokens_in_cache = 4;
+      optional float xattention_threshold = 5;
+      optional uint64 xattention_block_size = 6;
+      optional uint64 xattention_stride = 7;
     }
 
     enum PipelineType {
@@ -57,7 +87,7 @@ message LLMCalculatorOptions {
     optional uint64 max_num_batched_tokens = 2 [default = 256];
 
     // model memory cache to allocate in GB
-    optional uint64 cache_size  = 3 [default = 8];
+    optional uint64 cache_size  = 3 [default = 0];
 
     optional uint64 max_num_seqs = 4 [default = 256];
 
@@ -101,4 +131,6 @@ message LLMCalculatorOptions {
     optional string reasoning_parser = 21;
 
     optional bool enable_tool_guided_generation = 22 [default = false];
+
+    optional SparseAttentionConfig sparse_attention_config = 23;
 }

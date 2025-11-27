@@ -452,7 +452,7 @@ bool ModelManager::CheckStartFromGraph(std::string inputPath, MediapipeGraphConf
 }
 
 Status ModelManager::validateUserSettingsInSingleModelCliGraphStart(const ModelsSettingsImpl& modelsSettings) {
-    static const std::vector<std::string> allowedUserSettings = {"model_name", "model_path"};
+    static const std::vector<std::string> allowedUserSettings = {"model_name", "model_path", "plugin_config"};
     std::vector<std::string> usedButDisallowedUserSettings;
     for (const std::string& userSetting : modelsSettings.userSetSingleModelArguments) {
         bool isAllowed = false;
@@ -483,27 +483,21 @@ Status ModelManager::processMediapipeConfig(const MediapipeGraphConfig& config, 
         SPDLOG_LOGGER_WARN(modelmanager_logger, "Duplicated mediapipe names: {} defined in config file. Only first graph will be loaded.", config.getGraphName());
         return StatusCode::OK;
     }
-
+    mediapipesInConfigFile.insert(config.getGraphName());
     MediapipeGraphDefinition* mediapipeGraphDefinition = factory.findDefinitionByName(config.getGraphName());
-
     if (mediapipeGraphDefinition == nullptr) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Mediapipe graph:{} was not loaded so far. Triggering load", config.getGraphName());
         auto status = factory.createDefinition(config.getGraphName(), config, *this);
-        mediapipesInConfigFile.insert(config.getGraphName());
         return status;
     }
-
     if (mediapipeGraphDefinition->isReloadRequired(config)) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Mediapipe graph:{} triggering reload", config.getGraphName());
         auto status = factory.reloadDefinition(config.getGraphName(),
             config,
             *this);
-        mediapipesInConfigFile.insert(config.getGraphName());
         return status;
     }
-
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Mediapipe graph:{} already loaded and reload is not required", config.getGraphName());
-    mediapipesInConfigFile.insert(config.getGraphName());
     return StatusCode::OK;
 }
 #endif
@@ -681,16 +675,19 @@ Status ModelManager::loadMediapipeGraphsConfig(std::vector<MediapipeGraphConfig>
     Status firstErrorStatus = StatusCode::OK;
     try {
         for (const auto& mediapipeGraphConfig : mediapipesInConfigFile) {
+            mediapipesInConfigFileNames.insert(mediapipeGraphConfig.getGraphName());
+        }
+        mediapipeFactory.retireOtherThan(std::move(mediapipesInConfigFileNames), *this);
+        std::set<std::string> mediapipesAlreadyLoaded;
+        for (const auto& mediapipeGraphConfig : mediapipesInConfigFile) {
             if (spdlog::default_logger_raw()->level() <= spdlog::level::debug) {
                 mediapipeGraphConfig.logGraphConfigContent();
             }
-
-            auto status = processMediapipeConfig(mediapipeGraphConfig, mediapipesInConfigFileNames, mediapipeFactory);
+            auto status = processMediapipeConfig(mediapipeGraphConfig, mediapipesAlreadyLoaded, mediapipeFactory);
             if (status != StatusCode::OK) {
                 IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
             }
         }
-        mediapipeFactory.retireOtherThan(std::move(mediapipesInConfigFileNames), *this);
     } catch (const std::exception& e) {
         SPDLOG_ERROR("Failed to process mediapipe graph config:{}", e.what());
     } catch (...) {
@@ -1700,7 +1697,7 @@ const std::vector<std::string> ModelManager::getNamesOfAvailableModels() const {
     return names;
 }
 
-Status ModelManager::createPipeline(std::shared_ptr<MediapipeGraphExecutor>& graph,
+Status ModelManager::createPipeline(std::unique_ptr<MediapipeGraphExecutor>& graph,
     const std::string& name) {
 #if (MEDIAPIPE_DISABLE == 0)
     return this->mediapipeFactory.create(graph, name, *this);

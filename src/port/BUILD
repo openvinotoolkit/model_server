@@ -23,6 +23,20 @@ ovms_cc_library(
 )
 
 ovms_cc_library(
+    name = "rapidjson_stringbuffer",
+    hdrs = ["rapidjson_stringbuffer.hpp"],
+    deps = ["@com_github_tencent_rapidjson//:rapidjson"],
+    visibility = ["//visibility:public",],
+)
+
+ovms_cc_library(
+    name = "rapidjson_writer",
+    hdrs = ["rapidjson_writer.hpp"],
+    deps = ["@com_github_tencent_rapidjson//:rapidjson"],
+    visibility = ["//visibility:public",],
+)
+
+ovms_cc_library(
     name = "dr_audio",
     hdrs = ["dr_audio.hpp"],
     deps = ["@dr_libs//:dr"],

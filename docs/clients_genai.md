@@ -12,6 +12,8 @@ Embeddings API <ovms_docs_rest_api_embeddings>
 Reranking API <ovms_docs_rest_api_rerank>
 Image generation API <ovms_docs_rest_api_image_generation>
 Image generation API <ovms_docs_rest_api_image_edit>
+Speech to text API <ovms_docs_rest_api_s2t>
+Text to speech API <ovms_docs_rest_api_t2s>
 ```
 ## Introduction
 Beside Tensorflow Serving API (`/v1`) and KServe API (`/v2`) frontends, the model server supports a range of endpoints for generative use cases (`v3`). They are extendible using MediaPipe graphs.
@@ -22,6 +24,10 @@ OpenAI compatible endpoints:
 - [completions](./model_server_rest_api_completions.md)
 - [embeddings](./model_server_rest_api_embeddings.md)
 - [images/generations](./model_server_rest_api_image_generation.md)
+- [images/edit](./model_server_rest_api_image_edit.md)
+- [audio/transcriptions](./model_server_rest_api_speech_to_text.md#transcription)
+- [audio/translations](./model_server_rest_api_speech_to_text.md#translation)
+- [audio/speech](./model_server_rest_api_text_to_speech.md)
 - [images/edit](./model_server_rest_api_image_edit.md)
 - /models
 - /models/{model}
@@ -67,7 +73,7 @@ print(response.choices[0].message)
 import requests
 payload = {"model": "meta-llama/Llama-2-7b-chat-hf", "messages": [ {"role": "user","content": "Say this is a test" }]}
 headers = {"Content-Type": "application/json", "Authorization": "not used"}
-response = requests.post("http://localhost:8000/v3/chat/completions", json=payload, headers=headers)
+response = requests.post("http://127.0.0.1:8000/v3/chat/completions", json=payload, headers=headers)
 print(response.text)
 ```
 :::
@@ -147,7 +153,7 @@ print(response.choices[0].text)
 import requests
 payload = {"model": "meta-llama/Llama-2-7b", "prompt": "Say this is a test"}
 headers = {"Content-Type": "application/json", "Authorization": "not used"}
-response = requests.post("http://localhost:8000/v3/completions", json=payload, headers=headers)
+response = requests.post("http://127.0.0.1:8000/v3/completions", json=payload, headers=headers)
 print(response.text)
 ```
 :::
@@ -280,7 +286,7 @@ for data in responses.data:
 import requests
 payload = {"model": "Alibaba-NLP/gte-large-en-v1.5", "input": "hello world"}
 headers = {"Content-Type": "application/json", "Authorization": "not used"}
-response = requests.post("http://localhost:8000/v3/embeddings", json=payload, headers=headers)
+response = requests.post("http://127.0.0.1:8000/v3/embeddings", json=payload, headers=headers)
 print(response.text)
 ```
 :::
@@ -363,6 +369,121 @@ $base64 = ($response.Content | ConvertFrom-Json).data[0].b64_json
 
 Check [image generation end to end demo](../demos/image_generation/README.md).
 
+### Speech to text 
+#### Transcription
+::::{tab-set}
+:::{tab-item} python [OpenAI] 
+:sync: python-openai
+```python
+from pathlib import Path
+from openai import OpenAI
+
+filename = "speech.wav"
+url="http://localhost:8000/v3"
+
+
+speech_file_path = Path(__file__).parent / filename
+client = OpenAI(base_url=url, api_key="not_used")
+
+audio_file = open(filename, "rb")
+transcript = client.audio.transcriptions.create(
+  model="OpenVINO/whisper-large-v3-fp16-ov",
+  file=audio_file
+)
+
+print(transcript.text)
+```
+:::
+:::{tab-item} curl [Linux]
+:sync: curl
+```text
+curl http://localhost:8000/v3/audio/transcriptions \
+  -H "Content-Type: multipart/form-data" \
+  -F file="@speech.wav"\
+  -F model="OpenVINO/whisper-large-v3-fp16-ov"
+```
+:::
+::::
+
+
+Check [Transcription demo](../demos/audio/README.md#Transcription).
+
+#### Translation
+::::{tab-set}
+:::{tab-item} python [OpenAI] 
+:sync: python-openai
+```python
+from pathlib import Path
+from openai import OpenAI
+
+filename = "speech_spanish.wav"
+url="http://localhost:8000/v3"
+
+
+speech_file_path = Path(__file__).parent / filename
+client = OpenAI(base_url=url, api_key="not_used")
+
+audio_file = open(filename, "rb")
+translation = client.audio.translations.create(
+  model="OpenVINO/whisper-large-v3-fp16-ov",
+  file=audio_file
+)
+
+print(transcript.text)
+```
+:::
+:::{tab-item} curl [Linux]
+:sync: curl
+```text
+curl http://localhost:8000/v3/audio/translations \
+  -H "Content-Type: multipart/form-data" \
+  -F file="@speech_spanish.wav"\
+  -F model="OpenVINO/whisper-large-v3-fp16-ov"
+```
+:::
+::::
+
+
+Check [Translation demo](../demos/audio/README.md#Translation).
+
+### Text to speech
+::::{tab-set}
+:::{tab-item} python [OpenAI] 
+:sync: python-openai
+```python
+from pathlib import Path
+from openai import OpenAI
+
+prompt = "The quick brown fox jumped over the lazy dog"
+filename = "speech.wav"
+url="http://localhost:8000/v3"
+
+
+speech_file_path = Path(__file__).parent / "speech.wav"
+client = OpenAI(base_url=url, api_key="not_used")
+
+with client.audio.speech.with_streaming_response.create(
+  model="microsoft/speecht5_tts",
+  voice="unused",
+  input=prompt
+) as response:
+  response.stream_to_file(speech_file_path)
+```
+:::
+:::{tab-item} curl [Linux]
+:sync: curl
+```text
+curl http://localhost:8000/v3/audio/speech \
+  -H "Content-Type: application/json" \
+  -d "{\"model\": \"microsoft/speecht5_tts\", \"input\": \"The quick brown fox jumped over the lazy dog\"}" \
+  -o speech.wav
+```
+:::
+::::
+
+
+Check [Speech generation demo](../demos/audio/README.md#Speech-generation).
+
 ### List models
 
 ::::{tab-set}
@@ -435,7 +556,7 @@ for res in responses.results:
 import requests
 payload = {"model": "BAAI/bge-reranker-large", "query": "Hello", "documents":["Welcome","Farewell"]}
 headers = {"Content-Type": "application/json", "Authorization": "not used"}
-response = requests.post("http://localhost:8000/v3/rerank", json=payload, headers=headers)
+response = requests.post("http://127.0.0.1:8000/v3/rerank", json=payload, headers=headers)
 print(response.text)
 ```
 :::

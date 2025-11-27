@@ -612,7 +612,49 @@ TEST_F(Qwen3CoderOutputParserTest, StreamingSimpleToolCall) {
         {"value1</parameter></function></tool_call>", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":3,"function":{"arguments":"{\"arg1\": \"value1\"}"}}]}})"},
         {"NOTHING IMPORTANT HERE", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"part of bfcl 'draft'.\n\n<function=cd>\n", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"id":"XXXXXXXXX","type":"function","index":4,"function":{"name":"cd"}}]}})"},
-        {"\n<parameter=folder>\nResearchDocs\n</parameter>\n</function>\n</tool_call>", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":4,"function":{"arguments":"{\"folder\": \"ResearchDocs\"}"}}]}})"}};
+        {"\n<parameter=folder>\nResearchDocs\n</parameter>\n</function>\n</tool_call>", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":4,"function":{"arguments":"{\"folder\": \"ResearchDocs\"}"}}]}})"},
+        // example from cds:
+        {R"(
+<tool_call>
+<function=string_tool>
+<parameter=arg1>
+)",
+            ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"id":"XXXXXXXXX","type":"function","index":5,"function":{"name":"string_tool"}}]}})"},
+        {R"(FUNCTION FC_CreateJsonPayload : STRING
+VAR_INPUT
+    Value1 : REAL;
+    Value2 : INT;
+    Value3 : BOOL;
+    Value4 : STRING(100);
+END_VAR
+VAR_OUTPUT
+    JsonPayload : STRING(1000);
+END_VAR
+VAR
+    TempStr : STRING(100);
+END_VAR
+
+    JsonPayload := '{';
+    JsonPayload := JsonPayload + '"value1":' + REAL_TO_STRING(Value1, '', 2) + ',';
+    JsonPayload := JsonPayload + '"value2":' + INT_TO_STRING(Value2) + ',';
+    JsonPayload := JsonPayload + '"value3":' + BOOL_TO_STRING(Value3) + ',';
+    JsonPayload := JsonPayload + '"value4":"' + Value4 + '"';
+    JsonPayload := JsonPayload + '}';
+
+END_FUNCTION</parameter>
+</function>
+</tool_call>)",
+            ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":5,"function":{"arguments":"{\"arg1\": \"FUNCTION FC_CreateJsonPayload : STRING\\nVAR_INPUT\\n    Value1 : REAL;\\n    Value2 : INT;\\n    Value3 : BOOL;\\n    Value4 : STRING(100);\\nEND_VAR\\nVAR_OUTPUT\\n    JsonPayload : STRING(1000);\\nEND_VAR\\nVAR\\n    TempStr : STRING(100);\\nEND_VAR\\n\\n    JsonPayload := '{';\\n    JsonPayload := JsonPayload + '\\\"value1\\\":' + REAL_TO_STRING(Value1, '', 2) + ',';\\n    JsonPayload := JsonPayload + '\\\"value2\\\":' + INT_TO_STRING(Value2) + ',';\\n    JsonPayload := JsonPayload + '\\\"value3\\\":' + BOOL_TO_STRING(Value3) + ',';\\n    JsonPayload := JsonPayload + '\\\"value4\\\":\\\"' + Value4 + '\\\"';\\n    JsonPayload := JsonPayload + '}';\\n\\nEND_FUNCTION\"}"}}]}})"},
+        {"<tool_call><function=string_tool><parameter=arg1>", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"id":"XXXXXXXXX","type":"function","index":6,"function":{"name":"string_tool"}}]}})"},
+        {R"(
+if __name__ == "__main__":
+    addresses = {}
+    addresses["Hodor"] = """The door"""
+    addresses["Arya"] = "Winterfell"
+    for name, address in addresses.items():
+        print(f'\n\t{name} lives at {address}\n\r')
+</parameter></function></tool_call>)",
+            ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":6,"function":{"arguments":"{\"arg1\": \"if __name__ == \\\"__main__\\\":\\n    addresses = {}\\n    addresses[\\\"Hodor\\\"] = \\\"\\\"\\\"The door\\\"\\\"\\\"\\n    addresses[\\\"Arya\\\"] = \\\"Winterfell\\\"\\n    for name, address in addresses.items():\\n        print(f'\\n\\t{name} lives at {address}\\n\\r')\"}"}}]}})"}};
     for (const auto& [chunk, finishReason, expectedDelta] : chunkToDeltaVec) {
         i++;
         std::optional<rapidjson::Document> doc = outputParser->parseChunk(chunk, true, ov::genai::GenerationFinishReason::NONE);
@@ -649,6 +691,28 @@ TEST_F(Qwen3CoderOutputParserTest, StreamingSimpleToolCall) {
                 SPDLOG_ERROR("Expected:\n{}", expected);
                 SPDLOG_ERROR("Got:\n{}", docStr);
                 EXPECT_EQ(docStr, expected) << "Mismatch for chunk: " << chunk;
+                // now we do final check
+                // we want to ensure that if we extract from expectedDelta["delta"]["tool_calls"][0]["function"]["arguments"] which as a string
+                // and then try to read this string as a json
+                if (expectedDelta.value().find("arguments") == std::string::npos) {
+                    SPDLOG_TRACE("No arguments to check for delta:\n{}", expectedDelta.value());
+                    continue;  // no arguments to check
+                }
+                auto docJsonIt = doc->FindMember("delta");
+                ASSERT_NE(docJsonIt, doc->MemberEnd());
+                auto toolCallsIt = docJsonIt->value.FindMember("tool_calls");
+                ASSERT_NE(toolCallsIt, docJsonIt->value.MemberEnd());
+                for (const auto& toolCall : toolCallsIt->value.GetArray()) {
+                    auto functionIt = toolCall.FindMember("function");
+                    ASSERT_NE(functionIt, toolCall.MemberEnd());
+                    auto argumentsIt = functionIt->value.FindMember("arguments");
+                    ASSERT_NE(argumentsIt, functionIt->value.MemberEnd());
+                    const std::string& argumentsStr = argumentsIt->value.GetString();
+                    rapidjson::Document argsDoc;
+                    argsDoc.Parse(argumentsStr.c_str());  // now check for errors
+                    EXPECT_FALSE(argsDoc.HasParseError()) << "Arguments is not valid JSON for chunk: " << chunk << "\nArguments string:\n"
+                                                          << argumentsStr;
+                }
             }
         } else {
             EXPECT_TRUE(false) << "Mismatch between expectedDelta and doc for id: " << i << " chunk:\n"

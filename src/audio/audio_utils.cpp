@@ -22,6 +22,9 @@
 #include "src/logging.hpp"
 #include <string>
 #include <vector>
+#include <random>
+#include <algorithm>
+#pragma warning(push)
 #define PIPELINE_SUPPORTED_SAMPLE_RATE 16000
 
 using namespace ovms;
@@ -48,7 +51,7 @@ void resample_audio(const float* input,
     float inputRate,
     float targetRate,
     std::vector<float>& output) {
-    SPDLOG_LOGGER_DEBUG(stt_calculator_logger, "Input file sample rate: {}. Resampling to {} required", inputRate, targetRate);
+    SPDLOG_LOGGER_DEBUG(s2t_calculator_logger, "Input file sample rate: {}. Resampling to {} required", inputRate, targetRate);
     float ratio = inputRate / targetRate;
 
     for (size_t i = 0; i < output.size(); i++) {
@@ -106,7 +109,7 @@ std::vector<float> readWav(const std::string_view& wavData) {
     }
     timer.stop(TENSOR_PREPARATION);
     auto tensorPreparationTime = (timer.elapsed<std::chrono::microseconds>(TENSOR_PREPARATION)) / 1000;
-    SPDLOG_LOGGER_DEBUG(stt_calculator_logger, "Tensor preparation time: {} ms size: {}", tensorPreparationTime, pcmf32.size());
+    SPDLOG_LOGGER_DEBUG(s2t_calculator_logger, "Tensor preparation time: {} ms size: {}", tensorPreparationTime, pcmf32.size());
     if (wav.sampleRate == PIPELINE_SUPPORTED_SAMPLE_RATE) {
         return pcmf32;
     }
@@ -117,7 +120,7 @@ std::vector<float> readWav(const std::string_view& wavData) {
     resample_audio(reinterpret_cast<float*>(pcmf32.data()), pcmf32.size(), wav.sampleRate, PIPELINE_SUPPORTED_SAMPLE_RATE, output);
     timer.stop(RESAMPLING);
     auto resamplingTime = (timer.elapsed<std::chrono::microseconds>(RESAMPLING)) / 1000;
-    SPDLOG_LOGGER_DEBUG(stt_calculator_logger, "Resampling time: {} ms", resamplingTime);
+    SPDLOG_LOGGER_DEBUG(s2t_calculator_logger, "Resampling time: {} ms", resamplingTime);
     return output;
 }
 #pragma warning(push)
@@ -142,7 +145,7 @@ std::vector<float> readMp3(const std::string_view& mp3Data) {
     drmp3_uninit(&mp3);
     timer.stop(TENSOR_PREPARATION);
     auto tensorPreparationTime = (timer.elapsed<std::chrono::microseconds>(TENSOR_PREPARATION)) / 1000;
-    SPDLOG_LOGGER_DEBUG(stt_calculator_logger, "Tensor preparation time: {} ms size: {}", tensorPreparationTime, pcmf32.size());
+    SPDLOG_LOGGER_DEBUG(s2t_calculator_logger, "Tensor preparation time: {} ms size: {}", tensorPreparationTime, pcmf32.size());
     if (mp3.sampleRate == PIPELINE_SUPPORTED_SAMPLE_RATE) {
         return pcmf32;
     }
@@ -152,7 +155,7 @@ std::vector<float> readMp3(const std::string_view& mp3Data) {
     resample_audio(reinterpret_cast<float*>(pcmf32.data()), pcmf32.size(), mp3.sampleRate, PIPELINE_SUPPORTED_SAMPLE_RATE, output);
     timer.stop(RESAMPLING);
     auto resamplingTime = (timer.elapsed<std::chrono::microseconds>(RESAMPLING)) / 1000;
-    SPDLOG_LOGGER_DEBUG(stt_calculator_logger, "Resampling time: {} ms", resamplingTime);
+    SPDLOG_LOGGER_DEBUG(s2t_calculator_logger, "Resampling time: {} ms", resamplingTime);
     return output;
 }
 
@@ -170,9 +173,9 @@ void prepareAudioOutput(void** ppData, size_t& pDataSize, uint16_t bitsPerSample
     format.sampleRate = 16000;  // assume it is always 16 KHz
     format.bitsPerSample = bitsPerSample;
     drwav wav;
-    auto waveformSize = speechSize;
-    size_t totalSamples = waveformSize * format.channels;
-    auto status = drwav_init_memory_write_sequential_pcm_frames(&wav, ppData, &pDataSize, &format, totalSamples, nullptr);
+    size_t totalSamples = speechSize * format.channels;
+
+    auto status = drwav_init_memory_write(&wav, ppData, &pDataSize, &format, nullptr);
     if (status == DRWAV_FALSE) {
         throw std::runtime_error("Failed to write all frames");
     }
@@ -183,5 +186,5 @@ void prepareAudioOutput(void** ppData, size_t& pDataSize, uint16_t bitsPerSample
     drwav_uninit(&wav);
     timer.stop(OUTPUT_PREPARATION);
     auto outputPreparationTime = (timer.elapsed<std::chrono::microseconds>(OUTPUT_PREPARATION)) / 1000;
-    SPDLOG_LOGGER_DEBUG(tts_calculator_logger, "Output preparation time: {} ms", outputPreparationTime);
+    SPDLOG_LOGGER_DEBUG(t2s_calculator_logger, "Output preparation time: {} ms", outputPreparationTime);
 }

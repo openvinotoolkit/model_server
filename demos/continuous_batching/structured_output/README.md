@@ -120,7 +120,7 @@ payload = {
 }
 
 headers = {"Content-Type": "application/json", "Authorization": "not used"}
-response = requests.post("http://localhost:8000/v3/chat/completions", json=payload, headers=headers)
+response = requests.post("http://127.0.0.1:8000/v3/chat/completions", json=payload, headers=headers)
 json_response = response.json()
 
 print(json_response["choices"][0]["message"]["content"])
@@ -138,7 +138,7 @@ pip install openai
 ```python
 from openai import OpenAI
 from pydantic import BaseModel
-base_url = "http://localhost:8000/v3"
+base_url = "http://127.0.0.1:8000/v3"
 model_name = "OpenVINO/Mistral-7B-Instruct-v0.3-int4-cw-ov"
 client = OpenAI(base_url=base_url, api_key="unused")
 class CalendarEvent(BaseModel):
@@ -174,14 +174,14 @@ It will be executed with the response_format request field including the schema 
 ```console
 pip install datasets tqdm openai jsonschema
 curl -L https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/continuous_batching/structured_output/accuracy_test.py -O 
-python accuracy_test.py --base_url http://localhost:8000/v3 --model OpenVINO/Mistral-7B-Instruct-v0.3-int4-cw-ov --concurrency 50 --limit 1000
+python accuracy_test.py --base_url http://127.0.0.1:8000/v3 --model OpenVINO/Mistral-7B-Instruct-v0.3-int4-cw-ov --concurrency 50 --limit 1000
 ```
 ```
 Requests: 1000, Successful responses: 1000, Exact matches: 135, Schema matches: 435 Invalid inputs: 0
 ```
 
 ```console
-python accuracy_test.py --base_url http://localhost:8000/v3 --model OpenVINO/Mistral-7B-Instruct-v0.3-int4-cw-ov --enable_response_format --concurrency 50 --limit 1000
+python accuracy_test.py --base_url http://127.0.0.1:8000/v3 --model OpenVINO/Mistral-7B-Instruct-v0.3-int4-cw-ov --enable_response_format --concurrency 50 --limit 1000
 ```
 ```
 Requests: 1000, Successful responses: 1000, Exact matches: 217, Schema matches: 828 Invalid inputs: 0

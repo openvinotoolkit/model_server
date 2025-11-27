@@ -66,7 +66,7 @@ private:
         ModelManager& manager) const;
 
 public:
-    Status create(std::shared_ptr<MediapipeGraphExecutor>& pipeline,
+    Status create(std::unique_ptr<MediapipeGraphExecutor>& pipeline,
         const std::string& name,
         ModelManager& manager) const;
 
