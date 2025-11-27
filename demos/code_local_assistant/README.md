@@ -27,7 +27,7 @@ Pull and add the model on Linux:
 python export_model.py text_generation --source_model Qwen/Qwen3-Coder-30B-A3B-Instruct --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device GPU --tool_parser qwen3coder --overwrite_models
 curl -L -o models/Qwen/Qwen3-Coder-30B-A3B-Instruct/chat_template.jinja https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/extras/chat_template_examples/chat_template_qwen3coder_instruct.jinja
 ```
-> **Note:** This model requires ~15GB disk space and same amount of VRAM on the GPU.
+> **Note:** This model requires ~150GB disk space and 60GB RAM for conversion. For deployment the model require ~16GB disk space and same amount of VRAM on the GPU.
 
 :::
 :::{tab-item} mistralai/Codestral-22B-v0.1 
