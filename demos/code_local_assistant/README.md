@@ -152,7 +152,7 @@ ovms.exe --add_to_config --config_path models/config_all.json --model_name OpenV
 ::::
 
 ## Set Up Server
-Run OpenVINO Model Server with both models loaded at the same time:
+Run OpenVINO Model Server with all downloaded models loaded at the same time:
 
 ::::{tab-set}
 :::{tab-item} Windows
