@@ -398,7 +398,7 @@ def export_text_generation_model(model_repository_path, source_model, model_name
         print("Exporting LLM model to ", llm_model_path)
         if not os.path.isdir(llm_model_path) or args['overwrite_models']:
             if task_parameters['target_device'] == 'NPU':
-                if precision != 'int4' or precision != 'nf4':
+                if precision != 'int4' and precision != 'nf4':
                     print("NPU target device requires int4 or nf4 precision. Changing to int4")
                     precision = 'int4'
                 if task_parameters['extra_quantization_params'] == "":
