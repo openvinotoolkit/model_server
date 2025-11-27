@@ -405,4 +405,4 @@ docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models openvino/model_serve
 ![voice mode](./voice_mode.png)
 
 ### Reference
-[https://docs.openwebui.com/getting-started/env-configuration#audio](https://docs.openwebui.com/getting-started/env-configuration#audio)
+[https://docs.openwebui.com/features/#%EF%B8%8F-audio-voice--accessibility](https://docs.openwebui.com/features/#%EF%B8%8F-audio-voice--accessibility)
