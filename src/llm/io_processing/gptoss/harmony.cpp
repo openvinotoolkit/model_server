@@ -97,7 +97,7 @@ ToolCalls_t Harmony::getToolCalls() {
     static const std::string tool_prefix = "to=functions.";
     ToolCalls_t toolCalls;
     for (const auto& msg : messages) {
-        if (startsWith(msg.getChannel(), "commentary")) {
+        if (startsWith(msg.getChannel(), "commentary") || startsWith(msg.getChannel(), "analysis")) {
             size_t marker = msg.getChannel().find(tool_prefix);
             if (marker != std::string::npos) {
                 marker += tool_prefix.length();
