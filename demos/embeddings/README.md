@@ -552,7 +552,7 @@ Response:
 
 It's possible to use additional parameters:
  - `pad_to_max_length` - whether to pad the sequence to the maximum length. Default is False. 
- - `max_length` - maximum length of the sequence. If specified, it truncates the tokens to the provided number of tokens.
+ - `max_length` - maximum length of the sequence. If specified, it truncates the tokens to the provided number.
  - `padding_side` - side to pad the sequence, can be `left` or `right`. Default is `right`.
  - `add_special_tokens` - whether to add special tokens like BOS, EOS, PAD. Default is True. 
 
