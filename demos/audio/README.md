@@ -107,7 +107,6 @@ An asynchronous benchmarking client can be used to access the model server perfo
 
 ```console
 git clone https://github.com/openvinotoolkit/model_server
-pushd .
 cd model_server/demos/benchmark/v3/
 pip install -r requirements.txt
 python benchmark.py --api_url http://localhost:8122/v3/audio/speech --model microsoft/speecht5_tts --batch_size 1 --limit 100 --request_rate inf --backend text2speech --dataset edinburghcstr/ami --hf-subset 'ihm' --tokenizer openai/whisper-large-v3-turbo --trust-remote-code True
@@ -234,7 +233,6 @@ An asynchronous benchmarking client can be used to access the model server perfo
 
 ```console
 git clone https://github.com/openvinotoolkit/model_server
-pushd .
 cd model_server/demos/benchmark/v3/
 pip install -r requirements.txt
 python benchmark.py --api_url http://localhost:8000/v3/audio/transcriptions --model openai/whisper-large-v3-turbo --batch_size 1 --limit 1000 --request_rate inf --dataset edinburghcstr/ami --hf-subset ihm --backend speech2text --trust-remote-code True
