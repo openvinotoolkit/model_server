@@ -4,7 +4,7 @@ This document describes how to leverage OpenVINO Model Server (OVMS) pull featur
 
 - pulling pre-configured models in IR format (described below)
 - pulling GGUF models from Hugging Face
-- pulling models with automatic conversion and quantization via optimum-cli. Described in the [pulling with conversion](https://github.com/openvinotoolkit/model_server/blob/main/docs/pull_optimum_cli.md)
+- pulling models with automatic conversion and quantization via optimum-cli. Described in the [pulling with conversion](https://github.com/openvinotoolkit/model_server/blob/releases/2025/4/docs/pull_optimum_cli.md)
 
 > **Note:** Models in IR format must be exported using `optimum-cli` including tokenizer and detokenizer files also in IR format, if applicable. If missing, tokenizer and detokenizer should be added using `convert_tokenizer --with-detokenizer` tool.
 

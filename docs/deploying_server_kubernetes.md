@@ -5,7 +5,7 @@ The recommended deployment method in Kubernetes is via Kserve operator for Kuber
 ## ServingRuntime configuration:
 
 ```
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/extras/kserve/kserve-openvino.yaml -O
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/4/extras/kserve/kserve-openvino.yaml -O
 sed -i 's/openvino\/model_server:replace/openvino\/model_server:2025.4-py/' kserve-openvino.yaml
 kubectl apply -f kserve-openvino.yaml
 ```

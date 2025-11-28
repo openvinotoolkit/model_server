@@ -2,7 +2,7 @@
 
 ## API Reference
 OpenVINO Model Server includes now the `audio/transcriptions` and `audio/translations` endpoints using OpenAI API.
-It is used to execute [speech to text](https://github.com/openvinotoolkit/openvino.genai/tree/master/samples/cpp/audio/speech_to_text) task with OpenVINO GenAI pipeline.
+It is used to execute [speech to text](https://github.com/openvinotoolkit/openvino.genai/tree/master/samples/cpp/whisper_speech_recognition) task with OpenVINO GenAI pipeline.
 Please see the [OpenAI API Transcription Reference](https://platform.openai.com/docs/api-reference/audio/createTranscription) and [OpenAI API Translation Reference](https://platform.openai.com/docs/api-reference/audio/createTranslation) for more information on the API.
 
 The are two endpoints exposed:
