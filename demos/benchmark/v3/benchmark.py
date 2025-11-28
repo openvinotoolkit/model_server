@@ -57,6 +57,7 @@ parser.add_argument('--limit', required=False, type=int, default=1000, help='Num
 parser.add_argument('--split', required=False, default='train', help='Dataset split', dest='split')
 parser.add_argument('--hf-subset', required=False, help='Hf dataset subset', dest='subset')
 parser.add_argument('--trust-remote-code', required=False, type=bool, default=False, help='Trust remote code from huggingface', dest='trust_remote_code')
+parser.add_argument('--tokenizer', required=False, type=bool, default=False, help='HF tokenizer, provide if different than model', dest='tokenizer')
 
 args = vars(parser.parse_args())
 
@@ -80,7 +81,9 @@ print("Number of documents:",len(docs))
 batch_size = args['batch_size']
 
 def count_tokens(docs, model):
-    tokenizer = AutoTokenizer.from_pretrained(model)
+    if args["tokenizer"] == None:
+        args["tokenizer"] = model
+    tokenizer = AutoTokenizer.from_pretrained(args["tokenizer"])
     documents = docs.iter(batch_size=1)
     num_tokens = 0
     for request in documents:
@@ -367,10 +370,12 @@ async def benchmark(docs, model, api_url, request_rate, backend_function):
     benchmark_duration = time.perf_counter() - benchmark_start_time
     pbar.close()
     if args["backend"] == "speech2text" or args["backend"] == "translations":
-        tokenizer = AutoTokenizer.from_pretrained(model)
+        if args["tokenizer"] == None:
+            args["tokenizer"] = model
+        tokenizer = AutoTokenizer.from_pretrained(args["tokenizer"])
         for output in outputs:
             data = json.loads(output.text)
-            output.tokens_len +=  len(tokenizer(data['text'],add_special_tokens=False)["input_ids"])
+            output.tokens_len =  len(tokenizer(data['text'],add_special_tokens=False)["input_ids"])
 
     result = {
         "duration": benchmark_duration,
