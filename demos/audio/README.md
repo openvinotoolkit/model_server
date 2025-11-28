@@ -102,6 +102,25 @@ print("Generation finished")
 
 Play speech.wav file to check generated speech.
 
+## Benchmarking speech generation
+An asynchronous benchmarking client can be used to access the model server performance with various load conditions. Below are execution examples captured on Intel(R) Core(TM) Ultra 7 258V.
+
+```console
+git clone https://github.com/openvinotoolkit/model_server
+cd model_server/demos/benchmark/v3/
+pip install -r requirements.txt
+python benchmark.py --api_url http://localhost:8122/v3/audio/speech --model microsoft/speecht5_tts --batch_size 1 --limit 100 --request_rate inf --backend text2speech --dataset edinburghcstr/ami --hf-subset 'ihm' --tokenizer openai/whisper-large-v3-turbo --trust-remote-code True
+Number of documents: 100
+100%|████████████████████████████████████████████████████████████████████████████████| 100/100 [01:58<00:00,  1.19s/it]
+Asking to truncate to max_length but no maximum length is provided and the model has no predefined maximum length. Default to no truncation.
+Tokens: 1802
+Success rate: 100.0%. (100/100)
+Throughput - Tokens per second: 15.2
+Mean latency: 63653.98 ms
+Median latency: 66736.83 ms
+Average document length: 18.02 tokens
+```
+
 ## Transcription
 ### Model preparation
 Many variances of Whisper models can be deployed in a single command by using pre-configured models from [OpenVINO HuggingFace organization](https://huggingface.co/collections/OpenVINO/speech-to-text) and used both for translations and transcriptions endpoints.
@@ -208,6 +227,26 @@ print(transcript.text)
 The quick brown fox jumped over the lazy dog.
 ```
 :::
+
+## Benchmarking transcription
+An asynchronous benchmarking client can be used to access the model server performance with various load conditions. Below are execution examples captured on Intel(R) Core(TM) Ultra 7 258V.
+
+```console
+git clone https://github.com/openvinotoolkit/model_server
+cd model_server/demos/benchmark/v3/
+pip install -r requirements.txt
+python benchmark.py --api_url http://localhost:8000/v3/audio/transcriptions --model openai/whisper-large-v3-turbo --batch_size 1 --limit 1000 --request_rate inf --dataset edinburghcstr/ami --hf-subset ihm --backend speech2text --trust-remote-code True
+Number of documents: 1000
+100%|██████████████████████████████████████████████████████████████████████████████| 1000/1000 [04:44<00:00,  3.51it/s]
+Asking to truncate to max_length but no maximum length is provided and the model has no predefined maximum length. Default to no truncation.
+Tokens: 10948
+Success rate: 100.0%. (1000/1000)
+Throughput - Tokens per second: 38.5
+Mean latency: 26670.64 ms
+Median latency: 20772.09 ms
+Average document length: 10.948 tokens
+```
+
 ## Translation
 To test translations endpoint we first need to prepare audio file with speech in language other than English, e.g. Spanish. To generate such sample we will use finetuned version of microsoft/speecht5_tts model.
 
