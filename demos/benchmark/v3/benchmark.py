@@ -57,7 +57,7 @@ parser.add_argument('--limit', required=False, type=int, default=1000, help='Num
 parser.add_argument('--split', required=False, default='train', help='Dataset split', dest='split')
 parser.add_argument('--hf-subset', required=False, help='Hf dataset subset', dest='subset')
 parser.add_argument('--trust-remote-code', required=False, type=bool, default=False, help='Trust remote code from huggingface', dest='trust_remote_code')
-parser.add_argument('--tokenizer', required=False, default=False, help='HF tokenizer, provide if different than model', dest='tokenizer')
+parser.add_argument('--tokenizer', required=False, help='HF tokenizer, provide if different than model', dest='tokenizer')
 
 args = vars(parser.parse_args())
 
