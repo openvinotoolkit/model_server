@@ -60,7 +60,7 @@ class EmbeddingsCalculatorOV : public CalculatorBase {
 
     mediapipe::Timestamp timestamp{0};
 
-    absl::Status tokenizeStrings(ov::genai::Tokenizer& tokenizer, const std::vector<std::string>& inputStrings, const ov::AnyMap& parameters, ov::genai::TokenizedInputs& tokens) {
+    absl::Status tokenizeStrings(ov::genai::Tokenizer& tokenizer, const std::vector<std::string>& inputStrings, const ov::AnyMap& parameters, ov::genai::TokenizedInputs& tokens, const size_t& max_context_length) {
         tokens = tokenizer.encode(inputStrings, parameters);
         RET_CHECK(tokens.input_ids.get_shape().size() == 2);
 
@@ -131,7 +131,7 @@ public:
             }
             auto input = tokenizeRequest.input;
             if (auto strings = std::get_if<std::vector<std::string>>(&input)) {
-                auto tokenizationStatus = this->tokenizeStrings(embeddings_session->getTokenizer(), *strings, tokenizeRequest.parameters, tokens);
+                auto tokenizationStatus = this->tokenizeStrings(embeddings_session->getTokenizer(), *strings, tokenizeRequest.parameters, tokens, max_context_length);
                 if (!tokenizationStatus.ok()) {
                     return tokenizationStatus;
                 }
@@ -169,7 +169,7 @@ public:
                     params["max_length"] = max_context_length;
                 }
 
-                absl::Status tokenizationStatus = this->tokenizeStrings(embeddings_session->getTokenizer(), *strings, params, tokens);
+                absl::Status tokenizationStatus = this->tokenizeStrings(embeddings_session->getTokenizer(), *strings, params, tokens, max_context_length);
                 if (!tokenizationStatus.ok()) {
                     return tokenizationStatus;
                 }
