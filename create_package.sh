@@ -93,8 +93,8 @@ patchelf --debug --set-rpath '$ORIGIN' /ovms_release/lib/libopenvino_tokenizers.
 patchelf --debug --set-rpath '$ORIGIN' /ovms_release/lib/lib*plugin.so
 if [ -f  /ovms_release/lib/libopenvino_nvidia_gpu_plugin.so ] && [ "$BASE_OS" != "redhat" ]; then patchelf --replace-needed libcutensor.so.1 /usr/lib/x86_64-linux-gnu/libcutensor/11/libcutensor.so.1 /ovms_release/lib/libopenvino_nvidia_gpu_plugin.so ; fi
 if [ -e /ovms_release/lib/libopenvino_genai_c.so ]; then rm -rf /ovms_release/lib/libopenvino_genai_c.so* ; fi
-if [[ "$BASE_OS" =~ "redhat" ]] && [ -f /ovms_release/lib/libopenvino_genai.so ]; then cd /ovms_release/lib/ ; rm -rf libopenvino_genai.so.* ; ln -s libopenvino_genai.so libopenvino_genai.so.2540 ; ln -s libopenvino_genai.so libopenvino_genai.so.2026.0.0.0 ; fi
-if [[ "$BASE_OS" =~ "ubuntu" ]] && [ -f /ovms_release/lib/libopenvino_genai.so.2026.0.0.0 ]; then cd /ovms_release/lib/ ; rm -rf libopenvino_genai.so ; rm -rf libopenvino_genai.so.2540 ; ln -s libopenvino_genai.so.2026.0.0.0 libopenvino_genai.so.2540 ; ln -s libopenvino_genai.so.2026.0.0.0 libopenvino_genai.so ; fi
+if [[ "$BASE_OS" =~ "redhat" ]] && [ -f /ovms_release/lib/libopenvino_genai.so ]; then cd /ovms_release/lib/ ; rm -rf libopenvino_genai.so.* ; ln -s libopenvino_genai.so libopenvino_genai.so.2600 ; ln -s libopenvino_genai.so libopenvino_genai.so.2026.0.0.0 ; fi
+if [[ "$BASE_OS" =~ "ubuntu" ]] && [ -f /ovms_release/lib/libopenvino_genai.so.2026.0.0.0 ]; then cd /ovms_release/lib/ ; rm -rf libopenvino_genai.so ; rm -rf libopenvino_genai.so.2600 ; ln -s libopenvino_genai.so.2026.0.0.0 libopenvino_genai.so.2600 ; ln -s libopenvino_genai.so.2026.0.0.0 libopenvino_genai.so ; fi
 
 cd /ovms
 cp -v /ovms/release_files/LICENSE /ovms_release/
