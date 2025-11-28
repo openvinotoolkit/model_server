@@ -26,11 +26,8 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
-#pragma warning(push)
-#pragma warning(disable : 6313)
-#include <rapidjson/stringbuffer.h>
-#include <rapidjson/writer.h>
-#pragma warning(pop)
+#include "src/port/rapidjson_stringbuffer.hpp"
+#include "src/port/rapidjson_writer.hpp"
 
 #include "http_rest_api_handler.hpp"
 #include "http_status_code.hpp"
@@ -199,8 +196,8 @@ std::unique_ptr<DrogonHttpServer> createAndStartDrogonHttpServer(const std::stri
             &headers,
             &output,
             responseComponents,
-            writer,
-            multiPartParser);
+            std::move(writer),
+            std::move(multiPartParser));
         if (status == StatusCode::PARTIAL_END) {
             // No further messaging is required.
             // Partial responses were delivered via "req" object.

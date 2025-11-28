@@ -21,7 +21,7 @@ ovms_cc_library(
     name = "cmd_exec",
     srcs = ["cmd_exec.cpp"],
     hdrs = ["cmd_exec.hpp"],
-    deps =  [],
+    deps =  ["@ovms//src/utils:env_guard"],
     visibility = ["//visibility:public"],
 )
 

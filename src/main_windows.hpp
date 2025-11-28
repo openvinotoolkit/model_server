@@ -22,7 +22,12 @@
 #include <utility>
 #include <Windows.h>
 #include <tchar.h>
+#pragma warning(push)
+#pragma warning(disable : 6553)
+#include <WinReg/WinReg.hpp>
+#pragma warning(pop)
 
+#include "capi_frontend/server_settings.hpp"
 #include "server.hpp"
 namespace ovms_service {
 using ovms::Server;
@@ -41,9 +46,11 @@ private:
 
 public:
     bool started;
+    bool setup;
     int error;
     void TearDown();
-    int SetUp(int argc, char** argv);
+
+    int SetUp(std::pair<ovms::ServerSettingsImpl, ovms::ModelsSettingsImpl>* parameters);
     bool isReady();
     bool isRunning();
     bool isLive(const std::string& moduleName);
@@ -69,14 +76,22 @@ public:
 
     // Members
     ConsoleParameters ovmsParams;
+    std::pair<ovms::ServerSettingsImpl, ovms::ModelsSettingsImpl> parsedParameters;
     static LPSTR serviceName;
     static LPSTR serviceDisplayName;
     static LPSTR serviceDesc;
 
     // Methods
+    static OvmsWindowsServiceManager& instance();
     static std::string getCurrentTimeString();
     static void logParameters(DWORD argc, LPTSTR* argv, const std::string& logText);
     static void serviceReportEvent(LPSTR szFunction);
+    static void serviceReportEvent(const std::string& szFunction);
+    static void serviceReportEventWithExitCode(const std::string& szFunction, const std::string& message, const int& exitCode);
+    static void serviceReportEventWithExitCode(LPSTR szFunction, const std::string& message, const int& exitCode);
+    static void serviceReportEventSuccess(const std::string& szFunction, const std::string& message);
+    static void serviceReportEventSuccess(LPSTR szFunction, const std::string& message);
+
     void WINAPI serviceMain(DWORD argc, LPTSTR* argv);
 
     // Registry manipulation
@@ -101,7 +116,12 @@ private:
     void setServiceStartStatus();
     void setServiceStopStatusWithSuccess();
     void setServiceStopStatusWithError();
-    void setServiceRunningStatus();
+    void setServiceStopStatusWithExitCode(const int& exitCode);
+    static void setServiceRunningStatus();
+
+    // Registry manipulation
+    static std::string getRegValue(const winreg::RegKey& key, const std::wstring& name, const DWORD& type);
+    static void logRegistryEntry(HKEY keyType, const std::wstring& keyPath);
 };
 
 }  // namespace ovms_service

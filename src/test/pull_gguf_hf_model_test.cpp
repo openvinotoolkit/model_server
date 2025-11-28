@@ -21,7 +21,7 @@
 #include <gtest/gtest.h>
 
 #include <git2.h>
-#include "env_guard.hpp"
+#include "../utils/env_guard.hpp"
 #include "test_utils.hpp"
 #include "test_with_temp_dir.hpp"
 #include "gguf_environment.hpp"

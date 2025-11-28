@@ -196,14 +196,6 @@ bool OutputParser::isReasoningParserAvailable() const {
     return reasoningParser != nullptr;
 }
 
-void OutputParser::enableImmediateToolParsing() {
-    if (toolParser) {
-        toolParser->enableImmediateParsing();
-    } else {
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Tool parser is not available, cannot enable zero trigger tool parsing");
-    }
-}
-
 std::string OutputParser::getToolParserStartTag() const {
     if (toolParser) {
         return toolParser->getParsingStartTags()[0];
@@ -245,11 +237,6 @@ std::optional<rapidjson::Document> OutputParser::parseChunk(const std::string& c
     bool toolParserExistsAndSupportsStreaming = toolParser && !toolParser->getParsingStartTags().empty();
     bool applyToolParser = toolParserExistsAndSupportsStreaming && toolsAvailable;
 
-    if (applyToolParser && toolParser->isImmediateParsingEnabled() && processingPhase == UNKNOWN) {
-        // If zero trigger parsing is enabled, we assume the start tag has been injected to the prompt.
-        streamOutputCache.add(getToolParserStartTag());
-    }
-
     streamOutputCache.add(chunkResponse);
 
     if (processingPhase == UNKNOWN) {
@@ -269,23 +256,17 @@ std::optional<rapidjson::Document> OutputParser::parseChunk(const std::string& c
         }
 
         if (applyToolParser) {
-            if (toolParser->isImmediateParsingEnabled()) {
-                // If zero trigger parsing is enabled, we assume the start tag has been injected to the prompt, but for the unified parsing logic,
-                // we still parse it to put parser in a proper state.
+            // Check if tool call start tag has been received
+            TagLookupStatus toolCallStartTagStatus = streamOutputCache.lookupTags(toolParser->getParsingStartTags());
+            if (toolCallStartTagStatus == TagLookupStatus::NOT_FOUND) {
+                // If tool call start tag is not found, check if any of the special start tags are found
+                toolCallStartTagStatus = streamOutputCache.lookupTags(toolParser->getSpecialParsingStartTags());
+            }
+            if (toolCallStartTagStatus == TagLookupStatus::FOUND_COMPLETE) {
                 return parseToolCallChunk(finishReason);
-            } else {
-                // Check if tool call start tag has been received
-                TagLookupStatus toolCallStartTagStatus = streamOutputCache.lookupTags(toolParser->getParsingStartTags());
-                if (toolCallStartTagStatus == TagLookupStatus::NOT_FOUND) {
-                    // If tool call start tag is not found, check if any of the special start tags are found
-                    toolCallStartTagStatus = streamOutputCache.lookupTags(toolParser->getSpecialParsingStartTags());
-                }
-                if (toolCallStartTagStatus == TagLookupStatus::FOUND_COMPLETE) {
-                    return parseToolCallChunk(finishReason);
-                }  // else startTagStatus is FOUND_INCOMPLETE or NOT_FOUND, we continue processing
-                if (toolCallStartTagStatus == TagLookupStatus::FOUND_INCOMPLETE) {
-                    anyStartTagStatus = toolCallStartTagStatus;  // We have at least one incomplete start tag
-                }
+            }  // else startTagStatus is FOUND_INCOMPLETE or NOT_FOUND, we continue processing
+            if (toolCallStartTagStatus == TagLookupStatus::FOUND_INCOMPLETE) {
+                anyStartTagStatus = toolCallStartTagStatus;  // We have at least one incomplete start tag
             }
         }
 

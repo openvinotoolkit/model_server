@@ -57,8 +57,8 @@ void GraphCLIParser::createOptions() {
             cxxopts::value<uint32_t>(),
             "MAX_NUM_BATCHED_TOKENS")
         ("cache_size",
-            "cache size in GB, default is 10.",
-            cxxopts::value<uint32_t>()->default_value("10"),
+            "KV cache size in GB, default is 0 which mean dynamic allocation.",
+            cxxopts::value<uint32_t>()->default_value("0"),
             "CACHE_SIZE")
         ("draft_source_model",
             "HF model name or path to the local folder with PyTorch or OpenVINO draft model.",
@@ -89,7 +89,11 @@ void GraphCLIParser::createOptions() {
         ("kv_cache_precision",
             "u8 or empty (model default). Reduced kv cache precision to u8 lowers the cache size consumption.",
             cxxopts::value<std::string>()->default_value(""),
-            "KV_CACHE_PRECISION");
+            "KV_CACHE_PRECISION")
+        ("model_distribution_policy",
+            "TENSOR_PARALLEL, PIPELINE_PARALLEL or empty (model default). Sets model distribution policy for inference with multiple sockets/devices.",
+            cxxopts::value<std::string>(),
+            "MODEL_DISTRIBUTION_POLICY");
 }
 
 void GraphCLIParser::printHelp() {
@@ -115,12 +119,12 @@ std::vector<std::string> GraphCLIParser::parse(const std::vector<std::string>& u
 
 void GraphCLIParser::prepare(OvmsServerMode serverMode, HFSettingsImpl& hfSettings, const std::string& modelName) {
     TextGenGraphSettingsImpl graphSettings = GraphCLIParser::defaultGraphSettings();
-    graphSettings.targetDevice = hfSettings.exportSettings.targetDevice;
+    hfSettings.exportSettings.targetDevice = hfSettings.exportSettings.targetDevice;
     // Deduct model name
     if (modelName != "") {
-        graphSettings.modelName = modelName;
+        hfSettings.exportSettings.modelName = modelName;
     } else {
-        graphSettings.modelName = hfSettings.sourceModel;
+        hfSettings.exportSettings.modelName = hfSettings.sourceModel;
     }
 
     if (nullptr == result) {
@@ -131,6 +135,9 @@ void GraphCLIParser::prepare(OvmsServerMode serverMode, HFSettingsImpl& hfSettin
     } else {
         graphSettings.maxNumSeqs = result->operator[]("max_num_seqs").as<uint32_t>();
         graphSettings.enablePrefixCaching = result->operator[]("enable_prefix_caching").as<std::string>();
+        if (graphSettings.enablePrefixCaching == "true" && hfSettings.exportSettings.targetDevice == "NPU") {
+            hfSettings.exportSettings.pluginConfig.useNpuPrefixCaching = true;
+        }
         graphSettings.cacheSize = result->operator[]("cache_size").as<uint32_t>();
         graphSettings.dynamicSplitFuse = result->operator[]("dynamic_split_fuse").as<std::string>();
         if (result->count("draft_source_model")) {
@@ -153,11 +160,13 @@ void GraphCLIParser::prepare(OvmsServerMode serverMode, HFSettingsImpl& hfSettin
 
         // Plugin configuration
         if (result->count("max_prompt_len")) {
-            graphSettings.pluginConfig.maxPromptLength = result->operator[]("max_prompt_len").as<uint32_t>();
+            hfSettings.exportSettings.pluginConfig.maxPromptLength = result->operator[]("max_prompt_len").as<uint32_t>();
         }
-
+        if (result->count("model_distribution_policy")) {
+            hfSettings.exportSettings.pluginConfig.modelDistributionPolicy = result->operator[]("model_distribution_policy").as<std::string>();
+        }
         if (result->count("kv_cache_precision")) {
-            graphSettings.pluginConfig.kvCachePrecision = result->operator[]("kv_cache_precision").as<std::string>();
+            hfSettings.exportSettings.pluginConfig.kvCachePrecision = result->operator[]("kv_cache_precision").as<std::string>();
         }
     }
 

@@ -472,6 +472,7 @@ Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const :
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "LLM node requires models_path to be set.");
         return StatusCode::INTERNAL_ERROR;
     }
+    servable->determineDecodingMethod();
     return StatusCode::OK;
 }
 }  // namespace ovms
