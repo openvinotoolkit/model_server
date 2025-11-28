@@ -110,16 +110,16 @@ git clone https://github.com/openvinotoolkit/model_server
 pushd .
 cd model_server/demos/benchmark/v3/
 pip install -r requirements.txt
-python benchmark.py --api_url http://localhost:8000/v3/audio/transcriptions --model openai/whisper-large-v3-turbo --batch_size 1 --limit 1000 --request_rate inf --dataset edinburghcstr/ami --hf-subset ihm --backend speech2text --trust-remote-code True
-None of PyTorch, TensorFlow >= 2.0, or Flax have been found. Models won't be available and only tokenizers, configuration and file/data utilities can be used.
-Number of documents: 1000
-100%|██████████████████████████████████████████████████████████████████████████████| 1000/1000 [04:44<00:00,  3.51it/s]
-Tokens: 10948
-Success rate: 100.0%. (1000/1000)
-Throughput - Tokens per second: 38.5
-Mean latency: 26670.64 ms
-Median latency: 20772.09 ms
-Average document length: 10.948 tokens
+python benchmark.py --api_url http://localhost:8122/v3/audio/speech --model microsoft/speecht5_tts --batch_size 1 --limit 100 --request_rate inf --backend text2speech --dataset edinburghcstr/ami --hf-subset 'ihm' --tokenizer openai/whisper-large-v3-turbo
+Number of documents: 100
+100%|████████████████████████████████████████████████████████████████████████████████| 100/100 [01:58<00:00,  1.19s/it]
+Asking to truncate to max_length but no maximum length is provided and the model has no predefined maximum length. Default to no truncation.
+Tokens: 1802
+Success rate: 100.0%. (100/100)
+Throughput - Tokens per second: 15.2
+Mean latency: 63653.98 ms
+Median latency: 66736.83 ms
+Average document length: 18.02 tokens
 ```
 
 ## Transcription
@@ -239,6 +239,7 @@ cd model_server/demos/benchmark/v3/
 pip install -r requirements.txt
 python benchmark.py --api_url http://localhost:8000/v3/audio/transcriptions --model openai/whisper-large-v3-turbo --batch_size 1 --limit 1000 --request_rate inf --dataset edinburghcstr/ami --hf-subset ihm --backend speech2text --trust-remote-code True
 Number of documents: 1000
+Asking to truncate to max_length but no maximum length is provided and the model has no predefined maximum length. Default to no truncation.
 100%|██████████████████████████████████████████████████████████████████████████████| 1000/1000 [04:44<00:00,  3.51it/s]
 Tokens: 10948
 Success rate: 100.0%. (1000/1000)
