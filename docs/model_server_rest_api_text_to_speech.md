@@ -2,7 +2,7 @@
 
 ## API Reference
 OpenVINO Model Server includes now the `audio/speech` endpoint using OpenAI API.
-It is used to execute [text to speech](https://github.com/openvinotoolkit/openvino.genai/tree/master/samples/cpp/audio/text_to_speech) task with OpenVINO GenAI pipeline.
+It is used to execute [text to speech](https://github.com/openvinotoolkit/openvino.genai/tree/master/samples/cpp/speech_generation) task with OpenVINO GenAI pipeline.
 Please see the [OpenAI API Create Speech Reference](https://platform.openai.com/docs/api-reference/audio/createSpeech) for more information on the API.
 The endpoint is exposed via a path:
 
