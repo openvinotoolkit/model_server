@@ -96,7 +96,7 @@ Click **New Chat** and select the model to start chatting
 
 ### (optional) Step 3: Set request parameters
 
-There are multiple configurable parameters in OVMS, all of them for `/v3/chat/completions` endpoint are accessible in [chat api documentation](https://github.com/openvinotoolkit/model_server/blob/main/docs/model_server_rest_api_chat.md#request).
+There are multiple configurable parameters in OVMS, all of them for `/v3/chat/completions` endpoint are accessible in [chat api documentation](https://github.com/openvinotoolkit/model_server/blob/releases/2025/4/docs/model_server_rest_api_chat.md#request).
 
 To configure them in *OpenWebUI* with an example of turning off reasoning:
 1. Go to **Admin Panel** -> **Settings** -> **Models** ([http://localhost:8080/admin/settings/models](http://localhost:8080/admin/settings/models))
@@ -298,13 +298,13 @@ docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models openvino/model_serve
 Keep the model server running or restart it. Here is the basic call to check if it works:
 
 ```console
-curl http://localhost:8000/v3/chat/completions  -H "Content-Type: application/json" -d "{ \"model\": \"OpenVINO/InternVL2-2B-int4-ov\", \"messages\":[{\"role\": \"user\", \"content\": [{\"type\": \"text\", \"text\": \"what is in the picture?\"},{\"type\": \"image_url\", \"image_url\": {\"url\": \"http://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/demos/common/static/images/zebra.jpeg\"}}]}], \"max_completion_tokens\": 100}"
+curl http://localhost:8000/v3/chat/completions  -H "Content-Type: application/json" -d "{ \"model\": \"OpenVINO/InternVL2-2B-int4-ov\", \"messages\":[{\"role\": \"user\", \"content\": [{\"type\": \"text\", \"text\": \"what is in the picture?\"},{\"type\": \"image_url\", \"image_url\": {\"url\": \"http://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/4/demos/common/static/images/zebra.jpeg\"}}]}], \"max_completion_tokens\": 100}"
 ```
 
 ### Step 2: Chat with VLM
 
 1. Start a **New Chat** with model set to `OpenVINO/InternVL2-2B-int4-ov`
-2. Click **+More** to upload images, by capturing the screen or uploading files. The image used in this demo is [http://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/demos/common/static/images/zebra.jpeg](http://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/demos/common/static/images/zebra.jpeg).
+2. Click **+More** to upload images, by capturing the screen or uploading files. The image used in this demo is [http://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/4/demos/common/static/images/zebra.jpeg](http://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/4/demos/common/static/images/zebra.jpeg).
 
 ![upload images](./upload_images.png)
 3. Enter a query and send
@@ -360,8 +360,8 @@ mcpo --port 9000 -- python -m mcp_weather_server
 
 Start by downloading `export_models.py` script and run it to download and quantize the model for speech generation:
 ```console 
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/export_model.py -o export_model.py
-pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/4/demos/common/export_models/export_model.py -o export_model.py
+pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/4/demos/common/export_models/requirements.txt
 python export_model.py text2speech --source_model microsoft/speecht5_tts --weight-format fp32 --model_name microsoft/speecht5_tts --config_file_path models/config.json --model_repository_path models --vocoder microsoft/speecht5_hifigan
 ```
 

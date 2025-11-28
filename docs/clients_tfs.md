@@ -8,7 +8,7 @@ hidden:
 
 gRPC API <ovms_docs_grpc_api_tfs>
 RESTful API <ovms_docs_rest_api_tfs>
-Examples <https://github.com/openvinotoolkit/model_server/blob/main/client/python/tensorflow-serving-api/samples/README.md>
+Examples <https://github.com/openvinotoolkit/model_server/blob/releases/2025/4/client/python/tensorflow-serving-api/samples/README.md>
 ```
 
 ## Python Client

@@ -29,8 +29,8 @@ Use those steps to convert the model from HugginFace Hub to OpenVINO format and 
 
 ```console
 # Download export script, install its dependencies and create directory for the models
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/export_model.py -o export_model.py
-pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/4/demos/common/export_models/export_model.py -o export_model.py
+pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/4/demos/common/export_models/requirements.txt
 mkdir models
 ```
 Run `export_model.py` script to download and quantize the model:
@@ -82,14 +82,14 @@ curl -L -o models/mistralai/Mistral-7B-Instruct-v0.3/chat_template.jinja https:/
 :sync: microsoft/Phi-4-mini-instruct 
 ```console
 python export_model.py text_generation --source_model microsoft/Phi-4-mini-instruct --weight-format int8 --config_file_path models/config.json --model_repository_path models --tool_parser phi4 --max_num_batched_tokens 99999
-curl -L -o models/microsoft/Phi-4-mini-instruct/chat_template.jinja https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/extras/chat_template_examples/chat_template_phi4_mini.jinja
+curl -L -o models/microsoft/Phi-4-mini-instruct/chat_template.jinja https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/4/extras/chat_template_examples/chat_template_phi4_mini.jinja
 ```
 :::
 :::{tab-item} Qwen3-Coder-30B-A3B-Instruct
 :sync: Qwen3-Coder-30B-A3B-Instruct
 ```console
 python export_model.py text_generation --source_model Qwen/Qwen3-Coder-30B-A3B-Instruct --weight-format int8 --config_file_path models/config.json --model_repository_path models --tool_parser qwen3coder
-curl -L -o models/Qwen/Qwen3-Coder-30B-A3B-Instruct/chat_template.jinja https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/extras/chat_template_examples/chat_template_qwen3coder_instruct.jinja
+curl -L -o models/Qwen/Qwen3-Coder-30B-A3B-Instruct/chat_template.jinja https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/4/extras/chat_template_examples/chat_template_qwen3coder_instruct.jinja
 ```
 :::
 ::::
@@ -117,7 +117,7 @@ curl -L -o models/OpenVINO/Mistral-7B-Instruct-v0.3-int4-ov/chat_template.jinja 
 :sync: Phi-4-mini-instruct-int4-ov
 ```bash
 docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:weekly --pull --model_repository_path /models --source_model OpenVINO/Phi-4-mini-instruct-int4-ov --task text_generation --tool_parser phi4
-curl -L -o models/OpenVINO/Phi-4-mini-instruct-int4-ov/chat_template.jinja https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/extras/chat_template_examples/chat_template_phi4_mini.jinja
+curl -L -o models/OpenVINO/Phi-4-mini-instruct-int4-ov/chat_template.jinja https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/4/extras/chat_template_examples/chat_template_phi4_mini.jinja
 ```
 :::
 ::::
@@ -547,8 +547,8 @@ docker run -d -p 8080:8080 -e PORT=8080 mcp-weather-server:sse uv run python -m 
 Install the application requirements
 
 ```console
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/continuous_batching/agentic_ai/openai_agent.py -o openai_agent.py
-pip install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/continuous_batching/agentic_ai/requirements.txt
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/2025/4/demos/continuous_batching/agentic_ai/openai_agent.py -o openai_agent.py
+pip install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/2025/4/demos/continuous_batching/agentic_ai/requirements.txt
 ```
 Make sure nodejs and npx are installed. On ubuntu it would require `sudo apt install nodejs npm`. On windows, visit https://nodejs.org/en/download. It is needed for the `file system` MCP server.
 
@@ -631,7 +631,7 @@ python openai_agent.py --query "What is the current weather in Tokyo?" --model Q
 You can try also similar implementation based on llama_index library working the same way:
 ```bash
 pip install llama-index-llms-openai-like==0.5.3 llama-index-core==0.14.5 llama-index-tools-mcp==0.4.2
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/continuous_batching/agentic_ai/llama_index_agent.py -o llama_index_agent.py
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/2025/4/demos/continuous_batching/agentic_ai/llama_index_agent.py -o llama_index_agent.py
 python llama_index_agent.py --query "What is the current weather in Tokyo?" --model OpenVINO/Qwen3-8B-int4-ov --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather --stream --enable-thinking
 
 ```

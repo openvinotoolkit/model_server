@@ -95,8 +95,8 @@ That ensures faster initialization time, better performance and lower memory con
 
 Download export script, install it's dependencies and create directory for the models:
 ```console
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/export_model.py -o export_model.py
-pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/4/demos/common/export_models/export_model.py -o export_model.py
+pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/4/demos/common/export_models/requirements.txt
 mkdir models 
 ```
 
@@ -409,14 +409,14 @@ Average document length: 83.208 tokens
 ## RAG with Model Server
 
 Embeddings endpoint can be applied in RAG chains to delegated text feature extraction both for documented vectorization and in context retrieval.
-Check this demo to see the langchain code example which is using OpenVINO Model Server both for text generation and embedding endpoint in [RAG application demo](https://github.com/openvinotoolkit/model_server/tree/main/demos/continuous_batching/rag)
+Check this demo to see the langchain code example which is using OpenVINO Model Server both for text generation and embedding endpoint in [RAG application demo](https://github.com/openvinotoolkit/model_server/tree/releases/2025/4/demos/continuous_batching/rag)
 
 
 ## Testing the model accuracy over serving API
 
 A simple method of testing the response accuracy is via comparing the response for a sample prompt from the model server and with local python execution based on HuggingFace python code.
 
-The script [compare_results.py](https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/embeddings/compare_results.py) can assist with such experiment.
+The script [compare_results.py](https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/4/demos/embeddings/compare_results.py) can assist with such experiment.
 ```bash
 popd
 cd model_server/demos/embeddings
@@ -451,7 +451,7 @@ Difference score with HF AutoModel: 0.020293646680283224
 It is easy also to run model evaluation using [MTEB](https://github.com/embeddings-benchmark/mteb) framework using a custom class based on openai model:
 ```bash
 pip install "mteb<2" einops openai --extra-index-url "https://download.pytorch.org/whl/cpu"
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/embeddings/ovms_mteb.py -o ovms_mteb.py
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/4/demos/embeddings/ovms_mteb.py -o ovms_mteb.py
 python ovms_mteb.py --model BAAI/bge-large-en-v1.5 --service_url http://localhost:8000/v3/embeddings
 ```
 Results will be stored in `results` folder:
