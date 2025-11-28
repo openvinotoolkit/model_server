@@ -82,8 +82,10 @@ batch_size = args['batch_size']
 
 def count_tokens(docs, model):
     if args["tokenizer"] == None:
-        args["tokenizer"] = model
-    tokenizer = AutoTokenizer.from_pretrained(args["tokenizer"])
+        hf_tokenizer = model
+    else:
+        hf_tokenizer = args["tokenizer"]
+    tokenizer = AutoTokenizer.from_pretrained(hf_tokenizer)
     documents = docs.iter(batch_size=1)
     num_tokens = 0
     for request in documents:
@@ -371,8 +373,10 @@ async def benchmark(docs, model, api_url, request_rate, backend_function):
     pbar.close()
     if args["backend"] == "speech2text" or args["backend"] == "translations":
         if args["tokenizer"] == None:
-            args["tokenizer"] = model
-        tokenizer = AutoTokenizer.from_pretrained(args["tokenizer"])
+            hf_tokenizer = model
+        else:
+            hf_tokenizer = args["tokenizer"]
+        tokenizer = AutoTokenizer.from_pretrained(hf_tokenizer)
         for output in outputs:
             data = json.loads(output.text)
             output.tokens_len =  len(tokenizer(data['text'],add_special_tokens=False)["input_ids"])
