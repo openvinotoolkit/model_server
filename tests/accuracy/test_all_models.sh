@@ -14,18 +14,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
-BRANCH_NAME=$(git rev-parse --abbrev-ref HEAD)
 # install dependencies
-pip install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/${BRANCH_NAME}/demos/common/export_models/requirements.txt
+pip install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
 rm -rf gorilla
 git clone https://github.com/ShishirPatil/gorilla
 cd gorilla/berkeley-function-call-leaderboard
 git checkout cd9429ccf3d4d04156affe883c495b3b047e6b64
-curl -s https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/${BRANCH_NAME}/demos/continuous_batching/accuracy/gorilla.patch | git apply -v
+curl -s https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/continuous_batching/accuracy/gorilla.patch | git apply -v
 pip install -e . 
 cd ../..
-curl -L -O https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/${BRANCH_NAME}/demos/common/export_models/export_model.py
+curl -L -O https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/export_model.py
 mkdir -p models
 
 python export_model.py text_generation --source_model Qwen/Qwen3-14B --model_name Qwen/Qwen3-14B --weight-format int4 --model_repository_path models
