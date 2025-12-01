@@ -284,7 +284,7 @@ The three main tourist attractions in Paris are the Eiffel Tower, the Louvre, an
 
 ## Testing the model accuracy over serving API
 
-Check the [guide of using lm-evaluation-harness](https://github.com/openvinotoolkit/model_server/blob/main/demos/continuous_batching/accuracy/README.md)
+Check the [guide of using lm-evaluation-harness](https://github.com/openvinotoolkit/model_server/blob/releases/2025/4/demos/continuous_batching/accuracy/README.md)
 
 > **Note:** Text generation on NPU is not returning the log_probs which are required to calculate some of the metrics. Only the tasks of type `generate_until` can be used.
 For example `--tasks leaderboard_ifeval`.
