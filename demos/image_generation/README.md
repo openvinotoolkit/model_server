@@ -5,6 +5,8 @@ Image generation pipelines are exposed via [OpenAI API](https://platform.openai.
 
 Check [supported models](https://openvinotoolkit.github.io/openvino.genai/docs/supported-models/#image-generation-models).
 
+> **Note:** Please note that FLUX models are not supported on NPU.
+
 > **Note:** This demo was tested on Intel® Xeon®, Intel® Core®, Intel® Arc™ A770, Intel® Arc™ B580 on Ubuntu 22/24, RedHat 9 and Windows 11.
 
 ## Prerequisites
@@ -254,7 +256,7 @@ Running this command starts the container with CPU only target device:
 
 Start docker container:
 ```bash
-docker run -d --rm -p 8000:8000 -v $(pwd)/models:/models:ro \
+docker run -d --rm -p 8000:8000 -v $(pwd)/models:/models:rw \
   openvino/model_server:latest \
     --rest_port 8000 \
     --model_name OpenVINO/stable-diffusion-v1-5-int8-ov \
@@ -292,7 +294,7 @@ In case you want to use GPU device to run the generation, add extra docker param
 to `docker run` command, use the image with GPU support. Export the models with precision matching the GPU capacity and adjust pipeline configuration.
 It can be applied using the commands below:
 ```bash
-docker run -d --rm -p 8000:8000 -v $(pwd)/models:/models:ro \
+docker run -d --rm -p 8000:8000 -v $(pwd)/models:/models:rw \
   --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) \
   openvino/model_server:latest-gpu \
     --rest_port 8000 \
@@ -330,8 +332,8 @@ It can be applied using the commands below:
 ```bash
 mkdir -p cache
 docker run -d --rm -p 8000:8000 \
-  -v $(pwd)/models:/models:ro \
-  -v $(pwd)/cache:/cache:ro \
+  -v $(pwd)/models:/models:rw \
+  -v $(pwd)/cache:/cache:rw \
   --device /dev/accel --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) \
   openvino/model_server:latest-gpu \
     --rest_port 8000 \
