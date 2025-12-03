@@ -29,6 +29,7 @@ absl::Status TokenizeParser::parseTokenizeResponse(rapidjson::StringBuffer& buff
     ov::Shape outputShape = tokens.input_ids.get_shape();
     auto inputIdsTensor = tokens.input_ids;
     auto attentionMaskTensor = tokens.attention_mask;
+    std::cout << "Parameter pad_to_max_length: " << (parameters.find("pad_to_max_length") != parameters.end() ? parameters.at("pad_to_max_length").as<bool>() : false) << std::endl;
     auto pad_to_max_length = parameters.find("pad_to_max_length") != parameters.end() ? parameters.at("pad_to_max_length").as<bool>() : false;
     if (outputShape.size() != 2) {
         return absl::InvalidArgumentError("Invalid input ids tensor shape");
@@ -220,5 +221,12 @@ absl::Status TokenizeParser::parseTokenizeRequest(rapidjson::Document& parsedJso
     }
     request = std::get<TokenizeRequest>(validated);
     return absl::OkStatus();
+}
+
+bool TokenizeParser::isTokenizeEndpoint(const std::string& uri) {
+    const int endpoint_len = std::strlen(TokenizeParser::TOKENIZE_ENDPOINT_SUFFIX);
+    const bool useTokenizeEndpoint = uri.size() >= endpoint_len &&
+                                         uri.compare(uri.size() - endpoint_len, endpoint_len, TokenizeParser::TOKENIZE_ENDPOINT_SUFFIX) == 0;
+    return useTokenizeEndpoint;
 }
 }  // namespace ovms

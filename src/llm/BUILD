@@ -26,6 +26,7 @@ ovms_cc_library(
         "@com_github_tencent_rapidjson//:rapidjson",
         "//src/kfserving_api:kfserving_api_cpp",
         "//src:libovmsprofiler",
+        "//src/tokenize:tokenize_parser",
         ":genai_servables",
         "//src:httppayload",
         "//third_party:genai",],
