@@ -79,7 +79,7 @@ public:
         return allocImpl->allocate(bytes, alignment);
     }
 
-    void deallocate(void* handle, const size_t bytes, size_t alignment) {
+    void deallocate(void* handle, const size_t bytes, const size_t alignment) noexcept {
         allocImpl->deallocate(handle, bytes, alignment);
         (*freeCallCount)++;
     }

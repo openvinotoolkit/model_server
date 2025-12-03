@@ -190,7 +190,7 @@ RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; \
     ln -s /openvino/inference-engine/temp/opencv_*/opencv /opt/intel/openvino/extras && \
     ln -s /usr/local/runtime /opt/intel/openvino && \
     ln -s /openvino/scripts/setupvars/setupvars.sh /opt/intel/openvino/setupvars.sh && \
-    ln -s /opt/intel/openvino /opt/intel/openvino_2025
+    ln -s /opt/intel/openvino /opt/intel/openvino_2026
 RUN if [ "$ov_use_binary" == "0" ]; then true ; else exit 0 ; fi ; if ! [[ $debug_bazel_flags == *"py_off"* ]]; then true ; else exit 0 ; fi ; mkdir -p /opt/intel/openvino && cp -r /openvino/bin/intel64/Release/python /opt/intel/openvino/
 RUN if [ "$ov_use_binary" == "0" ]; then true ; else exit 0 ; fi ; if ! [[ $debug_bazel_flags == *"py_off"* ]]; then true ; else exit 0 ; fi ; cp -r /openvino/tools/ovc/* /opt/intel/openvino/python
 ################## END OF OPENVINO SOURCE BUILD ######################
@@ -203,7 +203,7 @@ RUN if [ "$ov_use_binary" = "1" ] && [ "$DLDT_PACKAGE_URL" != "" ]; then true ; 
     mkdir /opt/intel && \
     tar -zxf ./*openvino_genai*.tar.gz -C /opt/intel && \
     ln -s /opt/intel/*openvino_genai* /opt/intel/openvino && \
-    ln -s /opt/intel/*openvino_genai* /opt/intel/openvino_2025
+    ln -s /opt/intel/*openvino_genai* /opt/intel/openvino_2026
 
 # install sample apps including benchmark_app
 # hadolint ignore=DL3041
@@ -226,8 +226,8 @@ RUN git clone https://github.com/$ov_tokenizers_org/openvino_tokenizers.git /ope
 RUN if ! [[ $debug_bazel_flags == *"_py_off"* ]]; then \
     mkdir -p /opt/intel/openvino/python/openvino_tokenizers/lib ; \
     cp -r python/* /opt/intel/openvino/python/ ; \
-    mkdir -p /opt/intel/openvino/python/openvino_tokenizers-2025.4.dist-info ; \
-    echo $'Metadata-Version: 1.0\nName: openvino-tokenizers\nVersion: 2025.4\nRequires-Python: >=3.9\nRequires-Dist: openvino~=2025.4.0' > /opt/intel/openvino/python/openvino_tokenizers-2025.4.dist-info/METADATA ; \
+    mkdir -p /opt/intel/openvino/python/openvino_tokenizers-2026.0.dist-info ; \
+    echo $'Metadata-Version: 1.0\nName: openvino-tokenizers\nVersion: 2026.0\nRequires-Python: >=3.9\nRequires-Dist: openvino~=2026.0.0' > /opt/intel/openvino/python/openvino_tokenizers-2026.0.dist-info/METADATA ; \
     ln -s /ovms/lib/libopenvino_tokenizers.so /opt/intel/openvino/python/openvino_tokenizers/lib/libopenvino_tokenizers.so ; \
     fi
 
@@ -290,7 +290,7 @@ RUN make
 
 RUN if ! [[ $debug_bazel_flags == *"py_off"* ]]; then true ; else exit 0 ; fi ; \
     mkdir -p /opt/intel/openvino/python/openvino-4.dist-info && \
-    echo $'Metadata-Version: 1.0\nName: openvino\nVersion: 2025.4' > /opt/intel/openvino/python/openvino-4.dist-info/METADATA
+    echo $'Metadata-Version: 1.0\nName: openvino\nVersion: 2026.0' > /opt/intel/openvino/python/openvino-4.dist-info/METADATA
 ENV PYTHONPATH=/opt/intel/openvino/python:/ovms/bazel-bin/src/python/binding
 
 WORKDIR /patchelf
@@ -301,7 +301,7 @@ RUN wget -q https://github.com/NixOS/patchelf/archive/0.10.tar.gz && \
 
 WORKDIR /ovms
 
-ARG PROJECT_VERSION="2025.4.0"
+ARG PROJECT_VERSION="2026.0.0"
 LABEL description="OpenVINO Model Server"
 ARG minitrace_flags
 
@@ -387,8 +387,8 @@ RUN if [ -f /ovms_release/lib/libovms_shared.so ] ; then mv /ovms_release/lib/li
 FROM $RELEASE_BASE_IMAGE as release
 LABEL "name"="OVMS"
 LABEL "vendor"="Intel Corporation"
-LABEL "version"="2025.4.0"
-LABEL "release"="2025"
+LABEL "version"="2026.0.0"
+LABEL "release"="2026"
 LABEL "summary"="OpenVINO(TM) Model Server"
 LABEL "description"="OpenVINO(TM) Model Server is a solution for serving AI models"
 LABEL "maintainer"="dariusz.trawinski@intel.com"

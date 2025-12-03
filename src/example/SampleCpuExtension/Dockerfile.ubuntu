@@ -19,7 +19,7 @@ FROM $BASE_IMAGE
 
 ARG TEMP_DIR=/tmp/openvino_installer
 ARG APT_OV_PACKAGE
-ARG DLDT_PACKAGE_URL=https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/pre-release/2025.4.0.0rc1/openvino_genai_ubuntu22_2025.4.0.0rc1_x86_64.tar.gz
+ARG DLDT_PACKAGE_URL=https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/nightly/2026.0.0.0.dev20251119/openvino_genai_ubuntu22_2026.0.0.0.dev20251119_x86_64.tar.gz
 
 RUN apt update && apt install -y build-essential wget make python3
 
@@ -31,7 +31,7 @@ RUN mkdir -p $TEMP_DIR && cd $TEMP_DIR/ && \
     mkdir /opt/intel && \
     tar -zxf ./*openvino_genai*.tar.gz -C /opt/intel && \
     ln -s /opt/intel/*openvino_genai* /opt/intel/openvino && \
-    ln -s /opt/intel/*openvino_genai* /opt/intel/openvino_2025
+    ln -s /opt/intel/*openvino_genai* /opt/intel/openvino_2026
 WORKDIR /workspace
 COPY Makefile ov_extension.cpp CustomReluOp.cpp CustomReluOp.hpp ./
 

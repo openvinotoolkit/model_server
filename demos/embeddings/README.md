@@ -371,9 +371,9 @@ An asynchronous benchmarking client can be used to access the model server perfo
 ```console
 git clone https://github.com/openvinotoolkit/model_server
 pushd .
-cd model_server/demos/benchmark/embeddings/
+cd model_server/demos/benchmark/v3/
 pip install -r requirements.txt
-python benchmark_embeddings.py --api_url http://localhost:8000/v3/embeddings --dataset synthetic --synthetic_length 5 --request_rate 10 --batch_size 1 --model BAAI/bge-large-en-v1.5
+python benchmark.py --api_url http://localhost:8000/v3/embeddings --dataset synthetic --synthetic_length 5 --request_rate 10 --batch_size 1 --model BAAI/bge-large-en-v1.5
 Number of documents: 1000
 100%|████████████████████████████████████████████████████████████████| 1000/1000 [01:44<00:00,  9.56it/s]
 Tokens: 5000
@@ -384,7 +384,7 @@ Median latency: 13.97 ms
 Average document length: 5.0 tokens
 
 
-python benchmark_embeddings.py --api_url http://localhost:8000/v3/embeddings --request_rate inf --batch_size 32 --dataset synthetic --synthetic_length 510 --model BAAI/bge-large-en-v1.5
+python benchmark.py --api_url http://localhost:8000/v3/embeddings --request_rate inf --batch_size 32 --dataset synthetic --synthetic_length 510 --model BAAI/bge-large-en-v1.5
 Number of documents: 1000
 100%|████████████████████████████████████████████████████████████████| 32/32 [00:17<00:00,  1.82it/s]
 Tokens: 510000
@@ -395,7 +395,7 @@ Median latency: 9905.79 ms
 Average document length: 510.0 tokens
 
 
-python benchmark_embeddings.py --api_url http://localhost:8000/v3/embeddings --request_rate inf --batch_size 1 --dataset Cohere/wikipedia-22-12-simple-embeddings --model BAAI/bge-large-en-v1.5
+python benchmark.py --api_url http://localhost:8000/v3/embeddings --request_rate inf --batch_size 1 --dataset Cohere/wikipedia-22-12-simple-embeddings --model BAAI/bge-large-en-v1.5
 Number of documents: 1000
 100%|████████████████████████████████████████████████████████████████| 1000/1000 [00:15<00:00, 64.02it/s]
 Tokens: 83208
@@ -537,7 +537,7 @@ mteb run -m thenlper/gte-small -t Banking77Classification --output_folder result
 
 # Usage of tokenize endpoint (release 2025.4 or weekly)
 
-The `tokenize` endpoint provides a simple API for tokenizing input text using the same tokenizer as the deployed embeddings model. This allows you to see how your text will be split into tokens before feature extraction or inference. The endpoint accepts a string or list of strings and returns the corresponding token IDs and tokenized text.
+The `tokenize` endpoint provides a simple API for tokenizing input text using the same tokenizer as the deployed embeddings model. This allows you to see how your text will be split into tokens before feature extraction or inference. The endpoint accepts a string or list of strings and returns the corresponding token IDs.
 
 Example usage:
 ```console
@@ -551,10 +551,10 @@ Response:
 ```
 
 It's possible to use additional parameters:
- - pad_to_max_length - whether to pad the sequence to the maximum length. Default is False. 
- - max_length - maximum length of the sequence. If None (default), the value will be taken from the IR (where default value from original HF/GGUF model is stored).
- - padding_side - side to pad the sequence, can be ‘left’ or ‘right’. Default is None.
- - add_special_tokens - whether to add special tokens like BOS, EOS, PAD. Default is True. 
+ - `pad_to_max_length` - whether to pad the sequence to the maximum length. Default is False. 
+ - `max_length` - maximum length of the sequence. If specified, it truncates the tokens to the provided number.
+ - `padding_side` - side to pad the sequence, can be `left` or `right`. Default is `right`.
+ - `add_special_tokens` - whether to add special tokens like BOS, EOS, PAD. Default is True. 
 
  Example usage:
 ```console
