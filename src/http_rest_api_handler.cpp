@@ -686,11 +686,40 @@ bool HttpRestApiHandler::isAuthorized(const std::unordered_map<std::string, std:
     return false;
 }
 
+struct V3StreamCallbackResourceGuard {
+    CopyableObjectWrapper<MediapipeGraphExecutor>& executorWrapper;
+    CopyableObjectWrapper<HttpPayload>& requestWrapper;
+    std::shared_ptr<HttpAsyncWriter>& serverReaderWriter;
+
+    V3StreamCallbackResourceGuard(
+        CopyableObjectWrapper<MediapipeGraphExecutor>& executorWrapper,
+        CopyableObjectWrapper<HttpPayload>& requestWrapper,
+        std::shared_ptr<HttpAsyncWriter>& serverReaderWriter) :
+        executorWrapper(executorWrapper),
+        requestWrapper(requestWrapper),
+        serverReaderWriter(serverReaderWriter) {}
+
+    ~V3StreamCallbackResourceGuard() {
+        auto& executor = executorWrapper.getObjectHolder()->get();
+        executor.reset();
+        if (serverReaderWriter) {
+            // This part must execute before request cleanup as request holds the client connection
+            serverReaderWriter->PartialReplyEnd();
+        }
+        auto& request = requestWrapper.getObjectHolder()->get();
+        if (request != nullptr) {
+            request->client.reset();
+        }
+    }
+};
+
 Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser) {
 #if (MEDIAPIPE_DISABLE == 0)
     OVMS_PROFILE_FUNCTION();
 
-    HttpPayload request;
+    CopyableObjectWrapper<HttpPayload> requestWrapper;
+    auto& request = requestWrapper.getObjectHolder()->get();
+    request = std::make_unique<HttpPayload>();
     std::string modelName;
     bool streamFieldVal = false;
     if (!this->apiKey.empty()) {
@@ -698,7 +727,8 @@ Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpReque
             return StatusCode::UNAUTHORIZED;
         }
     }
-    auto status = createV3HttpPayload(uri, request_components, response, request_body, serverReaderWriter, std::move(multiPartParser), request, modelName, streamFieldVal);
+
+    auto status = createV3HttpPayload(uri, request_components, response, request_body, serverReaderWriter, std::move(multiPartParser), *request, modelName, streamFieldVal);
     if (!status.ok()) {
         SPDLOG_DEBUG("Failed to create V3 payload: {}", status.string());
         return status;
@@ -718,15 +748,32 @@ Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpReque
 
     if (streamFieldVal == false) {
         ExecutionContext executionContext{ExecutionContext::Interface::REST, ExecutionContext::Method::V3Unary};
-        return executor->infer(&request, &response, executionContext);
+        return executor->infer(request.get(), &response, executionContext);
     } else {
         serverReaderWriter->OverwriteResponseHeader("Content-Type", "text/event-stream");
         serverReaderWriter->OverwriteResponseHeader("Cache-Control", "no-cache");
         serverReaderWriter->OverwriteResponseHeader("Connection", "keep-alive");
-        serverReaderWriter->PartialReplyBegin([executorWrapper = executorWrapper, serverReaderWriter, request = std::move(request)]() mutable {
-            ExecutionContext executionContext{ExecutionContext::Interface::REST, ExecutionContext::Method::V3Stream};
+        serverReaderWriter->PartialReplyBegin([executorWrapper = executorWrapper, weakWriter = std::weak_ptr<HttpAsyncWriter>(serverReaderWriter), requestWrapper = requestWrapper]() mutable {
+            // Lock the weak_ptr to get a shared_ptr - this keeps the object alive during execution
+            auto serverReaderWriter = weakWriter.lock();
+            // Create guard to clean up resources after streaming is done
+            auto resourceGuard = V3StreamCallbackResourceGuard(executorWrapper, requestWrapper, serverReaderWriter);
+
+            if (!serverReaderWriter) {
+                SPDLOG_DEBUG("Connection was closed before streaming could begin");
+                return;
+            }
+
+            auto& request = requestWrapper.getObjectHolder()->get();
             auto& executor = executorWrapper.getObjectHolder()->get();
-            auto status = executor->inferStream(request, *serverReaderWriter, executionContext);
+
+            if (request == nullptr || executor == nullptr) {  // should not happen
+                SPDLOG_DEBUG("Request or executor object is null in streaming inference");
+                return;
+            }
+
+            ExecutionContext executionContext{ExecutionContext::Interface::REST, ExecutionContext::Method::V3Stream};
+            auto status = executor->inferStream(*request, *serverReaderWriter, executionContext);
             if (!status.ok()) {
                 rapidjson::StringBuffer buffer;
                 rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
@@ -736,8 +783,6 @@ Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpReque
                 writer.EndObject();
                 serverReaderWriter->PartialReplyWithStatus(buffer.GetString(), HTTPStatusCode::BAD_REQUEST);
             }
-            executor.reset();
-            serverReaderWriter->PartialReplyEnd();
         });
         return StatusCode::PARTIAL_END;
     }
