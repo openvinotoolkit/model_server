@@ -180,6 +180,9 @@ void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServ
                 import datetime as _dt
                 return _dt.datetime.now().strftime(format)
 
+            def from_json_raw(json_str):
+                return json.dumps(json.loads(json_str), ensure_ascii=False)
+
             # Following the logic from:
             # https://github.com/huggingface/transformers/blob/7188e2e28c6d663284634732564143b820a03f8b/src/transformers/utils/chat_template_utils.py#L398
             class AssistantTracker(Extension):
@@ -239,6 +242,7 @@ void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServ
             jinja_env.globals["raise_exception"] = raise_exception
             jinja_env.globals["strftime_now"] = strftime_now
             jinja_env.filters["from_json"] = json.loads
+            jinja_env.filters["from_json_raw"] = from_json_raw
 
             # Try to read data from tokenizer_config.json to get additional tool chat template if present
             tokenizer_config_file = Path(templates_directory + "/tokenizer_config.json")
