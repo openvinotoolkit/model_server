@@ -1,19 +1,15 @@
 --extra-index-url "https://download.pytorch.org/whl/cpu"
---extra-index-url "https://storage.openvinotoolkit.org/simple/wheels/nightly"
---extra-index-url "https://storage.openvinotoolkit.org/simple/wheels/pre-release"
---pre
-optimum-intel@git+https://github.com/huggingface/optimum-intel.git
+optimum-intel@git+https://github.com/huggingface/optimum-intel.git@aed07975d817c124fd5d45375ac131d4a068b557
 accelerate==1.11.0
 diffusers==0.35.2  # for image generation
 einops==0.8.1
-nncf==2.18.0
+nncf==2.19.0
 numpy==2.2.6
-openai
-openvino-tokenizers==2025.4.0.0rc3
-openvino==2025.4.0rc3
+openvino-tokenizers==2025.4.0.0
+openvino==2025.4.0
 #optimum is in dependency list of optimum-intel
 pillow==12.0.0
-sentence_transformers
+sentence_transformers==5.1.2
 sentencepiece==0.2.1  # Required by: transformers
 timm==1.0.22
 torchvision
