@@ -195,7 +195,7 @@ Transcript file that was previously generated with audio/speech endpoint.
 
 
 ```bash
-curl http://localhost:8000/v3/audio/transcriptions -H "Content-Type: multipart/form-data" -F file="@speech.wav" -F model="OpenVINO/whisper-large-v3-fp16-ov"
+curl http://localhost:8000/v3/audio/transcriptions -H "Content-Type: multipart/form-data" -F file="@speech.wav" -F model="openai/whisper-large-v3-turbo"
 ```
 ```json
 {"text": " The quick brown fox jumped over the lazy dog."}
@@ -217,7 +217,7 @@ client = OpenAI(base_url=url, api_key="not_used")
 
 audio_file = open(filename, "rb")
 transcript = client.audio.transcriptions.create(
-  model="OpenVINO/whisper-large-v3-fp16-ov",
+  model="openai/whisper-large-v3-turbo",
   file=audio_file
 )
 
