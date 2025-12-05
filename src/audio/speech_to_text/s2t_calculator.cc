@@ -72,6 +72,8 @@ size_t ISO_LANG_CODE_MAX = 3;
 class S2tCalculator : public CalculatorBase {
     static const std::string INPUT_TAG_NAME;
     static const std::string OUTPUT_TAG_NAME;
+    std::shared_ptr<SttExecutionContext> executionContext;
+
 
 public:
     static absl::Status GetContract(CalculatorContract* cc) {
@@ -110,9 +112,12 @@ public:
         if (payload.multipartParser->hasParseError())
             return absl::InvalidArgumentError("Failed to parse multipart data");
 
+        bool streaming = false;
         std::string_view stream = payload.multipartParser->getFileContentByFieldName("stream");
         if (!stream.empty()) {
-            return absl::InvalidArgumentError("streaming is not supported");
+            if(stream=="True"){
+                streaming = true;
+            }
         }
         std::string_view file = payload.multipartParser->getFileContentByFieldName("file");
         if (file.empty()) {
@@ -143,12 +148,24 @@ public:
                 }
                 std::string genaiLanguage = "<|" + std::string(language) + "|>";
                 std::unique_lock lock(pipe->sttPipelineMutex);
-                std::string generatedText = pipe->sttPipeline->generate(rawSpeech, ov::genai::language(genaiLanguage.c_str()));
+                if(streaming){
+                    pipe->createStreamer(executionContext);
+                    std::string generatedText = pipe->sttPipeline->generate(rawSpeech, ov::genai::language(genaiLanguage.c_str()));
+                }
+                else{
+                    std::string generatedText = pipe->sttPipeline->generate(rawSpeech, ov::genai::language(genaiLanguage.c_str()));
+                }
                 lock.unlock();
                 writer.String(generatedText.c_str());
             } else {
                 std::unique_lock lock(pipe->sttPipelineMutex);
-                std::string generatedText = pipe->sttPipeline->generate(rawSpeech);
+                if(streaming){
+                    pipe->createStreamer(executionContext);
+                    std::string generatedText = pipe->sttPipeline->generate(rawSpeech, executionContext->textStreamer);
+                }
+                else{
+                    std::string generatedText = pipe->sttPipeline->generate(rawSpeech);
+                }
                 lock.unlock();
                 writer.String(generatedText.c_str());
             }

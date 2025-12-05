@@ -119,3 +119,5 @@ Check out the list below to see complete step-by-step examples of using OpenVINO
 |[Image Classification](image_classification/go/README.md)|Run prediction on a JPEG image using image classification model via gRPC API.|
 
 
+
+

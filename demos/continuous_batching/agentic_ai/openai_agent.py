@@ -36,15 +36,6 @@ from agents import (
     Runner,
 )
 
-API_KEY = "not_used"
-env_proxy = {}
-http_proxy = os.environ.get("http_proxy")
-https_proxy = os.environ.get("https_proxy")
-if http_proxy:
-    env_proxy["http_proxy"] = http_proxy
-if https_proxy:
-    env_proxy["https_proxy"] = https_proxy
-
 RunConfig.tracing_disabled = False  # Disable tracing for this example
 
 async def run(query, agent, OVMS_MODEL_PROVIDER, stream: bool = False):
@@ -105,18 +96,6 @@ if __name__ == "__main__":
             )
         mcp_servers.append(weather_server)
 
-    if args.mcp_server in ["all", "fs"]:
-        fs_server = MCPServerStdio(
-            client_session_timeout_seconds=30,
-            name="FS MCP Server",
-            params={"command": "npx", "args": ["-y", "@modelcontextprotocol/server-filesystem", "/tmp"], "env": env_proxy}
-        )
-        mcp_servers.append(fs_server)
-    client = AsyncOpenAI(base_url=args.base_url, api_key=API_KEY)
-
-    class OVMSModelProvider(ModelProvider):
-        def get_model(self, _) -> Model:
-            return OpenAIChatCompletionsModel(model=args.model, openai_client=client)
 
     OVMS_MODEL_PROVIDER = OVMSModelProvider()
 

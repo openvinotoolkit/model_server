@@ -34,6 +34,12 @@
 
 namespace ovms {
 
+struct SttExecutionContext {
+    std::shared_ptr<ov::genai::TextStreamer> textStreamer;
+    bool sendLoopbackSignal = false;
+    std::string lastStreamerCallbackOutput;
+};
+
 struct SttServable {
     std::filesystem::path parsedModelsPath;
     std::shared_ptr<ov::genai::WhisperPipeline> sttPipeline;
@@ -47,6 +53,18 @@ struct SttServable {
             parsedModelsPath = fsModelsPath.string();
         }
         sttPipeline = std::make_shared<ov::genai::WhisperPipeline>(parsedModelsPath.string(), targetDevice);
+    }
+
+    void createStreamer(std::shared_ptr<SttExecutionContext>& executionContext){
+        executionContext->lastStreamerCallbackOutput = "";  // initialize with empty string
+        auto callback = [& lastStreamerCallbackOutput = executionContext->lastStreamerCallbackOutput](std::string text) {
+            SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Streamer callback executed with text: [{}]", text);
+            lastStreamerCallbackOutput = text;
+            return ov::genai::StreamingStatus::RUNNING;
+        };
+        ov::AnyMap streamerConfig;
+        streamerConfig.insert(ov::genai::skip_special_tokens(false));
+        executionContext->textStreamer = std::make_shared<ov::genai::TextStreamer>(getProperties()->tokenizer, callback, streamerConfig);
     }
 };
 
