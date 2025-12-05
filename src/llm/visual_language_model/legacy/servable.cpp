@@ -201,10 +201,11 @@ absl::Status VisualLanguageModelLegacyServable::preparePartialResponse(std::shar
         if (!serializedChunk.empty()) {
             executionContext->response = wrapTextInServerSideEventMessage(serializedChunk);
         }
-        // Disabling usage in streaming mode in legacy servable due to the issue with token counting.
+        // Fake usage in streaming mode in legacy servable due to the issue with token counting.
+        // Usage will be 0.
+        // This enables Continue.dev streaming scenario, which always uses include_usage: true
         if (executionContext->apiHandler->getStreamOptions().includeUsage)
-            return absl::InvalidArgumentError("Usage is not supported in legacy servable in streaming mode.");
-        // executionContext->response += wrapTextInServerSideEventMessage(executionContext->apiHandler->serializeStreamingUsageChunk());
+            executionContext->response += wrapTextInServerSideEventMessage(executionContext->apiHandler->serializeStreamingUsageChunk());
 
         executionContext->response += wrapTextInServerSideEventMessage("[DONE]");
 
