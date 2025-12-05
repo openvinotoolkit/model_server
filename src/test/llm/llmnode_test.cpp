@@ -2055,20 +2055,23 @@ TEST_P(LLMFlowHttpTestParameterized, streamChatCompletionsUsage) {
         if (params.checkFinishReason) {
             ASSERT_TRUE(responses.back().find("\"finish_reason\":\"length\"") != std::string::npos);
         }
-        // For non-continuous batching servables usage is not supported
+        // For non-continuous batching servables usage is faked, always returns 0
     } else {
-        EXPECT_CALL(*writer, PartialReplyWithStatus(::testing::_, ::testing::_))
-            .WillOnce([this](std::string response, ovms::HTTPStatusCode code) {
-                ASSERT_EQ(response, "{\"error\":\"Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed: \\nCalculator::Process() for node \\\"llmNode1\\\" failed: Usage is not supported in legacy servable in streaming mode.\"}");
-                rapidjson::Document d;
-                rapidjson::ParseResult ok = d.Parse(response.c_str());
-                ASSERT_EQ(ok.Code(), 0);
-                ASSERT_EQ(code, ovms::HTTPStatusCode::BAD_REQUEST);
+        EXPECT_CALL(*writer, PartialReply(::testing::_))
+            .WillRepeatedly([this, &responses](std::string response) {
+                responses.push_back(response);
             });
         EXPECT_CALL(*writer, PartialReplyEnd()).Times(1);
         ASSERT_EQ(
             handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
             ovms::StatusCode::PARTIAL_END);
+
+        ASSERT_TRUE(responses.back().find("\"completion_tokens\":0") != std::string::npos);
+        ASSERT_TRUE(responses.back().find("\"prompt_tokens\"") != std::string::npos);
+        ASSERT_TRUE(responses.back().find("\"total_tokens\"") != std::string::npos);
+        if (params.checkFinishReason) {
+            ASSERT_TRUE(responses.back().find("\"finish_reason\":\"length\"") != std::string::npos);
+        }
     }
 }
 
@@ -2109,20 +2112,23 @@ TEST_P(LLMFlowHttpTestParameterized, streamCompletionsUsage) {
         if (params.checkFinishReason) {
             ASSERT_TRUE(responses.back().find("\"finish_reason\":\"length\"") != std::string::npos);
         }
-        // For non-continuous batching servables usage is not supported
+        // For non-continuous batching servables usage is faked, always returns 0
     } else {
-        EXPECT_CALL(*writer, PartialReplyWithStatus(::testing::_, ::testing::_))
-            .WillOnce([this](std::string response, ovms::HTTPStatusCode code) {
-                ASSERT_EQ(response, "{\"error\":\"Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed: \\nCalculator::Process() for node \\\"llmNode1\\\" failed: Usage is not supported in legacy servable in streaming mode.\"}");
-                rapidjson::Document d;
-                rapidjson::ParseResult ok = d.Parse(response.c_str());
-                ASSERT_EQ(ok.Code(), 0);
-                ASSERT_EQ(code, ovms::HTTPStatusCode::BAD_REQUEST);
+        EXPECT_CALL(*writer, PartialReply(::testing::_))
+            .WillRepeatedly([this, &responses](std::string response) {
+                responses.push_back(response);
             });
         EXPECT_CALL(*writer, PartialReplyEnd()).Times(1);
         ASSERT_EQ(
             handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
             ovms::StatusCode::PARTIAL_END);
+
+        ASSERT_TRUE(responses.back().find("\"completion_tokens\":0") != std::string::npos);
+        ASSERT_TRUE(responses.back().find("\"prompt_tokens\"") != std::string::npos);
+        ASSERT_TRUE(responses.back().find("\"total_tokens\"") != std::string::npos);
+        if (params.checkFinishReason) {
+            ASSERT_TRUE(responses.back().find("\"finish_reason\":\"length\"") != std::string::npos);
+        }
     }
 }
 
