@@ -426,6 +426,10 @@ public:
     ~ModulesShutdownGuard() {
         this->server.shutdownModules();
     }
+    ModulesShutdownGuard(const ModulesShutdownGuard&) = delete;
+    ModulesShutdownGuard& operator=(const ModulesShutdownGuard&) = delete;
+    ModulesShutdownGuard(ModulesShutdownGuard&&) = delete;
+    ModulesShutdownGuard& operator=(ModulesShutdownGuard&&) = delete;
 };
 
 class OvmsExitGuard {
