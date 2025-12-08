@@ -152,6 +152,24 @@ python export_model.py embeddings_ov --source_model intfloat/multilingual-e5-lar
 python export_model.py embeddings_ov --source_model intfloat/multilingual-e5-large --pooling MEAN --weight-format int8 --config_file_path models/config.json --model_repository_path models
 ```
 :::
+:::{tab-item} Alibaba-NLP/gte-large-en-v1.5
+:sync: gte-large-en-v1.5
+```console
+python export_model.py embeddings_ov --source_model Alibaba-NLP/gte-large-en-v1.5 --pooling CLS --extra_quantization_params "--library sentence_transformers"
+```
+:::
+:::{tab-item} nomic-ai/nomic-embed-text-v1.5
+:sync: nomic-embed-text-v1.5
+```console
+python export_model.py embeddings_ov --source_model nomic-ai/nomic-embed-text-v1.5 --pooling MEAN --extra_quantization_params "--library sentence_transformers"
+```
+:::
+:::{tab-item} sentence-transformers/all-mpnet-base-v2
+:sync: all-mpnet-base-v2
+```console
+python export_model.py embeddings_ov --source_model sentence-transformers/all-mpnet-base-v2 --pooling MEAN
+```
+:::
 ::::
 
 
@@ -205,6 +223,24 @@ python export_model.py embeddings_ov --source_model intfloat/multilingual-e5-lar
 python export_model.py embeddings_ov --source_model intfloat/multilingual-e5-large --pooling MEAN --weight-format int8 --target_device GPU --config_file_path models/config.json --model_repository_path models
 ```
 :::
+:::{tab-item} Alibaba-NLP/gte-large-en-v1.5
+:sync: gte-large-en-v1.5
+```console
+python export_model.py embeddings_ov --source_model Alibaba-NLP/gte-large-en-v1.5 --pooling CLS --weight-format int8 --target_device GPU --extra_quantization_params "--library sentence_transformers" --config_file_path models/config.json --model_repository_path models
+```
+:::
+:::{tab-item} nomic-ai/nomic-embed-text-v1.5
+:sync: nomic-embed-text-v1.5
+```console
+python export_model.py embeddings_ov --source_model nomic-ai/nomic-embed-text-v1.5 --pooling MEAN --weight-format int8 --target_device GPU --extra_quantization_params "--library sentence_transformers" --config_file_path models/config.json --model_repository_path models
+```
+:::
+:::{tab-item} sentence-transformers/all-mpnet-base-v2
+:sync: all-mpnet-base-v2
+```console
+python export_model.py embeddings_ov --source_model sentence-transformers/all-mpnet-base-v2 --pooling MEAN --weight-format int8 --target_device GPU --config_file_path models/config.json --model_repository_path models
+```
+:::
 ::::
 
 
@@ -256,6 +292,9 @@ All models supported by [optimum-intel](https://github.com/huggingface/optimum-i
 |mixedbread-ai/deepset-mxbai-embed-de-large-v1|MEAN|
 |intfloat/multilingual-e5-large-instruct|MEAN|
 |intfloat/multilingual-e5-large|MEAN|
+|Alibaba-NLP/gte-large-en-v1.5|CLS|
+|nomic-ai/nomic-embed-text-v1.5|MEAN|
+|sentence-transformers/all-mpnet-base-v2|MEAN|
 
 
 ## Server Deployment
