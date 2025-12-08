@@ -243,8 +243,8 @@ void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServ
             # Try to read data from tokenizer_config.json to get additional tool chat template if present
             tokenizer_config_file = Path(templates_directory + "/tokenizer_config.json")
             if tokenizer_config_file.is_file():
-                f = open(templates_directory + "/tokenizer_config.json", "r", encoding="utf-8")
-                data = json.load(f)
+                with open(templates_directory + "/tokenizer_config.json", "r", encoding="utf-8") as f:
+                    data = json.load(f)
 
                 chat_template_from_tokenizer_config = data.get("chat_template", None)
                 if isinstance(chat_template_from_tokenizer_config, list):
@@ -263,9 +263,9 @@ void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServ
             # Temporary override of GenAI value as we want jinja file to have priority over tokenizer RT info
             chat_template_jinja_file = Path(templates_directory + "/chat_template.jinja")
             if chat_template_jinja_file.is_file():
-                f = open(templates_directory + "/chat_template.jinja", "r", encoding="utf-8")
-                chat_template = f.read()
-                print("Overriding chat template with chat_template.jinja file from templates directory. Used template:\n {} \n".format(chat_template))
+                with open(chat_template_jinja_file, "r", encoding="utf-8") as f:
+                    chat_template = f.read()
+                print("\n\n[WARNING] Overriding chat template with chat_template.jinja file from templates directory. Used template:\n {} \n".format(chat_template))
             
             # Load templates from strings
             template = jinja_env.from_string(chat_template)
