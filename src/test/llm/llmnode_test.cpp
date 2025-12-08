@@ -2049,6 +2049,7 @@ TEST_P(LLMFlowHttpTestParameterized, streamChatCompletionsUsage) {
             handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
             ovms::StatusCode::PARTIAL_END);
 
+        ASSERT_GT(responses.size(), 0);
         ASSERT_TRUE(responses.back().find("\"completion_tokens\":5") != std::string::npos);
         ASSERT_TRUE(responses.back().find("\"prompt_tokens\"") != std::string::npos);
         ASSERT_TRUE(responses.back().find("\"total_tokens\"") != std::string::npos);
@@ -2066,6 +2067,7 @@ TEST_P(LLMFlowHttpTestParameterized, streamChatCompletionsUsage) {
             handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
             ovms::StatusCode::PARTIAL_END);
 
+        ASSERT_GT(responses.size(), 0);
         ASSERT_TRUE(responses.back().find("\"completion_tokens\":0") != std::string::npos);
         ASSERT_TRUE(responses.back().find("\"prompt_tokens\"") != std::string::npos);
         ASSERT_TRUE(responses.back().find("\"total_tokens\"") != std::string::npos);
