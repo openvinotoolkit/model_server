@@ -47,7 +47,19 @@ Learn more about the [Image generation calculator](./image_generation/reference.
 
 Check also the demo of [image generation](../demos/image_generation/README.md)
 
+## Speech recognition
 
+The implementation is compatible with the OpenAI API for [audio/transcriptions](./model_server_rest_api_speech_to_text.md#transcription) and [audio/translations](./model_server_rest_api_speech_to_text.md#translation).
+It supports a wide range of speech recognition models from Hugging Face Hub.
+
+Check also the demo of [transcription](../demos/audio/README.md#transcription) and [translation](../demos/audio/README.md#translation).
+
+## Speech generation
+
+The implementation is compatible with the OpenAI API for [audio/speech](./model_server_rest_api_text_to_speech.md).
+It supports microsoft/speecht5_tts model.
+
+Check also the demo of [speech generation](../demos/audio/README.md#speech-generation).
 
 
 

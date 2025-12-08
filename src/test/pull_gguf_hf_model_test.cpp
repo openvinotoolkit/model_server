@@ -521,6 +521,17 @@ TEST_F(GGUFDownloaderMultipartUtils, PreparePartFilenameNegative) {
     EXPECT_EQ(std::get<Status>(GGUFDownloader::preparePartFilename(ggufFilename, 1, 100000)).getCode(), StatusCode::INTERNAL_ERROR);
     EXPECT_EQ(std::get<Status>(GGUFDownloader::preparePartFilename(ggufFilename, 100000, 99999)).getCode(), StatusCode::INTERNAL_ERROR);
 }
+TEST_F(GGUFDownloaderMultipartUtils, CreateGGUFFilenamesToDownloadNegative) {
+    // too much zeros
+    auto statusOrFilenames = GGUFDownloader::createGGUFFilenamesToDownload("qwen2.5-7b-instruct-q4_k_m-0000001-of-00002.gguf");
+    // ---------------------------------------------------------------------------------------------------^
+    ASSERT_TRUE(std::holds_alternative<Status>(statusOrFilenames));
+    ASSERT_EQ(std::get<Status>(statusOrFilenames).getCode(), StatusCode::PATH_INVALID);
+    statusOrFilenames = GGUFDownloader::createGGUFFilenamesToDownload("qwen2.5-7b-instruct-q4_k_m-00001-of-000002.gguf");
+    // -------------------------------------------------------------------------------------------------------^
+    ASSERT_TRUE(std::holds_alternative<Status>(statusOrFilenames));
+    ASSERT_EQ(std::get<Status>(statusOrFilenames).getCode(), StatusCode::PATH_INVALID);
+}
 
 void find_file_in_tree(git_repository* repo, git_tree* tree,
     const std::regex& pattern,

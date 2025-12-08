@@ -44,29 +44,34 @@ ov::Tensor loadImageStbi(unsigned char* image, const int x, const int y, const i
         throw std::runtime_error{errorMessage.str()};
     }
     struct SharedImageAllocator {
+    private:
         unsigned char* image;
         int channels, height, width;
-        void* allocate(size_t bytes, size_t) const {
+
+    public:
+        SharedImageAllocator(unsigned char* img, int ch, int h, int w) :
+            image(img),
+            channels(ch),
+            height(h),
+            width(w) {}
+        void* allocate(const size_t bytes, const size_t) const {
             if (image && channels * height * width == bytes) {
                 return image;
             }
             throw std::runtime_error{"Unexpected number of bytes was requested to allocate."};
         }
-        void deallocate(void*, size_t bytes, size_t) {
-            if (channels * height * width != bytes) {
-                throw std::runtime_error{"Unexpected number of bytes was requested to deallocate."};
-            }
+        void deallocate(void*, const size_t bytes, const size_t) noexcept {
             if (image != nullptr) {
                 stbi_image_free(image);
                 image = nullptr;
             }
         }
-        bool is_equal(const SharedImageAllocator& other) const noexcept { return this == &other; }
+        bool is_equal(const SharedImageAllocator& other) const { return this == &other; }
     };
     return ov::Tensor(
         ov::element::u8,
         ov::Shape{1, size_t(y), size_t(x), size_t(desiredChannels)},
-        SharedImageAllocator{image, desiredChannels, y, x});
+        SharedImageAllocator(image, desiredChannels, y, x));
 }
 
 ov::Tensor loadImageStbiFromMemory(const std::string& imageBytes) {
@@ -108,7 +113,7 @@ std::vector<std::string> saveImagesStbi(const ov::Tensor& tensor) {
         throw std::runtime_error{"Tensor batch size cannot be zero"};
     }
 
-    unsigned char* imageData = tensor.data<unsigned char>();
+    const unsigned char* imageData = tensor.data<unsigned char>();
 
     // Create a memory buffer to hold the PNG data
     std::vector<std::vector<unsigned char>> pngBuffers(batchSize);

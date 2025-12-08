@@ -1697,7 +1697,7 @@ const std::vector<std::string> ModelManager::getNamesOfAvailableModels() const {
     return names;
 }
 
-Status ModelManager::createPipeline(std::shared_ptr<MediapipeGraphExecutor>& graph,
+Status ModelManager::createPipeline(std::unique_ptr<MediapipeGraphExecutor>& graph,
     const std::string& name) {
 #if (MEDIAPIPE_DISABLE == 0)
     return this->mediapipeFactory.create(graph, name, *this);

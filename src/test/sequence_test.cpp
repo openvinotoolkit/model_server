@@ -54,7 +54,7 @@ TEST(Sequence, UpdateSequenceState) {
     ASSERT_TRUE(sequenceMemoryState.count(stateName));
 
     std::vector<float> stateTensorSequenceData;
-    auto state = static_cast<float*>(sequenceMemoryState.at(stateName).data());
+    auto state = static_cast<const float*>(sequenceMemoryState.at(stateName).data());
     stateTensorSequenceData.assign(state, state + 1);
     EXPECT_EQ(stateTensorSequenceData, expectedState);
 }

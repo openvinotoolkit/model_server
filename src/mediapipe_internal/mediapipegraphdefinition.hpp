@@ -119,7 +119,7 @@ public:
     const tensor_map_t getOutputsInfo() const;
     const MediapipeGraphConfig& getMediapipeGraphConfig() const { return this->mgconfig; }
     MediapipeServableMetricReporter& getMetricReporter() const { return *this->reporter; }
-    Status create(std::shared_ptr<MediapipeGraphExecutor>& pipeline);
+    Status create(std::unique_ptr<MediapipeGraphExecutor>& pipeline);
 
     Status reload(ModelManager& manager, const MediapipeGraphConfig& config);
     Status validate(ModelManager& manager);

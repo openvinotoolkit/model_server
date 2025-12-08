@@ -37,7 +37,7 @@ CustomNodeOutputAllocator::CustomNodeOutputAllocator(struct CustomNodeTensor ten
 void* CustomNodeOutputAllocator::allocate(const size_t bytes, const size_t alignment) {
     return (void*)tensor.data;
 }
-void CustomNodeOutputAllocator::deallocate(void* handle, const size_t bytes, size_t alignment) {
+void CustomNodeOutputAllocator::deallocate(void* handle, const size_t bytes, size_t alignment) noexcept {
     bool succeeded = nodeLibrary.release(tensor.data, customNodeLibraryInternalManager) == 0;
     if (false == succeeded) {
         SPDLOG_LOGGER_ERROR(dag_executor_logger, "Failed to release custom node tensor:{} buffer using library:{}", tensor.name, nodeLibrary.basePath);
