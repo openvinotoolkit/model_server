@@ -29,7 +29,6 @@ absl::Status TokenizeParser::parseTokenizeResponse(rapidjson::StringBuffer& buff
     ov::Shape outputShape = tokens.input_ids.get_shape();
     auto inputIdsTensor = tokens.input_ids;
     auto attentionMaskTensor = tokens.attention_mask;
-    std::cout << "Parameter pad_to_max_length: " << (parameters.find("pad_to_max_length") != parameters.end() ? parameters.at("pad_to_max_length").as<bool>() : false) << std::endl;
     auto pad_to_max_length = parameters.find("pad_to_max_length") != parameters.end() ? parameters.at("pad_to_max_length").as<bool>() : false;
     if (outputShape.size() != 2) {
         return absl::InvalidArgumentError("Invalid input ids tensor shape");
@@ -46,7 +45,7 @@ absl::Status TokenizeParser::parseTokenizeResponse(rapidjson::StringBuffer& buff
         int64_t* attentionMaskPtr = reinterpret_cast<int64_t*>(attentionMaskTensor.data()) + batchIterator * size;
         for (size_t i = 0; i < size; ++i) {
             if (attentionMaskPtr[i] == 0 && !pad_to_max_length) {
-                break;
+                continue;
             }
             writer.Int64(dataPtr[i]);
         }
