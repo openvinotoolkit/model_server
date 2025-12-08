@@ -97,7 +97,7 @@ curl -L -o models/Qwen/Qwen3-Coder-30B-A3B-Instruct/chat_template.jinja https://
 :sync: gpt-oss-20b
 ```console
 python export_model.py text_generation --source_model openai/gpt-oss-20b --weight-format int4 --config_file_path models/config.json --model_repository_path models --tool_parser gptoss --reasoning_parser gptoss
-curl -L -o models/Qwen/Qwen3-Coder-30B-A3B-Instruct/chat_template.jinja https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/gpt-multi-turn/extras/chat_template_examples/chat_template_gpt_oss_multiturn.jinja
+curl -L -o models/openai/gpt-oss-20b/chat_template.jinja https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/gpt-multi-turn/extras/chat_template_examples/chat_template_gpt_oss_multiturn.jinja
 ```
 :::
 ::::
@@ -239,7 +239,7 @@ ovms.exe --rest_port 8000 --source_model Qwen/Qwen3-Coder-30B-A3B-Instruct --mod
 :::{tab-item} gpt-oss-20b
 :sync: gpt-oss-20b
 ```bat
-ovms.exe --rest_port 8000 --source_model openai/gpt-oss-20b --model_repository_path models --tool_parser gptoss --reasoning_parser gptoss --target_device GPU --task text_generation --cache_dir .cache
+ovms.exe --rest_port 8000 --source_model openai/gpt-oss-20b --model_repository_path models --tool_parser gptoss --reasoning_parser gptoss --target_device GPU --task text_generation
 ```
 :::
 ::::
