@@ -30,7 +30,6 @@
 #include "../profiler.hpp"
 #include "apis/openai_completions.hpp"
 #include "servable.hpp"
-#include "../tokenize/tokenize_parser.hpp"
 
 using namespace ovms;
 
@@ -91,39 +90,22 @@ public:
         try {
             // First iteration of Process()
             if (!cc->Inputs().Tag(INPUT_TAG_NAME).IsEmpty()) {
-                auto payload = cc->Inputs().Tag(INPUT_TAG_NAME).Get<ovms::HttpPayload>();
-                auto useTokenizeEndpoint = ovms::TokenizeParser::isTokenizeEndpoint(payload.uri);
-                if (useTokenizeEndpoint) {
-                    ovms::TokenizeRequest tokenizeRequest;
-                    auto status = ovms::TokenizeParser::parseTokenizeRequest(*payload.parsedJson, tokenizeRequest);
-                    if (status != absl::OkStatus()) {
-                        return status;
-                    }
-                    auto tokenizer = servable->getProperties()->tokenizer;
-                    auto input = tokenizeRequest.input;
-                    ov::genai::TokenizedInputs tokens;
-
-                    if (auto strings = std::get_if<std::vector<std::string>>(&input)) {
-                        tokens = tokenizer.encode(*strings, tokenizeRequest.parameters);
-                        RET_CHECK(tokens.input_ids.get_shape().size() == 2);
-                    } else {
-                        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "LLM tokenize input is of not supported type");
-                        return absl::InvalidArgumentError("Input should be string or array of strings");
-                    }
-
-                    StringBuffer responseBuffer;
-                    auto responseStatus = ovms::TokenizeParser::parseTokenizeResponse(responseBuffer, tokens, tokenizeRequest.parameters);
-
-                    if (!responseStatus.ok()) {
-                        return responseStatus;
-                    }
-                    cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new std::string(responseBuffer.GetString()), iterationBeginTimestamp);
-                    return absl::OkStatus();
-                }
-                auto status = servable->loadRequest(executionContext, payload);
+                auto status = servable->loadRequest(executionContext, cc->Inputs().Tag(INPUT_TAG_NAME).Get<ovms::HttpPayload>());
                 if (status != absl::OkStatus())
                     return status;
                 SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "LLMCalculator  [Node: {}] Request loaded successfully", cc->NodeName());
+
+                if (executionContext->endpoint == Endpoint::TOKENIZE) {
+                    OVMS_PROFILE_SCOPE("Tokenize generation cycle");
+                    status = servable->processTokenizeRequest(executionContext);
+                    if (status != absl::OkStatus())
+                        return status;
+                    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "LLMCalculator  [Node: {}] Tokenization response prepared, sending it down the graph", cc->NodeName());
+
+                    std::string& response = executionContext->response;
+                    cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new std::string{std::move(response)}, iterationBeginTimestamp);
+                    return absl::OkStatus();
+                }
 
                 // Creates internal API handler in executionContext with data from the payload and parses the request
                 status = servable->parseRequest(executionContext);

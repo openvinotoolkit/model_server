@@ -190,6 +190,13 @@ public:
     Base implementation uses textStreamer to create text chunk, attempts to serialize it, and sets sendLoopbackSignal according to generation status.
     */
     virtual absl::Status preparePartialResponse(std::shared_ptr<GenAiServableExecutionContext>& executionContext);
+
+    // ----------- Tokenize scenario ------------
+    /*
+    processTokenizeRequest method should implement tokenization of the input text provided in executionContext payload.
+    Implementation MUST fill executionContext response field.
+    */
+    virtual absl::Status processTokenizeRequest(std::shared_ptr<GenAiServableExecutionContext>& executionContext);
 };
 std::string wrapTextInServerSideEventMessage(const std::string& text);
 using GenAiServableMap = std::unordered_map<std::string, std::shared_ptr<GenAiServable>>;
