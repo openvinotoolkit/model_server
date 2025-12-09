@@ -95,6 +95,7 @@ public:
                     return status;
                 SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "LLMCalculator  [Node: {}] Request loaded successfully", cc->NodeName());
 
+                // Tokenize endpoint doens't require full full servable path and it ends workflow after tokenization, it does not need additional processing
                 if (executionContext->endpoint == Endpoint::TOKENIZE) {
                     OVMS_PROFILE_SCOPE("Tokenize generation cycle");
                     status = servable->processTokenizeRequest(executionContext);

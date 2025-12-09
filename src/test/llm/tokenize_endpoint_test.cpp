@@ -415,6 +415,34 @@ TEST_P(LLMTokenizeTests, tokenizeArrayOfStringsWithPaddingSideLeft) {
     }
 }
 
+TEST_P(LLMTokenizeTests, tokenizeStringWithAddSpecialTokens) {
+    auto params = GetParam();
+    if (params.modelName == "vlm_cb_regular" || params.modelName == "vlm_legacy_regular") {
+        GTEST_SKIP() << "Skipping test for " << params.modelName;
+    }
+    
+    std::string requestBody = R"(
+        {
+            "model": ")" + params.modelName +
+                              R"(",
+            "text": "hello world",
+            "add_special_tokens": true
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointTokenize, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK);
+    parsedResponse.Parse(response.c_str());
+
+    ASSERT_EQ(parsedResponse.HasParseError(), false);
+    ASSERT_TRUE(parsedResponse.IsObject());
+    ASSERT_TRUE(parsedResponse.HasMember("tokens"));
+    const auto& tokens = parsedResponse["tokens"];
+    ASSERT_TRUE(tokens.IsArray());
+    ASSERT_GT(tokens.Size(), params.expectedTokens.size());
+}
+
 INSTANTIATE_TEST_SUITE_P(
     LLMTokenizeTestInstances,
     LLMTokenizeTests,

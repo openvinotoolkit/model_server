@@ -79,12 +79,11 @@ absl::Status GenAiServable::processTokenizeRequest(std::shared_ptr<GenAiServable
     if (status != absl::OkStatus()) {
         return status;
     }
-    auto tokenizer = getProperties()->tokenizer;
-    auto input = tokenizeRequest.input;
+
     ov::genai::TokenizedInputs tokens;
 
-    if (auto strings = std::get_if<std::vector<std::string>>(&input)) {
-        tokens = tokenizer.encode(*strings, tokenizeRequest.parameters);
+    if (auto strings = std::get_if<std::vector<std::string>>(&tokenizeRequest.input)) {
+        tokens = getProperties()->tokenizer.encode(*strings, tokenizeRequest.parameters);
         RET_CHECK(tokens.input_ids.get_shape().size() == 2);
     } else {
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "LLM tokenize input is of not supported type");
