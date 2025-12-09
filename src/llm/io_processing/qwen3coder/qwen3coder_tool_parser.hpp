@@ -38,12 +38,14 @@ namespace ovms {
 using ParametersValues_t = std::map<std::string, std::string>;
 struct Functool {
     std::string name;
-    ParametersValues_t parameters;
     void clear() {
         name.clear();
-        parameters.clear();
+        argumentsAsDocument.SetObject();
     }
-    std::string parametersToJson();
+    rapidjson::Document argumentsAsDocument;
+    Functool() {
+        argumentsAsDocument.SetObject();
+    }
 };
 struct Qwen3CoderToolParserImpl {
     enum class State {
@@ -108,6 +110,7 @@ private:
         std::stack<size_t> end;
     };
     ToolCallPositions toolCallPositions;
+    void addParameterToCurrentFunctionDoc(std::string& parameterValueAsString);
     /*
      * process streamContent from lastProcessedPosition until change of state
      * return true if state changed, false otherwise
@@ -159,7 +162,7 @@ public:
 
 private:
     std::optional<rapidjson::Document> sendFirstDeltaIfNeeded(const std::string& currentFunctionName);
-    std::optional<rapidjson::Document> sendFullDelta(std::optional<ToolCalls_t>& toolCallsOpt);
+    std::optional<rapidjson::Document> sendFullDelta(const ToolCalls_t& toolCalls);
     void lazyFillInitToolParametersTypesMap();
 };
 }  // namespace ovms
