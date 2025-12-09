@@ -782,6 +782,7 @@ std::string OpenAIChatCompletionsHandler::getToolChoice() const { return request
 const std::unique_ptr<OutputParser>& OpenAIChatCompletionsHandler::getOutputParser() const { return outputParser; }
 
 void OpenAIChatCompletionsHandler::setPromptTokensUsage(size_t promptTokens) {
+    SPDLOG_LOGGER_ERROR(llm_calculator_logger, "XXXXXXXXXXXX Setting prompt tokens usage to {}", promptTokens);
     usage.promptTokens = promptTokens;
 }
 

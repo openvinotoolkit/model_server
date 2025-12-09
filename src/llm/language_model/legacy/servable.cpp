@@ -201,8 +201,7 @@ absl::Status LegacyServable::preparePartialResponse(std::shared_ptr<GenAiServabl
             executionContext->response = wrapTextInServerSideEventMessage(serializedChunk);
         }
 
-        // Fake usage in streaming mode in legacy servable due to the issue with token counting.
-        // Usage will be 0.
+        // TODO: Usage is zero in streaming mode in legacy servable due to the issue with token counting.
         // This enables Continue.dev streaming scenario, which always uses include_usage: true
         if (executionContext->apiHandler->getStreamOptions().includeUsage)
             executionContext->response += wrapTextInServerSideEventMessage(executionContext->apiHandler->serializeStreamingUsageChunk());

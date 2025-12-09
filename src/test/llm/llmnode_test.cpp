@@ -2056,7 +2056,7 @@ TEST_P(LLMFlowHttpTestParameterized, streamChatCompletionsUsage) {
         if (params.checkFinishReason) {
             ASSERT_TRUE(responses.back().find("\"finish_reason\":\"length\"") != std::string::npos) << responses.back();
         }
-        // For non-continuous batching servables usage is faked, always returns 0
+        // For non-continuous batching servables usage is always 0
     } else {
         EXPECT_CALL(*writer, PartialReply(::testing::_))
             .WillRepeatedly([this, &responses](std::string response) {
@@ -2114,7 +2114,7 @@ TEST_P(LLMFlowHttpTestParameterized, streamCompletionsUsage) {
         if (params.checkFinishReason) {
             ASSERT_TRUE(responses.back().find("\"finish_reason\":\"length\"") != std::string::npos) << responses.back();
         }
-        // For non-continuous batching servables usage is faked, always returns 0
+        // For non-continuous batching servables usage is always 0
     } else {
         EXPECT_CALL(*writer, PartialReply(::testing::_))
             .WillRepeatedly([this, &responses](std::string response) {
