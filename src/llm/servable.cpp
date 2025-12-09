@@ -73,8 +73,7 @@ absl::Status GenAiServable::loadRequest(std::shared_ptr<GenAiServableExecutionCo
     return absl::OkStatus();
 }
 
-absl::Status GenAiServable::processTokenizeRequest(std::shared_ptr<GenAiServableExecutionContext>& executionContext)
-{
+absl::Status GenAiServable::processTokenizeRequest(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
     ovms::TokenizeRequest tokenizeRequest;
     auto status = ovms::TokenizeParser::parseTokenizeRequest(*executionContext->payload.parsedJson, tokenizeRequest);
     if (status != absl::OkStatus()) {
@@ -98,7 +97,7 @@ absl::Status GenAiServable::processTokenizeRequest(std::shared_ptr<GenAiServable
     if (!responseStatus.ok()) {
         return responseStatus;
     }
-    
+
     executionContext->response = responseBuffer.GetString();
 
     return absl::OkStatus();

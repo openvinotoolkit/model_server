@@ -225,7 +225,7 @@ absl::Status TokenizeParser::parseTokenizeRequest(rapidjson::Document& parsedJso
 bool TokenizeParser::isTokenizeEndpoint(const std::string& uri) {
     const int endpoint_len = std::strlen(TokenizeParser::TOKENIZE_ENDPOINT_SUFFIX);
     const bool useTokenizeEndpoint = uri.size() >= endpoint_len &&
-                                         uri.compare(uri.size() - endpoint_len, endpoint_len, TokenizeParser::TOKENIZE_ENDPOINT_SUFFIX) == 0;
+                                     uri.compare(uri.size() - endpoint_len, endpoint_len, TokenizeParser::TOKENIZE_ENDPOINT_SUFFIX) == 0;
     return useTokenizeEndpoint;
 }
 }  // namespace ovms

@@ -62,7 +62,6 @@ struct TestParameters {
     bool testSpeculativeDecoding;
 };
 
-
 class LLMFlowHttpTest : public ::testing::Test {
 protected:
     static std::unique_ptr<std::thread> t;
