@@ -420,7 +420,7 @@ TEST_P(LLMTokenizeTests, tokenizeStringWithAddSpecialTokens) {
     if (params.modelName == "vlm_cb_regular" || params.modelName == "vlm_legacy_regular") {
         GTEST_SKIP() << "Skipping test for " << params.modelName;
     }
-    
+
     std::string requestBody = R"(
         {
             "model": ")" + params.modelName +
