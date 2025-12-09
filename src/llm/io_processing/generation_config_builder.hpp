@@ -24,6 +24,7 @@
 #include "phi4/generation_config_builder.hpp"
 #include "llama3/generation_config_builder.hpp"
 #include "hermes3/generation_config_builder.hpp"
+#include "devstral/generation_config_builder.hpp"
 #include "../apis/openai_request.hpp"
 #include "../../logging.hpp"
 
@@ -44,6 +45,8 @@ public:
             builder_impl = std::make_unique<Hermes3GenerationConfigBuilder>(baseConfig, enableToolGuidedGeneration, decodingMethod);
         } else if (toolParserName == "phi4") {
             builder_impl = std::make_unique<Phi4GenerationConfigBuilder>(baseConfig, enableToolGuidedGeneration, decodingMethod);
+        } else if (toolParserName == "devstral") {
+            builder_impl = std::make_unique<DevstralGenerationConfigBuilder>(baseConfig, enableToolGuidedGeneration, decodingMethod);
         } else {
             if (enableToolGuidedGeneration) {
                 SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Option enable_tool_guided_generation is set, but will not be effective since no valid tool parser has been provided.");
