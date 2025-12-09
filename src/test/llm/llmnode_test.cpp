@@ -2050,11 +2050,11 @@ TEST_P(LLMFlowHttpTestParameterized, streamChatCompletionsUsage) {
             ovms::StatusCode::PARTIAL_END);
 
         ASSERT_GT(responses.size(), 0);
-        ASSERT_TRUE(responses.back().find("\"completion_tokens\":5") != std::string::npos);
-        ASSERT_TRUE(responses.back().find("\"prompt_tokens\"") != std::string::npos);
-        ASSERT_TRUE(responses.back().find("\"total_tokens\"") != std::string::npos);
+        ASSERT_TRUE(responses.back().find("\"completion_tokens\":5") != std::string::npos) << responses.back();  // ensure 5 - reaching max_tokens
+        ASSERT_TRUE(responses.back().find("\"prompt_tokens\"") != std::string::npos) << responses.back();  // this is always present and > 0, depends on pipeline type and underlying model 
+        ASSERT_TRUE(responses.back().find("\"total_tokens\"") != std::string::npos) << responses.back();  // this is always present and > 0, depends on pipeline type and underlying model 
         if (params.checkFinishReason) {
-            ASSERT_TRUE(responses.back().find("\"finish_reason\":\"length\"") != std::string::npos);
+            ASSERT_TRUE(responses.back().find("\"finish_reason\":\"length\"") != std::string::npos) << responses.back();
         }
         // For non-continuous batching servables usage is faked, always returns 0
     } else {
@@ -2068,11 +2068,11 @@ TEST_P(LLMFlowHttpTestParameterized, streamChatCompletionsUsage) {
             ovms::StatusCode::PARTIAL_END);
 
         ASSERT_GT(responses.size(), 0);
-        ASSERT_TRUE(responses.back().find("\"completion_tokens\":0") != std::string::npos);
-        ASSERT_TRUE(responses.back().find("\"prompt_tokens\"") != std::string::npos);
-        ASSERT_TRUE(responses.back().find("\"total_tokens\"") != std::string::npos);
+        ASSERT_TRUE(responses.back().find("\"completion_tokens\":0") != std::string::npos) << responses.back();  // ensure 0
+        ASSERT_TRUE(responses.back().find("\"prompt_tokens\"") != std::string::npos) << responses.back();  // this is always present and > 0, depends on pipeline type and underlying model 
+        ASSERT_TRUE(responses.back().find("\"total_tokens\"") != std::string::npos) << responses.back();  // this is always present and > 0, depends on pipeline type and underlying model 
         if (params.checkFinishReason) {
-            ASSERT_TRUE(responses.back().find("\"finish_reason\":\"length\"") != std::string::npos);
+            ASSERT_TRUE(responses.back().find("\"finish_reason\":\"length\"") != std::string::npos) << responses.back();
         }
     }
 }
@@ -2108,11 +2108,11 @@ TEST_P(LLMFlowHttpTestParameterized, streamCompletionsUsage) {
             handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
             ovms::StatusCode::PARTIAL_END);
 
-        ASSERT_TRUE(responses.back().find("\"completion_tokens\":5") != std::string::npos);
-        ASSERT_TRUE(responses.back().find("\"prompt_tokens\"") != std::string::npos);
-        ASSERT_TRUE(responses.back().find("\"total_tokens\"") != std::string::npos);
+        ASSERT_TRUE(responses.back().find("\"completion_tokens\":5") != std::string::npos) << responses.back();  // ensure 5 - reaching max_tokens
+        ASSERT_TRUE(responses.back().find("\"prompt_tokens\"") != std::string::npos) << responses.back(); // this is always present and > 0, depends on pipeline type and underlying model 
+        ASSERT_TRUE(responses.back().find("\"total_tokens\"") != std::string::npos) << responses.back(); // this is always present and > 0, depends on pipeline type and underlying model 
         if (params.checkFinishReason) {
-            ASSERT_TRUE(responses.back().find("\"finish_reason\":\"length\"") != std::string::npos);
+            ASSERT_TRUE(responses.back().find("\"finish_reason\":\"length\"") != std::string::npos) << responses.back();
         }
         // For non-continuous batching servables usage is faked, always returns 0
     } else {
@@ -2125,11 +2125,11 @@ TEST_P(LLMFlowHttpTestParameterized, streamCompletionsUsage) {
             handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
             ovms::StatusCode::PARTIAL_END);
 
-        ASSERT_TRUE(responses.back().find("\"completion_tokens\":0") != std::string::npos);
-        ASSERT_TRUE(responses.back().find("\"prompt_tokens\"") != std::string::npos);
-        ASSERT_TRUE(responses.back().find("\"total_tokens\"") != std::string::npos);
+        ASSERT_TRUE(responses.back().find("\"completion_tokens\":0") != std::string::npos) << responses.back();  // ensure 0
+        ASSERT_TRUE(responses.back().find("\"prompt_tokens\"") != std::string::npos) << responses.back(); // this is always present and > 0, depends on pipeline type and underlying model 
+        ASSERT_TRUE(responses.back().find("\"total_tokens\"") != std::string::npos) << responses.back(); // this is always present and > 0, depends on pipeline type and underlying model 
         if (params.checkFinishReason) {
-            ASSERT_TRUE(responses.back().find("\"finish_reason\":\"length\"") != std::string::npos);
+            ASSERT_TRUE(responses.back().find("\"finish_reason\":\"length\"") != std::string::npos) << responses.back();
         }
     }
 }
