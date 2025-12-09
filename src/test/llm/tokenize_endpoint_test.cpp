@@ -68,7 +68,7 @@ public:
     ov::genai::GenerationConfig config;
     std::vector<std::string> expectedMessages;
 
-static void SetUpTestSuite() {
+    static void SetUpTestSuite() {
         std::string port = "9173";
         ovms::Server& server = ovms::Server::instance();
         ::SetUpServer(t, server, port, getGenericFullPathForSrcTest("/ovms/src/test/llm/config.json").c_str(), 60);
