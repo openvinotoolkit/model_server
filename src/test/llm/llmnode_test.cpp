@@ -2051,8 +2051,8 @@ TEST_P(LLMFlowHttpTestParameterized, streamChatCompletionsUsage) {
 
         ASSERT_GT(responses.size(), 0);
         ASSERT_TRUE(responses.back().find("\"completion_tokens\":5") != std::string::npos) << responses.back();  // ensure 5 - reaching max_tokens
-        ASSERT_TRUE(responses.back().find("\"prompt_tokens\"") != std::string::npos) << responses.back();  // this is always present and > 0, depends on pipeline type and underlying model 
-        ASSERT_TRUE(responses.back().find("\"total_tokens\"") != std::string::npos) << responses.back();  // this is always present and > 0, depends on pipeline type and underlying model 
+        ASSERT_TRUE(responses.back().find("\"prompt_tokens\"") != std::string::npos) << responses.back();        // this is always present and > 0, depends on pipeline type and underlying model
+        ASSERT_TRUE(responses.back().find("\"total_tokens\"") != std::string::npos) << responses.back();         // this is always present and > 0, depends on pipeline type and underlying model
         if (params.checkFinishReason) {
             ASSERT_TRUE(responses.back().find("\"finish_reason\":\"length\"") != std::string::npos) << responses.back();
         }
@@ -2069,8 +2069,8 @@ TEST_P(LLMFlowHttpTestParameterized, streamChatCompletionsUsage) {
 
         ASSERT_GT(responses.size(), 0);
         ASSERT_TRUE(responses.back().find("\"completion_tokens\":0") != std::string::npos) << responses.back();  // ensure 0
-        ASSERT_TRUE(responses.back().find("\"prompt_tokens\"") != std::string::npos) << responses.back();  // this is always present and > 0, depends on pipeline type and underlying model 
-        ASSERT_TRUE(responses.back().find("\"total_tokens\"") != std::string::npos) << responses.back();  // this is always present and > 0, depends on pipeline type and underlying model 
+        ASSERT_TRUE(responses.back().find("\"prompt_tokens\"") != std::string::npos) << responses.back();        // this is always present and > 0, depends on pipeline type and underlying model
+        ASSERT_TRUE(responses.back().find("\"total_tokens\"") != std::string::npos) << responses.back();         // this is always present and > 0, depends on pipeline type and underlying model
         if (params.checkFinishReason) {
             ASSERT_TRUE(responses.back().find("\"finish_reason\":\"length\"") != std::string::npos) << responses.back();
         }
@@ -2109,8 +2109,8 @@ TEST_P(LLMFlowHttpTestParameterized, streamCompletionsUsage) {
             ovms::StatusCode::PARTIAL_END);
 
         ASSERT_TRUE(responses.back().find("\"completion_tokens\":5") != std::string::npos) << responses.back();  // ensure 5 - reaching max_tokens
-        ASSERT_TRUE(responses.back().find("\"prompt_tokens\"") != std::string::npos) << responses.back(); // this is always present and > 0, depends on pipeline type and underlying model 
-        ASSERT_TRUE(responses.back().find("\"total_tokens\"") != std::string::npos) << responses.back(); // this is always present and > 0, depends on pipeline type and underlying model 
+        ASSERT_TRUE(responses.back().find("\"prompt_tokens\"") != std::string::npos) << responses.back();        // this is always present and > 0, depends on pipeline type and underlying model
+        ASSERT_TRUE(responses.back().find("\"total_tokens\"") != std::string::npos) << responses.back();         // this is always present and > 0, depends on pipeline type and underlying model
         if (params.checkFinishReason) {
             ASSERT_TRUE(responses.back().find("\"finish_reason\":\"length\"") != std::string::npos) << responses.back();
         }
@@ -2126,8 +2126,8 @@ TEST_P(LLMFlowHttpTestParameterized, streamCompletionsUsage) {
             ovms::StatusCode::PARTIAL_END);
 
         ASSERT_TRUE(responses.back().find("\"completion_tokens\":0") != std::string::npos) << responses.back();  // ensure 0
-        ASSERT_TRUE(responses.back().find("\"prompt_tokens\"") != std::string::npos) << responses.back(); // this is always present and > 0, depends on pipeline type and underlying model 
-        ASSERT_TRUE(responses.back().find("\"total_tokens\"") != std::string::npos) << responses.back(); // this is always present and > 0, depends on pipeline type and underlying model 
+        ASSERT_TRUE(responses.back().find("\"prompt_tokens\"") != std::string::npos) << responses.back();        // this is always present and > 0, depends on pipeline type and underlying model
+        ASSERT_TRUE(responses.back().find("\"total_tokens\"") != std::string::npos) << responses.back();         // this is always present and > 0, depends on pipeline type and underlying model
         if (params.checkFinishReason) {
             ASSERT_TRUE(responses.back().find("\"finish_reason\":\"length\"") != std::string::npos) << responses.back();
         }
