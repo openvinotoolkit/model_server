@@ -1,10 +1,25 @@
 {#-
+  Modifications to original chat template:
+    * Allowing reasoning_effort=none; this automaticly adds empty reasoning channel at the end. It should force the model to follow with regular response/tool call immediately.
+      IMPORTANT: When none used, reasoning_effort is rendered as low in the reasoning definition slot (as it is the lowest possible reasoning during model training).
+    * Removed exception when chat history contains both: content and reasoning_content.
+      BFCL benchmark requests contain both: reasoning & regular content in SINGLE history turn.
+      Instead of exception, the regular content is rendered and reasoning_content omitted (assuming regular content might be more insightful)
+    * Replaced thinking with reasoning_content. For some reason OpenAI used thinking field to render reasoning from history.
+      Replaced with reasoning_content which is present in history when benchmarking with BFCL.
+    * Added special handling for empty tool_calls field when rendering chat history.
+      In some cases gpt-oss generates reasoning/content but no tool calls.
+      BFCL sends empty array and chat template accessed index 0 assuming there always is some tool call. New chat templat ignores empty arrays now.
+    * Removed "|tojson" from tool argument rendering. This introduced string escaping drastically influenced following generations. OpenAI Harmony format assumes no escaping of arguments.
+      This was related to both: function call output (result from mcp servers) and function call arguments (input to mcp servers) in chat history.
+#}
+{#-
   In addition to the normal inputs of `messages` and `tools`, this template also accepts the
   following kwargs:
   - "builtin_tools": A list, can contain "browser" and/or "python".
   - "model_identity": A string that optionally describes the model identity.
   - "reasoning_effort": A string that describes the reasoning effort, defaults to "medium".
- #}
+#}
 
 {#- Tool Definition Rendering ============================================== #}
 {%- macro render_typescript_type(param_spec, required_params, is_nullable=false) -%}
@@ -286,9 +301,9 @@
                 {%- endif %}
             {%- endfor %}
             {%- if message.content and message.reasoning_content and not future_final_message.found %}
-                {#- Mod: Exception surpressed, it happens in BFCL #}
-                {#- {{- raise_exception("Cannot pass both content and reasoning_content in an assistant message with tool calls! Put the analysis message in one or the other, but not both.") }} #}
-                {#- Mod: prefer rendering content over reasoning when both are available, looks like it contains more info #}
+                {#- Original: {{- raise_exception("Cannot pass both content and reasoning_content in an assistant message with tool calls! Put the analysis message in one or the other, but not both.") }} #}
+                {#- Mod: Exception surpressed, multi-turn BFCL benchmark contains such situations. #}
+                {#- Prefer rendering content over reasoning when both are available, looks like it contains more information. #}
                 {{- "<|start|>assistant<|channel|>analysis<|message|>" + message.content + "<|end|>" }}
             {%- elif message.content and not future_final_message.found %}
                 {{- "<|start|>assistant<|channel|>analysis<|message|>" + message.content + "<|end|>" }}
@@ -310,7 +325,8 @@
                 {#- No need to escape: #}
                 {{- tool_call.arguments }}
                 {#- Original: {{- "<|call|>" }} #}
-                {#- Found out in docs it should be replaced with <|end|> in history rendering: #}
+                {#- https://cookbook.openai.com/articles/openai-harmony#handling-tool-calls #}
+                {#- Found out in OpenAI Harmony docs it should be replaced with <|end|> in history rendering: #}
                 {{- "<|end|>" }}
                 {%- set last_tool_call.name = tool_call.name %}
             {%- endif %}
@@ -336,7 +352,6 @@
         {%- endif %}
         {{- "<|start|>functions." + last_tool_call.name }}
         {#- Original: {{- " to=assistant<|channel|>commentary<|message|>" + message.content|tojson + "<|end|>" }} #}
-        {#- Ver1: {{- (" to=assistant<|channel|>commentary<|message|>" ~ message.content|from_json_raw ~ "<|end|>") | safe -}} #}
         {#- Actual version that works, doesnt escape and allows non-json: #}
         {{- " to=assistant<|channel|>commentary<|message|>" + message.content + "<|end|>" -}}
     {%- elif message.role == 'user' -%}
