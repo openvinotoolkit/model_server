@@ -195,7 +195,7 @@ void Qwen3CoderToolParserImpl::addParameterToCurrentFunctionDoc(std::string& par
     if (temp.HasParseError()) {
         rapidjson::ParseErrorCode errorCode = temp.GetParseError();
         size_t errorOffset = temp.GetErrorOffset();
-        SPDLOG_DEBUG("Error parsing parameter:{} value:{}; error at offset: {}; code:{};", this->currentParameterName, parameterValueAsString, errorOffset, rapidjson::GetParseError_En(errorCode));
+        SPDLOG_DEBUG("Error parsing parameter: {} value: {}; error at offset: {}; code: {};", this->currentParameterName, parameterValueAsString, errorOffset, rapidjson::GetParseError_En(errorCode));
         rapidjson::Value v;
         v.SetString(parameterValueAsString.c_str(), static_cast<rapidjson::SizeType>(parameterValueAsString.size()), allocator);
         if (!currentFunctionArgsDoc.HasMember(keyVal)) {
@@ -203,7 +203,6 @@ void Qwen3CoderToolParserImpl::addParameterToCurrentFunctionDoc(std::string& par
         } else {
             SPDLOG_DEBUG("Parameter: {} already exists in document, overwriting with string value due to parse error", key);
         }
-        SPDLOG_TRACE("After fallback add key:{} val:{} type:{}, current document:{};", key, parameterValueAsString, "string", documentToString(currentFunctionArgsDoc));
     } else {
         rapidjson::Value valueCopy;
         valueCopy.CopyFrom(temp, allocator);
@@ -215,7 +214,7 @@ void Qwen3CoderToolParserImpl::addParameterToCurrentFunctionDoc(std::string& par
         }
         // Add or overwrite key in the main document
         if (!currentFunctionArgsDoc.HasMember(keyVal)) {
-            SPDLOG_TRACE("Will add key:{} val:{} type:{}, parsed:{}", key, parameterValueAsString, jsonTypeOf(valueCopy), documentToString(temp));
+            SPDLOG_TRACE("Will add key:{} val:{} type:{}", key, parameterValueAsString, jsonTypeOf(valueCopy));
             currentFunctionArgsDoc.AddMember(keyVal, valueCopy, allocator);
         } else {
             SPDLOG_DEBUG("Parameter: {} already exists in document.", key);
@@ -299,7 +298,6 @@ bool Qwen3CoderToolParserImpl::parseUntilStateChange(ToolCalls_t& toolCalls) {
             rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
             this->currentFunction.argumentsAsDocument.Accept(writer);
             argumentsAsString = buffer.GetString();
-            SPDLOG_TRACE("Current argumentsAsDocument JSON: {}; current argumentsAsString:{}", documentToString(this->currentFunction.argumentsAsDocument), argumentsAsString);
         }
         ToolCall toolCall{generateRandomId(), this->currentFunction.name, argumentsAsString};
         SPDLOG_TRACE("Adding tool call: id={}, name={}, params={}", toolCall.id, toolCall.name, toolCall.arguments);
