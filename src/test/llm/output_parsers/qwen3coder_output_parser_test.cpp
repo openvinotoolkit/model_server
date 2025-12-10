@@ -291,7 +291,7 @@ value1
 }
 TEST_F(Qwen3CoderOutputParserTest, TestJustParserImplUnaryWithEnforcementOfStringParameter) {
     // arg1, arg2, ..., arg7: bool, int, uint, int64, uint64, double, null
-    // tool schema defines types as strings but the value of string coould be number etc
+    // tool schema defines types as strings but the value of string could be number etc
     const std::string input = R"(
 <tool_call>
 <function=stringx7_tool>

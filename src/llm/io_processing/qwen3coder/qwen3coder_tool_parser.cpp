@@ -195,7 +195,7 @@ void Qwen3CoderToolParserImpl::addParameterToCurrentFunctionDoc(std::string& par
     if (temp.HasParseError()) {
         rapidjson::ParseErrorCode errorCode = temp.GetParseError();
         size_t errorOffset = temp.GetErrorOffset();
-        SPDLOG_DEBUG("Error parsing parameter value:{}; error at offset: {}; code:{};", parameterValueAsString, errorOffset, rapidjson::GetParseError_En(errorCode));
+        SPDLOG_DEBUG("Error parsing parameter:{} value:{}; error at offset: {}; code:{};", this->currentParameterName, parameterValueAsString, errorOffset, rapidjson::GetParseError_En(errorCode));
         rapidjson::Value v;
         v.SetString(parameterValueAsString.c_str(), static_cast<rapidjson::SizeType>(parameterValueAsString.size()), allocator);
         if (!currentFunctionArgsDoc.HasMember(keyVal)) {
@@ -218,7 +218,7 @@ void Qwen3CoderToolParserImpl::addParameterToCurrentFunctionDoc(std::string& par
             SPDLOG_TRACE("Will add key:{} val:{} type:{}, parsed:{}", key, parameterValueAsString, jsonTypeOf(valueCopy), documentToString(temp));
             currentFunctionArgsDoc.AddMember(keyVal, valueCopy, allocator);
         } else {
-            SPDLOG_DEBUG("Parameter: {} already exists in document, overwriting with string value due to parse error", key);
+            SPDLOG_DEBUG("Parameter: {} already exists in document.", key);
         }
     }
 }
