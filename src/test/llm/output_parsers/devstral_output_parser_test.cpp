@@ -57,11 +57,11 @@ protected:
         static std::map<std::string, std::string> toolSchemasInput = {
             {"example_tool", R"({"properties": {"arg1": {"type": "string", "description": "A string argument."}}, "required": ["arg1"]})"},
         };
- 
+
         static std::vector<std::unique_ptr<rapidjson::Document>> schemaDocsStorage;
 
         auto convertStringToolSchemasStringToToolsSchemas = [](
-            const std::map<std::string, std::string>& input) -> ToolsSchemas_t {
+                                                                const std::map<std::string, std::string>& input) -> ToolsSchemas_t {
             ToolsSchemas_t result;
             schemaDocsStorage.clear();
             for (const auto& [name, schemaStr] : input) {
@@ -208,8 +208,7 @@ TEST_F(DevstralOutputParserTest, HolisticStreaming) {
         // Last chunk is added in the for loop below
     };
     ToolsSchemas_t tools_schemas = {
-        {"get_weather", ToolSchemaWrapper{}}
-    };
+        {"get_weather", ToolSchemaWrapper{}}};
     for (auto lastFinishReason : {ov::genai::GenerationFinishReason::STOP, ov::genai::GenerationFinishReason::LENGTH}) {
         // Need to have new output parser per case to simulate separate request processing
         outputParserWithRegularToolParsing = std::make_unique<OutputParser>(*devstralTokenizer, "devstral", "", tools_schemas);
@@ -270,7 +269,6 @@ TEST_F(DevstralOutputParserTest, HolisticStreaming) {
         }
     }
 }
-
 
 TEST_F(DevstralOutputParserTest, ToolCallsWithoutToolsInTheRequestStreaming) {
     std::vector<std::pair<std::string, std::optional<std::string>>> chunkToDeltaVec{

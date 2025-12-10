@@ -52,7 +52,7 @@ void DevstralToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int
     } else {
         return;
     }
-  
+
     size_t firstArgsTokenIndex;
     auto it_args = std::find(generatedTokens.begin() + firstToolTokenIndex, generatedTokens.end(), this->argsTokenId);
     if (it_args != generatedTokens.end()) {
@@ -66,7 +66,7 @@ void DevstralToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int
     }
     std::vector<int64_t> tool_name_tokens(generatedTokens.begin() + (firstToolTokenIndex + 1), generatedTokens.begin() + (firstArgsTokenIndex));
     std::vector<int64_t> arguments_tokens(generatedTokens.begin() + (firstArgsTokenIndex + 1), generatedTokens.end());
-    
+
     ToolCall toolCall;
     std::string tool_name = tokenizer.decode(tool_name_tokens, ov::AnyMap{ov::genai::skip_special_tokens(true)});
     if (this->toolSchemas.find(tool_name) == this->toolSchemas.end()) {
@@ -84,7 +84,7 @@ void DevstralToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int
     std::vector<int64_t> content_tokens;
     if (firstToolTokenIndex > 0) {
         content_tokens = std::vector<int64_t>(generatedTokens.begin(), generatedTokens.begin() + firstToolTokenIndex);
-        parsedOutput.content = tokenizer.decode(content_tokens, ov::AnyMap{ov::genai::skip_special_tokens(true)}); // Return only the contnet till tool call in content
+        parsedOutput.content = tokenizer.decode(content_tokens, ov::AnyMap{ov::genai::skip_special_tokens(true)});  // Return only the content till tool call
     } else {
         parsedOutput.content = "";
     }
@@ -104,7 +104,6 @@ std::optional<rapidjson::Document> DevstralToolParser::sendFullDelta(ToolCall& t
     auto currentDelta = wrapDelta(argumentsWrapper, this->toolCallIndex);
     return currentDelta;
 }
-
 
 std::optional<rapidjson::Document> DevstralToolParser::parseChunk(const std::string& chunk, ov::genai::GenerationFinishReason finishReason) {
     /* 
@@ -128,7 +127,7 @@ std::optional<rapidjson::Document> DevstralToolParser::parseChunk(const std::str
             if (pos == 0) {
                 this->streamContent.clear();
             } else {
-                this->streamContent = this->streamContent.substr(pos + 13); // "[TOOLS_CALLS]" length is 13
+                this->streamContent = this->streamContent.substr(pos + 13);  // "[TOOLS_CALLS]" length is 13
             }
         } else {
             return std::nullopt;
@@ -144,7 +143,7 @@ std::optional<rapidjson::Document> DevstralToolParser::parseChunk(const std::str
                 SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Tool name '{}' not valid.", this->toolName);
                 return std::nullopt;
             }
-            this->streamContent = this->streamContent.substr(pos + 6); // "[ARGS]" length is 6
+            this->streamContent = this->streamContent.substr(pos + 6);  // "[ARGS]" length is 6
             return wrapFirstDelta(this->toolName, this->toolCallIndex);
         } else {
             return std::nullopt;

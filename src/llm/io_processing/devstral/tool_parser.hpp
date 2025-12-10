@@ -28,8 +28,8 @@
 
 namespace ovms {
 class DevstralToolParser : public BaseOutputParser {
-    const int64_t argsTokenId; // [ARGS]
-    const int64_t botTokenId;  // [TOOL_CALLS]
+    const int64_t argsTokenId;  // [ARGS]
+    const int64_t botTokenId;   // [TOOL_CALLS]
 
     // in streaming mode we can rely on tags in string format as tokens are not available
     const std::string streamingParsingArgsStartTag = "[ARGS]";
@@ -52,9 +52,9 @@ class DevstralToolParser : public BaseOutputParser {
 public:
     DevstralToolParser() = delete;
     DevstralToolParser(ov::genai::Tokenizer& tokenizer, const ToolsSchemas_t& toolSchemas) :
-        BaseOutputParser(tokenizer), 
-        argsTokenId(tokenizer.encode("[ARGS]",{{"add_special_tokens", false}}).input_ids.data<int64_t>()[0]), 
-        botTokenId(tokenizer.encode("[TOOL_CALLS]",{{"add_special_tokens", false}}).input_ids.data<int64_t>()[0]), 
+        BaseOutputParser(tokenizer),
+        argsTokenId(tokenizer.encode("[ARGS]", {{"add_special_tokens", false}}).input_ids.data<int64_t>()[0]),
+        botTokenId(tokenizer.encode("[TOOL_CALLS]", {{"add_special_tokens", false}}).input_ids.data<int64_t>()[0]),
         toolSchemas(toolSchemas) {}
 
     void parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) override;
@@ -72,7 +72,7 @@ public:
         static const std::string toolCallEndTag = "";
         return toolCallEndTag;
     }
-    
+
     bool requiresStreamingWithSpecialTokens() const override {
 
         std::cout << "Requires streaming with special tokens: true" << std::endl;
