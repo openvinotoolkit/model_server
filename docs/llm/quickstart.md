@@ -163,7 +163,7 @@ Paris, the charming City of Light, is renowned for its rich history, iconic land
 
 ## Tokenization (release 2026.0 or weekly)
 
-The `tokenize` endpoint provides a simple API for tokenizing input text using the same tokenizer as the deployed LLM or VLM. This allows you to see how your text will be split into tokens before feature extraction or inference. The endpoint accepts a string or list of strings and returns the corresponding token IDs.
+The `tokenize` endpoint provides a simple API for tokenizing input text using the same tokenizer as the deployed LLM, VLM or [embedding](../../demos/embeddings/README.md#usage-of-tokenize-endpoint-release-20254-or-weekly). This allows you to see how your text will be split into tokens before feature extraction or inference. The endpoint accepts a string or list of strings and returns the corresponding token IDs.
 
 Example usage:
 ```console
