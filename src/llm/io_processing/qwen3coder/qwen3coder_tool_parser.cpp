@@ -20,11 +20,12 @@
 #include <stack>
 #include <vector>
 
+#include "rapidjson/error/en.h"
+
 #include "src/llm/io_processing/utils.hpp"
 #include "src/logging.hpp"
 #include "src/utils/rapidjson_utils.hpp"
 #include "qwen3coder_tool_parser.hpp"
-#include "rapidjson/error/en.h"
 
 namespace ovms {
 const std::string Qwen3CoderToolParser::TOOL_START_TAG = "<tool_call>";
