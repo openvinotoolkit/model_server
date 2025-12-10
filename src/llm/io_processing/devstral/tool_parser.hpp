@@ -74,8 +74,6 @@ public:
     }
 
     bool requiresStreamingWithSpecialTokens() const override {
-
-        std::cout << "Requires streaming with special tokens: true" << std::endl;
         return true;
     }
 };

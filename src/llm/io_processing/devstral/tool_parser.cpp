@@ -30,21 +30,12 @@ namespace ovms {
 
 void DevstralToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) {
     std::vector<std::string> tools;
-
+    // Parser will consume entire model output only if the first generated token is the beginning of tools token.
+    // expected format: [TOOL_CALLS]tool_name[ARGS]{"arg1": "value1", ...}
     if (parsedOutput.content.empty() || generatedTokens.size() <= 0) {
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "No content to parse for tool calls");
         return;
     }
-
-    // Parser will consume entire model output only if the first generated token is the beginning of tools token.
-    // expected format: [TOOL_CALLS]tool_name[ARGS]{"arg1": "value1", ...}
-
-    //size_t pos = 0;
-    //size_t firstToolCallPos;
-
-    // Save position of the first tool call start tag to properly clear content after parsing.
-    //firstToolCallPos = parsedOutput.content.find("[TOOL_CALLS]", pos);
-    //find position in vector generatedTokens with value 9
     size_t firstToolTokenIndex;
     auto it = std::find(generatedTokens.begin(), generatedTokens.end(), this->botTokenId);
     if (it != generatedTokens.end()) {
@@ -134,7 +125,7 @@ std::optional<rapidjson::Document> DevstralToolParser::parseChunk(const std::str
         }
     }
     if (this->internalState == AWAITING_ARGS_TAG) {
-        //check if [ARGS] tag is present in the chunk and update state accordingly
+        // check if [ARGS] tag is present in the chunk and update state accordingly
         size_t pos = this->streamContent.find("[ARGS]");
         if (pos != std::string::npos) {
             this->internalState = PROCESSING_ARGS;
