@@ -225,6 +225,7 @@ ovms_cc_library(
         "//src:libovmsprofiler",
         "//src:libovmsstring_utils",
         "//src:libovmsfilesystem",
+        "//src/tokenize:tokenize_parser",
         "llmcalculator_cc_proto",
         ":openai_completions_api_handler",
         ":generation_config_builders",

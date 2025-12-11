@@ -119,6 +119,13 @@ public:
 
     void determineDecodingMethod();
 
+    // ----------- Tokenize scenario ------------
+    /*
+    processTokenizeRequest method implements tokenization of the input text provided in executionContext payload.
+    Implementation fills executionContext response field with serialized tokenization result wrapped in json.
+    */
+    absl::Status processTokenizeRequest(std::shared_ptr<GenAiServableExecutionContext>& executionContext);
+
     // ----- Interface for derived classes -----
 
     /*

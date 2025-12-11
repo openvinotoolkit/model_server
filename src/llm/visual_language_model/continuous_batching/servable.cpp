@@ -24,6 +24,7 @@
 
 #include "../../../logging.hpp"
 #include "../../text_utils.hpp"
+#include "../../../tokenize/tokenize_parser.hpp"
 
 namespace ovms {
 
@@ -44,8 +45,10 @@ absl::Status VisualLanguageModelServable::loadRequest(std::shared_ptr<GenAiServa
     }
     if (payload.uri == "/v3/chat/completions" || payload.uri == "/v3/v1/chat/completions") {
         executionContext->endpoint = Endpoint::CHAT_COMPLETIONS;
+    } else if (TokenizeParser::isTokenizeEndpoint(payload.uri)) {
+        executionContext->endpoint = Endpoint::TOKENIZE;
     } else {
-        return absl::InvalidArgumentError("Wrong endpoint. VLM Servable allowed only on /v3/chat/completions endpoint");
+        return absl::InvalidArgumentError("Wrong endpoint. VLM Servable allowed only on /v3/chat/completions endpoint or /v3/tokenize");
     }
     executionContext->payload = payload;
     return absl::OkStatus();
