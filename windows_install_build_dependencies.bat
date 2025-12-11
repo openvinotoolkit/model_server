@@ -155,7 +155,7 @@ IF "%USE_OV_BINARY%"=="0" (
 ::::::::::::::::::::::: GENAI/OPENVINO install from ZIP - reinstalled per build trigger
 :: Set default GENAI_PACKAGE_URL if not set
 if "%GENAI_PACKAGE_URL%"=="" (
-    set "GENAI_PACKAGE_URL=https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/pre-release/2025.4.0.0rc3/openvino_genai_windows_2025.4.0.0rc3_x86_64.zip"
+    set "GENAI_PACKAGE_URL=https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/pre-release/2025.4.1.0rc1/openvino_genai_windows_2025.4.1.0rc1_x86_64.zip"
 )
 
 :: Extract genai_ver from GENAI_PACKAGE_URL (filename)
@@ -208,7 +208,7 @@ IF /I EXIST %BAZEL_SHORT_PATH%\openvino (
     rmdir /S /Q %BAZEL_SHORT_PATH%\openvino
 )
 if "%OV_SOURCE_BRANCH%"=="" (
-    set "OV_SOURCE_BRANCH=7a975177ff432c687e5619e8fb22e4bf265e48b7"
+    set "OV_SOURCE_BRANCH=82bbf0292c5bd490bc25a383e63d6461d3ee05c5"
 )
 if "%OV_SOURCE_ORG%"=="" (
     set "OV_SOURCE_ORG=openvinotoolkit"
@@ -217,13 +217,13 @@ if "%TOKENIZER_SOURCE_ORG%"=="" (
     set "TOKENIZER_SOURCE_ORG=openvinotoolkit"
 )
 if "%TOKENIZER_SOURCE_BRANCH%"=="" (
-    set "TOKENIZER_SOURCE_BRANCH=3694f87878edab6cf08cd3624f08df205dc39713"
+    set "TOKENIZER_SOURCE_BRANCH=e79796a77f3212bc69466be54d05ed04f0a6ffd8"
 )
 if "%GENAI_SOURCE_ORG%"=="" (
     set "GENAI_SOURCE_ORG=openvinotoolkit"
 )
 if "%GENAI_SOURCE_BRANCH%"=="" (
-    set "GENAI_SOURCE_BRANCH=5041b1dc4e51ad51bea88f4e17d00ef0c418f36e"
+    set "GENAI_SOURCE_BRANCH=fc593653d7781f6bd722e62a8f6801fdba423262"
 )
 
 IF /I NOT EXIST %BAZEL_SHORT_PATH%\openvino_src (

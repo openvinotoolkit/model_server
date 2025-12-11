@@ -19,7 +19,7 @@ FROM $BASE_IMAGE
 
 ARG TEMP_DIR=/tmp/openvino_installer
 ARG APT_OV_PACKAGE
-ARG DLDT_PACKAGE_URL=https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/pre-release/2025.4.0.0rc1/openvino_genai_ubuntu22_2025.4.0.0rc1_x86_64.tar.gz
+ARG DLDT_PACKAGE_URL=https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/pre-release/2025.4.1.0rc1/openvino_genai_ubuntu22_2025.4.1.0rc1_x86_64.tar.gz
 
 RUN apt update && apt install -y build-essential wget make python3
 
