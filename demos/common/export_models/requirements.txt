@@ -8,8 +8,8 @@ diffusers==0.35.2  # for image generation
 einops==0.8.1
 nncf@git+https://github.com/openvinotoolkit/nncf.git
 numpy==2.2.6
-openvino-tokenizers==2026.0.0.0.dev20251209
-openvino==2026.0.0.dev20251209
+openvino-tokenizers==2026.0.0.0.dev20251210
+openvino==2026.0.0.dev20251210
 #optimum is in dependency list of optimum-intel
 pillow==12.0.0
 sentence_transformers
