@@ -20,6 +20,8 @@
 #include <stack>
 #include <vector>
 
+#include "rapidjson/error/en.h"
+
 #include "src/llm/io_processing/utils.hpp"
 #include "src/logging.hpp"
 #include "src/utils/rapidjson_utils.hpp"
@@ -47,21 +49,6 @@ static void trimNewline(std::string& str) {
     if (str.front() == '\n') {
         str.erase(str.begin());
     }
-}
-
-std::string Functool::parametersToJson() {
-    std::ostringstream oss;
-    oss << "{";
-    size_t i = 0;
-    for (const auto& [key, value] : this->parameters) {
-        oss << "\"" << key << "\": ";
-        oss << value;
-        if (i++ + 1 < this->parameters.size()) {
-            oss << ", ";
-        }
-    }
-    oss << "}";
-    return oss.str();
 }
 
 Status Qwen3CoderToolParserImpl::removeToolCallsFromContentIfNeeded(std::string& outContent) {
@@ -127,76 +114,98 @@ static const ParametersTypeMap_t parseToolSchema(const std::string& functionName
     return result;
 }
 
-static std::string escapeQuotes(const std::string& input) {
-    std::string output;
-    output.reserve(input.size());
-    for (char c : input) {
-        switch (c) {
-        case '"':
-            output += "\\\"";
-            break;
-        default:
-            output += c;
-        }
-    }
-    return output;
-}
-static std::string escapeWithoutQuotes(const std::string& input) {
-    std::string output;
-    output.reserve(input.size());
-    for (char c : input) {
-        switch (c) {
-        case '\n':
-            output += "\\n";
-            break;
-        case '\r':
-            output += "\\r";
-            break;
-            // escaping '/' is for now omitted as its creating issues in Continue
-
-        /*case '\\':
-            output += "\\\\";
-            break;*/
-        case '\b':
-            output += "\\b";
-            break;
-        case '\f':
-            output += "\\f";
-            break;
-        case '\t':
-            output += "\\t";
-            break;
-        default:
-            output += c;
-        }
-    }
-    return output;
-}
-
-static std::string setCorrectValueType(std::string& inputValue, const std::string& currentParameterName, const ParametersTypeMap_t& parametersType) {
-    auto paramIt = parametersType.find(currentParameterName);
-    if (paramIt == parametersType.end()) {
-        SPDLOG_DEBUG("Parameter: {} schema not found , leaving as is", currentParameterName);
-        return inputValue;
-    }
-    if (paramIt->second == ParameterType::STRING) {
-        inputValue = "\"" + escapeQuotes(inputValue) + "\"";
-        return inputValue;
-    }
-    if (paramIt->second == ParameterType::BOOLEAN) {
-        // in case of bool we need to convert to lower case
-        std::transform(inputValue.begin(), inputValue.end(), inputValue.begin(), ::tolower);
-        return inputValue;
-    }
-    return inputValue;
-}
-
 #define DEFINE_TAG_POSITION_AND_BREAK_IF_NOT_FOUND(TAG)                         \
     auto pos = this->streamContent.find(TAG, this->getLastProcessedPosition()); \
     if (pos == std::string::npos) {                                             \
         SPDLOG_TRACE("Did not find: {}", TAG);                                  \
         break;                                                                  \
     }
+
+static const char* jsonTypeOf(const rapidjson::Value& val) {
+    if (val.IsObject())
+        return "object";
+    if (val.IsArray())
+        return "array";
+    if (val.IsString())
+        return "string";
+    if (val.IsBool())
+        return "bool";
+    if (val.IsInt())
+        return "int";
+    if (val.IsUint())
+        return "uint";
+    if (val.IsInt64())
+        return "int64";
+    if (val.IsUint64())
+        return "uint64";
+    if (val.IsDouble())
+        return "double";
+    if (val.IsNumber())
+        return "number";
+    if (val.IsNull())
+        return "null";
+    return "unknown";
+}
+static void enforceStringValue(rapidjson::Value& v,
+    rapidjson::Document::AllocatorType& alloc) {
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+    v.Accept(writer);
+    v.SetString(buffer.GetString(), buffer.GetLength(), alloc);
+}
+
+void Qwen3CoderToolParserImpl::addParameterToCurrentFunctionDoc(std::string& parameterValueAsString) {
+    if (this->removeNewlineAroundParameters)
+        trimNewline(parameterValueAsString);
+    // now we have parameter value in string format. We need to use toolsSchemas to determine if it is string, number, bool, array or object
+    auto paramIt = this->toolsParametersTypeMap.find(this->currentFunction.name);
+    auto& currentFunctionArgsDoc = this->currentFunction.argumentsAsDocument;
+    auto& allocator = currentFunctionArgsDoc.GetAllocator();
+    auto& key = this->currentParameterName;
+    rapidjson::Value keyVal(key.c_str(), allocator);
+    rapidjson::Document temp;
+    if (paramIt != this->toolsParametersTypeMap.end()) {
+        auto paramJt = paramIt->second.find(currentParameterName);
+        if (paramJt != paramIt->second.end() && (paramJt->second == ParameterType::BOOLEAN)) {
+            if (parameterValueAsString == "True" || parameterValueAsString == "TRUE") {
+                parameterValueAsString = "true";
+            } else if (parameterValueAsString == "False" || parameterValueAsString == "FALSE") {
+                parameterValueAsString = "false";
+            }
+        }
+    }
+    temp.Parse(parameterValueAsString.c_str());
+    if (temp.HasParseError()) {
+        rapidjson::ParseErrorCode errorCode = temp.GetParseError();
+        size_t errorOffset = temp.GetErrorOffset();
+        // If error occurred during parsing, we will insert parameter as string
+        SPDLOG_DEBUG("Error parsing parameter: {} value: {}; error at offset: {}; code: {}; Will insert as string", this->currentParameterName, parameterValueAsString, errorOffset, rapidjson::GetParseError_En(errorCode));
+        // since we are unable to parse with rapidjson generated parameter will be inserted as is as string
+        rapidjson::Value v;
+        v.SetString(parameterValueAsString.c_str(), static_cast<rapidjson::SizeType>(parameterValueAsString.size()), allocator);
+        if (!currentFunctionArgsDoc.HasMember(keyVal)) {
+            currentFunctionArgsDoc.AddMember(keyVal, v, allocator);
+        } else {
+            SPDLOG_DEBUG("Parameter: {} already exists in document", key);
+        }
+    } else {
+        rapidjson::Value valueCopy;
+        valueCopy.CopyFrom(temp, allocator);
+        if (paramIt != this->toolsParametersTypeMap.end()) {
+            auto paramJt = paramIt->second.find(currentParameterName);
+            if (paramJt != paramIt->second.end() && (paramJt->second == ParameterType::STRING)) {
+                enforceStringValue(valueCopy, allocator);
+            }
+        }
+        // Add or overwrite key in the main document
+        if (!currentFunctionArgsDoc.HasMember(keyVal)) {
+            SPDLOG_TRACE("Will add key:{} val:{} type:{}", key, parameterValueAsString, jsonTypeOf(valueCopy));
+            currentFunctionArgsDoc.AddMember(keyVal, valueCopy, allocator);
+        } else {
+            SPDLOG_DEBUG("Parameter: {} already exists in document.", key);
+        }
+    }
+}
 
 bool Qwen3CoderToolParserImpl::parseUntilStateChange(ToolCalls_t& toolCalls) {
     SPDLOG_TRACE("State: {}", this->currentState);
@@ -258,20 +267,8 @@ bool Qwen3CoderToolParserImpl::parseUntilStateChange(ToolCalls_t& toolCalls) {
     }
     case State::InsideParameter: {
         DEFINE_TAG_POSITION_AND_BREAK_IF_NOT_FOUND(Qwen3CoderToolParser::PARAMETER_END_TAG);
-        std::string parameterValue(streamContent.substr(this->lastProcessedPosition, pos - this->lastProcessedPosition));
-        if (this->removeNewlineAroundParameters)
-            trimNewline(parameterValue);
-        // now we have parameter value in string format. We need to use toolsSchemas to determine if it is string, number, bool, array or object
-        auto paramIt = this->toolsParametersTypeMap.find(this->currentFunction.name);
-        if (paramIt == this->toolsParametersTypeMap.end()) {
-            SPDLOG_DEBUG("Tool schema not found for tool: {}, leaving parameter: {} as string", this->currentFunction.name, this->currentParameterName);
-        } else {
-            // we don't want to escape entry/exit " for string parameters
-            parameterValue = escapeWithoutQuotes(setCorrectValueType(parameterValue, this->currentParameterName, paramIt->second));
-        }
-        auto res = this->currentFunction.parameters.try_emplace(this->currentParameterName, parameterValue);
-        if (!res.second)
-            SPDLOG_DEBUG("Parameter: {} already exists", this->currentParameterName);
+        std::string parameterValueAsString(streamContent.substr(this->lastProcessedPosition, pos - this->lastProcessedPosition));
+        addParameterToCurrentFunctionDoc(parameterValueAsString);
         this->lastProcessedPosition = pos + Qwen3CoderToolParser::PARAMETER_END_TAG.length();
         this->currentState = State::InsideFunction;
         break;
@@ -280,7 +277,14 @@ bool Qwen3CoderToolParserImpl::parseUntilStateChange(ToolCalls_t& toolCalls) {
         DEFINE_TAG_POSITION_AND_BREAK_IF_NOT_FOUND(Qwen3CoderToolParser::TOOL_END_TAG);
         this->lastProcessedPosition = pos + Qwen3CoderToolParser::TOOL_END_TAG.length();
         this->currentState = State::Content;
-        ToolCall toolCall{generateRandomId(), this->currentFunction.name, this->currentFunction.parametersToJson()};
+        std::string argumentsAsString;
+        {
+            rapidjson::StringBuffer buffer;
+            rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+            this->currentFunction.argumentsAsDocument.Accept(writer);
+            argumentsAsString = buffer.GetString();
+        }
+        ToolCall toolCall{generateRandomId(), this->currentFunction.name, argumentsAsString};
         SPDLOG_TRACE("Adding tool call: id={}, name={}, params={}", toolCall.id, toolCall.name, toolCall.arguments);
         toolCalls.emplace_back(std::move(toolCall));
         this->currentFunction.clear();
@@ -370,8 +374,7 @@ std::optional<std::string> Qwen3CoderToolParserImpl::getCurrentFunctionName() co
     }
     return this->currentFunction.name;
 }
-std::optional<rapidjson::Document> Qwen3CoderToolParser::sendFullDelta(std::optional<ToolCalls_t>& toolCallsOpt) {
-    auto& toolCalls = toolCallsOpt.value();
+std::optional<rapidjson::Document> Qwen3CoderToolParser::sendFullDelta(const ToolCalls_t& toolCalls) {
     if (toolCalls.size() != 1) {
         SPDLOG_ERROR("For streaming we expected one tool call, got: {}", toolCalls.size());
         // TODO we should return status code but this require change of parsers API
@@ -388,6 +391,7 @@ std::optional<rapidjson::Document> Qwen3CoderToolParser::sendFullDelta(std::opti
     rapidjson::Value toolCallsString(rapidjson::kStringType);
     toolCallsString.SetString(toolCall.arguments.c_str(), allocator);
     SPDLOG_TRACE("Tool call arguments string: {}", toolCall.arguments);
+
     argumentsWrapper.AddMember("arguments", toolCallsString, allocator);
     auto currentDelta = wrapDelta(argumentsWrapper, this->toolCallIndex);
     SPDLOG_DEBUG("First delta doc: {}", documentToString(currentDelta));
@@ -420,7 +424,7 @@ std::optional<rapidjson::Document> Qwen3CoderToolParser::parseChunk(const std::s
     }
     auto toolCallsOpt = this->streamParser.parseChunk(newChunk);
     if (toolCallsOpt.has_value()) {
-        return this->sendFullDelta(toolCallsOpt);
+        return this->sendFullDelta(toolCallsOpt.value());
     }
     auto functionNameOpt = this->streamParser.getCurrentFunctionName();
     if (functionNameOpt.has_value()) {
