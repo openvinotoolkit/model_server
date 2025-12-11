@@ -236,6 +236,12 @@ ovms.exe --rest_port 8000 --source_model OpenVINO/Phi-4-mini-instruct-int4-ov --
 ovms.exe --rest_port 8000 --source_model Qwen/Qwen3-Coder-30B-A3B-Instruct --model_repository_path models --tool_parser qwen3coder --target_device GPU --task text_generation --enable_tool_guided_generation true --cache_dir .cache
 ```
 :::
+:::{tab-item} gpt-oss-20b
+:sync: gpt-oss-20b
+```bat
+ovms.exe --rest_port 8000 --source_model openai/gpt-oss-20b --model_repository_path models --tool_parser gptoss --reasoning_parser gptoss --target_device GPU --task text_generation --pipeline_type LM
+```
+:::
 ::::
 
 ### Deploying on Windows with NPU
