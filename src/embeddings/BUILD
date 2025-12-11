@@ -22,6 +22,8 @@ ovms_cc_library(
     hdrs = ["embeddings_api.hpp"],
     srcs = ["embeddings_api.cpp"],
     deps = ["//src:libovmslogging",
+            "//src/tokenize:tokenize_parser",
+            "//src/port:rapidjson_document",
             "@mediapipe//mediapipe/framework:calculator_framework",
             "//third_party:openvino",
             "@com_github_tencent_rapidjson//:rapidjson",],

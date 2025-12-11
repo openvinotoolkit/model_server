@@ -29,7 +29,7 @@ namespace ovms {
 class Llama3ToolParser : public BaseOutputParser {
 protected:
     const std::string parsingStartTag = "<|python_tag|>";
-    // Tools calls are expected to be the last part of the content, so we do not specify an end tag.
+    // Tools calls are expected to be the last part of the content and there is no unique separator between tools, so we do not specify an end tag.
     const std::string parsingEndTag = "";
 
     // Id of the <|python_tag|> which is a special token used to indicate the start of a tool calls

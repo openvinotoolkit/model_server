@@ -4,21 +4,99 @@ Text generation use case is exposed via OpenAI API `embeddings` endpoint.
 
 ## Prerequisites
 
-**Model preparation**: Python 3.9 or higher with pip 
-
 **Model Server deployment**: Installed Docker Engine or OVMS binary package according to the [baremetal deployment guide](../../docs/deploying_server_baremetal.md)
+
+**(Optional) Model preparation**: Can be omitted when pulling models in IR format directly from HuggingFaces. Otherwise Python 3.9 or higher with pip for manual model export step.
 
 **(Optional) Client**: Python with pip
 
 ## Model preparation
+
+### Direct pulling of pre-configured HuggingFace models
+
+This procedure can be used to pull preconfigured models from OpenVINO organization in HuggingFace Hub
+
+**CPU**
+::::{tab-set}
+:::{tab-item} OpenVINO/Qwen3-Embedding-0.6B-int8-ov
+:sync: Qwen3-Embedding-0.6B-int8-ov
+**Using docker image**
+```bash
+mkdir -p models
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --pull --model_repository_path /models --source_model OpenVINO/Qwen3-Embedding-0.6B-int8-ov --pooling LAST --task embeddings
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --add_to_config --config_path /models/config.json --model_name OpenVINO/Qwen3-Embedding-0.6B-int8-ov --model_path OpenVINO/Qwen3-Embedding-0.6B-int8-ov
+```
+
+**On Bare Metal (Windows/Linux)**
+```console
+mkdir models
+ovms --pull --model_repository_path /models --source_model OpenVINO/Qwen3-Embedding-0.6B-int8-ov --pooling LAST --task embeddings
+ovms --add_to_config --config_path /models/config.json --model_name OpenVINO/Qwen3-Embedding-0.6B-int8-ov --model_path OpenVINO/Qwen3-Embedding-0.6B-int8-ov
+```
+:::
+:::{tab-item} OpenVINO/bge-base-en-v1.5-int8-ov
+:sync: bge-base-en-v1.5-int8-ov
+**Using docker image**
+```bash
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --pull --model_repository_path /models --source_model OpenVINO/bge-base-en-v1.5-int8-ov --pooling CLS --task embeddings
+
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --add_to_config --config_path /models/config.json --model_name OpenVINO/bge-base-en-v1.5-int8-ov --model_path OpenVINO/bge-base-en-v1.5-int8-ov
+```
+
+**On Bare Metal (Windows/Linux)**
+```console
+ovms --pull --model_repository_path /models --source_model OpenVINO/bge-base-en-v1.5-int8-ov --pooling CLS --task embeddings
+
+ovms --add_to_config --config_path /models/config.json --model_name OpenVINO/bge-base-en-v1.5-int8-ov --model_path OpenVINO/bge-base-en-v1.5-int8-ov
+```
+:::
+::::
+
+**GPU**
+::::{tab-set}
+:::{tab-item} OpenVINO/Qwen3-Embedding-0.6B-int8-ov
+:sync: Qwen3-Embedding-0.6B-int8-ov
+**Using docker image**
+```bash
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --pull --model_repository_path /models --source_model OpenVINO/Qwen3-Embedding-0.6B-int8-ov --pooling LAST --target_device GPU --task embeddings
+
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --add_to_config --config_path /models/config.json --model_name OpenVINO/Qwen3-Embedding-0.6B-int8-ov --model_path OpenVINO/Qwen3-Embedding-0.6B-int8-ov
+```
+
+**On Bare Metal (Windows/Linux)**
+```console
+ovms --pull --model_repository_path /models --source_model OpenVINO/Qwen3-Embedding-0.6B-int8-ov --pooling LAST --target_device GPU --task embeddings
+
+ovms --add_to_config --config_path /models/config.json --model_name OpenVINO/Qwen3-Embedding-0.6B-int8-ov --model_path OpenVINO/Qwen3-Embedding-0.6B-int8-ov
+```
+:::
+:::{tab-item} OpenVINO/bge-base-en-v1.5-int8-ov
+:sync: OpenVINO/bge-base-en-v1.5-int8-ov
+**Using docker image**
+```bash
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --pull --model_repository_path /models --source_model OpenVINO/bge-base-en-v1.5-int8-ov --pooling CLS --target_device GPU --task embeddings
+
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --add_to_config --config_path /models/config.json --model_name OpenVINO/bge-base-en-v1.5-int8-ov --model_path OpenVINO/bge-base-en-v1.5-int8-ov
+```
+
+**On Bare Metal (Windows/Linux)**
+```console
+ovms --pull --model_repository_path /models --source_model OpenVINO/bge-base-en-v1.5-int8-ov --pooling CLS --target_device GPU --task embeddings
+
+ovms --add_to_config --config_path /models/config.json --model_name OpenVINO/bge-base-en-v1.5-int8-ov --model_path OpenVINO/bge-base-en-v1.5-int8-ov
+```
+:::
+::::
+
+### Export model
 
 Here, the original Pytorch LLM model and the tokenizer will be converted to IR format and optionally quantized.
 That ensures faster initialization time, better performance and lower memory consumption.
 
 Download export script, install it's dependencies and create directory for the models:
 ```console
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/demos/common/export_models/export_model.py -o export_model.py
-pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/demos/common/export_models/requirements.txt
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/export_model.py -o export_model.py
+pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
 mkdir models 
 ```
 
@@ -26,18 +104,6 @@ Run `export_model.py` script to download and quantize the model:
 
 **CPU**
 ::::{tab-set}
-:::{tab-item} nomic-ai/nomic-embed-text-v1.5
-:sync: nomic-embed-text-v1.5
-```console
-python export_model.py embeddings_ov --source_model nomic-ai/nomic-embed-text-v1.5 --extra_quantization_params "--library sentence_transformers" --pooling MEAN --weight-format int8 --config_file_path models/config.json --model_repository_path models
-```
-:::
-:::{tab-item} Alibaba-NLP/gte-large-en-v1.5
-:sync: gte-large-en-v1.5
-```console
-python export_model.py embeddings_ov --source_model Alibaba-NLP/gte-large-en-v1.5 --extra_quantization_params "--library sentence_transformers" --pooling CLS --weight-format int8 --config_file_path models/config.json --model_repository_path models
-```
-:::
 :::{tab-item} BAAI/bge-large-en-v1.5
 :sync: bge-large-en-v1.5
 ```console
@@ -50,22 +116,10 @@ python export_model.py embeddings_ov --source_model BAAI/bge-large-en-v1.5 --poo
 python export_model.py embeddings_ov --source_model BAAI/bge-large-zh-v1.5 --pooling CLS --weight-format int8 --config_file_path models/config.json --model_repository_path models
 ```
 :::
-:::{tab-item} OpenVINO/bge-base-en-v1.5-int8-ov
-:sync: bge-base-en-v1.5-int8-ov
-```console
-docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --pull --model_repository_path /models --source_model OpenVINO/bge-base-en-v1.5-int8-ov --pooling CLS --task embeddings
-```
-:::
 :::{tab-item} thenlper/gte-small
 :sync: gte-small
 ```console
 python export_model.py embeddings_ov --source_model thenlper/gte-small --pooling CLS --weight-format int8 --config_file_path models/config.json --model_repository_path models
-```
-:::
-:::{tab-item} OpenVINO/Qwen3-Embedding-0.6B-int8-ov
-:sync: Qwen3-Embedding-0.6B-int8-ov
-```console
-docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --pull --model_repository_path /models --source_model OpenVINO/Qwen3-Embedding-0.6B-int8-ov --pooling LAST --task embeddings
 ```
 :::
 :::{tab-item} sentence-transformers/all-MiniLM-L12-v2
@@ -98,23 +152,29 @@ python export_model.py embeddings_ov --source_model intfloat/multilingual-e5-lar
 python export_model.py embeddings_ov --source_model intfloat/multilingual-e5-large --pooling MEAN --weight-format int8 --config_file_path models/config.json --model_repository_path models
 ```
 :::
+:::{tab-item} Alibaba-NLP/gte-large-en-v1.5
+:sync: gte-large-en-v1.5
+```console
+python export_model.py embeddings_ov --source_model Alibaba-NLP/gte-large-en-v1.5 --pooling CLS --extra_quantization_params "--library sentence_transformers"
+```
+:::
+:::{tab-item} nomic-ai/nomic-embed-text-v1.5
+:sync: nomic-embed-text-v1.5
+```console
+python export_model.py embeddings_ov --source_model nomic-ai/nomic-embed-text-v1.5 --pooling MEAN --extra_quantization_params "--library sentence_transformers"
+```
+:::
+:::{tab-item} sentence-transformers/all-mpnet-base-v2
+:sync: all-mpnet-base-v2
+```console
+python export_model.py embeddings_ov --source_model sentence-transformers/all-mpnet-base-v2 --pooling MEAN
+```
+:::
 ::::
 
 
 **GPU**
 ::::{tab-set}
-:::{tab-item} nomic-ai/nomic-embed-text-v1.5
-:sync: nomic-embed-text-v1.5
-```console
-python export_model.py embeddings_ov --source_model nomic-ai/nomic-embed-text-v1.5 --extra_quantization_params "--library sentence_transformers" --pooling MEAN --weight-format int8 --target_device GPU --config_file_path models/config.json --model_repository_path models
-```
-:::
-:::{tab-item} Alibaba-NLP/gte-large-en-v1.5
-:sync: gte-large-en-v1.5
-```console
-python export_model.py embeddings_ov --source_model Alibaba-NLP/gte-large-en-v1.5 --extra_quantization_params "--library sentence_transformers" --pooling CLS --weight-format int8 --target_device GPU --config_file_path models/config.json --model_repository_path models
-```
-:::
 :::{tab-item} BAAI/bge-large-en-v1.5
 :sync: bge-large-en-v1.5
 ```console
@@ -127,22 +187,10 @@ python export_model.py embeddings_ov --source_model BAAI/bge-large-en-v1.5 --poo
 python export_model.py embeddings_ov --source_model BAAI/bge-large-zh-v1.5 --pooling CLS --weight-format int8 --target_device GPU --config_file_path models/config.json --model_repository_path models
 ```
 :::
-:::{tab-item} OpenVINO/bge-base-en-v1.5-int8-ov
-:sync: bge-base-en-v1.5-int8-ov
-```console
-docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --pull --model_repository_path /models --source_model OpenVINO/bge-base-en-v1.5-int8-ov --task pooling CLS --target_device GPU --task embeddings
-```
-:::
 :::{tab-item} thenlper/gte-small
 :sync: gte-small
 ```console
 python export_model.py embeddings_ov --source_model thenlper/gte-small --pooling CLS --weight-format int8 --target_device GPU --config_file_path models/config.json --model_repository_path models
-```
-:::
-:::{tab-item} OpenVINO/Qwen3-Embedding-0.6B-int8-ov
-:sync: Qwen3-Embedding-0.6B-int8-ov
-```console
-docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --pull --model_repository_path /models --source_model OpenVINO/Qwen3-Embedding-0.6B-int8-ov --task pooling LAST --target_device GPU --task embeddings
 ```
 :::
 :::{tab-item} sentence-transformers/all-MiniLM-L12-v2
@@ -173,6 +221,24 @@ python export_model.py embeddings_ov --source_model intfloat/multilingual-e5-lar
 :sync: multilingual-e5-large
 ```console
 python export_model.py embeddings_ov --source_model intfloat/multilingual-e5-large --pooling MEAN --weight-format int8 --target_device GPU --config_file_path models/config.json --model_repository_path models
+```
+:::
+:::{tab-item} Alibaba-NLP/gte-large-en-v1.5
+:sync: gte-large-en-v1.5
+```console
+python export_model.py embeddings_ov --source_model Alibaba-NLP/gte-large-en-v1.5 --pooling CLS --weight-format int8 --target_device GPU --extra_quantization_params "--library sentence_transformers" --config_file_path models/config.json --model_repository_path models
+```
+:::
+:::{tab-item} nomic-ai/nomic-embed-text-v1.5
+:sync: nomic-embed-text-v1.5
+```console
+python export_model.py embeddings_ov --source_model nomic-ai/nomic-embed-text-v1.5 --pooling MEAN --weight-format int8 --target_device GPU --extra_quantization_params "--library sentence_transformers" --config_file_path models/config.json --model_repository_path models
+```
+:::
+:::{tab-item} sentence-transformers/all-mpnet-base-v2
+:sync: all-mpnet-base-v2
+```console
+python export_model.py embeddings_ov --source_model sentence-transformers/all-mpnet-base-v2 --pooling MEAN --weight-format int8 --target_device GPU --config_file_path models/config.json --model_repository_path models
 ```
 :::
 ::::
@@ -212,22 +278,23 @@ python export_model.py embeddings_ov --source_model Qwen/Qwen3-Embedding-0.6B --
 ```
 
 ## Tested models
-All models supported by [optimum-intel](https://github.com/huggingface/optimum-intel) should be compatible. In serving validation are included Hugging Face models:
+All models supported by [optimum-intel](https://github.com/huggingface/optimum-intel) should be compatible. The demo is validated against following Hugging Face models:
 
 |Model name|Pooling|
 |---|---|
-|nomic-ai/nomic-embed-text-v1.5|MEAN|
-|Alibaba-NLP/gte-large-en-v1.5|CLS|
+|OpenVINO/Qwen3-Embedding-0.6B-int8-ov|LAST|
+|OpenVINO/bge-base-en-v1.5-int8-ov|CLS|
 |BAAI/bge-large-en-v1.5|CLS|
 |BAAI/bge-large-zh-v1.5|CLS|
-|OpenVINO/bge-base-en-v1.5-int8-ov|CLS|
 |thenlper/gte-small|CLS|
-|Qwen/Qwen3-Embedding-0.6B|LAST|
 |sentence-transformers/all-MiniLM-L12-v2|MEAN|
 |sentence-transformers/all-distilroberta-v1|MEAN|
 |mixedbread-ai/deepset-mxbai-embed-de-large-v1|MEAN|
 |intfloat/multilingual-e5-large-instruct|MEAN|
 |intfloat/multilingual-e5-large|MEAN|
+|Alibaba-NLP/gte-large-en-v1.5|CLS|
+|nomic-ai/nomic-embed-text-v1.5|MEAN|
+|sentence-transformers/all-mpnet-base-v2|MEAN|
 
 
 ## Server Deployment
@@ -268,10 +335,9 @@ ovms --rest_port 8000 --config_path ./models/config.json
 
 Wait for the model to load. You can check the status with a simple command below. Note that the slash `/` in the model name needs to be escaped with `%2F`:
 ```bash
-curl -i http://localhost:8000/v2/models/BAAI%2Fbge-large-en-v1.5/ready
-HTTP/1.1 200 OK
-content-length: 0
-content-type: application/json; charset=utf-8
+curl http://localhost:9999/v3/models/BAAI%2Fbge-large-en-v1.5
+
+{"id":"BAAI/bge-large-en-v1.5","object":"model","created":1763997378,"owned_by":"OVMS"}
 ```
 
 ## Client code
@@ -308,7 +374,7 @@ curl http://localhost:8000/v3/embeddings -H "Content-Type: application/json" -d 
 :::{dropdown} **Request embeddings with OpenAI Python package**
 
 ```bash
-pip3 install openai
+pip3 install openai "numpy<2"
 ```
 ```bash
 echo '
@@ -344,9 +410,9 @@ An asynchronous benchmarking client can be used to access the model server perfo
 ```console
 git clone https://github.com/openvinotoolkit/model_server
 pushd .
-cd model_server/demos/benchmark/embeddings/
+cd model_server/demos/benchmark/v3/
 pip install -r requirements.txt
-python benchmark_embeddings.py --api_url http://localhost:8000/v3/embeddings --dataset synthetic --synthetic_length 5 --request_rate 10 --batch_size 1 --model BAAI/bge-large-en-v1.5
+python benchmark.py --api_url http://localhost:8000/v3/embeddings --dataset synthetic --synthetic_length 5 --request_rate 10 --batch_size 1 --model BAAI/bge-large-en-v1.5
 Number of documents: 1000
 100%|████████████████████████████████████████████████████████████████| 1000/1000 [01:44<00:00,  9.56it/s]
 Tokens: 5000
@@ -357,7 +423,7 @@ Median latency: 13.97 ms
 Average document length: 5.0 tokens
 
 
-python benchmark_embeddings.py --api_url http://localhost:8000/v3/embeddings --request_rate inf --batch_size 32 --dataset synthetic --synthetic_length 510 --model BAAI/bge-large-en-v1.5
+python benchmark.py --api_url http://localhost:8000/v3/embeddings --request_rate inf --batch_size 32 --dataset synthetic --synthetic_length 510 --model BAAI/bge-large-en-v1.5
 Number of documents: 1000
 100%|████████████████████████████████████████████████████████████████| 32/32 [00:17<00:00,  1.82it/s]
 Tokens: 510000
@@ -368,7 +434,7 @@ Median latency: 9905.79 ms
 Average document length: 510.0 tokens
 
 
-python benchmark_embeddings.py --api_url http://localhost:8000/v3/embeddings --request_rate inf --batch_size 1 --dataset Cohere/wikipedia-22-12-simple-embeddings --model BAAI/bge-large-en-v1.5
+python benchmark.py --api_url http://localhost:8000/v3/embeddings --request_rate inf --batch_size 1 --dataset Cohere/wikipedia-22-12-simple-embeddings --model BAAI/bge-large-en-v1.5
 Number of documents: 1000
 100%|████████████████████████████████████████████████████████████████| 1000/1000 [00:15<00:00, 64.02it/s]
 Tokens: 83208
@@ -389,7 +455,7 @@ Check this demo to see the langchain code example which is using OpenVINO Model 
 
 A simple method of testing the response accuracy is via comparing the response for a sample prompt from the model server and with local python execution based on HuggingFace python code.
 
-The script [compare_results.py](./compare_results.py) can assist with such experiment.
+The script [compare_results.py](https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/embeddings/compare_results.py) can assist with such experiment.
 ```bash
 popd
 cd model_server/demos/embeddings
@@ -503,10 +569,40 @@ Results will be stored in `results` folder:
   "kg_co2_emissions": null
 }
 ```
-
 Compare against local HuggingFace execution for reference:
 ```console
 mteb run -m thenlper/gte-small -t Banking77Classification --output_folder results
+``` 
+
+# Usage of tokenize endpoint (release 2025.4 or weekly)
+
+The `tokenize` endpoint provides a simple API for tokenizing input text using the same tokenizer as the deployed embeddings model. This allows you to see how your text will be split into tokens before feature extraction or inference. The endpoint accepts a string or list of strings and returns the corresponding token IDs.
+
+Example usage:
+```console
+curl http://localhost:8000/v3/tokenize -H "Content-Type: application/json" -d "{ \"model\": \"BAAI/bge-large-en-v1.5\", \"text\": \"hello world\" }"
+```
+Response:
+```json
+{
+  "tokens": [101,7592,2088,102]
+}
 ```
 
+It's possible to use additional parameters:
+ - `pad_to_max_length` - whether to pad the sequence to the maximum length. Default is False. 
+ - `max_length` - maximum length of the sequence. If specified, it truncates the tokens to the provided number.
+ - `padding_side` - side to pad the sequence, can be `left` or `right`. Default is `right`.
+ - `add_special_tokens` - whether to add special tokens like BOS, EOS, PAD. Default is True. 
 
+ Example usage:
+```console
+curl http://localhost:8000/v3/tokenize -H "Content-Type: application/json" -d "{ \"model\": \"BAAI/bge-large-en-v1.5\", \"text\": \"hello world\", \"max_length\": 10, \"pad_to_max_length\": true, \"padding_side\": \"left\", \"add_special_tokens\": true }"
+```
+
+Response:
+```json
+{
+  "tokens":[0,0,0,0,0,0,101,7592,2088,102]
+}
+```

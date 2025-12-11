@@ -32,7 +32,7 @@ class CustomNodeOutputAllocator {
 public:
     CustomNodeOutputAllocator(struct CustomNodeTensor tensor, NodeLibrary nodeLibrary, void* customNodeLibraryInternalManager);
     void* allocate(const size_t bytes, const size_t alignment = alignof(max_align_t));
-    void deallocate(void* handle, const size_t bytes, size_t alignment = alignof(max_align_t));
+    void deallocate(void* handle, const size_t bytes, size_t alignment = alignof(max_align_t)) noexcept;
     bool is_equal(const CustomNodeOutputAllocator& other) const;
 };
 

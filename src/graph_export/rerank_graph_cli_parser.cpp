@@ -73,12 +73,12 @@ std::vector<std::string> RerankGraphCLIParser::parse(const std::vector<std::stri
 
 void RerankGraphCLIParser::prepare(OvmsServerMode serverMode, HFSettingsImpl& hfSettings, const std::string& modelName) {
     ovms::RerankGraphSettingsImpl rerankGraphSettings = RerankGraphCLIParser::defaultGraphSettings();
-    rerankGraphSettings.targetDevice = hfSettings.exportSettings.targetDevice;
+    hfSettings.exportSettings.targetDevice = hfSettings.exportSettings.targetDevice;
     // Deduct model name
     if (modelName != "") {
-        rerankGraphSettings.modelName = modelName;
+        hfSettings.exportSettings.modelName = modelName;
     } else {
-        rerankGraphSettings.modelName = hfSettings.sourceModel;
+        hfSettings.exportSettings.modelName = hfSettings.sourceModel;
     }
     if (nullptr == result) {
         // Pull with default arguments - no arguments from user
@@ -86,7 +86,7 @@ void RerankGraphCLIParser::prepare(OvmsServerMode serverMode, HFSettingsImpl& hf
             throw std::logic_error("Tried to prepare server and model settings without graph parse result");
         }
     } else {
-        rerankGraphSettings.numStreams = result->operator[]("num_streams").as<uint32_t>();
+        hfSettings.exportSettings.pluginConfig.numStreams = result->operator[]("num_streams").as<uint32_t>();
         rerankGraphSettings.maxAllowedChunks = result->operator[]("max_allowed_chunks").as<uint64_t>();
     }
 

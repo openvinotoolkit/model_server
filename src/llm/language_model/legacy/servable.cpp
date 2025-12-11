@@ -99,8 +99,12 @@ absl::Status LegacyServable::parseRequest(std::shared_ptr<GenAiServableExecution
         }
         legacyExecutionContext->textStreamer = std::make_shared<ov::genai::TextStreamer>(getProperties()->tokenizer, callback, streamerConfig);
     }
-    legacyExecutionContext->generationConfigBuilder = std::make_shared<GenerationConfigBuilder>(getProperties()->baseGenerationConfig, getProperties()->toolParserName, getProperties()->enableToolGuidedGeneration);
+    legacyExecutionContext->generationConfigBuilder = std::make_shared<GenerationConfigBuilder>(getProperties()->baseGenerationConfig,
+        getProperties()->toolParserName,
+        getProperties()->enableToolGuidedGeneration,
+        getProperties()->decodingMethod);
     legacyExecutionContext->generationConfigBuilder->parseConfigFromRequest(legacyExecutionContext->apiHandler->getRequest());
+    legacyExecutionContext->generationConfigBuilder->adjustConfigForDecodingMethod();
     try {
         legacyExecutionContext->generationConfigBuilder->validateStructuredOutputConfig(getProperties()->tokenizer);
     } catch (const std::exception& e) {

@@ -30,11 +30,8 @@
 #pragma GCC diagnostic pop
 #pragma warning(pop)
 
-#pragma warning(push)
-#pragma warning(disable : 6313)
-#include <rapidjson/document.h>
-#include <rapidjson/writer.h>
-#pragma warning(pop)
+#include "src/port/rapidjson_document.hpp"
+#include "src/port/rapidjson_writer.hpp"
 #pragma warning(push)
 #pragma warning(disable : 6001 6385 6386)
 #include "absl/strings/escaping.h"
@@ -45,67 +42,26 @@ using namespace rapidjson;
 namespace ovms {
 
 std::variant<EmbeddingsRequest, std::string> EmbeddingsRequest::fromJson(rapidjson::Document* parsedJson) {
-    enum class InputType {
-        NONE,
-        STRING,
-        INT,
-        INT_VEC
-    };
     EmbeddingsRequest request;
-    std::vector<std::string> input_strings;
-    std::vector<std::vector<int64_t>> input_tokens;
-
     if (!parsedJson->IsObject())
         return "Received json is not an object";
 
-    auto it = parsedJson->FindMember("input");
-    if (it != parsedJson->MemberEnd()) {
-        if (it->value.IsString()) {
-            input_strings.push_back(it->value.GetString());
-        } else if (it->value.IsArray()) {
-            if (it->value.GetArray().Size() == 0) {
-                return "input array should not be empty";
-            }
-            InputType input_type = InputType::NONE;
-            for (auto& input : it->value.GetArray()) {
-                if (input.IsArray()) {
-                    if (input_type != InputType::NONE && input_type != InputType::INT_VEC)
-                        return "input must be homogeneous";
-                    input_type = InputType::INT_VEC;
-                    std::vector<int64_t> ints;
-                    ints.reserve(input.GetArray().Size());
-                    for (auto& val : input.GetArray()) {
-                        if (val.IsInt())
-                            ints.push_back(val.GetInt());
-                        else
-                            return "input must be homogeneous";
-                    }
-                    input_tokens.emplace_back(std::move(ints));
-                } else if (input.IsString()) {
-                    if (input_type != InputType::NONE && input_type != InputType::STRING)
-                        return "input must be homogeneous";
-                    input_type = InputType::STRING;
-                    input_strings.push_back(input.GetString());
-                } else if (input.IsInt()) {
-                    if (input_type != InputType::NONE && input_type != InputType::INT)
-                        return "input must be homogeneous";
-                    input_type = InputType::INT;
-                    if (input_tokens.size() == 0) {
-                        input_tokens.push_back(std::vector<int64_t>());
-                    }
-                    input_tokens[0].push_back(input.GetInt());
-                } else {
-                    return "every element in input array should be either string or int";
-                }
-            }
-        } else {
-            return "input should be string, array of strings or array of integers";
-        }
+    auto parsedInput = TokenizeParser::parseInput(*parsedJson, "input");
+
+    if (std::holds_alternative<std::string>(parsedInput)) {
+        return std::get<std::string>(parsedInput);
     } else {
-        return "input field is required";
+        auto inputVariant = std::get<EmbeddingsRequest::InputDataType>(parsedInput);
+        if (std::holds_alternative<std::vector<std::string>>(inputVariant)) {
+            request.input = std::get<std::vector<std::string>>(inputVariant);
+        } else if (std::holds_alternative<std::vector<std::vector<int64_t>>>(inputVariant)) {
+            request.input = std::get<std::vector<std::vector<int64_t>>>(inputVariant);
+        } else {
+            return "input must be either array of strings or array of array of integers";
+        }
     }
 
-    it = parsedJson->FindMember("encoding_format");
+    auto it = parsedJson->FindMember("encoding_format");
     request.encoding_format = EncodingFormat::FLOAT;
     if (it != parsedJson->MemberEnd()) {
         if (it->value.IsString()) {
@@ -123,13 +79,6 @@ std::variant<EmbeddingsRequest, std::string> EmbeddingsRequest::fromJson(rapidjs
 
     // TODO: dimensions (optional)
     // TODO: user (optional)
-    if (input_strings.size() > 0) {
-        request.input = input_strings;
-    } else if (input_tokens.size() > 0) {
-        request.input = input_tokens;
-    } else {
-        return "input field is required";
-    }
     return request;
 }
 
@@ -149,11 +98,14 @@ absl::Status EmbeddingsHandler::parseRequest() {
     return absl::OkStatus();
 }
 
-std::variant<std::vector<std::string>, std::vector<std::vector<int64_t>>>& EmbeddingsHandler::getInput() {
+TokenizeRequest::InputDataType& EmbeddingsHandler::getInput() {
     return request.input;
 }
 EmbeddingsRequest::EncodingFormat EmbeddingsHandler::getEncodingFormat() const {
     return request.encoding_format;
+}
+ov::AnyMap& EmbeddingsHandler::getParameters() {
+    return request.parameters;
 }
 
 void EmbeddingsHandler::setPromptTokensUsage(int promptTokens) {

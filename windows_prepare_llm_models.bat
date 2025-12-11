@@ -43,22 +43,6 @@ set "PHI4_MODEL=microsoft/Phi-4-mini-instruct"
 set "MISTRAL_MODEL=mistralai/Mistral-7B-Instruct-v0.3"
 set "GPTOSS_MODEL=openai/gpt-oss-20b"
 
-set MODELS_LIST=%TEXT_GENERATION_MODEL%\%TOKENIZER_FILE% %EMBEDDING_MODEL%\ov\%TOKENIZER_FILE% %RERANK_MODEL%\rerank\%LEGACY_MODEL_FILE% %VLM_MODEL%\%TOKENIZER_FILE% %QWEN3_MODEL%\%TOKENIZER_FILE% %LLAMA3_MODEL%\%TOKENIZER_FILE% %HERMES3_MODEL%\%TOKENIZER_FILE% %PHI4_MODEL%\%TOKENIZER_FILE% %MISTRAL_MODEL%\%TOKENIZER_FILE% %GPTOSS_MODEL%\%TOKENIZER_FILE%
-
-set "ALL_EXIST=1"
-for %%M in (%MODELS_LIST%) do (
-  if not exist "%~1\%%~M" (
-    echo "%~1\%%~M" does not exist
-    set "ALL_EXIST=0"
-  )
-  echo "%~1\%%~M" exists
-)
-
-if "!ALL_EXIST!"=="1" (
-  echo All required models exist in %~1. Skipping downloading models.
-  exit /b 0
-)
-
 echo Downloading LLM testing models to directory %~1
 set "PIP_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cpu https://storage.openvinotoolkit.org/simple/wheels/nightly"
 set "PYTHONPATH="
@@ -84,7 +68,13 @@ if exist "%~1\%TEXT_GENERATION_MODEL%\%TOKENIZER_FILE%" (
 if not exist "%~1\%TEXT_GENERATION_MODEL%\%TOKENIZER_FILE%" (
   echo Models file %~1\%TEXT_GENERATION_MODEL%\%TOKENIZER_FILE% does not exists.
   exit /b 1
-) 
+)
+
+if not exist "%~1\%TEXT_GENERATION_MODEL%\chat_template.jinja" (
+    echo Copying dummy chat template to %TEXT_GENERATION_MODEL% model directory.
+    copy /Y "src\test\llm\dummy_facebook_template.jinja" "%~1\%TEXT_GENERATION_MODEL%\chat_template.jinja"
+    if !errorlevel! neq 0 exit /b !errorlevel!
+)
 
 if exist "%~1\%EMBEDDING_MODEL%\ov\%TOKENIZER_FILE%" (
   echo Models file %~1\%EMBEDDING_MODEL%\ov\%TOKENIZER_FILE% exists. Skipping downloading models.
@@ -202,7 +192,7 @@ if not exist "%~1\%MISTRAL_MODEL%\%TOKENIZER_FILE%" (
 if exist "%~1\%GPTOSS_MODEL%\%TOKENIZER_FILE%" (
   echo Models file %~1\%GPTOSS_MODEL%\%TOKENIZER_FILE% exists. Skipping downloading models.
 ) else (
-  echo Downloading tokenizer and detokenizer for Mistral model to %~1\%GPTOSS_MODEL% directory.
+  echo Downloading tokenizer and detokenizer for GPT-OSS model to %~1\%GPTOSS_MODEL% directory.
   mkdir "%~1\%GPTOSS_MODEL%"
   convert_tokenizer "%GPTOSS_MODEL%" --with_detokenizer -o "%~1\%GPTOSS_MODEL%"
   if !errorlevel! neq 0 exit /b !errorlevel!

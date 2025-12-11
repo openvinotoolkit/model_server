@@ -38,6 +38,19 @@
 #include "text_utils.hpp"
 
 namespace ovms {
+
+void GenAiServable::determineDecodingMethod() {
+    getProperties()->decodingMethod = DecodingMethod::STANDARD;
+    auto& pluginConfig = getProperties()->pluginConfig;
+    if (pluginConfig.find("draft_model") != pluginConfig.end()) {
+        getProperties()->decodingMethod = DecodingMethod::SPECULATIVE_DECODING;
+    }
+    auto it = pluginConfig.find("prompt_lookup");
+    if (it != pluginConfig.end() && it->second.as<bool>() == true) {
+        getProperties()->decodingMethod = DecodingMethod::PROMPT_LOOKUP;
+    }
+}
+
 absl::Status GenAiServable::loadRequest(std::shared_ptr<GenAiServableExecutionContext>& executionContext, const ovms::HttpPayload& payload) {
     if (spdlog::default_logger_raw()->level() <= spdlog::level::debug) {
         logRequestDetails(payload);
@@ -86,8 +99,12 @@ absl::Status GenAiServable::parseRequest(std::shared_ptr<GenAiServableExecutionC
         }
         executionContext->textStreamer = std::make_shared<ov::genai::TextStreamer>(getProperties()->tokenizer, callback, streamerConfig);
     }
-    executionContext->generationConfigBuilder = std::make_shared<GenerationConfigBuilder>(getProperties()->baseGenerationConfig, getProperties()->toolParserName, getProperties()->enableToolGuidedGeneration);
+    executionContext->generationConfigBuilder = std::make_shared<GenerationConfigBuilder>(getProperties()->baseGenerationConfig,
+        getProperties()->toolParserName,
+        getProperties()->enableToolGuidedGeneration,
+        getProperties()->decodingMethod);
     executionContext->generationConfigBuilder->parseConfigFromRequest(executionContext->apiHandler->getRequest());
+    executionContext->generationConfigBuilder->adjustConfigForDecodingMethod();
     try {
         executionContext->generationConfigBuilder->validateStructuredOutputConfig(getProperties()->tokenizer);
     } catch (const std::exception& e) {
@@ -124,7 +141,12 @@ absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecution
 #else
         ov::genai::ChatHistory& chatHistory = executionContext->apiHandler->getChatHistory();
         constexpr bool add_generation_prompt = true;  // confirm it should be hardcoded
-        inputText = getProperties()->tokenizer.apply_chat_template(chatHistory, add_generation_prompt);
+        try {
+            inputText = getProperties()->tokenizer.apply_chat_template(chatHistory, add_generation_prompt);
+        } catch (const std::exception& e) {
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Failed to apply chat template: {}", e.what());
+            return absl::Status(absl::StatusCode::kInvalidArgument, "Failed to apply chat template. The model either does not have chat template or has an invalid one.");
+        }
 #endif
         if (inputText.size() == 0) {
             return absl::Status(absl::StatusCode::kInvalidArgument, "Final prompt after applying chat template is empty");
@@ -136,18 +158,6 @@ absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecution
     }
     }
     bool encodeAddSpecialTokens = (executionContext->endpoint == Endpoint::COMPLETIONS);
-    if (executionContext->apiHandler->getToolChoice() == "required") {
-        const auto& outputParser = executionContext->apiHandler->getOutputParser();
-        if (outputParser != nullptr && outputParser->isToolParserAvailable()) {
-            // If tool parser is available, we add tool parser start tag to the input text
-            // to increase the chance of the model generating tool calls immediately.
-            outputParser->enableImmediateToolParsing();
-            inputText += outputParser->getToolParserStartTag();
-            SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Adding tool parser trigger: {} at the end of the input.", outputParser->getToolParserStartTag());
-        } else {
-            return absl::InvalidArgumentError("Tool parser is not available, but tool_choice is set to 'required'");
-        }
-    }
     executionContext->inputIds = getProperties()->tokenizer.encode(inputText, ov::genai::add_special_tokens(encodeAddSpecialTokens)).input_ids;
     if (getProperties()->maxModelLength.has_value()) {
         if (executionContext->inputIds.get_size() > getProperties()->maxModelLength.value()) {

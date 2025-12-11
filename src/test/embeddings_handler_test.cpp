@@ -252,7 +252,7 @@ TEST(EmbeddingsDeserialization, invalidEncoding) {
         {
             "model": "embeddings",
             "input": ["one", "three"],
-"encoding_format": "dummy"
+            "encoding_format": "dummy"
         }
     )";
     rapidjson::Document d;
@@ -269,7 +269,7 @@ TEST(EmbeddingsDeserialization, invalidEncodingType) {
         {
             "model": "embeddings",
             "input": ["one", "three"],
-"encoding_format": 42
+            "encoding_format": 42
         }
     )";
     rapidjson::Document d;
@@ -340,7 +340,7 @@ TEST(EmbeddingsDeserialization, multipleStringInputFloat) {
         {
             "model": "embeddings",
             "input": ["one", "two", "three"],
-"encoding_format": "float"
+            "encoding_format": "float"
         }
     )";
     rapidjson::Document d;
