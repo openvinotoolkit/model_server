@@ -70,7 +70,7 @@ if ! [[ $debug_bazel_flags == *"_py_off"* ]] && [ "$FUZZER_BUILD" == "0" ]; then
 if ! [[ $debug_bazel_flags == *"_py_off"* ]]; then echo $'#!/bin/bash\npython3 -m openvino_tokenizers.cli "$@"' > /ovms_release/bin/convert_tokenizer ; \
    chmod +x /ovms_release/bin/convert_tokenizer ; fi
 if  ! [[ $debug_bazel_flags == *"_py_off"* ]]; then	mkdir -p /ovms_release/lib/python/openvino_genai-2025.4.dist-info ; \
-	echo $'Metadata-Version: 1.0\nName: openvino-genai\nVersion: 2025.4\nRequires-Python: >=3.9\nRequires-Dist: openvino-genai~=2025.4.0' > /ovms_release/lib/python/openvino_genai-2025.4.dist-info/METADATA; fi
+	echo $'Metadata-Version: 1.0\nName: openvino-genai\nVersion: 2025.4\nRequires-Python: >=3.9\nRequires-Dist: openvino-genai~=2025.4.1' > /ovms_release/lib/python/openvino_genai-2025.4.dist-info/METADATA; fi
 
 if [ -f /opt/intel/openvino/runtime/lib/intel64/plugins.xml ]; then cp /opt/intel/openvino/runtime/lib/intel64/plugins.xml /ovms_release/lib/ ; fi
 find /opt/intel/openvino/runtime/lib/intel64/ -iname '*.mvcmd*' -exec cp -v {} /ovms_release/lib/ \;
@@ -93,8 +93,8 @@ patchelf --debug --set-rpath '$ORIGIN' /ovms_release/lib/libopenvino_tokenizers.
 patchelf --debug --set-rpath '$ORIGIN' /ovms_release/lib/lib*plugin.so
 if [ -f  /ovms_release/lib/libopenvino_nvidia_gpu_plugin.so ] && [ "$BASE_OS" != "redhat" ]; then patchelf --replace-needed libcutensor.so.1 /usr/lib/x86_64-linux-gnu/libcutensor/11/libcutensor.so.1 /ovms_release/lib/libopenvino_nvidia_gpu_plugin.so ; fi
 if [ -e /ovms_release/lib/libopenvino_genai_c.so ]; then rm -rf /ovms_release/lib/libopenvino_genai_c.so* ; fi
-if [[ "$BASE_OS" =~ "redhat" ]] && [ -f /ovms_release/lib/libopenvino_genai.so ]; then cd /ovms_release/lib/ ; rm -rf libopenvino_genai.so.* ; ln -s libopenvino_genai.so libopenvino_genai.so.2540 ; ln -s libopenvino_genai.so libopenvino_genai.so.2025.4.0.0 ; fi
-if [[ "$BASE_OS" =~ "ubuntu" ]] && [ -f /ovms_release/lib/libopenvino_genai.so.2025.4.0.0 ]; then cd /ovms_release/lib/ ; rm -rf libopenvino_genai.so ; rm -rf libopenvino_genai.so.2540 ; ln -s libopenvino_genai.so.2025.4.0.0 libopenvino_genai.so.2540 ; ln -s libopenvino_genai.so.2025.4.0.0 libopenvino_genai.so ; fi
+if [[ "$BASE_OS" =~ "redhat" ]] && [ -f /ovms_release/lib/libopenvino_genai.so ]; then cd /ovms_release/lib/ ; rm -rf libopenvino_genai.so.* ; ln -s libopenvino_genai.so libopenvino_genai.so.2541 ; ln -s libopenvino_genai.so libopenvino_genai.so.2025.4.1 ; fi
+if [[ "$BASE_OS" =~ "ubuntu" ]] && [ -f /ovms_release/lib/libopenvino_genai.so.2025.4.1 ]; then cd /ovms_release/lib/ ; rm -rf libopenvino_genai.so ; rm -rf libopenvino_genai.so.2541 ; ln -s libopenvino_genai.so.2025.4.1 libopenvino_genai.so.2541 ; ln -s libopenvino_genai.so.2025.4.1 libopenvino_genai.so ; fi
 
 cd /ovms
 cp -v /ovms/release_files/LICENSE /ovms_release/

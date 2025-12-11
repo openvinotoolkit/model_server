@@ -207,7 +207,7 @@ RUN if ! [[ $debug_bazel_flags == *"_py_off"* ]]; then \
     mkdir -p /opt/intel/openvino/python/openvino_tokenizers/lib ; \
     cp -r python/* /opt/intel/openvino/python/ ; \
     mkdir -p /opt/intel/openvino/python/openvino_tokenizers-2025.4.dist-info ; \
-    echo $'Metadata-Version: 1.0\nName: openvino-tokenizers\nVersion: 2025.4\nRequires-Python: >=3.9\nRequires-Dist: openvino~=2025.4.0' > /opt/intel/openvino/python/openvino_tokenizers-2025.4.dist-info/METADATA ; \
+    echo $'Metadata-Version: 1.0\nName: openvino-tokenizers\nVersion: 2025.4\nRequires-Python: >=3.9\nRequires-Dist: openvino~=2025.4.1' > /opt/intel/openvino/python/openvino_tokenizers-2025.4.dist-info/METADATA ; \
     ln -s /ovms/lib/libopenvino_tokenizers.so /opt/intel/openvino/python/openvino_tokenizers/lib/libopenvino_tokenizers.so ; \
     fi
 # hadolint ignore=DL3003
@@ -291,7 +291,7 @@ RUN if ! [[ $debug_bazel_flags == *"py_off"* ]]; then true ; else exit 0 ; fi ; 
 
 WORKDIR /ovms
 
-ARG PROJECT_VERSION="2025.4.0"
+ARG PROJECT_VERSION="2025.4.1"
 LABEL description="OpenVINO Model Server"
 ARG minitrace_flags
 ENV PYTHONPATH=/opt/intel/openvino/python:/ovms/bazel-bin/src/python/binding
