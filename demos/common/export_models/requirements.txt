@@ -6,7 +6,7 @@ optimum-intel@git+https://github.com/huggingface/optimum-intel.git
 accelerate==1.11.0
 diffusers==0.35.2  # for image generation
 einops==0.8.1
-nncf==2.18.0
+nncf
 numpy==2.2.6
 openai
 openvino-tokenizers==2025.4.0.0rc3

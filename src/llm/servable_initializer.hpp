@@ -52,10 +52,6 @@ public:
     // Use Python Jinja module for template processing
     static void loadPyTemplateProcessor(std::shared_ptr<GenAiServableProperties> properties, const ExtraGenerationInfo& extraGenInfo);
     static ExtraGenerationInfo readExtraGenerationInfo(std::shared_ptr<GenAiServableProperties> properties, const std::string& chatTemplateDirectory);
-#else
-    // In C++ only version we use GenAI for template processing, but to have the same behavior as in Python-enabled version
-    // we use default template if model does not have its own, so that servable can also work on chat/completion endpoint.
-    static void loadDefaultTemplateProcessorIfNeeded(std::shared_ptr<GenAiServableProperties> properties);
 #endif
     /*
     initialize method implementation MUST fill servable with all required properties i.e. pipeline, tokenizer, configs etc. based on mediapipe node options.
