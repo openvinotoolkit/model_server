@@ -379,14 +379,6 @@ docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/model
 --rest_port 8000 --source_model Qwen/Qwen3-Coder-30B-A3B-Instruct --model_repository_path models --tool_parser qwen3coder --task text_generation --enable_tool_guided_generation true --cache_dir .cache
 ```
 :::
-:::{tab-item} gpt-oss-20b
-:sync: gpt-oss-20b
-```bash
-docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models openvino/model_server:weekly \
---rest_port 8000 --source_model openai/gpt-oss-20b --model_repository_path models \
---tool_parser gptoss --reasoning_parser gptoss --task text_generation --enable_prefix_caching true --pipeline_type LM
-```
-:::
 ::::
 
 
