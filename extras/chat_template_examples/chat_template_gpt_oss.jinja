@@ -1,10 +1,25 @@
 {#-
+  Modifications to original chat template:
+    * Allowing reasoning_effort=none; this automatically adds empty reasoning channel at the end. It should force the model to follow with regular response/tool call immediately.
+      IMPORTANT: When none used, reasoning_effort is rendered as low in the reasoning definition slot (as it is the lowest possible reasoning during model training).
+    * Removed exception when chat history contains both: content and reasoning_content.
+      BFCL benchmark requests contain both: reasoning & regular content in SINGLE history turn.
+      Instead of exception, the regular content is rendered and reasoning_content omitted (assuming regular content might be more insightful)
+    * Replaced thinking with reasoning_content. For some reason OpenAI used thinking field to render reasoning from history.
+      Replaced with reasoning_content which is present in history when benchmarking with BFCL.
+    * Added special handling for empty tool_calls field when rendering chat history.
+      In some cases gpt-oss generates reasoning/content but no tool calls.
+      BFCL sends empty array and chat template accessed index 0 assuming there always is some tool call. New chat template ignores empty arrays now.
+    * Removed "|tojson" from tool argument rendering. This introduced string escaping drastically influenced following generations. OpenAI Harmony format assumes no escaping of arguments.
+      This was related to both: function call output (result from mcp servers) and function call arguments (input to mcp servers) in chat history.
+#}
+{#-
   In addition to the normal inputs of `messages` and `tools`, this template also accepts the
   following kwargs:
   - "builtin_tools": A list, can contain "browser" and/or "python".
   - "model_identity": A string that optionally describes the model identity.
   - "reasoning_effort": A string that describes the reasoning effort, defaults to "medium".
- #}
+#}
 
 {#- Tool Definition Rendering ============================================== #}
 {%- macro render_typescript_type(param_spec, required_params, is_nullable=false) -%}
@@ -203,7 +218,12 @@
     {%- if reasoning_effort is not defined %}
         {%- set reasoning_effort = "medium" %}
     {%- endif %}
-    {{- "Reasoning: " + reasoning_effort + "\n\n" }}
+    {#- {{- "Reasoning: " + reasoning_effort + "\n\n" }} #}
+    {%- set display_effort = reasoning_effort %}
+    {%- if reasoning_effort == "none" %}
+        {%- set display_effort = "low" %}
+    {%- endif %}
+    {{- "Reasoning: " + display_effort + "\n\n" }}
     {%- if builtin_tools %}
         {{- "# Tools\n\n" }}
         {%- set available_builtin_tools = namespace(browser=false, python=false) %}
@@ -262,12 +282,12 @@
         {#- Checks to ensure the messages are being passed in the format we expect #}
         {%- if "content" in message %}
             {%- if "<|channel|>analysis<|message|>" in message.content or "<|channel|>final<|message|>" in message.content %}
-                {{- raise_exception("You have passed a message containing <|channel|> tags in the content field. Instead of doing this, you should pass analysis messages (the string between '<|message|>' and '<|end|>') in the 'thinking' field, and final messages (the string between '<|message|>' and '<|end|>') in the 'content' field.") }}
+                {{- raise_exception("You have passed a message containing <|channel|> tags in the content field. Instead of doing this, you should pass analysis messages (the string between '<|message|>' and '<|end|>') in the 'reasoning_content' field, and final messages (the string between '<|message|>' and '<|end|>') in the 'content' field.") }}
             {%- endif %}
         {%- endif %}
-        {%- if "thinking" in message %}
-            {%- if "<|channel|>analysis<|message|>" in message.thinking or "<|channel|>final<|message|>" in message.thinking %}
-                {{- raise_exception("You have passed a message containing <|channel|> tags in the thinking field. Instead of doing this, you should pass analysis messages (the string between '<|message|>' and '<|end|>') in the 'thinking' field, and final messages (the string between '<|message|>' and '<|end|>') in the 'content' field.") }}
+        {%- if "reasoning_content" in message %}
+            {%- if "<|channel|>analysis<|message|>" in message.reasoning_content or "<|channel|>final<|message|>" in message.reasoning_content %}
+                {{- raise_exception("You have passed a message containing <|channel|> tags in the reasoning_content field. Instead of doing this, you should pass analysis messages (the string between '<|message|>' and '<|end|>') in the 'reasoning_content' field, and final messages (the string between '<|message|>' and '<|end|>') in the 'content' field.") }}
             {%- endif %}
         {%- endif %}
         {%- if "tool_calls" in message %}
@@ -280,25 +300,37 @@
                     {%- set future_final_message.found = true %}
                 {%- endif %}
             {%- endfor %}
-            {#- We assume max 1 tool call per message, and so we infer the tool call name #}
-            {#- in "tool" messages from the most recent assistant tool call name #}
-            {%- set tool_call = message.tool_calls[0] %}
-            {%- if tool_call.function %}
-                {%- set tool_call = tool_call.function %}
-            {%- endif %}
-            {%- if message.content and message.thinking %}
-                {{- raise_exception("Cannot pass both content and thinking in an assistant message with tool calls! Put the analysis message in one or the other, but not both.") }}
+            {%- if message.content and message.reasoning_content and not future_final_message.found %}
+                {#- Original: {{- raise_exception("Cannot pass both content and reasoning_content in an assistant message with tool calls! Put the analysis message in one or the other, but not both.") }} #}
+                {#- Mod: Exception suppressed, multi-turn BFCL benchmark contains such situations. #}
+                {#- Prefer rendering content over reasoning when both are available, looks like it contains more information. #}
+                {{- "<|start|>assistant<|channel|>analysis<|message|>" + message.content + "<|end|>" }}
             {%- elif message.content and not future_final_message.found %}
                 {{- "<|start|>assistant<|channel|>analysis<|message|>" + message.content + "<|end|>" }}
-            {%- elif message.thinking and not future_final_message.found %}
-                {{- "<|start|>assistant<|channel|>analysis<|message|>" + message.thinking + "<|end|>" }}
+            {%- elif message.reasoning_content and not future_final_message.found %}
+                {{- "<|start|>assistant<|channel|>analysis<|message|>" + message.reasoning_content + "<|end|>" }}
             {%- endif %}
-            {{- "<|start|>assistant to=" }}
-            {{- "functions." + tool_call.name + "<|channel|>commentary " }}
-            {{- (tool_call.content_type if tool_call.content_type is defined else "json") + "<|message|>" }}
-            {{- tool_call.arguments|tojson }}
-            {{- "<|call|>" }}
-            {%- set last_tool_call.name = tool_call.name %}
+            {#- Mod: this check was not present, causing crashes if tool_calls array was empty #}
+            {%- if message.tool_calls|length > 0 %}
+                {#- We assume max 1 tool call per message, and so we infer the tool call name #}
+                {#- in "tool" messages from the most recent assistant tool call name #}
+                {%- set tool_call = message.tool_calls[0] %}
+                {%- if tool_call.function %}
+                    {%- set tool_call = tool_call.function %}
+                {%- endif %}
+                {{- "<|start|>assistant to=" }}
+                {{- "functions." + tool_call.name + " <|channel|>commentary " }}
+                {{- (tool_call.content_type if tool_call.content_type is defined else "json") + "<|message|>" }}
+                {#- Original: {{- tool_call.arguments|tojson }} #}
+                {#- No need to escape: #}
+                {{- tool_call.arguments }}
+                {#- Original: {{- "<|call|>" }} #}
+                {#- https://cookbook.openai.com/articles/openai-harmony#handling-tool-calls #}
+                {#- Found out in OpenAI Harmony docs it should be replaced with <|end|> in history rendering: #}
+                {{- "<|end|>" }}
+                {%- set last_tool_call.name = tool_call.name %}
+            {%- endif %}
+
         {%- elif loop.last and not add_generation_prompt %}
             {#- Only render the CoT if the final turn is an assistant turn and add_generation_prompt is false #}
             {#- This is a situation that should only occur in training, never in inference. #}
@@ -319,7 +351,9 @@
             {{- raise_exception("Message has tool role, but there was no previous assistant message with a tool call!") }}
         {%- endif %}
         {{- "<|start|>functions." + last_tool_call.name }}
-        {{- " to=assistant<|channel|>commentary<|message|>" + message.content|tojson + "<|end|>" }}
+        {#- Original: {{- " to=assistant<|channel|>commentary<|message|>" + message.content|tojson + "<|end|>" }} #}
+        {#- Actual version that works, does not escape and allows non-json: #}
+        {{- " to=assistant<|channel|>commentary<|message|>" + message.content + "<|end|>" -}}
     {%- elif message.role == 'user' -%}
         {{- "<|start|>user<|message|>" + message.content + "<|end|>" }}
     {%- endif -%}
@@ -327,5 +361,9 @@
 
 {#- Generation prompt #}
 {%- if add_generation_prompt -%}
-<|start|>assistant
+    {%- if reasoning_effort == "none" -%}
+        {{- "<|start|>assistant<|channel|>analysis<|message|><|end|><|start|>assistant" }}
+    {%- else -%}
+        {{- "<|start|>assistant" }}
+    {%- endif -%}
 {%- endif -%}
