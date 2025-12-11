@@ -148,31 +148,10 @@ static const char* jsonTypeOf(const rapidjson::Value& val) {
 }
 static void enforceStringValue(rapidjson::Value& v,
     rapidjson::Document::AllocatorType& alloc) {
-    if (v.IsString()) {
-        return;
-    }
-    std::string s;
-    if (v.IsBool()) {
-        s = v.GetBool() ? "true" : "false";
-    } else if (v.IsInt()) {
-        s = std::to_string(v.GetInt());
-    } else if (v.IsUint()) {
-        s = std::to_string(v.GetUint());
-    } else if (v.IsInt64()) {
-        s = std::to_string(v.GetInt64());
-    } else if (v.IsUint64()) {
-        s = std::to_string(v.GetUint64());
-    } else if (v.IsDouble()) {
-        s = std::to_string(v.GetDouble());
-    } else if (v.IsNull()) {
-        s = "null";
-    } else {
-        rapidjson::StringBuffer buffer;
-        rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-        v.Accept(writer);
-        s = buffer.GetString();
-    }
-    v.SetString(s.c_str(), static_cast<rapidjson::SizeType>(s.size()), alloc);
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+    v.Accept(writer);
+    v.SetString(buffer.GetString(), buffer.GetLength(), alloc);
 }
 
 void Qwen3CoderToolParserImpl::addParameterToCurrentFunctionDoc(std::string& parameterValueAsString) {
@@ -188,21 +167,26 @@ void Qwen3CoderToolParserImpl::addParameterToCurrentFunctionDoc(std::string& par
     if (paramIt != this->toolsParametersTypeMap.end()) {
         auto paramJt = paramIt->second.find(currentParameterName);
         if (paramJt != paramIt->second.end() && (paramJt->second == ParameterType::BOOLEAN)) {
-            std::transform(parameterValueAsString.begin(), parameterValueAsString.end(), parameterValueAsString.begin(), ::tolower);
+            if (parameterValueAsString == "True" || parameterValueAsString == "TRUE") {
+                parameterValueAsString = "true";
+            } else if (parameterValueAsString == "False" || parameterValueAsString == "FALSE") {
+                parameterValueAsString = "false";
+            }
         }
     }
     temp.Parse(parameterValueAsString.c_str());
     if (temp.HasParseError()) {
         rapidjson::ParseErrorCode errorCode = temp.GetParseError();
         size_t errorOffset = temp.GetErrorOffset();
-        SPDLOG_DEBUG("Error parsing parameter: {} value: {}; error at offset: {}; code: {};", this->currentParameterName, parameterValueAsString, errorOffset, rapidjson::GetParseError_En(errorCode));
+        // If error occurred during parsing, we will insert parameter as string
+        SPDLOG_DEBUG("Error parsing parameter: {} value: {}; error at offset: {}; code: {}; Will insert as string", this->currentParameterName, parameterValueAsString, errorOffset, rapidjson::GetParseError_En(errorCode));
         // since we are unable to parse with rapidjson generated parameter will be inserted as is as string
         rapidjson::Value v;
         v.SetString(parameterValueAsString.c_str(), static_cast<rapidjson::SizeType>(parameterValueAsString.size()), allocator);
         if (!currentFunctionArgsDoc.HasMember(keyVal)) {
             currentFunctionArgsDoc.AddMember(keyVal, v, allocator);
         } else {
-            SPDLOG_DEBUG("Parameter: {} already exists in document, overwriting with string value due to parse error", key);
+            SPDLOG_DEBUG("Parameter: {} already exists in document", key);
         }
     } else {
         rapidjson::Value valueCopy;

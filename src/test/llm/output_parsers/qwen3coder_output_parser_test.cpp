@@ -327,7 +327,53 @@ null
     EXPECT_TRUE(status.ok()) << status.string();
     EXPECT_EQ(calls.size(), 1) << input;
     EXPECT_EQ(calls[0].name, "stringx7_tool");
-    EXPECT_EQ(calls[0].arguments, "{\"arg1\":\"true\",\"arg2\":\"-13\",\"arg3\":\"42\",\"arg4\":\"-12345678901234\",\"arg5\":\"12345678901234\",\"arg6\":\"3.141590\",\"arg7\":\"null\"}");
+    EXPECT_EQ(calls[0].arguments, "{\"arg1\":\"true\",\"arg2\":\"-13\",\"arg3\":\"42\",\"arg4\":\"-12345678901234\",\"arg5\":\"12345678901234\",\"arg6\":\"3.14159\",\"arg7\":\"null\"}");
+    EXPECT_EQ(parser.getCurrentState(), ovms::Qwen3CoderToolParserImpl::State::Content) << input;
+    EXPECT_EQ(parser.getLastProcessedPosition(), input.find("</tool_call>") + std::string("</tool_call>").size()) << input;
+    EXPECT_EQ(content, "\n");
+}
+TEST_F(Qwen3CoderOutputParserTest, TestJustParserImplUnaryWithNotPresentToolSchema) {
+    // in this case everything will be writtem as parsed type
+    // arg1, arg2, ..., arg8: bool, int, uint, int64, uint64, double, null, string
+    const std::string input = R"(
+<tool_call>
+<function=unrecognized_tool>
+<parameter=arg1>
+true
+</parameter>
+<parameter=arg2>
+-13
+</parameter>
+<parameter=arg3>
+42
+</parameter>
+<parameter=arg4>
+-12345678901234
+</parameter>
+<parameter=arg5>
+12345678901234
+</parameter>
+<parameter=arg6>
+3.14159
+</parameter>
+<parameter=arg7>
+null
+</parameter>
+<parameter=arg8>
+SomeStringHere
+</parameter>
+</function>
+</tool_call>)";
+    auto content = input;
+    ovms::Qwen3CoderToolParserImpl parser(toolsParametersTypeMap);
+    auto callsOpt = parser.parseChunk(content);
+    ASSERT_TRUE(callsOpt.has_value());
+    ToolCalls_t& calls = callsOpt.value();
+    auto status = parser.removeToolCallsFromContentIfNeeded(content);
+    EXPECT_TRUE(status.ok()) << status.string();
+    EXPECT_EQ(calls.size(), 1) << input;
+    EXPECT_EQ(calls[0].name, "unrecognized_tool");
+    EXPECT_EQ(calls[0].arguments, "{\"arg1\":true,\"arg2\":-13,\"arg3\":42,\"arg4\":-12345678901234,\"arg5\":12345678901234,\"arg6\":3.14159,\"arg7\":null,\"arg8\":\"SomeStringHere\"}");
     EXPECT_EQ(parser.getCurrentState(), ovms::Qwen3CoderToolParserImpl::State::Content) << input;
     EXPECT_EQ(parser.getLastProcessedPosition(), input.find("</tool_call>") + std::string("</tool_call>").size()) << input;
     EXPECT_EQ(content, "\n");
