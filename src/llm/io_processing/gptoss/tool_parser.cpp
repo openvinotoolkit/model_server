@@ -86,9 +86,11 @@ std::optional<rapidjson::Document> GptOssToolParser::parseChunk(const std::strin
     std::string chunk = newChunk;
     std::optional<rapidjson::Document> result;
 
-    if (chunk.find(getParsingStartTags()[0]) != std::string::npos) {
-        toolCallIndex++;  // starting with -1, first call will be 0
-        return std::nullopt;
+    for (const auto& parsingStartTag : getParsingStartTags()) {
+        if (chunk.find(parsingStartTag) != std::string::npos) {
+            toolCallIndex++;  // starting with -1, first call will be 0
+            return std::nullopt;
+        }
     }
 
     // This should only happen during channel read if model does not produce garbage
@@ -158,6 +160,7 @@ std::optional<rapidjson::Document> GptOssToolParser::parseChunk(const std::strin
                 // Cut everything after first .
                 // Remove and take only remaining part
                 // The harmony format is: <|channel|>commentary to=functions.<function_name> <|constrain|>json<|message|>{...}<|call|>
+                // HACK: This does not conform to OpenAI Harmony format, but we allow for <|channel|>analysis to=... as well
                 std::size_t pos = chunk.find('.');
                 if (pos != std::string::npos) {
                     chunk = chunk.substr(pos + 1);
