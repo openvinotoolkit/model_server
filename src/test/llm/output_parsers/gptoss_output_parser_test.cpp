@@ -485,7 +485,7 @@ protected:
 };
 
 TEST_F(GptOssOutputStreamParserTest, HolisticStreamingReasoning) {
-    for (const auto stopToken : std::vector<std::string>{"<|end|>", "<|return|>"}) {
+    for (const auto& stopToken : std::vector<std::string>{"<|end|>", "<|return|>"}) {
         std::vector<std::tuple<std::string, ov::genai::GenerationFinishReason, std::optional<std::string>>> chunkToDeltaVec{
             // Reasoning
             {"<|channel|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
