@@ -113,6 +113,9 @@ pipeline {
                 label 'win_ovms'
               }
               when { expression { win_image_build_needed == "true" } }
+              environment {
+                USE_OV_BINARY = "0"
+              }
               steps {
                   script {
                       agent_name_windows = env.NODE_NAME
