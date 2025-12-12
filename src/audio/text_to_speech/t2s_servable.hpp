@@ -38,11 +38,32 @@
 
 namespace ovms {
 
+static ov::Tensor read_speaker_embedding(const std::filesystem::path& file_path) {
+    std::ifstream input(file_path, std::ios::binary);
+    OPENVINO_ASSERT(input, "Failed to open file: " + file_path.string());
+
+    // Get file size
+    input.seekg(0, std::ios::end);
+    size_t buffer_size = static_cast<size_t>(input.tellg());
+    input.seekg(0, std::ios::beg);
+
+    // Check size is multiple of float
+    OPENVINO_ASSERT(buffer_size % sizeof(float) == 0, "File size is not a multiple of float size.");
+    size_t num_floats = buffer_size / sizeof(float);
+    OPENVINO_ASSERT(num_floats == 512, "File must contain speaker embedding including 512 32-bit floats.");
+
+    OPENVINO_ASSERT(input, "Failed to read all data from file.");
+    ov::Tensor floats_tensor(ov::element::f32, ov::Shape{1, num_floats});
+    input.read(reinterpret_cast<char*>(floats_tensor.data()), buffer_size);
+
+    return floats_tensor;
+}
+
 struct TtsServable {
     std::filesystem::path parsedModelsPath;
     std::shared_ptr<ov::genai::Text2SpeechPipeline> ttsPipeline;
     std::mutex ttsPipelineMutex;
-    std::unordered_map<std::string, std::string> voices;
+    std::unordered_map<std::string, ov::Tensor> voices;
 
     TtsServable(const std::string& modelDir, const std::string& targetDevice, const google::protobuf::RepeatedPtrField<mediapipe::T2sCalculatorOptions_SpeakerEmbeddings>& graphVoices, const std::string& graphPath) {
         auto fsModelsPath = std::filesystem::path(modelDir);
@@ -59,7 +80,9 @@ struct TtsServable {
         }
         ttsPipeline = std::make_shared<ov::genai::Text2SpeechPipeline>(parsedModelsPath.string(), nodeOptions.target_device(), config);
         for(auto voice : graphVoices){
-            voices[voice.name()] = voice.path();
+            if (!std::filesystem::exists(voice.path()))
+                throw std::runtime_error{"Requested voice speaker embeddings file does not exist."};
+            voices[voice.name()] = read_speaker_embedding(voice.path());
         }
     }
 };
