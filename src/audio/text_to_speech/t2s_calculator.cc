@@ -124,16 +124,27 @@ public:
             if (streamIt != payload.parsedJson->MemberEnd()) {
                 return absl::InvalidArgumentError("streaming is not supported");
             }
+            std::optional<std::string> voice;
+            auto voiceIt = payload.parsedJson->FindMember("voice");
+            if (voiceIt != payload.parsedJson->MemberEnd() && voiceIt->value.IsString()) {
+                voice = voiceIt->value.GetString();
+            }
+            std::string voiceEmbeddingsPath;
+            if(voice.has_value()){
+                if (pipe->voices.find(voice.value()) == pipe->voices.end())
+                    return absl::InvalidArgumentError(absl::StrCat("Requested voice not available: ", payload.uri));
+                if (!std::filesystem::exists(pipe->voices[voice.value()]))
+                    return absl::InvalidArgumentError(absl::StrCat("Requested voice speaker embeddings file does not exist: ", pipe->voices[voice.value()]));
+                voiceEmbeddingsPath = pipe->voices[voice.value()];
+            }
             ov::genai::Text2SpeechDecodedResults generatedSpeech;
-            std::string voiceEmbeddingsPath = std::string(pipe->parsedModelsPath.c_str()) + std::string("speaker_embedding.bin");
             std::unique_lock lock(pipe->ttsPipelineMutex);
-            if(std::filesystem::exists(voiceEmbeddingsPath)){
-                SPDLOG_LOGGER_DEBUG(t2s_calculator_logger, "Voice embeddings file found");
+
+            if(voice.has_value()){
                 auto speakerEmbedding = read_speaker_embedding(voiceEmbeddingsPath);
                 generatedSpeech = pipe->ttsPipeline->generate(inputIt->value.GetString(), speakerEmbedding);
             }
             else{
-                SPDLOG_LOGGER_DEBUG(t2s_calculator_logger, "Voice embeddings not found");
                 generatedSpeech = pipe->ttsPipeline->generate(inputIt->value.GetString());
             }
             auto bitsPerSample = generatedSpeech.speeches[0].get_element_type().bitwidth();

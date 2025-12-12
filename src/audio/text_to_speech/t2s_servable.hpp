@@ -38,8 +38,9 @@ struct TtsServable {
     std::filesystem::path parsedModelsPath;
     std::shared_ptr<ov::genai::Text2SpeechPipeline> ttsPipeline;
     std::mutex ttsPipelineMutex;
+    std::unordered_map<std::string, std::string> voices;
 
-    TtsServable(const std::string& modelDir, const std::string& targetDevice, const std::string& graphPath) {
+    TtsServable(const std::string& modelDir, const std::string& targetDevice, const google::protobuf::RepeatedPtrField<mediapipe::T2sCalculatorOptions_SpeakerEmbeddings>& graphVoices, const std::string& graphPath) {
         auto fsModelsPath = std::filesystem::path(modelDir);
         if (fsModelsPath.is_relative()) {
             parsedModelsPath = (std::filesystem::path(graphPath) / fsModelsPath);
@@ -47,6 +48,10 @@ struct TtsServable {
             parsedModelsPath = fsModelsPath.string();
         }
         ttsPipeline = std::make_shared<ov::genai::Text2SpeechPipeline>(parsedModelsPath.string(), targetDevice);
+        for(auto voice : graphVoices){
+            voices[voice.name()] = voice.path();
+            SPDLOG_ERROR("{} : {}", voice.name(), voice.path());
+        }
     }
 };
 
