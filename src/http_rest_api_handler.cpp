@@ -771,8 +771,8 @@ Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpReque
             auto& executor = executorWrapper.getObjectHolder()->get();
 
             if (request == nullptr || executor == nullptr) {  // should not happen
-                SPDLOG_DEBUG("Request or executor object is null in streaming inference");
-                return;
+                SPDLOG_ERROR("Not all resources for streaming inference have been properly initialized");
+                throw std::runtime_error("Not all resources for streaming inference have been properly initialized");
             }
 
             ExecutionContext executionContext{ExecutionContext::Interface::REST, ExecutionContext::Method::V3Stream};
