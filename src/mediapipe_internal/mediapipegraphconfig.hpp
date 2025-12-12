@@ -16,10 +16,7 @@
 #pragma once
 
 #include <string>
-#pragma warning(push)
-#pragma warning(disable : 6313)
-#include <rapidjson/document.h>
-#pragma warning(pop)
+#include "src/port/rapidjson_document.hpp"
 
 namespace ovms {
 
