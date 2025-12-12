@@ -28,7 +28,6 @@ python export_model.py text_generation --source_model Qwen/Qwen3-Coder-30B-A3B-I
 curl -L -o models/Qwen/Qwen3-Coder-30B-A3B-Instruct/chat_template.jinja https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/extras/chat_template_examples/chat_template_qwen3coder_instruct.jinja
 
 docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
-    -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy=$no_proxy \
     openvino/model_server:weekly \
     --add_to_config \
     --config_path /models/config_all.json \
@@ -45,7 +44,6 @@ python export_model.py text_generation --source_model mistralai/Codestral-22B-v0
 curl -L -o models/mistralai/Codestral-22B-v0.1/chat_template.jinja https://raw.githubusercontent.com/vllm-project/vllm/refs/tags/v0.10.1.1/examples/tool_chat_template_mistral_parallel.jinja
 
 docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
-    -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy=$no_proxy \
     openvino/model_server:weekly \
     --add_to_config \
     --config_path /models/config_all.json \
@@ -62,12 +60,27 @@ python export_model.py text_generation --source_model openai/gpt-oss-20b --weigh
 curl -L -o models/openai/gpt-oss-20b/chat_template.jinja https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/extras/chat_template_examples/chat_template_gpt_oss.jinja
 
 docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
-    -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy=$no_proxy \
     openvino/model_server:weekly \
     --add_to_config \
     --config_path /models/config_all.json \
     --model_name openai/gpt-oss-20b \
     --model_path openai/gpt-oss-20b
+```
+> **Note:** This model requires ~13GB disk space and same amount of VRAM on the GPU for deployment. For conversion, the original model will be pulled and quantization will require the amount of RAM of the model size.
+
+:::
+
+:::{tab-item} unsloth/Devstral-Small-2507
+```bash
+python export_model.py text_generation --source_model unsloth/Devstral-Small-2507 --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device GPU --overwrite_models --pipeline_type LM
+curl -L -o models/unsloth/Devstral-Small-2507/chat_template.jinja https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/extras/chat_template_examples/chat_template_gpt_oss.jinja
+
+docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
+    openvino/model_server:weekly \
+    --add_to_config \
+    --config_path /models/config_all.json \
+    --model_name unsloth/Devstral-Small-2507 \
+    --model_path unsloth/Devstral-Small-2507
 ```
 > **Note:** This model requires ~xGB disk space and same amount of VRAM on the GPU for deployment. For conversion, the original model will be pulled and quantization will require the amount of RAM of the model size.
 
@@ -83,7 +96,6 @@ docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
     --task text_generation
 
 docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
-    -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy=$no_proxy \
     openvino/model_server:weekly \
     --add_to_config \
     --config_path /models/config_all.json \
@@ -102,7 +114,6 @@ docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
     --task text_generation
     
 docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
-    -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy=$no_proxy \
     openvino/model_server:weekly \
     --add_to_config --config_path /models/config_all.json \
     --model_name OpenVINO/Qwen3-4B-int4-ov \
@@ -120,7 +131,6 @@ docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
     --task text_generation
     
 docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
-    -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy=$no_proxy \
     openvino/model_server:weekly \
     --add_to_config \
     --config_path /models/config_all.json \
@@ -160,12 +170,24 @@ ovms.exe --add_to_config --config_path models/config_all.json --model_name mistr
 :::
 :::{tab-item} openai/gpt-oss-20b
 :sync: openai/gpt-oss-20b
-```bash
+```bat
 python export_model.py text_generation --source_model openai/gpt-oss-20b --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device GPU --overwrite_models --pipeline_type LM
+curl -L -o models/openai/gpt-oss-20b/chat_template.jinja https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/extras/chat_template_examples/chat_template_gpt_oss.jinja
 
 ovms.exe --add_to_config --config_path models/config_all.json --model_name openai/gpt-oss-20b --model_path openai/gpt-oss-20b
 ```
-> **Note:** This model requires ~xGB disk space and same amount of VRAM on the GPU for deployment. For conversion, the original model will be pulled and quantization will require the amount of RAM of the model size.
+> **Note:** This model requires ~13GB disk space and same amount of VRAM on the GPU for deployment. For conversion, the original model will be pulled and quantization will require the amount of RAM of the model size.
+
+:::
+:::{tab-item} unsloth/Devstral-Small-2507
+:sync: unsloth/Devstral-Small-2507
+```bat
+python export_model.py text_generation --source_model unsloth/Devstral-Small-2507 --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device GPU --overwrite_models --pipeline_type LM
+curl -L -o models/unsloth/Devstral-Small-2507/chat_template.jinja https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/extras/chat_template_examples/chat_template_gpt_oss.jinja
+
+ovms.exe --add_to_config --config_path models/config_all.json --model_name openai/gpt-oss-20b --model_path openai/gpt-oss-20b
+```
+> **Note:** This model requires ~13GB disk space and same amount of VRAM on the GPU for deployment. For conversion, the original model will be pulled and quantization will require the amount of RAM of the model size.
 
 :::
 :::{tab-item} OpenVINO/Qwen3-8B-int4-ov
@@ -342,13 +364,21 @@ models:
       - chat
       - edit
       - apply
+    capabilities:
+      - tool_use
+  - name: OVMS openai/gpt-oss-20b autocomplete
+    provider: openai
+    model: openai/gpt-oss-20b
+    apiKey: unused
+    apiBase: http://localhost:8000/v3
+    roles:
       - autocomplete
     capabilities:
       - tool_use
     requestOptions:
       extraBodyProperties:
-        chat_template_kwargs:
-          enable_thinking: false
+        reasoning_effort:
+          none
 
     autocompleteOptions:
       maxPromptTokens: 500
