@@ -42,9 +42,10 @@ struct TtsServable {
     std::filesystem::path parsedModelsPath;
     std::shared_ptr<ov::genai::Text2SpeechPipeline> ttsPipeline;
     std::mutex ttsPipelineMutex;
+    std::unordered_map<std::string, std::string> voices;
 
-    TtsServable(const mediapipe::T2sCalculatorOptions& nodeOptions, const std::string& graphPath) {
-        auto fsModelsPath = std::filesystem::path(nodeOptions.models_path());
+    TtsServable(const std::string& modelDir, const std::string& targetDevice, const google::protobuf::RepeatedPtrField<mediapipe::T2sCalculatorOptions_SpeakerEmbeddings>& graphVoices, const std::string& graphPath) {
+        auto fsModelsPath = std::filesystem::path(modelDir);
         if (fsModelsPath.is_relative()) {
             parsedModelsPath = (std::filesystem::path(graphPath) / fsModelsPath);
         } else {
@@ -57,6 +58,9 @@ struct TtsServable {
             throw std::runtime_error("Error during plugin_config option parsing");
         }
         ttsPipeline = std::make_shared<ov::genai::Text2SpeechPipeline>(parsedModelsPath.string(), nodeOptions.target_device(), config);
+        for(auto voice : graphVoices){
+            voices[voice.name()] = voice.path();
+        }
     }
 };
 
