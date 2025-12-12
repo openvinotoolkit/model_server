@@ -120,6 +120,7 @@ ovms_cc_library(
     hdrs = ["io_processing/qwen3coder/qwen3coder_tool_parser.hpp"],
     srcs = ["io_processing/qwen3coder/qwen3coder_tool_parser.cpp"],
     deps = [
+        "@com_github_tencent_rapidjson//:rapidjson",
         "//src:libovmslogging",
         "//src:libovmsstatus",
         "//src/utils:rapidjson_utils",
@@ -225,6 +226,7 @@ ovms_cc_library(
         "//src:libovmsprofiler",
         "//src:libovmsstring_utils",
         "//src:libovmsfilesystem",
+        "//src/tokenize:tokenize_parser",
         "llmcalculator_cc_proto",
         ":openai_completions_api_handler",
         ":generation_config_builders",

@@ -62,6 +62,7 @@
 #include "status.hpp"
 #include "stringutils.hpp"
 #include "timer.hpp"
+#include "copyable_object_wrapper.hpp"
 
 #if (MEDIAPIPE_DISABLE == 0)
 #include "http_frontend/http_client_connection.hpp"
@@ -703,10 +704,16 @@ Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpReque
         return status;
     }
 
-    std::shared_ptr<MediapipeGraphExecutor> executor;
+    CopyableObjectWrapper<MediapipeGraphExecutor> executorWrapper;
+    auto& executor = executorWrapper.getObjectHolder()->get();
     status = this->modelManager.createPipeline(executor, modelName);
     if (!status.ok()) {
         return status;
+    }
+
+    if (!executorWrapper.getObjectHolder()->valid()) {
+        SPDLOG_ERROR("Failed to acquire MediaPipe graph executor for model: {}", modelName);
+        return StatusCode::INTERNAL_ERROR;
     }
 
     if (streamFieldVal == false) {
@@ -716,8 +723,9 @@ Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpReque
         serverReaderWriter->OverwriteResponseHeader("Content-Type", "text/event-stream");
         serverReaderWriter->OverwriteResponseHeader("Cache-Control", "no-cache");
         serverReaderWriter->OverwriteResponseHeader("Connection", "keep-alive");
-        serverReaderWriter->PartialReplyBegin([executor = std::move(executor), serverReaderWriter, request = std::move(request)] {
+        serverReaderWriter->PartialReplyBegin([executorWrapper = executorWrapper, serverReaderWriter, request = std::move(request)]() mutable {
             ExecutionContext executionContext{ExecutionContext::Interface::REST, ExecutionContext::Method::V3Stream};
+            auto& executor = executorWrapper.getObjectHolder()->get();
             auto status = executor->inferStream(request, *serverReaderWriter, executionContext);
             if (!status.ok()) {
                 rapidjson::StringBuffer buffer;
@@ -728,6 +736,7 @@ Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpReque
                 writer.EndObject();
                 serverReaderWriter->PartialReplyWithStatus(buffer.GetString(), HTTPStatusCode::BAD_REQUEST);
             }
+            executor.reset();
             serverReaderWriter->PartialReplyEnd();
         });
         return StatusCode::PARTIAL_END;

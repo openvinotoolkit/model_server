@@ -28,8 +28,8 @@
 namespace ovms {
 class Phi4ToolParser : public BaseOutputParser {
 protected:
-    // Tools calls are expected to be the last part of the content, so we do not specify an end tag.
     const std::string parsingStartTag = "functools";
+    // Tools calls are expected to be the last part of the content and there is no unique separator between tools, so we do not specify an end tag.
     const std::string parsingEndTag = "";
 
     // Streaming required members

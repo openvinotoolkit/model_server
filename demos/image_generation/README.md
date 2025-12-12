@@ -226,7 +226,7 @@ python export_model.py image_generation \
   --source_model stable-diffusion-v1-5/stable-diffusion-v1-5 \
   --weight-format int8 \
   --target_device "NPU NPU NPU" \
-  --resolution '512x512' \
+  --resolution 512x512 \
   --ov_cache_dir /cache \
   --config_file_path models/config.json \
   --model_repository_path models \
@@ -331,9 +331,11 @@ In this specific case, we also need to use `--device /dev/dri`, because we also 
 It can be applied using the commands below:
 ```bash
 mkdir -p cache
+chmod -R 755 cache
 docker run -d --rm -p 8000:8000 \
   -v $(pwd)/models:/models:rw \
   -v $(pwd)/cache:/cache:rw \
+  -u $(id -u):$(id -g) \
   --device /dev/accel --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) \
   openvino/model_server:latest-gpu \
     --rest_port 8000 \

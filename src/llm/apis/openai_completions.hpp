@@ -45,6 +45,7 @@ namespace ovms {
 enum class Endpoint {
     CHAT_COMPLETIONS,
     COMPLETIONS,
+    TOKENIZE,
 };
 
 struct CompletionUsageStatistics {

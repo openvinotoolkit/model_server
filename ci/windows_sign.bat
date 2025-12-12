@@ -12,7 +12,13 @@ if /I "%PYTHON%"=="1" (
     set "PYTHON_OPT="
 )
 
-python check_signing.py --user=%OVMS_USER% --path=%OVMS_FILES% %PYTHON_OPT% --auto --verbose --print_all 2>&1 | tee ..\..\win_sign.log
+if /I "%RELEASE_TYPE%"=="RELEASE" (
+    set "RELEASE_OPT=--release"
+) else (
+    set "RELEASE_OPT="
+)
+
+python check_signing.py --user=%OVMS_USER% --path=%OVMS_FILES% %PYTHON_OPT% %RELEASE_OPT% --auto --verbose --print_all 2>&1 | tee ..\..\win_sign.log
 python check_signing.py --zip --path=%OVMS_FILES% %PYTHON_OPT% --auto
 
 for %%f in (ovms_windows_python_*) do (

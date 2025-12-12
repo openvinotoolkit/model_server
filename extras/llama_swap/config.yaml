@@ -1,0 +1,110 @@
+# llama-swap YAML configuration example
+# -------------------------------------
+#
+# 💡 Tip - Use an LLM with this file!
+# ====================================
+#  This example configuration is written to be LLM friendly. Try
+#  copying this file into an LLM and asking it to explain or generate
+#  sections for you.
+# ====================================
+
+# Usage notes:
+# - Below are all the available configuration options for llama-swap.
+# - Settings noted as "required" must be in your configuration file
+# - Settings noted as "optional" can be omitted
+
+# healthCheckTimeout: number of seconds to wait for a model to be ready to serve requests
+# - optional, default: 120
+# - minimum value is 15 seconds, anything less will be set to this value
+healthCheckTimeout: 120
+
+# logLevel: sets the logging value
+# - optional, default: info
+# - Valid log levels: debug, info, warn, error
+logLevel: debug
+
+# metricsMaxInMemory: maximum number of metrics to keep in memory
+# - optional, default: 1000
+# - controls how many metrics are stored in memory before older ones are discarded
+# - useful for limiting memory usage when processing large volumes of metrics
+metricsMaxInMemory: 1000
+
+ttl: 300
+
+# startPort: sets the starting port number for the automatic ${PORT} macro.
+# - optional, default: 5800
+# - the ${PORT} macro can be used in model.cmd and model.proxy settings
+# - it is automatically incremented for every model that uses it
+startPort: 10001
+
+# macros: a dictionary of string substitutions
+# - optional, default: empty dictionary
+# - macros are reusable snippets
+# - used in a model's cmd, cmdStop, proxy and checkEndpoint
+# - useful for reducing common configuration settings
+macros:
+  "base_url": http://127.0.0.1:8000/v3
+
+# models: a dictionary of model configurations
+# - required
+# - each key is the model's ID, used in API requests
+# - model settings have default values that are used if they are not defined here
+# - below are examples of the various settings a model can have:
+# - available model settings: env, cmd, cmdStop, proxy, aliases, checkEndpoint, ttl, unlisted
+models:
+
+  OpenVINO/Qwen3-Embedding-0.6B-int8-ov:
+    # cmd: the command to run to start the inference server.
+    # - required
+    # - it is just a string, similar to what you would run on the CLI
+    # - using `|` allows for comments in the command, these will be parsed out
+    # - macros can be used within cmd
+    cmd: |
+      powershell -NoProfile -Command "ovms.exe --add_to_config --model_name ${MODEL_ID}; Start-Sleep -Seconds 999999"
+    cmdStop: |
+      powershell -NoProfile -Command "ovms.exe --remove_from_config  --model_name ${MODEL_ID}"
+    proxy: ${base_url}
+    checkEndpoint: models/${MODEL_ID}
+    name: ${MODEL_ID}
+
+  OpenVINO/Qwen3-4B-int4-ov:
+    # cmd: the command to run to start the inference server.
+    # - required
+    # - it is just a string, similar to what you would run on the CLI
+    # - using `|` allows for comments in the command, these will be parsed out
+    # - macros can be used within cmd
+    cmd: |
+      powershell -NoProfile -Command "ovms.exe --add_to_config --model_name ${MODEL_ID}; Start-Sleep -Seconds 999999"
+    cmdStop: |
+      powershell -NoProfile -Command "ovms.exe --remove_from_config  --model_name ${MODEL_ID}"
+    proxy: ${base_url}
+    checkEndpoint: models/${MODEL_ID}
+    name: ${MODEL_ID}
+
+  OpenVINO/InternVL2-2B-int4-ov:
+    # cmd: the command to run to start the inference server.
+    # - required
+    # - it is just a string, similar to what you would run on the CLI
+    # - using `|` allows for comments in the command, these will be parsed out
+    # - macros can be used within cmd
+    cmd: |
+      powershell -NoProfile -Command "ovms.exe --add_to_config --model_name ${MODEL_ID}; Start-Sleep -Seconds 999999"
+    cmdStop: |
+      powershell -NoProfile -Command "ovms.exe --remove_from_config  --model_name ${MODEL_ID}"
+    proxy: ${base_url}
+    checkEndpoint: models/${MODEL_ID}
+    name: ${MODEL_ID}
+
+  OpenVINO/Mistral-7B-Instruct-v0.3-int4-ov:
+    # cmd: the command to run to start the inference server.
+    # - required
+    # - it is just a string, similar to what you would run on the CLI
+    # - using `|` allows for comments in the command, these will be parsed out
+    # - macros can be used within cmd
+    cmd: |
+      powershell -NoProfile -Command "ovms.exe --add_to_config --model_name ${MODEL_ID}; Start-Sleep -Seconds 999999"
+    cmdStop: |
+      powershell -NoProfile -Command "ovms.exe --remove_from_config  --model_name ${MODEL_ID}"
+    proxy: ${base_url}
+    checkEndpoint: models/${MODEL_ID}
+    name: ${MODEL_ID}

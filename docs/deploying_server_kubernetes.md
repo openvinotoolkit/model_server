@@ -1,17 +1,67 @@
 ## Deploying Model Server in Kubernetes {#ovms_docs_deploying_server_kubernetes}
 
-There are three recommended methods for deploying OpenVINO Model Server in Kubernetes:
-1. [helm chart](https://github.com/openvinotoolkit/operator/tree/main/helm-charts/ovms) - deploys Model Server instances using the [helm](https://helm.sh) package manager for Kubernetes
-2. [Kubernetes Operator](https://operatorhub.io/operator/ovms-operator) - manages Model Server using a Kubernetes Operator
-3. [OpenShift Operator](https://github.com/openvinotoolkit/operator/blob/main/docs/operator_installation.md#openshift) - manages Model Server instances in Red Hat OpenShift
+The recommended deployment method in Kubernetes is via Kserve operator for Kubernetes and OpenShift.
 
-For operators mentioned in 2. and 3. see the [description of the deployment process](https://github.com/openvinotoolkit/operator/blob/main/docs/modelserver.md)
+## ServingRuntime configuration:
 
-## Next Steps
+```
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/extras/kserve/kserve-openvino.yaml -O
+sed -i 's/openvino\/model_server:replace/openvino\/model_server:2025.4-py/' kserve-openvino.yaml
+kubectl apply -f kserve-openvino.yaml
+```
+Note: Alternatively use the image tag `2025.4` to employ smaller image with support to GPU only or `2025.4-gpu` with support for GPU and CPU.
 
-- [Start the server](starting_server.md)
-- Try the model server [features](features.md)
-- Explore the model server [demos](../demos/README.md)
+## Deploying inference service with a generative model from HuggingFace
+
+Below is an example of the InferenceService resource. Change the args and resource to fit your needs.
+```
+apiVersion: serving.kserve.io/v1beta1
+kind: InferenceService
+metadata:
+  name: qwen3-8b-int4-ov
+spec:
+  predictor:
+    model:
+      runtime: kserve-openvino
+      modelFormat:
+        name: huggingface
+      args:
+        - --source_model=OpenVINO/Qwen3-8B-int4-ov
+        - --model_repository_path=/tmp
+        - --task=text_generation
+        - --enable_prefix_caching=true
+        - --tool_parser=hermes3 
+        - --target_device=CPU
+      resources:
+        requests:
+          cpu: "16"
+          memory: "8G"
+        limits:
+          cpu: "16"
+          memory: "8G"
+```
+
+## Deploying a model from cloud storage
+
+```
+kind: InferenceService
+metadata:
+  name: openvino-model
+spec:
+  predictor:
+    serviceAccountName: sa
+    model:
+      runtime: kserve-openvino
+      modelFormat:
+        name: openvino
+      storageUri: "s3://bucket_name/model"
+```
+Note that using s3 or minio bucket requires configuring credentials like described in [KServer documentation](https://kserve.github.io/archive/0.15/modelserving/storage/s3/s3/)
+
+
+## Deprecation notice about OpenVINO operator
+
+The dedicated [operator for OpenVINO]((https://operatorhub.io/operator/ovms-operator)) is now deprecated. KServe operator can now support all OVMS use cases including generative models. It provides wider set of features and configuration options. Because KServe is commonly used for other serving runtimes, it gives easier transition and transparent migration.
 
 ## Additional Resources
 
