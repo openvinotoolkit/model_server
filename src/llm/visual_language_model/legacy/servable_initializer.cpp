@@ -48,6 +48,39 @@
 #include "servable_initializer.hpp"
 
 namespace ovms {
+
+std::pair<size_t, size_t> get_kv_axes_pos(std::shared_ptr<const ov::Model> model) {
+    // sequence length axis in key/values tensors, for most cases [BATCH_SIZE, num_kv_heads, seq_len, head_size],
+    // therefore usually seq_length_axis = 2 and batch = 0
+    std::pair<size_t, size_t> kv_pos { 0u, 2u };
+
+    // "ReadValue" node is KV cache representation in stateful model
+    std::string kv_node_type_name = std::string(ov::op::v6::ReadValue::get_type_info_static().name);
+
+    for (const auto& op : model->get_ops()) {
+        // check input size, as in LoRA adapters case it could be 0
+        if (op->get_type_name() != kv_node_type_name || op->get_input_size() < 1) {
+            continue;
+        }
+
+        // Shape example: [-1,4,0,64]
+        auto shape = op->get_input_partial_shape(0);
+
+        for (size_t i = 0; i < shape.rank().get_length(); i++) {
+            // Find axis = 0. This would be sequence length axis.
+            if (shape[i] == 0) {
+                kv_pos.second = i;
+            } else if (shape[i].is_dynamic()) {
+                // Dynamic axis is a batch
+                kv_pos.first = i;
+            }
+        }
+        break;
+    }
+
+    return kv_pos;
+}
+
 Status VisualLanguageModelLegacyServableInitializer::initialize(std::shared_ptr<GenAiServable>& servable, const mediapipe::LLMCalculatorOptions& nodeOptions, std::string graphPath) {
     std::string parsedModelsPath;
     auto status = parseModelsPath(parsedModelsPath, nodeOptions.models_path(), graphPath);
@@ -93,6 +126,7 @@ Status VisualLanguageModelLegacyServableInitializer::initialize(std::shared_ptr<
         ov::Core core;
         auto language_model_path = std::filesystem::path(parsedModelsPath) / "openvino_language_model.xml";
         auto language_model = core.read_model(language_model_path, {}, properties->pluginConfig);
+        auto kv_pos = get_kv_axes_pos(language_model);
         compiledModelsMap["language"] = core.compile_model(language_model, properties->device, properties->pluginConfig);
 
         auto vision_model_path = std::filesystem::path(parsedModelsPath) / "openvino_vision_embeddings_model.xml";
@@ -113,7 +147,7 @@ Status VisualLanguageModelLegacyServableInitializer::initialize(std::shared_ptr<
         
         compiledModelsMap["text_embeddings"] = core.compile_model(text_embeddings_model, properties->device, properties->pluginConfig);
 
-        properties->pipeline = std::make_shared<ov::genai::VLMPipeline>(parsedModelsPath, compiledModelsMap, properties->pluginConfig);
+        properties->pipeline = std::make_shared<ov::genai::VLMPipeline>(parsedModelsPath, compiledModelsMap, kv_pos.first, kv_pos.second, properties->pluginConfig);
 #else
         properties->pipeline = std::make_shared<ov::genai::VLMPipeline>(parsedModelsPath, properties->device, properties->pluginConfig);
 #endif
