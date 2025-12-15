@@ -76,6 +76,10 @@ curl http://localhost:8000/v3/audio/speech -H "Content-Type: application/json" -
 
 :::{dropdown} **Unary call with OpenAi python library**
 
+```console
+pip3 install openai
+```
+
 ```python
 from pathlib import Path
 from openai import OpenAI
@@ -124,7 +128,7 @@ Average document length: 18.02 tokens
 ## Transcription
 ### Model preparation
 Many variances of Whisper models can be deployed in a single command by using pre-configured models from [OpenVINO HuggingFace organization](https://huggingface.co/collections/OpenVINO/speech-to-text) and used both for translations and transcriptions endpoints.
-However in this demo we will use openai/whisper-large-v3-turbo which needs to be converted to IR format before using in OVMS.
+However, in this demo we will use openai/whisper-large-v3-turbo which needs to be converted to IR format before using in OVMS.
 
 Here, the original Speech to Text model will be converted to IR format and quantized.
 That ensures faster initialization time, better performance and lower memory consumption.
