@@ -260,4 +260,36 @@ tomaarsen/Qwen3-Reranker-0.6B-seq-cls
 
 Check [RAG demo](../continuous_batching/rag/README.md) which employs `rerank` endpoint together with `chat/completions` and `embeddings`. 
 
+# Usage of tokenize endpoint (release 2025.6 or weekly)
+
+The `tokenize` endpoint provides a simple API for tokenizing input text using the same tokenizer as the deployed rerank model. This allows you to see how your text will be split into tokens before feature extraction or inference. The endpoint accepts a string or list of strings and returns the corresponding token IDs.
+
+Example usage:
+```console
+curl http://localhost:8000/v3/tokenize -H "Content-Type: application/json" -d "{ \"model\": \"BAAI/bge-reranker-large\", \"text\": \"hello world\" }"
+```
+Response:
+```json
+{
+  "tokens": [33600,31,8999]
+}
+```
+
+It's possible to use additional parameters:
+ - `pad_to_max_length` - whether to pad the sequence to the maximum length. Default is False. 
+ - `max_length` - maximum length of the sequence. If specified, it truncates the tokens to the provided number.
+ - `padding_side` - side to pad the sequence, can be `left` or `right`. Default is `right`.
+ - `add_special_tokens` - whether to add special tokens like BOS, EOS, PAD. Default is True. 
+
+ Example usage:
+```console
+curl http://localhost:8000/v3/tokenize -H "Content-Type: application/json" -d "{ \"model\": \"BAAI/bge-reranker-large\", \"text\": \"hello world\", \"max_length\": 10, \"pad_to_max_length\": true, \"padding_side\": \"left\", \"add_special_tokens\": true }"
+```
+
+Response:
+```json
+{
+  "tokens": [1,1,1,1,1,1,1,33600,31,8999]
+}
+```
 
