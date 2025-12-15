@@ -133,4 +133,7 @@ message LLMCalculatorOptions {
     optional bool enable_tool_guided_generation = 22 [default = false];
 
     optional SparseAttentionConfig sparse_attention_config = 23;
+
+    optional string vision_embeddings_device = 24 [default = ""];
+    optional string text_embeddings_device = 25 [default = ""];
 }

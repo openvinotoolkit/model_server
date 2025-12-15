@@ -131,7 +131,9 @@ Status VisualLanguageModelLegacyServableInitializer::initialize(std::shared_ptr<
 
         auto vision_model_path = std::filesystem::path(parsedModelsPath) / "openvino_vision_embeddings_model.xml";
         auto vision_model = core.read_model(vision_model_path, {}, properties->pluginConfig);
-        compiledModelsMap["vision_embeddings"] = core.compile_model(vision_model, properties->device, properties->pluginConfig);
+        const std::string vision_embeddings_device = nodeOptions.vision_embeddings_device().size() > 0 ? nodeOptions.vision_embeddings_device() : properties->device;
+        compiledModelsMap["vision_embeddings"] = core.compile_model(vision_model, 
+            vision_embeddings_device, properties->pluginConfig);
 
         auto text_embeddings_model_path = std::filesystem::path(parsedModelsPath) / "openvino_text_embeddings_model.xml";
         auto text_embeddings_model = core.read_model(text_embeddings_model_path, {}, properties->pluginConfig);
@@ -145,8 +147,10 @@ Status VisualLanguageModelLegacyServableInitializer::initialize(std::shared_ptr<
         });
         ppp.build();
         
-        compiledModelsMap["text_embeddings"] = core.compile_model(text_embeddings_model, properties->device, properties->pluginConfig);
+        const std::string text_embeddings_device = nodeOptions.text_embeddings_device().size() > 0 ? nodeOptions.text_embeddings_device() : properties->device;
+        compiledModelsMap["text_embeddings"] = core.compile_model(text_embeddings_model, text_embeddings_device, properties->pluginConfig);
 
+        SPDLOG_ERROR("Selecting Devices: Language: {}, Vision Embeddings: {}, Text Embeddings: {}", properties->device, vision_embeddings_device, text_embeddings_device);
         properties->pipeline = std::make_shared<ov::genai::VLMPipeline>(parsedModelsPath, compiledModelsMap, kv_pos.first, kv_pos.second, properties->pluginConfig);
 #else
         properties->pipeline = std::make_shared<ov::genai::VLMPipeline>(parsedModelsPath, properties->device, properties->pluginConfig);
