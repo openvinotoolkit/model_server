@@ -20,6 +20,16 @@
 
 #include <openvino/genai/visual_language/pipeline.hpp>
 #include <openvino/openvino.hpp>
+
+#include <openvino/op/add.hpp>
+#include <openvino/op/divide.hpp>
+#include <openvino/op/gather.hpp>
+#include <openvino/op/multiply.hpp>
+#include <openvino/op/matmul.hpp>
+#include <openvino/op/slice.hpp>
+#include <openvino/op/tanh.hpp>
+#include <openvino/op/transpose.hpp>
+
 #include <spdlog/spdlog.h>
 
 #pragma warning(push)
@@ -73,8 +83,40 @@ Status VisualLanguageModelLegacyServableInitializer::initialize(std::shared_ptr<
         return status;
     }
 
+#define NEW_CONSTRUCTORS
+
     try {
+#ifdef NEW_CONSTRUCTORS
+        // TODO: Make ov::Core a singleton shared among single models and  all calculators (+ possibly genai?)
+        ov::genai::CompiledModelsMap compiledModelsMap;
+        
+        ov::Core core;
+        auto language_model_path = std::filesystem::path(parsedModelsPath) / "openvino_language_model.xml";
+        auto language_model = core.read_model(language_model_path, {}, properties->pluginConfig);
+        compiledModelsMap["language"] = core.compile_model(language_model, properties->device, properties->pluginConfig);
+
+        auto vision_model_path = std::filesystem::path(parsedModelsPath) / "openvino_vision_embeddings_model.xml";
+        auto vision_model = core.read_model(vision_model_path, {}, properties->pluginConfig);
+        compiledModelsMap["vision_embeddings"] = core.compile_model(vision_model, properties->device, properties->pluginConfig);
+
+        auto text_embeddings_model_path = std::filesystem::path(parsedModelsPath) / "openvino_text_embeddings_model.xml";
+        auto text_embeddings_model = core.read_model(text_embeddings_model_path, {}, properties->pluginConfig);
+        
+        //?
+        const float scale_emb = 1.0f; // to be read from config.json -> scale_emb
+        ov::preprocess::PrePostProcessor ppp(text_embeddings_model);
+        ppp.output().postprocess().custom([scale_emb](const ov::Output<ov::Node>& node) {
+            auto constant = std::make_shared<ov::op::v0::Constant>(ov::element::f32, ov::Shape{1}, scale_emb);
+            return std::make_shared<ov::op::v1::Multiply>(node, constant);
+        });
+        ppp.build();
+        
+        compiledModelsMap["text_embeddings"] = core.compile_model(text_embeddings_model, properties->device, properties->pluginConfig);
+
+        properties->pipeline = std::make_shared<ov::genai::VLMPipeline>(parsedModelsPath, compiledModelsMap, properties->pluginConfig);
+#else
         properties->pipeline = std::make_shared<ov::genai::VLMPipeline>(parsedModelsPath, properties->device, properties->pluginConfig);
+#endif
         properties->tokenizer = properties->pipeline->get_tokenizer();
     } catch (const std::exception& e) {
         SPDLOG_ERROR("Error during llm node initialization for models_path: {} exception: {}", parsedModelsPath, e.what());
