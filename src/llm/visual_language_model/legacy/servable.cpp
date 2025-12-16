@@ -36,6 +36,7 @@
 #include "../../../mediapipe_internal/mediapipe_utils.hpp"
 #include "../../apis/openai_completions.hpp"
 #include "../../text_utils.hpp"
+#include "../../../tokenize/tokenize_parser.hpp"
 #if (PYTHON_DISABLE == 0)
 #include "../../py_jinja_template_processor.hpp"
 #endif
@@ -52,8 +53,10 @@ absl::Status VisualLanguageModelLegacyServable::loadRequest(std::shared_ptr<GenA
     }
     if (payload.uri == "/v3/chat/completions" || payload.uri == "/v3/v1/chat/completions") {
         executionContext->endpoint = Endpoint::CHAT_COMPLETIONS;
+    } else if (TokenizeParser::isTokenizeEndpoint(payload.uri)) {
+        executionContext->endpoint = Endpoint::TOKENIZE;
     } else {
-        return absl::InvalidArgumentError("Wrong endpoint. VLM Servable allowed only on /v3/chat/completions endpoint");
+        return absl::InvalidArgumentError("Wrong endpoint. VLM Servable allowed only on /v3/chat/completions endpoint or /v3/tokenize");
     }
     executionContext->payload = payload;
     return absl::OkStatus();
@@ -173,11 +176,6 @@ absl::Status VisualLanguageModelLegacyServable::preparePartialResponse(std::shar
         lastTextChunk = executionContext->lastStreamerCallbackOutput;
         executionContext->lastStreamerCallbackOutput = "";
     }
-    if (!lastTextChunk.empty()) {
-        auto tokensTensor = properties->tokenizer.encode(lastTextChunk, ov::genai::add_special_tokens(false)).input_ids;
-        auto numTokens = tokensTensor.get_size();
-        executionContext->apiHandler->incrementProcessedTokens(numTokens);
-    }
     if (generationStatus != std::future_status::ready) {  // continue
         if (lastTextChunk.size() > 0) {
             std::string serializedChunk = executionContext->apiHandler->serializeStreamingChunk(lastTextChunk, ov::genai::GenerationFinishReason::NONE);
@@ -201,10 +199,10 @@ absl::Status VisualLanguageModelLegacyServable::preparePartialResponse(std::shar
         if (!serializedChunk.empty()) {
             executionContext->response = wrapTextInServerSideEventMessage(serializedChunk);
         }
-        // Disabling usage in streaming mode in legacy servable due to the issue with token counting.
+        // TODO: Usage is zero in streaming mode in legacy servable due to the issue with token counting.
+        // This enables Continue.dev streaming scenario, which always uses include_usage: true
         if (executionContext->apiHandler->getStreamOptions().includeUsage)
-            return absl::InvalidArgumentError("Usage is not supported in legacy servable in streaming mode.");
-        // executionContext->response += wrapTextInServerSideEventMessage(executionContext->apiHandler->serializeStreamingUsageChunk());
+            executionContext->response += wrapTextInServerSideEventMessage(executionContext->apiHandler->serializeStreamingUsageChunk());
 
         executionContext->response += wrapTextInServerSideEventMessage("[DONE]");
 
