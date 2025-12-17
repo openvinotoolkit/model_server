@@ -77,10 +77,10 @@ FUZZER_BUILD ?= 0
 
 OV_SOURCE_BRANCH ?= e4d09f992ad71dc8b8978fb9b8905ffd8f75ffe0 # 10.12.2025 master branch
 OV_TOKENIZERS_BRANCH ?= a4d8fdf083e76147a5e8638a788e96f855084176 # 10.12.2025 master branch
-OV_GENAI_BRANCH ?= b1d835c85c68ad2e3b57ea91423bf64b74581f82 # 10.12.2025 master branch
+OV_GENAI_BRANCH ?= d25d3d46d15077844ab942c122bf8ac89da029ae # dkalinow fork commit
 
 OV_SOURCE_ORG ?= openvinotoolkit
-OV_GENAI_ORG ?= openvinotoolkit
+OV_GENAI_ORG ?= dkalinowski
 OV_TOKENIZERS_ORG ?= openvinotoolkit
 
 TEST_LLM_PATH ?= "src/test/llm_testing"

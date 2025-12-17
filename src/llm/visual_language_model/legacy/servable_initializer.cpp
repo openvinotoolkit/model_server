@@ -116,7 +116,8 @@ Status VisualLanguageModelLegacyServableInitializer::initialize(std::shared_ptr<
         return status;
     }
 
-#define NEW_CONSTRUCTORS
+//#define NEW_CONSTRUCTORS
+#define NEW_CONSTRUCTORS_V2
 
     try {
 #ifdef NEW_CONSTRUCTORS
@@ -125,17 +126,22 @@ Status VisualLanguageModelLegacyServableInitializer::initialize(std::shared_ptr<
         
         ov::Core core;
         auto language_model_path = std::filesystem::path(parsedModelsPath) / "openvino_language_model.xml";
+        std::cout << "read_model for llm model" << std::endl;
         auto language_model = core.read_model(language_model_path, {}, properties->pluginConfig);
         auto kv_pos = get_kv_axes_pos(language_model);
+        std::cout << "compile for llm model" << std::endl;
         compiledModelsMap["language"] = core.compile_model(language_model, properties->device, properties->pluginConfig);
 
         auto vision_model_path = std::filesystem::path(parsedModelsPath) / "openvino_vision_embeddings_model.xml";
+        std::cout << "read_model for vision embeddings model" << std::endl;
         auto vision_model = core.read_model(vision_model_path, {}, properties->pluginConfig);
         const std::string vision_embeddings_device = nodeOptions.vision_embeddings_device().size() > 0 ? nodeOptions.vision_embeddings_device() : properties->device;
+        std::cout << "compile for vision embeddings model" << std::endl;
         compiledModelsMap["vision_embeddings"] = core.compile_model(vision_model, 
             vision_embeddings_device, properties->pluginConfig);
 
         auto text_embeddings_model_path = std::filesystem::path(parsedModelsPath) / "openvino_text_embeddings_model.xml";
+        std::cout << "read_model for text embeddings model" << std::endl;
         auto text_embeddings_model = core.read_model(text_embeddings_model_path, {}, properties->pluginConfig);
         
         //?
@@ -148,10 +154,13 @@ Status VisualLanguageModelLegacyServableInitializer::initialize(std::shared_ptr<
         ppp.build();
         
         const std::string text_embeddings_device = nodeOptions.text_embeddings_device().size() > 0 ? nodeOptions.text_embeddings_device() : properties->device;
+        std::cout << "compile for text embeddings model" << std::endl;
         compiledModelsMap["text_embeddings"] = core.compile_model(text_embeddings_model, text_embeddings_device, properties->pluginConfig);
 
         SPDLOG_ERROR("Selecting Devices: Language: {}, Vision Embeddings: {}, Text Embeddings: {}", properties->device, vision_embeddings_device, text_embeddings_device);
         properties->pipeline = std::make_shared<ov::genai::VLMPipeline>(parsedModelsPath, compiledModelsMap, kv_pos.first, kv_pos.second, properties->pluginConfig);
+#elif defined(NEW_CONSTRUCTORS_V2)
+        properties->pipeline = std::make_shared<ov::genai::VLMPipeline>(parsedModelsPath, properties->device, properties->pluginConfig);
 #else
         properties->pipeline = std::make_shared<ov::genai::VLMPipeline>(parsedModelsPath, properties->device, properties->pluginConfig);
 #endif
