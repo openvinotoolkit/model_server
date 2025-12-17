@@ -44,6 +44,7 @@ curl -L -o models/mistralai/Codestral-22B-v0.1/chat_template.jinja https://raw.g
 :sync: OpenVINO/Qwen3-8B-int4-ov
 ```bash
 docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
+    openvino/model_server:weekly \
     --pull \
     --source_model OpenVINO/Qwen3-8B-int4-ov \
     --model_repository_path /models \
@@ -63,6 +64,7 @@ docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
 :sync: OpenVINO/Qwen3-4B-int4-ov
 ```bash
 docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
+    openvino/model_server:weekly \
     --pull \
     --source_model OpenVINO/Qwen3-4B-int4-ov \
     --model_repository_path /models \
@@ -81,6 +83,7 @@ docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
 :sync: OpenVINO/Qwen2.5-Coder-3B-Instruct-int4-ov
 ```bash
 docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
+    openvino/model_server:weekly \
     --pull \
     --source_model OpenVINO/Qwen2.5-Coder-3B-Instruct-int4-ov \
     --model_repository_path /models \
