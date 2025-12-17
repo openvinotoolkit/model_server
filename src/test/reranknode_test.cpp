@@ -547,20 +547,6 @@ TEST_F(RerankTokenizeHttpTest, tokenizeNegativeInvalidPaddingSide) {
     ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR) << status.string();
 }
 
-TEST_F(RerankTokenizeHttpTest, tokenizePositiveAddSpecialTokensFalse) {
-    std::string requestBody = R"(
-        {
-            "model": "rerank_ov",
-            "text": "hello world"
-        }
-    )";
-    std::vector<int> expectedTokens = {33600, 31, 8999};
-    ASSERT_EQ(
-        handler->dispatchToProcessor(endpointTokenize, requestBody, &response, comp, responseComponents, writer, multiPartParser),
-        ovms::StatusCode::OK);
-    AssertTokenizationResult(response, expectedTokens);
-}
-
 TEST_F(RerankTokenizeHttpTest, tokenizePositiveMaxLengthIgnored) {
     std::string requestBody = R"(
         {
@@ -615,6 +601,22 @@ TEST_F(RerankTokenizeHttpTest, tokenizeBatchWithPadToMaxLen) {
     rapidjson::Document d;
     rapidjson::ParseResult ok = d.Parse(response.c_str());
     ASSERT_EQ(ok.Code(), 0);
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointTokenize, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK);
+    AssertTokenizationResult(response, expectedTokens);
+}
+
+TEST_F(RerankTokenizeHttpTest, tokenizeIgnooreAddSpecialTokensParameter) {
+    std::string requestBody = R"(
+        {
+            "model": "rerank_ov",
+            "text": "hello world",
+            "max_length": 3,
+            "add_special_tokens": true
+        }
+    )";
+    std::vector<int> expectedTokens = {33600, 31, 8999};
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointTokenize, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
