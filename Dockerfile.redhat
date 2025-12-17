@@ -127,7 +127,9 @@ RUN dnf install -y -d6 \
             python3.12 \
             python3.12-devel \
             python3.12-pip \
-            libicu-devel && \
+            libicu-devel \
+            espeak-ng \
+            espeak-ng-devel && \
             dnf clean all
 
 WORKDIR /
@@ -416,6 +418,7 @@ RUN if [ -f /usr/bin/dnf ] ; then export DNF_TOOL=dnf ; echo -e "max_parallel_do
     if ! [[ $debug_bazel_flags == *"py_off"* ]]; then \
         $DNF_TOOL install -y python3.12-libs --setopt=install_weak_deps=0 --nodocs; \
     fi ; \
+    $DNF_TOOL install -y espeak-ng --setopt=install_weak_deps=0 --nodocs; \
     $DNF_TOOL install -y shadow-utils; \
     $DNF_TOOL clean all ; \
     cp -v /etc/ssl/certs/ca-bundle.crt /etc/ssl/certs/ca-certificates.crt ; \
