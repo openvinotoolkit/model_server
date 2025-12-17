@@ -294,6 +294,7 @@ public:
         if(TokenizeParser::isTokenizeEndpoint(payload.uri)) {
             TokenizeRequest tokenizeRequest;
             absl::Status status = TokenizeParser::parseTokenizeRequest(*payload.parsedJson, tokenizeRequest);
+            tokenizeRequest.parameters["add_special_tokens"] = false;  // Rerank model tokenizer should not add special tokens
             if (!status.ok()) {
                 return status;
             }

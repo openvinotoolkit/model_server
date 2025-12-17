@@ -392,7 +392,7 @@ public:
     const std::string endpointTokenize = "/v3/tokenize";
     static void SetUpTestSuite() {
         std::string port = "9173";
-        std::string configPath = getGenericFullPathForSrcTest("/ovms/src/test/rerank/with_params/invalid_config.json");
+        std::string configPath = getGenericFullPathForSrcTest("/ovms/src/test/rerank/config.json");
         SetUpSuite(port, configPath, t);
     }
 
@@ -471,11 +471,11 @@ TEST_F(RerankTokenizeHttpTest, tokenizePositiveMaxLenParam) {
     std::string requestBody = R"(
         {
             "model": "rerank_ov",
-            "text": "hello world",
+            "text": "hello world hello world",
             "max_length": 3
         }
     )";
-    std::vector<int> expectedTokens = {101, 7592, 102};
+    std::vector<int> expectedTokens = {33600,31,8999};
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointTokenize, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
@@ -491,8 +491,8 @@ TEST_F(RerankTokenizeHttpTest, tokenizePositivePadToMaxLenParam) {
             "pad_to_max_length": true
         }
     )";
-    std::vector<int> expectedTokens(96, 0);
-    expectedTokens.insert(expectedTokens.begin(), {101, 7592, 2088, 102});
+    std::vector<int> expectedTokens(97, 1);
+    expectedTokens.insert(expectedTokens.begin(), {33600,31,8999});
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointTokenize, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
@@ -509,8 +509,8 @@ TEST_F(RerankTokenizeHttpTest, tokenizePositivePaddingSideLeft) {
             "padding_side": "left"
         }
     )";
-    std::vector<int> expectedTokens(96, 0);
-    expectedTokens.insert(expectedTokens.end(), {101, 7592, 2088, 102});
+    std::vector<int> expectedTokens(97, 1);
+    expectedTokens.insert(expectedTokens.end(), {33600,31,8999});
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointTokenize, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
@@ -527,8 +527,8 @@ TEST_F(RerankTokenizeHttpTest, tokenizePositivePaddingSideRight) {
             "padding_side": "right"
         }
     )";
-    std::vector<int> expectedTokens(96, 0);
-    expectedTokens.insert(expectedTokens.begin(), {101, 7592, 2088, 102});
+    std::vector<int> expectedTokens(97, 1);
+    expectedTokens.insert(expectedTokens.begin(), {33600,31,8999});
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointTokenize, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
@@ -551,11 +551,10 @@ TEST_F(RerankTokenizeHttpTest, tokenizePositiveAddSpecialTokensFalse) {
     std::string requestBody = R"(
         {
             "model": "rerank_ov",
-            "text": "hello world",
-            "add_special_tokens": false
+            "text": "hello world"
         }
     )";
-    std::vector<int> expectedTokens = {7592, 2088};
+    std::vector<int> expectedTokens = {33600, 31, 8999};
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointTokenize, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
@@ -571,8 +570,8 @@ TEST_F(RerankTokenizeHttpTest, tokenizePositiveMaxLengthIgnored) {
             "pad_to_max_length": true
         }
     )";
-    std::vector<int> expectedTokens(509, 0);
-    expectedTokens.insert(expectedTokens.begin(), {101, 7592, 2088, 102});
+    std::vector<int> expectedTokens(510, 1);
+    expectedTokens.insert(expectedTokens.begin(), {33600,31,8999});
     ASSERT_EQ(handler->dispatchToProcessor(endpointTokenize, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
     AssertTokenizationResult(response, expectedTokens);
@@ -587,9 +586,9 @@ TEST_F(RerankTokenizeHttpTest, tokenizePositiveBatch) {
     )";
     Status status = handler->dispatchToProcessor(endpointTokenize, requestBody, &response, comp, responseComponents, writer, multiPartParser);
     std::vector<std::vector<int>> expectedTokens = {
-        {101, 7592, 102},
-        {101, 7592, 2088, 102},
-        {101, 7592, 7592, 7592, 2088, 102}};
+        {33600, 31},
+        {33600, 31, 8999},
+        {33600,31,33600,31,33600,31,8999}};
     rapidjson::Document d;
     rapidjson::ParseResult ok = d.Parse(response.c_str());
     ASSERT_EQ(ok.Code(), 0);
@@ -610,9 +609,9 @@ TEST_F(RerankTokenizeHttpTest, tokenizeBatchWithPadToMaxLen) {
     )";
     Status status = handler->dispatchToProcessor(endpointTokenize, requestBody, &response, comp, responseComponents, writer, multiPartParser);
     std::vector<std::vector<int>> expectedTokens = {
-        {101, 7592, 102, 0, 0, 0},
-        {101, 7592, 2088, 102, 0, 0},
-        {101, 7592, 7592, 7592, 2088, 102}};
+        {33600, 31, 1, 1, 1, 1},
+        {33600, 31, 8999, 1, 1, 1},
+        {33600,31,33600,31,33600,31}};
     rapidjson::Document d;
     rapidjson::ParseResult ok = d.Parse(response.c_str());
     ASSERT_EQ(ok.Code(), 0);
