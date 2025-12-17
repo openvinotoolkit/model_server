@@ -1,5 +1,4 @@
-datasets
-dataclasses==0.6
+datasets==4.4.1
 transformers==4.57.3
 numpy==2.3.5
 tqdm==4.67.1
