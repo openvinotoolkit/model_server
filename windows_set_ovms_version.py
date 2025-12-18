@@ -18,7 +18,7 @@ import sys
 import re
 import subprocess
 
-WIN_OV_VERSION_REGEX = re.compile(r'[0-9]{4}.[0-9].[0-9].[^_]+')
+WIN_OV_VERSION_REGEX = re.compile(r'[0-9]{4}.[0-9].[0-9]+')
 WIN_OV_ZIP_PACKAGE_DIR = "openvino_genai_windows_"
 VERSION_FILE = "src\\version.hpp"
 OVMS_PROJECT_VERSION="2026.0.0"
@@ -43,30 +43,25 @@ def replace_in_file(file_path, old_string, new_string):
         file.write(contents)
         file.truncate()
 
-def get_openvino_name(openvino_dir):
+def get_openvino_name_bin(openvino_dir):
     openvino_name = "Unknown"
-    for root, dirs, files in os.walk(openvino_dir):
-        # Start searching from directories with biggest version numbers
-        dirs = sorted(dirs, reverse=True)
-        for dir in dirs:
-            if WIN_OV_ZIP_PACKAGE_DIR in dir:
-                matches = WIN_OV_VERSION_REGEX.findall(dir)
-                if len(matches) > 1:
-                    print("[ERROR] Multiple openvino versions detected in " + os.path.join(root, dir))
-                    exit(-1)
-                if len(matches) == 1:
-                    print("[INFO] Openvino detected in " + os.path.join(root, dir))
-                    openvino_name = matches[0]
+    # read file openvino_dir\openvino\runtime\version.txt
+    version_file_path = os.path.join(openvino_dir, "openvino", "runtime", "version.txt")
+    if os.path.exists(version_file_path):
+        with open(version_file_path, 'r') as version_file:
+            for line in version_file:
+                match = WIN_OV_VERSION_REGEX.search(line)
+                if match:
+                    openvino_name = match.group(0)
                     break
-        
-        # we search only 1 directory level deep
-        break
-
-    if openvino_name == "Unknown":
-        print("[WARNING] Openvino versions not detected in " + openvino_dir)
-
     return openvino_name
 
+def get_openvino_name_src(openvino_dir):
+    src_dir = os.path.join(openvino_dir, "openvino_src")
+    # get version using git
+    command = "git -C {} rev-parse --short HEAD".format(src_dir)
+    output = subprocess.check_output(command, shell=True, text=True)
+    return output.rstrip()        
 def get_ovms_sha():
     command = "git rev-parse --short HEAD"
     output = subprocess.check_output(command, shell=True, text=True)
@@ -92,8 +87,13 @@ def main():
     else:
         openvino_dir = sys.argv[2]
         print('Provided openvino directory: ' + openvino_dir)
-
-    openvino_name = get_openvino_name(openvino_dir)
+    # If env varialbe OV_USE_BINARY=1 get version from openvino binary package
+    if os.environ.get('OV_USE_BINARY', '0') == '1':
+        print('Getting openvino version from binary package')
+        openvino_name = get_openvino_name_bin(openvino_dir)
+    else:
+        openvino_name = get_openvino_name_src(openvino_dir)
+        print('Using openvino source build, setting version to ' + openvino_name)
     version_file_path = os.path.join(os.getcwd(), VERSION_FILE)
     replace_in_file(version_file_path, "REPLACE_PROJECT_VERSION", check_get_product_version() + "." + get_ovms_sha())
     replace_in_file(version_file_path, "REPLACE_OPENVINO_NAME", openvino_name)
