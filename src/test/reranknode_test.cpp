@@ -439,7 +439,7 @@ TEST_F(RerankTokenizeHttpTest, tokenizePositive) {
             "text": "hello world"
         }
     )";
-    std::vector<int> expectedTokens = {33600,31,8999};
+    std::vector<int> expectedTokens = {33600, 31, 8999};
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointTokenize, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
@@ -475,7 +475,7 @@ TEST_F(RerankTokenizeHttpTest, tokenizePositiveMaxLenParam) {
             "max_length": 3
         }
     )";
-    std::vector<int> expectedTokens = {33600,31,8999};
+    std::vector<int> expectedTokens = {33600, 31, 8999};
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointTokenize, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
@@ -492,7 +492,7 @@ TEST_F(RerankTokenizeHttpTest, tokenizePositivePadToMaxLenParam) {
         }
     )";
     std::vector<int> expectedTokens(97, 1);
-    expectedTokens.insert(expectedTokens.begin(), {33600,31,8999});
+    expectedTokens.insert(expectedTokens.begin(), {33600, 31, 8999});
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointTokenize, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
@@ -510,7 +510,7 @@ TEST_F(RerankTokenizeHttpTest, tokenizePositivePaddingSideLeft) {
         }
     )";
     std::vector<int> expectedTokens(97, 1);
-    expectedTokens.insert(expectedTokens.end(), {33600,31,8999});
+    expectedTokens.insert(expectedTokens.end(), {33600, 31, 8999});
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointTokenize, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
@@ -528,7 +528,7 @@ TEST_F(RerankTokenizeHttpTest, tokenizePositivePaddingSideRight) {
         }
     )";
     std::vector<int> expectedTokens(97, 1);
-    expectedTokens.insert(expectedTokens.begin(), {33600,31,8999});
+    expectedTokens.insert(expectedTokens.begin(), {33600, 31, 8999});
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointTokenize, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
@@ -557,7 +557,7 @@ TEST_F(RerankTokenizeHttpTest, tokenizePositiveMaxLengthIgnored) {
         }
     )";
     std::vector<int> expectedTokens(510, 1);
-    expectedTokens.insert(expectedTokens.begin(), {33600,31,8999});
+    expectedTokens.insert(expectedTokens.begin(), {33600, 31, 8999});
     ASSERT_EQ(handler->dispatchToProcessor(endpointTokenize, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
     AssertTokenizationResult(response, expectedTokens);
@@ -574,7 +574,7 @@ TEST_F(RerankTokenizeHttpTest, tokenizePositiveBatch) {
     std::vector<std::vector<int>> expectedTokens = {
         {33600, 31},
         {33600, 31, 8999},
-        {33600,31,33600,31,33600,31,8999}};
+        {33600, 31, 33600, 31, 33600, 31, 8999}};
     rapidjson::Document d;
     rapidjson::ParseResult ok = d.Parse(response.c_str());
     ASSERT_EQ(ok.Code(), 0);
@@ -597,7 +597,7 @@ TEST_F(RerankTokenizeHttpTest, tokenizeBatchWithPadToMaxLen) {
     std::vector<std::vector<int>> expectedTokens = {
         {33600, 31, 1, 1, 1, 1},
         {33600, 31, 8999, 1, 1, 1},
-        {33600,31,33600,31,33600,31}};
+        {33600, 31, 33600, 31, 33600, 31}};
     rapidjson::Document d;
     rapidjson::ParseResult ok = d.Parse(response.c_str());
     ASSERT_EQ(ok.Code(), 0);

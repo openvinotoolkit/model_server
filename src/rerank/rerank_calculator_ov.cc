@@ -291,7 +291,7 @@ public:
         SPDLOG_LOGGER_DEBUG(rerank_calculator_logger, "Request body: {}", payload.body);
         SPDLOG_LOGGER_DEBUG(rerank_calculator_logger, "Request uri: {}", payload.uri);
 
-        if(TokenizeParser::isTokenizeEndpoint(payload.uri)) {
+        if (TokenizeParser::isTokenizeEndpoint(payload.uri)) {
             TokenizeRequest tokenizeRequest;
             absl::Status status = TokenizeParser::parseTokenizeRequest(*payload.parsedJson, tokenizeRequest);
             tokenizeRequest.parameters["add_special_tokens"] = false;  // Rerank model tokenizer should not add special tokens
