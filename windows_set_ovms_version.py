@@ -87,8 +87,8 @@ def main():
     else:
         openvino_dir = sys.argv[2]
         print('Provided openvino directory: ' + openvino_dir)
-    # If env varialbe OV_USE_BINARY=1 get version from openvino binary package
-    if os.environ.get('OV_USE_BINARY', '0') == '1':
+
+    if os.environ.get('OV_USE_BINARY', '1') == '1':
         print('Getting openvino version from binary package')
         openvino_name = get_openvino_name_bin(openvino_dir)
     else:
