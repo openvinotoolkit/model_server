@@ -2,56 +2,60 @@
 
 ## Prerequisites
 
-**Model preparation and Model Server deployment**: Installed Docker Engine or OVMS binary package according to the [baremetal deployment guide](../../docs/deploying_server_baremetal.md)
+**Model preparation**: Python 3.9 or higher with pip 
 
-**(Optional) Client**: Python 3.9 or higher with pip 
+**Model Server deployment**: Installed Docker Engine or OVMS binary package according to the [baremetal deployment guide](../../docs/deploying_server_baremetal.md)
+
+**(Optional) Client**: Python with pip
 
 ## Model preparation
 
-You can pull rerank models directly from HuggingFace using OVMS.
+Here, the original Pytorch LLM model and the tokenizer will be converted to IR format and optionally quantized.
+That ensures faster initialization time, better performance and lower memory consumption.
 
-:::{dropdown} **Preparation with Docker**
-**CPU**
-```bash
-mkdir models
-docker run -d --rm -u $(id -u):$(id -g) -v $(pwd)/models:/workspace openvino/model_server:latest --pull --source_model OpenVINO/bge-reranker-base-int8-ov --model_repository_path /workspace --task rerank
-docker run --rm -u $(id -u):$(id -g) -v $(pwd)/models:/workspace openvino/model_server:latest --add_to_config --model_name OpenVINO/bge-reranker-base-int8-ov --model_repository_path /workspace --config_path /workspace/config.json
+Download export script, install it's dependencies and create directory for the models:
+```console
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/export_model.py -o export_model.py
+pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
+mkdir models 
 ```
-**GPU**
-```bash
-mkdir models
-docker run -d --rm -u $(id -u):$(id -g) -v $(pwd)/models:/workspace openvino/model_server:latest --pull --source_model OpenVINO/bge-reranker-base-int8-ov --model_repository_path /workspace --task rerank --target_device GPU
-docker run -d --rm -u $(id -u):$(id -g) -v $(pwd)/models:/workspace openvino/model_server:latest --add_to_config --model_repository_path /workspace/models --config_path /workspace/config.json
+
+Run `export_model.py` script to download and quantize the model:
+
+**CPU**
+
+```console
+python export_model.py rerank_ov --source_model BAAI/bge-reranker-large --weight-format int8 --config_file_path models/config.json --model_repository_path models 
+```
+
+**GPU**:
+```console
+python export_model.py rerank_ov --source_model BAAI/bge-reranker-large --weight-format int8 --target_device GPU --config_file_path models/config.json --model_repository_path models 
 ```
 > **Note:** The users in China need to set environment variable HF_ENDPOINT="https://hf-mirror.com" before running the export script to connect to the HF Hub.
 
-:::
-
-:::{dropdown} **Preparation On Bare Metal**
-
-Assuming you have unpacked model server package, make sure to:
-
-- **On Windows**: run `setupvars` script
-- **On Linux**: set `LD_LIBRARY_PATH` and `PATH` environment variables
-
-as mentioned in [deployment guide](../../docs/deploying_server_baremetal.md), in every new shell that will start OpenVINO Model Server.
-
-**CPU**
-```bat
-mkdir models
-ovms --pull --source_model OpenVINO/bge-reranker-base-int8-ov --model_repository_path models --task rerank --target_device CPU
-ovms  --add_to_config --model_name OpenVINO/bge-reranker-base-int8-ov --model_repository_path models --config_path models/config.json
+You should have a model folder like below:
 ```
-**GPU**
-```bat
-mkdir models
-ovms --pull --source_model OpenVINO/bge-reranker-base-int8-ov --model_repository_path models --task rerank --target_device GPU
-ovms  --add_to_config --model_name OpenVINO/bge-reranker-base-int8-ov --model_repository_path models --config_path models/config.json
+tree models
+models
+├── BAAI
+│   └── bge-reranker-large
+│       ├── config.json
+│       ├── graph.pbtxt
+│       ├── openvino_model.bin
+│       |── openvino_model.xml
+│       ├── openvino_tokenizer.bin
+│       ├── openvino_tokenizer.xml
+│       ├── sentencepiece.bpe.model
+│       ├── special_tokens_map.json
+│       ├── tokenizer_config.json
+│       ├── tokenizer.json
+└── config.json
+
 ```
+> **Note** The actual models support version management and can be automatically swapped to newer version when new model is uploaded in newer version folder.
 
-> **Note:** The users in China need to set environment variable HF_ENDPOINT="https://hf-mirror.com" before running the export script to connect to the HF Hub.
 
-:::
 ## Server Deployment
 
 :::{dropdown} **Deploying with Docker**
@@ -72,6 +76,15 @@ docker run -d --rm -p 8000:8000 --device /dev/dri --group-add=$(stat -c "%g" /de
 
 :::{dropdown} **Deploying On Bare Metal**
 
+Assuming you have unpacked model server package, make sure to:
+
+- **On Windows**: run `setupvars` script
+- **On Linux**: set `LD_LIBRARY_PATH` and `PATH` environment variables
+
+as mentioned in [deployment guide](../../docs/deploying_server_baremetal.md), in every new shell that will start OpenVINO Model Server.
+
+Depending on how you prepared models in the first step of this demo, they are deployed to either CPU or GPU (it's defined in `config.json`). If you run on GPU make sure to have appropriate drivers installed, so the device is accessible for the model server.
+
 ```bat
 ovms --rest_port 8000 --config_path ./models/config.json
 ```
@@ -81,7 +94,7 @@ ovms --rest_port 8000 --config_path ./models/config.json
 
 Readiness of the model can be reported with a simple curl command. 
 ```bash
-curl -i http://localhost:8000/v2/models/OpenVINO%2Fbge-reranker-base-int8-ov/ready
+curl -i http://localhost:8000/v2/models/BAAI%2Fbge-reranker-large/ready
 HTTP/1.1 200 OK
 content-length: 0
 content-type: application/json; charset=utf-8
@@ -92,18 +105,18 @@ content-type: application/json; charset=utf-8
 :::{dropdown} **Requesting rerank score with cURL**
 
 ```bash
-curl http://localhost:8000/v3/rerank  -H "Content-Type: application/json" -d "{ \"model\": \"OpenVINO/bge-reranker-base-int8-ov\", \"query\": \"welcome\", \"documents\":[\"good morning\",\"farewell\"]}"
+curl http://localhost:8000/v3/rerank  -H "Content-Type: application/json" -d "{ \"model\": \"BAAI/bge-reranker-large\", \"query\": \"welcome\", \"documents\":[\"good morning\",\"farewell\"]}"
 ```
 ```json
 {
   "results": [
     {
       "index": 0,
-      "relevance_score": 0.9410624504089355
+      "relevance_score": 0.3886180520057678
     },
     {
       "index": 1,
-      "relevance_score": 0.9381139278411865
+      "relevance_score": 0.0055549247190356255
     }
   ]
 }
@@ -118,7 +131,7 @@ pip3 install cohere
 echo '
 import cohere
 client = cohere.Client(base_url="http://127.0.0.1:8000/v3", api_key="not_used")
-responses = client.rerank(query="hello",documents=["welcome","farewell"], model="OpenVINO/bge-reranker-base-int8-ov")
+responses = client.rerank(query="hello",documents=["welcome","farewell"], model="BAAI/bge-reranker-large")
 for response in responses.results:
     print(f"index {response.index}, relevance_score {response.relevance_score}")' > rerank_client.py
 
@@ -126,8 +139,8 @@ python rerank_client.py
 ```
 It will return response similar to:
 ```
-index 0, relevance_score 0.9388121962547302
-index 1, relevance_score 0.9375657439231873
+index 0, relevance_score 0.9968273043632507
+index 1, relevance_score 0.09138210117816925
 ```
 :::
 
@@ -184,34 +197,15 @@ It will return response similar to:
 
 ## Comparison with Hugging Faces
 
-Download export script, install it's dependencies:
-```console
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/export_model.py -o export_model.py
-pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
-```
-
-Run `export_model.py` script to download and quantize the model:
-
-**CPU**
-```console
-python export_model.py rerank_ov --source_model BAAI/bge-reranker-large --weight-format int8 --config_file_path models/config.json --model_repository_path models 
-```
-
-**GPU**:
-```console
-python export_model.py rerank_ov --source_model BAAI/bge-reranker-large --weight-format int8 --target_device GPU --config_file_path models/config.json --model_repository_path models 
-```
-> **Note:** The users in China need to set environment variable HF_ENDPOINT="https://hf-mirror.com" before running the export script to connect to the HF Hub.
-
 ```bash
 git clone https://github.com/openvinotoolkit/model_server
 python model_server/demos/rerank/compare_results.py --query "hello" --document "welcome" --document "farewell" --base_url http://127.0.0.1:8000/v3/
 query hello
 documents ['welcome', 'farewell']
-HF Duration: 126.124 ms
-OVMS Duration: 89.483 ms
-HF reranking: [0.99640983 0.08154131]
-OVMS reranking: [0.99646771 0.07699008]
+HF Duration: 145.731 ms
+OVMS Duration: 23.227 ms
+HF reranking: [0.99640983 0.08154089]
+OVMS reranking: [0.9968273 0.0913821]
 ```
 
 ## Performance benchmarking
