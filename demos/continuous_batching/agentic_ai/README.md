@@ -22,6 +22,9 @@ Currently supported models:
 - mistralai/Mistral-7B-Instruct-v0.3
 - microsoft/Phi-4-mini-instruct
 - Qwen/Qwen3-Coder-30B-A3B-Instruct
+- openai/gpt-oss-20b*
+
+> **Note:** GPT-OSS is validated with `--pipeline_type LM` for export and `--target device GPU` 2025.4.1, expect continuous batching and CPU support in weekly or 2026.0+ releases.
 
 ### Export using python script
 
@@ -92,9 +95,17 @@ python export_model.py text_generation --source_model Qwen/Qwen3-Coder-30B-A3B-I
 curl -L -o models/Qwen/Qwen3-Coder-30B-A3B-Instruct/chat_template.jinja https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/extras/chat_template_examples/chat_template_qwen3coder_instruct.jinja
 ```
 :::
+:::{tab-item} gpt-oss-20b
+:sync: gpt-oss-20b
+```console
+python export_model.py text_generation --source_model openai/gpt-oss-20b --weight-format int4 --config_file_path models/config.json --model_repository_path models --tool_parser gptoss --reasoning_parser gptoss --pipeline_type LM
+curl -L -o models/openai/gpt-oss-20b/chat_template.jinja https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/4/extras/chat_template_examples/chat_template_gpt_oss_multiturn.jinja
+```
+> **Note:**: Use `--pipeline_type LM` for export and `--target device GPU` for deployment. Expect continuous batching and CPU support in weekly or 2026.0+ releases.
+:::
 ::::
 
-> **Note:** To use these models on NPU, set `--weight_format` to either **int4** or **nf4**. When specifying `--extra_quantization_params`, ensure that `ratio` is set to **1.0** and `group_size` is set to **-1** or **128**. For more details, see [OpenVINO GenAI on NPU](https://docs.openvino.ai/nightly/openvino-workflow-generative/inference-with-genai/inference-with-genai-on-npu.html).
+> **Note:** To use these models on NPU, set `--weight-format` to either **int4** or **nf4**. When specifying `--extra_quantization_params`, ensure that `ratio` is set to **1.0** and `group_size` is set to **-1** or **128**. For more details, see [OpenVINO GenAI on NPU](https://docs.openvino.ai/nightly/openvino-workflow-generative/inference-with-genai/inference-with-genai-on-npu.html).
 
 ### Direct pulling of pre-configured HuggingFace models from docker containers
 
@@ -227,6 +238,13 @@ ovms.exe --rest_port 8000 --source_model OpenVINO/Phi-4-mini-instruct-int4-ov --
 ```bat
 ovms.exe --rest_port 8000 --source_model Qwen/Qwen3-Coder-30B-A3B-Instruct --model_repository_path models --tool_parser qwen3coder --target_device GPU --task text_generation --enable_tool_guided_generation true --cache_dir .cache
 ```
+:::
+:::{tab-item} gpt-oss-20b
+:sync: gpt-oss-20b
+```bat
+ovms.exe --rest_port 8000 --source_model openai/gpt-oss-20b --model_repository_path models --tool_parser gptoss --reasoning_parser gptoss --target_device GPU --task text_generation --pipeline_type LM --weight-format int4
+```
+> **Note:**: Use `--pipeline_type LM` for export and `--target device GPU` for deployment. Expect continuous batching and CPU support in weekly or 2026.0+ releases.
 :::
 ::::
 
@@ -364,7 +382,6 @@ docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/model
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models openvino/model_server:weekly \
 --rest_port 8000 --source_model Qwen/Qwen3-Coder-30B-A3B-Instruct --model_repository_path models --tool_parser qwen3coder --task text_generation --enable_tool_guided_generation true --cache_dir .cache
 ```
-
 :::
 ::::
 
@@ -452,6 +469,15 @@ docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/model
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:weekly \
 --rest_port 8000 --source_model Qwen/Qwen3-Coder-30B-A3B-Instruct --model_repository_path models --tool_parser qwen3coder --target_device GPU --task text_generation --enable_tool_guided_generation true --cache_dir .cache
 ```
+:::
+:::{tab-item} gpt-oss-20b
+:sync: gpt-oss-20b
+```bash
+docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:weekly \
+--rest_port 8000 --source_model openai/gpt-oss-20b --model_repository_path models \
+--tool_parser gptoss --reasoning_parser gptoss --target_device GPU --task text_generation --enable_prefix_caching true --pipeline_type LM --weight-format int4
+```
+> **Note:**: Use `--pipeline_type LM` for export and `--target device GPU` for deployment. Expect continuous batching and CPU support in weekly or 2026.0+ releases.
 :::
 ::::
 
@@ -620,6 +646,12 @@ python openai_agent.py --query "What is the current weather in Tokyo?" --model O
 :sync: Qwen3-Coder-30B-A3B-Instruct
 ```bash
 python openai_agent.py --query "What is the current weather in Tokyo?" --model Qwen3/Qwen3-Coder-30B-A3B-Instruct --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather
+```
+:::
+:::{tab-item} gpt-oss-20b
+:sync: gpt-oss-20b
+```bash
+python openai_agent.py --query "What is the current weather in Tokyo?" --model openai/gpt-oss-20b --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather
 ```
 :::
 ::::

@@ -135,11 +135,12 @@ const std::vector<std::string> PipelineFactory::getNamesOfAvailablePipelines() c
 template <typename RequestType, typename ResponseType>
 Status PipelineFactory::create(std::unique_ptr<Pipeline>& pipeline, const std::string& name, const RequestType* request, ResponseType* response, ModelManager& manager) const {
     std::shared_lock lock(definitionsMtx);
-    if (!definitionExists(name)) {
+    auto it = definitions.find(name);
+    if (it == definitions.end()) {
         SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Pipeline with requested name: {} does not exist", name);
         return StatusCode::PIPELINE_DEFINITION_NAME_MISSING;
     }
-    auto& definition = *definitions.at(name);
+    auto& definition = *it->second;
     lock.unlock();
     return definition.create(pipeline, request, response, manager);
 }
