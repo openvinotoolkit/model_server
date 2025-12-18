@@ -44,6 +44,7 @@ curl -L -o models/mistralai/Codestral-22B-v0.1/chat_template.jinja https://raw.g
 :sync: OpenVINO/Qwen3-8B-int4-ov
 ```bash
 docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
+    openvino/model_server:weekly \
     --pull \
     --source_model OpenVINO/Qwen3-8B-int4-ov \
     --model_repository_path /models \
@@ -63,6 +64,7 @@ docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
 :sync: OpenVINO/Qwen3-4B-int4-ov
 ```bash
 docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
+    openvino/model_server:weekly \
     --pull \
     --source_model OpenVINO/Qwen3-4B-int4-ov \
     --model_repository_path /models \
@@ -81,6 +83,7 @@ docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
 :sync: OpenVINO/Qwen2.5-Coder-3B-Instruct-int4-ov
 ```bash
 docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
+    openvino/model_server:weekly \
     --pull \
     --source_model OpenVINO/Qwen2.5-Coder-3B-Instruct-int4-ov \
     --model_repository_path /models \
@@ -105,7 +108,7 @@ Pull and add the model on Windows:
 ::::{tab-set}
 :::{tab-item} Qwen/Qwen3-Coder-30B-A3B-Instruct
 :sync: Qwen/Qwen3-Coder-30B-A3B-Instruct
-```bash
+```bat
 python export_model.py text_generation --source_model Qwen/Qwen3-Coder-30B-A3B-Instruct --weight-format int8 --config_file_path models/config_all.json --model_repository_path models --target_device GPU --tool_parser qwen3coder --cache_size 2 --overwrite_models
 curl -L -o models/Qwen/Qwen3-Coder-30B-A3B-Instruct/chat_template.jinja https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/4/extras/chat_template_examples/chat_template_qwen3coder_instruct.jinja
 
@@ -116,7 +119,7 @@ ovms.exe --add_to_config --config_path models/config_all.json --model_name Qwen/
 :::
 :::{tab-item} mistralai/Codestral-22B-v0.1 
 :sync: mistralai/Codestral-22B-v0.1
-```bash
+```bat
 python export_model.py text_generation --source_model mistralai/Codestral-22B-v0.1 --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device GPU --cache_size 2 --overwrite_models
 ```
 > **Note:** This model requires ~12GB disk space and same amount of VRAM on the GPU.
@@ -124,7 +127,7 @@ python export_model.py text_generation --source_model mistralai/Codestral-22B-v0
 :::
 :::{tab-item} OpenVINO/Qwen3-8B-int4-ov
 :sync: OpenVINO/Qwen3-8B-int4-ov
-```bash
+```bat
 ovms.exe --pull --source_model OpenVINO/Qwen3-8B-int4-ov --model_repository_path models --model_name OpenVINO/Qwen3-8B-int4-ov --target_device GPU --task text_generation
 
 ovms.exe --add_to_config --config_path models/config_all.json --model_name OpenVINO/Qwen3-8B-int4-ov --model_path OpenVINO/Qwen3-8B-int4-ov
@@ -132,7 +135,7 @@ ovms.exe --add_to_config --config_path models/config_all.json --model_name OpenV
 :::
 :::{tab-item} OpenVINO/Qwen3-4B-int4-ov
 :sync: OpenVINO/Qwen3-4B-int4-ov
-```bash
+```bat
 ovms.exe --pull --source_model OpenVINO/Qwen3-4B-int4-ov --model_repository_path models --model_name OpenVINO/Qwen3-4B-int4-ov --target_device GPU --task text_generation
     
 ovms.exe --add_to_config --config_path models/config_all.json --model_name OpenVINO/Qwen3-4B-int4-ov --model_path OpenVINO/Qwen3-4B-int4-ov
@@ -140,7 +143,7 @@ ovms.exe --add_to_config --config_path models/config_all.json --model_name OpenV
 :::
 :::{tab-item} OpenVINO/Qwen2.5-Coder-3B-Instruct-int4-ov
 :sync: OpenVINO/Qwen2.5-Coder-3B-Instruct-int4-ov
-```bash
+```bat
 ovms.exe --pull --source_model OpenVINO/Qwen2.5-Coder-3B-Instruct-int4-ov --model_repository_path models --model_name OpenVINO/Qwen2.5-Coder-3B-Instruct-int4-ov --target_device GPU --task text_generation
 
 ovms.exe --add_to_config --config_path models/config_all.json --model_name OpenVINO/Qwen2.5-Coder-3B-Instruct-int4-ov --model_path OpenVINO/Qwen2.5-Coder-3B-Instruct-int4-ov

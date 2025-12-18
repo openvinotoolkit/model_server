@@ -151,7 +151,8 @@ Additionally you can install [ovms as a windows service](windows_service.md)
 
 **Windows install service**
 ```bat
-.\ovms\install_ovms_service.bat
+mkdir C:\models
+.\ovms\install_ovms_service.bat C:\models
 ```
 
 > **Note**: If package contains Python, running this script changes Python settings for the shell that runs it. Environment variables are set only for the current shell so make sure you rerun the script before using model server in a new shell. 
