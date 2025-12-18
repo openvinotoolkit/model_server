@@ -266,7 +266,7 @@ tomaarsen/Qwen3-Reranker-0.6B-seq-cls
 
 Check [RAG demo](../continuous_batching/rag/README.md) which employs `rerank` endpoint together with `chat/completions` and `embeddings`. 
 
-# Usage of tokenize endpoint (release 2025.6 or weekly)
+# Usage of tokenize endpoint (release 2026.0 or weekly)
 
 The `tokenize` endpoint provides a simple API for tokenizing input text using the same tokenizer as the deployed rerank model. This allows you to see how your text will be split into tokens before feature extraction or inference. The endpoint accepts a string or list of strings and returns the corresponding token IDs.
 
