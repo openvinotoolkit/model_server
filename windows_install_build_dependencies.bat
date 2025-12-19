@@ -129,9 +129,9 @@ IF /I EXIST %bash_path% (
     echo [INFO] Msys installed in: %msys_path%
 )
 
-:: Set default USE_OV_BINARY if not set
-if "%USE_OV_BINARY%"=="" (
-    set "USE_OV_BINARY=1"
+:: Set default OV_USE_BINARY if not set
+if "%OV_USE_BINARY%"=="" (
+    set "OV_USE_BINARY=1"
 )
 
 set "genai_workspace=C:\\\\opt\\\\openvino\\\\runtime"
@@ -142,8 +142,8 @@ if "!output_user_root!" neq "opt" (
     if !errorlevel! neq 0 exit /b !errorlevel!
 )
 
-echo [INFO] USE_OV_BINARY=%USE_OV_BINARY%
-IF "%USE_OV_BINARY%"=="0" (
+echo [INFO] OV_USE_BINARY=%OV_USE_BINARY%
+IF "%OV_USE_BINARY%"=="0" (
     goto :install_openvino_from_src
 )
 
@@ -208,10 +208,10 @@ IF /I EXIST %BAZEL_SHORT_PATH%\openvino (
     rmdir /S /Q %BAZEL_SHORT_PATH%\openvino
 )
 if "%OV_SOURCE_BRANCH%"=="" (
-    set "OV_SOURCE_BRANCH=177080_random_uniform_shape_agnostic"
+    set "OV_SOURCE_BRANCH=master"
 )
 if "%OV_SOURCE_ORG%"=="" (
-    set "OV_SOURCE_ORG=sungeunk"
+    set "OV_SOURCE_ORG=openvinotoolkit"
 )
 if "%TOKENIZER_SOURCE_ORG%"=="" (
     set "TOKENIZER_SOURCE_ORG=openvinotoolkit"
@@ -224,6 +224,18 @@ if "%GENAI_SOURCE_ORG%"=="" (
 )
 if "%GENAI_SOURCE_BRANCH%"=="" (
     set "GENAI_SOURCE_BRANCH=master"
+)
+
+echo [INFO] Using OpenVINO source from %OV_SOURCE_ORG%
+IF /I EXIST %BAZEL_SHORT_PATH%\openvino_src (
+    git -C %BAZEL_SHORT_PATH%\openvino_src remote -v | findstr "/%OV_SOURCE_ORG%/" > nul
+    if !errorlevel! equ 0 (
+        echo [INFO] Repository already points to %OV_SOURCE_ORG%
+    ) else (
+        echo [INFO] Repository points to different org, removing...
+        rmdir /S /Q %BAZEL_SHORT_PATH%\openvino_src
+        if !errorlevel! neq 0 exit /b !errorlevel!
+    )
 )
 
 IF /I NOT EXIST %BAZEL_SHORT_PATH%\openvino_src (
