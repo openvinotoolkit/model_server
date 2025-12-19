@@ -25,6 +25,7 @@ Multiple [OpenVINO models optimized for NPU](https://huggingface.co/collections/
 :::{tab-item} Linux
 :sync: Linux
 ```bash
+mkdir -p models
 docker run -d --rm -u $(id -u):$(id -g) -v $(pwd)/models:/models:rw openvino/model_server:latest-gpu --pull --source_model OpenVINO/Qwen3-8B-int4-cw-ov --model_repository_path /models --target_device NPU --task text_generation --tool_parser hermes3 --cache_dir .ov_cache --enable_prefix_caching true --max_prompt_len 2000
 docker run -d --rm -u $(id -u):$(id -g) -v $(pwd)/models:/models:rw openvino/model_server:latest-gpu --add_to_config --config_path /models/config.json --model_name OpenVINO/Qwen3-8B-int4-cw-ov --model_path /models/OpenVINO/Qwen3-8B-int4-cw-ov
 ```
@@ -32,6 +33,7 @@ docker run -d --rm -u $(id -u):$(id -g) -v $(pwd)/models:/models:rw openvino/mod
 :::{tab-item} Windows
 :sync: Windows
 ```bat
+mkdir models
 ovms.exe --pull --source_model OpenVINO/Qwen3-8B-int4-cw-ov --model_repository_path models --target_device NPU --task text_generation --tool_parser hermes3 --cache_dir .ov_cache --enable_prefix_caching true --max_prompt_len 2000 
 ovms.exe --add_to_config --config_path models\config.json --model_name OpenVINO/Qwen3-8B-int4-cw-ov --model_path OpenVINO\Qwen3-8B-int4-cw-ov
 ```

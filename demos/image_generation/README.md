@@ -226,7 +226,7 @@ python export_model.py image_generation \
   --source_model stable-diffusion-v1-5/stable-diffusion-v1-5 \
   --weight-format int8 \
   --target_device "NPU NPU NPU" \
-  --resolution '512x512' \
+  --resolution 512x512 \
   --ov_cache_dir /cache \
   --config_file_path models/config.json \
   --model_repository_path models \
