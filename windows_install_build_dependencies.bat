@@ -228,7 +228,7 @@ if "%GENAI_SOURCE_BRANCH%"=="" (
 
 echo [INFO] Using OpenVINO source from %OV_SOURCE_ORG%
 IF /I EXIST %BAZEL_SHORT_PATH%\openvino_src (
-    git -C %BAZEL_SHORT_PATH%\openvino_src remote -v | findstr "/%OV_SOURCE_ORG%/" > nul
+    git -C %BAZEL_SHORT_PATH%\openvino_src remote -v | findstr "\/%OV_SOURCE_ORG%\/" > nul
     if !errorlevel! equ 0 (
         echo [INFO] Repository already points to %OV_SOURCE_ORG%
     ) else (
