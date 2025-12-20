@@ -234,7 +234,6 @@ IF /I EXIST %BAZEL_SHORT_PATH%\openvino_src (
     ) else (
         echo [INFO] Repository points to different org, removing...
         rmdir /S /Q %BAZEL_SHORT_PATH%\openvino_src
-        if !errorlevel! neq 0 exit /b !errorlevel!
     )
 )
 
