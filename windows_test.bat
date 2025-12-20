@@ -42,7 +42,7 @@ IF "%~3"=="" (
 
 set "buildTestCommand=bazel %bazelStartupCmd% build %bazelBuildArgs% --jobs=%NUMBER_OF_PROCESSORS% --verbose_failures //src:ovms_test"
 set "changeConfigsCmd=python windows_change_test_configs.py"
-set "runTest=%cd%\bazel-bin\src\ovms_test.exe --gtest_filter=!gtestFilter! 2>&1 | tee win_full_test.log"
+set "runTest=%cd%\bazel-bin\src\ovms_test.exe --gtest_filter=!gtestFilter! > win_full_test.log 2>&1"
 
 :: Setting PATH environment variable based on default windows node settings: Added ovms_windows specific python settings and c:/opt and removed unused Nvidia and OCL specific tools.
 :: When changing the values here you can print the node default PATH value and base your changes on it.
