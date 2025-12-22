@@ -39,14 +39,14 @@ struct SttServable {
     std::shared_ptr<ov::genai::WhisperPipeline> sttPipeline;
     std::mutex sttPipelineMutex;
 
-    SttServable(const std::string& modelDir, const std::string& targetDevice, const std::string& graphPath) {
+    SttServable(const std::string& modelDir, const S2TNodeOptions& nodeOptions, const std::string& graphPath) {
         auto fsModelsPath = std::filesystem::path(modelDir);
         if (fsModelsPath.is_relative()) {
             parsedModelsPath = (std::filesystem::path(graphPath) / fsModelsPath);
         } else {
-            parsedModelsPath = fsModelsPath.string();
+            parsedModelsPath = fsModelsPath;
         }
-        sttPipeline = std::make_shared<ov::genai::WhisperPipeline>(parsedModelsPath.string(), targetDevice);
+        sttPipeline = std::make_shared<ov::genai::WhisperPipeline>(parsedModelsPath.string(), nodeOptions.target_device(), nodeOptions.plugin_config());
     }
 };
 

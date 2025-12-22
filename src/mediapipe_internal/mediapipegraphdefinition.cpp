@@ -586,7 +586,7 @@ Status MediapipeGraphDefinition::initializeNodes() {
             }
             mediapipe::S2tCalculatorOptions nodeOptions;
             config.node(i).node_options(0).UnpackTo(&nodeOptions);
-            std::shared_ptr<SttServable> servable = std::make_shared<SttServable>(nodeOptions.models_path(), nodeOptions.target_device(), mgconfig.getBasePath());
+            std::shared_ptr<SttServable> servable = std::make_shared<SttServable>(nodeOptions.models_path(), nodeOptions, mgconfig.getBasePath());
             sttServableMap.insert(std::pair<std::string, std::shared_ptr<SttServable>>(nodeName, std::move(servable)));
             sttServablesCleaningGuard.disableCleaning();
         }
@@ -608,7 +608,7 @@ Status MediapipeGraphDefinition::initializeNodes() {
             }
             mediapipe::T2sCalculatorOptions nodeOptions;
             config.node(i).node_options(0).UnpackTo(&nodeOptions);
-            std::shared_ptr<TtsServable> servable = std::make_shared<TtsServable>(nodeOptions.models_path(), nodeOptions.target_device(), mgconfig.getBasePath());
+            std::shared_ptr<TtsServable> servable = std::make_shared<TtsServable>(nodeOptions.models_path(), nodeOptions, mgconfig.getBasePath());
             ttsServableMap.insert(std::pair<std::string, std::shared_ptr<TtsServable>>(nodeName, std::move(servable)));
             ttsServablesCleaningGuard.disableCleaning();
         }

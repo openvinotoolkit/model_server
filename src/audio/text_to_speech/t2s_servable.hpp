@@ -39,14 +39,14 @@ struct TtsServable {
     std::shared_ptr<ov::genai::Text2SpeechPipeline> ttsPipeline;
     std::mutex ttsPipelineMutex;
 
-    TtsServable(const std::string& modelDir, const std::string& targetDevice, const std::string& graphPath) {
+    TtsServable(const std::string& modelDir, const T2SNodeOptions& nodeOptions, const std::string& graphPath) {
         auto fsModelsPath = std::filesystem::path(modelDir);
         if (fsModelsPath.is_relative()) {
             parsedModelsPath = (std::filesystem::path(graphPath) / fsModelsPath);
         } else {
-            parsedModelsPath = fsModelsPath.string();
+            parsedModelsPath = fsModelsPath;
         }
-        ttsPipeline = std::make_shared<ov::genai::Text2SpeechPipeline>(parsedModelsPath.string(), targetDevice);
+        ttsPipeline = std::make_shared<ov::genai::Text2SpeechPipeline>(parsedModelsPath.string(), nodeOptions.target_device(), nodeOptions.plugin_config());
     }
 };
 
