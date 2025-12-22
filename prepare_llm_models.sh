@@ -29,7 +29,7 @@ VLM_MODEL="OpenGVLab/InternVL2-1B"
 
 # Models for tools testing. Only tokenizers are downloaded.
 QWEN3_MODEL="Qwen/Qwen3-8B"
-LLAMA3_MODEL="meta-llama/Llama-3.1-8B-Instruct"
+LLAMA3_MODEL="unsloth/Llama-3.1-8B-Instruct"
 HERMES3_MODEL="NousResearch/Hermes-3-Llama-3.1-8B"
 PHI4_MODEL="microsoft/Phi-4-mini-instruct"
 MISTRAL_MODEL="mistralai/Mistral-7B-Instruct-v0.3"
@@ -57,12 +57,10 @@ if [ "$(python3 -c 'import sys; print(sys.version_info[1])')" -le "8" ]; then ec
 echo "Downloading LLM testing models to directory $1"
 export PIP_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cpu https://storage.openvinotoolkit.org/simple/wheels/nightly"
 if [ "$2" = "docker" ]; then
-    sed -i '/openvino~=/d' /openvino_tokenizers/pyproject.toml
-    python3 -m pip wheel -v --no-deps --wheel-dir wheel /openvino_tokenizers
-    python3 -m pip install $(find wheel -name 'openvino_tokenizers*.whl')
-    python3 -m pip install "optimum-intel"@git+https://github.com/huggingface/optimum-intel.git nncf sentence_transformers==3.1.1
+    export PATH=$PATH:/opt/intel/openvino/python/bin
+    python3 -m pip install "optimum-intel"@git+https://github.com/huggingface/optimum-intel.git@a484bc6ee1175bbe8868bb53d2c42ab4c4802aa6 nncf sentence_transformers einops timm sentencepiece
 else
-    python3.10 -m venv .venv
+    python3 -m venv .venv
     . .venv/bin/activate
     pip3 install -U pip
     pip3 install -U -r demos/common/export_models/requirements.txt

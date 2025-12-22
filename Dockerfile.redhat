@@ -111,8 +111,8 @@ ARG VERBOSE_LOGS=OFF
 ARG LTO_ENABLE=OFF
 
 # hadolint ignore=DL3041
-RUN dnf install -y https://rpmfind.net/linux/almalinux/8.10/PowerTools/x86_64/os/Packages/opencl-headers-2.2-1.20180306gite986688.el8.noarch.rpm && \
-            dnf update -d6 -y && dnf install -d6 -y \
+RUN dnf install -y -d6 \
+            https://vault.centos.org/centos/8-stream/PowerTools/x86_64/os/Packages/opencl-headers-2.2-1.20180306gite986688.el8.noarch.rpm \
             gdb \
             java-11-openjdk-devel \
             tzdata-java \
@@ -222,21 +222,15 @@ ARG ov_tokenizers_branch=85be884a69f10270703f81f970a5ee596a4c8df7
 ARG ov_tokenizers_org=openvinotoolkit
 ARG SDL_OPS="-fpic -O2 -U_FORTIFY_SOURCE -fstack-protector -fno-omit-frame-pointer -D_FORTIFY_SOURCE=1 -fno-strict-overflow -Wall -Wno-unknown-pragmas -Wno-error=sign-compare -fno-delete-null-pointer-checks -fwrapv -fstack-clash-protection -Wformat -Wformat-security -Werror=format-security -s -D_GLIBCXX_USE_CXX11_ABI=1 -Wno-error=deprecated-declarations -Wuninitialized"
 # hadolint ignore=DL3003
-RUN git clone https://github.com/$ov_tokenizers_org/openvino_tokenizers.git /openvino_tokenizers && cd /openvino_tokenizers && git checkout $ov_tokenizers_branch && git submodule update --init --recursive
-RUN if ! [[ $debug_bazel_flags == *"_py_off"* ]]; then \
-    mkdir -p /opt/intel/openvino/python/openvino_tokenizers/lib ; \
-    cp -r python/* /opt/intel/openvino/python/ ; \
-    mkdir -p /opt/intel/openvino/python/openvino_tokenizers-2025.4.dist-info ; \
-    echo $'Metadata-Version: 1.0\nName: openvino-tokenizers\nVersion: 2025.4\nRequires-Python: >=3.9\nRequires-Dist: openvino~=2025.4.1' > /opt/intel/openvino/python/openvino_tokenizers-2025.4.dist-info/METADATA ; \
-    ln -s /ovms/lib/libopenvino_tokenizers.so /opt/intel/openvino/python/openvino_tokenizers/lib/libopenvino_tokenizers.so ; \
-    fi
 
-# hadolint ignore=DL3003
-RUN if [ "$ov_use_binary" == "0" ]; then true ; else exit 0 ; fi ; \
-    cd /openvino_tokenizers && cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_VERBOSE_MAKEFILE="${VERBOSE_LOGS}" -DCMAKE_CXX_FLAGS=" ${SDL_OPS} ${LTO_CXX_FLAGS} " -DCMAKE_SHARED_LINKER_FLAGS="${LTO_LD_FLAGS}" -S ./ -B ./build/  && cmake --build ./build/ --parallel $JOBS && cp /openvino_tokenizers/build/src/lib*.so /opt/intel/openvino/runtime/lib/intel64/ ; \
-    # Install the openvino_tokenizers python bindings and copy to OpenVINO location
-    if ! [[ $debug_bazel_flags == *"_py_off"* ]]; then \
-    cp build/python/* /opt/intel/openvino/python/openvino_tokenizers/ ; \
+RUN if ! [[ $debug_bazel_flags == *"_py_off"* ]]; then \  
+# python tokenizers built always from source because it is not in binary package
+    git clone https://github.com/$ov_tokenizers_org/openvino_tokenizers.git /openvino_tokenizers && cd /openvino_tokenizers && git checkout $ov_tokenizers_branch && git submodule update --init --recursive && \
+    sed -i '/openvino~=/d' /openvino_tokenizers/pyproject.toml && \
+    sed -i '/requires-python/d' /openvino_tokenizers/pyproject.toml && \
+    cd /openvino_tokenizers && cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_VERBOSE_MAKEFILE="${VERBOSE_LOGS}" -DCMAKE_CXX_FLAGS=" ${SDL_OPS} ${LTO_CXX_FLAGS} " -DCMAKE_SHARED_LINKER_FLAGS="${LTO_LD_FLAGS}" -S ./ -B ./build/  && cmake --build ./build/ --parallel $JOBS && cp /openvino_tokenizers/build/src/lib*.so /opt/intel/openvino/runtime/lib/intel64/ && \
+    python3 -m pip wheel -v --no-deps --wheel-dir wheel /openvino_tokenizers && \
+    python3 -m pip install $(find wheel -name 'openvino_tokenizers*.whl') --target /opt/intel/openvino/python ; \
     fi
 
 WORKDIR /openvino_genai/
@@ -290,7 +284,7 @@ RUN make
 
 RUN if ! [[ $debug_bazel_flags == *"py_off"* ]]; then true ; else exit 0 ; fi ; \
     mkdir -p /opt/intel/openvino/python/openvino-4.dist-info && \
-    echo $'Metadata-Version: 1.0\nName: openvino\nVersion: 2025.4' > /opt/intel/openvino/python/openvino-4.dist-info/METADATA
+    echo $'Metadata-Version: 1.0\nName: openvino\nVersion: 2025.4.1' > /opt/intel/openvino/python/openvino-4.dist-info/METADATA
 ENV PYTHONPATH=/opt/intel/openvino/python:/ovms/bazel-bin/src/python/binding
 
 WORKDIR /patchelf

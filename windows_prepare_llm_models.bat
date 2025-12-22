@@ -37,7 +37,7 @@ set "LEGACY_MODEL_FILE=1\model.bin"
 
 :: Models for tools testing. Only tokenizers are downloaded.
 set "QWEN3_MODEL=Qwen/Qwen3-8B"
-set "LLAMA3_MODEL=meta-llama/Llama-3.1-8B-Instruct"
+set "LLAMA3_MODEL=unsloth/Llama-3.1-8B-Instruct"
 set "HERMES3_MODEL=NousResearch/Hermes-3-Llama-3.1-8B"
 set "PHI4_MODEL=microsoft/Phi-4-mini-instruct"
 set "MISTRAL_MODEL=mistralai/Mistral-7B-Instruct-v0.3"
