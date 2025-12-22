@@ -204,11 +204,26 @@ Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiSe
         return status;
     }
 
+#define NEW_CONSTRUCTORS_V2
+
     properties->tokenizerPluginConfig = {{"PERFORMANCE_HINT", "THROUGHPUT"}};
     try {
+        SPDLOG_ERROR("Continuous Batching -------------");
+#if defined(NEW_CONSTRUCTORS_V2)
+        ov::genai::DeviceMapping deviceMapping{
+            {"language", properties->device},
+            {"text_embeddings", nodeOptions.text_embeddings_device().empty() ? properties->device : nodeOptions.text_embeddings_device()},
+            {"vision_embeddings", nodeOptions.vision_embeddings_device().empty() ? properties->device : nodeOptions.vision_embeddings_device()}
+        };
+        properties->pipeline = std::make_shared<ov::genai::ContinuousBatchingPipeline>(parsedModelsPath,
+            properties->schedulerConfig, deviceMapping,
+            properties->pluginConfig, properties->tokenizerPluginConfig);
+#else
         properties->pipeline = std::make_shared<ov::genai::ContinuousBatchingPipeline>(parsedModelsPath,
             properties->schedulerConfig, properties->device,
             properties->pluginConfig, properties->tokenizerPluginConfig);
+#endif
+
         properties->tokenizer = properties->pipeline->get_tokenizer();
     } catch (const std::exception& e) {
         SPDLOG_ERROR("Error during llm node initialization for models_path: {} exception: {}", parsedModelsPath, e.what());
