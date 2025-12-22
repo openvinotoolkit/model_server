@@ -52,7 +52,7 @@ def get_openvino_name_bin(openvino_dir):
             for line in version_file:
                 match = WIN_OV_VERSION_REGEX.search(line)
                 if match:
-                    openvino_name = line
+                    openvino_name = line.strip('\n')
                     break
     return openvino_name
 
