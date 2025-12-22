@@ -160,7 +160,12 @@ Status VisualLanguageModelLegacyServableInitializer::initialize(std::shared_ptr<
         SPDLOG_ERROR("Selecting Devices: Language: {}, Vision Embeddings: {}, Text Embeddings: {}", properties->device, vision_embeddings_device, text_embeddings_device);
         properties->pipeline = std::make_shared<ov::genai::VLMPipeline>(parsedModelsPath, compiledModelsMap, kv_pos.first, kv_pos.second, properties->pluginConfig);
 #elif defined(NEW_CONSTRUCTORS_V2)
-        properties->pipeline = std::make_shared<ov::genai::VLMPipeline>(parsedModelsPath, properties->device, properties->pluginConfig);
+        ov::genai::DeviceMapping deviceMapping{
+            {"language", properties->device},
+            {"text_embeddings", nodeOptions.text_embeddings_device().empty() ? properties->device : nodeOptions.text_embeddings_device()},
+            {"vision_embeddings", nodeOptions.vision_embeddings_device().empty() ? properties->device : nodeOptions.vision_embeddings_device()}
+        };
+        properties->pipeline = std::make_shared<ov::genai::VLMPipeline>(parsedModelsPath, deviceMapping, properties->pluginConfig);
 #else
         properties->pipeline = std::make_shared<ov::genai::VLMPipeline>(parsedModelsPath, properties->device, properties->pluginConfig);
 #endif
