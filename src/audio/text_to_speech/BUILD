@@ -38,6 +38,7 @@ ovms_cc_library(
         ":t2s_servable",
         "//third_party:genai",
         "//src/audio:audio_utils",
+        "//src:libmodelconfigjsonparser",
     ],
     visibility = ["//visibility:public"],
     alwayslink = 1,
