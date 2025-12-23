@@ -30,6 +30,7 @@
 namespace ovms {
 
 void GptOssToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) {
+    SPDLOG_ERROR("XXXXXXXXXXXXXXXXXXXXXXXXXX");
     openai::Harmony harmony(tokenizer, generatedTokens);
     if (!harmony.parse()) {
         SPDLOG_LOGGER_INFO(llm_calculator_logger, "Harmony parsing failed");
@@ -42,6 +43,10 @@ void GptOssToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64
     parsedOutput.toolCalls = harmony.getToolCalls();
     for (const auto& toolCall : parsedOutput.toolCalls) {
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Unary | GPT Tool | id: [{}], name: [{}], arguments: [{}]", toolCall.id, toolCall.name, toolCall.arguments);
+    }
+
+    for (const auto& builtInToolCall : harmony.getBuiltInToolCalls()) {
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Unary | GPT Built-in Tool | id: [{}], name: [{}], arguments: [{}]", builtInToolCall.id, builtInToolCall.name, builtInToolCall.arguments);
     }
 }
 
@@ -195,6 +200,7 @@ std::optional<rapidjson::Document> GptOssToolParser::parseChunk(const std::strin
 }
 
 const std::string GptOssToolParser::parsingStartTag = "<|channel|>commentary to=";
+const std::string GptOssToolParser::parsingStartTag2 = "<|channel|>analysis to=";
 const std::string GptOssToolParser::parsingEndTag = "<|call|>";
 
 }  // namespace ovms
