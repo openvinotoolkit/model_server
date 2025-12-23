@@ -615,7 +615,7 @@ Status MediapipeGraphDefinition::initializeNodes() {
             if (!calculatorOptions.UnpackTo(&nodeOptions)) {
                 SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to unpack calculator options");
                 return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
-    }
+            }
             std::shared_ptr<TtsServable> servable = std::make_shared<TtsServable>(nodeOptions, mgconfig.getBasePath());
             ttsServableMap.insert(std::pair<std::string, std::shared_ptr<TtsServable>>(nodeName, std::move(servable)));
             ttsServablesCleaningGuard.disableCleaning();

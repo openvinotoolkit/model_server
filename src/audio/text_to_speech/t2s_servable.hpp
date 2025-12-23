@@ -50,7 +50,7 @@ struct TtsServable {
         } else {
             parsedModelsPath = fsModelsPath;
         }
-        std::map<std::string, ov::Any> config;
+        ov::AnyMap config;
         Status status = JsonParser::parsePluginConfig(nodeOptions.plugin_config(), config);
         if (!status.ok()) {
             SPDLOG_ERROR("Error during llm node plugin_config option parsing to JSON: {}", nodeOptions.plugin_config());

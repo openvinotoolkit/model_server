@@ -49,7 +49,7 @@ struct SttServable {
         } else {
             parsedModelsPath = fsModelsPath;
         }
-        plugin_config_t config;
+        ov::AnyMap config;
         auto status = JsonParser::parsePluginConfig(nodeOptions.plugin_config(), config);
         if (!status.ok()) {
             SPDLOG_ERROR("Error during llm node plugin_config option parsing to JSON: {}", nodeOptions.plugin_config());
