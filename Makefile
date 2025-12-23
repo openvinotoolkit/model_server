@@ -77,7 +77,7 @@ FUZZER_BUILD ?= 0
 
 OV_SOURCE_BRANCH ?= e4d09f992ad71dc8b8978fb9b8905ffd8f75ffe0 # 10.12.2025 master branch
 OV_TOKENIZERS_BRANCH ?= a4d8fdf083e76147a5e8638a788e96f855084176 # 10.12.2025 master branch
-OV_GENAI_BRANCH ?= b99202e661d8bcd179dde9accda17714ec4e3447 # dkalinow fork commit
+OV_GENAI_BRANCH ?= d56f63cdd724d3422b23dac89e6e788c9d92aa07 # dkalinow fork commit
 
 OV_SOURCE_ORG ?= openvinotoolkit
 OV_GENAI_ORG ?= dkalinowski
