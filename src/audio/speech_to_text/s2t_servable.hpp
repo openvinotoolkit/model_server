@@ -31,6 +31,9 @@
 #include "openvino/genai/whisper_pipeline.hpp"
 #include "openvino/genai/speech_generation/text2speech_pipeline.hpp"
 #include "src/audio/speech_to_text/s2t_calculator.pb.h"
+#include "src/json_parser.hpp"
+#include "src/status.hpp"
+#include "src/logging.hpp"
 
 namespace ovms {
 
@@ -39,14 +42,20 @@ struct SttServable {
     std::shared_ptr<ov::genai::WhisperPipeline> sttPipeline;
     std::mutex sttPipelineMutex;
 
-    SttServable(const std::string& modelDir, const S2TNodeOptions& nodeOptions, const std::string& graphPath) {
-        auto fsModelsPath = std::filesystem::path(modelDir);
+    SttServable(const ::mediapipe::S2tCalculatorOptions& nodeOptions, const std::string& graphPath) {
+        auto fsModelsPath = std::filesystem::path(nodeOptions.models_path());
         if (fsModelsPath.is_relative()) {
             parsedModelsPath = (std::filesystem::path(graphPath) / fsModelsPath);
         } else {
             parsedModelsPath = fsModelsPath;
         }
-        sttPipeline = std::make_shared<ov::genai::WhisperPipeline>(parsedModelsPath.string(), nodeOptions.target_device(), nodeOptions.plugin_config());
+        plugin_config_t config;
+        auto status = JsonParser::parsePluginConfig(nodeOptions.plugin_config(), config);
+        if (!status.ok()) {
+            SPDLOG_ERROR("Error during llm node plugin_config option parsing to JSON: {}", nodeOptions.plugin_config());
+            throw std::runtime_error("Error during plugin_config option parsing");
+        }
+        sttPipeline = std::make_shared<ov::genai::WhisperPipeline>(parsedModelsPath.string(), nodeOptions.target_device(), config);
     }
 };
 
