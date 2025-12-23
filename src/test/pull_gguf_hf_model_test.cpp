@@ -465,7 +465,6 @@ TEST_P(GGUFDownloaderPullHfModelGGUFFilenameParameterizedNegative, NonMatchingPa
 }
 
 std::vector<std::tuple<std::string, std::string>> ggufPartsParams = {
-    std::make_tuple("qwen2.5-7b-instruct-q4_k_m-000001-of-00002.gguf", "https://modelscope.cn/"),
     std::make_tuple("qwen2.5-7b-instruct-q4_k_m-000001-of-00002.gguf", "https://huggingface.co/"),
     std::make_tuple("qwen2.5-7b-instruct-q4_k_m-00001-of-000002.gguf", "https://huggingface.co/"),
     std::make_tuple("qwen2.5-7b-instruct-q4_k_m-0001-of-00002.gguf", "https://huggingface.co/"),

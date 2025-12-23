@@ -14,13 +14,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+
 set -e
 if [ -z "$1" ]; then
   echo "Error: No directory specified."
   exit 1
 fi
 
-CB_MODEL="facebook/opt-125m"
+CB_MODEL="HuggingFaceTB/SmolLM2-360M-Instruct"
+FACEBOOK="facebook/opt-125m"
 TOKENIZER_FILE="openvino_tokenizer.bin"
 LEGACY_MODEL_FILE="1/model.bin"
 EMBEDDING_MODEL="thenlper/gte-small"
@@ -58,7 +60,7 @@ echo "Downloading LLM testing models to directory $1"
 export PIP_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cpu https://storage.openvinotoolkit.org/simple/wheels/nightly"
 if [ "$2" = "docker" ]; then
     export PATH=$PATH:/opt/intel/openvino/python/bin
-    python3 -m pip install "optimum-intel"@git+https://github.com/huggingface/optimum-intel.git@a484bc6ee1175bbe8868bb53d2c42ab4c4802aa6 nncf sentence_transformers einops timm sentencepiece
+    python3 -m pip install "optimum-intel"@git+https://github.com/huggingface/optimum-intel.git@75d6b7d3bc9544487e2111a610b59f8d62e0ef89 nncf sentence_transformers einops timm sentencepiece
 else
     python3 -m venv .venv
     . .venv/bin/activate
@@ -74,6 +76,16 @@ else
 fi
 if [ ! -f "$1/$CB_MODEL/$TOKENIZER_FILE" ]; then
   echo "[ERROR] Models file $1/$CB_MODEL/$TOKENIZER_FILE does not exist."
+  exit 1
+fi
+
+if [ -f "$1/$FACEBOOK/$TOKENIZER_FILE" ]; then
+  echo "Models file $1/$FACEBOOK/$TOKENIZER_FILE exists. Skipping downloading models."
+else
+  python3 demos/common/export_models/export_model.py text_generation --source_model "$FACEBOOK" --weight-format int8 --model_repository_path $1
+fi
+if [ ! -f "$1/$FACEBOOK/$TOKENIZER_FILE" ]; then
+  echo "[ERROR] Models file $1/$FACEBOOK/$TOKENIZER_FILE does not exist."
   exit 1
 fi
 
