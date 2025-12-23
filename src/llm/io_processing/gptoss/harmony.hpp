@@ -59,6 +59,7 @@ public:
     std::string getContent();
     std::string getReasoning();
     ToolCalls_t getToolCalls();
+    ToolCalls_t getBuiltInToolCalls();
 
     static const std::string TOKEN_START;
     static const std::string TOKEN_END;

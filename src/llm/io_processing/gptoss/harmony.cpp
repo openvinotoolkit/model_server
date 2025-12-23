@@ -121,6 +121,39 @@ ToolCalls_t Harmony::getToolCalls() {
     return toolCalls;
 }
 
+/*
+    Built-in tools calls are extracted from messages in channel "analysis" that contain "to=<builtins>.NAME" in the channel content; example:
+    <|channel|>analysis to=browser.search code<|message|>{"query": "latest developments AI technology 2025", "topn": 10, "source": "news"}<|call|>
+*/
+ToolCalls_t Harmony::getBuiltInToolCalls() {
+    static const std::string tool_prefix = "to=";
+    ToolCalls_t toolCalls;
+    for (const auto& msg : messages) {
+        SPDLOG_INFO("AAAAAA: Channel [{}], Content [{}]", msg.getChannel(), msg.getContent());
+        if (startsWith(msg.getChannel(), "analysis") || startsWith(msg.getChannel(), "commentary")) {
+            size_t marker = msg.getChannel().find(tool_prefix);
+            if (marker != std::string::npos) {
+                marker += tool_prefix.length();
+                size_t firstWhiteSpaceOrSpecialBegin = msg.getChannel().find_first_of(" \t\n\r<", marker);
+                ToolCall toolCall;
+                if (firstWhiteSpaceOrSpecialBegin == std::string::npos) {
+                    // Take the remaining part of the string
+                    toolCall.name = msg.getChannel().substr(marker);
+                } else {
+                    // Take up to the first whitespace or special token begin
+                    toolCall.name = msg.getChannel().substr(marker, firstWhiteSpaceOrSpecialBegin - marker);
+                }
+                toolCall.arguments = msg.getContent();
+                toolCall.id = generateRandomId();
+                toolCalls.push_back(std::move(toolCall));
+            } else {
+                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Skipping tool call. Could not find tool name in channel [{}]", msg.getChannel());
+            }
+        }
+    }
+    return toolCalls;
+}
+
 bool Harmony::parse() {
     if (tokens.empty())
         return true;
@@ -167,6 +200,7 @@ bool Harmony::parse() {
                 if (currentState == HarmonyState::READING_CHANNEL) {
                     currentChannel = tokenizer.decode(tokenCache, ov::AnyMap{ov::genai::skip_special_tokens(false)});
                     currentState = HarmonyState::READING_MESSAGE;
+                    SPDLOG_ERROR("AAAAAAAAAAAAAAAAAAAA: {}", currentChannel);
                 } else if (currentState == HarmonyState::READING_CONSTRAIN) {
                     currentConstrain = tokenizer.decode(tokenCache, ov::AnyMap{ov::genai::skip_special_tokens(false)});
                     currentState = HarmonyState::READING_MESSAGE;

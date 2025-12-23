@@ -28,6 +28,7 @@ namespace ovms {
 class GptOssToolParser : public BaseOutputParser {
     // This is the same as reasoning parser start tag, however since reasoning is always checked before tool parser, it is not a problem.
     static const std::string parsingStartTag;
+    static const std::string parsingStartTag2;
     static const std::string parsingEndTag;
 
     enum class StreamState : int {
@@ -58,7 +59,7 @@ public:
     std::optional<rapidjson::Document> parseChunk(const std::string& chunk, ov::genai::GenerationFinishReason finishReason) override;
 
     const std::vector<std::string>& getParsingStartTags() const override {
-        static const std::vector<std::string> parsingStartTags{parsingStartTag};
+        static const std::vector<std::string> parsingStartTags{parsingStartTag, parsingStartTag2};
         return parsingStartTags;
     }
 
