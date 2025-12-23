@@ -34,8 +34,8 @@ IF "%~2"=="--with_python" (
 )
 
 :: Set default USE_OV_BINARY if not set
-if "%USE_OV_BINARY%"=="" (
-    set "USE_OV_BINARY=1"
+if "%OV_USE_BINARY%"=="" (
+    set "OV_USE_BINARY=1"
 )
 
 if exist dist\windows\ovms (
@@ -113,7 +113,7 @@ md %license_dest%
 if !errorlevel! neq 0 exit /b !errorlevel!
 copy C:\opt\opencv_4.12.0\etc\licenses\* %license_dest%
 if !errorlevel! neq 0 exit /b !errorlevel!
-IF "%USE_OV_BINARY%"=="1" (
+IF "%OV_USE_BINARY%"=="1" (
     copy C:\%output_user_root%\openvino\docs\licensing\LICENSE %license_dest%openvino.LICENSE.txt
     if !errorlevel! neq 0 exit /b !errorlevel!
     copy C:\%output_user_root%\openvino\docs\licensing\LICENSE-GENAI %license_dest%LICENSE-GENAI.txt

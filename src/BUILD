@@ -477,7 +477,6 @@ ovms_cc_library(
         "capi_frontend/capi.cpp",
         "cleaner_utils.cpp",
         "cleaner_utils.hpp",
-        "copyable_object_wrapper.hpp",
         "customloaderconfig.hpp",
         "customloaders.hpp",
         "customloaders.cpp",
@@ -536,6 +535,7 @@ ovms_cc_library(
         "statefulmodelinstance.hpp",
          ] + select({
             "//:not_disable_mediapipe": [
+                "copyable_object_wrapper.hpp",
                 "mediapipe_internal/mediapipefactory.cpp",
                 "mediapipe_internal/mediapipefactory.hpp",
                 "mediapipe_internal/mediapipegraphconfig.hpp",
@@ -2512,6 +2512,7 @@ cc_test(
                 "test/multipart_calculator_test.cpp",
                 "test/llm/assisted_decoding_test.cpp",
                 "test/llm/llmnode_test.cpp",
+                "test/llm/tokenize_endpoint_test.cpp",
                 "test/llm/max_model_length_test.cpp",
                 "test/llm/text_streamer_test.cpp",
                 "test/llm/visual_language_model/complete_flow_test.cpp",

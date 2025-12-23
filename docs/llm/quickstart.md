@@ -161,6 +161,40 @@ Expected output:
 Paris, the charming City of Light, is renowned for its rich history, iconic landmarks, architectural splendor, and artistic
 ```
 
+## Tokenization (release 2026.0 or weekly)
+
+The `tokenize` endpoint provides a simple API for tokenizing input text using the same tokenizer as the deployed LLM, VLM or [embedding](../../demos/embeddings/README.md#usage-of-tokenize-endpoint-release-20254-or-weekly). This allows you to see how your text will be split into tokens before feature extraction or inference. The endpoint accepts a string or list of strings and returns the corresponding token IDs.
+
+Example usage:
+```console
+curl http://localhost:8000/v3/tokenize -H "Content-Type: application/json" -d "{ \"model\": \"Qwen/Qwen3-8B\", \"text\": \"hello world\"}"
+```
+Response:
+```json
+{
+  "tokens":[14990,1879]
+}
+```
+
+It's possible to use additional parameters:
+ - `pad_to_max_length` - whether to pad the sequence to the maximum length. Default is False. 
+ - `max_length` - maximum length of the sequence. If specified, it truncates the tokens to the provided number.
+ - `padding_side` - side to pad the sequence, can be `left` or `right`. Default is `right`.
+ - `add_special_tokens` - whether to add special tokens like BOS, EOS, PAD. Default is True. 
+
+ Example usage:
+```console
+curl http://localhost:8000/v3/tokenize -H "Content-Type: application/json" -d "{ \"model\": \"Qwen/Qwen3-8B\", \"text\": \"hello world\", \"max_length\": 5, \"pad_to_max_length\": true, \"padding_side\": \"left\", \"add_special_tokens\": true }"
+```
+
+Response:
+```json
+{
+  "tokens": [151643,151643,151643,14990,1879]
+}
+```
+> **Note:** Additional parameters are working only with the latest models. That means it's required to export it manually with [exoport model script](../../demos/common/export_models/README.md)
+
 ## References
 - [Efficient LLM Serving - reference](reference.md)
 - [Exporting GEN AI Models](../../demos/common/export_models/README.md)

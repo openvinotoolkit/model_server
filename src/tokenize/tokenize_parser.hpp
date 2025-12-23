@@ -47,9 +47,11 @@ struct TokenizeRequest {
 
 class TokenizeParser {
 public:
+    static constexpr const char* TOKENIZE_ENDPOINT_SUFFIX = "tokenize";
     static std::variant<TokenizeRequest::InputDataType, std::string> parseInput(rapidjson::Document& parsedJson, const std::string& field_name);
     static absl::Status parseTokenizeResponse(rapidjson::StringBuffer& buffer, const ov::genai::TokenizedInputs& tokens, const ov::AnyMap& parameters = {});
     static absl::Status parseTokenizeRequest(rapidjson::Document& parsedJson, TokenizeRequest& request);
     static std::variant<TokenizeRequest, std::string> validateTokenizeRequest(rapidjson::Document& parsedJson);
+    static bool isTokenizeEndpoint(const std::string& uri);
 };
 }  // namespace ovms

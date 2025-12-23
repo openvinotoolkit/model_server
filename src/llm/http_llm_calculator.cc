@@ -95,6 +95,19 @@ public:
                     return status;
                 SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "LLMCalculator  [Node: {}] Request loaded successfully", cc->NodeName());
 
+                // Tokenize endpoint doesn't require full servable path and it ends workflow after tokenization, it does not need additional processing
+                if (executionContext->endpoint == Endpoint::TOKENIZE) {
+                    OVMS_PROFILE_SCOPE("Tokenize generation cycle");
+                    status = servable->processTokenizeRequest(executionContext);
+                    if (status != absl::OkStatus())
+                        return status;
+                    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "LLMCalculator  [Node: {}] Tokenization response prepared, sending it down the graph", cc->NodeName());
+
+                    std::string& response = executionContext->response;
+                    cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new std::string{std::move(response)}, iterationBeginTimestamp);
+                    return absl::OkStatus();
+                }
+
                 // Creates internal API handler in executionContext with data from the payload and parses the request
                 status = servable->parseRequest(executionContext);
                 if (status != absl::OkStatus())

@@ -45,7 +45,7 @@ absl::Status TokenizeParser::parseTokenizeResponse(rapidjson::StringBuffer& buff
         int64_t* attentionMaskPtr = reinterpret_cast<int64_t*>(attentionMaskTensor.data()) + batchIterator * size;
         for (size_t i = 0; i < size; ++i) {
             if (attentionMaskPtr[i] == 0 && !pad_to_max_length) {
-                break;
+                continue;
             }
             writer.Int64(dataPtr[i]);
         }
@@ -220,5 +220,12 @@ absl::Status TokenizeParser::parseTokenizeRequest(rapidjson::Document& parsedJso
     }
     request = std::get<TokenizeRequest>(validated);
     return absl::OkStatus();
+}
+
+bool TokenizeParser::isTokenizeEndpoint(const std::string& uri) {
+    const int endpoint_len = std::strlen(TokenizeParser::TOKENIZE_ENDPOINT_SUFFIX);
+    const bool useTokenizeEndpoint = uri.size() >= endpoint_len &&
+                                     uri.compare(uri.size() - endpoint_len, endpoint_len, TokenizeParser::TOKENIZE_ENDPOINT_SUFFIX) == 0;
+    return useTokenizeEndpoint;
 }
 }  // namespace ovms
