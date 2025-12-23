@@ -46,7 +46,7 @@ Configuration options for the server are defined only via command-line options a
 | `cpu_extension` | `string` | Optional path to a library with [custom layers implementation](https://docs.openvino.ai/2025/documentation/openvino-extensibility.html). |
 | `log_level` | `"DEBUG"/"INFO"/"ERROR"` | Serving logging level |
 | `log_path` | `string` | Optional path to the log file. |
-| `cache_dir` | `string` | Path to the model cache storage. Caching will be enabled if this parameter is defined or the default path /opt/cache exists |
+| `cache_dir` | `string` | Path (absolute or relative to the current directory) to the model cache storage. Caching will be enabled if this parameter is defined or the default path /opt/cache exists |
 | `grpc_channel_arguments` | `string` |   A comma separated list of arguments to be passed to the grpc server. (e.g. grpc.max_connection_age_ms=2000) |
 | `grpc_max_threads` | `string` |   Maximum number of threads which can be used by the grpc server. Default value depends on number of CPUs. |
 | `grpc_memory_quota` | `string` |   GRPC server buffer memory quota. Default value set to 2147483648 (2GB). |
