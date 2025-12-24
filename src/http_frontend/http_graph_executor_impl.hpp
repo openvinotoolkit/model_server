@@ -18,10 +18,7 @@
 #include <map>
 #include <memory>
 #include <string>
-#pragma warning(push)
-#pragma warning(disable : 6313)
-#include <rapidjson/document.h>
-#pragma warning(pop)
+#include "src/port/rapidjson_document.hpp"
 
 #include "../http_payload.hpp"
 #include "../mediapipe_internal/packettypes.hpp"
