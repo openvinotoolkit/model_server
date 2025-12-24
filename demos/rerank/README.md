@@ -146,7 +146,7 @@ index 1, relevance_score 0.09138210117816925
 
 :::{dropdown} **Requesting rerank score with model that requires template applying on query and documents**
 
-tomaarsen/Qwen3-Reranker-0.6B-seq-cls is a copy of the Qwen3-Reranker-0.6B model (original model is not supported in OVMS) modified as a sequence classification model instead. It requires applying template on input, here is example client that does it:
+OpenVINO/Qwen3-Reranker-0.6B-seq-cls-fp16-ov is a copy of the Qwen3-Reranker-0.6B model (original model is not supported in OVMS) modified as a sequence classification model instead. It requires applying template on input, here is example client that does it:
 
 ```bash
 pip3 install requests
@@ -180,7 +180,7 @@ documents = [
 
 response = requests.post("http://127.0.0.1:8000/v3/rerank",
                          json={
-                             "model": "tomaarsen/Qwen3-Reranker-0.6B-seq-cls",
+                             "model": "OpenVINO/Qwen3-Reranker-0.6B-seq-cls-fp16-ov",
                              "query": query,
                              "documents": documents,
                          }).json()
@@ -191,7 +191,7 @@ python rerank_client.py
 ```
 It will return response similar to:
 ```
-{'results': [{'index': 0, 'relevance_score': 0.024518223479390144}, {'index': 1, 'relevance_score': 0.0026006349362432957}]}
+{'results': [{'index': 0, 'relevance_score': 0.0216273982077837}, {'index': 1, 'relevance_score': 0.018804751336574554}]}
 ```
 :::
 
@@ -260,4 +260,35 @@ tomaarsen/Qwen3-Reranker-0.6B-seq-cls
 
 Check [RAG demo](../continuous_batching/rag/README.md) which employs `rerank` endpoint together with `chat/completions` and `embeddings`. 
 
+# Usage of tokenize endpoint (release 2026.0 or weekly)
+
+The `tokenize` endpoint provides a simple API for tokenizing input text using the same tokenizer as the deployed rerank model. This allows you to see how your text will be split into tokens before feature extraction or inference. The endpoint accepts a string or list of strings and returns the corresponding token IDs.
+
+Example usage:
+```console
+curl http://localhost:8000/v3/tokenize -H "Content-Type: application/json" -d "{ \"model\": \"OpenVINO/bge-reranker-base-int8-ov\", \"text\": \"hello world\" }"
+```
+Response:
+```json
+{
+  "tokens": [33600,31,8999]
+}
+```
+
+It's possible to use additional parameters:
+ - `pad_to_max_length` - whether to pad the sequence to the maximum length. Default is False. 
+ - `max_length` - maximum length of the sequence. If specified, it truncates the tokens to the provided number.
+ - `padding_side` - side to pad the sequence, can be `left` or `right`. Default is `right`.
+
+ Example usage:
+```console
+curl http://localhost:8000/v3/tokenize -H "Content-Type: application/json" -d "{ \"model\": \"OpenVINO/bge-reranker-base-int8-ov\", \"text\": \"hello world\", \"max_length\": 10, \"pad_to_max_length\": true, \"padding_side\": \"left\"}"
+```
+
+Response:
+```json
+{
+  "tokens": [1,1,1,1,1,1,1,33600,31,8999]
+}
+```
 
