@@ -57,7 +57,7 @@ protected:
     ovms::Server& server = ovms::Server::instance();
     std::unique_ptr<std::thread> t;
 
-    void SetUpServerForDownloadAndStartGGUF(std::string& ggufFile, std::string& sourceModel, std::string& downloadPath, std::string& task, int timeoutSeconds = 500) {
+    void SetUpServerForDownloadAndStartGGUF(std::string& ggufFile, std::string& sourceModel, std::string& downloadPath, std::string& task, int timeoutSeconds = 300) {
         ::SetUpServerForDownloadAndStartGGUF(this->t, this->server, ggufFile, sourceModel, downloadPath, task, timeoutSeconds);
     }
     void TearDown() {

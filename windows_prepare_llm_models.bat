@@ -31,6 +31,7 @@ IF /I EXIST c:\opt\llm_testing (
 set "EMBEDDING_MODEL=thenlper/gte-small"
 set "RERANK_MODEL=BAAI/bge-reranker-base"
 set "TEXT_GENERATION_MODEL=facebook/opt-125m"
+set "LLM_MODEL=HuggingFaceTB/SmolLM2-360M-Instruct"
 set "VLM_MODEL=OpenGVLab/InternVL2-1B"
 set "TOKENIZER_FILE=openvino_tokenizer.bin"
 set "LEGACY_MODEL_FILE=1\model.bin"
@@ -84,7 +85,19 @@ if exist "%~1\%TEXT_GENERATION_MODEL%\%TOKENIZER_FILE%" (
 if not exist "%~1\%TEXT_GENERATION_MODEL%\%TOKENIZER_FILE%" (
   echo Models file %~1\%TEXT_GENERATION_MODEL%\%TOKENIZER_FILE% does not exists.
   exit /b 1
-) 
+)
+
+if exist "%~1\%LLM_MODEL%\%TOKENIZER_FILE%" (
+  echo Models file %~1\%LLM_MODEL%\%TOKENIZER_FILE% exists. Skipping downloading models.
+) else (
+  echo Downloading text generation model to %~1\%LLM_MODEL% directory.
+  python demos\common\export_models\export_model.py text_generation --source_model "%LLM_MODEL%" --weight-format int8 --model_repository_path %~1
+  if !errorlevel! neq 0 exit /b !errorlevel!
+)
+if not exist "%~1\%LLM_MODEL%\%TOKENIZER_FILE%" (
+  echo Models file %~1\%LLM_MODEL%\%TOKENIZER_FILE% does not exists.
+  exit /b 1
+)
 
 if exist "%~1\%EMBEDDING_MODEL%\ov\%TOKENIZER_FILE%" (
   echo Models file %~1\%EMBEDDING_MODEL%\ov\%TOKENIZER_FILE% exists. Skipping downloading models.
