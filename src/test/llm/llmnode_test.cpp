@@ -99,7 +99,7 @@ public:
             plugin_config_t pluginConfig;
             // Setting precision to f32 fails on SPR hosts - to be investigated
             // JsonParser::parsePluginConfig("{\"INFERENCE_PRECISION_HINT\":\"f32\"}", pluginConfig);
-            cbPipe = std::make_shared<ov::genai::ContinuousBatchingPipeline>(getGenericFullPathForSrcTest("/ovms/src/test/llm_testing/facebook/opt-125m"), schedulerConfig, device, pluginConfig, tokenizerPluginConfig);
+            cbPipe = std::make_shared<ov::genai::ContinuousBatchingPipeline>(getGenericFullPathForSrcTest("/ovms/src/test/llm_testing/HuggingFaceTB/SmolLM2-360M-Instruct"), schedulerConfig, device, pluginConfig, tokenizerPluginConfig);
             llmExecutorWrapper = std::make_shared<LLMExecutorWrapper>(cbPipe);
         } catch (const std::exception& e) {
             SPDLOG_ERROR("Error during llm node initialization for models_path exception: {}", e.what());
@@ -598,6 +598,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJsonSpaceStopString) {
             "stream": false,
             "ignore_eos": false,
             "max_tokens": 1000,
+            "temperature": 0,
             "stop": " ",
             "include_stop_str_in_output": true,
             "prompt": "                                   |                                |                             |  "
@@ -1515,7 +1516,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsStoppedByMaxModelLength
     }
     std::string prompt;
     // creating prompt that will be tokenized to 2044 tokens when model max length is 8192; 25 are tokens from chat template.
-    for (int i = 0; i < 8192 - 25 - 3; i++) {
+    for (int i = 0; i < 8192 - 29 - 3; i++) {
         prompt += "hello ";
     }
     std::string requestBody = R"(
