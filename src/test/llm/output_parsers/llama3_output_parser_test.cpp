@@ -25,10 +25,10 @@
 using namespace ovms;
 
 #ifdef _WIN32
-const std::string tokenizerPath = getWindowsRepoRootPath() + "\\src\\test\\llm_testing\\meta-llama\\Llama-3.1-8B-Instruct";
+const std::string tokenizerPath = getWindowsRepoRootPath() + "\\src\\test\\llm_testing\\unsloth\\Llama-3.1-8B-Instruct";
 #else
 // Hardcoded for usage in docker container
-const std::string tokenizerPath = "/ovms/src/test/llm_testing/meta-llama/Llama-3.1-8B-Instruct";
+const std::string tokenizerPath = "/ovms/src/test/llm_testing/unsloth/Llama-3.1-8B-Instruct";
 #endif
 
 static const ovms::ToolsSchemas_t EMPTY_TOOLS_SCHEMA = {};  // not used for llama3

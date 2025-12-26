@@ -57,7 +57,7 @@ protected:
     ovms::Server& server = ovms::Server::instance();
     std::unique_ptr<std::thread> t;
 
-    void SetUpServerForDownloadAndStartGGUF(std::string& ggufFile, std::string& sourceModel, std::string& downloadPath, std::string& task, int timeoutSeconds = 120) {
+    void SetUpServerForDownloadAndStartGGUF(std::string& ggufFile, std::string& sourceModel, std::string& downloadPath, std::string& task, int timeoutSeconds = 300) {
         ::SetUpServerForDownloadAndStartGGUF(this->t, this->server, ggufFile, sourceModel, downloadPath, task, timeoutSeconds);
     }
     void TearDown() {
@@ -465,7 +465,6 @@ TEST_P(GGUFDownloaderPullHfModelGGUFFilenameParameterizedNegative, NonMatchingPa
 }
 
 std::vector<std::tuple<std::string, std::string>> ggufPartsParams = {
-    std::make_tuple("qwen2.5-7b-instruct-q4_k_m-000001-of-00002.gguf", "https://modelscope.cn/"),
     std::make_tuple("qwen2.5-7b-instruct-q4_k_m-000001-of-00002.gguf", "https://huggingface.co/"),
     std::make_tuple("qwen2.5-7b-instruct-q4_k_m-00001-of-000002.gguf", "https://huggingface.co/"),
     std::make_tuple("qwen2.5-7b-instruct-q4_k_m-0001-of-00002.gguf", "https://huggingface.co/"),

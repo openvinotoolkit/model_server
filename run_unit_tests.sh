@@ -35,6 +35,12 @@ ${debug_bazel_flags} \
 LD_LIBRARY_PATH=/opt/opencv/lib/:/opt/intel/openvino/runtime/lib/intel64/:/opt/intel/openvino/runtime/3rdparty/tbb/lib/
 PYTHONPATH=/opt/intel/openvino/python:/ovms/bazel-bin/src/python/binding
 
+# if https proxy is set in the environment and file .user.bazelrc doesn't exist yet, add proxy env for bazel test
+if [ -n "${HTTPS_PROXY}" ] && [ ! -f .user.bazelrc ] ; then
+    echo test:linux --test_env https_proxy=${HTTPS_PROXY} >> .user.bazelrc
+    echo test:linux --test_env http_proxy=${HTTP_PROXY} >> .user.bazelrc
+fi
+
 # Check if RUN_GPU_TESTS is set and add it to SHARED_OPTIONS
 if [ "$RUN_GPU_TESTS" == "1" ]; then
     if grep -q "ID=ubuntu" /etc/os-release; then
