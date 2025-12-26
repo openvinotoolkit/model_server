@@ -30,7 +30,6 @@ namespace ovms {
 
 void DevstralToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) {
     std::vector<std::string> tools;
-    // Parser will consume entire model output only if the first generated token is the beginning of tools token.
     // expected format: [TOOL_CALLS]tool_name[ARGS]{"arg1": "value1", ...}
     if (parsedOutput.content.empty() || generatedTokens.size() <= 0) {
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "No content to parse for tool calls");
@@ -45,9 +44,9 @@ void DevstralToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int
     }
 
     size_t firstArgsTokenIndex;
-    auto it_args = std::find(generatedTokens.begin() + firstToolTokenIndex, generatedTokens.end(), this->argsTokenId);
-    if (it_args != generatedTokens.end()) {
-        firstArgsTokenIndex = std::distance(generatedTokens.begin(), it_args);
+    auto itArgs = std::find(generatedTokens.begin() + firstToolTokenIndex, generatedTokens.end(), this->argsTokenId);
+    if (itArgs != generatedTokens.end()) {
+        firstArgsTokenIndex = std::distance(generatedTokens.begin(), itArgs);
     } else {
         return;
     }
@@ -55,27 +54,22 @@ void DevstralToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "First tool token index is greater than first args token index.");
         return;
     }
-    std::vector<int64_t> tool_name_tokens(generatedTokens.begin() + (firstToolTokenIndex + 1), generatedTokens.begin() + (firstArgsTokenIndex));
-    std::vector<int64_t> arguments_tokens(generatedTokens.begin() + (firstArgsTokenIndex + 1), generatedTokens.end());
+    std::vector<int64_t> toolNameTokens(generatedTokens.begin() + (firstToolTokenIndex + 1), generatedTokens.begin() + (firstArgsTokenIndex));
+    std::vector<int64_t> argumentsTokens(generatedTokens.begin() + (firstArgsTokenIndex + 1), generatedTokens.end());
 
     ToolCall toolCall;
-    std::string tool_name = tokenizer.decode(tool_name_tokens, ov::AnyMap{ov::genai::skip_special_tokens(true)});
-    if (this->toolSchemas.find(tool_name) == this->toolSchemas.end()) {
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Tool name '{}' not valid.", tool_name);
-        return;
-    }
-    std::string arguments = tokenizer.decode(arguments_tokens, ov::AnyMap{ov::genai::skip_special_tokens(true)});
-
-    toolCall.name = tool_name;
+    std::string toolName = tokenizer.decode(toolNameTokens, ov::AnyMap{ov::genai::skip_special_tokens(true)});
+    std::string arguments = tokenizer.decode(argumentsTokens, ov::AnyMap{ov::genai::skip_special_tokens(true)});
+    toolCall.name = toolName;
     toolCall.arguments = arguments;
     toolCall.id = generateRandomId();  // Generate a random ID for the tool call
     parsedOutput.toolCalls.push_back(toolCall);
 
     // get subset of generatedTokens starting from begin() to firstArgsTokenIndex
-    std::vector<int64_t> content_tokens;
+    std::vector<int64_t> contentTokens;
     if (firstToolTokenIndex > 0) {
-        content_tokens = std::vector<int64_t>(generatedTokens.begin(), generatedTokens.begin() + firstToolTokenIndex);
-        parsedOutput.content = tokenizer.decode(content_tokens, ov::AnyMap{ov::genai::skip_special_tokens(true)});  // Return only the content till tool call
+        contentTokens = std::vector<int64_t>(generatedTokens.begin(), generatedTokens.begin() + firstToolTokenIndex);
+        parsedOutput.content = tokenizer.decode(contentTokens, ov::AnyMap{ov::genai::skip_special_tokens(true)});  // Return only the content till tool call
     } else {
         parsedOutput.content = "";
     }
@@ -110,15 +104,16 @@ std::optional<rapidjson::Document> DevstralToolParser::parseChunk(const std::str
     */
 
     this->streamContent += chunk;
+    SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Chunk content: '{}'", chunk);
     if (this->internalState == AWAITING_START_TAG) {
-        size_t pos = chunk.find("[TOOL_CALLS]");
+        size_t pos = chunk.find(this->streamingParsingToolCallsStartTag);
         if (pos != std::string::npos) {
             this->internalState = AWAITING_ARGS_TAG;
             this->toolCallIndex++;
             if (pos == 0) {
                 this->streamContent.clear();
             } else {
-                this->streamContent = this->streamContent.substr(pos + 13);  // "[TOOLS_CALLS]" length is 13
+                this->streamContent = this->streamContent.substr(pos + this->streamingParsingToolCallsStartTag.length());  // "[TOOLS_CALLS]" length is 13
             }
         } else {
             return std::nullopt;
@@ -126,25 +121,21 @@ std::optional<rapidjson::Document> DevstralToolParser::parseChunk(const std::str
     }
     if (this->internalState == AWAITING_ARGS_TAG) {
         // check if [ARGS] tag is present in the chunk and update state accordingly
-        size_t pos = this->streamContent.find("[ARGS]");
+        size_t pos = this->streamContent.find(this->streamingParsingArgsStartTag);
         if (pos != std::string::npos) {
             this->internalState = PROCESSING_ARGS;
             this->toolName = this->streamContent.substr(0, pos);
-            if (this->toolSchemas.find(this->toolName) == this->toolSchemas.end()) {
-                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Tool name '{}' not valid.", this->toolName);
-                return std::nullopt;
-            }
-            this->streamContent = this->streamContent.substr(pos + 6);  // "[ARGS]" length is 6
+            this->streamContent = this->streamContent.substr(pos + this->streamingParsingArgsStartTag.length());  // "[ARGS]" length is 6
             return wrapFirstDelta(this->toolName, this->toolCallIndex);
         } else {
             return std::nullopt;
         }
     }
     if (finishReason != ov::genai::GenerationFinishReason::NONE) {
-        size_t end_pos = this->streamContent.find("</s>");
+        size_t endPos = this->streamContent.find(this->streamingEndTag);
         std::string arguments;
-        if (end_pos != std::string::npos) {
-            arguments = this->streamContent.substr(0, end_pos);
+        if (endPos != std::string::npos) {
+            arguments = this->streamContent.substr(0, endPos);
         } else {
             arguments = this->streamContent;
         }

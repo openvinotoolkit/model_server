@@ -34,6 +34,7 @@ class DevstralToolParser : public BaseOutputParser {
     // in streaming mode we can rely on tags in string format as tokens are not available
     const std::string streamingParsingArgsStartTag = "[ARGS]";
     const std::string streamingParsingToolCallsStartTag = "[TOOL_CALLS]";
+    const std::string streamingEndTag = "</s>";
 
     enum InternalState {
         AWAITING_START_TAG,
@@ -53,8 +54,22 @@ public:
     DevstralToolParser() = delete;
     DevstralToolParser(ov::genai::Tokenizer& tokenizer, const ToolsSchemas_t& toolSchemas) :
         BaseOutputParser(tokenizer),
-        argsTokenId(tokenizer.encode("[ARGS]", {{"add_special_tokens", false}}).input_ids.data<int64_t>()[0]),
-        botTokenId(tokenizer.encode("[TOOL_CALLS]", {{"add_special_tokens", false}}).input_ids.data<int64_t>()[0]),
+        argsTokenId([&tokenizer, this]() {
+            // can not use streamingParsingArgsStartTag because object is not initialized yet
+            auto encoded = tokenizer.encode("[ARGS]", {{"add_special_tokens", false}}).input_ids;
+            if (encoded.get_shape()[0] != 1) {
+                throw std::runtime_error("[ARGS] must be a single token in the tokenizer vocabulary.");
+            }
+            return encoded.data<int64_t>()[0];
+        }()),
+        botTokenId([&tokenizer, this]() {
+            // can not use streamingParsingToolCallsStartTag because object is not initialized yet
+            auto encoded = tokenizer.encode("[TOOL_CALLS]", {{"add_special_tokens", false}}).input_ids;
+            if (encoded.get_shape()[0] != 1) {
+                throw std::runtime_error("[TOOL_CALLS] must be a single token in the tokenizer vocabulary.");
+            }
+            return encoded.data<int64_t>()[0];
+        }()),   
         toolSchemas(toolSchemas) {}
 
     void parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) override;
@@ -69,7 +84,7 @@ public:
     }
     // Tools calls are expected to be the last part of the content, so we do not specify an end tag.
     const std::string& getParsingEndTag() const override {
-        static const std::string toolCallEndTag = "";
+        static const std::string toolCallEndTag = "</s>";
         return toolCallEndTag;
     }
 
