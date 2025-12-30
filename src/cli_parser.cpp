@@ -587,6 +587,16 @@ void CLIParser::prepareModel(ModelsSettingsImpl& modelsSettings, HFSettingsImpl&
         modelsSettings.userSetSingleModelArguments.push_back("layout");
     }
 
+    if (result->count("mean")) {
+        modelsSettings.mean = result->operator[]("mean").as<std::string>();
+        modelsSettings.userSetSingleModelArguments.push_back("mean");
+    }
+
+    if (result->count("scale")) {
+        modelsSettings.scale = result->operator[]("scale").as<std::string>();
+        modelsSettings.userSetSingleModelArguments.push_back("scale");
+    }
+
     if (result->count("model_version_policy")) {
         modelsSettings.modelVersionPolicy = result->operator[]("model_version_policy").as<std::string>();
         modelsSettings.userSetSingleModelArguments.push_back("model_version_policy");

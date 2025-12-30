@@ -501,10 +501,16 @@ Status ModelInstance::loadTensors(const ModelConfig& config, const DynamicModelP
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error during adjusting output names");
         return status;
     }
-    status = applyPreprocessing(config, this->model, getName(), getVersion());
-    if (!status.ok()) {
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error during layout/preprocessing configuration");
-        return status;
+
+    bool hasLayoutConfigChanged = !config.isLayoutConfigurationEqual(this->config);
+    bool needsToApplyLayoutConfiguration = hasLayoutConfigChanged || !this->model;
+
+    if (needsToApplyLayoutConfiguration) {
+        status = applyPreprocessing(config, this->model, getName(), getVersion());
+        if (!status.ok()) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error during layout/preprocessing configuration");
+            return status;
+        }
     }
     status = loadInputTensors(config, parameter);
     if (!status.ok()) {

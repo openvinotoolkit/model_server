@@ -193,11 +193,24 @@ public:
     const std::string& shape() const;
 
     /**
-         * @brief Get the layout
+         * @brief Get the sout
          * 
          * @return const std::string&
          */
     const std::string& layout() const;
+
+     /**
+         * @brief Get means
+         * 
+         * @return const std::string&
+         */
+    const std::string& means() const;
+     /**
+         * @brief Get scales  
+         * 
+         * @return const std::string&
+         */
+    const std::string& scales() const;
 
     /**
          * @brief Get the shape

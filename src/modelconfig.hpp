@@ -24,6 +24,7 @@
 #include <tuple>
 #include <unordered_map>
 #include <vector>
+#include <variant>
 #pragma warning(push)
 #pragma warning(disable : 6313)
 #include <rapidjson/document.h>
@@ -199,6 +200,17 @@ private:
          * @brief custom_loader_options config as string
          */
     std::string customLoaderOptionsStr;
+
+      /**
+         * @brief meanValues mean preprocessing parameters  
+         */
+    std::variant<std::vector<float>, float> meanValues;
+
+     /**
+         * @brief scaleValues scale preprocessing parameters  
+         */
+    std::variant<std::vector<float>, float> scaleValues;
+
 
 public:
     /**
@@ -666,6 +678,54 @@ public:
          * @return status
          */
     Status parseLayoutParameter(const std::string& command);
+
+    /**
+         * @brief Parses value from string and extracts means info
+         * 
+         * @param string
+         * 
+         * @return status
+         */
+    Status parseMean(const std::string& command);
+
+     /**
+          * @brief Parses value from string and extracts scales info
+          * 
+          * @param string
+          * 
+          * @return status
+          */
+     Status parseScale(const std::string& command);
+
+     /**
+          * @brief Parses value from string and extracts float value
+          * 
+          * @param string
+          * @param value
+          * 
+          * @return status
+          */
+     Status parseFloat(const std::string& str, float& value);
+
+     /**
+          * @brief Parses value from string and extracts float value or array of float values
+          * 
+          * @param string
+          * @param value
+          * 
+          * @return status
+          */
+     Status parseFloatArrayOrValue(const std::string& str, std::variant<std::vector<float>, float>& values);
+     
+     /**
+          * @brief Parses value from string and extracts array of float values
+          * 
+          * @param string
+          * @param value
+          * 
+          * @return status
+          */
+     Status parseFloatArray(const std::string& str, std::vector<float>& values);
 
     /**
          * @brief Returns true if any input shape specified in shapes map is in AUTO mode
