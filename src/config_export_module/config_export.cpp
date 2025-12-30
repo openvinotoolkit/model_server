@@ -143,8 +143,8 @@ Status updateConfigAddModel(const std::string& fullPath, const ModelsSettingsImp
     }
 
     if (alreadyAdded) {
-        SPDLOG_ERROR("Could not add model to configuration file: {}. Model with the same name already exists.", modelSettings.modelName);
-        return StatusCode::MODEL_NAME_OCCUPIED;
+        SPDLOG_INFO("Model with this name already exists.", modelSettings.modelName);
+        return StatusCode::OK;
     }
 
     auto alloc = configJson.GetAllocator();
