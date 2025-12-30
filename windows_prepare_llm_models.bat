@@ -42,6 +42,7 @@ set "HERMES3_MODEL=NousResearch/Hermes-3-Llama-3.1-8B"
 set "PHI4_MODEL=microsoft/Phi-4-mini-instruct"
 set "MISTRAL_MODEL=mistralai/Mistral-7B-Instruct-v0.3"
 set "GPTOSS_MODEL=openai/gpt-oss-20b"
+set "DEVSTRAL_MODEL=unsloth/Devstral-Small-2507"
 
 echo Downloading LLM testing models to directory %~1
 set "PIP_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cpu https://storage.openvinotoolkit.org/simple/wheels/nightly"
@@ -199,6 +200,19 @@ if exist "%~1\%GPTOSS_MODEL%\%TOKENIZER_FILE%" (
 )
 if not exist "%~1\%GPTOSS_MODEL%\%TOKENIZER_FILE%" (
   echo Models file %~1\%GPTOSS_MODEL%\%TOKENIZER_FILE% does not exists.
+  exit /b 1
+)
+
+if exist "%~1\%DEVSTRAL_MODEL%\%TOKENIZER_FILE%" (
+  echo Models file %~1\%DEVSTRAL_MODEL%\%TOKENIZER_FILE% exists. Skipping downloading models.
+) else (
+  echo Downloading tokenizer and detokenizer for Devstral model to %~1\%DEVSTRAL_MODEL% directory.
+  mkdir "%~1\%DEVSTRAL_MODEL%"
+  convert_tokenizer "%DEVSTRAL_MODEL%" --with_detokenizer -o "%~1\%DEVSTRAL_MODEL%"
+  if !errorlevel! neq 0 exit /b !errorlevel!
+)
+if not exist "%~1\%DEVSTRAL_MODEL%\%TOKENIZER_FILE%" (
+  echo Models file %~1\%DEVSTRAL_MODEL%\%TOKENIZER_FILE% does not exists.
   exit /b 1
 )
 
