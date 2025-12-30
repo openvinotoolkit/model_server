@@ -42,7 +42,7 @@ void DevstralGenerationConfigBuilder::parseConfigFromRequest(const OpenAIChatCom
             const auto& toolSchema = toolSchemaWrapper.stringRepr;
             ov::genai::StructuredOutputConfig::Tag tagItem;
             tagItem.begin = "[TOOL_CALLS]" + toolName + "[ARGS]";
-            // tagItem.end = "</s>";
+            tagItem.end = "";
             tagItem.content = ov::genai::StructuredOutputConfig::JSONSchema(toolSchema);
             triggeredTags->tags.push_back(tagItem);
         }

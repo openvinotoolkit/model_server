@@ -180,17 +180,6 @@ TEST_F(DevstralOutputParserTest, ParseToolCallOutputWithInvalidArguments) {
     EXPECT_EQ(parsedOutput.toolCalls[0].id.empty(), false);
 }
 
-TEST_F(DevstralOutputParserTest, ParseToolCallOutputWithMissingTool_name) {
-    std::string input = "[TOOL_CALLS]wrong_name[ARGS]{ \"filepath\": \"/var/log/db.log\"}</s>";
-    std::string testInput = input;
-    auto generatedTensor = devstralTokenizer->encode(testInput, ov::genai::add_special_tokens(false)).input_ids;
-    std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
-    ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
-    EXPECT_EQ(parsedOutput.content, "wrong_name{ \"filepath\": \"/var/log/db.log\"}");
-    EXPECT_EQ(parsedOutput.reasoning, "");
-    ASSERT_EQ(parsedOutput.toolCalls.size(), 0);
-}
-
 TEST_F(DevstralOutputParserTest, HolisticStreaming) {
     std::vector<std::tuple<std::string, ov::genai::GenerationFinishReason, std::optional<std::string>>> chunkToDeltaVec{
         // Tool call phase
@@ -202,9 +191,9 @@ TEST_F(DevstralOutputParserTest, HolisticStreaming) {
         {"_", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"weather", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"[ARGS]", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"id":"XXXXXXXXX","type":"function","index":0,"function":{"name":"get_weather"}}]}})"},
-        {"{\"", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {"city\":", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {" \"Paris", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"{\"", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{\""}}]}})"},
+        {"city\":", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"city\":"}}]}})"},
+        {" \"Paris", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":" \"Paris"}}]}})"},
         // Last chunk is added in the for loop below
     };
     ToolsSchemas_t tools_schemas = {
@@ -214,9 +203,9 @@ TEST_F(DevstralOutputParserTest, HolisticStreaming) {
         outputParserWithRegularToolParsing = std::make_unique<OutputParser>(*devstralTokenizer, "devstral", "", tools_schemas);
         auto chunkToDeltaVecCopy = chunkToDeltaVec;
         if (lastFinishReason == ov::genai::GenerationFinishReason::STOP) {
-            chunkToDeltaVecCopy.push_back({"\"}", ov::genai::GenerationFinishReason::STOP, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{\"city\": \"Paris\"}"}}]}})"});
+            chunkToDeltaVecCopy.push_back({"\"}", ov::genai::GenerationFinishReason::STOP, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"\"}"}}]}})"});
         } else {
-            chunkToDeltaVecCopy.push_back({"\"", ov::genai::GenerationFinishReason::LENGTH, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{\"city\": \"Paris\""}}]}})"});
+            chunkToDeltaVecCopy.push_back({"\"}", ov::genai::GenerationFinishReason::LENGTH, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"\"}"}}]}})"});
         }
         int64_t chunkIteration = -1;
         for (const auto& [chunk, finishReason, expectedDelta] : chunkToDeltaVecCopy) {

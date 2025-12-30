@@ -69,11 +69,13 @@ public:
                 throw std::runtime_error("[TOOL_CALLS] must be a single token in the tokenizer vocabulary.");
             }
             return encoded.data<int64_t>()[0];
-        }()),   
+        }()),
         toolSchemas(toolSchemas) {}
 
     void parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) override;
     std::optional<rapidjson::Document> parseChunk(const std::string& chunk, ov::genai::GenerationFinishReason finishReason) override;
+    rapidjson::Document parseContentChunk();
+    rapidjson::Document wrapCombinedDelta(ToolCall& toolCall);
     const std::vector<std::string>& getParsingStartTags() const override {
         static const std::vector<std::string> toolCallStartTags{streamingParsingToolCallsStartTag};
         return toolCallStartTags;

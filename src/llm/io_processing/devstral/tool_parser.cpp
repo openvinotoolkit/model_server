@@ -71,7 +71,7 @@ void DevstralToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int
         contentTokens = std::vector<int64_t>(generatedTokens.begin(), generatedTokens.begin() + firstToolTokenIndex);
         parsedOutput.content = tokenizer.decode(contentTokens, ov::AnyMap{ov::genai::skip_special_tokens(true)});  // Return only the content till tool call
     } else {
-        parsedOutput.content = "";
+        parsedOutput.content = tokenizer.decode(contentTokens, ov::AnyMap{ov::genai::skip_special_tokens(true)});
     }
     return;
 }
@@ -90,6 +90,48 @@ std::optional<rapidjson::Document> DevstralToolParser::sendFullDelta(ToolCall& t
     return currentDelta;
 }
 
+rapidjson::Document DevstralToolParser::wrapCombinedDelta(ToolCall& toolCall) {
+    rapidjson::Document wrappedDelta;
+    wrappedDelta.SetObject();
+    rapidjson::Value toolCalls(rapidjson::kArrayType);
+    rapidjson::Value toolCallObj(rapidjson::kObjectType);
+    rapidjson::Value idValue(generateRandomId().c_str(), wrappedDelta.GetAllocator());
+    rapidjson::Value toolCallsString(rapidjson::kStringType);
+
+    toolCallObj.AddMember("id", idValue, wrappedDelta.GetAllocator());
+    toolCallObj.AddMember("type", "function", wrappedDelta.GetAllocator());
+    toolCallObj.AddMember("index", toolCallIndex, wrappedDelta.GetAllocator());
+    rapidjson::Value functionObj(rapidjson::kObjectType);
+    rapidjson::Value nameValue(toolCall.name.c_str(), wrappedDelta.GetAllocator());
+    functionObj.AddMember("name", nameValue, wrappedDelta.GetAllocator());
+    // now we need to add string toolCall.arguments to argumentsWrapper under "arguments" key
+
+    toolCallsString.SetString(toolCall.arguments.c_str(), wrappedDelta.GetAllocator());
+    functionObj.AddMember("arguments", toolCallsString, wrappedDelta.GetAllocator());
+    toolCallObj.AddMember("function", functionObj, wrappedDelta.GetAllocator());
+    toolCalls.PushBack(toolCallObj, wrappedDelta.GetAllocator());
+    rapidjson::Value deltaWrapper(rapidjson::kObjectType);
+    deltaWrapper.AddMember("tool_calls", toolCalls, wrappedDelta.GetAllocator());
+    wrappedDelta.AddMember("delta", deltaWrapper, wrappedDelta.GetAllocator());
+    return wrappedDelta;
+}
+
+rapidjson::Document DevstralToolParser::parseContentChunk() {
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+    writer.StartObject();
+    writer.String("delta");
+    writer.StartObject();
+    writer.String("content");
+    writer.String(streamContent.c_str());
+    writer.EndObject();
+    writer.EndObject();
+    rapidjson::Document doc;
+    doc.Parse(buffer.GetString());
+    streamContent.clear();
+    return doc;
+}
+
 std::optional<rapidjson::Document> DevstralToolParser::parseChunk(const std::string& chunk, ov::genai::GenerationFinishReason finishReason) {
     /* 
     Devstral [TOOL_CALL]tool_name[ARGS]arguments[</s>]
@@ -104,19 +146,31 @@ std::optional<rapidjson::Document> DevstralToolParser::parseChunk(const std::str
     */
 
     this->streamContent += chunk;
-    SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Chunk content: '{}'", chunk);
+    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Chunk content: '{}', StreamContent: '{}', State: {}", chunk, this->streamContent, std::to_string(this->internalState));
     if (this->internalState == AWAITING_START_TAG) {
+        // if chunk ends with </s> we need to remove it and return parsed content immediately
+        if (chunk.size() >= this->streamingEndTag.size() &&
+            chunk.substr(chunk.size() - this->streamingEndTag.size()) == this->streamingEndTag) {
+            // remove </s> from streamContent
+            this->streamContent = this->streamContent.substr(0, this->streamContent.size() - this->streamingEndTag.size());
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Found end tag in chunk while awaiting start tag. Returning content chunk.");
+            return parseContentChunk();
+        }
         size_t pos = chunk.find(this->streamingParsingToolCallsStartTag);
         if (pos != std::string::npos) {
             this->internalState = AWAITING_ARGS_TAG;
+            std::cout << "Found [TOOL_CALLS] tag in chunk."
+                      << " Current state: " << this->internalState << std::endl;
             this->toolCallIndex++;
             if (pos == 0) {
                 this->streamContent.clear();
+                return std::nullopt;
             } else {
                 this->streamContent = this->streamContent.substr(pos + this->streamingParsingToolCallsStartTag.length());  // "[TOOLS_CALLS]" length is 13
+                return parseContentChunk();
             }
         } else {
-            return std::nullopt;
+            return parseContentChunk();
         }
     }
     if (this->internalState == AWAITING_ARGS_TAG) {
@@ -125,13 +179,29 @@ std::optional<rapidjson::Document> DevstralToolParser::parseChunk(const std::str
         if (pos != std::string::npos) {
             this->internalState = PROCESSING_ARGS;
             this->toolName = this->streamContent.substr(0, pos);
-            this->streamContent = this->streamContent.substr(pos + this->streamingParsingArgsStartTag.length());  // "[ARGS]" length is 6
-            return wrapFirstDelta(this->toolName, this->toolCallIndex);
+            this->streamContent = this->streamContent.substr(pos + this->streamingParsingArgsStartTag.length());
+            // check if chunk ends with </s>, if yes, we need return full tool call delta
+            if (this->streamContent.size() >= this->streamingEndTag.size() &&
+                this->streamContent.substr(this->streamContent.size() - this->streamingEndTag.size()) == this->streamingEndTag) {
+                // remove </s> from streamContent
+                ToolCall toolCall;
+                toolCall.name = this->toolName;
+                this->streamContent = this->streamContent.substr(0, this->streamContent.size() - this->streamingEndTag.size());
+                if (!this->streamContent.empty()) {
+                    toolCall.arguments = this->streamContent;
+                } else {
+                    toolCall.arguments = "{}";
+                }
+                this->streamContent = "";
+                return wrapCombinedDelta(toolCall);
+            } else {
+                return wrapFirstDelta(this->toolName, this->toolCallIndex);
+            }
         } else {
             return std::nullopt;
         }
     }
-    if (finishReason != ov::genai::GenerationFinishReason::NONE) {
+    if (this->internalState == PROCESSING_ARGS) {
         size_t endPos = this->streamContent.find(this->streamingEndTag);
         std::string arguments;
         if (endPos != std::string::npos) {
@@ -143,6 +213,7 @@ std::optional<rapidjson::Document> DevstralToolParser::parseChunk(const std::str
             ToolCall toolCall;
             toolCall.arguments = arguments;
             toolCall.name = this->toolName;
+            this->streamContent = "";
             return sendFullDelta(toolCall);
         } else {
             SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "No valid arguments found in streamContent.");
