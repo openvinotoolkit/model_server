@@ -80,6 +80,7 @@ ovms_cc_library(
         "//src:model_metric_reporter",
         "//src:executingstreamidguard",
         "//src:libovms_execution_context",
+        "//src/tokenize:tokenize_parser",
     ],
     visibility = ["//visibility:public"],
     alwayslink = 1,
