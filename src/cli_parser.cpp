@@ -259,6 +259,14 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
                 "Resets model layout.",
                 cxxopts::value<std::string>(),
                 "LAYOUT")
+            ("mean",
+                "Resets model mean.",
+                cxxopts::value<std::string>(),
+                "MEAN")
+            ("scale",
+                "Resets model scale.",
+                cxxopts::value<std::string>(),
+                "SCALE")
             ("model_version_policy",
                 "Model version policy",
                 cxxopts::value<std::string>(),

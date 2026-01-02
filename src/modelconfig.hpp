@@ -42,6 +42,7 @@ class ModelVersionPolicy;
 using mapping_config_t = std::unordered_map<std::string, std::string>;
 using plugin_config_t = std::map<std::string, ov::Any>;
 using custom_loader_options_config_t = std::map<std::string, std::string>;
+using float_map_or_value_t = std::variant<std::vector<float>, float>;
 
 extern const std::string MAPPING_CONFIG_JSON;
 const uint32_t DEFAULT_MAX_SEQUENCE_NUMBER = 500;
@@ -204,12 +205,12 @@ private:
       /**
          * @brief meanValues mean preprocessing parameters  
          */
-    std::variant<std::vector<float>, float> meanValues;
+    float_map_or_value_t meanValues;
 
      /**
          * @brief scaleValues scale preprocessing parameters  
          */
-    std::variant<std::vector<float>, float> scaleValues;
+    float_map_or_value_t scaleValues;
 
 
 public:
@@ -715,7 +716,7 @@ public:
           * 
           * @return status
           */
-     Status parseFloatArrayOrValue(const std::string& str, std::variant<std::vector<float>, float>& values);
+     Status parseFloatArrayOrValue(const std::string& str, float_map_or_value_t& values);
      
      /**
           * @brief Parses value from string and extracts array of float values
@@ -845,6 +846,19 @@ public:
     void setLayouts(const layout_configurations_map_t& layouts) {
         this->layouts = layouts;
         this->layout = LayoutConfiguration();
+    }
+
+    const float_map_or_value_t& getScales() const {
+        return this->scaleValues;
+    }
+
+     /**
+         * @brief Get the get means
+         * 
+         * @return const model_version_t& 
+         */
+    const float_map_or_value_t& getMeans() const {
+        return this->meanValues;
     }
 
     /**

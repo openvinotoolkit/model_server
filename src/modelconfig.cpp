@@ -432,7 +432,7 @@ Status ModelConfig::parseFloatArray(const std::string& str, std::vector<float>& 
     return StatusCode::OK;
 }
 
-Status ModelConfig::parseFloatArrayOrValue(const std::string& str, std::variant<std::vector<float>, float>& values) {
+Status ModelConfig::parseFloatArrayOrValue(const std::string& str, float_map_or_value_t& values) {
     if (str.empty()) {
         return StatusCode::OK;
     }
@@ -634,6 +634,20 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
             if (!status.ok()) {
                 return status;
             }
+        }
+    }
+
+    if (v.HasMember("mean")) {
+        Status status = this->parseMean(v["mean"].GetString());
+        if (!status.ok()) {
+            return status;
+        }
+    }
+
+    if (v.HasMember("scale")) {
+        Status status = this->parseMean(v["scale"].GetString());
+        if (!status.ok()) {
+            return status;
         }
     }
 

@@ -233,28 +233,17 @@ const Layout ModelInstance::getReportedTensorLayout(const ModelConfig& config, c
 static Status applyPreprocessingConfiguration(ov::preprocess::PrePostProcessor& preproc, const ModelConfig& config, std::shared_ptr<ov::Model>& model, const std::string& modelName, model_version_t modelVersion) {
     OV_LOGGER("ov::preprocess::PrePostProcessor& preproc, const ModelConfig& config, std::shared_ptr<ov::Model>& model");
     //resnet onnx model specific preprocessing
-    std::vector<float> scaleValues = { 58.395f, 57.12f, 57.375f };
-    std::vector<float> meanValues = { 123.675f, 116.28f, 103.53f };
+    // std::vector<float> scaleValues = { 58.395f, 57.12f, 57.375f };
+    // std::vector<float> meanValues = { 123.675f, 116.28f, 103.53f };
 
-    std::variant<std::vector<float>,float> preprocessingScale = scaleValues;// to be overridden by config 
-    std::variant<std::vector<float>,float> preprocessingMean = meanValues;// to be overridden by config
+    auto preprocessingScale = config.getScales();
+    auto preprocessingMean = config.getMeans();
     ov::preprocess::ColorFormat colorFormat = ov::preprocess::ColorFormat::RGB; // to be overridden by config
-   
-    // if(std::get_if<std::vector<float>>(preprocessingScale).has_value()) { {
-    //     preprocessingScale = config.getPreprocessingScale();
-    // } else if (std::get_if<float>(preprocessingScale).has_value()) {
-    //     preprocessingScale = std::get<float>(config.getPreprocessingScale());
-    // } else {
-    //     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Using default preprocessing scale");
-    // }
 
-    // if (std::get_if<std::vector<float>>(preprocessingMean).has_value()) {
-    //     preprocessingMean = config.getPreprocessingMean();
-    // } else if (std::get_if<float>(preprocessingMean).has_value()) {
-    //     preprocessingMean = std::get<float>(config.getPreprocessingMean());
-    // } else {
-    //     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Using default preprocessing mean");
-    // }
+    auto debugPtr = std::get<std::vector<float>>(preprocessingMean);
+    for (const auto val : debugPtr) {
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Using mean array value: {}", val);
+    }
 
     preproc.input("data").tensor().set_color_format(colorFormat);
     
@@ -396,16 +385,12 @@ Status ModelInstance::applyPreprocessing(const ModelConfig& config, std::shared_
     ov::preprocess::PrePostProcessor preproc(model);
     Status status = StatusCode::OK;
 
-    // bool hasLayoutConfigChanged = !config.isLayoutConfigurationEqual(this->config);
-    // bool needsToApplyLayoutConfiguration = hasLayoutConfigChanged || !this->model;
 
-    // if (needsToApplyLayoutConfiguration) {
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Applying layout configuration");
-        status = applyLayoutConfiguration(preproc, config, model, modelName, modelVersion);
-        if (!status.ok()) {
-            return status;
-        }
-    // }
+    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Applying layout configuration");
+    status = applyLayoutConfiguration(preproc, config, model, modelName, modelVersion);
+    if (!status.ok()) {
+        return status;
+    }
 
     status = applyPreprocessingConfiguration(preproc, config, model, modelName, modelVersion);//there should be also condition
     if (!status.ok()) {
@@ -502,16 +487,16 @@ Status ModelInstance::loadTensors(const ModelConfig& config, const DynamicModelP
         return status;
     }
 
-    bool hasLayoutConfigChanged = !config.isLayoutConfigurationEqual(this->config);
-    bool needsToApplyLayoutConfiguration = hasLayoutConfigChanged || !this->model;
+    // bool hasLayoutConfigChanged = !config.isLayoutConfigurationEqual(this->config);
+    // bool needsToApplyLayoutConfiguration = hasLayoutConfigChanged || !this->model;
 
-    if (needsToApplyLayoutConfiguration) {
+    // if (needsToApplyLayoutConfiguration) {
         status = applyPreprocessing(config, this->model, getName(), getVersion());
         if (!status.ok()) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error during layout/preprocessing configuration");
             return status;
         }
-    }
+    // }
     status = loadInputTensors(config, parameter);
     if (!status.ok()) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error during loading input tensors");
