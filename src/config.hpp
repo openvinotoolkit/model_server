@@ -213,6 +213,13 @@ public:
     const std::string& scales() const;
 
     /**
+         * @brief Get color format  
+         * 
+         * @return const std::string&
+         */
+    const std::string& colorFormat() const;
+
+    /**
          * @brief Get the shape
          * 
          * @return const std::string&

@@ -432,7 +432,7 @@ Status ModelConfig::parseFloatArray(const std::string& str, std::vector<float>& 
     return StatusCode::OK;
 }
 
-Status ModelConfig::parseFloatArrayOrValue(const std::string& str, float_map_or_value_t& values) {
+Status ModelConfig::parseFloatArrayOrValue(const std::string& str, float_vec_or_value_t& values) {
     if (str.empty()) {
         return StatusCode::OK;
     }
@@ -467,6 +467,38 @@ Status ModelConfig::parseMean(const std::string& command) {
 
 Status ModelConfig::parseScale(const std::string& command) {
     return parseFloatArrayOrValue(command, this->scaleValues);
+}
+
+Status ModelConfig::parseColorFormat(const std::string& command) {
+    if (command.empty()) {
+        this->colorFormat = ov::preprocess::ColorFormat::RGB;
+        return StatusCode::OK;
+    }
+
+    std::string upperCaseCommand;
+    std::transform(command.begin(), command.end(), std::back_inserter(upperCaseCommand), ::toupper);
+
+    erase_spaces(upperCaseCommand);
+
+    if (upperCaseCommand == "RGB") {
+        this->colorFormat = ov::preprocess::ColorFormat::RGB;
+    } else if (upperCaseCommand == "BGR") {
+        this->colorFormat = ov::preprocess::ColorFormat::BGR;
+    } else if (upperCaseCommand == "GRAY") {
+        this->colorFormat = ov::preprocess::ColorFormat::GRAY;
+    } else if (upperCaseCommand == "NV12") {
+        this->colorFormat = ov::preprocess::ColorFormat::NV12_SINGLE_PLANE;
+    } else if (upperCaseCommand == "NV12_2") {
+        this->colorFormat = ov::preprocess::ColorFormat::NV12_TWO_PLANES;
+    } else if (upperCaseCommand == "I420") {
+        this->colorFormat = ov::preprocess::ColorFormat::I420_SINGLE_PLANE;
+    } else if (upperCaseCommand == "I420_3") {
+        this->colorFormat = ov::preprocess::ColorFormat::I420_THREE_PLANES;
+    } else {
+        SPDLOG_WARN("Parameter contains invalid color format value: {}", command);
+        return StatusCode::COLOR_FORMAT_WRONG_FORMAT;
+    }
+    return StatusCode::OK;
 }
 
 Status ModelConfig::parseShape(ShapeInfo& shapeInfo, const std::string& str) {
@@ -645,7 +677,14 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
     }
 
     if (v.HasMember("scale")) {
-        Status status = this->parseMean(v["scale"].GetString());
+        Status status = this->parseScale(v["scale"].GetString());
+        if (!status.ok()) {
+            return status;
+        }
+    }
+
+    if (v.HasMember("color_format")) {
+        Status status = this->parseColorFormat(v["color_format"].GetString());
         if (!status.ok()) {
             return status;
         }

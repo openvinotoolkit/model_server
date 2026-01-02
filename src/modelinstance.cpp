@@ -232,18 +232,10 @@ const Layout ModelInstance::getReportedTensorLayout(const ModelConfig& config, c
 
 static Status applyPreprocessingConfiguration(ov::preprocess::PrePostProcessor& preproc, const ModelConfig& config, std::shared_ptr<ov::Model>& model, const std::string& modelName, model_version_t modelVersion) {
     OV_LOGGER("ov::preprocess::PrePostProcessor& preproc, const ModelConfig& config, std::shared_ptr<ov::Model>& model");
-    //resnet onnx model specific preprocessing
-    // std::vector<float> scaleValues = { 58.395f, 57.12f, 57.375f };
-    // std::vector<float> meanValues = { 123.675f, 116.28f, 103.53f };
 
     auto preprocessingScale = config.getScales();
     auto preprocessingMean = config.getMeans();
-    ov::preprocess::ColorFormat colorFormat = ov::preprocess::ColorFormat::RGB; // to be overridden by config
-
-    auto debugPtr = std::get<std::vector<float>>(preprocessingMean);
-    for (const auto val : debugPtr) {
-            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Using mean array value: {}", val);
-    }
+    ov::preprocess::ColorFormat colorFormat = config.getColorFormat();
 
     preproc.input("data").tensor().set_color_format(colorFormat);
     

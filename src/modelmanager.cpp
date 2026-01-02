@@ -323,6 +323,12 @@ Status ModelManager::startFromConfig() {
         return status;
     }
 
+    status = modelConfig.parseColorFormat(config.colorFormat());
+    if (!status.ok()) { 
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Couldn't parse color format parameter");
+        return status;
+    }
+
     bool batchSizeSet = (modelConfig.getBatchingMode() != FIXED || modelConfig.getBatchSize() != 0);
     bool shapeSet = (modelConfig.getShapes().size() > 0);
 

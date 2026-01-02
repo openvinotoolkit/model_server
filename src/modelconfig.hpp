@@ -42,7 +42,7 @@ class ModelVersionPolicy;
 using mapping_config_t = std::unordered_map<std::string, std::string>;
 using plugin_config_t = std::map<std::string, ov::Any>;
 using custom_loader_options_config_t = std::map<std::string, std::string>;
-using float_map_or_value_t = std::variant<std::vector<float>, float>;
+using float_vec_or_value_t = std::variant<std::vector<float>, float>;
 
 extern const std::string MAPPING_CONFIG_JSON;
 const uint32_t DEFAULT_MAX_SEQUENCE_NUMBER = 500;
@@ -205,13 +205,17 @@ private:
       /**
          * @brief meanValues mean preprocessing parameters  
          */
-    float_map_or_value_t meanValues;
+    float_vec_or_value_t meanValues;
 
      /**
          * @brief scaleValues scale preprocessing parameters  
          */
-    float_map_or_value_t scaleValues;
+    float_vec_or_value_t scaleValues;
 
+     /**
+         * @brief colorFormat color format preprocessing parameter  
+         */
+    ov::preprocess::ColorFormat colorFormat = ov::preprocess::ColorFormat::RGB;
 
 public:
     /**
@@ -699,6 +703,16 @@ public:
      Status parseScale(const std::string& command);
 
      /**
+          * @brief Parses value from string and extracts color format
+          * 
+          * @param string
+          * 
+          * @return status
+          */
+     Status parseColorFormat(const std::string& command);
+
+
+     /**
           * @brief Parses value from string and extracts float value
           * 
           * @param string
@@ -716,7 +730,7 @@ public:
           * 
           * @return status
           */
-     Status parseFloatArrayOrValue(const std::string& str, float_map_or_value_t& values);
+     Status parseFloatArrayOrValue(const std::string& str, float_vec_or_value_t& values);
      
      /**
           * @brief Parses value from string and extracts array of float values
@@ -848,17 +862,31 @@ public:
         this->layout = LayoutConfiguration();
     }
 
-    const float_map_or_value_t& getScales() const {
+     /**
+         * @brief Get the get scales
+         * 
+         * @return const float_vec_or_value_t& 
+         */
+    const float_vec_or_value_t& getScales() const {
         return this->scaleValues;
     }
 
      /**
          * @brief Get the get means
          * 
-         * @return const model_version_t& 
+         * @return const float_vec_or_value_t& 
          */
-    const float_map_or_value_t& getMeans() const {
+    const float_vec_or_value_t& getMeans() const {
         return this->meanValues;
+    }
+
+         /**
+         * @brief Get the get color format
+         * 
+         * @return const ov::preprocess::ColorFormat& 
+         */
+    const ov::preprocess::ColorFormat& getColorFormat() const {
+        return this->colorFormat;
     }
 
     /**
