@@ -207,6 +207,9 @@ RUN if ! [[ $debug_bazel_flags == *"_py_off"* ]]; then \
     mkdir -p /opt/intel/openvino/python/openvino_tokenizers/lib ; \
     cp -r python/* /opt/intel/openvino/python/ ; \
     mkdir -p /opt/intel/openvino/python/openvino_tokenizers-2026.0.dist-info ; \
+    mkdir -p /opt/intel/openvino/python/bin ; \
+    echo $'#!/usr/bin/python3\n# -*- coding: utf-8 -*-\nimport re\nimport sys\nfrom openvino_tokenizers.cli import convert_hf_tokenizer\nif __name__ == \'__main__\':\n    sys.argv[0] = re.sub(r\'(-script\.pyw|\.exe)?\$\', \'\', sys.argv[0])\n    sys.exit(convert_hf_tokenizer())' > /opt/intel/openvino/python/bin/convert_tokenizer ; \
+    chmod 755 /opt/intel/openvino/python/bin/convert_tokenizer ; \
     echo $'Metadata-Version: 1.0\nName: openvino-tokenizers\nVersion: 2026.0\nRequires-Python: >=3.9\nRequires-Dist: openvino~=2026.0.0' > /opt/intel/openvino/python/openvino_tokenizers-2026.0.dist-info/METADATA ; \
     ln -s /ovms/lib/libopenvino_tokenizers.so /opt/intel/openvino/python/openvino_tokenizers/lib/libopenvino_tokenizers.so ; \
     fi
