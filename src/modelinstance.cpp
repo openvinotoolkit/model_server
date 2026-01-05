@@ -467,7 +467,7 @@ Status ModelInstance::adjustForEmptyOutputNames() {
     return StatusCode::OK;
 }
 
-Status ModelInstance::loadTensors(const ModelConfig& config, const DynamicModelParameter& parameter) {
+Status ModelInstance::loadTensors(const ModelConfig& config, const bool hasLayoutConfigChanged, const DynamicModelParameter& parameter) {
     Status status = validateConfigurationAgainstNetwork(config, this->model);
     if (!status.ok()) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error during configuration validation against model");
@@ -479,16 +479,15 @@ Status ModelInstance::loadTensors(const ModelConfig& config, const DynamicModelP
         return status;
     }
 
-    // bool hasLayoutConfigChanged = !config.isLayoutConfigurationEqual(this->config);
-    // bool needsToApplyLayoutConfiguration = hasLayoutConfigChanged || !this->model;
+    bool needsToApplyLayoutConfiguration = hasLayoutConfigChanged || !this->model;
 
-    // if (needsToApplyLayoutConfiguration) {
+    if (needsToApplyLayoutConfiguration) {
         status = applyPreprocessing(config, this->model, getName(), getVersion());
         if (!status.ok()) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error during layout/preprocessing configuration");
             return status;
         }
-    // }
+    }
     status = loadInputTensors(config, parameter);
     if (!status.ok()) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error during loading input tensors");
@@ -1004,7 +1003,7 @@ void ModelInstance::loadTensorFactories() {
 }
 
 Status ModelInstance::loadModelImpl(const ModelConfig& config, const DynamicModelParameter& parameter) {
-    bool isLayoutConfigurationChanged = !config.isLayoutConfigurationEqual(this->config);
+    bool hasLayoutConfigurationChanged = !config.isLayoutConfigurationEqual(this->config);
 
     subscriptionManager.notifySubscribers();
     this->path = config.getPath();
@@ -1023,7 +1022,7 @@ Status ModelInstance::loadModelImpl(const ModelConfig& config, const DynamicMode
             return status;
         }
 
-        if (!this->model || isLayoutConfigurationChanged) {
+        if (!this->model || hasLayoutConfigurationChanged) {
             if (this->config.isCustomLoaderRequiredToLoadModel()) {
                 status = loadOVModelUsingCustomLoader();
             } else {
@@ -1036,7 +1035,7 @@ Status ModelInstance::loadModelImpl(const ModelConfig& config, const DynamicMode
             return status;
         }
 
-        status = loadTensors(this->config, parameter);
+        status = loadTensors(this->config, hasLayoutConfigurationChanged, parameter);
         if (!status.ok()) {
             this->status.setLoading(ModelVersionStatusErrorCode::UNKNOWN);
             return status;

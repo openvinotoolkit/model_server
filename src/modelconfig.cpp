@@ -170,21 +170,26 @@ bool ModelConfig::isBatchSizeConfigurationEqual(const ModelConfig& rhs) const {
 
 bool ModelConfig::isLayoutConfigurationEqual(const ModelConfig& rhs) const {
     if (this->layout != rhs.layout) {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to layout mismatch", this->name);
         return false;
     }
 
     if (this->layouts.size() != rhs.layouts.size()) {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to layout size mismatch", this->name);
         return false;
     }
     for (const auto& [name, layoutConfig] : this->layouts) {
         auto it = rhs.layouts.find(name);
         if (it == rhs.layouts.end()) {
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to layout name {} mismatch", this->name, name);
             return false;
         }
         if (layoutConfig != it->second) {
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to layout {} mismatch", this->name, name);
             return false;
         }
     }
+    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} layout configuration match", this->name);
     return true;
 }
 
