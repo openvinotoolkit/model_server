@@ -196,6 +196,83 @@ TEST(ModelConfig, parseLayoutParam_multi) {
     }
 }
 
+TEST(ModelConfig, parseMeanParameter) {
+    using namespace ovms;
+    ModelConfig config;
+    
+    std::string valid_str1 = "{123.675,116.28,103.53}";
+    std::string valid_str2 = "  {   0.0 , 255.0 ,128.5  } ";
+    std::string valid_str3 = "1.0";
+
+    ASSERT_EQ(config.parseMean(valid_str1), StatusCode::OK);
+    EXPECT_EQ(std::get<std::vector<float>>(config.getMeans()), (std::vector<float>{123.675f, 116.28f, 103.53f}));
+    ASSERT_EQ(config.parseMean(valid_str2), StatusCode::OK);
+    EXPECT_EQ(std::get<std::vector<float>>(config.getMeans()), (std::vector<float>{0.0f, 255.0f, 128.5f}));
+    ASSERT_EQ(config.parseMean(valid_str3), StatusCode::OK);
+    EXPECT_EQ(std::get<float>(config.getMeans()), 1.0f);
+
+    std::string invalid_str1 = "{123.675;116.28;103.53}";
+    std::string invalid_str2 = "{123.675,abc,103.53}";
+    std::string invalid_str3 = "one.point.zero";
+    ASSERT_EQ(config.parseMean(invalid_str1), StatusCode::FLOAT_WRONG_FORMAT);
+    ASSERT_EQ(config.parseMean(invalid_str2), StatusCode::FLOAT_WRONG_FORMAT);
+    ASSERT_EQ(config.parseMean(invalid_str3), StatusCode::FLOAT_WRONG_FORMAT);
+}
+
+TEST(ModelConfig, parseScaleParameter) {
+    using namespace ovms;
+    ModelConfig config;
+    
+    std::string valid_str1 = "{123.675,116.28,103.53}";
+    std::string valid_str2 = "  {   0.0 , 255.0 ,128.5  } ";
+    std::string valid_str3 = "1.0";
+
+    ASSERT_EQ(config.parseScale(valid_str1), StatusCode::OK);
+    EXPECT_EQ(std::get<std::vector<float>>(config.getScales()), (std::vector<float>{123.675f, 116.28f, 103.53f}));
+    ASSERT_EQ(config.parseScale(valid_str2), StatusCode::OK);
+    EXPECT_EQ((std::get<std::vector<float>>(config.getScales())), (std::vector<float>{0.0f, 255.0f, 128.5f}));
+    ASSERT_EQ(config.parseScale(valid_str3), StatusCode::OK);
+    EXPECT_EQ(std::get<float>(config.getScales()), 1.0f);
+    std::string invalid_str1 = "{123.675;116.28;103.53}";
+    std::string invalid_str2 = "{123.675,abc,103.53}";
+    std::string invalid_str3 = "one.point.zero";
+    ASSERT_EQ(config.parseScale(invalid_str1), StatusCode::FLOAT_WRONG_FORMAT);
+    ASSERT_EQ(config.parseScale(invalid_str2), StatusCode::FLOAT_WRONG_FORMAT);
+    ASSERT_EQ(config.parseScale(invalid_str3), StatusCode::FLOAT_WRONG_FORMAT);
+}
+
+TEST(ModelConfig, parseColorFormatParameter) {
+    using namespace ovms;
+    ModelConfig config;
+    
+    std::string valid_str1 = "RGB";
+    std::string valid_str2 = "BGR";
+    std::string valid_str3 = "GRAY";
+    std::string valid_str4 = "NV12";
+    std::string valid_str5 = "NV12_2";
+    std::string valid_str6 = "I420";
+    std::string valid_str7 = "I420_3";
+
+    ASSERT_EQ(config.parseColorFormat(valid_str1), StatusCode::OK);
+    EXPECT_EQ(config.getColorFormat(), ov::preprocess::ColorFormat::RGB);
+    ASSERT_EQ(config.parseColorFormat(valid_str2), StatusCode::OK);
+    EXPECT_EQ(config.getColorFormat(), ov::preprocess::ColorFormat::BGR);
+    ASSERT_EQ(config.parseColorFormat(valid_str3), StatusCode::OK);
+    EXPECT_EQ(config.getColorFormat(), ov::preprocess::ColorFormat::GRAY);
+    ASSERT_EQ(config.parseColorFormat(valid_str4), StatusCode::OK);
+    EXPECT_EQ(config.getColorFormat(), ov::preprocess::ColorFormat::NV12_SINGLE_PLANE);
+    ASSERT_EQ(config.parseColorFormat(valid_str5), StatusCode::OK);
+    EXPECT_EQ(config.getColorFormat(), ov::preprocess::ColorFormat::NV12_TWO_PLANES);
+    ASSERT_EQ(config.parseColorFormat(valid_str6), StatusCode::OK);
+    EXPECT_EQ(config.getColorFormat(), ov::preprocess::ColorFormat::I420_SINGLE_PLANE);
+    ASSERT_EQ(config.parseColorFormat(valid_str7), StatusCode::OK);
+    EXPECT_EQ(config.getColorFormat(), ov::preprocess::ColorFormat::I420_THREE_PLANES);
+
+    std::string invalid_str1 = "INVALID_FORMAT";
+    auto status = config.parseColorFormat(invalid_str1);
+    EXPECT_EQ(status, ovms::StatusCode::COLOR_FORMAT_WRONG_FORMAT);
+}
+
 TEST(ModelConfig, shape) {
     ovms::ModelConfig config;
 

@@ -434,6 +434,14 @@ Status ModelConfig::parseFloatArray(const std::string& str, std::vector<float>& 
             return status;
         }
     }
+    if (values.empty()) {
+        SPDLOG_WARN("Parameter contains empty float array: {}", str);
+        return StatusCode::FLOAT_WRONG_FORMAT;
+    }
+    if (values.size() < 2) {
+        SPDLOG_WARN("Parameter contains float array with less than 2 values: {}", str);
+        return StatusCode::FLOAT_WRONG_FORMAT;
+    }
     return StatusCode::OK;
 }
 

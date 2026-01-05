@@ -2432,6 +2432,12 @@ TEST(OvmsConfigTest, positiveSingle) {
         "(3:5,5:6)",
         "--layout",
         "nchw:nhwc",
+        "--mean",
+        "{123.675,116.28,103.53}",
+        "--scale",
+        "{58.395,57.12,57.375}",
+        "--color_format",
+        "BGR",
         "--model_version_policy",
         "setting",
         "--nireq",
@@ -2449,7 +2455,7 @@ TEST(OvmsConfigTest, positiveSingle) {
         "--max_sequence_number",
         "52",
     };
-    int arg_count = 55;
+    int arg_count = 61;
     ConstructorEnabledConfig config;
     config.parse(arg_count, n_argv);
 
@@ -2477,6 +2483,9 @@ TEST(OvmsConfigTest, positiveSingle) {
     EXPECT_EQ(config.batchSize(), "(3:5)");
     EXPECT_EQ(config.shape(), "(3:5,5:6)");
     EXPECT_EQ(config.layout(), "nchw:nhwc");
+    EXPECT_EQ(config.means(), "{123.675,116.28,103.53}");
+    EXPECT_EQ(config.scales(), "{58.395,57.12,57.375}");
+    EXPECT_EQ(config.colorFormat(), "BGR");
     EXPECT_EQ(config.modelVersionPolicy(), "setting");
     EXPECT_EQ(config.nireq(), 2);
     EXPECT_EQ(config.targetDevice(), "GPU");
