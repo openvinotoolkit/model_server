@@ -1484,8 +1484,8 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsPromptTokensEqualToMaxM
         GTEST_SKIP();
     }
     std::string prompt;
-    // creating prompt that will be tokenized to 2044 tokens when model max length is 8192; 25 are tokens from chat template.
-    for (int i = 0; i < 8192 - 29 - 3; i++) {
+    // creating prompt that will be tokenized to  tokens when model max length is 8192; 32 are tokens from chat template.
+    for (int i = 0; i < 8192 - 32 + 1; i++) {
         prompt += "hello ";
     }
     std::string requestBody = R"(
