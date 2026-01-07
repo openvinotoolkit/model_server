@@ -230,7 +230,7 @@ const Layout ModelInstance::getReportedTensorLayout(const ModelConfig& config, c
     return defaultLayout;
 }
 
-static void applyPreprocessingConfiguration(ov::preprocess::PrePostProcessor& preproc, ov::float_vec_or_value_t config, bool isScale) {
+static void applyScaleOrMeanPreprocessing(ov::preprocess::PrePostProcessor& preproc, ovms::float_vec_or_value_t& config, bool isScale) {
     if (auto* scalar = std::get_if<float>(&config)) {
         isScale ? preproc.input().preprocess().scale(*scalar) : preproc.input().preprocess().mean(*scalar);
     } else {
@@ -242,15 +242,18 @@ static Status applyPreprocessingConfiguration(ov::preprocess::PrePostProcessor& 
     OV_LOGGER("ov::preprocess::PrePostProcessor& preproc, const ModelConfig& config, std::shared_ptr<ov::Model>& model");
     
     try {
-        auto preprocessingScale = config.getScales();
-        auto preprocessingMean = config.getMeans();
+        ovms::float_vec_or_value_t preprocessingScale = config.getScales();
+        ovms::float_vec_or_value_t preprocessingMean = config.getMeans();
         ov::preprocess::ColorFormat colorFormat = config.getColorFormat();
 
+        OV_LOGGER("Applying color format for model: {}, version: {}", modelName, modelVersion);
         preproc.input().tensor().set_color_format(colorFormat);
         preproc.input().preprocess().convert_color(colorFormat);
         
-        applyPreprocessingConfiguration(preproc, preprocessingMean, false);
-        applyPreprocessingConfiguration(preproc, preprocessingScale, true);
+        OV_LOGGER("Applying mean configuration: {} for model: {}, version: {}", modelName, modelVersion);
+        applyScaleOrMeanPreprocessing(preproc, preprocessingMean, false);
+        OV_LOGGER("Applying scale configuration: {} for model: {}, version: {}", modelName, modelVersion);
+        applyScaleOrMeanPreprocessing(preproc, preprocessingScale, true);
         
     } catch (const ov::Exception& e) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to configure input preprocessing configuration for model:{}; version:{}; from OpenVINO with error:{}",
@@ -270,7 +273,7 @@ static Status applyPreprocessingConfiguration(ov::preprocess::PrePostProcessor& 
             modelVersion);
         return StatusCode::UNKNOWN_ERROR;
     }
-    
+
     return StatusCode::OK;
 }
 
