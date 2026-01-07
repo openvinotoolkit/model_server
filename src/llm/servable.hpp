@@ -79,6 +79,9 @@ struct GenAiServableExecutionContext {
     // Built-in tool execution tracking
     int builtInToolExecutionIteration = 0;
     static constexpr int MAX_BUILTIN_TOOL_ITERATIONS = 10;  // Safety limit to prevent infinite loops
+    // Cached parsed output from last generation - used for built-in tool detection
+    ParsedOutput lastParsedOutput;
+    bool hasLastParsedOutput = false;
 };
 
 struct ExtraGenerationInfo {
@@ -181,16 +184,16 @@ public:
     prepareCompleteResponse method should implement preparing the response for unary request scenario from executionContext generationOutputs.
     Implementation MUST fill executionContext response field.
     Base implementation serializes the response using apiHandler.
-    If parsedOutputOut is provided, it will be populated with the parsed output for further processing.
+    Parsed output is stored in executionContext->lastParsedOutput for later use (e.g., built-in tool detection).
     */
-    virtual absl::Status prepareCompleteResponse(std::shared_ptr<GenAiServableExecutionContext>& executionContext, ParsedOutput* parsedOutputOut = nullptr);
+    virtual absl::Status prepareCompleteResponse(std::shared_ptr<GenAiServableExecutionContext>& executionContext);
 
     // ----------- Built-in tool execution ------------
 
     /*
-    Check if the parsed output contains built-in tool calls.
+    Check if the execution context has built-in tool calls from the last parsed output.
     */
-    static bool hasBuiltInToolCalls(const ParsedOutput& parsedOutput);
+    static bool hasBuiltInToolCalls(const std::shared_ptr<GenAiServableExecutionContext>& executionContext);
 
     /*
     Execute built-in tools from the parsed output and return their results.

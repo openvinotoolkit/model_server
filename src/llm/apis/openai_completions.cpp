@@ -853,7 +853,7 @@ ParsedOutput OpenAIChatCompletionsHandler::parseGenerationOutput(const std::vect
     return parseOutputIfNeeded(generatedIds);
 }
 
-std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const std::vector<ov::genai::GenerationOutput>& generationOutputs) {
+std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const std::vector<ov::genai::GenerationOutput>& generationOutputs, ParsedOutput* preParsedOutput) {
     OVMS_PROFILE_FUNCTION();
     OpenAiJsonResponse jsonResponse;
     jsonResponse.StartObject();
@@ -866,7 +866,13 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const std::vect
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Generated tokens: {}", generationOutput.generated_ids);
 
         updateUsage(usage, generationOutput.generated_ids, request.echo);
-        ParsedOutput parsedOutput = parseOutputIfNeeded(generationOutput.generated_ids);
+        // Use pre-parsed output if available (for first output only), otherwise parse
+        ParsedOutput parsedOutput;
+        if (preParsedOutput != nullptr && index == 0) {
+            parsedOutput = *preParsedOutput;
+        } else {
+            parsedOutput = parseOutputIfNeeded(generationOutput.generated_ids);
+        }
 
         jsonResponse.StartObject();
         // finish_reason: string;
@@ -984,7 +990,7 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const std::vect
     return jsonResponse.ToString();
 }
 
-std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const ov::genai::EncodedResults& results) {
+std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const ov::genai::EncodedResults& results, ParsedOutput* preParsedOutput) {
     OVMS_PROFILE_FUNCTION();
     OpenAiJsonResponse jsonResponse;
     jsonResponse.StartObject();
@@ -997,7 +1003,13 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const ov::genai
         const std::vector<int64_t>& tokens = results.tokens[i];
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Generated tokens: {}", tokens);
         updateUsage(usage, tokens, request.echo);
-        ParsedOutput parsedOutput = parseOutputIfNeeded(tokens);
+        // Use pre-parsed output if available (for first output only), otherwise parse
+        ParsedOutput parsedOutput;
+        if (preParsedOutput != nullptr && index == 0) {
+            parsedOutput = *preParsedOutput;
+        } else {
+            parsedOutput = parseOutputIfNeeded(tokens);
+        }
         jsonResponse.StartObject();
         // finish_reason: string; always "stop" for this method
         jsonResponse.FinishReason("stop");

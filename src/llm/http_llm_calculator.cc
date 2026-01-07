@@ -139,20 +139,21 @@ public:
                     auto status = servable->readCompleteExecutionResults(executionContext);
                     if (status != absl::OkStatus())
                         return status;
-                    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "LLMCalculator  [Node: {}] Received complete execution results, generationOutputs size: {}", 
-                        cc->NodeName(), executionContext->generationOutputs.size());
+                    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "LLMCalculator  [Node: {}] Received complete execution results", cc->NodeName());
 
-                    // Prepare response and get the parsed output for built-in tool checking
-                    ovms::ParsedOutput parsedOutput;
-                    status = servable->prepareCompleteResponse(executionContext, &parsedOutput);
+                    // Reset parsed output state before preparing response
+                    executionContext->hasLastParsedOutput = false;
+
+                    // Prepare response - this parses the output and stores it in executionContext->lastParsedOutput
+                    status = servable->prepareCompleteResponse(executionContext);
                     if (status != absl::OkStatus())
                         return status;
                     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "LLMCalculator  [Node: {}] Response prepared, checking for built-in tools", cc->NodeName());
 
-                    // Check if there are built-in tool calls to execute
-                    if (ovms::GenAiServable::hasBuiltInToolCalls(parsedOutput)) {
+                    // Check if there are built-in tool calls to execute (uses executionContext->lastParsedOutput)
+                    if (ovms::GenAiServable::hasBuiltInToolCalls(executionContext)) {
                         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "LLMCalculator  [Node: {}] Built-in tool calls detected: {}", 
-                            cc->NodeName(), parsedOutput.builtInToolCalls.size());
+                            cc->NodeName(), executionContext->lastParsedOutput.builtInToolCalls.size());
                         
                         // Check iteration limit to prevent infinite loops
                         if (executionContext->builtInToolExecutionIteration >= ovms::GenAiServableExecutionContext::MAX_BUILTIN_TOOL_ITERATIONS) {
@@ -165,7 +166,8 @@ public:
                         SPDLOG_LOGGER_INFO(llm_calculator_logger, "LLMCalculator  [Node: {}] Executing built-in tools (iteration {})", 
                             cc->NodeName(), executionContext->builtInToolExecutionIteration);
 
-                        // Execute built-in tools
+                        // Execute built-in tools using the parsed output from executionContext
+                        const auto& parsedOutput = executionContext->lastParsedOutput;
                         ovms::BuiltInToolResults_t toolResults = servable->executeBuiltInTools(parsedOutput.builtInToolCalls);
                         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "LLMCalculator  [Node: {}] Built-in tools executed, got {} results", 
                             cc->NodeName(), toolResults.size());
