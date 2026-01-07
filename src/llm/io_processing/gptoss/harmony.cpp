@@ -129,7 +129,6 @@ ToolCalls_t Harmony::getBuiltInToolCalls() {
     static const std::string tool_prefix = "to=";
     ToolCalls_t toolCalls;
     for (const auto& msg : messages) {
-        SPDLOG_INFO("AAAAAA: Channel [{}], Content [{}]", msg.getChannel(), msg.getContent());
         if (startsWith(msg.getChannel(), "analysis") || startsWith(msg.getChannel(), "commentary")) {
             size_t marker = msg.getChannel().find(tool_prefix);
             if (marker != std::string::npos) {
@@ -200,7 +199,6 @@ bool Harmony::parse() {
                 if (currentState == HarmonyState::READING_CHANNEL) {
                     currentChannel = tokenizer.decode(tokenCache, ov::AnyMap{ov::genai::skip_special_tokens(false)});
                     currentState = HarmonyState::READING_MESSAGE;
-                    SPDLOG_ERROR("AAAAAAAAAAAAAAAAAAAA: {}", currentChannel);
                 } else if (currentState == HarmonyState::READING_CONSTRAIN) {
                     currentConstrain = tokenizer.decode(tokenCache, ov::AnyMap{ov::genai::skip_special_tokens(false)});
                     currentState = HarmonyState::READING_MESSAGE;

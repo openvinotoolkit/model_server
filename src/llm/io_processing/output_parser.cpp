@@ -156,7 +156,6 @@ std::optional<rapidjson::Document> OutputParser::parseReasoningChunk(ov::genai::
 
 OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string toolParserName, const std::string reasoningParserName, const ToolsSchemas_t& toolNameSchemaMap) :
     tokenizer(tokenizer) {
-    SPDLOG_ERROR("EEEEEEEEEEEEEE: {} {}", toolParserName, reasoningParserName);
     if (toolParserName == "llama3") {
         toolParser = std::make_unique<Llama3ToolParser>(tokenizer);
     } else if (toolParserName == "hermes3") {
