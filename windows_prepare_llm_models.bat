@@ -79,7 +79,7 @@ if exist "%~1\%FACEBOOK_MODEL%\%TOKENIZER_FILE%" (
   if !errorlevel! neq 0 exit /b !errorlevel!
 )
 if not exist "%~1\%FACEBOOK_MODEL%\%TOKENIZER_FILE%" (
-  echo Models file %~1\%FACEBOOK_MODEL%\%TOKENIZER_FILE% does not exists.
+  echo Models file %~1\%FACEBOOK_MODEL%\%TOKENIZER_FILE% does not exist.
   exit /b 1
 )
 
