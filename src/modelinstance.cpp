@@ -230,28 +230,47 @@ const Layout ModelInstance::getReportedTensorLayout(const ModelConfig& config, c
     return defaultLayout;
 }
 
+static void applyPreprocessingConfiguration(ov::preprocess::PrePostProcessor& preproc, ov::float_vec_or_value_t config, bool isScale) {
+    if (auto* scalar = std::get_if<float>(&config)) {
+        isScale ? preproc.input().preprocess().scale(*scalar) : preproc.input().preprocess().mean(*scalar);
+    } else {
+        isScale ? preproc.input().preprocess().scale(std::get<std::vector<float>>(config)) : preproc.input().preprocess().mean(std::get<std::vector<float>>(config));
+    }
+}
+
 static Status applyPreprocessingConfiguration(ov::preprocess::PrePostProcessor& preproc, const ModelConfig& config, std::shared_ptr<ov::Model>& model, const std::string& modelName, model_version_t modelVersion) {
     OV_LOGGER("ov::preprocess::PrePostProcessor& preproc, const ModelConfig& config, std::shared_ptr<ov::Model>& model");
-
-    auto preprocessingScale = config.getScales();
-    auto preprocessingMean = config.getMeans();
-    ov::preprocess::ColorFormat colorFormat = config.getColorFormat();
-
-    preproc.input().tensor().set_color_format(colorFormat);
-    preproc.input().preprocess().convert_color(colorFormat);
     
-    if (auto* mean = std::get_if<float>(&preprocessingMean)) {
-        preproc.input().preprocess().mean(*mean);
-    } else {
-        preproc.input().preprocess().mean(std::get<std::vector<float>>(preprocessingMean));
-    }
+    try {
+        auto preprocessingScale = config.getScales();
+        auto preprocessingMean = config.getMeans();
+        ov::preprocess::ColorFormat colorFormat = config.getColorFormat();
 
-    if (auto* scale = std::get_if<float>(&preprocessingScale)) {
-        preproc.input().preprocess().scale(*scale);
-    } else {
-        preproc.input().preprocess().scale(std::get<std::vector<float>>(preprocessingScale));
+        preproc.input().tensor().set_color_format(colorFormat);
+        preproc.input().preprocess().convert_color(colorFormat);
+        
+        applyPreprocessingConfiguration(preproc, preprocessingMean, false);
+        applyPreprocessingConfiguration(preproc, preprocessingScale, true);
+        
+    } catch (const ov::Exception& e) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to configure input preprocessing configuration for model:{}; version:{}; from OpenVINO with error:{}",
+            modelName,
+            modelVersion,
+            e.what());
+        return StatusCode::UNKNOWN_ERROR;
+    } catch (const std::exception& e) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to configure input preprocessing configuration for model:{}; version:{}; from OpenVINO with error:{}",
+            modelName,
+            modelVersion,
+            e.what());
+        return StatusCode::UNKNOWN_ERROR;
+    } catch (...) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to configure input preprocessing configuration for model:{}; version:{}; from OpenVINO",
+            modelName,
+            modelVersion);
+        return StatusCode::UNKNOWN_ERROR;
     }
-
+    
     return StatusCode::OK;
 }
 
