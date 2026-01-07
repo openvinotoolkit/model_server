@@ -205,12 +205,12 @@ private:
       /**
          * @brief meanValues mean preprocessing parameters  
          */
-    float_vec_or_value_t meanValues;
+    float_vec_or_value_t meanValues = 0.0f;
 
      /**
          * @brief scaleValues scale preprocessing parameters  
          */
-    float_vec_or_value_t scaleValues;
+    float_vec_or_value_t scaleValues = 1.0f;
 
      /**
          * @brief colorFormat color format preprocessing parameter  

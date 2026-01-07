@@ -237,12 +237,20 @@ static Status applyPreprocessingConfiguration(ov::preprocess::PrePostProcessor& 
     auto preprocessingMean = config.getMeans();
     ov::preprocess::ColorFormat colorFormat = config.getColorFormat();
 
-    preproc.input("data").tensor().set_color_format(colorFormat);
+    preproc.input().tensor().set_color_format(colorFormat);
+    preproc.input().preprocess().convert_color(colorFormat);
     
-    preproc.input("data").preprocess()
-    .mean(std::get<std::vector<float>>(preprocessingMean))
-    .scale(std::get<std::vector<float>>(preprocessingScale))
-    .convert_color(colorFormat);
+    if (auto* mean = std::get_if<float>(&preprocessingMean)) {
+        preproc.input().preprocess().mean(*mean);
+    } else {
+        preproc.input().preprocess().mean(std::get<std::vector<float>>(preprocessingMean));
+    }
+
+    if (auto* scale = std::get_if<float>(&preprocessingScale)) {
+        preproc.input().preprocess().scale(*scale);
+    } else {
+        preproc.input().preprocess().scale(std::get<std::vector<float>>(preprocessingScale));
+    }
 
     return StatusCode::OK;
 }
@@ -376,7 +384,6 @@ Status ModelInstance::applyPreprocessing(const ModelConfig& config, std::shared_
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Applying preprocessing configuration");
     ov::preprocess::PrePostProcessor preproc(model);
     Status status = StatusCode::OK;
-
 
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Applying layout configuration");
     status = applyLayoutConfiguration(preproc, config, model, modelName, modelVersion);
