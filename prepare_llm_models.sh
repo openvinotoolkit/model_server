@@ -42,7 +42,7 @@ echo "Downloading LLM testing models to directory $1"
 export PIP_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cpu https://storage.openvinotoolkit.org/simple/wheels/nightly"
 if [ "$2" = "docker" ]; then
     export PATH=$PATH:/opt/intel/openvino/python/bin
-    python3 -m pip install "optimum-intel"@git+https://github.com/huggingface/optimum-intel.git nncf sentence_transformers einops timm sentencepiece
+    python3 -m pip install "optimum-intel"@git+https://github.com/huggingface/optimum-intel.git nncf sentence_transformers einops timm==1.0.22 sentencepiece
 else
     python3 -m venv .venv
     . .venv/bin/activate
@@ -72,9 +72,9 @@ if [ ! -f "$1/$FACEBOOK/$TOKENIZER_FILE" ]; then
   exit 1
 fi
 
-if [ ! -f "$1/$TEXT_GENERATION_MODEL/chat_template.jinja" ]; then
-    echo "Copying dummy chat template to $TEXT_GENERATION_MODEL model directory."
-    cp src/test/llm/dummy_facebook_template.jinja "$1/$TEXT_GENERATION_MODEL/chat_template.jinja"
+if [ ! -f "$1/$FACEBOOK/chat_template.jinja" ]; then
+    echo "Copying dummy chat template to $FACEBOOK model directory."
+    cp src/test/llm/dummy_facebook_template.jinja "$1/$FACEBOOK/chat_template.jinja"
 fi
 
 if [ -f "$1/$VLM_MODEL/$TOKENIZER_FILE" ]; then
