@@ -99,7 +99,7 @@ public:
             plugin_config_t pluginConfig;
             // Setting precision to f32 fails on SPR hosts - to be investigated
             // JsonParser::parsePluginConfig("{\"INFERENCE_PRECISION_HINT\":\"f32\"}", pluginConfig);
-            cbPipe = std::make_shared<ov::genai::ContinuousBatchingPipeline>(getGenericFullPathForSrcTest("/ovms/src/test/llm_testing/facebook/opt-125m"), schedulerConfig, device, pluginConfig, tokenizerPluginConfig);
+            cbPipe = std::make_shared<ov::genai::ContinuousBatchingPipeline>(getGenericFullPathForSrcTest("/ovms/src/test/llm_testing/HuggingFaceTB/SmolLM2-360M-Instruct"), schedulerConfig, device, pluginConfig, tokenizerPluginConfig);
             llmExecutorWrapper = std::make_shared<LLMExecutorWrapper>(cbPipe);
         } catch (const std::exception& e) {
             SPDLOG_ERROR("Error during llm node initialization for models_path exception: {}", e.what());
@@ -598,6 +598,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJsonSpaceStopString) {
             "stream": false,
             "ignore_eos": false,
             "max_tokens": 1000,
+            "temperature": 0,
             "stop": " ",
             "include_stop_str_in_output": true,
             "prompt": "                                   |                                |                             |  "
@@ -1419,8 +1420,9 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsPromptTokensWithMaxToke
         GTEST_SKIP();
     }
     std::string prompt;
-    // creating prompt that will be tokenized to 2048 tokens when model max length is 2048
-    for (int i = 0; i < 2044; i++) {
+    // creating prompt that will be tokenized to 8189 tokens when model max length is 8192; 29 are tokens from chat template,
+    // and 3 tokens are reserved (e.g., for special/assistant tokens or safety margin).
+    for (int i = 0; i < 8192 - 29 - 3; i++) {
         prompt += "hello ";
     }
     std::string requestBody = R"(
@@ -1429,7 +1431,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsPromptTokensWithMaxToke
                               R"(",
             "stream": false,
             "seed" : 1,
-            "max_tokens" : 5,
+            "max_tokens" : 10,
             "messages": [
             {
                 "role": "user",
@@ -1451,8 +1453,8 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsPromptTokensWithMaxComp
         GTEST_SKIP();
     }
     std::string prompt;
-    // creating prompt that will be tokenized to 2048 tokens when model max length is 2048
-    for (int i = 0; i < 2044; i++) {
+    // creating prompt that will be tokenized to 8189 tokens when model max length is 8192; 25 are tokens from chat template.
+    for (int i = 0; i < 8191 - 25 - 3; i++) {  // 3 extra tokens are reserved for special tokens added by the tokenizer
         prompt += "hello ";
     }
     std::string requestBody = R"(
@@ -1461,7 +1463,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsPromptTokensWithMaxComp
                               R"(",
             "stream": false,
             "seed" : 1,
-            "max_completion_tokens": 5,
+            "max_completion_tokens": 10,
             "messages": [
             {
                 "role": "user",
@@ -1483,8 +1485,8 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsPromptTokensEqualToMaxM
         GTEST_SKIP();
     }
     std::string prompt;
-    // creating prompt that will be tokenized to 2048 tokens when model max length is 2048
-    for (int i = 0; i < 2048; i++) {
+    // creating prompt that will be tokenized to  tokens when model max length is 8192; 32 are tokens from chat template.
+    for (int i = 0; i < 8192 - 32 + 1; i++) {
         prompt += "hello ";
     }
     std::string requestBody = R"(
