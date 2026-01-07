@@ -32,6 +32,7 @@
 #include "../http_payload.hpp"
 #include "apis/openai_completions.hpp"
 #include "builtin_tool_executor.hpp"
+#include "io_processing/base_output_parser.hpp"
 #include "io_processing/generation_config_builder.hpp"
 #if (PYTHON_DISABLE == 0)
 #include "py_jinja_template_processor.hpp"
@@ -180,18 +181,16 @@ public:
     prepareCompleteResponse method should implement preparing the response for unary request scenario from executionContext generationOutputs.
     Implementation MUST fill executionContext response field.
     Base implementation serializes the response using apiHandler.
+    If parsedOutputOut is provided, it will be populated with the parsed output for further processing.
     */
-    virtual absl::Status prepareCompleteResponse(std::shared_ptr<GenAiServableExecutionContext>& executionContext);
+    virtual absl::Status prepareCompleteResponse(std::shared_ptr<GenAiServableExecutionContext>& executionContext, ParsedOutput* parsedOutputOut = nullptr);
 
     // ----------- Built-in tool execution ------------
 
     /*
-    executeBuiltInToolsIfNeeded checks if the generation output contains built-in tool calls.
-    If built-in tools are detected, it executes them, appends results to chat history,
-    and continues inference until no more built-in tools are called or max iterations is reached.
-    Returns true if built-in tools were executed and inference should continue, false otherwise.
+    Check if the parsed output contains built-in tool calls.
     */
-    bool hasBuiltInToolCalls(const std::shared_ptr<GenAiServableExecutionContext>& executionContext) const;
+    static bool hasBuiltInToolCalls(const ParsedOutput& parsedOutput);
 
     /*
     Execute built-in tools from the parsed output and return their results.

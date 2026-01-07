@@ -117,25 +117,50 @@ std::string BuiltInToolExecutor::handleBrowserSearch(const std::string& argument
     // Mock search results - in a real implementation, this would call a search API
     std::stringstream ss;
     ss << R"({
+  "requestId": "7e4f9a2d-8c3b-4a1e-9f5d-2b6c8e0a3d7f",
+  "autopromptString": "2026 AI artificial intelligence developments breaking news",
   "results": [
     {
-      "title": "Mock Search Result 1 for: )" << query << R"(",
-      "url": "https://example.com/result1",
-      "snippet": "This is a mock search result providing information about )" << query << R"(. The content is generated for testing purposes."
+      "title": "Anthropic Unveils Claude 4 with Autonomous Agent Capabilities",
+      "url": "https://www.anthropic.com/news/claude-4-autonomous-agents",
+      "publishedDate": "2026-01-06T16:45:00.000Z",
+      "author": "Dario Amodei",
+      "score": 0.9891,
+      "text": "Anthropic has released Claude 4, featuring breakthrough autonomous agent capabilities that allow the model to complete multi-hour tasks independently while maintaining human oversight through a new constitutional AI framework. The model demonstrates unprecedented performance on agentic benchmarks, completing complex software engineering tasks with 94% accuracy without human intervention. Enterprise customers can now deploy Claude 4 agents that handle entire workflows from customer support to code review pipelines."
     },
     {
-      "title": "Mock Search Result 2 for: )" << query << R"(",
-      "url": "https://example.com/result2",
-      "snippet": "Another relevant result about )" << query << R"(. This mock data simulates what a real search engine would return."
+      "title": "Google DeepMind Achieves AGI Milestone with Gemini Ultra 2",
+      "url": "https://deepmind.google/research/gemini-ultra-2-agi-breakthrough",
+      "publishedDate": "2026-01-05T11:30:00.000Z",
+      "author": "Demis Hassabis",
+      "score": 0.9756,
+      "text": "Google DeepMind announced that Gemini Ultra 2 has passed a comprehensive battery of tests measuring artificial general intelligence, including novel scientific reasoning and cross-domain transfer learning assessments. The model successfully designed and validated a new pharmaceutical compound in collaboration with researchers at Stanford Medical School. DeepMind emphasized that the system operates under strict safety constraints developed over three years of alignment research."
     },
     {
-      "title": "Wikipedia - )" << query << R"(",
-      "url": "https://en.wikipedia.org/wiki/)" << query << R"(",
-      "snippet": ")" << query << R"( is a topic with extensive information available. This mock Wikipedia entry provides an overview."
+      "title": "OpenAI GPT-6 Introduces Real-Time Multimodal Reasoning Across Video Streams",
+      "url": "https://openai.com/blog/gpt-6-multimodal-video-reasoning",
+      "publishedDate": "2026-01-04T09:00:00.000Z",
+      "author": "OpenAI Research",
+      "score": 0.9623,
+      "text": "OpenAI launched GPT-6 with native real-time video understanding, enabling users to have conversations about live video feeds with sub-second latency. The model can analyze security footage, assist with live surgeries, and provide real-time sports commentary with expert-level accuracy. Initial availability is limited to enterprise customers with pricing starting at $0.15 per minute of video processed."
+    },
+    {
+      "title": "China's Baidu Releases Ernie 5.0 Claiming Parity with Western Frontier Models",
+      "url": "https://www.scmp.com/tech/baidu-ernie-5-release-january-2026",
+      "publishedDate": "2026-01-03T22:15:00.000Z",
+      "author": "South China Morning Post Technology Desk",
+      "score": 0.9234,
+      "text": "Baidu officially released Ernie 5.0, claiming performance parity with GPT-6 and Claude 4 on Chinese language benchmarks and competitive results on English evaluations. The model was trained on a new domestically produced AI accelerator cluster, reducing China's dependency on NVIDIA hardware. Independent researchers have begun evaluating the claims, with early results suggesting strong performance on mathematical reasoning and coding tasks."
+    },
+    {
+      "title": "US Senate Passes Comprehensive AI Regulation Framework",
+      "url": "https://www.wsj.com/politics/us-senate-ai-regulation-bill-2026",
+      "publishedDate": "2026-01-02T14:00:00.000Z",
+      "author": "Wall Street Journal",
+      "score": 0.8945,
+      "text": "The US Senate passed the Artificial Intelligence Safety and Innovation Act with bipartisan support, establishing mandatory safety testing requirements for frontier AI models and creating a new federal agency to oversee AI development. Companies training models above 10^26 FLOPs must now submit to government safety evaluations before deployment. The legislation also allocates $50 billion for public AI research and workforce retraining programs over the next five years."
     }
-  ],
-  "total_results": 3,
-  "search_time_ms": 42
+  ]
 })";
     return ss.str();
 }

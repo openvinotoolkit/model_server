@@ -130,6 +130,14 @@ absl::Status LegacyServable::scheduleExecution(std::shared_ptr<GenAiServableExec
     if (legacyExecutionContext->payload.client->isDisconnected()) {
         return absl::CancelledError();
     }
+    
+    // If this is a re-execution (built-in tool loop), reset the promise/future
+    // Check if the future is already ready (previous execution completed)
+    if (legacyExecutionContext->finished.wait_for(std::chrono::seconds(0)) == std::future_status::ready) {
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "LegacyServable: Resetting execution context for re-execution");
+        legacyExecutionContext->resetForReexecution();
+    }
+    
     properties->legacyExecutor->addRequest(legacyExecutionContext);
     return absl::OkStatus();
 }
@@ -146,11 +154,30 @@ absl::Status LegacyServable::readCompleteExecutionResults(std::shared_ptr<GenAiS
     return absl::OkStatus();
 }
 
-absl::Status LegacyServable::prepareCompleteResponse(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
+absl::Status LegacyServable::prepareCompleteResponse(std::shared_ptr<GenAiServableExecutionContext>& executionContext, ParsedOutput* parsedOutputOut) {
     auto legacyExecutionContext = std::static_pointer_cast<LegacyServableExecutionContext>(executionContext);
     if (legacyExecutionContext->payload.client->isDisconnected()) {
         return absl::CancelledError();
     }
+    
+    // If caller wants the parsed output, parse the first result's tokens
+    if (parsedOutputOut != nullptr && !legacyExecutionContext->results.tokens.empty()) {
+        const std::vector<int64_t>& tokens = legacyExecutionContext->results.tokens[0];
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "LegacyServable: Parsing output for built-in tool check, tokens size: {}", tokens.size());
+        *parsedOutputOut = executionContext->apiHandler->parseGenerationOutput(tokens);
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "LegacyServable: Parsed output - content size: {}, toolCalls: {}, builtInToolCalls: {}",
+            parsedOutputOut->content.size(), 
+            parsedOutputOut->toolCalls.size(), 
+            parsedOutputOut->builtInToolCalls.size());
+        
+        // Log each built-in tool call
+        for (size_t i = 0; i < parsedOutputOut->builtInToolCalls.size(); ++i) {
+            const auto& call = parsedOutputOut->builtInToolCalls[i];
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "LegacyServable: Built-in tool call [{}]: name='{}', id='{}', arguments='{}'",
+                i, call.name, call.id, call.arguments);
+        }
+    }
+    
     executionContext->response = executionContext->apiHandler->serializeUnaryResponse(legacyExecutionContext->results);
     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Complete unary response: {}", executionContext->response);
     return absl::OkStatus();

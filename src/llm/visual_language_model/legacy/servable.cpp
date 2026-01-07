@@ -139,11 +139,13 @@ absl::Status VisualLanguageModelLegacyServable::readCompleteExecutionResults(std
     return absl::OkStatus();
 }
 
-absl::Status VisualLanguageModelLegacyServable::prepareCompleteResponse(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
+absl::Status VisualLanguageModelLegacyServable::prepareCompleteResponse(std::shared_ptr<GenAiServableExecutionContext>& executionContext, ParsedOutput* parsedOutputOut) {
     auto legacyExecutionContext = std::static_pointer_cast<VisualLanguageModelLegacyServableExecutionContext>(executionContext);
     if (legacyExecutionContext->payload.client->isDisconnected()) {
         return absl::CancelledError();
     }
+    // Note: VLM Legacy servable doesn't populate parsedOutputOut - built-in tools not supported
+    (void)parsedOutputOut;
     size_t completionTokens = 0;
     for (std::string text : legacyExecutionContext->results.texts) {
         auto tokensTensor = properties->tokenizer.encode(text, ov::genai::add_special_tokens(false)).input_ids;

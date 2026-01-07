@@ -34,6 +34,14 @@ struct LegacyServableExecutionContext : public GenAiServableExecutionContext {
     // Workaround needed to pass generation config to the executor that requires it
     ov::genai::GenerationConfig baseGenerationConfig;
     bool success = true;
+    
+    // Reset the execution context for re-execution (e.g., after built-in tool execution)
+    void resetForReexecution() {
+        results = ov::genai::EncodedResults();
+        readySignal = std::promise<void>();
+        finished = readySignal.get_future();
+        success = true;
+    }
 };
 
 struct LegacyServableProperties : public GenAiServableProperties {
@@ -62,7 +70,7 @@ public:
     absl::Status prepareInputs(std::shared_ptr<GenAiServableExecutionContext>& executionContext) override;
     absl::Status scheduleExecution(std::shared_ptr<GenAiServableExecutionContext>& executionContext) override;
     absl::Status readCompleteExecutionResults(std::shared_ptr<GenAiServableExecutionContext>& executionContext) override;
-    absl::Status prepareCompleteResponse(std::shared_ptr<GenAiServableExecutionContext>& executionContext) override;
+    absl::Status prepareCompleteResponse(std::shared_ptr<GenAiServableExecutionContext>& executionContext, ParsedOutput* parsedOutputOut = nullptr) override;
     absl::Status readPartialExecutionResults(std::shared_ptr<GenAiServableExecutionContext>& executionContext) override;
     absl::Status preparePartialResponse(std::shared_ptr<GenAiServableExecutionContext>& executionContext) override;
 };

@@ -212,16 +212,63 @@ absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecution
     }
 
     executionContext->apiHandler->setPromptTokensUsage(executionContext->inputIds.get_size());
-    SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Pipeline input text: {}", inputText);
-    SPDLOG_LOGGER_TRACE(llm_calculator_logger, "{}", getPromptTokensString(executionContext->inputIds));
+    SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Pipeline input text: {}", inputText);
+    SPDLOG_LOGGER_ERROR(llm_calculator_logger, "{}", getPromptTokensString(executionContext->inputIds));
 
     return absl::OkStatus();
 }
 
-absl::Status GenAiServable::prepareCompleteResponse(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
+absl::Status GenAiServable::prepareCompleteResponse(std::shared_ptr<GenAiServableExecutionContext>& executionContext, ParsedOutput* parsedOutputOut) {
+    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "prepareCompleteResponse called, generationOutputs size: {}", executionContext->generationOutputs.size());
+    
+    if (executionContext->generationOutputs.empty()) {
+        SPDLOG_LOGGER_ERROR(llm_calculator_logger, "prepareCompleteResponse called but generationOutputs is empty");
+        return absl::InternalError("No generation outputs available");
+    }
+    
+    // If caller wants the parsed output, we need to parse it ourselves
+    if (parsedOutputOut != nullptr) {
+        const auto& generationOutput = executionContext->generationOutputs[0];
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Parsing generation output, generated_ids size: {}", generationOutput.generated_ids.size());
+        
+        *parsedOutputOut = executionContext->apiHandler->parseGenerationOutput(generationOutput.generated_ids);
+        
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Parsed output - content size: {}, toolCalls: {}, builtInToolCalls: {}, reasoning size: {}",
+            parsedOutputOut->content.size(), 
+            parsedOutputOut->toolCalls.size(), 
+            parsedOutputOut->builtInToolCalls.size(),
+            parsedOutputOut->reasoning.size());
+        
+        // Log first 200 chars of content for debugging
+        if (!parsedOutputOut->content.empty()) {
+            std::string contentPreview = parsedOutputOut->content.substr(0, std::min(size_t(200), parsedOutputOut->content.size()));
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Parsed content preview: {}", contentPreview);
+        }
+        
+        // Log each built-in tool call
+        for (size_t i = 0; i < parsedOutputOut->builtInToolCalls.size(); ++i) {
+            const auto& call = parsedOutputOut->builtInToolCalls[i];
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Built-in tool call [{}]: name='{}', id='{}', arguments='{}'",
+                i, call.name, call.id, call.arguments);
+        }
+        
+        // Log each regular tool call
+        for (size_t i = 0; i < parsedOutputOut->toolCalls.size(); ++i) {
+            const auto& call = parsedOutputOut->toolCalls[i];
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Regular tool call [{}]: name='{}', id='{}', arguments='{}'",
+                i, call.name, call.id, call.arguments);
+        }
+    }
+    
     executionContext->response = executionContext->apiHandler->serializeUnaryResponse(executionContext->generationOutputs);
-    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Complete unary response: {}", executionContext->response);
+    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Complete unary response prepared, length: {}", executionContext->response.size());
     return absl::OkStatus();
+}
+
+bool GenAiServable::hasBuiltInToolCalls(const ParsedOutput& parsedOutput) {
+    bool result = !parsedOutput.builtInToolCalls.empty();
+    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "hasBuiltInToolCalls check: {} (count: {})", result, parsedOutput.builtInToolCalls.size());
+    return result;
 }
 
 absl::Status GenAiServable::preparePartialResponse(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
@@ -292,18 +339,6 @@ void logRequestDetails(const ovms::HttpPayload& payload) {
 #pragma warning(push)
 
 // ----------- Built-in tool execution methods ------------
-
-bool GenAiServable::hasBuiltInToolCalls(const std::shared_ptr<GenAiServableExecutionContext>& executionContext) const {
-    if (executionContext->generationOutputs.empty()) {
-        return false;
-    }
-
-    // Parse the first generation output to check for built-in tool calls
-    const auto& generationOutput = executionContext->generationOutputs[0];
-    ParsedOutput parsedOutput = executionContext->apiHandler->parseGenerationOutput(generationOutput.generated_ids);
-
-    return !parsedOutput.builtInToolCalls.empty();
-}
 
 BuiltInToolResults_t GenAiServable::executeBuiltInTools(const ToolCalls_t& builtInToolCalls) {
     BuiltInToolExecutor executor;
