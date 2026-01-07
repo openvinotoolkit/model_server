@@ -31,6 +31,7 @@
 
 #include "../http_payload.hpp"
 #include "apis/openai_completions.hpp"
+#include "builtin_tool_executor.hpp"
 #include "io_processing/generation_config_builder.hpp"
 #if (PYTHON_DISABLE == 0)
 #include "py_jinja_template_processor.hpp"
@@ -74,6 +75,9 @@ struct GenAiServableExecutionContext {
     std::shared_ptr<ov::genai::TextStreamer> textStreamer;
     bool sendLoopbackSignal = false;
     std::string lastStreamerCallbackOutput;
+    // Built-in tool execution tracking
+    int builtInToolExecutionIteration = 0;
+    static constexpr int MAX_BUILTIN_TOOL_ITERATIONS = 10;  // Safety limit to prevent infinite loops
 };
 
 struct ExtraGenerationInfo {
@@ -178,6 +182,29 @@ public:
     Base implementation serializes the response using apiHandler.
     */
     virtual absl::Status prepareCompleteResponse(std::shared_ptr<GenAiServableExecutionContext>& executionContext);
+
+    // ----------- Built-in tool execution ------------
+
+    /*
+    executeBuiltInToolsIfNeeded checks if the generation output contains built-in tool calls.
+    If built-in tools are detected, it executes them, appends results to chat history,
+    and continues inference until no more built-in tools are called or max iterations is reached.
+    Returns true if built-in tools were executed and inference should continue, false otherwise.
+    */
+    bool hasBuiltInToolCalls(const std::shared_ptr<GenAiServableExecutionContext>& executionContext) const;
+
+    /*
+    Execute built-in tools from the parsed output and return their results.
+    */
+    BuiltInToolResults_t executeBuiltInTools(const ToolCalls_t& builtInToolCalls);
+
+    /*
+    Append assistant message with tool calls and tool results to chat history for continued inference.
+    */
+    void appendToolResultsToChatHistory(std::shared_ptr<GenAiServableExecutionContext>& executionContext,
+                                        const std::string& assistantContent,
+                                        const ToolCalls_t& builtInToolCalls,
+                                        const BuiltInToolResults_t& toolResults);
 
     // ----------- Streaming scenario ------------
 

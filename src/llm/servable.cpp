@@ -13,6 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include "servable.hpp"
+
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -34,7 +36,7 @@
 #include "../mediapipe_internal/mediapipe_utils.hpp"
 #include "../profiler.hpp"
 #include "apis/openai_completions.hpp"
-#include "servable.hpp"
+#include "builtin_tool_executor.hpp"
 #include "text_utils.hpp"
 #include "../tokenize/tokenize_parser.hpp"
 
@@ -288,5 +290,135 @@ void logRequestDetails(const ovms::HttpPayload& payload) {
 }
 #pragma GCC diagnostic pop
 #pragma warning(push)
+
+// ----------- Built-in tool execution methods ------------
+
+bool GenAiServable::hasBuiltInToolCalls(const std::shared_ptr<GenAiServableExecutionContext>& executionContext) const {
+    if (executionContext->generationOutputs.empty()) {
+        return false;
+    }
+
+    // Parse the first generation output to check for built-in tool calls
+    const auto& generationOutput = executionContext->generationOutputs[0];
+    ParsedOutput parsedOutput = executionContext->apiHandler->parseGenerationOutput(generationOutput.generated_ids);
+
+    return !parsedOutput.builtInToolCalls.empty();
+}
+
+BuiltInToolResults_t GenAiServable::executeBuiltInTools(const ToolCalls_t& builtInToolCalls) {
+    BuiltInToolExecutor executor;
+    return executor.execute(builtInToolCalls);
+}
+
+void GenAiServable::appendToolResultsToChatHistory(std::shared_ptr<GenAiServableExecutionContext>& executionContext,
+                                                    const std::string& assistantContent,
+                                                    const ToolCalls_t& builtInToolCalls,
+                                                    const BuiltInToolResults_t& toolResults) {
+#if (PYTHON_DISABLE == 0)
+    // When Python is enabled, we need to modify the JSON document
+    // Get the document and append messages to the "messages" array
+    rapidjson::Document& doc = executionContext->apiHandler->getDocument();
+
+    if (!doc.HasMember("messages") || !doc["messages"].IsArray()) {
+        SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Cannot append tool results: messages array not found in request");
+        return;
+    }
+
+    rapidjson::Value& messages = doc["messages"];
+    auto& allocator = doc.GetAllocator();
+
+    // Add assistant message with tool calls
+    rapidjson::Value assistantMessage(rapidjson::kObjectType);
+    assistantMessage.AddMember("role", rapidjson::Value("assistant", allocator), allocator);
+
+    if (!assistantContent.empty()) {
+        assistantMessage.AddMember("content", rapidjson::Value(assistantContent.c_str(), allocator), allocator);
+    } else {
+        assistantMessage.AddMember("content", rapidjson::Value("", allocator), allocator);
+    }
+
+    // Add tool_calls array to assistant message
+    if (!builtInToolCalls.empty()) {
+        rapidjson::Value toolCallsArray(rapidjson::kArrayType);
+        for (const auto& toolCall : builtInToolCalls) {
+            rapidjson::Value toolCallObj(rapidjson::kObjectType);
+            toolCallObj.AddMember("id", rapidjson::Value(toolCall.id.c_str(), allocator), allocator);
+            toolCallObj.AddMember("type", rapidjson::Value("function", allocator), allocator);
+
+            rapidjson::Value functionObj(rapidjson::kObjectType);
+            functionObj.AddMember("name", rapidjson::Value(toolCall.name.c_str(), allocator), allocator);
+            functionObj.AddMember("arguments", rapidjson::Value(toolCall.arguments.c_str(), allocator), allocator);
+            toolCallObj.AddMember("function", functionObj, allocator);
+
+            toolCallsArray.PushBack(toolCallObj, allocator);
+        }
+        assistantMessage.AddMember("tool_calls", toolCallsArray, allocator);
+    }
+
+    messages.PushBack(assistantMessage, allocator);
+    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Added assistant message to JSON with {} built-in tool calls", builtInToolCalls.size());
+
+    // Add tool result messages
+    for (const auto& result : toolResults) {
+        rapidjson::Value toolMessage(rapidjson::kObjectType);
+        toolMessage.AddMember("role", rapidjson::Value("tool", allocator), allocator);
+        toolMessage.AddMember("tool_call_id", rapidjson::Value(result.toolCallId.c_str(), allocator), allocator);
+        toolMessage.AddMember("name", rapidjson::Value(result.toolName.c_str(), allocator), allocator);
+        toolMessage.AddMember("content", rapidjson::Value(result.content.c_str(), allocator), allocator);
+        messages.PushBack(toolMessage, allocator);
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Added tool result message for tool: {} with id: {}", result.toolName, result.toolCallId);
+    }
+
+    // Serialize the updated document to processedJson for the template processor
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+    doc.Accept(writer);
+    executionContext->apiHandler->setProcessedJson(buffer.GetString());
+
+#else
+    // When Python is disabled, use ChatHistory
+    auto& chatHistory = executionContext->apiHandler->getChatHistory();
+
+    // Add assistant message with the content and tool calls
+    ov::AnyMap assistantMessage;
+    assistantMessage["role"] = std::string("assistant");
+
+    if (!assistantContent.empty()) {
+        assistantMessage["content"] = assistantContent;
+    } else {
+        assistantMessage["content"] = std::string("");
+    }
+
+    // Add tool_calls to assistant message as a formatted string representing the calls
+    // Note: The exact format depends on what the chat template expects
+    if (!builtInToolCalls.empty()) {
+        std::stringstream toolCallsStr;
+        toolCallsStr << "[";
+        for (size_t i = 0; i < builtInToolCalls.size(); ++i) {
+            if (i > 0) toolCallsStr << ", ";
+            toolCallsStr << "{\"id\": \"" << builtInToolCalls[i].id << "\", "
+                         << "\"type\": \"function\", "
+                         << "\"function\": {\"name\": \"" << builtInToolCalls[i].name << "\", "
+                         << "\"arguments\": " << builtInToolCalls[i].arguments << "}}";
+        }
+        toolCallsStr << "]";
+        assistantMessage["tool_calls"] = toolCallsStr.str();
+    }
+
+    chatHistory.push_back(assistantMessage);
+    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Added assistant message to chat history with {} built-in tool calls", builtInToolCalls.size());
+
+    // Add tool result messages
+    for (const auto& result : toolResults) {
+        ov::AnyMap toolMessage;
+        toolMessage["role"] = std::string("tool");
+        toolMessage["tool_call_id"] = result.toolCallId;
+        toolMessage["name"] = result.toolName;
+        toolMessage["content"] = result.content;
+        chatHistory.push_back(toolMessage);
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Added tool result message for tool: {} with id: {}", result.toolName, result.toolCallId);
+    }
+#endif
+}
 
 }  // namespace ovms

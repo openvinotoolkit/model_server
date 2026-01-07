@@ -97,6 +97,8 @@ public:
     std::optional<int> getNumReturnSequences() const;
     StreamOptions getStreamOptions() const;
     const std::string& getProcessedJson() const;
+    void setProcessedJson(const std::string& json);
+    Document& getDocument();
     const ImageHistory& getImageHistory() const;
     // User input might be modified by the servable logic, so it is not const
     ov::genai::ChatHistory& getChatHistory();
@@ -116,6 +118,9 @@ public:
     absl::Status parseMessages(std::optional<std::string> allowedLocalMediaPath = std::nullopt);
     absl::Status parseTools();
     const bool areToolsAvailable() const;
+
+    // Parse generation output and return ParsedOutput containing content, tool calls, built-in tool calls, and reasoning
+    ParsedOutput parseGenerationOutput(const std::vector<int64_t>& generatedIds);
 
     std::string serializeUnaryResponse(const std::vector<ov::genai::GenerationOutput>& generationOutputs);
     std::string serializeUnaryResponse(const ov::genai::EncodedResults& results);

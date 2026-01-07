@@ -43,6 +43,8 @@ struct ParsedOutput {
     std::string content;
     // Tool calls extracted from the response
     ToolCalls_t toolCalls;
+    // Built-in tool calls extracted from the response (e.g., browser, code_interpreter)
+    ToolCalls_t builtInToolCalls;
     // Decoded reasoning from the response
     std::string reasoning;
 };

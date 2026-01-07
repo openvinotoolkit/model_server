@@ -41,11 +41,12 @@ void GptOssToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64
     // This is because we have no guarantee that user will use both parsers, they might use only one of them.
     parsedOutput.content = harmony.getContent();
     parsedOutput.toolCalls = harmony.getToolCalls();
+    parsedOutput.builtInToolCalls = harmony.getBuiltInToolCalls();
     for (const auto& toolCall : parsedOutput.toolCalls) {
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Unary | GPT Tool | id: [{}], name: [{}], arguments: [{}]", toolCall.id, toolCall.name, toolCall.arguments);
     }
 
-    for (const auto& builtInToolCall : harmony.getBuiltInToolCalls()) {
+    for (const auto& builtInToolCall : parsedOutput.builtInToolCalls) {
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Unary | GPT Built-in Tool | id: [{}], name: [{}], arguments: [{}]", builtInToolCall.id, builtInToolCall.name, builtInToolCall.arguments);
     }
 }

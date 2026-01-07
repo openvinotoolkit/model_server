@@ -190,6 +190,19 @@ ovms_cc_library(
 )
 
 ovms_cc_library(
+    name = "builtin_tool_executor",
+    hdrs = ["builtin_tool_executor.hpp"],
+    srcs = ["builtin_tool_executor.cpp"],
+    deps = [
+        "@com_github_tencent_rapidjson//:rapidjson",
+        "//src:libovmslogging",
+        "//src/port:rapidjson_document",
+        ":io_processing_base_output_parser",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
     name = "genai_servables",
     hdrs = ["servable.hpp", 
             "servable_initializer.hpp", 
@@ -230,6 +243,7 @@ ovms_cc_library(
         "llmcalculator_cc_proto",
         ":openai_completions_api_handler",
         ":generation_config_builders",
+        ":builtin_tool_executor",
         "//src:httppayload",
         "//src:libhttpclientconnection",
         "//third_party:genai",] + select({

@@ -431,6 +431,15 @@ const OpenAIChatCompletionsRequest& OpenAIChatCompletionsHandler::getRequest() c
 const std::string& OpenAIChatCompletionsHandler::getProcessedJson() const {
     return request.processedJson;
 }
+
+void OpenAIChatCompletionsHandler::setProcessedJson(const std::string& json) {
+    request.processedJson = json;
+}
+
+Document& OpenAIChatCompletionsHandler::getDocument() {
+    return doc;
+}
+
 const ImageHistory& OpenAIChatCompletionsHandler::getImageHistory() const {
     return request.imageHistory;
 }
@@ -838,6 +847,10 @@ ParsedOutput OpenAIChatCompletionsHandler::parseOutputIfNeeded(const std::vector
         parsedOutput = outputParser->parse(generatedIds, this->areToolsAvailable());
     }
     return parsedOutput;
+}
+
+ParsedOutput OpenAIChatCompletionsHandler::parseGenerationOutput(const std::vector<int64_t>& generatedIds) {
+    return parseOutputIfNeeded(generatedIds);
 }
 
 std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const std::vector<ov::genai::GenerationOutput>& generationOutputs) {

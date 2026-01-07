@@ -29,6 +29,8 @@
 #include "../logging.hpp"
 #include "../profiler.hpp"
 #include "apis/openai_completions.hpp"
+#include "builtin_tool_executor.hpp"
+#include "io_processing/base_output_parser.hpp"
 #include "servable.hpp"
 
 using namespace ovms;
@@ -129,12 +131,63 @@ public:
 
             if (!executionContext->apiHandler->isStream()) {  // Unary scenario
                 OVMS_PROFILE_SCOPE("Unary generation cycle");
-                auto status = servable->readCompleteExecutionResults(executionContext);
-                if (status != absl::OkStatus())
-                    return status;
-                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "LLMCalculator  [Node: {}] Received complete execution results, preparing response", cc->NodeName());
 
-                status = servable->prepareCompleteResponse(executionContext);
+                // Built-in tool execution loop
+                // This loop continues inference when built-in tools are detected, executes them,
+                // appends results to chat history, and re-runs inference
+                while (true) {
+                    auto status = servable->readCompleteExecutionResults(executionContext);
+                    if (status != absl::OkStatus())
+                        return status;
+                    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "LLMCalculator  [Node: {}] Received complete execution results", cc->NodeName());
+
+                    // Check if there are built-in tool calls to execute
+                    if (servable->hasBuiltInToolCalls(executionContext)) {
+                        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "LLMCalculator  [Node: {}] Built-in tool calls detected in generation output", cc->NodeName());
+                        // Check iteration limit to prevent infinite loops
+                        if (executionContext->builtInToolExecutionIteration >= ovms::GenAiServableExecutionContext::MAX_BUILTIN_TOOL_ITERATIONS) {
+                            SPDLOG_LOGGER_WARN(llm_calculator_logger, "LLMCalculator  [Node: {}] Max built-in tool execution iterations ({}) reached, stopping", 
+                                cc->NodeName(), ovms::GenAiServableExecutionContext::MAX_BUILTIN_TOOL_ITERATIONS);
+                            break;
+                        }
+
+                        executionContext->builtInToolExecutionIteration++;
+                        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "LLMCalculator  [Node: {}] Built-in tools detected, executing (iteration {})", 
+                            cc->NodeName(), executionContext->builtInToolExecutionIteration);
+
+                        // Parse the generation output to get built-in tool calls
+                        const auto& generationOutput = executionContext->generationOutputs[0];
+                        ovms::ParsedOutput parsedOutput = executionContext->apiHandler->parseGenerationOutput(generationOutput.generated_ids);
+
+                        // Execute built-in tools
+                        ovms::BuiltInToolResults_t toolResults = servable->executeBuiltInTools(parsedOutput.builtInToolCalls);
+
+                        // Append assistant message and tool results to chat history
+                        servable->appendToolResultsToChatHistory(executionContext, parsedOutput.content, parsedOutput.builtInToolCalls, toolResults);
+
+                        // Re-prepare inputs with updated chat history
+                        status = servable->prepareInputs(executionContext);
+                        if (status != absl::OkStatus())
+                            return status;
+                        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "LLMCalculator  [Node: {}] Re-prepared inputs for continued inference", cc->NodeName());
+
+                        // Schedule new execution
+                        status = servable->scheduleExecution(executionContext);
+                        if (status != absl::OkStatus())
+                            return status;
+                        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "LLMCalculator  [Node: {}] Re-scheduled execution for built-in tool continuation", cc->NodeName());
+
+                        // Continue the loop to read the next generation result
+                        continue;
+                    }
+
+                    // No built-in tools to execute, break out of the loop
+                    break;
+                }
+
+                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "LLMCalculator  [Node: {}] Preparing final response", cc->NodeName());
+
+                auto status = servable->prepareCompleteResponse(executionContext);
                 if (status != absl::OkStatus())
                     return status;
                 SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "LLMCalculator  [Node: {}] Response prepared, sending it down the graph", cc->NodeName());
