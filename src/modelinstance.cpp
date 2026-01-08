@@ -254,7 +254,6 @@ static Status applyPreprocessingConfiguration(ov::preprocess::PrePostProcessor& 
         applyScaleOrMeanPreprocessing(preproc, preprocessingMean, false);
         OV_LOGGER("Applying scale configuration: {} for model: {}, version: {}", modelName, modelVersion);
         applyScaleOrMeanPreprocessing(preproc, preprocessingScale, true);
-
     } catch (const ov::Exception& e) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to configure input preprocessing configuration for model:{}; version:{}; from OpenVINO with error:{}",
             modelName,
@@ -413,7 +412,7 @@ Status ModelInstance::applyPreprocessing(const ModelConfig& config, std::shared_
         return status;
     }
 
-    status = applyPreprocessingConfiguration(preproc, config, model, modelName, modelVersion);  //there should be also condition
+    status = applyPreprocessingConfiguration(preproc, config, model, modelName, modelVersion);
     if (!status.ok()) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error during preprocessing configuration");
         return status;
