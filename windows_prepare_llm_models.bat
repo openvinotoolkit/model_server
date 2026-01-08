@@ -30,14 +30,15 @@ IF /I EXIST c:\opt\llm_testing (
 
 set "EMBEDDING_MODEL=thenlper/gte-small"
 set "RERANK_MODEL=BAAI/bge-reranker-base"
-set "TEXT_GENERATION_MODEL=facebook/opt-125m"
+set "TEXT_GENERATION_MODEL=HuggingFaceTB/SmolLM2-360M-Instruct"
+set "FACEBOOK_MODEL=facebook/opt-125m"
 set "VLM_MODEL=OpenGVLab/InternVL2-1B"
 set "TOKENIZER_FILE=openvino_tokenizer.bin"
 set "LEGACY_MODEL_FILE=1\model.bin"
 
 :: Models for tools testing. Only tokenizers are downloaded.
 set "QWEN3_MODEL=Qwen/Qwen3-8B"
-set "LLAMA3_MODEL=meta-llama/Llama-3.1-8B-Instruct"
+set "LLAMA3_MODEL=unsloth/Llama-3.1-8B-Instruct"
 set "HERMES3_MODEL=NousResearch/Hermes-3-Llama-3.1-8B"
 set "PHI4_MODEL=microsoft/Phi-4-mini-instruct"
 set "MISTRAL_MODEL=mistralai/Mistral-7B-Instruct-v0.3"
@@ -68,6 +69,18 @@ if exist "%~1\%TEXT_GENERATION_MODEL%\%TOKENIZER_FILE%" (
 )
 if not exist "%~1\%TEXT_GENERATION_MODEL%\%TOKENIZER_FILE%" (
   echo Models file %~1\%TEXT_GENERATION_MODEL%\%TOKENIZER_FILE% does not exists.
+  exit /b 1
+)
+
+if exist "%~1\%FACEBOOK_MODEL%\%TOKENIZER_FILE%" (
+  echo Models file %~1\%FACEBOOK_MODEL%\%TOKENIZER_FILE% exists. Skipping downloading models.
+) else (
+  echo Downloading text generation model to %~1\%FACEBOOK_MODEL% directory.
+  python demos\common\export_models\export_model.py text_generation --source_model "%FACEBOOK_MODEL%" --weight-format int8 --model_repository_path %~1
+  if !errorlevel! neq 0 exit /b !errorlevel!
+)
+if not exist "%~1\%FACEBOOK_MODEL%\%TOKENIZER_FILE%" (
+  echo Models file %~1\%FACEBOOK_MODEL%\%TOKENIZER_FILE% does not exist.
   exit /b 1
 )
 

@@ -20,7 +20,8 @@ if [ -z "$1" ]; then
   exit 1
 fi
 
-TEXT_GENERATION_MODEL="facebook/opt-125m"
+TEXT_GENERATION_MODEL="HuggingFaceTB/SmolLM2-360M-Instruct"
+FACEBOOK="facebook/opt-125m"
 TOKENIZER_FILE="openvino_tokenizer.bin"
 LEGACY_MODEL_FILE="1/model.bin"
 EMBEDDING_MODEL="thenlper/gte-small"
@@ -29,7 +30,7 @@ VLM_MODEL="OpenGVLab/InternVL2-1B"
 
 # Models for tools testing. Only tokenizers are downloaded.
 QWEN3_MODEL="Qwen/Qwen3-8B"
-LLAMA3_MODEL="meta-llama/Llama-3.1-8B-Instruct"
+LLAMA3_MODEL="unsloth/Llama-3.1-8B-Instruct"
 HERMES3_MODEL="NousResearch/Hermes-3-Llama-3.1-8B"
 PHI4_MODEL="microsoft/Phi-4-mini-instruct"
 MISTRAL_MODEL="mistralai/Mistral-7B-Instruct-v0.3"
@@ -41,12 +42,10 @@ if [ "$(python3 -c 'import sys; print(sys.version_info[1])')" -le "8" ]; then ec
 echo "Downloading LLM testing models to directory $1"
 export PIP_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cpu https://storage.openvinotoolkit.org/simple/wheels/nightly"
 if [ "$2" = "docker" ]; then
-    sed -i '/openvino~=/d' /openvino_tokenizers/pyproject.toml
-    python3 -m pip wheel -v --no-deps --wheel-dir wheel /openvino_tokenizers
-    python3 -m pip install $(find wheel -name 'openvino_tokenizers*.whl')
-    python3 -m pip install "optimum-intel"@git+https://github.com/huggingface/optimum-intel.git nncf sentence_transformers==3.1.1
+    export PATH=$PATH:/opt/intel/openvino/python/bin
+    python3 -m pip install "optimum-intel"@git+https://github.com/huggingface/optimum-intel.git nncf sentence_transformers einops timm==1.0.22 sentencepiece
 else
-    python3.10 -m venv .venv
+    python3 -m venv .venv
     . .venv/bin/activate
     pip3 install -U pip
     pip3 install -U -r demos/common/export_models/requirements.txt
@@ -64,9 +63,19 @@ if [ ! -f "$1/$TEXT_GENERATION_MODEL/$TOKENIZER_FILE" ]; then
   exit 1
 fi
 
-if [ ! -f "$1/$TEXT_GENERATION_MODEL/chat_template.jinja" ]; then
-    echo "Copying dummy chat template to $TEXT_GENERATION_MODEL model directory."
-    cp src/test/llm/dummy_facebook_template.jinja "$1/$TEXT_GENERATION_MODEL/chat_template.jinja"
+if [ -f "$1/$FACEBOOK/$TOKENIZER_FILE" ]; then
+  echo "Models file $1/$FACEBOOK/$TOKENIZER_FILE exists. Skipping downloading models."
+else
+  python3 demos/common/export_models/export_model.py text_generation --source_model "$FACEBOOK" --weight-format int8 --model_repository_path $1
+fi
+if [ ! -f "$1/$FACEBOOK/$TOKENIZER_FILE" ]; then
+  echo "[ERROR] Models file $1/$FACEBOOK/$TOKENIZER_FILE does not exist."
+  exit 1
+fi
+
+if [ ! -f "$1/$FACEBOOK/chat_template.jinja" ]; then
+    echo "Copying dummy chat template to $FACEBOOK model directory."
+    cp src/test/llm/dummy_facebook_template.jinja "$1/$FACEBOOK/chat_template.jinja"
 fi
 
 if [ -f "$1/$VLM_MODEL/$TOKENIZER_FILE" ]; then
