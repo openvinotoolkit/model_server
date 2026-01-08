@@ -126,6 +126,7 @@ RUN dnf install -y -d6 \
             xz \
             python3-devel \ 
             python3.12 \
+            python3.12-devel \
             python3.12-pip \
             libicu-devel && \
             dnf clean all
@@ -276,7 +277,7 @@ COPY package.json /ovms/
 
 # change system python to 3.9 for first bazel call and or_tensorflow build
 # hadolint ignore=DL3059
-RUN alternatives --install /usr/bin/python3 python3 /usr/bin/python3.9 1; fi
+RUN alternatives --install /usr/bin/python3 python3 /usr/bin/python3.9 1
 
 # prebuild dependencies before copying sources
 RUN bazel build --jobs=$JOBS ${debug_bazel_flags} //:ovms_dependencies @com_google_googletest//:gtest
@@ -290,7 +291,7 @@ COPY src/ /ovms/src/
 RUN bazel build --jobs=$JOBS ${debug_bazel_flags} @org_tensorflow//tensorflow/core:framework
 
 # hadolint ignore=DL3059
-RUN alternatives --install /usr/bin/python3 python3 /usr/bin/python3.12 2; fi
+RUN alternatives --install /usr/bin/python3 python3 /usr/bin/python3.12 2
 
 # Sample CPU Extension
 WORKDIR /ovms/src/example/SampleCpuExtension/
@@ -422,7 +423,7 @@ RUN if [ -f /usr/bin/dnf ] ; then export DNF_TOOL=dnf ; echo -e "max_parallel_do
     fi ; \
     # For image with Python enabled install Python library
     if ! [[ $debug_bazel_flags == *"py_off"* ]]; then \
-        $DNF_TOOL install -y python3-libs python3.12 --setopt=install_weak_deps=0 --nodocs; \
+        $DNF_TOOL install -y python3-libs python3.12 python3.12-devel python3.12-pip --setopt=install_weak_deps=0 --nodocs; \
     fi ; \
     $DNF_TOOL install -y shadow-utils; \
     $DNF_TOOL clean all ; \
