@@ -223,5 +223,5 @@ const std::string DevstralToolParser::ParsingArgsStartTag = "[ARGS]";
 const std::string DevstralToolParser::ParsingToolCallsStartTag = "[TOOL_CALLS]";
 const std::string DevstralToolParser::ParsingEndTag = "</s>";
 const int64_t DevstralToolParser::argsTokenId = 32;  // [ARGS]
-const int64_t DevstralToolParser::botTokenId = 9;   // [TOOL_CALLS]
+const int64_t DevstralToolParser::botTokenId = 9;    // [TOOL_CALLS]
 }  // namespace ovms
