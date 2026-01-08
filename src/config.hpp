@@ -199,13 +199,13 @@ public:
          */
     const std::string& layout() const;
 
-     /**
+    /**
          * @brief Get means
          * 
          * @return const std::string&
          */
     const std::string& means() const;
-     /**
+    /**
          * @brief Get scales  
          * 
          * @return const std::string&

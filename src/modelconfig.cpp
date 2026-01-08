@@ -455,7 +455,7 @@ Status ModelConfig::parseFloatArrayOrValue(const std::string& str, float_vec_or_
 
     erase_spaces(upperCaseCommand);
 
-    if ((*upperCaseCommand.begin() == '[' && *upperCaseCommand.rbegin() == ']') || 
+    if ((*upperCaseCommand.begin() == '[' && *upperCaseCommand.rbegin() == ']') ||
         (*upperCaseCommand.begin() == '(' && *upperCaseCommand.rbegin() == ')')) {
         auto commandWithoutBraces = upperCaseCommand.substr(1, upperCaseCommand.size() - 2);
         std::vector<float> vals;
@@ -476,7 +476,7 @@ Status ModelConfig::parseFloatArrayOrValue(const std::string& str, float_vec_or_
 }
 
 Status ModelConfig::parseMean(const std::string& command) {
-   return parseFloatArrayOrValue(command, this->meanValues);
+    return parseFloatArrayOrValue(command, this->meanValues);
 }
 
 Status ModelConfig::parseScale(const std::string& command) {

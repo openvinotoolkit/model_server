@@ -240,7 +240,7 @@ static void applyScaleOrMeanPreprocessing(ov::preprocess::PrePostProcessor& prep
 
 static Status applyPreprocessingConfiguration(ov::preprocess::PrePostProcessor& preproc, const ModelConfig& config, std::shared_ptr<ov::Model>& model, const std::string& modelName, model_version_t modelVersion) {
     OV_LOGGER("ov::preprocess::PrePostProcessor& preproc, const ModelConfig& config, std::shared_ptr<ov::Model>& model");
-    
+
     try {
         ovms::float_vec_or_value_t preprocessingScale = config.getScales();
         ovms::float_vec_or_value_t preprocessingMean = config.getMeans();
@@ -249,12 +249,12 @@ static Status applyPreprocessingConfiguration(ov::preprocess::PrePostProcessor& 
         OV_LOGGER("Applying color format for model: {}, version: {}", modelName, modelVersion);
         preproc.input().tensor().set_color_format(colorFormat);
         preproc.input().preprocess().convert_color(colorFormat);
-        
+
         OV_LOGGER("Applying mean configuration: {} for model: {}, version: {}", modelName, modelVersion);
         applyScaleOrMeanPreprocessing(preproc, preprocessingMean, false);
         OV_LOGGER("Applying scale configuration: {} for model: {}, version: {}", modelName, modelVersion);
         applyScaleOrMeanPreprocessing(preproc, preprocessingScale, true);
-        
+
     } catch (const ov::Exception& e) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to configure input preprocessing configuration for model:{}; version:{}; from OpenVINO with error:{}",
             modelName,
@@ -401,7 +401,7 @@ static Status applyLayoutConfiguration(ov::preprocess::PrePostProcessor& preproc
     return StatusCode::OK;
 }
 
-Status ModelInstance::applyPreprocessing(const ModelConfig& config, std::shared_ptr<ov::Model>& model, const std::string& modelName, model_version_t modelVersion){
+Status ModelInstance::applyPreprocessing(const ModelConfig& config, std::shared_ptr<ov::Model>& model, const std::string& modelName, model_version_t modelVersion) {
     OV_LOGGER("ov::Model: {}, ov::preprocess::PrePostProcessor(ov::Model)", reinterpret_cast<void*>(model.get()));
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Applying preprocessing configuration");
     ov::preprocess::PrePostProcessor preproc(model);
@@ -413,7 +413,7 @@ Status ModelInstance::applyPreprocessing(const ModelConfig& config, std::shared_
         return status;
     }
 
-    status = applyPreprocessingConfiguration(preproc, config, model, modelName, modelVersion);//there should be also condition
+    status = applyPreprocessingConfiguration(preproc, config, model, modelName, modelVersion);  //there should be also condition
     if (!status.ok()) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error during preprocessing configuration");
         return status;

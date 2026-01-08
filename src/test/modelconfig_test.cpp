@@ -199,7 +199,7 @@ TEST(ModelConfig, parseLayoutParam_multi) {
 TEST(ModelConfig, parseMeanParameter) {
     using namespace ovms;
     ModelConfig config;
-    
+
     std::string valid_str1 = "[123.675,116.28,103.53]";
     std::string valid_str2 = "  [   0.0 , 255.0 ,128.5  ] ";
     std::string valid_str3 = "1.0";
@@ -229,7 +229,7 @@ TEST(ModelConfig, parseMeanParameter) {
 TEST(ModelConfig, parseScaleParameter) {
     using namespace ovms;
     ModelConfig config;
-    
+
     std::string valid_str1 = "[123.675,116.28,103.53]";
     std::string valid_str2 = "  [   0.0 , 255.0 ,128.5  ] ";
     std::string valid_str3 = "1.0";
@@ -259,7 +259,7 @@ TEST(ModelConfig, parseScaleParameter) {
 TEST(ModelConfig, parseColorFormatParameter) {
     using namespace ovms;
     ModelConfig config;
-    
+
     std::string valid_str1 = "RGB";
     std::string valid_str2 = "BGR";
     std::string valid_str3 = "GRAY";

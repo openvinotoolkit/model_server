@@ -202,17 +202,17 @@ private:
          */
     std::string customLoaderOptionsStr;
 
-      /**
+    /**
          * @brief meanValues mean preprocessing parameters  
          */
     float_vec_or_value_t meanValues = 0.0f;
 
-     /**
+    /**
          * @brief scaleValues scale preprocessing parameters  
          */
     float_vec_or_value_t scaleValues = 1.0f;
 
-     /**
+    /**
          * @brief colorFormat color format preprocessing parameter  
          */
     ov::preprocess::ColorFormat colorFormat = ov::preprocess::ColorFormat::RGB;
@@ -693,26 +693,25 @@ public:
          */
     Status parseMean(const std::string& command);
 
-     /**
+    /**
           * @brief Parses value from string and extracts scales info
           * 
           * @param string
           * 
           * @return status
           */
-     Status parseScale(const std::string& command);
+    Status parseScale(const std::string& command);
 
-     /**
+    /**
           * @brief Parses value from string and extracts color format
           * 
           * @param string
           * 
           * @return status
           */
-     Status parseColorFormat(const std::string& command);
+    Status parseColorFormat(const std::string& command);
 
-
-     /**
+    /**
           * @brief Parses value from string and extracts float value
           * 
           * @param string
@@ -720,9 +719,9 @@ public:
           * 
           * @return status
           */
-     Status parseFloat(const std::string& str, float& value);
+    Status parseFloat(const std::string& str, float& value);
 
-     /**
+    /**
           * @brief Parses value from string and extracts float value or array of float values
           * 
           * @param string
@@ -730,9 +729,9 @@ public:
           * 
           * @return status
           */
-     Status parseFloatArrayOrValue(const std::string& str, float_vec_or_value_t& values);
-     
-     /**
+    Status parseFloatArrayOrValue(const std::string& str, float_vec_or_value_t& values);
+
+    /**
           * @brief Parses value from string and extracts array of float values
           * 
           * @param string
@@ -740,7 +739,7 @@ public:
           * 
           * @return status
           */
-     Status parseFloatArray(const std::string& str, std::vector<float>& values);
+    Status parseFloatArray(const std::string& str, std::vector<float>& values);
 
     /**
          * @brief Returns true if any input shape specified in shapes map is in AUTO mode
@@ -862,7 +861,7 @@ public:
         this->layout = LayoutConfiguration();
     }
 
-     /**
+    /**
          * @brief Get the get scales
          * 
          * @return const float_vec_or_value_t& 
@@ -871,7 +870,7 @@ public:
         return this->scaleValues;
     }
 
-     /**
+    /**
          * @brief Get the get means
          * 
          * @return const float_vec_or_value_t& 
@@ -880,7 +879,7 @@ public:
         return this->meanValues;
     }
 
-         /**
+    /**
          * @brief Get the get color format
          * 
          * @return const ov::preprocess::ColorFormat& 

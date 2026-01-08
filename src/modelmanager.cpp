@@ -316,15 +316,15 @@ Status ModelManager::startFromConfig() {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Couldn't parse mean parameter");
         return status;
     }
-    
+
     status = modelConfig.parseScale(config.scales());
-    if (!status.ok()) { 
+    if (!status.ok()) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Couldn't parse scale parameter");
         return status;
     }
 
     status = modelConfig.parseColorFormat(config.colorFormat());
-    if (!status.ok()) { 
+    if (!status.ok()) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Couldn't parse color format parameter");
         return status;
     }
