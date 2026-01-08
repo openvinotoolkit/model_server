@@ -19,6 +19,9 @@
 #include <vector>
 
 #include <openvino/genai/visual_language/pipeline.hpp>
+#include <openvino/genai/visual_language/vision_encoder.hpp>
+#include <openvino/genai/visual_language/embeddings_model.hpp>
+#include <openvino/genai/visual_language/inputs_embedder.hpp>
 #include <openvino/openvino.hpp>
 
 #include <openvino/op/add.hpp>
@@ -117,7 +120,8 @@ Status VisualLanguageModelLegacyServableInitializer::initialize(std::shared_ptr<
     }
 
 //#define NEW_CONSTRUCTORS
-#define NEW_CONSTRUCTORS_V2
+//#define NEW_CONSTRUCTORS_V2
+#define NEW_CONSTRUCTORS_V3
 
     try {
 #ifdef NEW_CONSTRUCTORS
@@ -160,6 +164,20 @@ Status VisualLanguageModelLegacyServableInitializer::initialize(std::shared_ptr<
         SPDLOG_ERROR("Selecting Devices: Language: {}, Vision Embeddings: {}, Text Embeddings: {}", properties->device, vision_embeddings_device, text_embeddings_device);
         properties->pipeline = std::make_shared<ov::genai::VLMPipeline>(parsedModelsPath, compiledModelsMap, kv_pos.first, kv_pos.second, properties->pluginConfig);
 #elif defined(NEW_CONSTRUCTORS_V2)
+        ov::genai::DeviceMapping deviceMapping{
+            {"language", properties->device},
+            {"text_embeddings", nodeOptions.text_embeddings_device().empty() ? properties->device : nodeOptions.text_embeddings_device()},
+            {"vision_embeddings", nodeOptions.vision_embeddings_device().empty() ? properties->device : nodeOptions.vision_embeddings_device()}
+        };
+        properties->pipeline = std::make_shared<ov::genai::VLMPipeline>(parsedModelsPath, deviceMapping, properties->pluginConfig);
+#elif defined(NEW_CONSTRUCTORS_V3)
+        // Construct Vision Encoder
+        auto visionEncoder = std::make_shared<ov::genai::VisionEncoder>(parsedModelsPath, nodeOptions.vision_embeddings_device().empty() ? properties->device : nodeOptions.vision_embeddings_device(), properties->pluginConfig);
+        auto textEmbeddingsModel = std::make_shared<ov::genai::EmbeddingsModel>(parsedModelsPath, nodeOptions.text_embeddings_device().empty() ? properties->device : nodeOptions.text_embeddings_device(), properties->pluginConfig);
+        ov::genai::Tokenizer tokenizer(parsedModelsPath);
+
+        ov::genai::InputsEmbedder inputsEmbedder(tokenizer, visionEncoder, textEmbeddingsModel, parsedModelsPath);
+
         ov::genai::DeviceMapping deviceMapping{
             {"language", properties->device},
             {"text_embeddings", nodeOptions.text_embeddings_device().empty() ? properties->device : nodeOptions.text_embeddings_device()},
