@@ -21,20 +21,19 @@
 #include <vector>
 
 #include "src/port/rapidjson_document.hpp"
-
 #include "src/llm/io_processing/base_output_parser.hpp"
 #include "src/llm/io_processing/partial_json_builder.hpp"
 #include "src/llm/apis/tool_schema_wrapper.hpp"
 
 namespace ovms {
 class DevstralToolParser : public BaseOutputParser {
-    const int64_t argsTokenId;  // [ARGS]
-    const int64_t botTokenId;   // [TOOL_CALLS]
+    static const int64_t argsTokenId;  // [ARGS]
+    static const int64_t botTokenId;   // [TOOL_CALLS]
 
     // in streaming mode we can rely on tags in string format as tokens are not available
-    const std::string streamingParsingArgsStartTag = "[ARGS]";
-    const std::string streamingParsingToolCallsStartTag = "[TOOL_CALLS]";
-    const std::string streamingEndTag = "</s>";
+    static const std::string ParsingArgsStartTag;
+    static const std::string ParsingToolCallsStartTag;
+    static const std::string ParsingEndTag;
 
     enum InternalState {
         AWAITING_START_TAG,
@@ -54,22 +53,6 @@ public:
     DevstralToolParser() = delete;
     DevstralToolParser(ov::genai::Tokenizer& tokenizer, const ToolsSchemas_t& toolSchemas) :
         BaseOutputParser(tokenizer),
-        argsTokenId([&tokenizer, this]() {
-            // can not use streamingParsingArgsStartTag because object is not initialized yet
-            auto encoded = tokenizer.encode("[ARGS]", {{"add_special_tokens", false}}).input_ids;
-            if (encoded.get_shape()[0] != 1) {
-                throw std::runtime_error("[ARGS] must be a single token in the tokenizer vocabulary.");
-            }
-            return encoded.data<int64_t>()[0];
-        }()),
-        botTokenId([&tokenizer, this]() {
-            // can not use streamingParsingToolCallsStartTag because object is not initialized yet
-            auto encoded = tokenizer.encode("[TOOL_CALLS]", {{"add_special_tokens", false}}).input_ids;
-            if (encoded.get_shape()[0] != 1) {
-                throw std::runtime_error("[TOOL_CALLS] must be a single token in the tokenizer vocabulary.");
-            }
-            return encoded.data<int64_t>()[0];
-        }()),
         toolSchemas(toolSchemas) {}
 
     void parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) override;
@@ -77,7 +60,7 @@ public:
     rapidjson::Document parseContentChunk();
     rapidjson::Document wrapCombinedDelta(ToolCall& toolCall);
     const std::vector<std::string>& getParsingStartTags() const override {
-        static const std::vector<std::string> toolCallStartTags{streamingParsingToolCallsStartTag};
+        static const std::vector<std::string> toolCallStartTags{ParsingToolCallsStartTag};
         return toolCallStartTags;
     }
     const std::vector<std::string>& getSpecialParsingStartTags() const override {
@@ -94,4 +77,5 @@ public:
         return true;
     }
 };
+
 }  // namespace ovms

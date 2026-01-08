@@ -20,11 +20,10 @@
 #include <regex>
 
 #include "src/port/rapidjson_document.hpp"
-
-#include "../../../logging.hpp"
-#include "tool_parser.hpp"
-#include "../utils.hpp"
+#include "src/logging.hpp"
+#include "src/llm/io_processing/utils.hpp"
 #include "src/stringutils.hpp"
+#include "tool_parser.hpp"
 
 namespace ovms {
 
@@ -146,27 +145,25 @@ std::optional<rapidjson::Document> DevstralToolParser::parseChunk(const std::str
     */
 
     this->streamContent += chunk;
-    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Chunk content: '{}', StreamContent: '{}', State: {}", chunk, this->streamContent, std::to_string(this->internalState));
+    SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Chunk content: '{}', StreamContent: '{}', State: {}", chunk, this->streamContent, std::to_string(this->internalState));
     if (this->internalState == AWAITING_START_TAG) {
         // if chunk ends with </s> we need to remove it and return parsed content immediately
-        if (chunk.size() >= this->streamingEndTag.size() &&
-            chunk.substr(chunk.size() - this->streamingEndTag.size()) == this->streamingEndTag) {
+        if (chunk.size() >= this->ParsingEndTag.size() &&
+            chunk.substr(chunk.size() - this->ParsingEndTag.size()) == this->ParsingEndTag) {
             // remove </s> from streamContent
-            this->streamContent = this->streamContent.substr(0, this->streamContent.size() - this->streamingEndTag.size());
+            this->streamContent = this->streamContent.substr(0, this->streamContent.size() - this->ParsingEndTag.size());
             SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Found end tag in chunk while awaiting start tag. Returning content chunk.");
             return parseContentChunk();
         }
-        size_t pos = chunk.find(this->streamingParsingToolCallsStartTag);
+        size_t pos = chunk.find(this->ParsingToolCallsStartTag);
         if (pos != std::string::npos) {
             this->internalState = AWAITING_ARGS_TAG;
-            std::cout << "Found [TOOL_CALLS] tag in chunk."
-                      << " Current state: " << this->internalState << std::endl;
             this->toolCallIndex++;
             if (pos == 0) {
                 this->streamContent.clear();
                 return std::nullopt;
             } else {
-                this->streamContent = this->streamContent.substr(pos + this->streamingParsingToolCallsStartTag.length());  // "[TOOLS_CALLS]" length is 13
+                this->streamContent = this->streamContent.substr(pos + this->ParsingToolCallsStartTag.length());  // "[TOOLS_CALLS]" length is 13
                 return parseContentChunk();
             }
         } else {
@@ -174,19 +171,18 @@ std::optional<rapidjson::Document> DevstralToolParser::parseChunk(const std::str
         }
     }
     if (this->internalState == AWAITING_ARGS_TAG) {
-        // check if [ARGS] tag is present in the chunk and update state accordingly
-        size_t pos = this->streamContent.find(this->streamingParsingArgsStartTag);
+        size_t pos = this->streamContent.find(this->ParsingArgsStartTag);
         if (pos != std::string::npos) {
             this->internalState = PROCESSING_ARGS;
             this->toolName = this->streamContent.substr(0, pos);
-            this->streamContent = this->streamContent.substr(pos + this->streamingParsingArgsStartTag.length());
+            this->streamContent = this->streamContent.substr(pos + this->ParsingArgsStartTag.length());
             // check if chunk ends with </s>, if yes, we need return full tool call delta
-            if (this->streamContent.size() >= this->streamingEndTag.size() &&
-                this->streamContent.substr(this->streamContent.size() - this->streamingEndTag.size()) == this->streamingEndTag) {
+            if (this->streamContent.size() >= this->ParsingEndTag.size() &&
+                this->streamContent.substr(this->streamContent.size() - this->ParsingEndTag.size()) == this->ParsingEndTag) {
                 // remove </s> from streamContent
                 ToolCall toolCall;
                 toolCall.name = this->toolName;
-                this->streamContent = this->streamContent.substr(0, this->streamContent.size() - this->streamingEndTag.size());
+                this->streamContent = this->streamContent.substr(0, this->streamContent.size() - this->ParsingEndTag.size());
                 if (!this->streamContent.empty()) {
                     toolCall.arguments = this->streamContent;
                 } else {
@@ -202,7 +198,7 @@ std::optional<rapidjson::Document> DevstralToolParser::parseChunk(const std::str
         }
     }
     if (this->internalState == PROCESSING_ARGS) {
-        size_t endPos = this->streamContent.find(this->streamingEndTag);
+        size_t endPos = this->streamContent.find(this->ParsingEndTag);
         std::string arguments;
         if (endPos != std::string::npos) {
             arguments = this->streamContent.substr(0, endPos);
@@ -222,4 +218,10 @@ std::optional<rapidjson::Document> DevstralToolParser::parseChunk(const std::str
     }
     return std::nullopt;
 }
+// Static member definitions
+const std::string DevstralToolParser::ParsingArgsStartTag = "[ARGS]";
+const std::string DevstralToolParser::ParsingToolCallsStartTag = "[TOOL_CALLS]";
+const std::string DevstralToolParser::ParsingEndTag = "</s>";
+const int64_t DevstralToolParser::argsTokenId = 32;  // [ARGS]
+const int64_t DevstralToolParser::botTokenId = 9;   // [TOOL_CALLS]
 }  // namespace ovms

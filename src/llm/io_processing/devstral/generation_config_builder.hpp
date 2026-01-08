@@ -19,7 +19,7 @@
 namespace ovms {
 
 /*
- * Phi4GenerationConfigBuilder extends BaseGenerationConfigBuilder to provide specific configuration for Phi-4 model.
+ * DevstralGenerationConfigBuilder extends BaseGenerationConfigBuilder to provide specific configuration for Devstral model.
  * It overrides the parseConfigFromRequest method to set tool guided generation config.
  */
 class DevstralGenerationConfigBuilder : public BaseGenerationConfigBuilder {
