@@ -407,7 +407,12 @@ Status ModelConfig::parseLayoutParameter(const std::string& command) {
 
 Status ModelConfig::parseFloat(const std::string& str, float& value) {
     try {
-        value = std::stof(str);
+        size_t processCount = 0;
+        value = std::stof(str, &processCount);
+        if (processCount != str.size()) {
+            SPDLOG_WARN("Parameter contains invalid float value: {}", str);
+            return StatusCode::FLOAT_WRONG_FORMAT;
+        }
     } catch (const std::invalid_argument&) {
         SPDLOG_WARN("Parameter contains invalid float value: {}", str);
         return StatusCode::FLOAT_WRONG_FORMAT;
@@ -450,7 +455,8 @@ Status ModelConfig::parseFloatArrayOrValue(const std::string& str, float_vec_or_
 
     erase_spaces(upperCaseCommand);
 
-    if (*upperCaseCommand.begin() == '{' && *upperCaseCommand.rbegin() == '}') {
+    if ((*upperCaseCommand.begin() == '[' && *upperCaseCommand.rbegin() == ']') || 
+        (*upperCaseCommand.begin() == '(' && *upperCaseCommand.rbegin() == ')')) {
         auto commandWithoutBraces = upperCaseCommand.substr(1, upperCaseCommand.size() - 2);
         std::vector<float> vals;
         auto status = parseFloatArray(commandWithoutBraces, vals);

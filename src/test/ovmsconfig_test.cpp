@@ -2433,9 +2433,9 @@ TEST(OvmsConfigTest, positiveSingle) {
         "--layout",
         "nchw:nhwc",
         "--mean",
-        "{123.675,116.28,103.53}",
+        "[123.675,116.28,103.53]",
         "--scale",
-        "{58.395,57.12,57.375}",
+        "[58.395,57.12,57.375]",
         "--color_format",
         "BGR",
         "--model_version_policy",
@@ -2483,8 +2483,8 @@ TEST(OvmsConfigTest, positiveSingle) {
     EXPECT_EQ(config.batchSize(), "(3:5)");
     EXPECT_EQ(config.shape(), "(3:5,5:6)");
     EXPECT_EQ(config.layout(), "nchw:nhwc");
-    EXPECT_EQ(config.means(), "{123.675,116.28,103.53}");
-    EXPECT_EQ(config.scales(), "{58.395,57.12,57.375}");
+    EXPECT_EQ(config.means(), "[123.675,116.28,103.53]");
+    EXPECT_EQ(config.scales(), "[58.395,57.12,57.375]");
     EXPECT_EQ(config.colorFormat(), "BGR");
     EXPECT_EQ(config.modelVersionPolicy(), "setting");
     EXPECT_EQ(config.nireq(), 2);

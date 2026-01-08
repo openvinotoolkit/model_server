@@ -200,9 +200,10 @@ TEST(ModelConfig, parseMeanParameter) {
     using namespace ovms;
     ModelConfig config;
     
-    std::string valid_str1 = "{123.675,116.28,103.53}";
-    std::string valid_str2 = "  {   0.0 , 255.0 ,128.5  } ";
+    std::string valid_str1 = "[123.675,116.28,103.53]";
+    std::string valid_str2 = "  [   0.0 , 255.0 ,128.5  ] ";
     std::string valid_str3 = "1.0";
+    std::string valid_str4 = "(123.675,116.28,103.53)";
 
     ASSERT_EQ(config.parseMean(valid_str1), StatusCode::OK);
     EXPECT_EQ(std::get<std::vector<float>>(config.getMeans()), (std::vector<float>{123.675f, 116.28f, 103.53f}));
@@ -210,22 +211,29 @@ TEST(ModelConfig, parseMeanParameter) {
     EXPECT_EQ(std::get<std::vector<float>>(config.getMeans()), (std::vector<float>{0.0f, 255.0f, 128.5f}));
     ASSERT_EQ(config.parseMean(valid_str3), StatusCode::OK);
     EXPECT_EQ(std::get<float>(config.getMeans()), 1.0f);
+    ASSERT_EQ(config.parseMean(valid_str4), StatusCode::OK);
+    EXPECT_EQ(std::get<std::vector<float>>(config.getMeans()), (std::vector<float>{123.675f, 116.28f, 103.53f}));
 
-    std::string invalid_str1 = "{123.675;116.28;103.53}";
-    std::string invalid_str2 = "{123.675,abc,103.53}";
+    std::string invalid_str1 = "[123.675;116.28;103.53]";
+    std::string invalid_str2 = "[123.675,abc,103.53]";
     std::string invalid_str3 = "one.point.zero";
+    std::string invalid_str4 = "{123.675,116.28,103.53}";
+    std::string invalid_str5 = "123.675,116.28,103.53";
     ASSERT_EQ(config.parseMean(invalid_str1), StatusCode::FLOAT_WRONG_FORMAT);
     ASSERT_EQ(config.parseMean(invalid_str2), StatusCode::FLOAT_WRONG_FORMAT);
     ASSERT_EQ(config.parseMean(invalid_str3), StatusCode::FLOAT_WRONG_FORMAT);
+    ASSERT_EQ(config.parseMean(invalid_str4), StatusCode::FLOAT_WRONG_FORMAT);
+    ASSERT_EQ(config.parseMean(invalid_str5), StatusCode::FLOAT_WRONG_FORMAT);
 }
 
 TEST(ModelConfig, parseScaleParameter) {
     using namespace ovms;
     ModelConfig config;
     
-    std::string valid_str1 = "{123.675,116.28,103.53}";
-    std::string valid_str2 = "  {   0.0 , 255.0 ,128.5  } ";
+    std::string valid_str1 = "[123.675,116.28,103.53]";
+    std::string valid_str2 = "  [   0.0 , 255.0 ,128.5  ] ";
     std::string valid_str3 = "1.0";
+    std::string valid_str4 = "(123.675,116.28,103.53)";
 
     ASSERT_EQ(config.parseScale(valid_str1), StatusCode::OK);
     EXPECT_EQ(std::get<std::vector<float>>(config.getScales()), (std::vector<float>{123.675f, 116.28f, 103.53f}));
@@ -233,12 +241,19 @@ TEST(ModelConfig, parseScaleParameter) {
     EXPECT_EQ((std::get<std::vector<float>>(config.getScales())), (std::vector<float>{0.0f, 255.0f, 128.5f}));
     ASSERT_EQ(config.parseScale(valid_str3), StatusCode::OK);
     EXPECT_EQ(std::get<float>(config.getScales()), 1.0f);
-    std::string invalid_str1 = "{123.675;116.28;103.53}";
-    std::string invalid_str2 = "{123.675,abc,103.53}";
+    ASSERT_EQ(config.parseScale(valid_str4), StatusCode::OK);
+    EXPECT_EQ(std::get<std::vector<float>>(config.getScales()), (std::vector<float>{123.675f, 116.28f, 103.53f}));
+
+    std::string invalid_str1 = "[123.675;116.28;103.53]";
+    std::string invalid_str2 = "[123.675,abc,103.53]";
     std::string invalid_str3 = "one.point.zero";
+    std::string invalid_str4 = "{123.675,116.28,103.53}";
+    std::string invalid_str5 = "123.675,116.28,103.53";
     ASSERT_EQ(config.parseScale(invalid_str1), StatusCode::FLOAT_WRONG_FORMAT);
     ASSERT_EQ(config.parseScale(invalid_str2), StatusCode::FLOAT_WRONG_FORMAT);
     ASSERT_EQ(config.parseScale(invalid_str3), StatusCode::FLOAT_WRONG_FORMAT);
+    ASSERT_EQ(config.parseScale(invalid_str4), StatusCode::FLOAT_WRONG_FORMAT);
+    ASSERT_EQ(config.parseScale(invalid_str5), StatusCode::FLOAT_WRONG_FORMAT);
 }
 
 TEST(ModelConfig, parseColorFormatParameter) {
