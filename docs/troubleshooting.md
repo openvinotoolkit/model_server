@@ -2,7 +2,9 @@
 
 ## Introduction
 This document gives information about troubleshooting the following issues while using the OpenVINO&trade; Model Server:
-* [Model Import Issues](#model-import-issues)
+* [Model Import Issues for generative models](#model-import-issues-for-generative-models)
+* [Accuracy in agentic use cases with tools calling](#accuracy-in-agentic-use-cases-with-tools-calling)
+* [Model Import Issues for classic models](#model-import-issues-for-classic-models)
 * [Client Request Issues](#client-request-issues)
 * [Resource Allocation](#resource-allocation)
 * [Usage Monitoring](#usage-monitoring)
@@ -11,14 +13,42 @@ This document gives information about troubleshooting the following issues while
 * [Model Cache Issues](#model-cache-issues)
 
 
-## Model Import Issues
+## Model Import Issues for Generative Models
+
+On some Linux systems, there might be low number of allowed number of open files. It can results in the error in logs `too many open files` during model initialization or during the inference execution.
+In such case, the limit can be lifted using `ulimit` command or docker parameter. For example:
+```
+docker run --ulimit nofile=262144:262144  ....
+```
+For baremetal deployment, use the command before staring ovms:
+```
+ulimit -n 262144
+```
+
+
+While loading the models from HuggingFace hub, make sure the model is converted to OpenVINO format using optimum-cli tool. Example of such models are in https://huggingface.co/OpenVINO.
+
+Pulling the models from Hugging Face hub in China, requires pointing to the local mirror. It can be done using environment variable: `HF_ENDPOINT=https://modelscope.cn` or `HF_ENDPOINT=https://hf-mirror.com`.
+
+
+
+Models in Pytorch format need to be [exported](../demos/common/export_models/README.md) or converted in runtime using [ovms with embedded optimum-cli](./pull_optimum_cli.md). 
+It is recommended to get started with [tested models](https://openvinotoolkit.github.io/openvino.genai/docs/supported-models)
+
+
+## Accuracy in Agentic Use Cases with Tools Calling
+
+While using agentic models with tools calling capabilities, it is important to set proper tools parser and reasoning parser in the runtime parameters. For some models like, qwen3-coder, gpt-oss-20b, mistral, it is important to use correct, tunned chat template. Check the [agentic demo](../demos/continuous_batching/agentic_ai/README.md)
+
+
+
+## Model Import Issues for Classic Models
 
 OpenVINO&trade; Model Server loads all defined models versions according to set [version policy](./model_version_policy.md). A model version is represented by a numerical directory in a model path, containing OpenVINO model files with .bin and .xml extensions.
 
 When a new model version is detected, the server loads the model files and starts serving a new model version. This operation might fail for the following reasons :
 - There is a problem with accessing model files (due to network connectivity issues to the remote storage or insufficient permissions).
 - Model files are malformed and can not be imported by the OpenVINO&trade; Runtime.
-- Model requires a custom CPU extension.
 
 
 Below are examples of incorrect structure :
@@ -59,7 +89,7 @@ The possible issues could be :
 * Incorrectly serialized data on the client-side.
 
 ## Resource Allocation
-- RAM consumption might depend on the size and volume of the models configured for serving. It should be measured experimentally, however it can be estimated that each model will consume RAM size equal to the size of the model weights file (.bin file).
+- RAM consumption might depend on the size and volume of the models configured for serving. It should be measured experimentally, however it can be estimated that each model will consume at least RAM size equal to the size of the model weights file (.bin file).
 
 - Every version of the model enabled in the version policy creates a separate OpenVINO&trade; Runtime `ov::Model` and `ov::CompiledModel` object. By default, only the latest version is enabled.
 
