@@ -27,10 +27,7 @@
 #include <vector>
 
 #include <openvino/openvino.hpp>
-#pragma warning(push)
-#pragma warning(disable : 6313)
-#include <rapidjson/document.h>
-#pragma warning(pop)
+#include "src/port/rapidjson_document.hpp"
 #include <spdlog/spdlog.h>
 #include <sys/stat.h>
 
