@@ -28,7 +28,7 @@ ulimit -n 262144
 
 While loading the models from HuggingFace hub, make sure the model is converted to OpenVINO format using optimum-cli tool. Example of such models are in https://huggingface.co/OpenVINO.
 
-Pull the models from Hugging Face hub in China, requires pointing to the local mirror. It can be done using environment variable: `HF_ENDPOINT=https://modelscope.cn` or `HF_ENDPOINT=https://hf-mirror.com`.
+Pulling the models from Hugging Face hub in China, requires pointing to the local mirror. It can be done using environment variable: `HF_ENDPOINT=https://modelscope.cn` or `HF_ENDPOINT=https://hf-mirror.com`.
 
 
 
