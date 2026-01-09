@@ -13,7 +13,7 @@ This document gives information about troubleshooting the following issues while
 * [Model Cache Issues](#model-cache-issues)
 
 
-## Model Import Issues for generative models
+## Model Import Issues for Generative Models
 
 On some Linux systems, there might be low number of allowed number of open files. It can results in the error in logs `too many open files` during model initialization or during the inference execution.
 In such case, the limit can be lifted using `ulimit` command or docker parameter. For example:
@@ -36,13 +36,13 @@ Models in Pytorch format need to be [exported](../demos/common/export_models/REA
 It is recommended to get started with [tested models](https://openvinotoolkit.github.io/openvino.genai/docs/supported-models)
 
 
-## Accuracy in agentic use cases with tools calling
+## Accuracy in Agentic Use Cases with Tools Calling
 
 While using agentic models with tools calling capabilities, it is important to set proper tools parser and reasoning parser in the runtime parameters. For some models like, qwen3-coder, gpt-oss-20b, mistral, it is important to use correct, tunned chat template. Check the [agentic demo](../demos/continuous_batching/agentic_ai/README.md)
 
 
 
-## Model Import Issues for classic models
+## Model Import Issues for Classic Models
 
 OpenVINO&trade; Model Server loads all defined models versions according to set [version policy](./model_version_policy.md). A model version is represented by a numerical directory in a model path, containing OpenVINO model files with .bin and .xml extensions.
 
