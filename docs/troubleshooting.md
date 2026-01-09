@@ -2,8 +2,9 @@
 
 ## Introduction
 This document gives information about troubleshooting the following issues while using the OpenVINO&trade; Model Server:
-* [Model Import Issues for generative models](#model-import-issues-genai)
-* [Model Import Issues for classic models](#model-import-issues)
+* [Model Import Issues for generative models](#model-import-issues-for-generative-models)
+* [Accuracy in agentic use cases with tools calling](#accuracy-in-agentic-use-cases-with-tools-calling)
+* [Model Import Issues for classic models](#model-import-issues-for-classic-models)
 * [Client Request Issues](#client-request-issues)
 * [Resource Allocation](#resource-allocation)
 * [Usage Monitoring](#usage-monitoring)
