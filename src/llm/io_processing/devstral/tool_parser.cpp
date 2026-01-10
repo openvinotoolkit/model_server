@@ -211,7 +211,7 @@ std::optional<rapidjson::Document> DevstralToolParser::parseChunk(const std::str
         }
 
         ToolCall toolCall;
-        if (!arguments.empty()) 
+        if (!arguments.empty())
             toolCall.arguments = arguments;
         else
             toolCall.arguments = "{}";

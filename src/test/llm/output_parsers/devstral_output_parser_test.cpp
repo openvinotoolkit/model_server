@@ -120,7 +120,6 @@ TEST_F(DevstralOutputParserTest, ParseToolCallOutputWithSingleToolCall_EmptyArgu
     EXPECT_EQ(parsedOutput.toolCalls[0].id.empty(), false);
 }
 
-
 TEST_F(DevstralOutputParserTest, ParseToolCallOutputWithContentAndNoToolCalls) {
     std::string input = "This is a regular model response without tool calls.";
     auto generatedTensor = devstralTokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
@@ -288,7 +287,7 @@ TEST_F(DevstralOutputParserTest, EmptyArgumentsStreaming) {
     };
     ToolsSchemas_t tools_schemas = {
         {"list_tools", ToolSchemaWrapper{}}};
-    
+
     int64_t chunkIteration = 0;
     for (const auto& [chunk, finishReason, expectedDelta] : chunkToDeltaVec) {
         chunkIteration++;
