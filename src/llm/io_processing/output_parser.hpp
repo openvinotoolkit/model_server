@@ -87,8 +87,13 @@ public:
     std::optional<rapidjson::Document> parseChunk(const std::string& chunkResponse, const bool toolsAvailable, ov::genai::GenerationFinishReason finishReason);
 
     bool requiresStreamingWithSpecialTokens() const {
-        return (reasoningParser && reasoningParser->requiresStreamingWithSpecialTokens()) &&
-               (toolParser && toolParser->requiresStreamingWithSpecialTokens());
+        if (!reasoningParser) {
+            return toolParser && toolParser->requiresStreamingWithSpecialTokens();
+        } else if (!toolParser) {
+            return reasoningParser && reasoningParser->requiresStreamingWithSpecialTokens();
+        } else {
+            return (reasoningParser && reasoningParser->requiresStreamingWithSpecialTokens()) && (toolParser && toolParser->requiresStreamingWithSpecialTokens());
+        }
     }
 };
 }  // namespace ovms
