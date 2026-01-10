@@ -18,9 +18,9 @@
 #include <string>
 #include <vector>
 
-#include "../../../llm/io_processing/base_output_parser.hpp"
-#include "../../../llm/io_processing/output_parser.hpp"
-#include "../../platform_utils.hpp"
+#include "src/llm/io_processing/base_output_parser.hpp"
+#include "src/llm/io_processing/output_parser.hpp"
+#include "test/platform_utils.hpp"
 
 using namespace ovms;
 
@@ -81,7 +81,7 @@ protected:
 };
 
 TEST_F(DevstralOutputParserTest, ParseToolCallOutputWithSingleToolCall) {
-    std::string input = "[TOOL_CALLS]example_tool[ARGS]{\"arg1\":\"value1\",\"arg2\":42}</s>";
+    std::string input = "[TOOL_CALLS]example_tool[ARGS]{\"arg1\":\"value1 with new line \\n and \"quote\" and slash \\ \",\"arg2\":42}</s>";
     std::string testInput = input;
     auto generatedTensor = devstralTokenizer->encode(testInput, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
@@ -90,22 +90,36 @@ TEST_F(DevstralOutputParserTest, ParseToolCallOutputWithSingleToolCall) {
     EXPECT_EQ(parsedOutput.reasoning, "");
     ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
     EXPECT_EQ(parsedOutput.toolCalls[0].name, "example_tool");
-    EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{\"arg1\":\"value1\",\"arg2\":42}");
+    EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{\"arg1\":\"value1 with new line \\n and \"quote\" and slash \\ \",\"arg2\":42}");
     EXPECT_EQ(parsedOutput.toolCalls[0].id.empty(), false);
 }
 
 TEST_F(DevstralOutputParserTest, ParseToolCallOutputWithSingleToolCall_MissingEndTag) {
-    std::string testInput = "Reasoninig before tool call [TOOL_CALLS]example_tool[ARGS]{\"arg1\":\"value1\",\"arg2\":42}";
+    std::string testInput = "Reasoning before tool call [TOOL_CALLS] example_tool [ARGS]{\"arg1\":\"value1\",\"arg2\":42}";
     auto generatedTensor = devstralTokenizer->encode(testInput, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
     ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
-    EXPECT_EQ(parsedOutput.content, "Reasoninig before tool call ");
+    EXPECT_EQ(parsedOutput.content, "Reasoning before tool call ");
     EXPECT_EQ(parsedOutput.reasoning, "");
     ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
     EXPECT_EQ(parsedOutput.toolCalls[0].name, "example_tool");
     EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{\"arg1\":\"value1\",\"arg2\":42}");
     EXPECT_EQ(parsedOutput.toolCalls[0].id.empty(), false);
 }
+
+TEST_F(DevstralOutputParserTest, ParseToolCallOutputWithSingleToolCall_EmptyArguments) {
+    std::string testInput = "Reasoning before tool call [TOOL_CALLS]example_tool[ARGS]</s>";
+    auto generatedTensor = devstralTokenizer->encode(testInput, ov::genai::add_special_tokens(false)).input_ids;
+    std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+    ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
+    EXPECT_EQ(parsedOutput.content, "Reasoning before tool call ");
+    EXPECT_EQ(parsedOutput.reasoning, "");
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
+    EXPECT_EQ(parsedOutput.toolCalls[0].name, "example_tool");
+    EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{}");
+    EXPECT_EQ(parsedOutput.toolCalls[0].id.empty(), false);
+}
+
 
 TEST_F(DevstralOutputParserTest, ParseToolCallOutputWithContentAndNoToolCalls) {
     std::string input = "This is a regular model response without tool calls.";
@@ -118,11 +132,11 @@ TEST_F(DevstralOutputParserTest, ParseToolCallOutputWithContentAndNoToolCalls) {
 }
 
 TEST_F(DevstralOutputParserTest, ParseToolCallOutputWithContentAndSingleToolCall) {
-    std::string testInput = "Reasoninig before tool call [TOOL_CALLS]example_tool[ARGS]{\"arg1\":\"value1\",\"arg2\":42}</s>";
+    std::string testInput = "Reasoning before tool call [TOOL_CALLS]example_tool[ARGS]{\"arg1\":\"value1\",\"arg2\":42}</s>";
     auto generatedTensor = devstralTokenizer->encode(testInput, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
     ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
-    EXPECT_EQ(parsedOutput.content, "Reasoninig before tool call ");
+    EXPECT_EQ(parsedOutput.content, "Reasoning before tool call ");
     EXPECT_EQ(parsedOutput.reasoning, "");
     ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
     EXPECT_EQ(parsedOutput.toolCalls[0].name, "example_tool");
@@ -131,11 +145,11 @@ TEST_F(DevstralOutputParserTest, ParseToolCallOutputWithContentAndSingleToolCall
 }
 
 TEST_F(DevstralOutputParserTest, ParseToolCallOutputWithInvalidOrder) {
-    std::string testInput = "Reasoninig before tool call [ARGS]example_tool[TOOL_CALLS]{\"arg1\":\"value1\",\"arg2\":42}</s>";
+    std::string testInput = "Reasoning before tool call [ARGS]example_tool[TOOL_CALLS]{\"arg1\":\"value1\",\"arg2\":42}</s>";
     auto generatedTensor = devstralTokenizer->encode(testInput, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
     ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
-    EXPECT_EQ(parsedOutput.content, "Reasoninig before tool call example_tool{\"arg1\":\"value1\",\"arg2\":42}");
+    EXPECT_EQ(parsedOutput.content, "Reasoning before tool call example_tool{\"arg1\":\"value1\",\"arg2\":42}");
     EXPECT_EQ(parsedOutput.reasoning, "");
     ASSERT_EQ(parsedOutput.toolCalls.size(), 0);
 }
@@ -187,13 +201,15 @@ TEST_F(DevstralOutputParserTest, HolisticStreaming) {
         {"Reasoning", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":"Reasoning"}})"},
         {"example", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":"example"}})"},
         {"[TOOL_CALLS]", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {"get", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {" get", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"_", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"weather", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {"[ARGS]", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"id":"XXXXXXXXX","type":"function","index":0,"function":{"name":"get_weather"}}]}})"},
+        {" [ARGS]", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"id":"XXXXXXXXX","type":"function","index":0,"function":{"name":"get_weather"}}]}})"},
         {"{\"", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{\""}}]}})"},
         {"city\":", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"city\":"}}]}})"},
         {" \"Paris", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":" \"Paris"}}]}})"},
+        {" \"capital of ", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":" \"capital of "}}]}})"},
+        {"art\\vine \\n", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"art\\vine \\n"}}]}})"},
         // Last chunk is added in the for loop below
     };
     ToolsSchemas_t tools_schemas = {
@@ -255,6 +271,71 @@ TEST_F(DevstralOutputParserTest, HolisticStreaming) {
             } else {
                 FAIL() << "Mismatch for chunk: [" << chunk << "] " << chunkIteration;
             }
+        }
+    }
+}
+
+TEST_F(DevstralOutputParserTest, EmptyArgumentsStreaming) {
+    std::vector<std::tuple<std::string, ov::genai::GenerationFinishReason, std::optional<std::string>>> chunkToDeltaVec{
+        // Tool call phase
+        // Starting first tool. Collecting chunk until full name is received. Don't return until then.
+        {"[TOOL_CALLS]", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"list", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"_", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"tools", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"[ARGS]", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"id":"XXXXXXXXX","type":"function","index":0,"function":{"name":"list_tools"}}]}})"},
+        {"</s>", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{}"}}]}})"},
+    };
+    ToolsSchemas_t tools_schemas = {
+        {"list_tools", ToolSchemaWrapper{}}};
+    
+    int64_t chunkIteration = 0;
+    for (const auto& [chunk, finishReason, expectedDelta] : chunkToDeltaVec) {
+        chunkIteration++;
+        std::optional<rapidjson::Document> doc = outputParserWithRegularToolParsing->parseChunk(chunk, true, finishReason);
+        if (!expectedDelta.has_value() && !doc.has_value()) {
+            continue;  // Both are nullopt, OK
+        }
+        if (expectedDelta.has_value() && doc.has_value()) {
+            rapidjson::StringBuffer buffer;
+            rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+            doc->Accept(writer);
+            std::string docStr = buffer.GetString();
+            // If both strings contain "id":"...", compare id values by length and alphanumeric, else compare whole strings
+            std::string expected = expectedDelta.value();
+            std::string idKey = "\"id\":\"";
+            auto docIdPos = docStr.find(idKey);
+            auto expectedIdPos = expected.find(idKey);
+            if (docIdPos != std::string::npos && expectedIdPos != std::string::npos) {
+                auto docIdStart = docIdPos + idKey.size();
+                auto docIdEnd = docStr.find("\"", docIdStart);
+                auto expectedIdStart = expectedIdPos + idKey.size();
+                auto expectedIdEnd = expected.find("\"", expectedIdStart);
+                ASSERT_NE(docIdEnd, std::string::npos);
+                ASSERT_NE(expectedIdEnd, std::string::npos);
+                std::string docId = docStr.substr(docIdStart, docIdEnd - docIdStart);
+                std::string expectedId = expected.substr(expectedIdStart, expectedIdEnd - expectedIdStart);
+                EXPECT_EQ(docId.size(), expectedId.size()) << "ID length mismatch for chunk: " << chunk;
+                EXPECT_TRUE(std::all_of(docId.begin(), docId.end(), ::isalnum)) << "ID not alphanumeric for chunk: " << chunk;
+                // Compare everything except the id value
+                std::string docStrNoId = docStr;
+                std::string expectedNoId = expected;
+                docStrNoId.replace(docIdStart, docId.size(), std::string(docId.size(), '*'));
+                expectedNoId.replace(expectedIdStart, expectedId.size(), std::string(expectedId.size(), '*'));
+                EXPECT_EQ(docStrNoId, expectedNoId) << "Mismatch for chunk (ignoring id value): " << chunk;
+            } else {
+                EXPECT_EQ(docStr, expected) << "Mismatch for chunk: [" << chunk << "] got [" << docStr << "] but expected [" << expected << "]" << chunkIteration;
+            }
+        } else if (expectedDelta.has_value()) {
+            FAIL() << "Mismatch for chunk: [" << chunk << "] got nothing but expected [" << expectedDelta.value() << "]" << chunkIteration;
+        } else if (doc.has_value()) {
+            rapidjson::StringBuffer buffer;
+            rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+            doc->Accept(writer);
+            std::string docStr = buffer.GetString();
+            FAIL() << "Mismatch for chunk: [" << chunk << "] expected nothing but got [" << docStr << "]" << chunkIteration;
+        } else {
+            FAIL() << "Mismatch for chunk: [" << chunk << "] " << chunkIteration;
         }
     }
 }

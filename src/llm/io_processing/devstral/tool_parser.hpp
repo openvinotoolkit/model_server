@@ -31,9 +31,9 @@ class DevstralToolParser : public BaseOutputParser {
     static const int64_t botTokenId;   // [TOOL_CALLS]
 
     // in streaming mode we can rely on tags in string format as tokens are not available
-    static const std::string ParsingArgsStartTag;
-    static const std::string ParsingToolCallsStartTag;
-    static const std::string ParsingEndTag;
+    static const std::string parsingArgsStartTag;
+    static const std::string parsingToolCallsStartTag;
+    static const std::string parsingEndTag;
 
     enum InternalState {
         AWAITING_START_TAG,
@@ -60,7 +60,7 @@ public:
     rapidjson::Document parseContentChunk();
     rapidjson::Document wrapCombinedDelta(ToolCall& toolCall);
     const std::vector<std::string>& getParsingStartTags() const override {
-        static const std::vector<std::string> toolCallStartTags{ParsingToolCallsStartTag};
+        static const std::vector<std::string> toolCallStartTags{parsingToolCallsStartTag};
         return toolCallStartTags;
     }
     const std::vector<std::string>& getSpecialParsingStartTags() const override {
@@ -69,8 +69,7 @@ public:
     }
     // Tools calls are expected to be the last part of the content, so we do not specify an end tag.
     const std::string& getParsingEndTag() const override {
-        static const std::string toolCallEndTag = "</s>";
-        return toolCallEndTag;
+        return this->parsingEndTag;
     }
 
     bool requiresStreamingWithSpecialTokens() const override {
