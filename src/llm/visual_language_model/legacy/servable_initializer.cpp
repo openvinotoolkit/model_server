@@ -176,14 +176,11 @@ Status VisualLanguageModelLegacyServableInitializer::initialize(std::shared_ptr<
         auto textEmbeddingsModel = std::make_shared<ov::genai::EmbeddingsModel>(parsedModelsPath, nodeOptions.text_embeddings_device().empty() ? properties->device : nodeOptions.text_embeddings_device(), properties->pluginConfig);
         ov::genai::Tokenizer tokenizer(parsedModelsPath);
 
-        ov::genai::InputsEmbedder inputsEmbedder(tokenizer, visionEncoder, textEmbeddingsModel, parsedModelsPath);
+        auto inputsEmbedder = std::make_shared<ov::genai::InputsEmbedder>(tokenizer, visionEncoder, textEmbeddingsModel, parsedModelsPath);
 
-        ov::genai::DeviceMapping deviceMapping{
-            {"language", properties->device},
-            {"text_embeddings", nodeOptions.text_embeddings_device().empty() ? properties->device : nodeOptions.text_embeddings_device()},
-            {"vision_embeddings", nodeOptions.vision_embeddings_device().empty() ? properties->device : nodeOptions.vision_embeddings_device()}
-        };
-        properties->pipeline = std::make_shared<ov::genai::VLMPipeline>(parsedModelsPath, deviceMapping, properties->pluginConfig);
+
+        properties->pipeline = std::make_shared<ov::genai::VLMPipeline>(
+            inputsEmbedder, parsedModelsPath/*for llm*/, properties->device/*for llm*/, properties->pluginConfig/*for llm*/);
 #else
         properties->pipeline = std::make_shared<ov::genai::VLMPipeline>(parsedModelsPath, properties->device, properties->pluginConfig);
 #endif
