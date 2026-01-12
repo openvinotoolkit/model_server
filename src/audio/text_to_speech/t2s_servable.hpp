@@ -65,7 +65,7 @@ struct TtsServable {
     std::mutex ttsPipelineMutex;
     std::unordered_map<std::string, ov::Tensor> voices;
 
-    TtsServable(const std::string& modelDir, const std::string& targetDevice, const google::protobuf::RepeatedPtrField<mediapipe::T2sCalculatorOptions_SpeakerEmbeddings>& graphVoices, const std::string& graphPath) {
+    TtsServable(const std::string& modelDir, const std::string& targetDevice, const google::protobuf::RepeatedPtrField<mediapipe::T2sCalculatorOptions_SpeakerEmbeddings>& graphVoices, const std::string& pluginConfig, const std::string& graphPath) {
         auto fsModelsPath = std::filesystem::path(modelDir);
         if (fsModelsPath.is_relative()) {
             parsedModelsPath = (std::filesystem::path(graphPath) / fsModelsPath);
@@ -73,12 +73,12 @@ struct TtsServable {
             parsedModelsPath = fsModelsPath;
         }
         ov::AnyMap config;
-        Status status = JsonParser::parsePluginConfig(nodeOptions.plugin_config(), config);
+        Status status = JsonParser::parsePluginConfig(pluginConfig, config);
         if (!status.ok()) {
-            SPDLOG_ERROR("Error during llm node plugin_config option parsing to JSON: {}", nodeOptions.plugin_config());
+            SPDLOG_ERROR("Error during llm node plugin_config option parsing to JSON: {}", pluginConfig);
             throw std::runtime_error("Error during plugin_config option parsing");
         }
-        ttsPipeline = std::make_shared<ov::genai::Text2SpeechPipeline>(parsedModelsPath.string(), nodeOptions.target_device(), config);
+        ttsPipeline = std::make_shared<ov::genai::Text2SpeechPipeline>(parsedModelsPath.string(), pluginConfig, config);
         for (auto voice : graphVoices) {
             if (!std::filesystem::exists(voice.path()))
                 throw std::runtime_error{"Requested voice speaker embeddings file does not exist."};
