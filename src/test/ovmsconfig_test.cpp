@@ -2504,6 +2504,88 @@ TEST(OvmsConfigTest, positiveSingle) {
 #endif
 }
 
+TEST(OvmsConfigTest, positiveModelPreprocessingParams) {
+    char* n_argv[] = {
+        "ovms",
+        "--port",
+        "44",
+        "--model_name",
+        "model",
+        "--model_path",
+        "/path",
+        "--layout",
+        "nchw:nhwc",
+        "--mean",
+        "[123.675,116.28,103.53]",
+        "--scale",
+        "[58.395,57.12,57.375]",
+        "--color_format",
+        "BGR"
+    };
+    int arg_count = 15;
+    ConstructorEnabledConfig config;
+    config.parse(arg_count, n_argv);
+
+    EXPECT_EQ(config.port(), 44);
+    EXPECT_EQ(config.modelPath(), "/path");
+    EXPECT_EQ(config.modelName(), "model");
+    EXPECT_EQ(config.layout(), "nchw:nhwc");
+    EXPECT_EQ(config.means(), "[123.675,116.28,103.53]");
+    EXPECT_EQ(config.scales(), "[58.395,57.12,57.375]");
+    EXPECT_EQ(config.colorFormat(), "BGR");
+}
+
+TEST(OvmsConfigTest, missingLayoutModelPreprocessingMean) {
+    char* n_argv[] = {
+        "ovms",
+        "--port",
+        "44",
+        "--model_name",
+        "model",
+        "--model_path",
+        "/path",
+        "--mean",
+        "11.432"
+    };
+    int arg_count = 9;
+    ConstructorEnabledConfig config;
+    EXPECT_THROW(config.parse(arg_count, n_argv), std::logic_error);
+}
+
+TEST(OvmsConfigTest, missingLayoutModelPreprocessingScale) {
+    char* n_argv[] = {
+        "ovms",
+        "--port",
+        "44",
+        "--model_name",
+        "model",
+        "--model_path",
+        "/path",
+        "--scale",
+        "11.432"
+    };
+    int arg_count = 9;
+    ConstructorEnabledConfig config;
+    EXPECT_THROW(config.parse(arg_count, n_argv), std::logic_error);
+}
+
+TEST(OvmsConfigTest, missingLayoutModelPreprocessingColorFormat) {
+    char* n_argv[] = {
+        "ovms",
+        "--port",
+        "44",
+        "--model_name",
+        "model",
+        "--model_path",
+        "/path",
+        "--color_format",
+        "BGR"
+    };
+    int arg_count = 9;
+    ConstructorEnabledConfig config;
+    EXPECT_THROW(config.parse(arg_count, n_argv), std::logic_error);
+}
+
 TEST(OvmsConfigManipulationTest, positiveEnableModel) {
     std::string modelName = "name1";
     std::string modelPath = "/path/for/name1";

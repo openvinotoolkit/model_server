@@ -219,6 +219,13 @@ public:
          */
     const std::string& colorFormat() const;
 
+     /**
+         * @brief Get precision  
+         * 
+         * @return const std::string&
+         */
+    const std::string& precision() const;
+
     /**
          * @brief Get the shape
          * 

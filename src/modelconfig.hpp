@@ -205,17 +205,22 @@ private:
     /**
          * @brief meanValues mean preprocessing parameters  
          */
-    float_vec_or_value_t meanValues = 0.0f;
+    std::optional<float_vec_or_value_t> meanValues;
 
     /**
          * @brief scaleValues scale preprocessing parameters  
          */
-    float_vec_or_value_t scaleValues = 1.0f;
+    std::optional<float_vec_or_value_t> scaleValues;
 
     /**
          * @brief colorFormat color format preprocessing parameter  
          */
-    ov::preprocess::ColorFormat colorFormat = ov::preprocess::ColorFormat::RGB;
+    std::optional<ov::preprocess::ColorFormat> colorFormat;
+
+    /**
+         * @brief precision precision preprocessing parameter  
+         */
+    std::optional<ov::element::Type> precision;
 
 public:
     /**
@@ -712,6 +717,15 @@ public:
     Status parseColorFormat(const std::string& command);
 
     /**
+          * @brief Parses value from string and extracts precision
+          * 
+          * @param string
+          * 
+          * @return status
+          */
+    Status parsePrecision(const std::string& command);
+
+    /**
           * @brief Parses value from string and extracts float value
           * 
           * @param string
@@ -729,7 +743,7 @@ public:
           * 
           * @return status
           */
-    Status parseFloatArrayOrValue(const std::string& str, float_vec_or_value_t& values);
+    Status parseFloatArrayOrValue(const std::string& str, std::optional<float_vec_or_value_t>& values);
 
     /**
           * @brief Parses value from string and extracts array of float values
@@ -866,7 +880,7 @@ public:
          * 
          * @return const float_vec_or_value_t& 
          */
-    const float_vec_or_value_t& getScales() const {
+    const std::optional<float_vec_or_value_t>& getScales() const {
         return this->scaleValues;
     }
 
@@ -875,7 +889,7 @@ public:
          * 
          * @return const float_vec_or_value_t& 
          */
-    const float_vec_or_value_t& getMeans() const {
+    const std::optional<float_vec_or_value_t>& getMeans() const {
         return this->meanValues;
     }
 
@@ -884,8 +898,17 @@ public:
          * 
          * @return const ov::preprocess::ColorFormat& 
          */
-    const ov::preprocess::ColorFormat& getColorFormat() const {
+    const std::optional<ov::preprocess::ColorFormat>& getColorFormat() const {
         return this->colorFormat;
+    }
+
+     /**
+         * @brief Get the get precision
+         * 
+         * @return const ov::element::Type& 
+         */
+    const std::optional<ov::element::Type>& getPrecision() const {
+        return this->precision;
     }
 
     /**

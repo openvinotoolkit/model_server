@@ -380,6 +380,7 @@ const std::string& Config::layout() const { return this->modelsSettings.layout; 
 const std::string& Config::means() const { return this->modelsSettings.mean; }
 const std::string& Config::scales() const { return this->modelsSettings.scale; }
 const std::string& Config::colorFormat() const { return this->modelsSettings.colorFormat; }
+const std::string& Config::precision() const { return this->modelsSettings.precision; }
 const std::string& Config::modelVersionPolicy() const { return this->modelsSettings.modelVersionPolicy; }
 uint32_t Config::nireq() const { return this->modelsSettings.nireq; }
 const std::string& Config::targetDevice() const {

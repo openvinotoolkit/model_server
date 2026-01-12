@@ -230,11 +230,14 @@ const Layout ModelInstance::getReportedTensorLayout(const ModelConfig& config, c
     return defaultLayout;
 }
 
-static void applyScaleOrMeanPreprocessing(ov::preprocess::PrePostProcessor& preproc, ovms::float_vec_or_value_t& config, bool isScale) {
-    if (auto* scalar = std::get_if<float>(&config)) {
+static void applyScaleOrMeanPreprocessing(ov::preprocess::PrePostProcessor& preproc, std::optional<ovms::float_vec_or_value_t>& config, bool isScale) {
+    if (!config.has_value()) {
+        return;
+    }
+    if (auto* scalar = std::get_if<float>(&config.value())) {
         isScale ? preproc.input().preprocess().scale(*scalar) : preproc.input().preprocess().mean(*scalar);
     } else {
-        isScale ? preproc.input().preprocess().scale(std::get<std::vector<float>>(config)) : preproc.input().preprocess().mean(std::get<std::vector<float>>(config));
+        isScale ? preproc.input().preprocess().scale(std::get<std::vector<float>>(config.value())) : preproc.input().preprocess().mean(std::get<std::vector<float>>(config.value()));
     }
 }
 
@@ -242,13 +245,21 @@ static Status applyPreprocessingConfiguration(ov::preprocess::PrePostProcessor& 
     OV_LOGGER("ov::preprocess::PrePostProcessor& preproc, const ModelConfig& config, std::shared_ptr<ov::Model>& model");
 
     try {
-        ovms::float_vec_or_value_t preprocessingScale = config.getScales();
-        ovms::float_vec_or_value_t preprocessingMean = config.getMeans();
-        ov::preprocess::ColorFormat colorFormat = config.getColorFormat();
+        auto preprocessingScale = config.getScales();
+        auto preprocessingMean = config.getMeans();
+        auto colorFormat = config.getColorFormat();
+        auto precision = config.getPrecision();
 
-        OV_LOGGER("Applying color format for model: {}, version: {}", modelName, modelVersion);
-        preproc.input().tensor().set_color_format(colorFormat);
-        preproc.input().preprocess().convert_color(colorFormat);
+        if (colorFormat.has_value()) {
+            OV_LOGGER("Applying color format for model: {}, version: {}", modelName, modelVersion);
+            preproc.input().tensor().set_color_format(colorFormat.value());
+            preproc.input().preprocess().convert_color(colorFormat.value());
+        }
+
+        if (precision.has_value()) {
+            OV_LOGGER("Applying precision for model: {}, version: {}", modelName, modelVersion);
+            preproc.input().tensor().set_element_type(precision.value());
+        }
 
         OV_LOGGER("Applying mean configuration: {} for model: {}, version: {}", modelName, modelVersion);
         applyScaleOrMeanPreprocessing(preproc, preprocessingMean, false);

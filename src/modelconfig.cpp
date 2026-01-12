@@ -435,17 +435,13 @@ Status ModelConfig::parseFloatArray(const std::string& str, std::vector<float>& 
         }
     }
     if (values.empty()) {
-        SPDLOG_WARN("Parameter contains empty float array: {}", str);
-        return StatusCode::FLOAT_WRONG_FORMAT;
-    }
-    if (values.size() < 2) {
-        SPDLOG_WARN("Parameter contains float array with less than 2 values: {}", str);
+        SPDLOG_WARN("Parameter contains empty float array");
         return StatusCode::FLOAT_WRONG_FORMAT;
     }
     return StatusCode::OK;
 }
 
-Status ModelConfig::parseFloatArrayOrValue(const std::string& str, float_vec_or_value_t& values) {
+Status ModelConfig::parseFloatArrayOrValue(const std::string& str, std::optional<float_vec_or_value_t>& values) {
     if (str.empty()) {
         return StatusCode::OK;
     }
@@ -494,24 +490,58 @@ Status ModelConfig::parseColorFormat(const std::string& command) {
 
     erase_spaces(upperCaseCommand);
 
-    if (upperCaseCommand == "RGB") {
-        this->colorFormat = ov::preprocess::ColorFormat::RGB;
-    } else if (upperCaseCommand == "BGR") {
-        this->colorFormat = ov::preprocess::ColorFormat::BGR;
-    } else if (upperCaseCommand == "GRAY") {
-        this->colorFormat = ov::preprocess::ColorFormat::GRAY;
-    } else if (upperCaseCommand == "NV12") {
-        this->colorFormat = ov::preprocess::ColorFormat::NV12_SINGLE_PLANE;
-    } else if (upperCaseCommand == "NV12_2") {
-        this->colorFormat = ov::preprocess::ColorFormat::NV12_TWO_PLANES;
-    } else if (upperCaseCommand == "I420") {
-        this->colorFormat = ov::preprocess::ColorFormat::I420_SINGLE_PLANE;
-    } else if (upperCaseCommand == "I420_3") {
-        this->colorFormat = ov::preprocess::ColorFormat::I420_THREE_PLANES;
+    static const std::unordered_map<std::string, ov::preprocess::ColorFormat> colorFormatMap = {
+        {"RGB", ov::preprocess::ColorFormat::RGB},
+        {"BGR", ov::preprocess::ColorFormat::BGR},
+        {"GRAY", ov::preprocess::ColorFormat::GRAY},
+        {"NV12", ov::preprocess::ColorFormat::NV12_SINGLE_PLANE},
+        {"NV12_2", ov::preprocess::ColorFormat::NV12_TWO_PLANES},
+        {"I420", ov::preprocess::ColorFormat::I420_SINGLE_PLANE},
+        {"I420_3", ov::preprocess::ColorFormat::I420_THREE_PLANES}
+    };
+
+    auto it = colorFormatMap.find(upperCaseCommand);
+    if (it != colorFormatMap.end()) {
+        this->colorFormat = it->second;
     } else {
         SPDLOG_WARN("Parameter contains invalid color format value: {}", command);
         return StatusCode::COLOR_FORMAT_WRONG_FORMAT;
     }
+    return StatusCode::OK;
+}
+
+Status ModelConfig::parsePrecision(const std::string& command) {
+    if (command.empty()) {
+        return StatusCode::OK;
+    }
+
+    std::string upperCaseCommand;
+    std::transform(command.begin(), command.end(), std::back_inserter(upperCaseCommand), ::toupper);
+
+    erase_spaces(upperCaseCommand);
+
+    static const std::unordered_map<std::string, ov::element::Type> precisionMap = {
+        {"F32", ov::element::f32},
+        {"F16", ov::element::f16},
+        {"INT8", ov::element::i8},
+        {"UINT8", ov::element::u8},
+        {"INT16", ov::element::i16},
+        {"UINT16", ov::element::u16},
+        {"INT32", ov::element::i32},
+        {"UINT32", ov::element::u32},
+        {"INT64", ov::element::i64},
+        {"UINT64", ov::element::u64},
+        {"BF16", ov::element::bf16}
+    };
+
+    auto it = precisionMap.find(upperCaseCommand);
+    if (it != precisionMap.end()) {
+        this->precision = it->second;
+    } else {
+        SPDLOG_WARN("Parameter contains invalid precision value: {}", command);
+        return StatusCode::PRECISION_WRONG_FORMAT;
+    }
+    
     return StatusCode::OK;
 }
 
@@ -699,6 +729,13 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
 
     if (v.HasMember("color_format")) {
         Status status = this->parseColorFormat(v["color_format"].GetString());
+        if (!status.ok()) {
+            return status;
+        }
+    }
+
+    if (v.HasMember("precision")) {
+        Status status = this->parsePrecision(v["precision"].GetString());
         if (!status.ok()) {
             return status;
         }
