@@ -35,6 +35,7 @@ HERMES3_MODEL="NousResearch/Hermes-3-Llama-3.1-8B"
 PHI4_MODEL="microsoft/Phi-4-mini-instruct"
 MISTRAL_MODEL="mistralai/Mistral-7B-Instruct-v0.3"
 GPT_OSS="openai/gpt-oss-20b"
+DEVSTRAL_MODEL="unsloth/Devstral-Small-2507"
 
 if [ "$(python3 -c 'import sys; print(sys.version_info[1])')" -le "8" ]; then echo "Prepare models with python > 3.8."; exit 1 ; fi
 
@@ -180,5 +181,16 @@ else
 fi
 if [ ! -f "$1/$GPT_OSS/$TOKENIZER_FILE" ]; then
   echo "[ERROR] Models file $1/$GPT_OSS/$TOKENIZER_FILE does not exist."
+  exit 1
+fi
+
+if [ -f "$1/$DEVSTRAL_MODEL/$TOKENIZER_FILE" ]; then
+  echo "Models file $1/$DEVSTRAL_MODEL/$TOKENIZER_FILE exists. Skipping downloading models."
+else
+  mkdir -p $1/$DEVSTRAL_MODEL
+  convert_tokenizer $DEVSTRAL_MODEL --with_detokenizer -o $1/$DEVSTRAL_MODEL
+fi
+if [ ! -f "$1/$DEVSTRAL_MODEL/$TOKENIZER_FILE" ]; then
+  echo "[ERROR] Models file $1/$DEVSTRAL_MODEL/$TOKENIZER_FILE does not exist."
   exit 1
 fi
