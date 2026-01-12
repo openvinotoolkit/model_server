@@ -79,7 +79,7 @@ struct TtsServable {
             throw std::runtime_error("Error during plugin_config option parsing");
         }
         ttsPipeline = std::make_shared<ov::genai::Text2SpeechPipeline>(parsedModelsPath.string(), nodeOptions.target_device(), config);
-        for(auto voice : graphVoices){
+        for (auto voice : graphVoices) {
             if (!std::filesystem::exists(voice.path()))
                 throw std::runtime_error{"Requested voice speaker embeddings file does not exist."};
             voices[voice.name()] = read_speaker_embedding(voice.path());

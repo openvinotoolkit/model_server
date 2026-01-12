@@ -108,17 +108,16 @@ public:
             if (voiceIt != payload.parsedJson->MemberEnd() && voiceIt->value.IsString()) {
                 voice = voiceIt->value.GetString();
             }
-            if(voice.has_value()){
+            if (voice.has_value()) {
                 if (pipe->voices.find(voice.value()) == pipe->voices.end())
                     return absl::InvalidArgumentError(absl::StrCat("Requested voice not available: ", payload.uri));
             }
             ov::genai::Text2SpeechDecodedResults generatedSpeech;
             std::unique_lock lock(pipe->ttsPipelineMutex);
 
-            if(voice.has_value()){
+            if (voice.has_value()) {
                 generatedSpeech = pipe->ttsPipeline->generate(inputIt->value.GetString(), pipe->voices[voice.value()]);
-            }
-            else{
+            } else {
                 generatedSpeech = pipe->ttsPipeline->generate(inputIt->value.GetString());
             }
             auto bitsPerSample = generatedSpeech.speeches[0].get_element_type().bitwidth();
