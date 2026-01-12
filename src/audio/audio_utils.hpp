@@ -25,3 +25,5 @@ bool isWavBuffer(const std::string buf);
 std::vector<float> readWav(const std::string_view& wavData);
 std::vector<float> readMp3(const std::string_view& mp3Data);
 void prepareAudioOutput(void** ppData, size_t& pDataSize, uint16_t bitsPerSample, size_t speechSize, const float* waveformPtr);
+void prepareAudioOutputKokoro(void** ppData, size_t& pDataSize, uint16_t bitsPerSample, size_t speechSize, const float* waveformPtr);
+
