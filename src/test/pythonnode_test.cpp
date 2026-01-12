@@ -3319,3 +3319,45 @@ TEST_F(PythonFlowTest, PythonCalculatorTest_FP64) {
 
     checkDummyResponse("out", data, req, res, 1 /* expect +1 */, 1, "mediaDummy");
 }
+
+class PythonFlowTest2 : public PythonFlowTest {
+    // initialize setup of ovms and shutdown
+};
+
+TEST_F(PythonFlowTest2, PythonCalculatorTest_FP64) {
+    std::unique_ptr<MediapipeGraphExecutor> pipeline;
+    std::unique_ptr<DummyMediapipeGraphDefinition> mediapipeDummy;
+    setUpConverterPrecisionTest(pipeline, mediapipeDummy);
+
+    KFSRequest req;
+    KFSResponse res;
+
+    const std::vector<double> data{1, 20, 3, -1, 20, 3, 1, 20, 3, -5};
+    req.set_model_name("mediaDummy");
+    prepareKFSInferInputTensor(req, "in", std::tuple<ovms::signed_shape_t, const ovms::Precision>{{1, DUMMY_MODEL_OUTPUT_SIZE}, ovms::Precision::FP64}, data, false);
+
+    ASSERT_EQ(pipeline->infer(&req, &res, this->defaultExecutionContext), StatusCode::OK);  //, smr), StatusCode::OK);
+
+    checkDummyResponse("out", data, req, res, 1 /* expect +1 */, 1, "mediaDummy");
+}
+
+class PythonFlowTest21 : public PythonFlowTest {
+    // initialize setup of ovms and shutdown
+};
+
+TEST_F(PythonFlowTest21, PythonCalculatorTest_FP64) {
+    std::unique_ptr<MediapipeGraphExecutor> pipeline;
+    std::unique_ptr<DummyMediapipeGraphDefinition> mediapipeDummy;
+    setUpConverterPrecisionTest(pipeline, mediapipeDummy);
+
+    KFSRequest req;
+    KFSResponse res;
+
+    const std::vector<double> data{1, 20, 3, -1, 20, 3, 1, 20, 3, -5};
+    req.set_model_name("mediaDummy");
+    prepareKFSInferInputTensor(req, "in", std::tuple<ovms::signed_shape_t, const ovms::Precision>{{1, DUMMY_MODEL_OUTPUT_SIZE}, ovms::Precision::FP64}, data, false);
+
+    ASSERT_EQ(pipeline->infer(&req, &res, this->defaultExecutionContext), StatusCode::OK);  //, smr), StatusCode::OK);
+
+    checkDummyResponse("out", data, req, res, 1 /* expect +1 */, 1, "mediaDummy");
+}
