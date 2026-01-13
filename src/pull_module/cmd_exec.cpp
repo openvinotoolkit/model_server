@@ -65,14 +65,14 @@ static std::vector<std::string> parseArguments(const std::string& input) {
 
 // Internal secure execution - bypasses shell to prevent command injection
 static std::string exec_secure_internal(const std::string& command,
-                                        int& returnCode,
-                                        bool setUtf8Encoding = false) {
+    int& returnCode,
+    bool setUtf8Encoding = false) {
     std::string result;
     returnCode = -1;
-
-    EnvGuard guard;
+    std::unique_ptr<EnvGuard> envGuard;
     if (setUtf8Encoding) {
-        guard.set("PYTHONIOENCODING", "utf-8");
+        envGuard = std::make_unique<EnvGuard>();
+        envGuard->set("PYTHONIOENCODING", "utf-8");
     }
 
 #ifdef _WIN32
@@ -100,7 +100,7 @@ static std::string exec_secure_internal(const std::string& command,
     // CreateProcess takes a mutable string, make a copy
     std::string cmdCopy = command;
     if (!CreateProcessA(NULL, const_cast<char*>(cmdCopy.c_str()),
-                        NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi)) {
+            NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi)) {
         CloseHandle(hReadPipe);
         CloseHandle(hWritePipe);
         return "Error: CreateProcess failed.";
