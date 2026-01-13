@@ -118,8 +118,8 @@ is_nginx_mtls = get_bool("TT_IS_NGINX_MTLS", "nginx-mtls" in image)
 skip_nginx_test = get_bool("TT_SKIP_TEST_IF_IS_NGINX_MTLS", "True")
 skip_nginx_test = skip_nginx_test and is_nginx_mtls
 
-""" TT_ENABLE_PYTEST_PLUGINS - enable pytest plugins """
-enable_pytest_plugins = get_bool("TT_ENABLE_PYTEST_PLUGINS", "True")
+""" TT_ENABLE_OVMS_C_PYTEST_PLUGINS - enable pytest plugins """
+enable_pytest_plugins = get_bool("TT_ENABLE_OVMS_C_PYTEST_PLUGINS", "True")
 
 """ TT_OVMS_C_REPO_PATH - path to ovms-c repository. Can be relative or absolute. """
 ovms_c_repo_path = get_path("TT_OVMS_C_REPO_PATH", get_path("PWD", "./"))
