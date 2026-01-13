@@ -33,6 +33,7 @@ from tests.functional.utils.rest import get_predict_url, get_metadata_url, get_s
 logger = logging.getLogger(__name__)
 
 
+@pytest.mark.priority_low
 @pytest.mark.skipif(skip_nginx_test, reason=NOT_TO_BE_REPORTED_IF_SKIPPED)
 @devices_not_supported_for_test([TargetDevice.GPU])
 class TestModelVersionHandling:

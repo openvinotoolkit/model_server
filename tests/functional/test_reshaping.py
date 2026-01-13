@@ -39,13 +39,14 @@ auto_shapes = [
 fixed_shape = {'in': (1, 3, 600, 600), 'out': (1, 1, 200, 7)}
 
 
+@pytest.mark.priority_low
 @pytest.mark.skipif(skip_nginx_test, reason=NOT_TO_BE_REPORTED_IF_SKIPPED)
 @devices_not_supported_for_test([TargetDevice.GPU])
 class TestModelReshaping:
 
-    @pytest.mark.parametrize("shape, is_correct",
-                             [(fixed_shape['in'], True), (FaceDetection.input_shape,
-                                                          False)])
+    @pytest.mark.parametrize(
+        "shape, is_correct", [(fixed_shape['in'], True), (FaceDetection.input_shape, False)]
+    )
     @pytest.mark.api_enabling
     def test_single_local_model_reshaping_fixed(self, start_server_face_detection_model_named_shape,
                                                 start_server_face_detection_model_nonamed_shape, shape, is_correct):

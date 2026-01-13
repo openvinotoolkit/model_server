@@ -31,6 +31,7 @@ from tests.functional.utils.rest import get_metadata_url, get_status_url, get_mo
 logger = logging.getLogger(__name__)
 
 
+@pytest.mark.priority_low
 @pytest.mark.skipif(skip_nginx_test, reason=NOT_TO_BE_REPORTED_IF_SKIPPED)
 class TestModelVerPolicy:
 

@@ -31,7 +31,9 @@ xfail = pytest.mark.xfail
 skip = pytest.mark.skip
 
 
+@pytest.mark.priority_low
 class TestSingleModelInference:
+
     @skip(reason="not implemented yet")
     @pytest.mark.api_enabling
     def test_chat_with_tool_definition(self):
