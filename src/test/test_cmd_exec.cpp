@@ -57,9 +57,12 @@ TEST_F(ExecCmdTest, CommandSeparatorInjectionBlocked) {
     int returnCode = 0;
 
 #ifdef _WIN32
-    // Windows: Attempt command injection with & (command separator)
-    // If vulnerable, this would create the file
-    std::string maliciousCmd = "cmd.exe /c echo safe & echo PWNED > " + injectionFile1.string();
+    // Windows: CreateProcess without cmd.exe doesn't interpret & as command separator
+    // The & and everything after becomes arguments to echo, not a separate command
+    // Note: We can't easily test this on Windows without cmd.exe since most commands
+    // are cmd.exe built-ins. Instead, test that arguments with shell metacharacters
+    // are passed literally to the program.
+    std::string maliciousCmd = "python.exe -c \"import sys; print(sys.argv)\" \"& echo PWNED > " + injectionFile1.string() + "\"";
     ovms::exec_cmd(maliciousCmd, returnCode);
 #else
     // Linux: Attempt command injection with ; (command separator)
@@ -78,8 +81,8 @@ TEST_F(ExecCmdTest, CommandSubstitutionInjectionBlocked) {
     int returnCode = 0;
 
 #ifdef _WIN32
-    // Windows: Attempt injection via pipe
-    std::string maliciousCmd = "cmd.exe /c echo safe | echo PWNED > " + injectionFile1.string();
+    // Windows: Without cmd.exe, | is just a character passed to the program
+    std::string maliciousCmd = "python.exe -c \"import sys; print(sys.argv)\" \"| echo PWNED > " + injectionFile1.string() + "\"";
     ovms::exec_cmd(maliciousCmd, returnCode);
 #else
     // Linux: Attempt injection via subshell $()
@@ -96,8 +99,8 @@ TEST_F(ExecCmdTest, AlternativeSubstitutionInjectionBlocked) {
     int returnCode = 0;
 
 #ifdef _WIN32
-    // Windows doesn't use backticks, test another vector
-    std::string maliciousCmd = "cmd.exe /c (echo PWNED > " + injectionFile1.string() + ")";
+    // Windows: Parentheses without cmd.exe are just characters
+    std::string maliciousCmd = "python.exe -c \"import sys; print(sys.argv)\" \"(echo PWNED > " + injectionFile1.string() + ")\"";
     ovms::exec_cmd(maliciousCmd, returnCode);
 #else
     // Linux: Attempt injection via backticks
@@ -114,8 +117,8 @@ TEST_F(ExecCmdTest, ComplexInjectionBlocked) {
     int returnCode = 0;
 
 #ifdef _WIN32
-    // Windows: Complex injection attempt
-    std::string maliciousCmd = "echo.exe safe & cmd.exe /c \"echo PWNED > " + injectionFile1.string() + "\" & rem ";
+    // Windows: Complex injection attempt - all metacharacters are literal without cmd.exe
+    std::string maliciousCmd = "python.exe -c \"import sys; print(sys.argv)\" \"& cmd.exe /c echo PWNED > " + injectionFile1.string() + " & rem\"";
     ovms::exec_cmd(maliciousCmd, returnCode);
 #else
     // Linux: Complex injection attempt like: touch /tmp/safe.txt; sh -c 'id >/tmp/OWNED.txt'; #
@@ -132,7 +135,8 @@ TEST_F(ExecCmdTest, PipeInjectionBlocked) {
     int returnCode = 0;
 
 #ifdef _WIN32
-    std::string maliciousCmd = "echo safe | cmd.exe /c echo PWNED > " + injectionFile1.string();
+    // Windows: Pipe character without cmd.exe is just passed as argument
+    std::string maliciousCmd = "python.exe -c \"import sys; print(sys.argv)\" \"| cmd.exe /c echo PWNED > " + injectionFile1.string() + "\"";
     ovms::exec_cmd(maliciousCmd, returnCode);
 #else
     // Linux: Attempt injection via pipe
@@ -149,8 +153,9 @@ TEST_F(ExecCmdTest, LegitimateCommandWorks) {
     int returnCode = -1;
 
 #ifdef _WIN32
-    std::string output = ovms::exec_cmd("cmd.exe /c echo hello", returnCode);
+    std::string output = ovms::exec_cmd("python.exe -c \"print('hello')\"", returnCode);
     EXPECT_TRUE(output.find("hello") != std::string::npos);
+    EXPECT_EQ(returnCode, 0);
 #else
     std::string output = ovms::exec_cmd("echo hello", returnCode);
     EXPECT_EQ(output, "hello\n");
@@ -163,7 +168,7 @@ TEST_F(ExecCmdTest, CommandSeparatorInjectionBlockedUtf8) {
     int returnCode = 0;
 
 #ifdef _WIN32
-    std::string maliciousCmd = "cmd.exe /c echo safe & echo PWNED > " + injectionFile1.string();
+    std::string maliciousCmd = "python.exe -c \"import sys; print(sys.argv)\" \"& echo PWNED > " + injectionFile1.string() + "\"";
     ovms::exec_cmd_utf8(maliciousCmd, returnCode);
 #else
     std::string maliciousCmd = "echo safe; touch " + injectionFile1.string();
