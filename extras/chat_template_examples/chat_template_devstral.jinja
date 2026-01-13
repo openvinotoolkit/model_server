@@ -100,7 +100,7 @@
         {{- "[TOOL_RESULTS]" + content|string + "[/TOOL_RESULTS]" }}
 
     {%- else %}
-        {{- raise_exception('Only user, systemm assistant and tool roles are supported in the custom template made by Unsloth!') }}
+        {{- raise_exception('Only user, system, assistant and tool roles are supported in the custom template made by Unsloth!') }}
     {%- endif %}
 {%- endfor %}
 {#- Copyright 2025-present the Unsloth team. All rights reserved. #}
