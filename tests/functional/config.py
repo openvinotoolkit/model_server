@@ -17,7 +17,7 @@
 import os
 
 from tests.functional.constants.target_device import TargetDevice
-from tests.functional.utils.helpers import get_int, get_bool, get_path
+from tests.functional.utils.helpers import get_bool, get_int, get_path, get_target_devices
 from tests.functional.utils.parametrization import generate_test_object_name
 
 try:
@@ -32,8 +32,7 @@ test_dir = os.environ.get("TEST_DIR", "/tmp/{}".format(generate_test_object_name
 """TEST_DIR_CACHE -  location where models and test data should be downloaded to and serve as cache for TEST_DIR"""
 test_dir_cache = os.environ.get("TEST_DIR_CACHE", "/tmp/ovms_models_cache")
 
-"""TEST_DIR_CLEANUP - if set to True, TEST_DIR directory will be removed
-                      after tests execution"""
+"""TEST_DIR_CLEANUP - if set to True, TEST_DIR directory will be removed after tests execution"""
 test_dir_cleanup = os.environ.get("TEST_DIR_CLEANUP", "True")
 test_dir_cleanup = test_dir_cleanup.lower() == "true"
 
@@ -63,8 +62,9 @@ models_path = path_to_mount if ovms_binary_path else "/opt/ml"
 """TT_MINIO_IMAGE_NAME - Docker image for Minio"""
 minio_image = os.environ.get("TT_MINIO_IMAGE_NAME", "minio/minio:latest")
 
-""" TT_TARGET_DEVICE - one of "CPU", "GPU" """
-target_device = os.environ.get("TT_TARGET_DEVICE", TargetDevice.CPU)
+""" TT_TARGET_DEVICE - list of devices separated by a comma "CPU,GPU" """
+target_devices = get_target_devices()
+target_device = target_devices[0]
 
 """IMAGE - docker image name which should be used to run tests"""
 if target_device == TargetDevice.GPU:
@@ -94,15 +94,6 @@ default_infer_timeout = get_int("TT_DEFAULT_INFER_TIMEOUT", 10)
 
 """ TT_DEFAULT_GPU_INFER_TIMEOUT - Timeout for CPU target device"""
 default_gpu_infer_timeout = get_int("TT_DEFAULT_GPU_INFER_TIMEOUT", 10*default_infer_timeout)
-
-""" TT_DEFAULT_GPU_INFER_TIMEOUT - Timeout for CPU target device"""
-default_cuda_infer_timeout = get_int("TT_DEFAULT_CUDA_INFER_TIMEOUT", 10*default_infer_timeout)
-
-""" TT_DEFAULT_HDDL_INFER_TIMEOUT - Timeout for CPU target device"""
-default_hddl_infer_timeout = get_int("TT_DEFAULT_HDDL_INFER_TIMEOUT", 3*default_infer_timeout)
-
-""" TT_DEFAULT_MYRIAD_INFER_TIMEOUT - Timeout for CPU target device"""
-default_myriad_infer_timeout = get_int("TT_DEFAULT_MYRIAD_INFER_TIMEOUT", 5*default_infer_timeout)
 
 """ INFER TIMEOUT """
 infer_timeouts = {
