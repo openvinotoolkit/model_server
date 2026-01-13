@@ -335,7 +335,7 @@ ovms --rest_port 8000 --config_path ./models/config.json
 
 Wait for the model to load. You can check the status with a simple command below. Note that the slash `/` in the model name needs to be escaped with `%2F`:
 ```bash
-curl http://localhost:9999/v3/models/BAAI%2Fbge-large-en-v1.5
+curl http://localhost:8000/v3/models/BAAI%2Fbge-large-en-v1.5
 
 {"id":"BAAI/bge-large-en-v1.5","object":"model","created":1763997378,"owned_by":"OVMS"}
 ```

@@ -16,7 +16,7 @@ You can download model server package in two configurations. One with Python sup
 Download precompiled package (without python):
 ```{code} sh
 wget https://github.com/openvinotoolkit/model_server/releases/download/v2025.4.1/ovms_ubuntu22_python_off.tar.gz
-tar -xzvf ovms_ubuntu22.tar.gz
+tar -xzvf ovms_ubuntu22_python_off.tar.gz
 ```
 or precompiled package (with python):
 ```{code} sh
@@ -51,7 +51,7 @@ Model server version with Python is shipped with those packages and new installa
 Download precompiled package (without python):
 ```{code} sh
 wget https://github.com/openvinotoolkit/model_server/releases/download/v2025.4.1/ovms_ubuntu24_python_off.tar.gz
-tar -xzvf ovms_ubuntu24.tar.gz
+tar -xzvf ovms_ubuntu24_python_off.tar.gz
 ```
 or precompiled package (with python):
 ```{code} sh
@@ -86,7 +86,7 @@ Model server version with Python is shipped with those packages and new installa
 Download precompiled package (without python):
 ```{code} sh
 wget https://github.com/openvinotoolkit/model_server/releases/download/v2025.4.1/ovms_redhat_python_off.tar.gz
-tar -xzvf ovms_redhat.tar.gz
+tar -xzvf ovms_redhat_python_off.tar.gz
 ```
 or precompiled package (with python):
 ```{code} sh
