@@ -1,6 +1,6 @@
 #!/bin/bash -x
 #
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,13 +18,6 @@
 BRANCH_NAME=$(git rev-parse --abbrev-ref HEAD)
 # install dependencies
 pip install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/${BRANCH_NAME}/demos/common/export_models/requirements.txt
-rm -rf gorilla
-git clone https://github.com/ShishirPatil/gorilla
-cd gorilla/berkeley-function-call-leaderboard
-git checkout cd9429ccf3d4d04156affe883c495b3b047e6b64
-curl -s https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/${BRANCH_NAME}/demos/continuous_batching/accuracy/gorilla.patch | git apply -v
-pip install -e . 
-cd ../..
 curl -L -O https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/${BRANCH_NAME}/demos/common/export_models/export_model.py
 mkdir -p models
 
@@ -79,71 +72,14 @@ python export_model.py text_generation --source_model mistralai/Mistral-7B-Instr
 curl -L -o models/mistralai/Mistral-7B-Instruct-v0.3-int8/chat_template.jinja https://raw.githubusercontent.com/vllm-project/vllm/refs/tags/v0.9.0/examples/tool_chat_template_mistral_parallel.jinja
 python export_model.py text_generation --source_model mistralai/Mistral-7B-Instruct-v0.3 --model_name mistralai/Mistral-7B-Instruct-v0.3-fp16 --weight-format fp16 --config_file_path models/config.json --model_repository_path models --tool_parser mistral --cache_size 2 --extra_quantization_params "--task text-generation-with-past"
 curl -L -o models/mistralai/Mistral-7B-Instruct-v0.3-fp16/chat_template.jinja https://raw.githubusercontent.com/vllm-project/vllm/refs/tags/v0.9.0/examples/tool_chat_template_mistral_parallel.jinja
+# openai/gpt-oss-20b
+python export_model.py text_generation --source_model openai/gpt-oss-20b --model_name openai/gpt-oss-20b-int4 --weight-format int4 --config_file_path models/config.json --model_repository_path models
+cp ../extras/chat_template_examples/chat_template_gpt_oss.jinja models/openai/gpt-oss-20b-int4/chat_template.jinja
 
-run_model_test() {
-    local model_name=$1
-    local precision=$2
-    local tool_parser=$3
-    local enable_tool_guided_generation=${4:-false}
-    set -x
-    docker stop ovms 2>/dev/null
-    docker run -d --name ovms --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models openvino/model_server:latest \
-    --rest_port 8000 --model_repository_path /models --source_model ${model_name}-${precision} \
-    --tool_parser ${tool_parser} --model_name ovms-model --enable_tool_guided_generation $enable_tool_guided_generation \
-    --cache_size 20 --task text_generation
-    
-    sleep 20
+# Qwen/Qwen3-Coder-30B-Instruct
+python export_model.py text_generation --source_model Qwen/Qwen3-Coder-30B-Instruct --model_name Qwen/Qwen3-Coder-30B-Instruct-int4 --weight-format int4 --config_file_path models/config.json --model_repository_path models
+cp ../extras/chat_template_examples/chat_template_qwen3coder_instruct.jinja models/Qwen/Qwen3-Coder-30B-Instruct-int4/chat_template.jinja
 
-    local result_dir="${model_name}-${precision}${enable_tool_guided_generation}"
-    # use short model name
-    result_dir=$(echo "$result_dir" | awk -F'/' '{print $NF}')
-    echo "Result directory: $result_dir"
-    sleep 10
-    export OPENAI_BASE_URL=http://localhost:8000/v3
-    export OPENAI_API_KEY="notused"
-    export TOOL_CHOICE=auto
-    bfcl generate --model ovms-model --test-category simple,multiple,parallel,irrelevance,multi_turn_base --num-threads 100 --result-dir $result_dir -o
-    bfcl generate --model ovms-model --test-category multi_turn_base --num-threads 10 --result-dir $result_dir -o
-    bfcl evaluate --model ovms-model --result-dir $result_dir --score-dir ${result_dir}_score
-}
-
-# Model configurations
-declare -A models=(
-    ["Qwen/Qwen3-8B"]="hermes3"
-    ["Qwen/Qwen3-4B"]="hermes3"
-    ["Qwen/Qwen3-1.7B"]="hermes3"
-    ["Qwen/Qwen3-0.6B"]="hermes3"
-    ["meta-llama/Llama-3.1-8B-Instruct"]="llama3"
-    ["meta-llama/Llama-3.2-3B-Instruct"]="llama3"
-    ["NousResearch/Hermes-3-Llama-3.1-8B"]="hermes3"
-    ["microsoft/Phi-4-mini-instruct"]="phi4"
-    ["mistralai/Mistral-7B-Instruct-v0.3"]="mistral"
-)
-
-precisions=("int4" "int8" "fp16")
-
-# Run tests for each model and precision
-# enable tool guided generation
-for model in "${!models[@]}"; do
-    tool_parser="${models[$model]}"
-    for precision in "${precisions[@]}"; do
-        run_model_test "$model" "$precision" "$tool_parser" "true"
-    done
-done
-
-
-# disable tool guided generation
-for model in "${!models[@]}"; do
-    tool_parser="${models[$model]}"
-    for precision in "${precisions[@]}"; do
-        run_model_test "$model" "$precision" "$tool_parser" "false"
-    done
-done
-
-docker stop ovms 2>/dev/null
-
-
-python sumarize_results.py
-
-
-
+# devstral
+python export_model.py text_generation --source_model unsloth/Devstral-Small-2507 --model_name unsloth/Devstral-Small-2507-int4 --weight-format int4 --config_file_path models/config.json --model_repository_path models
+cp ../extras/chat_template_examples/chat_template_devstral.jinja models/unsloth/Devstral-Small-2507-int4/chat_template.jinja
