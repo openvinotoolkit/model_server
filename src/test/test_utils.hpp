@@ -91,7 +91,6 @@ void preparePredictRequest(tensorflow::serving::PredictRequest& request, inputs_
 KFSTensorInputProto* findKFSInferInputTensor(::KFSRequest& request, const std::string& name);
 std::string* findKFSInferInputTensorContentInRawInputs(::KFSRequest& request, const std::string& name);
 
-
 template <typename T = float>
 void prepareKFSInferInputTensor(::KFSRequest& request, const std::string& name, const std::tuple<ovms::signed_shape_t, const std::string>& inputInfo,
     const std::vector<T>& data = std::vector<float>{}, bool putBufferInInputTensorContent = false) {

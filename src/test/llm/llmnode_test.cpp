@@ -3417,9 +3417,13 @@ INSTANTIATE_TEST_SUITE_P(
 // Common tests for all pipeline types (testing logic executed prior pipeline type selection)
 class LLMConfigHttpTest : public ::testing::Test {
 #if (PYTHON_DISABLE == 0)
-public:
-    void SetUp() { py::initialize_interpreter(); }
-    void TearDown() { py::finalize_interpreter(); }
+    static void SetUpTestSuite() {
+        py::initialize_interpreter();
+    }
+
+    static void TearDownTestSuite() {
+        py::finalize_interpreter();
+    }
 #endif
 };
 
