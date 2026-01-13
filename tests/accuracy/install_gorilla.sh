@@ -1,6 +1,6 @@
 #!/bin/bash -x
 #
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -23,7 +23,10 @@ if [ ! -d "gorilla" ]; then
     cd gorilla/berkeley-function-call-leaderboard
     git checkout 9b8a5202544f49a846aced185a340361231ef3e1
     curl -s https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/${BRANCH_NAME}/demos/continuous_batching/accuracy/gorilla.patch | git apply -v
-    pip install -e . 
+    pip install -e . --extra-index-url "https://download.pytorch.org/whl/cpu"
+    bfcl --help
     cd ../..
     cp test_case_ids_to_generate.json gorilla/berkeley-function-call-leaderboard/
+else
+    echo "Gorilla already installed, skipping installation. Delete the 'gorilla' directory to reinstall."
 fi
