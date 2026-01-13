@@ -91,6 +91,7 @@ void preparePredictRequest(tensorflow::serving::PredictRequest& request, inputs_
 KFSTensorInputProto* findKFSInferInputTensor(::KFSRequest& request, const std::string& name);
 std::string* findKFSInferInputTensorContentInRawInputs(::KFSRequest& request, const std::string& name);
 
+
 template <typename T = float>
 void prepareKFSInferInputTensor(::KFSRequest& request, const std::string& name, const std::tuple<ovms::signed_shape_t, const std::string>& inputInfo,
     const std::vector<T>& data = std::vector<float>{}, bool putBufferInInputTensorContent = false) {
@@ -318,6 +319,18 @@ std::string readableSetError(std::unordered_set<std::string> expected, std::unor
 void checkDummyResponse(const std::string outputName,
     const std::vector<float>& requestData,
     tensorflow::serving::PredictRequest& request, tensorflow::serving::PredictResponse& response, int seriesLength, int batchSize = 1, const std::string& servableName = "", size_t expectedOutputsCount = 1);
+
+static int testInterpretersRequired = 5;
+static void initializePythonInterpreter() {
+    if (testInterpretersRequired == 5)
+        py::initialize_interpreter();
+}
+
+static void finalizePythonInterpreter() {
+    testInterpretersRequired--;
+    if (testInterpretersRequired == 0)
+        py::finalize_interpreter();
+}
 
 static std::string vectorTypeToKfsString(const std::type_info& vectorType) {
     // {Precision::BF16, "BF16"},
