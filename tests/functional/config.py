@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2020 Intel Corporation
+# Copyright (c) 2020-2026 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@
 import os
 
 from tests.functional.constants.target_device import TargetDevice
-from tests.functional.utils.helpers import get_int, get_bool
+from tests.functional.utils.helpers import get_int, get_bool, get_path
 from tests.functional.utils.parametrization import generate_test_object_name
 
 try:
@@ -120,3 +120,6 @@ skip_nginx_test = skip_nginx_test and is_nginx_mtls
 
 """ TT_ENABLE_PYTEST_PLUGINS - enable pytest plugins """
 enable_pytest_plugins = get_bool("TT_ENABLE_PYTEST_PLUGINS", "True")
+
+""" TT_OVMS_C_REPO_PATH - path to ovms-c repository. Can be relative or absolute. """
+ovms_c_repo_path = get_path("TT_OVMS_C_REPO_PATH", get_path("PWD", "./"))

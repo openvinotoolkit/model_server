@@ -61,6 +61,14 @@ def get_bool(key_name, fallback=None):
     return value
 
 
+def get_path(key_name, fallback=None):
+    value = os.environ.get(key_name, fallback)
+    if value:
+        value = os.path.expanduser(value)
+        value = os.path.realpath(value)
+    return value
+
+
 def get_xdist_worker_count():
     return int(os.environ.get("PYTEST_XDIST_WORKER_COUNT", "1"))
 

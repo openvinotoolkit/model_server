@@ -26,7 +26,7 @@ def new_file_name(file):
 @pytest.fixture(autouse=True, scope="session")
 def prepare_json(request):
     files_to_prepare = ["config_template.json", "model_version_policy_config_template.json"]
-    path_to_config = "tests/functional/"
+    path_to_config = os.path.join(config.ovms_c_repo_path, "tests/functional/")
 
     def finalizer():
         for file in files_to_prepare:

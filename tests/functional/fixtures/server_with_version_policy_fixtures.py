@@ -27,7 +27,7 @@ from tests.functional.object_model.server import Server
 @pytest.fixture(scope="session")
 def start_server_model_ver_policy(request):
 
-    shutil.copyfile('tests/functional/mapping_config.json',
+    shutil.copyfile(os.path.join(config.ovms_c_repo_path, 'tests/functional/mapping_config.json'),
                     config.path_to_mount + '/model_ver/3/mapping_config.json')
 
     start_server_command_args = {"config_path": "{}/model_version_policy_config.json".format(config.models_path)}
