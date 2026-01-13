@@ -18,8 +18,8 @@ import pytest
 import numpy as np
 
 from tests.functional.config import skip_nginx_test
-from tests.functional.constants.constants import MODEL_SERVICE, TARGET_DEVICE_GPU, TARGET_DEVICE_HDDL, \
-    TARGET_DEVICE_MYRIAD, TARGET_DEVICE_CUDA, NOT_TO_BE_REPORTED_IF_SKIPPED
+from tests.functional.constants.constants import MODEL_SERVICE, NOT_TO_BE_REPORTED_IF_SKIPPED
+from tests.functional.constants.target_device import TargetDevice
 from tests.functional.conftest import devices_not_supported_for_test
 from tests.functional.model.models_information import PVBFaceDetectionV2, PVBFaceDetection
 from tests.functional.utils.grpc import create_channel, infer, get_model_metadata_request, get_model_metadata, model_metadata_response, \
@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 
 
 @pytest.mark.skipif(skip_nginx_test, reason=NOT_TO_BE_REPORTED_IF_SKIPPED)
-@devices_not_supported_for_test([TARGET_DEVICE_MYRIAD, TARGET_DEVICE_HDDL, TARGET_DEVICE_GPU, TARGET_DEVICE_CUDA])
+@devices_not_supported_for_test([TargetDevice.GPU])
 class TestModelVersionHandling:
     model_name = "pvb_face_multi_version"
 

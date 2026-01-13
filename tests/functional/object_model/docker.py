@@ -29,7 +29,7 @@ from tests.functional.utils.files_operation import get_path_friendly_test_name
 import tests.functional.config as config
 from tests.functional.utils.grpc import port_manager_grpc
 from tests.functional.utils.rest import port_manager_rest
-from tests.functional.constants.constants import TARGET_DEVICE_HDDL, TARGET_DEVICE_GPU, TARGET_DEVICE_CUDA, TARGET_DEVICE_CPU, TARGET_DEVICE_MYRIAD
+from tests.functional.constants.target_device import TargetDevice
 
 
 logger = logging.getLogger(__name__)
@@ -37,12 +37,12 @@ CONTAINER_STATUS_RUNNING = "running"
 TERMINAL_STATUSES = ["exited"]
 
 TARGET_DEVICE_CONFIGURATION = {
-    TARGET_DEVICE_CPU: {
+    TargetDevice.CPU: {
         'volumes': {},
         "privileged": False,
     },
 
-    TARGET_DEVICE_GPU: {
+    TargetDevice.GPU: {
         'volumes': {},
         "devices": ["/dev/dri:/dev/dri:mrw"],
         "privileged": False,
@@ -50,25 +50,6 @@ TARGET_DEVICE_CONFIGURATION = {
         "group_add": [getgrnam('render').gr_gid, getgrnam('video').gr_gid]
     },
 
-    TARGET_DEVICE_CUDA: {
-        'volumes': {},
-        "privileged": False,
-        'device_requests':  [DeviceRequest(count=-1, capabilities=[['gpu']])]
-    },
-
-    TARGET_DEVICE_MYRIAD: {
-        'volumes': {"/dev/bus/usb": {'bind': "/dev/bus/usb", 'mode': 'ro'}},
-        'privileged': False,
-        "user": f"{getuid()}:{getgrnam('users').gr_gid}",
-        "device_cgroup_rules": ["c 189:* rmw"]
-    },
-
-    TARGET_DEVICE_HDDL: {
-        "volumes": {"/var/tmp": {"bind": "/var/tmp", "mode": "rw"}},
-        "devices": ["/dev/ion:/dev/ion:mrw"],
-        "privileged": False,
-        "user": "root"
-    },
 }
 
 

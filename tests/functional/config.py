@@ -16,8 +16,7 @@
 
 import os
 
-from tests.functional.constants.constants import TARGET_DEVICE_CPU, TARGET_DEVICE_GPU, TARGET_DEVICE_CUDA, \
-    TARGET_DEVICE_MYRIAD, TARGET_DEVICE_HDDL
+from tests.functional.constants.target_device import TargetDevice
 from tests.functional.utils.helpers import get_int, get_bool
 from tests.functional.utils.parametrization import generate_test_object_name
 
@@ -65,10 +64,10 @@ models_path = path_to_mount if ovms_binary_path else "/opt/ml"
 minio_image = os.environ.get("TT_MINIO_IMAGE_NAME", "minio/minio:latest")
 
 """ TT_TARGET_DEVICE - one of "CPU", "GPU" """
-target_device = os.environ.get("TT_TARGET_DEVICE", TARGET_DEVICE_CPU)
+target_device = os.environ.get("TT_TARGET_DEVICE", TargetDevice.CPU)
 
 """IMAGE - docker image name which should be used to run tests"""
-if target_device == TARGET_DEVICE_GPU:
+if target_device == TargetDevice.GPU:
     _default_image = "openvino/model_server-gpu"
 else:
     _default_image = "openvino/model_server"
@@ -107,11 +106,8 @@ default_myriad_infer_timeout = get_int("TT_DEFAULT_MYRIAD_INFER_TIMEOUT", 5*defa
 
 """ INFER TIMEOUT """
 infer_timeouts = {
-    TARGET_DEVICE_CPU: default_infer_timeout,
-    TARGET_DEVICE_GPU: default_gpu_infer_timeout,
-    TARGET_DEVICE_CUDA: default_cuda_infer_timeout,
-    TARGET_DEVICE_HDDL: default_hddl_infer_timeout,
-    TARGET_DEVICE_MYRIAD: default_myriad_infer_timeout,
+    TargetDevice.CPU: default_infer_timeout,
+    TargetDevice.GPU: default_gpu_infer_timeout,
 }
 infer_timeout = infer_timeouts[target_device]
 

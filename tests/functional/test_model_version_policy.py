@@ -17,26 +17,21 @@
 import pytest
 import requests
 from google.protobuf.json_format import Parse
-from tensorflow_serving.apis import get_model_metadata_pb2, \
-    get_model_status_pb2  # noqa
+from tensorflow_serving.apis import get_model_metadata_pb2, get_model_status_pb2  # noqa
 
-from tests.functional.constants.constants import MODEL_SERVICE, TARGET_DEVICE_MYRIAD, TARGET_DEVICE_CUDA, \
-    NOT_TO_BE_REPORTED_IF_SKIPPED
+from tests.functional.constants.constants import MODEL_SERVICE, NOT_TO_BE_REPORTED_IF_SKIPPED
 from tests.functional.config import skip_nginx_test
-from tests.functional.conftest import devices_not_supported_for_test
 from tests.functional.model.models_information import AgeGender, PVBDetection, PVBFaceDetectionV2
 from tests.functional.utils.grpc import create_channel, get_model_metadata_request, get_model_metadata, \
     model_metadata_response, get_model_status
 import logging
-from tests.functional.utils.models_utils import ModelVersionState, ErrorCode, \
-    ERROR_MESSAGE  # noqa
+from tests.functional.utils.models_utils import ModelVersionState, ErrorCode, ERROR_MESSAGE  # noqa
 from tests.functional.utils.rest import get_metadata_url, get_status_url, get_model_status_response_rest
 
 logger = logging.getLogger(__name__)
 
 
 @pytest.mark.skipif(skip_nginx_test, reason=NOT_TO_BE_REPORTED_IF_SKIPPED)
-@devices_not_supported_for_test([TARGET_DEVICE_MYRIAD, TARGET_DEVICE_CUDA])
 class TestModelVerPolicy:
 
     @pytest.mark.parametrize("model_name, throw_error", [
