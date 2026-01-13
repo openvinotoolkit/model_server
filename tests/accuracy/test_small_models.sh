@@ -80,7 +80,7 @@ done
 docker stop ovms 2>/dev/null
 
 
-python sumarize_results.py
+python summarize_results.py
 
 
 
