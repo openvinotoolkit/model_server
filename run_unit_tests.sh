@@ -76,7 +76,7 @@ if [ "$RUN_TESTS" == "1" ] ; then
     echo "Executing unit tests"
     failed=0
 
-    # For RH UBI and Ubuntu20
+    # For RH UBI and Ubuntu
     if ! bazel test --jobs=$JOBS ${debug_bazel_flags} ${SHARED_OPTIONS} --test_summary=detailed --test_output=streamed --test_filter="*" //src:ovms_test > ${TEST_LOG} 2>&1 ; then
         failed=1
     fi
