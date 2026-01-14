@@ -38,7 +38,7 @@ It is recommended to get started with [tested models](https://openvinotoolkit.gi
 
 ## Accuracy in Agentic Use Cases with Tools Calling
 
-While using agentic models with tools calling capabilities, it is important to set proper tools parser and reasoning parser in the runtime parameters. For some models like, qwen3-coder, gpt-oss-20b, mistral, it is important to use correct, tunned chat template. Check the [agentic demo](../demos/continuous_batching/agentic_ai/README.md)
+While using agentic models with tools calling capabilities, it is important to set proper tools parser and reasoning parser in the runtime parameters. For some models like, qwen3-coder, gpt-oss-20b, mistral, it is important to use correct, tuned chat template. Check the [agentic demo](../demos/continuous_batching/agentic_ai/README.md)
 
 
 
