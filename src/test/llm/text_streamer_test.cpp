@@ -41,7 +41,7 @@ public:
 
     static void SetUpTestSuite() {
 #if (PYTHON_DISABLE == 0)
-        py::initialize_interpreter();
+        py::initialize_interpreter();;
 #endif
         std::string adjustedPbtxt = testPbtxt;
         adjustConfigForTargetPlatform(adjustedPbtxt);

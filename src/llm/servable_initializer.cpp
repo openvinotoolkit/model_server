@@ -149,7 +149,9 @@ void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServ
     properties->templateProcessor.bosToken = bosToken;
     properties->templateProcessor.eosToken = eosToken;
 
+    std::cout << std::endl << "gil_scoped_acquire3" << std::endl;
     py::gil_scoped_acquire acquire;
+    std::cout << std::endl << "gil_scoped_acquire4" << std::endl;
     try {
         auto locals = py::dict("chat_template"_a = chatTemplate,
             "templates_directory"_a = extraGenInfo.chatTemplateDirectory);

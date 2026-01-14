@@ -58,14 +58,6 @@ protected:
     std::string jinjaConfigFilePath;
     std::shared_ptr<GenAiServable> servable;
 
-    static void SetUpTestSuite() {
-        py::initialize_interpreter();
-    }
-
-    static void TearDownTestSuite() {
-        py::finalize_interpreter();
-    }
-
     void LoadTemplateProcessor() {
         servable = std::make_shared<ContinuousBatchingServable>();
         servable->getProperties()->modelsPath = directoryPath;
@@ -78,6 +70,7 @@ protected:
 
     void SetUp() {
         TestWithTempDir::SetUp();
+        py::initialize_interpreter();
         tokenizerConfigFilePath = directoryPath + "/tokenizer_config.json";
         jinjaConfigFilePath = directoryPath + "/chat_template.jinja";
 
@@ -102,6 +95,7 @@ protected:
     }
 
     void TearDown() {
+        py::finalize_interpreter();
         servable.reset();
         std::filesystem::remove_all(directoryPath);
         TestWithTempDir::TearDown();

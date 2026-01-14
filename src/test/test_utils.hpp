@@ -321,12 +321,14 @@ void checkDummyResponse(const std::string outputName,
 
 static int testInterpretersRequired = 5;
 static void initializePythonInterpreter() {
+    std::cout << std::endl << "testInterpretersRequired" << testInterpretersRequired << std::endl;
     if (testInterpretersRequired == 5)
         py::initialize_interpreter();
 }
 
 static void finalizePythonInterpreter() {
     testInterpretersRequired--;
+    std::cout << std::endl << "testInterpretersRequired" << testInterpretersRequired << std::endl;
     if (testInterpretersRequired == 0)
         py::finalize_interpreter();
 }
