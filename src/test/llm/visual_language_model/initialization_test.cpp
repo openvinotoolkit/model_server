@@ -39,7 +39,7 @@ class VLMServableInitializationTest : public ::testing::Test {
 /*#if (PYTHON_DISABLE == 0)
 public:
     static void SetUpTestSuite() {
-        py::initialize_interpreter();
+        py::initialize_interpreter();;
     }
 
     static void TearDownTestSuite() {

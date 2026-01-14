@@ -78,6 +78,7 @@ protected:
 
     void SetUp() {
         TestWithTempDir::SetUp();
+        py::initialize_interpreter();
         tokenizerConfigFilePath = directoryPath + "/tokenizer_config.json";
         jinjaConfigFilePath = directoryPath + "/chat_template.jinja";
 
@@ -102,6 +103,7 @@ protected:
     }
 
     void TearDown() {
+        py::finalize_interpreter();
         servable.reset();
         std::filesystem::remove_all(directoryPath);
         TestWithTempDir::TearDown();
