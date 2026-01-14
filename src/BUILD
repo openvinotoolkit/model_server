@@ -2679,6 +2679,7 @@ cc_test(
             ":libtest_environment",
             ":libtest_gpuenvironment",
             ":test_gguf_environment",
+            ":libtest_pythonenvironment",
             ":network_utils_test",
             "//src:custom_nodes_common_buffersqueue",
             "@com_google_googletest//:gtest",
@@ -2850,6 +2851,19 @@ cc_library(
     linkopts = [],
     deps = [
             "libovmslogging",
+            "@com_google_googletest//:gtest",
+    ],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_TESTS,
+)
+cc_library(
+    name = "libtest_pythonenvironment",
+    linkstatic = 1,
+    alwayslink = True,
+    hdrs = ["test/python_environment.hpp",],
+    srcs = ["test/python_environment.cpp",],
+    linkopts = [],
+    deps = [
             "@com_google_googletest//:gtest",
     ],
     local_defines = COMMON_LOCAL_DEFINES,

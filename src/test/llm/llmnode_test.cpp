@@ -3417,7 +3417,7 @@ INSTANTIATE_TEST_SUITE_P(
 // Common tests for all pipeline types (testing logic executed prior pipeline type selection)
 class LLMConfigHttpTest : public ::testing::Test {
 public:
-#if (PYTHON_DISABLE == 0)
+/*#if (PYTHON_DISABLE == 0)
     static void SetUpTestSuite() {
         py::initialize_interpreter();
     }
@@ -3425,7 +3425,7 @@ public:
     static void TearDownTestSuite() {
         py::finalize_interpreter();
     }
-#endif
+#endif*/
 };
 
 TEST_F(LLMConfigHttpTest, LLMNodeNameMissing) {
@@ -3685,11 +3685,11 @@ TEST_F(LLMConfigHttpTest, LLMNodeWorkspacePathToFileNotDir) {
 }
 
 class LLMConfigHttpTestParameterized : public ::testing::Test, public ::testing::WithParamInterface<std::tuple<std::string, ovms::StatusCode>> {
-#if (PYTHON_DISABLE == 0)
+/*#if (PYTHON_DISABLE == 0)
 public:
     static void SetUpTestSuite() { py::initialize_interpreter(); }
     static void TearDownTestSuite() { py::finalize_interpreter(); }
-#endif
+#endif*/
 };
 
 TEST_P(LLMConfigHttpTestParameterized, LLMNodeResourceInitFailed) {
@@ -3754,11 +3754,11 @@ INSTANTIATE_TEST_SUITE_P(
 // Those tests are working on Continuous Batching path, since most of the node options are scheduler parameters that are not used in non-CB servables
 // We could consider adding tests for non-CB path in the future in the separate test suite
 class LLMOptionsHttpTestPython : public ::testing::Test {
-#if (PYTHON_DISABLE == 0)
+/*#if (PYTHON_DISABLE == 0)
 public:
     static void SetUpTestSuite() { py::initialize_interpreter(); }
     static void TearDownTestSuite() { py::finalize_interpreter(); }
-#endif
+#endif*/
 };
 
 class LLMOptionsHttpTest : public LLMOptionsHttpTestPython {

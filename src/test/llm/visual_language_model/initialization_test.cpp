@@ -36,7 +36,7 @@ Status callDeterminePipelineType(PipelineType& pipelineType, const std::string& 
 
 // Initialization tests
 class VLMServableInitializationTest : public ::testing::Test {
-#if (PYTHON_DISABLE == 0)
+/*#if (PYTHON_DISABLE == 0)
 public:
     static void SetUpTestSuite() {
         py::initialize_interpreter();
@@ -46,6 +46,7 @@ public:
         py::finalize_interpreter();
     }
 #endif
+*/
 };
 
 TEST_F(VLMServableInitializationTest, determinePipelineTypeDefault) {

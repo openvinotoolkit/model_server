@@ -319,9 +319,8 @@ void checkDummyResponse(const std::string outputName,
     const std::vector<float>& requestData,
     tensorflow::serving::PredictRequest& request, tensorflow::serving::PredictResponse& response, int seriesLength, int batchSize = 1, const std::string& servableName = "", size_t expectedOutputsCount = 1);
 
-static int testInterpretersRequired = 5;
 static void initializePythonInterpreter() {
-    if (testInterpretersRequired == 5)
+    if (!py::is_interpreter_initialized())
         py::initialize_interpreter();
 }
 
