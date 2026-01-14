@@ -15,14 +15,28 @@
 //*****************************************************************************
 #include "python_environment.hpp"
 
-void Environment::SetUp() {
+void PythonEnvironment::SetUp() {
 #if (PYTHON_DISABLE == 0)
     py::initialize_interpreter();
+    releaseGILFromThisThread();
 #endif
 }
 
-void Environment::TearDown() {
+void PythonEnvironment::TearDown() {
 #if (PYTHON_DISABLE == 0)
-    py::finalize_interpreter()();
+    reacquireGILForThisThread();
+    py::finalize_interpreter();
+#endif
+}
+
+void PythonEnvironment::releaseGILFromThisThread() const {
+#if (PYTHON_DISABLE == 0)
+    this->GILScopedRelease = std::make_unique<py::gil_scoped_release>();
+#endif
+}
+
+void PythonEnvironment::reacquireGILForThisThread() const {
+#if (PYTHON_DISABLE == 0)
+    this->GILScopedRelease.reset();
 #endif
 }

@@ -15,6 +15,7 @@
 //*****************************************************************************
 #include "pythoninterpretermodule.hpp"
 
+#include <iostream>
 #include <string>
 #include <utility>
 #pragma warning(push)
@@ -36,7 +37,7 @@ Status PythonInterpreterModule::start(const ovms::Config&) {
     state = ModuleState::STARTED_INITIALIZE;
     SPDLOG_INFO("{} starting", PYTHON_INTERPRETER_MODULE_NAME);
     this->threadId = std::this_thread::get_id();
-    if (!py::is_interpreter_initialized()) {
+    if (!Py_IsInitialized()) {
         SPDLOG_INFO("Initializing python interpreter", PYTHON_INTERPRETER_MODULE_NAME);
         py::initialize_interpreter();
         hasModuleInitializedTheInterpreter = true;
@@ -44,7 +45,8 @@ Status PythonInterpreterModule::start(const ovms::Config&) {
         SPDLOG_INFO("Python interpreter already initialized", PYTHON_INTERPRETER_MODULE_NAME);
         hasModuleInitializedTheInterpreter = false;
     }
-
+    
+    py::gil_scoped_acquire acquire;
     py::exec(R"(
         import sys
         print("Python version:")
@@ -52,6 +54,7 @@ Status PythonInterpreterModule::start(const ovms::Config&) {
         print("Python sys.path output:")
         print(sys.path)
     )");
+    std::cout << std::endl << "EXEC IMPORT" << std::endl;
     if (!PythonBackend::createPythonBackend(pythonBackend))
         return StatusCode::INTERNAL_ERROR;
     state = ModuleState::INITIALIZED;
@@ -76,11 +79,15 @@ void PythonInterpreterModule::shutdown() {
 }
 
 void PythonInterpreterModule::releaseGILFromThisThread() const {
+    if (!hasModuleInitializedTheInterpreter)
+        return;
     if (std::this_thread::get_id() != this->threadId) {
         SPDLOG_ERROR("Cannot use {} from different thread than the one starting module", __FUNCTION__);
         throw std::logic_error("Cannot use method from different thread than the one starting python module");
     }
+    std::cout <<std::endl << "PythonInterpreterModule releaseGILFromThisThread " << hasModuleInitializedTheInterpreter << std::endl;
     this->GILScopedRelease = std::make_unique<py::gil_scoped_release>();
+    std::cout <<std::endl << "PythonInterpreterModule releaseGILFromThisThread DONE" << std::endl;
 }
 
 void PythonInterpreterModule::reacquireGILForThisThread() const {
@@ -88,6 +95,7 @@ void PythonInterpreterModule::reacquireGILForThisThread() const {
         SPDLOG_ERROR("Cannot use {} from different thread than the one starting module", __FUNCTION__);
         throw std::logic_error("Cannot use method from different thread than the one starting python module");
     }
+    std::cout <<std::endl << "PythonInterpreterModule reacquireGILForThisThread" << std::endl;
     this->GILScopedRelease.reset();
 }
 
@@ -95,7 +103,10 @@ PythonBackend* PythonInterpreterModule::getPythonBackend() const {
     return pythonBackend.get();
 }
 
-PythonInterpreterModule::PythonInterpreterModule() = default;
+PythonInterpreterModule::PythonInterpreterModule() {
+    hasModuleInitializedTheInterpreter = false;
+    std::cout <<std::endl << "PythonInterpreterModule hasModuleInitializedTheInterpreter" << hasModuleInitializedTheInterpreter << std::endl;
+}
 
 PythonInterpreterModule::~PythonInterpreterModule() {
     this->shutdown();

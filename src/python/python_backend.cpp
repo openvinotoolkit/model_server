@@ -14,6 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 
+#include <iostream>
 #include "python_backend.hpp"
 
 #pragma warning(push)
@@ -29,6 +30,7 @@ using namespace ovms;
 #pragma warning(disable : 4101)
 bool PythonBackend::createPythonBackend(std::unique_ptr<PythonBackend>& pythonBackend) {
     py::gil_scoped_acquire acquire;
+    std::cout << std::endl << "gil_scoped_acquire" << std::endl;
     try {
         pythonBackend = std::make_unique<PythonBackend>();
     } catch (const pybind11::error_already_set& e) {
