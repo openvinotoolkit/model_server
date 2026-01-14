@@ -159,9 +159,7 @@ Status PythonNodeResources::createPythonNodeResources(std::shared_ptr<PythonNode
         nodeResources->ovmsPythonModel = std::make_unique<py::object>(OvmsPythonModel());
         if (py::hasattr(*nodeResources->ovmsPythonModel, "initialize")) {
             py::dict kwargsParam = preparePythonNodeInitializeArguments(graphNodeConfig, basePath);
-            SPDLOG_INFO("attr(initialize)(kwargsParam); {} ", basePath);
             nodeResources->ovmsPythonModel->attr("initialize")(kwargsParam);
-            SPDLOG_INFO("attr(initialize)(kwargsParam); END");
         } else {
             SPDLOG_DEBUG("OvmsPythonModel class defined in {} does not implement initialize method.", nodeOptions.handler_path());
         }

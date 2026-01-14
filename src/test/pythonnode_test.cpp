@@ -85,7 +85,6 @@ public:
     }
 
     static void SetUpTestSuite() {
-        std::cout << std::endl << "SetUpTestSuite start" << std::endl;
         std::string configPath = getGenericFullPathForSrcTest("/ovms/src/test/mediapipe/python/mediapipe_add_python_node.json");
         ovms::Server::instance().setShutdownRequest(0);
         std::string port = "9178";
@@ -99,12 +98,9 @@ public:
             (char*)"0"};
         int argc = 7;
         serverThread.reset(new std::thread([&argc, &argv]() {
-            std::cout << std::endl << "ovms::Server::instance() start" << std::endl;
             EXPECT_EQ(EXIT_SUCCESS, ovms::Server::instance().start(argc, argv));
-            std::cout << std::endl << "ovms::Server::instance() started" << std::endl;
         }));
         EnsureServerStartedWithTimeout(ovms::Server::instance(), 5);
-        std::cout << std::endl << "SetUpTestSuite end" << std::endl;
     }
     static void TearDownTestSuite() {
         ovms::Server::instance().setShutdownRequest(1);

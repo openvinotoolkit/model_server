@@ -41,9 +41,7 @@ bool PyJinjaTemplateProcessor::applyChatTemplate(PyJinjaTemplateProcessor& templ
         return false;
     }
 
-    std::cout << std::endl << "gil_scoped_acquire1" << std::endl;
     py::gil_scoped_acquire acquire;
-    std::cout << std::endl << "gil_scoped_acquire2" << std::endl;
     try {
         auto locals = py::dict("request_body"_a = requestBody, "chat_template"_a = templateProcessor.chatTemplate->getObject(),
             "tool_chat_template"_a = templateProcessor.toolTemplate->getObject(), "models_path"_a = modelsPath,

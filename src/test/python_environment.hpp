@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2020 Intel Corporation
+// Copyright 2026 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+#include <memory>
 
 #pragma warning(push)
 #pragma warning(disable : 6326 28182 6011 28020)
@@ -27,6 +28,7 @@ namespace py = pybind11;
 
 class PythonEnvironment : public testing::Environment {
     mutable std::unique_ptr<py::gil_scoped_release> GILScopedRelease;
+
 public:
     void SetUp() override;
     void TearDown() override;

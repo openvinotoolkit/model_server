@@ -319,20 +319,6 @@ void checkDummyResponse(const std::string outputName,
     const std::vector<float>& requestData,
     tensorflow::serving::PredictRequest& request, tensorflow::serving::PredictResponse& response, int seriesLength, int batchSize = 1, const std::string& servableName = "", size_t expectedOutputsCount = 1);
 
-static int testInterpretersRequired = 5;
-static void initializePythonInterpreter() {
-    std::cout << std::endl << "testInterpretersRequired" << testInterpretersRequired << std::endl;
-    if (testInterpretersRequired == 5)
-        py::initialize_interpreter();
-}
-
-static void finalizePythonInterpreter() {
-    testInterpretersRequired--;
-    std::cout << std::endl << "testInterpretersRequired" << testInterpretersRequired << std::endl;
-    if (testInterpretersRequired == 0)
-        py::finalize_interpreter();
-}
-
 static std::string vectorTypeToKfsString(const std::type_info& vectorType) {
     // {Precision::BF16, "BF16"},
     // {Precision::FP16, "FP16"},

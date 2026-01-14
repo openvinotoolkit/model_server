@@ -15,6 +15,8 @@
 //*****************************************************************************
 #include "python_environment.hpp"
 
+#include <memory>
+
 void PythonEnvironment::SetUp() {
 #if (PYTHON_DISABLE == 0)
     py::initialize_interpreter();
