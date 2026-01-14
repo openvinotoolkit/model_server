@@ -178,3 +178,80 @@ TEST_F(ExecCmdTest, CommandSeparatorInjectionBlockedUtf8) {
     EXPECT_FALSE(fs::exists(injectionFile1))
         << "Command injection via exec_cmd_utf8 was successful - SECURITY VULNERABILITY!";
 }
+
+#ifndef _WIN32
+// Tests for parseArguments escape sequence handling (Linux only)
+// These tests verify that the argument parser correctly handles quoted strings and escape sequences
+
+// Test that double quotes group arguments correctly
+TEST_F(ExecCmdTest, DoubleQuotesGroupArguments) {
+    int returnCode = -1;
+    // echo should receive "hello world" as a single argument
+    std::string output = ovms::exec_cmd("echo \"hello world\"", returnCode);
+    EXPECT_EQ(output, "hello world\n");
+    EXPECT_EQ(returnCode, 0);
+}
+
+// Test that single quotes group arguments correctly
+TEST_F(ExecCmdTest, SingleQuotesGroupArguments) {
+    int returnCode = -1;
+    // echo should receive 'hello world' as a single argument
+    std::string output = ovms::exec_cmd("echo 'hello world'", returnCode);
+    EXPECT_EQ(output, "hello world\n");
+    EXPECT_EQ(returnCode, 0);
+}
+
+// Test that escaped quotes inside double quotes work
+TEST_F(ExecCmdTest, EscapedQuotesInsideDoubleQuotes) {
+    int returnCode = -1;
+    // The argument should be: He said "Hello"
+    std::string output = ovms::exec_cmd("echo \"He said \\\"Hello\\\"\"", returnCode);
+    EXPECT_EQ(output, "He said \"Hello\"\n");
+    EXPECT_EQ(returnCode, 0);
+}
+
+// Test that escaped backslash inside double quotes work
+TEST_F(ExecCmdTest, EscapedBackslashInsideDoubleQuotes) {
+    int returnCode = -1;
+    // The argument should be: path\to\file
+    std::string output = ovms::exec_cmd("echo \"path\\\\to\\\\file\"", returnCode);
+    EXPECT_EQ(output, "path\\to\\file\n");
+    EXPECT_EQ(returnCode, 0);
+}
+
+// Test that backslash outside quotes escapes the next character
+TEST_F(ExecCmdTest, BackslashEscapesOutsideQuotes) {
+    int returnCode = -1;
+    // Escaped space should not split the argument
+    std::string output = ovms::exec_cmd("echo hello\\ world", returnCode);
+    EXPECT_EQ(output, "hello world\n");
+    EXPECT_EQ(returnCode, 0);
+}
+
+// Test that single quotes preserve everything literally (no escape processing)
+TEST_F(ExecCmdTest, SingleQuotesPreserveLiterally) {
+    int returnCode = -1;
+    // Inside single quotes, backslash is literal
+    std::string output = ovms::exec_cmd("echo 'hello\\nworld'", returnCode);
+    EXPECT_EQ(output, "hello\\nworld\n");
+    EXPECT_EQ(returnCode, 0);
+}
+
+// Test mixed quoting styles
+TEST_F(ExecCmdTest, MixedQuotingStyles) {
+    int returnCode = -1;
+    // Combine single and double quotes
+    std::string output = ovms::exec_cmd("echo \"double\"'single'unquoted", returnCode);
+    EXPECT_EQ(output, "doublesingleunquoted\n");
+    EXPECT_EQ(returnCode, 0);
+}
+
+// Test that special shell characters are not interpreted
+TEST_F(ExecCmdTest, SpecialCharactersNotInterpreted) {
+    int returnCode = -1;
+    // These shell metacharacters should be passed literally to echo
+    std::string output = ovms::exec_cmd("echo '$HOME $(whoami) `id` ; | & < >'", returnCode);
+    EXPECT_EQ(output, "$HOME $(whoami) `id` ; | & < >\n");
+    EXPECT_EQ(returnCode, 0);
+}
+#endif

@@ -254,6 +254,7 @@ build:win_mp_on_py_off --define=MEDIAPIPE_DISABLE=0
 build:win_mp_on_py_off --define=PYTHON_DISABLE=1
 
 # Tests settings ############################################################################################################################
+test --test_timeout=1200
 # sometimes failed logs exceed this threshold
 test --experimental_ui_max_stdouterr_bytes=304857600
 

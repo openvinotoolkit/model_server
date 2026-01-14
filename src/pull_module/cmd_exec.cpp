@@ -15,12 +15,13 @@
 //*****************************************************************************
 #include "cmd_exec.hpp"
 
-#include <iostream>
+#include <cctype>
 #include <cstdio>
+#include <iostream>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
-#include <cctype>
 #ifdef _WIN32
 #include <windows.h>
 #else
@@ -33,23 +34,55 @@
 namespace ovms {
 
 #ifndef _WIN32
-// Internal helper to parse command string into arguments (handles quoted strings)
+// Internal helper to parse command string into executable and arguments (handles quoted strings and escape sequences)
 // Only needed on Linux for execvp which requires an argument array
-static std::vector<std::string> parseArguments(const std::string& input) {
+// Follows bash-like escaping rules:
+// - Inside double quotes: \" becomes ", \\ becomes "\""
+// - Inside single quotes: no escape processing (everything is literal)
+// - Outside quotes: \ escapes the next character
+// Returns pair: (executable, vector of arguments)
+static std::pair<std::string, std::vector<std::string>> parseCommand(const std::string& input) {
+    std::string executable;
     std::vector<std::string> args;
     std::string current;
     bool inDoubleQuotes = false;
     bool inSingleQuotes = false;
+    bool firstTokenParsed = false;
 
     for (size_t i = 0; i < input.size(); ++i) {
         char c = input[i];
+
+        // Handle escape sequences (backslash)
+        if (c == '\\' && i + 1 < input.size() && !inSingleQuotes) {
+            char next = input[i + 1];
+            if (inDoubleQuotes) {
+                // Inside double quotes: only \" and \\ are escape sequences
+                if (next == '"' || next == '\\') {
+                    current += next;
+                    ++i;  // Skip the next character
+                    continue;
+                }
+                // Other backslashes are literal
+            } else {
+                // Outside quotes: backslash escapes any character
+                current += next;
+                ++i;  // Skip the next character
+                continue;
+            }
+        }
+
         if (c == '"' && !inSingleQuotes) {
             inDoubleQuotes = !inDoubleQuotes;
         } else if (c == '\'' && !inDoubleQuotes) {
             inSingleQuotes = !inSingleQuotes;
         } else if (std::isspace(static_cast<unsigned char>(c)) && !inDoubleQuotes && !inSingleQuotes) {
             if (!current.empty()) {
-                args.push_back(current);
+                if (!firstTokenParsed) {
+                    executable = current;
+                    firstTokenParsed = true;
+                } else {
+                    args.push_back(current);
+                }
                 current.clear();
             }
         } else {
@@ -57,9 +90,13 @@ static std::vector<std::string> parseArguments(const std::string& input) {
         }
     }
     if (!current.empty()) {
-        args.push_back(current);
+        if (!firstTokenParsed) {
+            executable = current;
+        } else {
+            args.push_back(current);
+        }
     }
-    return args;
+    return {executable, args};
 }
 #endif
 
@@ -127,13 +164,11 @@ static std::string exec_secure_internal(const std::string& command,
 
 #else  // Linux
     // Linux: Must use fork/execvp to avoid shell interpretation
-    // Parse command into arguments for execvp
-    std::vector<std::string> args = parseArguments(command);
-    if (args.empty()) {
+    // Parse command into executable and arguments for execvp
+    auto [executable, args] = parseCommand(command);
+    if (executable.empty()) {
         return "Error: empty command.";
     }
-    std::string executable = args[0];
-    args.erase(args.begin());
 
     int pipefd[2];
     if (pipe(pipefd) == -1) {
