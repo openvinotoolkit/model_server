@@ -14,7 +14,6 @@
 // limitations under the License.
 //*****************************************************************************
 
-#include <iostream>
 #include "python_backend.hpp"
 
 #pragma warning(push)

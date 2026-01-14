@@ -15,7 +15,6 @@
 //*****************************************************************************
 #include "pythoninterpretermodule.hpp"
 
-#include <iostream>
 #include <string>
 #include <utility>
 #pragma warning(push)
