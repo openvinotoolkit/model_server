@@ -39,10 +39,10 @@ Status PythonInterpreterModule::start(const ovms::Config&) {
     if (!Py_IsInitialized()) {
         SPDLOG_INFO("Initializing python interpreter", PYTHON_INTERPRETER_MODULE_NAME);
         py::initialize_interpreter();
-        hasModuleInitializedTheInterpreter = true;
+        ownsInterpreter = true;
     } else {
         SPDLOG_INFO("Python interpreter already initialized", PYTHON_INTERPRETER_MODULE_NAME);
-        hasModuleInitializedTheInterpreter = false;
+        ownsInterpreter = false;
     }
 
     py::gil_scoped_acquire acquire;
@@ -72,14 +72,11 @@ void PythonInterpreterModule::shutdown() {
     pythonBackend.reset();
     state = ModuleState::SHUTDOWN;
     SPDLOG_INFO("{} shutdown", PYTHON_INTERPRETER_MODULE_NAME);
-    if (hasModuleInitializedTheInterpreter)
+    if (ownsInterpreter)
         py::finalize_interpreter();
 }
 
 void PythonInterpreterModule::releaseGILFromThisThread() const {
-    // No need to release GIL it must be handled with the initialize interpreter class. Currently in gtest PythonEnvironment.
-    if (!hasModuleInitializedTheInterpreter)
-        return;
     if (std::this_thread::get_id() != this->threadId) {
         SPDLOG_ERROR("Cannot use {} from different thread than the one starting module", __FUNCTION__);
         throw std::logic_error("Cannot use method from different thread than the one starting python module");
@@ -95,12 +92,16 @@ void PythonInterpreterModule::reacquireGILForThisThread() const {
     this->GILScopedRelease.reset();
 }
 
+bool PythonInterpreterModule::ownsPythonInterpreter() const {
+    return ownsInterpreter;
+}
+
 PythonBackend* PythonInterpreterModule::getPythonBackend() const {
     return pythonBackend.get();
 }
 
 PythonInterpreterModule::PythonInterpreterModule() {
-    hasModuleInitializedTheInterpreter = false;
+    ownsInterpreter = false;
 }
 
 PythonInterpreterModule::~PythonInterpreterModule() {
