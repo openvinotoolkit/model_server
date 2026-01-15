@@ -430,12 +430,21 @@ public:
     ~ModulesShutdownGuard() {
         this->server.shutdownModules();
     }
+    ModulesShutdownGuard(const ModulesShutdownGuard&) = delete;
+    ModulesShutdownGuard& operator=(const ModulesShutdownGuard&) = delete;
+    ModulesShutdownGuard(ModulesShutdownGuard&&) = delete;
+    ModulesShutdownGuard& operator=(ModulesShutdownGuard&&) = delete;
 };
 
 class OvmsExitGuard {
     Server& server;
 
 public:
+    OvmsExitGuard() = delete;
+    OvmsExitGuard(const OvmsExitGuard&) = delete;
+    OvmsExitGuard& operator=(const OvmsExitGuard&) = delete;
+    OvmsExitGuard& operator=(OvmsExitGuard&&) = delete;
+    OvmsExitGuard(OvmsExitGuard&&) = delete;
     OvmsExitGuard(Server& server) :
         server(server) { server.setExitStatus(0); }
     ~OvmsExitGuard() { server.setExitStatus(1); }
