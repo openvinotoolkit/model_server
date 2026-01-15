@@ -204,7 +204,7 @@ Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiSe
         return status;
     }
 
-#define NEW_CONSTRUCTORS_V2
+#define NEW_CONSTRUCTORS_V3
 
     properties->tokenizerPluginConfig = {{"PERFORMANCE_HINT", "THROUGHPUT"}};
     try {
@@ -218,6 +218,10 @@ Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiSe
         properties->pipeline = std::make_shared<ov::genai::ContinuousBatchingPipeline>(parsedModelsPath,
             properties->schedulerConfig, deviceMapping,
             properties->pluginConfig, properties->tokenizerPluginConfig);
+#elif defined(NEW_CONSTRUCTORS_V3)
+        // not implemented yet
+        SPDLOG_ERROR("Continuous Batching with DeviceMapping is not supported in this build.");
+        return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
 #else
         properties->pipeline = std::make_shared<ov::genai::ContinuousBatchingPipeline>(parsedModelsPath,
             properties->schedulerConfig, properties->device,
