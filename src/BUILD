@@ -2691,6 +2691,7 @@ cc_test(
             ":test_constructor_enabled_model_manager",
             ":test_test_models",
             ":test_test_models_configs",
+            ":test_cmd_exec",
             ] + select({
                 "//conditions:default": [
                     ":openvino_remote_tensors_tests",
@@ -2753,6 +2754,20 @@ cc_library(
             ":modelconfig",
     ],
     linkstatic = 1,
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_TESTS,
+    linkopts = COMMON_STATIC_LIBS_LINKOPTS,
+)
+
+cc_library(
+    name = "test_cmd_exec",
+    srcs = ["test/test_cmd_exec.cpp",],
+    linkstatic = 1,
+    alwayslink = True,
+    deps = [
+        "@com_google_googletest//:gtest",
+        "//src/pull_module:cmd_exec",
+    ],
     local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_TESTS,
     linkopts = COMMON_STATIC_LIBS_LINKOPTS,
