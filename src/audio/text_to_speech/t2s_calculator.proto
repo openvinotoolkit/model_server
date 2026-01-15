@@ -31,4 +31,13 @@ message T2sCalculatorOptions {
     required string models_path = 1;
     optional string target_device = 2;
     optional string plugin_config = 3;
+
+    message SpeakerEmbeddings {
+      // Speaker name.
+      required string name = 1;
+
+      // Path to speaker embeddings file.
+      required string path = 2;
+    }
+    repeated SpeakerEmbeddings voices = 4;
 }

@@ -103,8 +103,23 @@ public:
             if (streamIt != payload.parsedJson->MemberEnd()) {
                 return absl::InvalidArgumentError("streaming is not supported");
             }
+            std::optional<std::string> voice;
+            auto voiceIt = payload.parsedJson->FindMember("voice");
+            if (voiceIt != payload.parsedJson->MemberEnd() && voiceIt->value.IsString()) {
+                voice = voiceIt->value.GetString();
+            }
+            if (voice.has_value()) {
+                if (pipe->voices.find(voice.value()) == pipe->voices.end())
+                    return absl::InvalidArgumentError(absl::StrCat("Requested voice not available: ", payload.uri));
+            }
+            ov::genai::Text2SpeechDecodedResults generatedSpeech;
             std::unique_lock lock(pipe->ttsPipelineMutex);
-            auto generatedSpeech = pipe->ttsPipeline->generate(inputIt->value.GetString());
+
+            if (voice.has_value()) {
+                generatedSpeech = pipe->ttsPipeline->generate(inputIt->value.GetString(), pipe->voices[voice.value()]);
+            } else {
+                generatedSpeech = pipe->ttsPipeline->generate(inputIt->value.GetString());
+            }
             auto bitsPerSample = generatedSpeech.speeches[0].get_element_type().bitwidth();
             auto speechSize = generatedSpeech.speeches[0].get_size();
             ov::Tensor cpuTensor(generatedSpeech.speeches[0].get_element_type(), generatedSpeech.speeches[0].get_shape());
