@@ -26,6 +26,7 @@ See also:
 Generative endpoints starting with `/v3`, might be restricted with authorization and API key. It can be set during the server initialization with a parameter `api_key_file` or environment variable `API_KEY`. 
 The `api_key_file` should contain a path to the file containing the value of API key. The content of the file first line is used. If parameter api_key_file and variable  API_KEY are not set, the server will not require any authorization. The client should send the API key inside the `Authorization` header as `Bearer <api_key>`.
 
+---
 The chat/completions endpoint supports requests that include an image_url. When such a request is received, the server fetches arbitrary user‑controlled URLs using libcurl, with redirects enabled and without any IP or domain restrictions.
 This behavior may expose the server to Server-Side Request Forgery (SSRF) vulnerabilities.
 To mitigate this risk, it is recommended to start OVMS with the appropriate environment variables preconfigured: 
