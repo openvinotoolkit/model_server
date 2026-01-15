@@ -607,7 +607,7 @@ TEST_F(RerankTokenizeHttpTest, tokenizeBatchWithPadToMaxLen) {
     AssertTokenizationResult(response, expectedTokens);
 }
 
-TEST_F(RerankTokenizeHttpTest, tokenizeIgnooreAddSpecialTokensParameter) {
+TEST_F(RerankTokenizeHttpTest, tokenizeIgnoreAddSpecialTokensParameter) {
     std::string requestBody = R"(
         {
             "model": "rerank_ov",
