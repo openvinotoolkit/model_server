@@ -25,7 +25,7 @@ from tests.functional.object_model.server import Server
 
 
 @pytest.fixture(scope="session")
-def start_server_model_ver_policy(request):
+def start_server_model_ver_policy(request, resnet_multiple_batch_sizes):
 
     shutil.copyfile(os.path.join(config.ovms_c_repo_path, 'tests/functional/mapping_config.json'),
                     config.path_to_mount + '/model_ver/3/mapping_config.json')
@@ -38,7 +38,7 @@ def start_server_model_ver_policy(request):
     return server.start()
 
 
-@pytest.fixture(autouse=True, scope="session")
+@pytest.fixture(scope="session")
 def model_version_policy_models(models_downloader):
     model_ver_dir = os.path.join(config.path_to_mount, 'model_ver')
 

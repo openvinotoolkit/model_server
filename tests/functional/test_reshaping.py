@@ -41,7 +41,7 @@ fixed_shape = {'in': (1, 3, 600, 600), 'out': (1, 1, 200, 7)}
 
 @pytest.mark.priority_low
 @pytest.mark.skipif(skip_nginx_test, reason=NOT_TO_BE_REPORTED_IF_SKIPPED)
-@devices_not_supported_for_test([TargetDevice.GPU])
+@devices_not_supported_for_test([TargetDevice.GPU, TargetDevice.NPU])
 class TestModelReshaping:
 
     @pytest.mark.parametrize(
@@ -119,7 +119,7 @@ class TestModelReshaping:
                              ['row_name', 'row_noname',
                               'column_name', 'column_noname'])
     @pytest.mark.api_enabling
-    def test_mutli_local_model_reshaping_auto_rest(self, start_server_multi_model, request_format):
+    def test_multi_local_model_reshaping_auto_rest(self, start_server_multi_model, request_format):
 
         _, ports = start_server_multi_model
 

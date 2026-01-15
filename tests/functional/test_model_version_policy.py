@@ -20,7 +20,9 @@ from google.protobuf.json_format import Parse
 from tensorflow_serving.apis import get_model_metadata_pb2, get_model_status_pb2  # noqa
 
 from tests.functional.constants.constants import MODEL_SERVICE, NOT_TO_BE_REPORTED_IF_SKIPPED
+from tests.functional.constants.target_device import TargetDevice
 from tests.functional.config import skip_nginx_test
+from tests.functional.conftest import devices_not_supported_for_test
 from tests.functional.model.models_information import AgeGender, PVBDetection, PVBFaceDetectionV2
 from tests.functional.utils.grpc import create_channel, get_model_metadata_request, get_model_metadata, \
     model_metadata_response, get_model_status
@@ -33,6 +35,7 @@ logger = logging.getLogger(__name__)
 
 @pytest.mark.priority_low
 @pytest.mark.skipif(skip_nginx_test, reason=NOT_TO_BE_REPORTED_IF_SKIPPED)
+@devices_not_supported_for_test([TargetDevice.NPU])
 class TestModelVerPolicy:
 
     @pytest.mark.parametrize("model_name, throw_error", [

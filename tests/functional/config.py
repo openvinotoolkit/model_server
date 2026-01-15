@@ -54,6 +54,7 @@ ovms_binary_path = os.environ.get("OVMS_BINARY_PATH", None)
 log_level = os.environ.get("LOG_LEVEL", "INFO")
 
 path_to_mount = os.path.join(test_dir, "saved_models")
+os.makedirs(path_to_mount, exist_ok=True)
 
 path_to_mount_cache = os.path.join(test_dir_cache, "saved_models")
 

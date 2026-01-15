@@ -23,8 +23,8 @@ def new_file_name(file):
     return file.replace("_template", "")
 
 
-@pytest.fixture(autouse=True, scope="session")
-def prepare_json(request):
+@pytest.fixture(scope="session")
+def prepare_json(request, copy_cached_models_to_test_dir):
     files_to_prepare = ["config_template.json", "model_version_policy_config_template.json"]
     path_to_config = os.path.join(config.ovms_c_repo_path, "tests/functional/")
 

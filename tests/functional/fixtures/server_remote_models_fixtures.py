@@ -95,7 +95,7 @@ def start_minio_server(request, get_docker_context):
 
 
 @pytest.fixture(scope="session")
-def get_minio_server_s3(start_minio_server):
+def get_minio_server_s3(start_minio_server, copy_cached_resnet_models):
 
     path_to_mount = config.path_to_mount + '/{}/{}'.format(Resnet.name, Resnet.version)
     input_bin = os.path.join(path_to_mount, '{}.bin'.format(Resnet.name))

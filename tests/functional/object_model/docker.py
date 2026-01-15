@@ -13,8 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-from grp import getgrnam
-from os import getuid
+
+try:
+    from grp import getgrnam
+except ImportError:
+    getgrnam = None
+
 import os
 import time
 from typing import List
@@ -37,12 +41,12 @@ CONTAINER_STATUS_RUNNING = "running"
 TERMINAL_STATUSES = ["exited"]
 
 TARGET_DEVICE_CONFIGURATION = {
-    TargetDevice.CPU: {
+    TargetDevice.CPU: lambda: {
         'volumes': {},
         "privileged": False,
     },
 
-    TargetDevice.GPU: {
+    TargetDevice.GPU: lambda: {
         'volumes': {},
         "devices": ["/dev/dri:/dev/dri:mrw"],
         "privileged": False,
@@ -88,7 +92,8 @@ class Docker:
         logger.info(f"Starting container: {self.container_name}")
 
         ports = {'{}/tcp'.format(self.grpc_port): self.grpc_port, '{}/tcp'.format(self.rest_port): self.rest_port}
-        device_cfg = TARGET_DEVICE_CONFIGURATION[config.target_device]
+        device_cfg = TARGET_DEVICE_CONFIGURATION[config.target_device]()
+        device_cfg = TARGET_DEVICE_CONFIGURATION[config.target_device]()
         volumes_dict = {config.path_to_mount: {'bind': '/opt/ml', 'mode': 'ro'}}
         device_cfg['volumes'].update(volumes_dict)
 

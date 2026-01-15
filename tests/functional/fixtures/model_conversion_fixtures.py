@@ -27,8 +27,8 @@ from tests.functional.utils.model_management import convert_model
 logger = logging.getLogger(__name__)
 
 
-@pytest.fixture(autouse=True, scope="session")
-def resnet_multiple_batch_sizes(get_docker_context):
+@pytest.fixture(scope="session")
+def resnet_multiple_batch_sizes(get_docker_context, prepare_json):
     resnet_to_convert = [Resnet, ResnetBS4, ResnetBS8]
     converted_models = []
     tensorflow_model_path = download_file(model_url_base=Resnet.url, model_name=Resnet.name,
@@ -48,8 +48,8 @@ def resnet_multiple_batch_sizes(get_docker_context):
     return converted_models
 
 
-@pytest.fixture(autouse=True, scope="session")
-def copy_cached_resnet_models(resnet_multiple_batch_sizes):
+@pytest.fixture(scope="session")
+def copy_cached_resnet_models(resnet_multiple_batch_sizes, prepare_json):
     cached_resnet_models = resnet_multiple_batch_sizes
 
     for cached_model_path_bin, _ in cached_resnet_models:

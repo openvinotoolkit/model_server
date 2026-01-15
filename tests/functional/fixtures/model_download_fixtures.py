@@ -48,7 +48,7 @@ def download_file(model_url_base, model_name, directory, extension, model_versio
     return os.path.join(directory, model_name)
 
 
-@pytest.fixture(autouse=True, scope="session")
+@pytest.fixture(scope="session")
 def models_downloader():
     models_paths = {}
     for model in models_to_download:
@@ -58,10 +58,9 @@ def models_downloader():
     return models_paths
 
 
-@pytest.fixture(autouse=True, scope="session")
+@pytest.fixture(scope="session")
 def copy_cached_models_to_test_dir(models_downloader):
     cached_models_paths = models_downloader
-    os.makedirs(config.path_to_mount, exist_ok=True)
 
     for model_name, cached_model_dir in cached_models_paths.items():
         dest_model_dir = os.path.join(config.path_to_mount, model_name)

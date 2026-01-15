@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 
 @pytest.mark.priority_low
 @pytest.mark.skipif(skip_nginx_test, reason=NOT_TO_BE_REPORTED_IF_SKIPPED)
-@devices_not_supported_for_test([TargetDevice.GPU])
+@devices_not_supported_for_test([TargetDevice.GPU, TargetDevice.NPU])
 class TestModelVersionHandling:
     model_name = "pvb_face_multi_version"
 
