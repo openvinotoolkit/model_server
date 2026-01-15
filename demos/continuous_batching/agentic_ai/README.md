@@ -81,13 +81,6 @@ python export_model.py text_generation --source_model mistralai/Mistral-7B-Instr
 curl -L -o models/mistralai/Mistral-7B-Instruct-v0.3/chat_template.jinja https://raw.githubusercontent.com/vllm-project/vllm/refs/tags/v0.10.1.1/examples/tool_chat_template_mistral_parallel.jinja
 ```
 :::
-:::{tab-item} Phi-4-mini-instruct 
-:sync: microsoft/Phi-4-mini-instruct 
-```console
-python export_model.py text_generation --source_model microsoft/Phi-4-mini-instruct --weight-format int8 --config_file_path models/config.json --model_repository_path models --tool_parser phi4 --max_num_batched_tokens 99999
-curl -L -o models/microsoft/Phi-4-mini-instruct/chat_template.jinja https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/extras/chat_template_examples/chat_template_phi4_mini.jinja
-```
-:::
 :::{tab-item} Qwen3-Coder-30B-A3B-Instruct
 :sync: Qwen3-Coder-30B-A3B-Instruct
 ```console
@@ -102,6 +95,16 @@ python export_model.py text_generation --source_model openai/gpt-oss-20b --weigh
 curl -L -o models/openai/gpt-oss-20b/chat_template.jinja https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/4/extras/chat_template_examples/chat_template_gpt_oss_multiturn.jinja
 ```
 > **Note:**: Use `--pipeline_type LM` for export and `--target device GPU` for deployment. Expect continuous batching and CPU support in weekly or 2026.0+ releases.
+:::
+:::{tab-item} Phi-4-mini-instruct 
+:sync: microsoft/Phi-4-mini-instruct 
+Note: This model requires a fix in optimum-intel which is currently on a fork.
+```console
+pip3 install transformers==4.53.3 --force-reinstall
+pip3 install "optimum-intel[openvino]"@git+https://github.com/helena-intel/optimum-intel/@ea/lonrope_exp --force-reinstall
+python export_model.py text_generation --source_model microsoft/Phi-4-mini-instruct --weight-format int8 --config_file_path models/config.json --model_repository_path models --tool_parser phi4 --max_num_batched_tokens 99999
+curl -L -o models/microsoft/Phi-4-mini-instruct/chat_template.jinja https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/extras/chat_template_examples/chat_template_phi4_mini.jinja
+```
 :::
 ::::
 
