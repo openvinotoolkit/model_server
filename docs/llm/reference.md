@@ -281,6 +281,7 @@ __Tool parsers:__
 - `llama3`
 - `phi4`
 - `mistral`
+- `devstral`
 - `gptoss`
 - `qwen3coder`
 
@@ -288,7 +289,7 @@ __Reasoning parsers:__
 - `qwen3`
 
 Note that using `tools` might require a chat template other than the original. 
-We recommend using templates from the [vLLM repository](https://github.com/vllm-project/vllm/tree/main/examples) for `hermes3`, `llama3`, `phi4`, `mistral`, `gptoss`, and `qwen3coder` models (if available). Save the selected template as `chat_template.jinja` in the model directory and it will be used instead of the default one. If a template is not available for your model, please refer to the model's documentation or use the default template provided by the model server.
+We recommend using templates from the [vLLM repository](https://github.com/vllm-project/vllm/tree/main/examples) for `hermes3`, `llama3`, `phi4`, `mistral`, `devstral`, `gptoss`, and `qwen3coder` models (if available). Save the selected template as `chat_template.jinja` in the model directory and it will be used instead of the default one. If a template is not available for your model, please refer to the model's documentation or use the default template provided by the model server.
 
 When `tool_parser` is used, it's possible to leverage tool guided generation with `enable_tool_guided_generation` option. That setting pushes the model to generate tool calls that matches the schemas specified in the `tools`.
 
