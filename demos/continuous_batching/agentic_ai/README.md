@@ -98,6 +98,7 @@ curl -L -o models/openai/gpt-oss-20b/chat_template.jinja https://raw.githubuserc
 :::
 :::{tab-item} Phi-4-mini-instruct 
 :sync: microsoft/Phi-4-mini-instruct 
+Note: This model requires a fix in optimum-intel which is currently on a fork.
 ```console
 pip3 install transformers==4.53.3 --force-reinstall
 pip3 install "optimum-intel[openvino]"@git+https://github.com/helena-intel/optimum-intel/@ea/lonrope_exp --force-reinstall
