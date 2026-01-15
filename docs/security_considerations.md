@@ -26,7 +26,13 @@ See also:
 Generative endpoints starting with `/v3`, might be restricted with authorization and API key. It can be set during the server initialization with a parameter `api_key_file` or environment variable `API_KEY`. 
 The `api_key_file` should contain a path to the file containing the value of API key. The content of the file first line is used. If parameter api_key_file and variable  API_KEY are not set, the server will not require any authorization. The client should send the API key inside the `Authorization` header as `Bearer <api_key>`.
 
-`/v3/chat/completions` and `/v3/completions` endpoints supports requests containing `image_url`. When such requests is received, server fetches arbitrary user-controlled URLs using libcurl with redirects enabled and without any IP/domain restrictions. This allows OVMS to reach internal services. To prevent from that its advised to setup proxy and configure OVMS to use it with `http_proxy`, `https_proxy` and `no_proxy` enviromental variables.
+The chat/completions endpoint supports requests that include an image_url. When such a request is received, the server fetches arbitrary user‑controlled URLs using libcurl, with redirects enabled and without any IP or domain restrictions.
+This behavior may expose the server to Server-Side Request Forgery (SSRF) vulnerabilities.
+To mitigate this risk, it is recommended to start OVMS with the appropriate environment variables preconfigured: 
+`http_proxy`, 
+`https_proxy`,
+`no_proxy`.
+By routing outbound requests through a controlled proxy, you can restrict which internal domains are reachable. Use the `no_proxy` variable to explicitly specify allowed internal domain names that should bypass the proxy.
 
 ---
 
