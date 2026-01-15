@@ -58,14 +58,6 @@ protected:
     std::string jinjaConfigFilePath;
     std::shared_ptr<GenAiServable> servable;
 
-    static void SetUpTestSuite() {
-        py::initialize_interpreter();
-    }
-
-    static void TearDownTestSuite() {
-        py::finalize_interpreter();
-    }
-
     void LoadTemplateProcessor() {
         servable = std::make_shared<ContinuousBatchingServable>();
         servable->getProperties()->modelsPath = directoryPath;

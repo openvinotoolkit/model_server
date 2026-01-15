@@ -3415,13 +3415,7 @@ INSTANTIATE_TEST_SUITE_P(
         TestParameters{"vlm_legacy_regular", false, false, false, false}));
 
 // Common tests for all pipeline types (testing logic executed prior pipeline type selection)
-class LLMConfigHttpTest : public ::testing::Test {
-#if (PYTHON_DISABLE == 0)
-public:
-    void SetUp() { py::initialize_interpreter(); }
-    void TearDown() { py::finalize_interpreter(); }
-#endif
-};
+class LLMConfigHttpTest : public ::testing::Test {};
 
 TEST_F(LLMConfigHttpTest, LLMNodeNameMissing) {
     ConstructorEnabledModelManager manager;
@@ -3679,13 +3673,7 @@ TEST_F(LLMConfigHttpTest, LLMNodeWorkspacePathToFileNotDir) {
     ASSERT_EQ(status, StatusCode::LLM_NODE_PATH_DOES_NOT_EXIST_AND_NOT_GGUFFILE) << status.string();
 }
 
-class LLMConfigHttpTestParameterized : public ::testing::Test, public ::testing::WithParamInterface<std::tuple<std::string, ovms::StatusCode>> {
-#if (PYTHON_DISABLE == 0)
-public:
-    void SetUp() { py::initialize_interpreter(); }
-    void TearDown() { py::finalize_interpreter(); }
-#endif
-};
+class LLMConfigHttpTestParameterized : public ::testing::Test, public ::testing::WithParamInterface<std::tuple<std::string, ovms::StatusCode>> {};
 
 TEST_P(LLMConfigHttpTestParameterized, LLMNodeResourceInitFailed) {
     auto [pipelineType, expectedStatusCode] = GetParam();
@@ -3748,13 +3736,7 @@ INSTANTIATE_TEST_SUITE_P(
 
 // Those tests are working on Continuous Batching path, since most of the node options are scheduler parameters that are not used in non-CB servables
 // We could consider adding tests for non-CB path in the future in the separate test suite
-class LLMOptionsHttpTestPython : public ::testing::Test {
-#if (PYTHON_DISABLE == 0)
-public:
-    static void SetUpTestSuite() { py::initialize_interpreter(); }
-    static void TearDownTestSuite() { py::finalize_interpreter(); }
-#endif
-};
+class LLMOptionsHttpTestPython : public ::testing::Test {};
 
 class LLMOptionsHttpTest : public LLMOptionsHttpTestPython {
 public:

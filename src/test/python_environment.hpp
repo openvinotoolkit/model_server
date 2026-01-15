@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2020 Intel Corporation
+// Copyright 2026 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,19 +13,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#pragma once
 
-#include "environment.hpp"
-#include "gpuenvironment.hpp"
-#include "gguf_environment.hpp"
-#include "python_environment.hpp"
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
+#include <memory>
 
-int main(int argc, char** argv) {
-    ::testing::InitGoogleTest(&argc, argv);
-    ::testing::InitGoogleMock(&argc, argv);
-    ::testing::AddGlobalTestEnvironment(new Environment);
-    ::testing::AddGlobalTestEnvironment(new GPUEnvironment);
-    ::testing::AddGlobalTestEnvironment(new GGUFEnvironment);
-    ::testing::AddGlobalTestEnvironment(new PythonEnvironment);
-    ::testing::FLAGS_gtest_death_test_style = "threadsafe";
-    return RUN_ALL_TESTS();
-}
+#pragma warning(push)
+#pragma warning(disable : 6326 28182 6011 28020)
+#include <pybind11/embed.h>  // everything needed for embedding
+#pragma warning(pop)
+
+namespace py = pybind11;
+
+class PythonEnvironment : public testing::Environment {
+    mutable std::unique_ptr<py::gil_scoped_release> GILScopedRelease;
+
+public:
+    void SetUp() override;
+    void TearDown() override;
+    void releaseGILFromThisThread() const;
+    void reacquireGILForThisThread() const;
+};

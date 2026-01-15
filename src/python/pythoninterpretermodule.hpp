@@ -32,6 +32,7 @@ class PythonInterpreterModule : public Module {
     std::unique_ptr<PythonBackend> pythonBackend;
     mutable std::unique_ptr<py::gil_scoped_release> GILScopedRelease;
     std::thread::id threadId;
+    bool ownsInterpreter;
 
 public:
     PythonInterpreterModule();
@@ -41,5 +42,6 @@ public:
     PythonBackend* getPythonBackend() const;
     void releaseGILFromThisThread() const;
     void reacquireGILForThisThread() const;
+    bool ownsPythonInterpreter() const;
 };
 }  // namespace ovms
