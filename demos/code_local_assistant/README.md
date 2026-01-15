@@ -34,7 +34,7 @@ docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
     --model_name Qwen/Qwen3-Coder-30B-A3B-Instruct \
     --model_path Qwen/Qwen3-Coder-30B-A3B-Instruct
 ```
-> **Note:** For deployment, the model require ~16GB disk space and recommended 16GB+ of VRAM on the GPU. For conversion, the original model will be pulled and quantization will require the amount of RAM of the model size.
+> **Note:** For deployment, the model requires ~16GB disk space and recommended 16GB+ of VRAM on the GPU. For conversion, the original model will be pulled and quantization will require the amount of RAM of the model size.
 
 :::
 :::{tab-item} mistralai/Codestral-22B-v0.1 
@@ -79,8 +79,8 @@ docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
     openvino/model_server:weekly \
     --add_to_config \
     --config_path /models/config_all.json \
-    --model_name nsloth/Devstral-Small-2507 \
-    --model_path nsloth/Devstral-Small-2507
+    --model_name unsloth/Devstral-Small-2507 \
+    --model_path unsloth/Devstral-Small-2507
 ```
 > **Note:** This model requires ~13GB disk space and recommended 16GB+ of VRAM on the GPU for deployment. For conversion, the original model will be pulled and quantization will require the amount of RAM of the model size.
 
