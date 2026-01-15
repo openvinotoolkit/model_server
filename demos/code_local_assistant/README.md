@@ -34,7 +34,7 @@ docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
     --model_name Qwen/Qwen3-Coder-30B-A3B-Instruct \
     --model_path Qwen/Qwen3-Coder-30B-A3B-Instruct
 ```
-> **Note:** This model requires ~150GB disk space and 60GB RAM for conversion. For deployment the model require ~16GB disk space and same amount of VRAM on the GPU.
+> **Note:** For deployment, the model require ~16GB disk space and recommended 16GB+ of VRAM on the GPU. For conversion, the original model will be pulled and quantization will require the amount of RAM of the model size.
 
 :::
 :::{tab-item} mistralai/Codestral-22B-v0.1 
@@ -155,7 +155,7 @@ Pull and add the model on Windows:
 :::{tab-item} Qwen/Qwen3-Coder-30B-A3B-Instruct
 :sync: Qwen/Qwen3-Coder-30B-A3B-Instruct
 ```bat
-python export_model.py text_generation --source_model Qwen/Qwen3-Coder-30B-A3B-Instruct --weight-format int8 --config_file_path models/config_all.json --model_repository_path models --target_device GPU --tool_parser qwen3coder --overwrite_models
+python export_model.py text_generation --source_model Qwen/Qwen3-Coder-30B-A3B-Instruct --weight-format int8 --config_file_path models/config_all.json --model_repository_path models --target_device GPU --tool_parser qwen3coder
 curl -L -o models/Qwen/Qwen3-Coder-30B-A3B-Instruct/chat_template.jinja https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/extras/chat_template_examples/chat_template_qwen3coder_instruct.jinja
 
 ovms.exe --add_to_config --config_path models/config_all.json --model_name Qwen/Qwen3-Coder-30B-A3B-Instruct --model_path Qwen/Qwen3-Coder-30B-A3B-Instruct
@@ -166,7 +166,7 @@ ovms.exe --add_to_config --config_path models/config_all.json --model_name Qwen/
 :::{tab-item} mistralai/Codestral-22B-v0.1 
 :sync: mistralai/Codestral-22B-v0.1
 ```bat
-python export_model.py text_generation --source_model mistralai/Codestral-22B-v0.1 --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device GPU --overwrite_models
+python export_model.py text_generation --source_model mistralai/Codestral-22B-v0.1 --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device GPU
 curl -L -o models/mistralai/Codestral-22B-v0.1/chat_template.jinja https://raw.githubusercontent.com/vllm-project/vllm/refs/tags/v0.10.1.1/examples/tool_chat_template_mistral_parallel.jinja
 
 ovms.exe --add_to_config --config_path models/config_all.json --model_name mistralai/Codestral-22B-v0.1 --model_path mistralai/Codestral-22B-v0.1
@@ -178,19 +178,19 @@ ovms.exe --add_to_config --config_path models/config_all.json --model_name mistr
 :::{tab-item} openai/gpt-oss-20b
 :sync: openai/gpt-oss-20b
 ```bat
-python export_model.py text_generation --source_model openai/gpt-oss-20b --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device GPU --overwrite_models --pipeline_type LM
+python export_model.py text_generation --source_model openai/gpt-oss-20b --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device GPU
 curl -L -o models/openai/gpt-oss-20b/chat_template.jinja https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/extras/chat_template_examples/chat_template_gpt_oss.jinja
 
 ovms.exe --add_to_config --config_path models/config_all.json --model_name openai/gpt-oss-20b --model_path openai/gpt-oss-20b
 ```
-> **Note:** This model requires ~13GB disk space and recommended 16GB+ of VRAM on the GPU for deployment. For conversion, the original model will be pulled and quantization will require the amount of RAM of the model size.
-> **Note:** While using version 2025.4.*, add `--pipeline_type LM` parameter to the export_model.py. It disabled continuous batching. With 2026+ or latest weekly release, it is not required.
+> **Note:** This model requires ~12GB disk space and recommended 16GB+ of VRAM on the GPU for deployment. For conversion, the original model will be pulled and quantization will require the amount of RAM of the model size.
+> **Note:** While using version 2025.4.*, add `--pipeline_type LM` parameter to the export_model.py. It disables continuous batching. With 2026+ or latest weekly release, it is not required.
 
 :::
 :::{tab-item} unsloth/Devstral-Small-2507
 :sync: unsloth/Devstral-Small-2507
 ```bat
-python export_model.py text_generation --source_model unsloth/Devstral-Small-2507 --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --tool_parser devstral --target_device GPU --overwrite_models
+python export_model.py text_generation --source_model unsloth/Devstral-Small-2507 --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --tool_parser devstral --target_device GPU
 curl -L -o models/unsloth/Devstral-Small-2507/chat_template.jinja https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/extras/chat_template_examples/chat_template_devstral.jinja
 
 ovms.exe --add_to_config --config_path models/config_all.json --model_name unsloth/Devstral-Small-2507 --model_path unsloth/Devstral-Small-2507
@@ -356,42 +356,6 @@ context:
   - provider: codebase
 ```
 :::
-:::{tab-item} unsloth/Devstral-Small-2507
-:sync: unsloth/Devstral-Small-2507
-```
-name: Local Assistant
-version: 1.0.0
-schema: v1
-models:
-  - name: OVMS unsloth/Devstral-Small-2507
-    provider: openai
-    model: unsloth/Devstral-Small-2507
-    apiKey: unused
-    apiBase: http://localhost:8000/v3
-    roles:
-      - chat
-      - edit
-      - apply
-      - autocomplete
-    capabilities:
-      - tool_use
-    autocompleteOptions:
-      maxPromptTokens: 500
-      debounceDelay: 124
-      useCache: true
-      onlyMyCode: true
-      modelTimeout: 400
-context:
-  - provider: code
-  - provider: docs
-  - provider: diff
-  - provider: terminal
-  - provider: problems
-  - provider: folder
-  - provider: codebase
-```
-
-:::
 :::{tab-item} openai/gpt-oss-20b
 :sync: openai/gpt-oss-20b
 ```
@@ -424,6 +388,41 @@ models:
         reasoning_effort:
           none
 
+    autocompleteOptions:
+      maxPromptTokens: 500
+      debounceDelay: 124
+      useCache: true
+      onlyMyCode: true
+      modelTimeout: 400
+context:
+  - provider: code
+  - provider: docs
+  - provider: diff
+  - provider: terminal
+  - provider: problems
+  - provider: folder
+  - provider: codebase
+```
+:::
+:::{tab-item} unsloth/Devstral-Small-2507
+:sync: unsloth/Devstral-Small-2507
+```
+name: Local Assistant
+version: 1.0.0
+schema: v1
+models:
+  - name: OVMS unsloth/Devstral-Small-2507
+    provider: openai
+    model: unsloth/Devstral-Small-2507
+    apiKey: unused
+    apiBase: http://localhost:8000/v3
+    roles:
+      - chat
+      - edit
+      - apply
+      - autocomplete
+    capabilities:
+      - tool_use
     autocompleteOptions:
       maxPromptTokens: 500
       debounceDelay: 124
@@ -503,7 +502,6 @@ models:
       extraBodyProperties:
         chat_template_kwargs:
           enable_thinking: false
-
     autocompleteOptions:
       maxPromptTokens: 500
       debounceDelay: 124
