@@ -220,6 +220,7 @@ struct ModelsSettingsImpl {
     std::string scale;
     std::string colorFormat;
     std::string precision;
+    std::string resizeDimensions;
     std::string modelVersionPolicy;
     uint32_t nireq = 0;
     std::string targetDevice;

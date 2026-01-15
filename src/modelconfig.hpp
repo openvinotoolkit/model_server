@@ -222,6 +222,11 @@ private:
          */
     std::optional<ov::element::Type> precision;
 
+     /**
+          * @brief resizeDimensions resize dimensions preprocessing parameter  
+          */
+    std::optional<std::vector<int>> resizeDimensions;
+
 public:
     /**
          * @brief Construct a new Model Config object
@@ -726,6 +731,15 @@ public:
     Status parsePrecision(const std::string& command);
 
     /**
+          * @brief Parses value from string and extracts resize dimensions
+          * 
+          * @param string
+          * 
+          * @return status
+          */
+    Status parseResizeDimensions(const std::string& command);
+
+    /**
           * @brief Parses value from string and extracts float value
           * 
           * @param string
@@ -878,7 +892,7 @@ public:
     /**
          * @brief Get the get scales
          * 
-         * @return const float_vec_or_value_t& 
+         * @return const std::optional<float_vec_or_value_t>& 
          */
     const std::optional<float_vec_or_value_t>& getScales() const {
         return this->scaleValues;
@@ -887,7 +901,7 @@ public:
     /**
          * @brief Get the get means
          * 
-         * @return const float_vec_or_value_t& 
+         * @return const std::optional<float_vec_or_value_t>& 
          */
     const std::optional<float_vec_or_value_t>& getMeans() const {
         return this->meanValues;
@@ -896,7 +910,7 @@ public:
     /**
          * @brief Get the get color format
          * 
-         * @return const ov::preprocess::ColorFormat& 
+         * @return const std::optional<ov::preprocess::ColorFormat>& 
          */
     const std::optional<ov::preprocess::ColorFormat>& getColorFormat() const {
         return this->colorFormat;
@@ -905,10 +919,19 @@ public:
      /**
          * @brief Get the get precision
          * 
-         * @return const ov::element::Type& 
+         * @return const std::optional<ov::element::Type>& 
          */
     const std::optional<ov::element::Type>& getPrecision() const {
         return this->precision;
+    }
+
+    /**
+         * @brief Get the get resize dimensions
+         * 
+         * @return const std::optional<std::vector<int>>& 
+         */
+    const std::optional<std::vector<int>>& getResizeDimensions() const {
+        return this->resizeDimensions;
     }
 
     /**

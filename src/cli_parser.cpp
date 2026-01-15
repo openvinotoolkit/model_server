@@ -275,6 +275,10 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
                 "Resets model precision.",
                 cxxopts::value<std::string>(),
                 "PRECISION")
+            ("resize",
+                "Resets model resize dimensions.",
+                cxxopts::value<std::string>(),
+                "resize")
             ("model_version_policy",
                 "Model version policy",
                 cxxopts::value<std::string>(),
@@ -635,6 +639,13 @@ void CLIParser::prepareModel(ModelsSettingsImpl& modelsSettings, HFSettingsImpl&
         modelsSettings.userSetSingleModelArguments.push_back("precision");
     }
 
+    if (result->count("resize")) {
+        if (modelsSettings.layout.empty()) {
+            throw std::logic_error("error parsing options - --resize parameter requires --layout to be set");
+        }
+        modelsSettings.resizeDimensions = result->operator[]("resize").as<std::string>();
+        modelsSettings.userSetSingleModelArguments.push_back("resize");
+    }
 
     if (result->count("model_version_policy")) {
         modelsSettings.modelVersionPolicy = result->operator[]("model_version_policy").as<std::string>();
