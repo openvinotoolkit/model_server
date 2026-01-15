@@ -230,10 +230,53 @@ const Layout ModelInstance::getReportedTensorLayout(const ModelConfig& config, c
     return defaultLayout;
 }
 
-static Status applyLayoutConfiguration(const ModelConfig& config, std::shared_ptr<ov::Model>& model, const std::string& modelName, model_version_t modelVersion) {
-    OV_LOGGER("ov::Model: {}, ov::preprocess::PrePostProcessor(ov::Model)", reinterpret_cast<void*>(model.get()));
-    ov::preprocess::PrePostProcessor preproc(model);
+static void applyScaleOrMeanPreprocessing(ov::preprocess::PrePostProcessor& preproc, ovms::float_vec_or_value_t& config, bool isScale) {
+    if (auto* scalar = std::get_if<float>(&config)) {
+        isScale ? preproc.input().preprocess().scale(*scalar) : preproc.input().preprocess().mean(*scalar);
+    } else {
+        isScale ? preproc.input().preprocess().scale(std::get<std::vector<float>>(config)) : preproc.input().preprocess().mean(std::get<std::vector<float>>(config));
+    }
+}
 
+static Status applyPreprocessingConfiguration(ov::preprocess::PrePostProcessor& preproc, const ModelConfig& config, std::shared_ptr<ov::Model>& model, const std::string& modelName, model_version_t modelVersion) {
+    OV_LOGGER("ov::preprocess::PrePostProcessor& preproc, const ModelConfig& config, std::shared_ptr<ov::Model>& model");
+
+    try {
+        ovms::float_vec_or_value_t preprocessingScale = config.getScales();
+        ovms::float_vec_or_value_t preprocessingMean = config.getMeans();
+        ov::preprocess::ColorFormat colorFormat = config.getColorFormat();
+
+        OV_LOGGER("Applying color format for model: {}, version: {}", modelName, modelVersion);
+        preproc.input().tensor().set_color_format(colorFormat);
+        preproc.input().preprocess().convert_color(colorFormat);
+
+        OV_LOGGER("Applying mean configuration: {} for model: {}, version: {}", modelName, modelVersion);
+        applyScaleOrMeanPreprocessing(preproc, preprocessingMean, false);
+        OV_LOGGER("Applying scale configuration: {} for model: {}, version: {}", modelName, modelVersion);
+        applyScaleOrMeanPreprocessing(preproc, preprocessingScale, true);
+    } catch (const ov::Exception& e) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to configure input preprocessing configuration for model:{}; version:{}; from OpenVINO with error:{}",
+            modelName,
+            modelVersion,
+            e.what());
+        return StatusCode::UNKNOWN_ERROR;
+    } catch (const std::exception& e) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to configure input preprocessing configuration for model:{}; version:{}; from OpenVINO with error:{}",
+            modelName,
+            modelVersion,
+            e.what());
+        return StatusCode::UNKNOWN_ERROR;
+    } catch (...) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to configure input preprocessing configuration for model:{}; version:{}; from OpenVINO",
+            modelName,
+            modelVersion);
+        return StatusCode::UNKNOWN_ERROR;
+    }
+
+    return StatusCode::OK;
+}
+
+static Status applyLayoutConfiguration(ov::preprocess::PrePostProcessor& preproc, const ModelConfig& config, std::shared_ptr<ov::Model>& model, const std::string& modelName, model_version_t modelVersion) {
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Applying layout configuration: {}", config.layoutConfigurationToString());
 
     OV_LOGGER("ov::Model: {}, model->inputs()", reinterpret_cast<void*>(model.get()));
@@ -354,13 +397,35 @@ static Status applyLayoutConfiguration(const ModelConfig& config, std::shared_pt
         }
     }
 
+    return StatusCode::OK;
+}
+
+Status ModelInstance::applyPreprocessing(const ModelConfig& config, std::shared_ptr<ov::Model>& model, const std::string& modelName, model_version_t modelVersion) {
+    OV_LOGGER("ov::Model: {}, ov::preprocess::PrePostProcessor(ov::Model)", reinterpret_cast<void*>(model.get()));
+    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Applying preprocessing configuration");
+    ov::preprocess::PrePostProcessor preproc(model);
+    Status status = StatusCode::OK;
+
+    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Applying layout configuration");
+    status = applyLayoutConfiguration(preproc, config, model, modelName, modelVersion);
+    if (!status.ok()) {
+        return status;
+    }
+
+    status = applyPreprocessingConfiguration(preproc, config, model, modelName, modelVersion);
+    if (!status.ok()) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error during preprocessing configuration");
+        return status;
+    }
+
     try {
         OV_LOGGER("preproc: {}, ov::Model = ov::preprocess::PrePostProcessor::build()", reinterpret_cast<void*>(&preproc));
         model = preproc.build();
-    } catch (std::exception&) {
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Cannot change layout");
+    } catch (std::exception& e) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Cannot change layout or preprocessing parameters. Error: {}", e.what());
         return StatusCode::MODEL_NOT_LOADED;
     }
+
     return StatusCode::OK;
 }
 
@@ -430,7 +495,7 @@ Status ModelInstance::adjustForEmptyOutputNames() {
     return StatusCode::OK;
 }
 
-Status ModelInstance::loadTensors(const ModelConfig& config, bool needsToApplyLayoutConfiguration, const DynamicModelParameter& parameter) {
+Status ModelInstance::loadTensors(const ModelConfig& config, const bool hasLayoutConfigChanged, const DynamicModelParameter& parameter) {
     Status status = validateConfigurationAgainstNetwork(config, this->model);
     if (!status.ok()) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error during configuration validation against model");
@@ -441,10 +506,13 @@ Status ModelInstance::loadTensors(const ModelConfig& config, bool needsToApplyLa
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error during adjusting output names");
         return status;
     }
+
+    bool needsToApplyLayoutConfiguration = hasLayoutConfigChanged || !this->model;
+
     if (needsToApplyLayoutConfiguration) {
-        status = applyLayoutConfiguration(config, this->model, getName(), getVersion());
+        status = applyPreprocessing(config, this->model, getName(), getVersion());
         if (!status.ok()) {
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error during layout configuration");
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error during layout/preprocessing configuration");
             return status;
         }
     }
@@ -963,8 +1031,7 @@ void ModelInstance::loadTensorFactories() {
 }
 
 Status ModelInstance::loadModelImpl(const ModelConfig& config, const DynamicModelParameter& parameter) {
-    bool isLayoutConfigurationChanged = !config.isLayoutConfigurationEqual(this->config);
-    bool needsToApplyLayoutConfiguration = isLayoutConfigurationChanged || !this->model;
+    bool hasLayoutConfigurationChanged = !config.isLayoutConfigurationEqual(this->config);
 
     subscriptionManager.notifySubscribers();
     this->path = config.getPath();
@@ -983,7 +1050,7 @@ Status ModelInstance::loadModelImpl(const ModelConfig& config, const DynamicMode
             return status;
         }
 
-        if (!this->model || isLayoutConfigurationChanged) {
+        if (!this->model || hasLayoutConfigurationChanged) {
             if (this->config.isCustomLoaderRequiredToLoadModel()) {
                 status = loadOVModelUsingCustomLoader();
             } else {
@@ -996,7 +1063,7 @@ Status ModelInstance::loadModelImpl(const ModelConfig& config, const DynamicMode
             return status;
         }
 
-        status = loadTensors(this->config, needsToApplyLayoutConfiguration, parameter);
+        status = loadTensors(this->config, hasLayoutConfigurationChanged, parameter);
         if (!status.ok()) {
             this->status.setLoading(ModelVersionStatusErrorCode::UNKNOWN);
             return status;

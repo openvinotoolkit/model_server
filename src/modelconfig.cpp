@@ -405,6 +405,116 @@ Status ModelConfig::parseLayoutParameter(const std::string& command) {
     return parseLayoutParameter(node);
 }
 
+Status ModelConfig::parseFloat(const std::string& str, float& value) {
+    try {
+        size_t processCount = 0;
+        value = std::stof(str, &processCount);
+        if (processCount != str.size()) {
+            SPDLOG_WARN("Parameter contains invalid float value: {}", str);
+            return StatusCode::FLOAT_WRONG_FORMAT;
+        }
+    } catch (const std::invalid_argument&) {
+        SPDLOG_WARN("Parameter contains invalid float value: {}", str);
+        return StatusCode::FLOAT_WRONG_FORMAT;
+    } catch (const std::out_of_range&) {
+        SPDLOG_WARN("Parameter contains out of range float value: {}", str);
+        return StatusCode::FLOAT_WRONG_FORMAT;
+    }
+    return StatusCode::OK;
+}
+
+Status ModelConfig::parseFloatArray(const std::string& str, std::vector<float>& values) {
+    values.clear();
+    std::string s = str;
+    std::stringstream ss(s);
+    std::string item;
+    while (std::getline(ss, item, ',')) {
+        auto status = parseFloat(item, values.emplace_back());
+        if (!status.ok()) {
+            return status;
+        }
+    }
+    if (values.empty()) {
+        SPDLOG_WARN("Parameter contains empty float array: {}", str);
+        return StatusCode::FLOAT_WRONG_FORMAT;
+    }
+    if (values.size() < 2) {
+        SPDLOG_WARN("Parameter contains float array with less than 2 values: {}", str);
+        return StatusCode::FLOAT_WRONG_FORMAT;
+    }
+    return StatusCode::OK;
+}
+
+Status ModelConfig::parseFloatArrayOrValue(const std::string& str, float_vec_or_value_t& values) {
+    if (str.empty()) {
+        return StatusCode::OK;
+    }
+
+    std::string upperCaseCommand;
+    std::transform(str.begin(), str.end(), std::back_inserter(upperCaseCommand), ::toupper);
+
+    erase_spaces(upperCaseCommand);
+
+    if ((*upperCaseCommand.begin() == '[' && *upperCaseCommand.rbegin() == ']') ||
+        (*upperCaseCommand.begin() == '(' && *upperCaseCommand.rbegin() == ')')) {
+        auto commandWithoutBraces = upperCaseCommand.substr(1, upperCaseCommand.size() - 2);
+        std::vector<float> vals;
+        auto status = parseFloatArray(commandWithoutBraces, vals);
+        if (!status.ok()) {
+            return status;
+        }
+        values = vals;
+        return StatusCode::OK;
+    }
+    float val;
+    auto status = parseFloat(upperCaseCommand, val);
+    if (!status.ok()) {
+        return status;
+    }
+    values = val;
+    return StatusCode::OK;
+}
+
+Status ModelConfig::parseMean(const std::string& command) {
+    return parseFloatArrayOrValue(command, this->meanValues);
+}
+
+Status ModelConfig::parseScale(const std::string& command) {
+    return parseFloatArrayOrValue(command, this->scaleValues);
+}
+
+Status ModelConfig::parseColorFormat(const std::string& command) {
+    if (command.empty()) {
+        this->colorFormat = ov::preprocess::ColorFormat::RGB;
+        return StatusCode::OK;
+    }
+
+    std::string upperCaseCommand;
+    std::transform(command.begin(), command.end(), std::back_inserter(upperCaseCommand), ::toupper);
+
+    erase_spaces(upperCaseCommand);
+
+    if (upperCaseCommand == "RGB") {
+        this->colorFormat = ov::preprocess::ColorFormat::RGB;
+    } else if (upperCaseCommand == "BGR") {
+        this->colorFormat = ov::preprocess::ColorFormat::BGR;
+    } else if (upperCaseCommand == "GRAY") {
+        this->colorFormat = ov::preprocess::ColorFormat::GRAY;
+    } else if (upperCaseCommand == "NV12") {
+        this->colorFormat = ov::preprocess::ColorFormat::NV12_SINGLE_PLANE;
+    } else if (upperCaseCommand == "NV12_2") {
+        this->colorFormat = ov::preprocess::ColorFormat::NV12_TWO_PLANES;
+    } else if (upperCaseCommand == "I420") {
+        this->colorFormat = ov::preprocess::ColorFormat::I420_SINGLE_PLANE;
+    } else if (upperCaseCommand == "I420_3") {
+        this->colorFormat = ov::preprocess::ColorFormat::I420_THREE_PLANES;
+    } else {
+        SPDLOG_WARN("Parameter contains invalid color format value: {}", command);
+        return StatusCode::COLOR_FORMAT_WRONG_FORMAT;
+    }
+    return StatusCode::OK;
+}
+
 Status ModelConfig::parseShape(ShapeInfo& shapeInfo, const std::string& str) {
     if (str == "auto") {
         SPDLOG_LOGGER_WARN(modelmanager_logger, "Shape auto is deprecated. Use model dynamic shapes instead. Check (https://docs.openvino.ai/2023.3/ovms_docs_dynamic_shape_dynamic_model.html#doxid-ovms-docs-dynamic-shape-dynamic-model)");
@@ -570,6 +680,27 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
             if (!status.ok()) {
                 return status;
             }
+        }
+    }
+
+    if (v.HasMember("mean")) {
+        Status status = this->parseMean(v["mean"].GetString());
+        if (!status.ok()) {
+            return status;
+        }
+    }
+
+    if (v.HasMember("scale")) {
+        Status status = this->parseScale(v["scale"].GetString());
+        if (!status.ok()) {
+            return status;
+        }
+    }
+
+    if (v.HasMember("color_format")) {
+        Status status = this->parseColorFormat(v["color_format"].GetString());
+        if (!status.ok()) {
+            return status;
         }
     }
 

@@ -24,6 +24,7 @@
 #include <tuple>
 #include <unordered_map>
 #include <vector>
+#include <variant>
 #pragma warning(push)
 #pragma warning(disable : 6313)
 #include <rapidjson/document.h>
@@ -41,6 +42,7 @@ class ModelVersionPolicy;
 using mapping_config_t = std::unordered_map<std::string, std::string>;
 using plugin_config_t = std::map<std::string, ov::Any>;
 using custom_loader_options_config_t = std::map<std::string, std::string>;
+using float_vec_or_value_t = std::variant<std::vector<float>, float>;
 
 extern const std::string MAPPING_CONFIG_JSON;
 const uint32_t DEFAULT_MAX_SEQUENCE_NUMBER = 500;
@@ -199,6 +201,21 @@ private:
          * @brief custom_loader_options config as string
          */
     std::string customLoaderOptionsStr;
+
+    /**
+         * @brief meanValues mean preprocessing parameters  
+         */
+    float_vec_or_value_t meanValues = 0.0f;
+
+    /**
+         * @brief scaleValues scale preprocessing parameters  
+         */
+    float_vec_or_value_t scaleValues = 1.0f;
+
+    /**
+         * @brief colorFormat color format preprocessing parameter  
+         */
+    ov::preprocess::ColorFormat colorFormat = ov::preprocess::ColorFormat::RGB;
 
 public:
     /**
@@ -668,6 +685,63 @@ public:
     Status parseLayoutParameter(const std::string& command);
 
     /**
+         * @brief Parses value from string and extracts means info
+         * 
+         * @param string
+         * 
+         * @return status
+         */
+    Status parseMean(const std::string& command);
+
+    /**
+          * @brief Parses value from string and extracts scales info
+          * 
+          * @param string
+          * 
+          * @return status
+          */
+    Status parseScale(const std::string& command);
+
+    /**
+          * @brief Parses value from string and extracts color format
+          * 
+          * @param string
+          * 
+          * @return status
+          */
+    Status parseColorFormat(const std::string& command);
+
+    /**
+          * @brief Parses value from string and extracts float value
+          * 
+          * @param string
+          * @param value
+          * 
+          * @return status
+          */
+    Status parseFloat(const std::string& str, float& value);
+
+    /**
+          * @brief Parses value from string and extracts float value or array of float values
+          * 
+          * @param string
+          * @param value
+          * 
+          * @return status
+          */
+    Status parseFloatArrayOrValue(const std::string& str, float_vec_or_value_t& values);
+
+    /**
+          * @brief Parses value from string and extracts array of float values
+          * 
+          * @param string
+          * @param value
+          * 
+          * @return status
+          */
+    Status parseFloatArray(const std::string& str, std::vector<float>& values);
+
+    /**
          * @brief Returns true if any input shape specified in shapes map is in AUTO mode
          * 
          * @return bool
@@ -785,6 +859,33 @@ public:
     void setLayouts(const layout_configurations_map_t& layouts) {
         this->layouts = layouts;
         this->layout = LayoutConfiguration();
+    }
+
+    /**
+         * @brief Get the get scales
+         * 
+         * @return const float_vec_or_value_t& 
+         */
+    const float_vec_or_value_t& getScales() const {
+        return this->scaleValues;
+    }
+
+    /**
+         * @brief Get the get means
+         * 
+         * @return const float_vec_or_value_t& 
+         */
+    const float_vec_or_value_t& getMeans() const {
+        return this->meanValues;
+    }
+
+    /**
+         * @brief Get the get color format
+         * 
+         * @return const ov::preprocess::ColorFormat& 
+         */
+    const ov::preprocess::ColorFormat& getColorFormat() const {
+        return this->colorFormat;
     }
 
     /**

@@ -259,6 +259,18 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
                 "Resets model layout.",
                 cxxopts::value<std::string>(),
                 "LAYOUT")
+            ("mean",
+                "Resets model mean.",
+                cxxopts::value<std::string>(),
+                "MEAN")
+            ("scale",
+                "Resets model scale.",
+                cxxopts::value<std::string>(),
+                "SCALE")
+            ("color_format",
+                "Resets model color format.",
+                cxxopts::value<std::string>(),
+                "COLOR_FORMAT")
             ("model_version_policy",
                 "Model version policy",
                 cxxopts::value<std::string>(),
@@ -585,6 +597,21 @@ void CLIParser::prepareModel(ModelsSettingsImpl& modelsSettings, HFSettingsImpl&
     if (result->count("layout")) {
         modelsSettings.layout = result->operator[]("layout").as<std::string>();
         modelsSettings.userSetSingleModelArguments.push_back("layout");
+    }
+
+    if (result->count("mean")) {
+        modelsSettings.mean = result->operator[]("mean").as<std::string>();
+        modelsSettings.userSetSingleModelArguments.push_back("mean");
+    }
+
+    if (result->count("scale")) {
+        modelsSettings.scale = result->operator[]("scale").as<std::string>();
+        modelsSettings.userSetSingleModelArguments.push_back("scale");
+    }
+
+    if (result->count("color_format")) {
+        modelsSettings.colorFormat = result->operator[]("color_format").as<std::string>();
+        modelsSettings.userSetSingleModelArguments.push_back("color_format");
     }
 
     if (result->count("model_version_policy")) {
