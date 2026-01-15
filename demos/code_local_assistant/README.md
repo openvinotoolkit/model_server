@@ -26,6 +26,13 @@ Pull and add the model on Linux:
 ```bash
 python export_model.py text_generation --source_model Qwen/Qwen3-Coder-30B-A3B-Instruct --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device GPU --tool_parser qwen3coder --overwrite_models
 curl -L -o models/Qwen/Qwen3-Coder-30B-A3B-Instruct/chat_template.jinja https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/extras/chat_template_examples/chat_template_qwen3coder_instruct.jinja
+
+docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
+    openvino/model_server:weekly \
+    --add_to_config \
+    --config_path /models/config_all.json \
+    --model_name Qwen/Qwen3-Coder-30B-A3B-Instruct \
+    --model_path Qwen/Qwen3-Coder-30B-A3B-Instruct
 ```
 > **Note:** This model requires ~150GB disk space and 60GB RAM for conversion. For deployment the model require ~16GB disk space and same amount of VRAM on the GPU.
 
@@ -36,8 +43,30 @@ curl -L -o models/Qwen/Qwen3-Coder-30B-A3B-Instruct/chat_template.jinja https://
 python export_model.py text_generation --source_model mistralai/Codestral-22B-v0.1 --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device GPU --overwrite_models
 curl -L -o models/mistralai/Codestral-22B-v0.1/chat_template.jinja https://raw.githubusercontent.com/vllm-project/vllm/refs/tags/v0.10.1.1/examples/tool_chat_template_mistral_parallel.jinja
 
+docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
+    openvino/model_server:weekly \
+    --add_to_config \
+    --config_path /models/config_all.json \
+    --model_name mistralai/Codestral-22B-v0.1 \
+    --model_path mistralai/Codestral-22B-v0.1
 ```
 > **Note:** This model requires ~12GB disk space and same amount of VRAM on the GPU for deployment. For conversion, the original model will be pulled and quantization will require the amount of RAM of the model size.
+
+:::
+:::{tab-item} openai/gpt-oss-20b
+:sync: openai/gpt-oss-20b
+```bash
+python export_model.py text_generation --source_model openai/gpt-oss-20b --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device GPU --overwrite_models
+curl -L -o models/openai/gpt-oss-20b/chat_template.jinja https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/extras/chat_template_examples/chat_template_gpt_oss.jinja
+
+docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
+    openvino/model_server:weekly \
+    --add_to_config \
+    --config_path /models/config_all.json \
+    --model_name openai/gpt-oss-20b \
+    --model_path openai/gpt-oss-20b
+```
+> **Note:** This model requires ~13GB disk space and same amount of VRAM on the GPU for deployment. For conversion, the original model will be pulled and quantization will require the amount of RAM of the model size.
 
 :::
 :::{tab-item} OpenVINO/Qwen3-8B-int4-ov
@@ -51,7 +80,6 @@ docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
     --task text_generation
 
 docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
-    -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy=$no_proxy \
     openvino/model_server:weekly \
     --add_to_config \
     --config_path /models/config_all.json \
@@ -70,7 +98,6 @@ docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
     --task text_generation
     
 docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
-    -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy=$no_proxy \
     openvino/model_server:weekly \
     --add_to_config --config_path /models/config_all.json \
     --model_name OpenVINO/Qwen3-4B-int4-ov \
@@ -88,7 +115,6 @@ docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
     --task text_generation
     
 docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
-    -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy=$no_proxy \
     openvino/model_server:weekly \
     --add_to_config \
     --config_path /models/config_all.json \
@@ -106,7 +132,7 @@ Pull and add the model on Windows:
 :::{tab-item} Qwen/Qwen3-Coder-30B-A3B-Instruct
 :sync: Qwen/Qwen3-Coder-30B-A3B-Instruct
 ```bat
-python export_model.py text_generation --source_model Qwen/Qwen3-Coder-30B-A3B-Instruct --weight-format int8 --config_file_path models/config_all.json --model_repository_path models --target_device GPU --tool_parser qwen3coder --cache_size 2 --overwrite_models
+python export_model.py text_generation --source_model Qwen/Qwen3-Coder-30B-A3B-Instruct --weight-format int8 --config_file_path models/config_all.json --model_repository_path models --target_device GPU --tool_parser qwen3coder --overwrite_models
 curl -L -o models/Qwen/Qwen3-Coder-30B-A3B-Instruct/chat_template.jinja https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/extras/chat_template_examples/chat_template_qwen3coder_instruct.jinja
 
 ovms.exe --add_to_config --config_path models/config_all.json --model_name Qwen/Qwen3-Coder-30B-A3B-Instruct --model_path Qwen/Qwen3-Coder-30B-A3B-Instruct
@@ -117,9 +143,24 @@ ovms.exe --add_to_config --config_path models/config_all.json --model_name Qwen/
 :::{tab-item} mistralai/Codestral-22B-v0.1 
 :sync: mistralai/Codestral-22B-v0.1
 ```bat
-python export_model.py text_generation --source_model mistralai/Codestral-22B-v0.1 --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device GPU --cache_size 2 --overwrite_models
+python export_model.py text_generation --source_model mistralai/Codestral-22B-v0.1 --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device GPU --overwrite_models
+curl -L -o models/mistralai/Codestral-22B-v0.1/chat_template.jinja https://raw.githubusercontent.com/vllm-project/vllm/refs/tags/v0.10.1.1/examples/tool_chat_template_mistral_parallel.jinja
+
+ovms.exe --add_to_config --config_path models/config_all.json --model_name mistralai/Codestral-22B-v0.1 --model_path mistralai/Codestral-22B-v0.1
+
 ```
 > **Note:** This model requires ~12GB disk space and same amount of VRAM on the GPU.
+
+:::
+:::{tab-item} openai/gpt-oss-20b
+:sync: openai/gpt-oss-20b
+```bat
+python export_model.py text_generation --source_model openai/gpt-oss-20b --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device GPU --overwrite_models --pipeline_type LM
+curl -L -o models/openai/gpt-oss-20b/chat_template.jinja https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/extras/chat_template_examples/chat_template_gpt_oss.jinja
+
+ovms.exe --add_to_config --config_path models/config_all.json --model_name openai/gpt-oss-20b --model_path openai/gpt-oss-20b
+```
+> **Note:** This model requires ~13GB disk space and same amount of VRAM on the GPU for deployment. For conversion, the original model will be pulled and quantization will require the amount of RAM of the model size.
 
 :::
 :::{tab-item} OpenVINO/Qwen3-8B-int4-ov
@@ -251,7 +292,7 @@ models:
     provider: openai
     model: mistralai/Codestral-22B-v0.1 
     apiKey: unused
-    apiBase: http://ov-spr-19.sclab.intel.com:8000/v3
+    apiBase: http://localhost:8000/v3
     roles:
       - chat
       - edit
@@ -263,6 +304,54 @@ models:
       extraBodyProperties:
         chat_template_kwargs:
           enable_thinking: false
+
+    autocompleteOptions:
+      maxPromptTokens: 500
+      debounceDelay: 124
+      useCache: true
+      onlyMyCode: true
+      modelTimeout: 400
+context:
+  - provider: code
+  - provider: docs
+  - provider: diff
+  - provider: terminal
+  - provider: problems
+  - provider: folder
+  - provider: codebase
+```
+:::
+:::{tab-item} openai/gpt-oss-20b
+:sync: openai/gpt-oss-20b
+```
+name: Local Assistant
+version: 1.0.0
+schema: v1
+models:
+  - name: OVMS openai/gpt-oss-20b 
+    provider: openai
+    model: openai/gpt-oss-20b
+    apiKey: unused
+    apiBase: http://localhost:8000/v3
+    roles:
+      - chat
+      - edit
+      - apply
+    capabilities:
+      - tool_use
+  - name: OVMS openai/gpt-oss-20b autocomplete
+    provider: openai
+    model: openai/gpt-oss-20b
+    apiKey: unused
+    apiBase: http://localhost:8000/v3
+    roles:
+      - autocomplete
+    capabilities:
+      - tool_use
+    requestOptions:
+      extraBodyProperties:
+        reasoning_effort:
+          none
 
     autocompleteOptions:
       maxPromptTokens: 500

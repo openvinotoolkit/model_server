@@ -175,11 +175,6 @@ absl::Status LegacyServable::preparePartialResponse(std::shared_ptr<GenAiServabl
             generationStatus = legacyExecutionContext->finished.wait_for(std::chrono::nanoseconds::zero());
         }
         lastTextChunk = executionContext->lastStreamerCallbackOutput;
-        if (!lastTextChunk.empty()) {
-            auto tokensTensor = properties->tokenizer.encode(lastTextChunk, ov::genai::add_special_tokens(false)).input_ids;
-            auto numTokens = tokensTensor.get_size();
-            executionContext->apiHandler->incrementProcessedTokens(numTokens);
-        }
         executionContext->lastStreamerCallbackOutput = "";
     }
     if (generationStatus != std::future_status::ready) {  // continue
@@ -206,11 +201,10 @@ absl::Status LegacyServable::preparePartialResponse(std::shared_ptr<GenAiServabl
             executionContext->response = wrapTextInServerSideEventMessage(serializedChunk);
         }
 
-        // Disabling usage in streaming mode in legacy servable due to the issue with token counting.
+        // TODO: Usage is zero in streaming mode in legacy servable due to the issue with token counting.
+        // This enables Continue.dev streaming scenario, which always uses include_usage: true
         if (executionContext->apiHandler->getStreamOptions().includeUsage)
-            return absl::InvalidArgumentError("Usage is not supported in legacy servable in streaming mode.");
-
-        // executionContext->response += wrapTextInServerSideEventMessage(executionContext->apiHandler->serializeStreamingUsageChunk());
+            executionContext->response += wrapTextInServerSideEventMessage(executionContext->apiHandler->serializeStreamingUsageChunk());
 
         executionContext->response += wrapTextInServerSideEventMessage("[DONE]");
 

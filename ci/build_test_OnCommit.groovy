@@ -18,6 +18,7 @@ pipeline {
             script{
               println "BUILD CAUSE ONCOMMIT: ${currentBuild.getBuildCauses()}"
               agent_name_linux = env.NODE_NAME
+              println "Running on NODE = ${env.NODE_NAME}"
             }
             script {
               shortCommit = sh(returnStdout: true, script: "git log -n 1 --pretty=format:'%h'").trim()
@@ -113,6 +114,10 @@ pipeline {
                 label 'win_ovms'
               }
               when { expression { win_image_build_needed == "true" } }
+              // Uncomment to build OV from source
+              // environment {
+              //   OV_USE_BINARY = "0"
+              // }
               steps {
                   script {
                       agent_name_windows = env.NODE_NAME

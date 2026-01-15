@@ -71,6 +71,10 @@ std::optional<rapidjson::Document> GptOssReasoningParser::parseChunk(const std::
         // End
         state = StreamState::UNKNOWN;
         chunk = chunk.substr(0, chunk.size() - getParsingEndTag().size());
+    } else if (endsWith(chunk, "<|return|>")) {
+        // End
+        state = StreamState::UNKNOWN;
+        chunk = chunk.substr(0, chunk.size() - std::strlen("<|return|>"));
     }
 
     if (chunk.size() == 0)
