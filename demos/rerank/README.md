@@ -165,11 +165,11 @@ instruction = (
     "Given a web search query, retrieve relevant passages that answer the query"
 )
 
-query = "welcome"
-
+query = "What are the key benefits of machine learning in business?"
+ 
 documents = [
-    "good morning",
-    "farewell",
+    "Machine learning benefits businesses with better decisions, task automation, customer personalization, and cost savings.",
+    "Quantum computing uses quantum bits for fast calculations in cryptography and simulations.",
 ]
 
 query = query_template.format(prefix=prefix, instruction=instruction, query=query)
@@ -191,7 +191,7 @@ python rerank_client.py
 ```
 It will return response similar to:
 ```
-{'results': [{'index': 0, 'relevance_score': 0.0216273982077837}, {'index': 1, 'relevance_score': 0.018804751336574554}]}
+{'results': [{'index': 0, 'relevance_score': 0.9989529848098755}, {'index': 1, 'relevance_score': 0.060060907155275345}]}
 ```
 :::
 
@@ -234,7 +234,7 @@ Mean latency: 10268 ms
 Median latency: 10249 ms
 Average document length: 501.0 tokens
 
-python benchmark.py --api_url http://127.0.0.1:8000/v3/rerank --backend ovms_rerank --dataset Cohere/wikipedia-22-12-simple-embeddings --request_rate inf --batch_size 20 --model BAAI/bge-reranker-large
+python benchmark.py --api_url http://127.0.0.1:8000/v3/rerank --backend ovms_rerank --dataset Cohere/wikipedia-2023-11-embed-multilingual-v3 --request_rate inf --batch_size 20 --model BAAI/bge-reranker-large
 Number of documents: 1000
 100%|██████████████████████████████████████| 50/50 [00:09<00:00,  5.55it/s]
 Tokens: 92248
