@@ -26,6 +26,8 @@ See also:
 Generative endpoints starting with `/v3`, might be restricted with authorization and API key. It can be set during the server initialization with a parameter `api_key_file` or environment variable `API_KEY`. 
 The `api_key_file` should contain a path to the file containing the value of API key. The content of the file first line is used. If parameter api_key_file and variable  API_KEY are not set, the server will not require any authorization. The client should send the API key inside the `Authorization` header as `Bearer <api_key>`.
 
+OVMS supports multimodal models with image inputs provided as url's. However due to vulnerability to Server-Side Request Forgery (SSRF) attacks, all the url's are restricted by default. To allow fetching image from specific domains use `--allowed_media_domains` parameter described [here](parameters.md). Also, consider setting OVMS_MEDIA_URL_ALLOW_REDIRECTS=0 to prevent HTTP redirects from being followed to bypass domain restrictions. 
+
 ---
 
 OpenVINO Model Server has a set of mechanisms preventing denial of service attacks from the client applications. They include the following:

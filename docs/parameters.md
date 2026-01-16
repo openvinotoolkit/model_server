@@ -20,7 +20,6 @@
 | `"low_latency_transformation"` | `bool` | If set to true, model server will apply [low latency transformation](https://docs.openvino.ai/2025/openvino-workflow/running-inference/inference-request/stateful-models/obtaining-stateful-openvino-model.html#lowlatency2-transformation) on model load. |
 | `"metrics_enable"` | `bool` | Flag enabling [metrics](metrics.md) endpoint on rest_port. |
 | `"metrics_list"` | `string` | Comma separated list of [metrics](metrics.md). If unset, only default metrics will be enabled.|
-| `"allowed_local_media_path"` | `string` | Path to the directory containing images to include in requests. If unset, local filesystem images in requests are not supported.|
 
 > **Note** : Specifying config_path is mutually exclusive with putting model parameters in the CLI ([serving multiple models](./starting_server.md)).
 
@@ -57,6 +56,8 @@ Configuration options for the server are defined only via command-line options a
 | `allowed_methods` | `string` (default: *) | Comma-separated list of allowed methods in CORS requests. |
 | `allowed_origins` | `string` (default: *) | Comma-separated list of allowed origins in CORS requests. |
 | `api_key_file` | `string` | Path to the text file with the API key for generative endpoints `/v3/`. The value of first line is used. If not specified, server is using environment variable API_KEY. If not set, requests will not require authorization.| 
+| `allowed_local_media_path` | `string` | Path to the directory containing images to include in requests. If unset, local filesystem images in requests are not supported.|
+| `allowed_media_domains` | `string` | Comma separated list of media domains from which urls can be used as input for LLMs. Set to \"all\" to disable this restriction."
 
 ## Config management mode options
 
