@@ -234,7 +234,7 @@ Mean latency: 10268 ms
 Median latency: 10249 ms
 Average document length: 501.0 tokens
 
-python benchmark.py --api_url http://127.0.0.1:8000/v3/rerank --backend ovms_rerank --dataset Cohere/wikipedia-2023-11-embed-multilingual-v3 --request_rate inf --batch_size 20 --model BAAI/bge-reranker-large
+python benchmark.py --api_url http://127.0.0.1:8000/v3/rerank --backend ovms_rerank --dataset Cohere/wikipedia-2023-11-embed-multilingual-v3 --subset simple --request_rate inf --batch_size 20 --model BAAI/bge-reranker-large
 Number of documents: 1000
 100%|██████████████████████████████████████| 50/50 [00:09<00:00,  5.55it/s]
 Tokens: 92248
