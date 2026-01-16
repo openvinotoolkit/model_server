@@ -574,7 +574,7 @@ Compare against local HuggingFace execution for reference:
 mteb run -m thenlper/gte-small -t Banking77Classification --output_folder results
 ``` 
 
-# Usage of tokenize endpoint (release 2025.4 or weekly)
+# Usage of tokenize endpoint
 
 The `tokenize` endpoint provides a simple API for tokenizing input text using the same tokenizer as the deployed embeddings model. This allows you to see how your text will be split into tokens before feature extraction or inference. The endpoint accepts a string or list of strings and returns the corresponding token IDs.
 
