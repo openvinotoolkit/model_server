@@ -187,6 +187,7 @@ struct ServerSettingsImpl {
     std::string metricsList;
     std::string cpuExtensionLibraryPath;
     std::optional<std::string> allowedLocalMediaPath;
+    std::optional<std::vector<std::string>> allowedMediaDomains;
     std::string logLevel = "INFO";
     std::string logPath;
     bool allowCredentials = false;

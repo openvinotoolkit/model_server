@@ -21,6 +21,7 @@
 #include "src/port/rapidjson_stringbuffer.hpp"
 #include "src/port/rapidjson_writer.hpp"
 #include <set>
+#include <string.h>
 
 #include "openai_json_response.hpp"
 
@@ -113,7 +114,10 @@ static absl::Status downloadImage(const char* url, std::string& image, const int
     CURL_SETOPT(curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, appendChunkCallback))
     CURL_SETOPT(curl_easy_setopt(curl_handle, CURLOPT_WRITEDATA, &image))
     CURL_SETOPT(curl_easy_setopt(curl_handle, CURLOPT_SSL_OPTIONS, CURLSSLOPT_NATIVE_CA))
-    CURL_SETOPT(curl_easy_setopt(curl_handle, CURLOPT_FOLLOWLOCATION, 1L))
+    const char* envAllowRedirects = std::getenv("OVMS_MEDIA_URL_ALLOW_REDIRECTS");
+    if(envAllowRedirects != nullptr && (std::strcmp(envAllowRedirects, "1") == 0)){
+        CURL_SETOPT(curl_easy_setopt(curl_handle, CURLOPT_FOLLOWLOCATION, 1L))
+    }
     CURL_SETOPT(curl_easy_setopt(curl_handle, CURLOPT_MAXFILESIZE, sizeLimit))
 
     if (status != CURLE_OK) {
@@ -159,7 +163,7 @@ absl::Status OpenAIChatCompletionsHandler::ensureArgumentsInToolCalls(Value& mes
     return absl::OkStatus();
 }
 
-absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::string> allowedLocalMediaPath) {
+absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::string> allowedLocalMediaPath, std::optional<std::vector<std::string>> allowedMediaDomains) {
     auto it = doc.FindMember("messages");
     if (it == doc.MemberEnd())
         return absl::InvalidArgumentError("Messages missing in request");
@@ -237,6 +241,23 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
                             } else if (std::regex_match(url.c_str(), std::regex("^(http|https|ftp|sftp|)://(.*)"))) {
                                 SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Loading image using curl");
                                 int64_t sizeLimit = 20000000;  // restrict single image size to 20MB
+                                bool allowedDomain = false;
+                                if(!allowedMediaDomains.has_value()){
+                                    return absl::InvalidArgumentError("Given url does not match any allowed domain from allowed_media_domains");
+                                }
+                                for(auto domain : allowedMediaDomains.value()){
+                                    const auto firstMissmatch = std::mismatch(url.begin(), url.end(), domain.begin(), domain.end());
+                                    if (firstMissmatch.second == domain.end()) {
+                                        allowedDomain = true;
+                                        break;
+                                    }
+                                    if(domain == "*"){
+                                        allowedDomain = true;
+                                    }
+                                }
+                                if(!allowedDomain){
+                                    return absl::InvalidArgumentError("Given url does not match any allowed domain from allowed_media_domains");
+                                }
                                 auto status = downloadImage(url.c_str(), decoded, sizeLimit);
                                 if (status != absl::OkStatus()) {
                                     return status;
@@ -469,9 +490,9 @@ std::string convertOpenAIResponseFormatToStructuralTagStringFormat(const rapidjs
     return buffer.GetString();
 }
 
-absl::Status OpenAIChatCompletionsHandler::parseChatCompletionsPart(std::optional<uint32_t> maxTokensLimit, std::optional<std::string> allowedLocalMediaPath) {
+absl::Status OpenAIChatCompletionsHandler::parseChatCompletionsPart(std::optional<uint32_t> maxTokensLimit, std::optional<std::string> allowedLocalMediaPath, std::optional<std::vector<std::string>> allowedMediaDomains) {
     // messages: [{role: content}, {role: content}, ...]; required
-    auto status = parseMessages(allowedLocalMediaPath);
+    auto status = parseMessages(allowedLocalMediaPath, allowedMediaDomains);
     if (status != absl::OkStatus()) {
         return status;
     }
@@ -791,14 +812,14 @@ void OpenAIChatCompletionsHandler::incrementProcessedTokens(size_t numTokens) {
         usage.completionTokens += numTokens;
 }
 
-absl::Status OpenAIChatCompletionsHandler::parseRequest(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength, std::optional<std::string> allowedLocalMediaPath) {
+absl::Status OpenAIChatCompletionsHandler::parseRequest(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength, std::optional<std::string> allowedLocalMediaPath, std::optional<std::vector<std::string>> allowedMediaDomains) {
     absl::Status status = parseCommonPart(maxTokensLimit, bestOfLimit, maxModelLength);
     if (status != absl::OkStatus())
         return status;
     if (endpoint == Endpoint::COMPLETIONS)
         status = parseCompletionsPart();
     else
-        status = parseChatCompletionsPart(maxTokensLimit, allowedLocalMediaPath);
+        status = parseChatCompletionsPart(maxTokensLimit, allowedLocalMediaPath, allowedMediaDomains);
 
     return status;
 }

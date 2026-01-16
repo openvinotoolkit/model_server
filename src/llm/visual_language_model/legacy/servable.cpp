@@ -84,7 +84,7 @@ absl::Status VisualLanguageModelLegacyServable::parseRequest(std::shared_ptr<Gen
         getProperties()->tokenizer);
     auto& config = ovms::Config::instance();
 
-    auto status = executionContext->apiHandler->parseRequest(getProperties()->maxTokensLimit, getProperties()->bestOfLimit, getProperties()->maxModelLength, config.getServerSettings().allowedLocalMediaPath);
+    auto status = executionContext->apiHandler->parseRequest(getProperties()->maxTokensLimit, getProperties()->bestOfLimit, getProperties()->maxModelLength, config.getServerSettings().allowedLocalMediaPath, config.getServerSettings().allowedMediaDomains);
     if (!status.ok()) {
         SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Failed to parse request: {}", status.message());
         return status;
