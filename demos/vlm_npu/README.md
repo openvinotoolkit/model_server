@@ -29,6 +29,7 @@ Download export script, install it's dependencies and create directory for the m
 ```console
 curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/4/demos/common/export_models/export_model.py -o export_model.py
 pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/4/demos/common/export_models/requirements.txt
+pip3 install transformers==4.53.3 --force-reinstall
 mkdir models
 ```
 
