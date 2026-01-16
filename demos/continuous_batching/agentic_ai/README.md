@@ -94,7 +94,7 @@ curl -L -o models/Qwen/Qwen3-Coder-30B-A3B-Instruct/chat_template.jinja https://
 python export_model.py text_generation --source_model openai/gpt-oss-20b --weight-format int4 --config_file_path models/config.json --model_repository_path models --tool_parser gptoss --reasoning_parser gptoss --pipeline_type LM
 curl -L -o models/openai/gpt-oss-20b/chat_template.jinja https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/4/extras/chat_template_examples/chat_template_gpt_oss_multiturn.jinja
 ```
-> **Note:**: Use `--pipeline_type LM` for export and `--target device GPU` for deployment. Expect continuous batching and CPU support in weekly or 2026.0+ releases.
+> **Note:**: Use `--pipeline_type LM` for export and `--target device GPU` for deployment. Using weekly release, it is recommanded to drop `--pipeline_type LM` to enable continous batching.
 
 :::
 :::{tab-item} Phi-4-mini-instruct 
