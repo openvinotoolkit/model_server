@@ -259,8 +259,8 @@ static Status applyPreprocessingConfiguration(ov::preprocess::PrePostProcessor& 
 
         if (colorFormat.has_value()) {
             OV_LOGGER("Applying color format for model: {}, version: {}", modelName, modelVersion);
-            preproc.input().tensor().set_color_format(colorFormat.value());
-            preproc.input().preprocess().convert_color(colorFormat.value());
+            preproc.input().tensor().set_color_format(colorFormat.value().getSourceColorFormat());
+            preproc.input().preprocess().convert_color(colorFormat.value().getTargetColorFormat());
         }
 
         if (precision.has_value()) {
@@ -438,6 +438,13 @@ Status ModelInstance::applyPreprocessing(const ModelConfig& config, std::shared_
 
     try {
         OV_LOGGER("preproc: {}, ov::Model = ov::preprocess::PrePostProcessor::build()", reinterpret_cast<void*>(&preproc));
+
+        if (spdlog::default_logger_raw()->level() <= spdlog::level::debug) {
+            std::ostringstream ss;
+            ss << preproc;
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Preprocessing steps applied:\n{}", ss.str());
+        }
+
         model = preproc.build();
     } catch (std::exception& e) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Cannot change layout or preprocessing parameters. Error: {}", e.what());

@@ -481,32 +481,14 @@ Status ModelConfig::parseScale(const std::string& command) {
 
 Status ModelConfig::parseColorFormat(const std::string& command) {
     if (command.empty()) {
-        this->colorFormat = ov::preprocess::ColorFormat::RGB;
         return StatusCode::OK;
     }
-
-    std::string upperCaseCommand;
-    std::transform(command.begin(), command.end(), std::back_inserter(upperCaseCommand), ::toupper);
-
-    erase_spaces(upperCaseCommand);
-
-    static const std::unordered_map<std::string, ov::preprocess::ColorFormat> colorFormatMap = {
-        {"RGB", ov::preprocess::ColorFormat::RGB},
-        {"BGR", ov::preprocess::ColorFormat::BGR},
-        {"GRAY", ov::preprocess::ColorFormat::GRAY},
-        {"NV12", ov::preprocess::ColorFormat::NV12_SINGLE_PLANE},
-        {"NV12_2", ov::preprocess::ColorFormat::NV12_TWO_PLANES},
-        {"I420", ov::preprocess::ColorFormat::I420_SINGLE_PLANE},
-        {"I420_3", ov::preprocess::ColorFormat::I420_THREE_PLANES}
-    };
-
-    auto it = colorFormatMap.find(upperCaseCommand);
-    if (it != colorFormatMap.end()) {
-        this->colorFormat = it->second;
-    } else {
-        SPDLOG_WARN("Parameter contains invalid color format value: {}", command);
-        return StatusCode::COLOR_FORMAT_WRONG_FORMAT;
+    ColorFormatConfiguration colorFormatConfig;
+    auto status = ColorFormatConfiguration::fromString(command, colorFormatConfig);
+    if (!status.ok()) {
+        return status;
     }
+    this->colorFormat = colorFormatConfig;
     return StatusCode::OK;
 }
 

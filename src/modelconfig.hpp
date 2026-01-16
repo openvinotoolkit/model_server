@@ -32,6 +32,7 @@
 
 #include "anonymous_input_name.hpp"
 #include "layout_configuration.hpp"
+#include "color_format_configuration.hpp"
 #include "modelversion.hpp"
 #include "shape.hpp"
 #include "status.hpp"  // TODO fwd dec
@@ -215,7 +216,7 @@ private:
     /**
          * @brief colorFormat color format preprocessing parameter  
          */
-    std::optional<ov::preprocess::ColorFormat> colorFormat;
+    std::optional<ovms::ColorFormatConfiguration> colorFormat;
 
     /**
          * @brief precision precision preprocessing parameter  
@@ -910,9 +911,9 @@ public:
     /**
          * @brief Get the get color format
          * 
-         * @return const std::optional<ov::preprocess::ColorFormat>& 
+         * @return const std::optional<ovms::ColorFormatConfiguration>& 
          */
-    const std::optional<ov::preprocess::ColorFormat>& getColorFormat() const {
+    const std::optional<ovms::ColorFormatConfiguration>& getColorFormat() const {
         return this->colorFormat;
     }
 
