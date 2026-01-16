@@ -10,14 +10,6 @@ The picture below shows the execution flow in the graph.
 
 ![Mediapipe graph image](graph.png)
 
-## Build image
-
-```bash
-git clone https://github.com/openvinotoolkit/model_server.git
-cd model_server
-make python_image
-```
-
 ## Install client requirements
 
 ```bash
@@ -47,7 +39,7 @@ Mount the `./servable` which contains:
 - `graph.pbtxt` - which defines MediaPipe graph containing python nodes
 
 ```bash
-docker run -d --rm -p 9000:9000 -p 8000:8000 -v ${PWD}/servable:/workspace -v ${PWD}/model:/model/ openvino/model_server:py --config_path /workspace/config.json --port 9000 --rest_port 8000
+docker run -d --rm -p 9000:9000 -p 8000:8000 -v ${PWD}/servable:/workspace -v ${PWD}/model:/model/ openvino/model_server:latest-py --config_path /workspace/config.json --port 9000 --rest_port 8000
 ```
 
 ## Requesting detection name with grpc request
