@@ -579,7 +579,7 @@ TEST_F(GptOssOutputStreamParserTest, HolisticStreamingTools) {
     test(chunkToDeltaVec);
 }
 
-TEST_F(GptOssOutputStreamParserTest, ConstrainGluedWithToolCall) {
+TEST_F(GptOssOutputStreamParserTest, ConstrainAndCallGluedWithToolCall) {
     std::vector<std::tuple<std::string, ov::genai::GenerationFinishReason, std::optional<std::string>>> chunkToDeltaVec{
         // Reasoning
         {"<|channel|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
@@ -592,7 +592,7 @@ TEST_F(GptOssOutputStreamParserTest, ConstrainGluedWithToolCall) {
         {"ction.", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"reasoning_content":"ction."}})"}},
         {"<|end|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
 
-        // Tool 2 (with ignored constrain, but it is glued to tool call)
+        // Tool 1 (with ignored constrain, but it is glued to tool call)
         {"<|channel|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"commentary", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {" to=", ov::genai::GenerationFinishReason::NONE, std::nullopt},
@@ -608,8 +608,20 @@ TEST_F(GptOssOutputStreamParserTest, ConstrainGluedWithToolCall) {
         {"\":", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"\":"}}]}})"},
         {" \"", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":" \""}}]}})"},
         {"Warsaw", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"Warsaw"}}]}})"},
-        {"\"}", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"\"}"}}]}})"},
-        {"<|call|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"\"", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"\""}}]}})"},
+        {"}<|call|>", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"}"}}]}})"},
+
+        // Tool 2 empty msg
+        {"<|channel|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"commentary", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {" to=", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"fun", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"ctions", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {".world ", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"<|constrain|>", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"id\":\"XXXXXXXXX\",\"type\":\"function\",\"index\":1,\"function\":{\"name\":\"world\"}}]}}"},
+        {"json", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"<|message|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"{}<|call|>", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":1,"function":{"arguments":"{}"}}]}})"},
     };
     test(chunkToDeltaVec);
 }
