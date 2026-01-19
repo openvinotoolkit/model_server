@@ -2437,7 +2437,9 @@ TEST(OvmsConfigTest, positiveSingle) {
         "--scale",
         "[58.395,57.12,57.375]",
         "--color_format",
-        "BGR",
+        "BGR:RGB",
+        "--precision",
+        "F16",
         "--model_version_policy",
         "setting",
         "--nireq",
@@ -2455,7 +2457,7 @@ TEST(OvmsConfigTest, positiveSingle) {
         "--max_sequence_number",
         "52",
     };
-    int arg_count = 61;
+    int arg_count = 63;
     ConstructorEnabledConfig config;
     config.parse(arg_count, n_argv);
 
@@ -2485,7 +2487,8 @@ TEST(OvmsConfigTest, positiveSingle) {
     EXPECT_EQ(config.layout(), "nchw:nhwc");
     EXPECT_EQ(config.means(), "[123.675,116.28,103.53]");
     EXPECT_EQ(config.scales(), "[58.395,57.12,57.375]");
-    EXPECT_EQ(config.colorFormat(), "BGR");
+    EXPECT_EQ(config.precision(), "F16");
+    EXPECT_EQ(config.colorFormat(), "BGR:RGB");
     EXPECT_EQ(config.modelVersionPolicy(), "setting");
     EXPECT_EQ(config.nireq(), 2);
     EXPECT_EQ(config.targetDevice(), "GPU");
@@ -2520,9 +2523,11 @@ TEST(OvmsConfigTest, positiveModelPreprocessingParams) {
         "--scale",
         "[58.395,57.12,57.375]",
         "--color_format",
-        "BGR"
+        "BGR:RGB",
+        "--precision",
+        "F16"
     };
-    int arg_count = 15;
+    int arg_count = 17;
     ConstructorEnabledConfig config;
     config.parse(arg_count, n_argv);
 
@@ -2532,7 +2537,8 @@ TEST(OvmsConfigTest, positiveModelPreprocessingParams) {
     EXPECT_EQ(config.layout(), "nchw:nhwc");
     EXPECT_EQ(config.means(), "[123.675,116.28,103.53]");
     EXPECT_EQ(config.scales(), "[58.395,57.12,57.375]");
-    EXPECT_EQ(config.colorFormat(), "BGR");
+    EXPECT_EQ(config.colorFormat(), "BGR:RGB");
+    EXPECT_EQ(config.precision(), "F16");
 }
 
 TEST(OvmsConfigTest, missingLayoutModelPreprocessingMean) {
@@ -2579,7 +2585,24 @@ TEST(OvmsConfigTest, missingLayoutModelPreprocessingColorFormat) {
         "--model_path",
         "/path",
         "--color_format",
-        "BGR"
+        "BGR:RGB"
+    };
+    int arg_count = 9;
+    ConstructorEnabledConfig config;
+    EXPECT_THROW(config.parse(arg_count, n_argv), std::logic_error);
+}
+
+TEST(OvmsConfigTest, missingLayoutModelPreprocessingPrecision) {
+    char* n_argv[] = {
+        "ovms",
+        "--port",
+        "44",
+        "--model_name",
+        "model",
+        "--model_path",
+        "/path",
+        "--precision",
+        "F16"
     };
     int arg_count = 9;
     ConstructorEnabledConfig config;
