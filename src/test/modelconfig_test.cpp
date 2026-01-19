@@ -293,6 +293,53 @@ TEST(ModelConfig, parseColorFormatParameter) {
     EXPECT_EQ(status2, ovms::StatusCode::COLOR_FORMAT_WRONG_FORMAT);
 }
 
+TEST(ModelConfig, parsePrecision) {
+    using namespace ovms;
+    ModelConfig config;
+
+    std::string valid_str1 = "F32";
+    std::string valid_str2 = "F16";
+    std::string valid_str3 = "int8";
+    std::string valid_str4 = "UINT8";
+    std::string valid_str5 = "Int16";
+    std::string valid_str6 = "UINT16";
+    std::string valid_str7 = "INT32";
+    std::string valid_str8 = "uint32";
+    std::string valid_str9 = "INT64";
+    std::string valid_str10 = "uInt64";
+    std::string valid_str11 = "bf16";
+
+    ASSERT_EQ(config.parsePrecision(valid_str1), StatusCode::OK);
+    EXPECT_EQ(config.getPrecision().value(), ov::element::f32);
+    ASSERT_EQ(config.parsePrecision(valid_str2), StatusCode::OK);
+    EXPECT_EQ(config.getPrecision().value(), ov::element::f16);
+    ASSERT_EQ(config.parsePrecision(valid_str3), StatusCode::OK);
+    EXPECT_EQ(config.getPrecision().value(), ov::element::i8);
+    ASSERT_EQ(config.parsePrecision(valid_str4), StatusCode::OK);
+    EXPECT_EQ(config.getPrecision().value(), ov::element::u8);
+    ASSERT_EQ(config.parsePrecision(valid_str5), StatusCode::OK);
+    EXPECT_EQ(config.getPrecision().value(), ov::element::i16);
+    ASSERT_EQ(config.parsePrecision(valid_str6), StatusCode::OK);
+    EXPECT_EQ(config.getPrecision().value(), ov::element::u16);
+    ASSERT_EQ(config.parsePrecision(valid_str7), StatusCode::OK);
+    EXPECT_EQ(config.getPrecision().value(), ov::element::i32);
+    ASSERT_EQ(config.parsePrecision(valid_str8), StatusCode::OK);
+    EXPECT_EQ(config.getPrecision().value(), ov::element::u32);
+    ASSERT_EQ(config.parsePrecision(valid_str9), StatusCode::OK);
+    EXPECT_EQ(config.getPrecision().value(), ov::element::i64);
+    ASSERT_EQ(config.parsePrecision(valid_str10), StatusCode::OK);
+    EXPECT_EQ(config.getPrecision().value(), ov::element::u64);
+    ASSERT_EQ(config.parsePrecision(valid_str11), StatusCode::OK);
+    EXPECT_EQ(config.getPrecision().value(), ov::element::bf16);
+
+    std::string invalid_str1 = "FLOAT32";
+    std::string invalid_str2 = "INVALID_PRECISION";
+    auto status1 = config.parsePrecision(invalid_str1);
+    EXPECT_EQ(status1, ovms::StatusCode::PRECISION_WRONG_FORMAT);
+    auto status2 = config.parsePrecision(invalid_str2);
+    EXPECT_EQ(status2, ovms::StatusCode::PRECISION_WRONG_FORMAT);
+}
+
 TEST(ModelConfig, shape) {
     ovms::ModelConfig config;
 
