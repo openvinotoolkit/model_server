@@ -183,8 +183,23 @@ std::optional<rapidjson::Document> GptOssToolParser::parseChunk(const std::strin
         break;
     }
     case StreamState::READING_CONSTRAIN:
+    {
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Streaming | GPT Tool | Reading constrain...");
         // Ignored, not needed for end user
+        // ignore up to <|message|>
+        std::size_t pos = chunk.find(openai::Harmony::TOKEN_MESSAGE);
+        if (pos == std::string::npos) {
+            // keep ignoring
+        } else {
+            // ignore only up to message
+            chunk = chunk.substr(pos + openai::Harmony::TOKEN_MESSAGE.size());
+            streamState = StreamState::READING_MESSAGE;
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Streaming | GPT Tool | Sending Argument Part [{}]", chunk);
+            return wrapDeltaIntoDocument(chunk);
+        }
+
         break;
+    }
     case StreamState::READING_MESSAGE: {
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Streaming | GPT Tool | Sending Argument Part [{}]", chunk);
         return wrapDeltaIntoDocument(chunk);
