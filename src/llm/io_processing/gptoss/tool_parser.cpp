@@ -110,7 +110,9 @@ std::optional<rapidjson::Document> GptOssToolParser::parseChunk(const std::strin
     }
 
     // Message appears after channel and constrain, before actual message
-    if (chunk == openai::Harmony::TOKEN_MESSAGE) {
+    std::size_t pos = chunk.find(openai::Harmony::TOKEN_MESSAGE);
+    //if (chunk == openai::Harmony::TOKEN_MESSAGE) {
+    if (pos != std::string::npos) {
         // If previous state was channel, it means constrain was skipped
         // We can push function name in case there is some in cache
         if (streamState == StreamState::READING_CHANNEL) {
@@ -119,11 +121,20 @@ std::optional<rapidjson::Document> GptOssToolParser::parseChunk(const std::strin
                 result = wrapFirstDelta(functionNameCache, toolCallIndex);
             }
         }
+
         // StreamState::READING_CONSTRAIN implement here if required
 
-        streamState = StreamState::READING_MESSAGE;
-        clearState();
-        return result;
+        // Move chunk pointer after message tag, process rest as message
+        if (chunk.size() > openai::Harmony::TOKEN_MESSAGE.size()) {
+            chunk = chunk.substr(pos + openai::Harmony::TOKEN_MESSAGE.size());
+            streamState = StreamState::READING_MESSAGE;
+            clearState();
+        } else {
+            // Entire chunk is only message tag, wait for next chunk
+            streamState = StreamState::READING_MESSAGE;
+            clearState();
+            return result;
+        }
     }
 
     if (endsWith(chunk, openai::Harmony::TOKEN_CALL) || endsWith(chunk, openai::Harmony::TOKEN_END) || endsWith(chunk, openai::Harmony::TOKEN_RETURN)) {
