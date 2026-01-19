@@ -46,7 +46,7 @@ default_url_description = "Default value depends on the backend: \
     translations: http://localhost:8000/v3/audio/translations"
 
 parser = argparse.ArgumentParser(description='Run benchmark for embeddings endpoints', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-parser.add_argument('--dataset', required=False, default='Cohere/wikipedia-22-12-simple-embeddings', help='Dataset for load generation from HF or a keyword "synthetic"', dest='dataset')
+parser.add_argument('--dataset', required=False, default='Cohere/wikipedia-2023-11-embed-multilingual-v3', help='Dataset for load generation from HF or a keyword "synthetic"', dest='dataset')
 parser.add_argument('--synthetic_length', required=False, default=510, type=int, help='Length of the synthetic dataset', dest='length')
 parser.add_argument('--api_url', required=False, help='API URL for embeddings endpoint. ' + default_url_description, dest='api_url')
 parser.add_argument('--model', required=False, default='Alibaba-NLP/gte-large-en-v1.5', help='HF model name', dest='model')
