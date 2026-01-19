@@ -527,50 +527,6 @@ Status ModelConfig::parsePrecision(const std::string& command) {
     return StatusCode::OK;
 }
 
-Status ModelConfig::parseResizeDimensions(const std::string& command) {
-    if (command.empty()) {
-        return StatusCode::OK;
-    }
-
-    std::vector<int> dimensions;
-    if (*command.begin() == '(' && *command.rbegin() == ')') {
-        auto commandWithoutBraces = command.substr(1, command.size() - 2);
-
-        std::stringstream ss(commandWithoutBraces);
-        std::string item;
-        while (std::getline(ss, item, ',')) {
-            try {
-                size_t processCount = 0;
-                int dim = std::stoi(item, &processCount);
-                if (processCount != item.size() || dim <= 0) {
-                    SPDLOG_WARN("Parameter contains invalid resize dimension value: {}", item);
-                    return StatusCode::RESIZE_DIMENSIONS_WRONG_FORMAT;  
-                }
-                dimensions.push_back(dim);
-            } catch (const std::invalid_argument&) {
-                SPDLOG_WARN("Parameter contains invalid resize dimension value: {}", item);
-                return StatusCode::RESIZE_DIMENSIONS_WRONG_FORMAT;
-            } catch (const std::out_of_range&) {
-                SPDLOG_WARN("Parameter contains out of range resize dimension value: {}", item);
-                return StatusCode::RESIZE_DIMENSIONS_WRONG_FORMAT;
-            }
-        }
-
-        if (dimensions.size() != 2) {
-            SPDLOG_WARN("Parameter contains invalid number of resize dimensions: {}", command);
-            return StatusCode::RESIZE_DIMENSIONS_WRONG_FORMAT;
-        }
-
-        this->resizeDimensions = dimensions;
-        
-    } else {
-        SPDLOG_WARN("Parameter contains invalid resize dimensions format: {}", command);
-        return StatusCode::RESIZE_DIMENSIONS_WRONG_FORMAT;
-    }
-
-    return StatusCode::OK;
-}
-
 Status ModelConfig::parseShape(ShapeInfo& shapeInfo, const std::string& str) {
     if (str == "auto") {
         SPDLOG_LOGGER_WARN(modelmanager_logger, "Shape auto is deprecated. Use model dynamic shapes instead. Check (https://docs.openvino.ai/2023.3/ovms_docs_dynamic_shape_dynamic_model.html#doxid-ovms-docs-dynamic-shape-dynamic-model)");
@@ -766,14 +722,6 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
             return status;
         }
     }
-
-    if (v.HasMember("resize_dimensions")) {
-        Status status = this->parseResizeDimensions(v["resize_dimensions"].GetString());
-        if (!status.ok()) {
-            return status;
-        }
-    }
-
 
     if (v.HasMember("plugin_config")) {
         auto status = this->parsePluginConfig(v["plugin_config"], this->pluginConfig);

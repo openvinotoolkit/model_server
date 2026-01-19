@@ -335,12 +335,6 @@ Status ModelManager::startFromConfig() {
         return status;
     }
 
-    status = modelConfig.parseResizeDimensions(config.resizeDimensions());
-    if (!status.ok()) {
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Couldn't parse resize dimensions parameter");
-        return status;
-    }
-
     bool batchSizeSet = (modelConfig.getBatchingMode() != FIXED || modelConfig.getBatchSize() != 0);
     bool shapeSet = (modelConfig.getShapes().size() > 0);
 

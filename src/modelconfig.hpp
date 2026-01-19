@@ -223,11 +223,6 @@ private:
          */
     std::optional<ov::element::Type> precision;
 
-     /**
-          * @brief resizeDimensions resize dimensions preprocessing parameter  
-          */
-    std::optional<std::vector<int>> resizeDimensions;
-
 public:
     /**
          * @brief Construct a new Model Config object
@@ -732,15 +727,6 @@ public:
     Status parsePrecision(const std::string& command);
 
     /**
-          * @brief Parses value from string and extracts resize dimensions
-          * 
-          * @param string
-          * 
-          * @return status
-          */
-    Status parseResizeDimensions(const std::string& command);
-
-    /**
           * @brief Parses value from string and extracts float value
           * 
           * @param string
@@ -924,15 +910,6 @@ public:
          */
     const std::optional<ov::element::Type>& getPrecision() const {
         return this->precision;
-    }
-
-    /**
-         * @brief Get the get resize dimensions
-         * 
-         * @return const std::optional<std::vector<int>>& 
-         */
-    const std::optional<std::vector<int>>& getResizeDimensions() const {
-        return this->resizeDimensions;
     }
 
     /**

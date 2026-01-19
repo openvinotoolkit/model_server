@@ -249,13 +249,6 @@ static Status applyPreprocessingConfiguration(ov::preprocess::PrePostProcessor& 
         auto preprocessingMean = config.getMeans();
         auto colorFormat = config.getColorFormat();
         auto precision = config.getPrecision();
-        auto resizeDims = config.getResizeDimensions();
-
-        if (resizeDims.has_value()) {
-            OV_LOGGER("Applying resize for model: {}, version: {}", modelName, modelVersion);
-            preproc.input().tensor().set_spatial_static_shape(resizeDims.value()[0], resizeDims.value()[1]);
-        }
-        preproc.input().preprocess().resize(ov::preprocess::ResizeAlgorithm::RESIZE_LINEAR); // make it configurable?
 
         if (colorFormat.has_value()) {
             OV_LOGGER("Applying color format for model: {}, version: {}", modelName, modelVersion);

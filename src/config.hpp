@@ -225,13 +225,6 @@ public:
          * @return const std::string&
          */
     const std::string& precision() const;
-
-     /**
-         * @brief Get resize dimensions  
-         * 
-         * @return const std::string&
-         */
-    const std::string& resizeDimensions() const;
     
     /**
          * @brief Get the shape
