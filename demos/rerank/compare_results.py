@@ -25,7 +25,7 @@ import argparse
 parser = argparse.ArgumentParser(description='Compare rerank responses from HF transformers OVMS')
 parser.add_argument('--base_url', required=False, default='http://localhost:8000/v3/',
                     help='Specify url to embeddings endpoint. default:http://localhost:8000/v3', dest='base_url')
-parser.add_argument('--model_name', default='BAAI/bge-reranker-large', help='Model name to query. default: Alibaba-NLP/gte-large-en-v1.5',
+parser.add_argument('--model_name', default='BAAI/bge-reranker-large', help='Model name to query. default: BAAI/bge-reranker-large',
                     dest='model_name')
 parser.add_argument('--query', default='', help='Query string to rerank.',
                     dest='query')
