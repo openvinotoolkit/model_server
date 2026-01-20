@@ -18,8 +18,8 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "../../audio/audio_utils.hpp"
 #include "../../http_rest_api_handler.hpp"
-#include "../../servablemanagermodule.hpp"
 #include "../../server.hpp"
 #include "rapidjson/document.h"
 #include "../test_http_utils.hpp"
@@ -64,6 +64,9 @@ TEST_F(Text2SpeechHttpTest, simplePositive) {
     ASSERT_EQ(
         handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
+    EXPECT_NO_THROW({
+        auto wav = readWav(response);
+    });
 }
 
 TEST_F(Text2SpeechHttpTest, positiveWithVoice) {
@@ -78,6 +81,9 @@ TEST_F(Text2SpeechHttpTest, positiveWithVoice) {
     ASSERT_EQ(
         handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
+    EXPECT_NO_THROW({
+        auto wav = readWav(response);
+    });
 }
 
 TEST_F(Text2SpeechHttpTest, nonExisitingVoiceRequested) {
