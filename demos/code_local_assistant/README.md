@@ -34,7 +34,7 @@ docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
     --model_name Qwen/Qwen3-Coder-30B-A3B-Instruct \
     --model_path Qwen/Qwen3-Coder-30B-A3B-Instruct
 ```
-> **Note:** For deployment, the model requires ~16GB disk space and recommended 19GB+ of VRAM on the GPU. For conversion, the original model will be pulled and quantized, which requires about amount of 65GB RAM (extended by virtual memory or swap).
+> **Note:** For deployment, the model requires ~16GB disk space and recommended 19GB+ of VRAM on the GPU. For conversion, the original model will be pulled and quantized, which requires 65GB of free RAM.
 
 :::
 :::{tab-item} mistralai/Codestral-22B-v0.1 
@@ -50,7 +50,7 @@ docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
     --model_name mistralai/Codestral-22B-v0.1 \
     --model_path mistralai/Codestral-22B-v0.1
 ```
-> **Note:** For deployment, the model requires ~12GB disk space and recommended 16GB+ of VRAM on the GPU. For conversion, the original model will be pulled and quantized, which requires about amount of 70GB RAM (extended by virtual memory or swap).
+> **Note:** For deployment, the model requires ~12GB disk space and recommended 16GB+ of VRAM on the GPU. For conversion, the original model will be pulled and quantized, which requires 50GB of free RAM.
 
 :::
 :::{tab-item} openai/gpt-oss-20b
@@ -66,7 +66,7 @@ docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
     --model_name openai/gpt-oss-20b \
     --model_path openai/gpt-oss-20b
 ```
-> **Note:** For deployment, the model requires ~12GB disk space and recommended 16GB+ of VRAM on the GPU. For conversion, the original model will be pulled and quantized, which requires about amount of 45GB RAM (extended by virtual memory or swap).
+> **Note:** For deployment, the model requires ~12GB disk space and recommended 16GB+ of VRAM on the GPU. For conversion, the original model will be pulled and quantized, which requires 45GB of free RAM.
 
 :::
 :::{tab-item} unsloth/Devstral-Small-2507
@@ -82,7 +82,7 @@ docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
     --model_name unsloth/Devstral-Small-2507 \
     --model_path unsloth/Devstral-Small-2507
 ```
-> **Note:** For deployment, the model requires ~13GB disk space and recommended 16GB+ of VRAM on the GPU. For conversion, the original model will be pulled and quantized, which requires about amount of 50GB RAM (extended by virtual memory or swap).
+> **Note:** For deployment, the model requires ~13GB disk space and recommended 16GB+ of VRAM on the GPU. For conversion, the original model will be pulled and quantized, which requires 50GB of free RAM.
 
 :::
 :::{tab-item} OpenVINO/Qwen3-4B-int4-ov
@@ -144,7 +144,7 @@ curl -L -o models/Qwen/Qwen3-Coder-30B-A3B-Instruct/chat_template.jinja https://
 
 ovms.exe --add_to_config --config_path models/config_all.json --model_name Qwen/Qwen3-Coder-30B-A3B-Instruct --model_path Qwen/Qwen3-Coder-30B-A3B-Instruct
 ```
-> **Note:** For deployment, the model requires ~16GB disk space and recommended 19GB+ of VRAM on the GPU. For conversion, the original model will be pulled and quantized, which requires about amount of 65GB RAM (extended by virtual memory or swap).
+> **Note:** For deployment, the model requires ~16GB disk space and recommended 19GB+ of VRAM on the GPU. For conversion, the original model will be pulled and quantized, which requires 65GB of free RAM.
 
 :::
 :::{tab-item} mistralai/Codestral-22B-v0.1 
@@ -156,7 +156,7 @@ curl -L -o models/mistralai/Codestral-22B-v0.1/chat_template.jinja https://raw.g
 ovms.exe --add_to_config --config_path models/config_all.json --model_name mistralai/Codestral-22B-v0.1 --model_path mistralai/Codestral-22B-v0.1
 
 ```
-> **Note:** For deployment, the model requires ~12GB disk space and recommended 16GB+ of VRAM on the GPU. For conversion, the original model will be pulled and quantized, which requires about amount of 60GB RAM (extended by virtual memory or swap).
+> **Note:** For deployment, the model requires ~12GB disk space and recommended 16GB+ of VRAM on the GPU. For conversion, the original model will be pulled and quantized, which requires 50GB of free RAM.
 
 
 :::
@@ -168,7 +168,7 @@ curl -L -o models/openai/gpt-oss-20b/chat_template.jinja https://raw.githubuserc
 
 ovms.exe --add_to_config --config_path models/config_all.json --model_name openai/gpt-oss-20b --model_path openai/gpt-oss-20b
 ```
-> **Note:** For deployment, the model requires ~12GB disk space and recommended 16GB+ of VRAM on the GPU. For conversion, the original model will be pulled and quantized, which requires about amount of 45GB RAM (extended by virtual memory or swap).
+> **Note:** For deployment, the model requires ~12GB disk space and recommended 16GB+ of VRAM on the GPU. For conversion, the original model will be pulled and quantized, which requires 45GB of free RAM.
 > **Note:**: Use `--pipeline_type LM` parameter in export command, for version 2025.4.1 or older. It disables continuous batching and CPU support in weekly or 2026.0+ releases.
 
 :::
@@ -180,7 +180,7 @@ curl -L -o models/unsloth/Devstral-Small-2507/chat_template.jinja https://raw.gi
 
 ovms.exe --add_to_config --config_path models/config_all.json --model_name unsloth/Devstral-Small-2507 --model_path unsloth/Devstral-Small-2507
 ```
-> **Note:** For deployment, the model requires ~13GB disk space and recommended 16GB+ of VRAM on the GPU. For conversion, the original model will be pulled and quantized, which requires about amount of 50GB RAM (extended by virtual memory or swap).
+> **Note:** For deployment, the model requires ~13GB disk space and recommended 16GB+ of VRAM on the GPU. For conversion, the original model will be pulled and quantized, which requires 50GB of free RAM.
 
 :::
 :::{tab-item} OpenVINO/Qwen3-4B-int4-ov
@@ -274,11 +274,6 @@ models:
       - autocomplete
     capabilities:
       - tool_use
-    requestOptions:
-      extraBodyProperties:
-        chat_template_kwargs:
-          enable_thinking: false
-
     autocompleteOptions:
       maxPromptTokens: 500
       debounceDelay: 124
@@ -314,11 +309,6 @@ models:
       - autocomplete
     capabilities:
       - tool_use
-    requestOptions:
-      extraBodyProperties:
-        chat_template_kwargs:
-          enable_thinking: false
-
     autocompleteOptions:
       maxPromptTokens: 500
       debounceDelay: 124
@@ -366,7 +356,6 @@ models:
       extraBodyProperties:
         reasoning_effort:
           none
-
     autocompleteOptions:
       maxPromptTokens: 500
       debounceDelay: 124
@@ -446,7 +435,7 @@ models:
       debounceDelay: 124
       useCache: true
       onlyMyCode: true
-      modelTimeout: 1000
+      modelTimeout: 400
 context:
   - provider: code
   - provider: docs
@@ -476,16 +465,12 @@ models:
       - autocomplete
     capabilities:
       - tool_use
-    requestOptions:
-      extraBodyProperties:
-        chat_template_kwargs:
-          enable_thinking: false
     autocompleteOptions:
       maxPromptTokens: 500
       debounceDelay: 124
       useCache: true
       onlyMyCode: true
-      modelTimeout: 700
+      modelTimeout: 400
 context:
   - provider: code
   - provider: docs

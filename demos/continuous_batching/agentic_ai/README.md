@@ -93,7 +93,7 @@ curl -L -o models/Qwen/Qwen3-Coder-30B-A3B-Instruct/chat_template.jinja https://
 python export_model.py text_generation --source_model openai/gpt-oss-20b --weight-format int4 --config_file_path models/config.json --model_repository_path models --tool_parser gptoss --reasoning_parser gptoss
 curl -L -o models/openai/gpt-oss-20b/chat_template.jinja https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/4/extras/chat_template_examples/chat_template_gpt_oss_multiturn.jinja
 ```
-> **Note:**: Use `--pipeline_type LM` parameter in export command, for version 2025.4.1 or older. It disables continuous batching and CPU support in weekly or 2026.0+ releases.
+> **Note:**: Use `--pipeline_type LM` parameter in export command, for version 2025.4.*. It disables continuous batching. Not needed in weekly release or 2026.0+ releases.
 :::
 :::{tab-item} Phi-4-mini-instruct 
 :sync: microsoft/Phi-4-mini-instruct 
@@ -101,7 +101,7 @@ Note: This model requires a fix in optimum-intel which is currently on a fork.
 ```console
 pip3 install transformers==4.53.3 --force-reinstall
 pip3 install "optimum-intel[openvino]"@git+https://github.com/helena-intel/optimum-intel/@ea/lonrope_exp --force-reinstall
-python export_model.py text_generation --source_model microsoft/Phi-4-mini-instruct --weight-format int8 --config_file_path models/config.json --model_repository_path models --tool_parser phi4 --max_num_batched_tokens 99999
+python export_model.py text_generation --source_model microsoft/Phi-4-mini-instruct --weight-format int4 --config_file_path models/config.json --model_repository_path models --tool_parser phi4 --max_num_batched_tokens 99999
 curl -L -o models/microsoft/Phi-4-mini-instruct/chat_template.jinja https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/extras/chat_template_examples/chat_template_phi4_mini.jinja
 ```
 :::
@@ -145,20 +145,20 @@ as mentioned in [deployment guide](../../../docs/deploying_server_baremetal.md),
 :::{tab-item} Qwen3-8B-int4-ov
 :sync: Qwen3-8B-int4-ov
 ```bat
-ovms.exe --pull --model_repository_path models --source_model OpenVINO/Qwen3-8B-int4-ov --task text_generation --tool_parser hermes3
+ovms.exe --pull --model_repository_path models --source_model OpenVINO/Qwen3-8B-int4-ov --task text_generation --tool_parser hermes3 --enable_prefix_caching true
 ```
 :::
 :::{tab-item} Mistral-7B-Instruct-v0.3-int4-ov
 :sync: Mistral-7B-Instruct-v0.3-int4-ov
 ```bat
-ovms.exe --pull --model_repository_path models --source_model OpenVINO/Mistral-7B-Instruct-v0.3-int4-ov --task text_generation --tool_parser mistral
+ovms.exe --pull --model_repository_path models --source_model OpenVINO/Mistral-7B-Instruct-v0.3-int4-ov --task text_generation --tool_parser mistral --enable_prefix_caching true
 curl -L -o models\OpenVINO\Mistral-7B-Instruct-v0.3-int4-ov\chat_template.jinja https://raw.githubusercontent.com/vllm-project/vllm/refs/tags/v0.10.1.1/examples/tool_chat_template_mistral_parallel.jinja
 ```
 :::
 :::{tab-item} Phi-4-mini-instruct-int4-ov
 :sync: Phi-4-mini-instruct-int4-ov
 ```bat
-ovms.exe --pull --model_repository_path models --source_model OpenVINO/Phi-4-mini-instruct-int4-ov --task text_generation --tool_parser phi4
+ovms.exe --pull --model_repository_path models --source_model OpenVINO/Phi-4-mini-instruct-int4-ov --task text_generation --tool_parser phi4 --enable_prefix_caching true
 curl -L -o models\OpenVINO\Phi-4-mini-instruct-int4-ov\chat_template.jinja https://raw.githubusercontent.com/vllm-project/vllm/refs/tags/v0.9.0/examples/tool_chat_template_phi4_mini.jinja
 ```
 :::
@@ -246,7 +246,7 @@ ovms.exe --rest_port 8000 --source_model Qwen/Qwen3-Coder-30B-A3B-Instruct --mod
 ```bat
 ovms.exe --rest_port 8000 --source_model openai/gpt-oss-20b --model_repository_path models --tool_parser gptoss --reasoning_parser gptoss --target_device GPU --task text_generation --enabled_prefix_caching true --target_device GPU
 ```
-> **Note:**: Use `--pipeline_type LM` parameter in export command, for version 2025.4.1 or older. It disables continuous batching and CPU support in weekly or 2026.0+ releases.
+> **Note:**: Use `--pipeline_type LM` parameter in export command, for version 2025.4.*. It disables continuous batching. Not needed in last weekly or 2026.0+ releases.
 :::
 ::::
 
