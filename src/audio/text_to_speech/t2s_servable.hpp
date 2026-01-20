@@ -14,6 +14,8 @@
 // limitations under the License.
 //*****************************************************************************
 
+#pragma once
+
 #include "openvino/genai/speech_generation/text2speech_pipeline.hpp"
 #include "src/audio/text_to_speech/t2s_calculator.pb.h"
 

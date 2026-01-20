@@ -19,6 +19,7 @@
 #include <string>
 #include <string_view>
 #include <vector>
+#include <unordered_map>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
