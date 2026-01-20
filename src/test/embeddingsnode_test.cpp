@@ -549,7 +549,7 @@ protected:
     const std::string endpointTokenize = "/v3/tokenize";
     static std::unique_ptr<std::thread> t;
 
-public:    
+public:
     void SetUp() {
         V3HttpTest::SetUp();
         ASSERT_EQ(handler->parseRequestComponents(comp, "POST", endpointTokenize, headers), ovms::StatusCode::OK);

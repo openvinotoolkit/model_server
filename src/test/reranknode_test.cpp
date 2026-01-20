@@ -49,7 +49,7 @@ public:
         V3HttpTest::SetUp();
         ASSERT_EQ(handler->parseRequestComponents(comp, "POST", endpoint, headers), ovms::StatusCode::OK);
     }
-    
+
     static void TearDownTestSuite() {
         TearDownSuite(t);
     }
@@ -190,7 +190,7 @@ public:
         std::string configPath = getGenericFullPathForSrcTest("/ovms/src/test/rerank/with_params/config.json");
         SetUpSuite(port, configPath, t);
     }
-    
+
     void SetUp() {
         V3HttpTest::SetUp();
         ASSERT_EQ(handler->parseRequestComponents(comp, "POST", endpoint, headers), ovms::StatusCode::OK);

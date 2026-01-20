@@ -202,7 +202,6 @@ TEST_F(Text2SpeechConfigTest, MissingModelsPath) {
     }
     )";
 
-
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, nullptr);
     mediapipeDummy.inputConfig = testPbtxt;
@@ -230,8 +229,6 @@ TEST_F(Text2SpeechConfigTest, InvalidPluginConfig) {
         }
     }
     )";
-
-
 
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, nullptr);
@@ -267,8 +264,6 @@ TEST_F(Text2SpeechConfigTest, NonExistingVoicePath) {
     }
     )";
 
-
-
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, nullptr);
     mediapipeDummy.inputConfig = testPbtxt;
@@ -301,8 +296,6 @@ TEST_F(Text2SpeechConfigTest, VoiceMissingPath) {
         }
     }
     )";
-
-
 
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, nullptr);
@@ -337,8 +330,6 @@ TEST_F(Text2SpeechConfigTest, VoiceInvalidFile) {
         }
     }
     )";
-
-
 
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, nullptr);
