@@ -100,7 +100,7 @@ def get_multi_target_devices(target_devices_list, separator):
         first_td = td_list_copy.pop(0)
         if separator in first_td:  # ie: 'AUTO:GPU'
             second_td = td_list_copy.pop(0)
-            assert separator not in second_td, "Incorrect target_device_list={target_devices_list}"
+            assert separator not in second_td, f"Incorrect target_device_list={target_devices_list}"
             result.append(f"{first_td},{second_td}")  # ie: 'AUTO:GPU,CPU'
         else:
             result.append(first_td)

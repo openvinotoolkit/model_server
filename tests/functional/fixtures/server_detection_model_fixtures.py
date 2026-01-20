@@ -37,7 +37,7 @@ def start_server_face_detection_model_auto_shape(request):
 
 
 @pytest.fixture(scope="session")
-def start_server_face_detection_model_named_shape(request):
+def start_server_face_detection_model_named_shape(request, copy_cached_models_to_test_dir):
 
     start_server_command_args = {"model_name": FaceDetection.name,
                                  "model_path": FaceDetection.model_path,
@@ -53,7 +53,7 @@ def start_server_face_detection_model_named_shape(request):
 
 
 @pytest.fixture(scope="session")
-def start_server_face_detection_model_nonamed_shape(request):
+def start_server_face_detection_model_nonamed_shape(request, prepare_json):
 
     start_server_command_args = {"model_name": FaceDetection.name,
                                  "model_path": FaceDetection.model_path,

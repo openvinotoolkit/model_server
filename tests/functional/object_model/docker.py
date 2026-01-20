@@ -51,7 +51,7 @@ TARGET_DEVICE_CONFIGURATION = {
         "devices": ["/dev/dri:/dev/dri:mrw"],
         "privileged": False,
         "user": None,
-        "group_add": [getgrnam('render').gr_gid, getgrnam('video').gr_gid]
+        "group_add": [getgrnam('render').gr_gid, getgrnam('video').gr_gid] if getgrnam is not None else []
     },
 
 }
@@ -92,7 +92,6 @@ class Docker:
         logger.info(f"Starting container: {self.container_name}")
 
         ports = {'{}/tcp'.format(self.grpc_port): self.grpc_port, '{}/tcp'.format(self.rest_port): self.rest_port}
-        device_cfg = TARGET_DEVICE_CONFIGURATION[config.target_device]()
         device_cfg = TARGET_DEVICE_CONFIGURATION[config.target_device]()
         volumes_dict = {config.path_to_mount: {'bind': '/opt/ml', 'mode': 'ro'}}
         device_cfg['volumes'].update(volumes_dict)
