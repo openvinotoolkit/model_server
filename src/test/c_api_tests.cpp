@@ -61,6 +61,7 @@ static void testDefaultSingleModelOptions(ModelsSettingsImpl* modelsSettings) {
     EXPECT_EQ(modelsSettings->mean, "");
     EXPECT_EQ(modelsSettings->scale, "");
     EXPECT_EQ(modelsSettings->colorFormat, "");
+    EXPECT_EQ(modelsSettings->precision, "");
     EXPECT_EQ(modelsSettings->modelVersionPolicy, "");
     EXPECT_EQ(modelsSettings->nireq, 0);
     EXPECT_EQ(modelsSettings->targetDevice, "");
@@ -220,6 +221,7 @@ TEST(CAPIConfigTest, MultiModelConfiguration) {
     EXPECT_EQ(cfg.means(), "");
     EXPECT_EQ(cfg.scales(), "");
     EXPECT_EQ(cfg.colorFormat(), "");
+    EXPECT_EQ(cfg.precision(), "");
     EXPECT_EQ(cfg.modelVersionPolicy(), "");
     EXPECT_EQ(cfg.nireq(), 0);
     EXPECT_EQ(cfg.targetDevice(), "CPU");
