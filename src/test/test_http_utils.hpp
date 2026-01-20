@@ -28,6 +28,8 @@
 #include "../http_status_code.hpp"
 #include "../multi_part_parser.hpp"
 
+#include "test_utils.hpp"
+
 class MockedServerRequestInterface final : public ovms::HttpAsyncWriter {
 public:
     MOCK_METHOD(void, OverwriteResponseHeader, (const std::string&, const std::string&), (override));
@@ -46,4 +48,41 @@ public:
     MOCK_METHOD(std::string, getFieldByName, (const std::string&), (const override));
     MOCK_METHOD(std::string_view, getFileContentByFieldName, (const std::string&), (const override));
     MOCK_METHOD(std::set<std::string>, getAllFieldNames, (), (const, override));
+};
+
+class V3HttpTest : public ::testing::Test {
+public:
+    std::unique_ptr<ovms::HttpRestApiHandler> handler;
+
+    std::unordered_map<std::string, std::string> headers{{"content-type", "application/json"}};
+    ovms::HttpRequestComponents comp;
+    std::shared_ptr<MockedServerRequestInterface> writer;
+    std::shared_ptr<MockedMultiPartParser> multiPartParser;
+    std::string response;
+    ovms::HttpResponseComponents responseComponents;
+
+    static void SetUpSuite(std::string& port, std::string& configPath, std::unique_ptr<std::thread>& t) {
+        ovms::Server& server = ovms::Server::instance();
+        ::SetUpServer(t, server, port, configPath.c_str());
+    }
+    static void SetUpTestSuite() {
+    }
+
+    void SetUp() {
+        writer = std::make_shared<MockedServerRequestInterface>();
+        multiPartParser = std::make_shared<MockedMultiPartParser>();
+        ovms::Server& server = ovms::Server::instance();
+        handler = std::make_unique<ovms::HttpRestApiHandler>(server, 5);
+    }
+
+    static void TearDownSuite(std::unique_ptr<std::thread>& t) {
+        ovms::Server& server = ovms::Server::instance();
+        server.setShutdownRequest(1);
+        t->join();
+        server.setShutdownRequest(0);
+    }
+
+    void TearDown() {
+        handler.reset();
+    }
 };

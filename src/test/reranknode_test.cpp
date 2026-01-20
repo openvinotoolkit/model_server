@@ -30,51 +30,12 @@
 
 using namespace ovms;
 
-class V3HttpTest : public ::testing::Test {
-public:
-    std::unique_ptr<ovms::HttpRestApiHandler> handler;
-
-    std::unordered_map<std::string, std::string> headers{{"content-type", "application/json"}};
-    ovms::HttpRequestComponents comp;
-    const std::string endpointEmbeddings = "/v3/embeddings";
-    const std::string endpointRerank = "/v3/rerank";
-    std::shared_ptr<MockedServerRequestInterface> writer;
-    std::shared_ptr<MockedMultiPartParser> multiPartParser;
-    std::string response;
-    ovms::HttpResponseComponents responseComponents;
-
-    static void SetUpSuite(std::string& port, std::string& configPath, std::unique_ptr<std::thread>& t) {
-        ovms::Server& server = ovms::Server::instance();
-        ::SetUpServer(t, server, port, configPath.c_str());
-    }
-    static void SetUpTestSuite() {
-    }
-
-    void SetUp() {
-        writer = std::make_shared<MockedServerRequestInterface>();
-        multiPartParser = std::make_shared<MockedMultiPartParser>();
-        ovms::Server& server = ovms::Server::instance();
-        handler = std::make_unique<ovms::HttpRestApiHandler>(server, 5);
-        ASSERT_EQ(handler->parseRequestComponents(comp, "POST", endpointEmbeddings, headers), ovms::StatusCode::OK);
-    }
-
-    static void TearDownSuite(std::unique_ptr<std::thread>& t) {
-        ovms::Server& server = ovms::Server::instance();
-        server.setShutdownRequest(1);
-        t->join();
-        server.setShutdownRequest(0);
-    }
-
-    void TearDown() {
-        handler.reset();
-    }
-};
-
 auto graphs = ::testing::Values(
     "rerank", "rerank_ov");
 
 class RerankHttpTest : public V3HttpTest, public ::testing::WithParamInterface<std::string> {
 protected:
+    std::string endpoint = "/v3/rerank";
     static std::unique_ptr<std::thread> t;
 
 public:
@@ -84,6 +45,11 @@ public:
         SetUpSuite(port, configPath, t);
     }
 
+    void SetUp() {
+        V3HttpTest::SetUp();
+        ASSERT_EQ(handler->parseRequestComponents(comp, "POST", endpoint, headers), ovms::StatusCode::OK);
+    }
+    
     static void TearDownTestSuite() {
         TearDownSuite(t);
     }
@@ -105,7 +71,7 @@ TEST_P(RerankHttpTest, simplePositive) {
         }
     )";
     ASSERT_EQ(
-        handler->dispatchToProcessor(endpointRerank, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
     rapidjson::Document d;
     rapidjson::ParseResult ok = d.Parse(response.c_str());
@@ -139,7 +105,7 @@ TEST_P(RerankHttpTest, positiveTopN) {
         }
     )";
     ASSERT_EQ(
-        handler->dispatchToProcessor(endpointRerank, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
     rapidjson::Document d;
     rapidjson::ParseResult ok = d.Parse(response.c_str());
@@ -173,7 +139,7 @@ TEST_P(RerankHttpTest, positiveReturnDocuments) {
         }
     )";
     ASSERT_EQ(
-        handler->dispatchToProcessor(endpointRerank, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
     rapidjson::Document d;
     rapidjson::ParseResult ok = d.Parse(response.c_str());
@@ -203,6 +169,7 @@ INSTANTIATE_TEST_SUITE_P(
 
 class RerankWithParamsHttpTest : public V3HttpTest, public ::testing::WithParamInterface<std::string> {
 protected:
+    std::string endpoint = "/v3/rerank";
     static std::unique_ptr<std::thread> t;
 
 public:
@@ -222,6 +189,11 @@ public:
         */
         std::string configPath = getGenericFullPathForSrcTest("/ovms/src/test/rerank/with_params/config.json");
         SetUpSuite(port, configPath, t);
+    }
+    
+    void SetUp() {
+        V3HttpTest::SetUp();
+        ASSERT_EQ(handler->parseRequestComponents(comp, "POST", endpoint, headers), ovms::StatusCode::OK);
     }
 
     static void TearDownTestSuite() {
@@ -254,7 +226,7 @@ TEST_P(RerankWithParamsHttpTest, PositiveMaxAllowedChunksNotExceeded) {
 
     std::string requestBody = buffer.GetString();
     ASSERT_EQ(
-        handler->dispatchToProcessor(endpointRerank, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
 }
 
@@ -282,7 +254,7 @@ TEST_P(RerankWithParamsHttpTest, MaxAllowedChunksExceededByDocumentsBeforeChunki
     document.Accept(wr);
 
     std::string requestBody = buffer.GetString();
-    auto status = handler->dispatchToProcessor(endpointRerank, requestBody, &response, comp, responseComponents, writer, multiPartParser);
+    auto status = handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParser);
     ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
     ASSERT_THAT(status.string(), ::testing::HasSubstr("Number of documents exceeds max_allowed_chunks"));  // 5 because we prepared 1 document more than allowed
 }
@@ -314,7 +286,7 @@ TEST_P(RerankWithParamsHttpTest, MaxAllowedChunksExceededAfterChunking) {
     document.Accept(wr);
 
     std::string requestBody = buffer.GetString();
-    auto status = handler->dispatchToProcessor(endpointRerank, requestBody, &response, comp, responseComponents, writer, multiPartParser);
+    auto status = handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParser);
     ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR) << status.string();
     ASSERT_THAT(status.string(), ::testing::HasSubstr("Chunking failed: exceeding max_allowed_chunks after chunking limit: 4; actual: 8"));  // 8 because of the last document which was chunked to 5 documents, 3 + 5 = 8
 }
@@ -326,6 +298,7 @@ INSTANTIATE_TEST_SUITE_P(
 
 class RerankWithInvalidParamsHttpTest : public V3HttpTest, public ::testing::WithParamInterface<std::string> {
 protected:
+    std::string endpoint = "/v3/rerank";
     static std::unique_ptr<std::thread> t;
 
 public:
@@ -343,6 +316,11 @@ public:
         */
         std::string configPath = getGenericFullPathForSrcTest("/ovms/src/test/rerank/with_params/invalid_config.json");
         SetUpSuite(port, configPath, t);
+    }
+
+    void SetUp() {
+        V3HttpTest::SetUp();
+        ASSERT_EQ(handler->parseRequestComponents(comp, "POST", endpoint, headers), ovms::StatusCode::OK);
     }
 
     static void TearDownTestSuite() {
@@ -374,7 +352,7 @@ TEST_P(RerankWithInvalidParamsHttpTest, AnyRequestNegativeWithInvalidSetup) {
     document.Accept(wr);
 
     std::string requestBody = buffer.GetString();
-    auto status = handler->dispatchToProcessor(endpointRerank, requestBody, &response, comp, responseComponents, writer, multiPartParser);
+    auto status = handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParser);
     ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
     ASSERT_THAT(status.string(), ::testing::HasSubstr("max_position_embeddings should be larger than 2 * NUMBER_OF_SPECIAL_TOKENS"));
 }
