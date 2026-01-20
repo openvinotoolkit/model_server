@@ -184,67 +184,67 @@ as mentioned in [deployment guide](../../../docs/deploying_server_baremetal.md),
 :::{tab-item} Qwen3-8B
 :sync: Qwen3-8B
 ```bat
-ovms.exe --rest_port 8000 --source_model Qwen/Qwen3-8B --model_repository_path models --tool_parser hermes3 --target_device GPU --task text_generation --cache_dir .cache --enabled_prefix_caching true
+ovms.exe --rest_port 8000 --source_model Qwen/Qwen3-8B --model_repository_path models --tool_parser hermes3 --target_device GPU --task text_generation --cache_dir .cache --enable_prefix_caching true
 ```
 :::
 :::{tab-item} Qwen3-4B
 :sync: Qwen3-4B
 ```bat
-ovms.exe --rest_port 8000 --source_model Qwen/Qwen3-4B --model_repository_path models --tool_parser hermes3 --target_device GPU --task text_generation --cache_dir .cache --enabled_prefix_caching true
+ovms.exe --rest_port 8000 --source_model Qwen/Qwen3-4B --model_repository_path models --tool_parser hermes3 --target_device GPU --task text_generation --cache_dir .cache --enable_prefix_caching true
 ```
 :::
 :::{tab-item} Llama-3.1-8B-Instruct
 :sync: Llama-3.1-8B-Instruct
 ```bat
-ovms.exe --rest_port 8000 --source_model meta-llama/Llama-3.1-8B-Instruct --model_repository_path models --tool_parser llama3 --target_device GPU --task text_generation --enable_tool_guided_generation true --cache_dir .cache --enabled_prefix_caching true
+ovms.exe --rest_port 8000 --source_model meta-llama/Llama-3.1-8B-Instruct --model_repository_path models --tool_parser llama3 --target_device GPU --task text_generation --enable_tool_guided_generation true --cache_dir .cache --enable_prefix_caching true
 ```
 :::
 :::{tab-item} Llama-3.2-3B-Instruct
 :sync: Llama-3.2-3B-Instruct
 ```bat
-ovms.exe --rest_port 8000 --source_model meta-llama/Llama-3.2-3B-Instruct --model_repository_path models --tool_parser llama3 --target_device GPU --task text_generation --enable_tool_guided_generation true --cache_dir .cache --enabled_prefix_caching true
+ovms.exe --rest_port 8000 --source_model meta-llama/Llama-3.2-3B-Instruct --model_repository_path models --tool_parser llama3 --target_device GPU --task text_generation --enable_tool_guided_generation true --cache_dir .cache --enable_prefix_caching true
 ```
 :::
 :::{tab-item} Mistral-7B-Instruct-v0.3
 :sync: Mistral-7B-Instruct-v0.3
 ```bat
-ovms.exe --rest_port 8000 --source_model mistralai/Mistral-7B-Instruct-v0.3 --model_repository_path models --tool_parser mistral --target_device GPU --task text_generation --cache_dir .cache --enabled_prefix_caching true
+ovms.exe --rest_port 8000 --source_model mistralai/Mistral-7B-Instruct-v0.3 --model_repository_path models --tool_parser mistral --target_device GPU --task text_generation --cache_dir .cache --enable_prefix_caching true
 ```
 :::
 :::{tab-item} Phi-4-mini-instruct
 :sync: Phi-4-mini-instruct
 ```bat
-ovms.exe --rest_port 8000 --source_model microsoft/Phi-4-mini-instruct --model_repository_path models --tool_parser phi4 --target_device GPU --task text_generation --enable_tool_guided_generation true --cache_dir .cache --max_num_batched_tokens 99999 --enabled_prefix_caching true
+ovms.exe --rest_port 8000 --source_model microsoft/Phi-4-mini-instruct --model_repository_path models --tool_parser phi4 --target_device GPU --task text_generation --enable_tool_guided_generation true --cache_dir .cache --max_num_batched_tokens 99999 --enable_prefix_caching true
 ```
 :::
 :::{tab-item} Qwen3-8B-int4-ov
 :sync: Qwen3-8B-int4-ov
 ```bat
-ovms.exe --rest_port 8000 --source_model OpenVINO/Qwen3-8B-int4-ov --model_repository_path models --tool_parser hermes3 --target_device GPU --task text_generation --cache_dir .cache --enabled_prefix_caching true
+ovms.exe --rest_port 8000 --source_model OpenVINO/Qwen3-8B-int4-ov --model_repository_path models --tool_parser hermes3 --target_device GPU --task text_generation --cache_dir .cache --enable_prefix_caching true
 ```
 :::
 :::{tab-item} Mistral-7B-Instruct-v0.3-int4-ov
 :sync: Mistral-7B-Instruct-v0.3-int4-ov
 ```bat
-ovms.exe --rest_port 8000 --source_model OpenVINO/Mistral-7B-Instruct-v0.3-int4-ov --model_repository_path models --tool_parser mistral --target_device GPU --task text_generation --cache_dir .cache --enabled_prefix_caching true
+ovms.exe --rest_port 8000 --source_model OpenVINO/Mistral-7B-Instruct-v0.3-int4-ov --model_repository_path models --tool_parser mistral --target_device GPU --task text_generation --cache_dir .cache --enable_prefix_caching true
 ```
 :::
 :::{tab-item} Phi-4-mini-instruct-int4-ov
 :sync: Phi-4-mini-instruct-int4-ov
 ```bat
-ovms.exe --rest_port 8000 --source_model OpenVINO/Phi-4-mini-instruct-int4-ov --model_repository_path models --tool_parser phi4 --target_device GPU --task text_generation --enable_tool_guided_generation true --cache_dir .cache --enabled_prefix_caching true
+ovms.exe --rest_port 8000 --source_model OpenVINO/Phi-4-mini-instruct-int4-ov --model_repository_path models --tool_parser phi4 --target_device GPU --task text_generation --enable_tool_guided_generation true --cache_dir .cache --enable_prefix_caching true
 ```
 :::
 :::{tab-item} Qwen3-Coder-30B-A3B-Instruct
 :sync: Qwen3-Coder-30B-A3B-Instruct
 ```bat
-ovms.exe --rest_port 8000 --source_model Qwen/Qwen3-Coder-30B-A3B-Instruct --model_repository_path models --tool_parser qwen3coder --target_device GPU --task text_generation --cache_dir .cache --enabled_prefix_caching true
+ovms.exe --rest_port 8000 --source_model Qwen/Qwen3-Coder-30B-A3B-Instruct --model_repository_path models --tool_parser qwen3coder --target_device GPU --task text_generation --cache_dir .cache --enable_prefix_caching true
 ```
 :::
 :::{tab-item} gpt-oss-20b
 :sync: gpt-oss-20b
 ```bat
-ovms.exe --rest_port 8000 --source_model openai/gpt-oss-20b --model_repository_path models --tool_parser gptoss --reasoning_parser gptoss --target_device GPU --task text_generation --enabled_prefix_caching true --target_device GPU
+ovms.exe --rest_port 8000 --source_model openai/gpt-oss-20b --model_repository_path models --tool_parser gptoss --reasoning_parser gptoss --target_device GPU --task text_generation --enable_prefix_caching true --target_device GPU
 ```
 > **Note:**: Use `--pipeline_type LM` parameter in export command, for version 2025.4.*. It disables continuous batching. Not needed in last weekly or 2026.0+ releases.
 :::
