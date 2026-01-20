@@ -17,6 +17,10 @@
 #include "openvino/genai/speech_generation/text2speech_pipeline.hpp"
 #include "src/audio/text_to_speech/t2s_calculator.pb.h"
 
+#include <memory>
+#include <string>
+#include <unordered_map>
+
 namespace ovms {
 
 class TtsServable {
