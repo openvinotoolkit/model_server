@@ -27,13 +27,14 @@ private:
 
     ov::preprocess::ColorFormat targetColorFormat;
     ov::preprocess::ColorFormat sourceColorFormat;
+
 public:
     static const char COLOR_FORMAT_DELIMITER;
     ColorFormatConfiguration() = default;
     ColorFormatConfiguration(ov::preprocess::ColorFormat target, ov::preprocess::ColorFormat source) :
         targetColorFormat(target),
         sourceColorFormat(source) {}
-    ColorFormatConfiguration(const std::string& colorFormat){ fromString(colorFormat, *this); };
+    ColorFormatConfiguration(const std::string& colorFormat) { fromString(colorFormat, *this); };
     static Status fromString(const std::string& configurationStr, ColorFormatConfiguration& configOut);
     static Status stringToColorFormat(const std::string& colorFormatStr, ov::preprocess::ColorFormat& colorFormatOut);
 
@@ -50,4 +51,4 @@ public:
         return *this;
     }
 };
-} // namespace ovms
+}  // namespace ovms

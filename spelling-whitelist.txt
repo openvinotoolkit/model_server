@@ -9,12 +9,12 @@ src/shape.cpp:438: strIn
 src/shape.cpp:488: strIn
 src/shape.cpp:507: strIn
 src/shape.hpp:121: strIn
-src/test/modelconfig_test.cpp:565: OptionA
-src/test/modelconfig_test.cpp:571: OptionA
-src/test/modelconfig_test.cpp:577: OptionA
-src/test/modelconfig_test.cpp:583: OptionA
-src/test/modelconfig_test.cpp:589: OptionA
-src/test/modelconfig_test.cpp:595: OptionA
+src/test/modelconfig_test.cpp:617: OptionA
+src/test/modelconfig_test.cpp:623: OptionA
+src/test/modelconfig_test.cpp:629: OptionA
+src/test/modelconfig_test.cpp:635: OptionA
+src/test/modelconfig_test.cpp:641: OptionA
+src/test/modelconfig_test.cpp:647: OptionA
 src/test/modelinstance_test.cpp:1093: THROUGHTPUT
 third_party/aws-sdk-cpp/aws-sdk-cpp.bz
 WORKSPACE:98: thirdparty

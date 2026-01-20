@@ -2525,8 +2525,7 @@ TEST(OvmsConfigTest, positiveModelPreprocessingParams) {
         "--color_format",
         "BGR:RGB",
         "--precision",
-        "F16"
-    };
+        "F16"};
     int arg_count = 17;
     ConstructorEnabledConfig config;
     config.parse(arg_count, n_argv);
@@ -2551,8 +2550,7 @@ TEST(OvmsConfigTest, missingLayoutModelPreprocessingMean) {
         "--model_path",
         "/path",
         "--mean",
-        "11.432"
-    };
+        "11.432"};
     int arg_count = 9;
     ConstructorEnabledConfig config;
     EXPECT_THROW(config.parse(arg_count, n_argv), std::logic_error);
@@ -2568,8 +2566,7 @@ TEST(OvmsConfigTest, missingLayoutModelPreprocessingScale) {
         "--model_path",
         "/path",
         "--scale",
-        "11.432"
-    };
+        "11.432"};
     int arg_count = 9;
     ConstructorEnabledConfig config;
     EXPECT_THROW(config.parse(arg_count, n_argv), std::logic_error);
@@ -2585,8 +2582,7 @@ TEST(OvmsConfigTest, missingLayoutModelPreprocessingColorFormat) {
         "--model_path",
         "/path",
         "--color_format",
-        "BGR:RGB"
-    };
+        "BGR:RGB"};
     int arg_count = 9;
     ConstructorEnabledConfig config;
     EXPECT_THROW(config.parse(arg_count, n_argv), std::logic_error);
@@ -2602,8 +2598,7 @@ TEST(OvmsConfigTest, missingLayoutModelPreprocessingPrecision) {
         "--model_path",
         "/path",
         "--precision",
-        "F16"
-    };
+        "F16"};
     int arg_count = 9;
     ConstructorEnabledConfig config;
     EXPECT_THROW(config.parse(arg_count, n_argv), std::logic_error);

@@ -513,8 +513,7 @@ Status ModelConfig::parsePrecision(const std::string& command) {
         {"UINT32", ov::element::u32},
         {"INT64", ov::element::i64},
         {"UINT64", ov::element::u64},
-        {"BF16", ov::element::bf16}
-    };
+        {"BF16", ov::element::bf16}};
 
     auto it = precisionMap.find(upperCaseCommand);
     if (it != precisionMap.end()) {

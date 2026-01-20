@@ -13,8 +13,7 @@ const std::unordered_map<std::string, ov::preprocess::ColorFormat> ColorFormatCo
     {"NV12", ov::preprocess::ColorFormat::NV12_SINGLE_PLANE},
     {"NV12_2", ov::preprocess::ColorFormat::NV12_TWO_PLANES},
     {"I420", ov::preprocess::ColorFormat::I420_SINGLE_PLANE},
-    {"I420_3", ov::preprocess::ColorFormat::I420_THREE_PLANES}
-};
+    {"I420_3", ov::preprocess::ColorFormat::I420_THREE_PLANES}};
 
 Status ColorFormatConfiguration::stringToColorFormat(const std::string& colorFormatStr, ov::preprocess::ColorFormat& colorFormatOut) {
     auto it = colorFormatMap.find(colorFormatStr);
@@ -54,4 +53,4 @@ Status ColorFormatConfiguration::fromString(const std::string& configurationStr,
 
     return StatusCode::OK;
 }
-} // namespace ovms
+}  // namespace ovms

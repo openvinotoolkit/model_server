@@ -903,7 +903,7 @@ public:
         return this->colorFormat;
     }
 
-     /**
+    /**
          * @brief Get the get precision
          * 
          * @return const std::optional<ov::element::Type>& 
