@@ -616,9 +616,15 @@ Status MediapipeGraphDefinition::initializeNodes() {
                 SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to unpack calculator options");
                 return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
             }
-            std::shared_ptr<TtsServable> servable = std::make_shared<TtsServable>(nodeOptions.models_path(), nodeOptions.target_device(), nodeOptions.voices(), nodeOptions.plugin_config(), mgconfig.getBasePath());
-            ttsServableMap.insert(std::pair<std::string, std::shared_ptr<TtsServable>>(nodeName, std::move(servable)));
-            ttsServablesCleaningGuard.disableCleaning();
+            try{
+                std::shared_ptr<TtsServable> servable = std::make_shared<TtsServable>(nodeOptions.models_path(), nodeOptions.target_device(), nodeOptions.voices(), nodeOptions.plugin_config(), mgconfig.getBasePath());
+                ttsServableMap.insert(std::pair<std::string, std::shared_ptr<TtsServable>>(nodeName, std::move(servable)));
+                ttsServablesCleaningGuard.disableCleaning();
+            }
+            catch(const std::runtime_error& e){
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "TextToSpeech node name: {} initialization failed: {}. ", nodeName, e.what());
+                return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
+            }
         }
     }
     return StatusCode::OK;
