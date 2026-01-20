@@ -75,7 +75,7 @@ TtsServable::TtsServable(const std::string& modelDir, const std::string& targetD
         SPDLOG_ERROR("Error during llm node plugin_config option parsing to JSON: {}", pluginConfig);
         throw std::runtime_error("Error during plugin_config option parsing");
     }
-    ttsPipeline = std::make_shared<ov::genai::Text2SpeechPipeline>(parsedModelsPath.string(), pluginConfig, config);
+    ttsPipeline = std::make_shared<ov::genai::Text2SpeechPipeline>(parsedModelsPath.string(), targetDevice, config);
     for (auto voice : graphVoices) {
         if (!std::filesystem::exists(voice.path()))
             throw std::runtime_error{"Requested voice speaker embeddings file does not exist."};
