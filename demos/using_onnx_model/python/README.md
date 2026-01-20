@@ -7,7 +7,7 @@ For this example let's use a public [ONNX ResNet](https://github.com/onnx/models
 This model requires additional [preprocessing function](https://github.com/onnx/models/tree/main/validated/vision/classification/resnet#preprocessing). Preprocessing can be performed in the client by manipulating data before sending the request. Preprocessing can be also delegated to the server by setting preprocessing parameters. Both methods will be explained below.
 
 [Option 1: Adding preprocessing to the client side](#option-1-adding-preprocessing-to-the-client-side)
-[Option 2: Adding preprocessing to the server side (building DAG)](#option-2-adding-preprocessing-to-the-server-side-building-a-dag)
+[Option 2: Adding preprocessing to the server side](#option-2-adding-preprocessing-to-the-server-side)
 
 ## Option 1: Adding preprocessing to the client side
 
@@ -53,12 +53,12 @@ Class is with highest score: 309
 Detected class name: bee
 ```
 
-## Option 2: Adding preprocessing to the server side (building a DAG)
+## Option 2: Adding preprocessing to the server side
 
 Start the OVMS container with additional preprocessing options:
 ```bash
 docker run -d -u $(id -u):$(id -g) -v $(pwd)/workspace:/workspace -p 9001:9001 openvino/model_server:latest \
---model_path /workspace/resnet50-onnx --model_name resnet --port 9001 --layout NHWC:NCHW --mean "[123.675,116.28,103.53]" --scale "[58.395,57.12,57.375]" --shape "(1,224,224,3)" --color_format BGR
+--model_path /workspace/resnet50-onnx --model_name resnet --port 9001 --layout NHWC:NCHW --mean "[123.675,116.28,103.53]" --scale "[58.395,57.12,57.375]" --shape "(1,224,224,3)" --color_format BGR:RGB
 ```
 
 The `onnx_model_demo.py` script can run inference both with and without performing preprocessing. Since in this variant preprocessing is done by the model server, there's no need to perform any image preprocessing on the client side. In that case, run without `--run_preprocessing` option. See [preprocessing function](https://github.com/openvinotoolkit/model_server/blob/main/demos/using_onnx_model/python/onnx_model_demo.py#L26-L33) run in the client.
