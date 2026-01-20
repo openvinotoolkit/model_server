@@ -193,7 +193,7 @@ public:
     const std::string& shape() const;
 
     /**
-         * @brief Get the sout
+         * @brief Get the layout
          * 
          * @return const std::string&
          */

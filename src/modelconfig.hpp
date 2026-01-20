@@ -204,22 +204,22 @@ private:
     std::string customLoaderOptionsStr;
 
     /**
-         * @brief meanValues mean preprocessing parameters  
+         * @brief meanValues mean preprocessing parameters
          */
     std::optional<float_vec_or_value_t> meanValues;
 
     /**
-         * @brief scaleValues scale preprocessing parameters  
+         * @brief scaleValues scale preprocessing parameters
          */
     std::optional<float_vec_or_value_t> scaleValues;
 
     /**
-         * @brief colorFormat color format preprocessing parameter  
+         * @brief colorFormat color format preprocessing parameter
          */
     std::optional<ovms::ColorFormatConfiguration> colorFormat;
 
     /**
-         * @brief precision precision preprocessing parameter  
+         * @brief precision precision preprocessing parameter
          */
     std::optional<ov::element::Type> precision;
 

@@ -523,7 +523,6 @@ Status ModelConfig::parsePrecision(const std::string& command) {
         SPDLOG_WARN("Parameter contains invalid precision value: {}", command);
         return StatusCode::PRECISION_WRONG_FORMAT;
     }
-    
     return StatusCode::OK;
 }
 
