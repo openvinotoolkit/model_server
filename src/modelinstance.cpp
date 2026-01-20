@@ -56,7 +56,6 @@
 #include "profiler.hpp"
 #include "regularovtensorfactory.hpp"
 #include "shape.hpp"
-#include "status.hpp"
 #include "stringutils.hpp"
 #include "tensorinfo.hpp"
 #include "timer.hpp"

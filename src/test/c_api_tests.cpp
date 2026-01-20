@@ -1932,12 +1932,12 @@ struct CallbackUnblockingAndCheckingStruct : CallbackUnblockingStruct {
     float expectedValue{-1231571};
 };
 
-// static void callbackCheckingIfErrorReported(OVMS_InferenceResponse* response, uint32_t flag, void* userStruct) {
-//     SPDLOG_DEBUG("Using callback: callbackCheckingIfErrorReported!");
-//     EXPECT_NE(flag, 0);
-//     CallbackUnblockingAndCheckingStruct* callbackStruct = reinterpret_cast<CallbackUnblockingAndCheckingStruct*>(userStruct);
-//     callbackStruct->signal.set_value();
-// }
+static void callbackCheckingIfErrorReported(OVMS_InferenceResponse* response, uint32_t flag, void* userStruct) {
+    SPDLOG_DEBUG("Using callback: callbackCheckingIfErrorReported!");
+    EXPECT_NE(flag, 0);
+    CallbackUnblockingAndCheckingStruct* callbackStruct = reinterpret_cast<CallbackUnblockingAndCheckingStruct*>(userStruct);
+    callbackStruct->signal.set_value();
+}
 static void callbackUnblockingAndCheckingResponse(OVMS_InferenceResponse* response, uint32_t flag, void* userStruct) {
     EXPECT_EQ(flag, 0);
     SPDLOG_DEBUG("Using callback: callbackUnblockingAndFreeingRequest!");
@@ -1999,27 +1999,27 @@ TEST_F(CAPIInference, AsyncWithCallbackDummy) {
     }
     SPDLOG_INFO("Using callbacks!");
 }
-// TEST_F(CAPIInference, AsyncErrorHandling) {
-//     ov::Core core;
-//     MockModelInstanceWithSetOutputInfo instance(core);
-//     instance.loadModel(DUMMY_MODEL_CONFIG);
-//     std::unique_ptr<ModelInstanceUnloadGuard> unloadGuard;  // we do not need it to be set
-//     ovms::InferenceRequest request("dummy", 0);
-//     std::vector<float> in(10, INITIAL_VALUE);
-//     request.addInput(DUMMY_MODEL_INPUT_NAME, OVMS_DATATYPE_FP32, DUMMY_MODEL_SHAPE.data(), DUMMY_MODEL_SHAPE.size());
-//     request.setInputBuffer(DUMMY_MODEL_INPUT_NAME, in.data(), DUMMY_MODEL_SHAPE[1] * sizeof(float), OVMS_BUFFERTYPE_CPU, 0);
-//     ovms::InferenceResponse response;
-//     auto outputInfo = instance.getOutputsInfo();
-//     outputInfo["NOT_EXISTING"] = std::make_shared<ovms::TensorInfo>("BADUMTSSS", ovms::Precision::UNDEFINED, shape_t{});
-//     instance.waitForLoaded(0, unloadGuard);
-//     CallbackUnblockingAndCheckingStruct callbackStruct;
-//     auto unblockSignal = callbackStruct.signal.get_future();
-//     request.setCompletionCallback(callbackCheckingIfErrorReported, &callbackStruct);
-//     instance.setOutputsInfo(outputInfo);
-//     auto status = ovms::modelInferAsync<ovms::InferenceRequest, ovms::InferenceResponse>(instance, &request, unloadGuard);
-//     EXPECT_EQ(status, ovms::StatusCode::OK) << status.string();
-//     unblockSignal.get();
-//     std::this_thread::sleep_for(std::chrono::seconds(1));
-//     unloadGuard.reset();
-//     instance.retireModel();
-// }
+TEST_F(CAPIInference, AsyncErrorHandling) {
+    ov::Core core;
+    MockModelInstanceWithSetOutputInfo instance(core);
+    instance.loadModel(DUMMY_MODEL_CONFIG);
+    std::unique_ptr<ModelInstanceUnloadGuard> unloadGuard;  // we do not need it to be set
+    ovms::InferenceRequest request("dummy", 0);
+    std::vector<float> in(10, INITIAL_VALUE);
+    request.addInput(DUMMY_MODEL_INPUT_NAME, OVMS_DATATYPE_FP32, DUMMY_MODEL_SHAPE.data(), DUMMY_MODEL_SHAPE.size());
+    request.setInputBuffer(DUMMY_MODEL_INPUT_NAME, in.data(), DUMMY_MODEL_SHAPE[1] * sizeof(float), OVMS_BUFFERTYPE_CPU, 0);
+    ovms::InferenceResponse response;
+    auto outputInfo = instance.getOutputsInfo();
+    outputInfo["NOT_EXISTING"] = std::make_shared<ovms::TensorInfo>("BADUMTSSS", ovms::Precision::UNDEFINED, shape_t{});
+    instance.waitForLoaded(0, unloadGuard);
+    CallbackUnblockingAndCheckingStruct callbackStruct;
+    auto unblockSignal = callbackStruct.signal.get_future();
+    request.setCompletionCallback(callbackCheckingIfErrorReported, &callbackStruct);
+    instance.setOutputsInfo(outputInfo);
+    auto status = ovms::modelInferAsync<ovms::InferenceRequest, ovms::InferenceResponse>(instance, &request, unloadGuard);
+    EXPECT_EQ(status, ovms::StatusCode::OK) << status.string();
+    unblockSignal.get();
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+    unloadGuard.reset();
+    instance.retireModel();
+}
