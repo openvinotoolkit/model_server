@@ -34,7 +34,7 @@ public:
     ColorFormatConfiguration(ov::preprocess::ColorFormat target, ov::preprocess::ColorFormat source) :
         targetColorFormat(target),
         sourceColorFormat(source) {}
-    ColorFormatConfiguration(const std::string& colorFormat) { fromString(colorFormat, *this); };
+    ColorFormatConfiguration(const std::string& colorFormat) { fromString(colorFormat, *this); }
     static Status fromString(const std::string& configurationStr, ColorFormatConfiguration& configOut);
     static Status stringToColorFormat(const std::string& colorFormatStr, ov::preprocess::ColorFormat& colorFormatOut);
 
