@@ -305,9 +305,6 @@ RUN bash -c "sed -i -e 's|REPLACE_PROJECT_VERSION|${PROJECT_VERSION}|g' /ovms/sr
     if [ "$ov_use_binary" == "0" ] ; then sed -i -e "s#REPLACE_OPENVINO_NAME#$(git --git-dir /openvino/.git log -n 1 | head -n 1 | cut -d' ' -f2 | head -c 12)#g" /ovms/src/version.hpp ; fi && \
     bash -c "sed -i -e 's|REPLACE_BAZEL_BUILD_FLAGS|${debug_bazel_flags}${minitrace_flags}|g' /ovms/src/version.hpp"
 
-WORKDIR /usr/lib/x86_64-linux-gnu/
-RUN ln -s libOpenCL.so.1 libOpenCL.so
-
 WORKDIR /patchelf
 # hadolint ignore=DL3003
 RUN wget -q https://github.com/NixOS/patchelf/archive/0.10.tar.gz && \
