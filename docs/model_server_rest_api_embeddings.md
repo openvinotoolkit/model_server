@@ -49,7 +49,7 @@ curl http://localhost/v3/embeddings \
 
 #### Generic
 
-| Param | OpenVINO Model Server | OpenAI /completions API | Type | Description |
+| Param | OpenVINO Model Server | OpenAI /embeddings API | Type | Description |
 |-----|----------|----------|---------|-----|
 | model | ✅ | ✅ | string (required) | Name of the model to use. Name assigned to a MediaPipe graph configured to schedule generation using desired embedding model.  |
 | input | ✅ | ✅ | string/list of strings (required) | Input text to embed, encoded as a string or a list of strings  |
@@ -61,7 +61,7 @@ curl http://localhost/v3/embeddings \
 
 ## Response
 
-| Param | OpenVINO Model Server | OpenAI /completions API | Type | Description |
+| Param | OpenVINO Model Server | OpenAI /embeddings API | Type | Description |
 |-----|----------|----------|---------|-----|
 | data | ✅ | ✅ | array | A list of responses for each string |
 | data.embedding | ✅ | ✅ | array of float or base64 string | Vector of embeddings for a string. |

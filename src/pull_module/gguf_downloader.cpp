@@ -175,6 +175,9 @@ void print_progress(size_t count, size_t max, bool first_run, size_t elapsed_tim
 struct FtpFile {
     const char* filename;
     FILE* stream;
+    FtpFile() = delete;
+    FtpFile(const FtpFile&) = delete;
+    FtpFile& operator=(const FtpFile&) = delete;
     FtpFile(const char* fname, FILE* str) :
         filename(fname),
         stream(str) {}
@@ -303,6 +306,15 @@ std::variant<Status, std::vector<std::string>> GGUFDownloader::createGGUFFilenam
     // we need to extract N
     // note that it could be 00001-of-00002, it could be 00001-of-00212 etc
     // note that it has to be exactly 5 digits for part number and 5 digits for total parts
+    // we first should check if this at least tries to be multipart with regex "-of-" as not to
+    // try to use web with curl unnecessarily
+    std::string multipartPreCheckPattern = R"(.*-of-.*$)";
+    std::smatch preCheckMatch;
+    if (!std::regex_match(ggufFilename, preCheckMatch, std::regex(multipartPreCheckPattern))) {
+        // not multipart
+        filesToDownload.push_back(ggufFilename);
+        return filesToDownload;
+    }
     std::string multipartExactPattern = R"(.*-(\d{5})-of-(\d{5})\.gguf$)";
     std::smatch match;
     if (std::regex_match(ggufFilename, match, std::regex(multipartExactPattern))) {
@@ -332,7 +344,8 @@ std::variant<Status, std::vector<std::string>> GGUFDownloader::createGGUFFilenam
             filesToDownload.push_back(std::get<std::string>(partFilenameOrStatus));
         }
     } else {
-        filesToDownload.push_back(ggufFilename);
+        SPDLOG_ERROR("Invalid multipart gguf filename format: {}", ggufFilename);
+        return StatusCode::PATH_INVALID;
     }
     return filesToDownload;
 }

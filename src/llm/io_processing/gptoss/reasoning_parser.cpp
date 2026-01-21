@@ -18,12 +18,7 @@
 #include <string>
 #include <vector>
 
-#pragma warning(push)
-#pragma warning(disable : 6313)
-#include <rapidjson/document.h>
-#include <rapidjson/stringbuffer.h>
-#include <rapidjson/writer.h>
-#pragma warning(pop)
+#include "src/port/rapidjson_document.hpp"
 
 #include "../../../logging.hpp"
 #include "../../../stringutils.hpp"
@@ -56,10 +51,10 @@ std::optional<rapidjson::Document> GptOssReasoningParser::parseChunk(const std::
 
     StreamState lastState = state;
 
-    if (startsWith(chunk, getParsingStartTag())) {
+    if (startsWith(chunk, getParsingStartTags()[0])) {
         // Final content
         state = StreamState::READING_REASONING;
-        chunk = chunk.substr(getParsingStartTag().size());
+        chunk = chunk.substr(getParsingStartTags()[0].size());
     } else if (startsWith(chunk, "<|start|>assistant<|channel|>final<|message|>")) {
         // Final content
         state = StreamState::READING_CONTENT;
@@ -76,6 +71,10 @@ std::optional<rapidjson::Document> GptOssReasoningParser::parseChunk(const std::
         // End
         state = StreamState::UNKNOWN;
         chunk = chunk.substr(0, chunk.size() - getParsingEndTag().size());
+    } else if (endsWith(chunk, "<|return|>")) {
+        // End
+        state = StreamState::UNKNOWN;
+        chunk = chunk.substr(0, chunk.size() - std::strlen("<|return|>"));
     }
 
     if (chunk.size() == 0)

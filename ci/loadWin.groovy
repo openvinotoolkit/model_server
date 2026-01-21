@@ -3,7 +3,7 @@ def cleanup_directories() {
     println "Cleaning pr-xxxx directories from node: NODE_NAME = ${env.NODE_NAME}"
     // First delete directories older than 14 days
     deleteOldDirectories()
-    def command = 'ls c:\\Jenkins\\workspace | grep -oE ".*(PR-[0-9]*)$" | sed -n -E "s/(ovms_oncommit_|ovms_ovms-windows_)//p'
+    def command = 'ls c:\\Jenkins\\workspace | grep -oE "(PR-[0-9]*)$"'
     def status = bat(returnStatus: true, script: command)
     if ( status != 0) {
         error "Error: trying to list jenkins workspaces."
@@ -48,7 +48,7 @@ def cleanup_directories() {
                 println "Deleting: " + pathToDelete
                 status = bat(returnStatus: true, script: 'rmdir /s /q ' + pathToDelete)
                 if (status != 0) {
-                    error "Error: Deleting directory ${pathToDelete} failed: ${status}. Check piepeline.log for details."
+                    error "Error: Deleting directory ${pathToDelete} failed: ${status}. Check pipeline.log for details."
                 } else {
                     echo "Deleting directory ${pathToDelete} successful."
                 }
@@ -90,7 +90,7 @@ def deleteOldDirectories() {
             println "Deleting: " + pathToDelete
             status = bat(returnStatus: true, script: 'rmdir /s /q ' + pathToDelete)
             if (status != 0) {
-                error "Error: Deleting directory ${pathToDelete} failed: ${status}. Check piepeline.log for details."
+                error "Error: Deleting directory ${pathToDelete} failed: ${status}. Check pipeline.log for details."
             } else {
                 echo "Deleting directory ${pathToDelete} successful."
             }
@@ -110,11 +110,19 @@ def install_dependencies() {
 
 def clean() {
     def output1 = bat(returnStdout: true, script: 'windows_clean_build.bat ' + get_short_bazel_path() + ' ' + env.OVMS_CLEAN_EXPUNGE)
+    if(fileExists('dist\\windows\\ovms')){
+        def status_del = bat(returnStatus: true, script: 'rmdir /s /q dist\\windows\\ovms')
+        if (status_del != 0) {
+            error "Error: Deleting existing ovms directory failed ${status_del}. Check pipeline.log for details."
+        } else {
+            echo "Existing ovms directory deleted successfully."
+        }
+    }
 }
 
 def build(){
     println "OVMS_PYTHON_ENABLED=${env.OVMS_PYTHON_ENABLED}"
-    def pythonOption = env.OVMS_PYTHON_ENABLED == "1" ? "--with_python" : "--no_python"
+    def pythonOption = env.OVMS_PYTHON_ENABLED == "0" ? "--no_python" : "--with_python"
     def status = bat(returnStatus: true, script: 'windows_build.bat ' + get_short_bazel_path() + ' ' + pythonOption + ' --with_tests') 
     status = bat(returnStatus: true, script: 'grep "Build completed successfully" win_build.log"')
     if (status != 0) {
@@ -128,11 +136,126 @@ def build(){
     } else {
         echo "Windows package created successfully."
     }
+    def unzipCmd = "tar -xf dist\\windows\\ovms.zip"
+    def status_unzip = bat(returnStatus: true, script: "${unzipCmd}")
+    if (status_unzip != 0) {
+        error "Error: Unzipping package failed: ${status_unzip}."
+    } else {
+        echo "Package unzipped successfully."
+    }
+}
+
+def clone_sdl_repo()
+{
+    if(!fileExists('sdl_repo')){
+        println "Starting code signing"
+        def statusPull = bat(returnStatus: true, script: 'git clone -b ' + env.SIGN_REPO_BRANCH + ' ' + env.SIGN_REPO + ' sdl_repo')
+        if (statusPull != 0) {
+            error "Error: Downloading sdl_repo failed ${statusPull}. Check pipeline.log for details."
+        } else {
+            echo "sdl_repo downloaded successfully."
+        }
+    }else{
+        println "Pulling latest changes in sdl_repo"
+        dir('sdl_repo') {
+            def statusPull = bat(returnStatus: true, script: 'git fetch && git reset --hard origin/'+env.SIGN_REPO_BRANCH)
+            if (statusPull != 0) {
+                error "Error: Pulling latest changes in sdl_repo failed ${statusPull}. Check pipeline.log for details."
+            } else {
+                echo "sdl_repo updated successfully."
+            }
+        }
+    }
+}
+
+def clone_bdba_repo()
+{
+    if(!fileExists('repo_ci_infra')){
+        println "Starting BDBA infrastructure download"
+        def statusPull = bat(returnStatus: true, script: 'git clone -b ' + env.BDBA_REPO_BRANCH + ' ' + env.BDBA_REPO + ' repo_ci_infra')
+        if (statusPull != 0) {
+            error "Error: Downloading BDBA infrastructure failed ${statusPull}. Check pipeline.log for details."
+        } else {
+            echo "BDBA infrastructure downloaded successfully."
+        }
+    }else{
+        println "Pulling latest changes in BDBA infrastructure"
+        dir('repo_ci_infra') {
+            def statusPull = bat(returnStatus: true, script: 'git fetch && git reset --hard origin/'+env.BDBA_REPO_BRANCH)
+            if (statusPull != 0) {
+                error "Error: Pulling latest changes in BDBA infrastructure failed ${statusPull}. Check pipeline.log for details."
+            } else {
+                echo "BDBA infrastructure updated successfully."
+            }
+        }
+    }
+}
+
+def sign(){
+    println "SIGNING_USER=${env.SIGNING_USER}"
+    def status = bat(returnStatus: true, script: 'ci\\windows_sign.bat ' + env.SIGNING_USER + ' dist\\windows ' + env.OVMS_PYTHON_ENABLED)
+    if (status != 0) {
+        error "Error: Windows code signing failed ${status}. Check win_sign.log for details."
+    } else {
+        echo "Code signing successful."
+    }
+}
+
+def bdba(){
+    println "Starting BDBA scan"
+    def status = bat(returnStatus: true, script: 'ci\\windows_bdba.bat ' + env.BDBA_CREDS_PSW + ' dist\\windows sdl_repo\\ovms-package')
+    if (status != 0) {
+        error "Error: Windows BDBA scan failed ${status}. Check win_bdba.log for details."
+    } else {
+        echo "BDBA scan successful."
+    }   
+}
+
+def download_package(){
+    println "Downloading package from URL: ${env.PACKAGE_URL}"
+    if(!fileExists('dist\\windows')){
+        def status = bat(returnStatus: true, script: 'mkdir dist\\windows')
+        if (status != 0) {
+            error "Error: Creating dist\\windows directory failed ${status}. Check pipeline.log for details."
+        } else {
+            echo "Directory dist\\windows created successfully."
+        }
+    }
+    dir('dist\\windows') {
+        if(fileExists('ovms.zip')){
+            def status_del = bat(returnStatus: true, script: 'del /f ovms.zip')
+            if (status_del != 0) {
+                error "Error: Deleting existing ovms.zip failed ${status_del}. Check pipeline.log for details."
+            } else {
+                echo "Existing ovms.zip deleted successfully."
+            }
+        }
+        if(fileExists('ovms')){
+            def status_del = bat(returnStatus: true, script: 'rmdir /s /q ovms')
+            if (status_del != 0) {
+                error "Error: Deleting existing ovms directory failed ${status_del}. Check pipeline.log for details."
+            } else {
+                echo "Existing ovms directory deleted successfully."
+            }
+        }
+        def status = bat(returnStatus: true, script: 'curl -L -k -o ovms.zip ' + env.PACKAGE_URL)
+        if (status != 0) {
+            error "Error: Downloading package failed ${status}. Check pipeline.log for details."
+        } else {
+            echo "Package downloaded successfully."
+        }
+        def status_unzip = bat(returnStatus: true, script: 'tar -xf ovms.zip')
+        if (status_unzip != 0) {
+            error "Error: Unzipping package failed: ${status_unzip}."
+        } else {
+            echo "Package unzipped successfully."
+        }
+    }
 }
 
 def unit_test(){
     println "OVMS_PYTHON_ENABLED=${env.OVMS_PYTHON_ENABLED}"
-    def pythonOption = env.OVMS_PYTHON_ENABLED == "1" ? "--with_python" : "--no_python"
+    def pythonOption = env.OVMS_PYTHON_ENABLED == "0" ? "--no_python" : "--with_python"
     status = bat(returnStatus: true, script: 'windows_test.bat ' + get_short_bazel_path() + ' ' + pythonOption)
     if (status != 0) {
         error "Error: Windows build test failed ${status}. Check win_build_test.log for details."
@@ -166,7 +289,7 @@ def check_tests(){
 
     status = bat(returnStatus: true, script: 'grep "  PASSED  " win_full_test.log')
     if (status != 0) {
-            error "Error: Windows run test failed ${status}. Expecting   PASSED   at the end of log. Check piepeline.log for details."
+            error "Error: Windows run test failed ${status}. Expecting   PASSED   at the end of log. Check pipeline.log for details."
     } else {
         echo "Success: Windows run test finished with success."
     }
@@ -186,6 +309,18 @@ def archive_test_artifacts(){
     archiveArtifacts allowEmptyArchive: true, artifacts: "win_build_test.log"
     archiveArtifacts allowEmptyArchive: true, artifacts: "win_test_summary.log"
     archiveArtifacts allowEmptyArchive: true, artifacts: "win_test_log.zip"
+}
+
+def archive_bdba_reports(){
+    archiveArtifacts allowEmptyArchive: true, artifacts: "win_bdba.log"
+    archiveArtifacts allowEmptyArchive: true, artifacts: "ovms_windows_bdba_reports.zip"
+}
+
+def archive_sign_results(){
+    def python_suffix = env.OVMS_PYTHON_ENABLED == "0" ? "off" : "on"
+    archiveArtifacts allowEmptyArchive: true, artifacts: "win_sign.log"
+    archiveArtifacts allowEmptyArchive: true, artifacts: "dist\\windows\\ovms_windows_python_${python_suffix}.zip"
+    archiveArtifacts allowEmptyArchive: true, artifacts: "dist\\windows\\ovms_windows_python_${python_suffix}.zip.sha256"
 }
 
 def setup_bazel_remote_cache(){

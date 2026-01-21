@@ -17,15 +17,11 @@ load("@bazel_skylib//lib:selects.bzl", "selects")
 load("@mediapipe//mediapipe/framework:more_selects.bzl", "more_selects")
 load("//:common_settings.bzl",
      "COMMON_STATIC_TEST_COPTS", "COMMON_STATIC_LIBS_COPTS", "COMMON_STATIC_LIBS_LINKOPTS", "COMMON_FUZZER_COPTS", "COMMON_FUZZER_LINKOPTS", "COMMON_LOCAL_DEFINES", "COPTS_PYTHON", "COPTS_MEDIAPIPE", "COPTS_DROGON",
-     "create_config_settings", "ovms_cc_library")
+     "create_config_settings", "PYBIND_DEPS", "ovms_cc_library")
 
 COPTS_OV_TRACE = select({
     "//conditions:default": ["-DOV_TRACE=0"],
     "//:not_disable_ov_trace" : ["-DOV_TRACE=1"],
-})
-COPTS_ADJUSTED = COMMON_STATIC_LIBS_COPTS + select({
-        "//conditions:default": [],
-        "//:fuzzer_build" : COMMON_FUZZER_COPTS,
 })
 LINKOPTS_ADJUSTED = COMMON_STATIC_LIBS_LINKOPTS + select({
     "//conditions:default": [],
@@ -309,6 +305,8 @@ ovms_cc_library(
         "//src/graph_export:graph_cli_parser",
         "//src/graph_export:rerank_graph_cli_parser",
         "//src/graph_export:embeddings_graph_cli_parser",
+        "//src/graph_export:t2s_graph_cli_parser",
+        "//src/graph_export:s2t_graph_cli_parser",
         "//src/graph_export:image_generation_graph_cli_parser",
     ],
     visibility = ["//visibility:public",],
@@ -537,6 +535,7 @@ ovms_cc_library(
         "statefulmodelinstance.hpp",
          ] + select({
             "//:not_disable_mediapipe": [
+                "copyable_object_wrapper.hpp",
                 "mediapipe_internal/mediapipefactory.cpp",
                 "mediapipe_internal/mediapipefactory.hpp",
                 "mediapipe_internal/mediapipegraphconfig.hpp",
@@ -562,9 +561,11 @@ ovms_cc_library(
             "//conditions:default": [],
             "//:not_disable_mediapipe" : [
                 "//src/image_gen:image_gen_calculator",
+                "//src/audio/speech_to_text:s2t_calculator",
+                "//src/audio/text_to_speech:t2s_calculator",
+                "//src/audio:audio_utils",
                 "//src/image_gen:imagegen_init",
                 "//src/llm:openai_completions_api_handler",
-                "//src/embeddings:embeddingscalculator",
                 "//src/embeddings:embeddingscalculator_ov",
                 "//src/rerank:rerankcalculator",
                 "//src/rerank:rerankcalculator_ov",
@@ -1129,6 +1130,7 @@ ovms_cc_library(
         "libovmsfilesystem",
         "libovmsstatus",
         "libovmslogging",
+        "//src/port:rapidjson_stringbuffer",
     ],
     visibility = ["//visibility:public"],
     additional_copts = COPTS_MEDIAPIPE + COPTS_DROGON,
@@ -1153,6 +1155,8 @@ ovms_cc_library(
     deps = [
         "@com_github_jupp0r_prometheus_cpp//core",
         "@com_github_tencent_rapidjson//:rapidjson",
+        "//src/port:rapidjson_stringbuffer",
+        "//src/port:rapidjson_writer",
         "cpp_headers",
         "libovms_module",
         "libovmslogging",
@@ -1608,6 +1612,8 @@ ovms_cc_library(
             "libovmsstring_utils",
             "libmodelconfigjsonparser",
             "anonymous_input_name",
+            "//src/port:rapidjson_stringbuffer",
+            "//src/port:rapidjson_writer",
     ],
     visibility = ["//visibility:public"],
 )
@@ -2280,7 +2286,8 @@ ovms_cc_library(
         "libovmslogging",
         "libovmsstatus",
         "libhttp_status_code",
-        "libovms_config"
+        "libovms_config",
+        "libovmsstring_utils",
     ],
     visibility = ["//visibility:public",],
 )
@@ -2376,7 +2383,9 @@ cc_binary(
     name = "ovms",
     srcs = [
         "main.cpp",
-    ],
+    ] + select({
+        "//conditions:default": [],
+        "//src:windows" : ["main_windows.hpp", "main_windows.cpp",],}),
     linkopts = LINKOPTS_ADJUSTED,
     copts = COMMON_STATIC_LIBS_COPTS,
     deps = [
@@ -2390,7 +2399,7 @@ cc_binary(
                 "//src:libcustom_node_model_zoo_intel_object_detection.so",
                 "//src:libcustom_node_image_transformation.so",
             ],
-            "//src:windows" : [],
+            "//src:windows" : ["@winreg//:winreg"],
         })
      + select({
             "//conditions:default": [
@@ -2503,6 +2512,7 @@ cc_test(
                 "test/multipart_calculator_test.cpp",
                 "test/llm/assisted_decoding_test.cpp",
                 "test/llm/llmnode_test.cpp",
+                "test/llm/tokenize_endpoint_test.cpp",
                 "test/llm/max_model_length_test.cpp",
                 "test/llm/text_streamer_test.cpp",
                 "test/llm/visual_language_model/complete_flow_test.cpp",
@@ -2664,10 +2674,12 @@ cc_test(
             ":test_platform_utils",
             "//src/rerank:rerank_api_handler",
             ":embeddings_handler_tests",
+            ":tokenize_parser_tests",
             ":inferencerequest_test",
             ":libtest_environment",
             ":libtest_gpuenvironment",
             ":test_gguf_environment",
+            ":libtest_pythonenvironment",
             ":network_utils_test",
             "//src:custom_nodes_common_buffersqueue",
             "@com_google_googletest//:gtest",
@@ -2680,6 +2692,7 @@ cc_test(
             ":test_constructor_enabled_model_manager",
             ":test_test_models",
             ":test_test_models_configs",
+            ":test_cmd_exec",
             ] + select({
                 "//conditions:default": [
                     ":openvino_remote_tensors_tests",
@@ -2692,7 +2705,7 @@ cc_test(
             "//conditions:default": [
                 "//src/llm:genai_servables",
                 "//src/llm:output_parsers",
-                ":llm_output_parsers_tests",
+                ":test_llm_output_parser_tests",
                 "//src/test/mediapipe/calculators:mediapipe_test_calculators",
                 "//src/test/mediapipe/calculators:dependency_free_http_test_calculators",
                 "@mediapipe//mediapipe/calculators/ovms:ovms_calculator",
@@ -2708,19 +2721,7 @@ cc_test(
     local_defines = COMMON_LOCAL_DEFINES,
     linkopts = LINKOPTS_ADJUSTED,
 )
-cc_library(
-    name = "test_env_guard",
-    hdrs = ["test/env_guard.hpp",],
-    srcs = ["test/env_guard.cpp",],
-    deps = [
-        "libovmslogging",
-        "@com_google_googletest//:gtest",
-    ],
-    linkstatic = 1,
-    local_defines = COMMON_LOCAL_DEFINES,
-    copts = COPTS_TESTS,
-    linkopts = COMMON_STATIC_LIBS_LINKOPTS,
-)
+
 cc_library(
     name = "test_constructor_enabled_model_manager",
     hdrs = ["test/constructor_enabled_model_manager.hpp",],
@@ -2754,6 +2755,20 @@ cc_library(
             ":modelconfig",
     ],
     linkstatic = 1,
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_TESTS,
+    linkopts = COMMON_STATIC_LIBS_LINKOPTS,
+)
+
+cc_library(
+    name = "test_cmd_exec",
+    srcs = ["test/test_cmd_exec.cpp",],
+    linkstatic = 1,
+    alwayslink = True,
+    deps = [
+        "@com_google_googletest//:gtest",
+        "//src/pull_module:cmd_exec",
+    ],
     local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_TESTS,
     linkopts = COMMON_STATIC_LIBS_LINKOPTS,
@@ -2857,6 +2872,19 @@ cc_library(
     copts = COPTS_TESTS,
 )
 cc_library(
+    name = "libtest_pythonenvironment",
+    linkstatic = 1,
+    alwayslink = True,
+    hdrs = ["test/python_environment.hpp",],
+    srcs = ["test/python_environment.cpp",],
+    linkopts = [],
+    deps = PYBIND_DEPS + [
+            "@com_google_googletest//:gtest",
+    ],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_TESTS,
+)
+cc_library(
     name = "test_gguf_environment",
     linkstatic = 1,
     alwayslink = True,
@@ -2897,7 +2925,7 @@ cc_library(
     linkopts = [],
     deps = [
         "//src/servables_config_manager_module:listmodels",
-        ":test_env_guard",
+        "//src/utils:env_guard",
         ":test_utils",
         ":test_platform_utils",
         ":test_test_with_temp_dir",
@@ -2923,7 +2951,7 @@ cc_library(
         ":test_utils",
         ":test_test_with_temp_dir",
         ":test_gguf_environment",
-        ":test_env_guard",
+        "//src/utils:env_guard",
         "//src/pull_module:gguf_downloader",
         "//src:ovms_lib",
         "libovmsstring_utils",
@@ -3113,7 +3141,22 @@ cc_library(
 )
 
 cc_library(
-    name = "llm_output_parsers_tests",
+    name = "tokenize_parser_tests",
+    linkstatic = 1,
+    alwayslink = True,
+    srcs = ["test/tokenize_parser_test.cpp"],
+    data = [],
+    deps = [
+        "//src/tokenize:tokenize_parser",
+        "@com_google_googletest//:gtest",
+    ],
+    copts = COPTS_TESTS,
+    linkopts = [],
+)
+
+
+cc_library(
+    name = "test_llm_output_parser_tests",
     linkstatic = 1,
     alwayslink = True,
     srcs = glob(["test/llm/output_parsers/*_test.cpp"]),
@@ -3159,10 +3202,8 @@ ovms_cc_library(
             "//src:libovms_ovinferrequestsqueue",
             "@mediapipe//mediapipe/framework:calculator_framework",
             "//third_party:openvino",
-            "@com_github_tencent_rapidjson//:rapidjson",] + select({
-            "//conditions:default": ["//third_party:genai", "@llm_engine//:llm_engine"],
-            "//:not_genai_bin" : ["@llm_engine//:llm_engine"],
-    }),
+            "@com_github_tencent_rapidjson//:rapidjson", 
+            "//third_party:genai",],
     visibility = ["//visibility:public"],
     alwayslink = 1,
 )

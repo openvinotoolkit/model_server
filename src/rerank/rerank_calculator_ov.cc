@@ -31,11 +31,8 @@
 #pragma warning(pop)
 
 #include <adapters/inference_adapter.h>
-#pragma warning(push)
-#pragma warning(disable : 6313)
-#include <rapidjson/stringbuffer.h>
-#include <rapidjson/writer.h>
-#pragma warning(pop)
+#include "src/port/rapidjson_stringbuffer.hpp"
+#include "src/port/rapidjson_writer.hpp"
 
 #include "../http_payload.hpp"
 #include "../logging.hpp"
@@ -45,6 +42,7 @@
 #include "rerank_servable.hpp"
 #include "../model_metric_reporter.hpp"
 #include "../executingstreamidguard.hpp"
+#include "../tokenize/tokenize_parser.hpp"
 
 using namespace rapidjson;
 using namespace ovms;
@@ -292,6 +290,26 @@ public:
         InputDataType payload = cc->Inputs().Tag(INPUT_TAG_NAME).Get<InputDataType>();
         SPDLOG_LOGGER_DEBUG(rerank_calculator_logger, "Request body: {}", payload.body);
         SPDLOG_LOGGER_DEBUG(rerank_calculator_logger, "Request uri: {}", payload.uri);
+
+        if (TokenizeParser::isTokenizeEndpoint(payload.uri)) {
+            TokenizeRequest tokenizeRequest;
+            absl::Status status = TokenizeParser::parseTokenizeRequest(*payload.parsedJson, tokenizeRequest);
+            tokenizeRequest.parameters["add_special_tokens"] = false;  // Rerank model tokenizer should not add special tokens
+            if (!status.ok()) {
+                return status;
+            }
+            if (auto strings = std::get_if<std::vector<std::string>>(&tokenizeRequest.input)) {
+                auto tokens = rerank_session->getTokenizer().encode(*strings, tokenizeRequest.parameters);
+                StringBuffer buffer;
+                status = TokenizeParser::parseTokenizeResponse(buffer, tokens, tokenizeRequest.parameters);
+                cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new std::string(buffer.GetString()), timestamp);
+                return absl::OkStatus();
+            } else {
+                SPDLOG_LOGGER_DEBUG(rerank_calculator_logger, "Rerank tokenize input is of not supported type");
+                return absl::InvalidArgumentError("Input should be string or array of strings");
+            }
+        }
+
         RerankHandler handler(*payload.parsedJson);
         absl::Status status = handler.parseRequest();
         if (!status.ok()) {

@@ -21,12 +21,9 @@
 #include <utility>
 #include <vector>
 
-#pragma warning(push)
-#pragma warning(disable : 6313)
-#include <rapidjson/document.h>
-#include <rapidjson/stringbuffer.h>
-#include <rapidjson/writer.h>
-#pragma warning(pop)
+#include "src/port/rapidjson_document.hpp"
+#include "src/port/rapidjson_stringbuffer.hpp"
+#include "src/port/rapidjson_writer.hpp"
 
 using namespace rapidjson;
 namespace ovms {
@@ -69,6 +66,11 @@ public:
     void clear();
     // Add new chunk to the buffer return current parsed JSON document (incremental parsing)
     Document add(const std::string& chunk);
+    // Check if the current state is END (i.e. we have a complete JSON)
+    bool isComplete() const;
+
+    // Get the unprocessed part of the buffer (from current position to the end)
+    std::string getUnprocessedBuffer() const;
 
     static Document computeDelta(const Document& previous, const Document& current);
 };

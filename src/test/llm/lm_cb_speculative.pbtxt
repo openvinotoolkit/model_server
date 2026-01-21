@@ -30,7 +30,7 @@ node {
         [type.googleapis.com/mediapipe.LLMCalculatorOptions]: {
           models_path: "/ovms/src/test/llm_testing/facebook/opt-125m"
           cache_size: 1
-          plugin_config: '{"INFERENCE_PRECISION_HINT": "fp32"}'
+          plugin_config: '{"INFERENCE_PRECISION_HINT": "f32"}'
           draft_models_path: "/ovms/src/test/llm_testing/facebook/opt-125m"
         }
     }

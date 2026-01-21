@@ -92,6 +92,7 @@ public:
          * @return bool
          */
     static bool check_hostname_or_ip(const std::string& input);
+    static bool is_ipv6(const std::string& input);
 
     /**
          * @brief Get the config path
@@ -323,6 +324,7 @@ public:
     const std::string& allowedOrigins() const;
     const std::string& allowedMethods() const;
     const std::string& allowedHeaders() const;
+    const std::string& apiKey() const;
 
     /**
          * @brief Model cache directory

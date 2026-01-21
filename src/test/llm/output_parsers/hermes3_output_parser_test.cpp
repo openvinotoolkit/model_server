@@ -32,11 +32,11 @@ const std::string tokenizerPath = "/ovms/src/test/llm_testing/NousResearch/Herme
 #endif
 
 static std::unique_ptr<ov::genai::Tokenizer> hermes3Tokenizer;
+static const ToolsSchemas_t& EMPTY_TOOLS_SCHEMA = {};  // not used in hermes3
 
 class Hermes3OutputParserTest : public ::testing::Test {
 protected:
     std::unique_ptr<OutputParser> outputParserWithRegularToolParsing;
-    std::unique_ptr<OutputParser> outputParserWithImmediateToolParsing;
 
     static void SetUpTestSuite() {
         try {
@@ -54,9 +54,7 @@ protected:
 
     void SetUp() override {
         // For Hermes3 model there is only tool parser available
-        outputParserWithRegularToolParsing = std::make_unique<OutputParser>(*hermes3Tokenizer, "hermes3", "");
-        outputParserWithImmediateToolParsing = std::make_unique<OutputParser>(*hermes3Tokenizer, "hermes3", "");
-        outputParserWithImmediateToolParsing->enableImmediateToolParsing();
+        outputParserWithRegularToolParsing = std::make_unique<OutputParser>(*hermes3Tokenizer, "hermes3", "", EMPTY_TOOLS_SCHEMA);
     }
 };
 
@@ -66,25 +64,19 @@ TEST_F(Hermes3OutputParserTest, ParseToolCallOutputWithSingleToolCall) {
 
     // Hermes3 may produce last tool call without closing tag, so we test both cases
     // The results should be identical
-    for (bool immediateParsing : {false, true}) {
-        std::vector<std::string> inputs = {inputWithProperClosure, inputWithImproperClosure};
-        for (auto& input : inputs) {
-            if (immediateParsing) {
-                // Remove opening tag for immediate parsing
-                input = input.substr(std::string("<tool_call>").length());
-            }
-            auto generatedTensor = hermes3Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
-            std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
-            ParsedOutput parsedOutput = immediateParsing ? outputParserWithImmediateToolParsing->parse(generatedTokens, true) : outputParserWithRegularToolParsing->parse(generatedTokens, true);
-            EXPECT_EQ(parsedOutput.content, "");
-            EXPECT_EQ(parsedOutput.reasoning, "");
+    std::vector<std::string> inputs = {inputWithProperClosure, inputWithImproperClosure};
+    for (auto& input : inputs) {
+        auto generatedTensor = hermes3Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
+        std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+        ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
+        EXPECT_EQ(parsedOutput.content, "");
+        EXPECT_EQ(parsedOutput.reasoning, "");
 
-            ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
-            EXPECT_EQ(parsedOutput.toolCalls[0].name, "example_tool");
-            // Parser removes whitespaces, so we expect arguments value to be without spaces
-            EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{\"arg1\":\"value1\",\"arg2\":42}");
-            EXPECT_EQ(parsedOutput.toolCalls[0].id.empty(), false);  // ID should be generated
-        }
+        ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
+        EXPECT_EQ(parsedOutput.toolCalls[0].name, "example_tool");
+        // Parser removes whitespaces, so we expect arguments value to be without spaces
+        EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{\"arg1\":\"value1\",\"arg2\":42}");
+        EXPECT_EQ(parsedOutput.toolCalls[0].id.empty(), false);  // ID should be generated
     }
 }
 
@@ -94,22 +86,16 @@ TEST_F(Hermes3OutputParserTest, ParseToolCallOutputWithNoToolsInTheRequest) {
 
     // Hermes3 may produce last tool call without closing tag, so we test both cases
     // The results should be identical
-    for (bool immediateParsing : {false, true}) {
-        std::vector<std::string> inputs = {inputWithProperClosure, inputWithImproperClosure};
-        for (auto& input : inputs) {
-            std::string testInput = input;
-            if (immediateParsing) {
-                // Remove opening tag for immediate parsing
-                testInput = testInput.substr(std::string("<tool_call>").length());
-            }
-            auto generatedTensor = hermes3Tokenizer->encode(testInput, ov::genai::add_special_tokens(false)).input_ids;
-            std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
-            ParsedOutput parsedOutput = immediateParsing ? outputParserWithImmediateToolParsing->parse(generatedTokens, false) : outputParserWithRegularToolParsing->parse(generatedTokens, false);
-            EXPECT_EQ(parsedOutput.content, testInput);
-            EXPECT_EQ(parsedOutput.reasoning, "");
+    std::vector<std::string> inputs = {inputWithProperClosure, inputWithImproperClosure};
+    for (auto& input : inputs) {
+        std::string testInput = input;
+        auto generatedTensor = hermes3Tokenizer->encode(testInput, ov::genai::add_special_tokens(false)).input_ids;
+        std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+        ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, false);
+        EXPECT_EQ(parsedOutput.content, testInput);
+        EXPECT_EQ(parsedOutput.reasoning, "");
 
-            ASSERT_EQ(parsedOutput.toolCalls.size(), 0);
-        }
+        ASSERT_EQ(parsedOutput.toolCalls.size(), 0);
     }
 }
 
@@ -123,40 +109,35 @@ TEST_F(Hermes3OutputParserTest, ParseToolCallOutputWithThreeToolCalls) {
 
     // Hermes3 may produce last tool call without closing tag, so we test both cases
     // The results should be identical
-    for (bool immediateParsing : {false, true}) {
-        std::vector<std::string> inputs = {inputWithProperClosure, inputWithImproperClosure};
-        for (auto& input : inputs) {
-            if (immediateParsing) {
-                input = input.substr(std::string("<tool_call>").length());
-            }
-            auto generatedTensor = hermes3Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
-            std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
-            ParsedOutput parsedOutput = immediateParsing ? outputParserWithImmediateToolParsing->parse(generatedTokens, true) : outputParserWithRegularToolParsing->parse(generatedTokens, true);
-            EXPECT_EQ(parsedOutput.content, "");
-            EXPECT_EQ(parsedOutput.reasoning, "");
+    std::vector<std::string> inputs = {inputWithProperClosure, inputWithImproperClosure};
+    for (auto& input : inputs) {
+        auto generatedTensor = hermes3Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
+        std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+        ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
+        EXPECT_EQ(parsedOutput.content, "");
+        EXPECT_EQ(parsedOutput.reasoning, "");
 
-            ASSERT_EQ(parsedOutput.toolCalls.size(), 3);
-            EXPECT_EQ(parsedOutput.toolCalls[0].name, "example_tool");
-            // Parser removes whitespaces, so we expect arguments value to be without spaces
-            EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{\"arg1\":\"value1\",\"arg2\":42}");
-            EXPECT_EQ(parsedOutput.toolCalls[0].id.empty(), false);  // ID should be generated
-            auto firstToolCallId = parsedOutput.toolCalls[0].id;
+        ASSERT_EQ(parsedOutput.toolCalls.size(), 3);
+        EXPECT_EQ(parsedOutput.toolCalls[0].name, "example_tool");
+        // Parser removes whitespaces, so we expect arguments value to be without spaces
+        EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{\"arg1\":\"value1\",\"arg2\":42}");
+        EXPECT_EQ(parsedOutput.toolCalls[0].id.empty(), false);  // ID should be generated
+        auto firstToolCallId = parsedOutput.toolCalls[0].id;
 
-            EXPECT_EQ(parsedOutput.toolCalls[1].name, "another_tool");
-            // Parser removes whitespaces, so we expect arguments value to be without spaces
-            EXPECT_EQ(parsedOutput.toolCalls[1].arguments, "{\"param1\":\"data\",\"param2\":true}");
-            EXPECT_EQ(parsedOutput.toolCalls[1].id.empty(), false);  // ID should be generated
-            auto secondToolCallId = parsedOutput.toolCalls[1].id;
-            EXPECT_NE(firstToolCallId, secondToolCallId);  // IDs should be different
+        EXPECT_EQ(parsedOutput.toolCalls[1].name, "another_tool");
+        // Parser removes whitespaces, so we expect arguments value to be without spaces
+        EXPECT_EQ(parsedOutput.toolCalls[1].arguments, "{\"param1\":\"data\",\"param2\":true}");
+        EXPECT_EQ(parsedOutput.toolCalls[1].id.empty(), false);  // ID should be generated
+        auto secondToolCallId = parsedOutput.toolCalls[1].id;
+        EXPECT_NE(firstToolCallId, secondToolCallId);  // IDs should be different
 
-            EXPECT_EQ(parsedOutput.toolCalls[2].name, "third_tool");
-            // Parser removes whitespaces, so we expect arguments value to be without spaces
-            EXPECT_EQ(parsedOutput.toolCalls[2].arguments, "{\"key\":\"value\"}");
-            EXPECT_EQ(parsedOutput.toolCalls[2].id.empty(), false);  // ID should be generated
-            auto thirdToolCallId = parsedOutput.toolCalls[2].id;
-            EXPECT_NE(firstToolCallId, thirdToolCallId);   // IDs should be different
-            EXPECT_NE(secondToolCallId, thirdToolCallId);  // IDs should be different
-        }
+        EXPECT_EQ(parsedOutput.toolCalls[2].name, "third_tool");
+        // Parser removes whitespaces, so we expect arguments value to be without spaces
+        EXPECT_EQ(parsedOutput.toolCalls[2].arguments, "{\"key\":\"value\"}");
+        EXPECT_EQ(parsedOutput.toolCalls[2].id.empty(), false);  // ID should be generated
+        auto thirdToolCallId = parsedOutput.toolCalls[2].id;
+        EXPECT_NE(firstToolCallId, thirdToolCallId);   // IDs should be different
+        EXPECT_NE(secondToolCallId, thirdToolCallId);  // IDs should be different
     }
 }
 
@@ -171,32 +152,27 @@ TEST_F(Hermes3OutputParserTest, ParseToolCallOutputWithTwoValidToolCallsAndOneIn
     // Hermes3 may produce last tool call without closing tag, so we test both cases
     // The results should be identical
     std::vector<std::string> inputs = {inputWithProperClosure, inputWithImproperClosure};
-    for (bool immediateParsing : {false, true}) {
-        for (auto& input : inputs) {
-            if (immediateParsing) {
-                input = input.substr(std::string("<tool_call>").length());
-            }
-            auto generatedTensor = hermes3Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
-            std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
-            ParsedOutput parsedOutput = immediateParsing ? outputParserWithImmediateToolParsing->parse(generatedTokens, true) : outputParserWithRegularToolParsing->parse(generatedTokens, true);
-            EXPECT_EQ(parsedOutput.content, "");
-            EXPECT_EQ(parsedOutput.reasoning, "");
+    for (auto& input : inputs) {
+        auto generatedTensor = hermes3Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
+        std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+        ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
+        EXPECT_EQ(parsedOutput.content, "");
+        EXPECT_EQ(parsedOutput.reasoning, "");
 
-            // Expecting two tool calls as the second one does not have a valid name
-            ASSERT_EQ(parsedOutput.toolCalls.size(), 2);
-            EXPECT_EQ(parsedOutput.toolCalls[0].name, "example_tool");
-            // Parser removes whitespaces, so we expect arguments value to be without spaces
-            EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{\"arg1\":\"value1\",\"arg2\":42}");
-            EXPECT_EQ(parsedOutput.toolCalls[0].id.empty(), false);  // ID should be generated
-            auto firstToolCallId = parsedOutput.toolCalls[0].id;
+        // Expecting two tool calls as the second one does not have a valid name
+        ASSERT_EQ(parsedOutput.toolCalls.size(), 2);
+        EXPECT_EQ(parsedOutput.toolCalls[0].name, "example_tool");
+        // Parser removes whitespaces, so we expect arguments value to be without spaces
+        EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{\"arg1\":\"value1\",\"arg2\":42}");
+        EXPECT_EQ(parsedOutput.toolCalls[0].id.empty(), false);  // ID should be generated
+        auto firstToolCallId = parsedOutput.toolCalls[0].id;
 
-            EXPECT_EQ(parsedOutput.toolCalls[1].name, "third_tool");
-            // Parser removes whitespaces, so we expect arguments value to be without spaces
-            EXPECT_EQ(parsedOutput.toolCalls[1].arguments, "{\"key\":\"value\"}");
-            EXPECT_EQ(parsedOutput.toolCalls[1].id.empty(), false);  // ID should be generated
-            auto secondToolCallId = parsedOutput.toolCalls[1].id;
-            EXPECT_NE(firstToolCallId, secondToolCallId);  // IDs should be different
-        }
+        EXPECT_EQ(parsedOutput.toolCalls[1].name, "third_tool");
+        // Parser removes whitespaces, so we expect arguments value to be without spaces
+        EXPECT_EQ(parsedOutput.toolCalls[1].arguments, "{\"key\":\"value\"}");
+        EXPECT_EQ(parsedOutput.toolCalls[1].id.empty(), false);  // ID should be generated
+        auto secondToolCallId = parsedOutput.toolCalls[1].id;
+        EXPECT_NE(firstToolCallId, secondToolCallId);  // IDs should be different
     }
 }
 
@@ -208,12 +184,6 @@ TEST_F(Hermes3OutputParserTest, ParseToolCallOutputWithContentAndNoToolCalls) {
     EXPECT_EQ(parsedOutput.content, "This is a regular model response without tool calls.");
     ASSERT_EQ(parsedOutput.toolCalls.size(), 0);
     EXPECT_EQ(parsedOutput.reasoning, "");
-
-    // Immediate parsing expects tool call right away, so it fails yielding empty both content and tool calls
-    ParsedOutput parsedOutputImmediate = outputParserWithImmediateToolParsing->parse(generatedTokens, true);
-    EXPECT_EQ(parsedOutputImmediate.content, "");
-    ASSERT_EQ(parsedOutputImmediate.toolCalls.size(), 0);
-    EXPECT_EQ(parsedOutputImmediate.reasoning, "");
 }
 
 TEST_F(Hermes3OutputParserTest, ParseToolCallOutputWithContentAndSingleToolCall) {
@@ -302,10 +272,9 @@ TEST_F(Hermes3OutputParserTest, HolisticStreaming) {
         {"\"", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":1,\"function\":{\"arguments\":\"val{{{ue1\"}}]}}"},
         {"}", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":1,\"function\":{\"arguments\":\"\\\"\"}}]}}"},
         {"}", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":1,\"function\":{\"arguments\":\"}\"}}]}}"},  // returning last arguments part
-        {"</tool_call>\n", ov::genai::GenerationFinishReason::NONE, std::nullopt},                                                          // closed main JSON, with the last chunk, now only return nullopt
+        {"</tool_call>\n", ov::genai::GenerationFinishReason::NONE, std::nullopt},                                                          // closed main JSON, with the last chunk, now only return nullopt since there is no delta
         // Starting third tool. Collecting chunk until full name is received. Don't return until then.
-        {"<tool_call>\n", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {"{\"", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"<tool_call>\n{\"", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"name", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"\":", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {" \"", ov::genai::GenerationFinishReason::NONE, std::nullopt},
@@ -324,63 +293,98 @@ TEST_F(Hermes3OutputParserTest, HolisticStreaming) {
         {"arg1", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":2,\"function\":{\"arguments\":\"\\\"\"}}]}}"},
         {"\": ", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":2,\"function\":{\"arguments\":\"arg1\"}}]}}"},
         {"\"", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":2,\"function\":{\"arguments\":\"\\\": \"}}]}}"},
+        {"val{{{ue1", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":2,\"function\":{\"arguments\":\"\\\"\"}}]}}"},
+        {"\"", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":2,\"function\":{\"arguments\":\"val{{{ue1\"}}]}}"},
+        {"}}</tool_call>\n", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":2,\"function\":{\"arguments\":\"\\\"}\"}}]}}"},
+        // Starting fourth tool (without arguments). Collecting chunk until full name is received. Don't return until then.
+        {"<tool_call>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"{\"name", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"\":", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {" \"", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"super", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"_tool", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"_number", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"_four", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"\",", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {" \"", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"arguments", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        // As we have 'arguments' key present, we can return first delta
+        {"\": {}}\n", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"id\":\"XXXXXXXXX\",\"type\":\"function\",\"index\":3,\"function\":{\"name\":\"super_tool_number_four\"}}]}}"},
+        // Both arguments key first appearance and full arguments value is received in the previous chunk, but we cannot return function name and arguments in the same chunk
+        // so arguments value is returned in the next chunk
+        {"</tool_call>", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":3,\"function\":{\"arguments\":\"{}\"}}]}}"},
+        // Starting fifth tool. Collecting chunk until full name is received. Don't return until then.
+        {"<tool_call>\n", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"{\"", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"name", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"\":", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {" \"", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"super", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"_tool", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"_number", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"_five", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"\",", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {" \"", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"arguments", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        // As we have 'arguments' key present, we can return first delta
+        {"\":", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"id\":\"XXXXXXXXX\",\"type\":\"function\",\"index\":4,\"function\":{\"name\":\"super_tool_number_five\"}}]}}"},
+        // Consecutive deltas without 'id' and 'type'. In order to find the end of arguments parser has one chunk delay to handle end of tool.
+        {" {", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"\"", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":4,\"function\":{\"arguments\":\"{\"}}]}}"},
+        {"arg1", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":4,\"function\":{\"arguments\":\"\\\"\"}}]}}"},
+        {"\": ", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":4,\"function\":{\"arguments\":\"arg1\"}}]}}"},
+        {"\"", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":4,\"function\":{\"arguments\":\"\\\": \"}}]}}"},
         // Simulating hitting max tokens while during tool call generation. We should return the last two chunks as delta to flush the delay window
-        {"val,", ov::genai::GenerationFinishReason::LENGTH, "{\"delta\":{\"tool_calls\":[{\"index\":2,\"function\":{\"arguments\":\"\\\"val,\"}}]}}"},  // clo
+        {"val,", ov::genai::GenerationFinishReason::LENGTH, "{\"delta\":{\"tool_calls\":[{\"index\":4,\"function\":{\"arguments\":\"\\\"val,\"}}]}}"},
     };
 
-    for (bool immediateParsing : {false, true}) {
-        if (immediateParsing) {
-            chunkToDeltaVec.erase(chunkToDeltaVec.begin(), chunkToDeltaVec.begin() + 4);
-            chunkToDeltaVec.insert(chunkToDeltaVec.begin(), {"\n", ov::genai::GenerationFinishReason::NONE, std::nullopt});
+    for (const auto& [chunk, finishReason, expectedDelta] : chunkToDeltaVec) {
+        std::optional<rapidjson::Document> doc = outputParserWithRegularToolParsing->parseChunk(chunk, true, finishReason);
+        if (!expectedDelta.has_value() && !doc.has_value()) {
+            continue;  // Both are nullopt, OK
         }
-        for (const auto& [chunk, finishReason, expectedDelta] : chunkToDeltaVec) {
-            std::optional<rapidjson::Document> doc = immediateParsing ? outputParserWithImmediateToolParsing->parseChunk(chunk, true, finishReason) : outputParserWithRegularToolParsing->parseChunk(chunk, true, finishReason);
-            if (!expectedDelta.has_value() && !doc.has_value()) {
-                continue;  // Both are nullopt, OK
+        if (expectedDelta.has_value() && doc.has_value()) {
+            rapidjson::StringBuffer buffer;
+            rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+            doc->Accept(writer);
+            std::string docStr = buffer.GetString();
+            // If both strings contain "id":"...", compare id values by length and alphanumeric, else compare whole strings
+            std::string expected = expectedDelta.value();
+            std::string idKey = "\"id\":\"";
+            auto docIdPos = docStr.find(idKey);
+            auto expectedIdPos = expected.find(idKey);
+            if (docIdPos != std::string::npos && expectedIdPos != std::string::npos) {
+                auto docIdStart = docIdPos + idKey.size();
+                auto docIdEnd = docStr.find("\"", docIdStart);
+                auto expectedIdStart = expectedIdPos + idKey.size();
+                auto expectedIdEnd = expected.find("\"", expectedIdStart);
+                ASSERT_NE(docIdEnd, std::string::npos);
+                ASSERT_NE(expectedIdEnd, std::string::npos);
+                std::string docId = docStr.substr(docIdStart, docIdEnd - docIdStart);
+                std::string expectedId = expected.substr(expectedIdStart, expectedIdEnd - expectedIdStart);
+                EXPECT_EQ(docId.size(), expectedId.size()) << "ID length mismatch for chunk: " << chunk;
+                EXPECT_TRUE(std::all_of(docId.begin(), docId.end(), ::isalnum)) << "ID not alphanumeric for chunk: " << chunk;
+                // Compare everything except the id value
+                std::string docStrNoId = docStr;
+                std::string expectedNoId = expected;
+                docStrNoId.replace(docIdStart, docId.size(), std::string(docId.size(), '*'));
+                expectedNoId.replace(expectedIdStart, expectedId.size(), std::string(expectedId.size(), '*'));
+                EXPECT_EQ(docStrNoId, expectedNoId) << "Mismatch for chunk (ignoring id value): " << chunk;
+            } else {
+                EXPECT_EQ(docStr, expected) << "Mismatch for chunk: " << chunk;
             }
-            if (expectedDelta.has_value() && doc.has_value()) {
+        } else {
+            std::string expectedStr = expectedDelta.has_value() ? expectedDelta.value() : "std::nullopt";
+            std::string docStr = doc.has_value() ? [&]() {
                 rapidjson::StringBuffer buffer;
                 rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
                 doc->Accept(writer);
-                std::string docStr = buffer.GetString();
-                // If both strings contain "id":"...", compare id values by length and alphanumeric, else compare whole strings
-                std::string expected = expectedDelta.value();
-                std::string idKey = "\"id\":\"";
-                auto docIdPos = docStr.find(idKey);
-                auto expectedIdPos = expected.find(idKey);
-                if (docIdPos != std::string::npos && expectedIdPos != std::string::npos) {
-                    auto docIdStart = docIdPos + idKey.size();
-                    auto docIdEnd = docStr.find("\"", docIdStart);
-                    auto expectedIdStart = expectedIdPos + idKey.size();
-                    auto expectedIdEnd = expected.find("\"", expectedIdStart);
-                    ASSERT_NE(docIdEnd, std::string::npos);
-                    ASSERT_NE(expectedIdEnd, std::string::npos);
-                    std::string docId = docStr.substr(docIdStart, docIdEnd - docIdStart);
-                    std::string expectedId = expected.substr(expectedIdStart, expectedIdEnd - expectedIdStart);
-                    EXPECT_EQ(docId.size(), expectedId.size()) << "ID length mismatch for chunk: " << chunk;
-                    EXPECT_TRUE(std::all_of(docId.begin(), docId.end(), ::isalnum)) << "ID not alphanumeric for chunk: " << chunk;
-                    // Compare everything except the id value
-                    std::string docStrNoId = docStr;
-                    std::string expectedNoId = expected;
-                    docStrNoId.replace(docIdStart, docId.size(), std::string(docId.size(), '*'));
-                    expectedNoId.replace(expectedIdStart, expectedId.size(), std::string(expectedId.size(), '*'));
-                    EXPECT_EQ(docStrNoId, expectedNoId) << "Mismatch for chunk (ignoring id value): " << chunk;
-                } else {
-                    EXPECT_EQ(docStr, expected) << "Mismatch for chunk: " << chunk;
-                }
-            } else {
-                std::string expectedStr = expectedDelta.has_value() ? expectedDelta.value() : "std::nullopt";
-                std::string docStr = doc.has_value() ? [&]() {
-                    rapidjson::StringBuffer buffer;
-                    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-                    doc->Accept(writer);
-                    return std::string(buffer.GetString());
-                }()
-                                                     : "std::nullopt";
-                FAIL() << "Mismatch between expectedDelta and doc for chunk: " << chunk
-                       << "\nexpectedDelta: " << expectedStr
-                       << "\ndoc: " << docStr;
-            }
+                return std::string(buffer.GetString());
+            }()
+                                                 : "std::nullopt";
+            FAIL() << "Mismatch between expectedDelta and doc for chunk: " << chunk
+                   << "\nexpectedDelta: " << expectedStr
+                   << "\ndoc: " << docStr;
         }
     }
 }

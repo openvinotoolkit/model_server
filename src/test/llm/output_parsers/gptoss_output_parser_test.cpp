@@ -34,6 +34,7 @@ const std::string tokenizerPath = "/ovms/src/test/llm_testing/openai/gpt-oss-20b
 #endif
 
 static std::unique_ptr<ov::genai::Tokenizer> gptOssTokenizer;
+static const ToolsSchemas_t& EMPTY_TOOLS_SCHEMA = {};  // not used in gptoss
 
 static std::vector<int64_t> getTokens(const std::string& text) {
     ov::Tensor t = gptOssTokenizer->encode(text).input_ids;
@@ -424,12 +425,12 @@ protected:
 
     void SetUp() override {
         GptOssOutputUnaryParserTest::SetUp();
-        outputParser = std::make_unique<OutputParser>(*gptOssTokenizer, "gptoss", "gptoss");
+        outputParser = std::make_unique<OutputParser>(*gptOssTokenizer, "gptoss", "gptoss", EMPTY_TOOLS_SCHEMA);
     }
 
     void test(const std::vector<std::tuple<std::string, ov::genai::GenerationFinishReason, std::optional<std::string>>>& chunkToDeltaVec) {
         // Need to have new output parser per case to simulate separate request processing
-        outputParser = std::make_unique<OutputParser>(*gptOssTokenizer, "gptoss", "gptoss");
+        outputParser = std::make_unique<OutputParser>(*gptOssTokenizer, "gptoss", "gptoss", EMPTY_TOOLS_SCHEMA);
         auto chunkToDeltaVecCopy = chunkToDeltaVec;
         int64_t chunkIteration = -1;
         for (const auto& [chunk, finishReason, expectedDelta] : chunkToDeltaVecCopy) {
@@ -484,37 +485,39 @@ protected:
 };
 
 TEST_F(GptOssOutputStreamParserTest, HolisticStreamingReasoning) {
-    std::vector<std::tuple<std::string, ov::genai::GenerationFinishReason, std::optional<std::string>>> chunkToDeltaVec{
-        // Reasoning
-        {"<|channel|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {"analysis", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {"<|message|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {"I", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"reasoning_content":"I"}})"}},
-        {" am", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"reasoning_content":" am"}})"}},
-        {" reaso", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"reasoning_content":" reaso"}})"}},
-        {"ning.", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"reasoning_content":"ning."}})"}},
-        {"<|end|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        // Preamble
-        {"<|channel|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {"commentary", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {"<|message|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {"I", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"content":"I"}})"}},
-        {" am", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"content":" am"}})"}},
-        {" producing", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"content":" producing"}})"}},
-        {" preamble", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"content":" preamble"}})"}},
-        {".", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"content":"."}})"}},
-        {"<|end|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        // Final content
-        {"<|channel|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {"final", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {"<|message|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {"Dear", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"content":"Dear"}})"}},
-        {" User,", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"content":" User,"}})"}},
-        {" I", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"content":" I"}})"}},
-        {" reason!", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"content":" reason!"}})"}},
-        {"<|end|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-    };
-    test(chunkToDeltaVec);
+    for (const auto& stopToken : std::vector<std::string>{"<|end|>", "<|return|>"}) {
+        std::vector<std::tuple<std::string, ov::genai::GenerationFinishReason, std::optional<std::string>>> chunkToDeltaVec{
+            // Reasoning
+            {"<|channel|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+            {"analysis", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+            {"<|message|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+            {"I", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"reasoning_content":"I"}})"}},
+            {" am", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"reasoning_content":" am"}})"}},
+            {" reaso", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"reasoning_content":" reaso"}})"}},
+            {"ning.", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"reasoning_content":"ning."}})"}},
+            {"<|end|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+            // Preamble
+            {"<|channel|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+            {"commentary", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+            {"<|message|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+            {"I", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"content":"I"}})"}},
+            {" am", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"content":" am"}})"}},
+            {" producing", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"content":" producing"}})"}},
+            {" preamble", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"content":" preamble"}})"}},
+            {".", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"content":"."}})"}},
+            {"<|end|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+            // Final content
+            {"<|channel|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+            {"final", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+            {"<|message|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+            {"Dear", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"content":"Dear"}})"}},
+            {" User,", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"content":" User,"}})"}},
+            {" I", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"content":" I"}})"}},
+            {" reason!", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"content":" reason!"}})"}},
+            {stopToken, ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        };
+        test(chunkToDeltaVec);
+    }
 }
 
 TEST_F(GptOssOutputStreamParserTest, HolisticStreamingTools) {

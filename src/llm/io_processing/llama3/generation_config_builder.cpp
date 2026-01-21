@@ -14,6 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 
+#include <memory>
 #include <string>
 #include <utility>
 #include <openvino/genai/generation_config.hpp>
@@ -32,20 +33,25 @@ void Llama3GenerationConfigBuilder::parseConfigFromRequest(const OpenAIChatCompl
         return;
     }
 
-    // Set tool guided generation config specific to Llama-3 model
-    ov::genai::StructuralTagsConfig structuralTagsConfig;
-    static const std::string beginOfToolsString = "<|python_tag|>";
-    structuralTagsConfig.triggers.push_back(beginOfToolsString);
+    if (enableToolGuidedGeneration || request.toolChoice == "required") {
+        // Set tool guided generation config specific to Llama-3 model
+        auto triggeredTags = std::make_shared<ov::genai::StructuredOutputConfig::TriggeredTags>();
+        triggeredTags->triggers.push_back("{\"name\":");
 
-    for (const auto& [toolName, toolSchema] : request.toolNameSchemaMap) {
-        ov::genai::StructuralTagItem tagItem;
-        std::string toolCallTrigger = "{\"name\": \"" + toolName + "\", \"parameters\": ";
-        structuralTagsConfig.triggers.push_back(toolCallTrigger);
-        tagItem.begin = toolCallTrigger;
-        tagItem.schema = toolSchema;
-        structuralTagsConfig.structural_tags.push_back(tagItem);
+        for (const auto& [toolName, toolSchemaWrapper] : request.toolNameSchemaMap) {
+            const auto& toolSchema = toolSchemaWrapper.stringRepr;
+            ov::genai::StructuredOutputConfig::Tag tagItem;
+            tagItem.begin = "{\"name\": \"" + toolName + "\", \"parameters\": ";
+            tagItem.end = "}";
+            tagItem.content = ov::genai::StructuredOutputConfig::JSONSchema(toolSchema);
+            triggeredTags->tags.push_back(tagItem);
+        }
+        if (request.toolChoice == "required") {
+            triggeredTags->at_least_one = true;
+        }
+        ov::genai::StructuredOutputConfig::StructuralTag structuralTag = triggeredTags;
+        setStructuralTagsConfig(structuralTag);
     }
-    setStructuralTagsConfig(structuralTagsConfig);
 }
 
 }  // namespace ovms

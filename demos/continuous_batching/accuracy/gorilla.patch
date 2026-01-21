@@ -1,10 +1,10 @@
 diff --git a/berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py b/berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py
-index 73731c0..0d966ed 100644
+index bb625d2..7204adb 100644
 --- a/berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py
 +++ b/berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py
-@@ -2060,6 +2060,30 @@ third_party_inference_model_map = {
+@@ -2153,6 +2153,30 @@ third_party_inference_model_map = {
          is_fc_model=True,
-         underscore_to_dot=False,
+         underscore_to_dot=True,
      ),
 +    "ovms-model": ModelConfig(
 +        model_name="ovms-model",
@@ -34,53 +34,72 @@ index 73731c0..0d966ed 100644
  
  
 diff --git a/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/openai_completion.py b/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/openai_completion.py
-index 8665234..9e85e59 100644
+index 357584f..e45e12c 100644
 --- a/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/openai_completion.py
 +++ b/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/openai_completion.py
-@@ -23,7 +23,7 @@ class OpenAICompletionsHandler(BaseHandler):
-     def __init__(self, model_name, temperature) -> None:
-         super().__init__(model_name, temperature)
-         self.model_style = ModelStyle.OpenAI_Completions
--        self.client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-+        self.client = OpenAI(base_url=os.getenv("OPENAI_BASE_URL"), api_key=os.getenv("OPENAI_API_KEY", "not_used"),timeout=os.getenv("OPENAI_TIMEOUT", 1600))
+@@ -38,10 +38,10 @@ class OpenAICompletionsHandler(BaseHandler):
  
-     def decode_ast(self, result, language="Python"):
-         if "FC" in self.model_name or self.is_fc_model:
-@@ -61,6 +61,8 @@ class OpenAICompletionsHandler(BaseHandler):
+         kwargs = {}
+ 
+-        if api_key := os.getenv("OPENAI_API_KEY"):
++        if api_key := os.getenv("OPENAI_API_KEY","unused"):
+             kwargs["api_key"] = api_key
+ 
+-        if base_url := os.getenv("OPENAI_BASE_URL"):
++        if base_url := os.getenv("OPENAI_BASE_URL","http://localhost:8000/v3"):
+             kwargs["base_url"] = base_url
+ 
+         if headers_env := os.getenv("OPENAI_DEFAULT_HEADERS"):
+@@ -85,6 +85,9 @@ class OpenAICompletionsHandler(BaseHandler):
              "messages": message,
-             "model": self.model_name.replace("-FC", ""),
+             "model": self.model_name,
              "temperature": self.temperature,
-+            "tool_choice": os.getenv("TOOL_CHOICE", "auto"),
 +            "max_completion_tokens": 2048,
++            "tool_choice": os.getenv("TOOL_CHOICE", "auto"),
++            "extra_body": {"chat_template_kwargs": json.loads(os.getenv("CHAT_TEMPLATE_KWARGS", "{}"))},
              "store": False,
          }
  
 diff --git a/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/qwen.py b/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/qwen.py
-index 9ce4e7d..076e706 100644
+index 10f1a08..50890c7 100644
 --- a/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/qwen.py
 +++ b/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/qwen.py
-@@ -21,8 +21,8 @@ class QwenAPIHandler(OpenAICompletionsHandler):
-         super().__init__(model_name, temperature)
-         self.model_style = ModelStyle.OpenAI_Completions
+@@ -7,6 +7,7 @@ from openai import OpenAI
+ from overrides import override
+ from qwen_agent.llm import get_chat_model
+ import time
++import json
+ 
+ class QwenAPIHandler(OpenAICompletionsHandler):
+     """
+@@ -28,8 +29,8 @@ class QwenAPIHandler(OpenAICompletionsHandler):
+         super().__init__(model_name, temperature, registry_name, is_fc_model, **kwargs)
+         self.model_style = ModelStyle.OPENAI_COMPLETIONS
          self.client = OpenAI(
 -            base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
 -            api_key=os.getenv("QWEN_API_KEY"),
 +            base_url=os.getenv("OPENAI_BASE_URL", "https://localhost:8000/v3"),
-+            api_key=os.getenv("QWEN_API_KEY", "not_used"),
++            api_key=os.getenv("QWEN_API_KEY","unused"),
          )
  
      #### FC methods ####
-@@ -38,9 +38,10 @@ class QwenAPIHandler(OpenAICompletionsHandler):
+@@ -45,9 +46,9 @@ class QwenAPIHandler(OpenAICompletionsHandler):
              model=self.model_name.replace("-FC", ""),
              tools=tools,
              parallel_tool_calls=True,
 -            extra_body={
 -                "enable_thinking": True
 -            },
-+            extra_body={ "chat_template_kwargs": {
-+                "enable_thinking": False
-+            }},
-+            temperature=self.temperature,
++            max_completion_tokens=2048,
++            tool_choice=os.getenv("TOOL_CHOICE", "auto"),
++            extra_body={"chat_template_kwargs": json.loads(os.getenv("CHAT_TEMPLATE_KWARGS", "{}"))},
              stream=True,
              stream_options={
                  "include_usage": True
+@@ -352,4 +353,4 @@ class QwenAgentNoThinkHandler(QwenAgentThinkHandler):
+             'timeout': 1000,
+             'max_tokens': 16384
+         }
+-    })
+\ No newline at end of file
++    })

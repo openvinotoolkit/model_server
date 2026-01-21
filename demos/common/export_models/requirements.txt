@@ -3,14 +3,17 @@
 --extra-index-url "https://storage.openvinotoolkit.org/simple/wheels/pre-release"
 --pre
 optimum-intel@git+https://github.com/huggingface/optimum-intel.git
-openvino-tokenizers==2025.4.0.0.dev20250923
-openvino==2025.4.0.dev20250923
-nncf>=2.11.0 
-sentence_transformers
-sentencepiece==0.2.0
-openai
-transformers<4.54
+accelerate
+diffusers  # for image generation
 einops
+nncf@git+https://github.com/openvinotoolkit/nncf.git
+numpy
+openvino-tokenizers==2026.0.0.0.dev20260115
+openvino==2026.0.0.dev20260115
+pillow
+sentence_transformers
+sentencepiece  # Required by: transformers
+timm==1.0.22
 torchvision
-timm==1.0.15
-diffusers==0.33.1  # for image generation
+torch==2.9.1+cpu
+transformers<4.58

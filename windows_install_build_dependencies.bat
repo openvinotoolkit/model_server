@@ -129,15 +129,33 @@ IF /I EXIST %bash_path% (
     echo [INFO] Msys installed in: %msys_path%
 )
 
+:: Set default OV_USE_BINARY if not set
+if "%OV_USE_BINARY%"=="" (
+    set "OV_USE_BINARY=1"
+)
+
+set "genai_workspace=C:\\\\opt\\\\openvino\\\\runtime"
+set "genai_new_workspace=C:\\%output_user_root%\\openvino\\runtime"
+:: Replace path to GenAi in ovms WORKSPACE file
+if "!output_user_root!" neq "opt" (
+    powershell -Command "(gc -Path WORKSPACE) -replace '%genai_workspace%', '%genai_new_workspace%' | Set-Content -Path WORKSPACE"
+    if !errorlevel! neq 0 exit /b !errorlevel!
+)
+
+echo [INFO] OV_USE_BINARY=%OV_USE_BINARY%
+IF "%OV_USE_BINARY%"=="0" (
+    goto :install_openvino_from_src
+)
+
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: Install in c:\PR-XXXX\ section started - once per build, reinstalled only with expunge clean :::::::::::::::::::::::::::::::::: 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-::::::::::::::::::::::: GENAI/OPENVINO - reinstalled per build trigger
+::::::::::::::::::::::: GENAI/OPENVINO install from ZIP - reinstalled per build trigger
 :: Set default GENAI_PACKAGE_URL if not set
 if "%GENAI_PACKAGE_URL%"=="" (
-    set "GENAI_PACKAGE_URL=https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/nightly/2025.4.0.0.dev20250923/openvino_genai_windows_2025.4.0.0.dev20250923_x86_64.zip"
+    set "GENAI_PACKAGE_URL=https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/nightly/2026.0.0.0.dev20260117/openvino_genai_windows_2026.0.0.0.dev20260117_x86_64.zip"
 )
 
 :: Extract genai_ver from GENAI_PACKAGE_URL (filename)
@@ -147,8 +165,6 @@ for %%F in ("%GENAI_PACKAGE_URL%") do set "genai_ver=%%~nxF"
 for %%F in ("%genai_ver%") do set "genai_dir=%%~nF"
 
 set "genai_zip=%BAZEL_SHORT_PATH%\%genai_ver%"
-set "genai_workspace=C:\\\\opt\\\\openvino\\\\runtime"
-set "genai_new_workspace=C:\\%output_user_root%\\openvino\\runtime"
 
 echo [INFO] Installing GenAI: %genai_dir% ...
 :: Download GenAi
@@ -184,15 +200,112 @@ IF /I EXIST %BAZEL_SHORT_PATH%\openvino (
 mklink /d %BAZEL_SHORT_PATH%\openvino %BAZEL_SHORT_PATH%\%genai_dir%
 if !errorlevel! neq 0 exit /b !errorlevel!
 
-:: Replace path to GenAi in ovms WORKSPACE file
-if "!output_user_root!" neq "opt" (
-    powershell -Command "(gc -Path WORKSPACE) -replace '%genai_workspace%', '%genai_new_workspace%' | Set-Content -Path WORKSPACE"
-    if !errorlevel! neq 0 exit /b !errorlevel!
-)
-:: Remove genai headers to be replaced by the ones from openvino_genai repository
-rmdir /S /Q %BAZEL_SHORT_PATH%\%genai_dir%\runtime\include\openvino\genai
-echo [INFO] GenAi installed: %BAZEL_SHORT_PATH%\%genai_dir%
+echo [INFO] GenAI installed: %BAZEL_SHORT_PATH%\%genai_dir%
+goto :finished_openvino
 
+:install_openvino_from_src
+IF /I EXIST %BAZEL_SHORT_PATH%\openvino (
+    rmdir /S /Q %BAZEL_SHORT_PATH%\openvino
+)
+if "%OV_SOURCE_BRANCH%"=="" (
+    set "OV_SOURCE_BRANCH=4666d6c07a3b4d25119e1fd294e419d754eab21d"
+)
+if "%OV_SOURCE_ORG%"=="" (
+    set "OV_SOURCE_ORG=openvinotoolkit"
+)
+if "%TOKENIZER_SOURCE_ORG%"=="" (
+    set "TOKENIZER_SOURCE_ORG=openvinotoolkit"
+)
+if "%TOKENIZER_SOURCE_BRANCH%"=="" (
+    set "TOKENIZER_SOURCE_BRANCH=47cea02a2d47b2fcf9152a1891f7360d6fdf4a27"
+)
+if "%GENAI_SOURCE_ORG%"=="" (
+    set "GENAI_SOURCE_ORG=openvinotoolkit"
+)
+if "%GENAI_SOURCE_BRANCH%"=="" (
+    set "GENAI_SOURCE_BRANCH=b3621327181bc08ab2829ad2896190cc0e5e85e3"
+)
+
+echo [INFO] Using OpenVINO source from %OV_SOURCE_ORG%
+IF /I EXIST %BAZEL_SHORT_PATH%\openvino_src (
+    git -C %BAZEL_SHORT_PATH%\openvino_src remote -v | findstr "\/%OV_SOURCE_ORG%\/" > nul
+    if !errorlevel! equ 0 (
+        echo [INFO] Repository already points to %OV_SOURCE_ORG%
+    ) else (
+        echo [INFO] Repository points to different org, removing...
+        rmdir /S /Q %BAZEL_SHORT_PATH%\openvino_src
+    )
+)
+
+IF /I NOT EXIST %BAZEL_SHORT_PATH%\openvino_src (
+    git clone https://github.com/%OV_SOURCE_ORG%/openvino %BAZEL_SHORT_PATH%\openvino_src
+)
+
+set "BACK_CWD=%cd%"
+cd %BAZEL_SHORT_PATH%\openvino_src
+git fetch origin
+git checkout %OV_SOURCE_BRANCH%
+if !errorlevel! neq 0 exit /b !errorlevel!
+git submodule update --init --recursive
+if !errorlevel! neq 0 exit /b !errorlevel!
+IF /I NOT EXIST build (
+    mkdir build
+)
+cd build
+set "TBB_DIR="
+cmake -G "Visual Studio 17 2022" -DENABLE_SAMPLES=OFF -DENABLE_INTEL_NPU_PROTOPIPE=OFF ..
+if !errorlevel! neq 0 exit /b !errorlevel!
+cmake --build . --config Release --verbose -j
+if !errorlevel! neq 0 exit /b !errorlevel!
+cmake --install . --config Release --prefix %BAZEL_SHORT_PATH%\openvino
+if !errorlevel! neq 0 exit /b !errorlevel!
+call %BAZEL_SHORT_PATH%\openvino\setupvars.bat
+
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+::::::::::::::::::::::: OpenVINO Tokenizers
+
+IF /I NOT EXIST %BAZEL_SHORT_PATH%\openvino_tokenizers_src (
+    git clone https://github.com/%TOKENIZER_SOURCE_ORG%/openvino_tokenizers.git %BAZEL_SHORT_PATH%\openvino_tokenizers_src
+)
+cd %BAZEL_SHORT_PATH%\openvino_tokenizers_src
+git fetch origin
+git checkout %TOKENIZER_SOURCE_BRANCH%
+if !errorlevel! neq 0 exit /b !errorlevel!
+IF /I NOT EXIST build (
+    mkdir build
+)
+cd build
+cmake -DCMAKE_BUILD_TYPE=Release ..
+if !errorlevel! neq 0 exit /b !errorlevel!
+cmake --build . --config Release --verbose -j
+if !errorlevel! neq 0 exit /b !errorlevel!
+cmake --install . --config Release --prefix %BAZEL_SHORT_PATH%\openvino
+if !errorlevel! neq 0 exit /b !errorlevel!
+
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+::::::::::::::::::::::: OpenVINO GenAI
+
+IF /I NOT EXIST %BAZEL_SHORT_PATH%\openvino_genai_src (
+    git clone https://github.com/%GENAI_SOURCE_ORG%/openvino.genai.git %BAZEL_SHORT_PATH%\openvino_genai_src
+)
+cd %BAZEL_SHORT_PATH%\openvino_genai_src
+git fetch origin
+git checkout %GENAI_SOURCE_BRANCH%
+if !errorlevel! neq 0 exit /b !errorlevel!
+IF /I NOT EXIST build (
+    mkdir build
+)
+cd build
+cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TOKENIZERS=OFF -DENABLE_SAMPLES=OFF -DENABLE_TOOLS=OFF -DENABLE_TESTS=OFF -DENABLE_XGRAMMAR=ON ..
+if !errorlevel! neq 0 exit /b !errorlevel!
+cmake --build . --config Release --verbose -j
+if !errorlevel! neq 0 exit /b !errorlevel!
+cmake --install . --config Release --prefix %BAZEL_SHORT_PATH%\openvino
+if !errorlevel! neq 0 exit /b !errorlevel!
+
+echo [INFO] OpenVINO from source installed: %BAZEL_SHORT_PATH%\openvino
+cd !BACK_CWD!
+:finished_openvino
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: OpenCL headers
 echo [INFO] Installing OpenCL headers ...

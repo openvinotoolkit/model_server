@@ -27,8 +27,9 @@ LLM engine parameters will be defined inside the `graph.pbtxt` file.
 
 Download export script, install it's dependencies and create directory for the models:
 ```console
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/demos/common/export_models/export_model.py -o export_model.py
-pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/demos/common/export_models/requirements.txt
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/export_model.py -o export_model.py
+pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
+pip3 install transformers==4.53.3 --force-reinstall
 mkdir models
 ```
 
@@ -168,7 +169,7 @@ curl http://localhost:8000/v3/chat/completions  -H "Content-Type: application/js
 ```python
 import requests
 import base64
-base_url='http://localhost:8000/v3'
+base_url='http://127.0.0.1:8000/v3'
 model_name = "microsoft/Phi-3.5-vision-instruct"
 
 def convert_image(Image):

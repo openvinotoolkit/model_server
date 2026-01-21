@@ -40,12 +40,13 @@ The models used by the server need to be stored locally or hosted remotely by ob
 Start using OpenVINO Model Server with a fast-forward serving example from the [QuickStart guide](ovms_quickstart.md) or [LLM QuickStart guide](./llm/quickstart.md).
 
 ### Key features:
+- **[NEW]** [Speech Generation and Speech Recognition with OpenAI API](../demos/audio/README.md)
 - **[NEW]** [Support for AI agents](../demos/continuous_batching/agentic_ai/README.md)
 - **[NEW]** [Image generation and editing](../demos/image_generation/README.md)
-- **[NEW]** Native Windows support. Check updated [deployment guide](./deploying_server.md)
-- **[NEW]** [Embeddings endpoint compatible with OpenAI API](../demos/embeddings/README.md)
-- **[NEW]** [Reranking compatible with Cohere API](../demos/rerank/README.md)
-- **[NEW]** [Efficient Text Generation with OpenAI API](../demos/continuous_batching/README.md)
+- Native Windows support. Check updated [deployment guide](./deploying_server.md)
+- [Embeddings endpoint compatible with OpenAI API](../demos/embeddings/README.md)
+- [Reranking compatible with Cohere API](../demos/rerank/README.md)
+- [Efficient Text Generation with OpenAI API](../demos/continuous_batching/README.md)
 - [Python code execution](python_support/reference.md)
 - [gRPC streaming](streaming_endpoints.md)
 - [MediaPipe graphs serving](mediapipe.md)
@@ -57,8 +58,12 @@ Start using OpenVINO Model Server with a fast-forward serving example from the [
 - Support for [AI accelerators](./accelerators.md)
 
 ## Additional Resources
+* [ADVANCING GENAI WITH CPU OPTIMIZATION](https://cdrdv2-public.intel.com/864404/vFINAL_Intel%20SLM%20Whitepaper.pdf)
+
+* [Manage deep learning models with OpenVINO Model Server](https://developers.redhat.com/articles/2024/07/03/manage-deep-learning-models-openvino-model-server#)
+
 * [RAG building blocks made easy and affordable with OpenVINO Model Server](https://medium.com/openvino-toolkit/rag-building-blocks-made-easy-and-affordable-with-openvino-model-server-e7b03da5012b)
-* [Simplified Deployments with OpenVINO™ Model Server and TensorFlow Serving](https://community.intel.com/t5/Blogs/Tech-Innovation/Artificial-Intelligence-AI/Simplified-Deployments-with-OpenVINO-Model-Server-and-TensorFlow/post/1353218)
-* [Inference Scaling with OpenVINO™ Model Server in Kubernetes and OpenShift Clusters](https://www.intel.com/content/www/us/en/developer/articles/technical/deploy-openvino-in-openshift-and-kubernetes.html)
+
+* [Simple deployment with KServe API](https://blog.openvino.ai/blog-posts/kserve-api)
+
 * [Benchmarking results](https://docs.openvino.ai/2025/about-openvino/performance-benchmarks.html)
-* [Release Notes](https://github.com/openvinotoolkit/model_server/releases)

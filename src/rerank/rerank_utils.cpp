@@ -19,11 +19,8 @@
 #include <algorithm>
 #include <cmath>
 #include <numeric>
-#pragma warning(push)
-#pragma warning(disable : 6313)
-#include <rapidjson/document.h>
-#include <rapidjson/writer.h>
-#pragma warning(pop)
+#include "src/port/rapidjson_document.hpp"
+#include "src/port/rapidjson_writer.hpp"
 
 #include "../logging.hpp"
 #include "../profiler.hpp"
@@ -239,7 +236,7 @@ absl::Status chunkDocuments(
 
     size_t new_tokens_count_of_longest_document = 0;
     for (size_t i = 0; i < batch_size; i++) {
-        int64_t* in_attention_mask_data = reinterpret_cast<int64_t*>(in_attention_mask.data()) + i * tokens_count_of_longest_document;
+        const int64_t* in_attention_mask_data = reinterpret_cast<const int64_t*>(in_attention_mask.data()) + i * tokens_count_of_longest_document;
         auto it = std::find(in_attention_mask_data, in_attention_mask_data + tokens_count_of_longest_document, 0);
         size_t token_count = (it != in_attention_mask_data + tokens_count_of_longest_document) ? std::distance(in_attention_mask_data, it) : tokens_count_of_longest_document;
         if (token_count > max_tokens_per_chunk) {
@@ -268,8 +265,8 @@ absl::Status chunkDocuments(
 
     size_t new_i = 0;
     for (size_t i = 0; i < batch_size; i++) {
-        int64_t* in_input_ids_data = reinterpret_cast<int64_t*>(in_input_ids.data()) + i * tokens_count_of_longest_document;
-        int64_t* in_attention_mask_data = reinterpret_cast<int64_t*>(in_attention_mask.data()) + i * tokens_count_of_longest_document;
+        const int64_t* in_input_ids_data = reinterpret_cast<const int64_t*>(in_input_ids.data()) + i * tokens_count_of_longest_document;
+        const int64_t* in_attention_mask_data = reinterpret_cast<const int64_t*>(in_attention_mask.data()) + i * tokens_count_of_longest_document;
         auto it = std::find(in_attention_mask_data, in_attention_mask_data + tokens_count_of_longest_document, 0);
         size_t token_count = (it != in_attention_mask_data + tokens_count_of_longest_document) ? std::distance(in_attention_mask_data, it) : tokens_count_of_longest_document;
         if (token_count > max_tokens_per_chunk) {

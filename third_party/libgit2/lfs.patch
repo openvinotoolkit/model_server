@@ -198,7 +198,7 @@ index a7d3c7ca4..13e9dfc37 100644
  		target_compile_definitions(libgit2package PRIVATE LIBGIT2_FILENAME=\"${LIBGIT2_FILENAME}\")
  		set_target_properties(libgit2package PROPERTIES OUTPUT_NAME ${LIBGIT2_FILENAME})
 diff --git a/src/libgit2/clone.c b/src/libgit2/clone.c
-index 237efc0ba..6f34bdbb1 100644
+index 237efc0ba..d439d01cc 100644
 --- a/src/libgit2/clone.c
 +++ b/src/libgit2/clone.c
 @@ -24,6 +24,7 @@
@@ -231,14 +231,39 @@ index 237efc0ba..6f34bdbb1 100644
  	/* enforce some behavior on fetch */
  	options.fetch_opts.update_fetchhead = 0;
  
-@@ -641,6 +657,7 @@ static int clone_repo(
- 	if ((error = repository_cb(&repo, local_path, options.bare, options.repository_cb_payload)) < 0)
+@@ -638,14 +654,22 @@ static int clone_repo(
+ 	else
+ 		repository_cb = default_repository_create;
+ 
+-	if ((error = repository_cb(&repo, local_path, options.bare, options.repository_cb_payload)) < 0)
++	if ((error = repository_cb(
++	             &repo, local_path, options.bare,
++	             options.repository_cb_payload)) < 0) {
++		cli_progress_abort(&progress);
++		cli_progress_dispose(&progress);
  		return error;
++	}
  
 +	repo->url = git__strdup(url);
  	if (!(error = create_and_configure_origin(&origin, repo, url, &options))) {
  		bool clone_local;
  
+ 		if ((error = git_clone__should_clone_local(&clone_local, url, options.local)) < 0) {
+ 			git_remote_free(origin);
++			cli_progress_abort(&progress);
++			cli_progress_dispose(&progress);
+ 			return error;
+ 		}
+ 
+@@ -669,6 +693,8 @@ static int clone_repo(
+ 		git_error_restore(last_error);
+ 	}
+ 
++	cli_progress_finish(&progress);
++	cli_progress_dispose(&progress);
+ 	*out = repo;
+ 	return error;
+ }
 diff --git a/src/libgit2/filter.c b/src/libgit2/filter.c
 index 9e0910c8c..a27b55340 100644
 --- a/src/libgit2/filter.c
@@ -287,7 +312,7 @@ index 58cb4b424..00ddee9f3 100644
  	git_writestream **out,
 diff --git a/src/libgit2/lfs_filter.c b/src/libgit2/lfs_filter.c
 new file mode 100644
-index 000000000..0ac7b40a2
+index 000000000..484811a0c
 --- /dev/null
 +++ b/src/libgit2/lfs_filter.c
 @@ -0,0 +1,567 @@
@@ -514,7 +539,7 @@ index 000000000..0ac7b40a2
 +		rate_unit_idx++;
 +	}
 +
-+	printf(" [%.2f %s] ", rate, sizeUnits[rate_unit_idx]);
++	printf(" [%.2f %s/s] ", rate, sizeUnits[rate_unit_idx]);
 +}
 +
 +void print_progress(

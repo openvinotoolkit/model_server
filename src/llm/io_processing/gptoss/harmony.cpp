@@ -15,6 +15,8 @@
 //*****************************************************************************
 #include "harmony.hpp"
 
+#include <utility>
+
 #include "../../../logging.hpp"
 #include "../../../stringutils.hpp"
 #include "../utils.hpp"
@@ -91,9 +93,9 @@ std::string Harmony::getReasoning() {
     Tool calls are extracted from messages in channel "commentary" that contain "to=functions.NAME" in the channel content; example:
     <|channel|>commentary to=functions.get_humidity <|message|>{"location":"Paris"}<|end|>
 */
-ToolCalls Harmony::getToolCalls() {
+ToolCalls_t Harmony::getToolCalls() {
     static const std::string tool_prefix = "to=functions.";
-    ToolCalls toolCalls;
+    ToolCalls_t toolCalls;
     for (const auto& msg : messages) {
         if (startsWith(msg.getChannel(), "commentary")) {
             size_t marker = msg.getChannel().find(tool_prefix);
@@ -110,7 +112,7 @@ ToolCalls Harmony::getToolCalls() {
                 }
                 toolCall.arguments = msg.getContent();
                 toolCall.id = generateRandomId();
-                toolCalls.push_back(toolCall);
+                toolCalls.push_back(std::move(toolCall));
             } else {
                 SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Skipping tool call. Could not find tool name in channel [{}]", msg.getChannel());
             }

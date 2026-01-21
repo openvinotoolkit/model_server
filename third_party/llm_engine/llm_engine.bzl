@@ -24,7 +24,7 @@ def llm_engine():
     new_git_repository(
         name = "llm_engine",
         remote = "https://github.com/openvinotoolkit/openvino.genai",
-        commit = "8e86a984f7ab14579a6ab7c58258abdbababa38b", # master 2025-09-13 Increase GGUF timeouts (#2756)
+        commit = "2689c9ec9e28b83421f3fa5d380b10dd10dc3379",
         build_file = "@_llm_engine//:BUILD",
         init_submodules = True,
         recursive_init_submodules = True,
@@ -76,7 +76,7 @@ def _impl(repository_ctx):
         out_dll_dir_win = ""
         out_lib_dir = "out_lib_dir = \"runtime/lib/intel64\""
         out_static = ""
-        out_libs = "out_shared_libs = [\"{lib_name}.so.2540\"],".format(lib_name=lib_name)
+        out_libs = "out_shared_libs = [\"{lib_name}.so.2600\"],".format(lib_name=lib_name)
         cache_entries = """
         "BUILD_SHARED_LIBS": "OFF",
         "CMAKE_POSITION_INDEPENDENT_CODE": "ON",

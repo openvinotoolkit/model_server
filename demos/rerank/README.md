@@ -15,8 +15,8 @@ That ensures faster initialization time, better performance and lower memory con
 
 Download export script, install it's dependencies and create directory for the models:
 ```console
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/demos/common/export_models/export_model.py -o export_model.py
-pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/demos/common/export_models/requirements.txt
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/export_model.py -o export_model.py
+pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
 mkdir models 
 ```
 
@@ -130,7 +130,7 @@ pip3 install cohere
 ```bash
 echo '
 import cohere
-client = cohere.Client(base_url="http://localhost:8000/v3", api_key="not_used")
+client = cohere.Client(base_url="http://127.0.0.1:8000/v3", api_key="not_used")
 responses = client.rerank(query="hello",documents=["welcome","farewell"], model="BAAI/bge-reranker-large")
 for response in responses.results:
     print(f"index {response.index}, relevance_score {response.relevance_score}")' > rerank_client.py
@@ -146,7 +146,7 @@ index 1, relevance_score 0.09138210117816925
 
 :::{dropdown} **Requesting rerank score with model that requires template applying on query and documents**
 
-tomaarsen/Qwen3-Reranker-0.6B-seq-cls is a copy of the Qwen3-Reranker-0.6B model (original model is not supported in OVMS) modified as a sequence classification model instead. It requires applying template on input, here is example client that does it:
+OpenVINO/Qwen3-Reranker-0.6B-seq-cls-fp16-ov is a copy of the Qwen3-Reranker-0.6B model (original model is not supported in OVMS) modified as a sequence classification model instead. It requires applying template on input, here is example client that does it:
 
 ```bash
 pip3 install requests
@@ -165,11 +165,11 @@ instruction = (
     "Given a web search query, retrieve relevant passages that answer the query"
 )
 
-query = "welcome"
-
+query = "What are the key benefits of machine learning in business?"
+ 
 documents = [
-    "good morning",
-    "farewell",
+    "Machine learning benefits businesses with better decisions, task automation, customer personalization, and cost savings.",
+    "Quantum computing uses quantum bits for fast calculations in cryptography and simulations.",
 ]
 
 query = query_template.format(prefix=prefix, instruction=instruction, query=query)
@@ -178,9 +178,9 @@ documents = [
     document_template.format(doc=doc, suffix=suffix) for doc in documents
 ]
 
-response = requests.post("http://localhost:8125/v3/rerank",
+response = requests.post("http://127.0.0.1:8000/v3/rerank",
                          json={
-                             "model": "tomaarsen/Qwen3-Reranker-0.6B-seq-cls",
+                             "model": "OpenVINO/Qwen3-Reranker-0.6B-seq-cls-fp16-ov",
                              "query": query,
                              "documents": documents,
                          }).json()
@@ -191,7 +191,7 @@ python rerank_client.py
 ```
 It will return response similar to:
 ```
-{'results': [{'index': 0, 'relevance_score': 0.024518223479390144}, {'index': 1, 'relevance_score': 0.0026006349362432957}]}
+{'results': [{'index': 0, 'relevance_score': 0.9989529848098755}, {'index': 1, 'relevance_score': 0.060060907155275345}]}
 ```
 :::
 
@@ -199,7 +199,7 @@ It will return response similar to:
 
 ```bash
 git clone https://github.com/openvinotoolkit/model_server
-python model_server/demos/rerank/compare_results.py --query "hello" --document "welcome" --document "farewell" --base_url http://localhost:8000/v3/
+python model_server/demos/rerank/compare_results.py --query "hello" --document "welcome" --document "farewell" --base_url http://127.0.0.1:8000/v3/
 query hello
 documents ['welcome', 'farewell']
 HF Duration: 145.731 ms
@@ -210,39 +210,39 @@ OVMS reranking: [0.9968273 0.0913821]
 
 ## Performance benchmarking
 
-An asynchronous benchmarking client can be used to access the model server performance with various load conditions. Below are execution examples captured on dual Intel(R) Xeon(R) CPU Max 9480.
+An asynchronous benchmarking client can be used to access the model server performance with various load conditions. Below are execution examples captured on Intel(R) Core(TM) Ultra X7 368H.
 ```bash
-cd model_server/demos/benchmark/embeddings/
+cd model_server/demos/benchmark/v3/
 pip install -r requirements.txt
-python benchmark_embeddings.py --api_url http://localhost:8000/v3/rerank --backend ovms_rerank --dataset synthetic --synthetic_length 500 --request_rate inf --batch_size 20 --model BAAI/bge-reranker-large 
+python benchmark.py --api_url http://127.0.0.1:8000/v3/rerank --backend ovms_rerank --dataset synthetic --synthetic_length 500 --request_rate inf --batch_size 20 --model BAAI/bge-reranker-large
 Number of documents: 1000
-100%|██████████████████████████████████████| 50/50 [00:19<00:00,  2.53it/s]
+100%|██████████████████████████████████████| 50/50 [00:13<00:00,  3.64it/s]
 Tokens: 501000
 Success rate: 100.0%. (50/50)
-Throughput - Tokens per second: 25325.17484336458
-Mean latency: 10268 ms
-Median latency: 10249 ms
+Throughput - Tokens per second: 36,516.5
+Mean latency: 6960.67 ms
+Median latency: 6913.43 ms
 Average document length: 501.0 tokens
 
-python benchmark_embeddings.py --api_url http://localhost:8000/v3/rerank --backend ovms_rerank --dataset synthetic --synthetic_length 500 --request_rate inf --batch_size 20 --model BAAI/bge-reranker-large 
+python benchmark.py --api_url http://127.0.0.1:8000/v3/rerank --backend ovms_rerank --dataset synthetic --synthetic_length 500 --request_rate inf --batch_size 20 --model BAAI/bge-reranker-large
 Number of documents: 1000
-100%|██████████████████████████████████████| 50/50 [00:19<00:00,  2.53it/s]
+100%|██████████████████████████████████████| 50/50 [00:13<00:00,  3.69it/s]
 Tokens: 501000
 Success rate: 100.0%. (50/50)
-Throughput - Tokens per second: 25325.17484336458
-Mean latency: 10268 ms
-Median latency: 10249 ms
+Throughput - Tokens per second: 36,963.0
+Mean latency: 6846.51 ms
+Median latency: 6811.82 ms
 Average document length: 501.0 tokens
 
-python benchmark_embeddings.py --api_url http://localhost:8000/v3/rerank --backend ovms_rerank --dataset Cohere/wikipedia-22-12-simple-embeddings --request_rate inf --batch_size 20 --model BAAI/bge-reranker-large
+python benchmark.py --api_url http://127.0.0.1:8000/v3/rerank --backend ovms_rerank --dataset Cohere/wikipedia-2023-11-embed-multilingual-v3 --hf-subset simple --request_rate inf --batch_size 20 --model BAAI/bge-reranker-large
 Number of documents: 1000
-100%|██████████████████████████████████████| 50/50 [00:09<00:00,  5.55it/s]
-Tokens: 92248
+100%|██████████████████████████████████████| 50/50 [00:03<00:00, 12.69it/s]
+Tokens: 75147
 Success rate: 100.0%. (50/50)
-Throughput - Tokens per second: 10236.429922338193
-Mean latency: 4511 ms
-Median latency: 4309 ms
-Average document length: 92.248 tokens
+Throughput - Tokens per second: 19,071.0
+Mean latency: 1805.52 ms
+Median latency: 1768.86 ms
+Average document length: 75.147 tokens
 
 
 ```
@@ -260,4 +260,35 @@ tomaarsen/Qwen3-Reranker-0.6B-seq-cls
 
 Check [RAG demo](../continuous_batching/rag/README.md) which employs `rerank` endpoint together with `chat/completions` and `embeddings`. 
 
+# Usage of tokenize endpoint (release 2026.0 or weekly)
+
+The `tokenize` endpoint provides a simple API for tokenizing input text using the same tokenizer as the deployed rerank model. This allows you to see how your text will be split into tokens before feature extraction or inference. The endpoint accepts a string or list of strings and returns the corresponding token IDs.
+
+Example usage:
+```console
+curl http://localhost:8000/v3/tokenize -H "Content-Type: application/json" -d "{ \"model\": \"OpenVINO/bge-reranker-base-int8-ov\", \"text\": \"hello world\" }"
+```
+Response:
+```json
+{
+  "tokens": [33600,31,8999]
+}
+```
+
+It's possible to use additional parameters:
+ - `pad_to_max_length` - whether to pad the sequence to the maximum length. Default is False. 
+ - `max_length` - maximum length of the sequence. If specified, it truncates the tokens to the provided number.
+ - `padding_side` - side to pad the sequence, can be `left` or `right`. Default is `right`.
+
+ Example usage:
+```console
+curl http://localhost:8000/v3/tokenize -H "Content-Type: application/json" -d "{ \"model\": \"OpenVINO/bge-reranker-base-int8-ov\", \"text\": \"hello world\", \"max_length\": 10, \"pad_to_max_length\": true, \"padding_side\": \"left\"}"
+```
+
+Response:
+```json
+{
+  "tokens": [1,1,1,1,1,1,1,33600,31,8999]
+}
+```
 

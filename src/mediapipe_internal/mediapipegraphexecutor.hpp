@@ -93,6 +93,8 @@ public:
     static const std::string IMAGE_GEN_SESSION_SIDE_PACKET_TAG;
     static const std::string EMBEDDINGS_SESSION_SIDE_PACKET_TAG;
     static const std::string RERANK_SESSION_SIDE_PACKET_TAG;
+    static const std::string STT_SESSION_SIDE_PACKET_TAG;
+    static const std::string TTS_SESSION_SIDE_PACKET_TAG;
     static const ::mediapipe::Timestamp STARTING_TIMESTAMP;
 
     MediapipeGraphExecutor(const std::string& name, const std::string& version, const ::mediapipe::CalculatorGraphConfig& config,
@@ -103,6 +105,8 @@ public:
         const GenAiServableMap& llmNodeResourcesMap,
         const EmbeddingsServableMap& embeddingsServableMap,
         const RerankServableMap& rerankServableMap,
+        const SttServableMap& sttServableMap,
+        const TtsServableMap& ttsServableMap,
         PythonBackend* pythonBackend,
         MediapipeServableMetricReporter* mediapipeServableMetricReporter);
     MediapipeGraphExecutor(const std::string& name, const std::string& version, const ::mediapipe::CalculatorGraphConfig& config,
@@ -151,6 +155,9 @@ public:
         inputSidePackets[EMBEDDINGS_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<EmbeddingsServableMap>(this->sidePacketMaps.embeddingsServableMap).At(STARTING_TIMESTAMP);
 
         inputSidePackets[RERANK_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<RerankServableMap>(this->sidePacketMaps.rerankServableMap).At(STARTING_TIMESTAMP);
+        inputSidePackets[STT_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<SttServableMap>(this->sidePacketMaps.sttServableMap).At(STARTING_TIMESTAMP);
+        inputSidePackets[TTS_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<TtsServableMap>(this->sidePacketMaps.ttsServableMap).At(STARTING_TIMESTAMP);
+
         MP_RETURN_ON_FAIL(graph.StartRun(inputSidePackets), std::string("start MediaPipe graph: ") + this->name, StatusCode::MEDIAPIPE_GRAPH_START_ERROR);
 
         ::mediapipe::Packet packet;
@@ -386,4 +393,5 @@ public:
         }
     }
 };
+
 }  // namespace ovms

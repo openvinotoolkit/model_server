@@ -303,7 +303,7 @@ Status KFSInferenceServiceImpl::ModelInferImpl(::grpc::ServerContext* context, c
         if (status == StatusCode::PIPELINE_DEFINITION_NAME_MISSING) {
             SPDLOG_DEBUG("Requested DAG: {} does not exist. Searching for mediapipe graph with that name...", request->model_name());
 #if (MEDIAPIPE_DISABLE == 0)
-            std::shared_ptr<MediapipeGraphExecutor> executor;
+            std::unique_ptr<MediapipeGraphExecutor> executor;
             status = this->modelManager.createPipeline(executor, request->model_name());
             if (!status.ok()) {
                 return status;
@@ -346,7 +346,7 @@ Status KFSInferenceServiceImpl::ModelStreamInferImpl(::grpc::ServerContext* cont
         SPDLOG_DEBUG(status.string());
         return status;
     }
-    std::shared_ptr<MediapipeGraphExecutor> executor;
+    std::unique_ptr<MediapipeGraphExecutor> executor;
     auto status = this->modelManager.createPipeline(executor, firstRequest.model_name());
     if (!status.ok()) {
         return status;

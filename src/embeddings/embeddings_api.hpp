@@ -28,11 +28,9 @@
 #pragma warning(pop)
 
 #include <openvino/runtime/tensor.hpp>
-#pragma warning(push)
-#pragma warning(disable : 6313)
-#include <rapidjson/document.h>
-#include <rapidjson/stringbuffer.h>
-#pragma warning(pop)
+#include "src/port/rapidjson_document.hpp"
+#include "src/port/rapidjson_writer.hpp"
+#include "../tokenize/tokenize_parser.hpp"
 
 namespace ovms {
 
@@ -41,12 +39,11 @@ enum class PoolingMode {
     LAST
 };
 
-struct EmbeddingsRequest {
+struct EmbeddingsRequest : TokenizeRequest {
     enum class EncodingFormat {
         FLOAT,
         BASE64
     };
-    std::variant<std::vector<std::string>, std::vector<std::vector<int64_t>>> input;
     EncodingFormat encoding_format;
 
     static std::variant<EmbeddingsRequest, std::string> fromJson(rapidjson::Document* request);
@@ -61,11 +58,16 @@ public:
     EmbeddingsHandler(rapidjson::Document& document) :
         doc(document) {}
 
-    std::variant<std::vector<std::string>, std::vector<std::vector<int64_t>>>& getInput();
+    TokenizeRequest::InputDataType& getInput();
     EmbeddingsRequest::EncodingFormat getEncodingFormat() const;
+    ov::AnyMap& getParameters();
 
     absl::Status parseRequest();
-    absl::Status parseResponse(rapidjson::StringBuffer& buffer, const ov::Tensor& embeddingsTensor, const bool normalizeEmbeddings, const PoolingMode poolingMode = PoolingMode::CLS, const std::optional<ov::Tensor>& attentionMask = std::nullopt);
+
+    absl::Status parseResponse(
+        rapidjson::StringBuffer& buffer,
+        const ov::Tensor& embeddingsTensor);
+
     void setPromptTokensUsage(int promptTokens);
 };
 }  // namespace ovms
