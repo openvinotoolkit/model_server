@@ -374,6 +374,11 @@ public:
         SetUpSuite(port, configPath, t);
     }
 
+     void SetUp() {
+        V3HttpTest::SetUp();
+        ASSERT_EQ(handler->parseRequestComponents(comp, "POST", endpointTokenize, headers), ovms::StatusCode::OK);
+    }
+    
     static void TearDownTestSuite() {
         TearDownSuite(t);
     }
