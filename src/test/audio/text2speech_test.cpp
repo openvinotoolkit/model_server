@@ -86,7 +86,7 @@ TEST_F(Text2SpeechHttpTest, positiveWithVoice) {
     });
 }
 
-TEST_F(Text2SpeechHttpTest, nonExisitingVoiceRequested) {
+TEST_F(Text2SpeechHttpTest, nonExistingVoiceRequested) {
     std::string requestBody = R"(
         {
             "model": ")" + modelName +
