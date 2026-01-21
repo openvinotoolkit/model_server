@@ -164,10 +164,9 @@ curl -L -o models\OpenVINO\Phi-4-mini-instruct-int4-ov\chat_template.jinja https
 :::
 ::::
 
-You can use similar commands for different models. Change the source_model and the weights-format. 
+You can use similar commands for different models and precision. Change the source_model and other configuration parameters.
 > **Note:** Some models give more reliable responses with tuned chat template.
-
-> **Note:** Currently models with tool calls format compatible with Phi4, Llama3, Mistral or Hermes3 are supported.
+> **Note:** Currently tool parsers are supported for formats compatible with Phi4, Llama3, Mistral, Devstral, Hermes3 or GPT-OSS.
 
 
 
@@ -660,7 +659,7 @@ python openai_agent.py --query "What is the current weather in Tokyo?" --model o
 
 > **Note:** The tool checking the weather forecast in the demo is making a remote call to a REST API server. Make sure you have internet connection and proxy configured while running the agent. 
 
-> **Note:**  For more interactive mode you can run the application with streaming enabled by providing `--stream` parameter to the script. Currently streaming is enabled models using `hermes3` tool parser.
+> **Note:**  For more interactive mode you can run the application with streaming enabled by providing `--stream` parameter to the script.
 
 You can try also similar implementation based on llama_index library working the same way:
 ```bash
@@ -678,8 +677,6 @@ To simulate such type of load, we should use a dedicated tool [multi_turn benchm
 ```bash
 git clone -b v0.10.2 https://github.com/vllm-project/vllm
 cd vllm/benchmarks/multi_turn
-wget https://www.gutenberg.org/ebooks/1184.txt.utf-8
-mv 1184.txt.utf-8 pg1184.txt
 pip install -r requirements.txt
 sed -i -e 's/if not os.path.exists(args.model)/if 1 == 0/g' benchmark_serving_multi_turn.py
 
@@ -733,7 +730,7 @@ Testing model accuracy is critical for a successful adoption in AI application. 
 Here is example of the response from the OpenVINO/Qwen3-8B-int4-ov model:
 
 ```
---test-category simple
+--test-category simple_python
 {"accuracy": 0.9525, "correct_count": 381, "total_count": 400}
 
 --test-category multiple
