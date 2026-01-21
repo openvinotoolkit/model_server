@@ -601,7 +601,8 @@ TEST_F(GptOssOutputStreamParserTest, ConstrainAndCallGluedWithToolCall) {
         {".world ", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"<|constrain|>", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"id\":\"XXXXXXXXX\",\"type\":\"function\",\"index\":0,\"function\":{\"name\":\"world\"}}]}}"},
         {R"(json<|message|>{
-)", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{\n"}}]}})"},
+)",
+            ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{\n"}}]}})"},
         {"   ", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"   "}}]}})"},
         {" \"", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":" \""}}]}})"},
         {"location", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"location"}}]}})"},
@@ -636,4 +637,3 @@ TEST_F(GptOssOutputStreamParserTest, ConstrainAndCallGluedWithToolCall) {
     };
     test(chunkToDeltaVec);
 }
-
