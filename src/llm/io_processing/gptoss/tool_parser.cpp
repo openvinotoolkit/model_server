@@ -137,10 +137,10 @@ std::optional<rapidjson::Document> GptOssToolParser::parseChunk(const std::strin
 
     if (endsWith(chunk, openai::Harmony::TOKEN_CALL) || endsWith(chunk, openai::Harmony::TOKEN_END) || endsWith(chunk, openai::Harmony::TOKEN_RETURN)) {
         // find last <| and remove from chunk everything after it
-        std::size_t pos = chunk.rfind("<|");
-        if (pos != std::string::npos) {
-            if (pos > 0) {
-                std::string clearedChunk = chunk.substr(0, pos);
+        std::size_t tagPos = chunk.rfind("<|");
+        if (tagPos != std::string::npos) {
+            if (tagPos > 0) {
+                std::string clearedChunk = chunk.substr(0, tagPos);
                 if (!clearedChunk.empty()) {
                     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Streaming | GPT Tool | Sending Argument Part [{}]", clearedChunk);
                     result = wrapDeltaIntoDocument(clearedChunk);
@@ -167,9 +167,9 @@ std::optional<rapidjson::Document> GptOssToolParser::parseChunk(const std::strin
                 // Cut everything after first .
                 // Remove and take only remaining part
                 // The harmony format is: <|channel|>commentary to=functions.<function_name> <|constrain|>json<|message|>{...}<|call|>
-                std::size_t pos = chunk.find('.');
-                if (pos != std::string::npos) {
-                    chunk = chunk.substr(pos + 1);
+                std::size_t dotPos = chunk.find('.');
+                if (dotPos != std::string::npos) {
+                    chunk = chunk.substr(dotPos + 1);
                 }
             }
         }
@@ -178,10 +178,10 @@ std::optional<rapidjson::Document> GptOssToolParser::parseChunk(const std::strin
         if (isStreamingFunctionName) {
             // Function names dont include space bars.
             // We can rely on this fact and simply decide if function name reading phase has finished.
-            std::size_t pos = chunk.find(' ');
-            if (pos != std::string::npos) {
+            std::size_t spacePos = chunk.find(' ');
+            if (spacePos != std::string::npos) {
                 isStreamingFunctionName = false;
-                chunk = chunk.substr(0, pos);
+                chunk = chunk.substr(0, spacePos);
                 cache.clear();
             }
 
@@ -193,10 +193,10 @@ std::optional<rapidjson::Document> GptOssToolParser::parseChunk(const std::strin
     }
     case StreamState::READING_CONSTRAIN: {
         // Ignore up to <|message|>
-        std::size_t pos = chunk.find(openai::Harmony::TOKEN_MESSAGE);
-        if (pos != std::string::npos) {
+        std::size_t msgPos = chunk.find(openai::Harmony::TOKEN_MESSAGE);
+        if (msgPos != std::string::npos) {
             // ignore only up to message
-            chunk = chunk.substr(pos + openai::Harmony::TOKEN_MESSAGE.size());
+            chunk = chunk.substr(msgPos + openai::Harmony::TOKEN_MESSAGE.size());
             streamState = StreamState::READING_MESSAGE;
             clearState();
             SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Streaming | GPT Tool | Sending Argument Part [{}]", chunk);
