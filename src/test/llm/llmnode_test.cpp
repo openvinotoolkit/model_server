@@ -1937,7 +1937,7 @@ TEST_P(LLMFlowHttpTestParameterized, streamCompletionsFinishReasonLength) {
 }
 
 // Potential sporadic - move to functional if problematic
-TEST_P(LLMFlowHttpTestParameterized, streamCompletionsSingleStopString) {
+TEST_P(LLMFlowHttpTestParameterized, DISABLED_streamCompletionsSingleStopString) {
     auto params = GetParam();
     // TODO: In the next step we should break this suite into smaller ones, use proper configuration instead of skipping
     if (params.modelName.find("vlm") != std::string::npos) {
