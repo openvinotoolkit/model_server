@@ -34,7 +34,21 @@ ovms_cc_library(
 ovms_cc_library(
     name = "embeddings_servable",
     srcs = ["embeddings_servable.cpp"],
-    hdrs = ["embeddings_servable.hpp"],
+    hdrs = ["embeddings_servable.hpp", "genai_embeddings_servable.hpp"],
+    deps = [
+        "//src:libovmslogging",
+        "//src:sidepacket_servable",
+        "//third_party:openvino",
+        "embeddings_calculator_ov_cc_proto",
+    ],
+    visibility = ["//visibility:public"],
+    alwayslink = 1,
+)
+
+ovms_cc_library(
+    name = "genai_embeddings_servable",
+    srcs = ["genai_embeddings_servable.cpp"],
+    hdrs = ["genai_embeddings_servable.hpp"],
     deps = [
         "//src:libovmslogging",
         "//src:sidepacket_servable",
@@ -79,6 +93,30 @@ ovms_cc_library(
         "//src:libovmsprofiler",
         "embeddings_calculator_ov_cc_proto",
         ":embeddings_servable",
+        "//src:sidepacket_servable",
+        "//src:model_metric_reporter",
+        "//src:executingstreamidguard",
+        "//src:libovms_execution_context",
+        ":embeddings_api",
+    ],
+    visibility = ["//visibility:public"],
+    alwayslink = 1,
+)
+
+ovms_cc_library(
+    name = "genai_embeddingscalculator_ov",
+    hdrs = [],
+    srcs = ["genai_embeddings_calculator_ov.cc"],
+    deps = [
+        "@mediapipe//mediapipe/framework:calculator_framework",
+        "@com_github_tencent_rapidjson//:rapidjson",
+        "@model_api//:model_api",
+        "//src:httppayload",
+        "//src:libhttpclientconnection",
+        "//src:libovmslogging",
+        "//src:libovmsprofiler",
+        "embeddings_calculator_ov_cc_proto",
+        ":genai_embeddings_servable",
         "//src:sidepacket_servable",
         "//src:model_metric_reporter",
         "//src:executingstreamidguard",

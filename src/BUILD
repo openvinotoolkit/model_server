@@ -567,6 +567,7 @@ ovms_cc_library(
                 "//src/image_gen:imagegen_init",
                 "//src/llm:openai_completions_api_handler",
                 "//src/embeddings:embeddingscalculator_ov",
+                "//src/embeddings:genai_embeddingscalculator_ov",
                 "//src/rerank:rerankcalculator",
                 "//src/rerank:rerankcalculator_ov",
                 "//src/llm:llmcalculator",],

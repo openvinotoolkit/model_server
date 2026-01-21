@@ -45,6 +45,7 @@
 
 #include "../sidepacket_servable.hpp"
 #include "../embeddings/embeddings_servable.hpp"
+#include "../embeddings/genai_embeddings_servable.hpp"
 #include "../rerank/rerank_servable.hpp"
 #include "../audio/speech_to_text/s2t_servable.hpp"
 #include "../audio/text_to_speech/t2s_servable.hpp"
@@ -67,6 +68,7 @@ using RerankServableMap = std::unordered_map<std::string, std::shared_ptr<Rerank
 using SttServableMap = std::unordered_map<std::string, std::shared_ptr<SttServable>>;
 using TtsServableMap = std::unordered_map<std::string, std::shared_ptr<TtsServable>>;
 using EmbeddingsServableMap = std::unordered_map<std::string, std::shared_ptr<EmbeddingsServable>>;
+using GenaiEmbeddingsServableMap = std::unordered_map<std::string, std::shared_ptr<GenaiEmbeddingsServable>>;
 using ImageGenerationPipelinesMap = std::unordered_map<std::string, std::shared_ptr<ImageGenerationPipelines>>;
 
 struct GraphSidePackets {
@@ -74,6 +76,7 @@ struct GraphSidePackets {
     GenAiServableMap genAiServableMap;
     ImageGenerationPipelinesMap imageGenPipelinesMap;
     EmbeddingsServableMap embeddingsServableMap;
+    GenaiEmbeddingsServableMap genaiEmbeddingsServableMap;
     RerankServableMap rerankServableMap;
     SttServableMap sttServableMap;
     TtsServableMap ttsServableMap;
@@ -82,6 +85,7 @@ struct GraphSidePackets {
         genAiServableMap.clear();
         imageGenPipelinesMap.clear();
         embeddingsServableMap.clear();
+        genaiEmbeddingsServableMap.clear();
         rerankServableMap.clear();
         sttServableMap.clear();
         ttsServableMap.clear();
@@ -91,6 +95,7 @@ struct GraphSidePackets {
                 genAiServableMap.empty() &&
                 imageGenPipelinesMap.empty() &&
                 embeddingsServableMap.empty() &&
+                genaiEmbeddingsServableMap.empty() &&
                 rerankServableMap.empty() &&
                 sttServableMap.empty() &&
                 ttsServableMap.empty());
@@ -133,6 +138,7 @@ public:
     static const std::string LLM_NODE_CALCULATOR_NAME;
     static const std::string IMAGE_GEN_CALCULATOR_NAME;
     static const std::string EMBEDDINGS_NODE_CALCULATOR_NAME;
+    static const std::string GENAI_EMBEDDINGS_NODE_CALCULATOR_NAME;
     static const std::string RERANK_NODE_CALCULATOR_NAME;
     static const std::string STT_NODE_CALCULATOR_NAME;
     static const std::string TTS_NODE_CALCULATOR_NAME;

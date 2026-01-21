@@ -46,6 +46,7 @@ MediapipeGraphExecutor::MediapipeGraphExecutor(
     const PythonNodeResourcesMap& pythonNodeResourcesMap,
     const GenAiServableMap& llmNodeResourcesMap,
     const EmbeddingsServableMap& embeddingsServableMap,
+    const GenaiEmbeddingsServableMap& genaiEmbeddingsServableMap,
     const RerankServableMap& rerankServableMap,
     const SttServableMap& sttServableMap,
     const TtsServableMap& ttsServableMap,
@@ -58,7 +59,7 @@ MediapipeGraphExecutor::MediapipeGraphExecutor(
     outputTypes(std::move(outputTypes)),
     inputNames(std::move(inputNames)),
     outputNames(std::move(outputNames)),
-    sidePacketMaps({pythonNodeResourcesMap, llmNodeResourcesMap, {}, embeddingsServableMap, rerankServableMap, sttServableMap, ttsServableMap}),
+    sidePacketMaps({pythonNodeResourcesMap, llmNodeResourcesMap, {}, embeddingsServableMap, genaiEmbeddingsServableMap, rerankServableMap, sttServableMap, ttsServableMap}),
     pythonBackend(pythonBackend),
     currentStreamTimestamp(STARTING_TIMESTAMP),
     mediapipeServableMetricReporter(mediapipeServableMetricReporter) {}
