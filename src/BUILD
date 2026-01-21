@@ -2517,6 +2517,7 @@ cc_test(
                 "test/llm/text_streamer_test.cpp",
                 "test/llm/visual_language_model/complete_flow_test.cpp",
                 "test/llm/visual_language_model/initialization_test.cpp",
+                "test/audio/text2speech_test.cpp",
             ],
             "//:disable_mediapipe" : [
                 "test/disabled_mediapipe_test.cpp",

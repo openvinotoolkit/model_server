@@ -28,48 +28,9 @@
 
 using namespace ovms;
 
-class V3HttpTest : public ::testing::Test {
-public:
-    std::unique_ptr<ovms::HttpRestApiHandler> handler;
-
-    std::unordered_map<std::string, std::string> headers{{"content-type", "application/json"}};
-    ovms::HttpRequestComponents comp;
-    const std::string endpointEmbeddings = "/v3/embeddings";
-    const std::string endpointRerank = "/v3/rerank";
-    std::shared_ptr<MockedServerRequestInterface> writer;
-    std::shared_ptr<MockedMultiPartParser> multiPartParser;
-    std::string response;
-    ovms::HttpResponseComponents responseComponents;
-
-    static void SetUpSuite(std::string& port, std::string& configPath, std::unique_ptr<std::thread>& t) {
-        ovms::Server& server = ovms::Server::instance();
-        ::SetUpServer(t, server, port, configPath.c_str());
-    }
-    static void SetUpTestSuite() {
-    }
-
-    void SetUp() {
-        writer = std::make_shared<MockedServerRequestInterface>();
-        multiPartParser = std::make_shared<MockedMultiPartParser>();
-        ovms::Server& server = ovms::Server::instance();
-        handler = std::make_unique<ovms::HttpRestApiHandler>(server, 5);
-        ASSERT_EQ(handler->parseRequestComponents(comp, "POST", endpointEmbeddings, headers), ovms::StatusCode::OK);
-    }
-
-    static void TearDownSuite(std::unique_ptr<std::thread>& t) {
-        ovms::Server& server = ovms::Server::instance();
-        server.setShutdownRequest(1);
-        t->join();
-        server.setShutdownRequest(0);
-    }
-
-    void TearDown() {
-        handler.reset();
-    }
-};
-
 class EmbeddingsHttpTest : public V3HttpTest, public ::testing::WithParamInterface<std::string> {
 protected:
+    std::string endpoint = "/v3/embeddings";
     static std::unique_ptr<std::thread> t;
 
 public:
@@ -77,6 +38,11 @@ public:
         std::string port = "9173";
         std::string configPath = getGenericFullPathForSrcTest("/ovms/src/test/embeddings/config_embeddings.json");
         SetUpSuite(port, configPath, t);
+    }
+
+    void SetUp() {
+        V3HttpTest::SetUp();
+        ASSERT_EQ(handler->parseRequestComponents(comp, "POST", endpoint, headers), ovms::StatusCode::OK);
     }
 
     static void TearDownTestSuite() {
@@ -97,7 +63,7 @@ TEST_P(EmbeddingsHttpTest, simplePositive) {
         }
     )";
     ASSERT_EQ(
-        handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
     rapidjson::Document d;
     rapidjson::ParseResult ok = d.Parse(response.c_str());
@@ -133,7 +99,7 @@ TEST_P(EmbeddingsHttpTest, simplePositiveNoNorm) {
         }
     )";
     ASSERT_EQ(
-        handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
     rapidjson::Document d;
     rapidjson::ParseResult ok = d.Parse(response.c_str());
@@ -170,7 +136,7 @@ TEST_P(EmbeddingsHttpTest, simplePositiveBase64) {
         }
     )";
     ASSERT_EQ(
-        handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
     rapidjson::Document d;
     rapidjson::ParseResult ok = d.Parse(response.c_str());
@@ -199,7 +165,7 @@ TEST_P(EmbeddingsHttpTest, simplePositiveInt) {
             "input": [111, 222, 121]
         }
     )";
-    Status status = handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, writer, multiPartParser);
+    Status status = handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParser);
     ASSERT_EQ(status,
         ovms::StatusCode::OK)
         << status.string();
@@ -223,7 +189,7 @@ TEST_P(EmbeddingsHttpTest, simplePositiveMultipleInts) {
             "input": [[111, 222, 121], [123, 221, 311]]
         }
     )";
-    Status status = handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, writer, multiPartParser);
+    Status status = handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParser);
     ASSERT_EQ(status,
         ovms::StatusCode::OK)
         << status.string();
@@ -250,7 +216,7 @@ TEST_P(EmbeddingsHttpTest, simplePositiveMultipleIntLengths) {
             "input": [[1, 2, 3, 4, 5, 6], [4, 5, 6, 7], [7, 8]]
         }
     )";
-    Status status = handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, writer, multiPartParser);
+    Status status = handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParser);
     ASSERT_EQ(status,
         ovms::StatusCode::OK)
         << status.string();
@@ -279,7 +245,7 @@ TEST_P(EmbeddingsHttpTest, simplePositiveMultipleStrings) {
             "input": ["one", "two"]
         }
     )";
-    Status status = handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, writer, multiPartParser);
+    Status status = handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParser);
     ASSERT_EQ(status,
         ovms::StatusCode::OK)
         << status.string();
@@ -305,7 +271,7 @@ TEST_P(EmbeddingsHttpTest, positiveLongInput) {
     }
     std::string requestBody = "{ \"model\": \"" + modelName + "\", \"input\": \"" + words + " \"}";
 
-    Status status = handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, writer, multiPartParser);
+    Status status = handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParser);
     ASSERT_EQ(status,
         ovms::StatusCode::OK)
         << status.string();
@@ -325,7 +291,7 @@ TEST_P(EmbeddingsHttpTest, negativeTooLongInput) {
     }
     std::string requestBody = "{ \"model\": \"" + modelName + "\", \"input\": \"" + words + " \"}";
 
-    Status status = handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, writer, multiPartParser);
+    Status status = handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParser);
     ASSERT_EQ(status,
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR)
         << status.string();
@@ -344,7 +310,7 @@ TEST_P(EmbeddingsHttpTest, negativeTooLongInputPair) {
     }
     std::string requestBody = "{ \"model\": \"" + modelName + "\", \"input\": [\"" + words + " \", \"short prompt\"]}";
 
-    Status status = handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, writer, multiPartParser);
+    Status status = handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParser);
     ASSERT_EQ(status,
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR)
         << status.string();
@@ -362,7 +328,7 @@ TEST_F(EmbeddingsHttpTest, relativePath) {
             "input": [111, 222, 121]
         }
     )";
-    Status status = handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, writer, multiPartParser);
+    Status status = handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParser);
     ASSERT_EQ(status,
         ovms::StatusCode::OK)
         << status.string();
@@ -384,7 +350,7 @@ TEST_F(EmbeddingsHttpTest, positivePoolingMean) {
             "input": [111, 222, 121]
         }
     )";
-    Status status = handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, writer, multiPartParser);
+    Status status = handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParser);
     ASSERT_EQ(status,
         ovms::StatusCode::OK)
         << status.string();
@@ -406,7 +372,7 @@ TEST_F(EmbeddingsHttpTest, positivePoolingLast) {
             "input": [111, 222, 121]
         }
     )";
-    Status status = handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, writer, multiPartParser);
+    Status status = handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParser);
     ASSERT_EQ(status,
         ovms::StatusCode::OK)
         << status.string();
@@ -478,7 +444,7 @@ public:
 
     std::unordered_map<std::string, std::string> headers{{"content-type", "application/json"}};
     ovms::HttpRequestComponents comp;
-    const std::string endpointEmbeddings = "/v3/embeddings_ov";
+    const std::string endpoint = "/v3/embeddings_ov";
     std::shared_ptr<MockedServerRequestInterface> writer;
     std::shared_ptr<MockedMultiPartParser> multiPartParser;
     std::string response;
@@ -532,7 +498,7 @@ public:
         multiPartParser = std::make_shared<MockedMultiPartParser>();
         ovms::Server& server = ovms::Server::instance();
         handler = std::make_unique<ovms::HttpRestApiHandler>(server, 5);
-        ASSERT_EQ(handler->parseRequestComponents(comp, "POST", endpointEmbeddings, headers), ovms::StatusCode::OK);
+        ASSERT_EQ(handler->parseRequestComponents(comp, "POST", endpoint, headers), ovms::StatusCode::OK);
     }
 
     static void TearDownTestSuite() {
@@ -564,7 +530,7 @@ TEST_F(EmbeddingsExtensionTest, simplePositive) {
         }
     )";
     ASSERT_EQ(
-        handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
     rapidjson::Document d;
     rapidjson::ParseResult ok = d.Parse(response.c_str());
@@ -580,10 +546,14 @@ TEST_F(EmbeddingsExtensionTest, simplePositive) {
 
 class EmbeddingsTokenizeHttpTest : public V3HttpTest {
 protected:
+    const std::string endpointTokenize = "/v3/tokenize";
     static std::unique_ptr<std::thread> t;
 
 public:
-    const std::string endpointTokenize = "/v3/tokenize";
+    void SetUp() {
+        V3HttpTest::SetUp();
+        ASSERT_EQ(handler->parseRequestComponents(comp, "POST", endpointTokenize, headers), ovms::StatusCode::OK);
+    }
     static void SetUpTestSuite() {
         std::string port = "9173";
         std::string configPath = getGenericFullPathForSrcTest("/ovms/src/test/embeddings/config_embeddings.json");

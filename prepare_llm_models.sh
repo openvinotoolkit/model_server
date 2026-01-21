@@ -27,6 +27,7 @@ LEGACY_MODEL_FILE="1/model.bin"
 EMBEDDING_MODEL="thenlper/gte-small"
 RERANK_MODEL="BAAI/bge-reranker-base"
 VLM_MODEL="OpenGVLab/InternVL2-1B"
+TTS_MODEL="microsoft/speecht5_tts"
 
 # Models for tools testing. Only tokenizers are downloaded.
 QWEN3_MODEL="Qwen/Qwen3-8B"
@@ -76,6 +77,16 @@ fi
 if [ ! -f "$1/$FACEBOOK/chat_template.jinja" ]; then
     echo "Copying dummy chat template to $FACEBOOK model directory."
     cp src/test/llm/dummy_facebook_template.jinja "$1/$FACEBOOK/chat_template.jinja"
+fi
+
+if [ -f "$1/$TTS_MODEL/$TOKENIZER_FILE" ]; then
+  echo "Model file $1/$TTS_MODEL/$TOKENIZER_FILE exists. Skipping downloading models."
+else
+  python3 demos/common/export_models/export_model.py text2speech --source_model "$TTS_MODEL" --weight-format int4 --model_repository_path $1 --vocoder microsoft/speecht5_hifigan
+fi
+if [ ! -f "$1/$TTS_MODEL/$TOKENIZER_FILE" ]; then
+  echo "[ERROR] Model file $1/$TTS_MODEL/$TOKENIZER_FILE does not exist."
+  exit 1
 fi
 
 if [ -f "$1/$VLM_MODEL/$TOKENIZER_FILE" ]; then
