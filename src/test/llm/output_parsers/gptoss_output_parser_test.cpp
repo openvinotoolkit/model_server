@@ -288,6 +288,36 @@ TEST_F(GptOssOutputUnaryParserTest, SingleToolCallWithConstrain) {
     }
 }
 
+// This does not conform to OpenAI Harmony format, however tests show that sometimes model produces tools in analysis channel
+TEST_F(GptOssOutputUnaryParserTest, SingleToolCallWithConstrainInAnalysisChannel) {
+    for (auto closureToken : std::vector<Harmony::TokenID>{
+             Harmony::TokenID::RETURN,   // ending with <|return|>
+             Harmony::TokenID::END,      // ending with <|end|>
+             Harmony::TokenID::CALL}) {  // ending with <|call|>
+        for (auto functionDeclaration : std::vector<std::string>{
+                 "analysis to=functions.hello",  // valid channel with to=
+                 "analysis to=functions.hello ",
+                 "analysis   to=functions.hello",
+                 "analysis  ANYTHING IN BETWEEN to=functions.hello",
+             }) {  // spaces after hello
+            builder
+                .clear()
+                .add(Harmony::TokenID::CHANNEL)
+                .add(functionDeclaration)
+                .add(Harmony::TokenID::MESSAGE)
+                .add(R"({"Hello": "world!"})")
+                .add(closureToken);
+            Harmony harmony(*gptOssTokenizer, builder.build());
+            ASSERT_TRUE(harmony.parse()) << "Failed for closure token: " << static_cast<int64_t>(closureToken) << " function declaration: " << functionDeclaration;
+            ASSERT_EQ(harmony.getContent(), "") << "Failed for closure token: " << static_cast<int64_t>(closureToken) << " function declaration: " << functionDeclaration;
+            ASSERT_EQ(harmony.getReasoning(), "") << "Failed for closure token: " << static_cast<int64_t>(closureToken) << " function declaration: " << functionDeclaration;
+            ASSERT_EQ(harmony.getToolCalls().size(), 1) << "Failed for closure token: " << static_cast<int64_t>(closureToken) << " function declaration: " << functionDeclaration;
+            ASSERT_EQ(harmony.getToolCalls()[0].name, "hello") << "Failed for closure token: " << static_cast<int64_t>(closureToken) << " function declaration: " << functionDeclaration;
+            ASSERT_EQ(harmony.getToolCalls()[0].arguments, R"({"Hello": "world!"})") << "Failed for closure token: " << static_cast<int64_t>(closureToken) << " function declaration: " << functionDeclaration;
+        }
+    }
+}
+
 TEST_F(GptOssOutputUnaryParserTest, InvalidSingleToolCallWithConstrain) {
     for (auto closureToken : std::vector<Harmony::TokenID>{
              Harmony::TokenID::RETURN,   // ending with <|return|>
@@ -634,6 +664,77 @@ TEST_F(GptOssOutputStreamParserTest, ConstrainAndCallGluedWithToolCall) {
         {"<|constrain|>", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"id\":\"XXXXXXXXX\",\"type\":\"function\",\"index\":2,\"function\":{\"name\":\"world\"}}]}}"},
         {"json", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"<|message|>{}<|call|>", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":2,"function":{"arguments":"{}"}}]}})"},
+    };
+    test(chunkToDeltaVec);
+}
+
+// This does not conform to OpenAI Harmony format, however tests show that sometimes model produces tools in analysis channel
+TEST_F(GptOssOutputStreamParserTest, HolisticStreamingToolsInAnalysisChannel) {
+    std::vector<std::tuple<std::string, ov::genai::GenerationFinishReason, std::optional<std::string>>> chunkToDeltaVec{
+        // Reasoning
+        {"<|channel|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"analysis", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"<|message|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"I", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"reasoning_content":"I"}})"}},
+        {" will", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"reasoning_content":" will"}})"}},
+        {" call", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"reasoning_content":" call"}})"}},
+        {" fun", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"reasoning_content":" fun"}})"}},
+        {"ction.", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"reasoning_content":"ction."}})"}},
+        {"<|end|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        // Preamble
+        {"<|channel|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"commentary", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"<|message|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"I", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"content":"I"}})"}},
+        {" have", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"content":" have"}})"}},
+        {" to", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"content":" to"}})"}},
+        {" call", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"content":" call"}})"}},
+        {" fun", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"content":" fun"}})"}},
+        {"ction.", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"content":"ction."}})"}},
+        {"<|end|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        // Tool 1 (with ignored constrain)
+        {"<|channel|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"analysis", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {" to=", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"fun", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"ctions", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {".hello ", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"<|message|>", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"id\":\"XXXXXXXXX\",\"type\":\"function\",\"index\":0,\"function\":{\"name\":\"hello\"}}]}}"},
+        {" {\"", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":" {\""}}]}})"},
+        {"location", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"location"}}]}})"},
+        {"\":", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"\":"}}]}})"},
+        {" \"", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":" \""}}]}})"},
+        {"Paris", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"Paris"}}]}})"},
+        {"\"}", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"\"}"}}]}})"},
+        {"<|call|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        // Tool 2 (with constrain)
+        {"<|channel|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"analysis", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {" to=", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"fun", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"ctions", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {".world ", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"<|constrain|>", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"id\":\"XXXXXXXXX\",\"type\":\"function\",\"index\":1,\"function\":{\"name\":\"world\"}}]}}"},
+        {"json", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"<|message|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {" {\"", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":1,"function":{"arguments":" {\""}}]}})"},
+        {"location", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":1,"function":{"arguments":"location"}}]}})"},
+        {"\":", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":1,"function":{"arguments":"\":"}}]}})"},
+        {" \"", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":1,"function":{"arguments":" \""}}]}})"},
+        {"Warsaw", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":1,"function":{"arguments":"Warsaw"}}]}})"},
+        {"\"}", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":1,"function":{"arguments":"\"}"}}]}})"},
+        {"<|call|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        // Tool 3 (glued with call token)
+        {"<|channel|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"analysis", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {" to=", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"fun", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"ctions", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {".world ", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"<|constrain|>", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"id\":\"XXXXXXXXX\",\"type\":\"function\",\"index\":2,\"function\":{\"name\":\"world\"}}]}}"},
+        {"json", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"<|message|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"{}<|call|>", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":2,"function":{"arguments":"{}"}}]}})"},
     };
     test(chunkToDeltaVec);
 }

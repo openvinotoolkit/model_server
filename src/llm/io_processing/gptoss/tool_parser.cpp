@@ -86,9 +86,11 @@ std::optional<rapidjson::Document> GptOssToolParser::parseChunk(const std::strin
     std::string chunk = newChunk;
     std::optional<rapidjson::Document> result;
 
-    if (chunk.find(getParsingStartTags()[0]) != std::string::npos) {
-        toolCallIndex++;  // starting with -1, first call will be 0
-        return std::nullopt;
+    for (const auto& parsingStartTag : getParsingStartTags()) {
+        if (chunk.find(parsingStartTag) != std::string::npos) {
+            toolCallIndex++;  // starting with -1, first call will be 0
+            return std::nullopt;
+        }
     }
 
     // This should only happen during channel read if model does not produce garbage
