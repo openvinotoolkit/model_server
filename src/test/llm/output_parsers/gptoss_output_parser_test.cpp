@@ -693,6 +693,7 @@ TEST_F(GptOssOutputStreamParserTest, ConstrainAndCallGluedWithToolCall) {
         {" fun", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"reasoning_content":" fun"}})"}},
         {"ction.", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"reasoning_content":"ction."}})"}},
         {"<|end|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+
         // Tool 1 (with ignored constrain, but it is glued to tool call)
         {"<|channel|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"commentary", ov::genai::GenerationFinishReason::NONE, std::nullopt},
