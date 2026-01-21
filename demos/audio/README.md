@@ -55,7 +55,7 @@ curl --output create_speaker_embedding.py "https://raw.githubusercontent.com/ope
 python create_speaker_embedding.py
 mv speaker_embedding.bin models/
 ```
-Script records your speech for 5 seconds(you can adjust duration of recording to achieve better results) and then, using speechbrain/spkrec-xvect-voxceleb model, creates `speaker_embedding.bin` file that contains yout speaker embedding.
+Script records your speech for 5 seconds(you can adjust duration of recording to achieve better results) and then, using speechbrain/spkrec-xvect-voxceleb model, creates `speaker_embedding.bin` file that contains your speaker embedding.
 Now you need to add speaker embedding path to graph.pbtxt file of text2speech graph:
 ```
 input_stream: "HTTP_REQUEST_PAYLOAD:input"
