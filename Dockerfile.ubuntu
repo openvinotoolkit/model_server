@@ -113,6 +113,7 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
             libtbb-dev \
             libssl-dev \
             libxml2 \
+            ocl-icd-opencl-dev \
             python3.10-dev \
             python3.10-venv \
             python3-pip \
@@ -303,9 +304,6 @@ RUN bash -c "sed -i -e 's|REPLACE_PROJECT_VERSION|${PROJECT_VERSION}|g' /ovms/sr
     if [ "$ov_use_binary" == "1" ] ; then sed -i -e "s#REPLACE_OPENVINO_NAME#$(find /opt/intel/ -maxdepth 1 -mindepth 1 -type d | grep openvino | grep -Eo '[0-9]{4}.[0-9].[0-9].[^_]+')#g" /ovms/src/version.hpp ; fi && \
     if [ "$ov_use_binary" == "0" ] ; then sed -i -e "s#REPLACE_OPENVINO_NAME#$(git --git-dir /openvino/.git log -n 1 | head -n 1 | cut -d' ' -f2 | head -c 12)#g" /ovms/src/version.hpp ; fi && \
     bash -c "sed -i -e 's|REPLACE_BAZEL_BUILD_FLAGS|${debug_bazel_flags}${minitrace_flags}|g' /ovms/src/version.hpp"
-
-WORKDIR /usr/lib/x86_64-linux-gnu/
-RUN ln -s libOpenCL.so.1 libOpenCL.so
 
 WORKDIR /patchelf
 # hadolint ignore=DL3003

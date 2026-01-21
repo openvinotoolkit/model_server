@@ -112,21 +112,23 @@ Use [Berkeley function call leaderboard ](https://github.com/ShishirPatil/gorill
 ```text
 git clone https://github.com/ShishirPatil/gorilla
 cd gorilla/berkeley-function-call-leaderboard
-git checkout cd9429ccf3d4d04156affe883c495b3b047e6b64
+git checkout 9b8a5202544f49a846aced185a340361231ef3e1
 curl -s https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/continuous_batching/accuracy/gorilla.patch | git apply -v
-pip install -e . 
+pip install -e . --extra-index-url "https://download.pytorch.org/whl/cpu"
 ```
 The commands below assumes the models is deployed with the name `ovms-model`. It must match the name set in the `bfcl_eval/constants/model_config.py`.
 ```text
 export OPENAI_BASE_URL=http://localhost:8000/v3
-bfcl generate --model ovms-model --test-category simple,multiple --temperature 0.0 --num-threads 100 -o --result-dir model_name_dir
+export CHAT_TEMPLATE_KWARGS='{"enable_thinking":false, "reasoning_effort":"low"}'
+
+bfcl generate --model ovms-model --test-category simple_python,multiple --temperature 0.0 --num-threads 100 -o --result-dir model_name_dir
 bfcl evaluate --model ovms-model --result-dir model_name_dir 
 ```
 
 Alternatively, use the model name `ovms-model-stream` to run the tests with stream requests. The results should be the same.
 ```text
 export OPENAI_BASE_URL=http://localhost:8000/v3
-bfcl generate --model ovms-model-stream --test-category simple,multiple --temperature 0.0 --num-threads 100 -o --result-dir model_name_dir
+bfcl generate --model ovms-model-stream --test-category simple_python,multiple --temperature 0.0 --num-threads 100 -o --result-dir model_name_dir
 bfcl evaluate --model ovms-model-stream --result-dir model_name_dir 
 ```
 
@@ -134,7 +136,7 @@ bfcl evaluate --model ovms-model-stream --result-dir model_name_dir
 The output artifacts will be stored in `result` and `scores`. For example:
 
 ```text
-cat score/openvino-qwen3-8b-int4-FC/BFCL_v3_simple_score.json | head -1
+cat score/openvino-qwen3-8b-int4-FC/BFCL_v3_simple_python_score.json | head -1
 {"accuracy": 0.95, "correct_count": 380, "total_count": 400}
 ```
 Those results can be compared with the reference from the [berkeley leaderbaord](https://gorilla.cs.berkeley.edu/leaderboard.html#leaderboard).
