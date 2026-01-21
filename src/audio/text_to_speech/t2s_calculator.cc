@@ -103,20 +103,18 @@ public:
             if (streamIt != payload.parsedJson->MemberEnd()) {
                 return absl::InvalidArgumentError("streaming is not supported");
             }
-            std::optional<std::string> voice;
+            std::optional<std::string> voiceName;
             auto voiceIt = payload.parsedJson->FindMember("voice");
             if (voiceIt != payload.parsedJson->MemberEnd() && voiceIt->value.IsString()) {
-                voice = voiceIt->value.GetString();
-            }
-            if (voice.has_value()) {
-                if (pipe->voices.find(voice.value()) == pipe->voices.end())
-                    return absl::InvalidArgumentError(absl::StrCat("Requested voice not available: ", voice.value()));
+                voiceName = voiceIt->value.GetString();
+                if (pipe->voices.find(voiceName.value()) == pipe->voices.end())
+                    return absl::InvalidArgumentError(absl::StrCat("Requested voice not available: ", voiceName.value()));
             }
             ov::genai::Text2SpeechDecodedResults generatedSpeech;
             std::unique_lock lock(pipe->ttsPipelineMutex);
 
-            if (voice.has_value()) {
-                generatedSpeech = pipe->ttsPipeline->generate(inputIt->value.GetString(), pipe->voices[voice.value()]);
+            if (voiceName.has_value()) {
+                generatedSpeech = pipe->ttsPipeline->generate(inputIt->value.GetString(), pipe->voices[voiceName.value()]);
             } else {
                 generatedSpeech = pipe->ttsPipeline->generate(inputIt->value.GetString());
             }
