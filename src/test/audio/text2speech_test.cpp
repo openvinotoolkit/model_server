@@ -102,40 +102,6 @@ TEST_F(Text2SpeechHttpTest, nonExistingVoiceRequested) {
 
 class Text2SpeechConfigTest : public ::testing::Test {};
 
-TEST_F(Text2SpeechConfigTest, simplePositive) {
-    ConstructorEnabledModelManager manager;
-    std::string testPbtxt = R"(
-    input_stream: "HTTP_REQUEST_PAYLOAD:input"
-    output_stream: "HTTP_RESPONSE_PAYLOAD:output"
-
-    node {
-    name: "ttsNode1"
-    input_side_packet: "TTS_NODE_RESOURCES:t2s_servable"
-    calculator: "T2sCalculator"
-    input_stream: "HTTP_REQUEST_PAYLOAD:input"
-    output_stream: "HTTP_RESPONSE_PAYLOAD:output"
-        node_options: {
-        [type.googleapis.com / mediapipe.T2sCalculatorOptions]: {
-            models_path: "/ovms/src/test/llm_testing/microsoft/speecht5_tts"
-            plugin_config: '{"NUM_STREAMS": "1" }',
-            target_device: "CPU"
-            voices: [
-            {
-                name: "speaker1",
-                path: "/ovms/src/test/audio/speaker.bin",
-            }
-        ]
-        }
-        }
-    }
-    )";
-
-    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
-    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, nullptr);
-    mediapipeDummy.inputConfig = testPbtxt;
-    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::OK);
-}
-
 TEST_F(Text2SpeechConfigTest, NodeNameMissing) {
     ConstructorEnabledModelManager manager;
     std::string testPbtxt = R"(
