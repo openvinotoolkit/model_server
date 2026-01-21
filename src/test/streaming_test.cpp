@@ -489,7 +489,7 @@ TEST_F(StreamingWithOVMSCalculatorsCliTest, OVInferenceCalculatorWith2InputsSend
     EXPECT_EQ(definition->getInputsInfo().count("in2"), 1);
     EXPECT_EQ(definition->getOutputsInfo().count("sum"), 1);
 
-    std::shared_ptr<MediapipeGraphExecutor> executor;
+    std::unique_ptr<MediapipeGraphExecutor> executor;
     KFSRequest request;
     KFSResponse response;
     auto status = manager.createPipeline(executor, name);
@@ -526,7 +526,7 @@ TEST_F(StreamingWithOVMSCalculatorsTest, OVInferenceCalculatorWith2InputsSendSep
     EXPECT_EQ(definition->getInputsInfo().count("in"), 1);
     EXPECT_EQ(definition->getInputsInfo().count("in2"), 1);
 
-    std::shared_ptr<MediapipeGraphExecutor> executor;
+    std::unique_ptr<MediapipeGraphExecutor> executor;
     KFSRequest request;
     KFSResponse response;
     auto status = manager.createPipeline(executor, name);
@@ -655,11 +655,10 @@ node {
     DummyMediapipeGraphDefinition mediapipeDummy("my_graph", mgc, testPbtxt, this->pythonBackend);
     ASSERT_EQ(mediapipeDummy.validate(*this->manager), StatusCode::OK);
 
-    std::shared_ptr<MediapipeGraphExecutor> pipeline;
+    std::unique_ptr<MediapipeGraphExecutor> pipeline;
     ASSERT_EQ(mediapipeDummy.create(pipeline), StatusCode::OK);
     ASSERT_NE(pipeline, nullptr);
 
-    this->pythonModule->releaseGILFromThisThread();
     // Mock only 1 request and disconnect immediately
     prepareRequest(this->firstRequest, {{"input", 3.5f}});
     EXPECT_CALL(this->stream, Read(_))
@@ -717,11 +716,10 @@ node {
     DummyMediapipeGraphDefinition mediapipeDummy("my_graph", mgc, testPbtxt, this->pythonBackend);
     ASSERT_EQ(mediapipeDummy.validate(*this->manager), StatusCode::OK);
 
-    std::shared_ptr<MediapipeGraphExecutor> pipeline;
+    std::unique_ptr<MediapipeGraphExecutor> pipeline;
     ASSERT_EQ(mediapipeDummy.create(pipeline), StatusCode::OK);
     ASSERT_NE(pipeline, nullptr);
 
-    this->pythonModule->releaseGILFromThisThread();
     // Mock only 1 request and disconnect immediately
     prepareRequest(this->firstRequest, {{"in", 3.5f}});
     EXPECT_CALL(this->stream, Read(_))
@@ -759,11 +757,10 @@ node {
     DummyMediapipeGraphDefinition mediapipeDummy("my_graph", mgc, testPbtxt, this->pythonBackend);
     ASSERT_EQ(mediapipeDummy.validate(*this->manager), StatusCode::OK);
 
-    std::shared_ptr<MediapipeGraphExecutor> pipeline;
+    std::unique_ptr<MediapipeGraphExecutor> pipeline;
     ASSERT_EQ(mediapipeDummy.create(pipeline), StatusCode::OK);
     ASSERT_NE(pipeline, nullptr);
 
-    this->pythonModule->releaseGILFromThisThread();
     // Mock receiving 3 requests and disconnection
     prepareRequest(this->firstRequest, {{"input", 3.5f}});  // no timestamp specified, server will assign one
     EXPECT_CALL(this->stream, Read(_))
@@ -824,11 +821,10 @@ node {
     DummyMediapipeGraphDefinition mediapipeDummy("my_graph", mgc, testPbtxt, this->pythonBackend);
     ASSERT_EQ(mediapipeDummy.validate(*this->manager), StatusCode::OK);
 
-    std::shared_ptr<MediapipeGraphExecutor> pipeline;
+    std::unique_ptr<MediapipeGraphExecutor> pipeline;
     ASSERT_EQ(mediapipeDummy.create(pipeline), StatusCode::OK);
     ASSERT_NE(pipeline, nullptr);
 
-    this->pythonModule->releaseGILFromThisThread();
     // Mock receiving 3 requests and disconnection
     prepareRequest(this->firstRequest, {{"in", 3.5f}});  // no timestamp specified, server will assign one
     EXPECT_CALL(this->stream, Read(_))
@@ -880,13 +876,12 @@ node {
     DummyMediapipeGraphDefinition mediapipeDummy("my_graph", mgc, testPbtxt, this->pythonBackend);
     ASSERT_EQ(mediapipeDummy.validate(*this->manager), StatusCode::OK);
 
-    std::shared_ptr<MediapipeGraphExecutor> pipeline;
+    std::unique_ptr<MediapipeGraphExecutor> pipeline;
     ASSERT_EQ(mediapipeDummy.create(pipeline), StatusCode::OK);
     ASSERT_NE(pipeline, nullptr);
 
     std::promise<void> signalPromise;
     std::future<void> signalFuture = signalPromise.get_future();
-    this->pythonModule->releaseGILFromThisThread();
     // Mock receiving 2 requests and disconnection
     prepareRequest(this->firstRequest, {{"input1", 3.5f}});  // no timestamp specified, server will assign one
     EXPECT_CALL(this->stream, Read(_))
@@ -943,11 +938,10 @@ node {
     DummyMediapipeGraphDefinition mediapipeDummy("my_graph", mgc, testPbtxt, this->pythonBackend);
     ASSERT_EQ(mediapipeDummy.validate(*this->manager), StatusCode::OK);
 
-    std::shared_ptr<MediapipeGraphExecutor> pipeline;
+    std::unique_ptr<MediapipeGraphExecutor> pipeline;
     ASSERT_EQ(mediapipeDummy.create(pipeline), StatusCode::OK);
     ASSERT_NE(pipeline, nullptr);
 
-    this->pythonModule->releaseGILFromThisThread();
     // Mock only 1 request and disconnect immediately
     prepareRequest(this->firstRequest, {{"input", 3.5f}});
     EXPECT_CALL(this->stream, Read(_))
@@ -1007,11 +1001,10 @@ node {
     DummyMediapipeGraphDefinition mediapipeDummy("my_graph", mgc, testPbtxt, this->pythonBackend);
     ASSERT_EQ(mediapipeDummy.validate(*this->manager), StatusCode::OK);
 
-    std::shared_ptr<MediapipeGraphExecutor> pipeline;
+    std::unique_ptr<MediapipeGraphExecutor> pipeline;
     ASSERT_EQ(mediapipeDummy.create(pipeline), StatusCode::OK);
     ASSERT_NE(pipeline, nullptr);
 
-    this->pythonModule->releaseGILFromThisThread();
     // Mock only 1 request and disconnect immediately
     prepareRequest(this->firstRequest, {{"input1", 3.5f}, {"input2", 13.5f}});
     EXPECT_CALL(this->stream, Read(_))
@@ -1075,11 +1068,9 @@ node_options: {
     DummyMediapipeGraphDefinition mediapipeDummy("my_graph", mgc, testPbtxt, this->pythonBackend);
     ASSERT_EQ(mediapipeDummy.validate(*this->manager), StatusCode::OK);
 
-    std::shared_ptr<MediapipeGraphExecutor> pipeline;
+    std::unique_ptr<MediapipeGraphExecutor> pipeline;
     ASSERT_EQ(mediapipeDummy.create(pipeline), StatusCode::OK);
     ASSERT_NE(pipeline, nullptr);
-
-    this->pythonModule->releaseGILFromThisThread();
 
     std::promise<void> signalPromise;
     std::future<void> signalFuture = signalPromise.get_future();
@@ -1129,11 +1120,9 @@ node_options: {
     DummyMediapipeGraphDefinition mediapipeDummy("my_graph", mgc, testPbtxt, this->pythonBackend);
     ASSERT_EQ(mediapipeDummy.validate(*this->manager), StatusCode::OK);
 
-    std::shared_ptr<MediapipeGraphExecutor> pipeline;
+    std::unique_ptr<MediapipeGraphExecutor> pipeline;
     ASSERT_EQ(mediapipeDummy.create(pipeline), StatusCode::OK);
     ASSERT_NE(pipeline, nullptr);
-
-    this->pythonModule->releaseGILFromThisThread();
 
     const int64_t timestamp = 64;
 
@@ -1165,11 +1154,10 @@ node {
     DummyMediapipeGraphDefinition mediapipeDummy("my_graph", mgc, testPbtxt, this->pythonBackend);
     ASSERT_EQ(mediapipeDummy.validate(*this->manager), StatusCode::OK);
 
-    std::shared_ptr<MediapipeGraphExecutor> pipeline;
+    std::unique_ptr<MediapipeGraphExecutor> pipeline;
     ASSERT_EQ(mediapipeDummy.create(pipeline), StatusCode::OK);
     ASSERT_NE(pipeline, nullptr);
 
-    this->pythonModule->releaseGILFromThisThread();
     prepareRequest(this->firstRequest, {{"input", 3.5f}});
 
     ASSERT_EQ(pipeline->inferStream(this->firstRequest, this->stream, this->executionContext), StatusCode::MEDIAPIPE_EXECUTION_ERROR);
@@ -1198,11 +1186,10 @@ node {
     DummyMediapipeGraphDefinition mediapipeDummy("my_graph", mgc, testPbtxt, this->pythonBackend);
     ASSERT_EQ(mediapipeDummy.validate(*this->manager), StatusCode::OK);
 
-    std::shared_ptr<MediapipeGraphExecutor> pipeline;
+    std::unique_ptr<MediapipeGraphExecutor> pipeline;
     ASSERT_EQ(mediapipeDummy.create(pipeline), StatusCode::OK);
     ASSERT_NE(pipeline, nullptr);
 
-    this->pythonModule->releaseGILFromThisThread();
     prepareRequest(this->firstRequest, {{"input", 3.5f}});
 
     ASSERT_EQ(pipeline->inferStream(this->firstRequest, this->stream, this->executionContext), StatusCode::MEDIAPIPE_EXECUTION_ERROR);

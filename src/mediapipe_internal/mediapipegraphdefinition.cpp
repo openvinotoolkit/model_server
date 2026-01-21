@@ -253,7 +253,7 @@ Status MediapipeGraphDefinition::createOutputsInfo() {
     return StatusCode::OK;
 }
 
-Status MediapipeGraphDefinition::create(std::shared_ptr<MediapipeGraphExecutor>& pipeline) {
+Status MediapipeGraphDefinition::create(std::unique_ptr<MediapipeGraphExecutor>& pipeline) {
     std::unique_ptr<MediapipeGraphDefinitionUnloadGuard> unloadGuard;
     Status status = waitForLoaded(unloadGuard);
     if (!status.ok()) {
@@ -262,7 +262,7 @@ Status MediapipeGraphDefinition::create(std::shared_ptr<MediapipeGraphExecutor>&
     }
     SPDLOG_DEBUG("Creating Mediapipe graph executor: {}", getName());
 
-    pipeline = std::make_shared<MediapipeGraphExecutor>(getName(), std::to_string(getVersion()),
+    pipeline = std::make_unique<MediapipeGraphExecutor>(getName(), std::to_string(getVersion()),
         this->config, this->inputTypes, this->outputTypes, this->inputNames, this->outputNames,
         this->sidePacketMaps,
         this->pythonBackend, this->reporter.get());
@@ -585,8 +585,12 @@ Status MediapipeGraphDefinition::initializeNodes() {
                 return StatusCode::LLM_NODE_NAME_ALREADY_EXISTS;
             }
             mediapipe::S2tCalculatorOptions nodeOptions;
-            config.node(i).node_options(0).UnpackTo(&nodeOptions);
-            std::shared_ptr<SttServable> servable = std::make_shared<SttServable>(nodeOptions.models_path(), nodeOptions.target_device(), mgconfig.getBasePath());
+            auto& calculatorOptions = config.node(i).node_options(0);
+            if (!calculatorOptions.UnpackTo(&nodeOptions)) {
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to unpack calculator options");
+                return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
+            }
+            std::shared_ptr<SttServable> servable = std::make_shared<SttServable>(nodeOptions, mgconfig.getBasePath());
             sttServableMap.insert(std::pair<std::string, std::shared_ptr<SttServable>>(nodeName, std::move(servable)));
             sttServablesCleaningGuard.disableCleaning();
         }
@@ -607,8 +611,12 @@ Status MediapipeGraphDefinition::initializeNodes() {
                 return StatusCode::LLM_NODE_NAME_ALREADY_EXISTS;
             }
             mediapipe::T2sCalculatorOptions nodeOptions;
-            config.node(i).node_options(0).UnpackTo(&nodeOptions);
-            std::shared_ptr<TtsServable> servable = std::make_shared<TtsServable>(nodeOptions.models_path(), nodeOptions.target_device(), mgconfig.getBasePath());
+            auto& calculatorOptions = config.node(i).node_options(0);
+            if (!calculatorOptions.UnpackTo(&nodeOptions)) {
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to unpack calculator options");
+                return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
+            }
+            std::shared_ptr<TtsServable> servable = std::make_shared<TtsServable>(nodeOptions, mgconfig.getBasePath());
             ttsServableMap.insert(std::pair<std::string, std::shared_ptr<TtsServable>>(nodeName, std::move(servable)));
             ttsServablesCleaningGuard.disableCleaning();
         }

@@ -28,8 +28,8 @@ NUMA node5 CPU(s):                    160-191,352-383
 
 Download the export_model.py script and install python dependencies:
 ```bash
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/demos/common/export_models/export_model.py -o export_model.py
-pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/demos/common/export_models/requirements.txt
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/export_model.py -o export_model.py
+pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
 mkdir models
 ```
 Use the export_model.py script:
@@ -211,8 +211,8 @@ Export the model:
 ```bash
 python export_model.py text_generation --source_model deepseek-ai/DeepSeek-R1-Distill-Qwen-32B --model_name DeepSeek-R1-Distill-Qwen-32B_INT4 --weight-format int4 --model_repository_path models --target_device HETERO:GPU.0,GPU.1 --pipeline_type LM_CB
 ```
-> **Note**: Using the pipeline type LM_CB which includes continuous batching, requires OVMS version 2025.3. Build it from source before the publication.
 
+Deploy model:
 ```bash
 docker run --device /dev/dri -d --rm -p 8000:8000 -u 0 -v $(pwd)/models/DeepSeek-R1-Distill-Qwen-32B_INT4:/model:ro openvino/model_server:latest-gpu --rest_port 8000 --model_name deepseek-ai/DeepSeek-R1-Distill-Qwen-32B --model_path /model
 ```

@@ -56,7 +56,7 @@ The input also includes a side packet with a reference to `LLM_NODE_RESOURCES` w
 
 On the output the calculator creates an std::string with the json content, which is returned to the client as one response or in chunks with streaming.
 
-Let's have a look at the graph from the graph configuration from the quickstart:
+Let's have a look at the simplest graph:
 ```protobuf
 input_stream: "HTTP_REQUEST_PAYLOAD:input"
 output_stream: "HTTP_RESPONSE_PAYLOAD:output"
@@ -96,7 +96,7 @@ Above node configuration should be used as a template since user is not expected
 The calculator supports the following `node_options` for tuning the pipeline configuration:
 -    `required string models_path` - location of the model directory (can be relative);
 -    `optional uint64 max_num_batched_tokens` - max number of tokens processed in a single iteration [default = 256];
--    `optional uint64 cache_size` - memory size in GB for storing KV cache [default = 8];
+-    `optional uint64 cache_size` - memory size in GB for storing KV cache [default = 0];
 -    `optional uint64 max_num_seqs` - max number of sequences actively processed by the engine [default = 256];
 -    `optional bool dynamic_split_fuse` - use Dynamic Split Fuse token scheduling [default = true];
 -    `optional string device` - device to load models to. Supported values: "CPU", "GPU" [default = "CPU"]
@@ -107,7 +107,8 @@ The calculator supports the following `node_options` for tuning the pipeline con
 -    `optional CacheEvictionConfig cache_eviction_config` - KV cache eviction configuration. Disabled if not specified.
 -    `optional string reasoning_parser` - name of the parser to use for reasoning content extraction from model output before creating a response;
 -    `optional string tool_parser` - name of the parser to use for tool calls extraction from model output before creating a response;
--    `optional bool enable_tool_guided_generation` - enable enforcing tool schema during generation. Requires setting response parser. [default = false]; 
+-    `optional bool enable_tool_guided_generation` - enable enforcing tool schema during generation. Requires setting response parser. [default = false];
+-    `optional SparseAttentionConfig sparse_attention_config` - Sparse attention configuration. Disabled if not specified.
 
 ### Caching settings
 The value of `cache_size` might have performance and stability implications. It is used for storing LLM model KV cache data. Adjust it based on your environment capabilities, model size and expected level of concurrency.
@@ -115,10 +116,12 @@ You can track the actual usage of the cache in the server logs. You can observe 
 ```
 [2024-07-30 14:28:02.536][624][llm_executor][info][llm_executor.hpp:65] All requests: 50; Scheduled requests: 25; Cache usage 23.9%;
 ```
-Consider increasing the `cache_size` parameter in case the logs report the usage getting close to 100%. When the cache is consumed, some of the running requests might be preempted to free cache for other requests to finish their generations (preemption will likely have negative impact on performance since preempted request cache will need to be recomputed when it gets processed again). When preemption is not possible i.e. `cache size` is very small and there is a single, long running request that consumes it all, then the request gets terminated when no more cache can be assigned to it, even before reaching stopping criteria.
+The logs represent the cache usage for the current generation cycles. By default, the allocation is increased dynamically, which mean more space is added when the context for all batched requests require more space.
+When set as static, it is recommended to set a value which doesn't lead to 100% usage. When the cache is consumed, some of the running requests might be preempted to free cache for other requests to finish their generations (preemption will likely have negative impact on performance since preempted request cache will need to be recomputed when it gets processed again). When preemption is not possible i.e. `cache size` is very small and there is a single, long running request that consumes it all, then the request gets terminated when no more cache can be assigned to it, even before reaching stopping criteria.
+The dynamic allocation reserves as much as required to prevent preemption. In such way it should be most efficient to get optimal performance. In some cases it could lead however to consuming all available RAM.  
 
 `enable_prefix_caching` can improve generation performance when the initial prompt content is repeated. That is the case with chat applications which resend the history of the conversations. Thanks to prefix caching, there is no need to reevaluate the same sequence of tokens. Thanks to that, first token will be generated much quicker and the overall
-utilization of resource will be lower. Old cache will be cleared automatically but it is recommended to increase cache_size to take bigger performance advantage.
+utilization of resource will be lower. Old cache will be cleared automatically when entire free cache is consumed, so it is recommended to increase `cache_size` to get better performance advantage and store longer history of previous requests.
 
 Another cache related option is `cache_eviction_config` which can help with latency of the long generation, but at the cost of accuracy. It's type is defined as follows:
 ```
@@ -141,7 +144,7 @@ Another cache related option is `cache_eviction_config` which can help with late
       NORM_SUM = 1; // Same as SUM, but the importance scores are additionally divided by the lifetime (in tokens generated) of a given token in cache
       }
 
-      optional AggregationMode aggregation_mode = 1 [default = SUM];
+      optional AggregationMode aggregation_mode = 1 [default = NORM_SUM];
       required uint64 start_size = 2;
       required uint64 recent_size = 3;
       required uint64 max_cache_size = 4;
@@ -151,8 +154,51 @@ Another cache related option is `cache_eviction_config` which can help with late
     }
 ```
 Learn more about the algorithm and above parameters from [GenAI docs](https://github.com/openvinotoolkit/openvino.genai/blob/master/site/docs/concepts/optimization-techniques/kvcache-eviction-algorithm.md). 
-Example of cache eviction config in the node options:
-`cache_eviction_config: {start_size: 32, recent_size: 128, max_cache_size: 672}`
+Example of a graph with cache eviction configured:
+
+```protobuf
+input_stream: "HTTP_REQUEST_PAYLOAD:input"
+output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+
+node: {
+  name: "LLMExecutor"
+  calculator: "HttpLLMCalculator"
+  input_stream: "LOOPBACK:loopback"
+  input_stream: "HTTP_REQUEST_PAYLOAD:input"
+  input_side_packet: "LLM_NODE_RESOURCES:llm"
+  output_stream: "LOOPBACK:loopback"
+  output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+  input_stream_info: {
+    tag_index: 'LOOPBACK:0',
+    back_edge: true
+  }
+  node_options: {
+      [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
+          models_path: "./",
+          cache_eviction_config: {
+            start_size: 32,
+            recent_size: 128,
+            max_cache_size: 672,
+            kv_crush_config: {
+              anchor_point_mode: RANDOM
+              budget: 8
+              rng_seed: 42
+            }
+          }
+      }
+  }
+  input_stream_handler {
+    input_stream_handler: "SyncSetInputStreamHandler",
+    options {
+      [mediapipe.SyncSetInputStreamHandlerOptions.ext] {
+        sync_set {
+          tag_index: "LOOPBACK:0"
+        }
+      }
+    }
+  }
+}
+```
 
 ### Scheduling settings
 In different use cases and load specification, requests and tokens scheduling might play a role when it comes to performance.
@@ -179,7 +225,52 @@ In different use cases and load specification, requests and tokens scheduling mi
     ```
     Description of parameters in that config can be found in GenAI docs about [SparseAttentionConfig](https://docs.openvino.ai/2025/api/genai_api/_autosummary/openvino_genai.SparseAttentionConfig.html#openvino-genai-sparseattentionconfig).
 
-**Note that the following options are ignored in Stateful servables (so in deployments on NPU): cache_size, dynamic_split_fuse, max_num_batched_tokens, max_num_seq, enable_prefix_caching**
+    Example of graph with sparse attention configured:
+
+    ```protobuf
+    input_stream: "HTTP_REQUEST_PAYLOAD:input"
+    output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+
+    node: {
+      name: "LLMExecutor"
+      calculator: "HttpLLMCalculator"
+      input_stream: "LOOPBACK:loopback"
+      input_stream: "HTTP_REQUEST_PAYLOAD:input"
+      input_side_packet: "LLM_NODE_RESOURCES:llm"
+      output_stream: "LOOPBACK:loopback"
+      output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+      input_stream_info: {
+        tag_index: 'LOOPBACK:0',
+        back_edge: true
+      }
+      node_options: {
+          [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
+              models_path: "./",
+              sparse_attention_config: {
+                mode: TRISHAPE
+                num_last_dense_tokens_in_prefill: 100
+                num_retained_start_tokens_in_cache: 128
+                num_retained_recent_tokens_in_cache: 1920
+                xattention_threshold: 0.8
+                xattention_block_size: 64
+                xattention_stride: 8
+              }
+          }
+      }
+      input_stream_handler {
+        input_stream_handler: "SyncSetInputStreamHandler",
+        options {
+          [mediapipe.SyncSetInputStreamHandlerOptions.ext] {
+            sync_set {
+              tag_index: "LOOPBACK:0"
+            }
+          }
+        }
+      }
+    }
+    ```
+
+**Note that the following options are ignored in Stateful servables (so in deployments on NPU): cache_size, dynamic_split_fuse, max_num_batched_tokens, max_num_seq, enable_prefix_caching, cache_eviction_config, sparse_attention_config**
 
 ### Output parsing settings
 
@@ -190,6 +281,7 @@ __Tool parsers:__
 - `llama3`
 - `phi4`
 - `mistral`
+- `devstral`
 - `gptoss`
 - `qwen3coder`
 
@@ -197,7 +289,7 @@ __Reasoning parsers:__
 - `qwen3`
 
 Note that using `tools` might require a chat template other than the original. 
-We recommend using templates from the [vLLM repository](https://github.com/vllm-project/vllm/tree/main/examples) for `hermes3`, `llama3`, `phi4`, `mistral`, `gptoss`, and `qwen3coder` models (if available). Save the selected template as `chat_template.jinja` in the model directory and it will be used instead of the default one. If a template is not available for your model, please refer to the model's documentation or use the default template provided by the model server.
+We recommend using templates from the [vLLM repository](https://github.com/vllm-project/vllm/tree/main/examples) for `hermes3`, `llama3`, `phi4`, `mistral`, `devstral`, `gptoss`, and `qwen3coder` models (if available). Save the selected template as `chat_template.jinja` in the model directory and it will be used instead of the default one. If a template is not available for your model, please refer to the model's documentation or use the default template provided by the model server.
 
 When `tool_parser` is used, it's possible to leverage tool guided generation with `enable_tool_guided_generation` option. That setting pushes the model to generate tool calls that matches the schemas specified in the `tools`.
 
@@ -214,7 +306,7 @@ The LLM calculator config can also restrict the range of sampling parameters in 
 As mentioned above, in LLM pipelines, `plugin_config` map holds not only OpenVINO device plugin options, but also additional pipeline configuration. Those additional options are:
 
 - `prompt_lookup` - if set to `true`, pipeline will use [prompt lookup decoding](https://github.com/apoorvumang/prompt-lookup-decoding) technique for sampling new tokens. Example: `plugin_config: '{"prompt_lookup": true}'`. With prompt lookup enabled it is recommended to disable `dynamic_split_fuse` and set `max_num_batched_tokens` to be higher than model context length.
-- `MAX_PROMPT_LEN` (**important for NPU users**) - NPU plugin sets a limitation on prompt (1024 tokens by default), this options allows modifying this value. Example: `plugin_config: '{"MAX_PROMPT_LEN": 2048}'`
+- `MAX_PROMPT_LEN` (**important for NPU users**) - NPU plugin sets a limitation on prompt (1024 tokens by default), this options allows modifying this value. Example: `plugin_config: '{"DEVICE_PROPERTIES": { "NPU": {"MAX_PROMPT_LEN": 2048}}}'`
 
 
 ## Canceling the generation

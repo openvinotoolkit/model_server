@@ -18,6 +18,7 @@
 #include <filesystem>
 #include <limits>
 #include <regex>
+#include <utility>
 #include <thread>
 #include <vector>
 
@@ -49,11 +50,21 @@ const size_t DEFAULT_GRPC_MEMORY_QUOTA = (size_t)2 * 1024 * 1024 * 1024;  // 2GB
 const uint64_t MAX_REST_WORKERS = 10'000;
 
 Config& Config::parse(int argc, char** argv) {
-    ovms::CLIParser p;
+    ovms::CLIParser parser;
     ovms::ServerSettingsImpl serverSettings;
     ovms::ModelsSettingsImpl modelsSettings;
-    p.parse(argc, argv);
-    p.prepare(&serverSettings, &modelsSettings);
+    auto successOrExit = parser.parse(argc, argv);
+    // Check for error in parsing
+    if (std::holds_alternative<std::pair<int, std::string>>(successOrExit)) {
+        auto printAndExit = std::get<std::pair<int, std::string>>(successOrExit);
+        if (printAndExit.first > 0) {
+            std::cerr << printAndExit.second;
+        } else {
+            std::cout << printAndExit.second;
+        }
+        exit(printAndExit.first);
+    }
+    parser.prepare(&serverSettings, &modelsSettings);
     if (!this->parse(&serverSettings, &modelsSettings))
         exit(OVMS_EX_USAGE);
     return *this;
@@ -110,7 +121,7 @@ bool Config::check_hostname_or_ip(const std::string& input) {
 }
 
 bool Config::validateUserSettingsInConfigAddRemoveModel(const ModelsSettingsImpl& modelsSettings) {
-    static const std::vector<std::string> allowedUserSettings = {"model_name", "model_path"};
+    static const std::vector<std::string> allowedUserSettings = {"model_name", "model_path", "config_path"};
     std::vector<std::string> usedButDisallowedUserSettings;
     for (const std::string& userSetting : modelsSettings.userSetSingleModelArguments) {
         bool isAllowed = false;
@@ -268,16 +279,16 @@ bool Config::validate() {
         if (modelName().empty()) {
             std::cerr << "Set model_name with add_to_config/remove_from_config" << std::endl
                       << "Usage: " << std::endl
-                      << "  ovms --model_name <model_name> --model_repository_path <repo_path> --add_to_config <config_path>" << std::endl
-                      << "  ovms --model_name <model_name> --model_path <model_path> --add_to_config <config_path>" << std::endl
-                      << "  ovms --model_name <model_name> --remove_from_config <config_path>" << std::endl;
+                      << "  ovms --add_to_config --model_name <model_name> --model_repository_path <repo_path>--config_path <config_path>" << std::endl
+                      << "  ovms  --add_to_config --model_name <model_name> --model_path <model_path> --config_path <config_path>" << std::endl
+                      << "  ovms --remove_from_config --model_name <model_name> --config_path <config_path>" << std::endl;
             return false;
         }
         if (modelPath().empty() && this->serverSettings.exportConfigType == ENABLE_MODEL) {
             std::cerr << "Set model_name either with model_path or model_repository_path with add_to_config" << std::endl
                       << "Usage: " << std::endl
-                      << "  ovms --model_name <model_name> --model_repository_path <repo_path> --add_to_config <config_path>" << std::endl
-                      << "  ovms --model_name <model_name> --model_path <model_path> --add_to_config <config_path>" << std::endl;
+                      << "  ovms --add_to_config --model_name <model_name> --model_repository_path <repo_path>  --config_path <config_path>" << std::endl
+                      << "  ovms --add_to_config --model_name <model_name> --model_path <model_path> --config_path <config_path>" << std::endl;
             return false;
         }
 

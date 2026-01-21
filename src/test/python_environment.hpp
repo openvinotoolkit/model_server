@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2024 Intel Corporation
+// Copyright 2026 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,17 +13,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#pragma once
 
-syntax = "proto2";
-package mediapipe;
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
+#include <memory>
 
-import "mediapipe/framework/calculator.proto";
+#pragma warning(push)
+#pragma warning(disable : 6326 28182 6011 28020)
+#include <pybind11/embed.h>  // everything needed for embedding
+#pragma warning(pop)
 
-message EmbeddingsCalculatorOptions {
-  extend mediapipe.CalculatorOptions {
-    // https://github.com/google/mediapipe/issues/634 have to be unique in app
-    // no rule to obtain this
-    optional EmbeddingsCalculatorOptions ext = 1134737;
-    }
-    optional bool normalize_embeddings = 1 [default = true];
-}
+namespace py = pybind11;
+
+class PythonEnvironment : public testing::Environment {
+    mutable std::unique_ptr<py::gil_scoped_release> GILScopedRelease;
+
+public:
+    void SetUp() override;
+    void TearDown() override;
+    void releaseGILFromThisThread() const;
+    void reacquireGILForThisThread() const;
+};

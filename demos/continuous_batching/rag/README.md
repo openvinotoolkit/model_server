@@ -14,9 +14,9 @@ docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/mo
 docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --pull --model_repository_path /models --source_model OpenVINO/bge-base-en-v1.5-fp16-ov --task embeddings
 docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --pull --model_repository_path /models --source_model OpenVINO/bge-reranker-base-fp16-ov --task rerank
 
-docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --add_to_config /models --model_name OpenVINO/Qwen3-8B-int4-ov --model_path OpenVINO/Qwen3-8B-int4-ov
-docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --add_to_config /models --model_name OpenVINO/bge-base-en-v1.5-fp16-ov --model_path OpenVINO/bge-base-en-v1.5-fp16-ov
-docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --add_to_config /models --model_name OpenVINO/bge-reranker-base-fp16-ov --model_path OpenVINO/bge-reranker-base-fp16-ov
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --add_to_config --config_path /models/config.json --model_name OpenVINO/Qwen3-8B-int4-ov --model_path OpenVINO/Qwen3-8B-int4-ov
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --add_to_config --config_path /models/config.json --model_name OpenVINO/bge-base-en-v1.5-fp16-ov --model_path OpenVINO/bge-base-en-v1.5-fp16-ov
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --add_to_config --config_path /models/config.json --model_name OpenVINO/bge-reranker-base-fp16-ov --model_path OpenVINO/bge-reranker-base-fp16-ov
 ```
 :::
 
@@ -30,9 +30,9 @@ ovms --pull --model_repository_path models --source_model OpenVINO/Qwen3-8B-int4
 ovms --pull --model_repository_path models --source_model OpenVINO/bge-base-en-v1.5-fp16-ov --task embeddings
 ovms --pull --model_repository_path models --source_model OpenVINO/bge-reranker-base-fp16-ov --task rerank
 
-ovms --add_to_config models --model_name OpenVINO/Qwen3-8B-int4-ov --model_path OpenVINO/Qwen3-8B-int4-ov
-ovms --add_to_config models --model_name OpenVINO/bge-base-en-v1.5-fp16-ov --model_path OpenVINO/bge-base-en-v1.5-fp16-ov
-ovms --add_to_config models --model_name OpenVINO/bge-reranker-base-fp16-ov --model_path OpenVINO/bge-reranker-base-fp16-ov
+ovms --add_to_config --config_path models/config.json --model_name OpenVINO/Qwen3-8B-int4-ov --model_path OpenVINO/Qwen3-8B-int4-ov
+ovms --add_to_config --config_path models/config.json --model_name OpenVINO/bge-base-en-v1.5-fp16-ov --model_path OpenVINO/bge-base-en-v1.5-fp16-ov
+ovms --add_to_config --config_path models/config.json --model_name OpenVINO/bge-reranker-base-fp16-ov --model_path OpenVINO/bge-reranker-base-fp16-ov
 ```
 :::
 
@@ -46,9 +46,9 @@ ovms --pull --model_repository_path c:\models --source_model OpenVINO/Qwen3-8B-i
 ovms --pull --model_repository_path c:\models --source_model OpenVINO/bge-base-en-v1.5-fp16-ov --task embeddings
 ovms --pull --model_repository_path c:\models --source_model OpenVINO/bge-reranker-base-fp16-ov --task rerank
 
-ovms --add_to_config c:\models --model_name OpenVINO/Qwen3-8B-int4-ov --model_path OpenVINO/Qwen3-8B-int4-ov
-ovms --add_to_config c:\models --model_name OpenVINO/bge-base-en-v1.5-fp16-ov --model_path OpenVINO/bge-base-en-v1.5-fp16-ov
-ovms --add_to_config c:\models --model_name OpenVINO/bge-reranker-base-fp16-ov --model_path OpenVINO/bge-reranker-base-fp16-ov
+ovms --add_to_config --config_path c:\models\config.json --model_name OpenVINO/Qwen3-8B-int4-ov --model_path OpenVINO/Qwen3-8B-int4-ov
+ovms --add_to_config --config_path c:\models\config.json --model_name OpenVINO/bge-base-en-v1.5-fp16-ov --model_path OpenVINO/bge-base-en-v1.5-fp16-ov
+ovms --add_to_config --config_path c:\models\config.json --model_name OpenVINO/bge-reranker-base-fp16-ov --model_path OpenVINO/bge-reranker-base-fp16-ov
 ```
 :::
 ::::
@@ -60,17 +60,14 @@ ovms --add_to_config c:\models --model_name OpenVINO/bge-reranker-base-fp16-ov -
 :::{tab-item} With Docker
 **Required:** Docker Engine installed
 ```bash
-git clone https://github.com/openvinotoolkit/model_server.git
-cd model_server
-make python_image
 mkdir models
-docker run --user $(id -u):$(id -g) -e HF_HOME=/hf_home/cache --rm -v $(pwd)/models:/models:rw -v /opt/home/user/.cache/huggingface/:/hf_home/cache openvino/model_server:py --pull --model_repository_path /models --source_model meta-llama/Meta-Llama-3-8B-Instruct --task text_generation --weight-format int8
-docker run --user $(id -u):$(id -g) -e HF_HOME=/hf_home/cache --rm -v $(pwd)/models:/models:rw -v /opt/home/user/.cache/huggingface/:/hf_home/cache openvino/model_server:py --pull --model_repository_path /models --source_model Alibaba-NLP/gte-large-en-v1.5 --task embeddings --weight-format int8
-docker run --user $(id -u):$(id -g) -e HF_HOME=/hf_home/cache --rm -v $(pwd)/models:/models:rw -v /opt/home/user/.cache/huggingface/:/hf_home/cache openvino/model_server:py --pull --model_repository_path /models --source_model BAAI/bge-reranker-large --task rerank --weight-format int8
+docker run --user $(id -u):$(id -g) -e HF_HOME=/hf_home/cache --rm -v $(pwd)/models:/models:rw -v /opt/home/user/.cache/huggingface/:/hf_home/cache openvino/model_server:latest-py --pull --model_repository_path /models --source_model meta-llama/Meta-Llama-3-8B-Instruct --task text_generation --weight-format int8
+docker run --user $(id -u):$(id -g) -e HF_HOME=/hf_home/cache --rm -v $(pwd)/models:/models:rw -v /opt/home/user/.cache/huggingface/:/hf_home/cache openvino/model_server:latest-py --pull --model_repository_path /models --source_model Alibaba-NLP/gte-large-en-v1.5 --task embeddings --weight-format int8
+docker run --user $(id -u):$(id -g) -e HF_HOME=/hf_home/cache --rm -v $(pwd)/models:/models:rw -v /opt/home/user/.cache/huggingface/:/hf_home/cache openvino/model_server:latest-py --pull --model_repository_path /models --source_model BAAI/bge-reranker-large --task rerank --weight-format int8
 
-docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:py --add_to_config /models --model_name meta-llama/Meta-Llama-3-8B-Instruct --model_path meta-llama/Meta-Llama-3-8B-Instruct --weight-format int8
-docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:py --add_to_config /models --model_name Alibaba-NLP/gte-large-en-v1.5 --model_path Alibaba-NLP/gte-large-en-v1.5 --weight-format int8
-docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:py --add_to_config /models --model_name BAAI/bge-reranker-large --model_path BAAI/bge-reranker-large --weight-format int8
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest-py --add_to_config --config_path /models/config.json --model_name meta-llama/Meta-Llama-3-8B-Instruct --model_path meta-llama/Meta-Llama-3-8B-Instruct --weight-format int8
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest-py --add_to_config --config_path /models/config.json --model_name Alibaba-NLP/gte-large-en-v1.5 --model_path Alibaba-NLP/gte-large-en-v1.5 --weight-format int8
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest-py --add_to_config --config_path /models/config.json --model_name BAAI/bge-reranker-large --model_path BAAI/bge-reranker-large --weight-format int8
 ```
 :::
 
@@ -78,7 +75,7 @@ docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/mo
 **Required:** OpenVINO Model Server package - see [deployment instructions](../../../docs/deploying_server_baremetal.md) for details.
 
 ```bat
-pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/demos/common/export_models/requirements.txt
+pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
 pip3 install -q -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/demos/continuous_batching/rag/requirements.txt
 mkdir models
 set HF_HOME=C:\hf_home\cache # export HF_HOME=/hf_home/cache if using linux
@@ -86,9 +83,9 @@ ovms --pull --model_repository_path models --source_model meta-llama/Meta-Llama-
 ovms --pull --model_repository_path models --source_model Alibaba-NLP/gte-large-en-v1.5 --task embeddings --weight-format int8
 ovms --pull --model_repository_path models --source_model BAAI/bge-reranker-large --task rerank --weight-format int8
 
-ovms --add_to_config models --model_name meta-llama/Meta-Llama-3-8B-Instruct --model_path meta-llama/Meta-Llama-3-8B-Instruct
-ovms --add_to_config models --model_name Alibaba-NLP/gte-large-en-v1.5 --model_path Alibaba-NLP/gte-large-en-v1.5
-ovms --add_to_config models --model_name BAAI/bge-reranker-large --model_path BAAI/bge-reranker-large
+ovms --add_to_config --config_path /models/config.json --model_name meta-llama/Meta-Llama-3-8B-Instruct --model_path meta-llama/Meta-Llama-3-8B-Instruct
+ovms --add_to_config --config_path /models/config.json --model_name Alibaba-NLP/gte-large-en-v1.5 --model_path Alibaba-NLP/gte-large-en-v1.5
+ovms --add_to_config --config_path /models/config.json --model_name BAAI/bge-reranker-large --model_path BAAI/bge-reranker-large
 ```
 :::
 ::::
@@ -99,8 +96,8 @@ ovms --add_to_config models --model_name BAAI/bge-reranker-large --model_path BA
 Use this procedure for all the models outside of OpenVINO organization in HuggingFace Hub.
 
 ```console
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/demos/common/export_models/export_model.py -o export_model.py
-pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/demos/common/export_models/requirements.txt
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/export_model.py -o export_model.py
+pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
 
 mkdir models
 python export_model.py text_generation --source_model meta-llama/Meta-Llama-3-8B-Instruct --weight-format int8 --kv_cache_precision u8 --config_file_path models/config.json --model_repository_path models

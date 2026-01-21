@@ -23,12 +23,13 @@ Start using OpenVINO Model Server with a fast-forward serving example from the [
 Read [release notes](https://github.com/openvinotoolkit/model_server/releases) to find out what’s new.
 
 ### Key features:
+- **[NEW]** [Speech Generation and Speech Recognition with OpenAI API](https://docs.openvino.ai/2025/model-server/ovms_demos_audio.html)
 - **[NEW]** [Support for AI agents](https://docs.openvino.ai/2025/model-server/ovms_demos_continuous_batching_agent.html)
 - **[NEW]** [Image generation compatible with OpenAI API](https://docs.openvino.ai/2025/model-server/ovms_demos_image_generation.html)
-- **[NEW]** Native Windows support. Check updated [deployment guide](https://docs.openvino.ai/2025/model-server/ovms_docs_deploying_server_baremetal.html)
-- **[NEW]** [Text Embeddings compatible with OpenAI API](https://docs.openvino.ai/2025/model-server/ovms_demos_embeddings.html)
-- **[NEW]** [Reranking compatible with Cohere API](https://docs.openvino.ai/2025/model-server/ovms_demos_rerank.html)
-- **[NEW]** [Efficient Text Generation via OpenAI API](https://docs.openvino.ai/2025/model-server/ovms_demos_continuous_batching.html)
+- Native Windows support. Check updated [deployment guide](https://docs.openvino.ai/2025/model-server/ovms_docs_deploying_server_baremetal.html)
+- [Text Embeddings compatible with OpenAI API](https://docs.openvino.ai/2025/model-server/ovms_demos_embeddings.html)
+- [Reranking compatible with Cohere API](https://docs.openvino.ai/2025/model-server/ovms_demos_rerank.html)
+- [Efficient Text Generation via OpenAI API](https://docs.openvino.ai/2025/model-server/ovms_demos_continuous_batching.html)
 - [Python code execution](docs/python_support/reference.md)
 - [gRPC streaming](docs/streaming_endpoints.md)
 - [MediaPipe graphs serving](docs/mediapipe.md)

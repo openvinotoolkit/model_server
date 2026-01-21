@@ -104,15 +104,16 @@ Status MediapipeFactory::reloadDefinition(const std::string& name,
     return mgd->reload(manager, config);
 }
 
-Status MediapipeFactory::create(std::shared_ptr<MediapipeGraphExecutor>& pipeline,
+Status MediapipeFactory::create(std::unique_ptr<MediapipeGraphExecutor>& pipeline,
     const std::string& name,
     ModelManager& manager) const {
     std::shared_lock lock(definitionsMtx);
-    if (!definitionExists(name)) {
+    auto it = definitions.find(name);
+    if (it == definitions.end()) {
         SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Mediapipe with requested name: {} does not exist", name);
         return StatusCode::MEDIAPIPE_DEFINITION_NAME_MISSING;
     }
-    auto& definition = *definitions.at(name);
+    auto& definition = *it->second;
     return definition.create(pipeline);
 }
 

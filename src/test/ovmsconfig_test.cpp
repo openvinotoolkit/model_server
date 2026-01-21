@@ -329,7 +329,7 @@ TEST_F(OvmsConfigDeathTest, NegativeListModelsWithoutModelRepositoryPath) {
 TEST_F(OvmsConfigDeathTest, NegativeInvalidAPIKeyFile) {
     char* n_argv[] = {"ovms", "--config_path", "/path1", "--api_key_file", "/wrong/dir", "--port", "44"};
     int arg_count = 7;
-    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "Error reading API key file: Unable to open file \"/wrong/dir\"");
+    EXPECT_THROW(ovms::Config::instance().parse(arg_count, n_argv), std::filesystem::filesystem_error);
 }
 
 TEST_F(OvmsConfigDeathTest, negativeMissingDashes) {
@@ -700,8 +700,9 @@ TEST_F(OvmsConfigDeathTest, modifyModelConfigEnableButMissingModelPath) {
         "--model_name",
         "name",
         "--add_to_config",
+        "--config_path",
         "/config/path"};
-    int arg_count = 5;
+    int arg_count = 6;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "Set model_name either with model_path or model_repository_path with add_to_config");
 }
 
@@ -711,12 +712,13 @@ TEST_F(OvmsConfigDeathTest, modifyModelConfigEnableWithBadAdditionalParameters) 
         "--model_name",
         "name",
         "--add_to_config",
+        "--config_path",
         "/config/path",
         "--target_device",
         "GPU",
         "--model_path",
         "/model/path"};
-    int arg_count = 9;
+    int arg_count = 10;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "Adding or removing models from the configuration file, allows passing only model_name and model_path parameters. Invalid parameters passed: target_device,");
 }
 
@@ -724,8 +726,9 @@ TEST_F(OvmsConfigDeathTest, modifyModelConfigDisableMissingModelName) {
     char* n_argv[] = {
         "ovms",
         "--remove_from_config",
+        "--config_path",
         "/config/path"};
-    int arg_count = 3;
+    int arg_count = 4;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "Set model_name with add_to_config/remove_from_config");
 }
 
@@ -735,8 +738,9 @@ TEST_F(OvmsConfigDeathTest, modifyModelConfigEnableMissingModelName) {
         "--model_repository_path",
         "/repo/path",
         "--add_to_config",
+        "--config_path",
         "/config/path"};
-    int arg_count = 5;
+    int arg_count = 6;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "Set model_name with add_to_config/remove_from_config");
 }
 
@@ -746,8 +750,9 @@ TEST_F(OvmsConfigDeathTest, modifyModelConfigDisableMissingModelNameWithPath) {
         "--model_path",
         "/path1",
         "--add_to_config",
+        "--config_path",
         "/config/path"};
-    int arg_count = 5;
+    int arg_count = 6;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "Set model_name with add_to_config/remove_from_config");
 }
 TEST_F(OvmsConfigDeathTest, hfBadImageGenerationGraphNoPull) {
@@ -881,13 +886,14 @@ TEST_F(OvmsConfigDeathTest, simultaneousAddToConfigAndListModels) {
     char* n_argv[] = {
         (char*)"ovms",
         (char*)"--add_to_config",
+        (char*)"--config_path",
         (char*)configPath.c_str(),
         (char*)"--model_name",
         (char*)modelName.c_str(),
         (char*)"--model_path",
         (char*)modelPath.c_str(),
         "--list_models"};
-    int arg_count = 8;
+    int arg_count = 9;
 
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "--list_models cannot be used with --add_to_config") << createCmd(arg_count, n_argv) << buffer.str();
 }
@@ -898,48 +904,14 @@ TEST_F(OvmsConfigDeathTest, simultaneousRemoveFromConfigAndListModels) {
     char* n_argv[] = {
         (char*)"ovms",
         (char*)"--remove_from_config",
+        (char*)"--config_path",
         (char*)configPath.c_str(),
         (char*)"--model_name",
         (char*)modelName.c_str(),
         "--list_models"};
-    int arg_count = 6;
-
-    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "--list_models cannot be used with --remove_from_config") << createCmd(arg_count, n_argv) << buffer.str();
-}
-
-TEST_F(OvmsConfigDeathTest, simultaneousAddToConfigAndRepositroyPath) {
-    std::string modelName = "name1";
-    std::string modelPath = "/path/for/name1";
-    std::string configPath = "test/repository";
-    char* n_argv[] = {
-        (char*)"ovms",
-        (char*)"--add_to_config",
-        (char*)configPath.c_str(),
-        (char*)"--model_name",
-        (char*)modelName.c_str(),
-        (char*)"--model_path",
-        (char*)modelPath.c_str(),
-        "--model_repository_path",
-        (char*)modelPath.c_str()};
-    int arg_count = 9;
-
-    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "--model_repository_path cannot be used with --model_path") << createCmd(arg_count, n_argv) << buffer.str();
-}
-
-TEST_F(OvmsConfigDeathTest, simultaneousRemoveFromConfigAndRepositroyPath) {
-    std::string modelName = "name1";
-    std::string configPath = "test/repository";
-    char* n_argv[] = {
-        (char*)"ovms",
-        (char*)"--remove_from_config",
-        (char*)configPath.c_str(),
-        (char*)"--model_name",
-        (char*)modelName.c_str(),
-        (char*)"--model_repository_path",
-        (char*)configPath.c_str()};
     int arg_count = 7;
 
-    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "--model_repository_path cannot be used with --remove_from_config") << createCmd(arg_count, n_argv) << buffer.str();
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "--list_models cannot be used with --remove_from_config") << createCmd(arg_count, n_argv) << buffer.str();
 }
 
 TEST_F(OvmsConfigDeathTest, simultaneousRemoveFromConfigAndModelPath) {
@@ -948,12 +920,13 @@ TEST_F(OvmsConfigDeathTest, simultaneousRemoveFromConfigAndModelPath) {
     char* n_argv[] = {
         (char*)"ovms",
         (char*)"--remove_from_config",
+        (char*)"--config_path",
         (char*)configPath.c_str(),
         (char*)"--model_name",
         (char*)modelName.c_str(),
         (char*)"--model_path",
         (char*)configPath.c_str()};
-    int arg_count = 7;
+    int arg_count = 8;
 
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "--model_path cannot be used with --remove_from_config") << createCmd(arg_count, n_argv) << buffer.str();
 }
@@ -972,13 +945,14 @@ TEST_F(OvmsConfigDeathTest, simultaneousPullAndAdd) {
         "--task",
         "text_generation",
         (char*)"--add_to_config",
+        (char*)"--config_path",
         (char*)configPath.c_str(),
         (char*)"--model_name",
         (char*)modelName.c_str(),
         (char*)"--model_path",
         (char*)modelPath.c_str(),
     };
-    int arg_count = 14;
+    int arg_count = 15;
 
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "--add_to_config cannot be used with --pull or --task") << createCmd(arg_count, n_argv) << buffer.str();
 }
@@ -996,11 +970,12 @@ TEST_F(OvmsConfigDeathTest, simultaneousPullAndRemove) {
         "--task",
         "text_generation",
         (char*)"--remove_from_config",
+        (char*)"--config_path",
         (char*)configPath.c_str(),
         (char*)"--model_name",
         (char*)modelName.c_str(),
     };
-    int arg_count = 12;
+    int arg_count = 13;
 
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "--remove_from_config cannot be used with --pull or --task") << createCmd(arg_count, n_argv) << buffer.str();
 }
@@ -1117,7 +1092,7 @@ TEST(OvmsGraphConfigTest, positiveSomeChangedTextGeneration) {
     ASSERT_EQ(exportSettings.targetDevice, "NPU");
     ASSERT_EQ(exportSettings.pluginConfig.kvCachePrecision.has_value(), false);
     ASSERT_EQ(graphSettings.enablePrefixCaching, "true");
-    ASSERT_EQ(graphSettings.cacheSize, 10);
+    ASSERT_EQ(graphSettings.cacheSize, 0);
     ASSERT_EQ(graphSettings.maxNumBatchedTokens.has_value(), false);
     ASSERT_EQ(graphSettings.dynamicSplitFuse, "true");
     ASSERT_EQ(graphSettings.draftModelDirName.has_value(), false);
@@ -1153,7 +1128,7 @@ TEST(OvmsGraphConfigTest, positiveTaskTextGen) {
     ASSERT_EQ(exportSettings.targetDevice, "CPU");
     ASSERT_EQ(exportSettings.pluginConfig.kvCachePrecision.has_value(), false);
     ASSERT_EQ(graphSettings.enablePrefixCaching, "true");
-    ASSERT_EQ(graphSettings.cacheSize, 10);
+    ASSERT_EQ(graphSettings.cacheSize, 0);
     ASSERT_EQ(graphSettings.maxNumBatchedTokens.has_value(), false);
     ASSERT_EQ(graphSettings.dynamicSplitFuse, "true");
     ASSERT_EQ(graphSettings.draftModelDirName.has_value(), false);
@@ -1333,7 +1308,7 @@ TEST(OvmsGraphConfigTest, positiveDefault) {
     ASSERT_EQ(exportSettings.targetDevice, "CPU");
     ASSERT_EQ(exportSettings.pluginConfig.kvCachePrecision.has_value(), false);
     ASSERT_EQ(graphSettings.enablePrefixCaching, "true");
-    ASSERT_EQ(graphSettings.cacheSize, 10);
+    ASSERT_EQ(graphSettings.cacheSize, 0);
     ASSERT_EQ(graphSettings.maxNumBatchedTokens.has_value(), false);
     ASSERT_EQ(graphSettings.dynamicSplitFuse, "true");
     ASSERT_EQ(graphSettings.draftModelDirName.has_value(), false);
@@ -1373,7 +1348,7 @@ TEST(OvmsGraphConfigTest, positiveDefaultStart) {
     ASSERT_EQ(exportSettings.targetDevice, "CPU");
     ASSERT_EQ(exportSettings.pluginConfig.kvCachePrecision.has_value(), false);
     ASSERT_EQ(graphSettings.enablePrefixCaching, "true");
-    ASSERT_EQ(graphSettings.cacheSize, 10);
+    ASSERT_EQ(graphSettings.cacheSize, 0);
     ASSERT_EQ(graphSettings.maxNumBatchedTokens.has_value(), false);
     ASSERT_EQ(graphSettings.dynamicSplitFuse, "true");
     ASSERT_EQ(graphSettings.draftModelDirName.has_value(), false);
@@ -2527,6 +2502,7 @@ TEST(OvmsConfigManipulationTest, positiveEnableModel) {
     char* n_argv[] = {
         (char*)"ovms",
         (char*)"--add_to_config",
+        (char*)"--config_path",
         (char*)configPath.c_str(),
         (char*)"--model_name",
         (char*)modelName.c_str(),
@@ -2534,7 +2510,7 @@ TEST(OvmsConfigManipulationTest, positiveEnableModel) {
         (char*)modelPath.c_str(),
     };
 
-    int arg_count = 7;
+    int arg_count = 8;
     ConstructorEnabledConfig config;
     config.parse(arg_count, n_argv);
     auto& serverSettigns = config.getServerSettings();
@@ -2553,6 +2529,7 @@ TEST(OvmsConfigManipulationTest, positiveEnableModelRepoParam) {
     char* n_argv[] = {
         (char*)"ovms",
         (char*)"--add_to_config",
+        (char*)"--config_path",
         (char*)configPath.c_str(),
         (char*)"--model_name",
         (char*)modelName.c_str(),
@@ -2560,7 +2537,7 @@ TEST(OvmsConfigManipulationTest, positiveEnableModelRepoParam) {
         (char*)modelPath.c_str(),
     };
 
-    int arg_count = 7;
+    int arg_count = 8;
     ConstructorEnabledConfig config;
     config.parse(arg_count, n_argv);
     auto& serverSettigns = config.getServerSettings();
@@ -2578,12 +2555,13 @@ TEST(OvmsConfigManipulationTest, positiveDisableModel) {
     char* n_argv[] = {
         (char*)"ovms",
         (char*)"--remove_from_config",
+        (char*)"--config_path",
         (char*)configPath.c_str(),
         (char*)"--model_name",
         (char*)modelName.c_str(),
     };
 
-    int arg_count = 5;
+    int arg_count = 6;
     ConstructorEnabledConfig config;
     config.parse(arg_count, n_argv);
     auto& serverSettigns = config.getServerSettings();

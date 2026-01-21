@@ -58,17 +58,12 @@ protected:
     std::string jinjaConfigFilePath;
     std::shared_ptr<GenAiServable> servable;
 
-    static void SetUpTestSuite() {
-        py::initialize_interpreter();
-    }
-
-    static void TearDownTestSuite() {
-        py::finalize_interpreter();
-    }
-
     void LoadTemplateProcessor() {
         servable = std::make_shared<ContinuousBatchingServable>();
         servable->getProperties()->modelsPath = directoryPath;
+        servable->getProperties()->tokenizer = ov::genai::Tokenizer(directoryPath);
+        std::cout << "Chat template to be used: \n"
+                  << servable->getProperties()->tokenizer.get_original_chat_template() << std::endl;
         ExtraGenerationInfo extraGenInfo = GenAiServableInitializer::readExtraGenerationInfo(servable->getProperties(), directoryPath);
         GenAiServableInitializer::loadPyTemplateProcessor(servable->getProperties(), extraGenInfo);
     }
@@ -77,9 +72,30 @@ protected:
         TestWithTempDir::SetUp();
         tokenizerConfigFilePath = directoryPath + "/tokenizer_config.json";
         jinjaConfigFilePath = directoryPath + "/chat_template.jinja";
+
+        // We need real model tokenizer and detokenizer as we rely on them to load chat template properly
+        std::string realModelPath = getGenericFullPathForSrcTest("/ovms/src/test/llm_testing/facebook/opt-125m");
+
+        std::string srcTokenizerPath = ovms::FileSystem::joinPath({realModelPath, "openvino_tokenizer.xml"});
+        std::string dstTokenizerPath = ovms::FileSystem::joinPath({directoryPath, "openvino_tokenizer.xml"});
+        std::filesystem::copy_file(srcTokenizerPath, dstTokenizerPath, std::filesystem::copy_options::overwrite_existing);
+
+        std::string srcTokenizerBinPath = ovms::FileSystem::joinPath({realModelPath, "openvino_tokenizer.bin"});
+        std::string dstTokenizerBinPath = ovms::FileSystem::joinPath({directoryPath, "openvino_tokenizer.bin"});
+        std::filesystem::copy_file(srcTokenizerBinPath, dstTokenizerBinPath, std::filesystem::copy_options::overwrite_existing);
+
+        std::string srcDetokenizerPath = ovms::FileSystem::joinPath({realModelPath, "openvino_detokenizer.xml"});
+        std::string dstDetokenizerPath = ovms::FileSystem::joinPath({directoryPath, "openvino_detokenizer.xml"});
+        std::filesystem::copy_file(srcDetokenizerPath, dstDetokenizerPath, std::filesystem::copy_options::overwrite_existing);
+
+        std::string srcDetokenizerBinPath = ovms::FileSystem::joinPath({realModelPath, "openvino_detokenizer.bin"});
+        std::string dstDetokenizerBinPath = ovms::FileSystem::joinPath({directoryPath, "openvino_detokenizer.bin"});
+        std::filesystem::copy_file(srcDetokenizerBinPath, dstDetokenizerBinPath, std::filesystem::copy_options::overwrite_existing);
     }
 
     void TearDown() {
+        servable.reset();
+        std::filesystem::remove_all(directoryPath);
         TestWithTempDir::TearDown();
     }
 
@@ -90,9 +106,15 @@ public:
     bool CreateJinjaConfig(std::string& fileContents) {
         return createConfigFileWithContent(fileContents, jinjaConfigFilePath);
     }
+    void CopyDefaultChatTemplate() {
+        std::string srcFilePath = getGenericFullPathForSrcTest("/ovms/src/test/llm_testing/facebook/opt-125m/chat_template.jinja");
+        std::string dstFilePath = ovms::FileSystem::joinPath({directoryPath, "chat_template.jinja"});
+        std::filesystem::copy_file(srcFilePath, dstFilePath, std::filesystem::copy_options::overwrite_existing);
+    }
 };
 
 TEST_F(LLMChatTemplateTest, ChatTemplateEmptyBody) {
+    CopyDefaultChatTemplate();
     LoadTemplateProcessor();
     std::string finalPrompt = "";
     std::string payloadBody = "";
@@ -102,6 +124,7 @@ TEST_F(LLMChatTemplateTest, ChatTemplateEmptyBody) {
 }
 
 TEST_F(LLMChatTemplateTest, ChatTemplateEmptyMessage) {
+    CopyDefaultChatTemplate();
     LoadTemplateProcessor();
     std::string finalPrompt = "";
     std::string payloadBody = R"(
@@ -116,6 +139,7 @@ TEST_F(LLMChatTemplateTest, ChatTemplateEmptyMessage) {
 }
 
 TEST_F(LLMChatTemplateTest, ChatTemplateMessageWithEmptyObject) {
+    CopyDefaultChatTemplate();
     LoadTemplateProcessor();
     std::string finalPrompt = "";
     std::string payloadBody = R"(
@@ -130,6 +154,7 @@ TEST_F(LLMChatTemplateTest, ChatTemplateMessageWithEmptyObject) {
 }
 
 TEST_F(LLMChatTemplateTest, ChatTemplateDefault) {
+    CopyDefaultChatTemplate();
     LoadTemplateProcessor();
     std::string finalPrompt = "";
     std::string payloadBody = R"(
@@ -143,6 +168,7 @@ TEST_F(LLMChatTemplateTest, ChatTemplateDefault) {
 }
 
 TEST_F(LLMChatTemplateTest, ChatTemplateMultiMessage) {
+    CopyDefaultChatTemplate();
     LoadTemplateProcessor();
     std::string finalPrompt = "";
     std::string payloadBody = R"(
@@ -156,6 +182,7 @@ TEST_F(LLMChatTemplateTest, ChatTemplateMultiMessage) {
 }
 
 TEST_F(LLMChatTemplateTest, ChatTemplateComplexMessage) {
+    CopyDefaultChatTemplate();
     LoadTemplateProcessor();
     std::string finalPrompt = "";
     std::string payloadBody = R"(

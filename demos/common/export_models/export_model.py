@@ -44,7 +44,7 @@ parser_text.add_argument('--enable_prefix_caching', action='store_true', help='T
 parser_text.add_argument('--disable_dynamic_split_fuse', action='store_false', help='The maximum number of tokens that can be batched together.', dest='dynamic_split_fuse')
 parser_text.add_argument('--max_num_batched_tokens', default=None, help='empty or integer. The maximum number of tokens that can be batched together.', dest='max_num_batched_tokens')
 parser_text.add_argument('--max_num_seqs', default=None, help='256 by default. The maximum number of sequences that can be processed together.', dest='max_num_seqs')
-parser_text.add_argument('--cache_size', default=10, type=int, help='KV cache size in GB', dest='cache_size')
+parser_text.add_argument('--cache_size', default=0, type=int, help='KV cache size in GB', dest='cache_size')
 parser_text.add_argument('--draft_source_model', required=False, default=None, help='HF model name or path to the local folder with PyTorch or OpenVINO draft model. '
                          'Using this option will create configuration for speculative decoding', dest='draft_source_model')
 parser_text.add_argument('--draft_model_name', required=False, default=None, help='Draft model name that should be used in the deployment. '
@@ -271,7 +271,7 @@ rerank_subconfig_template = """{
                 "name": "{{model_name}}_rerank_model",
                 "base_path": "rerank",
                 "target_device": "{{target_device|default("CPU", true)}}",
-                "plugin_config": '{ "NUM_STREAMS": "{{num_streams|default(1, true)}}" }'
+                "plugin_config": { "NUM_STREAMS": "{{num_streams|default(1, true)}}" }
             }
 	}
    ]
@@ -398,8 +398,8 @@ def export_text_generation_model(model_repository_path, source_model, model_name
         print("Exporting LLM model to ", llm_model_path)
         if not os.path.isdir(llm_model_path) or args['overwrite_models']:
             if task_parameters['target_device'] == 'NPU':
-                if precision != 'int4':
-                    print("NPU target device requires int4 precision. Changing to int4")
+                if precision != 'int4' and precision != 'nf4':
+                    print("NPU target device requires int4 or nf4 precision. Changing to int4")
                     precision = 'int4'
                 if task_parameters['extra_quantization_params'] == "":
                     print("Using default quantization parameters for NPU: --sym --ratio 1.0 --group-size -1")

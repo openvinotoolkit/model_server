@@ -96,7 +96,8 @@ struct GenAiServableProperties {
     ov::AnyMap pluginConfig;
     ov::AnyMap tokenizerPluginConfig;
     bool enableToolGuidedGeneration = false;
-    // Sampling limits
+    // Sampling
+    DecodingMethod decodingMethod;
     std::optional<uint32_t> maxTokensLimit;
     std::optional<uint32_t> maxModelLength;
     uint32_t bestOfLimit;
@@ -115,6 +116,15 @@ public:
     GenAiServable(const GenAiServable&) = delete;
     GenAiServable& operator=(const GenAiServable&) = delete;
     virtual ~GenAiServable() = default;
+
+    void determineDecodingMethod();
+
+    // ----------- Tokenize scenario ------------
+    /*
+    processTokenizeRequest method implements tokenization of the input text provided in executionContext payload.
+    Implementation fills executionContext response field with serialized tokenization result wrapped in json.
+    */
+    absl::Status processTokenizeRequest(std::shared_ptr<GenAiServableExecutionContext>& executionContext);
 
     // ----- Interface for derived classes -----
 

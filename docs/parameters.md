@@ -46,7 +46,7 @@ Configuration options for the server are defined only via command-line options a
 | `cpu_extension` | `string` | Optional path to a library with [custom layers implementation](https://docs.openvino.ai/2025/documentation/openvino-extensibility.html). |
 | `log_level` | `"DEBUG"/"INFO"/"ERROR"` | Serving logging level |
 | `log_path` | `string` | Optional path to the log file. |
-| `cache_dir` | `string` | Path to the model cache storage. Caching will be enabled if this parameter is defined or the default path /opt/cache exists |
+| `cache_dir` | `string` | Path (absolute or relative to the current directory) to the model cache storage. Caching will be enabled if this parameter is defined or the default path /opt/cache exists |
 | `grpc_channel_arguments` | `string` |   A comma separated list of arguments to be passed to the grpc server. (e.g. grpc.max_connection_age_ms=2000) |
 | `grpc_max_threads` | `string` |   Maximum number of threads which can be used by the grpc server. Default value depends on number of CPUs. |
 | `grpc_memory_quota` | `string` |   GRPC server buffer memory quota. Default value set to 2147483648 (2GB). |
@@ -68,8 +68,9 @@ Configuration options for the config management mode, which is used to manage co
 | `list_models`           | `NA`         | List all models paths in the model repository.                                                                                                      |
 | `model_name`            | `string`     | Name of the model as visible in serving. If `--model_path` is not provided, path is deduced from name.                                              |
 | `model_path`            | `string`     | Optional. Path to the model repository. If path is relative then it is prefixed with `--model_repository_path`.                                     |
-| `add_to_config`         | `string`     | Either path to directory containing config.json file for OVMS, or path to ovms configuration file, to add specific model to.                        |
-| `remove_from_config`    | `string`     | Either path to directory containing config.json file for OVMS, or path to ovms configuration file, to remove specific model from.                   |
+| `add_to_config`         | `NA`         | Directive to add new model to the config file.                                                                                                      |
+| `remove_from_config`    | `NA`     | Directive to remove model from the config file.                                                                                                     |
+| `config_path`           | `string`     | Path to the configuration file.                                                                                                                     |
 
 ## Pull mode configuration options
 
@@ -80,7 +81,7 @@ Shared configuration options for the pull, and pull & start mode. In the presenc
 | Option                      | Value format | Description                                                                                                   |
 |-----------------------------|--------------|---------------------------------------------------------------------------------------------------------------|
 | `--pull`                    | `NA`         | Runs the server in pull mode to download the model from the Hugging Face repository.                          |
-| `--source_model`            | `string`     | Name of the model in the Hugging Face repository. If not set, `model_name` is used. `Required`                |
+| `--source_model`            | `string`     | Name of the model in the Hugging Face repository. If not set, `model_name` is used.                           |
 | `--model_repository_path`   | `string`     | Directory where all required model files will be saved.                                                       |
 | `--model_name`              | `string`     | Name of the model as exposed externally by the server.                                                        |
 | `--target_device`           | `string`     | Device name to be used to execute inference operations. Accepted values are: `"CPU"/"GPU"/"MULTI"/"HETERO"`   |
@@ -108,6 +109,7 @@ There are also additional environment variables that may change the behavior of 
 | `HF_ENDPOINT`   | `string`     | Default: `https://huggingface.co`. For users in China, set to `https://www.modelscope.cn/models` or `https://hf-mirror.com` if needed.                                 |
 | `HF_TOKEN`      | `string`     | Authentication token required for accessing some models from Hugging Face.                                               |
 | `https_proxy`   | `string`     | If set, model downloads will use this proxy.                                                                             |
+| `OVMS_MODEL_REPOSITORY_PATH`   | `string`     | If set, it defines default value for `--model_repository_path` and `--config_path` as config.json in the model repository path   |
 
 ### Advanced Environment Variables for Pull Mode
 | Variable                            | Format  | Description                                                                                                |
@@ -125,7 +127,7 @@ Task specific parameters for different tasks (text generation/image generation/e
 | `--pipeline_type`                     | `string`     | Type of the pipeline to be used. Choices: `LM`, `LM_CB`, `VLM`, `VLM_CB`, `AUTO`. Default: `AUTO`.                         |
 | `--enable_prefix_caching`             | `bool`       | Enables algorithm to cache the prompt tokens. Default: true.                                                               |
 | `--max_num_batched_tokens`            | `integer`    | The maximum number of tokens that can be batched together.                                                                 |
-| `--cache_size`                        | `integer`    | Cache size in GB. Default: 10.                                                                                             |
+| `--cache_size`                        | `integer`    | KV Cache size in GB. Default: 0 which is a dynamic allocation.                              |
 | `--draft_source_model`                | `string`     | HF model name or path to the local folder with PyTorch or OpenVINO draft model.                                            |
 | `--dynamic_split_fuse`                | `bool`       | Enables dynamic split fuse algorithm. Default: true.                                                                       |
 | `--max_prompt_len`                    | `integer`    | Sets NPU specific property for maximum number of tokens in the prompt.                                                     |

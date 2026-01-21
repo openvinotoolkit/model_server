@@ -129,9 +129,9 @@ IF /I EXIST %bash_path% (
     echo [INFO] Msys installed in: %msys_path%
 )
 
-:: Set default USE_OV_BINARY if not set
-if "%USE_OV_BINARY%"=="" (
-    set "USE_OV_BINARY=1"
+:: Set default OV_USE_BINARY if not set
+if "%OV_USE_BINARY%"=="" (
+    set "OV_USE_BINARY=1"
 )
 
 set "genai_workspace=C:\\\\opt\\\\openvino\\\\runtime"
@@ -142,8 +142,8 @@ if "!output_user_root!" neq "opt" (
     if !errorlevel! neq 0 exit /b !errorlevel!
 )
 
-echo [INFO] USE_OV_BINARY=%USE_OV_BINARY%
-IF "%USE_OV_BINARY%"=="0" (
+echo [INFO] OV_USE_BINARY=%OV_USE_BINARY%
+IF "%OV_USE_BINARY%"=="0" (
     goto :install_openvino_from_src
 )
 
@@ -155,7 +155,7 @@ IF "%USE_OV_BINARY%"=="0" (
 ::::::::::::::::::::::: GENAI/OPENVINO install from ZIP - reinstalled per build trigger
 :: Set default GENAI_PACKAGE_URL if not set
 if "%GENAI_PACKAGE_URL%"=="" (
-    set "GENAI_PACKAGE_URL=https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/pre-release/2025.4.0.0rc1/openvino_genai_windows_2025.4.0.0rc1_x86_64.zip"
+    set "GENAI_PACKAGE_URL=https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/nightly/2026.0.0.0.dev20260117/openvino_genai_windows_2026.0.0.0.dev20260117_x86_64.zip"
 )
 
 :: Extract genai_ver from GENAI_PACKAGE_URL (filename)
@@ -208,7 +208,7 @@ IF /I EXIST %BAZEL_SHORT_PATH%\openvino (
     rmdir /S /Q %BAZEL_SHORT_PATH%\openvino
 )
 if "%OV_SOURCE_BRANCH%"=="" (
-    set "OV_SOURCE_BRANCH=2120be664d3a23b23189a68bb8d4d1aa3b92f79d"
+    set "OV_SOURCE_BRANCH=4666d6c07a3b4d25119e1fd294e419d754eab21d"
 )
 if "%OV_SOURCE_ORG%"=="" (
     set "OV_SOURCE_ORG=openvinotoolkit"
@@ -217,13 +217,24 @@ if "%TOKENIZER_SOURCE_ORG%"=="" (
     set "TOKENIZER_SOURCE_ORG=openvinotoolkit"
 )
 if "%TOKENIZER_SOURCE_BRANCH%"=="" (
-    set "TOKENIZER_SOURCE_BRANCH=b87b62e84fc2728ef7c79ac9cb86d9550b9816d0"
+    set "TOKENIZER_SOURCE_BRANCH=47cea02a2d47b2fcf9152a1891f7360d6fdf4a27"
 )
 if "%GENAI_SOURCE_ORG%"=="" (
     set "GENAI_SOURCE_ORG=openvinotoolkit"
 )
 if "%GENAI_SOURCE_BRANCH%"=="" (
-    set "GENAI_SOURCE_BRANCH=3221f9a02f7e49d9d8ad789e646d0790b62d46ae"
+    set "GENAI_SOURCE_BRANCH=b3621327181bc08ab2829ad2896190cc0e5e85e3"
+)
+
+echo [INFO] Using OpenVINO source from %OV_SOURCE_ORG%
+IF /I EXIST %BAZEL_SHORT_PATH%\openvino_src (
+    git -C %BAZEL_SHORT_PATH%\openvino_src remote -v | findstr "\/%OV_SOURCE_ORG%\/" > nul
+    if !errorlevel! equ 0 (
+        echo [INFO] Repository already points to %OV_SOURCE_ORG%
+    ) else (
+        echo [INFO] Repository points to different org, removing...
+        rmdir /S /Q %BAZEL_SHORT_PATH%\openvino_src
+    )
 )
 
 IF /I NOT EXIST %BAZEL_SHORT_PATH%\openvino_src (
