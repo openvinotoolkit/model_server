@@ -512,7 +512,7 @@ Status ModelInstance::adjustForEmptyOutputNames() {
     return StatusCode::OK;
 }
 
-Status ModelInstance::loadTensors(const ModelConfig& config, const bool hasLayoutConfigChanged, const DynamicModelParameter& parameter) {
+Status ModelInstance::loadTensors(const ModelConfig& config, const bool needsToApplyLayoutConfiguration, const DynamicModelParameter& parameter) {
     Status status = validateConfigurationAgainstNetwork(config, this->model);
     if (!status.ok()) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error during configuration validation against model");
@@ -523,8 +523,6 @@ Status ModelInstance::loadTensors(const ModelConfig& config, const bool hasLayou
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error during adjusting output names");
         return status;
     }
-
-    bool needsToApplyLayoutConfiguration = hasLayoutConfigChanged || !this->model;
 
     if (needsToApplyLayoutConfiguration) {
         status = applyPreprocessing(config, this->model, getName(), getVersion());
@@ -1049,6 +1047,7 @@ void ModelInstance::loadTensorFactories() {
 
 Status ModelInstance::loadModelImpl(const ModelConfig& config, const DynamicModelParameter& parameter) {
     bool hasLayoutConfigurationChanged = !config.isLayoutConfigurationEqual(this->config);
+    bool needsToApplyLayoutConfiguration = hasLayoutConfigurationChanged || !this->model;
 
     subscriptionManager.notifySubscribers();
     this->path = config.getPath();
@@ -1080,7 +1079,7 @@ Status ModelInstance::loadModelImpl(const ModelConfig& config, const DynamicMode
             return status;
         }
 
-        status = loadTensors(this->config, hasLayoutConfigurationChanged, parameter);
+        status = loadTensors(this->config, needsToApplyLayoutConfiguration, parameter);
         if (!status.ok()) {
             this->status.setLoading(ModelVersionStatusErrorCode::UNKNOWN);
             return status;

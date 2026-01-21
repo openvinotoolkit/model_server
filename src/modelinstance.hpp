@@ -306,7 +306,7 @@ private:
          *
          * @param config
          */
-    Status loadTensors(const ModelConfig& config, const bool hasLayoutConfigChanged, const DynamicModelParameter& parameter = DynamicModelParameter());
+    Status loadTensors(const ModelConfig& config, const bool needsToApplyLayoutConfiguration, const DynamicModelParameter& parameter = DynamicModelParameter());
 
     /**
          * @brief Internal method for preprocessing model
