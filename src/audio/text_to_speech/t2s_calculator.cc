@@ -110,7 +110,7 @@ public:
             }
             if (voice.has_value()) {
                 if (pipe->voices.find(voice.value()) == pipe->voices.end())
-                    return absl::InvalidArgumentError(absl::StrCat("Requested voice not available: ", payload.uri));
+                    return absl::InvalidArgumentError(absl::StrCat("Requested voice not available: ", voice.value()));
             }
             ov::genai::Text2SpeechDecodedResults generatedSpeech;
             std::unique_lock lock(pipe->ttsPipelineMutex);
