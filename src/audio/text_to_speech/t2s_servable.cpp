@@ -78,7 +78,7 @@ TtsServable::TtsServable(const std::string& modelDir, const std::string& targetD
     ttsPipeline = std::make_shared<ov::genai::Text2SpeechPipeline>(parsedModelsPath.string(), targetDevice, config);
     for (auto voice : graphVoices) {
         if (!std::filesystem::exists(voice.path()))
-            throw std::runtime_error{"Requested voice speaker embeddings file does not exist."};
+            throw std::runtime_error{"Requested voice speaker embeddings file does not exist: " + voice.path()};
         voices[voice.name()] = read_speaker_embedding(voice.path());
     }
 }
