@@ -60,7 +60,7 @@ public:
     const std::vector<std::string>& getParsingStartTags() const override {
         static const std::vector<std::string> parsingStartTags{
             parsingStartTag,
-            "<|channel|>analysis to=",  // This is not strict parsing => This does not conform to OpenAI Harmony format, however tests show that sometimes model produces tools in analysis channel
+            "<|channel|>analysis to=",  // Workaround: allow tool calls emitted from the analysis channel (non-standard behavior observed in some model outputs).
         };
         return parsingStartTags;
     }
