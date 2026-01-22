@@ -404,7 +404,11 @@ Status Server::startModules(ovms::Config& config) {
     if (config.getServerSettings().withPython) {
         GET_MODULE(PYTHON_INTERPRETER_MODULE_NAME, it);
         auto pythonModule = dynamic_cast<const PythonInterpreterModule*>(it->second.get());
-        pythonModule->releaseGILFromThisThread();
+        if (pythonModule->ownsPythonInterpreter()) {
+            // Natively GIL is held by the thread that initialized interpreter, so we only need to release it, if we own the interpreter.
+            // If it was initialized externally, then the external thread shall release the GIL before launching that module.
+            pythonModule->releaseGILFromThisThread();
+        }
     }
 #endif
     return status;

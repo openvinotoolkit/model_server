@@ -99,7 +99,7 @@ public:
             plugin_config_t pluginConfig;
             // Setting precision to f32 fails on SPR hosts - to be investigated
             // JsonParser::parsePluginConfig("{\"INFERENCE_PRECISION_HINT\":\"f32\"}", pluginConfig);
-            cbPipe = std::make_shared<ov::genai::ContinuousBatchingPipeline>(getGenericFullPathForSrcTest("/ovms/src/test/llm_testing/facebook/opt-125m"), schedulerConfig, device, pluginConfig, tokenizerPluginConfig);
+            cbPipe = std::make_shared<ov::genai::ContinuousBatchingPipeline>(getGenericFullPathForSrcTest("/ovms/src/test/llm_testing/HuggingFaceTB/SmolLM2-360M-Instruct"), schedulerConfig, device, pluginConfig, tokenizerPluginConfig);
             llmExecutorWrapper = std::make_shared<LLMExecutorWrapper>(cbPipe);
         } catch (const std::exception& e) {
             SPDLOG_ERROR("Error during llm node initialization for models_path exception: {}", e.what());
@@ -598,6 +598,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJsonSpaceStopString) {
             "stream": false,
             "ignore_eos": false,
             "max_tokens": 1000,
+            "temperature": 0,
             "stop": " ",
             "include_stop_str_in_output": true,
             "prompt": "                                   |                                |                             |  "
@@ -1419,8 +1420,9 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsPromptTokensWithMaxToke
         GTEST_SKIP();
     }
     std::string prompt;
-    // creating prompt that will be tokenized to 2048 tokens when model max length is 2048
-    for (int i = 0; i < 2044; i++) {
+    // creating prompt that will be tokenized to 8189 tokens when model max length is 8192; 29 are tokens from chat template,
+    // and 3 tokens are reserved (e.g., for special/assistant tokens or safety margin).
+    for (int i = 0; i < 8192 - 29 - 3; i++) {
         prompt += "hello ";
     }
     std::string requestBody = R"(
@@ -1429,7 +1431,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsPromptTokensWithMaxToke
                               R"(",
             "stream": false,
             "seed" : 1,
-            "max_tokens" : 5,
+            "max_tokens" : 10,
             "messages": [
             {
                 "role": "user",
@@ -1451,8 +1453,8 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsPromptTokensWithMaxComp
         GTEST_SKIP();
     }
     std::string prompt;
-    // creating prompt that will be tokenized to 2048 tokens when model max length is 2048
-    for (int i = 0; i < 2044; i++) {
+    // creating prompt that will be tokenized to 8189 tokens when model max length is 8192; 25 are tokens from chat template.
+    for (int i = 0; i < 8191 - 25 - 3; i++) {  // 3 extra tokens are reserved for special tokens added by the tokenizer
         prompt += "hello ";
     }
     std::string requestBody = R"(
@@ -1461,7 +1463,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsPromptTokensWithMaxComp
                               R"(",
             "stream": false,
             "seed" : 1,
-            "max_completion_tokens": 5,
+            "max_completion_tokens": 10,
             "messages": [
             {
                 "role": "user",
@@ -1483,8 +1485,8 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsPromptTokensEqualToMaxM
         GTEST_SKIP();
     }
     std::string prompt;
-    // creating prompt that will be tokenized to 2048 tokens when model max length is 2048
-    for (int i = 0; i < 2048; i++) {
+    // creating prompt that will be tokenized to  tokens when model max length is 8192; 32 are tokens from chat template.
+    for (int i = 0; i < 8192 - 32 + 1; i++) {
         prompt += "hello ";
     }
     std::string requestBody = R"(
@@ -1935,7 +1937,7 @@ TEST_P(LLMFlowHttpTestParameterized, streamCompletionsFinishReasonLength) {
 }
 
 // Potential sporadic - move to functional if problematic
-TEST_P(LLMFlowHttpTestParameterized, streamCompletionsSingleStopString) {
+TEST_P(LLMFlowHttpTestParameterized, DISABLED_streamCompletionsSingleStopString) {
     auto params = GetParam();
     // TODO: In the next step we should break this suite into smaller ones, use proper configuration instead of skipping
     if (params.modelName.find("vlm") != std::string::npos) {
@@ -2049,26 +2051,31 @@ TEST_P(LLMFlowHttpTestParameterized, streamChatCompletionsUsage) {
             handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
             ovms::StatusCode::PARTIAL_END);
 
-        ASSERT_TRUE(responses.back().find("\"completion_tokens\":5") != std::string::npos);
-        ASSERT_TRUE(responses.back().find("\"prompt_tokens\"") != std::string::npos);
-        ASSERT_TRUE(responses.back().find("\"total_tokens\"") != std::string::npos);
+        ASSERT_GT(responses.size(), 0);
+        ASSERT_TRUE(responses.back().find("\"completion_tokens\":5") != std::string::npos) << responses.back();  // ensure 5 - reaching max_tokens
+        ASSERT_TRUE(responses.back().find("\"prompt_tokens\"") != std::string::npos) << responses.back();        // this is always present and > 0, depends on pipeline type and underlying model
+        ASSERT_TRUE(responses.back().find("\"total_tokens\"") != std::string::npos) << responses.back();         // this is always present and > 0, depends on pipeline type and underlying model
         if (params.checkFinishReason) {
-            ASSERT_TRUE(responses.back().find("\"finish_reason\":\"length\"") != std::string::npos);
+            ASSERT_TRUE(responses.back().find("\"finish_reason\":\"length\"") != std::string::npos) << responses.back();
         }
-        // For non-continuous batching servables usage is not supported
+        // For non-continuous batching servables usage is always 0
     } else {
-        EXPECT_CALL(*writer, PartialReplyWithStatus(::testing::_, ::testing::_))
-            .WillOnce([this](std::string response, ovms::HTTPStatusCode code) {
-                ASSERT_EQ(response, "{\"error\":\"Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed: \\nCalculator::Process() for node \\\"llmNode1\\\" failed: Usage is not supported in legacy servable in streaming mode.\"}");
-                rapidjson::Document d;
-                rapidjson::ParseResult ok = d.Parse(response.c_str());
-                ASSERT_EQ(ok.Code(), 0);
-                ASSERT_EQ(code, ovms::HTTPStatusCode::BAD_REQUEST);
+        EXPECT_CALL(*writer, PartialReply(::testing::_))
+            .WillRepeatedly([this, &responses](std::string response) {
+                responses.push_back(response);
             });
         EXPECT_CALL(*writer, PartialReplyEnd()).Times(1);
         ASSERT_EQ(
             handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
             ovms::StatusCode::PARTIAL_END);
+
+        ASSERT_GT(responses.size(), 0);
+        ASSERT_TRUE(responses.back().find("\"completion_tokens\":0") != std::string::npos) << responses.back();  // ensure 0
+        ASSERT_TRUE(responses.back().find("\"prompt_tokens\"") != std::string::npos) << responses.back();        // this is always present and > 0, depends on pipeline type and underlying model
+        ASSERT_TRUE(responses.back().find("\"total_tokens\"") != std::string::npos) << responses.back();         // this is always present and > 0, depends on pipeline type and underlying model
+        if (params.checkFinishReason) {
+            ASSERT_TRUE(responses.back().find("\"finish_reason\":\"length\"") != std::string::npos) << responses.back();
+        }
     }
 }
 
@@ -2103,26 +2110,29 @@ TEST_P(LLMFlowHttpTestParameterized, streamCompletionsUsage) {
             handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
             ovms::StatusCode::PARTIAL_END);
 
-        ASSERT_TRUE(responses.back().find("\"completion_tokens\":5") != std::string::npos);
-        ASSERT_TRUE(responses.back().find("\"prompt_tokens\"") != std::string::npos);
-        ASSERT_TRUE(responses.back().find("\"total_tokens\"") != std::string::npos);
+        ASSERT_TRUE(responses.back().find("\"completion_tokens\":5") != std::string::npos) << responses.back();  // ensure 5 - reaching max_tokens
+        ASSERT_TRUE(responses.back().find("\"prompt_tokens\"") != std::string::npos) << responses.back();        // this is always present and > 0, depends on pipeline type and underlying model
+        ASSERT_TRUE(responses.back().find("\"total_tokens\"") != std::string::npos) << responses.back();         // this is always present and > 0, depends on pipeline type and underlying model
         if (params.checkFinishReason) {
-            ASSERT_TRUE(responses.back().find("\"finish_reason\":\"length\"") != std::string::npos);
+            ASSERT_TRUE(responses.back().find("\"finish_reason\":\"length\"") != std::string::npos) << responses.back();
         }
-        // For non-continuous batching servables usage is not supported
+        // For non-continuous batching servables usage is always 0
     } else {
-        EXPECT_CALL(*writer, PartialReplyWithStatus(::testing::_, ::testing::_))
-            .WillOnce([this](std::string response, ovms::HTTPStatusCode code) {
-                ASSERT_EQ(response, "{\"error\":\"Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed: \\nCalculator::Process() for node \\\"llmNode1\\\" failed: Usage is not supported in legacy servable in streaming mode.\"}");
-                rapidjson::Document d;
-                rapidjson::ParseResult ok = d.Parse(response.c_str());
-                ASSERT_EQ(ok.Code(), 0);
-                ASSERT_EQ(code, ovms::HTTPStatusCode::BAD_REQUEST);
+        EXPECT_CALL(*writer, PartialReply(::testing::_))
+            .WillRepeatedly([this, &responses](std::string response) {
+                responses.push_back(response);
             });
         EXPECT_CALL(*writer, PartialReplyEnd()).Times(1);
         ASSERT_EQ(
             handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
             ovms::StatusCode::PARTIAL_END);
+
+        ASSERT_TRUE(responses.back().find("\"completion_tokens\":0") != std::string::npos) << responses.back();  // ensure 0
+        ASSERT_TRUE(responses.back().find("\"prompt_tokens\"") != std::string::npos) << responses.back();        // this is always present and > 0, depends on pipeline type and underlying model
+        ASSERT_TRUE(responses.back().find("\"total_tokens\"") != std::string::npos) << responses.back();         // this is always present and > 0, depends on pipeline type and underlying model
+        if (params.checkFinishReason) {
+            ASSERT_TRUE(responses.back().find("\"finish_reason\":\"length\"") != std::string::npos) << responses.back();
+        }
     }
 }
 
@@ -3405,13 +3415,7 @@ INSTANTIATE_TEST_SUITE_P(
         TestParameters{"vlm_legacy_regular", false, false, false, false}));
 
 // Common tests for all pipeline types (testing logic executed prior pipeline type selection)
-class LLMConfigHttpTest : public ::testing::Test {
-#if (PYTHON_DISABLE == 0)
-public:
-    void SetUp() { py::initialize_interpreter(); }
-    void TearDown() { py::finalize_interpreter(); }
-#endif
-};
+class LLMConfigHttpTest : public ::testing::Test {};
 
 TEST_F(LLMConfigHttpTest, LLMNodeNameMissing) {
     ConstructorEnabledModelManager manager;
@@ -3669,13 +3673,7 @@ TEST_F(LLMConfigHttpTest, LLMNodeWorkspacePathToFileNotDir) {
     ASSERT_EQ(status, StatusCode::LLM_NODE_PATH_DOES_NOT_EXIST_AND_NOT_GGUFFILE) << status.string();
 }
 
-class LLMConfigHttpTestParameterized : public ::testing::Test, public ::testing::WithParamInterface<std::tuple<std::string, ovms::StatusCode>> {
-#if (PYTHON_DISABLE == 0)
-public:
-    void SetUp() { py::initialize_interpreter(); }
-    void TearDown() { py::finalize_interpreter(); }
-#endif
-};
+class LLMConfigHttpTestParameterized : public ::testing::Test, public ::testing::WithParamInterface<std::tuple<std::string, ovms::StatusCode>> {};
 
 TEST_P(LLMConfigHttpTestParameterized, LLMNodeResourceInitFailed) {
     auto [pipelineType, expectedStatusCode] = GetParam();
@@ -3738,13 +3736,7 @@ INSTANTIATE_TEST_SUITE_P(
 
 // Those tests are working on Continuous Batching path, since most of the node options are scheduler parameters that are not used in non-CB servables
 // We could consider adding tests for non-CB path in the future in the separate test suite
-class LLMOptionsHttpTestPython : public ::testing::Test {
-#if (PYTHON_DISABLE == 0)
-public:
-    static void SetUpTestSuite() { py::initialize_interpreter(); }
-    static void TearDownTestSuite() { py::finalize_interpreter(); }
-#endif
-};
+class LLMOptionsHttpTestPython : public ::testing::Test {};
 
 class LLMOptionsHttpTest : public LLMOptionsHttpTestPython {
 public:

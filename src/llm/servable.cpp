@@ -36,6 +36,7 @@
 #include "apis/openai_completions.hpp"
 #include "servable.hpp"
 #include "text_utils.hpp"
+#include "../tokenize/tokenize_parser.hpp"
 
 namespace ovms {
 
@@ -63,6 +64,8 @@ absl::Status GenAiServable::loadRequest(std::shared_ptr<GenAiServableExecutionCo
         executionContext->endpoint = Endpoint::CHAT_COMPLETIONS;
     } else if (payload.uri == "/v3/completions" || payload.uri == "/v3/v1/completions") {
         executionContext->endpoint = Endpoint::COMPLETIONS;
+    } else if (TokenizeParser::isTokenizeEndpoint(payload.uri)) {
+        executionContext->endpoint = Endpoint::TOKENIZE;
     } else {
         return absl::InvalidArgumentError("Wrong endpoint. Allowed endpoints: /v3/chat/completions, /v3/completions");
     }
@@ -70,13 +73,47 @@ absl::Status GenAiServable::loadRequest(std::shared_ptr<GenAiServableExecutionCo
     return absl::OkStatus();
 }
 
+absl::Status GenAiServable::processTokenizeRequest(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
+    ovms::TokenizeRequest tokenizeRequest;
+    auto status = ovms::TokenizeParser::parseTokenizeRequest(*executionContext->payload.parsedJson, tokenizeRequest);
+    if (status != absl::OkStatus()) {
+        return status;
+    }
+
+    ov::genai::TokenizedInputs tokens;
+
+    if (auto strings = std::get_if<std::vector<std::string>>(&tokenizeRequest.input)) {
+        tokens = getProperties()->tokenizer.encode(*strings, tokenizeRequest.parameters);
+        RET_CHECK(tokens.input_ids.get_shape().size() == 2);
+    } else {
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "LLM tokenize input is of not supported type");
+        return absl::InvalidArgumentError("Input should be string or array of strings");
+    }
+
+    StringBuffer responseBuffer;
+    auto responseStatus = ovms::TokenizeParser::parseTokenizeResponse(responseBuffer, tokens, tokenizeRequest.parameters);
+
+    if (!responseStatus.ok()) {
+        return responseStatus;
+    }
+
+    executionContext->response = responseBuffer.GetString();
+
+    return absl::OkStatus();
+}
+
 absl::Status GenAiServable::parseRequest(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
-    executionContext->apiHandler = std::make_shared<OpenAIChatCompletionsHandler>(*executionContext->payload.parsedJson,
-        executionContext->endpoint,
-        std::chrono::system_clock::now(),
-        getProperties()->tokenizer,
-        getProperties()->toolParserName,
-        getProperties()->reasoningParserName);
+    try {
+        executionContext->apiHandler = std::make_shared<OpenAIChatCompletionsHandler>(*executionContext->payload.parsedJson,
+            executionContext->endpoint,
+            std::chrono::system_clock::now(),
+            getProperties()->tokenizer,
+            getProperties()->toolParserName,
+            getProperties()->reasoningParserName);
+    } catch (const std::exception& e) {
+        SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Failed to create API handler: {}", e.what());
+        return absl::InvalidArgumentError(std::string("Failed to create API handler: ") + e.what());
+    }
     auto& config = ovms::Config::instance();
 
     auto status = executionContext->apiHandler->parseRequest(getProperties()->maxTokensLimit, getProperties()->bestOfLimit, getProperties()->maxModelLength, config.getServerSettings().allowedLocalMediaPath);
@@ -155,7 +192,10 @@ absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecution
     }
     case Endpoint::COMPLETIONS: {
         inputText = executionContext->apiHandler->getPrompt().value();
+        break;
     }
+    case Endpoint::TOKENIZE:
+        return absl::InternalError("Tokenize endpoint should not reach prepareInputs stage");
     }
     bool encodeAddSpecialTokens = (executionContext->endpoint == Endpoint::COMPLETIONS);
     executionContext->inputIds = getProperties()->tokenizer.encode(inputText, ov::genai::add_special_tokens(encodeAddSpecialTokens)).input_ids;
