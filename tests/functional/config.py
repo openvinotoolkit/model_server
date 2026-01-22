@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2020 Intel Corporation
+# Copyright (c) 2020-2026 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,9 +16,9 @@
 
 import os
 
-from constants import TARGET_DEVICE_CPU, TARGET_DEVICE_GPU, TARGET_DEVICE_CUDA, TARGET_DEVICE_MYRIAD, TARGET_DEVICE_HDDL
-from utils.helpers import get_int, get_bool
-from utils.parametrization import generate_test_object_name
+from tests.functional.constants.target_device import TargetDevice
+from tests.functional.utils.helpers import get_bool, get_int, get_path, get_target_devices
+from tests.functional.utils.parametrization import generate_test_object_name
 
 try:
     # In user_config.py, user might export custom environment variables
@@ -32,8 +32,7 @@ test_dir = os.environ.get("TEST_DIR", "/tmp/{}".format(generate_test_object_name
 """TEST_DIR_CACHE -  location where models and test data should be downloaded to and serve as cache for TEST_DIR"""
 test_dir_cache = os.environ.get("TEST_DIR_CACHE", "/tmp/ovms_models_cache")
 
-"""TEST_DIR_CLEANUP - if set to True, TEST_DIR directory will be removed
-                      after tests execution"""
+"""TEST_DIR_CLEANUP - if set to True, TEST_DIR directory will be removed after tests execution"""
 test_dir_cleanup = os.environ.get("TEST_DIR_CLEANUP", "True")
 test_dir_cleanup = test_dir_cleanup.lower() == "true"
 
@@ -55,6 +54,7 @@ ovms_binary_path = os.environ.get("OVMS_BINARY_PATH", None)
 log_level = os.environ.get("LOG_LEVEL", "INFO")
 
 path_to_mount = os.path.join(test_dir, "saved_models")
+os.makedirs(path_to_mount, exist_ok=True)
 
 path_to_mount_cache = os.path.join(test_dir_cache, "saved_models")
 
@@ -63,11 +63,12 @@ models_path = path_to_mount if ovms_binary_path else "/opt/ml"
 """TT_MINIO_IMAGE_NAME - Docker image for Minio"""
 minio_image = os.environ.get("TT_MINIO_IMAGE_NAME", "minio/minio:latest")
 
-""" TT_TARGET_DEVICE - one of "CPU", "GPU" """
-target_device = os.environ.get("TT_TARGET_DEVICE", TARGET_DEVICE_CPU)
+""" TT_TARGET_DEVICE - list of devices separated by a comma "CPU,GPU" """
+target_devices = get_target_devices()
+target_device = target_devices[0]
 
 """IMAGE - docker image name which should be used to run tests"""
-if target_device == TARGET_DEVICE_GPU:
+if target_device == TargetDevice.GPU:
     _default_image = "openvino/model_server-gpu"
 else:
     _default_image = "openvino/model_server"
@@ -95,22 +96,10 @@ default_infer_timeout = get_int("TT_DEFAULT_INFER_TIMEOUT", 10)
 """ TT_DEFAULT_GPU_INFER_TIMEOUT - Timeout for CPU target device"""
 default_gpu_infer_timeout = get_int("TT_DEFAULT_GPU_INFER_TIMEOUT", 10*default_infer_timeout)
 
-""" TT_DEFAULT_GPU_INFER_TIMEOUT - Timeout for CPU target device"""
-default_cuda_infer_timeout = get_int("TT_DEFAULT_CUDA_INFER_TIMEOUT", 10*default_infer_timeout)
-
-""" TT_DEFAULT_HDDL_INFER_TIMEOUT - Timeout for CPU target device"""
-default_hddl_infer_timeout = get_int("TT_DEFAULT_HDDL_INFER_TIMEOUT", 3*default_infer_timeout)
-
-""" TT_DEFAULT_MYRIAD_INFER_TIMEOUT - Timeout for CPU target device"""
-default_myriad_infer_timeout = get_int("TT_DEFAULT_MYRIAD_INFER_TIMEOUT", 5*default_infer_timeout)
-
 """ INFER TIMEOUT """
 infer_timeouts = {
-    TARGET_DEVICE_CPU : default_infer_timeout,
-    TARGET_DEVICE_GPU : default_gpu_infer_timeout,
-    TARGET_DEVICE_CUDA : default_cuda_infer_timeout,
-    TARGET_DEVICE_HDDL : default_hddl_infer_timeout,
-    TARGET_DEVICE_MYRIAD : default_myriad_infer_timeout,
+    TargetDevice.CPU: default_infer_timeout,
+    TargetDevice.GPU: default_gpu_infer_timeout,
 }
 infer_timeout = infer_timeouts[target_device]
 
@@ -120,3 +109,9 @@ is_nginx_mtls = get_bool("TT_IS_NGINX_MTLS", "nginx-mtls" in image)
 """ TT_SKIP_TEST_IF_IS_NGINX_MTLS """
 skip_nginx_test = get_bool("TT_SKIP_TEST_IF_IS_NGINX_MTLS", "True")
 skip_nginx_test = skip_nginx_test and is_nginx_mtls
+
+""" TT_ENABLE_OVMS_C_PYTEST_PLUGINS - enable pytest plugins """
+enable_pytest_plugins = get_bool("TT_ENABLE_OVMS_C_PYTEST_PLUGINS", "True")
+
+""" TT_OVMS_C_REPO_PATH - path to ovms-c repository. Can be relative or absolute. """
+ovms_c_repo_path = get_path("TT_OVMS_C_REPO_PATH", get_path("PWD", "./"))
