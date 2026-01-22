@@ -15,6 +15,98 @@ This demo shows how to use speculative decoding in the model serving scenario, b
 
 **Model Server deployment**: Installed Docker Engine or OVMS binary package according to the [baremetal deployment guide](../../../docs/deploying_server_baremetal.md)
 
+# Eagle3
+Currently using [EAGLE3](https://github.com/SafeAILab/EAGLE) requires some specific preparations hence dedicated section.
+
+## Model considerations
+
+For this demo we picked a pair of models from [available models](https://github.com/SafeAILab/EAGLE#eagle-3-models-on-hugging-face):
+    - [Qwen/Qwen3-8B](https://huggingface.co/Qwen/Qwen3-8B) as a main model
+    - [Tengyunw/qwen3_8b_eagle3](https://huggingface.co/Tengyunw/qwen3_8b_eagle3) as a draft model
+
+both in INT4 precision.
+
+## Model preparation
+
+Python environment setup:
+```
+# Install regular requirements for OVMS export script
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/export_model.py -o export_model.py
+pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
+
+# Override optimum-intel with version supporting eagle3
+python -m pip install git+https://github.com/xufang-lisa/optimum-intel.git@xufang/add_eagle3_draft_model_conversion
+
+mkdir models
+```
+
+Run `export_model.py` script to download and quantize the model:
+
+```console
+python export_model.py text_generation --source_model Qwen/Qwen3-8B --draft_source_model Tengyunw/qwen3_8b_eagle3 --draft_eagle3 --weight-format int4 --config_file_path models/config.json --model_repository_path models
+```
+
+Draft model inherits all scheduler properties from the main model.
+
+You should have a model folder like below:
+```console
+models
+├── config.json
+└── Qwen
+    └── Qwen3-8B
+        ├── added_tokens.json
+        ├── chat_template.jinja
+        ├── config.json
+        ├── generation_config.json
+        ├── graph.pbtxt
+        ├── merges.txt
+        ├── openvino_config.json
+        ├── openvino_detokenizer.bin
+        ├── openvino_detokenizer.xml
+        ├── openvino_model.bin
+        ├── openvino_model.xml
+        ├── openvino_tokenizer.bin
+        ├── openvino_tokenizer.xml
+        ├── special_tokens_map.json
+        ├── Tengyunw-qwen3_8b_eagle3
+        │   ├── config.json
+        │   ├── generation_config.json
+        │   ├── openvino_model.bin
+        │   └── openvino_model.xml
+        ├── tokenizer_config.json
+        ├── tokenizer.json
+        └── vocab.json
+```
+
+## Server Deployment
+
+:::{dropdown} **Deploying with Docker**
+```bash
+docker run -d --rm -p 8000:8000 -v $(pwd)/models:/workspace:ro openvino/model_server:latest --rest_port 8000 --config_path /workspace/config.json
+```
+
+Running above command starts the container with no accelerators support. 
+To deploy on devices other than CPU, change `target_device` parameter in `export_model.py` call and follow [AI accelerators guide](../../../docs/accelerators.md) for additionally required docker parameters.
+:::
+
+:::{dropdown} **Deploying on Bare Metal**
+
+Assuming you have unpacked model server package, make sure to:
+
+- **On Windows**: run `setupvars` script
+- **On Linux**: set `LD_LIBRARY_PATH` and `PATH` environment variables
+
+as mentioned in [deployment guide](../../../docs/deploying_server_baremetal.md), in every new shell that will start OpenVINO Model Server.
+
+Depending on how you prepared models in the first step of this demo, they are deployed to either CPU or GPU (it's defined in `config.json`). If you run on GPU make sure to have appropriate drivers installed, so the device is accessible for the model server.
+
+```bat
+ovms --rest_port 8000 --config_path ./models/config.json
+```
+:::
+
+# Classic Models
+
 ## Model considerations
 
 From the functional perspective both main and draft models must use the same tokenizer, so the tokens from the draft model are correctly matched in the the main model.

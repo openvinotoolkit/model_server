@@ -49,6 +49,7 @@ parser_text.add_argument('--draft_source_model', required=False, default=None, h
                          'Using this option will create configuration for speculative decoding', dest='draft_source_model')
 parser_text.add_argument('--draft_model_name', required=False, default=None, help='Draft model name that should be used in the deployment. '
                          'Equal to draft_source_model if HF model name is used. Available only in draft_source_model has been specified.', dest='draft_model_name')
+parser_text.add_argument('--draft_eagle3', action='store_true', help='Set this flag if you use EAGLE3 draft model for speculative decoding', dest='draft_eagle3')
 parser_text.add_argument('--max_prompt_len', required=False, type=int, default=None, help='Sets NPU specific property for maximum number of tokens in the prompt. '
                          'Not effective if target device is not NPU', dest='max_prompt_len')
 parser_text.add_argument('--prompt_lookup_decoding', action='store_true', help='Set pipeline to use prompt lookup decoding', dest='prompt_lookup_decoding')
@@ -237,7 +238,8 @@ node: {
           device: "{{target_device|default("CPU", true)}}",
           {%- if draft_model_dir_name %}
           # Speculative decoding configuration
-          draft_models_path: "./{{draft_model_dir_name}}",{% endif %}
+          draft_models_path: "./{{draft_model_dir_name}}",
+          draft_device: "{{target_device|default("CPU", true)}}",{% endif %}
           {%- if reasoning_parser %}
           reasoning_parser: "{{reasoning_parser}}",{% endif %}
           {%- if tool_parser %}
@@ -429,7 +431,11 @@ def export_text_generation_model(model_repository_path, source_model, model_name
         else: # assume HF model name or local pytorch model folder
             print("Exporting draft LLM model to ", draft_llm_model_path)
             if not os.path.isdir(draft_llm_model_path) or args['overwrite_models']:
-                optimum_command = "optimum-cli export openvino --model {} --weight-format {} --trust-remote-code {}".format(draft_source_model, precision, draft_llm_model_path)
+                additional_options = ""
+                if args["draft_eagle3"]:
+                    print("Using eagle3 option for the draft model export")
+                    additional_options += " --eagle3  --task text-generation-with-past"
+                optimum_command = "optimum-cli export openvino --model {} --weight-format {} --trust-remote-code {} {}".format(draft_source_model, precision, additional_options, draft_llm_model_path)
                 if os.system(optimum_command):
                     raise ValueError("Failed to export llm model", source_model)
 
