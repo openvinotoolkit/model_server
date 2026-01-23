@@ -337,6 +337,24 @@ OVMS_Status* OVMS_ServerSettingsSetLogLevel(OVMS_ServerSettings* settings,
 OVMS_Status* OVMS_ServerSettingsSetLogPath(OVMS_ServerSettings* settings,
     const char* log_path);
 
+// Set the server allowed_local_media_path setting. Equivalent of starting server with
+// --allowed_local_media_path.
+//
+// \param settings The server settings object to be set
+// \param allowed_local_media_path The value to be set
+// \return OVMS_Status object in case of failure
+OVMS_Status* OVMS_ServerSettingsSetAllowedLocalMediaPath(OVMS_ServerSettings* settings,
+    const char* allowed_local_media_path);
+
+// Set the server allowed_media_domains setting. Equivalent of starting server with
+// --allowed_media_domains.
+//
+// \param settings The server settings object to be set
+// \param allowed_media_domains The value to be set as comma separated string
+// \return OVMS_Status object in case of failure
+OVMS_Status* OVMS_ServerSettingsSetAllowedMediaDomains(OVMS_ServerSettings* settings,
+    const char* allowed_media_domains);
+
 ////
 //// OVMS_ModelsSettings
 //// Options for starting multi model server controlled by config.json file

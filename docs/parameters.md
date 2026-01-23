@@ -57,7 +57,7 @@ Configuration options for the server are defined only via command-line options a
 | `allowed_origins` | `string` (default: *) | Comma-separated list of allowed origins in CORS requests. |
 | `api_key_file` | `string` | Path to the text file with the API key for generative endpoints `/v3/`. The value of first line is used. If not specified, server is using environment variable API_KEY. If not set, requests will not require authorization.| 
 | `allowed_local_media_path` | `string` | Path to the directory containing images to include in requests. If unset, local filesystem images in requests are not supported.|
-| `allowed_media_domains` | `string` | Comma separated list of media domains from which urls can be used as input for LLMs. Set to \"all\" to disable this restriction."
+| `allowed_media_domains` | `string` | Comma separated list of media domains from which URLs can be used as input for LLMs. Set to \"all\" to disable this restrictions."
 
 ## Config management mode options
 

@@ -134,7 +134,7 @@ static absl::Status downloadImage(const char* url, std::string& image, const int
     return absl::OkStatus();
 }
 
-static bool isDomainAllowed(std::vector<std::string> allowedDomains, const char* url) {
+static bool isDomainAllowed(const std::vector<std::string>& allowedDomains, const char* url) {
     if (allowedDomains.size() == 1 && allowedDomains[0] == "all") {
         return true;
     }
@@ -143,18 +143,21 @@ static bool isDomainAllowed(std::vector<std::string> allowedDomains, const char*
     rc = curl_url_set(parsedUrl, CURLUPART_URL, url, 0);
     if (rc) {
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Parsing url {} failed", url);
+        curl_url_cleanup(parsedUrl);
         return false;
     }
     char* host;
     rc = curl_url_get(parsedUrl, CURLUPART_HOST, &host, 0);
     if (rc) {
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Parsing url {} hostname failed", url);
+        curl_url_cleanup(parsedUrl);
         return false;
     }
     bool allowed = false;
-    for (auto allowedDomain : allowedDomains) {
+    for (const auto& allowedDomain : allowedDomains) {
         if (allowedDomain.compare(host) == 0) {
             allowed = true;
+            break;
         }
     }
     curl_free(host);

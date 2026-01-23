@@ -148,7 +148,7 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
                 cxxopts::value<std::string>()->default_value(""),
                 "CPU_EXTENSION")
             ("allowed_media_domains",
-                "Comma separated list of media domains from which urls can be used as input for LLMs. Set to \"all\" to disable this restriction.",
+                "Comma separated list of media domains from which URLs can be used as input for LLMs. Set to \"all\" to disable this restriction.",
                 cxxopts::value<std::vector<std::string>>(),
                 "ALLOWED_MEDIA_DOMAINS")
             ("allowed_local_media_path",
