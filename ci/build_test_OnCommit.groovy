@@ -180,7 +180,7 @@ pipeline {
                     userRemoteConfigs: [[credentialsId: 'workflow-lab',
                     url: 'https://github.com/intel-innersource/frameworks.ai.openvino.model-server.tests.git']])
                     sh 'pwd'
-                    sh "make create-venv && ln -s ../tests/functional tests/functional && TT_ON_COMMIT_TESTS=True TT_XDIST_WORKERS=10 TT_BASE_OS=redhat TT_OVMS_IMAGE_NAME=openvino/model_server:${shortCommit} TT_OVMS_IMAGE_LOCAL=True make tests"
+                    sh "make create-venv && ln -s ${env.PWD}/../tests/functional tests/functional && TT_ON_COMMIT_TESTS=True TT_XDIST_WORKERS=10 TT_BASE_OS=redhat TT_OVMS_IMAGE_NAME=openvino/model_server:${shortCommit} TT_OVMS_IMAGE_LOCAL=True make tests"
                   }
                 }
               }            
