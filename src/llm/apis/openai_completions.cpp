@@ -115,6 +115,7 @@ static absl::Status downloadImage(const char* url, std::string& image, const int
     CURL_SETOPT(curl_easy_setopt(curl_handle, CURLOPT_SSL_OPTIONS, CURLSSLOPT_NATIVE_CA))
     const char* envAllowRedirects = std::getenv("OVMS_MEDIA_URL_ALLOW_REDIRECTS");
     if (envAllowRedirects != nullptr && (std::strcmp(envAllowRedirects, "1") == 0)) {
+        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "URL redirects allowed");
         CURL_SETOPT(curl_easy_setopt(curl_handle, CURLOPT_FOLLOWLOCATION, 1L))
     }
     CURL_SETOPT(curl_easy_setopt(curl_handle, CURLOPT_MAXFILESIZE, sizeLimit))

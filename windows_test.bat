@@ -27,6 +27,7 @@ IF "%~1"=="" (
 
 set "bazelStartupCmd=--output_user_root=!BAZEL_SHORT_PATH!"
 set "openvino_dir=!BAZEL_SHORT_PATH!/openvino/runtime/cmake"
+set "OVMS_MEDIA_URL_ALLOW_REDIRECTS=1"
 
 IF "%~2"=="--with_python" (
     set "bazelBuildArgs=--config=win_mp_on_py_on --action_env OpenVINO_DIR=%openvino_dir%"

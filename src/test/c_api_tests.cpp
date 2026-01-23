@@ -177,7 +177,7 @@ TEST(CAPIConfigTest, MultiModelConfiguration) {
     EXPECT_EQ(serverSettings->logLevel, "TRACE");
     EXPECT_EQ(serverSettings->logPath, getGenericFullPathForTmp("/tmp/logs"));
     ASSERT_TRUE(serverSettings->allowedLocalMediaPath.has_value());
-    EXPECT_EQ(serverSettings->allowedLocalMediaPath.value(), "/tmp/path");
+    EXPECT_EQ(serverSettings->allowedLocalMediaPath.value(), getGenericFullPathForTmp("/tmp/path"));
     ASSERT_TRUE(serverSettings->allowedMediaDomains.has_value());
     EXPECT_EQ(serverSettings->allowedMediaDomains.value().size(), 3);
     EXPECT_EQ(serverSettings->allowedMediaDomains.value()[0], "raw.githubusercontent.com");
