@@ -21,8 +21,8 @@ Currently using [EAGLE3](https://github.com/SafeAILab/EAGLE) requires some speci
 ## Model considerations
 
 For this demo we picked a pair of models from [available models](https://github.com/SafeAILab/EAGLE#eagle-3-models-on-hugging-face):
-    - [Qwen/Qwen3-8B](https://huggingface.co/Qwen/Qwen3-8B) as a main model
-    - [Tengyunw/qwen3_8b_eagle3](https://huggingface.co/Tengyunw/qwen3_8b_eagle3) as a draft model
+- [Qwen/Qwen3-8B](https://huggingface.co/Qwen/Qwen3-8B) as a main model
+- [Tengyunw/qwen3_8b_eagle3](https://huggingface.co/Tengyunw/qwen3_8b_eagle3) as a draft model
 
 both in INT4 precision.
 
