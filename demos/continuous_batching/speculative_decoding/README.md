@@ -105,6 +105,62 @@ ovms --rest_port 8000 --config_path ./models/config.json
 ```
 :::
 
+## Check performance
+
+Let's check how the deployed model is doing by running performance test. For that purpose we can use vLLM benchmark script and sonnet dataset.
+
+Install vLLM and download sonnet dataset: 
+```bash
+pip install vllm --extra-index-url https://wheels.vllm.ai/nightly/cpu
+curl https://raw.githubusercontent.com/vllm-project/vllm/refs/heads/main/benchmarks/sonnet.txt -o sonnet.txt
+```
+
+Run benchmark with 100 requests sent sequentially:
+```bash
+vllm bench serve --dataset-name sonnet --dataset-path sonnet.txt --backend openai-chat --host localhost --port 8000 --endpoint /v3/chat/completions --max-concurrency 1 --tokenizer Qwen/Qwen3-8B --model Qwen/Qwen3-8B --num_prompts 100
+
+Starting initial single prompt test run...
+Skipping endpoint ready check.
+Starting main benchmark run...
+Traffic request rate: inf
+Burstiness factor: 1.0 (Poisson process)
+Maximum request concurrency: 1
+100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 100/100 [06:59<00:00,  4.19s/it]
+tip: install termplotlib and gnuplot to plot the metrics
+============ Serving Benchmark Result ============
+Successful requests:                     100
+Failed requests:                         0
+Maximum request concurrency:             1
+Benchmark duration (s):                  419.00
+Total input tokens:                      54256
+Total generated tokens:                  15000
+Request throughput (req/s):              0.24
+Output token throughput (tok/s):         35.80
+Peak output token throughput (tok/s):    16.00
+Peak concurrent requests:                2.00
+Total token throughput (tok/s):          165.29
+---------------Time to First Token----------------
+Mean TTFT (ms):                          426.71
+Median TTFT (ms):                        424.97
+P99 TTFT (ms):                           635.37
+-----Time per Output Token (excl. 1st token)------
+Mean TPOT (ms):                          25.25
+Median TPOT (ms):                        25.09
+P99 TPOT (ms):                           29.22
+---------------Inter-token Latency----------------
+Mean ITL (ms):                           66.29
+Median ITL (ms):                         66.75
+P99 ITL (ms):                            72.11
+==================================================
+```
+
+## Limitations
+
+Eagle3 deployments currently have following known limitations:
+- stateful mode (pipeline_type: LM) not supported,
+- concurrency not supported (max 1 request processed at a time),
+- prefix caching not supported
+
 # Classic Models
 
 ## Model considerations
