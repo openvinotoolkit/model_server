@@ -36,7 +36,6 @@ Status ColorFormatConfiguration::stringToColorFormat(const std::string& colorFor
         colorFormatOut = it->second;
         return StatusCode::OK;
     } else {
-        SPDLOG_ERROR("Invalid color format value: {}", colorFormatStr);
         return StatusCode::COLOR_FORMAT_WRONG_FORMAT;
     }
 }
@@ -55,6 +54,7 @@ Status ColorFormatConfiguration::fromString(const std::string& configurationStr,
 
     Status status = stringToColorFormat(targetColorFormatStr, targetColorFormat);
     if (status != StatusCode::OK) {
+        SPDLOG_ERROR("Invalid color format configuration string: {}", configurationStr);
         return status;
     }
 
@@ -62,6 +62,7 @@ Status ColorFormatConfiguration::fromString(const std::string& configurationStr,
     std::string sourceColorFormatStr = upperConfigurationStr.substr(delimiterPos + 1);
     status = stringToColorFormat(sourceColorFormatStr, sourceColorFormat);
     if (status != StatusCode::OK) {
+        SPDLOG_ERROR("Invalid color format configuration string: {}", configurationStr);
         return status;
     }
     configOut = ColorFormatConfiguration(targetColorFormat, sourceColorFormat);

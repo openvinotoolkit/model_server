@@ -260,7 +260,7 @@ TEST(ModelConfig, parseColorFormatParameter) {
     ModelConfig config;
 
     std::string valid_str1 = "RGB:BGR";
-    std::string valid_str2 = "GRAY:NV12";
+    std::string valid_str2 = "gray:nv12";
     std::string valid_str3 = "NV12_2:RGB";
     std::string valid_str4 = "I420:I420_3";
 
@@ -291,6 +291,18 @@ TEST(ModelConfig, parseColorFormatParameter) {
     std::string invalid_str2 = "RGB";
     auto status2 = config.parseColorFormat(invalid_str2);
     EXPECT_EQ(status2, ovms::StatusCode::COLOR_FORMAT_WRONG_FORMAT);
+    std::string invalid_str3 = "RGB:BGR:RGB";
+    auto status3 = config.parseColorFormat(invalid_str3);
+    EXPECT_EQ(status3, ovms::StatusCode::COLOR_FORMAT_WRONG_FORMAT);
+    std::string invalid_str4 = "RGB::BGR";
+    auto status4 = config.parseColorFormat(invalid_str4);
+    EXPECT_EQ(status4, ovms::StatusCode::COLOR_FORMAT_WRONG_FORMAT);
+    std::string invalid_str5 = ":RGB";
+    auto status5 = config.parseColorFormat(invalid_str5);
+    EXPECT_EQ(status5, ovms::StatusCode::COLOR_FORMAT_WRONG_FORMAT);
+    std::string invalid_str6 = "BGR:";
+    auto status6 = config.parseColorFormat(invalid_str6);
+    EXPECT_EQ(status6, ovms::StatusCode::COLOR_FORMAT_WRONG_FORMAT);
 }
 
 TEST(ModelConfig, parsePrecision) {
