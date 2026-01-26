@@ -75,9 +75,9 @@ FUZZER_BUILD ?= 0
 #         - uncomment source build section, comment binary section
 #         - adjust binary version path - version variable is not passed to WORKSPACE file!
 
-OV_SOURCE_BRANCH ?= 4666d6c07a3b4d25119e1fd294e419d754eab21d # 17.01.2026 master branch
-OV_TOKENIZERS_BRANCH ?= 47cea02a2d47b2fcf9152a1891f7360d6fdf4a27 # 17.01.2026 master branch
-OV_GENAI_BRANCH ?= b3621327181bc08ab2829ad2896190cc0e5e85e3 # 17.01.2026 master branch
+OV_SOURCE_BRANCH ?= 8029cea3ed525a2995be108db9b9cab8a15db272 # 23.01.2026 master branch
+OV_TOKENIZERS_BRANCH ?= 47cea02a2d47b2fcf9152a1891f7360d6fdf4a27 # 23.01.2026 master branch
+OV_GENAI_BRANCH ?= cd9505689ce868c4750c89caf8ae993fa702ec6e # 23.01.2026 master branch
 
 OV_SOURCE_ORG ?= openvinotoolkit
 OV_GENAI_ORG ?= openvinotoolkit
@@ -172,11 +172,11 @@ ifeq ($(findstring ubuntu,$(BASE_OS)),ubuntu)
   ifeq ($(BASE_OS_TAG),24.04)
         OS=ubuntu24
 	INSTALL_DRIVER_VERSION ?= "25.48.36300"
-	DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/nightly/2026.0.0.0.dev20260117/openvino_genai_ubuntu24_2026.0.0.0.dev20260117_x86_64.tar.gz
+	DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/nightly/2026.0.0.0.dev20260123/openvino_genai_ubuntu24_2026.0.0.0.dev20260123_x86_64.tar.gz
   else ifeq  ($(BASE_OS_TAG),22.04)
         OS=ubuntu22
 	INSTALL_DRIVER_VERSION ?= "24.39.31294"
-	DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/nightly/2026.0.0.0.dev20260117/openvino_genai_ubuntu22_2026.0.0.0.dev20260117_x86_64.tar.gz
+	DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/nightly/2026.0.0.0.dev20260123/openvino_genai_ubuntu22_2026.0.0.0.dev20260123_x86_64.tar.gz
   endif
 endif
 ifeq ($(BASE_OS),redhat)
