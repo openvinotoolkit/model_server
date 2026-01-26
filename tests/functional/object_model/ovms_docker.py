@@ -14,10 +14,10 @@
 # limitations under the License.
 #
 
-import config
-from command_wrappers.server import start_ovms_container_command
-from object_model.docker import Docker
-from utils.parametrization import generate_test_object_name
+import tests.functional.config as config
+from tests.functional.command_wrappers.server import start_ovms_container_command
+from tests.functional.object_model.docker import Docker
+from tests.functional.utils.parametrization import generate_test_object_name
 
 
 class OvmsDocker(Docker):

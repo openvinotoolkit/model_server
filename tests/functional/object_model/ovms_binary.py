@@ -22,11 +22,11 @@ import time
 
 from retry.api import retry_call
 
-import config
-from command_wrappers.server import start_ovms_container_command
+import tests.functional.config as config
+from tests.functional.command_wrappers.server import start_ovms_container_command
 
-from utils.grpc import port_manager_grpc
-from utils.rest import port_manager_rest
+from tests.functional.utils.grpc import port_manager_grpc
+from tests.functional.utils.rest import port_manager_rest
 
 
 class OvmsBinary:

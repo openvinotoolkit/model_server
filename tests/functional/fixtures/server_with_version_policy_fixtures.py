@@ -19,15 +19,15 @@ import pytest
 import shutil
 from distutils.dir_util import copy_tree
 
-import config
-from model.models_information import FaceDetection, PVBFaceDetectionV2, AgeGender
-from object_model.server import Server
+import tests.functional.config as config
+from tests.functional.model.models_information import FaceDetection, PVBFaceDetectionV2, AgeGender
+from tests.functional.object_model.server import Server
 
 
 @pytest.fixture(scope="session")
-def start_server_model_ver_policy(request):
+def start_server_model_ver_policy(request, resnet_multiple_batch_sizes):
 
-    shutil.copyfile('tests/functional/mapping_config.json',
+    shutil.copyfile(os.path.join(config.ovms_c_repo_path, 'tests/functional/mapping_config.json'),
                     config.path_to_mount + '/model_ver/3/mapping_config.json')
 
     start_server_command_args = {"config_path": "{}/model_version_policy_config.json".format(config.models_path)}
@@ -38,7 +38,7 @@ def start_server_model_ver_policy(request):
     return server.start()
 
 
-@pytest.fixture(autouse=True, scope="session")
+@pytest.fixture(scope="session")
 def model_version_policy_models(models_downloader):
     model_ver_dir = os.path.join(config.path_to_mount, 'model_ver')
 

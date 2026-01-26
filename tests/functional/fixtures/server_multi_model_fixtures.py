@@ -17,13 +17,15 @@
 import os
 import pytest
 
-import config
-from object_model.minio_docker import MinioDocker
-from object_model.server import Server
+import tests.functional.config as config
+from tests.functional.object_model.minio_docker import MinioDocker
+from tests.functional.object_model.server import Server
 
 
 @pytest.fixture(scope="session")
-def start_server_multi_model(request, start_minio_server, get_minio_server_s3):
+def start_server_multi_model(
+        request, start_minio_server, get_minio_server_s3, model_version_policy_models, resnet_multiple_batch_sizes
+):
 
     aws_access_key_id = os.getenv('MINIO_ACCESS_KEY')
     aws_secret_access_key = os.getenv('MINIO_SECRET_KEY')
