@@ -49,7 +49,7 @@ python export_model.py text_generation --source_model Qwen/Qwen3-8B --draft_sour
 Draft model inherits all scheduler properties from the main model.
 
 You should have a model folder like below:
-```console
+```
 models
 ├── config.json
 └── Qwen
