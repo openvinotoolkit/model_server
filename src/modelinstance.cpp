@@ -240,7 +240,7 @@ static void applyScaleOrMeanPreprocessing(ov::preprocess::PrePostProcessor& prep
     }
 }
 
-static Status applyPreprocessingConfiguration(ov::preprocess::PrePostProcessor& preproc, const ModelConfig& config, std::shared_ptr<ov::Model>& model, const std::string& modelName, model_version_t modelVersion) {
+static Status applyPreprocessingConfiguration(ov::preprocess::PrePostProcessor& preproc, const ModelConfig& config, std::shared_ptr<ov::Model>& model) {
     OV_LOGGER("ov::preprocess::PrePostProcessor& preproc, const ModelConfig& config, std::shared_ptr<ov::Model>& model");
 
     try {
@@ -250,36 +250,30 @@ static Status applyPreprocessingConfiguration(ov::preprocess::PrePostProcessor& 
         auto precision = config.getPrecision();
 
         if (colorFormat.has_value()) {
-            OV_LOGGER("Applying color format for model: {}, version: {}", modelName, modelVersion);
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Applying color format for model");
             preproc.input().tensor().set_color_format(colorFormat.value().getSourceColorFormat());
             preproc.input().preprocess().convert_color(colorFormat.value().getTargetColorFormat());
         }
 
         if (precision.has_value()) {
-            OV_LOGGER("Applying precision for model: {}, version: {}", modelName, modelVersion);
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Applying precision for model");
             preproc.input().tensor().set_element_type(precision.value());
         }
 
-        OV_LOGGER("Applying mean configuration: {} for model: {}, version: {}", modelName, modelVersion);
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Applying mean configuration");
         applyScaleOrMeanPreprocessing(preproc, preprocessingMean, false);
-        OV_LOGGER("Applying scale configuration: {} for model: {}, version: {}", modelName, modelVersion);
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Applying scale configuration");
         applyScaleOrMeanPreprocessing(preproc, preprocessingScale, true);
     } catch (const ov::Exception& e) {
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to configure input preprocessing configuration for model:{}; version:{}; from OpenVINO with error:{}",
-            modelName,
-            modelVersion,
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to configure input preprocessing configuration; from OpenVINO with error:{}",
             e.what());
         return StatusCode::UNKNOWN_ERROR;
     } catch (const std::exception& e) {
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to configure input preprocessing configuration for model:{}; version:{}; from OpenVINO with error:{}",
-            modelName,
-            modelVersion,
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to configure input preprocessing configuration; from OpenVINO with error:{}",
             e.what());
         return StatusCode::UNKNOWN_ERROR;
     } catch (...) {
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to configure input preprocessing configuration for model:{}; version:{}; from OpenVINO",
-            modelName,
-            modelVersion);
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to configure input preprocessing configuration; from OpenVINO");
         return StatusCode::UNKNOWN_ERROR;
     }
 
@@ -354,10 +348,10 @@ static Status applyLayoutConfiguration(ov::preprocess::PrePostProcessor& preproc
         }
     }
 
-    OV_LOGGER("ov::Model: {}, model->outputs()", reinterpret_cast<void*>(model.get()));
+    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ov::Model: {}, model->outputs()", reinterpret_cast<void*>(model.get()));
     for (const ov::Output<ov::Node>& output : model->outputs()) {
         try {
-            OV_LOGGER("ov::Output<ov::Node> output: {}, output.get_any_name()", reinterpret_cast<const void*>(&output));
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ov::Output<ov::Node> output: {}, output.get_any_name()", reinterpret_cast<const void*>(&output));
             std::string name = output.get_any_name();
             std::string mappedName = config.getMappingOutputByKey(name).empty() ? name : config.getMappingOutputByKey(name);
             if (config.getLayouts().count(mappedName) > 0) {
@@ -368,12 +362,12 @@ static Status applyLayoutConfiguration(ov::preprocess::PrePostProcessor& preproc
                     layout.getTensorLayout(),
                     layout.getModelLayout(),
                     mappedName);
-                OV_LOGGER("ov::preprocess::PrePostProcessor::output({})::tensor()::set_layout(ov::Layout({}))", name, layout.getTensorLayout());
+                SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ov::preprocess::PrePostProcessor::output({})::tensor()::set_layout(ov::Layout({}))", name, layout.getTensorLayout());
                 preproc.output(name).tensor().set_layout(ov::Layout(layout.getTensorLayout()));
-                OV_LOGGER("ov::preprocess::PrePostProcessor::output({})::model()::set_layout(ov::Layout({}))", name, layout.getModelLayout());
+                SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ov::preprocess::PrePostProcessor::output({})::model()::set_layout(ov::Layout({}))", name, layout.getModelLayout());
                 preproc.output(name).model().set_layout(ov::Layout(layout.getModelLayout()));
             } else {
-                OV_LOGGER("output: {}, output.get_rt_info()", reinterpret_cast<const void*>(&output));
+                SPDLOG_LOGGER_DEBUG(modelmanager_logger, "output: {}, output.get_rt_info()", reinterpret_cast<const void*>(&output));
                 auto inheritedModelLayout = getLayoutFromRTMap(output.get_rt_info());
                 const auto& guessedModelLayout = Layout::getDefaultLayout(output.get_partial_shape().size());
 
@@ -384,7 +378,7 @@ static Status applyLayoutConfiguration(ov::preprocess::PrePostProcessor& preproc
                 } else {
                     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "model: {}, version: {}; Configuring layout: Tensor Layout:; Network Layout:{} (default); output name: {}", modelName, modelVersion, targetModelLayout.to_string(), name);
                 }
-                OV_LOGGER("ov::preprocess::PrePostProcessor::output({})::model()::set_layout(ov::Layout({}))", name, targetModelLayout.to_string());
+                SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ov::preprocess::PrePostProcessor::output({})::model()::set_layout(ov::Layout({}))", name, targetModelLayout.to_string());
                 preproc.output(name).model().set_layout(targetModelLayout);
             }
         } catch (const ov::Exception& e) {
@@ -422,7 +416,7 @@ Status ModelInstance::applyPreprocessing(const ModelConfig& config, std::shared_
         return status;
     }
 
-    status = applyPreprocessingConfiguration(preproc, config, model, modelName, modelVersion);
+    status = applyPreprocessingConfiguration(preproc, config, model);
     if (!status.ok()) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error during preprocessing configuration");
         return status;

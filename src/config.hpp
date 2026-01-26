@@ -202,29 +202,29 @@ public:
     /**
          * @brief Get means
          * 
-         * @return const std::string&
+         * @return const std::string
          */
-    const std::string& means() const;
+    const std::string means() const;
     /**
          * @brief Get scales  
          * 
-         * @return const std::string&
+         * @return const std::string
          */
-    const std::string& scales() const;
+    const std::string scales() const;
 
     /**
          * @brief Get color format  
          * 
-         * @return const std::string&
+         * @return const std::string
          */
-    const std::string& colorFormat() const;
+    const std::string colorFormat() const;
 
     /**
          * @brief Get precision  
          * 
-         * @return const std::string&
+         * @return const std::string
          */
-    const std::string& precision() const;
+    const std::string precision() const;
 
     /**
          * @brief Get the shape
