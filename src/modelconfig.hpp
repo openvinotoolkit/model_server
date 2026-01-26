@@ -727,16 +727,6 @@ public:
     Status parsePrecision(const std::string& command);
 
     /**
-          * @brief Parses value from string and extracts float value
-          * 
-          * @param string
-          * @param value
-          * 
-          * @return status
-          */
-    Status parseFloat(const std::string& str, float& value);
-
-    /**
           * @brief Parses value from string and extracts float value or array of float values
           * 
           * @param string
@@ -745,16 +735,6 @@ public:
           * @return status
           */
     Status parseFloatArrayOrValue(const std::string& str, std::optional<float_vec_or_value_t>& values);
-
-    /**
-          * @brief Parses value from string and extracts array of float values
-          * 
-          * @param string
-          * @param value
-          * 
-          * @return status
-          */
-    Status parseFloatArray(const std::string& str, std::vector<float>& values);
 
     /**
          * @brief Returns true if any input shape specified in shapes map is in AUTO mode

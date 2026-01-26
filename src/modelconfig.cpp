@@ -405,42 +405,6 @@ Status ModelConfig::parseLayoutParameter(const std::string& command) {
     return parseLayoutParameter(node);
 }
 
-Status ModelConfig::parseFloat(const std::string& str, float& value) {
-    try {
-        size_t processCount = 0;
-        value = std::stof(str, &processCount);
-        if (processCount != str.size()) {
-            SPDLOG_WARN("Parameter contains invalid float value: {}", str);
-            return StatusCode::FLOAT_WRONG_FORMAT;
-        }
-    } catch (const std::invalid_argument&) {
-        SPDLOG_WARN("Parameter contains invalid float value: {}", str);
-        return StatusCode::FLOAT_WRONG_FORMAT;
-    } catch (const std::out_of_range&) {
-        SPDLOG_WARN("Parameter contains out of range float value: {}", str);
-        return StatusCode::FLOAT_WRONG_FORMAT;
-    }
-    return StatusCode::OK;
-}
-
-Status ModelConfig::parseFloatArray(const std::string& str, std::vector<float>& values) {
-    values.clear();
-    std::string s = str;
-    std::stringstream ss(s);
-    std::string item;
-    while (std::getline(ss, item, ',')) {
-        auto status = parseFloat(item, values.emplace_back());
-        if (!status.ok()) {
-            return status;
-        }
-    }
-    if (values.empty()) {
-        SPDLOG_WARN("Parameter contains empty float array");
-        return StatusCode::FLOAT_WRONG_FORMAT;
-    }
-    return StatusCode::OK;
-}
-
 Status ModelConfig::parseFloatArrayOrValue(const std::string& str, std::optional<float_vec_or_value_t>& values) {
     if (str.empty()) {
         return StatusCode::OK;
@@ -454,18 +418,16 @@ Status ModelConfig::parseFloatArrayOrValue(const std::string& str, std::optional
     if ((*upperCaseCommand.begin() == '[' && *upperCaseCommand.rbegin() == ']') ||
         (*upperCaseCommand.begin() == '(' && *upperCaseCommand.rbegin() == ')')) {
         auto commandWithoutBraces = upperCaseCommand.substr(1, upperCaseCommand.size() - 2);
-        std::vector<float> vals;
-        auto status = parseFloatArray(commandWithoutBraces, vals);
-        if (!status.ok()) {
-            return status;
+        auto floatValues = ovms::stringToFloatVector(commandWithoutBraces, ',');
+        if (!floatValues.has_value()) {
+            return StatusCode::FLOAT_WRONG_FORMAT;
         }
-        values = vals;
+        values = floatValues.value();
         return StatusCode::OK;
     }
-    float val;
-    auto status = parseFloat(upperCaseCommand, val);
-    if (!status.ok()) {
-        return status;
+    auto val = ovms::stof(upperCaseCommand);
+    if (!val.has_value()) {
+        return StatusCode::FLOAT_WRONG_FORMAT;
     }
     values = val;
     return StatusCode::OK;
