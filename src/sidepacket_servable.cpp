@@ -16,6 +16,7 @@
 
 #include <numeric>
 
+#include "openvino/genai/rag/text_embedding_pipeline.hpp"
 #include "sidepacket_servable.hpp"
 #include "logging.hpp"
 #include <spdlog/spdlog.h>
@@ -55,6 +56,112 @@ namespace ovms {
 
 SidepacketServable::SidepacketServable(const std::string& modelDir, const std::string& targetDevice, const std::string& pluginConfig, const std::string& graphPath) {
     return;
+}
+
+struct KVAxesPosition {
+    size_t batch;
+    size_t seq_len;
+};
+
+struct KVDesc {
+    uint32_t max_prompt_len;
+    uint32_t min_response_len;
+};
+
+std::optional<ov::Any> pop_option(ov::AnyMap& config, const std::string& option_name) {
+    if (auto it = config.find(option_name); it != config.end()) {
+        std::optional<ov::Any> found = std::make_optional(it->second);
+        config.erase(it);
+        return found;
+    }
+    return std::nullopt;
+}
+
+std::optional<uint32_t> pop_int_and_cast(ov::AnyMap& config, const std::string& key) {
+    auto anyopt = pop_option(config, key);
+    if (anyopt.has_value()) {
+        const auto any = anyopt.value();
+        int64_t value;
+        // NB: Integer value coming from python has int64_t datatype
+        if (any.is<int64_t>()) {
+            value = any.as<int64_t>();
+        } else if (any.is<int>()) {
+            value = any.as<int>();
+        } else {
+            OPENVINO_THROW("Failed to extract " + key + ". Type mismatch: expected types: int or int64_t");
+        }
+        if (value < 0) {
+            OPENVINO_THROW(key + " cannot be negative!");
+        }
+        return std::make_optional(static_cast<uint32_t>(value));
+    }
+    return std::nullopt;
+}
+
+KVAxesPosition get_kv_axes_pos(std::shared_ptr<const ov::Model> model) {
+    // sequence length axis in key/values tensors, for most cases [BATCH_SIZE, num_kv_heads, seq_len, head_size],
+    // therefore usually seq_length_axis = 2 and batch = 0
+    KVAxesPosition kv_pos { 0u, 2u };
+
+    // "ReadValue" node is KV cache representation in stateful model
+    std::string kv_node_type_name = std::string(ov::op::v6::ReadValue::get_type_info_static().name);
+
+    for (const auto &op : model->get_ops()) {
+        // check input size, as in LoRA adapters case it could be 0
+        if (op->get_type_name() != kv_node_type_name || op->get_input_size() < 1) {
+            continue;
+        }
+
+        // Shape example: [-1,4,0,64]
+        auto shape = op->get_input_partial_shape(0);
+
+        for (size_t i = 0; i < shape.rank().get_length(); i++) {
+            // Find axis = 0. This would be sequence length axis.
+            if (shape[i] == 0) {
+                kv_pos.seq_len = i;
+            } else if (shape[i].is_dynamic()) {
+                // Dynamic axis is a batch
+                kv_pos.batch = i;
+            }
+        }
+        break;
+    }
+
+    return kv_pos;
+}
+
+void update_config(ov::AnyMap& config, const std::pair<std::string, ov::Any>& pair) {
+    if (config.count(pair.first) == 0) {
+        config.insert(pair);
+    }
+}
+
+void update_npu_config_text_embedding(ov::AnyMap& config,
+                                      const KVAxesPosition& kv_pos,
+                                      const KVDesc& kv_desc) {
+    update_config(config, {"NPU_USE_NPUW", "YES"});
+    update_config(config, {"NPUW_LLM", "YES"});
+    update_config(config, {"NPUW_LLM_BATCH_DIM", kv_pos.batch});
+    update_config(config, {"NPUW_LLM_SEQ_LEN_DIM", kv_pos.seq_len});
+
+    update_config(config, {"NPUW_LLM_MAX_PROMPT_LEN", kv_desc.max_prompt_len});
+    update_config(config, {"NPUW_LLM_MIN_RESPONSE_LEN", kv_desc.min_response_len});
+    update_config(config, {"NPUW_LLM_SHARED_HEAD", "NO"});
+
+    update_config(config, {"NPUW_TEXT_EMBED", "YES"});
+}
+
+void get_npu_text_embedding_config(ov::AnyMap& properties,
+                                   const KVAxesPosition& kv_pos,
+                                   KVDesc& kv_desc,
+                                   const TextEmbeddingPipeline::Config& text_embed_config) {
+    if (text_embed_config.max_length.has_value()) {
+        kv_desc.max_prompt_len = text_embed_config.max_length.value();
+    } else {
+        kv_desc.max_prompt_len = pop_int_and_cast(properties, "MAX_PROMPT_LEN").value_or(1024u);
+    }
+    kv_desc.min_response_len = kv_desc.max_prompt_len;
+    update_npu_config_text_embedding(properties, kv_pos, kv_desc);
 }
 
 void SidepacketServable::initialize(const std::string& modelDir, const std::string& targetDevice, const std::string& pluginConfig, const std::string& graphPath) {
@@ -131,6 +238,12 @@ void SidepacketServable::initialize(const std::string& modelDir, const std::stri
     ov::Core core;
     std::shared_ptr<ov::Model> m_model = core.read_model(parsedModelsPath / std::filesystem::path("openvino_model.xml"), {}, properties);
     m_model = this->applyPrePostProcessing(m_model);
+    if (targetDevice == "NPU") {
+        TextEmbeddingPipeline::Config config;
+        auto kv_pos = get_kv_axes_pos(m_model);
+        KVDesc kv_desc;
+        get_npu_text_embedding_config(properties, kv_pos, kv_desc, config);
+    }
     compiledModel = core.compile_model(m_model, targetDevice, properties);
     auto& ovmsConfig = ovms::Config::instance();
     uint32_t numberOfParallelInferRequests = 1;
