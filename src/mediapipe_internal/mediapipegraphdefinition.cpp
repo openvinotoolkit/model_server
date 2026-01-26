@@ -48,6 +48,7 @@
 #include "mediapipe_utils.hpp"
 #include "mediapipegraphexecutor.hpp"
 #include "src/embeddings/embeddings_calculator_ov.pb.h"
+#include "src/embeddings/genai_embeddings_servable.hpp"
 #include "src/rerank/rerank_calculator_ov.pb.h"
 
 #include "src/image_gen/pipelines.hpp"
@@ -64,6 +65,7 @@ const std::string MediapipeGraphDefinition::IMAGE_GEN_CALCULATOR_NAME{"ImageGenC
 const std::string MediapipeGraphDefinition::STT_NODE_CALCULATOR_NAME{"S2tCalculator"};
 const std::string MediapipeGraphDefinition::TTS_NODE_CALCULATOR_NAME{"T2sCalculator"};
 const std::string MediapipeGraphDefinition::EMBEDDINGS_NODE_CALCULATOR_NAME{"EmbeddingsCalculatorOV"};
+const std::string MediapipeGraphDefinition::GENAI_EMBEDDINGS_NODE_CALCULATOR_NAME{"GenaiEmbeddingsCalculatorOV"};
 const std::string MediapipeGraphDefinition::RERANK_NODE_CALCULATOR_NAME{"RerankCalculatorOV"};
 
 MediapipeGraphDefinition::~MediapipeGraphDefinition() = default;
@@ -544,6 +546,39 @@ Status MediapipeGraphDefinition::initializeNodes() {
                 mgconfig.getBasePath());
             embeddingsServableMap.insert(std::pair<std::string, std::shared_ptr<EmbeddingsServable>>(nodeName, std::move(servable)));
             embeddingsServablesCleaningGuard.disableCleaning();
+        }
+        if (endsWith(config.node(i).calculator(), GENAI_EMBEDDINGS_NODE_CALCULATOR_NAME)) {
+            auto& genaiEmbeddingsServableMap = this->sidePacketMaps.genaiEmbeddingsServableMap;
+            ResourcesCleaningGuard<GenaiEmbeddingsServableMap> genaiEmbeddingsServablesCleaningGuard(genaiEmbeddingsServableMap);
+            if (!config.node(i).node_options().size()) {
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Embeddings node missing options in graph: {}. ", this->name);
+                return StatusCode::LLM_NODE_MISSING_OPTIONS;
+            }
+            if (config.node(i).name().empty()) {
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Embeddings node name is missing in graph: {}. ", this->name);
+                return StatusCode::LLM_NODE_MISSING_NAME;
+            }
+            std::string nodeName = config.node(i).name();
+            if (genaiEmbeddingsServableMap.find(nodeName) != genaiEmbeddingsServableMap.end()) {
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Embeddings node name: {} already used in graph: {}. ", nodeName, this->name);
+                return StatusCode::LLM_NODE_NAME_ALREADY_EXISTS;
+            }
+            mediapipe::EmbeddingsCalculatorOVOptions nodeOptions;
+            config.node(i).node_options(0).UnpackTo(&nodeOptions);
+            std::shared_ptr<GenaiEmbeddingsServable> servable = std::make_shared<GenaiEmbeddingsServable>(
+                nodeOptions.models_path(),
+                nodeOptions.target_device(),
+                nodeOptions.plugin_config(),
+                mgconfig.getBasePath(),
+                nodeOptions.pooling(),
+                nodeOptions.normalize_embeddings());
+            servable->initialize(
+                nodeOptions.models_path(),
+                nodeOptions.target_device(),
+                nodeOptions.plugin_config(),
+                mgconfig.getBasePath());
+            genaiEmbeddingsServableMap.insert(std::pair<std::string, std::shared_ptr<GenaiEmbeddingsServable>>(nodeName, std::move(servable)));
+            genaiEmbeddingsServablesCleaningGuard.disableCleaning();
         }
         if (endsWith(config.node(i).calculator(), RERANK_NODE_CALCULATOR_NAME)) {
             auto& rerankServableMap = this->sidePacketMaps.rerankServableMap;

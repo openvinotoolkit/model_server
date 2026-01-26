@@ -104,6 +104,7 @@ public:
         const PythonNodeResourcesMap& pythonNodeResourcesMap,
         const GenAiServableMap& llmNodeResourcesMap,
         const EmbeddingsServableMap& embeddingsServableMap,
+        const GenaiEmbeddingsServableMap& genaiEmbeddingsServableMap,
         const RerankServableMap& rerankServableMap,
         const SttServableMap& sttServableMap,
         const TtsServableMap& ttsServableMap,
