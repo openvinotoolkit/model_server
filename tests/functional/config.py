@@ -93,13 +93,17 @@ converted_models_expire_time = get_int("TT_CONVERTED_MODELS_EXPIRE_TIME", 7*24*3
 """ TT_DEFAULT_INFER_TIMEOUT - Timeout for CPU target device"""
 default_infer_timeout = get_int("TT_DEFAULT_INFER_TIMEOUT", 10)
 
-""" TT_DEFAULT_GPU_INFER_TIMEOUT - Timeout for CPU target device"""
+""" TT_DEFAULT_GPU_INFER_TIMEOUT - Timeout for GPU target device"""
 default_gpu_infer_timeout = get_int("TT_DEFAULT_GPU_INFER_TIMEOUT", 10*default_infer_timeout)
+
+""" TT_DEFAULT_NPU_INFER_TIMEOUT - Timeout for NPU target device"""
+default_npu_infer_timeout = get_int("TT_DEFAULT_NPU_INFER_TIMEOUT", 10*default_infer_timeout)
 
 """ INFER TIMEOUT """
 infer_timeouts = {
     TargetDevice.CPU: default_infer_timeout,
     TargetDevice.GPU: default_gpu_infer_timeout,
+    TargetDevice.NPU: default_npu_infer_timeout,
 }
 infer_timeout = infer_timeouts[target_device]
 
