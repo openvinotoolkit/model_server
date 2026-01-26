@@ -256,7 +256,7 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
                 cxxopts::value<std::string>(),
                 "SHAPE")
             ("layout",
-                "Resets model layout.",
+                "Resets model layout. It should be in format <TARGET_LAYOUT>:<SOURCE_LAYOUT> e.g. NCHW:NHWC",
                 cxxopts::value<std::string>(),
                 "LAYOUT")
             ("mean",
@@ -268,7 +268,7 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
                 cxxopts::value<std::string>(),
                 "SCALE")
             ("color_format",
-                "Resets model color format.",
+                "Resets model color format. It should be in format <TARGET_COLOR_FORMAT>:<SOURCE_COLOR_FORMAT> e.g. BGR:RGB",
                 cxxopts::value<std::string>(),
                 "COLOR_FORMAT")
             ("precision",
