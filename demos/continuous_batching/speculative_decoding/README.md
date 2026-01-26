@@ -305,7 +305,7 @@ stream = client.completions.create(
     prompt="<s>def quicksort(numbers):",
     temperature=0,
     max_tokens=100,
-    extra_body={"num_assistant_tokens": 5}
+    extra_body={"num_assistant_tokens": 5},
     stream=True,
 )
 for chunk in stream:
