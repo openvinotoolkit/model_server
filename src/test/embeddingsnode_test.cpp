@@ -68,6 +68,43 @@ public:
     }
 };
 
+class GenaiEmbeddingsHttpTest : public V3HttpTest, public ::testing::WithParamInterface<std::string> {
+protected:
+    static std::unique_ptr<std::thread> t;
+
+public:
+    static void SetUpTestSuite() {
+        std::string port = "9173";
+        std::string configPath = getGenericFullPathForSrcTest("/ovms/src/test/embeddings/genai_config_embeddings.json");
+        SetUpSuite(port, configPath, t);
+    }
+
+    static void TearDownTestSuite() {
+        TearDownSuite(t);
+    }
+};
+std::unique_ptr<std::thread> GenaiEmbeddingsHttpTest::t;
+
+TEST_P(GenaiEmbeddingsHttpTest, positiveLongInput) {
+    auto modelName = GetParam();
+    std::string words;
+    for (int i = 0; i < 500; i++) {
+        words += "hello ";
+    }
+    std::string requestBody = "{ \"model\": \"" + modelName + "\", \"input\": \"" + words + " \"}";
+
+    Status status = handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, writer, multiPartParser);
+    ASSERT_EQ(status,
+        ovms::StatusCode::OK)
+        << status.string();
+    rapidjson::Document d;
+    rapidjson::ParseResult ok = d.Parse(response.c_str());
+    std::cout << response << std::endl;
+    ASSERT_EQ(ok.Code(), 0);
+    ASSERT_TRUE(d["usage"]["prompt_tokens"].IsInt());
+    ASSERT_EQ(d["usage"]["prompt_tokens"], 502);  // 500 words + 2 special tokens
+}
+
 class EmbeddingsHttpTest : public V3HttpTest, public ::testing::WithParamInterface<std::string> {
 protected:
     static std::unique_ptr<std::thread> t;
@@ -442,6 +479,11 @@ INSTANTIATE_TEST_SUITE_P(
     EmbeddingsHttpTestInstances,
     EmbeddingsHttpTest,
     ::testing::Values("embeddings_ov"));
+
+INSTANTIATE_TEST_SUITE_P(
+    GenaiEmbeddingsHttpTestInstances,
+    GenaiEmbeddingsHttpTest,
+    ::testing::Values("embeddings_ov_no_norm"));
 
 static bool isMpReady(const std::string name) {
     ovms::Server& server = ovms::Server::instance();

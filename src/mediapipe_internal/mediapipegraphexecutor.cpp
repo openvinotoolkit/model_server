@@ -90,6 +90,7 @@ const std::string MediapipeGraphExecutor::PYTHON_SESSION_SIDE_PACKET_TAG = "py";
 const std::string MediapipeGraphExecutor::LLM_SESSION_SIDE_PACKET_TAG = "llm";
 const std::string MediapipeGraphExecutor::IMAGE_GEN_SESSION_SIDE_PACKET_TAG = "pipes";
 const std::string MediapipeGraphExecutor::EMBEDDINGS_SESSION_SIDE_PACKET_TAG = "embeddings_servable";
+const std::string MediapipeGraphExecutor::GENAI_EMBEDDINGS_SESSION_SIDE_PACKET_TAG = "genai_embeddings_servable";
 const std::string MediapipeGraphExecutor::RERANK_SESSION_SIDE_PACKET_TAG = "rerank_servable";
 const std::string MediapipeGraphExecutor::STT_SESSION_SIDE_PACKET_TAG = "s2t_servable";
 const std::string MediapipeGraphExecutor::TTS_SESSION_SIDE_PACKET_TAG = "t2s_servable";

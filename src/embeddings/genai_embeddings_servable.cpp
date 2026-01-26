@@ -27,6 +27,8 @@
 #include "openvino/opsets/opset3.hpp"
 #include "openvino/opsets/opset8.hpp"
 
+#include "../json_parser.hpp"
+
 using namespace ov::genai;
 using namespace ov;
 
@@ -39,14 +41,28 @@ void GenaiEmbeddingsServable::initialize(const std::string& modelDir, const std:
         parsedModelsPath = fsModelsPath.string();
     }
 
-    /*ov::AnyMap properties;
+    ov::AnyMap properties;
     auto status = JsonParser::parsePluginConfig(pluginConfig, properties);
     if (!status.ok()) {
         SPDLOG_ERROR("Error during embeddings node plugin_config option parsing to JSON: {}", pluginConfig);
-    }*/
+    }
 
-    TextEmbeddingPipeline::Config config;
-    config.pooling_type = TextEmbeddingPipeline::PoolingType::MEAN;
+    TextEmbeddingPipeline::Config config(properties);
+    switch (pooling) {
+        case mediapipe::EmbeddingsCalculatorOVOptions_Pooling_CLS:
+            config.pooling_type = TextEmbeddingPipeline::PoolingType::CLS;
+            break;
+        case mediapipe::EmbeddingsCalculatorOVOptions_Pooling_LAST:
+            config.pooling_type = TextEmbeddingPipeline::PoolingType::LAST_TOKEN;
+            break;
+        case mediapipe::EmbeddingsCalculatorOVOptions_Pooling_MEAN:
+            config.pooling_type = TextEmbeddingPipeline::PoolingType::MEAN;
+            break;
+        default:
+            config.pooling_type = TextEmbeddingPipeline::PoolingType::CLS;
+            break;
+        }
+
     m_pipeline = std::make_unique<TextEmbeddingPipeline>(parsedModelsPath, targetDevice, config);
 }
 

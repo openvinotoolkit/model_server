@@ -45,7 +45,7 @@ class GenaiEmbeddingsServable;
 
 namespace mediapipe {
 
-const std::string EMBEDDINGS_SESSION_SIDE_PACKET_TAG = "GENAI_EMBEDDINGS_NODE_RESOURCES";
+const std::string GENAI_EMBEDDINGS_SESSION_SIDE_PACKET_TAG = "GENAI_EMBEDDINGS_NODE_RESOURCES";
 
 using InputDataType = ovms::HttpPayload;
 using OutputDataType = std::string;
@@ -87,7 +87,7 @@ public:
         RET_CHECK(!cc->Outputs().GetTags().empty());
         cc->Inputs().Tag(INPUT_TAG_NAME).Set<InputDataType>();
         cc->Outputs().Tag(OUTPUT_TAG_NAME).Set<OutputDataType>();
-        cc->InputSidePackets().Tag(EMBEDDINGS_SESSION_SIDE_PACKET_TAG).Set<ovms::GenaiEmbeddingsServableMap>();
+        cc->InputSidePackets().Tag(GENAI_EMBEDDINGS_SESSION_SIDE_PACKET_TAG).Set<ovms::GenaiEmbeddingsServableMap>();
         return absl::OkStatus();
     }
 
@@ -101,7 +101,7 @@ public:
         OVMS_PROFILE_FUNCTION();
         SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "GenaiEmbeddingsCalculatorOV  [Node: {}] Open start", cc->NodeName());
         auto servableMap = cc->InputSidePackets()
-                               .Tag(EMBEDDINGS_SESSION_SIDE_PACKET_TAG)
+                               .Tag(GENAI_EMBEDDINGS_SESSION_SIDE_PACKET_TAG)
                                .Get<ovms::GenaiEmbeddingsServableMap>();
         auto it = servableMap.find(cc->NodeName());
         RET_CHECK(it != servableMap.end()) << "Could not find initialized Embeddings node named: " << cc->NodeName();
@@ -122,7 +122,6 @@ public:
         SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Request uri: {}", payload.uri);
 
         ov::Tensor embeddingsTensor;
-        //size_t received_batch_size = 1;
         size_t max_context_length = 1024;  // default allowed input length. Otherwise, it will be read from model config.json file
         ov::genai::TokenizedInputs tokens;
         ov::Tensor typeIds;
@@ -132,6 +131,8 @@ public:
             SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "max_position_embeddings nor max_trained_positions included in config.json. Using default value {}", max_context_length);
         }
         
+        // TODO: Tokenizer endpoint
+
         ovms::EmbeddingsHandler handler(*payload.parsedJson);
         auto parseRequestStartTime = std::chrono::high_resolution_clock::now();
         absl::Status status = handler.parseRequest();
@@ -148,14 +149,12 @@ public:
             auto input = handler.getInput();
             if (auto strings = std::get_if<std::vector<std::string>>(&input)) {
                 ov::AnyMap& params = handler.getParameters();
-                //size_t received_batch_size = strings->size();
                 if (cc->Options<EmbeddingsCalculatorOVOptions>().truncate() && params.find("max_length") == params.end()) {
                     params["max_length"] = max_context_length;
                 }
 
-                
-                // TODO:handler.setPromptTokensUsage(attendedTokens);
-
+                // TODO:handler.setPromptTokensUsage(attendedTokens); Need info from genai, currently private
+                // handler.setPromptTokensUsage(attendedTokens);
                 ov::genai::EmbeddingResults documents_embeddings = embeddings_session->m_pipeline->embed_documents(*strings);
                 std::cout << std::endl << "documents_embeddings:" << std::endl;
                 printVariant(documents_embeddings);
