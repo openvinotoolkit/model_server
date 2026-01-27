@@ -232,7 +232,11 @@ absl::Status GenAiServable::preparePartialResponse(std::shared_ptr<GenAiServable
         return absl::InternalError("For streaming we expect exactly one generation output");
     }
     auto& generationOutput = executionContext->generationOutputs[0];
-    executionContext->apiHandler->incrementProcessedTokens(generationOutput.generated_ids.size());
+
+    auto generatedTokensCount = generationOutput.generated_ids.get_size();
+    SPDLOG_LOGGER_TRACE(llm_calculator_logger, "LLM iteration done. Number of generated tokens in this chunk: {}", generatedTokensCount);
+
+    executionContext->apiHandler->incrementProcessedTokens(generatedTokensCount);
 
     std::stringstream ss;
     executionContext->textStreamer->write(generationOutput.generated_ids);
