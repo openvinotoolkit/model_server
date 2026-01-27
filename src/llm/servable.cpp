@@ -233,7 +233,7 @@ absl::Status GenAiServable::preparePartialResponse(std::shared_ptr<GenAiServable
     }
     auto& generationOutput = executionContext->generationOutputs[0];
 
-    auto generatedTokensCount = generationOutput.generated_ids.get_size();
+    auto generatedTokensCount = generationOutput.generated_ids.size();
     SPDLOG_LOGGER_TRACE(llm_calculator_logger, "LLM iteration done. Number of generated tokens in this chunk: {}", generatedTokensCount);
 
     executionContext->apiHandler->incrementProcessedTokens(generatedTokensCount);
