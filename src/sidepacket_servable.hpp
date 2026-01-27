@@ -41,12 +41,15 @@ struct SidepacketServable {
     std::shared_ptr<ov::genai::Tokenizer> tokenizer;
     std::shared_ptr<ov::Model> model;
     ov::CompiledModel compiledModel;
+    ov::CompiledModel postProcCompiledModel;
+    std::unique_ptr<OVInferRequestsQueue> postProcInferRequestsQueue;
     std::unique_ptr<OVInferRequestsQueue> inferRequestsQueue;
     std::optional<int64_t> pad_token;
     std::optional<int64_t> eos_token;
     std::optional<int64_t> bos_token;
     std::optional<int64_t> sep_token;
     std::optional<uint32_t> maxModelLength;
+    bool npuPostprocessingRequired;
     std::filesystem::path parsedModelsPath;
 
 public:
@@ -54,6 +57,9 @@ public:
     void initialize(const std::string& modelDir, const std::string& targetDevice, const std::string& pluginConfig, const std::string& graphPath);
     OVInferRequestsQueue& getInferRequestsQueue() {
         return *inferRequestsQueue;
+    }
+    OVInferRequestsQueue& getPostProcInferRequestsQueue() {
+        return *postProcInferRequestsQueue;
     }
     ov::genai::Tokenizer& getTokenizer() {
         return *tokenizer;
@@ -75,6 +81,9 @@ public:
     }
     const size_t getNumberOfModelInputs() {
         return compiledModel.inputs().size();
+    }
+    const bool isNpuPostprocessingRequired() {
+        return npuPostprocessingRequired;
     }
 
 protected:

@@ -263,6 +263,42 @@ public:
                 SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Single embedding model output found with name {}", outputTensorName);
             }
             embeddingsTensor = inferRequest.get_tensor(outputTensorName.c_str());
+
+            // NPU embeddings dynamic model case
+            if (embeddings_session->isNpuPostprocessingRequired()) {
+                SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "NPU embeddings dynamic model additional inference");
+                ModelMetricReporter unused2(nullptr, nullptr, "unused2", 1);
+                auto executingStreamIdGuard2 = std::make_unique<ExecutingStreamIdGuard>(embeddings_session->getPostProcInferRequestsQueue(), unused2);
+                ov::InferRequest& inferRequest2 = executingStreamIdGuard2->getInferRequest();
+                const auto input_shape = embeddingsTensor.get_shape();
+                const size_t sequence_length = input_shape[1];
+                const size_t original_mask_size = tokens.attention_mask.get_size();
+                RET_CHECK(sequence_length >= original_mask_size) << "Attention mask size mismatch for post_request embeddings NPU request";
+
+                // Create attention mask tensor matching the embedding output shape
+                ov::Tensor attention_mask_tensor{ov::element::i64, {1, sequence_length}};
+
+                // Copy original attention mask
+                std::copy_n(tokens.attention_mask.data<int64_t>(), original_mask_size, attention_mask_tensor.data<int64_t>());
+
+                // When prefill-chunk is enabled, the input sequence length is aligned to the chunk size.
+                // For example, if the input sequence length is 3800 and the chunk size is 1024, the input
+                // sequence length will be reset to 4096. In this case, the attention_mask_tensor size is 4096,
+                // which is greater than the original tokens.attention_mask size of 3800. We need to zero-fill
+                // the remaining elements in the attention_mask_tensor to ensure correct masking behavior.
+                if (sequence_length > original_mask_size) {
+                    std::fill_n(attention_mask_tensor.data<int64_t>() + original_mask_size,
+                                sequence_length - original_mask_size,
+                                0);
+                }
+
+                // Run post-processing inference
+                inferRequest2.set_tensor("attention_mask", attention_mask_tensor);
+                inferRequest2.set_tensor("embedding_hidden_state", embeddingsTensor);
+                inferRequest2.infer();
+                embeddingsTensor = inferRequest2.get_tensor(outputTensorName.c_str());
+            }   
+
         } catch (const std::exception& e) {
             SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Caught exception from session infer(): {}", e.what());
             LOG(INFO) << e.what();
@@ -275,6 +311,8 @@ public:
         RET_CHECK(embeddingsTensor.get_shape().size() == 2);
         RET_CHECK(embeddingsTensor.get_shape()[0] == received_batch_size);
         RET_CHECK(embeddingsTensor.get_element_type() == ov::element::f32);  // do we still need it?
+
+            
 
         auto parseResponseStartTime = std::chrono::high_resolution_clock::now();
         StringBuffer buffer;

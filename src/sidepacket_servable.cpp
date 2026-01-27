@@ -16,6 +16,11 @@
 
 #include <numeric>
 
+#include "openvino/core/except.hpp"
+#include "openvino/opsets/opset.hpp"
+#include "openvino/opsets/opset1.hpp"
+#include "openvino/opsets/opset3.hpp"
+#include "openvino/opsets/opset8.hpp"
 #include "openvino/genai/rag/text_embedding_pipeline.hpp"
 #include "sidepacket_servable.hpp"
 #include "logging.hpp"
@@ -164,6 +169,135 @@ void get_npu_text_embedding_config(ov::AnyMap& properties,
     update_npu_config_text_embedding(properties, kv_pos, kv_desc);
 }
 
+
+void set_node_name(const std::shared_ptr<ov::Node>& node, const std::string& name) {
+    node->set_friendly_name(name);
+    node->get_output_tensor(0).set_names({name});
+}
+
+/**
+ * CLS pooling slices first element from seq_length dimension
+ * [batch_size, seq_length, hidden_size] -> [batch_size, seq_length[0], hidden_size]
+ * [10, 5, 768] -> [10, 768]
+ */
+std::shared_ptr<op::Op> get_cls_pooling_op(const ov::Output<ov::Node>& last_hidden_state_node) {
+    auto start = std::make_shared<op::v0::Constant>(ov::element::i64, ov::Shape{1}, std::vector<int64_t>{0});
+    auto stop = std::make_shared<op::v0::Constant>(ov::element::i64, ov::Shape{1}, std::vector<int64_t>{1});
+    auto step = std::make_shared<op::v0::Constant>(ov::element::i64, ov::Shape{1}, std::vector<int64_t>{1});
+    auto axis = std::make_shared<op::v0::Constant>(ov::element::i64, ov::Shape{1}, std::vector<int64_t>{1});
+
+    auto slice = std::make_shared<op::v8::Slice>(last_hidden_state_node, start, stop, step, axis);
+
+    auto squeeze_axis = std::make_shared<op::v0::Constant>(ov::element::i64, ov::Shape{1}, std::vector<int64_t>{1});
+    return std::make_shared<op::v15::Squeeze>(slice, squeeze_axis);
+}
+
+std::shared_ptr<op::Op> get_mean_pooling_op(const ov::Output<ov::Node>& last_hidden_state_node,
+                                            const ov::Output<ov::Node>& attention_mask) {
+    auto shape_of = std::make_shared<op::v3::ShapeOf>(last_hidden_state_node);
+
+    auto unsqueze_axis = std::make_shared<op::v0::Constant>(ov::element::i64, ov::Shape{1}, std::vector<int64_t>{-1});
+
+    auto unsqueze = std::make_shared<op::v0::Unsqueeze>(attention_mask, unsqueze_axis);
+
+    auto input_mask_expanded = std::make_shared<op::v3::Broadcast>(unsqueze, shape_of);
+
+    auto input_mask_expanded_convert =
+        std::make_shared<op::v0::Convert>(input_mask_expanded, last_hidden_state_node.get_element_type());
+
+    auto last_hidden_node_with_applied_attention_mask =
+        std::make_shared<op::v1::Multiply>(last_hidden_state_node, input_mask_expanded_convert->outputs()[0]);
+
+    auto axis_1 = std::make_shared<op::v0::Constant>(ov::element::i64, ov::Shape{1}, std::vector<int64_t>{1});
+    auto sum_hidden_state = std::make_shared<op::v1::ReduceSum>(last_hidden_node_with_applied_attention_mask, axis_1);
+
+    // f32 overflow possible
+    // ReduceMean might help with overflow but its precision diverges from LlamaIndex
+    auto sum_expanded_mask = std::make_shared<op::v1::ReduceSum>(input_mask_expanded_convert, axis_1);
+
+    auto nearest_to_zero =
+        std::make_shared<op::v0::Constant>(ov::element::f32, ov::Shape{1}, std::vector<float>{1e-12});
+    auto max_expanded_mask = std::make_shared<op::v1::Maximum>(sum_expanded_mask, nearest_to_zero);
+
+    // shape: [batch_size, hidden_state_size]
+    return std::make_shared<op::v1::Divide>(sum_hidden_state, max_expanded_mask);
+}
+
+std::shared_ptr<op::Op> get_last_token_pooling_op(const ov::Output<ov::Node>& last_hidden_state_node,
+                                                  const ov::Output<ov::Node>& attention_mask,
+                                                  const TextEmbeddingPipeline::Config& config) {
+    const auto left_padding = config.padding_side.has_value() && config.padding_side.value() == "left";
+
+    // shortcut for left padding. We can slice last token directly
+    if (left_padding) {
+        auto start = std::make_shared<op::v0::Constant>(ov::element::i64, ov::Shape{1}, std::vector<int64_t>{-1});
+        auto stop = std::make_shared<op::v0::Constant>(ov::element::i64,
+                                                       ov::Shape{1},
+                                                       std::vector<int64_t>{std::numeric_limits<int64_t>::max()});
+        auto step = std::make_shared<op::v0::Constant>(ov::element::i64, ov::Shape{1}, std::vector<int64_t>{1});
+        auto axis = std::make_shared<op::v0::Constant>(ov::element::i64, ov::Shape{1}, std::vector<int64_t>{1});
+
+        auto slice = std::make_shared<op::v8::Slice>(last_hidden_state_node, start, stop, step, axis);
+
+        auto squeeze_axis = std::make_shared<op::v0::Constant>(ov::element::i64, ov::Shape{1}, std::vector<int64_t>{1});
+        return std::make_shared<op::v15::Squeeze>(slice, squeeze_axis);
+    }
+
+    auto axis_1 = std::make_shared<op::v0::Constant>(ov::element::i64, ov::Shape{1}, std::vector<int64_t>{1});
+    auto reduce_sum = std::make_shared<op::v1::ReduceSum>(attention_mask, axis_1);
+    auto subtract_1 = std::make_shared<op::v0::Constant>(ov::element::i64, ov::Shape{1}, std::vector<int64_t>{1});
+    auto subtract = std::make_shared<op::v1::Subtract>(reduce_sum, subtract_1);
+
+    return std::make_shared<op::v8::Gather>(last_hidden_state_node, subtract, axis_1, 1);
+}
+
+std::shared_ptr<op::Op> create_post_ops(const ov::Output<ov::Node>& input,
+                                        const ov::Output<ov::Node>& attention_mask,
+                                        const TextEmbeddingPipeline::Config& config) {
+    if (config.pooling_type == TextEmbeddingPipeline::PoolingType::CLS) {
+        return get_cls_pooling_op(input);
+    } else if (config.pooling_type == TextEmbeddingPipeline::PoolingType::MEAN) {
+        return get_mean_pooling_op(input, attention_mask);
+    } else if (config.pooling_type == TextEmbeddingPipeline::PoolingType::LAST_TOKEN) {
+        return get_last_token_pooling_op(input, attention_mask, config);
+    }
+
+    OPENVINO_THROW("Pooling type is not supported");
+}
+
+std::shared_ptr<op::Op> create_normalize_ops(const ov::Output<ov::Node>& input,
+                                             const TextEmbeddingPipeline::Config& config) {
+    if (config.normalize) {
+        auto axis_const = std::make_shared<op::v0::Constant>(ov::element::i32, ov::Shape{1}, std::vector{1});
+        return std::make_shared<op::v0::NormalizeL2>(input, axis_const, 1e-12, op::EpsMode::MAX);
+    }
+    return std::dynamic_pointer_cast<op::Op>(input.get_node_shared_ptr());
+}
+
+std::shared_ptr<ov::Model> create_post_model(std::shared_ptr<ov::Model> model,
+                                             const TextEmbeddingPipeline::Config& config) {
+    auto output_node = model->outputs()[0];
+    auto output_shape = output_node.get_partial_shape();
+    auto input_param = std::make_shared<ov::op::v0::Parameter>(output_node.get_element_type(),
+                                                               ov::PartialShape{1, -1, output_shape[2]});
+    set_node_name(input_param, "embedding_hidden_state");
+
+    auto attention_mask = std::make_shared<ov::op::v0::Parameter>(ov::element::i64, ov::PartialShape{1, -1});
+    set_node_name(attention_mask, "attention_mask");
+
+    auto post_output = create_post_ops(input_param, attention_mask, config);
+    auto post_normalize_output = create_normalize_ops(post_output, config);
+    OPENVINO_ASSERT(post_normalize_output != nullptr);
+
+    auto result_node = std::make_shared<ov::op::v0::Result>(post_normalize_output);
+    set_node_name(result_node, "last_hidden_state");
+    auto post_model =
+        std::make_shared<ov::Model>(ov::OutputVector{result_node}, ov::ParameterVector{input_param, attention_mask});
+    post_model->set_friendly_name(model->get_friendly_name() + "_post_process");
+    post_model->validate_nodes_and_infer_types();
+    return post_model;
+}
+
 void SidepacketServable::initialize(const std::string& modelDir, const std::string& targetDevice, const std::string& pluginConfig, const std::string& graphPath) {
     auto fsModelsPath = std::filesystem::path(modelDir);
     if (fsModelsPath.is_relative()) {
@@ -235,22 +369,47 @@ void SidepacketServable::initialize(const std::string& modelDir, const std::stri
         }
     }
 
-    ov::Core core;
-    std::shared_ptr<ov::Model> m_model = core.read_model(parsedModelsPath / std::filesystem::path("openvino_model.xml"), {}, properties);
-    m_model = this->applyPrePostProcessing(m_model);
-    if (targetDevice == "NPU") {
-        TextEmbeddingPipeline::Config config;
-        auto kv_pos = get_kv_axes_pos(m_model);
-        KVDesc kv_desc;
-        get_npu_text_embedding_config(properties, kv_pos, kv_desc, config);
-    }
-    compiledModel = core.compile_model(m_model, targetDevice, properties);
     auto& ovmsConfig = ovms::Config::instance();
     uint32_t numberOfParallelInferRequests = 1;
     if (ovmsConfig.nireq() > 0) {
         // nireq is set globally for all models in ovms startup parameters
         numberOfParallelInferRequests = ovmsConfig.nireq();
     }
+
+    ov::Core core;
+    std::shared_ptr<ov::Model> m_model = core.read_model(parsedModelsPath / std::filesystem::path("openvino_model.xml"), {}, properties);
+    if (targetDevice == "NPU") {
+        // TODO: if (config.batch_size.has_value() && is_seq_len_fixed) {
+            // utils::reshape_model(model, config, max_position_embeddings);
+        // }
+        if (m_model->is_dynamic()) {
+            // TODO: Setup proper config based on calculator options
+            TextEmbeddingPipeline::Config config;
+            config.pooling_type = ov::genai::TextEmbeddingPipeline::PoolingType::LAST_TOKEN;
+            config.normalize = true;
+            // Compile additional CPU model for NPU dynamic model case
+            auto post_model = create_post_model(m_model, config);
+            postProcCompiledModel = core.compile_model(post_model, "CPU", properties);
+            try {
+                numberOfParallelInferRequests = postProcCompiledModel.get_property(ov::optimal_number_of_infer_requests);
+            } catch (const ov::Exception& ex) {
+                SPDLOG_WARN("Failed to query OPTIMAL_NUMBER_OF_INFER_REQUESTS with error {}. Using 1 nireq.", ex.what());
+                numberOfParallelInferRequests = 1u;
+            }
+            postProcInferRequestsQueue = std::make_unique<OVInferRequestsQueue>(postProcCompiledModel, numberOfParallelInferRequests);
+            npuPostprocessingRequired = true;
+
+            // Set additional properties for NPU model
+            auto kv_pos = get_kv_axes_pos(m_model);
+            KVDesc kv_desc;
+            get_npu_text_embedding_config(properties, kv_pos, kv_desc, config); 
+        }
+    } else {
+        m_model = this->applyPrePostProcessing(m_model);
+    }
+
+    compiledModel = core.compile_model(m_model, targetDevice, properties);
+
     try {
         numberOfParallelInferRequests = compiledModel.get_property(ov::optimal_number_of_infer_requests);
     } catch (const ov::Exception& ex) {
