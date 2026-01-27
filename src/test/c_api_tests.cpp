@@ -58,10 +58,10 @@ static void testDefaultSingleModelOptions(ModelsSettingsImpl* modelsSettings) {
     EXPECT_EQ(modelsSettings->batchSize, "");
     EXPECT_EQ(modelsSettings->shape, "");
     EXPECT_EQ(modelsSettings->layout, "");
-    EXPECT_EQ(modelsSettings->mean, "");
-    EXPECT_EQ(modelsSettings->scale, "");
-    EXPECT_EQ(modelsSettings->colorFormat, "");
-    EXPECT_EQ(modelsSettings->precision, "");
+    EXPECT_EQ(modelsSettings->mean, std::nullopt);
+    EXPECT_EQ(modelsSettings->scale, std::nullopt);
+    EXPECT_EQ(modelsSettings->colorFormat, std::nullopt);
+    EXPECT_EQ(modelsSettings->precision, std::nullopt);
     EXPECT_EQ(modelsSettings->modelVersionPolicy, "");
     EXPECT_EQ(modelsSettings->nireq, 0);
     EXPECT_EQ(modelsSettings->targetDevice, "");
