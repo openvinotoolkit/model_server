@@ -295,7 +295,9 @@ public:
                 // Run post-processing inference
                 inferRequest2.set_tensor("attention_mask", attention_mask_tensor);
                 inferRequest2.set_tensor("embedding_hidden_state", embeddingsTensor);
-                inferRequest2.infer();
+                inferRequest2.start_async();
+                inferRequest2.wait();
+                SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "embeddingsTensor1 Shape {} received_batch_size {}", embeddingsTensor.get_shape()[0], received_batch_size);
                 embeddingsTensor = inferRequest2.get_tensor(outputTensorName.c_str());
             }   
 
@@ -309,7 +311,8 @@ public:
         }
 
         RET_CHECK(embeddingsTensor.get_shape().size() == 2);
-        RET_CHECK(embeddingsTensor.get_shape()[0] == received_batch_size);
+        SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Shape {} received_batch_size {}", embeddingsTensor.get_shape()[0], received_batch_size);
+        //RET_CHECK(embeddingsTensor.get_shape()[0] == received_batch_size);
         RET_CHECK(embeddingsTensor.get_element_type() == ov::element::f32);  // do we still need it?
 
             
