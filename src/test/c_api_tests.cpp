@@ -135,6 +135,8 @@ TEST(CAPIConfigTest, MultiModelConfiguration) {
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetLogLevel(_serverSettings, OVMS_LOG_TRACE));
     ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerSettingsSetLogLevel(_serverSettings, static_cast<OVMS_LogLevel>(99)), StatusCode::NONEXISTENT_LOG_LEVEL);
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetLogPath(_serverSettings, getGenericFullPathForTmp("/tmp/logs").c_str()));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetAllowedLocalMediaPath(_serverSettings, getGenericFullPathForTmp("/tmp/path").c_str()));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetAllowedMediaDomains(_serverSettings, "raw.githubusercontent.com,githubusercontent.com,google.com"));
     ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(_modelsSettings, getGenericFullPathForTmp("/tmp/config").c_str()));
     // check nullptr
     ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerSettingsSetGrpcPort(nullptr, 5555), StatusCode::NONEXISTENT_PTR);
@@ -159,6 +161,10 @@ TEST(CAPIConfigTest, MultiModelConfiguration) {
     ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerSettingsSetLogLevel(nullptr, OVMS_LOG_TRACE), StatusCode::NONEXISTENT_PTR);
     ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerSettingsSetLogPath(nullptr, getGenericFullPathForTmp("/tmp/logs").c_str()), StatusCode::NONEXISTENT_PTR);
     ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerSettingsSetLogPath(_serverSettings, nullptr), StatusCode::NONEXISTENT_PTR);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerSettingsSetAllowedLocalMediaPath(nullptr, getGenericFullPathForTmp("/tmp/images").c_str()), StatusCode::NONEXISTENT_PTR);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerSettingsSetAllowedLocalMediaPath(_serverSettings, nullptr), StatusCode::NONEXISTENT_PTR);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerSettingsSetAllowedMediaDomains(nullptr, "raw.githubusercontent.com,githubusercontent.com,google.com"), StatusCode::NONEXISTENT_PTR);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerSettingsSetAllowedMediaDomains(_serverSettings, nullptr), StatusCode::NONEXISTENT_PTR);
     ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ModelsSettingsSetConfigPath(nullptr, getGenericFullPathForTmp("/tmp/config").c_str()), StatusCode::NONEXISTENT_PTR);
     ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ModelsSettingsSetConfigPath(_modelsSettings, nullptr), StatusCode::NONEXISTENT_PTR);
 
@@ -174,6 +180,13 @@ TEST(CAPIConfigTest, MultiModelConfiguration) {
     EXPECT_EQ(serverSettings->cpuExtensionLibraryPath, getGenericFullPathForSrcTest("/ovms/src/test"));
     EXPECT_EQ(serverSettings->logLevel, "TRACE");
     EXPECT_EQ(serverSettings->logPath, getGenericFullPathForTmp("/tmp/logs"));
+    ASSERT_TRUE(serverSettings->allowedLocalMediaPath.has_value());
+    EXPECT_EQ(serverSettings->allowedLocalMediaPath.value(), getGenericFullPathForTmp("/tmp/path"));
+    ASSERT_TRUE(serverSettings->allowedMediaDomains.has_value());
+    EXPECT_EQ(serverSettings->allowedMediaDomains.value().size(), 3);
+    EXPECT_EQ(serverSettings->allowedMediaDomains.value()[0], "raw.githubusercontent.com");
+    EXPECT_EQ(serverSettings->allowedMediaDomains.value()[1], "githubusercontent.com");
+    EXPECT_EQ(serverSettings->allowedMediaDomains.value()[2], "google.com");
     // trace path  // not tested since it is not supported in C-API
     EXPECT_EQ(serverSettings->grpcChannelArguments, "grpcargs");
     EXPECT_EQ(serverSettings->grpcMaxThreads, 100);

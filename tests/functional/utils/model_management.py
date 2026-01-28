@@ -21,10 +21,10 @@ from datetime import datetime
 from pathlib import Path
 
 import logging
-from utils.parametrization import get_tests_suffix, generate_test_object_name
-from utils.process import Process
+from tests.functional.utils.parametrization import get_tests_suffix, generate_test_object_name
+from tests.functional.utils.process import Process
 
-from config import converted_models_expire_time
+from tests.functional.config import converted_models_expire_time
 
 logger = logging.getLogger(__name__)
 

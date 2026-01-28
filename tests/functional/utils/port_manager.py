@@ -17,7 +17,7 @@ import logging
 import socket
 import errno
 
-from utils.helpers import get_xdist_worker_count, get_xdist_worker_nr
+from tests.functional.utils.helpers import get_xdist_worker_count, get_xdist_worker_nr
 
 logger = logging.getLogger(__name__)
 

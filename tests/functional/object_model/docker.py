@@ -13,8 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-from grp import getgrnam
-from os import getuid
+
+try:
+    from grp import getgrnam
+except ImportError:
+    getgrnam = None
+
 import os
 import time
 from typing import List
@@ -24,12 +28,12 @@ import docker
 from docker.types import DeviceRequest
 import logging
 from retry.api import retry_call
-from utils.files_operation import get_path_friendly_test_name
+from tests.functional.utils.files_operation import get_path_friendly_test_name
 
-import config
-from utils.grpc import port_manager_grpc
-from utils.rest import port_manager_rest
-from constants import TARGET_DEVICE_HDDL, TARGET_DEVICE_GPU, TARGET_DEVICE_CUDA, TARGET_DEVICE_CPU, TARGET_DEVICE_MYRIAD
+import tests.functional.config as config
+from tests.functional.utils.grpc import port_manager_grpc
+from tests.functional.utils.rest import port_manager_rest
+from tests.functional.constants.target_device import TargetDevice
 
 
 logger = logging.getLogger(__name__)
@@ -37,38 +41,19 @@ CONTAINER_STATUS_RUNNING = "running"
 TERMINAL_STATUSES = ["exited"]
 
 TARGET_DEVICE_CONFIGURATION = {
-    TARGET_DEVICE_CPU: {
+    TargetDevice.CPU: lambda: {
         'volumes': {},
         "privileged": False,
     },
 
-    TARGET_DEVICE_GPU: {
+    TargetDevice.GPU: lambda: {
         'volumes': {},
         "devices": ["/dev/dri:/dev/dri:mrw"],
         "privileged": False,
         "user": None,
-        "group_add": [getgrnam('render').gr_gid, getgrnam('video').gr_gid]
+        "group_add": [getgrnam('render').gr_gid, getgrnam('video').gr_gid] if getgrnam is not None else []
     },
 
-    TARGET_DEVICE_CUDA: {
-        'volumes': {},
-        "privileged": False,
-        'device_requests':  [DeviceRequest(count=-1, capabilities=[['gpu']])]
-    },
-
-    TARGET_DEVICE_MYRIAD: {
-        'volumes': {"/dev/bus/usb": {'bind': "/dev/bus/usb", 'mode': 'ro'}},
-        'privileged': False,
-        "user": f"{getuid()}:{getgrnam('users').gr_gid}",
-        "device_cgroup_rules": ["c 189:* rmw"]
-    },
-
-    TARGET_DEVICE_HDDL: {
-        "volumes": {"/var/tmp": {"bind": "/var/tmp", "mode": "rw"}},
-        "devices": ["/dev/ion:/dev/ion:mrw"],
-        "privileged": False,
-        "user": "root"
-    },
 }
 
 
@@ -107,7 +92,7 @@ class Docker:
         logger.info(f"Starting container: {self.container_name}")
 
         ports = {'{}/tcp'.format(self.grpc_port): self.grpc_port, '{}/tcp'.format(self.rest_port): self.rest_port}
-        device_cfg = TARGET_DEVICE_CONFIGURATION[config.target_device]
+        device_cfg = TARGET_DEVICE_CONFIGURATION[config.target_device]()
         volumes_dict = {config.path_to_mount: {'bind': '/opt/ml', 'mode': 'ro'}}
         device_cfg['volumes'].update(volumes_dict)
 
