@@ -60,12 +60,12 @@ args = vars(parser.parse_args())
 if args["run_preprocessing"]:
     print("Running with preprocessing on client side")
     img = getJpeg(args["image_path"], 224)
-    input_name = "gpu_0/data_0"
+    input_name = "data"
 else:
     print("Running without preprocessing on client side")
     with open(args["image_path"], "rb") as f:
         img = f.read()
-    input_name = "0"
+    input_name = "data"
 
 client = make_grpc_client(args["service_url"])
 output = client.predict({input_name: img}, "resnet")

@@ -200,6 +200,33 @@ public:
     const std::string& layout() const;
 
     /**
+         * @brief Get means
+         * 
+         * @return const std::string
+         */
+    const std::string means() const;
+    /**
+         * @brief Get scales  
+         * 
+         * @return const std::string
+         */
+    const std::string scales() const;
+
+    /**
+         * @brief Get color format  
+         * 
+         * @return const std::string
+         */
+    const std::string colorFormat() const;
+
+    /**
+         * @brief Get precision  
+         * 
+         * @return const std::string
+         */
+    const std::string precision() const;
+
+    /**
          * @brief Get the shape
          * 
          * @return const std::string&

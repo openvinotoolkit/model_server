@@ -58,6 +58,10 @@ static void testDefaultSingleModelOptions(ModelsSettingsImpl* modelsSettings) {
     EXPECT_EQ(modelsSettings->batchSize, "");
     EXPECT_EQ(modelsSettings->shape, "");
     EXPECT_EQ(modelsSettings->layout, "");
+    EXPECT_EQ(modelsSettings->mean, std::nullopt);
+    EXPECT_EQ(modelsSettings->scale, std::nullopt);
+    EXPECT_EQ(modelsSettings->colorFormat, std::nullopt);
+    EXPECT_EQ(modelsSettings->precision, std::nullopt);
     EXPECT_EQ(modelsSettings->modelVersionPolicy, "");
     EXPECT_EQ(modelsSettings->nireq, 0);
     EXPECT_EQ(modelsSettings->targetDevice, "");
@@ -227,6 +231,10 @@ TEST(CAPIConfigTest, MultiModelConfiguration) {
     EXPECT_EQ(cfg.batchSize(), "");
     EXPECT_EQ(cfg.shape(), "");
     EXPECT_EQ(cfg.layout(), "");
+    EXPECT_EQ(cfg.means(), "");
+    EXPECT_EQ(cfg.scales(), "");
+    EXPECT_EQ(cfg.colorFormat(), "");
+    EXPECT_EQ(cfg.precision(), "");
     EXPECT_EQ(cfg.modelVersionPolicy(), "");
     EXPECT_EQ(cfg.nireq(), 0);
     EXPECT_EQ(cfg.targetDevice(), "CPU");

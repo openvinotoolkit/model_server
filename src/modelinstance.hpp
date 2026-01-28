@@ -306,7 +306,14 @@ private:
          *
          * @param config
          */
-    Status loadTensors(const ModelConfig& config, bool needsToApplyLayoutConfiguration, const DynamicModelParameter& parameter = DynamicModelParameter());
+    Status loadTensors(const ModelConfig& config, const bool needsToApplyLayoutConfiguration, const DynamicModelParameter& parameter = DynamicModelParameter());
+
+    /**
+         * @brief Internal method for preprocessing model
+         *
+         * @param config
+         */
+    Status applyPreprocessing(const ModelConfig& config, std::shared_ptr<ov::Model>& model, const std::string& modelName, model_version_t modelVersion);
 
     /**
          * @brief Internal method for loading inputs

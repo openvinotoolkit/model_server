@@ -260,9 +260,29 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
                 cxxopts::value<std::string>(),
                 "SHAPE")
             ("layout",
-                "Resets model layout.",
+                "Resets model layout. It should be in format <TARGET_LAYOUT>:<SOURCE_LAYOUT> e.g. NCHW:NHWC",
                 cxxopts::value<std::string>(),
                 "LAYOUT")
+            ("mean",
+                "Resets model mean.",
+                cxxopts::value<std::string>(),
+                "MEAN")
+            ("scale",
+                "Resets model scale.",
+                cxxopts::value<std::string>(),
+                "SCALE")
+            ("color_format",
+                "Resets model color format. It should be in format <TARGET_COLOR_FORMAT>:<SOURCE_COLOR_FORMAT> e.g. BGR:RGB",
+                cxxopts::value<std::string>(),
+                "COLOR_FORMAT")
+            ("precision",
+                "Resets model precision.",
+                cxxopts::value<std::string>(),
+                "PRECISION")
+            ("resize",
+                "Resets model resize dimensions.",
+                cxxopts::value<std::string>(),
+                "resize")
             ("model_version_policy",
                 "Model version policy",
                 cxxopts::value<std::string>(),
@@ -592,6 +612,38 @@ void CLIParser::prepareModel(ModelsSettingsImpl& modelsSettings, HFSettingsImpl&
     if (result->count("layout")) {
         modelsSettings.layout = result->operator[]("layout").as<std::string>();
         modelsSettings.userSetSingleModelArguments.push_back("layout");
+    }
+
+    if (result->count("mean")) {
+        if (modelsSettings.layout.empty()) {
+            throw std::logic_error("error parsing options - --mean parameter requires --layout to be set");
+        }
+        modelsSettings.mean = result->operator[]("mean").as<std::string>();
+        modelsSettings.userSetSingleModelArguments.push_back("mean");
+    }
+
+    if (result->count("scale")) {
+        if (modelsSettings.layout.empty()) {
+            throw std::logic_error("error parsing options - --scale parameter requires --layout to be set");
+        }
+        modelsSettings.scale = result->operator[]("scale").as<std::string>();
+        modelsSettings.userSetSingleModelArguments.push_back("scale");
+    }
+
+    if (result->count("color_format")) {
+        if (modelsSettings.layout.empty()) {
+            throw std::logic_error("error parsing options - --color_format parameter requires --layout to be set");
+        }
+        modelsSettings.colorFormat = result->operator[]("color_format").as<std::string>();
+        modelsSettings.userSetSingleModelArguments.push_back("color_format");
+    }
+
+    if (result->count("precision")) {
+        if (modelsSettings.layout.empty()) {
+            throw std::logic_error("error parsing options - --precision parameter requires --layout to be set");
+        }
+        modelsSettings.precision = result->operator[]("precision").as<std::string>();
+        modelsSettings.userSetSingleModelArguments.push_back("precision");
     }
 
     if (result->count("model_version_policy")) {
