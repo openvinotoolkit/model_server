@@ -313,58 +313,56 @@ static std::shared_ptr<op::Op> get_last_token_pooling_op(std::shared_ptr<Model> 
 }
 
 std::shared_ptr<ov::Model> EmbeddingsServable::applyPrePostProcessing(ov::Core& core, const std::string& targetDevice, std::shared_ptr<ov::Model> model, ov::AnyMap& properties) {
-    if (targetDevice == "NPU") {
+    if (targetDevice == "NPU" && model->is_dynamic()) {
         // Model optimization
         // TODO: if (config.batch_size.has_value() && is_seq_len_fixed) {
         // utils::reshape_model(model, config, max_position_embeddings);
         // }
-        if (model->is_dynamic()) {
-            // TODO: Setup proper config based on calculator options
-            TextEmbeddingPipeline::Config config;
-            switch (this->pooling) {
-            case mediapipe::EmbeddingsCalculatorOVOptions_Pooling_CLS: {
-                config.pooling_type = ov::genai::TextEmbeddingPipeline::PoolingType::CLS;
-                break;
-            }
-            case mediapipe::EmbeddingsCalculatorOVOptions_Pooling_LAST: {
-                config.pooling_type = ov::genai::TextEmbeddingPipeline::PoolingType::LAST_TOKEN;
-                break;
-            }
-            case mediapipe::EmbeddingsCalculatorOVOptions_Pooling_MEAN: {
-                config.pooling_type = ov::genai::TextEmbeddingPipeline::PoolingType::MEAN;
-                break;
-            }
-            default: {
-                OPENVINO_THROW("Pooling type is not supported");
-                break;
-            }
-            }
-
-            config.normalize = this->normalizeEmbeddings;
-            // Compile additional CPU model for NPU dynamic model case
-            auto post_model = create_post_model(model, config);
-            postProcCompiledModel = core.compile_model(post_model, "CPU", properties);
-
-            auto& ovmsConfig = ovms::Config::instance();
-            uint32_t numberOfParallelInferRequests = 1;
-            if (ovmsConfig.nireq() > 0) {
-                // nireq is set globally for all models in ovms startup parameters
-                numberOfParallelInferRequests = ovmsConfig.nireq();
-            }
-            try {
-                numberOfParallelInferRequests = postProcCompiledModel.get_property(ov::optimal_number_of_infer_requests);
-            } catch (const ov::Exception& ex) {
-                SPDLOG_WARN("Failed to query OPTIMAL_NUMBER_OF_INFER_REQUESTS with error {}. Using 1 nireq.", ex.what());
-                numberOfParallelInferRequests = 1u;
-            }
-            postProcInferRequestsQueue = std::make_unique<OVInferRequestsQueue>(postProcCompiledModel, numberOfParallelInferRequests);
-            npuPostprocessingRequired = true;
-
-            // Set additional properties for NPU model
-            auto kv_pos = get_kv_axes_pos(model);
-            KVDesc kv_desc;
-            get_npu_text_embedding_config(properties, kv_pos, kv_desc, config);
+        // TODO: Setup proper config based on calculator options
+        TextEmbeddingPipeline::Config config;
+        switch (this->pooling) {
+        case mediapipe::EmbeddingsCalculatorOVOptions_Pooling_CLS: {
+            config.pooling_type = ov::genai::TextEmbeddingPipeline::PoolingType::CLS;
+            break;
         }
+        case mediapipe::EmbeddingsCalculatorOVOptions_Pooling_LAST: {
+            config.pooling_type = ov::genai::TextEmbeddingPipeline::PoolingType::LAST_TOKEN;
+            break;
+        }
+        case mediapipe::EmbeddingsCalculatorOVOptions_Pooling_MEAN: {
+            config.pooling_type = ov::genai::TextEmbeddingPipeline::PoolingType::MEAN;
+            break;
+        }
+        default: {
+            OPENVINO_THROW("Pooling type is not supported");
+            break;
+        }
+        }
+
+        config.normalize = this->normalizeEmbeddings;
+        // Compile additional CPU model for NPU dynamic model case
+        auto post_model = create_post_model(model, config);
+        postProcCompiledModel = core.compile_model(post_model, "CPU", properties);
+
+        auto& ovmsConfig = ovms::Config::instance();
+        uint32_t numberOfParallelInferRequests = 1;
+        if (ovmsConfig.nireq() > 0) {
+            // nireq is set globally for all models in ovms startup parameters
+            numberOfParallelInferRequests = ovmsConfig.nireq();
+        }
+        try {
+            numberOfParallelInferRequests = postProcCompiledModel.get_property(ov::optimal_number_of_infer_requests);
+        } catch (const ov::Exception& ex) {
+            SPDLOG_WARN("Failed to query OPTIMAL_NUMBER_OF_INFER_REQUESTS with error {}. Using 1 nireq.", ex.what());
+            numberOfParallelInferRequests = 1u;
+        }
+        postProcInferRequestsQueue = std::make_unique<OVInferRequestsQueue>(postProcCompiledModel, numberOfParallelInferRequests);
+        npuPostprocessingRequired = true;
+
+        // Set additional properties for NPU model
+        auto kv_pos = get_kv_axes_pos(model);
+        KVDesc kv_desc;
+        get_npu_text_embedding_config(properties, kv_pos, kv_desc, config);
     } else {
         ov::preprocess::PrePostProcessor processor(model);
 
