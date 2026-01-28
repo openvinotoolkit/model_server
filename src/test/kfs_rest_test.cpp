@@ -18,7 +18,7 @@
 #include <string>
 
 #include <gtest/gtest.h>
-#include <rapidjson/document.h>
+#include "../port/rapidjson_document.hpp"
 #include <stdint.h>
 
 #include "../config.hpp"

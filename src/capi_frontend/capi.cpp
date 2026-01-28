@@ -18,14 +18,11 @@
 #include <iterator>
 #include <memory>
 #include <string>
-#pragma warning(push)
-#pragma warning(disable : 6313)
-#include <rapidjson/document.h>
+#include "src/port/rapidjson_document.hpp"
 #include <rapidjson/pointer.h>
 #include <rapidjson/rapidjson.h>
 #include "src/port/rapidjson_stringbuffer.hpp"
 #include "src/port/rapidjson_writer.hpp"
-#pragma warning(pop)
 
 #include "../dags/pipeline.hpp"
 #include "../dags/pipelinedefinition.hpp"
