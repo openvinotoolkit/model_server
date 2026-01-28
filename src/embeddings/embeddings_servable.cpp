@@ -314,14 +314,33 @@ static std::shared_ptr<op::Op> get_last_token_pooling_op(std::shared_ptr<Model> 
 
 std::shared_ptr<ov::Model> EmbeddingsServable::applyPrePostProcessing(ov::Core& core, const std::string& targetDevice, std::shared_ptr<ov::Model> model, ov::AnyMap& properties) {
     if (targetDevice == "NPU") {
+        // Model optimization
         // TODO: if (config.batch_size.has_value() && is_seq_len_fixed) {
         // utils::reshape_model(model, config, max_position_embeddings);
         // }
         if (model->is_dynamic()) {
             // TODO: Setup proper config based on calculator options
             TextEmbeddingPipeline::Config config;
-            config.pooling_type = ov::genai::TextEmbeddingPipeline::PoolingType::LAST_TOKEN;
-            config.normalize = true;
+            switch (this->pooling) {
+            case mediapipe::EmbeddingsCalculatorOVOptions_Pooling_CLS: {
+                config.pooling_type = ov::genai::TextEmbeddingPipeline::PoolingType::CLS;
+                break;
+            }
+            case mediapipe::EmbeddingsCalculatorOVOptions_Pooling_LAST: {
+                config.pooling_type = ov::genai::TextEmbeddingPipeline::PoolingType::LAST_TOKEN;
+                break;
+            }
+            case mediapipe::EmbeddingsCalculatorOVOptions_Pooling_MEAN: {
+                config.pooling_type = ov::genai::TextEmbeddingPipeline::PoolingType::MEAN;
+                break;
+            }
+            default: {
+                OPENVINO_THROW("Pooling type is not supported");
+                break;
+            }
+            }
+
+            config.normalize = this->normalizeEmbeddings;
             // Compile additional CPU model for NPU dynamic model case
             auto post_model = create_post_model(model, config);
             postProcCompiledModel = core.compile_model(post_model, "CPU", properties);
