@@ -4,6 +4,7 @@
 --pre
 optimum-intel@git+https://github.com/huggingface/optimum-intel.git
 accelerate
+datasets
 diffusers  # for image generation
 einops
 nncf@git+https://github.com/openvinotoolkit/nncf.git

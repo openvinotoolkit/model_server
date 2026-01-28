@@ -147,6 +147,10 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
                 "A path to shared library containing custom CPU layer implementation. Default: empty.",
                 cxxopts::value<std::string>()->default_value(""),
                 "CPU_EXTENSION")
+            ("allowed_media_domains",
+                "Comma separated list of media domains from which URLs can be used as input for LLMs. Set to \"all\" to disable this restriction.",
+                cxxopts::value<std::vector<std::string>>(),
+                "ALLOWED_MEDIA_DOMAINS")
             ("allowed_local_media_path",
                 "Path to directory that contains multimedia files that can be used as input for LLMs.",
                 cxxopts::value<std::string>(),
@@ -501,6 +505,9 @@ void CLIParser::prepareServer(ServerSettingsImpl& serverSettings) {
     }
     if (result->count("cpu_extension")) {
         serverSettings.cpuExtensionLibraryPath = result->operator[]("cpu_extension").as<std::string>();
+    }
+    if (result->count("allowed_media_domains")) {
+        serverSettings.allowedMediaDomains = result->operator[]("allowed_media_domains").as<std::vector<std::string>>();
     }
     if (result->count("allowed_local_media_path")) {
         serverSettings.allowedLocalMediaPath = result->operator[]("allowed_local_media_path").as<std::string>();

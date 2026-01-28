@@ -112,6 +112,7 @@ curl http://localhost/v3/chat/completions \
     "max_completion_tokens": 128
 }'
 ```
+**Note**: using urls in request requires `--allowed_media_domains` parameter described [here](parameters.md)
 
 3) Image from local filesystem:
 ```
