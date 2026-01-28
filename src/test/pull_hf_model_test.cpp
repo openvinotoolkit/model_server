@@ -166,7 +166,8 @@ TEST_F(HfDownloaderPullHfModel, PositiveDownload) {
     ASSERT_EQ(expectedGraphContents, removeVersionString(graphContents)) << graphContents;
 }
 
-TEST_F(HfDownloaderPullHfModel, PositiveDownloadAndStart) {
+// Disabled due to CI network issues causing test failures
+TEST_F(HfDownloaderPullHfModel, DISABLED_PositiveDownloadAndStart) {
     // EnvGuard guard;
     // guard.set("HF_ENDPOINT", "https://modelscope.cn");
     // guard.set("HF_ENDPOINT", "https://hf-mirror.com");
@@ -189,7 +190,8 @@ TEST_F(HfDownloaderPullHfModel, PositiveDownloadAndStart) {
     ASSERT_EQ(expectedGraphContents, removeVersionString(graphContents)) << graphContents;
 }
 
-TEST_F(HfDownloaderPullHfModel, ModelOutOfOvOrg) {
+// Disabled due to CI network issues causing test failures
+TEST_F(HfDownloaderPullHfModel, DISABLED_ModelOutOfOvOrg) {
     // EnvGuard guard;
     // guard.set("HF_ENDPOINT", "https://modelscope.cn");
     // guard.set("HF_ENDPOINT", "https://hf-mirror.com");
@@ -232,7 +234,8 @@ TEST_F(HfDownloaderPullHfModel, ModelOutOfOvOrg) {
     ASSERT_EQ(ftime1, ftime2);
 }
 
-TEST_F(HfDownloaderPullHfModel, PositiveDownloadAndStartModelOutsideOvOrg) {
+// Disabled due to CI network issues causing test failures
+TEST_F(HfDownloaderPullHfModel, DISABLED_PositiveDownloadAndStartModelOutsideOvOrg) {
     this->filesToPrintInCaseOfFailure.emplace_back("graph.pbtxt");
     this->filesToPrintInCaseOfFailure.emplace_back("config.json");
     std::string modelName = "AIFunOver/SmolLM2-360M-Instruct-openvino-4bit";
@@ -251,7 +254,8 @@ TEST_F(HfDownloaderPullHfModel, PositiveDownloadAndStartModelOutsideOvOrg) {
     ASSERT_EQ(expectedGraphContents, removeVersionString(graphContents)) << graphContents;
 }
 
-TEST_F(HfDownloaderPullHfModel, DownloadDraftModel) {
+// Disabled due to CI network issues causing test failures
+TEST_F(HfDownloaderPullHfModel, DISABLED_DownloadDraftModel) {
     // EnvGuard guard;
     // guard.set("HF_ENDPOINT", "https://modelscope.cn");
     // guard.set("HF_ENDPOINT", "https://hf-mirror.com");
