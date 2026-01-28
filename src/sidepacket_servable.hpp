@@ -78,7 +78,7 @@ public:
     }
 
 protected:
-    virtual std::shared_ptr<ov::Model> applyPrePostProcessing(std::shared_ptr<ov::Model> model) {
+    virtual std::shared_ptr<ov::Model> applyPrePostProcessing(ov::Core& core, const std::string& targetDevice, std::shared_ptr<ov::Model> model, ov::AnyMap& properties) {
         // No custom postprocessing by default
         return model;
     }

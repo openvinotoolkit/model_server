@@ -16,6 +16,7 @@
 
 #include <numeric>
 
+#include "openvino/core/except.hpp"
 #include "sidepacket_servable.hpp"
 #include "logging.hpp"
 #include <spdlog/spdlog.h>
@@ -128,16 +129,19 @@ void SidepacketServable::initialize(const std::string& modelDir, const std::stri
         }
     }
 
-    ov::Core core;
-    std::shared_ptr<ov::Model> m_model = core.read_model(parsedModelsPath / std::filesystem::path("openvino_model.xml"), {}, properties);
-    m_model = this->applyPrePostProcessing(m_model);
-    compiledModel = core.compile_model(m_model, targetDevice, properties);
     auto& ovmsConfig = ovms::Config::instance();
     uint32_t numberOfParallelInferRequests = 1;
     if (ovmsConfig.nireq() > 0) {
         // nireq is set globally for all models in ovms startup parameters
         numberOfParallelInferRequests = ovmsConfig.nireq();
     }
+
+    ov::Core core;
+    std::shared_ptr<ov::Model> m_model = core.read_model(parsedModelsPath / std::filesystem::path("openvino_model.xml"), {}, properties);
+    m_model = this->applyPrePostProcessing(core, targetDevice, m_model, properties);
+
+    compiledModel = core.compile_model(m_model, targetDevice, properties);
+
     try {
         numberOfParallelInferRequests = compiledModel.get_property(ov::optimal_number_of_infer_requests);
     } catch (const ov::Exception& ex) {
