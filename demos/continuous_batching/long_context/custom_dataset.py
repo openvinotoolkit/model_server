@@ -49,7 +49,7 @@ def download_file(url):
         raise ValueError("Unsupported file type. Only .txt and .pdf files are supported.")
 
 parser = argparse.ArgumentParser(description="Generate a dataset of long context examples.")
-parser.add_argument("--file_url", type=str, default="https://ota.bodleian.ox.ac.uk/repository/xmlui/bitstream/handle/20.500.12024/2011/donquix-2011.txt", help="URL of the file to download")
+parser.add_argument("--file_url", type=str, default="https://www.gutenberg.org/cache/epub/1184/pg1184.txt", help="URL of the file to download")
 parser.add_argument("--model_name", type=str, default="Qwen/Qwen2.5-7B-Instruct-1M", help="Model name for the tokenizer")
 parser.add_argument("--limit_context_tokens", type=int, default=50000, help="Maximum number of tokens to use for the context")
 args = parser.parse_args()
