@@ -37,6 +37,8 @@
 #include "src/stringutils.hpp"
 #include "../timer.hpp"
 
+#include "environment.hpp"
+
 class HfDownloaderPullHfModel : public TestWithTempDir {
 protected:
     ovms::Server& server = ovms::Server::instance();
@@ -167,6 +169,7 @@ TEST_F(HfDownloaderPullHfModel, PositiveDownload) {
 }
 
 TEST_F(HfDownloaderPullHfModel, PositiveDownloadAndStart) {
+    SKIP_AND_EXIT_IF_NOT_RUNNING_UNSTABLE();  // CVS-180127
     // EnvGuard guard;
     // guard.set("HF_ENDPOINT", "https://modelscope.cn");
     // guard.set("HF_ENDPOINT", "https://hf-mirror.com");
@@ -190,6 +193,7 @@ TEST_F(HfDownloaderPullHfModel, PositiveDownloadAndStart) {
 }
 
 TEST_F(HfDownloaderPullHfModel, ModelOutOfOvOrg) {
+    SKIP_AND_EXIT_IF_NOT_RUNNING_UNSTABLE();  // CVS-180127
     // EnvGuard guard;
     // guard.set("HF_ENDPOINT", "https://modelscope.cn");
     // guard.set("HF_ENDPOINT", "https://hf-mirror.com");
@@ -233,6 +237,7 @@ TEST_F(HfDownloaderPullHfModel, ModelOutOfOvOrg) {
 }
 
 TEST_F(HfDownloaderPullHfModel, PositiveDownloadAndStartModelOutsideOvOrg) {
+    SKIP_AND_EXIT_IF_NOT_RUNNING_UNSTABLE();  // CVS-180127
     this->filesToPrintInCaseOfFailure.emplace_back("graph.pbtxt");
     this->filesToPrintInCaseOfFailure.emplace_back("config.json");
     std::string modelName = "AIFunOver/SmolLM2-360M-Instruct-openvino-4bit";
@@ -252,6 +257,7 @@ TEST_F(HfDownloaderPullHfModel, PositiveDownloadAndStartModelOutsideOvOrg) {
 }
 
 TEST_F(HfDownloaderPullHfModel, DownloadDraftModel) {
+    SKIP_AND_EXIT_IF_NOT_RUNNING_UNSTABLE();  // CVS-180127
     // EnvGuard guard;
     // guard.set("HF_ENDPOINT", "https://modelscope.cn");
     // guard.set("HF_ENDPOINT", "https://hf-mirror.com");
