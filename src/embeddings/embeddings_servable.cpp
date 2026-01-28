@@ -92,7 +92,7 @@ KVAxesPosition get_kv_axes_pos(std::shared_ptr<const ov::Model> model) {
         // Shape example: [-1,4,0,64]
         auto shape = op->get_input_partial_shape(0);
 
-        for (size_t i = 0; i < shape.rank().get_length(); i++) {
+        for (int i = 0; i < shape.rank().get_length(); i++) {
             // Find axis = 0. This would be sequence length axis.
             if (shape[i] == 0) {
                 kv_pos.seq_len = i;
