@@ -57,7 +57,7 @@ protected:
 private:
     mediapipe::EmbeddingsCalculatorOVOptions_Pooling pooling;
     bool normalizeEmbeddings;
-    bool npuPostprocessingRequired;
+    bool npuPostprocessingRequired = false;
     ov::CompiledModel postProcCompiledModel;
     std::unique_ptr<OVInferRequestsQueue> postProcInferRequestsQueue;
 
