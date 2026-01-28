@@ -448,7 +448,6 @@ def export_text_generation_model(model_repository_path, source_model, model_name
             raise ValueError("max_prompt_len is only supported for NPU target device")
         if task_parameters['max_prompt_len'] <= 0:
             raise ValueError("max_prompt_len should be a positive integer")
-        plugin_config['MAX_PROMPT_LEN'] = task_parameters['max_prompt_len']
     if task_parameters['ov_cache_dir'] is not None:
         plugin_config['CACHE_DIR'] = task_parameters['ov_cache_dir']
 
@@ -458,6 +457,17 @@ def export_text_generation_model(model_repository_path, source_model, model_name
     # Additional plugin properties for HETERO
     if "HETERO" in task_parameters['target_device']:
         plugin_config['MODEL_DISTRIBUTION_POLICY'] = 'PIPELINE_PARALLEL'
+
+    if task_parameters['target_device'] == 'NPU':
+        max_prompt_len = task_parameters['max_prompt_len']
+        npu_properties = {}
+        if max_prompt_len is not None:
+            npu_properties['MAX_PROMPT_LEN'] = max_prompt_len
+        if task_parameters['enable_prefix_caching']:
+            npu_properties['NPUW_LLM_ENABLE_PREFIX_CACHING'] = True
+        device_properties = { "NPU": npu_properties }
+        plugin_config['DEVICE_PROPERTIES'] = device_properties
+ 
 
     plugin_config_str = json.dumps(plugin_config)
     task_parameters['plugin_config'] = plugin_config_str
