@@ -9,8 +9,8 @@ diffusers  # for image generation
 einops
 nncf@git+https://github.com/openvinotoolkit/nncf.git
 numpy
-openvino-tokenizers==2026.0.0.0.dev20260123
-openvino==2026.0.0.dev20260123
+openvino-tokenizers==2026.0.0rc1
+openvino==2026.0.0rc1
 pillow
 sentence_transformers
 sentencepiece  # Required by: transformers
