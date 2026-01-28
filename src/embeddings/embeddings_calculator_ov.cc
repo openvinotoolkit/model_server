@@ -288,8 +288,8 @@ public:
                 // the remaining elements in the attention_mask_tensor to ensure correct masking behavior.
                 if (sequence_length > original_mask_size) {
                     std::fill_n(attention_mask_tensor.data<int64_t>() + original_mask_size,
-                                sequence_length - original_mask_size,
-                                0);
+                        sequence_length - original_mask_size,
+                        0);
                 }
 
                 // Run post-processing inference
@@ -299,8 +299,7 @@ public:
                 inferRequest2.wait();
                 SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "embeddingsTensor1 Shape {} received_batch_size {}", embeddingsTensor.get_shape()[0], received_batch_size);
                 embeddingsTensor = inferRequest2.get_tensor(outputTensorName.c_str());
-            }   
-
+            }
         } catch (const std::exception& e) {
             SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Caught exception from session infer(): {}", e.what());
             LOG(INFO) << e.what();
@@ -312,10 +311,8 @@ public:
 
         RET_CHECK(embeddingsTensor.get_shape().size() == 2);
         SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Shape {} received_batch_size {}", embeddingsTensor.get_shape()[0], received_batch_size);
-        //RET_CHECK(embeddingsTensor.get_shape()[0] == received_batch_size);
+        // TODO: RET_CHECK(embeddingsTensor.get_shape()[0] == received_batch_size);
         RET_CHECK(embeddingsTensor.get_element_type() == ov::element::f32);  // do we still need it?
-
-            
 
         auto parseResponseStartTime = std::chrono::high_resolution_clock::now();
         StringBuffer buffer;

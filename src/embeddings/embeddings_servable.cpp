@@ -15,6 +15,8 @@
 //*****************************************************************************
 #include "embeddings_servable.hpp"
 
+#include <limits>
+#include <utility>
 #include <vector>
 
 #include "../config.hpp"
@@ -76,12 +78,12 @@ std::optional<uint32_t> pop_int_and_cast(ov::AnyMap& config, const std::string& 
 KVAxesPosition get_kv_axes_pos(std::shared_ptr<const ov::Model> model) {
     // sequence length axis in key/values tensors, for most cases [BATCH_SIZE, num_kv_heads, seq_len, head_size],
     // therefore usually seq_length_axis = 2 and batch = 0
-    KVAxesPosition kv_pos { 0u, 2u };
+    KVAxesPosition kv_pos{0u, 2u};
 
     // "ReadValue" node is KV cache representation in stateful model
     std::string kv_node_type_name = std::string(ov::op::v6::ReadValue::get_type_info_static().name);
 
-    for (const auto &op : model->get_ops()) {
+    for (const auto& op : model->get_ops()) {
         // check input size, as in LoRA adapters case it could be 0
         if (op->get_type_name() != kv_node_type_name || op->get_input_size() < 1) {
             continue;
@@ -112,8 +114,8 @@ void update_config(ov::AnyMap& config, const std::pair<std::string, ov::Any>& pa
 }
 
 void update_npu_config_text_embedding(ov::AnyMap& config,
-                                      const KVAxesPosition& kv_pos,
-                                      const KVDesc& kv_desc) {
+    const KVAxesPosition& kv_pos,
+    const KVDesc& kv_desc) {
     update_config(config, {"NPU_USE_NPUW", "YES"});
     update_config(config, {"NPUW_LLM", "YES"});
     update_config(config, {"NPUW_LLM_BATCH_DIM", kv_pos.batch});
@@ -127,9 +129,9 @@ void update_npu_config_text_embedding(ov::AnyMap& config,
 }
 
 void get_npu_text_embedding_config(ov::AnyMap& properties,
-                                   const KVAxesPosition& kv_pos,
-                                   KVDesc& kv_desc,
-                                   const TextEmbeddingPipeline::Config& text_embed_config) {
+    const KVAxesPosition& kv_pos,
+    KVDesc& kv_desc,
+    const TextEmbeddingPipeline::Config& text_embed_config) {
     if (text_embed_config.max_length.has_value()) {
         kv_desc.max_prompt_len = text_embed_config.max_length.value();
     } else {
@@ -139,14 +141,13 @@ void get_npu_text_embedding_config(ov::AnyMap& properties,
     update_npu_config_text_embedding(properties, kv_pos, kv_desc);
 }
 
-
 void set_node_name(const std::shared_ptr<ov::Node>& node, const std::string& name) {
     node->set_friendly_name(name);
     node->get_output_tensor(0).set_names({name});
 }
 
 std::shared_ptr<op::Op> get_mean_pooling_op(const ov::Output<ov::Node>& last_hidden_state_node,
-                                            const ov::Output<ov::Node>& attention_mask) {
+    const ov::Output<ov::Node>& attention_mask) {
     auto shape_of = std::make_shared<op::v3::ShapeOf>(last_hidden_state_node);
 
     auto unsqueze_axis = std::make_shared<op::v0::Constant>(ov::element::i64, ov::Shape{1}, std::vector<int64_t>{-1});
@@ -177,16 +178,16 @@ std::shared_ptr<op::Op> get_mean_pooling_op(const ov::Output<ov::Node>& last_hid
 }
 
 std::shared_ptr<op::Op> get_last_token_pooling_op(const ov::Output<ov::Node>& last_hidden_state_node,
-                                                  const ov::Output<ov::Node>& attention_mask,
-                                                  const TextEmbeddingPipeline::Config& config) {
+    const ov::Output<ov::Node>& attention_mask,
+    const TextEmbeddingPipeline::Config& config) {
     const auto left_padding = config.padding_side.has_value() && config.padding_side.value() == "left";
 
     // shortcut for left padding. We can slice last token directly
     if (left_padding) {
         auto start = std::make_shared<op::v0::Constant>(ov::element::i64, ov::Shape{1}, std::vector<int64_t>{-1});
         auto stop = std::make_shared<op::v0::Constant>(ov::element::i64,
-                                                       ov::Shape{1},
-                                                       std::vector<int64_t>{std::numeric_limits<int64_t>::max()});
+            ov::Shape{1},
+            std::vector<int64_t>{std::numeric_limits<int64_t>::max()});
         auto step = std::make_shared<op::v0::Constant>(ov::element::i64, ov::Shape{1}, std::vector<int64_t>{1});
         auto axis = std::make_shared<op::v0::Constant>(ov::element::i64, ov::Shape{1}, std::vector<int64_t>{1});
 
@@ -218,8 +219,8 @@ static std::shared_ptr<op::Op> get_cls_pooling_op(const ov::Output<ov::Node>& la
 }
 
 std::shared_ptr<op::Op> create_post_ops(const ov::Output<ov::Node>& input,
-                                        const ov::Output<ov::Node>& attention_mask,
-                                        const TextEmbeddingPipeline::Config& config) {
+    const ov::Output<ov::Node>& attention_mask,
+    const TextEmbeddingPipeline::Config& config) {
     if (config.pooling_type == TextEmbeddingPipeline::PoolingType::CLS) {
         return get_cls_pooling_op(input);
     } else if (config.pooling_type == TextEmbeddingPipeline::PoolingType::MEAN) {
@@ -232,7 +233,7 @@ std::shared_ptr<op::Op> create_post_ops(const ov::Output<ov::Node>& input,
 }
 
 std::shared_ptr<op::Op> create_normalize_ops(const ov::Output<ov::Node>& input,
-                                             const TextEmbeddingPipeline::Config& config) {
+    const TextEmbeddingPipeline::Config& config) {
     if (config.normalize) {
         auto axis_const = std::make_shared<op::v0::Constant>(ov::element::i32, ov::Shape{1}, std::vector{1});
         return std::make_shared<op::v0::NormalizeL2>(input, axis_const, 1e-12, op::EpsMode::MAX);
@@ -241,11 +242,11 @@ std::shared_ptr<op::Op> create_normalize_ops(const ov::Output<ov::Node>& input,
 }
 
 std::shared_ptr<ov::Model> create_post_model(std::shared_ptr<ov::Model> model,
-                                             const TextEmbeddingPipeline::Config& config) {
+    const TextEmbeddingPipeline::Config& config) {
     auto output_node = model->outputs()[0];
     auto output_shape = output_node.get_partial_shape();
     auto input_param = std::make_shared<ov::op::v0::Parameter>(output_node.get_element_type(),
-                                                               ov::PartialShape{1, -1, output_shape[2]});
+        ov::PartialShape{1, -1, output_shape[2]});
     set_node_name(input_param, "embedding_hidden_state");
 
     auto attention_mask = std::make_shared<ov::op::v0::Parameter>(ov::element::i64, ov::PartialShape{1, -1});
@@ -314,7 +315,7 @@ static std::shared_ptr<op::Op> get_last_token_pooling_op(std::shared_ptr<Model> 
 std::shared_ptr<ov::Model> EmbeddingsServable::applyPrePostProcessing(ov::Core& core, const std::string& targetDevice, std::shared_ptr<ov::Model> model, ov::AnyMap& properties) {
     if (targetDevice == "NPU") {
         // TODO: if (config.batch_size.has_value() && is_seq_len_fixed) {
-            // utils::reshape_model(model, config, max_position_embeddings);
+        // utils::reshape_model(model, config, max_position_embeddings);
         // }
         if (model->is_dynamic()) {
             // TODO: Setup proper config based on calculator options
