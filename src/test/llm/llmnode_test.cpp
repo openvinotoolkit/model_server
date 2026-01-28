@@ -1767,7 +1767,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsStreamOptionsSetFail) {
 TEST_P(LLMFlowHttpTestParameterized, streamChatCompletionsFinishReasonLength) {
     auto params = GetParam();
     if (params.modelName == "LM")
-        SKIP_AND_EXIT_IF_NOT_RUNNING_UNSTABLE();
+        SKIP_AND_EXIT_IF_NOT_RUNNING_UNSTABLE();  // CVS-179700
     std::string requestBody = R"(
         {
             "model": ")" + params.modelName +
@@ -1803,7 +1803,7 @@ TEST_P(LLMFlowHttpTestParameterized, streamChatCompletionsFinishReasonLength) {
 TEST_P(LLMFlowHttpTestParameterized, streamChatCompletionsSingleStopString) {
     auto params = GetParam();
     if (params.modelName == "LM")
-        SKIP_AND_EXIT_IF_NOT_RUNNING_UNSTABLE();
+        SKIP_AND_EXIT_IF_NOT_RUNNING_UNSTABLE();  // CVS-179700
     std::string requestBody = R"(
         {
             "model": ")" + params.modelName +
@@ -1949,7 +1949,7 @@ TEST_P(LLMFlowHttpTestParameterized, DISABLED_streamCompletionsSingleStopString)
         GTEST_SKIP();
     }
     if (params.modelName == "LM")
-        SKIP_AND_EXIT_IF_NOT_RUNNING_UNSTABLE();
+        SKIP_AND_EXIT_IF_NOT_RUNNING_UNSTABLE();  // CVS-179700
     std::string requestBody = R"(
         {
             "model": ")" + params.modelName +
@@ -2031,7 +2031,7 @@ TEST_P(LLMFlowHttpTestParameterized, streamCompletionsSpaceStopString) {
 TEST_P(LLMFlowHttpTestParameterized, streamChatCompletionsUsage) {
     auto params = GetParam();
     if (params.modelName == "LM")
-        SKIP_AND_EXIT_IF_NOT_RUNNING_UNSTABLE();
+        SKIP_AND_EXIT_IF_NOT_RUNNING_UNSTABLE();  // CVS-179700
     std::string requestBody = R"(
         {
             "model": ")" + params.modelName +

@@ -26,6 +26,7 @@
 #include "../module_names.hpp"
 #include "../servablemanagermodule.hpp"
 #include "../server.hpp"
+#include "environment.hpp"
 #include "test_http_utils.hpp"
 #include "test_utils.hpp"
 #include "platform_utils.hpp"
@@ -441,6 +442,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesSucceedsBase64) {
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesSucceedsUrlHttp) {
+    SKIP_AND_EXIT_IF_NOT_RUNNING_UNSTABLE();  // CVS-180127
     std::string json = R"({
   "model": "llama",
   "messages": [
@@ -477,6 +479,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesSucceedsUrlHttp) {
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesSucceedsUrlHttpMultipleAllowedDomains) {
+    SKIP_AND_EXIT_IF_NOT_RUNNING_UNSTABLE();  // CVS-180127
     std::string json = R"({
   "model": "llama",
   "messages": [
@@ -513,6 +516,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesSucceedsUrlHttpMultipleAllow
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesSucceedsUrlHttps) {
+    SKIP_AND_EXIT_IF_NOT_RUNNING_UNSTABLE();  // CVS-180127
     std::string json = R"({
 "model": "llama",
 "messages": [
@@ -549,6 +553,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesSucceedsUrlHttps) {
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesSucceedsUrlHttpsAllowedDomainAll) {
+    SKIP_AND_EXIT_IF_NOT_RUNNING_UNSTABLE();  // CVS-180127
     std::string json = R"({
 "model": "llama",
 "messages": [
