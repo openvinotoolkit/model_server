@@ -58,7 +58,8 @@ SidepacketServable::SidepacketServable(const std::string& modelDir, const std::s
     return;
 }
 
-void SidepacketServable::initialize(const std::string& modelDir, const std::string& targetDevice, const std::string& pluginConfig, const std::string& graphPath) {
+void SidepacketServable::initialize(const std::string& modelDir, const std::string& inTargetDevice, const std::string& pluginConfig, const std::string& graphPath) {
+    this->targetDevice = inTargetDevice;
     auto fsModelsPath = std::filesystem::path(modelDir);
     if (fsModelsPath.is_relative()) {
         parsedModelsPath = (std::filesystem::path(graphPath) / fsModelsPath);
@@ -138,7 +139,7 @@ void SidepacketServable::initialize(const std::string& modelDir, const std::stri
 
     ov::Core core;
     std::shared_ptr<ov::Model> m_model = core.read_model(parsedModelsPath / std::filesystem::path("openvino_model.xml"), {}, properties);
-    m_model = this->applyPrePostProcessing(core, targetDevice, m_model, properties);
+    m_model = this->applyPrePostProcessing(core, m_model, properties);
 
     compiledModel = core.compile_model(m_model, targetDevice, properties);
 

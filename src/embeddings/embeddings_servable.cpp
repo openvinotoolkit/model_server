@@ -246,10 +246,10 @@ std::shared_ptr<ov::Model> create_post_model(std::shared_ptr<ov::Model> model,
     auto output_node = model->outputs()[0];
     auto output_shape = output_node.get_partial_shape();
     auto input_param = std::make_shared<ov::op::v0::Parameter>(output_node.get_element_type(),
-        ov::PartialShape{1, -1, output_shape[2]});
+        ov::PartialShape{-1, -1, output_shape[2]});
     set_node_name(input_param, "embedding_hidden_state");
 
-    auto attention_mask = std::make_shared<ov::op::v0::Parameter>(ov::element::i64, ov::PartialShape{1, -1});
+    auto attention_mask = std::make_shared<ov::op::v0::Parameter>(ov::element::i64, ov::PartialShape{-1, -1});
     set_node_name(attention_mask, "attention_mask");
 
     auto post_output = create_post_ops(input_param, attention_mask, config);
@@ -262,6 +262,12 @@ std::shared_ptr<ov::Model> create_post_model(std::shared_ptr<ov::Model> model,
         std::make_shared<ov::Model>(ov::OutputVector{result_node}, ov::ParameterVector{input_param, attention_mask});
     post_model->set_friendly_name(model->get_friendly_name() + "_post_process");
     post_model->validate_nodes_and_infer_types();
+    //post_model->get_input_tensor(0).set_layout(ov::Layout("N..."));
+    for(int i = 0; i < post_model->get_parameters().size(); i++) {
+        post_model->get_parameters()[i]->set_layout("N...");
+        SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "post_model->get_parameters()[i]->set_layout {}", i);
+    }
+    
     return post_model;
 }
 
@@ -312,8 +318,8 @@ static std::shared_ptr<op::Op> get_last_token_pooling_op(std::shared_ptr<Model> 
     return std::make_shared<op::v8::Gather>(last_hidden_state_node, subtract, axis_1, 1);
 }
 
-std::shared_ptr<ov::Model> EmbeddingsServable::applyPrePostProcessing(ov::Core& core, const std::string& targetDevice, std::shared_ptr<ov::Model> model, ov::AnyMap& properties) {
-    if (targetDevice == "NPU" && model->is_dynamic()) {
+std::shared_ptr<ov::Model> EmbeddingsServable::applyPrePostProcessing(ov::Core& core, std::shared_ptr<ov::Model> model, ov::AnyMap& properties) {
+    if (this->targetDevice == "NPU" && model->is_dynamic()) {
         // Model optimization
         // TODO: if (config.batch_size.has_value() && is_seq_len_fixed) {
         // utils::reshape_model(model, config, max_position_embeddings);

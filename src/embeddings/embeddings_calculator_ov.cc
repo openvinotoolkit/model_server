@@ -242,27 +242,72 @@ public:
                 SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Embeddings input is of not supported type");
                 return absl::InvalidArgumentError("Input should be string, array of strings or array of integers");
             }
-            auto executingStreamIdGuard = std::make_unique<ExecutingStreamIdGuard>(embeddings_session->getInferRequestsQueue(), unused);
-            ov::InferRequest& inferRequest = executingStreamIdGuard->getInferRequest();
-            inferRequest.set_tensor(EMBEDDINGS_MODEL_INPUT_IDS_NAME, tokens.input_ids);
-            inferRequest.set_tensor(EMBEDDINGS_MODEL_ATTENTION_MASK_NAME, tokens.attention_mask);
-            if (embeddings_session->getNumberOfModelInputs() == 3) {
-                inferRequest.set_tensor(EMBEDDINGS_MODEL_TOKEN_TYPE_IDS_NAME, typeIds);
-            }
-            inferRequest.start_async();
-            inferRequest.wait();
+
+            std::vector<ov::Tensor> embeddingsTensors;
+            std::vector<ov::Tensor> embeddingsAttentionMasks;
             std::string outputTensorName;
-            if (inferRequest.get_compiled_model().outputs().size() >= 2) {  // GTE
-                int targetOutputIndex = embeddings_session->getTargetOutputIndex();
-                RET_CHECK(targetOutputIndex >= 0) << "No output with 3 dimensions found";  // this should never happen as pipeline is unavailable if pooling operation could not be added
-                outputTensorName = inferRequest.get_compiled_model().outputs()[targetOutputIndex].get_any_name();
-                SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Multiple embedding model outputs found, 3-dim output with name {} will be used", outputTensorName);
-            } else {  // BGE
-                RET_CHECK(inferRequest.get_compiled_model().outputs().size() == 1);
-                outputTensorName = inferRequest.get_compiled_model().outputs().begin()->get_any_name();
-                SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Single embedding model output found with name {}", outputTensorName);
+            // NPU embeddings dynamic model case for batch size grater than 1
+            if (embeddings_session->getTargetDevice() == "NPU" && received_batch_size > 1) {
+                SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Embeddings batch NPU request split for BS {}", received_batch_size);
+                size_t input_ids_size = tokens.input_ids.get_shape()[1];
+                size_t attention_mask_size = tokens.attention_mask.get_shape()[1];
+                size_t typeIds_size = 0;
+                if (embeddings_session->getNumberOfModelInputs() == 3) {
+                    typeIds_size = tokens.attention_mask.get_shape()[1];
+                }
+                for (long unsigned int i = 0; i < received_batch_size; i++) {
+                    // TODO: Check optimal inferRequest init
+                    auto executingStreamIdGuard = std::make_unique<ExecutingStreamIdGuard>(embeddings_session->getInferRequestsQueue(), unused);
+                    ov::InferRequest& inferRequest = executingStreamIdGuard->getInferRequest();
+                    ov::Tensor oneBatchInputIdsTensor = ov::Tensor(tokens.input_ids, {i,0}, {i+1, input_ids_size});
+                    ov::Tensor oneBatchAttentionMaskTensor = ov::Tensor(tokens.attention_mask, {i,0}, {i+1, attention_mask_size});
+
+                    inferRequest.set_tensor(EMBEDDINGS_MODEL_INPUT_IDS_NAME, oneBatchInputIdsTensor);
+                    inferRequest.set_tensor(EMBEDDINGS_MODEL_ATTENTION_MASK_NAME, oneBatchAttentionMaskTensor);
+
+                    if (embeddings_session->getNumberOfModelInputs() == 3) {
+                        ov::Tensor oneBatchInputIdsTensor = ov::Tensor(typeIds, {i,0}, {i+1, typeIds_size});
+                        inferRequest.set_tensor(EMBEDDINGS_MODEL_TOKEN_TYPE_IDS_NAME, oneBatchInputIdsTensor);
+                    }
+                    // TODO: Optimize and test execution here
+                    inferRequest.start_async();
+                    inferRequest.wait();
+                    if (inferRequest.get_compiled_model().outputs().size() >= 2) {  // GTE
+                        int targetOutputIndex = embeddings_session->getTargetOutputIndex();
+                        RET_CHECK(targetOutputIndex >= 0) << "No output with 3 dimensions found";  // this should never happen as pipeline is unavailable if pooling operation could not be added
+                        outputTensorName = inferRequest.get_compiled_model().outputs()[targetOutputIndex].get_any_name();
+                        SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Multiple embedding model outputs found, 3-dim output with name {} will be used", outputTensorName);
+                    } else {  // BGE
+                        RET_CHECK(inferRequest.get_compiled_model().outputs().size() == 1);
+                        outputTensorName = inferRequest.get_compiled_model().outputs().begin()->get_any_name();
+                        SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Single embedding model output found with name {}", outputTensorName);
+                    }
+                    embeddingsTensors.push_back(inferRequest.get_tensor(outputTensorName.c_str()));
+                    embeddingsAttentionMasks.push_back(oneBatchAttentionMaskTensor);
+                }
+            } else {
+                // Standard CPU/GPU, NPU BS=1 path
+                auto executingStreamIdGuard = std::make_unique<ExecutingStreamIdGuard>(embeddings_session->getInferRequestsQueue(), unused);
+                ov::InferRequest& inferRequest = executingStreamIdGuard->getInferRequest();
+                inferRequest.set_tensor(EMBEDDINGS_MODEL_INPUT_IDS_NAME, tokens.input_ids);
+                inferRequest.set_tensor(EMBEDDINGS_MODEL_ATTENTION_MASK_NAME, tokens.attention_mask);
+                if (embeddings_session->getNumberOfModelInputs() == 3) {
+                    inferRequest.set_tensor(EMBEDDINGS_MODEL_TOKEN_TYPE_IDS_NAME, typeIds);
+                }
+                inferRequest.start_async();
+                inferRequest.wait();
+                if (inferRequest.get_compiled_model().outputs().size() >= 2) {  // GTE
+                    int targetOutputIndex = embeddings_session->getTargetOutputIndex();
+                    RET_CHECK(targetOutputIndex >= 0) << "No output with 3 dimensions found";  // this should never happen as pipeline is unavailable if pooling operation could not be added
+                    outputTensorName = inferRequest.get_compiled_model().outputs()[targetOutputIndex].get_any_name();
+                    SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Multiple embedding model outputs found, 3-dim output with name {} will be used", outputTensorName);
+                } else {  // BGE
+                    RET_CHECK(inferRequest.get_compiled_model().outputs().size() == 1);
+                    outputTensorName = inferRequest.get_compiled_model().outputs().begin()->get_any_name();
+                    SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Single embedding model output found with name {}", outputTensorName);
+                }
+                embeddingsTensor = inferRequest.get_tensor(outputTensorName.c_str());
             }
-            embeddingsTensor = inferRequest.get_tensor(outputTensorName.c_str());
 
             // NPU embeddings dynamic model case
             if (embeddings_session->isNpuPostprocessingRequired()) {
@@ -270,34 +315,56 @@ public:
                 ModelMetricReporter unused2(nullptr, nullptr, "unused2", 1);
                 auto executingStreamIdGuard2 = std::make_unique<ExecutingStreamIdGuard>(embeddings_session->getPostProcInferRequestsQueue(), unused2);
                 ov::InferRequest& inferRequest2 = executingStreamIdGuard2->getInferRequest();
-                const auto input_shape = embeddingsTensor.get_shape();
-                const size_t sequence_length = input_shape[1];
-                const size_t original_mask_size = tokens.attention_mask.get_size();
-                RET_CHECK(sequence_length >= original_mask_size) << "Attention mask size mismatch for post_request embeddings NPU request";
+                ov::Shape input_shape;
+                if (received_batch_size > 1) {
+                    SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "embeddingsTensors.size {}", embeddingsTensors.size());
+                    SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "embeddingsTensors.get_shape() {}", embeddingsTensors[0].get_shape());
+                    input_shape = embeddingsTensors[0].get_shape();
+                    inferRequest2.set_tensors("attention_mask", embeddingsAttentionMasks);
+                } else {
+                    SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "embeddingsTensor.get_shape() {}", embeddingsTensor.get_shape());
+                    input_shape = embeddingsTensor.get_shape();
+                
+                    SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "input_shape {}", input_shape);
+                    RET_CHECK(input_shape.size() > 1) << "Embeddings result shape is too small";
+                    const size_t sequence_length = input_shape[1];
+                    const size_t original_mask_size = tokens.attention_mask.get_size();
+                    RET_CHECK(sequence_length >= original_mask_size) << "Attention mask size mismatch for post_request embeddings NPU request";
 
-                // Create attention mask tensor matching the embedding output shape
-                ov::Tensor attention_mask_tensor{ov::element::i64, {1, sequence_length}};
+                    // Create attention mask tensor matching the embedding output shape
+                    ov::Tensor attention_mask_tensor{ov::element::i64, {1, sequence_length}};
 
-                // Copy original attention mask
-                std::copy_n(tokens.attention_mask.data<int64_t>(), original_mask_size, attention_mask_tensor.data<int64_t>());
+                    // Copy original attention mask
+                    std::copy_n(tokens.attention_mask.data<int64_t>(), original_mask_size, attention_mask_tensor.data<int64_t>());
 
-                // When prefill-chunk is enabled, the input sequence length is aligned to the chunk size.
-                // For example, if the input sequence length is 3800 and the chunk size is 1024, the input
-                // sequence length will be reset to 4096. In this case, the attention_mask_tensor size is 4096,
-                // which is greater than the original tokens.attention_mask size of 3800. We need to zero-fill
-                // the remaining elements in the attention_mask_tensor to ensure correct masking behavior.
-                if (sequence_length > original_mask_size) {
-                    std::fill_n(attention_mask_tensor.data<int64_t>() + original_mask_size,
-                        sequence_length - original_mask_size,
-                        0);
+                    // When prefill-chunk is enabled, the input sequence length is aligned to the chunk size.
+                    // For example, if the input sequence length is 3800 and the chunk size is 1024, the input
+                    // sequence length will be reset to 4096. In this case, the attention_mask_tensor size is 4096,
+                    // which is greater than the original tokens.attention_mask size of 3800. We need to zero-fill
+                    // the remaining elements in the attention_mask_tensor to ensure correct masking behavior.
+                    SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "sequence_length {}, original_mask_size {}", sequence_length, original_mask_size);
+                    if (sequence_length > original_mask_size) {
+                        SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "std::fill_n(attention_mask_tensor");
+                        std::fill_n(attention_mask_tensor.data<int64_t>() + original_mask_size,
+                            sequence_length - original_mask_size,
+                            0);
+                    }
+
+                    SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "set_tensor(attention_mask)");
+                    // Run post-processing inference
+                    inferRequest2.set_tensor("attention_mask", attention_mask_tensor);
                 }
-
-                // Run post-processing inference
-                inferRequest2.set_tensor("attention_mask", attention_mask_tensor);
-                inferRequest2.set_tensor("embedding_hidden_state", embeddingsTensor);
+                if (received_batch_size > 1) {
+                    SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "NPU embeddings batch size {} dynamic model additional inference on CPU", received_batch_size);
+                    inferRequest2.set_tensors("embedding_hidden_state", embeddingsTensors);
+                } else {
+                    inferRequest2.set_tensor("embedding_hidden_state", embeddingsTensor);
+                }
+                SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "start_async");
                 inferRequest2.start_async();
+                SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "wait");
                 inferRequest2.wait();
-                SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "embeddingsTensor1 Shape {} received_batch_size {}", embeddingsTensor.get_shape()[0], received_batch_size);
+
                 embeddingsTensor = inferRequest2.get_tensor(outputTensorName.c_str());
             }
         } catch (const std::exception& e) {

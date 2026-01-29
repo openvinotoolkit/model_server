@@ -48,6 +48,7 @@ struct SidepacketServable {
     std::optional<int64_t> sep_token;
     std::optional<uint32_t> maxModelLength;
     std::filesystem::path parsedModelsPath;
+    std::string targetDevice;
 
 public:
     SidepacketServable(const std::string& modelDir, const std::string& targetDevice, const std::string& pluginConfig, const std::string& graphPath);
@@ -77,8 +78,12 @@ public:
         return compiledModel.inputs().size();
     }
 
+    const std::string getTargetDevice() {
+        return targetDevice;
+    }
+
 protected:
-    virtual std::shared_ptr<ov::Model> applyPrePostProcessing(ov::Core& core, const std::string& targetDevice, std::shared_ptr<ov::Model> model, ov::AnyMap& properties) {
+    virtual std::shared_ptr<ov::Model> applyPrePostProcessing(ov::Core& core, std::shared_ptr<ov::Model> model, ov::AnyMap& properties) {
         // No custom postprocessing by default
         return model;
     }

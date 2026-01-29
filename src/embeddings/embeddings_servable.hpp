@@ -52,7 +52,7 @@ public:
     }
 
 protected:
-    std::shared_ptr<ov::Model> applyPrePostProcessing(ov::Core& core, const std::string& targetDevice, std::shared_ptr<ov::Model> model, ov::AnyMap& properties) override;
+    std::shared_ptr<ov::Model> applyPrePostProcessing(ov::Core& core, std::shared_ptr<ov::Model> model, ov::AnyMap& properties) override;
 
 private:
     mediapipe::EmbeddingsCalculatorOVOptions_Pooling pooling;
