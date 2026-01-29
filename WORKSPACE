@@ -297,6 +297,12 @@ new_local_repository(
 )
 
 new_local_repository(
+    name = "cpp-mcp",
+    build_file = "@//third_party/cpp-mcp:BUILD",
+    path = "/cpp-mcp/",
+)
+
+new_local_repository(
     name = "windows_opencv",
     build_file = "@//third_party/opencv:opencv_windows.BUILD",
     path = "C:\\opt\\opencv_4.12.0",
