@@ -443,6 +443,13 @@ COPY --from=build /usr/local/lib/python3.*/dist-packages/jinja2 /ovms/python_dep
 COPY --from=build /usr/local/lib/python3.*/dist-packages/jinja2-3.1.6.dist-info /ovms/python_deps/jinja2-3.1.6.dist-info
 COPY --from=build /usr/local/lib/python3.*/dist-packages/markupsafe /ovms/python_deps/markupsafe
 
+# For CPU images remove unused libraries
+RUN if [ "$GPU" = "0" ]; then \
+    rm -f /ovms/lib/libopenvino_intel_npu_compiler.so && \
+    rm -f /ovms/lib/libopenvino_intel_gpu_plugin.so && \
+    rm -f /ovms/lib/libopenvino_intel_npu_plugin.so ; \
+fi
+
 # For image with Python enabled install Python library
 RUN if ! [[ $debug_bazel_flags == *"py_off"* ]]; then true ; else exit 0 ; fi ; \
     apt-get update -y ; \
