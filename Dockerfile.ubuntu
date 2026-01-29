@@ -445,9 +445,9 @@ COPY --from=build /usr/local/lib/python3.*/dist-packages/markupsafe /ovms/python
 
 # For CPU images remove unused libraries
 RUN if [ "$GPU" = "0" ]; then \
-    rm -f /ovms/lib/libopenvino_intel_npu_compiler.so && \
-    rm -f /ovms/lib/libopenvino_intel_gpu_plugin.so && \
-    rm -f /ovms/lib/libopenvino_intel_npu_plugin.so ; \
+    rm -f /ovms/lib/libopenvino_intel_npu_compiler.so \
+          /ovms/lib/libopenvino_intel_gpu_plugin.so \
+          /ovms/lib/libopenvino_intel_npu_plugin.so ; \
 fi
 
 # For image with Python enabled install Python library
