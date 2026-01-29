@@ -1766,7 +1766,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsStreamOptionsSetFail) {
 
 TEST_P(LLMFlowHttpTestParameterized, streamChatCompletionsFinishReasonLength) {
     auto params = GetParam();
-    if (params.modelName == "LM")
+    if (params.modelName == "lm_legacy_regular")
         SKIP_AND_EXIT_IF_NOT_RUNNING_UNSTABLE();  // CVS-179700
     std::string requestBody = R"(
         {
@@ -1802,7 +1802,7 @@ TEST_P(LLMFlowHttpTestParameterized, streamChatCompletionsFinishReasonLength) {
 
 TEST_P(LLMFlowHttpTestParameterized, streamChatCompletionsSingleStopString) {
     auto params = GetParam();
-    if (params.modelName == "LM")
+    if (params.modelName == "lm_legacy_regular")
         SKIP_AND_EXIT_IF_NOT_RUNNING_UNSTABLE();  // CVS-179700
     std::string requestBody = R"(
         {
@@ -1942,13 +1942,13 @@ TEST_P(LLMFlowHttpTestParameterized, streamCompletionsFinishReasonLength) {
 }
 
 // Potential sporadic - move to functional if problematic
-TEST_P(LLMFlowHttpTestParameterized, DISABLED_streamCompletionsSingleStopString) {
+TEST_P(LLMFlowHttpTestParameterized, streamCompletionsSingleStopString) {
     auto params = GetParam();
     // TODO: In the next step we should break this suite into smaller ones, use proper configuration instead of skipping
     if (params.modelName.find("vlm") != std::string::npos) {
         GTEST_SKIP();
     }
-    if (params.modelName == "LM")
+    if (params.modelName == "lm_legacy_regular")
         SKIP_AND_EXIT_IF_NOT_RUNNING_UNSTABLE();  // CVS-179700
     std::string requestBody = R"(
         {
@@ -2030,7 +2030,7 @@ TEST_P(LLMFlowHttpTestParameterized, streamCompletionsSpaceStopString) {
 
 TEST_P(LLMFlowHttpTestParameterized, streamChatCompletionsUsage) {
     auto params = GetParam();
-    if (params.modelName == "LM")
+    if (params.modelName == "lm_legacy_regular")
         SKIP_AND_EXIT_IF_NOT_RUNNING_UNSTABLE();  // CVS-179700
     std::string requestBody = R"(
         {
