@@ -18,49 +18,172 @@
 
 #include <sstream>
 
+#include <mcp_sse_client.h>
+#include <mcp_message.h>
+#include <mcp_logger.h>
+
 #include "../logging.hpp"
 #include "src/port/rapidjson_document.hpp"
 
 namespace ovms {
 
 BuiltInToolExecutor::BuiltInToolExecutor() {
+    SPDLOG_LOGGER_INFO(llm_calculator_logger, "BuiltInToolExecutor: Initializing with default mock handlers");
     // Register default mock handlers for built-in tools
     // Tool names follow the pattern: <category>.<action> (e.g., browser.search, browser.open)
     handlers["browser.search"] = handleBrowserSearch;
     handlers["browser.open"] = handleBrowserOpen;
-    handlers["code_interpreter"] = handleCodeInterpreter;
-    handlers["code_interpreter.run"] = handleCodeInterpreter;
+    // code_interpreter uses mock by default, will be overridden when MCP client is initialized
+    handlers["code_interpreter"] = handleCodeInterpreterMock;
+    handlers["code_interpreter.run"] = handleCodeInterpreterMock;
     handlers["file_search"] = handleFileSearch;
     handlers["file_search.search"] = handleFileSearch;
     handlers["image_generation"] = handleImageGeneration;
     handlers["image_generation.generate"] = handleImageGeneration;
+    SPDLOG_LOGGER_INFO(llm_calculator_logger, "BuiltInToolExecutor: Registered {} handlers (MCP not connected, using mocks)", handlers.size());
+}
+
+BuiltInToolExecutor::~BuiltInToolExecutor() {
+    SPDLOG_LOGGER_INFO(llm_calculator_logger, "BuiltInToolExecutor: Destructor called, cleaning up");
+    disconnectMcpClient();
+}
+
+bool BuiltInToolExecutor::initializeMcpClient(const std::string& url, const std::string& sseEndpoint) {
+    SPDLOG_LOGGER_INFO(llm_calculator_logger, "BuiltInToolExecutor::initializeMcpClient called with url={}, sseEndpoint={}", url, sseEndpoint);
+    std::lock_guard<std::mutex> lock(mcpClientMutex);
+
+    if (mcpClientInitialized) {
+        SPDLOG_LOGGER_WARN(llm_calculator_logger, "MCP client already initialized, skipping");
+        return true;
+    }
+
+    try {
+        SPDLOG_LOGGER_INFO(llm_calculator_logger, "Creating MCP SSE client instance...");
+        mcpClient = std::make_unique<mcp::sse_client>(url, sseEndpoint);
+        SPDLOG_LOGGER_INFO(llm_calculator_logger, "MCP SSE client instance created successfully");
+
+        // Set capabilities
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Setting MCP client capabilities...");
+        mcp::json capabilities = {
+            {"roots", {{"listChanged", true}}}};
+        mcpClient->set_capabilities(capabilities);
+        mcpClient->set_timeout(30);  // 30 second timeout
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "MCP client timeout set to 30 seconds");
+
+        // Initialize the connection
+        SPDLOG_LOGGER_INFO(llm_calculator_logger, "Calling MCP client initialize with client name 'ovms-builtin-tool-executor'...");
+        bool initialized = mcpClient->initialize("ovms-builtin-tool-executor", mcp::MCP_VERSION);
+
+        SPDLOG_LOGGER_INFO(llm_calculator_logger, "MCP client initialize returned: {}", initialized);
+        if (initialized) {
+            // Verify connection with ping
+            SPDLOG_LOGGER_INFO(llm_calculator_logger, "Verifying MCP connection with ping...");
+            bool pingResult = mcpClient->ping();
+            SPDLOG_LOGGER_INFO(llm_calculator_logger, "MCP ping result: {}", pingResult ? "SUCCESS" : "FAILED");
+            if (pingResult) {
+                mcpClientInitialized = true;
+
+                // Register the real Python execution handler
+                SPDLOG_LOGGER_INFO(llm_calculator_logger, "Registering real Python execution handlers...");
+                auto pythonHandler = [this](const std::string& args) {
+                    return this->handlePythonExecution(args);
+                };
+                handlers["python"] = pythonHandler;
+                handlers["code_interpreter"] = pythonHandler;
+                handlers["code_interpreter.run"] = pythonHandler;
+
+                SPDLOG_LOGGER_INFO(llm_calculator_logger, "MCP client initialized successfully! Python/code_interpreter tools now use REAL execution via MCP server");
+                return true;
+            } else {
+                SPDLOG_LOGGER_ERROR(llm_calculator_logger, "MCP client ping failed - server may not be responding");
+                mcpClient.reset();
+                return false;
+            }
+        } else {
+            SPDLOG_LOGGER_ERROR(llm_calculator_logger, "MCP client initialization failed - check server URL and availability");
+            mcpClient.reset();
+            return false;
+        }
+    } catch (const mcp::mcp_exception& e) {
+        SPDLOG_LOGGER_ERROR(llm_calculator_logger, "MCP exception during initialization: {}", e.what());
+        mcpClient.reset();
+        return false;
+    } catch (const std::exception& e) {
+        SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Exception during MCP client initialization: {}", e.what());
+        mcpClient.reset();
+        return false;
+    }
+}
+
+bool BuiltInToolExecutor::isMcpClientReady() const {
+    std::lock_guard<std::mutex> lock(mcpClientMutex);
+    return mcpClientInitialized && mcpClient != nullptr;
+}
+
+void BuiltInToolExecutor::disconnectMcpClient() {
+    std::lock_guard<std::mutex> lock(mcpClientMutex);
+    if (mcpClient) {
+        SPDLOG_LOGGER_INFO(llm_calculator_logger, "Disconnecting MCP client and reverting to mock handlers...");
+        mcpClient.reset();
+        mcpClientInitialized = false;
+
+        // Reset handlers back to mock implementations
+        handlers["code_interpreter"] = handleCodeInterpreterMock;
+        handlers["code_interpreter.run"] = handleCodeInterpreterMock;
+        handlers.erase("python");
+        SPDLOG_LOGGER_INFO(llm_calculator_logger, "MCP client disconnected, Python/code_interpreter tools reverted to MOCK mode");
+    } else {
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "disconnectMcpClient called but no MCP client was connected");
+    }
+}
+
+// Helper to normalize tool name by stripping "functions." prefix if present
+static std::string normalizeToolName(const std::string& toolName) {
+    static const std::string functions_prefix = "functions.";
+    if (toolName.compare(0, functions_prefix.length(), functions_prefix) == 0) {
+        return toolName.substr(functions_prefix.length());
+    }
+    return toolName;
 }
 
 BuiltInToolResults_t BuiltInToolExecutor::execute(const ToolCalls_t& builtInToolCalls) {
+    SPDLOG_LOGGER_INFO(llm_calculator_logger, "BuiltInToolExecutor::execute called with {} tool calls, MCP connected: {}",
+                       builtInToolCalls.size(), mcpClientInitialized ? "YES" : "NO");
     BuiltInToolResults_t results;
     results.reserve(builtInToolCalls.size());
 
     for (const auto& toolCall : builtInToolCalls) {
+        SPDLOG_LOGGER_INFO(llm_calculator_logger, "Processing tool call: id={}, name={}, args_length={}",
+                           toolCall.id, toolCall.name, toolCall.arguments.length());
+        
+        // Normalize tool name (strip "functions." prefix if present)
+        std::string normalizedName = normalizeToolName(toolCall.name);
+        if (normalizedName != toolCall.name) {
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Normalized tool name '{}' -> '{}'", toolCall.name, normalizedName);
+        }
+        
         BuiltInToolResult result;
         result.toolCallId = toolCall.id;
-        result.toolName = toolCall.name;
+        result.toolName = normalizedName;
 
-        auto it = handlers.find(toolCall.name);
+        auto it = handlers.find(normalizedName);
         if (it != handlers.end()) {
-            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Executing built-in tool: {} with arguments: {}", toolCall.name, toolCall.arguments);
+            SPDLOG_LOGGER_INFO(llm_calculator_logger, "Found handler for tool '{}', executing...", normalizedName);
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Tool arguments: {}", toolCall.arguments);
             try {
                 result.content = it->second(toolCall.arguments);
                 result.success = true;
-                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Built-in tool {} executed successfully, result: {}", toolCall.name, result.content);
+                SPDLOG_LOGGER_INFO(llm_calculator_logger, "Tool '{}' executed successfully, result length: {} chars", normalizedName, result.content.length());
+                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Tool '{}' result: {}", normalizedName, result.content);
             } catch (const std::exception& e) {
                 result.content = std::string("Error executing tool: ") + e.what();
                 result.success = false;
-                SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Built-in tool {} execution failed: {}", toolCall.name, e.what());
+                SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Tool '{}' execution FAILED with exception: {}", normalizedName, e.what());
             }
         } else {
             // Unknown built-in tool - provide a generic mock response
-            SPDLOG_LOGGER_WARN(llm_calculator_logger, "Unknown built-in tool: {}, providing generic mock response", toolCall.name);
-            result.content = "Mock response for unknown tool: " + toolCall.name;
+            SPDLOG_LOGGER_WARN(llm_calculator_logger, "No handler found for tool '{}', providing generic mock response", normalizedName);
+            result.content = "Mock response for unknown tool: " + normalizedName;
             result.success = true;
         }
 
@@ -71,16 +194,20 @@ BuiltInToolResults_t BuiltInToolExecutor::execute(const ToolCalls_t& builtInTool
 }
 
 bool BuiltInToolExecutor::isBuiltInTool(const std::string& toolName) const {
+    // Normalize tool name first (strip "functions." prefix if present)
+    std::string normalizedName = normalizeToolName(toolName);
+    
     // Built-in tools typically have a category prefix like "browser.", "code_interpreter", etc.
     // or are explicitly registered
-    if (handlers.find(toolName) != handlers.end()) {
+    if (handlers.find(normalizedName) != handlers.end()) {
         return true;
     }
     // Check for category-based built-in tools
-    return toolName.find("browser.") == 0 ||
-           toolName.find("code_interpreter") == 0 ||
-           toolName.find("file_search") == 0 ||
-           toolName.find("image_generation") == 0;
+    return normalizedName.find("browser.") == 0 ||
+           normalizedName.find("code_interpreter") == 0 ||
+           normalizedName.find("file_search") == 0 ||
+           normalizedName.find("image_generation") == 0 ||
+           normalizedName == "python";
 }
 
 void BuiltInToolExecutor::registerHandler(const std::string& toolName, ToolHandler handler) {
@@ -183,11 +310,119 @@ std::string BuiltInToolExecutor::handleBrowserOpen(const std::string& arguments)
     return ss.str();
 }
 
-std::string BuiltInToolExecutor::handleCodeInterpreter(const std::string& arguments) {
+std::string BuiltInToolExecutor::handlePythonExecution(const std::string& arguments) {
+    SPDLOG_LOGGER_INFO(llm_calculator_logger, "handlePythonExecution called, arguments: [{}]", arguments);
+    std::string code = arguments;//getArgumentValue(arguments, "code");
+    if (code.empty()) {
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "No 'code' argument found, trying 'input'");
+        code = getArgumentValue(arguments, "input");
+    }
+
+    if (code.empty()) {
+        SPDLOG_LOGGER_ERROR(llm_calculator_logger, "No code provided in arguments, returning error");
+        return R"({"status": "error", "error": "No code provided"})";
+    }
+
+    SPDLOG_LOGGER_INFO(llm_calculator_logger, "Python code to execute ({} chars): {}", code.length(), code.substr(0, 200));
+
+    std::lock_guard<std::mutex> lock(mcpClientMutex);
+
+    if (!mcpClientInitialized || !mcpClient) {
+        SPDLOG_LOGGER_WARN(llm_calculator_logger, "MCP client not ready (initialized={}, client={}), falling back to mock response",
+                          mcpClientInitialized, mcpClient ? "exists" : "null");
+        return handleCodeInterpreterMock(arguments);
+    }
+
+    try {
+        SPDLOG_LOGGER_INFO(llm_calculator_logger, "Calling MCP server to execute Python code...");
+
+        mcp::json args = mcp::json::object();
+        args["code"] = code;
+
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "MCP call_tool('python', ...) starting");
+        mcp::json result = mcpClient->call_tool("python", args);
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "MCP call_tool completed");
+
+        SPDLOG_LOGGER_INFO(llm_calculator_logger, "MCP Python execution raw result: {}", result.dump());
+
+        // Extract the result from MCP response
+        // MCP response format: {"content": [{"type": "text", "text": "..."}], "structuredContent": {...}, "isError": bool}
+        std::stringstream ss;
+        ss << R"({"status": )";
+
+        bool isError = false;
+        if (result.contains("isError") && result["isError"].is_boolean()) {
+            isError = result["isError"].get<bool>();
+        }
+
+        if (isError) {
+            ss << R"("error")";
+        } else {
+            ss << R"("success")";
+        }
+
+        // Extract output text
+        std::string outputText;
+        if (result.contains("content") && result["content"].is_array()) {
+            for (const auto& content : result["content"]) {
+                if (content.contains("type") && content["type"] == "text" && content.contains("text")) {
+                    outputText += content["text"].get<std::string>();
+                }
+            }
+        } else if (result.contains("structuredContent") && result["structuredContent"].contains("result")) {
+            outputText = result["structuredContent"]["result"].get<std::string>();
+        }
+
+        // Escape the output for JSON
+        std::string escapedOutput;
+        for (char c : outputText) {
+            switch (c) {
+            case '"':
+                escapedOutput += "\\\"";
+                break;
+            case '\\':
+                escapedOutput += "\\\\";
+                break;
+            case '\n':
+                escapedOutput += "\\n";
+                break;
+            case '\r':
+                escapedOutput += "\\r";
+                break;
+            case '\t':
+                escapedOutput += "\\t";
+                break;
+            default:
+                escapedOutput += c;
+            }
+        }
+
+        ss << R"(, "output": ")" << escapedOutput << R"("})";
+        std::string finalResult = ss.str();
+        SPDLOG_LOGGER_INFO(llm_calculator_logger, "Python execution completed successfully, output length: {} chars", outputText.length());
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Final formatted result: {}", finalResult);
+        return finalResult;
+
+    } catch (const mcp::mcp_exception& e) {
+        SPDLOG_LOGGER_ERROR(llm_calculator_logger, "MCP exception during Python execution: {} (type: mcp_exception)", e.what());
+        std::stringstream ss;
+        ss << R"({"status": "error", "error": "MCP error: )" << e.what() << R"("})";
+        return ss.str();
+    } catch (const std::exception& e) {
+        SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Standard exception during Python execution: {} (type: std::exception)", e.what());
+        std::stringstream ss;
+        ss << R"({"status": "error", "error": ")" << e.what() << R"("})";
+        return ss.str();
+    }
+}
+
+std::string BuiltInToolExecutor::handleCodeInterpreterMock(const std::string& arguments) {
+    SPDLOG_LOGGER_INFO(llm_calculator_logger, "handleCodeInterpreterMock called (MOCK MODE - MCP not connected)");
     std::string code = getArgumentValue(arguments, "code");
     if (code.empty()) {
         code = getArgumentValue(arguments, "input");
     }
+    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Mock code_interpreter received code: {}", code.substr(0, 200));
 
     // Mock code execution - in a real implementation, this would run the code in a sandbox
     std::stringstream ss;

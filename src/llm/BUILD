@@ -202,6 +202,7 @@ ovms_cc_library(
         "//src:libovmslogging",
         "//src/port:rapidjson_document",
         ":io_processing_base_output_parser",
+        "@cpp-mcp//:cpp-mcp",
     ],
     visibility = ["//visibility:public"],
 )

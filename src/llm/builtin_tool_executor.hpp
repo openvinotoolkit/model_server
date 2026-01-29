@@ -19,8 +19,15 @@
 #include <vector>
 #include <unordered_map>
 #include <functional>
+#include <memory>
+#include <mutex>
 
 #include "io_processing/base_output_parser.hpp"
+
+// Forward declarations for MCP client
+namespace mcp {
+class sse_client;
+}  // namespace mcp
 
 namespace ovms {
 
@@ -36,11 +43,25 @@ using BuiltInToolResults_t = std::vector<BuiltInToolResult>;
 
 // Built-in tool executor that handles execution of tools like browser, code_interpreter, etc.
 // Currently provides mock implementations for development and testing purposes.
+// Supports real Python code execution via MCP SSE client.
 class BuiltInToolExecutor {
 public:
     using ToolHandler = std::function<std::string(const std::string& arguments)>;
 
     BuiltInToolExecutor();
+    ~BuiltInToolExecutor();
+
+    // Initialize MCP client connection for Python code execution
+    // url: MCP server URL (e.g., "http://localhost:8000")
+    // sseEndpoint: SSE endpoint path (e.g., "/sse")
+    // Returns true if initialization was successful
+    bool initializeMcpClient(const std::string& url, const std::string& sseEndpoint = "/sse");
+
+    // Check if MCP client is connected and ready
+    bool isMcpClientReady() const;
+
+    // Disconnect MCP client
+    void disconnectMcpClient();
 
     // Execute all built-in tool calls and return results
     BuiltInToolResults_t execute(const ToolCalls_t& builtInToolCalls);
@@ -54,12 +75,20 @@ public:
 private:
     std::unordered_map<std::string, ToolHandler> handlers;
 
+    // MCP client for remote tool execution
+    std::unique_ptr<mcp::sse_client> mcpClient;
+    mutable std::mutex mcpClientMutex;
+    bool mcpClientInitialized = false;
+
     // Default mock handlers for built-in tools
     static std::string handleBrowserSearch(const std::string& arguments);
     static std::string handleBrowserOpen(const std::string& arguments);
-    static std::string handleCodeInterpreter(const std::string& arguments);
+    static std::string handleCodeInterpreterMock(const std::string& arguments);
     static std::string handleFileSearch(const std::string& arguments);
     static std::string handleImageGeneration(const std::string& arguments);
+
+    // Real Python execution via MCP client (non-static, uses member mcpClient)
+    std::string handlePythonExecution(const std::string& arguments);
 
     // Helper to parse JSON arguments
     static std::string getArgumentValue(const std::string& arguments, const std::string& key);

@@ -124,9 +124,12 @@ ToolCalls_t Harmony::getToolCalls() {
 /*
     Built-in tools calls are extracted from messages in channel "analysis" that contain "to=<builtins>.NAME" in the channel content; example:
     <|channel|>analysis to=browser.search code<|message|>{"query": "latest developments AI technology 2025", "topn": 10, "source": "news"}<|call|>
+    
+    Also supports "to=functions.python" format for Python code execution.
 */
 ToolCalls_t Harmony::getBuiltInToolCalls() {
     static const std::string tool_prefix = "to=";
+    static const std::string functions_prefix = "functions.";
     ToolCalls_t toolCalls;
     for (const auto& msg : messages) {
         if (startsWith(msg.getChannel(), "analysis") || startsWith(msg.getChannel(), "commentary")) {
@@ -135,13 +138,22 @@ ToolCalls_t Harmony::getBuiltInToolCalls() {
                 marker += tool_prefix.length();
                 size_t firstWhiteSpaceOrSpecialBegin = msg.getChannel().find_first_of(" \t\n\r<", marker);
                 ToolCall toolCall;
+                std::string rawName;
                 if (firstWhiteSpaceOrSpecialBegin == std::string::npos) {
                     // Take the remaining part of the string
-                    toolCall.name = msg.getChannel().substr(marker);
+                    rawName = msg.getChannel().substr(marker);
                 } else {
                     // Take up to the first whitespace or special token begin
-                    toolCall.name = msg.getChannel().substr(marker, firstWhiteSpaceOrSpecialBegin - marker);
+                    rawName = msg.getChannel().substr(marker, firstWhiteSpaceOrSpecialBegin - marker);
                 }
+                
+                // Strip "functions." prefix if present (e.g., "functions.python" -> "python")
+                if (startsWith(rawName, functions_prefix)) {
+                    toolCall.name = rawName.substr(functions_prefix.length());
+                } else {
+                    toolCall.name = rawName;
+                }
+                
                 toolCall.arguments = msg.getContent();
                 toolCall.id = generateRandomId();
                 toolCalls.push_back(std::move(toolCall));

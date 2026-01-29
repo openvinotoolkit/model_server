@@ -42,6 +42,19 @@
 
 namespace ovms {
 
+GenAiServable::GenAiServable() {
+    SPDLOG_LOGGER_INFO(llm_calculator_logger, "GenAiServable: Constructor called, BuiltInToolExecutor initialized with mock handlers");
+}
+
+bool GenAiServable::initializeMcpClient(const std::string& url, const std::string& sseEndpoint) {
+    SPDLOG_LOGGER_INFO(llm_calculator_logger, "GenAiServable::initializeMcpClient called with url={}, sseEndpoint={}", url, sseEndpoint);
+    return builtInToolExecutor.initializeMcpClient(url, sseEndpoint);
+}
+
+bool GenAiServable::isMcpClientReady() const {
+    return builtInToolExecutor.isMcpClientReady();
+}
+
 void GenAiServable::determineDecodingMethod() {
     getProperties()->decodingMethod = DecodingMethod::STANDARD;
     auto& pluginConfig = getProperties()->pluginConfig;
@@ -343,8 +356,9 @@ void logRequestDetails(const ovms::HttpPayload& payload) {
 // ----------- Built-in tool execution methods ------------
 
 BuiltInToolResults_t GenAiServable::executeBuiltInTools(const ToolCalls_t& builtInToolCalls) {
-    BuiltInToolExecutor executor;
-    return executor.execute(builtInToolCalls);
+    SPDLOG_LOGGER_INFO(llm_calculator_logger, "GenAiServable::executeBuiltInTools called with {} tool calls, MCP ready: {}",
+                       builtInToolCalls.size(), builtInToolExecutor.isMcpClientReady() ? "YES" : "NO");
+    return builtInToolExecutor.execute(builtInToolCalls);
 }
 
 void GenAiServable::appendToolResultsToChatHistory(std::shared_ptr<GenAiServableExecutionContext>& executionContext,

@@ -17,6 +17,66 @@ In build container:
 git clone https://github.com/hkr04/cpp-mcp /cpp-mcp && cd /cpp-mcp && cmake -B build && cmake --build build --config Release
 ```
 
+## BuiltInToolExecutor MCP Integration
+
+The `BuiltInToolExecutor` class now supports real Python code execution via MCP SSE client. When initialized with an MCP server connection, the `code_interpreter` and `python` tools will execute Python code remotely instead of returning mock responses.
+
+### Automatic Initialization via Environment Variable
+
+The MCP client is automatically initialized when a GenAI servable starts, if the `MCP_SERVER_URL` environment variable is set.
+
+**Environment Variables:**
+- `MCP_SERVER_URL` - Required. The base URL of the MCP server (e.g., `http://localhost:8000`)
+- `MCP_SSE_ENDPOINT` - Optional. The SSE endpoint path (defaults to `/sse`)
+
+**Example: Starting OVMS with MCP support**
+```bash
+# Start MCP Python server first
+cd gpt-oss/gpt-oss-mcp-server
+mcp run -t sse python_server.py:mcp
+
+# In another terminal, start OVMS with MCP enabled
+export MCP_SERVER_URL=http://localhost:8000
+export MCP_SSE_ENDPOINT=/sse  # optional, defaults to /sse
+bazel-bin/src/ovms --config_path /path/to/config.json
+```
+
+When OVMS starts and loads a GenAI servable, you will see logs like:
+```
+[INFO] MCP_SERVER_URL environment variable detected: http://localhost:8000, initializing MCP client...
+[INFO] MCP client initialized successfully. Built-in tools (python, code_interpreter) will use REAL execution.
+```
+
+If the environment variable is not set:
+```
+[INFO] MCP_SERVER_URL not set. Built-in tools will use MOCK responses. Set MCP_SERVER_URL=http://localhost:8000 to enable real Python execution.
+```
+
+### Programmatic Usage (C++)
+
+```cpp
+#include "src/llm/servable.hpp"
+
+// GenAiServable has a built-in BuiltInToolExecutor member
+// You can also manually initialize/check MCP status:
+servable->initializeMcpClient("http://localhost:8000", "/sse");
+if (servable->isMcpClientReady()) {
+    // Real Python execution enabled
+}
+```
+
+### Supported Tools
+
+When MCP client is connected:
+- `python` - Executes Python code via MCP server
+- `code_interpreter` - Alias for Python execution
+- `code_interpreter.run` - Alias for Python execution
+
+When MCP client is not connected (fallback to mock):
+- All tools return mock responses for testing/development
+
+## MCP Test Client
+
 ```bash
 cd /ovms && bazel build --config=linux --strip=never --config=mp_on_py_on --//:distro=ubuntu //src:mcp_test_client
 bazel-bin/src/mcp_test_client

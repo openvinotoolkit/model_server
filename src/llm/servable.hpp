@@ -118,7 +118,7 @@ struct GenAiServableProperties {
 
 class GenAiServable {
 public:
-    GenAiServable() = default;
+    GenAiServable();
     GenAiServable(GenAiServable&&) = default;
     GenAiServable& operator=(GenAiServable&&) = default;
     GenAiServable(const GenAiServable&) = delete;
@@ -126,6 +126,13 @@ public:
     virtual ~GenAiServable() = default;
 
     void determineDecodingMethod();
+
+    // Initialize MCP client for built-in tool execution (e.g., Python code execution)
+    // Should be called after servable initialization if MCP support is desired
+    bool initializeMcpClient(const std::string& url, const std::string& sseEndpoint = "/sse");
+
+    // Check if MCP client is ready for tool execution
+    bool isMcpClientReady() const;
 
     // ----------- Tokenize scenario ------------
     /*
@@ -226,6 +233,11 @@ public:
     Base implementation uses textStreamer to create text chunk, attempts to serialize it, and sets sendLoopbackSignal according to generation status.
     */
     virtual absl::Status preparePartialResponse(std::shared_ptr<GenAiServableExecutionContext>& executionContext);
+
+protected:
+    // Built-in tool executor for handling tools like code_interpreter, browser, etc.
+    // Shared across all requests to maintain MCP client connection
+    BuiltInToolExecutor builtInToolExecutor;
 };
 std::string wrapTextInServerSideEventMessage(const std::string& text);
 using GenAiServableMap = std::unordered_map<std::string, std::shared_ptr<GenAiServable>>;

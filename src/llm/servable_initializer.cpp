@@ -13,6 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <cstdlib>
+#include <cstring>
 #include <filesystem>
 #include <memory>
 #include <stdexcept>
@@ -461,6 +463,26 @@ Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const :
         return StatusCode::INTERNAL_ERROR;
     }
     servable->determineDecodingMethod();
+
+    // Initialize MCP client for built-in tools if configured via environment variable
+    // Environment variable: MCP_SERVER_URL (e.g., "http://localhost:8000")
+    // Optional: MCP_SSE_ENDPOINT (defaults to "/sse")
+    const char* mcpServerUrl = std::getenv("MCP_SERVER_URL");
+    if (mcpServerUrl != nullptr && std::strlen(mcpServerUrl) > 0) {
+        const char* mcpSseEndpoint = std::getenv("MCP_SSE_ENDPOINT");
+        std::string sseEndpoint = (mcpSseEndpoint != nullptr && std::strlen(mcpSseEndpoint) > 0) ? mcpSseEndpoint : "/sse";
+
+        SPDLOG_LOGGER_INFO(modelmanager_logger, "MCP_SERVER_URL environment variable detected: {}, initializing MCP client...", mcpServerUrl);
+        bool mcpInitialized = servable->initializeMcpClient(mcpServerUrl, sseEndpoint);
+        if (mcpInitialized) {
+            SPDLOG_LOGGER_INFO(modelmanager_logger, "MCP client initialized successfully. Built-in tools (python, code_interpreter) will use REAL execution.");
+        } else {
+            SPDLOG_LOGGER_WARN(modelmanager_logger, "MCP client initialization failed. Built-in tools will use MOCK responses. Check MCP server availability at {}", mcpServerUrl);
+        }
+    } else {
+        SPDLOG_LOGGER_INFO(modelmanager_logger, "MCP_SERVER_URL not set. Built-in tools will use MOCK responses. Set MCP_SERVER_URL=http://localhost:8000 to enable real Python execution.");
+    }
+
     return StatusCode::OK;
 }
 }  // namespace ovms
