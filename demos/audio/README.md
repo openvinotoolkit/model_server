@@ -47,6 +47,41 @@ python export_model.py text2speech --source_model microsoft/speecht5_tts --weigh
 
 The default configuration should work in most cases but the parameters can be tuned via `export_model.py` script arguments. Run the script with `--help` argument to check available parameters and see the [T2s calculator documentation](../../docs/speech_generation/reference.md) to learn more about configuration options and limitations.
 
+### Speaker embeddings
+
+Instead of generating speech with default model voice you can create speaker embeddings with [this script](https://github.com/openvinotoolkit/openvino.genai/blob/master/samples/python/speech_generation/create_speaker_embedding.py)
+```bash
+curl --output create_speaker_embedding.py "https://raw.githubusercontent.com/openvinotoolkit/openvino.genai/refs/heads/master/samples/python/speech_generation/create_speaker_embedding.py"
+python create_speaker_embedding.py
+mv speaker_embedding.bin models/
+```
+Script records your speech for 5 seconds(you can adjust duration of recording to achieve better results) and then, using speechbrain/spkrec-xvect-voxceleb model, creates `speaker_embedding.bin` file that contains your speaker embedding.
+Now you need to add speaker embedding path to graph.pbtxt file of text2speech graph:
+```
+input_stream: "HTTP_REQUEST_PAYLOAD:input"
+output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+node {
+  name: "T2sExecutor"
+  input_side_packet: "TTS_NODE_RESOURCES:t2s_servable"
+  calculator: "T2sCalculator"
+  input_stream: "HTTP_REQUEST_PAYLOAD:input"
+  output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+  node_options: {
+    [type.googleapis.com / mediapipe.T2sCalculatorOptions]: {
+      models_path: "./",
+      plugin_config: '{ "NUM_STREAMS": "1" }',
+      target_device: "CPU",
+      voices: [
+        {
+          name: "voice",
+          path: "/models/speaker_embedding.bin",
+        }
+      ]
+    }
+  }
+}
+```
+
 ### Deployment
 
 **CPU**

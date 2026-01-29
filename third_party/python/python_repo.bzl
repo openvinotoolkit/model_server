@@ -28,7 +28,7 @@ def _python_repository_impl(repository_ctx):
             version = 3.12
     else: # for redhat
         lib_path = "lib64"
-        version = "3.9"
+        version = "3.12"
 
     build_file_content = """
 cc_library(

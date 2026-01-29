@@ -14,8 +14,6 @@
 # limitations under the License.
 #
 import os
-import config
-import datetime
 
 
 def get_path_friendly_test_name(location=None):

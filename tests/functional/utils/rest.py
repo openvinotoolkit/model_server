@@ -22,9 +22,9 @@ from tensorflow_serving.apis import get_model_metadata_pb2, \
     get_model_status_pb2
 import logging
 
-from config import infer_timeout
-from utils.port_manager import PortManager
-from config import rest_ovms_starting_port, ports_pool_size
+from tests.functional.config import infer_timeout
+from tests.functional.utils.port_manager import PortManager
+from tests.functional.config import rest_ovms_starting_port, ports_pool_size
 
 logger = logging.getLogger(__name__)
 

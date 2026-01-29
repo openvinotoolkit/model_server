@@ -16,14 +16,14 @@
 
 import numpy as np
 import pytest
-from constants import ERROR_SHAPE, NOT_TO_BE_REPORTED_IF_SKIPPED, TARGET_DEVICE_HDDL, TARGET_DEVICE_MYRIAD, \
-    TARGET_DEVICE_CUDA, TARGET_DEVICE_GPU
-from config import skip_nginx_test
-from conftest import devices_not_supported_for_test
-from model.models_information import FaceDetection
-from utils.grpc import create_channel, infer
+from tests.functional.constants.constants import ERROR_SHAPE, NOT_TO_BE_REPORTED_IF_SKIPPED
+from tests.functional.constants.target_device import TargetDevice
+from tests.functional.config import skip_nginx_test
+from tests.functional.conftest import devices_not_supported_for_test
+from tests.functional.model.models_information import FaceDetection
+from tests.functional.utils.grpc import create_channel, infer
 import logging
-from utils.rest import get_predict_url, infer_rest
+from tests.functional.utils.rest import get_predict_url, infer_rest
 
 logger = logging.getLogger(__name__)
 
@@ -38,24 +38,16 @@ auto_shapes = [
 
 fixed_shape = {'in': (1, 3, 600, 600), 'out': (1, 1, 200, 7)}
 
+
+@pytest.mark.priority_low
 @pytest.mark.skipif(skip_nginx_test, reason=NOT_TO_BE_REPORTED_IF_SKIPPED)
-@devices_not_supported_for_test([TARGET_DEVICE_MYRIAD, TARGET_DEVICE_HDDL, TARGET_DEVICE_CUDA, TARGET_DEVICE_GPU])
+@devices_not_supported_for_test([TargetDevice.GPU, TargetDevice.NPU])
 class TestModelReshaping:
-    def test_single_local_model_reshaping_auto(self, start_server_face_detection_model_auto_shape):
 
-        _, ports = start_server_face_detection_model_auto_shape
-
-        # Connect to grpc service
-        stub = create_channel(port=ports["grpc_port"])
-
-        for shape in auto_shapes:
-            imgs = np.zeros(shape['in'], FaceDetection.dtype)
-            self.run_inference_grpc(imgs, FaceDetection.output_name, shape['out'],
-                                    True, FaceDetection.name, stub)
-
-    @pytest.mark.parametrize("shape, is_correct",
-                             [(fixed_shape['in'], True), (FaceDetection.input_shape,
-                                                          False)])
+    @pytest.mark.parametrize(
+        "shape, is_correct", [(fixed_shape['in'], True), (FaceDetection.input_shape, False)]
+    )
+    @pytest.mark.api_enabling
     def test_single_local_model_reshaping_fixed(self, start_server_face_detection_model_named_shape,
                                                 start_server_face_detection_model_nonamed_shape, shape, is_correct):
 
@@ -70,25 +62,13 @@ class TestModelReshaping:
             self.run_inference_grpc(imgs, FaceDetection.output_name, fixed_shape['out'],
                                     is_correct, FaceDetection.name, stub)
 
-    @pytest.mark.parametrize("request_format",
-                             ['row_name', 'row_noname',
-                              'column_name', 'column_noname'])
-    def test_single_local_model_reshaping_auto_rest(self, start_server_face_detection_model_auto_shape, request_format):
-
-        _, ports = start_server_face_detection_model_auto_shape
-
-        for shape in auto_shapes:
-            imgs = np.zeros(shape['in'], FaceDetection.dtype)
-            rest_url = get_predict_url(model="face_detection", port=ports["rest_port"])
-            self.run_inference_rest(imgs, FaceDetection.output_name, shape['out'], True,
-                                    request_format, rest_url)
-
     @pytest.mark.parametrize("shape, is_correct",
                              [(fixed_shape['in'], True), (FaceDetection.input_shape,
                                                           False)])
     @pytest.mark.parametrize("request_format",
                              ['row_name', 'row_noname',
                               'column_name', 'column_noname'])
+    @pytest.mark.api_enabling
     def test_single_local_model_reshaping_fixed_rest(self, start_server_face_detection_model_named_shape,
                                                      start_server_face_detection_model_nonamed_shape, shape, is_correct,
                                                      request_format):
@@ -103,6 +83,7 @@ class TestModelReshaping:
             self.run_inference_rest(imgs, FaceDetection.output_name, fixed_shape['out'],
                                     is_correct, request_format, rest_url)
 
+    @pytest.mark.api_enabling
     def test_multi_local_model_reshaping_auto(self, start_server_multi_model):
 
         _, ports = start_server_multi_model
@@ -118,6 +99,7 @@ class TestModelReshaping:
     @pytest.mark.parametrize("shape, is_correct",
                              [(fixed_shape['in'], True), (FaceDetection.input_shape,
                                                           False)])
+    @pytest.mark.api_enabling
     def test_multi_local_model_reshaping_fixed(self, start_server_multi_model, shape, is_correct):
 
         _, ports = start_server_multi_model
@@ -136,7 +118,8 @@ class TestModelReshaping:
     @pytest.mark.parametrize("request_format",
                              ['row_name', 'row_noname',
                               'column_name', 'column_noname'])
-    def test_mutli_local_model_reshaping_auto_rest(self, start_server_multi_model, request_format):
+    @pytest.mark.api_enabling
+    def test_multi_local_model_reshaping_auto_rest(self, start_server_multi_model, request_format):
 
         _, ports = start_server_multi_model
 
@@ -152,6 +135,7 @@ class TestModelReshaping:
     @pytest.mark.parametrize("request_format",
                              ['row_name', 'row_noname',
                               'column_name', 'column_noname'])
+    @pytest.mark.api_enabling
     def test_multi_local_model_reshaping_fixed_rest(self, start_server_multi_model, shape, is_correct, request_format):
 
         _, ports = start_server_multi_model

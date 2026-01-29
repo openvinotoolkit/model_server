@@ -30,8 +30,12 @@ logger = logging.getLogger(__name__)
 xfail = pytest.mark.xfail
 skip = pytest.mark.skip
 
+
+@pytest.mark.priority_low
 class TestSingleModelInference:
+
     @skip(reason="not implemented yet")
+    @pytest.mark.api_enabling
     def test_chat_with_tool_definition(self):
         """
         <b>Description</b>
@@ -132,6 +136,7 @@ class TestSingleModelInference:
         assert completion.choices[0].message.tool_calls is None or completion.choices[0].message.tool_calls == []
 
     @skip(reason="not implemented yet")
+    @pytest.mark.api_enabling
     def test_chat_with_dual_tools_definition(self):
         """
         <b>Description</b>
@@ -246,8 +251,8 @@ class TestSingleModelInference:
             assert "pm10" in content or "PM10" in content
             assert "28 µg/m" in content or "28µg/m" in content
 
-        
     @skip(reason="not implemented yet")
+    @pytest.mark.api_enabling
     def test_chat_with_tool_definition_stream(self):
         """
         <b>Description</b>
@@ -307,6 +312,7 @@ class TestSingleModelInference:
         assert arguments == '{"location": "Paris, France"}'
 
     @skip(reason="not implemented yet")
+    @pytest.mark.api_enabling
     def test_chat_with_structured_output(self):
         """
         <b>Description</b>
@@ -352,9 +358,3 @@ class TestSingleModelInference:
         assert event.event_name.lower() == "science fair".lower()
         assert event.date == "Friday"
         assert event.participants == ["Alice", "Bob"]
-
-
-
-
-
-    

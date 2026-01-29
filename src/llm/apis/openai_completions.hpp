@@ -72,7 +72,7 @@ class OpenAIChatCompletionsHandler {
     std::unique_ptr<OutputParser> outputParser = nullptr;
 
     absl::Status parseCompletionsPart();
-    absl::Status parseChatCompletionsPart(std::optional<uint32_t> maxTokensLimit, std::optional<std::string> allowedLocalMediaPath);
+    absl::Status parseChatCompletionsPart(std::optional<uint32_t> maxTokensLimit, std::optional<std::string> allowedLocalMediaPath, std::optional<std::vector<std::string>> allowedMediaDomains);
     absl::Status parseCommonPart(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength);
 
     ParsedOutput parseOutputIfNeeded(const std::vector<int64_t>& generatedIds);
@@ -114,8 +114,8 @@ public:
 
     void incrementProcessedTokens(size_t numTokens = 1);
 
-    absl::Status parseRequest(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength, std::optional<std::string> allowedLocalMediaPath = std::nullopt);
-    absl::Status parseMessages(std::optional<std::string> allowedLocalMediaPath = std::nullopt);
+    absl::Status parseRequest(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength, std::optional<std::string> allowedLocalMediaPath = std::nullopt, std::optional<std::vector<std::string>> allowedMediaDomains = std::nullopt);
+    absl::Status parseMessages(std::optional<std::string> allowedLocalMediaPath = std::nullopt, std::optional<std::vector<std::string>> allowedMediaDomains = std::nullopt);
     absl::Status parseTools();
     const bool areToolsAvailable() const;
 

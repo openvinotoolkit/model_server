@@ -279,7 +279,9 @@ packages = {
         'libgssapi-krb5-2',
         'nginx',
     },
-    OvmsBaseType.REDHAT: set(),
+    OvmsBaseType.REDHAT: {
+        "findutils",
+    },
     OvmsBaseType.REDHAT_PYTHON: {
         'expat',
         'python3-libs',

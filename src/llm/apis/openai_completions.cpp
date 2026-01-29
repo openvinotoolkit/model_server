@@ -21,6 +21,7 @@
 #include "src/port/rapidjson_stringbuffer.hpp"
 #include "src/port/rapidjson_writer.hpp"
 #include <set>
+#include <string.h>
 
 #include "openai_json_response.hpp"
 
@@ -100,7 +101,6 @@ static size_t appendChunkCallback(void* downloadedChunk, size_t size, size_t nme
     if (status == CURLE_OK) { \
         status = setopt;      \
     }
-
 static absl::Status downloadImage(const char* url, std::string& image, const int64_t& sizeLimit) {
     CURL* curl_handle = curl_easy_init();
     if (!curl_handle) {
@@ -113,7 +113,11 @@ static absl::Status downloadImage(const char* url, std::string& image, const int
     CURL_SETOPT(curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, appendChunkCallback))
     CURL_SETOPT(curl_easy_setopt(curl_handle, CURLOPT_WRITEDATA, &image))
     CURL_SETOPT(curl_easy_setopt(curl_handle, CURLOPT_SSL_OPTIONS, CURLSSLOPT_NATIVE_CA))
-    CURL_SETOPT(curl_easy_setopt(curl_handle, CURLOPT_FOLLOWLOCATION, 1L))
+    const char* envAllowRedirects = std::getenv("OVMS_MEDIA_URL_ALLOW_REDIRECTS");
+    if (envAllowRedirects != nullptr && (std::strcmp(envAllowRedirects, "1") == 0)) {
+        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "URL redirects allowed");
+        CURL_SETOPT(curl_easy_setopt(curl_handle, CURLOPT_FOLLOWLOCATION, 1L))
+    }
     CURL_SETOPT(curl_easy_setopt(curl_handle, CURLOPT_MAXFILESIZE, sizeLimit))
 
     if (status != CURLE_OK) {
@@ -129,6 +133,37 @@ static absl::Status downloadImage(const char* url, std::string& image, const int
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Downloading image succeeded, {} bytes retrieved", image.size());
     }
     return absl::OkStatus();
+}
+
+static bool isDomainAllowed(const std::vector<std::string>& allowedDomains, const char* url) {
+    if (allowedDomains.size() == 1 && allowedDomains[0] == "all") {
+        return true;
+    }
+    CURLUcode rc;
+    CURLU* parsedUrl = curl_url();
+    rc = curl_url_set(parsedUrl, CURLUPART_URL, url, 0);
+    if (rc) {
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Parsing url {} failed", url);
+        curl_url_cleanup(parsedUrl);
+        return false;
+    }
+    char* host;
+    rc = curl_url_get(parsedUrl, CURLUPART_HOST, &host, 0);
+    if (rc) {
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Parsing url {} hostname failed", url);
+        curl_url_cleanup(parsedUrl);
+        return false;
+    }
+    bool allowed = false;
+    for (const auto& allowedDomain : allowedDomains) {
+        if (allowedDomain.compare(host) == 0) {
+            allowed = true;
+            break;
+        }
+    }
+    curl_free(host);
+    curl_url_cleanup(parsedUrl);
+    return allowed;
 }
 
 absl::Status OpenAIChatCompletionsHandler::ensureArgumentsInToolCalls(Value& messageObj, bool& jsonChanged) {
@@ -159,7 +194,7 @@ absl::Status OpenAIChatCompletionsHandler::ensureArgumentsInToolCalls(Value& mes
     return absl::OkStatus();
 }
 
-absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::string> allowedLocalMediaPath) {
+absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::string> allowedLocalMediaPath, std::optional<std::vector<std::string>> allowedMediaDomains) {
     auto it = doc.FindMember("messages");
     if (it == doc.MemberEnd())
         return absl::InvalidArgumentError("Messages missing in request");
@@ -237,6 +272,9 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
                             } else if (std::regex_match(url.c_str(), std::regex("^(http|https|ftp|sftp|)://(.*)"))) {
                                 SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Loading image using curl");
                                 int64_t sizeLimit = 20000000;  // restrict single image size to 20MB
+                                if (!allowedMediaDomains.has_value() || !isDomainAllowed(allowedMediaDomains.value(), url.c_str())) {
+                                    return absl::InvalidArgumentError("Given url does not match any allowed domain from allowed_media_domains");
+                                }
                                 auto status = downloadImage(url.c_str(), decoded, sizeLimit);
                                 if (status != absl::OkStatus()) {
                                     return status;
@@ -497,9 +535,9 @@ std::string convertOpenAIResponseFormatToStructuralTagStringFormat(const rapidjs
     return buffer.GetString();
 }
 
-absl::Status OpenAIChatCompletionsHandler::parseChatCompletionsPart(std::optional<uint32_t> maxTokensLimit, std::optional<std::string> allowedLocalMediaPath) {
+absl::Status OpenAIChatCompletionsHandler::parseChatCompletionsPart(std::optional<uint32_t> maxTokensLimit, std::optional<std::string> allowedLocalMediaPath, std::optional<std::vector<std::string>> allowedMediaDomains) {
     // messages: [{role: content}, {role: content}, ...]; required
-    auto status = parseMessages(allowedLocalMediaPath);
+    auto status = parseMessages(allowedLocalMediaPath, allowedMediaDomains);
     if (status != absl::OkStatus()) {
         return status;
     }
@@ -819,14 +857,14 @@ void OpenAIChatCompletionsHandler::incrementProcessedTokens(size_t numTokens) {
         usage.completionTokens += numTokens;
 }
 
-absl::Status OpenAIChatCompletionsHandler::parseRequest(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength, std::optional<std::string> allowedLocalMediaPath) {
+absl::Status OpenAIChatCompletionsHandler::parseRequest(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength, std::optional<std::string> allowedLocalMediaPath, std::optional<std::vector<std::string>> allowedMediaDomains) {
     absl::Status status = parseCommonPart(maxTokensLimit, bestOfLimit, maxModelLength);
     if (status != absl::OkStatus())
         return status;
     if (endpoint == Endpoint::COMPLETIONS)
         status = parseCompletionsPart();
     else
-        status = parseChatCompletionsPart(maxTokensLimit, allowedLocalMediaPath);
+        status = parseChatCompletionsPart(maxTokensLimit, allowedLocalMediaPath, allowedMediaDomains);
 
     return status;
 }
