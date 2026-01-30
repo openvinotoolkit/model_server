@@ -133,6 +133,7 @@ IF /I EXIST %bash_path% (
 if "%OV_USE_BINARY%"=="" (
     set "OV_USE_BINARY=1"
 )
+set "OV_USE_BINARY=0"
 
 set "genai_workspace=C:\\\\opt\\\\openvino\\\\runtime"
 set "genai_new_workspace=C:\\%output_user_root%\\openvino\\runtime"
