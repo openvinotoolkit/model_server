@@ -51,6 +51,7 @@
 #include "../platform_utils.hpp"
 #include "../test_http_utils.hpp"
 #include "../test_utils.hpp"
+#include "src/test/environment.hpp"
 
 using namespace ovms;
 
@@ -1765,6 +1766,8 @@ TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsStreamOptionsSetFail) {
 
 TEST_P(LLMFlowHttpTestParameterized, streamChatCompletionsFinishReasonLength) {
     auto params = GetParam();
+    if (params.modelName == "lm_legacy_regular")
+        SKIP_AND_EXIT_IF_NOT_RUNNING_UNSTABLE();  // CVS-179700
     std::string requestBody = R"(
         {
             "model": ")" + params.modelName +
@@ -1799,6 +1802,8 @@ TEST_P(LLMFlowHttpTestParameterized, streamChatCompletionsFinishReasonLength) {
 
 TEST_P(LLMFlowHttpTestParameterized, streamChatCompletionsSingleStopString) {
     auto params = GetParam();
+    if (params.modelName == "lm_legacy_regular")
+        SKIP_AND_EXIT_IF_NOT_RUNNING_UNSTABLE();  // CVS-179700
     std::string requestBody = R"(
         {
             "model": ")" + params.modelName +
@@ -1937,12 +1942,14 @@ TEST_P(LLMFlowHttpTestParameterized, streamCompletionsFinishReasonLength) {
 }
 
 // Potential sporadic - move to functional if problematic
-TEST_P(LLMFlowHttpTestParameterized, DISABLED_streamCompletionsSingleStopString) {
+TEST_P(LLMFlowHttpTestParameterized, streamCompletionsSingleStopString) {
     auto params = GetParam();
     // TODO: In the next step we should break this suite into smaller ones, use proper configuration instead of skipping
     if (params.modelName.find("vlm") != std::string::npos) {
         GTEST_SKIP();
     }
+    if (params.modelName == "lm_legacy_regular")
+        SKIP_AND_EXIT_IF_NOT_RUNNING_UNSTABLE();  // CVS-179700
     std::string requestBody = R"(
         {
             "model": ")" + params.modelName +
@@ -1968,6 +1975,7 @@ TEST_P(LLMFlowHttpTestParameterized, DISABLED_streamCompletionsSingleStopString)
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::PARTIAL_END);
+    SPDLOG_DEBUG("Test middle");
     if (params.checkFinishReason) {
         ASSERT_TRUE(responses.back().find("\"finish_reason\":\"stop\"") != std::string::npos);
     }
@@ -1979,6 +1987,7 @@ TEST_P(LLMFlowHttpTestParameterized, DISABLED_streamCompletionsSingleStopString)
     } else {
         ASSERT_TRUE(std::regex_search(responses.back(), content_regex));
     }
+    SPDLOG_DEBUG("Test end");
 }
 
 TEST_P(LLMFlowHttpTestParameterized, streamCompletionsSpaceStopString) {
@@ -2021,6 +2030,8 @@ TEST_P(LLMFlowHttpTestParameterized, streamCompletionsSpaceStopString) {
 
 TEST_P(LLMFlowHttpTestParameterized, streamChatCompletionsUsage) {
     auto params = GetParam();
+    if (params.modelName == "lm_legacy_regular")
+        SKIP_AND_EXIT_IF_NOT_RUNNING_UNSTABLE();  // CVS-179700
     std::string requestBody = R"(
         {
             "model": ")" + params.modelName +
@@ -3730,7 +3741,7 @@ INSTANTIATE_TEST_SUITE_P(
     // We might want to consider unification of error codes in the future
     ::testing::Values(
         std::make_tuple("LM_CB", ovms::StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED),
-        std::make_tuple("LM", ovms::StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED),
+        std::make_tuple("LM", ovms::StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED),  // TODO unstable
         std::make_tuple("VLM_CB", ovms::StatusCode::INTERNAL_ERROR),
         std::make_tuple("VLM", ovms::StatusCode::INTERNAL_ERROR)));
 
