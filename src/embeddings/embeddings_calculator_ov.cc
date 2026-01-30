@@ -266,8 +266,8 @@ public:
                     inferRequest.set_tensor(EMBEDDINGS_MODEL_ATTENTION_MASK_NAME, oneBatchAttentionMaskTensor);
 
                     if (embeddings_session->getNumberOfModelInputs() == 3) {
-                        ov::Tensor oneBatchInputIdsTensor = ov::Tensor(typeIds, {i, 0}, {i + 1, typeIds_size});
-                        inferRequest.set_tensor(EMBEDDINGS_MODEL_TOKEN_TYPE_IDS_NAME, oneBatchInputIdsTensor);
+                        ov::Tensor oneBatchTypeIdsTensor = ov::Tensor(typeIds, {i, 0}, {i + 1, typeIds_size});
+                        inferRequest.set_tensor(EMBEDDINGS_MODEL_TOKEN_TYPE_IDS_NAME, oneBatchTypeIdsTensor);
                     }
                     // TODO: Optimize and test execution here
                     inferRequest.start_async();
