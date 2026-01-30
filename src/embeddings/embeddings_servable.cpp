@@ -262,12 +262,12 @@ std::shared_ptr<ov::Model> create_post_model(std::shared_ptr<ov::Model> model,
         std::make_shared<ov::Model>(ov::OutputVector{result_node}, ov::ParameterVector{input_param, attention_mask});
     post_model->set_friendly_name(model->get_friendly_name() + "_post_process");
     post_model->validate_nodes_and_infer_types();
-    //post_model->get_input_tensor(0).set_layout(ov::Layout("N..."));
-    for(int i = 0; i < post_model->get_parameters().size(); i++) {
+
+    // Set parameters layout for dynamic model
+    for (int i = 0; i < post_model->get_parameters().size(); i++) {
         post_model->get_parameters()[i]->set_layout("N...");
-        SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "post_model->get_parameters()[i]->set_layout {}", i);
     }
-    
+
     return post_model;
 }
 

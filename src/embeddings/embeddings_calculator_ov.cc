@@ -255,18 +255,18 @@ public:
                 if (embeddings_session->getNumberOfModelInputs() == 3) {
                     typeIds_size = tokens.attention_mask.get_shape()[1];
                 }
-                for (long unsigned int i = 0; i < received_batch_size; i++) {
+                for (uint_64_t i = 0; i < received_batch_size; i++) {
                     // TODO: Check optimal inferRequest init
                     auto executingStreamIdGuard = std::make_unique<ExecutingStreamIdGuard>(embeddings_session->getInferRequestsQueue(), unused);
                     ov::InferRequest& inferRequest = executingStreamIdGuard->getInferRequest();
-                    ov::Tensor oneBatchInputIdsTensor = ov::Tensor(tokens.input_ids, {i,0}, {i+1, input_ids_size});
-                    ov::Tensor oneBatchAttentionMaskTensor = ov::Tensor(tokens.attention_mask, {i,0}, {i+1, attention_mask_size});
+                    ov::Tensor oneBatchInputIdsTensor = ov::Tensor(tokens.input_ids, {i, 0}, {i + 1, input_ids_size});
+                    ov::Tensor oneBatchAttentionMaskTensor = ov::Tensor(tokens.attention_mask, {i, 0}, {i + 1, attention_mask_size});
 
                     inferRequest.set_tensor(EMBEDDINGS_MODEL_INPUT_IDS_NAME, oneBatchInputIdsTensor);
                     inferRequest.set_tensor(EMBEDDINGS_MODEL_ATTENTION_MASK_NAME, oneBatchAttentionMaskTensor);
 
                     if (embeddings_session->getNumberOfModelInputs() == 3) {
-                        ov::Tensor oneBatchInputIdsTensor = ov::Tensor(typeIds, {i,0}, {i+1, typeIds_size});
+                        ov::Tensor oneBatchInputIdsTensor = ov::Tensor(typeIds, {i, 0}, {i + 1, typeIds_size});
                         inferRequest.set_tensor(EMBEDDINGS_MODEL_TOKEN_TYPE_IDS_NAME, oneBatchInputIdsTensor);
                     }
                     // TODO: Optimize and test execution here
@@ -324,7 +324,7 @@ public:
                 } else {
                     SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "embeddingsTensor.get_shape() {}", embeddingsTensor.get_shape());
                     input_shape = embeddingsTensor.get_shape();
-                
+
                     SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "input_shape {}", input_shape);
                     RET_CHECK(input_shape.size() > 1) << "Embeddings result shape is too small";
                     const size_t sequence_length = input_shape[1];
