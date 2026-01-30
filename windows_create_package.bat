@@ -37,6 +37,7 @@ IF "%~2"=="--with_python" (
 if "%OV_USE_BINARY%"=="" (
     set "OV_USE_BINARY=1"
 )
+set "OV_USE_BINARY=0
 
 if exist dist\windows\ovms (
     rmdir /s /q dist\windows\ovms
@@ -108,48 +109,48 @@ copy %cd%\install_ovms_service.bat dist\windows\ovms
 if !errorlevel! neq 0 exit /b !errorlevel!
 
 :: Adding licenses
-set "license_dest=%cd%\dist\windows\ovms\thirdparty-licenses\"
-md %license_dest%
-if !errorlevel! neq 0 exit /b !errorlevel!
-copy C:\opt\opencv_4.12.0\etc\licenses\* %license_dest%
-if !errorlevel! neq 0 exit /b !errorlevel!
-IF "%OV_USE_BINARY%"=="1" (
-    copy C:\%output_user_root%\openvino\docs\licensing\LICENSE %license_dest%openvino.LICENSE.txt
-    if !errorlevel! neq 0 exit /b !errorlevel!
-    copy C:\%output_user_root%\openvino\docs\licensing\LICENSE-GENAI %license_dest%LICENSE-GENAI.txt
-    if !errorlevel! neq 0 exit /b !errorlevel!
-) ELSE (
-    copy C:\%output_user_root%\openvino\licenses %license_dest%
-    if !errorlevel! neq 0 exit /b !errorlevel!
-)
-
-copy %cd%\release_files\LICENSE %cd%\dist\windows\ovms\
-if !errorlevel! neq 0 exit /b !errorlevel!
-copy %cd%\release_files\thirdparty-licenses\* %license_dest%
-if !errorlevel! neq 0 exit /b !errorlevel!
-
-if !errorlevel! neq 0 exit /b !errorlevel!
-copy C:\opt\curl-8.14.1_1-win64-mingw\COPYING.txt %license_dest%LICENSE-CURL.txt
-if !errorlevel! neq 0 exit /b !errorlevel!
-copy C:\opt\curl-8.14.1_1-win64-mingw\dep\brotli\LICENSE.txt %license_dest%LICENSE-BROTIL.txt
-if !errorlevel! neq 0 exit /b !errorlevel!
-copy C:\opt\curl-8.14.1_1-win64-mingw\dep\cacert\LICENSE.url %license_dest%LICENSE-CACERT.url
-if !errorlevel! neq 0 exit /b !errorlevel!
-copy C:\opt\curl-8.14.1_1-win64-mingw\dep\libpsl\COPYING.txt %license_dest%LICENSE-LIBPSL.txt
-if !errorlevel! neq 0 exit /b !errorlevel!
-copy C:\opt\curl-8.14.1_1-win64-mingw\dep\libressl\COPYING.txt %license_dest%LICENSE-LIBRESSL.txt
-if !errorlevel! neq 0 exit /b !errorlevel!
-copy C:\opt\curl-8.14.1_1-win64-mingw\dep\libssh2\COPYING.txt %license_dest%LICENSE-LIBSSH2.txt
-if !errorlevel! neq 0 exit /b !errorlevel!
-copy C:\opt\curl-8.14.1_1-win64-mingw\dep\nghttp2\COPYING.txt %license_dest%LICENSE-NGHTTP2.txt
-if !errorlevel! neq 0 exit /b !errorlevel!
-copy C:\opt\curl-8.14.1_1-win64-mingw\dep\nghttp3\COPYING.txt %license_dest%LICENSE-NGHTTP3.txt
-if !errorlevel! neq 0 exit /b !errorlevel!
-copy C:\opt\curl-8.14.1_1-win64-mingw\dep\ngtcp2\COPYING.txt %license_dest%LICENSE-NGTCP2.txt
-if !errorlevel! neq 0 exit /b !errorlevel!
-copy C:\opt\curl-8.14.1_1-win64-mingw\dep\zlibng\LICENSE.md %license_dest%LICENSE-ZLIBNG.md
-if !errorlevel! neq 0 exit /b !errorlevel!
-copy C:\opt\curl-8.14.1_1-win64-mingw\dep\zstd\LICENSE.txt %license_dest%LICENSE-ZSTD.txt
+:: set "license_dest=%cd%\dist\windows\ovms\thirdparty-licenses\"
+:: md %license_dest%
+:: if !errorlevel! neq 0 exit /b !errorlevel!
+:: copy C:\opt\opencv_4.12.0\etc\licenses\* %license_dest%
+:: if !errorlevel! neq 0 exit /b !errorlevel!
+:: IF "%OV_USE_BINARY%"=="1" (
+::     copy C:\%output_user_root%\openvino\docs\licensing\LICENSE %license_dest%openvino.LICENSE.txt
+::     if !errorlevel! neq 0 exit /b !errorlevel!
+::     copy C:\%output_user_root%\openvino\docs\licensing\LICENSE-GENAI %license_dest%LICENSE-GENAI.txt
+::     if !errorlevel! neq 0 exit /b !errorlevel!
+:: ) ELSE (
+::     copy C:\%output_user_root%\openvino\licenses %license_dest%
+::     if !errorlevel! neq 0 exit /b !errorlevel!
+:: )
+:: 
+:: copy %cd%\release_files\LICENSE %cd%\dist\windows\ovms\
+:: if !errorlevel! neq 0 exit /b !errorlevel!
+:: copy %cd%\release_files\thirdparty-licenses\* %license_dest%
+:: if !errorlevel! neq 0 exit /b !errorlevel!
+:: 
+:: if !errorlevel! neq 0 exit /b !errorlevel!
+:: copy C:\opt\curl-8.14.1_1-win64-mingw\COPYING.txt %license_dest%LICENSE-CURL.txt
+:: if !errorlevel! neq 0 exit /b !errorlevel!
+:: copy C:\opt\curl-8.14.1_1-win64-mingw\dep\brotli\LICENSE.txt %license_dest%LICENSE-BROTIL.txt
+:: if !errorlevel! neq 0 exit /b !errorlevel!
+:: copy C:\opt\curl-8.14.1_1-win64-mingw\dep\cacert\LICENSE.url %license_dest%LICENSE-CACERT.url
+:: if !errorlevel! neq 0 exit /b !errorlevel!
+:: copy C:\opt\curl-8.14.1_1-win64-mingw\dep\libpsl\COPYING.txt %license_dest%LICENSE-LIBPSL.txt
+:: if !errorlevel! neq 0 exit /b !errorlevel!
+:: copy C:\opt\curl-8.14.1_1-win64-mingw\dep\libressl\COPYING.txt %license_dest%LICENSE-LIBRESSL.txt
+:: if !errorlevel! neq 0 exit /b !errorlevel!
+:: copy C:\opt\curl-8.14.1_1-win64-mingw\dep\libssh2\COPYING.txt %license_dest%LICENSE-LIBSSH2.txt
+:: if !errorlevel! neq 0 exit /b !errorlevel!
+:: copy C:\opt\curl-8.14.1_1-win64-mingw\dep\nghttp2\COPYING.txt %license_dest%LICENSE-NGHTTP2.txt
+:: if !errorlevel! neq 0 exit /b !errorlevel!
+:: copy C:\opt\curl-8.14.1_1-win64-mingw\dep\nghttp3\COPYING.txt %license_dest%LICENSE-NGHTTP3.txt
+:: if !errorlevel! neq 0 exit /b !errorlevel!
+:: copy C:\opt\curl-8.14.1_1-win64-mingw\dep\ngtcp2\COPYING.txt %license_dest%LICENSE-NGTCP2.txt
+:: if !errorlevel! neq 0 exit /b !errorlevel!
+:: copy C:\opt\curl-8.14.1_1-win64-mingw\dep\zlibng\LICENSE.md %license_dest%LICENSE-ZLIBNG.md
+:: if !errorlevel! neq 0 exit /b !errorlevel!
+:: copy C:\opt\curl-8.14.1_1-win64-mingw\dep\zstd\LICENSE.txt %license_dest%LICENSE-ZSTD.txt
 
 :: Add when CAPI enabled and tested
 ::mkdir -vp /ovms_release/include && cp /ovms/src/ovms.h /ovms_release/include
