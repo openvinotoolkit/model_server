@@ -35,6 +35,7 @@ using namespace ov;
 
 namespace ovms {
 
+// Start code from OpenVINO GenAI repository
 struct KVAxesPosition {
     size_t batch;
     size_t seq_len;
@@ -205,7 +206,6 @@ std::shared_ptr<op::Op> get_last_token_pooling_op(const ov::Output<ov::Node>& la
     return std::make_shared<op::v8::Gather>(last_hidden_state_node, subtract, axis_1, 1);
 }
 
-// From OpenVINO GenAI repository
 static std::shared_ptr<op::Op> get_cls_pooling_op(const ov::Output<ov::Node>& last_hidden_state_node) {
     auto start = std::make_shared<op::v0::Constant>(ov::element::i64, ov::Shape{1}, std::vector<int64_t>{0});
     auto stop = std::make_shared<op::v0::Constant>(ov::element::i64, ov::Shape{1}, std::vector<int64_t>{1});
@@ -271,7 +271,6 @@ std::shared_ptr<ov::Model> create_post_model(std::shared_ptr<ov::Model> model,
     return post_model;
 }
 
-// From OpenVINO GenAI repository
 static std::shared_ptr<op::Op> get_mean_pooling_op(std::shared_ptr<Model> model,
     const ov::Output<ov::Node>& last_hidden_state_node) {
     auto shape_of = std::make_shared<op::v3::ShapeOf>(last_hidden_state_node);
@@ -305,7 +304,6 @@ static std::shared_ptr<op::Op> get_mean_pooling_op(std::shared_ptr<Model> model,
     return std::make_shared<op::v1::Divide>(sum_hidden_state, max_expanded_mask);
 }
 
-// From OpenVINO GenAI repository
 static std::shared_ptr<op::Op> get_last_token_pooling_op(std::shared_ptr<Model> model,
     const ov::Output<ov::Node>& last_hidden_state_node) {
     auto attention_mask = model->input("attention_mask").get_node()->outputs()[0];
@@ -317,14 +315,10 @@ static std::shared_ptr<op::Op> get_last_token_pooling_op(std::shared_ptr<Model> 
 
     return std::make_shared<op::v8::Gather>(last_hidden_state_node, subtract, axis_1, 1);
 }
+// End code from OpenVINO GenAI repository
 
 std::shared_ptr<ov::Model> EmbeddingsServable::applyPrePostProcessing(ov::Core& core, std::shared_ptr<ov::Model> model, ov::AnyMap& properties) {
     if (this->targetDevice == "NPU" && model->is_dynamic()) {
-        // Model optimization
-        // TODO: if (config.batch_size.has_value() && is_seq_len_fixed) {
-        // utils::reshape_model(model, config, max_position_embeddings);
-        // }
-        // TODO: Setup proper config based on calculator options
         TextEmbeddingPipeline::Config config;
         switch (this->pooling) {
         case mediapipe::EmbeddingsCalculatorOVOptions_Pooling_CLS: {

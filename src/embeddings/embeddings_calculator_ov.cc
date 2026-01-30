@@ -255,7 +255,7 @@ public:
                 if (embeddings_session->getNumberOfModelInputs() == 3) {
                     typeIds_size = tokens.attention_mask.get_shape()[1];
                 }
-                for (uint_64_t i = 0; i < received_batch_size; i++) {
+                for (uint64_t i = 0; i < received_batch_size; i++) {
                     // TODO: Check optimal inferRequest init
                     auto executingStreamIdGuard = std::make_unique<ExecutingStreamIdGuard>(embeddings_session->getInferRequestsQueue(), unused);
                     ov::InferRequest& inferRequest = executingStreamIdGuard->getInferRequest();
@@ -317,15 +317,12 @@ public:
                 ov::InferRequest& inferRequest2 = executingStreamIdGuard2->getInferRequest();
                 ov::Shape input_shape;
                 if (received_batch_size > 1) {
-                    SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "embeddingsTensors.size {}", embeddingsTensors.size());
-                    SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "embeddingsTensors.get_shape() {}", embeddingsTensors[0].get_shape());
                     input_shape = embeddingsTensors[0].get_shape();
                     inferRequest2.set_tensors("attention_mask", embeddingsAttentionMasks);
+                    inferRequest2.set_tensors("embedding_hidden_state", embeddingsTensors);
                 } else {
-                    SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "embeddingsTensor.get_shape() {}", embeddingsTensor.get_shape());
                     input_shape = embeddingsTensor.get_shape();
 
-                    SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "input_shape {}", input_shape);
                     RET_CHECK(input_shape.size() > 1) << "Embeddings result shape is too small";
                     const size_t sequence_length = input_shape[1];
                     const size_t original_mask_size = tokens.attention_mask.get_size();
@@ -342,27 +339,18 @@ public:
                     // sequence length will be reset to 4096. In this case, the attention_mask_tensor size is 4096,
                     // which is greater than the original tokens.attention_mask size of 3800. We need to zero-fill
                     // the remaining elements in the attention_mask_tensor to ensure correct masking behavior.
-                    SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "sequence_length {}, original_mask_size {}", sequence_length, original_mask_size);
                     if (sequence_length > original_mask_size) {
-                        SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "std::fill_n(attention_mask_tensor");
                         std::fill_n(attention_mask_tensor.data<int64_t>() + original_mask_size,
                             sequence_length - original_mask_size,
                             0);
                     }
 
-                    SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "set_tensor(attention_mask)");
                     // Run post-processing inference
                     inferRequest2.set_tensor("attention_mask", attention_mask_tensor);
-                }
-                if (received_batch_size > 1) {
-                    SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "NPU embeddings batch size {} dynamic model additional inference on CPU", received_batch_size);
-                    inferRequest2.set_tensors("embedding_hidden_state", embeddingsTensors);
-                } else {
                     inferRequest2.set_tensor("embedding_hidden_state", embeddingsTensor);
                 }
-                SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "start_async");
+
                 inferRequest2.start_async();
-                SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "wait");
                 inferRequest2.wait();
 
                 embeddingsTensor = inferRequest2.get_tensor(outputTensorName.c_str());
@@ -377,8 +365,7 @@ public:
         }
 
         RET_CHECK(embeddingsTensor.get_shape().size() == 2);
-        SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Shape {} received_batch_size {}", embeddingsTensor.get_shape()[0], received_batch_size);
-        // TODO: RET_CHECK(embeddingsTensor.get_shape()[0] == received_batch_size);
+        RET_CHECK(embeddingsTensor.get_shape()[0] == received_batch_size);
         RET_CHECK(embeddingsTensor.get_element_type() == ov::element::f32);  // do we still need it?
 
         auto parseResponseStartTime = std::chrono::high_resolution_clock::now();
