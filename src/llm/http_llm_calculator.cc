@@ -62,9 +62,6 @@ public:
     absl::Status Close(CalculatorContext* cc) final {
         OVMS_PROFILE_FUNCTION();
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "LLMCalculator [Node: {} ] Close", cc->NodeName());
-        if (executionContext && executionContext->servableLock.owns_lock()) {
-            executionContext->servableLock.unlock();
-        }
         return absl::OkStatus();
     }
 
@@ -80,10 +77,6 @@ public:
         return absl::OkStatus();
     }
     absl::Status Process(CalculatorContext* cc) final {
-        if (servable->getProperties()->eagle3Mode) {
-            // Acquire servable lock for Eagle3 mode to enforce sequential processing
-            executionContext->servableLock = std::unique_lock<std::mutex>(servable->getProperties()->servableMtx);
-        }
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "LLMCalculator  [Node: {}] Process start", cc->NodeName());
         OVMS_PROFILE_FUNCTION();
         RET_CHECK(this->servable != nullptr);

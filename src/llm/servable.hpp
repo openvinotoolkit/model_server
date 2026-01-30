@@ -74,9 +74,6 @@ struct GenAiServableExecutionContext {
     std::shared_ptr<ov::genai::TextStreamer> textStreamer;
     bool sendLoopbackSignal = false;
     std::string lastStreamerCallbackOutput;
-
-    // Lock used when sequential processing is required - for now Eagle3 pipeline only
-    std::unique_lock<std::mutex> servableLock;
 };
 
 struct ExtraGenerationInfo {
@@ -108,9 +105,6 @@ struct GenAiServableProperties {
     ov::genai::Tokenizer tokenizer;
     // Specific pipeline properties
     bool eagle3Mode = false;
-
-    // Enforcing sequential processing on the calculator level
-    std::mutex servableMtx;
 
 #if (PYTHON_DISABLE == 0)
     PyJinjaTemplateProcessor templateProcessor;
