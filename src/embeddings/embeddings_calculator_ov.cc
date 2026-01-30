@@ -246,6 +246,7 @@ public:
             std::vector<ov::Tensor> embeddingsTensors;
             std::vector<ov::Tensor> embeddingsAttentionMasks;
             std::string outputTensorName;
+            auto executingStreamIdGuard = std::make_unique<ExecutingStreamIdGuard>(embeddings_session->getInferRequestsQueue(), unused);
             // NPU embeddings dynamic model case for batch size grater than 1
             if (embeddings_session->getTargetDevice() == "NPU" && received_batch_size > 1) {
                 SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Embeddings batch NPU request split for BS {}", received_batch_size);
@@ -257,7 +258,6 @@ public:
                 }
                 for (uint64_t i = 0; i < received_batch_size; i++) {
                     // TODO: Check optimal inferRequest init
-                    auto executingStreamIdGuard = std::make_unique<ExecutingStreamIdGuard>(embeddings_session->getInferRequestsQueue(), unused);
                     ov::InferRequest& inferRequest = executingStreamIdGuard->getInferRequest();
                     ov::Tensor oneBatchInputIdsTensor = ov::Tensor(tokens.input_ids, {i, 0}, {i + 1, input_ids_size});
                     ov::Tensor oneBatchAttentionMaskTensor = ov::Tensor(tokens.attention_mask, {i, 0}, {i + 1, attention_mask_size});
@@ -287,7 +287,6 @@ public:
                 }
             } else {
                 // Standard CPU/GPU, NPU BS=1 path
-                auto executingStreamIdGuard = std::make_unique<ExecutingStreamIdGuard>(embeddings_session->getInferRequestsQueue(), unused);
                 ov::InferRequest& inferRequest = executingStreamIdGuard->getInferRequest();
                 inferRequest.set_tensor(EMBEDDINGS_MODEL_INPUT_IDS_NAME, tokens.input_ids);
                 inferRequest.set_tensor(EMBEDDINGS_MODEL_ATTENTION_MASK_NAME, tokens.attention_mask);
