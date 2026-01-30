@@ -149,6 +149,7 @@ void SidepacketServable::initialize(const std::string& modelDir, const std::stri
         SPDLOG_WARN("Failed to query OPTIMAL_NUMBER_OF_INFER_REQUESTS with error {}. Using 1 nireq.", ex.what());
         numberOfParallelInferRequests = 1u;
     }
+    SPDLOG_DEBUG("Setting inference queue for {} with {} parallel requests", targetDevice, numberOfParallelInferRequests);
     inferRequestsQueue = std::make_unique<OVInferRequestsQueue>(compiledModel, numberOfParallelInferRequests);
 }
 

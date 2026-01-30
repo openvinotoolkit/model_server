@@ -342,7 +342,8 @@ std::shared_ptr<ov::Model> EmbeddingsServable::applyPrePostProcessing(ov::Core& 
         config.normalize = this->normalizeEmbeddings;
         // Compile additional CPU model for NPU dynamic model case
         auto post_model = create_post_model(model, config);
-        postProcCompiledModel = core.compile_model(post_model, "CPU", properties);
+        const std::string postModelDevice = "CPU";
+        postProcCompiledModel = core.compile_model(post_model, postModelDevice, properties);
 
         auto& ovmsConfig = ovms::Config::instance();
         uint32_t numberOfParallelInferRequests = 1;
@@ -356,6 +357,7 @@ std::shared_ptr<ov::Model> EmbeddingsServable::applyPrePostProcessing(ov::Core& 
             SPDLOG_WARN("Failed to query OPTIMAL_NUMBER_OF_INFER_REQUESTS with error {}. Using 1 nireq.", ex.what());
             numberOfParallelInferRequests = 1u;
         }
+        SPDLOG_DEBUG("Setting post processing inference queue for {} with {} parallel requests", postModelDevice, numberOfParallelInferRequests);
         postProcInferRequestsQueue = std::make_unique<OVInferRequestsQueue>(postProcCompiledModel, numberOfParallelInferRequests);
         npuPostprocessingRequired = true;
 
