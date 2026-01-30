@@ -43,7 +43,7 @@ mkdir models
 Run `export_model.py` script to download and quantize the model:
 
 ```console
-python export_model.py text_generation --source_model Qwen/Qwen3-8B --draft_source_model Tengyunw/qwen3_8b_eagle3 --draft_eagle3 --weight-format int4 --config_file_path models/config.json --model_repository_path models
+python export_model.py text_generation --source_model Qwen/Qwen3-8B --draft_source_model Tengyunw/qwen3_8b_eagle3 --draft_eagle3_mode --weight-format int4 --config_file_path models/config.json --model_repository_path models
 ```
 
 Draft model inherits all scheduler properties from the main model.
@@ -158,8 +158,9 @@ P99 ITL (ms):                            72.11
 
 Eagle3 deployments currently have following known limitations:
 - stateful mode (pipeline_type: LM) not supported,
-- concurrency not supported (max 1 request processed at a time),
+- concurrency not supported - max 1 request can be processed at a time (enforced by OVMS if pipeline configured properly),
 - prefix caching not supported
+- only greedy sampling is supported (enforced by OVMS if pipeline configured properly)
 
 # Classic Models
 
