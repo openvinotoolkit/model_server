@@ -246,6 +246,7 @@ cd %BAZEL_SHORT_PATH%\openvino_src
 git fetch origin
 git checkout %OV_SOURCE_BRANCH%
 if !errorlevel! neq 0 exit /b !errorlevel!
+git pull
 git submodule update --init --recursive
 if !errorlevel! neq 0 exit /b !errorlevel!
 IF /I NOT EXIST build (
@@ -271,6 +272,7 @@ cd %BAZEL_SHORT_PATH%\openvino_tokenizers_src
 git fetch origin
 git checkout %TOKENIZER_SOURCE_BRANCH%
 if !errorlevel! neq 0 exit /b !errorlevel!
+git pull
 IF /I NOT EXIST build (
     mkdir build
 )
@@ -292,6 +294,7 @@ cd %BAZEL_SHORT_PATH%\openvino_genai_src
 git fetch origin
 git checkout %GENAI_SOURCE_BRANCH%
 if !errorlevel! neq 0 exit /b !errorlevel!
+git pull
 IF /I NOT EXIST build (
     mkdir build
 )

@@ -423,7 +423,7 @@ RUN if [ -f /usr/bin/dnf ] ; then export DNF_TOOL=dnf ; echo -e "max_parallel_do
     fi ; \
     # For image with Python enabled install Python library
     if ! [[ $debug_bazel_flags == *"py_off"* ]]; then \
-        $DNF_TOOL install -y python3-libs python3.12 python3.12-devel python3.12-pip --setopt=install_weak_deps=0 --nodocs; \
+        $DNF_TOOL install -y python3-libs --setopt=install_weak_deps=0 --nodocs; \
     fi ; \
     $DNF_TOOL install -y shadow-utils; \
     $DNF_TOOL clean all ; \
