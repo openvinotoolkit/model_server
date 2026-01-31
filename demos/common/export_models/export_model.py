@@ -469,8 +469,7 @@ def export_text_generation_model(model_repository_path, source_model, model_name
     with open(os.path.join(model_repository_path, model_name, 'graph.pbtxt'), 'w') as f:
         f.write(graph_content)
     print("Created graph {}".format(os.path.join(model_repository_path, model_name, 'graph.pbtxt')))
-
-    add_servable_to_config(config_file_path, model_name, os.path.relpath( os.path.join(model_repository_path, model_name), os.path.dirname(config_file_path)))
+    add_servable_to_config(config_file_path, model_name, os.path.relpath(os.path.join(model_repository_path, model_name), os.path.dirname(config_file_path)))
 
 def export_embeddings_model_ov(model_repository_path, source_model, model_name, precision, task_parameters, config_file_path, truncate=True):
     set_max_context_length = ""
@@ -491,6 +490,7 @@ def export_embeddings_model_ov(model_repository_path, source_model, model_name, 
     with open(os.path.join(model_repository_path, model_name, 'graph.pbtxt'), 'w') as f:
         f.write(graph_content)
     print("Created graph {}".format(os.path.join(model_repository_path, model_name, 'graph.pbtxt')))
+    add_servable_to_config(config_file_path, model_name, os.path.relpath(os.path.join(model_repository_path, model_name), os.path.dirname(config_file_path)))
 
 def export_text2speech_model(model_repository_path, source_model, model_name, precision, task_parameters, config_file_path):
     destination_path = os.path.join(model_repository_path, model_name)
@@ -504,7 +504,7 @@ def export_text2speech_model(model_repository_path, source_model, model_name, pr
     with open(os.path.join(model_repository_path, model_name, 'graph.pbtxt'), 'w') as f:
         f.write(graph_content)
     print("Created graph {}".format(os.path.join(model_repository_path, model_name, 'graph.pbtxt')))
-    add_servable_to_config(config_file_path, model_name, os.path.relpath( os.path.join(model_repository_path, model_name), os.path.dirname(config_file_path)))
+    add_servable_to_config(config_file_path, model_name, os.path.relpath(os.path.join(model_repository_path, model_name), os.path.dirname(config_file_path)))
 
 def export_speech2text_model(model_repository_path, source_model, model_name, precision, task_parameters, config_file_path):
     destination_path = os.path.join(model_repository_path, model_name)
@@ -518,7 +518,7 @@ def export_speech2text_model(model_repository_path, source_model, model_name, pr
     with open(os.path.join(model_repository_path, model_name, 'graph.pbtxt'), 'w') as f:
         f.write(graph_content)
     print("Created graph {}".format(os.path.join(model_repository_path, model_name, 'graph.pbtxt')))
-    add_servable_to_config(config_file_path, model_name, os.path.relpath( os.path.join(model_repository_path, model_name), os.path.dirname(config_file_path)))
+    add_servable_to_config(config_file_path, model_name, os.path.relpath(os.path.join(model_repository_path, model_name), os.path.dirname(config_file_path)))
 
 def export_rerank_model_ov(model_repository_path, source_model, model_name, precision, task_parameters, config_file_path, max_doc_length):
     destination_path = os.path.join(model_repository_path, model_name)
@@ -575,7 +575,7 @@ def export_rerank_model(model_repository_path, source_model, model_name, precisi
     with open(os.path.join(model_repository_path, model_name, 'subconfig.json'), 'w') as f:
         f.write(subconfig_content)
     print("Created subconfig {}".format(os.path.join(model_repository_path, model_name, 'subconfig.json')))
-    add_servable_to_config(config_file_path, model_name, os.path.relpath( os.path.join(model_repository_path, model_name), os.path.dirname(config_file_path)))
+    add_servable_to_config(config_file_path, model_name, os.path.relpath(os.path.join(model_repository_path, model_name), os.path.dirname(config_file_path)))
 
 
 def export_image_generation_model(model_repository_path, source_model, model_name, precision, task_parameters, config_file_path, num_streams):
@@ -616,7 +616,7 @@ def export_image_generation_model(model_repository_path, source_model, model_nam
     with open(os.path.join(model_repository_path, model_name, 'graph.pbtxt'), 'w') as f:
          f.write(graph_content)
     print("Created graph {}".format(os.path.join(model_repository_path, model_name, 'graph.pbtxt')))
-    add_servable_to_config(config_file_path, model_name, os.path.relpath( os.path.join(model_repository_path, model_name), os.path.dirname(config_file_path)))
+    add_servable_to_config(config_file_path, model_name, os.path.relpath(os.path.join(model_repository_path, model_name), os.path.dirname(config_file_path)))
 
 
 if not os.path.isdir(args['model_repository_path']):
