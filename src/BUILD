@@ -2941,6 +2941,7 @@ cc_library(
         "//src/servables_config_manager_module:listmodels",
         "//src/utils:env_guard",
         ":test_utils",
+        ":libtest_environment",
         ":test_platform_utils",
         ":test_test_with_temp_dir",
         "//src/pull_module:libgit2",
