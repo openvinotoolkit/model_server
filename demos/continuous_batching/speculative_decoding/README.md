@@ -159,8 +159,9 @@ P99 ITL (ms):                            72.11
 Eagle3 deployments currently have following known limitations:
 - stateful mode (pipeline_type: LM) not supported,
 - concurrency not supported - max 1 request can be processed at a time (**ALWAYS** use rest_workers=2 when deploying Eagle3 pipeline),
-- prefix caching not supported
-- only greedy sampling is supported (enforced by OVMS if pipeline configured properly)
+- prefix caching not supported,
+- only greedy sampling is supported (enforced by OVMS if pipeline configured properly),
+- MoE models not supported
 
 # Classic Models
 

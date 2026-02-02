@@ -45,7 +45,6 @@ void GenAiServable::determineDecodingMethod() {
     auto& pluginConfig = getProperties()->pluginConfig;
     if (pluginConfig.find("draft_model") != pluginConfig.end()) {
         if (getProperties()->eagle3Mode) {
-            std::cout << "Eagle3 mode enabled: enforcing greedy decoding" << std::endl;
             getProperties()->decodingMethod = DecodingMethod::EAGLE3;
         } else {
             getProperties()->decodingMethod = DecodingMethod::SPECULATIVE_DECODING;
