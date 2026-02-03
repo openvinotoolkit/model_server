@@ -110,7 +110,7 @@ public:
         if (payload.multipartParser->hasParseError())
             return absl::InvalidArgumentError("Failed to parse multipart data");
 
-        std::string_view stream = payload.multipartParser->getFileContentByFieldName("stream");
+        std::string_view stream = payload.multipartParser->getFieldByName("stream");
         if (!stream.empty()) {
             return absl::InvalidArgumentError("streaming is not supported");
         }
@@ -136,22 +136,76 @@ public:
         writer.StartObject();
         writer.String("text");
         if (endpoint == Endpoint::TRANSCRIPTIONS) {
-            std::string_view language = payload.multipartParser->getFileContentByFieldName("language");
+            ov::genai::WhisperGenerationConfig config = pipe->sttPipeline->get_generation_config();
+            std::string_view language = payload.multipartParser->getFieldByName("language");
             if (!language.empty()) {
                 if (language.size() > ISO_LANG_CODE_MAX) {
                     return absl::InvalidArgumentError("Invalid language code.");
                 }
-                std::string genaiLanguage = "<|" + std::string(language) + "|>";
-                std::unique_lock lock(pipe->sttPipelineMutex);
-                std::string generatedText = pipe->sttPipeline->generate(rawSpeech, ov::genai::language(genaiLanguage.c_str()));
-                lock.unlock();
-                writer.String(generatedText.c_str());
-            } else {
-                std::unique_lock lock(pipe->sttPipelineMutex);
-                std::string generatedText = pipe->sttPipeline->generate(rawSpeech);
-                lock.unlock();
-                writer.String(generatedText.c_str());
+                config.language = "<|" + std::string(language) + "|>";
             }
+            std::string_view timestampsType = payload.multipartParser->getFieldByName("timestamp_granularities");
+            if (!timestampsType.empty()) {
+                if(std::string(timestampsType) == "segment")
+                    config.return_timestamps = true;
+                else if (std::string(timestampsType) == "word")
+                    config.word_timestamps = true;
+                else
+                    return absl::InvalidArgumentError("Invalid timestamp_granularities type.");
+            }
+            std::string_view temperature = payload.multipartParser->getFieldByName("temperature");
+            if (!temperature.empty()) {
+                double temp;
+                try{
+                    temp = stod(std::string(temperature));
+                }
+                catch(...){
+                    return absl::InvalidArgumentError("Invalid temperature type.");
+                }
+                config.temperature = temp;
+            }
+            std::unique_lock lock(pipe->sttPipelineMutex);
+            auto result = pipe->sttPipeline->generate(rawSpeech, config);
+            std::string generatedText = result;
+            if(config.word_timestamps){
+                if(!result.words.has_value()){
+                    return absl::InvalidArgumentError("Timestamps requested but pipeline does not generated any.");
+                }
+                writer.String("words");
+                writer.StartArray();
+                for(const auto& word : *result.words){
+                    writer.StartObject();
+                    writer.String("word");
+                    writer.String(word.word.c_str());
+                    writer.String("start");
+                    writer.Double(word.start_ts);
+                    writer.String("end");
+                    writer.Double(word.end_ts);
+                    writer.EndObject();
+                }
+                writer.EndArray();
+            }
+            writer.String(generatedText.c_str());
+            if(config.return_timestamps){
+                if(!result.chunks.has_value()){
+                    return absl::InvalidArgumentError("Timestamps requested but pipeline does not generated any.");
+                }
+                writer.String("segments");
+                writer.StartArray();
+                for(const auto& chunk : *result.chunks){
+                    writer.StartObject();
+                    writer.String("text");
+                    writer.String(chunk.text.c_str());
+                    writer.String("start");
+                    writer.Double(chunk.start_ts);
+                    writer.String("end");
+                    writer.Double(chunk.end_ts);
+                    writer.EndObject();
+                }
+                writer.EndArray();
+            }
+            lock.unlock();
+            writer.EndObject();
         }
         if (endpoint == Endpoint::TRANSLATIONS) {
             std::unique_lock lock(pipe->sttPipelineMutex);
