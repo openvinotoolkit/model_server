@@ -467,7 +467,6 @@ def export_text_generation_model(model_repository_path, source_model, model_name
             npu_properties['NPUW_LLM_ENABLE_PREFIX_CACHING'] = True
         device_properties = { "NPU": npu_properties }
         plugin_config['DEVICE_PROPERTIES'] = device_properties
- 
 
     plugin_config_str = json.dumps(plugin_config)
     task_parameters['plugin_config'] = plugin_config_str
