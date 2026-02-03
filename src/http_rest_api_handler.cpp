@@ -711,6 +711,7 @@ struct V3StreamCallbackResourceGuard {
         auto& request = requestWrapper.getObjectHolder()->get();
         if (request != nullptr) {
             request->client.reset();
+            request.reset();  // Release the HttpPayload object itself
         }
     }
 };

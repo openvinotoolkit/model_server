@@ -85,8 +85,12 @@ absl::Status ContinuousBatchingServable::scheduleExecution(std::shared_ptr<GenAi
         return status;
     }
 
-    cbExecutionContext->payload.client->registerDisconnectionCallback([genHandle = cbExecutionContext->generationHandle]() {
-        genHandle->stop();
+    cbExecutionContext->payload.client->registerDisconnectionCallback([weakContext = std::weak_ptr<ContinuousBatchingServableExecutionContext>(cbExecutionContext)]() {
+        if (auto context = weakContext.lock()) {
+            if (context->generationHandle) {
+                context->generationHandle->stop();
+            }
+        }
     });
     notifyExecutorThread();
 

@@ -71,7 +71,20 @@ void DrogonHttpAsyncWriterImpl::PartialReplyBegin(std::function<void()> actualWo
     this->drogonResponseInitializeCallback(this->responsePtr);
 }
 void DrogonHttpAsyncWriterImpl::PartialReplyEnd() {
+    SPDLOG_DEBUG("DrogonHttpAsyncWriterImpl::PartialReplyEnd() called");
     this->stream->close();
+    
+    // Clear the disconnection callback to prevent it from keeping resources alive
+    // when the connection is reused (HTTP keep-alive)
+    const auto& weakConnPtr = requestPtr->getConnectionPtr();
+    if (auto connPtr = weakConnPtr.lock()) {
+        SPDLOG_DEBUG("Clearing disconnection callback on connection");
+        connPtr->setCloseCallback([](const trantor::TcpConnectionPtr&) {
+            // Empty callback to clear the previous one
+        });
+    } else {
+        SPDLOG_DEBUG("Connection already gone when trying to clear callback");
+    }
 }
 // Used by graph executor impl
 void DrogonHttpAsyncWriterImpl::PartialReply(std::string message) {

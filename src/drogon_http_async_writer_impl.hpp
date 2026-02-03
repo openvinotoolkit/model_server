@@ -35,7 +35,7 @@ class DrogonHttpAsyncWriterImpl : public HttpAsyncWriter {
     drogon::ResponseStreamPtr stream;
     bool isDisconnected = false;
     std::unordered_map<std::string, std::string> additionalHeaders;
-    const drogon::HttpRequestPtr requestPtr{nullptr};
+    drogon::HttpRequestPtr requestPtr{nullptr};
     drogon::HttpResponsePtr responsePtr{nullptr};
 
 public:
