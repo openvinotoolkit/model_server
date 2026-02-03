@@ -351,7 +351,7 @@ std::shared_ptr<ov::Model> EmbeddingsServable::applyPrePostProcessing(ov::Core& 
             numberOfParallelInferRequests = ovmsConfig.nireq();
         } else {
             try {
-            numberOfParallelInferRequests = postProcCompiledModel.get_property(ov::optimal_number_of_infer_requests);
+                numberOfParallelInferRequests = postProcCompiledModel.get_property(ov::optimal_number_of_infer_requests);
             } catch (const ov::Exception& ex) {
                 SPDLOG_WARN("Failed to query OPTIMAL_NUMBER_OF_INFER_REQUESTS with error {}. Using 1 nireq.", ex.what());
                 numberOfParallelInferRequests = 1u;

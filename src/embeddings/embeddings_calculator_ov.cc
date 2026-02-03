@@ -45,7 +45,7 @@ using namespace ovms;
 class EmbeddingsServable;
 
 namespace mediapipe {
-    
+
 void printTensor(const ov::Tensor& tensor) {
     const auto& elementType = tensor.get_element_type();
     // Get pointer to data
@@ -301,10 +301,10 @@ public:
                 for (uint64_t i = 0; i < receivedBatchSize; i++) {
                     auto executingStreamIdGuard = std::make_unique<ExecutingStreamIdGuard>(embeddings_session->getInferRequestsQueue(), unused);
                     ov::InferRequest& inferRequest = executingStreamIdGuard->getInferRequest();
-                    std::vector<uint64_t> startingBatchDimension =  {i, 0};
-                    std::vector<uint64_t> slicedDimensionEndForIdsTensor =  {i + 1, inputIdsSize};
-                    std::vector<uint64_t> slicedDimensionEndForAttentionMask =  {i + 1, attentionMaskSize};
-                    std::vector<uint64_t> slicedDimensionEndForTypeIds =  {i + 1, typeIdsSize};
+                    std::vector<uint64_t> startingBatchDimension = {i, 0};
+                    std::vector<uint64_t> slicedDimensionEndForIdsTensor = {i + 1, inputIdsSize};
+                    std::vector<uint64_t> slicedDimensionEndForAttentionMask = {i + 1, attentionMaskSize};
+                    std::vector<uint64_t> slicedDimensionEndForTypeIds = {i + 1, typeIdsSize};
                     ov::Tensor oneBatchInputIdsTensor = ov::Tensor(tokens.input_ids, startingBatchDimension, slicedDimensionEndForIdsTensor);
                     ov::Tensor oneBatchAttentionMaskTensor = ov::Tensor(tokens.attention_mask, startingBatchDimension, slicedDimensionEndForAttentionMask);
 
@@ -367,8 +367,8 @@ public:
             if (embeddings_session->isNpuPostprocessingRequired()) {
                 SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "NPU embeddings dynamic model additional inference");
                 ModelMetricReporter unused2(nullptr, nullptr, "unused2", 1);
-                auto executingStreamIdGuardForPostprocessingModel  = std::make_unique<ExecutingStreamIdGuard>(embeddings_session->getPostProcInferRequestsQueue(), unused2);
-                ov::InferRequest& inferRequestForPostprocessingMode = executingStreamIdGuardForPostprocessingModel ->getInferRequest();
+                auto executingStreamIdGuardForPostprocessingModel = std::make_unique<ExecutingStreamIdGuard>(embeddings_session->getPostProcInferRequestsQueue(), unused2);
+                ov::InferRequest& inferRequestForPostprocessingMode = executingStreamIdGuardForPostprocessingModel->getInferRequest();
                 if (receivedBatchSize > 1) {
                     inferRequestForPostprocessingMode.set_tensors("attention_mask", embeddingsAttentionMasks);
                     inferRequestForPostprocessingMode.set_tensors("embedding_hidden_state", embeddingsTensors);
