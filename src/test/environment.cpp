@@ -15,8 +15,27 @@
 //*****************************************************************************
 #include "environment.hpp"
 
-#include "../logging.hpp"
+#include <string>
+
+#include "src/logging.hpp"
 
 void Environment::SetUp() {
     ovms::configure_logger("TRACE", "");
+    const char* runUnstableTestsEnv = std::getenv("RUN_UNSTABLE");
+    if (runUnstableTestsEnv) {
+        std::string runUnstableTestsEnvContent(runUnstableTestsEnv);
+        if (runUnstableTestsEnvContent == "1") {
+            Environment::runUnstableTests = true;
+            SPDLOG_INFO("RUN_UNSTABLE was set to 1. Will run unstable tests");
+        } else {
+            SPDLOG_WARN("Unstable tests will be skipped since RUN_UNSTABLE env variable was not set to 1. It was set to: {}", runUnstableTestsEnvContent);
+        }
+    } else {
+        SPDLOG_INFO("Unstable tests will be skipped since RUN_UNSTABLE env variable was not set to 1. Remember to use bazel test parameter --test_env when triggering tests using bazel.");
+    }
 }
+bool Environment::shouldRunUnstableTests() {
+    return Environment::runUnstableTests;
+}
+
+bool Environment::runUnstableTests = false;
