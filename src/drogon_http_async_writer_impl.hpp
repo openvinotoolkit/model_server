@@ -15,8 +15,11 @@
 //*****************************************************************************
 #pragma once
 
+#include <atomic>
 #include <functional>
+#include <memory>
 #include <string>
+#include <thread>
 #include <unordered_map>
 #include <utility>
 #pragma warning(push)
@@ -29,7 +32,7 @@
 
 namespace ovms {
 
-class DrogonHttpAsyncWriterImpl : public HttpAsyncWriter {
+class DrogonHttpAsyncWriterImpl : public HttpAsyncWriter, public std::enable_shared_from_this<DrogonHttpAsyncWriterImpl> {
     std::function<void(const drogon::HttpResponsePtr&)> drogonResponseInitializeCallback;
     mediapipe::ThreadPool& pool;
     drogon::ResponseStreamPtr stream;
@@ -37,6 +40,12 @@ class DrogonHttpAsyncWriterImpl : public HttpAsyncWriter {
     std::unordered_map<std::string, std::string> additionalHeaders;
     drogon::HttpRequestPtr requestPtr{nullptr};
     drogon::HttpResponsePtr responsePtr{nullptr};
+    
+    // Polling-based disconnection detection to avoid circular reference leaks
+    // that occur with connection-level callbacks on keep-alive connections
+    std::function<void()> disconnectionCallback;
+    std::atomic<bool> stopPolling{false};
+    std::unique_ptr<std::thread> pollingThread;
 
 public:
     DrogonHttpAsyncWriterImpl(

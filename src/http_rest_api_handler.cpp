@@ -711,7 +711,6 @@ struct V3StreamCallbackResourceGuard {
         auto& request = requestWrapper.getObjectHolder()->get();
         if (request != nullptr) {
             request->client.reset();
-            request.reset();  // Release the HttpPayload object itself
         }
     }
 };
@@ -757,12 +756,16 @@ Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpReque
         serverReaderWriter->OverwriteResponseHeader("Content-Type", "text/event-stream");
         serverReaderWriter->OverwriteResponseHeader("Cache-Control", "no-cache");
         serverReaderWriter->OverwriteResponseHeader("Connection", "keep-alive");
-        serverReaderWriter->PartialReplyBegin([executorWrapper = executorWrapper, weakWriter = std::weak_ptr<HttpAsyncWriter>(serverReaderWriter), requestWrapper = requestWrapper]() mutable {
-            // Lock the weak_ptr to get a shared_ptr - this keeps the object alive during execution
+        
+        // Extract client before clearing it to break circular reference
+        auto client = request->client;
+        // Clear client from request to break circular reference: 
+        // serverReaderWriter -> responsePtr -> lambda -> requestWrapper -> request -> client -> serverReaderWriter
+        request->client = nullptr;
+        
+        serverReaderWriter->PartialReplyBegin([executorWrapper = executorWrapper, weakWriter = std::weak_ptr<HttpAsyncWriter>(serverReaderWriter), client = std::move(client), requestWrapper = requestWrapper]() mutable {
+            // Lock the weak_ptr to get shared_ptr - this keeps the object alive during execution
             auto serverReaderWriter = weakWriter.lock();
-            // Create guard to clean up resources after streaming is done
-            auto resourceGuard = V3StreamCallbackResourceGuard(executorWrapper, requestWrapper, serverReaderWriter);
-
             if (!serverReaderWriter) {
                 SPDLOG_DEBUG("Connection was closed before streaming could begin");
                 return;
@@ -773,11 +776,18 @@ Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpReque
 
             if (request == nullptr || executor == nullptr) {  // should not happen
                 SPDLOG_ERROR("Not all resources for streaming inference have been properly initialized");
-                throw std::runtime_error("Not all resources for streaming inference have been properly initialized");
+                return;
             }
 
+            // Temporarily restore client reference for execution
+            request->client = client;
+            
             ExecutionContext executionContext{ExecutionContext::Interface::REST, ExecutionContext::Method::V3Stream};
             auto status = executor->inferStream(*request, *serverReaderWriter, executionContext);
+            
+            // Clear client again to avoid keeping references
+            request->client = nullptr;
+            
             if (!status.ok()) {
                 rapidjson::StringBuffer buffer;
                 rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
@@ -787,6 +797,8 @@ Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpReque
                 writer.EndObject();
                 serverReaderWriter->PartialReplyWithStatus(buffer.GetString(), HTTPStatusCode::BAD_REQUEST);
             }
+            executor.reset();
+            serverReaderWriter->PartialReplyEnd();
         });
         return StatusCode::PARTIAL_END;
     }

@@ -85,6 +85,8 @@ absl::Status ContinuousBatchingServable::scheduleExecution(std::shared_ptr<GenAi
         return status;
     }
 
+    // Register callback to stop generation if client disconnects
+    // The callback is cleared in PartialReplyEnd() to prevent resource leaks
     cbExecutionContext->payload.client->registerDisconnectionCallback([weakContext = std::weak_ptr<ContinuousBatchingServableExecutionContext>(cbExecutionContext)]() {
         if (auto context = weakContext.lock()) {
             if (context->generationHandle) {
