@@ -40,7 +40,7 @@ parser_text = subparsers.add_parser('text_generation', help='export model for ch
 add_common_arguments(parser_text)
 parser_text.add_argument('--pipeline_type', default=None, choices=["LM", "LM_CB", "VLM", "VLM_CB", "AUTO"], help='Type of the pipeline to be used. AUTO is used by default', dest='pipeline_type')
 parser_text.add_argument('--kv_cache_precision', default=None, choices=["u8"], help='u8 or empty (model default). Reduced kv cache precision to u8 lowers the cache size consumption.', dest='kv_cache_precision')
-parser_text.add_argument('--enable_prefix_caching', action='store_true', help='This algorithm is used to cache the prompt tokens.', dest='enable_prefix_caching')
+parser_text.add_argument('--enable_prefix_caching', type=lambda x: (str(x).lower() == 'true'), default=True, help='This algorithm is used to cache the prompt tokens.', dest='enable_prefix_caching')
 parser_text.add_argument('--disable_dynamic_split_fuse', action='store_false', help='The maximum number of tokens that can be batched together.', dest='dynamic_split_fuse')
 parser_text.add_argument('--max_num_batched_tokens', default=None, help='empty or integer. The maximum number of tokens that can be batched together.', dest='max_num_batched_tokens')
 parser_text.add_argument('--max_num_seqs', default=None, help='256 by default. The maximum number of sequences that can be processed together.', dest='max_num_seqs')
@@ -54,7 +54,7 @@ parser_text.add_argument('--max_prompt_len', required=False, type=int, default=N
                          'Not effective if target device is not NPU', dest='max_prompt_len')
 parser_text.add_argument('--prompt_lookup_decoding', action='store_true', help='Set pipeline to use prompt lookup decoding', dest='prompt_lookup_decoding')
 parser_text.add_argument('--reasoning_parser', choices=["qwen3", "gptoss"], help='Set the type of the reasoning parser for reasoning content extraction', dest='reasoning_parser')
-parser_text.add_argument('--tool_parser', choices=["llama3", "phi4", "hermes3", "mistral", "qwen3coder", "gptoss"], help='Set the type of the tool parser for tool calls extraction', dest='tool_parser')
+parser_text.add_argument('--tool_parser', choices=["llama3", "phi4", "hermes3", "mistral", "qwen3coder", "gptoss", "devstral"], help='Set the type of the tool parser for tool calls extraction', dest='tool_parser')
 parser_text.add_argument('--enable_tool_guided_generation', action='store_true', help='Enables enforcing tool schema during generation. Requires setting tool_parser', dest='enable_tool_guided_generation')
 
 parser_embeddings_ov = subparsers.add_parser('embeddings_ov', help='export model for embeddings endpoint with directory structure aligned with OpenVINO tools')
@@ -469,8 +469,7 @@ def export_text_generation_model(model_repository_path, source_model, model_name
     with open(os.path.join(model_repository_path, model_name, 'graph.pbtxt'), 'w') as f:
         f.write(graph_content)
     print("Created graph {}".format(os.path.join(model_repository_path, model_name, 'graph.pbtxt')))
-
-    add_servable_to_config(config_file_path, model_name, os.path.relpath( os.path.join(model_repository_path, model_name), os.path.dirname(config_file_path)))
+    add_servable_to_config(config_file_path, model_name, os.path.relpath(os.path.join(model_repository_path, model_name), os.path.dirname(config_file_path)))
 
 def export_embeddings_model_ov(model_repository_path, source_model, model_name, precision, task_parameters, config_file_path, truncate=True):
     set_max_context_length = ""
@@ -491,6 +490,7 @@ def export_embeddings_model_ov(model_repository_path, source_model, model_name, 
     with open(os.path.join(model_repository_path, model_name, 'graph.pbtxt'), 'w') as f:
         f.write(graph_content)
     print("Created graph {}".format(os.path.join(model_repository_path, model_name, 'graph.pbtxt')))
+    add_servable_to_config(config_file_path, model_name, os.path.relpath(os.path.join(model_repository_path, model_name), os.path.dirname(config_file_path)))
 
 def export_text2speech_model(model_repository_path, source_model, model_name, precision, task_parameters, config_file_path):
     destination_path = os.path.join(model_repository_path, model_name)
@@ -504,7 +504,7 @@ def export_text2speech_model(model_repository_path, source_model, model_name, pr
     with open(os.path.join(model_repository_path, model_name, 'graph.pbtxt'), 'w') as f:
         f.write(graph_content)
     print("Created graph {}".format(os.path.join(model_repository_path, model_name, 'graph.pbtxt')))
-    add_servable_to_config(config_file_path, model_name, os.path.relpath( os.path.join(model_repository_path, model_name), os.path.dirname(config_file_path)))
+    add_servable_to_config(config_file_path, model_name, os.path.relpath(os.path.join(model_repository_path, model_name), os.path.dirname(config_file_path)))
 
 def export_speech2text_model(model_repository_path, source_model, model_name, precision, task_parameters, config_file_path):
     destination_path = os.path.join(model_repository_path, model_name)
@@ -518,7 +518,7 @@ def export_speech2text_model(model_repository_path, source_model, model_name, pr
     with open(os.path.join(model_repository_path, model_name, 'graph.pbtxt'), 'w') as f:
         f.write(graph_content)
     print("Created graph {}".format(os.path.join(model_repository_path, model_name, 'graph.pbtxt')))
-    add_servable_to_config(config_file_path, model_name, os.path.relpath( os.path.join(model_repository_path, model_name), os.path.dirname(config_file_path)))
+    add_servable_to_config(config_file_path, model_name, os.path.relpath(os.path.join(model_repository_path, model_name), os.path.dirname(config_file_path)))
 
 def export_rerank_model_ov(model_repository_path, source_model, model_name, precision, task_parameters, config_file_path, max_doc_length):
     destination_path = os.path.join(model_repository_path, model_name)
@@ -575,7 +575,7 @@ def export_rerank_model(model_repository_path, source_model, model_name, precisi
     with open(os.path.join(model_repository_path, model_name, 'subconfig.json'), 'w') as f:
         f.write(subconfig_content)
     print("Created subconfig {}".format(os.path.join(model_repository_path, model_name, 'subconfig.json')))
-    add_servable_to_config(config_file_path, model_name, os.path.relpath( os.path.join(model_repository_path, model_name), os.path.dirname(config_file_path)))
+    add_servable_to_config(config_file_path, model_name, os.path.relpath(os.path.join(model_repository_path, model_name), os.path.dirname(config_file_path)))
 
 
 def export_image_generation_model(model_repository_path, source_model, model_name, precision, task_parameters, config_file_path, num_streams):
@@ -616,7 +616,7 @@ def export_image_generation_model(model_repository_path, source_model, model_nam
     with open(os.path.join(model_repository_path, model_name, 'graph.pbtxt'), 'w') as f:
          f.write(graph_content)
     print("Created graph {}".format(os.path.join(model_repository_path, model_name, 'graph.pbtxt')))
-    add_servable_to_config(config_file_path, model_name, os.path.relpath( os.path.join(model_repository_path, model_name), os.path.dirname(config_file_path)))
+    add_servable_to_config(config_file_path, model_name, os.path.relpath(os.path.join(model_repository_path, model_name), os.path.dirname(config_file_path)))
 
 
 if not os.path.isdir(args['model_repository_path']):

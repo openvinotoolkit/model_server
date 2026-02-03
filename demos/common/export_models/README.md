@@ -42,7 +42,7 @@ python export_model.py text_generation --help
 Expected Output:
 ```console
 usage: export_model.py text_generation [-h] [--model_repository_path MODEL_REPOSITORY_PATH] --source_model SOURCE_MODEL [--model_name MODEL_NAME] [--weight-format PRECISION] [--config_file_path CONFIG_FILE_PATH] [--overwrite_models] [--target_device TARGET_DEVICE] [--ov_cache_dir OV_CACHE_DIR]
-                                       [--extra_quantization_params EXTRA_QUANTIZATION_PARAMS] [--pipeline_type {LM,LM_CB,VLM,VLM_CB,AUTO}] [--kv_cache_precision {u8}] [--enable_prefix_caching] [--disable_dynamic_split_fuse] [--max_num_batched_tokens MAX_NUM_BATCHED_TOKENS] [--max_num_seqs MAX_NUM_SEQS]
+                                       [--extra_quantization_params EXTRA_QUANTIZATION_PARAMS] [--pipeline_type {LM,LM_CB,VLM,VLM_CB,AUTO}] [--kv_cache_precision {u8}] [--enable_prefix_caching ENABLE_PREFIX_CACHING] [--disable_dynamic_split_fuse] [--max_num_batched_tokens MAX_NUM_BATCHED_TOKENS] [--max_num_seqs MAX_NUM_SEQS]
                                        [--cache_size CACHE_SIZE] [--draft_source_model DRAFT_SOURCE_MODEL] [--draft_model_name DRAFT_MODEL_NAME] [--draft_eagle3] [--max_prompt_len MAX_PROMPT_LEN] [--prompt_lookup_decoding] [--reasoning_parser {qwen3,gptoss}]
                                        [--tool_parser {llama3,phi4,hermes3,mistral,qwen3coder,gptoss}] [--enable_tool_guided_generation]
 
@@ -69,8 +69,8 @@ options:
                         Type of the pipeline to be used. AUTO is used by default
   --kv_cache_precision {u8}
                         u8 or empty (model default). Reduced kv cache precision to u8 lowers the cache size consumption.
-  --enable_prefix_caching
-                        This algorithm is used to cache the prompt tokens.
+  --enable_prefix_caching ENABLE_PREFIX_CACHING
+                        This algorithm is used to cache the prompt tokens. Default is True.
   --disable_dynamic_split_fuse
                         The maximum number of tokens that can be batched together.
   --max_num_batched_tokens MAX_NUM_BATCHED_TOKENS
@@ -90,7 +90,7 @@ options:
                         Set pipeline to use prompt lookup decoding
   --reasoning_parser {qwen3,gptoss}
                         Set the type of the reasoning parser for reasoning content extraction
-  --tool_parser {llama3,phi4,hermes3,mistral,qwen3coder,gptoss}
+  --tool_parser {llama3,phi4,hermes3,mistral,qwen3coder,gptoss,devstral}
                         Set the type of the tool parser for tool calls extraction
   --enable_tool_guided_generation
                         Enables enforcing tool schema during generation. Requires setting tool_parser
