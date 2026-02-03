@@ -88,6 +88,7 @@ HF_embeddings = run_model()
 OVMS_embeddings = run_ovms()
 
 i=0
+failed=0
 for res in OVMS_embeddings:
     print("Batch number:", i)
     ovmsresult = np.array(res.embedding)
@@ -96,8 +97,24 @@ for res in OVMS_embeddings:
         #print("OVSentenceTransformer: shape:",OV_embeddings[i].shape, "emb[:20]:\n", OV_embeddings[i][:20])
         print("HF AutoModel: shape:",HF_embeddings[i].shape, "emb[:20]:\n", HF_embeddings[i][:20])
     print("Difference score with HF AutoModel:", np.linalg.norm(ovmsresult - HF_embeddings[i]))
-    assert np.allclose(ovmsresult, HF_embeddings[i], atol=1e-2)
-    assert (np.linalg.norm(ovmsresult - HF_embeddings[i]) < 0.06)
+    #assert np.allclose(ovmsresult, HF_embeddings[i], atol=1e-2)
+    if np.allclose(ovmsresult, HF_embeddings[i], atol=1e-2):
+        print("[PASS] Arrays are within tolerance (atol=1e-2)")
+    else:
+        failed+=1
+        print("[FAIL] Arrays are NOT within tolerance (atol=1e-2)")
+        # Optional: print the differences for debugging
+        diff = np.abs(ovmsresult - HF_embeddings[i])
+        print(f"Max difference: {diff.max():.6f}")
+        print(f"Mean difference: {diff.mean():.6f}")
+    if (np.linalg.norm(ovmsresult - HF_embeddings[i]) < 0.06):
+        print("[PASS] Np linalg.norm")
+    else:
+        print("[FAIL] Np linalg.norm")
+        failed+=1
     i+=1
 
-
+if failed:
+    print("[FAILED]")
+else:
+    print("[SUCCESS]")

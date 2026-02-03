@@ -348,16 +348,16 @@ std::shared_ptr<ov::Model> EmbeddingsServable::applyPrePostProcessing(ov::Core& 
         auto& ovmsConfig = ovms::Config::instance();
         uint32_t numberOfParallelInferRequests = 1;
         if (ovmsConfig.nireq() > 0) {
-            // nireq is set globally for all models in ovms startup parameters
             numberOfParallelInferRequests = ovmsConfig.nireq();
-        }
-        try {
+        } else {
+            try {
             numberOfParallelInferRequests = postProcCompiledModel.get_property(ov::optimal_number_of_infer_requests);
-        } catch (const ov::Exception& ex) {
-            SPDLOG_WARN("Failed to query OPTIMAL_NUMBER_OF_INFER_REQUESTS with error {}. Using 1 nireq.", ex.what());
-            numberOfParallelInferRequests = 1u;
+            } catch (const ov::Exception& ex) {
+                SPDLOG_WARN("Failed to query OPTIMAL_NUMBER_OF_INFER_REQUESTS with error {}. Using 1 nireq.", ex.what());
+                numberOfParallelInferRequests = 1u;
+            }
+            SPDLOG_DEBUG("Setting inference queue for {} with {} parallel requests", postModelDevice, numberOfParallelInferRequests);
         }
-        SPDLOG_DEBUG("Setting post processing inference queue for {} with {} parallel requests", postModelDevice, numberOfParallelInferRequests);
         postProcInferRequestsQueue = std::make_unique<OVInferRequestsQueue>(postProcCompiledModel, numberOfParallelInferRequests);
         npuPostprocessingRequired = true;
 

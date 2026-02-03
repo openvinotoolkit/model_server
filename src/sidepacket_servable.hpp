@@ -78,7 +78,7 @@ public:
         return compiledModel.inputs().size();
     }
 
-    const std::string getTargetDevice() {
+    const std::string& getTargetDevice() {
         return targetDevice;
     }
 

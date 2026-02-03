@@ -58,8 +58,8 @@ SidepacketServable::SidepacketServable(const std::string& modelDir, const std::s
     return;
 }
 
-void SidepacketServable::initialize(const std::string& modelDir, const std::string& inTargetDevice, const std::string& pluginConfig, const std::string& graphPath) {
-    this->targetDevice = inTargetDevice;
+void SidepacketServable::initialize(const std::string& modelDir, const std::string& inputTargetDevice, const std::string& pluginConfig, const std::string& graphPath) {
+    this->targetDevice = inputTargetDevice;
     auto fsModelsPath = std::filesystem::path(modelDir);
     if (fsModelsPath.is_relative()) {
         parsedModelsPath = (std::filesystem::path(graphPath) / fsModelsPath);
@@ -133,8 +133,15 @@ void SidepacketServable::initialize(const std::string& modelDir, const std::stri
     auto& ovmsConfig = ovms::Config::instance();
     uint32_t numberOfParallelInferRequests = 1;
     if (ovmsConfig.nireq() > 0) {
-        // nireq is set globally for all models in ovms startup parameters
         numberOfParallelInferRequests = ovmsConfig.nireq();
+    } else {
+        try {
+        numberOfParallelInferRequests = compiledModel.get_property(ov::optimal_number_of_infer_requests);
+        } catch (const ov::Exception& ex) {
+            SPDLOG_WARN("Failed to query OPTIMAL_NUMBER_OF_INFER_REQUESTS with error {}. Using 1 nireq.", ex.what());
+            numberOfParallelInferRequests = 1u;
+        }
+        SPDLOG_DEBUG("Setting inference queue for {} with {} parallel requests", targetDevice, numberOfParallelInferRequests);
     }
 
     ov::Core core;
@@ -143,13 +150,7 @@ void SidepacketServable::initialize(const std::string& modelDir, const std::stri
 
     compiledModel = core.compile_model(m_model, targetDevice, properties);
 
-    try {
-        numberOfParallelInferRequests = compiledModel.get_property(ov::optimal_number_of_infer_requests);
-    } catch (const ov::Exception& ex) {
-        SPDLOG_WARN("Failed to query OPTIMAL_NUMBER_OF_INFER_REQUESTS with error {}. Using 1 nireq.", ex.what());
-        numberOfParallelInferRequests = 1u;
-    }
-    SPDLOG_DEBUG("Setting inference queue for {} with {} parallel requests", targetDevice, numberOfParallelInferRequests);
+    
     inferRequestsQueue = std::make_unique<OVInferRequestsQueue>(compiledModel, numberOfParallelInferRequests);
 }
 
