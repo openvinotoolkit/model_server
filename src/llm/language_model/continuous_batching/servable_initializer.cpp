@@ -192,7 +192,7 @@ Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiSe
             SPDLOG_ERROR("Error during draft model initialization for draft models_path: {}", draftPipelinePath);
             return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
         }
-
+        properties->eagle3Mode = nodeOptions.draft_eagle3_mode();
     } else if (nodeOptions.has_draft_max_num_batched_tokens() || nodeOptions.has_draft_cache_size() || nodeOptions.has_draft_dynamic_split_fuse() || nodeOptions.has_draft_max_num_seqs() || nodeOptions.has_draft_block_size() || nodeOptions.has_draft_device()) {
         SPDLOG_ERROR("Draft model path is not provided, but draft scheduler options are set.");
         return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
