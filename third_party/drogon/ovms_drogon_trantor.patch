@@ -221,6 +221,22 @@ index 3335e6ff..7874f18b 100644
  namespace drogon
  {
 Submodule trantor contains modified content
+diff --git a/trantor/trantor/net/TcpConnection.h b/trantor/trantor/net/TcpConnection.h
+index 8d8a5c19..1f2e3d4a 100644
+--- a/trantor/trantor/net/TcpConnection.h
++++ b/trantor/trantor/net/TcpConnection.h
+@@ -351,6 +351,11 @@ class TRANTOR_EXPORT TcpConnection
+     {
+         closeCallback_ = std::move(cb);
+     }
++    CloseCallback getCloseCallback() const
++    {
++        return closeCallback_;
++    }
++
+     void setSSLErrorCallback(const SSLErrorCallback &cb)
+     {
+         sslErrorCallback_ = cb;
 diff --git a/trantor/trantor/net/EventLoop.cc b/trantor/trantor/net/EventLoop.cc
 index 8db1090..682ed64 100644
 --- a/trantor/trantor/net/EventLoop.cc

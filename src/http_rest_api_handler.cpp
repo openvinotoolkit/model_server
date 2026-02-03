@@ -756,8 +756,9 @@ Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpReque
         serverReaderWriter->OverwriteResponseHeader("Content-Type", "text/event-stream");
         serverReaderWriter->OverwriteResponseHeader("Cache-Control", "no-cache");
         serverReaderWriter->OverwriteResponseHeader("Connection", "keep-alive");
+        
         serverReaderWriter->PartialReplyBegin([executorWrapper = executorWrapper, weakWriter = std::weak_ptr<HttpAsyncWriter>(serverReaderWriter), requestWrapper = requestWrapper]() mutable {
-            // Lock the weak_ptr to get a shared_ptr - this keeps the object alive during execution
+            // Lock the weak_ptr to get shared_ptr - this keeps the object alive during execution
             auto serverReaderWriter = weakWriter.lock();
             // Create guard to clean up resources after streaming is done
             auto resourceGuard = V3StreamCallbackResourceGuard(executorWrapper, requestWrapper, serverReaderWriter);
@@ -771,12 +772,12 @@ Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpReque
             auto& executor = executorWrapper.getObjectHolder()->get();
 
             if (request == nullptr || executor == nullptr) {  // should not happen
-                SPDLOG_ERROR("Not all resources for streaming inference have been properly initialized");
                 throw std::runtime_error("Not all resources for streaming inference have been properly initialized");
             }
-
+            
             ExecutionContext executionContext{ExecutionContext::Interface::REST, ExecutionContext::Method::V3Stream};
             auto status = executor->inferStream(*request, *serverReaderWriter, executionContext);
+            
             if (!status.ok()) {
                 rapidjson::StringBuffer buffer;
                 rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
