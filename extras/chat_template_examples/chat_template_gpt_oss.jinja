@@ -1,4 +1,20 @@
 {#-
+  *****************************************************************************
+   Copyright 2025 Intel Corporation
+  
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+  
+       http://www.apache.org/licenses/LICENSE-2.0
+  
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+  *****************************************************************************
+
   Modifications to original chat template:
     * Allowing reasoning_effort=none; this automatically adds empty reasoning channel at the end. It should force the model to follow with regular response/tool call immediately.
       IMPORTANT: When none used, reasoning_effort is rendered as low in the reasoning definition slot (as it is the lowest possible reasoning during model training).
@@ -12,6 +28,10 @@
       BFCL sends empty array and chat template accessed index 0 assuming there always is some tool call. New chat template ignores empty arrays now.
     * Removed "|tojson" from tool argument rendering. This introduced string escaping drastically influenced following generations. OpenAI Harmony format assumes no escaping of arguments.
       This was related to both: function call output (result from mcp servers) and function call arguments (input to mcp servers) in chat history.
+    * Improved built-in tool history rendering based on documentation: https://developers.openai.com/cookbook/articles/openai-harmony/#function-calling
+      Built-in tools are supposed to be rendered in analysis channel (contrary to user-defined functions rendered in commentary).
+      Fixed rendering of message constrain in histories to follow documentation.
+      Added rendering previous reasoning_content messages as those are crucial for multi-step chain of thought.
 #}
 {#-
   In addition to the normal inputs of `messages` and `tools`, this template also accepts the
@@ -296,18 +316,12 @@
             {#- when we render CoT/analysis messages in inference. #}
             {%- set future_final_message = namespace(found=false) %}
             {%- for future_message in loop_messages[loop.index:] %}
-                {%- if future_message.role == 'assistant' and "tool_calls" not in future_message %}
+                {#- {%- if future_message.role == 'assistant' and "tool_calls" not in future_message %} #}
+                {%- if future_message.role == 'assistant' and "content" in future_message %}
                     {%- set future_final_message.found = true %}
                 {%- endif %}
             {%- endfor %}
-            {%- if message.content and message.reasoning_content and not future_final_message.found %}
-                {#- Original: {{- raise_exception("Cannot pass both content and reasoning_content in an assistant message with tool calls! Put the analysis message in one or the other, but not both.") }} #}
-                {#- Mod: Exception suppressed, multi-turn BFCL benchmark contains such situations. #}
-                {#- Prefer rendering content over reasoning when both are available, looks like it contains more information. #}
-                {{- "<|start|>assistant<|channel|>analysis<|message|>" + message.content + "<|end|>" }}
-            {%- elif message.content and not future_final_message.found %}
-                {{- "<|start|>assistant<|channel|>analysis<|message|>" + message.content + "<|end|>" }}
-            {%- elif message.reasoning_content and not future_final_message.found %}
+            {%- if message.reasoning_content %}
                 {{- "<|start|>assistant<|channel|>analysis<|message|>" + message.reasoning_content + "<|end|>" }}
             {%- endif %}
             {#- Mod: this check was not present, causing crashes if tool_calls array was empty #}
@@ -318,9 +332,16 @@
                 {%- if tool_call.function %}
                     {%- set tool_call = tool_call.function %}
                 {%- endif %}
-                {{- "<|start|>assistant to=" }}
-                {{- "functions." + tool_call.name + " <|channel|>commentary " }}
-                {{- (tool_call.content_type if tool_call.content_type is defined else "json") + "<|message|>" }}
+                {#- Check if this is a builtin tool (browser, python) or a custom function #}
+                {{- "<|start|>assistant" }}
+                {%- if tool_call.name in ['python', 'browser.search', 'browser.open', 'browser.find'] %}
+                    {{- "<|channel|>analysis to=" + tool_call.name + " <|message|>" }}
+                    {%- set last_tool_call.name = tool_call.name %}
+                {%- else %}
+                    {{- "<|channel|>commentary to=functions." + tool_call.name + " " }}
+                    {{- (tool_call.content_type if tool_call.content_type is defined else "<|constrain|>json") + "<|message|>" }}
+                    {%- set last_tool_call.name = tool_call.name %}
+                {%- endif %}
                 {#- Original: {{- tool_call.arguments|tojson }} #}
                 {#- No need to escape: #}
                 {{- tool_call.arguments }}
@@ -328,7 +349,6 @@
                 {#- https://cookbook.openai.com/articles/openai-harmony#handling-tool-calls #}
                 {#- Found out in OpenAI Harmony docs it should be replaced with <|end|> in history rendering: #}
                 {{- "<|end|>" }}
-                {%- set last_tool_call.name = tool_call.name %}
             {%- endif %}
 
         {%- elif loop.last and not add_generation_prompt %}
@@ -350,7 +370,11 @@
         {%- if last_tool_call.name is none %}
             {{- raise_exception("Message has tool role, but there was no previous assistant message with a tool call!") }}
         {%- endif %}
-        {{- "<|start|>functions." + last_tool_call.name }}
+        {%- if last_tool_call.name in ['python', 'browser.search', 'browser.open', 'browser.find'] %}
+            {{- "<|start|>" + last_tool_call.name }}
+        {%- else %}
+            {{- "<|start|>functions." + last_tool_call.name }}
+        {%- endif %}
         {#- Original: {{- " to=assistant<|channel|>commentary<|message|>" + message.content|tojson + "<|end|>" }} #}
         {#- Actual version that works, does not escape and allows non-json: #}
         {{- " to=assistant<|channel|>commentary<|message|>" + message.content + "<|end|>" -}}
