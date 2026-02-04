@@ -188,7 +188,7 @@ protected:
     void prepareBinaryRequest(const std::string& jpegPath, PredictRequest& request, const std::string& customPipelineInputName, int batchSize = 1) {
         size_t filesize;
         std::unique_ptr<char[]> image_bytes;
-        readImage(jpegPath, filesize, image_bytes);
+        readFile(jpegPath, filesize, image_bytes);
 
         request.Clear();
         tensorflow::TensorProto& inputProto = (*request.mutable_inputs())[customPipelineInputName];
@@ -206,10 +206,10 @@ protected:
 
         size_t filesize;
         std::unique_ptr<char[]> image_bytes;
-        readImage(image1, filesize, image_bytes);
+        readFile(image1, filesize, image_bytes);
         inputProto.add_string_val(image_bytes.get(), filesize);
 
-        readImage(image2, filesize, image_bytes);
+        readFile(image2, filesize, image_bytes);
         inputProto.add_string_val(image_bytes.get(), filesize);
 
         inputProto.mutable_tensor_shape()->add_dim()->set_size(2);
