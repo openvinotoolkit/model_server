@@ -275,10 +275,6 @@ COPY *\.bzl /ovms/
 COPY yarn.lock /ovms/
 COPY package.json /ovms/
 
-# change system python to 3.9 for first bazel call and or_tensorflow build
-# hadolint ignore=DL3059
-## RUN alternatives --install /usr/bin/python3 python3 /usr/bin/python3.9 1
-
 # prebuild dependencies before copying sources
 # hadolint ignore=DL3059
 RUN bazel build --jobs=$JOBS ${debug_bazel_flags} //:ovms_dependencies @com_google_googletest//:gtest
@@ -290,27 +286,6 @@ COPY src/ /ovms/src/
 
 # hadolint ignore=DL3059
 RUN bazel build --jobs=$JOBS ${debug_bazel_flags} @org_tensorflow//tensorflow/core:framework
-
-# hadolint ignore=DL3059
-
-
-
-# Diagnose Python installation
-# hadolint ignore=DL3059
-RUN echo "=== Python version check ===" && \
-    python3 --version && \
-    which python3 && \
-    ls -la /usr/bin/python3* && \
-    echo "=== Python libraries in /usr/lib64/ ===" && \
-    ls -la /usr/lib64/libpython* && \
-    echo "=== Python include directories ===" && \
-    ls -d /usr/include/python* 2>/dev/null || echo "No python includes found" && \
-    echo "=== Check Python 3.9 existence ===" && \
-    if [ -f /usr/lib64/libpython3.9.so ]; then echo "WARNING: libpython3.9.so still exists!"; ls -la /usr/lib64/libpython3.9*; else echo "Good: libpython3.9.so not found"; fi
-
-# Clear Bazel's external repository cache to force re-detection of Python version
-# hadolint ignore=DL3059
-# RUN bazel clean --expunge
 
 # Sample CPU Extension
 WORKDIR /ovms/src/example/SampleCpuExtension/
@@ -346,31 +321,10 @@ RUN bazel build --jobs=$JOBS ${debug_bazel_flags} //src:release_custom_nodes
 ARG OPTIMIZE_BUILDING_TESTS=0
 RUN rm -f /usr/lib64/cmake/OpenSSL/OpenSSLConfig.cmake
 
-# Diagnose what Bazel python repository generated
-# hadolint ignore=DL3059
-RUN echo "=== Checking Bazel's Python detection ===" && \
-    cat /root/.cache/bazel/_bazel_root/*/external/_python3-linux/BUILD 2>/dev/null || echo "Python repository not yet generated" && \
-    echo "=== Verifying symlink structure ===" && \
-    ls -la /usr/lib64/libpython3.so* 2>/dev/null || echo "No libpython3.so symlinks"
-
-# Trigger python repository creation
-# hadolint ignore=DL3059  
-RUN bazel query @_python3-linux//... 2>/dev/null || true && \
-    echo "=== Bazel Python repository BUILD file ===" && \
-    cat /root/.cache/bazel/_bazel_root/*/external/_python3-linux/BUILD || echo "Failed to read BUILD file"
-
 # Builds unit tests together with ovms server in one step
 # It speeds up CI when tests are executed outside of the image building
 # hadolint ignore=SC2046
 RUN bazel build --jobs=$JOBS ${debug_bazel_flags} ${minitrace_flags} --action_env=PYTHON_BIN_PATH=/usr/bin/python3.12 //src:ovms $(if [ "$OPTIMIZE_BUILDING_TESTS" == "1" ] ; then echo -n //src:ovms_test; fi)
-
-# Verify what Python library the binary is linked to
-# hadolint ignore=DL3059
-RUN echo "=== Checking OVMS binary Python linkage ===" && \
-    ldd /ovms/bazel-bin/src/ovms | grep libpython && \
-    echo "=== If linked to 3.9, check which file exists ===" && \
-    file /usr/lib64/libpython3.9.so* 2>/dev/null || echo "libpython3.9.so not found" && \
-    file /usr/lib64/libpython3.12.so* 2>/dev/null || echo "libpython3.12.so not found"
 
 # Tests execution
 COPY ci/check_coverage.bat /ovms/
