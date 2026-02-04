@@ -146,7 +146,7 @@ public:
             }
             std::string_view timestampsType = payload.multipartParser->getFieldByName("timestamp_granularities");
             if (!timestampsType.empty()) {
-                if(std::string(timestampsType) == "segment")
+                if (std::string(timestampsType) == "segment")
                     config.return_timestamps = true;
                 else if (std::string(timestampsType) == "word")
                     config.word_timestamps = true;
@@ -156,10 +156,9 @@ public:
             std::string_view temperature = payload.multipartParser->getFieldByName("temperature");
             if (!temperature.empty()) {
                 double temp;
-                try{
+                try {
                     temp = stod(std::string(temperature));
-                }
-                catch(...){
+                } catch (...) {
                     return absl::InvalidArgumentError("Invalid temperature type.");
                 }
                 config.temperature = temp;
@@ -167,13 +166,13 @@ public:
             std::unique_lock lock(pipe->sttPipelineMutex);
             auto result = pipe->sttPipeline->generate(rawSpeech, config);
             std::string generatedText = result;
-            if(config.word_timestamps){
-                if(!result.words.has_value()){
+            if (config.word_timestamps) {
+                if (!result.words.has_value()) {
                     return absl::InvalidArgumentError("Timestamps requested but pipeline does not generated any.");
                 }
                 writer.String("words");
                 writer.StartArray();
-                for(const auto& word : *result.words){
+                for (const auto& word : *result.words) {
                     writer.StartObject();
                     writer.String("word");
                     writer.String(word.word.c_str());
@@ -186,13 +185,13 @@ public:
                 writer.EndArray();
             }
             writer.String(generatedText.c_str());
-            if(config.return_timestamps){
-                if(!result.chunks.has_value()){
+            if (config.return_timestamps) {
+                if (!result.chunks.has_value()) {
                     return absl::InvalidArgumentError("Timestamps requested but pipeline does not generated any.");
                 }
                 writer.String("segments");
                 writer.StartArray();
-                for(const auto& chunk : *result.chunks){
+                for (const auto& chunk : *result.chunks) {
                     writer.StartObject();
                     writer.String("text");
                     writer.String(chunk.text.c_str());
