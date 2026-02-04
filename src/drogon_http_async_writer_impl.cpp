@@ -72,8 +72,6 @@ void DrogonHttpAsyncWriterImpl::PartialReplyBegin(std::function<void()> actualWo
 }
 void DrogonHttpAsyncWriterImpl::PartialReplyEnd() {
     this->stream->close();
-    //this->requestPtr.reset();
-    //this->responsePtr.reset();
 }
 
 // Used by graph executor impl
