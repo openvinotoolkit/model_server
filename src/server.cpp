@@ -519,7 +519,7 @@ int Server::start(int argc, char** argv) {
     // Set default for MOE_USE_MICRO_GEMM_PREFILL if not set
     // This is a workaround for OpenVINO issue where prefill causes accuracy problems in long context in qwen3-coder model
     const char* moeEnv = std::getenv("MOE_USE_MICRO_GEMM_PREFILL");
-    if (moeEnv == nullptr)  
+    if (moeEnv == nullptr)
         setenv("MOE_USE_MICRO_GEMM_PREFILL", "0", 1);
 
     auto paramsOrExit = parseArgs(argc, argv);
