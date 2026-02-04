@@ -44,8 +44,14 @@ DrogonHttpServer::DrogonHttpServer(size_t numWorkersForUnary, size_t numWorkersF
 
     const char* envVarValue = std::getenv("DROGON_LOG_LEVEL");
     if (envVarValue != nullptr) {
-        SPDLOG_DEBUG("Setting drogon log level to {}", envVarValue);
-        trantor::Logger::setLogLevel(static_cast<trantor::Logger::LogLevel>(std::atoi(envVarValue)));
+        int logLevel = std::atoi(envVarValue);
+        if (logLevel < 0 || logLevel >= trantor::Logger::kNumberOfLogLevels) {
+            SPDLOG_WARN("Invalid DROGON_LOG_LEVEL value {}, using default log level INFO", logLevel);
+            trantor::Logger::setLogLevel(trantor::Logger::kInfo);
+        } else {
+            SPDLOG_DEBUG("Setting drogon log level to {}", logLevel);
+            trantor::Logger::setLogLevel(static_cast<trantor::Logger::LogLevel>(logLevel));
+        }
     } else {
         SPDLOG_DEBUG("DROGON_LOG_LEVEL env var not set, using default log level INFO");
         trantor::Logger::setLogLevel(trantor::Logger::kInfo);
