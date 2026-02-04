@@ -51,7 +51,7 @@ DrogonHttpServer::DrogonHttpServer(size_t numWorkersForUnary, size_t numWorkersF
         } else {
             SPDLOG_DEBUG("Setting drogon log level to {}", logLevel);
             if (logLevel == trantor::Logger::kTrace) {
-                SPDLOG_DEBUG("Note: Trace level is disabled at compile time");
+                SPDLOG_DEBUG("Note: Setting log level to trace, but trace logs are disabled at compile time anyway");
             }
             trantor::Logger::setLogLevel(static_cast<trantor::Logger::LogLevel>(logLevel));
         }
