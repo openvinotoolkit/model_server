@@ -172,7 +172,7 @@ ARG TEMP_DIR=/tmp/openvino_installer
 ARG CMAKE_BUILD_TYPE=Release
 ARG debug_bazel_flags="--strip=always  --config=mp_on_py_on --//:distro=redhat"
 
-RUN alternatives --install /usr/bin/python3 python3 /usr/bin/python3.12 1 && ln -sf python3.12-config /usr/bin/python3-config
+RUN alternatives --install /usr/bin/python3 python3 /usr/bin/python3.12 1 && alternatives --install /usr/bin/python3-config python3-config /usr/bin/python3.12-config 2
 
 ################### BUILD OPENVINO FROM SOURCE - buildarg ov_use_binary=0  ############################
 
@@ -324,7 +324,7 @@ RUN rm -f /usr/lib64/cmake/OpenSSL/OpenSSLConfig.cmake
 # Builds unit tests together with ovms server in one step
 # It speeds up CI when tests are executed outside of the image building
 # hadolint ignore=SC2046
-RUN bazel build --jobs=$JOBS ${debug_bazel_flags} ${minitrace_flags} --action_env=PYTHON_BIN_PATH=/usr/bin/python3.12 //src:ovms $(if [ "$OPTIMIZE_BUILDING_TESTS" == "1" ] ; then echo -n //src:ovms_test; fi)
+RUN bazel build --jobs=$JOBS ${debug_bazel_flags} ${minitrace_flags} //src:ovms $(if [ "$OPTIMIZE_BUILDING_TESTS" == "1" ] ; then echo -n //src:ovms_test; fi)
 
 # Tests execution
 COPY ci/check_coverage.bat /ovms/
