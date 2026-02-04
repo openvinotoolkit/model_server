@@ -68,6 +68,7 @@
 #include "servables_config_manager_module/servablesconfigmanagermodule.hpp"
 #include "stringutils.hpp"
 #include "version.hpp"
+#include "src/utils/env_guard.hpp"
 
 #if (PYTHON_DISABLE == 0)
 #include "python/pythoninterpretermodule.hpp"
