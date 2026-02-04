@@ -84,6 +84,15 @@ void DrogonHttpAsyncWriterImpl::PartialReplyEnd() {
     SPDLOG_DEBUG("DrogonHttpAsyncWriterImpl::PartialReplyEnd() called");
     this->stream->close();
     
+    // Clear the close callback to allow connection cleanup
+    // This is critical: even with weak_ptr in ResponseStream, the closeCallback_ stored
+    // in TcpConnection prevents it from being released for connection reuse
+    const auto& weakConnPtr = requestPtr->getConnectionPtr();
+    if (auto connPtr = weakConnPtr.lock()) {
+        SPDLOG_DEBUG("Clearing close callback on connection");
+        connPtr->setCloseCallback([](const trantor::TcpConnectionPtr&) {});
+    }
+    
     // Stop the polling thread and clean up
     if (this->pollingThread && this->pollingThread->joinable()) {
         SPDLOG_DEBUG("Stopping disconnection polling thread");
@@ -112,36 +121,22 @@ bool DrogonHttpAsyncWriterImpl::IsDisconnected() const {
 
 void DrogonHttpAsyncWriterImpl::RegisterDisconnectionCallback(std::function<void()> onDisconnectedCallback) {
     SPDLOG_DEBUG("DrogonHttpAsyncWriterImpl::RegisterDisconnectionCallback() called");
-    /* THIS WORKS
-    // Store the callback and start a polling thread instead of using connection-level callbacks
-    // This avoids circular references: Connection -> callback -> context -> writer -> request -> Connection
-    this->disconnectionCallback = std::move(onDisconnectedCallback);
-    this->stopPolling.store(false);
     
-    // Start polling thread that checks connection status periodically
-    this->pollingThread = std::make_unique<std::thread>([this]() {
-        SPDLOG_DEBUG("Disconnection polling thread started");
-        while (!this->stopPolling.load()) {
-            // Check if client is disconnected
-            if (this->IsDisconnected()) {
-                SPDLOG_DEBUG("Disconnection detected via polling, executing callback");
-                if (this->disconnectionCallback) {
-                    this->disconnectionCallback();
-                    this->disconnectionCallback = nullptr;  // Execute only once
-                }
-                break;
-            }
-            // Poll every 100ms - fast enough to detect disconnections quickly,
-            // slow enough to not waste CPU
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        }
-        SPDLOG_DEBUG("Disconnection polling thread finished");
-    });
-    */
     const auto& weakConnPtr = requestPtr->getConnectionPtr();
     if (auto connPtr = weakConnPtr.lock()) {
-        connPtr->setCloseCallback([onDisconnectedCallback = std::move(onDisconnectedCallback)](const trantor::TcpConnectionPtr& conn) {
-            onDisconnectedCallback();
+        // Get the original callback set by TcpServer (does connSet_.erase())
+        auto originalCallback = connPtr->getCloseCallback();
+        
+        // Chain callbacks: call original first (for cleanup), then ours (for early stop optimization)
+        connPtr->setCloseCallback([originalCallback, onDisconnectedCallback = std::move(onDisconnectedCallback)](const trantor::TcpConnectionPtr& conn) {
+            // Call original callback to maintain Drogon's connection management
+            if (originalCallback) {
+                originalCallback(conn);
+            }
+            // Then call our callback for early generation stop
+            if (onDisconnectedCallback) {
+                onDisconnectedCallback();
+            }
         });
     }
 }
