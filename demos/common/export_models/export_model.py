@@ -44,7 +44,7 @@ parser_text.add_argument('--enable_prefix_caching', type=lambda x: (str(x).lower
 parser_text.add_argument('--disable_dynamic_split_fuse', action='store_false', help='The maximum number of tokens that can be batched together.', dest='dynamic_split_fuse')
 parser_text.add_argument('--max_num_batched_tokens', default=None, help='empty or integer. The maximum number of tokens that can be batched together.', dest='max_num_batched_tokens')
 parser_text.add_argument('--max_num_seqs', default=None, help='256 by default. The maximum number of sequences that can be processed together.', dest='max_num_seqs')
-parser_text.add_argument('--cache_size', default=0, type=int, help='KV cache size in GB', dest='cache_size')
+parser_text.add_argument('--cache_size', default=0, type=int, help='KV cache size in GB. If not set, cache is allocated dynamically.', dest='cache_size')
 parser_text.add_argument('--draft_source_model', required=False, default=None, help='HF model name or path to the local folder with PyTorch or OpenVINO draft model. '
                          'Using this option will create configuration for speculative decoding', dest='draft_source_model')
 parser_text.add_argument('--draft_model_name', required=False, default=None, help='Draft model name that should be used in the deployment. '
@@ -229,7 +229,7 @@ node: {
           models_path: "{{model_path}}",
           plugin_config: '{{plugin_config}}',
           enable_prefix_caching: {% if not enable_prefix_caching %}false{% else %} true{% endif%},
-          cache_size: {{cache_size|default("10", true)}},
+          cache_size: {{cache_size|default("0", true)}},
           {%- if max_num_batched_tokens %}
           max_num_batched_tokens: {{max_num_batched_tokens}},{% endif %}
           {%- if not dynamic_split_fuse %}
