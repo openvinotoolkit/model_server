@@ -104,6 +104,9 @@ infer_timeouts = {
     TargetDevice.CPU: default_infer_timeout,
     TargetDevice.GPU: default_gpu_infer_timeout,
     TargetDevice.NPU: default_npu_infer_timeout,
+    TargetDevice.AUTO: default_gpu_infer_timeout,
+    TargetDevice.HETERO: default_gpu_infer_timeout,
+    TargetDevice.AUTO_CPU_GPU: default_gpu_infer_timeout,
 }
 infer_timeout = infer_timeouts[target_device]
 
