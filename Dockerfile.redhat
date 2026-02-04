@@ -124,7 +124,7 @@ RUN dnf install -y -d6 \
             unzip \
             vim \
             xz \
-            python3-devel \ 
+            python3.9-pip \
             python3.12 \
             python3.12-devel \
             python3.12-pip \
@@ -147,8 +147,6 @@ RUN wget -q https://mirror.stream.centos.org/9-stream/AppStream/x86_64/os/Packag
     if [ -f /usr/bin/dnf ] ; then export DNF_TOOL=dnf ; echo -e "max_parallel_downloads=8\nretries=50" >> /etc/dnf/dnf.conf ; else export DNF_TOOL=microdnf ; fi ; source ./install_gpu_drivers.sh && \
     groupadd --gid 5000 ovms && groupadd --gid 44 video1 && \
     useradd --home-dir /home/ovms --create-home --uid 5000 --gid 5000 --groups 39,44 --shell /bin/bash --skel /dev/null ovms
-RUN python3 --version && python3 -m pip install "numpy<2.0.0" --no-cache-dir && \
-    python3 --version && python3 -m pip install "Jinja2==3.1.6" "MarkupSafe==3.0.2" --no-cache-dir
 
 RUN python3.12 --version && python3.12 -m pip install "numpy<2.0.0" --no-cache-dir && \
     python3.12 --version && python3.12 -m pip install "Jinja2==3.1.6" "MarkupSafe==3.0.2" --no-cache-dir
@@ -174,7 +172,10 @@ ARG TEMP_DIR=/tmp/openvino_installer
 ARG CMAKE_BUILD_TYPE=Release
 ARG debug_bazel_flags="--strip=always  --config=mp_on_py_on --//:distro=redhat"
 
+RUN alternatives --install /usr/bin/python3 python3 /usr/bin/python3.12 1 && ln -sf python3.12-config /usr/bin/python3-config
+
 ################### BUILD OPENVINO FROM SOURCE - buildarg ov_use_binary=0  ############################
+
 # hadolint ignore=DL3041
 RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm && dnf install -y gflags-devel gflags json-devel fdupes && \
     dnf clean all
@@ -276,7 +277,7 @@ COPY package.json /ovms/
 
 # change system python to 3.9 for first bazel call and or_tensorflow build
 # hadolint ignore=DL3059
-RUN alternatives --install /usr/bin/python3 python3 /usr/bin/python3.9 1
+## RUN alternatives --install /usr/bin/python3 python3 /usr/bin/python3.9 1
 
 # prebuild dependencies before copying sources
 # hadolint ignore=DL3059
@@ -291,7 +292,25 @@ COPY src/ /ovms/src/
 RUN bazel build --jobs=$JOBS ${debug_bazel_flags} @org_tensorflow//tensorflow/core:framework
 
 # hadolint ignore=DL3059
-RUN alternatives --install /usr/bin/python3 python3 /usr/bin/python3.12 2
+
+
+
+# Diagnose Python installation
+# hadolint ignore=DL3059
+RUN echo "=== Python version check ===" && \
+    python3 --version && \
+    which python3 && \
+    ls -la /usr/bin/python3* && \
+    echo "=== Python libraries in /usr/lib64/ ===" && \
+    ls -la /usr/lib64/libpython* && \
+    echo "=== Python include directories ===" && \
+    ls -d /usr/include/python* 2>/dev/null || echo "No python includes found" && \
+    echo "=== Check Python 3.9 existence ===" && \
+    if [ -f /usr/lib64/libpython3.9.so ]; then echo "WARNING: libpython3.9.so still exists!"; ls -la /usr/lib64/libpython3.9*; else echo "Good: libpython3.9.so not found"; fi
+
+# Clear Bazel's external repository cache to force re-detection of Python version
+# hadolint ignore=DL3059
+# RUN bazel clean --expunge
 
 # Sample CPU Extension
 WORKDIR /ovms/src/example/SampleCpuExtension/
@@ -326,10 +345,32 @@ RUN bazel build --jobs=$JOBS ${debug_bazel_flags} //src:release_custom_nodes
 # OVMS
 ARG OPTIMIZE_BUILDING_TESTS=0
 RUN rm -f /usr/lib64/cmake/OpenSSL/OpenSSLConfig.cmake
+
+# Diagnose what Bazel python repository generated
+# hadolint ignore=DL3059
+RUN echo "=== Checking Bazel's Python detection ===" && \
+    cat /root/.cache/bazel/_bazel_root/*/external/_python3-linux/BUILD 2>/dev/null || echo "Python repository not yet generated" && \
+    echo "=== Verifying symlink structure ===" && \
+    ls -la /usr/lib64/libpython3.so* 2>/dev/null || echo "No libpython3.so symlinks"
+
+# Trigger python repository creation
+# hadolint ignore=DL3059  
+RUN bazel query @_python3-linux//... 2>/dev/null || true && \
+    echo "=== Bazel Python repository BUILD file ===" && \
+    cat /root/.cache/bazel/_bazel_root/*/external/_python3-linux/BUILD || echo "Failed to read BUILD file"
+
 # Builds unit tests together with ovms server in one step
 # It speeds up CI when tests are executed outside of the image building
 # hadolint ignore=SC2046
-RUN bazel build --jobs=$JOBS ${debug_bazel_flags} ${minitrace_flags} //src:ovms $(if [ "$OPTIMIZE_BUILDING_TESTS" == "1" ] ; then echo -n //src:ovms_test; fi)
+RUN bazel build --jobs=$JOBS ${debug_bazel_flags} ${minitrace_flags} --action_env=PYTHON_BIN_PATH=/usr/bin/python3.12 //src:ovms $(if [ "$OPTIMIZE_BUILDING_TESTS" == "1" ] ; then echo -n //src:ovms_test; fi)
+
+# Verify what Python library the binary is linked to
+# hadolint ignore=DL3059
+RUN echo "=== Checking OVMS binary Python linkage ===" && \
+    ldd /ovms/bazel-bin/src/ovms | grep libpython && \
+    echo "=== If linked to 3.9, check which file exists ===" && \
+    file /usr/lib64/libpython3.9.so* 2>/dev/null || echo "libpython3.9.so not found" && \
+    file /usr/lib64/libpython3.12.so* 2>/dev/null || echo "libpython3.12.so not found"
 
 # Tests execution
 COPY ci/check_coverage.bat /ovms/
