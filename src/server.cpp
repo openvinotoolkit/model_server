@@ -521,7 +521,7 @@ int Server::start(int argc, char** argv) {
     const char* moeEnv = std::getenv("MOE_USE_MICRO_GEMM_PREFILL");
     if (moeEnv == nullptr)
         std::unique_ptr<EnvGuard> envGuard;
-        envGuard->set("MOE_USE_MICRO_GEMM_PREFILL", "0");
+    envGuard->set("MOE_USE_MICRO_GEMM_PREFILL", "0");
 
     auto paramsOrExit = parseArgs(argc, argv);
     // Check for error in parsing
