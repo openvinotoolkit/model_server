@@ -756,7 +756,7 @@ Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpReque
         serverReaderWriter->OverwriteResponseHeader("Content-Type", "text/event-stream");
         serverReaderWriter->OverwriteResponseHeader("Cache-Control", "no-cache");
         serverReaderWriter->OverwriteResponseHeader("Connection", "keep-alive");
-        
+
         serverReaderWriter->PartialReplyBegin([executorWrapper = executorWrapper, weakWriter = std::weak_ptr<HttpAsyncWriter>(serverReaderWriter), requestWrapper = requestWrapper]() mutable {
             // Lock the weak_ptr to get shared_ptr - this keeps the object alive during execution
             auto serverReaderWriter = weakWriter.lock();
@@ -774,10 +774,10 @@ Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpReque
             if (request == nullptr || executor == nullptr) {  // should not happen
                 throw std::runtime_error("Not all resources for streaming inference have been properly initialized");
             }
-            
+
             ExecutionContext executionContext{ExecutionContext::Interface::REST, ExecutionContext::Method::V3Stream};
             auto status = executor->inferStream(*request, *serverReaderWriter, executionContext);
-            
+
             if (!status.ok()) {
                 rapidjson::StringBuffer buffer;
                 rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
