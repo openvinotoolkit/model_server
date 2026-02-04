@@ -503,7 +503,7 @@ static Status createV3HttpPayload(
         }
         SPDLOG_ERROR("multipart");
         auto names = multiPartParser->getAllFieldNames();
-        for(auto name : names){
+        for (auto name : names) {
             SPDLOG_ERROR("{}", name);
         }
         modelName = multiPartParser->getFieldByName("model");

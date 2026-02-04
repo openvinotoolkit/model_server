@@ -39,20 +39,21 @@ protected:
     std::unordered_map<std::string, std::string> multipartHeader{{"content-type", "multipart/form-data"}};
     static std::string modelNameForm;
     static std::string body;
+
 public:
     static void SetUpTestSuite() {
         std::string port = "9173";
         std::string configPath = getGenericFullPathForSrcTest("/ovms/src/test/audio/config_stt.json");
         SetUpSuite(port, configPath, t);
         modelNameForm = "--12345\r\n"
-        "Content-Disposition: form-data;name=\"model\"\r\n"
-        "\r\n"
-        "speech2text\r\n";
+                        "Content-Disposition: form-data;name=\"model\"\r\n"
+                        "\r\n"
+                        "speech2text\r\n";
 
         body = modelNameForm + "--12345\r\n"
-        "Content-Disposition: form-data;name=\"file\";\"filename=file\""
-        "\r\nContent-Type: application/octet-stream"
-        "\r\ncontent-transfer-encoding: quoted-printable\r\n\r\n";
+                               "Content-Disposition: form-data;name=\"file\";\"filename=file\""
+                               "\r\nContent-Type: application/octet-stream"
+                               "\r\ncontent-transfer-encoding: quoted-printable\r\n\r\n";
         std::unique_ptr<char[]> imageBytes;
         size_t fileSize;
         readFile(getGenericFullPathForSrcTest("/ovms/src/test/audio/test.wav"), fileSize, imageBytes);
@@ -90,10 +91,10 @@ TEST_F(Speech2TextHttpTest, simplePositiveLanguage) {
     req->setMethod(drogon::Post);
     req->addHeader("content-type", "multipart/form-data; boundary=\"12345\"");
     std::string language = "\r\n"
-    "Content-Disposition: form-data;name=\"language\"\r\n"
-    "\r\n"
-    "en\r\n"
-    "--12345";
+                           "Content-Disposition: form-data;name=\"language\"\r\n"
+                           "\r\n"
+                           "en\r\n"
+                           "--12345";
     req->setBody(Speech2TextHttpTest::body + language);
     std::shared_ptr<MultiPartParser> multiPartParser2 = std::make_shared<DrogonMultiPartParser>(req);
     std::string requestBody = "";
@@ -107,9 +108,9 @@ TEST_F(Speech2TextHttpTest, invalidFile) {
     req->setMethod(drogon::Post);
     req->addHeader("content-type", "multipart/form-data; boundary=\"12345\"");
     std::string invalidBody = modelNameForm + "--12345\r\n"
-    "Content-Disposition: form-data;name=\"file\";\"filename=file\""
-    "\r\nContent-Type: application/octet-stream"
-    "\r\ncontent-transfer-encoding: quoted-printable\r\n\r\n";
+                                              "Content-Disposition: form-data;name=\"file\";\"filename=file\""
+                                              "\r\nContent-Type: application/octet-stream"
+                                              "\r\ncontent-transfer-encoding: quoted-printable\r\n\r\n";
     invalidBody.append("INVALID");
     req->setBody(invalidBody);
     std::shared_ptr<MultiPartParser> multiPartParser2 = std::make_shared<DrogonMultiPartParser>(req);
