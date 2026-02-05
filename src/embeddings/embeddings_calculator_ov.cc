@@ -46,48 +46,6 @@ class EmbeddingsServable;
 
 namespace mediapipe {
 
-void printTensor(const ov::Tensor& tensor) {
-    const auto& elementType = tensor.get_element_type();
-    // Get pointer to data
-    const void* dataPtr = tensor.data();
-    // Handle different data types (example for float)
-    if (elementType == ov::element::f32) {
-        const float* data = static_cast<const float*>(dataPtr);
-        std::cout << "Tensor data (f32): ";
-        for (size_t i = 0; i < 20; ++i) {
-            std::cout << data[i] << " ";
-        }
-        std::cout << std::endl;
-        return;
-    } else if (elementType == ov::element::i32) {
-        const int32_t* data = static_cast<const int32_t*>(dataPtr);
-        std::cout << "Tensor data (i32): ";
-        for (size_t i = 0; i < tensor.get_size(); ++i) {
-            std::cout << data[i] << " ";
-        }
-        std::cout << std::endl;
-        return;
-    } else if (elementType == ov::element::i64) {
-        const int64_t* data = static_cast<const int64_t*>(dataPtr);
-        std::cout << "Tensor data (i64): ";
-        for (size_t i = 0; i < tensor.get_size(); ++i) {
-            std::cout << data[i] << " ";
-        }
-        std::cout << std::endl;
-        return;
-    } else if (elementType == ov::element::f64) {
-        const double* data = static_cast<const double*>(dataPtr);
-        std::cout << "Tensor data (f64): ";
-        for (size_t i = 0; i < 20; ++i) {
-            std::cout << data[i] << " ";
-        }
-        std::cout << std::endl;
-        return;
-    }
-
-    std::cout << "[ERROR] Unsupported data type: " << elementType << std::endl;
-}
-
 const std::string EMBEDDINGS_SESSION_SIDE_PACKET_TAG = "EMBEDDINGS_NODE_RESOURCES";
 
 using InputDataType = ovms::HttpPayload;
@@ -106,6 +64,14 @@ class EmbeddingsCalculatorOV : public CalculatorBase {
         tokens = tokenizer.encode(inputStrings, parameters);
         RET_CHECK(tokens.input_ids.get_shape().size() == 2);
 
+        return absl::OkStatus();
+    }
+
+    absl::Status isInputIdSizeOk(size_t inputIdsSize, size_t maxContextLength) {
+        if (inputIdsSize > maxContextLength) {
+            SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Input size {} exceeds maxContextLength {}", inputIdsSize, maxContextLength);
+            return absl::InvalidArgumentError(absl::StrCat("Input length ", inputIdsSize, " longer than allowed ", maxContextLength));
+        }
         return absl::OkStatus();
     }
 
@@ -215,9 +181,9 @@ public:
                 }
 
                 size_t inputIdsSize = tokens.input_ids.get_shape()[1];
-                if (inputIdsSize > maxContextLength) {
-                    SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Input size {} exceeds maxContextLength {}", inputIdsSize, maxContextLength);
-                    return absl::InvalidArgumentError("Input length " + std::to_string(inputIdsSize) + " longer than allowed " + std::to_string(maxContextLength));
+                auto sizeCheckStatus = this->isInputIdSizeOk(inputIdsSize, maxContextLength);
+                if (!sizeCheckStatus.ok()) {
+                    return sizeCheckStatus;
                 }
 
                 if (embeddings_session->getNumberOfModelInputs() == 3) {
@@ -254,10 +220,11 @@ public:
                     ov::element::i64,
                     ov::Shape{receivedBatchSize, tokenCountOfLongestDocument}};
                 size_t inputIdsSize = tokens.input_ids.get_shape()[1];
-                if (inputIdsSize > maxContextLength) {
-                    SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Input size {} exceeds maxContextLength {}", inputIdsSize, maxContextLength);
-                    return absl::InvalidArgumentError(absl::StrCat("Input length ", inputIdsSize, " longer than allowed ", maxContextLength));
+                auto sizeCheckStatus = this->isInputIdSizeOk(inputIdsSize, maxContextLength);
+                if (!sizeCheckStatus.ok()) {
+                    return sizeCheckStatus;
                 }
+                
                 tokens.attention_mask = ov::Tensor{
                     ov::element::i64,
                     ov::Shape{receivedBatchSize, tokenCountOfLongestDocument}};

@@ -53,6 +53,48 @@ void preparePredictRequest(ovms::InferenceRequest& request, inputs_info_t reques
     }
 }
 
+void printTensor(const ov::Tensor& tensor) {
+    const auto& elementType = tensor.get_element_type();
+    // Get pointer to data
+    const void* dataPtr = tensor.data();
+    // Handle different data types (example for float)
+    if (elementType == ov::element::f32) {
+        const float* data = static_cast<const float*>(dataPtr);
+        std::cout << "Tensor data (f32): ";
+        for (size_t i = 0; i < 20; ++i) {
+            std::cout << data[i] << " ";
+        }
+        std::cout << std::endl;
+        return;
+    } else if (elementType == ov::element::i32) {
+        const int32_t* data = static_cast<const int32_t*>(dataPtr);
+        std::cout << "Tensor data (i32): ";
+        for (size_t i = 0; i < tensor.get_size(); ++i) {
+            std::cout << data[i] << " ";
+        }
+        std::cout << std::endl;
+        return;
+    } else if (elementType == ov::element::i64) {
+        const int64_t* data = static_cast<const int64_t*>(dataPtr);
+        std::cout << "Tensor data (i64): ";
+        for (size_t i = 0; i < tensor.get_size(); ++i) {
+            std::cout << data[i] << " ";
+        }
+        std::cout << std::endl;
+        return;
+    } else if (elementType == ov::element::f64) {
+        const double* data = static_cast<const double*>(dataPtr);
+        std::cout << "Tensor data (f64): ";
+        for (size_t i = 0; i < 20; ++i) {
+            std::cout << data[i] << " ";
+        }
+        std::cout << std::endl;
+        return;
+    }
+
+    std::cout << "[ERROR] Unsupported data type: " << elementType << std::endl;
+}
+
 void preparePredictRequest(tensorflow::serving::PredictRequest& request, inputs_info_t requestInputs, const std::vector<float>& data) {
     request.mutable_inputs()->clear();
     for (auto const& it : requestInputs) {
