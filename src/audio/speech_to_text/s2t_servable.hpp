@@ -59,8 +59,7 @@ struct SttServable {
         if (nodeOptions.target_device() == "NPU")
             config["STATIC_PIPELINE"] = true;
         enableWordTimestamps = nodeOptions.enable_word_timestamps();
-        if (enableWordTimestamps)
-            config["word_timestamps"] = true;
+        config["word_timestamps"] = enableWordTimestamps;
         sttPipeline = std::make_shared<ov::genai::WhisperPipeline>(parsedModelsPath.string(), nodeOptions.target_device(), config);
     }
 };
