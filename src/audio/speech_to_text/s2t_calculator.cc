@@ -138,21 +138,22 @@ public:
             writer.String("text");
             if (endpoint == Endpoint::TRANSCRIPTIONS) {
                 ov::genai::WhisperGenerationConfig config = pipe->sttPipeline->get_generation_config();
-                std::string_view language = payload.multipartParser->getFieldByName("language");
-                if (!language.empty()) {
+                std::string language = payload.multipartParser->getFieldByName("language");
+                if (language.size() > 0) {
                     if (language.size() > ISO_LANG_CODE_MAX) {
                         return absl::InvalidArgumentError("Invalid language code.");
                     }
-                    config.language = "<|" + std::string(language) + "|>";
+                    SPDLOG_LOGGER_TRACE(s2t_calculator_logger, "Received language: {}");
+                    config.language = "<|" + language + "|>";
                 }
                 // Currently supports only 1 granularity at once, CVS-179914
-                std::string_view timestampsType = payload.multipartParser->getFieldByName("timestamp_granularities[]");
+                std::string timestampsType = payload.multipartParser->getFieldByName("timestamp_granularities[]");
                 config.word_timestamps = false;
-                if (!timestampsType.empty()) {
-                    auto type = std::string(timestampsType);
-                    if (type == "segment") {
+                if (timestampsType.size() > 0) {
+                    SPDLOG_LOGGER_TRACE(s2t_calculator_logger, "Received timestamp type: {}", timestampsType);
+                    if (timestampsType == "segment") {
                         config.return_timestamps = true;
-                    } else if (type == "word") {
+                    } else if (timestampsType == "word") {
                         if (!pipe->enableWordTimestamps)
                             return absl::InvalidArgumentError("Word timestamps not supported for this model");
                         config.word_timestamps = true;
@@ -160,11 +161,14 @@ public:
                         return absl::InvalidArgumentError("Invalid timestamp_granularities type. Allowed types: \"segment\", \"word\"");
                     }
                 }
-                std::string_view temperature = payload.multipartParser->getFieldByName("temperature");
-                if (!temperature.empty()) {
-                    auto temp = ovms::stof(std::string(temperature));
+                std::string temperature = payload.multipartParser->getFieldByName("temperature");
+                if (temperature.size() > 0) {
+                    SPDLOG_LOGGER_TRACE(s2t_calculator_logger, "Received temperature: {}", temperature);
+                    auto temp = ovms::stof(temperature);
                     if (!temp.has_value()) {
-                        return absl::InvalidArgumentError("Invalid temperature type.");
+                        temp = stou32(temperature);
+                        if (!temp.has_value())
+                            return absl::InvalidArgumentError("Invalid temperature type.");
                     }
                     if (temp.value() < 0.0f || temp.value() > 2.0f)
                         return absl::InvalidArgumentError("temperature out of range(0.0, 2.0)");
