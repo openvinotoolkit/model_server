@@ -217,9 +217,6 @@ BUILD_CUSTOM_NODES ?= false
 
 VERBOSE_LOGS ?= OFF
 
-NPU ?= 0
-GPU ?= 0
-
 BUILD_ARGS = --build-arg http_proxy=$(HTTP_PROXY)\
 	--build-arg https_proxy=$(HTTPS_PROXY)\
 	--build-arg no_proxy=$(NO_PROXY)\
@@ -380,8 +377,6 @@ else
 endif
 	@cat .workspace/metadata.json
 	docker $(BUILDX) build $(NO_CACHE_OPTION) -f Dockerfile.$(DIST_OS) . \
-		--build-arg GPU=$(GPU) \
-		--build-arg NPU=$(NPU) \
 		$(BUILD_ARGS) \
 		-t $(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
 		--target=build
@@ -409,8 +404,6 @@ else
 	$(eval NPU:=1)
 endif
 	docker $(BUILDX) build $(NO_CACHE_OPTION) -f Dockerfile.$(DIST_OS) . \
-		--build-arg GPU=$(GPU) \
-		--build-arg NPU=$(NPU) \
 		$(BUILD_ARGS) \
 		-t $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
 		--target=release && \

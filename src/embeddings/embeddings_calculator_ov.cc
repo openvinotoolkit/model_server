@@ -224,7 +224,7 @@ public:
                 if (!sizeCheckStatus.ok()) {
                     return sizeCheckStatus;
                 }
-                
+
                 tokens.attention_mask = ov::Tensor{
                     ov::element::i64,
                     ov::Shape{receivedBatchSize, tokenCountOfLongestDocument}};

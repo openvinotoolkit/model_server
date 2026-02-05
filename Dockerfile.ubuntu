@@ -138,8 +138,6 @@ ARG ov_source_org=openvinotoolkit
 ARG DLDT_PACKAGE_URL
 ARG ov_source_branch=master
 ARG CMAKE_BUILD_TYPE=Release
-ARG NPU=0
-ARG GPU=0
 
 ENV HDDL_INSTALL_DIR=/opt/intel/openvino/deployment_tools/inference_engine/external/hddl
 ENV TF_SYSTEM_LIBS="curl"
@@ -342,28 +340,6 @@ COPY client /client
 RUN python3 -c "import json; m={'PROJECT_VERSION':'${PROJECT_VERSION}','OPENVINO backend':'$(/ovms/bazel-bin/src/ovms --version | grep backend | cut -d' ' -f3)', \
     'BAZEL_BUILD_FLAGS':'${debug_bazel_flags}${minitrace_flags}','BASE_IMAGE':'${BASE_IMAGE}' }; \
     print(json.dumps(m,indent=4))" > /ovms/release_files/metadata.json
-
-# hadolint ignore=DL3003,SC2164
-RUN apt-get update ; \
-    apt-get install -y --no-install-recommends curl ca-certificates libxml2 || exit 1; \
-    if [ "$GPU" == "1" ] ; then \
-	/tmp/install_gpu_drivers.sh ; \
-    fi ; \
-    if [ "$NPU" == "1" ] ; then \
-            mkdir /tmp/npu_deps && cd /tmp/npu_deps ; \
-            apt-get update && apt-get install -y --no-install-recommends libtbb12 libicu-dev && \
-            if [[ "$BASE_IMAGE" == *"22.04"* ]] ; then \
-                curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.26.0/linux-npu-driver-v1.26.0.20251125-19665715237-ubuntu2204.tar.gz && \
-                tar -xf linux-npu-driver-v1.26.0.20251125-19665715237-ubuntu2204.tar.gz && \
-                curl -L -O https://github.com/oneapi-src/level-zero/releases/download/v1.24.2/level-zero_1.24.2+u22.04_amd64.deb     ; \
-            else \
-                curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.28.0/linux-npu-driver-v1.28.0.20251218-20347000698-ubuntu2404.tar.gz && \
-                tar -xf linux-npu-driver-v1.28.0.20251218-20347000698-ubuntu2404.tar.gz && \
-                curl -L -O https://github.com/oneapi-src/level-zero/releases/download/v1.24.2/level-zero_1.24.2+u24.04_amd64.deb ; \
-            fi ; \      
-            dpkg -i ./*.deb && rm -Rf /tmp/npu_deps ; \
-        fi ; \
-        apt-get clean ;
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
 FROM $BUILD_IMAGE as capi-build
