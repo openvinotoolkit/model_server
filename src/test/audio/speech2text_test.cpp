@@ -79,10 +79,10 @@ TEST_F(Speech2TextHttpTest, simplePositive) {
     req->setMethod(drogon::Post);
     req->addHeader("content-type", "multipart/form-data; boundary=\"12345\"");
     req->setBody(Speech2TextHttpTest::body);
-    std::shared_ptr<MultiPartParser> multiPartParser2 = std::make_shared<DrogonMultiPartParser>(req);
+    std::shared_ptr<MultiPartParser> multiPartParserWithRequest = std::make_shared<DrogonMultiPartParser>(req);
     std::string requestBody = "";
     ASSERT_EQ(
-        handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParser2),
+        handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParserWithRequest),
         ovms::StatusCode::OK);
 }
 
@@ -96,10 +96,10 @@ TEST_F(Speech2TextHttpTest, simplePositiveLanguage) {
                            "en\r\n"
                            "--12345";
     req->setBody(Speech2TextHttpTest::body + language);
-    std::shared_ptr<MultiPartParser> multiPartParser2 = std::make_shared<DrogonMultiPartParser>(req);
+    std::shared_ptr<MultiPartParser> multiPartParserWithRequest = std::make_shared<DrogonMultiPartParser>(req);
     std::string requestBody = "";
     ASSERT_EQ(
-        handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParser2),
+        handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParserWithRequest),
         ovms::StatusCode::OK);
 }
 
@@ -113,9 +113,9 @@ TEST_F(Speech2TextHttpTest, invalidFile) {
                                               "\r\ncontent-transfer-encoding: quoted-printable\r\n\r\n";
     invalidBody.append("INVALID");
     req->setBody(invalidBody);
-    std::shared_ptr<MultiPartParser> multiPartParser2 = std::make_shared<DrogonMultiPartParser>(req);
+    std::shared_ptr<MultiPartParser> multiPartParserWithRequest = std::make_shared<DrogonMultiPartParser>(req);
     std::string requestBody = "";
     ASSERT_EQ(
-        handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParser2),
+        handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParserWithRequest),
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
