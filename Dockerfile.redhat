@@ -124,7 +124,6 @@ RUN dnf install -y -d6 \
             unzip \
             vim \
             xz \
-            python3.9-pip \
             python3.12 \
             python3.12-devel \
             python3.12-pip \
@@ -132,8 +131,6 @@ RUN dnf install -y -d6 \
             dnf clean all
 
 WORKDIR /
-
-RUN python3 --version && python3 -m pip install numpy==1.21.0 --no-cache-dir
 
 ARG INSTALL_DRIVER_VERSION="24.52.32224"
 # GPU testing in build img & remote tensors dependencies
@@ -148,8 +145,7 @@ RUN wget -q https://mirror.stream.centos.org/9-stream/AppStream/x86_64/os/Packag
     groupadd --gid 5000 ovms && groupadd --gid 44 video1 && \
     useradd --home-dir /home/ovms --create-home --uid 5000 --gid 5000 --groups 39,44 --shell /bin/bash --skel /dev/null ovms
 
-RUN python3.12 --version && python3.12 -m pip install "numpy<2.0.0" --no-cache-dir && \
-    python3.12 --version && python3.12 -m pip install "Jinja2==3.1.6" "MarkupSafe==3.0.2" --no-cache-dir
+RUN python3.12 --version && python3.12 -m pip install "numpy<2.0.0" "Jinja2==3.1.6" "MarkupSafe==3.0.2"  --no-cache-dir
 
 # Set up Bazel
 ENV BAZEL_VERSION 6.1.1
@@ -340,7 +336,7 @@ RUN /ovms/bazel-bin/src/ovms --version && /ovms/bazel-bin/src/ovms
 COPY release_files/thirdparty-licenses/ /ovms/release_files/thirdparty-licenses/
 COPY release_files/LICENSE /ovms/release_files/LICENSE
 COPY client /client
-RUN python3 -c "import json; m={'PROJECT_VERSION':'${PROJECT_VERSION}','OPENVINO backend':'$(/ovms/bazel-bin/src/ovms --version | grep backend | cut -d' ' -f3)', \
+RUN python3.12 -c "import json; m={'PROJECT_VERSION':'${PROJECT_VERSION}','OPENVINO backend':'$(/ovms/bazel-bin/src/ovms --version | grep backend | cut -d' ' -f3)', \
     'BAZEL_BUILD_FLAGS':'${debug_bazel_flags}${minitrace_flags}}','BASE_IMAGE':'${BASE_IMAGE}' }; \
     print(json.dumps(m,indent=4))" > /ovms/release_files/metadata.json
 
