@@ -144,11 +144,14 @@ public:
                 }
                 config.language = "<|" + std::string(language) + "|>";
             }
-            std::string_view timestampsType = payload.multipartParser->getFieldByName("timestamp_granularities");
+            std::string_view timestampsType = payload.multipartParser->getFieldByName("timestamp_granularities[]");
+            config.word_timestamps = false;
             if (!timestampsType.empty()) {
-                if (std::string(timestampsType) == "segment")
+                auto type = std::string(timestampsType);
+                SPDLOG_ERROR("{}", type);
+                if (type == "segment")
                     config.return_timestamps = true;
-                else if (std::string(timestampsType) == "word")
+                else if (type == "word")
                     config.word_timestamps = true;
                 else
                     return absl::InvalidArgumentError("Invalid timestamp_granularities type.");
@@ -166,6 +169,7 @@ public:
             std::unique_lock lock(pipe->sttPipelineMutex);
             auto result = pipe->sttPipeline->generate(rawSpeech, config);
             std::string generatedText = result;
+            writer.String(generatedText.c_str());
             if (config.word_timestamps) {
                 if (!result.words.has_value()) {
                     return absl::InvalidArgumentError("Timestamps requested but pipeline does not generated any.");
@@ -184,7 +188,6 @@ public:
                 }
                 writer.EndArray();
             }
-            writer.String(generatedText.c_str());
             if (config.return_timestamps) {
                 if (!result.chunks.has_value()) {
                     return absl::InvalidArgumentError("Timestamps requested but pipeline does not generated any.");
@@ -204,7 +207,6 @@ public:
                 writer.EndArray();
             }
             lock.unlock();
-            writer.EndObject();
         }
         if (endpoint == Endpoint::TRANSLATIONS) {
             std::unique_lock lock(pipe->sttPipelineMutex);
