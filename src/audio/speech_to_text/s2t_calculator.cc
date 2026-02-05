@@ -155,8 +155,9 @@ public:
                     if (!pipe->enableWordTimestamps)
                         return absl::InvalidArgumentError("Word timestamps not supported for this model");
                     config.word_timestamps = true;
-                } else
+                } else {
                     return absl::InvalidArgumentError("Invalid timestamp_granularities type. Allowed types: \"segment\", \"word\"");
+                }
             }
             std::string_view temperature = payload.multipartParser->getFieldByName("temperature");
             if (!temperature.empty()) {
