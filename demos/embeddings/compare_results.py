@@ -30,7 +30,7 @@ parser.add_argument('--hf_model_name', default='', help='HuggingFaces model name
                     dest='hf_model_name')
 parser.add_argument('--input', default=[], help='List of strings to query. default: []',
                     dest='input', action='append')
-parser.add_argument('--pooling', default="CLS", choices=["CLS", "LAST"], help='Embeddings pooling mode', dest='pooling')
+parser.add_argument('--pooling', default="CLS", choices=["CLS", "LAST", "MEAN"], help='Embeddings pooling mode', dest='pooling')
 
 args = vars(parser.parse_args())
 
