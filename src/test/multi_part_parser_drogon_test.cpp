@@ -39,6 +39,34 @@ TEST(MultiPartParserDrogonImpl, GetFieldName) {
     std::string val = std::string(parser.getFieldByName("somekey"));
     EXPECT_EQ(val, "Hello; World");
 }
+TEST(MultiPartParserDrogonImpl, GetArrayFieldName) {
+    auto req = drogon::HttpRequest::newHttpRequest();
+    req->setMethod(drogon::Post);
+    req->addHeader("content-type", "multipart/form-data; boundary=\"12345\"");
+    req->setBody(
+        "--12345\r\n"
+        "Content-Disposition: form-data; name=\"arraykey[]\"\r\n"
+        "\r\n"
+        "value1\r\n"
+        "--12345\r\n"
+        "Content-Disposition: form-data; name=\"arraykey[]\"\r\n"
+        "\r\n"
+        "value2\r\n"
+        "--12345\r\n"
+        "Content-Disposition: form-data; name=\"arraykey[]\"\r\n"
+        "\r\n"
+        "value3\r\n"
+        "--12345--");
+
+    ovms::DrogonMultiPartParser parser(req);
+    ASSERT_TRUE(parser.parse());
+    ASSERT_FALSE(parser.hasParseError());
+    auto values = parser.getArrayFieldByName("arraykey[]");
+    ASSERT_EQ(values.size(), 3);
+    EXPECT_EQ(values[0], "value1");
+    EXPECT_EQ(values[1], "value2");
+    EXPECT_EQ(values[2], "value3");
+}
 TEST(MultiPartParserDrogonImpl, GetFileContentByName) {
     auto req = drogon::HttpRequest::newHttpRequest();
     req->setMethod(drogon::Post);
