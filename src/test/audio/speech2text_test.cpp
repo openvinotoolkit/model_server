@@ -142,13 +142,13 @@ TEST_F(Speech2TextHttpTest, simplePositiveWordTimestamps) {
     req->setMethod(drogon::Post);
     req->addHeader("content-type", "multipart/form-data; boundary=\"12345\"");
     std::string multipartBody = "--12345\r\n"
-                    "Content-Disposition: form-data;name=\"model\"\r\n"
-                    "\r\n"
-                    "speech2textWordTimestamps\r\n"
-                    "--12345\r\n"
-                    "Content-Disposition: form-data;name=\"file\";\"filename=file\""
-                    "\r\nContent-Type: application/octet-stream"
-                    "\r\ncontent-transfer-encoding: quoted-printable\r\n\r\n";
+                                "Content-Disposition: form-data;name=\"model\"\r\n"
+                                "\r\n"
+                                "speech2textWordTimestamps\r\n"
+                                "--12345\r\n"
+                                "Content-Disposition: form-data;name=\"file\";\"filename=file\""
+                                "\r\nContent-Type: application/octet-stream"
+                                "\r\ncontent-transfer-encoding: quoted-printable\r\n\r\n";
     std::unique_ptr<char[]> imageBytes;
     size_t fileSize;
     readFile(getGenericFullPathForSrcTest("/ovms/src/test/audio/test.wav"), fileSize, imageBytes);
