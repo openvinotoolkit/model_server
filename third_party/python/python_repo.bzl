@@ -25,7 +25,7 @@ def _python_repository_impl(repository_ctx):
         if ubuntu22_count == 1:
             version = "3.10"
         else:
-            version = 3.12
+            version = "3.12"
     else: # for redhat
         lib_path = "lib64"
         version = "3.12"

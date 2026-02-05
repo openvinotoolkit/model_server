@@ -14,13 +14,13 @@
 # limitations under the License.
 #
 
-ARG BASE_IMAGE=registry.access.redhat.com/ubi9/ubi:9.6
+ARG BASE_IMAGE=registry.access.redhat.com/ubi9/ubi:9.7
 ARG BUILD_IMAGE=build
 ARG PKG_IMAGE=pkg
-ARG RELEASE_BASE_IMAGE=registry.access.redhat.com/ubi9/ubi-minimal:9.6
+ARG RELEASE_BASE_IMAGE=registry.access.redhat.com/ubi9/ubi-minimal:9.7
 
 FROM $BASE_IMAGE as base_build
-ARG BASE_IMAGE=registry.access.redhat.com/ubi9/ubi:9.6
+ARG BASE_IMAGE=registry.access.redhat.com/ubi9/ubi:9.7
 
 SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
 
@@ -124,7 +124,6 @@ RUN dnf install -y -d6 \
             unzip \
             vim \
             xz \
-            python3-devel \ 
             python3.12 \
             python3.12-devel \
             python3.12-pip \
@@ -132,8 +131,6 @@ RUN dnf install -y -d6 \
             dnf clean all
 
 WORKDIR /
-
-RUN python3 --version && python3 -m pip install numpy==1.21.0 --no-cache-dir
 
 ARG INSTALL_DRIVER_VERSION="24.52.32224"
 # GPU testing in build img & remote tensors dependencies
@@ -147,11 +144,8 @@ RUN wget -q https://mirror.stream.centos.org/9-stream/AppStream/x86_64/os/Packag
     if [ -f /usr/bin/dnf ] ; then export DNF_TOOL=dnf ; echo -e "max_parallel_downloads=8\nretries=50" >> /etc/dnf/dnf.conf ; else export DNF_TOOL=microdnf ; fi ; source ./install_gpu_drivers.sh && \
     groupadd --gid 5000 ovms && groupadd --gid 44 video1 && \
     useradd --home-dir /home/ovms --create-home --uid 5000 --gid 5000 --groups 39,44 --shell /bin/bash --skel /dev/null ovms
-RUN python3 --version && python3 -m pip install "numpy<2.0.0" --no-cache-dir && \
-    python3 --version && python3 -m pip install "Jinja2==3.1.6" "MarkupSafe==3.0.2" --no-cache-dir
 
-RUN python3.12 --version && python3.12 -m pip install "numpy<2.0.0" --no-cache-dir && \
-    python3.12 --version && python3.12 -m pip install "Jinja2==3.1.6" "MarkupSafe==3.0.2" --no-cache-dir
+RUN python3.12 --version && python3.12 -m pip install "numpy<2.0.0" "Jinja2==3.1.6" "MarkupSafe==3.0.2"  --no-cache-dir
 
 # Set up Bazel
 ENV BAZEL_VERSION 6.1.1
@@ -174,13 +168,16 @@ ARG TEMP_DIR=/tmp/openvino_installer
 ARG CMAKE_BUILD_TYPE=Release
 ARG debug_bazel_flags="--strip=always  --config=mp_on_py_on --//:distro=redhat"
 
+RUN alternatives --install /usr/bin/python3 python3 /usr/bin/python3.12 1 && alternatives --install /usr/bin/python3-config python3-config /usr/bin/python3.12-config 2
+
 ################### BUILD OPENVINO FROM SOURCE - buildarg ov_use_binary=0  ############################
+
 # hadolint ignore=DL3041
 RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm && dnf install -y gflags-devel gflags json-devel fdupes && \
     dnf clean all
 # hadolint ignore=DL3003
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; git clone https://github.com/$ov_source_org/openvino.git /openvino && cd /openvino && git checkout $ov_source_branch && git submodule update --init --recursive
-RUN if [ "$ov_use_binary" == "0" ]; then true ; else exit 0 ; fi ; if ! [[ $debug_bazel_flags == *"py_off"* ]]; then true ; else exit 0 ; fi ; pip3 install --no-cache-dir -r /openvino/src/bindings/python/wheel/requirements-dev.txt
+RUN if [ "$ov_use_binary" == "0" ]; then true ; else exit 0 ; fi ; if ! [[ $debug_bazel_flags == *"py_off"* ]]; then true ; else exit 0 ; fi ; pip3.12 install --no-cache-dir -r /openvino/src/bindings/python/wheel/requirements-dev.txt
 WORKDIR /openvino/build
 RUN if [ "$ov_use_binary" == "0" ]; then true ; else exit 0 ; fi ; \
     if ! [[ $debug_bazel_flags == *"py_off"* ]]; then \
@@ -274,10 +271,6 @@ COPY *\.bzl /ovms/
 COPY yarn.lock /ovms/
 COPY package.json /ovms/
 
-# change system python to 3.9 for first bazel call and or_tensorflow build
-# hadolint ignore=DL3059
-RUN alternatives --install /usr/bin/python3 python3 /usr/bin/python3.9 1
-
 # prebuild dependencies before copying sources
 # hadolint ignore=DL3059
 RUN bazel build --jobs=$JOBS ${debug_bazel_flags} //:ovms_dependencies @com_google_googletest//:gtest
@@ -289,9 +282,6 @@ COPY src/ /ovms/src/
 
 # hadolint ignore=DL3059
 RUN bazel build --jobs=$JOBS ${debug_bazel_flags} @org_tensorflow//tensorflow/core:framework
-
-# hadolint ignore=DL3059
-RUN alternatives --install /usr/bin/python3 python3 /usr/bin/python3.12 2
 
 # Sample CPU Extension
 WORKDIR /ovms/src/example/SampleCpuExtension/
@@ -326,6 +316,7 @@ RUN bazel build --jobs=$JOBS ${debug_bazel_flags} //src:release_custom_nodes
 # OVMS
 ARG OPTIMIZE_BUILDING_TESTS=0
 RUN rm -f /usr/lib64/cmake/OpenSSL/OpenSSLConfig.cmake
+
 # Builds unit tests together with ovms server in one step
 # It speeds up CI when tests are executed outside of the image building
 # hadolint ignore=SC2046
@@ -345,7 +336,7 @@ RUN /ovms/bazel-bin/src/ovms --version && /ovms/bazel-bin/src/ovms
 COPY release_files/thirdparty-licenses/ /ovms/release_files/thirdparty-licenses/
 COPY release_files/LICENSE /ovms/release_files/LICENSE
 COPY client /client
-RUN python3 -c "import json; m={'PROJECT_VERSION':'${PROJECT_VERSION}','OPENVINO backend':'$(/ovms/bazel-bin/src/ovms --version | grep backend | cut -d' ' -f3)', \
+RUN python3.12 -c "import json; m={'PROJECT_VERSION':'${PROJECT_VERSION}','OPENVINO backend':'$(/ovms/bazel-bin/src/ovms --version | grep backend | cut -d' ' -f3)', \
     'BAZEL_BUILD_FLAGS':'${debug_bazel_flags}${minitrace_flags}}','BASE_IMAGE':'${BASE_IMAGE}' }; \
     print(json.dumps(m,indent=4))" > /ovms/release_files/metadata.json
 
@@ -423,7 +414,7 @@ RUN if [ -f /usr/bin/dnf ] ; then export DNF_TOOL=dnf ; echo -e "max_parallel_do
     fi ; \
     # For image with Python enabled install Python library
     if ! [[ $debug_bazel_flags == *"py_off"* ]]; then \
-        $DNF_TOOL install -y python3-libs python3.12 python3.12-devel python3.12-pip --setopt=install_weak_deps=0 --nodocs; \
+        $DNF_TOOL install -y python3.12-libs --setopt=install_weak_deps=0 --nodocs; \
     fi ; \
     $DNF_TOOL install -y shadow-utils; \
     $DNF_TOOL clean all ; \
