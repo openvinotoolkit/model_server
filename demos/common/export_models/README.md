@@ -78,7 +78,7 @@ options:
   --max_num_seqs MAX_NUM_SEQS
                         256 by default. The maximum number of sequences that can be processed together.
   --cache_size CACHE_SIZE
-                        KV cache size in GB
+                        KV cache size in GB. If not set, cache is allocated dynamically.
   --draft_source_model DRAFT_SOURCE_MODEL
                         HF model name or path to the local folder with PyTorch or OpenVINO draft model. Using this option will create configuration for speculative decoding
   --draft_model_name DRAFT_MODEL_NAME
@@ -108,12 +108,12 @@ python export_model.py text_generation --source_model meta-llama/Meta-Llama-3-8B
 #### GPU Deployment (Low Concurrency, Limited Memory)
 Text generation for GPU target device with limited memory without dynamic split fuse algorithm (recommended for usage in low concurrency):
 ```console
-python export_model.py text_generation --source_model meta-llama/Meta-Llama-3-8B-Instruct --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device GPU --disable_dynamic_split_fuse --max_num_batched_tokens 8192 --cache_size 1
+python export_model.py text_generation --source_model meta-llama/Meta-Llama-3-8B-Instruct --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device GPU --disable_dynamic_split_fuse --max_num_batched_tokens 8192
 ```
 #### GPU Deployment (High Concurrency, Dynamic Split Fuse Enabled)
 Text generation for GPU target device with limited memory with enabled dynamic split fuse algorithm (recommended for usage in high concurrency):
 ```console
-python export_model.py text_generation --source_model meta-llama/Meta-Llama-3-8B-Instruct --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device GPU --cache_size 3
+python export_model.py text_generation --source_model meta-llama/Meta-Llama-3-8B-Instruct --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device GPU
 ```
 #### NPU Deployment
 Text generation for NPU target device. Command below sets max allowed prompt size and configures model compilation directory to speedup initialization time:

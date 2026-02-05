@@ -50,7 +50,7 @@ python export_model.py text_generation --source_model meta-llama/Meta-Llama-3-8B
 
 **GPU**
 ```console
-python export_model.py text_generation --source_model meta-llama/Meta-Llama-3-8B-Instruct --weight-format int4 --target_device GPU --cache_size 2 --config_file_path models/config.json --model_repository_path models --overwrite_models
+python export_model.py text_generation --source_model meta-llama/Meta-Llama-3-8B-Instruct --weight-format int4 --target_device GPU --config_file_path models/config.json --model_repository_path models --overwrite_models
 ```
 
 > **Note:** Change the `--weight-format` to quantize the model to `int8` or `int4` precision to reduce memory consumption and improve performance.

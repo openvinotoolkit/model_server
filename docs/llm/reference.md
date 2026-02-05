@@ -96,7 +96,7 @@ Above node configuration should be used as a template since user is not expected
 The calculator supports the following `node_options` for tuning the pipeline configuration:
 -    `required string models_path` - location of the model directory (can be relative);
 -    `optional uint64 max_num_batched_tokens` - max number of tokens processed in a single iteration [default = 256];
--    `optional uint64 cache_size` - memory size in GB for storing KV cache [default = 0];
+-    `optional uint64 cache_size` - memory size in GB for storing KV cache. If not set or set to 0, cache is allocated dynamically [default = 0];
 -    `optional uint64 max_num_seqs` - max number of sequences actively processed by the engine [default = 256];
 -    `optional bool dynamic_split_fuse` - use Dynamic Split Fuse token scheduling [default = true];
 -    `optional string device` - device to load models to. Supported values: "CPU", "GPU" [default = "CPU"]

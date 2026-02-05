@@ -41,7 +41,25 @@ DrogonHttpServer::DrogonHttpServer(size_t numWorkersForUnary, size_t numWorkersF
     SPDLOG_DEBUG("Starting http thread pool for streaming ({} threads)", numWorkersForStreaming);
     pool->StartWorkers();  // this tp is for streaming workload which cannot use drogon's internal listener threads
     SPDLOG_DEBUG("Thread pool started");
-    trantor::Logger::setLogLevel(trantor::Logger::kInfo);
+
+    const char* envVarValue = std::getenv("DROGON_LOG_LEVEL");
+    if (envVarValue != nullptr) {
+        auto logLevelOpt = stoi32(envVarValue);
+        if (!logLevelOpt.has_value() || logLevelOpt.value() < 0 || logLevelOpt.value() >= trantor::Logger::kNumberOfLogLevels) {
+            SPDLOG_WARN("Invalid DROGON_LOG_LEVEL value, using default log level INFO", envVarValue);
+            trantor::Logger::setLogLevel(trantor::Logger::kInfo);
+        } else {
+            int logLevel = logLevelOpt.value();
+            SPDLOG_DEBUG("Setting drogon log level to {}", logLevel);
+            if (logLevel == trantor::Logger::kTrace) {
+                SPDLOG_DEBUG("Note: Setting log level to trace, but trace logs are disabled at compile time anyway");
+            }
+            trantor::Logger::setLogLevel(static_cast<trantor::Logger::LogLevel>(logLevel));
+        }
+    } else {
+        SPDLOG_DEBUG("DROGON_LOG_LEVEL env var not set, using default log level INFO");
+        trantor::Logger::setLogLevel(trantor::Logger::kInfo);
+    }
 }
 
 namespace {
