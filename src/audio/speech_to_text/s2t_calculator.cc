@@ -171,12 +171,9 @@ public:
                 config.temperature = 1.0;  // default value
             }
             std::unique_lock lock(pipe->sttPipelineMutex);
-            auto result = pipe->sttPipeline->generate(rawSpeech, config);
+            const auto& result = pipe->sttPipeline->generate(rawSpeech, config);
             std::vector<std::string> texts = result;
-            for (auto text : texts) {
-                SPDLOG_ERROR("text {}", text);
-            }
-            std::string generatedText = result;
+            const std::string& generatedText = result;
             lock.unlock();
             writer.String(generatedText.c_str());
             if (config.word_timestamps) {
