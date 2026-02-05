@@ -107,124 +107,129 @@ public:
         if (endpoint == Endpoint::UNSUPPORTED) {
             return absl::InvalidArgumentError(absl::StrCat("Unsupported URI: ", payload.uri));
         }
-
-        if (payload.multipartParser->hasParseError())
-            return absl::InvalidArgumentError("Failed to parse multipart data");
-
-        std::string_view stream = payload.multipartParser->getFieldByName("stream");
-        if (!stream.empty()) {
-            return absl::InvalidArgumentError("streaming is not supported");
-        }
-        std::string_view file = payload.multipartParser->getFileContentByFieldName("file");
-        if (file.empty()) {
-            return absl::InvalidArgumentError(absl::StrCat("File parsing fails"));
-        }
-
-        std::vector<float> rawSpeech;
         try {
-            if (isWavBuffer(std::string(file))) {
-                SPDLOG_DEBUG("Received file format: wav");
-                rawSpeech = readWav(file);
-            } else {
-                rawSpeech = readMp3(file);
-                SPDLOG_DEBUG("Received file format: mp3");
+            if (payload.multipartParser->hasParseError())
+                return absl::InvalidArgumentError("Failed to parse multipart data");
+
+            std::string_view stream = payload.multipartParser->getFieldByName("stream");
+            if (!stream.empty()) {
+                return absl::InvalidArgumentError("streaming is not supported");
             }
-        } catch (std::exception&) {
-            return absl::InvalidArgumentError("Received input file is not valid wav nor mp3 audio file");
-        }
-        rapidjson::StringBuffer buffer;
-        rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-        writer.StartObject();
-        writer.String("text");
-        if (endpoint == Endpoint::TRANSCRIPTIONS) {
-            ov::genai::WhisperGenerationConfig config = pipe->sttPipeline->get_generation_config();
-            std::string_view language = payload.multipartParser->getFieldByName("language");
-            if (!language.empty()) {
-                if (language.size() > ISO_LANG_CODE_MAX) {
-                    return absl::InvalidArgumentError("Invalid language code.");
-                }
-                config.language = "<|" + std::string(language) + "|>";
+            std::string_view file = payload.multipartParser->getFileContentByFieldName("file");
+            if (file.empty()) {
+                return absl::InvalidArgumentError(absl::StrCat("File parsing fails"));
             }
-            std::string_view timestampsType = payload.multipartParser->getFieldByName("timestamp_granularities[]");
-            config.word_timestamps = false;
-            if (!timestampsType.empty()) {
-                auto type = std::string(timestampsType);
-                if (type == "segment") {
-                    config.return_timestamps = true;
-                } else if (type == "word") {
-                    if (!pipe->enableWordTimestamps)
-                        return absl::InvalidArgumentError("Word timestamps not supported for this model");
-                    config.word_timestamps = true;
+
+            std::vector<float> rawSpeech;
+            try {
+                if (isWavBuffer(std::string(file))) {
+                    SPDLOG_DEBUG("Received file format: wav");
+                    rawSpeech = readWav(file);
                 } else {
-                    return absl::InvalidArgumentError("Invalid timestamp_granularities type. Allowed types: \"segment\", \"word\"");
+                    rawSpeech = readMp3(file);
+                    SPDLOG_DEBUG("Received file format: mp3");
+                }
+            } catch (std::exception&) {
+                return absl::InvalidArgumentError("Received input file is not valid wav nor mp3 audio file");
+            }
+            rapidjson::StringBuffer buffer;
+            rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+            writer.StartObject();
+            writer.String("text");
+            if (endpoint == Endpoint::TRANSCRIPTIONS) {
+                ov::genai::WhisperGenerationConfig config = pipe->sttPipeline->get_generation_config();
+                std::string_view language = payload.multipartParser->getFieldByName("language");
+                if (!language.empty()) {
+                    if (language.size() > ISO_LANG_CODE_MAX) {
+                        return absl::InvalidArgumentError("Invalid language code.");
+                    }
+                    config.language = "<|" + std::string(language) + "|>";
+                }
+                // Currently supports only 1 granularity at once, CVS-179914
+                std::string_view timestampsType = payload.multipartParser->getFieldByName("timestamp_granularities[]");
+                config.word_timestamps = false;
+                if (!timestampsType.empty()) {
+                    auto type = std::string(timestampsType);
+                    if (type == "segment") {
+                        config.return_timestamps = true;
+                    } else if (type == "word") {
+                        if (!pipe->enableWordTimestamps)
+                            return absl::InvalidArgumentError("Word timestamps not supported for this model");
+                        config.word_timestamps = true;
+                    } else {
+                        return absl::InvalidArgumentError("Invalid timestamp_granularities type. Allowed types: \"segment\", \"word\"");
+                    }
+                }
+                std::string_view temperature = payload.multipartParser->getFieldByName("temperature");
+                if (!temperature.empty()) {
+                    auto temp = ovms::stof(std::string(temperature));
+                    if (!temp.has_value()) {
+                        return absl::InvalidArgumentError("Invalid temperature type.");
+                    }
+                    if (temp.value() < 0.0f || temp.value() > 2.0f)
+                        return absl::InvalidArgumentError("temperature out of range(0.0, 2.0)");
+                    config.temperature = temp.value();
+                } else {
+                    config.temperature = 1.0;  // default value
+                }
+                std::unique_lock lock(pipe->sttPipelineMutex);
+                const ov::genai::WhisperDecodedResults result = pipe->sttPipeline->generate(rawSpeech, config);
+                lock.unlock();
+                const std::string generatedText = result;  // word chunks concatenation to single string
+                writer.String(generatedText.c_str());
+                if (config.word_timestamps) {
+                    if (!result.words.has_value()) {
+                        return absl::InvalidArgumentError("Timestamps requested but pipeline does not generated any.");
+                    }
+                    writer.String("words");
+                    writer.StartArray();
+                    for (const auto& word : *result.words) {
+                        writer.StartObject();
+                        writer.String("word");
+                        writer.String(word.word.c_str());
+                        writer.String("start");
+                        writer.Double(word.start_ts);
+                        writer.String("end");
+                        writer.Double(word.end_ts);
+                        writer.EndObject();
+                    }
+                    writer.EndArray();
+                }
+                if (config.return_timestamps) {
+                    if (!result.chunks.has_value()) {
+                        return absl::InvalidArgumentError("Timestamps requested but pipeline does not generated any.");
+                    }
+                    writer.String("segments");
+                    writer.StartArray();
+                    for (const auto& chunk : *result.chunks) {
+                        writer.StartObject();
+                        writer.String("text");
+                        writer.String(chunk.text.c_str());
+                        writer.String("start");
+                        writer.Double(chunk.start_ts);
+                        writer.String("end");
+                        writer.Double(chunk.end_ts);
+                        writer.EndObject();
+                    }
+                    writer.EndArray();
                 }
             }
-            std::string_view temperature = payload.multipartParser->getFieldByName("temperature");
-            if (!temperature.empty()) {
-                auto temp = ovms::stof(std::string(temperature));
-                if (!temp.has_value()) {
-                    return absl::InvalidArgumentError("Invalid temperature type.");
-                }
-                if (temp.value() < 0.0f || temp.value() > 2.0f)
-                    return absl::InvalidArgumentError("temperature out of range(0.0, 2.0)");
-                config.temperature = temp.value();
-            } else {
-                config.temperature = 1.0;  // default value
+            if (endpoint == Endpoint::TRANSLATIONS) {
+                std::unique_lock lock(pipe->sttPipelineMutex);
+                std::string generatedText = pipe->sttPipeline->generate(rawSpeech, ov::genai::task("translate"));
+                lock.unlock();
+                writer.String(generatedText.c_str());
             }
-            std::unique_lock lock(pipe->sttPipelineMutex);
-            const ov::genai::WhisperDecodedResults result = pipe->sttPipeline->generate(rawSpeech, config);
-            lock.unlock();
-            const std::string generatedText = result;
-            writer.String(generatedText.c_str());
-            if (config.word_timestamps) {
-                if (!result.words.has_value()) {
-                    return absl::InvalidArgumentError("Timestamps requested but pipeline does not generated any.");
-                }
-                writer.String("words");
-                writer.StartArray();
-                for (const auto& word : *result.words) {
-                    writer.StartObject();
-                    writer.String("word");
-                    writer.String(word.word.c_str());
-                    writer.String("start");
-                    writer.Double(word.start_ts);
-                    writer.String("end");
-                    writer.Double(word.end_ts);
-                    writer.EndObject();
-                }
-                writer.EndArray();
-            }
-            if (config.return_timestamps) {
-                if (!result.chunks.has_value()) {
-                    return absl::InvalidArgumentError("Timestamps requested but pipeline does not generated any.");
-                }
-                writer.String("segments");
-                writer.StartArray();
-                for (const auto& chunk : *result.chunks) {
-                    writer.StartObject();
-                    writer.String("text");
-                    writer.String(chunk.text.c_str());
-                    writer.String("start");
-                    writer.Double(chunk.start_ts);
-                    writer.String("end");
-                    writer.Double(chunk.end_ts);
-                    writer.EndObject();
-                }
-                writer.EndArray();
-            }
-        }
-        if (endpoint == Endpoint::TRANSLATIONS) {
-            std::unique_lock lock(pipe->sttPipelineMutex);
-            std::string generatedText = pipe->sttPipeline->generate(rawSpeech, ov::genai::task("translate"));
-            lock.unlock();
-            writer.String(generatedText.c_str());
-        }
-        writer.EndObject();
-        std::unique_ptr<std::string> output = std::make_unique<std::string>(buffer.GetString());
+            writer.EndObject();
+            std::unique_ptr<std::string> output = std::make_unique<std::string>(buffer.GetString());
 
-        cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(output.release(), cc->InputTimestamp());
-        SPDLOG_LOGGER_DEBUG(s2t_calculator_logger, "SpeechToTextCalculator  [Node: {}] Process end", cc->NodeName());
-
+            cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(output.release(), cc->InputTimestamp());
+            SPDLOG_LOGGER_DEBUG(s2t_calculator_logger, "SpeechToTextCalculator  [Node: {}] Process end", cc->NodeName());
+        } catch (ov::AssertFailure& e) {
+            return absl::InvalidArgumentError(e.what());
+        } catch (...) {
+            return absl::InvalidArgumentError("Response generation failed");
+        }
         return absl::OkStatus();
     }
 };

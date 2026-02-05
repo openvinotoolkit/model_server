@@ -103,6 +103,65 @@ TEST_F(Speech2TextHttpTest, simplePositiveLanguage) {
         ovms::StatusCode::OK);
 }
 
+TEST_F(Speech2TextHttpTest, simplePositiveTemperature) {
+    auto req = drogon::HttpRequest::newHttpRequest();
+    req->setMethod(drogon::Post);
+    req->addHeader("content-type", "multipart/form-data; boundary=\"12345\"");
+    std::string language = "\r\n"
+                           "Content-Disposition: form-data;name=\"temperature\"\r\n"
+                           "\r\n"
+                           "1.0\r\n"
+                           "--12345";
+    req->setBody(Speech2TextHttpTest::body + language);
+    std::shared_ptr<MultiPartParser> multiPartParserWithRequest = std::make_shared<DrogonMultiPartParser>(req);
+    std::string requestBody = "";
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParserWithRequest),
+        ovms::StatusCode::OK);
+}
+
+TEST_F(Speech2TextHttpTest, simplePositiveSegmentTimestamps) {
+    auto req = drogon::HttpRequest::newHttpRequest();
+    req->setMethod(drogon::Post);
+    req->addHeader("content-type", "multipart/form-data; boundary=\"12345\"");
+    std::string language = "\r\n"
+                           "Content-Disposition: form-data;name=\"timestamp_granularities[]\"\r\n"
+                           "\r\n"
+                           "segment\r\n"
+                           "--12345";
+    req->setBody(Speech2TextHttpTest::body + language);
+    std::shared_ptr<MultiPartParser> multiPartParserWithRequest = std::make_shared<DrogonMultiPartParser>(req);
+    std::string requestBody = "";
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParserWithRequest),
+        ovms::StatusCode::OK);
+}
+
+TEST_F(Speech2TextHttpTest, simplePositiveWordTimestamps) {
+    auto req = drogon::HttpRequest::newHttpRequest();
+    req->setMethod(drogon::Post);
+    req->addHeader("content-type", "multipart/form-data; boundary=\"12345\"");
+    std::string multipartBody = "--12345\r\n"
+                    "Content-Disposition: form-data;name=\"model\"\r\n"
+                    "\r\n"
+                    "speech2textWordTimestamps\r\n"
+                    "--12345\r\n"
+                    "Content-Disposition: form-data;name=\"file\";\"filename=file\""
+                    "\r\nContent-Type: application/octet-stream"
+                    "\r\ncontent-transfer-encoding: quoted-printable\r\n\r\n";
+    std::unique_ptr<char[]> imageBytes;
+    size_t fileSize;
+    readFile(getGenericFullPathForSrcTest("/ovms/src/test/audio/test.wav"), fileSize, imageBytes);
+    multipartBody.append(imageBytes.get(), fileSize);
+    multipartBody.append("12345");
+    req->setBody(multipartBody);
+    std::shared_ptr<MultiPartParser> multiPartParserWithRequest = std::make_shared<DrogonMultiPartParser>(req);
+    std::string requestBody = "";
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParserWithRequest),
+        ovms::StatusCode::OK);
+}
+
 TEST_F(Speech2TextHttpTest, invalidFile) {
     auto req = drogon::HttpRequest::newHttpRequest();
     req->setMethod(drogon::Post);
@@ -113,6 +172,57 @@ TEST_F(Speech2TextHttpTest, invalidFile) {
                                               "\r\ncontent-transfer-encoding: quoted-printable\r\n\r\n";
     invalidBody.append("INVALID");
     req->setBody(invalidBody);
+    std::shared_ptr<MultiPartParser> multiPartParserWithRequest = std::make_shared<DrogonMultiPartParser>(req);
+    std::string requestBody = "";
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParserWithRequest),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_F(Speech2TextHttpTest, invalidLanguage) {
+    auto req = drogon::HttpRequest::newHttpRequest();
+    req->setMethod(drogon::Post);
+    req->addHeader("content-type", "multipart/form-data; boundary=\"12345\"");
+    std::string language = "\r\n"
+                           "Content-Disposition: form-data;name=\"language\"\r\n"
+                           "\r\n"
+                           "xD\r\n"
+                           "--12345";
+    req->setBody(Speech2TextHttpTest::body + language);
+    std::shared_ptr<MultiPartParser> multiPartParserWithRequest = std::make_shared<DrogonMultiPartParser>(req);
+    std::string requestBody = "";
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParserWithRequest),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_F(Speech2TextHttpTest, invalidTemperatureOutOfRange) {
+    auto req = drogon::HttpRequest::newHttpRequest();
+    req->setMethod(drogon::Post);
+    req->addHeader("content-type", "multipart/form-data; boundary=\"12345\"");
+    std::string language = "\r\n"
+                           "Content-Disposition: form-data;name=\"temperature\"\r\n"
+                           "\r\n"
+                           "10.0\r\n"
+                           "--12345";
+    req->setBody(Speech2TextHttpTest::body + language);
+    std::shared_ptr<MultiPartParser> multiPartParserWithRequest = std::make_shared<DrogonMultiPartParser>(req);
+    std::string requestBody = "";
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParserWithRequest),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_F(Speech2TextHttpTest, invalidTimestampType) {
+    auto req = drogon::HttpRequest::newHttpRequest();
+    req->setMethod(drogon::Post);
+    req->addHeader("content-type", "multipart/form-data; boundary=\"12345\"");
+    std::string language = "\r\n"
+                           "Content-Disposition: form-data;name=\"timestamp_granularities[]\"\r\n"
+                           "\r\n"
+                           "INVALID\r\n"
+                           "--12345";
+    req->setBody(Speech2TextHttpTest::body + language);
     std::shared_ptr<MultiPartParser> multiPartParserWithRequest = std::make_shared<DrogonMultiPartParser>(req);
     std::string requestBody = "";
     ASSERT_EQ(
