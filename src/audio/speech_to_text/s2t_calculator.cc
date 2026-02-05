@@ -27,6 +27,7 @@
 #include "src/audio/audio_utils.hpp"
 #include "src/http_payload.hpp"
 #include "src/logging.hpp"
+#include "src/stringutils.hpp"
 #include <mutex>
 #include <thread>
 
@@ -148,27 +149,35 @@ public:
             config.word_timestamps = false;
             if (!timestampsType.empty()) {
                 auto type = std::string(timestampsType);
-                SPDLOG_ERROR("{}", type);
-                if (type == "segment")
+                if (type == "segment") {
                     config.return_timestamps = true;
-                else if (type == "word")
+                } else if (type == "word") {
+                    if (!pipe->enableWordTimestamps)
+                        return absl::InvalidArgumentError("Word timestamps not supported for this model");
                     config.word_timestamps = true;
-                else
-                    return absl::InvalidArgumentError("Invalid timestamp_granularities type.");
+                } else
+                    return absl::InvalidArgumentError("Invalid timestamp_granularities type. Allowed types: \"segment\", \"word\"");
             }
             std::string_view temperature = payload.multipartParser->getFieldByName("temperature");
             if (!temperature.empty()) {
-                double temp;
-                try {
-                    temp = stod(std::string(temperature));
-                } catch (...) {
+                auto temp = ovms::stof(std::string(temperature));
+                if (!temp.has_value()) {
                     return absl::InvalidArgumentError("Invalid temperature type.");
                 }
-                config.temperature = temp;
+                if (temp.value() < 0.0f || temp.value() > 2.0f)
+                    return absl::InvalidArgumentError("temperature out of range(0.0, 2.0)");
+                config.temperature = temp.value();
+            } else {
+                config.temperature = 1.0;  // default value
             }
             std::unique_lock lock(pipe->sttPipelineMutex);
             auto result = pipe->sttPipeline->generate(rawSpeech, config);
+            std::vector<std::string> texts = result;
+            for (auto text : texts) {
+                SPDLOG_ERROR("text {}", text);
+            }
             std::string generatedText = result;
+            lock.unlock();
             writer.String(generatedText.c_str());
             if (config.word_timestamps) {
                 if (!result.words.has_value()) {
@@ -206,7 +215,6 @@ public:
                 }
                 writer.EndArray();
             }
-            lock.unlock();
         }
         if (endpoint == Endpoint::TRANSLATIONS) {
             std::unique_lock lock(pipe->sttPipelineMutex);

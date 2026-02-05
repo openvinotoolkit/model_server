@@ -41,6 +41,7 @@ struct SttServable {
     std::filesystem::path parsedModelsPath;
     std::shared_ptr<ov::genai::WhisperPipeline> sttPipeline;
     std::mutex sttPipelineMutex;
+    bool enableWordTimestamps;
 
     SttServable(const ::mediapipe::S2tCalculatorOptions& nodeOptions, const std::string& graphPath) {
         auto fsModelsPath = std::filesystem::path(nodeOptions.models_path());
@@ -57,7 +58,9 @@ struct SttServable {
         }
         if (nodeOptions.target_device() == "NPU")
             config["STATIC_PIPELINE"] = true;
-        config["word_timestamps"] = true;
+        enableWordTimestamps = nodeOptions.enable_word_timestamps();
+        if (enableWordTimestamps)
+            config["word_timestamps"] = true;
         sttPipeline = std::make_shared<ov::genai::WhisperPipeline>(parsedModelsPath.string(), nodeOptions.target_device(), config);
     }
 };
