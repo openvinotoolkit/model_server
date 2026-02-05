@@ -501,11 +501,6 @@ static Status createV3HttpPayload(
             SPDLOG_DEBUG("Failed to parse multipart content type request");
             return StatusCode::FAILED_TO_PARSE_MULTIPART_CONTENT_TYPE;
         }
-        SPDLOG_ERROR("multipart");
-        auto names = multiPartParser->getAllFieldNames();
-        for (auto name : names) {
-            SPDLOG_ERROR("{}", name);
-        }
         modelName = multiPartParser->getFieldByName("model");
         if (modelName.empty()) {
             isUriBasedRouting = true;
