@@ -690,7 +690,7 @@ docker run -d --name ovms --user $(id -u):$(id -g) --device /dev/dri --group-add
 
 python benchmark_serving_multi_turn.py -m Qwen/Qwen3-8B --url http://localhost:8000/v3 -i generate_multi_turn.json --served-model-name OpenVINO/Qwen3-8B-int4-ov --num-clients 1 -n 50
 
-# Testing high concurrency, for example on Xeon CPU with constrained resources
+# Testing high concurrency, for example on Xeon CPU with constrained resources (in case of memory constrains, reduce cache_size)
 docker run -d --name ovms --cpuset-cpus 0-15 --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models openvino/model_server:weekly --rest_port 8000 --model_repository_path /models --source_model OpenVINO/Qwen3-8B-int4-ov --enable_prefix_caching true --cache_size 20 --task text_generation
 
 python benchmark_serving_multi_turn.py -m Qwen/Qwen3-8B --url http://localhost:8000/v3 -i generate_multi_turn.json --served-model-name OpenVINO/Qwen3-8B-int4-ov --num-clients 24 

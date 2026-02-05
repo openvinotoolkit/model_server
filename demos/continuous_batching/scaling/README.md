@@ -232,11 +232,11 @@ Total generated tokens: 2287
 Request throughput (req/s): 0.04
 Output token throughput (tok/s): 9.85
 Total Token throughput (tok/s): 15.76
---------------Time to First Token---------------
+---------------Time to First Token----------------
 Mean TTFT (ms): 732.52
 Median TTFT (ms): 466.59
 P99 TTFT (ms): 1678.66
-----Time per Output Token (excl. 1st token)-----
+-----Time per Output Token (excl. 1st token)------
 Mean TPOT (ms): 64.23
 Median TPOT (ms): 52.06
 P99 TPOT (ms): 132.36

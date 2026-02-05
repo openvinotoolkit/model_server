@@ -1766,8 +1766,6 @@ TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsStreamOptionsSetFail) {
 
 TEST_P(LLMFlowHttpTestParameterized, streamChatCompletionsFinishReasonLength) {
     auto params = GetParam();
-    if (params.modelName == "lm_legacy_regular")
-        SKIP_AND_EXIT_IF_NOT_RUNNING_UNSTABLE();  // CVS-179700
     std::string requestBody = R"(
         {
             "model": ")" + params.modelName +
@@ -1802,8 +1800,6 @@ TEST_P(LLMFlowHttpTestParameterized, streamChatCompletionsFinishReasonLength) {
 
 TEST_P(LLMFlowHttpTestParameterized, streamChatCompletionsSingleStopString) {
     auto params = GetParam();
-    if (params.modelName == "lm_legacy_regular")
-        SKIP_AND_EXIT_IF_NOT_RUNNING_UNSTABLE();  // CVS-179700
     std::string requestBody = R"(
         {
             "model": ")" + params.modelName +
@@ -1834,9 +1830,11 @@ TEST_P(LLMFlowHttpTestParameterized, streamChatCompletionsSingleStopString) {
     // dispatchToProcessor is blocking because of mocked PartialReplyBegin in fixture:
     // ON_CALL(*writer, PartialReplyBegin(::testing::_)).WillByDefault(testing::Invoke([](std::function<void()> fn) { fn(); }));
     EXPECT_CALL(*writer, PartialReplyEnd()).Times(1);
+    SPDLOG_TRACE("Will dispatch");
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::PARTIAL_END);
+    SPDLOG_TRACE("After dispatch");
 
     // Check if there is at least one response
     ASSERT_GT(responses.size(), 0);
@@ -1948,8 +1946,6 @@ TEST_P(LLMFlowHttpTestParameterized, streamCompletionsSingleStopString) {
     if (params.modelName.find("vlm") != std::string::npos) {
         GTEST_SKIP();
     }
-    if (params.modelName == "lm_legacy_regular")
-        SKIP_AND_EXIT_IF_NOT_RUNNING_UNSTABLE();  // CVS-179700
     std::string requestBody = R"(
         {
             "model": ")" + params.modelName +
@@ -2030,8 +2026,6 @@ TEST_P(LLMFlowHttpTestParameterized, streamCompletionsSpaceStopString) {
 
 TEST_P(LLMFlowHttpTestParameterized, streamChatCompletionsUsage) {
     auto params = GetParam();
-    if (params.modelName == "lm_legacy_regular")
-        SKIP_AND_EXIT_IF_NOT_RUNNING_UNSTABLE();  // CVS-179700
     std::string requestBody = R"(
         {
             "model": ")" + params.modelName +

@@ -103,6 +103,9 @@ struct GenAiServableProperties {
     uint32_t bestOfLimit;
     // Text processing utilities
     ov::genai::Tokenizer tokenizer;
+    // Specific pipeline properties
+    bool eagle3Mode = false;
+
 #if (PYTHON_DISABLE == 0)
     PyJinjaTemplateProcessor templateProcessor;
 #endif

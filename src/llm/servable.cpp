@@ -44,7 +44,11 @@ void GenAiServable::determineDecodingMethod() {
     getProperties()->decodingMethod = DecodingMethod::STANDARD;
     auto& pluginConfig = getProperties()->pluginConfig;
     if (pluginConfig.find("draft_model") != pluginConfig.end()) {
-        getProperties()->decodingMethod = DecodingMethod::SPECULATIVE_DECODING;
+        if (getProperties()->eagle3Mode) {
+            getProperties()->decodingMethod = DecodingMethod::EAGLE3;
+        } else {
+            getProperties()->decodingMethod = DecodingMethod::SPECULATIVE_DECODING;
+        }
     }
     auto it = pluginConfig.find("prompt_lookup");
     if (it != pluginConfig.end() && it->second.as<bool>() == true) {
@@ -116,7 +120,7 @@ absl::Status GenAiServable::parseRequest(std::shared_ptr<GenAiServableExecutionC
     }
     auto& config = ovms::Config::instance();
 
-    auto status = executionContext->apiHandler->parseRequest(getProperties()->maxTokensLimit, getProperties()->bestOfLimit, getProperties()->maxModelLength, config.getServerSettings().allowedLocalMediaPath);
+    auto status = executionContext->apiHandler->parseRequest(getProperties()->maxTokensLimit, getProperties()->bestOfLimit, getProperties()->maxModelLength, config.getServerSettings().allowedLocalMediaPath, config.getServerSettings().allowedMediaDomains);
     if (!status.ok()) {
         SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Failed to parse request: {}", status.message());
         return status;
