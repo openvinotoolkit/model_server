@@ -33,6 +33,7 @@
 #include "anonymous_input_name.hpp"
 #include "layout_configuration.hpp"
 #include "color_format_configuration.hpp"
+#include "precision_configuration.hpp"
 #include "modelversion.hpp"
 #include "shape.hpp"
 #include "status.hpp"  // TODO fwd dec
@@ -221,7 +222,7 @@ private:
     /**
          * @brief precision precision preprocessing parameter
          */
-    std::optional<ov::element::Type> precision;
+    std::optional<ovms::PrecisionConfiguration> precision;
 
 public:
     /**
@@ -886,9 +887,9 @@ public:
     /**
          * @brief Get the get precision
          * 
-         * @return const std::optional<ov::element::Type>& 
+         * @return const std::optional<ovms::PrecisionConfiguration>& 
          */
-    const std::optional<ov::element::Type>& getPrecision() const {
+    const std::optional<ovms::PrecisionConfiguration>& getPrecision() const {
         return this->precision;
     }
 

@@ -2445,7 +2445,7 @@ TEST(OvmsConfigTest, positiveSingle) {
         "--color_format",
         "BGR:RGB",
         "--precision",
-        "F16",
+        "FP16:INT16",
         "--model_version_policy",
         "setting",
         "--nireq",
@@ -2493,7 +2493,7 @@ TEST(OvmsConfigTest, positiveSingle) {
     EXPECT_EQ(config.layout(), "nchw:nhwc");
     EXPECT_EQ(config.means(), "[123.675,116.28,103.53]");
     EXPECT_EQ(config.scales(), "[58.395,57.12,57.375]");
-    EXPECT_EQ(config.precision(), "F16");
+    EXPECT_EQ(config.precision(), "FP16:INT16");
     EXPECT_EQ(config.colorFormat(), "BGR:RGB");
     EXPECT_EQ(config.modelVersionPolicy(), "setting");
     EXPECT_EQ(config.nireq(), 2);
@@ -2531,7 +2531,7 @@ TEST(OvmsConfigTest, positiveModelPreprocessingParams) {
         "--color_format",
         "BGR:RGB",
         "--precision",
-        "F16"};
+        "FP16:INT16"};
     int arg_count = 17;
     ConstructorEnabledConfig config;
     config.parse(arg_count, n_argv);
@@ -2543,7 +2543,7 @@ TEST(OvmsConfigTest, positiveModelPreprocessingParams) {
     EXPECT_EQ(config.means(), "[123.675,116.28,103.53]");
     EXPECT_EQ(config.scales(), "[58.395,57.12,57.375]");
     EXPECT_EQ(config.colorFormat(), "BGR:RGB");
-    EXPECT_EQ(config.precision(), "F16");
+    EXPECT_EQ(config.precision(), "FP16:INT16");
 }
 
 TEST(OvmsConfigTest, missingLayoutModelPreprocessingMean) {

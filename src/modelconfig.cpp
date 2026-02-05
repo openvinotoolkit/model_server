@@ -459,31 +459,12 @@ Status ModelConfig::parsePrecision(const std::string& command) {
         return StatusCode::OK;
     }
 
-    std::string upperCaseCommand;
-    std::transform(command.begin(), command.end(), std::back_inserter(upperCaseCommand), ::toupper);
-
-    erase_spaces(upperCaseCommand);
-
-    static const std::unordered_map<std::string, ov::element::Type> precisionMap = {
-        {"F32", ov::element::f32},
-        {"F16", ov::element::f16},
-        {"INT8", ov::element::i8},
-        {"UINT8", ov::element::u8},
-        {"INT16", ov::element::i16},
-        {"UINT16", ov::element::u16},
-        {"INT32", ov::element::i32},
-        {"UINT32", ov::element::u32},
-        {"INT64", ov::element::i64},
-        {"UINT64", ov::element::u64},
-        {"BF16", ov::element::bf16}};
-
-    auto it = precisionMap.find(upperCaseCommand);
-    if (it != precisionMap.end()) {
-        this->precision = it->second;
-    } else {
-        SPDLOG_WARN("Parameter contains invalid precision value: {}", command);
-        return StatusCode::PRECISION_WRONG_FORMAT;
+    PrecisionConfiguration precisionConfig;
+    auto status = PrecisionConfiguration::fromString(command, precisionConfig);;
+    if (!status.ok()) {
+        return status;
     }
+    this->precision = precisionConfig;
     return StatusCode::OK;
 }
 

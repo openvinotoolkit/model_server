@@ -257,7 +257,8 @@ static Status applyPreprocessingConfiguration(ov::preprocess::PrePostProcessor& 
 
         if (precision.has_value()) {
             SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Applying precision for model");
-            preproc.input().tensor().set_element_type(precision.value());
+            preproc.input().tensor().set_element_type(precision.value().getTargetPrecision());
+            preproc.input().preprocess().convert_element_type(precision.value().getSourcePrecision());
         }
 
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Applying mean configuration");

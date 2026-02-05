@@ -636,6 +636,7 @@ ovms_cc_library(
             "libovmslayout",
             "libovmslayout_configuration",
             "libovmscolor_format_configuration",
+            "libovmsprecision_configuration",
             "libovms_tensorinfo",
             "libovmstimer",
             "tfs_utils",
@@ -1607,6 +1608,7 @@ ovms_cc_library(
             "libovmsfilesystem",
             "libovmslayout_configuration",
             "libovmscolor_format_configuration",
+            "libovmsprecision_configuration",
             "libovmsmodelversioning",
             "libovmsschema",
             "libovmsshape",
@@ -1669,6 +1671,17 @@ ovms_cc_library(
     name = "libovmscolor_format_configuration",
     hdrs = ["color_format_configuration.hpp",],
     srcs = ["color_format_configuration.cpp",],
+    deps = [
+            "//third_party:openvino",
+            "ovms_header",
+            "libovmsstatus",
+],
+    visibility = ["//visibility:public"],
+)
+ovms_cc_library(
+    name = "libovmsprecision_configuration",
+    hdrs = ["precision_configuration.hpp",],
+    srcs = ["precision_configuration.cpp",],
     deps = [
             "//third_party:openvino",
             "ovms_header",
