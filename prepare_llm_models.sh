@@ -28,6 +28,7 @@ EMBEDDING_MODEL="thenlper/gte-small"
 RERANK_MODEL="BAAI/bge-reranker-base"
 VLM_MODEL="OpenGVLab/InternVL2-1B"
 TTS_MODEL="microsoft/speecht5_tts"
+STT_MODEL="openai/whisper-tiny"
 
 # Models for tools testing. Only tokenizers are downloaded.
 QWEN3_MODEL="Qwen/Qwen3-8B"
@@ -86,6 +87,16 @@ else
 fi
 if [ ! -f "$1/$TTS_MODEL/$TOKENIZER_FILE" ]; then
   echo "[ERROR] Model file $1/$TTS_MODEL/$TOKENIZER_FILE does not exist."
+  exit 1
+fi
+
+if [ -f "$1/$STT_MODEL/$TOKENIZER_FILE" ]; then
+  echo "Model file $1/$STT_MODEL/$TOKENIZER_FILE exists. Skipping downloading models."
+else
+  python3 demos/common/export_models/export_model.py speech2text --source_model "$STT_MODEL" --weight-format int4 --model_repository_path $1
+fi
+if [ ! -f "$1/$STT_MODEL/$TOKENIZER_FILE" ]; then
+  echo "[ERROR] Model file $1/$STT_MODEL/$TOKENIZER_FILE does not exist."
   exit 1
 fi
 

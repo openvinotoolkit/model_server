@@ -38,7 +38,7 @@ protected:
 public:
     static void SetUpTestSuite() {
         std::string port = "9173";
-        std::string configPath = getGenericFullPathForSrcTest("/ovms/src/test/audio/config.json");
+        std::string configPath = getGenericFullPathForSrcTest("/ovms/src/test/audio/config_tts.json");
         SetUpSuite(port, configPath, t);
     }
 

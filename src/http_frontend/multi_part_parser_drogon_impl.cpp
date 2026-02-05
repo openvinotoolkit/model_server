@@ -32,7 +32,6 @@ std::string DrogonMultiPartParser::getFieldByName(const std::string& name) const
 
 std::string_view DrogonMultiPartParser::getFileContentByFieldName(const std::string& name) const {
     auto fileMap = this->parser->getFilesMap();
-
     auto it = fileMap.find(name);
     if (it == fileMap.end()) {
         return "";

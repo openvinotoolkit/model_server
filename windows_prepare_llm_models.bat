@@ -34,6 +34,7 @@ set "TEXT_GENERATION_MODEL=HuggingFaceTB/SmolLM2-360M-Instruct"
 set "FACEBOOK_MODEL=facebook/opt-125m"
 set "VLM_MODEL=OpenGVLab/InternVL2-1B"
 set "TTS_MODEL=microsoft/speecht5_tts"
+set "STT_MODEL=openai/whisper-tiny"
 
 :: Models for tools testing. Only tokenizers are downloaded.
 set "QWEN3_MODEL=Qwen/Qwen3-8B"
@@ -61,6 +62,7 @@ if not exist "%~1" mkdir "%~1"
 
 :: Export models
 call :download_export_model "%TTS_MODEL%" "text2speech" "--weight-format int4" "--vocoder microsoft/speecht5_hifigan" "%~1"
+call :download_export_model "%STT_MODEL%" "speech2text" "--weight-format int4" "%~1"
 call :download_export_model "%VLM_MODEL%" "text_generation" "--weight-format int4" "%~1"
 call :download_export_model "%TEXT_GENERATION_MODEL%" "text_generation" "--weight-format int8" "%~1"
 call :download_export_model "%FACEBOOK_MODEL%" "text_generation" "--weight-format int8" "%~1"

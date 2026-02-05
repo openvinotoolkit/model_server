@@ -561,7 +561,7 @@ bool isShapeTheSame(const KFSShapeType&, const std::vector<int64_t>&&);
 
 void readRgbJpg(size_t& filesize, std::unique_ptr<char[]>& image_bytes);
 void read4x4RgbJpg(size_t& filesize, std::unique_ptr<char[]>& image_bytes);
-void readImage(const std::string& path, size_t& filesize, std::unique_ptr<char[]>& image_bytes);
+void readFile(const std::string& path, size_t& filesize, std::unique_ptr<char[]>& bytes);
 
 static const std::vector<ovms::Precision> SUPPORTED_INPUT_PRECISIONS{
     // ovms::Precision::UNDEFINED,
