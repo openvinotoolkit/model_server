@@ -172,9 +172,9 @@ public:
                 config.temperature = 1.0;  // default value
             }
             std::unique_lock lock(pipe->sttPipelineMutex);
-            const auto result = pipe->sttPipeline->generate(rawSpeech, config);
-            const std::string generatedText = result;
+            const ov::genai::WhisperDecodedResults result = pipe->sttPipeline->generate(rawSpeech, config);
             lock.unlock();
+            const std::string generatedText = result;
             writer.String(generatedText.c_str());
             if (config.word_timestamps) {
                 if (!result.words.has_value()) {
