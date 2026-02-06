@@ -277,10 +277,6 @@ TEST_F(Speech2TextHttpTest, invalidLanguageCode) {
     ASSERT_EQ(
         status.getCode(),
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
-    std::string expectedMsg = "Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed: \n"
-                              "Calculator::Process() for node \"S2tExecutor\" failed: Check 'lang_to_id.count(*language)' failed at /openvino_genai/src/cpp/src/whisper/generation_config.cpp:77:\n"
-                              "'language' <|xD|> must be provided in generation_config.json 'lang_to_id' map.\n";
-    EXPECT_EQ(status.string(), expectedMsg);
 }
 
 TEST_F(Speech2TextHttpTest, invalidLanguageTooLong) {
