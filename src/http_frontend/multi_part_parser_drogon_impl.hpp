@@ -44,6 +44,7 @@ public:
     bool hasParseError() const override;
 
     std::string getFieldByName(const std::string& name) const override;
+
     std::string_view getFileContentByFieldName(const std::string& name) const override;
     std::set<std::string> getAllFieldNames() const override;
 };
