@@ -36,8 +36,7 @@ const std::unordered_map<std::string, ov::element::Type> PrecisionConfiguration:
     {"UINT16", ov::element::u16},
     {"UINT8", ov::element::u8},
     {"UINT4", ov::element::u4},
-    {"UINT1", ov::element::u1}
-};
+    {"UINT1", ov::element::u1}};
 
 Status PrecisionConfiguration::stringToPrecision(const std::string& precisionStr, ov::element::Type& precisionOut) {
     auto it = precisionMap.find(precisionStr);

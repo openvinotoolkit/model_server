@@ -460,7 +460,7 @@ Status ModelConfig::parsePrecision(const std::string& command) {
     }
 
     PrecisionConfiguration precisionConfig;
-    auto status = PrecisionConfiguration::fromString(command, precisionConfig);;
+    auto status = PrecisionConfiguration::fromString(command, precisionConfig);
     if (!status.ok()) {
         return status;
     }
