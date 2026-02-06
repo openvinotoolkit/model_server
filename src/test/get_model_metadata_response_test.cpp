@@ -18,7 +18,7 @@
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
-#include <rapidjson/document.h>
+#include "../port/rapidjson_document.hpp"
 
 #include "../get_model_metadata_impl.hpp"
 #include "../modelmanager.hpp"

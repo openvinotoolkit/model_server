@@ -16,13 +16,10 @@
 #pragma once
 
 #include <string>
-#pragma warning(push)
-#pragma warning(disable : 6313)
-#include <rapidjson/document.h>
+#include "src/port/rapidjson_document.hpp"
 #include <rapidjson/istreamwrapper.h>
 #include "src/port/rapidjson_stringbuffer.hpp"
 #include "src/port/rapidjson_writer.hpp"
-#pragma warning(pop)
 #include <spdlog/spdlog.h>
 
 #include "filesystem.hpp"

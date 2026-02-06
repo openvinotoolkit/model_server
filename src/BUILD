@@ -341,6 +341,7 @@ ovms_cc_library(
         "libovms_execution_context",
         "libovmslogging",
         "libovmsmetrics",
+        "//src/port:rapidjson_document",
     ],
     visibility = ["//visibility:public",],
 )
@@ -361,6 +362,7 @@ ovms_cc_library(
     srcs = ["modelinstanceunloadguard.cpp",],
     deps = [
         "modelinstance_h",
+        "//src/port:rapidjson_document",
     ],
     visibility = ["//visibility:public",],
 )
@@ -1157,6 +1159,7 @@ ovms_cc_library(
         "@com_github_tencent_rapidjson//:rapidjson",
         "//src/port:rapidjson_stringbuffer",
         "//src/port:rapidjson_writer",
+        "//src/port:rapidjson_document",
         "cpp_headers",
         "libovms_module",
         "libovmslogging",
@@ -2240,9 +2243,9 @@ ovms_cc_library(
     ],
     srcs = ["json_parser.cpp"],
     deps = ["cpp_headers",
-            "@com_github_tencent_rapidjson//:rapidjson",
             "//third_party:openvino",
-            "libovmslogging"],
+            "libovmslogging",
+            "//src/port:rapidjson_document"],
     visibility = ["//visibility:public"],
 )
 

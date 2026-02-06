@@ -1,3 +1,4 @@
+#pragma once
 //*****************************************************************************
 // Copyright 2025 Intel Corporation
 //
@@ -13,19 +14,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include "rapidjson_utils.hpp"
 
-#include <string>
-
-#include "../port/rapidjson_document.hpp"
-#include "src/port/rapidjson_stringbuffer.hpp"
-#include "src/port/rapidjson_writer.hpp"
-
-namespace ovms {
-std::string documentToString(const rapidjson::Document& doc) {
-    rapidjson::StringBuffer buffer;
-    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-    doc.Accept(writer);
-    return buffer.GetString();
-}
-}  // namespace ovms
+#pragma warning(push)
+#pragma warning(disable : 6313)
+#include <rapidjson/prettywriter.h>
+#pragma warning(pop)
