@@ -20,7 +20,7 @@ node: {
           dynamic_split_fuse: false,
           max_num_seqs: 256,
           max_num_batched_tokens:8192,
-          cache_size: 8,
+          cache_size: 0,
           device: "GPU"
       }
   }

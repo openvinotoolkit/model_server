@@ -43,7 +43,7 @@ Expected Output:
 ```console
 usage: export_model.py text_generation [-h] [--model_repository_path MODEL_REPOSITORY_PATH] --source_model SOURCE_MODEL [--model_name MODEL_NAME] [--weight-format PRECISION] [--config_file_path CONFIG_FILE_PATH] [--overwrite_models] [--target_device TARGET_DEVICE] [--ov_cache_dir OV_CACHE_DIR]
                                        [--extra_quantization_params EXTRA_QUANTIZATION_PARAMS] [--pipeline_type {LM,LM_CB,VLM,VLM_CB,AUTO}] [--kv_cache_precision {u8}] [--enable_prefix_caching ENABLE_PREFIX_CACHING] [--disable_dynamic_split_fuse] [--max_num_batched_tokens MAX_NUM_BATCHED_TOKENS] [--max_num_seqs MAX_NUM_SEQS]
-                                       [--cache_size CACHE_SIZE] [--draft_source_model DRAFT_SOURCE_MODEL] [--draft_model_name DRAFT_MODEL_NAME] [--draft_eagle3] [--max_prompt_len MAX_PROMPT_LEN] [--prompt_lookup_decoding] [--reasoning_parser {qwen3,gptoss}]
+                                       [--cache_size CACHE_SIZE] [--draft_source_model DRAFT_SOURCE_MODEL] [--draft_model_name DRAFT_MODEL_NAME] [--draft_eagle3_mode] [--max_prompt_len MAX_PROMPT_LEN] [--prompt_lookup_decoding] [--reasoning_parser {qwen3,gptoss}]
                                        [--tool_parser {llama3,phi4,hermes3,mistral,qwen3coder,gptoss}] [--enable_tool_guided_generation]
 
 options:
@@ -78,12 +78,12 @@ options:
   --max_num_seqs MAX_NUM_SEQS
                         256 by default. The maximum number of sequences that can be processed together.
   --cache_size CACHE_SIZE
-                        KV cache size in GB
+                        KV cache size in GB. If not set, cache is allocated dynamically.
   --draft_source_model DRAFT_SOURCE_MODEL
                         HF model name or path to the local folder with PyTorch or OpenVINO draft model. Using this option will create configuration for speculative decoding
   --draft_model_name DRAFT_MODEL_NAME
                         Draft model name that should be used in the deployment. Equal to draft_source_model if HF model name is used. Available only in draft_source_model has been specified.
-  --draft_eagle3        Set this flag if you use EAGLE3 draft model for speculative decoding
+  --draft_eagle3_mode   Set this flag if you use EAGLE3 draft model for speculative decoding
   --max_prompt_len MAX_PROMPT_LEN
                         Sets NPU specific property for maximum number of tokens in the prompt. Not effective if target device is not NPU
   --prompt_lookup_decoding
@@ -108,12 +108,12 @@ python export_model.py text_generation --source_model meta-llama/Meta-Llama-3-8B
 #### GPU Deployment (Low Concurrency, Limited Memory)
 Text generation for GPU target device with limited memory without dynamic split fuse algorithm (recommended for usage in low concurrency):
 ```console
-python export_model.py text_generation --source_model meta-llama/Meta-Llama-3-8B-Instruct --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device GPU --disable_dynamic_split_fuse --max_num_batched_tokens 8192 --cache_size 1
+python export_model.py text_generation --source_model meta-llama/Meta-Llama-3-8B-Instruct --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device GPU --disable_dynamic_split_fuse --max_num_batched_tokens 8192
 ```
 #### GPU Deployment (High Concurrency, Dynamic Split Fuse Enabled)
 Text generation for GPU target device with limited memory with enabled dynamic split fuse algorithm (recommended for usage in high concurrency):
 ```console
-python export_model.py text_generation --source_model meta-llama/Meta-Llama-3-8B-Instruct --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device GPU --cache_size 3
+python export_model.py text_generation --source_model meta-llama/Meta-Llama-3-8B-Instruct --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device GPU
 ```
 #### NPU Deployment
 Text generation for NPU target device. Command below sets max allowed prompt size and configures model compilation directory to speedup initialization time:

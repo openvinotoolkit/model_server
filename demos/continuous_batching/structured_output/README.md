@@ -16,7 +16,7 @@ There are no extra steps needed to use structured output. Whole behavior is trig
 
 ```bash
 mkdir models
-docker run --user $(id -u):$(id -g) -d --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render*  | head -1) --rm -p 8000:8000 -v $(pwd)/models:/models:rw openvino/model_server:latest-gpu --source_model OpenVINO/Mistral-7B-Instruct-v0.3-int4-cw-ov --model_repository_path models --task text_generation --rest_port 8000 --target_device GPU --cache_size 2
+docker run --user $(id -u):$(id -g) -d --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render*  | head -1) --rm -p 8000:8000 -v $(pwd)/models:/models:rw openvino/model_server:latest-gpu --source_model OpenVINO/Mistral-7B-Instruct-v0.3-int4-cw-ov --model_repository_path models --task text_generation --rest_port 8000 --target_device GPU
 ```
 :::
 :::{tab-item} With Docker on NPU
@@ -24,7 +24,7 @@ docker run --user $(id -u):$(id -g) -d --device /dev/dri --group-add=$(stat -c "
 
 ```bash
 mkdir models
-docker run --user $(id -u):$(id -g) -d --device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render*  | head -1) --rm -p 8000:8000 -v $(pwd)/models:/models:rw openvino/model_server:latest-gpu --source_model OpenVINO/Mistral-7B-Instruct-v0.3-int4-cw-ov --model_repository_path models --task text_generation --rest_port 8000 --target_device NPU --cache_size 2
+docker run --user $(id -u):$(id -g) -d --device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render*  | head -1) --rm -p 8000:8000 -v $(pwd)/models:/models:rw openvino/model_server:latest-gpu --source_model OpenVINO/Mistral-7B-Instruct-v0.3-int4-cw-ov --model_repository_path models --task text_generation --rest_port 8000 --target_device NPU
 ```
 :::
 :::{tab-item} With Docker on CPU
@@ -32,28 +32,28 @@ docker run --user $(id -u):$(id -g) -d --device /dev/accel --group-add=$(stat -c
 
 ```bash
 mkdir models
-docker run --user $(id -u):$(id -g) -d --rm -p 8000:8000 -v $(pwd)/models:/models:rw openvino/model_server:latest --source_model OpenVINO/Mistral-7B-Instruct-v0.3-int4-cw-ov --model_repository_path models --task text_generation --rest_port 8000 --target_device CPU --cache_size 2
+docker run --user $(id -u):$(id -g) -d --rm -p 8000:8000 -v $(pwd)/models:/models:rw openvino/model_server:latest --source_model OpenVINO/Mistral-7B-Instruct-v0.3-int4-cw-ov --model_repository_path models --task text_generation --rest_port 8000 --target_device CPU
 ```
 :::
 :::{tab-item} On Baremetal Host and GPU
 **Required:** OpenVINO Model Server package - see [deployment instructions](../../../docs/deploying_server_baremetal.md) for details.
 
 ```bat
-ovms.exe --source_model OpenVINO/Mistral-7B-Instruct-v0.3-int4-cw-ov --model_repository_path models --rest_port 8000 --target_device GPU --cache_size 2 --task text_generation
+ovms.exe --source_model OpenVINO/Mistral-7B-Instruct-v0.3-int4-cw-ov --model_repository_path models --rest_port 8000 --target_device GPU --task text_generation
 ```
 :::
 :::{tab-item} On Baremetal Host and NPU
 **Required:** OpenVINO Model Server package - see [deployment instructions](../../../docs/deploying_server_baremetal.md) for details.
 
 ```bat
-ovms.exe --source_model OpenVINO/Mistral-7B-Instruct-v0.3-int4-cw-ov --model_repository_path models --rest_port 8000 --target_device NPU --cache_size 2 --task text_generation
+ovms.exe --source_model OpenVINO/Mistral-7B-Instruct-v0.3-int4-cw-ov --model_repository_path models --rest_port 8000 --target_device NPU --task text_generation
 ```
 :::
 :::{tab-item} On Baremetal Host and CPU
 **Required:** OpenVINO Model Server package - see [deployment instructions](../../../docs/deploying_server_baremetal.md) for details.
 
 ```bat
-ovms.exe --source_model OpenVINO/Mistral-7B-Instruct-v0.3-int4-cw-ov --model_repository_path models --rest_port 8000 --target_device CPU --cache_size 2 --task text_generation
+ovms.exe --source_model OpenVINO/Mistral-7B-Instruct-v0.3-int4-cw-ov --model_repository_path models --rest_port 8000 --target_device CPU --task text_generation
 ```
 :::
 ::::

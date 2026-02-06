@@ -81,58 +81,63 @@ public:
         TtsServableMap pipelinesMap = cc->InputSidePackets().Tag(TTS_SESSION_SIDE_PACKET_TAG).Get<TtsServableMap>();
         auto it = pipelinesMap.find(cc->NodeName());
         RET_CHECK(it != pipelinesMap.end()) << "Could not find initialized TTS node named: " << cc->NodeName();
-        auto pipe = it->second;
-        const auto& payload = cc->Inputs().Tag(INPUT_TAG_NAME).Get<ovms::HttpPayload>();
-
         std::unique_ptr<std::string> output;
-        if (absl::StartsWith(payload.uri, "/v3/audio/speech")) {
-            if (payload.parsedJson->HasParseError())
-                return absl::InvalidArgumentError("Failed to parse JSON");
+        try {
+            auto pipe = it->second;
+            const auto& payload = cc->Inputs().Tag(INPUT_TAG_NAME).Get<ovms::HttpPayload>();
 
-            if (!payload.parsedJson->IsObject()) {
-                return absl::InvalidArgumentError("JSON body must be an object");
-            }
-            auto inputIt = payload.parsedJson->FindMember("input");
-            if (inputIt == payload.parsedJson->MemberEnd()) {
-                return absl::InvalidArgumentError("input field is missing in JSON body");
-            }
-            if (!inputIt->value.IsString()) {
-                return absl::InvalidArgumentError("input field is not a string");
-            }
-            auto streamIt = payload.parsedJson->FindMember("stream_format");
-            if (streamIt != payload.parsedJson->MemberEnd()) {
-                return absl::InvalidArgumentError("streaming is not supported");
-            }
-            std::optional<std::string> voiceName;
-            auto voiceIt = payload.parsedJson->FindMember("voice");
-            if (voiceIt != payload.parsedJson->MemberEnd() && voiceIt->value.IsString()) {
-                voiceName = voiceIt->value.GetString();
-                if (pipe->voices.find(voiceName.value()) == pipe->voices.end())
-                    return absl::InvalidArgumentError(absl::StrCat("Requested voice not available: ", voiceName.value()));
-            }
-            ov::genai::Text2SpeechDecodedResults generatedSpeech;
-            std::unique_lock lock(pipe->ttsPipelineMutex);
+            if (absl::StartsWith(payload.uri, "/v3/audio/speech")) {
+                if (payload.parsedJson->HasParseError())
+                    return absl::InvalidArgumentError("Failed to parse JSON");
 
-            if (voiceName.has_value()) {
-                generatedSpeech = pipe->ttsPipeline->generate(inputIt->value.GetString(), pipe->voices[voiceName.value()]);
+                if (!payload.parsedJson->IsObject()) {
+                    return absl::InvalidArgumentError("JSON body must be an object");
+                }
+                auto inputIt = payload.parsedJson->FindMember("input");
+                if (inputIt == payload.parsedJson->MemberEnd()) {
+                    return absl::InvalidArgumentError("input field is missing in JSON body");
+                }
+                if (!inputIt->value.IsString()) {
+                    return absl::InvalidArgumentError("input field is not a string");
+                }
+                auto streamIt = payload.parsedJson->FindMember("stream_format");
+                if (streamIt != payload.parsedJson->MemberEnd()) {
+                    return absl::InvalidArgumentError("streaming is not supported");
+                }
+                std::optional<std::string> voiceName;
+                auto voiceIt = payload.parsedJson->FindMember("voice");
+                if (voiceIt != payload.parsedJson->MemberEnd() && voiceIt->value.IsString()) {
+                    voiceName = voiceIt->value.GetString();
+                    if (pipe->voices.find(voiceName.value()) == pipe->voices.end())
+                        return absl::InvalidArgumentError(absl::StrCat("Requested voice not available: ", voiceName.value()));
+                }
+                ov::genai::Text2SpeechDecodedResults generatedSpeech;
+                std::unique_lock lock(pipe->ttsPipelineMutex);
+
+                if (voiceName.has_value()) {
+                    generatedSpeech = pipe->ttsPipeline->generate(inputIt->value.GetString(), pipe->voices[voiceName.value()]);
+                } else {
+                    generatedSpeech = pipe->ttsPipeline->generate(inputIt->value.GetString());
+                }
+                auto bitsPerSample = generatedSpeech.speeches[0].get_element_type().bitwidth();
+                auto speechSize = generatedSpeech.speeches[0].get_size();
+                ov::Tensor cpuTensor(generatedSpeech.speeches[0].get_element_type(), generatedSpeech.speeches[0].get_shape());
+                // copy results to release inference request
+                generatedSpeech.speeches[0].copy_to(cpuTensor);
+                lock.unlock();
+                void* ppData;
+                size_t pDataSize;
+                prepareAudioOutput(&ppData, pDataSize, bitsPerSample, speechSize, cpuTensor.data<const float>());
+                output = std::make_unique<std::string>(reinterpret_cast<char*>(ppData), pDataSize);
+                drwav_free(ppData, NULL);
             } else {
-                generatedSpeech = pipe->ttsPipeline->generate(inputIt->value.GetString());
+                return absl::InvalidArgumentError(absl::StrCat("Unsupported URI: ", payload.uri));
             }
-            auto bitsPerSample = generatedSpeech.speeches[0].get_element_type().bitwidth();
-            auto speechSize = generatedSpeech.speeches[0].get_size();
-            ov::Tensor cpuTensor(generatedSpeech.speeches[0].get_element_type(), generatedSpeech.speeches[0].get_shape());
-            // copy results to release inference request
-            generatedSpeech.speeches[0].copy_to(cpuTensor);
-            lock.unlock();
-            void* ppData;
-            size_t pDataSize;
-            prepareAudioOutput(&ppData, pDataSize, bitsPerSample, speechSize, cpuTensor.data<const float>());
-            output = std::make_unique<std::string>(reinterpret_cast<char*>(ppData), pDataSize);
-            drwav_free(ppData, NULL);
-        } else {
-            return absl::InvalidArgumentError(absl::StrCat("Unsupported URI: ", payload.uri));
+        } catch (ov::AssertFailure& e) {
+            return absl::InvalidArgumentError(e.what());
+        } catch (...) {
+            return absl::InvalidArgumentError("Response generation failed");
         }
-
         cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(output.release(), cc->InputTimestamp());
         SPDLOG_LOGGER_DEBUG(t2s_calculator_logger, "T2sCalculator  [Node: {}] Process end", cc->NodeName());
 

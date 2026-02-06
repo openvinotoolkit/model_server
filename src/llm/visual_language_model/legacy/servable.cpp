@@ -170,8 +170,11 @@ absl::Status VisualLanguageModelLegacyServable::preparePartialResponse(std::shar
         std::unique_lock lock(legacyExecutionContext->mutex);
         while (executionContext->lastStreamerCallbackOutput.size() == 0 && generationStatus != std::future_status::ready) {
             SPDLOG_LOGGER_TRACE(llm_executor_logger, "Waiting for partial data...");
-            legacyExecutionContext->executionInProgress.wait(lock);
+            auto cvStatus = legacyExecutionContext->executionInProgress.wait_for(lock, std::chrono::milliseconds(10));
             generationStatus = legacyExecutionContext->finished.wait_for(std::chrono::nanoseconds::zero());
+            if (cvStatus == std::cv_status::timeout && generationStatus == std::future_status::ready) {
+                SPDLOG_LOGGER_TRACE(llm_executor_logger, "Race condition avoided - notification was missed but recovered with timeout");
+            }
         }
         lastTextChunk = executionContext->lastStreamerCallbackOutput;
         executionContext->lastStreamerCallbackOutput = "";

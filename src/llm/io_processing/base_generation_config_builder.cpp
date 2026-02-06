@@ -14,6 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 
+#include "../../logging.hpp"
 #include <limits>
 #include <string>
 #include <openvino/genai/generation_config.hpp>
@@ -30,16 +31,30 @@ void BaseGenerationConfigBuilder::adjustConfigForDecodingMethod() {
         // Set num_assistant_tokens to a default value if neither num_assistant_tokens nor assistant_confidence_threshold are set
         if (config.num_assistant_tokens == 0 && config.assistant_confidence_threshold == 0) {
             config.num_assistant_tokens = 5;  // default value for speculative decoding
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "WARNING: Overriding num_assistant_tokens to default value of 5 for speculative decoding as neither num_assistant_tokens nor assistant_confidence_threshold were set.");
         }
+        break;
+    case DecodingMethod::EAGLE3:
+        // Set num_assistant_tokens to a default value if neither num_assistant_tokens nor assistant_confidence_threshold are set
+        if (config.num_assistant_tokens == 0 && config.assistant_confidence_threshold == 0) {
+            config.num_assistant_tokens = 5;  // default value for speculative decoding
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "WARNING: Overriding num_assistant_tokens to default value of 5 for eagle3 decoding as neither num_assistant_tokens nor assistant_confidence_threshold were set.");
+        }
+        // Enforce greedy decoding
+        config.do_sample = false;  // Eagle3 does not support random sampling
+        config.num_beams = 1;      // Eagle3 does not support beam search
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "WARNING: Eagle3 greedy decoding enforced: setting do_sample to false and num_beams to 1.");
         break;
     case DecodingMethod::PROMPT_LOOKUP:
         // Set num_assistant_tokens to a default value if not already set
         if (config.num_assistant_tokens == 0) {
             config.num_assistant_tokens = 5;  // default value for prompt lookup
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "WARNING: Overriding num_assistant_tokens to default value of 5 for prompt lookup as it was not set.");
         }
         // Set max_ngram_size to a default value if not already set
         if (config.max_ngram_size == 0) {
             config.max_ngram_size = 3;  // default value for prompt lookup
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "WARNING: Overriding max_ngram_size to default value of 3 for prompt lookup as it was not set.");
         }
         break;
     }

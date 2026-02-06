@@ -399,22 +399,22 @@ bool isShapeTheSame(const KFSShapeType& actual, const std::vector<int64_t>&& exp
     return same;
 }
 
-void readImage(const std::string& path, size_t& filesize, std::unique_ptr<char[]>& image_bytes) {
+void readFile(const std::string& path, size_t& filesize, std::unique_ptr<char[]>& bytes) {
     std::ifstream DataFile;
     DataFile.open(path, std::ios::binary);
     DataFile.seekg(0, std::ios::end);
     filesize = DataFile.tellg();
     DataFile.seekg(0);
-    image_bytes = std::make_unique<char[]>(filesize);
-    DataFile.read(image_bytes.get(), filesize);
+    bytes = std::make_unique<char[]>(filesize);
+    DataFile.read(bytes.get(), filesize);
 }
 
 void readRgbJpg(size_t& filesize, std::unique_ptr<char[]>& image_bytes) {
-    return readImage(getGenericFullPathForSrcTest("/ovms/src/test/binaryutils/rgb.jpg"), filesize, image_bytes);
+    return readFile(getGenericFullPathForSrcTest("/ovms/src/test/binaryutils/rgb.jpg"), filesize, image_bytes);
 }
 
 void read4x4RgbJpg(size_t& filesize, std::unique_ptr<char[]>& image_bytes) {
-    return readImage(getGenericFullPathForSrcTest("/ovms/src/test/binaryutils/rgb4x4.jpg"), filesize, image_bytes);
+    return readFile(getGenericFullPathForSrcTest("/ovms/src/test/binaryutils/rgb4x4.jpg"), filesize, image_bytes);
 }
 
 void prepareInferStringTensor(::KFSRequest::InferInputTensor& tensor, const std::string& name, const std::vector<std::string>& data, bool putBufferInInputTensorContent, std::string* content) {

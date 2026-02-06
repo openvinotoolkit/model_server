@@ -38,7 +38,7 @@ protected:
 public:
     static void SetUpTestSuite() {
         std::string port = "9173";
-        std::string configPath = getGenericFullPathForSrcTest("/ovms/src/test/audio/config.json");
+        std::string configPath = getGenericFullPathForSrcTest("/ovms/src/test/audio/config_tts.json");
         SetUpSuite(port, configPath, t);
     }
 
@@ -67,6 +67,34 @@ TEST_F(Text2SpeechHttpTest, simplePositive) {
     EXPECT_NO_THROW({
         auto wav = readWav(response);
     });
+}
+
+TEST_F(Text2SpeechHttpTest, emptyInput) {
+    std::string requestBody = R"(
+        {
+            "model": ")" + modelName +
+                              R"(",
+            "input": ""
+        }
+    )";
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK);
+    EXPECT_NO_THROW({
+        auto wav = readWav(response);
+    });
+}
+
+TEST_F(Text2SpeechHttpTest, noInput) {
+    std::string requestBody = R"(
+        {
+            "model": ")" + modelName +
+                              R"("
+        }
+    )";
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
 TEST_F(Text2SpeechHttpTest, positiveWithVoice) {

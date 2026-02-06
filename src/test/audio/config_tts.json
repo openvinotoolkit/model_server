@@ -4,7 +4,7 @@
     {
         "name":"text2speech",
         "base_path":"/ovms/src/test/audio/",
-        "graph_path":"/ovms/src/test/audio/graph.pbtxt"
+        "graph_path":"/ovms/src/test/audio/graph_tts.pbtxt"
     }
     ]
 }
