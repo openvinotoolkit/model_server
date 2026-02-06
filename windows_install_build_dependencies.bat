@@ -500,9 +500,9 @@ exit /b 0
 :install_curl
 echo [INFO] Installing curl ...
 
-set "curl_dir=curl-8.14.1_1-win64-mingw"
-set "curl_ver=curl-8.14.1_1-win64-mingw.zip"
-set "curl_http=https://curl.se/windows/dl-8.14.1_1/"
+set "curl_dir=curl-8.18.0_4-win64-mingw"
+set "curl_ver=curl-8.18.0_4-win64-mingw.zip"
+set "curl_http=https://curl.se/windows/dl-8.18.0_4/"
 
 set "curl_zip=%opt_install_dir%\%curl_ver%"
 
@@ -534,7 +534,7 @@ IF /I EXIST %opt_install_dir%\%curl_dir% (
 )
 
 :: Create lib file for libgit2 linking
-set "curl_lib=C:\opt\curl-8.14.1_1-win64-mingw\bin\libcurl-x64.lib"
+set "curl_lib=C:\opt\curl-8.18.0_4-win64-mingw\bin\libcurl-x64.lib"
 IF /I EXIST %curl_lib% (
     echo [INFO] file exists %curl_lib% 
 ) ELSE (
@@ -549,7 +549,7 @@ IF /I EXIST %curl_lib% (
     exit /b
     :create_lib
 	IF /I EXIST !LIB_EXE! (
-		set "curl_def=C:\opt\curl-8.14.1_1-win64-mingw\bin\libcurl-x64.def"
+		set "curl_def=C:\opt\curl-8.18.0_4-win64-mingw\bin\libcurl-x64.def"
 		"!LIB_EXE!" /def:!curl_def! /out:%curl_lib% /MACHINE:x64
 		if !errorlevel! neq 0 exit /b !errorlevel!
         echo [INFO] !LIB_EXE! created.
