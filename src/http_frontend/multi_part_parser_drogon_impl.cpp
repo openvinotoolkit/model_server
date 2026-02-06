@@ -15,6 +15,8 @@
 //*****************************************************************************
 #include "multi_part_parser_drogon_impl.hpp"
 
+#include <vector>
+
 namespace ovms {
 
 bool DrogonMultiPartParser::parse() {
@@ -28,6 +30,15 @@ bool DrogonMultiPartParser::hasParseError() const {
 
 std::string DrogonMultiPartParser::getFieldByName(const std::string& name) const {
     return this->parser->getParameter<std::string>(name);
+}
+
+std::vector<std::string> DrogonMultiPartParser::getArrayFieldByName(const std::string& name) const {
+    const auto& paramsVector = this->parser->getParametersVector();
+    auto it = paramsVector.find(name);
+    if (it == paramsVector.end()) {
+        return {};
+    }
+    return it->second;
 }
 
 std::string_view DrogonMultiPartParser::getFileContentByFieldName(const std::string& name) const {

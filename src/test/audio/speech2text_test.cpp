@@ -39,6 +39,7 @@ protected:
     std::unordered_map<std::string, std::string> multipartHeader{{"content-type", "multipart/form-data"}};
     static std::string modelNameForm;
     static std::string body;
+    rapidjson::Document d;
 
 public:
     static void SetUpTestSuite() {
@@ -84,9 +85,15 @@ TEST_F(Speech2TextHttpTest, simplePositive) {
     ASSERT_EQ(
         handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParserWithRequest),
         ovms::StatusCode::OK);
+    rapidjson::ParseResult ok = d.Parse(response.c_str());
+    EXPECT_EQ(ok.Code(), 0);
+    EXPECT_TRUE(d.HasMember("text"));
+    EXPECT_TRUE(d["text"].IsString());
+    EXPECT_FALSE(d.HasMember("segments"));
+    EXPECT_FALSE(d.HasMember("words"));
 }
 
-TEST_F(Speech2TextHttpTest, simplePositiveLanguage) {
+TEST_F(Speech2TextHttpTest, positiveLanguage) {
     auto req = drogon::HttpRequest::newHttpRequest();
     req->setMethod(drogon::Post);
     req->addHeader("content-type", "multipart/form-data; boundary=\"12345\"");
@@ -101,9 +108,15 @@ TEST_F(Speech2TextHttpTest, simplePositiveLanguage) {
     ASSERT_EQ(
         handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParserWithRequest),
         ovms::StatusCode::OK);
+    rapidjson::ParseResult ok = d.Parse(response.c_str());
+    EXPECT_EQ(ok.Code(), 0);
+    EXPECT_TRUE(d.HasMember("text"));
+    EXPECT_TRUE(d["text"].IsString());
+    EXPECT_FALSE(d.HasMember("segments"));
+    EXPECT_FALSE(d.HasMember("words"));
 }
 
-TEST_F(Speech2TextHttpTest, simplePositiveTemperature) {
+TEST_F(Speech2TextHttpTest, positiveTemperature) {
     auto req = drogon::HttpRequest::newHttpRequest();
     req->setMethod(drogon::Post);
     req->addHeader("content-type", "multipart/form-data; boundary=\"12345\"");
@@ -118,9 +131,15 @@ TEST_F(Speech2TextHttpTest, simplePositiveTemperature) {
     ASSERT_EQ(
         handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParserWithRequest),
         ovms::StatusCode::OK);
+    rapidjson::ParseResult ok = d.Parse(response.c_str());
+    EXPECT_EQ(ok.Code(), 0);
+    EXPECT_TRUE(d.HasMember("text"));
+    EXPECT_TRUE(d["text"].IsString());
+    EXPECT_FALSE(d.HasMember("segments"));
+    EXPECT_FALSE(d.HasMember("words"));
 }
 
-TEST_F(Speech2TextHttpTest, simplePositiveSegmentTimestamps) {
+TEST_F(Speech2TextHttpTest, positiveSegmentTimestamps) {
     auto req = drogon::HttpRequest::newHttpRequest();
     req->setMethod(drogon::Post);
     req->addHeader("content-type", "multipart/form-data; boundary=\"12345\"");
@@ -135,9 +154,16 @@ TEST_F(Speech2TextHttpTest, simplePositiveSegmentTimestamps) {
     ASSERT_EQ(
         handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParserWithRequest),
         ovms::StatusCode::OK);
+    rapidjson::ParseResult ok = d.Parse(response.c_str());
+    EXPECT_EQ(ok.Code(), 0);
+    EXPECT_TRUE(d.HasMember("text"));
+    EXPECT_TRUE(d["text"].IsString());
+    EXPECT_TRUE(d.HasMember("segments"));
+    EXPECT_TRUE(d["segments"].IsArray());
+    EXPECT_FALSE(d.HasMember("words"));
 }
 
-TEST_F(Speech2TextHttpTest, simplePositiveWordTimestamps) {
+TEST_F(Speech2TextHttpTest, positiveWordTimestamps) {
     auto req = drogon::HttpRequest::newHttpRequest();
     req->setMethod(drogon::Post);
     req->addHeader("content-type", "multipart/form-data; boundary=\"12345\"");
@@ -145,6 +171,10 @@ TEST_F(Speech2TextHttpTest, simplePositiveWordTimestamps) {
                                 "Content-Disposition: form-data;name=\"model\"\r\n"
                                 "\r\n"
                                 "speech2textWordTimestamps\r\n"
+                                "--12345\r\n"
+                                "Content-Disposition: form-data;name=\"timestamp_granularities[]\"\r\n"
+                                "\r\n"
+                                "word\r\n"
                                 "--12345\r\n"
                                 "Content-Disposition: form-data;name=\"file\";\"filename=file\""
                                 "\r\nContent-Type: application/octet-stream"
@@ -160,6 +190,54 @@ TEST_F(Speech2TextHttpTest, simplePositiveWordTimestamps) {
     ASSERT_EQ(
         handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParserWithRequest),
         ovms::StatusCode::OK);
+    rapidjson::ParseResult ok = d.Parse(response.c_str());
+    EXPECT_EQ(ok.Code(), 0);
+    EXPECT_TRUE(d.HasMember("text"));
+    EXPECT_TRUE(d["text"].IsString());
+    EXPECT_TRUE(d.HasMember("words"));
+    EXPECT_TRUE(d["words"].IsArray());
+    EXPECT_FALSE(d.HasMember("segments"));
+}
+
+TEST_F(Speech2TextHttpTest, positiveBothTimestampsTypes) {
+    auto req = drogon::HttpRequest::newHttpRequest();
+    req->setMethod(drogon::Post);
+    req->addHeader("content-type", "multipart/form-data; boundary=\"12345\"");
+    std::string multipartBody = "--12345\r\n"
+                                "Content-Disposition: form-data;name=\"model\"\r\n"
+                                "\r\n"
+                                "speech2textWordTimestamps\r\n"
+                                "--12345\r\n"
+                                "Content-Disposition: form-data;name=\"timestamp_granularities[]\"\r\n"
+                                "\r\n"
+                                "word\r\n"
+                                "--12345\r\n"
+                                "Content-Disposition: form-data;name=\"timestamp_granularities[]\"\r\n"
+                                "\r\n"
+                                "segment\r\n"
+                                "--12345\r\n"
+                                "Content-Disposition: form-data;name=\"file\";\"filename=file\""
+                                "\r\nContent-Type: application/octet-stream"
+                                "\r\ncontent-transfer-encoding: quoted-printable\r\n\r\n";
+    std::unique_ptr<char[]> imageBytes;
+    size_t fileSize;
+    readFile(getGenericFullPathForSrcTest("/ovms/src/test/audio/test.wav"), fileSize, imageBytes);
+    multipartBody.append(imageBytes.get(), fileSize);
+    multipartBody.append("12345");
+    req->setBody(multipartBody);
+    std::shared_ptr<MultiPartParser> multiPartParserWithRequest = std::make_shared<DrogonMultiPartParser>(req);
+    std::string requestBody = "";
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParserWithRequest),
+        ovms::StatusCode::OK);
+    rapidjson::ParseResult ok = d.Parse(response.c_str());
+    EXPECT_EQ(ok.Code(), 0);
+    EXPECT_TRUE(d.HasMember("text"));
+    EXPECT_TRUE(d["text"].IsString());
+    EXPECT_TRUE(d.HasMember("words"));
+    EXPECT_TRUE(d["words"].IsArray());
+    EXPECT_TRUE(d.HasMember("segments"));
+    EXPECT_TRUE(d["segments"].IsArray());
 }
 
 TEST_F(Speech2TextHttpTest, invalidFile) {
@@ -174,12 +252,16 @@ TEST_F(Speech2TextHttpTest, invalidFile) {
     req->setBody(invalidBody);
     std::shared_ptr<MultiPartParser> multiPartParserWithRequest = std::make_shared<DrogonMultiPartParser>(req);
     std::string requestBody = "";
+    auto status = handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParserWithRequest);
     ASSERT_EQ(
-        handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParserWithRequest),
+        status.getCode(),
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+    std::string expectedMsg = "Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed: \n"
+                              "Calculator::Process() for node \"S2tExecutor\" failed: File parsing fails";
+    EXPECT_EQ(status.string(), expectedMsg);
 }
 
-TEST_F(Speech2TextHttpTest, invalidLanguage) {
+TEST_F(Speech2TextHttpTest, invalidLanguageCode) {
     auto req = drogon::HttpRequest::newHttpRequest();
     req->setMethod(drogon::Post);
     req->addHeader("content-type", "multipart/form-data; boundary=\"12345\"");
@@ -191,9 +273,31 @@ TEST_F(Speech2TextHttpTest, invalidLanguage) {
     req->setBody(Speech2TextHttpTest::body + language);
     std::shared_ptr<MultiPartParser> multiPartParserWithRequest = std::make_shared<DrogonMultiPartParser>(req);
     std::string requestBody = "";
+    auto status = handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParserWithRequest);
     ASSERT_EQ(
-        handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParserWithRequest),
+        status.getCode(),
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_F(Speech2TextHttpTest, invalidLanguageTooLong) {
+    auto req = drogon::HttpRequest::newHttpRequest();
+    req->setMethod(drogon::Post);
+    req->addHeader("content-type", "multipart/form-data; boundary=\"12345\"");
+    std::string language = "\r\n"
+                           "Content-Disposition: form-data;name=\"language\"\r\n"
+                           "\r\n"
+                           "TOO_LONG\r\n"
+                           "--12345";
+    req->setBody(Speech2TextHttpTest::body + language);
+    std::shared_ptr<MultiPartParser> multiPartParserWithRequest = std::make_shared<DrogonMultiPartParser>(req);
+    std::string requestBody = "";
+    auto status = handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParserWithRequest);
+    ASSERT_EQ(
+        status.getCode(),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+    std::string expectedMsg = "Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed: \n"
+                              "Calculator::Process() for node \"S2tExecutor\" failed: Invalid language code.";
+    EXPECT_EQ(status.string(), expectedMsg);
 }
 
 TEST_F(Speech2TextHttpTest, invalidTemperatureOutOfRange) {
@@ -208,9 +312,13 @@ TEST_F(Speech2TextHttpTest, invalidTemperatureOutOfRange) {
     req->setBody(Speech2TextHttpTest::body + language);
     std::shared_ptr<MultiPartParser> multiPartParserWithRequest = std::make_shared<DrogonMultiPartParser>(req);
     std::string requestBody = "";
+    auto status = handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParserWithRequest);
     ASSERT_EQ(
-        handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParserWithRequest),
+        status.getCode(),
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+    std::string expectedMsg = "Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed: \n"
+                              "Calculator::Process() for node \"S2tExecutor\" failed: Temperature out of range(0.0, 2.0)";
+    EXPECT_EQ(status.string(), expectedMsg);
 }
 
 TEST_F(Speech2TextHttpTest, invalidTimestampType) {
@@ -225,7 +333,32 @@ TEST_F(Speech2TextHttpTest, invalidTimestampType) {
     req->setBody(Speech2TextHttpTest::body + language);
     std::shared_ptr<MultiPartParser> multiPartParserWithRequest = std::make_shared<DrogonMultiPartParser>(req);
     std::string requestBody = "";
+    auto status = handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParserWithRequest);
     ASSERT_EQ(
-        handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParserWithRequest),
+        status.getCode(),
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+    std::string expectedMsg = "Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed: \n"
+                              "Calculator::Process() for node \"S2tExecutor\" failed: Invalid timestamp_granularities type. Allowed types: \"segment\", \"word\"";
+    EXPECT_EQ(status.string(), expectedMsg);
+}
+
+TEST_F(Speech2TextHttpTest, emptyTimestampType) {
+    auto req = drogon::HttpRequest::newHttpRequest();
+    req->setMethod(drogon::Post);
+    req->addHeader("content-type", "multipart/form-data; boundary=\"12345\"");
+    std::string language = "\r\n"
+                           "Content-Disposition: form-data;name=\"timestamp_granularities[]\"\r\n"
+                           "\r\n"
+                           "\r\n"
+                           "--12345";
+    req->setBody(Speech2TextHttpTest::body + language);
+    std::shared_ptr<MultiPartParser> multiPartParserWithRequest = std::make_shared<DrogonMultiPartParser>(req);
+    std::string requestBody = "";
+    auto status = handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParserWithRequest);
+    ASSERT_EQ(
+        status.getCode(),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+    std::string expectedMsg = "Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed: \n"
+                              "Calculator::Process() for node \"S2tExecutor\" failed: Invalid timestamp_granularities type. Allowed types: \"segment\", \"word\"";
+    EXPECT_EQ(status.string(), expectedMsg);
 }
