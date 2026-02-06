@@ -165,7 +165,8 @@ public:
         SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Embeddings request deserialization time: {} ms", time / 1000);
 
         ModelMetricReporter unused(nullptr, nullptr, "unused", 1);
-
+        std::unique_ptr<ExecutingStreamIdGuard> executingStreamIdGuard;
+        std::unique_ptr<ExecutingStreamIdGuard> executingStreamIdGuardForPostprocessingModel;
         try {
             auto input = handler.getInput();
             if (auto strings = std::get_if<std::vector<std::string>>(&input)) {
@@ -257,8 +258,6 @@ public:
             std::vector<ov::Tensor> embeddingsAttentionMasks;
             std::string outputTensorName;
             ModelMetricReporter unused2(nullptr, nullptr, "unused2", 1);
-            std::unique_ptr<ExecutingStreamIdGuard> executingStreamIdGuard;
-            std::unique_ptr<ExecutingStreamIdGuard> executingStreamIdGuardForPostprocessingModel;
             // NPU embeddings dynamic model case for batch size grater than 1
             if (embeddings_session->getTargetDevice() == "NPU" && receivedBatchSize > 1) {
                 SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Embeddings batch NPU request split for BS {}", receivedBatchSize);
