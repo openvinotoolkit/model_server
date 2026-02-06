@@ -28,7 +28,6 @@
 #include "../test_utils.hpp"
 #include "../platform_utils.hpp"
 #include "../constructor_enabled_model_manager.hpp"
-#include "rapidjson/document.h"
 
 using namespace ovms;
 
