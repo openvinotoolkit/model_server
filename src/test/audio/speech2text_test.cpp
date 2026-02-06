@@ -258,8 +258,8 @@ TEST_F(Speech2TextHttpTest, invalidFile) {
         status.getCode(),
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
     std::string expectedMsg = "Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed: \n"
-"Calculator::Process() for node \"S2tExecutor\" failed: File parsing fails";
-    EXPECT_EQ(status.string(),expectedMsg);
+                              "Calculator::Process() for node \"S2tExecutor\" failed: File parsing fails";
+    EXPECT_EQ(status.string(), expectedMsg);
 }
 
 TEST_F(Speech2TextHttpTest, invalidLanguageCode) {
@@ -279,9 +279,9 @@ TEST_F(Speech2TextHttpTest, invalidLanguageCode) {
         status.getCode(),
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
     std::string expectedMsg = "Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed: \n"
-"Calculator::Process() for node \"S2tExecutor\" failed: Check 'lang_to_id.count(*language)' failed at /openvino_genai/src/cpp/src/whisper/generation_config.cpp:77:\n"
-"'language' <|xD|> must be provided in generation_config.json 'lang_to_id' map.\n";
-    EXPECT_EQ(status.string(),expectedMsg);
+                              "Calculator::Process() for node \"S2tExecutor\" failed: Check 'lang_to_id.count(*language)' failed at /openvino_genai/src/cpp/src/whisper/generation_config.cpp:77:\n"
+                              "'language' <|xD|> must be provided in generation_config.json 'lang_to_id' map.\n";
+    EXPECT_EQ(status.string(), expectedMsg);
 }
 
 TEST_F(Speech2TextHttpTest, invalidLanguageTooLong) {
@@ -301,8 +301,8 @@ TEST_F(Speech2TextHttpTest, invalidLanguageTooLong) {
         status.getCode(),
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
     std::string expectedMsg = "Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed: \n"
-"Calculator::Process() for node \"S2tExecutor\" failed: Invalid language code.";
-    EXPECT_EQ(status.string(),expectedMsg);
+                              "Calculator::Process() for node \"S2tExecutor\" failed: Invalid language code.";
+    EXPECT_EQ(status.string(), expectedMsg);
 }
 
 TEST_F(Speech2TextHttpTest, invalidTemperatureOutOfRange) {
@@ -322,8 +322,8 @@ TEST_F(Speech2TextHttpTest, invalidTemperatureOutOfRange) {
         status.getCode(),
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
     std::string expectedMsg = "Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed: \n"
-"Calculator::Process() for node \"S2tExecutor\" failed: Temperature out of range(0.0, 2.0)";
-    EXPECT_EQ(status.string(),expectedMsg);
+                              "Calculator::Process() for node \"S2tExecutor\" failed: Temperature out of range(0.0, 2.0)";
+    EXPECT_EQ(status.string(), expectedMsg);
 }
 
 TEST_F(Speech2TextHttpTest, invalidTimestampType) {
@@ -343,8 +343,8 @@ TEST_F(Speech2TextHttpTest, invalidTimestampType) {
         status.getCode(),
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
     std::string expectedMsg = "Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed: \n"
-"Calculator::Process() for node \"S2tExecutor\" failed: Invalid timestamp_granularities type. Allowed types: \"segment\", \"word\"";
-    EXPECT_EQ(status.string(),expectedMsg);
+                              "Calculator::Process() for node \"S2tExecutor\" failed: Invalid timestamp_granularities type. Allowed types: \"segment\", \"word\"";
+    EXPECT_EQ(status.string(), expectedMsg);
 }
 
 TEST_F(Speech2TextHttpTest, EmptyTimestampType) {
@@ -364,6 +364,6 @@ TEST_F(Speech2TextHttpTest, EmptyTimestampType) {
         status.getCode(),
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
     std::string expectedMsg = "Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed: \n"
-"Calculator::Process() for node \"S2tExecutor\" failed: Invalid timestamp_granularities type. Allowed types: \"segment\", \"word\"";
-    EXPECT_EQ(status.string(),expectedMsg);
+                              "Calculator::Process() for node \"S2tExecutor\" failed: Invalid timestamp_granularities type. Allowed types: \"segment\", \"word\"";
+    EXPECT_EQ(status.string(), expectedMsg);
 }
