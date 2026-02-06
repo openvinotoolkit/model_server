@@ -82,6 +82,8 @@ using CAPIInterface = std::pair<ovms::InferenceRequest, ovms::InferenceResponse>
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
+void printTensor(const ov::Tensor& tensor);
+
 ovms::tensor_map_t prepareTensors(
     const std::unordered_map<std::string, ovms::Shape>&& tensors,
     ovms::Precision precision = ovms::Precision::FP32);

@@ -43,12 +43,23 @@ public:
         return targetOutputIndex;
     }
 
+    const bool isNpuPostprocessingRequired() {
+        return npuPostprocessingRequired;
+    }
+
+    OVInferRequestsQueue& getPostProcInferRequestsQueue() {
+        return *postProcInferRequestsQueue;
+    }
+
 protected:
-    std::shared_ptr<ov::Model> applyPrePostProcessing(std::shared_ptr<ov::Model> model) override;
+    std::shared_ptr<ov::Model> applyPrePostProcessing(ov::Core& core, std::shared_ptr<ov::Model> model, ov::AnyMap& properties) override;
 
 private:
     mediapipe::EmbeddingsCalculatorOVOptions_Pooling pooling;
     bool normalizeEmbeddings;
+    bool npuPostprocessingRequired = false;
+    ov::CompiledModel postProcCompiledModel;
+    std::unique_ptr<OVInferRequestsQueue> postProcInferRequestsQueue;
 
     int targetOutputIndex = -1;
 };

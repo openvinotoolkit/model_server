@@ -84,6 +84,7 @@ ovms_cc_library(
         "//src:executingstreamidguard",
         "//src:libovms_execution_context",
         ":embeddings_api",
+        "//third_party:openvino",
     ],
     visibility = ["//visibility:public"],
     alwayslink = 1,
