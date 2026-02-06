@@ -390,7 +390,6 @@ std::shared_ptr<ov::Model> EmbeddingsServable::applyPrePostProcessing(ov::Core& 
         }
 
         config.normalize = this->normalizeEmbeddings;
-
         // Compile additional CPU model for NPU dynamic model case
         auto post_model = create_post_model(model, config);
         const std::string postModelDevice = "CPU";
@@ -414,6 +413,10 @@ std::shared_ptr<ov::Model> EmbeddingsServable::applyPrePostProcessing(ov::Core& 
         postProcInferRequestsQueue = std::make_unique<OVInferRequestsQueue>(postProcCompiledModel, numberOfParallelInferRequests);
         npuPostprocessingRequired = true;
 
+        // These are the settings for NPU model
+        if (getMaxModelLength().has_value()) {
+            config.max_length = getMaxModelLength().value();
+        }
         auto kv_pos = get_kv_axes_pos(model);
         KVDesc kv_desc;
         get_npu_text_embedding_config(properties, kv_pos, kv_desc, config);
