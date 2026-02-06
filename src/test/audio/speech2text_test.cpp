@@ -86,7 +86,7 @@ TEST_F(Speech2TextHttpTest, simplePositive) {
         ovms::StatusCode::OK);
 }
 
-TEST_F(Speech2TextHttpTest, simplePositiveLanguage) {
+TEST_F(Speech2TextHttpTest, positiveLanguage) {
     auto req = drogon::HttpRequest::newHttpRequest();
     req->setMethod(drogon::Post);
     req->addHeader("content-type", "multipart/form-data; boundary=\"12345\"");
@@ -103,7 +103,7 @@ TEST_F(Speech2TextHttpTest, simplePositiveLanguage) {
         ovms::StatusCode::OK);
 }
 
-TEST_F(Speech2TextHttpTest, simplePositiveTemperature) {
+TEST_F(Speech2TextHttpTest, positiveTemperature) {
     auto req = drogon::HttpRequest::newHttpRequest();
     req->setMethod(drogon::Post);
     req->addHeader("content-type", "multipart/form-data; boundary=\"12345\"");
@@ -120,7 +120,7 @@ TEST_F(Speech2TextHttpTest, simplePositiveTemperature) {
         ovms::StatusCode::OK);
 }
 
-TEST_F(Speech2TextHttpTest, simplePositiveSegmentTimestamps) {
+TEST_F(Speech2TextHttpTest, positiveSegmentTimestamps) {
     auto req = drogon::HttpRequest::newHttpRequest();
     req->setMethod(drogon::Post);
     req->addHeader("content-type", "multipart/form-data; boundary=\"12345\"");
@@ -137,7 +137,69 @@ TEST_F(Speech2TextHttpTest, simplePositiveSegmentTimestamps) {
         ovms::StatusCode::OK);
 }
 
-TEST_F(Speech2TextHttpTest, simplePositiveWordTimestamps) {
+TEST_F(Speech2TextHttpTest, positiveWordTimestamps) {
+    auto req = drogon::HttpRequest::newHttpRequest();
+    req->setMethod(drogon::Post);
+    req->addHeader("content-type", "multipart/form-data; boundary=\"12345\"");
+    std::string multipartBody = "--12345\r\n"
+                                "Content-Disposition: form-data;name=\"model\"\r\n"
+                                "\r\n"
+                                "speech2textWordTimestamps\r\n"
+                                "--12345\r\n"
+                                "Content-Disposition: form-data;name=\"timestamp_granularities[]\"\r\n"
+                                "\r\n"
+                                "word\r\n"
+                                "--12345\r\n"
+                                "Content-Disposition: form-data;name=\"file\";\"filename=file\""
+                                "\r\nContent-Type: application/octet-stream"
+                                "\r\ncontent-transfer-encoding: quoted-printable\r\n\r\n";
+    std::unique_ptr<char[]> imageBytes;
+    size_t fileSize;
+    readFile(getGenericFullPathForSrcTest("/ovms/src/test/audio/test.wav"), fileSize, imageBytes);
+    multipartBody.append(imageBytes.get(), fileSize);
+    multipartBody.append("12345");
+    req->setBody(multipartBody);
+    std::shared_ptr<MultiPartParser> multiPartParserWithRequest = std::make_shared<DrogonMultiPartParser>(req);
+    std::string requestBody = "";
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParserWithRequest),
+        ovms::StatusCode::OK);
+}
+
+TEST_F(Speech2TextHttpTest, positiveBothTimestampsTypes) {
+    auto req = drogon::HttpRequest::newHttpRequest();
+    req->setMethod(drogon::Post);
+    req->addHeader("content-type", "multipart/form-data; boundary=\"12345\"");
+    std::string multipartBody = "--12345\r\n"
+                                "Content-Disposition: form-data;name=\"model\"\r\n"
+                                "\r\n"
+                                "speech2textWordTimestamps\r\n"
+                                "--12345\r\n"
+                                "Content-Disposition: form-data;name=\"timestamp_granularities[]\"\r\n"
+                                "\r\n"
+                                "word\r\n"
+                                "--12345\r\n"
+                                "Content-Disposition: form-data;name=\"timestamp_granularities[]\"\r\n"
+                                "\r\n"
+                                "segment\r\n"
+                                "--12345\r\n"
+                                "Content-Disposition: form-data;name=\"file\";\"filename=file\""
+                                "\r\nContent-Type: application/octet-stream"
+                                "\r\ncontent-transfer-encoding: quoted-printable\r\n\r\n";
+    std::unique_ptr<char[]> imageBytes;
+    size_t fileSize;
+    readFile(getGenericFullPathForSrcTest("/ovms/src/test/audio/test.wav"), fileSize, imageBytes);
+    multipartBody.append(imageBytes.get(), fileSize);
+    multipartBody.append("12345");
+    req->setBody(multipartBody);
+    std::shared_ptr<MultiPartParser> multiPartParserWithRequest = std::make_shared<DrogonMultiPartParser>(req);
+    std::string requestBody = "";
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParserWithRequest),
+        ovms::StatusCode::OK);
+}
+
+TEST_F(Speech2TextHttpTest, positiveBothTimestamps) {
     auto req = drogon::HttpRequest::newHttpRequest();
     req->setMethod(drogon::Post);
     req->addHeader("content-type", "multipart/form-data; boundary=\"12345\"");

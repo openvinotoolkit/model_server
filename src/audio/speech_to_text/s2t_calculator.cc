@@ -146,19 +146,20 @@ public:
                     SPDLOG_LOGGER_TRACE(s2t_calculator_logger, "Received language: {}");
                     config.language = "<|" + language + "|>";
                 }
-                // Currently supports only 1 granularity at once, CVS-179914
-                std::string timestampsType = payload.multipartParser->getFieldByName("timestamp_granularities[]");
+                std::vector<std::string> timestampsTypes = payload.multipartParser->getArrayFieldByName("timestamp_granularities[]");
                 config.word_timestamps = false;
-                if (timestampsType.size() > 0) {
-                    SPDLOG_LOGGER_TRACE(s2t_calculator_logger, "Received timestamp type: {}", timestampsType);
-                    if (timestampsType == "segment") {
-                        config.return_timestamps = true;
-                    } else if (timestampsType == "word") {
-                        if (!pipe->enableWordTimestamps)
-                            return absl::InvalidArgumentError("Word timestamps not supported for this model");
-                        config.word_timestamps = true;
-                    } else {
-                        return absl::InvalidArgumentError("Invalid timestamp_granularities type. Allowed types: \"segment\", \"word\"");
+                for(auto timestampsType : timestampsTypes){
+                    if (timestampsType.size() > 0) {
+                        SPDLOG_LOGGER_TRACE(s2t_calculator_logger, "Received timestamp type: {}", timestampsType);
+                        if (timestampsType == "segment") {
+                            config.return_timestamps = true;
+                        } else if (timestampsType == "word") {
+                            if (!pipe->enableWordTimestamps)
+                                return absl::InvalidArgumentError("Word timestamps not supported for this model");
+                            config.word_timestamps = true;
+                        } else {
+                            return absl::InvalidArgumentError("Invalid timestamp_granularities type. Allowed types: \"segment\", \"word\"");
+                        }
                     }
                 }
                 std::string temperature = payload.multipartParser->getFieldByName("temperature");
