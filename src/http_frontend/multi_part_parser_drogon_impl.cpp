@@ -15,6 +15,8 @@
 //*****************************************************************************
 #include "multi_part_parser_drogon_impl.hpp"
 
+#include <vector>
+
 namespace ovms {
 
 bool DrogonMultiPartParser::parse() {
