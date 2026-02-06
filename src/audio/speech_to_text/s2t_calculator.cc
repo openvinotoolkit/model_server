@@ -183,7 +183,7 @@ public:
                 if (config.word_timestamps) {
                     writer.String("words");
                     writer.StartArray();
-                    if (!result.words.has_value()) {
+                    if (result.words.has_value()) {
                         for (const auto& word : *result.words) {
                             writer.StartObject();
                             writer.String("word");

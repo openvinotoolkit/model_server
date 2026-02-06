@@ -347,7 +347,7 @@ TEST_F(Speech2TextHttpTest, invalidTimestampType) {
     EXPECT_EQ(status.string(), expectedMsg);
 }
 
-TEST_F(Speech2TextHttpTest, EmptyTimestampType) {
+TEST_F(Speech2TextHttpTest, emptyTimestampType) {
     auto req = drogon::HttpRequest::newHttpRequest();
     req->setMethod(drogon::Post);
     req->addHeader("content-type", "multipart/form-data; boundary=\"12345\"");
