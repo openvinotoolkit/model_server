@@ -315,6 +315,55 @@ static std::shared_ptr<op::Op> get_last_token_pooling_op(std::shared_ptr<Model> 
 
     return std::make_shared<op::v8::Gather>(last_hidden_state_node, subtract, axis_1, 1);
 }
+
+template <typename T>
+bool hasTokenTypeIdsInput(const T& inputs) {
+    for (const auto& input : inputs) {
+        if (input.get_any_name() == "token_type_ids") {
+            return true;
+        }
+    }
+    return false;
+}
+
+void reshapeModel(std::shared_ptr<Model>& model,
+                   const TextEmbeddingPipeline::Config& config,
+                   std::optional<size_t> max_position_embeddings) {
+    ov::PartialShape target_shape{ov::Dimension::dynamic(), ov::Dimension::dynamic()};
+
+    if (config.batch_size.has_value()) {
+        target_shape[0] = ov::Dimension(*config.batch_size);
+    }
+
+    if (config.max_length.has_value()) {
+        if (max_position_embeddings.has_value() && *config.max_length > max_position_embeddings.value()) {
+            std::stringstream message;
+            message << "max_length is set to " << *config.max_length
+                    << " which is greater than models max_position_embeddings (" << max_position_embeddings.value()
+                    << ")."
+                    << " Some models may fail with such configuration."
+                    << " Remove max_position_embeddings from config.json to silence this warning.";
+            SPDLOG_WARN(message.str());
+        }
+
+        if (config.pad_to_max_length.has_value() && config.pad_to_max_length.value()) {
+            target_shape[1] = ov::Dimension(*config.max_length);
+        } else {
+            target_shape[1] = ov::Dimension{1, static_cast<int64_t>(config.max_length.value())};
+        }
+    }
+
+    std::map<std::string, ov::PartialShape> input_name_to_shape;
+    input_name_to_shape["input_ids"] = target_shape;
+    input_name_to_shape["attention_mask"] = target_shape;
+
+    if (hasTokenTypeIdsInput(model->inputs())) {
+        input_name_to_shape["token_type_ids"] = target_shape;
+    }
+
+    model->reshape(input_name_to_shape);
+}
+
 // End code from OpenVINO GenAI repository
 
 std::shared_ptr<ov::Model> EmbeddingsServable::applyPrePostProcessing(ov::Core& core, std::shared_ptr<ov::Model> model, ov::AnyMap& properties) {
@@ -340,14 +389,17 @@ std::shared_ptr<ov::Model> EmbeddingsServable::applyPrePostProcessing(ov::Core& 
         }
 
         config.normalize = this->normalizeEmbeddings;
+
         // Compile additional CPU model for NPU dynamic model case
         auto post_model = create_post_model(model, config);
         const std::string postModelDevice = "CPU";
         postProcCompiledModel = core.compile_model(post_model, postModelDevice, properties);
+        SPDLOG_DEBUG("Model compiled {} for {}", parsedModelsPath.string(), postModelDevice);
 
         auto& ovmsConfig = ovms::Config::instance();
         uint32_t numberOfParallelInferRequests = 1;
         if (ovmsConfig.nireq() > 0) {
+            // We take nireq that set globally for all models in ovms startup parameters
             numberOfParallelInferRequests = ovmsConfig.nireq();
         } else {
             try {
@@ -360,8 +412,7 @@ std::shared_ptr<ov::Model> EmbeddingsServable::applyPrePostProcessing(ov::Core& 
         }
         postProcInferRequestsQueue = std::make_unique<OVInferRequestsQueue>(postProcCompiledModel, numberOfParallelInferRequests);
         npuPostprocessingRequired = true;
-
-        // Set additional properties for NPU model
+        
         auto kv_pos = get_kv_axes_pos(model);
         KVDesc kv_desc;
         get_npu_text_embedding_config(properties, kv_pos, kv_desc, config);

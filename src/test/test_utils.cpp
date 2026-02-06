@@ -61,7 +61,7 @@ void printTensor(const ov::Tensor& tensor) {
     if (elementType == ov::element::f32) {
         const float* data = static_cast<const float*>(dataPtr);
         std::cout << "Tensor data (f32): ";
-        for (size_t i = 0; i < 20; ++i) {
+        for (size_t i = 0; i < tensor.get_size(); ++i) {
             std::cout << data[i] << " ";
         }
         std::cout << std::endl;
@@ -85,7 +85,7 @@ void printTensor(const ov::Tensor& tensor) {
     } else if (elementType == ov::element::f64) {
         const double* data = static_cast<const double*>(dataPtr);
         std::cout << "Tensor data (f64): ";
-        for (size_t i = 0; i < 20; ++i) {
+        for (size_t i = 0; i < tensor.get_size(); ++i) {
             std::cout << data[i] << " ";
         }
         std::cout << std::endl;

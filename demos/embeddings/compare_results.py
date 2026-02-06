@@ -97,7 +97,6 @@ for res in OVMS_embeddings:
         #print("OVSentenceTransformer: shape:",OV_embeddings[i].shape, "emb[:20]:\n", OV_embeddings[i][:20])
         print("HF AutoModel: shape:",HF_embeddings[i].shape, "emb[:20]:\n", HF_embeddings[i][:20])
     print("Difference score with HF AutoModel:", np.linalg.norm(ovmsresult - HF_embeddings[i]))
-    #assert np.allclose(ovmsresult, HF_embeddings[i], atol=1e-2)
     if np.allclose(ovmsresult, HF_embeddings[i], atol=1e-2):
         print("[PASS] Arrays are within tolerance (atol=1e-2)")
     else:
@@ -116,5 +115,6 @@ for res in OVMS_embeddings:
 
 if failed:
     print("[FAILED]")
+    assert failed==0
 else:
     print("[SUCCESS]")

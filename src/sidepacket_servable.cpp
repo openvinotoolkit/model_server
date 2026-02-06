@@ -133,6 +133,7 @@ void SidepacketServable::initialize(const std::string& modelDir, const std::stri
     auto& ovmsConfig = ovms::Config::instance();
     uint32_t numberOfParallelInferRequests = 1;
     if (ovmsConfig.nireq() > 0) {
+        // We take nireq that set globally for all models in ovms startup parameters
         numberOfParallelInferRequests = ovmsConfig.nireq();
     } else {
         try {
@@ -149,7 +150,7 @@ void SidepacketServable::initialize(const std::string& modelDir, const std::stri
     m_model = this->applyPrePostProcessing(core, m_model, properties);
 
     compiledModel = core.compile_model(m_model, targetDevice, properties);
-
+    SPDLOG_DEBUG("Model compiled {} for {}", parsedModelsPath.string(), targetDevice);
     inferRequestsQueue = std::make_unique<OVInferRequestsQueue>(compiledModel, numberOfParallelInferRequests);
 }
 
