@@ -61,7 +61,7 @@ if not exist "%~1" mkdir "%~1"
 
 
 :: Export models
-call :download_export_model "%TTS_MODEL%" "text2speech" "--weight-format int4" "%~1"
+call :download_export_model_tts "%TTS_MODEL%" "text2speech" "--weight-format int4" "%~1"
 call :download_export_model "%STT_MODEL%" "speech2text" "--weight-format int4" "%~1"
 call :download_export_model "%VLM_MODEL%" "text_generation" "--weight-format int4" "%~1"
 call :download_export_model "%TEXT_GENERATION_MODEL%" "text_generation" "--weight-format int8" "%~1"
