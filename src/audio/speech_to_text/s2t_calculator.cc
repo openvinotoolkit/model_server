@@ -148,7 +148,7 @@ public:
                 }
                 std::vector<std::string> timestampsTypes = payload.multipartParser->getArrayFieldByName("timestamp_granularities[]");
                 config.word_timestamps = false;
-                for(auto timestampsType : timestampsTypes){
+                for (auto timestampsType : timestampsTypes) {
                     if (timestampsType.size() > 0) {
                         SPDLOG_LOGGER_TRACE(s2t_calculator_logger, "Received timestamp type: {}", timestampsType);
                         if (timestampsType == "segment") {
