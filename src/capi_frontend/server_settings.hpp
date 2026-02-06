@@ -217,6 +217,10 @@ struct ModelsSettingsImpl {
     std::string batchSize;
     std::string shape;
     std::string layout;
+    std::optional<std::string> mean;
+    std::optional<std::string> scale;
+    std::optional<std::string> colorFormat;
+    std::optional<std::string> precision;
     std::string modelVersionPolicy;
     uint32_t nireq = 0;
     std::string targetDevice;
