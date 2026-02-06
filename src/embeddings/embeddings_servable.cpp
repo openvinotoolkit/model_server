@@ -327,8 +327,8 @@ bool hasTokenTypeIdsInput(const T& inputs) {
 }
 
 void reshapeModel(std::shared_ptr<Model>& model,
-                   const TextEmbeddingPipeline::Config& config,
-                   std::optional<size_t> max_position_embeddings) {
+    const TextEmbeddingPipeline::Config& config,
+    std::optional<size_t> max_position_embeddings) {
     ov::PartialShape target_shape{ov::Dimension::dynamic(), ov::Dimension::dynamic()};
 
     if (config.batch_size.has_value()) {
@@ -412,7 +412,7 @@ std::shared_ptr<ov::Model> EmbeddingsServable::applyPrePostProcessing(ov::Core& 
         }
         postProcInferRequestsQueue = std::make_unique<OVInferRequestsQueue>(postProcCompiledModel, numberOfParallelInferRequests);
         npuPostprocessingRequired = true;
-        
+
         auto kv_pos = get_kv_axes_pos(model);
         KVDesc kv_desc;
         get_npu_text_embedding_config(properties, kv_pos, kv_desc, config);
