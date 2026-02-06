@@ -258,7 +258,7 @@ public:
             std::string outputTensorName;
             ModelMetricReporter unused2(nullptr, nullptr, "unused2", 1);
             std::unique_ptr<ExecutingStreamIdGuard> executingStreamIdGuard;
-            auto executingStreamIdGuardForPostprocessingModel = std::make_unique<ExecutingStreamIdGuard>(embeddings_session->getPostProcInferRequestsQueue(), unused2);
+            std::unique_ptr<ExecutingStreamIdGuard> executingStreamIdGuardForPostprocessingModel;
             // NPU embeddings dynamic model case for batch size grater than 1
             if (embeddings_session->getTargetDevice() == "NPU" && receivedBatchSize > 1) {
                 SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Embeddings batch NPU request split for BS {}", receivedBatchSize);
@@ -336,6 +336,7 @@ public:
             // NPU embeddings dynamic model case
             if (embeddings_session->isNpuPostprocessingRequired()) {
                 SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "NPU embeddings dynamic model additional inference");
+                executingStreamIdGuardForPostprocessingModel = std::make_unique<ExecutingStreamIdGuard>(embeddings_session->getPostProcInferRequestsQueue(), unused2);
                 ov::InferRequest& inferRequestForPostprocessingMode = executingStreamIdGuardForPostprocessingModel->getInferRequest();
                 if (receivedBatchSize > 1) {
                     inferRequestForPostprocessingMode.set_tensors("attention_mask", embeddingsAttentionMasks);
