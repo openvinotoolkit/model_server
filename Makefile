@@ -17,7 +17,7 @@
 BUILDKIT_STEP_LOG_MAX_SIZE=500000000
 BUILDKIT_STEP_LOG_MAX_SPEED=10000000
 
-VIRTUALENV_EXE := python3 -m virtualenv -p python3
+VIRTUALENV_EXE := python3 -m venv
 VIRTUALENV_DIR := .venv
 VIRTUALENV_STYLE_DIR := .venv-style
 ACTIVATE="$(VIRTUALENV_DIR)/bin/activate"
@@ -51,7 +51,7 @@ BASE_OS ?= ubuntu24
 BASE_OS_TAG ?= latest
 
 BASE_OS_TAG_UBUNTU ?= 24.04
-BASE_OS_TAG_REDHAT ?= 9.6
+BASE_OS_TAG_REDHAT ?= 9.7
 
 INSTALL_RPMS_FROM_URL ?=
 BUILD_IMAGE ?= build
@@ -75,9 +75,9 @@ FUZZER_BUILD ?= 0
 #         - uncomment source build section, comment binary section
 #         - adjust binary version path - version variable is not passed to WORKSPACE file!
 
-OV_SOURCE_BRANCH ?= 0adcf28eba5760c63dc8d0c4944a9132fd672886 # 01.12.2025 master branch
-OV_TOKENIZERS_BRANCH ?= 6a3d3114a650e65b6c10d097cd7da803b5dbc432 # 01.12.2025 master branch
-OV_GENAI_BRANCH ?= df1c52db71e80c734a20cacb39e51edf14064646 # 01.12.2025 master branch
+OV_SOURCE_BRANCH ?= 77501947b70f6c7996f07c068f2067e868e356ed # releases/2026/0 branch
+OV_TOKENIZERS_BRANCH ?= 47cea02a2d47b2fcf9152a1891f7360d6fdf4a27 # releases/2026/0 branch
+OV_GENAI_BRANCH ?= 67e82bbdcadd740b7d84de7b6586fb1a92836789 # releases/2026/0 branch
 
 OV_SOURCE_ORG ?= openvinotoolkit
 OV_GENAI_ORG ?= openvinotoolkit
@@ -171,12 +171,12 @@ ifeq ($(findstring ubuntu,$(BASE_OS)),ubuntu)
   BASE_IMAGE_RELEASE=$(BASE_IMAGE)
   ifeq ($(BASE_OS_TAG),24.04)
         OS=ubuntu24
-	INSTALL_DRIVER_VERSION ?= "25.35.35096"
-	DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/nightly/2026.0.0.0.dev20251128/openvino_genai_ubuntu24_2026.0.0.0.dev20251128_x86_64.tar.gz
+	INSTALL_DRIVER_VERSION ?= "25.48.36300"
+	DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/pre-release/2026.0.0.0rc2/openvino_genai_ubuntu24_2026.0.0.0rc2_x86_64.tar.gz
   else ifeq  ($(BASE_OS_TAG),22.04)
         OS=ubuntu22
 	INSTALL_DRIVER_VERSION ?= "24.39.31294"
-	DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/nightly/2026.0.0.0.dev20251128/openvino_genai_ubuntu22_2026.0.0.0.dev20251128_x86_64.tar.gz
+	DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/pre-release/2026.0.0.0rc2/openvino_genai_ubuntu22_2026.0.0.0rc2_x86_64.tar.gz
   endif
 endif
 ifeq ($(BASE_OS),redhat)
@@ -185,7 +185,7 @@ ifeq ($(BASE_OS),redhat)
   BASE_IMAGE ?= registry.access.redhat.com/ubi9/ubi:$(BASE_OS_TAG_REDHAT)
   BASE_IMAGE_RELEASE=registry.access.redhat.com/ubi9/ubi-minimal:$(BASE_OS_TAG_REDHAT)
   DIST_OS=redhat
-  DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/nightly/2026.0.0.0.dev20251128/openvino_genai_rhel8_2026.0.0.0.dev20251128_x86_64.tar.gz # not used
+  DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/pre-release/2026.0.0.0rc2/openvino_genai_rhel8_2026.0.0.0rc2_x86_64.tar.gz # not used
   INSTALL_DRIVER_VERSION ?= "24.52.32224"
 endif
 
@@ -266,7 +266,6 @@ spell: venv-style
 
 $(ACTIVATE):
 	@echo "Updating virtualenv dependencies in: $(VIRTUALENV_DIR)..."
-	@python3 -m pip install virtualenv
 	@test -d $(VIRTUALENV_DIR) || $(VIRTUALENV_EXE) $(VIRTUALENV_DIR)
 	@. $(ACTIVATE); pip3 install --upgrade pip
 	@. $(ACTIVATE); pip3 install -vUqq "setuptools<80"
@@ -275,7 +274,6 @@ $(ACTIVATE):
 
 $(ACTIVATE_STYLE):
 	@echo "Updating virtualenv dependencies in: $(VIRTUALENV_STYLE_DIR)..."
-	@python3 -m pip install virtualenv
 	@test -d $(VIRTUALENV_STYLE_DIR) || $(VIRTUALENV_EXE) $(VIRTUALENV_STYLE_DIR)
 	@. $(ACTIVATE_STYLE); pip3 install --upgrade pip
 	@. $(ACTIVATE_STYLE); pip3 install -vUqq "setuptools<80"
@@ -431,7 +429,7 @@ ifeq ($(findstring ubuntu,$(BASE_OS)),ubuntu)
 endif
 ifeq ($(BASE_OS),redhat)
 	touch base_packages.txt
-	docker run registry.access.redhat.com/ubi9-minimal:9.6 rpm -qa  --qf "%{NAME}\n" | sort > base_packages.txt
+	docker run registry.access.redhat.com/ubi9-minimal:9.7 rpm -qa  --qf "%{NAME}\n" | sort > base_packages.txt
 	docker run --entrypoint rpm $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) -qa  --qf "%{NAME}\n" | sort > all_packages.txt
 	rm -rf ovms_rhel_$(OVMS_CPP_IMAGE_TAG)
 	mkdir ovms_rhel_$(OVMS_CPP_IMAGE_TAG)

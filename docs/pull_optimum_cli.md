@@ -15,7 +15,7 @@ mkdir models
 ## Add optimum-cli to OVMS installation on windows
 
 ```bat
-curl -L https://github.com/openvinotoolkit/model_server/releases/download/v2025.3/ovms_windows_python_on.zip -o ovms.zip
+curl -L https://github.com/openvinotoolkit/model_server/releases/download/v2025.4.1/ovms_windows_python_on.zip -o ovms.zip
 tar -xf ovms.zip
 ovms\setupvars.bat
 ovms\python\python -m pip install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
@@ -81,8 +81,13 @@ You may need read permissions to the source model in Hugging Face Hub. Pass the 
 
 You can mount the HuggingFace cache to avoid downloading the original model in case it was pulled earlier.
 
-Below is an example pull command with optimum model cache directory sharing and setting HF_TOKEN environment variable for model download authentication:
+Below is an example pull command with optimum model cache directory sharing for model download:
 
 ```bash
-docker run -e HF_TOKEN=$HF_TOKEN -e HF_HOME=/hf_home/cache --user $(id -u):$(id -g) --group-add=$(id -g) -v /opt/home/user/.cache/huggingface/:/hf_home/cache -v $(pwd)/models:/models:rw openvino/model_server:latest-py --pull --model_repository_path /models --source_model meta-llama/Meta-Llama-3-8B-Instruct --task text_generation --weight-format int8
+docker run -v /etc/passwd:/etc/passwd -e HF_HOME=/hf_home/cache --user $(id -u):$(id -g) --group-add=$(id -g) -v ${HOME}/.cache/huggingface/:/hf_home/cache -v $(pwd)/models:/models:rw openvino/model_server:latest-py --pull --model_repository_path /models --source_model meta-llama/Meta-Llama-3-8B-Instruct --task text_generation --weight-format int8
+```
+
+or deploy without caching the model files with passed HF_TOKEN for authorization:
+```bash
+docker run -p 8000:8000 -e HF_TOKEN=$HF_TOKEN openvino/model_server:latest-py --model_repository_path /tmp --source_model meta-llama/Meta-Llama-3-8B-Instruct --task text_generation --weight-format int8 --target_device CPU --rest_port 8000
 ```

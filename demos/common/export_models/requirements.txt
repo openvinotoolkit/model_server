@@ -3,19 +3,18 @@
 --extra-index-url "https://storage.openvinotoolkit.org/simple/wheels/pre-release"
 --pre
 optimum-intel@git+https://github.com/huggingface/optimum-intel.git
-accelerate==1.11.0
-diffusers==0.35.2  # for image generation
-einops==0.8.1
-nncf
-numpy==2.2.6
-openai
-openvino-tokenizers==2025.4.0.0rc3
-openvino==2025.4.0rc3
-#optimum is in dependency list of optimum-intel
-pillow==12.0.0
+accelerate
+datasets
+diffusers  # for image generation
+einops
+nncf@git+https://github.com/openvinotoolkit/nncf.git
+numpy
+openvino-tokenizers==2026.0.0rc2
+openvino==2026.0.0rc2
+pillow
 sentence_transformers
-sentencepiece==0.2.1  # Required by: transformers
+sentencepiece  # Required by: transformers
 timm==1.0.22
 torchvision
 torch==2.9.1+cpu
-transformers==4.55.4
+transformers<4.58

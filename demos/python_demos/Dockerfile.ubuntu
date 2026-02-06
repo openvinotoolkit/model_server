@@ -22,6 +22,10 @@ RUN apt update && apt install -y python3-pip git
 COPY requirements.txt .
 ENV PIP_BREAK_SYSTEM_PACKAGES=1
 RUN BUILD_CUDA_EXT=0 pip3 install -r requirements.txt --no-cache-dir
-RUN opt_in_out --opt_out
+# Configure Intel telemetry/usage collection to opt-out for all users;
+# `opt_in_out` writes settings under /root/intel, which we copy to / so they
+# are available system-wide (including for the non-root ovms user).
+RUN opt_in_out --opt_out && cp -R /root/intel /
+RUN python3 -c "import openvino" && optimum-cli export openvino --help | grep -q "usage: optimum-cli export openvino" && convert_tokenizer --help | grep -q "Converts tokenizers"
 USER ovms
 ENTRYPOINT [ "/ovms/bin/ovms" ]

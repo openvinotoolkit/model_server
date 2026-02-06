@@ -2334,13 +2334,14 @@ TEST(OvmsConfigTest, positiveMulti) {
 #endif
         "--cache_dir", "/tmp/model_cache",
         "--allowed_local_media_path", "/tmp/path",
+        "--allowed_media_domains", "raw.githubusercontent.com,githubusercontent.com,google.com",
         "--log_path", "/tmp/log_path",
         "--log_level", "ERROR",
         "--grpc_max_threads", "100",
         "--grpc_memory_quota", "1000000",
         "--config_path", "/config.json"};
 
-    int arg_count = 44;
+    int arg_count = 46;
     ConstructorEnabledConfig config;
     config.parse(arg_count, n_argv);
 
@@ -2364,6 +2365,11 @@ TEST(OvmsConfigTest, positiveMulti) {
     EXPECT_EQ(config.cacheDir(), "/tmp/model_cache");
     ASSERT_TRUE(config.getServerSettings().allowedLocalMediaPath.has_value());
     EXPECT_EQ(config.getServerSettings().allowedLocalMediaPath.value(), "/tmp/path");
+    ASSERT_TRUE(config.getServerSettings().allowedMediaDomains.has_value());
+    EXPECT_EQ(config.getServerSettings().allowedMediaDomains.value().size(), 3);
+    EXPECT_EQ(config.getServerSettings().allowedMediaDomains.value()[0], "raw.githubusercontent.com");
+    EXPECT_EQ(config.getServerSettings().allowedMediaDomains.value()[1], "githubusercontent.com");
+    EXPECT_EQ(config.getServerSettings().allowedMediaDomains.value()[2], "google.com");
     EXPECT_EQ(config.logPath(), "/tmp/log_path");
     EXPECT_EQ(config.logLevel(), "ERROR");
     EXPECT_EQ(config.configPath(), "/config.json");
@@ -2432,6 +2438,14 @@ TEST(OvmsConfigTest, positiveSingle) {
         "(3:5,5:6)",
         "--layout",
         "nchw:nhwc",
+        "--mean",
+        "[123.675,116.28,103.53]",
+        "--scale",
+        "[58.395,57.12,57.375]",
+        "--color_format",
+        "BGR:RGB",
+        "--precision",
+        "FP16:INT16",
         "--model_version_policy",
         "setting",
         "--nireq",
@@ -2449,7 +2463,7 @@ TEST(OvmsConfigTest, positiveSingle) {
         "--max_sequence_number",
         "52",
     };
-    int arg_count = 55;
+    int arg_count = 63;
     ConstructorEnabledConfig config;
     config.parse(arg_count, n_argv);
 
@@ -2477,6 +2491,10 @@ TEST(OvmsConfigTest, positiveSingle) {
     EXPECT_EQ(config.batchSize(), "(3:5)");
     EXPECT_EQ(config.shape(), "(3:5,5:6)");
     EXPECT_EQ(config.layout(), "nchw:nhwc");
+    EXPECT_EQ(config.means(), "[123.675,116.28,103.53]");
+    EXPECT_EQ(config.scales(), "[58.395,57.12,57.375]");
+    EXPECT_EQ(config.precision(), "FP16:INT16");
+    EXPECT_EQ(config.colorFormat(), "BGR:RGB");
     EXPECT_EQ(config.modelVersionPolicy(), "setting");
     EXPECT_EQ(config.nireq(), 2);
     EXPECT_EQ(config.targetDevice(), "GPU");
@@ -2493,6 +2511,103 @@ TEST(OvmsConfigTest, positiveSingle) {
 #ifdef _WIN32
     std::filesystem::remove_all(cpu_extension_lib_path);
 #endif
+}
+
+TEST(OvmsConfigTest, positiveModelPreprocessingParams) {
+    char* n_argv[] = {
+        "ovms",
+        "--port",
+        "44",
+        "--model_name",
+        "model",
+        "--model_path",
+        "/path",
+        "--layout",
+        "nchw:nhwc",
+        "--mean",
+        "[123.675,116.28,103.53]",
+        "--scale",
+        "[58.395,57.12,57.375]",
+        "--color_format",
+        "BGR:RGB",
+        "--precision",
+        "FP16:INT16"};
+    int arg_count = 17;
+    ConstructorEnabledConfig config;
+    config.parse(arg_count, n_argv);
+
+    EXPECT_EQ(config.port(), 44);
+    EXPECT_EQ(config.modelPath(), "/path");
+    EXPECT_EQ(config.modelName(), "model");
+    EXPECT_EQ(config.layout(), "nchw:nhwc");
+    EXPECT_EQ(config.means(), "[123.675,116.28,103.53]");
+    EXPECT_EQ(config.scales(), "[58.395,57.12,57.375]");
+    EXPECT_EQ(config.colorFormat(), "BGR:RGB");
+    EXPECT_EQ(config.precision(), "FP16:INT16");
+}
+
+TEST(OvmsConfigTest, missingLayoutModelPreprocessingMean) {
+    char* n_argv[] = {
+        "ovms",
+        "--port",
+        "44",
+        "--model_name",
+        "model",
+        "--model_path",
+        "/path",
+        "--mean",
+        "11.432"};
+    int arg_count = 9;
+    ConstructorEnabledConfig config;
+    EXPECT_THROW(config.parse(arg_count, n_argv), std::logic_error);
+}
+
+TEST(OvmsConfigTest, missingLayoutModelPreprocessingScale) {
+    char* n_argv[] = {
+        "ovms",
+        "--port",
+        "44",
+        "--model_name",
+        "model",
+        "--model_path",
+        "/path",
+        "--scale",
+        "11.432"};
+    int arg_count = 9;
+    ConstructorEnabledConfig config;
+    EXPECT_THROW(config.parse(arg_count, n_argv), std::logic_error);
+}
+
+TEST(OvmsConfigTest, missingLayoutModelPreprocessingColorFormat) {
+    char* n_argv[] = {
+        "ovms",
+        "--port",
+        "44",
+        "--model_name",
+        "model",
+        "--model_path",
+        "/path",
+        "--color_format",
+        "BGR:RGB"};
+    int arg_count = 9;
+    ConstructorEnabledConfig config;
+    EXPECT_THROW(config.parse(arg_count, n_argv), std::logic_error);
+}
+
+TEST(OvmsConfigTest, missingLayoutModelPreprocessingPrecision) {
+    char* n_argv[] = {
+        "ovms",
+        "--port",
+        "44",
+        "--model_name",
+        "model",
+        "--model_path",
+        "/path",
+        "--precision",
+        "F16"};
+    int arg_count = 9;
+    ConstructorEnabledConfig config;
+    EXPECT_THROW(config.parse(arg_count, n_argv), std::logic_error);
 }
 
 TEST(OvmsConfigManipulationTest, positiveEnableModel) {

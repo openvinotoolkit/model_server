@@ -19,8 +19,8 @@ from docker.errors import APIError
 import os
 import shutil
 
-from utils.parametrization import get_tests_suffix
-import config
+from tests.functional.utils.parametrization import get_tests_suffix
+import tests.functional.config as config
 
 
 def get_docker_client():

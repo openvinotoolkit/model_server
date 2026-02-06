@@ -187,6 +187,7 @@ struct ServerSettingsImpl {
     std::string metricsList;
     std::string cpuExtensionLibraryPath;
     std::optional<std::string> allowedLocalMediaPath;
+    std::optional<std::vector<std::string>> allowedMediaDomains;
     std::string logLevel = "INFO";
     std::string logPath;
     bool allowCredentials = false;
@@ -216,6 +217,10 @@ struct ModelsSettingsImpl {
     std::string batchSize;
     std::string shape;
     std::string layout;
+    std::optional<std::string> mean;
+    std::optional<std::string> scale;
+    std::optional<std::string> colorFormat;
+    std::optional<std::string> precision;
     std::string modelVersionPolicy;
     uint32_t nireq = 0;
     std::string targetDevice;

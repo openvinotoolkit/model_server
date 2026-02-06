@@ -574,6 +574,38 @@ DLL_PUBLIC OVMS_Status* OVMS_ServerSettingsSetLogPath(OVMS_ServerSettings* setti
     return nullptr;
 }
 
+DLL_PUBLIC OVMS_Status* OVMS_ServerSettingsSetAllowedLocalMediaPath(OVMS_ServerSettings* settings,
+    const char* allowed_local_media_path) {
+    if (settings == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "server settings"));
+    }
+    if (allowed_local_media_path == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "log path"));
+    }
+    ovms::ServerSettingsImpl* serverSettings = reinterpret_cast<ovms::ServerSettingsImpl*>(settings);
+    serverSettings->allowedLocalMediaPath = allowed_local_media_path;
+    return nullptr;
+}
+
+DLL_PUBLIC OVMS_Status* OVMS_ServerSettingsSetAllowedMediaDomains(OVMS_ServerSettings* settings,
+    const char* allowed_media_domains) {
+    if (settings == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "server settings"));
+    }
+    if (allowed_media_domains == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "log path"));
+    }
+    std::vector<std::string> domains;
+    std::string domain;
+    std::istringstream ss(allowed_media_domains);
+    while (std::getline(ss, domain, ',')) {
+        domains.push_back(domain);
+    }
+    ovms::ServerSettingsImpl* serverSettings = reinterpret_cast<ovms::ServerSettingsImpl*>(settings);
+    serverSettings->allowedMediaDomains = domains;
+    return nullptr;
+}
+
 DLL_PUBLIC OVMS_Status* OVMS_ModelsSettingsSetConfigPath(OVMS_ModelsSettings* settings,
     const char* config_path) {
     if (settings == nullptr) {

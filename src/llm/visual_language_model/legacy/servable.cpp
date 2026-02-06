@@ -36,6 +36,7 @@
 #include "../../../mediapipe_internal/mediapipe_utils.hpp"
 #include "../../apis/openai_completions.hpp"
 #include "../../text_utils.hpp"
+#include "../../../tokenize/tokenize_parser.hpp"
 #if (PYTHON_DISABLE == 0)
 #include "../../py_jinja_template_processor.hpp"
 #endif
@@ -52,8 +53,10 @@ absl::Status VisualLanguageModelLegacyServable::loadRequest(std::shared_ptr<GenA
     }
     if (payload.uri == "/v3/chat/completions" || payload.uri == "/v3/v1/chat/completions") {
         executionContext->endpoint = Endpoint::CHAT_COMPLETIONS;
+    } else if (TokenizeParser::isTokenizeEndpoint(payload.uri)) {
+        executionContext->endpoint = Endpoint::TOKENIZE;
     } else {
-        return absl::InvalidArgumentError("Wrong endpoint. VLM Servable allowed only on /v3/chat/completions endpoint");
+        return absl::InvalidArgumentError("Wrong endpoint. VLM Servable allowed only on /v3/chat/completions endpoint or /v3/tokenize");
     }
     executionContext->payload = payload;
     return absl::OkStatus();
@@ -81,7 +84,7 @@ absl::Status VisualLanguageModelLegacyServable::parseRequest(std::shared_ptr<Gen
         getProperties()->tokenizer);
     auto& config = ovms::Config::instance();
 
-    auto status = executionContext->apiHandler->parseRequest(getProperties()->maxTokensLimit, getProperties()->bestOfLimit, getProperties()->maxModelLength, config.getServerSettings().allowedLocalMediaPath);
+    auto status = executionContext->apiHandler->parseRequest(getProperties()->maxTokensLimit, getProperties()->bestOfLimit, getProperties()->maxModelLength, config.getServerSettings().allowedLocalMediaPath, config.getServerSettings().allowedMediaDomains);
     if (!status.ok()) {
         SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Failed to parse request: {}", status.message());
         return status;
@@ -167,16 +170,14 @@ absl::Status VisualLanguageModelLegacyServable::preparePartialResponse(std::shar
         std::unique_lock lock(legacyExecutionContext->mutex);
         while (executionContext->lastStreamerCallbackOutput.size() == 0 && generationStatus != std::future_status::ready) {
             SPDLOG_LOGGER_TRACE(llm_executor_logger, "Waiting for partial data...");
-            legacyExecutionContext->executionInProgress.wait(lock);
+            auto cvStatus = legacyExecutionContext->executionInProgress.wait_for(lock, std::chrono::milliseconds(10));
             generationStatus = legacyExecutionContext->finished.wait_for(std::chrono::nanoseconds::zero());
+            if (cvStatus == std::cv_status::timeout && generationStatus == std::future_status::ready) {
+                SPDLOG_LOGGER_TRACE(llm_executor_logger, "Race condition avoided - notification was missed but recovered with timeout");
+            }
         }
         lastTextChunk = executionContext->lastStreamerCallbackOutput;
         executionContext->lastStreamerCallbackOutput = "";
-    }
-    if (!lastTextChunk.empty()) {
-        auto tokensTensor = properties->tokenizer.encode(lastTextChunk, ov::genai::add_special_tokens(false)).input_ids;
-        auto numTokens = tokensTensor.get_size();
-        executionContext->apiHandler->incrementProcessedTokens(numTokens);
     }
     if (generationStatus != std::future_status::ready) {  // continue
         if (lastTextChunk.size() > 0) {
@@ -201,10 +202,10 @@ absl::Status VisualLanguageModelLegacyServable::preparePartialResponse(std::shar
         if (!serializedChunk.empty()) {
             executionContext->response = wrapTextInServerSideEventMessage(serializedChunk);
         }
-        // Disabling usage in streaming mode in legacy servable due to the issue with token counting.
+        // TODO: Usage is zero in streaming mode in legacy servable due to the issue with token counting.
+        // This enables Continue.dev streaming scenario, which always uses include_usage: true
         if (executionContext->apiHandler->getStreamOptions().includeUsage)
-            return absl::InvalidArgumentError("Usage is not supported in legacy servable in streaming mode.");
-        // executionContext->response += wrapTextInServerSideEventMessage(executionContext->apiHandler->serializeStreamingUsageChunk());
+            executionContext->response += wrapTextInServerSideEventMessage(executionContext->apiHandler->serializeStreamingUsageChunk());
 
         executionContext->response += wrapTextInServerSideEventMessage("[DONE]");
 

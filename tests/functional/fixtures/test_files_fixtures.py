@@ -16,17 +16,17 @@
 import os
 import pytest
 
-import config
+import tests.functional.config as config
 
 
 def new_file_name(file):
     return file.replace("_template", "")
 
 
-@pytest.fixture(autouse=True, scope="session")
-def prepare_json(request):
+@pytest.fixture(scope="session")
+def prepare_json(request, copy_cached_models_to_test_dir):
     files_to_prepare = ["config_template.json", "model_version_policy_config_template.json"]
-    path_to_config = "tests/functional/"
+    path_to_config = os.path.join(config.ovms_c_repo_path, "tests/functional/")
 
     def finalizer():
         for file in files_to_prepare:
@@ -35,7 +35,9 @@ def prepare_json(request):
     request.addfinalizer(finalizer)
 
     for file_to_prepare in files_to_prepare:
-        with open(path_to_config + file_to_prepare, "r") as template:
+        file_to_prepare_path = file_to_prepare if path_to_config.strip(os.path.sep) in os.getcwd() \
+            else os.path.join(path_to_config, file_to_prepare)
+        with open(file_to_prepare_path, "r") as template:
             new_file_path = os.path.join(config.path_to_mount, new_file_name(file_to_prepare))
             with open(new_file_path, "w+") as config_file:
                 for line in template:

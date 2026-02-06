@@ -597,12 +597,43 @@ std::variant<std::optional<std::string>, Status> GraphExport::createPluginString
         rapidjson::Value value;
         value.SetBool(pluginConfig.useNpuPrefixCaching.value());
         auto itr = d.FindMember("NPUW_LLM_ENABLE_PREFIX_CACHING");
-        if (itr != d.MemberEnd()) {
+        bool foundInTopLevel = (itr != d.MemberEnd());
+
+        bool foundInDeviceProperties = false;
+        if (!foundInTopLevel) {
+            auto devicePropsItr = d.FindMember("DEVICE_PROPERTIES");
+            if (devicePropsItr != d.MemberEnd() && devicePropsItr->value.IsObject()) {
+                auto npuItr = devicePropsItr->value.FindMember("NPU");
+                if (npuItr != devicePropsItr->value.MemberEnd() && npuItr->value.IsObject()) {
+                    auto npuPrefixCachingItr = npuItr->value.FindMember("NPUW_LLM_ENABLE_PREFIX_CACHING");
+                    foundInDeviceProperties = (npuPrefixCachingItr != npuItr->value.MemberEnd());
+                }
+            }
+        }
+
+        if (foundInTopLevel || foundInDeviceProperties) {
             return Status(StatusCode::PLUGIN_CONFIG_CONFLICTING_PARAMETERS, "Doubled NPUW_LLM_ENABLE_PREFIX_CACHING parameter in plugin config.");
         }
-        d.AddMember("NPUW_LLM_ENABLE_PREFIX_CACHING", value, d.GetAllocator());
+
+        // Add to nested structure DEVICE_PROPERTIES.NPU
+        auto devicePropsItr = d.FindMember("DEVICE_PROPERTIES");
+        if (devicePropsItr == d.MemberEnd()) {
+            rapidjson::Value deviceProps(rapidjson::kObjectType);
+            d.AddMember("DEVICE_PROPERTIES", deviceProps, d.GetAllocator());
+            devicePropsItr = d.FindMember("DEVICE_PROPERTIES");
+        }
+
+        auto npuItr = devicePropsItr->value.FindMember("NPU");
+        if (npuItr == devicePropsItr->value.MemberEnd()) {
+            rapidjson::Value npuObj(rapidjson::kObjectType);
+            devicePropsItr->value.AddMember("NPU", npuObj, d.GetAllocator());
+            npuItr = devicePropsItr->value.FindMember("NPU");
+        }
+
+        npuItr->value.AddMember("NPUW_LLM_ENABLE_PREFIX_CACHING", value, d.GetAllocator());
         configNotEmpty = true;
     }
+
     if (configNotEmpty) {
         // Serialize the document to a JSON string
         rapidjson::StringBuffer buffer;

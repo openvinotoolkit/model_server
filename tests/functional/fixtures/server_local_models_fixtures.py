@@ -18,9 +18,9 @@ import shutil
 import os
 import pytest
 
-import config
-from model.models_information import Resnet, ResnetONNX, AgeGender
-from object_model.server import Server
+import tests.functional.config as config
+from tests.functional.model.models_information import Resnet, ResnetONNX, AgeGender
+from tests.functional.object_model.server import Server
 
 
 @pytest.fixture(scope="session")
@@ -65,7 +65,7 @@ def start_server_with_mapping(request):
     request.addfinalizer(delete_mapping_file)
 
     file_dst_path = config.path_to_mount + '/age_gender/1/mapping_config.json'
-    shutil.copyfile('tests/functional/mapping_config.json', file_dst_path)
+    shutil.copyfile(os.path.join(config.ovms_c_repo_path, 'tests/functional/mapping_config.json'), file_dst_path)
 
     start_server_command_args = {"model_name": AgeGender.name,
                                  "model_path": AgeGender.model_path}

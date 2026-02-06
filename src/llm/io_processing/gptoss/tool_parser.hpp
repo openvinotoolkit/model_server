@@ -58,7 +58,10 @@ public:
     std::optional<rapidjson::Document> parseChunk(const std::string& chunk, ov::genai::GenerationFinishReason finishReason) override;
 
     const std::vector<std::string>& getParsingStartTags() const override {
-        static const std::vector<std::string> parsingStartTags{parsingStartTag};
+        static const std::vector<std::string> parsingStartTags{
+            parsingStartTag,
+            "<|channel|>analysis to=",  // Workaround: allow tool calls emitted from the analysis channel (non-standard behavior observed in some model outputs).
+        };
         return parsingStartTags;
     }
 

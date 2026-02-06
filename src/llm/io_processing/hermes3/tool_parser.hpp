@@ -32,8 +32,7 @@ protected:
     const std::string toolCallEndTag = "</tool_call>";
 
     const std::string parsingStartTag = toolCallStartTag;
-    // Tools calls are expected to be the last part of the content, so we do not specify an end tag.
-    const std::string parsingEndTag = "";
+    const std::string parsingEndTag = toolCallEndTag;
 
     // Streaming required members and methods
     rapidjson::Document lastJson;

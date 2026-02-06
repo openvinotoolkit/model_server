@@ -22,15 +22,15 @@ This procedure can be used to pull preconfigured models from OpenVINO organizati
 :sync: Qwen3-Embedding-0.6B-int8-ov
 **Using docker image**
 ```bash
+mkdir -p models
 docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --pull --model_repository_path /models --source_model OpenVINO/Qwen3-Embedding-0.6B-int8-ov --pooling LAST --task embeddings
-
 docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --add_to_config --config_path /models/config.json --model_name OpenVINO/Qwen3-Embedding-0.6B-int8-ov --model_path OpenVINO/Qwen3-Embedding-0.6B-int8-ov
 ```
 
 **On Bare Metal (Windows/Linux)**
 ```console
+mkdir models
 ovms --pull --model_repository_path /models --source_model OpenVINO/Qwen3-Embedding-0.6B-int8-ov --pooling LAST --task embeddings
-
 ovms --add_to_config --config_path /models/config.json --model_name OpenVINO/Qwen3-Embedding-0.6B-int8-ov --model_path OpenVINO/Qwen3-Embedding-0.6B-int8-ov
 ```
 :::
@@ -152,6 +152,24 @@ python export_model.py embeddings_ov --source_model intfloat/multilingual-e5-lar
 python export_model.py embeddings_ov --source_model intfloat/multilingual-e5-large --pooling MEAN --weight-format int8 --config_file_path models/config.json --model_repository_path models
 ```
 :::
+:::{tab-item} Alibaba-NLP/gte-large-en-v1.5
+:sync: gte-large-en-v1.5
+```console
+python export_model.py embeddings_ov --source_model Alibaba-NLP/gte-large-en-v1.5 --pooling CLS --extra_quantization_params "--library sentence_transformers"
+```
+:::
+:::{tab-item} nomic-ai/nomic-embed-text-v1.5
+:sync: nomic-embed-text-v1.5
+```console
+python export_model.py embeddings_ov --source_model nomic-ai/nomic-embed-text-v1.5 --pooling MEAN --extra_quantization_params "--library sentence_transformers"
+```
+:::
+:::{tab-item} sentence-transformers/all-mpnet-base-v2
+:sync: all-mpnet-base-v2
+```console
+python export_model.py embeddings_ov --source_model sentence-transformers/all-mpnet-base-v2 --pooling MEAN
+```
+:::
 ::::
 
 
@@ -205,6 +223,24 @@ python export_model.py embeddings_ov --source_model intfloat/multilingual-e5-lar
 python export_model.py embeddings_ov --source_model intfloat/multilingual-e5-large --pooling MEAN --weight-format int8 --target_device GPU --config_file_path models/config.json --model_repository_path models
 ```
 :::
+:::{tab-item} Alibaba-NLP/gte-large-en-v1.5
+:sync: gte-large-en-v1.5
+```console
+python export_model.py embeddings_ov --source_model Alibaba-NLP/gte-large-en-v1.5 --pooling CLS --weight-format int8 --target_device GPU --extra_quantization_params "--library sentence_transformers" --config_file_path models/config.json --model_repository_path models
+```
+:::
+:::{tab-item} nomic-ai/nomic-embed-text-v1.5
+:sync: nomic-embed-text-v1.5
+```console
+python export_model.py embeddings_ov --source_model nomic-ai/nomic-embed-text-v1.5 --pooling MEAN --weight-format int8 --target_device GPU --extra_quantization_params "--library sentence_transformers" --config_file_path models/config.json --model_repository_path models
+```
+:::
+:::{tab-item} sentence-transformers/all-mpnet-base-v2
+:sync: all-mpnet-base-v2
+```console
+python export_model.py embeddings_ov --source_model sentence-transformers/all-mpnet-base-v2 --pooling MEAN --weight-format int8 --target_device GPU --config_file_path models/config.json --model_repository_path models
+```
+:::
 ::::
 
 
@@ -256,6 +292,9 @@ All models supported by [optimum-intel](https://github.com/huggingface/optimum-i
 |mixedbread-ai/deepset-mxbai-embed-de-large-v1|MEAN|
 |intfloat/multilingual-e5-large-instruct|MEAN|
 |intfloat/multilingual-e5-large|MEAN|
+|Alibaba-NLP/gte-large-en-v1.5|CLS|
+|nomic-ai/nomic-embed-text-v1.5|MEAN|
+|sentence-transformers/all-mpnet-base-v2|MEAN|
 
 
 ## Server Deployment
@@ -296,7 +335,7 @@ ovms --rest_port 8000 --config_path ./models/config.json
 
 Wait for the model to load. You can check the status with a simple command below. Note that the slash `/` in the model name needs to be escaped with `%2F`:
 ```bash
-curl http://localhost:9999/v3/models/BAAI%2Fbge-large-en-v1.5
+curl http://localhost:8000/v3/models/BAAI%2Fbge-large-en-v1.5
 
 {"id":"BAAI/bge-large-en-v1.5","object":"model","created":1763997378,"owned_by":"OVMS"}
 ```
@@ -367,7 +406,7 @@ It will report results like `Similarity score as cos_sim 0.9605122725993963`.
 
 ## Benchmarking feature extraction
 
-An asynchronous benchmarking client can be used to access the model server performance with various load conditions. Below are execution examples captured on dual Intel(R) Xeon(R) CPU Max 9480.
+An asynchronous benchmarking client can be used to access the model server performance with various load conditions. Below are execution examples captured on Intel(R) Core(TM) Ultra X7 368H.
 ```console
 git clone https://github.com/openvinotoolkit/model_server
 pushd .
@@ -375,35 +414,35 @@ cd model_server/demos/benchmark/v3/
 pip install -r requirements.txt
 python benchmark.py --api_url http://localhost:8000/v3/embeddings --dataset synthetic --synthetic_length 5 --request_rate 10 --batch_size 1 --model BAAI/bge-large-en-v1.5
 Number of documents: 1000
-100%|████████████████████████████████████████████████████████████████| 1000/1000 [01:44<00:00,  9.56it/s]
+100%|██████████████████████████████████████| 1000/1000 [01:40<00:00,  9.92it/s]
 Tokens: 5000
 Success rate: 100.0%. (1000/1000)
-Throughput - Tokens per second: 47.8
-Mean latency: 14.40 ms
-Median latency: 13.97 ms
+Throughput - Tokens per second: 49.6
+Mean latency: 12.75 ms
+Median latency: 12.43 ms
 Average document length: 5.0 tokens
 
 
 python benchmark.py --api_url http://localhost:8000/v3/embeddings --request_rate inf --batch_size 32 --dataset synthetic --synthetic_length 510 --model BAAI/bge-large-en-v1.5
 Number of documents: 1000
-100%|████████████████████████████████████████████████████████████████| 32/32 [00:17<00:00,  1.82it/s]
+100%|██████████████████████████████████████| 32/32 [00:13<00:00,  2.43it/s]
 Tokens: 510000
 Success rate: 100.0%. (32/32)
-Throughput - Tokens per second: 29,066.2
-Mean latency: 9768.28 ms
-Median latency: 9905.79 ms
+Throughput - Tokens per second: 38,746.8
+Mean latency: 6851.76 ms
+Median latency: 6790.46 ms
 Average document length: 510.0 tokens
 
 
-python benchmark.py --api_url http://localhost:8000/v3/embeddings --request_rate inf --batch_size 1 --dataset Cohere/wikipedia-22-12-simple-embeddings --model BAAI/bge-large-en-v1.5
+python benchmark.py --api_url http://localhost:8000/v3/embeddings --request_rate inf --batch_size 1 --dataset Cohere/wikipedia-2023-11-embed-multilingual-v3 --hf-subset simple --model BAAI/bge-large-en-v1.5
 Number of documents: 1000
-100%|████████████████████████████████████████████████████████████████| 1000/1000 [00:15<00:00, 64.02it/s]
-Tokens: 83208
+100%|██████████████████████████████████████| 1000/1000 [00:11<00:00, 89.84it/s]
+Tokens: 66568
 Success rate: 100.0%. (1000/1000)
-Throughput - Tokens per second: 4,120.6
-Mean latency: 1882.98 ms
-Median latency: 1608.47 ms
-Average document length: 83.208 tokens
+Throughput - Tokens per second: 5,980.8
+Mean latency: 1037.83 ms
+Median latency: 912.00 ms
+Average document length: 66.568 tokens
 ```
 
 ## RAG with Model Server
@@ -535,7 +574,7 @@ Compare against local HuggingFace execution for reference:
 mteb run -m thenlper/gte-small -t Banking77Classification --output_folder results
 ``` 
 
-# Usage of tokenize endpoint (release 2025.4 or weekly)
+# Usage of tokenize endpoint
 
 The `tokenize` endpoint provides a simple API for tokenizing input text using the same tokenizer as the deployed embeddings model. This allows you to see how your text will be split into tokens before feature extraction or inference. The endpoint accepts a string or list of strings and returns the corresponding token IDs.
 

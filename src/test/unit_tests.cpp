@@ -17,6 +17,7 @@
 #include "environment.hpp"
 #include "gpuenvironment.hpp"
 #include "gguf_environment.hpp"
+#include "python_environment.hpp"
 
 int main(int argc, char** argv) {
     ::testing::InitGoogleTest(&argc, argv);
@@ -24,6 +25,7 @@ int main(int argc, char** argv) {
     ::testing::AddGlobalTestEnvironment(new Environment);
     ::testing::AddGlobalTestEnvironment(new GPUEnvironment);
     ::testing::AddGlobalTestEnvironment(new GGUFEnvironment);
+    ::testing::AddGlobalTestEnvironment(new PythonEnvironment);
     ::testing::FLAGS_gtest_death_test_style = "threadsafe";
     return RUN_ALL_TESTS();
 }

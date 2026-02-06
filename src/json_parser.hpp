@@ -13,9 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#ifndef SRC_JSON_PARSER_HPP_
-#define SRC_JSON_PARSER_HPP_
-#endif  // SRC_JSON_PARSER_HPP_
+
+#pragma once
 #include <map>
 #include <string>
 

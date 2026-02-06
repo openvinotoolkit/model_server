@@ -36,7 +36,16 @@ Status PythonInterpreterModule::start(const ovms::Config&) {
     state = ModuleState::STARTED_INITIALIZE;
     SPDLOG_INFO("{} starting", PYTHON_INTERPRETER_MODULE_NAME);
     this->threadId = std::this_thread::get_id();
-    py::initialize_interpreter();
+    if (!Py_IsInitialized()) {
+        SPDLOG_INFO("Initializing python interpreter", PYTHON_INTERPRETER_MODULE_NAME);
+        py::initialize_interpreter();
+        ownsInterpreter = true;
+    } else {
+        SPDLOG_INFO("Python interpreter already initialized", PYTHON_INTERPRETER_MODULE_NAME);
+        ownsInterpreter = false;
+    }
+
+    py::gil_scoped_acquire acquire;
     py::exec(R"(
         import sys
         print("Python version:")
@@ -63,7 +72,8 @@ void PythonInterpreterModule::shutdown() {
     pythonBackend.reset();
     state = ModuleState::SHUTDOWN;
     SPDLOG_INFO("{} shutdown", PYTHON_INTERPRETER_MODULE_NAME);
-    py::finalize_interpreter();
+    if (ownsInterpreter)
+        py::finalize_interpreter();
 }
 
 void PythonInterpreterModule::releaseGILFromThisThread() const {
@@ -82,11 +92,17 @@ void PythonInterpreterModule::reacquireGILForThisThread() const {
     this->GILScopedRelease.reset();
 }
 
+bool PythonInterpreterModule::ownsPythonInterpreter() const {
+    return ownsInterpreter;
+}
+
 PythonBackend* PythonInterpreterModule::getPythonBackend() const {
     return pythonBackend.get();
 }
 
-PythonInterpreterModule::PythonInterpreterModule() = default;
+PythonInterpreterModule::PythonInterpreterModule() {
+    ownsInterpreter = false;
+}
 
 PythonInterpreterModule::~PythonInterpreterModule() {
     this->shutdown();

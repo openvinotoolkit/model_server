@@ -24,6 +24,7 @@
 #include <tuple>
 #include <unordered_map>
 #include <vector>
+#include <variant>
 #pragma warning(push)
 #pragma warning(disable : 6313)
 #include <rapidjson/document.h>
@@ -31,6 +32,8 @@
 
 #include "anonymous_input_name.hpp"
 #include "layout_configuration.hpp"
+#include "color_format_configuration.hpp"
+#include "precision_configuration.hpp"
 #include "modelversion.hpp"
 #include "shape.hpp"
 #include "status.hpp"  // TODO fwd dec
@@ -41,6 +44,7 @@ class ModelVersionPolicy;
 using mapping_config_t = std::unordered_map<std::string, std::string>;
 using plugin_config_t = std::map<std::string, ov::Any>;
 using custom_loader_options_config_t = std::map<std::string, std::string>;
+using float_vec_or_value_t = std::variant<std::vector<float>, float>;
 
 extern const std::string MAPPING_CONFIG_JSON;
 const uint32_t DEFAULT_MAX_SEQUENCE_NUMBER = 500;
@@ -199,6 +203,26 @@ private:
          * @brief custom_loader_options config as string
          */
     std::string customLoaderOptionsStr;
+
+    /**
+         * @brief meanValues mean preprocessing parameters
+         */
+    std::optional<float_vec_or_value_t> meanValues;
+
+    /**
+         * @brief scaleValues scale preprocessing parameters
+         */
+    std::optional<float_vec_or_value_t> scaleValues;
+
+    /**
+         * @brief colorFormat color format preprocessing parameter
+         */
+    std::optional<ovms::ColorFormatConfiguration> colorFormat;
+
+    /**
+         * @brief precision precision preprocessing parameter
+         */
+    std::optional<ovms::PrecisionConfiguration> precision;
 
 public:
     /**
@@ -668,6 +692,52 @@ public:
     Status parseLayoutParameter(const std::string& command);
 
     /**
+         * @brief Parses value from string and extracts means info
+         * 
+         * @param string
+         * 
+         * @return status
+         */
+    Status parseMean(const std::string& command);
+
+    /**
+          * @brief Parses value from string and extracts scales info
+          * 
+          * @param string
+          * 
+          * @return status
+          */
+    Status parseScale(const std::string& command);
+
+    /**
+          * @brief Parses value from string and extracts color format
+          * 
+          * @param string
+          * 
+          * @return status
+          */
+    Status parseColorFormat(const std::string& command);
+
+    /**
+          * @brief Parses value from string and extracts precision
+          * 
+          * @param string
+          * 
+          * @return status
+          */
+    Status parsePrecision(const std::string& command);
+
+    /**
+          * @brief Parses value from string and extracts float value or array of float values
+          * 
+          * @param string
+          * @param value
+          * 
+          * @return status
+          */
+    Status parseFloatArrayOrValue(const std::string& str, std::optional<float_vec_or_value_t>& values);
+
+    /**
          * @brief Returns true if any input shape specified in shapes map is in AUTO mode
          * 
          * @return bool
@@ -785,6 +855,42 @@ public:
     void setLayouts(const layout_configurations_map_t& layouts) {
         this->layouts = layouts;
         this->layout = LayoutConfiguration();
+    }
+
+    /**
+         * @brief Get the get scales
+         * 
+         * @return const std::optional<float_vec_or_value_t>& 
+         */
+    const std::optional<float_vec_or_value_t>& getScales() const {
+        return this->scaleValues;
+    }
+
+    /**
+         * @brief Get the get means
+         * 
+         * @return const std::optional<float_vec_or_value_t>& 
+         */
+    const std::optional<float_vec_or_value_t>& getMeans() const {
+        return this->meanValues;
+    }
+
+    /**
+         * @brief Get the get color format
+         * 
+         * @return const std::optional<ovms::ColorFormatConfiguration>& 
+         */
+    const std::optional<ovms::ColorFormatConfiguration>& getColorFormat() const {
+        return this->colorFormat;
+    }
+
+    /**
+         * @brief Get the get precision
+         * 
+         * @return const std::optional<ovms::PrecisionConfiguration>& 
+         */
+    const std::optional<ovms::PrecisionConfiguration>& getPrecision() const {
+        return this->precision;
     }
 
     /**

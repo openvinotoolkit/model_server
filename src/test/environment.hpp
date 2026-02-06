@@ -18,7 +18,15 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#define SKIP_AND_EXIT_IF_NOT_RUNNING_UNSTABLE()                                                                   \
+    if (!Environment::shouldRunUnstableTests()) {                                                                 \
+        GTEST_SKIP() << "Skipping unstable tests because those tests were not enabled. Check environment.[hc]pp"; \
+        return;                                                                                                   \
+    }
+
 class Environment : public testing::Environment {
 public:
     void SetUp() override;
+    static bool runUnstableTests;
+    static bool shouldRunUnstableTests();
 };

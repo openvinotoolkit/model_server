@@ -120,17 +120,19 @@ message LLMCalculatorOptions {
 
     optional bool draft_dynamic_split_fuse = 17;
 
+    optional bool draft_eagle3_mode = 18 [default = false];
+
     // End of speculative decoding config
 
-    optional PipelineType pipeline_type = 18 [default = AUTO];
+    optional PipelineType pipeline_type = 19 [default = AUTO];
+    
+    optional CacheEvictionConfig cache_eviction_config = 20;
 
-    optional CacheEvictionConfig cache_eviction_config = 19;
+    optional string tool_parser = 21;
 
-    optional string tool_parser = 20;
+    optional string reasoning_parser = 22;
 
-    optional string reasoning_parser = 21;
+    optional bool enable_tool_guided_generation = 23 [default = false];
 
-    optional bool enable_tool_guided_generation = 22 [default = false];
-
-    optional SparseAttentionConfig sparse_attention_config = 23;
+    optional SparseAttentionConfig sparse_attention_config = 24;
 }

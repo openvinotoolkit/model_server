@@ -35,6 +35,12 @@ ${debug_bazel_flags} \
 LD_LIBRARY_PATH=/opt/opencv/lib/:/opt/intel/openvino/runtime/lib/intel64/:/opt/intel/openvino/runtime/3rdparty/tbb/lib/
 PYTHONPATH=/opt/intel/openvino/python:/ovms/bazel-bin/src/python/binding
 
+# if https proxy is set in the environment and file .user.bazelrc doesn't exist yet, add proxy env for bazel test
+if [ -n "${HTTPS_PROXY}" ] && [ ! -f .user.bazelrc ] ; then
+    echo test:linux --test_env https_proxy=${HTTPS_PROXY} >> .user.bazelrc
+    echo test:linux --test_env http_proxy=${HTTP_PROXY} >> .user.bazelrc
+fi
+
 # Check if RUN_GPU_TESTS is set and add it to SHARED_OPTIONS
 if [ "$RUN_GPU_TESTS" == "1" ]; then
     if grep -q "ID=ubuntu" /etc/os-release; then
@@ -69,43 +75,12 @@ if [ "$RUN_TESTS" == "1" ] ; then
     bazel build ${SHARED_OPTIONS} //src:ovms_test || exit 1
     echo "Executing unit tests"
     failed=0
-    if [[ "$(python3 --version)" =~ "Python 3.12" ]] ; then
-        set +x
-        # Tests starting python interpreter should be executed separately for Python 3.12 due to issues with multiple reinitialization of the interpreter
-        for i in `./bazel-bin/src/ovms_test --gtest_list_tests --gtest_filter="-HfDownloaderPullHfModel.*:-LLMChatTemplateTest.*:LLMOptionsHttpTest.*:LLMVLMOptionsHttpTest.*" | grep -vE '^ ' | cut -d. -f1` ; do
-            if bazel test ${SHARED_OPTIONS} --test_filter="$i.*" //src:ovms_test > tmp.log 2>&1 ; then
-                echo -n .
-            else
-                failed=1
-                echo -n F
-                cat tmp.log >> ${FAIL_LOG}
-            fi
-            cat tmp.log >> ${TEST_LOG}
-        done
-        for i in `./bazel-bin/src/ovms_test --gtest_list_tests --gtest_filter="HfDownloaderPullHfModel.*:LLMChatTemplateTest.*:LLMOptionsHttpTest.*:LLMVLMOptionsHttpTest.*" | grep '^  '` ; do
-            if bazel test ${SHARED_OPTIONS} --test_filter="*.$i" //src:ovms_test > tmp.log 2>&1 ; then
-                echo -n .
-            else
-                failed=1
-                echo -n F
-                cat tmp.log >> ${FAIL_LOG}
-            fi
-            cat tmp.log >> ${TEST_LOG}
-            echo -n .
-        done
-        if [ $failed -eq 1 ]; then
-          echo "Tests failed:"
-          cat ${FAIL_LOG}
-        else
-          rm -rf ${FAIL_LOG}
-        fi
-    else
-        # For RH UBI and Ubuntu20
-        if ! bazel test --jobs=$JOBS ${debug_bazel_flags} ${SHARED_OPTIONS} --test_summary=detailed --test_output=streamed --test_filter="*" //src:ovms_test > ${TEST_LOG} 2>&1 ; then
-            failed=1
-        fi
-        cat ${TEST_LOG} | tail -500
+
+    # For RH UBI and Ubuntu
+    if ! bazel test --jobs=$JOBS ${debug_bazel_flags} ${SHARED_OPTIONS} --test_summary=detailed --test_output=streamed --test_filter="*" //src:ovms_test > ${TEST_LOG} 2>&1 ; then
+        failed=1
     fi
+    cat ${TEST_LOG} | tail -500
     grep -a " ms \| ms)" ${TEST_LOG} > linux_tests_summary.log
     echo "Tests completed:" `grep -a " ms \| ms)" ${TEST_LOG} | grep " OK " | wc -l`
     compress_logs

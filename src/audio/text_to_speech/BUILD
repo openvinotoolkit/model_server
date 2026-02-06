@@ -20,6 +20,14 @@ load("//:common_settings.bzl", "ovms_cc_library")
 ovms_cc_library(
     name = "t2s_servable",
     hdrs = ["t2s_servable.hpp"],
+    srcs = ["t2s_servable.cpp"],
+        deps = [
+        "//third_party:genai",
+        "@mediapipe//mediapipe/framework:calculator_framework",
+        "//src:libovmslogging",
+        "//src:libmodelconfigjsonparser",
+        "t2s_calculator_cc_proto",
+    ],
     visibility = ["//visibility:public"],
     alwayslink = 1,
 )
@@ -36,8 +44,8 @@ ovms_cc_library(
         "//src/port:rapidjson_stringbuffer",
         "//src/port:rapidjson_writer",
         ":t2s_servable",
-        "//third_party:genai",
         "//src/audio:audio_utils",
+        "//src:libmodelconfigjsonparser",
     ],
     visibility = ["//visibility:public"],
     alwayslink = 1,
