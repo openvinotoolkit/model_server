@@ -16,6 +16,7 @@
 #include "embeddings_servable.hpp"
 
 #include <limits>
+#include <map>
 #include <utility>
 #include <vector>
 
