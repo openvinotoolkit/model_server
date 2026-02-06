@@ -56,9 +56,9 @@ struct SttServable {
             SPDLOG_ERROR("Error during llm node plugin_config option parsing to JSON: {}", nodeOptions.plugin_config());
             throw std::runtime_error("Error during plugin_config option parsing");
         }
-        if (nodeOptions.target_device() == "NPU")
-            config["STATIC_PIPELINE"] = true;
         enableWordTimestamps = nodeOptions.enable_word_timestamps();
+        if (enableWordTimestamps && nodeOptions.target_device() == "NPU")
+            config["STATIC_PIPELINE"] = true;
         config["word_timestamps"] = enableWordTimestamps;
         sttPipeline = std::make_shared<ov::genai::WhisperPipeline>(parsedModelsPath.string(), nodeOptions.target_device(), config);
     }

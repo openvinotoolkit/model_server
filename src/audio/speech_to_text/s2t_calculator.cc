@@ -148,18 +148,16 @@ public:
                 }
                 std::vector<std::string> timestampsTypes = payload.multipartParser->getArrayFieldByName("timestamp_granularities[]");
                 config.word_timestamps = false;
-                for (auto timestampsType : timestampsTypes) {
-                    if (timestampsType.size() > 0) {
-                        SPDLOG_LOGGER_TRACE(s2t_calculator_logger, "Received timestamp type: {}", timestampsType);
-                        if (timestampsType == "segment") {
-                            config.return_timestamps = true;
-                        } else if (timestampsType == "word") {
-                            if (!pipe->enableWordTimestamps)
-                                return absl::InvalidArgumentError("Word timestamps not supported for this model");
-                            config.word_timestamps = true;
-                        } else {
-                            return absl::InvalidArgumentError("Invalid timestamp_granularities type. Allowed types: \"segment\", \"word\"");
-                        }
+                for (auto const& timestampsType : timestampsTypes) {
+                    SPDLOG_LOGGER_TRACE(s2t_calculator_logger, "Received timestamp type: {}", timestampsType);
+                    if (timestampsType == "segment") {
+                        config.return_timestamps = true;
+                    } else if (timestampsType == "word") {
+                        if (!pipe->enableWordTimestamps)
+                            return absl::InvalidArgumentError("Word timestamps not supported for this model");
+                        config.word_timestamps = true;
+                    } else {
+                        return absl::InvalidArgumentError("Invalid timestamp_granularities type. Allowed types: \"segment\", \"word\"");
                     }
                 }
                 std::string temperature = payload.multipartParser->getFieldByName("temperature");
@@ -172,7 +170,7 @@ public:
                             return absl::InvalidArgumentError("Invalid temperature type.");
                     }
                     if (temp.value() < 0.0f || temp.value() > 2.0f)
-                        return absl::InvalidArgumentError("temperature out of range(0.0, 2.0)");
+                        return absl::InvalidArgumentError("Temperature out of range(0.0, 2.0)");
                     config.temperature = temp.value();
                 } else {
                     config.temperature = 1.0;  // default value
@@ -183,38 +181,36 @@ public:
                 const std::string generatedText = result;  // word chunks concatenation to single string
                 writer.String(generatedText.c_str());
                 if (config.word_timestamps) {
-                    if (!result.words.has_value()) {
-                        return absl::InvalidArgumentError("Timestamps requested but pipeline does not generated any.");
-                    }
                     writer.String("words");
                     writer.StartArray();
-                    for (const auto& word : *result.words) {
-                        writer.StartObject();
-                        writer.String("word");
-                        writer.String(word.word.c_str());
-                        writer.String("start");
-                        writer.Double(word.start_ts);
-                        writer.String("end");
-                        writer.Double(word.end_ts);
-                        writer.EndObject();
+                    if (!result.words.has_value()) {
+                        for (const auto& word : *result.words) {
+                            writer.StartObject();
+                            writer.String("word");
+                            writer.String(word.word.c_str());
+                            writer.String("start");
+                            writer.Double(word.start_ts);
+                            writer.String("end");
+                            writer.Double(word.end_ts);
+                            writer.EndObject();
+                        }
                     }
                     writer.EndArray();
                 }
                 if (config.return_timestamps) {
-                    if (!result.chunks.has_value()) {
-                        return absl::InvalidArgumentError("Timestamps requested but pipeline does not generated any.");
-                    }
                     writer.String("segments");
                     writer.StartArray();
-                    for (const auto& chunk : *result.chunks) {
-                        writer.StartObject();
-                        writer.String("text");
-                        writer.String(chunk.text.c_str());
-                        writer.String("start");
-                        writer.Double(chunk.start_ts);
-                        writer.String("end");
-                        writer.Double(chunk.end_ts);
-                        writer.EndObject();
+                    if (result.chunks.has_value()) {
+                        for (const auto& chunk : *result.chunks) {
+                            writer.StartObject();
+                            writer.String("text");
+                            writer.String(chunk.text.c_str());
+                            writer.String("start");
+                            writer.Double(chunk.start_ts);
+                            writer.String("end");
+                            writer.Double(chunk.end_ts);
+                            writer.EndObject();
+                        }
                     }
                     writer.EndArray();
                 }
