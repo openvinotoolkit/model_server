@@ -51,8 +51,9 @@ public:
         std::string email = payload.multipartParser->getFieldByName("email");
         std::string username = payload.multipartParser->getFieldByName("username");
         std::string_view fileContent = payload.multipartParser->getFileContentByFieldName("file");
-
-        cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new std::string{email + std::string{"+"} + username + std::string{"\n"} + std::string(fileContent)}, cc->InputTimestamp());
+        std::vector<std::string> someParam = payload.multipartParser->getArrayFieldByName("some_param[]");
+        RET_CHECK(someParam.size() == 2);
+        cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new std::string{email + std::string{"+"} + username + std::string{"+"} + someParam[0] + std::string{"+"} + someParam[1] + std::string{"\n"} + std::string(fileContent)}, cc->InputTimestamp());
         return absl::OkStatus();
     }
 };
