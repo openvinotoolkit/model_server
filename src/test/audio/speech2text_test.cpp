@@ -257,7 +257,28 @@ TEST_F(Speech2TextHttpTest, invalidFile) {
         status.getCode(),
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
     std::string expectedMsg = "Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed: \n"
-                              "Calculator::Process() for node \"S2tExecutor\" failed: File parsing fails";
+                              "Calculator::Process() for node \"S2tExecutor\" failed: File parsing failed.";
+    EXPECT_EQ(status.string(), expectedMsg);
+}
+
+TEST_F(Speech2TextHttpTest, invalidStreamTrue) {
+    auto req = drogon::HttpRequest::newHttpRequest();
+    req->setMethod(drogon::Post);
+    req->addHeader("content-type", "multipart/form-data; boundary=\"12345\"");
+    std::string stream = "\r\n"
+                           "Content-Disposition: form-data;name=\"stream\"\r\n"
+                           "\r\n"
+                           "true\r\n"
+                           "--12345";
+    req->setBody(Speech2TextHttpTest::body + stream);
+    std::shared_ptr<MultiPartParser> multiPartParserWithRequest = std::make_shared<DrogonMultiPartParser>(req);
+    std::string requestBody = "";
+    auto status = handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParserWithRequest);
+    ASSERT_EQ(
+        status.getCode(),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+    std::string expectedMsg = "Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed: \n"
+                              "Calculator::Process() for node \"S2tExecutor\" failed: Streaming is not supported.";
     EXPECT_EQ(status.string(), expectedMsg);
 }
 
@@ -338,7 +359,7 @@ TEST_F(Speech2TextHttpTest, invalidTimestampType) {
         status.getCode(),
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
     std::string expectedMsg = "Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed: \n"
-                              "Calculator::Process() for node \"S2tExecutor\" failed: Invalid timestamp_granularities type. Allowed types: \"segment\", \"word\"";
+                              "Calculator::Process() for node \"S2tExecutor\" failed: Invalid timestamp_granularities type. Allowed types: \"segment\", \"word\".";
     EXPECT_EQ(status.string(), expectedMsg);
 }
 
@@ -359,6 +380,6 @@ TEST_F(Speech2TextHttpTest, emptyTimestampType) {
         status.getCode(),
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
     std::string expectedMsg = "Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed: \n"
-                              "Calculator::Process() for node \"S2tExecutor\" failed: Invalid timestamp_granularities type. Allowed types: \"segment\", \"word\"";
+                              "Calculator::Process() for node \"S2tExecutor\" failed: Invalid timestamp_granularities type. Allowed types: \"segment\", \"word\".";
     EXPECT_EQ(status.string(), expectedMsg);
 }
