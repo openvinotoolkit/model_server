@@ -47,8 +47,8 @@ curl -X POST http://localhost:8000/v3/audio/translations \
 | prompt | ❌ | ✅ | string | An optional text to guide the model's style or continue a previous audio segment. |
 | response_format | ❌ | ✅ | string | The format of the output. |
 | stream | ❌ | ✅ | boolean | Generate the response in streaming mode. |
-| temperature | ❌ | ✅ | number | The sampling temperature, between 0 and 1. |
-| timestamp_granularities | ❌ | ✅ | array | The timestamp granularities to populate for this transcription. |
+| temperature | ⚠️ | ✅ | number | The sampling temperature, between 0 and 1. (⚠️**Note**: In OVMS the supported value range is between 0 and 2)|
+| timestamp_granularities | ⚠️ | ✅ | array | The timestamp granularities to populate for this transcription. Supported values: "word" and "segment" (⚠️**Note**: To enable word timestamps `enable_word_timestamps: true` need to be set in graph.pbtxt) |
 
 
 ### Translation

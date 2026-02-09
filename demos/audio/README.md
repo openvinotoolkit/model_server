@@ -207,6 +207,26 @@ docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 --device /dev/dri --group-a
 ```
 :::
 
+**Note:** To enable word timestamps, edit `$(pwd)/models/openai/whisper-large-v3-turbo/graph.pbtxt` by adding `enable_word_timestamps: true`:
+```bash
+input_stream: "HTTP_REQUEST_PAYLOAD:input"
+output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+node {
+  name: "S2tExecutor"
+  input_side_packet: "STT_NODE_RESOURCES:s2t_servable"
+  calculator: "S2tCalculator"
+  input_stream: "HTTP_REQUEST_PAYLOAD:input"
+  output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+  node_options: {
+    [type.googleapis.com / mediapipe.S2tCalculatorOptions]: {
+      models_path: "./",
+      plugin_config: '{ "NUM_STREAMS": "1" }',
+      target_device: "CPU",
+      enable_word_timestamps: true
+    }
+  }
+}
+```
 :::{dropdown} **Deploying on Bare Metal**
 
 If you run on GPU make sure to have appropriate drivers installed, so the device is accessible for the model server.
@@ -230,7 +250,7 @@ Transcript file that was previously generated with audio/speech endpoint.
 
 
 ```bash
-curl http://localhost:8000/v3/audio/transcriptions -H "Content-Type: multipart/form-data" -F file="@speech.wav" -F model="openai/whisper-large-v3-turbo"
+curl http://localhost:8000/v3/audio/transcriptions -H "Content-Type: multipart/form-data" -F file="@speech.wav" -F model="openai/whisper-large-v3-turbo" -F language="en"
 ```
 ```json
 {"text": " The quick brown fox jumped over the lazy dog."}
@@ -253,6 +273,7 @@ client = OpenAI(base_url=url, api_key="not_used")
 audio_file = open(filename, "rb")
 transcript = client.audio.transcriptions.create(
   model="openai/whisper-large-v3-turbo",
+  language="en",
   file=audio_file
 )
 
@@ -260,6 +281,47 @@ print(transcript.text)
 ```
 ```
 The quick brown fox jumped over the lazy dog.
+```
+:::
+:::{dropdown} **Unary call with timestamps**
+
+
+```bash
+curl http://localhost:8000/v3/audio/transcriptions -H "Content-Type: multipart/form-data" -F file="@speech.wav" -F model="openai/whisper-large-v3-turbo" -F language="en" -F timestamp_granularities[]="segment" 
+```
+```json
+{"text":" Quick brown fox jumped over the lazy dog.","segments":[{"text":" Quick brown fox jumped over the lazy dog.","start":0.0,"end":2.9800000190734863}]}
+```
+:::
+
+:::{dropdown} **Unary call with python OpenAI library with timestamps**
+
+```python
+from pathlib import Path
+from openai import OpenAI
+
+filename = "speech.wav"
+url="http://localhost:8000/v3"
+
+
+speech_file_path = Path(__file__).parent / filename
+client = OpenAI(base_url=url, api_key="not_used")
+
+audio_file = open(filename, "rb")
+transcript = client.audio.transcriptions.create(
+  model="openai/whisper-large-v3-turbo",
+  language="en",
+  response_format="verbose_json",
+  timestamp_granularities=["segment"],
+  file=audio_file
+)
+
+print(transcript.text)
+print(transcript.segments)
+```
+```
+ Quick brown fox jumped over the lazy dog.
+[TranscriptionSegment(id=None, avg_logprob=None, compression_ratio=None, end=2.9800000190734863, no_speech_prob=None, seek=None, start=0.0, temperature=None, text=' Quick brown fox jumped over the lazy dog.', tokens=None)]
 ```
 :::
 
