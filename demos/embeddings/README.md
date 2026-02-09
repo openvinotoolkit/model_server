@@ -243,7 +243,6 @@ python export_model.py embeddings_ov --source_model sentence-transformers/all-mp
 :::
 ::::
 
-
 > **Note** Change the `--weight-format` to quantize the model to `fp16`, `int8` or `int4` precision to reduce memory consumption and improve performance.
 > **Note:** The users in China need to set environment variable HF_ENDPOINT="https://hf-mirror.com" before running the export script to connect to the HF Hub.
 
@@ -297,6 +296,26 @@ All models supported by [optimum-intel](https://github.com/huggingface/optimum-i
 |sentence-transformers/all-mpnet-base-v2|MEAN|
 
 
+**NPU**
+::::{tab-set}
+:::{tab-item} Qwen/Qwen3-Embedding-0.6B
+:sync: Qwen3-Embedding-0.6B-fp16
+```console
+python export_model.py embeddings_ov --source_model Qwen/Qwen3-Embedding-0.6B --pooling LAST --weight-format fp16 --target_device NPU --config_file_path models/config.json --model_repository_path models
+```
+:::
+::::
+
+> **Note** Change the `--weight-format` to quantize the model to `fp16`, `int8` or `int4` precision to reduce memory consumption and improve performance. `fp16` is ised for better accuracy but `int8` and `int4` has better performance.
+> **Note** Pooling mode --pooling LAST has the best accuracy.
+
+## Tested models
+All models supported by [optimum-intel](https://github.com/huggingface/optimum-intel) should be compatible. The demo is validated against following Hugging Face models:
+
+|Model name|Pooling|
+|---|---|
+|Wqen/Qwen3-Embedding-0.6B|LAST|
+
 ## Server Deployment
 
 :::{dropdown} **Deploying with Docker**
@@ -312,6 +331,14 @@ to `docker run` command, use the image with GPU support and make sure set the ta
 
 ```bash
 docker run -d --rm -p 8000:8000 --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -v $(pwd)/models:/workspace:ro openvino/model_server:latest-gpu --rest_port 8000 --config_path /workspace/config.json
+```
+**NPU**
+
+In case you want to use NPU device to run the embeddings model, add extra docker parameters `--device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1)` 
+to `docker run` command, use the image with NPU support and make sure set the target_device in subconfig.json to NPU. Also make sure the export model quantization level and cache size fit to the NPU memory. All of that can be applied with the commands:
+
+```bash
+docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 --device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render*  | head -1) -v $(pwd)/models:/workspace:ro openvino/model_server:latest-gpu --rest_port 8000 --config_path /workspace/config.json
 ```
 :::
 
@@ -368,8 +395,16 @@ curl http://localhost:8000/v3/embeddings -H "Content-Type: application/json" -d 
   "usage":{"prompt_tokens":4,"total_tokens":4}
 }
 
+
 ```
 :::
+
+## Client code for NPU
+
+:::{dropdown} **Request embeddings with cURL**
+```bash
+curl http://localhost:8000/v3/embeddings -H "Content-Type: application/json" -d "{ \"model\": \"Qwen/Qwen3-Embedding-0.6B\", \"input\": \"hello world\"}"
+```
 
 :::{dropdown} **Request embeddings with OpenAI Python package**
 

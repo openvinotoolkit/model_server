@@ -486,6 +486,10 @@ def export_embeddings_model_ov(model_repository_path, source_model, model_name, 
     destination_path = os.path.join(model_repository_path, model_name)
     print("Exporting embeddings model to ",destination_path)
     if not os.path.isdir(destination_path) or args['overwrite_models']:
+        if task_parameters['target_device'] == 'NPU':
+            if task_parameters['extra_quantization_params'] == "":
+                print("Using default quantization parameters for NPU: --sym --ratio 1.0 --group-size -1")
+                task_parameters['extra_quantization_params'] = "--sym --ratio 1.0 --group-size -1"
         optimum_command = "optimum-cli export openvino --model {} --disable-convert-tokenizer --task feature-extraction --weight-format {} {} --trust-remote-code {}".format(source_model, precision, task_parameters['extra_quantization_params'], destination_path)
         print('Running command:', optimum_command)  # for debug purposes
         if os.system(optimum_command):
