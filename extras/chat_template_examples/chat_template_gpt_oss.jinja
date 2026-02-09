@@ -32,13 +32,14 @@
       Built-in tools are supposed to be rendered in analysis channel (contrary to user-defined functions rendered in commentary).
       Fixed rendering of message constrain in histories to follow documentation.
       Added rendering previous reasoning_content messages as those are crucial for multi-step chain of thought.
+    * Switched default reasoning mode to low
 #}
 {#-
   In addition to the normal inputs of `messages` and `tools`, this template also accepts the
   following kwargs:
   - "builtin_tools": A list, can contain "browser" and/or "python".
   - "model_identity": A string that optionally describes the model identity.
-  - "reasoning_effort": A string that describes the reasoning effort, defaults to "medium".
+  - "reasoning_effort": A string that describes the reasoning effort, defaults to "low".
 #}
 
 {#- Tool Definition Rendering ============================================== #}
@@ -236,7 +237,7 @@
     {{- "Knowledge cutoff: 2024-06\n" }}
     {{- "Current date: " + strftime_now("%Y-%m-%d") + "\n\n" }}
     {%- if reasoning_effort is not defined %}
-        {%- set reasoning_effort = "medium" %}
+        {%- set reasoning_effort = "low" %}
     {%- endif %}
     {#- {{- "Reasoning: " + reasoning_effort + "\n\n" }} #}
     {%- set display_effort = reasoning_effort %}
