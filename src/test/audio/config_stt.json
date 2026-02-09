@@ -1,0 +1,15 @@
+{
+    "model_config_list": [],
+    "mediapipe_config_list": [
+    {
+        "name":"speech2text",
+        "base_path":"/ovms/src/test/audio/",
+        "graph_path":"/ovms/src/test/audio/graph_stt.pbtxt"
+    },
+    {
+        "name":"speech2textWordTimestamps",
+        "base_path":"/ovms/src/test/audio/",
+        "graph_path":"/ovms/src/test/audio/graph_stt_word_timestamps.pbtxt"
+    }
+    ]
+}

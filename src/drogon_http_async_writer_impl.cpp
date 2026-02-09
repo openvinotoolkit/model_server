@@ -73,6 +73,7 @@ void DrogonHttpAsyncWriterImpl::PartialReplyBegin(std::function<void()> actualWo
 void DrogonHttpAsyncWriterImpl::PartialReplyEnd() {
     this->stream->close();
 }
+
 // Used by graph executor impl
 void DrogonHttpAsyncWriterImpl::PartialReply(std::string message) {
     return PartialReplyWithStatus(std::move(message), HTTPStatusCode::OK);
@@ -85,8 +86,18 @@ bool DrogonHttpAsyncWriterImpl::IsDisconnected() const {
 void DrogonHttpAsyncWriterImpl::RegisterDisconnectionCallback(std::function<void()> onDisconnectedCallback) {
     const auto& weakConnPtr = requestPtr->getConnectionPtr();
     if (auto connPtr = weakConnPtr.lock()) {
-        connPtr->setCloseCallback([onDisconnectedCallback = std::move(onDisconnectedCallback)](const trantor::TcpConnectionPtr& conn) {
-            onDisconnectedCallback();
+        // Get the original callback set by TcpServer (does connSet_.erase())
+        auto originalCallback = connPtr->getCloseCallback();
+        connPtr->setCloseCallback([originalCallback, onDisconnectedCallback = std::move(onDisconnectedCallback)](const trantor::TcpConnectionPtr& conn) {
+            // Run original callback first to ensure proper cleanup
+            if (originalCallback) {
+                originalCallback(conn);
+            }
+
+            // Run custom callback to stop ongoing processing
+            if (onDisconnectedCallback) {
+                onDisconnectedCallback();
+            }
         });
     }
 }

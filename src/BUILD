@@ -635,6 +635,8 @@ ovms_cc_library(
             "libovmsschema",
             "libovmslayout",
             "libovmslayout_configuration",
+            "libovmscolor_format_configuration",
+            "libovmsprecision_configuration",
             "libovms_tensorinfo",
             "libovmstimer",
             "tfs_utils",
@@ -1605,6 +1607,8 @@ ovms_cc_library(
             "@com_github_tencent_rapidjson//:rapidjson", # TODO split into parser
             "libovmsfilesystem",
             "libovmslayout_configuration",
+            "libovmscolor_format_configuration",
+            "libovmsprecision_configuration",
             "libovmsmodelversioning",
             "libovmsschema",
             "libovmsshape",
@@ -1661,6 +1665,28 @@ ovms_cc_library(
             "libovmsstatus",
             "libovmsstring_utils",
     ],
+    visibility = ["//visibility:public"],
+)
+ovms_cc_library(
+    name = "libovmscolor_format_configuration",
+    hdrs = ["color_format_configuration.hpp",],
+    srcs = ["color_format_configuration.cpp",],
+    deps = [
+            "//third_party:openvino",
+            "ovms_header",
+            "libovmsstatus",
+],
+    visibility = ["//visibility:public"],
+)
+ovms_cc_library(
+    name = "libovmsprecision_configuration",
+    hdrs = ["precision_configuration.hpp",],
+    srcs = ["precision_configuration.cpp",],
+    deps = [
+            "//third_party:openvino",
+            "ovms_header",
+            "libovmsstatus",
+],
     visibility = ["//visibility:public"],
 )
 ovms_cc_library(
@@ -2518,6 +2544,7 @@ cc_test(
                 "test/llm/visual_language_model/complete_flow_test.cpp",
                 "test/llm/visual_language_model/initialization_test.cpp",
                 "test/audio/text2speech_test.cpp",
+                "test/audio/speech2text_test.cpp",
             ],
             "//:disable_mediapipe" : [
                 "test/disabled_mediapipe_test.cpp",

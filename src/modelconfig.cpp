@@ -405,6 +405,69 @@ Status ModelConfig::parseLayoutParameter(const std::string& command) {
     return parseLayoutParameter(node);
 }
 
+Status ModelConfig::parseFloatArrayOrValue(const std::string& str, std::optional<float_vec_or_value_t>& values) {
+    if (str.empty()) {
+        return StatusCode::OK;
+    }
+
+    std::string upperCaseCommand;
+    std::transform(str.begin(), str.end(), std::back_inserter(upperCaseCommand), ::toupper);
+
+    erase_spaces(upperCaseCommand);
+
+    if ((*upperCaseCommand.begin() == '[' && *upperCaseCommand.rbegin() == ']') ||
+        (*upperCaseCommand.begin() == '(' && *upperCaseCommand.rbegin() == ')')) {
+        auto commandWithoutBraces = upperCaseCommand.substr(1, upperCaseCommand.size() - 2);
+        auto floatValues = ovms::stringToFloatVector(commandWithoutBraces, ',');
+        if (!floatValues.has_value()) {
+            return StatusCode::FLOAT_WRONG_FORMAT;
+        }
+        values = floatValues.value();
+        return StatusCode::OK;
+    }
+    auto val = ovms::stof(upperCaseCommand);
+    if (!val.has_value()) {
+        return StatusCode::FLOAT_WRONG_FORMAT;
+    }
+    values = val;
+    return StatusCode::OK;
+}
+
+Status ModelConfig::parseMean(const std::string& command) {
+    return parseFloatArrayOrValue(command, this->meanValues);
+}
+
+Status ModelConfig::parseScale(const std::string& command) {
+    return parseFloatArrayOrValue(command, this->scaleValues);
+}
+
+Status ModelConfig::parseColorFormat(const std::string& command) {
+    if (command.empty()) {
+        return StatusCode::OK;
+    }
+    ColorFormatConfiguration colorFormatConfig;
+    auto status = ColorFormatConfiguration::fromString(command, colorFormatConfig);
+    if (!status.ok()) {
+        return status;
+    }
+    this->colorFormat = colorFormatConfig;
+    return StatusCode::OK;
+}
+
+Status ModelConfig::parsePrecision(const std::string& command) {
+    if (command.empty()) {
+        return StatusCode::OK;
+    }
+
+    PrecisionConfiguration precisionConfig;
+    auto status = PrecisionConfiguration::fromString(command, precisionConfig);
+    if (!status.ok()) {
+        return status;
+    }
+    this->precision = precisionConfig;
+    return StatusCode::OK;
+}
+
 Status ModelConfig::parseShape(ShapeInfo& shapeInfo, const std::string& str) {
     if (str == "auto") {
         SPDLOG_LOGGER_WARN(modelmanager_logger, "Shape auto is deprecated. Use model dynamic shapes instead. Check (https://docs.openvino.ai/2023.3/ovms_docs_dynamic_shape_dynamic_model.html#doxid-ovms-docs-dynamic-shape-dynamic-model)");
@@ -570,6 +633,34 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
             if (!status.ok()) {
                 return status;
             }
+        }
+    }
+
+    if (v.HasMember("mean")) {
+        Status status = this->parseMean(v["mean"].GetString());
+        if (!status.ok()) {
+            return status;
+        }
+    }
+
+    if (v.HasMember("scale")) {
+        Status status = this->parseScale(v["scale"].GetString());
+        if (!status.ok()) {
+            return status;
+        }
+    }
+
+    if (v.HasMember("color_format")) {
+        Status status = this->parseColorFormat(v["color_format"].GetString());
+        if (!status.ok()) {
+            return status;
+        }
+    }
+
+    if (v.HasMember("precision")) {
+        Status status = this->parsePrecision(v["precision"].GetString());
+        if (!status.ok()) {
+            return status;
         }
     }
 

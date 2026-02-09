@@ -18,7 +18,7 @@ node: {
           models_path: "./",
           plugin_config: '{"KV_CACHE_PRECISION": "u8", "DYNAMIC_QUANTIZATION_GROUP_SIZE": "32"}',
           enable_prefix_caching: false
-          cache_size: 10
+          cache_size: 0
       }
   }
   input_stream_handler {

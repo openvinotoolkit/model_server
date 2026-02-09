@@ -82,6 +82,8 @@ using CAPIInterface = std::pair<ovms::InferenceRequest, ovms::InferenceResponse>
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
+void printTensor(const ov::Tensor& tensor);
+
 ovms::tensor_map_t prepareTensors(
     const std::unordered_map<std::string, ovms::Shape>&& tensors,
     ovms::Precision precision = ovms::Precision::FP32);
@@ -561,7 +563,7 @@ bool isShapeTheSame(const KFSShapeType&, const std::vector<int64_t>&&);
 
 void readRgbJpg(size_t& filesize, std::unique_ptr<char[]>& image_bytes);
 void read4x4RgbJpg(size_t& filesize, std::unique_ptr<char[]>& image_bytes);
-void readImage(const std::string& path, size_t& filesize, std::unique_ptr<char[]>& image_bytes);
+void readFile(const std::string& path, size_t& filesize, std::unique_ptr<char[]>& bytes);
 
 static const std::vector<ovms::Precision> SUPPORTED_INPUT_PRECISIONS{
     // ovms::Precision::UNDEFINED,

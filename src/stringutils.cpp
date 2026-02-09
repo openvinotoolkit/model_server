@@ -210,6 +210,19 @@ std::optional<float> stof(const std::string& str) {
     }
 }
 
+std::optional<std::vector<float>> stringToFloatVector(const std::string& str, char delimiter) {
+    std::vector<std::string> stringValues = tokenize(str, delimiter);
+    std::vector<float> floatValues;
+    for (const auto& stringValue : stringValues) {
+        auto floatValue = ovms::stof(stringValue);
+        if (!floatValue.has_value()) {
+            return std::nullopt;
+        }
+        floatValues.push_back(floatValue.value());
+    }
+    return floatValues;
+}
+
 bool isValidUtf8(const std::string& text) {
     // inspect the chars from the end of the string to test if the utf8 sequence is complete
     size_t byte_counter = 0;

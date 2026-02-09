@@ -377,6 +377,10 @@ const std::string& Config::batchSize() const {
 }
 const std::string& Config::Config::shape() const { return this->modelsSettings.shape; }
 const std::string& Config::layout() const { return this->modelsSettings.layout; }
+const std::string Config::means() const { return this->modelsSettings.mean.value_or(""); }
+const std::string Config::scales() const { return this->modelsSettings.scale.value_or(""); }
+const std::string Config::colorFormat() const { return this->modelsSettings.colorFormat.value_or(""); }
+const std::string Config::precision() const { return this->modelsSettings.precision.value_or(""); }
 const std::string& Config::modelVersionPolicy() const { return this->modelsSettings.modelVersionPolicy; }
 uint32_t Config::nireq() const { return this->modelsSettings.nireq; }
 const std::string& Config::targetDevice() const {

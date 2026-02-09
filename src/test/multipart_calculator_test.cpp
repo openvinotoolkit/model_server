@@ -82,6 +82,14 @@ Content-Disposition: form-data; name="model"
 
 multipart
 ------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="some_param[]"
+
+val1
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="some_param[]"
+
+val2
+------WebKitFormBoundary7MA4YWxkTrZu0gW
 Content-Disposition: form-data; name="doc"; filename="notes.txt"
 Content-Type: text/plain
 
@@ -93,6 +101,7 @@ It has two lines.
     EXPECT_CALL(*multiPartParser, getFieldByName(::testing::Eq("model"))).WillOnce(::testing::Return("multipart"));
     EXPECT_CALL(*multiPartParser, getFieldByName(::testing::Eq("email"))).WillOnce(::testing::Return("john@example.com"));
     EXPECT_CALL(*multiPartParser, getFieldByName(::testing::Eq("username"))).WillOnce(::testing::Return("john_doe"));
+    EXPECT_CALL(*multiPartParser, getArrayFieldByName(::testing::Eq("some_param[]"))).WillOnce(::testing::Return(std::vector<std::string>{"val1", "val2"}));
     EXPECT_CALL(*multiPartParser, getFileContentByFieldName(::testing::Eq("file"))).WillOnce([](const std::string& name) {
         static std::string retval{"this is file content\nIt has two lines."};
         return std::string_view(retval);
@@ -103,7 +112,7 @@ It has two lines.
         handler->dispatchToProcessor(URI, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
 
-    std::string expectedResponse = R"(john@example.com+john_doe
+    std::string expectedResponse = R"(john@example.com+john_doe+val1+val2
 this is file content
 It has two lines.)";
     ASSERT_EQ(response, expectedResponse);
@@ -125,6 +134,14 @@ Content-Disposition: form-data; name="email"
 
 john@example.com
 ------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="some_param[]"
+
+val1
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="some_param[]"
+
+val2
+------WebKitFormBoundary7MA4YWxkTrZu0gW
 Content-Disposition: form-data; name="doc"; filename="notes.txt"
 Content-Type: text/plain
 
@@ -136,6 +153,7 @@ It has two lines.
     EXPECT_CALL(*multiPartParser, getFieldByName(::testing::Eq("model"))).WillOnce(::testing::Return(""));
     EXPECT_CALL(*multiPartParser, getFieldByName(::testing::Eq("email"))).WillOnce(::testing::Return("john@example.com"));
     EXPECT_CALL(*multiPartParser, getFieldByName(::testing::Eq("username"))).WillOnce(::testing::Return("john_doe"));
+    EXPECT_CALL(*multiPartParser, getArrayFieldByName(::testing::Eq("some_param[]"))).WillOnce(::testing::Return(std::vector<std::string>{"val1", "val2"}));
     EXPECT_CALL(*multiPartParser, getFileContentByFieldName(::testing::Eq("file"))).WillOnce([](const std::string& name) {
         static std::string retval{"this is file content\nIt has two lines."};
         return std::string_view(retval);
@@ -148,7 +166,7 @@ It has two lines.
         handler->dispatchToProcessor(URI, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
 
-    std::string expectedResponse = R"(john@example.com+john_doe
+    std::string expectedResponse = R"(john@example.com+john_doe+val1+val2
 this is file content
 It has two lines.)";
     ASSERT_EQ(response, expectedResponse);

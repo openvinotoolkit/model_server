@@ -53,6 +53,53 @@ void preparePredictRequest(ovms::InferenceRequest& request, inputs_info_t reques
     }
 }
 
+void printTensor(const ov::Tensor& tensor) {
+    const auto& elementType = tensor.get_element_type();
+    // Get pointer to data
+    const void* dataPtr = tensor.data();
+
+    size_t limit = 20;
+    if (tensor.get_size() < limit) {
+        limit = tensor.get_size();
+    }
+    // Handle different data types (example for float)
+    if (elementType == ov::element::f32) {
+        const float* data = static_cast<const float*>(dataPtr);
+        std::cout << "Tensor data (f32): ";
+        for (size_t i = 0; i < limit; ++i) {
+            std::cout << data[i] << " ";
+        }
+        std::cout << std::endl;
+        return;
+    } else if (elementType == ov::element::i32) {
+        const int32_t* data = static_cast<const int32_t*>(dataPtr);
+        std::cout << "Tensor data (i32): ";
+        for (size_t i = 0; i < limit; ++i) {
+            std::cout << data[i] << " ";
+        }
+        std::cout << std::endl;
+        return;
+    } else if (elementType == ov::element::i64) {
+        const int64_t* data = static_cast<const int64_t*>(dataPtr);
+        std::cout << "Tensor data (i64): ";
+        for (size_t i = 0; i < limit; ++i) {
+            std::cout << data[i] << " ";
+        }
+        std::cout << std::endl;
+        return;
+    } else if (elementType == ov::element::f64) {
+        const double* data = static_cast<const double*>(dataPtr);
+        std::cout << "Tensor data (f64): ";
+        for (size_t i = 0; i < limit; ++i) {
+            std::cout << data[i] << " ";
+        }
+        std::cout << std::endl;
+        return;
+    }
+
+    std::cout << "[ERROR] Unsupported data type: " << elementType << std::endl;
+}
+
 void preparePredictRequest(tensorflow::serving::PredictRequest& request, inputs_info_t requestInputs, const std::vector<float>& data) {
     request.mutable_inputs()->clear();
     for (auto const& it : requestInputs) {
@@ -357,22 +404,22 @@ bool isShapeTheSame(const KFSShapeType& actual, const std::vector<int64_t>&& exp
     return same;
 }
 
-void readImage(const std::string& path, size_t& filesize, std::unique_ptr<char[]>& image_bytes) {
+void readFile(const std::string& path, size_t& filesize, std::unique_ptr<char[]>& bytes) {
     std::ifstream DataFile;
     DataFile.open(path, std::ios::binary);
     DataFile.seekg(0, std::ios::end);
     filesize = DataFile.tellg();
     DataFile.seekg(0);
-    image_bytes = std::make_unique<char[]>(filesize);
-    DataFile.read(image_bytes.get(), filesize);
+    bytes = std::make_unique<char[]>(filesize);
+    DataFile.read(bytes.get(), filesize);
 }
 
 void readRgbJpg(size_t& filesize, std::unique_ptr<char[]>& image_bytes) {
-    return readImage(getGenericFullPathForSrcTest("/ovms/src/test/binaryutils/rgb.jpg"), filesize, image_bytes);
+    return readFile(getGenericFullPathForSrcTest("/ovms/src/test/binaryutils/rgb.jpg"), filesize, image_bytes);
 }
 
 void read4x4RgbJpg(size_t& filesize, std::unique_ptr<char[]>& image_bytes) {
-    return readImage(getGenericFullPathForSrcTest("/ovms/src/test/binaryutils/rgb4x4.jpg"), filesize, image_bytes);
+    return readFile(getGenericFullPathForSrcTest("/ovms/src/test/binaryutils/rgb4x4.jpg"), filesize, image_bytes);
 }
 
 void prepareInferStringTensor(::KFSRequest::InferInputTensor& tensor, const std::string& name, const std::vector<std::string>& data, bool putBufferInInputTensorContent, std::string* content) {

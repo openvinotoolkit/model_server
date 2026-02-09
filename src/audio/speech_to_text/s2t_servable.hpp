@@ -41,6 +41,7 @@ struct SttServable {
     std::filesystem::path parsedModelsPath;
     std::shared_ptr<ov::genai::WhisperPipeline> sttPipeline;
     std::mutex sttPipelineMutex;
+    bool enableWordTimestamps;
 
     SttServable(const ::mediapipe::S2tCalculatorOptions& nodeOptions, const std::string& graphPath) {
         auto fsModelsPath = std::filesystem::path(nodeOptions.models_path());
@@ -55,6 +56,10 @@ struct SttServable {
             SPDLOG_ERROR("Error during llm node plugin_config option parsing to JSON: {}", nodeOptions.plugin_config());
             throw std::runtime_error("Error during plugin_config option parsing");
         }
+        enableWordTimestamps = nodeOptions.enable_word_timestamps();
+        if (enableWordTimestamps && nodeOptions.target_device() == "NPU")
+            config["STATIC_PIPELINE"] = true;
+        config["word_timestamps"] = enableWordTimestamps;
         sttPipeline = std::make_shared<ov::genai::WhisperPipeline>(parsedModelsPath.string(), nodeOptions.target_device(), config);
     }
 };

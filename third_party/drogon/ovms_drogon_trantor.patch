@@ -42,8 +42,31 @@ index 620577e5..30798b59 100644
      /// Return the string of http version of request, such as HTTP/1.0,
      /// HTTP/1.1, etc.
      virtual const char *versionString() const = 0;
+diff --git a/lib/inc/drogon/MultiPart.h b/lib/inc/drogon/MultiPart.h
+index 5401626a..0e89f2a0 100644
+--- a/lib/inc/drogon/MultiPart.h
++++ b/lib/inc/drogon/MultiPart.h
+@@ -137,6 +137,10 @@ class DROGON_EXPORT MultiPartParser
+     /// method.
+     const SafeStringMap<std::string> &getParameters() const;
+ 
++    /// Get parameters as vectors, supporting array-style fields (e.g., name[]).
++    /// This method should be called after calling the parse() method.
++    const SafeStringMap<std::vector<std::string>> &getParametersVector() const;
++
+     /// Get the value of an optional parameter
+     /// This method should be called after calling the parse() method.
+     template <typename T>
+@@ -177,6 +181,7 @@ class DROGON_EXPORT MultiPartParser
+   protected:
+     std::vector<HttpFile> files_;
+     SafeStringMap<std::string> parameters_;
++    SafeStringMap<std::vector<std::string>> parametersVector_;
+     int parse(const HttpRequestPtr &req,
+               const char *boundaryData,
+               size_t boundaryLen);
 diff --git a/lib/src/HttpAppFrameworkImpl.cc b/lib/src/HttpAppFrameworkImpl.cc
-index 623d906a..bd61837d 100644
+index 4c49c259..058203c8 100644
 --- a/lib/src/HttpAppFrameworkImpl.cc
 +++ b/lib/src/HttpAppFrameworkImpl.cc
 @@ -525,15 +525,15 @@ void HttpAppFrameworkImpl::run()
@@ -102,10 +125,10 @@ index d6b949c8..fadb6e8b 100644
      {
          cookies_[key] = Cookie(key, value);
 diff --git a/lib/src/HttpServer.cc b/lib/src/HttpServer.cc
-index 257976b1..1d407514 100644
+index 51506f95..809358d5 100644
 --- a/lib/src/HttpServer.cc
 +++ b/lib/src/HttpServer.cc
-@@ -965,24 +965,36 @@ void HttpServer::sendResponse(const TcpConnectionPtr &conn,
+@@ -971,24 +971,36 @@ void HttpServer::sendResponse(const TcpConnectionPtr &conn,
      auto respImplPtr = static_cast<HttpResponseImpl *>(response.get());
      if (!isHeadMethod)
      {
@@ -146,7 +169,7 @@ index 257976b1..1d407514 100644
          auto &streamCallback = respImplPtr->streamCallback();
          const std::string &sendfileName = respImplPtr->sendfileName();
          if (streamCallback || !sendfileName.empty())
-@@ -1056,11 +1068,16 @@ void HttpServer::sendResponses(
+@@ -1062,11 +1074,16 @@ void HttpServer::sendResponses(
              {
                  conn->send(buffer);
                  buffer.retrieveAll();
@@ -165,6 +188,34 @@ index 257976b1..1d407514 100644
                  }
                  else
                  {
+diff --git a/lib/src/MultiPart.cc b/lib/src/MultiPart.cc
+index 72f42805..d1ef5e02 100644
+--- a/lib/src/MultiPart.cc
++++ b/lib/src/MultiPart.cc
+@@ -50,6 +50,12 @@ const SafeStringMap<std::string> &MultiPartParser::getParameters() const
+     return parameters_;
+ }
+ 
++const SafeStringMap<std::vector<std::string>> &MultiPartParser::getParametersVector()
++    const
++{
++    return parametersVector_;
++}
++
+ int MultiPartParser::parse(const HttpRequestPtr &req)
+ {
+     switch (req->method())
+@@ -167,7 +173,9 @@ int MultiPartParser::parseEntity(const HttpRequestPtr &req,
+                 std::search(nameEnd, valueEnd, fileName, fileName + 9);
+             if (fileNamePos == valueEnd)
+             {
+-                parameters_.emplace(name, std::string(headEnd + 2, end));
++                std::string value(headEnd + 2, end);
++                parameters_.emplace(name, value);
++                parametersVector_[name].push_back(std::move(value));
+                 return 0;
+             }
+             else
 diff --git a/lib/src/Utilities.cc b/lib/src/Utilities.cc
 index c6601f61..8c55ed15 100644
 --- a/lib/src/Utilities.cc
@@ -221,6 +272,22 @@ index 3335e6ff..7874f18b 100644
  namespace drogon
  {
 Submodule trantor contains modified content
+diff --git a/trantor/trantor/net/TcpConnection.h b/trantor/trantor/net/TcpConnection.h
+index 8d8a5c19..1f2e3d4a 100644
+--- a/trantor/trantor/net/TcpConnection.h
++++ b/trantor/trantor/net/TcpConnection.h
+@@ -351,6 +351,11 @@ class TRANTOR_EXPORT TcpConnection
+     {
+         closeCallback_ = std::move(cb);
+     }
++    CloseCallback getCloseCallback() const
++    {
++        return closeCallback_;
++    }
++
+     void setSSLErrorCallback(const SSLErrorCallback &cb)
+     {
+         sslErrorCallback_ = cb;
 diff --git a/trantor/trantor/net/EventLoop.cc b/trantor/trantor/net/EventLoop.cc
 index 8db1090..682ed64 100644
 --- a/trantor/trantor/net/EventLoop.cc
@@ -270,10 +337,22 @@ index 2aff5a0..145f9eb 100755
  }
  int Socket::accept(InetAddress *peeraddr)
 diff --git a/trantor/trantor/net/inner/TcpConnectionImpl.cc b/trantor/trantor/net/inner/TcpConnectionImpl.cc
-index 6a75707..4b436b3 100644
+index 6a75707..79d042d 100644
 --- a/trantor/trantor/net/inner/TcpConnectionImpl.cc
 +++ b/trantor/trantor/net/inner/TcpConnectionImpl.cc
-@@ -391,7 +391,9 @@ void TcpConnectionImpl::sendInLoop(const char *buffer, size_t length)
+@@ -252,7 +252,10 @@ void TcpConnectionImpl::writeCallback()
+     }
+     else
+     {
+-        LOG_SYSERR << "no writing but write callback called";
++        LOG_WARN << "write callback but not writing, fd=" << socketPtr_->fd()
++                 << " status=" << static_cast<int>(status_)
++                 << " writeBufferList.size=" << writeBufferList_.size()
++                 << " tlsProvider=" << (tlsProviderPtr_ ? "yes" : "no");
+     }
+ }
+ void TcpConnectionImpl::connectEstablished()
+@@ -391,7 +394,9 @@ void TcpConnectionImpl::sendInLoop(const char *buffer, size_t length)
          return;
      }
      ssize_t sendLen = 0;

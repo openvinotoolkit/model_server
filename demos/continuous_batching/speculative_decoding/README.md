@@ -43,7 +43,7 @@ mkdir models
 Run `export_model.py` script to download and quantize the model:
 
 ```console
-python export_model.py text_generation --source_model Qwen/Qwen3-8B --draft_source_model Tengyunw/qwen3_8b_eagle3 --draft_eagle3 --weight-format int4 --config_file_path models/config.json --model_repository_path models
+python export_model.py text_generation --source_model Qwen/Qwen3-8B --draft_source_model Tengyunw/qwen3_8b_eagle3 --draft_eagle3_mode --weight-format int4 --config_file_path models/config.json --model_repository_path models
 ```
 
 Draft model inherits all scheduler properties from the main model.
@@ -82,7 +82,7 @@ models
 
 :::{dropdown} **Deploying with Docker**
 ```bash
-docker run -d --rm -p 8000:8000 -v $(pwd)/models:/workspace:ro openvino/model_server:weekly --rest_port 8000 --config_path /workspace/config.json
+docker run -d --rm -p 8000:8000 -v $(pwd)/models:/workspace:ro openvino/model_server:weekly --rest_port 8000 --rest_workers 2 --config_path /workspace/config.json
 ```
 
 Running above command starts the container with no accelerators support. 
@@ -101,7 +101,7 @@ as mentioned in [deployment guide](../../../docs/deploying_server_baremetal.md),
 Depending on how you prepared models in the first step of this demo, they are deployed to either CPU or GPU (it's defined in `config.json`). If you run on GPU make sure to have appropriate drivers installed, so the device is accessible for the model server.
 
 ```bat
-ovms --rest_port 8000 --config_path ./models/config.json
+ovms --rest_port 8000 --rest_workers 2 --config_path ./models/config.json
 ```
 :::
 
@@ -158,8 +158,10 @@ P99 ITL (ms):                            72.11
 
 Eagle3 deployments currently have following known limitations:
 - stateful mode (pipeline_type: LM) not supported,
-- concurrency not supported (max 1 request processed at a time),
-- prefix caching not supported
+- concurrency not supported - max 1 request can be processed at a time (**ALWAYS** use rest_workers=2 when deploying Eagle3 pipeline),
+- prefix caching not supported,
+- only greedy sampling is supported (enforced by OVMS if pipeline configured properly),
+- MoE models not supported
 
 # Classic Models
 

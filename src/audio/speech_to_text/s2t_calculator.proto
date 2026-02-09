@@ -31,4 +31,5 @@ message S2tCalculatorOptions {
     required string models_path = 1;
     optional string target_device = 2;
     optional string plugin_config = 3;
+    optional bool enable_word_timestamps = 4 [default = false];
 }

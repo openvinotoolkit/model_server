@@ -24,7 +24,7 @@ Pull and add the model on Linux:
 :::{tab-item} Qwen/Qwen3-Coder-30B-A3B-Instruct
 :sync: Qwen/Qwen3-Coder-30B-A3B-Instruct
 ```bash
-python export_model.py text_generation --source_model Qwen/Qwen3-Coder-30B-A3B-Instruct --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device GPU --tool_parser qwen3coder --enable_prefix_caching true
+python export_model.py text_generation --source_model Qwen/Qwen3-Coder-30B-A3B-Instruct --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device GPU --tool_parser qwen3coder
 curl -L -o models/Qwen/Qwen3-Coder-30B-A3B-Instruct/chat_template.jinja https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/extras/chat_template_examples/chat_template_qwen3coder_instruct.jinja
 
 docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
@@ -40,7 +40,7 @@ docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
 :::{tab-item} mistralai/Codestral-22B-v0.1 
 :sync: mistralai/Codestral-22B-v0.1
 ```bash
-python export_model.py text_generation --source_model mistralai/Codestral-22B-v0.1 --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device GPU --enable_prefix_caching true
+python export_model.py text_generation --source_model mistralai/Codestral-22B-v0.1 --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device GPU
 curl -L -o models/mistralai/Codestral-22B-v0.1/chat_template.jinja https://raw.githubusercontent.com/vllm-project/vllm/refs/tags/v0.10.1.1/examples/tool_chat_template_mistral_parallel.jinja
 
 docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
@@ -56,7 +56,7 @@ docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
 :::{tab-item} openai/gpt-oss-20b
 :sync: openai/gpt-oss-20b
 ```bash
-python export_model.py text_generation --source_model openai/gpt-oss-20b --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --tool_parser gptoss --reasoning_parser gptoss --target_device GPU --enable_prefix_caching true
+python export_model.py text_generation --source_model openai/gpt-oss-20b --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --tool_parser gptoss --reasoning_parser gptoss --target_device GPU
 curl -L -o models/openai/gpt-oss-20b/chat_template.jinja https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/extras/chat_template_examples/chat_template_gpt_oss.jinja
 
 docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
@@ -72,7 +72,7 @@ docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
 :::{tab-item} unsloth/Devstral-Small-2507
 :sync: unsloth/Devstral-Small-2507
 ```bash
-python export_model.py text_generation --source_model unsloth/Devstral-Small-2507 --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --tool_parser devstral --target_device GPU --enable_prefix_caching true
+python export_model.py text_generation --source_model unsloth/Devstral-Small-2507 --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --tool_parser devstral --target_device GPU
 curl -L -o models/unsloth/Devstral-Small-2507/chat_template.jinja https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/extras/chat_template_examples/chat_template_devstral.jinja
 
 docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
@@ -89,13 +89,13 @@ docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
 :sync: OpenVINO/Qwen3-4B-int4-ov
 ```bash
 docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
+    openvino/model_server:weekly \
     --pull \
     --source_model OpenVINO/Qwen3-4B-int4-ov \
     --model_repository_path /models \
     --model_name OpenVINO/Qwen3-4B-int4-ov \
     --task text_generation \
     --tool_parser hermes3 \
-    --enable_prefix_caching true \
     --target_device GPU
 
 docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
@@ -117,7 +117,6 @@ docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
     --model_repository_path /models \
     --model_name OpenVINO/Qwen2.5-Coder-3B-Instruct-int4-ov \
     --task text_generation \
-    --enable_prefix_caching true \
     --target_device GPU
     
 docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
@@ -139,7 +138,7 @@ Pull and add the model on Windows:
 :::{tab-item} Qwen/Qwen3-Coder-30B-A3B-Instruct
 :sync: Qwen/Qwen3-Coder-30B-A3B-Instruct
 ```bat
-python export_model.py text_generation --source_model Qwen/Qwen3-Coder-30B-A3B-Instruct --weight-format int8 --config_file_path models/config_all.json --model_repository_path models --target_device GPU --tool_parser qwen3coder --enable_prefix_caching true
+python export_model.py text_generation --source_model Qwen/Qwen3-Coder-30B-A3B-Instruct --weight-format int8 --config_file_path models/config_all.json --model_repository_path models --target_device GPU --tool_parser qwen3coder
 curl -L -o models/Qwen/Qwen3-Coder-30B-A3B-Instruct/chat_template.jinja https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/extras/chat_template_examples/chat_template_qwen3coder_instruct.jinja
 
 ovms.exe --add_to_config --config_path models/config_all.json --model_name Qwen/Qwen3-Coder-30B-A3B-Instruct --model_path Qwen/Qwen3-Coder-30B-A3B-Instruct
@@ -150,7 +149,7 @@ ovms.exe --add_to_config --config_path models/config_all.json --model_name Qwen/
 :::{tab-item} mistralai/Codestral-22B-v0.1 
 :sync: mistralai/Codestral-22B-v0.1
 ```bat
-python export_model.py text_generation --source_model mistralai/Codestral-22B-v0.1 --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device GPU --enable_prefix_caching true
+python export_model.py text_generation --source_model mistralai/Codestral-22B-v0.1 --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device GPU
 curl -L -o models/mistralai/Codestral-22B-v0.1/chat_template.jinja https://raw.githubusercontent.com/vllm-project/vllm/refs/tags/v0.10.1.1/examples/tool_chat_template_mistral_parallel.jinja
 
 ovms.exe --add_to_config --config_path models/config_all.json --model_name mistralai/Codestral-22B-v0.1 --model_path mistralai/Codestral-22B-v0.1
@@ -163,7 +162,7 @@ ovms.exe --add_to_config --config_path models/config_all.json --model_name mistr
 :::{tab-item} openai/gpt-oss-20b
 :sync: openai/gpt-oss-20b
 ```bat
-python export_model.py text_generation --source_model openai/gpt-oss-20b --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device GPU --enable_prefix_caching true --tool_parser gptoss --reasoning_parser gptoss
+python export_model.py text_generation --source_model openai/gpt-oss-20b --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device GPU --tool_parser gptoss --reasoning_parser gptoss
 curl -L -o models/openai/gpt-oss-20b/chat_template.jinja https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/extras/chat_template_examples/chat_template_gpt_oss.jinja
 
 ovms.exe --add_to_config --config_path models/config_all.json --model_name openai/gpt-oss-20b --model_path openai/gpt-oss-20b
@@ -175,7 +174,7 @@ ovms.exe --add_to_config --config_path models/config_all.json --model_name opena
 :::{tab-item} unsloth/Devstral-Small-2507
 :sync: unsloth/Devstral-Small-2507
 ```bat
-python export_model.py text_generation --source_model unsloth/Devstral-Small-2507 --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --tool_parser devstral --target_device GPU --enable_prefix_caching true
+python export_model.py text_generation --source_model unsloth/Devstral-Small-2507 --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --tool_parser devstral --target_device GPU
 curl -L -o models/unsloth/Devstral-Small-2507/chat_template.jinja https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/extras/chat_template_examples/chat_template_devstral.jinja
 
 ovms.exe --add_to_config --config_path models/config_all.json --model_name unsloth/Devstral-Small-2507 --model_path unsloth/Devstral-Small-2507
@@ -186,7 +185,7 @@ ovms.exe --add_to_config --config_path models/config_all.json --model_name unslo
 :::{tab-item} OpenVINO/Qwen3-4B-int4-ov
 :sync: OpenVINO/Qwen3-4B-int4-ov
 ```bat
-ovms.exe --pull --source_model OpenVINO/Qwen3-4B-int4-ov --model_repository_path models --model_name OpenVINO/Qwen3-4B-int4-ov --target_device GPU --task text_generation --tool_parser hermes3 --enable_prefix_caching true
+ovms.exe --pull --source_model OpenVINO/Qwen3-4B-int4-ov --model_repository_path models --model_name OpenVINO/Qwen3-4B-int4-ov --target_device GPU --task text_generation --tool_parser hermes3
     
 ovms.exe --add_to_config --config_path models/config_all.json --model_name OpenVINO/Qwen3-4B-int4-ov --model_path OpenVINO/Qwen3-4B-int4-ov
 ```
@@ -196,7 +195,7 @@ ovms.exe --add_to_config --config_path models/config_all.json --model_name OpenV
 :::{tab-item} OpenVINO/Qwen2.5-Coder-3B-Instruct-int4-ov
 :sync: OpenVINO/Qwen2.5-Coder-3B-Instruct-int4-ov
 ```bat
-ovms.exe --pull --source_model OpenVINO/Qwen2.5-Coder-3B-Instruct-int4-ov --model_repository_path models --model_name OpenVINO/Qwen2.5-Coder-3B-Instruct-int4-ov --target_device GPU --task text_generation --enable_prefix_caching true
+ovms.exe --pull --source_model OpenVINO/Qwen2.5-Coder-3B-Instruct-int4-ov --model_repository_path models --model_name OpenVINO/Qwen2.5-Coder-3B-Instruct-int4-ov --target_device GPU --task text_generation
 
 ovms.exe --add_to_config --config_path models/config_all.json --model_name OpenVINO/Qwen2.5-Coder-3B-Instruct-int4-ov --model_path OpenVINO/Qwen2.5-Coder-3B-Instruct-int4-ov
 ```

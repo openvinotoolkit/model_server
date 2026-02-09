@@ -19,9 +19,10 @@ USER root
 ENV LD_LIBRARY_PATH=/ovms/lib
 ENV PYTHONPATH=/ovms/lib/python
 RUN if [ -f /usr/bin/dnf ] ; then export DNF_TOOL=dnf ; else export DNF_TOOL=microdnf ; fi ; \
-	$DNF_TOOL install -y python3-pip git
+	$DNF_TOOL install -y python3.12 python3.12-devel python3.12-pip git
 COPY requirements.txt .
-RUN BUILD_CUDA_EXT=0 pip3 install -r requirements.txt
-RUN python3 -c "import openvino" && optimum-cli export openvino --help | grep -q "usage: optimum-cli export openvino" && convert_tokenizer --help | grep -q "Converts tokenizers"
+RUN BUILD_CUDA_EXT=0 pip3.12 install -r requirements.txt
+RUN opt_in_out --opt_out && cp -R /root/intel /
+RUN python3.12 -c "import openvino" && optimum-cli export openvino --help | grep -q "usage: optimum-cli export openvino" && convert_tokenizer --help | grep -q "Converts tokenizers"
 USER ovms
 ENTRYPOINT [ "/ovms/bin/ovms" ]
