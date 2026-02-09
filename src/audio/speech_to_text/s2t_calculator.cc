@@ -111,7 +111,7 @@ public:
             if (payload.multipartParser->hasParseError())
                 return absl::InvalidArgumentError("Failed to parse multipart data");
 
-            std::string_view stream = payload.multipartParser->getFieldByName("stream");
+            std::string stream = payload.multipartParser->getFieldByName("stream");
             if (!stream.empty()) {
                 return absl::InvalidArgumentError("streaming is not supported");
             }
