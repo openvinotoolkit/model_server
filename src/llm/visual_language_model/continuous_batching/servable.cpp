@@ -30,8 +30,8 @@ namespace ovms {
 
 absl::Status VisualLanguageModelServable::addRequestToPipeline(std::shared_ptr<ContinuousBatchingServableExecutionContext>& executionContext) {
     auto vlmExecutionContext = std::static_pointer_cast<VisualLanguageModelServableExecutionContext>(executionContext);
-    vlmExecutionContext->generationHandle = properties->pipeline->add_request(currentRequestId++,  // to be removed from API?
-        vlmExecutionContext->inputText, vlmExecutionContext->inputImages,
+    vlmExecutionContext->generationHandle = properties->pipeline->add_request(currentRequestId++,
+        vlmExecutionContext->vlmInputs,
         vlmExecutionContext->generationConfigBuilder->getConfig());
     return absl::OkStatus();
 }
@@ -94,6 +94,11 @@ absl::Status VisualLanguageModelServable::prepareInputs(std::shared_ptr<GenAiSer
 
         constexpr bool add_generation_prompt = true;  // confirm it should be hardcoded
         vlmExecutionContext->inputText = properties->tokenizer.apply_chat_template(chatHistory, add_generation_prompt);
+
+        // Use VLMProcessor to prepare structured inputs (vision encoding + embedding merge)
+        auto vlmProperties = std::static_pointer_cast<VisualLanguageModelServableProperties>(getProperties());
+        vlmProperties->processor->set_apply_chat_template(false);  // chat template already applied above
+        vlmExecutionContext->vlmInputs = vlmProperties->processor->prepare(vlmExecutionContext->inputText, vlmExecutionContext->inputImages);
     } else {
         return absl::InvalidArgumentError("Unsupported endpoint");
     }

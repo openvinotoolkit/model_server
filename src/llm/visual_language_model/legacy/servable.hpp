@@ -19,6 +19,8 @@
 #include <vector>
 
 #include <openvino/genai/visual_language/pipeline.hpp>
+#include <openvino/genai/visual_language/processor.hpp>
+#include <openvino/genai/visual_language/vlm_inputs.hpp>
 
 #include "../../servable.hpp"
 #include "legacy_executor.hpp"
@@ -34,6 +36,7 @@ struct VisualLanguageModelLegacyServableExecutionContext : public GenAiServableE
     std::vector<ov::Tensor> inputImages;
     std::condition_variable executionInProgress;
     std::string inputText;
+    ov::genai::VLMInputs vlmInputs;
     // Workaround needed to pass generation config to the executor that requires it
     ov::genai::GenerationConfig baseGenerationConfig;
     bool success = true;
@@ -42,6 +45,7 @@ struct VisualLanguageModelLegacyServableExecutionContext : public GenAiServableE
 struct VisualLanguageModelLegacyServableProperties : public GenAiServableProperties {
     ov::genai::SchedulerConfig schedulerConfig;
     std::shared_ptr<ov::genai::VLMPipeline> pipeline;
+    std::shared_ptr<ov::genai::VLMProcessor> processor;
     std::shared_ptr<VisualLanguageModelLegacyExecutorWrapper> legacyExecutor;
 };
 

@@ -247,6 +247,10 @@ absl::Status VisualLanguageModelLegacyServable::prepareInputs(std::shared_ptr<Ge
 
         constexpr bool add_generation_prompt = true;  // confirm it should be hardcoded
         vlmExecutionContext->inputText = properties->tokenizer.apply_chat_template(chatHistory, add_generation_prompt);
+
+        // Use VLMProcessor to prepare structured inputs (vision encoding + embedding merge)
+        properties->processor->set_apply_chat_template(false);  // chat template already applied above
+        vlmExecutionContext->vlmInputs = properties->processor->prepare(vlmExecutionContext->inputText, vlmExecutionContext->inputImages);
     } else {
         return absl::InvalidArgumentError("Unsupported endpoint");
     }

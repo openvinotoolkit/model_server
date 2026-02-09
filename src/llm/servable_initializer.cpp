@@ -38,6 +38,7 @@
 #include "../logging.hpp"
 #include "../mediapipe_internal/mediapipe_utils.hpp"
 #include "../status.hpp"
+#include "../json_parser.hpp"
 #include "../filesystem.hpp"
 #include "../stringutils.hpp"
 #include "language_model/continuous_batching/servable.hpp"
@@ -435,6 +436,16 @@ Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const :
             if (status != StatusCode::OK) {
                 SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error during LLM node resources initialization: {}", status.string());
                 return status;
+            }
+            // Create VLMProcessor for vision encoding and embedding preparation
+            try {
+                auto vlmProperties = std::static_pointer_cast<VisualLanguageModelServableProperties>(servable->getProperties());
+                ov::AnyMap pluginConfig;
+                JsonParser::parsePluginConfig(nodeOptions.plugin_config(), pluginConfig);
+                vlmProperties->processor = std::make_shared<ov::genai::VLMProcessor>(vlmProperties->modelsPath, vlmProperties->device, pluginConfig);
+            } catch (const std::exception& e) {
+                SPDLOG_ERROR("Error during VLMProcessor initialization: {}", e.what());
+                return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
             }
         } else if (pipelineType == PipelineType::LM) {
             SPDLOG_LOGGER_INFO(modelmanager_logger, "Initializing Language Model Legacy servable");

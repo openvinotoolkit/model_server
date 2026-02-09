@@ -19,6 +19,8 @@
 #include <vector>
 
 #include <openvino/genai/visual_language/pipeline.hpp>
+#include <openvino/genai/visual_language/processor.hpp>
+#include <openvino/genai/visual_language/vlm_inputs.hpp>
 
 #include "../../language_model/continuous_batching/servable.hpp"
 
@@ -29,13 +31,16 @@ VisualLanguageModelServable extends ContinuousBatchingServable since in GenAI VL
 This servable also reuses CB servable initializer.
 */
 
-using VisualLanguageModelServableProperties = ContinuousBatchingServableProperties;
+struct VisualLanguageModelServableProperties : public ContinuousBatchingServableProperties {
+    std::shared_ptr<ov::genai::VLMProcessor> processor;
+};
 
 struct VisualLanguageModelServableExecutionContext : public ContinuousBatchingServableExecutionContext {
     // Currently, scheduleExecution uses add_request call with prompt as std::string and images as std::vector<ov::Tensor>
     // so prepareInputs provides inputText and inputImages instead of inputIds from the base class.
     std::vector<ov::Tensor> inputImages;
     std::string inputText;
+    ov::genai::VLMInputs vlmInputs;
 };
 
 class VisualLanguageModelServable : public ContinuousBatchingServable {

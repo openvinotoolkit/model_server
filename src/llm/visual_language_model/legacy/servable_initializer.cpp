@@ -19,6 +19,7 @@
 #include <vector>
 
 #include <openvino/genai/visual_language/pipeline.hpp>
+#include <openvino/genai/visual_language/processor.hpp>
 #include <openvino/openvino.hpp>
 #include <spdlog/spdlog.h>
 
@@ -74,8 +75,9 @@ Status VisualLanguageModelLegacyServableInitializer::initialize(std::shared_ptr<
     }
 
     try {
+        properties->processor = std::make_shared<ov::genai::VLMProcessor>(parsedModelsPath, properties->device, properties->pluginConfig);
         properties->pipeline = std::make_shared<ov::genai::VLMPipeline>(parsedModelsPath, properties->device, properties->pluginConfig);
-        properties->tokenizer = properties->pipeline->get_tokenizer();
+        properties->tokenizer = properties->processor->get_tokenizer();
     } catch (const std::exception& e) {
         SPDLOG_ERROR("Error during llm node initialization for models_path: {} exception: {}", parsedModelsPath, e.what());
         return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
