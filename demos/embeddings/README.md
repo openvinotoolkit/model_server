@@ -308,6 +308,7 @@ python export_model.py embeddings_ov --source_model Qwen/Qwen3-Embedding-0.6B --
 
 > **Note** Change the `--weight-format` to quantize the model to `fp16`, `int8` or `int4` precision to reduce memory consumption and improve performance. `fp16` is used for better accuracy but `int8` and `int4` has better performance.
 > **Note** Pooling mode --pooling LAST has the best accuracy.
+> **Note** For weight-format int4, use `--extra_quantization_params "--sym --ratio 1.0 --group-size -1"`
 
 ## Tested models
 The demo is validated against following Hugging Face models:
