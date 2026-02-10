@@ -310,11 +310,11 @@ python export_model.py embeddings_ov --source_model Qwen/Qwen3-Embedding-0.6B --
 > **Note** Pooling mode --pooling LAST has the best accuracy.
 
 ## Tested models
-All models supported by [optimum-intel](https://github.com/huggingface/optimum-intel) should be compatible. The demo is validated against following Hugging Face models:
+The demo is validated against following Hugging Face models:
 
 |Model name|Pooling|
 |---|---|
-|Wqen/Qwen3-Embedding-0.6B|LAST|
+|Qwen/Qwen3-Embedding-0.6B|LAST|
 
 ## Server Deployment
 
