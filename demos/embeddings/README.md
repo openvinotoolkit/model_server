@@ -574,7 +574,7 @@ Compare against local HuggingFace execution for reference:
 mteb run -m thenlper/gte-small -t Banking77Classification --output_folder results
 ```
 
-> **Note**: To run limited number of samples, add `--eval_splits test --max_samples <number_of_samples>` to the command.
+> **Note**: To run limited number of samples, add `--eval_splits test` to the command.
 
 # Usage of tokenize endpoint
 

@@ -17,12 +17,11 @@
 from __future__ import annotations
 
 import logging
-import random
+from functools import partial
 from typing import Any
 
 import numpy as np
 import mteb
-from datasets import DatasetDict
 logger = logging.getLogger(__name__)
 import argparse
 
@@ -36,43 +35,7 @@ parser.add_argument('--dataset', default='Banking77Classification', help='Datase
 parser.add_argument('--eval_splits', nargs='*', default=None,
                     help='Evaluation splits to use, e.g. --eval_splits test dev. If not set, all splits defined in the task are used.',
                     dest='eval_splits')
-parser.add_argument('--hf_subsets', nargs='*', default=None,
-                    help='HuggingFace dataset subsets to evaluate on, e.g. --hf_subsets en fr. '
-                         'Useful for multilingual datasets to test only selected language subsets.',
-                    dest='hf_subsets')
-parser.add_argument('--max_samples', type=int, default=None,
-                    help='Maximum number of samples to use per split. '
-                         'When set, each evaluation split is truncated to at most this many samples, '
-                         'allowing quick smoke-test runs on large datasets.',
-                    dest='max_samples')
 args = vars(parser.parse_args())
-
-
-def truncate_task_datasets(task, max_samples: int, seed: int = 42) -> None:
-    """Truncate every split of every subset in a loaded task to at most *max_samples* rows.
-
-    Works on the task.dataset object in-place after task.load_data() has been called.
-    Handles both multilingual layout (subset -> DatasetDict) and flat layout (DatasetDict).
-    """
-    rng = random.Random(seed)
-
-    def _truncate_split(dataset, n):
-        if len(dataset) <= n:
-            return dataset
-        indices = list(range(len(dataset)))
-        rng.shuffle(indices)
-        return dataset.select(sorted(indices[:n]))
-
-    if isinstance(task.dataset, dict):
-        for key in task.dataset:
-            value = task.dataset[key]
-            if isinstance(value, DatasetDict):
-                # Multilingual: subset_name -> DatasetDict(split -> Dataset)
-                for split in value:
-                    value[split] = _truncate_split(value[split], max_samples)
-            else:
-                # Flat: split -> Dataset
-                task.dataset[key] = _truncate_split(value, max_samples)
 
 
 class OVMSModel:
@@ -85,7 +48,7 @@ class OVMSModel:
 
     def encode(
         self, sentences: list[str], **kwargs: Any
-    ) -> np.ndarray:
+    ) -> torch.Tensor | np.ndarray:
         max_batch_size = 32
         sublists = [
             sentences[i : i + max_batch_size]
@@ -110,17 +73,9 @@ class OVMSModel:
         return np.array([e.embedding for e in embedding_response.data])
 
 model = OVMSModel(args['model_name'], args['service_url'] ,1)
-task = mteb.get_task(args['dataset'],
-                     eval_splits=args['eval_splits'],
-                     hf_subsets=args['hf_subsets'])
-
-# If --max_samples is set, load the data early and truncate before evaluation
-if args['max_samples'] is not None:
-    task.load_data()
-    truncate_task_datasets(task, args['max_samples'])
-    logger.info("Truncated dataset splits to at most %d samples", args['max_samples'])
-
-evaluation = mteb.MTEB(tasks=[task])
+tasks = mteb.get_task(args['dataset'],
+                      eval_splits=args['eval_splits'])
+evaluation = mteb.MTEB(tasks=[tasks])
 evaluation.run(model,verbosity=3,overwrite_results=True,output_folder='results')
 # For full leaderboard tests set run:
 # benchmark = mteb.get_benchmark("MTEB(eng)")
