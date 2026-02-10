@@ -130,10 +130,17 @@ void SidepacketServable::initialize(const std::string& modelDir, const std::stri
         }
     }
 
+    ov::Core core;
+    std::shared_ptr<ov::Model> m_model = core.read_model(parsedModelsPath / std::filesystem::path("openvino_model.xml"), {}, properties);
+    m_model = this->applyPrePostProcessing(core, m_model, properties);
+    compiledModel = core.compile_model(m_model, targetDevice, properties);
+    SPDLOG_DEBUG("Model compiled {} for {}", parsedModelsPath.string(), targetDevice);
+
     auto& ovmsConfig = ovms::Config::instance();
     uint32_t numberOfParallelInferRequests = 1;
     if (ovmsConfig.nireq() > 0) {
         // We take nireq that set globally for all models in ovms startup parameters
+        // FIXME: This is dead anyway, --nireq parameter is disabled when running with --model_name and --model_path
         numberOfParallelInferRequests = ovmsConfig.nireq();
     } else {
         try {
@@ -145,13 +152,8 @@ void SidepacketServable::initialize(const std::string& modelDir, const std::stri
         SPDLOG_DEBUG("Setting inference queue for {} with {} parallel requests", targetDevice, numberOfParallelInferRequests);
     }
 
-    ov::Core core;
-    std::shared_ptr<ov::Model> m_model = core.read_model(parsedModelsPath / std::filesystem::path("openvino_model.xml"), {}, properties);
-    m_model = this->applyPrePostProcessing(core, m_model, properties);
-
-    compiledModel = core.compile_model(m_model, targetDevice, properties);
-    SPDLOG_DEBUG("Model compiled {} for {}", parsedModelsPath.string(), targetDevice);
     inferRequestsQueue = std::make_unique<OVInferRequestsQueue>(compiledModel, numberOfParallelInferRequests);
+    SPDLOG_DEBUG("Initialized infer requests queue with {} parallel requests", numberOfParallelInferRequests);
 }
 
 }  // namespace ovms
