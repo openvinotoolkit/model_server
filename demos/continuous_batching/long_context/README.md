@@ -25,8 +25,8 @@ Let's demonstrate all the optimizations combined and test it with the real life 
 Export the model Qwen/Qwen2.5-7B-Instruct-1M which has the max context length of 1 million tokens! 
 
 ```bash
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/export_model.py -o export_model.py
-pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/0/demos/common/export_models/export_model.py -o export_model.py
+pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/0/demos/common/export_models/requirements.txt
 mkdir models
 python export_model.py text_generation --source_model Qwen/Qwen2.5-7B-Instruct-1M --weight-format int4 --config_file_path models/config.json --model_repository_path models
 ```
