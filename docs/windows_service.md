@@ -46,7 +46,7 @@ ovms --list_models
 
 ### Pull models
 ```bat
-ovms --pull --model_name OpenVINO/Qwen3-8B-int4-ov --task text_generation --target_device
+ovms --pull --model_name OpenVINO/Qwen3-8B-int4-ov --task text_generation --target_device CPU
 ```
 
 ### Start a model by adding it to the config.json
