@@ -413,7 +413,7 @@ def export_text_generation_model(model_repository_path, source_model, model_name
                 raise ValueError("Failed to export llm model", source_model)
             if not (os.path.isfile(os.path.join(llm_model_path, 'openvino_detokenizer.xml'))):
                 print("Tokenizer and detokenizer not found in the exported model. Exporting tokenizer and detokenizer from HF model")
-                trust_remote_code_flag = "--trust-remote-code" if task_parameters['trust_remote_code'] else ""
+                trust_remote_code_flag = "--trust-remote-code" if task_parameters.get('trust_remote_code', False) else ""
                 convert_tokenizer_command = f"convert_tokenizer --with-detokenizer {trust_remote_code_flag} -o {llm_model_path} {source_model}"
                 if os.system(convert_tokenizer_command):
                     raise ValueError("Failed to export tokenizer and detokenizer", source_model)
