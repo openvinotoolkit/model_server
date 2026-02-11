@@ -266,10 +266,10 @@ TEST_F(Speech2TextHttpTest, invalidStreamTrue) {
     req->setMethod(drogon::Post);
     req->addHeader("content-type", "multipart/form-data; boundary=\"12345\"");
     std::string stream = "\r\n"
-                           "Content-Disposition: form-data;name=\"stream\"\r\n"
-                           "\r\n"
-                           "true\r\n"
-                           "--12345";
+                         "Content-Disposition: form-data;name=\"stream\"\r\n"
+                         "\r\n"
+                         "true\r\n"
+                         "--12345";
     req->setBody(Speech2TextHttpTest::body + stream);
     std::shared_ptr<MultiPartParser> multiPartParserWithRequest = std::make_shared<DrogonMultiPartParser>(req);
     std::string requestBody = "";
