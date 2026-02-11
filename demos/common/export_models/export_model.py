@@ -56,7 +56,7 @@ parser_text.add_argument('--prompt_lookup_decoding', action='store_true', help='
 parser_text.add_argument('--reasoning_parser', choices=["qwen3", "gptoss"], help='Set the type of the reasoning parser for reasoning content extraction', dest='reasoning_parser')
 parser_text.add_argument('--tool_parser', choices=["llama3", "phi4", "hermes3", "mistral", "qwen3coder", "gptoss", "devstral"], help='Set the type of the tool parser for tool calls extraction', dest='tool_parser')
 parser_text.add_argument('--enable_tool_guided_generation', action='store_true', help='Enables enforcing tool schema during generation. Requires setting tool_parser', dest='enable_tool_guided_generation')
-parser_text.add_argument('--trust_remote_code', required=False, action='store_true', help='Trust remote code for tokenizer conversion', dest='trust_remote_code')
+parser_text.add_argument('--trust_remote_code', required=False, action='store_true', help='Trust remote code for tokenizer conversion. It should be used only with trusted sources.', dest='trust_remote_code')
 
 parser_embeddings_ov = subparsers.add_parser('embeddings_ov', help='export model for embeddings endpoint with directory structure aligned with OpenVINO tools')
 add_common_arguments(parser_embeddings_ov)
