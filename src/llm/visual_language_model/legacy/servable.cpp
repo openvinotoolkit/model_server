@@ -123,6 +123,9 @@ absl::Status VisualLanguageModelLegacyServable::scheduleExecution(std::shared_pt
     if (legacyExecutionContext->payload.client->isDisconnected()) {
         return absl::CancelledError();
     }
+    legacyExecutionContext->payload.client->registerDisconnectionCallback([& clientDisconnected = legacyExecutionContext->clientDisconnected]() {
+        clientDisconnected = true;
+    });
     properties->legacyExecutor->addRequest(legacyExecutionContext);
     return absl::OkStatus();
 }

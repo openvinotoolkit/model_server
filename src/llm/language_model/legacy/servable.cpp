@@ -130,6 +130,9 @@ absl::Status LegacyServable::scheduleExecution(std::shared_ptr<GenAiServableExec
     if (legacyExecutionContext->payload.client->isDisconnected()) {
         return absl::CancelledError();
     }
+    legacyExecutionContext->payload.client->registerDisconnectionCallback([& clientDisconnected = legacyExecutionContext->clientDisconnected]() {
+        clientDisconnected = true;
+    });
     properties->legacyExecutor->addRequest(legacyExecutionContext);
     return absl::OkStatus();
 }
