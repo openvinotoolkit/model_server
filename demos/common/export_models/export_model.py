@@ -56,6 +56,7 @@ parser_text.add_argument('--prompt_lookup_decoding', action='store_true', help='
 parser_text.add_argument('--reasoning_parser', choices=["qwen3", "gptoss"], help='Set the type of the reasoning parser for reasoning content extraction', dest='reasoning_parser')
 parser_text.add_argument('--tool_parser', choices=["llama3", "phi4", "hermes3", "mistral", "qwen3coder", "gptoss", "devstral"], help='Set the type of the tool parser for tool calls extraction', dest='tool_parser')
 parser_text.add_argument('--enable_tool_guided_generation', action='store_true', help='Enables enforcing tool schema during generation. Requires setting tool_parser', dest='enable_tool_guided_generation')
+parser_text.add_argument('--trust_remote_code', required=False, action='store_true', help='Trust remote code for tokenizer conversion', dest='trust_remote_code')
 
 parser_embeddings_ov = subparsers.add_parser('embeddings_ov', help='export model for embeddings endpoint with directory structure aligned with OpenVINO tools')
 add_common_arguments(parser_embeddings_ov)
@@ -412,7 +413,8 @@ def export_text_generation_model(model_repository_path, source_model, model_name
                 raise ValueError("Failed to export llm model", source_model)
             if not (os.path.isfile(os.path.join(llm_model_path, 'openvino_detokenizer.xml'))):
                 print("Tokenizer and detokenizer not found in the exported model. Exporting tokenizer and detokenizer from HF model")
-                convert_tokenizer_command = "convert_tokenizer --with-detokenizer -o {} {}".format(llm_model_path, source_model)
+                trust_remote_code_flag = "--trust-remote-code" if task_parameters['trust_remote_code'] else ""
+                convert_tokenizer_command = f"convert_tokenizer --with-detokenizer {trust_remote_code_flag} -o {llm_model_path} {source_model}"
                 if os.system(convert_tokenizer_command):
                     raise ValueError("Failed to export tokenizer and detokenizer", source_model)
     ### Export draft model for speculative decoding 
