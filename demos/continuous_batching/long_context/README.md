@@ -22,7 +22,7 @@ Compression reduces this memory usage, enabling longer prompts or more parallel 
 
 Let's demonstrate all the optimizations combined and test it with the real life scenario of sending multiple various questions in the same context. It will illustrate the gain from the prefix caching on the first token latency, improved second token latency thanks to prompt lookup and moderate memory consumption despite very long prompts and parallel execution.
 
-Export the model Qwen/Qwen2.5-7B-Instruct-1M which has the max context length of 1 million tokens! 
+Export the model openai/gpt-oss-20b which has the max context length of 131k tokens.
 
 ```bash
 curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/export_model.py -o export_model.py
@@ -33,15 +33,23 @@ curl -L -o models/openai/gpt-oss-20b/chat_template.jinja https://raw.githubuserc
 ```
 
 Start OVMS:
+
+::::{tab-set}
+:::{tab-item} CPU
+:sync: CPU
 ```bash
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models openvino/model_server:weekly --rest_port 8000 --source_model openai/gpt-oss-20b --model_repository_path models --tool_parser gptoss --task text_generation --cache_dir /models/.cache --enable_prefix_caching true
 ```
-
+:::
+:::{tab-item} GPU
+:sync: GPU
 ```bash
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:weekly \
 --rest_port 8000 --source_model openai/gpt-oss-20b --model_repository_path models \
 --tool_parser gptoss --reasoning_parser gptoss --target_device GPU --task text_generation --enable_prefix_caching true
 ```
+:::
+::::
 
 ## Dataset for experiments
 
@@ -65,31 +73,10 @@ pip3 install -r requirements/cpu.txt . --extra-index-url https://download.pytorc
 python benchmarks/benchmark_serving.py --host localhost --port 8000 --endpoint /v3/chat/completions --backend openai-chat --model openai/gpt-oss-20b --dataset-name custom --dataset-path ../dataset.jsonl --num-prompts 10 --max-concurrency 1 --custom-output-len 50
 ```
 
-# GPU
-```
-============ Serving Benchmark Result ============
-Successful requests:                     10
-Benchmark duration (s):                  33.49
-Total input tokens:                      49774
-Total generated tokens:                  500
-Request throughput (req/s):              0.30
-Output token throughput (tok/s):         14.93
-Total Token throughput (tok/s):          1501.34
----------------Time to First Token----------------
-Mean TTFT (ms):                          126.35
-Median TTFT (ms):                        125.42
-P99 TTFT (ms):                           135.13
------Time per Output Token (excl. 1st token)------
-Mean TPOT (ms):                          65.75
-Median TPOT (ms):                        65.69
-P99 TPOT (ms):                           66.04
----------------Inter-token Latency----------------
-Mean ITL (ms):                           87.07
-Median ITL (ms):                         65.98
-P99 ITL (ms):                            199.35
-==================================================
-```
-# CPU
+
+::::{tab-set}
+:::{tab-item} CPU
+:sync: CPU
 ```
 ============ Serving Benchmark Result ============
 Successful requests:                     10
@@ -113,6 +100,34 @@ Median ITL (ms):                         56.81
 P99 ITL (ms):                            171.99
 ==================================================
 ```
+:::
+:::{tab-item} GPU
+:sync: GPU
+```
+============ Serving Benchmark Result ============
+Successful requests:                     10
+Benchmark duration (s):                  33.49
+Total input tokens:                      49774
+Total generated tokens:                  500
+Request throughput (req/s):              0.30
+Output token throughput (tok/s):         14.93
+Total Token throughput (tok/s):          1501.34
+---------------Time to First Token----------------
+Mean TTFT (ms):                          126.35
+Median TTFT (ms):                        125.42
+P99 TTFT (ms):                           135.13
+-----Time per Output Token (excl. 1st token)------
+Mean TPOT (ms):                          65.75
+Median TPOT (ms):                        65.69
+P99 TPOT (ms):                           66.04
+---------------Inter-token Latency----------------
+Mean ITL (ms):                           87.07
+Median ITL (ms):                         65.98
+P99 ITL (ms):                            199.35
+==================================================
+```
+:::
+::::
 
 The results shown above, despite very long context, have much lower TTFT latency with prefix caching. As long as the beginning of the request prompt is reused, KV cache can be also reused to speed up prompt processing.
 
