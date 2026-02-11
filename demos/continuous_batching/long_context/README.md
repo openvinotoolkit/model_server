@@ -28,12 +28,19 @@ Export the model Qwen/Qwen2.5-7B-Instruct-1M which has the max context length of
 curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/export_model.py -o export_model.py
 pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
 mkdir models
-python export_model.py text_generation --source_model Qwen/Qwen2.5-7B-Instruct-1M --weight-format int4 --config_file_path models/config.json --model_repository_path models
+python export_model.py text_generation --source_model openai/gpt-oss-20b --weight-format int4 --config_file_path models/config.json --model_repository_path models --tool_parser gptoss --reasoning_parser gptoss
+curl -L -o models/openai/gpt-oss-20b/chat_template.jinja https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/4/extras/chat_template_examples/chat_template_gpt_oss_multiturn.jinja
 ```
 
 Start OVMS:
 ```bash
-docker run -it --rm -u $(id -u) -p 8000:8000 -v $(pwd)/models/:/models:rw openvino/model_server:latest --rest_port 8000 --source_model Qwen/Qwen2.5-7B-Instruct-1M --model_repository_path /models --task text_generation --enable_prefix_caching true --kv_cache_precision u8 --target_device CPU
+docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models openvino/model_server:weekly --rest_port 8000 --source_model openai/gpt-oss-20b --model_repository_path models --tool_parser gptoss --task text_generation --cache_dir /models/.cache --enable_prefix_caching true
+```
+
+```bash
+docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:weekly \
+--rest_port 8000 --source_model openai/gpt-oss-20b --model_repository_path models \
+--tool_parser gptoss --reasoning_parser gptoss --target_device GPU --task text_generation --enable_prefix_caching true
 ```
 
 ## Dataset for experiments
@@ -55,19 +62,56 @@ Let's check the performance
 git clone --branch v0.9.1 --depth 1 https://github.com/vllm-project/vllm
 cd vllm
 pip3 install -r requirements/cpu.txt . --extra-index-url https://download.pytorch.org/whl/cpu
-python benchmarks/benchmark_serving.py --host localhost --port 8000 --endpoint /v3/chat/completions --backend openai-chat --model Qwen/Qwen2.5-7B-Instruct-1M --dataset-name custom --dataset-path ../dataset.jsonl --num-prompts 10 --max-concurrency 1 --custom-output-len 50
+python benchmarks/benchmark_serving.py --host localhost --port 8000 --endpoint /v3/chat/completions --backend openai-chat --model openai/gpt-oss-20b --dataset-name custom --dataset-path ../dataset.jsonl --num-prompts 10 --max-concurrency 1 --custom-output-len 50
+```
+
+# GPU
+```
 ============ Serving Benchmark Result ============
-Successful requests:                     10        
-Benchmark duration (s):                  31.44     
-Total input tokens:                      500414    
-Total generated tokens:                  500       
-Request throughput (req/s):              0.32      
-Output token throughput (tok/s):         15.91     
-Total Token throughput (tok/s):          15934.81  
+Successful requests:                     10
+Benchmark duration (s):                  33.49
+Total input tokens:                      49774
+Total generated tokens:                  500
+Request throughput (req/s):              0.30
+Output token throughput (tok/s):         14.93
+Total Token throughput (tok/s):          1501.34
 ---------------Time to First Token----------------
-Mean TTFT (ms):                          1551.46   
-Median TTFT (ms):                        518.46    
-P99 TTFT (ms):                           3260.48   
+Mean TTFT (ms):                          126.35
+Median TTFT (ms):                        125.42
+P99 TTFT (ms):                           135.13
+-----Time per Output Token (excl. 1st token)------
+Mean TPOT (ms):                          65.75
+Median TPOT (ms):                        65.69
+P99 TPOT (ms):                           66.04
+---------------Inter-token Latency----------------
+Mean ITL (ms):                           87.07
+Median ITL (ms):                         65.98
+P99 ITL (ms):                            199.35
+==================================================
+```
+# CPU
+```
+============ Serving Benchmark Result ============
+Successful requests:                     10
+Benchmark duration (s):                  29.54
+Total input tokens:                      49774
+Total generated tokens:                  500
+Request throughput (req/s):              0.34
+Output token throughput (tok/s):         16.92
+Total Token throughput (tok/s):          1701.74
+---------------Time to First Token----------------
+Mean TTFT (ms):                          173.65
+Median TTFT (ms):                        171.61
+P99 TTFT (ms):                           190.84
+-----Time per Output Token (excl. 1st token)------
+Mean TPOT (ms):                          56.74
+Median TPOT (ms):                        56.82
+P99 TPOT (ms):                           56.87
+---------------Inter-token Latency----------------
+Mean ITL (ms):                           75.14
+Median ITL (ms):                         56.81
+P99 ITL (ms):                            171.99
+==================================================
 ```
 
 The results shown above, despite very long context, have much lower TTFT latency with prefix caching. As long as the beginning of the request prompt is reused, KV cache can be also reused to speed up prompt processing.
