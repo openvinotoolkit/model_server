@@ -347,6 +347,7 @@ ARG LTO_ENABLE=OFF
 WORKDIR /ovms
 # Konflux has a hard time locating the built binaries. Need to put it
 # in a known location.
+# hadolint ignore=DL4006 
 RUN mkdir -p /tmp/bazel-output && \
     bazel --output_base=/tmp/bazel-output \
         build --jobs=$JOBS ${CAPI_FLAGS} //src:ovms_shared && \
@@ -363,6 +364,7 @@ RUN bazel build --jobs $JOBS ${CAPI_FLAGS} //src:capi_cpp_example
 # C-API benchmark app
 # Konflux has a hard time locating the built binaries. Need to put it
 # in a known location.
+# hadolint ignore=DL4006 
 RUN mkdir -p /tmp/bazel-output && \
     bazel --output_base=/tmp/bazel-output \
         build --jobs=$JOBS ${CAPI_FLAGS} //src:capi_benchmark && \
