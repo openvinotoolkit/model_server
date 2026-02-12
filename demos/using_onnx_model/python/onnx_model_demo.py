@@ -25,10 +25,10 @@ import classes
 
 
 def load_image(path):
-    img = Image.open(path)
-    img = img.resize((224, 224))
-    np_img = np.array(img, dtype=np.uint8)
-    np_img = np.expand_dims(np_img, axis=0)
+    with Image.open(path) as img:
+        img = img.resize((224, 224))
+        np_img = np.array(img, dtype=np.uint8)
+        np_img = np.expand_dims(np_img, axis=0)
     return np_img
 
 parser = argparse.ArgumentParser(description='Run prediction on ONNX ResNet50 Model')
