@@ -15,10 +15,10 @@ While this tool was implemented for llama-cpp project, it can be easily enabled 
 ## Pull the models needed for the deployment
 
 ```bat
-ovms pull --task embeddings --model_name OpenVINO/Qwen3-Embedding-0.6B-int8-ov --target_device GPU --cache_dir .ov_cache --pooling LAST
-ovms pull --task text_generation --model_name OpenVINO/Qwen3-4B-int4-ov --target_device GPU --cache_dir .ov_cache --tool_parser hermes3
-ovms pull --task text_generation --model_name OpenVINO/InternVL2-2B-int4-ov --target_device GPU --cache_dir .ov_cache 
-ovms pull --task text_generation --model_name OpenVINO/Mistral-7B-Instruct-v0.3-int4-ov --target_device GPU --cache_dir .ov_cache --tool_parser mistral
+ovms --pull --task embeddings --model_name OpenVINO/Qwen3-Embedding-0.6B-int8-ov --target_device GPU --cache_dir .ov_cache --pooling LAST
+ovms --pull --task text_generation --model_name OpenVINO/Qwen3-4B-int4-ov --target_device GPU --cache_dir .ov_cache --tool_parser hermes3
+ovms --pull --task text_generation --model_name OpenVINO/InternVL2-2B-int4-ov --target_device GPU --cache_dir .ov_cache
+ovms --pull --task text_generation --model_name OpenVINO/Mistral-7B-Instruct-v0.3-int4-ov --target_device GPU --cache_dir .ov_cache --tool_parser mistral
 ```
 
 ## Configure config.yaml for llama_swap
