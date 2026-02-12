@@ -87,7 +87,7 @@ Run `export_model.py` script to download and quantize the model:
 > **Note:** The users in China need to set environment variable HF_ENDPOINT="https://hf-mirror.com" before running the export script to connect to the HF Hub.
 
 **CPU**
-``` 
+```console
 python export_model.py text_generation --source_model OpenGVLab/InternVL2-2B --weight-format int4 --pipeline_type VLM --model_name OpenGVLab/InternVL2-2B --config_file_path models/config.json --model_repository_path models  --overwrite_models --trust_remote_code
 ```
 
