@@ -31,8 +31,8 @@ Use those steps to convert the model from HugginFace Hub to OpenVINO format and 
 
 ```console
 # Download export script, install its dependencies and create directory for the models
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/export_model.py -o export_model.py
-pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/0/demos/common/export_models/export_model.py -o export_model.py
+pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/0/demos/common/export_models/requirements.txt
 mkdir models
 ```
 Run `export_model.py` script to download and quantize the model:
@@ -84,14 +84,14 @@ curl -L -o models/mistralai/Mistral-7B-Instruct-v0.3/chat_template.jinja https:/
 :sync: Qwen3-Coder-30B-A3B-Instruct
 ```console
 python export_model.py text_generation --source_model Qwen/Qwen3-Coder-30B-A3B-Instruct --weight-format int4 --config_file_path models/config.json --model_repository_path models --tool_parser qwen3coder
-curl -L -o models/Qwen/Qwen3-Coder-30B-A3B-Instruct/chat_template.jinja https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/extras/chat_template_examples/chat_template_qwen3coder_instruct.jinja
+curl -L -o models/Qwen/Qwen3-Coder-30B-A3B-Instruct/chat_template.jinja https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/0/extras/chat_template_examples/chat_template_qwen3coder_instruct.jinja
 ```
 :::
 :::{tab-item} gpt-oss-20b
 :sync: gpt-oss-20b
 ```console
 python export_model.py text_generation --source_model openai/gpt-oss-20b --weight-format int4 --config_file_path models/config.json --model_repository_path models --tool_parser gptoss --reasoning_parser gptoss
-curl -L -o models/openai/gpt-oss-20b/chat_template.jinja https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/4/extras/chat_template_examples/chat_template_gpt_oss_multiturn.jinja
+curl -L -o models/openai/gpt-oss-20b/chat_template.jinja https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/0/extras/chat_template_examples/chat_template_gpt_oss.jinja
 ```
 > **Note:**: Use `--pipeline_type LM` parameter in export command, for version 2025.4.*. It disables continuous batching. Not needed in weekly release or 2026.0+ releases.
 :::
@@ -102,12 +102,12 @@ Note: This model requires a fix in optimum-intel which is currently on a fork.
 pip3 install transformers==4.53.3 --force-reinstall
 pip3 install "optimum-intel[openvino]"@git+https://github.com/helena-intel/optimum-intel/@ea/lonrope_exp
 python export_model.py text_generation --source_model microsoft/Phi-4-mini-instruct --weight-format int4 --config_file_path models/config.json --model_repository_path models --tool_parser phi4 --max_num_batched_tokens 99999
-curl -L -o models/microsoft/Phi-4-mini-instruct/chat_template.jinja https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/extras/chat_template_examples/chat_template_phi4_mini.jinja
+curl -L -o models/microsoft/Phi-4-mini-instruct/chat_template.jinja https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/0/extras/chat_template_examples/chat_template_phi4_mini.jinja
 ```
 :::
 ::::
 
-> **Note:** To use these models on NPU, set `--weight-format` to either **int4** or **nf4**. When specifying `--extra_quantization_params`, ensure that `ratio` is set to **1.0** and `group_size` is set to **-1** or **128**. For more details, see [OpenVINO GenAI on NPU](https://docs.openvino.ai/nightly/openvino-workflow-generative/inference-with-genai/inference-with-genai-on-npu.html).
+> **Note:** To use these models on NPU, set `--weight-format` to either **int4** or **nf4**. When specifying `--extra_quantization_params`, ensure that `ratio` is set to **1.0** and `group_size` is set to **-1** or **128**. For more details, see [OpenVINO GenAI on NPU](https://docs.openvino.ai/2026/openvino-workflow-generative/inference-with-genai/inference-with-genai-on-npu.html).
 
 ### Direct pulling of pre-configured HuggingFace models from docker containers
 
@@ -485,7 +485,7 @@ docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/model
 ### Deploying in a docker container on NPU
 
 The case of NPU is similar to GPU, but `--device` should be set to `/dev/accel`, `--group-add` parameter should be the same.
-Running `docker run` command, use the image with GPU support. Export the models with precision matching the [NPU capacity](https://docs.openvino.ai/nightly/openvino-workflow-generative/inference-with-genai/inference-with-genai-on-npu.html) and adjust pipeline configuration.
+Running `docker run` command, use the image with GPU support. Export the models with precision matching the [NPU capacity](https://docs.openvino.ai/2026/openvino-workflow-generative/inference-with-genai/inference-with-genai-on-npu.html) and adjust pipeline configuration.
 It can be applied using the commands below:
 
 ::::{tab-set}
@@ -574,8 +574,8 @@ docker run -d -p 8080:8080 -e PORT=8080 mcp-weather-server:sse uv run python -m 
 Install the application requirements
 
 ```console
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/continuous_batching/agentic_ai/openai_agent.py -o openai_agent.py
-pip install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/continuous_batching/agentic_ai/requirements.txt
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/2026/0/demos/continuous_batching/agentic_ai/openai_agent.py -o openai_agent.py
+pip install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/2026/0/demos/continuous_batching/agentic_ai/requirements.txt
 ```
 Make sure nodejs and npx are installed. On ubuntu it would require `sudo apt install nodejs npm`. On windows, visit https://nodejs.org/en/download. It is needed for the `file system` MCP server.
 
@@ -664,7 +664,7 @@ python openai_agent.py --query "What is the current weather in Tokyo?" --model o
 You can try also similar implementation based on llama_index library working the same way:
 ```bash
 pip install llama-index-llms-openai-like==0.5.3 llama-index-core==0.14.5 llama-index-tools-mcp==0.4.2
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/continuous_batching/agentic_ai/llama_index_agent.py -o llama_index_agent.py
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/2026/0/demos/continuous_batching/agentic_ai/llama_index_agent.py -o llama_index_agent.py
 python llama_index_agent.py --query "What is the current weather in Tokyo?" --model OpenVINO/Qwen3-8B-int4-ov --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather --stream --enable-thinking
 
 ```

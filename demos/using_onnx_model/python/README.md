@@ -61,7 +61,7 @@ docker run -d -u $(id -u):$(id -g) -v $(pwd)/workspace:/workspace -p 9001:9001 o
 --model_path /workspace/resnet50-onnx --model_name resnet --port 9001 --layout NHWC:NCHW --mean "[123.675,116.28,103.53]" --scale "[58.395,57.12,57.375]" --shape "(1,224,224,3)" --color_format BGR:RGB
 ```
 
-The `onnx_model_demo.py` script can run inference both with and without performing preprocessing. Since in this variant preprocessing is done by the model server, there's no need to perform any image preprocessing on the client side. In that case, run without `--run_preprocessing` option. See [preprocessing function](https://github.com/openvinotoolkit/model_server/blob/main/demos/using_onnx_model/python/onnx_model_demo.py#L26-L33) run in the client.
+The `onnx_model_demo.py` script can run inference both with and without performing preprocessing. Since in this variant preprocessing is done by the model server, there's no need to perform any image preprocessing on the client side. In that case, run without `--run_preprocessing` option. See [preprocessing function](https://github.com/openvinotoolkit/model_server/blob/releases/2026/0/demos/using_onnx_model/python/onnx_model_demo.py#L26-L33) run in the client.
 
 Run the client without preprocessing:
 ```bash
