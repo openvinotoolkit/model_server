@@ -100,7 +100,7 @@ The calculator supports the following `node_options` for tuning the pipeline con
 -    `optional uint64 max_num_seqs` - max number of sequences actively processed by the engine [default = 256];
 -    `optional bool dynamic_split_fuse` - use Dynamic Split Fuse token scheduling [default = true];
 -    `optional string device` - device to load models to. Supported values: "CPU", "GPU" [default = "CPU"]
--    `optional string plugin_config` - [OpenVINO device plugin configuration](https://docs.openvino.ai/2025/openvino-workflow/running-inference/inference-devices-and-modes.html) and additional pipeline options. Should be provided in the same format for regular [models configuration](../parameters.md#model-configuration-options) [default = "{}"]
+-    `optional string plugin_config` - [OpenVINO device plugin configuration](https://docs.openvino.ai/2026/openvino-workflow/running-inference/inference-devices-and-modes.html) and additional pipeline options. Should be provided in the same format for regular [models configuration](../parameters.md#model-configuration-options) [default = "{}"]
 -    `optional uint32 best_of_limit` - max value of best_of parameter accepted by endpoint [default = 20];
 -    `optional uint32 max_tokens_limit` - max value of max_tokens parameter accepted by endpoint;
 -    `optional bool enable_prefix_caching` - enable caching of KV-blocks [default = false];
@@ -223,7 +223,7 @@ In different use cases and load specification, requests and tokens scheduling mi
     optional uint64 xattention_block_size = 6;
     optional uint64 xattention_stride = 7;
     ```
-    Description of parameters in that config can be found in GenAI docs about [SparseAttentionConfig](https://docs.openvino.ai/2025/api/genai_api/_autosummary/openvino_genai.SparseAttentionConfig.html#openvino-genai-sparseattentionconfig).
+    Description of parameters in that config can be found in GenAI docs about [SparseAttentionConfig](https://docs.openvino.ai/2026/api/genai_api/_autosummary/openvino_genai.SparseAttentionConfig.html#openvino-genai-sparseattentionconfig).
 
     Example of graph with sparse attention configured:
 

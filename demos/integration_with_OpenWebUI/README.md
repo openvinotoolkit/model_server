@@ -20,7 +20,7 @@ In this demo, OpenVINO Model Server is deployed on Linux with CPU using Docker a
 * Python 3.11 with pip 
 * HuggingFace account to download models
 
-There are other options to fulfill the prerequisites like [OpenVINO Model Server deployment on baremetal Linux or Windows](https://docs.openvino.ai/2025/model-server/ovms_docs_deploying_server_baremetal.html) and [Open WebUI installation with Docker](https://docs.openwebui.com/#quick-start-with-docker-). The steps in this demo can be reused across different options, and the reference for each step cover both deployments.
+There are other options to fulfill the prerequisites like [OpenVINO Model Server deployment on baremetal Linux or Windows](https://docs.openvino.ai/2026/model-server/ovms_docs_deploying_server_baremetal.html) and [Open WebUI installation with Docker](https://docs.openwebui.com/#quick-start-with-docker-). The steps in this demo can be reused across different options, and the reference for each step cover both deployments.
 
 This demo was tested on CPU but most of the models could be also run on Intel accelerators like GPU and NPU.
 
@@ -71,7 +71,7 @@ Go to [http://localhost:8080](http://localhost:8080) and create admin account to
 ![get started with Open WebUI](./get_started_with_Open_WebUI.png)
 
 ### Reference
-[https://docs.openvino.ai/2025/model-server/ovms_demos_continuous_batching.html](https://docs.openvino.ai/2025/model-server/ovms_demos_continuous_batching.html#model-preparation)
+[https://docs.openvino.ai/2026/model-server/ovms_demos_continuous_batching.html](https://docs.openvino.ai/2026/model-server/ovms_demos_continuous_batching.html#model-preparation)
 
 [https://docs.openwebui.com](https://docs.openwebui.com/#installation-with-pip)
 
@@ -96,7 +96,7 @@ Click **New Chat** and select the model to start chatting
 
 ### (optional) Step 3: Set request parameters
 
-There are multiple configurable parameters in OVMS, all of them for `/v3/chat/completions` endpoint are accessible in [chat api documentation](https://github.com/openvinotoolkit/model_server/blob/main/docs/model_server_rest_api_chat.md#request).
+There are multiple configurable parameters in OVMS, all of them for `/v3/chat/completions` endpoint are accessible in [chat api documentation](https://github.com/openvinotoolkit/model_server/blob/releases/2026/0/docs/model_server_rest_api_chat.md#request).
 
 To configure them in *OpenWebUI* with an example of turning off reasoning:
 1. Go to **Admin Panel** -> **Settings** -> **Models** ([http://localhost:8080/admin/settings/models](http://localhost:8080/admin/settings/models))
@@ -202,7 +202,7 @@ curl http://localhost:8000/v3/rerank -H "Content-Type: application/json" -d "{\"
 
 ### Reference
 
-[https://docs.openvino.ai/2025/model-server/ovms_demos_continuous_batching_rag.html](https://docs.openvino.ai/2025/model-server/ovms_demos_continuous_batching_rag.html#export-models-from-huggingface-hub-including-conversion-to-openvino-format-using-the-python-script)
+[https://docs.openvino.ai/2026/model-server/ovms_demos_continuous_batching_rag.html](https://docs.openvino.ai/2026/model-server/ovms_demos_continuous_batching_rag.html#export-models-from-huggingface-hub-including-conversion-to-openvino-format-using-the-python-script)
 
 [https://docs.openwebui.com/tutorials/tips/rag-tutorial](https://docs.openwebui.com/tutorials/tips/rag-tutorial/#setup)
 
@@ -267,7 +267,7 @@ Method 2:
 ![image generation method 2 demo](./image_generation_method_2_demo.png)
 
 ### Reference
-[https://docs.openvino.ai/2025/model-server/ovms_demos_image_generation.html](https://docs.openvino.ai/2025/model-server/ovms_demos_image_generation.html#export-model-for-cpu)
+[https://docs.openvino.ai/2026/model-server/ovms_demos_image_generation.html](https://docs.openvino.ai/2026/model-server/ovms_demos_image_generation.html#export-model-for-cpu)
 
 [https://docs.openwebui.com/features/image-generation-and-editing](https://docs.openwebui.com/features/image-generation-and-editing/openai)
 
@@ -312,7 +312,7 @@ curl http://localhost:8000/v3/chat/completions  -H "Content-Type: application/js
 ![chat with VLM demo](./chat_with_VLM_demo.png)
 
 ### Reference
-[https://docs.openvino.ai/2025/model-server/ovms_demos_continuous_batching_vlm.html](https://docs.openvino.ai/2025/model-server/ovms_demos_continuous_batching_vlm.html#model-preparation)
+[https://docs.openvino.ai/2026/model-server/ovms_demos_continuous_batching_vlm.html](https://docs.openvino.ai/2026/model-server/ovms_demos_continuous_batching_vlm.html#model-preparation)
 
 ---
 
@@ -360,8 +360,8 @@ mcpo --port 9000 -- python -m mcp_weather_server
 
 Start by downloading `export_models.py` script and run it to download and quantize the model for speech generation:
 ```console 
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/export_model.py -o export_model.py
-pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/0/demos/common/export_models/export_model.py -o export_model.py
+pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/0/demos/common/export_models/requirements.txt
 python export_model.py text2speech --source_model microsoft/speecht5_tts --weight-format fp32 --model_name microsoft/speecht5_tts --config_file_path models/config.json --model_repository_path models --vocoder microsoft/speecht5_hifigan
 ```
 

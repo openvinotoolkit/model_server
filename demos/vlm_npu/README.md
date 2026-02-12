@@ -27,8 +27,8 @@ LLM engine parameters will be defined inside the `graph.pbtxt` file.
 
 Download export script, install it's dependencies and create directory for the models:
 ```console
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/export_model.py -o export_model.py
-pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/0/demos/common/export_models/export_model.py -o export_model.py
+pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/0/demos/common/export_models/requirements.txt
 pip3 install transformers==4.53.3 --force-reinstall
 mkdir models
 ```
@@ -124,9 +124,9 @@ curl http://localhost:8000/v1/config
 
 ```console
 pip3 install requests
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/static/images/zebra.jpeg -o zebra.jpeg
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/0/demos/common/static/images/zebra.jpeg -o zebra.jpeg
 ```
-![zebra](https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/static/images/zebra.jpeg)
+![zebra](https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/0/demos/common/static/images/zebra.jpeg)
 
 :::{dropdown} **Unary call with curl using image from local filesystem**
 
@@ -286,7 +286,7 @@ python benchmark_serving.py --backend openai-chat --dataset-name hf --dataset-pa
 
 ## Testing the model accuracy over serving API
 
-Check the [guide of using lm-evaluation-harness](https://github.com/openvinotoolkit/model_server/blob/main/demos/continuous_batching/accuracy/README.md)
+Check the [guide of using lm-evaluation-harness](https://github.com/openvinotoolkit/model_server/blob/releases/2026/0/demos/continuous_batching/accuracy/README.md)
 
 ## Limitations
 

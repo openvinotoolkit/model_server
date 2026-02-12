@@ -1,6 +1,6 @@
 # How to serve LLM Models in Speculative Decoding Pipeline{#ovms_demos_continuous_batching_speculative_decoding}
 
-Following [OpenVINO GenAI docs](https://docs.openvino.ai/2025/openvino-workflow-generative/inference-with-genai.html#efficient-text-generation-via-speculative-decoding):
+Following [OpenVINO GenAI docs](https://docs.openvino.ai/2026/openvino-workflow-generative/inference-with-genai.html#efficient-text-generation-via-speculative-decoding):
 > Speculative decoding (or assisted-generation) enables faster token generation when an additional smaller draft model is used alongside the main model. This reduces the number of infer requests to the main model, increasing performance.
 > 
 > The draft model predicts the next K tokens one by one in an autoregressive manner. The main model validates these predictions and corrects them if necessary - in case of a discrepancy, the main model prediction is used. Then, the draft model acquires this token and runs prediction of the next K tokens, thus repeating the cycle.
@@ -31,8 +31,8 @@ both in INT4 precision.
 Python environment setup:
 ```console
 # Install regular requirements for OVMS export script
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/export_model.py -o export_model.py
-pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/0/demos/common/export_models/export_model.py -o export_model.py
+pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/0/demos/common/export_models/requirements.txt
 
 # Override optimum-intel with version supporting eagle3
 python -m pip install git+https://github.com/xufang-lisa/optimum-intel.git@xufang/add_eagle3_draft_model_conversion
@@ -185,8 +185,8 @@ LLM engine parameters will be defined inside the `graph.pbtxt` file.
 
 Download export script, install its dependencies and create directory for the models:
 ```console
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/export_model.py -o export_model.py
-pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/0/demos/common/export_models/export_model.py -o export_model.py
+pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/0/demos/common/export_models/requirements.txt
 mkdir models 
 ```
 

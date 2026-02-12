@@ -18,7 +18,7 @@ mkdir models
 curl -L https://github.com/openvinotoolkit/model_server/releases/download/v2025.4.1/ovms_windows_python_on.zip -o ovms.zip
 tar -xf ovms.zip
 ovms\setupvars.bat
-ovms\python\python -m pip install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
+ovms\python\python -m pip install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/0/demos/common/export_models/requirements.txt
 ```
 Then use the ovms cli commands described in `Pulling the models` section
 
