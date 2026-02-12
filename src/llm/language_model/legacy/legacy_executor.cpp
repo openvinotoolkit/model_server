@@ -32,16 +32,22 @@ size_t LegacyExecutor::requestsQueueSize() {
 
 void LegacyExecutor::processRequest() {
     OVMS_PROFILE_FUNCTION();
-    SPDLOG_LOGGER_TRACE(llm_executor_logger, "Generation started");
-    try {
-        requests.front()->results = pipe->generate(requests.front()->inputIds, requests.front()->generationConfigBuilder->getConfig(), requests.front()->textStreamer);
-    } catch (std::exception& e) {
-        requests.front()->success = false;
-        SPDLOG_LOGGER_ERROR(llm_executor_logger, "LLM pipeline generation failed: {}.", e.what());
+    auto& requestExecutionContext = requests.front();
+    if (requestExecutionContext->clientDisconnected) {
+        requestExecutionContext->success = false;
+        SPDLOG_LOGGER_DEBUG(llm_executor_logger, "Client disconnected, skipping request processing.");
+    } else {
+        SPDLOG_LOGGER_TRACE(llm_executor_logger, "Generation started");
+        try {
+            requestExecutionContext->results = pipe->generate(requestExecutionContext->inputIds, requestExecutionContext->generationConfigBuilder->getConfig(), requestExecutionContext->textStreamer);
+        } catch (std::exception& e) {
+            requestExecutionContext->success = false;
+            SPDLOG_LOGGER_ERROR(llm_executor_logger, "LLM pipeline generation failed: {}.", e.what());
+        }
+        SPDLOG_LOGGER_TRACE(llm_executor_logger, "Generation ended");
     }
-    SPDLOG_LOGGER_TRACE(llm_executor_logger, "Generation ended");
-    requests.front()->readySignal.set_value();
-    requests.front()->executionInProgress.notify_one();
+    requestExecutionContext->readySignal.set_value();
+    requestExecutionContext->executionInProgress.notify_one();
     std::unique_lock<std::mutex> lock(queueMutex);
     requests.pop();
 }
