@@ -11,7 +11,9 @@ This enables seamless integration with a wide range of applications and client l
 Below is a complete functional use case using Python 3.7 or higher.
 For this example let's use a public [ONNX ResNet](https://github.com/onnx/models/tree/main/validated/vision/classification/resnet) model - resnet50-caffe2-v1-9.onnx model.
 
-This model requires additional [preprocessing function](https://github.com/onnx/models/tree/main/validated/vision/classification/resnet#preprocessing). Preprocessing can be performed in the client by manipulating data before sending the request, but a more efficient way is to delegate preprocessing to the server by setting preprocessing parameters. Server side preprocessing may have an impact on the performance by reducing amount of data sent, as `uint8` instead of `fp32`. More information about preprocessing parameters is available in [parameters.md](../../../docs/parameters.md).
+This model was trained using an additional [preprocessing](https://github.com/onnx/models/tree/main/validated/vision/classification/resnet#preprocessing). For inference, preprocessing can be executed on the client side by transforming the input data before sending the request. However, a more efficient approach is to delegate preprocessing to the server by configuring the appropriate preprocessing parameters.
+Here will be adjusted `mean`, `scale`, `color` and `layout`. In addition to that, input precision conversion from fp32 to uint8 can improve performance and bandwidth efficiency. Raw images can be transmitted using more compact uint8 data, significantly reducing the payload size and lowering client‑side compute requirements.
+More details about [parameters](../../../docs/parameters.md).
 
 ## Adding preprocessing to the server side
 
