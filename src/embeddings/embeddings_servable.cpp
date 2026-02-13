@@ -417,9 +417,19 @@ std::shared_ptr<ov::Model> EmbeddingsServable::applyPrePostProcessing(ov::Core& 
         if (getMaxModelLength().has_value()) {
             config.max_length = getMaxModelLength().value();
         }
-        auto kv_pos = get_kv_axes_pos(model);
-        KVDesc kv_desc;
-        get_npu_text_embedding_config(properties, kv_pos, kv_desc, config);
+        // Models other than Qwen requires reshaping to static shape to work on NPU.
+        if (getMaxModelLength().has_value() && getMaxModelLength().value() < 1024) {
+            modelIsStatic = true;
+            config.padding_side = "right";
+            config.pad_to_max_length = true;
+            config.batch_size = 1;
+            config.max_length = getMaxModelLength().value();
+            reshapeModel(model, config, maxModelLength);
+        } else {
+            auto kv_pos = get_kv_axes_pos(model);
+            KVDesc kv_desc;
+            get_npu_text_embedding_config(properties, kv_pos, kv_desc, config);
+        }
     } else {
         ov::preprocess::PrePostProcessor processor(model);
 
