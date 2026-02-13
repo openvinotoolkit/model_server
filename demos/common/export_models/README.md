@@ -94,6 +94,7 @@ options:
                         Set the type of the tool parser for tool calls extraction
   --enable_tool_guided_generation
                         Enables enforcing tool schema during generation. Requires setting tool_parser
+  --trust_remote_code   Trust remote code for tokenizer conversion
 ```
 
 ## Model Export Examples
