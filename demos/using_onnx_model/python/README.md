@@ -15,7 +15,7 @@ This model was trained using an additional [preprocessing](https://github.com/on
 Here will be adjusted `mean`, `scale`, `color` and `layout`. In addition to that, input precision conversion from fp32 to uint8 can improve performance and bandwidth efficiency. Raw images can be transmitted using more compact uint8 data, significantly reducing the payload size and lowering client‑side compute requirements.
 More details about [parameters](../../../docs/parameters.md).
 
-## Adding preprocessing to the server side
+## Model deployment with preprocessing
 
 Clone the repository and enter using_onnx_model directory
 
