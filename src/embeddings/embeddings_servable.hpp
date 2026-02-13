@@ -43,6 +43,10 @@ public:
         return targetOutputIndex;
     }
 
+    bool isStatic() const {
+        return modelIsStatic;
+    }
+
     const bool isNpuPostprocessingRequired() {
         return npuPostprocessingRequired;
     }
@@ -60,6 +64,7 @@ private:
     bool npuPostprocessingRequired = false;
     ov::CompiledModel postProcCompiledModel;
     std::unique_ptr<OVInferRequestsQueue> postProcInferRequestsQueue;
+    bool modelIsStatic = false;
 
     int targetOutputIndex = -1;
 };
