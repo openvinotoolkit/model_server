@@ -148,9 +148,9 @@ void SidepacketServable::initialize(const std::string& modelDir, const std::stri
     ov::Core core;
     std::shared_ptr<ov::Model> m_model = core.read_model(parsedModelsPath / std::filesystem::path("openvino_model.xml"), {}, properties);
     m_model = this->applyPrePostProcessing(core, m_model, properties);
+
     compiledModel = core.compile_model(m_model, targetDevice, properties);
     SPDLOG_DEBUG("Model compiled {} for {}", parsedModelsPath.string(), targetDevice);
-
     inferRequestsQueue = std::make_unique<OVInferRequestsQueue>(compiledModel, numberOfParallelInferRequests);
 }
 
