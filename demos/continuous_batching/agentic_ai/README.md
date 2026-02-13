@@ -1,4 +1,4 @@
-# Agentic AI with OpenVINO Model Server {#ovms_demos_continuous_batching_agent}
+Note: While adding preprocessing to the model input, shape needs to be set as static.# Agentic AI with OpenVINO Model Server {#ovms_demos_continuous_batching_agent}
 
 OpenVINO Model Server can be used to serve language models for AI Agents. It supports the usage of tools in the context of content generation.
 It can be integrated with MCP servers and AI agent frameworks. 
@@ -22,7 +22,7 @@ Currently supported models:
 - mistralai/Mistral-7B-Instruct-v0.3
 - microsoft/Phi-4-mini-instruct
 - Qwen/Qwen3-Coder-30B-A3B-Instruct
-- openai/gpt-oss-20b*
+- openai/gpt-oss-20b
 
 
 ### Export using python script
@@ -175,10 +175,81 @@ You can use similar commands for different models and precision. Change the sour
 This deployment procedure assumes the model was pulled or exported using the procedure above. The exception are models from OpenVINO organization if they support tools correctly with the default template like "OpenVINO/Qwen3-8B-int4-ov" - they can be deployed in a single command pulling and staring the server.
 
 
-### Deploying on Windows with GPU
+### Deploying on Windows with CPU
 Assuming you have unpacked model server package with python enabled version, make sure to run `setupvars` script
 as mentioned in [deployment guide](../../../docs/deploying_server_baremetal.md), in every new shell that will start OpenVINO Model Server.
 
+::::{tab-set}
+:::{tab-item} Qwen3-8B
+:sync: Qwen3-8B
+```bat
+ovms.exe --rest_port 8000 --source_model Qwen/Qwen3-8B --model_repository_path models --tool_parser hermes3 --task text_generation --cache_dir .cache --enable_prefix_caching true
+```
+:::
+:::{tab-item} Qwen3-4B
+:sync: Qwen3-4B
+```bat
+ovms.exe --rest_port 8000 --source_model Qwen/Qwen3-4B --model_repository_path models --tool_parser hermes3 --task text_generation --cache_dir .cache --enable_prefix_caching true
+```
+:::
+:::{tab-item} Llama-3.1-8B-Instruct
+:sync: Llama-3.1-8B-Instruct
+```bat
+ovms.exe --rest_port 8000 --source_model meta-llama/Llama-3.1-8B-Instruct --model_repository_path models --tool_parser llama3 --task text_generation --enable_tool_guided_generation true --cache_dir .cache --enable_prefix_caching true
+```
+:::
+:::{tab-item} Llama-3.2-3B-Instruct
+:sync: Llama-3.2-3B-Instruct
+```bat
+ovms.exe --rest_port 8000 --source_model meta-llama/Llama-3.2-3B-Instruct --model_repository_path models --tool_parser llama3 --task text_generation --enable_tool_guided_generation true --cache_dir .cache --enable_prefix_caching true
+```
+:::
+:::{tab-item} Mistral-7B-Instruct-v0.3
+:sync: Mistral-7B-Instruct-v0.3
+```bat
+ovms.exe --rest_port 8000 --source_model mistralai/Mistral-7B-Instruct-v0.3 --model_repository_path models --tool_parser mistral --task text_generation --cache_dir .cache --enable_prefix_caching true
+```
+:::
+:::{tab-item} Phi-4-mini-instruct
+:sync: Phi-4-mini-instruct
+```bat
+ovms.exe --rest_port 8000 --source_model microsoft/Phi-4-mini-instruct --model_repository_path models --tool_parser phi4 --task text_generation --enable_tool_guided_generation true --cache_dir .cache --max_num_batched_tokens 99999 --enable_prefix_caching true
+```
+:::
+:::{tab-item} Qwen3-8B-int4-ov
+:sync: Qwen3-8B-int4-ov
+```bat
+ovms.exe --rest_port 8000 --source_model OpenVINO/Qwen3-8B-int4-ov --model_repository_path models --tool_parser hermes3  --task text_generation --cache_dir .cache --enable_prefix_caching true
+```
+:::
+:::{tab-item} Mistral-7B-Instruct-v0.3-int4-ov
+:sync: Mistral-7B-Instruct-v0.3-int4-ov
+```bat
+ovms.exe --rest_port 8000 --source_model OpenVINO/Mistral-7B-Instruct-v0.3-int4-ov --model_repository_path models --tool_parser mistral --task text_generation --cache_dir .cache --enable_prefix_caching true
+```
+:::
+:::{tab-item} Phi-4-mini-instruct-int4-ov
+:sync: Phi-4-mini-instruct-int4-ov
+```bat
+ovms.exe --rest_port 8000 --source_model OpenVINO/Phi-4-mini-instruct-int4-ov --model_repository_path models --tool_parser phi4 --task text_generation --enable_tool_guided_generation true --cache_dir .cache --enable_prefix_caching true
+```
+:::
+:::{tab-item} Qwen3-Coder-30B-A3B-Instruct
+:sync: Qwen3-Coder-30B-A3B-Instruct
+```bat
+ovms.exe --rest_port 8000 --source_model Qwen/Qwen3-Coder-30B-A3B-Instruct --model_repository_path models --tool_parser qwen3coder --task text_generation --cache_dir .cache --enable_prefix_caching true --max_num_batched_tokens 99999
+```
+:::
+:::{tab-item} gpt-oss-20b
+:sync: gpt-oss-20b
+```bat
+ovms.exe --rest_port 8000 --source_model openai/gpt-oss-20b --model_repository_path models --tool_parser gptoss --reasoning_parser gptoss --task text_generation --enable_prefix_caching true 
+```
+> **Note:**: Use `--pipeline_type LM` parameter in export command, for version 2025.4.*. It disables continuous batching. Not needed in last weekly or 2026.0+ releases.
+:::
+::::
+
+### Deploying on Windows with GPU
 ::::{tab-set}
 :::{tab-item} Qwen3-8B
 :sync: Qwen3-8B
@@ -237,13 +308,13 @@ ovms.exe --rest_port 8000 --source_model OpenVINO/Phi-4-mini-instruct-int4-ov --
 :::{tab-item} Qwen3-Coder-30B-A3B-Instruct
 :sync: Qwen3-Coder-30B-A3B-Instruct
 ```bat
-ovms.exe --rest_port 8000 --source_model Qwen/Qwen3-Coder-30B-A3B-Instruct --model_repository_path models --tool_parser qwen3coder --target_device GPU --task text_generation --cache_dir .cache --enable_prefix_caching true
+ovms.exe --rest_port 8000 --source_model Qwen/Qwen3-Coder-30B-A3B-Instruct --model_repository_path models --tool_parser qwen3coder --target_device GPU --task text_generation --cache_dir .cache --enable_prefix_caching true --max_num_batched_tokens 99999
 ```
 :::
 :::{tab-item} gpt-oss-20b
 :sync: gpt-oss-20b
 ```bat
-ovms.exe --rest_port 8000 --source_model openai/gpt-oss-20b --model_repository_path models --tool_parser gptoss --reasoning_parser gptoss --target_device GPU --task text_generation --enable_prefix_caching true --target_device GPU
+ovms.exe --rest_port 8000 --source_model openai/gpt-oss-20b --model_repository_path models --tool_parser gptoss --reasoning_parser gptoss --task text_generation --enable_prefix_caching true --target_device GPU
 ```
 > **Note:**: Use `--pipeline_type LM` parameter in export command, for version 2025.4.*. It disables continuous batching. Not needed in last weekly or 2026.0+ releases.
 :::
@@ -292,12 +363,6 @@ ovms.exe --rest_port 8000 --source_model OpenVINO/Qwen3-4B-int4-ov --model_repos
 :sync: Mistral-7B-Instruct-v0.3-cw-int4-ov
 ```bat
 ovms.exe --rest_port 8000 --source_model OpenVINO/Mistral-7B-Instruct-v0.3-int4-cw-ov --model_repository_path models --tool_parser mistral --target_device NPU --task text_generation --enable_prefix_caching true --cache_dir .cache --max_prompt_len 4000
-```
-:::
-:::{tab-item} Phi-3-mini-4k-instruct-int4-cw-ov
-:sync: Phi-3-mini-4k-instruct-int4-cw-ov
-```bat
-ovms.exe --rest_port 8000 --source_model OpenVINO/Phi-3-mini-4k-instruct-int4-cw-ov --model_repository_path models --tool_parser phi4 --target_device NPU --task text_generation --enable_tool_guided_generation true --enable_prefix_caching true --cache_dir .cache --max_prompt_len 4000
 ```
 :::
 ::::
@@ -381,7 +446,7 @@ docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/model
 :sync: Qwen3-Coder-30B-A3B-Instruct
 ```bash
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models openvino/model_server:weekly \
---rest_port 8000 --source_model Qwen/Qwen3-Coder-30B-A3B-Instruct --model_repository_path models --tool_parser qwen3coder --task text_generation --cache_dir .cache --enable_prefix_caching true
+--rest_port 8000 --source_model Qwen/Qwen3-Coder-30B-A3B-Instruct --model_repository_path models --tool_parser qwen3coder --task text_generation --cache_dir .cache --enable_prefix_caching true --max_num_batched_tokens 99999
 ```
 :::
 ::::
@@ -468,7 +533,7 @@ docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/model
 :sync: Qwen3-Coder-30B-A3B-Instruct
 ```bash
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:weekly \
---rest_port 8000 --source_model Qwen/Qwen3-Coder-30B-A3B-Instruct --model_repository_path models --tool_parser qwen3coder --target_device GPU --task text_generation --enable_tool_guided_generation true --enable_prefix_caching true
+--rest_port 8000 --source_model Qwen/Qwen3-Coder-30B-A3B-Instruct --model_repository_path models --tool_parser qwen3coder --target_device GPU --task text_generation --enable_tool_guided_generation true --enable_prefix_caching true --max_num_batched_tokens 99999
 ```
 :::
 :::{tab-item} gpt-oss-20b
@@ -536,13 +601,6 @@ docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/model
 ```bash
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models --device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:weekly \
 --rest_port 8000 --model_repository_path models --source_model OpenVINO/Mistral-7B-Instruct-v0.3-int4-cw-ov --tool_parser mistral --target_device NPU --task text_generation --enable_prefix_caching true --max_prompt_len 4000
-```
-:::
-:::{tab-item} Phi-3-mini-4k-instruct-int4-cw-ov
-:sync: Phi-3-mini-4k-instruct-int4-cw-ov
-```bash
-docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models --device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:weekly \
---rest_port 8000 --model_repository_path models --source_model OpenVINO/Phi-3-mini-4k-instruct-int4-cw-ov --tool_parser phi4 --target_device NPU --task text_generation --enable_tool_guided_generation true --enable_prefix_caching true --max_prompt_len 4000
 ```
 :::
 ::::
@@ -621,7 +679,7 @@ python openai_agent.py --query "List the files in folder /root" --model meta-lla
 :::
 :::{tab-item} Phi-4-mini-instruct
 :sync: Phi-4-mini-instruct
-```console
+```bash
 python openai_agent.py --query "What is the current weather in Tokyo?" --model microsoft/Phi-4-mini-instruct --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather
 ```
 :::
@@ -651,7 +709,7 @@ python openai_agent.py --query "What is the current weather in Tokyo?" --model Q
 :::
 :::{tab-item} gpt-oss-20b
 :sync: gpt-oss-20b
-```bash
+```console
 python openai_agent.py --query "What is the current weather in Tokyo?" --model openai/gpt-oss-20b --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather
 ```
 :::
