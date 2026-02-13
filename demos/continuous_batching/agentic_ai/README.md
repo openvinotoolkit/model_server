@@ -245,7 +245,7 @@ ovms.exe --rest_port 8000 --source_model Qwen/Qwen3-Coder-30B-A3B-Instruct --mod
 ```bat
 ovms.exe --rest_port 8000 --source_model openai/gpt-oss-20b --model_repository_path models --tool_parser gptoss --reasoning_parser gptoss --task text_generation --enable_prefix_caching true 
 ```
-> **Note:**: Use `--pipeline_type LM` parameter in export command, for version 2025.4.*. It disables continuous batching. Not needed in last weekly or 2026.0+ releases.
+> **Note:** Use `--pipeline_type LM` parameter in the export command for version 2025.4.* to disable continuous batching. Not needed in the latest weekly or 2026.0+ releases.
 :::
 ::::
 
