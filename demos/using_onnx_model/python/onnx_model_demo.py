@@ -35,11 +35,11 @@ def load_image(path):
 parser = argparse.ArgumentParser(description='Run prediction on ONNX ResNet50 Model')
 parser.add_argument('--image_path', required=False, default='../../common/static/images/bee.jpeg', help='Path to a file with a JPEG image')
 parser.add_argument('--service_url',required=False, default='localhost:9001',  help='Specify url to grpc service. default:localhost:9001')
-parser.add_argument('--load_image', action="store_true", required=False, help='Send image after loading it with Pillow')
+parser.add_argument('--send_tensor', action="store_true", required=False, help='Send image after loading it with Pillow')
 args = vars(parser.parse_args())
 
 print(f"Running inference with image: {args['image_path']}")
-if args["load_image"]:
+if args["send_tensor"]:
     img = load_image(args["image_path"])
 else:
     with open(args["image_path"], "rb") as f:
