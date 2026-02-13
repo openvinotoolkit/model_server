@@ -35,7 +35,7 @@ docker run -d -u $(id -u):$(id -g) -v $(pwd)/workspace:/workspace -p 9001:9001 o
 --model_path /workspace/resnet50-onnx --model_name resnet --port 9001 --layout NHWC:NCHW --mean "[123.675,116.28,103.53]" --scale "[58.395,57.12,57.375]" --shape "(1,224,224,3)" --color_format BGR:RGB --precision uint8:fp32
 ```
 
-Run the client:
+## Running the client:
 ```bash
 pip3 install -r requirements.txt
 python onnx_model_demo.py --service_url localhost:9001
