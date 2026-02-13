@@ -1,6 +1,13 @@
 # Prediction Example with an ONNX Model {#ovms_demo_using_onnx_model}
 
-Steps are similar to when you work with IR model format. Model Server accepts ONNX models as well with no differences in versioning. Locate ONNX model file in separate model version directory.
+This demo demonstrates the steps required to deploy an ONNX‑based vision model. The workflow is optimized for rapid integration and ease of use: no model‑conversion step is needed, as the model is provided directly in ONNX format.
+To further simplify deployment, the server applies all necessary image‑preprocessing operations, removing the need for the client to implement preprocessing pipelines such as normalization or color‑space transformation. This approach reduces development effort, ensures consistency with the model’s training configuration, and accelerates end‑to‑end deployment.
+The server accepts image data in multiple formats, offering flexibility depending on the client environment. Images can be sent as:
+
+Raw arrays directly obtained from OpenCV or Pillow
+Encoded images, including JPEG or PNG formats
+
+This enables seamless integration with a wide range of applications and client libraries.
 Below is a complete functional use case using Python 3.7 or higher.
 For this example let's use a public [ONNX ResNet](https://github.com/onnx/models/tree/main/validated/vision/classification/resnet) model - resnet50-caffe2-v1-9.onnx model.
 
