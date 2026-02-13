@@ -32,6 +32,9 @@ parser.add_argument('--model_name', default='Alibaba-NLP/gte-large-en-v1.5', hel
                     dest='model_name')
 parser.add_argument('--dataset', default='Banking77Classification', help='Dataset to benchmark. default: Banking77Classification',
                     dest='dataset')
+parser.add_argument('--eval_splits', nargs='*', default=None,
+                    help='Evaluation splits to use, e.g. --eval_splits test dev. If not set, all splits defined in the task are used.',
+                    dest='eval_splits')
 args = vars(parser.parse_args())
 
 
@@ -70,7 +73,8 @@ class OVMSModel:
         return np.array([e.embedding for e in embedding_response.data])
 
 model = OVMSModel(args['model_name'], args['service_url'] ,1)
-tasks = mteb.get_task(args['dataset'])
+tasks = mteb.get_task(args['dataset'],
+                      eval_splits=args['eval_splits'])
 evaluation = mteb.MTEB(tasks=[tasks])
 evaluation.run(model,verbosity=3,overwrite_results=True,output_folder='results')
 # For full leaderboard tests set run:
