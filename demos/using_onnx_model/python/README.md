@@ -26,7 +26,6 @@ cd model_server/demos/using_onnx_model/python
 
 Prepare environment
 ```bash
-pip install -r requirements.txt
 curl --fail -L --create-dirs https://github.com/onnx/models/raw/main/validated/vision/classification/resnet/model/resnet50-caffe2-v1-9.onnx -o workspace/resnet50-onnx/1/resnet50-caffe2-v1-9.onnx
 ```
 
