@@ -1,4 +1,4 @@
-Note: While adding preprocessing to the model input, shape needs to be set as static.# Agentic AI with OpenVINO Model Server {#ovms_demos_continuous_batching_agent}
+# Agentic AI with OpenVINO Model Server {#ovms_demos_continuous_batching_agent}
 
 OpenVINO Model Server can be used to serve language models for AI Agents. It supports the usage of tools in the context of content generation.
 It can be integrated with MCP servers and AI agent frameworks. 
