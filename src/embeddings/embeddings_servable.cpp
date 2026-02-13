@@ -417,6 +417,7 @@ std::shared_ptr<ov::Model> EmbeddingsServable::applyPrePostProcessing(ov::Core& 
         if (getMaxModelLength().has_value()) {
             config.max_length = getMaxModelLength().value();
         }
+        // Models other than Qwen requires reshaping to static shape to work on NPU.
         if (getMaxModelLength().has_value() && getMaxModelLength().value() < 1024) {
             modelIsStatic = true;
             config.padding_side = "right";
