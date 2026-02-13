@@ -185,7 +185,7 @@ ifeq ($(BASE_OS),redhat)
   BASE_IMAGE ?= registry.access.redhat.com/ubi9/ubi:$(BASE_OS_TAG_REDHAT)
   BASE_IMAGE_RELEASE=registry.access.redhat.com/ubi9/ubi-minimal:$(BASE_OS_TAG_REDHAT)
   DIST_OS=redhat
-	DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/pre-release/2026.0.0.0rc3/openvino_genai_rhel8_2026.0.0.0rc3_x86_64.tar.gz # not used
+  DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/pre-release/2026.0.0.0rc3/openvino_genai_rhel8_2026.0.0.0rc3_x86_64.tar.gz # not used
   INSTALL_DRIVER_VERSION ?= "24.52.32224"
 endif
 

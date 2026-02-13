@@ -1,10 +1,10 @@
 --extra-index-url "https://download.pytorch.org/whl/cpu"
-optimum-intel@git+https://github.com/huggingface/optimum-intel.git
+optimum-intel@git+https://github.com/huggingface/optimum-intel.git@2c48d6430c265ac259c1b264f3e2c4025cdd7b76
 pillow==10.3.0
 tritonclient[grpc]==2.57.0  # Required to use batch string serialization/deserialization (4byte length prepend)
 numpy<2.0
 huggingface_hub==0.32.0
-nncf>=2.11.0
+nncf@git+https://github.com/openvinotoolkit/nncf.git@7a6ac29a15d247c0fc76da93f4d53bbfa7b489cc
 sentence_transformers
 sentencepiece==0.2.0
 transformers<=4.53
