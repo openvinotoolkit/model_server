@@ -47,7 +47,7 @@ Class with highest score: 309
 Detected class name: bee
 ```
 
-The client can be also run with flag `--load_image` which loads input image as uint8. In this case the image needs to be resized and batch dimension needs to be added.
+The client can be also run with flag `--send_tensor` which reads encoded input image and sends it with uint8 precision.
 ```bash
 python onnx_model_demo.py --service_url localhost:9001 --load_image
 ```
