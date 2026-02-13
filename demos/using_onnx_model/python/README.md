@@ -29,6 +29,7 @@ docker run -d -u $(id -u):$(id -g) -v $(pwd)/workspace:/workspace -p 9001:9001 o
 
 Run the client:
 ```bash
+pip3 install -r requirements.txt
 python onnx_model_demo.py --service_url localhost:9001
 ```
 Output:
