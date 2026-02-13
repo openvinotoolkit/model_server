@@ -175,7 +175,7 @@ public:
                 if (cc->Options<EmbeddingsCalculatorOVOptions>().truncate() && params.find("max_length") == params.end()) {
                     params["max_length"] = maxContextLength;
                 }
-                if(embeddings_session->isStatic()) {
+                if (embeddings_session->isStatic()) {
                     params["pad_to_max_length"] = true;
                     params["max_length"] = maxContextLength;
                 }
