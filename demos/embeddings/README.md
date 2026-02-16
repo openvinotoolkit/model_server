@@ -310,12 +310,16 @@ python export_model.py embeddings_ov --source_model Qwen/Qwen3-Embedding-0.6B --
 > **Note** Pooling mode --pooling LAST has the best accuracy.
 > **Note** For weight-format int4, use `--extra_quantization_params "--sym --ratio 1.0 --group-size -1"`
 
-## Tested models
+## Tested NPU models
 The demo is validated against following Hugging Face models:
 
 |Model name|Pooling|
 |---|---|
 |Qwen/Qwen3-Embedding-0.6B|LAST|
+|BAAI/bge-large-en-v1.5|CLS|
+|BAAI/bge-large-zh-v1.5|CLS|
+|thenlper/gte-small|CLS|
+|sentence-transformers/all-mpnet-base-v2|MEAN|
 
 ## Server Deployment
 
@@ -335,7 +339,7 @@ docker run -d --rm -p 8000:8000 --device /dev/dri --group-add=$(stat -c "%g" /de
 ```
 **NPU**
 NOTE: NPU execution for embeddings model is a preview feature.
-In case you want to use NPU device to run the embeddings model, add extra docker parameters `--device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1)` 
+In case you want to use NPU device to run the embeddings model, add extra docker parameters `--device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1)` 
 to `docker run` command, use the image with NPU support and make sure set the target_device in subconfig.json to NPU. Also make sure the export model quantization level and cache size fit to the NPU memory. All of that can be applied with the commands:
 
 ```bash
@@ -399,15 +403,6 @@ curl http://localhost:8000/v3/embeddings -H "Content-Type: application/json" -d 
 
 ```
 :::
-
-## Client code for NPU
-
-:::{dropdown} **Request embeddings with cURL**
-```bash
-curl http://localhost:8000/v3/embeddings -H "Content-Type: application/json" -d "{ \"model\": \"Qwen/Qwen3-Embedding-0.6B\", \"input\": \"hello world\"}"
-```
-
-:::{dropdown} **Request embeddings with OpenAI Python package**
 
 ```bash
 pip3 install openai "numpy<2"
