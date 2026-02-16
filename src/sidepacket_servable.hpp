@@ -15,10 +15,6 @@
 //*****************************************************************************
 #pragma once
 
-#include "openvino/op/constant.hpp"
-#include "openvino/runtime/core.hpp"
-#include "openvino/core/preprocess/pre_post_process.hpp"
-#include "openvino/op/multiply.hpp"
 #include "ovinferrequestsqueue.hpp"
 
 #include <memory>
