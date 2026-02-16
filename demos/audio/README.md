@@ -182,7 +182,7 @@ python export_model.py speech2text --source_model openai/whisper-large-v3-turbo 
 ```
 
 > **Note:** Change the `--weight-format` to quantize the model to `int8` precision to reduce memory consumption and improve performance.
-> **Note:** `--enable_word_timestamps` can be ommited if there is no need for word timestamps support. 
+> **Note:** `--enable_word_timestamps` can be omitted if there is no need for word timestamps support. 
 
 ### Deployment
 
