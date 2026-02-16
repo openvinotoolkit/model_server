@@ -280,17 +280,17 @@
     {#- At this point only assistant/user/tool messages should remain #}
     {%- if message.role == 'assistant' -%}
         {#- Checks to ensure the messages are being passed in the format we expect #}
-        {%- if "content" in message %}
+        {%- if "content" in message and message.content is not none %}
             {%- if "<|channel|>analysis<|message|>" in message.content or "<|channel|>final<|message|>" in message.content %}
                 {{- raise_exception("You have passed a message containing <|channel|> tags in the content field. Instead of doing this, you should pass analysis messages (the string between '<|message|>' and '<|end|>') in the 'reasoning_content' field, and final messages (the string between '<|message|>' and '<|end|>') in the 'content' field.") }}
             {%- endif %}
         {%- endif %}
-        {%- if "reasoning_content" in message %}
+        {%- if "reasoning_content" in message and message.reasoning_content is not none %}
             {%- if "<|channel|>analysis<|message|>" in message.reasoning_content or "<|channel|>final<|message|>" in message.reasoning_content %}
                 {{- raise_exception("You have passed a message containing <|channel|> tags in the reasoning_content field. Instead of doing this, you should pass analysis messages (the string between '<|message|>' and '<|end|>') in the 'reasoning_content' field, and final messages (the string between '<|message|>' and '<|end|>') in the 'content' field.") }}
             {%- endif %}
         {%- endif %}
-        {%- if "tool_calls" in message %}
+        {%- if "tool_calls" in message and message.tool_calls is not none %}
             {#- We need very careful handling here - we want to drop the tool call analysis message if the model #}
             {#- has output a later <|final|> message, but otherwise we want to retain it. This is the only case #}
             {#- when we render CoT/analysis messages in inference. #}
