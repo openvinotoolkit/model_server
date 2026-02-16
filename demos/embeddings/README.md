@@ -243,6 +243,7 @@ python export_model.py embeddings_ov --source_model sentence-transformers/all-mp
 :::
 ::::
 
+
 > **Note** Change the `--weight-format` to quantize the model to `fp16`, `int8` or `int4` precision to reduce memory consumption and improve performance.
 > **Note:** The users in China need to set environment variable HF_ENDPOINT="https://hf-mirror.com" before running the export script to connect to the HF Hub.
 
@@ -403,6 +404,8 @@ curl http://localhost:8000/v3/embeddings -H "Content-Type: application/json" -d 
 
 ```
 :::
+
+:::{dropdown} **Request embeddings with OpenAI Python package**
 
 ```bash
 pip3 install openai "numpy<2"
