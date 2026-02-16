@@ -18,6 +18,8 @@
 #include "servable.hpp"
 #include "vector"
 
+#include <openvino/genai/parsers.hpp>
+
 namespace ovms {
 VisualLanguageModelLegacyExecutor::VisualLanguageModelLegacyExecutor(std::shared_ptr<ov::genai::VLMPipeline> pipe) {
     this->pipe = std::move(pipe);
@@ -40,7 +42,7 @@ void VisualLanguageModelLegacyExecutor::processRequest() {
     } else {
         SPDLOG_LOGGER_TRACE(llm_executor_logger, "Generation started");
         try {
-            requestExecutionContext->results = pipe->generate(requestExecutionContext->inputText, requestExecutionContext->inputImages, requestExecutionContext->generationConfigBuilder->getConfig(), requestExecutionContext->textStreamer);
+            requestExecutionContext->results = pipe->generate(requestExecutionContext->inputText, requestExecutionContext->inputImages, generationConfigBuilder->getConfig(), requestExecutionContext->textStreamer);
         } catch (std::exception& e) {
             requestExecutionContext->success = false;
             SPDLOG_LOGGER_ERROR(llm_executor_logger, "VLM pipeline generation failed: {}.", e.what());

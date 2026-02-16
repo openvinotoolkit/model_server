@@ -252,7 +252,23 @@ absl::Status VisualLanguageModelLegacyServable::prepareInputs(std::shared_ptr<Ge
         }
 
         constexpr bool add_generation_prompt = true;  // confirm it should be hardcoded
-        vlmExecutionContext->inputText = properties->tokenizer.apply_chat_template(chatHistory, add_generation_prompt);
+        ov::genai::JsonContainer tools = ov::genai::JsonContainer::from_json_string(R"([
+  {
+    "type": "function",
+    "function": {
+      "name": "get_weather",
+      "description": "Get current weather by city",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "city": {"type": "string"}
+        },
+        "required": ["city"]
+      }
+    }
+  }
+])");
+        vlmExecutionContext->inputText = properties->tokenizer.apply_chat_template(chatHistory, add_generation_prompt, {}, tools);
     } else {
         return absl::InvalidArgumentError("Unsupported endpoint");
     }
