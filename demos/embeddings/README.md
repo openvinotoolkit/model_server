@@ -306,7 +306,7 @@ python export_model.py embeddings_ov --source_model Qwen/Qwen3-Embedding-0.6B --
 :::
 ::::
 
-> **Note** Change the `--weight-format` to quantize the model to `fp16`, `int8` or `int4` precision to reduce memory consumption and improve performance. `fp16` is used for better accuracy but `int8` and `int4` has better performance.
+> **Note** Change the `--weight-format` to quantize the model to `fp16`, `int8` or `int4` precision. For int4 precisions, add required extra parameter `--extra_quantization_params "--sym --ratio 1.0 --group-size -1"`
 > **Note** Pooling mode --pooling LAST has the best accuracy.
 > **Note** For weight-format int4, use `--extra_quantization_params "--sym --ratio 1.0 --group-size -1"`
 
@@ -334,7 +334,7 @@ to `docker run` command, use the image with GPU support and make sure set the ta
 docker run -d --rm -p 8000:8000 --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -v $(pwd)/models:/workspace:ro openvino/model_server:latest-gpu --rest_port 8000 --config_path /workspace/config.json
 ```
 **NPU**
-
+NOTE: NPU execution for embeddings model is a preview feature.
 In case you want to use NPU device to run the embeddings model, add extra docker parameters `--device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1)` 
 to `docker run` command, use the image with NPU support and make sure set the target_device in subconfig.json to NPU. Also make sure the export model quantization level and cache size fit to the NPU memory. All of that can be applied with the commands:
 
