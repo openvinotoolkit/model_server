@@ -17,13 +17,14 @@ Check supported [Speech Recognition Models](https://openvinotoolkit.github.io/op
 
 ## Speech generation
 ### Prepare speaker embeddings
-When generating speech you can use default speaker voice (only with curl) or you can prepaere your own speaker embedding file. Here you can see how to do it with downloaded file from online repository, but you can try with your own speech recorded as well:
+When generating speech you can use default speaker voice or you can prepaere your own speaker embedding file. Here you can see how to do it with downloaded file from online repository, but you can try with your own speech recorded as well:
 ```bash
 pip install -r requirements.txt
-mkdir audio_samples
+mkdir -p audio_samples
 curl --output audio_samples/audio.wav "https://www.voiptroubleshooter.com/open_speech/american/OSR_us_000_0032_8k.wav"
-mkdir speakers
-python create_speaker_embedding.py audio_samples/audio.wav speakers/voice1.bin
+mkdir -p models
+mkdir -p models/speakers
+python create_speaker_embedding.py audio_samples/audio.wav models/speakers/voice1.bin
 ```
 
 ### Model preparation
@@ -50,10 +51,11 @@ Run `export_model.py` script to download and quantize the model:
 
 **CPU**
 ```console
-python export_model.py text2speech --source_model microsoft/speecht5_tts --weight-format fp16 --model_name microsoft/speecht5_tts --config_file_path models/config.json --model_repository_path models --overwrite_models --vocoder microsoft/speecht5_hifigan --speaker_name voice1 --speaker_path /speakers/voice1.bin
+python export_model.py text2speech --source_model microsoft/speecht5_tts --weight-format fp16 --model_name microsoft/speecht5_tts --config_file_path models/config.json --model_repository_path models --overwrite_models --vocoder microsoft/speecht5_hifigan --speaker_name voice1 --speaker_path /models/speakers/voice1.bin
 ```
 
 > **Note:** Change the `--weight-format` to quantize the model to `int8` precision to reduce memory consumption and improve performance.
+> **Note:** `speaker_name` and `speaker_path` may be omitted if the default model voice is sufficient
 
 The default configuration should work in most cases but the parameters can be tuned via `export_model.py` script arguments. Run the script with `--help` argument to check available parameters and see the [T2s calculator documentation](../../docs/speech_generation/reference.md) to learn more about configuration options and limitations.
 
@@ -64,7 +66,7 @@ The default configuration should work in most cases but the parameters can be tu
 Running this command starts the container with CPU only target device:
 ```bash
 mkdir -p models
-docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models:rw -v $(pwd)/speakers:/speakers:rw openvino/model_server:latest --rest_port 8000 --model_path /models/microsoft/speecht5_tts --model_name microsoft/speecht5_tts
+docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models:rw openvino/model_server:latest --rest_port 8000 --model_path /models/microsoft/speecht5_tts --model_name microsoft/speecht5_tts
 ```
 
 **Deploying on Bare Metal**
@@ -81,6 +83,32 @@ ovms --rest_port 8000 --source_model microsoft/speecht5_tts --model_repository_p
 
 ```bash
 curl http://localhost:8000/v3/audio/speech -H "Content-Type: application/json" -d "{\"model\": \"microsoft/speecht5_tts\", \"input\": \"The quick brown fox jumped over the lazy dog\"}" -o speech.wav
+```
+:::
+
+:::{dropdown} **Unary call with OpenAi python library with default voice**
+
+```python
+from pathlib import Path
+from openai import OpenAI
+
+prompt = "The quick brown fox jumped over the lazy dog"
+filename = "speech.wav"
+url="http://localhost:8000/v3"
+
+
+speech_file_path = Path(__file__).parent / "speech.wav"
+client = OpenAI(base_url=url, api_key="not_used")
+
+with client.audio.speech.with_streaming_response.create(
+  model="microsoft/speecht5_tts",
+  voice=None,
+  input=prompt
+) as response:
+  response.stream_to_file(speech_file_path)
+
+
+print("Generation finished")
 ```
 :::
 
