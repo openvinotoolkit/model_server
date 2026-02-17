@@ -62,6 +62,7 @@ std::shared_ptr<GenAiServableProperties> VisualLanguageModelServable::getPropert
     return properties;
 }
 
+// Continuous Batching VLM
 absl::Status VisualLanguageModelServable::prepareInputs(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
     auto vlmExecutionContext = std::static_pointer_cast<VisualLanguageModelServableExecutionContext>(executionContext);
     if (vlmExecutionContext->apiHandler == nullptr) {
@@ -93,24 +94,12 @@ absl::Status VisualLanguageModelServable::prepareInputs(std::shared_ptr<GenAiSer
         }
 
         constexpr bool add_generation_prompt = true;  // confirm it should be hardcoded
-        ov::genai::JsonContainer tools = ov::genai::JsonContainer::from_json_string(R"([
-  {
-    "type": "function",
-    "function": {
-      "name": "get_weather",
-      "description": "Get current weather by city",
-      "parameters": {
-        "type": "object",
-        "properties": {
-          "city": {"type": "string"}
-        },
-        "required": ["city"]
-      }
-    }
-  }
-])");
-        vlmExecutionContext->inputText = properties->tokenizer.apply_chat_template(chatHistory, add_generation_prompt, {}, tools);
-        //vlmExecutionContext->inputText = properties->tokenizer.apply_chat_template(chatHistory, add_generation_prompt, {});
+        const auto& tools = vlmExecutionContext->apiHandler->getTools();
+        if (tools.has_value()) {
+            vlmExecutionContext->inputText = properties->tokenizer.apply_chat_template(chatHistory, add_generation_prompt, {}, tools);
+        } else {
+            vlmExecutionContext->inputText = properties->tokenizer.apply_chat_template(chatHistory, add_generation_prompt, {});
+        }
     } else {
         return absl::InvalidArgumentError("Unsupported endpoint");
     }

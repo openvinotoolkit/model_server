@@ -222,6 +222,7 @@ absl::Status VisualLanguageModelLegacyServable::preparePartialResponse(std::shar
     return absl::OkStatus();
 }
 
+// Legacy VLM
 absl::Status VisualLanguageModelLegacyServable::prepareInputs(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
     auto vlmExecutionContext = std::static_pointer_cast<VisualLanguageModelLegacyServableExecutionContext>(executionContext);
     if (vlmExecutionContext->apiHandler == nullptr) {

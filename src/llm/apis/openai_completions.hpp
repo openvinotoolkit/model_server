@@ -102,6 +102,7 @@ public:
     ov::genai::ChatHistory& getChatHistory();
     std::optional<int> getMaxTokens() const;
     std::optional<std::string> getResponseFormat() const;
+    const std::optional<ov::genai::JsonContainer>& getTools() const;
 
     bool isStream() const;
     std::string getModel() const;

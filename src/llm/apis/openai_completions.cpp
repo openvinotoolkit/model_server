@@ -17,6 +17,7 @@
 #include "openai_completions.hpp"
 
 #include <cmath>
+#include <limits>
 #include <memory>
 #include "src/port/rapidjson_stringbuffer.hpp"
 #include "src/port/rapidjson_writer.hpp"
@@ -43,6 +44,51 @@ using namespace rapidjson;
 namespace ovms {
 
 constexpr size_t DEFAULT_MAX_STOP_WORDS = 16;  // same as deep-seek
+
+namespace {
+
+ov::genai::JsonContainer rapidJsonValueToJsonContainer(const rapidjson::Value& value) {
+    if (value.IsNull()) {
+        return ov::genai::JsonContainer(nullptr);
+    }
+    if (value.IsBool()) {
+        return ov::genai::JsonContainer(value.GetBool());
+    }
+    if (value.IsInt64()) {
+        return ov::genai::JsonContainer(value.GetInt64());
+    }
+    if (value.IsUint64()) {
+        auto uintValue = value.GetUint64();
+        if (uintValue <= static_cast<uint64_t>(std::numeric_limits<int64_t>::max())) {
+            return ov::genai::JsonContainer(static_cast<int64_t>(uintValue));
+        }
+        return ov::genai::JsonContainer(static_cast<double>(uintValue));
+    }
+    if (value.IsDouble()) {
+        return ov::genai::JsonContainer(value.GetDouble());
+    }
+    if (value.IsString()) {
+        return ov::genai::JsonContainer(std::string(value.GetString(), value.GetStringLength()));
+    }
+    if (value.IsArray()) {
+        ov::genai::JsonContainer arrayContainer = ov::genai::JsonContainer::array();
+        for (const auto& item : value.GetArray()) {
+            arrayContainer.push_back(rapidJsonValueToJsonContainer(item));
+        }
+        return arrayContainer;
+    }
+    if (value.IsObject()) {
+        ov::genai::JsonContainer objectContainer = ov::genai::JsonContainer::object();
+        for (auto member = value.MemberBegin(); member != value.MemberEnd(); ++member) {
+            const std::string key(member->name.GetString(), member->name.GetStringLength());
+            objectContainer[key] = rapidJsonValueToJsonContainer(member->value);
+        }
+        return objectContainer;
+    }
+    throw std::invalid_argument("Unsupported JSON value type");
+}
+
+}  // namespace
 
 absl::Status OpenAIChatCompletionsHandler::parseCompletionsPart() {
     // prompt: string
@@ -430,6 +476,23 @@ absl::Status OpenAIChatCompletionsHandler::parseTools() {
     }
 
     request.toolChoice = tool_choice;
+    request.tools = std::nullopt;
+    if (it != doc.MemberEnd() && !it->value.IsNull()) {
+        try {
+            request.tools = rapidJsonValueToJsonContainer(it->value);
+        } catch (const std::exception& e) {
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Direct tools conversion to JsonContainer failed: {}. Falling back to JSON string conversion.", e.what());
+            try {
+                rapidjson::StringBuffer toolsBuffer;
+                rapidjson::Writer<rapidjson::StringBuffer> toolsWriter(toolsBuffer);
+                it->value.Accept(toolsWriter);
+                request.tools = ov::genai::JsonContainer::from_json_string(toolsBuffer.GetString());
+            } catch (const std::exception& fallbackEx) {
+                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Fallback tools conversion failed: {}", fallbackEx.what());
+                return absl::InvalidArgumentError(absl::StrCat("Invalid tools payload: ", fallbackEx.what()));
+            }
+        }
+    }
     if (jsonChanged) {
         StringBuffer buffer;
         Writer<StringBuffer> writer(buffer);
@@ -464,6 +527,10 @@ std::optional<int> OpenAIChatCompletionsHandler::getMaxTokens() const {
 
 std::optional<std::string> OpenAIChatCompletionsHandler::getResponseFormat() const {
     return request.responseFormat;
+}
+
+const std::optional<ov::genai::JsonContainer>& OpenAIChatCompletionsHandler::getTools() const {
+    return request.tools;
 }
 
 std::string convertOpenAIResponseFormatToStructuralTagStringFormat(const rapidjson::Value& openAIFormat) {
