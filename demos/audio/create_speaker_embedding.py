@@ -12,7 +12,7 @@ signal, fs = torchaudio.load(file)
 if signal.shape[0] > 1:
     signal = torch.mean(signal, dim=0, keepdim=True)
 expected_sample_rate = 16000
-if(fs != expected_sample_rate):
+if fs != expected_sample_rate:
     resampler = torchaudio.transforms.Resample(orig_freq=fs, new_freq=expected_sample_rate)
     signal = resampler(signal)
 
