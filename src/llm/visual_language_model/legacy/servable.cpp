@@ -81,7 +81,9 @@ absl::Status VisualLanguageModelLegacyServable::parseRequest(std::shared_ptr<Gen
     legacyExecutionContext->apiHandler = std::make_shared<OpenAIChatCompletionsHandler>(*legacyExecutionContext->payload.parsedJson,
         legacyExecutionContext->endpoint,
         std::chrono::system_clock::now(),
-        getProperties()->tokenizer);
+        getProperties()->tokenizer,
+        getProperties()->toolParserName,
+        getProperties()->reasoningParserName);
     auto& config = ovms::Config::instance();
 
     auto status = executionContext->apiHandler->parseRequest(getProperties()->maxTokensLimit, getProperties()->bestOfLimit, getProperties()->maxModelLength, config.getServerSettings().allowedLocalMediaPath, config.getServerSettings().allowedMediaDomains);
@@ -101,7 +103,12 @@ absl::Status VisualLanguageModelLegacyServable::parseRequest(std::shared_ptr<Gen
             }
             return ov::genai::StreamingStatus::RUNNING;
         };
-        legacyExecutionContext->textStreamer = std::make_shared<ov::genai::TextStreamer>(getProperties()->tokenizer, callback);
+        ov::AnyMap streamerConfig;
+        if (legacyExecutionContext->apiHandler->getOutputParser() != nullptr &&
+            (legacyExecutionContext->apiHandler->getOutputParser()->requiresStreamingWithSpecialTokens())) {
+            streamerConfig.insert(ov::genai::skip_special_tokens(false));
+        }
+        legacyExecutionContext->textStreamer = std::make_shared<ov::genai::TextStreamer>(getProperties()->tokenizer, callback, streamerConfig);
     }
     legacyExecutionContext->generationConfigBuilder = std::make_shared<GenerationConfigBuilder>(getProperties()->baseGenerationConfig,
         getProperties()->toolParserName,
@@ -253,24 +260,12 @@ absl::Status VisualLanguageModelLegacyServable::prepareInputs(std::shared_ptr<Ge
         }
 
         constexpr bool add_generation_prompt = true;  // confirm it should be hardcoded
-        ov::genai::JsonContainer tools = ov::genai::JsonContainer::from_json_string(R"([
-  {
-    "type": "function",
-    "function": {
-      "name": "get_weather",
-      "description": "Get current weather by city",
-      "parameters": {
-        "type": "object",
-        "properties": {
-          "city": {"type": "string"}
-        },
-        "required": ["city"]
-      }
-    }
-  }
-])");
-        //vlmExecutionContext->inputText = properties->tokenizer.apply_chat_template(chatHistory, add_generation_prompt, {}, tools);
-        vlmExecutionContext->inputText = properties->tokenizer.apply_chat_template(chatHistory, add_generation_prompt, {});
+        const auto& tools = vlmExecutionContext->apiHandler->getTools();
+        if (tools.has_value()) {
+            vlmExecutionContext->inputText = properties->tokenizer.apply_chat_template(chatHistory, add_generation_prompt, {}, tools);
+        } else {
+            vlmExecutionContext->inputText = properties->tokenizer.apply_chat_template(chatHistory, add_generation_prompt, {});
+        }
     } else {
         return absl::InvalidArgumentError("Unsupported endpoint");
     }
