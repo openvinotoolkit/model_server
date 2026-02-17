@@ -212,7 +212,7 @@ Body:
         }
     
 JSON Parser:
-{"model":"gpt","stream":false,"messages":[]}0)";
+{"model":"gpt","stream":false,"messages":[]}012345678)"; // we reuse graph so this appends each time
     ASSERT_EQ(response, expectedResponse);
 }
 
@@ -244,7 +244,7 @@ Body:
         }
     
 JSON Parser:
-{"model":"gpt","stream":false,"messages":[]}0)";
+{"model":"gpt","stream":false,"messages":[]}012345678)"; // we reuse graph so this appends each time
     ASSERT_EQ(response, expectedResponse);
 }
 

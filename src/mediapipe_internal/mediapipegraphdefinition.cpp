@@ -186,10 +186,7 @@ Status MediapipeGraphDefinition::validate(ModelManager& manager) {
     if (!status.ok()) {
         return status;
     }
-    // TODO FIXME @atobisze
-    SPDLOG_ERROR("ER");
-    this->queue = std::make_shared<GraphQueue>(this->config, this->sidePacketMaps, 12);
-    SPDLOG_ERROR("XXX ER GraphQueue:{}", (void*)this->queue.get());
+    this->initializeQueueIfRequired();
 
     lock.unlock();
     notifier.passed = true;
@@ -198,6 +195,17 @@ Status MediapipeGraphDefinition::validate(ModelManager& manager) {
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Mediapipe: {} outputs: {}", getName(), getTensorMapString(outputsInfo));
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Mediapipe: {} kfs pass through: {}", getName(), this->passKfsRequestFlag);
     return StatusCode::OK;
+}
+
+void MediapipeGraphDefinition::initializeQueueIfRequired() {
+    // TODO FIXME @atobisze
+    int initialQueueSize = this->mgconfig.getInitialQueueSize();
+    if (initialQueueSize < 0) {
+        SPDLOG_DEBUG("Graph queue creation disabled for mediapipe: {} (graph_queue_size={})", getName(), initialQueueSize);
+        return;
+    }
+    this->queue = std::make_shared<GraphQueue>(this->config, this->sidePacketMaps, initialQueueSize);
+    SPDLOG_DEBUG("Created graph queue with size {} for mediapipe: {}", initialQueueSize, getName());
 }
 
 MediapipeGraphDefinition::MediapipeGraphDefinition(const std::string name,
@@ -282,6 +290,10 @@ Status MediapipeGraphDefinition::create(std::unique_ptr<MediapipeGraphExecutor>&
         return status;
     }
     SPDLOG_DEBUG("Creating Mediapipe graph executor: {}", getName());
+    if (!this->queue) {
+        SPDLOG_ERROR("Cannot create mediapipe graph executor: {} - graph queue not initialized (graph_queue_size=0)", getName());
+        return StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR;
+    }
     GraphIdGuard graphIdGuard(this->queue);  // TODO timeout?
     SPDLOG_ERROR("ER");
     pipeline = std::make_unique<MediapipeGraphExecutor>(getName(), std::to_string(getVersion()),
@@ -451,6 +463,7 @@ public:
 
 Status MediapipeGraphDefinition::initializeNodes() {
     SPDLOG_INFO("MediapipeGraphDefinition initializing graph nodes");
+    this->sidePacketMaps = std::make_shared<GraphSidePackets>();
     for (int i = 0; i < config.node().size(); i++) {
 #if (PYTHON_DISABLE == 0)
         auto& pythonNodeResourcesMap = this->sidePacketMaps->pythonNodeResourcesMap;

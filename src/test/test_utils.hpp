@@ -844,7 +844,10 @@ public:
         const ovms::MediapipeGraphConfig& config,
         std::string inputConfig,
         ovms::PythonBackend* pythonBackend = nullptr) :
-        ovms::MediapipeGraphDefinition(name, config, nullptr, nullptr, pythonBackend) { this->inputConfig = inputConfig; }
+        ovms::MediapipeGraphDefinition(name, config, nullptr, nullptr, pythonBackend) {
+        this->inputConfig = inputConfig;
+        this->mgconfig.setGraphQueueSize(-1); // TODO FIXME @atobisze
+    }
 
     // Do not read from path - use predefined config contents
     ovms::Status validateForConfigFileExistence() override {
