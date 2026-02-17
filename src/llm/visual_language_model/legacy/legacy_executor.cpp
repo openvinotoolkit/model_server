@@ -16,9 +16,7 @@
 
 #include "legacy_executor.hpp"
 #include "servable.hpp"
-#include "vector"
-
-#include <openvino/genai/parsers.hpp>
+#include <vector>
 
 namespace ovms {
 VisualLanguageModelLegacyExecutor::VisualLanguageModelLegacyExecutor(std::shared_ptr<ov::genai::VLMPipeline> pipe) {

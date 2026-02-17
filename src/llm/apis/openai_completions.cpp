@@ -19,6 +19,7 @@
 #include <cmath>
 #include <limits>
 #include <memory>
+#include <stdexcept>
 #include "src/port/rapidjson_stringbuffer.hpp"
 #include "src/port/rapidjson_writer.hpp"
 #include <set>
@@ -53,6 +54,12 @@ ov::genai::JsonContainer rapidJsonValueToJsonContainer(const rapidjson::Value& v
     }
     if (value.IsBool()) {
         return ov::genai::JsonContainer(value.GetBool());
+    }
+    if (value.IsInt()) {
+        return ov::genai::JsonContainer(value.GetInt());
+    }
+    if (value.IsUint()) {
+        return ov::genai::JsonContainer(static_cast<int64_t>(value.GetUint()));
     }
     if (value.IsInt64()) {
         return ov::genai::JsonContainer(value.GetInt64());
