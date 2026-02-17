@@ -1214,9 +1214,7 @@ std::string OpenAIChatCompletionsHandler::serializeStreamingChunk(const std::str
     // logprobs: object/null; Log probability information for the choice. TODO
     choice.AddMember("logprobs", Value(), allocator);
     if (endpoint == Endpoint::CHAT_COMPLETIONS) {
-        SPDLOG_INFO("If have output parser, we will parseChunk via it");
         if (outputParser != nullptr) {
-            SPDLOG_INFO("Passing chunk via output parser: {}", chunkResponse);
             std::optional<Document> delta = outputParser->parseChunk(chunkResponse, areToolsAvailable(), finishReason);
             if (!delta.has_value()) {
                 return "";

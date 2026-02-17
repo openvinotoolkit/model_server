@@ -1175,6 +1175,73 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParseRequestWithTools_Provided1_ChoiceNone)
     assertRequestWithTools(providedTools, toolsChoice, expectedJson);
 }
 
+TEST_F(HttpOpenAIHandlerParsingTest, ParseRequestWithTools_PopulatesToolsJsonContainer) {
+    std::string json = R"({
+    "model": "llama",
+    "messages": [
+      {
+        "role": "user",
+        "content": "What is the weather?"
+      }
+    ],
+    "tools": [
+      {
+        "type": "function",
+        "function": {
+          "name": "get_weather",
+          "description": "Get weather",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "location": {
+                "type": "string"
+              }
+            },
+            "required": ["location"]
+          }
+        }
+      }
+    ]
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler =
+        std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+    const auto& tools = apiHandler->getTools();
+    ASSERT_TRUE(tools.has_value());
+    EXPECT_TRUE(tools->is_array());
+    ASSERT_EQ(tools->size(), 1);
+    ASSERT_TRUE((*tools)[0]["function"]["name"].as_string().has_value());
+    EXPECT_EQ((*tools)[0]["function"]["name"].as_string().value(), "get_weather");
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, OutputParserInitializationDependsOnParserNames) {
+    std::string json = R"({
+    "model": "llama",
+    "messages": [
+      {
+        "role": "user",
+        "content": "hello"
+      }
+    ]
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    auto withoutParserNames = std::make_shared<ovms::OpenAIChatCompletionsHandler>(
+        doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    EXPECT_EQ(withoutParserNames->getOutputParser(), nullptr);
+
+    auto withParserNames = std::make_shared<ovms::OpenAIChatCompletionsHandler>(
+      doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer, "llama3", "");
+    EXPECT_NE(withParserNames->getOutputParser(), nullptr);
+}
+
 // Provide get_weather1, get_weather2, get_weather3 but take only first one - get_weather1
 TEST_F(HttpOpenAIHandlerParsingTest, ParseRequestWithTools_Provided3_ChoiceFirst) {
     std::string providedTools = R"(
