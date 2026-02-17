@@ -91,6 +91,9 @@ parser_text2speech = subparsers.add_parser('text2speech', help='export model for
 add_common_arguments(parser_text2speech)
 parser_text2speech.add_argument('--num_streams', default=0, type=int, help='The number of parallel execution streams to use for the models in the pipeline.', dest='num_streams')
 parser_text2speech.add_argument('--vocoder', type=str, help='The vocoder model to use for text2speech. For example microsoft/speecht5_hifigan', dest='vocoder')
+parser_text2speech.add_argument('--speaker_name', type=str, help='Name of the speaker', dest='speaker_name')
+parser_text2speech.add_argument('--speaker_path', type=str, help='Path to the speaker.bin file.', dest='speaker_path')
+
 
 parser_speech2text = subparsers.add_parser('speech2text', help='export model for speech2text endpoint')
 add_common_arguments(parser_speech2text)
@@ -110,7 +113,14 @@ node {
     [type.googleapis.com / mediapipe.T2sCalculatorOptions]: {
       models_path: "{{model_path}}",
       plugin_config: '{ "NUM_STREAMS": "{{num_streams|default(1, true)}}" }',
-      target_device: "{{target_device|default("CPU", true)}}"
+      target_device: "{{target_device|default("CPU", true)}}",
+      {%- if speaker_name and speaker_path %}
+      voices: [
+        {
+            name: "{{speaker_name}}",
+            path: "{{speaker_path}}"
+        }
+      ]{% endif %}
     }
   }
 }
