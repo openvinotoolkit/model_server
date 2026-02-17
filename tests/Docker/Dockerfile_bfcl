@@ -1,0 +1,20 @@
+FROM ubuntu:24.04
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3.12 \
+    python3-pip \
+    git \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+ARG MODE=unary    
+
+RUN git clone https://github.com/ShishirPatil/gorilla && \
+    cd gorilla/berkeley-function-call-leaderboard && \
+    git checkout 9b8a5202544f49a846aced185a340361231ef3e1 && \
+    curl -s https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/continuous_batching/accuracy/gorilla.patch | git apply -v && \
+    if [ "$MODE" != "unary" ]; then \
+    sed -i 's/model_handler=OpenAICompletionsHandler/model_handler=QwenAPIHandler/g' bfcl_eval/constants/model_config.py; \
+    fi && \
+    pip install -e . --extra-index-url "https://download.pytorch.org/whl/cpu" --break-system-packages && \
+    curl -L https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/tests/accuracy/test_case_ids_to_generate.json -O

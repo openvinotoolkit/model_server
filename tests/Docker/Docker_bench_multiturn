@@ -1,0 +1,16 @@
+FROM ubuntu:24.04
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        build-essential \
+        git \
+        curl \
+        python3.12-venv \
+        python3.12-dev \
+        python3-pip && \
+    rm -rf /var/lib/apt/lists/*
+WORKDIR /app
+RUN git clone -b v0.10.2 https://github.com/vllm-project/vllm && \
+    sed -i -e 's/if not os.path.exists(args.model)/if 1 == 0/g' vllm/benchmarks/multi_turn/benchmark_serving_multi_turn.py && \
+    pip3 install -r vllm/benchmarks/multi_turn/requirements.txt sentencepiece protobuf --break-system-packages
+
+WORKDIR /app/vllm/benchmarks/multi_turn
+RUN curl -s https://www.gutenberg.org/cache/epub/1184/pg1184.txt -O 
