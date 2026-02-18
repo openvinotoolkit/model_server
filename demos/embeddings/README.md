@@ -302,7 +302,7 @@ All models supported by [optimum-intel](https://github.com/huggingface/optimum-i
 :::{tab-item} Qwen/Qwen3-Embedding-0.6B
 :sync: Qwen3-Embedding-0.6B-fp16
 ```console
-python export_model.py embeddings_ov --source_model Qwen/Qwen3-Embedding-0.6B --pooling LAST --weight-format fp16 --target_device NPU --config_file_path models/config.json --model_repository_path models
+python export_model.py embeddings_ov --source_model BAAI/bge-large-en-v1.5 --pooling CLS --weight-format fp16 --target_device NPU --config_file_path models/config.json --model_repository_path models
 ```
 :::
 ::::
