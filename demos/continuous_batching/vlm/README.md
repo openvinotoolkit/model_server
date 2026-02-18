@@ -74,11 +74,6 @@ Download export script, install it's dependencies and create directory for the m
 ```console
 curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/export_model.py -o export_model.py
 pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
-git clone https://github.com/openvinotoolkit/openvino_tokenizers.git
-cd openvino_tokenizers
-git checkout 862f4997ac44a232efc9fbf029b35edc98abdae9
-pip install . --extra-index-url https://storage.openvinotoolkit.org/simple/wheels/nightly
-cd ..
 mkdir models
 ```
 
@@ -88,15 +83,13 @@ Run `export_model.py` script to download and quantize the model:
 
 **CPU**
 ```console
-python export_model.py text_generation --source_model OpenGVLab/InternVL2-2B --weight-format int4 --pipeline_type VLM --model_name OpenGVLab/InternVL2-2B --config_file_path models/config.json --model_repository_path models  --overwrite_models --trust_remote_code
+python export_model.py text_generation --source_model OpenGVLab/InternVL2-2B --weight-format int4 --pipeline_type VLM --model_name OpenGVLab/InternVL2-2B --config_file_path models/config.json --model_repository_path models  --overwrite_models
 ```
 
 **GPU**
 ```console
-python export_model.py text_generation --source_model OpenGVLab/InternVL2-2B --weight-format int4 --pipeline_type VLM --model_name OpenGVLab/InternVL2-2B --config_file_path models/config.json --model_repository_path models --overwrite_models --trust_remote_code --target_device GPU
+python export_model.py text_generation --source_model OpenGVLab/InternVL2-2B --weight-format int4 --pipeline_type VLM --model_name OpenGVLab/InternVL2-2B --config_file_path models/config.json --model_repository_path models --overwrite_models --target_device GPU
 ```
-
-> **Note:** Change the `--weight-format` to quantize the model to `fp16` or `int8` precision to reduce memory consumption and improve performance.
 
 > **Note:** You can change the model used in the demo out of any topology [tested](https://openvinotoolkit.github.io/openvino.genai/docs/supported-models/#visual-language-models-vlms) with OpenVINO.
 Be aware that QwenVL models executed on GPU might experience execution errors with very high resolution images. In case of such behavior, it is recommended to reduce the parameter `max_pixels` in `preprocessor_config.json`.

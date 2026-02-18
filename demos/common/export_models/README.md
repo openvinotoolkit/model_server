@@ -1,6 +1,7 @@
 # Exporting models using script {#ovms_demos_common_export}
 
 This documents describes how to export, optimize and configure models prior to server deployment with provided python script. This approach is more flexible than using [pull feature](../../../docs/pull_hf_models.md) from OVMS as it allows for using models that were not optimized beforehand and provided in [OpenVINO organization](https://huggingface.co/OpenVINO) in HuggingFace, but requires having Python set up to work.
+> **Warning:** This script uses option `--trust-remote-code`, which allows model-provided Python code to run on your machine during export. Use only trusted models/sources, review repository code before running, and avoid executing this script in sensitive environments.
 
 ## What it does
 
@@ -94,7 +95,6 @@ options:
                         Set the type of the tool parser for tool calls extraction
   --enable_tool_guided_generation
                         Enables enforcing tool schema during generation. Requires setting tool_parser
-  --trust_remote_code   Trust remote code for tokenizer conversion
 ```
 
 ## Model Export Examples
