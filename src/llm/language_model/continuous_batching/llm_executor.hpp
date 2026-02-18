@@ -59,12 +59,36 @@ struct LLMExecutor {
         cv.notify_one();
     }
 
+    std::string formatBytes(size_t bytes)
+    {
+        const double KB = 1024.0;
+        const double MB = KB * 1024.0;
+        const double GB = MB * 1024.0;
+        const double TB = GB * 1024.0;
+
+        std::ostringstream oss;
+        oss << std::fixed << std::setprecision(1);
+
+        if (bytes >= TB)
+            oss << (bytes / TB) << " TB";
+        else if (bytes >= GB)
+            oss << (bytes / GB) << " GB";
+        else if (bytes >= MB)
+            oss << (bytes / MB) << " MB";
+        else if (bytes >= KB)
+            oss << (bytes / KB) << " KB";
+        else
+            oss << bytes << " B";
+
+        return oss.str();
+    }
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
     void printMetrics() {
         ov::genai::PipelineMetrics metrics = pipe->get_metrics();
-        SPDLOG_LOGGER_INFO(llm_executor_logger, "All requests: {}; Scheduled requests: {}; Cache usage {:.1f}%;",
-            metrics.requests, metrics.scheduled_requests, metrics.cache_usage);
+        SPDLOG_LOGGER_INFO(llm_executor_logger, "All requests: {}; Scheduled requests: {}; Cache usage {:.1f}% of {};",
+            metrics.requests, metrics.scheduled_requests, metrics.cache_usage, formatBytes(metrics.kv_cache_size_in_bytes));
     }
 };
 #pragma GCC diagnostic pop
