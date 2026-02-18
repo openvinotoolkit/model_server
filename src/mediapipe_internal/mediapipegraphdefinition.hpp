@@ -123,6 +123,7 @@ protected:
     };
 
     virtual Status validateForConfigFileExistence();
+    Status parseGraphQueueSizeDirective();
     Status validateForConfigLoadableness();
 
     Status setStreamTypes();

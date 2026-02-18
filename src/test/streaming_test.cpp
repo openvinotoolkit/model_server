@@ -355,14 +355,11 @@ node {
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
-    auto sidePackets = std::make_shared<GraphSidePackets>();
-    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, sidePackets, 1);
-    GraphIdGuard guard(queue);
     MediapipeGraphExecutor executor{
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::KFS_REQUEST}},
         {{"out", mediapipe_packet_type_enum::KFS_RESPONSE}},
-{"in"}, {"out"}, {}, {}, {}, {}, {}, {}, nullptr, this->reporter.get(), std::move(guard)};
+{"in"}, {"out"}, {}, nullptr, this->reporter.get()};
 
     // Mock receiving 3 requests and disconnection
     prepareRequest(this->firstRequest, {{"in", 3.5f}});
@@ -415,14 +412,11 @@ node {
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
-    auto sidePackets = std::make_shared<GraphSidePackets>();
-    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, sidePackets, 1);
-    GraphIdGuard guard(queue);
     MediapipeGraphExecutor executor{
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
-{"in"}, {"out"}, {}, {}, {}, {}, {}, {}, nullptr, this->reporter.get(), std::move(guard)};
+{"in"}, {"out"}, {}, nullptr, this->reporter.get()};
 
     // Mock receiving 3 requests and disconnection
     prepareRequest(this->firstRequest, {{"in", 3.5f}});  // no timestamp specified, server will assign one
@@ -561,14 +555,11 @@ node {
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
-    auto sidePackets = std::make_shared<GraphSidePackets>();
-    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, sidePackets, 1);
-    GraphIdGuard guard(queue);
     MediapipeGraphExecutor executor{
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
-{"in"}, {"out"}, {}, {}, {}, {}, {}, {}, nullptr, this->reporter.get(), std::move(guard)};
+{"in"}, {"out"}, {}, nullptr, this->reporter.get()};
 
     // Mock receiving 3 requests with manually (client) assigned ascending order of timestamp and disconnection
     prepareRequest(this->firstRequest, {{"in", 3.5f}}, 3);  // first request with timestamp 3
@@ -609,14 +600,11 @@ node {
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
-    auto sidePackets = std::make_shared<GraphSidePackets>();
-    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, sidePackets, 1);
-    GraphIdGuard guard(queue);
     MediapipeGraphExecutor executor{
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
-{"in"}, {"out"}, {}, {}, {}, {}, {}, {}, nullptr, this->reporter.get(), std::move(guard)};
+{"in"}, {"out"}, {}, nullptr, this->reporter.get()};
 
     // Mock only 1 request and disconnect immediately
     prepareRequest(this->firstRequest, {{"in", 3.5f}});
@@ -1232,9 +1220,6 @@ node {
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
-    auto sidePackets = std::make_shared<GraphSidePackets>();
-    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, sidePackets, 1);
-    GraphIdGuard guard(queue);
     MediapipeGraphExecutor executor{
         this->name, this->version, config,
         {{"in1", mediapipe_packet_type_enum::OVTENSOR},
@@ -1245,7 +1230,7 @@ node {
             {"out3", mediapipe_packet_type_enum::OVTENSOR}},
         {"in1", "in2", "in3"},
         {"out1", "out2", "out3"},
-{}, {}, {}, {}, {}, {}, nullptr, this->reporter.get(), std::move(guard)};
+{}, nullptr, this->reporter.get()};
 
     std::promise<void> signalPromise;
     std::future<void> signalFuture = signalPromise.get_future();
@@ -1287,9 +1272,6 @@ node {
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
-    auto sidePackets = std::make_shared<GraphSidePackets>();
-    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, sidePackets, 1);
-    GraphIdGuard guard(queue);
     MediapipeGraphExecutor executor{
         this->name, this->version, config,
         {{"in1", mediapipe_packet_type_enum::OVTENSOR},
@@ -1300,7 +1282,7 @@ node {
             {"out3", mediapipe_packet_type_enum::OVTENSOR}},
         {"in1", "in2", "in3"},
         {"out1", "out2", "out3"},
-{}, {}, {}, {}, {}, {}, nullptr, this->reporter.get(), std::move(guard)};
+{}, nullptr, this->reporter.get()};
 
     std::promise<void> signalPromise;
     std::future<void> signalFuture = signalPromise.get_future();
@@ -1331,14 +1313,11 @@ node {
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
-    auto sidePackets = std::make_shared<GraphSidePackets>();
-    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, sidePackets, 1);
-    GraphIdGuard guard(queue);
     MediapipeGraphExecutor executor{
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
-{"in"}, {"out"}, {}, {}, {}, {}, {}, {}, nullptr, this->reporter.get(), std::move(guard)};
+{"in"}, {"out"}, {}, nullptr, this->reporter.get()};
 
     std::promise<void> signalPromise;
     std::future<void> signalFuture = signalPromise.get_future();
@@ -1368,14 +1347,11 @@ node {
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
-    auto sidePackets = std::make_shared<GraphSidePackets>();
-    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, sidePackets, 1);
-    GraphIdGuard guard(queue);
     MediapipeGraphExecutor executor{
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
-{"in"}, {"wrong_name"}, {}, {}, {}, {}, {}, {}, nullptr, this->reporter.get(), std::move(guard)};  // cannot install observer due to wrong output name (should never happen due to validation)
+{"in"}, {"wrong_name"}, {}, nullptr, this->reporter.get()};  // cannot install observer due to wrong output name (should never happen due to validation)
 
     EXPECT_CALL(this->stream, Read(_)).Times(0);
     EXPECT_CALL(this->stream, Write(_, _)).Times(0);
@@ -1396,14 +1372,11 @@ node {
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
-    auto sidePackets = std::make_shared<GraphSidePackets>();
-    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, sidePackets, 1);
-    GraphIdGuard guard(queue);
     MediapipeGraphExecutor executor{
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
-{"in"}, {"out"}, {}, {}, {}, {}, {}, {}, nullptr, this->reporter.get(), std::move(guard)};
+{"in"}, {"out"}, {}, nullptr, this->reporter.get()};
 
     prepareRequest(this->firstRequest, {});
     EXPECT_CALL(this->stream, Read(_))
@@ -1427,14 +1400,11 @@ node {
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
-    auto sidePackets = std::make_shared<GraphSidePackets>();
-    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, sidePackets, 1);
-    GraphIdGuard guard(queue);
     MediapipeGraphExecutor executor{
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
-{"in"}, {"out"}, {}, {}, {}, {}, {}, {}, nullptr, this->reporter.get(), std::move(guard)};
+{"in"}, {"out"}, {}, nullptr, this->reporter.get()};
 
     std::promise<void> signalPromise;
     std::future<void> signalFuture = signalPromise.get_future();
@@ -1466,14 +1436,11 @@ node {
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
-    auto sidePackets = std::make_shared<GraphSidePackets>();
-    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, sidePackets, 1);
-    GraphIdGuard guard(queue);
     MediapipeGraphExecutor executor{
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
-{"in"}, {"out"}, {}, {}, {}, {}, {}, {}, nullptr, this->reporter.get(), std::move(guard)};
+{"in"}, {"out"}, {}, nullptr, this->reporter.get()};
 
     prepareRequest(this->firstRequest, {{"in", 3.5f}});
     ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream, this->executionContext), StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR);
@@ -1492,14 +1459,11 @@ node {
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
-    auto sidePackets = std::make_shared<GraphSidePackets>();
-    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, sidePackets, 1);
-    GraphIdGuard guard(queue);
     MediapipeGraphExecutor executor{
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
-{"in"}, {"out"}, {}, {}, {}, {}, {}, {}, nullptr, this->reporter.get(), std::move(guard)};
+{"in"}, {"out"}, {}, nullptr, this->reporter.get()};
 
     // Invalid request - missing data in buffer
     prepareInvalidRequest(this->firstRequest, {"in"});  // no timestamp specified, server will assign one
@@ -1530,14 +1494,11 @@ node {
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
-    auto sidePackets = std::make_shared<GraphSidePackets>();
-    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, sidePackets, 1);
-    GraphIdGuard guard(queue);
     MediapipeGraphExecutor executor{
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
-{"in"}, {"out"}, {}, {}, {}, {}, {}, {}, nullptr, this->reporter.get(), std::move(guard)};
+{"in"}, {"out"}, {}, nullptr, this->reporter.get()};
 
     std::promise<void> signalPromise[3];
     std::future<void> signalFuture[3] = {
@@ -1580,14 +1541,11 @@ node {
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
-    auto sidePackets = std::make_shared<GraphSidePackets>();
-    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, sidePackets, 1);
-    GraphIdGuard guard(queue);
     MediapipeGraphExecutor executor{
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
-{"in"}, {"out"}, {}, {}, {}, {}, {}, {}, nullptr, this->reporter.get(), std::move(guard)};
+{"in"}, {"out"}, {}, nullptr, this->reporter.get()};
 
     prepareRequest(this->firstRequest, {{"in", 3.5f}}, 0);
     EXPECT_CALL(this->stream, Read(_))
@@ -1611,14 +1569,11 @@ node {
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
-    auto sidePackets = std::make_shared<GraphSidePackets>();
-    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, sidePackets, 1);
-    GraphIdGuard guard(queue);
     MediapipeGraphExecutor executor{
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
-{"in"}, {"out"}, {}, {}, {}, {}, {}, {}, nullptr, this->reporter.get(), std::move(guard)};
+{"in"}, {"out"}, {}, nullptr, this->reporter.get()};
 
     prepareRequest(this->firstRequest, {{"in", 3.5f}});
     setRequestTimestamp(this->firstRequest, std::string("not an int"));
@@ -1649,14 +1604,11 @@ node {
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
-    auto sidePackets = std::make_shared<GraphSidePackets>();
-    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, sidePackets, 1);
-    GraphIdGuard guard(queue);
     MediapipeGraphExecutor executor{
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
-{"in"}, {"out"}, {}, {}, {}, {}, {}, {}, nullptr, this->reporter.get(), std::move(guard)};
+{"in"}, {"out"}, {}, nullptr, this->reporter.get()};
 
     // Timestamps not allowed in stream
     // Expect continuity of operation and response with error message
@@ -1694,14 +1646,11 @@ node {
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
-    auto sidePackets = std::make_shared<GraphSidePackets>();
-    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, sidePackets, 1);
-    GraphIdGuard guard(queue);
     MediapipeGraphExecutor executor{
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
-{"in"}, {"out"}, {}, {}, {}, {}, {}, {}, nullptr, this->reporter.get(), std::move(guard)};
+{"in"}, {"out"}, {}, nullptr, this->reporter.get()};
 
     // Allowed in stream
     for (auto timestamp : std::vector<::mediapipe::Timestamp>{
@@ -1733,14 +1682,11 @@ node {
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
-    auto sidePackets = std::make_shared<GraphSidePackets>();
-    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, sidePackets, 1);
-    GraphIdGuard guard(queue);
     MediapipeGraphExecutor executor{
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
-{"in"}, {"out"}, {}, {}, {}, {}, {}, {}, nullptr, this->reporter.get(), std::move(guard)};
+{"in"}, {"out"}, {}, nullptr, this->reporter.get()};
 
     // Mock receiving 3 requests and disconnection
     prepareRequestWithParam(this->firstRequest, {{"in", 3.5f}}, {"val", 65});  // request with parameter val
@@ -1773,14 +1719,11 @@ node {
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
-    auto sidePackets = std::make_shared<GraphSidePackets>();
-    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, sidePackets, 1);
-    GraphIdGuard guard(queue);
     MediapipeGraphExecutor executor{
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
-{"in"}, {"out"}, {}, {}, {}, {}, {}, {}, nullptr, this->reporter.get(), std::move(guard)};
+{"in"}, {"out"}, {}, nullptr, this->reporter.get()};
 
     // Mock receiving the invalid request and disconnection
     // Request with invalid param py (special pythons session side packet)
@@ -1805,14 +1748,11 @@ node {
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
-    auto sidePackets = std::make_shared<GraphSidePackets>();
-    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, sidePackets, 1);
-    GraphIdGuard guard(queue);
     MediapipeGraphExecutor executor{
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
-{"in"}, {"out"}, {}, {}, {}, {}, {}, {}, nullptr, this->reporter.get(), std::move(guard)};
+{"in"}, {"out"}, {}, nullptr, this->reporter.get()};
 
     prepareRequest(this->firstRequest, {{"in", 3.5f}});  // missing required request param
     EXPECT_CALL(this->stream, Read(_)).Times(0);
@@ -1834,14 +1774,11 @@ node {
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
-    auto sidePackets = std::make_shared<GraphSidePackets>();
-    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, sidePackets, 1);
-    GraphIdGuard guard(queue);
     MediapipeGraphExecutor executor{
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
-{"in"}, {"out"}, {}, {}, {}, {}, {}, {}, nullptr, this->reporter.get(), std::move(guard)};
+{"in"}, {"out"}, {}, nullptr, this->reporter.get()};
 
     // Mock receiving 2 requests and disconnection
     prepareRequest(this->firstRequest, {{"in", 3.5f}}, std::nullopt, this->name, this->version);  // no timestamp specified, server will assign one
@@ -1871,14 +1808,11 @@ node {
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
-    auto sidePackets = std::make_shared<GraphSidePackets>();
-    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, sidePackets, 1);
-    GraphIdGuard guard(queue);
     MediapipeGraphExecutor executor{
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
-{"in"}, {"out"}, {}, {}, {}, {}, {}, {}, nullptr, this->reporter.get(), std::move(guard)};
+{"in"}, {"out"}, {}, nullptr, this->reporter.get()};
 
     std::promise<void> signalPromise;
     std::future<void> signalFuture = signalPromise.get_future();

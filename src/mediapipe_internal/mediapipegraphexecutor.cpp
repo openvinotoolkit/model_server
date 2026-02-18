@@ -90,6 +90,27 @@ MediapipeGraphExecutor::MediapipeGraphExecutor(
     currentStreamTimestamp(::mediapipe::Timestamp(STARTING_TIMESTAMP_VALUE)),
     mediapipeServableMetricReporter(mediapipeServableMetricReporter),
     guard(std::move(guard)) {}
-
+MediapipeGraphExecutor::MediapipeGraphExecutor(
+    const std::string& name,
+    const std::string& version,
+    const ::mediapipe::CalculatorGraphConfig& config,
+    stream_types_mapping_t inputTypes,
+    stream_types_mapping_t outputTypes,
+    std::vector<std::string> inputNames,
+    std::vector<std::string> outputNames,
+    const GraphSidePackets& sidePacketMaps,
+    PythonBackend* pythonBackend,
+    MediapipeServableMetricReporter* mediapipeServableMetricReporter) :
+    name(name),
+    version(version),
+    config(config),
+    inputTypes(std::move(inputTypes)),
+    outputTypes(std::move(outputTypes)),
+    inputNames(std::move(inputNames)),
+    outputNames(std::move(outputNames)),
+    sidePacketMaps(sidePacketMaps),
+    pythonBackend(pythonBackend),
+    currentStreamTimestamp(::mediapipe::Timestamp(STARTING_TIMESTAMP_VALUE)),
+    mediapipeServableMetricReporter(mediapipeServableMetricReporter) {}
 
 }  // namespace ovms

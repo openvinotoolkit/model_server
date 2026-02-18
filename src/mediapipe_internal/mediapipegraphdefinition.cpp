@@ -18,8 +18,10 @@
 #include <algorithm>
 #include <iostream>
 #include <memory>
+#include <regex>
 #include <sstream>
 #include <string>
+#include <thread>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -99,6 +101,45 @@ Status MediapipeGraphDefinition::validateForConfigFileExistence() {
     config << ifs.rdbuf();
     this->mgconfig.setCurrentGraphPbTxtMD5(ovms::FileSystem::getStringMD5(config.str()));
     this->chosenConfig.assign(config.str());
+    return parseGraphQueueSizeDirective();
+}
+
+Status MediapipeGraphDefinition::parseGraphQueueSizeDirective() {
+    // Scan pbtxt content for: # OVMS_GRAPH_QUEUE_SIZE: <value>
+    static const std::regex directiveRegex(
+        R"(^\s*#\s*OVMS_GRAPH_QUEUE_SIZE\s*:\s*(\S+)\s*$)",
+        std::regex::multiline);
+    std::smatch match;
+    if (!std::regex_search(this->chosenConfig, match, directiveRegex)) {
+        SPDLOG_TRACE("OVMS_GRAPH_QUEUE_SIZE directive not found in pbtxt for mediapipe: {}", getName());
+        return StatusCode::OK;  // directive not present - queue disabled by default
+    }
+    std::string value = match[1].str();
+    if (value == "AUTO") {
+        this->mgconfig.setGraphQueueSizeAuto();
+        return StatusCode::OK;
+    }
+    // Try to parse as integer
+    auto parsed = stoi32(value);
+    if (!parsed.has_value()) {
+        SPDLOG_ERROR("Invalid OVMS_GRAPH_QUEUE_SIZE value: '{}'. Expected integer or 'AUTO'.", value);
+        return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
+    }
+    int queueSize = parsed.value();
+    if (queueSize < -1) {
+        SPDLOG_ERROR("Invalid OVMS_GRAPH_QUEUE_SIZE value: {}. Must be -1 (disabled), or a positive integer.", queueSize);
+        return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
+    }
+    if (queueSize == 0) {
+        SPDLOG_ERROR("Invalid OVMS_GRAPH_QUEUE_SIZE value: 0. Must be -1 (disabled), or a positive integer.");
+        return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
+    }
+    unsigned int maxThreads = std::thread::hardware_concurrency();
+    if (maxThreads > 0 && queueSize > static_cast<int>(maxThreads)) {
+        SPDLOG_ERROR("Invalid OVMS_GRAPH_QUEUE_SIZE value: {}. Exceeds available hardware threads: {}.", queueSize, maxThreads);
+        return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
+    }
+    this->mgconfig.setGraphQueueSize(queueSize);
     return StatusCode::OK;
 }
 
@@ -290,16 +331,18 @@ Status MediapipeGraphDefinition::create(std::unique_ptr<MediapipeGraphExecutor>&
         return status;
     }
     SPDLOG_DEBUG("Creating Mediapipe graph executor: {}", getName());
-    if (!this->queue) {
-        SPDLOG_ERROR("Cannot create mediapipe graph executor: {} - graph queue not initialized (graph_queue_size=0)", getName());
-        return StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR;
+    if (this->queue) {
+        GraphIdGuard graphIdGuard(this->queue);
+        pipeline = std::make_unique<MediapipeGraphExecutor>(getName(), std::to_string(getVersion()),
+            this->config, this->inputTypes, this->outputTypes, this->inputNames, this->outputNames,
+            *this->sidePacketMaps,
+            this->pythonBackend, this->reporter.get(), std::move(graphIdGuard));
+    } else {
+        pipeline = std::make_unique<MediapipeGraphExecutor>(getName(), std::to_string(getVersion()),
+            this->config, this->inputTypes, this->outputTypes, this->inputNames, this->outputNames,
+            *this->sidePacketMaps,
+            this->pythonBackend, this->reporter.get());
     }
-    GraphIdGuard graphIdGuard(this->queue);  // TODO timeout?
-    SPDLOG_ERROR("ER");
-    pipeline = std::make_unique<MediapipeGraphExecutor>(getName(), std::to_string(getVersion()),
-        this->config, this->inputTypes, this->outputTypes, this->inputNames, this->outputNames,
-        *this->sidePacketMaps,
-        this->pythonBackend, this->reporter.get(), std::move(graphIdGuard));
     return status;
 }
 
@@ -373,13 +416,10 @@ Status MediapipeGraphDefinition::reload(ModelManager& manager, const MediapipeGr
         std::this_thread::sleep_for(std::chrono::microseconds(1));
     }
     this->mgconfig = config;
-    //this->pythonNodeResourcesMap.reset();
-    //this->genAiServableMap.reset();
     this->queue.reset();
     SPDLOG_ERROR("XXX ER cleared queue");
-    this->sidePacketMaps.reset(); 
+    this->sidePacketMaps = std::make_shared<GraphSidePackets>();
     SPDLOG_ERROR("XXX ER cleared sidePacketMaps");
-    // TODO FIXME @atobisze NOW we created new maps here before
     return validate(manager);
 }
 
@@ -463,7 +503,6 @@ public:
 
 Status MediapipeGraphDefinition::initializeNodes() {
     SPDLOG_INFO("MediapipeGraphDefinition initializing graph nodes");
-    this->sidePacketMaps = std::make_shared<GraphSidePackets>();
     for (int i = 0; i < config.node().size(); i++) {
 #if (PYTHON_DISABLE == 0)
         auto& pythonNodeResourcesMap = this->sidePacketMaps->pythonNodeResourcesMap;

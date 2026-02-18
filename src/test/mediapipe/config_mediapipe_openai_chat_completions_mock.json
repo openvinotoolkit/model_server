@@ -3,7 +3,8 @@
     "mediapipe_config_list": [
         {
             "name": "gpt",
-            "graph_path": "/ovms/src/test/mediapipe/graph_gpt.pbtxt"
+            "graph_path": "/ovms/src/test/mediapipe/graph_gpt.pbtxt",
+            "graph_queue_size": -1
         }
     ]
 }

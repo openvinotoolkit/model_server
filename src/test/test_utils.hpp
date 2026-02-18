@@ -846,13 +846,12 @@ public:
         ovms::PythonBackend* pythonBackend = nullptr) :
         ovms::MediapipeGraphDefinition(name, config, nullptr, nullptr, pythonBackend) {
         this->inputConfig = inputConfig;
-        this->mgconfig.setGraphQueueSize(-1); // TODO FIXME @atobisze
     }
 
     // Do not read from path - use predefined config contents
     ovms::Status validateForConfigFileExistence() override {
         this->chosenConfig = this->inputConfig;
-        return ovms::StatusCode::OK;
+        return parseGraphQueueSizeDirective();
     }
 };
 #endif

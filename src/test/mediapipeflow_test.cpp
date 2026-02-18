@@ -232,9 +232,11 @@ protected:
     void SetUp() override {
     }
     void TearDown() {
-        server.setShutdownRequest(1);
-        t->join();
-        server.setShutdownRequest(0);
+        if (t) {
+            server.setShutdownRequest(1);
+            t->join();
+            server.setShutdownRequest(0);
+        }
     }
 };
 
@@ -4066,4 +4068,119 @@ TEST(WhitelistRegistered, MediapipeSubgraphList) {
         "TensorsToPoseLandmarksAndSegmentation"});
 
     ASSERT_THAT(mediapipe::SubgraphRegistry::GetRegisteredNames(), UnorderedElementsAreArray(expected)) << readableSetError(mediapipe::SubgraphRegistry::GetRegisteredNames(), expected);
+}
+
+// --- OVMS_GRAPH_QUEUE_SIZE pbtxt directive tests ---
+
+// Minimal valid pbtxt that MediaPipe can parse (uses a registered test calculator)
+static const char* MINIMAL_PBTXT_TEMPLATE = R"(
+input_stream: "HTTP_REQUEST_PAYLOAD:input"
+output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+node: {
+  calculator: "OpenAIChatCompletionsMockCalculator"
+  input_stream: "LOOPBACK:loopback"
+  input_stream: "HTTP_REQUEST_PAYLOAD:input"
+  output_stream: "LOOPBACK:loopback"
+  output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+  input_stream_info: {
+    tag_index: 'LOOPBACK:0',
+    back_edge: true
+  }
+  input_stream_handler {
+    input_stream_handler: "SyncSetInputStreamHandler",
+    options {
+      [mediapipe.SyncSetInputStreamHandlerOptions.ext] {
+        sync_set {
+          tag_index: "LOOPBACK:0"
+        }
+      }
+    }
+  }
+}
+)";
+
+static std::string makePbtxtWithDirective(const std::string& directive) {
+    return directive + "\n" + MINIMAL_PBTXT_TEMPLATE;
+}
+
+TEST(MediapipeGraphQueueSizeDirective, NoDirectiveMeansDisabled) {
+    ovms::MediapipeGraphConfig mgc;
+    DummyMediapipeGraphDefinition def("test", mgc, MINIMAL_PBTXT_TEMPLATE);
+    ovms::ModelManager manager;
+    auto status = def.validate(manager);
+    ASSERT_EQ(status, ovms::StatusCode::OK);
+    EXPECT_FALSE(mgc.getGraphQueueSize().has_value());
+    // getInitialQueueSize on default mgc returns -1
+    EXPECT_EQ(def.getMediapipeGraphConfig().getInitialQueueSize(), -1);
+}
+
+TEST(MediapipeGraphQueueSizeDirective, ExplicitPositiveValue) {
+    std::string pbtxt = makePbtxtWithDirective("# OVMS_GRAPH_QUEUE_SIZE: 4");
+    ovms::MediapipeGraphConfig mgc;
+    DummyMediapipeGraphDefinition def("test", mgc, pbtxt);
+    ovms::ModelManager manager;
+    auto status = def.validate(manager);
+    ASSERT_EQ(status, ovms::StatusCode::OK);
+    EXPECT_EQ(def.getMediapipeGraphConfig().getInitialQueueSize(), 4);
+}
+
+TEST(MediapipeGraphQueueSizeDirective, DisabledExplicitly) {
+    std::string pbtxt = makePbtxtWithDirective("# OVMS_GRAPH_QUEUE_SIZE: -1");
+    ovms::MediapipeGraphConfig mgc;
+    DummyMediapipeGraphDefinition def("test", mgc, pbtxt);
+    ovms::ModelManager manager;
+    auto status = def.validate(manager);
+    ASSERT_EQ(status, ovms::StatusCode::OK);
+    EXPECT_EQ(def.getMediapipeGraphConfig().getInitialQueueSize(), -1);
+}
+
+TEST(MediapipeGraphQueueSizeDirective, AutoValue) {
+    std::string pbtxt = makePbtxtWithDirective("# OVMS_GRAPH_QUEUE_SIZE: AUTO");
+    ovms::MediapipeGraphConfig mgc;
+    DummyMediapipeGraphDefinition def("test", mgc, pbtxt);
+    ovms::ModelManager manager;
+    auto status = def.validate(manager);
+    ASSERT_EQ(status, ovms::StatusCode::OK);
+    EXPECT_GT(def.getMediapipeGraphConfig().getInitialQueueSize(), 0);
+}
+
+TEST(MediapipeGraphQueueSizeDirective, ZeroRejected) {
+    std::string pbtxt = makePbtxtWithDirective("# OVMS_GRAPH_QUEUE_SIZE: 0");
+    ovms::MediapipeGraphConfig mgc;
+    DummyMediapipeGraphDefinition def("test", mgc, pbtxt);
+    ovms::ModelManager manager;
+    auto status = def.validate(manager);
+    EXPECT_EQ(status, ovms::StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID);
+}
+
+TEST(MediapipeGraphQueueSizeDirective, NegativeBelowMinusOneRejected) {
+    std::string pbtxt = makePbtxtWithDirective("# OVMS_GRAPH_QUEUE_SIZE: -2");
+    ovms::MediapipeGraphConfig mgc;
+    DummyMediapipeGraphDefinition def("test", mgc, pbtxt);
+    ovms::ModelManager manager;
+    auto status = def.validate(manager);
+    EXPECT_EQ(status, ovms::StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID);
+}
+
+TEST(MediapipeGraphQueueSizeDirective, ExceedsHardwareThreads) {
+    unsigned int maxThreads = std::thread::hardware_concurrency();
+    if (maxThreads == 0) {
+        GTEST_SKIP() << "hardware_concurrency() returned 0, cannot test thread limit";
+    }
+    int oversized = static_cast<int>(maxThreads) + 1;
+    std::string pbtxt = makePbtxtWithDirective("# OVMS_GRAPH_QUEUE_SIZE: " + std::to_string(oversized));
+    ovms::MediapipeGraphConfig mgc;
+    DummyMediapipeGraphDefinition def("test", mgc, pbtxt);
+    ovms::ModelManager manager;
+    auto status = def.validate(manager);
+    EXPECT_EQ(status, ovms::StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID);
+}
+
+TEST(MediapipeGraphQueueSizeDirective, InvalidStringRejected) {
+    std::string pbtxt = makePbtxtWithDirective("# OVMS_GRAPH_QUEUE_SIZE: INVALID");
+    ovms::MediapipeGraphConfig mgc;
+    DummyMediapipeGraphDefinition def("test", mgc, pbtxt);
+    ovms::ModelManager manager;
+    auto status = def.validate(manager);
+    EXPECT_EQ(status, ovms::StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID);
 }

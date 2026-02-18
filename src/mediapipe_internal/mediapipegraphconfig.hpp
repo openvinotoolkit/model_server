@@ -264,12 +264,12 @@ public:
      *    0  => queue with size 0 (user set 0)
      *   >0  => explicit size or resolved AUTO / default
      *
-     * When not set (nullopt): returns default of 1.
+     * When not set (nullopt): returns -1 (queue disabled).
      * When AUTO: returns hardcoded value (TODO FIXME @atobisze determine optimal size).
      */
     int getInitialQueueSize() const {
         if (!this->graphQueueSize.has_value()) {
-            return 1;  // not set - default
+            return -1;  // not set - queue disabled by default
         }
         if (std::holds_alternative<GraphQueueAutoTag>(*this->graphQueueSize)) {
             return 16;  // TODO FIXME @atobisze determine optimal size based on nireq / hardware

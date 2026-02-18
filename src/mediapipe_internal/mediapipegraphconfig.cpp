@@ -118,17 +118,6 @@ Status MediapipeGraphConfig::parseNode(const rapidjson::Value& v) {
             this->setSubconfigPath(DEFAULT_SUBCONFIG_FILENAME);
             this->setModelMeshSubconfigPath(DEFAULT_MODELMESH_SUBCONFIG_FILENAME);
         }
-        if (v.HasMember("graph_queue_size")) {
-            const auto& val = v["graph_queue_size"];
-            if (val.IsInt()) {
-                this->setGraphQueueSize(val.GetInt());
-            } else if (val.IsString() && std::string(val.GetString()) == "AUTO") {
-                this->setGraphQueueSizeAuto();
-            } else {
-                SPDLOG_ERROR("Invalid graph_queue_size value. Expected integer or \"AUTO\".");
-                return StatusCode::JSON_INVALID;
-            }
-        }
     } catch (std::logic_error& e) {
         SPDLOG_DEBUG("Relative path error: {}", e.what());
         return StatusCode::INTERNAL_ERROR;
