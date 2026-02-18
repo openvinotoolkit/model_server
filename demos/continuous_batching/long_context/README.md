@@ -106,24 +106,24 @@ P99 ITL (ms):                            171.99
 ```
 ============ Serving Benchmark Result ============
 Successful requests:                     10
-Benchmark duration (s):                  33.49
+Benchmark duration (s):                  26.56
 Total input tokens:                      49774
 Total generated tokens:                  500
-Request throughput (req/s):              0.30
-Output token throughput (tok/s):         14.93
-Total Token throughput (tok/s):          1501.34
+Request throughput (req/s):              0.38
+Output token throughput (tok/s):         18.82
+Total Token throughput (tok/s):          1892.75
 ---------------Time to First Token----------------
-Mean TTFT (ms):                          126.35
-Median TTFT (ms):                        125.42
-P99 TTFT (ms):                           135.13
+Mean TTFT (ms):                          101.70
+Median TTFT (ms):                        101.62
+P99 TTFT (ms):                           102.47
 -----Time per Output Token (excl. 1st token)------
-Mean TPOT (ms):                          65.75
-Median TPOT (ms):                        65.69
-P99 TPOT (ms):                           66.04
+Mean TPOT (ms):                          52.12
+Median TPOT (ms):                        51.96
+P99 TPOT (ms):                           53.55
 ---------------Inter-token Latency----------------
-Mean ITL (ms):                           87.07
-Median ITL (ms):                         65.98
-P99 ITL (ms):                            199.35
+Mean ITL (ms):                           69.02
+Median ITL (ms):                         52.13
+P99 ITL (ms):                            160.02
 ==================================================
 ```
 :::
@@ -133,17 +133,29 @@ The results shown above, despite very long context, have much lower TTFT latency
 
 ## Performance Comparison Table
 
-| Context Length (tokens) | TTFT No Caching (ms) | TTFT Prefix Caching (ms) | KV Cache Usage (GB) |
-|------------------------|----------------------|--------------------------|---------------------|
-| 1,000                  | 785               | 141                    | 0.1                 |
-| 5,000                  | 4160              | 172                    | 0.2                 |
-| 10,000                 | 9570              | 217                    | 0.4                 |
-| 50,000                 | 152,589           | 795                    | 1.5                 |
-| 100,000                | 624,713           | 1097                   | 3.1                 |
-| 200,000                |                   | 5406                   | 6.2                 |
+::::{tab-set}
+:::{tab-item} CPU
+| Context Length (tokens) | TTFT No Caching (ms) | TTFT Prefix Caching (ms) |
+|------------------------|------------------|---------------------|
+| 10,000                 | 176.89           | 170.42                  |
+| 50,000                 | 177.75           | 171.19                  |
+| 100,000                | 179.16           | 172.79                  |
+| 200,000                | 181.29           | 175.05                  |
+
+:::
+:::{tab-item} GPU
+:sync: GPU
+| Context Length (tokens) | TTFT No Caching (ms) | TTFT Prefix Caching (ms) |
+|------------------------|-------------------|-------------------------|
+| 10,000                 | 101.82            | 101.47                  | 
+| 50,000                 | 103.93            | 101.98                  |
+| 100,000                | 105.23            | 104.67                  |
+| 200,000                | 127.61            | 111.49                  |
+
+:::
+::::
 
 The results show that the cache usage grows linearly with the context length.
-First token generation without prefix caching is growing significantly with the prompt size. 
 Prefix caching is very effective in reducing the first token generation making the long context calls practical even on slower HW.
 
 ## Testing accuracy
