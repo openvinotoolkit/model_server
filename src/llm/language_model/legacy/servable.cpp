@@ -127,6 +127,12 @@ absl::Status LegacyServable::prepareInputs(std::shared_ptr<GenAiServableExecutio
 
 absl::Status LegacyServable::scheduleExecution(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
     auto legacyExecutionContext = std::static_pointer_cast<LegacyServableExecutionContext>(executionContext);
+    std::weak_ptr<LegacyServableExecutionContext> weakContext = legacyExecutionContext;
+    legacyExecutionContext->payload.client->registerDisconnectionCallback([weakContext]() {
+        if (auto context = weakContext.lock()) {
+            context->clientDisconnected = true;
+        }
+    });
     if (legacyExecutionContext->payload.client->isDisconnected()) {
         return absl::CancelledError();
     }
