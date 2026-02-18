@@ -17,9 +17,9 @@ Check supported [Speech Recognition Models](https://openvinotoolkit.github.io/op
 
 ## Speech generation
 ### Prepare speaker embeddings
-When generating speech you can use default speaker voice or you can prepaere your own speaker embedding file. Here you can see how to do it with downloaded file from online repository, but you can try with your own speech recorded as well:
+When generating speech you can use default speaker voice or you can prepare your own speaker embedding file. Here you can see how to do it with downloaded file from online repository, but you can try with your own speech recorded as well:
 ```bash
-pip install -r requirements.txt
+pip install -r pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/audio/requirements.txt
 mkdir -p audio_samples
 curl --output audio_samples/audio.wav "https://www.voiptroubleshooter.com/open_speech/american/OSR_us_000_0032_8k.wav"
 mkdir -p models
@@ -86,7 +86,7 @@ curl http://localhost:8000/v3/audio/speech -H "Content-Type: application/json" -
 ```
 :::
 
-:::{dropdown} **Unary call with OpenAi python library with default voice**
+:::{dropdown} **Unary call with OpenAI python library with default voice**
 
 ```python
 from pathlib import Path
@@ -120,7 +120,7 @@ curl http://localhost:8000/v3/audio/speech -H "Content-Type: application/json" -
 ```
 :::
 
-:::{dropdown} **Unary call with OpenAi python library**
+:::{dropdown} **Unary call with OpenAI python library**
 
 ```python
 from pathlib import Path
@@ -232,12 +232,12 @@ ovms --rest_port 8000 --source_model openai/whisper-large-v3-turbo --model_repos
 ```
 :::
 
-The default configuration should work in most cases but the parameters can be tuned via `export_model.py` script arguments. Run the script with `--help` argument to check available parameters and see the [S2t calculator documentation](../../docs/speech_recognition/reference.md) to learn more about configuration options and limitations.
+The default configuration should work in most cases but the parameters can be tuned via `export_model.py` script arguments. Run the script with `--help` argument to check available parameters and see the [s2t calculator documentation](../../docs/speech_recognition/reference.md) to learn more about configuration options and limitations.
 
 ### Request Generation 
 Transcript file that was previously generated with audio/speech endpoint.
 
-:::{dropdown} **Unary call with curl**
+:::{dropdown} **Unary call with cURL**
 
 
 ```bash
@@ -347,7 +347,7 @@ ovms --rest_port 8000 --source_model OpenVINO/whisper-large-v3-fp16-ov --model_r
 ### Request Generation 
 Transcript and translate file that was previously generated with audio/speech endpoint.
 
-:::{dropdown} **Unary call with curl**
+:::{dropdown} **Unary call with cURL**
 
 
 ```bash
