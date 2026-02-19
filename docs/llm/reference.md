@@ -396,7 +396,7 @@ There are several known limitations which are expected to be addressed in the co
 Some servable types introduce additional limitations:
 
 ### Stateful servable limitations
-- `finish_reason=length`is not supported (only possible are `stop` or `tool_call`),
+- `finish_reason=length` is not supported (only possible are `stop` or `tool_calls`),
 - `logprobs` not supported,
 - sequential request processing (only one request is handled at a time),
 - only a single response can be returned. Parameter `n` is not supported.
