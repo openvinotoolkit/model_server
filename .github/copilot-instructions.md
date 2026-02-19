@@ -27,7 +27,7 @@ Building and testing is done **inside a Docker `-build` container** with the rep
 
 **Important:** Building the `-build` image from scratch is time-expensive, but may be required if dependencies or the build environment change. Before building a new one, check if one already exists:
 ```bash
-docker images | grep -build
+docker images | grep -- -build
 ```
 If a `-build` image exists, start a container from it with the repository mounted:
 ```bash
