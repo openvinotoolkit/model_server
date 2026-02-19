@@ -123,7 +123,7 @@ make prepare_models
 
 Models are exported using the `demos/common/export_models/export_model.py` script (used internally by the test setup).
 
-If LLM test models change (e.g., new model version, openvino version change or config update), you may need to remove and regenerate the LLM test data:
+If LLM test models change (e.g., new model version, OpenVINO version change or config update), you may need to remove and regenerate the LLM test data:
 ```bash
 rm -rf src/test/llm_testing
 make prepare_models
