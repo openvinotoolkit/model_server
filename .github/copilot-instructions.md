@@ -19,6 +19,58 @@ OpenVINO Model Server (OVMS) is a high-performance inference serving platform bu
 - `Makefile` — Orchestrates Docker-based builds and test runs
 - `*.bat` files — Windows build and setup scripts
 
+## Code Style
+
+- C++ style is enforced via `cpplint` and `clang-format`
+- Run `make style` to check formatting
+- Apache 2.0 license headers are required on all source files
+
+## Expertise Areas
+
+1. **OpenVINO Expertise:**
+   - Proficient with OpenVINO core libraries and `ov::genai` components
+   - Familiar with OpenVINO performance optimization techniques
+2. **C++ Proficiency:**
+   - Strong C++17 skills
+   - Familiar with best practices in memory management, concurrency, and template programming
+3. **Serving Infrastructure:**
+   - gRPC and REST API handler design
+   - Model management, pipeline orchestration, and MediaPipe integration
+   - C API (`libovms_shared.so`) surface and bindings
+4. **Build System Awareness:**
+   - Bazel build configuration and dependency management
+   - Minimizing C++ build times: forward declarations, include-what-you-use, avoiding transitive header leakage
+   - Understanding of Bazel targets, build flags (`--//:distro`), and multi-stage Docker builds
+
+## Code Review Instructions for PRs
+
+When analyzing a Pull Request, follow this protocol:
+
+1. Follow **C++ Core Guidelines** strictly. Include references in review comments.
+2. Check for **hidden performance costs**: avoid `dynamic_cast` on the hot path; suggest `static_cast` or redesign if the type is known.
+3. **Avoid copies**: ensure large data structures (tensors, buffers) are passed by reference or moved, not copied.
+4. **Documentation**: ensure new public APIs have docstrings in C++ headers and Python bindings; update `docs/` as needed.
+5. **Test coverage**: ensure that new features or changes have corresponding tests in `src/test/`.
+6. **Formatting & safety:**
+   - No `using namespace std; using namespace ov;`. Prefer explicit using with specific symbols if needed, for readability.
+   - No `auto` for primitive types where it obscures readability.
+   - Use `const` and `constexpr` wherever possible.
+7. Pass non-fundamental values by `const` reference wherever possible.
+8. Prefer member initializer lists over direct assignments in constructor bodies.
+9. Verify that the result of every newly introduced function is used in at least one call site (except `void` functions).
+10. Use descriptive function and variable names. Avoid duplicate code — extract common functionality into reusable utilities.
+11. When initial container values are known upfront, prefer initializer-list / brace-initialization over constructing an empty container and inserting.
+12. Unused functions and includes are not allowed. Build times are already long — do not add unnecessary `#include` directives. Prefer forward declarations where possible and follow the include-what-you-use principle.
+    - **Forward-declare in headers, include in `.cpp`**: if a header only uses pointers or references to a type, use a forward declaration (`class Foo;`) instead of `#include "foo.hpp"`. Move the full `#include` to the `.cpp` file where the type is actually used.
+    - **Keep headers self-contained but minimal**: each header must compile on its own, but should not pull in transitive dependencies that callers don't need.
+    - **Prefer opaque types / Pimpl**: for complex implementation details, consider the Pimpl idiom to keep implementation-only types out of the public header entirely.
+    - **Never include a header solely for a typedef or enum**: forward-declare the enum (`enum class Foo;` in C++17) or relocate the typedef to a lightweight `fwd.hpp`-style header.
+13. Be mindful when accepting `const T&` in constructors or functions that store the reference: verify that the referenced object's lifetime outlives the usage to avoid dangling references.
+
+
+
+
+
 ## Build System
 
 ### Bazel (primary build tool)
@@ -142,50 +194,3 @@ Run the full test suite only after the targeted tests pass.
 - Test models are stored in `src/test/` subdirectories (e.g., `dummy/`, `passthrough/`, `summator/`)
 - Specialized test areas: `src/test/llm/`, `src/test/mediapipe/`, `src/test/python/`, `src/test/embeddings/`
 
-## Code Style
-
-- C++ style is enforced via `cpplint` and `clang-format`
-- Run `make style` to check formatting
-- Apache 2.0 license headers are required on all source files
-
-## Expertise Areas
-
-1. **OpenVINO Expertise:**
-   - Proficient with OpenVINO core libraries and `ov::genai` components
-   - Familiar with OpenVINO performance optimization techniques
-2. **C++ Proficiency:**
-   - Strong C++17 skills
-   - Familiar with best practices in memory management, concurrency, and template programming
-3. **Serving Infrastructure:**
-   - gRPC and REST API handler design
-   - Model management, pipeline orchestration, and MediaPipe integration
-   - C API (`libovms_shared.so`) surface and bindings
-4. **Build System Awareness:**
-   - Bazel build configuration and dependency management
-   - Minimizing C++ build times: forward declarations, include-what-you-use, avoiding transitive header leakage
-   - Understanding of Bazel targets, build flags (`--//:distro`), and multi-stage Docker builds
-
-## Code Review Instructions for PRs
-
-When analyzing a Pull Request, follow this protocol:
-
-1. Follow **C++ Core Guidelines** strictly. Include references in review comments.
-2. Check for **hidden performance costs**: avoid `dynamic_cast` on the hot path; suggest `static_cast` or redesign if the type is known.
-3. **Avoid copies**: ensure large data structures (tensors, buffers) are passed by reference or moved, not copied.
-4. **Documentation**: ensure new public APIs have docstrings in C++ headers and Python bindings; update `docs/` as needed.
-5. **Test coverage**: ensure that new features or changes have corresponding tests in `src/test/`.
-6. **Formatting & safety:**
-   - No `using namespace std; using namespace ov;`. Prefer explicit using with specific symbols if needed, for readability.
-   - No `auto` for primitive types where it obscures readability.
-   - Use `const` and `constexpr` wherever possible.
-7. Pass non-fundamental values by `const` reference wherever possible.
-8. Prefer member initializer lists over direct assignments in constructor bodies.
-9. Verify that the result of every newly introduced function is used in at least one call site (except `void` functions).
-10. Use descriptive function and variable names. Avoid duplicate code — extract common functionality into reusable utilities.
-11. When initial container values are known upfront, prefer initializer-list / brace-initialization over constructing an empty container and inserting.
-12. Unused functions and includes are not allowed. Build times are already long — do not add unnecessary `#include` directives. Prefer forward declarations where possible and follow the include-what-you-use principle.
-    - **Forward-declare in headers, include in `.cpp`**: if a header only uses pointers or references to a type, use a forward declaration (`class Foo;`) instead of `#include "foo.hpp"`. Move the full `#include` to the `.cpp` file where the type is actually used.
-    - **Keep headers self-contained but minimal**: each header must compile on its own, but should not pull in transitive dependencies that callers don't need.
-    - **Prefer opaque types / Pimpl**: for complex implementation details, consider the Pimpl idiom to keep implementation-only types out of the public header entirely.
-    - **Never include a header solely for a typedef or enum**: forward-declare the enum (`enum class Foo;` in C++17) or relocate the typedef to a lightweight `fwd.hpp`-style header.
-13. Be mindful when accepting `const T&` in constructors or functions that store the reference: verify that the referenced object's lifetime outlives the usage to avoid dangling references.
