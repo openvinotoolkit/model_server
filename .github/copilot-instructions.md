@@ -193,4 +193,4 @@ When analyzing a Pull Request, follow this protocol:
     - **Keep headers self-contained but minimal**: each header must compile on its own, but should not pull in transitive dependencies that callers don't need.
     - **Prefer opaque types / Pimpl**: for complex implementation details, consider the Pimpl idiom to keep implementation-only types out of the public header entirely.
     - **Never include a header solely for a typedef or enum**: forward-declare the enum (`enum class Foo;` in C++17) or relocate the typedef to a lightweight `fwd.hpp`-style header.
-15. Be mindful when accepting `const T&` in constructors or functions that store the reference: verify that the referenced object's lifetime outlaps the usage to avoid dangling references.
+15. Be mindful when accepting `const T&` in constructors or functions that store the reference: verify that the referenced object's lifetime outlives the usage to avoid dangling references.
