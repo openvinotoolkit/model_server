@@ -267,7 +267,7 @@ TEST_P(VLMServableExecutionTestParameterized, unaryBasicWithTools) {
         {"stream", "false"},
         {"max_tokens", "5"},
         {"ignore_eos", "true"},
-        {"tool_choice", R"("auto")"},
+        {"tool_choice", "auto"},
         {"tools", R"([
             {
                 "type": "function",

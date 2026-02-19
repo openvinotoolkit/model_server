@@ -156,7 +156,6 @@ absl::Status GenAiServable::parseRequest(std::shared_ptr<GenAiServableExecutionC
     return absl::OkStatus();
 }
 
-// Continuous batching LLM
 absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
     if (executionContext->apiHandler == nullptr) {
         return absl::Status(absl::StatusCode::kInvalidArgument, "API handler is not initialized");

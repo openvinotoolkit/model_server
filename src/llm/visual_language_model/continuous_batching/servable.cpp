@@ -62,7 +62,6 @@ std::shared_ptr<GenAiServableProperties> VisualLanguageModelServable::getPropert
     return properties;
 }
 
-// Continuous Batching VLM
 absl::Status VisualLanguageModelServable::prepareInputs(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
     auto vlmExecutionContext = std::static_pointer_cast<VisualLanguageModelServableExecutionContext>(executionContext);
     if (vlmExecutionContext->apiHandler == nullptr) {
