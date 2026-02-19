@@ -121,7 +121,7 @@ public:
     std::string serializeUnaryResponse(const std::vector<ov::genai::GenerationOutput>& generationOutputs);
     std::string serializeUnaryResponse(const ov::genai::EncodedResults& results);
     // VLMDecodedResults does not contain tokens that we can count, so we need to pass completionTokens in order to provide correct usage statistics
-    std::string serializeUnaryResponse(const ov::genai::VLMDecodedResults& results, size_t completionTokens);
+    std::string serializeUnaryResponse(const ov::genai::VLMDecodedResults& results);
     std::string serializeStreamingChunk(const std::string& chunkResponse, ov::genai::GenerationFinishReason finishReason);
     std::string serializeStreamingUsageChunk();
 };

@@ -157,13 +157,7 @@ absl::Status VisualLanguageModelLegacyServable::prepareCompleteResponse(std::sha
     if (legacyExecutionContext->payload.client->isDisconnected()) {
         return absl::CancelledError();
     }
-    size_t completionTokens = 0;
-    for (std::string text : legacyExecutionContext->results.texts) {
-        auto tokensTensor = properties->tokenizer.encode(text, ov::genai::add_special_tokens(false)).input_ids;
-        completionTokens += tokensTensor.get_size();
-    }
-    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Generated tokens number: {}", completionTokens);
-    executionContext->response = executionContext->apiHandler->serializeUnaryResponse(legacyExecutionContext->results, completionTokens);
+    executionContext->response = executionContext->apiHandler->serializeUnaryResponse(legacyExecutionContext->results);
     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Complete unary response: {}", executionContext->response);
     return absl::OkStatus();
 }

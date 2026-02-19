@@ -917,6 +917,7 @@ absl::Status OpenAIChatCompletionsHandler::parseRequest(std::optional<uint32_t> 
 
 void updateUsage(CompletionUsageStatistics& usage, const std::vector<int64_t>& generatedIds, bool echoPrompt) {
     OVMS_PROFILE_FUNCTION();
+    SPDLOG_INFO("Echo prompt: {}", echoPrompt);
     usage.completionTokens += generatedIds.size();
     if (echoPrompt)
         usage.completionTokens -= usage.promptTokens;
@@ -1123,7 +1124,7 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const ov::genai
     return jsonResponse.ToString();
 }
 
-std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const ov::genai::VLMDecodedResults& results, size_t completionTokens) {
+std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const ov::genai::VLMDecodedResults& results) {
     OVMS_PROFILE_FUNCTION();
     OpenAiJsonResponse jsonResponse;
     jsonResponse.StartObject();
@@ -1131,7 +1132,6 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const ov::genai
     // choices: array of size N, where N is related to n request parameter
     jsonResponse.StartArray("choices");
     int index = 0;
-    usage.completionTokens = completionTokens;
     for (int i = 0; i < results.texts.size(); i++) {
         const std::string& text = results.texts[i];
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Generated text: {}", text);
