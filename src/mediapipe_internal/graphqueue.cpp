@@ -40,7 +40,6 @@ namespace ovms {
 GraphQueue::GraphQueue(const ::mediapipe::CalculatorGraphConfig& config, std::shared_ptr<GraphSidePackets> sidePacketMaps, int streamsLength) :
     Queue(streamsLength),
     sidePacketMaps(sidePacketMaps) {
-    SPDLOG_ERROR("ER Constr graph queue:{}", (void*)this);
     inferRequests.reserve(streamsLength);
     // TODO FIXME split constructor to init to handle retCodes?
     for (auto i = 0; i < streamsLength; ++i) {
@@ -50,17 +49,17 @@ GraphQueue::GraphQueue(const ::mediapipe::CalculatorGraphConfig& config, std::sh
 
         auto absStatus = gh->graph->Initialize(config);
         if (!absStatus.ok()) {
-            SPDLOG_ERROR("ER issue:{} {}", absStatus.ToString(), (void*)this);
-            throw 42;
+            SPDLOG_ERROR("Graph queue initialization failed: {}", absStatus.ToString());
+            throw std::runtime_error(absStatus.ToString());
         }
         for (auto& name : config.output_stream()) {
             std::string streamName = getStreamName(name);
             gh->outStreamObservers[streamName] = std::shared_ptr<OutputStreamObserverI>(new NullOutputStreamObserver());  // TODO use at() FIXME
             auto& perGraphObserverFunctor = gh->outStreamObservers[streamName];
-            absStatus = gh->graph->ObserveOutputStream(streamName, [&perGraphObserverFunctor](const ::mediapipe::Packet& packet) -> absl::Status { return perGraphObserverFunctor->handlePacket(packet); });  // TODO FIXME throw?
+            absStatus = gh->graph->ObserveOutputStream(streamName, [&perGraphObserverFunctor](const ::mediapipe::Packet& packet) -> absl::Status { return perGraphObserverFunctor->handlePacket(packet); });
             if (!absStatus.ok()) {
-                SPDLOG_ERROR("ER issue:{} {}", absStatus.ToString(), (void*)this);
-                throw 42;
+                SPDLOG_ERROR("Graph queue ObserveOutputStream failed: {}", absStatus.ToString());
+                throw std::runtime_error(absStatus.ToString());
             }
         }
         std::map<std::string, mediapipe::Packet> inputSidePackets;
@@ -73,47 +72,30 @@ GraphQueue::GraphQueue(const ::mediapipe::CalculatorGraphConfig& config, std::sh
         inputSidePackets[RERANK_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<RerankServableMap>(sidePacketMaps->rerankServableMap).At(::mediapipe::Timestamp(STARTING_TIMESTAMP_VALUE));
         inputSidePackets[STT_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<SttServableMap>(sidePacketMaps->sttServableMap).At(::mediapipe::Timestamp(STARTING_TIMESTAMP_VALUE));
         inputSidePackets[TTS_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<TtsServableMap>(sidePacketMaps->ttsServableMap).At(::mediapipe::Timestamp(STARTING_TIMESTAMP_VALUE));
-        SPDLOG_ERROR("ER");
         absStatus = gh->graph->StartRun(inputSidePackets);
-        SPDLOG_ERROR("ER");
         if (!absStatus.ok()) {
-            SPDLOG_ERROR("Input sidePackets size:{}", inputSidePackets.size());
-            SPDLOG_ERROR("ER issue:{} {}", absStatus.ToString(), (void*)this);
-            throw 42;
+            SPDLOG_ERROR("Graph queue StartRun failed: {}", absStatus.ToString());
+            throw std::runtime_error(absStatus.ToString());
         }
-
-        SPDLOG_ERROR("ER");
         inferRequests.emplace_back(std::move(gh));
-        SPDLOG_ERROR("ER");
     }
 }
 GraphQueue::~GraphQueue() {
-    SPDLOG_ERROR("ER Destroy graph queue:{}", (void*)this);
     for (auto& graphHelper : inferRequests) {
         auto absStatus = graphHelper->graph->WaitUntilIdle();
         if (!absStatus.ok()) {
-            SPDLOG_ERROR("ER issue:{} {}", absStatus.ToString(), (void*)this);
-            //        throw 42.2;
+            SPDLOG_DEBUG("Graph queue WaitUntilIdle error: {}", absStatus.ToString());
         }
         absStatus = graphHelper->graph->CloseAllPacketSources();
         if (!absStatus.ok()) {
-            SPDLOG_ERROR("ER issue:{} {}", absStatus.ToString(), (void*)this);
-            //      throw "as";
+            SPDLOG_DEBUG("Graph queue CloseAllPacketSources error: {}", absStatus.ToString());
         }
         absStatus = graphHelper->graph->WaitUntilDone();
         if (!absStatus.ok()) {
-            SPDLOG_ERROR("ER issue:{} {}", absStatus.ToString(), (void*)this);
-            //    throw 42.2;
+            SPDLOG_DEBUG("Graph queue WaitUntilDone error: {}", absStatus.ToString());
         }
         graphHelper->graph->Cancel();
-        if (!absStatus.ok()) {
-            SPDLOG_ERROR("ER issue:{} {}", absStatus.ToString(), (void*)this);
-            //    throw 42.2;
-        }
-        SPDLOG_ERROR("ER");
         graphHelper->graph.reset();
-        SPDLOG_ERROR("ER");
     }
-    SPDLOG_ERROR("ER Destroy graph queue:{}", (void*)this);
 }
 }  // namespace ovms

@@ -73,17 +73,13 @@ struct GraphIdGuard {
         id(queue->getIdleStream().get()),
         gh((queue->getInferRequest(id))),
         graph(*gh->graph) {
-        SPDLOG_ERROR("ER Guard construct this:{}", (void*)this);
     }
     GraphIdGuard(GraphIdGuard&&) = default;
     GraphIdGuard(const GraphIdGuard&) = delete;
     ~GraphIdGuard() {
         auto existingQueue = weakQueue.lock();
-        SPDLOG_ERROR("ER DEstroy Guard begin qu:{}", (void*)existingQueue.get());
         if (existingQueue)
             existingQueue->returnStream(this->id);
-        SPDLOG_ERROR("ER Destroy Guard end qu:{}", (void*)existingQueue.get());
-        SPDLOG_ERROR("ER Guard destroy this:{}", (void*)this);
     }
 };
 }  // namespace ovms

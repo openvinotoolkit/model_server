@@ -87,12 +87,9 @@ struct MyFunctor : public OutputStreamObserverI {
         outputStreamName(outputStreamName),
         packetType(packetType),
         response(response) {
-        SPDLOG_ERROR("ER MyFunctor:{} observer constructed:{}", outputStreamName, (void*)this);
     }
     absl::Status handlePacket(const ::mediapipe::Packet& packet) override;
-    ~MyFunctor() {
-        SPDLOG_ERROR("ER Destroy Functor:{} this:{}", outputStreamName, (void*)this);
-    }
+    ~MyFunctor() = default;
 };
 class MediapipeGraphExecutor {
 public:
@@ -201,12 +198,6 @@ public:
             INCREMENT_IF_ENABLED(this->mediapipeServableMetricReporter->getGraphErrorMetric(executionContext));
         }
         MP_RETURN_ON_FAIL(status, "graph wait until idle", mediapipeAbslToOvmsStatus(status.code()));
-
-        status = graph.WaitUntilIdle();
-        if (!status.ok()) {
-            INCREMENT_IF_ENABLED(this->mediapipeServableMetricReporter->getGraphErrorMetric(executionContext));
-        }
-        MP_RETURN_ON_FAIL(status, "graph wait until done", mediapipeAbslToOvmsStatus(status.code()));
         SPDLOG_DEBUG("Received all output stream packets for graph: {}", this->name);
         return StatusCode::OK;
     }
@@ -472,7 +463,6 @@ public:
 
 template <typename RequestType, typename ResponseType>
 absl::Status MyFunctor<RequestType, ResponseType>::handlePacket(const ::mediapipe::Packet& packet) {
-    SPDLOG_ERROR("ER my functor:{}", (void*)this);
     auto status = onPacketReadySerializeImpl(
         this->requestId,
         this->exec.name,

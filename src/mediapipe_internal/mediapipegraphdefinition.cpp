@@ -194,14 +194,12 @@ Status MediapipeGraphDefinition::validate(ModelManager& manager) {
     if (!validationResult.ok()) {
         return validationResult;
     }
-    SPDLOG_ERROR("ER");
     std::unique_lock lock(metadataMtx);
     auto status = createInputsInfo();
     if (!status.ok()) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to create inputs info for mediapipe graph definition: {}", getName());
         return status;
     }
-    SPDLOG_ERROR("ER");
     status = createOutputsInfo();
     if (!status.ok()) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to create outputs info for mediapipe graph definition: {}", getName());
@@ -261,13 +259,6 @@ MediapipeGraphDefinition::MediapipeGraphDefinition(const std::string name,
     reporter(std::make_unique<MediapipeServableMetricReporter>(metricConfig, registry, name)) {
     mgconfig = config;
     passKfsRequestFlag = false;
-    SPDLOG_ERROR("XXX ER new PythonNodeResourcesMap:{}", (void*)&this->sidePacketMaps->pythonNodeResourcesMap);
-    SPDLOG_ERROR("XXX ER new genAiServableMap:{}", (void*)&this->sidePacketMaps->genAiServableMap);
-    /*if (!sharedThreadPool) {
-        SPDLOG_ERROR("Created shared Thread Pool XXX");
-        //sharedThreadPool = std::make_shared<mediapipe::ThreadPoolExecutor>(std::thread::hardware_concurrency());  // TODO FIXME should be in MP factory
-    }*/
-   // TODO FIXME illegal constructor as we do not create queue here
 }
 
 Status MediapipeGraphDefinition::createInputsInfo() {
@@ -343,6 +334,7 @@ Status MediapipeGraphDefinition::create(std::unique_ptr<MediapipeGraphExecutor>&
             *this->sidePacketMaps,
             this->pythonBackend, this->reporter.get());
     }
+    SPDLOG_DEBUG("Created Mediapipe graph executor: {}", getName());
     return status;
 }
 
@@ -417,9 +409,7 @@ Status MediapipeGraphDefinition::reload(ModelManager& manager, const MediapipeGr
     }
     this->mgconfig = config;
     this->queue.reset();
-    SPDLOG_ERROR("XXX ER cleared queue");
     this->sidePacketMaps = std::make_shared<GraphSidePackets>();
-    SPDLOG_ERROR("XXX ER cleared sidePacketMaps");
     return validate(manager);
 }
 

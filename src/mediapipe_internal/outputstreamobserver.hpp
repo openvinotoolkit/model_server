@@ -51,13 +51,10 @@ public:
 };
 class NullOutputStreamObserver : public OutputStreamObserverI {
 public:
-    NullOutputStreamObserver() {
-        SPDLOG_ERROR("NUll observer constructed:{}", (void*)this);
-    }
+    NullOutputStreamObserver() = default;
     absl::Status handlePacket(const ::mediapipe::Packet& packet) override {
-        SPDLOG_ERROR("Internal error occured:{}", (void*)this);
-        throw std::runtime_error("Should not happen");
-        return absl::Status(absl::StatusCode::kInternal, "Should not happen");
+        SPDLOG_ERROR("NullOutputStreamObserver::handlePacket called - graph observer was not replaced before execution");
+        throw std::runtime_error("NullOutputStreamObserver should have been replaced before graph execution");
     }
 };
 }  // namespace ovms
