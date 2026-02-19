@@ -172,11 +172,25 @@ Such experiment can confirm the impact on accuracy from the model quantization a
 
 ## Cache Precision Comparison
 
-| Cache Precision | Plugin Config | Accuracy (longbench_gov_report, concurrency 50) | Max Cache Usage (GB) | Duration (s for 100 requests) |
-|-----------------|--------------|-----------------------------------------------|----------------------|-------------------------------|
-| INT8            | "KV_CACHE_PRECISION":"u8"                                     | 0.3374        | 11                   | 41m6.993s    |
-| BF16            | "KV_CACHE_PRECISION":"bf16"                                   | 0.3297        | 20                   | 40m15.359s   |
-| FP32            | "KV_CACHE_PRECISION":"FP32","EXECUTION_MODE_HINT": "ACCURACY" | 0.331         | 37                   | 105m15.876s  |
+::::{tab-set}
+:::{tab-item} CPU
+| Cache Precision | Plugin Config | Accuracy (longbench_gov_report, concurrency 50) | Duration (s for 100 requests) |
+|-----------------|--------------|-----------------------------------------------|-------------------------------|
+| INT8            | "KV_CACHE_PRECISION":"u8"                                     |         |     |
+| BF16            | "KV_CACHE_PRECISION":"bf16"                                   |         |    |
+| FP32            | "KV_CACHE_PRECISION":"FP32","EXECUTION_MODE_HINT": "ACCURACY" |          |   |
+
+:::
+:::{tab-item} GPU
+:sync: GPU
+| Cache Precision | Plugin Config | Accuracy (longbench_gov_report, concurrency 50) | Duration (s for 100 requests) |
+|-----------------|--------------|-----------------------------------------------|-------------------------------|
+| INT8            | "KV_CACHE_PRECISION":"u8"                                     |         |     |
+| BF16            | "KV_CACHE_PRECISION":"bf16"                                   |         |    |
+| FP32            | "KV_CACHE_PRECISION":"FP32","EXECUTION_MODE_HINT": "ACCURACY" |          |   |
+
+:::
+::::
 
 The results in an experiment captured on Xeon Gen4 server show that KV cache compression has minimal impact on accuracy and significantly reduces memory consumption.
 Slower execution with FP32 precision is a result of disabled AMX acceleration.
