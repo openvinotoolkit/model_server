@@ -1135,6 +1135,25 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const ov::genai
     for (int i = 0; i < results.texts.size(); i++) {
         const std::string& text = results.texts[i];
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Generated text: {}", text);
+
+        // Workaround to use OVMS unary parsers: get tokens from string
+        // This way we have detokenized text from GenAI and calculate tokens, to further convert back to text again, in parseOutputIfNeeded...
+        auto result = tokenizer.encode(text);
+        auto& input_ids = result.input_ids;
+        if (input_ids.get_shape().size() != 2)
+            throw std::runtime_error("input_ids should have 2 dimensions");
+        if (input_ids.get_shape()[0] != 1)
+            throw std::runtime_error("input_ids should have 1 batch size");
+        if (input_ids.get_element_type() != ov::element::i64)
+            throw std::runtime_error("input_ids should have i64 element type");
+
+        int64_t* input_ids_data = reinterpret_cast<int64_t*>(input_ids.data());
+        std::vector<int64_t> tokens(input_ids_data, input_ids_data + input_ids.get_shape()[1]);
+
+        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Generated tokens: {}", tokens);
+        updateUsage(usage, tokens, request.echo);
+        ParsedOutput parsedOutput = parseOutputIfNeeded(tokens);
+
         jsonResponse.StartObject();
         // finish_reason: string; always "stop" for this method
         jsonResponse.FinishReason("stop");
@@ -1142,16 +1161,10 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const ov::genai
         jsonResponse.Index(index++);
         // logprobs: object/null; Log probability information for the choice. TODO
 
-        // message: object
         if (endpoint == Endpoint::CHAT_COMPLETIONS) {
-            jsonResponse.StartObject("message");
-            jsonResponse.String("content", text);
-            jsonResponse.String("role", "assistant");  // TODO - hardcoded
-            // TODO: tools_call
-            // TODO: function_call (deprecated)
-            jsonResponse.EndObject();
+            jsonResponse.MessageObject(parsedOutput);
         } else if (endpoint == Endpoint::COMPLETIONS) {
-            jsonResponse.String("text", text);
+            jsonResponse.Text(parsedOutput);
         }
 
         // finish message object
