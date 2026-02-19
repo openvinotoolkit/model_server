@@ -848,6 +848,34 @@ void updateUsage(CompletionUsageStatistics& usage, const std::vector<int64_t>& g
         usage.completionTokens -= usage.promptTokens;
 }
 
+static bool isToolCallsFinishReason(ov::genai::GenerationFinishReason finishReason) {
+    // GenerationFinishReason::TOOL_CALLS is not available in GenAI yet.
+    // Newer versions will probably expose it as enum value 3.
+    return static_cast<int>(finishReason) == 3;
+}
+
+static std::optional<std::string> mapFinishReason(ov::genai::GenerationFinishReason finishReason, bool hasToolCalls) {
+    if (isToolCallsFinishReason(finishReason) || (hasToolCalls && finishReason == ov::genai::GenerationFinishReason::STOP) /* workaround until GenAI exposes TOOL_CALLS */) {
+        return "tool_calls";
+    }
+    switch (finishReason) {
+    case ov::genai::GenerationFinishReason::STOP:
+        return "stop";
+    case ov::genai::GenerationFinishReason::LENGTH:
+        return "length";
+    default:
+        return std::nullopt;
+    }
+}
+
+static bool hasToolCallsInStreamingDelta(const rapidjson::Document& delta) {
+    if (!delta.HasMember("delta") || !delta["delta"].IsObject()) {
+        return false;
+    }
+    const auto& deltaObj = delta["delta"];
+    return deltaObj.HasMember("tool_calls") && deltaObj["tool_calls"].IsArray();
+}
+
 ParsedOutput OpenAIChatCompletionsHandler::parseOutputIfNeeded(const std::vector<int64_t>& generatedIds) {
     OVMS_PROFILE_FUNCTION();
     ParsedOutput parsedOutput;
@@ -878,22 +906,13 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const std::vect
         // finish_reason: string;
         // "stop" => natural stop point due to stopping criteria
         // "length" => due to reaching max_tokens parameter
+        // "tool_calls" => generation stopped due to generated tool calls
 
-        std::string finishReason;
-        switch (generationOutput.finish_reason) {
-        case ov::genai::GenerationFinishReason::STOP:
-            finishReason = "stop";
-            break;
-        case ov::genai::GenerationFinishReason::LENGTH:
-            finishReason = "length";
-            break;
-        default:
-            finishReason = "unknown";
+        std::optional<std::string> finishReason = mapFinishReason(generationOutput.finish_reason, !parsedOutput.toolCalls.empty());
+        if (!finishReason.has_value()) {
             SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Unknown finish reason: {}", static_cast<int>(generationOutput.finish_reason));
-            break;
         }
-        jsonResponse.FinishReason(finishReason);
-
+        jsonResponse.FinishReason(finishReason.value_or("unknown"));
         // index: integer; Choice index, only n=1 supported anyway
         jsonResponse.Index(index++);
 
@@ -1005,8 +1024,9 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const ov::genai
         updateUsage(usage, tokens, request.echo);
         ParsedOutput parsedOutput = parseOutputIfNeeded(tokens);
         jsonResponse.StartObject();
-        // finish_reason: string; always "stop" for this method
-        jsonResponse.FinishReason("stop");
+        // finish_reason: "stop" in regular scenario, "tool_calls" if output contains tool calls
+        auto finishReason = mapFinishReason(ov::genai::GenerationFinishReason::STOP, !parsedOutput.toolCalls.empty());
+        jsonResponse.FinishReason(finishReason.value_or("unknown"));
         // index: integer; Choice index, only n=1 supported anyway
         jsonResponse.Index(index++);
 
@@ -1058,11 +1078,13 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const ov::genai
     jsonResponse.StartArray("choices");
     int index = 0;
     usage.completionTokens = completionTokens;
+
     for (int i = 0; i < results.texts.size(); i++) {
         const std::string& text = results.texts[i];
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Generated text: {}", text);
         jsonResponse.StartObject();
         // finish_reason: string; always "stop" for this method
+        // tool_calls from VLM legacy pipeline are unsupported due to lack of tokens in API, so finish reason cannot be tool_call
         jsonResponse.FinishReason("stop");
         // index: integer; Choice index, only n=1 supported anyway
         jsonResponse.Index(index++);
@@ -1121,6 +1143,7 @@ std::string OpenAIChatCompletionsHandler::serializeStreamingChunk(const std::str
 
     Value choices(kArrayType);
     Value choice(kObjectType);
+    bool hasToolCalls = false;
 
     // choices: array of size N, where N is related to n request parameter
     choices.SetArray();
@@ -1129,19 +1152,9 @@ std::string OpenAIChatCompletionsHandler::serializeStreamingChunk(const std::str
     // "stop" => natural stop point due to stopping criteria
     // "length" => due to reaching max_tokens parameter
     // "content_filter" => when produced restricted output (not supported)
-    // "tool_calls" => generation stopped and waiting for tool output (not supported)
+    // "tool_calls" => generation stopped and waiting for tool output
     // "function_call" => deprecated
     // null - natural scenario when the generation has not completed yet
-    switch (finishReason) {
-    case ov::genai::GenerationFinishReason::STOP:
-        choice.AddMember("finish_reason", "stop", allocator);
-        break;
-    case ov::genai::GenerationFinishReason::LENGTH:
-        choice.AddMember("finish_reason", "length", allocator);
-        break;
-    default:
-        choice.AddMember("finish_reason", Value(), allocator);
-    }
     // index: integer; Choice index, only n=1 supported anyway
     choice.AddMember("index", 0, allocator);
     // logprobs: object/null; Log probability information for the choice. TODO
@@ -1155,6 +1168,7 @@ std::string OpenAIChatCompletionsHandler::serializeStreamingChunk(const std::str
             if (delta->HasMember("delta")) {
                 // Deep copy the "delta" member value into the choice object
                 choice.AddMember("delta", Value((*delta)["delta"], allocator), allocator);
+                hasToolCalls = hasToolCallsInStreamingDelta(*delta);
             }
 
         } else {
@@ -1165,6 +1179,13 @@ std::string OpenAIChatCompletionsHandler::serializeStreamingChunk(const std::str
         }
     } else if (endpoint == Endpoint::COMPLETIONS) {
         choice.AddMember("text", Value(chunkResponse.c_str(), allocator), allocator);
+    }
+
+    auto serializedFinishReason = mapFinishReason(finishReason, hasToolCalls);
+    if (serializedFinishReason.has_value()) {
+        choice.AddMember("finish_reason", Value(serializedFinishReason.value().c_str(), allocator), allocator);
+    } else {
+        choice.AddMember("finish_reason", Value("unknown", allocator), allocator);
     }
 
     choices.PushBack(choice, allocator);

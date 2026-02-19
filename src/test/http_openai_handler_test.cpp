@@ -31,6 +31,13 @@
 #include "test_utils.hpp"
 #include "platform_utils.hpp"
 
+#ifdef _WIN32
+const std::string llama3TokenizerPathForHandlerTests = getWindowsRepoRootPath() + "\\src\\test\\llm_testing\\unsloth\\Llama-3.1-8B-Instruct";
+#else
+const std::string llama3TokenizerPathForHandlerTests = "/ovms/src/test/llm_testing/unsloth/Llama-3.1-8B-Instruct";
+#endif
+constexpr int64_t llama3BotTokenIdForHandlerTests = 128010;
+
 class HttpOpenAIHandlerTest : public ::testing::Test {
 protected:
     ovms::Server& server = ovms::Server::instance();
@@ -401,6 +408,161 @@ protected:
         EXPECT_EQ(json, expectedJson);
     }
 };
+
+static std::vector<int64_t> createLlama3ToolCallTokens(ov::genai::Tokenizer& tokenizer) {
+    std::string toolCall = R"({"name": "example_tool", "parameters": {"arg1": "value1", "arg2": 42}})";
+    auto generatedTensor = tokenizer.encode(toolCall, ov::genai::add_special_tokens(false)).input_ids;
+    std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+    generatedTokens.insert(generatedTokens.begin(), llama3BotTokenIdForHandlerTests);
+    return generatedTokens;
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, serializeStreamingChunkReturnsToolCallsFinishReason) {
+    std::shared_ptr<ov::genai::Tokenizer> llama3Tokenizer = std::make_shared<ov::genai::Tokenizer>(llama3TokenizerPathForHandlerTests);
+    std::string json = R"({
+    "model": "llama",
+    "stream": true,
+    "messages": [{"role": "user", "content": "What is weather?"}],
+    "tools": [{
+      "type": "function",
+      "function": {
+        "name": "get_humidity",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "location": {"type": "string"}
+          }
+        }
+      }
+    }]
+    })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    auto apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *llama3Tokenizer, "llama3");
+    uint32_t maxTokensLimit = 100;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+
+    std::vector<std::pair<std::string, ov::genai::GenerationFinishReason>> stream = {
+        {"<|python_tag|>", ov::genai::GenerationFinishReason::NONE},
+        {"{\"", ov::genai::GenerationFinishReason::NONE},
+        {"name", ov::genai::GenerationFinishReason::NONE},
+        {"\":", ov::genai::GenerationFinishReason::NONE},
+        {" \"", ov::genai::GenerationFinishReason::NONE},
+        {"get", ov::genai::GenerationFinishReason::NONE},
+        {"_humidity", ov::genai::GenerationFinishReason::NONE},
+        {"\",", ov::genai::GenerationFinishReason::NONE},
+        {" \"", ov::genai::GenerationFinishReason::NONE},
+        {"parameters", ov::genai::GenerationFinishReason::NONE},
+        {"\":", ov::genai::GenerationFinishReason::NONE},
+        {" {\"", ov::genai::GenerationFinishReason::NONE},
+        {"location", ov::genai::GenerationFinishReason::NONE},
+        {"\":", ov::genai::GenerationFinishReason::NONE},
+        {" \"", ov::genai::GenerationFinishReason::NONE},
+        {"Paris\"}}", ov::genai::GenerationFinishReason::STOP},
+    };
+
+    std::string lastChunk;
+    for (const auto& [chunk, finishReason] : stream) {
+        std::string serialized = apiHandler->serializeStreamingChunk(chunk, finishReason);
+        if (!serialized.empty()) {
+            lastChunk = serialized;
+        }
+    }
+
+    ASSERT_FALSE(lastChunk.empty());
+    ASSERT_NE(lastChunk.find("\"tool_calls\""), std::string::npos) << lastChunk;
+    ASSERT_NE(lastChunk.find("\"finish_reason\":\"tool_calls\""), std::string::npos) << lastChunk;
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseGenerationOutputReturnsToolCallsFinishReason) {
+    std::shared_ptr<ov::genai::Tokenizer> llama3Tokenizer = std::make_shared<ov::genai::Tokenizer>(llama3TokenizerPathForHandlerTests);
+    std::string json = R"({
+    "model": "llama",
+    "stream": false,
+    "messages": [{"role": "user", "content": "What is weather?"}],
+    "tools": [{
+      "type": "function",
+      "function": {
+        "name": "example_tool",
+        "parameters": {"type": "object"}
+      }
+    }]
+    })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    auto apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *llama3Tokenizer, "llama3");
+    uint32_t maxTokensLimit = 100;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+
+    ov::genai::GenerationOutput generationOutput;
+    generationOutput.generated_ids = createLlama3ToolCallTokens(*llama3Tokenizer);
+    generationOutput.finish_reason = ov::genai::GenerationFinishReason::STOP;  // Change it once GenAI introduces tool_calls finish reason
+    std::string serialized = apiHandler->serializeUnaryResponse(std::vector<ov::genai::GenerationOutput>{generationOutput});
+
+    ASSERT_NE(serialized.find("\"finish_reason\":\"tool_calls\""), std::string::npos) << serialized;
+    ASSERT_NE(serialized.find("\"tool_calls\":[{"), std::string::npos) << serialized;
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseEncodedResultsReturnsToolCallsFinishReason) {
+    std::shared_ptr<ov::genai::Tokenizer> llama3Tokenizer = std::make_shared<ov::genai::Tokenizer>(llama3TokenizerPathForHandlerTests);
+    std::string json = R"({
+    "model": "llama",
+    "stream": false,
+    "messages": [{"role": "user", "content": "What is weather?"}],
+    "tools": [{
+      "type": "function",
+      "function": {
+        "name": "example_tool",
+        "parameters": {"type": "object"}
+      }
+    }]
+    })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    auto apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *llama3Tokenizer, "llama3");
+    uint32_t maxTokensLimit = 100;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+
+    ov::genai::EncodedResults results;
+    results.tokens = {createLlama3ToolCallTokens(*llama3Tokenizer)};
+    std::string serialized = apiHandler->serializeUnaryResponse(results);
+
+    ASSERT_NE(serialized.find("\"finish_reason\":\"tool_calls\""), std::string::npos) << serialized;
+    ASSERT_NE(serialized.find("\"tool_calls\":[{"), std::string::npos) << serialized;
+}
+
+// This is unsupported, once we have tool calling for VLM legacy pipeline, change the test
+TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseVLMSupportsToolCallsFinishReason_Unsupported) {
+    std::string json = R"({
+    "model": "llama",
+    "stream": false,
+    "messages": [{"role": "user", "content": "What is weather?"}]
+    })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    auto apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    uint32_t maxTokensLimit = 100;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+
+    ov::genai::VLMDecodedResults results;
+    results.texts = {"dummy"};
+    std::string serialized = apiHandler->serializeUnaryResponse(results, 1);
+
+    // ASSERT_NE(serialized.find("\"finish_reason\":\"tool_calls\""), std::string::npos) << serialized;
+    ASSERT_NE(serialized.find("\"finish_reason\":\"stop\""), std::string::npos) << serialized;
+}
 
 TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesSucceedsBase64) {
     std::string json = R"({
