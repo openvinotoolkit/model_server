@@ -237,6 +237,8 @@ docker run -d --rm --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render*
 :::
 ::::
 
+> **Note:** `MOE_USE_MICRO_GEMM_PREFILL=0` is a workaround for *Qwen3-Coder-30B-A3B-Instruct* and it will be fixed in release 2026.1 or next weekly.
+
 ## Set Up Visual Studio Code
 
 ### Download [Continue plugin](https://www.continue.dev/)
