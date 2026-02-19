@@ -10,7 +10,7 @@ OpenVINO Model Server (OVMS) is a high-performance inference serving platform bu
 
 - `src/` — Main C++ source code (server, gRPC/REST handlers, model management, pipelines, mediapipe, LLM, C API)
 - `src/test/` — C++ unit tests (gtest-based); this is where most developer tests live
-- `src/python/` — Python bindings and related code
+- `src/python/` — Python custom node bindings and related code
 - `demos/` — End-user demo applications
 - `client/` — Client libraries (C++, Python, Go, Java)
 - `docs/` — Documentation
