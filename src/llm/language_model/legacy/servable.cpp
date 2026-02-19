@@ -83,26 +83,31 @@ absl::Status LegacyServable::parseRequest(std::shared_ptr<GenAiServableExecution
 
     if (legacyExecutionContext->apiHandler->isStream()) {
         legacyExecutionContext->lastStreamerCallbackOutput = "";  // initialize with empty string
-        auto callback = [& executionInProgress = legacyExecutionContext->executionInProgress, &mutex = legacyExecutionContext->mutex, &lastStreamerCallbackOutput = legacyExecutionContext->lastStreamerCallbackOutput, &clientDisconnected = legacyExecutionContext->clientDisconnected](std::string text) {
-            SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Streamer callback executed with text: [{}]", text);
-            if (clientDisconnected.load()) {
-                executionInProgress.notify_one();
-                return ov::genai::StreamingStatus::CANCEL;
-            }
-            {
-                std::lock_guard<std::mutex> lock(mutex);
-                lastStreamerCallbackOutput += text;
-                executionInProgress.notify_one();
-            }
-            return ov::genai::StreamingStatus::RUNNING;
-        };
-        ov::AnyMap streamerConfig;
-        if (legacyExecutionContext->apiHandler->getOutputParser() != nullptr &&
-            (legacyExecutionContext->apiHandler->getOutputParser()->requiresStreamingWithSpecialTokens())) {
-            streamerConfig.insert(ov::genai::skip_special_tokens(false));
-        }
-        legacyExecutionContext->textStreamer = std::make_shared<ov::genai::TextStreamer>(getProperties()->tokenizer, callback, streamerConfig);
     }
+    auto callback = [& executionInProgress = legacyExecutionContext->executionInProgress,
+                        &mutex = legacyExecutionContext->mutex,
+                        &lastStreamerCallbackOutput = legacyExecutionContext->lastStreamerCallbackOutput,
+                        &clientDisconnected = legacyExecutionContext->clientDisconnected,
+                        streamMode = legacyExecutionContext->apiHandler->isStream()](std::string text) {
+        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Streamer callback executed with text: [{}]", text);
+        if (clientDisconnected.load()) {
+            executionInProgress.notify_one();
+            return ov::genai::StreamingStatus::CANCEL;
+        }
+        if (streamMode) {
+            std::lock_guard<std::mutex> lock(mutex);
+            lastStreamerCallbackOutput += text;
+            executionInProgress.notify_one();
+        }
+        return ov::genai::StreamingStatus::RUNNING;
+    };
+    ov::AnyMap streamerConfig;
+    if (legacyExecutionContext->apiHandler->isStream() &&
+        legacyExecutionContext->apiHandler->getOutputParser() != nullptr &&
+        (legacyExecutionContext->apiHandler->getOutputParser()->requiresStreamingWithSpecialTokens())) {
+        streamerConfig.insert(ov::genai::skip_special_tokens(false));
+    }
+    legacyExecutionContext->textStreamer = std::make_shared<ov::genai::TextStreamer>(getProperties()->tokenizer, callback, streamerConfig);
     legacyExecutionContext->generationConfigBuilder = std::make_shared<GenerationConfigBuilder>(getProperties()->baseGenerationConfig,
         getProperties()->toolParserName,
         getProperties()->enableToolGuidedGeneration,
