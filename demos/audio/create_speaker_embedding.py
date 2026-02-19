@@ -7,6 +7,10 @@ import torchaudio
 from speechbrain.inference.speaker import EncoderClassifier
 import sys
 
+if len(sys.argv) != 3:
+    print(f"Usage: {sys.argv[0]} <input_audio_file> <output_embedding_file>")
+    sys.exit(1)
+
 file = sys.argv[1]
 signal, fs = torchaudio.load(file)
 if signal.shape[0] > 1:
@@ -15,6 +19,13 @@ expected_sample_rate = 16000
 if fs != expected_sample_rate:
     resampler = torchaudio.transforms.Resample(orig_freq=fs, new_freq=expected_sample_rate)
     signal = resampler(signal)
+
+if signal.ndim != 2 or signal.shape[0] != 1:
+    print(f"Error: expected signal shape [1, num_samples], got {list(signal.shape)}")
+    sys.exit(1)
+if signal.shape[1] == 0:
+    print("Error: audio file contains no samples")
+    sys.exit(1)
 
 classifier = EncoderClassifier.from_hparams(source="speechbrain/spkrec-xvect-voxceleb")
 embedding = classifier.encode_batch(signal)

@@ -17,7 +17,7 @@ Check supported [Speech Recognition Models](https://openvinotoolkit.github.io/op
 
 ## Speech generation
 ### Prepare speaker embeddings
-When generating speech you can use default speaker voice or you can prepare your own speaker embedding file. Here you can see how to do it with downloaded file from online repository, but you can try with your own speech recorded as well:
+When generating speech you can use default speaker voice or you can prepare your own speaker embedding file. Here you can see how to do it with downloaded file from online repository, but you can try with your own speech recording as well:
 ```bash
 pip install -r pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/audio/requirements.txt
 mkdir -p audio_samples
