@@ -31,13 +31,15 @@
 
 namespace ovms {
 struct LLMExecutor {
+    bool isDynamicKVCache;
     // For logging purposes we could have more information about graph and node here
     std::mutex mutex;
     std::condition_variable cv;
     std::shared_ptr<ov::genai::ContinuousBatchingPipeline> pipe = nullptr;
 
-    LLMExecutor(std::shared_ptr<ov::genai::ContinuousBatchingPipeline> pipe) {
+    LLMExecutor(std::shared_ptr<ov::genai::ContinuousBatchingPipeline> pipe, bool isDynamicKVCacheSet = false) {
         this->pipe = std::move(pipe);
+        this->isDynamicKVCache = isDynamicKVCacheSet;
     }
 
     bool hasRequests() {
@@ -57,6 +59,18 @@ struct LLMExecutor {
     void notify() {
         std::unique_lock<std::mutex> lock(mutex);
         cv.notify_one();
+    }
+
+    std::string formatCacheInfo(float cacheUsage, size_t cacheBytes, bool isCacheDynamic) {
+        std::ostringstream oss;
+        oss << std::fixed << std::setprecision(1);
+        if (isCacheDynamic) {
+            oss << formatBytes(cacheBytes);
+        } else {
+            oss << cacheUsage << "% of " << formatBytes(cacheBytes);
+        }
+
+        return oss.str();
     }
 
     std::string formatBytes(size_t bytes)
@@ -87,8 +101,8 @@ struct LLMExecutor {
 #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
     void printMetrics() {
         ov::genai::PipelineMetrics metrics = pipe->get_metrics();
-        SPDLOG_LOGGER_INFO(llm_executor_logger, "All requests: {}; Scheduled requests: {}; Cache usage {:.1f}% of {};",
-            metrics.requests, metrics.scheduled_requests, metrics.cache_usage, formatBytes(metrics.kv_cache_size_in_bytes));
+        SPDLOG_LOGGER_INFO(llm_executor_logger, "All requests: {}; Scheduled requests: {}; Cache usage {};",
+            metrics.requests, metrics.scheduled_requests, formatCacheInfo(metrics.cache_usage, metrics.kv_cache_usage_in_bytes, this->isDynamicKVCache));
     }
 };
 #pragma GCC diagnostic pop
@@ -122,8 +136,8 @@ class LLMExecutorWrapper {
     }
 
 public:
-    LLMExecutorWrapper(std::shared_ptr<ov::genai::ContinuousBatchingPipeline> pipe) :
-        llmExecutor(std::move(pipe)) {
+    LLMExecutorWrapper(std::shared_ptr<ov::genai::ContinuousBatchingPipeline> pipe, bool isDynamicKVCache = false) :
+        llmExecutor(std::move(pipe), isDynamicKVCache) {
         llmExecutorThread = std::thread(LLMExecutorWrapper::run, &llmExecutor, &finishExecutorThread);
     }
 
