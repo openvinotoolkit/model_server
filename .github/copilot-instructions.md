@@ -92,7 +92,6 @@ If a container from a previous session is still available (`docker ps -a`), reus
 | `//src:ovms` | Main OVMS server binary |
 | `//src:ovms_test` | C++ unit tests (gtest) |
 | `//src:ovms_shared` | C API shared library (`libovms_shared.so`) |
-| `//src/python/binding:test_python_binding` | Python binding tests |
 
 **Build the server:**
 ```bash
