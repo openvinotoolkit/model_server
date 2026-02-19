@@ -1242,6 +1242,101 @@ TEST_F(HttpOpenAIHandlerParsingTest, OutputParserInitializationDependsOnParserNa
     EXPECT_NE(withParserNames->getOutputParser(), nullptr);
 }
 
+TEST_F(HttpOpenAIHandlerParsingTest, SerializeUnaryResponseVLMDecodedResultsWithToolParser) {
+    std::string json = R"({
+    "model": "llama",
+    "messages": [
+      {
+        "role": "user",
+        "content": "hello"
+      }
+    ],
+    "tools": [
+      {
+        "type": "function",
+        "function": {
+          "name": "get_weather",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "location": {
+                "type": "string"
+              }
+            },
+            "required": ["location"]
+          }
+        }
+      }
+    ]
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    uint32_t maxTokensLimit = 64;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+
+    auto apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(
+        doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer, "hermes3", "");
+
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+
+    ov::genai::VLMDecodedResults results;
+    results.texts.push_back(
+        "I will call a tool.<tool_call>{\"name\":\"get_weather\",\"arguments\":{\"location\":\"Paris\"}}</tool_call>");
+
+    std::string serialized = apiHandler->serializeUnaryResponse(results);
+
+    rapidjson::Document responseDoc;
+    responseDoc.Parse(serialized.c_str());
+    ASSERT_FALSE(responseDoc.HasParseError());
+    ASSERT_TRUE(responseDoc.IsObject());
+
+    ASSERT_TRUE(responseDoc.HasMember("choices"));
+    ASSERT_TRUE(responseDoc["choices"].IsArray());
+    ASSERT_EQ(responseDoc["choices"].Size(), 1);
+
+    const auto& choice = responseDoc["choices"][0];
+    ASSERT_TRUE(choice.IsObject());
+    ASSERT_TRUE(choice.HasMember("finish_reason"));
+    ASSERT_TRUE(choice["finish_reason"].IsString());
+    EXPECT_STREQ(choice["finish_reason"].GetString(), "stop");
+
+    ASSERT_TRUE(choice.HasMember("message"));
+    ASSERT_TRUE(choice["message"].IsObject());
+    const auto& message = choice["message"];
+
+    ASSERT_TRUE(message.HasMember("content"));
+    ASSERT_TRUE(message["content"].IsString());
+    EXPECT_STREQ(message["content"].GetString(), "I will call a tool.");
+
+    ASSERT_TRUE(message.HasMember("tool_calls"));
+    ASSERT_TRUE(message["tool_calls"].IsArray());
+    ASSERT_EQ(message["tool_calls"].Size(), 1);
+
+    const auto& toolCall = message["tool_calls"][0];
+    ASSERT_TRUE(toolCall.IsObject());
+    ASSERT_TRUE(toolCall.HasMember("id"));
+    ASSERT_TRUE(toolCall["id"].IsString());
+    EXPECT_GT(std::string(toolCall["id"].GetString()).size(), 0);
+    ASSERT_TRUE(toolCall.HasMember("function"));
+    ASSERT_TRUE(toolCall["function"].IsObject());
+    ASSERT_TRUE(toolCall["function"].HasMember("name"));
+    EXPECT_STREQ(toolCall["function"]["name"].GetString(), "get_weather");
+    ASSERT_TRUE(toolCall["function"].HasMember("arguments"));
+    EXPECT_STREQ(toolCall["function"]["arguments"].GetString(), "{\"location\":\"Paris\"}");
+
+    ASSERT_TRUE(responseDoc.HasMember("object"));
+    EXPECT_STREQ(responseDoc["object"].GetString(), "chat.completion");
+    ASSERT_TRUE(responseDoc.HasMember("model"));
+    EXPECT_STREQ(responseDoc["model"].GetString(), "llama");
+
+    ASSERT_TRUE(responseDoc.HasMember("usage"));
+    ASSERT_TRUE(responseDoc["usage"].IsObject());
+    ASSERT_TRUE(responseDoc["usage"].HasMember("completion_tokens"));
+    EXPECT_GT(responseDoc["usage"]["completion_tokens"].GetInt(), 0);
+}
+
 // Provide get_weather1, get_weather2, get_weather3 but take only first one - get_weather1
 TEST_F(HttpOpenAIHandlerParsingTest, ParseRequestWithTools_Provided3_ChoiceFirst) {
     std::string providedTools = R"(
