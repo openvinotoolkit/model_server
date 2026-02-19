@@ -848,14 +848,10 @@ void updateUsage(CompletionUsageStatistics& usage, const std::vector<int64_t>& g
         usage.completionTokens -= usage.promptTokens;
 }
 
-static bool isToolCallsFinishReason(ov::genai::GenerationFinishReason finishReason) {
-    // GenerationFinishReason::TOOL_CALLS is not available in GenAI yet.
-    // Newer versions will probably expose it as enum value 3.
-    return static_cast<int>(finishReason) == 3;
-}
-
 static std::optional<std::string> mapFinishReason(ov::genai::GenerationFinishReason finishReason, bool hasToolCalls) {
-    if (isToolCallsFinishReason(finishReason) || (hasToolCalls && finishReason == ov::genai::GenerationFinishReason::STOP) /* workaround until GenAI exposes TOOL_CALLS */) {
+    // GenerationFinishReason::TOOL_CALLS is not available in GenAI yet.
+    // Use feature detection based on presence of tool calls as a workaround until GenAI exposes TOOL_CALLS.
+    if (hasToolCalls && finishReason == ov::genai::GenerationFinishReason::STOP) {
         return "tool_calls";
     }
     switch (finishReason) {
@@ -1185,7 +1181,7 @@ std::string OpenAIChatCompletionsHandler::serializeStreamingChunk(const std::str
     if (serializedFinishReason.has_value()) {
         choice.AddMember("finish_reason", Value(serializedFinishReason.value().c_str(), allocator), allocator);
     } else {
-        choice.AddMember("finish_reason", Value("unknown", allocator), allocator);
+        choice.AddMember("finish_reason", Value(rapidjson::kNullType), allocator);
     }
 
     choices.PushBack(choice, allocator);

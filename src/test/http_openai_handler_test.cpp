@@ -417,7 +417,7 @@ static std::vector<int64_t> createLlama3ToolCallTokens(ov::genai::Tokenizer& tok
     return generatedTokens;
 }
 
-TEST_F(HttpOpenAIHandlerParsingTest, serializeStreamingChunkReturnsToolCallsFinishReason) {
+TEST_F(HttpOpenAIHandlerParsingTest, serializeStreamingChunkReturnsIntermediateNullAndFinallyToolCallsFinishReason) {
     std::shared_ptr<ov::genai::Tokenizer> llama3Tokenizer = std::make_shared<ov::genai::Tokenizer>(llama3TokenizerPathForHandlerTests);
     std::string json = R"({
     "model": "llama",
@@ -464,17 +464,23 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeStreamingChunkReturnsToolCallsFini
         {"Paris\"}}", ov::genai::GenerationFinishReason::STOP},
     };
 
-    std::string lastChunk;
+    std::vector<std::string> serializedChunks;
     for (const auto& [chunk, finishReason] : stream) {
         std::string serialized = apiHandler->serializeStreamingChunk(chunk, finishReason);
         if (!serialized.empty()) {
-            lastChunk = serialized;
+            serializedChunks.push_back(serialized);
         }
     }
-
-    ASSERT_FALSE(lastChunk.empty());
+    ASSERT_FALSE(serializedChunks.empty());
+    const std::string& lastChunk = serializedChunks.back();
     ASSERT_NE(lastChunk.find("\"tool_calls\""), std::string::npos) << lastChunk;
     ASSERT_NE(lastChunk.find("\"finish_reason\":\"tool_calls\""), std::string::npos) << lastChunk;
+    // Verify that intermediate chunks with NONE finish_reason are serialized correctly
+    ASSERT_GE(serializedChunks.size(), 2u);
+    for (size_t i = 0; i + 1 < serializedChunks.size(); ++i) {
+        const std::string& chunkStr = serializedChunks[i];
+        ASSERT_NE(chunkStr.find("\"finish_reason\":null"), std::string::npos) << chunkStr;
+    }
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseGenerationOutputReturnsToolCallsFinishReason) {
