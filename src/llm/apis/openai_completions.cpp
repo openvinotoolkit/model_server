@@ -17,7 +17,9 @@
 #include "openai_completions.hpp"
 
 #include <cmath>
+#include <limits>
 #include <memory>
+#include <stdexcept>
 #include "src/port/rapidjson_stringbuffer.hpp"
 #include "src/port/rapidjson_writer.hpp"
 #include <set>
@@ -43,6 +45,57 @@ using namespace rapidjson;
 namespace ovms {
 
 constexpr size_t DEFAULT_MAX_STOP_WORDS = 16;  // same as deep-seek
+
+namespace {
+
+ov::genai::JsonContainer rapidJsonValueToJsonContainer(const rapidjson::Value& value) {
+    if (value.IsNull()) {
+        return ov::genai::JsonContainer(nullptr);
+    }
+    if (value.IsBool()) {
+        return ov::genai::JsonContainer(value.GetBool());
+    }
+    if (value.IsInt()) {
+        return ov::genai::JsonContainer(value.GetInt());
+    }
+    if (value.IsUint()) {
+        return ov::genai::JsonContainer(static_cast<int64_t>(value.GetUint()));
+    }
+    if (value.IsInt64()) {
+        return ov::genai::JsonContainer(value.GetInt64());
+    }
+    if (value.IsUint64()) {
+        auto uintValue = value.GetUint64();
+        if (uintValue <= static_cast<uint64_t>(std::numeric_limits<int64_t>::max())) {
+            return ov::genai::JsonContainer(static_cast<int64_t>(uintValue));
+        }
+        return ov::genai::JsonContainer(static_cast<double>(uintValue));
+    }
+    if (value.IsDouble()) {
+        return ov::genai::JsonContainer(value.GetDouble());
+    }
+    if (value.IsString()) {
+        return ov::genai::JsonContainer(std::string(value.GetString(), value.GetStringLength()));
+    }
+    if (value.IsArray()) {
+        ov::genai::JsonContainer arrayContainer = ov::genai::JsonContainer::array();
+        for (const auto& item : value.GetArray()) {
+            arrayContainer.push_back(rapidJsonValueToJsonContainer(item));
+        }
+        return arrayContainer;
+    }
+    if (value.IsObject()) {
+        ov::genai::JsonContainer objectContainer = ov::genai::JsonContainer::object();
+        for (auto member = value.MemberBegin(); member != value.MemberEnd(); ++member) {
+            const std::string key(member->name.GetString(), member->name.GetStringLength());
+            objectContainer[key] = rapidJsonValueToJsonContainer(member->value);
+        }
+        return objectContainer;
+    }
+    throw std::invalid_argument("Unsupported JSON value type");
+}
+
+}  // namespace
 
 absl::Status OpenAIChatCompletionsHandler::parseCompletionsPart() {
     // prompt: string
@@ -437,6 +490,27 @@ absl::Status OpenAIChatCompletionsHandler::parseTools() {
         request.processedJson = buffer.GetString();
     }
     return absl::OkStatus();
+}
+
+absl::StatusOr<std::optional<ov::genai::JsonContainer>> OpenAIChatCompletionsHandler::parseToolsToJsonContainer() {
+    auto it = doc.FindMember("tools");
+    if (it == doc.MemberEnd() || it->value.IsNull()) {
+        return std::nullopt;
+    }
+    try {
+        return rapidJsonValueToJsonContainer(it->value);
+    } catch (const std::exception& e) {
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Direct tools conversion to JsonContainer failed: {}. Falling back to JSON string conversion.", e.what());
+        try {
+            rapidjson::StringBuffer toolsBuffer;
+            rapidjson::Writer<rapidjson::StringBuffer> toolsWriter(toolsBuffer);
+            it->value.Accept(toolsWriter);
+            return ov::genai::JsonContainer::from_json_string(toolsBuffer.GetString());
+        } catch (const std::exception& fallbackEx) {
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Fallback tools conversion failed: {}", fallbackEx.what());
+            return absl::InvalidArgumentError(absl::StrCat("Invalid tools payload: ", fallbackEx.what()));
+        }
+    }
 }
 
 const bool OpenAIChatCompletionsHandler::areToolsAvailable() const {
@@ -843,6 +917,7 @@ absl::Status OpenAIChatCompletionsHandler::parseRequest(std::optional<uint32_t> 
 
 void updateUsage(CompletionUsageStatistics& usage, const std::vector<int64_t>& generatedIds, bool echoPrompt) {
     OVMS_PROFILE_FUNCTION();
+    SPDLOG_INFO("Echo prompt: {}", echoPrompt);
     usage.completionTokens += generatedIds.size();
     if (echoPrompt)
         usage.completionTokens -= usage.promptTokens;
@@ -1049,7 +1124,7 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const ov::genai
     return jsonResponse.ToString();
 }
 
-std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const ov::genai::VLMDecodedResults& results, size_t completionTokens) {
+std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const ov::genai::VLMDecodedResults& results) {
     OVMS_PROFILE_FUNCTION();
     OpenAiJsonResponse jsonResponse;
     jsonResponse.StartObject();
@@ -1057,10 +1132,28 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const ov::genai
     // choices: array of size N, where N is related to n request parameter
     jsonResponse.StartArray("choices");
     int index = 0;
-    usage.completionTokens = completionTokens;
     for (int i = 0; i < results.texts.size(); i++) {
         const std::string& text = results.texts[i];
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Generated text: {}", text);
+
+        // Workaround to use OVMS unary parsers: get tokens from string
+        // This way we have detokenized text from GenAI and calculate tokens, to further convert back to text again, in parseOutputIfNeeded...
+        auto result = tokenizer.encode(text);
+        auto& input_ids = result.input_ids;
+        if (input_ids.get_shape().size() != 2)
+            throw std::runtime_error("input_ids should have 2 dimensions");
+        if (input_ids.get_shape()[0] != 1)
+            throw std::runtime_error("input_ids should have 1 batch size");
+        if (input_ids.get_element_type() != ov::element::i64)
+            throw std::runtime_error("input_ids should have i64 element type");
+
+        int64_t* input_ids_data = reinterpret_cast<int64_t*>(input_ids.data());
+        std::vector<int64_t> tokens(input_ids_data, input_ids_data + input_ids.get_shape()[1]);
+
+        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Generated tokens: {}", tokens);
+        updateUsage(usage, tokens, request.echo);
+        ParsedOutput parsedOutput = parseOutputIfNeeded(tokens);
+
         jsonResponse.StartObject();
         // finish_reason: string; always "stop" for this method
         jsonResponse.FinishReason("stop");
@@ -1068,16 +1161,10 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const ov::genai
         jsonResponse.Index(index++);
         // logprobs: object/null; Log probability information for the choice. TODO
 
-        // message: object
         if (endpoint == Endpoint::CHAT_COMPLETIONS) {
-            jsonResponse.StartObject("message");
-            jsonResponse.String("content", text);
-            jsonResponse.String("role", "assistant");  // TODO - hardcoded
-            // TODO: tools_call
-            // TODO: function_call (deprecated)
-            jsonResponse.EndObject();
+            jsonResponse.MessageObject(parsedOutput);
         } else if (endpoint == Endpoint::COMPLETIONS) {
-            jsonResponse.String("text", text);
+            jsonResponse.Text(parsedOutput);
         }
 
         // finish message object
