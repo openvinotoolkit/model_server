@@ -115,9 +115,9 @@ pipeline {
               }
               when { expression { win_image_build_needed == "true" } }
               // Uncomment to build OV from source
-              // environment {
-              //   OV_USE_BINARY = "0"
-              // }
+              environment {
+                 OV_USE_BINARY = "0"
+              }
               steps {
                   script {
                       agent_name_windows = env.NODE_NAME
