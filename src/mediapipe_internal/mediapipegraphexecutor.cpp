@@ -19,6 +19,8 @@
 #include <utility>
 #include <vector>
 
+#include "graph_executor_constants.hpp"
+
 #pragma warning(push)
 #pragma warning(disable : 4324 6001 6385 6386 6326 6011 4309 4005 4456 6246)
 #pragma GCC diagnostic push
@@ -28,10 +30,10 @@
 #pragma warning(pop)
 
 #if (PYTHON_DISABLE == 0)
-#include "../python/python_backend.hpp"
+#include "src/python/python_backend.hpp"
 #endif
 
-#include "../image_gen/pipelines.hpp"
+#include "src/image_gen/pipelines.hpp"
 
 namespace ovms {
 
@@ -43,14 +45,10 @@ MediapipeGraphExecutor::MediapipeGraphExecutor(
     stream_types_mapping_t outputTypes,
     std::vector<std::string> inputNames,
     std::vector<std::string> outputNames,
-    const PythonNodeResourcesMap& pythonNodeResourcesMap,
-    const GenAiServableMap& llmNodeResourcesMap,
-    const EmbeddingsServableMap& embeddingsServableMap,
-    const RerankServableMap& rerankServableMap,
-    const SttServableMap& sttServableMap,
-    const TtsServableMap& ttsServableMap,
+    const GraphSidePackets& sidePacketMaps,
     PythonBackend* pythonBackend,
-    MediapipeServableMetricReporter* mediapipeServableMetricReporter) :
+    MediapipeServableMetricReporter* mediapipeServableMetricReporter,
+    GraphIdGuard&& guard) :
     name(name),
     version(version),
     config(config),
@@ -58,10 +56,11 @@ MediapipeGraphExecutor::MediapipeGraphExecutor(
     outputTypes(std::move(outputTypes)),
     inputNames(std::move(inputNames)),
     outputNames(std::move(outputNames)),
-    sidePacketMaps({pythonNodeResourcesMap, llmNodeResourcesMap, {}, embeddingsServableMap, rerankServableMap, sttServableMap, ttsServableMap}),
+    sidePacketMaps(sidePacketMaps),
     pythonBackend(pythonBackend),
-    currentStreamTimestamp(STARTING_TIMESTAMP),
-    mediapipeServableMetricReporter(mediapipeServableMetricReporter) {}
+    currentStreamTimestamp(::mediapipe::Timestamp(STARTING_TIMESTAMP_VALUE)),
+    mediapipeServableMetricReporter(mediapipeServableMetricReporter),
+    guard(std::move(guard)) {}
 MediapipeGraphExecutor::MediapipeGraphExecutor(
     const std::string& name,
     const std::string& version,
@@ -82,16 +81,7 @@ MediapipeGraphExecutor::MediapipeGraphExecutor(
     outputNames(std::move(outputNames)),
     sidePacketMaps(sidePacketMaps),
     pythonBackend(pythonBackend),
-    currentStreamTimestamp(STARTING_TIMESTAMP),
+    currentStreamTimestamp(::mediapipe::Timestamp(STARTING_TIMESTAMP_VALUE)),
     mediapipeServableMetricReporter(mediapipeServableMetricReporter) {}
-
-const std::string MediapipeGraphExecutor::PYTHON_SESSION_SIDE_PACKET_TAG = "py";
-const std::string MediapipeGraphExecutor::LLM_SESSION_SIDE_PACKET_TAG = "llm";
-const std::string MediapipeGraphExecutor::IMAGE_GEN_SESSION_SIDE_PACKET_TAG = "pipes";
-const std::string MediapipeGraphExecutor::EMBEDDINGS_SESSION_SIDE_PACKET_TAG = "embeddings_servable";
-const std::string MediapipeGraphExecutor::RERANK_SESSION_SIDE_PACKET_TAG = "rerank_servable";
-const std::string MediapipeGraphExecutor::STT_SESSION_SIDE_PACKET_TAG = "s2t_servable";
-const std::string MediapipeGraphExecutor::TTS_SESSION_SIDE_PACKET_TAG = "t2s_servable";
-const ::mediapipe::Timestamp MediapipeGraphExecutor::STARTING_TIMESTAMP = ::mediapipe::Timestamp(0);
 
 }  // namespace ovms
