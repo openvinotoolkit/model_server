@@ -72,7 +72,7 @@ docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models:rw
 **Deploying on Bare Metal**
 
 ```bat
-mkdir models
+mkdir -p models
 ovms --rest_port 8000 --model_path models/microsoft/speecht5_tts --model_name microsoft/speecht5_tts
 ```
 
