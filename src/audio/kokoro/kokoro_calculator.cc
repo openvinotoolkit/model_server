@@ -271,7 +271,7 @@ public:
         auto refS = ov::Tensor{ov::element::f32, ov::Shape{1, voice.size()}};
         auto speed = ov::Tensor{ov::element::f32, ov::Shape{1}};
 
-        *reinterpret_cast<float*>(speed.data()) = 0.5f;
+        *reinterpret_cast<float*>(speed.data()) = 0.8f;
         std::copy(ids.data(), ids.data() + ids.size(),
                   reinterpret_cast<int64_t*>(inputIdsTensor.data()));
         std::copy(voice.data(), voice.data() + voice.size(),
