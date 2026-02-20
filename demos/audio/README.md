@@ -19,7 +19,7 @@ Check supported [Speech Recognition Models](https://openvinotoolkit.github.io/op
 ### Prepare speaker embeddings
 When generating speech you can use default speaker voice or you can prepare your own speaker embedding file. Here you can see how to do it with downloaded file from online repository, but you can try with your own speech recording as well:
 ```bash
-pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/audio/requirements.txt
+pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/0/demos/audio/requirements.txt
 mkdir -p audio_samples
 curl --output audio_samples/audio.wav "https://www.voiptroubleshooter.com/open_speech/american/OSR_us_000_0032_8k.wav"
 mkdir -p models
@@ -73,7 +73,7 @@ docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models:rw
 
 ```bat
 mkdir models
-ovms --rest_port 8000 --source_model microsoft/speecht5_tts --model_repository_path models --model_name microsoft/speecht5_tts --task text2speech --target_device CPU
+ovms --rest_port 8000 --model_path models/microsoft/speecht5_tts --model_name microsoft/speecht5_tts
 ```
 
 ### Request Generation 
