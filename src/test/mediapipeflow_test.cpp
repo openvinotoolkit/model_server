@@ -2707,14 +2707,16 @@ class MediapipeSerialization : public ::testing::Test {
             stream_types_mapping_t inputTypes,
             stream_types_mapping_t outputTypes,
             std::vector<std::string> inputNames, std::vector<std::string> outputNames,
-            const std::shared_ptr<PythonNodeResourcesMap>& pythonNodeResourcesMap,
-            const std::shared_ptr<GenAiServableMap>& gasm,
+            const GraphSidePackets& sidePackets,
             MediapipeServableMetricReporter* mediapipeServableMetricReporter, GraphIdGuard&& guard) :
-            MediapipeGraphExecutor(name, version, config, inputTypes, outputTypes, inputNames, outputNames, *pythonNodeResourcesMap, *gasm, {}, {}, {}, {}, nullptr, mediapipeServableMetricReporter, std::move(guard)) {}
+            MediapipeGraphExecutor(name, version, config, inputTypes, outputTypes, inputNames, outputNames,
+                sidePackets,
+                nullptr, mediapipeServableMetricReporter, std::move(guard)) {}
     };
 
 protected:
     std::unique_ptr<MediapipeServableMetricReporter> reporter;
+    std::shared_ptr<GraphSidePackets> sidePackets;
     std::shared_ptr<GraphQueue> queue;
     std::unique_ptr<MockedMediapipeGraphExecutor> executor;
     ::inference::ModelInferResponse mp_response;
@@ -2729,13 +2731,10 @@ protected:
         const std::vector<std::string> outputNames;
         const ::mediapipe::CalculatorGraphConfig config;
         this->reporter = std::make_unique<MediapipeServableMetricReporter>(nullptr, nullptr, "");  // disabled reporter
-        auto sidePackets = std::make_shared<GraphSidePackets>();
-        std::shared_ptr<PythonNodeResourcesMap> pnsm = std::make_shared<PythonNodeResourcesMap>();
-        std::shared_ptr<GenAiServableMap> gasm = std::make_shared<GenAiServableMap>();
-        std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, sidePackets, 1);
+        sidePackets = std::make_shared<GraphSidePackets>();
+        queue = std::make_shared<GraphQueue>(config, sidePackets, 1);
         GraphIdGuard guard(queue);
-        executor = std::make_unique<MockedMediapipeGraphExecutor>("", "", config, mapping, mapping, inputNames, outputNames, pnsm, gasm, this->reporter.get(), std::move(guard));
-        SPDLOG_ERROR("Exit SetUp");
+        executor = std::make_unique<MockedMediapipeGraphExecutor>("", "", config, mapping, mapping, inputNames, outputNames, *sidePackets, this->reporter.get(), std::move(guard));
     }
 };
 

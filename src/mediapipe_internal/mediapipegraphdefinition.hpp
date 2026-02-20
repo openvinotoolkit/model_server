@@ -128,7 +128,7 @@ protected:
 
     Status setStreamTypes();
     Status dryInitializeTest();
-    void initializeQueueIfRequired();
+    Status initializeQueueIfRequired();
     std::string chosenConfig;
     static MediapipeGraphConfig MGC;
     const std::string name;

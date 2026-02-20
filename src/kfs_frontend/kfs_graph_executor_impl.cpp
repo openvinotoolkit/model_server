@@ -1156,6 +1156,16 @@ Status createAndPushPacketsImpl(
     return StatusCode::OK;
 }
 
+bool requestHasInputSidePackets(const KFSRequest& request) {
+    static const std::string TIMESTAMP_PARAM{"OVMS_MP_TIMESTAMP"};
+    for (const auto& [name, valueChoice] : request.parameters()) {
+        if (name != TIMESTAMP_PARAM) {
+            return true;
+        }
+    }
+    return false;
+}
+
 Status deserializeInputSidePacketsFromFirstRequestImpl(
     std::map<std::string, mediapipe::Packet>& inputSidePackets,
     const KFSRequest& request) {

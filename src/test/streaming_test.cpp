@@ -70,6 +70,35 @@ protected:
     }
 };
 
+class StreamingQueueTest : public StreamingTest {
+protected:
+    std::shared_ptr<GraphQueue> queue;
+
+    MediapipeGraphExecutor createQueueExecutor(
+        const ::mediapipe::CalculatorGraphConfig& config,
+        stream_types_mapping_t inputTypes,
+        stream_types_mapping_t outputTypes,
+        std::vector<std::string> inputNames,
+        std::vector<std::string> outputNames,
+        int queueSize = 1) {
+        auto sidePackets = std::make_shared<GraphSidePackets>();
+        queue = std::make_shared<GraphQueue>(config, sidePackets, queueSize);
+        GraphIdGuard graphIdGuard(queue);
+        return MediapipeGraphExecutor{
+            this->name,
+            this->version,
+            config,
+            std::move(inputTypes),
+            std::move(outputTypes),
+            std::move(inputNames),
+            std::move(outputNames),
+            *sidePackets,
+            nullptr,
+            this->reporter.get(),
+            std::move(graphIdGuard)};
+    }
+};
+
 #if (PYTHON_DISABLE == 0)
 class PythonStreamingTest : public StreamingTest {
 protected:
@@ -617,6 +646,184 @@ node {
         .WillOnce(SendWithTimestamp({{"out", 4.5f}}, 1))
         .WillOnce(SendWithTimestamp({{"out", 5.5f}}, 2))
         .WillOnce(SendWithTimestamp({{"out", 6.5f}}, 3));
+
+    ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream, this->executionContext), StatusCode::OK);
+}
+
+TEST_F(StreamingQueueTest, SingleStreamSend3Receive3AutomaticTimestamp) {
+    const std::string pbTxt{R"(
+input_stream: "in"
+output_stream: "out"
+node {
+  calculator: "AddOneSingleStreamTestCalculator"
+  input_stream: "in"
+  output_stream: "out"
+}
+    )"};
+    ::mediapipe::CalculatorGraphConfig config;
+    ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
+
+    auto executor = createQueueExecutor(
+        config,
+        {{"in", mediapipe_packet_type_enum::OVTENSOR}},
+        {{"out", mediapipe_packet_type_enum::OVTENSOR}},
+        {"in"},
+        {"out"},
+        2);
+
+    prepareRequest(this->firstRequest, {{"in", 3.5f}});
+    EXPECT_CALL(this->stream, Read(_))
+        .WillOnce(Receive({{"in", 7.2f}}))
+        .WillOnce(Receive({{"in", 102.4f}}))
+        .WillOnce(Disconnect());
+
+    auto timestamp = std::make_shared<int64_t>(-1);
+    EXPECT_CALL(this->stream, Write(_, _))
+        .WillOnce(SendWithAutomaticTimestamp({{"out", 4.5f}}, timestamp))
+        .WillOnce(SendWithAutomaticTimestamp({{"out", 8.2f}}, timestamp))
+        .WillOnce(SendWithAutomaticTimestamp({{"out", 103.4f}}, timestamp));
+
+    ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream, this->executionContext), StatusCode::OK);
+}
+
+TEST_F(StreamingQueueTest, SingleStreamSend1Receive3) {
+    const std::string pbTxt{R"(
+input_stream: "in"
+output_stream: "out"
+node {
+  calculator: "AddOne3CycleIterationsTestCalculator"
+  input_stream: "in"
+  input_stream: "signal"
+  input_stream_info: {
+    tag_index: ':1',
+    back_edge: true
+  }
+  input_stream_handler {
+    input_stream_handler: 'ImmediateInputStreamHandler'
+  }
+  output_stream: "out"
+  output_stream: "signal"
+}
+    )"};
+    ::mediapipe::CalculatorGraphConfig config;
+    ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
+
+    auto executor = createQueueExecutor(
+        config,
+        {{"in", mediapipe_packet_type_enum::OVTENSOR}},
+        {{"out", mediapipe_packet_type_enum::OVTENSOR}},
+        {"in"},
+        {"out"},
+        2);
+
+    prepareRequest(this->firstRequest, {{"in", 3.5f}});
+    EXPECT_CALL(this->stream, Read(_))
+        .WillOnce(Disconnect());
+
+    EXPECT_CALL(this->stream, Write(_, _))
+        .WillOnce(SendWithTimestamp({{"out", 4.5f}}, 1))
+        .WillOnce(SendWithTimestamp({{"out", 5.5f}}, 2))
+        .WillOnce(SendWithTimestamp({{"out", 6.5f}}, 3));
+
+    ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream, this->executionContext), StatusCode::OK);
+}
+
+TEST_F(StreamingQueueTest, ExitOnDisconnectionDuringRead) {
+    const std::string pbTxt{R"(
+input_stream: "in"
+output_stream: "out"
+node {
+  calculator: "AddOneSingleStreamTestCalculator"
+  input_stream: "in"
+  output_stream: "out"
+}
+    )"};
+    ::mediapipe::CalculatorGraphConfig config;
+    ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
+
+    auto executor = createQueueExecutor(
+        config,
+        {{"in", mediapipe_packet_type_enum::OVTENSOR}},
+        {{"out", mediapipe_packet_type_enum::OVTENSOR}},
+        {"in"},
+        {"out"},
+        2);
+
+    prepareRequest(this->firstRequest, {});
+    EXPECT_CALL(this->stream, Read(_))
+        .WillOnce(Disconnect());
+
+    EXPECT_CALL(this->stream, Write(_, _)).Times(0);
+
+    ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream, this->executionContext), StatusCode::OK);
+}
+
+TEST_F(StreamingQueueTest, ErrorOnDisconnectionDuringWrite) {
+    const std::string pbTxt{R"(
+input_stream: "in"
+output_stream: "out"
+node {
+  calculator: "AddOneSingleStreamTestCalculator"
+  input_stream: "in"
+  output_stream: "out"
+}
+    )"};
+    ::mediapipe::CalculatorGraphConfig config;
+    ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
+
+    auto executor = createQueueExecutor(
+        config,
+        {{"in", mediapipe_packet_type_enum::OVTENSOR}},
+        {{"out", mediapipe_packet_type_enum::OVTENSOR}},
+        {"in"},
+        {"out"},
+        2);
+
+    std::promise<void> signalPromise;
+    std::future<void> signalFuture = signalPromise.get_future();
+
+    prepareRequest(this->firstRequest, {{"in", 3.5f}});
+    EXPECT_CALL(this->stream, Read(_))
+        .WillOnce(DisconnectWhenNotified(signalFuture));
+
+    EXPECT_CALL(this->stream, Write(_, _))
+        .WillOnce(DisconnectOnWriteAndNotifyEnd(signalPromise));
+
+    ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream, this->executionContext), StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_F(StreamingQueueTest, ErrorDuringFirstRequestDeserialization) {
+    const std::string pbTxt{R"(
+input_stream: "in"
+output_stream: "out"
+node {
+  calculator: "AddOneSingleStreamTestCalculator"
+  input_stream: "in"
+  output_stream: "out"
+}
+    )"};
+    ::mediapipe::CalculatorGraphConfig config;
+    ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
+
+    auto executor = createQueueExecutor(
+        config,
+        {{"in", mediapipe_packet_type_enum::OVTENSOR}},
+        {{"out", mediapipe_packet_type_enum::OVTENSOR}},
+        {"in"},
+        {"out"},
+        2);
+
+    prepareInvalidRequest(this->firstRequest, {"in"});
+
+    std::promise<void> signalPromise;
+    std::future<void> signalFuture = signalPromise.get_future();
+
+    EXPECT_CALL(this->stream, Read(_))
+        .WillOnce(DisconnectWhenNotified(signalFuture));
+    EXPECT_CALL(this->stream, Write(_, _))
+        .WillOnce(SendErrorAndNotifyEnd(
+            Status(StatusCode::INVALID_CONTENT_SIZE).string() + std::string{" - Expected: 4 bytes; Actual: 0 bytes; input name: in; partial deserialization of first request"},
+            signalPromise));
 
     ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream, this->executionContext), StatusCode::OK);
 }

@@ -225,7 +225,10 @@ Status MediapipeGraphDefinition::validate(ModelManager& manager) {
     if (!status.ok()) {
         return status;
     }
-    this->initializeQueueIfRequired();
+    status = this->initializeQueueIfRequired();
+    if (!status.ok()) {
+        return status;
+    }
 
     lock.unlock();
     notifier.passed = true;
@@ -236,15 +239,23 @@ Status MediapipeGraphDefinition::validate(ModelManager& manager) {
     return StatusCode::OK;
 }
 
-void MediapipeGraphDefinition::initializeQueueIfRequired() {
-    // TODO FIXME @atobisze
+Status MediapipeGraphDefinition::initializeQueueIfRequired() {
     int initialQueueSize = this->mgconfig.getInitialQueueSize();
     if (initialQueueSize < 0) {
         SPDLOG_DEBUG("Graph queue creation disabled for mediapipe: {} (graph_queue_size={})", getName(), initialQueueSize);
-        return;
+        return StatusCode::OK;
     }
-    this->queue = std::make_shared<GraphQueue>(this->config, this->sidePacketMaps, initialQueueSize);
+    try {
+        this->queue = std::make_shared<GraphQueue>(this->config, this->sidePacketMaps, initialQueueSize);
+    } catch (const std::exception& e) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to create graph queue for mediapipe: {} error: {}", getName(), e.what());
+        return StatusCode::INTERNAL_ERROR;
+    } catch (...) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to create graph queue for mediapipe: {} unknown error", getName());
+        return StatusCode::INTERNAL_ERROR;
+    }
     SPDLOG_DEBUG("Created graph queue with size {} for mediapipe: {}", initialQueueSize, getName());
+    return StatusCode::OK;
 }
 
 MediapipeGraphDefinition::MediapipeGraphDefinition(const std::string name,
