@@ -81,7 +81,9 @@ absl::Status VisualLanguageModelLegacyServable::parseRequest(std::shared_ptr<Gen
     legacyExecutionContext->apiHandler = std::make_shared<OpenAIChatCompletionsHandler>(*legacyExecutionContext->payload.parsedJson,
         legacyExecutionContext->endpoint,
         std::chrono::system_clock::now(),
-        getProperties()->tokenizer);
+        getProperties()->tokenizer,
+        getProperties()->toolParserName,
+        getProperties()->reasoningParserName);
     auto& config = ovms::Config::instance();
 
     auto status = executionContext->apiHandler->parseRequest(getProperties()->maxTokensLimit, getProperties()->bestOfLimit, getProperties()->maxModelLength, config.getServerSettings().allowedLocalMediaPath, config.getServerSettings().allowedMediaDomains);
