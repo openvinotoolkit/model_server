@@ -42,7 +42,8 @@ node {
   node_options: {
     [type.googleapis.com / mediapipe.S2tCalculatorOptions]: {
       models_path: "./",
-      target_device: "CPU"
+      target_device: "CPU",
+      enable_word_timestamps: true
     }
   }
 }
@@ -53,6 +54,7 @@ Above node configuration should be used as a template since user is not expected
 The calculator supports the following `node_options` for tuning the pipeline configuration:
 -    `required string models_path` - location of the models and scheduler directory (can be relative);
 -    `optional string device` - device to load models to. Supported values: "CPU, GPU, NPU" [default = "CPU"]
+-    `optional bool enable_word_timestamps` - set to true if model should support user requests for word timestamp. [default = false]
 
 We recommend using [export script](../../demos/common/export_models/README.md) to prepare models directory structure for serving.
 Check [supported models](https://openvinotoolkit.github.io/openvino.genai/docs/supported-models/#speech-recognition-models).
