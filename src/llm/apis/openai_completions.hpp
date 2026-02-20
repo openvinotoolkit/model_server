@@ -26,6 +26,7 @@
 
 #include <openvino/genai/generation_config.hpp>
 #include <openvino/genai/generation_handle.hpp>
+#include <openvino/genai/json_container.hpp>
 #include <openvino/genai/llm_pipeline.hpp>
 #include <openvino/genai/tokenizer.hpp>
 #include <openvino/genai/visual_language/pipeline.hpp>
@@ -34,6 +35,7 @@
 #pragma warning(push)
 #pragma warning(disable : 6001 4324 6385 6386)
 #include "absl/status/status.h"
+#include "absl/status/statusor.h"
 #pragma warning(pop)
 #include "../io_processing/output_parser.hpp"
 #include "openai_request.hpp"
@@ -102,7 +104,6 @@ public:
     ov::genai::ChatHistory& getChatHistory();
     std::optional<int> getMaxTokens() const;
     std::optional<std::string> getResponseFormat() const;
-    const std::optional<ov::genai::JsonContainer>& getTools() const;
 
     bool isStream() const;
     std::string getModel() const;
@@ -116,6 +117,7 @@ public:
     absl::Status parseRequest(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength, std::optional<std::string> allowedLocalMediaPath = std::nullopt, std::optional<std::vector<std::string>> allowedMediaDomains = std::nullopt);
     absl::Status parseMessages(std::optional<std::string> allowedLocalMediaPath = std::nullopt, std::optional<std::vector<std::string>> allowedMediaDomains = std::nullopt);
     absl::Status parseTools();
+    absl::StatusOr<std::optional<ov::genai::JsonContainer>> parseToolsToJsonContainer();
     const bool areToolsAvailable() const;
 
     std::string serializeUnaryResponse(const std::vector<ov::genai::GenerationOutput>& generationOutputs);

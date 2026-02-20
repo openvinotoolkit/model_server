@@ -182,7 +182,11 @@ absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecution
 #else
         ov::genai::ChatHistory& chatHistory = executionContext->apiHandler->getChatHistory();
         constexpr bool add_generation_prompt = true;  // confirm it should be hardcoded
-        const auto& tools = executionContext->apiHandler->getTools();
+        auto toolsStatus = executionContext->apiHandler->parseToolsToJsonContainer();
+        if (!toolsStatus.ok()) {
+            return toolsStatus.status();
+        }
+        const auto& tools = toolsStatus.value();
         try {
             if (tools.has_value()) {
                 inputText = getProperties()->tokenizer.apply_chat_template(chatHistory, add_generation_prompt, {}, tools);

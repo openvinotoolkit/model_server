@@ -1175,7 +1175,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParseRequestWithTools_Provided1_ChoiceNone)
     assertRequestWithTools(providedTools, toolsChoice, expectedJson);
 }
 
-TEST_F(HttpOpenAIHandlerParsingTest, ParseRequestWithTools_PopulatesToolsJsonContainer) {
+TEST_F(HttpOpenAIHandlerParsingTest, ParseRequestWithTools_ParsesToolsJsonContainerOnDemand) {
     std::string json = R"({
     "model": "llama",
     "messages": [
@@ -1212,7 +1212,9 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParseRequestWithTools_PopulatesToolsJsonCon
         std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
 
     ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
-    const auto& tools = apiHandler->getTools();
+    auto toolsStatus = apiHandler->parseToolsToJsonContainer();
+    ASSERT_TRUE(toolsStatus.ok());
+    const auto& tools = toolsStatus.value();
     ASSERT_TRUE(tools.has_value());
     EXPECT_TRUE(tools->is_array());
     ASSERT_EQ(tools->size(), 1);

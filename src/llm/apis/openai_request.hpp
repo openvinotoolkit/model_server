@@ -25,7 +25,6 @@
 #include <vector>
 
 #include <openvino/runtime/tensor.hpp>
-#include <openvino/genai/json_container.hpp>
 #include <openvino/genai/tokenizer.hpp>
 
 #include "src/port/rapidjson_document.hpp"
@@ -79,8 +78,6 @@ struct OpenAIChatCompletionsRequest {
     std::optional<std::string> responseFormat{std::nullopt};
     // Map that holds tool names and schemas for their arguments
     ToolsSchemas_t toolNameSchemaMap;
-    // Full tools payload in JSON form for passing directly to tokenizer chat template.
-    std::optional<ov::genai::JsonContainer> tools{std::nullopt};
     // Holds value for tool_choice field as described in https://platform.openai.com/docs/api-reference/chat/create#chat_create-tool_choice
     std::string toolChoice;
 

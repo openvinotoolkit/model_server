@@ -483,23 +483,6 @@ absl::Status OpenAIChatCompletionsHandler::parseTools() {
     }
 
     request.toolChoice = tool_choice;
-    request.tools = std::nullopt;
-    if (it != doc.MemberEnd() && !it->value.IsNull()) {
-        try {
-            request.tools = rapidJsonValueToJsonContainer(it->value);
-        } catch (const std::exception& e) {
-            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Direct tools conversion to JsonContainer failed: {}. Falling back to JSON string conversion.", e.what());
-            try {
-                rapidjson::StringBuffer toolsBuffer;
-                rapidjson::Writer<rapidjson::StringBuffer> toolsWriter(toolsBuffer);
-                it->value.Accept(toolsWriter);
-                request.tools = ov::genai::JsonContainer::from_json_string(toolsBuffer.GetString());
-            } catch (const std::exception& fallbackEx) {
-                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Fallback tools conversion failed: {}", fallbackEx.what());
-                return absl::InvalidArgumentError(absl::StrCat("Invalid tools payload: ", fallbackEx.what()));
-            }
-        }
-    }
     if (jsonChanged) {
         StringBuffer buffer;
         Writer<StringBuffer> writer(buffer);
@@ -507,6 +490,27 @@ absl::Status OpenAIChatCompletionsHandler::parseTools() {
         request.processedJson = buffer.GetString();
     }
     return absl::OkStatus();
+}
+
+absl::StatusOr<std::optional<ov::genai::JsonContainer>> OpenAIChatCompletionsHandler::parseToolsToJsonContainer() {
+    auto it = doc.FindMember("tools");
+    if (it == doc.MemberEnd() || it->value.IsNull()) {
+        return std::nullopt;
+    }
+    try {
+        return rapidJsonValueToJsonContainer(it->value);
+    } catch (const std::exception& e) {
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Direct tools conversion to JsonContainer failed: {}. Falling back to JSON string conversion.", e.what());
+        try {
+            rapidjson::StringBuffer toolsBuffer;
+            rapidjson::Writer<rapidjson::StringBuffer> toolsWriter(toolsBuffer);
+            it->value.Accept(toolsWriter);
+            return ov::genai::JsonContainer::from_json_string(toolsBuffer.GetString());
+        } catch (const std::exception& fallbackEx) {
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Fallback tools conversion failed: {}", fallbackEx.what());
+            return absl::InvalidArgumentError(absl::StrCat("Invalid tools payload: ", fallbackEx.what()));
+        }
+    }
 }
 
 const bool OpenAIChatCompletionsHandler::areToolsAvailable() const {
@@ -534,10 +538,6 @@ std::optional<int> OpenAIChatCompletionsHandler::getMaxTokens() const {
 
 std::optional<std::string> OpenAIChatCompletionsHandler::getResponseFormat() const {
     return request.responseFormat;
-}
-
-const std::optional<ov::genai::JsonContainer>& OpenAIChatCompletionsHandler::getTools() const {
-    return request.tools;
 }
 
 std::string convertOpenAIResponseFormatToStructuralTagStringFormat(const rapidjson::Value& openAIFormat) {
