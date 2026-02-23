@@ -30,8 +30,14 @@
 
 #include "../queue.hpp"
 
+#pragma warning(push)
+#pragma warning(disable : 4324 6001 6385 6386 6326 6011 4309 4005 4456 6246)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "mediapipe/framework/calculator_graph.h"
 #include "mediapipe/framework/port/status.h"
+#pragma GCC diagnostic pop
+#pragma warning(pop)
 
 #include "graph_executor_constants.hpp"
 #include "graph_side_packets.hpp"

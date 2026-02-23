@@ -24,6 +24,7 @@
 
 #include "../kfs_frontend/kfs_utils.hpp"
 #include "../logging.hpp"
+#include "../mediapipe_internal/graph_executor_constants.hpp"
 #include "../mediapipe_internal/mediapipe_utils.hpp"
 #include "../mediapipe_internal/mediapipegraphdefinition.hpp"
 #include "../predict_request_validation_utils.hpp"
@@ -1168,7 +1169,6 @@ bool requestHasInputSidePackets(const KFSRequest& request) {
 Status deserializeInputSidePacketsFromFirstRequestImpl(
     std::map<std::string, mediapipe::Packet>& inputSidePackets,
     const KFSRequest& request) {
-    static const std::string PYTHON_SESSION_SIDE_PACKET_TAG{"py"};
     for (const auto& [name, valueChoice] : request.parameters()) {
         SPDLOG_DEBUG("Found: {}; parameter in request for: {};", name, request.model_name());
         if (name == TIMESTAMP_PARAMETER_NAME) {

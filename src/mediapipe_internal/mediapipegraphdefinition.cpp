@@ -106,8 +106,7 @@ Status MediapipeGraphDefinition::validateForConfigFileExistence() {
 Status MediapipeGraphDefinition::parseGraphQueueSizeDirective() {
     // Scan pbtxt content for: # OVMS_GRAPH_QUEUE_SIZE: <value>
     static const std::regex directiveRegex(
-        R"(^\s*#\s*OVMS_GRAPH_QUEUE_SIZE\s*:\s*(\S+)\s*$)",
-        std::regex::multiline);
+        R"((?:^|\n)\s*#\s*OVMS_GRAPH_QUEUE_SIZE\s*:\s*(\S+)\s*(?:\r?\n|$))");
     std::smatch match;
     if (!std::regex_search(this->chosenConfig, match, directiveRegex)) {
         SPDLOG_TRACE("OVMS_GRAPH_QUEUE_SIZE directive not found in pbtxt for mediapipe: {}", getName());
