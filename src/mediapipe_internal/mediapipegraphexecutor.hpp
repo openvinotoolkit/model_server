@@ -159,6 +159,10 @@ public:
         PythonBackend* pythonBackend,
         MediapipeServableMetricReporter* mediapipeServableMetricReporter);
 
+    Status initializeLlmExecutionContexts(GenAiExecutionContextMap& executionContextMap);
+
+    void resetLlmExecutionContexts(GenAiExecutionContextMap& executionContextMap);
+
     template <typename RequestType, typename ResponseType>
     Status infer(const RequestType* request, ResponseType* response, ExecutionContext executionContext) {
         OVMS_PROFILE_FUNCTION();
@@ -175,6 +179,10 @@ public:
     template <typename RequestType, typename ResponseType>
     Status inferWithQueue(const RequestType* request, ResponseType* response, ExecutionContext executionContext, MetricCounterGuard& failedRequestsGuard) {
         ::mediapipe::CalculatorGraph& graph = this->guard->graph;
+        auto llmContextStatus = initializeLlmExecutionContexts(this->guard->gh->genAiExecutionContextMap);
+        if (!llmContextStatus.ok()) {
+            return llmContextStatus;
+        }
         for (auto& name : this->outputNames) {
             if (name.empty()) {
                 SPDLOG_DEBUG("Creating Mediapipe graph outputs name failed for: {}", name);
@@ -209,7 +217,10 @@ public:
         if (!status.ok()) {
             INCREMENT_IF_ENABLED(this->mediapipeServableMetricReporter->getGraphErrorMetric(executionContext));
         }
+        resetLlmExecutionContexts(this->guard->gh->genAiExecutionContextMap);
         MP_RETURN_ON_FAIL(status, "graph wait until idle", mediapipeAbslToOvmsStatus(status.code()));
+        // Increment timestamp for next request reusing this graph from the queue
+        this->guard->gh->currentTimestamp = ::mediapipe::Timestamp(this->guard->gh->currentTimestamp.Value() + 1);
         SPDLOG_DEBUG("Received all output stream packets for graph: {}", this->name);
         return StatusCode::OK;
     }
@@ -218,7 +229,12 @@ public:
     Status inferWithoutQueue(const RequestType* request, ResponseType* response, ExecutionContext executionContext, MetricCounterGuard& failedRequestsGuard) {
         ::mediapipe::CalculatorGraph graph;
         MP_RETURN_ON_FAIL(graph.Initialize(this->config), std::string("failed initialization of MediaPipe graph: ") + this->name, StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR);
-        enum : unsigned int { PROCESS, TIMER_END2 };
+        auto llmContextStatus = initializeLlmExecutionContexts(this->sidePacketMaps.genAiExecutionContextMap);
+        if (!llmContextStatus.ok()) {
+            return llmContextStatus;
+        }
+        enum : unsigned int { PROCESS,
+            TIMER_END2 };
         Timer<TIMER_END2> timer;
         timer.start(PROCESS);
         std::unordered_map<std::string, ::mediapipe::OutputStreamPoller> outputPollers;
@@ -241,6 +257,7 @@ public:
         inputSidePackets[PYTHON_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<PythonNodeResourcesMap>(this->sidePacketMaps.pythonNodeResourcesMap).At(::mediapipe::Timestamp(STARTING_TIMESTAMP_VALUE));
 #endif
         inputSidePackets[LLM_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<GenAiServableMap>(this->sidePacketMaps.genAiServableMap).At(::mediapipe::Timestamp(STARTING_TIMESTAMP_VALUE));
+        inputSidePackets[LLM_EXECUTION_CONTEXT_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<GenAiExecutionContextMap>(this->sidePacketMaps.genAiExecutionContextMap).At(::mediapipe::Timestamp(STARTING_TIMESTAMP_VALUE));
         inputSidePackets[IMAGE_GEN_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<ImageGenerationPipelinesMap>(this->sidePacketMaps.imageGenPipelinesMap).At(::mediapipe::Timestamp(STARTING_TIMESTAMP_VALUE));
         inputSidePackets[EMBEDDINGS_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<EmbeddingsServableMap>(this->sidePacketMaps.embeddingsServableMap).At(::mediapipe::Timestamp(STARTING_TIMESTAMP_VALUE));
         inputSidePackets[RERANK_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<RerankServableMap>(this->sidePacketMaps.rerankServableMap).At(::mediapipe::Timestamp(STARTING_TIMESTAMP_VALUE));
@@ -278,6 +295,7 @@ public:
         if (!status.ok()) {
             INCREMENT_IF_ENABLED(this->mediapipeServableMetricReporter->getGraphErrorMetric(executionContext));
         }
+        resetLlmExecutionContexts(this->sidePacketMaps.genAiExecutionContextMap);
         MP_RETURN_ON_FAIL(status, "graph wait until idle", mediapipeAbslToOvmsStatus(status.code()));
 
         MP_RETURN_ON_FAIL(graph.CloseAllPacketSources(), "graph close all packet sources", StatusCode::MEDIAPIPE_GRAPH_CLOSE_INPUT_STREAM_ERROR);
@@ -340,12 +358,17 @@ public:
             // Side packets are set at queue construction time.
             if (requestHasInputSidePackets(req)) {
                 SPDLOG_DEBUG("Graph queue does not support user-provided input side packets. "
-                             "Side packets are set at graph queue construction time. Graph: {}", this->name);
+                             "Side packets are set at graph queue construction time. Graph: {}",
+                    this->name);
                 return Status(StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR,
                     "Input side packets are not supported for graphs with queue enabled");
             }
             MetricGaugeGuard currentGraphs(this->mediapipeServableMetricReporter->currentGraphs.get());
             ::mediapipe::CalculatorGraph& graph = this->guard->graph;
+            auto llmContextStatus = initializeLlmExecutionContexts(this->guard->gh->genAiExecutionContextMap);
+            if (!llmContextStatus.ok()) {
+                return llmContextStatus;
+            }
 
             enum : unsigned int {
                 PROCESS,
@@ -426,7 +449,10 @@ public:
             if (!status.ok()) {
                 INCREMENT_IF_ENABLED(this->mediapipeServableMetricReporter->getGraphErrorMetric(executionContext));
             }
+            resetLlmExecutionContexts(this->guard->gh->genAiExecutionContextMap);
             MP_RETURN_ON_FAIL(status, "graph wait until idle", mediapipeAbslToOvmsStatus(status.code()));
+            // Increment timestamp for next request reusing this graph from the queue
+            this->guard->gh->currentTimestamp = ::mediapipe::Timestamp(this->guard->gh->currentTimestamp.Value() + 1);
             SPDLOG_DEBUG("Graph {}: Done streaming execution (queue path)", this->name);
 
             timer.stop(PROCESS);
@@ -450,6 +476,10 @@ public:
                 OVMS_PROFILE_SCOPE("Mediapipe graph initialization");
                 // Init
                 MP_RETURN_ON_FAIL(graph.Initialize(this->config), "graph initialization", StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR);
+            }
+            auto llmContextStatus = initializeLlmExecutionContexts(this->sidePacketMaps.genAiExecutionContextMap);
+            if (!llmContextStatus.ok()) {
+                return llmContextStatus;
             }
             enum : unsigned int {
                 PROCESS,
@@ -498,6 +528,7 @@ public:
                                                                        .At(::mediapipe::Timestamp(STARTING_TIMESTAMP_VALUE));
 #endif
                 inputSidePackets[LLM_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<GenAiServableMap>(this->sidePacketMaps.genAiServableMap).At(::mediapipe::Timestamp(STARTING_TIMESTAMP_VALUE));
+                inputSidePackets[LLM_EXECUTION_CONTEXT_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<GenAiExecutionContextMap>(this->sidePacketMaps.genAiExecutionContextMap).At(::mediapipe::Timestamp(STARTING_TIMESTAMP_VALUE));
                 inputSidePackets[EMBEDDINGS_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<EmbeddingsServableMap>(this->sidePacketMaps.embeddingsServableMap).At(::mediapipe::Timestamp(STARTING_TIMESTAMP_VALUE));
                 // Add image generation side packet in case image generation allow for streaming
             }
@@ -576,6 +607,7 @@ public:
                 if (!status.ok()) {
                     INCREMENT_IF_ENABLED(this->mediapipeServableMetricReporter->getGraphErrorMetric(executionContext));
                 }
+                resetLlmExecutionContexts(this->sidePacketMaps.genAiExecutionContextMap);
                 MP_RETURN_ON_FAIL(status, "graph wait until done", mediapipeAbslToOvmsStatus(status.code()));
                 SPDLOG_DEBUG("Graph {}: Done execution", this->name);
             }

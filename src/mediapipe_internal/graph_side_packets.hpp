@@ -15,6 +15,7 @@
 //*****************************************************************************
 #pragma once
 
+#include <mutex>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -24,6 +25,7 @@ namespace ovms {
 // Forward declarations - only shared_ptrs are stored so full definitions are not needed
 class PythonNodeResources;
 class GenAiServable;
+struct GenAiServableExecutionContext;
 struct ImageGenerationPipelines;
 struct EmbeddingsServable;
 struct RerankServable;
@@ -38,9 +40,16 @@ using TtsServableMap = std::unordered_map<std::string, std::shared_ptr<TtsServab
 using EmbeddingsServableMap = std::unordered_map<std::string, std::shared_ptr<EmbeddingsServable>>;
 using ImageGenerationPipelinesMap = std::unordered_map<std::string, std::shared_ptr<ImageGenerationPipelines>>;
 
+struct GenAiExecutionContextHolder {
+    std::mutex mutex;
+    std::shared_ptr<GenAiServableExecutionContext> executionContext;
+};
+using GenAiExecutionContextMap = std::unordered_map<std::string, std::shared_ptr<GenAiExecutionContextHolder>>;
+
 struct GraphSidePackets {
     PythonNodeResourcesMap pythonNodeResourcesMap;
     GenAiServableMap genAiServableMap;
+    GenAiExecutionContextMap genAiExecutionContextMap;
     ImageGenerationPipelinesMap imageGenPipelinesMap;
     EmbeddingsServableMap embeddingsServableMap;
     RerankServableMap rerankServableMap;
@@ -49,6 +58,7 @@ struct GraphSidePackets {
     void clear() {
         pythonNodeResourcesMap.clear();
         genAiServableMap.clear();
+        genAiExecutionContextMap.clear();
         imageGenPipelinesMap.clear();
         embeddingsServableMap.clear();
         rerankServableMap.clear();
@@ -58,6 +68,7 @@ struct GraphSidePackets {
     bool empty() {
         return (pythonNodeResourcesMap.empty() &&
                 genAiServableMap.empty() &&
+                genAiExecutionContextMap.empty() &&
                 imageGenPipelinesMap.empty() &&
                 embeddingsServableMap.empty() &&
                 rerankServableMap.empty() &&

@@ -62,7 +62,6 @@
 #include "src/audio/speech_to_text/s2t_servable.hpp"
 #include "src/audio/text_to_speech/t2s_servable.hpp"
 
-
 namespace ovms {
 MediapipeGraphConfig MediapipeGraphDefinition::MGC;
 
@@ -494,7 +493,7 @@ public:
         resources(resources) {}
     ~ResourcesCleaningGuard() {
         if (shouldCleanup) {
-            resources.clear(); // TODO FIXME @atobisze check
+            resources.clear();  // TODO FIXME @atobisze check
         }
     }
     void disableCleaning() {
@@ -537,6 +536,7 @@ Status MediapipeGraphDefinition::initializeNodes() {
         // Passed to both calculators that require LLM Engine (gRPC KServe & HTTP OpenAI)
         if (endsWith(config.node(i).calculator(), LLM_NODE_CALCULATOR_NAME)) {
             auto& genAiServableMap = this->sidePacketMaps->genAiServableMap;
+            auto& genAiExecutionContextMap = this->sidePacketMaps->genAiExecutionContextMap;
             ResourcesCleaningGuard<GenAiServableMap> genAiServablesCleaningGuard(genAiServableMap);
             if (!config.node(i).node_options().size()) {
                 SPDLOG_LOGGER_ERROR(modelmanager_logger, "LLM node missing options in graph: {}. ", this->name);
@@ -551,6 +551,10 @@ Status MediapipeGraphDefinition::initializeNodes() {
                 SPDLOG_LOGGER_ERROR(modelmanager_logger, "LLM node name: {} already used in graph: {}. ", nodeName, this->name);
                 return StatusCode::LLM_NODE_NAME_ALREADY_EXISTS;
             }
+            if (genAiExecutionContextMap.find(nodeName) != genAiExecutionContextMap.end()) {
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "LLM execution context holder for node name: {} already exists in graph: {}. ", nodeName, this->name);
+                return StatusCode::LLM_NODE_NAME_ALREADY_EXISTS;
+            }
             std::shared_ptr<GenAiServable> servable;
             Status status = initializeGenAiServable(servable, config.node(i), mgconfig.getBasePath());
             if (!status.ok()) {
@@ -558,6 +562,7 @@ Status MediapipeGraphDefinition::initializeNodes() {
                 return status;
             }
             genAiServableMap.insert(std::pair<std::string, std::shared_ptr<GenAiServable>>(nodeName, std::move(servable)));
+            genAiExecutionContextMap.insert(std::pair<std::string, std::shared_ptr<GenAiExecutionContextHolder>>(nodeName, std::make_shared<GenAiExecutionContextHolder>()));
             genAiServablesCleaningGuard.disableCleaning();
         }
         // Passed to both calculators that require Image Generation pipelines

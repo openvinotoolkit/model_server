@@ -212,7 +212,7 @@ Body:
         }
     
 JSON Parser:
-{"model":"gpt","stream":false,"messages":[]}0)"; // non-queue path: fresh graph, poller gets first packet only
+{"model":"gpt","stream":false,"messages":[]}0)";  // non-queue path: fresh graph, poller gets first packet only
     ASSERT_EQ(response, expectedResponse);
 }
 
@@ -244,7 +244,7 @@ Body:
         }
     
 JSON Parser:
-{"model":"gpt","stream":false,"messages":[]}0)"; // non-queue path: fresh graph, poller gets first packet only
+{"model":"gpt","stream":false,"messages":[]}0)";  // non-queue path: fresh graph, poller gets first packet only
     ASSERT_EQ(response, expectedResponse);
 }
 

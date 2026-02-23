@@ -40,6 +40,7 @@ class NullOutputStreamObserver;
 struct GraphHelper {
     std::shared_ptr<::mediapipe::CalculatorGraph> graph;  // TODO FIXME this does not have to be shared_ptr
     std::unordered_map<std::string, std::shared_ptr<OutputStreamObserverI>> outStreamObservers;
+    GenAiExecutionContextMap genAiExecutionContextMap;
     ::mediapipe::Timestamp currentTimestamp;  // TODO FIXME const
     // TODO FIXME move constr/=
     GraphHelper() = default;
@@ -48,13 +49,14 @@ struct GraphHelper {
     GraphHelper(GraphHelper&& gh) :
         graph(std::move(gh.graph)),
         outStreamObservers(std::move(gh.outStreamObservers)),
+        genAiExecutionContextMap(std::move(gh.genAiExecutionContextMap)),
         currentTimestamp(gh.currentTimestamp) {}
     GraphHelper& operator=(GraphHelper&& gh) = default;
 };
 // we need to keep Graph alive during MP reload hence shared_ptr
 //class GraphQueue : public Queue<std::shared_ptr<::mediapipe::CalculatorGraph>> {
 class GraphQueue : public Queue<std::shared_ptr<GraphHelper>> {
-    public: // XXX TODO make private? we need to acces in mediapipegraphdefinition to set side packets though
+public:  // XXX TODO make private? we need to acces in mediapipegraphdefinition to set side packets though
     std::shared_ptr<GraphSidePackets> sidePacketMaps;
 
 public:

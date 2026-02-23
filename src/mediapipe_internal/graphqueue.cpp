@@ -34,7 +34,6 @@
 #include "mediapipe/framework/port/status.h"
 
 #include "graph_executor_constants.hpp"
-//#include "mediapipegraphexecutor.hpp"  // for side packet tag names
 #include "outputstreamobserver.hpp"
 namespace ovms {
 GraphQueue::GraphQueue(const ::mediapipe::CalculatorGraphConfig& config, std::shared_ptr<GraphSidePackets> sidePacketMaps, int streamsLength) :
@@ -62,11 +61,15 @@ GraphQueue::GraphQueue(const ::mediapipe::CalculatorGraphConfig& config, std::sh
                 throw std::runtime_error(absStatus.ToString());
             }
         }
+        for (const auto& [nodeName, _] : sidePacketMaps->genAiServableMap) {
+            gh->genAiExecutionContextMap[nodeName] = std::make_shared<GenAiExecutionContextHolder>();
+        }
         std::map<std::string, mediapipe::Packet> inputSidePackets;
 #if (PYTHON_DISABLE == 0)
         inputSidePackets[PYTHON_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<PythonNodeResourcesMap>(sidePacketMaps->pythonNodeResourcesMap).At(::mediapipe::Timestamp(STARTING_TIMESTAMP_VALUE));
 #endif
         inputSidePackets[LLM_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<GenAiServableMap>(sidePacketMaps->genAiServableMap).At(::mediapipe::Timestamp(STARTING_TIMESTAMP_VALUE));
+        inputSidePackets[LLM_EXECUTION_CONTEXT_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<GenAiExecutionContextMap>(gh->genAiExecutionContextMap).At(::mediapipe::Timestamp(STARTING_TIMESTAMP_VALUE));
         inputSidePackets[IMAGE_GEN_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<ImageGenerationPipelinesMap>(sidePacketMaps->imageGenPipelinesMap).At(::mediapipe::Timestamp(STARTING_TIMESTAMP_VALUE));
         inputSidePackets[EMBEDDINGS_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<EmbeddingsServableMap>(sidePacketMaps->embeddingsServableMap).At(::mediapipe::Timestamp(STARTING_TIMESTAMP_VALUE));
         inputSidePackets[RERANK_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<RerankServableMap>(sidePacketMaps->rerankServableMap).At(::mediapipe::Timestamp(STARTING_TIMESTAMP_VALUE));

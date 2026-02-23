@@ -388,7 +388,7 @@ node {
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::KFS_REQUEST}},
         {{"out", mediapipe_packet_type_enum::KFS_RESPONSE}},
-{"in"}, {"out"}, {}, nullptr, this->reporter.get()};
+        {"in"}, {"out"}, {}, nullptr, this->reporter.get()};
 
     // Mock receiving 3 requests and disconnection
     prepareRequest(this->firstRequest, {{"in", 3.5f}});
@@ -445,7 +445,7 @@ node {
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
-{"in"}, {"out"}, {}, nullptr, this->reporter.get()};
+        {"in"}, {"out"}, {}, nullptr, this->reporter.get()};
 
     // Mock receiving 3 requests and disconnection
     prepareRequest(this->firstRequest, {{"in", 3.5f}});  // no timestamp specified, server will assign one
@@ -588,7 +588,7 @@ node {
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
-{"in"}, {"out"}, {}, nullptr, this->reporter.get()};
+        {"in"}, {"out"}, {}, nullptr, this->reporter.get()};
 
     // Mock receiving 3 requests with manually (client) assigned ascending order of timestamp and disconnection
     prepareRequest(this->firstRequest, {{"in", 3.5f}}, 3);  // first request with timestamp 3
@@ -633,7 +633,7 @@ node {
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
-{"in"}, {"out"}, {}, nullptr, this->reporter.get()};
+        {"in"}, {"out"}, {}, nullptr, this->reporter.get()};
 
     // Mock only 1 request and disconnect immediately
     prepareRequest(this->firstRequest, {{"in", 3.5f}});
@@ -669,7 +669,7 @@ node {
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
         {"in"},
         {"out"},
-        2);
+        1);
 
     prepareRequest(this->firstRequest, {{"in", 3.5f}});
     EXPECT_CALL(this->stream, Read(_))
@@ -714,7 +714,7 @@ node {
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
         {"in"},
         {"out"},
-        2);
+        1);
 
     prepareRequest(this->firstRequest, {{"in", 3.5f}});
     EXPECT_CALL(this->stream, Read(_))
@@ -747,7 +747,7 @@ node {
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
         {"in"},
         {"out"},
-        2);
+        1);
 
     prepareRequest(this->firstRequest, {});
     EXPECT_CALL(this->stream, Read(_))
@@ -777,7 +777,7 @@ node {
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
         {"in"},
         {"out"},
-        2);
+        1);
 
     std::promise<void> signalPromise;
     std::future<void> signalFuture = signalPromise.get_future();
@@ -811,7 +811,7 @@ node {
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
         {"in"},
         {"out"},
-        2);
+        1);
 
     prepareInvalidRequest(this->firstRequest, {"in"});
 
@@ -1437,7 +1437,7 @@ node {
             {"out3", mediapipe_packet_type_enum::OVTENSOR}},
         {"in1", "in2", "in3"},
         {"out1", "out2", "out3"},
-{}, nullptr, this->reporter.get()};
+        {}, nullptr, this->reporter.get()};
 
     std::promise<void> signalPromise;
     std::future<void> signalFuture = signalPromise.get_future();
@@ -1489,7 +1489,7 @@ node {
             {"out3", mediapipe_packet_type_enum::OVTENSOR}},
         {"in1", "in2", "in3"},
         {"out1", "out2", "out3"},
-{}, nullptr, this->reporter.get()};
+        {}, nullptr, this->reporter.get()};
 
     std::promise<void> signalPromise;
     std::future<void> signalFuture = signalPromise.get_future();
@@ -1524,7 +1524,7 @@ node {
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
-{"in"}, {"out"}, {}, nullptr, this->reporter.get()};
+        {"in"}, {"out"}, {}, nullptr, this->reporter.get()};
 
     std::promise<void> signalPromise;
     std::future<void> signalFuture = signalPromise.get_future();
@@ -1558,7 +1558,7 @@ node {
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
-{"in"}, {"wrong_name"}, {}, nullptr, this->reporter.get()};  // cannot install observer due to wrong output name (should never happen due to validation)
+        {"in"}, {"wrong_name"}, {}, nullptr, this->reporter.get()};  // cannot install observer due to wrong output name (should never happen due to validation)
 
     EXPECT_CALL(this->stream, Read(_)).Times(0);
     EXPECT_CALL(this->stream, Write(_, _)).Times(0);
@@ -1583,7 +1583,7 @@ node {
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
-{"in"}, {"out"}, {}, nullptr, this->reporter.get()};
+        {"in"}, {"out"}, {}, nullptr, this->reporter.get()};
 
     prepareRequest(this->firstRequest, {});
     EXPECT_CALL(this->stream, Read(_))
@@ -1611,7 +1611,7 @@ node {
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
-{"in"}, {"out"}, {}, nullptr, this->reporter.get()};
+        {"in"}, {"out"}, {}, nullptr, this->reporter.get()};
 
     std::promise<void> signalPromise;
     std::future<void> signalFuture = signalPromise.get_future();
@@ -1647,7 +1647,7 @@ node {
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
-{"in"}, {"out"}, {}, nullptr, this->reporter.get()};
+        {"in"}, {"out"}, {}, nullptr, this->reporter.get()};
 
     prepareRequest(this->firstRequest, {{"in", 3.5f}});
     ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream, this->executionContext), StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR);
@@ -1670,7 +1670,7 @@ node {
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
-{"in"}, {"out"}, {}, nullptr, this->reporter.get()};
+        {"in"}, {"out"}, {}, nullptr, this->reporter.get()};
 
     // Invalid request - missing data in buffer
     prepareInvalidRequest(this->firstRequest, {"in"});  // no timestamp specified, server will assign one
@@ -1705,7 +1705,7 @@ node {
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
-{"in"}, {"out"}, {}, nullptr, this->reporter.get()};
+        {"in"}, {"out"}, {}, nullptr, this->reporter.get()};
 
     std::promise<void> signalPromise[3];
     std::future<void> signalFuture[3] = {
@@ -1752,7 +1752,7 @@ node {
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
-{"in"}, {"out"}, {}, nullptr, this->reporter.get()};
+        {"in"}, {"out"}, {}, nullptr, this->reporter.get()};
 
     prepareRequest(this->firstRequest, {{"in", 3.5f}}, 0);
     EXPECT_CALL(this->stream, Read(_))
@@ -1780,7 +1780,7 @@ node {
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
-{"in"}, {"out"}, {}, nullptr, this->reporter.get()};
+        {"in"}, {"out"}, {}, nullptr, this->reporter.get()};
 
     prepareRequest(this->firstRequest, {{"in", 3.5f}});
     setRequestTimestamp(this->firstRequest, std::string("not an int"));
@@ -1815,7 +1815,7 @@ node {
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
-{"in"}, {"out"}, {}, nullptr, this->reporter.get()};
+        {"in"}, {"out"}, {}, nullptr, this->reporter.get()};
 
     // Timestamps not allowed in stream
     // Expect continuity of operation and response with error message
@@ -1857,7 +1857,7 @@ node {
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
-{"in"}, {"out"}, {}, nullptr, this->reporter.get()};
+        {"in"}, {"out"}, {}, nullptr, this->reporter.get()};
 
     // Allowed in stream
     for (auto timestamp : std::vector<::mediapipe::Timestamp>{
@@ -1893,7 +1893,7 @@ node {
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
-{"in"}, {"out"}, {}, nullptr, this->reporter.get()};
+        {"in"}, {"out"}, {}, nullptr, this->reporter.get()};
 
     // Mock receiving 3 requests and disconnection
     prepareRequestWithParam(this->firstRequest, {{"in", 3.5f}}, {"val", 65});  // request with parameter val
@@ -1930,7 +1930,7 @@ node {
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
-{"in"}, {"out"}, {}, nullptr, this->reporter.get()};
+        {"in"}, {"out"}, {}, nullptr, this->reporter.get()};
 
     // Mock receiving the invalid request and disconnection
     // Request with invalid param py (special pythons session side packet)
@@ -1959,7 +1959,7 @@ node {
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
-{"in"}, {"out"}, {}, nullptr, this->reporter.get()};
+        {"in"}, {"out"}, {}, nullptr, this->reporter.get()};
 
     prepareRequest(this->firstRequest, {{"in", 3.5f}});  // missing required request param
     EXPECT_CALL(this->stream, Read(_)).Times(0);
@@ -1985,7 +1985,7 @@ node {
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
-{"in"}, {"out"}, {}, nullptr, this->reporter.get()};
+        {"in"}, {"out"}, {}, nullptr, this->reporter.get()};
 
     // Mock receiving 2 requests and disconnection
     prepareRequest(this->firstRequest, {{"in", 3.5f}}, std::nullopt, this->name, this->version);  // no timestamp specified, server will assign one
@@ -2019,7 +2019,7 @@ node {
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
-{"in"}, {"out"}, {}, nullptr, this->reporter.get()};
+        {"in"}, {"out"}, {}, nullptr, this->reporter.get()};
 
     std::promise<void> signalPromise;
     std::future<void> signalFuture = signalPromise.get_future();

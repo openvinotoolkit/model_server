@@ -26,7 +26,6 @@
 #include "../logging.hpp"
 #include "../mediapipe_internal/mediapipe_utils.hpp"
 #include "../mediapipe_internal/mediapipegraphdefinition.hpp"
-// TODO FIXME #include "../mediapipe_internal/graph_executor_constants.hpp"
 #include "../predict_request_validation_utils.hpp"
 #include "../status.hpp"
 #include "../tfs_frontend/tfs_utils.hpp"
