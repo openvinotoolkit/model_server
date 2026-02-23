@@ -37,7 +37,6 @@
 #pragma GCC diagnostic pop
 #pragma warning(pop)
 #include "mediapipe_utils.hpp"
-//#include "mediapipegraphdefinition.hpp"  // for version in response and PythonNodeResourceMap
 #include "packettypes.hpp"
 #include "graphqueue.hpp"
 

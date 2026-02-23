@@ -18,6 +18,7 @@
 #include <atomic>
 #include <condition_variable>
 #include <future>
+#include <map>
 #include <memory>
 #include <mutex>
 #include <optional>

@@ -21,8 +21,10 @@
 #include <memory>
 #include <mutex>
 #include <optional>
+#include <string>
 #include <queue>
 #include <thread>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -54,9 +56,8 @@ struct GraphHelper {
     GraphHelper& operator=(GraphHelper&& gh) = default;
 };
 // we need to keep Graph alive during MP reload hence shared_ptr
-//class GraphQueue : public Queue<std::shared_ptr<::mediapipe::CalculatorGraph>> {
 class GraphQueue : public Queue<std::shared_ptr<GraphHelper>> {
-public:  // XXX TODO make private? we need to acces in mediapipegraphdefinition to set side packets though
+public:  // XXX TODO make private? we need to access in mediapipegraphdefinition to set side packets though
     std::shared_ptr<GraphSidePackets> sidePacketMaps;
 
 public:

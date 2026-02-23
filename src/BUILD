@@ -178,7 +178,7 @@ ovms_cc_library(
         "mediapipe_internal_graph_side_packets",
         "//third_party:openvino",
         "@mediapipe//mediapipe/framework:calculator_graph",
-        "//src/python:libovmspythonmodule", # TODO not splitted
+        "//src/python:libovmspythonmodule", # TODO not split
         "//src/llm:genai_servables", # TODO split!
     ],
     visibility = ["//visibility:public",],

@@ -137,12 +137,12 @@ TEST_F(MediapipeFrameworkTest, HotReloadOutputStreamHandlerCheckNoInputPackets) 
         ParseTextProtoOrDie<CalculatorGraphConfig>(graph_proto);
     const std::string inputStreamName = "input";
     const std::string outputStreamName = "output";
-    // avoid creating pollers, retreiving packets etc.
+    // avoid creating pollers, retrieving packets etc.
     //////////////////
     // model mgmt thread
     //////////////////
-    //std::shared_ptr<ovms::GraphQueue> queue;
-    //queue = std::make_shared<GraphQueue>(graphConfig, 1);
+    // std::shared_ptr<ovms::GraphQueue> queue;
+    // queue = std::make_shared<GraphQueue>(graphConfig, 1);
     ::mediapipe::CalculatorGraph graph;
     EXPECT_EQ(graph.Initialize(graphConfig).code(), absl::StatusCode::kOk);
     // Install NullObserver
@@ -153,7 +153,7 @@ TEST_F(MediapipeFrameworkTest, HotReloadOutputStreamHandlerCheckNoInputPackets) 
     MP_ERROR_STOP(graph.ObserveOutputStream(outputStreamName, [&perGraphObserverFunctor](const ::mediapipe::Packet& packet) -> absl::Status { return perGraphObserverFunctor->handlePacket(packet); }));
     // Here ends model management
     // Here starts mp graph executor
-    //ovms::GraphIdGuard graphIdGuard(queue); // TODO timeout?
+    // ovms::GraphIdGuard graphIdGuard(queue); // TODO timeout?
     // get graphIdGuard from queue
     // create FrontendAppropriateObserver
     float expVal = 13.5;
@@ -193,9 +193,9 @@ TEST_F(MediapipeFrameworkTest, HotReloadOutputStreamHandlerCheckNoInputPackets) 
     perGraphObserverFunctor = std::make_shared<MyFunctor>(expVal);
     // now add second packet
     auto inputTensor2 = std::make_unique<ov::Tensor>(datatype, shape, data.data());
-    //MP_ERROR_STOP(graph.AddPacketToInputStream(
+    // MP_ERROR_STOP(graph.AddPacketToInputStream(
     //    inputStreamName, Adopt(inputTensor2.release()).At(Timestamp(timestamp++))));
-    //MP_ERROR_STOP(graph.WaitUntilIdle());
+    // MP_ERROR_STOP(graph.WaitUntilIdle());
     MP_ERROR_STOP(graph.CloseAllPacketSources());
     MP_ERROR_STOP(graph.WaitUntilDone());
 }
@@ -238,12 +238,12 @@ TEST_F(MediapipeFrameworkTest, HotReloadOutputStreamHandlerPOC) {
         ParseTextProtoOrDie<CalculatorGraphConfig>(graph_proto);
     const std::string inputStreamName = "input";
     const std::string outputStreamName = "output";
-    // avoid creating pollers, retreiving packets etc.
+    // avoid creating pollers, retrieving packets etc.
     //////////////////
     // model mgmt thread
     //////////////////
-    //std::shared_ptr<ovms::GraphQueue> queue;
-    //queue = std::make_shared<GraphQueue>(graphConfig, 1);
+    // std::shared_ptr<ovms::GraphQueue> queue;
+    // queue = std::make_shared<GraphQueue>(graphConfig, 1);
     ::mediapipe::CalculatorGraph graph;
     EXPECT_EQ(graph.Initialize(graphConfig).code(), absl::StatusCode::kOk);
     // Install NullObserver
@@ -254,7 +254,7 @@ TEST_F(MediapipeFrameworkTest, HotReloadOutputStreamHandlerPOC) {
     MP_ERROR_STOP(graph.ObserveOutputStream(outputStreamName, [&perGraphObserverFunctor](const ::mediapipe::Packet& packet) -> absl::Status { return perGraphObserverFunctor->handlePacket(packet); }));
     // Here ends model management
     // Here starts mp graph executor
-    //ovms::GraphIdGuard graphIdGuard(queue); // TODO timeout?
+    // ovms::GraphIdGuard graphIdGuard(queue); // TODO timeout?
     // get graphIdGuard from queue
     // create FrontendAppropriateObserver
     float expVal = 13.5;
@@ -336,12 +336,12 @@ TEST_F(MediapipeFrameworkTest, HotReloadOutputStreamHandlerPOCCompare) {
         ParseTextProtoOrDie<CalculatorGraphConfig>(graph_proto);
     const std::string inputStreamName = "input";
     const std::string outputStreamName = "output";
-    // avoid creating pollers, retreiving packets etc.
+    // avoid creating pollers, retrieving packets etc.
     //////////////////
     // model mgmt thread
     //////////////////
-    //std::shared_ptr<ovms::GraphQueue> queue;
-    //queue = std::make_shared<GraphQueue>(graphConfig, 1);
+    // std::shared_ptr<ovms::GraphQueue> queue;
+    // queue = std::make_shared<GraphQueue>(graphConfig, 1);
     auto datatype = ov::element::Type_t::f32;
     ov::Shape shape{1, 10};
     int timestamp{0};
@@ -363,7 +363,7 @@ TEST_F(MediapipeFrameworkTest, HotReloadOutputStreamHandlerPOCCompare) {
         MP_ERROR_STOP(graph.ObserveOutputStream(outputStreamName, [&perGraphObserverFunctor](const ::mediapipe::Packet& packet) -> absl::Status { return perGraphObserverFunctor->handlePacket(packet); }));
         // Here ends model management
         // Here starts mp graph executor
-        //ovms::GraphIdGuard graphIdGuard(queue); // TODO timeout?
+        // ovms::GraphIdGuard graphIdGuard(queue); // TODO timeout?
         // get graphIdGuard from queue
         // create FrontendAppropriateObserver
         struct MyFunctor : public OutputStreamObserverI {
@@ -443,7 +443,7 @@ TEST_F(MediapipeFrameworkTest, HotReloadOutputStreamHandlerPOCCompare) {
         SPDLOG_ERROR("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX end:{}", timer.elapsed<std::chrono::microseconds>(1) / 1000);
     }
     {  // thread pool case
-        //auto sharedThreadPool = std::make_shared<mediapipe::ThreadPoolExecutor>(std::thread::hardware_concurrency());
+        // auto sharedThreadPool = std::make_shared<mediapipe::ThreadPoolExecutor>(std::thread::hardware_concurrency());
         auto sharedThreadPool = std::make_shared<mediapipe::ThreadPoolExecutor>(24);
         SPDLOG_ERROR("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX thread");
         timer.start(2);
