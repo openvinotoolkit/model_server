@@ -31,12 +31,7 @@
 #include "test_utils.hpp"
 #include "platform_utils.hpp"
 
-#ifdef _WIN32
-const std::string llama3TokenizerPathForHandlerTests = getWindowsRepoRootPath() + "\\src\\test\\llm_testing\\unsloth\\Llama-3.1-8B-Instruct";
-#else
-const std::string llama3TokenizerPathForHandlerTests = "/ovms/src/test/llm_testing/unsloth/Llama-3.1-8B-Instruct";
-#endif
-constexpr int64_t llama3BotTokenIdForHandlerTests = 128010;
+const std::string llama3TokenizerPathForHandlerTests = getGenericFullPathForSrcTest("/ovms/src/test/llm_testing/unsloth/Llama-3.1-8B-Instruct");
 
 class HttpOpenAIHandlerTest : public ::testing::Test {
 protected:
@@ -410,10 +405,10 @@ protected:
 };
 
 static std::vector<int64_t> createLlama3ToolCallTokens(ov::genai::Tokenizer& tokenizer) {
-    std::string toolCall = R"({"name": "example_tool", "parameters": {"arg1": "value1", "arg2": 42}})";
-    auto generatedTensor = tokenizer.encode(toolCall, ov::genai::add_special_tokens(false)).input_ids;
+    std::string toolCall = "<|python_tag|>"
+                           R"({"name": "example_tool", "parameters": {"arg1": "value1", "arg2": 42}})";
+    auto generatedTensor = tokenizer.encode(toolCall, ov::genai::add_special_tokens(true)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
-    generatedTokens.insert(generatedTokens.begin(), llama3BotTokenIdForHandlerTests);
     return generatedTokens;
 }
 
