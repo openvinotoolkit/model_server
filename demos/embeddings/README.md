@@ -243,7 +243,19 @@ python export_model.py embeddings_ov --source_model sentence-transformers/all-mp
 :::
 ::::
 
+**NPU**
+::::{tab-set}
+:::{tab-item} Qwen/Qwen3-Embedding-0.6B
+:sync: Qwen3-Embedding-0.6B-fp16
+```console
+python export_model.py embeddings_ov --source_model BAAI/bge-large-en-v1.5 --pooling CLS --weight-format fp16 --target_device NPU --config_file_path models/config.json --model_repository_path models
+```
+:::
+::::
 
+> **Note** For NPU Change the `--weight-format` to quantize the model to `fp16`, `int8` or `int4` precision. For int4 precisions, add required extra parameter `--extra_quantization_params "--sym --ratio 1.0 --group-size -1"`
+> **Note** For NPU the pooling mode --pooling LAST has the best accuracy.
+> **Note** For NPU and the weight-format int4, use `--extra_quantization_params "--sym --ratio 1.0 --group-size -1"`
 > **Note** Change the `--weight-format` to quantize the model to `fp16`, `int8` or `int4` precision to reduce memory consumption and improve performance.
 > **Note:** The users in China need to set environment variable HF_ENDPOINT="https://hf-mirror.com" before running the export script to connect to the HF Hub.
 
@@ -280,22 +292,22 @@ python export_model.py embeddings_ov --source_model Qwen/Qwen3-Embedding-0.6B --
 ## Tested models
 All models supported by [optimum-intel](https://github.com/huggingface/optimum-intel) should be compatible. The demo is validated against following Hugging Face models:
 
-|Model name|Pooling|
-|---|---|
-|OpenVINO/Qwen3-Embedding-0.6B-int8-ov|LAST|
-|OpenVINO/bge-base-en-v1.5-int8-ov|CLS|
-|BAAI/bge-large-en-v1.5|CLS|
-|BAAI/bge-large-zh-v1.5|CLS|
-|thenlper/gte-small|CLS|
-|sentence-transformers/all-MiniLM-L12-v2|MEAN|
-|sentence-transformers/all-distilroberta-v1|MEAN|
-|mixedbread-ai/deepset-mxbai-embed-de-large-v1|MEAN|
-|intfloat/multilingual-e5-large-instruct|MEAN|
-|intfloat/multilingual-e5-large|MEAN|
-|Alibaba-NLP/gte-large-en-v1.5|CLS|
-|nomic-ai/nomic-embed-text-v1.5|MEAN|
-|sentence-transformers/all-mpnet-base-v2|MEAN|
-
+|Model name|Pooling|Devices|
+|---|---|---|
+|OpenVINO/Qwen3-Embedding-0.6B-int8-ov|LAST|CPU,GPU|
+|OpenVINO/bge-base-en-v1.5-int8-ov|CLS|CPU,GPU|
+|Qwen/Qwen3-Embedding-0.6B|LAST|CPU,GPU,NPU|
+|BAAI/bge-large-en-v1.5|CLS|CPU,GPU,NPU|
+|BAAI/bge-large-zh-v1.5|CLS|CPU,GPU,NPU|
+|thenlper/gte-small|CLS|CPU,GPU,NPU|
+|sentence-transformers/all-MiniLM-L12-v2|MEAN|CPU,GPU|
+|sentence-transformers/all-distilroberta-v1|MEAN|CPU,GPU|
+|mixedbread-ai/deepset-mxbai-embed-de-large-v1|MEAN|CPU,GPU|
+|intfloat/multilingual-e5-large-instruct|MEAN|CPU,GPU|
+|intfloat/multilingual-e5-large|MEAN|CPU,GPU|
+|Alibaba-NLP/gte-large-en-v1.5|CLS|CPU,GPU|
+|nomic-ai/nomic-embed-text-v1.5|MEAN|CPU,GPU|
+|sentence-transformers/all-mpnet-base-v2|MEAN|CPU,GPU,NPU|
 
 ## Server Deployment
 
@@ -312,6 +324,14 @@ to `docker run` command, use the image with GPU support and make sure set the ta
 
 ```bash
 docker run -d --rm -p 8000:8000 --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -v $(pwd)/models:/workspace:ro openvino/model_server:latest-gpu --rest_port 8000 --config_path /workspace/config.json
+```
+**NPU**
+NOTE: NPU execution for embeddings model is a preview feature.
+In case you want to use NPU device to run the embeddings model, add extra docker parameters `--device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1)` 
+to `docker run` command, use the image with NPU support and make sure set the target_device in subconfig.json to NPU. Also make sure the export model quantization level and cache size fit to the NPU memory. All of that can be applied with the commands:
+
+```bash
+docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 --device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render*  | head -1) -v $(pwd)/models:/workspace:ro openvino/model_server:latest-gpu --rest_port 8000 --config_path /workspace/config.json
 ```
 :::
 
@@ -367,6 +387,7 @@ curl http://localhost:8000/v3/embeddings -H "Content-Type: application/json" -d 
   ],
   "usage":{"prompt_tokens":4,"total_tokens":4}
 }
+
 
 ```
 :::
