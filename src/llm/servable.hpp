@@ -73,6 +73,8 @@ struct GenAiServableExecutionContext {
     std::string response;
     std::shared_ptr<ov::genai::TextStreamer> textStreamer;
     bool sendLoopbackSignal = false;
+    bool prefillEndSent = false;
+    bool prefillEndNotified = false;  // Set by PrefillNotifyingTextStreamer::on_prefill_end() under mutex
     std::string lastStreamerCallbackOutput;
 };
 

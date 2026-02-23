@@ -35,6 +35,7 @@
 #include "../../../http_payload.hpp"
 #include "../../../mediapipe_internal/mediapipe_utils.hpp"
 #include "../../apis/openai_completions.hpp"
+#include "../../prefill_notifying_text_streamer.hpp"
 #include "../../text_utils.hpp"
 #include "../../../tokenize/tokenize_parser.hpp"
 #if (PYTHON_DISABLE == 0)
@@ -101,7 +102,11 @@ absl::Status VisualLanguageModelLegacyServable::parseRequest(std::shared_ptr<Gen
             }
             return ov::genai::StreamingStatus::RUNNING;
         };
-        legacyExecutionContext->textStreamer = std::make_shared<ov::genai::TextStreamer>(getProperties()->tokenizer, callback);
+        legacyExecutionContext->textStreamer = std::make_shared<PrefillNotifyingTextStreamer>(
+            getProperties()->tokenizer, callback,
+            legacyExecutionContext->mutex,
+            legacyExecutionContext->executionInProgress,
+            legacyExecutionContext->prefillEndNotified);
     }
     legacyExecutionContext->generationConfigBuilder = std::make_shared<GenerationConfigBuilder>(getProperties()->baseGenerationConfig,
         getProperties()->toolParserName,
@@ -170,6 +175,27 @@ absl::Status VisualLanguageModelLegacyServable::preparePartialResponse(std::shar
     if (legacyExecutionContext->payload.client->isDisconnected()) {
         return absl::CancelledError();
     }
+
+    // Wait for prefill to complete, then emit empty role chunk before first token
+    if (!executionContext->prefillEndSent) {
+        {
+            std::unique_lock lock(legacyExecutionContext->mutex);
+            auto generationStatus = legacyExecutionContext->finished.wait_for(std::chrono::nanoseconds::zero());
+            while (!executionContext->prefillEndNotified && generationStatus != std::future_status::ready) {
+                legacyExecutionContext->executionInProgress.wait_for(lock, std::chrono::milliseconds(10));
+                generationStatus = legacyExecutionContext->finished.wait_for(std::chrono::nanoseconds::zero());
+            }
+        }
+        executionContext->prefillEndSent = true;
+        SPDLOG_LOGGER_INFO(llm_calculator_logger, "Prefill end detected, emitting initial assistant role chunk");
+        std::string prefillEndChunk = executionContext->apiHandler->serializePrefillEndChunk();
+        if (!prefillEndChunk.empty()) {
+            executionContext->response = wrapTextInServerSideEventMessage(prefillEndChunk);
+        }
+        executionContext->sendLoopbackSignal = true;
+        return absl::OkStatus();
+    }
+
     std::string lastTextChunk;
     auto generationStatus = legacyExecutionContext->finished.wait_for(std::chrono::nanoseconds::zero());
     {

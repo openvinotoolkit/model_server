@@ -1200,6 +1200,46 @@ std::string OpenAIChatCompletionsHandler::serializeStreamingChunk(const std::str
     return buffer.GetString();
 }
 
+std::string OpenAIChatCompletionsHandler::serializePrefillEndChunk() {
+    OVMS_PROFILE_FUNCTION();
+    Document doc;
+    doc.SetObject();
+    Document::AllocatorType& allocator = doc.GetAllocator();
+
+    Value choices(kArrayType);
+    Value choice(kObjectType);
+    choices.SetArray();
+    choice.SetObject();
+    choice.AddMember("finish_reason", Value(), allocator);
+    choice.AddMember("index", 0, allocator);
+    choice.AddMember("logprobs", Value(), allocator);
+    if (endpoint == Endpoint::CHAT_COMPLETIONS) {
+        Value delta(kObjectType);
+        delta.SetObject();
+        delta.AddMember("content", Value(), allocator);
+        delta.AddMember("role", "assistant", allocator);
+        choice.AddMember("delta", delta, allocator);
+    } else if (endpoint == Endpoint::COMPLETIONS) {
+        choice.AddMember("text", "", allocator);
+    }
+    choices.PushBack(choice, allocator);
+    doc.AddMember("choices", choices, allocator);
+    doc.AddMember("created", std::chrono::duration_cast<std::chrono::seconds>(created.time_since_epoch()).count(), allocator);
+    doc.AddMember("model", Value(request.model.c_str(), allocator), allocator);
+    if (endpoint == Endpoint::CHAT_COMPLETIONS) {
+        doc.AddMember("object", Value("chat.completion.chunk", allocator), allocator);
+    } else if (endpoint == Endpoint::COMPLETIONS) {
+        doc.AddMember("object", Value("text_completion.chunk", allocator), allocator);
+    }
+    if (request.streamOptions.includeUsage) {
+        doc.AddMember("usage", Value(), allocator);
+    }
+    StringBuffer buffer;
+    Writer<StringBuffer> writer(buffer);
+    doc.Accept(writer);
+    return buffer.GetString();
+}
+
 std::string OpenAIChatCompletionsHandler::serializeStreamingUsageChunk() {
     OVMS_PROFILE_FUNCTION();
     StringBuffer buffer;

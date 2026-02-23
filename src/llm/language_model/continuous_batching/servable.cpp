@@ -130,6 +130,15 @@ absl::Status ContinuousBatchingServable::readPartialExecutionResults(std::shared
         return absl::CancelledError();
     }
 
+    // On first streaming iteration, wait for prefill to complete without reading tokens.
+    // This allows emitting the prefill-end chunk before first token computation.
+    if (!executionContext->prefillEndSent) {
+        if (!cbExecutionContext->generationHandle->wait_for_prefill()) {
+            return absl::CancelledError();
+        }
+        return absl::OkStatus();
+    }
+
     if (cbExecutionContext->generationHandle->get_status() == ov::genai::GenerationStatus::RUNNING || cbExecutionContext->generationHandle->can_read()) {
         // Subsequent iteration
         OVMS_PROFILE_SCOPE("Generation of subsequent streaming response");

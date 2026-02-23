@@ -232,9 +232,24 @@ absl::Status GenAiServable::prepareCompleteResponse(std::shared_ptr<GenAiServabl
 }
 
 absl::Status GenAiServable::preparePartialResponse(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
+    // Emit empty role chunk when prefill ends, before first output token.
+    // Must be checked before generationOutputs size validation since CB path
+    // skips handle->read() on the first iteration (generationOutputs is empty).
+    if (!executionContext->prefillEndSent) {
+        executionContext->prefillEndSent = true;
+        SPDLOG_LOGGER_INFO(llm_calculator_logger, "Prefill end detected, emitting initial assistant role chunk");
+        std::string prefillEndChunk = executionContext->apiHandler->serializePrefillEndChunk();
+        if (!prefillEndChunk.empty()) {
+            executionContext->response = wrapTextInServerSideEventMessage(prefillEndChunk);
+        }
+        executionContext->sendLoopbackSignal = true;
+        return absl::OkStatus();
+    }
+
     if (executionContext->generationOutputs.size() != 1) {
         return absl::InternalError("For streaming we expect exactly one generation output");
     }
+
     auto& generationOutput = executionContext->generationOutputs[0];
     executionContext->apiHandler->incrementProcessedTokens(generationOutput.generated_ids.size());
 
