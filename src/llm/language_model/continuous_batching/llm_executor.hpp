@@ -73,8 +73,7 @@ struct LLMExecutor {
         return oss.str();
     }
 
-    std::string formatBytes(size_t bytes)
-    {
+    std::string formatBytes(size_t bytes) {
         const double KB = 1024.0;
         const double MB = KB * 1024.0;
         const double GB = MB * 1024.0;
