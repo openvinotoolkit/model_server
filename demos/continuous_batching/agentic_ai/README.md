@@ -22,7 +22,7 @@ Currently supported models:
 - mistralai/Mistral-7B-Instruct-v0.3
 - microsoft/Phi-4-mini-instruct
 - Qwen/Qwen3-Coder-30B-A3B-Instruct
-- openai/gpt-oss-20b
+- openai/gpt-oss-20b*
 
 
 ### Export using python script
