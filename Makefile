@@ -75,7 +75,7 @@ FUZZER_BUILD ?= 0
 #         - uncomment source build section, comment binary section
 #         - adjust binary version path - version variable is not passed to WORKSPACE file!
 
-OV_SOURCE_BRANCH ?= ecc723d395d7459f1599f48c1e6b48956631a67e # releases/2026/0 branch
+OV_SOURCE_BRANCH ?= f08e8b36350149367ace4ed108f5e215dccddc4f # releases/2026/0 branch
 OV_TOKENIZERS_BRANCH ?= 47cea02a2d47b2fcf9152a1891f7360d6fdf4a27 # releases/2026/0 branch
 OV_GENAI_BRANCH ?= dab5b993a38aeb15d06478d5f3aca72404646528 # releases/2026/0 branch
 
@@ -172,11 +172,11 @@ ifeq ($(findstring ubuntu,$(BASE_OS)),ubuntu)
   ifeq ($(BASE_OS_TAG),24.04)
         OS=ubuntu24
 	INSTALL_DRIVER_VERSION ?= "25.48.36300"
-	DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/pre-release/2026.0.0.0rc4/openvino_genai_ubuntu24_2026.0.0.0rc4_x86_64.tar.gz
+	DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/pre-release/2026.0.0.0rc3/openvino_genai_ubuntu24_2026.0.0.0rc3_x86_64.tar.gz
   else ifeq  ($(BASE_OS_TAG),22.04)
         OS=ubuntu22
 	INSTALL_DRIVER_VERSION ?= "24.39.31294"
-	DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/pre-release/2026.0.0.0rc4/openvino_genai_ubuntu22_2026.0.0.0rc4_x86_64.tar.gz
+	DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/pre-release/2026.0.0.0rc3/openvino_genai_ubuntu22_2026.0.0.0rc3_x86_64.tar.gz
   endif
 endif
 ifeq ($(BASE_OS),redhat)
@@ -185,7 +185,7 @@ ifeq ($(BASE_OS),redhat)
   BASE_IMAGE ?= registry.access.redhat.com/ubi9/ubi:$(BASE_OS_TAG_REDHAT)
   BASE_IMAGE_RELEASE=registry.access.redhat.com/ubi9/ubi-minimal:$(BASE_OS_TAG_REDHAT)
   DIST_OS=redhat
-  DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/pre-release/2026.0.0.0rc4/openvino_genai_rhel8_2026.0.0.0rc4_x86_64.tar.gz # not used
+  DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/pre-release/2026.0.0.0rc3/openvino_genai_rhel8_2026.0.0.0rc3_x86_64.tar.gz # not used
   INSTALL_DRIVER_VERSION ?= "24.52.32224"
 endif
 
