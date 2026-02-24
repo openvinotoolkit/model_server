@@ -917,7 +917,6 @@ absl::Status OpenAIChatCompletionsHandler::parseRequest(std::optional<uint32_t> 
 
 void updateUsage(CompletionUsageStatistics& usage, const std::vector<int64_t>& generatedIds, bool echoPrompt) {
     OVMS_PROFILE_FUNCTION();
-    SPDLOG_INFO("Echo prompt: {}", echoPrompt);
     usage.completionTokens += generatedIds.size();
     if (echoPrompt)
         usage.completionTokens -= usage.promptTokens;
@@ -1165,16 +1164,15 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const ov::genai
             throw std::runtime_error("input_ids should have i64 element type");
 
         int64_t* input_ids_data = reinterpret_cast<int64_t*>(input_ids.data());
-        std::vector<int64_t> tokens(input_ids_data, input_ids_data + input_ids.get_shape()[1]);
+        std::vector<int64_t> generatedTokens(input_ids_data, input_ids_data + input_ids.get_shape()[1]);
 
-        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Generated tokens: {}", tokens);
-        updateUsage(usage, tokens, request.echo);
-        ParsedOutput parsedOutput = parseOutputIfNeeded(tokens);
-
+        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Generated tokens: {}", generatedTokens);
+        updateUsage(usage, generatedTokens, request.echo);
+        ParsedOutput parsedOutput = parseOutputIfNeeded(generatedTokens);
         jsonResponse.StartObject();
-        // finish_reason: string; always "stop" for this method
-        // tool_calls from VLM legacy pipeline are unsupported due to lack of tokens in API, so finish reason cannot be tool_call
-        jsonResponse.FinishReason("stop");
+        // finish_reason: "stop" in regular scenario, "tool_calls" if output contains tool calls
+        auto finishReason = mapFinishReason(ov::genai::GenerationFinishReason::STOP, !parsedOutput.toolCalls.empty());
+        jsonResponse.FinishReason(finishReason.value_or("unknown"));
         // index: integer; Choice index, only n=1 supported anyway
         jsonResponse.Index(index++);
         // logprobs: object/null; Log probability information for the choice. TODO
