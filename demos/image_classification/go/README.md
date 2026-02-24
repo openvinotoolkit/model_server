@@ -16,6 +16,7 @@ To run end to end flow and get correct results, please download `resnet-50` mode
 For example:
 ```bash
 curl --fail -L --create-dirs https://github.com/onnx/models/raw/main/validated/vision/classification/resnet/model/resnet50-caffe2-v1-9.onnx -o models/resnet/1/resnet50-caffe2-v1-9.onnx
+chmod -R 755 models
 ```
 
 ## Build Go client docker image
