@@ -16,6 +16,17 @@ Check supported [Speech Recognition Models](https://openvinotoolkit.github.io/op
 **Client**: curl or Python for using OpenAI client package
 
 ## Speech generation
+### Prepare speaker embeddings
+When generating speech you can use default speaker voice or you can prepare your own speaker embedding file. Here you can see how to do it with downloaded file from online repository, but you can try with your own speech recording as well:
+```bash
+pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/audio/requirements.txt
+mkdir -p audio_samples
+curl --output audio_samples/audio.wav "https://www.voiptroubleshooter.com/open_speech/american/OSR_us_000_0032_8k.wav"
+mkdir -p models
+mkdir -p models/speakers
+python create_speaker_embedding.py audio_samples/audio.wav models/speakers/voice1.bin
+```
+
 ### Model preparation
 Supported models should use the topology of [microsoft/speecht5_tts](https://huggingface.co/microsoft/speecht5_tts) which needs to be converted to IR format before using in OVMS.
 
@@ -40,47 +51,13 @@ Run `export_model.py` script to download and quantize the model:
 
 **CPU**
 ```console
-python export_model.py text2speech --source_model microsoft/speecht5_tts --weight-format fp16 --model_name microsoft/speecht5_tts --config_file_path models/config.json --model_repository_path models --overwrite_models --vocoder microsoft/speecht5_hifigan
+python export_model.py text2speech --source_model microsoft/speecht5_tts --weight-format fp16 --model_name microsoft/speecht5_tts --config_file_path models/config.json --model_repository_path models --overwrite_models --vocoder microsoft/speecht5_hifigan --speaker_name voice1 --speaker_path /models/speakers/voice1.bin
 ```
 
 > **Note:** Change the `--weight-format` to quantize the model to `int8` precision to reduce memory consumption and improve performance.
+> **Note:** `speaker_name` and `speaker_path` may be omitted if the default model voice is sufficient
 
 The default configuration should work in most cases but the parameters can be tuned via `export_model.py` script arguments. Run the script with `--help` argument to check available parameters and see the [T2s calculator documentation](../../docs/speech_generation/reference.md) to learn more about configuration options and limitations.
-
-### Speaker embeddings
-
-Instead of generating speech with default model voice you can create speaker embeddings with [this script](https://github.com/openvinotoolkit/openvino.genai/blob/master/samples/python/speech_generation/create_speaker_embedding.py)
-```bash
-curl --output create_speaker_embedding.py "https://raw.githubusercontent.com/openvinotoolkit/openvino.genai/refs/heads/master/samples/python/speech_generation/create_speaker_embedding.py"
-python create_speaker_embedding.py
-mv speaker_embedding.bin models/
-```
-Script records your speech for 5 seconds(you can adjust duration of recording to achieve better results) and then, using speechbrain/spkrec-xvect-voxceleb model, creates `speaker_embedding.bin` file that contains your speaker embedding.
-Now you need to add speaker embedding path to graph.pbtxt file of text2speech graph:
-```
-input_stream: "HTTP_REQUEST_PAYLOAD:input"
-output_stream: "HTTP_RESPONSE_PAYLOAD:output"
-node {
-  name: "T2sExecutor"
-  input_side_packet: "TTS_NODE_RESOURCES:t2s_servable"
-  calculator: "T2sCalculator"
-  input_stream: "HTTP_REQUEST_PAYLOAD:input"
-  output_stream: "HTTP_RESPONSE_PAYLOAD:output"
-  node_options: {
-    [type.googleapis.com / mediapipe.T2sCalculatorOptions]: {
-      models_path: "./",
-      plugin_config: '{ "NUM_STREAMS": "1" }',
-      target_device: "CPU",
-      voices: [
-        {
-          name: "voice",
-          path: "/models/speaker_embedding.bin",
-        }
-      ]
-    }
-  }
-}
-```
 
 ### Deployment
 
@@ -101,7 +78,7 @@ ovms --rest_port 8000 --source_model microsoft/speecht5_tts --model_repository_p
 
 ### Request Generation 
 
-:::{dropdown} **Unary call with curl**
+:::{dropdown} **Unary call with curl with default voice**
 
 
 ```bash
@@ -109,7 +86,7 @@ curl http://localhost:8000/v3/audio/speech -H "Content-Type: application/json" -
 ```
 :::
 
-:::{dropdown} **Unary call with OpenAi python library**
+:::{dropdown} **Unary call with OpenAI python library with default voice**
 
 ```python
 from pathlib import Path
@@ -125,7 +102,41 @@ client = OpenAI(base_url=url, api_key="not_used")
 
 with client.audio.speech.with_streaming_response.create(
   model="microsoft/speecht5_tts",
-  voice="unused",
+  voice=None,
+  input=prompt
+) as response:
+  response.stream_to_file(speech_file_path)
+
+
+print("Generation finished")
+```
+:::
+
+:::{dropdown} **Unary call with curl**
+
+
+```bash
+curl http://localhost:8000/v3/audio/speech -H "Content-Type: application/json" -d "{\"model\": \"microsoft/speecht5_tts\", \"voice\":\"voice1\", \"input\": \"The quick brown fox jumped over the lazy dog\"}" -o speech.wav
+```
+:::
+
+:::{dropdown} **Unary call with OpenAI python library**
+
+```python
+from pathlib import Path
+from openai import OpenAI
+
+prompt = "The quick brown fox jumped over the lazy dog"
+filename = "speech.wav"
+url="http://localhost:8000/v3"
+
+
+speech_file_path = Path(__file__).parent / "speech.wav"
+client = OpenAI(base_url=url, api_key="not_used")
+
+with client.audio.speech.with_streaming_response.create(
+  model="microsoft/speecht5_tts",
+  voice="voice1",
   input=prompt
 ) as response:
   response.stream_to_file(speech_file_path)
@@ -144,7 +155,7 @@ An asynchronous benchmarking client can be used to access the model server perfo
 git clone https://github.com/openvinotoolkit/model_server
 cd model_server/demos/benchmark/v3/
 pip install -r requirements.txt
-python benchmark.py --api_url http://localhost:8122/v3/audio/speech --model microsoft/speecht5_tts --batch_size 1 --limit 100 --request_rate inf --backend text2speech --dataset edinburghcstr/ami --hf-subset 'ihm' --tokenizer openai/whisper-large-v3-turbo --trust-remote-code True
+python benchmark.py --api_url http://localhost:8000/v3/audio/speech --model microsoft/speecht5_tts --batch_size 1 --limit 100 --request_rate inf --backend text2speech --dataset edinburghcstr/ami --hf-subset 'ihm' --tokenizer openai/whisper-large-v3-turbo --trust-remote-code True
 Number of documents: 100
 100%|████████████████████████████████████████████████████████████████████████████████| 100/100 [01:58<00:00,  1.19s/it]
 Asking to truncate to max_length but no maximum length is provided and the model has no predefined maximum length. Default to no truncation.
@@ -178,10 +189,11 @@ Run `export_model.py` script to download and quantize the model:
 
 **CPU**
 ```console
-python export_model.py speech2text --source_model openai/whisper-large-v3-turbo --weight-format fp16 --model_name openai/whisper-large-v3-turbo --config_file_path models/config.json --model_repository_path models --overwrite_models
+python export_model.py speech2text --source_model openai/whisper-large-v3-turbo --weight-format fp16 --model_name openai/whisper-large-v3-turbo --config_file_path models/config.json --model_repository_path models --overwrite_models --enable_word_timestamps
 ```
 
 > **Note:** Change the `--weight-format` to quantize the model to `int8` precision to reduce memory consumption and improve performance.
+> **Note:** `--enable_word_timestamps` can be omitted if there is no need for word timestamps support. 
 
 ### Deployment
 
@@ -221,16 +233,16 @@ ovms --rest_port 8000 --source_model openai/whisper-large-v3-turbo --model_repos
 ```
 :::
 
-The default configuration should work in most cases but the parameters can be tuned via `export_model.py` script arguments. Run the script with `--help` argument to check available parameters and see the [S2t calculator documentation](../../docs/speech_recognition/reference.md) to learn more about configuration options and limitations.
+The default configuration should work in most cases but the parameters can be tuned via `export_model.py` script arguments. Run the script with `--help` argument to check available parameters and see the [s2t calculator documentation](../../docs/speech_recognition/reference.md) to learn more about configuration options and limitations.
 
 ### Request Generation 
 Transcript file that was previously generated with audio/speech endpoint.
 
-:::{dropdown} **Unary call with curl**
+:::{dropdown} **Unary call with cURL**
 
 
 ```bash
-curl http://localhost:8000/v3/audio/transcriptions -H "Content-Type: multipart/form-data" -F file="@speech.wav" -F model="openai/whisper-large-v3-turbo"
+curl http://localhost:8000/v3/audio/transcriptions -H "Content-Type: multipart/form-data" -F file="@speech.wav" -F model="openai/whisper-large-v3-turbo" -F language="en"
 ```
 ```json
 {"text": " The quick brown fox jumped over the lazy dog."}
@@ -253,6 +265,7 @@ client = OpenAI(base_url=url, api_key="not_used")
 audio_file = open(filename, "rb")
 transcript = client.audio.transcriptions.create(
   model="openai/whisper-large-v3-turbo",
+  language="en",
   file=audio_file
 )
 
@@ -260,6 +273,49 @@ print(transcript.text)
 ```
 ```
 The quick brown fox jumped over the lazy dog.
+```
+:::
+:::{dropdown} **Unary call with timestamps**
+
+
+```bash
+curl http://localhost:8000/v3/audio/transcriptions -H "Content-Type: multipart/form-data" -F file="@speech.wav" -F model="openai/whisper-large-v3-turbo" -F language="en" -F timestamp_granularities[]="segment" -F timestamp_granularities[]="word" 
+```
+```json
+{"text":" A quick brown fox jumped over the lazy dog","words":[{"word":" A","start":0.0,"end":0.14000000059604645},{"word":" quick","start":0.14000000059604645,"end":0.3400000035762787},{"word":" brown","start":0.3400000035762787,"end":0.7799999713897705},{"word":" fox","start":0.7799999713897705,"end":1.3199999332427979},{"word":" jumped","start":1.3199999332427979,"end":1.7799999713897705},{"word":" over","start":1.7799999713897705,"end":2.0799999237060547},{"word":" the","start":2.0799999237060547,"end":2.259999990463257},{"word":" lazy","start":2.259999990463257,"end":2.5399999618530273},{"word":" dog","start":2.5399999618530273,"end":2.919999837875366}],"segments":[{"text":" A quick brown fox jumped over the lazy dog","start":0.0,"end":3.1399998664855957}]}
+```
+:::
+
+:::{dropdown} **Unary call with python OpenAI library with timestamps**
+
+```python
+from pathlib import Path
+from openai import OpenAI
+
+filename = "speech.wav"
+url="http://localhost:8000/v3"
+
+
+speech_file_path = Path(__file__).parent / filename
+client = OpenAI(base_url=url, api_key="not_used")
+
+audio_file = open(filename, "rb")
+transcript = client.audio.transcriptions.create(
+  model="openai/whisper-large-v3-turbo",
+  language="en",
+  response_format="verbose_json",
+  timestamp_granularities=["segment", "word"],
+  file=audio_file
+)
+
+print(transcript.text)
+print(transcript.segments)
+print(transcript.words)
+```
+```
+ A quick brown fox jumped over the lazy dog
+[TranscriptionSegment(id=None, avg_logprob=None, compression_ratio=None, end=3.1399998664855957, no_speech_prob=None, seek=None, start=0.0, temperature=None, text=' A quick brown fox jumped over the lazy dog', tokens=None)]
+[TranscriptionWord(end=0.14000000059604645, start=0.0, word=' A'), TranscriptionWord(end=0.3400000035762787, start=0.14000000059604645, word=' quick'), TranscriptionWord(end=0.7799999713897705, start=0.3400000035762787, word=' brown'), TranscriptionWord(end=1.3199999332427979, start=0.7799999713897705, word=' fox'), TranscriptionWord(end=1.7799999713897705, start=1.3199999332427979, word=' jumped'), TranscriptionWord(end=2.0799999237060547, start=1.7799999713897705, word=' over'), TranscriptionWord(end=2.259999990463257, start=2.0799999237060547, word=' the'), TranscriptionWord(end=2.5399999618530273, start=2.259999990463257, word=' lazy'), TranscriptionWord(end=2.919999837875366, start=2.5399999618530273, word=' dog')]
 ```
 :::
 
@@ -336,7 +392,7 @@ ovms --rest_port 8000 --source_model OpenVINO/whisper-large-v3-fp16-ov --model_r
 ### Request Generation 
 Transcript and translate file that was previously generated with audio/speech endpoint.
 
-:::{dropdown} **Unary call with curl**
+:::{dropdown} **Unary call with cURL**
 
 
 ```bash
