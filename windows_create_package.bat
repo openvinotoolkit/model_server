@@ -84,10 +84,6 @@ if !errorlevel! neq 0 exit /b !errorlevel!
 :: Copy from bazel-out if the genai is from sources
 copy %cd%\bazel-out\x64_windows-opt\bin\src\opencv_world4120.dll dist\windows\ovms
 if !errorlevel! neq 0 exit /b !errorlevel!
-copy /Y %cd%\bazel-out\x64_windows-opt\bin\src\icudt70.dll dist\windows\ovms
-if !errorlevel! neq 0 exit /b !errorlevel!
-copy /Y %cd%\bazel-out\x64_windows-opt\bin\src\icuuc70.dll dist\windows\ovms
-if !errorlevel! neq 0 exit /b !errorlevel!
 copy /Y %cd%\bazel-out\x64_windows-opt\bin\src\openvino_genai.dll dist\windows\ovms
 if !errorlevel! neq 0 exit /b !errorlevel!
 copy /Y %cd%\bazel-out\x64_windows-opt\bin\src\openvino_tokenizers.dll dist\windows\ovms
