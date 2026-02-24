@@ -100,8 +100,7 @@ using mediapipe::Timestamp;
     }
 TEST_F(MediapipeFrameworkTest, HotReloadOutputStreamHandlerCheckNoInputPackets) {
     // we need it only so that dummy is available via C-API
-    //    ServerGuard servGuard("/ovms/src/test/configs/config_standard_dummy.json");
-    ServerGuard servGuard("/ovms/src/test/configs/config_benchmark.json");
+    ServerGuard servGuard(getGenericFullPathForSrcTest("/ovms/src/test/configs/config_benchmark.json"));
     std::string graph_proto = R"(
       input_stream: "IN:input"
       output_stream: "OUT:output"
@@ -201,8 +200,7 @@ TEST_F(MediapipeFrameworkTest, HotReloadOutputStreamHandlerCheckNoInputPackets) 
 }
 TEST_F(MediapipeFrameworkTest, HotReloadOutputStreamHandlerPOC) {
     // we need it only so that dummy is available via C-API
-    //    ServerGuard servGuard("/ovms/src/test/configs/config_standard_dummy.json");
-    ServerGuard servGuard("/ovms/src/test/configs/config_benchmark.json");
+    ServerGuard servGuard(getGenericFullPathForSrcTest("/ovms/src/test/configs/config_benchmark.json"));
     std::string graph_proto = R"(
       input_stream: "IN:input"
       output_stream: "OUT:output"
@@ -300,7 +298,7 @@ TEST_F(MediapipeFrameworkTest, HotReloadOutputStreamHandlerPOC) {
 }
 TEST_F(MediapipeFrameworkTest, HotReloadOutputStreamHandlerPOCCompare) {
     // we need it only so that dummy is available via C-API
-    ServerGuard servGuard("/ovms/src/test/configs/config_standard_dummy.json");
+    ServerGuard servGuard(getGenericFullPathForSrcTest("/ovms/src/test/configs/config_standard_dummy.json"));
     std::string graph_proto = R"(
       input_stream: "IN:input"
       output_stream: "OUT:output"
