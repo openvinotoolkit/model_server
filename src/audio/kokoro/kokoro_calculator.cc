@@ -123,6 +123,71 @@ void espeakPhonemizeAll(const std::string& textUtf8, std::string& outIpa, bool n
     SPDLOG_DEBUG("IPA phonemes: '{}' (length: {})", outIpa, outIpa.size());
 }
 
+// Post-process eSpeak IPA into Kokoro/misaki phoneme alphabet.
+// Mirrors misaki.espeak.EspeakFallback.E2M for American English.
+// void espeakIpaToKokoro(std::string& ps) {
+//     // Helper: replace all occurrences of `from` with `to` in `s`.
+//     auto replaceAll = [](std::string& s, const std::string& from, const std::string& to) {
+//         if (from.empty()) return;
+//         size_t pos = 0;
+//         while ((pos = s.find(from, pos)) != std::string::npos) {
+//             s.replace(pos, from.size(), to);
+//             pos += to.size();
+//         }
+//     };
+
+//     // --- Multi-char replacements (longest first) ---
+//     // Syllabic n with glottal stop
+//     replaceAll(ps, "\xca\x94\xcb\x8c\x6e\xcc\xa9", "\xca\x94\x6e");  // ʔˌn̩ → ʔn
+//     replaceAll(ps, "\xca\x94\x6e\xcc\xa9", "\xca\x94\x6e");              // ʔn̩ → ʔn
+//     // Syllabic mark before consonant → ᵊ + consonant
+//     // ə̩l → ᵊl  (syllabic l)
+//     replaceAll(ps, "\xc9\x99\xcc\xa9\x6c", "\xe1\xb5\x8a\x6c");          // əl̩ → ᵊl  (approximation)
+
+//     // Diphthongs
+//     replaceAll(ps, "a\xc9\xaa", "I");       // aɪ → I
+//     replaceAll(ps, "a\xca\x8a", "W");       // aʊ → W
+//     replaceAll(ps, "e\xc9\xaa", "A");       // eɪ → A
+//     replaceAll(ps, "\xc9\x94\xc9\xaa", "Y"); // ɔɪ → Y
+//     replaceAll(ps, "o\xca\x8a", "O");       // oʊ → O  (American)
+//     replaceAll(ps, "\xc9\x99\xca\x8a", "O"); // əʊ → O  (British)
+
+//     // Affricates
+//     replaceAll(ps, "d\xca\x92", "\xca\xa4");  // dʒ → ʤ
+//     replaceAll(ps, "t\xca\x83", "\xca\xa7");  // tʃ → ʧ
+
+//     // Palatalization
+//     replaceAll(ps, "\xca\xb2\x6f", "jo");     // ʲo → jo
+//     replaceAll(ps, "\xca\xb2\xc9\x99", "j\xc9\x99"); // ʲə → jə
+//     replaceAll(ps, "\xca\xb2", "");           // ʲ → (delete)
+
+//     // R-colored vowels and vowel length
+//     replaceAll(ps, "\xc9\x9c\xcb\x90\xc9\xb9", "\xc9\x9c\xc9\xb9"); // ɜːɹ → ɜɹ
+//     replaceAll(ps, "\xc9\x9c\xcb\x90", "\xc9\x9c\xc9\xb9");           // ɜː → ɜɹ
+//     replaceAll(ps, "\xc9\xaa\xc9\x99", "i\xc9\x99");                   // ɪə → iə
+
+//     // --- Single-char replacements ---
+//     replaceAll(ps, "\xc9\x9a", "\xc9\x99\xc9\xb9"); // ɚ → əɹ
+//     replaceAll(ps, "\xc9\x90", "\xc9\x99");           // ɐ → ə
+//     replaceAll(ps, "\xc9\xac", "l");                   // ɬ → l
+//     replaceAll(ps, "\xc3\xa7", "k");                   // ç → k
+//     replaceAll(ps, "x", "k");                           // x → k
+//     replaceAll(ps, "r", "\xc9\xb9");                   // r → ɹ
+//     replaceAll(ps, "\xcb\x90", "");                     // ː → (strip length marks)
+//     replaceAll(ps, "\xcc\x83", "");                     // ̃ → (strip nasal tilde)
+
+//     // British vowel mappings (in case eSpeak uses 'en' voice)
+//     replaceAll(ps, "\xc9\x92", "\xc9\x94");           // ɒ → ɔ
+
+//     // Remaining standalone vowels (must be AFTER diphthong replacements)
+//     replaceAll(ps, "o", "\xc9\x94");                   // o → ɔ  (for espeak < 1.52)
+//     replaceAll(ps, "e", "A");                           // e → A
+
+//     // Flap and glottal stop (misaki version != 2.0)
+//     replaceAll(ps, "\xc9\xbe", "T");                   // ɾ → T
+//     replaceAll(ps, "\xca\x94", "t");                   // ʔ → t
+// }
+
 size_t utf8CharLen(unsigned char lead) {
     if (lead < 0x80) return 1;
     if ((lead >> 5) == 0x6) return 2;
@@ -211,70 +276,50 @@ public:
         RET_CHECK(it->value.IsString()) << "'input' must be a string";
         const std::string text = it->value.GetString();
 
+        // Read optional "voice" parameter (OpenAI TTS API)
+        std::string voiceName;
+        auto voiceIt = payload.parsedJson->FindMember("voice");
+        if (voiceIt != payload.parsedJson->MemberEnd() && voiceIt->value.IsString()) {
+            voiceName = voiceIt->value.GetString();
+        }
+
         // Text -> IPA phonemization
         std::string phonemes;
-        espeakPhonemizeAll(text, phonemes, /*noStress=*/true);
+        espeakPhonemizeAll(text, phonemes, /*noStress=*/false);
         SPDLOG_DEBUG("Input text: '{}', IPA phonemes ({} chars): '{}'", text, phonemes.size(), phonemes);
 
+        // Preserve trailing punctuation from original text (eSpeak strips it)
+        // if (!text.empty()) {
+        //     char last = text.back();
+        //     if (last == '.' || last == '!' || last == '?' || last == ';' || last == ':' || last == ',') {
+        //         phonemes.push_back(last);
+        //     }
+        // }
+        SPDLOG_DEBUG("After E2M mapping ({} chars): '{}'", phonemes.size(), phonemes);
         // IPA -> Kokoro token IDs
         const auto& vocabIx = servable->getVocabIndex();
         std::vector<std::vector<int64_t>> inputTokens(1);
         tokenize(phonemes, inputTokens[0], vocabIx);
 
-        // Prepend PAD token (id=0) - Kokoro model requires BOS/PAD at start
+        // Wrap with PAD token (id=0) at both ends — matches official
+        // forward_with_tokens: input_ids = [[0, *tokens, 0]]
         inputTokens[0].insert(inputTokens[0].begin(), 0);
+        inputTokens[0].push_back(0);
 
-        // Append EOS (period token = 4) if not already present
-        if (inputTokens[0].empty() || inputTokens[0].back() != 4) {
-            inputTokens[0].push_back(4);
-        }
-
-        // Voice embedding
-        std::vector<float> voice = {
-            -0.2296, 0.1835, -0.0069, -0.1240, -0.2505, 0.0112, -0.0759, -0.1650,
-            -0.2665, -0.1965, 0.0242, -0.1667, 0.3524, 0.2140, 0.3069, -0.3377,
-            -0.0878, -0.0477, 0.0813, -0.2135, -0.2340, -0.1971, 0.0200, 0.0145,
-            0.0016, 0.2596, -0.2665, 0.1434, 0.0503, 0.0867, 0.1905, -0.1281,
-            0.0658, -0.0639, -0.0920, 0.2444, -0.1506, -0.2197, 0.1385, 0.2133,
-            -0.0755, -0.0188, -0.0142, 0.2301, -0.0776, -0.0748, 0.0172, 0.0430,
-            -0.1009, 0.1519, 0.1137, 0.0641, 0.2264, 0.1911, -0.0205, 0.2578,
-            0.2210, -0.0784, -0.0235, -0.0547, 0.2191, -0.1623, -0.2416, 0.0076,
-            0.0574, 0.2186, 0.0080, 0.0473, 0.0972, 0.0286, 0.1324, 0.0686,
-            0.2652, -0.2237, -0.0980, -0.1693, -0.1866, 0.2273, 0.2008, -0.0683,
-            0.0957, 0.0623, -0.1891, 0.1620, 0.1811, -0.0516, -0.0800, -0.1416,
-            -0.2374, -0.1892, 0.1726, -0.0690, -0.0300, 0.0467, -0.2811, -0.1603,
-            0.0342, -0.1054, -0.0604, -0.0475, -0.0908, -0.1286, 0.1105, -0.1186,
-            0.0582, 0.1887, 0.0345, 0.2081, 0.1404, -0.2532, 0.0026, 0.0402,
-            0.0812, -0.0512, 0.0128, 0.0084, -0.0970, -0.0362, 0.0036, -0.0720,
-            -0.0850, 0.0221, -0.1037, 0.0569, 0.0187, -0.0649, -0.0288, -0.1795,
-            0.0045, 0.2535, 0.6751, 0.1578, -0.0966, 0.1516, 0.2109, 0.2033,
-            -0.2155, -0.1783, 0.0836, -0.1050, 0.0676, -0.0237, 0.0387, -0.2564,
-            0.1891, 0.1305, -0.3239, -0.1312, 0.2723, 0.0745, 0.1335, 0.0302,
-            0.0172, 0.2207, 0.0215, -0.0379, -0.1954, 0.4944, 0.2905, -0.0306,
-            0.2858, 0.2341, 0.0545, 0.4626, 0.2947, 0.3802, 0.2820, 0.1557,
-            0.1743, -0.1410, 0.0986, 0.4751, -0.2146, 0.3530, -0.2357, -0.5626,
-            -0.0617, 0.2190, 0.0992, -0.2365, 0.3726, 0.2092, 0.1660, 0.1928,
-            0.5731, -0.1734, -0.0816, -0.3191, -0.1871, -0.2217, -0.0112, 0.1261,
-            0.1601, 0.3835, 0.0451, -0.1927, -0.1116, 0.2204, -0.0379, -0.0094,
-            -0.0455, -0.4831, -0.3345, -0.2119, 0.4803, 0.1214, 0.1723, 0.2605,
-            0.0051, -0.2587, 0.0511, -0.1318, 0.0227, -0.0645, 0.2573, -0.0205,
-            0.0665, -0.3562, -0.6070, 0.4191, 0.0351, 0.2033, -0.5508, -0.1415,
-            -0.1249, -0.0986, -0.1120, -0.1187, 0.0600, 0.1974, 0.5017, -0.0247,
-            -0.2986, 0.3983, -0.1159, -0.4275, -0.0164, -0.3783, 0.0717, 0.1478,
-            -0.1144, 0.2292, 0.2741, 0.4309, -0.1611, 0.0755, -0.0981, 0.4584,
-            -0.2061, -0.0787, -0.1779, 0.2275, -0.1742, -0.2230, -0.1739, 0.0646
-        };
-
+        // Voice embedding — select slice from voice pack based on content token count
         auto& ids = inputTokens[0];
+        size_t numContentTokens = ids.size() >= 2 ? ids.size() - 2 : 0;  // exclude BOS pad + EOS
+        const float* voiceSlice = servable->getVoiceSlice(voiceName, numContentTokens);
+        RET_CHECK(voiceSlice != nullptr) << "No voice pack loaded (place .bin files in <model_dir>/voices/)";
 
         auto inputIdsTensor = ov::Tensor{ov::element::i64, ov::Shape{1, ids.size()}};
-        auto refS = ov::Tensor{ov::element::f32, ov::Shape{1, voice.size()}};
+        auto refS = ov::Tensor{ov::element::f32, ov::Shape{1, KokoroServable::STYLE_DIM}};
         auto speed = ov::Tensor{ov::element::f32, ov::Shape{1}};
 
-        *reinterpret_cast<float*>(speed.data()) = 0.8f;
+        *reinterpret_cast<float*>(speed.data()) = 1.0f;
         std::copy(ids.data(), ids.data() + ids.size(),
                   reinterpret_cast<int64_t*>(inputIdsTensor.data()));
-        std::copy(voice.data(), voice.data() + voice.size(),
+        std::copy(voiceSlice, voiceSlice + KokoroServable::STYLE_DIM,
                   reinterpret_cast<float*>(refS.data()));
 
         // Inference
@@ -301,7 +346,7 @@ public:
 
         void* wavDataPtr = nullptr;
         size_t wavSize = 0;
-        prepareAudioOutputKokoro(&wavDataPtr, wavSize, 32, samples, data);
+        prepareAudioOutputKokoro(&wavDataPtr, wavSize, samples, data);
 
         auto output = std::make_unique<std::string>(reinterpret_cast<char*>(wavDataPtr), wavSize);
         drwav_free(wavDataPtr, NULL);

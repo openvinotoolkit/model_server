@@ -15,6 +15,8 @@
 //*****************************************************************************
 #pragma once
 
+#include <algorithm>
+#include <filesystem>
 #include <fstream>
 #include <memory>
 #include <mutex>
@@ -45,6 +47,11 @@ namespace ovms {
 struct VocabIndex {
     std::unordered_map<std::string, int> by_token;
     size_t max_token_bytes = 1;
+};
+
+struct VoicePack {
+    std::vector<float> data;   // flat [numEntries * STYLE_DIM]
+    size_t numEntries = 0;
 };
 
 class EspeakInstance {
@@ -82,8 +89,8 @@ private:
                                        0, path,
                                        espeakINITIALIZE_DONT_EXIT);
             if (sr <= 0) return false;
-            if (espeak_SetVoiceByName("en") != EE_OK &&
-                espeak_SetVoiceByName("en-us") != EE_OK) {
+            if (espeak_SetVoiceByName("en-us") != EE_OK &&
+                espeak_SetVoiceByName("en") != EE_OK) {
                 return false;
             }
             return true;
@@ -118,11 +125,15 @@ private:
 };
 
 struct KokoroServable {
+    static constexpr size_t STYLE_DIM = 256;
+
     std::filesystem::path parsedModelsPath;
     std::shared_ptr<ov::Model> model;
     ov::CompiledModel compiledModel;
     std::unique_ptr<OVInferRequestsQueue> inferRequestsQueue;
     VocabIndex vocabIndex;
+    std::unordered_map<std::string, VoicePack> voicePacks;
+    std::string defaultVoiceName;
 
     KokoroServable(const std::string& modelDir, const std::string& targetDevice, const std::string& graphPath) {
         EspeakInstance::instance();
@@ -135,8 +146,13 @@ struct KokoroServable {
         }
 
         vocabIndex = loadVocabFromConfig(parsedModelsPath);
+        loadVoicePacks(parsedModelsPath);
 
-        ov::AnyMap properties;
+        ov::AnyMap properties = {
+            // Use ACCURACY execution mode to avoid fast-math approximation errors
+            // that accumulate in the deep decoder network and cause energy fade.
+            ov::hint::execution_mode(ov::hint::ExecutionMode::ACCURACY),
+        };
         ov::Core core;
         auto m_model = core.read_model(parsedModelsPath / std::filesystem::path("openvino_model.xml"), {}, properties);
         compiledModel = core.compile_model(m_model, targetDevice, properties);
@@ -149,6 +165,30 @@ struct KokoroServable {
 
     const VocabIndex& getVocabIndex() const {
         return vocabIndex;
+    }
+
+    // Returns pointer to 256 floats for the given voice and token count.
+    // voiceName: requested voice (e.g. "af_alloy"). Falls back to default voice if not found.
+    // numContentTokens: number of token IDs excluding BOS/EOS padding.
+    const float* getVoiceSlice(const std::string& voiceName, size_t numContentTokens) const {
+        auto it = voicePacks.find(voiceName);
+        if (it == voicePacks.end()) {
+            it = voicePacks.find(defaultVoiceName);
+            if (it == voicePacks.end()) {
+                return nullptr;
+            }
+        }
+        const auto& pack = it->second;
+        size_t idx = std::min(numContentTokens, pack.numEntries - 1);
+        return pack.data.data() + (idx * STYLE_DIM);
+    }
+
+    bool hasVoice(const std::string& voiceName) const {
+        return voicePacks.count(voiceName) > 0;
+    }
+
+    const std::string& getDefaultVoiceName() const {
+        return defaultVoiceName;
     }
 
 private:
@@ -190,6 +230,47 @@ private:
         SPDLOG_INFO("Loaded Kokoro vocabulary: {} tokens, max_token_bytes={}",
                      ix.by_token.size(), ix.max_token_bytes);
         return ix;
+    }
+
+    void loadVoicePacks(const std::filesystem::path& modelDir) {
+        auto voicesDir = modelDir / "voices";
+        if (!std::filesystem::exists(voicesDir) || !std::filesystem::is_directory(voicesDir)) {
+            SPDLOG_WARN("No voices directory found at: {}", voicesDir.string());
+            return;
+        }
+
+        for (const auto& entry : std::filesystem::directory_iterator(voicesDir)) {
+            if (!entry.is_regular_file() || entry.path().extension() != ".bin")
+                continue;
+
+            std::string name = entry.path().stem().string();
+            auto fileSize = std::filesystem::file_size(entry.path());
+            if (fileSize == 0 || fileSize % (STYLE_DIM * sizeof(float)) != 0) {
+                SPDLOG_ERROR("Voice file {} has invalid size {} (must be multiple of {})",
+                             entry.path().string(), fileSize, STYLE_DIM * sizeof(float));
+                continue;
+            }
+
+            VoicePack pack;
+            pack.numEntries = fileSize / (STYLE_DIM * sizeof(float));
+            pack.data.resize(pack.numEntries * STYLE_DIM);
+
+            std::ifstream ifs(entry.path(), std::ios::binary);
+            if (!ifs.read(reinterpret_cast<char*>(pack.data.data()), fileSize)) {
+                SPDLOG_ERROR("Failed to read voice file: {}", entry.path().string());
+                continue;
+            }
+
+            SPDLOG_INFO("Loaded voice pack '{}': {} entries x {} dims from {}",
+                         name, pack.numEntries, STYLE_DIM, entry.path().string());
+
+            if (defaultVoiceName.empty()) {
+                defaultVoiceName = name;
+            }
+            voicePacks.emplace(name, std::move(pack));
+        }
+
+        SPDLOG_INFO("Loaded {} voice pack(s), default: '{}'", voicePacks.size(), defaultVoiceName);
     }
 };
 
