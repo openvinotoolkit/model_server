@@ -199,6 +199,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJson) {
     auto params = GetParam();
     config.max_new_tokens = 5;
     config.rng_seed = 1;
+    config.temperature = 0;
     if (params.generateExpectedOutput) {
         ASSERT_EQ(generateExpectedText("What is OpenVINO?"), 0);
         ASSERT_EQ(config.num_return_sequences, expectedMessages.size());
@@ -209,6 +210,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJson) {
                               R"(",
             "stream": false,
             "seed" : 1,
+            "temperature": 0,
             "max_tokens": 5,
             "prompt": "What is OpenVINO?"
         }
@@ -257,6 +259,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJsonEchoWithCompletion) {
 
     config.max_new_tokens = 5;
     config.rng_seed = 1;
+    config.temperature = 0;
     config.echo = true;
     if (params.generateExpectedOutput) {
         ASSERT_EQ(generateExpectedText("What is OpenVINO?"), 0);
@@ -268,6 +271,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJsonEchoWithCompletion) {
                               R"(",
             "stream": false,
             "seed" : 1,
+            "temperature": 0,
             "max_tokens": 5,
             "prompt": "What is OpenVINO?",
             "echo": true
@@ -643,6 +647,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJsonNFail) {
                               R"(",
             "stream": false,
             "seed" : 1,
+            "temperature": 0,
             "max_tokens": 5,
             "prompt": "What is OpenVINO?"
         }
@@ -661,6 +666,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJsonN) {
     }
     config.max_new_tokens = 5;
     config.rng_seed = 1;
+    config.temperature = 0;
     config.echo = false;
     if (params.generateExpectedOutput) {
         ASSERT_EQ(generateExpectedText("What is OpenVINO?"), 0);
@@ -672,6 +678,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJsonN) {
                               R"(",
             "stream": false,
             "seed" : 1,
+            "temperature": 0,
             "max_tokens": 5,
             "prompt": "What is OpenVINO?"
         }
@@ -715,6 +722,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsJsonNFail) {
                               R"(",
             "stream": false,
             "seed" : 1,
+            "temperature": 0,
             "max_tokens": 5,
             "messages": [
             {
@@ -735,6 +743,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsJsonN) {
     auto params = GetParam();
     config.max_new_tokens = 5;
     config.rng_seed = 1;
+    config.temperature = 0;
     config.echo = false;
     if (params.generateExpectedOutput) {
         ASSERT_EQ(generateExpectedText("What is OpenVINO?", false, true), 0);
@@ -746,6 +755,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsJsonN) {
                               R"(",
             "stream": false,
             "seed" : 1,
+            "temperature": 0,
             "max_tokens": 5,
             "messages": [
             {
@@ -816,6 +826,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsJson) {
                               R"(",
             "stream": false,
             "seed" : 1,
+            "temperature": 0,
             "max_tokens": 5,
             "messages": [
             {
@@ -864,6 +875,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsJsonContentArray) {
                               R"(",
             "stream": false,
             "seed" : 1,
+            "temperature": 0,
             "max_tokens": 5,
             "messages": [
             {
@@ -912,6 +924,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsJsonContentArrayWithIma
                               R"(",
             "stream": false,
             "seed" : 1,
+            "temperature": 0,
             "max_tokens": 5,
             "messages": [
             {
@@ -941,6 +954,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsJsonNMultipleStopString
                               R"(",
             "stream": false,
             "seed" : 1,
+            "temperature": 0,
             "max_tokens": 50,
             "stop": [".", ","],
             "include_stop_str_in_output": true,
