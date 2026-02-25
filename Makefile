@@ -217,6 +217,8 @@ BUILD_CUSTOM_NODES ?= false
 
 VERBOSE_LOGS ?= OFF
 
+CACHEBUST ?= 1
+
 BUILD_ARGS = --build-arg http_proxy=$(HTTP_PROXY)\
 	--build-arg https_proxy=$(HTTPS_PROXY)\
 	--build-arg no_proxy=$(NO_PROXY)\
@@ -244,7 +246,8 @@ BUILD_ARGS = --build-arg http_proxy=$(HTTP_PROXY)\
 	--build-arg RELEASE_BASE_IMAGE=$(BASE_IMAGE_RELEASE)\
 	--build-arg JOBS=$(JOBS)\
 	--build-arg CAPI_FLAGS=$(CAPI_FLAGS)\
-	--build-arg VERBOSE_LOGS=$(VERBOSE_LOGS)
+	--build-arg VERBOSE_LOGS=$(VERBOSE_LOGS) \
+	--build-arg CACHEBUST=$(CACHEBUST)
 
 
 .PHONY: default docker_build \

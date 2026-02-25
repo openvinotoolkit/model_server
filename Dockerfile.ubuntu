@@ -396,6 +396,7 @@ ARG INSTALL_RPMS_FROM_URL=
 ARG INSTALL_DRIVER_VERSION="24.26.30049"
 ARG GPU=0
 ARG NPU=0
+ARG CACHEBUST=1
 ENV DEBIAN_FRONTEND=noninteractive
 ARG debug_bazel_flags=
 LABEL bazel-build-flags=${debug_bazel_flags}
@@ -412,7 +413,8 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 ARG INSTALL_DRIVER_VERSION="24.39.31294"
 COPY ./install_ubuntu_gpu_drivers.sh /tmp/install_gpu_drivers.sh
 # hadolint ignore=DL3003,SC2164
-RUN apt-get update ; \
+RUN echo "Cache bust: ${CACHEBUST}" && \ 
+    apt-get update ; \
     apt-get install -y --no-install-recommends curl ca-certificates libxml2 || exit 1; \
     if [ "$GPU" == "1" ] ; then \
 	/tmp/install_gpu_drivers.sh ; \

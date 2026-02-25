@@ -395,6 +395,7 @@ LABEL "maintainer"="dariusz.trawinski@intel.com"
 ARG INSTALL_RPMS_FROM_URL=
 ARG INSTALL_DRIVER_VERSION="24.52.32224"
 ARG GPU=0
+ARG CACHE_BUST=1
 ARG debug_bazel_flags=
 LABEL bazel-build-flags=${debug_bazel_flags}
 LABEL supported-devices="CPU=1 GPU=${GPU}"
@@ -407,7 +408,7 @@ WORKDIR /
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 COPY ./install_redhat_gpu_drivers.sh /install_gpu_drivers.sh
 # hadolint ignore=DL3003,DL3041,SC2164,SC1091
-RUN if [ -f /usr/bin/dnf ] ; then export DNF_TOOL=dnf ; echo -e "max_parallel_downloads=8\nretries=50" >> /etc/dnf/dnf.conf ; else export DNF_TOOL=microdnf ; fi ; \
+RUN echo "CACHE_BUST=${CACHE_BUST}" ; if [ -f /usr/bin/dnf ] ; then export DNF_TOOL=dnf ; echo -e "max_parallel_downloads=8\nretries=50" >> /etc/dnf/dnf.conf ; else export DNF_TOOL=microdnf ; fi ; \
     $DNF_TOOL upgrade --setopt=install_weak_deps=0 --nodocs -y ; \
     if [ "$GPU" == "1" ] ; then \
         source /install_gpu_drivers.sh && rm -rf /install_gpu_drivers.sh; \
