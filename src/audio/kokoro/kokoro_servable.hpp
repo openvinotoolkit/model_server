@@ -50,7 +50,7 @@ struct VocabIndex {
 };
 
 struct VoicePack {
-    std::vector<float> data;   // flat [numEntries * STYLE_DIM]
+    std::vector<float> data;  // flat [numEntries * STYLE_DIM]
     size_t numEntries = 0;
 };
 
@@ -86,9 +86,10 @@ private:
     bool tryInit() {
         auto try_path = [](const char* path) -> bool {
             int sr = espeak_Initialize(AUDIO_OUTPUT_SYNCHRONOUS,
-                                       0, path,
-                                       espeakINITIALIZE_DONT_EXIT);
-            if (sr <= 0) return false;
+                0, path,
+                espeakINITIALIZE_DONT_EXIT);
+            if (sr <= 0)
+                return false;
             if (espeak_SetVoiceByName("en-us") != EE_OK &&
                 espeak_SetVoiceByName("en") != EE_OK) {
                 return false;
@@ -96,26 +97,27 @@ private:
             return true;
         };
 
-        if (try_path(nullptr)) return true;
+        if (try_path(nullptr))
+            return true;
 
         static const char* ngPaths[] = {
             "/usr/share/espeak-ng-data",
             "/opt/homebrew/share/espeak-ng-data",
             "/usr/local/share/espeak-ng-data",
             "espeak-ng-data",
-            nullptr
-        };
+            nullptr};
         for (int i = 0; ngPaths[i]; ++i)
-            if (try_path(ngPaths[i])) return true;
+            if (try_path(ngPaths[i]))
+                return true;
 
         static const char* esPaths[] = {
             "/usr/share/espeak-data",
             "/usr/local/share/espeak-data",
             "espeak-data",
-            nullptr
-        };
+            nullptr};
         for (int i = 0; esPaths[i]; ++i)
-            if (try_path(esPaths[i])) return true;
+            if (try_path(esPaths[i]))
+                return true;
 
         return false;
     }
@@ -220,7 +222,8 @@ private:
         const auto& vocab = doc["vocab"];
         ix.by_token.reserve(vocab.MemberCount());
         for (auto it = vocab.MemberBegin(); it != vocab.MemberEnd(); ++it) {
-            if (!it->name.IsString() || !it->value.IsInt()) continue;
+            if (!it->name.IsString() || !it->value.IsInt())
+                continue;
             std::string token = it->name.GetString();
             int id = it->value.GetInt();
             ix.by_token.emplace(token, id);
@@ -228,7 +231,7 @@ private:
         }
 
         SPDLOG_INFO("Loaded Kokoro vocabulary: {} tokens, max_token_bytes={}",
-                     ix.by_token.size(), ix.max_token_bytes);
+            ix.by_token.size(), ix.max_token_bytes);
         return ix;
     }
 
@@ -247,7 +250,7 @@ private:
             auto fileSize = std::filesystem::file_size(entry.path());
             if (fileSize == 0 || fileSize % (STYLE_DIM * sizeof(float)) != 0) {
                 SPDLOG_ERROR("Voice file {} has invalid size {} (must be multiple of {})",
-                             entry.path().string(), fileSize, STYLE_DIM * sizeof(float));
+                    entry.path().string(), fileSize, STYLE_DIM * sizeof(float));
                 continue;
             }
 
@@ -262,7 +265,7 @@ private:
             }
 
             SPDLOG_INFO("Loaded voice pack '{}': {} entries x {} dims from {}",
-                         name, pack.numEntries, STYLE_DIM, entry.path().string());
+                name, pack.numEntries, STYLE_DIM, entry.path().string());
 
             if (defaultVoiceName.empty()) {
                 defaultVoiceName = name;

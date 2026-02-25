@@ -189,16 +189,20 @@ void espeakPhonemizeAll(const std::string& textUtf8, std::string& outIpa, bool n
 // }
 
 size_t utf8CharLen(unsigned char lead) {
-    if (lead < 0x80) return 1;
-    if ((lead >> 5) == 0x6) return 2;
-    if ((lead >> 4) == 0xE) return 3;
-    if ((lead >> 3) == 0x1E) return 4;
+    if (lead < 0x80)
+        return 1;
+    if ((lead >> 5) == 0x6)
+        return 2;
+    if ((lead >> 4) == 0xE)
+        return 3;
+    if ((lead >> 3) == 0x1E)
+        return 4;
     return 1;
 }
 
 void tokenize(const std::string& textUtf8,
-              std::vector<int64_t>& tokenIds,
-              const ovms::VocabIndex& ix) {
+    std::vector<int64_t>& tokenIds,
+    const ovms::VocabIndex& ix) {
     tokenIds.clear();
     size_t pos = 0;
     const size_t n = textUtf8.size();
@@ -224,7 +228,7 @@ void tokenize(const std::string& textUtf8,
             const unsigned char lead = static_cast<unsigned char>(textUtf8[pos]);
             const size_t adv = utf8CharLen(lead);
             SPDLOG_WARN("Tokenizer: unknown bytes at pos {}: '{}'",
-                        pos, std::string(textUtf8.data() + pos, std::min(adv, n - pos)));
+                pos, std::string(textUtf8.data() + pos, std::min(adv, n - pos)));
             pos += std::min(adv, n - pos);
         }
     }
@@ -264,7 +268,8 @@ public:
         SPDLOG_LOGGER_DEBUG(kokoro_calculator_logger, "KokoroCalculator [Node: {}] Process start", cc->NodeName());
 
         KokoroServableMap servablesMap = cc->InputSidePackets()
-            .Tag(KOKORO_SESSION_SIDE_PACKET_TAG).Get<KokoroServableMap>();
+                                             .Tag(KOKORO_SESSION_SIDE_PACKET_TAG)
+                                             .Get<KokoroServableMap>();
         auto servableIt = servablesMap.find(cc->NodeName());
         RET_CHECK(servableIt != servablesMap.end())
             << "Could not find initialized Kokoro node named: " << cc->NodeName();
@@ -318,9 +323,9 @@ public:
 
         *reinterpret_cast<float*>(speed.data()) = 1.0f;
         std::copy(ids.data(), ids.data() + ids.size(),
-                  reinterpret_cast<int64_t*>(inputIdsTensor.data()));
+            reinterpret_cast<int64_t*>(inputIdsTensor.data()));
         std::copy(voiceSlice, voiceSlice + KokoroServable::STYLE_DIM,
-                  reinterpret_cast<float*>(refS.data()));
+            reinterpret_cast<float*>(refS.data()));
 
         // Inference
         ModelMetricReporter unused(nullptr, nullptr, "unused", 1);
@@ -342,7 +347,7 @@ public:
         const float* data = out.data<float>();
 
         SPDLOG_DEBUG("Model output: {} audio samples ({:.2f}s at 24kHz)",
-                     samples, static_cast<float>(samples) / 24000.0f);
+            samples, static_cast<float>(samples) / 24000.0f);
 
         void* wavDataPtr = nullptr;
         size_t wavSize = 0;

@@ -190,7 +190,6 @@ void prepareAudioOutput(void** ppData, size_t& pDataSize, uint16_t bitsPerSample
     SPDLOG_LOGGER_DEBUG(t2s_calculator_logger, "Output preparation time: {} ms", outputPreparationTime);
 }
 
-
 void prepareAudioOutputKokoro(void** ppData, size_t& pDataSize, size_t speechSize, const float* waveformPtr) {
     enum : unsigned int {
         OUTPUT_PREPARATION,
