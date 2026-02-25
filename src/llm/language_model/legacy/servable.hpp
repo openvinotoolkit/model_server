@@ -37,6 +37,11 @@ struct LegacyServableExecutionContext : public GenAiServableExecutionContext {
 
     // Disconnection handling
     std::atomic<bool> clientDisconnected{false};
+
+    void signalDisconnection() {
+        clientDisconnected = true;
+        executionInProgress.notify_all();
+    }
 };
 
 struct LegacyServableProperties : public GenAiServableProperties {

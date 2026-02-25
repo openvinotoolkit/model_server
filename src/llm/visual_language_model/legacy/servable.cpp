@@ -94,17 +94,25 @@ absl::Status VisualLanguageModelLegacyServable::parseRequest(std::shared_ptr<Gen
 
     if (legacyExecutionContext->apiHandler->isStream()) {
         legacyExecutionContext->lastStreamerCallbackOutput = "";  // initialize with empty string
-        auto callback = [& executionInProgress = legacyExecutionContext->executionInProgress, &mutex = legacyExecutionContext->mutex, &lastStreamerCallbackOutput = legacyExecutionContext->lastStreamerCallbackOutput](std::string text) {
-            SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Streamer callback executed with text: [{}]", text);
-            {
-                std::lock_guard<std::mutex> lock(mutex);
-                lastStreamerCallbackOutput += text;
-                executionInProgress.notify_one();
-            }
-            return ov::genai::StreamingStatus::RUNNING;
-        };
-        legacyExecutionContext->textStreamer = std::make_shared<ov::genai::TextStreamer>(getProperties()->tokenizer, callback);
     }
+    auto callback = [& executionInProgress = legacyExecutionContext->executionInProgress,
+                        &mutex = legacyExecutionContext->mutex,
+                        &lastStreamerCallbackOutput = legacyExecutionContext->lastStreamerCallbackOutput,
+                        &clientDisconnected = legacyExecutionContext->clientDisconnected,
+                        streamMode = legacyExecutionContext->apiHandler->isStream()](std::string text) {
+        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Streamer callback executed with text: [{}]", text);
+        if (clientDisconnected.load()) {
+            executionInProgress.notify_one();
+            return ov::genai::StreamingStatus::CANCEL;
+        }
+        if (streamMode) {
+            std::lock_guard<std::mutex> lock(mutex);
+            lastStreamerCallbackOutput += text;
+            executionInProgress.notify_one();
+        }
+        return ov::genai::StreamingStatus::RUNNING;
+    };
+    legacyExecutionContext->textStreamer = std::make_shared<ov::genai::TextStreamer>(getProperties()->tokenizer, callback);
     legacyExecutionContext->generationConfigBuilder = std::make_shared<GenerationConfigBuilder>(getProperties()->baseGenerationConfig,
         getProperties()->toolParserName,
         getProperties()->enableToolGuidedGeneration,
@@ -125,10 +133,11 @@ absl::Status VisualLanguageModelLegacyServable::scheduleExecution(std::shared_pt
     std::weak_ptr<VisualLanguageModelLegacyServableExecutionContext> weakContext = legacyExecutionContext;
     legacyExecutionContext->payload.client->registerDisconnectionCallback([weakContext]() {
         if (auto context = weakContext.lock()) {
-            context->clientDisconnected = true;
+            context->signalDisconnection();
         }
     });
     if (legacyExecutionContext->payload.client->isDisconnected()) {
+        legacyExecutionContext->signalDisconnection();
         return absl::CancelledError();
     }
     properties->legacyExecutor->addRequest(legacyExecutionContext);
