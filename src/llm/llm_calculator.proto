@@ -60,7 +60,7 @@ message LLMCalculatorOptions {
       }
       optional SparseAttentionMode mode = 1 [default = TRISHAPE];
       // As for parameters below, if they are not set, default values are set on GenAI level
-      // https://docs.openvino.ai/2025/api/genai_api/_autosummary/openvino_genai.SparseAttentionConfig.html#openvino_genai.SparseAttentionConfig.__init__
+      // https://docs.openvino.ai/2026/api/genai_api/_autosummary/openvino_genai.SparseAttentionConfig.html#openvino_genai.SparseAttentionConfig.__init__
       optional uint64 num_last_dense_tokens_in_prefill = 2;
       optional uint64 num_retained_start_tokens_in_cache = 3;
       optional uint64 num_retained_recent_tokens_in_cache = 4;
