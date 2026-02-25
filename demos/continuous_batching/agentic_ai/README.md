@@ -90,10 +90,10 @@ curl -L -o models/Qwen/Qwen3-Coder-30B-A3B-Instruct/chat_template.jinja https://
 :::{tab-item} gpt-oss-20b
 :sync: gpt-oss-20b
 ```console
-python export_model.py text_generation --source_model openai/gpt-oss-20b --weight-format int4 --config_file_path models/config.json --model_repository_path models --tool_parser gptoss --reasoning_parser gptoss --pipeline_type LM
+python export_model.py text_generation --source_model openai/gpt-oss-20b --weight-format int4 --config_file_path models/config.json --model_repository_path models --tool_parser gptoss --reasoning_parser gptoss
 curl -L -o models/openai/gpt-oss-20b/chat_template.jinja https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/0/extras/chat_template_examples/chat_template_gpt_oss.jinja
 ```
-> **Note:** For versions up to 2026.0, include the `--pipeline_type LM` parameter in the export command. This disables continuous batching, which is not yet fully supported for GPT-OSS. The parameter is not required for weekly releases or 2026.1+.
+> **Note:** Continuous batching is supported for GPT-OSS, however concurrency is still unstable and will be fixed in 2026.1 and the next weekly release.
 
 :::
 :::{tab-item} Phi-4-mini-instruct 
@@ -245,10 +245,10 @@ ovms.exe --rest_port 8000 --source_model Qwen/Qwen3-Coder-30B-A3B-Instruct --mod
 :::{tab-item} gpt-oss-20b
 :sync: gpt-oss-20b
 ```bat
-ovms.exe --rest_port 8000 --source_model openai/gpt-oss-20b --model_repository_path models --tool_parser gptoss --reasoning_parser gptoss --task text_generation --enable_prefix_caching true --target_device GPU --pipeline_type LM
+ovms.exe --rest_port 8000 --source_model openai/gpt-oss-20b --model_repository_path models --tool_parser gptoss --reasoning_parser gptoss --task text_generation --enable_prefix_caching true --target_device GPU
 ```
 
-> **Note:** For versions up to 2026.0, include the `--pipeline_type LM` parameter. This disables continuous batching, which is not yet fully supported for GPT-OSS. The parameter is not required for weekly releases or 2026.1+.
+> **Note:** Continuous batching is supported for GPT-OSS, however concurrency is still unstable and will be fixed in 2026.1 and the next weekly release.
 
 :::
 ::::
@@ -474,9 +474,9 @@ docker run -d --user $(id -u):$(id -g) -e MOE_USE_MICRO_GEMM_PREFILL=0 --rm -p 8
 ```bash
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:weekly \
 --rest_port 8000 --source_model openai/gpt-oss-20b --model_repository_path models \
---tool_parser gptoss --reasoning_parser gptoss --target_device GPU --task text_generation --enable_prefix_caching true --pipeline_type LM
+--tool_parser gptoss --reasoning_parser gptoss --target_device GPU --task text_generation --enable_prefix_caching true
 ```
-> **Note:** For versions up to 2026.0, include the `--pipeline_type LM` parameter. This disables continuous batching, which is not yet fully supported for GPT-OSS. The parameter is not required for weekly releases or 2026.1+.
+> **Note:** Continuous batching is supported for GPT-OSS, however concurrency is still unstable and will be fixed in 2026.1 and the next weekly release.
 
 :::
 ::::

@@ -56,7 +56,7 @@ docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
 :::{tab-item} openai/gpt-oss-20b
 :sync: openai/gpt-oss-20b
 ```bash
-python export_model.py text_generation --source_model openai/gpt-oss-20b --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --tool_parser gptoss --reasoning_parser gptoss --target_device GPU --pipeline_type LM
+python export_model.py text_generation --source_model openai/gpt-oss-20b --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --tool_parser gptoss --reasoning_parser gptoss --target_device GPU
 curl -L -o models/openai/gpt-oss-20b/chat_template.jinja https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/0/extras/chat_template_examples/chat_template_gpt_oss.jinja
 
 docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
@@ -67,7 +67,7 @@ docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
     --model_path openai/gpt-oss-20b
 ```
 
-> **Note:** For versions up to 2026.0, include the `--pipeline_type LM` parameter. This disables continuous batching, which is not yet fully supported for GPT-OSS. The parameter is not required for weekly releases or 2026.1+.
+> **Note:** Continuous batching is supported for GPT-OSS, however concurrency is still unstable and will be fixed in 2026.1 and the next weekly release.
 
 > **Note:** For deployment, the model requires ~12GB disk space and recommended 16GB+ of VRAM on the GPU. For conversion, the original model will be pulled and quantized, which requires 45GB of free RAM.
 
@@ -165,13 +165,13 @@ ovms.exe --add_to_config --config_path models/config_all.json --model_name mistr
 :::{tab-item} openai/gpt-oss-20b
 :sync: openai/gpt-oss-20b
 ```bat
-python export_model.py text_generation --source_model openai/gpt-oss-20b --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device GPU --tool_parser gptoss --reasoning_parser gptoss --pipeline_type LM
+python export_model.py text_generation --source_model openai/gpt-oss-20b --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device GPU --tool_parser gptoss --reasoning_parser gptoss
 curl -L -o models/openai/gpt-oss-20b/chat_template.jinja https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/0/extras/chat_template_examples/chat_template_gpt_oss.jinja
 
 ovms.exe --add_to_config --config_path models/config_all.json --model_name openai/gpt-oss-20b --model_path openai/gpt-oss-20b
 ```
 > **Note:** For deployment, the model requires ~12GB disk space and recommended 16GB+ of VRAM on the GPU. For conversion, the original model will be pulled and quantized, which requires 45GB of free RAM.
-> **Note:** For versions up to 2026.0, include the `--pipeline_type LM` parameter. This disables continuous batching, which is not yet fully supported for GPT-OSS. The parameter is not required for weekly releases or 2026.1+.
+> **Note:** Continuous batching is supported for GPT-OSS, however concurrency is still unstable and will be fixed in 2026.1 and the next weekly release.
 
 :::
 :::{tab-item} unsloth/Devstral-Small-2507
