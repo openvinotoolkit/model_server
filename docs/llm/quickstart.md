@@ -1,7 +1,7 @@
 # QuickStart - LLM models {#ovms_docs_llm_quickstart}
 
-Let's deploy [OpenVINO/Phi-3.5-mini-instruct-int4-ov](https://huggingface.co/OpenVINO/Phi-3.5-mini-instruct-int4-ov) model on Intel iGPU or ARC GPU.
-It is [microsoft/Phi-3.5-mini-instruct](https://huggingface.co/microsoft/Phi-3.5-mini-instruct) quantized to INT4 precision and converted to IR format.
+Let's deploy [OpenVINO/Qwen3-8B-int4-ov](https://huggingface.co/OpenVINO/Qwen3-8B-int4-ov) model on Intel iGPU or ARC GPU.
+It is [Qwen/Qwen3-8B](https://huggingface.co/Qwen/Qwen3-8B) quantized to INT4 precision and converted to IR format.
 You can use another model from [OpenVINO organization on HuggingFace](https://huggingface.co/OpenVINO) if you find one that better suits your needs and hardware configuration.
 
 ## Requirements
@@ -19,7 +19,7 @@ You can use another model from [OpenVINO organization on HuggingFace](https://hu
 
 ```bash
 mkdir models
-docker run --user $(id -u):$(id -g) -d --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) --rm -p 8000:8000 -v $(pwd)/models:/models:rw openvino/model_server:latest-gpu --source_model OpenVINO/Phi-3.5-mini-instruct-int4-ov --model_repository_path models --task text_generation --rest_port 8000 --target_device GPU
+docker run --user $(id -u):$(id -g) -d --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) --rm -p 8000:8000 -v $(pwd)/models:/models:rw openvino/model_server:latest-gpu --source_model OpenVINO/Qwen3-8B-int4-ov --model_repository_path models --task text_generation --rest_port 8000 --target_device GPU
 ```
 :::
 
@@ -27,12 +27,12 @@ docker run --user $(id -u):$(id -g) -d --device /dev/dri --group-add=$(stat -c "
 **Required:** OpenVINO Model Server package - see [deployment instructions](../deploying_server_baremetal.md) for details.
 
 ```bat
-ovms.exe --source_model OpenVINO/Phi-3.5-mini-instruct-int4-ov --model_repository_path models --rest_port 8000 --task text_generation --target_device GPU
+ovms.exe --source_model OpenVINO/Qwen3-8B-int4-ov --model_repository_path models --rest_port 8000 --task text_generation --target_device GPU
 ```
 :::
 ::::
 
-First run of the command will download the https://huggingface.co/OpenVINO/Phi-3.5-mini-instruct-int4-ov to models/OpenVINO/Phi-3.5-mini-instruct-int4-ov directory and start serving it with ovms.
+First run of the command will download the https://huggingface.co/OpenVINO/Qwen3-8B-int4-ov to models/OpenVINO/Qwen3-8B-int4-ov directory and start serving it with ovms.
 The consecutive run of the command will check that the model exists and start serving it.
 
 ### 2. Check Model Readiness
@@ -46,7 +46,7 @@ curl http://localhost:8000/v1/config
 :::{dropdown} Expected Response
 ```json
 {
-  "OpenVINO/Phi-3.5-mini-instruct-int4-ov": {
+  "OpenVINO/Qwen3-8B-int4-ov": {
     "model_version_status": [
       {
         "version": "1",
@@ -71,7 +71,7 @@ curl http://localhost:8000/v1/config
 curl -s http://localhost:8000/v3/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "OpenVINO/Phi-3.5-mini-instruct-int4-ov",
+    "model": "OpenVINO/Qwen3-8B-int4-ov",
     "max_tokens": 30,
     "temperature": 0,
     "stream": false,
@@ -90,12 +90,12 @@ Windows Powershell
 (Invoke-WebRequest -Uri "http://localhost:8000/v3/chat/completions" `
  -Method POST `
  -Headers @{ "Content-Type" = "application/json" } `
- -Body '{"model": "OpenVINO/Phi-3.5-mini-instruct-int4-ov", "max_tokens": 30, "temperature": 0, "stream": false, "messages": [{"role": "system", "content": "You are a helpful assistant."}, {"role": "user", "content": "What are the 3 main tourist attractions in Paris?"}]}').Content
+ -Body '{"model": "OpenVINO/Qwen3-8B-int4-ov", "max_tokens": 30, "temperature": 0, "stream": false, "messages": [{"role": "system", "content": "You are a helpful assistant."}, {"role": "user", "content": "What are the 3 main tourist attractions in Paris?"}]}').Content
 ```
 
 Windows Command Prompt
 ```bat
-curl -s http://localhost:8000/v3/chat/completions -H "Content-Type: application/json" -d "{\"model\": \"OpenVINO/Phi-3.5-mini-instruct-int4-ov\", \"max_tokens\": 30, \"temperature\": 0, \"stream\": false, \"messages\": [{\"role\": \"system\", \"content\": \"You are a helpful assistant.\"}, {\"role\": \"user\", \"content\": \"What are the 3 main tourist attractions in Paris?\"}]}"
+curl -s http://localhost:8000/v3/chat/completions -H "Content-Type: application/json" -d "{\"model\": \"OpenVINO/Qwen3-8B-int4-ov\", \"max_tokens\": 30, \"temperature\": 0, \"stream\": false, \"messages\": [{\"role\": \"system\", \"content\": \"You are a helpful assistant.\"}, {\"role\": \"user\", \"content\": \"What are the 3 main tourist attractions in Paris?\"}]}"
 ```
 :::
 
@@ -116,7 +116,7 @@ curl -s http://localhost:8000/v3/chat/completions -H "Content-Type: application/
     }
   ],
   "created": 1744716414,
-  "model": "OpenVINO/Phi-3.5-mini-instruct-int4-ov",
+  "model": "OpenVINO/Qwen3-8B-int4-ov",
   "object": "chat.completion",
   "usage": {
     "prompt_tokens": 24,
@@ -144,7 +144,7 @@ client = OpenAI(
 )
 
 stream = client.chat.completions.create(
-    model="OpenVINO/Phi-3.5-mini-instruct-int4-ov",
+    model="OpenVINO/Qwen3-8B-int4-ov",
     messages=[{"role": "system", "content": "You are a helpful assistant."},
               {"role": "user", "content": "What are the 3 main tourist attractions in Paris?"}
     ],
