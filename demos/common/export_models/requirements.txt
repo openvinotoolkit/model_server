@@ -8,7 +8,7 @@ datasets
 diffusers  # for image generation
 einops
 nncf@git+https://github.com/openvinotoolkit/nncf.git@7a6ac29a15d247c0fc76da93f4d53bbfa7b489cc
-numpy
+numpy==2.2.6
 openvino-tokenizers==2026.0.0rc3
 openvino==2026.0.0rc3
 pillow

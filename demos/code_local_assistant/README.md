@@ -218,6 +218,7 @@ Run OpenVINO Model Server with all downloaded models loaded at the same time:
 Please refer to OpenVINO Model Server installation first: [link](../../docs/deploying_server_baremetal.md)
 
 ```bat
+set MOE_USE_MICRO_GEMM_PREFILL=0
 ovms --rest_port 8000 --config_path ./models/config_all.json
 ```
 :::
@@ -225,7 +226,7 @@ ovms --rest_port 8000 --config_path ./models/config_all.json
 :sync: Linux CPU
 ### Linux: via Docker with CPU
 ```bash
-docker run -d --rm -u $(id -u):$(id -g) \
+docker run -d --rm -u $(id -u):$(id -g) -e MOE_USE_MICRO_GEMM_PREFILL=0 \
   -p 8000:8000 -v $(pwd)/:/workspace/ openvino/model_server:weekly --rest_port 8000 --config_path /workspace/models/config_all.json
 ```
 :::
@@ -233,11 +234,13 @@ docker run -d --rm -u $(id -u):$(id -g) \
 :sync: Linux GPU
 ### Linux: via Docker with GPU
 ```bash
-docker run -d --rm --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
+docker run -d --rm --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) -e MOE_USE_MICRO_GEMM_PREFILL=0 \
   -p 8000:8000 -v $(pwd)/:/workspace/ openvino/model_server:weekly --rest_port 8000 --config_path /workspace/models/config_all.json
 ```
 :::
 ::::
+
+> **Note:** `MOE_USE_MICRO_GEMM_PREFILL=0` is a workaround for *Qwen3-Coder-30B-A3B-Instruct* and it will be fixed in release 2026.1 or next weekly.
 
 ## Set Up Visual Studio Code
 
