@@ -105,7 +105,7 @@ export PATH=$PATH:${PWD}/ovms/bin
 In case of the version with python run also:
 ```{code} sh
 export PYTHONPATH=${PWD}/ovms/lib/python
-sudo yum install -y python3-pip
+sudo yum install -y python3.12 python3.12-pip
 pip3 install "Jinja2==3.1.6" "MarkupSafe==3.0.2"
 ```
 
