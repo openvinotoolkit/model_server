@@ -31,8 +31,6 @@
 #include "test_utils.hpp"
 #include "platform_utils.hpp"
 
-const std::string llama3TokenizerPathForHandlerTests = getGenericFullPathForSrcTest("/ovms/src/test/llm_testing/unsloth/Llama-3.1-8B-Instruct");
-
 class HttpOpenAIHandlerTest : public ::testing::Test {
 protected:
     ovms::Server& server = ovms::Server::instance();
@@ -404,16 +402,14 @@ protected:
     }
 };
 
-static std::vector<int64_t> createLlama3ToolCallTokens(ov::genai::Tokenizer& tokenizer) {
-    std::string toolCall = "<|python_tag|>"
-                           R"({"name": "example_tool", "parameters": {"arg1": "value1", "arg2": 42}})";
+static std::vector<int64_t> createHermes3ToolCallTokens(ov::genai::Tokenizer& tokenizer) {
+    std::string toolCall = R"(<tool_call>{"name": "example_tool", "arguments": {"arg1": "value1", "arg2": 42}}</tool_call>)";
     auto generatedTensor = tokenizer.encode(toolCall, ov::genai::add_special_tokens(true)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
     return generatedTokens;
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, serializeStreamingChunkReturnsIntermediateNullAndFinallyToolCallsFinishReason) {
-    std::shared_ptr<ov::genai::Tokenizer> llama3Tokenizer = std::make_shared<ov::genai::Tokenizer>(llama3TokenizerPathForHandlerTests);
     std::string json = R"({
     "model": "llama",
     "stream": true,
@@ -434,29 +430,21 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeStreamingChunkReturnsIntermediateN
     doc.Parse(json.c_str());
     ASSERT_FALSE(doc.HasParseError());
 
-    auto apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *llama3Tokenizer, "llama3");
+    auto apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer, "hermes3");
     uint32_t maxTokensLimit = 100;
     uint32_t bestOfLimit = 0;
     std::optional<uint32_t> maxModelLength;
     ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
 
     std::vector<std::pair<std::string, ov::genai::GenerationFinishReason>> stream = {
-        {"<|python_tag|>", ov::genai::GenerationFinishReason::NONE},
-        {"{\"", ov::genai::GenerationFinishReason::NONE},
-        {"name", ov::genai::GenerationFinishReason::NONE},
-        {"\":", ov::genai::GenerationFinishReason::NONE},
-        {" \"", ov::genai::GenerationFinishReason::NONE},
-        {"get", ov::genai::GenerationFinishReason::NONE},
-        {"_humidity", ov::genai::GenerationFinishReason::NONE},
-        {"\",", ov::genai::GenerationFinishReason::NONE},
-        {" \"", ov::genai::GenerationFinishReason::NONE},
-        {"parameters", ov::genai::GenerationFinishReason::NONE},
-        {"\":", ov::genai::GenerationFinishReason::NONE},
-        {" {\"", ov::genai::GenerationFinishReason::NONE},
-        {"location", ov::genai::GenerationFinishReason::NONE},
-        {"\":", ov::genai::GenerationFinishReason::NONE},
-        {" \"", ov::genai::GenerationFinishReason::NONE},
-        {"Paris\"}}", ov::genai::GenerationFinishReason::STOP},
+        {"<tool_call>", ov::genai::GenerationFinishReason::NONE},
+        {"{\"name\":", ov::genai::GenerationFinishReason::NONE},
+        {" \"get", ov::genai::GenerationFinishReason::NONE},
+        {"_humidity\",", ov::genai::GenerationFinishReason::NONE},
+        {" \"arguments\":", ov::genai::GenerationFinishReason::NONE},
+        {" {\"location\":", ov::genai::GenerationFinishReason::NONE},
+        {" \"Paris\"}}", ov::genai::GenerationFinishReason::NONE},
+        {"</tool_call>", ov::genai::GenerationFinishReason::STOP},
     };
 
     std::vector<std::string> serializedChunks;
@@ -479,7 +467,6 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeStreamingChunkReturnsIntermediateN
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseGenerationOutputReturnsToolCallsFinishReason) {
-    std::shared_ptr<ov::genai::Tokenizer> llama3Tokenizer = std::make_shared<ov::genai::Tokenizer>(llama3TokenizerPathForHandlerTests);
     std::string json = R"({
     "model": "llama",
     "stream": false,
@@ -495,14 +482,14 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseGenerationOutputRetur
     doc.Parse(json.c_str());
     ASSERT_FALSE(doc.HasParseError());
 
-    auto apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *llama3Tokenizer, "llama3");
+    auto apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer, "hermes3");
     uint32_t maxTokensLimit = 100;
     uint32_t bestOfLimit = 0;
     std::optional<uint32_t> maxModelLength;
     ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
 
     ov::genai::GenerationOutput generationOutput;
-    generationOutput.generated_ids = createLlama3ToolCallTokens(*llama3Tokenizer);
+    generationOutput.generated_ids = createHermes3ToolCallTokens(*tokenizer);
     generationOutput.finish_reason = ov::genai::GenerationFinishReason::STOP;  // Change it once GenAI introduces tool_calls finish reason
     std::string serialized = apiHandler->serializeUnaryResponse(std::vector<ov::genai::GenerationOutput>{generationOutput});
 
@@ -511,7 +498,6 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseGenerationOutputRetur
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseEncodedResultsReturnsToolCallsFinishReason) {
-    std::shared_ptr<ov::genai::Tokenizer> llama3Tokenizer = std::make_shared<ov::genai::Tokenizer>(llama3TokenizerPathForHandlerTests);
     std::string json = R"({
     "model": "llama",
     "stream": false,
@@ -527,42 +513,48 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseEncodedResultsReturns
     doc.Parse(json.c_str());
     ASSERT_FALSE(doc.HasParseError());
 
-    auto apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *llama3Tokenizer, "llama3");
+    auto apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer, "hermes3");
     uint32_t maxTokensLimit = 100;
     uint32_t bestOfLimit = 0;
     std::optional<uint32_t> maxModelLength;
     ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
 
     ov::genai::EncodedResults results;
-    results.tokens = {createLlama3ToolCallTokens(*llama3Tokenizer)};
+    results.tokens = {createHermes3ToolCallTokens(*tokenizer)};
     std::string serialized = apiHandler->serializeUnaryResponse(results);
 
     ASSERT_NE(serialized.find("\"finish_reason\":\"tool_calls\""), std::string::npos) << serialized;
     ASSERT_NE(serialized.find("\"tool_calls\":[{"), std::string::npos) << serialized;
 }
 
-// This is unsupported, once we have tool calling for VLM legacy pipeline, change the test
-TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseVLMSupportsToolCallsFinishReason_Unsupported) {
+TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseVLMSupportsToolCallsFinishReason) {
     std::string json = R"({
     "model": "llama",
     "stream": false,
-    "messages": [{"role": "user", "content": "What is weather?"}]
+    "messages": [{"role": "user", "content": "What is weather?"}],
+    "tools": [{
+      "type": "function",
+      "function": {
+        "name": "example_tool",
+        "parameters": {"type": "object"}
+      }
+    }]
     })";
     doc.Parse(json.c_str());
     ASSERT_FALSE(doc.HasParseError());
 
-    auto apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    auto apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer, "hermes3");
     uint32_t maxTokensLimit = 100;
     uint32_t bestOfLimit = 0;
     std::optional<uint32_t> maxModelLength;
     ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
 
     ov::genai::VLMDecodedResults results;
-    results.texts = {"dummy"};
-    std::string serialized = apiHandler->serializeUnaryResponse(results, 1);
+    std::string toolCall = R"(<tool_call>{"name": "example_tool", "arguments": {"arg1": "value1", "arg2": 42}}</tool_call>)";
+    results.texts = {toolCall};
+    std::string serialized = apiHandler->serializeUnaryResponse(results);
 
-    // ASSERT_NE(serialized.find("\"finish_reason\":\"tool_calls\""), std::string::npos) << serialized;
-    ASSERT_NE(serialized.find("\"finish_reason\":\"stop\""), std::string::npos) << serialized;
+    ASSERT_NE(serialized.find("\"finish_reason\":\"tool_calls\""), std::string::npos) << serialized;
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesSucceedsBase64) {
@@ -1338,6 +1330,170 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParseRequestWithTools_Provided1_ChoiceNone)
     assertRequestWithTools(providedTools, toolsChoice, expectedJson);
 }
 
+TEST_F(HttpOpenAIHandlerParsingTest, ParseRequestWithTools_ParsesToolsJsonContainerOnDemand) {
+    std::string json = R"({
+    "model": "llama",
+    "messages": [
+      {
+        "role": "user",
+        "content": "What is the weather?"
+      }
+    ],
+    "tools": [
+      {
+        "type": "function",
+        "function": {
+          "name": "get_weather",
+          "description": "Get weather",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "location": {
+                "type": "string"
+              }
+            },
+            "required": ["location"]
+          }
+        }
+      }
+    ]
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler =
+        std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+    auto toolsStatus = apiHandler->parseToolsToJsonContainer();
+    ASSERT_TRUE(toolsStatus.ok());
+    const auto& tools = toolsStatus.value();
+    ASSERT_TRUE(tools.has_value());
+    EXPECT_TRUE(tools->is_array());
+    ASSERT_EQ(tools->size(), 1);
+    ASSERT_TRUE((*tools)[0]["function"]["name"].as_string().has_value());
+    EXPECT_EQ((*tools)[0]["function"]["name"].as_string().value(), "get_weather");
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, OutputParserInitializationDependsOnParserNames) {
+    std::string json = R"({
+    "model": "llama",
+    "messages": [
+      {
+        "role": "user",
+        "content": "hello"
+      }
+    ]
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    auto withoutParserNames = std::make_shared<ovms::OpenAIChatCompletionsHandler>(
+        doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    EXPECT_EQ(withoutParserNames->getOutputParser(), nullptr);
+
+    auto withParserNames = std::make_shared<ovms::OpenAIChatCompletionsHandler>(
+        doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer, "llama3", "");
+    EXPECT_NE(withParserNames->getOutputParser(), nullptr);
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, SerializeUnaryResponseVLMDecodedResultsWithToolParser) {
+    std::string json = R"({
+    "model": "llama",
+    "messages": [
+      {
+        "role": "user",
+        "content": "hello"
+      }
+    ],
+    "tools": [
+      {
+        "type": "function",
+        "function": {
+          "name": "get_weather",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "location": {
+                "type": "string"
+              }
+            },
+            "required": ["location"]
+          }
+        }
+      }
+    ]
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    uint32_t maxTokensLimit = 64;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+
+    auto apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(
+        doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer, "hermes3", "");
+
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+
+    ov::genai::VLMDecodedResults results;
+    results.texts.push_back(
+        "I will call a tool.<tool_call>{\"name\":\"get_weather\",\"arguments\":{\"location\":\"Paris\"}}</tool_call>");
+
+    std::string serialized = apiHandler->serializeUnaryResponse(results);
+
+    rapidjson::Document responseDoc;
+    responseDoc.Parse(serialized.c_str());
+    ASSERT_FALSE(responseDoc.HasParseError());
+    ASSERT_TRUE(responseDoc.IsObject());
+
+    ASSERT_TRUE(responseDoc.HasMember("choices"));
+    ASSERT_TRUE(responseDoc["choices"].IsArray());
+    ASSERT_EQ(responseDoc["choices"].Size(), 1);
+
+    const auto& choice = responseDoc["choices"][0];
+    ASSERT_TRUE(choice.IsObject());
+    ASSERT_TRUE(choice.HasMember("finish_reason"));
+    ASSERT_TRUE(choice["finish_reason"].IsString());
+    EXPECT_STREQ(choice["finish_reason"].GetString(), "tool_calls");
+
+    ASSERT_TRUE(choice.HasMember("message"));
+    ASSERT_TRUE(choice["message"].IsObject());
+    const auto& message = choice["message"];
+
+    ASSERT_TRUE(message.HasMember("content"));
+    ASSERT_TRUE(message["content"].IsString());
+    EXPECT_STREQ(message["content"].GetString(), "I will call a tool.");
+
+    ASSERT_TRUE(message.HasMember("tool_calls"));
+    ASSERT_TRUE(message["tool_calls"].IsArray());
+    ASSERT_EQ(message["tool_calls"].Size(), 1);
+
+    const auto& toolCall = message["tool_calls"][0];
+    ASSERT_TRUE(toolCall.IsObject());
+    ASSERT_TRUE(toolCall.HasMember("id"));
+    ASSERT_TRUE(toolCall["id"].IsString());
+    EXPECT_GT(std::string(toolCall["id"].GetString()).size(), 0);
+    ASSERT_TRUE(toolCall.HasMember("function"));
+    ASSERT_TRUE(toolCall["function"].IsObject());
+    ASSERT_TRUE(toolCall["function"].HasMember("name"));
+    EXPECT_STREQ(toolCall["function"]["name"].GetString(), "get_weather");
+    ASSERT_TRUE(toolCall["function"].HasMember("arguments"));
+    EXPECT_STREQ(toolCall["function"]["arguments"].GetString(), "{\"location\":\"Paris\"}");
+
+    ASSERT_TRUE(responseDoc.HasMember("object"));
+    EXPECT_STREQ(responseDoc["object"].GetString(), "chat.completion");
+    ASSERT_TRUE(responseDoc.HasMember("model"));
+    EXPECT_STREQ(responseDoc["model"].GetString(), "llama");
+
+    ASSERT_TRUE(responseDoc.HasMember("usage"));
+    ASSERT_TRUE(responseDoc["usage"].IsObject());
+    ASSERT_TRUE(responseDoc["usage"].HasMember("completion_tokens"));
+    EXPECT_GT(responseDoc["usage"]["completion_tokens"].GetInt(), 0);
+}
+
 // Provide get_weather1, get_weather2, get_weather3 but take only first one - get_weather1
 TEST_F(HttpOpenAIHandlerParsingTest, ParseRequestWithTools_Provided3_ChoiceFirst) {
     std::string providedTools = R"(
@@ -1618,4 +1774,252 @@ TEST_F(HttpOpenAIHandlerParsingTest, responseFormatNullValue) {
     std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
     EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
     EXPECT_FALSE(apiHandler->getResponseFormat().has_value());
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, parseChatTemplateKwargsWithBooleanValue) {
+    std::string json = R"({
+    "model": "llama",
+    "messages": [{"role": "user", "content": "hello"}],
+    "chat_template_kwargs": {"enable_thinking": true}
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    auto apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+    auto kwargsStatus = apiHandler->parseChatTemplateKwargsToJsonContainer();
+    ASSERT_TRUE(kwargsStatus.ok());
+    const auto& kwargs = kwargsStatus.value();
+    ASSERT_TRUE(kwargs.has_value());
+    EXPECT_TRUE(kwargs->is_object());
+    ASSERT_TRUE((*kwargs)["enable_thinking"].as_bool().has_value());
+    EXPECT_EQ((*kwargs)["enable_thinking"].as_bool().value(), true);
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, parseChatTemplateKwargsWithMultipleValues) {
+    std::string json = R"({
+    "model": "llama",
+    "messages": [{"role": "user", "content": "hello"}],
+    "chat_template_kwargs": {"enable_thinking": false, "custom_param": "value"}
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    auto apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+    auto kwargsStatus = apiHandler->parseChatTemplateKwargsToJsonContainer();
+    ASSERT_TRUE(kwargsStatus.ok());
+    const auto& kwargs = kwargsStatus.value();
+    ASSERT_TRUE(kwargs.has_value());
+    EXPECT_TRUE(kwargs->is_object());
+    ASSERT_TRUE((*kwargs)["enable_thinking"].as_bool().has_value());
+    EXPECT_EQ((*kwargs)["enable_thinking"].as_bool().value(), false);
+    ASSERT_TRUE((*kwargs)["custom_param"].as_string().has_value());
+    EXPECT_EQ((*kwargs)["custom_param"].as_string().value(), "value");
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, parseChatTemplateKwargsEmptyObject) {
+    std::string json = R"({
+    "model": "llama",
+    "messages": [{"role": "user", "content": "hello"}],
+    "chat_template_kwargs": {}
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    auto apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+    auto kwargsStatus = apiHandler->parseChatTemplateKwargsToJsonContainer();
+    ASSERT_TRUE(kwargsStatus.ok());
+    const auto& kwargs = kwargsStatus.value();
+    ASSERT_TRUE(kwargs.has_value());
+    EXPECT_TRUE(kwargs->is_object());
+    EXPECT_EQ(kwargs->size(), 0);
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, parseChatTemplateKwargsNull) {
+    std::string json = R"({
+    "model": "llama",
+    "messages": [{"role": "user", "content": "hello"}],
+    "chat_template_kwargs": null
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    auto apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+    auto kwargsStatus = apiHandler->parseChatTemplateKwargsToJsonContainer();
+    ASSERT_TRUE(kwargsStatus.ok());
+    EXPECT_FALSE(kwargsStatus.value().has_value());
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, parseChatTemplateKwargsAbsent) {
+    std::string json = R"({
+    "model": "llama",
+    "messages": [{"role": "user", "content": "hello"}]
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    auto apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+    auto kwargsStatus = apiHandler->parseChatTemplateKwargsToJsonContainer();
+    ASSERT_TRUE(kwargsStatus.ok());
+    EXPECT_FALSE(kwargsStatus.value().has_value());
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, parseChatTemplateKwargsInvalidString) {
+    std::string json = R"({
+    "model": "llama",
+    "messages": [{"role": "user", "content": "hello"}],
+    "chat_template_kwargs": "not_an_object"
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    auto apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+    auto kwargsStatus = apiHandler->parseChatTemplateKwargsToJsonContainer();
+    ASSERT_FALSE(kwargsStatus.ok());
+    EXPECT_EQ(kwargsStatus.status().code(), absl::StatusCode::kInvalidArgument);
+    EXPECT_THAT(std::string(kwargsStatus.status().message()), ::testing::HasSubstr("chat_template_kwargs must be an object"));
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, parseChatTemplateKwargsInvalidArray) {
+    std::string json = R"({
+    "model": "llama",
+    "messages": [{"role": "user", "content": "hello"}],
+    "chat_template_kwargs": [1, 2, 3]
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    auto apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+    auto kwargsStatus = apiHandler->parseChatTemplateKwargsToJsonContainer();
+    ASSERT_FALSE(kwargsStatus.ok());
+    EXPECT_EQ(kwargsStatus.status().code(), absl::StatusCode::kInvalidArgument);
+    EXPECT_THAT(std::string(kwargsStatus.status().message()), ::testing::HasSubstr("chat_template_kwargs must be an object"));
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, parseChatTemplateKwargsInvalidNumber) {
+    std::string json = R"({
+    "model": "llama",
+    "messages": [{"role": "user", "content": "hello"}],
+    "chat_template_kwargs": 42
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    auto apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+    auto kwargsStatus = apiHandler->parseChatTemplateKwargsToJsonContainer();
+    ASSERT_FALSE(kwargsStatus.ok());
+    EXPECT_EQ(kwargsStatus.status().code(), absl::StatusCode::kInvalidArgument);
+    EXPECT_THAT(std::string(kwargsStatus.status().message()), ::testing::HasSubstr("chat_template_kwargs must be an object"));
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, parseChatTemplateKwargsWithNestedObject) {
+    std::string json = R"({
+    "model": "llama",
+    "messages": [{"role": "user", "content": "hello"}],
+    "chat_template_kwargs": {"documents": [{"title": "doc1", "text": "content1"}], "enable_thinking": true}
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    auto apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+    auto kwargsStatus = apiHandler->parseChatTemplateKwargsToJsonContainer();
+    ASSERT_TRUE(kwargsStatus.ok());
+    const auto& kwargs = kwargsStatus.value();
+    ASSERT_TRUE(kwargs.has_value());
+    EXPECT_TRUE(kwargs->is_object());
+    ASSERT_TRUE((*kwargs)["enable_thinking"].as_bool().has_value());
+    EXPECT_EQ((*kwargs)["enable_thinking"].as_bool().value(), true);
+    EXPECT_TRUE((*kwargs)["documents"].is_array());
+    EXPECT_EQ((*kwargs)["documents"].size(), 1);
+}
+
+// Integration test: verifies that chat_template_kwargs extracted from request
+// are actually consumed by GenAI tokenizer.apply_chat_template as extra_context.
+// This mirrors the non-Python (#else) path in GenAiServable::prepareInputs.
+TEST_F(HttpOpenAIHandlerParsingTest, chatTemplateKwargsConsumedByApplyChatTemplate) {
+    // Set a custom chat template that branches on enable_thinking kwarg
+    std::string chatTemplate = R"({% if enable_thinking is defined and enable_thinking %}<think>{% endif %}{% for message in messages %}{{ message['content'] }}{% endfor %}{% if enable_thinking is defined and enable_thinking %}</think>{% endif %})";
+    tokenizer->set_chat_template(chatTemplate);
+
+    // Parse request with enable_thinking = true
+    std::string jsonTrue = R"({
+    "model": "llama",
+    "messages": [{"role": "user", "content": "hello"}],
+    "chat_template_kwargs": {"enable_thinking": true}
+  })";
+    doc.Parse(jsonTrue.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    auto apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+
+    // Extract kwargs and chat history - same as servable code does
+    auto kwargsStatus = apiHandler->parseChatTemplateKwargsToJsonContainer();
+    ASSERT_TRUE(kwargsStatus.ok());
+    const auto& chatTemplateKwargs = kwargsStatus.value();
+    ov::genai::ChatHistory& chatHistory = apiHandler->getChatHistory();
+
+    // Call apply_chat_template with extra_context, exactly as the servable does
+    constexpr bool add_generation_prompt = true;
+    std::string result = tokenizer->apply_chat_template(chatHistory, add_generation_prompt, {}, std::nullopt, chatTemplateKwargs);
+    EXPECT_EQ(result, "<think>hello</think>");
+
+    // Now test with enable_thinking = false
+    rapidjson::Document docFalse;
+    std::string jsonFalse = R"({
+    "model": "llama",
+    "messages": [{"role": "user", "content": "hello"}],
+    "chat_template_kwargs": {"enable_thinking": false}
+  })";
+    docFalse.Parse(jsonFalse.c_str());
+    ASSERT_FALSE(docFalse.HasParseError());
+    auto apiHandlerFalse = std::make_shared<ovms::OpenAIChatCompletionsHandler>(docFalse, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    ASSERT_EQ(apiHandlerFalse->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+    auto kwargsFalseStatus = apiHandlerFalse->parseChatTemplateKwargsToJsonContainer();
+    ASSERT_TRUE(kwargsFalseStatus.ok());
+    std::string resultFalse = tokenizer->apply_chat_template(apiHandlerFalse->getChatHistory(), add_generation_prompt, {}, std::nullopt, kwargsFalseStatus.value());
+    EXPECT_EQ(resultFalse, "hello");
+
+    // And with no kwargs at all
+    rapidjson::Document docNone;
+    std::string jsonNone = R"({
+    "model": "llama",
+    "messages": [{"role": "user", "content": "hello"}]
+  })";
+    docNone.Parse(jsonNone.c_str());
+    ASSERT_FALSE(docNone.HasParseError());
+    auto apiHandlerNone = std::make_shared<ovms::OpenAIChatCompletionsHandler>(docNone, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    ASSERT_EQ(apiHandlerNone->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+    auto kwargsNoneStatus = apiHandlerNone->parseChatTemplateKwargsToJsonContainer();
+    ASSERT_TRUE(kwargsNoneStatus.ok());
+    std::string resultNone = tokenizer->apply_chat_template(apiHandlerNone->getChatHistory(), add_generation_prompt, {}, std::nullopt, kwargsNoneStatus.value());
+    EXPECT_EQ(resultNone, "hello");
 }

@@ -26,6 +26,7 @@
 
 #include <openvino/genai/generation_config.hpp>
 #include <openvino/genai/generation_handle.hpp>
+#include <openvino/genai/json_container.hpp>
 #include <openvino/genai/llm_pipeline.hpp>
 #include <openvino/genai/tokenizer.hpp>
 #include <openvino/genai/visual_language/pipeline.hpp>
@@ -34,6 +35,7 @@
 #pragma warning(push)
 #pragma warning(disable : 6001 4324 6385 6386)
 #include "absl/status/status.h"
+#include "absl/status/statusor.h"
 #pragma warning(pop)
 #include "../io_processing/output_parser.hpp"
 #include "openai_request.hpp"
@@ -115,12 +117,14 @@ public:
     absl::Status parseRequest(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength, std::optional<std::string> allowedLocalMediaPath = std::nullopt, std::optional<std::vector<std::string>> allowedMediaDomains = std::nullopt);
     absl::Status parseMessages(std::optional<std::string> allowedLocalMediaPath = std::nullopt, std::optional<std::vector<std::string>> allowedMediaDomains = std::nullopt);
     absl::Status parseTools();
+    absl::StatusOr<std::optional<ov::genai::JsonContainer>> parseToolsToJsonContainer();
+    absl::StatusOr<std::optional<ov::genai::JsonContainer>> parseChatTemplateKwargsToJsonContainer();
     const bool areToolsAvailable() const;
 
     std::string serializeUnaryResponse(const std::vector<ov::genai::GenerationOutput>& generationOutputs);
     std::string serializeUnaryResponse(const ov::genai::EncodedResults& results);
     // VLMDecodedResults does not contain tokens that we can count, so we need to pass completionTokens in order to provide correct usage statistics
-    std::string serializeUnaryResponse(const ov::genai::VLMDecodedResults& results, size_t completionTokens);
+    std::string serializeUnaryResponse(const ov::genai::VLMDecodedResults& results);
     std::string serializeStreamingChunk(const std::string& chunkResponse, ov::genai::GenerationFinishReason finishReason);
     std::string serializeStreamingUsageChunk();
 };

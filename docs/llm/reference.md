@@ -407,7 +407,6 @@ Some servable types introduce additional limitations:
 
 ### Visual Language servable limitations
 - works only on `/chat/completions` endpoint,
-- does not work with `tools`,
 - **[NPU only]** requests MUST include one and only one image in the messages context. Other request will be rejected.
 
 ## References
