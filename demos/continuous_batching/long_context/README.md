@@ -22,6 +22,10 @@ Compression reduces this memory usage, enabling longer prompts or more parallel 
 
 Let's demonstrate all the optimizations combined and test it with the real life scenario of sending multiple various questions in the same context. It will illustrate the gain from the prefix caching on the first token latency, improved second token latency thanks to prompt lookup and moderate memory consumption despite very long prompts and parallel execution.
 
+::::{tab-set}
+:::{tab-item} CPU and GPU
+:sync:CPU
+
 Export the model openai/gpt-oss-20b which has the max context length of 131k tokens.
 
 ```bash
@@ -31,6 +35,13 @@ mkdir models
 python export_model.py text_generation --source_model openai/gpt-oss-20b --weight-format int4 --config_file_path models/config.json --model_repository_path models --tool_parser gptoss --reasoning_parser gptoss
 curl -L -o models/openai/gpt-oss-20b/chat_template.jinja https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/4/extras/chat_template_examples/chat_template_gpt_oss_multiturn.jinja
 ```
+:::
+:::{tab-item} NPU
+```bash
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --pull --model_repository_path /models --source_model OpenVINO/Qwen3-8B-int4-cw-ov  --target_device NPU --task text_generation --enable_prefix_caching true --max_num_batch_tokens 16000 --tool_parser hermes3
+```
+:::
+::::
 
 Start OVMS:
 
@@ -38,7 +49,7 @@ Start OVMS:
 :::{tab-item} CPU
 :sync: CPU
 ```bash
-docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models openvino/model_server:weekly --rest_port 8000 --source_model openai/gpt-oss-20b --model_repository_path models --tool_parser gptoss --task text_generation --cache_dir /models/.cache --enable_prefix_caching true
+docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models openvino/model_server:weekly --rest_port 8000 --source_model openai/gpt-oss-20b --model_repository_path models --tool_parser gptoss --reasoning_parser gptoss --task text_generation --cache_dir /models/.cache --enable_prefix_caching true
 ```
 :::
 :::{tab-item} GPU
@@ -47,6 +58,13 @@ docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/model
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:weekly \
 --rest_port 8000 --source_model openai/gpt-oss-20b --model_repository_path models \
 --tool_parser gptoss --reasoning_parser gptoss --target_device GPU --task text_generation --enable_prefix_caching true
+```
+:::
+:::{tab-item} NPU
+:sync: NPU
+```bash
+docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:weekly \
+--rest_port 8000 --model_name OpenVINO/Qwen3-8B-int4-cw-ov --model_repository_path models
 ```
 :::
 ::::
@@ -127,6 +145,12 @@ P99 ITL (ms):                            160.02
 ==================================================
 ```
 :::
+:::{tab-item} NPU
+:sync: NPU
+```
+TODO
+```
+:::
 ::::
 
 The results shown above, despite very long context, have much lower TTFT latency with prefix caching. As long as the beginning of the request prompt is reused, KV cache can be also reused to speed up prompt processing.
@@ -137,21 +161,28 @@ The results shown above, despite very long context, have much lower TTFT latency
 :::{tab-item} CPU
 | Context Length (tokens) | TTFT No Caching (ms) | TTFT Prefix Caching (ms) |
 |------------------------|------------------|---------------------|
-| 10,000                 | 176.89           | 170.42                  |
-| 50,000                 | 177.75           | 171.19                  |
-| 100,000                | 179.16           | 172.79                  |
-| 200,000                | 181.29           | 175.05                  |
+| 10,000                 | TODO           | 170.42                  |
+| 50,000                 | TODO           | 171.19                  |
+| 100,000                | TODO           | 172.79                  |
+| 200,000                | TODO           | 175.05                  |
 
 :::
 :::{tab-item} GPU
 :sync: GPU
 | Context Length (tokens) | TTFT No Caching (ms) | TTFT Prefix Caching (ms) |
 |------------------------|-------------------|-------------------------|
-| 10,000                 | 101.82            | 101.47                  | 
-| 50,000                 | 103.93            | 101.98                  |
-| 100,000                | 105.23            | 104.67                  |
-| 200,000                | 127.61            | 111.49                  |
+| 10,000                 | TODO            | 101.47                  | 
+| 50,000                 | TODO            | 101.98                  |
+| 100,000                | TODO            | 104.67                  |
+| 200,000                | TODO            | 111.49                  |
 
+:::
+:::{tab-item} NPU
+:sync: NPU
+| Context Length (tokens) | TTFT No Caching (ms) | TTFT Prefix Caching (ms) |
+|------------------------|-------------------|-------------------------|
+| 10,000                 | TODO            | TODO                  | 
+| 15,000                 | TODO            | TODO                  |
 :::
 ::::
 
@@ -171,26 +202,6 @@ lm-eval --model local-chat-completions --tasks longbench_gov_report  --model_arg
 Such experiment can confirm the impact on accuracy from the model quantization and KV cache compression.
 
 ## Cache Precision Comparison
-
-::::{tab-set}
-:::{tab-item} CPU
-| Cache Precision | Plugin Config | Accuracy (longbench_gov_report, concurrency 50) | Duration (s for 100 requests) |
-|-----------------|--------------|-----------------------------------------------|-------------------------------|
-| INT8            | "KV_CACHE_PRECISION":"u8"                                     |         |     |
-| BF16            | "KV_CACHE_PRECISION":"bf16"                                   |         |    |
-| FP32            | "KV_CACHE_PRECISION":"FP32","EXECUTION_MODE_HINT": "ACCURACY" |          |   |
-
-:::
-:::{tab-item} GPU
-:sync: GPU
-| Cache Precision | Plugin Config | Accuracy (longbench_gov_report, concurrency 50) | Duration (s for 100 requests) |
-|-----------------|--------------|-----------------------------------------------|-------------------------------|
-| INT8            | "KV_CACHE_PRECISION":"u8"                                     |         |     |
-| BF16            | "KV_CACHE_PRECISION":"bf16"                                   |         |    |
-| FP32            | "KV_CACHE_PRECISION":"FP32","EXECUTION_MODE_HINT": "ACCURACY" |          |   |
-
-:::
-::::
 
 The results in an experiment captured on Xeon Gen4 server show that KV cache compression has minimal impact on accuracy and significantly reduces memory consumption.
 Slower execution with FP32 precision is a result of disabled AMX acceleration.
