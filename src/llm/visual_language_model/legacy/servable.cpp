@@ -258,11 +258,12 @@ absl::Status VisualLanguageModelLegacyServable::prepareInputs(std::shared_ptr<Ge
             return toolsStatus.status();
         }
         const auto& tools = toolsStatus.value();
-        if (tools.has_value()) {
-            vlmExecutionContext->inputText = properties->tokenizer.apply_chat_template(chatHistory, add_generation_prompt, {}, tools);
-        } else {
-            vlmExecutionContext->inputText = properties->tokenizer.apply_chat_template(chatHistory, add_generation_prompt);
+        auto chatTemplateKwargsStatus = vlmExecutionContext->apiHandler->parseChatTemplateKwargsToJsonContainer();
+        if (!chatTemplateKwargsStatus.ok()) {
+            return chatTemplateKwargsStatus.status();
         }
+        const auto& chatTemplateKwargs = chatTemplateKwargsStatus.value();
+        vlmExecutionContext->inputText = properties->tokenizer.apply_chat_template(chatHistory, add_generation_prompt, {}, tools, chatTemplateKwargs);
     } else {
         return absl::InvalidArgumentError("Unsupported endpoint");
     }

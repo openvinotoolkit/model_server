@@ -513,6 +513,30 @@ absl::StatusOr<std::optional<ov::genai::JsonContainer>> OpenAIChatCompletionsHan
     }
 }
 
+absl::StatusOr<std::optional<ov::genai::JsonContainer>> OpenAIChatCompletionsHandler::parseChatTemplateKwargsToJsonContainer() {
+    auto it = doc.FindMember("chat_template_kwargs");
+    if (it == doc.MemberEnd() || it->value.IsNull()) {
+        return std::nullopt;
+    }
+    if (!it->value.IsObject()) {
+        return absl::InvalidArgumentError("chat_template_kwargs must be an object");
+    }
+    try {
+        return rapidJsonValueToJsonContainer(it->value);
+    } catch (const std::exception& e) {
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Direct chat_template_kwargs conversion to JsonContainer failed: {}. Falling back to JSON string conversion.", e.what());
+        try {
+            rapidjson::StringBuffer buffer;
+            rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+            it->value.Accept(writer);
+            return ov::genai::JsonContainer::from_json_string(buffer.GetString());
+        } catch (const std::exception& fallbackEx) {
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Fallback chat_template_kwargs conversion failed: {}", fallbackEx.what());
+            return absl::InvalidArgumentError(absl::StrCat("Invalid chat_template_kwargs payload: ", fallbackEx.what()));
+        }
+    }
+}
+
 const bool OpenAIChatCompletionsHandler::areToolsAvailable() const {
     return !request.toolNameSchemaMap.empty();
 }

@@ -187,12 +187,13 @@ absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecution
             return toolsStatus.status();
         }
         const auto& tools = toolsStatus.value();
+        auto chatTemplateKwargsStatus = executionContext->apiHandler->parseChatTemplateKwargsToJsonContainer();
+        if (!chatTemplateKwargsStatus.ok()) {
+            return chatTemplateKwargsStatus.status();
+        }
+        const auto& chatTemplateKwargs = chatTemplateKwargsStatus.value();
         try {
-            if (tools.has_value()) {
-                inputText = getProperties()->tokenizer.apply_chat_template(chatHistory, add_generation_prompt, {}, tools);
-            } else {
-                inputText = getProperties()->tokenizer.apply_chat_template(chatHistory, add_generation_prompt);
-            }
+            inputText = getProperties()->tokenizer.apply_chat_template(chatHistory, add_generation_prompt, {}, tools, chatTemplateKwargs);
         } catch (const std::exception& e) {
             SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Failed to apply chat template: {}", e.what());
             return absl::Status(absl::StatusCode::kInvalidArgument, "Failed to apply chat template. The model either does not have chat template or has an invalid one.");

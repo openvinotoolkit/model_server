@@ -118,6 +118,7 @@ public:
     absl::Status parseMessages(std::optional<std::string> allowedLocalMediaPath = std::nullopt, std::optional<std::vector<std::string>> allowedMediaDomains = std::nullopt);
     absl::Status parseTools();
     absl::StatusOr<std::optional<ov::genai::JsonContainer>> parseToolsToJsonContainer();
+    absl::StatusOr<std::optional<ov::genai::JsonContainer>> parseChatTemplateKwargsToJsonContainer();
     const bool areToolsAvailable() const;
 
     std::string serializeUnaryResponse(const std::vector<ov::genai::GenerationOutput>& generationOutputs);
