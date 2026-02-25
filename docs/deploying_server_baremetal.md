@@ -187,7 +187,7 @@ Learn more about model server [starting parameters](parameters.md).
 
 > **NOTE**:
 > When serving models on [AI accelerators](accelerators.md), some additional steps may be required to install device drivers and dependencies.
-> Learn more in the [Additional Configurations for Hardware](https://docs.openvino.ai/2025/get-started/install-openvino/configurations.html) documentation.
+> Learn more in the [Additional Configurations for Hardware](https://docs.openvino.ai/2026/get-started/install-openvino/configurations.html) documentation.
 
 
 ## Next Steps
