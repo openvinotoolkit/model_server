@@ -106,12 +106,12 @@ In case of the version with python run also:
 ```{code} sh
 export PYTHONPATH=${PWD}/ovms/lib/python
 sudo yum install -y python3.12 python3.12-pip
-pip3 install "Jinja2==3.1.6" "MarkupSafe==3.0.2"
+pip3.12 install "Jinja2==3.1.6" "MarkupSafe==3.0.2"
 ```
 
 and if you plan to use Python nodes with OpenVINO or OpenVINO GenAI, you will also need to install NumPy:
 ```{code} sh
-pip3 install numpy
+pip3.12 install numpy
 ```
 **Do not install openvino, openvino-tokenizers or openvino-genai via pip**.
 Model server version with Python is shipped with those packages and new installation with pip will likely result in broken dependencies.
