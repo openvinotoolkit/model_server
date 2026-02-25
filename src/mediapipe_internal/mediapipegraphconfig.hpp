@@ -15,7 +15,9 @@
 //*****************************************************************************
 #pragma once
 
+#include <optional>
 #include <string>
+#include <variant>
 #pragma warning(push)
 #pragma warning(disable : 6313)
 #include <rapidjson/document.h>
@@ -26,6 +28,22 @@ namespace ovms {
 extern const std::string DEFAULT_GRAPH_FILENAME;
 extern const std::string DEFAULT_SUBCONFIG_FILENAME;
 extern const std::string DEFAULT_MODELMESH_SUBCONFIG_FILENAME;
+
+/**
+ * @brief Tag type representing AUTO graph queue size (determined at runtime).
+ */
+struct GraphQueueAutoTag {
+    bool operator==(const GraphQueueAutoTag&) const { return true; }
+};
+
+/**
+ * @brief Represents the user's graph_queue_size setting.
+ *
+ * - std::nullopt              => user did not set this field
+ * - int                       => user explicitly set a numeric value
+ * - GraphQueueAutoTag         => user explicitly set "AUTO"
+ */
+using GraphQueueSizeValue = std::optional<std::variant<int, GraphQueueAutoTag>>;
 
 class Status;
 
@@ -68,6 +86,15 @@ private:
      * @brief MD5 hash for graph pbtxt file
      */
     std::string currentGraphPbTxtMD5;
+
+    /**
+     * @brief Graph queue size configuration.
+     *
+     * - std::nullopt              => user did not set this field
+     * - int                       => user explicitly set a numeric size
+     * - GraphQueueAutoTag         => user explicitly set "AUTO"
+     */
+    GraphQueueSizeValue graphQueueSize;
 
 public:
     /**
@@ -204,6 +231,50 @@ public:
 
     void setCurrentGraphPbTxtMD5(const std::string& currentGraphPbTxtMD5) {
         this->currentGraphPbTxtMD5 = currentGraphPbTxtMD5;
+    }
+
+    /**
+     * @brief Get the graph queue size setting.
+     *
+     * @return const GraphQueueSizeValue& - nullopt if not set, int or GraphQueueAutoTag
+     */
+    const GraphQueueSizeValue& getGraphQueueSize() const {
+        return this->graphQueueSize;
+    }
+
+    /**
+     * @brief Set the graph queue size to an explicit numeric value.
+     */
+    void setGraphQueueSize(int size) {
+        this->graphQueueSize = size;
+    }
+
+    /**
+     * @brief Set the graph queue size to AUTO.
+     */
+    void setGraphQueueSizeAuto() {
+        this->graphQueueSize = GraphQueueAutoTag{};
+    }
+
+    /**
+     * @brief Resolve the graph queue size setting to a concrete integer.
+     *
+     * Returns:
+     *   -1  => queue creation disabled (user set -1)
+     *    0  => queue with size 0 (user set 0)
+     *   >0  => explicit size or resolved AUTO / default
+     *
+     * When not set (nullopt): returns -1 (queue disabled).
+     * When AUTO: returns hardcoded value (TODO FIXME @atobisze determine optimal size).
+     */
+    int getInitialQueueSize() const {
+        if (!this->graphQueueSize.has_value()) {
+            return -1;  // not set - queue disabled by default
+        }
+        if (std::holds_alternative<GraphQueueAutoTag>(*this->graphQueueSize)) {
+            return 16;  // TODO FIXME @atobisze determine optimal size based on nireq / hardware
+        }
+        return std::get<int>(*this->graphQueueSize);
     }
 
     bool isReloadRequired(const MediapipeGraphConfig& rhs) const;

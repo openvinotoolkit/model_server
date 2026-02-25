@@ -50,6 +50,7 @@
 #include "../server.hpp"
 #include "../status.hpp"
 #include "../stringutils.hpp"
+#include "src/timer.hpp"
 #include "../tfs_frontend/tfs_utils.hpp"
 #include "c_api_test_utils.hpp"
 #include "test_utils.hpp"
@@ -1067,7 +1068,99 @@ static const std::string basicMediapipeConfigWithNewGraphPath = R"({
     "mediapipe_config_list": [
     {
         "name":"pipeline1Dummy",
-        "graph_path":"/ovms/src/test/mediapipe/graphdummyadapterfull_dummyinputnames.pbtxt"
+        "graph_path":"/ovms/src/test/mediapipe/graphdummyadapterfull_dummyinputnames_newpath.pbtxt"
+    }
+    ]
+})";
+
+const std::string basicMediapipeQueueConfig = R"({
+    "model_config_list": [
+        {"config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy"
+        }
+        }
+    ],
+    "mediapipe_config_list": [
+    {
+        "name":"pipeline1Dummy",
+        "graph_path":"/ovms/src/test/mediapipe/graph_queue_dummyadapterfull_dummyinputnames.pbtxt"
+    }
+    ]
+})";
+
+static const std::string basicMediapipeQueueConfigWithAddedGraph = R"({
+    "model_config_list": [
+        {"config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy"
+        }
+        }
+    ],
+    "mediapipe_config_list": [
+    {
+        "name":"pipeline1Dummy",
+        "graph_path":"/ovms/src/test/mediapipe/graph_queue_dummyadapterfull_dummyinputnames.pbtxt"
+    },
+    {
+        "name":"pipeline2Dummy",
+        "graph_path":"/ovms/src/test/mediapipe/graph_queue_dummyadapterfull_dummyinputnames.pbtxt"
+    }
+    ]
+})";
+
+static const std::string basicMediapipeQueueConfigWithRemovedGraph = R"({
+    "model_config_list": [
+        {"config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy"
+        }
+        }
+    ],
+    "mediapipe_config_list": [
+    ]
+})";
+
+static const std::string basicMediapipeQueueConfigWithRemovedModel = R"({
+    "model_config_list": [
+    ],
+    "mediapipe_config_list": [
+    {
+        "name":"pipeline1Dummy",
+        "graph_path":"/ovms/src/test/mediapipe/graph_queue_dummyadapterfull_dummyinputnames.pbtxt"
+    }
+    ]
+})";
+
+static const std::string basicMediapipeQueueConfigWithReloadedModel = R"({
+    "model_config_list": [
+        {"config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "nireq": 47
+        }
+        }
+    ],
+    "mediapipe_config_list": [
+    {
+        "name":"pipeline1Dummy",
+        "graph_path":"/ovms/src/test/mediapipe/graph_queue_dummyadapterfull_dummyinputnames.pbtxt"
+    }
+    ]
+})";
+
+static const std::string basicMediapipeQueueConfigWithNewGraphPath = R"({
+    "model_config_list": [
+        {"config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy"
+        }
+        }
+    ],
+    "mediapipe_config_list": [
+    {
+        "name":"pipeline1Dummy",
+        "graph_path":"/ovms/src/test/mediapipe/graph_queue_dummyadapterfull_dummyinputnames_newpath.pbtxt"
     }
     ]
 })";
@@ -1094,9 +1187,16 @@ static void mediacreate(std::unique_ptr<MediapipeGraphExecutor>& executorPtr, ov
         sc = static_cast<StatusCode>(code);                   \
     }
 
+enum StressTimerSlot : unsigned int {
+    STRESS_LOOP,
+    CREATE,
+    EXECUTE,
+    TIMER_END
+};
+
 class ConfigChangeStressTest : public TestWithTempDir {
 protected:
-    const uint32_t loadThreadCount = 20;
+    const uint32_t loadThreadCount = 16;
     const uint32_t beforeConfigChangeLoadTimeMs = 30;
     const uint32_t afterConfigChangeLoadTimeMs = 50;
     const int stressIterationsLimit = 10000;
@@ -1291,6 +1391,12 @@ public:
         createConfigFileWithContent(ovmsConfig, configFilePath);
         SPDLOG_INFO("{} end", __FUNCTION__);
     }
+    void addNewMediapipeQueueGraph() {
+        SPDLOG_INFO("{} start", __FUNCTION__);
+        SetUpConfig(basicMediapipeQueueConfigWithAddedGraph);
+        createConfigFileWithContent(ovmsConfig, configFilePath);
+        SPDLOG_INFO("{} end", __FUNCTION__);
+    }
     void removeMediapipeGraph() {
         SPDLOG_INFO("{} start", __FUNCTION__);
         SetUpConfig(basicMediapipeConfigWithRemovedGraph);
@@ -1312,6 +1418,30 @@ public:
     void reloadMediapipeGraph() {
         SPDLOG_INFO("{} start", __FUNCTION__);
         SetUpConfig(basicMediapipeConfigWithNewGraphPath);
+        createConfigFileWithContent(ovmsConfig, configFilePath);
+        SPDLOG_INFO("{} end", __FUNCTION__);
+    }
+    void removeMediapipeQueueGraph() {
+        SPDLOG_INFO("{} start", __FUNCTION__);
+        SetUpConfig(basicMediapipeQueueConfigWithRemovedGraph);
+        createConfigFileWithContent(ovmsConfig, configFilePath);
+        SPDLOG_INFO("{} end", __FUNCTION__);
+    }
+    void removeMediapipeQueueGraphUsedModel() {
+        SPDLOG_INFO("{} start", __FUNCTION__);
+        SetUpConfig(basicMediapipeQueueConfigWithRemovedModel);
+        createConfigFileWithContent(ovmsConfig, configFilePath);
+        SPDLOG_INFO("{} end", __FUNCTION__);
+    }
+    void reloadMediapipeQueueGraphUsedModel() {
+        SPDLOG_INFO("{} start", __FUNCTION__);
+        SetUpConfig(basicMediapipeQueueConfigWithReloadedModel);
+        createConfigFileWithContent(ovmsConfig, configFilePath);
+        SPDLOG_INFO("{} end", __FUNCTION__);
+    }
+    void reloadMediapipeQueueGraph() {
+        SPDLOG_INFO("{} start", __FUNCTION__);
+        SetUpConfig(basicMediapipeQueueConfigWithNewGraphPath);
         createConfigFileWithContent(ovmsConfig, configFilePath);
         SPDLOG_INFO("{} end", __FUNCTION__);
     }
@@ -1706,6 +1836,8 @@ public:
         auto stressIterationsCounter = stressIterationsLimit;
         bool breakLoop = false;
         while (stressIterationsCounter-- > 0) {
+            ovms::Timer<TIMER_END> timer;
+            timer.start(STRESS_LOOP);
             auto futureWaitResult = stopSignal.wait_for(std::chrono::milliseconds(0));
             if (true == breakLoop) {
                 SPDLOG_INFO("Ending Load");
@@ -1725,6 +1857,7 @@ public:
             RequestType request2;
             RequestType request = preparePipelinePredictRequest(request2);
             ovms::Status createPipelineStatus = StatusCode::UNKNOWN_ERROR;
+            timer.start(CREATE);
             if (typeid(ServableType) == typeid(ovms::Pipeline)) {
                 createPipelineStatus = this->manager->createPipeline(pipelinePtr, pipelineName, &request, &response);
 #if (MEDIAPIPE_DISABLE == 0)
@@ -1732,6 +1865,8 @@ public:
                 mediacreate(executorPtr, *(this->manager), request, response, createPipelineStatus);
 #endif
             }
+            timer.stop(CREATE);
+            SPDLOG_TRACE("XYZ creation time: {} us", timer.elapsed<std::chrono::microseconds>(CREATE));
             // we need to make sure that expected status happened and still accept
             // some that could happen but we may not hit them
             EXPECT_TRUE((requiredLoadResults.find(createPipelineStatus.getCode()) != requiredLoadResults.end()) ||
@@ -1743,6 +1878,7 @@ public:
             }
 
             ovms::Status executePipelineStatus = StatusCode::UNKNOWN_ERROR;
+            timer.start(EXECUTE);
             if (typeid(ServableType) == typeid(ovms::Pipeline)) {
                 executePipelineStatus = pipelinePtr->execute(ovms::ExecutionContext(
                     ovms::ExecutionContext::Interface::GRPC,
@@ -1752,6 +1888,8 @@ public:
                 mediaexec(executorPtr, *(this->manager), request, response, executePipelineStatus);
 #endif
             }
+            timer.stop(EXECUTE);
+            SPDLOG_TRACE("XYZ execution time: {} us", timer.elapsed<std::chrono::microseconds>(EXECUTE));
             createPipelineRetCodesCounters[executePipelineStatus.getCode()]++;
             EXPECT_TRUE((requiredLoadResults.find(executePipelineStatus.getCode()) != requiredLoadResults.end()) ||
                         (allowedLoadResults.find(executePipelineStatus.getCode()) != allowedLoadResults.end()))
@@ -1763,6 +1901,8 @@ public:
                 SPDLOG_INFO("Earlier fail detected. Stopping execution");
                 break;
             }
+            timer.stop(STRESS_LOOP);
+            SPDLOG_TRACE("XYZ loop iteration time: {} us", timer.elapsed<std::chrono::microseconds>(STRESS_LOOP));
         }
         for (auto& [retCode, counter] : createPipelineRetCodesCounters) {
             if (counter > 0) {

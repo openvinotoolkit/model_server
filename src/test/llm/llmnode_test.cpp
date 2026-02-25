@@ -174,6 +174,51 @@ std::shared_ptr<ov::genai::ContinuousBatchingPipeline> LLMFlowHttpTest::cbPipe;
 std::shared_ptr<LLMExecutorWrapper> LLMFlowHttpTest::llmExecutorWrapper;
 std::unique_ptr<std::thread> LLMFlowHttpTest::t;
 
+class LLMFlowHttpQueueGraphTest : public ::testing::Test {
+protected:
+    static std::unique_ptr<std::thread> t;
+
+public:
+    std::unique_ptr<ovms::HttpRestApiHandler> handler;
+    std::unordered_map<std::string, std::string> headers{{"content-type", "application/json"}};
+    ovms::HttpRequestComponents comp;
+    const std::string endpointChatCompletions = "/v3/chat/completions";
+    const std::string endpointCompletions = "/v3/completions";
+    std::shared_ptr<MockedServerRequestInterface> writer;
+    std::shared_ptr<MockedMultiPartParser> multiPartParser;
+    std::string response;
+    rapidjson::Document parsedResponse;
+    ovms::HttpResponseComponents responseComponents;
+
+    static void SetUpTestSuite() {
+        std::string port = "9173";
+        ovms::Server& server = ovms::Server::instance();
+        ::SetUpServer(t, server, port, getGenericFullPathForSrcTest("/ovms/src/test/llm/config_queue.json").c_str(), 60);
+    }
+
+    static void TearDownTestSuite() {
+        ovms::Server& server = ovms::Server::instance();
+        server.setShutdownRequest(1);
+        t->join();
+        server.setShutdownRequest(0);
+    }
+
+    void SetUp() {
+        writer = std::make_shared<MockedServerRequestInterface>();
+        multiPartParser = std::make_shared<MockedMultiPartParser>();
+        ON_CALL(*writer, PartialReplyBegin(::testing::_)).WillByDefault(testing::Invoke([](std::function<void()> fn) { fn(); }));
+        ovms::Server& server = ovms::Server::instance();
+        handler = std::make_unique<ovms::HttpRestApiHandler>(server, 5);
+        ASSERT_EQ(handler->parseRequestComponents(comp, "POST", endpointCompletions, headers), ovms::StatusCode::OK);
+    }
+
+    void TearDown() {
+        handler.reset();
+    }
+};
+
+std::unique_ptr<std::thread> LLMFlowHttpQueueGraphTest::t;
+
 // --------------------------------------- OVMS LLM nodes tests
 
 /* 
@@ -247,6 +292,157 @@ TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJson) {
             handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
             ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
     }
+}
+
+TEST_F(LLMFlowHttpQueueGraphTest, unaryCompletionsJsonQueueGraph) {
+    std::string requestBody = R"(
+        {
+            "model": "lm_cb_regular_queue",
+            "stream": false,
+            "seed" : 1,
+            "best_of": 16,
+            "max_tokens": 5,
+            "prompt": "What is OpenVINO?"
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK);
+    parsedResponse.Parse(response.c_str());
+    ASSERT_TRUE(parsedResponse["choices"].IsArray());
+    ASSERT_EQ(parsedResponse["choices"].Capacity(), 1);
+    for (auto& choice : parsedResponse["choices"].GetArray()) {
+        ASSERT_TRUE(choice["finish_reason"].IsString());
+        ASSERT_FALSE(choice["logprobs"].IsObject());
+        ASSERT_TRUE(choice["text"].IsString());
+    }
+
+    ASSERT_TRUE(parsedResponse["usage"].IsObject());
+    ASSERT_TRUE(parsedResponse["usage"].GetObject()["prompt_tokens"].IsInt());
+    ASSERT_TRUE(parsedResponse["usage"].GetObject()["completion_tokens"].IsInt());
+    ASSERT_TRUE(parsedResponse["usage"].GetObject()["total_tokens"].IsInt());
+    ASSERT_EQ(parsedResponse["usage"].GetObject()["completion_tokens"].GetInt(), 5);
+    EXPECT_STREQ(parsedResponse["model"].GetString(), "lm_cb_regular_queue");
+    EXPECT_STREQ(parsedResponse["object"].GetString(), "text_completion");
+}
+
+TEST_F(LLMFlowHttpQueueGraphTest, unaryChatCompletionsJsonQueueGraph) {
+    std::string requestBody = R"(
+        {
+            "model": "lm_cb_regular_queue",
+            "stream": false,
+            "seed" : 1,
+            "max_tokens": 5,
+            "messages": [
+            {
+                "role": "user",
+                "content": "What is OpenVINO?"
+            }
+            ]
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK);
+    parsedResponse.Parse(response.c_str());
+    ASSERT_TRUE(parsedResponse["choices"].IsArray());
+    ASSERT_EQ(parsedResponse["choices"].Capacity(), 1);
+    for (auto& choice : parsedResponse["choices"].GetArray()) {
+        ASSERT_TRUE(choice["finish_reason"].IsString());
+        ASSERT_TRUE(choice["message"].IsObject());
+        ASSERT_TRUE(choice["message"]["content"].IsString());
+        EXPECT_STREQ(choice["message"]["role"].GetString(), "assistant");
+    }
+
+    ASSERT_TRUE(parsedResponse["usage"].IsObject());
+    ASSERT_TRUE(parsedResponse["usage"].GetObject()["prompt_tokens"].IsInt());
+    ASSERT_TRUE(parsedResponse["usage"].GetObject()["completion_tokens"].IsInt());
+    ASSERT_TRUE(parsedResponse["usage"].GetObject()["total_tokens"].IsInt());
+    ASSERT_EQ(parsedResponse["usage"].GetObject()["completion_tokens"].GetInt(), 5);
+    EXPECT_STREQ(parsedResponse["model"].GetString(), "lm_cb_regular_queue");
+    EXPECT_STREQ(parsedResponse["object"].GetString(), "chat.completion");
+}
+
+TEST_F(LLMFlowHttpQueueGraphTest, streamChatCompletionsQueueGraph) {
+    std::string requestBody = R"(
+        {
+            "model": "lm_cb_regular_queue",
+            "stream": true,
+            "seed" : 1,
+            "max_tokens": 5,
+            "ignore_eos": true,
+            "messages": [
+            {
+                "role": "user",
+                "content": "What is OpenVINO?"
+            }
+            ]
+        }
+    )";
+    ON_CALL(*writer, PartialReply).WillByDefault([this](std::string response) {
+        rapidjson::Document d;
+        std::string dataPrefix = "data:";
+        ASSERT_STREQ(response.substr(0, dataPrefix.size()).c_str(), dataPrefix.c_str());
+        size_t pos = response.find("\n");
+        ASSERT_NE(pos, response.npos);
+        rapidjson::ParseResult parsingSucceeded = d.Parse(response.substr(dataPrefix.size(), (pos - dataPrefix.size())).c_str());
+        ASSERT_EQ(parsingSucceeded.Code(), 0);
+        ASSERT_TRUE(d["choices"].IsArray());
+        ASSERT_EQ(d["choices"].Capacity(), 1);
+        int i = 0;
+        for (auto& choice : d["choices"].GetArray()) {
+            if (choice["finish_reason"].IsString()) {
+                EXPECT_STREQ(choice["finish_reason"].GetString(), "length");
+            } else {
+                ASSERT_TRUE(choice["finish_reason"].IsNull());
+            }
+            ASSERT_EQ(choice["index"], i++);
+            ASSERT_TRUE(choice["delta"].IsObject());
+            ASSERT_TRUE(choice["delta"]["content"].IsString());
+        }
+        EXPECT_STREQ(d["model"].GetString(), "lm_cb_regular_queue");
+        EXPECT_STREQ(d["object"].GetString(), "chat.completion.chunk");
+    });
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::PARTIAL_END);
+}
+
+// Test that verifies graph reuse works correctly with queue size 1
+// Sends 2 sequential requests to ensure the same graph instance is reused
+TEST_F(LLMFlowHttpQueueGraphTest, queueGraphReuseTwoRequests) {
+    std::string requestBody = R"(
+        {
+            "model": "lm_cb_regular_queue",
+            "stream": false,
+            "seed" : 1,
+            "max_tokens": 5,
+            "prompt": "What is OpenVINO?"
+        }
+    )";
+
+    // First request
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK);
+    parsedResponse.Parse(response.c_str());
+    ASSERT_TRUE(parsedResponse["choices"].IsArray());
+    ASSERT_EQ(parsedResponse["choices"].Capacity(), 1);
+    ASSERT_TRUE(parsedResponse["choices"].GetArray()[0]["text"].IsString());
+
+    // Second request - reuses the same graph from the queue
+    // This validates that timestamp increment works for graph reuse
+    response.clear();
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK);
+    parsedResponse.Parse(response.c_str());
+    ASSERT_TRUE(parsedResponse["choices"].IsArray());
+    ASSERT_EQ(parsedResponse["choices"].Capacity(), 1);
+    ASSERT_TRUE(parsedResponse["choices"].GetArray()[0]["text"].IsString());
+    // Note: Responses may differ due to KV cache state despite same seed
 }
 
 TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJsonEchoWithCompletion) {

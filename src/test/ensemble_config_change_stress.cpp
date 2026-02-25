@@ -813,7 +813,8 @@ TEST_F(StressMediapipeChanges, ReloadMediapipeGraphDuringMetadataLoad) {
     SetUpConfig(basicMediapipeConfig);
     bool performWholeConfigReload = true;
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuity of operation
-    std::set<StatusCode> allowedLoadResults = {};
+    // Graph path change triggers real reload, briefly entering NOT_LOADED_YET state
+    std::set<StatusCode> allowedLoadResults = {StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_YET};
     performStressTest(
         &ConfigChangeStressTest::triggerKFSGetPipelineMetadataInALoop,
         &ConfigChangeStressTest::reloadMediapipeGraph,
@@ -821,4 +822,90 @@ TEST_F(StressMediapipeChanges, ReloadMediapipeGraphDuringMetadataLoad) {
         requiredLoadResults,
         allowedLoadResults);
 }
+
+class StressMediapipeQueueChanges : public StressPipelineConfigChanges {
+    const std::string modelName = PIPELINE_1_DUMMY_NAME;
+    const std::string modelInputName = "b";
+    const std::string modelOutputName = "a";
+
+public:
+    std::string getServableName() override {
+        return modelName;
+    }
+    void SetUp() override {
+        SetUpCAPIServerInstance(createStressTestPipelineOneDummyConfig());
+    }
+};
+TEST_F(StressMediapipeQueueChanges, AddGraphDuringPredictLoad) {
+    // we add another graph definition during load (queue-enabled graph)
+    SetUpConfig(basicMediapipeQueueConfig);
+    bool performWholeConfigReload = true;
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuity of operation
+    std::set<StatusCode> allowedLoadResults = {};
+    performStressTest(
+        &ConfigChangeStressTest::triggerPredictInALoop<KFSRequest, KFSResponse, ovms::MediapipeGraphExecutor>,
+        &ConfigChangeStressTest::addNewMediapipeQueueGraph,
+        performWholeConfigReload,
+        requiredLoadResults,
+        allowedLoadResults);
+}
+TEST_F(StressMediapipeQueueChanges, RemoveGraphDuringPredictLoad) {
+    SetUpConfig(basicMediapipeQueueConfig);
+    bool performWholeConfigReload = true;
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK,
+        StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_ANYMORE};
+    std::set<StatusCode> allowedLoadResults = {};
+    performStressTest(
+        &ConfigChangeStressTest::triggerPredictInALoop<KFSRequest, KFSResponse, ovms::MediapipeGraphExecutor>,
+        &ConfigChangeStressTest::removeMediapipeQueueGraph,
+        performWholeConfigReload,
+        requiredLoadResults,
+        allowedLoadResults);
+}
+TEST_F(StressMediapipeQueueChanges, RemoveModelDuringPredictLoad) {
+    SetUpConfig(basicMediapipeQueueConfig);
+    bool performWholeConfigReload = true;
+    // With queue path, pre-initialized graphs may keep working with cached sessions
+    // even after model removal, so MEDIAPIPE_PRECONDITION_FAILED may not occur
+    std::set<StatusCode> requiredLoadResults = {
+        StatusCode::OK,
+    };
+    std::set<StatusCode> allowedLoadResults = {
+        StatusCode::MEDIAPIPE_EXECUTION_ERROR,
+        StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM,
+        StatusCode::MEDIAPIPE_PRECONDITION_FAILED,
+    };
+    performStressTest(
+        &ConfigChangeStressTest::triggerPredictInALoop<KFSRequest, KFSResponse, ovms::MediapipeGraphExecutor>,
+        &ConfigChangeStressTest::removeMediapipeQueueGraphUsedModel,
+        performWholeConfigReload,
+        requiredLoadResults,
+        allowedLoadResults);
+}
+TEST_F(StressMediapipeQueueChanges, ReloadModelDuringPredictLoad) {
+    SetUpConfig(basicMediapipeQueueConfig);
+    bool performWholeConfigReload = true;
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};
+    std::set<StatusCode> allowedLoadResults = {};
+    performStressTest(
+        &ConfigChangeStressTest::triggerPredictInALoop<KFSRequest, KFSResponse, ovms::MediapipeGraphExecutor>,
+        &ConfigChangeStressTest::reloadMediapipeQueueGraphUsedModel,
+        performWholeConfigReload,
+        requiredLoadResults,
+        allowedLoadResults);
+}
+TEST_F(StressMediapipeQueueChanges, ReloadMediapipeGraphDuringPredictLoad) {
+    SetUpConfig(basicMediapipeQueueConfig);
+    bool performWholeConfigReload = true;
+    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};
+    std::set<StatusCode> allowedLoadResults = {};
+    performStressTest(
+        &ConfigChangeStressTest::triggerPredictInALoop<KFSRequest, KFSResponse, ovms::MediapipeGraphExecutor>,
+        &ConfigChangeStressTest::reloadMediapipeQueueGraph,
+        performWholeConfigReload,
+        requiredLoadResults,
+        allowedLoadResults);
+}
+// Status and metadata tests are not duplicated for queue fixture because
+// neither status nor metadata operations exercise the graph queue path.
 #endif

@@ -214,7 +214,7 @@ Body:
         }
     
 JSON Parser:
-{"model":"gpt","stream":false,"messages":[]}0)";
+{"model":"gpt","stream":false,"messages":[]}0)";  // non-queue path: fresh graph, poller gets first packet only
     ASSERT_EQ(response, expectedResponse);
 }
 
@@ -246,7 +246,7 @@ Body:
         }
     
 JSON Parser:
-{"model":"gpt","stream":false,"messages":[]}0)";
+{"model":"gpt","stream":false,"messages":[]}0)";  // non-queue path: fresh graph, poller gets first packet only
     ASSERT_EQ(response, expectedResponse);
 }
 
@@ -1618,4 +1618,97 @@ TEST_F(HttpOpenAIHandlerParsingTest, responseFormatNullValue) {
     std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
     EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
     EXPECT_FALSE(apiHandler->getResponseFormat().has_value());
+}
+
+// ==================== HttpOpenAIHandlerWithQueueTest ====================
+// Same as HttpOpenAIHandlerTest but uses config with graph_queue_size=1
+// to verify the graph pool (GraphQueue) path works correctly.
+class HttpOpenAIHandlerWithQueueTest : public ::testing::Test {
+protected:
+    ovms::Server& server = ovms::Server::instance();
+    std::unique_ptr<ovms::HttpRestApiHandler> handler;
+
+    std::unique_ptr<std::thread> t;
+    std::string port = "9173";
+
+    std::unordered_map<std::string, std::string> headers{{"content-type", "application/json"}};
+    ovms::HttpRequestComponents comp;
+    std::string endpoint = "/v3/chat/completions";
+    std::shared_ptr<MockedServerRequestInterface> writer;
+    std::shared_ptr<MockedMultiPartParser> multiPartParser;
+    std::string response;
+    ovms::HttpResponseComponents responseComponents;
+
+    void SetUpServer(const char* configPath) {
+        ::SetUpServer(this->t, this->server, this->port, configPath);
+        EnsureServerStartedWithTimeout(this->server, 5);
+        handler = std::make_unique<ovms::HttpRestApiHandler>(server, 5);
+    }
+
+    void SetUp() {
+        writer = std::make_shared<MockedServerRequestInterface>();
+        multiPartParser = std::make_shared<MockedMultiPartParser>();
+        SetUpServer(getGenericFullPathForSrcTest("/ovms/src/test/mediapipe/config_mediapipe_openai_chat_completions_mock_with_queue.json").c_str());
+        ASSERT_EQ(handler->parseRequestComponents(comp, "POST", endpoint, headers), ovms::StatusCode::OK);
+    }
+
+    void TearDown() {
+        handler.reset();
+        server.setShutdownRequest(1);
+        t->join();
+        server.setShutdownRequest(0);
+    }
+};
+
+TEST_F(HttpOpenAIHandlerWithQueueTest, UnaryWithQueue) {
+    std::string requestBody = R"(
+        {
+            "model": "gpt",
+            "stream": false,
+            "messages": []
+        }
+    )";
+
+    const std::string URI = "/v3/something";
+    ASSERT_EQ(
+        handler->dispatchToProcessor(URI, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK);
+
+    std::string expectedResponse = R"(URI: /v3/something
+Key: content-type; Value: application/json
+Body:
+
+        {
+            "model": "gpt",
+            "stream": false,
+            "messages": []
+        }
+    
+JSON Parser:
+{"model":"gpt","stream":false,"messages":[]}012345678)";
+    ASSERT_EQ(response, expectedResponse);
+}
+
+TEST_F(HttpOpenAIHandlerWithQueueTest, StreamWithQueue) {
+    std::string requestBody = R"(
+        {
+            "model": "gpt",
+            "stream": true,
+            "messages": []
+        }
+    )";
+
+    EXPECT_CALL(*writer, PartialReplyBegin(::testing::_)).WillOnce(testing::Invoke([](std::function<void()> fn) { fn(); }));
+    EXPECT_CALL(*writer, PartialReplyEnd()).Times(1);
+    // The calculator produces 9 packets (timestamps 0-8) via loopback,
+    // each containing the accumulated body + timestamp. The '8' in the body stops the loop.
+    EXPECT_CALL(*writer, PartialReply(::testing::_)).Times(9);
+    EXPECT_CALL(*writer, IsDisconnected()).Times(9);
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor("/v3/completions", requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::PARTIAL_END);
+
+    // For streaming, the response body stays empty (content goes through PartialReply callbacks)
+    ASSERT_EQ(response, "");
 }
