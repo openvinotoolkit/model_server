@@ -1198,7 +1198,6 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(ov::genai::VLMD
         std::vector<int64_t> generatedTokens(input_ids_data, input_ids_data + input_ids.get_shape()[1]);
 
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Generated tokens: {}", generatedTokens);
-        updateUsage(usage, generatedTokens, request.echo);
         ParsedOutput parsedOutput = parseOutputIfNeeded(generatedTokens);
         jsonResponse.StartObject();
         // finish_reason: "stop" in regular scenario, "tool_calls" if output contains tool calls
