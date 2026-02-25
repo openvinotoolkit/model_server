@@ -6,7 +6,7 @@ Docker engine installed (on Linux and WSL), or ovms binary package installed as 
 
 Supported HW is documented in [OpenVINO system requirements](https://docs.openvino.ai/2026/about-openvino/release-notes-openvino/system-requirements.html)
 
-Before staring the model server as a binary package, make sure there are installed GPU or/and NPU required drivers like described in [https://docs.openvino.ai/2026/get-started/install-openvino/configurations.html](https://docs.openvino.ai/2026/get-started/install-openvino/configurations.html)
+Before starting the model server as a binary package, make sure there are installed GPU or/and NPU required drivers like described in [https://docs.openvino.ai/2026/get-started/install-openvino/configurations.html](https://docs.openvino.ai/2026/get-started/install-openvino/configurations.html)
 
 Additional considerations when deploying with docker container:
 - make sure to use the image version including runtime drivers. The public image has a suffix -gpu like `openvino/model_server:latest-gpu`.
