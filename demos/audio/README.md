@@ -48,6 +48,7 @@ mkdir models
 Run `export_model.py` script to download and quantize the model:
 
 > **Note:** The users in China need to set environment variable HF_ENDPOINT="https://hf-mirror.com" before running the export script to connect to the HF Hub.
+> **Note:** Exporting `microsoft/speecht5_tts` model requires Python 3.10
 
 **CPU**
 ```console
