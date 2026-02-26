@@ -269,6 +269,27 @@ TEST_F(HttpOpenAIHandlerTest, Stream) {
     ASSERT_EQ(response, "");
 }
 
+  TEST_F(HttpOpenAIHandlerTest, ResponsesStream) {
+    std::string requestBody = R"(
+      {
+        "model": "gpt",
+        "stream": true,
+        "input": "What is OpenVINO?"
+      }
+    )";
+
+    EXPECT_CALL(*writer, PartialReplyBegin(::testing::_)).WillOnce(testing::Invoke([](std::function<void()> fn) { fn(); }));
+    EXPECT_CALL(*writer, PartialReplyEnd()).Times(1);
+    EXPECT_CALL(*writer, PartialReply(::testing::_)).Times(9);
+    EXPECT_CALL(*writer, IsDisconnected()).Times(9);
+
+    ASSERT_EQ(
+      handler->dispatchToProcessor("/v3/responses", requestBody, &response, comp, responseComponents, writer, multiPartParser),
+      ovms::StatusCode::PARTIAL_END);
+
+    ASSERT_EQ(response, "");
+  }
+
 TEST_F(HttpOpenAIHandlerTest, BodyNotAJson) {
     std::string requestBody = "not a json";
 
@@ -607,6 +628,85 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseVLMSupportsToolCallsF
     std::string serialized = apiHandler->serializeUnaryResponse(results);
 
     ASSERT_NE(serialized.find("\"finish_reason\":\"tool_calls\""), std::string::npos) << serialized;
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseForResponsesContainsOutputText) {
+    std::string json = R"({
+    "model": "llama",
+    "input": "What is OpenVINO?",
+    "max_output_tokens": 5
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    auto apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+
+    ov::genai::EncodedResults results;
+    ov::Tensor outputIds = tokenizer->encode("OVMS", ov::genai::add_special_tokens(false)).input_ids;
+    ASSERT_EQ(outputIds.get_shape().size(), 2);
+    ASSERT_EQ(outputIds.get_shape()[0], 1);
+    ASSERT_EQ(outputIds.get_element_type(), ov::element::i64);
+    int64_t* outputIdsData = reinterpret_cast<int64_t*>(outputIds.data());
+    results.tokens = {std::vector<int64_t>(outputIdsData, outputIdsData + outputIds.get_shape()[1])};
+
+    std::string serialized = apiHandler->serializeUnaryResponse(results);
+    ASSERT_NE(serialized.find("\"object\":\"response\""), std::string::npos) << serialized;
+    ASSERT_NE(serialized.find("\"output\":"), std::string::npos) << serialized;
+    ASSERT_NE(serialized.find("\"type\":\"output_text\""), std::string::npos) << serialized;
+    ASSERT_NE(serialized.find("\"text\":"), std::string::npos) << serialized;
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, serializeStreamingChunkForResponsesContainsRequiredEvents) {
+    std::string json = R"({
+    "model": "llama",
+    "input": "What is OpenVINO?",
+    "stream": true
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    auto apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+
+    std::string firstChunk = apiHandler->serializeStreamingChunk("Hello", ov::genai::GenerationFinishReason::NONE);
+    ASSERT_NE(firstChunk.find("\"type\":\"response.created\""), std::string::npos) << firstChunk;
+    ASSERT_NE(firstChunk.find("\"type\":\"response.output_item.added\""), std::string::npos) << firstChunk;
+    ASSERT_NE(firstChunk.find("\"type\":\"response.content_part.added\""), std::string::npos) << firstChunk;
+    ASSERT_NE(firstChunk.find("\"type\":\"response.output_text.delta\""), std::string::npos) << firstChunk;
+    ASSERT_NE(firstChunk.find("\"delta\":\"Hello\""), std::string::npos) << firstChunk;
+
+    std::string finalChunk = apiHandler->serializeStreamingChunk(" world", ov::genai::GenerationFinishReason::STOP);
+    ASSERT_NE(finalChunk.find("\"type\":\"response.output_text.done\""), std::string::npos) << finalChunk;
+    ASSERT_NE(finalChunk.find("\"type\":\"response.content_part.done\""), std::string::npos) << finalChunk;
+    ASSERT_NE(finalChunk.find("\"type\":\"response.output_item.done\""), std::string::npos) << finalChunk;
+    ASSERT_NE(finalChunk.find("\"type\":\"response.completed\""), std::string::npos) << finalChunk;
+    ASSERT_NE(finalChunk.find("\"text\":\"Hello world\""), std::string::npos) << finalChunk;
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, serializeStreamingUsageChunkForResponsesIsEmpty) {
+    std::string json = R"({
+    "model": "llama",
+    "input": "What is OpenVINO?",
+    "stream": true,
+    "stream_options": {"include_usage": true}
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    auto apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+
+    ASSERT_EQ(apiHandler->serializeStreamingUsageChunk(), "");
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesSucceedsBase64) {
@@ -1368,6 +1468,432 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingRequestWithNullParametersCompletions
         std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
         EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
     }
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingResponsesMaxOutputTokensSetsMaxTokens) {
+    std::string json = R"({
+    "model": "llama",
+    "input": "valid prompt",
+    "max_output_tokens": 7
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
+    EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+    EXPECT_TRUE(apiHandler->getMaxTokens().has_value());
+    EXPECT_EQ(apiHandler->getMaxTokens().value(), 7);
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingResponsesStringInputCreatesUserChatMessage) {
+    std::string json = R"({
+    "model": "llama",
+    "input": "What is OpenVINO?"
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
+    EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+
+    auto& chatHistory = apiHandler->getChatHistory();
+    ASSERT_EQ(chatHistory.size(), 1);
+    ASSERT_TRUE(chatHistory[0].contains("role"));
+    ASSERT_TRUE(chatHistory[0].contains("content"));
+    EXPECT_EQ(chatHistory[0]["role"], "user");
+    EXPECT_EQ(chatHistory[0]["content"], "What is OpenVINO?");
+    EXPECT_NE(apiHandler->getProcessedJson().find("\"messages\""), std::string::npos);
+    EXPECT_NE(apiHandler->getProcessedJson().find("\"role\":\"user\""), std::string::npos);
+    EXPECT_NE(apiHandler->getProcessedJson().find("\"input\":\"What is OpenVINO?\""), std::string::npos);
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingResponsesConflictingOutputAndCompletionTokensFails) {
+    std::string json = R"({
+    "model": "llama",
+    "input": "valid prompt",
+    "max_output_tokens": 5,
+    "max_completion_tokens": 7
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
+    EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::InvalidArgumentError("max_output_tokens and max_completion_tokens must match when both are provided"));
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingResponsesFlatFunctionToolsSucceeds) {
+    std::string json = R"({
+    "model": "llama",
+    "input": "What is the weather like in Boston today?",
+    "tool_choice": "auto",
+    "tools": [
+      {
+        "type": "function",
+        "name": "get_current_weather",
+        "description": "Get the current weather in a given location",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "location": {
+              "type": "string",
+              "description": "The city and state, e.g. San Francisco, CA"
+            },
+            "unit": {
+              "type": "string",
+              "enum": ["celsius", "fahrenheit"]
+            }
+          },
+          "required": ["location", "unit"]
+        }
+      }
+    ]
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
+    EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+    EXPECT_TRUE(apiHandler->areToolsAvailable());
+    EXPECT_EQ(apiHandler->getToolChoice(), "auto");
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingResponsesToolChoiceFunctionObjectSucceeds) {
+    std::string json = R"({
+    "model": "llama",
+    "input": "What is the weather like in Boston today?",
+    "tool_choice": {
+      "type": "function",
+      "name": "get_current_weather"
+    },
+    "tools": [
+      {
+        "type": "function",
+        "name": "get_current_weather",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "location": {"type": "string"}
+          },
+          "required": ["location"]
+        }
+      },
+      {
+        "type": "function",
+        "name": "unused_tool",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "arg": {"type": "string"}
+          }
+        }
+      }
+    ]
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
+    EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+    EXPECT_TRUE(apiHandler->areToolsAvailable());
+    EXPECT_EQ(apiHandler->getToolChoice(), "get_current_weather");
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, SerializeResponsesUnaryResponseContainsFunctionTools) {
+    std::string json = R"({
+    "model": "llama",
+    "input": "What is the weather like in Boston today?",
+    "tool_choice": "auto",
+    "tools": [
+      {
+        "type": "function",
+        "name": "get_current_weather",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "location": {"type": "string"}
+          },
+          "required": ["location"]
+        }
+      }
+    ]
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+
+    ov::genai::EncodedResults results;
+    ov::Tensor outputIds = tokenizer->encode("Sunny", ov::genai::add_special_tokens(false)).input_ids;
+    ASSERT_EQ(outputIds.get_shape().size(), 2);
+    ASSERT_EQ(outputIds.get_shape()[0], 1);
+    ASSERT_EQ(outputIds.get_element_type(), ov::element::i64);
+    int64_t* outputIdsData = reinterpret_cast<int64_t*>(outputIds.data());
+    results.tokens = {std::vector<int64_t>(outputIdsData, outputIdsData + outputIds.get_shape()[1])};
+
+    std::string serialized = apiHandler->serializeUnaryResponse(results);
+    ASSERT_NE(serialized.find("\"object\":\"response\""), std::string::npos) << serialized;
+    ASSERT_NE(serialized.find("\"tools\":[{"), std::string::npos) << serialized;
+    ASSERT_NE(serialized.find("\"type\":\"function\""), std::string::npos) << serialized;
+    ASSERT_NE(serialized.find("\"name\":\"get_current_weather\""), std::string::npos) << serialized;
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, SerializeResponsesUnaryResponseContainsFunctionToolChoiceObject) {
+    std::string json = R"({
+    "model": "llama",
+    "input": "What is the weather like in Boston today?",
+    "tool_choice": {
+      "type": "function",
+      "name": "get_current_weather"
+    },
+    "tools": [
+      {
+        "type": "function",
+        "name": "get_current_weather",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "location": {"type": "string"}
+          },
+          "required": ["location"]
+        }
+      }
+    ]
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+
+    ov::genai::EncodedResults results;
+    ov::Tensor outputIds = tokenizer->encode("Sunny", ov::genai::add_special_tokens(false)).input_ids;
+    ASSERT_EQ(outputIds.get_shape().size(), 2);
+    ASSERT_EQ(outputIds.get_shape()[0], 1);
+    ASSERT_EQ(outputIds.get_element_type(), ov::element::i64);
+    int64_t* outputIdsData = reinterpret_cast<int64_t*>(outputIds.data());
+    results.tokens = {std::vector<int64_t>(outputIdsData, outputIdsData + outputIds.get_shape()[1])};
+
+    std::string serialized = apiHandler->serializeUnaryResponse(results);
+    ASSERT_NE(serialized.find("\"tool_choice\":{"), std::string::npos) << serialized;
+    ASSERT_NE(serialized.find("\"type\":\"function\""), std::string::npos) << serialized;
+    ASSERT_NE(serialized.find("\"name\":\"get_current_weather\""), std::string::npos) << serialized;
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingResponsesToolChoiceFunctionObjectMissingNameFails) {
+    std::string json = R"({
+    "model": "llama",
+    "input": "What is the weather like in Boston today?",
+    "tool_choice": {
+      "type": "function"
+    },
+    "tools": [
+      {
+        "type": "function",
+        "name": "get_current_weather",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "location": {"type": "string"}
+          }
+        }
+      }
+    ]
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
+    EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::InvalidArgumentError("tool_choice.name is not a valid string"));
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingResponsesToolChoiceFunctionObjectNameNotStringFails) {
+    std::string json = R"({
+    "model": "llama",
+    "input": "What is the weather like in Boston today?",
+    "tool_choice": {
+      "type": "function",
+      "name": 7
+    },
+    "tools": [
+      {
+        "type": "function",
+        "name": "get_current_weather",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "location": {"type": "string"}
+          }
+        }
+      }
+    ]
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
+    EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::InvalidArgumentError("tool_choice.name is not a valid string"));
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingResponsesInputImageUrlStringSucceeds) {
+    std::string json = R"({
+    "model": "llama",
+    "input": [
+      {
+        "role": "user",
+        "content": [
+          {"type": "input_text", "text": "what is in this image?"},
+          {"type": "input_image", "image_url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAAEElEQVR4nGLK27oAEAAA//8DYAHGgEvy5AAAAABJRU5ErkJggg=="}
+        ]
+      }
+    ]
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler =
+        std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
+    EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+    EXPECT_EQ(apiHandler->getImageHistory().size(), 1);
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingResponsesInputImageUrlObjectSucceeds) {
+    std::string json = R"({
+    "model": "llama",
+    "input": [
+      {
+        "role": "user",
+        "content": [
+          {"type": "input_text", "text": "what is in this image?"},
+          {"type": "input_image", "image_url": {"url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAAEElEQVR4nGLK27oAEAAA//8DYAHGgEvy5AAAAABJRU5ErkJggg=="}}
+        ]
+      }
+    ]
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler =
+        std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
+    EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+    EXPECT_EQ(apiHandler->getImageHistory().size(), 1);
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingResponsesInputImageWithoutImageUrlFails) {
+    std::string json = R"({
+    "model": "llama",
+    "input": [
+      {
+        "role": "user",
+        "content": [
+          {"type": "input_text", "text": "what is in this image?"},
+          {"type": "input_image"}
+        ]
+      }
+    ]
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler =
+        std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
+    EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::InvalidArgumentError("input_image requires image_url field"));
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingResponsesInputImageUrlInvalidTypeFails) {
+    std::string json = R"({
+    "model": "llama",
+    "input": [
+      {
+        "role": "user",
+        "content": [
+          {"type": "input_text", "text": "what is in this image?"},
+          {"type": "input_image", "image_url": 123}
+        ]
+      }
+    ]
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler =
+        std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
+    EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::InvalidArgumentError("input_image.image_url must be a string or object"));
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingResponsesUnsupportedToolTypeFails) {
+    std::string json = R"({
+    "model": "llama",
+    "input": "What is the weather like in Boston today?",
+    "tool_choice": "auto",
+    "tools": [
+      {
+        "type": "web_search_preview"
+      }
+    ]
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
+    EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::InvalidArgumentError("Only function tools are supported"));
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingResponsesToolChoiceNoneRemovesTools) {
+    std::string json = R"({
+    "model": "llama",
+    "input": "What is the weather like in Boston today?",
+    "tool_choice": "none",
+    "tools": [
+      {
+        "type": "function",
+        "name": "get_current_weather",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "location": {"type": "string"}
+          }
+        }
+      }
+    ]
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
+    EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+    EXPECT_FALSE(apiHandler->areToolsAvailable());
+    EXPECT_EQ(apiHandler->getToolChoice(), "none");
 }
 
 // Provide get_weather2 but take none
