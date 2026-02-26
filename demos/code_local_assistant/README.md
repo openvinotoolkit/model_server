@@ -20,6 +20,8 @@ mkdir models
 > **Note:** The users in China need to set environment variable HF_ENDPOINT="https://hf-mirror.com" before running the export script to connect to the HF Hub.
 
 Pull and add the model on Linux:
+
+> **Note:** To use CPU, please export model with option `--target_device CPU` instead of `GPU`.
 ::::{tab-set}
 :::{tab-item} Qwen/Qwen3-Coder-30B-A3B-Instruct
 :sync: Qwen/Qwen3-Coder-30B-A3B-Instruct
@@ -224,7 +226,7 @@ ovms --rest_port 8000 --config_path ./models/config_all.json
 :::{tab-item} Linux CPU
 :sync: Linux CPU
 ### Linux: via Docker with CPU
-```bash
+```text
 docker run -d --rm -u $(id -u):$(id -g) -e MOE_USE_MICRO_GEMM_PREFILL=0 \
   -p 8000:8000 -v $(pwd)/:/workspace/ openvino/model_server:weekly --rest_port 8000 --config_path /workspace/models/config_all.json
 ```
