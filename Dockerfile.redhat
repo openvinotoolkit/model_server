@@ -271,10 +271,6 @@ COPY *\.bzl /ovms/
 COPY yarn.lock /ovms/
 COPY package.json /ovms/
 
-# prebuild dependencies before copying sources
-# hadolint ignore=DL3059
-RUN bazel build --jobs=$JOBS ${debug_bazel_flags} //:ovms_dependencies @com_google_googletest//:gtest
-
 # hadolint ignore=DL3059
 RUN cp -v /etc/ssl/certs/ca-bundle.crt /etc/ssl/certs/ca-certificates.crt
 
@@ -310,17 +306,18 @@ RUN bash -c "sed -i -e 's|REPLACE_PROJECT_VERSION|${PROJECT_VERSION}|g' /ovms/sr
     if [ "$ov_use_binary" == "0" ] ; then sed -i -e "s#REPLACE_OPENVINO_NAME#$(git --git-dir /openvino/.git log -n 1 | head -n 1 | cut -d' ' -f2 | head -c 12)#g" /ovms/src/version.hpp ; fi && \
     bash -c "sed -i -e 's|REPLACE_BAZEL_BUILD_FLAGS|${debug_bazel_flags}${minitrace_flags}|g' /ovms/src/version.hpp"
 
-# Custom Nodes
-RUN bazel build --jobs=$JOBS ${debug_bazel_flags} //src:release_custom_nodes
-
 # OVMS
 ARG OPTIMIZE_BUILDING_TESTS=0
 RUN rm -f /usr/lib64/cmake/OpenSSL/OpenSSLConfig.cmake
 
 # Builds unit tests together with ovms server in one step
 # It speeds up CI when tests are executed outside of the image building
+# Konflux build system cuts off network access at times. Build all in 1 shot.
 # hadolint ignore=SC2046
-RUN bazel build --jobs=$JOBS ${debug_bazel_flags} ${minitrace_flags} //src:ovms $(if [ "$OPTIMIZE_BUILDING_TESTS" == "1" ] ; then echo -n //src:ovms_test; fi)
+RUN bazel build --jobs=$JOBS ${debug_bazel_flags} //:ovms_dependencies @com_google_googletest//:gtest && \
+  bazel build --jobs=$JOBS ${debug_bazel_flags} //src:release_custom_nodes && \
+  bazel build --jobs=$JOBS ${debug_bazel_flags} ${minitrace_flags} //src:ovms \
+  $(if [ "$OPTIMIZE_BUILDING_TESTS" == "1" ] ; then echo -n //src:ovms_test; fi)
 
 # Tests execution
 COPY ci/check_coverage.bat /ovms/
@@ -348,14 +345,33 @@ ARG CAPI_FLAGS="--strip=always  --config=mp_off_py_off --//:distro=redhat"
 ARG JOBS=40
 ARG LTO_ENABLE=OFF
 WORKDIR /ovms
-RUN bazel build --jobs $JOBS ${CAPI_FLAGS} //src:ovms_shared
+# Konflux has a hard time locating the built binaries. Need to put it
+# in a known location.
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+RUN mkdir -p /tmp/bazel-output && \
+    bazel --output_base=/tmp/bazel-output \
+        build --jobs=$JOBS ${CAPI_FLAGS} //src:ovms_shared && \
+    find /tmp/bazel-output -name libovms_shared.so && \
+    LIB_PATH=$(find /tmp/bazel-output -name libovms_shared.so | head -n1) && \
+    echo "Found built file: $LIB_PATH" && \
+    mkdir -p /ovms_release/lib && \
+    cp -v "$LIB_PATH" /ovms_release/lib/
 
 # C api app with bazel
 # hadolint ignore=DL3059
 RUN bazel build --jobs $JOBS ${CAPI_FLAGS} //src:capi_cpp_example
 
 # C-API benchmark app
-RUN bazel build --jobs=$JOBS ${CAPI_FLAGS} //src:capi_benchmark && ./bazel-bin/src/capi_benchmark --niter 2 --nstreams 1 --servable_name "dummy"
+# Konflux has a hard time locating the built binaries. Need to put it
+# in a known location.
+RUN mkdir -p /tmp/bazel-output && \
+    bazel --output_base=/tmp/bazel-output \
+        build --jobs=$JOBS ${CAPI_FLAGS} //src:capi_benchmark && \
+    CAPI_BIN=$(find /tmp/bazel-output -type f -name capi_benchmark | head -n1) && \
+    echo "Found built capi_benchmark: $CAPI_BIN" && \
+    chmod +x "$CAPI_BIN" && \
+    "$CAPI_BIN" --niter 2 --nstreams 1 --servable_name "dummy"
+
 # C-api C/C++ app with gcc
 COPY MakefileCapi /ovms/
 RUN make -f MakefileCapi cpp CAPI_FLAGS="${CAPI_FLAGS}" && \
