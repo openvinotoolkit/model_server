@@ -68,10 +68,12 @@ absl::Status GenAiServable::loadRequest(std::shared_ptr<GenAiServableExecutionCo
         executionContext->endpoint = Endpoint::CHAT_COMPLETIONS;
     } else if (payload.uri == "/v3/completions" || payload.uri == "/v3/v1/completions") {
         executionContext->endpoint = Endpoint::COMPLETIONS;
+    } else if (payload.uri == "/v3/responses" || payload.uri == "/v3/v1/responses") {
+        executionContext->endpoint = Endpoint::RESPONSES;
     } else if (TokenizeParser::isTokenizeEndpoint(payload.uri)) {
         executionContext->endpoint = Endpoint::TOKENIZE;
     } else {
-        return absl::InvalidArgumentError("Wrong endpoint. Allowed endpoints: /v3/chat/completions, /v3/completions");
+        return absl::InvalidArgumentError("Wrong endpoint. Allowed endpoints: /v3/chat/completions, /v3/completions, /v3/responses, /v3/tokenize");
     }
     executionContext->payload = payload;
     return absl::OkStatus();
@@ -204,6 +206,50 @@ absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecution
         }
         break;
     }
+    case Endpoint::RESPONSES: {
+        if (executionContext->apiHandler->getChatHistory().size() > 0) {
+#if (PYTHON_DISABLE == 0)
+            bool success;
+            if (executionContext->apiHandler->getProcessedJson().size() > 0) {
+                success = PyJinjaTemplateProcessor::applyChatTemplate(getProperties()->templateProcessor, getProperties()->modelsPath, executionContext->apiHandler->getProcessedJson(), inputText);
+            } else {
+                success = PyJinjaTemplateProcessor::applyChatTemplate(getProperties()->templateProcessor, getProperties()->modelsPath, executionContext->payload.body, inputText);
+            }
+            if (!success) {
+                return absl::Status(absl::StatusCode::kInvalidArgument, inputText);
+            }
+#else
+            ov::genai::ChatHistory& chatHistory = executionContext->apiHandler->getChatHistory();
+            constexpr bool add_generation_prompt = true;
+            auto toolsStatus = executionContext->apiHandler->parseToolsToJsonContainer();
+            if (!toolsStatus.ok()) {
+                return toolsStatus.status();
+            }
+            const auto& tools = toolsStatus.value();
+            auto chatTemplateKwargsStatus = executionContext->apiHandler->parseChatTemplateKwargsToJsonContainer();
+            if (!chatTemplateKwargsStatus.ok()) {
+                return chatTemplateKwargsStatus.status();
+            }
+            const auto& chatTemplateKwargs = chatTemplateKwargsStatus.value();
+            try {
+                inputText = getProperties()->tokenizer.apply_chat_template(chatHistory, add_generation_prompt, {}, tools, chatTemplateKwargs);
+            } catch (const std::exception& e) {
+                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Failed to apply chat template: {}", e.what());
+                return absl::Status(absl::StatusCode::kInvalidArgument, "Failed to apply chat template. The model either does not have chat template or has an invalid one.");
+            }
+#endif
+            if (inputText.size() == 0) {
+                return absl::Status(absl::StatusCode::kInvalidArgument, "Final prompt after applying chat template is empty");
+            }
+        } else {
+            auto prompt = executionContext->apiHandler->getPrompt();
+            if (!prompt.has_value()) {
+                return absl::Status(absl::StatusCode::kInvalidArgument, "input is missing");
+            }
+            inputText = prompt.value();
+        }
+        break;
+    }
     case Endpoint::COMPLETIONS: {
         inputText = executionContext->apiHandler->getPrompt().value();
         break;
@@ -277,8 +323,12 @@ absl::Status GenAiServable::preparePartialResponse(std::shared_ptr<GenAiServable
         if (!serializedChunk.empty()) {
             executionContext->response = wrapTextInServerSideEventMessage(serializedChunk);
         }
-        if (executionContext->apiHandler->getStreamOptions().includeUsage)
-            executionContext->response += wrapTextInServerSideEventMessage(executionContext->apiHandler->serializeStreamingUsageChunk());
+        if (executionContext->apiHandler->getStreamOptions().includeUsage) {
+            std::string usageChunk = executionContext->apiHandler->serializeStreamingUsageChunk();
+            if (!usageChunk.empty()) {
+                executionContext->response += wrapTextInServerSideEventMessage(usageChunk);
+            }
+        }
 
         executionContext->response += wrapTextInServerSideEventMessage("[DONE]");
 
