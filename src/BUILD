@@ -3153,6 +3153,7 @@ cc_library(
         "@com_google_googletest//:gtest",
     ],
     copts = COPTS_TESTS,
+    local_defines = COMMON_LOCAL_DEFINES,
     linkopts = [],
 )
 cc_library(
