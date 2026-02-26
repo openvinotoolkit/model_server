@@ -68,6 +68,7 @@
 #include "servables_config_manager_module/servablesconfigmanagermodule.hpp"
 #include "stringutils.hpp"
 #include "version.hpp"
+#include "src/utils/env_guard.hpp"
 
 #if (PYTHON_DISABLE == 0)
 #include "python/pythoninterpretermodule.hpp"
@@ -525,6 +526,14 @@ int Server::startServerFromSettings(ServerSettingsImpl& serverSettings, ModelsSe
 
 // OVMS Start
 int Server::start(int argc, char** argv) {
+    // Set default for MOE_USE_MICRO_GEMM_PREFILL if not set
+    // This is a workaround for OpenVINO issue where prefill causes accuracy problems in long context in qwen3-coder model
+    const char* moeEnv = std::getenv("MOE_USE_MICRO_GEMM_PREFILL");
+    if (moeEnv == nullptr){
+        std::unique_ptr<EnvGuard> envGuard = std::make_unique<EnvGuard>();
+        envGuard->set("MOE_USE_MICRO_GEMM_PREFILL", "0");
+    }
+
     auto paramsOrExit = parseArgs(argc, argv);
     // Check for error in parsing
     if (std::holds_alternative<std::pair<int, std::string>>(paramsOrExit)) {
