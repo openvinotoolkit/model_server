@@ -9,7 +9,7 @@ It reports end to end quality of served model from the client application point 
 
 Install the framework via pip:
 ```console
-pip3 install --extra-index-url "https://download.pytorch.org/whl/cpu" lm_eval[api] langdetect immutabledict dotenv openai
+pip3 install --extra-index-url "https://download.pytorch.org/whl/cpu" lm_eval[api] langdetect immutabledict dotenv openai hf_transfer
 ```
 
 ## Exporting the models
