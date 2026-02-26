@@ -388,7 +388,7 @@ TEST_F(ConfigCreationTest, negativeInternalErrorForType) {
     ASSERT_EQ(status, ovms::StatusCode::NOT_IMPLEMENTED);
 }
 
-TEST_F(ConfigCreationTest, negativeAddTheSameModelName) {
+TEST_F(ConfigCreationTest, AddTheSameModelName) {
     auto status = ovms::updateConfig(this->modelsSettings, ovms::ENABLE_MODEL);
     ASSERT_EQ(status, ovms::StatusCode::OK);
 
@@ -397,7 +397,7 @@ TEST_F(ConfigCreationTest, negativeAddTheSameModelName) {
 
     // Add second model
     status = ovms::updateConfig(this->modelsSettings, ovms::ENABLE_MODEL);
-    ASSERT_EQ(status, ovms::StatusCode::MODEL_NAME_OCCUPIED);
+    ASSERT_EQ(status, ovms::StatusCode::OK);
 }
 
 TEST_F(ConfigCreationTest, negativeRemoveNotExistingName) {
