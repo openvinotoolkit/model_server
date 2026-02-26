@@ -74,6 +74,7 @@ struct GenAiServableExecutionContext {
     std::shared_ptr<ov::genai::TextStreamer> textStreamer;
     bool sendLoopbackSignal = false;
     std::string lastStreamerCallbackOutput;
+    size_t loopIteration = 0;
 };
 
 struct ExtraGenerationInfo {

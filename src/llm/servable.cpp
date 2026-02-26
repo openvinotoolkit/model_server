@@ -256,6 +256,12 @@ absl::Status GenAiServable::preparePartialResponse(std::shared_ptr<GenAiServable
     executionContext->lastStreamerCallbackOutput = "";
 
     std::string lastTextChunk = ss.str();
+    if (lastTextChunk.empty() && executionContext->loopIteration == 0) {
+        std::string serializedChunk = executionContext->apiHandler->serializeStreamingFirstTokenControlChunk();
+        executionContext->response = wrapTextInServerSideEventMessage(serializedChunk);
+    }
+    executionContext->loopIteration++;
+
     ov::genai::GenerationFinishReason finishReason = generationOutput.finish_reason;
     if (finishReason == ov::genai::GenerationFinishReason::NONE) {  // continue
         if (lastTextChunk.size() > 0) {
