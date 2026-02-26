@@ -224,7 +224,7 @@ ovms --rest_port 8000 --config_path ./models/config_all.json
 :::{tab-item} Linux CPU
 :sync: Linux CPU
 ### Linux: via Docker with CPU
-```
+```text
 docker run -d --rm -u $(id -u):$(id -g) -e MOE_USE_MICRO_GEMM_PREFILL=0 \
   -p 8000:8000 -v $(pwd)/:/workspace/ openvino/model_server:weekly --rest_port 8000 --config_path /workspace/models/config_all.json
 ```
