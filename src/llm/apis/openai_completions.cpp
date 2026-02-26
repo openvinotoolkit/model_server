@@ -1367,4 +1367,53 @@ std::string OpenAIChatCompletionsHandler::serializeStreamingUsageChunk() {
     writer.EndObject();  // }
     return buffer.GetString();
 }
+
+std::string OpenAIChatCompletionsHandler::serializeStreamingFirstTokenControlChunk() {
+    OVMS_PROFILE_FUNCTION();
+    Document doc;
+    doc.SetObject();
+    Document::AllocatorType& allocator = doc.GetAllocator();
+
+    Value choices(kArrayType);
+    Value choice(kObjectType);
+
+    // choices: array of size N, where N is related to n request parameter
+    choices.SetArray();
+    choice.SetObject();
+
+    choice.AddMember("index", 0, allocator);
+    // logprobs: object/null; Log probability information for the choice. TODO
+    if (endpoint == Endpoint::CHAT_COMPLETIONS) {
+        Value delta(kObjectType);
+        delta.SetObject();
+        delta.AddMember("role", Value("assistant", allocator), allocator);
+        delta.AddMember("content", Value(rapidjson::kNullType), allocator);
+        choice.AddMember("delta", delta, allocator);
+    } else if (endpoint == Endpoint::COMPLETIONS) {
+        choice.AddMember("text", Value(rapidjson::kNullType), allocator);
+    }
+
+    choice.AddMember("finish_reason", Value(rapidjson::kNullType), allocator);
+    choices.PushBack(choice, allocator);
+
+    doc.AddMember("choices", choices, allocator);
+
+    // created: integer; Unix timestamp (in seconds) when the MP graph was created.
+    doc.AddMember("created", std::chrono::duration_cast<std::chrono::seconds>(created.time_since_epoch()).count(), allocator);
+
+    // model: string; copied from the request
+    doc.AddMember("model", Value(request.model.c_str(), allocator), allocator);
+
+    // object: string; defined that the type streamed chunk rather than complete response
+    if (endpoint == Endpoint::CHAT_COMPLETIONS) {
+        doc.AddMember("object", Value("chat.completion.chunk", allocator), allocator);
+    } else if (endpoint == Endpoint::COMPLETIONS) {
+        doc.AddMember("object", Value("text_completion.chunk", allocator), allocator);
+    }
+
+    StringBuffer buffer;
+    Writer<StringBuffer> writer(buffer);
+    doc.Accept(writer);
+    return buffer.GetString();
+}
 }  // namespace ovms
