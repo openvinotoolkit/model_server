@@ -67,7 +67,7 @@ docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
     --model_path openai/gpt-oss-20b
 ```
 
-> **Note:** Continuous batching is supported for GPT-OSS, however concurrency is still unstable and will be fixed in 2026.1 and the next weekly release.
+> **Note:** Continuous batching and paged attention are supported for GPT‑OSS. However, when deployed on GPU, the model may experience reduced accuracy under high‑concurrency workloads. This issue will be resolved in version 2026.1 and in the upcoming weekly release. CPU execution is not affected.
 
 > **Note:** For deployment, the model requires ~12GB disk space and recommended 16GB+ of VRAM on the GPU. For conversion, the original model will be pulled and quantized, which requires 45GB of free RAM.
 
@@ -171,7 +171,7 @@ curl -L -o models/openai/gpt-oss-20b/chat_template.jinja https://raw.githubuserc
 ovms.exe --add_to_config --config_path models/config_all.json --model_name openai/gpt-oss-20b --model_path openai/gpt-oss-20b
 ```
 > **Note:** For deployment, the model requires ~12GB disk space and recommended 16GB+ of VRAM on the GPU. For conversion, the original model will be pulled and quantized, which requires 45GB of free RAM.
-> **Note:** Continuous batching is supported for GPT-OSS, however concurrency is still unstable and will be fixed in 2026.1 and the next weekly release.
+> **Note:** Continuous batching and paged attention are supported for GPT‑OSS. However, when deployed on GPU, the model may experience reduced accuracy under high‑concurrency workloads. This issue will be resolved in version 2026.1 and in the upcoming weekly release. CPU execution is not affected.
 
 :::
 :::{tab-item} unsloth/Devstral-Small-2507

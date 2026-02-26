@@ -93,7 +93,7 @@ curl -L -o models/Qwen/Qwen3-Coder-30B-A3B-Instruct/chat_template.jinja https://
 python export_model.py text_generation --source_model openai/gpt-oss-20b --weight-format int4 --config_file_path models/config.json --model_repository_path models --tool_parser gptoss --reasoning_parser gptoss
 curl -L -o models/openai/gpt-oss-20b/chat_template.jinja https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/0/extras/chat_template_examples/chat_template_gpt_oss.jinja
 ```
-> **Note:** Continuous batching is supported for GPT-OSS, however concurrency is still unstable and will be fixed in 2026.1 and the next weekly release.
+> **Note:** Continuous batching and paged attention are supported for GPT‑OSS. However, when deployed on GPU, the model may experience reduced accuracy under high‑concurrency workloads. This issue will be resolved in version 2026.1 and in the upcoming weekly release. CPU execution is not affected.
 
 :::
 :::{tab-item} Phi-4-mini-instruct 
@@ -248,7 +248,7 @@ ovms.exe --rest_port 8000 --source_model Qwen/Qwen3-Coder-30B-A3B-Instruct --mod
 ovms.exe --rest_port 8000 --source_model openai/gpt-oss-20b --model_repository_path models --tool_parser gptoss --reasoning_parser gptoss --task text_generation --enable_prefix_caching true --target_device GPU
 ```
 
-> **Note:** Continuous batching is supported for GPT-OSS, however concurrency is still unstable and will be fixed in 2026.1 and the next weekly release.
+> **Note:** Continuous batching and paged attention are supported for GPT‑OSS. However, when deployed on GPU, the model may experience reduced accuracy under high‑concurrency workloads. This issue will be resolved in version 2026.1 and in the upcoming weekly release. CPU execution is not affected.
 
 :::
 ::::
@@ -476,7 +476,7 @@ docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/model
 --rest_port 8000 --source_model openai/gpt-oss-20b --model_repository_path models \
 --tool_parser gptoss --reasoning_parser gptoss --target_device GPU --task text_generation --enable_prefix_caching true
 ```
-> **Note:** Continuous batching is supported for GPT-OSS, however concurrency is still unstable and will be fixed in 2026.1 and the next weekly release.
+> **Note:** Continuous batching and paged attention are supported for GPT‑OSS. However, when deployed on GPU, the model may experience reduced accuracy under high‑concurrency workloads. This issue will be resolved in version 2026.1 and in the upcoming weekly release. CPU execution is not affected.
 
 :::
 ::::
