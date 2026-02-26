@@ -47,6 +47,7 @@ namespace ovms {
 enum class Endpoint {
     CHAT_COMPLETIONS,
     COMPLETIONS,
+    RESPONSES,
     TOKENIZE,
 };
 
@@ -70,12 +71,16 @@ class OpenAIChatCompletionsHandler {
     ov::genai::Tokenizer tokenizer;
     size_t processedTokens = 0;              // tracks overall number of tokens processed by the pipeline
     bool toolCallsDetectedInStream = false;  // tracks whether tool calls were detected in any streaming chunk
+    size_t responsesStreamingSequenceNumber = 0;
+    bool responsesStreamingInitialized = false;
+    std::string responsesStreamingOutputText;
 
     // Output parser is used to parse chat completions response to extract specific fields like tool calls and reasoning.
     std::unique_ptr<OutputParser> outputParser = nullptr;
 
     absl::Status parseCompletionsPart();
     absl::Status parseChatCompletionsPart(std::optional<uint32_t> maxTokensLimit, std::optional<std::string> allowedLocalMediaPath, std::optional<std::vector<std::string>> allowedMediaDomains);
+    absl::Status parseResponsesPart(std::optional<uint32_t> maxTokensLimit, std::optional<std::string> allowedLocalMediaPath, std::optional<std::vector<std::string>> allowedMediaDomains);
     absl::Status parseCommonPart(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength);
 
     ParsedOutput parseOutputIfNeeded(const std::vector<int64_t>& generatedIds);
