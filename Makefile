@@ -85,6 +85,9 @@ OV_TOKENIZERS_ORG ?= openvinotoolkit
 
 TEST_LLM_PATH ?= "src/test/llm_testing"
 GPU_MODEL_PATH ?= "/tmp/face_detection_adas"
+MNT_LLM_MODELS_PATH ?= "/mnt/llm_models"
+OVMS_MODELS_PATH ?= "/opt/home/k8sworker/ovms_models"
+CONTAINER_VOLUME_MOUNTS ?= ""
 
 APT_OV_PACKAGE ?= openvino-2022.1.0
 # opt, dbg:
@@ -654,7 +657,15 @@ ifeq ($(RUN_GPU_TESTS),1)
 	./prepare_gpu_models.sh ${GPU_MODEL_PATH}
 endif
 
-run_unit_tests: prepare_models
+prepare_container_mounts:
+ifeq ($(shell test -d $(MNT_LLM_MODELS_PATH) && echo exists),exists)
+	CONTAINER_VOLUME_MOUNTS := "-v $(shell realpath $(MNT_LLM_MODELS_PATH)):/mnt/llm_models"
+endif
+ifeq ($(shell test -d $(OVMS_MODELS_PATH) && echo exists),exists)
+	CONTAINER_VOLUME_MOUNTS := "${CONTAINER_VOLUME_MOUNTS} -v $(shell realpath $(OVMS_MODELS_PATH)):/opt/home/k8sworker/ovms_models"
+endif
+
+run_unit_tests: prepare_models prepare_container_mounts
 	docker rm -f $(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX)
 ifeq ($(RUN_GPU_TESTS),1)
 	docker run \
@@ -662,6 +673,7 @@ ifeq ($(RUN_GPU_TESTS),1)
 		--device=/dev/dri \
 		--group-add=$(shell stat -c "%g" /dev/dri/render* | head -n 1) \
 		-u 0 \
+		${CONTAINER_VOLUME_MOUNTS} \
 		-v $(shell realpath ./run_unit_tests.sh):/ovms/./run_unit_tests.sh \
 		-v $(shell realpath ${GPU_MODEL_PATH}):/ovms/src/test/face_detection_adas/1:ro \
 		-v $(shell realpath ${TEST_LLM_PATH}):/ovms/src/test/llm_testing:ro \
@@ -680,6 +692,7 @@ ifeq ($(RUN_GPU_TESTS),1)
 else
 	docker run \
 		--name $(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
+		${CONTAINER_VOLUME_MOUNTS} \
 		-v $(shell realpath ./run_unit_tests.sh):/ovms/./run_unit_tests.sh \
 		-v $(shell realpath ${TEST_LLM_PATH}):/ovms/src/test/llm_testing:ro \
 		-e https_proxy=${https_proxy} \
