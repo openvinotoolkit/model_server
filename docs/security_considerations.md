@@ -20,7 +20,7 @@ When deploying in environments where only local access is required, administrato
 
 See also:
 - [Securing OVMS with NGINX](../extras/nginx-mtls-auth/README.md)
-- [Securing models with OVSA](https://docs.openvino.ai/2025/about-openvino/openvino-ecosystem/openvino-project/openvino-security-add-on.html)
+- [Securing models with OVSA](https://docs.openvino.ai/2026/about-openvino/openvino-ecosystem/openvino-project/openvino-security-add-on.html)
 
 ---
 Generative endpoints starting with `/v3`, might be restricted with authorization and API key. It can be set during the server initialization with a parameter `api_key_file` or environment variable `API_KEY`. 

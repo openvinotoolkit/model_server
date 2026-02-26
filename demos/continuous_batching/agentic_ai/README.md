@@ -91,7 +91,7 @@ curl -L -o models/Qwen/Qwen3-Coder-30B-A3B-Instruct/chat_template.jinja https://
 :sync: gpt-oss-20b
 ```console
 python export_model.py text_generation --source_model openai/gpt-oss-20b --weight-format int4 --config_file_path models/config.json --model_repository_path models --tool_parser gptoss --reasoning_parser gptoss
-curl -L -o models/openai/gpt-oss-20b/chat_template.jinja https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/4/extras/chat_template_examples/chat_template_gpt_oss.jinja
+curl -L -o models/openai/gpt-oss-20b/chat_template.jinja https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/extras/chat_template_examples/chat_template_gpt_oss.jinja
 ```
 > **Note:**: Use `--pipeline_type LM` parameter in export command, for version 2025.4.*. It disables continuous batching. Not needed in weekly release or 2026.0+ releases.
 :::
@@ -130,7 +130,7 @@ curl -L -o models/OpenVINO/Mistral-7B-Instruct-v0.3-int4-ov/chat_template.jinja 
 :sync: Phi-4-mini-instruct-int4-ov
 ```bash
 docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:weekly --pull --model_repository_path /models --source_model OpenVINO/Phi-4-mini-instruct-int4-ov --task text_generation --tool_parser phi4
-curl -L -o models/OpenVINO/Phi-4-mini-instruct-int4-ov/chat_template.jinja https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/extras/chat_template_examples/chat_template_phi4_mini.jinja
+curl -L -o models/OpenVINO/Phi-4-mini-instruct-int4-ov/chat_template.jinja https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/extras/chat_template_examples/chat_template_phi4_mini.jinja
 ```
 :::
 ::::

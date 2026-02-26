@@ -93,7 +93,17 @@ absl::Status VisualLanguageModelServable::prepareInputs(std::shared_ptr<GenAiSer
         }
 
         constexpr bool add_generation_prompt = true;  // confirm it should be hardcoded
-        vlmExecutionContext->inputText = properties->tokenizer.apply_chat_template(chatHistory, add_generation_prompt);
+        auto toolsStatus = vlmExecutionContext->apiHandler->parseToolsToJsonContainer();
+        if (!toolsStatus.ok()) {
+            return toolsStatus.status();
+        }
+        const auto& tools = toolsStatus.value();
+        auto chatTemplateKwargsStatus = vlmExecutionContext->apiHandler->parseChatTemplateKwargsToJsonContainer();
+        if (!chatTemplateKwargsStatus.ok()) {
+            return chatTemplateKwargsStatus.status();
+        }
+        const auto& chatTemplateKwargs = chatTemplateKwargsStatus.value();
+        vlmExecutionContext->inputText = properties->tokenizer.apply_chat_template(chatHistory, add_generation_prompt, {}, tools, chatTemplateKwargs);
     } else {
         return absl::InvalidArgumentError("Unsupported endpoint");
     }
