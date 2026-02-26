@@ -336,13 +336,12 @@ pipeline {
                 }
                 sh "echo Install BFCL && \
                 test -d gorilla || git clone https://github.com/ShishirPatil/gorilla && \
-                cd gorilla/berkeley-function-call-leaderboard && git checkout cd9429ccf3d4d04156affe883c495b3b047e6b64 -f && curl -s https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/perf-111/demos/continuous_batching/accuracy/gorilla.patch | git apply -v"
+                cd gorilla/berkeley-function-call-leaderboard && git checkout cd9429ccf3d4d04156affe883c495b3b047e6b64 -f && curl -s https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/continuous_batching/accuracy/gorilla.patch | git apply -v"
                 sh "test -d .venv || python3 -m venv .venv && \
                 . .venv/bin/activate && pip install -e ./gorilla/berkeley-function-call-leaderboard && \
                 echo Running agentic accuracy test && \
-                export OPENAI_BASE_URL=http://localhost:9000/v3 && \
-                ${params.USE_THINKING ? 'export ENABLE_THINKING=true && \\' : ''} \
-                bfcl generate --model ovms-model --test-category simple --temperature 0.0 --num-threads 100 -o --result-dir bfcl_results && bfcl evaluate --model ovms-model --result-dir bfcl_results --score-dir bfcl_scores && \
+                OPENAI_BASE_URL=http://localhost:9000/v3 ENABLE_THINKING=${params.USE_THINKING} bfcl generate --model ovms-model --test-category simple --temperature 0.0 --num-threads 100 -o --result-dir bfcl_results && \
+                bfcl evaluate --model ovms-model --result-dir bfcl_results --score-dir bfcl_scores && \
                 cat gorilla/berkeley-function-call-leaderboard/bfcl_scores/ovms-model/BFCL_v3_simple_score.json | head -1 | jq ."
                 script {
                     def accuracy = sh(script: "cat gorilla/berkeley-function-call-leaderboard/bfcl_scores/ovms-model/BFCL_v3_simple_score.json | head -1 | jq -r '.accuracy'", returnStdout: true).trim()
