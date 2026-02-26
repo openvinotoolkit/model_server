@@ -193,7 +193,7 @@ Response:
   "tokens": [151643,151643,151643,14990,1879]
 }
 ```
-> **Note:** Additional parameters are working only with the latest models. That means it's required to export it manually with [exoport model script](../../demos/common/export_models/README.md)
+> **Note:** Additional parameters are working only with the latest models. That means it's required to export it manually with [export model script](../../demos/common/export_models/README.md)
 
 ## References
 - [Efficient LLM Serving - reference](reference.md)
