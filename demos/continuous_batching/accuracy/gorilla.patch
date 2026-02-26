@@ -103,3 +103,16 @@ index 10f1a08..50890c7 100644
 -    })
 \ No newline at end of file
 +    })
+diff --git a/berkeley-function-call-leaderboard/bfcl_eval/utils.py b/berkeley-function-call-leaderboard/bfcl_eval/utils.py
+index 552a10f..ade0e94 100644
+--- a/berkeley-function-call-leaderboard/bfcl_eval/utils.py
++++ b/berkeley-function-call-leaderboard/bfcl_eval/utils.py
+@@ -356,7 +356,7 @@ def load_file(file_path, sort_by_id: bool = False, use_lock: bool = True) -> lis
+     result = []
+ 
+     def _load_entries(input_path: str) -> None:
+-        with open(input_path) as f:
++        with open(input_path, encoding="utf-8") as f:
+             file = f.readlines()
+             for line in file:
+                 content = json.loads(line)
