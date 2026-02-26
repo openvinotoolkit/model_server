@@ -427,7 +427,7 @@ It will report results like `Similarity score as cos_sim 0.9605122725993963`.
 
 ## Benchmarking feature extraction
 
-An asynchronous benchmarking client can be used to access the model server performance with various load conditions. Below are execution examples captured on Intel(R) Core(TM) Ultra X7 368H.
+An asynchronous benchmarking client can be used to access the model server performance with various load conditions. Below are execution examples captured using GPU on Intel(R) Core(TM) Ultra X7 368H.
 ```console
 git clone https://github.com/openvinotoolkit/model_server
 pushd .
