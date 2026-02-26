@@ -358,7 +358,7 @@ mcpo --port 9000 -- python -m mcp_weather_server
 
 ### Step 1: Models Preparation
 
-Start by downloading `export_models.py` script and run it to download and quantize the model for speech generation:
+Start by downloading `export_model.py` script and run it to download and quantize the model for speech generation:
 ```console 
 curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/0/demos/common/export_models/export_model.py -o export_model.py
 pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/0/demos/common/export_models/requirements.txt

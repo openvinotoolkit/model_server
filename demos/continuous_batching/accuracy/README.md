@@ -41,7 +41,7 @@ ovms --rest_port 8000 --config_path ./models/config.json
 ```console
 lm-eval --model local-chat-completions --tasks gsm8k --model_args model=meta-llama/Meta-Llama-3-8B-Instruct,base_url=http://localhost:8000/v3/chat/completions,num_concurrent=1,max_retries=3,tokenized_requests=False --verbosity DEBUG  --log_samples --output_path test/ --seed 1 --apply_chat_template --limit 100
 
-local-chat-completions (model=meta-llama/Meta-Llama-3-8B-Instruct,base_url=http://localhost:8000/v3/chat/completions,num_concurrent=10,max_retries=3,tokenized_requests=False), gen_kwargs: (None), limit: 100.0, num_fewshot: None, batch_size: 1
+local-chat-completions ({'model': 'meta-llama/Meta-Llama-3-8B-Instruct', 'base_url': 'http://localhost:8000/v3/chat/completions', 'num_concurrent': 10, 'max_retries': 3, 'tokenized_requests': False}), gen_kwargs: ({}), limit: 100.0, num_fewshot: None, batch_size: 1
 |Tasks|Version|     Filter     |n-shot|  Metric   |   |Value|   |Stderr|
 |-----|------:|----------------|-----:|-----------|---|----:|---|-----:|
 |gsm8k|      3|flexible-extract|     5|exact_match|↑  | 0.62|±  |0.0488|
@@ -53,7 +53,7 @@ While testing the non chat model and `completion` endpoint, the command would lo
 ```console
 lm-eval --model local-completions --tasks gsm8k --model_args model=meta-llama/Meta-Llama-3-8B,base_url=http://localhost:8000/v3/completions,num_concurrent=1,max_retries=3,tokenized_requests=False --verbosity DEBUG  --log_samples --output_path results/ --seed 1 --limit 100
 
-local-completions (model=meta-llama/Meta-Llama-3-8B,base_url=http://localhost:8000/v3/completions,num_concurrent=10,max_retries=3,tokenized_requests=False), gen_kwargs: (None), limit: 100.0, num_fewshot: None, batch_size: 1
+local-completions ({'model': 'meta-llama/Meta-Llama-3-8B', 'base_url': 'http://localhost:8000/v3/completions', 'num_concurrent': 10, 'max_retries': 3, 'tokenized_requests': False}), gen_kwargs: ({}), limit: 100.0, num_fewshot: None, batch_size: 1
 |Tasks|Version|     Filter     |n-shot|  Metric   |   |Value|   |Stderr|
 |-----|------:|----------------|-----:|-----------|---|----:|---|-----:|
 |gsm8k|      3|flexible-extract|     5|exact_match|↑  | 0.43|±  |0.0498|
