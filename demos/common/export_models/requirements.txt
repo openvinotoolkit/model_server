@@ -9,11 +9,11 @@ diffusers  # for image generation
 einops
 nncf@git+https://github.com/openvinotoolkit/nncf.git
 numpy==2.2.6 # temporary change until ov tokenizers upgrade
-openvino-tokenizers==2026.0.0rc2
-openvino==2026.0.0rc2
+openvino-tokenizers==2026.1.0.0.dev20260225
+openvino==2026.1.0.dev20260225
 pillow
 sentence_transformers
-sentencepiece  # Required by: transformers
+sentencepiece  # Required by: transformers`
 timm==1.0.22
 torchvision
 torch==2.9.1+cpu
