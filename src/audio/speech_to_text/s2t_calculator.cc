@@ -109,15 +109,15 @@ public:
         }
         try {
             if (payload.multipartParser->hasParseError())
-                return absl::InvalidArgumentError("Failed to parse multipart data");
+                return absl::InvalidArgumentError("Failed to parse multipart .");
 
             std::string stream = payload.multipartParser->getFieldByName("stream");
             if (!stream.empty()) {
-                return absl::InvalidArgumentError("streaming is not supported");
+                return absl::InvalidArgumentError("Streaming is not supported.");
             }
             std::string_view file = payload.multipartParser->getFileContentByFieldName("file");
             if (file.empty()) {
-                return absl::InvalidArgumentError(absl::StrCat("File parsing fails"));
+                return absl::InvalidArgumentError(absl::StrCat("File parsing failed."));
             }
 
             std::vector<float> rawSpeech;
@@ -130,7 +130,7 @@ public:
                     SPDLOG_DEBUG("Received file format: mp3");
                 }
             } catch (std::exception&) {
-                return absl::InvalidArgumentError("Received input file is not valid wav nor mp3 audio file");
+                return absl::InvalidArgumentError("Received input file is not valid wav nor mp3 audio file.");
             }
             rapidjson::StringBuffer buffer;
             rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
@@ -154,10 +154,10 @@ public:
                         config.return_timestamps = true;
                     } else if (timestampsType == "word") {
                         if (!pipe->enableWordTimestamps)
-                            return absl::InvalidArgumentError("Word timestamps not supported for this model");
+                            return absl::InvalidArgumentError("Word timestamps not supported for this model.");
                         config.word_timestamps = true;
                     } else {
-                        return absl::InvalidArgumentError("Invalid timestamp_granularities type. Allowed types: \"segment\", \"word\"");
+                        return absl::InvalidArgumentError("Invalid timestamp_granularities type. Allowed types: \"segment\", \"word\".");
                     }
                 }
                 std::string temperature = payload.multipartParser->getFieldByName("temperature");

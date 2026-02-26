@@ -49,9 +49,9 @@ static ov::Tensor read_speaker_embedding(const std::filesystem::path& file_path)
         throw std::runtime_error("File size is not a multiple of float size.");
     }
     size_t num_floats = buffer_size / sizeof(float);
-    if (num_floats != 512) {
-        throw std::runtime_error("File must contain speaker embedding including 512 32-bit floats.");
-    }
+    // if (num_floats != 512) {
+    //     throw std::runtime_error("File must contain speaker embedding including 512 32-bit floats.");
+    // }
 
     ov::Tensor floats_tensor(ov::element::f32, ov::Shape{1, num_floats});
     input.read(reinterpret_cast<char*>(floats_tensor.data()), buffer_size);
