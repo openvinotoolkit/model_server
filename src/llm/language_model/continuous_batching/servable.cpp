@@ -103,6 +103,15 @@ static ov::genai::GenerationOutput prepareEmptyStopReasonOutput() {
     return out;
 }
 
+static ov::genai::GenerationOutput prepareEmptyNoneReasonOutput() {
+    static ov::genai::GenerationOutput out = {
+        std::vector<int64_t>(),  // generated_ids
+        std::vector<float>(),    // generated_log_probs
+        0.0f,                    // score
+        ov::genai::GenerationFinishReason::NONE};
+    return out;
+}
+
 absl::Status ContinuousBatchingServable::readCompleteExecutionResults(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
     auto cbExecutionContext = std::static_pointer_cast<ContinuousBatchingServableExecutionContext>(executionContext);
     if (cbExecutionContext->payload.client->isDisconnected()) {
@@ -136,7 +145,11 @@ absl::Status ContinuousBatchingServable::readPartialExecutionResults(std::shared
         ov::genai::GenerationOutputs generationOutputs = cbExecutionContext->generationHandle->read();
         RET_CHECK(generationOutputs.size() <= 1);  // TODO: Support multiple generations
         if (generationOutputs.size() == 0) {
-            cbExecutionContext->generationOutputs = {prepareEmptyStopReasonOutput()};
+            if (cbExecutionContext->generationHandle->get_status() == ov::genai::GenerationStatus::RUNNING) {
+                cbExecutionContext->generationOutputs = {prepareEmptyNoneReasonOutput()};
+            } else {
+                cbExecutionContext->generationOutputs = {prepareEmptyStopReasonOutput()};
+            }
         } else {
             cbExecutionContext->generationOutputs = {generationOutputs.begin()->second};
         }
