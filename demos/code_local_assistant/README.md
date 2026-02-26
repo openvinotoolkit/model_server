@@ -222,10 +222,11 @@ ovms --rest_port 8000 --config_path ./models/config_all.json
 :::{tab-item} Linux CPU
 :sync: Linux CPU
 ### Linux: via Docker with CPU
-```bash
+```
 docker run -d --rm -u $(id -u):$(id -g) -e MOE_USE_MICRO_GEMM_PREFILL=0 \
   -p 8000:8000 -v $(pwd)/:/workspace/ openvino/model_server:weekly --rest_port 8000 --config_path /workspace/models/config_all.json
 ```
+> **Note:** To use CPU, please export model with option `--target_device CPU` instead of `GPU`.
 :::
 :::{tab-item} Linux GPU
 :sync: Linux GPU
