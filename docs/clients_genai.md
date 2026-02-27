@@ -16,7 +16,7 @@ Speech to text API <ovms_docs_rest_api_s2t>
 Text to speech API <ovms_docs_rest_api_t2s>
 ```
 ## Introduction
-Beside Tensorflow Serving API (`/v1`) and KServe API (`/v2`) frontends, the model server supports a range of endpoints for generative use cases (`v3`). They are extendible using MediaPipe graphs.
+Besides Tensorflow Serving API (`/v1`) and KServe API (`/v2`) frontends, the model server supports a range of endpoints for generative use cases (`v3`). They are extendible using MediaPipe graphs.
 Currently supported endpoints are:
 
 OpenAI compatible endpoints:

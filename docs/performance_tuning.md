@@ -146,7 +146,7 @@ $ cpupower frequency-set --min 3.1GHz
 
 ## Network Configuration for Optimal Performance
 
-By default, OVMS endpoints are bound to all ipv4 addresses. On same systems, which route localhost name to ipv6 address, it might cause extra time on the client side to switch to ipv4. It can effectively results with extra 1-2s latency.
+By default, OVMS endpoints are bound to all ipv4 addresses. On same systems, which route localhost name to ipv6 address, it might cause extra time on the client side to switch to ipv4. It can effectively result in extra 1-2s latency.
 It can be overcome by switching the API URL to `http://127.0.0.1` on the client side.
 
 To optimize network connection performance:

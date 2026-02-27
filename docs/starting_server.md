@@ -1,6 +1,6 @@
 # Starting the Server  {#ovms_docs_serving_model}
 
-There are two method for passing to the model server information about the models and their configuration:
+There are two methods for passing to the model server information about the models and their configuration:
 - via CLI parameters - for a single model or pipeline
 - via config file in json format - for any number of models and pipelines
 
