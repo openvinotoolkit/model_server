@@ -52,7 +52,7 @@ It will create a file called `dataset.jsonl` with 10 requests of shared context 
 
 Let's check the performance 
 ```bash
-git clone --branch v0.9.1 --depth 1 https://github.com/vllm-project/vllm
+git clone --branch v0.11.2 --depth 1 https://github.com/vllm-project/vllm
 cd vllm
 pip3 install -r requirements/cpu.txt . --extra-index-url https://download.pytorch.org/whl/cpu
 python benchmarks/benchmark_serving.py --host localhost --port 8000 --endpoint /v3/chat/completions --backend openai-chat --model Qwen/Qwen2.5-7B-Instruct-1M --dataset-name custom --dataset-path ../dataset.jsonl --num-prompts 10 --max-concurrency 1 --custom-output-len 50
