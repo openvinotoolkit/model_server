@@ -30,4 +30,5 @@ message KokoroCalculatorOptions {
     required string models_path = 1;
     optional string target_device = 2;
     optional string plugin_config = 3;
+    optional string language = 4;  // ISO 639-1 language code (en, es, fr, hi, it, ja, pt-br, zh)
 }

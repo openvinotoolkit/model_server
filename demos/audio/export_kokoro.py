@@ -118,16 +118,16 @@ class OVKModel(KModel):
 
 if __name__ == "__main__":
 
-    model_id = "hexgrad/Kokoro-82M"
+    model_id = "hexgrad/Kokoro-82M-v1.1-zh"
 
     # Download model from Hugging Face and convert to OpenVINO format.
     pipeline = KokoroTTSPipeline()
 
     # Convert and save the Kokoro model to OpenVINO format
-    OVKModel.download_and_convert(Path("./kokoro_openvino_model"), repo_id=model_id, ttsPipeline=pipeline)
+    OVKModel.download_and_convert(Path("./kokoro_openvino_model_zh"), repo_id=model_id, ttsPipeline=pipeline)
 
     # To run inference on NPU, model must have static input shapes
-    OVKModel.convert_to_static(Path("./kokoro_openvino_model"), Path("./kokoro_static_openvino_model"))
+    OVKModel.convert_to_static(Path("./kokoro_openvino_model_zh"), Path("./kokoro_static_openvino_model_zh"))
     # # Execution on NPU require config file
     # config = {
     #     "NPU": {

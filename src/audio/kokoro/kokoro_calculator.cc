@@ -14,11 +14,8 @@
 // limitations under the License.
 //*****************************************************************************
 #include <algorithm>
-#include <cstdint>
-#include <fstream>
 #include <mutex>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 #pragma warning(push)
@@ -40,7 +37,6 @@
 
 #pragma warning(push)
 #pragma warning(disable : 6001 4324 6385 6386)
-#include "absl/strings/escaping.h"
 #include "absl/strings/str_cat.h"
 #pragma warning(pop)
 
@@ -64,7 +60,67 @@ namespace {
 #define espeakPHONEMES_NO_STRESS 0x08
 #endif
 
-void espeakPhonemizeAll(const std::string& textUtf8, std::string& outIpa, bool noStress = true) {
+std::string retone(const std::string& p) {
+    std::string result = p;
+    
+    auto replaceAll = [](std::string& s, const std::string& from, const std::string& to) {
+        size_t pos = 0;
+        while ((pos = s.find(from, pos)) != std::string::npos) {
+            s.replace(pos, from.size(), to);
+            pos += to.size();
+        }
+    };
+    
+    // Tone mark replacements
+    replaceAll(result, "˧˩˧", "↓");  // third tone
+    replaceAll(result, "˧˥", "↗");   // second tone
+    replaceAll(result, "˥˩", "↘");   // fourth tone
+    replaceAll(result, "˥", "→");    // first tone
+    
+    // Unicode character replacements (UTF-8 encoded)
+    replaceAll(result, "\xCA\x97\xCC\x89", "ɨ");  // chr(635)+chr(809)
+    replaceAll(result, "\xCA\x91\xCC\x89", "ɨ");  // chr(633)+chr(809)
+    
+    // Verify chr(809) removed
+    if (result.find("\xCC\x89") != std::string::npos) {
+        SPDLOG_WARN("Combining diacritic (chr 809) still present: {}", result);
+    }
+    
+    return result;
+}
+
+std::string getEspeakVoice(const std::string& isoLanguageCode) {
+    // ISO 639-1 codes with optional region codes
+    if (isoLanguageCode == "en-us") {
+        return "en-us";  // American English (default for 'en')
+    } else if (isoLanguageCode == "en-gb") {
+        return "en";     // British English
+    } else if (isoLanguageCode == "en") {
+        return "en-us";  // Default to American English when only 'en' specified
+    } else if (isoLanguageCode == "es") {
+        return "es";
+    } else if (isoLanguageCode == "fr") {
+        return "fr";
+    } else if (isoLanguageCode == "hi") {
+        return "hi";
+    } else if (isoLanguageCode == "it") {
+        return "it";
+    } else if (isoLanguageCode == "ja") {
+        return "ja";
+    } else if (isoLanguageCode == "pt-br") {
+        return "pt";     // Brazilian Portuguese
+    } else if (isoLanguageCode == "zh" || isoLanguageCode == "zh-cn") {
+        return "cmn-latn-pinyin";    // Mandarin Chinese
+    }
+    return "";  // Unsupported
+}
+
+bool isSupportedLanguage(const std::string& isoLanguageCode) {
+    // Only accept ISO 639-1 codes and regional variants
+    return !getEspeakVoice(isoLanguageCode).empty();
+}
+
+void espeakPhonemizeAll(const std::string& textUtf8, std::string& outIpa, const std::string& language = "en", bool noStress = true) {
     outIpa.clear();
     auto& espeak = ovms::EspeakInstance::instance();
     if (!espeak.isReady()) {
@@ -73,6 +129,23 @@ void espeakPhonemizeAll(const std::string& textUtf8, std::string& outIpa, bool n
     }
 
     std::lock_guard<std::mutex> guard(espeak.mutex());
+
+    // Get the eSpeak voice name from the ISO language code
+    // Kokoro supports 9 languages: American English, British English, Spanish, French, Hindi, Italian, Japanese, Brazilian Portuguese, Mandarin Chinese
+    std::string voiceName = getEspeakVoice(language);
+    if (voiceName.empty()) {
+        // This should not happen if validation was done, but fallback just in case
+        SPDLOG_ERROR("Invalid language code '{}' passed to espeakPhonemizeAll", language);
+        voiceName = "en-us";
+    }
+    if (espeak_SetVoiceByName(voiceName.c_str()) != EE_OK) {
+        SPDLOG_ERROR("Failed to set eSpeak voice '{}'", voiceName);
+        if (voiceName != "en-us" && espeak_SetVoiceByName("en-us") == EE_OK) {
+            voiceName = "en-us";
+        } else {
+            return;
+        }
+    }
 
     const int mode = espeakPHONEMES_IPA | (noStress ? espeakPHONEMES_NO_STRESS : 0);
     const void* pos = static_cast<const void*>(textUtf8.c_str());
@@ -91,6 +164,7 @@ void espeakPhonemizeAll(const std::string& textUtf8, std::string& outIpa, bool n
 
     // Strip combining diacriticals (U+0300..U+036F) and collapse spaces
     std::string cleaned;
+    cleaned.reserve(rawIpa.size());
     for (size_t i = 0; i < rawIpa.size(); ++i) {
         unsigned char c = static_cast<unsigned char>(rawIpa[i]);
         if (i + 1 < rawIpa.size()) {
@@ -103,6 +177,7 @@ void espeakPhonemizeAll(const std::string& textUtf8, std::string& outIpa, bool n
         cleaned.push_back(c);
     }
 
+    outIpa.reserve(cleaned.size());
     bool lastSpace = false;
     for (char c : cleaned) {
         if (std::isspace(static_cast<unsigned char>(c))) {
@@ -123,70 +198,6 @@ void espeakPhonemizeAll(const std::string& textUtf8, std::string& outIpa, bool n
     SPDLOG_DEBUG("IPA phonemes: '{}' (length: {})", outIpa, outIpa.size());
 }
 
-// Post-process eSpeak IPA into Kokoro/misaki phoneme alphabet.
-// Mirrors misaki.espeak.EspeakFallback.E2M for American English.
-// void espeakIpaToKokoro(std::string& ps) {
-//     // Helper: replace all occurrences of `from` with `to` in `s`.
-//     auto replaceAll = [](std::string& s, const std::string& from, const std::string& to) {
-//         if (from.empty()) return;
-//         size_t pos = 0;
-//         while ((pos = s.find(from, pos)) != std::string::npos) {
-//             s.replace(pos, from.size(), to);
-//             pos += to.size();
-//         }
-//     };
-
-//     // --- Multi-char replacements (longest first) ---
-//     // Syllabic n with glottal stop
-//     replaceAll(ps, "\xca\x94\xcb\x8c\x6e\xcc\xa9", "\xca\x94\x6e");  // ʔˌn̩ → ʔn
-//     replaceAll(ps, "\xca\x94\x6e\xcc\xa9", "\xca\x94\x6e");              // ʔn̩ → ʔn
-//     // Syllabic mark before consonant → ᵊ + consonant
-//     // ə̩l → ᵊl  (syllabic l)
-//     replaceAll(ps, "\xc9\x99\xcc\xa9\x6c", "\xe1\xb5\x8a\x6c");          // əl̩ → ᵊl  (approximation)
-
-//     // Diphthongs
-//     replaceAll(ps, "a\xc9\xaa", "I");       // aɪ → I
-//     replaceAll(ps, "a\xca\x8a", "W");       // aʊ → W
-//     replaceAll(ps, "e\xc9\xaa", "A");       // eɪ → A
-//     replaceAll(ps, "\xc9\x94\xc9\xaa", "Y"); // ɔɪ → Y
-//     replaceAll(ps, "o\xca\x8a", "O");       // oʊ → O  (American)
-//     replaceAll(ps, "\xc9\x99\xca\x8a", "O"); // əʊ → O  (British)
-
-//     // Affricates
-//     replaceAll(ps, "d\xca\x92", "\xca\xa4");  // dʒ → ʤ
-//     replaceAll(ps, "t\xca\x83", "\xca\xa7");  // tʃ → ʧ
-
-//     // Palatalization
-//     replaceAll(ps, "\xca\xb2\x6f", "jo");     // ʲo → jo
-//     replaceAll(ps, "\xca\xb2\xc9\x99", "j\xc9\x99"); // ʲə → jə
-//     replaceAll(ps, "\xca\xb2", "");           // ʲ → (delete)
-
-//     // R-colored vowels and vowel length
-//     replaceAll(ps, "\xc9\x9c\xcb\x90\xc9\xb9", "\xc9\x9c\xc9\xb9"); // ɜːɹ → ɜɹ
-//     replaceAll(ps, "\xc9\x9c\xcb\x90", "\xc9\x9c\xc9\xb9");           // ɜː → ɜɹ
-//     replaceAll(ps, "\xc9\xaa\xc9\x99", "i\xc9\x99");                   // ɪə → iə
-
-//     // --- Single-char replacements ---
-//     replaceAll(ps, "\xc9\x9a", "\xc9\x99\xc9\xb9"); // ɚ → əɹ
-//     replaceAll(ps, "\xc9\x90", "\xc9\x99");           // ɐ → ə
-//     replaceAll(ps, "\xc9\xac", "l");                   // ɬ → l
-//     replaceAll(ps, "\xc3\xa7", "k");                   // ç → k
-//     replaceAll(ps, "x", "k");                           // x → k
-//     replaceAll(ps, "r", "\xc9\xb9");                   // r → ɹ
-//     replaceAll(ps, "\xcb\x90", "");                     // ː → (strip length marks)
-//     replaceAll(ps, "\xcc\x83", "");                     // ̃ → (strip nasal tilde)
-
-//     // British vowel mappings (in case eSpeak uses 'en' voice)
-//     replaceAll(ps, "\xc9\x92", "\xc9\x94");           // ɒ → ɔ
-
-//     // Remaining standalone vowels (must be AFTER diphthong replacements)
-//     replaceAll(ps, "o", "\xc9\x94");                   // o → ɔ  (for espeak < 1.52)
-//     replaceAll(ps, "e", "A");                           // e → A
-
-//     // Flap and glottal stop (misaki version != 2.0)
-//     replaceAll(ps, "\xc9\xbe", "T");                   // ɾ → T
-//     replaceAll(ps, "\xca\x94", "t");                   // ʔ → t
-// }
 
 size_t utf8CharLen(unsigned char lead) {
     if (lead < 0x80)
@@ -202,10 +213,15 @@ size_t utf8CharLen(unsigned char lead) {
 
 void tokenize(const std::string& textUtf8,
     std::vector<int64_t>& tokenIds,
-    const ovms::VocabIndex& ix) {
+    const ovms::VocabIndex& ix,
+    const std::string& language = "en") {
     tokenIds.clear();
+    // Reserve estimated capacity to avoid reallocations
+    tokenIds.reserve(textUtf8.size() / 2);
+    
     size_t pos = 0;
     const size_t n = textUtf8.size();
+    size_t unknownCount = 0;
 
     while (pos < n) {
         size_t maxTry = std::min(ix.max_token_bytes, n - pos);
@@ -227,12 +243,20 @@ void tokenize(const std::string& textUtf8,
         } else {
             const unsigned char lead = static_cast<unsigned char>(textUtf8[pos]);
             const size_t adv = utf8CharLen(lead);
-            SPDLOG_WARN("Tokenizer: unknown bytes at pos {}: '{}'",
-                pos, std::string(textUtf8.data() + pos, std::min(adv, n - pos)));
+            std::string unknownBytes(textUtf8.data() + pos, std::min(adv, n - pos));
+            unknownCount++;
+            SPDLOG_DEBUG("Tokenizer [lang={}]: unknown phoneme at pos {}: '{}' (skipping)",
+                language, pos, unknownBytes);
             pos += std::min(adv, n - pos);
         }
     }
-    SPDLOG_DEBUG("Tokenize: produced {} ids", tokenIds.size());
+    if (unknownCount > 0) {
+        SPDLOG_WARN("Tokenize [lang={}]: {} unknown phonemes found. Produced {} token ids. "
+                    "Consider updating vocabulary for better {} speech quality.",
+                    language, unknownCount, tokenIds.size(), language);
+    } else {
+        SPDLOG_DEBUG("Tokenize [lang={}]: produced {} ids without unknown phonemes", language, tokenIds.size());
+    }
 }
 }  // namespace
 
@@ -243,6 +267,7 @@ const std::string KOKORO_SESSION_SIDE_PACKET_TAG = "KOKORO_NODE_RESOURCES";
 class KokoroCalculator : public CalculatorBase {
     static const std::string INPUT_TAG_NAME;
     static const std::string OUTPUT_TAG_NAME;
+    std::string defaultLanguage;  // Language configured in graph pbtxt
 
 public:
     static absl::Status GetContract(CalculatorContract* cc) {
@@ -261,102 +286,140 @@ public:
 
     absl::Status Open(CalculatorContext* cc) final {
         SPDLOG_LOGGER_DEBUG(kokoro_calculator_logger, "KokoroCalculator [Node: {}] Open", cc->NodeName());
+        
+        // Read language from graph configuration
+        const auto& options = cc->Options<KokoroCalculatorOptions>();
+        this->defaultLanguage = options.has_language() ? options.language() : "en";
+        
+        // Normalize language code to lowercase
+        std::transform(this->defaultLanguage.begin(), this->defaultLanguage.end(), this->defaultLanguage.begin(), ::tolower);
+        
+        // Validate language is supported
+        if (!isSupportedLanguage(this->defaultLanguage)) {
+            return absl::InvalidArgumentError(absl::StrCat(
+                "Invalid language in graph config: '", this->defaultLanguage, "'. ",
+                "Supported ISO 639-1 language codes: en, es, fr, hi, it, ja, pt-br, zh. ",
+                "Regional variants: en-us, en-gb, pt-br, zh-cn"
+            ));
+        }
+        
+        SPDLOG_LOGGER_DEBUG(kokoro_calculator_logger, 
+            "KokoroCalculator [Node: {}] configured for language: {}", 
+            cc->NodeName(), this->defaultLanguage);
+        
         return absl::OkStatus();
     }
 
     absl::Status Process(CalculatorContext* cc) final {
         SPDLOG_LOGGER_DEBUG(kokoro_calculator_logger, "KokoroCalculator [Node: {}] Process start", cc->NodeName());
+        try {
+            KokoroServableMap servablesMap = cc->InputSidePackets()
+                                                 .Tag(KOKORO_SESSION_SIDE_PACKET_TAG)
+                                                 .Get<KokoroServableMap>();
+            auto servableIt = servablesMap.find(cc->NodeName());
+            RET_CHECK(servableIt != servablesMap.end())
+                << "Could not find initialized Kokoro node named: " << cc->NodeName();
+            auto servable = servableIt->second;
 
-        KokoroServableMap servablesMap = cc->InputSidePackets()
-                                             .Tag(KOKORO_SESSION_SIDE_PACKET_TAG)
-                                             .Get<KokoroServableMap>();
-        auto servableIt = servablesMap.find(cc->NodeName());
-        RET_CHECK(servableIt != servablesMap.end())
-            << "Could not find initialized Kokoro node named: " << cc->NodeName();
-        auto servable = servableIt->second;
+            const auto& payload = cc->Inputs().Tag(INPUT_TAG_NAME).Get<ovms::HttpPayload>();
+            auto it = payload.parsedJson->FindMember("input");
+            RET_CHECK(it != payload.parsedJson->MemberEnd()) << "Missing 'input' in request";
+            RET_CHECK(it->value.IsString()) << "'input' must be a string";
+            const std::string text = it->value.GetString();
 
-        const auto& payload = cc->Inputs().Tag(INPUT_TAG_NAME).Get<ovms::HttpPayload>();
-        auto it = payload.parsedJson->FindMember("input");
-        RET_CHECK(it != payload.parsedJson->MemberEnd()) << "Missing 'input' in request";
-        RET_CHECK(it->value.IsString()) << "'input' must be a string";
-        const std::string text = it->value.GetString();
+            // Read optional "voice" parameter (OpenAI TTS API)
+            std::string voiceName;
+            auto voiceIt = payload.parsedJson->FindMember("voice");
+            if (voiceIt != payload.parsedJson->MemberEnd() && voiceIt->value.IsString()) {
+                voiceName = voiceIt->value.GetString();
+            }
 
-        // Read optional "voice" parameter (OpenAI TTS API)
-        std::string voiceName;
-        auto voiceIt = payload.parsedJson->FindMember("voice");
-        if (voiceIt != payload.parsedJson->MemberEnd() && voiceIt->value.IsString()) {
-            voiceName = voiceIt->value.GetString();
+            // Language is configured in the graph pbtxt, not from request
+            // Use the defaultLanguage set during Open()
+            const std::string language = this->defaultLanguage;
+            SPDLOG_DEBUG("Using configured language: {}", language);
+
+            // Text -> IPA phonemization
+            std::string phonemes;
+            
+            // Use eSpeak for all languages
+            espeakPhonemizeAll(text, phonemes, language, /*noStress=*/false);
+            if(language == "zh" || language == "zh-cn"){
+                phonemes = retone(phonemes);
+            }
+            
+            SPDLOG_DEBUG("Input text: '{}' (language: {}), IPA phonemes ({} chars): '{}'", text, language, phonemes.size(), phonemes);
+
+            // Preserve trailing punctuation from original text (eSpeak strips it)
+            // if (!text.empty()) {
+            //     char last = text.back();
+            //     if (last == '.' || last == '!' || last == '?' || last == ';' || last == ':' || last == ',') {
+            //         phonemes.push_back(last);
+            //     }
+            // }
+            SPDLOG_DEBUG("After E2M mapping ({} chars): '{}'", phonemes.size(), phonemes);
+            // IPA -> Kokoro token IDs
+            const auto& vocabIx = servable->getVocabIndex();
+            std::vector<int64_t> tokenIds;
+            tokenize(phonemes, tokenIds, vocabIx, language);
+
+            // Wrap with PAD token (id=0) at both ends — matches official
+            // forward_with_tokens: input_ids = [[0, *tokens, 0]]
+            tokenIds.insert(tokenIds.begin(), 0);
+            tokenIds.push_back(0);
+
+            // Voice embedding — select slice from voice pack based on content token count
+            size_t numContentTokens = tokenIds.size() >= 2 ? tokenIds.size() - 2 : 0;  // exclude BOS pad + EOS
+            const float* voiceSlice = servable->getVoiceSlice(voiceName, numContentTokens);
+            RET_CHECK(voiceSlice != nullptr) << "No voice pack loaded (place .bin files in <model_dir>/voices/)";
+
+            auto inputIdsTensor = ov::Tensor{ov::element::i64, ov::Shape{1, tokenIds.size()}};
+            auto refS = ov::Tensor{ov::element::f32, ov::Shape{1, KokoroServable::STYLE_DIM}};
+            auto speed = ov::Tensor{ov::element::f32, ov::Shape{1}};
+
+            *reinterpret_cast<float*>(speed.data()) = 1.0f;
+            std::copy(tokenIds.data(), tokenIds.data() + tokenIds.size(),
+                reinterpret_cast<int64_t*>(inputIdsTensor.data()));
+            std::copy(voiceSlice, voiceSlice + KokoroServable::STYLE_DIM,
+                reinterpret_cast<float*>(refS.data()));
+
+            // Inference
+            ModelMetricReporter unused(nullptr, nullptr, "unused", 1);
+            auto executingStreamIdGuard =
+                std::make_unique<ExecutingStreamIdGuard>(servable->getInferRequestsQueue(), unused);
+            ov::InferRequest& inferRequest = executingStreamIdGuard->getInferRequest();
+
+            inferRequest.set_tensor("input_ids", inputIdsTensor);
+            inferRequest.set_tensor("103", refS);
+            inferRequest.set_tensor("speed", speed);
+            inferRequest.start_async();
+            inferRequest.wait();
+
+            // Collect audio output
+            auto out = inferRequest.get_tensor(inferRequest.get_compiled_model().outputs()[0]);
+            RET_CHECK(out.get_shape().size() == 1);
+            RET_CHECK(out.get_element_type() == ov::element::f32);
+            const size_t samples = out.get_shape()[0];
+            const float* data = out.data<float>();
+
+            SPDLOG_DEBUG("Model output: {} audio samples ({:.2f}s at 24kHz)",
+                samples, static_cast<float>(samples) / 24000.0f);
+
+            void* wavDataPtr = nullptr;
+            size_t wavSize = 0;
+            prepareAudioOutputKokoro(&wavDataPtr, wavSize, samples, data);
+
+            auto output = std::make_unique<std::string>(reinterpret_cast<char*>(wavDataPtr), wavSize);
+            drwav_free(wavDataPtr, NULL);
+
+            cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(output.release(), cc->InputTimestamp());
+        } catch (const std::exception& e) {
+            SPDLOG_ERROR("KokoroCalculator [Node: {}] Process failed: {}", cc->NodeName(), e.what());
+            return absl::InvalidArgumentError(e.what());
+        } catch (...) {
+            SPDLOG_ERROR("KokoroCalculator [Node: {}] Process failed: unknown error", cc->NodeName());
+            return absl::InvalidArgumentError("Kokoro processing failed");
         }
-
-        // Text -> IPA phonemization
-        std::string phonemes;
-        espeakPhonemizeAll(text, phonemes, /*noStress=*/false);
-        SPDLOG_DEBUG("Input text: '{}', IPA phonemes ({} chars): '{}'", text, phonemes.size(), phonemes);
-
-        // Preserve trailing punctuation from original text (eSpeak strips it)
-        // if (!text.empty()) {
-        //     char last = text.back();
-        //     if (last == '.' || last == '!' || last == '?' || last == ';' || last == ':' || last == ',') {
-        //         phonemes.push_back(last);
-        //     }
-        // }
-        SPDLOG_DEBUG("After E2M mapping ({} chars): '{}'", phonemes.size(), phonemes);
-        // IPA -> Kokoro token IDs
-        const auto& vocabIx = servable->getVocabIndex();
-        std::vector<std::vector<int64_t>> inputTokens(1);
-        tokenize(phonemes, inputTokens[0], vocabIx);
-
-        // Wrap with PAD token (id=0) at both ends — matches official
-        // forward_with_tokens: input_ids = [[0, *tokens, 0]]
-        inputTokens[0].insert(inputTokens[0].begin(), 0);
-        inputTokens[0].push_back(0);
-
-        // Voice embedding — select slice from voice pack based on content token count
-        auto& ids = inputTokens[0];
-        size_t numContentTokens = ids.size() >= 2 ? ids.size() - 2 : 0;  // exclude BOS pad + EOS
-        const float* voiceSlice = servable->getVoiceSlice(voiceName, numContentTokens);
-        RET_CHECK(voiceSlice != nullptr) << "No voice pack loaded (place .bin files in <model_dir>/voices/)";
-
-        auto inputIdsTensor = ov::Tensor{ov::element::i64, ov::Shape{1, ids.size()}};
-        auto refS = ov::Tensor{ov::element::f32, ov::Shape{1, KokoroServable::STYLE_DIM}};
-        auto speed = ov::Tensor{ov::element::f32, ov::Shape{1}};
-
-        *reinterpret_cast<float*>(speed.data()) = 1.0f;
-        std::copy(ids.data(), ids.data() + ids.size(),
-            reinterpret_cast<int64_t*>(inputIdsTensor.data()));
-        std::copy(voiceSlice, voiceSlice + KokoroServable::STYLE_DIM,
-            reinterpret_cast<float*>(refS.data()));
-
-        // Inference
-        ModelMetricReporter unused(nullptr, nullptr, "unused", 1);
-        auto executingStreamIdGuard =
-            std::make_unique<ExecutingStreamIdGuard>(servable->getInferRequestsQueue(), unused);
-        ov::InferRequest& inferRequest = executingStreamIdGuard->getInferRequest();
-
-        inferRequest.set_tensor("input_ids", inputIdsTensor);
-        inferRequest.set_tensor("103", refS);
-        inferRequest.set_tensor("speed", speed);
-        inferRequest.start_async();
-        inferRequest.wait();
-
-        // Collect audio output
-        auto out = inferRequest.get_tensor(inferRequest.get_compiled_model().outputs()[0]);
-        RET_CHECK(out.get_shape().size() == 1);
-        RET_CHECK(out.get_element_type() == ov::element::f32);
-        const size_t samples = out.get_shape()[0];
-        const float* data = out.data<float>();
-
-        SPDLOG_DEBUG("Model output: {} audio samples ({:.2f}s at 24kHz)",
-            samples, static_cast<float>(samples) / 24000.0f);
-
-        void* wavDataPtr = nullptr;
-        size_t wavSize = 0;
-        prepareAudioOutputKokoro(&wavDataPtr, wavSize, samples, data);
-
-        auto output = std::make_unique<std::string>(reinterpret_cast<char*>(wavDataPtr), wavSize);
-        drwav_free(wavDataPtr, NULL);
-
-        cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(output.release(), cc->InputTimestamp());
         SPDLOG_LOGGER_DEBUG(kokoro_calculator_logger, "KokoroCalculator [Node: {}] Process end", cc->NodeName());
         return absl::OkStatus();
     }

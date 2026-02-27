@@ -24,7 +24,6 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
-#include <utility>
 
 #pragma warning(push)
 #pragma warning(disable : 4005 4309 6001 6385 6386 6326 6011 4005 4456 6246)
@@ -91,8 +90,17 @@ private:
                 espeakINITIALIZE_DONT_EXIT);
             if (sr <= 0)
                 return false;
+            // Try to initialize with Kokoro's supported language voices
+            // Kokoro supports: en-us (American English), en (British English), es (Spanish), fr (French), hi (Hindi), it (Italian), ja (Japanese), pt (Brazilian Portuguese), cmn (Mandarin Chinese)
             if (espeak_SetVoiceByName("en-us") != EE_OK &&
-                espeak_SetVoiceByName("en") != EE_OK) {
+                espeak_SetVoiceByName("en") != EE_OK &&
+                espeak_SetVoiceByName("es") != EE_OK &&
+                espeak_SetVoiceByName("fr") != EE_OK &&
+                espeak_SetVoiceByName("hi") != EE_OK &&
+                espeak_SetVoiceByName("it") != EE_OK &&
+                espeak_SetVoiceByName("ja") != EE_OK &&
+                espeak_SetVoiceByName("pt") != EE_OK &&
+                espeak_SetVoiceByName("cmn") != EE_OK) {
                 return false;
             }
             return true;
@@ -168,9 +176,6 @@ struct KokoroServable {
             numberOfParallelInferRequests = 1u;
         }
         inferRequestsQueue = std::make_unique<OVInferRequestsQueue>(compiledModel, numberOfParallelInferRequests);
-        
-        // Warm up model with dummy inference
-        //warmUpModel();
     }
 
     OVInferRequestsQueue& getInferRequestsQueue() {
@@ -287,38 +292,6 @@ private:
 
         SPDLOG_INFO("Loaded {} voice pack(s), default: '{}'", voicePacks.size(), defaultVoiceName);
     }
-
-    // void warmUpModel() {
-    //     try {
-    //         SPDLOG_INFO("Warming up Kokoro model with dummy inference...");
-            
-    //         // Create dummy tensors with minimal sequence length
-    //         constexpr size_t dummySeqLen = 3;  // [0, token, 0] pattern
-    //         auto inputIdsTensor = ov::Tensor{ov::element::i64, ov::Shape{1, dummySeqLen}};
-    //         auto refS = ov::Tensor{ov::element::f32, ov::Shape{1, STYLE_DIM}};
-    //         auto speed = ov::Tensor{ov::element::f32, ov::Shape{1}};
-            
-    //         // Fill with dummy values
-    //         auto* idsData = reinterpret_cast<int64_t*>(inputIdsTensor.data());
-    //         idsData[0] = 0;  // PAD token
-    //         idsData[1] = 1;  // arbitrary token ID
-    //         idsData[2] = 0;  // PAD token
-            
-    //         std::fill_n(reinterpret_cast<float*>(refS.data()), STYLE_DIM, 0.0f);
-    //         *reinterpret_cast<float*>(speed.data()) = 1.0f;
-            
-    //         // Get infer request and run warm-up inference
-    //         ov::InferRequest inferRequest = compiledModel.create_infer_request();
-    //         inferRequest.set_tensor("input_ids", inputIdsTensor);
-    //         inferRequest.set_tensor("103", refS);
-    //         inferRequest.set_tensor("speed", speed);
-    //         inferRequest.infer();
-            
-    //         SPDLOG_INFO("Kokoro model warm-up completed successfully");
-    //     } catch (const std::exception& ex) {
-    //         SPDLOG_WARN("Kokoro model warm-up failed: {}. Continuing anyway...", ex.what());
-    //     }
-    // }
 };
 
 using KokoroServableMap = std::unordered_map<std::string, std::shared_ptr<KokoroServable>>;
