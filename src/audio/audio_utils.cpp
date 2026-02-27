@@ -22,6 +22,7 @@
 #include "src/logging.hpp"
 #include <string>
 #include <vector>
+#include <cmath>
 #include <random>
 #include <algorithm>
 #pragma warning(push)
@@ -181,6 +182,36 @@ void prepareAudioOutput(void** ppData, size_t& pDataSize, uint16_t bitsPerSample
     }
     drwav_uint64 framesWritten = drwav_write_pcm_frames(&wav, totalSamples, waveformPtr);
     if (framesWritten != totalSamples) {
+        throw std::runtime_error("Failed to write all frames");
+    }
+    drwav_uninit(&wav);
+    timer.stop(OUTPUT_PREPARATION);
+    auto outputPreparationTime = (timer.elapsed<std::chrono::microseconds>(OUTPUT_PREPARATION)) / 1000;
+    SPDLOG_LOGGER_DEBUG(t2s_calculator_logger, "Output preparation time: {} ms", outputPreparationTime);
+}
+
+void prepareAudioOutputKokoro(void** ppData, size_t& pDataSize, size_t speechSize, const float* waveformPtr) {
+    enum : unsigned int {
+        OUTPUT_PREPARATION,
+        TIMER_END
+    };
+    Timer<TIMER_END> timer;
+    timer.start(OUTPUT_PREPARATION);
+
+    drwav_data_format format;
+    format.container = drwav_container_riff;
+    format.format = DR_WAVE_FORMAT_IEEE_FLOAT;
+    format.channels = 1;
+    format.sampleRate = 24000;  // Kokoro native sample rate
+    format.bitsPerSample = 32;
+    drwav wav;
+
+    auto status = drwav_init_memory_write(&wav, ppData, &pDataSize, &format, nullptr);
+    if (status == DRWAV_FALSE) {
+        throw std::runtime_error("Failed to initialize WAV writer");
+    }
+    drwav_uint64 framesWritten = drwav_write_pcm_frames(&wav, speechSize, waveformPtr);
+    if (framesWritten != speechSize) {
         throw std::runtime_error("Failed to write all frames");
     }
     drwav_uninit(&wav);

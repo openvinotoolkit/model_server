@@ -48,6 +48,7 @@
 #include "../rerank/rerank_servable.hpp"
 #include "../audio/speech_to_text/s2t_servable.hpp"
 #include "../audio/text_to_speech/t2s_servable.hpp"
+#include "../audio/kokoro/kokoro_servable.hpp"
 
 namespace ovms {
 class MediapipeGraphDefinitionUnloadGuard;
@@ -66,6 +67,7 @@ using GenAiServableMap = std::unordered_map<std::string, std::shared_ptr<GenAiSe
 using RerankServableMap = std::unordered_map<std::string, std::shared_ptr<RerankServable>>;
 using SttServableMap = std::unordered_map<std::string, std::shared_ptr<SttServable>>;
 using TtsServableMap = std::unordered_map<std::string, std::shared_ptr<TtsServable>>;
+using KokoroServableMap = std::unordered_map<std::string, std::shared_ptr<KokoroServable>>;
 using EmbeddingsServableMap = std::unordered_map<std::string, std::shared_ptr<EmbeddingsServable>>;
 using ImageGenerationPipelinesMap = std::unordered_map<std::string, std::shared_ptr<ImageGenerationPipelines>>;
 
@@ -77,6 +79,7 @@ struct GraphSidePackets {
     RerankServableMap rerankServableMap;
     SttServableMap sttServableMap;
     TtsServableMap ttsServableMap;
+    KokoroServableMap kokoroServableMap;
     void clear() {
         pythonNodeResourcesMap.clear();
         genAiServableMap.clear();
@@ -85,6 +88,7 @@ struct GraphSidePackets {
         rerankServableMap.clear();
         sttServableMap.clear();
         ttsServableMap.clear();
+        kokoroServableMap.clear();
     }
     bool empty() {
         return (pythonNodeResourcesMap.empty() &&
@@ -93,7 +97,8 @@ struct GraphSidePackets {
                 embeddingsServableMap.empty() &&
                 rerankServableMap.empty() &&
                 sttServableMap.empty() &&
-                ttsServableMap.empty());
+                ttsServableMap.empty() &&
+                kokoroServableMap.empty());
     }
 };
 
@@ -136,6 +141,7 @@ public:
     static const std::string RERANK_NODE_CALCULATOR_NAME;
     static const std::string STT_NODE_CALCULATOR_NAME;
     static const std::string TTS_NODE_CALCULATOR_NAME;
+    static const std::string KOKORO_NODE_CALCULATOR_NAME;
     Status waitForLoaded(std::unique_ptr<MediapipeGraphDefinitionUnloadGuard>& unloadGuard, const uint32_t waitForLoadedTimeoutMicroseconds = WAIT_FOR_LOADED_DEFAULT_TIMEOUT_MICROSECONDS);
 
     // Pipelines are not versioned and any available definition has constant version equal 1.
