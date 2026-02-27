@@ -312,7 +312,7 @@ index 58cb4b424..00ddee9f3 100644
  	git_writestream **out,
 diff --git a/src/libgit2/lfs_filter.c b/src/libgit2/lfs_filter.c
 new file mode 100644
-index 000000000..5a005f903
+index 000000000..7c1111c34
 --- /dev/null
 +++ b/src/libgit2/lfs_filter.c
 @@ -0,0 +1,655 @@
@@ -391,7 +391,7 @@ index 000000000..5a005f903
 +	size_t existingLength = strlen(existingBuffer);
 +	size_t suffixLength = strlen(suffix);
 +
-+	// +1 for the null terminator
++	/* +1 for the null terminator */
 +	size_t newSize = existingLength + suffixLength + 1;
 +
 +	char *newBuffer = (char *)malloc(newSize);
@@ -399,7 +399,7 @@ index 000000000..5a005f903
 +		return NULL;
 +	}
 +
-+	// Copy existing and then append suffix
++	/* Copy existing and then append suffix */
 +	memcpy(newBuffer, existingBuffer, existingLength);
 +	memcpy(newBuffer + existingLength, suffix, suffixLength);
 +	newBuffer[newSize - 1] = '\0';
