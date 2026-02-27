@@ -34,7 +34,7 @@ docker run -d --rm -p 8000:8000 -v $(pwd)/models:/workspace:ro openvino/model_se
 ```
 
 ### On Baremetal
-```
+```bash
 ovms --rest_port 8000 --config_path ./models/config.json
 ```
 
