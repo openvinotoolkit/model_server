@@ -65,15 +65,15 @@ Following table lists supported tag and packet types in pbtxt graph definition:
 |pbtxt line|input/output|tag|packet type|stream name|
 |:---|:---|:---|:---|:---|
 |input_stream: "a"|input|none|ov::Tensor|a|
-|output_stream: "b"|input|none|ov::Tensor|b|
+|output_stream: "b"|output|none|ov::Tensor|b|
 |input_stream: "IMAGE:a"|input|IMAGE|mediapipe::ImageFrame|a|
 |output_stream: "IMAGE:b"|output|IMAGE|mediapipe::ImageFrame|b|
-|input_stream: "OVTENSOR:a"|output|OVTENSOR|ov::Tensor|a|
+|input_stream: "OVTENSOR:a"|input|OVTENSOR|ov::Tensor|a|
 |output_stream: "OVTENSOR:b"|output|OVTENSOR|ov::Tensor|b|
 |input_stream: "REQUEST:req"|input|REQUEST|KServe inference::ModelInferRequest|req|
 |output_stream: "RESPONSE:res"|output|RESPONSE|KServe inference::ModelInferResponse|res|
 
-In case of missing tag OpenVINO Model Server assumes that the packet type is `ov::Tensor'. The stream name can be arbitrary but the convention is to use a lower case word.
+In case of missing tag OpenVINO Model Server assumes that the packet type is `ov::Tensor`. The stream name can be arbitrary but the convention is to use a lower case word.
 
 The required data layout for the MediaPipe `IMAGE` conversion is HWC and the supported precisions are:
 |Datatype|Allowed number of channels|
@@ -110,7 +110,7 @@ client.async_stream_infer(
 ```
 
 ### List of default calculators
-Beside OpenVINO inference calculators, model server public docker image also includes all the calculators used in the enabled demos.
+Besides OpenVINO inference calculators, model server public docker image also includes all the calculators used in the enabled demos.
 The list of all included calculators, subgraphs, input/output stream handler is reported in the model server is started with extra parameter `--log_level TRACE`.
 
 ### CPU and GPU execution

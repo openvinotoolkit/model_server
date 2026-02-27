@@ -2,7 +2,7 @@
 
 ## Overview
 
-With rapid development of generative AI, new techniques and algorithms for performance optimization and better resource utilization are introduced to make best use of the hardware and provide best generation performance. OpenVINO implements those state of the art methods in it's [GenAI Library](https://github.com/openvinotoolkit/openvino.genai) like:
+With rapid development of generative AI, new techniques and algorithms for performance optimization and better resource utilization are introduced to make best use of the hardware and provide best generation performance. OpenVINO implements those state of the art methods in its [GenAI Library](https://github.com/openvinotoolkit/openvino.genai) like:
   - Continuous Batching
   - Paged Attention
   - Dynamic Split Fuse
@@ -22,7 +22,7 @@ The servable types are:
 - Visual Language Model Stateful.
 
 First part - Language Model / Visual Language Model - determines whether servable accepts only text or both text and images on the input.
-Seconds part - Continuous Batching / Stateful - determines what kind of GenAI pipeline is used as the engine. By default CPU and GPU devices work on Continuous Batching pipelines. NPU device works only on Stateful servable type.
+Second part - Continuous Batching / Stateful - determines what kind of GenAI pipeline is used as the engine. By default CPU and GPU devices work on Continuous Batching pipelines. NPU device works only on Stateful servable type.
 
 User does not have to explicitly select servable type. It is inferred based on model directory contents and selected target device.
 Model directory contents determine if model can work only with text or visual input as well. As for target device, setting it to `NPU` will always pick Stateful servable, while any other device will result in deploying Continuous Batching servable. 
@@ -354,7 +354,7 @@ Check [tested models](https://github.com/openvinotoolkit/openvino.genai/blob/mas
 
 ### Completions
 
-When sending a request to `/completions` endpoint, model server adds `bos_token_id` during tokenization, so **there is not need to add `bos_token` to the prompt**.
+When sending a request to `/completions` endpoint, model server adds `bos_token_id` during tokenization, so **there is no need to add `bos_token` to the prompt**.
 
 ### Chat Completions
 

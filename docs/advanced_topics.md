@@ -13,7 +13,7 @@ ovms_extras_nginx-mtls-auth-readme
 ```
 
 ## CPU Extensions
-Implement any CPU layer, that is not support by OpenVINO yet, as a shared library.
+Implement any CPU layer, that is not supported by OpenVINO yet, as a shared library.
 
 [Learn more](../src/example/SampleCpuExtension/README.md)
 
