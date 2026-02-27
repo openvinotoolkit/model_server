@@ -88,6 +88,11 @@ def get_list(key_name, delimiter=",", fallback=None):
     value = os.environ.get(key_name, fallback)
     if value != fallback:
         value = value.split(delimiter)
+        for index, item in enumerate(value):
+            if item.lower() == "true":
+                value[index] = True
+            elif item.lower() == "false":
+                value[index] = False
     elif not value:
         value = []
     return value
