@@ -62,5 +62,7 @@ protected:
     std::string GetRepositoryUrlWithPassword();
     bool CheckIfProxySet();
     Status RemoveReadonlyFileAttributeFromDir(const std::string& directoryPath);
+    Status CheckRepositoryStatus();
+    int CheckRepositoryForResume();
 };
 }  // namespace ovms

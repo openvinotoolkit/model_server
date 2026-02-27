@@ -179,6 +179,184 @@ Status HfDownloader::RemoveReadonlyFileAttributeFromDir(const std::string& direc
     return StatusCode::OK;
 }
 
+Status HfDownloader::CheckRepositoryStatus() {
+    git_repository *repo = NULL;
+    int error = git_repository_open_ext(&repo, this->downloadPath.c_str(), 0, NULL);
+    if (error < 0) {
+        const git_error *err = git_error_last();
+        if (err)
+            SPDLOG_ERROR("Repository open failed: {} {}", err->klass, err->message);
+        else
+            SPDLOG_ERROR("Repository open failed: {}", error);
+        if (repo) git_repository_free(repo);
+
+        return StatusCode::HF_GIT_STATUS_FAILED;
+    }
+    // HEAD state info
+    bool is_detached = git_repository_head_detached(repo) == 1;
+    bool is_unborn   = git_repository_head_unborn(repo) == 1;
+    
+    // Collect status (staged/unstaged/untracked)
+    git_status_options opts = GIT_STATUS_OPTIONS_INIT;
+    
+    opts.show  = GIT_STATUS_SHOW_INDEX_AND_WORKDIR;
+    opts.flags = GIT_STATUS_OPT_INCLUDE_UNTRACKED        // include untracked files // | GIT_STATUS_OPT_RENAMES_HEAD_TO_INDEX    // detect renames HEAD->index - not required currently and impacts performance
+               | GIT_STATUS_OPT_SORT_CASE_SENSITIVELY;   
+
+    
+    git_status_list* status_list = nullptr;
+    error = git_status_list_new(&status_list, repo, &opts);
+    if (error != 0) {
+        return StatusCode::HF_GIT_STATUS_FAILED;
+    }
+
+    size_t staged = 0, unstaged = 0, untracked = 0, conflicted = 0;
+    const size_t n = git_status_list_entrycount(status_list); // iterate entries
+    for (size_t i = 0; i < n; ++i) {
+        const git_status_entry* e = git_status_byindex(status_list, i);
+        unsigned s = e->status;
+
+        // Staged (index) changes
+        if (s & (GIT_STATUS_INDEX_NEW     |
+                 GIT_STATUS_INDEX_MODIFIED|
+                 GIT_STATUS_INDEX_DELETED |
+                 GIT_STATUS_INDEX_RENAMED |
+                 GIT_STATUS_INDEX_TYPECHANGE))
+            ++staged;
+
+        // Unstaged (workdir) changes
+        if (s & (GIT_STATUS_WT_MODIFIED   |
+                 GIT_STATUS_WT_DELETED    |
+                 GIT_STATUS_WT_RENAMED    |
+                 GIT_STATUS_WT_TYPECHANGE))
+            ++unstaged;
+
+        // Untracked
+        if (s & GIT_STATUS_WT_NEW)
+            ++untracked;
+
+        // libgit2 will also flag conflicted entries via status/diff machinery
+        if (s & GIT_STATUS_CONFLICTED)
+            ++conflicted;
+    }
+
+    std::stringstream ss;
+    ss << "HEAD state      : "
+              << (is_unborn ? "unborn (no commits)" : (is_detached ? "detached" : "attached"))
+              << "\n";
+    ss << "Staged changes  : " << staged     << "\n";
+    ss << "Unstaged changes: " << unstaged   << "\n";
+    ss << "Untracked files : " << untracked  << "\n";
+    if (conflicted) ss << " (" << conflicted << " paths flagged)";
+
+    SPDLOG_DEBUG(ss.str());
+    git_status_list_free(status_list);
+
+    if (is_unborn || is_detached || staged || unstaged || untracked || conflicted) {
+        return StatusCode::HF_GIT_STATUS_UNCLEAN; 
+    }
+    return StatusCode::OK;
+}
+
+static int print_changed_and_untracked(git_repository *repo) {
+    int error = 0;
+    git_status_list *statuslist = NULL;
+
+    git_status_options opts;
+    error = git_status_options_init(&opts, GIT_STATUS_OPTIONS_VERSION);
+    if (error < 0) return error;
+
+    // Choose what to include
+    opts.show  = GIT_STATUS_SHOW_INDEX_AND_WORKDIR; // consider both index and working dir
+    opts.flags =
+        GIT_STATUS_OPT_INCLUDE_UNTRACKED |        // include untracked files
+        GIT_STATUS_OPT_RECURSE_UNTRACKED_DIRS |   // recurse into untracked dirs
+        GIT_STATUS_OPT_INCLUDE_IGNORED |          // (optional) include ignored if you want to see them
+        GIT_STATUS_OPT_RENAMES_HEAD_TO_INDEX |    // detect renames in index
+        GIT_STATUS_OPT_RENAMES_INDEX_TO_WORKDIR | // detect renames in workdir
+        GIT_STATUS_OPT_SORT_CASE_SENSITIVELY;     // stable ordering
+
+    // If you want to limit to certain paths/patterns, set opts.pathspec here.
+
+    if ((error = git_status_list_new(&statuslist, repo, &opts)) < 0)
+        return error;
+
+    size_t count = git_status_list_entrycount(statuslist);
+    for (size_t i = 0; i < count; i++) {
+        const git_status_entry *e = git_status_byindex(statuslist, i);
+        if (!e) continue;
+
+        unsigned int s = e->status;
+
+        // Consider “changed” as anything that’s not current in HEAD/INDEX/WT:
+        // You can tailor this to your exact definition.
+        int is_untracked =
+            (s & GIT_STATUS_WT_NEW) != 0; // working tree new (untracked)
+        int is_workdir_changed =
+            (s & (GIT_STATUS_WT_MODIFIED |
+                  GIT_STATUS_WT_DELETED  |
+                  GIT_STATUS_WT_RENAMED  |
+                  GIT_STATUS_WT_TYPECHANGE)) != 0;
+        int is_index_changed =
+            (s & (GIT_STATUS_INDEX_NEW      |
+                  GIT_STATUS_INDEX_MODIFIED |
+                  GIT_STATUS_INDEX_DELETED  |
+                  GIT_STATUS_INDEX_RENAMED  |
+                  GIT_STATUS_INDEX_TYPECHANGE)) != 0;
+
+        if (!(is_untracked || is_workdir_changed || is_index_changed))
+            continue;
+
+        // Prefer the most relevant delta for the path
+        const git_diff_delta *delta = NULL;
+        if (is_workdir_changed && e->index_to_workdir)
+            delta = e->index_to_workdir;
+        else if (is_index_changed && e->head_to_index)
+            delta = e->head_to_index;
+        else if (is_untracked && e->index_to_workdir)
+            delta = e->index_to_workdir;
+
+        if (!delta) continue;
+
+        // For renames, old_file and new_file may differ; typically you want new_file.path
+        const char *path = delta->new_file.path ? delta->new_file.path
+                                                : delta->old_file.path;
+
+        // Print or collect the filename
+        SPDLOG_INFO("is_untracked {} is_workdir_changed {} is_index_changed {} File {} ", is_untracked, is_workdir_changed, is_index_changed, path);
+    }
+
+    git_status_list_free(statuslist);
+    return 0;
+}
+
+int HfDownloader::CheckRepositoryForResume() {
+    git_repository *repo = NULL;
+    int error = git_repository_open_ext(&repo, this->downloadPath.c_str(), 0, NULL);
+    if (error < 0) {
+        const git_error *err = git_error_last();
+        if (err)
+            SPDLOG_ERROR("Repository open failed: {} {}", err->klass, err->message);
+        else
+            SPDLOG_ERROR("Repository open failed: {}", error);
+        if (repo) git_repository_free(repo);
+
+        return error;
+    }
+
+    error = print_changed_and_untracked(repo);
+    if (error < 0) {
+        const git_error *err = git_error_last();
+        if (err)
+            SPDLOG_ERROR("Print changed files failed: {} {}", err->klass, err->message);
+        else
+            SPDLOG_ERROR("Print changed files failed: {}", error);
+    }
+
+    if (repo) git_repository_free(repo);
+    return error;
+}
+
 Status HfDownloader::downloadModel() {
     if (FileSystem::isPathEscaped(this->downloadPath)) {
         SPDLOG_ERROR("Path {} escape with .. is forbidden.", this->downloadPath);
@@ -187,6 +365,9 @@ Status HfDownloader::downloadModel() {
 
     // Repository exists and we do not want to overwrite
     if (std::filesystem::is_directory(this->downloadPath) && !this->overwriteModels) {
+        CheckRepositoryForResume();
+
+
         std::cout << "Path already exists on local filesystem. Skipping download to path: " << this->downloadPath << std::endl;
         return StatusCode::OK;
     }
@@ -229,6 +410,12 @@ Status HfDownloader::downloadModel() {
         return StatusCode::HF_GIT_CLONE_FAILED;
     } else if (cloned_repo) {
         git_repository_free(cloned_repo);
+    }
+
+    SPDLOG_DEBUG("Checking repository status.");
+    status = CheckRepositoryStatus();
+    if (!status.ok()) {
+        return status;
     }
 
     // libgit2 clone sets readonly attributes
