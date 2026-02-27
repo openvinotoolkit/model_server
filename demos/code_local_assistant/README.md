@@ -6,242 +6,152 @@ With the rise of AI PC capabilities, hosting own Visual Studio code assistant is
 # Requirements
 - Windows (for standalone app) or Linux (using Docker)
 - Python installed (for model preparation only)
-- Intel Meteor Lake, Lunar Lake, Arrow Lake or newer Intel CPU.
+- Intel Meteor Lake, Lunar Lake, Arrow Lake or Panter Lake. 
+- Memory requirements depend on the model size
 
-## Prepare Code Chat/Edit Model 
-We need to use medium size model to get reliable responses but also to fit it to the available memory on the host or discrete GPU.
-
-Download export script, install its dependencies and create directory for the models:
-```console
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/export_model.py -o export_model.py
-pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
-mkdir models
-```
-> **Note:** The users in China need to set environment variable HF_ENDPOINT="https://hf-mirror.com" before running the export script to connect to the HF Hub.
-
-Pull and add the model on Linux:
-
-> **Note:** To use CPU, please export model with option `--target_device CPU` instead of `GPU`.
-::::{tab-set}
-:::{tab-item} Qwen/Qwen3-Coder-30B-A3B-Instruct
-:sync: Qwen/Qwen3-Coder-30B-A3B-Instruct
-```bash
-python export_model.py text_generation --source_model Qwen/Qwen3-Coder-30B-A3B-Instruct --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device GPU --tool_parser qwen3coder
-curl -L -o models/Qwen/Qwen3-Coder-30B-A3B-Instruct/chat_template.jinja https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/extras/chat_template_examples/chat_template_qwen3coder_instruct.jinja
-
-docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
-    openvino/model_server:weekly \
-    --add_to_config \
-    --config_path /models/config_all.json \
-    --model_name Qwen/Qwen3-Coder-30B-A3B-Instruct \
-    --model_path Qwen/Qwen3-Coder-30B-A3B-Instruct
-```
-> **Note:** For deployment, the model requires ~16GB disk space and recommended 19GB+ of VRAM on the GPU. For conversion, the original model will be pulled and quantized, which requires 65GB of free RAM.
-
-:::
-:::{tab-item} mistralai/Codestral-22B-v0.1 
-:sync: mistralai/Codestral-22B-v0.1
-```bash
-python export_model.py text_generation --source_model mistralai/Codestral-22B-v0.1 --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device GPU
-curl -L -o models/mistralai/Codestral-22B-v0.1/chat_template.jinja https://raw.githubusercontent.com/vllm-project/vllm/refs/tags/v0.10.1.1/examples/tool_chat_template_mistral_parallel.jinja
-
-docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
-    openvino/model_server:weekly \
-    --add_to_config \
-    --config_path /models/config_all.json \
-    --model_name mistralai/Codestral-22B-v0.1 \
-    --model_path mistralai/Codestral-22B-v0.1
-```
-> **Note:** For deployment, the model requires ~12GB disk space and recommended 16GB+ of VRAM on the GPU. For conversion, the original model will be pulled and quantized, which requires 50GB of free RAM.
-
-:::
-:::{tab-item} openai/gpt-oss-20b
-:sync: openai/gpt-oss-20b
-```bash
-python export_model.py text_generation --source_model openai/gpt-oss-20b --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --tool_parser gptoss --reasoning_parser gptoss --target_device GPU
-curl -L -o models/openai/gpt-oss-20b/chat_template.jinja https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/extras/chat_template_examples/chat_template_gpt_oss.jinja
-
-docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
-    openvino/model_server:weekly \
-    --add_to_config \
-    --config_path /models/config_all.json \
-    --model_name openai/gpt-oss-20b \
-    --model_path openai/gpt-oss-20b
-```
-
-> **Note:** Continuous batching and paged attention are supported for GPT‑OSS. However, when deployed on GPU, the model may experience reduced accuracy under high‑concurrency workloads. This issue will be resolved in version 2026.1 and in the upcoming weekly release. CPU execution is not affected.
-> **Note:** For deployment, the model requires ~12GB disk space and recommended 16GB+ of VRAM on the GPU. For conversion, the original model will be pulled and quantized, which requires 96GB of free RAM.
-
-:::
-:::{tab-item} unsloth/Devstral-Small-2507
-:sync: unsloth/Devstral-Small-2507
-```bash
-python export_model.py text_generation --source_model unsloth/Devstral-Small-2507 --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --tool_parser devstral --target_device GPU
-curl -L -o models/unsloth/Devstral-Small-2507/chat_template.jinja https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/extras/chat_template_examples/chat_template_devstral.jinja
-
-docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
-    openvino/model_server:weekly \
-    --add_to_config \
-    --config_path /models/config_all.json \
-    --model_name unsloth/Devstral-Small-2507 \
-    --model_path unsloth/Devstral-Small-2507
-```
-> **Note:** For deployment, the model requires ~13GB disk space and recommended 16GB+ of VRAM on the GPU. For conversion, the original model will be pulled and quantized, which requires 50GB of free RAM.
-
-:::
-:::{tab-item} OpenVINO/Qwen3-4B-int4-ov
-:sync: OpenVINO/Qwen3-4B-int4-ov
-```bash
-docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
-    openvino/model_server:weekly \
-    --pull \
-    --source_model OpenVINO/Qwen3-4B-int4-ov \
-    --model_repository_path /models \
-    --model_name OpenVINO/Qwen3-4B-int4-ov \
-    --task text_generation \
-    --tool_parser hermes3 \
-    --target_device GPU
-
-docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
-    openvino/model_server:weekly \
-    --add_to_config --config_path /models/config_all.json \
-    --model_name OpenVINO/Qwen3-4B-int4-ov \
-    --model_path OpenVINO/Qwen3-4B-int4-ov
-```
-> **Note:** `Qwen3` models are available on [HuggingFace OpenVINO repository](https://huggingface.co/OpenVINO/models?search=qwen3) in different sizes and precisions. It is possible to choose it for any use and hardware.
-RAM requirements depends on the model quantization. 
-:::
-:::{tab-item} OpenVINO/Qwen2.5-Coder-3B-Instruct-int4-ov
-:sync: OpenVINO/Qwen2.5-Coder-3B-Instruct-int4-ov
-```bash
-docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
-    openvino/model_server:weekly \
-    --pull \
-    --source_model OpenVINO/Qwen2.5-Coder-3B-Instruct-int4-ov \
-    --model_repository_path /models \
-    --model_name OpenVINO/Qwen2.5-Coder-3B-Instruct-int4-ov \
-    --task text_generation \
-    --target_device GPU
-    
-docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
-    openvino/model_server:weekly \
-    --add_to_config \
-    --config_path /models/config_all.json \
-    --model_name OpenVINO/Qwen2.5-Coder-3B-Instruct-int4-ov \
-    --model_path OpenVINO/Qwen2.5-Coder-3B-Instruct-int4-ov
-```
-
-> **Note:** `Qwen2.5-Coder` models are available on [HuggingFace OpenVINO repository](https://huggingface.co/OpenVINO/models?search=qwen2.5-coder) in different sizes and precisions. It is possible to choose it for any use and hardware.
-RAM requirements depends on the model quantization. 
-
-:::
-::::
-
-Pull and add the model on Windows:
-::::{tab-set}
-:::{tab-item} Qwen/Qwen3-Coder-30B-A3B-Instruct
-:sync: Qwen/Qwen3-Coder-30B-A3B-Instruct
-```bat
-python export_model.py text_generation --source_model Qwen/Qwen3-Coder-30B-A3B-Instruct --weight-format int8 --config_file_path models/config_all.json --model_repository_path models --target_device GPU --tool_parser qwen3coder
-curl -L -o models/Qwen/Qwen3-Coder-30B-A3B-Instruct/chat_template.jinja https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/extras/chat_template_examples/chat_template_qwen3coder_instruct.jinja
-
-ovms.exe --add_to_config --config_path models/config_all.json --model_name Qwen/Qwen3-Coder-30B-A3B-Instruct --model_path Qwen/Qwen3-Coder-30B-A3B-Instruct
-```
-> **Note:** For deployment, the model requires ~16GB disk space and recommended 19GB+ of VRAM on the GPU. For conversion, the original model will be pulled and quantized, which requires 65GB of free RAM.
-
-:::
-:::{tab-item} mistralai/Codestral-22B-v0.1 
-:sync: mistralai/Codestral-22B-v0.1
-```bat
-python export_model.py text_generation --source_model mistralai/Codestral-22B-v0.1 --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device GPU
-curl -L -o models/mistralai/Codestral-22B-v0.1/chat_template.jinja https://raw.githubusercontent.com/vllm-project/vllm/refs/tags/v0.10.1.1/examples/tool_chat_template_mistral_parallel.jinja
-
-ovms.exe --add_to_config --config_path models/config_all.json --model_name mistralai/Codestral-22B-v0.1 --model_path mistralai/Codestral-22B-v0.1
-
-```
-> **Note:** For deployment, the model requires ~12GB disk space and recommended 16GB+ of VRAM on the GPU. For conversion, the original model will be pulled and quantized, which requires 50GB of free RAM.
-
-
-:::
-:::{tab-item} openai/gpt-oss-20b
-:sync: openai/gpt-oss-20b
-```bat
-python export_model.py text_generation --source_model openai/gpt-oss-20b --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device GPU --tool_parser gptoss --reasoning_parser gptoss
-curl -L -o models/openai/gpt-oss-20b/chat_template.jinja https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/extras/chat_template_examples/chat_template_gpt_oss.jinja
-
-ovms.exe --add_to_config --config_path models/config_all.json --model_name openai/gpt-oss-20b --model_path openai/gpt-oss-20b
-```
-> **Note:** For deployment, the model requires ~12GB disk space and recommended 16GB+ of VRAM on the GPU. For conversion, the original model will be pulled and quantized, which requires 96GB of free RAM.
-> **Note:** Continuous batching and paged attention are supported for GPT‑OSS. However, when deployed on GPU, the model may experience reduced accuracy under high‑concurrency workloads. This issue will be resolved in version 2026.1 and in the upcoming weekly release. CPU execution is not affected.
-
-:::
-:::{tab-item} unsloth/Devstral-Small-2507
-:sync: unsloth/Devstral-Small-2507
-```bat
-python export_model.py text_generation --source_model unsloth/Devstral-Small-2507 --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --tool_parser devstral --target_device GPU
-curl -L -o models/unsloth/Devstral-Small-2507/chat_template.jinja https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/extras/chat_template_examples/chat_template_devstral.jinja
-
-ovms.exe --add_to_config --config_path models/config_all.json --model_name unsloth/Devstral-Small-2507 --model_path unsloth/Devstral-Small-2507
-```
-> **Note:** For deployment, the model requires ~13GB disk space and recommended 16GB+ of VRAM on the GPU. For conversion, the original model will be pulled and quantized, which requires 50GB of free RAM.
-
-:::
-:::{tab-item} OpenVINO/Qwen3-4B-int4-ov
-:sync: OpenVINO/Qwen3-4B-int4-ov
-```bat
-ovms.exe --pull --source_model OpenVINO/Qwen3-4B-int4-ov --model_repository_path models --model_name OpenVINO/Qwen3-4B-int4-ov --target_device GPU --task text_generation --tool_parser hermes3
-    
-ovms.exe --add_to_config --config_path models/config_all.json --model_name OpenVINO/Qwen3-4B-int4-ov --model_path OpenVINO/Qwen3-4B-int4-ov
-```
-> **Note:** `Qwen3` models are available on [HuggingFace OpenVINO repository](https://huggingface.co/OpenVINO/models?search=qwen3) in different sizes and precisions. It is possible to choose it for any use and hardware. 
-
-:::
-:::{tab-item} OpenVINO/Qwen2.5-Coder-3B-Instruct-int4-ov
-:sync: OpenVINO/Qwen2.5-Coder-3B-Instruct-int4-ov
-```bat
-ovms.exe --pull --source_model OpenVINO/Qwen2.5-Coder-3B-Instruct-int4-ov --model_repository_path models --model_name OpenVINO/Qwen2.5-Coder-3B-Instruct-int4-ov --target_device GPU --task text_generation
-
-ovms.exe --add_to_config --config_path models/config_all.json --model_name OpenVINO/Qwen2.5-Coder-3B-Instruct-int4-ov --model_path OpenVINO/Qwen2.5-Coder-3B-Instruct-int4-ov
-```
-
-> **Note:** `Qwen2.5-Coder` models are available on [HuggingFace OpenVINO repository](https://huggingface.co/OpenVINO/models?search=qwen2.5-coder) in different sizes and precisions. It is possible to choose it for any use and hardware. 
-
-:::
-::::
-
-## Set Up Server
-Run OpenVINO Model Server with all downloaded models loaded at the same time:
-
-::::{tab-set}
-:::{tab-item} Windows
-:sync: Windows
 ### Windows: deploying on bare metal
-Please refer to OpenVINO Model Server installation first: [link](../../docs/deploying_server_baremetal.md)
 
+::::{tab-set}
+:::{tab-item} OpenVINO/Qwen3-Coder-30B-A3B-Instruct-int4
+:sync: OpenVINO/Qwen3-Coder-30B-A3B-Instruct-int4
 ```bat
-set MOE_USE_MICRO_GEMM_PREFILL=0
-ovms --rest_port 8000 --config_path ./models/config_all.json
+mkdir c:\models
+set MOE_USE_MICRO_GEMM_PREFILL=0  # temporary workaround to improve accuracy with long context
+ovms --model_repository_path c:\models --source_model OpenVINO/Qwen3-Coder-30B-A3B-Instruct-int4 --task text_generation --target_device GPU --tool_parser qwen3coder --rest_port 8000 --cache_dir .ovcache --model_name Qwen3-Coder-30B-A3B-Instruct
 ```
+> **Note:** For deployment, the model requires ~16GB disk space and recommended 19GB+ of VRAM on the GPU.
 :::
-:::{tab-item} Linux CPU
-:sync: Linux CPU
-### Linux: via Docker with CPU
-```text
-docker run -d --rm -u $(id -u):$(id -g) -e MOE_USE_MICRO_GEMM_PREFILL=0 \
-  -p 8000:8000 -v $(pwd)/:/workspace/ openvino/model_server:weekly --rest_port 8000 --config_path /workspace/models/config_all.json
+
+:::{tab-item} OpenVINO/Qwen3-Coder-30B-A3B-Instruct-int8
+:sync: OpenVINO/Qwen3-Coder-30B-A3B-Instruct-int8
+```bat
+mkdir c:\models
+set MOE_USE_MICRO_GEMM_PREFILL=0  # temporary workaround to improve accuracy with long context
+ovms --model_repository_path c:\models --source_model OpenVINO/Qwen3-Coder-30B-A3B-Instruct-int4 --task text_generation --target_device GPU --tool_parser qwen3coder --rest_port 8000 --cache_dir .ovcache --model_name Qwen3-Coder-30B-A3B-Instruct
 ```
+> **Note:** For deployment, the model requires ~16GB disk space and recommended 34GB+ of VRAM on the GPU.
 :::
-:::{tab-item} Linux GPU
-:sync: Linux GPU
-### Linux: via Docker with GPU
-```bash
-docker run -d --rm --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) -e MOE_USE_MICRO_GEMM_PREFILL=0 \
-  -p 8000:8000 -v $(pwd)/:/workspace/ openvino/model_server:weekly --rest_port 8000 --config_path /workspace/models/config_all.json
+
+:::{tab-item} OpenVINO/gpt-oss-20B-int4
+:sync: OpenVINO/gpt-oss-20B-int4
+```bat
+mkdir c:\models
+ovms --model_repository_path c:\models --source_model OpenVINO/gpt-oss-20B-int4 --task text_generation --target_device GPU --tool_parser gptoss --reasoning_parser gptoss --rest_port 8000 --cache_dir .ovcache --model_name gpt-oss-20B
 ```
+> **Note:** For deployment, the model requires ~12GB disk space and recommended 16GB+ of VRAM on the GPU.
+:::
+
+:::{tab-item} OpenVINO/gpt-oss-20B-int8
+:sync: OpenVINO/gpt-oss-20B-int8
+```bat
+mkdir c:\models
+ovms --model_repository_path c:\models --source_model OpenVINO/gpt-oss-20B-int8 --task text_generation --target_device GPU --tool_parser gptoss --reasoning_parser gptoss --rest_port 8000 --cache_dir .ovcache --model_name gpt-oss-20B
+```
+> **Note:** For deployment, the model requires ~24GB disk space and recommended 28GB+ of VRAM on the GPU.
+:::
+
+:::{tab-item} OpenVINO/Qwen3-8B-int4-ov
+:sync: OpenVINO/Qwen3-8B-int4-ov
+```bat
+mkdir c:\models
+ovms --model_repository_path c:\models --source_model OpenVINO/Qwen3-8B-int4-ov --task text_generation --target_device GPU --tool_parser hermes3 --reasoning_parser qwen3 --rest_port 8000 --cache_dir .ovcache --model_name Qwen3-8B
+```
+> **Note:** For deployment, the model requires ~4GB disk space and recommended 6GB+ of VRAM on the GPU.
+:::
+:::{tab-item} OpenVINO/Qwen3-8B-int4-cw-ov
+:sync: OpenVINO/Qwen3-8B-int4-cw-ov
+```bat
+mkdir c:\models
+ovms --model_repository_path c:\models --source_model OpenVINO/Qwen3-8B-int4-cw-ov --task text_generation --target_device NPU --tool_parser hermes3 --rest_port 8000 --max_prompt_len 16384 --plugin_config "{\"NPUW_LLM_PREFILL_ATTENTION_HINT\":\"PYRAMID\"}" --cache_dir .ovcache --model_name Qwen3-8B
+```
+> **Note:** First model initialization might be long. With the compilation cache, sequential model loading will be fast.
 :::
 ::::
 
-> **Note:** `MOE_USE_MICRO_GEMM_PREFILL=0` is a workaround for *Qwen3-Coder-30B-A3B-Instruct* and it will be fixed in release 2026.1 or next weekly.
+### Linux: via Docker
+
+::::{tab-set}
+:::{tab-item} OpenVINO/Qwen3-Coder-30B-A3B-Instruct-int4
+:sync: OpenVINO/Qwen3-Coder-30B-A3B-Instruct-int4
+```bash
+mkdir -p models
+docker run -d -p 8000:8000 --rm -e MOE_USE_MICRO_GEMM_PREFILL=0 --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
+    openvino/model_server:weekly \
+    --model_repository_path /models --source_model OpenVINO/Qwen3-Coder-30B-A3B-Instruct-int4 --task text_generation --target_device GPU --tool_parser qwen3coder --rest_port 8000 --model_name Qwen3-Coder-30B-A3B-Instruct
+```
+> **Note:** For deployment, the model requires ~16GB disk space and recommended 19GB+ of VRAM on the GPU.
+:::
+
+:::{tab-item} OpenVINO/QwCoder-30B-A3B-Instruct-int8
+:sync: OpenVINO/Qwen3-Coder-30B-A3B-Instruct-int8
+```bash
+mkdir c:\models
+docker run -d -p 8000:8000 --rm -e MOE_USE_MICRO_GEMM_PREFILL=0 --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
+    openvino/model_server:weekly \
+    --model_repository_path /models --source_model OpenVINO/Qwen3-Coder-30B-A3B-Instruct-int8 --task text_generation --target_device GPU --tool_parser qwen3coder --rest_port 8000 --model_name Qwen3-Coder-30B-A3B-Instruct
+```
+> **Note:** For deployment, the model requires ~16GB disk space and recommended 34GB+ of VRAM on the GPU.
+:::
+
+:::{tab-item} OpenVINO/gpt-oss-20B-int4
+:sync: OpenVINO/gpt-oss-20B-int4
+```bash
+mkdir c:\models
+docker run -d -p 8000:8000 --rm -e MOE_USE_MICRO_GEMM_PREFILL=0 --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
+    openvino/model_server:weekly \
+    --model_repository_path /models --source_model OpenVINO/gpt-oss-20B-int4 --task text_generation --target_device GPU --tool_parser gptoss --reasoning_parser gptoss --rest_port 8000 --model_name gpt-oss-20B
+```
+> **Note:** For deployment, the model requires ~12GB disk space and recommended 16GB+ of VRAM on the GPU.
+:::
+
+:::{tab-item} OpenVINO/gpt-oss-20B-int8
+:sync: OpenVINO/gpt-oss-20B-int8
+```bash
+mkdir c:\models
+docker run -d -p 8000:8000 --rm -e MOE_USE_MICRO_GEMM_PREFILL=0 --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
+    openvino/model_server:weekly \
+    --model_repository_path /models --source_model OpenVINO/gpt-oss-20B-int8 --task text_generation --target_device GPU --tool_parser gptoss --reasoning_parser gptoss --rest_port 8000 --model_name gpt-oss-20B
+```
+> **Note:** For deployment, the model requires ~24GB disk space and recommended 28GB+ of VRAM on the GPU.
+:::
+
+:::{tab-item} OpenVINO/Qwen3-8B-int4-ov
+:sync: OpenVINO/Qwen3-8B-int4-ov
+```bash
+mkdir c:\models
+docker run -d -p 8000:8000 --rm -e MOE_USE_MICRO_GEMM_PREFILL=0 --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
+    openvino/model_server:weekly \
+    --model_repository_path c:\models --source_model OpenVINO/Qwen3-8B-int4-ov --task text_generation --target_device GPU --tool_parser hermes3 --reasoning_parser qwen3 --rest_port 8000  --model_name Qwen3-8B
+```
+> **Note:** For deployment, the model requires ~4GB disk space and recommended 6GB+ of VRAM on the GPU.
+:::
+:::{tab-item} OpenVINO/Qwen3-8B-int4-cw-ov
+:sync: OpenVINO/Qwen3-8B-int4-cw-ov
+```bash
+mkdir c:\models
+docker run -d -p 8000:8000 --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw --device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
+    openvino/model_server:weekly \
+    --model_repository_path /models --source_model OpenVINO/Qwen3-8B-int4-cw-ov --task text_generation --target_device NPU --tool_parser hermes3 --rest_port 8000 --max_prompt_len 16384 --plugin_config '{"NPUW_LLM_PREFILL_ATTENTION_HINT":"PYRAMID"}' --model_name Qwen3-8B
+```
+> **Note:** First model initialization might be long. With the compilation cache, sequential model loading will be fast.
+:::
+::::
+
+
+## Custom models
+
+Models which are not published in OpenVINO format can be exported and quantized with custom parameters. Below is an example how to export and deploy model Devstral-Small-2507.
+
+```
+mkdir models
+python export_model.py text_generation --source_model unsloth/Devstral-Small-2507 --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --tool_parser devstral --target_device GPU
+curl -L -o models/unsloth/Devstral-Small-2507/chat_template.jinja https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/extras/chat_template_examples/chat_template_devstral.jinja
+
+ovms --model_repository_path models --source_model unsloth/Devstral-Small-2507 --task text_generation --target_device GPU --tool_parser devstral --rest_port 8000 --cache_dir .ovcache
+```
+> **Note:** Exporting models is a one time operation but might consume RAM at least of the model size and might take a lot of time depending on the model size.
+
+
 
 ## Set Up Visual Studio Code
 
@@ -261,16 +171,16 @@ Open configuration file:
 Prepare a config:
 
 ::::{tab-set}
-:::{tab-item} Qwen/Qwen3-Coder-30B-A3B-Instruct
-:sync: Qwen/Qwen3-Coder-30B-A3B-Instruct
+:::{tab-item} Qwen3-Coder-30B-A3B-Instruct
+:sync: Qwen3-Coder-30B-A3B-Instruct
 ```
 name: Local Assistant
 version: 1.0.0
 schema: v1
 models:
-  - name: OVMS Qwen/Qwen3-Coder-30B-A3B
+  - name: OVMS Qwen3-Coder-30B-A3B-Instruct
     provider: openai
-    model: Qwen/Qwen3-Coder-30B-A3B-Instruct
+    model: Qwen3-Coder-30B-A3B-Instruct
     apiKey: unused
     apiBase: http://localhost:8000/v3
     roles:
@@ -296,51 +206,17 @@ context:
   - provider: codebase
 ```
 :::
-:::{tab-item} mistralai/Codestral-22B-v0.1 
-:sync: mistralai/Codestral-22B-v0.1
+
+:::{tab-item} gpt-oss-20b
+:sync: gpt-oss-20b
 ```
 name: Local Assistant
 version: 1.0.0
 schema: v1
 models:
-  - name: OVMS mistralai/Codestral-22B-v0.1 
+  - name: OVMS gpt-oss-20b 
     provider: openai
-    model: mistralai/Codestral-22B-v0.1 
-    apiKey: unused
-    apiBase: http://localhost:8000/v3
-    roles:
-      - chat
-      - edit
-      - apply
-      - autocomplete
-    capabilities:
-      - tool_use
-    autocompleteOptions:
-      maxPromptTokens: 500
-      debounceDelay: 124
-      useCache: true
-      onlyMyCode: true
-      modelTimeout: 400
-context:
-  - provider: code
-  - provider: docs
-  - provider: diff
-  - provider: terminal
-  - provider: problems
-  - provider: folder
-  - provider: codebase
-```
-:::
-:::{tab-item} openai/gpt-oss-20b
-:sync: openai/gpt-oss-20b
-```
-name: Local Assistant
-version: 1.0.0
-schema: v1
-models:
-  - name: OVMS openai/gpt-oss-20b 
-    provider: openai
-    model: openai/gpt-oss-20b
+    model: gpt-oss-20b
     apiKey: unused
     apiBase: http://localhost:8000/v3
     roles:
@@ -349,9 +225,9 @@ models:
       - apply
     capabilities:
       - tool_use
-  - name: OVMS openai/gpt-oss-20b autocomplete
+  - name: OVMS gpt-oss-20b autocomplete
     provider: openai
-    model: openai/gpt-oss-20b
+    model: gpt-oss-20b
     apiKey: unused
     apiBase: http://localhost:8000/v3
     roles:
@@ -413,35 +289,28 @@ context:
   - provider: codebase
 ```
 :::
-:::{tab-item} OpenVINO/Qwen3-4B-int4-ov
-:sync: OpenVINO/Qwen3-4B-int4-ov
+:::{tab-item} Qwen3-8B
+:sync: Qwen3-8B
 ```
 name: Local Assistant
 version: 1.0.0
 schema: v1
 models:
-  - name: OVMS OpenVINO/Qwen3-4B
+  - name: OVMS Qwen3-8B
     provider: openai
-    model: OpenVINO/Qwen3-4B-int4-ov
+    model: Qwen3-8B
     apiKey: unused
     apiBase: http://localhost:8000/v3
     roles:
       - chat
       - edit
       - apply
-      - autocomplete
     capabilities:
       - tool_use
     requestOptions:
       extraBodyProperties:
         chat_template_kwargs:
           enable_thinking: false
-    autocompleteOptions:
-      maxPromptTokens: 500
-      debounceDelay: 124
-      useCache: true
-      onlyMyCode: true
-      modelTimeout: 400
 context:
   - provider: code
   - provider: docs
@@ -451,42 +320,6 @@ context:
   - provider: folder
   - provider: codebase
 ```
-:::
-:::{tab-item} OpenVINO/Qwen2.5-Coder-3B-Instruct-int4-ov
-:sync: OpenVINO/Qwen2.5-Coder-3B-Instruct-int4-ov
-```
-name: Local Assistant
-version: 1.0.0
-schema: v1
-models:
-  - name: OVMS OpenVINO/Qwen2.5-Coder-3B-Instruct-int4-ov
-    provider: openai
-    model: OpenVINO/Qwen2.5-Coder-3B-Instruct-int4-ov
-    apiKey: unused
-    apiBase: http://localhost:8000/v3
-    roles:
-      - chat
-      - edit
-      - apply
-      - autocomplete
-    capabilities:
-      - tool_use
-    autocompleteOptions:
-      maxPromptTokens: 500
-      debounceDelay: 124
-      useCache: true
-      onlyMyCode: true
-      modelTimeout: 400
-context:
-  - provider: code
-  - provider: docs
-  - provider: diff
-  - provider: terminal
-  - provider: problems
-  - provider: folder
-  - provider: codebase
-```
-:::
 ::::
 
 > **Note:** For more information about this config, see [configuration reference](https://docs.continue.dev/reference#models).
@@ -526,3 +359,6 @@ Example use cases for tools:
 
 ![glob](./glob.png)
 
+* Extending VRAM allocation to iGPU to enable loading bigger models
+
+![xram](./vram.png)
