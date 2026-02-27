@@ -156,10 +156,21 @@ struct KokoroServable {
             // that accumulate in the deep decoder network and cause energy fade.
             ov::hint::execution_mode(ov::hint::ExecutionMode::ACCURACY),
         };
+        //properties["INFERENCE_PRECISION_HINT"] = "f32";
         ov::Core core;
         auto m_model = core.read_model(parsedModelsPath / std::filesystem::path("openvino_model.xml"), {}, properties);
         compiledModel = core.compile_model(m_model, targetDevice, properties);
-        inferRequestsQueue = std::make_unique<OVInferRequestsQueue>(compiledModel, 5);
+        uint32_t numberOfParallelInferRequests = 1;
+        try {
+            numberOfParallelInferRequests = compiledModel.get_property(ov::optimal_number_of_infer_requests);
+        } catch (const ov::Exception& ex) {
+            SPDLOG_WARN("Failed to query OPTIMAL_NUMBER_OF_INFER_REQUESTS with error {}. Using 1 nireq.", ex.what());
+            numberOfParallelInferRequests = 1u;
+        }
+        inferRequestsQueue = std::make_unique<OVInferRequestsQueue>(compiledModel, numberOfParallelInferRequests);
+        
+        // Warm up model with dummy inference
+        //warmUpModel();
     }
 
     OVInferRequestsQueue& getInferRequestsQueue() {
@@ -276,6 +287,38 @@ private:
 
         SPDLOG_INFO("Loaded {} voice pack(s), default: '{}'", voicePacks.size(), defaultVoiceName);
     }
+
+    // void warmUpModel() {
+    //     try {
+    //         SPDLOG_INFO("Warming up Kokoro model with dummy inference...");
+            
+    //         // Create dummy tensors with minimal sequence length
+    //         constexpr size_t dummySeqLen = 3;  // [0, token, 0] pattern
+    //         auto inputIdsTensor = ov::Tensor{ov::element::i64, ov::Shape{1, dummySeqLen}};
+    //         auto refS = ov::Tensor{ov::element::f32, ov::Shape{1, STYLE_DIM}};
+    //         auto speed = ov::Tensor{ov::element::f32, ov::Shape{1}};
+            
+    //         // Fill with dummy values
+    //         auto* idsData = reinterpret_cast<int64_t*>(inputIdsTensor.data());
+    //         idsData[0] = 0;  // PAD token
+    //         idsData[1] = 1;  // arbitrary token ID
+    //         idsData[2] = 0;  // PAD token
+            
+    //         std::fill_n(reinterpret_cast<float*>(refS.data()), STYLE_DIM, 0.0f);
+    //         *reinterpret_cast<float*>(speed.data()) = 1.0f;
+            
+    //         // Get infer request and run warm-up inference
+    //         ov::InferRequest inferRequest = compiledModel.create_infer_request();
+    //         inferRequest.set_tensor("input_ids", inputIdsTensor);
+    //         inferRequest.set_tensor("103", refS);
+    //         inferRequest.set_tensor("speed", speed);
+    //         inferRequest.infer();
+            
+    //         SPDLOG_INFO("Kokoro model warm-up completed successfully");
+    //     } catch (const std::exception& ex) {
+    //         SPDLOG_WARN("Kokoro model warm-up failed: {}. Continuing anyway...", ex.what());
+    //     }
+    // }
 };
 
 using KokoroServableMap = std::unordered_map<std::string, std::shared_ptr<KokoroServable>>;
