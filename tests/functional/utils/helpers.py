@@ -89,9 +89,10 @@ def get_list(key_name, delimiter=",", fallback=None):
     if value != fallback:
         value = value.split(delimiter)
         for index, item in enumerate(value):
-            if item.lower() == "true":
+            normalized = item.strip().lower()
+            if normalized == "true":
                 value[index] = True
-            elif item.lower() == "false":
+            elif normalized == "false":
                 value[index] = False
     elif not value:
         value = []
