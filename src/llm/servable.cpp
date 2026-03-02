@@ -256,10 +256,6 @@ absl::Status GenAiServable::preparePartialResponse(std::shared_ptr<GenAiServable
     executionContext->lastStreamerCallbackOutput = "";
 
     std::string lastTextChunk = ss.str();
-    if (lastTextChunk.empty() && executionContext->loopIteration == 0) {
-        std::string serializedChunk = executionContext->apiHandler->serializeStreamingFirstTokenControlChunk();
-        executionContext->response = wrapTextInServerSideEventMessage(serializedChunk);
-    }
     executionContext->loopIteration++;
 
     ov::genai::GenerationFinishReason finishReason = generationOutput.finish_reason;
@@ -270,6 +266,9 @@ absl::Status GenAiServable::preparePartialResponse(std::shared_ptr<GenAiServable
                 executionContext->response = wrapTextInServerSideEventMessage(serializedChunk);
                 SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Generated subsequent streaming response: {}", executionContext->response);
             }
+        } else if (executionContext->loopIteration <= 1) {
+            std::string serializedChunk = executionContext->apiHandler->serializeStreamingFirstTokenControlChunk();
+            executionContext->response = wrapTextInServerSideEventMessage(serializedChunk);
         }
         executionContext->sendLoopbackSignal = true;
     } else {  // finish generation

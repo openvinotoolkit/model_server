@@ -61,6 +61,7 @@ struct TestParameters {
     bool checkLogprobs;
     bool checkFinishReason;
     bool testSpeculativeDecoding;
+    bool supportsEmptyControlMsg;
 };
 
 class LLMFlowHttpTest : public ::testing::Test {
@@ -192,6 +193,32 @@ TEST(OpenAiApiHandlerTest, writeLogprobs) {
     }
 }
 */
+
+// Reusable helper: asserts that a streaming chat completion chunk is the initial
+// initial empty message with role:assistant and content:null.
+inline void assertInitialStreamChatCompletionChunk(const std::string& response, const std::string& expectedModel) {
+    const std::string dataPrefix = "data:";
+    ASSERT_GE(response.size(), dataPrefix.size());
+    ASSERT_EQ(response.substr(0, dataPrefix.size()), dataPrefix);
+    size_t pos = response.find("\n");
+    ASSERT_NE(pos, std::string::npos);
+    rapidjson::Document d;
+    rapidjson::ParseResult ok = d.Parse(response.substr(dataPrefix.size(), pos - dataPrefix.size()).c_str());
+    ASSERT_EQ(ok.Code(), 0);
+    ASSERT_TRUE(d.HasMember("choices"));
+    ASSERT_TRUE(d["choices"].IsArray());
+    ASSERT_EQ(d["choices"].Size(), 1);
+    const auto& choice = d["choices"][0];
+    ASSERT_EQ(choice["index"].GetInt(), 0);
+    ASSERT_TRUE(choice["finish_reason"].IsNull());
+    ASSERT_TRUE(choice["delta"].IsObject());
+    EXPECT_STREQ(choice["delta"]["role"].GetString(), "assistant");
+    ASSERT_TRUE(choice["delta"]["content"].IsNull());
+    ASSERT_TRUE(d.HasMember("created"));
+    ASSERT_TRUE(d["created"].IsInt());
+    EXPECT_STREQ(d["model"].GetString(), expectedModel.c_str());
+    EXPECT_STREQ(d["object"].GetString(), "chat.completion.chunk");
+}
 
 class LLMFlowHttpTestParameterized : public LLMFlowHttpTest, public ::testing::WithParamInterface<TestParameters> {};
 
@@ -1676,7 +1703,14 @@ TEST_P(LLMFlowHttpTestParameterized, inferChatCompletionsStream) {
             ]
         }
     )";
-    ON_CALL(*writer, PartialReply).WillByDefault([this, &params](std::string response) {
+    int replyCounter = 0;
+    ON_CALL(*writer, PartialReply).WillByDefault([this, &params, &replyCounter](std::string response) {
+        if (replyCounter == 0 && params.supportsEmptyControlMsg) {
+            replyCounter++;
+            assertInitialStreamChatCompletionChunk(response, params.modelName);
+            return;
+        }
+        replyCounter++;
         rapidjson::Document d;
         std::string dataPrefix = "data:";
         ASSERT_STREQ(response.substr(0, dataPrefix.size()).c_str(), dataPrefix.c_str());
@@ -1829,8 +1863,16 @@ TEST_P(LLMFlowHttpTestParameterized, streamChatCompletionsSingleStopString) {
         ovms::StatusCode::PARTIAL_END);
     SPDLOG_TRACE("After dispatch");
 
-    // Check if there is at least one response
-    ASSERT_GT(responses.size(), 0);
+    if (params.supportsEmptyControlMsg) {
+        // Check if there is more than 1 partial response - initial and at least one real response with stop string
+        ASSERT_GT(responses.size(), 1);
+
+        // Assert initial message with empty content
+        assertInitialStreamChatCompletionChunk(responses[0], params.modelName);
+    } else {
+        // For legacy there is no initial empty message
+        ASSERT_GT(responses.size(), 0);
+    }
 
     if (params.checkFinishReason) {
         ASSERT_TRUE(responses.back().find("\"finish_reason\":\"stop\"") != std::string::npos);
@@ -1845,7 +1887,7 @@ TEST_P(LLMFlowHttpTestParameterized, streamChatCompletionsSingleStopString) {
     // or simply any token (or group of tokens) that has dot in a middle.
 
     // Check for no existence of a dot:
-    for (size_t i = 0; i < responses.size() - numberOfLastResponsesToCheckForStopString; ++i) {
+    for (size_t i = params.supportsEmptyControlMsg ? 1 : 0; i < responses.size() - numberOfLastResponsesToCheckForStopString; ++i) {
         // Assert there is no dot '.' in the response
 
         // Cut "data: " prefix
@@ -2554,11 +2596,11 @@ INSTANTIATE_TEST_SUITE_P(
     LLMFlowHttpTestInstances,
     LLMFlowHttpTestParameterized,
     ::testing::Values(
-        // params:     model name, generate expected output, check logprobs, check finish reason, test speculative decoding
-        TestParameters{"lm_cb_regular", true, true, true, false},
-        TestParameters{"lm_legacy_regular", false, false, false, false},
-        TestParameters{"vlm_cb_regular", false, true, true, false},
-        TestParameters{"vlm_legacy_regular", false, false, false, false}));
+        // params:     model name, generate expected output, check logprobs, check finish reason, test speculative decoding, supports empty stop string
+        TestParameters{"lm_cb_regular", true, true, true, false, true},
+        TestParameters{"lm_legacy_regular", false, false, false, false, false},
+        TestParameters{"vlm_cb_regular", false, true, true, false, true},
+        TestParameters{"vlm_legacy_regular", false, false, false, false, false}));
 
 const std::string validRequestBodyWithParameter(const std::string& modelName, const std::string& parameter, const std::string& value) {
     std::string requestBody = R"(
@@ -3367,11 +3409,11 @@ INSTANTIATE_TEST_SUITE_P(
     LLMHttpParametersValidationTestInstances,
     LLMHttpParametersValidationTest,
     ::testing::Values(
-        // params:     model name, generate expected output, check logprobs, check finish reason, test speculative decoding
-        TestParameters{"lm_cb_regular", true, true, true, false},
-        TestParameters{"lm_legacy_regular", false, false, false, false},
-        TestParameters{"vlm_cb_regular", false, true, true, false},
-        TestParameters{"vlm_legacy_regular", false, false, false, false}));
+        // params:     model name, generate expected output, check logprobs, check finish reason, test speculative decoding, supports empty control msg
+        TestParameters{"lm_cb_regular", true, true, true, false, true},
+        TestParameters{"lm_legacy_regular", false, false, false, false, false},
+        TestParameters{"vlm_cb_regular", false, true, true, false, true},
+        TestParameters{"vlm_legacy_regular", false, false, false, false, false}));
 
 // Common tests for all pipeline types (testing logic executed prior pipeline type selection)
 class LLMConfigHttpTest : public ::testing::Test {};

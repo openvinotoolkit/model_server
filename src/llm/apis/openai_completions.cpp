@@ -1388,7 +1388,6 @@ std::string OpenAIChatCompletionsHandler::serializeStreamingFirstTokenControlChu
     choice.SetObject();
 
     choice.AddMember("index", 0, allocator);
-    // logprobs: object/null; Log probability information for the choice. TODO
     if (endpoint == Endpoint::CHAT_COMPLETIONS) {
         Value delta(kObjectType);
         delta.SetObject();
