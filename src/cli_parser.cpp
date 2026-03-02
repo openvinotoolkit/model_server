@@ -279,10 +279,6 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
                 "Resets model precision.",
                 cxxopts::value<std::string>(),
                 "PRECISION")
-            ("resize",
-                "Resets model resize dimensions.",
-                cxxopts::value<std::string>(),
-                "resize")
             ("model_version_policy",
                 "Model version policy",
                 cxxopts::value<std::string>(),
