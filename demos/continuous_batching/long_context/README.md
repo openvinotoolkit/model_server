@@ -80,8 +80,21 @@ To test the performance using vllm benchmarking script, let's create a custom da
 ```bash
 curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/demos/continuous_batching/long_context/custom_dataset.py -o custom_dataset.py
 pip install requests transformers
+```
+
+::::{tab-set}
+:::{tab-item} CPU and GPU
+:sync:CPU
+```bash
 python custom_dataset.py --limit_context_tokens 5000
 ```
+:::
+:::{tab-item} NPU
+```bash
+python custom_dataset.py --limit_context_tokens 5000 --model_name OpenVINO/Qwen3-8B-int4-cw-ov
+```
+:::
+::::
 
 It will create a file called `dataset.jsonl` with 10 requests of shared context body limited to 50000 tokens. 
 
