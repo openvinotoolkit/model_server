@@ -50,7 +50,7 @@ def download_file(url):
 
 parser = argparse.ArgumentParser(description="Generate a dataset of long context examples.")
 parser.add_argument("--file_url", type=str, default="https://ota.bodleian.ox.ac.uk/repository/xmlui/bitstream/handle/20.500.12024/2011/donquix-2011.txt", help="URL of the file to download")
-parser.add_argument("--model_name", type=str, default="openai/gpt-oss-20b", help="Model name for the tokenizer")
+parser.add_argument("--model_name", type=str, default="OpenVINO/gpt-oss-20b-int4-ov", help="Model name for the tokenizer")
 parser.add_argument("--limit_context_tokens", type=int, default=50000, help="Maximum number of tokens to use for the context")
 args = parser.parse_args()
 
