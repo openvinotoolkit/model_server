@@ -648,14 +648,14 @@ TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJsonNFail) {
             "stream": false,
             "seed" : 1,
             "temperature": 0,
-            "max_tokens": 5,
+            "max_tokens": -5,
             "prompt": "What is OpenVINO?"
         }
     )";
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
-        ovms::StatusCode::OK);
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
 TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJsonN) {
@@ -689,7 +689,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJsonN) {
         ovms::StatusCode::OK);
     parsedResponse.Parse(response.c_str());
     ASSERT_TRUE(parsedResponse["choices"].IsArray());
-    ASSERT_EQ(parsedResponse["choices"].Capacity(), 1);
+    ASSERT_EQ(parsedResponse["choices"].Size(), 1);
     int i = 0;
     for (auto& choice : parsedResponse["choices"].GetArray()) {
         ASSERT_TRUE(choice["finish_reason"].IsString());
@@ -723,7 +723,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsJsonNFail) {
             "stream": false,
             "seed" : 1,
             "temperature": 0,
-            "max_tokens": 5,
+            "max_tokens": -5,
             "messages": [
             {
                 "role": "user",
@@ -735,7 +735,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsJsonNFail) {
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
-        ovms::StatusCode::OK);
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
 TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsJsonN) {
@@ -771,7 +771,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsJsonN) {
         ovms::StatusCode::OK);
     parsedResponse.Parse(response.c_str());
     ASSERT_TRUE(parsedResponse["choices"].IsArray());
-    ASSERT_EQ(parsedResponse["choices"].Capacity(), 1);
+    ASSERT_EQ(parsedResponse["choices"].Size(), 1);
     int i = 0;
     for (auto& choice : parsedResponse["choices"].GetArray()) {
         ASSERT_TRUE(choice["finish_reason"].IsString());
@@ -972,7 +972,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsJsonNMultipleStopString
         ovms::StatusCode::OK);
     parsedResponse.Parse(response.c_str());
     ASSERT_TRUE(parsedResponse["choices"].IsArray());
-    ASSERT_EQ(parsedResponse["choices"].Capacity(), 1);
+    ASSERT_EQ(parsedResponse["choices"].Size(), 1);
     int i = 0;
     for (auto& choice : parsedResponse["choices"].GetArray()) {
         if (params.checkFinishReason) {
@@ -2039,41 +2039,21 @@ TEST_P(LLMFlowHttpTestParameterized, streamChatCompletionsUsage) {
 
     std::vector<std::string> responses;
 
-    if (params.modelName.find("cb") != std::string::npos) {
-        EXPECT_CALL(*writer, PartialReply(::testing::_))
-            .WillRepeatedly([this, &responses](std::string response) {
-                responses.push_back(response);
-            });
-        EXPECT_CALL(*writer, PartialReplyEnd()).Times(1);
-        ASSERT_EQ(
-            handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
-            ovms::StatusCode::PARTIAL_END);
+    EXPECT_CALL(*writer, PartialReply(::testing::_))
+        .WillRepeatedly([this, &responses](std::string response) {
+            responses.push_back(response);
+        });
+    EXPECT_CALL(*writer, PartialReplyEnd()).Times(1);
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::PARTIAL_END);
 
-        ASSERT_GT(responses.size(), 0);
-        ASSERT_TRUE(responses.back().find("\"completion_tokens\":5") != std::string::npos) << responses.back();  // ensure 5 - reaching max_tokens
-        ASSERT_TRUE(responses.back().find("\"prompt_tokens\"") != std::string::npos) << responses.back();        // this is always present and > 0, depends on pipeline type and underlying model
-        ASSERT_TRUE(responses.back().find("\"total_tokens\"") != std::string::npos) << responses.back();         // this is always present and > 0, depends on pipeline type and underlying model
-        if (params.checkFinishReason) {
-            ASSERT_TRUE(responses.back().find("\"finish_reason\":\"length\"") != std::string::npos) << responses.back();
-        }
-        // For non-continuous batching servables usage is always 0
-    } else {
-        EXPECT_CALL(*writer, PartialReply(::testing::_))
-            .WillRepeatedly([this, &responses](std::string response) {
-                responses.push_back(response);
-            });
-        EXPECT_CALL(*writer, PartialReplyEnd()).Times(1);
-        ASSERT_EQ(
-            handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
-            ovms::StatusCode::PARTIAL_END);
-
-        ASSERT_GT(responses.size(), 0);
-        ASSERT_TRUE(responses.back().find("\"completion_tokens\":0") != std::string::npos) << responses.back();  // ensure 0
-        ASSERT_TRUE(responses.back().find("\"prompt_tokens\"") != std::string::npos) << responses.back();        // this is always present and > 0, depends on pipeline type and underlying model
-        ASSERT_TRUE(responses.back().find("\"total_tokens\"") != std::string::npos) << responses.back();         // this is always present and > 0, depends on pipeline type and underlying model
-        if (params.checkFinishReason) {
-            ASSERT_TRUE(responses.back().find("\"finish_reason\":\"length\"") != std::string::npos) << responses.back();
-        }
+    ASSERT_GT(responses.size(), 0);
+    ASSERT_TRUE(responses.back().find("\"completion_tokens\":5") != std::string::npos) << responses.back();  // ensure 5 - reaching max_tokens
+    ASSERT_TRUE(responses.back().find("\"prompt_tokens\"") != std::string::npos) << responses.back();        // this is always present and > 0, depends on pipeline type and underlying model
+    ASSERT_TRUE(responses.back().find("\"total_tokens\"") != std::string::npos) << responses.back();         // this is always present and > 0, depends on pipeline type and underlying model
+    if (params.checkFinishReason) {
+        ASSERT_TRUE(responses.back().find("\"finish_reason\":\"length\"") != std::string::npos) << responses.back();
     }
 }
 
@@ -2098,39 +2078,20 @@ TEST_P(LLMFlowHttpTestParameterized, streamCompletionsUsage) {
 
     std::vector<std::string> responses;
 
-    if (params.modelName.find("cb") != std::string::npos) {
-        EXPECT_CALL(*writer, PartialReply(::testing::_))
-            .WillRepeatedly([this, &responses](std::string response) {
-                responses.push_back(response);
-            });
-        EXPECT_CALL(*writer, PartialReplyEnd()).Times(1);
-        ASSERT_EQ(
-            handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
-            ovms::StatusCode::PARTIAL_END);
+    EXPECT_CALL(*writer, PartialReply(::testing::_))
+        .WillRepeatedly([this, &responses](std::string response) {
+            responses.push_back(response);
+        });
+    EXPECT_CALL(*writer, PartialReplyEnd()).Times(1);
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::PARTIAL_END);
 
-        ASSERT_TRUE(responses.back().find("\"completion_tokens\":5") != std::string::npos) << responses.back();  // ensure 5 - reaching max_tokens
-        ASSERT_TRUE(responses.back().find("\"prompt_tokens\"") != std::string::npos) << responses.back();        // this is always present and > 0, depends on pipeline type and underlying model
-        ASSERT_TRUE(responses.back().find("\"total_tokens\"") != std::string::npos) << responses.back();         // this is always present and > 0, depends on pipeline type and underlying model
-        if (params.checkFinishReason) {
-            ASSERT_TRUE(responses.back().find("\"finish_reason\":\"length\"") != std::string::npos) << responses.back();
-        }
-        // For non-continuous batching servables usage is always 0
-    } else {
-        EXPECT_CALL(*writer, PartialReply(::testing::_))
-            .WillRepeatedly([this, &responses](std::string response) {
-                responses.push_back(response);
-            });
-        EXPECT_CALL(*writer, PartialReplyEnd()).Times(1);
-        ASSERT_EQ(
-            handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
-            ovms::StatusCode::PARTIAL_END);
-
-        ASSERT_TRUE(responses.back().find("\"completion_tokens\":0") != std::string::npos) << responses.back();  // ensure 0
-        ASSERT_TRUE(responses.back().find("\"prompt_tokens\"") != std::string::npos) << responses.back();        // this is always present and > 0, depends on pipeline type and underlying model
-        ASSERT_TRUE(responses.back().find("\"total_tokens\"") != std::string::npos) << responses.back();         // this is always present and > 0, depends on pipeline type and underlying model
-        if (params.checkFinishReason) {
-            ASSERT_TRUE(responses.back().find("\"finish_reason\":\"length\"") != std::string::npos) << responses.back();
-        }
+    ASSERT_TRUE(responses.back().find("\"completion_tokens\":5") != std::string::npos) << responses.back();  // ensure 5 - reaching max_tokens
+    ASSERT_TRUE(responses.back().find("\"prompt_tokens\"") != std::string::npos) << responses.back();        // this is always present and > 0, depends on pipeline type and underlying model
+    ASSERT_TRUE(responses.back().find("\"total_tokens\"") != std::string::npos) << responses.back();         // this is always present and > 0, depends on pipeline type and underlying model
+    if (params.checkFinishReason) {
+        ASSERT_TRUE(responses.back().find("\"finish_reason\":\"length\"") != std::string::npos) << responses.back();
     }
 }
 

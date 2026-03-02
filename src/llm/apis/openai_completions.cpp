@@ -921,6 +921,10 @@ void OpenAIChatCompletionsHandler::setPromptTokensUsage(size_t promptTokens) {
     usage.promptTokens = promptTokens;
 }
 
+void OpenAIChatCompletionsHandler::setCompletionTokensUsage(size_t completionTokens) {
+    usage.completionTokens = completionTokens;
+}
+
 void OpenAIChatCompletionsHandler::incrementProcessedTokens(size_t numTokens) {
     processedTokens += numTokens;
     if (!request.echo || processedTokens > usage.promptTokens)
@@ -989,6 +993,7 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const std::vect
     // choices: array of size N, where N is related to n request parameter
     jsonResponse.StartArray("choices");
     int index = 0;
+    // Manual usage setup for CB pipelines. For legacy we rely on PerfMetrics object from GenAI `generate` results
     usage.completionTokens = 0;
     for (const ov::genai::GenerationOutput& generationOutput : generationOutputs) {
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Generated tokens: {}", generationOutput.generated_ids);
@@ -1103,19 +1108,19 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const std::vect
     return jsonResponse.ToString();
 }
 
-std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const ov::genai::EncodedResults& results) {
+std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(ov::genai::EncodedResults& results) {
     OVMS_PROFILE_FUNCTION();
+    usage.promptTokens = results.perf_metrics.get_num_input_tokens();
+    usage.completionTokens = results.perf_metrics.get_num_generated_tokens();
     OpenAiJsonResponse jsonResponse;
     jsonResponse.StartObject();
 
     // choices: array of size N, where N is related to n request parameter
     jsonResponse.StartArray("choices");
     int index = 0;
-    usage.completionTokens = 0;
     for (int i = 0; i < results.tokens.size(); i++) {
         const std::vector<int64_t>& tokens = results.tokens[i];
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Generated tokens: {}", tokens);
-        updateUsage(usage, tokens, request.echo);
         ParsedOutput parsedOutput = parseOutputIfNeeded(tokens);
         jsonResponse.StartObject();
         // finish_reason: "stop" in regular scenario, "tool_calls" if output contains tool calls
@@ -1163,8 +1168,10 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const ov::genai
     return jsonResponse.ToString();
 }
 
-std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const ov::genai::VLMDecodedResults& results) {
+std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(ov::genai::VLMDecodedResults& results) {
     OVMS_PROFILE_FUNCTION();
+    usage.promptTokens = results.perf_metrics.get_num_input_tokens();
+    usage.completionTokens = results.perf_metrics.get_num_generated_tokens();
     OpenAiJsonResponse jsonResponse;
     jsonResponse.StartObject();
 
@@ -1191,7 +1198,6 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const ov::genai
         std::vector<int64_t> generatedTokens(input_ids_data, input_ids_data + input_ids.get_shape()[1]);
 
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Generated tokens: {}", generatedTokens);
-        updateUsage(usage, generatedTokens, request.echo);
         ParsedOutput parsedOutput = parseOutputIfNeeded(generatedTokens);
         jsonResponse.StartObject();
         // finish_reason: "stop" in regular scenario, "tool_calls" if output contains tool calls

@@ -218,8 +218,8 @@ absl::Status VisualLanguageModelLegacyServable::preparePartialResponse(std::shar
         if (!serializedChunk.empty()) {
             executionContext->response = wrapTextInServerSideEventMessage(serializedChunk);
         }
-        // TODO: Usage is zero in streaming mode in legacy servable due to the issue with token counting.
-        // This enables Continue.dev streaming scenario, which always uses include_usage: true
+        executionContext->apiHandler->setPromptTokensUsage(legacyExecutionContext->results.perf_metrics.get_num_input_tokens());
+        executionContext->apiHandler->setCompletionTokensUsage(legacyExecutionContext->results.perf_metrics.get_num_generated_tokens());
         if (executionContext->apiHandler->getStreamOptions().includeUsage)
             executionContext->response += wrapTextInServerSideEventMessage(executionContext->apiHandler->serializeStreamingUsageChunk());
 
