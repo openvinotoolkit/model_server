@@ -38,7 +38,7 @@ curl -L -o models/openai/gpt-oss-20b/chat_template.jinja https://raw.githubuserc
 :::
 :::{tab-item} NPU
 ```bash
-docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --pull --model_repository_path /models --source_model OpenVINO/Qwen3-8B-int4-cw-ov  --target_device NPU --task text_generation --enable_prefix_caching true --max_num_batch_tokens 16000 --tool_parser hermes3
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --pull --model_repository_path /models --source_model OpenVINO/Qwen3-8B-int4-cw-ov  --target_device NPU --task text_generation --enable_prefix_caching true --max_num_batched_tokens 16000 --tool_parser hermes3
 ```
 :::
 ::::
@@ -63,7 +63,7 @@ docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/model
 :::{tab-item} NPU
 :sync: NPU
 ```bash
-docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:weekly \
+docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models --device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:weekly \
 --rest_port 8000 --model_name OpenVINO/Qwen3-8B-int4-cw-ov --model_repository_path models
 ```
 :::
@@ -76,7 +76,7 @@ To test the performance using vllm benchmarking script, let's create a custom da
 ```bash
 curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/demos/continuous_batching/long_context/custom_dataset.py -o custom_dataset.py
 pip install requests transformers
-python custom_dataset.py --limit_context_tokens 50000
+python custom_dataset.py --limit_context_tokens 5000
 ```
 
 It will create a file called `dataset.jsonl` with 10 requests of shared context body limited to 50000 tokens. 
@@ -148,7 +148,27 @@ P99 ITL (ms):                            160.02
 :::{tab-item} NPU
 :sync: NPU
 ```
-TODO
+============ Serving Benchmark Result ============
+Successful requests:                     10
+Benchmark duration (s):                  57.14
+Total input tokens:                      50294
+Total generated tokens:                  500
+Request throughput (req/s):              0.18
+Output token throughput (tok/s):         8.75
+Total Token throughput (tok/s):          888.98
+---------------Time to First Token----------------
+Mean TTFT (ms):                          2292.98
+Median TTFT (ms):                        2306.25
+P99 TTFT (ms):                           2317.77
+-----Time per Output Token (excl. 1st token)------
+Mean TPOT (ms):                          69.77
+Median TPOT (ms):                        69.92
+P99 TPOT (ms):                           70.45
+---------------Inter-token Latency----------------
+Mean ITL (ms):                           72.89
+Median ITL (ms):                         71.35
+P99 ITL (ms):                            214.61
+==================================================
 ```
 :::
 ::::
@@ -159,30 +179,41 @@ The results shown above, despite very long context, have much lower TTFT latency
 
 ::::{tab-set}
 :::{tab-item} CPU
-| Context Length (tokens) | TTFT No Caching (ms) | TTFT Prefix Caching (ms) |
-|------------------------|------------------|---------------------|
-| 10,000                 | TODO           | 170.42                  |
-| 50,000                 | TODO           | 171.19                  |
-| 100,000                | TODO           | 172.79                  |
-| 200,000                | TODO           | 175.05                  |
+Platform: Intel(R) Xeon(R) Platinum 8480+
+| Context Length (tokens) | TTFT No Caching (ms) | TTFT Prefix Caching (ms) | KV Cache Usage (GB) |
+|------------------------|------------------|---------------------|-----------------------|
+| 1,000                  |  4 420          | 190.84                  |          0.03       |
+| 2,500                  |  9 627          | 272.56                  |          0.07       |
+| 5,000                  | 17 736          | 369.66                  |          0.1        |
+| 10,000                 | 36 684          | 680.28                  |          0.2        |
+| 25,000                 | 100 807         | 1570.07                 |         0.6         |
+| 50,000                 | 287 788         | 5133.87                 |          1.3        |
 
 :::
-:::{tab-item} GPU
+:::{tab-item} iGPU
 :sync: GPU
-| Context Length (tokens) | TTFT No Caching (ms) | TTFT Prefix Caching (ms) |
-|------------------------|-------------------|-------------------------|
-| 10,000                 | TODO            | 101.47                  | 
-| 50,000                 | TODO            | 101.98                  |
-| 100,000                | TODO            | 104.67                  |
-| 200,000                | TODO            | 111.49                  |
+Platform: Intel(R) Core(TM) Ultra 5 338H
+| Context Length (tokens) | TTFT No Caching (ms) | TTFT Prefix Caching (ms) | KV Cache Usage (GB) |
+|------------------------|------------------|---------------------|-----------------------|
+| 1,000                  |  1 729          | 279.75                  |          0.03       |
+| 2,500                  |  3 752          | 367.02                  |          0.07       |
+| 5,000                  |  7 215          | 364.82                  |          0.1        |
+| 10,000                 | 17 380          | 599.86                  |          0.2        |
+| 25,000                 | 59 201          | 991.01                  |          0.6        |
+| 50,000                 | 160 138         | 2305.10                 |          1.3        |
 
 :::
 :::{tab-item} NPU
 :sync: NPU
+Platform: Intel(R) Core(TM) Ultra 5 338H
 | Context Length (tokens) | TTFT No Caching (ms) | TTFT Prefix Caching (ms) |
-|------------------------|-------------------|-------------------------|
-| 10,000                 | TODO            | TODO                  | 
-| 15,000                 | TODO            | TODO                  |
+|------------------------|------------------|---------------------|
+| 500                    | 1521.75          | 1489.22                  |
+| 1,000                  | 3061.18          | 1729.39                  |
+| 2,000                  | 3072.92          | 1806.56                  |
+| 4,000                  | 6697.62          | 2421.26                  |
+| 8,000                  | 16046.92          | 3232.11                 |
+| 16,000                 | 53378.22         | 6585.93                  |
 :::
 ::::
 
