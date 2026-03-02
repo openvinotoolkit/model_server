@@ -11,25 +11,25 @@ Model Server hosts models and makes them accessible to software components over 
 
 ![OVMS diagram](docs/ovms_diagram.png)
 
-OpenVINO&trade; Model Server (OVMS) is a high-performance system for serving models. Implemented in C++ for scalability and optimized for deployment on Intel architectures. It uses the [generative API](https://docs.openvino.ai/2025/model-server/ovms_docs_clients_genai.html) like OpenAI and Cohere, [KServe](https://docs.openvino.ai/2025/model-server/ovms_docs_clients_kfs.html) and [TensorFlow Serving](https://docs.openvino.ai/2025/model-server/ovms_docs_clients_tfs.html) and while applying OpenVINO for inference execution. Inference service is provided via gRPC or REST API, making deploying new algorithms and AI experiments easy.
+OpenVINO&trade; Model Server (OVMS) is a high-performance system for serving models. Implemented in C++ for scalability and optimized for deployment on Intel architectures. It uses the [generative API](https://docs.openvino.ai/2026/model-server/ovms_docs_clients_genai.html) like OpenAI and Cohere, [KServe](https://docs.openvino.ai/2026/model-server/ovms_docs_clients_kfs.html) and [TensorFlow Serving](https://docs.openvino.ai/2026/model-server/ovms_docs_clients_tfs.html) and while applying OpenVINO for inference execution. Inference service is provided via gRPC or REST API, making deploying new algorithms and AI experiments easy.
 
 ![OVMS picture](docs/ovms_high_level.png)
 
-The models used by the server can be stored locally, hosted remotely by object storage services or pulled from HuggingFace Hub. For more details, refer to [Preparing Model Repository](https://docs.openvino.ai/2025/model-server/ovms_docs_models_repository.html) and [Deployment](https://docs.openvino.ai/2025/model-server/ovms_docs_deploying_server.html) documentation.
+The models used by the server can be stored locally, hosted remotely by object storage services or pulled from HuggingFace Hub. For more details, refer to [Preparing Model Repository](https://docs.openvino.ai/2026/model-server/ovms_docs_models_repository.html) and [Deployment](https://docs.openvino.ai/2026/model-server/ovms_docs_deploying_server.html) documentation.
 Model server works inside Docker containers, Bare Metal and in Kubernetes environment.
 
-Start using OpenVINO Model Server with a fast-forward serving example from the [QuickStart guide](https://docs.openvino.ai/2025/model-server/ovms_docs_quick_start_guide.html) or [LLM QuickStart guide](https://docs.openvino.ai/2025/model-server/ovms_docs_llm_quickstart.html).
+Start using OpenVINO Model Server with a fast-forward serving example from the [QuickStart guide](https://docs.openvino.ai/2026/model-server/ovms_docs_quick_start_guide.html) or [LLM QuickStart guide](https://docs.openvino.ai/2026/model-server/ovms_docs_llm_quickstart.html).
 
 Read [release notes](https://github.com/openvinotoolkit/model_server/releases) to find out what’s new.
 
 ### Key features:
-- **[NEW]** [Speech Generation and Speech Recognition with OpenAI API](https://docs.openvino.ai/2025/model-server/ovms_demos_audio.html)
-- **[NEW]** [Support for AI agents](https://docs.openvino.ai/2025/model-server/ovms_demos_continuous_batching_agent.html)
-- **[NEW]** [Image generation compatible with OpenAI API](https://docs.openvino.ai/2025/model-server/ovms_demos_image_generation.html)
-- Native Windows support. Check updated [deployment guide](https://docs.openvino.ai/2025/model-server/ovms_docs_deploying_server_baremetal.html)
-- [Text Embeddings compatible with OpenAI API](https://docs.openvino.ai/2025/model-server/ovms_demos_embeddings.html)
-- [Reranking compatible with Cohere API](https://docs.openvino.ai/2025/model-server/ovms_demos_rerank.html)
-- [Efficient Text Generation via OpenAI API](https://docs.openvino.ai/2025/model-server/ovms_demos_continuous_batching.html)
+- **[NEW]** [Speech Generation and Speech Recognition with OpenAI API](https://docs.openvino.ai/2026/model-server/ovms_demos_audio.html)
+- **[NEW]** [Support for AI agents](https://docs.openvino.ai/2026/model-server/ovms_demos_continuous_batching_agent.html)
+- **[NEW]** [Image generation compatible with OpenAI API](https://docs.openvino.ai/2026/model-server/ovms_demos_image_generation.html)
+- Native Windows support. Check updated [deployment guide](https://docs.openvino.ai/2026/model-server/ovms_docs_deploying_server_baremetal.html)
+- [Text Embeddings compatible with OpenAI API](https://docs.openvino.ai/2026/model-server/ovms_demos_embeddings.html)
+- [Reranking compatible with Cohere API](https://docs.openvino.ai/2026/model-server/ovms_demos_rerank.html)
+- [Efficient Text Generation via OpenAI API](https://docs.openvino.ai/2026/model-server/ovms_demos_continuous_batching.html)
 - [Python code execution](docs/python_support/reference.md)
 - [gRPC streaming](docs/streaming_endpoints.md)
 - [MediaPipe graphs serving](docs/mediapipe.md)
@@ -54,13 +54,13 @@ A demonstration on how to use OpenVINO Model Server can be found in our [quick-s
 
 Check also other instructions:
 
-[Preparing model repository](https://docs.openvino.ai/2025/model-server/ovms_docs_models_repository.html)
+[Preparing model repository](https://docs.openvino.ai/2026/model-server/ovms_docs_models_repository.html)
 
-[Deployment](https://docs.openvino.ai/2025/model-server/ovms_docs_deploying_server.html)
+[Deployment](https://docs.openvino.ai/2026/model-server/ovms_docs_deploying_server.html)
 
-[Writing client code](https://docs.openvino.ai/2025/model-server/ovms_docs_server_app.html)
+[Writing client code](https://docs.openvino.ai/2026/model-server/ovms_docs_server_app.html)
 
-[Demos](https://docs.openvino.ai/2025/model-server/ovms_docs_demos.html)
+[Demos](https://docs.openvino.ai/2026/model-server/ovms_docs_demos.html)
 
 
 
@@ -76,7 +76,7 @@ Check also other instructions:
 
 * [Simple deployment with KServe API](https://blog.openvino.ai/blog-posts/kserve-api)
 
-* [Benchmarking results](https://docs.openvino.ai/2025/about-openvino/performance-benchmarks.html)
+* [Benchmarking results](https://docs.openvino.ai/2026/about-openvino/performance-benchmarks.html)
 
 
 ## Contact
