@@ -12,8 +12,8 @@ With the rise of AI PC capabilities, hosting own Visual Studio code assistant is
 ### Windows: deploying on bare metal
 
 ::::{tab-set}
-:::{tab-item} OpenVINO/Qwen3-Coder-30B-A3B-Instruct-int4
-:sync: OpenVINO/Qwen3-Coder-30B-A3B-Instruct-int4
+:::{tab-item} OpenVINO/Qwen3-Coder-30B-A3B-Instruct-int4-ov
+:sync: OpenVINO/Qwen3-Coder-30B-A3B-Instruct-int4-ov
 ```bat
 mkdir c:\models
 set MOE_USE_MICRO_GEMM_PREFILL=0  # temporary workaround to improve accuracy with long context
@@ -22,30 +22,30 @@ ovms --model_repository_path c:\models --source_model OpenVINO/Qwen3-Coder-30B-A
 > **Note:** For deployment, the model requires ~16GB disk space and recommended 19GB+ of VRAM on the GPU.
 :::
 
-:::{tab-item} OpenVINO/Qwen3-Coder-30B-A3B-Instruct-int8
-:sync: OpenVINO/Qwen3-Coder-30B-A3B-Instruct-int8
+:::{tab-item} OpenVINO/Qwen3-Coder-30B-A3B-Instruct-int8-ov
+:sync: OpenVINO/Qwen3-Coder-30B-A3B-Instruct-int8-ov
 ```bat
 mkdir c:\models
 set MOE_USE_MICRO_GEMM_PREFILL=0  # temporary workaround to improve accuracy with long context
-ovms --model_repository_path c:\models --source_model OpenVINO/Qwen3-Coder-30B-A3B-Instruct-int8 --task text_generation --target_device GPU --tool_parser qwen3coder --rest_port 8000 --cache_dir .ovcache --model_name Qwen3-Coder-30B-A3B-Instruct
+ovms --model_repository_path c:\models --source_model OpenVINO/Qwen3-Coder-30B-A3B-Instruct-int8-ov --task text_generation --target_device GPU --tool_parser qwen3coder --rest_port 8000 --cache_dir .ovcache --model_name Qwen3-Coder-30B-A3B-Instruct
 ```
 > **Note:** For deployment, the model requires ~16GB disk space and recommended 34GB+ of VRAM on the GPU.
 :::
 
-:::{tab-item} OpenVINO/gpt-oss-20B-int4
-:sync: OpenVINO/gpt-oss-20B-int4
+:::{tab-item} OpenVINO/gpt-oss-20b-int4-ov
+:sync: OpenVINO/gpt-oss-20b-int4-ov
 ```bat
 mkdir c:\models
-ovms --model_repository_path c:\models --source_model OpenVINO/gpt-oss-20B-int4 --task text_generation --target_device GPU --tool_parser gptoss --reasoning_parser gptoss --rest_port 8000 --cache_dir .ovcache --model_name gpt-oss-20B
+ovms --model_repository_path c:\models --source_model OpenVINO/gpt-oss-20b-int4-ov --task text_generation --target_device GPU --tool_parser gptoss --reasoning_parser gptoss --rest_port 8000 --cache_dir .ovcache --model_name gpt-oss-20b
 ```
 > **Note:** For deployment, the model requires ~12GB disk space and recommended 16GB+ of VRAM on the GPU.
 :::
 
-:::{tab-item} OpenVINO/gpt-oss-20B-int8
-:sync: OpenVINO/gpt-oss-20B-int8
+:::{tab-item} OpenVINO/gpt-oss-20b-int8-ov
+:sync: OpenVINO/gpt-oss-20b-int8-ov
 ```bat
 mkdir c:\models
-ovms --model_repository_path c:\models --source_model OpenVINO/gpt-oss-20B-int8 --task text_generation --target_device GPU --tool_parser gptoss --reasoning_parser gptoss --rest_port 8000 --cache_dir .ovcache --model_name gpt-oss-20B
+ovms --model_repository_path c:\models --source_model OpenVINO/gpt-oss-20b-int8 --task text_generation --target_device GPU --tool_parser gptoss --reasoning_parser gptoss --rest_port 8000 --cache_dir .ovcache --model_name gpt-oss-20b
 ```
 > **Note:** For deployment, the model requires ~24GB disk space and recommended 28GB+ of VRAM on the GPU.
 :::
@@ -71,8 +71,8 @@ ovms --model_repository_path c:\models --source_model OpenVINO/Qwen3-8B-int4-cw-
 ### Linux: via Docker
 
 ::::{tab-set}
-:::{tab-item} OpenVINO/Qwen3-Coder-30B-A3B-Instruct-int4
-:sync: OpenVINO/Qwen3-Coder-30B-A3B-Instruct-int4
+:::{tab-item} OpenVINO/Qwen3-Coder-30B-A3B-Instruct-int4-ov
+:sync: OpenVINO/Qwen3-Coder-30B-A3B-Instruct-int4-ov
 ```bash
 mkdir -p models
 docker run -d -p 8000:8000 --rm -e MOE_USE_MICRO_GEMM_PREFILL=0 --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) \
@@ -82,35 +82,35 @@ docker run -d -p 8000:8000 --rm -e MOE_USE_MICRO_GEMM_PREFILL=0 --user $(id -u):
 > **Note:** For deployment, the model requires ~16GB disk space and recommended 19GB+ of VRAM on the GPU.
 :::
 
-:::{tab-item} OpenVINO/Qwen3-Coder-30B-A3B-Instruct-int8
-:sync: OpenVINO/Qwen3-Coder-30B-A3B-Instruct-int8
+:::{tab-item} OpenVINO/Qwen3-Coder-30B-A3B-Instruct-int8-ov
+:sync: OpenVINO/Qwen3-Coder-30B-A3B-Instruct-int8-ov
 ```bash
 mkdir -p models
-docker run -d -p 8000:8000 --rm -e MOE_USE_MICRO_GEMM_PREFILL=0 --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
+docker run -d -p 8000:8000 --rm -e MOE_USE_MICRO_GEMM_PREFILL=0 --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) \
     openvino/model_server:weekly \
     --model_repository_path /models --source_model OpenVINO/Qwen3-Coder-30B-A3B-Instruct-int8-ov --task text_generation --target_device GPU --tool_parser qwen3coder --rest_port 8000 --model_name Qwen3-Coder-30B-A3B-Instruct
 ```
 > **Note:** For deployment, the model requires ~16GB disk space and recommended 34GB+ of VRAM on the GPU.
 :::
 
-:::{tab-item} OpenVINO/gpt-oss-20B-int4
-:sync: OpenVINO/gpt-oss-20B-int4
+:::{tab-item} OpenVINO/gpt-oss-20B-int4-ov
+:sync: OpenVINO/gpt-oss-20B-int4-ov
 ```bash
 mkdir -p models
-docker run -d -p 8000:8000 --rm -e MOE_USE_MICRO_GEMM_PREFILL=0 --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
+docker run -d -p 8000:8000 --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) \
     openvino/model_server:weekly \
-    --model_repository_path /models --source_model OpenVINO/gpt-oss-20B-int4 --task text_generation --target_device GPU --tool_parser gptoss --reasoning_parser gptoss --rest_port 8000 --model_name gpt-oss-20B
+    --model_repository_path /models --source_model OpenVINO/gpt-oss-20B-int4-ov --task text_generation --target_device GPU --tool_parser gptoss --reasoning_parser gptoss --rest_port 8000 --model_name gpt-oss-20B
 ```
 > **Note:** For deployment, the model requires ~12GB disk space and recommended 16GB+ of VRAM on the GPU.
 :::
 
-:::{tab-item} OpenVINO/gpt-oss-20B-int8
-:sync: OpenVINO/gpt-oss-20B-int8
+:::{tab-item} OpenVINO/gpt-oss-20b-int8-ov
+:sync: OpenVINO/gpt-oss-20B-int8-ov
 ```bash
 mkdir -p models
-docker run -d -p 8000:8000 --rm -e MOE_USE_MICRO_GEMM_PREFILL=0 --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
+docker run -d -p 8000:8000 --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
     openvino/model_server:weekly \
-    --model_repository_path /models --source_model OpenVINO/gpt-oss-20B-int8 --task text_generation --target_device GPU --tool_parser gptoss --reasoning_parser gptoss --rest_port 8000 --model_name gpt-oss-20B
+    --model_repository_path /models --source_model OpenVINO/gpt-oss-20b-int8 --task text_generation --target_device GPU --tool_parser gptoss --reasoning_parser gptoss --rest_port 8000 --model_name gpt-oss-20b
 ```
 > **Note:** For deployment, the model requires ~24GB disk space and recommended 28GB+ of VRAM on the GPU.
 :::
@@ -129,7 +129,7 @@ docker run -d -p 8000:8000 --rm --user $(id -u):$(id -g) -v $(pwd)/models:/model
 :sync: OpenVINO/Qwen3-8B-int4-cw-ov
 ```bash
 mkdir -p models
-docker run -d -p 8000:8000 --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw --device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
+docker run -d -p 8000:8000 --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw --device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) \
     openvino/model_server:weekly \
     --model_repository_path /models --source_model OpenVINO/Qwen3-8B-int4-cw-ov --task text_generation --target_device NPU --tool_parser hermes3 --rest_port 8000 --max_prompt_len 16384 --plugin_config '{"NPUW_LLM_PREFILL_ATTENTION_HINT":"PYRAMID"}' --model_name Qwen3-8B
 ```
