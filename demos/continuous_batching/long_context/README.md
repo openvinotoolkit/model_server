@@ -31,48 +31,22 @@ mkdir models
 :::{tab-item} CPU
 :sync:CPU
 ```bash
-docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --pull --model_repository_path /models --source_model OpenVINO/gpt-oss-20b-int4-ov  --tool_parser gptoss --reasoning_parser gptoss --task text_generation --enable_prefix_caching true
+docker run --user $(id -u):$(id -g) -d --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --rest_port 8000 --model_repository_path /models --source_model OpenVINO/gpt-oss-20b-int4-ov  --tool_parser gptoss --reasoning_parser gptoss --task text_generation --enable_prefix_caching true
 ```
 :::
 ::: {tab-item} GPU
 :sync: GPU
 ```bash
-docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest-gpu --pull --model_repository_path /models --source_model OpenVINO/gpt-oss-20b-int4-ov  --tool_parser gptoss --reasoning_parser gptoss --task text_generation --enable_prefix_caching true --target_device GPU
+docker run --user $(id -u):$(id -g) -d --rm -v $(pwd)/models:/models:rw openvino/model_server:latest-gpu --rest_port 8000 --model_repository_path /models --source_model OpenVINO/gpt-oss-20b-int4-ov  --tool_parser gptoss --reasoning_parser gptoss --task text_generation --enable_prefix_caching true --target_device GPU
 ```
 :::
 :::{tab-item} NPU
 ```bash
-docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest-gpu --pull --model_repository_path /models --source_model OpenVINO/Qwen3-8B-int4-cw-ov  --target_device NPU --task text_generation --enable_prefix_caching true --max_prompt_len 16000 --tool_parser hermes3 --plugin_config "{\"NPUW_LLM_PREFILL_ATTENTION_HINT\": \"PYRAMID\"}"
+docker run --user $(id -u):$(id -g) -d --rm -v $(pwd)/models:/models:rw openvino/model_server:latest-gpu --rest_port 8000 --model_repository_path /models --source_model OpenVINO/Qwen3-8B-int4-cw-ov  --target_device NPU --task text_generation --enable_prefix_caching true --max_prompt_len 16000 --tool_parser hermes3 --plugin_config "{\"NPUW_LLM_PREFILL_ATTENTION_HINT\": \"PYRAMID\"}"
 ```
 **Note:** It's recommended to set `--max_prompt_len` value to as low as possible. This will improve performence, but limit number of tokens model will accept.
 :::
 ::::
-
-Start OVMS:
-
-::::{tab-set}
-:::{tab-item} CPU
-:sync: CPU
-```bash
-docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models openvino/model_server:latest --rest_port 8000 --model_name OpenVINO/gpt-oss-20b-int4-ov --model_path /models/OpenVINO/gpt-oss-20b-int4-ov
-```
-:::
-:::{tab-item} GPU
-:sync: GPU
-```bash
-docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:latest-gpu \
---rest_port 8000 --model_name OpenVINO/gpt-oss-20b-int4-ov --model_path /models/OpenVINO/gpt-oss-20b-int4-ov
-```
-:::
-:::{tab-item} NPU
-:sync: NPU
-```bash
-docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models --device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:latest-gpu \
---rest_port 8000 --model_name OpenVINO/Qwen3-8B-int4-cw-ov --model_path /models/OpenVINO/Qwen3-8B-int4-cw-ov
-```
-:::
-::::
-
 ## Dataset for experiments
 
 To test the performance using vllm benchmarking script, let's create a custom dataset with long shared context and a set of questions in each request.  That way we can create a dataset with identical very long context with different queries related to the context. That is a common scenario for RAG applications which generates response based on a complete knowledge base. To make this experiment similar to real live, the context is not synthetic but build with the content of Don Quixote story with 10 different questions related to the story. Because the context is reused, it is a perfect case for benefitting from prefix caching. 
