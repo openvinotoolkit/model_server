@@ -27,6 +27,7 @@ namespace ovms {
 struct ImageGenerationPipelines {
     std::unique_ptr<ov::genai::Image2ImagePipeline> image2ImagePipeline;
     std::unique_ptr<ov::genai::Text2ImagePipeline> text2ImagePipeline;
+    std::unique_ptr<ov::genai::InpaintingPipeline> inpaintingPipeline;
     ImageGenPipelineArgs args;
 
     ImageGenerationPipelines() = delete;

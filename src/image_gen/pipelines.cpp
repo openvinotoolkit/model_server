@@ -17,6 +17,10 @@
 
 #include <vector>
 
+#include <openvino/genai/image_generation/inpainting_pipeline.hpp>
+#include <openvino/genai/image_generation/text2image_pipeline.hpp>
+#include <openvino/genai/image_generation/image2image_pipeline.hpp>
+
 #include "../logging.hpp"
 #include "../stringutils.hpp"
 
@@ -34,7 +38,11 @@ ImageGenerationPipelines::ImageGenerationPipelines(const ImageGenPipelineArgs& a
     SPDLOG_DEBUG("Image Generation Pipelines weights loading from: {}", args.modelsPath);
 
     image2ImagePipeline = std::make_unique<ov::genai::Image2ImagePipeline>(args.modelsPath);
-
+    if (!image2ImagePipeline) {
+        // TODO -> that should only turn off that routing
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to create Image2ImagePipeline");
+        throw std::runtime_error("Failed to create Image2ImagePipeline");
+    }
     if (args.staticReshapeSettings.has_value() && args.staticReshapeSettings.value().resolution.size() == 1) {
         auto numImagesPerPrompt = args.staticReshapeSettings.value().numImagesPerPrompt.value_or(ov::genai::ImageGenerationConfig().num_images_per_prompt);
         auto guidanceScale = args.staticReshapeSettings.value().guidanceScale.value_or(ov::genai::ImageGenerationConfig().guidance_scale);
@@ -58,5 +66,18 @@ ImageGenerationPipelines::ImageGenerationPipelines(const ImageGenPipelineArgs& a
     }
 
     text2ImagePipeline = std::make_unique<ov::genai::Text2ImagePipeline>(*image2ImagePipeline);
+    if (!text2ImagePipeline) {
+        // TODO -> that should only turn off that routing
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to create Text2ImagePipeline");
+        throw std::runtime_error("Failed to create Text2ImagePipeline");
+    }
+    // TODO: Initialize optional GenAI pipelines based on model capabilities (e.g. inpainting support)
+    // instead of constructing all of them unconditionally.
+    inpaintingPipeline = std::make_unique<ov::genai::InpaintingPipeline>(*image2ImagePipeline);
+    if (!inpaintingPipeline) {
+        // TODO -> that should only turn off that routing
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to create Text2ImagePipeline");
+        throw std::runtime_error("Failed to create InpaintingPipeline");
+    }
 }
 }  // namespace ovms
