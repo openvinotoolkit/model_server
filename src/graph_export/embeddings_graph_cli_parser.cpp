@@ -53,7 +53,7 @@ void EmbeddingsGraphCLIParser::createOptions() {
             cxxopts::value<std::string>()->default_value("false"),
             "truncate")
         ("pooling",
-            "Mean pooling option.",
+            "Pooling option. One of: CLS, LAST, MEAN.",
             cxxopts::value<std::string>()->default_value("CLS"),
             "POOLING");
 }
