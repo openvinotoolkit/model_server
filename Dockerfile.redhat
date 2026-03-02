@@ -120,7 +120,7 @@ RUN cd /tmp/espeak_build/espeak-ng-src && \
     autoheader && \
     autoconf && \
     automake --add-missing --copy && \
-    ./configure --prefix=/opt/espeak-ng \
+    ./configure --prefix=/usr/local \
         --disable-shared \
         --enable-static \
         --disable-mbrola \
@@ -160,12 +160,6 @@ RUN dnf install -y -d6 \
             python3.12-pip \
             libicu-devel && \
             dnf clean all
-
-# Copy espeak-ng built from sources
-COPY --from=espeak_build /opt/espeak-ng /opt/espeak-ng
-ENV PATH="/opt/espeak-ng/bin:${PATH}"
-ENV LD_LIBRARY_PATH="/opt/espeak-ng/lib:${LD_LIBRARY_PATH}"
-ENV ESPEAK_DATA_PATH="/opt/espeak-ng/share/espeak-ng-data"
 
 WORKDIR /
 
@@ -292,17 +286,6 @@ COPY .bazelrc .user.bazelr[c] .bazelversion WORKSPACE /ovms/
 RUN ln -s /usr/lib64 /usr/lib/x86_64-linux-gnu
 COPY external /ovms/external/
 COPY third_party /ovms/third_party
-
-# Provide espeak-ng headers and static library inside workspace for Bazel
-RUN mkdir -p /ovms/third_party/espeak_ng/include /ovms/third_party/espeak_ng/lib && \
-    cp -r /opt/espeak-ng/include/* /ovms/third_party/espeak_ng/include/ && \
-    mkdir -p /ovms/third_party/espeak_ng/include/espeak-ng && \
-    if [ -d /opt/espeak-ng/include/espeak-ng ]; then \
-        cp -r /opt/espeak-ng/include/espeak-ng/* /ovms/third_party/espeak_ng/include/espeak-ng/; \
-    else \
-        cp -v /opt/espeak-ng/include/*.h /ovms/third_party/espeak_ng/include/espeak-ng/; \
-    fi && \
-    cp -v /opt/espeak-ng/lib/libespeak-ng.a /ovms/third_party/espeak_ng/lib/
 
 # This path is required for namespace to setup Python dependencies for testing the binding
 COPY src/BUILD /ovms/src/BUILD
@@ -452,12 +435,8 @@ LABEL base-image=${RELEASE_BASE_IMAGE}
 ENV PYTHONPATH=/ovms/lib/python:/ovms/python_deps
 
 WORKDIR /
-
-# Copy espeak-ng built from sources
-COPY --from=espeak_build /opt/espeak-ng /opt/espeak-ng
-ENV PATH="/opt/espeak-ng/bin:${PATH}"
-ENV LD_LIBRARY_PATH="/opt/espeak-ng/lib:${LD_LIBRARY_PATH}"
-ENV ESPEAK_DATA_PATH="/opt/espeak-ng/share/espeak-ng-data"
+COPY --from=base_build /usr/local/share/espeak-ng-data /usr/local/share/espeak-ng-data
+ENV ESPEAK_DATA_PATH=/usr/local/share/espeak-ng-data
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 COPY ./install_redhat_gpu_drivers.sh /install_gpu_drivers.sh

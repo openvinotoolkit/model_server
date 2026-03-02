@@ -8,17 +8,13 @@ config_setting(
 
 cc_library(
     name = "espeak_ng",
-    hdrs = glob(["include/**/*.h"]),
-    includes = [
-        "include",
-        "include/espeak-ng",
+    linkopts = [
+        "-L/usr/local/lib",
+        "-lespeak-ng",
     ],
-    deps = [":espeak_ng_lib"],
+    includes = [
+        "/usr/local/include",
+        "/usr/local/include/espeak-ng",
+    ],
     visibility = ["//visibility:public"],
-)
-
-cc_import(
-    name = "espeak_ng_lib",
-    static_library = "lib/libespeak-ng.a",
-    visibility = ["//visibility:private"],
 )
