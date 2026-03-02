@@ -22,24 +22,29 @@ Compression reduces this memory usage, enabling longer prompts or more parallel 
 
 Let's demonstrate all the optimizations combined and test it with the real life scenario of sending multiple various questions in the same context. It will illustrate the gain from the prefix caching on the first token latency, improved second token latency thanks to prompt lookup and moderate memory consumption despite very long prompts and parallel execution.
 
-::::{tab-set}
-:::{tab-item} CPU and GPU
-:sync:CPU
-
-Export the model openai/gpt-oss-20b which has the max context length of 131k tokens.
-
+Prepare models directory:
 ```bash
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/export_model.py -o export_model.py
-pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
 mkdir models
-python export_model.py text_generation --source_model openai/gpt-oss-20b --weight-format int4 --config_file_path models/config.json --model_repository_path models --tool_parser gptoss --reasoning_parser gptoss
-curl -L -o models/openai/gpt-oss-20b/chat_template.jinja https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/4/extras/chat_template_examples/chat_template_gpt_oss_multiturn.jinja
+```
+
+::::{tab-set}
+:::{tab-item} CPU
+:sync:CPU
+```bash
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --pull --model_repository_path /models --source_model OpenVINO/gpt-oss-20b-int4-ov  --tool_parser gptoss --reasoning_parser gptoss --task text_generation --enable_prefix_caching true
+```
+:::
+::: {tab-item} GPU
+:sync: GPU
+```bash
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest-gpu --pull --model_repository_path /models --source_model OpenVINO/gpt-oss-20b-int4-ov  --tool_parser gptoss --reasoning_parser gptoss --task text_generation --enable_prefix_caching true --target_device GPU
 ```
 :::
 :::{tab-item} NPU
 ```bash
-docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --pull --model_repository_path /models --source_model OpenVINO/Qwen3-8B-int4-cw-ov  --target_device NPU --task text_generation --enable_prefix_caching true --max_num_batched_tokens 16000 --tool_parser hermes3
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest-gpu --pull --model_repository_path /models --source_model OpenVINO/Qwen3-8B-int4-cw-ov  --target_device NPU --task text_generation --enable_prefix_caching true --max_prompt_len 16000 --tool_parser hermes3 --plugin_config "{\"NPUW_LLM_PREFILL_ATTENTION_HINT\": \"PYRAMID\"}"
 ```
+**Note:** It's recommended to set `--max_prompt_len` value to as low as possible. This will improve performence, but limit number of tokens model will accept.
 :::
 ::::
 
@@ -49,22 +54,21 @@ Start OVMS:
 :::{tab-item} CPU
 :sync: CPU
 ```bash
-docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models openvino/model_server:weekly --rest_port 8000 --source_model openai/gpt-oss-20b --model_repository_path models --tool_parser gptoss --reasoning_parser gptoss --task text_generation --cache_dir /models/.cache --enable_prefix_caching true
+docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models openvino/model_server:latest --rest_port 8000 --model_name OpenVINO/gpt-oss-20b-int4-ov --model_path /models/OpenVINO/gpt-oss-20b-int4-ov
 ```
 :::
 :::{tab-item} GPU
 :sync: GPU
 ```bash
-docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:weekly \
---rest_port 8000 --source_model openai/gpt-oss-20b --model_repository_path models \
---tool_parser gptoss --reasoning_parser gptoss --target_device GPU --task text_generation --enable_prefix_caching true
+docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:latest-gpu \
+--rest_port 8000 --model_name OpenVINO/gpt-oss-20b-int4-ov --model_path /models/OpenVINO/gpt-oss-20b-int4-ov
 ```
 :::
 :::{tab-item} NPU
 :sync: NPU
 ```bash
-docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models --device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:weekly \
---rest_port 8000 --model_name OpenVINO/Qwen3-8B-int4-cw-ov --model_repository_path models
+docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models --device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:latest-gpu \
+--rest_port 8000 --model_name OpenVINO/Qwen3-8B-int4-cw-ov --model_path /models/OpenVINO/Qwen3-8B-int4-cw-ov
 ```
 :::
 ::::
@@ -88,7 +92,7 @@ Let's check the performance
 git clone --branch v0.9.1 --depth 1 https://github.com/vllm-project/vllm
 cd vllm
 pip3 install -r requirements/cpu.txt . --extra-index-url https://download.pytorch.org/whl/cpu
-python benchmarks/benchmark_serving.py --host localhost --port 8000 --endpoint /v3/chat/completions --backend openai-chat --model openai/gpt-oss-20b --dataset-name custom --dataset-path ../dataset.jsonl --num-prompts 10 --max-concurrency 1 --custom-output-len 50
+python benchmarks/benchmark_serving.py --host localhost --port 8000 --endpoint /v3/chat/completions --backend openai-chat --model OpenVINO/gpt-oss-20b-int4-ov --dataset-name custom --dataset-path ../dataset.jsonl --num-prompts 10 --max-concurrency 1 --custom-output-len 50
 ```
 
 
@@ -212,7 +216,7 @@ Platform: Intel(R) Core(TM) Ultra 5 338H
 | 1,000                  | 3061.18          | 1729.39                  |
 | 2,000                  | 3072.92          | 1806.56                  |
 | 4,000                  | 6697.62          | 2421.26                  |
-| 8,000                  | 16046.92          | 3232.11                 |
+| 8,000                  | 16046.92         | 3232.11                  |
 | 16,000                 | 53378.22         | 6585.93                  |
 :::
 ::::
@@ -227,7 +231,7 @@ The only difference is that the configured testing task should include a relevan
 
 For example:
 ```
-lm-eval --model local-chat-completions --tasks longbench_gov_report  --model_args model=Qwen/Qwen2.5-7B-Instruct-1M,base_url=http://localhost:8000/v3/chat/completions,num_concurrent=10,tokenized_requests=False,timeout=3000  --verbosity DEBUG --seed 1 --apply_chat_template
+lm-eval --model local-chat-completions --tasks longbench_gov_report  --model_args model=OpenVINO/gpt-oss-20b-int4-ov,base_url=http://localhost:8000/v3/chat/completions,num_concurrent=10,tokenized_requests=False,timeout=3000  --verbosity DEBUG --seed 1 --apply_chat_template
 ```
 
 Such experiment can confirm the impact on accuracy from the model quantization and KV cache compression.
@@ -243,7 +247,7 @@ Enable prefix caching feature with `--enable_prefix_caching` parameter when you 
 
 Use KV cache compression as INT8 which is the default setting.
 
-Set the KV cache size via `--cache_size` parameter based on the available memory, expected concurrency and context length. It will improve the performance. 
+Set the KV cache size via `--cache_size` parameter based on the available memory, expected concurrency and context length or use default value (`0`) to make it dynamic. It will improve the performance. 
 
 **Note** You can force reducing the concurrency on the server using a parameter `--rest_workers` which by default allows number of connections the same like number of CPU cores. Alternatively the limit can be set on the model level in `--max_num_seqs`.
 
