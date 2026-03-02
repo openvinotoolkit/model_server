@@ -45,6 +45,7 @@
 #endif
 
 namespace ovms {
+namespace fs = std::filesystem;
 
 // Callback for clone authentication - will be used when password is not set in repo_url
 // Does not work with LFS download as it requires additional authentication when password is not set in repository url
@@ -330,6 +331,339 @@ static int print_changed_and_untracked(git_repository *repo) {
     return 0;
 }
 
+#define CHECK(call) do { \
+    int _err = (call); \
+    if (_err < 0) { \
+        const git_error *e = git_error_last(); \
+        fprintf(stderr, "Error %d: %s (%s:%d)\n", _err, e && e->message ? e->message : "no message", __FILE__, __LINE__); \
+        return; \
+    } \
+} while (0)
+
+// Fetch from remote and update FETCH_HEAD
+static void do_fetch(git_repository *repo, const char *remote_name, const char *proxy)
+{
+    git_remote *remote = NULL;
+    git_fetch_options fetch_opts = GIT_FETCH_OPTIONS_INIT;
+
+    fetch_opts.prune = GIT_FETCH_PRUNE_UNSPECIFIED;
+    fetch_opts.update_fetchhead = 1;
+    fetch_opts.download_tags = GIT_REMOTE_DOWNLOAD_TAGS_ALL;
+    fetch_opts.callbacks = (git_remote_callbacks) GIT_REMOTE_CALLBACKS_INIT;
+    fetch_opts.callbacks.credentials = cred_acquire_cb;
+    if (proxy) {
+        fetch_opts.proxy_opts.type = GIT_PROXY_SPECIFIED;
+        fetch_opts.proxy_opts.url = proxy;
+    }
+
+    CHECK(git_remote_lookup(&remote, repo, remote_name));
+
+    printf("Fetching from %s...\n", remote_name);
+    CHECK(git_remote_fetch(remote, NULL, &fetch_opts, NULL));
+
+    // Optional: update remote-tracking branches' default refspec tips
+    // (git_remote_fetch already updates tips if update_fetchhead=1; explicit
+    // update_tips is not required in recent libgit2 versions.)
+
+    git_remote_free(remote);
+}
+
+// Fast-forward the local branch to target OID
+static void do_fast_forward(git_repository *repo,
+                            git_reference *local_branch,
+                            const git_oid *target_oid)
+{
+    git_object *target = NULL;
+    git_checkout_options co_opts = GIT_CHECKOUT_OPTIONS_INIT;
+    git_reference *updated_ref = NULL;
+
+    CHECK(git_object_lookup(&target, repo, target_oid, GIT_OBJECT_COMMIT));
+
+    // Update the branch reference to point to the target commit
+    CHECK(git_reference_set_target(&updated_ref, local_branch, target_oid, "Fast-forward"));
+
+    // Make sure HEAD points to that branch (it normally already does)
+    CHECK(git_repository_set_head(repo, git_reference_name(updated_ref)));
+
+    // Checkout files to match the target tree
+    co_opts.checkout_strategy = GIT_CHECKOUT_SAFE;
+    CHECK(git_checkout_tree(repo, target, &co_opts));
+
+    printf("Fast-forwarded %s to %s\n",
+           git_reference_shorthand(local_branch),
+           git_oid_tostr_s(target_oid));
+
+    git_object_free(target);
+    git_reference_free(updated_ref);
+}
+
+// Perform a normal merge and create a merge commit if no conflicts
+static void do_normal_merge(git_repository *repo,
+                            git_reference *local_branch,
+                            git_annotated_commit *their_head)
+{
+    git_merge_options merge_opts = GIT_MERGE_OPTIONS_INIT;
+    git_checkout_options co_opts = GIT_CHECKOUT_OPTIONS_INIT;
+
+    merge_opts.file_favor = GIT_MERGE_FILE_FAVOR_NORMAL;
+    co_opts.checkout_strategy = GIT_CHECKOUT_SAFE | GIT_CHECKOUT_RECREATE_MISSING;
+
+    const git_annotated_commit *their_heads[1] = { their_head };
+
+    printf("Merging...\n");
+    CHECK(git_merge(repo, their_heads, 1, &merge_opts, &co_opts));
+
+    // Check for conflicts
+    git_index *index = NULL;
+    CHECK(git_repository_index(&index, repo));
+
+    if (git_index_has_conflicts(index)) {
+        printf("Merge has conflicts. Please resolve them and create the merge commit manually.\n");
+        git_index_free(index);
+        return; // Leave repository in merging state
+    }
+
+    // Write index to tree
+    git_oid tree_oid;
+    CHECK(git_index_write_tree(&tree_oid, index));
+    CHECK(git_index_write(index));
+    git_index_free(index);
+
+    git_tree *tree = NULL;
+    CHECK(git_tree_lookup(&tree, repo, &tree_oid));
+
+    // Prepare signature (from config if available)
+    git_signature *sig = NULL;
+    int err = git_signature_default(&sig, repo);
+    if (err == GIT_ENOTFOUND || sig == NULL) {
+        // Fallback if user.name/email not set in config
+        CHECK(git_signature_now(&sig, "Your Name", "you@example.com"));
+    } else {
+        CHECK(err);
+    }
+
+    // Get current HEAD (our) commit and their commit to be parents
+    git_reference *head = NULL, *resolved_branch = NULL;
+    CHECK(git_repository_head(&head, repo));
+    CHECK(git_reference_resolve(&resolved_branch, head)); // ensure direct ref
+
+    const git_oid *our_oid = git_reference_target(resolved_branch);
+    git_commit *our_commit = NULL;
+    git_commit *their_commit = NULL;
+    CHECK(git_commit_lookup(&our_commit, repo, our_oid));
+    CHECK(git_commit_lookup(&their_commit, repo, git_annotated_commit_id(their_head)));
+
+    const git_commit *parents[2] = { our_commit, their_commit };
+    git_oid merge_commit_oid;
+
+    // Create merge commit on the current branch ref
+    CHECK(git_commit_create(&merge_commit_oid,
+                            repo,
+                            git_reference_name(resolved_branch),
+                            sig, sig,
+                            NULL /* message_encoding */,
+                            "Merge remote-tracking branch",
+                            tree,
+                            2, parents));
+
+    printf("Created merge commit %s on %s\n",
+           git_oid_tostr_s(&merge_commit_oid),
+           git_reference_shorthand(resolved_branch));
+
+    // Cleanup
+    git_signature_free(sig);
+    git_tree_free(tree);
+    git_commit_free(our_commit);
+    git_commit_free(their_commit);
+    git_reference_free(head);
+    git_reference_free(resolved_branch);
+}
+
+// Main pull routine: fetch + merge (fast-forward if possible)
+static void pull(git_repository *repo, const char *remote_name, const char *proxy)
+{
+    // Ensure we are on a branch (not detached HEAD)
+    git_reference *head = NULL;
+    int head_res = git_repository_head(&head, repo);
+    // HEAD state info
+    bool is_detached = git_repository_head_detached(repo) == 1;
+    bool is_unborn   = git_repository_head_unborn(repo) == 1;
+    if (is_unborn) {
+        fprintf(stderr, "Repository has no HEAD yet (unborn branch).\n");
+        return;
+    } else if (is_detached) {
+        fprintf(stderr, "HEAD is detached; cannot pull safely. Checkout a branch first.\n");
+        return;
+    }
+    CHECK(head_res);
+
+    // Resolve symbolic HEAD to direct branch ref (refs/heads/…)
+    git_reference *local_branch = NULL;
+    CHECK(git_reference_resolve(&local_branch, head));
+
+    // Find the upstream tracking branch (refs/remotes/<remote>/<branch>)
+    git_reference *upstream = NULL;
+    int up_ok = git_branch_upstream(&upstream, local_branch);
+    if (up_ok != 0 || upstream == NULL) {
+        fprintf(stderr, "Current branch has no upstream. Set it with:\n"
+                        "  git branch --set-upstream-to=%s/<branch> <branch>\n", remote_name);
+        return;
+    }
+
+    // Verify upstream belongs to the requested remote; not strictly required for fetch
+    // but we fetch from the chosen remote anyway.
+    do_fetch(repo, remote_name, proxy);
+
+    // Prepare "their" commit as annotated commit from upstream
+    git_annotated_commit *their_head = NULL;
+    CHECK(git_annotated_commit_from_ref(&their_head, repo, upstream));
+
+    // Merge analysis
+    git_merge_analysis_t analysis;
+    git_merge_preference_t preference;
+    CHECK(git_merge_analysis(&analysis, &preference, repo,
+                             (const git_annotated_commit **)&their_head, 1));
+
+    if (analysis & GIT_MERGE_ANALYSIS_UP_TO_DATE) {
+        printf("Already up to date.\n");
+    } else if (analysis & GIT_MERGE_ANALYSIS_FASTFORWARD) {
+        const git_oid *target_oid = git_annotated_commit_id(their_head);
+        do_fast_forward(repo, local_branch, target_oid);
+    } else if (analysis & GIT_MERGE_ANALYSIS_NORMAL) {
+        do_normal_merge(repo, local_branch, their_head);
+    } else {
+        printf("No merge action taken (analysis=%u, preference=%u).\n",
+               (unsigned)analysis, (unsigned)preference);
+    }
+
+    // Cleanup
+    git_annotated_commit_free(their_head);
+    git_reference_free(upstream);
+    git_reference_free(local_branch);
+    git_reference_free(head);
+}
+
+
+// Trim trailing '\r' (for CRLF files) and surrounding spaces
+static inline void rtrimCrLfWhitespace(std::string& s) {
+    if (!s.empty() && s.back() == '\r') s.pop_back(); // remove trailing '\r'
+    while (!s.empty() && std::isspace(static_cast<unsigned char>(s.back()))) s.pop_back(); // trailing ws
+    size_t i = 0;
+    while (i < s.size() && std::isspace(static_cast<unsigned char>(s[i]))) ++i; // leading ws
+    if (i > 0) s.erase(0, i);
+}
+
+// Case-insensitive substring search: returns true if 'needle' is found in 'hay'
+static bool containsCaseInsensitive(const std::string& hay, const std::string& needle) {
+    auto toLower = [](std::string v) {
+        std::transform(v.begin(), v.end(), v.begin(),
+                       [](unsigned char c){ return static_cast<char>(std::tolower(c)); });
+        return v;
+    };
+    std::string hayLower = toLower(hay);
+    std::string needleLower = toLower(needle);
+    return hayLower.find(needleLower) != std::string::npos;
+}
+
+// Read at most the first 3 lines of a file, with a per-line cap to avoid huge reads.
+// Returns true if successful (even if <3 lines exist; vector will just be shorter).
+static bool readFirstThreeLines(const fs::path& p, std::vector<std::string>& outLines) {
+    outLines.clear();
+    std::ifstream in(p, std::ios::in | std::ios::binary);
+    if (!in) return false;
+
+    constexpr std::streamsize kMaxPerLine = 8192;
+
+    std::string line;
+    line.reserve(static_cast<size_t>(kMaxPerLine));
+    for (int i = 0; i < 3 && in.good(); ++i) {
+        line.clear();
+        std::streamsize count = 0;
+        char ch;
+        bool gotNewline = false;
+        while (count < kMaxPerLine && in.get(ch)) {
+            if (ch == '\n') { gotNewline = true; break; }
+            line.push_back(ch);
+            ++count;
+        }
+        // If we hit kMaxPerLine without encountering '\n', drain until newline to resync
+        if (count == kMaxPerLine && !gotNewline) {
+            while (in.get(ch)) {
+                if (ch == '\n') break;
+            }
+        }
+
+        if (!in && line.empty()) {
+            // EOF with no data accumulated; if previous lines were read, that's fine.
+            break;
+        }
+        rtrimCrLfWhitespace(line);
+        outLines.push_back(line);
+        if (!in) break; // Handle EOF gracefully
+    }
+    return true;
+}
+
+// Check if the first 3 lines contain required keywords in positional order:
+// line1 -> "version", line2 -> "oid", line3 -> "size" (case-insensitive).
+static bool fileHasLfsKeywordsFirst3Positional(const fs::path& p) {
+    std::error_code ec;
+    if (!fs::is_regular_file(p, ec)) return false;
+
+    std::vector<std::string> lines;
+    if (!readFirstThreeLines(p, lines)) return false;
+
+    if (lines.size() < 3) return false;
+
+    return containsCaseInsensitive(lines[0], "version") &&
+           containsCaseInsensitive(lines[1], "oid") &&
+           containsCaseInsensitive(lines[2], "size");
+}
+
+
+// Helper: make path relative to base (best-effort, non-throwing).
+static fs::path makeRelativeToBase(const fs::path& path, const fs::path& base) {
+    std::error_code ec;
+    // Try fs::relative first (handles canonical comparisons, may fail if on different roots)
+    fs::path rel = fs::relative(path, base, ec);
+    if (!ec && !rel.empty()) return rel;
+
+    // Fallback: purely lexical relative (doesn't access filesystem)
+    rel = path.lexically_relative(base);
+    if (!rel.empty()) return rel;
+
+    // Last resort: return filename only (better than absolute when nothing else works)
+    if (path.has_filename()) return path.filename();
+    return path;
+}
+
+// Find all files under 'directory' that satisfy the first-3-lines LFS keyword check.
+std::vector<fs::path> findLfsLikeFiles(const std::string& directory, bool recursive = true) {
+    std::vector<fs::path> matches;
+    std::error_code ec;
+
+    if (!fs::exists(directory, ec) || !fs::is_directory(directory, ec)) {
+        return matches;
+    }
+
+    if (recursive) {
+        for (fs::recursive_directory_iterator it(directory, ec), end; !ec && it != end; ++it) {
+            const auto& p = it->path();
+            if (fileHasLfsKeywordsFirst3Positional(p)) {
+                matches.push_back(makeRelativeToBase(p, directory));
+            }
+        }
+    } else {
+        for (fs::directory_iterator it(directory, ec), end; !ec && it != end; ++it) {
+            const auto& p = it->path();
+            if (fileHasLfsKeywordsFirst3Positional(p)) {
+                matches.push_back(makeRelativeToBase(p, directory));
+            }
+        }
+    }
+    return matches;
+}
+
 int HfDownloader::CheckRepositoryForResume() {
     git_repository *repo = NULL;
     int error = git_repository_open_ext(&repo, this->downloadPath.c_str(), 0, NULL);
@@ -357,6 +691,107 @@ int HfDownloader::CheckRepositoryForResume() {
     return error;
 }
 
+
+/*
+ * checkout_one_file: Check out a single path from a treeish (commit/ref)
+ * into the working directory, applying filters (smudge, EOL) just like clone.
+ *
+ * repo_path      : filesystem path to the existing (non-bare) repository
+ * treeish        : e.g., "HEAD", "origin/main", a full commit SHA, etc.
+ * path_in_repo   : repo-relative path (e.g., "src/main.c")
+ *
+ * Returns 0 on success; <0 (libgit2 error code) on failure.
+ */
+void resumeLfsDownloadForFile(git_repository *repo, fs::path fileToResume, const std::string& repositoryPath) { 
+    int error = 0;
+
+    // Remove existing lfs pointer file from repository
+    std::string fullPath = FileSystem::joinPath({repositoryPath, fileToResume.string()});
+    std::filesystem::path filePath(fullPath);
+    if (!std::filesystem::remove(filePath)) {
+        SPDLOG_ERROR("Removing lfs file pointer error {}", fullPath);
+        return;
+    }
+
+    const char *path_in_repo = fileToResume.string().c_str();
+    const char *treeish = "HEAD";
+    git_object *target = NULL;
+    git_strarray paths = {0};
+    git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+    opts.disable_filters = 0;   // default; ensure you are NOT disabling filters
+
+    if (git_repository_is_bare(repo)) {
+        SPDLOG_ERROR("Repository is bare; cannot checkout to working directory {}", fileToResume.string());
+        error = GIT_EBAREREPO;
+        goto done;
+    }
+
+    if ((error = git_revparse_single(&target, repo, treeish)) < 0) {
+        SPDLOG_ERROR("git_revparse_single failed {}", fileToResume.string());
+        goto done;
+    }
+
+    // Restrict checkout to a single path
+    paths.count = 1;
+    paths.strings = (char **)&path_in_repo;
+
+    opts.paths = paths;
+
+    // Strategy: SAFER defaults — apply filters, write new files, update existing file
+    // You can add GIT_CHECKOUT_FORCE if you want to overwrite conflicts.
+    // opts.checkout_strategy = GIT_CHECKOUT_SAFE | GIT_CHECKOUT_DISABLE_PATHSPEC_MATCH;
+    opts.checkout_strategy = GIT_CHECKOUT_FORCE; // This makes sure BLOB update with filter is called
+    // This actually writes the filtered content to the working directory
+    error = git_checkout_tree(repo, target, &opts);
+    if (error < 0) {
+        SPDLOG_ERROR("git_checkout_tree failed {}", fileToResume.string());
+    }
+
+done:
+    if (target) git_object_free(target);
+    return;    
+}
+
+/* Does not work
+void resumeLfsDownloadForFile(git_repository *repo, fs::path fileToResume) {  
+    git_object *obj = NULL;
+    git_tree *tree = NULL;
+    git_tree_entry *entry = NULL;
+    git_blob *blob = NULL;
+    git_buf out = GIT_BUF_INIT;
+    // Configure filter behavior
+    git_blob_filter_options opts = GIT_BLOB_FILTER_OPTIONS_INIT;
+    // Choose direction:
+    //   GIT_BLOB_FILTER_TO_WORKTREE : apply smudge (as if writing to working tree)
+    //   GIT_BLOB_FILTER_TO_ODB      : apply clean  (as if writing to ODB)
+    // opts.flags = GIT_FILTER_TO_WORKTREE;
+
+    const char *file_path_in_repo = fileToResume.string().c_str(); // relative to repo root
+
+    // Resolve HEAD tree
+    CHECK(git_revparse_single(&obj, repo, "HEAD^{tree}") != 0);
+    tree = (git_tree *)obj;
+
+    // Find the tree entry and get the blob
+    CHECK(git_tree_entry_bypath(&entry, tree, file_path_in_repo) != 0);
+    CHECK(git_tree_entry_type(entry) != GIT_OBJECT_BLOB);
+
+    CHECK(git_blob_lookup(&blob, repo, git_tree_entry_id(entry)) != 0);
+
+    // Apply filters based on .gitattributes for this path
+    CHECK(git_blob_filter(&out, blob, file_path_in_repo, &opts) != 0);
+
+    // out.ptr now contains the filtered content
+    fwrite(out.ptr, 1, out.size, stdout);
+
+    git_buf_dispose(&out);
+    if (blob) git_blob_free(blob);
+    if (entry) git_tree_entry_free(entry);
+    if (tree) git_tree_free(tree);
+    if (obj) git_object_free(obj);
+    return;
+} */
+
 Status HfDownloader::downloadModel() {
     if (FileSystem::isPathEscaped(this->downloadPath)) {
         SPDLOG_ERROR("Path {} escape with .. is forbidden.", this->downloadPath);
@@ -365,8 +800,44 @@ Status HfDownloader::downloadModel() {
 
     // Repository exists and we do not want to overwrite
     if (std::filesystem::is_directory(this->downloadPath) && !this->overwriteModels) {
-        CheckRepositoryForResume();
+        auto matches = findLfsLikeFiles(this->downloadPath, true);
+        
+        if (matches.empty()) {
+            std::cout << "No files with LFS-like keywords in the first 3 lines were found.\n";
+        } else {
+            std::cout << "Found " << matches.size() << " matching file(s):\n";
+            for (const auto& p : matches) {
+                std::cout << "  " << p.string() << "\n";
+            }
+        }
 
+        git_repository *repo = NULL;
+        int error = git_repository_open_ext(&repo, this->downloadPath.c_str(), 0, NULL);
+        if (error < 0) {
+            const git_error *err = git_error_last();
+            if (err)
+                SPDLOG_ERROR("Repository open failed: {} {}", err->klass, err->message);
+            else
+                SPDLOG_ERROR("Repository open failed: {}", error);
+            if (repo) git_repository_free(repo);
+
+            std::cout << "Path already exists on local filesystem. And is not a git repository: " << this->downloadPath << std::endl;
+            return StatusCode::HF_GIT_CLONE_FAILED;
+        }
+
+        for (const auto& p : matches) {
+                std::cout << " Resuming " << p.string() << "\n";
+                resumeLfsDownloadForFile(repo, p, this->downloadPath);
+            }
+        
+        // Use proxy
+        if (CheckIfProxySet()) {
+            SPDLOG_DEBUG("Download using https_proxy settings");
+            //pull(repo, "origin", this->httpProxy.c_str());
+        } else {
+            SPDLOG_DEBUG("Download with https_proxy not set");
+            pull(repo, "origin", nullptr);
+        }
 
         std::cout << "Path already exists on local filesystem. Skipping download to path: " << this->downloadPath << std::endl;
         return StatusCode::OK;
