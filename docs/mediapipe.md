@@ -73,7 +73,7 @@ Following table lists supported tag and packet types in pbtxt graph definition:
 |input_stream: "REQUEST:req"|input|REQUEST|KServe inference::ModelInferRequest|req|
 |output_stream: "RESPONSE:res"|output|RESPONSE|KServe inference::ModelInferResponse|res|
 
-In case of missing tag OpenVINO Model Server assumes that the packet type is `ov::Tensor`. The stream name can be arbitrary but the convention is to use a lower case word.
+In case of missing tag OpenVINO Model Server assumes that the packet type is `ov::Tensor`. The stream name can be arbitrary but the convention is to use a lowercase word.
 
 The required data layout for the MediaPipe `IMAGE` conversion is HWC and the supported precisions are:
 |Datatype|Allowed number of channels|

@@ -1,7 +1,7 @@
 # Graphs Repository {#ovms_docs_models_repository_graph}
 
 Model server can deploy a pipelines of models and nodes for any complex and custom transformations.
-From the client perspective it behaves almost like a single model but it more flexible and configurable.
+From the client perspective it behaves almost like a single model, but it is more flexible and configurable.
 
 The model repository employing graphs is similar in the structure to [classic models](./models_repository_classic.md).
 It needs to include the collection of models used in the pipeline. It also requires a MediaPipe graph definition file in .pbtxt format.
