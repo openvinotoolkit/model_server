@@ -98,7 +98,7 @@ Shared configuration options for the pull, and pull & start mode. In the presenc
 
 ## Pull Mode Options for optimum-cli mode
 
-When pulling models outside of OpenVINO organization the optimum-cli api is used inside ovms. You can set two additional parameters for this mode.
+When pulling models outside of OpenVINO organization the optimum-cli api is used inside ovms. You can set additional parameters for this mode.
 | Option                       | Value format | Description                                                                                                   |
 |------------------------------|--------------|---------------------------------------------------------------------------------------------------------------|
 | `--extra_quantization_params`| `string`     | Add advanced quantization parameters. Check [optimum-intel](https://github.com/huggingface/optimum-intel) documentation. Example: `--sym --group-size -1 --ratio 1.0 --awq --scale-estimation --dataset wikitext2`  |
