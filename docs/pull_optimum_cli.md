@@ -32,7 +32,7 @@ Using `--pull` parameter, we can use OVMS to download the model, quantize and co
 **Required:** Docker Engine installed
 
 ```text
-docker run $(id -u):$(id -g) --rm -v <model_repository_path>:/models:rw openvino/model_server:latest-py --pull --source_model <model_name_in_HF> --model_repository_path /models --model_name <external_model_name> --target_device <DEVICE> --weight-format int8 --task <task> [TASK_SPECIFIC_PARAMETERS]
+docker run -u $(id -u):$(id -g) --rm -v <model_repository_path>:/models:rw openvino/model_server:latest-py --pull --source_model <model_name_in_HF> --model_repository_path /models --model_name <external_model_name> --target_device <DEVICE> --weight-format int8 --task <task> [TASK_SPECIFIC_PARAMETERS]
 ```
 :::
 
@@ -54,8 +54,9 @@ ovms --pull --source_model "Qwen/Qwen3-8B" --model_repository_path /models --mod
 :sync: docker
 **Required:** Docker Engine installed
 
-```text
-docker run $(id -u):$(id -g) --rm -v <model_repository_path>:/models:rw openvino/model_server:latest-py --pull --source_model "Qwen/Qwen3-8B" --model_repository_path /models --model_name Qwen3-8B --task text_generation --weight-format int8
+```bash
+mkdir -p models
+docker run -u $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest-py --pull --source_model "Qwen/Qwen3-4B" --model_repository_path /models --model_name Qwen3-4B --task text_generation --weight-format int8
 ```
 :::
 
