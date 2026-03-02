@@ -100,6 +100,37 @@ WORKDIR /ovms/third_party/opencv
 RUN if [ "$VERBOSE_LOGS" == "ON" ] ; then export VERBOSE=1 ; fi && ./install_opencv.sh
 ####### End of OpenCV
 
+# Build espeak-ng from sources
+FROM base_build as espeak_build
+
+ARG ESPEAK_NG_VERSION=1.51.1
+WORKDIR /tmp/espeak_build
+
+RUN dnf install -y libtool automake autoconf pkgconfig && \
+    dnf clean all
+
+RUN cd /tmp/espeak_build && \
+    git clone --branch ${ESPEAK_NG_VERSION} https://github.com/espeak-ng/espeak-ng.git espeak-ng-src 2>&1 && \
+    ls -lah /tmp/espeak_build/
+
+RUN cd /tmp/espeak_build/espeak-ng-src && \
+    touch AUTHORS NEWS && \
+    libtoolize --force --copy && \
+    aclocal && \
+    autoheader && \
+    autoconf && \
+    automake --add-missing --copy && \
+    ./configure --prefix=/opt/espeak-ng \
+        --disable-shared \
+        --enable-static \
+        --disable-mbrola \
+        --disable-klatt \
+        --without-audio && \
+    make -j$(nproc) && \
+    make install
+
+RUN rm -rf /tmp/espeak_build
+
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 FROM base_build as build
 ARG BASE_IMAGE
@@ -127,10 +158,14 @@ RUN dnf install -y -d6 \
             python3.12 \
             python3.12-devel \
             python3.12-pip \
-            libicu-devel \
-            espeak-ng \
-            espeak-ng-devel && \
+            libicu-devel && \
             dnf clean all
+
+# Copy espeak-ng built from sources
+COPY --from=espeak_build /opt/espeak-ng /opt/espeak-ng
+ENV PATH="/opt/espeak-ng/bin:${PATH}"
+ENV LD_LIBRARY_PATH="/opt/espeak-ng/lib:${LD_LIBRARY_PATH}"
+ENV ESPEAK_DATA_PATH="/opt/espeak-ng/share/espeak-ng-data"
 
 WORKDIR /
 
@@ -257,6 +292,17 @@ COPY .bazelrc .user.bazelr[c] .bazelversion WORKSPACE /ovms/
 RUN ln -s /usr/lib64 /usr/lib/x86_64-linux-gnu
 COPY external /ovms/external/
 COPY third_party /ovms/third_party
+
+# Provide espeak-ng headers and static library inside workspace for Bazel
+RUN mkdir -p /ovms/third_party/espeak_ng/include /ovms/third_party/espeak_ng/lib && \
+    cp -r /opt/espeak-ng/include/* /ovms/third_party/espeak_ng/include/ && \
+    mkdir -p /ovms/third_party/espeak_ng/include/espeak-ng && \
+    if [ -d /opt/espeak-ng/include/espeak-ng ]; then \
+        cp -r /opt/espeak-ng/include/espeak-ng/* /ovms/third_party/espeak_ng/include/espeak-ng/; \
+    else \
+        cp -v /opt/espeak-ng/include/*.h /ovms/third_party/espeak_ng/include/espeak-ng/; \
+    fi && \
+    cp -v /opt/espeak-ng/lib/libespeak-ng.a /ovms/third_party/espeak_ng/lib/
 
 # This path is required for namespace to setup Python dependencies for testing the binding
 COPY src/BUILD /ovms/src/BUILD
@@ -406,6 +452,13 @@ LABEL base-image=${RELEASE_BASE_IMAGE}
 ENV PYTHONPATH=/ovms/lib/python:/ovms/python_deps
 
 WORKDIR /
+
+# Copy espeak-ng built from sources
+COPY --from=espeak_build /opt/espeak-ng /opt/espeak-ng
+ENV PATH="/opt/espeak-ng/bin:${PATH}"
+ENV LD_LIBRARY_PATH="/opt/espeak-ng/lib:${LD_LIBRARY_PATH}"
+ENV ESPEAK_DATA_PATH="/opt/espeak-ng/share/espeak-ng-data"
+
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 COPY ./install_redhat_gpu_drivers.sh /install_gpu_drivers.sh
 # hadolint ignore=DL3003,DL3041,SC2164,SC1091
@@ -418,7 +471,6 @@ RUN if [ -f /usr/bin/dnf ] ; then export DNF_TOOL=dnf ; echo -e "max_parallel_do
     if ! [[ $debug_bazel_flags == *"py_off"* ]]; then \
         $DNF_TOOL install -y python3.12-libs --setopt=install_weak_deps=0 --nodocs; \
     fi ; \
-    $DNF_TOOL install -y espeak-ng --setopt=install_weak_deps=0 --nodocs; \
     $DNF_TOOL install -y shadow-utils; \
     $DNF_TOOL clean all ; \
     cp -v /etc/ssl/certs/ca-bundle.crt /etc/ssl/certs/ca-certificates.crt ; \
