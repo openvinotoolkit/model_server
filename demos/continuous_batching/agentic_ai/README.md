@@ -570,6 +570,12 @@ pip install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/ma
 ```
 Make sure nodejs and npx are installed. On ubuntu it would require `sudo apt install nodejs npm`. On windows, visit https://nodejs.org/en/download. It is needed for the `file system` MCP server.
 
+For windows applications it may be required to set environmental variable to enforce utf-8 encodeing in python:
+
+```bat
+set PYTHONUTF8=1
+```
+
 Run the agentic application:
 
 
