@@ -66,4 +66,4 @@ Start using OpenVINO Model Server with a fast-forward serving example from the [
 
 * [Simple deployment with KServe API](https://blog.openvino.ai/blog-posts/kserve-api)
 
-* [Benchmarking results](https://docs.openvino.ai/2025/about-openvino/performance-benchmarks.html)
+* [Benchmarking results](https://docs.openvino.ai/2026/about-openvino/performance-benchmarks.html)
