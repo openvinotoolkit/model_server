@@ -31,140 +31,30 @@ mkdir models
 :::{tab-item} CPU
 :sync:CPU
 ```bash
-docker run --user $(id -u):$(id -g) -d --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --rest_port 8000 --model_repository_path /models --source_model OpenVINO/gpt-oss-20b-int4-ov  --tool_parser gptoss --reasoning_parser gptoss --task text_generation --enable_prefix_caching true
+docker run --user $(id -u):$(id -g) -d --rm -v $(pwd)/models:/models:rw -p 8000:8000 openvino/model_server:latest --rest_port 8000 --model_repository_path /models --source_model OpenVINO/gpt-oss-20b-int4-ov  --tool_parser gptoss --reasoning_parser gptoss --task text_generation --enable_prefix_caching true
 ```
 :::
 ::: {tab-item} GPU
 :sync: GPU
 ```bash
-docker run --user $(id -u):$(id -g) -d --rm -v $(pwd)/models:/models:rw openvino/model_server:latest-gpu --rest_port 8000 --model_repository_path /models --source_model OpenVINO/gpt-oss-20b-int4-ov  --tool_parser gptoss --reasoning_parser gptoss --task text_generation --enable_prefix_caching true --target_device GPU
+docker run --user $(id -u):$(id -g) -d --rm -v $(pwd)/models:/models:rw -p 8000:8000 openvino/model_server:latest-gpu --rest_port 8000 --model_repository_path /models --source_model OpenVINO/gpt-oss-20b-int4-ov  --tool_parser gptoss --reasoning_parser gptoss --task text_generation --enable_prefix_caching true --target_device GPU
 ```
 :::
 :::{tab-item} NPU
 ```bash
-docker run --user $(id -u):$(id -g) -d --rm -v $(pwd)/models:/models:rw openvino/model_server:latest-gpu --rest_port 8000 --model_repository_path /models --source_model OpenVINO/Qwen3-8B-int4-cw-ov  --target_device NPU --task text_generation --enable_prefix_caching true --max_prompt_len 16000 --tool_parser hermes3 --plugin_config "{\"NPUW_LLM_PREFILL_ATTENTION_HINT\": \"PYRAMID\"}"
+docker run --user $(id -u):$(id -g) -d --rm -v $(pwd)/models:/models:rw -p 8000:8000 openvino/model_server:latest-gpu --rest_port 8000 --model_repository_path /models --source_model OpenVINO/Qwen3-8B-int4-cw-ov  --target_device NPU --task text_generation --enable_prefix_caching true --max_prompt_len 16000 --tool_parser hermes3 --plugin_config "{\"NPUW_LLM_PREFILL_ATTENTION_HINT\": \"PYRAMID\"}"
 ```
 **Note:** It's recommended to set `--max_prompt_len` value to as low as possible. This will improve performence, but limit number of tokens model will accept.
 :::
 ::::
-## Dataset for experiments
-
-To test the performance using vllm benchmarking script, let's create a custom dataset with long shared context and a set of questions in each request.  That way we can create a dataset with identical very long context with different queries related to the context. That is a common scenario for RAG applications which generates response based on a complete knowledge base. To make this experiment similar to real live, the context is not synthetic but build with the content of Don Quixote story with 10 different questions related to the story. Because the context is reused, it is a perfect case for benefitting from prefix caching. 
-
-```bash
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/demos/continuous_batching/long_context/custom_dataset.py -o custom_dataset.py
-pip install requests transformers
-```
-
-::::{tab-set}
-:::{tab-item} CPU and GPU
-:sync:CPU
-```bash
-python custom_dataset.py --limit_context_tokens 5000
-```
-:::
-:::{tab-item} NPU
-```bash
-python custom_dataset.py --limit_context_tokens 5000 --model_name OpenVINO/Qwen3-8B-int4-cw-ov
-```
-:::
-::::
-
-It will create a file called `dataset.jsonl` with 10 requests of shared context body limited to 50000 tokens. 
 
 ## Testing performance
 
-Let's check the performance 
+Using `vllm` benchmark it's possible to check performence of the model with desired context lenght. It's also available set prefix parameters check performence benefit from prefix caching.
 ```bash
-git clone --branch v0.9.1 --depth 1 https://github.com/vllm-project/vllm
-cd vllm
-pip3 install -r requirements/cpu.txt . --extra-index-url https://download.pytorch.org/whl/cpu
-python benchmarks/benchmark_serving.py --host localhost --port 8000 --endpoint /v3/chat/completions --backend openai-chat --model OpenVINO/gpt-oss-20b-int4-ov --dataset-name custom --dataset-path ../dataset.jsonl --num-prompts 10 --max-concurrency 1 --custom-output-len 50
+pip install vllm --extra-index-url https://wheels.vllm.ai/nightly/cpu
+vllm bench serve --backend  openai --base-url http://localhost:8000/ --endpoint v3/completions --model  OpenVINO/gpt-oss-20b-int4-ov --tokenizer openai/gpt-oss-20b --prefix-repetition-prefix-len 50000 --prefix-repetition-suffix-len 10 --prefix-repetition-output-len 20 --prefix-repetition-num-prefixes 1  --num-prompts 2 --max_concurrency 1 --dataset-name prefix_repetition --num-warmups 1
 ```
-
-
-::::{tab-set}
-:::{tab-item} CPU
-:sync: CPU
-```
-============ Serving Benchmark Result ============
-Successful requests:                     10
-Benchmark duration (s):                  29.54
-Total input tokens:                      49774
-Total generated tokens:                  500
-Request throughput (req/s):              0.34
-Output token throughput (tok/s):         16.92
-Total Token throughput (tok/s):          1701.74
----------------Time to First Token----------------
-Mean TTFT (ms):                          173.65
-Median TTFT (ms):                        171.61
-P99 TTFT (ms):                           190.84
------Time per Output Token (excl. 1st token)------
-Mean TPOT (ms):                          56.74
-Median TPOT (ms):                        56.82
-P99 TPOT (ms):                           56.87
----------------Inter-token Latency----------------
-Mean ITL (ms):                           75.14
-Median ITL (ms):                         56.81
-P99 ITL (ms):                            171.99
-==================================================
-```
-:::
-:::{tab-item} GPU
-:sync: GPU
-```
-============ Serving Benchmark Result ============
-Successful requests:                     10
-Benchmark duration (s):                  26.56
-Total input tokens:                      49774
-Total generated tokens:                  500
-Request throughput (req/s):              0.38
-Output token throughput (tok/s):         18.82
-Total Token throughput (tok/s):          1892.75
----------------Time to First Token----------------
-Mean TTFT (ms):                          101.70
-Median TTFT (ms):                        101.62
-P99 TTFT (ms):                           102.47
------Time per Output Token (excl. 1st token)------
-Mean TPOT (ms):                          52.12
-Median TPOT (ms):                        51.96
-P99 TPOT (ms):                           53.55
----------------Inter-token Latency----------------
-Mean ITL (ms):                           69.02
-Median ITL (ms):                         52.13
-P99 ITL (ms):                            160.02
-==================================================
-```
-:::
-:::{tab-item} NPU
-:sync: NPU
-```
-============ Serving Benchmark Result ============
-Successful requests:                     10
-Benchmark duration (s):                  57.14
-Total input tokens:                      50294
-Total generated tokens:                  500
-Request throughput (req/s):              0.18
-Output token throughput (tok/s):         8.75
-Total Token throughput (tok/s):          888.98
----------------Time to First Token----------------
-Mean TTFT (ms):                          2292.98
-Median TTFT (ms):                        2306.25
-P99 TTFT (ms):                           2317.77
------Time per Output Token (excl. 1st token)------
-Mean TPOT (ms):                          69.77
-Median TPOT (ms):                        69.92
-P99 TPOT (ms):                           70.45
----------------Inter-token Latency----------------
-Mean ITL (ms):                           72.89
-Median ITL (ms):                         71.35
-P99 ITL (ms):                            214.61
-==================================================
-```
-:::
-::::
-
-The results shown above, despite very long context, have much lower TTFT latency with prefix caching. As long as the beginning of the request prompt is reused, KV cache can be also reused to speed up prompt processing.
 
 ## Performance Comparison Table
 
@@ -208,7 +98,7 @@ Platform: Intel(R) Core(TM) Ultra 5 338H
 :::
 ::::
 
-The results show that the cache usage grows linearly with the context length.
+The results show that the cache usage grows exponentialy with the context length.
 Prefix caching is very effective in reducing the first token generation making the long context calls practical even on slower HW.
 
 ## Testing accuracy
@@ -216,17 +106,10 @@ Prefix caching is very effective in reducing the first token generation making t
 Testing accuracy for use cases with long context can be done via [lm-eval_harness](../accuracy/README.md).
 The only difference is that the configured testing task should include a relevant dataset.
 
-For example:
-```
-lm-eval --model local-chat-completions --tasks longbench_gov_report  --model_args model=OpenVINO/gpt-oss-20b-int4-ov,base_url=http://localhost:8000/v3/chat/completions,num_concurrent=10,tokenized_requests=False,timeout=3000  --verbosity DEBUG --seed 1 --apply_chat_template
-```
+## Cache Precision
 
-Such experiment can confirm the impact on accuracy from the model quantization and KV cache compression.
-
-## Cache Precision Comparison
-
-The results in an experiment captured on Xeon Gen4 server show that KV cache compression has minimal impact on accuracy and significantly reduces memory consumption.
-Slower execution with FP32 precision is a result of disabled AMX acceleration.
+KV cache compression has minimal impact on accuracy and significantly reduces memory consumption and benchmark time.
+It's recommended to use default KV cache precision which is INT8.
 
 ## Recommendations
 
