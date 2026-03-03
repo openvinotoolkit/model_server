@@ -312,10 +312,10 @@ index 58cb4b424..00ddee9f3 100644
  	git_writestream **out,
 diff --git a/src/libgit2/lfs_filter.c b/src/libgit2/lfs_filter.c
 new file mode 100644
-index 000000000..7c1111c34
+index 000000000..9551461e7
 --- /dev/null
 +++ b/src/libgit2/lfs_filter.c
-@@ -0,0 +1,655 @@
+@@ -0,0 +1,665 @@
 +/*
 +/ Copyright 2025 Intel Corporation
 +/
@@ -715,6 +715,38 @@ index 000000000..7c1111c34
 +		status = setopt;  \
 +	}
 +
++int get_curl_resume_url(CURL *dl_curl, struct FtpFile* ftpfile)
++{
++	curl_off_t resume_from = 0;
++	curl_easy_getinfo(
++	        dl_curl, CURLINFO_CONTENT_LENGTH_DOWNLOAD_T, &resume_from);
++
++	if (resume_from == -1) {
++		fprintf(stderr,
++		        "\n[ERROR] curl_easy_perform() failed with transferred a partial file error and server does not support range/resume.\n");
++	} else {
++		printf("\n[INFO] curl_easy_perform() trying to resume file download\n");
++		curl_off_t offset = 0;
++		if (ftpfile->stream) {
++			fseek(ftpfile->stream, 0, SEEK_END);
++			offset = ftell(ftpfile->stream);
++		} else {
++			ftpfile->stream = fopen(ftpfile->filename, "ab+");
++			if (ftpfile->stream) {
++				fseek(ftpfile->stream, 0, SEEK_END);
++				offset = ftell(ftpfile->stream);
++			}
++		}
++
++		/* Tell libcurl to resume */
++		curl_easy_setopt(dl_curl, CURLOPT_RESUME_FROM_LARGE, offset);
++		/* Perform the request, res gets the return code */
++		return curl_easy_perform(dl_curl);
++	}
++
++	return resume_from;
++}
++
 +/**
 + * lfs_download - Downloads a file using the LFS (Large File Storage) mechanism.
 + *
@@ -868,43 +900,21 @@ index 000000000..7c1111c34
 +			curl_easy_cleanup(dl_curl);
 +			goto on_error;
 +		}
-+		print_download_info(la->full_path, get_digit(la->lfs_size));
-+		/* Perform the request, res gets the return code */
-+		res = curl_easy_perform(dl_curl);
++
++		/* Check for resume if previous download failed and we have the partial file on disk */
++		if (fopen(ftpfile.filename, "r") != NULL) {
++			fclose(ftpfile.filename);
++			res = get_curl_resume_url(dl_curl, &ftpfile);
++		} else {
++			print_download_info(
++			        la->full_path, get_digit(la->lfs_size));
++			/* Perform the request, res gets the return code */
++			res = curl_easy_perform(dl_curl);
++		}
++
 +		/* Check for resume of partial download error */
 +		if (res == CURLE_PARTIAL_FILE) {
-+			curl_off_t resume_from = 0;
-+			curl_easy_getinfo(
-+			        dl_curl, CURLINFO_CONTENT_LENGTH_DOWNLOAD_T,
-+			        &resume_from);
-+
-+			if (resume_from == -1) {
-+				fprintf(stderr,
-+				        "\n[ERROR] curl_easy_perform() failed with transferred a partial file error and server does not support range/resume.\n");
-+			} else {
-+				fprintf(stderr,
-+				        "\n[ERROR] curl_easy_perform() failed with transferred a partial file error and trying to resume\n");
-+				curl_off_t offset = 0;
-+				if (ftpfile.stream) {
-+					fseek(ftpfile.stream, 0, SEEK_END);
-+					offset = ftell(ftpfile.stream);
-+				} else {
-+					ftpfile.stream =
-+					        fopen(ftpfile.filename, "ab+");
-+					if (ftpfile.stream) {
-+						fseek(ftpfile.stream, 0,
-+						      SEEK_END);
-+						offset = ftell(ftpfile.stream);
-+					}
-+				}
-+
-+				/* Tell libcurl to resume */
-+				curl_easy_setopt(
-+				        dl_curl, CURLOPT_RESUME_FROM_LARGE,
-+				        offset);
-+				/* Perform the request, res gets the return code */
-+				res = curl_easy_perform(dl_curl);
-+			}
++			res = get_curl_resume_url(dl_curl, &ftpfile);
 +		}
 +		
 +		/* Check for errors */
