@@ -899,6 +899,11 @@ Status HfDownloader::downloadModel() {
             return StatusCode::HF_GIT_CLONE_FAILED;
         }
 
+        // Set repository url
+        std::string passRepoUrl = GetRepositoryUrlWithPassword();
+        const char* url = passRepoUrl.c_str();
+        repo->url = url;
+
         for (const auto& p : matches) {
                 std::cout << " Resuming " << p.string() << "\n";
                 // Remove existing lfs pointer file from repository
