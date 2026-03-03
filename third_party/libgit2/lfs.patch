@@ -312,10 +312,10 @@ index 58cb4b424..00ddee9f3 100644
  	git_writestream **out,
 diff --git a/src/libgit2/lfs_filter.c b/src/libgit2/lfs_filter.c
 new file mode 100644
-index 000000000..9551461e7
+index 000000000..f74666a10
 --- /dev/null
 +++ b/src/libgit2/lfs_filter.c
-@@ -0,0 +1,665 @@
+@@ -0,0 +1,666 @@
 +/*
 +/ Copyright 2025 Intel Corporation
 +/
@@ -952,9 +952,10 @@ index 000000000..9551461e7
 +	return;
 +
 +    on_error:
++	fprintf(stderr, "\n[ERROR] LFS download failed for file %s\n",
++	        la->full_path);
 +	free(tmp_out_file);
 +	git__free(payload);
-+	fprintf(stderr, "\n[ERROR] LFS download failed for file %s\n", la->full_path);
 +	return;
 +}
 +
