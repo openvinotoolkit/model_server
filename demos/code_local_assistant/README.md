@@ -41,15 +41,6 @@ ovms --model_repository_path c:\models --source_model OpenVINO/gpt-oss-20b-int4-
 > **Note:** For deployment, the model requires ~12GB disk space and recommended 16GB+ of VRAM on the GPU.
 :::
 
-:::{tab-item} OpenVINO/gpt-oss-20b-int8-ov
-:sync: OpenVINO/gpt-oss-20b-int8-ov
-```bat
-mkdir c:\models
-ovms --model_repository_path c:\models --source_model OpenVINO/gpt-oss-20b-int8-ov --task text_generation --target_device GPU --tool_parser gptoss --reasoning_parser gptoss --rest_port 8000 --cache_dir .ovcache --model_name gpt-oss-20b
-```
-> **Note:** For deployment, the model requires ~24GB disk space and recommended 28GB+ of VRAM on the GPU.
-:::
-
 :::{tab-item} OpenVINO/Qwen3-8B-int4-ov
 :sync: OpenVINO/Qwen3-8B-int4-ov
 ```bat
@@ -102,17 +93,6 @@ docker run -d -p 8000:8000 --rm --user $(id -u):$(id -g) -v $(pwd)/models:/model
     --model_repository_path /models --source_model OpenVINO/gpt-oss-20b-int4-ov --task text_generation --target_device GPU --tool_parser gptoss --reasoning_parser gptoss --rest_port 8000 --model_name gpt-oss-20b
 ```
 > **Note:** For deployment, the model requires ~12GB disk space and recommended 16GB+ of VRAM on the GPU.
-:::
-
-:::{tab-item} OpenVINO/gpt-oss-20b-int8-ov
-:sync: OpenVINO/gpt-oss-20B-int8-ov
-```bash
-mkdir -p models
-docker run -d -p 8000:8000 --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
-    openvino/model_server:weekly \
-    --model_repository_path /models --source_model OpenVINO/gpt-oss-20b-int8-ov --task text_generation --target_device GPU --tool_parser gptoss --reasoning_parser gptoss --rest_port 8000 --model_name gpt-oss-20b
-```
-> **Note:** For deployment, the model requires ~24GB disk space and recommended 28GB+ of VRAM on the GPU.
 :::
 
 :::{tab-item} OpenVINO/Qwen3-8B-int4-ov
