@@ -33,7 +33,15 @@ struct LegacyServableExecutionContext : public GenAiServableExecutionContext {
     std::condition_variable executionInProgress;
     // Workaround needed to pass generation config to the executor that requires it
     ov::genai::GenerationConfig baseGenerationConfig;
-    bool success = true;
+    bool success{true};
+
+    // Disconnection handling
+    std::atomic<bool> clientDisconnected{false};
+
+    void signalDisconnection() {
+        clientDisconnected = true;
+        executionInProgress.notify_all();
+    }
 };
 
 struct LegacyServableProperties : public GenAiServableProperties {

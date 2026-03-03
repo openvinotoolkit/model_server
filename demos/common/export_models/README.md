@@ -1,6 +1,7 @@
 # Exporting models using script {#ovms_demos_common_export}
 
 This documents describes how to export, optimize and configure models prior to server deployment with provided python script. This approach is more flexible than using [pull feature](../../../docs/pull_hf_models.md) from OVMS as it allows for using models that were not optimized beforehand and provided in [OpenVINO organization](https://huggingface.co/OpenVINO) in HuggingFace, but requires having Python set up to work.
+> **Warning:** This script uses option `--trust-remote-code`, which allows model-provided Python code to run on your machine during export. Use only trusted models/sources, review repository code before running, and avoid executing this script in sensitive environments.
 
 ## What it does
 
@@ -44,7 +45,7 @@ Expected Output:
 usage: export_model.py text_generation [-h] [--model_repository_path MODEL_REPOSITORY_PATH] --source_model SOURCE_MODEL [--model_name MODEL_NAME] [--weight-format PRECISION] [--config_file_path CONFIG_FILE_PATH] [--overwrite_models] [--target_device TARGET_DEVICE] [--ov_cache_dir OV_CACHE_DIR]
                                        [--extra_quantization_params EXTRA_QUANTIZATION_PARAMS] [--pipeline_type {LM,LM_CB,VLM,VLM_CB,AUTO}] [--kv_cache_precision {u8}] [--enable_prefix_caching ENABLE_PREFIX_CACHING] [--disable_dynamic_split_fuse] [--max_num_batched_tokens MAX_NUM_BATCHED_TOKENS] [--max_num_seqs MAX_NUM_SEQS]
                                        [--cache_size CACHE_SIZE] [--draft_source_model DRAFT_SOURCE_MODEL] [--draft_model_name DRAFT_MODEL_NAME] [--draft_eagle3_mode] [--max_prompt_len MAX_PROMPT_LEN] [--prompt_lookup_decoding] [--reasoning_parser {qwen3,gptoss}]
-                                       [--tool_parser {llama3,phi4,hermes3,mistral,qwen3coder,gptoss}] [--enable_tool_guided_generation]
+                                       [--tool_parser {llama3,phi4,hermes3,mistral,qwen3coder,gptoss,devstral}] [--enable_tool_guided_generation]
 
 options:
   -h, --help            show this help message and exit

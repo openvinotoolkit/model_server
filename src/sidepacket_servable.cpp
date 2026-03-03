@@ -130,27 +130,21 @@ void SidepacketServable::initialize(const std::string& modelDir, const std::stri
         }
     }
 
-    auto& ovmsConfig = ovms::Config::instance();
-    uint32_t numberOfParallelInferRequests = 1;
-    if (ovmsConfig.nireq() > 0) {
-        // We take nireq that set globally for all models in ovms startup parameters
-        numberOfParallelInferRequests = ovmsConfig.nireq();
-    } else {
-        try {
-            numberOfParallelInferRequests = compiledModel.get_property(ov::optimal_number_of_infer_requests);
-        } catch (const ov::Exception& ex) {
-            SPDLOG_WARN("Failed to query OPTIMAL_NUMBER_OF_INFER_REQUESTS with error {}. Using 1 nireq.", ex.what());
-            numberOfParallelInferRequests = 1u;
-        }
-        SPDLOG_DEBUG("Setting inference queue for {} with {} parallel requests", targetDevice, numberOfParallelInferRequests);
-    }
-
     ov::Core core;
     std::shared_ptr<ov::Model> m_model = core.read_model(parsedModelsPath / std::filesystem::path("openvino_model.xml"), {}, properties);
     m_model = this->applyPrePostProcessing(core, m_model, properties);
-
     compiledModel = core.compile_model(m_model, targetDevice, properties);
     SPDLOG_DEBUG("Model compiled {} for {}", parsedModelsPath.string(), targetDevice);
+
+    uint32_t numberOfParallelInferRequests = 1;
+    try {
+        numberOfParallelInferRequests = compiledModel.get_property(ov::optimal_number_of_infer_requests);
+    } catch (const ov::Exception& ex) {
+        SPDLOG_WARN("Failed to query OPTIMAL_NUMBER_OF_INFER_REQUESTS with error {}. Using 1 nireq.", ex.what());
+        numberOfParallelInferRequests = 1u;
+    }
+    SPDLOG_DEBUG("Setting inference queue for {} with {} parallel requests", targetDevice, numberOfParallelInferRequests);
+
     inferRequestsQueue = std::make_unique<OVInferRequestsQueue>(compiledModel, numberOfParallelInferRequests);
 }
 

@@ -20,6 +20,8 @@ mkdir models
 > **Note:** The users in China need to set environment variable HF_ENDPOINT="https://hf-mirror.com" before running the export script to connect to the HF Hub.
 
 Pull and add the model on Linux:
+
+> **Note:** To use CPU, please export model with option `--target_device CPU` instead of `GPU`.
 ::::{tab-set}
 :::{tab-item} Qwen/Qwen3-Coder-30B-A3B-Instruct
 :sync: Qwen/Qwen3-Coder-30B-A3B-Instruct
@@ -66,7 +68,9 @@ docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
     --model_name openai/gpt-oss-20b \
     --model_path openai/gpt-oss-20b
 ```
-> **Note:** For deployment, the model requires ~12GB disk space and recommended 16GB+ of VRAM on the GPU. For conversion, the original model will be pulled and quantized, which requires 45GB of free RAM.
+
+> **Note:** Continuous batching and paged attention are supported for GPT‑OSS. However, when deployed on GPU, the model may experience reduced accuracy under high‑concurrency workloads. This issue will be resolved in version 2026.1 and in the upcoming weekly release. CPU execution is not affected.
+> **Note:** For deployment, the model requires ~12GB disk space and recommended 16GB+ of VRAM on the GPU. For conversion, the original model will be pulled and quantized, which requires 96GB of free RAM.
 
 :::
 :::{tab-item} unsloth/Devstral-Small-2507
@@ -167,8 +171,8 @@ curl -L -o models/openai/gpt-oss-20b/chat_template.jinja https://raw.githubuserc
 
 ovms.exe --add_to_config --config_path models/config_all.json --model_name openai/gpt-oss-20b --model_path openai/gpt-oss-20b
 ```
-> **Note:** For deployment, the model requires ~12GB disk space and recommended 16GB+ of VRAM on the GPU. For conversion, the original model will be pulled and quantized, which requires 45GB of free RAM.
-> **Note:**: Use `--pipeline_type LM` parameter in export command, for version 2025.4.1 or older. It disables continuous batching and CPU support in weekly or 2026.0+ releases.
+> **Note:** For deployment, the model requires ~12GB disk space and recommended 16GB+ of VRAM on the GPU. For conversion, the original model will be pulled and quantized, which requires 96GB of free RAM.
+> **Note:** Continuous batching and paged attention are supported for GPT‑OSS. However, when deployed on GPU, the model may experience reduced accuracy under high‑concurrency workloads. This issue will be resolved in version 2026.1 and in the upcoming weekly release. CPU execution is not affected.
 
 :::
 :::{tab-item} unsloth/Devstral-Small-2507
@@ -215,14 +219,15 @@ Run OpenVINO Model Server with all downloaded models loaded at the same time:
 Please refer to OpenVINO Model Server installation first: [link](../../docs/deploying_server_baremetal.md)
 
 ```bat
+set MOE_USE_MICRO_GEMM_PREFILL=0
 ovms --rest_port 8000 --config_path ./models/config_all.json
 ```
 :::
 :::{tab-item} Linux CPU
 :sync: Linux CPU
 ### Linux: via Docker with CPU
-```bash
-docker run -d --rm -u $(id -u):$(id -g) \
+```text
+docker run -d --rm -u $(id -u):$(id -g) -e MOE_USE_MICRO_GEMM_PREFILL=0 \
   -p 8000:8000 -v $(pwd)/:/workspace/ openvino/model_server:weekly --rest_port 8000 --config_path /workspace/models/config_all.json
 ```
 :::
@@ -230,11 +235,13 @@ docker run -d --rm -u $(id -u):$(id -g) \
 :sync: Linux GPU
 ### Linux: via Docker with GPU
 ```bash
-docker run -d --rm --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
+docker run -d --rm --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) -e MOE_USE_MICRO_GEMM_PREFILL=0 \
   -p 8000:8000 -v $(pwd)/:/workspace/ openvino/model_server:weekly --rest_port 8000 --config_path /workspace/models/config_all.json
 ```
 :::
 ::::
+
+> **Note:** `MOE_USE_MICRO_GEMM_PREFILL=0` is a workaround for *Qwen3-Coder-30B-A3B-Instruct* and it will be fixed in release 2026.1 or next weekly.
 
 ## Set Up Visual Studio Code
 

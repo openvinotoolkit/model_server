@@ -175,7 +175,10 @@ public:
                 if (cc->Options<EmbeddingsCalculatorOVOptions>().truncate() && params.find("max_length") == params.end()) {
                     params["max_length"] = maxContextLength;
                 }
-
+                if (embeddings_session->isStatic()) {
+                    params["pad_to_max_length"] = true;
+                    params["max_length"] = maxContextLength;
+                }
                 absl::Status tokenizationStatus = this->tokenizeStrings(embeddings_session->getTokenizer(), *strings, params, tokens);
                 if (!tokenizationStatus.ok()) {
                     return tokenizationStatus;
