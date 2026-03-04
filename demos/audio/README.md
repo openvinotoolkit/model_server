@@ -24,7 +24,7 @@ mkdir -p audio_samples
 curl --output audio_samples/audio.wav "https://www.voiptroubleshooter.com/open_speech/american/OSR_us_000_0032_8k.wav"
 mkdir -p models
 mkdir -p models/speakers
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/audio/create_speaker_embedding.py -o create_speaker_embedding.py
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/0/demos/audio/create_speaker_embedding.py -o create_speaker_embedding.py
 python create_speaker_embedding.py audio_samples/audio.wav models/speakers/voice1.bin
 ```
 
