@@ -53,7 +53,7 @@ void EmbeddingsGraphCLIParser::createOptions() {
             cxxopts::value<std::string>()->default_value("false"),
             "truncate")
         ("pooling",
-            "Mean pooling option.",
+            "Pooling option. One of: CLS, LAST, MEAN.",
             cxxopts::value<std::string>()->default_value("CLS"),
             "POOLING");
 }
@@ -98,7 +98,7 @@ void EmbeddingsGraphCLIParser::prepare(OvmsServerMode serverMode, HFSettingsImpl
         embeddingsGraphSettings.truncate = result->operator[]("truncate").as<std::string>();
         embeddingsGraphSettings.pooling = result->operator[]("pooling").as<std::string>();
     }
-    if (!(embeddingsGraphSettings.pooling == "CLS" || embeddingsGraphSettings.pooling == "LAST")){
+    if (!(embeddingsGraphSettings.pooling == "CLS" || embeddingsGraphSettings.pooling == "LAST" || embeddingsGraphSettings.pooling == "MEAN")){
         throw std::invalid_argument("Only CLS and LAST pooling modes are supported");
     }
     hfSettings.graphSettings = std::move(embeddingsGraphSettings);
