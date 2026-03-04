@@ -288,43 +288,43 @@ Run the agentic application:
 ::::{tab-set}
 :::{tab-item} Qwen3-8B
 :sync: Qwen3-8B
-```bash
+```text
 python openai_agent.py --query "What is the current weather in Tokyo?" --model OpenVINO/Qwen3-8B-int4-ov --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather --stream --enable-thinking
 ```
-```bash
+```text
 python openai_agent.py --query "List the files in folder /root" --model OpenVINO/Qwen3-8B-int4-ov --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server all
 ```
 :::
 :::{tab-item} Qwen3-4B 
 :sync: Qwen3-4B
-```bash
+```text
 python openai_agent.py --query "What is the current weather in Tokyo?" --model OpenVINO/Qwen3-4B-int4-ov --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather --stream
 ```
-```bash
+```text
 python openai_agent.py --query "List the files in folder /root" --model OpenVINO/Qwen3-4B-int4-ov --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server all
 ```
 :::
 :::{tab-item} Mistral-7B-Instruct-v0.3
 :sync: Mistral-7B-Instruct-v0.3
-```bash
+```text
 python openai_agent.py --query "List the files in folder /root" --model OpenVINO/Mistral-7B-Instruct-v0.3-int4-ov --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server all --tool_choice required
 ```
 :::
 :::{tab-item} Llama-3.2-3B-Instruct
 :sync: Llama-3.2-3B-Instruct
-```bash
+```text
 python openai_agent.py --query "List the files in folder /root" --model srang992/Llama-3.2-3B-Instruct-ov-INT4 --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server all
 ```
 :::
 :::{tab-item} Phi-4-mini-instruct
 :sync: Phi-4-mini-instruct
-```bash
+```text
 python openai_agent.py --query "What is the current weather in Tokyo?" --model OpenVINO/Phi-4-mini-instruct-int4-ov --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather
 ```
 :::
 :::{tab-item} Qwen3-Coder-30B-A3B-Instruct
 :sync: Qwen3-Coder-30B-A3B-Instruct
-```bash
+```text
 python openai_agent.py --query "What is the current weather in Tokyo?" --model OpenVINO/Qwen3-Coder-30B-A3B-Instruct-int4-ov --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather
 ```
 :::
