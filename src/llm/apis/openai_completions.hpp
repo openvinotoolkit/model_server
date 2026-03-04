@@ -127,6 +127,6 @@ public:
     std::string serializeUnaryResponse(ov::genai::VLMDecodedResults& results);
     std::string serializeStreamingChunk(const std::string& chunkResponse, ov::genai::GenerationFinishReason finishReason);
     std::string serializeStreamingUsageChunk();
-    std::string serializeStreamingFirstTokenControlChunk();
+    std::string serializeStreamingHandshakeChunk();
 };
 }  // namespace ovms

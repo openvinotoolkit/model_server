@@ -1374,7 +1374,7 @@ std::string OpenAIChatCompletionsHandler::serializeStreamingUsageChunk() {
     return buffer.GetString();
 }
 
-std::string OpenAIChatCompletionsHandler::serializeStreamingFirstTokenControlChunk() {
+std::string OpenAIChatCompletionsHandler::serializeStreamingHandshakeChunk() {
     OVMS_PROFILE_FUNCTION();
     Document doc;
     doc.SetObject();

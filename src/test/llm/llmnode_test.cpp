@@ -61,7 +61,7 @@ struct TestParameters {
     bool checkLogprobs;
     bool checkFinishReason;
     bool testSpeculativeDecoding;
-    bool supportsEmptyControlMsg;
+    bool checkHandshakeChunk;
 };
 
 class LLMFlowHttpTest : public ::testing::Test {
@@ -1705,12 +1705,11 @@ TEST_P(LLMFlowHttpTestParameterized, inferChatCompletionsStream) {
     )";
     int replyCounter = 0;
     ON_CALL(*writer, PartialReply).WillByDefault([this, &params, &replyCounter](std::string response) {
-        if (replyCounter == 0 && params.supportsEmptyControlMsg) {
+        if (replyCounter == 0 && params.checkHandshakeChunk) {
             replyCounter++;
             assertInitialStreamChatCompletionChunk(response, params.modelName);
             return;
         }
-        replyCounter++;
         rapidjson::Document d;
         std::string dataPrefix = "data:";
         ASSERT_STREQ(response.substr(0, dataPrefix.size()).c_str(), dataPrefix.c_str());
@@ -1863,7 +1862,7 @@ TEST_P(LLMFlowHttpTestParameterized, streamChatCompletionsSingleStopString) {
         ovms::StatusCode::PARTIAL_END);
     SPDLOG_TRACE("After dispatch");
 
-    if (params.supportsEmptyControlMsg) {
+    if (params.checkHandshakeChunk) {
         // Check if there is more than 1 partial response - initial and at least one real response with stop string
         ASSERT_GT(responses.size(), 1);
 
@@ -1887,7 +1886,7 @@ TEST_P(LLMFlowHttpTestParameterized, streamChatCompletionsSingleStopString) {
     // or simply any token (or group of tokens) that has dot in a middle.
 
     // Check for no existence of a dot:
-    for (size_t i = params.supportsEmptyControlMsg ? 1 : 0; i < responses.size() - numberOfLastResponsesToCheckForStopString; ++i) {
+    for (size_t i = params.checkHandshakeChunk ? 1 : 0; i < responses.size() - numberOfLastResponsesToCheckForStopString; ++i) {
         // Assert there is no dot '.' in the response
 
         // Cut "data: " prefix
