@@ -305,6 +305,8 @@ cmake --build . --config Release --verbose -j
 if !errorlevel! neq 0 exit /b !errorlevel!
 cmake --install . --config Release --prefix %BAZEL_SHORT_PATH%\openvino
 if !errorlevel! neq 0 exit /b !errorlevel!
+copy src\cpp\openvino\genai\version.hpp %BAZEL_SHORT_PATH%\openvino\runtime\include\openvino\genai\
+if !errorlevel! neq 0 exit /b !errorlevel!
 
 echo [INFO] OpenVINO from source installed: %BAZEL_SHORT_PATH%\openvino
 cd !BACK_CWD!
