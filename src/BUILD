@@ -255,7 +255,7 @@ ovms_cc_library(
     name = "libovms_version",
     hdrs = ["version.hpp"],
     srcs = [],
-    deps = [],
+    deps = ["//third_party:openvino",],
     visibility = ["//visibility:public",],
 )
 ovms_cc_library(

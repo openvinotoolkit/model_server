@@ -248,6 +248,7 @@ git checkout %OV_SOURCE_BRANCH%
 if !errorlevel! neq 0 exit /b !errorlevel!
 git submodule update --init --recursive
 if !errorlevel! neq 0 exit /b !errorlevel!
+git pull --recurse-submodules
 IF /I NOT EXIST build (
     mkdir build
 )
@@ -271,6 +272,7 @@ cd %BAZEL_SHORT_PATH%\openvino_tokenizers_src
 git fetch origin
 git checkout %TOKENIZER_SOURCE_BRANCH%
 if !errorlevel! neq 0 exit /b !errorlevel!
+git pull --recurse-submodules
 IF /I NOT EXIST build (
     mkdir build
 )
@@ -292,6 +294,7 @@ cd %BAZEL_SHORT_PATH%\openvino_genai_src
 git fetch origin
 git checkout %GENAI_SOURCE_BRANCH%
 if !errorlevel! neq 0 exit /b !errorlevel!
+git pull --recurse-submodules
 IF /I NOT EXIST build (
     mkdir build
 )
@@ -301,6 +304,8 @@ if !errorlevel! neq 0 exit /b !errorlevel!
 cmake --build . --config Release --verbose -j
 if !errorlevel! neq 0 exit /b !errorlevel!
 cmake --install . --config Release --prefix %BAZEL_SHORT_PATH%\openvino
+if !errorlevel! neq 0 exit /b !errorlevel!
+copy src\cpp\openvino\genai\version.hpp %BAZEL_SHORT_PATH%\openvino\runtime\include\openvino\genai\
 if !errorlevel! neq 0 exit /b !errorlevel!
 
 echo [INFO] OpenVINO from source installed: %BAZEL_SHORT_PATH%\openvino
