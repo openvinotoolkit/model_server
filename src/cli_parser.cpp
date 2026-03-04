@@ -444,6 +444,7 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
             std::string project_version(PROJECT_VERSION);
             ss << project_name + " " + project_version << std::endl;
             ss << "OpenVINO backend " << OPENVINO_NAME << std::endl;
+            ss << "OpenVINO GenAI backend " << GENAI_NAME << std::endl;
             ss << "Bazel build flags: " << BAZEL_BUILD_FLAGS << std::endl;
 #pragma warning(pop)
             return std::make_pair(OVMS_EX_OK, ss.str());
