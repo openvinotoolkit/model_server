@@ -36,7 +36,15 @@ struct VisualLanguageModelLegacyServableExecutionContext : public GenAiServableE
     std::string inputText;
     // Workaround needed to pass generation config to the executor that requires it
     ov::genai::GenerationConfig baseGenerationConfig;
-    bool success = true;
+    bool success{true};
+
+    // Disconnection handling
+    std::atomic<bool> clientDisconnected{false};
+
+    void signalDisconnection() {
+        clientDisconnected = true;
+        executionInProgress.notify_all();
+    }
 };
 
 struct VisualLanguageModelLegacyServableProperties : public GenAiServableProperties {

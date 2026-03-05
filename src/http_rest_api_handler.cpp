@@ -693,6 +693,12 @@ struct V3StreamCallbackResourceGuard {
     CopyableObjectWrapper<HttpPayload>& requestWrapper;
     std::shared_ptr<HttpAsyncWriter>& serverReaderWriter;
 
+    V3StreamCallbackResourceGuard() = delete;
+    V3StreamCallbackResourceGuard(const V3StreamCallbackResourceGuard&) = delete;
+    V3StreamCallbackResourceGuard& operator=(const V3StreamCallbackResourceGuard&) = delete;
+    V3StreamCallbackResourceGuard& operator=(V3StreamCallbackResourceGuard&&) = delete;
+    V3StreamCallbackResourceGuard(V3StreamCallbackResourceGuard&&) = delete;
+
     V3StreamCallbackResourceGuard(
         CopyableObjectWrapper<MediapipeGraphExecutor>& executorWrapper,
         CopyableObjectWrapper<HttpPayload>& requestWrapper,

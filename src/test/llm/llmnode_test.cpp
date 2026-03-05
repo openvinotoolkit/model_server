@@ -244,7 +244,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJson) {
     auto params = GetParam();
     config.max_new_tokens = 5;
     config.rng_seed = 1;
-    config.num_beams = 16;
+    config.temperature = 0;
     if (params.generateExpectedOutput) {
         ASSERT_EQ(generateExpectedText("What is OpenVINO?"), 0);
         ASSERT_EQ(config.num_return_sequences, expectedMessages.size());
@@ -255,7 +255,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJson) {
                               R"(",
             "stream": false,
             "seed" : 1,
-            "best_of": 16,
+            "temperature": 0,
             "max_tokens": 5,
             "prompt": "What is OpenVINO?"
         }
@@ -455,7 +455,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJsonEchoWithCompletion) {
 
     config.max_new_tokens = 5;
     config.rng_seed = 1;
-    config.num_beams = 16;
+    config.temperature = 0;
     config.echo = true;
     if (params.generateExpectedOutput) {
         ASSERT_EQ(generateExpectedText("What is OpenVINO?"), 0);
@@ -467,7 +467,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJsonEchoWithCompletion) {
                               R"(",
             "stream": false,
             "seed" : 1,
-            "best_of": 16,
+            "temperature": 0,
             "max_tokens": 5,
             "prompt": "What is OpenVINO?",
             "echo": true
@@ -843,9 +843,8 @@ TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJsonNFail) {
                               R"(",
             "stream": false,
             "seed" : 1,
-            "best_of": 2,
-            "n": 3,
-            "max_tokens": 5,
+            "temperature": 0,
+            "max_tokens": -5,
             "prompt": "What is OpenVINO?"
         }
     )";
@@ -863,8 +862,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJsonN) {
     }
     config.max_new_tokens = 5;
     config.rng_seed = 1;
-    config.num_beams = 16;
-    config.num_return_sequences = 8;
+    config.temperature = 0;
     config.echo = false;
     if (params.generateExpectedOutput) {
         ASSERT_EQ(generateExpectedText("What is OpenVINO?"), 0);
@@ -876,8 +874,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJsonN) {
                               R"(",
             "stream": false,
             "seed" : 1,
-            "best_of": 16,
-            "n": 8,
+            "temperature": 0,
             "max_tokens": 5,
             "prompt": "What is OpenVINO?"
         }
@@ -888,7 +885,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJsonN) {
         ovms::StatusCode::OK);
     parsedResponse.Parse(response.c_str());
     ASSERT_TRUE(parsedResponse["choices"].IsArray());
-    ASSERT_EQ(parsedResponse["choices"].Capacity(), 8);
+    ASSERT_EQ(parsedResponse["choices"].Size(), 1);
     int i = 0;
     for (auto& choice : parsedResponse["choices"].GetArray()) {
         ASSERT_TRUE(choice["finish_reason"].IsString());
@@ -908,7 +905,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJsonN) {
     ASSERT_TRUE(parsedResponse["usage"].GetObject()["prompt_tokens"].IsInt());
     ASSERT_TRUE(parsedResponse["usage"].GetObject()["completion_tokens"].IsInt());
     ASSERT_TRUE(parsedResponse["usage"].GetObject()["total_tokens"].IsInt());
-    ASSERT_EQ(parsedResponse["usage"].GetObject()["completion_tokens"].GetInt(), 8 * 5 /* n * max_tokens */);
+    ASSERT_EQ(parsedResponse["usage"].GetObject()["completion_tokens"].GetInt(), 5 /* max_tokens */);
     EXPECT_STREQ(parsedResponse["model"].GetString(), params.modelName.c_str());
     EXPECT_STREQ(parsedResponse["object"].GetString(), "text_completion");
 }
@@ -921,9 +918,8 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsJsonNFail) {
                               R"(",
             "stream": false,
             "seed" : 1,
-            "best_of" : 2,
-            "n" : 3,
-            "max_tokens": 5,
+            "temperature": 0,
+            "max_tokens": -5,
             "messages": [
             {
                 "role": "user",
@@ -943,8 +939,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsJsonN) {
     auto params = GetParam();
     config.max_new_tokens = 5;
     config.rng_seed = 1;
-    config.num_beams = 16;
-    config.num_return_sequences = 8;
+    config.temperature = 0;
     config.echo = false;
     if (params.generateExpectedOutput) {
         ASSERT_EQ(generateExpectedText("What is OpenVINO?", false, true), 0);
@@ -956,8 +951,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsJsonN) {
                               R"(",
             "stream": false,
             "seed" : 1,
-            "best_of" : 16,
-            "n" : 8,
+            "temperature": 0,
             "max_tokens": 5,
             "messages": [
             {
@@ -973,7 +967,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsJsonN) {
         ovms::StatusCode::OK);
     parsedResponse.Parse(response.c_str());
     ASSERT_TRUE(parsedResponse["choices"].IsArray());
-    ASSERT_EQ(parsedResponse["choices"].Capacity(), 8);
+    ASSERT_EQ(parsedResponse["choices"].Size(), 1);
     int i = 0;
     for (auto& choice : parsedResponse["choices"].GetArray()) {
         ASSERT_TRUE(choice["finish_reason"].IsString());
@@ -996,7 +990,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsJsonN) {
     ASSERT_TRUE(parsedResponse["usage"].GetObject()["prompt_tokens"].IsInt());
     ASSERT_TRUE(parsedResponse["usage"].GetObject()["completion_tokens"].IsInt());
     ASSERT_TRUE(parsedResponse["usage"].GetObject()["total_tokens"].IsInt());
-    ASSERT_EQ(parsedResponse["usage"].GetObject()["completion_tokens"].GetInt(), 8 * 5 /* n * max_tokens */);
+    ASSERT_EQ(parsedResponse["usage"].GetObject()["completion_tokens"].GetInt(), 5 /* max_tokens */);
     EXPECT_STREQ(parsedResponse["model"].GetString(), params.modelName.c_str());
     EXPECT_STREQ(parsedResponse["object"].GetString(), "chat.completion");
 }
@@ -1028,7 +1022,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsJson) {
                               R"(",
             "stream": false,
             "seed" : 1,
-            "best_of" : 16,
+            "temperature": 0,
             "max_tokens": 5,
             "messages": [
             {
@@ -1077,7 +1071,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsJsonContentArray) {
                               R"(",
             "stream": false,
             "seed" : 1,
-            "best_of" : 16,
+            "temperature": 0,
             "max_tokens": 5,
             "messages": [
             {
@@ -1126,7 +1120,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsJsonContentArrayWithIma
                               R"(",
             "stream": false,
             "seed" : 1,
-            "best_of" : 16,
+            "temperature": 0,
             "max_tokens": 5,
             "messages": [
             {
@@ -1156,8 +1150,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsJsonNMultipleStopString
                               R"(",
             "stream": false,
             "seed" : 1,
-            "best_of" : 4,
-            "n": 4,
+            "temperature": 0,
             "max_tokens": 50,
             "stop": [".", ","],
             "include_stop_str_in_output": true,
@@ -1175,7 +1168,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsJsonNMultipleStopString
         ovms::StatusCode::OK);
     parsedResponse.Parse(response.c_str());
     ASSERT_TRUE(parsedResponse["choices"].IsArray());
-    ASSERT_EQ(parsedResponse["choices"].Capacity(), 4);
+    ASSERT_EQ(parsedResponse["choices"].Size(), 1);
     int i = 0;
     for (auto& choice : parsedResponse["choices"].GetArray()) {
         if (params.checkFinishReason) {
@@ -2242,41 +2235,21 @@ TEST_P(LLMFlowHttpTestParameterized, streamChatCompletionsUsage) {
 
     std::vector<std::string> responses;
 
-    if (params.modelName.find("cb") != std::string::npos) {
-        EXPECT_CALL(*writer, PartialReply(::testing::_))
-            .WillRepeatedly([this, &responses](std::string response) {
-                responses.push_back(response);
-            });
-        EXPECT_CALL(*writer, PartialReplyEnd()).Times(1);
-        ASSERT_EQ(
-            handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
-            ovms::StatusCode::PARTIAL_END);
+    EXPECT_CALL(*writer, PartialReply(::testing::_))
+        .WillRepeatedly([this, &responses](std::string response) {
+            responses.push_back(response);
+        });
+    EXPECT_CALL(*writer, PartialReplyEnd()).Times(1);
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::PARTIAL_END);
 
-        ASSERT_GT(responses.size(), 0);
-        ASSERT_TRUE(responses.back().find("\"completion_tokens\":5") != std::string::npos) << responses.back();  // ensure 5 - reaching max_tokens
-        ASSERT_TRUE(responses.back().find("\"prompt_tokens\"") != std::string::npos) << responses.back();        // this is always present and > 0, depends on pipeline type and underlying model
-        ASSERT_TRUE(responses.back().find("\"total_tokens\"") != std::string::npos) << responses.back();         // this is always present and > 0, depends on pipeline type and underlying model
-        if (params.checkFinishReason) {
-            ASSERT_TRUE(responses.back().find("\"finish_reason\":\"length\"") != std::string::npos) << responses.back();
-        }
-        // For non-continuous batching servables usage is always 0
-    } else {
-        EXPECT_CALL(*writer, PartialReply(::testing::_))
-            .WillRepeatedly([this, &responses](std::string response) {
-                responses.push_back(response);
-            });
-        EXPECT_CALL(*writer, PartialReplyEnd()).Times(1);
-        ASSERT_EQ(
-            handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
-            ovms::StatusCode::PARTIAL_END);
-
-        ASSERT_GT(responses.size(), 0);
-        ASSERT_TRUE(responses.back().find("\"completion_tokens\":0") != std::string::npos) << responses.back();  // ensure 0
-        ASSERT_TRUE(responses.back().find("\"prompt_tokens\"") != std::string::npos) << responses.back();        // this is always present and > 0, depends on pipeline type and underlying model
-        ASSERT_TRUE(responses.back().find("\"total_tokens\"") != std::string::npos) << responses.back();         // this is always present and > 0, depends on pipeline type and underlying model
-        if (params.checkFinishReason) {
-            ASSERT_TRUE(responses.back().find("\"finish_reason\":\"length\"") != std::string::npos) << responses.back();
-        }
+    ASSERT_GT(responses.size(), 0);
+    ASSERT_TRUE(responses.back().find("\"completion_tokens\":5") != std::string::npos) << responses.back();  // ensure 5 - reaching max_tokens
+    ASSERT_TRUE(responses.back().find("\"prompt_tokens\"") != std::string::npos) << responses.back();        // this is always present and > 0, depends on pipeline type and underlying model
+    ASSERT_TRUE(responses.back().find("\"total_tokens\"") != std::string::npos) << responses.back();         // this is always present and > 0, depends on pipeline type and underlying model
+    if (params.checkFinishReason) {
+        ASSERT_TRUE(responses.back().find("\"finish_reason\":\"length\"") != std::string::npos) << responses.back();
     }
 }
 
@@ -2301,39 +2274,20 @@ TEST_P(LLMFlowHttpTestParameterized, streamCompletionsUsage) {
 
     std::vector<std::string> responses;
 
-    if (params.modelName.find("cb") != std::string::npos) {
-        EXPECT_CALL(*writer, PartialReply(::testing::_))
-            .WillRepeatedly([this, &responses](std::string response) {
-                responses.push_back(response);
-            });
-        EXPECT_CALL(*writer, PartialReplyEnd()).Times(1);
-        ASSERT_EQ(
-            handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
-            ovms::StatusCode::PARTIAL_END);
+    EXPECT_CALL(*writer, PartialReply(::testing::_))
+        .WillRepeatedly([this, &responses](std::string response) {
+            responses.push_back(response);
+        });
+    EXPECT_CALL(*writer, PartialReplyEnd()).Times(1);
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::PARTIAL_END);
 
-        ASSERT_TRUE(responses.back().find("\"completion_tokens\":5") != std::string::npos) << responses.back();  // ensure 5 - reaching max_tokens
-        ASSERT_TRUE(responses.back().find("\"prompt_tokens\"") != std::string::npos) << responses.back();        // this is always present and > 0, depends on pipeline type and underlying model
-        ASSERT_TRUE(responses.back().find("\"total_tokens\"") != std::string::npos) << responses.back();         // this is always present and > 0, depends on pipeline type and underlying model
-        if (params.checkFinishReason) {
-            ASSERT_TRUE(responses.back().find("\"finish_reason\":\"length\"") != std::string::npos) << responses.back();
-        }
-        // For non-continuous batching servables usage is always 0
-    } else {
-        EXPECT_CALL(*writer, PartialReply(::testing::_))
-            .WillRepeatedly([this, &responses](std::string response) {
-                responses.push_back(response);
-            });
-        EXPECT_CALL(*writer, PartialReplyEnd()).Times(1);
-        ASSERT_EQ(
-            handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
-            ovms::StatusCode::PARTIAL_END);
-
-        ASSERT_TRUE(responses.back().find("\"completion_tokens\":0") != std::string::npos) << responses.back();  // ensure 0
-        ASSERT_TRUE(responses.back().find("\"prompt_tokens\"") != std::string::npos) << responses.back();        // this is always present and > 0, depends on pipeline type and underlying model
-        ASSERT_TRUE(responses.back().find("\"total_tokens\"") != std::string::npos) << responses.back();         // this is always present and > 0, depends on pipeline type and underlying model
-        if (params.checkFinishReason) {
-            ASSERT_TRUE(responses.back().find("\"finish_reason\":\"length\"") != std::string::npos) << responses.back();
-        }
+    ASSERT_TRUE(responses.back().find("\"completion_tokens\":5") != std::string::npos) << responses.back();  // ensure 5 - reaching max_tokens
+    ASSERT_TRUE(responses.back().find("\"prompt_tokens\"") != std::string::npos) << responses.back();        // this is always present and > 0, depends on pipeline type and underlying model
+    ASSERT_TRUE(responses.back().find("\"total_tokens\"") != std::string::npos) << responses.back();         // this is always present and > 0, depends on pipeline type and underlying model
+    if (params.checkFinishReason) {
+        ASSERT_TRUE(responses.back().find("\"finish_reason\":\"length\"") != std::string::npos) << responses.back();
     }
 }
 
