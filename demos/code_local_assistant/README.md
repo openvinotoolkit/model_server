@@ -7,6 +7,7 @@ With the rise of AI PC capabilities, hosting own Visual Studio code assistant is
 - Windows (for standalone app) or Linux (using Docker)
 - Python installed (for model preparation only)
 - Intel Meteor Lake, Lunar Lake, Arrow Lake or Panther Lake.
+- Mixture of Experts models like gpt-oss-20b and Qwen3-Coder-30B are supported only on GPU with platform Xe2+ (Panther Lake iGPU, Lunar Lake iGPU and ARC B50/B60 dGPU)
 - Memory requirements depend on the model size
 
 ### Windows: deploying on bare metal
