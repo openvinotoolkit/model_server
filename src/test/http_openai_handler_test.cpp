@@ -14,6 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 #include <chrono>
+#include <functional>
 #include <map>
 #include <memory>
 #include <string>
@@ -314,60 +315,6 @@ TEST_F(HttpOpenAIHandlerTest, JsonBodyValidButNotAnObject) {
     ASSERT_EQ(status.string(), "The file is not valid json - JSON body must be an object");
 }
 
-TEST_F(HttpOpenAIHandlerTest, ModelFieldMissing) {
-    std::string requestBody = R"(
-        {
-            "stream": true,
-            "messages": []
-        }
-    )";
-
-    EXPECT_CALL(*writer, PartialReplyEnd()).Times(0);
-    EXPECT_CALL(*writer, PartialReply(::testing::_)).Times(0);
-    EXPECT_CALL(*writer, IsDisconnected()).Times(0);
-
-    auto status = handler->dispatchToProcessor("/v3/completions", requestBody, &response, comp, responseComponents, writer, multiPartParser);
-    ASSERT_EQ(status, ovms::StatusCode::JSON_INVALID);
-    ASSERT_EQ(status.string(), "The file is not valid json - model field is missing in JSON body");
-}
-
-TEST_F(HttpOpenAIHandlerTest, ModelFieldNotAString) {
-    std::string requestBody = R"(
-        {
-            "model": 2,
-            "stream": true,
-            "messages": []
-        }
-    )";
-
-    EXPECT_CALL(*writer, PartialReplyEnd()).Times(0);
-    EXPECT_CALL(*writer, PartialReply(::testing::_)).Times(0);
-    EXPECT_CALL(*writer, IsDisconnected()).Times(0);
-
-    auto status = handler->dispatchToProcessor("/v3/completions", requestBody, &response, comp, responseComponents, writer, multiPartParser);
-    ASSERT_EQ(status, ovms::StatusCode::JSON_INVALID);
-    ASSERT_EQ(status.string(), "The file is not valid json - model field is not a string");
-}
-
-TEST_F(HttpOpenAIHandlerTest, StreamFieldNotABoolean) {
-    std::string requestBody = R"(
-        {
-            "model": "gpt",
-            "stream": 2,
-            "messages": []
-        }
-    )";
-
-    EXPECT_CALL(*writer, PartialReplyBegin(::testing::_)).Times(0);
-    EXPECT_CALL(*writer, PartialReplyEnd()).Times(0);
-    EXPECT_CALL(*writer, PartialReply(::testing::_)).Times(0);
-    EXPECT_CALL(*writer, IsDisconnected()).Times(0);
-
-    auto status = handler->dispatchToProcessor("/v3/completions", requestBody, &response, comp, responseComponents, writer, multiPartParser);
-    ASSERT_EQ(status, ovms::StatusCode::JSON_INVALID);
-    ASSERT_EQ(status.string(), "The file is not valid json - stream field is not a boolean");
-}
-
 TEST_F(HttpOpenAIHandlerTest, GraphWithANameDoesNotExist) {
     std::string requestBody = R"(
         {
@@ -422,6 +369,220 @@ protected:
         EXPECT_EQ(json, expectedJson);
     }
 };
+
+class HttpOpenAIHandlerCommonParsingValidationTest : public HttpOpenAIHandlerParsingTest,
+                           public ::testing::WithParamInterface<ovms::Endpoint> {
+protected:
+  ovms::Endpoint endpoint() const {
+    return GetParam();
+  }
+
+  std::string createRequestWithRawStreamValue(const std::string& streamRawValue) const {
+    if (endpoint() == ovms::Endpoint::COMPLETIONS) {
+      return std::string("{\"model\":\"llama\",\"stream\":") + streamRawValue + ",\"prompt\":\"valid prompt\"}";
+    }
+    if (endpoint() == ovms::Endpoint::RESPONSES) {
+      return std::string("{\"model\":\"llama\",\"stream\":") + streamRawValue + ",\"input\":\"valid prompt\"}";
+    }
+    return std::string("{\"model\":\"llama\",\"stream\":") + streamRawValue + ",\"messages\":[{\"role\":\"user\",\"content\":\"valid prompt\"}]}";
+  }
+
+  std::string createRequestWithoutModel() const {
+    if (endpoint() == ovms::Endpoint::COMPLETIONS) {
+      return "{\"prompt\":\"valid prompt\"}";
+    }
+    if (endpoint() == ovms::Endpoint::RESPONSES) {
+      return "{\"input\":\"valid prompt\"}";
+    }
+    return "{\"messages\":[{\"role\":\"user\",\"content\":\"valid prompt\"}]}";
+  }
+
+  std::string createRequestWithNonStringModel() const {
+    if (endpoint() == ovms::Endpoint::COMPLETIONS) {
+      return "{\"model\":2,\"prompt\":\"valid prompt\"}";
+    }
+    if (endpoint() == ovms::Endpoint::RESPONSES) {
+      return "{\"model\":2,\"input\":\"valid prompt\"}";
+    }
+    return "{\"model\":2,\"messages\":[{\"role\":\"user\",\"content\":\"valid prompt\"}]}";
+  }
+};
+
+TEST_P(HttpOpenAIHandlerCommonParsingValidationTest, StreamFieldNotABooleanFails) {
+  std::string json = createRequestWithRawStreamValue("2");
+  doc.Parse(json.c_str());
+  ASSERT_FALSE(doc.HasParseError());
+
+  std::optional<uint32_t> maxTokensLimit;
+  uint32_t bestOfLimit = 0;
+  std::optional<uint32_t> maxModelLength;
+  std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler =
+    std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, endpoint(), std::chrono::system_clock::now(), *tokenizer);
+
+  EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::InvalidArgumentError("Stream is not bool"));
+}
+
+TEST_P(HttpOpenAIHandlerCommonParsingValidationTest, ModelFieldMissingFails) {
+  std::string json = createRequestWithoutModel();
+  doc.Parse(json.c_str());
+  ASSERT_FALSE(doc.HasParseError());
+
+  std::optional<uint32_t> maxTokensLimit;
+  uint32_t bestOfLimit = 0;
+  std::optional<uint32_t> maxModelLength;
+  std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler =
+    std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, endpoint(), std::chrono::system_clock::now(), *tokenizer);
+
+  EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::InvalidArgumentError("model missing in request"));
+}
+
+TEST_P(HttpOpenAIHandlerCommonParsingValidationTest, ModelFieldNotStringFails) {
+  std::string json = createRequestWithNonStringModel();
+  doc.Parse(json.c_str());
+  ASSERT_FALSE(doc.HasParseError());
+
+  std::optional<uint32_t> maxTokensLimit;
+  uint32_t bestOfLimit = 0;
+  std::optional<uint32_t> maxModelLength;
+  std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler =
+    std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, endpoint(), std::chrono::system_clock::now(), *tokenizer);
+
+  EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::InvalidArgumentError("model is not a string"));
+}
+
+INSTANTIATE_TEST_SUITE_P(
+  CommonParsingValidation,
+  HttpOpenAIHandlerCommonParsingValidationTest,
+  ::testing::Values(ovms::Endpoint::CHAT_COMPLETIONS, ovms::Endpoint::COMPLETIONS, ovms::Endpoint::RESPONSES),
+  [](const testing::TestParamInfo<ovms::Endpoint>& info) {
+    switch (info.param) {
+    case ovms::Endpoint::CHAT_COMPLETIONS:
+      return "ChatCompletions";
+    case ovms::Endpoint::COMPLETIONS:
+      return "Completions";
+    case ovms::Endpoint::RESPONSES:
+      return "Responses";
+    default:
+      return "Unknown";
+    }
+  });
+
+  class HttpOpenAIHandlerChatAndResponsesParsingTest : public HttpOpenAIHandlerParsingTest,
+                             public ::testing::WithParamInterface<ovms::Endpoint> {
+  protected:
+    ovms::Endpoint endpoint() const {
+      return GetParam();
+    }
+
+    std::string createTextRequest(const std::string& text, const std::string& extraJsonFields = "") const {
+      if (endpoint() == ovms::Endpoint::RESPONSES) {
+        return std::string("{\"model\":\"llama\",\"input\":\"") + text + "\"" + extraJsonFields + "}";
+      }
+      return std::string("{\"model\":\"llama\",\"messages\":[{\"role\":\"user\",\"content\":\"") + text + "\"}]" + extraJsonFields + "}";
+    }
+
+    std::string createMultimodalRequestWithImageUrl(const std::string& dataUrl) const {
+      if (endpoint() == ovms::Endpoint::RESPONSES) {
+        return std::string("{\"model\":\"llama\",\"input\":[{\"role\":\"user\",\"content\":[{\"type\":\"input_text\",\"text\":\"what is in this image?\"},{\"type\":\"input_image\",\"image_url\":\"") + dataUrl + "\"}]}] }";
+      }
+      return std::string("{\"model\":\"llama\",\"messages\":[{\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"what is in this image?\"},{\"type\":\"image_url\",\"image_url\":{\"url\":\"") + dataUrl + "\"}}]}]}";
+    }
+
+    std::string createToolRequest(const std::string& toolChoiceJson) const {
+      std::string base = createTextRequest("What is the weather like in Boston today?", ",\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"get_current_weather\",\"parameters\":{\"type\":\"object\",\"properties\":{\"location\":{\"type\":\"string\"}},\"required\":[\"location\"]}}}]");
+      if (toolChoiceJson.empty()) {
+        return base;
+      }
+      base.pop_back();  // remove trailing '}'
+      base += ",\"tool_choice\":" + toolChoiceJson + "}";
+      return base;
+    }
+
+    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> parseCurrentRequest(const std::string& json) {
+      doc.Parse(json.c_str());
+      EXPECT_FALSE(doc.HasParseError()) << json;
+      std::optional<uint32_t> maxTokensLimit;
+      uint32_t bestOfLimit = 0;
+      std::optional<uint32_t> maxModelLength;
+      std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler =
+        std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, endpoint(), std::chrono::system_clock::now(), *tokenizer);
+      EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus()) << json;
+      return apiHandler;
+    }
+  };
+
+  TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingTextInputCreatesUserChatMessage) {
+    std::string json = createTextRequest("What is OpenVINO?");
+    auto apiHandler = parseCurrentRequest(json);
+
+    auto& chatHistory = apiHandler->getChatHistory();
+    ASSERT_EQ(chatHistory.size(), 1);
+    ASSERT_TRUE(chatHistory[0].contains("role"));
+    ASSERT_TRUE(chatHistory[0].contains("content"));
+    EXPECT_EQ(chatHistory[0]["role"], "user");
+    EXPECT_EQ(chatHistory[0]["content"], "What is OpenVINO?");
+    if (endpoint() == ovms::Endpoint::RESPONSES) {
+      EXPECT_NE(apiHandler->getProcessedJson().find("\"messages\""), std::string::npos);
+    } else {
+      EXPECT_TRUE(apiHandler->getProcessedJson().empty());
+    }
+  }
+
+  TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingTokenLimitSetsMaxTokens) {
+    std::string tokenField = endpoint() == ovms::Endpoint::RESPONSES ? "max_output_tokens" : "max_completion_tokens";
+    std::string json = createTextRequest("valid prompt", ",\"" + tokenField + "\":7");
+    auto apiHandler = parseCurrentRequest(json);
+
+    EXPECT_TRUE(apiHandler->getMaxTokens().has_value());
+    EXPECT_EQ(apiHandler->getMaxTokens().value(), 7);
+  }
+
+  TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingFunctionToolsWithAutoChoiceSucceeds) {
+    std::string json = createToolRequest("\"auto\"");
+    auto apiHandler = parseCurrentRequest(json);
+
+    EXPECT_TRUE(apiHandler->areToolsAvailable());
+    EXPECT_EQ(apiHandler->getToolChoice(), "auto");
+  }
+
+  TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingToolChoiceFunctionObjectSucceeds) {
+    std::string json = createToolRequest("{\"type\":\"function\",\"function\":{\"name\":\"get_current_weather\"}}");
+    auto apiHandler = parseCurrentRequest(json);
+
+    EXPECT_TRUE(apiHandler->areToolsAvailable());
+    EXPECT_EQ(apiHandler->getToolChoice(), "get_current_weather");
+  }
+
+  TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingToolChoiceNoneRemovesTools) {
+    std::string json = createToolRequest("\"none\"");
+    auto apiHandler = parseCurrentRequest(json);
+
+    EXPECT_FALSE(apiHandler->areToolsAvailable());
+    EXPECT_EQ(apiHandler->getToolChoice(), "none");
+  }
+
+  TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingMultimodalInputImageSucceeds) {
+    const std::string base64Image = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAAEElEQVR4nGLK27oAEAAA//8DYAHGgEvy5AAAAABJRU5ErkJggg==";
+    std::string json = createMultimodalRequestWithImageUrl(base64Image);
+    auto apiHandler = parseCurrentRequest(json);
+
+    EXPECT_EQ(apiHandler->getImageHistory().size(), 1);
+  }
+
+  INSTANTIATE_TEST_SUITE_P(
+    ChatAndResponses,
+    HttpOpenAIHandlerChatAndResponsesParsingTest,
+    ::testing::Values(ovms::Endpoint::CHAT_COMPLETIONS, ovms::Endpoint::RESPONSES),
+    [](const testing::TestParamInfo<ovms::Endpoint>& info) {
+      switch (info.param) {
+      case ovms::Endpoint::CHAT_COMPLETIONS:
+        return "ChatCompletions";
+      case ovms::Endpoint::RESPONSES:
+        return "Responses";
+      default:
+        return "Unknown";
+      }
+    });
 
 static std::vector<int64_t> createHermes3ToolCallTokens(ov::genai::Tokenizer& tokenizer) {
     std::string toolCall = R"(<tool_call>{"name": "example_tool", "arguments": {"arg1": "value1", "arg2": 42}}</tool_call>)";
