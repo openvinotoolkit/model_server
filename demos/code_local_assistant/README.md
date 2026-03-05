@@ -1,11 +1,11 @@
 # Visual Studio Code Local Assistant {#ovms_demos_code_completion_vsc}
 
 ## Intro
-With the rise of AI PC capabilities, hosting own Visual Studio code assistant is at your reach. In this demo, we will showcase how to deploy local LLM serving with OVMS and integrate it with Continue extension. It will employ GPU acceleration.
+With the rise of AI PC capabilities, hosting own Visual Studio code assistant is at your reach. In this demo, we will showcase how to deploy local LLM serving with OVMS and integrate it with Continue extension. It focuses on employing GPU with one NPU acceleration example.
 
 # Requirements
 - Windows (for standalone app) or Linux (using Docker)
-- Python installed (for model preparation only)
+- Python installed (for client application usage only)
 - Intel Meteor Lake, Lunar Lake, Arrow Lake or Panther Lake.
 - Mixture of Experts models like gpt-oss-20b and Qwen3-Coder-30B are supported only on GPU with platform Xe2+ (Panther Lake iGPU, Lunar Lake iGPU and ARC B50/B60 dGPU)
 - Memory requirements depend on the model size
