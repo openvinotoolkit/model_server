@@ -301,125 +301,6 @@ absl::Status normalizeResponsesFunctionToolsInPlace(rapidjson::Document& doc) {
     return absl::OkStatus();
 }
 
-absl::Status normalizeResponsesInputToMessagesInPlace(rapidjson::Document& doc) {
-    auto inputIt = doc.FindMember("input");
-    if (inputIt == doc.MemberEnd()) {
-        return absl::InvalidArgumentError("input missing in request");
-    }
-    auto& allocator = doc.GetAllocator();
-    if (inputIt->value.IsString()) {
-        rapidjson::Value messages(rapidjson::kArrayType);
-        rapidjson::Value messageObj(rapidjson::kObjectType);
-        messageObj.AddMember("role", "user", allocator);
-        messageObj.AddMember("content", rapidjson::Value(inputIt->value.GetString(), allocator), allocator);
-        messages.PushBack(messageObj, allocator);
-
-        auto existingMessages = doc.FindMember("messages");
-        if (existingMessages != doc.MemberEnd()) {
-            existingMessages->value = messages;
-        } else {
-            doc.AddMember("messages", messages, allocator);
-        }
-        return absl::OkStatus();
-    }
-    if (!inputIt->value.IsArray()) {
-        return absl::InvalidArgumentError("input is not a string or array");
-    }
-
-    rapidjson::Value messages(rapidjson::kArrayType);
-    for (auto& item : inputIt->value.GetArray()) {
-        if (!item.IsObject()) {
-            return absl::InvalidArgumentError("input array items must be objects");
-        }
-
-        auto itemObj = item.GetObject();
-        auto roleIt = itemObj.FindMember("role");
-        if (roleIt == itemObj.MemberEnd() || !roleIt->value.IsString()) {
-            return absl::InvalidArgumentError("input item role is missing or invalid");
-        }
-
-        rapidjson::Value messageObj(rapidjson::kObjectType);
-        messageObj.AddMember("role", rapidjson::Value(roleIt->value.GetString(), allocator), allocator);
-
-        auto contentIt = itemObj.FindMember("content");
-        if (contentIt == itemObj.MemberEnd()) {
-            return absl::InvalidArgumentError("input item content is missing");
-        }
-
-        if (contentIt->value.IsString()) {
-            messageObj.AddMember("content", rapidjson::Value(contentIt->value.GetString(), allocator), allocator);
-            messages.PushBack(messageObj, allocator);
-            continue;
-        }
-
-        if (!contentIt->value.IsArray()) {
-            return absl::InvalidArgumentError("input item content must be a string or array");
-        }
-
-        rapidjson::Value normalizedContent(rapidjson::kArrayType);
-        for (auto& contentItem : contentIt->value.GetArray()) {
-            if (!contentItem.IsObject()) {
-                return absl::InvalidArgumentError("input content items must be objects");
-            }
-            auto contentObj = contentItem.GetObject();
-            auto typeIt = contentObj.FindMember("type");
-            if (typeIt == contentObj.MemberEnd() || !typeIt->value.IsString()) {
-                return absl::InvalidArgumentError("input content item type is missing or invalid");
-            }
-
-            std::string type = typeIt->value.GetString();
-            if (type == "input_text") {
-                auto textIt = contentObj.FindMember("text");
-                if (textIt == contentObj.MemberEnd() || !textIt->value.IsString()) {
-                    return absl::InvalidArgumentError("input_text requires a valid text field");
-                }
-                rapidjson::Value textObj(rapidjson::kObjectType);
-                textObj.AddMember("type", "text", allocator);
-                textObj.AddMember("text", rapidjson::Value(textIt->value.GetString(), allocator), allocator);
-                normalizedContent.PushBack(textObj, allocator);
-            } else if (type == "input_image") {
-                std::string imageUrl;
-                auto imageUrlIt = contentObj.FindMember("image_url");
-                if (imageUrlIt == contentObj.MemberEnd()) {
-                    return absl::InvalidArgumentError("input_image requires image_url field");
-                }
-                if (imageUrlIt->value.IsString()) {
-                    imageUrl = imageUrlIt->value.GetString();
-                } else if (imageUrlIt->value.IsObject()) {
-                    auto imageUrlObj = imageUrlIt->value.GetObject();
-                    auto urlIt = imageUrlObj.FindMember("url");
-                    if (urlIt == imageUrlObj.MemberEnd() || !urlIt->value.IsString()) {
-                        return absl::InvalidArgumentError("input_image.image_url.url is missing or invalid");
-                    }
-                    imageUrl = urlIt->value.GetString();
-                } else {
-                    return absl::InvalidArgumentError("input_image.image_url must be a string or object");
-                }
-
-                rapidjson::Value imageUrlObj(rapidjson::kObjectType);
-                imageUrlObj.AddMember("url", rapidjson::Value(imageUrl.c_str(), allocator), allocator);
-
-                rapidjson::Value imageObj(rapidjson::kObjectType);
-                imageObj.AddMember("type", "image_url", allocator);
-                imageObj.AddMember("image_url", imageUrlObj, allocator);
-                normalizedContent.PushBack(imageObj, allocator);
-            } else {
-                return absl::InvalidArgumentError("Unsupported content type");
-            }
-        }
-        messageObj.AddMember("content", normalizedContent, allocator);
-        messages.PushBack(messageObj, allocator);
-    }
-
-    auto existingMessages = doc.FindMember("messages");
-    if (existingMessages != doc.MemberEnd()) {
-        existingMessages->value = messages;
-    } else {
-        doc.AddMember("messages", messages, allocator);
-    }
-    return absl::OkStatus();
-}
-
 }  // namespace
 
 absl::Status OpenAIChatCompletionsHandler::parseCompletionsPart() {
@@ -569,6 +450,193 @@ absl::Status OpenAIChatCompletionsHandler::ensureArgumentsInToolCalls(Value& mes
             }
         }
     }
+    return absl::OkStatus();
+}
+
+absl::Status OpenAIChatCompletionsHandler::parseResponsesInputDirectly(std::optional<std::string> allowedLocalMediaPath, std::optional<std::vector<std::string>> allowedMediaDomains) {
+    auto inputIt = doc.FindMember("input");
+    if (inputIt == doc.MemberEnd()) {
+        return absl::InvalidArgumentError("input missing in request");
+    }
+
+    auto& allocator = doc.GetAllocator();
+    rapidjson::Value messages(rapidjson::kArrayType);
+
+    if (inputIt->value.IsString()) {
+        request.prompt = inputIt->value.GetString();
+        if (!request.prompt.has_value() || request.prompt.value().empty()) {
+            return absl::InvalidArgumentError("input cannot be empty");
+        }
+
+        request.chatHistory.push_back({});
+        request.chatHistory.last()["role"] = "user";
+        request.chatHistory.last()["content"] = request.prompt.value();
+
+        rapidjson::Value messageObj(rapidjson::kObjectType);
+        messageObj.AddMember("role", "user", allocator);
+        messageObj.AddMember("content", rapidjson::Value(request.prompt->c_str(), allocator), allocator);
+        messages.PushBack(messageObj, allocator);
+    } else if (inputIt->value.IsArray()) {
+        if (inputIt->value.GetArray().Size() == 0) {
+            return absl::InvalidArgumentError("Messages array cannot be empty");
+        }
+
+        for (size_t i = 0; i < inputIt->value.GetArray().Size(); ++i) {
+            auto& item = inputIt->value.GetArray()[i];
+            if (!item.IsObject()) {
+                return absl::InvalidArgumentError("input array items must be objects");
+            }
+
+            auto itemObj = item.GetObject();
+            auto roleIt = itemObj.FindMember("role");
+            if (roleIt == itemObj.MemberEnd() || !roleIt->value.IsString()) {
+                return absl::InvalidArgumentError("input item role is missing or invalid");
+            }
+
+            request.chatHistory.push_back({});
+            request.chatHistory.last()["role"] = roleIt->value.GetString();
+
+            rapidjson::Value messageObj(rapidjson::kObjectType);
+            messageObj.AddMember("role", rapidjson::Value(roleIt->value.GetString(), allocator), allocator);
+
+            auto contentIt = itemObj.FindMember("content");
+            if (contentIt == itemObj.MemberEnd()) {
+                return absl::InvalidArgumentError("input item content is missing");
+            }
+
+            if (contentIt->value.IsString()) {
+                messageObj.AddMember("content", rapidjson::Value(contentIt->value.GetString(), allocator), allocator);
+                request.chatHistory.last()["content"] = contentIt->value.GetString();
+                messages.PushBack(messageObj, allocator);
+                continue;
+            }
+
+            if (!contentIt->value.IsArray()) {
+                return absl::InvalidArgumentError("input item content must be a string or array");
+            }
+            if (contentIt->value.GetArray().Size() == 0) {
+                return absl::InvalidArgumentError("Invalid message structure - content array is empty");
+            }
+
+            std::string contentText;
+            for (auto& contentItem : contentIt->value.GetArray()) {
+                if (!contentItem.IsObject()) {
+                    return absl::InvalidArgumentError("input content items must be objects");
+                }
+                auto contentObj = contentItem.GetObject();
+                auto typeIt = contentObj.FindMember("type");
+                if (typeIt == contentObj.MemberEnd() || !typeIt->value.IsString()) {
+                    return absl::InvalidArgumentError("input content item type is missing or invalid");
+                }
+
+                const std::string type = typeIt->value.GetString();
+                if (type == "input_text") {
+                    auto textIt = contentObj.FindMember("text");
+                    if (textIt == contentObj.MemberEnd() || !textIt->value.IsString()) {
+                        return absl::InvalidArgumentError("input_text requires a valid text field");
+                    }
+                    contentText = textIt->value.GetString();
+                } else if (type == "input_image") {
+                    std::string imageUrl;
+                    auto imageUrlIt = contentObj.FindMember("image_url");
+                    if (imageUrlIt == contentObj.MemberEnd()) {
+                        return absl::InvalidArgumentError("input_image requires image_url field");
+                    }
+                    if (imageUrlIt->value.IsString()) {
+                        imageUrl = imageUrlIt->value.GetString();
+                    } else if (imageUrlIt->value.IsObject()) {
+                        auto imageUrlObj = imageUrlIt->value.GetObject();
+                        auto urlIt = imageUrlObj.FindMember("url");
+                        if (urlIt == imageUrlObj.MemberEnd() || !urlIt->value.IsString()) {
+                            return absl::InvalidArgumentError("input_image.image_url.url is missing or invalid");
+                        }
+                        imageUrl = urlIt->value.GetString();
+                    } else {
+                        return absl::InvalidArgumentError("input_image.image_url must be a string or object");
+                    }
+
+                    std::string pattern = "base64,";
+                    std::size_t pos = imageUrl.find(pattern);
+                    std::string decoded;
+                    ov::Tensor tensor;
+                    if (pos != std::string::npos) {
+                        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Loading image from base64 string");
+                        size_t offset = pos + pattern.length();
+                        if (!absl::Base64Unescape(std::string_view(imageUrl.data() + offset, imageUrl.size() - offset), &decoded)) {
+                            return absl::InvalidArgumentError("Invalid base64 string in request");
+                        }
+                        try {
+                            tensor = loadImageStbiFromMemory(decoded);
+                        } catch (std::runtime_error& e) {
+                            std::stringstream ss;
+                            ss << "Image parsing failed: " << e.what();
+                            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, ss.str());
+                            return absl::InvalidArgumentError(ss.str());
+                        }
+                    } else if (std::regex_match(imageUrl.c_str(), std::regex("^(http|https|ftp|sftp|)://(.*)"))) {
+                        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Loading image using curl");
+                        int64_t sizeLimit = 20000000;  // restrict single image size to 20MB
+                        if (!allowedMediaDomains.has_value() || !isDomainAllowed(allowedMediaDomains.value(), imageUrl.c_str())) {
+                            return absl::InvalidArgumentError("Given url does not match any allowed domain from allowed_media_domains");
+                        }
+                        auto status = downloadImage(imageUrl.c_str(), decoded, sizeLimit);
+                        if (status != absl::OkStatus()) {
+                            return status;
+                        }
+                        try {
+                            tensor = loadImageStbiFromMemory(decoded);
+                        } catch (std::runtime_error& e) {
+                            std::stringstream ss;
+                            ss << "Image parsing failed: " << e.what();
+                            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, ss.str());
+                            return absl::InvalidArgumentError("Image parsing failed");
+                        }
+                    } else {
+                        if (!allowedLocalMediaPath.has_value()) {
+                            return absl::InvalidArgumentError("Loading images from local filesystem is disabled.");
+                        }
+                        if (FileSystem::isPathEscaped(imageUrl)) {
+                            std::stringstream ss;
+                            ss << "Path " << imageUrl.c_str() << " escape with .. is forbidden.";
+                            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, ss.str());
+                            return absl::InvalidArgumentError(ss.str());
+                        }
+                        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Loading image from local filesystem");
+                        const auto firstMissmatch = std::mismatch(imageUrl.begin(), imageUrl.end(), allowedLocalMediaPath.value().begin(), allowedLocalMediaPath.value().end());
+                        if (firstMissmatch.second != allowedLocalMediaPath.value().end()) {
+                            return absl::InvalidArgumentError("Given filepath is not subpath of allowed_local_media_path");
+                        }
+                        try {
+                            tensor = loadImageStbiFromFile(imageUrl.c_str());
+                        } catch (std::runtime_error& e) {
+                            std::stringstream ss;
+                            ss << "Image file " << imageUrl.c_str() << " parsing failed: " << e.what();
+                            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, ss.str());
+                            return absl::InvalidArgumentError(ss.str());
+                        }
+                    }
+                    request.imageHistory.push_back({i, tensor});
+                } else {
+                    return absl::InvalidArgumentError("Unsupported content type");
+                }
+            }
+
+            messageObj.AddMember("content", rapidjson::Value(contentText.c_str(), allocator), allocator);
+            request.chatHistory.last()["content"] = contentText;
+            messages.PushBack(messageObj, allocator);
+        }
+    } else {
+        return absl::InvalidArgumentError("input is not a string or array");
+    }
+
+    auto existingMessages = doc.FindMember("messages");
+    if (existingMessages != doc.MemberEnd()) {
+        existingMessages->value = messages;
+    } else {
+        doc.AddMember("messages", messages, allocator);
+    }
+
+    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Parsed responses input directly to chat history");
     return absl::OkStatus();
 }
 
@@ -1002,24 +1070,7 @@ absl::Status OpenAIChatCompletionsHandler::parseResponsesPart(std::optional<uint
         return absl::InvalidArgumentError("input missing in request");
     }
 
-    auto normalizeInputStatus = normalizeResponsesInputToMessagesInPlace(doc);
-    if (!normalizeInputStatus.ok()) {
-        return normalizeInputStatus;
-    }
-
-    it = doc.FindMember("input");
-    if (it == doc.MemberEnd()) {
-        return absl::InvalidArgumentError("input missing in request");
-    }
-
-    if (it->value.IsString()) {
-        request.prompt = it->value.GetString();
-        if (!request.prompt.has_value() || !request.prompt.value().size()) {
-            return absl::InvalidArgumentError("input cannot be empty");
-        }
-    }
-
-    auto messagesStatus = parseMessages(allowedLocalMediaPath, allowedMediaDomains);
+    auto messagesStatus = parseResponsesInputDirectly(allowedLocalMediaPath, allowedMediaDomains);
     if (!messagesStatus.ok()) {
         return messagesStatus;
     }
