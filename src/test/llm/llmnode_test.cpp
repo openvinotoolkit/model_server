@@ -2595,7 +2595,7 @@ INSTANTIATE_TEST_SUITE_P(
     LLMFlowHttpTestInstances,
     LLMFlowHttpTestParameterized,
     ::testing::Values(
-        // params:     model name, generate expected output, check logprobs, check finish reason, test speculative decoding, supports empty stop string
+        // params:     model name, generate expected output, check logprobs, check finish reason, test speculative decoding, supports empty handshake msg
         TestParameters{"lm_cb_regular", true, true, true, false, true},
         TestParameters{"lm_legacy_regular", false, false, false, false, false},
         TestParameters{"vlm_cb_regular", false, true, true, false, true},
@@ -3408,7 +3408,7 @@ INSTANTIATE_TEST_SUITE_P(
     LLMHttpParametersValidationTestInstances,
     LLMHttpParametersValidationTest,
     ::testing::Values(
-        // params:     model name, generate expected output, check logprobs, check finish reason, test speculative decoding, supports empty control msg
+        // params:     model name, generate expected output, check logprobs, check finish reason, test speculative decoding, supports empty handshake msg
         TestParameters{"lm_cb_regular", true, true, true, false, true},
         TestParameters{"lm_legacy_regular", false, false, false, false, false},
         TestParameters{"vlm_cb_regular", false, true, true, false, true},
