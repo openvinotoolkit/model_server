@@ -103,7 +103,7 @@ data: {"choices":[{"index":0,"logprobs":null,"delta":{"content":"Hello!"},"finis
 data: [DONE]
 ```
 
-**Note**: In Continuous Batching pipelines, the first chunk contains role and content=`null` indicating that the first token has been generated. It is a good indication for the Time to First Token metric. Last chunk contains content with full message and `data: [DONE]` indicating end of generation.
+**Note**: In Continuous Batching pipelines, the first chunk contains role and content=`null` indicating that the first token has been generated. It can be used to measure Time to First Token on the client side. Last chunk contains content with full message and `data: [DONE]` indicating end of generation.
 :::
 ::::
 
