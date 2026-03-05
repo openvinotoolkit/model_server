@@ -1,7 +1,8 @@
 # Visual Studio Code Local Assistant {#ovms_demos_code_completion_vsc}
 
 ## Intro
-With the rise of AI PC capabilities, hosting own Visual Studio code assistant is at your reach. In this demo, we will showcase how to deploy local LLM serving with OVMS and integrate it with Continue extension. It focuses on employing GPU with one NPU acceleration example.
+With the rise of AI‑enabled PCs, running your own Visual Studio Code assistant locally is now within reach.
+In this demo, we will walk through how to deploy a local LLM using OpenVINO Model Server (OVMS) and seamlessly integrate it with the Continue extension in Visual Studio Code. The focus will be on GPU‑based acceleration, with an additional example showcasing NPU usage.
 
 # Requirements
 - Windows (for standalone app) or Linux (using Docker)
