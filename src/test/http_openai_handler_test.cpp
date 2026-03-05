@@ -270,7 +270,7 @@ TEST_F(HttpOpenAIHandlerTest, Stream) {
     ASSERT_EQ(response, "");
 }
 
-  TEST_F(HttpOpenAIHandlerTest, ResponsesStream) {
+TEST_F(HttpOpenAIHandlerTest, ResponsesStream) {
     std::string requestBody = R"(
       {
         "model": "gpt",
@@ -285,11 +285,11 @@ TEST_F(HttpOpenAIHandlerTest, Stream) {
     EXPECT_CALL(*writer, IsDisconnected()).Times(9);
 
     ASSERT_EQ(
-      handler->dispatchToProcessor("/v3/responses", requestBody, &response, comp, responseComponents, writer, multiPartParser),
-      ovms::StatusCode::PARTIAL_END);
+        handler->dispatchToProcessor("/v3/responses", requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::PARTIAL_END);
 
     ASSERT_EQ(response, "");
-  }
+}
 
 TEST_F(HttpOpenAIHandlerTest, BodyNotAJson) {
     std::string requestBody = "not a json";
