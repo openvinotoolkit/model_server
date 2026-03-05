@@ -16,6 +16,7 @@
 #include "mediapipegraphdefinition.hpp"
 
 #include <algorithm>
+#include <cstdlib>
 #include <iostream>
 #include <memory>
 #include <regex>
@@ -110,7 +111,18 @@ Status MediapipeGraphDefinition::parseGraphQueueSizeDirective() {
     std::smatch match;
     if (!std::regex_search(this->chosenConfig, match, directiveRegex)) {
         SPDLOG_TRACE("OVMS_GRAPH_QUEUE_SIZE directive not found in pbtxt for mediapipe: {}", getName());
-        return StatusCode::OK;  // directive not present - queue disabled by default
+        // FIXME (@atobisze): Temporarily, unit tests set OVMS_TEST_GRAPH_QUEUE_OFF=1 to keep
+        // the old behavior (queue disabled). Once all tests are validated with graph queue,
+        // remove this env-var check and always default to AUTO.
+        const char* testGuard = std::getenv("OVMS_TEST_GRAPH_QUEUE_OFF");
+        if (testGuard != nullptr && std::string(testGuard) == "1") {
+            SPDLOG_DEBUG("OVMS_TEST_GRAPH_QUEUE_OFF=1 set, graph queue disabled by default for mediapipe: {}", getName());
+            return StatusCode::OK;
+        }
+        // Production default: enable graph queue with AUTO sizing
+        this->mgconfig.setGraphQueueSizeAuto();
+        SPDLOG_DEBUG("No OVMS_GRAPH_QUEUE_SIZE directive, defaulting to AUTO for mediapipe: {}", getName());
+        return StatusCode::OK;
     }
     std::string value = match[1].str();
     if (value == "AUTO") {

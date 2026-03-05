@@ -17,6 +17,7 @@
 
 #include <optional>
 #include <string>
+#include <thread>
 #include <variant>
 #pragma warning(push)
 #pragma warning(disable : 6313)
@@ -272,7 +273,8 @@ public:
             return -1;  // not set - queue disabled by default
         }
         if (std::holds_alternative<GraphQueueAutoTag>(*this->graphQueueSize)) {
-            return 16;  // TODO FIXME @atobisze determine optimal size based on nireq / hardware
+            unsigned int hwThreads = std::thread::hardware_concurrency();
+            return (hwThreads > 0) ? static_cast<int>(hwThreads) : 16;
         }
         return std::get<int>(*this->graphQueueSize);
     }
