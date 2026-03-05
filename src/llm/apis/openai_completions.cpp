@@ -483,6 +483,25 @@ absl::Status OpenAIChatCompletionsHandler::parseTools() {
     }
 
     request.toolChoice = tool_choice;
+
+    it = doc.FindMember("chat_template_kwargs");
+    // If chat_template_kwargs is present, we need to check for builtin_tools list
+    if (it != doc.MemberEnd() && !it->value.IsNull()) {
+        if (!it->value.IsObject())
+            return absl::InvalidArgumentError("chat_template_kwargs is not a JSON object");
+        auto builtinToolsIt = it->value.GetObject().FindMember("builtin_tools");
+        if (builtinToolsIt != it->value.GetObject().MemberEnd() && !builtinToolsIt->value.IsNull()) {
+            if (!builtinToolsIt->value.IsArray())
+                return absl::InvalidArgumentError("builtin_tools is not an array");
+            for (size_t i = 0; i < builtinToolsIt->value.GetArray().Size(); i++) {
+                auto& toolNameValue = builtinToolsIt->value.GetArray()[i];
+                if (!toolNameValue.IsString())
+                    return absl::InvalidArgumentError("Each builtin_tool name must be a string");
+                request.allowedBuiltInTools.push_back(toolNameValue.GetString());
+            }
+        }
+    }
+
     if (jsonChanged) {
         StringBuffer buffer;
         Writer<StringBuffer> writer(buffer);
@@ -538,7 +557,7 @@ absl::StatusOr<std::optional<ov::genai::JsonContainer>> OpenAIChatCompletionsHan
 }
 
 const bool OpenAIChatCompletionsHandler::areToolsAvailable() const {
-    return !request.toolNameSchemaMap.empty();
+    return !request.toolNameSchemaMap.empty() || !request.allowedBuiltInTools.empty();
 }
 
 const OpenAIChatCompletionsRequest& OpenAIChatCompletionsHandler::getRequest() const {
@@ -1007,7 +1026,7 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const std::vect
         // "length" => due to reaching max_tokens parameter
         // "tool_calls" => generation stopped due to generated tool calls
 
-        std::optional<std::string> finishReason = mapFinishReason(generationOutput.finish_reason, !parsedOutput.toolCalls.empty());
+        std::optional<std::string> finishReason = mapFinishReason(generationOutput.finish_reason, !parsedOutput.toolCalls.empty() || !parsedOutput.builtInToolCalls.empty());
         if (!finishReason.has_value()) {
             SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Unknown finish reason: {}", static_cast<int>(generationOutput.finish_reason));
         }
