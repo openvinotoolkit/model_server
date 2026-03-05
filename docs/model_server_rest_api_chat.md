@@ -9,11 +9,12 @@ The endpoint is exposed via a path:
 
 <b>http://server_name:port/v3/chat/completions</b>
 
+### Example request
+
 ::::{tab-set}
 :::{tab-item} Unary
 :sync: unary
 
-**Request:**
 ```
 curl http://localhost/v3/chat/completions \
   -H "Content-Type: application/json" \
@@ -32,8 +33,38 @@ curl http://localhost/v3/chat/completions \
     "stream": false
   }'
 ```
+:::
 
-**Response:**
+:::{tab-item} Stream
+:sync: stream
+
+```
+curl http://localhost/v3/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "llama3",
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are a helpful assistant."
+      },
+      {
+        "role": "user",
+        "content": "hello"
+      }
+    ],
+    "stream": true
+  }'
+```
+:::
+::::
+
+### Example response
+
+::::{tab-set}
+:::{tab-item} Unary
+:sync: unary
+
 ```json
 {
   "choices": [
@@ -62,39 +93,12 @@ curl http://localhost/v3/chat/completions \
 :::{tab-item} Stream
 :sync: stream
 
-**Request:**
-```
-curl http://localhost/v3/chat/completions \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "llama3",
-    "messages": [
-      {
-        "role": "system",
-        "content": "You are a helpful assistant."
-      },
-      {
-        "role": "user",
-        "content": "hello"
-      }
-    ],
-    "stream": true
-  }'
-```
-
-**Response:**
-
-- handshake
-- reasoning
-- actual content
-- end of stream
-
 ```
 data: {"choices":[{"index":0,"delta":{"role":"assistant","content":null},"finish_reason":null}],"created":1772634283,"model":"llama3","object":"chat.completion.chunk"}
 
 data: {"choices":[{"index":0,"logprobs":null,"delta":{"reasoning_content":"Reasoning..."},"finish_reason":null}],"created":1772634283,"model":"llama3","object":"chat.completion.chunk"}
 
-data: {"choices":[{"index":0,"logprobs":null,"delta":{"content":"Hello!"},"finish_reason":null}],"created":1772634283,"model":"llama3","object":"chat.completion.chunk"}
+data: {"choices":[{"index":0,"logprobs":null,"delta":{"content":"Hello!"},"finish_reason":"stop"}],"created":1772634283,"model":"llama3","object":"chat.completion.chunk"}
 
 data: [DONE]
 ```
