@@ -902,7 +902,17 @@ Status HfDownloader::downloadModel() {
         // Set repository url
         std::string passRepoUrl = GetRepositoryUrlWithPassword();
         const char* url = passRepoUrl.c_str();
-        repo->url = url;
+        error = git_repository_set_url(repo, url);
+        if (error < 0) {
+            const git_error *err = git_error_last();
+            if (err)
+                SPDLOG_ERROR("Repository set url failed: {} {}", err->klass, err->message);
+            else
+                SPDLOG_ERROR("Repository set url failed: {}", error);
+            if (repo) git_repository_free(repo);
+            std::cout << "Path already exists on local filesystem. And set git repository url failed: " << this->downloadPath << std::endl;
+            return StatusCode::HF_GIT_CLONE_FAILED;
+        }
 
         for (const auto& p : matches) {
                 std::cout << " Resuming " << p.string() << "\n";

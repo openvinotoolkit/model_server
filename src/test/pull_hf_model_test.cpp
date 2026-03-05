@@ -39,6 +39,8 @@
 
 #include "environment.hpp"
 
+namespace fs = std::filesystem;
+
 class HfDownloaderPullHfModel : public TestWithTempDir {
 protected:
     ovms::Server& server = ovms::Server::instance();
@@ -164,6 +166,84 @@ TEST_F(HfDownloaderPullHfModel, PositiveDownload) {
     ASSERT_EQ(std::filesystem::exists(graphPath), true) << graphPath;
     ASSERT_EQ(std::filesystem::file_size(modelPath), 52417240);
     std::string graphContents = GetFileContents(graphPath);
+
+    ASSERT_EQ(expectedGraphContents, removeVersionString(graphContents)) << graphContents;
+}
+
+// Truncate the file to half its size, keeping the first half.
+bool removeSecondHalf(const std::string& filrStr) {
+    const fs::path& file(filrStr);
+    std::error_code ec;
+    ec.clear();
+
+    if (!fs::exists(file, ec) || !fs::is_regular_file(file, ec)) {
+        if (!ec) ec = std::make_error_code(std::errc::no_such_file_or_directory);
+        return false;
+    }
+
+    const std::uintmax_t size = fs::file_size(file, ec);
+    if (ec) return false;
+
+    const std::uintmax_t newSize = size / 2; // floor(size/2)
+    fs::resize_file(file, newSize, ec);
+    return !ec;
+}
+
+bool createGitLfsPointerFile(const std::string& path) {
+    std::ofstream file(path, std::ios::binary);
+    if (!file.is_open()) {
+        return false;
+    }
+
+    file <<
+        "version https://git-lfs.github.com/spec/v1\n"
+        "oid sha256:59f24bc922e1a48bb3feeba18b23f0e9622a7ee07166d925650d7a933283f8b1\n"
+        "size 123882252\n";
+
+    return true;
+}
+
+TEST_F(HfDownloaderPullHfModel, PositiveDownloadAndResumeFromPArtialDownload) {
+    std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
+    std::string downloadPath = ovms::FileSystem::joinPath({this->directoryPath, "repository"});
+    std::string task = "text_generation";
+    this->ServerPullHfModel(modelName, downloadPath, task);
+    server.setShutdownRequest(1);
+    if (t)
+        t->join();
+    server.setShutdownRequest(0);
+
+    std::string ovModelName = "openvino_model.bin";
+    std::string basePath = ovms::FileSystem::joinPath({this->directoryPath, "repository", "OpenVINO", "Phi-3-mini-FastDraft-50M-int8-ov"});
+    std::string modelPath = ovms::FileSystem::appendSlash(basePath) + ovModelName;
+    std::string graphPath = ovms::FileSystem::appendSlash(basePath) + "graph.pbtxt";
+
+    ASSERT_EQ(std::filesystem::exists(modelPath), true) << modelPath;
+    ASSERT_EQ(std::filesystem::exists(graphPath), true) << graphPath;
+    ASSERT_EQ(std::filesystem::file_size(modelPath), 52417240);
+    std::string graphContents = GetFileContents(graphPath);
+
+    ASSERT_EQ(expectedGraphContents, removeVersionString(graphContents)) << graphContents;
+
+    // Prepare a git repository with a lfs_part file and lfs pointer file to simulate partial download error of a big model
+    ASSERT_EQ(removeSecondHalf(modelPath), true);
+    ASSERT_EQ(std::filesystem::file_size(modelPath), 26208620);
+    std::error_code ec;
+    ec.clear();
+    std::string ovModelPartLfsName = "openvino_model.binlfs_part";
+    std::string ovModelPartLfsPath = ovms::FileSystem::appendSlash(basePath) + ovModelPartLfsName;
+    fs::rename(modelPath, ovModelPartLfsPath, ec);
+    ASSERT_EQ(ec, std::errc());
+    ASSERT_EQ(std::filesystem::file_size(ovModelPartLfsPath), 26208620);
+    ASSERT_EQ(createGitLfsPointerFile(modelPath), true);
+
+    // Call ovms pull to resume the file
+    this->ServerPullHfModel(modelName, downloadPath, task);
+
+    ASSERT_EQ(std::filesystem::exists(modelPath), true) << modelPath;
+    ASSERT_EQ(std::filesystem::exists(graphPath), true) << graphPath;
+    ASSERT_EQ(std::filesystem::file_size(modelPath), 52417240);
+    graphContents = GetFileContents(graphPath);
 
     ASSERT_EQ(expectedGraphContents, removeVersionString(graphContents)) << graphContents;
 }
