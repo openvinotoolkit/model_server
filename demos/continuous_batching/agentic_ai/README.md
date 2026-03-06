@@ -68,12 +68,6 @@ ovms.exe --rest_port 8000 --source_model OpenVINO/Qwen3-4B-int4-ov --model_repos
 ovms.exe --rest_port 8000 --source_model srang992/Llama-3.2-3B-Instruct-ov-INT4 --model_repository_path models --tool_parser llama3 --target_device GPU --task text_generation --enable_tool_guided_generation true --cache_dir .cache --enable_prefix_caching true
 ```
 :::
-:::{tab-item} Mistral-7B-Instruct-v0.3
-:sync: Mistral-7B-Instruct-v0.3
-```bat
-ovms.exe --rest_port 8000 --source_model OpenVINO/Mistral-7B-Instruct-v0.3-int4-ov --model_repository_path models --tool_parser mistral --target_device GPU --task text_generation --cache_dir .cache --enable_prefix_caching true
-```
-:::
 :::{tab-item} Phi-4-mini-instruct
 :sync: Phi-4-mini-instruct
 ```bat
@@ -105,13 +99,30 @@ ovms.exe --rest_port 8000 --source_model OpenVINO/gpt-oss-20b-int4-ov --model_re
 ```bat
 ovms.exe --rest_port 8000 --source_model OpenVINO/Qwen3-8B-int4-cw-ov --model_repository_path models --tool_parser hermes3 --target_device NPU --task text_generation --enable_prefix_caching true --cache_dir .cache --max_prompt_len 4000
 ```
+
+```bat
+python openai_agent.py --query "What is the current weather in Tokyo?" --model OpenVINO/Qwen3-8B-int4-cw-ov --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather
+```
+
+```text
+The current weather in Tokyo is mainly clear with a temperature of 11.5°C. The relative humidity is at 82%, and the dew point is 8.5°C. The wind is blowing from the S at 6.8 km/h, with gusts up to 13.7 km/h. The atmospheric pressure is 1017.1 hPa, and there is 21% cloud cover. Visibility is 24.1 km.
+```
 :::
 :::{tab-item} Qwen3-4B
 :sync: Qwen3-4B
 ```bat
 ovms.exe --rest_port 8000 --source_model FluidInference/qwen3-4b-int4-ov-npu --model_repository_path models --tool_parser hermes3 --target_device NPU --task text_generation --enable_prefix_caching true --cache_dir .cache --max_prompt_len 4000
 ```
+
+```bat
+python openai_agent.py --query "What is the current weather in Tokyo?" --model OpenVINO/Qwen3-8B-int4-cw-ov --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather
+```
+
+```text
+The current weather in Tokyo is mainly clear, with a temperature of 11.5°C. The relative humidity is at 82%, and the dew point is at 8.5°C. There is a wind blowing from the south at 6.8 km/h, with gusts up to 13.7 km/h. The atmospheric pressure is 1017.1 hPa, and there is 21% cloud cover. The visibility is 24.1 km.
+```
 :::
+::::
 
 > **Note:** Setting the `--max_prompt_len` parameter too high may lead to performance degradation. It is recommended to use the smallest value that meets your requirements.
 
@@ -148,6 +159,21 @@ python openai_agent.py --query "What is the current weather in Tokyo?" --model O
 The current weather in Tokyo is clear with a temperature of 8.3°C (feels like 5.0°C). The relative humidity is at 50%, and the dew point is at -1.5°C. Winds are coming from the NNW at 6.8 km/h with gusts up to 21.2 km/h. The atmospheric pressure is 1021.5 hPa with 0% cloud cover. Visibility is 24.1 km.
 ```
 :::
+:::{tab-item} Phi-4-mini-instruct
+:sync: Phi-4-mini-instruct
+```bash
+docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models openvino/model_server:weekly \
+--rest_port 8000 --model_repository_path models --source_model OpenVINO/Phi-4-mini-instruct-int4-ov --tool_parser hermes3 --task text_generation --enable_prefix_caching true
+```
+
+```bash
+python openai_agent.py --query "What is the current weather in Tokyo?" --model OpenVINO/Phi-4-mini-instruct-int4-ov --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather --tool-choice required
+```
+
+```text
+The current weather in Tokyo is mostly clear with a temperature of 12.4°C. The relative humidity is at 68%, and the dew point is at 6.7°C. Winds are coming from the SSE at a speed of 5.3 km/h, with gusts reaching up to 25.2 km/h. The atmospheric pressure is 1017.9 hPa, and there is a 23% cloud cover. Visibility is good at 24.1 km.
+```
+:::
 :::{tab-item} Qwen3-Coder-30B-A3B-Instruct
 :sync: Qwen3-Coder-30B-A3B-Instruct
 ```bash
@@ -160,7 +186,18 @@ python openai_agent.py --query "What is the current weather in Tokyo?" --model O
 ```
 
 ```text
-The current weather in Tokyo is clear sky with a temperature of 5.5°C (feels like 2.8°C). The relative humidity is at 64%, and the dew point is -0.8°C. Wind is blowing from the NNE at 3.2 km/h with gusts up to 10.8 km/h. The atmospheric pressure is 1023.4 hPa with 0% cloud cover. Visibility is 24.1 km.
+The current weather in Tokyo is as follows:
+- **Condition**: Mainly clear
+- **Temperature**: 11.8°C
+- **Relative Humidity**: 78%
+- **Dew Point**: 8.1°C
+- **Wind**: Blowing from the SSE at 6.4 km/h with gusts up to 9.7 km/h
+- **Atmospheric Pressure**: 1017.5 hPa
+- **Cloud Cover**: 22%
+- **Visibility**: 24.1 km
+- **UV Index**: Not specified
+
+It's a relatively pleasant day with clear skies and mild temperatures.
 ```
 :::
 ::::
@@ -179,6 +216,14 @@ It can be applied using the commands below:
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:weekly \
 --rest_port 8000 --model_repository_path models --source_model OpenVINO/Qwen3-8B-int4-ov --tool_parser hermes3 --target_device GPU --task text_generation  --enable_prefix_caching true
 ```
+
+```bash
+python openai_agent.py --query "What is the current weather in Tokyo?" --model OpenVINO/Qwen3-8B-int4-ov --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather
+```
+
+```text
+The current weather in Tokyo is mainly clear with a temperature of 11.7°C. The relative humidity is at 74%, and the dew point is 7.2°C. The wind is blowing from the southeast at 4.2 km/h, with gusts up to 22.7 km/h. The atmospheric pressure is 1018.0 hPa, and there is 44% cloud cover. Visibility is 24.1 km.
+```
 :::
 :::{tab-item} Qwen3-4B
 :sync: Qwen3-4B
@@ -186,12 +231,36 @@ docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/model
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:weekly \
 --rest_port 8000 --model_repository_path models --source_model OpenVINO/Qwen3-4B-int4-ov --tool_parser hermes3 --target_device GPU --task text_generation --enable_prefix_caching true
 ```
+
+```bash
+python openai_agent.py --query "What is the current weather in Tokyo?" --model OpenVINO/Qwen3-4B-int4-ov --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather
+```
+
+```text
+The current weather in Tokyo is mainly clear. The temperature is 11.7°C, with a relative humidity of 74% and a dew point of 7.2°C. The wind is coming from the SSE at 4.2 km/h, with gusts up to 22.7 km/h. The atmospheric pressure is 1018.0 hPa, with 44% cloud cover. Visibility is 24.1 km.
+```
 :::
 :::{tab-item} Qwen3-Coder-30B-A3B-Instruct
 :sync: Qwen3-Coder-30B-A3B-Instruct
 ```bash
 docker run -d --user $(id -u):$(id -g) -e MOE_USE_MICRO_GEMM_PREFILL=0 --rm -p 8000:8000 -v $(pwd)/models:/models --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:weekly \
 --rest_port 8000 --source_model OpenVINO/Qwen3-Coder-30B-A3B-Instruct-int4-ov --model_repository_path models --tool_parser qwen3coder --target_device GPU --task text_generation --enable_tool_guided_generation true --enable_prefix_caching true
+```
+
+```bash
+python openai_agent.py --query "What is the current weather in Tokyo?" --model OpenVINO/Qwen3-Coder-30B-A3B-Instruct-int4-ov --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather
+```
+
+```text
+The current weather in Tokyo is as follows:
+- **Condition**: Mainly clear
+- **Temperature**: 11.7°C
+- **Relative Humidity**: 74%
+- **Dew Point**: 7.2°C
+- **Wind**: SSE at 4.2 km/h, with gusts up to 22.7 km/h
+- **Atmospheric Pressure**: 1018.0 hPa
+- **Cloud Cover**: 44%
+- **Visibility**: 24.1 km
 ```
 :::
 :::{tab-item} gpt-oss-20b
@@ -203,6 +272,24 @@ docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/model
 ```
 > **Note:** Continuous batching and paged attention are supported for GPT‑OSS. However, when deployed on GPU, the model may experience reduced accuracy under high‑concurrency workloads. This issue will be resolved in version 2026.1 and in the upcoming weekly release. CPU execution is not affected.
 
+```bash
+python openai_agent.py --query "What is the current weather in Tokyo?" --model OpenVINO/gpt-oss-20b-int4-ov --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather
+```
+
+```text
+**Tokyo – Current Weather**
+
+- **Condition:** Mainly clear
+- **Temperature:** 11.7 °C
+- **Humidity:** 74 %
+- **Dew Point:** 7.2 °C
+- **Wind:** 4.2 km/h from the SSE, gusts up to 22.7 km/h
+- **Pressure:** 1018.0 hPa
+- **Cloud Cover:** 44 %
+- **Visibility:** 24.1 km
+
+Enjoy your day!
+```
 :::
 ::::
 
