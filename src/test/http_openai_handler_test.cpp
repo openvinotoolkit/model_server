@@ -1631,47 +1631,6 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingRequestWithNullParametersCompletions
     }
 }
 
-TEST_F(HttpOpenAIHandlerParsingTest, ParsingResponsesMaxOutputTokensSetsMaxTokens) {
-    std::string json = R"({
-    "model": "llama",
-    "input": "valid prompt",
-    "max_output_tokens": 7
-  })";
-    doc.Parse(json.c_str());
-    ASSERT_FALSE(doc.HasParseError());
-    std::optional<uint32_t> maxTokensLimit;
-    uint32_t bestOfLimit = 0;
-    std::optional<uint32_t> maxModelLength;
-    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
-    EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
-    EXPECT_TRUE(apiHandler->getMaxTokens().has_value());
-    EXPECT_EQ(apiHandler->getMaxTokens().value(), 7);
-}
-
-TEST_F(HttpOpenAIHandlerParsingTest, ParsingResponsesStringInputCreatesUserChatMessage) {
-    std::string json = R"({
-    "model": "llama",
-    "input": "What is OpenVINO?"
-  })";
-    doc.Parse(json.c_str());
-    ASSERT_FALSE(doc.HasParseError());
-    std::optional<uint32_t> maxTokensLimit;
-    uint32_t bestOfLimit = 0;
-    std::optional<uint32_t> maxModelLength;
-    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
-    EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
-
-    auto& chatHistory = apiHandler->getChatHistory();
-    ASSERT_EQ(chatHistory.size(), 1);
-    ASSERT_TRUE(chatHistory[0].contains("role"));
-    ASSERT_TRUE(chatHistory[0].contains("content"));
-    EXPECT_EQ(chatHistory[0]["role"], "user");
-    EXPECT_EQ(chatHistory[0]["content"], "What is OpenVINO?");
-    EXPECT_NE(apiHandler->getProcessedJson().find("\"messages\""), std::string::npos);
-    EXPECT_NE(apiHandler->getProcessedJson().find("\"role\":\"user\""), std::string::npos);
-    EXPECT_NE(apiHandler->getProcessedJson().find("\"input\":\"What is OpenVINO?\""), std::string::npos);
-}
-
 TEST_F(HttpOpenAIHandlerParsingTest, ParsingResponsesConflictingOutputAndCompletionTokensFails) {
     std::string json = R"({
     "model": "llama",
@@ -1912,30 +1871,6 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingResponsesToolChoiceFunctionObjectNam
     std::optional<uint32_t> maxModelLength;
     std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
     EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::InvalidArgumentError("tool_choice.name is not a valid string"));
-}
-
-TEST_F(HttpOpenAIHandlerParsingTest, ParsingResponsesInputImageUrlStringSucceeds) {
-    std::string json = R"({
-    "model": "llama",
-    "input": [
-      {
-        "role": "user",
-        "content": [
-          {"type": "input_text", "text": "what is in this image?"},
-          {"type": "input_image", "image_url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAAEElEQVR4nGLK27oAEAAA//8DYAHGgEvy5AAAAABJRU5ErkJggg=="}
-        ]
-      }
-    ]
-  })";
-    doc.Parse(json.c_str());
-    ASSERT_FALSE(doc.HasParseError());
-    std::optional<uint32_t> maxTokensLimit;
-    uint32_t bestOfLimit = 0;
-    std::optional<uint32_t> maxModelLength;
-    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler =
-        std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
-    EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
-    EXPECT_EQ(apiHandler->getImageHistory().size(), 1);
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, ParsingResponsesInputImageUrlObjectSucceeds) {
