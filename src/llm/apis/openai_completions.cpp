@@ -766,8 +766,8 @@ absl::Status OpenAIChatCompletionsHandler::parseTools() {
             auto& obj = it->value.GetArray()[i];
             if (!obj.IsObject())
                 return absl::InvalidArgumentError("Tool is not a JSON object");
-            const rapidjson::Value* functionObj = nullptr;
-            const rapidjson::Value* parametersValue = nullptr;
+            rapidjson::Value* functionObj = nullptr;
+            rapidjson::Value* parametersValue = nullptr;
             const char* functionNameCStr = nullptr;
 
             auto functionIt = obj.FindMember("function");
