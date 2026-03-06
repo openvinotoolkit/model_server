@@ -21,6 +21,7 @@
 #include <cstdint>
 #include <memory>
 #include <mutex>
+#include <string>
 #include <thread>
 #include <utility>
 
@@ -65,9 +66,9 @@ struct LLMExecutor {
         std::ostringstream oss;
         oss << std::fixed << std::setprecision(1);
         if (isCacheDynamic) {
-            oss << formatBytes(cacheBytes);
+            oss << "dynamic " << cacheUsage << "% of " << formatBytes(cacheBytes);
         } else {
-            oss << cacheUsage << "% of " << formatBytes(cacheBytes);
+            oss << "static " << cacheUsage << "% of " << formatBytes(cacheBytes);
         }
 
         return oss.str();
@@ -101,7 +102,7 @@ struct LLMExecutor {
     void printMetrics() {
         ov::genai::PipelineMetrics metrics = pipe->get_metrics();
         SPDLOG_LOGGER_INFO(llm_executor_logger, "All requests: {}; Scheduled requests: {}; Cache usage {};",
-            metrics.requests, metrics.scheduled_requests, formatCacheInfo(metrics.cache_usage, metrics.kv_cache_usage_in_bytes, this->isDynamicKVCache));
+            metrics.requests, metrics.scheduled_requests, formatCacheInfo(metrics.cache_usage, metrics.kv_cache_size_in_bytes, this->isDynamicKVCache));
     }
 };
 #pragma GCC diagnostic pop
