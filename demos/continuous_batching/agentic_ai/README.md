@@ -12,6 +12,34 @@ The tools can also be used for automation purposes based on input in text format
 
 > **Note:** On Windows, make sure to use the weekly or 2025.4 release packages for proper functionality.
 
+## Start MCP server with SSE interface
+
+### Linux
+```bash
+git clone https://github.com/isdaniel/mcp_weather_server
+cd mcp_weather_server && git checkout v0.5.0
+docker build -t mcp-weather-server:sse .
+docker run -d -p 8080:8080 -e PORT=8080 mcp-weather-server:sse uv run python -m mcp_weather_server --mode sse
+```
+
+> **Note:** On Windows the MCP server will be demonstrated as an instance with stdio interface inside the agent application
+
+## Start the agent
+
+Install the application requirements
+
+```console
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/continuous_batching/agentic_ai/openai_agent.py -o openai_agent.py
+pip install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/continuous_batching/agentic_ai/requirements.txt
+```
+Make sure nodejs and npx are installed. On ubuntu it would require `sudo apt install nodejs npm`. On windows, visit https://nodejs.org/en/download. It is needed for the `file system` MCP server.
+
+For windows applications it may be required to set environmental variable to enforce utf-8 encodeing in python:
+
+```bat
+set PYTHONUTF8=1
+```
+
 ## Start OVMS
 
 This deployment procedure assumes the model was pulled or exported using the procedure above. The exception are models from OpenVINO organization if they support tools correctly with the default template like "OpenVINO/Qwen3-8B-int4-ov" - they can be deployed in a single command pulling and staring the server.
@@ -84,18 +112,6 @@ ovms.exe --rest_port 8000 --source_model OpenVINO/Qwen3-8B-int4-cw-ov --model_re
 ovms.exe --rest_port 8000 --source_model FluidInference/qwen3-4b-int4-ov-npu --model_repository_path models --tool_parser hermes3 --target_device NPU --task text_generation --enable_prefix_caching true --cache_dir .cache --max_prompt_len 4000
 ```
 :::
-:::{tab-item} Llama-3.2-3B-Instruct
-:sync: Llama-3.2-3B-Instruct
-```bat
-ovms.exe --rest_port 8000 --source_model llmware/llama-3.2-3b-instruct-npu-ov --model_repository_path models --tool_parser llama3 --target_device NPU --task text_generation --enable_tool_guided_generation true --enable_prefix_caching true --cache_dir .cache --max_prompt_len 4000
-```
-:::
-:::{tab-item} Mistral-7B-Instruct-v0.3
-:sync: Mistral-7B-Instruct-v0.3
-```bat
-ovms.exe --rest_port 8000 --source_model OpenVINO/Mistral-7B-Instruct-v0.3-int4-cw-ov --model_repository_path models --tool_parser mistral --target_device NPU --task text_generation --enable_prefix_caching true --cache_dir .cache --max_prompt_len 4000
-```
-:::
 
 > **Note:** Setting the `--max_prompt_len` parameter too high may lead to performance degradation. It is recommended to use the smallest value that meets your requirements.
 
@@ -108,6 +124,14 @@ ovms.exe --rest_port 8000 --source_model OpenVINO/Mistral-7B-Instruct-v0.3-int4-
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models openvino/model_server:weekly \
 --rest_port 8000 --model_repository_path models --source_model OpenVINO/Qwen3-8B-int4-ov --tool_parser hermes3 --task text_generation --enable_prefix_caching true 
 ```
+
+```bash
+python openai_agent.py --query "What is the current weather in Tokyo?" --model OpenVINO/Qwen3-8B-int4-ov --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather
+```
+
+```text
+The current weather in Tokyo is clear sky with a temperature of 8.3°C (feels like 5.0°C). The relative humidity is at 50%, and the dew point is -1.5°C. Wind is blowing from the NNW at 6.8 km/h with gusts up to 21.2 km/h. The atmospheric pressure is 1021.5 hPa with 0% cloud cover, and visibility is 24.1 km.
+```
 :::
 :::{tab-item} Qwen3-4B
 :sync: Qwen3-4B
@@ -115,26 +139,13 @@ docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/model
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models openvino/model_server:weekly \
 --rest_port 8000 --model_repository_path models --source_model OpenVINO/Qwen3-4B-int4-ov --tool_parser hermes3 --task text_generation --enable_prefix_caching true
 ```
-:::
-:::{tab-item} Llama-3.2-3B-Instruct
-:sync: Llama-3.2-3B-Instruct
+
 ```bash
-docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models openvino/model_server:weekly \
---rest_port 8000 --model_repository_path models --source_model srang992/Llama-3.2-3B-Instruct-ov-INT4 --tool_parser llama3 --task text_generation --enable_prefix_caching true --enable_tool_guided_generation true
+python openai_agent.py --query "What is the current weather in Tokyo?" --model OpenVINO/Qwen3-4B-int4-ov --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather
 ```
-:::
-:::{tab-item} Mistral-7B-Instruct-v0.3
-:sync: Mistral-7B-Instruct-v0.3
-```bash
-docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000  -v $(pwd)/models:/models openvino/model_server:weekly \
---rest_port 8000 --model_repository_path models --source_model OpenVINO/Mistral-7B-Instruct-v0.3-int4-ov --tool_parser mistral --task text_generation --enable_prefix_caching true
-```
-:::
-:::{tab-item} Phi-4-mini-instruct
-:sync: Phi-4-mini-instruct
-```bash
-docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000  -v $(pwd)/models:/models openvino/model_server:weekly \
---rest_port 8000 --model_repository_path models --source_model OpenVINO/Phi-4-mini-instruct-int4-ov --tool_parser phi4 --task text_generation --enable_prefix_caching true --max_num_batched_tokens 99999 --enable_tool_guided_generation true
+
+```text
+The current weather in Tokyo is clear with a temperature of 8.3°C (feels like 5.0°C). The relative humidity is at 50%, and the dew point is at -1.5°C. Winds are coming from the NNW at 6.8 km/h with gusts up to 21.2 km/h. The atmospheric pressure is 1021.5 hPa with 0% cloud cover. Visibility is 24.1 km.
 ```
 :::
 :::{tab-item} Qwen3-Coder-30B-A3B-Instruct
@@ -142,6 +153,14 @@ docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000  -v $(pwd)/models:/mode
 ```bash
 docker run -d --user $(id -u):$(id -g) --rm -e MOE_USE_MICRO_GEMM_PREFILL=0 -p 8000:8000 -v $(pwd)/models:/models openvino/model_server:weekly \
 --rest_port 8000 --source_model OpenVINO/Qwen3-Coder-30B-A3B-Instruct-int4-ov --model_repository_path models --tool_parser qwen3coder --task text_generation --enable_prefix_caching true
+```
+
+```bash
+python openai_agent.py --query "What is the current weather in Tokyo?" --model OpenVINO/Qwen3-Coder-30B-A3B-Instruct-int4-ov --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather
+```
+
+```text
+The current weather in Tokyo is clear sky with a temperature of 5.5°C (feels like 2.8°C). The relative humidity is at 64%, and the dew point is -0.8°C. Wind is blowing from the NNE at 3.2 km/h with gusts up to 10.8 km/h. The atmospheric pressure is 1023.4 hPa with 0% cloud cover. Visibility is 24.1 km.
 ```
 :::
 ::::
@@ -166,27 +185,6 @@ docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/model
 ```bash
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:weekly \
 --rest_port 8000 --model_repository_path models --source_model OpenVINO/Qwen3-4B-int4-ov --tool_parser hermes3 --target_device GPU --task text_generation --enable_prefix_caching true
-```
-:::
-:::{tab-item} Llama-3.2-3B-Instruct
-:sync: Llama-3.2-3B-Instruct
-```bash
-docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:weekly \
---rest_port 8000 --model_repository_path models --source_model srang992/Llama-3.2-3B-Instruct-ov-INT4 --tool_parser llama3 --target_device GPU --task text_generation --enable_tool_guided_generation true --enable_prefix_caching true
-```
-:::
-:::{tab-item} Mistral-7B-Instruct-v0.3
-:sync: Mistral-7B-Instruct-v0.3
-```bash
-docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000  -v $(pwd)/models:/models --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:weekly \
---rest_port 8000 --model_repository_path models --source_model OpenVINO/Mistral-7B-Instruct-v0.3-int4-ov --tool_parser mistral --target_device GPU --task text_generation --enable_prefix_caching true
-```
-:::
-:::{tab-item} Phi-4-mini-instruct
-:sync: Phi-4-mini-instruct
-```bash
-docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000  -v $(pwd)/models:/models --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:weekly \
---rest_port 8000 --model_repository_path models --source_model OpenVINO/Phi-4-mini-instruct-int4-ov --tool_parser phi4 --target_device GPU --task text_generation --max_num_batched_tokens 99999 --enable_prefix_caching true
 ```
 :::
 :::{tab-item} Qwen3-Coder-30B-A3B-Instruct
@@ -221,6 +219,14 @@ It can be applied using the commands below:
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models --device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render*  | head -1) openvino/model_server:weekly \
 --rest_port 8000 --model_repository_path models --source_model OpenVINO/Qwen3-8B-int4-cw-ov --tool_parser hermes3 --target_device NPU --task text_generation --enable_prefix_caching true --max_prompt_len 4000
 ```
+
+```bash
+python openai_agent.py --query "What is the current weather in Tokyo?" --model OpenVINO/Qwen3-8B-int4-cw-ov --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather
+```
+
+```text
+The current weather in Tokyo is clear sky with a temperature of 8.3°C (feels like 5.0°C). The relative humidity is at 50%, and the dew point is at -1.5°C. The wind is blowing from the NNW at 6.8 km/h with gusts up to 21.2 km/h. The atmospheric pressure is 1021.5 hPa with 0% cloud cover, and the visibility is 24.1 km.
+```
 :::
 :::{tab-item} Qwen3-4B
 :sync: Qwen3-4B
@@ -228,100 +234,13 @@ docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/model
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models --device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:weekly \
 --rest_port 8000 --model_repository_path models --source_model FluidInference/qwen3-4b-int4-ov-npu --tool_parser hermes3 --target_device NPU --task text_generation --enable_prefix_caching true --max_prompt_len 4000
 ```
-:::
-:::{tab-item} Llama-3.2-3B-Instruct
-:sync: Llama-3.2-3B-Instruct
+
 ```bash
-docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models --device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:weekly \
---rest_port 8000 --model_repository_path models --source_model llmware/llama-3.2-3b-instruct-npu-ov --tool_parser llama3 --target_device NPU --task text_generation --enable_tool_guided_generation true --enable_prefix_caching true --max_prompt_len 4000
-```
-:::
-:::{tab-item} Mistral-7B-Instruct-v0.3
-:sync: Mistral-7B-Instruct-v0.3
-```bash
-docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000  -v $(pwd)/models:/models --device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:weekly \
---rest_port 8000 --model_repository_path models --source_model OpenVINO/Mistral-7B-Instruct-v0.3-int4-cw-ov --tool_parser mistral --target_device NPU --task text_generation --enable_prefix_caching true --max_prompt_len 4000
-```
-:::
-
-## Start MCP server with SSE interface
-
-### Linux
-```bash
-git clone https://github.com/isdaniel/mcp_weather_server
-cd mcp_weather_server && git checkout v0.5.0
-docker build -t mcp-weather-server:sse .
-docker run -d -p 8080:8080 -e PORT=8080 mcp-weather-server:sse uv run python -m mcp_weather_server --mode sse
+python openai_agent.py --query "What is the current weather in Tokyo?" --model FluidInference/qwen3-4b-int4-ov-npu --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather --stream
 ```
 
-> **Note:** On Windows the MCP server will be demonstrated as an instance with stdio interface inside the agent application
-
-## Start the agent
-
-Install the application requirements
-
-```console
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/continuous_batching/agentic_ai/openai_agent.py -o openai_agent.py
-pip install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/continuous_batching/agentic_ai/requirements.txt
-```
-Make sure nodejs and npx are installed. On ubuntu it would require `sudo apt install nodejs npm`. On windows, visit https://nodejs.org/en/download. It is needed for the `file system` MCP server.
-
-For windows applications it may be required to set environmental variable to enforce utf-8 encodeing in python:
-
-```bat
-set PYTHONUTF8=1
-```
-
-Run the agentic application:
-
-
-::::{tab-set}
-:::{tab-item} Qwen3-8B
-:sync: Qwen3-8B
 ```text
-python openai_agent.py --query "What is the current weather in Tokyo?" --model OpenVINO/Qwen3-8B-int4-ov --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather --stream --enable-thinking
-```
-```text
-python openai_agent.py --query "List the files in folder /root" --model OpenVINO/Qwen3-8B-int4-ov --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server all
-```
-:::
-:::{tab-item} Qwen3-4B 
-:sync: Qwen3-4B
-```text
-python openai_agent.py --query "What is the current weather in Tokyo?" --model OpenVINO/Qwen3-4B-int4-ov --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather --stream
-```
-```text
-python openai_agent.py --query "List the files in folder /root" --model OpenVINO/Qwen3-4B-int4-ov --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server all
-```
-:::
-:::{tab-item} Mistral-7B-Instruct-v0.3
-:sync: Mistral-7B-Instruct-v0.3
-```text
-python openai_agent.py --query "List the files in folder /root" --model OpenVINO/Mistral-7B-Instruct-v0.3-int4-ov --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server all --tool_choice required
-```
-:::
-:::{tab-item} Llama-3.2-3B-Instruct
-:sync: Llama-3.2-3B-Instruct
-```text
-python openai_agent.py --query "List the files in folder /root" --model srang992/Llama-3.2-3B-Instruct-ov-INT4 --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server all
-```
-:::
-:::{tab-item} Phi-4-mini-instruct
-:sync: Phi-4-mini-instruct
-```text
-python openai_agent.py --query "What is the current weather in Tokyo?" --model OpenVINO/Phi-4-mini-instruct-int4-ov --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather
-```
-:::
-:::{tab-item} Qwen3-Coder-30B-A3B-Instruct
-:sync: Qwen3-Coder-30B-A3B-Instruct
-```text
-python openai_agent.py --query "What is the current weather in Tokyo?" --model OpenVINO/Qwen3-Coder-30B-A3B-Instruct-int4-ov --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather
-```
-:::
-:::{tab-item} gpt-oss-20b
-:sync: gpt-oss-20b
-```console
-python openai_agent.py --query "What is the current weather in Tokyo?" --model OpenVINO/gpt-oss-20b-int4-ov --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather
+The current weather in Tokyo is clear sky with a temperature of 8.3°C (feels like 5.0°C). The relative humidity is at 50%, and the dew point is at -1.5°C. There is a wind blowing from the NNW at 6.8 km/h with gusts up to 21.2 km/h. The atmospheric pressure is 1021.5 hPa with 0% cloud cover. The visibility is 24.1 km.
 ```
 :::
 ::::
@@ -336,61 +255,6 @@ pip install llama-index-llms-openai-like==0.5.3 llama-index-core==0.14.5 llama-i
 curl https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/continuous_batching/agentic_ai/llama_index_agent.py -o llama_index_agent.py
 python llama_index_agent.py --query "What is the current weather in Tokyo?" --model OpenVINO/Qwen3-8B-int4-ov --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather --stream --enable-thinking
 ```
-
-
-## Testing efficiency in agentic use case
-
-Using LLM models with AI agents has a unique load characteristics with multi-turn communication and resending bit parts of the prompt as the previous conversation.
-To simulate such type of load, we should use a dedicated tool [multi_turn benchmark](https://github.com/vllm-project/vllm/tree/main/benchmarks/multi_turn).
-```bash
-git clone -b v0.10.2 https://github.com/vllm-project/vllm
-cd vllm/benchmarks/multi_turn
-pip install -r requirements.txt
-sed -i -e 's/if not os.path.exists(args.model)/if 1 == 0/g' benchmark_serving_multi_turn.py
-
-#Download the following text file (used for generation of synthetic conversations)
-wget https://www.gutenberg.org/ebooks/1184.txt.utf-8
-mv 1184.txt.utf-8 pg1184.txt
-
-# Testing single client scenario, for example with GPU execution
-docker run -d --name ovms --user $(id -u):$(id -g) --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) --rm -p 8000:8000 -v $(pwd)/models:/models openvino/model_server:weekly \
---rest_port 8000 --model_repository_path /models --source_model OpenVINO/Qwen3-8B-int4-ov --enable_prefix_caching true --task text_generation --target_device GPU
-
-python benchmark_serving_multi_turn.py -m OpenVINO/Qwen3-8B-int4-ov --url http://localhost:8000/v3 -i generate_multi_turn.json --served-model-name OpenVINO/Qwen3-8B-int4-ov --num-clients 1 -n 50
-
-# Testing high concurrency, for example on Xeon CPU with constrained resources (in case of memory constrains, reduce cache_size)
-docker run -d --name ovms --cpuset-cpus 0-15 --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models openvino/model_server:weekly --rest_port 8000 --model_repository_path /models --source_model OpenVINO/Qwen3-8B-int4-ov --enable_prefix_caching true --cache_size 20 --task text_generation
-
-python benchmark_serving_multi_turn.py -m OpenVINO/Qwen3-8B-int4-ov --url http://localhost:8000/v3 -i generate_multi_turn.json --served-model-name OpenVINO/Qwen3-8B-int4-ov --num-clients 24 
-```
-Below is an example of the output captured on iGPU:
-```
-Parameters:
-model=OpenVINO/Qwen3-8B-int4-ov
-num_clients=1
-num_conversations=100
-active_conversations=None
-seed=0
-Conversations Generation Parameters:
-text_files=pg1184.txt
-input_num_turns=UniformDistribution[12, 18]
-input_common_prefix_num_tokens=Constant[500]
-input_prefix_num_tokens=LognormalDistribution[6, 4]
-input_num_tokens=UniformDistribution[120, 160]
-output_num_tokens=UniformDistribution[80, 120]
-----------------------------------------------------------------------------------------------------
-Statistics summary:
-runtime_sec = 307.569
-requests_per_sec = 0.163
-----------------------------------------------------------------------------------------------------
-                   count     mean      std      min      25%      50%      75%      90%      max
-ttft_ms             50.0  1052.97   987.30   200.61   595.29   852.08  1038.50  1193.38  4265.27
-tpot_ms             50.0    51.37     2.37    47.03    49.67    51.45    53.16    54.42    55.23
-latency_ms          50.0  6128.26  1093.40  4603.86  5330.43  5995.30  6485.20  7333.73  9505.51
-input_num_turns     50.0     7.64     4.72     1.00     3.00     7.00    11.00    15.00    17.00
-input_num_tokens    50.0  2298.92   973.02   520.00  1556.50  2367.00  3100.75  3477.70  3867.00
-```
-
 
 ## Testing accuracy
 
@@ -417,7 +281,7 @@ Models can be also compared using the [leaderboard reports](https://gorilla.cs.b
 
 Use those steps to convert the model from HugginFace Hub to OpenVINO format and export it to a local storage.
 
-```console
+```text
 # Download export script, install its dependencies and create directory for the models
 curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/export_model.py -o export_model.py
 pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
@@ -427,7 +291,7 @@ Run `export_model.py` script to download and quantize the model:
 
 > **Note:** The users in China need to set environment variable HF_ENDPOINT="https://hf-mirror.com" or "https://www.modelscope.cn/models" before running the export script to connect to the HF Hub.
 
-```console
+```text
 python export_model.py text_generation --source_model meta-llama/Llama-3.2-3B-Instruct --weight-format int8 --config_file_path models/config.json --model_repository_path models --tool_parser llama3
 curl -L -o models/meta-llama/Llama-3.2-3B-Instruct/chat_template.jinja https://raw.githubusercontent.com/vllm-project/vllm/refs/tags/v0.9.0/examples/tool_chat_template_llama3.2_json.jinja
 ```
