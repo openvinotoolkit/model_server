@@ -220,85 +220,6 @@ std::string serializeResponsesUnaryResponse(
     return buffer.GetString();
 }
 
-absl::Status normalizeResponsesFunctionToolsInPlace(rapidjson::Document& doc) {
-    auto toolsIt = doc.FindMember("tools");
-    if (toolsIt == doc.MemberEnd() || toolsIt->value.IsNull()) {
-        return absl::OkStatus();
-    }
-    if (!toolsIt->value.IsArray()) {
-        return absl::InvalidArgumentError("Tools are not an array");
-    }
-
-    auto& allocator = doc.GetAllocator();
-    for (auto& toolValue : toolsIt->value.GetArray()) {
-        if (!toolValue.IsObject()) {
-            return absl::InvalidArgumentError("Tool is not a JSON object");
-        }
-        auto toolObj = toolValue.GetObject();
-        auto typeIt = toolObj.FindMember("type");
-        if (typeIt == toolObj.MemberEnd() || !typeIt->value.IsString()) {
-            return absl::InvalidArgumentError("Tool type is missing or invalid");
-        }
-        if (std::string(typeIt->value.GetString()) != "function") {
-            return absl::InvalidArgumentError("Only function tools are supported");
-        }
-
-        auto functionIt = toolObj.FindMember("function");
-        if (functionIt != toolObj.MemberEnd()) {
-            if (!functionIt->value.IsObject()) {
-                return absl::InvalidArgumentError("Function is not a valid JSON object");
-            }
-            continue;
-        }
-
-        auto nameIt = toolObj.FindMember("name");
-        if (nameIt == toolObj.MemberEnd() || !nameIt->value.IsString()) {
-            return absl::InvalidArgumentError("Function object does not contain a valid name field");
-        }
-
-        rapidjson::Value functionObj(rapidjson::kObjectType);
-        functionObj.AddMember("name", rapidjson::Value(nameIt->value.GetString(), allocator), allocator);
-
-        auto descriptionIt = toolObj.FindMember("description");
-        if (descriptionIt != toolObj.MemberEnd() && descriptionIt->value.IsString()) {
-            functionObj.AddMember("description", rapidjson::Value(descriptionIt->value.GetString(), allocator), allocator);
-        }
-
-        auto parametersIt = toolObj.FindMember("parameters");
-        if (parametersIt != toolObj.MemberEnd()) {
-            if (!parametersIt->value.IsObject()) {
-                return absl::InvalidArgumentError("Function parameters are not a valid JSON object");
-            }
-            rapidjson::Value parametersCopy(rapidjson::kObjectType);
-            parametersCopy.CopyFrom(parametersIt->value, allocator);
-            functionObj.AddMember("parameters", parametersCopy, allocator);
-        }
-
-        toolValue.AddMember("function", functionObj, allocator);
-    }
-
-    auto toolChoiceIt = doc.FindMember("tool_choice");
-    if (toolChoiceIt != doc.MemberEnd() && !toolChoiceIt->value.IsNull() && toolChoiceIt->value.IsObject()) {
-        auto toolChoiceObj = toolChoiceIt->value.GetObject();
-        auto functionIt = toolChoiceObj.FindMember("function");
-        if (functionIt == toolChoiceObj.MemberEnd()) {
-            auto typeIt = toolChoiceObj.FindMember("type");
-            auto nameIt = toolChoiceObj.FindMember("name");
-            if (typeIt != toolChoiceObj.MemberEnd() && typeIt->value.IsString() && std::string(typeIt->value.GetString()) == "function") {
-                if (nameIt == toolChoiceObj.MemberEnd() || !nameIt->value.IsString()) {
-                    return absl::InvalidArgumentError("tool_choice.name is not a valid string");
-                }
-
-                rapidjson::Value functionObj(rapidjson::kObjectType);
-                functionObj.AddMember("name", rapidjson::Value(nameIt->value.GetString(), allocator), allocator);
-                toolChoiceIt->value.AddMember("function", functionObj, allocator);
-            }
-        }
-    }
-
-    return absl::OkStatus();
-}
-
 }  // namespace
 
 absl::Status OpenAIChatCompletionsHandler::parseCompletionsPart() {
@@ -806,8 +727,9 @@ absl::Status OpenAIChatCompletionsHandler::parseTools() {
             if (tool_choice != "none" && tool_choice != "auto" && tool_choice != "required")
                 return absl::InvalidArgumentError("tool_choice should be either 'none' or 'auto' or 'required'");
         } else if (tool_choice_it->value.IsObject()) {
-            auto tool_choice_functionIt = tool_choice_it->value.GetObject().FindMember("function");
-            if (tool_choice_functionIt != tool_choice_it->value.GetObject().MemberEnd() && tool_choice_functionIt->value.IsObject()) {
+            auto toolChoiceObj = tool_choice_it->value.GetObject();
+            auto tool_choice_functionIt = toolChoiceObj.FindMember("function");
+            if (tool_choice_functionIt != toolChoiceObj.MemberEnd() && tool_choice_functionIt->value.IsObject()) {
                 auto nameIt = tool_choice_functionIt->value.GetObject().FindMember("name");
                 if (nameIt != tool_choice_functionIt->value.GetObject().MemberEnd() && nameIt->value.IsString()) {
                     tool_choice = nameIt->value.GetString();
@@ -815,7 +737,16 @@ absl::Status OpenAIChatCompletionsHandler::parseTools() {
                     return absl::InvalidArgumentError("tool_choice.function.name is not a valid string");
                 }
             } else {
-                return absl::InvalidArgumentError("tool_choice.function is not a valid JSON object");
+                auto typeIt = toolChoiceObj.FindMember("type");
+                auto nameIt = toolChoiceObj.FindMember("name");
+                if (typeIt != toolChoiceObj.MemberEnd() && typeIt->value.IsString() && std::string(typeIt->value.GetString()) == "function") {
+                    if (nameIt == toolChoiceObj.MemberEnd() || !nameIt->value.IsString()) {
+                        return absl::InvalidArgumentError("tool_choice.name is not a valid string");
+                    }
+                    tool_choice = nameIt->value.GetString();
+                } else {
+                    return absl::InvalidArgumentError("tool_choice.function is not a valid JSON object");
+                }
             }
         } else {
             return absl::InvalidArgumentError("tool_choice is not a valid JSON object or string");
@@ -835,38 +766,71 @@ absl::Status OpenAIChatCompletionsHandler::parseTools() {
             auto& obj = it->value.GetArray()[i];
             if (!obj.IsObject())
                 return absl::InvalidArgumentError("Tool is not a JSON object");
+            const rapidjson::Value* functionObj = nullptr;
+            const rapidjson::Value* parametersValue = nullptr;
+            const char* functionNameCStr = nullptr;
+
             auto functionIt = obj.FindMember("function");
-            if (functionIt != obj.MemberEnd() && functionIt->value.IsObject()) {
-                auto nameIt = functionIt->value.GetObject().FindMember("name");
-                if (nameIt != functionIt->value.GetObject().MemberEnd() && nameIt->value.IsString()) {
-                    std::string functionName = nameIt->value.GetString();
-                    // If tool_choice is set to "auto", we keep all tools
-                    // If tool_choice is set to a specific function name, we keep only that tool
-                    if (tool_choice != "auto" && tool_choice != "required" && tool_choice != functionName) {
-                        it->value.Erase(&obj);
-                        jsonChanged = true;
-                    } else {
-                        i++;
-                        // If we keep the tool, add tool name and schema to the request
-                        auto parametersIt = functionIt->value.GetObject().FindMember("parameters");
-                        if (parametersIt != functionIt->value.GetObject().MemberEnd() && parametersIt->value.IsObject()) {
-                            // now we want to insert to a mapping of
-                            // tool name -> tool schema representations struct
-                            // Dump parameters object to string since this is the schema format expected by GenAI
-                            // Keep the rapidjson::Value object as well to avoid re-parsing in outputParsers
-                            rapidjson::StringBuffer buffer;
-                            rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-                            parametersIt->value.Accept(writer);
-                            std::string parametersStr = buffer.GetString();
-                            ToolSchemaWrapper schemaReprs{&parametersIt->value, std::move(parametersStr)};
-                            request.toolNameSchemaMap[nameIt->value.GetString()] = std::move(schemaReprs);
-                        }
-                    }
-                } else {
+            if (functionIt != obj.MemberEnd()) {
+                if (!functionIt->value.IsObject()) {
+                    return absl::InvalidArgumentError("Function is not a valid JSON object");
+                }
+                functionObj = &functionIt->value;
+                auto nameIt = functionObj->GetObject().FindMember("name");
+                if (nameIt == functionObj->GetObject().MemberEnd() || !nameIt->value.IsString()) {
                     return absl::InvalidArgumentError("Function object does not contain a valid name field");
                 }
+                functionNameCStr = nameIt->value.GetString();
+                auto parametersIt = functionObj->GetObject().FindMember("parameters");
+                if (parametersIt != functionObj->GetObject().MemberEnd()) {
+                    parametersValue = &parametersIt->value;
+                }
             } else {
-                return absl::InvalidArgumentError("Function is not a valid JSON object");
+                auto typeIt = obj.FindMember("type");
+                if (typeIt == obj.MemberEnd() || !typeIt->value.IsString()) {
+                    return absl::InvalidArgumentError("Tool type is missing or invalid");
+                }
+                if (std::string(typeIt->value.GetString()) != "function") {
+                    return absl::InvalidArgumentError("Only function tools are supported");
+                }
+
+                auto nameIt = obj.FindMember("name");
+                if (nameIt == obj.MemberEnd() || !nameIt->value.IsString()) {
+                    return absl::InvalidArgumentError("Function object does not contain a valid name field");
+                }
+                functionNameCStr = nameIt->value.GetString();
+
+                auto parametersIt = obj.FindMember("parameters");
+                if (parametersIt != obj.MemberEnd()) {
+                    parametersValue = &parametersIt->value;
+                }
+            }
+
+            std::string functionName = functionNameCStr;
+            // If tool_choice is set to "auto", we keep all tools
+            // If tool_choice is set to a specific function name, we keep only that tool
+            if (tool_choice != "auto" && tool_choice != "required" && tool_choice != functionName) {
+                it->value.Erase(&obj);
+                jsonChanged = true;
+                continue;
+            }
+
+            i++;
+            // If we keep the tool, add tool name and schema to the request
+            if (parametersValue != nullptr) {
+                if (!parametersValue->IsObject()) {
+                    return absl::InvalidArgumentError("Function parameters are not a valid JSON object");
+                }
+                // now we want to insert to a mapping of
+                // tool name -> tool schema representations struct
+                // Dump parameters object to string since this is the schema format expected by GenAI
+                // Keep the rapidjson::Value object as well to avoid re-parsing in outputParsers
+                rapidjson::StringBuffer buffer;
+                rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+                parametersValue->Accept(writer);
+                std::string parametersStr = buffer.GetString();
+                ToolSchemaWrapper schemaReprs{parametersValue, std::move(parametersStr)};
+                request.toolNameSchemaMap[functionNameCStr] = std::move(schemaReprs);
             }
         }
     } else {
@@ -1070,11 +1034,7 @@ absl::Status OpenAIChatCompletionsHandler::parseResponsesPart(std::optional<uint
         return absl::InvalidArgumentError("logprobs are not supported in streaming mode.");
     }
 
-    auto toolsStatus = normalizeResponsesFunctionToolsInPlace(doc);
-    if (!toolsStatus.ok()) {
-        return toolsStatus;
-    }
-    toolsStatus = parseTools();
+    auto toolsStatus = parseTools();
     if (!toolsStatus.ok()) {
         return toolsStatus;
     }
