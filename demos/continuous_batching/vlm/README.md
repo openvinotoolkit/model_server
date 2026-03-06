@@ -198,7 +198,7 @@ Let's send a request with text an image in the messages context.
 ![zebra](../../../demos/common/static/images/zebra.jpeg) 
 
 :::{dropdown} **Unary call with curl using image url**
-**Note**: using urls in request requires `--allowed_media_domains` parameter described [here](parameters.md)
+**Note**: using urls in request requires `--allowed_media_domains` parameter described [here](../../../docs/parameters.md)
 
 ```bash
 curl http://localhost:8000/v3/chat/completions  -H "Content-Type: application/json" -d "{ \"model\": \"OpenGVLab/InternVL2-2B\", \"messages\":[{\"role\": \"user\", \"content\": [{\"type\": \"text\", \"text\": \"Describe what is one the picture.\"},{\"type\": \"image_url\", \"image_url\": {\"url\": \"http://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/demos/common/static/images/zebra.jpeg\"}}]}], \"max_completion_tokens\": 100}"

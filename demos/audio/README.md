@@ -24,6 +24,7 @@ mkdir -p audio_samples
 curl --output audio_samples/audio.wav "https://www.voiptroubleshooter.com/open_speech/american/OSR_us_000_0032_8k.wav"
 mkdir -p models
 mkdir -p models/speakers
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/audio/create_speaker_embedding.py -o create_speaker_embedding.py
 python create_speaker_embedding.py audio_samples/audio.wav models/speakers/voice1.bin
 ```
 
@@ -48,6 +49,7 @@ mkdir models
 Run `export_model.py` script to download and quantize the model:
 
 > **Note:** The users in China need to set environment variable HF_ENDPOINT="https://hf-mirror.com" before running the export script to connect to the HF Hub.
+> **Note:** Exporting `microsoft/speecht5_tts` model requires Python 3.10
 
 **CPU**
 ```console

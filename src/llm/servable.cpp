@@ -182,8 +182,18 @@ absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecution
 #else
         ov::genai::ChatHistory& chatHistory = executionContext->apiHandler->getChatHistory();
         constexpr bool add_generation_prompt = true;  // confirm it should be hardcoded
+        auto toolsStatus = executionContext->apiHandler->parseToolsToJsonContainer();
+        if (!toolsStatus.ok()) {
+            return toolsStatus.status();
+        }
+        const auto& tools = toolsStatus.value();
+        auto chatTemplateKwargsStatus = executionContext->apiHandler->parseChatTemplateKwargsToJsonContainer();
+        if (!chatTemplateKwargsStatus.ok()) {
+            return chatTemplateKwargsStatus.status();
+        }
+        const auto& chatTemplateKwargs = chatTemplateKwargsStatus.value();
         try {
-            inputText = getProperties()->tokenizer.apply_chat_template(chatHistory, add_generation_prompt);
+            inputText = getProperties()->tokenizer.apply_chat_template(chatHistory, add_generation_prompt, {}, tools, chatTemplateKwargs);
         } catch (const std::exception& e) {
             SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Failed to apply chat template: {}", e.what());
             return absl::Status(absl::StatusCode::kInvalidArgument, "Failed to apply chat template. The model either does not have chat template or has an invalid one.");
@@ -246,6 +256,12 @@ absl::Status GenAiServable::preparePartialResponse(std::shared_ptr<GenAiServable
     executionContext->lastStreamerCallbackOutput = "";
 
     std::string lastTextChunk = ss.str();
+
+    bool isFirstToken = GenerationPhase::INPUT_TOKEN_PROCESSING == executionContext->generationPhase;
+    if (isFirstToken) {
+        executionContext->generationPhase = GenerationPhase::OUTPUT_TOKEN_PROCESSING;
+    }
+
     ov::genai::GenerationFinishReason finishReason = generationOutput.finish_reason;
     if (finishReason == ov::genai::GenerationFinishReason::NONE) {  // continue
         if (lastTextChunk.size() > 0) {
@@ -254,6 +270,9 @@ absl::Status GenAiServable::preparePartialResponse(std::shared_ptr<GenAiServable
                 executionContext->response = wrapTextInServerSideEventMessage(serializedChunk);
                 SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Generated subsequent streaming response: {}", executionContext->response);
             }
+        } else if (isFirstToken) {
+            std::string serializedChunk = executionContext->apiHandler->serializeStreamingHandshakeChunk();
+            executionContext->response = wrapTextInServerSideEventMessage(serializedChunk);
         }
         executionContext->sendLoopbackSignal = true;
     } else {  // finish generation

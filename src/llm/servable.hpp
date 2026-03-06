@@ -59,6 +59,11 @@ Instance of this class is created for each request and is passed through multipl
 Note that GenAiServableExecutionContext pointer is the only parameter most of the GenAiServable methods take.
 */
 
+enum class GenerationPhase {
+    INPUT_TOKEN_PROCESSING,
+    OUTPUT_TOKEN_PROCESSING,
+};
+
 struct GenAiServableExecutionContext {
     // Common API related members
     ovms::HttpPayload payload;
@@ -74,6 +79,7 @@ struct GenAiServableExecutionContext {
     std::shared_ptr<ov::genai::TextStreamer> textStreamer;
     bool sendLoopbackSignal = false;
     std::string lastStreamerCallbackOutput;
+    GenerationPhase generationPhase = GenerationPhase::INPUT_TOKEN_PROCESSING;
 };
 
 struct ExtraGenerationInfo {

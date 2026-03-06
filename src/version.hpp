@@ -13,10 +13,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+
+#include <openvino/openvino.hpp>
+#include <openvino/genai/version.hpp>
+
 #ifndef SRC_VERSION_HPP_
 #define SRC_VERSION_HPP_
 #define PROJECT_NAME "OpenVINO Model Server"
 #define PROJECT_VERSION "REPLACE_PROJECT_VERSION"
-#define OPENVINO_NAME "REPLACE_OPENVINO_NAME"
+#define OPENVINO_NAME ov::get_openvino_version().buildNumber
+#define GENAI_NAME ov::genai::get_version().buildNumber
 #define BAZEL_BUILD_FLAGS "REPLACE_BAZEL_BUILD_FLAGS"
-#endif  // SRC_VERSION_HPP_"
+#endif  // SRC_VERSION_HPP_

@@ -13,12 +13,12 @@ ovms_extras_nginx-mtls-auth-readme
 ```
 
 ## CPU Extensions
-Implement any CPU layer, that is not support by OpenVINO yet, as a shared library.
+Implement any CPU layer, that is not supported by OpenVINO yet, as a shared library.
 
 [Learn more](../src/example/SampleCpuExtension/README.md)
 
 ## Model Cache
-Leverage the OpenVINO [model caching](https://docs.openvino.ai/2025/openvino-workflow/running-inference/optimize-inference/optimizing-latency/model-caching-overview.html) feature to speed up subsequent model loading on a target device.
+Leverage the OpenVINO [model caching](https://docs.openvino.ai/2026/openvino-workflow/running-inference/optimize-inference/optimizing-latency/model-caching-overview.html) feature to speed up subsequent model loading on a target device.
 
 [Learn more](model_cache.md)
 
