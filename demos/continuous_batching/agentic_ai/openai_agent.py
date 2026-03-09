@@ -19,6 +19,7 @@ from __future__ import annotations
 import asyncio
 import os
 import platform
+import sys
 
 from openai import AsyncOpenAI
 from agents import Agent, Runner, RunConfig
@@ -37,6 +38,7 @@ from agents import (
 )
 
 API_KEY = "not_used"
+os.environ["PYTHONUTF8"] = "1"
 env_proxy = {}
 http_proxy = os.environ.get("http_proxy")
 https_proxy = os.environ.get("https_proxy")
@@ -76,6 +78,18 @@ async def run(query, agent, OVMS_MODEL_PROVIDER, stream: bool = False):
     else: 
         result = await Runner.run(starting_agent=agent, input=query, run_config=RunConfig(model_provider=OVMS_MODEL_PROVIDER, tracing_disabled=True))
         print(result.final_output)
+        
+        is_tool_call_present = False
+
+        if hasattr(result, 'new_items') and result.new_items:
+            for item in result.new_items:
+                if hasattr(item, 'type') and item.type == "tool_call_item":
+                    is_tool_call_present = True
+        
+        if is_tool_call_present:
+            sys.exit(0)
+        else:
+            sys.exit(1)
 
 
 if __name__ == "__main__":

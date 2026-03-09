@@ -35,12 +35,6 @@ curl https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/c
 pip install openai-agents openai
 ```
 
-For windows applications it may be required to set environment variable to enforce utf-8 encodeing in python:
-
-```bat
-set PYTHONUTF8=1
-```
-
 ## Start OVMS
 
 This deployment procedure assumes the model was pulled or exported using the procedure above. The exception are models from OpenVINO organization if they support tools correctly with the default template like "OpenVINO/Qwen3-8B-int4-ov" - they can be deployed in a single command pulling and staring the server.
@@ -159,7 +153,7 @@ Let me know if you’d like more details or a forecast!
 :sync: Qwen3-8B
 Pull and start OVMS:
 ```bat
-ovms.exe --rest_port 8000 --source_model OpenVINO/Qwen3-8B-int4-cw-ov --model_repository_path models --tool_parser hermes3 --target_device NPU --task text_generation --cache_dir .cache --max_prompt_len 4000
+ovms.exe --rest_port 8000 --source_model OpenVINO/Qwen3-8B-int4-cw-ov --model_repository_path models --tool_parser hermes3 --target_device NPU --task text_generation --cache_dir .cache --max_prompt_len 8000
 ```
 
 Use MCP server:
@@ -176,7 +170,7 @@ The current weather in Tokyo is mainly clear with a temperature of 11.5°C. The 
 :sync: Qwen3-4B
 Pull and start OVMS:
 ```bat
-ovms.exe --rest_port 8000 --source_model FluidInference/qwen3-4b-int4-ov-npu --model_repository_path models --tool_parser hermes3 --target_device NPU --task text_generation --cache_dir .cache --max_prompt_len 4000
+ovms.exe --rest_port 8000 --source_model FluidInference/qwen3-4b-int4-ov-npu --model_repository_path models --tool_parser hermes3 --target_device NPU --task text_generation --cache_dir .cache --max_prompt_len 8000
 ```
 
 Use MCP server:
@@ -396,7 +390,7 @@ It can be applied using the commands below:
 Pull and start OVMS:
 ```bash
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models --device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render*  | head -1) openvino/model_server:weekly \
---rest_port 8000 --model_repository_path models --source_model OpenVINO/Qwen3-8B-int4-cw-ov --tool_parser hermes3 --target_device NPU --task text_generation --max_prompt_len 4000
+--rest_port 8000 --model_repository_path models --source_model OpenVINO/Qwen3-8B-int4-cw-ov --tool_parser hermes3 --target_device NPU --task text_generation --max_prompt_len 8000
 ```
 
 Use MCP server:
@@ -414,7 +408,7 @@ The current weather in Tokyo is clear sky with a temperature of 8.3°C (feels li
 Pull and start OVMS:
 ```bash
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models --device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:weekly \
---rest_port 8000 --model_repository_path models --source_model FluidInference/qwen3-4b-int4-ov-npu --tool_parser hermes3 --target_device NPU --task text_generation --max_prompt_len 4000
+--rest_port 8000 --model_repository_path models --source_model FluidInference/qwen3-4b-int4-ov-npu --tool_parser hermes3 --target_device NPU --task text_generation --max_prompt_len 8000
 ```
 
 Use MCP server:
