@@ -66,9 +66,9 @@ struct LLMExecutor {
         std::ostringstream oss;
         oss << std::fixed << std::setprecision(1);
         if (isCacheDynamic) {
-            oss << "dynamic " << cacheUsage << "% of " << formatBytes(cacheBytes);
+            oss << "type: dynamic, cache usage: " << cacheUsage << "% of " << formatBytes(cacheBytes);
         } else {
-            oss << "static " << cacheUsage << "% of " << formatBytes(cacheBytes);
+            oss << "type: static, cache usage: " << cacheUsage << "% of " << formatBytes(cacheBytes);
         }
 
         return oss.str();
@@ -101,7 +101,7 @@ struct LLMExecutor {
 #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
     void printMetrics() {
         ov::genai::PipelineMetrics metrics = pipe->get_metrics();
-        SPDLOG_LOGGER_INFO(llm_executor_logger, "All requests: {}; Scheduled requests: {}; Cache usage {};",
+        SPDLOG_LOGGER_INFO(llm_executor_logger, "All requests: {}; Scheduled requests: {}; Cache {};",
             metrics.requests, metrics.scheduled_requests, formatCacheInfo(metrics.cache_usage, metrics.kv_cache_size_in_bytes, this->isDynamicKVCache));
     }
 };
