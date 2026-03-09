@@ -43,7 +43,7 @@ to `docker run` command, use the image with GPU support. Export the models with 
 It can be applied using the commands below:
 ```bat
 set MOE_USE_MICRO_GEMM_PREFILL=0
-ovms.exe --model_repository_path /models --source_model OpenVINO/Qwen3-30B-A3B-Instruct-2507-int4-ov --task text_generation --target_device GPU --tool_parser hermes3 --rest_port 8000 --model_name Qwen3-30B-A3B-Instruct-2507-int4-ov
+ovms.exe --model_repository_path c:\models --source_model OpenVINO/Qwen3-30B-A3B-Instruct-2507-int4-ov --task text_generation --target_device GPU --tool_parser hermes3 --rest_port 8000 --model_name Qwen3-30B-A3B-Instruct-2507-int4-ov
 ```
 
 
