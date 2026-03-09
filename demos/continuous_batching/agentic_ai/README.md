@@ -248,7 +248,7 @@ The current weather in Tokyo is clear with a temperature of 8.3°C (feels like 5
 Pull and start OVMS:
 ```bash
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models openvino/model_server:weekly \
---rest_port 8000 --model_repository_path models --source_model OpenVINO/Phi-4-mini-instruct-int4-ov --tool_parser hermes3 --task text_generation
+--rest_port 8000 --model_repository_path models --source_model OpenVINO/Phi-4-mini-instruct-int4-ov --tool_parser phi4 --task text_generation
 ```
 
 Use MCP server:
@@ -508,7 +508,7 @@ Models can be also compared using the [leaderboard reports](https://gorilla.cs.b
 
 ### Export using python script
 
-Use those steps to convert the model from HugginFace Hub to OpenVINO format and export it to a local storage.
+Use those steps to convert the model from HuggingFace Hub to OpenVINO format and export it to a local storage.
 
 ```text
 # Download export script, install its dependencies and create directory for the models
