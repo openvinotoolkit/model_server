@@ -1,4 +1,4 @@
-# Serving for Text generation with Visual Language Models with NPU acceleration {#ovms_demos_vlm_npu}
+# NPU for Visual Language Models {#ovms_demos_vlm_npu}
 
 
 This demo shows how to deploy VLM models in the OpenVINO Model Server with NPU acceleration.
@@ -11,9 +11,7 @@ It is targeted on client machines equipped with NPU accelerator.
 
 ## Prerequisites
 
-**OVMS 2025.1 or higher**
-
-**Model preparation**: Python 3.9 or higher with pip and HuggingFace account
+**Model preparation**: Python 3.10 or higher with pip and HuggingFace account
 
 **Model Server deployment**: Installed Docker Engine or OVMS binary package according to the [baremetal deployment guide](../../docs/deploying_server_baremetal.md)
 

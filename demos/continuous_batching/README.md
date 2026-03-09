@@ -30,17 +30,20 @@ That makes it easy to use and efficient especially on on Intel® Xeon® processo
 
 ## Server Deployment
 
-**CPU Docker on Ubuntu24**
+**Container on Linux and CPU target device**
 
 Running this command starts the container with CPU only target device:
 ```bash
-docker run -it -p 8000:8000 --rm -e MOE_USE_MICRO_GEMM_PREFILL=0 --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw openvino/model_server:weekly --model_repository_path /models --source_model OpenVINO/Qwen3-30B-A3B-Instruct-2507-int4-ov --task text_generation --target_device GPU --tool_parser hermes3 --rest_port 8000 --model_name Qwen3-30B-A3B-Instruct-2507-int4-ov
+docker run -it -p 8000:8000 --rm -e MOE_USE_MICRO_GEMM_PREFILL=0 --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw openvino/model_server:weekly --model_repository_path /models --source_model OpenVINO/Qwen3-30B-A3B-Instruct-2507-int4-ov --task text_generation --target_device CPU --tool_parser hermes3 --rest_port 8000 --model_name Qwen3-30B-A3B-Instruct-2507-int4-ov
 ```
-**GPU baremetal on Windows11**
+> **Note:** In case you want to use GPU target device, add extra docker parameters `--device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1)`
+to `docker run` command. The parameter `--target_device` should be also updated to `GPU`. 
 
-In case you want to use GPU device to run the generation, add extra docker parameters `--device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1)`
-to `docker run` command, use the image with GPU support. Export the models with precision matching the GPU capacity and adjust pipeline configuration.
-It can be applied using the commands below:
+
+**Binary package on Windows 11 with GPU target device**
+
+After ovms is installed according to steps from [baremetal deployment guide](../../docs/deploying_server_baremetal.md), run the following command:
+
 ```bat
 set MOE_USE_MICRO_GEMM_PREFILL=0
 ovms.exe --model_repository_path c:\models --source_model OpenVINO/Qwen3-30B-A3B-Instruct-2507-int4-ov --task text_generation --target_device GPU --tool_parser hermes3 --rest_port 8000 --model_name Qwen3-30B-A3B-Instruct-2507-int4-ov
@@ -69,9 +72,9 @@ curl http://localhost:8000/v3/models
 
 ## Request Generation
 
-A single servable exposes both `chat/completions` and `completions` endpoints with and without stream capabilities.
+Model exposes both `chat/completions` and `completions` endpoints with and without stream capabilities.
 Chat endpoint is expected to be used for scenarios where conversation context should be pasted by the client and the model prompt is created by the server based on the jinja model template.
-Completion endpoint should be used to pass the prompt directly by the client and for models without the jinja template.
+Completion endpoint should be used to pass the prompt directly by the client and for models without the jinja template. Here is demonstrated model `Qwen/Qwen3-30B-A3B-Instruct-2507` in int4 precision. It has chat capability so `chat/completions` endpoint will be employed:
 
 ### Unary calls to chat/completions endpoint using cURL 
 
@@ -110,7 +113,7 @@ Windows Powershell
 
 Windows Command Prompt
 ```bat
-curl -s http://localhost:8000/v3/chat/completions -H "Content-Type: application/json" -d "{\"model\": \"meta-llama/Meta-Llama-3-8B-Instruct\", \"max_tokens\": 30, \"temperature\": 0, \"stream\": false, \"messages\": [{\"role\": \"system\", \"content\": \"You are a helpful assistant.\"}, {\"role\": \"user\", \"content\": \"If 1=3 2=3 3=5 4=4 5=4 Then, 6=?\"}]}"
+curl -s http://localhost:8000/v3/chat/completions -H "Content-Type: application/json" -d "{\"model\": \"Qwen3-30B-A3B-Instruct-2507-int4-ov\", \"max_tokens\": 30, \"temperature\": 0, \"stream\": false, \"messages\": [{\"role\": \"system\", \"content\": \"You are a helpful assistant.\"}, {\"role\": \"user\", \"content\": \"If 1=3 2=3 3=5 4=4 5=4 Then, 6=?\"}]}"
 ```
 :::
 
@@ -289,6 +292,9 @@ Check the demo [structured output](./structured_output/README.md)
 Check the [guide of using lm-evaluation-harness](./accuracy/README.md)
 
 ## References
+- [Export models to OpenVINO format](../common/export_models/README.md)
+- [Supported LLM models](https://openvinotoolkit.github.io/openvino.genai/docs/supported-models/#large-language-models-llms)
+- [Official OpenVINO LLM models in HuggingFace](https://huggingface.co/collections/OpenVINO/llm)
 - [Chat Completions API](../../docs/model_server_rest_api_chat.md)
 - [Completions API](../../docs/model_server_rest_api_completions.md)
 - [Writing client code](../../docs/clients_genai.md)

@@ -1,4 +1,4 @@
-# How to serve Embeddings models via OpenAI API {#ovms_demos_embeddings}
+# Text Embeddings models via OpenAI API {#ovms_demos_embeddings}
 This demo shows how to deploy embeddings models in the OpenVINO Model Server for text feature extractions.
 Text generation use case is exposed via OpenAI API `embeddings` endpoint.
 
