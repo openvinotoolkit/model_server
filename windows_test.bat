@@ -98,7 +98,7 @@ if !errorlevel! neq 0 exit /b !errorlevel!
 
 :: FIXME (@atobisze): Temporarily disable graph queue by default in unit tests.
 :: Remove once all tests are validated with graph queue enabled.
-set "OVMS_TEST_GRAPH_QUEUE_OFF=1"
+set "OVMS_GRAPH_QUEUE_OFF=1"
 
 :: Start unit test
 echo Running: %runTest%

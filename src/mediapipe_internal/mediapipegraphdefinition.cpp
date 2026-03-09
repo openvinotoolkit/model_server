@@ -141,11 +141,11 @@ Status MediapipeGraphDefinition::resolveGraphQueueSize() {
     }
 
     // 2. Env var kill switch — suppresses the auto-enable default.
-    //    Used by unit tests (OVMS_TEST_GRAPH_QUEUE_OFF=1) to keep the old no-queue behavior
+    //    Used by unit tests (OVMS_GRAPH_QUEUE_OFF=1) to keep the old no-queue behavior
     //    unless a graph explicitly opts in via OVMS_GRAPH_QUEUE_SIZE directive above.
-    const char* testGuard = std::getenv("OVMS_TEST_GRAPH_QUEUE_OFF");
+    const char* testGuard = std::getenv("OVMS_GRAPH_QUEUE_OFF");
     if (testGuard != nullptr && std::string(testGuard) == "1") {
-        SPDLOG_DEBUG("OVMS_TEST_GRAPH_QUEUE_OFF=1 set, graph queue disabled by default for mediapipe: {}", getName());
+        SPDLOG_DEBUG("OVMS_GRAPH_QUEUE_OFF=1 set, graph queue disabled by default for mediapipe: {}", getName());
         return StatusCode::OK;
     }
 
