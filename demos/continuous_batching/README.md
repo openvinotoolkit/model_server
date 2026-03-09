@@ -15,70 +15,14 @@ This demo shows how to deploy LLM models in the OpenVINO Model Server using cont
 Text generation use case is exposed via OpenAI API `chat/completions` and `completions` endpoints.
 That makes it easy to use and efficient especially on on Intel® Xeon® processors and ARC GPUs.
 
-> **Note:** This demo was tested on 4th - 6th generation Intel® Xeon® Scalable Processors, Intel® Arc™ GPU Series and Intel® Data Center GPU Series on Ubuntu22/24, RedHat8/9 and Windows11.
+> **Note:** This demo was tested on 4th - 6th generation Intel® Xeon® Scalable Processors, and Intel® Core Ultra Series on Ubuntu24 and Windows11.
 
 ## Prerequisites
 
-**Model preparation**: Python 3.9 or higher with pip and HuggingFace account
-
 **Model Server deployment**: Installed Docker Engine or OVMS binary package according to the [baremetal deployment guide](../../docs/deploying_server_baremetal.md)
 
-**(Optional) Client**: git and Python for using OpenAI client package and vLLM benchmark app
+**(Optional) Client**: Git and Python for using OpenAI client package and vLLM benchmark app
 
-
-## Model preparation
-Here, the original Pytorch LLM model and the tokenizer will be converted to IR format and optionally quantized.
-That ensures faster initialization time, better performance and lower memory consumption.
-LLM engine parameters will be defined inside the `graph.pbtxt` file.
-
-Download export script, install it's dependencies and create directory for the models:
-```console
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/export_model.py -o export_model.py
-pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
-mkdir models
-```
-
-Run `export_model.py` script to download and quantize the model:
-
-> **Note:** Before downloading the model, access must be requested. Follow the instructions on the [HuggingFace model page](https://huggingface.co/meta-llama/Meta-Llama-3-8B) to request access. When access is granted, create an authentication token in the HuggingFace account -> Settings -> Access Tokens page. Issue the following command and enter the authentication token. Authenticate via `huggingface-cli login`. 
-> **Note:** The users in China need to set environment variable HF_ENDPOINT="https://hf-mirror.com" before running the export script to connect to the HF Hub.
-
-**CPU**
-```console
-python export_model.py text_generation --source_model meta-llama/Meta-Llama-3-8B-Instruct --weight-format fp16 --kv_cache_precision u8 --config_file_path models/config.json --model_repository_path models  --overwrite_models
-```
-
-**GPU**
-```console
-python export_model.py text_generation --source_model meta-llama/Meta-Llama-3-8B-Instruct --weight-format int4 --target_device GPU --config_file_path models/config.json --model_repository_path models --overwrite_models
-```
-
-> **Note:** Change the `--weight-format` to quantize the model to `int8` or `int4` precision to reduce memory consumption and improve performance.
-
-> **Note:** You can change the model used in the demo out of any topology [tested](https://github.com/openvinotoolkit/openvino.genai/blob/master/tests/python_tests/models/real_models) with OpenVINO.
-
-You should have a model folder like below:
-```
-tree models
-models
-├── config.json
-└── meta-llama
-    └── Meta-Llama-3-8B-Instruct
-        ├── config.json
-        ├── generation_config.json
-        ├── graph.pbtxt
-        ├── openvino_detokenizer.bin
-        ├── openvino_detokenizer.xml
-        ├── openvino_model.bin
-        ├── openvino_model.xml
-        ├── openvino_tokenizer.bin
-        ├── openvino_tokenizer.xml
-        ├── special_tokens_map.json
-        ├── tokenizer_config.json
-        └── tokenizer.json
-```
-
-The default configuration should work in most cases but the parameters can be tuned via `export_model.py` script arguments. Run the script with `--help` argument to check available parameters and see the [LLM calculator documentation](../../docs/llm/reference.md) to learn more about configuration options.
 
 ## Server Deployment
 
@@ -86,58 +30,41 @@ The default configuration should work in most cases but the parameters can be tu
 
 Select deployment option depending on how you prepared models in the previous step.
 
-**CPU**
+**CPU Docker on Ubuntu24**
 
 Running this command starts the container with CPU only target device:
 ```bash
-docker run -d --rm -p 8000:8000 -v $(pwd)/models:/workspace:ro openvino/model_server:latest --rest_port 8000 --config_path /workspace/config.json
+docker run -it -p 8000:8000 --rm -e MOE_USE_MICRO_GEMM_PREFILL=0 --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw openvino/model_server:weekly --model_repository_path /models --source_model OpenVINO/Qwen3-30B-A3B-Instruct-2507-int4-ov --task text_generation --target_device GPU --tool_parser hermes3 --rest_port 8000 --model_name Qwen3-30B-A3B-Instruct-2507-int4-ov
 ```
-**GPU**
+**GPU baremetal on Windows11**
 
 In case you want to use GPU device to run the generation, add extra docker parameters `--device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1)`
 to `docker run` command, use the image with GPU support. Export the models with precision matching the GPU capacity and adjust pipeline configuration.
 It can be applied using the commands below:
-```bash
-docker run -d --rm -p 8000:8000 --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -v $(pwd)/models:/workspace:ro openvino/model_server:latest-gpu --rest_port 8000 --config_path /workspace/config.json
-```
-:::
-
-:::{dropdown} **Deploying on Bare Metal**
-
-Assuming you have unpacked model server package, make sure to:
-
-- **On Windows**: run `setupvars` script
-- **On Linux**: set `LD_LIBRARY_PATH` and `PATH` environment variables
-
-as mentioned in [deployment guide](../../docs/deploying_server_baremetal.md), in every new shell that will start OpenVINO Model Server.
-
-Depending on how you prepared models in the first step of this demo, they are deployed to either CPU or GPU (it's defined in `graph.pbtxt`). If you run on GPU make sure to have appropriate drivers installed, so the device is accessible for the model server.
-
 ```bat
-ovms --rest_port 8000 --config_path ./models/config.json
+set MOE_USE_MICRO_GEMM_PREFILL=0
+ovms.exe --model_repository_path /models --source_model OpenVINO/Qwen3-30B-A3B-Instruct-2507-int4-ov --task text_generation --target_device GPU --tool_parser hermes3 --rest_port 8000 --model_name Qwen3-30B-A3B-Instruct-2507-int4-ov
 ```
 :::
+
 
 ## Readiness Check
 
 Wait for the model to load. You can check the status with a simple command:
 ```console
-curl http://localhost:8000/v1/config
+curl http://localhost:8000/v3/models
 ```
 ```json
 {
-    "meta-llama/Meta-Llama-3-8B-Instruct": {
-        "model_version_status": [
-            {
-                "version": "1",
-                "state": "AVAILABLE",
-                "status": {
-                    "error_code": "OK",
-                    "error_message": "OK"
-                }
-            }
-        ]
+  "object": "list",
+  "data": [
+    {
+      "id": "Qwen3-30B-A3B-Instruct-2507-int4-ov",
+      "object": "model",
+      "created": 1772928358,
+      "owned_by": "OVMS"
     }
+  ]
 }
 ```
 
@@ -156,8 +83,8 @@ Completion endpoint should be used to pass the prompt directly by the client and
 curl http://localhost:8000/v3/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "meta-llama/Meta-Llama-3-8B-Instruct",
-    "max_tokens":30,
+    "model": "Qwen3-30B-A3B-Instruct-2507-int4-ov",
+    "max_completion_tokens":300,
     "stream":false,
     "messages": [
       {
@@ -166,7 +93,7 @@ curl http://localhost:8000/v3/chat/completions \
       },
       {
         "role": "user",
-        "content": "What is OpenVINO?"
+        "content": "If 1=3 2=3 3=5 4=4 5=4 Then, 6=?"
       }
     ]
   }'| jq .
@@ -195,84 +122,29 @@ curl -s http://localhost:8000/v3/chat/completions -H "Content-Type: application/
 {
   "choices": [
     {
-      "finish_reason": "length",
+      "finish_reason": "stop",
       "index": 0,
       "logprobs": null,
       "message": {
-        "content": "OpenVINO is an open-source software framework developed by Intel for optimizing and deploying computer vision, machine learning, and deep learning models on various devices,",
-        "role": "assistant"
+        "content": "We are given a pattern:\n\n- 1 = 3  \n- 2 = 3  \n- 3 = 5  \n- 4 = 4  \n- 5 = 4  \n- 6 = ?\n\nWe need to find what **6** equals based on this pattern.\n\nLet’s analyze the pattern.\n\nAt first glance, it's not a mathematical operation like addition or multiplication. Let's look at the **number of letters** in the **English word** for each number.\n\nTry that:\n\n- 1 → \"one\" → 3 letters → matches 1 = 3 ✅  \n- 2 → \"two\" → 3 letters → matches 2 = 3 ✅  \n- 3 → \"three\" → 5 letters → matches 3 = 5 ✅  \n- 4 → \"four\" → 4 letters → matches 4 = 4 ✅  \n- 5 → \"five\" → 4 letters → matches 5 = 4 ✅  \n- 6 → \"six\" → 3 letters → So, 6 = 3?\n\nWait — let’s double-check:\n\n- \"six\" has 3 letters → so 6 = 3?\n\nBut let's confirm the pattern again.\n\nYes! The pattern is:  \n**The number on the left equals the number of letters in the English word for that number.**\n\nSo:\n\n| Number | Word     | Letters |\n|--------|----------|---------|\n| 1      | one      | 3       |\n| 2      | two      | 3       |\n| 3      | three    | 5       |\n| 4      | four     | 4       |\n| 5      | five     | 4       |\n| 6      | six      | 3       |\n\nSo, **6 = 3**\n\n### ✅ Final Answer: **3**",
+        "role": "assistant",
+        "tool_calls": []
       }
     }
   ],
-  "created": 1724405301,
-  "model": "meta-llama/Meta-Llama-3-8B-Instruct",
+  "created": 1772929186,
+  "model": "ovms-model",
   "object": "chat.completion",
   "usage": {
-    "prompt_tokens": 27,
-    "completion_tokens": 30,
-    "total_tokens": 57
+    "prompt_tokens": 45,
+    "completion_tokens": 394,
+    "total_tokens": 439
   }
 }
 ```
-:::
-### Unary calls to completions endpoint using cURL 
-A similar call can be made with a `completion` endpoint:
-::::{tab-set}
 
-:::{tab-item} Linux
-```bash
-curl http://localhost:8000/v3/completions \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "meta-llama/Meta-Llama-3-8B-Instruct",
-    "max_tokens":30,
-    "stream":false,
-    "prompt": "<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\nYou are assistant<|eot_id|><|start_header_id|>user<|end_header_id|>\n\nWhat is OpenVINO?<|eot_id|><|start_header_id|>assistant<|end_header_id|>"
-  }'| jq .
-```
-:::
 
-:::{tab-item} Windows
-Windows Powershell
-```powershell
-(Invoke-WebRequest -Uri "http://localhost:8000/v3/completions" `
- -Method POST `
- -Headers @{ "Content-Type" = "application/json" } `
- -Body '{"model": "meta-llama/Meta-Llama-3-8B-Instruct", "max_tokens": 30, "temperature": 0, "stream": false, "prompt":"<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\nYou are assistant<|eot_id|><|start_header_id|>user<|end_header_id|>\n\nWhat is OpenVINO?<|eot_id|><|start_header_id|>assistant<|end_header_id|>"}').Content
-```
-
-Windows Command Prompt
-```bat
-curl -s http://localhost:8000/v3/completions -H "Content-Type: application/json" -d "{\"model\": \"meta-llama/Meta-Llama-3-8B-Instruct\", \"max_tokens\": 30, \"temperature\": 0, \"stream\": false, \"prompt\":\"^<^|begin_of_text^|^>^<^|start_header_id^|^>system^<^|end_header_id^|^>\n\nYou are assistant^<^|eot_id^|^>^<^|start_header_id^|^>user^<^|end_header_id^|^>\n\nWhat is OpenVINO?^<^|eot_id^|^>^<^|start_header_id^|^>assistant^<^|end_header_id^|^>\"}"
-```
-::: 
-
-::::
-
-:::{dropdown} Expected Response
-```json
-{
-  "choices": [
-    {
-      "finish_reason": "length",
-      "index": 0,
-      "logprobs": null,
-      "text": "\n\nOpenVINO is an open-source computer vision platform developed by Intel for deploying and optimizing computer vision, machine learning, and autonomous driving applications. It"
-    }
-  ],
-  "created": 1724405354,
-  "model": "meta-llama/Meta-Llama-3-8B-Instruct",
-  "object": "text_completion",
-  "usage": {
-    "prompt_tokens": 23,
-    "completion_tokens": 30,
-    "total_tokens": 53
-  }
-}
-```
-:::
-
-### Streaming call with OpenAI Python package
+### OpenAI Python package
 
 The endpoints `chat/completions` and `completions` are compatible with OpenAI client so it can be easily used to generate code also in streaming mode:
 
@@ -283,7 +155,7 @@ pip3 install openai
 
 ::::{tab-set}
 
-:::{tab-item} Chat completions
+:::{tab-item} Chat completions with streaming
 ```python
 from openai import OpenAI
 
@@ -309,7 +181,7 @@ It looks like you're testing me!
 
 :::
 
-:::{tab-item} Completions
+:::{tab-item} Chat completions with unary response
 
 ```console
 pip3 install openai
@@ -340,41 +212,6 @@ It looks like you're testing me!
 
 ::::
 
-## Benchmarking text generation with high concurrency
-
-OpenVINO Model Server employs efficient parallelization for text generation. It can be used to generate text also in high concurrency in the environment shared by multiple clients.
-It can be demonstrated using benchmarking app from vLLM repository:
-```console
-git clone --branch v0.7.3 --depth 1 https://github.com/vllm-project/vllm
-cd vllm
-pip3 install -r requirements-cpu.txt --extra-index-url https://download.pytorch.org/whl/cpu
-cd benchmarks
-curl -L https://huggingface.co/datasets/anon8231489123/ShareGPT_Vicuna_unfiltered/resolve/main/ShareGPT_V3_unfiltered_cleaned_split.json -o ShareGPT_V3_unfiltered_cleaned_split.json # sample dataset
-python benchmark_serving.py --host localhost --port 8000 --endpoint /v3/chat/completions --backend openai-chat --model meta-llama/Meta-Llama-3-8B-Instruct --dataset-path ShareGPT_V3_unfiltered_cleaned_split.json --num-prompts 1000 --request-rate inf
-
-Namespace(backend='openai-chat', base_url=None, host='localhost', port=8000, endpoint='/v3/chat/completions', dataset=None, dataset_name='sharegpt', dataset_path='ShareGPT_V3_unfiltered_cleaned_split.json', max_concurrency=None, model='meta-llama/Meta-Llama-3-8B-Instruct', tokenizer=None, best_of=1, use_beam_search=False, num_prompts=1000, logprobs=None, request_rate=inf, burstiness=1.0, seed=0, trust_remote_code=False, disable_tqdm=False, profile=False, save_result=False, metadata=None, result_dir=None, result_filename=None, ignore_eos=False, percentile_metrics='ttft,tpot,itl', metric_percentiles='99', goodput=None, sonnet_input_len=550, sonnet_output_len=150, sonnet_prefix_len=200, sharegpt_output_len=None, random_input_len=1024, random_output_len=128, random_range_ratio=1.0, random_prefix_len=0, hf_subset=None, hf_split=None, hf_output_len=None, tokenizer_mode='auto', served_model_name=None, lora_modules=None)
-
-Traffic request rate: inf
-100%|██████████████████████████████████████████████████| 1000/1000 [17:17<00:00,  1.04s/it]
-============ Serving Benchmark Result ============
-Successful requests:                     1000
-Benchmark duration (s):                  447.62
-Total input tokens:                      215201
-Total generated tokens:                  198588
-Request throughput (req/s):              2.23
-Output token throughput (tok/s):         443.65
-Total Token throughput (tok/s):          924.41
----------------Time to First Token----------------
-Mean TTFT (ms):                          171999.94
-Median TTFT (ms):                        170699.21
-P99 TTFT (ms):                           360941.40
------Time per Output Token (excl. 1st token)------
-Mean TPOT (ms):                          211.31
-Median TPOT (ms):                        223.79
-P99 TPOT (ms):                           246.48
-==================================================
-```
-
 ## RAG with Model Server
 
 The service deployed above can be used in RAG chain using `langchain` library with OpenAI endpoint as the LLM engine.
@@ -384,7 +221,6 @@ Check the example in the [RAG notebook](https://github.com/openvinotoolkit/model
 ## Scaling the Model Server
 
 Check this simple [text generation scaling demo](https://github.com/openvinotoolkit/model_server/blob/main/demos/continuous_batching/scaling/README.md).
-
 
 ## Testing the model accuracy over serving API
 
