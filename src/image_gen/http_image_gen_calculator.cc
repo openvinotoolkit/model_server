@@ -180,6 +180,8 @@ public:
             SET_OR_RETURN(ov::AnyMap, requestOptions, getImageGenerationRequestOptions(*payload.parsedJson, pipe->args));
 
             // single request assumption - use pipeline instance directly
+            if (!pipe->text2ImagePipeline)
+                return absl::FailedPreconditionError("Text-to-image pipeline is not available for this model");
             auto status = generateTensor(*pipe->text2ImagePipeline, prompt, requestOptions, images);
             if (!status.ok()) {
                 return status;
@@ -205,21 +207,22 @@ public:
             SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "ImageGenCalculator [Node: {}] Mask present: {}", cc->NodeName(), mask.has_value() && !mask.value().empty());
 
             if (mask.has_value() && !mask.value().empty()) {
-                // inpainting path - single pipeline instance, no clone needed
+                if (!pipe->inpaintingPipeline)
+                    return absl::FailedPreconditionError("Inpainting pipeline is not available for this model");
+                // Inpainting path — uses the pre-built InpaintingPipeline that was loaded from disk
+                // during initialization.  Do NOT derive InpaintingPipeline from Image2ImagePipeline
+                // at request time — that derivation direction causes a SEGFAULT in GenAI.
                 ov::Tensor maskTensor;
                 SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "ImageGenCalculator [Node: {}] Inpainting: decoding mask tensor", cc->NodeName());
                 status = makeTensorFromString(std::string(mask.value()), maskTensor);
                 if (!status.ok()) {
                     return status;
                 }
-                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "ImageGenCalculator [Node: {}] Inpainting: mask tensor decoded", cc->NodeName());
-                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "ImageGenCalculator [Node: {}] Inpainting: creating img2img clone", cc->NodeName());
-                ov::genai::Image2ImagePipeline image2ImageClone = pipe->image2ImagePipeline->clone();
-                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "ImageGenCalculator [Node: {}] Inpainting: creating pipeline wrapper", cc->NodeName());
-                ov::genai::InpaintingPipeline inpaintingRequest(image2ImageClone);
-                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "ImageGenCalculator [Node: {}] Inpainting: invoking generate()", cc->NodeName());
-                status = generateTensorInpainting(inpaintingRequest, prompt, imageTensor, maskTensor, requestOptions, images);
+                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "ImageGenCalculator [Node: {}] Inpainting: mask tensor decoded, invoking generate()", cc->NodeName());
+                status = generateTensorInpainting(*pipe->inpaintingPipeline, prompt, imageTensor, maskTensor, requestOptions, images);
             } else {
+                if (!pipe->image2ImagePipeline)
+                    return absl::FailedPreconditionError("Image-to-image pipeline is not available for this model");
                 // image-to-image path - single pipeline instance, no clone needed
                 status = generateTensorImg2Img(*pipe->image2ImagePipeline, prompt, imageTensor, requestOptions, images);
             }

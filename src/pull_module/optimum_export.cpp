@@ -107,6 +107,9 @@ std::string OptimumDownloader::getExportCmdImageGeneration() {
     oss << this->OPTIMUM_CLI_EXPORT_COMMAND;
     oss << "--model " << this->sourceModel;
     oss << " --weight-format " << this->exportSettings.precision;
+    if (this->exportSettings.extraQuantizationParams.has_value()) {
+        oss << " " << this->exportSettings.extraQuantizationParams.value();
+    }
     oss << " " << this->downloadPath;
     // clang-format on
 

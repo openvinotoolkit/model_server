@@ -401,6 +401,19 @@ TEST_F(TestOptimumDownloaderSetup, RerankExportCmd) {
 TEST_F(TestOptimumDownloaderSetup, ImageGenExportCmd) {
     inHfSettings.task = ovms::IMAGE_GENERATION_GRAPH;
     std::unique_ptr<TestOptimumDownloader> optimumDownloader = std::make_unique<TestOptimumDownloader>(inHfSettings);
+    std::string expectedCmd = "optimum-cli export openvino --model model/name --weight-format fp64 --param --param value \\path\\to\\Download\\model\\name";
+    std::string expectedCmd2 = "";
+#ifdef __linux__
+    std::replace(expectedCmd.begin(), expectedCmd.end(), '\\', '/');
+#endif
+    ASSERT_EQ(optimumDownloader->getExportCmd(), expectedCmd);
+    ASSERT_EQ(optimumDownloader->getConvertCmd(), expectedCmd2);
+}
+
+TEST_F(TestOptimumDownloaderSetup, ImageGenExportCmdNoExtraParams) {
+    inHfSettings.task = ovms::IMAGE_GENERATION_GRAPH;
+    inHfSettings.exportSettings.extraQuantizationParams = std::nullopt;
+    std::unique_ptr<TestOptimumDownloader> optimumDownloader = std::make_unique<TestOptimumDownloader>(inHfSettings);
     std::string expectedCmd = "optimum-cli export openvino --model model/name --weight-format fp64 \\path\\to\\Download\\model\\name";
     std::string expectedCmd2 = "";
 #ifdef __linux__

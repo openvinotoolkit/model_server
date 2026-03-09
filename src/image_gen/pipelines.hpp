@@ -18,8 +18,9 @@
 #include <memory>
 #include <string>
 
-#include <openvino/genai/image_generation/text2image_pipeline.hpp>
 #include <openvino/genai/image_generation/image2image_pipeline.hpp>
+#include <openvino/genai/image_generation/inpainting_pipeline.hpp>
+#include <openvino/genai/image_generation/text2image_pipeline.hpp>
 
 #include "imagegenpipelineargs.hpp"
 
