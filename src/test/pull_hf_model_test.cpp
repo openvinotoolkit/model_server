@@ -14,6 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 #include <memory>
+#include <openssl/sha.h>
 #include <string>
 #include <thread>
 
@@ -152,7 +153,7 @@ const std::string expectedGraphContentsDraft = R"(
 )";
 
 TEST_F(HfDownloaderPullHfModel, PositiveDownload) {
-    GTEST_SKIP() << "Skipping test in CI - PositiveDownloadAndStart has full scope testing.";
+    // GTEST_SKIP() << "Skipping test in CI - PositiveDownloadAndStart has full scope testing.";
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string downloadPath = ovms::FileSystem::joinPath({this->directoryPath, "repository"});
     std::string task = "text_generation";
@@ -197,10 +198,58 @@ bool createGitLfsPointerFile(const std::string& path) {
 
     file <<
         "version https://git-lfs.github.com/spec/v1\n"
-        "oid sha256:59f24bc922e1a48bb3feeba18b23f0e9622a7ee07166d925650d7a933283f8b1\n"
-        "size 123882252\n";
+        "oid sha256:cecf0224201415144c00cf3a6cf3350306f9c78888d631eb590939a63722fefa\n"
+        "size 52417240\n";
 
     return true;
+}
+
+// Returns lowercase hex SHA-256 string on success, empty string on failure.
+std::string sha256File(std::string_view path, std::error_code& ec) {
+    ec.clear();
+
+    std::ifstream ifs(std::string(path), std::ios::binary);
+    if (!ifs) {
+        ec = std::make_error_code(std::errc::no_such_file_or_directory);
+        return {};
+    }
+
+    SHA256_CTX ctx;
+    if (SHA256_Init(&ctx) != 1) {
+        ec = std::make_error_code(std::errc::io_error);
+        return {};
+    }
+
+    // Read in chunks to support large files without high memory usage.
+    std::vector<unsigned char> buffer(1 << 20); // 1 MiB
+    while (ifs) {
+        ifs.read(reinterpret_cast<char*>(buffer.data()), static_cast<std::streamsize>(buffer.size()));
+        std::streamsize got = ifs.gcount();
+        if (got > 0) {
+            if (SHA256_Update(&ctx, buffer.data(), static_cast<size_t>(got)) != 1) {
+                ec = std::make_error_code(std::errc::io_error);
+                return {};
+            }
+        }
+    }
+    if (!ifs.eof()) { // read failed not due to EOF
+        ec = std::make_error_code(std::errc::io_error);
+        return {};
+    }
+
+    std::array<unsigned char, SHA256_DIGEST_LENGTH> digest{};
+    if (SHA256_Final(digest.data(), &ctx) != 1) {
+        ec = std::make_error_code(std::errc::io_error);
+        return {};
+    }
+
+    // Convert to lowercase hex
+    std::ostringstream oss;
+    oss << std::hex << std::setfill('0') << std::nouppercase;
+    for (unsigned char b : digest) {
+        oss << std::setw(2) << static_cast<unsigned int>(b);
+    }
+    return oss.str();
 }
 
 TEST_F(HfDownloaderPullHfModel, PositiveDownloadAndResumeFromPArtialDownload) {
@@ -225,11 +274,14 @@ TEST_F(HfDownloaderPullHfModel, PositiveDownloadAndResumeFromPArtialDownload) {
 
     ASSERT_EQ(expectedGraphContents, removeVersionString(graphContents)) << graphContents;
 
+    std::error_code ec;
+    ec.clear();
+    std::string expectedDigest = sha256File(modelPath, ec);
+    ASSERT_EQ(ec, std::errc());
     // Prepare a git repository with a lfs_part file and lfs pointer file to simulate partial download error of a big model
     ASSERT_EQ(removeSecondHalf(modelPath), true);
     ASSERT_EQ(std::filesystem::file_size(modelPath), 26208620);
-    std::error_code ec;
-    ec.clear();
+
     std::string ovModelPartLfsName = "openvino_model.binlfs_part";
     std::string ovModelPartLfsPath = ovms::FileSystem::appendSlash(basePath) + ovModelPartLfsName;
     fs::rename(modelPath, ovModelPartLfsPath, ec);
@@ -240,12 +292,17 @@ TEST_F(HfDownloaderPullHfModel, PositiveDownloadAndResumeFromPArtialDownload) {
     // Call ovms pull to resume the file
     this->ServerPullHfModel(modelName, downloadPath, task);
 
+    ASSERT_EQ(std::filesystem::exists(ovModelPartLfsPath), false) << modelPath;
     ASSERT_EQ(std::filesystem::exists(modelPath), true) << modelPath;
     ASSERT_EQ(std::filesystem::exists(graphPath), true) << graphPath;
     ASSERT_EQ(std::filesystem::file_size(modelPath), 52417240);
     graphContents = GetFileContents(graphPath);
 
     ASSERT_EQ(expectedGraphContents, removeVersionString(graphContents)) << graphContents;
+
+    std::string resumedDigest = sha256File(modelPath, ec);
+    ASSERT_EQ(ec, std::errc());
+    ASSERT_EQ(expectedDigest, resumedDigest);
 }
 
 TEST_F(HfDownloaderPullHfModel, PositiveDownloadAndStart) {
