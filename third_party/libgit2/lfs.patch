@@ -332,10 +332,10 @@ index 58cb4b424..00ddee9f3 100644
  	git_writestream **out,
 diff --git a/src/libgit2/lfs_filter.c b/src/libgit2/lfs_filter.c
 new file mode 100644
-index 000000000..f877c4afa
+index 000000000..6dc8f9650
 --- /dev/null
 +++ b/src/libgit2/lfs_filter.c
-@@ -0,0 +1,677 @@
+@@ -0,0 +1,679 @@
 +/*
 +/ Copyright 2025 Intel Corporation
 +/
@@ -488,6 +488,7 @@ index 000000000..f877c4afa
 +		        lfs_oid.ptr);
 +		return -1;
 +	}
++	printf("\nfrom->lfs_oid %s\n", lfs_oid.ptr);
 +
 +	if (get_lfs_info_match(&lfs_size, size_regexp) < 0) {
 +		fprintf(stderr,
@@ -531,8 +532,9 @@ index 000000000..f877c4afa
 +
 +	if (git_filter_source_mode(src) == GIT_FILTER_SMUDGE)
 +		return lfs_insert_id(to, from, src, payload);
-+	/*else
-+	* PATH for upload lfs files not needed
++	else
++		return GIT_PASSTHROUGH;
++	/* PATH for upload lfs files not needed
 +		return lfs_remove_id(to, from);
 +		*/
 +	return 0;
