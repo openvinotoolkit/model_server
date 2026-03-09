@@ -49,6 +49,13 @@ if https_proxy:
 
 RunConfig.tracing_disabled = False  # Disable tracing for this example
 
+def check_if_tool_calls_present(result) -> bool:
+    if hasattr(result, 'new_items') and result.new_items:
+        for item in result.new_items:
+            if hasattr(item, 'type') and item.type == "tool_call_item":
+                return True
+    return False
+
 async def run(query, agent, OVMS_MODEL_PROVIDER, stream: bool = False):
     for server in agent.mcp_servers:
         await server.connect()
@@ -79,17 +86,12 @@ async def run(query, agent, OVMS_MODEL_PROVIDER, stream: bool = False):
         result = await Runner.run(starting_agent=agent, input=query, run_config=RunConfig(model_provider=OVMS_MODEL_PROVIDER, tracing_disabled=True))
         print(result.final_output)
         
-        is_tool_call_present = False
+    is_tool_call_present = check_if_tool_calls_present(result)
 
-        if hasattr(result, 'new_items') and result.new_items:
-            for item in result.new_items:
-                if hasattr(item, 'type') and item.type == "tool_call_item":
-                    is_tool_call_present = True
-        
-        if is_tool_call_present:
-            sys.exit(0)
-        else:
-            sys.exit(1)
+    if is_tool_call_present:
+        sys.exit(0)
+    else:
+        sys.exit(1)
 
 
 if __name__ == "__main__":
