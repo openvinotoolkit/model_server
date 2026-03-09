@@ -34,7 +34,6 @@ Install the application requirements
 curl https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/continuous_batching/agentic_ai/openai_agent.py -O -L
 pip install openai-agents openai
 ```
-Make sure nodejs and npx are installed. On ubuntu it would require `sudo apt install nodejs npm`. On windows, visit https://nodejs.org/en/download. It is needed for the `file system` MCP server.
 
 For windows applications it may be required to set environment variable to enforce utf-8 encodeing in python:
 
