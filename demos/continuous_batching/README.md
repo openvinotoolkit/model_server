@@ -30,10 +30,6 @@ That makes it easy to use and efficient especially on on Intel® Xeon® processo
 
 ## Server Deployment
 
-:::{dropdown} **Deploying with Docker**
-
-Select deployment option depending on how you prepared models in the previous step.
-
 **CPU Docker on Ubuntu24**
 
 Running this command starts the container with CPU only target device:
