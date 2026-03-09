@@ -851,7 +851,7 @@ public:
     // Do not read from path - use predefined config contents
     ovms::Status validateForConfigFileExistence() override {
         this->chosenConfig = this->inputConfig;
-        return parseGraphQueueSizeDirective();
+        return ovms::StatusCode::OK;
     }
 };
 #endif

@@ -101,55 +101,65 @@ Status MediapipeGraphDefinition::validateForConfigFileExistence() {
     config << ifs.rdbuf();
     this->mgconfig.setCurrentGraphPbTxtMD5(ovms::FileSystem::getStringMD5(config.str()));
     this->chosenConfig.assign(config.str());
-    return parseGraphQueueSizeDirective();
+    return StatusCode::OK;
 }
 
-Status MediapipeGraphDefinition::parseGraphQueueSizeDirective() {
-    // Scan pbtxt content for: # OVMS_GRAPH_QUEUE_SIZE: <value>
+Status MediapipeGraphDefinition::resolveGraphQueueSize() {
+    // 1. Explicit pbtxt directive: # OVMS_GRAPH_QUEUE_SIZE: <value>
+    //    Always honored regardless of env var or calculator checks.
+    //    Value 0 or -1 disables the queue, AUTO or positive integer enables it.
     static const std::regex directiveRegex(
         R"((?:^|\n)\s*#\s*OVMS_GRAPH_QUEUE_SIZE\s*:\s*(\S+)\s*(?:\r?\n|$))");
     std::smatch match;
-    if (!std::regex_search(this->chosenConfig, match, directiveRegex)) {
-        SPDLOG_TRACE("OVMS_GRAPH_QUEUE_SIZE directive not found in pbtxt for mediapipe: {}", getName());
-        // FIXME (@atobisze): Temporarily, unit tests set OVMS_TEST_GRAPH_QUEUE_OFF=1 to keep
-        // the old behavior (queue disabled). Once all tests are validated with graph queue,
-        // remove this env-var check and always default to AUTO.
-        const char* testGuard = std::getenv("OVMS_TEST_GRAPH_QUEUE_OFF");
-        if (testGuard != nullptr && std::string(testGuard) == "1") {
-            SPDLOG_DEBUG("OVMS_TEST_GRAPH_QUEUE_OFF=1 set, graph queue disabled by default for mediapipe: {}", getName());
+    if (std::regex_search(this->chosenConfig, match, directiveRegex)) {
+        std::string value = match[1].str();
+        if (value == "AUTO") {
+            this->mgconfig.setGraphQueueSizeAuto();
             return StatusCode::OK;
         }
-        // Production default: enable graph queue with AUTO sizing
-        this->mgconfig.setGraphQueueSizeAuto();
-        SPDLOG_DEBUG("No OVMS_GRAPH_QUEUE_SIZE directive, defaulting to AUTO for mediapipe: {}", getName());
+        auto parsed = stoi32(value);
+        if (!parsed.has_value()) {
+            SPDLOG_ERROR("Invalid OVMS_GRAPH_QUEUE_SIZE value: '{}'. Expected integer or 'AUTO'.", value);
+            return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
+        }
+        int queueSize = parsed.value();
+        if (queueSize < -1) {
+            SPDLOG_ERROR("Invalid OVMS_GRAPH_QUEUE_SIZE value: {}. Must be -1 or 0 (disabled), or a positive integer.", queueSize);
+            return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
+        }
+        if (queueSize == 0 || queueSize == -1) {
+            SPDLOG_DEBUG("Graph queue explicitly disabled (OVMS_GRAPH_QUEUE_SIZE={}) for mediapipe: {}", queueSize, getName());
+            return StatusCode::OK;
+        }
+        unsigned int maxThreads = std::thread::hardware_concurrency();
+        if (maxThreads > 0 && queueSize > static_cast<int>(maxThreads)) {
+            SPDLOG_ERROR("Invalid OVMS_GRAPH_QUEUE_SIZE value: {}. Exceeds available hardware threads: {}.", queueSize, maxThreads);
+            return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
+        }
+        this->mgconfig.setGraphQueueSize(queueSize);
         return StatusCode::OK;
     }
-    std::string value = match[1].str();
-    if (value == "AUTO") {
-        this->mgconfig.setGraphQueueSizeAuto();
+
+    // 2. Env var kill switch — suppresses the auto-enable default.
+    //    Used by unit tests (OVMS_TEST_GRAPH_QUEUE_OFF=1) to keep the old no-queue behavior
+    //    unless a graph explicitly opts in via OVMS_GRAPH_QUEUE_SIZE directive above.
+    const char* testGuard = std::getenv("OVMS_TEST_GRAPH_QUEUE_OFF");
+    if (testGuard != nullptr && std::string(testGuard) == "1") {
+        SPDLOG_DEBUG("OVMS_TEST_GRAPH_QUEUE_OFF=1 set, graph queue disabled by default for mediapipe: {}", getName());
         return StatusCode::OK;
     }
-    // Try to parse as integer
-    auto parsed = stoi32(value);
-    if (!parsed.has_value()) {
-        SPDLOG_ERROR("Invalid OVMS_GRAPH_QUEUE_SIZE value: '{}'. Expected integer or 'AUTO'.", value);
-        return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
+
+    // 3. Python calculator is not yet safe for graph pool reuse
+    for (int i = 0; i < config.node().size(); i++) {
+        if (config.node(i).calculator() == PYTHON_NODE_CALCULATOR_NAME) {
+            SPDLOG_DEBUG("Graph contains Python calculator, graph queue disabled for mediapipe: {}", getName());
+            return StatusCode::OK;
+        }
     }
-    int queueSize = parsed.value();
-    if (queueSize < -1) {
-        SPDLOG_ERROR("Invalid OVMS_GRAPH_QUEUE_SIZE value: {}. Must be -1 (disabled), or a positive integer.", queueSize);
-        return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
-    }
-    if (queueSize == 0) {
-        SPDLOG_ERROR("Invalid OVMS_GRAPH_QUEUE_SIZE value: 0. Must be -1 (disabled), or a positive integer.");
-        return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
-    }
-    unsigned int maxThreads = std::thread::hardware_concurrency();
-    if (maxThreads > 0 && queueSize > static_cast<int>(maxThreads)) {
-        SPDLOG_ERROR("Invalid OVMS_GRAPH_QUEUE_SIZE value: {}. Exceeds available hardware threads: {}.", queueSize, maxThreads);
-        return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
-    }
-    this->mgconfig.setGraphQueueSize(queueSize);
+
+    // 4. Default: enable graph queue with AUTO sizing
+    this->mgconfig.setGraphQueueSizeAuto();
+    SPDLOG_DEBUG("Graph queue set to AUTO for mediapipe: {}", getName());
     return StatusCode::OK;
 }
 
@@ -232,6 +242,10 @@ Status MediapipeGraphDefinition::validate(ModelManager& manager) {
     }
 
     status = this->initializeNodes();
+    if (!status.ok()) {
+        return status;
+    }
+    status = this->resolveGraphQueueSize();
     if (!status.ok()) {
         return status;
     }

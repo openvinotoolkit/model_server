@@ -123,12 +123,13 @@ protected:
     };
 
     virtual Status validateForConfigFileExistence();
-    Status parseGraphQueueSizeDirective();
+    Status resolveGraphQueueSize();
     Status validateForConfigLoadableness();
 
     Status setStreamTypes();
     Status dryInitializeTest();
     Status initializeQueueIfRequired();
+
     std::string chosenConfig;
     static MediapipeGraphConfig MGC;
     const std::string name;
