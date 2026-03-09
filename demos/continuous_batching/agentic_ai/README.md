@@ -22,19 +22,22 @@ docker build -t mcp-weather-server:sse .
 docker run -d -p 8080:8080 -e PORT=8080 mcp-weather-server:sse uv run python -m mcp_weather_server --mode sse
 ```
 
-> **Note:** On Windows the MCP server will be demonstrated as an instance with stdio interface inside the agent application
+### Windows
+On Windows the MCP server will be demonstrated as an instance with stdio interface inside the agent application. 
+File system MCP server requires NodeJS and npx, visit https://nodejs.org/en/download. The weather MCP should be installed as python package:
+```pip install python-dateutil mcp_weather_server```
 
 ## Start the agent
 
 Install the application requirements
 
 ```console
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/continuous_batching/agentic_ai/openai_agent.py -o openai_agent.py
-pip install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/continuous_batching/agentic_ai/requirements.txt
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/continuous_batching/agentic_ai/openai_agent.py -O -L
+pip install openai-agents openai
 ```
 Make sure nodejs and npx are installed. On ubuntu it would require `sudo apt install nodejs npm`. On windows, visit https://nodejs.org/en/download. It is needed for the `file system` MCP server.
 
-For windows applications it may be required to set environmental variable to enforce utf-8 encodeing in python:
+For windows applications it may be required to set environment variable to enforce utf-8 encodeing in python:
 
 ```bat
 set PYTHONUTF8=1
@@ -53,7 +56,7 @@ as mentioned in [deployment guide](../../../docs/deploying_server_baremetal.md),
 :::{tab-item} Qwen3-8B
 :sync: Qwen3-8B
 ```bat
-ovms.exe --rest_port 8000 --source_model OpenVINO/Qwen3-8B-int4-ov --model_repository_path models --tool_parser hermes3 --target_device GPU --task text_generation --cache_dir .cache --enable_prefix_caching true
+ovms.exe --rest_port 8000 --source_model OpenVINO/Qwen3-8B-int4-ov --model_repository_path models --tool_parser hermes3 --target_device GPU --task text_generation --cache_dir .cache
 ```
 :::
 :::{tab-item} Qwen3-4B
