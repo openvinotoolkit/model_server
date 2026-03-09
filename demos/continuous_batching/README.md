@@ -34,6 +34,7 @@ That makes it easy to use and efficient especially on on Intel® Xeon® processo
 
 Running this command starts the container with CPU only target device:
 ```bash
+mkdir -p models
 docker run -it -p 8000:8000 --rm -e MOE_USE_MICRO_GEMM_PREFILL=0 --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw openvino/model_server:weekly --model_repository_path /models --source_model OpenVINO/Qwen3-30B-A3B-Instruct-2507-int4-ov --task text_generation --target_device CPU --tool_parser hermes3 --rest_port 8000 --model_name Qwen3-30B-A3B-Instruct-2507-int4-ov
 ```
 > **Note:** In case you want to use GPU target device, add extra docker parameters `--device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1)`
@@ -86,7 +87,7 @@ curl http://localhost:8000/v3/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
     "model": "Qwen3-30B-A3B-Instruct-2507-int4-ov",
-    "max_completion_tokens":300,
+    "max_completion_tokens":500,
     "stream":false,
     "messages": [
       {
@@ -108,12 +109,12 @@ Windows Powershell
 (Invoke-WebRequest -Uri "http://localhost:8000/v3/chat/completions" `
  -Method POST `
  -Headers @{ "Content-Type" = "application/json" } `
- -Body '{"model": "Qwen3-30B-A3B-Instruct-2507-int4-ov", "max_tokens": 30, "temperature": 0, "stream": false, "messages": [{"role": "system", "content": "You are a helpful assistant."}, {"role": "user", "content": "If 1=3 2=3 3=5 4=4 5=4 Then, 6=?"}]}').Content
+ -Body '{"model": "Qwen3-30B-A3B-Instruct-2507-int4-ov", "max_completion_tokens": 500, "temperature": 0, "stream": false, "messages": [{"role": "system", "content": "You are a helpful assistant."}, {"role": "user", "content": "If 1=3 2=3 3=5 4=4 5=4 Then, 6=?"}]}').Content
 ```
 
 Windows Command Prompt
 ```bat
-curl -s http://localhost:8000/v3/chat/completions -H "Content-Type: application/json" -d "{\"model\": \"Qwen3-30B-A3B-Instruct-2507-int4-ov\", \"max_tokens\": 30, \"temperature\": 0, \"stream\": false, \"messages\": [{\"role\": \"system\", \"content\": \"You are a helpful assistant.\"}, {\"role\": \"user\", \"content\": \"If 1=3 2=3 3=5 4=4 5=4 Then, 6=?\"}]}"
+curl -s http://localhost:8000/v3/chat/completions -H "Content-Type: application/json" -d "{\"model\": \"Qwen3-30B-A3B-Instruct-2507-int4-ov\", \"max_completion_tokens\": 500, \"temperature\": 0, \"stream\": false, \"messages\": [{\"role\": \"system\", \"content\": \"You are a helpful assistant.\"}, {\"role\": \"user\", \"content\": \"If 1=3 2=3 3=5 4=4 5=4 Then, 6=?\"}]}"
 ```
 :::
 
@@ -170,6 +171,7 @@ client = OpenAI(
 stream = client.chat.completions.create(
     model="Qwen3-30B-A3B-Instruct-2507-int4-ov",
     messages=[{"role": "user", "content": "If 1=3 2=3 3=5 4=4 5=4 Then, 6=?"}],
+    temperature=0,
     stream=True,
 )
 for chunk in stream:
@@ -224,6 +226,7 @@ client = OpenAI(
 response = client.chat.completions.create(
     model="Qwen3-30B-A3B-Instruct-2507-int4-ov",
     messages=[{"role": "user", "content": "If 1=3 2=3 3=5 4=4 5=4 Then, 6=?"}],
+    temperature=0,
     stream=False,
 )
 print(response.choices[0].message.content)
