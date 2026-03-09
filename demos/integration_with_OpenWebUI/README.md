@@ -1,4 +1,4 @@
-# Demonstrating integration of Open WebUI with OpenVINO Model Server {#ovms_demos_integration_with_open_webui}
+# Open WebUI with OpenVINO Model Server {#ovms_demos_integration_with_open_webui}
 
 ## Description
 
@@ -70,7 +70,9 @@ Go to [http://localhost:8080](http://localhost:8080) and create admin account to
 
 ![get started with Open WebUI](./get_started_with_Open_WebUI.png)
 
-### Reference
+> **Important Note**: While using NPU device for acceleration and model gpt-oss-20b with GPU, it is recommended to disable `Follow-Up Auto-Generation` in `Settings > Interface` menu. It will improve response time and avoid queuing requests. For gpt-oss model it will avoid concurrent execution which in version 2026.0 has an accuracy issue.
+
+### References
 [https://docs.openvino.ai/2026/model-server/ovms_demos_continuous_batching.html](https://docs.openvino.ai/2026/model-server/ovms_demos_continuous_batching.html#model-preparation)
 
 [https://docs.openwebui.com](https://docs.openwebui.com/#installation-with-pip)
