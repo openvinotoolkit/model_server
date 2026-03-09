@@ -47,7 +47,7 @@ if http_proxy:
 if https_proxy:
     env_proxy["https_proxy"] = https_proxy
 
-RunConfig.tracing_disabled = False  # Disable tracing for this example
+RunConfig.tracing_disabled = False  # Enable tracing for this example
 
 def check_if_tool_calls_present(result) -> bool:
     if hasattr(result, 'new_items') and result.new_items:
@@ -86,12 +86,7 @@ async def run(query, agent, OVMS_MODEL_PROVIDER, stream: bool = False):
         result = await Runner.run(starting_agent=agent, input=query, run_config=RunConfig(model_provider=OVMS_MODEL_PROVIDER, tracing_disabled=True))
         print(result.final_output)
         
-    is_tool_call_present = check_if_tool_calls_present(result)
-
-    if is_tool_call_present:
-        sys.exit(0)
-    else:
-        sys.exit(1)
+    return check_if_tool_calls_present(result)
 
 
 if __name__ == "__main__":
@@ -142,4 +137,9 @@ if __name__ == "__main__":
         model_settings=ModelSettings(tool_choice=args.tool_choice, temperature=0.0, max_tokens=1000, extra_body={"chat_template_kwargs": {"enable_thinking": args.enable_thinking}}),
     )
     loop = asyncio.new_event_loop()
-    loop.run_until_complete(run(args.query, agent, OVMS_MODEL_PROVIDER, args.stream))
+    
+    is_tool_call_present = loop.run_until_complete(run(args.query, agent, OVMS_MODEL_PROVIDER, args.stream))
+    if is_tool_call_present:
+        sys.exit(0)
+    else:
+        sys.exit(1)
