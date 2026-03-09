@@ -108,7 +108,7 @@ Use MCP server:
 python openai_agent.py --query "What is the current weather in Tokyo?" --model OpenVINO/Mistral-7B-Instruct-v0.3-int4-ov --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather  --stream
 ```
 
-Examplary output:
+Exemplary output:
 ```text
 The current weather in Tokyo on March 2, 2026 is Partly cloudy with a temperature of 9 degrees Celsius.
 ```
@@ -273,7 +273,7 @@ Use MCP server:
 python openai_agent.py --query "What is the current weather in Tokyo?" --model OpenVINO/Mistral-7B-Instruct-v0.3-int4-ov --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather  --stream
 ```
 
-Examplary output:
+Exemplary output:
 ```text
 The current weather in Tokyo on March 2, 2026 is Partly cloudy with a temperature of 9 degrees Celsius.
 ```
@@ -365,7 +365,7 @@ Use MCP server:
 python openai_agent.py --query "What is the current weather in Tokyo?" --model OpenVINO/Mistral-7B-Instruct-v0.3-int4-ov --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather  --stream
 ```
 
-Examplary output:
+Exemplary output:
 ```text
 The current weather in Tokyo on March 2, 2026 is Partly cloudy with a temperature of 9 degrees Celsius.
 ```
