@@ -138,8 +138,6 @@ libraries = {
     OvmsBaseType.REDHAT_PYTHON: set(),
     OvmsBaseType.WINDOWS: {
         'git2.dll',
-        'icudt70.dll',
-        'icuuc70.dll',
         'libcurl-x64.dll',
         'opencv_world4120.dll',
         'openvino.dll',
@@ -151,6 +149,7 @@ libraries = {
         'openvino_hetero_plugin.dll',
         'openvino_intel_cpu_plugin.dll',
         'openvino_intel_gpu_plugin.dll',
+        'openvino_intel_npu_compiler.dll',
         'openvino_intel_npu_plugin.dll',
         'openvino_ir_frontend.dll',
         'openvino_onnx_frontend.dll',
