@@ -1,14 +1,18 @@
-# How to serve LLM models with Continuous Batching via OpenAI API {#ovms_demos_continuous_batching}
+# LLM models via OpenAI API {#ovms_demos_continuous_batching}
 
 ```{toctree}
 ---
 maxdepth: 1
 hidden:
 ---
-ovms_demos_continuous_batching_accuracy
+ovms_demos_continuous_batching_agent
 ovms_demos_continuous_batching_rag
 ovms_demos_continuous_batching_scaling
 ovms_demos_continuous_batching_speculative_decoding
+ovms_structured_output
+ovms_demo_long_context
+ovms_demos_llm_npu
+ovms_demos_continuous_batching_accuracy
 ```
 
 This demo shows how to deploy LLM models in the OpenVINO Model Server using continuous batching and paged attention algorithms.
@@ -106,12 +110,12 @@ Windows Powershell
 (Invoke-WebRequest -Uri "http://localhost:8000/v3/chat/completions" `
  -Method POST `
  -Headers @{ "Content-Type" = "application/json" } `
- -Body '{"model": "meta-llama/Meta-Llama-3-8B-Instruct", "max_tokens": 30, "temperature": 0, "stream": false, "messages": [{"role": "system", "content": "You are a helpful assistant."}, {"role": "user", "content": "What are the 3 main tourist attractions in Paris?"}]}').Content
+ -Body '{"model": "Qwen3-30B-A3B-Instruct-2507-int4-ov", "max_tokens": 30, "temperature": 0, "stream": false, "messages": [{"role": "system", "content": "You are a helpful assistant."}, {"role": "user", "content": "If 1=3 2=3 3=5 4=4 5=4 Then, 6=?"}]}').Content
 ```
 
 Windows Command Prompt
 ```bat
-curl -s http://localhost:8000/v3/chat/completions -H "Content-Type: application/json" -d "{\"model\": \"meta-llama/Meta-Llama-3-8B-Instruct\", \"max_tokens\": 30, \"temperature\": 0, \"stream\": false, \"messages\": [{\"role\": \"system\", \"content\": \"You are a helpful assistant.\"}, {\"role\": \"user\", \"content\": \"What are the 3 main tourist attractions in Paris?\"}]}"
+curl -s http://localhost:8000/v3/chat/completions -H "Content-Type: application/json" -d "{\"model\": \"meta-llama/Meta-Llama-3-8B-Instruct\", \"max_tokens\": 30, \"temperature\": 0, \"stream\": false, \"messages\": [{\"role\": \"system\", \"content\": \"You are a helpful assistant.\"}, {\"role\": \"user\", \"content\": \"If 1=3 2=3 3=5 4=4 5=4 Then, 6=?\"}]}"
 ```
 :::
 
@@ -165,8 +169,8 @@ client = OpenAI(
 )
 
 stream = client.chat.completions.create(
-    model="meta-llama/Meta-Llama-3-8B-Instruct",
-    messages=[{"role": "user", "content": "Say this is a test"}],
+    model="Qwen3-30B-A3B-Instruct-2507-int4-ov",
+    messages=[{"role": "user", "content": "If 1=3 2=3 3=5 4=4 5=4 Then, 6=?"}],
     stream=True,
 )
 for chunk in stream:
@@ -176,7 +180,31 @@ for chunk in stream:
 
 Output:
 ```
-It looks like you're testing me!
+We are given a pattern:
+
+- 1 = 3  
+- 2 = 3  
+- 3 = 5  
+- 4 = 4  
+- 5 = 4  
+- 6 = ?
+
+We need to find the value for 6.
+
+Let’s look at the pattern. The numbers on the left are integers, and the values on the right seem to represent something about the number itself.
+
+Let’s consider: **the number of letters in the English word for the number.**
+
+Check:
+
+- **1** → "one" → 3 letters → matches 3 ✅  
+- **2** → "two" → 3 letters → matches 3 ✅  
+- **3** → "three" → 5 letters → matches 5 ✅  
+- **4** → "four" → 4 letters → matches 4 ✅  
+- **5** → "five" → 4 letters → matches 4 ✅  
+- **6** → "six" → 3 letters → so **6 = 3**
+
+### ✅ Answer: **3**
 ```
 
 :::
@@ -194,23 +222,49 @@ client = OpenAI(
   api_key="unused"
 )
 
-stream = client.completions.create(
-    model="meta-llama/Meta-Llama-3-8B-Instruct",
-    prompt="<|begin_of_text|><|start_header_id|>user<|end_header_id|>\n\nSay this is a test.<|eot_id|><|start_header_id|>assistant<|end_header_id|>",
-    stream=True,
+response = client.chat.completions.create(
+    model="Qwen3-30B-A3B-Instruct-2507-int4-ov",
+    messages=[{"role": "user", "content": "If 1=3 2=3 3=5 4=4 5=4 Then, 6=?"}],
+    stream=False,
 )
-for chunk in stream:
-    if chunk.choices[0].text is not None:
-        print(chunk.choices[0].text, end="", flush=True)
+print(response.choices[0].message.content)
 ```
 
 Output:
 ```
-It looks like you're testing me!
+We are given a pattern:
+
+- 1 = 3  
+- 2 = 3  
+- 3 = 5  
+- 4 = 4  
+- 5 = 4  
+- 6 = ?
+
+We need to find the value for 6.
+
+Let’s look at the pattern. The numbers on the left are integers, and the values on the right seem to represent something about the **number of letters** when the number is written out in English.
+
+Let’s check:
+
+- **1** = "one" → 3 letters → matches 3 ✅  
+- **2** = "two" → 3 letters → matches 3 ✅  
+- **3** = "three" → 5 letters → matches 5 ✅  
+- **4** = "four" → 4 letters → matches 4 ✅  
+- **5** = "five" → 4 letters → matches 4 ✅  
+- **6** = "six" → 3 letters → so 6 = **3**
+
+### ✅ Answer: **3**
+
+So, **6 = 3**.
 ```
 :::
 
 ::::
+
+## Check how to use AI agents with MCP servers and language models
+
+Check the demo [AI agent with MCP server and OpenVINO acceleration](./agentic_ai/README.md)
 
 ## RAG with Model Server
 
@@ -222,10 +276,6 @@ Check the example in the [RAG notebook](https://github.com/openvinotoolkit/model
 
 Check this simple [text generation scaling demo](https://github.com/openvinotoolkit/model_server/blob/main/demos/continuous_batching/scaling/README.md).
 
-## Testing the model accuracy over serving API
-
-Check the [guide of using lm-evaluation-harness](https://github.com/openvinotoolkit/model_server/blob/main/demos/continuous_batching/accuracy/README.md)
-
 ## Use Speculative Decoding
 
 Check the [guide for speculative decoding](./speculative_decoding/README.md)
@@ -234,13 +284,13 @@ Check the [guide for speculative decoding](./speculative_decoding/README.md)
 
 Check the demo [text generation with visual model](./vlm/README.md)
 
-## Check how to use AI agents with MCP servers and language models
-
-Check the demo [AI agent with MCP server and OpenVINO acceleration](./agentic_ai/README.md)
-
 ## Use structured output with json schema guided generation
 
 Check the demo [structured output](./structured_output/README.md)
+
+## Testing the model accuracy over serving API
+
+Check the [guide of using lm-evaluation-harness](./accuracy/README.md)
 
 ## References
 - [Chat Completions API](../../docs/model_server_rest_api_chat.md)
