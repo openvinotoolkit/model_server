@@ -351,10 +351,10 @@ index 58cb4b424..00ddee9f3 100644
  	git_writestream **out,
 diff --git a/src/libgit2/lfs_filter.c b/src/libgit2/lfs_filter.c
 new file mode 100644
-index 000000000..141d8e682
+index 000000000..6111fb556
 --- /dev/null
 +++ b/src/libgit2/lfs_filter.c
-@@ -0,0 +1,736 @@
+@@ -0,0 +1,734 @@
 +/*
 +/ Copyright 2025 Intel Corporation
 +/
@@ -500,10 +500,8 @@ index 000000000..141d8e682
 +	if (hdrlen < 0 || (size_t)hdrlen + 1 >= sizeof(header))
 +		return -1; /* impossible header size for normal blob lengths */
 +
-+	git_hash_algorithm_t algorithm;
-+	algorithm = git_oid_algorithm(GIT_OID_SHA256);
 +	/* 2) Init SHA-256 hashing context (internal API) */
-+	if (git_hash_ctx_init(&ctx, algorithm) < 0)
++	if (git_hash_ctx_init(&ctx, GIT_HASH_ALGORITHM_SHA256) < 0)
 +		goto done;
 +
 +	/* 3) Feed header + NUL, then data */
@@ -534,7 +532,7 @@ index 000000000..141d8e682
 +	git_oid lfs_oid;
 +	if (git_oid_sha256_from_git_str_blob(&lfs_oid, from) < 0) {
 +		fprintf(stderr,
-+		        "\n[ERROR] failure, cannot calculate sha256: %s\n");
++		        "\n[ERROR] failure, cannot calculate sha256\n");
 +		return -1;
 +	}
 +
