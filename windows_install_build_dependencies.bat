@@ -500,11 +500,13 @@ exit /b 0
 :install_curl
 echo [INFO] Installing curl ...
 
-set "curl_dir=curl-8.18.0_4-win64-mingw"
-set "curl_ver=curl-8.18.0_4-win64-mingw.zip"
-set "curl_http=https://curl.se/windows/dl-8.18.0_4/"
+set "curl_version=8.14.1_1"
+set "curl_dir=curl-%curl_version%-win64-mingw"
+set "curl_ver=%curl_dir%.zip"
+set "curl_http=https://curl.se/windows/dl-%curl_version%/"
 
 set "curl_zip=%opt_install_dir%\%curl_ver%"
+set "curl_path=%opt_install_dir%\%curl_dir%"
 
 :: Download curl
 IF /I EXIST %curl_zip% (
@@ -520,13 +522,13 @@ IF /I EXIST %curl_zip% (
     if !errorlevel! neq 0 exit /b !errorlevel!
 )
 :: Extract curl
-IF /I EXIST %opt_install_dir%\%curl_dir% (
+IF /I EXIST %curl_path% (
      if %expunge% EQU 1 (
-        rmdir /S /Q %opt_install_dir%\%curl_dir%
+        rmdir /S /Q %curl_path%
         if !errorlevel! neq 0 exit /b !errorlevel!
         C:\Windows\System32\tar.exe -xf "%curl_zip%" -C %opt_install_dir%
         if !errorlevel! neq 0 exit /b !errorlevel!
-    ) else ( echo [INFO] directory exists %opt_install_dir%\%curl_dir% )
+    ) else ( echo [INFO] directory exists %curl_path% )
     
 ) ELSE (
     C:\Windows\System32\tar.exe -xf "%curl_zip%" -C %opt_install_dir%
@@ -534,7 +536,7 @@ IF /I EXIST %opt_install_dir%\%curl_dir% (
 )
 
 :: Create lib file for libgit2 linking
-set "curl_lib=C:\opt\curl-8.18.0_4-win64-mingw\bin\libcurl-x64.lib"
+set "curl_lib=%curl_path%\bin\libcurl-x64.lib"
 IF /I EXIST %curl_lib% (
     echo [INFO] file exists %curl_lib% 
 ) ELSE (
@@ -549,7 +551,7 @@ IF /I EXIST %curl_lib% (
     exit /b
     :create_lib
 	IF /I EXIST !LIB_EXE! (
-		set "curl_def=C:\opt\curl-8.18.0_4-win64-mingw\bin\libcurl-x64.def"
+		set "curl_def=%curl_path%\bin\libcurl-x64.def"
 		"!LIB_EXE!" /def:!curl_def! /out:%curl_lib% /MACHINE:x64
 		if !errorlevel! neq 0 exit /b !errorlevel!
         echo [INFO] !LIB_EXE! created.
