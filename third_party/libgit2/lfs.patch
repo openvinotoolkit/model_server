@@ -100,7 +100,7 @@ index d121c588a..b54a01a4b 100644
  
  #
 diff --git a/src/cli/cmd_clone.c b/src/cli/cmd_clone.c
-index c18cb28d4..286fa7153 100644
+index c18cb28d4..6d23dcbb1 100644
 --- a/src/cli/cmd_clone.c
 +++ b/src/cli/cmd_clone.c
 @@ -146,6 +146,7 @@ int cmd_clone(int argc, char **argv)
@@ -111,6 +111,76 @@ index c18cb28d4..286fa7153 100644
  
  	if (!checkout)
  		clone_opts.checkout_opts.checkout_strategy = GIT_CHECKOUT_NONE;
+@@ -182,6 +183,69 @@ int cmd_clone(int argc, char **argv)
+ 
+ 	cli_progress_finish(&progress);
+ 
++
++	git_repository *repo2 = NULL;
++	int error = git_repository_open_ext(&repo2, local_path, 0, NULL);
++	// HEAD state info
++	bool is_detached = git_repository_head_detached(repo2) == 1;
++	bool is_unborn = git_repository_head_unborn(repo2) == 1;
++
++	// Collect status (staged/unstaged/untracked)
++	git_status_options opts = GIT_STATUS_OPTIONS_INIT;
++
++	opts.show = GIT_STATUS_SHOW_INDEX_AND_WORKDIR;
++	opts.flags = GIT_STATUS_OPT_INCLUDE_UNTRACKED // include untracked files
++	                                              // // |
++	                                              // GIT_STATUS_OPT_RENAMES_HEAD_TO_INDEX
++	                                              // // detect renames
++	                                              // HEAD->index - not
++	                                              // required currently and
++	                                              // impacts performance
++	             | GIT_STATUS_OPT_SORT_CASE_SENSITIVELY;
++
++	git_status_list *status_list = NULL;
++	ret = git_status_list_new(&status_list, repo2, &opts);
++
++	size_t staged = 0, unstaged = 0, untracked = 0, conflicted = 0;
++	const size_t n = git_status_list_entrycount(status_list);
++
++	for (size_t i = 0; i < n; ++i) {
++		const git_status_entry *e = git_status_byindex(status_list, i);
++		if (!e)
++			continue;
++		unsigned s = e->status;
++
++		// Staged (index) changes
++		if (s & (GIT_STATUS_INDEX_NEW | GIT_STATUS_INDEX_MODIFIED |
++		         GIT_STATUS_INDEX_DELETED | GIT_STATUS_INDEX_RENAMED |
++		         GIT_STATUS_INDEX_TYPECHANGE))
++			++staged;
++
++		// Unstaged (workdir) changes
++		if (s & (GIT_STATUS_WT_MODIFIED | GIT_STATUS_WT_DELETED |
++		         GIT_STATUS_WT_RENAMED | GIT_STATUS_WT_TYPECHANGE))
++			++unstaged;
++
++		// Untracked
++		if (s & GIT_STATUS_WT_NEW)
++			++untracked;
++
++		// Conflicted
++		if (s & GIT_STATUS_CONFLICTED)
++			++conflicted;
++	}
++
++	// Print summary (mirrors your original stream output)
++	printf("HEAD state      : %s\n",
++	       is_unborn ? "unborn (no commits)" :
++                           (is_detached ? "detached" : "attached"));
++	printf("Staged changes  : %zu\n", staged);
++	printf("Unstaged changes: %zu\n", unstaged);
++	printf("Untracked files : %zu", untracked);
++	if (conflicted) {
++		printf(" (%zu paths flagged)", conflicted);
++	}
++	printf("\n");
+ done:
+ 	cli_progress_dispose(&progress);
+ 	git__free(computed_path);
 diff --git a/src/cli/progress.h b/src/cli/progress.h
 index f08d68f19..0344304ec 100644
 --- a/src/cli/progress.h
@@ -351,11 +421,11 @@ index 58cb4b424..00ddee9f3 100644
  	git_writestream **out,
 diff --git a/src/libgit2/lfs_filter.c b/src/libgit2/lfs_filter.c
 new file mode 100644
-index 000000000..6111fb556
+index 000000000..876628fd2
 --- /dev/null
 +++ b/src/libgit2/lfs_filter.c
-@@ -0,0 +1,734 @@
-+/*
+@@ -0,0 +1,778 @@
++﻿/*
 +/ Copyright 2025 Intel Corporation
 +/
 +/ Licensed under the Apache License, Version 2.0 (the "License");
@@ -486,42 +556,57 @@ index 000000000..6111fb556
 +	}
 +}
 +
-+int git_oid_sha256_from_git_str_blob(git_oid *out, const struct git_str *input)
++int git_oid_sha256_from_git_str_blob(
++        git_oid *out,
++        const struct git_str *input,
++        char *pointer_line,
++        size_t pointer_line_cap)
 +{
 +	int error = -1;
-+	git_hash_ctx *ctx = NULL;
++	git_hash_ctx ctx;
 +
 +	if (!out || !input || !input->ptr)
 +		return -1;
 +
-+	/* 1) Build "blob <size>\\0" header (size = payload length in bytes) */
-+	char header[64]; /* plenty for "blob " + decimal size + \\0 */
-+	int hdrlen = snprintf(header, sizeof(header), "blob %zu", input->size);
-+	if (hdrlen < 0 || (size_t)hdrlen + 1 >= sizeof(header))
-+		return -1; /* impossible header size for normal blob lengths */
-+
-+	/* 2) Init SHA-256 hashing context (internal API) */
++	/* 1) Init SHA-256 hashing context (internal API) */
 +	if (git_hash_ctx_init(&ctx, GIT_HASH_ALGORITHM_SHA256) < 0)
 +		goto done;
 +
-+	/* 3) Feed header + NUL, then data */
-+	if (git_hash_update(ctx, header, (size_t)hdrlen) < 0)
-+		goto done;
-+	if (git_hash_update(ctx, "\0", 1) < 0)
-+		goto done;
-+	if (input->size > 0 &&
-+	    git_hash_update(ctx, input->ptr, input->size) < 0)
++	/* 2) Stream the payload in chunks — hash *only* the file bytes. */
++	const size_t CHUNK = 4 * 1024 * 1024; /* 4 MiB */
++	const unsigned char *p = (const unsigned char *)input->ptr;
++	size_t remaining = input->size;
++
++	while (remaining > 0) {
++		size_t n = remaining > CHUNK ? CHUNK : remaining;
++		if (git_hash_update(&ctx, p, n) < 0)
++			goto done;
++		p += n;
++		remaining -= n;
++	}
++
++	/* 3) Finalize into git_oid (32-byte raw digest for SHA-256). */
++	if (git_hash_final(out->id, &ctx) < 0)
 +		goto done;
 +
-+	/* 4) Finalize into git_oid (32-byte raw digest) */
-+	if (git_hash_final(out->id, ctx) < 0)
-+		goto done;
++	/* 4) Optionally format "oid sha256:<hex>" for the LFS pointer file. */
++	if (pointer_line &&
++	    pointer_line_cap >= (size_t)(strlen("oid sha256:") + 64 + 1)) {
++		char hex[64 + 1];
++		/* Formats full hex; no NUL added. */
++		if (git_oid_fmt(hex, out) < 0) {
++			fprintf(stderr,
++			        "\n[ERROR] failure, git_oid_fmt failed\n");
++			return -1;
++		}
++		    
++		hex[64] = '\0';
++		snprintf(pointer_line, pointer_line_cap, "oid sha256:%s", hex);
++	}
 +
 +	error = 0;
 +
 +done:
-+	if (ctx)
-+		git_hash_ctx_cleanup(ctx);
 +	return error;
 +}
 +
@@ -529,15 +614,44 @@ index 000000000..6111fb556
 +        git_str *to,
 +        const git_str *from)
 +{
++	int error = 0;
++
++	if(!from) return -1;
++
++	/* Use lib git oid to get lfs sha256 */
 +	git_oid lfs_oid;
-+	if (git_oid_sha256_from_git_str_blob(&lfs_oid, from) < 0) {
++	lfs_oid.type = GIT_OID_SHA256;
++	char line[80]; /* 75+ is enough */
++	if (git_oid_sha256_from_git_str_blob(&lfs_oid, from, line, sizeof(line)) < 0)
++		{
 +		fprintf(stderr,
 +		        "\n[ERROR] failure, cannot calculate sha256\n");
 +		return -1;
 +	}
 +
 +	printf("\nSize: %d\n", from->size);
-+	printf("\nOid sha256: %s\n", lfs_oid.id);
++	printf("\nOid sha256: %s\n", line);
++
++	git_str_init(to, 0);
++
++	/* 1) version line (LFS spec requires this literal string) */
++	if ((error = git_str_puts(to, "version https://git-lfs.github.com/spec/v1\n")) < 0)
++	    return error;
++
++	
++	/* 2) the oid line passed by caller (must end with '\n') */
++	if ((error = git_str_puts(to, line)) < 0)
++		return error;
++
++	if (line[strlen(line) - 1] != '\n') {
++		if ((error = git_str_putc(to, '\n')) < 0)
++			return error;
++	}
++
++	/* 3) size line from the original file size */
++	if ((error = git_str_printf(to, "size %zu\n", from->size)) < 0)
++		return error;
++
 +	return 0;
 +}
 +
