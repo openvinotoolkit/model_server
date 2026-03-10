@@ -24,6 +24,25 @@ index 31da49a88..d61c9735e 100644
  if(BUILD_EXAMPLES)
  	add_subdirectory(examples)
  endif()
+diff --git a/include/git2/oid.h b/include/git2/oid.h
+index 0af9737a0..6d9a8b08a 100644
+--- a/include/git2/oid.h
++++ b/include/git2/oid.h
+@@ -22,14 +22,8 @@ GIT_BEGIN_DECL
+ 
+ /** The type of object id. */
+ typedef enum {
+-
+-#ifdef GIT_EXPERIMENTAL_SHA256
+ 	GIT_OID_SHA1 = 1,  /**< SHA1 */
+ 	GIT_OID_SHA256 = 2 /**< SHA256 */
+-#else
+-	GIT_OID_SHA1 = 1   /**< SHA1 */
+-#endif
+-
+ } git_oid_t;
+ 
+ /*
 diff --git a/include/git2/repository.h b/include/git2/repository.h
 index b203576af..26309dd3f 100644
 --- a/include/git2/repository.h
@@ -332,10 +351,10 @@ index 58cb4b424..00ddee9f3 100644
  	git_writestream **out,
 diff --git a/src/libgit2/lfs_filter.c b/src/libgit2/lfs_filter.c
 new file mode 100644
-index 000000000..6dc8f9650
+index 000000000..280bcc7ab
 --- /dev/null
 +++ b/src/libgit2/lfs_filter.c
-@@ -0,0 +1,679 @@
+@@ -0,0 +1,732 @@
 +/*
 +/ Copyright 2025 Intel Corporation
 +/
@@ -357,6 +376,7 @@ index 000000000..6dc8f9650
 +
 +#include <curl/curl.h>
 +#include "git2/sys/filter.h"
++#include "hash.h"
 +#include "oid.h"
 +#include "filter.h"
 +#include "str.h"
@@ -466,6 +486,59 @@ index 000000000..6dc8f9650
 +	}
 +}
 +
++int git_oid_sha256_from_git_str_blob(git_oid *out, const struct git_str *input)
++{
++	int error = -1;
++	git_hash_ctx *ctx = NULL;
++
++	if (!out || !input || !input->ptr)
++		return -1;
++
++	/* 1) Build "blob <size>\\0" header (size = payload length in bytes) */
++	char header[64]; /* plenty for "blob " + decimal size + \\0 */
++	int hdrlen = snprintf(header, sizeof(header), "blob %zu", input->size);
++	if (hdrlen < 0 || (size_t)hdrlen + 1 >= sizeof(header))
++		return -1; /* impossible header size for normal blob lengths */
++
++	git_hash_algorithm_t algorithm;
++	algorithm = git_oid_algorithm(GIT_OID_SHA256);
++	/* 2) Init SHA-256 hashing context (internal API) */
++	if (git_hash_ctx_init(&ctx, algorithm) < 0)
++		goto done;
++
++	/* 3) Feed header + NUL, then data */
++	if (git_hash_update(ctx, header, (size_t)hdrlen) < 0)
++		goto done;
++	if (git_hash_update(ctx, "\0", 1) < 0)
++		goto done;
++	if (input->size > 0 &&
++	    git_hash_update(ctx, input->ptr, input->size) < 0)
++		goto done;
++
++	/* 4) Finalize into git_oid (32-byte raw digest) */
++	if (git_hash_final(out->id, ctx) < 0)
++		goto done;
++
++	error = 0;
++
++done:
++	if (ctx)
++		git_hash_ctx_cleanup(ctx);
++	return error;
++}
++
++static int lfs_remove_id(
++        git_str *to,
++        const git_str *from)
++{
++	git_oid lfs_oid;
++	git_oid_sha256_from_git_str_blob(&lfs_oid, from);
++
++	fprintf("Size: %d", from->size);
++	fprintf("Oid sha256: %s", lfs_oid.id);
++	return 0;
++}
++
 +static int lfs_insert_id(
 +	git_str *to, const git_str *from, const git_filter_source *src, void** payload)
 +{
@@ -482,13 +555,11 @@ index 000000000..6dc8f9650
 +	const char *obj_regexp = "\noid sha256:(.*)\n";
 +	const char *size_regexp = "\nsize (.*)\n";
 +
-+	print_src_oid(src);
 +	if (get_lfs_info_match(&lfs_oid, obj_regexp) < 0) {
 +		fprintf(stderr,"\n[ERROR] failure, cannot find lfs oid in: %s\n",
 +		        lfs_oid.ptr);
 +		return -1;
 +	}
-+	printf("\nfrom->lfs_oid %s\n", lfs_oid.ptr);
 +
 +	if (get_lfs_info_match(&lfs_size, size_regexp) < 0) {
 +		fprintf(stderr,
@@ -496,6 +567,9 @@ index 000000000..6dc8f9650
 +		        lfs_size.ptr);
 +		return -1;
 +	}
++
++	printf("\ndownload from->lfs_oid %s\n", lfs_oid.ptr);
++	printf("\ndownload from->lfs_size %s\n", lfs_size.ptr);
 +
 +	git_repository *repo = git_filter_source_repo(src);
 +	const char *path = git_filter_source_path(src);
@@ -533,10 +607,8 @@ index 000000000..6dc8f9650
 +	if (git_filter_source_mode(src) == GIT_FILTER_SMUDGE)
 +		return lfs_insert_id(to, from, src, payload);
 +	else
-+		return GIT_PASSTHROUGH;
-+	/* PATH for upload lfs files not needed
++	/* for upload of the lfs pointer files */
 +		return lfs_remove_id(to, from);
-+		*/
 +	return 0;
 +}
 +
