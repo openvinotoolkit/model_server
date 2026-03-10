@@ -18,6 +18,7 @@
 #include <string>
 
 #include <openvino/genai/continuous_batching_pipeline.hpp>
+#include <openvino/genai/lora_adapter.hpp>
 
 #include "../../servable.hpp"
 #include "src/llm/llm_calculator.pb.h"
@@ -31,6 +32,7 @@ struct ContinuousBatchingServableExecutionContext : public GenAiServableExecutio
 };
 
 struct ContinuousBatchingServableProperties : public GenAiServableProperties {
+    ov::genai::AdapterConfig adapterConfig;
     ov::genai::SchedulerConfig schedulerConfig;
     std::shared_ptr<ov::genai::ContinuousBatchingPipeline> pipeline;
     std::shared_ptr<LLMExecutorWrapper> llmExecutorWrapper;
