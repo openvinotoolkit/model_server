@@ -338,7 +338,7 @@ pipeline {
                 test -d gorilla || git clone https://github.com/ShishirPatil/gorilla && \
                 cd gorilla/berkeley-function-call-leaderboard && git checkout cd9429ccf3d4d04156affe883c495b3b047e6b64 -f && curl -s https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/perf-111/demos/continuous_batching/accuracy/gorilla.patch | git apply -v"
                 sh "test -d .venv || python3 -m venv .venv && \
-                . .venv/bin/activate && pip install -e ./gorilla/berkeley-function-call-leaderboard && \
+                . .venv/bin/activate && pip install -e ./gorilla/berkeley-function-call-leaderboard && pip install soundfile && \
                 echo Running agentic accuracy test && \
                 export OPENAI_BASE_URL=http://localhost:9000/v3 && \
                 ${params.USE_THINKING ? 'export ENABLE_THINKING=true && \\' : ''} \
