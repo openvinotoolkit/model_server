@@ -351,10 +351,10 @@ index 58cb4b424..00ddee9f3 100644
  	git_writestream **out,
 diff --git a/src/libgit2/lfs_filter.c b/src/libgit2/lfs_filter.c
 new file mode 100644
-index 000000000..795f08b29
+index 000000000..141d8e682
 --- /dev/null
 +++ b/src/libgit2/lfs_filter.c
-@@ -0,0 +1,732 @@
+@@ -0,0 +1,736 @@
 +/*
 +/ Copyright 2025 Intel Corporation
 +/
@@ -532,10 +532,14 @@ index 000000000..795f08b29
 +        const git_str *from)
 +{
 +	git_oid lfs_oid;
-+	git_oid_sha256_from_git_str_blob(&lfs_oid, from);
++	if (git_oid_sha256_from_git_str_blob(&lfs_oid, from) < 0) {
++		fprintf(stderr,
++		        "\n[ERROR] failure, cannot calculate sha256: %s\n");
++		return -1;
++	}
 +
-+	printf("Size: %d", from->size);
-+	printf("Oid sha256: %s", lfs_oid.id);
++	printf("\nSize: %d\n", from->size);
++	printf("\nOid sha256: %s\n", lfs_oid.id);
 +	return 0;
 +}
 +
