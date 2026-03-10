@@ -24,7 +24,9 @@ docker run -d -p 8080:8080 -e PORT=8080 mcp-weather-server:sse uv run python -m 
 ### Windows
 On Windows the MCP server will be demonstrated as an instance with stdio interface inside the agent application. 
 File system MCP server requires NodeJS and npx, visit https://nodejs.org/en/download. The weather MCP should be installed as python package:
-```pip install python-dateutil mcp_weather_server```
+```bat 
+pip install python-dateutil mcp_weather_server
+```
 
 ## Start the agent
 
