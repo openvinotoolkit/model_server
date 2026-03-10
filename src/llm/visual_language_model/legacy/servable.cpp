@@ -130,6 +130,12 @@ absl::Status VisualLanguageModelLegacyServable::parseRequest(std::shared_ptr<Gen
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Tool guided generation will not be applied due to JSON schema validation failure: {}", e.what());
         legacyExecutionContext->generationConfigBuilder->unsetStructuredOutputConfig();
     }
+
+    auto adapterStatus = applyLoraAdapter(executionContext);
+    if (!adapterStatus.ok()) {
+        return adapterStatus;
+    }
+
     return absl::OkStatus();
 }
 

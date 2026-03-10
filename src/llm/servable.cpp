@@ -153,6 +153,27 @@ absl::Status GenAiServable::parseRequest(std::shared_ptr<GenAiServableExecutionC
         executionContext->generationConfigBuilder->unsetStructuredOutputConfig();
     }
 
+    auto adapterStatus = applyLoraAdapter(executionContext);
+    if (!adapterStatus.ok()) {
+        return adapterStatus;
+    }
+
+    return absl::OkStatus();
+}
+
+absl::Status GenAiServable::applyLoraAdapter(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
+    const auto& request = executionContext->apiHandler->getRequest();
+    if (request.loraAdapter.has_value()) {
+        auto props = getProperties();
+        auto it = props->adaptersByName.find(request.loraAdapter.value());
+        if (it == props->adaptersByName.end()) {
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Unknown LoRA adapter requested: {}", request.loraAdapter.value());
+            return absl::InvalidArgumentError("Unknown LoRA adapter: " + request.loraAdapter.value());
+        }
+        float alpha = props->adapterConfig.get_alpha(it->second);
+        executionContext->generationConfigBuilder->getConfig().adapters =
+            ov::genai::AdapterConfig(it->second, alpha);
+    }
     return absl::OkStatus();
 }
 
