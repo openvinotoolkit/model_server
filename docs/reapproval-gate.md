@@ -24,9 +24,9 @@ Each reviewer's approval is evaluated **independently**:
        ▼                        No      │      Yes
      VALID                 ─────────────┼──────────────
                            ▼                           ▼
-                         VALID           Calculate churn*
+                         VALID           Calculate changes*
                                                 │
-                                        churn > 10 LOC?
+                                        changes > 10 LOC?
                                                 │
                                         No      │      Yes
                                    ─────────────┼──────────
@@ -41,9 +41,12 @@ Gate result:
 - **FAIL** — at least one approver is STALE (re-review is re-requested only from
   stale approvers; reviewers with a current approval are not bothered).
 
-\* "Churn" is **additions + deletions** across commits pushed after the
+\* "Changes" counts **additions + deletions** across commits pushed after the
 reviewer's most recent approval, **excluding** merge-from-main commits (e.g.
 the commits created by GitHub's "Update branch" button or `git merge main`).
+Merge-from-main commits are skipped because they only bring in code that was
+already reviewed and merged into the main branch — they represent no new work
+by the PR author.
 
 ## Required check
 
@@ -69,7 +72,7 @@ All configuration lives in the workflow file
 
 | Variable | Default | Description |
 |---|---|---|
-| `MAIN_BRANCH` | `main` | Name of the default branch. Merge-from-`MAIN_BRANCH` commits are excluded from the churn calculation. |
+| `MAIN_BRANCH` | `main` | Name of the default branch. Merge-from-`MAIN_BRANCH` commits are excluded from the changes calculation. |
 | `LOC_THRESHOLD` | `10` | Maximum allowed additions + deletions after a reviewer's most recent approval before re-approval is required from that reviewer. Change this constant in `.github/scripts/reapproval_gate.py`. |
 
 ## Merge-from-main detection
@@ -92,8 +95,8 @@ threshold.
 ## What happens when the gate fails
 
 1. The `reapproval-gate` check turns red and blocks merge (when required).
-2. The workflow attempts to **re-request review** from all users who previously
-   approved the PR, using `POST /repos/{owner}/{repo}/pulls/{pr}/requested_reviewers`.
+2. The workflow **re-requests review only from stale approvers** — reviewers
+   whose approval post-dates all significant commits are not bothered.
 3. A detailed log is available in the **Actions** tab of the PR.
 
 The gate resets automatically: once a reviewer approves the PR again
@@ -122,6 +125,6 @@ python .github/scripts/reapproval_gate.py
 python .github/scripts/test_reapproval_gate.py
 ```
 
-The unit tests cover `is_merge_from_main()` and `find_latest_approval()` — the
+The unit tests cover `is_merge_from_main()` and `find_latest_approval_per_user()` — the
 two pure functions that contain the core decision logic — without requiring any
 GitHub credentials.
