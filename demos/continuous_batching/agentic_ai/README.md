@@ -35,6 +35,7 @@ Install the application requirements
 ```console
 curl https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/continuous_batching/agentic_ai/openai_agent.py -O -L
 pip install openai-agents openai
+mkdir models
 ```
 
 ## Start OVMS
