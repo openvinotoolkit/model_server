@@ -139,6 +139,8 @@ if __name__ == "__main__":
     loop = asyncio.new_event_loop()
     
     is_tool_call_present = loop.run_until_complete(run(args.query, agent, OVMS_MODEL_PROVIDER, args.stream))
+    
+    # for testing purposes, exit codes are dependent on whether a tool call was present in the agent's reasoning process
     if is_tool_call_present:
         sys.exit(0)
     else:

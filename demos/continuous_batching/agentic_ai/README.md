@@ -480,6 +480,14 @@ The current weather in Tokyo is clear sky with a temperature of 8.3°C (feels li
 
 > **Note:**  For more interactive mode you can run the application with streaming enabled by providing `--stream` parameter to the script.
 
+### Using Llama index 
+
+Pull and start OVMS:
+```bash
+docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models openvino/model_server:weekly \
+--rest_port 8000 --model_repository_path models --source_model OpenVINO/Qwen3-8B-int4-ov --tool_parser hermes3 --task text_generation
+```
+
 You can try also similar implementation based on llama_index library working the same way:
 ```bash
 pip install llama-index-llms-openai-like==0.5.3 llama-index-core==0.14.5 llama-index-tools-mcp==0.4.2
