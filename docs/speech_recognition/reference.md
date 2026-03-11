@@ -59,7 +59,7 @@ The calculator supports the following `node_options` for tuning the pipeline con
 We recommend using [export script](../../demos/common/export_models/README.md) to prepare models directory structure for serving.
 Check [supported models](https://openvinotoolkit.github.io/openvino.genai/docs/supported-models/#speech-recognition-models).
 
-### Text to speech calculator limitations
+### Speech to text calculator limitations
 - Streaming is not supported
 
 ## References
