@@ -99,23 +99,6 @@ Exemplary output:
 The current weather in Tokyo is partly cloudy with a temperature of 8.4°C. The relative humidity is quite high at 91%, and the dew point is at 7.0°C, indicating that the air is moist. Winds are coming from the southeast at a gentle breeze of 4.2 km/h, with gusts reaching up to 15.5 km/h. The atmospheric pressure is steady at 1016.0 hPa, and cloud cover is at 72%. Visibility is excellent at 24.1 km, suggesting clear conditions for most outdoor activities.
 ```
 :::
-:::{tab-item} Mistral-7B-Instruct-v0.3
-:sync: Mistral-7B-Instruct-v0.3
-Pull and start OVMS:
-```bat
-ovms.exe --rest_port 8000 --model_repository_path models --source_model OpenVINO/Mistral-7B-Instruct-v0.3-int4-ov --tool_parser mistral --target_device GPU --task text_generation
-```
-
-Use MCP server:
-```bat
-python openai_agent.py --query "What is the current weather in Tokyo?" --model OpenVINO/Mistral-7B-Instruct-v0.3-int4-ov --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather  --stream
-```
-
-Exemplary output:
-```text
-The current weather in Tokyo on March 2, 2026 is Partly cloudy with a temperature of 9 degrees Celsius.
-```
-:::
 :::{tab-item} Qwen3-Coder-30B-A3B-Instruct
 :sync: Qwen3-Coder-30B-A3B-Instruct
 Pull and start OVMS:
@@ -264,23 +247,6 @@ Exemplary output:
 The current weather in Tokyo is mostly clear with a temperature of 12.4°C. The relative humidity is at 68%, and the dew point is at 6.7°C. Winds are coming from the SSE at a speed of 5.3 km/h, with gusts reaching up to 25.2 km/h. The atmospheric pressure is 1017.9 hPa, and there is a 23% cloud cover. Visibility is good at 24.1 km.
 ```
 :::
-:::{tab-item} Mistral-7B-Instruct-v0.3
-:sync: Mistral-7B-Instruct-v0.3
-Pull and start OVMS:
-```bash
-docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000  -v $(pwd)/models:/models openvino/model_server:latest --rest_port 8000 --model_repository_path models --source_model OpenVINO/Mistral-7B-Instruct-v0.3-int4-ov --tool_parser mistral --task text_generation
-```
-
-Use MCP server:
-```bash
-python openai_agent.py --query "What is the current weather in Tokyo?" --model OpenVINO/Mistral-7B-Instruct-v0.3-int4-ov --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather  --stream
-```
-
-Exemplary output:
-```text
-The current weather in Tokyo on March 2, 2026 is Partly cloudy with a temperature of 9 degrees Celsius.
-```
-:::
 :::{tab-item} Qwen3-Coder-30B-A3B-Instruct
 :sync: Qwen3-Coder-30B-A3B-Instruct
 Pull and start OVMS:
@@ -354,23 +320,6 @@ python openai_agent.py --query "What is the current weather in Tokyo?" --model O
 Exemplary output:
 ```text
 The current weather in Tokyo is mainly clear. The temperature is 11.7°C, with a relative humidity of 74% and a dew point of 7.2°C. The wind is coming from the SSE at 4.2 km/h, with gusts up to 22.7 km/h. The atmospheric pressure is 1018.0 hPa, with 44% cloud cover. Visibility is 24.1 km.
-```
-:::
-:::{tab-item} Mistral-7B-Instruct-v0.3
-:sync: Mistral-7B-Instruct-v0.3
-Pull and start OVMS:
-```bash
-docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000  -v $(pwd)/models:/models --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:latest-gpu --rest_port 8000 --model_repository_path models --source_model OpenVINO/Mistral-7B-Instruct-v0.3-int4-ov --tool_parser mistral --target_device GPU --task text_generation
-```
-
-Use MCP server:
-```bash
-python openai_agent.py --query "What is the current weather in Tokyo?" --model OpenVINO/Mistral-7B-Instruct-v0.3-int4-ov --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather  --stream
-```
-
-Exemplary output:
-```text
-The current weather in Tokyo on March 2, 2026 is Partly cloudy with a temperature of 9 degrees Celsius.
 ```
 :::
 :::{tab-item} Qwen3-Coder-30B-A3B-Instruct
