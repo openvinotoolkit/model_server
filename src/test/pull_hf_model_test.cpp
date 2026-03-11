@@ -153,7 +153,7 @@ const std::string expectedGraphContentsDraft = R"(
 )";
 
 TEST_F(HfDownloaderPullHfModel, PositiveDownload) {
-    // GTEST_SKIP() << "Skipping test in CI - PositiveDownloadAndStart has full scope testing.";
+    GTEST_SKIP() << "Skipping test in CI - PositiveDownloadAndStart has full scope testing.";
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string downloadPath = ovms::FileSystem::joinPath({this->directoryPath, "repository"});
     std::string task = "text_generation";
@@ -178,14 +178,16 @@ bool removeSecondHalf(const std::string& filrStr) {
     ec.clear();
 
     if (!fs::exists(file, ec) || !fs::is_regular_file(file, ec)) {
-        if (!ec) ec = std::make_error_code(std::errc::no_such_file_or_directory);
+        if (!ec)
+            ec = std::make_error_code(std::errc::no_such_file_or_directory);
         return false;
     }
 
     const std::uintmax_t size = fs::file_size(file, ec);
-    if (ec) return false;
+    if (ec)
+        return false;
 
-    const std::uintmax_t newSize = size / 2; // floor(size/2)
+    const std::uintmax_t newSize = size / 2;  // floor(size/2)
     fs::resize_file(file, newSize, ec);
     return !ec;
 }
@@ -196,10 +198,9 @@ bool createGitLfsPointerFile(const std::string& path) {
         return false;
     }
 
-    file <<
-        "version https://git-lfs.github.com/spec/v1\n"
-        "oid sha256:cecf0224201415144c00cf3a6cf3350306f9c78888d631eb590939a63722fefa\n"
-        "size 52417240\n";
+    file << "version https://git-lfs.github.com/spec/v1\n"
+            "oid sha256:cecf0224201415144c00cf3a6cf3350306f9c78888d631eb590939a63722fefa\n"
+            "size 52417240\n";
 
     return true;
 }
@@ -221,7 +222,7 @@ std::string sha256File(std::string_view path, std::error_code& ec) {
     }
 
     // Read in chunks to support large files without high memory usage.
-    std::vector<unsigned char> buffer(1 << 20); // 1 MiB
+    std::vector<unsigned char> buffer(1 << 20);  // 1 MiB
     while (ifs) {
         ifs.read(reinterpret_cast<char*>(buffer.data()), static_cast<std::streamsize>(buffer.size()));
         std::streamsize got = ifs.gcount();
@@ -232,7 +233,7 @@ std::string sha256File(std::string_view path, std::error_code& ec) {
             }
         }
     }
-    if (!ifs.eof()) { // read failed not due to EOF
+    if (!ifs.eof()) {  // read failed not due to EOF
         ec = std::make_error_code(std::errc::io_error);
         return {};
     }

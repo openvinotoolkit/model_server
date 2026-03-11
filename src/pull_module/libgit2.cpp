@@ -15,9 +15,11 @@
 //*****************************************************************************
 #include "libgit2.hpp"
 
+#include <algorithm>
 #include <iostream>
-#include <string>
 #include <memory>
+#include <string>
+#include <vector>
 
 #include <assert.h>
 #include <fcntl.h>
@@ -69,16 +71,16 @@ int cred_acquire_cb(git_credential** out,
             password = _strdup(username);
 #endif
         } else {
-            fprintf(stderr, "HF_TOKEN env variable is not set.\n");
+            fprintf(stderr, "[ERROR] HF_TOKEN env variable is not set.\n");
             return -1;
         }
         error = git_credential_userpass_plaintext_new(out, username, password);
         if (error < 0) {
-            fprintf(stderr, "Creating credentials failed.\n");
+            fprintf(stderr, "[ERROR] Creating credentials failed.\n");
             error = -1;
         }
     } else {
-        fprintf(stderr, "Only USERPASS_PLAINTEXT supported in OVMS.\n");
+        fprintf(stderr, "[ERROR] Only USERPASS_PLAINTEXT supported in OVMS.\n");
         return 1;
     }
 
@@ -180,56 +182,94 @@ Status HfDownloader::RemoveReadonlyFileAttributeFromDir(const std::string& direc
     return StatusCode::OK;
 }
 
-Status HfDownloader::CheckRepositoryStatus(bool checkUntracked) {
-    git_repository *repo = NULL;
-    int error = git_repository_open_ext(&repo, this->downloadPath.c_str(), 0, NULL);
-    if (error < 0) {
-        const git_error *err = git_error_last();
-        if (err)
-            SPDLOG_ERROR("Repository open failed: {} {}", err->klass, err->message);
-        else
-            SPDLOG_ERROR("Repository open failed: {}", error);
-        if (repo) git_repository_free(repo);
+class GitRepositoryGuard {
+public:
+    git_repository* repo = nullptr;
 
+    GitRepositoryGuard(const std::string& path) {
+        int error = git_repository_open_ext(&repo, path.c_str(), 0, nullptr);
+        if (error < 0) {
+            const git_error* err = git_error_last();
+            if (err)
+                SPDLOG_ERROR("Repository open failed: {} {}", err->klass, err->message);
+            else
+                SPDLOG_ERROR("Repository open failed: {}", error);
+            if (repo)
+                git_repository_free(repo);
+        }
+    }
+
+    ~GitRepositoryGuard() {
+        if (repo) {
+            git_repository_free(repo);
+        }
+    }
+
+    // Allow implicit access to the raw pointer
+    git_repository* get() const { return repo; }
+    operator git_repository*() const { return repo; }
+
+    // Non-copyable
+    GitRepositoryGuard(const GitRepositoryGuard&) = delete;
+    GitRepositoryGuard& operator=(const GitRepositoryGuard&) = delete;
+
+    // Movable
+    GitRepositoryGuard(GitRepositoryGuard&& other) noexcept {
+        repo = other.repo;
+        other.repo = nullptr;
+    }
+    GitRepositoryGuard& operator=(GitRepositoryGuard&& other) noexcept {
+        if (this != &other) {
+            if (repo)
+                git_repository_free(repo);
+            repo = other.repo;
+            other.repo = nullptr;
+        }
+        return *this;
+    }
+};
+
+Status HfDownloader::CheckRepositoryStatus(bool checkUntracked) {
+    GitRepositoryGuard repoGuard(this->downloadPath);
+    if (!repoGuard.get()) {
         return StatusCode::HF_GIT_STATUS_FAILED;
     }
     // HEAD state info
-    bool is_detached = git_repository_head_detached(repo) == 1;
-    bool is_unborn   = git_repository_head_unborn(repo) == 1;
-    
+    bool is_detached = git_repository_head_detached(repoGuard.get()) == 1;
+    bool is_unborn = git_repository_head_unborn(repoGuard.get()) == 1;
+
     // Collect status (staged/unstaged/untracked)
     git_status_options opts = GIT_STATUS_OPTIONS_INIT;
-    
-    opts.show  = GIT_STATUS_SHOW_INDEX_AND_WORKDIR;
-    opts.flags = GIT_STATUS_OPT_INCLUDE_UNTRACKED        // include untracked files // | GIT_STATUS_OPT_RENAMES_HEAD_TO_INDEX    // detect renames HEAD->index - not required currently and impacts performance
-               | GIT_STATUS_OPT_SORT_CASE_SENSITIVELY;   
 
-    
+    opts.show = GIT_STATUS_SHOW_INDEX_AND_WORKDIR;
+    opts.flags = GIT_STATUS_OPT_INCLUDE_UNTRACKED  // include untracked files // | GIT_STATUS_OPT_RENAMES_HEAD_TO_INDEX    // detect renames HEAD->index - not required currently and impacts performance
+                 | GIT_STATUS_OPT_SORT_CASE_SENSITIVELY;
+
     git_status_list* status_list = nullptr;
-    error = git_status_list_new(&status_list, repo, &opts);
+    int error = git_status_list_new(&status_list, repoGuard.get(), &opts);
     if (error != 0) {
         return StatusCode::HF_GIT_STATUS_FAILED;
     }
 
     size_t staged = 0, unstaged = 0, untracked = 0, conflicted = 0;
-    const size_t n = git_status_list_entrycount(status_list); // iterate entries
+    const size_t n = git_status_list_entrycount(status_list);  // iterate entries
     for (size_t i = 0; i < n; ++i) {
         const git_status_entry* e = git_status_byindex(status_list, i);
         unsigned s = e->status;
 
         // Staged (index) changes
-        if (s & (GIT_STATUS_INDEX_NEW     |
-                 GIT_STATUS_INDEX_MODIFIED|
-                 GIT_STATUS_INDEX_DELETED |
-                 GIT_STATUS_INDEX_RENAMED |
-                 GIT_STATUS_INDEX_TYPECHANGE))
+        if (s & (GIT_STATUS_INDEX_NEW |
+                    GIT_STATUS_INDEX_MODIFIED |
+                    GIT_STATUS_INDEX_DELETED |
+                    GIT_STATUS_INDEX_RENAMED |
+                    GIT_STATUS_INDEX_TYPECHANGE))
             ++staged;
 
         // Unstaged (workdir) changes
-        if (s & (GIT_STATUS_WT_MODIFIED   |
-                 GIT_STATUS_WT_DELETED    |
-                 GIT_STATUS_WT_RENAMED    |
-                 GIT_STATUS_WT_TYPECHANGE))
+        if (s & (GIT_STATUS_WT_MODIFIED |
+                    GIT_STATUS_WT_DELETED |
+                    GIT_STATUS_WT_RENAMED |
+                    GIT_STATUS_WT_TYPECHANGE))
             ++unstaged;
 
         // Untracked
@@ -243,46 +283,52 @@ Status HfDownloader::CheckRepositoryStatus(bool checkUntracked) {
 
     std::stringstream ss;
     ss << "HEAD state      : "
-              << (is_unborn ? "unborn (no commits)" : (is_detached ? "detached" : "attached"))
-              << "\n";
-    ss << "Staged changes  : " << staged     << "\n";
-    ss << "Unstaged changes: " << unstaged   << "\n";
-    ss << "Untracked files : " << untracked  << "\n";
-    if (conflicted) ss << " (" << conflicted << " paths flagged)";
+       << (is_unborn ? "unborn (no commits)" : (is_detached ? "detached" : "attached"))
+       << "\n";
+    ss << "Staged changes  : " << staged << "\n";
+    ss << "Unstaged changes: " << unstaged << "\n";
+    ss << "Untracked files : " << untracked << "\n";
+    if (conflicted)
+        ss << " (" << conflicted << " paths flagged)";
 
     SPDLOG_DEBUG(ss.str());
     git_status_list_free(status_list);
 
     // We do not care about untracked until after git clone
     if (is_unborn || is_detached || staged || unstaged || conflicted || (checkUntracked && untracked)) {
-        return StatusCode::HF_GIT_STATUS_UNCLEAN; 
+        return StatusCode::HF_GIT_STATUS_UNCLEAN;
     }
     return StatusCode::OK;
 }
 
-#define CHECK(call) do { \
-    int _err = (call); \
-    if (_err < 0) { \
-        const git_error *e = git_error_last(); \
-        fprintf(stderr, "Error %d: %s (%s:%d)\n", _err, e && e->message ? e->message : "no message", __FILE__, __LINE__); \
-        return; \
-    } \
-} while (0)
+#define CHECK(call)                                                                                                             \
+    do {                                                                                                                        \
+        int _err = (call);                                                                                                      \
+        if (_err < 0) {                                                                                                         \
+            const git_error* e = git_error_last();                                                                              \
+            fprintf(stderr, "[ERROR] %d: %s (%s:%d)\n", _err, e && e->message ? e->message : "no message", __FILE__, __LINE__); \
+            return;                                                                                                             \
+        }                                                                                                                       \
+    } while (0)
 
 // Trim trailing '\r' (for CRLF files) and surrounding spaces
 static inline void rtrimCrLfWhitespace(std::string& s) {
-    if (!s.empty() && s.back() == '\r') s.pop_back(); // remove trailing '\r'
-    while (!s.empty() && std::isspace(static_cast<unsigned char>(s.back()))) s.pop_back(); // trailing ws
+    if (!s.empty() && s.back() == '\r')
+        s.pop_back();  // remove trailing '\r'
+    while (!s.empty() && std::isspace(static_cast<unsigned char>(s.back())))
+        s.pop_back();  // trailing ws
     size_t i = 0;
-    while (i < s.size() && std::isspace(static_cast<unsigned char>(s[i]))) ++i; // leading ws
-    if (i > 0) s.erase(0, i);
+    while (i < s.size() && std::isspace(static_cast<unsigned char>(s[i])))
+        ++i;  // leading ws
+    if (i > 0)
+        s.erase(0, i);
 }
 
 // Case-insensitive substring search: returns true if 'needle' is found in 'hay'
 static bool containsCaseInsensitive(const std::string& hay, const std::string& needle) {
     auto toLower = [](std::string v) {
         std::transform(v.begin(), v.end(), v.begin(),
-                       [](unsigned char c){ return static_cast<char>(std::tolower(c)); });
+            [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
         return v;
     };
     std::string hayLower = toLower(hay);
@@ -295,7 +341,8 @@ static bool containsCaseInsensitive(const std::string& hay, const std::string& n
 static bool readFirstThreeLines(const fs::path& p, std::vector<std::string>& outLines) {
     outLines.clear();
     std::ifstream in(p, std::ios::in | std::ios::binary);
-    if (!in) return false;
+    if (!in)
+        return false;
 
     constexpr std::streamsize kMaxPerLine = 8192;
 
@@ -307,14 +354,18 @@ static bool readFirstThreeLines(const fs::path& p, std::vector<std::string>& out
         char ch;
         bool gotNewline = false;
         while (count < kMaxPerLine && in.get(ch)) {
-            if (ch == '\n') { gotNewline = true; break; }
+            if (ch == '\n') {
+                gotNewline = true;
+                break;
+            }
             line.push_back(ch);
             ++count;
         }
         // If we hit kMaxPerLine without encountering '\n', drain until newline to resync
         if (count == kMaxPerLine && !gotNewline) {
             while (in.get(ch)) {
-                if (ch == '\n') break;
+                if (ch == '\n')
+                    break;
             }
         }
 
@@ -324,7 +375,8 @@ static bool readFirstThreeLines(const fs::path& p, std::vector<std::string>& out
         }
         rtrimCrLfWhitespace(line);
         outLines.push_back(line);
-        if (!in) break; // Handle EOF gracefully
+        if (!in)
+            break;  // Handle EOF gracefully
     }
     return true;
 }
@@ -333,37 +385,42 @@ static bool readFirstThreeLines(const fs::path& p, std::vector<std::string>& out
 // line1 -> "version", line2 -> "oid", line3 -> "size" (case-insensitive).
 static bool fileHasLfsKeywordsFirst3Positional(const fs::path& p) {
     std::error_code ec;
-    if (!fs::is_regular_file(p, ec)) return false;
+    if (!fs::is_regular_file(p, ec))
+        return false;
 
     std::vector<std::string> lines;
-    if (!readFirstThreeLines(p, lines)) return false;
+    if (!readFirstThreeLines(p, lines))
+        return false;
 
-    if (lines.size() < 3) return false;
+    if (lines.size() < 3)
+        return false;
 
     return containsCaseInsensitive(lines[0], "version") &&
            containsCaseInsensitive(lines[1], "oid") &&
            containsCaseInsensitive(lines[2], "size");
 }
 
-
 // Helper: make path relative to base (best-effort, non-throwing).
 static fs::path makeRelativeToBase(const fs::path& path, const fs::path& base) {
     std::error_code ec;
     // Try fs::relative first (handles canonical comparisons, may fail if on different roots)
     fs::path rel = fs::relative(path, base, ec);
-    if (!ec && !rel.empty()) return rel;
+    if (!ec && !rel.empty())
+        return rel;
 
     // Fallback: purely lexical relative (doesn't access filesystem)
     rel = path.lexically_relative(base);
-    if (!rel.empty()) return rel;
+    if (!rel.empty())
+        return rel;
 
     // Last resort: return filename only (better than absolute when nothing else works)
-    if (path.has_filename()) return path.filename();
+    if (path.has_filename())
+        return path.filename();
     return path;
 }
 
 // Find all files under 'directory' that satisfy the first-3-lines LFS keyword check.
-std::vector<fs::path> findLfsLikeFiles(const std::string& directory, bool recursive = true) {
+static std::vector<fs::path> findLfsLikeFiles(const std::string& directory, bool recursive = true) {
     std::vector<fs::path> matches;
     std::error_code ec;
 
@@ -389,38 +446,102 @@ std::vector<fs::path> findLfsLikeFiles(const std::string& directory, bool recurs
     return matches;
 }
 
-void resumeLfsDownloadForFile(git_repository *repo, const char *file_path_in_repo) {
-    git_object *obj = NULL;
-    git_tree *tree = NULL;
-    git_tree_entry *entry = NULL;
-    git_blob *blob = NULL;
-    git_buf out = GIT_BUF_INIT;
+// pick the right entry pointer type for your libgit2
+#if defined(GIT_LIBGIT2_VER_MAJOR)
+// libgit2 ≥ 1.0 generally has const-correct free() (accepts const*)
+using git_tree_entry_ptr = const git_tree_entry*;
+#else
+using git_tree_entry_ptr = git_tree_entry*;
+#endif
+
+// Single guard that owns all temporaries used in resumeLfsDownloadForFile
+struct GitScope {
+    git_object* tree_obj = nullptr;      // owns the tree as a generic git_object
+    git_tree_entry_ptr entry = nullptr;  // owns the entry
+    git_blob* blob = nullptr;            // owns the blob
+    git_buf out = GIT_BUF_INIT;          // owns the buffer
+
+    GitScope() = default;
+    ~GitScope() { cleanup(); }
+
+    GitScope(const GitScope&) = delete;
+    GitScope& operator=(const GitScope&) = delete;
+
+    GitScope(GitScope&& other) noexcept :
+        tree_obj(other.tree_obj),
+        entry(other.entry),
+        blob(other.blob),
+        out(other.out) {
+        other.tree_obj = nullptr;
+        other.entry = nullptr;
+        other.blob = nullptr;
+        other.out = GIT_BUF_INIT;
+    }
+    GitScope& operator=(GitScope&& other) noexcept {
+        if (this != &other) {
+            cleanup();
+            tree_obj = other.tree_obj;
+            entry = other.entry;
+            blob = other.blob;
+            out = other.out;
+            other.tree_obj = nullptr;
+            other.entry = nullptr;
+            other.blob = nullptr;
+            other.out = GIT_BUF_INIT;
+        }
+        return *this;
+    }
+
+    git_tree* tree() const { return reinterpret_cast<git_tree*>(tree_obj); }
+
+private:
+    void cleanup() noexcept {
+        git_buf_dispose(&out);
+        if (blob) {
+            git_blob_free(blob);
+            blob = nullptr;
+        }
+        if (entry) {
+            git_tree_entry_free(entry);
+            entry = nullptr;
+        }
+        if (tree_obj) {
+            git_object_free(tree_obj);
+            tree_obj = nullptr;
+        }
+    }
+};
+
+void resumeLfsDownloadForFile(git_repository* repo, const char* filePathInRepo) {
+    GitScope g;
+
+    // Resolve HEAD tree (origin/main^{tree})
+    CHECK(git_revparse_single(&g.tree_obj, repo, "origin/main^{tree}"));
+
+    // Find the tree entry by path
+    CHECK(git_tree_entry_bypath(&g.entry, g.tree(), filePathInRepo));
+
+    // Ensure it's a blob
+    if (git_tree_entry_type(g.entry) != GIT_OBJECT_BLOB) {
+        fprintf(stderr, "[ERROR] Path is not a blob: %s\n", filePathInRepo);
+        return;  // Guard cleans up
+    }
+
+    // Lookup the blob
+    CHECK(git_blob_lookup(&g.blob, repo, git_tree_entry_id(g.entry)));
+
     // Configure filter behavior
     git_blob_filter_options opts = GIT_BLOB_FILTER_OPTIONS_INIT;
     // Choose direction:
     //   GIT_BLOB_FILTER_TO_WORKTREE : apply smudge (as if writing to working tree)
     //   GIT_BLOB_FILTER_TO_ODB      : apply clean  (as if writing to ODB)
-    // opts.flags = GIT_FILTER_TO_WORKTREE;
+    // opts.flags = GIT_BLOB_FILTER_TO_WORKTREE;
 
-    // Resolve HEAD tree
-    CHECK(git_revparse_single(&obj, repo, "origin/main^{tree}") != 0);
-    tree = (git_tree *)obj;
+    // Apply filters based on .gitattributes for this path (triggers LFS smudge/clean)
+    CHECK(git_blob_filter(&g.out, g.blob, filePathInRepo, &opts));
 
-    // Find the tree entry and get the blob
-    CHECK(git_tree_entry_bypath(&entry, tree, file_path_in_repo) != 0);
-    CHECK(git_tree_entry_type(entry) != GIT_OBJECT_BLOB);
-
-    CHECK(git_blob_lookup(&blob, repo, git_tree_entry_id(entry)) != 0);
-
-    // Apply filters based on .gitattributes for this path
-    CHECK(git_blob_filter(&out, blob, file_path_in_repo, &opts) != 0);
-
-    git_buf_dispose(&out);
-    if (blob) git_blob_free(blob);
-    if (entry) git_tree_entry_free(entry);
-    if (tree) git_tree_free(tree);
-    if (obj) git_object_free(obj);
-    return;
+    // We don't need the buffer contents; the filter side-effects are enough.
+    // All resources (out, blob, entry, tree_obj) will be freed automatically here.
 }
 
 Status HfDownloader::downloadModel() {
@@ -433,7 +554,7 @@ Status HfDownloader::downloadModel() {
     if (std::filesystem::is_directory(this->downloadPath) && !this->overwriteModels) {
         // Checking if the download was partially finished for any files in repository
         auto matches = findLfsLikeFiles(this->downloadPath, true);
-        
+
         if (matches.empty()) {
             std::cout << "No files to resume download found.\n";
             std::cout << "Path already exists on local filesystem. Skipping download to path: " << this->downloadPath << std::endl;
@@ -445,40 +566,31 @@ Status HfDownloader::downloadModel() {
             }
         }
 
-        git_repository *repo = NULL;
-        int error = git_repository_open_ext(&repo, this->downloadPath.c_str(), 0, NULL);
-        if (error < 0) {
-            const git_error *err = git_error_last();
-            if (err)
-                SPDLOG_ERROR("Repository open failed: {} {}", err->klass, err->message);
-            else
-                SPDLOG_ERROR("Repository open failed: {}", error);
-            if (repo) git_repository_free(repo);
-
+        GitRepositoryGuard repoGuard(this->downloadPath);
+        if (!repoGuard.get()) {
             std::cout << "Path already exists on local filesystem. And is not a git repository: " << this->downloadPath << std::endl;
-            return StatusCode::HF_GIT_CLONE_FAILED;
+            return StatusCode::HF_GIT_STATUS_FAILED;
         }
 
         // Set repository url
         std::string passRepoUrl = GetRepositoryUrlWithPassword();
         const char* url = passRepoUrl.c_str();
-        error = git_repository_set_url(repo, url);
+        int error = git_repository_set_url(repoGuard.get(), url);
         if (error < 0) {
-            const git_error *err = git_error_last();
+            const git_error* err = git_error_last();
             if (err)
                 SPDLOG_ERROR("Repository set url failed: {} {}", err->klass, err->message);
             else
                 SPDLOG_ERROR("Repository set url failed: {}", error);
-            if (repo) git_repository_free(repo);
             std::cout << "Path already exists on local filesystem. And set git repository url failed: " << this->downloadPath << std::endl;
             return StatusCode::HF_GIT_CLONE_FAILED;
         }
 
         for (const auto& p : matches) {
-                std::cout << " Resuming " << p.string() << "...\n";
-                std::string path = p.string();
-                resumeLfsDownloadForFile(repo, path.c_str());
-            }
+            std::cout << " Resuming " << p.string() << "...\n";
+            std::string path = p.string();
+            resumeLfsDownloadForFile(repoGuard.get(), path.c_str());
+        }
 
         SPDLOG_DEBUG("Checking repository status.");
         auto status = CheckRepositoryStatus(false);
@@ -495,6 +607,7 @@ Status HfDownloader::downloadModel() {
     }
 
     SPDLOG_DEBUG("Downloading to path: {}", this->downloadPath);
+
     git_repository* cloned_repo = NULL;
     // clone_opts for progress reporting set in libgit2 lib by patch
     git_clone_options clone_opts = GIT_CLONE_OPTIONS_INIT;
@@ -523,7 +636,6 @@ Status HfDownloader::downloadModel() {
             SPDLOG_ERROR("Libgit2 clone error: {} message: {}", err->klass, err->message);
         else
             SPDLOG_ERROR("Libgit2 clone error: {}", error);
-
         return StatusCode::HF_GIT_CLONE_FAILED;
     } else if (cloned_repo) {
         git_repository_free(cloned_repo);

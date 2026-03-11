@@ -63,6 +63,5 @@ protected:
     bool CheckIfProxySet();
     Status RemoveReadonlyFileAttributeFromDir(const std::string& directoryPath);
     Status CheckRepositoryStatus(bool checkUntracked);
-    int CheckRepositoryForResume();
 };
 }  // namespace ovms
