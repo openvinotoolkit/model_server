@@ -24,6 +24,17 @@ index 31da49a88..d61c9735e 100644
  if(BUILD_EXAMPLES)
  	add_subdirectory(examples)
  endif()
+diff --git a/cmake/ExperimentalFeatures.cmake b/cmake/ExperimentalFeatures.cmake
+index 7eff40bdb..5562acc77 100644
+--- a/cmake/ExperimentalFeatures.cmake
++++ b/cmake/ExperimentalFeatures.cmake
+@@ -18,6 +18,3 @@ else()
+ 	add_feature_info("SHA256 API" OFF "experimental SHA256 APIs")
+ endif()
+ 
+-if(EXPERIMENTAL)
+-	set(LIBGIT2_FILENAME "${LIBGIT2_FILENAME}-experimental")
+-endif()
 diff --git a/include/git2/oid.h b/include/git2/oid.h
 index 0af9737a0..6d9a8b08a 100644
 --- a/include/git2/oid.h
