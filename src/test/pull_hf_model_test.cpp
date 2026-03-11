@@ -253,7 +253,7 @@ std::string sha256File(std::string_view path, std::error_code& ec) {
     return oss.str();
 }
 
-TEST_F(HfDownloaderPullHfModel, PositiveDownloadAndResumeFromPArtialDownload) {
+TEST_F(HfDownloaderPullHfModel, Resume) {
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string downloadPath = ovms::FileSystem::joinPath({this->directoryPath, "repository"});
     std::string task = "text_generation";
