@@ -31,7 +31,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from reapproval_gate import (  # noqa: E402  (import after sys.path manipulation)
     LOC_THRESHOLD,
-    find_latest_approval,
+    find_latest_approval_per_user,
     is_merge_from_main,
 )
 
@@ -146,81 +146,104 @@ class TestIsMergeFromMain(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# find_latest_approval
+# find_latest_approval_per_user
 # ---------------------------------------------------------------------------
 
-class TestFindLatestApproval(unittest.TestCase):
-    """Tests for find_latest_approval()."""
+class TestFindLatestApprovalPerUser(unittest.TestCase):
+    """Tests for find_latest_approval_per_user()."""
 
-    def test_empty_reviews_returns_none(self):
-        self.assertIsNone(find_latest_approval([]))
+    def test_empty_reviews_returns_empty_dict(self):
+        """No reviews → no approvals → empty mapping."""
+        self.assertEqual(find_latest_approval_per_user([]), {})
 
-    def test_single_approval_returned(self):
-        reviews = [_make_review("APPROVED", commit_id="sha1")]
-        result = find_latest_approval(reviews)
-        self.assertIsNotNone(result)
-        self.assertEqual(result["commit_id"], "sha1")
+    def test_single_approval_in_result(self):
+        """One APPROVED review produces one entry."""
+        reviews = [_make_review("APPROVED", login="alice", commit_id="sha1")]
+        result = find_latest_approval_per_user(reviews)
+        self.assertIn("alice", result)
+        self.assertEqual(result["alice"]["commit_id"], "sha1")
 
-    def test_only_changes_requested_returns_none(self):
-        reviews = [_make_review("CHANGES_REQUESTED")]
-        self.assertIsNone(find_latest_approval(reviews))
+    def test_only_changes_requested_returns_empty(self):
+        """CHANGES_REQUESTED alone never produces an entry."""
+        self.assertEqual(find_latest_approval_per_user([_make_review("CHANGES_REQUESTED")]), {})
 
-    def test_only_comment_returns_none(self):
-        reviews = [_make_review("COMMENTED")]
-        self.assertIsNone(find_latest_approval(reviews))
+    def test_only_comment_returns_empty(self):
+        """COMMENTED reviews produce no entries."""
+        self.assertEqual(find_latest_approval_per_user([_make_review("COMMENTED")]), {})
 
-    def test_multiple_approvals_latest_returned(self):
-        """The last APPROVED review in chronological order is returned."""
+    def test_dismissed_not_included(self):
+        """DISMISSED reviews are not counted as approvals."""
+        self.assertEqual(find_latest_approval_per_user([_make_review("DISMISSED")]), {})
+
+    def test_same_user_multiple_approvals_latest_kept(self):
+        """When the same user approves twice, only their latest approval is kept."""
         reviews = [
-            _make_review("APPROVED", commit_id="sha1"),
-            _make_review("APPROVED", commit_id="sha2"),
+            _make_review("APPROVED", login="alice", commit_id="sha1"),
+            _make_review("APPROVED", login="alice", commit_id="sha2"),
         ]
-        result = find_latest_approval(reviews)
-        self.assertEqual(result["commit_id"], "sha2")
+        result = find_latest_approval_per_user(reviews)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result["alice"]["commit_id"], "sha2")
 
-    def test_approval_after_changes_requested(self):
-        """A fresh approval after CHANGES_REQUESTED clears the block."""
+    def test_approval_after_changes_requested_tracked(self):
+        """A fresh approval after CHANGES_REQUESTED appears in the result."""
         reviews = [
-            _make_review("CHANGES_REQUESTED", commit_id="sha1"),
-            _make_review("APPROVED", commit_id="sha2"),
+            _make_review("CHANGES_REQUESTED", login="alice", commit_id="sha1"),
+            _make_review("APPROVED", login="alice", commit_id="sha2"),
         ]
-        result = find_latest_approval(reviews)
-        self.assertEqual(result["commit_id"], "sha2")
+        result = find_latest_approval_per_user(reviews)
+        self.assertIn("alice", result)
+        self.assertEqual(result["alice"]["commit_id"], "sha2")
 
-    def test_changes_requested_after_approval(self):
-        """If CHANGES_REQUESTED follows an approval, the approval is still tracked."""
+    def test_changes_requested_after_approval_approval_still_tracked(self):
+        """An approval is still recorded even if CHANGES_REQUESTED follows."""
         reviews = [
-            _make_review("APPROVED", commit_id="sha1"),
-            _make_review("CHANGES_REQUESTED", commit_id="sha2"),
+            _make_review("APPROVED", login="alice", commit_id="sha1"),
+            _make_review("CHANGES_REQUESTED", login="alice", commit_id="sha2"),
         ]
-        result = find_latest_approval(reviews)
-        # The most recent APPROVED review is sha1
-        self.assertEqual(result["commit_id"], "sha1")
+        result = find_latest_approval_per_user(reviews)
+        self.assertIn("alice", result)
+        self.assertEqual(result["alice"]["commit_id"], "sha1")
 
     def test_commented_reviews_ignored(self):
-        """COMMENTED reviews have no effect on the latest approval."""
+        """COMMENTED reviews have no effect on the result."""
         reviews = [
-            _make_review("COMMENTED"),
-            _make_review("APPROVED", commit_id="sha1"),
-            _make_review("COMMENTED"),
+            _make_review("COMMENTED", login="alice"),
+            _make_review("APPROVED", login="alice", commit_id="sha1"),
+            _make_review("COMMENTED", login="alice"),
         ]
-        result = find_latest_approval(reviews)
-        self.assertEqual(result["commit_id"], "sha1")
+        result = find_latest_approval_per_user(reviews)
+        self.assertEqual(result["alice"]["commit_id"], "sha1")
 
-    def test_dismissed_review_not_approval(self):
-        """DISMISSED reviews are not counted as approvals."""
-        reviews = [_make_review("DISMISSED", commit_id="sha1")]
-        self.assertIsNone(find_latest_approval(reviews))
-
-    def test_multiple_reviewers_latest_approval_wins(self):
-        """Latest approval wins even if it comes from a different reviewer."""
+    def test_multiple_reviewers_tracked_independently(self):
+        """Each reviewer's approval is tracked independently."""
         reviews = [
             _make_review("APPROVED", login="alice", commit_id="sha1"),
             _make_review("APPROVED", login="bob", commit_id="sha2"),
         ]
-        result = find_latest_approval(reviews)
-        self.assertEqual(result["commit_id"], "sha2")
-        self.assertEqual(result["user"]["login"], "bob")
+        result = find_latest_approval_per_user(reviews)
+        self.assertIn("alice", result)
+        self.assertIn("bob", result)
+        self.assertEqual(result["alice"]["commit_id"], "sha1")
+        self.assertEqual(result["bob"]["commit_id"], "sha2")
+
+    def test_one_reviewer_stale_other_valid(self):
+        """
+        The key per-reviewer scenario: A approved at the latest commit (sha2),
+        B approved at an earlier commit (sha1).  Both entries are present with
+        their respective commit IDs so the gate can evaluate each independently.
+        """
+        reviews = [
+            _make_review("APPROVED", login="bob", commit_id="sha1"),
+            _make_review("APPROVED", login="alice", commit_id="sha2"),
+        ]
+        result = find_latest_approval_per_user(reviews)
+        # Both reviewers are present
+        self.assertIn("alice", result)
+        self.assertIn("bob", result)
+        # Alice's approval is at the newer commit; Bob's is at the older one.
+        self.assertEqual(result["alice"]["commit_id"], "sha2")
+        self.assertEqual(result["bob"]["commit_id"], "sha1")
 
 
 # ---------------------------------------------------------------------------

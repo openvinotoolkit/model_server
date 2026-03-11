@@ -10,33 +10,40 @@ The gate runs whenever **new commits are pushed to an open PR** (`synchronize`
 event), or whenever a **review is submitted** (so the gate re-evaluates after a
 fresh approval).
 
+Each reviewer's approval is evaluated **independently**:
+
 ```
-                   PR has at least
-                   one approval?
-                       │
-               No      │      Yes
-          ─────────────┼─────────────
-          ▼                          ▼
-        PASS              Commits exist after
-                          most recent approval?
-                                │
-                        No      │      Yes
-                   ─────────────┼──────────────
-                   ▼                           ▼
-                 PASS           Calculate churn*
-                                       │
-                               churn > 10 LOC?
-                                       │
-                               No      │      Yes
-                          ─────────────┼──────────
-                          ▼                       ▼
-                        PASS                   FAIL
-                                          (re-request review)
+             For each reviewer who
+             has approved the PR:
+                      │
+       ───────────────┼──────────────────
+       ▼                                ▼
+  Approval is the              Commits exist after
+  most recent commit?          reviewer's approval?
+       │                                │
+       ▼                        No      │      Yes
+     VALID                 ─────────────┼──────────────
+                           ▼                           ▼
+                         VALID           Calculate churn*
+                                                │
+                                        churn > 10 LOC?
+                                                │
+                                        No      │      Yes
+                                   ─────────────┼──────────
+                                   ▼                       ▼
+                                 VALID                   STALE
+                                                  (re-request that
+                                                    reviewer only)
 ```
 
-\* "Churn" is **additions + deletions** across commits pushed after the most
-recent approval, **excluding** merge-from-main commits (e.g. the commits
-created by GitHub's "Update branch" button or `git merge main`).
+Gate result:
+- **PASS** — every approver's approval is VALID.
+- **FAIL** — at least one approver is STALE (re-review is re-requested only from
+  stale approvers; reviewers with a current approval are not bothered).
+
+\* "Churn" is **additions + deletions** across commits pushed after the
+reviewer's most recent approval, **excluding** merge-from-main commits (e.g.
+the commits created by GitHub's "Update branch" button or `git merge main`).
 
 ## Required check
 
@@ -63,7 +70,7 @@ All configuration lives in the workflow file
 | Variable | Default | Description |
 |---|---|---|
 | `MAIN_BRANCH` | `main` | Name of the default branch. Merge-from-`MAIN_BRANCH` commits are excluded from the churn calculation. |
-| `LOC_THRESHOLD` | `10` | Maximum allowed additions + deletions after the most recent approval before re-approval is required. Change this constant in `.github/scripts/reapproval_gate.py`. |
+| `LOC_THRESHOLD` | `10` | Maximum allowed additions + deletions after a reviewer's most recent approval before re-approval is required from that reviewer. Change this constant in `.github/scripts/reapproval_gate.py`. |
 
 ## Merge-from-main detection
 
