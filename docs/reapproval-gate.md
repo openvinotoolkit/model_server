@@ -6,8 +6,9 @@ introduced without a fresh review.
 
 ## How it works
 
-The gate runs whenever a PR is **opened, synchronized (new commits pushed),
-reopened, marked ready for review**, or whenever a **review is submitted**.
+The gate runs whenever **new commits are pushed to an open PR** (`synchronize`
+event), or whenever a **review is submitted** (so the gate re-evaluates after a
+fresh approval).
 
 ```
                    PR has at least

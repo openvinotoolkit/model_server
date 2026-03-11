@@ -1,9 +1,10 @@
 name: Reapproval Gate
 
-# Run whenever a PR is opened/updated or a review is submitted.
+# Run only when new commits are pushed to an open PR, or when a review is
+# submitted (so the gate re-evaluates after a fresh approval).
 on:
   pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
+    types: [synchronize]
   pull_request_review:
     types: [submitted]
 
