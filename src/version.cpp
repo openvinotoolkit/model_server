@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2020 Intel Corporation
+// Copyright 2026 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,14 +13,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#ifndef SRC_VERSION_HPP_
-#define SRC_VERSION_HPP_
-#define PROJECT_NAME "OpenVINO Model Server"
-#define PROJECT_VERSION "REPLACE_PROJECT_VERSION"
-#define BAZEL_BUILD_FLAGS "REPLACE_BAZEL_BUILD_FLAGS"
+#include "version.hpp"
+
+#include <openvino/openvino.hpp>
+#if (MEDIAPIPE_DISABLE == 0)
+#include <openvino/genai/version.hpp>
+#endif
 
 namespace ovms {
-const char* getOpenvinoVersion();
-const char* getGenaiVersion();
+const char* getOpenvinoVersion() {
+    return ov::get_openvino_version().buildNumber;
+}
+const char* getGenaiVersion() {
+#if (MEDIAPIPE_DISABLE == 0)
+    return ov::genai::get_version().buildNumber;
+#else
+    return "Not available";
+#endif
+}
 }  // namespace ovms
-#endif  // SRC_VERSION_HPP_
