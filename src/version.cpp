@@ -28,7 +28,7 @@ const char* getGenaiVersion() {
 #if (MEDIAPIPE_DISABLE == 0)
     return ov::genai::get_version().buildNumber;
 #else
-    return "Not available";
+    return "";
 #endif
 }
 }  // namespace ovms
