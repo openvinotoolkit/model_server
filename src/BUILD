@@ -2470,6 +2470,7 @@ cc_test(
         "test/kfs_rest_test.cpp",
         "test/kfs_rest_parser_test.cpp",
         "test/layout_test.cpp",
+        "test/libgit2_test.cpp",
         "test/metric_config_test.cpp",
         "test/metrics_test.cpp",
         "test/metrics_flow_test.cpp",

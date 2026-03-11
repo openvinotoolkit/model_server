@@ -312,7 +312,7 @@ Status HfDownloader::CheckRepositoryStatus(bool checkUntracked) {
     } while (0)
 
 // Trim trailing '\r' (for CRLF files) and surrounding spaces
-static inline void rtrimCrLfWhitespace(std::string& s) {
+void rtrimCrLfWhitespace(std::string& s) {
     if (!s.empty() && s.back() == '\r')
         s.pop_back();  // remove trailing '\r'
     while (!s.empty() && std::isspace(static_cast<unsigned char>(s.back())))
@@ -325,7 +325,7 @@ static inline void rtrimCrLfWhitespace(std::string& s) {
 }
 
 // Case-insensitive substring search: returns true if 'needle' is found in 'hay'
-static bool containsCaseInsensitive(const std::string& hay, const std::string& needle) {
+bool containsCaseInsensitive(const std::string& hay, const std::string& needle) {
     auto toLower = [](std::string v) {
         std::transform(v.begin(), v.end(), v.begin(),
             [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
@@ -338,7 +338,7 @@ static bool containsCaseInsensitive(const std::string& hay, const std::string& n
 
 // Read at most the first 3 lines of a file, with a per-line cap to avoid huge reads.
 // Returns true if successful (even if <3 lines exist; vector will just be shorter).
-static bool readFirstThreeLines(const fs::path& p, std::vector<std::string>& outLines) {
+bool readFirstThreeLines(const fs::path& p, std::vector<std::string>& outLines) {
     outLines.clear();
     std::ifstream in(p, std::ios::in | std::ios::binary);
     if (!in)
@@ -383,7 +383,7 @@ static bool readFirstThreeLines(const fs::path& p, std::vector<std::string>& out
 
 // Check if the first 3 lines contain required keywords in positional order:
 // line1 -> "version", line2 -> "oid", line3 -> "size" (case-insensitive).
-static bool fileHasLfsKeywordsFirst3Positional(const fs::path& p) {
+bool fileHasLfsKeywordsFirst3Positional(const fs::path& p) {
     std::error_code ec;
     if (!fs::is_regular_file(p, ec))
         return false;
@@ -401,7 +401,7 @@ static bool fileHasLfsKeywordsFirst3Positional(const fs::path& p) {
 }
 
 // Helper: make path relative to base (best-effort, non-throwing).
-static fs::path makeRelativeToBase(const fs::path& path, const fs::path& base) {
+fs::path makeRelativeToBase(const fs::path& path, const fs::path& base) {
     std::error_code ec;
     // Try fs::relative first (handles canonical comparisons, may fail if on different roots)
     fs::path rel = fs::relative(path, base, ec);
@@ -419,8 +419,8 @@ static fs::path makeRelativeToBase(const fs::path& path, const fs::path& base) {
     return path;
 }
 
-// Find all files under 'directory' that satisfy the first-3-lines LFS keyword check.
-static std::vector<fs::path> findLfsLikeFiles(const std::string& directory, bool recursive = true) {
+// Find all files under 'directory' that satisfy the first-3-lines LFS keyword check. Default:  bool recursive = true
+std::vector<fs::path> findLfsLikeFiles(const std::string& directory, bool recursive) {
     std::vector<fs::path> matches;
     std::error_code ec;
 
