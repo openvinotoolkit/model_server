@@ -20,7 +20,7 @@
 #define BAZEL_BUILD_FLAGS "REPLACE_BAZEL_BUILD_FLAGS"
 
 namespace ovms {
-const char* getOpenvinoVersion();
-const char* getGenaiVersion();
+const char* getOpenVINOVersion();
+const char* getGenAIVersion();
 }  // namespace ovms
 #endif  // SRC_VERSION_HPP_

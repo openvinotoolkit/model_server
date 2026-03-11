@@ -86,8 +86,8 @@ static void logConfig(const Config& config) {
     std::string project_name(PROJECT_NAME);
     std::string project_version(PROJECT_VERSION);
     SPDLOG_INFO(project_name + " " + project_version);
-    SPDLOG_INFO("OpenVINO backend {}", ovms::getOpenvinoVersion());
-    const char* genaiVersion = ovms::getGenaiVersion();
+    SPDLOG_INFO("OpenVINO backend {}", ovms::getOpenVINOVersion());
+    const char* genaiVersion = ovms::getGenAIVersion();
     if (genaiVersion[0] != '\0') {
         SPDLOG_INFO("OpenVINO GenAI backend {}", genaiVersion);
     }

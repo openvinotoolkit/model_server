@@ -21,10 +21,10 @@
 #endif
 
 namespace ovms {
-const char* getOpenvinoVersion() {
+const char* getOpenVINOVersion() {
     return ov::get_openvino_version().buildNumber;
 }
-const char* getGenaiVersion() {
+const char* getGenAIVersion() {
 #if (MEDIAPIPE_DISABLE == 0)
     return ov::genai::get_version().buildNumber;
 #else

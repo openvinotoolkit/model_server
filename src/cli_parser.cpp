@@ -443,8 +443,8 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
             std::string project_name(PROJECT_NAME);
             std::string project_version(PROJECT_VERSION);
             ss << project_name + " " + project_version << std::endl;
-            ss << "OpenVINO backend " << ovms::getOpenvinoVersion() << std::endl;
-            const char* genaiVersion = ovms::getGenaiVersion();
+            ss << "OpenVINO backend " << ovms::getOpenVINOVersion() << std::endl;
+            const char* genaiVersion = ovms::getGenAIVersion();
             if (genaiVersion[0] != '\0') {
                 ss << "OpenVINO GenAI backend " << genaiVersion << std::endl;
             }
