@@ -170,10 +170,15 @@ absl::Status GenAiServable::applyLoraAdapter(std::shared_ptr<GenAiServableExecut
             SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Unknown LoRA adapter requested: {}", request.loraAdapter.value());
             return absl::InvalidArgumentError("Unknown LoRA adapter: " + request.loraAdapter.value());
         }
-        //float alpha = props->adapterConfig.get_alpha(it->second);
+        float alpha = 1.0f;//props->adapterConfig.get_alpha(it->second);
         executionContext->generationConfigBuilder->getConfig().adapters =
-            ov::genai::AdapterConfig(it->second, 0.5);//alpha);
+            ov::genai::AdapterConfig(it->second, alpha);
         SPDLOG_INFO("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX");
+    } else {
+        auto props = getProperties();
+        executionContext->generationConfigBuilder->getConfig().adapters =
+            ov::genai::AdapterConfig(props->adaptersByName["style-a"], 0.0f);
+        SPDLOG_INFO("YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY");
     }
     return absl::OkStatus();
 }
