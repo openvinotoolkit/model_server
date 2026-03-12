@@ -68,6 +68,7 @@
 #include "http_payload.hpp"
 #include "http_frontend/http_client_connection.hpp"
 #include "http_frontend/http_graph_executor_impl.hpp"
+#include "mediapipe_internal/mediapipefactory.hpp"
 #include "mediapipe_internal/mediapipegraphexecutor.hpp"
 #endif
 

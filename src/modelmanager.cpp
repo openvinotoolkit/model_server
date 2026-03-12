@@ -82,7 +82,7 @@ const std::string DEFAULT_MODEL_CACHE_DIRECTORY = "/opt/cache";
 ModelManager::ModelManager(const std::string& modelCacheDirectory, MetricRegistry* registry, PythonBackend* pythonBackend) :
     ieCore(std::make_unique<ov::Core>()),
 #if (MEDIAPIPE_DISABLE == 0)
-    mediapipeFactory(pythonBackend),
+    mediapipeFactory(std::make_unique<MediapipeFactory>(pythonBackend)),
 #endif
     waitForModelLoadedTimeoutMs(DEFAULT_WAIT_FOR_MODEL_LOADED_TIMEOUT_MS),
     modelCacheDirectory(modelCacheDirectory),
@@ -513,7 +513,7 @@ Status ModelManager::processMediapipeConfig(const MediapipeGraphConfig& config, 
     MediapipeGraphDefinition* mediapipeGraphDefinition = factory.findDefinitionByName(config.getGraphName());
     if (mediapipeGraphDefinition == nullptr) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Mediapipe graph:{} was not loaded so far. Triggering load", config.getGraphName());
-        auto status = factory.createDefinition(config.getGraphName(), config, *this);
+        auto status = factory.createDefinition(config.getGraphName(), config, *this, *this);
         return status;
     }
     if (mediapipeGraphDefinition->isReloadRequired(config)) {
@@ -694,7 +694,7 @@ Status ModelManager::loadCustomNodeLibrariesConfig(rapidjson::Document& configJs
 Status ModelManager::loadMediapipeGraphsConfig(std::vector<MediapipeGraphConfig>& mediapipesInConfigFile) {
     if (mediapipesInConfigFile.size() == 0) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Configuration file doesn't have mediapipe property.");
-        mediapipeFactory.retireOtherThan({}, *this);
+        mediapipeFactory->retireOtherThan({});
         return StatusCode::OK;
     }
     std::set<std::string> mediapipesInConfigFileNames;
@@ -703,13 +703,13 @@ Status ModelManager::loadMediapipeGraphsConfig(std::vector<MediapipeGraphConfig>
         for (const auto& mediapipeGraphConfig : mediapipesInConfigFile) {
             mediapipesInConfigFileNames.insert(mediapipeGraphConfig.getGraphName());
         }
-        mediapipeFactory.retireOtherThan(std::move(mediapipesInConfigFileNames), *this);
+        mediapipeFactory->retireOtherThan(std::move(mediapipesInConfigFileNames));
         std::set<std::string> mediapipesAlreadyLoaded;
         for (const auto& mediapipeGraphConfig : mediapipesInConfigFile) {
             if (spdlog::default_logger_raw()->level() <= spdlog::level::debug) {
                 mediapipeGraphConfig.logGraphConfigContent();
             }
-            auto status = processMediapipeConfig(mediapipeGraphConfig, mediapipesAlreadyLoaded, mediapipeFactory);
+            auto status = processMediapipeConfig(mediapipeGraphConfig, mediapipesAlreadyLoaded, *mediapipeFactory);
             if (status != StatusCode::OK) {
                 IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
             }
@@ -917,7 +917,7 @@ Status ModelManager::loadModels(const rapidjson::Value::MemberIterator& modelsCo
             continue;
         }
 #if (MEDIAPIPE_DISABLE == 0)
-        if (mediapipeFactory.definitionExists(modelName)) {
+        if (mediapipeFactory->definitionExists(modelName)) {
             IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(StatusCode::MODEL_NAME_OCCUPIED);
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Model name: {} is already occupied by mediapipe graph definition.", modelName);
             continue;
@@ -1730,7 +1730,7 @@ const std::vector<std::string> ModelManager::getNamesOfAvailableModels() const {
 Status ModelManager::createPipeline(std::unique_ptr<MediapipeGraphExecutor>& graph,
     const std::string& name) {
 #if (MEDIAPIPE_DISABLE == 0)
-    return this->mediapipeFactory.create(graph, name, *this);
+    return this->mediapipeFactory->create(graph, name);
 #else
     SPDLOG_ERROR("Mediapipe support was disabled during build process...");
     return StatusCode::INTERNAL_ERROR;
@@ -1739,5 +1739,20 @@ Status ModelManager::createPipeline(std::unique_ptr<MediapipeGraphExecutor>& gra
 
 void ModelManager::setRootDirectoryPath(const std::string& configFileFullPath) {
     FileSystem::setRootDirectoryPath(this->rootDirectoryPath, configFileFullPath);
+}
+
+bool ModelManager::servableExists(const std::string& name) const {
+    if (findModelByName(name) != nullptr) {
+        return true;
+    }
+    if (pipelineFactory.definitionExists(name)) {
+        return true;
+    }
+#if (MEDIAPIPE_DISABLE == 0)
+    if (mediapipeFactory->definitionExists(name)) {
+        return true;
+    }
+#endif
+    return false;
 }
 }  // namespace ovms

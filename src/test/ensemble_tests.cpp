@@ -39,6 +39,7 @@
 #include "../inference_executor.hpp"
 #include "../localfilesystem.hpp"
 #include "../logging.hpp"
+#include "../mediapipe_internal/mediapipefactory.hpp"
 #include "../metric_registry.hpp"
 #include "../model.hpp"
 #include "../model_metric_reporter.hpp"

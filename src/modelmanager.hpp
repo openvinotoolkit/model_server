@@ -33,11 +33,10 @@
 
 #include "dags/pipeline_factory.hpp"
 #include "global_sequences_viewer.hpp"
-#if (MEDIAPIPE_DISABLE == 0)
-#include "mediapipe_internal/mediapipefactory.hpp"
-#endif
 #include "metric_config.hpp"
+#include "metric_provider.hpp"
 #include "modelconfig.hpp"
+#include "servable_name_checker.hpp"
 #include "status.hpp"
 
 namespace ov {
@@ -58,6 +57,8 @@ class MetricRegistry;
 class Model;
 class ModelConfig;
 class FileSystem;
+class MediapipeFactory;
+class MediapipeGraphConfig;
 class MediapipeGraphExecutor;
 struct FunctorSequenceCleaner;
 struct FunctorResourcesCleaner;
@@ -65,7 +66,7 @@ class PythonBackend;
 /**
  * @brief Model manager is managing the list of model topologies enabled for serving and their versions.
  */
-class ModelManager {
+class ModelManager : public ServableNameChecker, public MetricProvider {
 public:
     /**
      * @brief A default constructor is private
@@ -88,7 +89,7 @@ protected:
 
     PipelineFactory pipelineFactory;
 #if (MEDIAPIPE_DISABLE == 0)
-    MediapipeFactory mediapipeFactory;
+    std::unique_ptr<MediapipeFactory> mediapipeFactory;
 #endif
     std::unique_ptr<CustomNodeLibraryManager> customNodeLibraryManager;
     std::vector<std::shared_ptr<CNLIMWrapper>> resources = {};
@@ -328,7 +329,7 @@ public:
 
 #if (MEDIAPIPE_DISABLE == 0)
     const MediapipeFactory& getMediapipeFactory() const {
-        return mediapipeFactory;
+        return *mediapipeFactory;
     }
 #endif
 
@@ -399,7 +400,7 @@ public:
          * 
          * @return const std::string&
          */
-    const MetricConfig& getMetricConfig() const {
+    const MetricConfig& getMetricConfig() const override {
         return this->metricConfig;
     }
 
@@ -504,7 +505,8 @@ public:
      */
     void cleanupResources();
 
-    MetricRegistry* getMetricRegistry() const { return this->metricRegistry; }
+    bool servableExists(const std::string& name) const override;
+    MetricRegistry* getMetricRegistry() const override { return this->metricRegistry; }
 };
 
 void cleanerRoutine(uint32_t resourcesCleanupInterval, FunctorResourcesCleaner& functorResourcesCleaner, uint32_t sequenceCleanerInterval, FunctorSequenceCleaner& functorSequenceCleaner, std::future<void>& cleanerExitSignal);

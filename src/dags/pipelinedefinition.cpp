@@ -20,6 +20,9 @@
 #include <thread>
 
 #include "../logging.hpp"
+#if (MEDIAPIPE_DISABLE == 0)
+#include "../mediapipe_internal/mediapipefactory.hpp"
+#endif
 #include "../model.hpp"
 #include "../model_metric_reporter.hpp"
 #include "../modelinstance.hpp"

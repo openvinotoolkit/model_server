@@ -1488,8 +1488,6 @@ TEST_F(MediapipeStreamFlowAddTest, Infer) {
 TEST_F(MediapipeStreamFlowAddTest, InferOnUnloadedGraph) {
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
     KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
-    const ServableManagerModule* smm = dynamic_cast<const ServableManagerModule*>(server.getModule(SERVABLE_MANAGER_MODULE_NAME));
-    ModelManager& modelManager = smm->getServableManager();
 
     auto* definition = this->getMPDefinitionByName(this->modelName);
     ASSERT_NE(definition, nullptr);
@@ -1533,10 +1531,10 @@ TEST_F(MediapipeStreamFlowAddTest, InferOnUnloadedGraph) {
             checkAddResponse("out", this->requestData1[2], this->requestData1[2], this->request[2], msg.infer_response(), 1, 1, this->modelName);
             return true;
         });
-    std::thread unloader([&startUnloading, &finishedUnloading, &definition, &modelManager]() {
+    std::thread unloader([&startUnloading, &finishedUnloading, &definition]() {
         // Wait till first response notifies that we should start unloading
         startUnloading.get_future().get();
-        definition->retire(modelManager);
+        definition->retire();
         // Notify second request to arrive because we unloaded the graph
         finishedUnloading.set_value();
     });
@@ -1655,11 +1653,9 @@ TEST_F(MediapipeStreamFlowAddTest, InferOnReloadedGraph) {
 TEST_F(MediapipeStreamFlowAddTest, NegativeShouldNotReachInferDueToRetiredGraph) {
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
     KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
-    const ServableManagerModule* smm = dynamic_cast<const ServableManagerModule*>(server.getModule(SERVABLE_MANAGER_MODULE_NAME));
-    ModelManager& modelManager = smm->getServableManager();
     auto* definition = this->getMPDefinitionByName(this->modelName);
     ASSERT_NE(definition, nullptr);
-    definition->retire(modelManager);
+    definition->retire();
 
     // Opening new stream, expect graph to be unavailable
     MockedServerReaderWriter<::inference::ModelStreamInferResponse, ::inference::ModelInferRequest> stream;

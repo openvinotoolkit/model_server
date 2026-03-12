@@ -36,6 +36,7 @@
 // kfs_graph_executor_impl needs to be included before mediapipegraphexecutor
 // because it contains functions required by graph execution template
 #include "kfs_graph_executor_impl.hpp"
+#include "../mediapipe_internal/mediapipefactory.hpp"
 #include "../mediapipe_internal/mediapipegraphdefinition.hpp"
 #include "../mediapipe_internal/mediapipegraphexecutor.hpp"
 // clang-format on

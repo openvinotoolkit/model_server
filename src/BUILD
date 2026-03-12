@@ -682,6 +682,8 @@ ovms_cc_library(
             "kfs_backend_impl",
             "tfs_backend_impl",
             "anonymous_input_name",
+            "libovms_servable_name_checker",
+            "libovms_metric_provider",
          ] + select({
                 "//:not_disable_cloud": [
                     "libovmsazurefilesystem",
@@ -1202,6 +1204,20 @@ ovms_cc_library(
             "libovmsstatus",
             "libovmslogging",],
     visibility = ["//visibility:public",],
+)
+
+ovms_cc_library(
+    name = "libovms_servable_name_checker",
+    hdrs = ["servable_name_checker.hpp",],
+    deps = [],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
+    name = "libovms_metric_provider",
+    hdrs = ["metric_provider.hpp",],
+    deps = [],
+    visibility = ["//visibility:public"],
 )
 
 ovms_cc_library( # make ovms_lib dependent, use share doptions

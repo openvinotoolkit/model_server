@@ -34,6 +34,7 @@
 #include "../execution_context.hpp"
 #include "../version.hpp"
 #if (MEDIAPIPE_DISABLE == 0)
+#include "../mediapipe_internal/mediapipefactory.hpp"
 #include "../mediapipe_internal/mediapipegraphdefinition.hpp"
 #endif
 #include "../model_service.hpp"
