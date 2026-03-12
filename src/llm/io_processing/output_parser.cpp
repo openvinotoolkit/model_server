@@ -171,6 +171,8 @@ OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string to
         toolParser = std::make_unique<Qwen3CoderToolParser>(tokenizer, toolNameSchemaMap);
     } else if (toolParserName == "devstral") {
         toolParser = std::make_unique<DevstralToolParser>(tokenizer, toolNameSchemaMap);
+    } else if (toolParserName == "lfm2") {
+        toolParser = std::make_unique<Lfm2ToolParser>(tokenizer);
     } else if (!toolParserName.empty()) {
         throw std::runtime_error("Unsupported tool parser: " + toolParserName);
     }
