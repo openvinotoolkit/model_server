@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright 2024 Intel Corporation
+# Copyright 2026 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -42,7 +42,7 @@ import re
 import sys
 import urllib.error
 import urllib.request
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 LOC_THRESHOLD: int = 10
 
@@ -66,7 +66,7 @@ def make_github_request(
         req.add_header("Content-Type", "application/json")
         req.data = json.dumps(body).encode("utf-8")
     try:
-        with urllib.request.urlopen(req) as response:
+        with urllib.request.urlopen(req, timeout=30) as response:
             return json.loads(response.read())
     except urllib.error.HTTPError as exc:
         print(f"HTTP {exc.code} for {method} {url}: {exc.read().decode()}", flush=True)
@@ -114,15 +114,70 @@ def request_re_review(
     pr_number: int,
     reviewers: List[str],
 ) -> None:
-    """Re-request reviews from the supplied list of GitHub logins (best-effort)."""
-    if not reviewers:
+    """Re-request reviews from the supplied list of GitHub logins (best-effort).
+
+    Normalises and de-duplicates the list, then posts requests in chunks of 50
+    (GitHub API limit).  When a chunk returns 422, each reviewer in that chunk
+    is retried individually so as many re-requests succeed as possible.
+    """
+    # Normalise and de-duplicate while preserving order.
+    seen: Set[str] = set()
+    normalized: List[str] = []
+    for reviewer in reviewers:
+        if reviewer and reviewer not in seen:
+            seen.add(reviewer)
+            normalized.append(reviewer)
+
+    if not normalized:
         return
+
     url = f"https://api.github.com/repos/{repo}/pulls/{pr_number}/requested_reviewers"
-    try:
-        make_github_request(token, "POST", url, {"reviewers": reviewers})
-        print(f"Re-requested review from: {', '.join(reviewers)}", flush=True)
-    except Exception as exc:  # pylint: disable=broad-except
-        print(f"Warning: could not re-request reviews: {exc}", flush=True)
+    max_per_request = 50
+    successful: List[str] = []
+
+    for i in range(0, len(normalized), max_per_request):
+        chunk = normalized[i : i + max_per_request]
+        try:
+            make_github_request(token, "POST", url, {"reviewers": chunk})
+            successful.extend(chunk)
+        except urllib.error.HTTPError as http_exc:
+            if http_exc.code == 422:
+                print(
+                    "Warning: bulk re-request failed with 422; "
+                    "retrying reviewers individually.",
+                    flush=True,
+                )
+                for reviewer in chunk:
+                    try:
+                        make_github_request(token, "POST", url, {"reviewers": [reviewer]})
+                        successful.append(reviewer)
+                    except urllib.error.HTTPError as inner_exc:
+                        print(
+                            f"Warning: could not re-request review from "
+                            f"{reviewer}: HTTP {inner_exc.code}",
+                            flush=True,
+                        )
+                    except Exception as inner_exc:  # pylint: disable=broad-except
+                        print(
+                            f"Warning: unexpected error while re-requesting "
+                            f"review from {reviewer}: {inner_exc}",
+                            flush=True,
+                        )
+            else:
+                print(
+                    f"Warning: HTTP {http_exc.code} while re-requesting "
+                    f"reviews for chunk {chunk}",
+                    flush=True,
+                )
+        except Exception as exc:  # pylint: disable=broad-except
+            print(
+                f"Warning: unexpected error while re-requesting reviews for "
+                f"chunk {chunk}: {exc}",
+                flush=True,
+            )
+
+    if successful:
+        print(f"Re-requested review from: {', '.join(successful)}", flush=True)
 
 
 # ---------------------------------------------------------------------------
@@ -218,6 +273,13 @@ def calculate_changes_after_approval(
         print(f"  {sha[:8]}: +{additions}/-{deletions} = {commit_changes} LOC", flush=True)
         total_changes += commit_changes
         evaluated += 1
+        if total_changes > LOC_THRESHOLD:
+            print(
+                f"  Total changes {total_changes} exceeds threshold {LOC_THRESHOLD}; "
+                "stopping further evaluation.",
+                flush=True,
+            )
+            break
 
     return total_changes, evaluated
 
