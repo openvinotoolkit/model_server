@@ -27,6 +27,12 @@ protected:
     const std::string toolRepsonseStartTag = "<|tool_response_start|>";
     const std::string toolResponseEndTag = "<|tool_response_end|>";
 
+    const std::string toolListStartIndicator = "[";
+    const std::string toolListEndIndicator = "]";
+    const std::string toolArgsStartIndicator = "(";
+    const std::string toolEndIndicator = ")";
+    const std::string toolSeparatorStr = ", ";
+
     struct Argument {
         std::string name;
         std::string value;
@@ -40,16 +46,21 @@ public:
     void parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) override;
     std::optional<rapidjson::Document> parseChunk(const std::string& chunk, ov::genai::GenerationFinishReason finishReason) override;
     const std::vector<std::string>& getParsingStartTags() const override {
-        static const std::vector<std::string> parsingStartTags = {parsingStartTag};
+        static const std::vector<std::string> parsingStartTags = {toolCallStartTag};
         return parsingStartTags;
     }
+
+    Argument parseSingleArgument(std::string& argumentStr);
+    std::vector<Argument> parseArguments(std::string& argumentsStr);
+    bool parseSingleToolCall(const std::string& toolStr, ToolCall& toolCall);
+
     const std::vector<std::string>& getSpecialParsingStartTags() const override {
         static const std::vector<std::string> beginningOnlyTags = {};
         return beginningOnlyTags;
     }
 
     const std::string& getParsingEndTag() const override {
-        return parsingEndTag;
+        return toolCallEndTag;
     }
 
 };
