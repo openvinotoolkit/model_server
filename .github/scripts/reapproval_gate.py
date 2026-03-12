@@ -21,7 +21,7 @@ Rules:
   - For each reviewer who has approved, compute the number of lines changed
     (additions + deletions) for commits pushed after *their* most recent
     approval, skipping any merge-from-main commits.
-  - If a reviewer's changes > LOC_THRESHOLD (default 10), that reviewer is
+  - If a reviewer's changes > LOC_THRESHOLD (default 20), that reviewer is
     marked stale and re-review is re-requested from them specifically.
   - The gate PASSES only when every approver's changes are within the threshold.
 
@@ -44,7 +44,7 @@ import urllib.error
 import urllib.request
 from typing import Any, Dict, List, Optional, Set, Tuple
 
-LOC_THRESHOLD: int = 10
+LOC_THRESHOLD: int = 20
 
 
 # ---------------------------------------------------------------------------

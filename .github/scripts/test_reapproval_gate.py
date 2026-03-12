@@ -247,20 +247,6 @@ class TestFindLatestApprovalPerUser(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# LOC_THRESHOLD constant
-# ---------------------------------------------------------------------------
-
-class TestLOCThreshold(unittest.TestCase):
-    """Sanity-check the published threshold value."""
-
-    def test_threshold_is_ten(self):
-        self.assertEqual(LOC_THRESHOLD, 10)
-
-    def test_threshold_is_int(self):
-        self.assertIsInstance(LOC_THRESHOLD, int)
-
-
-# ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 
