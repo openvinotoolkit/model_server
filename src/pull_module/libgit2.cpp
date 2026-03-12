@@ -19,6 +19,7 @@
 #include <iostream>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <assert.h>
@@ -338,46 +339,45 @@ bool containsCaseInsensitive(const std::string& hay, const std::string& needle) 
 
 // Read at most the first 3 lines of a file, with a per-line cap to avoid huge reads.
 // Returns true if successful (even if <3 lines exist; vector will just be shorter).
-bool readFirstThreeLines(const fs::path& p, std::vector<std::string>& outLines) {
-    outLines.clear();
-    std::ifstream in(p, std::ios::in | std::ios::binary);
+
+bool readFirstThreeLines(const std::filesystem::path& p, std::vector<std::string>& out) {
+    out.clear();
+
+    std::ifstream in(p, std::ios::binary);
     if (!in)
         return false;
 
-    constexpr std::streamsize kMaxPerLine = 8192;
-
     std::string line;
-    line.reserve(static_cast<size_t>(kMaxPerLine));
-    for (int i = 0; i < 3 && in.good(); ++i) {
-        line.clear();
-        std::streamsize count = 0;
-        char ch;
-        bool gotNewline = false;
-        while (count < kMaxPerLine && in.get(ch)) {
-            if (ch == '\n') {
-                gotNewline = true;
-                break;
-            }
-            line.push_back(ch);
-            ++count;
-        }
-        // If we hit kMaxPerLine without encountering '\n', drain until newline to resync
-        if (count == kMaxPerLine && !gotNewline) {
-            while (in.get(ch)) {
-                if (ch == '\n')
-                    break;
-            }
-        }
+    line.reserve(256);  // small optimization
+    int c;
 
-        if (!in && line.empty()) {
-            // EOF with no data accumulated; if previous lines were read, that's fine.
-            break;
+    while (out.size() < 3 && (c = in.get()) != EOF) {
+        if (c == '\r') {
+            // Handle CR or CRLF as one line ending
+            int next = in.peek();
+            if (next == '\n') {
+                in.get();  // consume '\n'
+            }
+            // finalize current line
+            rtrimCrLfWhitespace(line);
+            out.push_back(std::move(line));
+            line.clear();
+        } else if (c == '\n') {
+            // LF line ending
+            rtrimCrLfWhitespace(line);
+            out.push_back(std::move(line));
+            line.clear();
+        } else {
+            line.push_back(static_cast<char>(c));
         }
-        rtrimCrLfWhitespace(line);
-        outLines.push_back(line);
-        if (!in)
-            break;  // Handle EOF gracefully
     }
+
+    // Handle the last line if file did not end with EOL
+    if (!line.empty() && out.size() < 3) {
+        rtrimCrLfWhitespace(line);
+        out.push_back(std::move(line));
+    }
+
     return true;
 }
 
@@ -593,12 +593,7 @@ Status HfDownloader::downloadModel() {
         }
 
         SPDLOG_DEBUG("Checking repository status.");
-        auto status = CheckRepositoryStatus(false);
-        if (!status.ok()) {
-            return status;
-        }
-
-        return StatusCode::OK;
+        return CheckRepositoryStatus(false);
     }
 
     auto status = IModelDownloader::checkIfOverwriteAndRemove();
