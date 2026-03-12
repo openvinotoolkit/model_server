@@ -27,6 +27,12 @@ protected:
     const std::string toolRepsonseStartTag = "<|tool_response_start|>";
     const std::string toolResponseEndTag = "<|tool_response_end|>";
 
+    struct Argument {
+        std::string name;
+        std::string value;
+        ParameterType type;
+    };
+
 public:
     Lfm2ToolParser() = delete;
     explicit Lfm2ToolParser(ov::genai::Tokenizer& tokenizer) : BaseOutputParser(tokenizer) {}
