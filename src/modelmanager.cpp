@@ -911,18 +911,11 @@ Status ModelManager::loadModels(const rapidjson::Value::MemberIterator& modelsCo
         modelConfig.setCacheDir(this->modelCacheDirectory);
 
         const auto& modelName = modelConfig.getName();
-        if (pipelineDefinitionExists(modelName)) {
+        if (servableExists(modelName, ServableType::Pipeline | ServableType::Mediapipe)) {
             IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(StatusCode::MODEL_NAME_OCCUPIED);
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Model name: {} is already occupied by pipeline definition.", modelName);
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Model name: {} is already occupied by pipeline or mediapipe graph definition.", modelName);
             continue;
         }
-#if (MEDIAPIPE_DISABLE == 0)
-        if (mediapipeFactory->definitionExists(modelName)) {
-            IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(StatusCode::MODEL_NAME_OCCUPIED);
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Model name: {} is already occupied by mediapipe graph definition.", modelName);
-            continue;
-        }
-#endif
         if (modelsInConfigFile.find(modelName) != modelsInConfigFile.end()) {
             IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(StatusCode::MODEL_NAME_OCCUPIED);
             SPDLOG_LOGGER_WARN(modelmanager_logger, "Duplicated model names: {} defined in config file. Only first definition will be loaded.", modelName);
@@ -1741,15 +1734,15 @@ void ModelManager::setRootDirectoryPath(const std::string& configFileFullPath) {
     FileSystem::setRootDirectoryPath(this->rootDirectoryPath, configFileFullPath);
 }
 
-bool ModelManager::servableExists(const std::string& name) const {
-    if (findModelByName(name) != nullptr) {
+bool ModelManager::servableExists(const std::string& name, ServableType check) const {
+    if (hasFlag(check, ServableType::Model) && findModelByName(name) != nullptr) {
         return true;
     }
-    if (pipelineFactory.definitionExists(name)) {
+    if (hasFlag(check, ServableType::Pipeline) && pipelineFactory.definitionExists(name)) {
         return true;
     }
 #if (MEDIAPIPE_DISABLE == 0)
-    if (mediapipeFactory->definitionExists(name)) {
+    if (hasFlag(check, ServableType::Mediapipe) && mediapipeFactory->definitionExists(name)) {
         return true;
     }
 #endif

@@ -505,7 +505,7 @@ public:
      */
     void cleanupResources();
 
-    bool servableExists(const std::string& name) const override;
+    bool servableExists(const std::string& name, ServableType check = ServableType::All) const override;
     MetricRegistry* getMetricRegistry() const override { return this->metricRegistry; }
 };
 

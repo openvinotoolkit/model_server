@@ -16,13 +16,31 @@
 #pragma once
 
 #include <string>
+#include <type_traits>
 
 namespace ovms {
+
+enum class ServableType : uint8_t {
+    Model = 1 << 0,
+    Pipeline = 1 << 1,
+    Mediapipe = 1 << 2,
+    All = Model | Pipeline | Mediapipe
+};
+
+inline ServableType operator|(ServableType a, ServableType b) {
+    using T = std::underlying_type_t<ServableType>;
+    return static_cast<ServableType>(static_cast<T>(a) | static_cast<T>(b));
+}
+
+inline bool hasFlag(ServableType value, ServableType flag) {
+    using T = std::underlying_type_t<ServableType>;
+    return (static_cast<T>(value) & static_cast<T>(flag)) != 0;
+}
 
 class ServableNameChecker {
 public:
     virtual ~ServableNameChecker() = default;
-    virtual bool servableExists(const std::string& name) const = 0;
+    virtual bool servableExists(const std::string& name, ServableType check = ServableType::All) const = 0;
 };
 
 }  // namespace ovms

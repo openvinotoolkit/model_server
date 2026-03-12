@@ -134,7 +134,7 @@ Status MediapipeGraphDefinition::validate(const ServableNameChecker& checker) {
         return StatusCode::INTERNAL_ERROR;
     }
     ValidationResultNotifier notifier(this->status, this->loadedNotify);
-    if (checker.servableExists(this->getName())) {
+    if (checker.servableExists(this->getName(), ServableType::Model | ServableType::Pipeline)) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Mediapipe graph name: {} is already occupied by model or pipeline.", this->getName());
         return StatusCode::MEDIAPIPE_GRAPH_NAME_OCCUPIED;
     }
