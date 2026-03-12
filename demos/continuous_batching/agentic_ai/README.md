@@ -198,7 +198,7 @@ Pull and start OVMS:
 ```bash
 mkdir -p ${HOME}/models
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v ${HOME}/models:/models openvino/model_server:weekly \
---rest_port 8000 --model_repository_path ${HOME}/models --source_model OpenVINO/Qwen3-8B-int4-ov --tool_parser hermes3 --task text_generation
+--rest_port 8000 --model_repository_path /models --source_model OpenVINO/Qwen3-8B-int4-ov --tool_parser hermes3 --task text_generation
 ```
 
 Use MCP server:
@@ -217,7 +217,7 @@ Pull and start OVMS:
 ```bash
 mkdir -p ${HOME}/models
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v ${HOME}/models:/models openvino/model_server:weekly \
---rest_port 8000 --model_repository_path models --source_model OpenVINO/Qwen3-4B-int4-ov --tool_parser hermes3 --task text_generation
+--rest_port 8000 --model_repository_path /models --source_model OpenVINO/Qwen3-4B-int4-ov --tool_parser hermes3 --task text_generation
 ```
 
 Use MCP server:
