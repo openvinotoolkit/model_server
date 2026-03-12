@@ -220,7 +220,6 @@ Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiSe
                     std::istreambuf_iterator<char>());
                 if (!chatTemplateContent.empty()) {
                     properties->tokenizer.set_chat_template(chatTemplateContent);
-                    SPDLOG_LOGGER_ERROR(llm_calculator_logger, "PPPPPPPPPPPP Loaded custom chat template from: {}", chatTemplateJinjaPath.string());
                 }
             } else {
                 SPDLOG_LOGGER_WARN(llm_calculator_logger, "Failed to open chat template file: {}", chatTemplateJinjaPath.string());
