@@ -25,6 +25,7 @@ Run with:
 import os
 import sys
 import unittest
+from unittest import mock
 
 # Ensure the scripts directory is importable regardless of CWD.
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -33,6 +34,7 @@ from reapproval_gate import (  # noqa: E402  (import after sys.path manipulation
     LOC_THRESHOLD,
     find_latest_approval_per_user,
     is_merge_from_main,
+    run_gate,
 )
 
 
@@ -244,6 +246,51 @@ class TestFindLatestApprovalPerUser(unittest.TestCase):
         # Alice's approval is at the newer commit; Bob's is at the older one.
         self.assertEqual(result["alice"]["commit_id"], "sha2")
         self.assertEqual(result["bob"]["commit_id"], "sha1")
+
+
+# ---------------------------------------------------------------------------
+# Threshold decision (run_gate with all network calls mocked)
+# ---------------------------------------------------------------------------
+
+class TestThresholdDecision(unittest.TestCase):
+    """Verify the gate's pass/fail decision against LOC_THRESHOLD.
+
+    All GitHub API calls are replaced by in-process stubs so these tests run
+    fully offline with no credentials required.
+    """
+
+    @staticmethod
+    def _make_commit_details(additions: int, deletions: int) -> dict:
+        """Minimal commit-detail payload as returned by the GitHub API."""
+        return {
+            "sha": "sha2",
+            "parents": [{"sha": "sha1"}],  # single parent → not a merge commit
+            "commit": {"message": "Ordinary change"},
+            "stats": {"additions": additions, "deletions": deletions},
+        }
+
+    def _run_gate_with_churn(self, churn: int) -> bool:
+        """Run the gate for a single-reviewer PR whose one post-approval commit
+        carries *churn* total lines changed (additions + deletions).
+        """
+        reviews = [_make_review("APPROVED", login="alice", commit_id="sha1")]
+        pr_commits = [{"sha": "sha1"}, {"sha": "sha2"}]
+        commit_details = self._make_commit_details(
+            additions=churn // 2, deletions=churn - churn // 2
+        )
+        with mock.patch("reapproval_gate.get_reviews", return_value=reviews), \
+             mock.patch("reapproval_gate.get_pr_commits", return_value=pr_commits), \
+             mock.patch("reapproval_gate.get_commit_details", return_value=commit_details), \
+             mock.patch("reapproval_gate.request_re_review"):
+            return run_gate("fake-token", "owner/repo", 1)
+
+    def test_gate_fails_when_changes_exceed_threshold(self):
+        """LOC_THRESHOLD+1 lines changed after approval → gate fails (re-approval required)."""
+        self.assertFalse(self._run_gate_with_churn(LOC_THRESHOLD + 1))
+
+    def test_gate_passes_when_changes_below_threshold(self):
+        """LOC_THRESHOLD-1 lines changed after approval → gate passes."""
+        self.assertTrue(self._run_gate_with_churn(LOC_THRESHOLD - 1))
 
 
 # ---------------------------------------------------------------------------

@@ -26,7 +26,7 @@ Each reviewer's approval is evaluated **independently**:
                            ▼                           ▼
                          VALID           Calculate changes*
                                                 │
-                                        changes > 10 LOC?
+                                        changes > 20 LOC?
                                                 │
                                         No      │      Yes
                                    ─────────────┼──────────
@@ -73,7 +73,7 @@ All configuration lives in the workflow file
 | Variable | Default | Description |
 |---|---|---|
 | `MAIN_BRANCH` | `main` | Name of the default branch. Merge-from-`MAIN_BRANCH` commits are excluded from the changes calculation. |
-| `LOC_THRESHOLD` | `10` | Maximum allowed additions + deletions after a reviewer's most recent approval before re-approval is required from that reviewer. Change this constant in `.github/scripts/reapproval_gate.py`. |
+| `LOC_THRESHOLD` | `20` | Maximum allowed additions + deletions after a reviewer's most recent approval before re-approval is required from that reviewer. Change this constant in `.github/scripts/reapproval_gate.py`. |
 
 ## Merge-from-main detection
 
