@@ -1188,7 +1188,8 @@ ovms_cc_library(
     name = "libovmsstatus",
     hdrs = ["status.hpp",],
     srcs = ["status.cpp",],
-    deps = ["libovmslogging"],
+    deps = ["libovmslogging",
+            "@fmtlib",],
     visibility = ["//visibility:public"],
 )
 
