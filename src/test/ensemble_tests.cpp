@@ -40,6 +40,7 @@
 #include "../localfilesystem.hpp"
 #include "../logging.hpp"
 #include "../metric_registry.hpp"
+#include "../model.hpp"
 #include "../model_metric_reporter.hpp"
 #include "../modelconfig.hpp"
 #include "../modelinstance.hpp"

@@ -20,6 +20,7 @@
 #include <thread>
 
 #include "../logging.hpp"
+#include "../model.hpp"
 #include "../model_metric_reporter.hpp"
 #include "../modelinstance.hpp"
 #include "../modelinstanceunloadguard.hpp"

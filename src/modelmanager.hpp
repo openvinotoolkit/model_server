@@ -26,13 +26,10 @@
 #include <utility>
 #include <vector>
 
-#include <openvino/openvino.hpp>
 #pragma warning(push)
 #pragma warning(disable : 6313)
 #include <rapidjson/document.h>
 #pragma warning(pop)
-#include <spdlog/spdlog.h>
-#include <sys/stat.h>
 
 #include "dags/pipeline_factory.hpp"
 #include "global_sequences_viewer.hpp"
@@ -40,8 +37,12 @@
 #include "mediapipe_internal/mediapipefactory.hpp"
 #endif
 #include "metric_config.hpp"
-#include "model.hpp"
+#include "modelconfig.hpp"
 #include "status.hpp"
+
+namespace ov {
+class Core;
+}  // namespace ov
 
 namespace ovms {
 
@@ -54,6 +55,7 @@ struct ModelsSettingsImpl;
 class CustomLoaderConfig;
 class CustomNodeLibraryManager;
 class MetricRegistry;
+class Model;
 class ModelConfig;
 class FileSystem;
 class MediapipeGraphExecutor;
@@ -445,9 +447,7 @@ public:
      * 
      * @return std::shared_ptr<Model> 
      */
-    virtual std::shared_ptr<Model> modelFactory(const std::string& name, const bool isStateful) {
-        return std::make_shared<Model>(name, isStateful, &this->globalSequencesViewer);
-    }
+    virtual std::shared_ptr<Model> modelFactory(const std::string& name, const bool isStateful);
 
     /**
      * @brief Reads available versions from given filesystem

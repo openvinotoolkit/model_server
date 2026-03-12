@@ -21,6 +21,7 @@
 #include "dags/pipelinedefinitionstatus.hpp"
 #include "dags/pipelinedefinitionunloadguard.hpp"
 #include "execution_context.hpp"
+#include "model.hpp"
 #include "modelinstance.hpp"
 #include "modelinstanceunloadguard.hpp"
 #include "modelmanager.hpp"

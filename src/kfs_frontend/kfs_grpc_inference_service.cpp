@@ -41,6 +41,7 @@
 // clang-format on
 #endif
 #include "../metric.hpp"
+#include "../model.hpp"
 #include "../modelinstance.hpp"
 #include "../deserialization_main.hpp"
 #include "../inference_executor.hpp"

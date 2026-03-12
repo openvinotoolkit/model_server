@@ -34,6 +34,7 @@
 #endif
 
 #include <errno.h>
+#include <openvino/openvino.hpp>
 #pragma warning(push)
 #pragma warning(disable : 6313)
 #include <rapidjson/document.h>
@@ -64,6 +65,7 @@
 #endif
 #include "metric_config.hpp"
 #include "metric_registry.hpp"
+#include "model.hpp"
 #include "modelinstance.hpp"  // for logging
 #include "ov_utils.hpp"
 #include "schema.hpp"
@@ -1419,6 +1421,10 @@ Status ModelManager::checkStatefulFlagChange(const std::string& modelName, bool 
     if (model->isStateful() != configStatefulFlag)
         return StatusCode::REQUESTED_MODEL_TYPE_CHANGE;
     return StatusCode::OK;
+}
+
+std::shared_ptr<Model> ModelManager::modelFactory(const std::string& name, const bool isStateful) {
+    return std::make_shared<Model>(name, isStateful, &this->globalSequencesViewer);
 }
 
 std::shared_ptr<ovms::Model> ModelManager::getModelIfExistCreateElse(const std::string& modelName, const bool isStateful) {

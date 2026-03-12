@@ -47,6 +47,7 @@
 #include "../mediapipe_internal/mediapipegraphexecutor.hpp"
 #include "../metric_config.hpp"
 #include "../metric_module.hpp"
+#include "../model.hpp"
 #include "../model_service.hpp"
 #include "../ovms_exit_codes.hpp"
 #include "../precision.hpp"

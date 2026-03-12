@@ -40,6 +40,7 @@
 #include "mediapipe_internal/mediapipefactory.hpp"
 #include "mediapipe_internal/mediapipegraphdefinition.hpp"
 #endif
+#include "model.hpp"
 #include "modelinstance.hpp"
 #include "modelmanager.hpp"
 #include "servablemanagermodule.hpp"
