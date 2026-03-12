@@ -101,8 +101,8 @@ struct LLMExecutor {
 #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
     void printMetrics() {
         ov::genai::PipelineMetrics metrics = pipe->get_metrics();
-        SPDLOG_LOGGER_INFO(llm_executor_logger, "All requests: {}; Scheduled requests: {}; Cache {};",
-            metrics.requests, metrics.scheduled_requests, formatCacheInfo(metrics.cache_usage, metrics.kv_cache_size_in_bytes, this->isDynamicKVCache));
+        SPDLOG_LOGGER_INFO(llm_executor_logger, "All requests: {}; Scheduled requests: {};",
+            metrics.requests, metrics.scheduled_requests);
     }
 };
 #pragma GCC diagnostic pop
