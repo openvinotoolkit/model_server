@@ -21,7 +21,6 @@
 
 #include <openvino/openvino.hpp>
 
-#include "../logging.hpp"
 #include "../ovms.h"  // NOLINT
 #include "../regularovtensorfactory.hpp"
 #include "../tensorinfo.hpp"

@@ -27,7 +27,6 @@
 #include "kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "extractchoice.hpp"
 #include "requesttensorextractor.hpp"
-#include "logging.hpp"
 #include "shape.hpp"
 #include "status.hpp"
 

@@ -1719,6 +1719,7 @@ ovms_cc_library(
     hdrs = ["modelversionstatus.hpp",],
     srcs = ["modelversionstatus.cpp",],
     deps = [
+            "@fmtlib",
             "libovmslogging",
             "libovmsmodelversion",
     ],
@@ -1773,12 +1774,12 @@ ovms_cc_library(
     name = "nodeinfo",
     hdrs = ["dags/nodeinfo.hpp",],
     deps = [
+        "@fmtlib",
         "libovms_threadsafequeue",
         "libovmsmodelversion",
         "libovms_tensorinfo",
         "node_library",
         "libovms_dags_aliases",
-        "libovmslogging",
     ],
     visibility = ["//visibility:public"],
 )
@@ -1798,7 +1799,7 @@ ovms_cc_library(
     deps = [
         "libovmsstatus",
         "@com_github_grpc_grpc//:grpc++",
-        "libovmslogging",
+        "@fmtlib",
     ],
     visibility = ["//visibility:public"],
 )

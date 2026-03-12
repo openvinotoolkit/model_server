@@ -21,7 +21,6 @@
 #include <string>
 #include <vector>
 
-#include "logging.hpp"
 #include "status.hpp"
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
