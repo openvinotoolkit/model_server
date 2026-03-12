@@ -175,6 +175,24 @@ ovms_cc_library(
     ],
     visibility = ["//visibility:public"],
 )
+
+ovms_cc_library(
+    name = "io_processing_lfm2_tool_parser",
+    hdrs = ["io_processing/lfm2/lfm2_tool_parser.hpp"],
+    srcs = ["io_processing/lfm2/lfm2_tool_parser.cpp"],
+    deps = [
+        "@com_github_tencent_rapidjson//:rapidjson",
+        "//src:libovmslogging",
+        "//src:libovmsstatus",
+        "//src/utils:rapidjson_utils",
+        ":io_processing_utils",
+        ":io_processing_base_output_parser",
+        ":apis_tool_schema_wrapper",
+        "//third_party:genai",
+    ],
+    visibility = ["//visibility:public"],
+)
+
 ovms_cc_library( # TODO split further so we don't have to recompile everything when changing one parser ...
     name = "output_parsers",
     hdrs = [
