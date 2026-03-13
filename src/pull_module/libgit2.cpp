@@ -195,8 +195,9 @@ public:
             if (err) {
                 SPDLOG_ERROR("Repository open failed: {} {}", err->klass, err->message);
                 git_error_class = err->klass;
-            } else
+            } else {
                 SPDLOG_ERROR("Repository open failed: {}", error);
+            }
             if (repo)
                 git_repository_free(repo);
         }
