@@ -535,23 +535,23 @@ Inpainting replaces a masked region in an image based on the prompt. The `mask` 
 Linux
 ```bash
 curl http://localhost:8000/v3/images/edits \
-  -F "model=OpenVINO/stable-diffusion-v1-5-int8-ov" \
-  -F "prompt=a dalmatian puppy sitting on a bench in a park, photorealistic" \
+  -F "model=diffusers/stable-diffusion-xl-1.0-inpainting-0.1" \
+  -F "prompt=a golden retriever dog sitting on a bench in a sunny park" \
   -F "image=@cat.png" \
   -F "mask=@cat_mask.png" \
   -F "num_inference_steps=50" \
-  -F "size=512x512" | jq -r '.data[0].b64_json' | base64 --decode > inpaint_output.png
+  -F "size=1024x1024" | jq -r '.data[0].b64_json' | base64 --decode > inpaint_output.png
 ```
 
 Windows Command Prompt
 ```bat
 curl http://localhost:8000/v3/images/edits ^
-  -F "model=OpenVINO/stable-diffusion-v1-5-int8-ov" ^
-  -F "prompt=a dalmatian puppy sitting on a bench in a park, photorealistic" ^
+  -F "model=diffusers/stable-diffusion-xl-1.0-inpainting-0.1" ^
+  -F "prompt=a golden retriever dog sitting on a bench in a sunny park" ^
   -F "image=@cat.png" ^
   -F "mask=@cat_mask.png" ^
   -F "num_inference_steps=50" ^
-  -F "size=512x512"
+  -F "size=1024x1024"
 ```
 
 Expected output (`inpaint_output.png`):
@@ -572,13 +572,13 @@ client = OpenAI(
 )
 
 response = client.images.edit(
-            model="OpenVINO/stable-diffusion-v1-5-int8-ov",
+            model="diffusers/stable-diffusion-xl-1.0-inpainting-0.1",
             image=open("cat.png", "rb"),
             mask=open("cat_mask.png", "rb"),
-            prompt="a dalmatian puppy sitting on a bench in a park, photorealistic",
+            prompt="a golden retriever dog sitting on a bench in a sunny park",
             extra_body={
                 "num_inference_steps": 50,
-                "size": "512x512"
+                "size": "1024x1024"
             }
         )
 base64_image = response.data[0].b64_json
@@ -599,8 +599,8 @@ Outpainting extends an image beyond its original borders. Prepare two images:
 Linux
 ```bash
 curl http://localhost:8000/v3/images/edits \
-  -F "model=OpenVINO/stable-diffusion-v1-5-int8-ov" \
-  -F "prompt=a cat sitting on a bench in a park, photorealistic" \
+  -F "model=stable-diffusion-v1-5/stable-diffusion-inpainting" \
+  -F "prompt=a cat sitting on a bench in a park" \
   -F "image=@outpaint_input.png" \
   -F "mask=@outpaint_mask.png" \
   -F "num_inference_steps=50" \
@@ -610,8 +610,8 @@ curl http://localhost:8000/v3/images/edits \
 Windows Command Prompt
 ```bat
 curl http://localhost:8000/v3/images/edits ^
-  -F "model=OpenVINO/stable-diffusion-v1-5-int8-ov" ^
-  -F "prompt=a cat sitting on a bench in a park, photorealistic" ^
+  -F "model=stable-diffusion-v1-5/stable-diffusion-inpainting" ^
+  -F "prompt=a cat sitting on a bench in a park" ^
   -F "image=@outpaint_input.png" ^
   -F "mask=@outpaint_mask.png" ^
   -F "num_inference_steps=50" ^
@@ -636,10 +636,10 @@ client = OpenAI(
 )
 
 response = client.images.edit(
-            model="OpenVINO/stable-diffusion-v1-5-int8-ov",
+            model="stable-diffusion-v1-5/stable-diffusion-inpainting",
             image=open("outpaint_input.png", "rb"),
             mask=open("outpaint_mask.png", "rb"),
-            prompt="a cat sitting on a bench in a park, photorealistic",
+            prompt="a cat sitting on a bench in a park",
             extra_body={
                 "num_inference_steps": 50,
                 "size": "768x768"

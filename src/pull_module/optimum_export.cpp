@@ -109,7 +109,7 @@ std::string OptimumDownloader::getExportCmdImageGeneration() {
     oss << " --weight-format " << this->exportSettings.precision;
     if (this->exportSettings.extraQuantizationParams.has_value()) {
         oss << " " << this->exportSettings.extraQuantizationParams.value();
-    } // TODO FIXME check if its not needed to propagate to other exports
+    }  // TODO FIXME check if its not needed to propagate to other exports
     oss << " " << this->downloadPath;
     // clang-format on
 
