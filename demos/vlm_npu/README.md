@@ -41,16 +41,7 @@ Run `export_model.py` script to download and quantize the model:
 **LLM**
 ```console
 python export_model.py text_generation --source_model microsoft/Phi-3.5-vision-instruct --target_device NPU --config_file_path models/config.json --model_repository_path models  --overwrite_models
-```
-
-Copy corrected config to the model directory.
-Linux:
-```bash
-cp generation_config.json models/microsoft/Phi-3.5-vision-instruct
-```
-Windows:
-```bat
-copy generation_config.json models\microsoft\Phi-3.5-vision-instruct
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/przepeck/unicode_python_fix/demos/vlm_npu/generation_config.json -o models/microsoft/Phi-3.5-vision-instruct/generation_config.json
 ```
 
 Note that by default, NPU sets limitation on the prompt length (which in VLM also include image tokens) to 1024 tokens. You can modify that limit by using `--max_prompt_len` parameter.
