@@ -26,6 +26,12 @@ message LLMCalculatorOptions {
     optional LLMCalculatorOptions ext = 113473750;
     }
 
+    message LoraAdapter {
+      required string model_path = 1;
+      optional float alpha = 2 [default = 1];
+      optional string name = 3;
+    }
+
     message KVCrushConfig {
       enum AnchorPointMode {
         RANDOM = 0;
@@ -135,4 +141,6 @@ message LLMCalculatorOptions {
     optional bool enable_tool_guided_generation = 23 [default = false];
 
     optional SparseAttentionConfig sparse_attention_config = 24;
+
+    repeated LoraAdapter lora_adapter = 25;
 }
