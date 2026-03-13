@@ -255,8 +255,22 @@ ovms_cc_library(
     name = "libovms_version",
     hdrs = ["version.hpp"],
     srcs = [],
-    deps = ["//third_party:openvino",],
+    deps = [],
     visibility = ["//visibility:public",],
+)
+ovms_cc_library(
+    name = "libovms_version_impl",
+    srcs = ["version.cpp"],
+    deps = [
+        ":libovms_version",
+        "//third_party:openvino",
+    ] + select({
+        "//:not_disable_mediapipe": ["//third_party:genai"],
+        "//conditions:default": [],
+    }),
+    additional_copts = COPTS_MEDIAPIPE,
+    visibility = ["//visibility:public",],
+    alwayslink = 1,
 )
 ovms_cc_library(
     name = "network_utils",
@@ -641,6 +655,7 @@ ovms_cc_library(
             "libovmstimer",
             "tfs_utils",
             "libovms_version",
+            "libovms_version_impl",
             "serialization_common",
             "libovmsprofiler",
             "libovmsstatus",
