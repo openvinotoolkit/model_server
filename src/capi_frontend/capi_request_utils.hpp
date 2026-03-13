@@ -19,10 +19,10 @@
 #include <vector>
 
 #include "../ovms.h"  // NOLINT
+#include "src/logging.hpp"
 #include "../precision.hpp"
 #include "inferencerequest.hpp"
 #include "../shape.hpp"
-#include "../logging.hpp"
 #include "../status.hpp"  // TODO move impl @atobisze
 #include "../extractchoice.hpp"
 #include "../requesttensorextractor.hpp"

@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2024 Intel Corporation
+// Copyright 2026 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,22 +15,32 @@
 //*****************************************************************************
 #pragma once
 
-#include <algorithm>
-#include <limits>
-#include <memory>
-#include <optional>
-#include <sstream>
 #include <string>
-
-#include "shape.hpp"
-#include "anonymous_input_name.hpp"
-#include "status.hpp"
+#include <type_traits>
 
 namespace ovms {
-namespace request_validation_utils {
-const size_t MAX_2D_STRING_ARRAY_SIZE = 1024 * 1024 * 1024 * 1;                                             // 1GB
-Status getRawInputContentsBatchSizeAndWidth(const std::string& buffer, int32_t& batchSize, size_t& width);  // this comes from KFS - may need to move there
-Status validateAgainstMax2DStringArraySize(int32_t inputBatchSize, size_t inputWidth);
-Mode getShapeMode(const shapes_info_map_t& shapeInfo, const std::string& name);
-}  // namespace request_validation_utils
+
+enum class ServableType : uint8_t {
+    Model = 1 << 0,
+    Pipeline = 1 << 1,
+    Mediapipe = 1 << 2,
+    All = Model | Pipeline | Mediapipe
+};
+
+inline ServableType operator|(ServableType a, ServableType b) {
+    using T = std::underlying_type_t<ServableType>;
+    return static_cast<ServableType>(static_cast<T>(a) | static_cast<T>(b));
+}
+
+inline bool hasFlag(ServableType value, ServableType flag) {
+    using T = std::underlying_type_t<ServableType>;
+    return (static_cast<T>(value) & static_cast<T>(flag)) != 0;
+}
+
+class ServableNameChecker {
+public:
+    virtual ~ServableNameChecker() = default;
+    virtual bool servableExists(const std::string& name, ServableType check = ServableType::All) const = 0;
+};
+
 }  // namespace ovms

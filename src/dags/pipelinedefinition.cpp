@@ -20,6 +20,7 @@
 #include <thread>
 
 #include "../logging.hpp"
+#include "../model.hpp"
 #include "../model_metric_reporter.hpp"
 #include "../modelinstance.hpp"
 #include "../modelinstanceunloadguard.hpp"
@@ -68,16 +69,10 @@ PipelineDefinition::PipelineDefinition(const std::string& pipelineName,
 Status PipelineDefinition::validate(ModelManager& manager) {
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Started validation of pipeline: {}", getName());
     ValidationResultNotifier notifier(status, loadedNotify);
-    if (manager.modelExists(this->pipelineName)) {
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Pipeline name: {} is already occupied by model.", pipelineName);
+    if (manager.servableExists(this->pipelineName, ServableType::Model | ServableType::Mediapipe)) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Pipeline name: {} is already occupied by model or mediapipe graph.", pipelineName);
         return StatusCode::PIPELINE_NAME_OCCUPIED;
     }
-#if (MEDIAPIPE_DISABLE == 0)
-    if (manager.getMediapipeFactory().definitionExists(this->pipelineName)) {
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Pipeline name: {} is already occupied by mediapipe graph.", pipelineName);
-        return StatusCode::PIPELINE_NAME_OCCUPIED;
-    }
-#endif
     Status validationResult = initializeNodeResources(manager);
     if (!validationResult.ok()) {
         return validationResult;

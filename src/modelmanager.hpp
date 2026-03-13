@@ -26,22 +26,21 @@
 #include <utility>
 #include <vector>
 
-#include <openvino/openvino.hpp>
 #pragma warning(push)
 #pragma warning(disable : 6313)
 #include <rapidjson/document.h>
 #pragma warning(pop)
-#include <spdlog/spdlog.h>
-#include <sys/stat.h>
 
-#include "dags/pipeline_factory.hpp"
 #include "global_sequences_viewer.hpp"
-#if (MEDIAPIPE_DISABLE == 0)
-#include "mediapipe_internal/mediapipefactory.hpp"
-#endif
 #include "metric_config.hpp"
-#include "model.hpp"
+#include "metric_provider.hpp"
+#include "modelconfig.hpp"
+#include "servable_name_checker.hpp"
 #include "status.hpp"
+
+namespace ov {
+class Core;
+}  // namespace ov
 
 namespace ovms {
 
@@ -54,16 +53,23 @@ struct ModelsSettingsImpl;
 class CustomLoaderConfig;
 class CustomNodeLibraryManager;
 class MetricRegistry;
+class Model;
 class ModelConfig;
 class FileSystem;
+class MediapipeFactory;
+class MediapipeGraphConfig;
 class MediapipeGraphExecutor;
+class ModelInstance;
+class ModelInstanceUnloadGuard;
+class Pipeline;
+class PipelineFactory;
 struct FunctorSequenceCleaner;
 struct FunctorResourcesCleaner;
 class PythonBackend;
 /**
  * @brief Model manager is managing the list of model topologies enabled for serving and their versions.
  */
-class ModelManager {
+class ModelManager : public ServableNameChecker, public MetricProvider {
 public:
     /**
      * @brief A default constructor is private
@@ -84,9 +90,9 @@ protected:
     std::map<std::string, std::shared_ptr<Model>> models;
     std::unique_ptr<ov::Core> ieCore;
 
-    PipelineFactory pipelineFactory;
+    std::unique_ptr<PipelineFactory> pipelineFactory;
 #if (MEDIAPIPE_DISABLE == 0)
-    MediapipeFactory mediapipeFactory;
+    std::unique_ptr<MediapipeFactory> mediapipeFactory;
 #endif
     std::unique_ptr<CustomNodeLibraryManager> customNodeLibraryManager;
     std::vector<std::shared_ptr<CNLIMWrapper>> resources = {};
@@ -320,13 +326,11 @@ public:
      */
     void startCleaner();
 
-    const PipelineFactory& getPipelineFactory() const {
-        return pipelineFactory;
-    }
+    const PipelineFactory& getPipelineFactory() const;
 
 #if (MEDIAPIPE_DISABLE == 0)
     const MediapipeFactory& getMediapipeFactory() const {
-        return mediapipeFactory;
+        return *mediapipeFactory;
     }
 #endif
 
@@ -363,19 +367,8 @@ public:
      */
     const std::shared_ptr<ModelInstance> findModelInstance(const std::string& name, model_version_t version = 0) const;
 
-    template <typename RequestType, typename ResponseType>
-    Status createPipeline(std::unique_ptr<Pipeline>& pipeline,
-        const std::string& name,
-        const RequestType* request,
-        ResponseType* response) {
-        return pipelineFactory.create(pipeline, name, request, response, *this);
-    }
     Status createPipeline(std::unique_ptr<MediapipeGraphExecutor>& graph,
         const std::string& name);
-
-    const bool pipelineDefinitionExists(const std::string& name) const {
-        return pipelineFactory.definitionExists(name);
-    }
 
     /**
      * @brief Starts model manager using provided config file
@@ -397,7 +390,7 @@ public:
          * 
          * @return const std::string&
          */
-    const MetricConfig& getMetricConfig() const {
+    const MetricConfig& getMetricConfig() const override {
         return this->metricConfig;
     }
 
@@ -445,9 +438,7 @@ public:
      * 
      * @return std::shared_ptr<Model> 
      */
-    virtual std::shared_ptr<Model> modelFactory(const std::string& name, const bool isStateful) {
-        return std::make_shared<Model>(name, isStateful, &this->globalSequencesViewer);
-    }
+    virtual std::shared_ptr<Model> modelFactory(const std::string& name, const bool isStateful);
 
     /**
      * @brief Reads available versions from given filesystem
@@ -504,7 +495,8 @@ public:
      */
     void cleanupResources();
 
-    MetricRegistry* getMetricRegistry() const { return this->metricRegistry; }
+    bool servableExists(const std::string& name, ServableType check = ServableType::All) const override;
+    MetricRegistry* getMetricRegistry() const override { return this->metricRegistry; }
 };
 
 void cleanerRoutine(uint32_t resourcesCleanupInterval, FunctorResourcesCleaner& functorResourcesCleaner, uint32_t sequenceCleanerInterval, FunctorSequenceCleaner& functorSequenceCleaner, std::future<void>& cleanerExitSignal);

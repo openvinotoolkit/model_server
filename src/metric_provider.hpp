@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2022 Intel Corporation
+// Copyright 2026 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,24 +14,17 @@
 // limitations under the License.
 //*****************************************************************************
 #pragma once
-#include <string>
-
-#include <fmt/format.h>
-#include <grpcpp/server_context.h>
 
 namespace ovms {
-class Status;
 
-const grpc::Status grpc(const Status& status);
-}  // namespace ovms
+class MetricConfig;
+class MetricRegistry;
 
-namespace fmt {
-
-template <>
-struct formatter<::grpc::StatusCode> : formatter<std::string> {
-    auto format(::grpc::StatusCode status, format_context& ctx) const -> decltype(ctx.out()) {
-        return format_to(ctx.out(), "{}", (unsigned int)status);
-    }
+class MetricProvider {
+public:
+    virtual ~MetricProvider() = default;
+    virtual MetricRegistry* getMetricRegistry() const = 0;
+    virtual const MetricConfig& getMetricConfig() const = 0;
 };
 
-}  // namespace fmt
+}  // namespace ovms

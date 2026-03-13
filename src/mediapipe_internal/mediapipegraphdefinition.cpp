@@ -31,8 +31,8 @@
 #include "../deserialization_main.hpp"
 #include "../metric.hpp"
 #include "../model_metric_reporter.hpp"
-#include "../modelmanager.hpp"
 #include "../ov_utils.hpp"
+#include "../servable_name_checker.hpp"
 #include "../llm/servable.hpp"
 #include "../llm/servable_initializer.hpp"
 #if (PYTHON_DISABLE == 0)
@@ -127,14 +127,14 @@ Status MediapipeGraphDefinition::dryInitializeTest() {
     }
     return StatusCode::OK;
 }
-Status MediapipeGraphDefinition::validate(ModelManager& manager) {
+Status MediapipeGraphDefinition::validate(const ServableNameChecker& checker) {
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Started validation of mediapipe: {}", getName());
     if (!this->sidePacketMaps.empty()) {
         SPDLOG_ERROR("Internal Error: MediaPipe definition is in unexpected state.");
         return StatusCode::INTERNAL_ERROR;
     }
     ValidationResultNotifier notifier(this->status, this->loadedNotify);
-    if (manager.modelExists(this->getName()) || manager.pipelineDefinitionExists(this->getName())) {
+    if (checker.servableExists(this->getName(), ServableType::Model | ServableType::Pipeline)) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Mediapipe graph name: {} is already occupied by model or pipeline.", this->getName());
         return StatusCode::MEDIAPIPE_GRAPH_NAME_OCCUPIED;
     }
@@ -332,7 +332,7 @@ Status MediapipeGraphDefinition::setStreamTypes() {
     return StatusCode::OK;
 }
 
-Status MediapipeGraphDefinition::reload(ModelManager& manager, const MediapipeGraphConfig& config) {
+Status MediapipeGraphDefinition::reload(const ServableNameChecker& checker, const MediapipeGraphConfig& config) {
     // block creating new unloadGuards
     this->status.handle(ReloadEvent());
     while (requestsHandlesCounter > 0) {
@@ -340,10 +340,10 @@ Status MediapipeGraphDefinition::reload(ModelManager& manager, const MediapipeGr
     }
     this->mgconfig = config;
     this->sidePacketMaps.clear();
-    return validate(manager);
+    return validate(checker);
 }
 
-void MediapipeGraphDefinition::retire(ModelManager& manager) {
+void MediapipeGraphDefinition::retire() {
     this->sidePacketMaps.clear();
     this->status.handle(RetireEvent());
 }

@@ -28,12 +28,14 @@
 #pragma warning(pop)
 
 #include "../dags/pipeline.hpp"
+#include "../dags/pipeline_factory.hpp"
 #include "../dags/pipelinedefinition.hpp"
 #include "../dags/pipelinedefinitionstatus.hpp"
 #include "../dags/pipelinedefinitionunloadguard.hpp"
 #include "../execution_context.hpp"
 #include "../version.hpp"
 #if (MEDIAPIPE_DISABLE == 0)
+#include "../mediapipe_internal/mediapipefactory.hpp"
 #include "../mediapipe_internal/mediapipegraphdefinition.hpp"
 #endif
 #include "../model_service.hpp"
@@ -120,7 +122,7 @@ static Status getPipeline(ovms::Server& server, const InferenceRequest* request,
     if (!status.ok()) {
         return status;
     }
-    return modelManager->createPipeline(pipelinePtr, request->getServableName(), request, response);
+    return modelManager->getPipelineFactory().create(pipelinePtr, request->getServableName(), request, response, *modelManager);
 }
 
 static Status getPipelineDefinition(Server& server, const std::string& servableName, PipelineDefinition** pipelineDefinition, std::unique_ptr<PipelineDefinitionUnloadGuard>& unloadGuard) {

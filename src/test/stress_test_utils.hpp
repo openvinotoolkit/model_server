@@ -1726,7 +1726,7 @@ public:
             RequestType request = preparePipelinePredictRequest(request2);
             ovms::Status createPipelineStatus = StatusCode::UNKNOWN_ERROR;
             if (typeid(ServableType) == typeid(ovms::Pipeline)) {
-                createPipelineStatus = this->manager->createPipeline(pipelinePtr, pipelineName, &request, &response);
+                createPipelineStatus = this->manager->getPipelineFactory().create(pipelinePtr, pipelineName, &request, &response, *(this->manager));
 #if (MEDIAPIPE_DISABLE == 0)
             } else if (typeid(ServableType) == typeid(ovms::MediapipeGraphExecutor)) {
                 mediacreate(executorPtr, *(this->manager), request, response, createPipelineStatus);

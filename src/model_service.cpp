@@ -33,6 +33,7 @@
 #include "tensorflow_serving/apis/model_service.pb.h"
 #pragma GCC diagnostic pop
 
+#include "dags/pipeline_factory.hpp"
 #include "dags/pipelinedefinition.hpp"
 #include "execution_context.hpp"
 #include "grpc_utils.hpp"
@@ -40,6 +41,7 @@
 #include "mediapipe_internal/mediapipefactory.hpp"
 #include "mediapipe_internal/mediapipegraphdefinition.hpp"
 #endif
+#include "model.hpp"
 #include "modelinstance.hpp"
 #include "modelmanager.hpp"
 #include "servablemanagermodule.hpp"

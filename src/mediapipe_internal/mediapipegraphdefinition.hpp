@@ -54,7 +54,7 @@ class MediapipeGraphDefinitionUnloadGuard;
 class MetricConfig;
 class MetricRegistry;
 class MediapipeServableMetricReporter;
-class ModelManager;
+class ServableNameChecker;
 class MediapipeGraphExecutor;
 class Status;
 class PythonBackend;
@@ -121,9 +121,9 @@ public:
     MediapipeServableMetricReporter& getMetricReporter() const { return *this->reporter; }
     Status create(std::unique_ptr<MediapipeGraphExecutor>& pipeline);
 
-    Status reload(ModelManager& manager, const MediapipeGraphConfig& config);
-    Status validate(ModelManager& manager);
-    void retire(ModelManager& manager);
+    Status reload(const ServableNameChecker& checker, const MediapipeGraphConfig& config);
+    Status validate(const ServableNameChecker& checker);
+    void retire();
     Status initializeNodes();
     bool isReloadRequired(const MediapipeGraphConfig& config) const;
 

@@ -15,11 +15,9 @@
 //*****************************************************************************
 #pragma once
 
-#include <fstream>
 #include <map>
 #include <memory>
 #include <optional>
-#include <set>
 #include <string>
 #include <tuple>
 #include <unordered_map>
@@ -30,7 +28,6 @@
 #include <rapidjson/document.h>
 #pragma warning(pop)
 
-#include "anonymous_input_name.hpp"
 #include "layout_configuration.hpp"
 #include "color_format_configuration.hpp"
 #include "precision_configuration.hpp"
@@ -192,7 +189,7 @@ private:
     /**
          * @brief Allowed configurable layouts
          */
-    static const std::set<std::string> configAllowedLayouts;
+
 
     /**
          * @brief custom_loader_options config as map
@@ -742,13 +739,7 @@ public:
          * 
          * @return bool
          */
-    bool anyShapeSetToAuto() const {
-        for (const auto& [name, shapeInfo] : getShapes()) {
-            if (shapeInfo.shapeMode == AUTO)
-                return true;
-        }
-        return false;
-    }
+    bool anyShapeSetToAuto() const;
 
     /**
          * @brief Get the shapes
@@ -773,24 +764,9 @@ public:
          * 
          * @return bool
          */
-    bool isShapeAuto(const std::string& name) const {
-        auto it = getShapes().find(name);
-        if (it == getShapes().end()) {
-            it = getShapes().find(ANONYMOUS_INPUT_NAME);
-        }
-        if (it == getShapes().end()) {
-            return false;
-        }
-        return it->second.shapeMode == Mode::AUTO;
-    }
-
-    bool isShapeAnonymous() const {
-        return getShapes().size() == 1 && getShapes().begin()->first == ANONYMOUS_INPUT_NAME;
-    }
-
-    bool isShapeAnonymousFixed() const {
-        return isShapeAnonymous() && !isShapeAuto(ANONYMOUS_INPUT_NAME);
-    }
+    bool isShapeAuto(const std::string& name) const;
+    bool isShapeAnonymous() const;
+    bool isShapeAnonymousFixed() const;
 
     bool isCloudStored() const {
         return getLocalPath() != getBasePath();

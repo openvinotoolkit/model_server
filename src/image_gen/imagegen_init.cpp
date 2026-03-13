@@ -20,6 +20,8 @@
 #include <utility>
 #include <vector>
 
+#include <fmt/ranges.h>
+
 #include "absl/strings/str_replace.h"
 #include "absl/strings/ascii.h"
 

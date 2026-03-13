@@ -34,6 +34,7 @@
 #endif
 
 #include <errno.h>
+#include <openvino/openvino.hpp>
 #pragma warning(push)
 #pragma warning(disable : 6313)
 #include <rapidjson/document.h>
@@ -64,6 +65,7 @@
 #endif
 #include "metric_config.hpp"
 #include "metric_registry.hpp"
+#include "model.hpp"
 #include "modelinstance.hpp"  // for logging
 #include "ov_utils.hpp"
 #include "schema.hpp"
@@ -79,8 +81,9 @@ const std::string DEFAULT_MODEL_CACHE_DIRECTORY = "/opt/cache";
 #endif
 ModelManager::ModelManager(const std::string& modelCacheDirectory, MetricRegistry* registry, PythonBackend* pythonBackend) :
     ieCore(std::make_unique<ov::Core>()),
+    pipelineFactory(std::make_unique<PipelineFactory>()),
 #if (MEDIAPIPE_DISABLE == 0)
-    mediapipeFactory(pythonBackend),
+    mediapipeFactory(std::make_unique<MediapipeFactory>(pythonBackend)),
 #endif
     waitForModelLoadedTimeoutMs(DEFAULT_WAIT_FOR_MODEL_LOADED_TIMEOUT_MS),
     modelCacheDirectory(modelCacheDirectory),
@@ -511,7 +514,7 @@ Status ModelManager::processMediapipeConfig(const MediapipeGraphConfig& config, 
     MediapipeGraphDefinition* mediapipeGraphDefinition = factory.findDefinitionByName(config.getGraphName());
     if (mediapipeGraphDefinition == nullptr) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Mediapipe graph:{} was not loaded so far. Triggering load", config.getGraphName());
-        auto status = factory.createDefinition(config.getGraphName(), config, *this);
+        auto status = factory.createDefinition(config.getGraphName(), config, *this, *this);
         return status;
     }
     if (mediapipeGraphDefinition->isReloadRequired(config)) {
@@ -692,7 +695,7 @@ Status ModelManager::loadCustomNodeLibrariesConfig(rapidjson::Document& configJs
 Status ModelManager::loadMediapipeGraphsConfig(std::vector<MediapipeGraphConfig>& mediapipesInConfigFile) {
     if (mediapipesInConfigFile.size() == 0) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Configuration file doesn't have mediapipe property.");
-        mediapipeFactory.retireOtherThan({}, *this);
+        mediapipeFactory->retireOtherThan({});
         return StatusCode::OK;
     }
     std::set<std::string> mediapipesInConfigFileNames;
@@ -701,13 +704,13 @@ Status ModelManager::loadMediapipeGraphsConfig(std::vector<MediapipeGraphConfig>
         for (const auto& mediapipeGraphConfig : mediapipesInConfigFile) {
             mediapipesInConfigFileNames.insert(mediapipeGraphConfig.getGraphName());
         }
-        mediapipeFactory.retireOtherThan(std::move(mediapipesInConfigFileNames), *this);
+        mediapipeFactory->retireOtherThan(std::move(mediapipesInConfigFileNames));
         std::set<std::string> mediapipesAlreadyLoaded;
         for (const auto& mediapipeGraphConfig : mediapipesInConfigFile) {
             if (spdlog::default_logger_raw()->level() <= spdlog::level::debug) {
                 mediapipeGraphConfig.logGraphConfigContent();
             }
-            auto status = processMediapipeConfig(mediapipeGraphConfig, mediapipesAlreadyLoaded, mediapipeFactory);
+            auto status = processMediapipeConfig(mediapipeGraphConfig, mediapipesAlreadyLoaded, *mediapipeFactory);
             if (status != StatusCode::OK) {
                 IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
             }
@@ -725,18 +728,18 @@ Status ModelManager::loadPipelinesConfig(rapidjson::Document& configJson) {
     const auto itrp = configJson.FindMember("pipeline_config_list");
     if (itrp == configJson.MemberEnd() || !itrp->value.IsArray()) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Configuration file doesn't have pipelines property.");
-        pipelineFactory.retireOtherThan({}, *this);
+        pipelineFactory->retireOtherThan({}, *this);
         return StatusCode::OK;
     }
     std::set<std::string> pipelinesInConfigFile;
     Status firstErrorStatus = StatusCode::OK;
     for (const auto& pipelineConfig : itrp->value.GetArray()) {
-        auto status = processPipelineConfig(configJson, pipelineConfig, pipelinesInConfigFile, pipelineFactory, *this);
+        auto status = processPipelineConfig(configJson, pipelineConfig, pipelinesInConfigFile, *pipelineFactory, *this);
         if (status != StatusCode::OK) {
             IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
         }
     }
-    pipelineFactory.retireOtherThan(std::move(pipelinesInConfigFile), *this);
+    pipelineFactory->retireOtherThan(std::move(pipelinesInConfigFile), *this);
     return firstErrorStatus;
 }
 
@@ -909,18 +912,11 @@ Status ModelManager::loadModels(const rapidjson::Value::MemberIterator& modelsCo
         modelConfig.setCacheDir(this->modelCacheDirectory);
 
         const auto& modelName = modelConfig.getName();
-        if (pipelineDefinitionExists(modelName)) {
+        if (servableExists(modelName, ServableType::Pipeline | ServableType::Mediapipe)) {
             IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(StatusCode::MODEL_NAME_OCCUPIED);
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Model name: {} is already occupied by pipeline definition.", modelName);
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Model name: {} is already occupied by pipeline or mediapipe graph definition.", modelName);
             continue;
         }
-#if (MEDIAPIPE_DISABLE == 0)
-        if (mediapipeFactory.definitionExists(modelName)) {
-            IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(StatusCode::MODEL_NAME_OCCUPIED);
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Model name: {} is already occupied by mediapipe graph definition.", modelName);
-            continue;
-        }
-#endif
         if (modelsInConfigFile.find(modelName) != modelsInConfigFile.end()) {
             IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(StatusCode::MODEL_NAME_OCCUPIED);
             SPDLOG_LOGGER_WARN(modelmanager_logger, "Duplicated model names: {} defined in config file. Only first definition will be loaded.", modelName);
@@ -1180,7 +1176,7 @@ Status ModelManager::updateConfigurationWithoutConfigFile() {
             reloadNeeded = true;
         }
     }
-    status = pipelineFactory.revalidatePipelines(*this);
+    status = pipelineFactory->revalidatePipelines(*this);
     if (!status.ok()) {
         IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
     }
@@ -1419,6 +1415,10 @@ Status ModelManager::checkStatefulFlagChange(const std::string& modelName, bool 
     if (model->isStateful() != configStatefulFlag)
         return StatusCode::REQUESTED_MODEL_TYPE_CHANGE;
     return StatusCode::OK;
+}
+
+std::shared_ptr<Model> ModelManager::modelFactory(const std::string& name, const bool isStateful) {
+    return std::make_shared<Model>(name, isStateful, &this->globalSequencesViewer);
 }
 
 std::shared_ptr<ovms::Model> ModelManager::getModelIfExistCreateElse(const std::string& modelName, const bool isStateful) {
@@ -1724,7 +1724,7 @@ const std::vector<std::string> ModelManager::getNamesOfAvailableModels() const {
 Status ModelManager::createPipeline(std::unique_ptr<MediapipeGraphExecutor>& graph,
     const std::string& name) {
 #if (MEDIAPIPE_DISABLE == 0)
-    return this->mediapipeFactory.create(graph, name, *this);
+    return this->mediapipeFactory->create(graph, name);
 #else
     SPDLOG_ERROR("Mediapipe support was disabled during build process...");
     return StatusCode::INTERNAL_ERROR;
@@ -1734,4 +1734,24 @@ Status ModelManager::createPipeline(std::unique_ptr<MediapipeGraphExecutor>& gra
 void ModelManager::setRootDirectoryPath(const std::string& configFileFullPath) {
     FileSystem::setRootDirectoryPath(this->rootDirectoryPath, configFileFullPath);
 }
+
+bool ModelManager::servableExists(const std::string& name, ServableType check) const {
+    if (hasFlag(check, ServableType::Model) && findModelByName(name) != nullptr) {
+        return true;
+    }
+    if (hasFlag(check, ServableType::Pipeline) && pipelineFactory->definitionExists(name)) {
+        return true;
+    }
+#if (MEDIAPIPE_DISABLE == 0)
+    if (hasFlag(check, ServableType::Mediapipe) && mediapipeFactory->definitionExists(name)) {
+        return true;
+    }
+#endif
+    return false;
+}
+
+const PipelineFactory& ModelManager::getPipelineFactory() const {
+    return *pipelineFactory;
+}
+
 }  // namespace ovms

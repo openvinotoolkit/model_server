@@ -26,6 +26,7 @@
 #include "kfs_utils.hpp"
 #include "kfs_request_utils.hpp"
 #include "../dags/pipeline.hpp"
+#include "../dags/pipeline_factory.hpp"
 #include "../dags/pipelinedefinition.hpp"
 #include "../dags/pipelinedefinitionstatus.hpp"
 #include "../dags/pipelinedefinitionunloadguard.hpp"
@@ -36,11 +37,13 @@
 // kfs_graph_executor_impl needs to be included before mediapipegraphexecutor
 // because it contains functions required by graph execution template
 #include "kfs_graph_executor_impl.hpp"
+#include "../mediapipe_internal/mediapipefactory.hpp"
 #include "../mediapipe_internal/mediapipegraphdefinition.hpp"
 #include "../mediapipe_internal/mediapipegraphexecutor.hpp"
 // clang-format on
 #endif
 #include "../metric.hpp"
+#include "../model.hpp"
 #include "../modelinstance.hpp"
 #include "../deserialization_main.hpp"
 #include "../inference_executor.hpp"
@@ -85,7 +88,7 @@ Status KFSInferenceServiceImpl::getPipeline(const KFSRequest* request,
     KFSResponse* response,
     std::unique_ptr<ovms::Pipeline>& pipelinePtr) {
     OVMS_PROFILE_FUNCTION();
-    return this->modelManager.createPipeline(pipelinePtr, request->model_name(), request, response);
+    return this->modelManager.getPipelineFactory().create(pipelinePtr, request->model_name(), request, response, this->modelManager);
 }
 
 const std::string PLATFORM = "OpenVINO";

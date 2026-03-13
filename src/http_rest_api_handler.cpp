@@ -38,6 +38,7 @@
 
 #include "config.hpp"
 #include "dags/pipeline.hpp"
+#include "dags/pipeline_factory.hpp"
 #include "dags/pipelinedefinition.hpp"
 #include "dags/pipelinedefinitionunloadguard.hpp"
 #include "execution_context.hpp"
@@ -68,6 +69,7 @@
 #include "http_payload.hpp"
 #include "http_frontend/http_client_connection.hpp"
 #include "http_frontend/http_graph_executor_impl.hpp"
+#include "mediapipe_internal/mediapipefactory.hpp"
 #include "mediapipe_internal/mediapipegraphexecutor.hpp"
 #endif
 
@@ -1153,7 +1155,7 @@ Status HttpRestApiHandler::processPredictRequest(
     if (this->modelManager.modelExists(modelName)) {
         SPDLOG_DEBUG("Found model with name: {}. Searching for requested version...", modelName);
         status = processSingleModelRequest(modelName, modelVersion, request, requestOrder, responseProto, reporterOut);
-    } else if (this->modelManager.pipelineDefinitionExists(modelName)) {
+    } else if (this->modelManager.servableExists(modelName, ServableType::Pipeline)) {
         SPDLOG_DEBUG("Found pipeline with name: {}", modelName);
         status = processPipelineRequest(modelName, request, requestOrder, responseProto, reporterOut);
     } else {
@@ -1288,7 +1290,7 @@ Status HttpRestApiHandler::processPipelineRequest(const std::string& modelName,
 
     tensorflow::serving::PredictRequest& requestProto = requestParser.getProto();
     requestProto.mutable_model_spec()->set_name(modelName);
-    status = this->modelManager.createPipeline(pipelinePtr, modelName, &requestProto, &responseProto);
+    status = this->modelManager.getPipelineFactory().create(pipelinePtr, modelName, &requestProto, &responseProto, this->modelManager);
     if (!status.ok()) {
         INCREMENT_IF_ENABLED(reporterOut->getInferRequestMetric(executionContext, false));
         return status;
