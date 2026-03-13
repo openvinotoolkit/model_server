@@ -17,6 +17,7 @@
 #include "openai_completions.hpp"
 
 #include <cmath>
+#include <functional>
 #include <limits>
 #include <memory>
 #include <stdexcept>
@@ -93,6 +94,130 @@ ov::genai::JsonContainer rapidJsonValueToJsonContainer(const rapidjson::Value& v
         return objectContainer;
     }
     throw std::invalid_argument("Unsupported JSON value type");
+}
+
+std::string serializeResponsesUnaryResponse(
+    const std::vector<ParsedOutput>& parsedOutputs,
+    const CompletionUsageStatistics& usage,
+    const OpenAIChatCompletionsRequest& request,
+    const ToolsSchemas_t& toolNameSchemaMap,
+    std::chrono::time_point<std::chrono::system_clock> created) {
+    const auto createdAt = std::chrono::duration_cast<std::chrono::seconds>(created.time_since_epoch()).count();
+    const std::string responseId = "resp-" + std::to_string(createdAt);
+
+    auto serializeResponsesToolChoice = [&request](Writer<StringBuffer>& writer) {
+        writer.String("tool_choice");
+        if (request.toolChoice.empty()) {
+            writer.String("auto");
+        } else if (request.toolChoice == "auto" || request.toolChoice == "none" || request.toolChoice == "required") {
+            writer.String(request.toolChoice.c_str());
+        } else {
+            writer.StartObject();
+            writer.String("type");
+            writer.String("function");
+            writer.String("name");
+            writer.String(request.toolChoice.c_str());
+            writer.EndObject();
+        }
+    };
+
+    auto serializeResponsesTools = [&toolNameSchemaMap](Writer<StringBuffer>& writer) {
+        writer.String("tools");
+        writer.StartArray();
+        for (const auto& [toolName, toolSchemaWrapper] : toolNameSchemaMap) {
+            writer.StartObject();
+            writer.String("type");
+            writer.String("function");
+            writer.String("name");
+            writer.String(toolName.c_str());
+            writer.String("parameters");
+            writer.RawValue(toolSchemaWrapper.stringRepr.c_str(), toolSchemaWrapper.stringRepr.size(), rapidjson::kObjectType);
+            writer.EndObject();
+        }
+        writer.EndArray();
+    };
+
+    StringBuffer buffer;
+    Writer<StringBuffer> writer(buffer);
+
+    writer.StartObject();
+    writer.String("id");
+    writer.String(responseId.c_str());
+    writer.String("object");
+    writer.String("response");
+    writer.String("created_at");
+    writer.Int64(createdAt);
+    writer.String("completed_at");
+    writer.Int64(createdAt);
+    writer.String("model");
+    writer.String(request.model.c_str());
+    writer.String("status");
+    writer.String("completed");
+
+    writer.String("parallel_tool_calls");
+    writer.Bool(false);
+    serializeResponsesToolChoice(writer);
+    serializeResponsesTools(writer);
+
+    if (request.maxTokens.has_value()) {
+        writer.String("max_output_tokens");
+        writer.Uint64(static_cast<uint64_t>(request.maxTokens.value()));
+    }
+
+    writer.String("output");
+    writer.StartArray();
+    int outputIndex = 0;
+    for (const auto& parsedOutput : parsedOutputs) {
+        const std::string outputId = "msg-" + std::to_string(outputIndex++);
+
+        writer.StartObject();
+        writer.String("id");
+        writer.String(outputId.c_str());
+        writer.String("type");
+        writer.String("message");
+        writer.String("role");
+        writer.String("assistant");
+        writer.String("status");
+        writer.String("completed");
+        writer.String("content");
+        writer.StartArray();
+        writer.StartObject();
+        writer.String("type");
+        writer.String("output_text");
+        writer.String("text");
+        writer.String(parsedOutput.content.c_str());
+        writer.String("annotations");
+        writer.StartArray();
+        writer.EndArray();
+        writer.EndObject();
+        writer.EndArray();
+        writer.EndObject();
+    }
+    writer.EndArray();
+
+    writer.String("usage");
+    writer.StartObject();
+    writer.String("input_tokens");
+    writer.Uint64(static_cast<uint64_t>(usage.promptTokens));
+    writer.String("input_tokens_details");
+    writer.StartObject();
+    writer.String("cached_tokens");
+    writer.Uint64(0);
+    writer.EndObject();
+    writer.String("output_tokens");
+    writer.Uint64(static_cast<uint64_t>(usage.completionTokens));
+    writer.String("output_tokens_details");
+    writer.StartObject();
+    writer.String("reasoning_tokens");
+    writer.Uint64(0);
+    writer.EndObject();
+    writer.String("total_tokens");
+    writer.Uint64(static_cast<uint64_t>(usage.calculateTotalTokens()));
+    writer.EndObject();
+
+    writer.EndObject();
+
+    return buffer.GetString();
 }
 
 }  // namespace
@@ -244,6 +369,193 @@ absl::Status OpenAIChatCompletionsHandler::ensureArgumentsInToolCalls(Value& mes
             }
         }
     }
+    return absl::OkStatus();
+}
+
+absl::Status OpenAIChatCompletionsHandler::parseResponsesInputDirectly(std::optional<std::string> allowedLocalMediaPath, std::optional<std::vector<std::string>> allowedMediaDomains) {
+    auto inputIt = doc.FindMember("input");
+    if (inputIt == doc.MemberEnd()) {
+        return absl::InvalidArgumentError("input missing in request");
+    }
+
+    auto& allocator = doc.GetAllocator();
+    rapidjson::Value messages(rapidjson::kArrayType);
+
+    if (inputIt->value.IsString()) {
+        request.prompt = inputIt->value.GetString();
+        if (!request.prompt.has_value() || request.prompt.value().empty()) {
+            return absl::InvalidArgumentError("input cannot be empty");
+        }
+
+        request.chatHistory.push_back({});
+        request.chatHistory.last()["role"] = "user";
+        request.chatHistory.last()["content"] = request.prompt.value();
+
+        rapidjson::Value messageObj(rapidjson::kObjectType);
+        messageObj.AddMember("role", "user", allocator);
+        messageObj.AddMember("content", rapidjson::Value(request.prompt->c_str(), allocator), allocator);
+        messages.PushBack(messageObj, allocator);
+    } else if (inputIt->value.IsArray()) {
+        if (inputIt->value.GetArray().Size() == 0) {
+            return absl::InvalidArgumentError("Messages array cannot be empty");
+        }
+
+        for (size_t i = 0; i < inputIt->value.GetArray().Size(); ++i) {
+            auto& item = inputIt->value.GetArray()[i];
+            if (!item.IsObject()) {
+                return absl::InvalidArgumentError("input array items must be objects");
+            }
+
+            auto itemObj = item.GetObject();
+            auto roleIt = itemObj.FindMember("role");
+            if (roleIt == itemObj.MemberEnd() || !roleIt->value.IsString()) {
+                return absl::InvalidArgumentError("input item role is missing or invalid");
+            }
+
+            request.chatHistory.push_back({});
+            request.chatHistory.last()["role"] = roleIt->value.GetString();
+
+            rapidjson::Value messageObj(rapidjson::kObjectType);
+            messageObj.AddMember("role", rapidjson::Value(roleIt->value.GetString(), allocator), allocator);
+
+            auto contentIt = itemObj.FindMember("content");
+            if (contentIt == itemObj.MemberEnd()) {
+                return absl::InvalidArgumentError("input item content is missing");
+            }
+
+            if (contentIt->value.IsString()) {
+                messageObj.AddMember("content", rapidjson::Value(contentIt->value.GetString(), allocator), allocator);
+                request.chatHistory.last()["content"] = contentIt->value.GetString();
+                messages.PushBack(messageObj, allocator);
+                continue;
+            }
+
+            if (!contentIt->value.IsArray()) {
+                return absl::InvalidArgumentError("input item content must be a string or array");
+            }
+            if (contentIt->value.GetArray().Size() == 0) {
+                return absl::InvalidArgumentError("Invalid message structure - content array is empty");
+            }
+
+            std::string contentText;
+            for (auto& contentItem : contentIt->value.GetArray()) {
+                if (!contentItem.IsObject()) {
+                    return absl::InvalidArgumentError("input content items must be objects");
+                }
+                auto contentObj = contentItem.GetObject();
+                auto typeIt = contentObj.FindMember("type");
+                if (typeIt == contentObj.MemberEnd() || !typeIt->value.IsString()) {
+                    return absl::InvalidArgumentError("input content item type is missing or invalid");
+                }
+
+                const std::string type = typeIt->value.GetString();
+                if (type == "input_text") {
+                    auto textIt = contentObj.FindMember("text");
+                    if (textIt == contentObj.MemberEnd() || !textIt->value.IsString()) {
+                        return absl::InvalidArgumentError("input_text requires a valid text field");
+                    }
+                    contentText = textIt->value.GetString();
+                } else if (type == "input_image") {
+                    std::string imageUrl;
+                    auto imageUrlIt = contentObj.FindMember("image_url");
+                    if (imageUrlIt == contentObj.MemberEnd()) {
+                        return absl::InvalidArgumentError("input_image requires image_url field");
+                    }
+                    if (imageUrlIt->value.IsString()) {
+                        imageUrl = imageUrlIt->value.GetString();
+                    } else if (imageUrlIt->value.IsObject()) {
+                        auto imageUrlObj = imageUrlIt->value.GetObject();
+                        auto urlIt = imageUrlObj.FindMember("url");
+                        if (urlIt == imageUrlObj.MemberEnd() || !urlIt->value.IsString()) {
+                            return absl::InvalidArgumentError("input_image.image_url.url is missing or invalid");
+                        }
+                        imageUrl = urlIt->value.GetString();
+                    } else {
+                        return absl::InvalidArgumentError("input_image.image_url must be a string or object");
+                    }
+
+                    std::string pattern = "base64,";
+                    std::size_t pos = imageUrl.find(pattern);
+                    std::string decoded;
+                    ov::Tensor tensor;
+                    if (pos != std::string::npos) {
+                        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Loading image from base64 string");
+                        size_t offset = pos + pattern.length();
+                        if (!absl::Base64Unescape(std::string_view(imageUrl.data() + offset, imageUrl.size() - offset), &decoded)) {
+                            return absl::InvalidArgumentError("Invalid base64 string in request");
+                        }
+                        try {
+                            tensor = loadImageStbiFromMemory(decoded);
+                        } catch (std::runtime_error& e) {
+                            std::stringstream ss;
+                            ss << "Image parsing failed: " << e.what();
+                            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, ss.str());
+                            return absl::InvalidArgumentError(ss.str());
+                        }
+                    } else if (std::regex_match(imageUrl.c_str(), std::regex("^(http|https|ftp|sftp|)://(.*)"))) {
+                        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Loading image using curl");
+                        int64_t sizeLimit = 20000000;  // restrict single image size to 20MB
+                        if (!allowedMediaDomains.has_value() || !isDomainAllowed(allowedMediaDomains.value(), imageUrl.c_str())) {
+                            return absl::InvalidArgumentError("Given url does not match any allowed domain from allowed_media_domains");
+                        }
+                        auto status = downloadImage(imageUrl.c_str(), decoded, sizeLimit);
+                        if (status != absl::OkStatus()) {
+                            return status;
+                        }
+                        try {
+                            tensor = loadImageStbiFromMemory(decoded);
+                        } catch (std::runtime_error& e) {
+                            std::stringstream ss;
+                            ss << "Image parsing failed: " << e.what();
+                            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, ss.str());
+                            return absl::InvalidArgumentError("Image parsing failed");
+                        }
+                    } else {
+                        if (!allowedLocalMediaPath.has_value()) {
+                            return absl::InvalidArgumentError("Loading images from local filesystem is disabled.");
+                        }
+                        if (FileSystem::isPathEscaped(imageUrl)) {
+                            std::stringstream ss;
+                            ss << "Path " << imageUrl.c_str() << " escape with .. is forbidden.";
+                            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, ss.str());
+                            return absl::InvalidArgumentError(ss.str());
+                        }
+                        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Loading image from local filesystem");
+                        const auto firstMissmatch = std::mismatch(imageUrl.begin(), imageUrl.end(), allowedLocalMediaPath.value().begin(), allowedLocalMediaPath.value().end());
+                        if (firstMissmatch.second != allowedLocalMediaPath.value().end()) {
+                            return absl::InvalidArgumentError("Given filepath is not subpath of allowed_local_media_path");
+                        }
+                        try {
+                            tensor = loadImageStbiFromFile(imageUrl.c_str());
+                        } catch (std::runtime_error& e) {
+                            std::stringstream ss;
+                            ss << "Image file " << imageUrl.c_str() << " parsing failed: " << e.what();
+                            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, ss.str());
+                            return absl::InvalidArgumentError(ss.str());
+                        }
+                    }
+                    request.imageHistory.push_back({i, tensor});
+                } else {
+                    return absl::InvalidArgumentError("Unsupported content type");
+                }
+            }
+
+            messageObj.AddMember("content", rapidjson::Value(contentText.c_str(), allocator), allocator);
+            request.chatHistory.last()["content"] = contentText;
+            messages.PushBack(messageObj, allocator);
+        }
+    } else {
+        return absl::InvalidArgumentError("input is not a string or array");
+    }
+
+    auto existingMessages = doc.FindMember("messages");
+    if (existingMessages != doc.MemberEnd()) {
+        existingMessages->value = messages;
+    } else {
+        doc.AddMember("messages", messages, allocator);
+    }
+
+    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Parsed responses input directly to chat history");
     return absl::OkStatus();
 }
 
@@ -415,8 +727,9 @@ absl::Status OpenAIChatCompletionsHandler::parseTools() {
             if (tool_choice != "none" && tool_choice != "auto" && tool_choice != "required")
                 return absl::InvalidArgumentError("tool_choice should be either 'none' or 'auto' or 'required'");
         } else if (tool_choice_it->value.IsObject()) {
-            auto tool_choice_functionIt = tool_choice_it->value.GetObject().FindMember("function");
-            if (tool_choice_functionIt != tool_choice_it->value.GetObject().MemberEnd() && tool_choice_functionIt->value.IsObject()) {
+            auto toolChoiceObj = tool_choice_it->value.GetObject();
+            auto tool_choice_functionIt = toolChoiceObj.FindMember("function");
+            if (tool_choice_functionIt != toolChoiceObj.MemberEnd() && tool_choice_functionIt->value.IsObject()) {
                 auto nameIt = tool_choice_functionIt->value.GetObject().FindMember("name");
                 if (nameIt != tool_choice_functionIt->value.GetObject().MemberEnd() && nameIt->value.IsString()) {
                     tool_choice = nameIt->value.GetString();
@@ -424,7 +737,16 @@ absl::Status OpenAIChatCompletionsHandler::parseTools() {
                     return absl::InvalidArgumentError("tool_choice.function.name is not a valid string");
                 }
             } else {
-                return absl::InvalidArgumentError("tool_choice.function is not a valid JSON object");
+                auto typeIt = toolChoiceObj.FindMember("type");
+                auto nameIt = toolChoiceObj.FindMember("name");
+                if (typeIt != toolChoiceObj.MemberEnd() && typeIt->value.IsString() && std::string(typeIt->value.GetString()) == "function") {
+                    if (nameIt == toolChoiceObj.MemberEnd() || !nameIt->value.IsString()) {
+                        return absl::InvalidArgumentError("tool_choice.name is not a valid string");
+                    }
+                    tool_choice = nameIt->value.GetString();
+                } else {
+                    return absl::InvalidArgumentError("tool_choice.function is not a valid JSON object");
+                }
             }
         } else {
             return absl::InvalidArgumentError("tool_choice is not a valid JSON object or string");
@@ -444,38 +766,71 @@ absl::Status OpenAIChatCompletionsHandler::parseTools() {
             auto& obj = it->value.GetArray()[i];
             if (!obj.IsObject())
                 return absl::InvalidArgumentError("Tool is not a JSON object");
+            rapidjson::Value* functionObj = nullptr;
+            rapidjson::Value* parametersValue = nullptr;
+            const char* functionNameCStr = nullptr;
+
             auto functionIt = obj.FindMember("function");
-            if (functionIt != obj.MemberEnd() && functionIt->value.IsObject()) {
-                auto nameIt = functionIt->value.GetObject().FindMember("name");
-                if (nameIt != functionIt->value.GetObject().MemberEnd() && nameIt->value.IsString()) {
-                    std::string functionName = nameIt->value.GetString();
-                    // If tool_choice is set to "auto", we keep all tools
-                    // If tool_choice is set to a specific function name, we keep only that tool
-                    if (tool_choice != "auto" && tool_choice != "required" && tool_choice != functionName) {
-                        it->value.Erase(&obj);
-                        jsonChanged = true;
-                    } else {
-                        i++;
-                        // If we keep the tool, add tool name and schema to the request
-                        auto parametersIt = functionIt->value.GetObject().FindMember("parameters");
-                        if (parametersIt != functionIt->value.GetObject().MemberEnd() && parametersIt->value.IsObject()) {
-                            // now we want to insert to a mapping of
-                            // tool name -> tool schema representations struct
-                            // Dump parameters object to string since this is the schema format expected by GenAI
-                            // Keep the rapidjson::Value object as well to avoid re-parsing in outputParsers
-                            rapidjson::StringBuffer buffer;
-                            rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-                            parametersIt->value.Accept(writer);
-                            std::string parametersStr = buffer.GetString();
-                            ToolSchemaWrapper schemaReprs{&parametersIt->value, std::move(parametersStr)};
-                            request.toolNameSchemaMap[nameIt->value.GetString()] = std::move(schemaReprs);
-                        }
-                    }
-                } else {
+            if (functionIt != obj.MemberEnd()) {
+                if (!functionIt->value.IsObject()) {
+                    return absl::InvalidArgumentError("Function is not a valid JSON object");
+                }
+                functionObj = &functionIt->value;
+                auto nameIt = functionObj->GetObject().FindMember("name");
+                if (nameIt == functionObj->GetObject().MemberEnd() || !nameIt->value.IsString()) {
                     return absl::InvalidArgumentError("Function object does not contain a valid name field");
                 }
+                functionNameCStr = nameIt->value.GetString();
+                auto parametersIt = functionObj->GetObject().FindMember("parameters");
+                if (parametersIt != functionObj->GetObject().MemberEnd()) {
+                    parametersValue = &parametersIt->value;
+                }
             } else {
-                return absl::InvalidArgumentError("Function is not a valid JSON object");
+                auto typeIt = obj.FindMember("type");
+                if (typeIt == obj.MemberEnd() || !typeIt->value.IsString()) {
+                    return absl::InvalidArgumentError("Tool type is missing or invalid");
+                }
+                if (std::string(typeIt->value.GetString()) != "function") {
+                    return absl::InvalidArgumentError("Only function tools are supported");
+                }
+
+                auto nameIt = obj.FindMember("name");
+                if (nameIt == obj.MemberEnd() || !nameIt->value.IsString()) {
+                    return absl::InvalidArgumentError("Function object does not contain a valid name field");
+                }
+                functionNameCStr = nameIt->value.GetString();
+
+                auto parametersIt = obj.FindMember("parameters");
+                if (parametersIt != obj.MemberEnd()) {
+                    parametersValue = &parametersIt->value;
+                }
+            }
+
+            std::string functionName = functionNameCStr;
+            // If tool_choice is set to "auto", we keep all tools
+            // If tool_choice is set to a specific function name, we keep only that tool
+            if (tool_choice != "auto" && tool_choice != "required" && tool_choice != functionName) {
+                it->value.Erase(&obj);
+                jsonChanged = true;
+                continue;
+            }
+
+            i++;
+            // If we keep the tool, add tool name and schema to the request
+            if (parametersValue != nullptr) {
+                if (!parametersValue->IsObject()) {
+                    return absl::InvalidArgumentError("Function parameters are not a valid JSON object");
+                }
+                // now we want to insert to a mapping of
+                // tool name -> tool schema representations struct
+                // Dump parameters object to string since this is the schema format expected by GenAI
+                // Keep the rapidjson::Value object as well to avoid re-parsing in outputParsers
+                rapidjson::StringBuffer buffer;
+                rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+                parametersValue->Accept(writer);
+                std::string parametersStr = buffer.GetString();
+                ToolSchemaWrapper schemaReprs{parametersValue, std::move(parametersStr)};
+                request.toolNameSchemaMap[functionNameCStr] = std::move(schemaReprs);
             }
         }
     } else {
@@ -651,6 +1006,99 @@ absl::Status OpenAIChatCompletionsHandler::parseChatCompletionsPart(std::optiona
             return absl::InvalidArgumentError("response_format is not an object");
         const rapidjson::Value& responseFormat = it->value;
         request.responseFormat = convertOpenAIResponseFormatToStructuralTagStringFormat(responseFormat);
+    }
+
+    return absl::OkStatus();
+}
+
+absl::Status OpenAIChatCompletionsHandler::parseResponsesPart(std::optional<uint32_t> maxTokensLimit, std::optional<std::string> allowedLocalMediaPath, std::optional<std::vector<std::string>> allowedMediaDomains) {
+    // input: string; required
+    auto it = doc.FindMember("input");
+    if (it == doc.MemberEnd()) {
+        return absl::InvalidArgumentError("input missing in request");
+    }
+
+    auto messagesStatus = parseResponsesInputDirectly(allowedLocalMediaPath, allowedMediaDomains);
+    if (!messagesStatus.ok()) {
+        return messagesStatus;
+    }
+
+    // logprobs: bool; optional - defaults to false
+    it = doc.FindMember("logprobs");
+    if (it != doc.MemberEnd() && !it->value.IsNull()) {
+        if (!it->value.IsBool())
+            return absl::InvalidArgumentError("logprobs accepts values true or false");
+        request.logprobschat = it->value.GetBool();
+    }
+    if (request.logprobschat && request.stream) {
+        return absl::InvalidArgumentError("logprobs are not supported in streaming mode.");
+    }
+
+    auto toolsStatus = parseTools();
+    if (!toolsStatus.ok()) {
+        return toolsStatus;
+    }
+
+    std::optional<uint32_t> maxCompletionTokens;
+    std::optional<uint32_t> maxOutputTokens;
+
+    // max_completion_tokens: uint; optional
+    it = doc.FindMember("max_completion_tokens");
+    if (it != doc.MemberEnd() && !it->value.IsNull()) {
+        if (!it->value.IsUint()) {
+            if (it->value.IsUint64())
+                return absl::InvalidArgumentError("max_completion_tokens value can't be greater than 4294967295");
+            return absl::InvalidArgumentError("max_completion_tokens is not an unsigned integer");
+        }
+        if (maxTokensLimit.has_value() && it->value.GetUint() > maxTokensLimit.value())
+            return absl::InvalidArgumentError(absl::StrCat("max_completion_tokens exceeds limit provided in graph config: ", maxTokensLimit.value()));
+        maxCompletionTokens = it->value.GetUint();
+    }
+
+    // max_output_tokens: uint; optional
+    // OpenAI Responses API uses this field for output token limit.
+    it = doc.FindMember("max_output_tokens");
+    if (it != doc.MemberEnd() && !it->value.IsNull()) {
+        if (!it->value.IsUint()) {
+            if (it->value.IsUint64())
+                return absl::InvalidArgumentError("max_output_tokens value can't be greater than 4294967295");
+            return absl::InvalidArgumentError("max_output_tokens is not an unsigned integer");
+        }
+        if (maxTokensLimit.has_value() && it->value.GetUint() > maxTokensLimit.value())
+            return absl::InvalidArgumentError(absl::StrCat("max_output_tokens exceeds limit provided in graph config: ", maxTokensLimit.value()));
+        maxOutputTokens = it->value.GetUint();
+    }
+
+    if (maxCompletionTokens.has_value() && maxOutputTokens.has_value() && maxCompletionTokens.value() != maxOutputTokens.value()) {
+        return absl::InvalidArgumentError("max_output_tokens and max_completion_tokens must match when both are provided");
+    }
+    if (maxOutputTokens.has_value()) {
+        request.maxTokens = maxOutputTokens.value();
+    } else if (maxCompletionTokens.has_value()) {
+        request.maxTokens = maxCompletionTokens.value();
+    }
+
+    // specific part of max_tokens validation
+    if (request.maxTokens == 0) {
+        return absl::InvalidArgumentError("max_tokens value should be greater than 0");
+    }
+
+    // parse response_format
+    it = doc.FindMember("response_format");
+    if (it != doc.MemberEnd()) {
+        if (it->value.IsNull())
+            return absl::OkStatus();
+        if (!it->value.IsObject())
+            return absl::InvalidArgumentError("response_format is not an object");
+        const rapidjson::Value& responseFormat = it->value;
+        request.responseFormat = convertOpenAIResponseFormatToStructuralTagStringFormat(responseFormat);
+    }
+
+    {
+        StringBuffer buffer;
+        Writer<StringBuffer> writer(buffer);
+        doc.Accept(writer);
+        request.processedJson = buffer.GetString();
     }
 
     return absl::OkStatus();
@@ -937,6 +1385,8 @@ absl::Status OpenAIChatCompletionsHandler::parseRequest(std::optional<uint32_t> 
         return status;
     if (endpoint == Endpoint::COMPLETIONS)
         status = parseCompletionsPart();
+    else if (endpoint == Endpoint::RESPONSES)
+        status = parseResponsesPart(maxTokensLimit, allowedLocalMediaPath, allowedMediaDomains);
     else
         status = parseChatCompletionsPart(maxTokensLimit, allowedLocalMediaPath, allowedMediaDomains);
 
@@ -987,6 +1437,16 @@ ParsedOutput OpenAIChatCompletionsHandler::parseOutputIfNeeded(const std::vector
 
 std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const std::vector<ov::genai::GenerationOutput>& generationOutputs) {
     OVMS_PROFILE_FUNCTION();
+    if (endpoint == Endpoint::RESPONSES) {
+        std::vector<ParsedOutput> parsedOutputs;
+        usage.completionTokens = 0;
+        for (const ov::genai::GenerationOutput& generationOutput : generationOutputs) {
+            updateUsage(usage, generationOutput.generated_ids, request.echo);
+            parsedOutputs.push_back(parseOutputIfNeeded(generationOutput.generated_ids));
+        }
+        return serializeResponsesUnaryResponse(parsedOutputs, usage, request, request.toolNameSchemaMap, created);
+    }
+
     OpenAiJsonResponse jsonResponse;
     jsonResponse.StartObject();
 
@@ -1112,6 +1572,15 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(ov::genai::Enco
     OVMS_PROFILE_FUNCTION();
     usage.promptTokens = results.perf_metrics.get_num_input_tokens();
     usage.completionTokens = results.perf_metrics.get_num_generated_tokens();
+    if (endpoint == Endpoint::RESPONSES) {
+        std::vector<ParsedOutput> parsedOutputs;
+        for (const auto& tokens : results.tokens) {
+            updateUsage(usage, tokens, request.echo);
+            parsedOutputs.push_back(parseOutputIfNeeded(tokens));
+        }
+        return serializeResponsesUnaryResponse(parsedOutputs, usage, request, request.toolNameSchemaMap, created);
+    }
+
     OpenAiJsonResponse jsonResponse;
     jsonResponse.StartObject();
 
@@ -1172,6 +1641,27 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(ov::genai::VLMD
     OVMS_PROFILE_FUNCTION();
     usage.promptTokens = results.perf_metrics.get_num_input_tokens();
     usage.completionTokens = results.perf_metrics.get_num_generated_tokens();
+    if (endpoint == Endpoint::RESPONSES) {
+        std::vector<ParsedOutput> parsedOutputs;
+        usage.completionTokens = 0;
+        for (const std::string& text : results.texts) {
+            auto result = tokenizer.encode(text);
+            auto& input_ids = result.input_ids;
+            if (input_ids.get_shape().size() != 2)
+                throw std::runtime_error("input_ids should have 2 dimensions");
+            if (input_ids.get_shape()[0] != 1)
+                throw std::runtime_error("input_ids should have 1 batch size");
+            if (input_ids.get_element_type() != ov::element::i64)
+                throw std::runtime_error("input_ids should have i64 element type");
+
+            int64_t* input_ids_data = reinterpret_cast<int64_t*>(input_ids.data());
+            std::vector<int64_t> generatedTokens(input_ids_data, input_ids_data + input_ids.get_shape()[1]);
+            updateUsage(usage, generatedTokens, request.echo);
+            parsedOutputs.push_back(parseOutputIfNeeded(generatedTokens));
+        }
+        return serializeResponsesUnaryResponse(parsedOutputs, usage, request, request.toolNameSchemaMap, created);
+    }
+
     OpenAiJsonResponse jsonResponse;
     jsonResponse.StartObject();
 
@@ -1248,6 +1738,313 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(ov::genai::VLMD
 
 std::string OpenAIChatCompletionsHandler::serializeStreamingChunk(const std::string& chunkResponse, ov::genai::GenerationFinishReason finishReason) {
     OVMS_PROFILE_FUNCTION();
+    if (endpoint == Endpoint::RESPONSES) {
+        const auto createdAt = std::chrono::duration_cast<std::chrono::seconds>(created.time_since_epoch()).count();
+        const std::string responseId = "resp-" + std::to_string(createdAt);
+        const std::string outputItemId = "msg-0";
+
+        auto serializeResponsesToolChoice = [this](Writer<StringBuffer>& writer) {
+            writer.String("tool_choice");
+            if (request.toolChoice.empty()) {
+                writer.String("auto");
+            } else if (request.toolChoice == "auto" || request.toolChoice == "none" || request.toolChoice == "required") {
+                writer.String(request.toolChoice.c_str());
+            } else {
+                writer.StartObject();
+                writer.String("type");
+                writer.String("function");
+                writer.String("name");
+                writer.String(request.toolChoice.c_str());
+                writer.EndObject();
+            }
+        };
+
+        auto serializeResponsesTools = [this](Writer<StringBuffer>& writer) {
+            writer.String("tools");
+            writer.StartArray();
+            for (const auto& [toolName, toolSchemaWrapper] : request.toolNameSchemaMap) {
+                writer.StartObject();
+                writer.String("type");
+                writer.String("function");
+                writer.String("name");
+                writer.String(toolName.c_str());
+                writer.String("parameters");
+                writer.RawValue(toolSchemaWrapper.stringRepr.c_str(), toolSchemaWrapper.stringRepr.size(), rapidjson::kObjectType);
+                writer.EndObject();
+            }
+            writer.EndArray();
+        };
+
+        auto serializeResponseObject = [this, &responseId, createdAt, &serializeResponsesToolChoice, &serializeResponsesTools](Writer<StringBuffer>& writer, const char* status, const std::string& fullOutputText, bool includeUsage) {
+            writer.StartObject();
+            writer.String("id");
+            writer.String(responseId.c_str());
+            writer.String("object");
+            writer.String("response");
+            writer.String("created_at");
+            writer.Int64(createdAt);
+            if (std::string(status) == "completed") {
+                writer.String("completed_at");
+                writer.Int64(createdAt);
+            }
+            writer.String("model");
+            writer.String(request.model.c_str());
+            writer.String("status");
+            writer.String(status);
+
+            writer.String("parallel_tool_calls");
+            writer.Bool(false);
+            serializeResponsesToolChoice(writer);
+            serializeResponsesTools(writer);
+
+            if (request.maxTokens.has_value()) {
+                writer.String("max_output_tokens");
+                writer.Uint64(static_cast<uint64_t>(request.maxTokens.value()));
+            }
+
+            writer.String("output");
+            writer.StartArray();
+            if (!fullOutputText.empty()) {
+                writer.StartObject();
+                writer.String("id");
+                writer.String("msg-0");
+                writer.String("type");
+                writer.String("message");
+                writer.String("role");
+                writer.String("assistant");
+                writer.String("status");
+                writer.String(std::string(status) == "completed" ? "completed" : "in_progress");
+                writer.String("content");
+                writer.StartArray();
+                writer.StartObject();
+                writer.String("type");
+                writer.String("output_text");
+                writer.String("text");
+                writer.String(fullOutputText.c_str());
+                writer.String("annotations");
+                writer.StartArray();
+                writer.EndArray();
+                writer.EndObject();
+                writer.EndArray();
+                writer.EndObject();
+            }
+            writer.EndArray();
+
+            if (includeUsage) {
+                writer.String("usage");
+                writer.StartObject();
+                writer.String("input_tokens");
+                writer.Uint64(static_cast<uint64_t>(usage.promptTokens));
+                writer.String("input_tokens_details");
+                writer.StartObject();
+                writer.String("cached_tokens");
+                writer.Uint64(0);
+                writer.EndObject();
+                writer.String("output_tokens");
+                writer.Uint64(static_cast<uint64_t>(usage.completionTokens));
+                writer.String("output_tokens_details");
+                writer.StartObject();
+                writer.String("reasoning_tokens");
+                writer.Uint64(0);
+                writer.EndObject();
+                writer.String("total_tokens");
+                writer.Uint64(static_cast<uint64_t>(usage.calculateTotalTokens()));
+                writer.EndObject();
+            }
+
+            writer.EndObject();
+        };
+
+        auto serializeOutputItem = [&outputItemId](Writer<StringBuffer>& writer, const std::string& text, const char* status, bool withContent) {
+            writer.StartObject();
+            writer.String("id");
+            writer.String(outputItemId.c_str());
+            writer.String("type");
+            writer.String("message");
+            writer.String("role");
+            writer.String("assistant");
+            writer.String("status");
+            writer.String(status);
+            writer.String("content");
+            writer.StartArray();
+            if (withContent) {
+                writer.StartObject();
+                writer.String("type");
+                writer.String("output_text");
+                writer.String("text");
+                writer.String(text.c_str());
+                writer.String("annotations");
+                writer.StartArray();
+                writer.EndArray();
+                writer.EndObject();
+            }
+            writer.EndArray();
+            writer.EndObject();
+        };
+
+        auto serializePart = [](Writer<StringBuffer>& writer, const std::string& text) {
+            writer.StartObject();
+            writer.String("type");
+            writer.String("output_text");
+            writer.String("text");
+            writer.String(text.c_str());
+            writer.String("annotations");
+            writer.StartArray();
+            writer.EndArray();
+            writer.EndObject();
+        };
+
+        auto serializeResponsesEvent = [](const std::function<void(Writer<StringBuffer>&)>& eventSerializer) {
+            StringBuffer eventBuffer;
+            Writer<StringBuffer> eventWriter(eventBuffer);
+            eventSerializer(eventWriter);
+            return std::string(eventBuffer.GetString());
+        };
+
+        std::vector<std::string> events;
+        if (!responsesStreamingInitialized) {
+            events.emplace_back(serializeResponsesEvent([this, &serializeResponseObject](Writer<StringBuffer>& writer) {
+                writer.StartObject();
+                writer.String("type");
+                writer.String("response.created");
+                writer.String("sequence_number");
+                writer.Uint64(responsesStreamingSequenceNumber++);
+                writer.String("response");
+                serializeResponseObject(writer, "in_progress", "", false);
+                writer.EndObject();
+            }));
+
+            events.emplace_back(serializeResponsesEvent([this, &outputItemId, &serializeOutputItem](Writer<StringBuffer>& writer) {
+                writer.StartObject();
+                writer.String("type");
+                writer.String("response.output_item.added");
+                writer.String("sequence_number");
+                writer.Uint64(responsesStreamingSequenceNumber++);
+                writer.String("output_index");
+                writer.Uint64(0);
+                writer.String("item");
+                serializeOutputItem(writer, "", "in_progress", false);
+                writer.EndObject();
+            }));
+
+            events.emplace_back(serializeResponsesEvent([this, &outputItemId, &serializePart](Writer<StringBuffer>& writer) {
+                writer.StartObject();
+                writer.String("type");
+                writer.String("response.content_part.added");
+                writer.String("sequence_number");
+                writer.Uint64(responsesStreamingSequenceNumber++);
+                writer.String("output_index");
+                writer.Uint64(0);
+                writer.String("content_index");
+                writer.Uint64(0);
+                writer.String("item_id");
+                writer.String(outputItemId.c_str());
+                writer.String("part");
+                serializePart(writer, "");
+                writer.EndObject();
+            }));
+
+            responsesStreamingInitialized = true;
+        }
+
+        if (!chunkResponse.empty()) {
+            responsesStreamingOutputText += chunkResponse;
+            events.emplace_back(serializeResponsesEvent([this, &chunkResponse, &outputItemId](Writer<StringBuffer>& writer) {
+                writer.StartObject();
+                writer.String("type");
+                writer.String("response.output_text.delta");
+                writer.String("sequence_number");
+                writer.Uint64(responsesStreamingSequenceNumber++);
+                writer.String("output_index");
+                writer.Uint64(0);
+                writer.String("content_index");
+                writer.Uint64(0);
+                writer.String("item_id");
+                writer.String(outputItemId.c_str());
+                writer.String("delta");
+                writer.String(chunkResponse.c_str());
+                writer.String("logprobs");
+                writer.StartArray();
+                writer.EndArray();
+                writer.EndObject();
+            }));
+        }
+
+        if (finishReason != ov::genai::GenerationFinishReason::NONE) {
+            events.emplace_back(serializeResponsesEvent([this, &outputItemId](Writer<StringBuffer>& writer) {
+                writer.StartObject();
+                writer.String("type");
+                writer.String("response.output_text.done");
+                writer.String("sequence_number");
+                writer.Uint64(responsesStreamingSequenceNumber++);
+                writer.String("output_index");
+                writer.Uint64(0);
+                writer.String("content_index");
+                writer.Uint64(0);
+                writer.String("item_id");
+                writer.String(outputItemId.c_str());
+                writer.String("text");
+                writer.String(responsesStreamingOutputText.c_str());
+                writer.String("logprobs");
+                writer.StartArray();
+                writer.EndArray();
+                writer.EndObject();
+            }));
+
+            events.emplace_back(serializeResponsesEvent([this, &outputItemId, &serializePart](Writer<StringBuffer>& writer) {
+                writer.StartObject();
+                writer.String("type");
+                writer.String("response.content_part.done");
+                writer.String("sequence_number");
+                writer.Uint64(responsesStreamingSequenceNumber++);
+                writer.String("output_index");
+                writer.Uint64(0);
+                writer.String("content_index");
+                writer.Uint64(0);
+                writer.String("item_id");
+                writer.String(outputItemId.c_str());
+                writer.String("part");
+                serializePart(writer, responsesStreamingOutputText);
+                writer.EndObject();
+            }));
+
+            events.emplace_back(serializeResponsesEvent([this, &serializeOutputItem](Writer<StringBuffer>& writer) {
+                writer.StartObject();
+                writer.String("type");
+                writer.String("response.output_item.done");
+                writer.String("sequence_number");
+                writer.Uint64(responsesStreamingSequenceNumber++);
+                writer.String("output_index");
+                writer.Uint64(0);
+                writer.String("item");
+                serializeOutputItem(writer, responsesStreamingOutputText, "completed", true);
+                writer.EndObject();
+            }));
+
+            events.emplace_back(serializeResponsesEvent([this, &serializeResponseObject](Writer<StringBuffer>& writer) {
+                writer.StartObject();
+                writer.String("type");
+                writer.String("response.completed");
+                writer.String("sequence_number");
+                writer.Uint64(responsesStreamingSequenceNumber++);
+                writer.String("response");
+                serializeResponseObject(writer, "completed", responsesStreamingOutputText, true);
+                writer.EndObject();
+            }));
+        }
+
+        if (events.empty()) {
+            return "";
+        }
+
+        std::stringstream ss;
+        ss << events.front();
+        for (size_t i = 1; i < events.size(); ++i) {
+            ss << "\n\ndata: " << events[i];
+        }
+        return ss.str();
+    }
+
     Document doc;
     doc.SetObject();
     Document::AllocatorType& allocator = doc.GetAllocator();
@@ -1334,6 +2131,9 @@ std::string OpenAIChatCompletionsHandler::serializeStreamingChunk(const std::str
 
 std::string OpenAIChatCompletionsHandler::serializeStreamingUsageChunk() {
     OVMS_PROFILE_FUNCTION();
+    if (endpoint == Endpoint::RESPONSES) {
+        return "";
+    }
     StringBuffer buffer;
     Writer<StringBuffer> writer(buffer);
 
