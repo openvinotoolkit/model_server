@@ -349,7 +349,9 @@ const std::unordered_map<StatusCode, std::string> Status::statusMessageMap = {
     {StatusCode::HF_RUN_CONVERT_TOKENIZER_EXPORT_FAILED, "Failed to run convert-tokenizer export command"},
     {StatusCode::HF_GIT_CLONE_FAILED, "Failed in libgit2 execution of clone method"},
     {StatusCode::HF_GIT_STATUS_FAILED, "Failed in libgit2 execution of status method"},
-    {StatusCode::HF_GIT_STATUS_UNCLEAN, "Unclean status detected in libgit2 cloned repository"},
+    {StatusCode::HF_GIT_STATUS_FAILED_TO_RESOLVE_PATH, "Failed in libgit2 to check repository status for a given path"},
+    {StatusCode::HF_GIT_LIGIT2_NOT_INITIALIZED, "Libgit2 was not initialized"},
+    {StatusCode::HF_GIT_STATUS_UNCLEAN, "Unclean status detected in libgit2 repository path"},
 
     {StatusCode::PARTIAL_END, "Request has finished and no further communication is needed"},
     {StatusCode::NONEXISTENT_PATH, "Nonexistent path"},

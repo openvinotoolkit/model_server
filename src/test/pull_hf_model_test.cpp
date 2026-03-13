@@ -253,6 +253,20 @@ std::string sha256File(std::string_view path, std::error_code& ec) {
     return oss.str();
 }
 
+class TestHfDownloader : public ovms::HfDownloader {
+public:
+    TestHfDownloader(const std::string& sourceModel, const std::string& downloadPath, const std::string& hfEndpoint, const std::string& hfToken, const std::string& httpProxy, bool overwrite) :
+        HfDownloader(sourceModel, downloadPath, hfEndpoint, hfToken, httpProxy, overwrite) {}
+    std::string GetRepoUrl() { return HfDownloader::GetRepoUrl(); }
+    std::string GetRepositoryUrlWithPassword() { return HfDownloader::GetRepositoryUrlWithPassword(); }
+    bool CheckIfProxySet() { return HfDownloader::CheckIfProxySet(); }
+    const std::string& getEndpoint() { return this->hfEndpoint; }
+    const std::string& getProxy() { return this->httpProxy; }
+    std::string getGraphDirectory(const std::string& downloadPath, const std::string& sourceModel) { return IModelDownloader::getGraphDirectory(downloadPath, sourceModel); }
+    std::string getGraphDirectory() { return HfDownloader::getGraphDirectory(); }
+    ovms::Status CheckRepositoryStatus(bool checkUntracked) { return HfDownloader::CheckRepositoryStatus(checkUntracked); }
+};
+
 TEST_F(HfDownloaderPullHfModel, Resume) {
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string downloadPath = ovms::FileSystem::joinPath({this->directoryPath, "repository"});
@@ -274,6 +288,12 @@ TEST_F(HfDownloaderPullHfModel, Resume) {
     std::string graphContents = GetFileContents(graphPath);
 
     ASSERT_EQ(expectedGraphContents, removeVersionString(graphContents)) << graphContents;
+
+    // Check status function
+    std::unique_ptr<TestHfDownloader> hfDownloader = std::make_unique<TestHfDownloader>(modelName, ovms::IModelDownloader::getGraphDirectory(downloadPath, modelName), "", "", "", false);
+
+    // Fails because we want clean and it has the graph.pbtxt after download
+    ASSERT_EQ(hfDownloader->CheckRepositoryStatus(true).getCode(), ovms::StatusCode::HF_GIT_STATUS_UNCLEAN);
 
     std::error_code ec;
     ec.clear();
@@ -439,19 +459,6 @@ public:
     bool checkIfTokenizerFileIsExported() { return ovms::OptimumDownloader::checkIfTokenizerFileIsExported(); }
 };
 
-class TestHfDownloader : public ovms::HfDownloader {
-public:
-    TestHfDownloader(const std::string& sourceModel, const std::string& downloadPath, const std::string& hfEndpoint, const std::string& hfToken, const std::string& httpProxy, bool overwrite) :
-        HfDownloader(sourceModel, downloadPath, hfEndpoint, hfToken, httpProxy, overwrite) {}
-    std::string GetRepoUrl() { return HfDownloader::GetRepoUrl(); }
-    std::string GetRepositoryUrlWithPassword() { return HfDownloader::GetRepositoryUrlWithPassword(); }
-    bool CheckIfProxySet() { return HfDownloader::CheckIfProxySet(); }
-    const std::string& getEndpoint() { return this->hfEndpoint; }
-    const std::string& getProxy() { return this->httpProxy; }
-    std::string getGraphDirectory(const std::string& downloadPath, const std::string& sourceModel) { return IModelDownloader::getGraphDirectory(downloadPath, sourceModel); }
-    std::string getGraphDirectory() { return HfDownloader::getGraphDirectory(); }
-};
-
 TEST(HfDownloaderClassTest, Methods) {
     std::string modelName = "model/name";
     std::string downloadPath = "/path/to/Download";
@@ -473,6 +480,32 @@ TEST(HfDownloaderClassTest, Methods) {
 #endif
     ASSERT_EQ(hfDownloader->getGraphDirectory(downloadPath, modelName), expectedPath);
     ASSERT_EQ(hfDownloader->getGraphDirectory(), expectedPath);
+}
+
+TEST(HfDownloaderClassTest, RepositoryStatusCheckErrors) {
+    std::string modelName = "model/name";
+    std::string downloadPath = "/path/to/Download";
+    std::string hfEndpoint = "www.new_hf.com/";
+    std::string hfToken = "123$$o_O123!AAbb";
+    std::string httpProxy = "https://proxy_test1:123";
+    std::unique_ptr<TestHfDownloader> hfDownloader = std::make_unique<TestHfDownloader>(modelName, ovms::IModelDownloader::getGraphDirectory(downloadPath, modelName), hfEndpoint, hfToken, httpProxy, false);
+
+    // Fails without libgit init
+    ASSERT_EQ(hfDownloader->CheckRepositoryStatus(true).getCode(), ovms::StatusCode::HF_GIT_LIGIT2_NOT_INITIALIZED);
+    ASSERT_EQ(hfDownloader->CheckRepositoryStatus(false).getCode(), ovms::StatusCode::HF_GIT_LIGIT2_NOT_INITIALIZED);
+
+    auto guardOrError = ovms::createGuard();
+    ASSERT_EQ(std::holds_alternative<ovms::Status>(guardOrError), false);
+
+    // Path does not exist
+    ASSERT_EQ(hfDownloader->CheckRepositoryStatus(true).getCode(), ovms::StatusCode::HF_GIT_STATUS_FAILED_TO_RESOLVE_PATH);
+    ASSERT_EQ(hfDownloader->CheckRepositoryStatus(false).getCode(), ovms::StatusCode::HF_GIT_STATUS_FAILED_TO_RESOLVE_PATH);
+
+    // Path not a git repository
+    downloadPath = getGenericFullPathForSrcTest("/tmp/");
+    std::unique_ptr<TestHfDownloader> existingHfDownloader = std::make_unique<TestHfDownloader>(modelName, downloadPath, hfEndpoint, hfToken, httpProxy, false);
+    ASSERT_EQ(existingHfDownloader->CheckRepositoryStatus(true).getCode(), ovms::StatusCode::HF_GIT_STATUS_FAILED);
+    ASSERT_EQ(existingHfDownloader->CheckRepositoryStatus(false).getCode(), ovms::StatusCode::HF_GIT_STATUS_FAILED);
 }
 
 class TestOptimumDownloaderSetup : public ::testing::Test {

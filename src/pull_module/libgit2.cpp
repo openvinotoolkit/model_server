@@ -186,14 +186,16 @@ Status HfDownloader::RemoveReadonlyFileAttributeFromDir(const std::string& direc
 class GitRepositoryGuard {
 public:
     git_repository* repo = nullptr;
+    int git_error_class = 0;
 
     GitRepositoryGuard(const std::string& path) {
         int error = git_repository_open_ext(&repo, path.c_str(), 0, nullptr);
         if (error < 0) {
             const git_error* err = git_error_last();
-            if (err)
+            if (err) {
                 SPDLOG_ERROR("Repository open failed: {} {}", err->klass, err->message);
-            else
+                git_error_class = err->klass;
+            } else
                 SPDLOG_ERROR("Repository open failed: {}", error);
             if (repo)
                 git_repository_free(repo);
@@ -233,7 +235,12 @@ public:
 Status HfDownloader::CheckRepositoryStatus(bool checkUntracked) {
     GitRepositoryGuard repoGuard(this->downloadPath);
     if (!repoGuard.get()) {
-        return StatusCode::HF_GIT_STATUS_FAILED;
+        if (repoGuard.git_error_class == 2)
+            return StatusCode::HF_GIT_STATUS_FAILED_TO_RESOLVE_PATH;
+        else if (repoGuard.git_error_class == 3)
+            return StatusCode::HF_GIT_LIGIT2_NOT_INITIALIZED;
+        else
+            return StatusCode::HF_GIT_STATUS_FAILED;
     }
     // HEAD state info
     bool is_detached = git_repository_head_detached(repoGuard.get()) == 1;
@@ -569,7 +576,12 @@ Status HfDownloader::downloadModel() {
         GitRepositoryGuard repoGuard(this->downloadPath);
         if (!repoGuard.get()) {
             std::cout << "Path already exists on local filesystem. And is not a git repository: " << this->downloadPath << std::endl;
-            return StatusCode::HF_GIT_STATUS_FAILED;
+            if (repoGuard.git_error_class == 2)
+                return StatusCode::HF_GIT_STATUS_FAILED_TO_RESOLVE_PATH;
+            else if (repoGuard.git_error_class == 3)
+                return StatusCode::HF_GIT_LIGIT2_NOT_INITIALIZED;
+            else
+                return StatusCode::HF_GIT_STATUS_FAILED;
         }
 
         // Set repository url

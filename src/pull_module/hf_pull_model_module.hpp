@@ -21,7 +21,7 @@
 #include "../capi_frontend/server_settings.hpp"
 
 namespace ovms {
-
+class Libgt2InitGuard;
 class HfPullModelModule : public Module {
 protected:
     HFSettingsImpl hfSettings;
@@ -40,4 +40,6 @@ public:
     static const std::string GIT_SERVER_TIMEOUT_ENV;
     static const std::string GIT_SSL_CERT_LOCATIONS_ENV;
 };
+
+std::variant<ovms::Status, std::unique_ptr<Libgt2InitGuard>> createGuard();
 }  // namespace ovms
