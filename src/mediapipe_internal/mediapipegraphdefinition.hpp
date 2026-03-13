@@ -28,6 +28,7 @@
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "../kfs_frontend/kfs_utils.hpp"
 #include "../metric.hpp"
+#include "../single_version_servable_definition.hpp"
 #include "../tensorinfo.hpp"
 
 #pragma warning(push)
@@ -97,7 +98,7 @@ struct GraphSidePackets {
     }
 };
 
-class MediapipeGraphDefinition {
+class MediapipeGraphDefinition : public SingleVersionServableDefinition {
     friend MediapipeGraphDefinitionUnloadGuard;
 
 public:
@@ -108,13 +109,13 @@ public:
         const MetricConfig* metricConfig = nullptr,
         PythonBackend* pythonBackend = nullptr);
 
-    const std::string& getName() const { return name; }
+    const std::string& getName() const override { return SingleVersionServableDefinition::getName(); }
     const PipelineDefinitionStatus& getStatus() const {
         return this->status;
     }
 
     const PipelineDefinitionStateCode getStateCode() const { return status.getStateCode(); }
-    const model_version_t getVersion() const { return VERSION; }
+    bool isAvailable() const override { return status.isAvailable(); }
     const tensor_map_t getInputsInfo() const;
     const tensor_map_t getOutputsInfo() const;
     const MediapipeGraphConfig& getMediapipeGraphConfig() const { return this->mgconfig; }
@@ -137,9 +138,6 @@ public:
     static const std::string STT_NODE_CALCULATOR_NAME;
     static const std::string TTS_NODE_CALCULATOR_NAME;
     Status waitForLoaded(std::unique_ptr<MediapipeGraphDefinitionUnloadGuard>& unloadGuard, const uint32_t waitForLoadedTimeoutMicroseconds = WAIT_FOR_LOADED_DEFAULT_TIMEOUT_MICROSECONDS);
-
-    // Pipelines are not versioned and any available definition has constant version equal 1.
-    static constexpr model_version_t VERSION = 1;
 
 protected:
     GraphSidePackets sidePacketMaps;
@@ -171,7 +169,6 @@ protected:
     Status dryInitializeTest();
     std::string chosenConfig;
     static MediapipeGraphConfig MGC;
-    const std::string name;
 
     bool passKfsRequestFlag;
     std::unordered_map<std::string, mediapipe_packet_type_enum> inputTypes;

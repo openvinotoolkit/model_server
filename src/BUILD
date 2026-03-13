@@ -165,6 +165,19 @@ ovms_cc_library(
     name = "servable",
     hdrs = ["servable.hpp"],
 )
+ovms_cc_library(
+    name = "libovms_servable_definition",
+    hdrs = ["servable_definition.hpp"],
+)
+ovms_cc_library(
+    name = "libovms_single_version_servable_definition",
+    hdrs = ["single_version_servable_definition.hpp"],
+    deps = [
+        "servable",
+        "libovms_servable_definition",
+        "libovmsmodelversion",
+    ],
+)
 cc_library(
     name = "ovms_header",
     hdrs = ["ovms.h"],
@@ -684,6 +697,8 @@ ovms_cc_library(
             "anonymous_input_name",
             "libovms_servable_name_checker",
             "libovms_metric_provider",
+            "libovms_servable_definition",
+            "libovms_single_version_servable_definition",
          ] + select({
                 "//:not_disable_cloud": [
                     "libovmsazurefilesystem",
@@ -1834,6 +1849,7 @@ ovms_cc_library(
         "libovms_tensorinfo",
         "notifyreceiver",
         "libovmsmodelversion",
+        "libovms_single_version_servable_definition",
     ],
     visibility = ["//visibility:public"],
 )

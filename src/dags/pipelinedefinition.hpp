@@ -30,6 +30,7 @@
 #include "../tfs_frontend/tfs_utils.hpp"
 #include "../modelversion.hpp"
 #include "../notifyreceiver.hpp"
+#include "../single_version_servable_definition.hpp"
 #include "../tensorinfo.hpp"
 #include "aliases.hpp"
 #include "nodeinfo.hpp"
@@ -46,7 +47,7 @@ class Pipeline;
 class PipelineDefinitionUnloadGuard;
 class Status;
 
-class PipelineDefinition : public NotifyReceiver {
+class PipelineDefinition : public SingleVersionServableDefinition, public NotifyReceiver {
     friend NodeValidator;
     friend PipelineDefinitionUnloadGuard;
     struct ValidationResultNotifier {
@@ -68,7 +69,6 @@ class PipelineDefinition : public NotifyReceiver {
         std::condition_variable& loadedNotify;
     };
 
-    const std::string pipelineName;
     std::vector<NodeInfo> nodeInfos;
     std::map<std::string, std::shared_ptr<CNLIMWrapper>> nodeResources = {};
     pipeline_connections_t connections;
@@ -81,9 +81,6 @@ private:
     mutable std::shared_mutex metadataMtx;
     std::atomic<uint64_t> requestsHandlesCounter = 0;
     std::condition_variable loadedNotify;
-
-    // Pipelines are not versioned and any available definition has constant version equal 1.
-    static constexpr model_version_t VERSION = 1;
 
     std::unique_ptr<ServableMetricReporter> reporter;
 
@@ -129,9 +126,9 @@ public:
     std::vector<NodeInfo> calculateNodeInfosDiff(const std::vector<NodeInfo>& nodeInfos);
     void deinitializeNodeResources(const std::vector<NodeInfo>& nodeInfosDiff);
 
-    const std::string& getName() const override { return pipelineName; }
+    const std::string& getName() const override { return SingleVersionServableDefinition::getName(); }
     const PipelineDefinitionStateCode getStateCode() const { return status.getStateCode(); }
-    const model_version_t getVersion() const { return VERSION; }
+    bool isAvailable() const override { return status.isAvailable(); }
 
     void receiveNotification(const std::string& ownerDetails) override {
         this->status.handle(UsedModelChangedEvent(ownerDetails));

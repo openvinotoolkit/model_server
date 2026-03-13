@@ -27,6 +27,7 @@
 #include "modelchangesubscription.hpp"
 #include "modelconfig.hpp"
 #include "modelversion.hpp"
+#include "servable_definition.hpp"
 
 namespace ov {
 class Core;
@@ -42,7 +43,7 @@ class MetricRegistry;
 class Status;
 /*     * @brief This class represent inference models
      */
-class Model {
+class Model : public ServableDefinition {
 private:
     /**
      * @brief Mutex for protecting concurrent modifying and accessing modelVersions
@@ -136,9 +137,11 @@ public:
          * 
          * @return model name
          */
-    const std::string& getName() const {
+    const std::string& getName() const override {
         return name;
     }
+
+    bool isAvailable() const override;
 
     const bool isStateful() const {
         return stateful;
