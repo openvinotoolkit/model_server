@@ -19,7 +19,7 @@
 #include <vector>
 
 #include "../ovms.h"  // NOLINT
-#include "../logging.hpp"
+#include "src/logging.hpp"
 #include "../precision.hpp"
 #include "inferencerequest.hpp"
 #include "../shape.hpp"

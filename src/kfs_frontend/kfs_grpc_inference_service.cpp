@@ -26,6 +26,7 @@
 #include "kfs_utils.hpp"
 #include "kfs_request_utils.hpp"
 #include "../dags/pipeline.hpp"
+#include "../dags/pipeline_factory.hpp"
 #include "../dags/pipelinedefinition.hpp"
 #include "../dags/pipelinedefinitionstatus.hpp"
 #include "../dags/pipelinedefinitionunloadguard.hpp"
@@ -87,7 +88,7 @@ Status KFSInferenceServiceImpl::getPipeline(const KFSRequest* request,
     KFSResponse* response,
     std::unique_ptr<ovms::Pipeline>& pipelinePtr) {
     OVMS_PROFILE_FUNCTION();
-    return this->modelManager.createPipeline(pipelinePtr, request->model_name(), request, response);
+    return this->modelManager.getPipelineFactory().create(pipelinePtr, request->model_name(), request, response, this->modelManager);
 }
 
 const std::string PLATFORM = "OpenVINO";

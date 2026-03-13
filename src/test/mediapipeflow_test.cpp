@@ -36,6 +36,7 @@
 #pragma GCC diagnostic pop
 
 #include "../config.hpp"
+#include "../dags/pipeline_factory.hpp"
 #include "../dags/pipelinedefinition.hpp"
 #include "../grpcservermodule.hpp"
 #include "../http_rest_api_handler.hpp"

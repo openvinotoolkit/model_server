@@ -81,6 +81,7 @@ const std::string DEFAULT_MODEL_CACHE_DIRECTORY = "/opt/cache";
 #endif
 ModelManager::ModelManager(const std::string& modelCacheDirectory, MetricRegistry* registry, PythonBackend* pythonBackend) :
     ieCore(std::make_unique<ov::Core>()),
+    pipelineFactory(std::make_unique<PipelineFactory>()),
 #if (MEDIAPIPE_DISABLE == 0)
     mediapipeFactory(std::make_unique<MediapipeFactory>(pythonBackend)),
 #endif
@@ -727,18 +728,18 @@ Status ModelManager::loadPipelinesConfig(rapidjson::Document& configJson) {
     const auto itrp = configJson.FindMember("pipeline_config_list");
     if (itrp == configJson.MemberEnd() || !itrp->value.IsArray()) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Configuration file doesn't have pipelines property.");
-        pipelineFactory.retireOtherThan({}, *this);
+        pipelineFactory->retireOtherThan({}, *this);
         return StatusCode::OK;
     }
     std::set<std::string> pipelinesInConfigFile;
     Status firstErrorStatus = StatusCode::OK;
     for (const auto& pipelineConfig : itrp->value.GetArray()) {
-        auto status = processPipelineConfig(configJson, pipelineConfig, pipelinesInConfigFile, pipelineFactory, *this);
+        auto status = processPipelineConfig(configJson, pipelineConfig, pipelinesInConfigFile, *pipelineFactory, *this);
         if (status != StatusCode::OK) {
             IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
         }
     }
-    pipelineFactory.retireOtherThan(std::move(pipelinesInConfigFile), *this);
+    pipelineFactory->retireOtherThan(std::move(pipelinesInConfigFile), *this);
     return firstErrorStatus;
 }
 
@@ -1175,7 +1176,7 @@ Status ModelManager::updateConfigurationWithoutConfigFile() {
             reloadNeeded = true;
         }
     }
-    status = pipelineFactory.revalidatePipelines(*this);
+    status = pipelineFactory->revalidatePipelines(*this);
     if (!status.ok()) {
         IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
     }
@@ -1738,7 +1739,7 @@ bool ModelManager::servableExists(const std::string& name, ServableType check) c
     if (hasFlag(check, ServableType::Model) && findModelByName(name) != nullptr) {
         return true;
     }
-    if (hasFlag(check, ServableType::Pipeline) && pipelineFactory.definitionExists(name)) {
+    if (hasFlag(check, ServableType::Pipeline) && pipelineFactory->definitionExists(name)) {
         return true;
     }
 #if (MEDIAPIPE_DISABLE == 0)
@@ -1748,4 +1749,13 @@ bool ModelManager::servableExists(const std::string& name, ServableType check) c
 #endif
     return false;
 }
+
+const PipelineFactory& ModelManager::getPipelineFactory() const {
+    return *pipelineFactory;
+}
+
+const bool ModelManager::pipelineDefinitionExists(const std::string& name) const {
+    return pipelineFactory->definitionExists(name);
+}
+
 }  // namespace ovms

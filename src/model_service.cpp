@@ -33,6 +33,7 @@
 #include "tensorflow_serving/apis/model_service.pb.h"
 #pragma GCC diagnostic pop
 
+#include "dags/pipeline_factory.hpp"
 #include "dags/pipelinedefinition.hpp"
 #include "execution_context.hpp"
 #include "grpc_utils.hpp"

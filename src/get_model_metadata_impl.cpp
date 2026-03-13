@@ -17,6 +17,7 @@
 
 #include <google/protobuf/util/json_util.h>
 
+#include "dags/pipeline_factory.hpp"
 #include "dags/pipelinedefinition.hpp"
 #include "dags/pipelinedefinitionstatus.hpp"
 #include "dags/pipelinedefinitionunloadguard.hpp"

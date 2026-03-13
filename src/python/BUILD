@@ -41,7 +41,7 @@ mediapipe_proto_library(
 ovms_cc_library(
     name = "utils",
     hdrs = ["utils.hpp",],
-    srcs = [],
+    srcs = [], 
     deps = PYBIND_DEPS + [
         "//src:libovmslogging",
     ],

@@ -31,7 +31,6 @@
 #include <rapidjson/document.h>
 #pragma warning(pop)
 
-#include "dags/pipeline_factory.hpp"
 #include "global_sequences_viewer.hpp"
 #include "metric_config.hpp"
 #include "metric_provider.hpp"
@@ -60,6 +59,10 @@ class FileSystem;
 class MediapipeFactory;
 class MediapipeGraphConfig;
 class MediapipeGraphExecutor;
+class ModelInstance;
+class ModelInstanceUnloadGuard;
+class Pipeline;
+class PipelineFactory;
 struct FunctorSequenceCleaner;
 struct FunctorResourcesCleaner;
 class PythonBackend;
@@ -87,7 +90,7 @@ protected:
     std::map<std::string, std::shared_ptr<Model>> models;
     std::unique_ptr<ov::Core> ieCore;
 
-    PipelineFactory pipelineFactory;
+    std::unique_ptr<PipelineFactory> pipelineFactory;
 #if (MEDIAPIPE_DISABLE == 0)
     std::unique_ptr<MediapipeFactory> mediapipeFactory;
 #endif
@@ -323,9 +326,7 @@ public:
      */
     void startCleaner();
 
-    const PipelineFactory& getPipelineFactory() const {
-        return pipelineFactory;
-    }
+    const PipelineFactory& getPipelineFactory() const;
 
 #if (MEDIAPIPE_DISABLE == 0)
     const MediapipeFactory& getMediapipeFactory() const {
@@ -366,19 +367,10 @@ public:
      */
     const std::shared_ptr<ModelInstance> findModelInstance(const std::string& name, model_version_t version = 0) const;
 
-    template <typename RequestType, typename ResponseType>
-    Status createPipeline(std::unique_ptr<Pipeline>& pipeline,
-        const std::string& name,
-        const RequestType* request,
-        ResponseType* response) {
-        return pipelineFactory.create(pipeline, name, request, response, *this);
-    }
     Status createPipeline(std::unique_ptr<MediapipeGraphExecutor>& graph,
         const std::string& name);
 
-    const bool pipelineDefinitionExists(const std::string& name) const {
-        return pipelineFactory.definitionExists(name);
-    }
+    const bool pipelineDefinitionExists(const std::string& name) const;
 
     /**
      * @brief Starts model manager using provided config file

@@ -38,6 +38,7 @@
 
 #include "config.hpp"
 #include "dags/pipeline.hpp"
+#include "dags/pipeline_factory.hpp"
 #include "dags/pipelinedefinition.hpp"
 #include "dags/pipelinedefinitionunloadguard.hpp"
 #include "execution_context.hpp"
@@ -1289,7 +1290,7 @@ Status HttpRestApiHandler::processPipelineRequest(const std::string& modelName,
 
     tensorflow::serving::PredictRequest& requestProto = requestParser.getProto();
     requestProto.mutable_model_spec()->set_name(modelName);
-    status = this->modelManager.createPipeline(pipelinePtr, modelName, &requestProto, &responseProto);
+    status = this->modelManager.getPipelineFactory().create(pipelinePtr, modelName, &requestProto, &responseProto, this->modelManager);
     if (!status.ok()) {
         INCREMENT_IF_ENABLED(reporterOut->getInferRequestMetric(executionContext, false));
         return status;
