@@ -1754,8 +1754,4 @@ const PipelineFactory& ModelManager::getPipelineFactory() const {
     return *pipelineFactory;
 }
 
-const bool ModelManager::pipelineDefinitionExists(const std::string& name) const {
-    return pipelineFactory->definitionExists(name);
-}
-
 }  // namespace ovms

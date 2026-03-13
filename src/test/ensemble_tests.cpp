@@ -4367,7 +4367,7 @@ TEST_F(EnsembleFlowTest, MediapipeConfigModelWithSameNamePipeline) {
 
     ASSERT_FALSE(manager.getMediapipeFactory().definitionExists(MEDIAPIPE_DUMMY_NAME));
 
-    ASSERT_TRUE(manager.pipelineDefinitionExists(MEDIAPIPE_DUMMY_NAME));
+    ASSERT_TRUE(manager.servableExists(MEDIAPIPE_DUMMY_NAME, ServableType::Pipeline));
 }
 #endif
 TEST_F(EnsembleFlowTest, PipelineConfigModelWithSameName) {

@@ -370,8 +370,6 @@ public:
     Status createPipeline(std::unique_ptr<MediapipeGraphExecutor>& graph,
         const std::string& name);
 
-    const bool pipelineDefinitionExists(const std::string& name) const;
-
     /**
      * @brief Starts model manager using provided config file
      * 
