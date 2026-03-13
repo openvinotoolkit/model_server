@@ -49,6 +49,7 @@ static bool progress_bar(size_t step, size_t num_steps, ov::Tensor&) {
     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Image Generation Step: {}/{}", step + 1, num_steps);
     return false;
 }
+
 // written out separately to avoid msvc crashing when using try-catch in process method ...
 static absl::Status generateTensor(ov::genai::Text2ImagePipeline& request,
     const std::string& prompt, ov::AnyMap& requestOptions,
@@ -90,6 +91,28 @@ static absl::Status generateTensorImg2Img(ov::genai::Image2ImagePipeline& reques
         return absl::InternalError("Error during images generation");
     } catch (...) {
         return absl::InternalError("Unknown error during image generation");
+    }
+    return absl::OkStatus();
+}
+// written out separately to avoid msvc crashing when using try-catch in process method ...
+static absl::Status generateTensorInpainting(ov::genai::InpaintingPipeline& request,
+    const std::string& prompt, ov::Tensor image, ov::Tensor mask, ov::AnyMap& requestOptions,
+    std::unique_ptr<ov::Tensor>& images) {
+    try {
+        requestOptions.insert(ov::genai::callback(progress_bar));
+        images = std::make_unique<ov::Tensor>(request.generate(prompt, image, mask, requestOptions));
+        auto dims = images->get_shape();
+        std::stringstream ss;
+        for (const auto& dim : dims) {
+            ss << dim << " ";
+        }
+        ss << " element type: " << images->get_element_type().get_type_name();
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "ImageGenCalculator generated inpainting tensor: {}", ss.str());
+    } catch (const std::exception& e) {
+        SPDLOG_LOGGER_ERROR(llm_calculator_logger, "ImageGenCalculator Inpainting Error: {}", e.what());
+        return absl::InternalError("Error during inpainting generation");
+    } catch (...) {
+        return absl::InternalError("Unknown error during inpainting generation");
     }
     return absl::OkStatus();
 }
@@ -140,10 +163,12 @@ public:
         auto pipe = it->second;
 
         auto payload = cc->Inputs().Tag(INPUT_TAG_NAME).Get<ovms::HttpPayload>();
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "ImageGenCalculator [Node: {}] Request URI: {}", cc->NodeName(), payload.uri);
 
         std::unique_ptr<ov::Tensor> images;  // output
 
         if (absl::StartsWith(payload.uri, "/v3/images/generations")) {
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "ImageGenCalculator [Node: {}] Routed to image generations path", cc->NodeName());
             if (payload.parsedJson->HasParseError())
                 return absl::InvalidArgumentError("Failed to parse JSON");
 
@@ -154,13 +179,15 @@ public:
             SET_OR_RETURN(std::string, prompt, getPromptField(*payload.parsedJson));
             SET_OR_RETURN(ov::AnyMap, requestOptions, getImageGenerationRequestOptions(*payload.parsedJson, pipe->args));
 
-            ov::genai::Text2ImagePipeline request = pipe->text2ImagePipeline->clone();
-
-            auto status = generateTensor(request, prompt, requestOptions, images);
+            // single request assumption - use pipeline instance directly
+            if (!pipe->text2ImagePipeline)
+                return absl::FailedPreconditionError("Text-to-image pipeline is not available for this model");
+            auto status = generateTensor(*pipe->text2ImagePipeline, prompt, requestOptions, images);
             if (!status.ok()) {
                 return status;
             }
         } else if (absl::StartsWith(payload.uri, "/v3/images/edits")) {
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "ImageGenCalculator [Node: {}] Routed to image edits path", cc->NodeName());
             if (payload.multipartParser->hasParseError())
                 return absl::InvalidArgumentError("Failed to parse multipart data");
 
@@ -176,8 +203,29 @@ public:
 
             SET_OR_RETURN(ov::AnyMap, requestOptions, getImageEditRequestOptions(*payload.multipartParser, pipe->args));
 
-            ov::genai::Image2ImagePipeline request = pipe->image2ImagePipeline->clone();
-            status = generateTensorImg2Img(request, prompt, imageTensor, requestOptions, images);
+            SET_OR_RETURN(std::optional<std::string_view>, mask, getFileFromPayload(*payload.multipartParser, "mask"));
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "ImageGenCalculator [Node: {}] Mask present: {}", cc->NodeName(), mask.has_value() && !mask.value().empty());
+
+            if (mask.has_value() && !mask.value().empty()) {
+                if (!pipe->inpaintingPipeline)
+                    return absl::FailedPreconditionError("Inpainting pipeline is not available for this model");
+                // Inpainting path — uses the pre-built InpaintingPipeline that was loaded from disk
+                // during initialization.  Do NOT derive InpaintingPipeline from Image2ImagePipeline
+                // at request time — that derivation direction causes a SEGFAULT in GenAI.
+                ov::Tensor maskTensor;
+                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "ImageGenCalculator [Node: {}] Inpainting: decoding mask tensor", cc->NodeName());
+                status = makeTensorFromString(std::string(mask.value()), maskTensor);
+                if (!status.ok()) {
+                    return status;
+                }
+                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "ImageGenCalculator [Node: {}] Inpainting: mask tensor decoded, invoking generate()", cc->NodeName());
+                status = generateTensorInpainting(*pipe->inpaintingPipeline, prompt, imageTensor, maskTensor, requestOptions, images);
+            } else {
+                if (!pipe->image2ImagePipeline)
+                    return absl::FailedPreconditionError("Image-to-image pipeline is not available for this model");
+                // image-to-image path - single pipeline instance, no clone needed
+                status = generateTensorImg2Img(*pipe->image2ImagePipeline, prompt, imageTensor, requestOptions, images);
+            }
             if (!status.ok()) {
                 return status;
             }
