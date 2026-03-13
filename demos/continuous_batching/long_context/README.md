@@ -73,7 +73,7 @@ Platform: Intel(R) Xeon(R) Platinum 8480+
 :::
 :::{tab-item} iGPU
 :sync: GPU
-Platform: Intel(R) Core(TM) Ultra 5 338H
+Platform: Intel(R) Core(TM) Ultra X7 368H
 | Context Length (tokens) | TTFT No Caching (ms) | TTFT Prefix Caching (ms) | KV Cache Usage (GB) |
 |------------------------|------------------|---------------------|-----------------------|
 | 1,000                  |  1 729          | 279.75                  |          0.03       |
