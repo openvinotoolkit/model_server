@@ -100,6 +100,37 @@ WORKDIR /ovms/third_party/opencv
 RUN if [ "$VERBOSE_LOGS" == "ON" ] ; then export VERBOSE=1 ; fi && ./install_opencv.sh
 ####### End of OpenCV
 
+# Build espeak-ng from sources
+FROM base_build as espeak_build
+
+ARG ESPEAK_NG_VERSION=1.51.1
+WORKDIR /tmp/espeak_build
+
+RUN dnf install -y libtool automake autoconf pkgconfig && \
+    dnf clean all
+
+RUN cd /tmp/espeak_build && \
+    git clone --branch ${ESPEAK_NG_VERSION} https://github.com/espeak-ng/espeak-ng.git espeak-ng-src 2>&1 && \
+    ls -lah /tmp/espeak_build/
+
+RUN cd /tmp/espeak_build/espeak-ng-src && \
+    touch AUTHORS NEWS && \
+    libtoolize --force --copy && \
+    aclocal && \
+    autoheader && \
+    autoconf && \
+    automake --add-missing --copy && \
+    ./configure --prefix=/usr/local \
+        --disable-shared \
+        --enable-static \
+        --disable-mbrola \
+        --disable-klatt \
+        --without-audio && \
+    make -j$(nproc) && \
+    make install
+
+RUN rm -rf /tmp/espeak_build
+
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 FROM base_build as build
 ARG BASE_IMAGE
@@ -403,6 +434,9 @@ LABEL base-image=${RELEASE_BASE_IMAGE}
 ENV PYTHONPATH=/ovms/lib/python:/ovms/python_deps
 
 WORKDIR /
+COPY --from=base_build /usr/local/share/espeak-ng-data /usr/local/share/espeak-ng-data
+ENV ESPEAK_DATA_PATH=/usr/local/share/espeak-ng-data
+
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 COPY ./install_redhat_gpu_drivers.sh /install_gpu_drivers.sh
 # hadolint ignore=DL3003,DL3041,SC2164,SC1091
