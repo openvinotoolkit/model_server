@@ -50,6 +50,7 @@
 #include "../modelinstanceunloadguard.hpp"
 #include "../modelmanager.hpp"
 #include "../ovinferrequestsqueue.hpp"
+#include "../servable_definition.hpp"
 #include "../servablemanagermodule.hpp"
 #include "../server.hpp"
 #include "../status.hpp"
@@ -121,25 +122,23 @@ Status KFSInferenceServiceImpl::getModelReady(const KFSGetModelStatusRequest* re
     auto model = manager.findModelByName(name);
     SPDLOG_DEBUG("ModelReady requested name: {}, version: {}", name, versionString);
     if (model == nullptr) {
-        SPDLOG_DEBUG("ModelReady requested model {} is missing, trying to find pipeline with such name", name);
-        auto pipelineDefinition = manager.getPipelineFactory().findDefinitionByName(name);
-        if (!pipelineDefinition) {
-#if (MEDIAPIPE_DISABLE == 0)
-            SPDLOG_DEBUG("ModelReady requested pipeline {} is missing, trying to find mediapipe with such name", name);
-            auto mediapipeGraphDefinition = manager.getMediapipeFactory().findDefinitionByName(name);
-            if (!mediapipeGraphDefinition) {
-                return StatusCode::MODEL_NAME_MISSING;
-            }
-            auto status = buildResponse(*mediapipeGraphDefinition, response);
-            INCREMENT_IF_ENABLED(mediapipeGraphDefinition->getMetricReporter().getModelReadyMetric(executionContext, status.ok()));
-            return status;
-#else
+        SPDLOG_DEBUG("ModelReady requested model {} is missing, trying to find definition with such name", name);
+        auto* definition = manager.findServableDefinition(name);
+        if (!definition) {
             return StatusCode::MODEL_NAME_MISSING;
-#endif
         }
-        auto status = buildResponse(*pipelineDefinition, response);
-        INCREMENT_IF_ENABLED(pipelineDefinition->getMetricReporter().getModelReadyMetric(executionContext, status.ok()));
-        return status;
+        response->set_ready(definition->isAvailable());
+        auto* pipelineDefinition = dynamic_cast<PipelineDefinition*>(definition);
+        if (pipelineDefinition) {
+            INCREMENT_IF_ENABLED(pipelineDefinition->getMetricReporter().getModelReadyMetric(executionContext, true));
+        }
+#if (MEDIAPIPE_DISABLE == 0)
+        auto* mediapipeDefinition = dynamic_cast<MediapipeGraphDefinition*>(definition);
+        if (mediapipeDefinition) {
+            INCREMENT_IF_ENABLED(mediapipeDefinition->getMetricReporter().getModelReadyMetric(executionContext, true));
+        }
+#endif
+        return StatusCode::OK;
     }
     std::shared_ptr<ModelInstance> instance = nullptr;
     if (!versionString.empty()) {
@@ -204,25 +203,26 @@ Status KFSInferenceServiceImpl::ModelMetadataImpl(::grpc::ServerContext* context
     auto model = this->modelManager.findModelByName(name);
     SPDLOG_DEBUG("ModelMetadata requested name: {}, version: {}", name, versionString);
     if (model == nullptr) {
-        SPDLOG_DEBUG("GetModelMetadata: Model {} is missing, trying to find pipeline with such name", name);
-        auto pipelineDefinition = this->modelManager.getPipelineFactory().findDefinitionByName(name);
-        if (!pipelineDefinition) {
+        SPDLOG_DEBUG("GetModelMetadata: Model {} is missing, trying to find definition with such name", name);
+        auto* definition = this->modelManager.findServableDefinition(name);
+        if (!definition) {
+            return StatusCode::MODEL_NAME_MISSING;
+        }
+        auto* pipelineDefinition = dynamic_cast<PipelineDefinition*>(definition);
+        if (pipelineDefinition) {
+            auto status = buildResponse(*pipelineDefinition, response);
+            INCREMENT_IF_ENABLED(pipelineDefinition->getMetricReporter().getModelMetadataMetric(executionContext, status.ok()));
+            return status;
+        }
 #if (MEDIAPIPE_DISABLE == 0)
-            SPDLOG_DEBUG("GetModelMetadata: Pipeline {} is missing, trying to find mediapipe with such name", name);
-            auto mediapipeGraphDefinition = this->modelManager.getMediapipeFactory().findDefinitionByName(name);
-            if (!mediapipeGraphDefinition) {
-                return StatusCode::MODEL_NAME_MISSING;
-            }
+        auto* mediapipeGraphDefinition = dynamic_cast<MediapipeGraphDefinition*>(definition);
+        if (mediapipeGraphDefinition) {
             auto status = buildResponse(*mediapipeGraphDefinition, response);
             INCREMENT_IF_ENABLED(mediapipeGraphDefinition->getMetricReporter().getModelMetadataMetric(executionContext, status.ok()));
             return status;
-#else
-            return Status(StatusCode::MODEL_NAME_MISSING);
-#endif
         }
-        auto status = buildResponse(*pipelineDefinition, response);
-        INCREMENT_IF_ENABLED(pipelineDefinition->getMetricReporter().getModelMetadataMetric(executionContext, status.ok()));
-        return status;
+#endif
+        return StatusCode::MODEL_NAME_MISSING;
     }
     std::shared_ptr<ModelInstance> instance = nullptr;
     if (!versionString.empty()) {

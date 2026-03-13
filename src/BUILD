@@ -1121,40 +1121,6 @@ ovms_cc_library(
     visibility = ["//visibility:public"],
 )
 
-# Unused
-ovms_cc_library( # TODO split dependencies
-    name = "libovmshttpservermodule",
-    hdrs = [
-        "http_server.hpp",
-        "http_rest_api_handler.hpp",
-        "httpservermodule.hpp",
-    ],
-    srcs = [
-        "http_rest_api_handler.cpp",
-        "http_server.cpp",
-        "httpservermodule.cpp",
-    ],
-    deps = [
-        "@com_github_jupp0r_prometheus_cpp//core",
-        "@mediapipe//mediapipe/framework:calculator_framework",
-        "@tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto",
-        "@tensorflow_serving//tensorflow_serving/util:threadpool_executor",
-        "@tensorflow_serving//tensorflow_serving/util:json_tensor",
-        "libovms_module",
-        "libovmslogging",
-        "libovmsprofiler",
-        "libovmsstatus",
-        "libdrogon_http_server",
-        "//src/kfserving_api:kfserving_api_cpp",
-    ] + select({
-            "//:not_disable_python": [
-                "//src/python:libovmspythonmodule",
-            ],
-            "//:disable_python": []
-        }),
-    visibility = ["//visibility:public"],
-)
-
 ovms_cc_library(
     name = "libovmsschema",
     hdrs = ["schema.hpp",],
@@ -1831,25 +1797,6 @@ ovms_cc_library(
         "libovmsstatus",
         "@com_github_grpc_grpc//:grpc++",
         "@fmtlib",
-    ],
-    visibility = ["//visibility:public"],
-)
-ovms_cc_library(
-    # TODO needs further splitting
-    name = "libovms_dags_pipelinedefinition",
-    hdrs = ["dags/pipelinedefinition.hpp",],
-    srcs = ["dags/pipelinedefinition.cpp",],
-    deps = [
-        "@com_github_tencent_rapidjson//:rapidjson",
-        "libovms_kfs_utils",
-        "tfs_utils",
-        "libovms_dags_aliases",
-        "nodeinfo",
-        "libovms_dags_pipelinedefinitionstatus",
-        "libovms_tensorinfo",
-        "notifyreceiver",
-        "libovmsmodelversion",
-        "libovms_single_version_servable_definition",
     ],
     visibility = ["//visibility:public"],
 )

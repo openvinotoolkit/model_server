@@ -44,6 +44,7 @@
 #include "model.hpp"
 #include "modelinstance.hpp"
 #include "modelmanager.hpp"
+#include "servable_definition.hpp"
 #include "servablemanagermodule.hpp"
 #include "server.hpp"
 #include "status.hpp"
@@ -112,28 +113,29 @@ Status GetModelStatusImpl::getModelStatus(
     std::string requested_model_name = request->model_spec().name();
     auto model_ptr = manager.findModelByName(requested_model_name);
     if (!model_ptr) {
-        SPDLOG_DEBUG("GetModelStatus: Model {} is missing, trying to find pipeline with such name", requested_model_name);
-        auto pipelineDefinition = manager.getPipelineFactory().findDefinitionByName(requested_model_name);
-        if (!pipelineDefinition) {
+        SPDLOG_DEBUG("GetModelStatus: Model {} is missing, trying to find definition with such name", requested_model_name);
+        auto* definition = manager.findServableDefinition(requested_model_name);
+        if (!definition) {
+            return StatusCode::MODEL_NAME_MISSING;
+        }
+        auto* pipelineDefinition = dynamic_cast<PipelineDefinition*>(definition);
+        if (pipelineDefinition) {
+            INCREMENT_IF_ENABLED(pipelineDefinition->getMetricReporter().getGetModelStatusRequestSuccessMetric(context));
+            addStatusToResponse(response, pipelineDefinition->getVersion(), pipelineDefinition->getStatus());
+            SPDLOG_DEBUG("model_service: response: {}", response->DebugString());
+            SPDLOG_DEBUG("MODEL_STATUS created a response for {} - {}", requested_model_name, requested_version);
+            return StatusCode::OK;
+        }
 #if (MEDIAPIPE_DISABLE == 0)
-            auto mediapipeGraphDefinition = manager.getMediapipeFactory().findDefinitionByName(requested_model_name);
-            if (!mediapipeGraphDefinition) {
-                return StatusCode::MODEL_NAME_MISSING;
-            }
+        auto* mediapipeGraphDefinition = dynamic_cast<MediapipeGraphDefinition*>(definition);
+        if (mediapipeGraphDefinition) {
             addStatusToResponse(response, mediapipeGraphDefinition->getVersion(), mediapipeGraphDefinition->getStatus());
             SPDLOG_DEBUG("model_service: response: {}", response->DebugString());
             SPDLOG_DEBUG("MODEL_STATUS created a response for {} - {}", requested_model_name, requested_version);
             return StatusCode::OK;
-#else
-            return StatusCode::MODEL_NAME_MISSING;
-#endif
         }
-        INCREMENT_IF_ENABLED(pipelineDefinition->getMetricReporter().getGetModelStatusRequestSuccessMetric(context));
-
-        addStatusToResponse(response, pipelineDefinition->getVersion(), pipelineDefinition->getStatus());
-        SPDLOG_DEBUG("model_service: response: {}", response->DebugString());
-        SPDLOG_DEBUG("MODEL_STATUS created a response for {} - {}", requested_model_name, requested_version);
-        return StatusCode::OK;
+#endif
+        return StatusCode::MODEL_NAME_MISSING;
     }
 
     SPDLOG_DEBUG("requested model: {}, has_version: {} (version: {})", requested_model_name, has_requested_version, requested_version);

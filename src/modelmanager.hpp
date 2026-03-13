@@ -60,6 +60,7 @@ class MediapipeFactory;
 class MediapipeGraphConfig;
 class MediapipeGraphExecutor;
 class ModelInstance;
+class ServableDefinition;
 class ModelInstanceUnloadGuard;
 class Pipeline;
 class PipelineFactory;
@@ -496,6 +497,9 @@ public:
     void cleanupResources();
 
     bool servableExists(const std::string& name, ServableType check = ServableType::All) const override;
+
+    ServableDefinition* findServableDefinition(const std::string& name) const;
+
     MetricRegistry* getMetricRegistry() const override { return this->metricRegistry; }
 };
 

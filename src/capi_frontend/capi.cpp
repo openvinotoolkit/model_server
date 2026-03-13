@@ -51,6 +51,7 @@
 #include "../ovms.h"  // NOLINT
 #include "../prediction_service.hpp"
 #include "../profiler.hpp"
+#include "../servable_definition.hpp"
 #include "../servablemanagermodule.hpp"
 #include "../server.hpp"
 #include "../status.hpp"
@@ -1192,22 +1193,24 @@ DLL_PUBLIC OVMS_Status* OVMS_GetServableState(OVMS_Server* serverPtr, const char
     std::shared_ptr<ovms::ModelInstance> modelInstance = modelManager->findModelInstance(servableName, servableVersion);
 
     if (modelInstance == nullptr) {
-        SPDLOG_DEBUG("Requested model: {} does not exist. Searching for pipeline with that name...", servableName);
-        PipelineDefinition* pipelineDefinition = nullptr;
-        pipelineDefinition = modelManager->getPipelineFactory().findDefinitionByName(servableName);
-        if (!pipelineDefinition) {
-#if (MEDIAPIPE_DISABLE == 0)
-            ovms::MediapipeGraphDefinition* mediapipeDefinition = modelManager->getMediapipeFactory().findDefinitionByName(servableName);
-            if (mediapipeDefinition) {
-                *state = convertToServableState(mediapipeDefinition->getStateCode());
-                return nullptr;
-            }
-#endif
+        SPDLOG_DEBUG("Requested model: {} does not exist. Searching for definition with that name...", servableName);
+        auto* definition = modelManager->findServableDefinition(servableName);
+        if (!definition) {
             return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::MODEL_NAME_MISSING));
         }
-        *state = convertToServableState(pipelineDefinition->getStateCode());
-
-        return nullptr;
+        auto* pipelineDefinition = dynamic_cast<PipelineDefinition*>(definition);
+        if (pipelineDefinition) {
+            *state = convertToServableState(pipelineDefinition->getStateCode());
+            return nullptr;
+        }
+#if (MEDIAPIPE_DISABLE == 0)
+        auto* mediapipeDefinition = dynamic_cast<ovms::MediapipeGraphDefinition*>(definition);
+        if (mediapipeDefinition) {
+            *state = convertToServableState(mediapipeDefinition->getStateCode());
+            return nullptr;
+        }
+#endif
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::MODEL_NAME_MISSING));
     }
     if (!status.ok()) {
         if (modelInstance) {

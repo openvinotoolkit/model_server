@@ -69,6 +69,7 @@
 #include "modelinstance.hpp"  // for logging
 #include "ov_utils.hpp"
 #include "schema.hpp"
+#include "servable_definition.hpp"
 #include "stringutils.hpp"
 
 namespace ovms {
@@ -1752,6 +1753,29 @@ bool ModelManager::servableExists(const std::string& name, ServableType check) c
 
 const PipelineFactory& ModelManager::getPipelineFactory() const {
     return *pipelineFactory;
+}
+
+// Returns raw pointer - safe because definitions (Model, PipelineDefinition,
+// MediapipeGraphDefinition) are never removed from their maps during server
+// lifetime. They only transition to RETIRED state. This matches the existing
+// contract of PipelineFactory::findDefinitionByName and
+// MediapipeFactory::findDefinitionByName which also return raw pointers.
+ServableDefinition* ModelManager::findServableDefinition(const std::string& name) const {
+    auto model = findModelByName(name);
+    if (model) {
+        return model.get();
+    }
+    auto* pipelineDefinition = pipelineFactory->findDefinitionByName(name);
+    if (pipelineDefinition) {
+        return pipelineDefinition;
+    }
+#if (MEDIAPIPE_DISABLE == 0)
+    auto* mediapipeDefinition = mediapipeFactory->findDefinitionByName(name);
+    if (mediapipeDefinition) {
+        return mediapipeDefinition;
+    }
+#endif
+    return nullptr;
 }
 
 }  // namespace ovms
