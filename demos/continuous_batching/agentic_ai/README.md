@@ -61,7 +61,7 @@ python openai_agent.py --query "What is the current weather in Tokyo?" --model O
 
 Exemplary output:
 ```text
-The current weather in Tokyo is partly cloudy with a temperature of 8.4°C. The relative humidity is at 91%, and the dew point is 7.0°C. The wind is blowing from the SSE at 4.2 km/h, with gusts up to 15.5 km/h. The atmospheric pressure is 1016.0 hPa, with 72% cloud cover. Visibility is 24.1 km.
+The current weather in Tokyo is overcast with a temperature of 9.4°C (feels like 6.4°C). The relative humidity is at 42%, and the dew point is at -2.9°C. Wind is blowing from the NE at 3.6 km/h with gusts up to 24.8 km/h. The atmospheric pressure is 1018.9 hPa with 84% cloud cover. Visibility is 24.1 km.
 ```
 :::
 :::{tab-item} Qwen3-4B
@@ -78,7 +78,7 @@ python openai_agent.py --query "What is the current weather in Tokyo?" --model O
 
 Exemplary output:
 ```text
-The current weather in Tokyo is partly cloudy with a temperature of 8.4°C. The relative humidity is at 91%, and the dew point is 7.0°C. The wind is coming from the SSE at 4.2 km/h with gusts up to 15.5 km/h. The atmospheric pressure is 1016.0 hPa, with 72% cloud cover. Visibility is 24.1 km.
+The current weather in Tokyo is overcast with a temperature of 9.4°C (feels like 6.4°C). The relative humidity is at 42%, and the dew point is at -2.9°C. Wind is blowing from the NE at 3.6 km/h with gusts up to 24.8 km/h. The atmospheric pressure is 1018.9 hPa with 84% cloud cover. Visibility is 24.1 km.
 ```
 :::
 :::{tab-item} Phi-4-mini-instruct
@@ -95,7 +95,7 @@ python openai_agent.py --query "What is the current weather in Tokyo?" --model O
 
 Exemplary output:
 ```text
-The current weather in Tokyo is partly cloudy with a temperature of 8.4°C. The relative humidity is quite high at 91%, and the dew point is at 7.0°C, indicating that the air is moist. Winds are coming from the southeast at a gentle breeze of 4.2 km/h, with gusts reaching up to 15.5 km/h. The atmospheric pressure is steady at 1016.0 hPa, and cloud cover is at 72%. Visibility is excellent at 24.1 km, suggesting clear conditions for most outdoor activities.
+The current weather in Tokyo is Overcast with a temperature of 9.4°C (feels like 6.4°C), relative humidity at 42%, and dew point at -2.9°C. Wind is blowing from the NE at 3.6 km/h with gusts up to 24.8 km/h. Atmospheric pressure is 1018.9 hPa with 84% cloud cover. Visibility is 24.1 km.
 ```
 :::
 :::{tab-item} Qwen3-30B-A3B-Instruct-2507
@@ -113,7 +113,7 @@ python openai_agent.py --query "What is the current weather in Tokyo?" --model O
 
 Exemplary output:
 ```text
-The current weather in Tokyo is mainly clear with a temperature of 8.7°C. The relative humidity is at 89%, and the dew point is 6.9°C. The wind is blowing from the SSE at 5.0 km/h, with gusts reaching up to 22.0 km/h. The atmospheric pressure is 1014.4 hPa, and there is 34% cloud cover. The visibility is 24.1 km.
+The current weather in Tokyo is Overcast with a temperature of 9.4°C (feels like 6.4°C), relative humidity at 42%, and dew point at -2.9°C. The wind is blowing from the northeast at 3.6 km/h with gusts up to 24.8 km/h. The atmospheric pressure is 1018.9 hPa with 84% cloud cover. Visibility is 24.1 km.
 ```
 :::
 :::{tab-item} gpt-oss-20b
@@ -131,18 +131,18 @@ python openai_agent.py --query "What is the current weather in Tokyo?" --model O
 
 Exemplary output:
 ```text
-**Tokyo – Current Weather**
+**Tokyo Current Weather**
 
-- **Condition:** Mainly clear
-- **Temperature:** 8.7 °C
-- **Humidity:** 89 %
-- **Dew Point:** 6.9 °C
-- **Wind:** SSE at 5 km/h (gusts up to 22 km/h)
-- **Pressure:** 1014.4 hPa
-- **Cloud Cover:** 34 %
-- **Visibility:** 24.1 km
+- **Condition:** Overcast  
+- **Temperature:** 9.4°C (feels like 6.4°C)  
+- **Humidity:** 42%  
+- **Dew Point:** 2.9°C  
+- **Wind:** 3.6km/h from the NE, gusts up to 24.8km/h  
+- **Pressure:** 1018.9hPa  
+- **Cloud Cover:** 84%  
+- **Visibility:** 24.1km  
 
-Let me know if you’d like more details or a forecast!
+Let me know if you'd like forecast details or anything else!
 ```
 
 :::
@@ -165,7 +165,7 @@ python openai_agent.py --query "What is the current weather in Tokyo?" --model O
 
 Exemplary output:
 ```text
-The current weather in Tokyo is mainly clear with a temperature of 11.5°C. The relative humidity is at 82%, and the dew point is 8.5°C. The wind is blowing from the S at 6.8 km/h, with gusts up to 13.7 km/h. The atmospheric pressure is 1017.1 hPa, and there is 21% cloud cover. Visibility is 24.1 km.
+The current weather in Tokyo is overcast with a temperature of 9.4°C (feels like 6.4°C). The relative humidity is at 42%, and the dew point is at -2.9°C. The wind is blowing from the NE at 3.6 km/h, with gusts up to 24.8 km/h. The atmospheric pressure is 1018.9 hPa, and there is 84% cloud cover. Visibility is 24.1 km.
 ```
 :::
 :::{tab-item} Qwen3-4B
@@ -182,7 +182,7 @@ python openai_agent.py --query "What is the current weather in Tokyo?" --model O
 
 Exemplary output:
 ```text
-The current weather in Tokyo is mainly clear, with a temperature of 11.5°C. The relative humidity is at 82%, and the dew point is at 8.5°C. There is a wind blowing from the south at 6.8 km/h, with gusts up to 13.7 km/h. The atmospheric pressure is 1017.1 hPa, and there is 21% cloud cover. The visibility is 24.1 km.
+The current weather in Tokyo is overcast with a temperature of 9.4°C (feels like 6.4°C). The relative humidity is at 42%, and the dew point is at -2.9°C. The wind is blowing from the NE at 3.6 km/h, with gusts up to 24.8 km/h. The atmospheric pressure is 1018.9 hPa, and there is 84% cloud cover. Visibility is 24.1 km.
 ```
 :::
 ::::
@@ -208,7 +208,7 @@ python openai_agent.py --query "What is the current weather in Tokyo?" --model O
 
 Exemplary output:
 ```text
-The current weather in Tokyo is clear sky with a temperature of 8.3°C (feels like 5.0°C). The relative humidity is at 50%, and the dew point is -1.5°C. Wind is blowing from the NNW at 6.8 km/h with gusts up to 21.2 km/h. The atmospheric pressure is 1021.5 hPa with 0% cloud cover, and visibility is 24.1 km.
+The current weather in Tokyo is overcast with a temperature of 9.4°C (feels like 6.4°C). The relative humidity is at 42%, and the dew point is -2.9°C. Wind is blowing from the northeast at 3.6 km/h with gusts up to 24.8 km/h. The atmospheric pressure is 1018.9 hPa, with 84% cloud cover and visibility of 24.1 km.
 ```
 :::
 :::{tab-item} Qwen3-4B
@@ -227,7 +227,7 @@ python openai_agent.py --query "What is the current weather in Tokyo?" --model O
 
 Exemplary output:
 ```text
-The current weather in Tokyo is clear with a temperature of 8.3°C (feels like 5.0°C). The relative humidity is at 50%, and the dew point is at -1.5°C. Winds are coming from the NNW at 6.8 km/h with gusts up to 21.2 km/h. The atmospheric pressure is 1021.5 hPa with 0% cloud cover. Visibility is 24.1 km.
+The current weather in Tokyo is overcast with a temperature of 9.4°C (feels like 6.4°C). The relative humidity is at 42%, and the dew point is at -2.9°C. Wind is blowing from the NE at 3.6 km/h with gusts up to 24.8 km/h. The atmospheric pressure is 1018.9 hPa with 84% cloud cover. Visibility is 24.1 km.
 ```
 :::
 :::{tab-item} Phi-4-mini-instruct
@@ -246,7 +246,7 @@ python openai_agent.py --query "What is the current weather in Tokyo?" --model O
 
 Exemplary output:
 ```text
-The current weather in Tokyo is mostly clear with a temperature of 12.4°C. The relative humidity is at 68%, and the dew point is at 6.7°C. Winds are coming from the SSE at a speed of 5.3 km/h, with gusts reaching up to 25.2 km/h. The atmospheric pressure is 1017.9 hPa, and there is a 23% cloud cover. Visibility is good at 24.1 km.
+The current weather in Tokyo is as follows: The sky is mostly covered with clouds, and the temperature is 9.4°C, which feels like 6.4°C due to the humidity. The air is relatively dry with a humidity level of 42%, and the dew point is -2.9°C, indicating that the air is not very moist. The wind is coming from the northeast at a gentle pace of 3.6 km/h, but it can get quite gusty, reaching speeds of up to 24.8 km/h. The atmospheric pressure is 1018.9 hPa, which is slightly lower than average, and the sky is mostly cloudy with 84% cloud cover. Visibility is good at 24.1 km, so you can see quite a distance.
 ```
 :::
 :::{tab-item} Qwen3-30B-A3B-Instruct-2507
@@ -265,18 +265,7 @@ python openai_agent.py --query "What is the current weather in Tokyo?" --model O
 
 Exemplary output:
 ```text
-The current weather in Tokyo is as follows:
-- **Condition**: Mainly clear
-- **Temperature**: 11.8°C
-- **Relative Humidity**: 78%
-- **Dew Point**: 8.1°C
-- **Wind**: Blowing from the SSE at 6.4 km/h with gusts up to 9.7 km/h
-- **Atmospheric Pressure**: 1017.5 hPa
-- **Cloud Cover**: 22%
-- **Visibility**: 24.1 km
-- **UV Index**: Not specified
-
-It's a relatively pleasant day with clear skies and mild temperatures.
+The current weather in Tokyo is overcast with a temperature of 9.4°C (feels like 6.4°C). The relative humidity is 42%, and the dew point is -2.9°C. Wind is blowing from the northeast at 3.6 km/h, with gusts up to 24.8 km/h. The atmospheric pressure is 1018.9 hPa, and there is 84% cloud cover. Visibility is 24.1 km.
 ```
 :::
 ::::
@@ -305,7 +294,7 @@ python openai_agent.py --query "What is the current weather in Tokyo?" --model O
 
 Exemplary output:
 ```text
-The current weather in Tokyo is mainly clear with a temperature of 11.7°C. The relative humidity is at 74%, and the dew point is 7.2°C. The wind is blowing from the southeast at 4.2 km/h, with gusts up to 22.7 km/h. The atmospheric pressure is 1018.0 hPa, and there is 44% cloud cover. Visibility is 24.1 km.
+The current weather in Tokyo is overcast with a temperature of 9.4°C (feels like 6.4°C). The relative humidity is at 42%, and the dew point is -2.9°C. Wind is blowing from the northeast at 3.6 km/h with gusts up to 24.8 km/h. The atmospheric pressure is 1018.9 hPa with 84% cloud cover, and visibility is 24.1 km.
 ```
 :::
 :::{tab-item} Qwen3-4B
@@ -324,7 +313,7 @@ python openai_agent.py --query "What is the current weather in Tokyo?" --model O
 
 Exemplary output:
 ```text
-The current weather in Tokyo is mainly clear. The temperature is 11.7°C, with a relative humidity of 74% and a dew point of 7.2°C. The wind is coming from the SSE at 4.2 km/h, with gusts up to 22.7 km/h. The atmospheric pressure is 1018.0 hPa, with 44% cloud cover. Visibility is 24.1 km.
+The current weather in Tokyo is overcast with a temperature of 9.4°C (feels like 6.4°C). The relative humidity is at 42%, and the dew point is at -2.9°C. Wind is blowing from the NE at 3.6 km/h with gusts up to 24.8 km/h. The atmospheric pressure is 1018.9 hPa with 84% cloud cover. Visibility is 24.1 km.
 ```
 :::
 :::{tab-item} Qwen3-30B-A3B-Instruct-2507-int4-ov
@@ -343,15 +332,7 @@ python openai_agent.py --query "What is the current weather in Tokyo?" --model O
 
 Exemplary output:
 ```text
-The current weather in Tokyo is as follows:
-- **Condition**: Mainly clear
-- **Temperature**: 11.7°C
-- **Relative Humidity**: 74%
-- **Dew Point**: 7.2°C
-- **Wind**: SSE at 4.2 km/h, with gusts up to 22.7 km/h
-- **Atmospheric Pressure**: 1018.0 hPa
-- **Cloud Cover**: 44%
-- **Visibility**: 24.1 km
+The current weather in Tokyo is overcast with a temperature of 9.4°C (feels like 6.4°C). The relative humidity is 42%, and the dew point is -2.9°C. Wind is blowing from the northeast at 3.6 km/h, with gusts up to 24.8 km/h. The atmospheric pressure is 1018.9 hPa, and there is 84% cloud cover. Visibility is 24.1 km.
 ```
 :::
 :::{tab-item} gpt-oss-20b
@@ -372,18 +353,18 @@ python openai_agent.py --query "What is the current weather in Tokyo?" --model O
 
 Exemplary output:
 ```text
-**Tokyo – Current Weather**
+**Tokyo Current Weather**
 
-- **Condition:** Mainly clear
-- **Temperature:** 11.7 °C
-- **Humidity:** 74 %
-- **Dew Point:** 7.2 °C
-- **Wind:** 4.2 km/h from the SSE, gusts up to 22.7 km/h
-- **Pressure:** 1018.0 hPa
-- **Cloud Cover:** 44 %
-- **Visibility:** 24.1 km
+- **Condition:** Overcast  
+- **Temperature:** 9.4°C (feels like 6.4°C)  
+- **Humidity:** 42%  
+- **Dew Point:** 2.9°C  
+- **Wind:** 3.6km/h from the NE, gusts up to 24.8km/h  
+- **Pressure:** 1018.9hPa  
+- **Cloud Cover:** 84%  
+- **Visibility:** 24.1km  
 
-Enjoy your day!
+Let me know if you'd like forecast details or anything else!
 ```
 :::
 ::::
@@ -411,7 +392,7 @@ python openai_agent.py --query "What is the current weather in Tokyo?" --model O
 
 Exemplary output:
 ```text
-The current weather in Tokyo is clear sky with a temperature of 8.3°C (feels like 5.0°C). The relative humidity is at 50%, and the dew point is at -1.5°C. The wind is blowing from the NNW at 6.8 km/h with gusts up to 21.2 km/h. The atmospheric pressure is 1021.5 hPa with 0% cloud cover, and the visibility is 24.1 km.
+The current weather in Tokyo is overcast with a temperature of 9.4°C (feels like 6.4°C). The relative humidity is at 42%, and the dew point is at -2.9°C. The wind is blowing from the NE at 3.6 km/h with gusts up to 24.8 km/h. The atmospheric pressure is 1018.9 hPa with 84% cloud cover, and the visibility is 24.1 km.
 ```
 :::
 :::{tab-item} Qwen3-4B
@@ -430,7 +411,7 @@ python openai_agent.py --query "What is the current weather in Tokyo?" --model F
 
 Exemplary output:
 ```text
-The current weather in Tokyo is clear sky with a temperature of 8.3°C (feels like 5.0°C). The relative humidity is at 50%, and the dew point is at -1.5°C. There is a wind blowing from the NNW at 6.8 km/h with gusts up to 21.2 km/h. The atmospheric pressure is 1021.5 hPa with 0% cloud cover. The visibility is 24.1 km.
+The current weather in Tokyo is overcast with a temperature of 9.4°C (feels like 6.4°C). The relative humidity is at 42%, and the dew point is at -2.9°C. The wind is blowing from the NE at 3.6 km/h with gusts up to 24.8 km/h. The atmospheric pressure is 1018.9 hPa with 84% cloud cover, and the visibility is 24.1 km.
 ```
 :::
 ::::
