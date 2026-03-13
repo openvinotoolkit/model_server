@@ -15,8 +15,10 @@
 // limitations under the License.
 //*****************************************************************************
 #pragma once
-#include <string>
+#include <filesystem>
 #include <memory>
+#include <string>
+#include <vector>
 
 #include <assert.h>
 #include <fcntl.h>
@@ -31,6 +33,7 @@
 
 namespace ovms {
 class Status;
+namespace fs = std::filesystem;
 
 /*
  * libgit2 options. 0 is the default value
@@ -62,5 +65,13 @@ protected:
     std::string GetRepositoryUrlWithPassword();
     bool CheckIfProxySet();
     Status RemoveReadonlyFileAttributeFromDir(const std::string& directoryPath);
+    Status CheckRepositoryStatus(bool checkUntracked);
 };
+
+void rtrimCrLfWhitespace(std::string& s);
+bool containsCaseInsensitive(const std::string& hay, const std::string& needle);
+bool readFirstThreeLines(const fs::path& p, std::vector<std::string>& outLines);
+bool fileHasLfsKeywordsFirst3Positional(const fs::path& p);
+fs::path makeRelativeToBase(const fs::path& path, const fs::path& base);
+std::vector<fs::path> findLfsLikeFiles(const std::string& directory, bool recursive = true);
 }  // namespace ovms
