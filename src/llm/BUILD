@@ -134,8 +134,8 @@ ovms_cc_library(
 
 ovms_cc_library(
     name = "io_processing_lfm2_tool_parser",
-    hdrs = ["io_processing/lfm2/lfm2_tool_parser.hpp"],
-    srcs = ["io_processing/lfm2/lfm2_tool_parser.cpp"],
+    hdrs = ["io_processing/lfm2/tool_parser.hpp"],
+    srcs = ["io_processing/lfm2/tool_parser.cpp"],
     deps = [
         "@com_github_tencent_rapidjson//:rapidjson",
         "//src:libovmslogging",
@@ -184,6 +184,7 @@ ovms_cc_library( # TODO split further so we don't have to recompile everything w
         ":partial_json_builder",
         ":io_processing_base_output_parser",
         ":io_processing_qwen3coder_tool_parser",
+        ":io_processing_lfm2_tool_parser",
         ":io_processing_utils",
         ":apis_tool_schema_wrapper",
     ],
