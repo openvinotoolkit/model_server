@@ -14,6 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 #include <atomic>
+#include <mutex>
 #include <string>
 
 #pragma warning(push)
@@ -27,6 +28,7 @@
 
 #include "../http_payload.hpp"
 #include "../logging.hpp"
+#include "../mediapipe_internal/graph_side_packets.hpp"
 #include "../profiler.hpp"
 #include "apis/openai_completions.hpp"
 #include "servable.hpp"
@@ -36,9 +38,11 @@ using namespace ovms;
 namespace mediapipe {
 
 const std::string LLM_SESSION_SIDE_PACKET_TAG = "LLM_NODE_RESOURCES";
+const std::string LLM_EXECUTION_CONTEXT_SIDE_PACKET_TAG = "LLM_NODE_EXECUTION_CONTEXTS";
 
 class HttpLLMCalculator : public CalculatorBase {
     std::shared_ptr<GenAiServable> servable;
+    std::shared_ptr<GenAiExecutionContextHolder> executionContextHolder;
     std::shared_ptr<GenAiServableExecutionContext> executionContext;
 
     static const std::string INPUT_TAG_NAME;
@@ -54,6 +58,9 @@ public:
         cc->Inputs().Tag(INPUT_TAG_NAME).Set<ovms::HttpPayload>();
         cc->Inputs().Tag(LOOPBACK_TAG_NAME).Set<bool>();
         cc->InputSidePackets().Tag(LLM_SESSION_SIDE_PACKET_TAG).Set<ovms::GenAiServableMap>();
+        if (cc->InputSidePackets().HasTag(LLM_EXECUTION_CONTEXT_SIDE_PACKET_TAG)) {
+            cc->InputSidePackets().Tag(LLM_EXECUTION_CONTEXT_SIDE_PACKET_TAG).Set<ovms::GenAiExecutionContextMap>();
+        }
         cc->Outputs().Tag(OUTPUT_TAG_NAME).Set<std::string>();
         cc->Outputs().Tag(LOOPBACK_TAG_NAME).Set<bool>();
         return absl::OkStatus();
@@ -72,7 +79,17 @@ public:
         auto it = servableMap.find(cc->NodeName());
         RET_CHECK(it != servableMap.end()) << "Could not find initialized LLM node named: " << cc->NodeName();
         this->servable = it->second;
-        this->executionContext = servable->createExecutionContext();
+
+        if (cc->InputSidePackets().HasTag(LLM_EXECUTION_CONTEXT_SIDE_PACKET_TAG) && !cc->InputSidePackets().Tag(LLM_EXECUTION_CONTEXT_SIDE_PACKET_TAG).IsEmpty()) {
+            ovms::GenAiExecutionContextMap executionContextMap = cc->InputSidePackets().Tag(LLM_EXECUTION_CONTEXT_SIDE_PACKET_TAG).Get<ovms::GenAiExecutionContextMap>();
+            auto contextIt = executionContextMap.find(cc->NodeName());
+            RET_CHECK(contextIt != executionContextMap.end()) << "Could not find LLM execution context holder for node named: " << cc->NodeName();
+            this->executionContextHolder = contextIt->second;
+        }
+
+        if (!this->executionContextHolder) {
+            this->executionContext = servable->createExecutionContext();
+        }
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "LLMCalculator [Node: {}] Open end", cc->NodeName());
         return absl::OkStatus();
     }
@@ -80,6 +97,12 @@ public:
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "LLMCalculator  [Node: {}] Process start", cc->NodeName());
         OVMS_PROFILE_FUNCTION();
         RET_CHECK(this->servable != nullptr);
+
+        if (this->executionContextHolder) {
+            std::lock_guard<std::mutex> lock(this->executionContextHolder->mutex);
+            this->executionContext = this->executionContextHolder->executionContext;
+        }
+        RET_CHECK(this->executionContext != nullptr) << "LLM execution context not initialized for node: " << cc->NodeName();
 
         // For cases where MediaPipe decides to trigger Process() when there are no inputs
         if (cc->Inputs().Tag(INPUT_TAG_NAME).IsEmpty() && cc->Inputs().Tag(LOOPBACK_TAG_NAME).IsEmpty()) {

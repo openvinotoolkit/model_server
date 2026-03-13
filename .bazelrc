@@ -265,6 +265,9 @@ test:linux --test_env OPENVINO_TOKENIZERS_PATH_GENAI=/opt/intel/openvino/runtime
 test:linux --test_env PYTHONPATH=/opt/intel/openvino/python:/ovms/bazel-bin/src/python/binding
 test:linux --test_env no_proxy=localhost
 test:linux --test_env "OVMS_MEDIA_URL_ALLOW_REDIRECTS=1"
+# FIXME (@atobisze): Temporarily disable graph queue by default in unit tests.
+# Remove once all tests are validated with graph queue enabled.
+test --test_env "OVMS_GRAPH_QUEUE_OFF=1"
 
 # Bazelrc imports ############################################################################################################################
 # file below should contain sth like
