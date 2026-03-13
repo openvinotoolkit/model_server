@@ -210,6 +210,21 @@ Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiSe
             properties->schedulerConfig, properties->device,
             properties->pluginConfig, properties->tokenizerPluginConfig);
         properties->tokenizer = properties->pipeline->get_tokenizer();
+
+        // Override chat template from chat_template.jinja file if present in model directory
+        std::filesystem::path chatTemplateJinjaPath = std::filesystem::path(parsedModelsPath) / "chat_template.jinja";
+        if (std::filesystem::exists(chatTemplateJinjaPath)) {
+            std::ifstream chatTemplateFile(chatTemplateJinjaPath);
+            if (chatTemplateFile.is_open()) {
+                std::string chatTemplateContent((std::istreambuf_iterator<char>(chatTemplateFile)),
+                    std::istreambuf_iterator<char>());
+                if (!chatTemplateContent.empty()) {
+                    properties->tokenizer.set_chat_template(chatTemplateContent);
+                }
+            } else {
+                SPDLOG_LOGGER_WARN(llm_calculator_logger, "Failed to open chat template file: {}", chatTemplateJinjaPath.string());
+            }
+        }
     } catch (const std::exception& e) {
         SPDLOG_ERROR("Error during llm node initialization for models_path: {} exception: {}", parsedModelsPath, e.what());
         return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
