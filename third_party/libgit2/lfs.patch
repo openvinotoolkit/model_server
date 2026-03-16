@@ -444,7 +444,7 @@ index 58cb4b424..00ddee9f3 100644
  	git_writestream **out,
 diff --git a/src/libgit2/lfs_filter.c b/src/libgit2/lfs_filter.c
 new file mode 100644
-index 000000000..bcbae8bc5
+index 000000000..68371e058
 --- /dev/null
 +++ b/src/libgit2/lfs_filter.c
 @@ -0,0 +1,1185 @@
@@ -504,9 +504,8 @@ index 000000000..bcbae8bc5
 +        int *out_value)
 +{
 +	char *end;
-+	unsigned long long val;
-+	unsigned int ival;
-+	end = NULL;
++	long long val;
++	int ival;
 +	const char *s = getenv(env_name);
 +	if (!s || !*s) {
 +		*out_value = default_value;
@@ -518,6 +517,7 @@ index 000000000..bcbae8bc5
 +		s++;
 +
 +	errno = 0;
++	end = NULL;
 +	val = strtoull(s, &end, 10);
 +
 +	if (errno == ERANGE || end == s) {
@@ -564,7 +564,6 @@ index 000000000..bcbae8bc5
 +	char *end;
 +	unsigned long long val;
 +	unsigned int uval;
-+	end = NULL;
 +	const char *s = getenv(env_name);
 +	if (!s || !*s) {
 +		*out_value = default_value;
@@ -575,6 +574,7 @@ index 000000000..bcbae8bc5
 +		s++;
 +
 +	errno = 0;
++	end = NULL;
 +	val = strtoull(s, &end, 10);
 +
 +	if (errno == ERANGE || end == s) {
@@ -669,7 +669,6 @@ index 000000000..bcbae8bc5
 +	bool is_download;
 +} lfs_attrs;
 +
-+
 +/*
 + * Frees heap-allocated strings referenced by the struct fields.
 + * Ownership assumption:
@@ -678,7 +677,7 @@ index 000000000..bcbae8bc5
 + *   - If any field is borrowed (e.g., string literal or external buffer), set
 + * it to NULL before calling this function to avoid invalid free().
 + */
-+static inline void lfs_attrs_free(lfs_attrs *a)
++static void lfs_attrs_free(lfs_attrs *a)
 +{
 +	if (!a)
 +		return;
@@ -711,7 +710,7 @@ index 000000000..bcbae8bc5
 +}
 +
 +/* Use this if the struct itself was heap-allocated. */
-+static inline void lfs_attrs_delete(lfs_attrs *a)
++static void lfs_attrs_delete(lfs_attrs *a)
 +{
 +	if (!a)
 +		return;
@@ -840,7 +839,7 @@ index 000000000..bcbae8bc5
 +
 +	/* 2) Stream the payload in chunks — hash *only* the file bytes. */
 +	CHUNK = 4 * 1024 * 1024; /* 4 MiB */
-+	p = (const unsigned char *)input->ptr;
++	p = (unsigned char *)input->ptr;
 +	remaining = input->size;
 +
 +	while (remaining > 0) {
@@ -1148,6 +1147,7 @@ index 000000000..bcbae8bc5
 +	time_t currentTime = time(NULL);
 +	bool shouldPrintDueToTime = false;
 +	GIT_UNUSED(ulnow);
++	GIT_UNUSED(ultotal);
 +	if (dlnow == 0) {
 +		pcs->started_download = time(NULL);
 +		pcs->last_print_time = time(NULL);
@@ -1295,8 +1295,8 @@ index 000000000..bcbae8bc5
 +        unsigned int interval_seconds)
 +{
 +	CURLcode res = CURLE_OK;
-+
-+	for (int attempt = 1; attempt <= max_retries; ++attempt) {
++	int attempt;
++	for (attempt = 1; attempt <= max_retries; ++attempt) {
 +		res = curl_resume_url_execute(dl_curl, ftpfile);
 +
 +		if (res == CURLE_OK) {
