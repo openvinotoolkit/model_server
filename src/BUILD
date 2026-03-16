@@ -2204,6 +2204,12 @@ cc_binary(
             "//src/python/binding:pyovms.so",
         ],
         "//:disable_python": []
+    }) + select({
+        "//:espeak_on": [
+            "//third_party:espeak_ng",
+            "//third_party:espeak_ng_data",
+        ],
+        "//:espeak_off": [],
     }),
     # linkstatic = False,  # Use for dynamic linking when necessary
 )

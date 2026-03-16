@@ -43,7 +43,16 @@ void TextToSpeechGraphCLIParser::createOptions() {
         ("num_streams",
             "The number of parallel execution streams to use for the model. Use at least 2 on 2 socket CPU systems.",
             cxxopts::value<uint32_t>()->default_value("1"),
-            "NUM_STREAMS");
+            "NUM_STREAMS")
+        ("model_type",
+            "Type of the source TTS model: speecht5 (default) or kokoro.",
+            cxxopts::value<std::string>()->default_value("speecht5"),
+            "MODEL_TYPE")
+        ("language",
+            "Default language code passed to the TTS calculator (e.g. en-us, zh). Used by kokoro.",
+            cxxopts::value<std::string>(),
+            "LANGUAGE");
+    // clang-format on
 }
 
 void TextToSpeechGraphCLIParser::printHelp() {
@@ -64,7 +73,7 @@ std::vector<std::string> TextToSpeechGraphCLIParser::parse(const std::vector<std
     const char* const* args = cStrArray.data();
     result = std::make_unique<cxxopts::ParseResult>(options->parse(cStrArray.size(), args));
 
-    return  result->unmatched();
+    return result->unmatched();
 }
 
 void TextToSpeechGraphCLIParser::prepare(OvmsServerMode serverMode, HFSettingsImpl& hfSettings, const std::string& modelName) {
@@ -82,6 +91,14 @@ void TextToSpeechGraphCLIParser::prepare(OvmsServerMode serverMode, HFSettingsIm
         }
     } else {
         hfSettings.exportSettings.pluginConfig.numStreams = result->operator[]("num_streams").as<uint32_t>();
+        const std::string modelType = result->operator[]("model_type").as<std::string>();
+        if (modelType != "speecht5" && modelType != "kokoro") {
+            throw std::invalid_argument("--model_type must be one of: speecht5, kokoro");
+        }
+        hfSettings.exportSettings.modelType = modelType;
+        if (result->count("language")) {
+            textToSpeechGraphSettings.language = result->operator[]("language").as<std::string>();
+        }
     }
     hfSettings.graphSettings = std::move(textToSpeechGraphSettings);
 }

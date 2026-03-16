@@ -40,4 +40,6 @@ message T2sCalculatorOptions {
       required string path = 2;
     }
     repeated SpeakerEmbeddings voices = 4;
+    optional string language = 5 [default = "en-us"];
+    optional float speed = 6 [default = 1.0];
 }

@@ -16,10 +16,12 @@
 #include "graph_export.hpp"
 
 #include <algorithm>
+#include <filesystem>
 #include <fstream>
 #include <sstream>
 #include <string>
 #include <utility>
+#include <vector>
 
 #pragma warning(push)
 #pragma warning(disable : 6313)
@@ -328,6 +330,7 @@ static Status createTextToSpeechGraphTemplate(const std::string& directoryPath, 
         SPDLOG_ERROR("Graph options not initialized for speech generation.");
         return StatusCode::INTERNAL_ERROR;
     }
+    auto& graphSettings = std::get<TextToSpeechGraphSettingsImpl>(hfSettings.graphSettings);
     auto& ggufFilename = hfSettings.ggufFilename;
     auto& exportSettings = hfSettings.exportSettings;
 
@@ -336,6 +339,24 @@ static Status createTextToSpeechGraphTemplate(const std::string& directoryPath, 
     std::string modelsPath = constructModelsPath(exportSettings.modelPath, ggufFilename);
     SPDLOG_TRACE("modelsPath: {}, directoryPath: {}, ggufFilename: {}", modelsPath, directoryPath, ggufFilename.value_or("std::nullopt"));
     GET_PLUGIN_CONFIG_OPT_OR_FAIL_AND_RETURN(exportSettings);
+
+    // Enumerate kokoro speaker embeddings dumped by optimum-cli to <dir>/voices/*.bin.
+    std::vector<std::string> voiceNames;
+    if (exportSettings.modelType == "kokoro") {
+        std::filesystem::path voicesDir = std::filesystem::path(directoryPath) / "voices";
+        std::error_code ec;
+        if (std::filesystem::is_directory(voicesDir, ec)) {
+            for (const auto& entry : std::filesystem::directory_iterator(voicesDir, ec)) {
+                if (entry.is_regular_file() && entry.path().extension() == ".bin") {
+                    voiceNames.push_back(entry.path().stem().string());
+                }
+            }
+            std::sort(voiceNames.begin(), voiceNames.end());
+        } else {
+            SPDLOG_WARN("Kokoro voices directory not found at {}", voicesDir.string());
+        }
+    }
+
     // clang-format off
     oss << R"(
 input_stream: "HTTP_REQUEST_PAYLOAD:input"
@@ -355,7 +376,24 @@ node {
             )";
     if (pluginConfigOpt.has_value()) {
         oss << R"(plugin_config: ')" << pluginConfigOpt.value() << R"('
-        )";
+            )";
+    }
+    if (graphSettings.language.has_value()) {
+        oss << R"(language: ")" << graphSettings.language.value() << R"("
+            )";
+    }
+    if (!voiceNames.empty()) {
+        oss << R"(voices: [)";
+        for (size_t i = 0; i < voiceNames.size(); ++i) {
+            oss << R"(
+                { name: ")" << voiceNames[i] << R"(", path: "./voices/)" << voiceNames[i] << R"(.bin" })";
+            if (i + 1 < voiceNames.size()) {
+                oss << ",";
+            }
+        }
+        oss << R"(
+            ]
+            )";
     }
     oss << R"(}
     }
