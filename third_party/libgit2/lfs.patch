@@ -444,10 +444,10 @@ index 58cb4b424..00ddee9f3 100644
  	git_writestream **out,
 diff --git a/src/libgit2/lfs_filter.c b/src/libgit2/lfs_filter.c
 new file mode 100644
-index 000000000..bb2d49082
+index 000000000..84796d4b0
 --- /dev/null
 +++ b/src/libgit2/lfs_filter.c
-@@ -0,0 +1,1136 @@
+@@ -0,0 +1,1151 @@
 +﻿/*
 +/ Copyright 2025 Intel Corporation
 +/
@@ -494,68 +494,6 @@ index 000000000..bb2d49082
 +static int g_lfs_resume_attempts = 5; /* <-- make configurable */
 +static unsigned int g_lfs_resume_interval_secs = 10; /* <-- make configurable */
 +
-+/* Initialize globals from env exactly once */
-+static void lfs_resume_env_init(void)
-+{
-+	parse_env_nonneg_int(
-+	        "GIT_LFS_RESUME_ATTEMPTS", LFS_RESUME_ATTEMPTS_DEFAULT, 0,
-+	        LFS_RESUME_ATTEMPTS_MAX, &g_lfs_resume_attempts);
-+
-+	parse_env_nonneg_uint(
-+	        "GIT_LFS_RESUME_INTERVAL", LFS_RESUME_INTERVAL_DEFAULT, 0,
-+	        LFS_RESUME_INTERVAL_MAX, &g_lfs_resume_interval_secs);
-+
-+	/* log resolved config */
-+	fprintf(stderr, "[INFO] LFS resume: attempts=%d interval=%u s\n",
-+	        g_lfs_resume_attempts, g_lfs_resume_interval_secs);
-+}
-+
-+#ifdef _WIN32
-+#include <windows.h>
-+#define fseeko _fseeki64
-+#define ftello _ftelli64
-+static void sleep_seconds(unsigned int seconds)
-+{
-+	Sleep(seconds * 1000);
-+}
-+
-+#define LFS_ONCE_INIT INIT_ONCE_STATIC_INIT
-+static INIT_ONCE lfs_once = LFS_ONCE_INIT;
-+static BOOL CALLBACK lfs_once_cb_win(PINIT_ONCE once, PVOID param, PVOID *ctx)
-+{
-+	(void)once;
-+	(void)param;
-+	(void)ctx;
-+	lfs_resume_env_init();
-+	return TRUE;
-+}
-+#elif defined(__ANDROID__)
-+// Android may require _FILE_OFFSET_BITS=64 and proper headers
-+#else
-+// POSIX systems (Linux, macOS)
-+#include <unistd.h>
-+#include<pthread.h>
-+static pthread_once_t lfs_once = PTHREAD_ONCE_INIT;
-+static void lfs_once_cb_posix(void)
-+{
-+	lfs_resume_env_init();
-+}
-+static void sleep_seconds(unsigned int seconds)
-+{
-+	sleep(seconds);
-+}
-+#endif
-+
-+typedef struct lfs_attrs
-+{
-+	const char *path;
-+	const char* full_path;
-+	const char* workdir;
-+	const char *lfs_oid;
-+	const char *lfs_size;
-+	const char *url;
-+	bool is_download;
-+} lfs_attrs;
 +
 +/* Parse a non-negative integer from env, with bounds and default fallback */
 +static int parse_env_nonneg_int(
@@ -620,7 +558,12 @@ index 000000000..bb2d49082
 +        unsigned int max_value,
 +        unsigned int *out_value)
 +{
-+	const char *s = getenv(env_name);
++	char *end;
++	unsigned long long val;
++	unsigned int uval;
++	const char *s;
++	end = NULL;
++	s = getenv(env_name);
 +	if (!s || !*s) {
 +		*out_value = default_value;
 +		return 0;
@@ -630,8 +573,7 @@ index 000000000..bb2d49082
 +		s++;
 +
 +	errno = 0;
-+	char *end = NULL;
-+	unsigned long long val = strtoull(s, &end, 10);
++	val = strtoull(s, &end, 10);
 +
 +	if (errno == ERANGE || end == s) {
 +		fprintf(stderr, "[WARN] %s: invalid number, using default=%u\n",
@@ -652,7 +594,7 @@ index 000000000..bb2d49082
 +	if (val > (unsigned long long)UINT_MAX)
 +		val = (unsigned long long)UINT_MAX;
 +
-+	unsigned int uval = (unsigned int)val;
++	uval = (unsigned int)val;
 +	if (uval < min_value)
 +		uval = min_value;
 +	if (uval > max_value)
@@ -662,16 +604,80 @@ index 000000000..bb2d49082
 +	return 0;
 +}
 +
++/* Initialize globals from env exactly once */
++static void lfs_resume_env_init(void)
++{
++	parse_env_nonneg_int(
++	        "GIT_LFS_RESUME_ATTEMPTS", LFS_RESUME_ATTEMPTS_DEFAULT, 0,
++	        LFS_RESUME_ATTEMPTS_MAX, &g_lfs_resume_attempts);
++
++	parse_env_nonneg_uint(
++	        "GIT_LFS_RESUME_INTERVAL", LFS_RESUME_INTERVAL_DEFAULT, 0,
++	        LFS_RESUME_INTERVAL_MAX, &g_lfs_resume_interval_secs);
++
++	/* log resolved config */
++	fprintf(stderr, "[INFO] LFS resume: attempts=%d interval=%u s\n",
++	        g_lfs_resume_attempts, g_lfs_resume_interval_secs);
++}
++
++#ifdef _WIN32
++#include <windows.h>
++#define fseeko _fseeki64
++#define ftello _ftelli64
++static void sleep_seconds(unsigned int seconds)
++{
++	Sleep(seconds * 1000);
++}
++
++#define LFS_ONCE_INIT INIT_ONCE_STATIC_INIT
++static INIT_ONCE lfs_once = LFS_ONCE_INIT;
++static BOOL CALLBACK lfs_once_cb_win(PINIT_ONCE once, PVOID param, PVOID *ctx)
++{
++	(void)once;
++	(void)param;
++	(void)ctx;
++	lfs_resume_env_init();
++	return TRUE;
++}
++#elif defined(__ANDROID__)
++/* Android may require _FILE_OFFSET_BITS = 64 and proper headers */
++#else
++/* POSIX systems (Linux, macOS) */
++#include <unistd.h>
++#include<pthread.h>
++static pthread_once_t lfs_once = PTHREAD_ONCE_INIT;
++static void lfs_once_cb_posix(void)
++{
++	lfs_resume_env_init();
++}
++static void sleep_seconds(unsigned int seconds)
++{
++	sleep(seconds);
++}
++#endif
++
++typedef struct lfs_attrs
++{
++	const char *path;
++	const char* full_path;
++	const char* workdir;
++	const char *lfs_oid;
++	const char *lfs_size;
++	const char *url;
++	bool is_download;
++} lfs_attrs;
++
 +static size_t get_digit(const char *buffer)
 +{
 +	char *endptr;
 +	errno = 0;
++	size_t number;
 +	if (buffer == NULL) {
 +		fprintf(stderr, "\n[ERROR] get_digit on NULL\n");
 +		return 0;
 +	}
 +
-+	size_t number = strtoull(buffer, &endptr, 10);
++	number = strtoull(buffer, &endptr, 10);
 +
 +	if (errno == ERANGE) {
 +	    fprintf(stderr, "\n[ERROR] Conversion error\n");
@@ -695,7 +701,7 @@ index 000000000..bb2d49082
 + *
 + * Note: Caller is responsible for freeing the returned buffer.
 + */
-+char *append_cstr_to_buffer(const char *existingBuffer, const char *suffix)
++static char *append_cstr_to_buffer(const char *existingBuffer, const char *suffix)
 +{
 +	if (existingBuffer == NULL || suffix == NULL) {
 +		return NULL;
@@ -720,19 +726,20 @@ index 000000000..bb2d49082
 +	return newBuffer;
 +}
 +
-+int get_lfs_info_match(
++static int get_lfs_info_match(
 +        git_str *output,
 +        const char *regexp)
 +{
 +	int result;
-+	git_regexp preg = GIT_REGEX_INIT;
++	git_regexp preg;
++	size_t i;
++	git_regmatch pmatch[2];
++
++	preg = GIT_REGEX_INIT;
 +	if ((result = git_regexp_compile(&preg, regexp, 0)) < 0) {
 +		git_regexp_dispose(&preg);
 +		return result;
 +	}
-+
-+	size_t i;
-+	git_regmatch pmatch[2];
 +
 +	if (!git_regexp_search(&preg, output->ptr, 2, pmatch)) {
 +		/* use pmatch data to trim line data */
@@ -748,7 +755,7 @@ index 000000000..bb2d49082
 +	return -1;
 +}
 +
-+void print_src_oid(const git_filter_source *src)
++static void print_src_oid(const git_filter_source *src)
 +{
 +	const git_oid *oid = git_filter_source_id(src);
 +
@@ -759,7 +766,7 @@ index 000000000..bb2d49082
 +	}
 +}
 +
-+int git_oid_sha256_from_git_str_blob(
++static int git_oid_sha256_from_git_str_blob(
 +        git_oid *out,
 +        const struct git_str *input,
 +        char *pointer_line,
@@ -767,6 +774,9 @@ index 000000000..bb2d49082
 +{
 +	int error = -1;
 +	git_hash_ctx ctx;
++	size_t CHUNK;
++	unsigned char *p;
++	size_t remaining;
 +
 +	if (!out || !input || !input->ptr) {
 +		return -1;
@@ -784,9 +794,9 @@ index 000000000..bb2d49082
 +	}
 +
 +	/* 2) Stream the payload in chunks — hash *only* the file bytes. */
-+	const size_t CHUNK = 4 * 1024 * 1024; /* 4 MiB */
-+	const unsigned char *p = (const unsigned char *)input->ptr;
-+	size_t remaining = input->size;
++	CHUNK = 4 * 1024 * 1024; /* 4 MiB */
++	*p = (const unsigned char *)input->ptr;
++	remaining = input->size;
 +
 +	while (remaining > 0) {
 +		size_t n = remaining > CHUNK ? CHUNK : remaining;
@@ -832,6 +842,7 @@ index 000000000..bb2d49082
 +	void **payload)
 +{
 +	int error = 0;
++	git_oid lfs_oid;
 +	/* Init the lfs attrs to indicate git lfs clean, currently only diff support no upload of lfs file supported */
 +	struct lfs_attrs la = { NULL, NULL, NULL, NULL, NULL, NULL, false };
 +	*payload = git__malloc(sizeof(la));
@@ -847,7 +858,6 @@ index 000000000..bb2d49082
 +	}
 +
 +	/* Use lib git oid to get lfs sha256 */
-+	git_oid lfs_oid;
 +	lfs_oid.type = GIT_OID_SHA256;
 +	char line[80]; /* 75+ is enough */
 +	if (git_oid_sha256_from_git_str_blob(&lfs_oid, from, line, sizeof(line)) < 0) {
@@ -893,6 +903,17 @@ index 000000000..bb2d49082
 +{
 +	git_str lfs_oid = GIT_STR_INIT;
 +	git_str lfs_size = GIT_STR_INIT;
++	git_str full_path = GIT_STR_INIT;
++	const char *obj_regexp = "\noid sha256:(.*)\n";
++	const char *size_regexp = "\nsize (.*)\n";
++	git_repository *repo = git_filter_source_repo(src);
++	const char *path = git_filter_source_path(src);
++	const char *workdir = git_repository_workdir(repo);
++	/* Setup memory for payload struct ownership */
++	char *full_path_dup;
++	char *path_dup = git__strdup(path);
++	char *workdir_dup = git__strdup(workdir);
++	char *url_dup = git__strdup(repo->url);
 +
 +	lfs_oid.size = from->size;
 +	lfs_oid.asize = from->asize;
@@ -900,9 +921,6 @@ index 000000000..bb2d49082
 +	lfs_size.size = from->size;
 +	lfs_size.asize = from->asize;
 +	lfs_size.ptr = git__strdup(from->ptr);
-+
-+	const char *obj_regexp = "\noid sha256:(.*)\n";
-+	const char *size_regexp = "\nsize (.*)\n";
 +
 +	if (get_lfs_info_match(&lfs_oid, obj_regexp) < 0) {
 +		fprintf(stderr,"\n[ERROR] failure, cannot find lfs oid in: %s\n",
@@ -917,24 +935,14 @@ index 000000000..bb2d49082
 +		return -1;
 +	}
 +
-+	git_repository *repo = git_filter_source_repo(src);
-+	const char *path = git_filter_source_path(src);
-+
-+	git_str full_path = GIT_STR_INIT;
 +	if (git_repository_workdir_path(&full_path, repo, path) < 0) {
 +		fprintf(stderr,
 +		        "\n[ERROR] failure, cannot get repository path: %s\n",
 +		        path);
 +		return -1;
 +	}
-+
-+	const char *workdir = git_repository_workdir(repo);
-+	/* Setup memory for payload struct ownership */
-+	char *full_path_dup = git__strdup(full_path.ptr);
++	full_path_dup = git__strdup(full_path.ptr);
 +	git_str_dispose(&full_path);
-+	char *path_dup = git__strdup(path);
-+	char *workdir_dup = git__strdup(workdir);
-+	char *url_dup = git__strdup(repo->url);
 +
 +	struct lfs_attrs la = { path_dup, full_path_dup, workdir_dup,
 +		                lfs_oid.ptr, lfs_size.ptr, url_dup,
@@ -972,6 +980,9 @@ index 000000000..bb2d49082
 +        const git_filter_source *src,
 +        const char **attr_values)
 +{
++	GIT_UNUSED(self);
++	GIT_UNUSED(payload);
++	GIT_UNUSED(attr_values);
 +	const char *value;
 +
 +	git_repository *repo = git_filter_source_repo(src);
@@ -987,8 +998,6 @@ index 000000000..bb2d49082
 +	} else {
 +		return GIT_PASSTHROUGH;
 +	}
-+
-+	GIT_UNUSED(self);
 +
 +	return 0;
 +}
@@ -1026,9 +1035,9 @@ index 000000000..bb2d49082
 +	double recv_len = (double)received_size;
 +	uint64_t elapsed = (uint64_t)elapsed_time;
 +	double rate;
-+	rate = elapsed ? recv_len / elapsed : received_size;
-+
 +	size_t rate_unit_idx = 0;
++
++	rate = elapsed ? recv_len / elapsed : received_size;
 +	while (rate > 1000 && sizeUnits[rate_unit_idx + 1]) {
 +		rate /= 1000.0;
 +		rate_unit_idx++;
@@ -1037,37 +1046,40 @@ index 000000000..bb2d49082
 +	printf(" [%.2f %s/s] ", rate, sizeUnits[rate_unit_idx]);
 +}
 +
-+void print_progress(
++static void print_progress(
 +        size_t count,
 +        size_t max,
 +        bool first_run,
 +        size_t elapsed_time)
 +{
++	float progress;
++	int i, bar_length, bar_width;
++	size_t totalSizeUnitId;
++	double totalSize;
 +	if (max == 0) {
-+		// Print received bytes + rate without percentage bar
++		/* Print received bytes + rate without percentage bar */
 +		printf("\rProgress: [unknown size] ");
 +		print_download_speed_info(count, elapsed_time);
 +		fflush(stdout);
 +		return;
 +	}
 +
-+	float progress = (float)count / max;
++	progress = (float)count / max;
 +	if (!first_run && progress < 0.01 && count > 0)
 +		return;
 +
-+	const int bar_width = 50;
-+	int bar_length = progress * bar_width;
++	bar_width = 50;
++	bar_length = progress * bar_width;
 +
 +	printf("\rProgress: [");
-+	int i;
 +	for (i = 0; i < bar_length; ++i) {
 +		printf("#");
 +	}
 +	for (i = bar_length; i < bar_width; ++i) {
 +		printf(" ");
 +	}
-+	size_t totalSizeUnitId = 0;
-+	double totalSize = max;
++	totalSizeUnitId = 0;
++	totalSize = max;
 +	while (totalSize > 1000 && sizeUnits[totalSizeUnitId + 1]) {
 +		totalSize /= 1000.0;
 +		totalSizeUnitId++;
@@ -1080,7 +1092,7 @@ index 000000000..bb2d49082
 +	fflush(stdout);
 +}
 +
-+int progress_callback(
++static int progress_callback(
 +        void *clientp,
 +        curl_off_t dltotal,
 +        curl_off_t dlnow,
@@ -1122,6 +1134,7 @@ index 000000000..bb2d49082
 +static size_t file_write_callback(void *buffer, size_t size, size_t nmemb, void *stream)
 +{
 +	struct FtpFile *out = (struct FtpFile *)stream;
++	size_t written_items;
 +	if (!out->stream) {
 +		/* open file for writing */
 +		out->stream = fopen(out->filename, "wb");
@@ -1132,8 +1145,8 @@ index 000000000..bb2d49082
 +		}
 +	}
 +
-+	size_t written_items = fwrite(buffer, size, nmemb, out->stream);
-+	return written_items * size; // return BYTES written
++	written_items = fwrite(buffer, size, nmemb, out->stream);
++	return written_items * size; /* return BYTES written */
 +}
 +
 +static size_t write_callback(void *ptr, size_t size, size_t nmemb, void *userp)
@@ -1172,6 +1185,56 @@ index 000000000..bb2d49082
 +		status = setopt;  \
 +	}
 +
++static int curl_resume_url_execute(CURL *dl_curl, struct FtpFile *ftpfile)
++{
++	/* This helper check does not work but the resume mechanism still works
++	curl_off_t resume_from = 0;
++	curl_easy_getinfo(
++	        dl_curl, CURLINFO_CONTENT_LENGTH_DOWNLOAD_T, &resume_from);
++
++	if (resume_from == -1) {
++	        fprintf(stderr,
++	                "\n[ERROR] curl_easy_perform() failed with transferred a
++	partial file error and server does not support range/resume.\n"); } else
++	{
++	*/
++	CURLcode res;
++	curl_off_t offset = 0;
++	printf("\n[INFO] curl_easy_perform() trying to resume file download\n");
++	{
++		FILE *f = fopen(ftpfile->filename, "ab+");
++		if (f) {
++			if (fseeko(f, 0, SEEK_END) == 0) {
++				off_t pos = ftello(f);
++				if (pos > 0)
++					offset = (curl_off_t)pos;
++			}
++			fclose(f);
++		}
++	}
++
++	/* Tell libcurl to resume */
++	curl_easy_setopt(dl_curl, CURLOPT_RESUME_FROM_LARGE, offset);
++	/* Perform the request, res gets the return code */
++
++	/* Perform the request, res gets the return code */
++	res = curl_easy_perform(dl_curl);
++
++	/* Validate that server honored Range (206) when offset > 0 */
++	if (res == CURLE_OK && offset > 0) {
++		long http_code = 0;
++		curl_easy_getinfo(dl_curl, CURLINFO_RESPONSE_CODE, &http_code);
++		if (http_code != 206) {
++			/* Server did not honor resume — caller may choose to
++			 * retry or restart */
++			fprintf(stderr,
++			        "\n[WARN] Server did not return 206 for resumed request (HTTP %ld)\n",
++			        http_code);
++		}
++	}
++
++	return res;
++}
 +
 +/* Repeatedly attempts resume with a fixed wait interval.
 +   - max_retries: total number of resume attempts to try (e.g., 3)
@@ -1210,55 +1273,6 @@ index 000000000..bb2d49082
 +	return res; /* last result (failure) */
 +}
 +
-+int curl_resume_url_execute(CURL *dl_curl, struct FtpFile *ftpfile)
-+{
-+	/* This helper check does not work but the resume mechanism still works
-+	curl_off_t resume_from = 0;
-+	curl_easy_getinfo(
-+	        dl_curl, CURLINFO_CONTENT_LENGTH_DOWNLOAD_T, &resume_from);
-+
-+	if (resume_from == -1) {
-+		fprintf(stderr,
-+		        "\n[ERROR] curl_easy_perform() failed with transferred a partial file error and server does not support range/resume.\n");
-+	} else {
-+	*/
-+	printf("\n[INFO] curl_easy_perform() trying to resume file download\n");
-+	curl_off_t offset = 0;
-+	{
-+		FILE *f = fopen(ftpfile->filename, "ab+");
-+		if (f) {
-+			if (fseeko(f, 0, SEEK_END) == 0) {
-+				off_t pos = ftello(f);
-+				if (pos > 0)
-+					offset = (curl_off_t)pos;
-+			}
-+			fclose(f);
-+		}
-+	}
-+
-+	/* Tell libcurl to resume */
-+	curl_easy_setopt(dl_curl, CURLOPT_RESUME_FROM_LARGE, offset);
-+	/* Perform the request, res gets the return code */
-+
-+	/* Perform the request, res gets the return code */
-+	CURLcode res = curl_easy_perform(dl_curl);
-+
-+	/* Validate that server honored Range (206) when offset > 0 */
-+	if (res == CURLE_OK && offset > 0) {
-+		long http_code = 0;
-+		curl_easy_getinfo(dl_curl, CURLINFO_RESPONSE_CODE, &http_code);
-+		if (http_code != 206) {
-+			/* Server did not honor resume — caller may choose to
-+			 * retry or restart */
-+			fprintf(stderr,
-+			        "\n[WARN] Server did not return 206 for resumed request (HTTP %ld)\n",
-+			        http_code);
-+		}
-+	}
-+
-+	return res;
-+}
-+
 +/**
 + * lfs_download - Downloads a file using the LFS (Large File Storage) mechanism.
 + *
@@ -1277,14 +1291,21 @@ index 000000000..bb2d49082
 + * @param self: Unused parameter, reserved for future use.
 + * @param payload: Pointer to the lfs_attrs structure containing download parameters.
 + */
-+        static void lfs_download(git_filter *self, void *payload)
++static void lfs_download(git_filter *self, void *payload)
 +{
 +	GIT_UNUSED(self);
++	struct lfs_attrs *la;
++	char *tmp_out_file;
++	CURL *info_curl, *dl_curl;
++	CURLcode res = CURLE_OK;
++	CURLcode status = CURLE_OK;
++	git_str res_str = GIT_STR_INIT;
++	bool resumingFileByBlobFilter = false;
 +	if (!payload) {
 +		fprintf(stderr, "\n[ERROR] lfs payload not initialized\n");
 +		return;
 +	}
-+	struct lfs_attrs *la = (struct lfs_attrs *)payload;
++	la = (struct lfs_attrs *)payload;
 +
 +	/* Currently only download is supoprted, no lfs file upload */
 +	if (!la->is_download) {
@@ -1292,16 +1313,12 @@ index 000000000..bb2d49082
 +		return;
 +	}
 +
-+	char *tmp_out_file = append_cstr_to_buffer(la->full_path, "lfs_part");
++	tmp_out_file = append_cstr_to_buffer(la->full_path, "lfs_part");
 +	if (tmp_out_file == NULL) {
 +		fprintf(stderr, "\n[ERROR] lfs create temp filename failed\n");
 +		goto on_error2;
 +	}
 +
-+	CURL *info_curl,*dl_curl;
-+	CURLcode res = CURLE_OK;
-+	CURLcode status = CURLE_OK;
-+	git_str res_str = GIT_STR_INIT;
 +	/* get a curl handle */
 +	info_curl = curl_easy_init();
 +	if (info_curl) {
@@ -1407,7 +1424,6 @@ index 000000000..bb2d49082
 +	}
 +
 +	/* get a curl handle */
-+	bool resumingFileByBlobFilter = false;
 +	dl_curl = curl_easy_init();
 +	if (dl_curl) {
 +		struct FtpFile ftpfile = { tmp_out_file, NULL };
@@ -1548,13 +1564,12 @@ index 000000000..bb2d49082
 +	return;
 +}
 +
-+void git_lfs_filter_free(git_filter *filter)
++static void git_lfs_filter_free(git_filter *filter)
 +{
 +	curl_global_cleanup();
 +	git__free(filter);
 +}
 +
-+/*----public - ish trigger(call this in git_lfs_filter_new)-- --*/
 +static void lfs_resume_env_init_once(void)
 +{
 +#ifdef _WIN32
