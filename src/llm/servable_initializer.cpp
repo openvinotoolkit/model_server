@@ -62,7 +62,8 @@ void GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServablePro
     }
 #endif
     
-    // Override chat template from chat_template.jinja file if present in model directory
+    // In some cases we apply chat template by python's jinja, but in all other cases, when GenAI applies chat template
+    // we ensure here that it is chat_template.jinja that is prioritized, rather than openvino_tokenizer.xml.
     std::filesystem::path chatTemplateJinjaPath = std::filesystem::path(chatTemplateDirectory) / "chat_template.jinja";
     if (std::filesystem::exists(chatTemplateJinjaPath)) {
         std::ifstream chatTemplateFile(chatTemplateJinjaPath);
@@ -71,7 +72,7 @@ void GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServablePro
                 std::istreambuf_iterator<char>());
             if (!chatTemplateContent.empty()) {
                 properties->tokenizer.set_chat_template(chatTemplateContent);
-                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Loaded custom chat template from: {}", chatTemplateJinjaPath.string());
+                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Overriding chat template from: {}", chatTemplateJinjaPath.string());
             }
         } else {
             SPDLOG_LOGGER_WARN(llm_calculator_logger, "Failed to open chat template file: {}", chatTemplateJinjaPath.string());
