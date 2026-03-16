@@ -62,7 +62,7 @@ void GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServablePro
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, CHAT_TEMPLATE_WARNING_MESSAGE);
     }
 #endif
-    
+
     // In some cases we apply chat template by python's jinja, but in all other cases, when GenAI applies chat template
     // we ensure here that it is chat_template.jinja that is prioritized, rather than openvino_tokenizer.xml.
     std::filesystem::path chatTemplateJinjaPath = std::filesystem::path(chatTemplateDirectory) / "chat_template.jinja";
