@@ -19,6 +19,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <iterator>
 
 #include <spdlog/spdlog.h>
 
@@ -72,10 +73,10 @@ void GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServablePro
                 std::istreambuf_iterator<char>());
             if (!chatTemplateContent.empty()) {
                 properties->tokenizer.set_chat_template(chatTemplateContent);
-                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Overriding chat template from: {}", chatTemplateJinjaPath.string());
+                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Using the chat template from: {}", chatTemplateJinjaPath.string());
             }
         } else {
-            SPDLOG_LOGGER_WARN(llm_calculator_logger, "Failed to open chat template file: {}", chatTemplateJinjaPath.string());
+            SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Failed to open chat template file: {}", chatTemplateJinjaPath.string());
         }
     }
 }
