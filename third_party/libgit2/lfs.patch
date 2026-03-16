@@ -444,10 +444,10 @@ index 58cb4b424..00ddee9f3 100644
  	git_writestream **out,
 diff --git a/src/libgit2/lfs_filter.c b/src/libgit2/lfs_filter.c
 new file mode 100644
-index 000000000..84796d4b0
+index 000000000..bcbae8bc5
 --- /dev/null
 +++ b/src/libgit2/lfs_filter.c
-@@ -0,0 +1,1151 @@
+@@ -0,0 +1,1185 @@
 +﻿/*
 +/ Copyright 2025 Intel Corporation
 +/
@@ -503,6 +503,10 @@ index 000000000..84796d4b0
 +        int max_value,
 +        int *out_value)
 +{
++	char *end;
++	unsigned long long val;
++	unsigned int ival;
++	end = NULL;
 +	const char *s = getenv(env_name);
 +	if (!s || !*s) {
 +		*out_value = default_value;
@@ -514,8 +518,7 @@ index 000000000..84796d4b0
 +		s++;
 +
 +	errno = 0;
-+	char *end = NULL;
-+	unsigned long long val = strtoull(s, &end, 10);
++	val = strtoull(s, &end, 10);
 +
 +	if (errno == ERANGE || end == s) {
 +		fprintf(stderr, "[WARN] %s: invalid number, using default=%d\n",
@@ -540,7 +543,7 @@ index 000000000..84796d4b0
 +		val = (unsigned long long)max_value;
 +	}
 +
-+	int ival = (int)val;
++	ival = (int)val;
 +	if (ival < min_value)
 +		ival = min_value;
 +	if (ival > max_value)
@@ -561,9 +564,8 @@ index 000000000..84796d4b0
 +	char *end;
 +	unsigned long long val;
 +	unsigned int uval;
-+	const char *s;
 +	end = NULL;
-+	s = getenv(env_name);
++	const char *s = getenv(env_name);
 +	if (!s || !*s) {
 +		*out_value = default_value;
 +		return 0;
@@ -667,11 +669,62 @@ index 000000000..84796d4b0
 +	bool is_download;
 +} lfs_attrs;
 +
++
++/*
++ * Frees heap-allocated strings referenced by the struct fields.
++ * Ownership assumption:
++ *   - Only call free() on fields that point to heap memory
++ * (malloc/calloc/realloc/strdup).
++ *   - If any field is borrowed (e.g., string literal or external buffer), set
++ * it to NULL before calling this function to avoid invalid free().
++ */
++static inline void lfs_attrs_free(lfs_attrs *a)
++{
++	if (!a)
++		return;
++	if (a->path) {
++		free((void *)a->path);
++		a->path = NULL;
++	}
++	if (a->full_path) {
++		free((void *)a->full_path);
++		a->full_path = NULL;
++	}
++	if (a->workdir) {
++		free((void *)a->workdir);
++		a->workdir = NULL;
++	}
++	if (a->lfs_oid) {
++		free((void *)a->lfs_oid);
++		a->lfs_oid = NULL;
++	}
++	if (a->lfs_size) {
++		free((void *)a->lfs_size);
++		a->lfs_size = NULL;
++	}
++	if (a->url) {
++		free((void *)a->url);
++		a->url = NULL;
++	}
++
++	a->is_download = false;
++}
++
++/* Use this if the struct itself was heap-allocated. */
++static inline void lfs_attrs_delete(lfs_attrs *a)
++{
++	if (!a)
++		return;
++	lfs_attrs_free(a);
++	free(a);
++	a = NULL;
++}
++
 +static size_t get_digit(const char *buffer)
 +{
 +	char *endptr;
-+	errno = 0;
 +	size_t number;
++	errno = 0;
 +	if (buffer == NULL) {
 +		fprintf(stderr, "\n[ERROR] get_digit on NULL\n");
 +		return 0;
@@ -703,17 +756,21 @@ index 000000000..84796d4b0
 + */
 +static char *append_cstr_to_buffer(const char *existingBuffer, const char *suffix)
 +{
++	size_t existingLength;
++	size_t suffixLength;
++	size_t newSize;
++	char *newBuffer;
 +	if (existingBuffer == NULL || suffix == NULL) {
 +		return NULL;
 +	}
 +
-+	size_t existingLength = strlen(existingBuffer);
-+	size_t suffixLength = strlen(suffix);
++	existingLength = strlen(existingBuffer);
++	suffixLength = strlen(suffix);
 +
 +	/* +1 for the null terminator */
-+	size_t newSize = existingLength + suffixLength + 1;
++	newSize = existingLength + suffixLength + 1;
 +
-+	char *newBuffer = (char *)malloc(newSize);
++	newBuffer = (char *)malloc(newSize);
 +	if (newBuffer == NULL) {
 +		return NULL;
 +	}
@@ -755,24 +812,12 @@ index 000000000..84796d4b0
 +	return -1;
 +}
 +
-+static void print_src_oid(const git_filter_source *src)
-+{
-+	const git_oid *oid = git_filter_source_id(src);
-+
-+	if (oid) {
-+		printf("\nsrc->git_oid %s\n", git_oid_tostr_s(oid));
-+	} else {
-+		printf("\nsrc has no OID (e.g., not a blob-backed source or unavailable)\n");
-+	}
-+}
-+
 +static int git_oid_sha256_from_git_str_blob(
 +        git_oid *out,
 +        const struct git_str *input,
 +        char *pointer_line,
 +        size_t pointer_line_cap)
 +{
-+	int error = -1;
 +	git_hash_ctx ctx;
 +	size_t CHUNK;
 +	unsigned char *p;
@@ -795,7 +840,7 @@ index 000000000..84796d4b0
 +
 +	/* 2) Stream the payload in chunks — hash *only* the file bytes. */
 +	CHUNK = 4 * 1024 * 1024; /* 4 MiB */
-+	*p = (const unsigned char *)input->ptr;
++	p = (const unsigned char *)input->ptr;
 +	remaining = input->size;
 +
 +	while (remaining > 0) {
@@ -842,6 +887,7 @@ index 000000000..84796d4b0
 +	void **payload)
 +{
 +	int error = 0;
++	char line[80]; /* 75+ is enough */
 +	git_oid lfs_oid;
 +	/* Init the lfs attrs to indicate git lfs clean, currently only diff support no upload of lfs file supported */
 +	struct lfs_attrs la = { NULL, NULL, NULL, NULL, NULL, NULL, false };
@@ -859,7 +905,6 @@ index 000000000..84796d4b0
 +
 +	/* Use lib git oid to get lfs sha256 */
 +	lfs_oid.type = GIT_OID_SHA256;
-+	char line[80]; /* 75+ is enough */
 +	if (git_oid_sha256_from_git_str_blob(&lfs_oid, from, line, sizeof(line)) < 0) {
 +		fprintf(stderr,
 +		        "\n[ERROR] failure, cannot calculate sha256\n");
@@ -914,6 +959,8 @@ index 000000000..84796d4b0
 +	char *path_dup = git__strdup(path);
 +	char *workdir_dup = git__strdup(workdir);
 +	char *url_dup = git__strdup(repo->url);
++	struct lfs_attrs la = { path_dup, NULL, workdir_dup, NULL,
++		                NULL, url_dup, true };
 +
 +	lfs_oid.size = from->size;
 +	lfs_oid.asize = from->asize;
@@ -927,6 +974,7 @@ index 000000000..84796d4b0
 +		        lfs_oid.ptr);
 +		return -1;
 +	}
++	la.lfs_oid = lfs_oid.ptr;
 +
 +	if (get_lfs_info_match(&lfs_size, size_regexp) < 0) {
 +		fprintf(stderr,
@@ -934,6 +982,7 @@ index 000000000..84796d4b0
 +		        lfs_size.ptr);
 +		return -1;
 +	}
++	la.lfs_size = lfs_size.ptr;
 +
 +	if (git_repository_workdir_path(&full_path, repo, path) < 0) {
 +		fprintf(stderr,
@@ -943,10 +992,7 @@ index 000000000..84796d4b0
 +	}
 +	full_path_dup = git__strdup(full_path.ptr);
 +	git_str_dispose(&full_path);
-+
-+	struct lfs_attrs la = { path_dup, full_path_dup, workdir_dup,
-+		                lfs_oid.ptr, lfs_size.ptr, url_dup,
-+		                true };
++	la.full_path = full_path_dup;
 +
 +	*payload = git__malloc(sizeof(la));
 +	GIT_ERROR_CHECK_ALLOC(*payload);
@@ -980,14 +1026,13 @@ index 000000000..84796d4b0
 +        const git_filter_source *src,
 +        const char **attr_values)
 +{
-+	GIT_UNUSED(self);
-+	GIT_UNUSED(payload);
-+	GIT_UNUSED(attr_values);
 +	const char *value;
-+
 +	git_repository *repo = git_filter_source_repo(src);
 +	const char *path = git_filter_source_path(src);
 +
++	GIT_UNUSED(self);
++	GIT_UNUSED(payload);
++	GIT_UNUSED(attr_values);
 +	git_attr_get(
 +	        &value, repo, GIT_ATTR_CHECK_NO_SYSTEM, path, "filter");
 +
@@ -1100,12 +1145,15 @@ index 000000000..84796d4b0
 +        curl_off_t ulnow)
 +{
 +	struct progress_data *pcs = (struct progress_data *)clientp;
++	time_t currentTime = time(NULL);
++	bool shouldPrintDueToTime = false;
++	GIT_UNUSED(ulnow);
 +	if (dlnow == 0) {
 +		pcs->started_download = time(NULL);
 +		pcs->last_print_time = time(NULL);
 +	}
-+	time_t currentTime = time(NULL);
-+	bool shouldPrintDueToTime = (currentTime - pcs->last_print_time >= 1);
++	
++	shouldPrintDueToTime = (currentTime - pcs->last_print_time >= 1);
 +	if ((dltotal == dlnow) && dltotal < 10000) {
 +		/* Usually with first messages we don't get the full size and we
 +		   don't want to print progress bar so we assume that until
@@ -1293,7 +1341,6 @@ index 000000000..84796d4b0
 + */
 +static void lfs_download(git_filter *self, void *payload)
 +{
-+	GIT_UNUSED(self);
 +	struct lfs_attrs *la;
 +	char *tmp_out_file;
 +	CURL *info_curl, *dl_curl;
@@ -1301,6 +1348,9 @@ index 000000000..84796d4b0
 +	CURLcode status = CURLE_OK;
 +	git_str res_str = GIT_STR_INIT;
 +	bool resumingFileByBlobFilter = false;
++	struct progress_data progress_d = { time(NULL), time(NULL), false };
++	struct memory response = { 0 };
++	GIT_UNUSED(self);
 +	if (!payload) {
 +		fprintf(stderr, "\n[ERROR] lfs payload not initialized\n");
 +		return;
@@ -1324,6 +1374,7 @@ index 000000000..84796d4b0
 +	if (info_curl) {
 +		struct curl_slist *chunk = NULL;
 +		git_str lfs_info_url = GIT_STR_INIT;
++		git_str lfs_info_data = GIT_STR_INIT;
 +		if (git_str_join(
 +		            &lfs_info_url, '.',
 +		            la->url,
@@ -1331,6 +1382,7 @@ index 000000000..84796d4b0
 +			fprintf(stderr, "\n[ERROR] failed to create url '%s'\n",
 +			        la->full_path);
 +			git_str_dispose(&lfs_info_url);
++			git_str_dispose(&lfs_info_data);
 +			goto on_error;
 +		}
 +
@@ -1358,7 +1410,6 @@ index 000000000..84796d4b0
 +			fprintf(stderr, "\n[ERROR] curl_easy_setopt() failed: %s\n", curl_easy_strerror(status));
 +			goto info_cleaup;
 +		}
-+		git_str lfs_info_data = GIT_STR_INIT;
 +
 +		/* "{\"operation\":\"download\",\"transfer\":[\"basic\"],\"objects\":[{\"oid\":\"9556d0a12310629e217450ac4198c49f5457f1a69e22ce7c9f8e81fab4d530a7\",\"size\":499723}]}" */
 +		if (git_str_join_n(
@@ -1375,6 +1426,7 @@ index 000000000..84796d4b0
 +			/* free the custom headers */
 +			curl_slist_free_all(chunk);
 +			git_str_dispose(&lfs_info_data);
++			git_str_dispose(&lfs_info_url);
 +			goto on_error;
 +		}
 +
@@ -1383,7 +1435,6 @@ index 000000000..84796d4b0
 +		CURL_SETOPT(curl_easy_setopt(info_curl, CURLOPT_SSL_OPTIONS, CURLSSLOPT_NATIVE_CA));
 +		CURL_SETOPT(curl_easy_setopt(info_curl, CURLOPT_FOLLOWLOCATION, 1L));
 +
-+		struct memory response = { 0 };
 +		CURL_SETOPT(curl_easy_setopt(info_curl, CURLOPT_WRITEFUNCTION, write_callback));
 +		CURL_SETOPT(curl_easy_setopt(info_curl, CURLOPT_USERAGENT,"git-lfs/3.5.0"));
 +		CURL_SETOPT(curl_easy_setopt(info_curl, CURLOPT_WRITEDATA, (void *)&response));
@@ -1447,7 +1498,6 @@ index 000000000..84796d4b0
 +		CURL_SETOPT(curl_easy_setopt(dl_curl, CURLOPT_WRITEDATA, (void *)&ftpfile));
 +
 +		/* progress bar options */
-+		struct progress_data progress_d = { time(NULL), time(NULL) , false };
 +		CURL_SETOPT(curl_easy_setopt(dl_curl, CURLOPT_NOPROGRESS, 0L));
 +		CURL_SETOPT(curl_easy_setopt(dl_curl, CURLOPT_XFERINFOFUNCTION, progress_callback));
 +		CURL_SETOPT(curl_easy_setopt(dl_curl, CURLOPT_XFERINFODATA, &progress_d));
@@ -1533,16 +1583,8 @@ index 000000000..84796d4b0
 +		goto on_error;
 +	}
 +	free(tmp_out_file);
-+	if (la) {
-+		free((char *)la->path);
-+		free((char *)la->full_path);
-+		free((char *)la->workdir);
-+		free((char *)la->lfs_oid);
-+		free((char *)la->lfs_size);
-+		free((char *)la->url);
-+	}
-+	git__free(payload);
 +	git_str_dispose(&res_str);
++	lfs_attrs_delete(la);
 +	return;
 +
 +    on_error:
@@ -1552,15 +1594,7 @@ index 000000000..84796d4b0
 +	        la->full_path);
 +	fflush(stderr);
 +	git_str_dispose(&res_str);
-+	if (la) {
-+		free((char *)la->path);
-+		free((char *)la->full_path);
-+		free((char *)la->workdir);
-+		free((char *)la->lfs_oid);
-+		free((char *)la->lfs_size);
-+		free((char *)la->url);
-+	}
-+	git__free(payload);
++	lfs_attrs_delete(la);
 +	return;
 +}
 +
@@ -1581,12 +1615,12 @@ index 000000000..84796d4b0
 +
 +git_filter *git_lfs_filter_new(void)
 +{
-+	/* In Windows, this inits the Winsock stuff */
-+	curl_global_init(CURL_GLOBAL_ALL);
 +	git_filter *f = git__calloc(1, sizeof(git_filter));
 +	if (f == NULL)
 +		return NULL;
 +
++	/* In Windows, this inits the Winsock stuff */
++	curl_global_init(CURL_GLOBAL_ALL);
 +	/* Initialize env-config exactly once per process */
 +	lfs_resume_env_init_once();
 +
