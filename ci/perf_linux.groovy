@@ -336,7 +336,7 @@ pipeline {
                 }
                 sh "echo Install BFCL && \
                 test -d gorilla || git clone https://github.com/ShishirPatil/gorilla && \
-                cd gorilla/berkeley-function-call-leaderboard && git checkout cd9429ccf3d4d04156affe883c495b3b047e6b64 -f && curl -s https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/continuous_batching/accuracy/gorilla.patch | git apply -v"
+                cd gorilla/berkeley-function-call-leaderboard && git checkout 9b8a5202544f49a846aced185a340361231ef3e1 -f && curl -s https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/continuous_batching/accuracy/gorilla.patch | git apply -v"
                 sh "test -d .venv || python3 -m venv .venv && \
                 . .venv/bin/activate && pip install -e ./gorilla/berkeley-function-call-leaderboard && pip install soundfile && \
                 echo Running agentic accuracy test && \
