@@ -27,6 +27,8 @@
 #include "src/audio/audio_utils.hpp"
 #include "src/http_payload.hpp"
 #include "src/logging.hpp"
+#include "openvino/genai/speech_generation/text2speech_pipeline.hpp"
+#include "openvino/openvino.hpp"
 #include <mutex>
 #include <thread>
 
@@ -104,6 +106,7 @@ public:
                 if (streamIt != payload.parsedJson->MemberEnd()) {
                     return absl::InvalidArgumentError("streaming is not supported");
                 }
+                SPDLOG_LOGGER_DEBUG(t2s_calculator_logger, "1");
                 std::optional<std::string> voiceName;
                 auto voiceIt = payload.parsedJson->FindMember("voice");
                 if (voiceIt != payload.parsedJson->MemberEnd() && voiceIt->value.IsString()) {
@@ -111,15 +114,21 @@ public:
                     if (pipe->voices.find(voiceName.value()) == pipe->voices.end())
                         return absl::InvalidArgumentError(absl::StrCat("Requested voice not available: ", voiceName.value()));
                 }
+                SPDLOG_LOGGER_DEBUG(t2s_calculator_logger, "2");
                 ov::genai::Text2SpeechDecodedResults generatedSpeech;
                 std::unique_lock lock(pipe->ttsPipelineMutex);
 
                 if (voiceName.has_value()) {
+                    SPDLOG_LOGGER_DEBUG(t2s_calculator_logger, "x");
                     generatedSpeech = pipe->ttsPipeline->generate(inputIt->value.GetString(), pipe->voices[voiceName.value()]);
                 } else {
-                    generatedSpeech = pipe->ttsPipeline->generate(inputIt->value.GetString());
+                    SPDLOG_LOGGER_DEBUG(t2s_calculator_logger, "y");
+                    generatedSpeech = pipe->ttsPipeline->generate(inputIt->value.GetString(), ov::Tensor(),
+						   ov::AnyMap{{"voice", "af_alloy"},
+									  {"language", "en-us"}});
                 }
-                auto bitsPerSample = generatedSpeech.speeches[0].get_element_type().bitwidth();
+                SPDLOG_LOGGER_DEBUG(t2s_calculator_logger, "3");
+                //auto bitsPerSample = generatedSpeech.speeches[0].get_element_type().bitwidth();
                 auto speechSize = generatedSpeech.speeches[0].get_size();
                 ov::Tensor cpuTensor(generatedSpeech.speeches[0].get_element_type(), generatedSpeech.speeches[0].get_shape());
                 // copy results to release inference request
@@ -127,13 +136,17 @@ public:
                 lock.unlock();
                 void* ppData;
                 size_t pDataSize;
-                prepareAudioOutput(&ppData, pDataSize, bitsPerSample, speechSize, cpuTensor.data<const float>());
+                SPDLOG_LOGGER_DEBUG(t2s_calculator_logger, "4");
+                prepareAudioOutputKokoro(&ppData, pDataSize, speechSize, cpuTensor.data<const float>());
+                SPDLOG_LOGGER_DEBUG(t2s_calculator_logger, "5");
                 output = std::make_unique<std::string>(reinterpret_cast<char*>(ppData), pDataSize);
                 drwav_free(ppData, NULL);
             } else {
                 return absl::InvalidArgumentError(absl::StrCat("Unsupported URI: ", payload.uri));
             }
         } catch (ov::AssertFailure& e) {
+            return absl::InvalidArgumentError(e.what());
+        }catch (std::runtime_error& e) {
             return absl::InvalidArgumentError(e.what());
         } catch (...) {
             return absl::InvalidArgumentError("Response generation failed");

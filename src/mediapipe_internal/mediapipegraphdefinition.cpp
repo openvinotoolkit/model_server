@@ -47,6 +47,7 @@
 #include "mediapipe/framework/port/status.h"
 #include "mediapipe_utils.hpp"
 #include "mediapipegraphexecutor.hpp"
+#include "src/audio/speech_to_text/s2t_calculator.pb.h"
 #include "src/embeddings/embeddings_calculator_ov.pb.h"
 #include "src/rerank/rerank_calculator_ov.pb.h"
 

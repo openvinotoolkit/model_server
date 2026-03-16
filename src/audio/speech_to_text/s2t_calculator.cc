@@ -28,6 +28,8 @@
 #include "src/http_payload.hpp"
 #include "src/logging.hpp"
 #include "src/stringutils.hpp"
+#include "openvino/genai/whisper_pipeline.hpp"
+#include "openvino/openvino.hpp"
 #include <mutex>
 #include <thread>
 

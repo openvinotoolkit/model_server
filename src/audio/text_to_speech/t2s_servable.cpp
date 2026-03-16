@@ -20,7 +20,6 @@
 #include <vector>
 #include <fstream>
 
-#include "openvino/genai/whisper_pipeline.hpp"
 #include "openvino/genai/speech_generation/text2speech_pipeline.hpp"
 #include "src/audio/text_to_speech/t2s_calculator.pb.h"
 #include "src/status.hpp"

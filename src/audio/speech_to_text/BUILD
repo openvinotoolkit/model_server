@@ -19,7 +19,14 @@ load("//:common_settings.bzl", "ovms_cc_library")
 
 ovms_cc_library(
     name = "s2t_servable",
+    srcs = ["s2t_servable.cpp"],
     hdrs = ["s2t_servable.hpp"],
+    deps = [
+        "//src:libmodelconfigjsonparser",
+        "//src:libovmslogging",
+        "//third_party:genai",
+        ":s2t_calculator_cc_proto",
+    ],
     visibility = ["//visibility:public"],
     alwayslink = 1,
 )

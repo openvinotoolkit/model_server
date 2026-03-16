@@ -36,6 +36,7 @@ ovms_cc_library(
     name = "t2s_calculator",
     srcs = ["t2s_calculator.cc"],
     deps = [
+        "//third_party:genai",
         "@mediapipe//mediapipe/framework:calculator_framework",
         "//src:httppayload",
         "//src:libovmslogging",
