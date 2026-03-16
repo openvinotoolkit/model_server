@@ -16,19 +16,26 @@
 
 #pragma once
 
-#include "openvino/genai/speech_generation/text2speech_pipeline.hpp"
 #include "src/audio/text_to_speech/t2s_calculator.pb.h"
 
+#include <filesystem>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <unordered_map>
 
-namespace ovms {
+#include "openvino/runtime/tensor.hpp"
 
+namespace ov::genai {
+class Text2SpeechPipeline;
+}
+
+namespace ovms {
 class TtsServable {
 public:
     std::shared_ptr<ov::genai::Text2SpeechPipeline> ttsPipeline;
     std::unordered_map<std::string, ov::Tensor> voices;
+    bool isKokoroModel = false;
     std::mutex ttsPipelineMutex;
     std::filesystem::path parsedModelsPath;
 
