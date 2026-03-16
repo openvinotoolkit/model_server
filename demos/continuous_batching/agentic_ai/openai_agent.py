@@ -19,6 +19,7 @@ from __future__ import annotations
 import asyncio
 import os
 import platform
+import sys
 
 from openai import AsyncOpenAI
 from agents import Agent, Runner, RunConfig
@@ -37,6 +38,7 @@ from agents import (
 )
 
 API_KEY = "not_used"
+os.environ["PYTHONUTF8"] = "1"
 env_proxy = {}
 http_proxy = os.environ.get("http_proxy")
 https_proxy = os.environ.get("https_proxy")
@@ -45,7 +47,14 @@ if http_proxy:
 if https_proxy:
     env_proxy["https_proxy"] = https_proxy
 
-RunConfig.tracing_disabled = False  # Disable tracing for this example
+RunConfig.tracing_disabled = False  # Enable tracing for this example
+
+def check_if_tool_calls_present(result) -> bool:
+    if hasattr(result, 'new_items') and result.new_items:
+        for item in result.new_items:
+            if hasattr(item, 'type') and item.type == "tool_call_item":
+                return True
+    return False
 
 async def run(query, agent, OVMS_MODEL_PROVIDER, stream: bool = False):
     for server in agent.mcp_servers:
@@ -76,6 +85,8 @@ async def run(query, agent, OVMS_MODEL_PROVIDER, stream: bool = False):
     else: 
         result = await Runner.run(starting_agent=agent, input=query, run_config=RunConfig(model_provider=OVMS_MODEL_PROVIDER, tracing_disabled=True))
         print(result.final_output)
+        
+    return check_if_tool_calls_present(result)
 
 
 if __name__ == "__main__":
@@ -126,4 +137,11 @@ if __name__ == "__main__":
         model_settings=ModelSettings(tool_choice=args.tool_choice, temperature=0.0, max_tokens=1000, extra_body={"chat_template_kwargs": {"enable_thinking": args.enable_thinking}}),
     )
     loop = asyncio.new_event_loop()
-    loop.run_until_complete(run(args.query, agent, OVMS_MODEL_PROVIDER, args.stream))
+    
+    is_tool_call_present = loop.run_until_complete(run(args.query, agent, OVMS_MODEL_PROVIDER, args.stream))
+    
+    # for testing purposes, exit codes are dependent on whether a tool call was present in the agent's reasoning process
+    if is_tool_call_present:
+        sys.exit(0)
+    else:
+        sys.exit(1)
