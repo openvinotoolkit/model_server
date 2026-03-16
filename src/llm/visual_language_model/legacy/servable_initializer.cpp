@@ -85,22 +85,6 @@ Status VisualLanguageModelLegacyServableInitializer::initialize(std::shared_ptr<
     try {
         properties->pipeline = std::make_shared<ov::genai::VLMPipeline>(parsedModelsPath, properties->device, properties->pluginConfig);
         properties->tokenizer = properties->pipeline->get_tokenizer();
-
-        // Override chat template from chat_template.jinja file if present in model directory
-        std::filesystem::path chatTemplateJinjaPath = std::filesystem::path(parsedModelsPath) / "chat_template.jinja";
-        if (std::filesystem::exists(chatTemplateJinjaPath)) {
-            std::ifstream chatTemplateFile(chatTemplateJinjaPath);
-            if (chatTemplateFile.is_open()) {
-                std::string chatTemplateContent((std::istreambuf_iterator<char>(chatTemplateFile)),
-                    std::istreambuf_iterator<char>());
-                if (!chatTemplateContent.empty()) {
-                    properties->tokenizer.set_chat_template(chatTemplateContent);
-                    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Loaded custom chat template from: {}", chatTemplateJinjaPath.string());
-                }
-            } else {
-                SPDLOG_LOGGER_WARN(llm_calculator_logger, "Failed to open chat template file: {}", chatTemplateJinjaPath.string());
-            }
-        }
     } catch (const std::exception& e) {
         SPDLOG_ERROR("Error during llm node initialization for models_path: {} exception: {}", parsedModelsPath, e.what());
         return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
@@ -108,7 +92,7 @@ Status VisualLanguageModelLegacyServableInitializer::initialize(std::shared_ptr<
         SPDLOG_ERROR("Error during llm node initialization for models_path: {}", parsedModelsPath);
         return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
     }
-
+    loadChatTemplate(properties, parsedModelsPath);
     properties->legacyExecutor = std::make_shared<VisualLanguageModelLegacyExecutorWrapper>(properties->pipeline);
     if (nodeOptions.has_max_tokens_limit()) {
         properties->maxTokensLimit = nodeOptions.max_tokens_limit();

@@ -61,7 +61,22 @@ void GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServablePro
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, CHAT_TEMPLATE_WARNING_MESSAGE);
     }
 #endif
-    // In non-python build, GenAI handles chat template loading
+    
+    // Override chat template from chat_template.jinja file if present in model directory
+    std::filesystem::path chatTemplateJinjaPath = std::filesystem::path(chatTemplateDirectory) / "chat_template.jinja";
+    if (std::filesystem::exists(chatTemplateJinjaPath)) {
+        std::ifstream chatTemplateFile(chatTemplateJinjaPath);
+        if (chatTemplateFile.is_open()) {
+            std::string chatTemplateContent((std::istreambuf_iterator<char>(chatTemplateFile)),
+                std::istreambuf_iterator<char>());
+            if (!chatTemplateContent.empty()) {
+                properties->tokenizer.set_chat_template(chatTemplateContent);
+                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Loaded custom chat template from: {}", chatTemplateJinjaPath.string());
+            }
+        } else {
+            SPDLOG_LOGGER_WARN(llm_calculator_logger, "Failed to open chat template file: {}", chatTemplateJinjaPath.string());
+        }
+    }
 }
 
 #if (PYTHON_DISABLE == 0)
