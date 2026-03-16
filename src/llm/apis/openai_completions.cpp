@@ -1753,7 +1753,7 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(ov::genai::VLMD
 std::string OpenAIChatCompletionsHandler::serializeStreamingChunk(const std::string& chunkResponse, ov::genai::GenerationFinishReason finishReason) {
     OVMS_PROFILE_FUNCTION();
     if (endpoint == Endpoint::RESPONSES) {
-        const auto createdAt = std::chrono::duration_cast<std::chrono::seconds>(created.time_since_epoch()).count();
+        const auto createdAt = std::chrono::duration_cast<std::chrono::microseconds>(created.time_since_epoch()).count();
         const std::string responseId = "resp-" + std::to_string(createdAt);
         const std::string outputItemId = "msg-0";
 
