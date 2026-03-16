@@ -410,7 +410,6 @@ std::variant<absl::Status, ov::AnyMap> getImageGenerationRequestOptions(const ra
     static std::set<std::string> acceptedFields{
         "prompt", "prompt_2", "prompt_3",
         "image",
-        "mask",
         "negative_prompt", "negative_prompt_2", "negative_prompt_3",
         "size", "height", "width",
         "n", "num_images_per_prompt",
