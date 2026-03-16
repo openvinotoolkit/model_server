@@ -467,6 +467,14 @@ node: {
           max_num_inference_steps: )" << graphSettings.maxNumInferenceSteps.value();
     }
 
+    for (const auto& adapter : graphSettings.loraAdapters) {
+        std::string loraPath = "loras/" + adapter.sourceLora + "/" + adapter.safetensorsFile;
+        oss << R"(
+          lora_adapters { alias: ")" << adapter.alias << R"(" path: ")" << loraPath << R"(")";
+        // Only omit alpha when default (1.0) - let proto handle it
+        oss << R"( })";
+    }
+
     oss << R"(
       }
   }

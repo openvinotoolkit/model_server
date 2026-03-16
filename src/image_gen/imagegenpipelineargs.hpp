@@ -39,6 +39,12 @@ struct StaticReshapeSettingsArgs {
         guidanceScale(guidance) {}
 };
 
+struct LoraAdapterInfo {
+    std::string alias;
+    std::string path;  // absolute path to .safetensors file
+    float alpha = 1.0f;
+};
+
 struct ImageGenPipelineArgs {
     std::string modelsPath;
     std::vector<std::string> device;
@@ -51,5 +57,6 @@ struct ImageGenPipelineArgs {
     uint64_t maxNumInferenceSteps;
 
     std::optional<StaticReshapeSettingsArgs> staticReshapeSettings;
+    std::vector<LoraAdapterInfo> loraAdapters;
 };
 }  // namespace ovms

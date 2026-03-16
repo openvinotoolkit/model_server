@@ -27,6 +27,7 @@
 #include "../capi_frontend/server_settings.hpp"
 #include "../ovms_exit_codes.hpp"
 #include "../status.hpp"
+#include "src/stringutils.hpp"
 
 namespace ovms {
 
@@ -161,6 +162,42 @@ void ImageGenerationGraphCLIParser::prepare(ServerSettingsImpl& serverSettings, 
             if (!serverSettings.cacheDir.empty()) {
                 hfSettings.exportSettings.pluginConfig.cacheDir = serverSettings.cacheDir;
             }
+        }
+    }
+
+    // Parse --source_loras
+    if (!hfSettings.sourceLoras.empty()) {
+        auto entries = ovms::tokenize(hfSettings.sourceLoras, ',');
+        for (const auto& entry : entries) {
+            LoraAdapterSettings adapter;
+            auto eqPos = entry.find('=');
+            std::string repoAndFile;
+            if (eqPos != std::string::npos) {
+                adapter.alias = entry.substr(0, eqPos);
+                repoAndFile = entry.substr(eqPos + 1);
+            } else {
+                repoAndFile = entry;
+            }
+            // Check for @filename suffix
+            auto atPos = repoAndFile.find('@');
+            if (atPos != std::string::npos) {
+                adapter.sourceLora = repoAndFile.substr(0, atPos);
+                adapter.safetensorsFile = repoAndFile.substr(atPos + 1);
+                if (adapter.safetensorsFile.empty()) {
+                    throw std::invalid_argument("Empty filename after @ in --source_loras entry: '" + entry + "'");
+                }
+            } else {
+                adapter.sourceLora = repoAndFile;
+            }
+            // Derive alias from repo name if not explicitly provided
+            if (eqPos == std::string::npos) {
+                auto slashPos = adapter.sourceLora.find('/');
+                adapter.alias = (slashPos != std::string::npos) ? adapter.sourceLora.substr(slashPos + 1) : adapter.sourceLora;
+            }
+            if (adapter.alias.empty() || adapter.sourceLora.empty()) {
+                throw std::invalid_argument("Invalid --source_loras entry: '" + entry + "'. Expected format: alias=org/repo or org/repo");
+            }
+            imageGenerationGraphSettings.loraAdapters.push_back(std::move(adapter));
         }
     }
 

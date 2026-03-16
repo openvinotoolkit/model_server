@@ -30,6 +30,7 @@
 
 #include "pipelines.hpp"
 #include "imagegenutils.hpp"
+#include <openvino/genai/lora_adapter.hpp>
 
 #pragma warning(push)
 #pragma warning(disable : 6001 4324 6385 6386)
@@ -44,6 +45,28 @@ namespace mediapipe {
 using ImageGenerationPipelinesMap = std::unordered_map<std::string, std::shared_ptr<ImageGenerationPipelines>>;
 
 const std::string IMAGE_GEN_SESSION_SIDE_PACKET_TAG = "IMAGE_GEN_NODE_RESOURCES";
+
+static void applyLoraAdapterIfNeeded(const std::string& modelName,
+    const std::unordered_map<std::string, ov::genai::Adapter>& loraAdapters,
+    const ImageGenPipelineArgs& args,
+    ov::AnyMap& requestOptions) {
+    auto adapterIt = loraAdapters.find(modelName);
+    if (adapterIt == loraAdapters.end()) {
+        return;
+    }
+    // Find the alpha for this alias from the pipeline args
+    float alpha = 1.0f;
+    for (const auto& info : args.loraAdapters) {
+        if (info.alias == modelName) {
+            alpha = info.alpha;
+            break;
+        }
+    }
+    ov::genai::AdapterConfig adapterConfig;
+    adapterConfig.add(adapterIt->second, alpha);
+    requestOptions.insert(ov::genai::adapters(adapterConfig));
+    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Applied LoRA adapter: {} with alpha: {}", modelName, alpha);
+}
 
 static bool progress_bar(size_t step, size_t num_steps, ov::Tensor&) {
     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Image Generation Step: {}/{}", step + 1, num_steps);
@@ -179,6 +202,8 @@ public:
             SET_OR_RETURN(std::string, prompt, getPromptField(*payload.parsedJson));
             SET_OR_RETURN(ov::AnyMap, requestOptions, getImageGenerationRequestOptions(*payload.parsedJson, pipe->args));
 
+            // Apply LoRA adapter if the requested model name matches an alias
+            applyLoraAdapterIfNeeded(payload.modelName, pipe->loraAdapters, pipe->args, requestOptions);
             if (!pipe->text2ImagePipeline)
                 return absl::FailedPreconditionError("Text-to-image pipeline is not available for this model");
             auto t2i = pipe->text2ImagePipeline->clone();
@@ -202,6 +227,9 @@ public:
             }
 
             SET_OR_RETURN(ov::AnyMap, requestOptions, getImageEditRequestOptions(*payload.multipartParser, pipe->args));
+
+            // Apply LoRA adapter if the requested model name matches an alias
+            applyLoraAdapterIfNeeded(payload.modelName, pipe->loraAdapters, pipe->args, requestOptions);
 
             SET_OR_RETURN(std::optional<std::string_view>, mask, getFileFromPayload(*payload.multipartParser, "mask"));
             SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "ImageGenCalculator [Node: {}] Mask present: {}", cc->NodeName(), mask.has_value() && !mask.value().empty());

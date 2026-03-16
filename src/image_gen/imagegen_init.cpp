@@ -258,6 +258,21 @@ std::variant<Status, ImageGenPipelineArgs> prepareImageGenPipelineArgs(const goo
     args.maxNumImagesPerPrompt = nodeOptions.max_num_images_per_prompt();
     args.defaultNumInferenceSteps = nodeOptions.default_num_inference_steps();
     args.maxNumInferenceSteps = nodeOptions.max_num_inference_steps();
+
+    for (int i = 0; i < nodeOptions.lora_adapters_size(); ++i) {
+        const auto& loraEntry = nodeOptions.lora_adapters(i);
+        LoraAdapterInfo info;
+        info.alias = loraEntry.alias();
+        auto fsLoraPath = std::filesystem::path(loraEntry.path());
+        if (fsLoraPath.is_relative()) {
+            info.path = (std::filesystem::path(graphPath) / fsLoraPath).string();
+        } else {
+            info.path = fsLoraPath.string();
+        }
+        info.alpha = loraEntry.alpha();
+        args.loraAdapters.push_back(std::move(info));
+    }
+
     return std::move(args);
 }
 }  // namespace ovms

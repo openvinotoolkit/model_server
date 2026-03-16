@@ -143,6 +143,12 @@ struct RerankGraphSettingsImpl {
     uint64_t maxAllowedChunks = 10000;
 };
 
+struct LoraAdapterSettings {
+    std::string alias;
+    std::string sourceLora;       // HF repo, e.g. "juliensimon/stable-diffusion-v1-5-pokemon-lora"
+    std::string safetensorsFile;  // resolved filename, empty = auto-detect
+};
+
 struct ImageGenerationGraphSettingsImpl {
     std::string resolution = "";
     std::string maxResolution = "";
@@ -152,6 +158,7 @@ struct ImageGenerationGraphSettingsImpl {
     std::optional<uint32_t> maxNumberImagesPerPrompt;
     std::optional<uint32_t> defaultNumInferenceSteps;
     std::optional<uint32_t> maxNumInferenceSteps;
+    std::vector<LoraAdapterSettings> loraAdapters;
 };
 
 struct ExportSettings {
@@ -169,6 +176,7 @@ struct HFSettingsImpl {
     std::string sourceModel = "";
     std::optional<std::string> ggufFilename;
     std::string downloadPath = "";
+    std::string sourceLoras = "";  // raw --source_loras value, parsed by image gen CLI parser
     bool overwriteModels = false;
     ModelDownlaodType downloadType = GIT_CLONE_DOWNLOAD;
     GraphExportType task = TEXT_GENERATION_GRAPH;

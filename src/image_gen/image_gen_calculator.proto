@@ -43,4 +43,13 @@ message ImageGenCalculatorOptions {
     optional string resolution = 9;
     optional int64 num_images_per_prompt = 10;
     optional float guidance_scale = 11;
+
+    // LoRA adapters
+    repeated LoraAdapterEntry lora_adapters = 12;
+}
+
+message LoraAdapterEntry {
+    required string alias = 1;
+    required string path = 2;
+    optional float alpha = 3 [default = 1.0];
 }

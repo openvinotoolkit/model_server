@@ -112,6 +112,7 @@ public:
     const PipelineDefinitionStatus& getStatus() const {
         return this->status;
     }
+    const std::vector<std::string>& getLoraAliases() const { return loraAliases_; }
 
     const PipelineDefinitionStateCode getStateCode() const { return status.getStateCode(); }
     const model_version_t getVersion() const { return VERSION; }
@@ -203,6 +204,8 @@ private:
     std::vector<std::string> inputNames;
     std::vector<std::string> outputNames;
     std::vector<std::string> inputSidePacketNames;
+
+    std::vector<std::string> loraAliases_;
 
     std::atomic<uint64_t> requestsHandlesCounter = 0;
 

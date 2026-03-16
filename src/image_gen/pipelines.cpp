@@ -144,9 +144,21 @@ ImageGenerationPipelines::ImageGenerationPipelines(const ImageGenPipelineArgs& a
         inpaintingQueue = std::make_unique<Queue<int>>(1);
     }
 
-    SPDLOG_INFO("Image Generation Pipelines ready — T2I: {} | I2I: {} | INP: {}",
+    // --- Load LoRA adapters ---
+    for (const auto& loraInfo : args.loraAdapters) {
+        SPDLOG_INFO("Loading LoRA adapter: {} from: {}", loraInfo.alias, loraInfo.path);
+        try {
+            loraAdapters.emplace(loraInfo.alias, ov::genai::Adapter(loraInfo.path));
+            SPDLOG_INFO("LoRA adapter loaded: {}", loraInfo.alias);
+        } catch (const std::exception& e) {
+            throw std::runtime_error("Failed to load LoRA adapter '" + loraInfo.alias + "' from " + loraInfo.path + ": " + e.what());
+        }
+    }
+
+    SPDLOG_INFO("Image Generation Pipelines ready — T2I: {} | I2I: {} | INP: {} | LoRAs: {}",
         text2ImagePipeline ? "OK" : "N/A",
         image2ImagePipeline ? "OK" : "N/A",
-        inpaintingPipeline ? "OK" : "N/A");
+        inpaintingPipeline ? "OK" : "N/A",
+        loraAdapters.size());
 }
 }  // namespace ovms

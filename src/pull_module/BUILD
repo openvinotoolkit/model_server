@@ -105,6 +105,9 @@ ovms_cc_library(
         "@ovms//src:libovmslogging",
         "@ovms//src:libovms_server_settings",
         "@ovms//src:libovms_module",
+        "@ovms//src:libovms_version",
+        "//third_party:curl",
+        "@nlohmann_json//:json",
     ],
     visibility = ["//visibility:public"],
 )

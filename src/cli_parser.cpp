@@ -115,11 +115,11 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
                 cxxopts::value<std::string>(), "GRPC_CHANNEL_ARGUMENTS")
             ("file_system_poll_wait_seconds",
                 "Time interval between config and model versions changes detection. Default is 1. Zero or negative value disables changes monitoring.",
-                cxxopts::value<uint32_t>()->default_value("1"),
+                cxxopts::value<uint32_t>()->default_value("0"),
                 "FILE_SYSTEM_POLL_WAIT_SECONDS")
             ("sequence_cleaner_poll_wait_minutes",
                 "Time interval between two consecutive sequence cleanup scans. Default is 5. Zero value disables sequence cleaner. It also sets the schedule for releasing free memory from the heap.",
-                cxxopts::value<uint32_t>()->default_value("5"),
+                cxxopts::value<uint32_t>()->default_value("0"),
                 "SEQUENCE_CLEANER_POLL_WAIT_MINUTES")
             ("custom_node_resources_cleaner_interval_seconds",
                 "Time interval between two consecutive resources cleanup scans. Default is 300. Zero value disables resources cleaner.",
@@ -213,6 +213,10 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
             "HF source model path",
             cxxopts::value<std::string>(),
             "HF_SOURCE")
+            ("source_loras",
+            "LoRA adapters to apply to image generation model in format alias1=org1/repo1,alias2=org2/repo2@file.safetensors",
+            cxxopts::value<std::string>(),
+            "SOURCE_LORAS")
             ("gguf_filename",
             "Name of the GGUF file",
             cxxopts::value<std::string>(),
@@ -714,6 +718,9 @@ void CLIParser::prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl&
             hfSettings.sourceModel = result->operator[]("source_model").as<std::string>();
         } else if (result->count("model_name")) {
             hfSettings.sourceModel = result->operator[]("model_name").as<std::string>();
+        }
+        if (result->count("source_loras")) {
+            hfSettings.sourceLoras = result->operator[]("source_loras").as<std::string>();
         }
         if ((result->count("weight-format") || result->count("extra_quantization_params")) && isOptimumCliDownload(hfSettings.sourceModel, hfSettings.ggufFilename)) {
             hfSettings.downloadType = OPTIMUM_CLI_DOWNLOAD;

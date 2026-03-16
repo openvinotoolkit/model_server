@@ -32,6 +32,7 @@ namespace ovms {
 
 struct HttpPayload {
     std::string uri;
+    std::string modelName;  // resolved model name from request (JSON model field, multipart, or URI)
     std::unordered_map<std::string, std::string> headers;
     std::string body;                                 // always
     std::shared_ptr<rapidjson::Document> parsedJson;  // pre-parsed body             = null

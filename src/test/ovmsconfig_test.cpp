@@ -528,6 +528,60 @@ TEST_F(OvmsConfigDeathTest, negativeImageGenerationGraph_MaxNumInferenceStepsZer
     EXPECT_THROW(ovms::Config::instance().parse(arg_count, n_argv), std::invalid_argument);
 }
 
+TEST(OvmsGraphConfigTest, negativeImageGenerationGraph_SourceLorasEmptyAlias) {
+    char* n_argv[] = {
+        (char*)"ovms",
+        (char*)"--pull",
+        (char*)"--source_model",
+        (char*)"some/model",
+        (char*)"--model_repository_path",
+        (char*)"/some/path",
+        (char*)"--task",
+        (char*)"image_generation",
+        (char*)"--source_loras",
+        (char*)"=org/repo",
+    };
+    int arg_count = 10;
+    ConstructorEnabledConfig config;
+    EXPECT_THROW(config.parse(arg_count, n_argv), std::invalid_argument);
+}
+
+TEST(OvmsGraphConfigTest, negativeImageGenerationGraph_SourceLorasEmptyRepo) {
+    char* n_argv[] = {
+        (char*)"ovms",
+        (char*)"--pull",
+        (char*)"--source_model",
+        (char*)"some/model",
+        (char*)"--model_repository_path",
+        (char*)"/some/path",
+        (char*)"--task",
+        (char*)"image_generation",
+        (char*)"--source_loras",
+        (char*)"alias=",
+    };
+    int arg_count = 10;
+    ConstructorEnabledConfig config;
+    EXPECT_THROW(config.parse(arg_count, n_argv), std::invalid_argument);
+}
+
+TEST(OvmsGraphConfigTest, negativeImageGenerationGraph_SourceLorasEmptyFilenameAfterAt) {
+    char* n_argv[] = {
+        (char*)"ovms",
+        (char*)"--pull",
+        (char*)"--source_model",
+        (char*)"some/model",
+        (char*)"--model_repository_path",
+        (char*)"/some/path",
+        (char*)"--task",
+        (char*)"image_generation",
+        (char*)"--source_loras",
+        (char*)"org/repo@",
+    };
+    int arg_count = 10;
+    ConstructorEnabledConfig config;
+    EXPECT_THROW(config.parse(arg_count, n_argv), std::invalid_argument);
+}
+
 TEST_F(OvmsConfigDeathTest, hfBadEmbeddingsGraphParameter) {
     char* n_argv[] = {
         "ovms",
@@ -1709,6 +1763,37 @@ TEST(OvmsGraphConfigTest, positiveAllChangedImageGeneration) {
     ASSERT_EQ(exportSettings.pluginConfig.numStreams, 14);
     ASSERT_EQ(exportSettings.pluginConfig.cacheDir.value(), "/cache");
     ASSERT_EQ(exportSettings.pluginConfig.manualString.value(), "{\"SOME_KEY\":\"SOME_VALUE\"}");
+}
+
+TEST(OvmsGraphConfigTest, positiveImageGenerationWithSourceLoras) {
+    std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
+    std::string downloadPath = "test/repository";
+    char* n_argv[] = {
+        (char*)"ovms",
+        (char*)"--pull",
+        (char*)"--source_model",
+        (char*)modelName.c_str(),
+        (char*)"--model_repository_path",
+        (char*)downloadPath.c_str(),
+        (char*)"--task",
+        (char*)"image_generation",
+        (char*)"--source_loras=pokemon=juliensimon/sd-pokemon-lora@weights.safetensors,org/anime-lora",
+    };
+
+    int arg_count = 9;
+    ConstructorEnabledConfig config;
+    config.parse(arg_count, n_argv);
+
+    auto& hfSettings = config.getServerSettings().hfSettings;
+    ASSERT_EQ(hfSettings.task, ovms::IMAGE_GENERATION_GRAPH);
+    ovms::ImageGenerationGraphSettingsImpl imageGenerationGraphSettings = std::get<ovms::ImageGenerationGraphSettingsImpl>(hfSettings.graphSettings);
+    ASSERT_EQ(imageGenerationGraphSettings.loraAdapters.size(), 2);
+    ASSERT_EQ(imageGenerationGraphSettings.loraAdapters[0].alias, "pokemon");
+    ASSERT_EQ(imageGenerationGraphSettings.loraAdapters[0].sourceLora, "juliensimon/sd-pokemon-lora");
+    ASSERT_EQ(imageGenerationGraphSettings.loraAdapters[0].safetensorsFile, "weights.safetensors");
+    ASSERT_EQ(imageGenerationGraphSettings.loraAdapters[1].alias, "anime-lora");
+    ASSERT_EQ(imageGenerationGraphSettings.loraAdapters[1].sourceLora, "org/anime-lora");
+    ASSERT_TRUE(imageGenerationGraphSettings.loraAdapters[1].safetensorsFile.empty());
 }
 
 TEST(OvmsGraphConfigTest, positiveDefaultImageGeneration) {

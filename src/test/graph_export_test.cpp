@@ -23,6 +23,7 @@
 #include "light_test_utils.hpp"
 #include "../capi_frontend/server_settings.hpp"
 #include "../graph_export/graph_export.hpp"
+#include "../graph_export/image_generation_graph_cli_parser.hpp"
 #include "../filesystem.hpp"
 #include "../status.hpp"
 #include "../version.hpp"
@@ -1102,4 +1103,201 @@ TEST_F(GraphCreationTest, pluginConfigNegative) {
     res = ovms::GraphExport::createPluginString(exportSettings);
     ASSERT_TRUE(std::holds_alternative<ovms::Status>(res));
     ASSERT_EQ(std::get<Status>(res), ovms::StatusCode::PLUGIN_CONFIG_CONFLICTING_PARAMETERS);
+}
+
+// ===================== LoRA Graph Export Tests =====================
+
+const std::string expectedImageGenWithOneLora = R"(
+input_stream: "HTTP_REQUEST_PAYLOAD:input"
+output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+
+node: {
+  name: "ImageGenExecutor"
+  calculator: "ImageGenCalculator"
+  input_stream: "HTTP_REQUEST_PAYLOAD:input"
+  input_side_packet: "IMAGE_GEN_NODE_RESOURCES:pipes"
+  output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+  node_options: {
+      [type.googleapis.com / mediapipe.ImageGenCalculatorOptions]: {
+          models_path: "./"
+          device: "CPU"
+          lora_adapters { alias: "pokemon" path: "loras/juliensimon/sd-pokemon-lora/pytorch_lora_weights.safetensors" }
+      }
+  }
+}
+
+)";
+
+const std::string expectedImageGenWithTwoLoras = R"(
+input_stream: "HTTP_REQUEST_PAYLOAD:input"
+output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+
+node: {
+  name: "ImageGenExecutor"
+  calculator: "ImageGenCalculator"
+  input_stream: "HTTP_REQUEST_PAYLOAD:input"
+  input_side_packet: "IMAGE_GEN_NODE_RESOURCES:pipes"
+  output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+  node_options: {
+      [type.googleapis.com / mediapipe.ImageGenCalculatorOptions]: {
+          models_path: "./"
+          device: "GPU"
+          max_resolution: "1024x1024"
+          lora_adapters { alias: "pokemon" path: "loras/juliensimon/sd-pokemon-lora/model.safetensors" }
+          lora_adapters { alias: "anime-style" path: "loras/org2/anime-lora/weights.safetensors" }
+      }
+  }
+}
+
+)";
+
+TEST_F(GraphCreationTest, imageGenerationWithOneLora) {
+    ovms::HFSettingsImpl hfSettings;
+    hfSettings.task = ovms::IMAGE_GENERATION_GRAPH;
+    ovms::ImageGenerationGraphSettingsImpl imageGenerationGraphSettings;
+    imageGenerationGraphSettings.loraAdapters.push_back({"pokemon", "juliensimon/sd-pokemon-lora", "pytorch_lora_weights.safetensors"});
+    hfSettings.graphSettings = std::move(imageGenerationGraphSettings);
+    std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
+    std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
+    auto status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
+    ASSERT_EQ(status, ovms::StatusCode::OK);
+
+    std::string graphContents = GetFileContents(graphPath);
+    ASSERT_EQ(expectedImageGenWithOneLora, removeVersionString(graphContents)) << graphContents;
+}
+
+TEST_F(GraphCreationTest, imageGenerationWithTwoLoras) {
+    ovms::HFSettingsImpl hfSettings;
+    hfSettings.task = ovms::IMAGE_GENERATION_GRAPH;
+    ovms::ImageGenerationGraphSettingsImpl imageGenerationGraphSettings;
+    hfSettings.exportSettings.targetDevice = "GPU";
+    imageGenerationGraphSettings.maxResolution = "1024x1024";
+    imageGenerationGraphSettings.loraAdapters.push_back({"pokemon", "juliensimon/sd-pokemon-lora", "model.safetensors"});
+    imageGenerationGraphSettings.loraAdapters.push_back({"anime-style", "org2/anime-lora", "weights.safetensors"});
+    hfSettings.graphSettings = std::move(imageGenerationGraphSettings);
+    std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
+    std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
+    auto status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
+    ASSERT_EQ(status, ovms::StatusCode::OK);
+
+    std::string graphContents = GetFileContents(graphPath);
+    ASSERT_EQ(expectedImageGenWithTwoLoras, removeVersionString(graphContents)) << graphContents;
+}
+
+TEST_F(GraphCreationTest, imageGenerationNoLorasRemainsUnchanged) {
+    ovms::HFSettingsImpl hfSettings;
+    hfSettings.task = ovms::IMAGE_GENERATION_GRAPH;
+    ovms::ImageGenerationGraphSettingsImpl imageGenerationGraphSettings;
+    hfSettings.graphSettings = std::move(imageGenerationGraphSettings);
+    std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
+    std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
+    auto status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
+    ASSERT_EQ(status, ovms::StatusCode::OK);
+
+    std::string graphContents = GetFileContents(graphPath);
+    ASSERT_EQ(expectedImageGenerationGraphContentsDefault, removeVersionString(graphContents)) << graphContents;
+}
+
+// ===================== LoRA CLI-to-Settings Tests =====================
+
+TEST(ImageGenCLILoraParsingTest, SingleLoraWithAlias) {
+    ovms::ServerSettingsImpl serverSettings;
+    serverSettings.serverMode = ovms::HF_PULL_MODE;
+    ovms::HFSettingsImpl hfSettings;
+    hfSettings.sourceLoras = "pokemon=juliensimon/sd-pokemon-lora";
+    ovms::ImageGenerationGraphCLIParser parser;
+    parser.prepare(serverSettings, hfSettings, "test_model");
+    auto& graphSettings = std::get<ovms::ImageGenerationGraphSettingsImpl>(hfSettings.graphSettings);
+    ASSERT_EQ(graphSettings.loraAdapters.size(), 1);
+    EXPECT_EQ(graphSettings.loraAdapters[0].alias, "pokemon");
+    EXPECT_EQ(graphSettings.loraAdapters[0].sourceLora, "juliensimon/sd-pokemon-lora");
+    EXPECT_TRUE(graphSettings.loraAdapters[0].safetensorsFile.empty());
+}
+
+TEST(ImageGenCLILoraParsingTest, SingleLoraWithoutAlias) {
+    ovms::ServerSettingsImpl serverSettings;
+    serverSettings.serverMode = ovms::HF_PULL_MODE;
+    ovms::HFSettingsImpl hfSettings;
+    hfSettings.sourceLoras = "juliensimon/sd-pokemon-lora";
+    ovms::ImageGenerationGraphCLIParser parser;
+    parser.prepare(serverSettings, hfSettings, "test_model");
+    auto& graphSettings = std::get<ovms::ImageGenerationGraphSettingsImpl>(hfSettings.graphSettings);
+    ASSERT_EQ(graphSettings.loraAdapters.size(), 1);
+    EXPECT_EQ(graphSettings.loraAdapters[0].alias, "sd-pokemon-lora");
+    EXPECT_EQ(graphSettings.loraAdapters[0].sourceLora, "juliensimon/sd-pokemon-lora");
+    EXPECT_TRUE(graphSettings.loraAdapters[0].safetensorsFile.empty());
+}
+
+TEST(ImageGenCLILoraParsingTest, SingleLoraWithAliasAndFilename) {
+    ovms::ServerSettingsImpl serverSettings;
+    serverSettings.serverMode = ovms::HF_PULL_MODE;
+    ovms::HFSettingsImpl hfSettings;
+    hfSettings.sourceLoras = "pokemon=juliensimon/sd-pokemon-lora@custom_lora.safetensors";
+    ovms::ImageGenerationGraphCLIParser parser;
+    parser.prepare(serverSettings, hfSettings, "test_model");
+    auto& graphSettings = std::get<ovms::ImageGenerationGraphSettingsImpl>(hfSettings.graphSettings);
+    ASSERT_EQ(graphSettings.loraAdapters.size(), 1);
+    EXPECT_EQ(graphSettings.loraAdapters[0].alias, "pokemon");
+    EXPECT_EQ(graphSettings.loraAdapters[0].sourceLora, "juliensimon/sd-pokemon-lora");
+    EXPECT_EQ(graphSettings.loraAdapters[0].safetensorsFile, "custom_lora.safetensors");
+}
+
+TEST(ImageGenCLILoraParsingTest, MultipleLoras) {
+    ovms::ServerSettingsImpl serverSettings;
+    serverSettings.serverMode = ovms::HF_PULL_MODE;
+    ovms::HFSettingsImpl hfSettings;
+    hfSettings.sourceLoras = "pokemon=org1/repo1,anime=org2/repo2@weights.safetensors";
+    ovms::ImageGenerationGraphCLIParser parser;
+    parser.prepare(serverSettings, hfSettings, "test_model");
+    auto& graphSettings = std::get<ovms::ImageGenerationGraphSettingsImpl>(hfSettings.graphSettings);
+    ASSERT_EQ(graphSettings.loraAdapters.size(), 2);
+    EXPECT_EQ(graphSettings.loraAdapters[0].alias, "pokemon");
+    EXPECT_EQ(graphSettings.loraAdapters[0].sourceLora, "org1/repo1");
+    EXPECT_TRUE(graphSettings.loraAdapters[0].safetensorsFile.empty());
+    EXPECT_EQ(graphSettings.loraAdapters[1].alias, "anime");
+    EXPECT_EQ(graphSettings.loraAdapters[1].sourceLora, "org2/repo2");
+    EXPECT_EQ(graphSettings.loraAdapters[1].safetensorsFile, "weights.safetensors");
+}
+
+TEST(ImageGenCLILoraParsingTest, EmptySourceLorasProducesNoAdapters) {
+    ovms::ServerSettingsImpl serverSettings;
+    serverSettings.serverMode = ovms::HF_PULL_MODE;
+    ovms::HFSettingsImpl hfSettings;
+    hfSettings.sourceLoras = "";
+    ovms::ImageGenerationGraphCLIParser parser;
+    parser.prepare(serverSettings, hfSettings, "test_model");
+    auto& graphSettings = std::get<ovms::ImageGenerationGraphSettingsImpl>(hfSettings.graphSettings);
+    ASSERT_EQ(graphSettings.loraAdapters.size(), 0);
+}
+
+TEST(ImageGenCLILoraParsingTest, InvalidEmptyAlias) {
+    ovms::ServerSettingsImpl serverSettings;
+    serverSettings.serverMode = ovms::HF_PULL_MODE;
+    ovms::HFSettingsImpl hfSettings;
+    hfSettings.sourceLoras = "=org/repo";
+    ovms::ImageGenerationGraphCLIParser parser;
+    EXPECT_THROW(parser.prepare(serverSettings, hfSettings, "test_model"), std::invalid_argument);
+}
+
+TEST(ImageGenCLILoraParsingTest, InvalidEmptyFilenameAfterAt) {
+    ovms::ServerSettingsImpl serverSettings;
+    serverSettings.serverMode = ovms::HF_PULL_MODE;
+    ovms::HFSettingsImpl hfSettings;
+    hfSettings.sourceLoras = "pokemon=org/repo@";
+    ovms::ImageGenerationGraphCLIParser parser;
+    EXPECT_THROW(parser.prepare(serverSettings, hfSettings, "test_model"), std::invalid_argument);
+}
+
+TEST(ImageGenCLILoraParsingTest, WithoutAliasAndWithFilename) {
+    ovms::ServerSettingsImpl serverSettings;
+    serverSettings.serverMode = ovms::HF_PULL_MODE;
+    ovms::HFSettingsImpl hfSettings;
+    hfSettings.sourceLoras = "org1/repo1@special.safetensors";
+    ovms::ImageGenerationGraphCLIParser parser;
+    parser.prepare(serverSettings, hfSettings, "test_model");
+    auto& graphSettings = std::get<ovms::ImageGenerationGraphSettingsImpl>(hfSettings.graphSettings);
+    ASSERT_EQ(graphSettings.loraAdapters.size(), 1);
+    EXPECT_EQ(graphSettings.loraAdapters[0].alias, "repo1");
+    EXPECT_EQ(graphSettings.loraAdapters[0].sourceLora, "org1/repo1");
+    EXPECT_EQ(graphSettings.loraAdapters[0].safetensorsFile, "special.safetensors");
 }

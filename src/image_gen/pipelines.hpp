@@ -17,10 +17,12 @@
 
 #include <memory>
 #include <string>
+#include <unordered_map>
 
 #include <openvino/genai/image_generation/image2image_pipeline.hpp>
 #include <openvino/genai/image_generation/inpainting_pipeline.hpp>
 #include <openvino/genai/image_generation/text2image_pipeline.hpp>
+#include <openvino/genai/lora_adapter.hpp>
 
 #include "imagegenpipelineargs.hpp"
 #include "src/queue.hpp"
@@ -51,6 +53,7 @@ struct ImageGenerationPipelines {
     std::unique_ptr<ov::genai::Image2ImagePipeline> image2ImagePipeline;
     std::unique_ptr<ov::genai::Text2ImagePipeline> text2ImagePipeline;
     std::unique_ptr<ov::genai::InpaintingPipeline> inpaintingPipeline;
+    std::unordered_map<std::string, ov::genai::Adapter> loraAdapters;  // alias -> loaded adapter
     ImageGenPipelineArgs args;
 
     // Serializes concurrent inpainting requests (InpaintingPipeline lacks clone()).
