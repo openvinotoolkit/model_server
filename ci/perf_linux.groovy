@@ -180,7 +180,7 @@ pipeline {
                     sh "echo Start docker container && \
                     mkdir -p ${modelsPath} && \
                     docker pull ${params.DOCKER_IMAGE_NAME} && \
-                    docker run --rm -d --user \$(id -u):\$(id -g) ${gpuFlags} -e https_proxy=${env.HTTPS_PROXY} --name model_server_${BUILD_NUMBER} -p 9000:9000 -v ${modelsPath}:/models ${params.DOCKER_IMAGE_NAME} --source_model ${model_name} --rest_port 9000 --task text_generation --model_repository_path /models --target_device ${params.DEVICE} --cache_size 3 --log_level INFO && \
+                    docker run --rm -d --user \$(id -u):\$(id -g) ${gpuFlags} -e https_proxy=${env.HTTPS_PROXY} --name model_server_${BUILD_NUMBER} -p 9000:9000 -v ${modelsPath}:/models ${params.DOCKER_IMAGE_NAME} --source_model ${model_name} --rest_port 9000 --task text_generation --model_repository_path /models --target_device ${params.DEVICE} --cache_size 3 --log_level TRACE && \
                     echo wait for model server to be ready && \
                     while [ \"\$(curl -s http://localhost:9000/v3/models | jq -r '.data[0].id')\" != \"${model_name}\" ] ; do echo waiting for LLM model; sleep 1; done"
                 }
