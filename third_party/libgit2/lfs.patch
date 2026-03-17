@@ -444,10 +444,10 @@ index 58cb4b424..00ddee9f3 100644
  	git_writestream **out,
 diff --git a/src/libgit2/lfs_filter.c b/src/libgit2/lfs_filter.c
 new file mode 100644
-index 000000000..7c30438b8
+index 000000000..524f7dd7f
 --- /dev/null
 +++ b/src/libgit2/lfs_filter.c
-@@ -0,0 +1,1185 @@
+@@ -0,0 +1,1193 @@
 +﻿/*
 +/ Copyright 2025 Intel Corporation
 +/
@@ -1182,6 +1182,7 @@ index 000000000..7c30438b8
 +static size_t file_write_callback(void *buffer, size_t size, size_t nmemb, void *stream)
 +{
 +	struct FtpFile *out = (struct FtpFile *)stream;
++	size_t written_items;
 +	if (!out->stream) {
 +		/* open file for writing */
 +		out->stream = fopen(out->filename, "wb");
@@ -1192,7 +1193,8 @@ index 000000000..7c30438b8
 +		}
 +	}
 +
-+	return fwrite(buffer, size, nmemb, out->stream);
++	written_items = fwrite(buffer, size, nmemb, out->stream);
++	return written_items * size; /* return BYTES written */
 +}
 +
 +static size_t write_callback(void *ptr, size_t size, size_t nmemb, void *userp)
@@ -1246,19 +1248,25 @@ index 000000000..7c30438b8
 +	*/
 +	CURLcode res;
 +	curl_off_t offset = 0;
-+	{
-+		FILE *f = fopen(ftpfile->filename, "ab+");
-+		if (f) {
-+			if (fseeko(f, 0, SEEK_END) == 0) {
-+				off_t pos = ftello(f);
++	printf("\n[INFO] curl_easy_perform() trying to resume file download\n");
++	if (ftpfile->stream) {
++		fclose(ftpfile->stream);
++	}
++	ftpfile->stream = fopen(ftpfile->filename, "ab+");
++	if (ftpfile->stream) {
++		if (fseeko(ftpfile->stream, 0, SEEK_END) == 0) {
++			off_t pos = ftello(ftpfile->stream);
 +				if (pos > 0)
 +					offset = (curl_off_t)pos;
-+			}
-+			fclose(f);
 +		}
++		// Do not close the file because we want to append binary to the existin file
++		// fclose(f);
++	} else {
++		fprintf(stderr, "\n[ERROR] Cannot open file %s\n",
++		        ftpfile->filename);
++		return -1;
 +	}
 +
-+	printf("\n[INFO] curl_easy_perform() trying to resume file download from %lld bytes\n", offset);
 +	/* Tell libcurl to resume */
 +	curl_easy_setopt(dl_curl, CURLOPT_RESUME_FROM_LARGE, offset);
 +	/* Perform the request, res gets the return code */
