@@ -180,7 +180,7 @@ pipeline {
                     sh "echo Start docker container && \
                     mkdir -p ${modelsPath} && \
                     docker pull ${params.DOCKER_IMAGE_NAME} && \
-                    docker run --rm -d --user \$(id -u):\$(id -g) ${gpuFlags} -e https_proxy=${env.HTTPS_PROXY} --name model_server_${BUILD_NUMBER} -p 9000:9000 -v ${modelsPath}:/models ${params.DOCKER_IMAGE_NAME} --source_model ${model_name} --rest_port 9000 --task text_generation --model_repository_path /models --target_device ${params.DEVICE} --cache_size 3 --log_level TRACE && \
+                    docker run --rm -d --user \$(id -u):\$(id -g) ${gpuFlags} -e https_proxy=${env.HTTPS_PROXY} --name model_server_${BUILD_NUMBER} -p 9000:9000 -v ${modelsPath}:/models ${params.DOCKER_IMAGE_NAME} --source_model ${model_name} --rest_port 9000 --task text_generation --model_repository_path /models --target_device ${params.DEVICE} --cache_size 3 --log_level INFO && \
                     echo wait for model server to be ready && \
                     while [ \"\$(curl -s http://localhost:9000/v3/models | jq -r '.data[0].id')\" != \"${model_name}\" ] ; do echo waiting for LLM model; sleep 1; done"
                 }
@@ -342,7 +342,7 @@ pipeline {
                 echo Running agentic accuracy test && \
                 export OPENAI_BASE_URL=http://localhost:9000/v3 && \
                 ${params.USE_THINKING ? 'export ENABLE_THINKING=true && \\' : ''} \
-                bfcl generate --model ovms-model --test-category simple_python --temperature 0.0 --num-threads 100 -o --result-dir bfcl_results && bfcl evaluate --model ovms-model --result-dir bfcl_results --score-dir bfcl_scores && \
+                bfcl generate --model ovms-model --test-category simple_python --temperature 0.0 --num-threads 100 -o --result-dir bfcl_results > log.log && bfcl evaluate --model ovms-model --result-dir bfcl_results --score-dir bfcl_scores && \
                 cat gorilla/berkeley-function-call-leaderboard/bfcl_scores/ovms-model/non_live/BFCL_v4_simple_python_score.json | head -1 | jq ."
                 script {
                     def accuracy = sh(script: "cat gorilla/berkeley-function-call-leaderboard/bfcl_scores/ovms-model/non_live/BFCL_v4_simple_python_score.json | head -1 | jq -r '.accuracy'", returnStdout: true).trim()
