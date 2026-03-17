@@ -21,7 +21,7 @@
 #include "../capi_frontend/server_settings.hpp"
 
 namespace ovms {
-class Libgt2InitGuard;
+struct Libgt2InitGuard;
 class HfPullModelModule : public Module {
 protected:
     HFSettingsImpl hfSettings;
