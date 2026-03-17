@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2020 Intel Corporation
+// Copyright 2026 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,17 +13,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include "pipelinedefinitionunloadguard.hpp"
+#include "servable_definition_unload_guard.hpp"
 
-#include "pipelinedefinition.hpp"
+#include "single_version_servable_definition.hpp"
 
 namespace ovms {
-PipelineDefinitionUnloadGuard::PipelineDefinitionUnloadGuard(PipelineDefinition& pipelineDefinition) :
-    pipelineDefinition(pipelineDefinition) {
-    pipelineDefinition.increaseRequestsHandlesCount();
+
+ServableDefinitionUnloadGuard::ServableDefinitionUnloadGuard(SingleVersionServableDefinition& definition) :
+    definition(definition) {
+    definition.increaseRequestsHandlesCount();
 }
 
-PipelineDefinitionUnloadGuard::~PipelineDefinitionUnloadGuard() {
-    pipelineDefinition.decreaseRequestsHandlesCount();
+ServableDefinitionUnloadGuard::~ServableDefinitionUnloadGuard() {
+    definition.decreaseRequestsHandlesCount();
 }
+
 }  // namespace ovms

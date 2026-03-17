@@ -32,6 +32,7 @@
 #include "../metric.hpp"
 #include "../model_metric_reporter.hpp"
 #include "../ov_utils.hpp"
+#include "../servable_definition_unload_guard.hpp"
 #include "../servable_name_checker.hpp"
 #include "../llm/servable.hpp"
 #include "../llm/servable_initializer.hpp"
@@ -193,7 +194,7 @@ MediapipeGraphDefinition::MediapipeGraphDefinition(const std::string name,
     const MetricConfig* metricConfig,
     PythonBackend* pythonBackend) :
     SingleVersionServableDefinition(name),
-    status(SCHEDULER_CLASS_NAME, name),
+    status(SCHEDULER_CLASS_NAME, getName()),
     pythonBackend(pythonBackend),
     reporter(std::make_unique<MediapipeServableMetricReporter>(metricConfig, registry, name)) {
     mgconfig = config;
@@ -254,7 +255,7 @@ Status MediapipeGraphDefinition::createOutputsInfo() {
 }
 
 Status MediapipeGraphDefinition::create(std::unique_ptr<MediapipeGraphExecutor>& pipeline) {
-    std::unique_ptr<MediapipeGraphDefinitionUnloadGuard> unloadGuard;
+    std::unique_ptr<ServableDefinitionUnloadGuard> unloadGuard;
     Status status = waitForLoaded(unloadGuard);
     if (!status.ok()) {
         SPDLOG_DEBUG("Failed to execute mediapipe graph: {} since it is not available", getName());
@@ -356,50 +357,12 @@ bool MediapipeGraphDefinition::isReloadRequired(const MediapipeGraphConfig& conf
     return getMediapipeGraphConfig().isReloadRequired(config);
 }
 
-Status MediapipeGraphDefinition::waitForLoaded(std::unique_ptr<MediapipeGraphDefinitionUnloadGuard>& unloadGuard, const uint32_t waitForLoadedTimeoutMicroseconds) {
-    unloadGuard = std::make_unique<MediapipeGraphDefinitionUnloadGuard>(*this);
+StatusCode MediapipeGraphDefinition::notLoadedYetCode() const {
+    return StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_YET;
+}
 
-    const uint32_t waitLoadedTimestepMicroseconds = 1000;
-    const uint32_t waitCheckpoints = waitForLoadedTimeoutMicroseconds / waitLoadedTimestepMicroseconds;
-    uint32_t waitCheckpointsCounter = waitCheckpoints;
-    std::mutex cvMtx;
-    std::unique_lock<std::mutex> cvLock(cvMtx);
-    while (waitCheckpointsCounter-- != 0) {
-        if (status.isAvailable()) {
-            SPDLOG_DEBUG("Successfully waited for mediapipe definition: {}", getName());
-            return StatusCode::OK;
-        }
-        unloadGuard.reset();
-        if (!status.canEndLoaded()) {
-            if (status.getStateCode() != PipelineDefinitionStateCode::RETIRED) {
-                SPDLOG_DEBUG("Waiting for mediapipe definition: {} ended due to timeout.", getName());
-                return StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_YET;
-            } else {
-                SPDLOG_DEBUG("Waiting for mediapipe definition: {} ended since it failed to load.", getName());
-                return StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_ANYMORE;
-            }
-        }
-        SPDLOG_DEBUG("Waiting for available state for mediapipe: {}, with timestep: {}us timeout: {}us check count: {}",
-            getName(), waitLoadedTimestepMicroseconds, waitForLoadedTimeoutMicroseconds, waitCheckpointsCounter);
-        loadedNotify.wait_for(cvLock,
-            std::chrono::microseconds(waitLoadedTimestepMicroseconds),
-            [this]() {
-                return this->status.isAvailable() ||
-                       !this->status.canEndLoaded();
-            });
-        unloadGuard = std::make_unique<MediapipeGraphDefinitionUnloadGuard>(*this);
-    }
-    if (!status.isAvailable()) {
-        if (status.getStateCode() != PipelineDefinitionStateCode::RETIRED) {
-            SPDLOG_DEBUG("Waiting for mediapipe definition: {} ended due to timeout.", getName());
-            return StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_YET;
-        } else {
-            SPDLOG_DEBUG("Waiting for mediapipe definition: {} ended since it failed to load.", getName());
-            return StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_ANYMORE;
-        }
-    }
-    SPDLOG_DEBUG("Successfully waited for mediapipe definition: {}", getName());
-    return StatusCode::OK;
+StatusCode MediapipeGraphDefinition::notLoadedAnymoreCode() const {
+    return StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_ANYMORE;
 }
 
 template <typename T>

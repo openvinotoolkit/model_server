@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2020 Intel Corporation
+// Copyright 2026 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,15 +16,17 @@
 #pragma once
 
 namespace ovms {
-class PipelineDefinition;
 
-class PipelineDefinitionUnloadGuard {
+class SingleVersionServableDefinition;
+
+class ServableDefinitionUnloadGuard {
 public:
-    PipelineDefinitionUnloadGuard() = delete;
-    PipelineDefinitionUnloadGuard(PipelineDefinition& pipelineDefinition);
-    ~PipelineDefinitionUnloadGuard();
+    ServableDefinitionUnloadGuard() = delete;
+    ServableDefinitionUnloadGuard(SingleVersionServableDefinition& definition);
+    ~ServableDefinitionUnloadGuard();
 
 private:
-    PipelineDefinition& pipelineDefinition;
+    SingleVersionServableDefinition& definition;
 };
+
 }  // namespace ovms

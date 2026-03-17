@@ -40,7 +40,7 @@
 #include "dags/pipeline.hpp"
 #include "dags/pipeline_factory.hpp"
 #include "dags/pipelinedefinition.hpp"
-#include "dags/pipelinedefinitionunloadguard.hpp"
+#include "servable_definition_unload_guard.hpp"
 #include "execution_context.hpp"
 #include "filesystem.hpp"
 #include "get_model_metadata_impl.hpp"
@@ -1249,7 +1249,7 @@ Status HttpRestApiHandler::getPipelineInputsAndReporter(const std::string& model
     if (!pipelineDefinition) {
         return StatusCode::MODEL_MISSING;
     }
-    std::unique_ptr<PipelineDefinitionUnloadGuard> unloadGuard;
+    std::unique_ptr<ServableDefinitionUnloadGuard> unloadGuard;
     Status status = pipelineDefinition->waitForLoaded(unloadGuard);
     if (!status.ok()) {
         return status;

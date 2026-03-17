@@ -27,6 +27,7 @@
 #include "../modelmanager.hpp"
 #include "../ov_utils.hpp"
 #include "../prediction_service_utils.hpp"
+#include "../servable_definition_unload_guard.hpp"
 #include "../status.hpp"
 #include "custom_node.hpp"
 #include "custom_node_library_internal_manager_wrapper.hpp"
@@ -37,7 +38,6 @@
 #include "nodeinfo.hpp"
 #include "nodestreamidguard.hpp"
 #include "pipeline.hpp"
-#include "pipelinedefinitionunloadguard.hpp"
 
 namespace ovms {
 const std::string PipelineDefinition::SCHEDULER_CLASS_NAME{"Pipeline"};
@@ -64,7 +64,7 @@ PipelineDefinition::PipelineDefinition(const std::string& pipelineName,
     nodeInfos(nodeInfos),
     connections(connections),
     reporter(std::make_unique<ServableMetricReporter>(metricConfig, registry, pipelineName, VERSION)),
-    status(SCHEDULER_CLASS_NAME, pipelineName) {}
+    status(SCHEDULER_CLASS_NAME, getName()) {}
 
 Status PipelineDefinition::validate(ModelManager& manager) {
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Started validation of pipeline: {}", getName());
@@ -183,50 +183,12 @@ void PipelineDefinition::retire(ModelManager& manager) {
     this->connections.clear();
 }
 
-Status PipelineDefinition::waitForLoaded(std::unique_ptr<PipelineDefinitionUnloadGuard>& unloadGuard, const uint32_t waitForLoadedTimeoutMicroseconds) {
-    unloadGuard = std::make_unique<PipelineDefinitionUnloadGuard>(*this);
+StatusCode PipelineDefinition::notLoadedYetCode() const {
+    return StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET;
+}
 
-    const uint32_t waitLoadedTimestepMicroseconds = 1000;
-    const uint32_t waitCheckpoints = waitForLoadedTimeoutMicroseconds / waitLoadedTimestepMicroseconds;
-    uint32_t waitCheckpointsCounter = waitCheckpoints;
-    std::mutex cvMtx;
-    std::unique_lock<std::mutex> cvLock(cvMtx);
-    while (waitCheckpointsCounter-- != 0) {
-        if (status.isAvailable()) {
-            SPDLOG_DEBUG("Successfully waited for pipeline definition: {}", getName());
-            return StatusCode::OK;
-        }
-        unloadGuard.reset();
-        if (!status.canEndLoaded()) {
-            if (status.getStateCode() != PipelineDefinitionStateCode::RETIRED) {
-                SPDLOG_DEBUG("Waiting for pipeline definition: {} ended due to timeout.", getName());
-                return StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET;
-            } else {
-                SPDLOG_DEBUG("Waiting for pipeline definition: {} ended since it failed to load.", getName());
-                return StatusCode::PIPELINE_DEFINITION_NOT_LOADED_ANYMORE;
-            }
-        }
-        SPDLOG_DEBUG("Waiting for available state for pipeline: {}, with timestep: {}us timeout: {}us check count: {}",
-            getName(), waitLoadedTimestepMicroseconds, waitForLoadedTimeoutMicroseconds, waitCheckpointsCounter);
-        loadedNotify.wait_for(cvLock,
-            std::chrono::microseconds(waitLoadedTimestepMicroseconds),
-            [this]() {
-                return this->status.isAvailable() ||
-                       !this->status.canEndLoaded();
-            });
-        unloadGuard = std::make_unique<PipelineDefinitionUnloadGuard>(*this);
-    }
-    if (!status.isAvailable()) {
-        if (status.getStateCode() != PipelineDefinitionStateCode::RETIRED) {
-            SPDLOG_DEBUG("Waiting for pipeline definition: {} ended due to timeout.", getName());
-            return StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET;
-        } else {
-            SPDLOG_DEBUG("Waiting for pipeline definition: {} ended since it failed to load.", getName());
-            return StatusCode::PIPELINE_DEFINITION_NOT_LOADED_ANYMORE;
-        }
-    }
-    SPDLOG_DEBUG("Successfully waited for pipeline definition: {}", getName());
-    return StatusCode::OK;
+StatusCode PipelineDefinition::notLoadedAnymoreCode() const {
+    return StatusCode::PIPELINE_DEFINITION_NOT_LOADED_ANYMORE;
 }
 
 template <typename RequestType, typename ResponseType>
@@ -234,7 +196,7 @@ Status PipelineDefinition::create(std::unique_ptr<Pipeline>& pipeline,
     const RequestType* request,
     ResponseType* response,
     ModelManager& manager) {
-    std::unique_ptr<PipelineDefinitionUnloadGuard> unloadGuard;
+    std::unique_ptr<ServableDefinitionUnloadGuard> unloadGuard;
     Status status = waitForLoaded(unloadGuard);
     if (!status.ok()) {
         return status;

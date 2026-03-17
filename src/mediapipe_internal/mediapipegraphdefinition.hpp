@@ -28,6 +28,7 @@
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "../kfs_frontend/kfs_utils.hpp"
 #include "../metric.hpp"
+#include "../model_metric_reporter.hpp"
 #include "../single_version_servable_definition.hpp"
 #include "../tensorinfo.hpp"
 
@@ -51,10 +52,8 @@
 #include "../audio/text_to_speech/t2s_servable.hpp"
 
 namespace ovms {
-class MediapipeGraphDefinitionUnloadGuard;
 class MetricConfig;
 class MetricRegistry;
-class MediapipeServableMetricReporter;
 class ServableNameChecker;
 class MediapipeGraphExecutor;
 class Status;
@@ -99,7 +98,6 @@ struct GraphSidePackets {
 };
 
 class MediapipeGraphDefinition : public SingleVersionServableDefinition {
-    friend MediapipeGraphDefinitionUnloadGuard;
 
 public:
     virtual ~MediapipeGraphDefinition();
@@ -110,16 +108,16 @@ public:
         PythonBackend* pythonBackend = nullptr);
 
     const std::string& getName() const override { return SingleVersionServableDefinition::getName(); }
-    const PipelineDefinitionStatus& getStatus() const {
+    const PipelineDefinitionStatus& getStatus() const override {
         return this->status;
     }
 
     const PipelineDefinitionStateCode getStateCode() const { return status.getStateCode(); }
     bool isAvailable() const override { return status.isAvailable(); }
-    const tensor_map_t getInputsInfo() const;
-    const tensor_map_t getOutputsInfo() const;
+    const tensor_map_t getInputsInfo() const override;
+    const tensor_map_t getOutputsInfo() const override;
     const MediapipeGraphConfig& getMediapipeGraphConfig() const { return this->mgconfig; }
-    MediapipeServableMetricReporter& getMetricReporter() const { return *this->reporter; }
+    MediapipeServableMetricReporter& getMetricReporter() const override { return *this->reporter; }
     Status create(std::unique_ptr<MediapipeGraphExecutor>& pipeline);
 
     Status reload(const ServableNameChecker& checker, const MediapipeGraphConfig& config);
@@ -128,7 +126,6 @@ public:
     Status initializeNodes();
     bool isReloadRequired(const MediapipeGraphConfig& config) const;
 
-    static constexpr uint64_t WAIT_FOR_LOADED_DEFAULT_TIMEOUT_MICROSECONDS = 500000;
     static const std::string SCHEDULER_CLASS_NAME;
     static const std::string PYTHON_NODE_CALCULATOR_NAME;
     static const std::string LLM_NODE_CALCULATOR_NAME;
@@ -137,7 +134,6 @@ public:
     static const std::string RERANK_NODE_CALCULATOR_NAME;
     static const std::string STT_NODE_CALCULATOR_NAME;
     static const std::string TTS_NODE_CALCULATOR_NAME;
-    Status waitForLoaded(std::unique_ptr<MediapipeGraphDefinitionUnloadGuard>& unloadGuard, const uint32_t waitForLoadedTimeoutMicroseconds = WAIT_FOR_LOADED_DEFAULT_TIMEOUT_MICROSECONDS);
 
 protected:
     GraphSidePackets sidePacketMaps;
@@ -182,17 +178,11 @@ protected:
     Status createOutputsInfo();
     Status createInputSidePacketsInfo();
 
-    std::condition_variable loadedNotify;
     mutable std::shared_mutex metadataMtx;
 
 private:
-    void increaseRequestsHandlesCount() {
-        ++requestsHandlesCounter;
-    }
-
-    void decreaseRequestsHandlesCount() {
-        --requestsHandlesCounter;
-    }
+    StatusCode notLoadedYetCode() const override;
+    StatusCode notLoadedAnymoreCode() const override;
 
     tensor_map_t inputsInfo;
     tensor_map_t outputsInfo;
@@ -201,25 +191,8 @@ private:
     std::vector<std::string> outputNames;
     std::vector<std::string> inputSidePacketNames;
 
-    std::atomic<uint64_t> requestsHandlesCounter = 0;
-
     PythonBackend* pythonBackend;
 
     std::unique_ptr<MediapipeServableMetricReporter> reporter;
-};
-
-class MediapipeGraphDefinitionUnloadGuard {
-public:
-    MediapipeGraphDefinitionUnloadGuard(MediapipeGraphDefinition& definition) :
-        definition(definition) {
-        definition.increaseRequestsHandlesCount();
-    }
-
-    ~MediapipeGraphDefinitionUnloadGuard() {
-        definition.decreaseRequestsHandlesCount();
-    }
-
-private:
-    MediapipeGraphDefinition& definition;
 };
 }  // namespace ovms

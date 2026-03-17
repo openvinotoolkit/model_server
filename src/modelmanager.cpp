@@ -1778,4 +1778,15 @@ ServableDefinition* ModelManager::findServableDefinition(const std::string& name
     return nullptr;
 }
 
+std::vector<std::string> ModelManager::getServableDefinitionNames() const {
+    std::vector<std::string> names;
+    auto pipelineNames = pipelineFactory->getPipelinesNames();
+    names.insert(names.end(), pipelineNames.begin(), pipelineNames.end());
+#if (MEDIAPIPE_DISABLE == 0)
+    auto mediapipeNames = mediapipeFactory->getMediapipePipelinesNames();
+    names.insert(names.end(), mediapipeNames.begin(), mediapipeNames.end());
+#endif
+    return names;
+}
+
 }  // namespace ovms

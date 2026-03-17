@@ -171,11 +171,23 @@ ovms_cc_library(
 )
 ovms_cc_library(
     name = "libovms_single_version_servable_definition",
-    hdrs = ["single_version_servable_definition.hpp"],
+    srcs = [
+        "servable_definition_unload_guard.cpp",
+        "single_version_servable_definition.cpp",
+    ],
+    hdrs = [
+        "servable_definition_unload_guard.hpp",
+        "single_version_servable_definition.hpp",
+        "tensorinfo_fwd.hpp",
+    ],
     deps = [
         "servable",
         "libovms_servable_definition",
+        "libovms_dags_pipelinedefinitionstatus",
+        "libovms_tensorinfo",
+        "libovmslogging",
         "libovmsmodelversion",
+        "libovmsstatus",
     ],
 )
 cc_library(
@@ -521,8 +533,6 @@ ovms_cc_library(
         "dags/gatherexitnodeinputhandler.hpp",
         "dags/pipelinedefinition.hpp",
         "dags/pipelinedefinition.cpp",
-        "dags/pipelinedefinitionunloadguard.cpp",
-        "dags/pipelinedefinitionunloadguard.hpp",
         "dags/pipeline_factory.cpp",
         "dags/pipeline_factory.hpp",
         "get_model_metadata_impl.cpp",

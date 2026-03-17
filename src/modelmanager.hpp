@@ -500,6 +500,8 @@ public:
 
     ServableDefinition* findServableDefinition(const std::string& name) const;
 
+    std::vector<std::string> getServableDefinitionNames() const;
+
     MetricRegistry* getMetricRegistry() const override { return this->metricRegistry; }
 };
 
