@@ -444,7 +444,7 @@ index 58cb4b424..00ddee9f3 100644
  	git_writestream **out,
 diff --git a/src/libgit2/lfs_filter.c b/src/libgit2/lfs_filter.c
 new file mode 100644
-index 000000000..b0971f290
+index 000000000..7c30438b8
 --- /dev/null
 +++ b/src/libgit2/lfs_filter.c
 @@ -0,0 +1,1185 @@
@@ -1246,7 +1246,6 @@ index 000000000..b0971f290
 +	*/
 +	CURLcode res;
 +	curl_off_t offset = 0;
-+	printf("\n[INFO] curl_easy_perform() trying to resume file download\n");
 +	{
 +		FILE *f = fopen(ftpfile->filename, "ab+");
 +		if (f) {
@@ -1259,6 +1258,7 @@ index 000000000..b0971f290
 +		}
 +	}
 +
++	printf("\n[INFO] curl_easy_perform() trying to resume file download from %lld bytes\n", offset);
 +	/* Tell libcurl to resume */
 +	curl_easy_setopt(dl_curl, CURLOPT_RESUME_FROM_LARGE, offset);
 +	/* Perform the request, res gets the return code */
