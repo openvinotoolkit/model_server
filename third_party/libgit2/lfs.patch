@@ -444,7 +444,7 @@ index 58cb4b424..00ddee9f3 100644
  	git_writestream **out,
 diff --git a/src/libgit2/lfs_filter.c b/src/libgit2/lfs_filter.c
 new file mode 100644
-index 000000000..68371e058
+index 000000000..b0971f290
 --- /dev/null
 +++ b/src/libgit2/lfs_filter.c
 @@ -0,0 +1,1185 @@
@@ -1182,7 +1182,6 @@ index 000000000..68371e058
 +static size_t file_write_callback(void *buffer, size_t size, size_t nmemb, void *stream)
 +{
 +	struct FtpFile *out = (struct FtpFile *)stream;
-+	size_t written_items;
 +	if (!out->stream) {
 +		/* open file for writing */
 +		out->stream = fopen(out->filename, "wb");
@@ -1193,8 +1192,7 @@ index 000000000..68371e058
 +		}
 +	}
 +
-+	written_items = fwrite(buffer, size, nmemb, out->stream);
-+	return written_items * size; /* return BYTES written */
++	return fwrite(buffer, size, nmemb, out->stream);
 +}
 +
 +static size_t write_callback(void *ptr, size_t size, size_t nmemb, void *userp)
@@ -1585,6 +1583,7 @@ index 000000000..68371e058
 +	free(tmp_out_file);
 +	git_str_dispose(&res_str);
 +	lfs_attrs_delete(la);
++	fflush(stdout);
 +	return;
 +
 +    on_error:
@@ -1593,6 +1592,7 @@ index 000000000..68371e058
 +	fprintf(stderr, "\n[ERROR] LFS download failed for file %s\n",
 +	        la->full_path);
 +	fflush(stderr);
++	fflush(stdout);
 +	git_str_dispose(&res_str);
 +	lfs_attrs_delete(la);
 +	return;
@@ -1626,7 +1626,7 @@ index 000000000..68371e058
 +
 +	f->version = GIT_FILTER_VERSION;
 +	f->attributes = "lfs";
-+	f->shutdown = git_lfs_filter_free; /* will free cfg and filter */
++	f->shutdown = git_lfs_filter_free;
 +	f->stream = lfs_stream;
 +	f->check = lfs_check;
 +	f->cleanup = lfs_download;
