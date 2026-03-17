@@ -342,7 +342,7 @@ pipeline {
                 echo Running agentic accuracy test && \
                 export OPENAI_BASE_URL=http://localhost:9000/v3 && \
                 ${params.USE_THINKING ? 'export ENABLE_THINKING=true && \\' : ''} \
-                cat @tmp/durable-*/script.sh.copy' && \
+                cat @tmp/durable-*/script.sh.copy && \
                 bfcl generate --model ovms-model --test-category simple_python --temperature 0.0 --num-threads 100 -o --result-dir bfcl_results > log.log && bfcl evaluate --model ovms-model --result-dir bfcl_results --score-dir bfcl_scores && \
                 cat gorilla/berkeley-function-call-leaderboard/bfcl_scores/ovms-model/non_live/BFCL_v4_simple_python_score.json | head -1 | jq ."
                 script {
