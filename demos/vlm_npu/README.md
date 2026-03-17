@@ -35,7 +35,7 @@ The default configuration should work in most cases but the parameters can be tu
 
 Running this command starts the container with NPU enabled:
 ```bash
-docker run -d --rm --device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) -p 8000:8000 -v $(pwd)/models:/models:rw openvino/model_server:latest-gpu --rest_port 8000 --model_repository_path /models --source_model OpenVINO/Phi-3.5-vision-instruct-int8-ov  --task text_generation --target_device NPU
+docker run -d --rm --device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) -p 8000:8000 -v $(pwd)/models:/models:rw openvino/model_server:latest-gpu --rest_port 8000 --model_repository_path /models --source_model OpenVINO/Phi-3.5-vision-instruct-fp16-ov  --task text_generation --target_device NPU
 ```
 :::
 
@@ -49,7 +49,7 @@ Assuming you have unpacked model server package, make sure to:
 as mentioned in [deployment guide](../../docs/deploying_server_baremetal.md), in every new shell that will start OpenVINO Model Server.
 
 ```bat
-ovms --rest_port 8000 --model_repository_path /models --source_model OpenVINO/Phi-3.5-vision-instruct-int8-ov  --task text_generation --target_device NPU
+ovms --rest_port 8000 --model_repository_path /models --source_model OpenVINO/Phi-3.5-vision-instruct-fp16-ov  --task text_generation --target_device NPU
 ```
 :::
 
@@ -64,7 +64,7 @@ curl http://localhost:8000/v3/models
   "object": "list",
   "data": [
     {
-      "id": "OpenVINO/Phi-3.5-vision-instruct-int8-ov",
+      "id": "OpenVINO/Phi-3.5-vision-instruct-fp16-ov",
       "object": "model",
       "created": 1773742559,
       "owned_by": "OVMS"
@@ -85,11 +85,11 @@ curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/m
 
 Referring to local filesystem images in requests requires passing additional parameter `--allowed_local_media_path` (described in [Model Server Parameters](../../docs/parameters.md) section) when starting docker container: 
 ```bash
-docker run -d --rm --device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) -p 8000:8000 -v $(pwd)/models:/models:rw openvino/model_server:latest-gpu --rest_port 8000 --model_repository_path /models --source_model OpenVINO/Phi-3.5-vision-instruct-int8-ov  --task text_generation --target_device NPU  --allowed_local_media_path /images
+docker run -d --rm --device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) -p 8000:8000 -v $(pwd)/models:/models:rw openvino/model_server:latest-gpu --rest_port 8000 --model_repository_path /models --source_model OpenVINO/Phi-3.5-vision-instruct-fp16-ov  --task text_generation --target_device NPU  --allowed_local_media_path /images
 ```
 
 ```bash
-curl http://localhost:8000/v3/chat/completions  -H "Content-Type: application/json" -d "{ \"model\": \"OpenVINO/Phi-3.5-vision-instruct-int8-ov\", \"messages\":[{\"role\": \"user\", \"content\": [{\"type\": \"text\", \"text\": \"Describe what is one the picture.\"},{\"type\": \"image_url\", \"image_url\": {\"url\": \"/images/zebra.jpeg\"}}]}], \"max_completion_tokens\": 100}"
+curl http://localhost:8000/v3/chat/completions  -H "Content-Type: application/json" -d "{ \"model\": \"OpenVINO/Phi-3.5-vision-instruct-fp16-ov\", \"messages\":[{\"role\": \"user\", \"content\": [{\"type\": \"text\", \"text\": \"Describe what is one the picture.\"},{\"type\": \"image_url\", \"image_url\": {\"url\": \"/images/zebra.jpeg\"}}]}], \"max_completion_tokens\": 100}"
 ```
 ```json
 {
@@ -105,7 +105,7 @@ curl http://localhost:8000/v3/chat/completions  -H "Content-Type: application/js
     }
   ],
   "created": 1741731554,
-  "model": "OpenVINO/Phi-3.5-vision-instruct-int8-ov",
+  "model": "OpenVINO/Phi-3.5-vision-instruct-fp16-ov",
   "object": "chat.completion",
   "usage": {
     "prompt_tokens": 19,
@@ -122,7 +122,7 @@ curl http://localhost:8000/v3/chat/completions  -H "Content-Type: application/js
 import requests
 import base64
 base_url='http://127.0.0.1:8000/v3'
-model_name = "OpenVINO/Phi-3.5-vision-instruct-int8-ov"
+model_name = "OpenVINO/Phi-3.5-vision-instruct-fp16-ov"
 
 def convert_image(Image):
     with open(Image,'rb' ) as file:
@@ -160,7 +160,7 @@ print(response.text)
     }
   ],
   "created": 1773738822,
-  "model": "OpenVINO/Phi-3.5-vision-instruct-int8-ov",
+  "model": "OpenVINO/Phi-3.5-vision-instruct-fp16-ov",
   "object": "chat.completion",
   "usage": {
     "prompt_tokens": 26,
@@ -186,7 +186,7 @@ pip3 install openai
 from openai import OpenAI
 import base64
 base_url='http://localhost:8000/v3'
-model_name = "OpenVINO/Phi-3.5-vision-instruct-int8-ov"
+model_name = "OpenVINO/Phi-3.5-vision-instruct-fp16-ov"
 
 client = OpenAI(api_key='unused', base_url=base_url)
 
@@ -231,7 +231,7 @@ cd vllm
 pip3 install -r requirements-cpu.txt --extra-index-url https://download.pytorch.org/whl/cpu
 cd benchmarks
 curl -L https://huggingface.co/datasets/anon8231489123/ShareGPT_Vicuna_unfiltered/resolve/main/ShareGPT_V3_unfiltered_cleaned_split.json -o ShareGPT_V3_unfiltered_cleaned_split.json # sample dataset
-python benchmark_serving.py --backend openai-chat --dataset-name hf --dataset-path lmarena-ai/vision-arena-bench-v0.1 --hf-split train --host localhost --port 8000 --model OpenVINO/Phi-3.5-vision-instruct-int8-ov --endpoint /v3/chat/completions --num-prompts 10 --trust-remote-code --max-concurrency 1
+python benchmark_serving.py --backend openai-chat --dataset-name hf --dataset-path lmarena-ai/vision-arena-bench-v0.1 --hf-split train --host localhost --port 8000 --model OpenVINO/Phi-3.5-vision-instruct-fp16-ov --endpoint /v3/chat/completions --num-prompts 10 --trust-remote-code --max-concurrency 1
 
 ```
 
