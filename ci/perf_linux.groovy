@@ -343,9 +343,9 @@ pipeline {
                 export OPENAI_BASE_URL=http://localhost:9000/v3 && \
                 ${params.USE_THINKING ? 'export ENABLE_THINKING=true && \\' : ''} \
                 bfcl generate --model ovms-model --test-category simple_python --temperature 0.0 --num-threads 100 -o --result-dir bfcl_results && bfcl evaluate --model ovms-model --result-dir bfcl_results --score-dir bfcl_scores && \
-                cat gorilla/berkeley-function-call-leaderboard/bfcl_scores/ovms-model/BFCL_v3_simple_score.json | head -1 | jq ."
+                cat gorilla/berkeley-function-call-leaderboard/bfcl_scores/ovms-model/non_live/BFCL_v4_simple_python_score.json | head -1 | jq ."
                 script {
-                    def accuracy = sh(script: "cat gorilla/berkeley-function-call-leaderboard/bfcl_scores/ovms-model/BFCL_v3_simple_score.json | head -1 | jq -r '.accuracy'", returnStdout: true).trim()
+                    def accuracy = sh(script: "cat gorilla/berkeley-function-call-leaderboard/bfcl_scores/ovms-model/non_live/BFCL_v4_simple_python_score.json | head -1 | jq -r '.accuracy'", returnStdout: true).trim()
                     def accuracy_reference = {
                         if (fileExists("${env.WORKSPACE}/reference/${model_name}/${params.DEVICE}_agentic_accuracy.txt")) {
                             try {
@@ -370,13 +370,13 @@ pipeline {
                 script {
                     if (params.SAVE_REFERENCE) {
                         sh "mkdir -p ${env.WORKSPACE}/reference/${model_name} && \
-                        cat gorilla/berkeley-function-call-leaderboard/bfcl_scores/ovms-model/BFCL_v3_simple_score.json | head -1 | jq -r '.accuracy' > ${env.WORKSPACE}/reference/${model_name}/${params.DEVICE}_agentic_accuracy.txt"
+                        cat gorilla/berkeley-function-call-leaderboard/bfcl_scores/ovms-model/non_live/BFCL_v4_simple_python_score.json | head -1 | jq -r '.accuracy' > ${env.WORKSPACE}/reference/${model_name}/${params.DEVICE}_agentic_accuracy.txt"
                     }
                 }
             }
             post {
                 always {
-                    archiveArtifacts allowEmptyArchive: true, artifacts: "gorilla/berkeley-function-call-leaderboard/bfcl_scores/ovms-model/BFCL_v3_simple_score.json"
+                    archiveArtifacts allowEmptyArchive: true, artifacts: "gorilla/berkeley-function-call-leaderboard/bfcl_scores/ovms-model/non_live/BFCL_v4_simple_python_score.json"
                 }
             }                 
         }
