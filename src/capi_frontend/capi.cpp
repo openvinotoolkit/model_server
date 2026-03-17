@@ -334,7 +334,9 @@ DLL_PUBLIC OVMS_Status* OVMS_ServerMetadata(OVMS_Server* server, OVMS_Metadata**
     doc->SetObject();
     doc->AddMember("name", PROJECT_NAME, doc->GetAllocator());
     doc->AddMember("version", PROJECT_VERSION, doc->GetAllocator());
-    doc->AddMember("ov_version", OPENVINO_NAME, doc->GetAllocator());
+    rapidjson::Value ovVersion;
+    ovVersion.SetString(ovms::getOpenVINOVersion(), doc->GetAllocator());
+    doc->AddMember("ov_version", std::move(ovVersion), doc->GetAllocator());
     *metadata = reinterpret_cast<OVMS_Metadata*>(doc);
     return nullptr;
 }

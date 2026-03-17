@@ -68,7 +68,7 @@ dynamic_libraries = {
     OvmsBaseType.UBUNTU24: {'libdl.so', 'libm.so', 'libpthread.so',},
     OvmsBaseType.UBUNTU24_PYTHON: {'libpython3.12.so',},
     OvmsBaseType.REDHAT: {'libdl.so', 'libm.so', 'libpthread.so', 'libcrypt.so',},
-    OvmsBaseType.REDHAT_PYTHON:{'libpython3.9.so'},
+    OvmsBaseType.REDHAT_PYTHON: {'libpython3.12.so'},
 }
 
 whitelisted_dynamic_libraries = {
@@ -128,7 +128,9 @@ libraries = {
         'libopenvino_tokenizers.so',
         'libtbb.so',
     },
-    OvmsBaseType.UBUNTU: set(),
+    OvmsBaseType.UBUNTU: {
+        'libopenvino_intel_npu_compiler.so',
+    },
     OvmsBaseType.UBUNTU22: set(),
     OvmsBaseType.UBUNTU24: set(),
     OvmsBaseType.UBUNTU20_PYTHON: set(),
@@ -138,8 +140,6 @@ libraries = {
     OvmsBaseType.REDHAT_PYTHON: set(),
     OvmsBaseType.WINDOWS: {
         'git2.dll',
-        'icudt70.dll',
-        'icuuc70.dll',
         'libcurl-x64.dll',
         'opencv_world4120.dll',
         'openvino.dll',
@@ -151,6 +151,7 @@ libraries = {
         'openvino_hetero_plugin.dll',
         'openvino_intel_cpu_plugin.dll',
         'openvino_intel_gpu_plugin.dll',
+        'openvino_intel_npu_compiler.dll',
         'openvino_intel_npu_plugin.dll',
         'openvino_ir_frontend.dll',
         'openvino_onnx_frontend.dll',
