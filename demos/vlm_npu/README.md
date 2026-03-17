@@ -49,7 +49,7 @@ Assuming you have unpacked model server package, make sure to:
 as mentioned in [deployment guide](../../docs/deploying_server_baremetal.md), in every new shell that will start OpenVINO Model Server.
 
 ```bat
-ovms --rest_port 8000 --model_repository_path /models --source_model OpenVINO/Phi-3.5-vision-instruct-fp16-ov  --task text_generation --target_device NPU
+ovms --rest_port 8000 --model_repository_path models --source_model OpenVINO/Phi-3.5-vision-instruct-fp16-ov  --task text_generation --target_device NPU
 ```
 :::
 
