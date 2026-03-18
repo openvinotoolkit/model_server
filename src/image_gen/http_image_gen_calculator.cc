@@ -211,7 +211,6 @@ public:
                     return absl::FailedPreconditionError("Inpainting pipeline is not available for this model");
                 // Inpainting path — uses the pre-built InpaintingPipeline that was loaded from disk
                 // during initialization.  Do NOT derive InpaintingPipeline from Image2ImagePipeline
-                // at request time — that derivation direction causes a SEGFAULT in GenAI.
                 ov::Tensor maskTensor;
                 SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "ImageGenCalculator [Node: {}] Inpainting: decoding mask tensor", cc->NodeName());
                 status = makeTensorFromString(std::string(mask.value()), maskTensor);
