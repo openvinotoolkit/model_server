@@ -15,10 +15,7 @@
 //*****************************************************************************
 #pragma once
 
-#include <chrono>
-#include <future>
 #include <memory>
-#include <optional>
 #include <string>
 
 #include <openvino/genai/image_generation/image2image_pipeline.hpp>
@@ -34,29 +31,20 @@ namespace ovms {
 // and returns it on destruction, serializing concurrent inpainting requests.
 class InpaintingQueueGuard {
 public:
-    // Acquires a slot or sets acquired_ = false on timeout.
-    InpaintingQueueGuard(Queue<int>& queue, std::chrono::seconds timeout) :
-        queue_(queue) {
-        auto future = queue_.getIdleStream();
-        if (future.wait_for(timeout) == std::future_status::ready) {
-            streamId_ = future.get();
-            acquired_ = true;
-        }
-    }
+    // Blocks until an inpainting slot becomes available.
+    explicit InpaintingQueueGuard(Queue<int>& queue) :
+        queue_(queue),
+        streamId_(queue_.getIdleStream().get()) {}
     ~InpaintingQueueGuard() {
-        if (acquired_) {
-            queue_.returnStream(streamId_);
-        }
+        queue_.returnStream(streamId_);
     }
-    bool acquired() const { return acquired_; }
 
     InpaintingQueueGuard(const InpaintingQueueGuard&) = delete;
     InpaintingQueueGuard& operator=(const InpaintingQueueGuard&) = delete;
 
 private:
     Queue<int>& queue_;
-    int streamId_ = -1;
-    bool acquired_ = false;
+    int streamId_;
 };
 
 struct ImageGenerationPipelines {
@@ -68,7 +56,6 @@ struct ImageGenerationPipelines {
     // Serializes concurrent inpainting requests (InpaintingPipeline lacks clone()).
     // Queue size = 1: only one inpainting inference runs at a time.
     std::unique_ptr<Queue<int>> inpaintingQueue;
-    static constexpr std::chrono::seconds DEFAULT_INPAINTING_TIMEOUT{300};  // 5 minutes
 
     ImageGenerationPipelines() = delete;
     ImageGenerationPipelines(const ImageGenPipelineArgs& args);

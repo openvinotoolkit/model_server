@@ -117,7 +117,7 @@ static absl::Status generateTensorInpainting(ov::genai::InpaintingPipeline& requ
     return absl::OkStatus();
 }
 // written out separately to avoid msvc crashing when using try-catch in process method ...
-static absl::Status makeTensorFromString(const std::string& filePayload, ov::Tensor& imageTensor) {
+static absl::Status makeTensorFromString(std::string_view filePayload, ov::Tensor& imageTensor) {
     try {
         imageTensor = loadImageStbiFromMemory(filePayload);
     } catch (std::runtime_error& e) {
@@ -196,7 +196,7 @@ public:
             RET_CHECK(image.has_value() && !image.value().empty()) << "Image field is missing in multipart body";
 
             ov::Tensor imageTensor;
-            auto status = makeTensorFromString(std::string(image.value()), imageTensor);
+            auto status = makeTensorFromString(image.value(), imageTensor);
             if (!status.ok()) {
                 return status;
             }
@@ -213,15 +213,12 @@ public:
                 // during initialization.  Do NOT derive InpaintingPipeline from Image2ImagePipeline
                 ov::Tensor maskTensor;
                 SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "ImageGenCalculator [Node: {}] Inpainting: decoding mask tensor", cc->NodeName());
-                status = makeTensorFromString(std::string(mask.value()), maskTensor);
+                status = makeTensorFromString(mask.value(), maskTensor);
                 if (!status.ok()) {
                     return status;
                 }
                 SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "ImageGenCalculator [Node: {}] Inpainting: mask tensor decoded, acquiring inpainting queue slot", cc->NodeName());
-                InpaintingQueueGuard inpaintingGuard(*pipe->inpaintingQueue, ImageGenerationPipelines::DEFAULT_INPAINTING_TIMEOUT);
-                if (!inpaintingGuard.acquired()) {
-                    return absl::DeadlineExceededError("Inpainting pipeline is busy, request timed out");
-                }
+                InpaintingQueueGuard inpaintingGuard(*pipe->inpaintingQueue);
                 SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "ImageGenCalculator [Node: {}] Inpainting: queue slot acquired, invoking generate()", cc->NodeName());
                 status = generateTensorInpainting(*pipe->inpaintingPipeline, prompt, imageTensor, maskTensor, requestOptions, images);
             } else {

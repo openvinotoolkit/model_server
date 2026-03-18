@@ -16,6 +16,7 @@
 #pragma once
 
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include <openvino/runtime/tensor.hpp>
@@ -23,7 +24,7 @@
 namespace ovms {
 
 ov::Tensor loadImageStbi(unsigned char* image, const int x, const int y, const int desiredChannels);
-ov::Tensor loadImageStbiFromMemory(const std::string& imageBytes);
+ov::Tensor loadImageStbiFromMemory(std::string_view imageBytes);
 ov::Tensor loadImageStbiFromFile(const char* filename);
 std::vector<std::string> saveImagesStbi(const ov::Tensor& tensor);
 
