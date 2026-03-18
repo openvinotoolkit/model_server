@@ -96,46 +96,155 @@ ov::genai::JsonContainer rapidJsonValueToJsonContainer(const rapidjson::Value& v
     throw std::invalid_argument("Unsupported JSON value type");
 }
 
-std::string serializeResponsesUnaryResponse(
-    const std::vector<ParsedOutput>& parsedOutputs,
-    const CompletionUsageStatistics& usage,
-    const OpenAIChatCompletionsRequest& request,
-    const ToolsSchemas_t& toolNameSchemaMap,
-    std::chrono::time_point<std::chrono::system_clock> created) {
+std::string serializeResponsesEvent(const std::function<void(Writer<StringBuffer>&)>& eventSerializer) {
+    StringBuffer eventBuffer;
+    Writer<StringBuffer> eventWriter(eventBuffer);
+    eventSerializer(eventWriter);
+    return std::string(eventBuffer.GetString());
+}
+
+}  // namespace
+
+void OpenAIChatCompletionsHandler::serializeResponsesToolChoice(Writer<StringBuffer>& writer) const {
+    writer.String("tool_choice");
+    if (request.toolChoice.empty()) {
+        writer.String("auto");
+    } else if (request.toolChoice == "auto" || request.toolChoice == "none" || request.toolChoice == "required") {
+        writer.String(request.toolChoice.c_str());
+    } else {
+        writer.StartObject();
+        writer.String("type");
+        writer.String("function");
+        writer.String("name");
+        writer.String(request.toolChoice.c_str());
+        writer.EndObject();
+    }
+}
+
+void OpenAIChatCompletionsHandler::serializeResponsesTools(Writer<StringBuffer>& writer) const {
+    writer.String("tools");
+    writer.StartArray();
+    for (const auto& [toolName, toolSchemaWrapper] : request.toolNameSchemaMap) {
+        writer.StartObject();
+        writer.String("type");
+        writer.String("function");
+        writer.String("name");
+        writer.String(toolName.c_str());
+        writer.String("parameters");
+        writer.RawValue(toolSchemaWrapper.stringRepr.c_str(), toolSchemaWrapper.stringRepr.size(), rapidjson::kObjectType);
+        writer.EndObject();
+    }
+    writer.EndArray();
+}
+
+void OpenAIChatCompletionsHandler::serializeResponsesResponseObject(Writer<StringBuffer>& writer, const std::string& responseId, int64_t createdAt,
+    const char* status, const std::string& fullOutputText, bool includeUsage) const {
+    writer.StartObject();
+    writer.String("id");
+    writer.String(responseId.c_str());
+    writer.String("object");
+    writer.String("response");
+    writer.String("created_at");
+    writer.Int64(createdAt);
+    if (std::string(status) == "completed") {
+        writer.String("completed_at");
+        writer.Int64(createdAt);
+    }
+    writer.String("model");
+    writer.String(request.model.c_str());
+    writer.String("status");
+    writer.String(status);
+
+    writer.String("parallel_tool_calls");
+    writer.Bool(false);
+    serializeResponsesToolChoice(writer);
+    serializeResponsesTools(writer);
+
+    if (request.maxTokens.has_value()) {
+        writer.String("max_output_tokens");
+        writer.Uint64(static_cast<uint64_t>(request.maxTokens.value()));
+    }
+
+    writer.String("output");
+    writer.StartArray();
+    if (!fullOutputText.empty()) {
+        writer.StartObject();
+        writer.String("id");
+        writer.String("msg-0");
+        writer.String("type");
+        writer.String("message");
+        writer.String("role");
+        writer.String("assistant");
+        writer.String("status");
+        writer.String(std::string(status) == "completed" ? "completed" : "in_progress");
+        writer.String("content");
+        writer.StartArray();
+        serializeResponsesPart(writer, fullOutputText);
+        writer.EndArray();
+        writer.EndObject();
+    }
+    writer.EndArray();
+
+    if (includeUsage) {
+        writer.String("usage");
+        writer.StartObject();
+        writer.String("input_tokens");
+        writer.Uint64(static_cast<uint64_t>(usage.promptTokens));
+        writer.String("input_tokens_details");
+        writer.StartObject();
+        writer.String("cached_tokens");
+        writer.Uint64(0);
+        writer.EndObject();
+        writer.String("output_tokens");
+        writer.Uint64(static_cast<uint64_t>(usage.completionTokens));
+        writer.String("output_tokens_details");
+        writer.StartObject();
+        writer.String("reasoning_tokens");
+        writer.Uint64(0);
+        writer.EndObject();
+        writer.String("total_tokens");
+        writer.Uint64(static_cast<uint64_t>(usage.calculateTotalTokens()));
+        writer.EndObject();
+    }
+
+    writer.EndObject();
+}
+
+void OpenAIChatCompletionsHandler::serializeResponsesOutputItem(Writer<StringBuffer>& writer, const std::string& outputItemId,
+    const std::string& text, const char* status, bool withContent) {
+    writer.StartObject();
+    writer.String("id");
+    writer.String(outputItemId.c_str());
+    writer.String("type");
+    writer.String("message");
+    writer.String("role");
+    writer.String("assistant");
+    writer.String("status");
+    writer.String(status);
+    writer.String("content");
+    writer.StartArray();
+    if (withContent) {
+        serializeResponsesPart(writer, text);
+    }
+    writer.EndArray();
+    writer.EndObject();
+}
+
+void OpenAIChatCompletionsHandler::serializeResponsesPart(Writer<StringBuffer>& writer, const std::string& text) {
+    writer.StartObject();
+    writer.String("type");
+    writer.String("output_text");
+    writer.String("text");
+    writer.String(text.c_str());
+    writer.String("annotations");
+    writer.StartArray();
+    writer.EndArray();
+    writer.EndObject();
+}
+
+std::string OpenAIChatCompletionsHandler::serializeResponsesUnaryResponse(const std::vector<ParsedOutput>& parsedOutputs) const {
     const auto createdAt = std::chrono::duration_cast<std::chrono::seconds>(created.time_since_epoch()).count();
     const std::string responseId = "resp-" + std::to_string(createdAt);
-
-    auto serializeResponsesToolChoice = [&request](Writer<StringBuffer>& writer) {
-        writer.String("tool_choice");
-        if (request.toolChoice.empty()) {
-            writer.String("auto");
-        } else if (request.toolChoice == "auto" || request.toolChoice == "none" || request.toolChoice == "required") {
-            writer.String(request.toolChoice.c_str());
-        } else {
-            writer.StartObject();
-            writer.String("type");
-            writer.String("function");
-            writer.String("name");
-            writer.String(request.toolChoice.c_str());
-            writer.EndObject();
-        }
-    };
-
-    auto serializeResponsesTools = [&toolNameSchemaMap](Writer<StringBuffer>& writer) {
-        writer.String("tools");
-        writer.StartArray();
-        for (const auto& [toolName, toolSchemaWrapper] : toolNameSchemaMap) {
-            writer.StartObject();
-            writer.String("type");
-            writer.String("function");
-            writer.String("name");
-            writer.String(toolName.c_str());
-            writer.String("parameters");
-            writer.RawValue(toolSchemaWrapper.stringRepr.c_str(), toolSchemaWrapper.stringRepr.size(), rapidjson::kObjectType);
-            writer.EndObject();
-        }
-        writer.EndArray();
-    };
 
     StringBuffer buffer;
     Writer<StringBuffer> writer(buffer);
@@ -181,15 +290,7 @@ std::string serializeResponsesUnaryResponse(
         writer.String("completed");
         writer.String("content");
         writer.StartArray();
-        writer.StartObject();
-        writer.String("type");
-        writer.String("output_text");
-        writer.String("text");
-        writer.String(parsedOutput.content.c_str());
-        writer.String("annotations");
-        writer.StartArray();
-        writer.EndArray();
-        writer.EndObject();
+        serializeResponsesPart(writer, parsedOutput.content);
         writer.EndArray();
         writer.EndObject();
     }
@@ -219,8 +320,6 @@ std::string serializeResponsesUnaryResponse(
 
     return buffer.GetString();
 }
-
-}  // namespace
 
 absl::Status OpenAIChatCompletionsHandler::parseCompletionsPart() {
     // prompt: string
@@ -1292,6 +1391,7 @@ absl::Status OpenAIChatCompletionsHandler::parseCommonPart(std::optional<uint32_
 
     // best_of: int; optional - defaults to 1
     // Extension, unsupported by OpenAI API, however supported by vLLM, supported in CB lib by mapping to group_size param
+    // Not supported for RESPONSES streaming - output_index is hardcoded to 0
     it = doc.FindMember("best_of");
     if (it != doc.MemberEnd() && !it->value.IsNull()) {
         if (!it->value.IsUint())
@@ -1307,12 +1407,15 @@ absl::Status OpenAIChatCompletionsHandler::parseCommonPart(std::optional<uint32_
 
     // n: int; optional - defaults to 1
     // Supported by OpenAI API and vLLM, supported in CB lib by mapping to num_return_sequences param
+    // Not supported for RESPONSES streaming - output_index is hardcoded to 0
     it = doc.FindMember("n");
     if (it != doc.MemberEnd() && !it->value.IsNull()) {
         if (!it->value.IsUint())
             return absl::InvalidArgumentError("n is not an unsigned integer");
         if (it->value.GetUint() == 0)
             return absl::InvalidArgumentError("n value should be greater than 0");
+        if (endpoint == Endpoint::RESPONSES && request.stream && it->value.GetUint() > 1)
+            return absl::InvalidArgumentError("n greater than 1 is not supported for responses streaming");
         size_t bestOf = request.bestOf.has_value() ? request.bestOf.value() : 1;  // 1 is default best_of value
         if (bestOf < it->value.GetUint()) {
             return absl::InvalidArgumentError("n value cannot be greater than best_of");
@@ -1441,7 +1544,7 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const std::vect
             updateUsage(usage, generationOutput.generated_ids, request.echo);
             parsedOutputs.push_back(parseOutputIfNeeded(generationOutput.generated_ids));
         }
-        return serializeResponsesUnaryResponse(parsedOutputs, usage, request, request.toolNameSchemaMap, created);
+        return serializeResponsesUnaryResponse(parsedOutputs);
     }
 
     OpenAiJsonResponse jsonResponse;
@@ -1575,7 +1678,7 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(ov::genai::Enco
             updateUsage(usage, tokens, request.echo);
             parsedOutputs.push_back(parseOutputIfNeeded(tokens));
         }
-        return serializeResponsesUnaryResponse(parsedOutputs, usage, request, request.toolNameSchemaMap, created);
+        return serializeResponsesUnaryResponse(parsedOutputs);
     }
 
     OpenAiJsonResponse jsonResponse;
@@ -1656,7 +1759,7 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(ov::genai::VLMD
             updateUsage(usage, generatedTokens, request.echo);
             parsedOutputs.push_back(parseOutputIfNeeded(generatedTokens));
         }
-        return serializeResponsesUnaryResponse(parsedOutputs, usage, request, request.toolNameSchemaMap, created);
+        return serializeResponsesUnaryResponse(parsedOutputs);
     }
 
     OpenAiJsonResponse jsonResponse;
@@ -1740,189 +1843,31 @@ std::string OpenAIChatCompletionsHandler::serializeStreamingChunk(const std::str
         const std::string responseId = "resp-" + std::to_string(createdAt);
         const std::string outputItemId = "msg-0";
 
-        auto serializeResponsesToolChoice = [this](Writer<StringBuffer>& writer) {
-            writer.String("tool_choice");
-            if (request.toolChoice.empty()) {
-                writer.String("auto");
-            } else if (request.toolChoice == "auto" || request.toolChoice == "none" || request.toolChoice == "required") {
-                writer.String(request.toolChoice.c_str());
-            } else {
-                writer.StartObject();
-                writer.String("type");
-                writer.String("function");
-                writer.String("name");
-                writer.String(request.toolChoice.c_str());
-                writer.EndObject();
-            }
-        };
-
-        auto serializeResponsesTools = [this](Writer<StringBuffer>& writer) {
-            writer.String("tools");
-            writer.StartArray();
-            for (const auto& [toolName, toolSchemaWrapper] : request.toolNameSchemaMap) {
-                writer.StartObject();
-                writer.String("type");
-                writer.String("function");
-                writer.String("name");
-                writer.String(toolName.c_str());
-                writer.String("parameters");
-                writer.RawValue(toolSchemaWrapper.stringRepr.c_str(), toolSchemaWrapper.stringRepr.size(), rapidjson::kObjectType);
-                writer.EndObject();
-            }
-            writer.EndArray();
-        };
-
-        auto serializeResponseObject = [this, &responseId, createdAt, &serializeResponsesToolChoice, &serializeResponsesTools](Writer<StringBuffer>& writer, const char* status, const std::string& fullOutputText, bool includeUsage) {
-            writer.StartObject();
-            writer.String("id");
-            writer.String(responseId.c_str());
-            writer.String("object");
-            writer.String("response");
-            writer.String("created_at");
-            writer.Int64(createdAt);
-            if (std::string(status) == "completed") {
-                writer.String("completed_at");
-                writer.Int64(createdAt);
-            }
-            writer.String("model");
-            writer.String(request.model.c_str());
-            writer.String("status");
-            writer.String(status);
-
-            writer.String("parallel_tool_calls");
-            writer.Bool(false);
-            serializeResponsesToolChoice(writer);
-            serializeResponsesTools(writer);
-
-            if (request.maxTokens.has_value()) {
-                writer.String("max_output_tokens");
-                writer.Uint64(static_cast<uint64_t>(request.maxTokens.value()));
-            }
-
-            writer.String("output");
-            writer.StartArray();
-            if (!fullOutputText.empty()) {
-                writer.StartObject();
-                writer.String("id");
-                writer.String("msg-0");
-                writer.String("type");
-                writer.String("message");
-                writer.String("role");
-                writer.String("assistant");
-                writer.String("status");
-                writer.String(std::string(status) == "completed" ? "completed" : "in_progress");
-                writer.String("content");
-                writer.StartArray();
-                writer.StartObject();
-                writer.String("type");
-                writer.String("output_text");
-                writer.String("text");
-                writer.String(fullOutputText.c_str());
-                writer.String("annotations");
-                writer.StartArray();
-                writer.EndArray();
-                writer.EndObject();
-                writer.EndArray();
-                writer.EndObject();
-            }
-            writer.EndArray();
-
-            if (includeUsage) {
-                writer.String("usage");
-                writer.StartObject();
-                writer.String("input_tokens");
-                writer.Uint64(static_cast<uint64_t>(usage.promptTokens));
-                writer.String("input_tokens_details");
-                writer.StartObject();
-                writer.String("cached_tokens");
-                writer.Uint64(0);
-                writer.EndObject();
-                writer.String("output_tokens");
-                writer.Uint64(static_cast<uint64_t>(usage.completionTokens));
-                writer.String("output_tokens_details");
-                writer.StartObject();
-                writer.String("reasoning_tokens");
-                writer.Uint64(0);
-                writer.EndObject();
-                writer.String("total_tokens");
-                writer.Uint64(static_cast<uint64_t>(usage.calculateTotalTokens()));
-                writer.EndObject();
-            }
-
-            writer.EndObject();
-        };
-
-        auto serializeOutputItem = [&outputItemId](Writer<StringBuffer>& writer, const std::string& text, const char* status, bool withContent) {
-            writer.StartObject();
-            writer.String("id");
-            writer.String(outputItemId.c_str());
-            writer.String("type");
-            writer.String("message");
-            writer.String("role");
-            writer.String("assistant");
-            writer.String("status");
-            writer.String(status);
-            writer.String("content");
-            writer.StartArray();
-            if (withContent) {
-                writer.StartObject();
-                writer.String("type");
-                writer.String("output_text");
-                writer.String("text");
-                writer.String(text.c_str());
-                writer.String("annotations");
-                writer.StartArray();
-                writer.EndArray();
-                writer.EndObject();
-            }
-            writer.EndArray();
-            writer.EndObject();
-        };
-
-        auto serializePart = [](Writer<StringBuffer>& writer, const std::string& text) {
-            writer.StartObject();
-            writer.String("type");
-            writer.String("output_text");
-            writer.String("text");
-            writer.String(text.c_str());
-            writer.String("annotations");
-            writer.StartArray();
-            writer.EndArray();
-            writer.EndObject();
-        };
-
-        auto serializeResponsesEvent = [](const std::function<void(Writer<StringBuffer>&)>& eventSerializer) {
-            StringBuffer eventBuffer;
-            Writer<StringBuffer> eventWriter(eventBuffer);
-            eventSerializer(eventWriter);
-            return std::string(eventBuffer.GetString());
-        };
-
         std::vector<std::string> events;
         if (!responsesStreamingInitialized) {
-            events.emplace_back(serializeResponsesEvent([this, &serializeResponseObject](Writer<StringBuffer>& writer) {
+            events.emplace_back(serializeResponsesEvent([this, &responseId, createdAt](Writer<StringBuffer>& writer) {
                 writer.StartObject();
                 writer.String("type");
                 writer.String("response.created");
                 writer.String("sequence_number");
                 writer.Uint64(responsesStreamingSequenceNumber++);
                 writer.String("response");
-                serializeResponseObject(writer, "in_progress", "", false);
+                serializeResponsesResponseObject(writer, responseId, createdAt, "in_progress", "", false);
                 writer.EndObject();
             }));
 
-            events.emplace_back(serializeResponsesEvent([this, &serializeResponseObject](Writer<StringBuffer>& writer) {
+            events.emplace_back(serializeResponsesEvent([this, &responseId, createdAt](Writer<StringBuffer>& writer) {
                 writer.StartObject();
                 writer.String("type");
                 writer.String("response.in_progress");
                 writer.String("sequence_number");
                 writer.Uint64(responsesStreamingSequenceNumber++);
                 writer.String("response");
-                serializeResponseObject(writer, "in_progress", "", false);
+                serializeResponsesResponseObject(writer, responseId, createdAt, "in_progress", "", false);
                 writer.EndObject();
             }));
 
-            events.emplace_back(serializeResponsesEvent([this, &outputItemId, &serializeOutputItem](Writer<StringBuffer>& writer) {
+            events.emplace_back(serializeResponsesEvent([this, &outputItemId](Writer<StringBuffer>& writer) {
                 writer.StartObject();
                 writer.String("type");
                 writer.String("response.output_item.added");
@@ -1931,11 +1876,11 @@ std::string OpenAIChatCompletionsHandler::serializeStreamingChunk(const std::str
                 writer.String("output_index");
                 writer.Uint64(0);
                 writer.String("item");
-                serializeOutputItem(writer, "", "in_progress", false);
+                serializeResponsesOutputItem(writer, outputItemId, "", "in_progress", false);
                 writer.EndObject();
             }));
 
-            events.emplace_back(serializeResponsesEvent([this, &outputItemId, &serializePart](Writer<StringBuffer>& writer) {
+            events.emplace_back(serializeResponsesEvent([this, &outputItemId](Writer<StringBuffer>& writer) {
                 writer.StartObject();
                 writer.String("type");
                 writer.String("response.content_part.added");
@@ -1948,7 +1893,7 @@ std::string OpenAIChatCompletionsHandler::serializeStreamingChunk(const std::str
                 writer.String("item_id");
                 writer.String(outputItemId.c_str());
                 writer.String("part");
-                serializePart(writer, "");
+                serializeResponsesPart(writer, "");
                 writer.EndObject();
             }));
 
@@ -1999,7 +1944,7 @@ std::string OpenAIChatCompletionsHandler::serializeStreamingChunk(const std::str
                 writer.EndObject();
             }));
 
-            events.emplace_back(serializeResponsesEvent([this, &outputItemId, &serializePart](Writer<StringBuffer>& writer) {
+            events.emplace_back(serializeResponsesEvent([this, &outputItemId](Writer<StringBuffer>& writer) {
                 writer.StartObject();
                 writer.String("type");
                 writer.String("response.content_part.done");
@@ -2012,11 +1957,11 @@ std::string OpenAIChatCompletionsHandler::serializeStreamingChunk(const std::str
                 writer.String("item_id");
                 writer.String(outputItemId.c_str());
                 writer.String("part");
-                serializePart(writer, responsesStreamingOutputText);
+                serializeResponsesPart(writer, responsesStreamingOutputText);
                 writer.EndObject();
             }));
 
-            events.emplace_back(serializeResponsesEvent([this, &serializeOutputItem](Writer<StringBuffer>& writer) {
+            events.emplace_back(serializeResponsesEvent([this, &outputItemId](Writer<StringBuffer>& writer) {
                 writer.StartObject();
                 writer.String("type");
                 writer.String("response.output_item.done");
@@ -2025,18 +1970,18 @@ std::string OpenAIChatCompletionsHandler::serializeStreamingChunk(const std::str
                 writer.String("output_index");
                 writer.Uint64(0);
                 writer.String("item");
-                serializeOutputItem(writer, responsesStreamingOutputText, "completed", true);
+                serializeResponsesOutputItem(writer, outputItemId, responsesStreamingOutputText, "completed", true);
                 writer.EndObject();
             }));
 
-            events.emplace_back(serializeResponsesEvent([this, &serializeResponseObject](Writer<StringBuffer>& writer) {
+            events.emplace_back(serializeResponsesEvent([this, &responseId, createdAt](Writer<StringBuffer>& writer) {
                 writer.StartObject();
                 writer.String("type");
                 writer.String("response.completed");
                 writer.String("sequence_number");
                 writer.Uint64(responsesStreamingSequenceNumber++);
                 writer.String("response");
-                serializeResponseObject(writer, "completed", responsesStreamingOutputText, true);
+                serializeResponsesResponseObject(writer, responseId, createdAt, "completed", responsesStreamingOutputText, true);
                 writer.EndObject();
             }));
         }

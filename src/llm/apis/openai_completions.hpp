@@ -87,6 +87,16 @@ class OpenAIChatCompletionsHandler {
     ParsedOutput parseOutputIfNeeded(const std::vector<int64_t>& generatedIds);
     absl::Status ensureArgumentsInToolCalls(Value& messageObj, bool& jsonChanged);
 
+    // Responses API serialization helpers
+    void serializeResponsesToolChoice(Writer<StringBuffer>& writer) const;
+    void serializeResponsesTools(Writer<StringBuffer>& writer) const;
+    void serializeResponsesResponseObject(Writer<StringBuffer>& writer, const std::string& responseId, int64_t createdAt,
+        const char* status, const std::string& fullOutputText, bool includeUsage) const;
+    static void serializeResponsesOutputItem(Writer<StringBuffer>& writer, const std::string& outputItemId,
+        const std::string& text, const char* status, bool withContent);
+    static void serializeResponsesPart(Writer<StringBuffer>& writer, const std::string& text);
+    std::string serializeResponsesUnaryResponse(const std::vector<ParsedOutput>& parsedOutputs) const;
+
 public:
     OpenAIChatCompletionsHandler(Document& doc, Endpoint endpoint, std::chrono::time_point<std::chrono::system_clock> creationTime,
         ov::genai::Tokenizer tokenizer, const std::string& toolParserName = "", const std::string& reasoningParserName = "") :
