@@ -330,7 +330,7 @@ static fs::path createTempDir() {
     const fs::path base = fs::temp_directory_path();
     std::random_device rd;
     std::mt19937_64 gen(rd());
-    std::uniform_int_distribution<u_int64_t> dist;
+    std::uniform_int_distribution<uint64_t> dist;
 
     // Try a reasonable number of times to avoid rare collisions
     for (int attempt = 0; attempt < 100; ++attempt) {

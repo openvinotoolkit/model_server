@@ -759,6 +759,53 @@ public:
     EnvGuard guard;
 };
 
+TEST(Libgt2InitGuardTest, LfsFilterCaptureDefaultResumeOptions)
+{
+    // Need new process beacase we use INIT_ONCE in libgit2 lfs filter for env variables and once they are set they are set for the whole process lifetime, so we need to spawn new process without them set to test default values
+    EXPECT_EXIT({
+        // Act: capture stdout during object construction
+        testing::internal::CaptureStdout();
+        {
+            auto guardOrError = ovms::createGuard();
+            ASSERT_EQ(std::holds_alternative<ovms::Status>(guardOrError), false);
+        }
+        std::string output = testing::internal::GetCapturedStdout();
+
+        // Optional: trim trailing newline
+        if (!output.empty() && output.back() == '\n') {
+            output.pop_back();
+        }
+
+        EXPECT_THAT(output, ::testing::HasSubstr("[INFO] LFS resume: attempts=5 interval=10 s"));
+        exit(0);
+    }, ::testing::ExitedWithCode(0), "");
+}
+
+TEST(Libgt2InitGuardTest, LfsFilterCaptureNonDefaultResumeOptions)
+{
+    // Need new process beacase we use INIT_ONCE in libgit2 lfs filter for env variables and once they are set they are set for the whole process lifetime, so we need to spawn new process without them set to test default values
+    EXPECT_EXIT({
+        EnvGuard guard;
+        guard.set("GIT_LFS_RESUME_ATTEMPTS", "3");
+        guard.set("GIT_LFS_RESUME_INTERVAL", "20");
+        // Act: capture stdout during object construction
+        testing::internal::CaptureStdout();
+        {
+            auto guardOrError = ovms::createGuard();
+            ASSERT_EQ(std::holds_alternative<ovms::Status>(guardOrError), false);
+        }
+        std::string output = testing::internal::GetCapturedStdout();
+
+        // Optional: trim trailing newline
+        if (!output.empty() && output.back() == '\n') {
+            output.pop_back();
+        }
+
+        EXPECT_THAT(output, ::testing::HasSubstr("[INFO] LFS resume: attempts=3 interval=20 s"));
+        exit(0);
+    }, ::testing::ExitedWithCode(0), "");
+}
+
 TEST_F(HfDownloaderHfEnvTest, Methods) {
     std::string modelName = "model/name";
     std::string downloadPath = "/path/to/Download";
