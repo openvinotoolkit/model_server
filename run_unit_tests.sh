@@ -58,17 +58,27 @@ compress_logs() {
 generate_coverage_report() {
     local coverage_dat="$(bazel info output_path)/_coverage/_coverage_report.dat"
 
-    if ! lcov --extract "$coverage_dat" 'src/*' --output-file filtered_coverage.dat --ignore-errors negative; then
+    # lcov 2.x supports --ignore-errors negative,unused; lcov 1.x does not
+    local lcov_ver
+    lcov_ver=$(lcov --version | grep -oP '\d+' | head -1)
+    local lcov_ignore=""
+    local genhtml_ignore=""
+    if [ "$lcov_ver" -ge 2 ] 2>/dev/null; then
+        lcov_ignore="--ignore-errors negative,unused"
+        genhtml_ignore="--ignore-errors negative"
+    fi
+
+    if ! lcov --extract "$coverage_dat" 'src/*' --output-file filtered_coverage.dat $lcov_ignore; then
         echo "Error: lcov extraction failed" >&2
         return 1
     fi
 
-    if ! lcov --remove filtered_coverage.dat 'src/test/*' 'external/*' --output-file filtered_coverage.dat --ignore-errors negative,unused; then
+    if ! lcov --remove filtered_coverage.dat 'src/test/*' 'external/*' --output-file filtered_coverage.dat $lcov_ignore; then
         echo "Error: lcov filtering failed" >&2
         return 1
     fi
 
-    if ! genhtml --ignore-errors negative --output genhtml filtered_coverage.dat; then
+    if ! genhtml $genhtml_ignore --output genhtml filtered_coverage.dat; then
         echo "Error: genhtml report generation failed" >&2
         return 1
     fi

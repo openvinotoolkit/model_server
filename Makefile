@@ -477,7 +477,7 @@ get_coverage:
 	fi
 check_coverage:
 	@echo "Checking if coverage is above threshold..."
-	@docker run $(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG) ./check_coverage.bat | grep success
+	@bash ci/check_coverage.bat
 	
 test_checksec: venv
 	@echo "Running checksec on libovms_shared library..."
