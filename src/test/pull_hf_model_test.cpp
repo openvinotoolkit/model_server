@@ -759,9 +759,8 @@ public:
     EnvGuard guard;
 };
 
-TEST(Libgt2InitGuardTest, LfsFilterCaptureDefaultResumeOptions)
-{
-    // Need new process beacase we use INIT_ONCE in libgit2 lfs filter for env variables and once they are set they are set for the whole process lifetime, so we need to spawn new process without them set to test default values
+TEST(Libgt2InitGuardTest, LfsFilterCaptureDefaultResumeOptions) {
+    // Need new process beacase we use INIT_ONCE in libgit2 lfs filter for env variables and once they are set they are set for the whole process lifetime
     EXPECT_EXIT({
         // Act: capture stdout during object construction
         testing::internal::CaptureStdout();
@@ -778,12 +777,12 @@ TEST(Libgt2InitGuardTest, LfsFilterCaptureDefaultResumeOptions)
 
         EXPECT_THAT(output, ::testing::HasSubstr("[INFO] LFS resume: attempts=5 interval=10 s"));
         exit(0);
-    }, ::testing::ExitedWithCode(0), "");
+    },
+        ::testing::ExitedWithCode(0), "");
 }
 
-TEST(Libgt2InitGuardTest, LfsFilterCaptureNonDefaultResumeOptions)
-{
-    // Need new process beacase we use INIT_ONCE in libgit2 lfs filter for env variables and once they are set they are set for the whole process lifetime, so we need to spawn new process without them set to test default values
+TEST(Libgt2InitGuardTest, LfsFilterCaptureNonDefaultResumeOptions) {
+    // Need new process beacase we use INIT_ONCE in libgit2 lfs filter for env variables and once they are set they are set for the whole process lifetime
     EXPECT_EXIT({
         EnvGuard guard;
         guard.set("GIT_LFS_RESUME_ATTEMPTS", "3");
@@ -803,7 +802,8 @@ TEST(Libgt2InitGuardTest, LfsFilterCaptureNonDefaultResumeOptions)
 
         EXPECT_THAT(output, ::testing::HasSubstr("[INFO] LFS resume: attempts=3 interval=20 s"));
         exit(0);
-    }, ::testing::ExitedWithCode(0), "");
+    },
+        ::testing::ExitedWithCode(0), "");
 }
 
 TEST_F(HfDownloaderHfEnvTest, Methods) {
