@@ -14,11 +14,13 @@
 // limitations under the License.
 //*****************************************************************************
 #include "tool_parser.hpp"
+#include "../utils.hpp"
+#include "../../../logging.hpp"
 
 namespace ovms {
 
-Argument Lfm2ToolParser::parseSingleArgument(const std::string& argumentStr){
-    Argument argument;
+Lfm2ToolParser::Argument Lfm2ToolParser::parseSingleArgument(const std::string& argumentStr){
+    Lfm2ToolParser::Argument argument;
 
     size_t equalPos = argumentStr.find('=');
     if (equalPos != std::string::npos) {
@@ -44,9 +46,9 @@ Argument Lfm2ToolParser::parseSingleArgument(const std::string& argumentStr){
     return argument;
 }
 
-std::vector<Argument> Lfm2ToolParser::parseArguments(const std::string& argumentsStr) {
+std::vector<Lfm2ToolParser::Argument> Lfm2ToolParser::parseArguments(const std::string& argumentsStr) {
     std::vector<std::string> args;
-    std::vector<Argument> parsedArgs;
+    std::vector<Lfm2ToolParser::Argument> parsedArgs;
 
     size_t argPos = 0;
     while (argPos < argumentsStr.length()) {
@@ -65,6 +67,10 @@ std::vector<Argument> Lfm2ToolParser::parseArguments(const std::string& argument
     return parsedArgs;
 }
 
+std::optional<rapidjson::Document> Lfm2ToolParser::parseChunk(const std::string& chunk, ov::genai::GenerationFinishReason finishReason) {
+    return std::nullopt;
+}
+
 bool Lfm2ToolParser::parseSingleToolCall(const std::string& toolStr, ToolCall& toolCall) {
     size_t argsPos = toolStr.find(toolArgsStartIndicator);
     if (argsPos != std::string::npos) {
@@ -74,14 +80,14 @@ bool Lfm2ToolParser::parseSingleToolCall(const std::string& toolStr, ToolCall& t
         int argsStrLen = toolStr.length() - argsPos - toolArgsStartIndicator.length() - toolEndIndicator.length();
         std::string argsStr = toolStr.substr(argsPos + toolArgsStartIndicator.length(), argsStrLen);
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Parsed args string: {}", argsStr);
-        std::vector<Argument> arguments = parseArguments(argsStr);
+        std::vector<Lfm2ToolParser::Argument> arguments = parseArguments(argsStr);
 
         toolCall.name = toolName;
         rapidjson::Document argsDoc(rapidjson::kObjectType);
         rapidjson::StringBuffer sb;
         rapidjson::Writer<rapidjson::StringBuffer> argsWriter(sb);
         argsWriter.StartObject();
-        for (const Argument& argument : arguments) {
+        for (const Lfm2ToolParser::Argument& argument : arguments) {
             argsWriter.Key(argument.name.c_str());
             argsWriter.StartObject();
             if (argument.type == ParameterType::STRING) {
@@ -147,4 +153,5 @@ void Lfm2ToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t
                 SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Failed to parse tool call from string: {}", tool);
         }
     }
+}
 }
