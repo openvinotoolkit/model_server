@@ -1715,6 +1715,38 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingResponsesMaxTokensIsIgnored) {
     EXPECT_FALSE(apiHandler->getMaxTokens().has_value() && apiHandler->getMaxTokens().value() == 50);
 }
 
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingResponsesNStreamingIsRejected) {
+    std::string json = R"({
+    "model": "llama",
+    "input": "valid prompt",
+    "stream": true,
+    "n": 2
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
+    EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::InvalidArgumentError("n greater than 1 is not supported for responses streaming"));
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingResponsesNUnaryIsAccepted) {
+    std::string json = R"({
+    "model": "llama",
+    "input": "valid prompt",
+    "best_of": 3,
+    "n": 2
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 100;
+    std::optional<uint32_t> maxModelLength;
+    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
+    EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+}
+
 TEST_F(HttpOpenAIHandlerParsingTest, ParsingResponsesFlatFunctionToolsSucceeds) {
     std::string json = R"({
     "model": "llama",
