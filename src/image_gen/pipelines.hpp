@@ -15,7 +15,10 @@
 //*****************************************************************************
 #pragma once
 
+#include <chrono>
+#include <future>
 #include <memory>
+#include <optional>
 #include <string>
 
 #include <openvino/genai/image_generation/image2image_pipeline.hpp>
@@ -23,13 +26,49 @@
 #include <openvino/genai/image_generation/text2image_pipeline.hpp>
 
 #include "imagegenpipelineargs.hpp"
+#include "src/queue.hpp"
 
 namespace ovms {
+
+// RAII guard that acquires a slot from a Queue<int>(1) on construction
+// and returns it on destruction, serializing concurrent inpainting requests.
+class InpaintingQueueGuard {
+public:
+    // Acquires a slot or sets acquired_ = false on timeout.
+    InpaintingQueueGuard(Queue<int>& queue, std::chrono::seconds timeout) :
+        queue_(queue) {
+        auto future = queue_.getIdleStream();
+        if (future.wait_for(timeout) == std::future_status::ready) {
+            streamId_ = future.get();
+            acquired_ = true;
+        }
+    }
+    ~InpaintingQueueGuard() {
+        if (acquired_) {
+            queue_.returnStream(streamId_);
+        }
+    }
+    bool acquired() const { return acquired_; }
+
+    InpaintingQueueGuard(const InpaintingQueueGuard&) = delete;
+    InpaintingQueueGuard& operator=(const InpaintingQueueGuard&) = delete;
+
+private:
+    Queue<int>& queue_;
+    int streamId_ = -1;
+    bool acquired_ = false;
+};
+
 struct ImageGenerationPipelines {
     std::unique_ptr<ov::genai::Image2ImagePipeline> image2ImagePipeline;
     std::unique_ptr<ov::genai::Text2ImagePipeline> text2ImagePipeline;
     std::unique_ptr<ov::genai::InpaintingPipeline> inpaintingPipeline;
     ImageGenPipelineArgs args;
+
+    // Serializes concurrent inpainting requests (InpaintingPipeline lacks clone()).
+    // Queue size = 1: only one inpainting inference runs at a time.
+    std::unique_ptr<Queue<int>> inpaintingQueue;
+    static constexpr std::chrono::seconds DEFAULT_INPAINTING_TIMEOUT{300};  // 5 minutes
 
     ImageGenerationPipelines() = delete;
     ImageGenerationPipelines(const ImageGenPipelineArgs& args);

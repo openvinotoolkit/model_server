@@ -797,6 +797,14 @@ TEST(Image2ImageTest, getImageEditRequestOptionsRejectedFields) {
     ASSERT_FALSE(std::holds_alternative<ov::AnyMap>(requestOptions));
 }
 
+TEST(Image2ImageTest, getImageEditRequestOptionsMaskAccepted) {
+    MockedMultiPartParser multipartParser;
+    ON_CALL(multipartParser, getFieldByName("prompt")).WillByDefault(Return("test prompt"));
+    ON_CALL(multipartParser, getAllFieldNames()).WillByDefault(Return(std::set<std::string>{"prompt", "mask"}));
+    auto requestOptions = ovms::getImageEditRequestOptions(multipartParser, DEFAULTIMAGE_GEN_ARGS);
+    ASSERT_TRUE(std::holds_alternative<ov::AnyMap>(requestOptions));
+}
+
 using mediapipe::CalculatorGraphConfig;
 using ovms::ImageGenPipelineArgs;
 TEST(ImageGenCalculatorOptionsTest, PositiveAllfields) {

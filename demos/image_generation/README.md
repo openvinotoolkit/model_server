@@ -370,24 +370,20 @@ ovms --rest_port 8000 ^
 
 Wait for the model to load. You can check the status with a simple command:
 ```console
-curl http://localhost:8000/v1/config
+curl http://localhost:8000/v3/models
 ```
 
 ```json
 {
- "OpenVINO/stable-diffusion-v1-5-int8-ov" :
- {
-  "model_version_status": [
-   {
-    "version": "1",
-    "state": "AVAILABLE",
-    "status": {
-     "error_code": "OK",
-     "error_message": "OK"
+  "object": "list",
+  "data": [
+    {
+      "id": "OpenVINO/stable-diffusion-v1-5-int8-ov",
+      "object": "model",
+      "created": 0,
+      "owned_by": "openvinotoolkit"
     }
-   }
   ]
- }
 }
 ```
 
@@ -399,7 +395,7 @@ A single servable exposes the following endpoints:
 - **Inpainting**: `images/edits` — multipart form with `image` + `mask` + `prompt`
 - **Outpainting**: `images/edits` — multipart form with `image` + `mask` + `prompt` (image placed on larger canvas, mask marks the area to fill)
 
-> **Note:** For inpainting/outpainting, dedicated inpainting models (e.g. `stable-diffusion-v1-5/stable-diffusion-inpainting`) only support the `images/edits` endpoint. Base models (e.g. `stable-diffusion-v1-5/stable-diffusion-v1-5`) support all endpoints.
+> **Note:** For inpainting/outpainting, dedicated inpainting models (e.g. `stable-diffusion-v1-5/stable-diffusion-inpainting`) only support the `images/edits` endpoint. Check [supported models](https://openvinotoolkit.github.io/openvino.genai/docs/supported-models/#image-generation-models).
 
 All requests are processed in unary format, with no streaming capabilities.
 
@@ -532,7 +528,9 @@ Inpainting replaces a masked region in an image based on the prompt. The `mask` 
 
 ![cat](./cat.png) ![cat_mask](./cat_mask.png)
 
-Linux
+::::{tab-set}
+:::{tab-item} Linux
+:sync: linux
 ```bash
 curl http://localhost:8000/v3/images/edits \
   -F "model=diffusers/stable-diffusion-xl-1.0-inpainting-0.1" \
@@ -542,8 +540,10 @@ curl http://localhost:8000/v3/images/edits \
   -F "num_inference_steps=50" \
   -F "size=1024x1024" | jq -r '.data[0].b64_json' | base64 --decode > inpaint_output.png
 ```
+:::
 
-Windows Command Prompt
+:::{tab-item} Windows Command Prompt
+:sync: windows
 ```bat
 curl http://localhost:8000/v3/images/edits ^
   -F "model=diffusers/stable-diffusion-xl-1.0-inpainting-0.1" ^
@@ -553,6 +553,9 @@ curl http://localhost:8000/v3/images/edits ^
   -F "num_inference_steps=50" ^
   -F "size=1024x1024"
 ```
+:::
+
+::::
 
 Expected output (`inpaint_output.png`):
 
@@ -596,7 +599,9 @@ Outpainting extends an image beyond its original borders. Prepare two images:
 
 ![outpaint_input](./outpaint_input.png) ![outpaint_mask](./outpaint_mask.png)
 
-Linux
+::::{tab-set}
+:::{tab-item} Linux
+:sync: linux
 ```bash
 curl http://localhost:8000/v3/images/edits \
   -F "model=stable-diffusion-v1-5/stable-diffusion-inpainting" \
@@ -606,8 +611,10 @@ curl http://localhost:8000/v3/images/edits \
   -F "num_inference_steps=50" \
   -F "size=768x768" | jq -r '.data[0].b64_json' | base64 --decode > outpaint_output.png
 ```
+:::
 
-Windows Command Prompt
+:::{tab-item} Windows Command Prompt
+:sync: windows
 ```bat
 curl http://localhost:8000/v3/images/edits ^
   -F "model=stable-diffusion-v1-5/stable-diffusion-inpainting" ^
@@ -617,6 +624,9 @@ curl http://localhost:8000/v3/images/edits ^
   -F "num_inference_steps=50" ^
   -F "size=768x768"
 ```
+:::
+
+::::
 
 Expected output (`outpaint_output.png`):
 
@@ -665,22 +675,6 @@ For the full list see [supported image generation models](https://openvinotoolki
 > **Note:** Dedicated inpainting models only expose the `images/edits` endpoint (with mask). Text-to-image and image-to-image requests will return an error indicating the pipeline is not available for this model. Base models (e.g. `stable-diffusion-v1-5/stable-diffusion-v1-5`) support all endpoints including inpainting.
 
 ::::{tab-set}
-:::{tab-item} Docker (Linux) — CPU
-:sync: docker
-```bash
-mkdir -p models
-
-docker run -d --rm --user $(id -u):$(id -g) -p 8000:8000 -v $(pwd)/models:/models/:rw \
-  -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy=$no_proxy \
-  openvino/model_server:latest \
-    --rest_port 8000 \
-    --model_repository_path /models/ \
-    --task image_generation \
-    --source_model stable-diffusion-v1-5/stable-diffusion-inpainting \
-    --weight-format int8
-```
-:::
-
 :::{tab-item} Docker (Linux) — GPU
 :sync: docker-gpu
 ```bash
@@ -708,7 +702,8 @@ ovms --rest_port 8000 ^
   --model_repository_path ./models/ ^
   --task image_generation ^
   --source_model stable-diffusion-v1-5/stable-diffusion-inpainting ^
-  --weight-format int8
+  --weight-format int8 ^
+  --target_device GPU
 ```
 :::
 

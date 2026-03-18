@@ -179,10 +179,10 @@ public:
             SET_OR_RETURN(std::string, prompt, getPromptField(*payload.parsedJson));
             SET_OR_RETURN(ov::AnyMap, requestOptions, getImageGenerationRequestOptions(*payload.parsedJson, pipe->args));
 
-            // single request assumption - use pipeline instance directly
             if (!pipe->text2ImagePipeline)
                 return absl::FailedPreconditionError("Text-to-image pipeline is not available for this model");
-            auto status = generateTensor(*pipe->text2ImagePipeline, prompt, requestOptions, images);
+            auto t2i = pipe->text2ImagePipeline->clone();
+            auto status = generateTensor(t2i, prompt, requestOptions, images);
             if (!status.ok()) {
                 return status;
             }
@@ -218,13 +218,18 @@ public:
                 if (!status.ok()) {
                     return status;
                 }
-                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "ImageGenCalculator [Node: {}] Inpainting: mask tensor decoded, invoking generate()", cc->NodeName());
+                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "ImageGenCalculator [Node: {}] Inpainting: mask tensor decoded, acquiring inpainting queue slot", cc->NodeName());
+                InpaintingQueueGuard inpaintingGuard(*pipe->inpaintingQueue, ImageGenerationPipelines::DEFAULT_INPAINTING_TIMEOUT);
+                if (!inpaintingGuard.acquired()) {
+                    return absl::DeadlineExceededError("Inpainting pipeline is busy, request timed out");
+                }
+                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "ImageGenCalculator [Node: {}] Inpainting: queue slot acquired, invoking generate()", cc->NodeName());
                 status = generateTensorInpainting(*pipe->inpaintingPipeline, prompt, imageTensor, maskTensor, requestOptions, images);
             } else {
                 if (!pipe->image2ImagePipeline)
                     return absl::FailedPreconditionError("Image-to-image pipeline is not available for this model");
-                // image-to-image path - single pipeline instance, no clone needed
-                status = generateTensorImg2Img(*pipe->image2ImagePipeline, prompt, imageTensor, requestOptions, images);
+                auto i2i = pipe->image2ImagePipeline->clone();
+                status = generateTensorImg2Img(i2i, prompt, imageTensor, requestOptions, images);
             }
             if (!status.ok()) {
                 return status;

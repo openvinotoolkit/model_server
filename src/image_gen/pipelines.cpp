@@ -138,6 +138,12 @@ ImageGenerationPipelines::ImageGenerationPipelines(const ImageGenPipelineArgs& a
         throw std::runtime_error("Failed to create any image generation pipeline from: " + args.modelsPath);
     }
 
+    // InpaintingPipeline does not support clone(), so concurrent inpainting
+    // requests must be serialized.  Queue size = 1 acts as a mutex.
+    if (inpaintingPipeline) {
+        inpaintingQueue = std::make_unique<Queue<int>>(1);
+    }
+
     SPDLOG_INFO("Image Generation Pipelines ready — T2I: {} | I2I: {} | INP: {}",
         text2ImagePipeline ? "OK" : "N/A",
         image2ImagePipeline ? "OK" : "N/A",
