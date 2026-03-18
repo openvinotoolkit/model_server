@@ -9,7 +9,7 @@ ovms_demos_vlm_npu
 ```
 
 This demo shows how to deploy Vision Language Models in the OpenVINO Model Server.
-Text generation use case is exposed via OpenAI API `chat/completions` endpoint.
+Text generation use case is exposed via OpenAI API `chat/completions` and `responses` endpoints.
 
 > **Note:** This demo was tested on 4th - 6th generation Intel® Xeon® Scalable Processors, Intel® Arc™ GPU Series and Intel® Core Ultra Series on Ubuntu24, RedHat9 and Windows11.
 
@@ -119,6 +119,45 @@ curl http://localhost:8000/v3/chat/completions  -H "Content-Type: application/js
 ```
 :::
 
+:::{dropdown} **Unary call with curl using responses endpoint**
+**Note**: using urls in request requires `--allowed_media_domains` parameter described [here](../../../docs/parameters.md)
+
+```bash
+curl http://localhost:8000/v3/responses  -H "Content-Type: application/json" -d "{ \"model\": \"OpenGVLab/InternVL2-2B\", \"input\":[{\"role\": \"user\", \"content\": [{\"type\": \"input_text\", \"text\": \"Describe what is on the picture.\"},{\"type\": \"input_image\", \"image_url\": \"http://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/demos/common/static/images/zebra.jpeg\"}]}], \"max_output_tokens\": 100}"
+```
+```json
+{
+  "id": "resp-1741731554",
+  "object": "response",
+  "created_at": 1741731554,
+  "model": "OpenGVLab/InternVL2-2B",
+  "status": "completed",
+  "output": [
+    {
+      "id": "msg-0",
+      "type": "message",
+      "role": "assistant",
+      "status": "completed",
+      "content": [
+        {
+          "type": "output_text",
+          "text": "The picture features a zebra standing in a grassy plain. Zebras are known for their distinctive black and white striped patterns, which help them blend in for camouflage purposes.",
+          "annotations": []
+        }
+      ]
+    }
+  ],
+  "usage": {
+    "input_tokens": 19,
+    "input_tokens_details": { "cached_tokens": 0 },
+    "output_tokens": 83,
+    "output_tokens_details": { "reasoning_tokens": 0 },
+    "total_tokens": 102
+  }
+}
+```
+:::
+
 :::{dropdown} **Unary call with python requests library**
 
 ```console
@@ -177,9 +216,9 @@ print(response.text)
 }
 ```
 :::
-:::{dropdown} **Streaming request with OpenAI client**
+:::{dropdown} **Streaming request with OpenAI client using chat/completions**
 
-The endpoints `chat/completions` is compatible with OpenAI client so it can be easily used to generate code also in streaming mode:
+The endpoints `chat/completions` and `responses` are compatible with OpenAI client so it can be easily used to generate code also in streaming mode:
 
 Install the client library:
 ```console
@@ -223,6 +262,79 @@ The picture features a zebra standing in a grassy area. The zebra is characteriz
 
 :::
 
+:::{dropdown} **Streaming request with OpenAI client using responses endpoint**
+
+```console
+pip3 install openai
+```
+```python
+from openai import OpenAI
+import base64
+base_url='http://localhost:8080/v3'
+model_name = "OpenGVLab/InternVL2-2B"
+
+client = OpenAI(api_key='unused', base_url=base_url)
+
+def convert_image(Image):
+    with open(Image,'rb' ) as file:
+        base64_image = base64.b64encode(file.read()).decode("utf-8")
+    return base64_image
+
+stream = client.responses.create(
+    model=model_name,
+    input=[
+        {
+            "role": "user",
+            "content": [
+              {"type": "input_text", "text": "Describe what is on the picture."},
+              {"type": "input_image", "image_url": f"data:image/jpeg;base64,{convert_image('zebra.jpeg')}"}
+            ]
+        }
+        ],
+    stream=True,
+)
+for event in stream:
+    if event.type == "response.output_text.delta":
+        print(event.delta, end="", flush=True)
+```
+
+Output:
+```
+The picture features a zebra standing in a grassy area. The zebra is characterized by its distinctive black and white striped pattern, which covers its entire body, including its legs, neck, and head. Zebras have small, rounded ears and a long, flowing tail. The background appears to be a natural grassy habitat, typical of a savanna or plain.
+```
+
+:::
+
+## Benchmarking text generation with high concurrency
+
+OpenVINO Model Server employs efficient parallelization for text generation. It can be used to generate text also in high concurrency in the environment shared by multiple clients.
+It can be demonstrated using benchmarking app from vLLM repository:
+```console
+git clone --branch v0.7.3 --depth 1 https://github.com/vllm-project/vllm
+cd vllm
+pip3 install -r requirements-cpu.txt --extra-index-url https://download.pytorch.org/whl/cpu
+cd benchmarks
+python benchmark_serving.py --backend openai-chat --dataset-name hf --dataset-path lmarena-ai/vision-arena-bench-v0.1 --hf-split train --host localhost --port 8000 --model OpenGVLab/InternVL2-2B --endpoint /v3/chat/completions --max-concurrency 1 --num-prompts 100 --trust-remote-code
+
+Burstiness factor: 1.0 (Poisson process)
+Maximum request concurrency: None
+============ Serving Benchmark Result ============
+Successful requests:                     100       
+Benchmark duration (s):                  287.81    
+Total input tokens:                      15381     
+Total generated tokens:                  20109     
+Request throughput (req/s):              0.35       
+Output token throughput (tok/s):         69.87     
+Total Token throughput (tok/s):          123.31    
+---------------Time to First Token----------------
+Mean TTFT (ms):                          1513.96   
+Median TTFT (ms):                        1368.93   
+P99 TTFT (ms):                           2647.45   
+-----Time per Output Token (excl. 1st token)------
+Mean TPOT (ms):                          6.68      
+Median TPOT (ms):                        6.68      
+P99 TPOT (ms):                           8.02      
+```
 
 ## Testing the model accuracy over serving API
 
@@ -237,5 +349,6 @@ Check [VLM usage with NPU acceleration](../../vlm_npu/README.md)
 - [Export models to OpenVINO format](../../../demos/common/export_models/README.md)
 - [Supported VLM models](https://openvinotoolkit.github.io/openvino.genai/docs/supported-models/#visual-language-models-vlms)
 - [Chat Completions API](../../../docs/model_server_rest_api_chat.md)
+- [Responses API](../../../docs/model_server_rest_api_responses.md)
 - [Writing client code](../../../docs/clients_genai.md)
 - [LLM calculator reference](../../../docs/llm/reference.md)
