@@ -208,7 +208,7 @@ IF /I EXIST %BAZEL_SHORT_PATH%\openvino (
     rmdir /S /Q %BAZEL_SHORT_PATH%\openvino
 )
 if "%OV_SOURCE_BRANCH%"=="" (
-    set "OV_SOURCE_BRANCH= f6221c2f44e9ecfa5ac1f039d0a29a05a13aef1c"
+    set "OV_SOURCE_BRANCH=f6221c2f44e9ecfa5ac1f039d0a29a05a13aef1c"
 )
 if "%OV_SOURCE_ORG%"=="" (
     set "OV_SOURCE_ORG=openvinotoolkit"
