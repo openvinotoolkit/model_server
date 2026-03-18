@@ -444,7 +444,7 @@ index 58cb4b424..00ddee9f3 100644
  	git_writestream **out,
 diff --git a/src/libgit2/lfs_filter.c b/src/libgit2/lfs_filter.c
 new file mode 100644
-index 000000000..e3e48eed8
+index 000000000..ef3499b17
 --- /dev/null
 +++ b/src/libgit2/lfs_filter.c
 @@ -0,0 +1,1459 @@
@@ -1467,7 +1467,7 @@ index 000000000..e3e48eed8
 +				offset = (curl_off_t)pos;
 +		}
 +		/* Do not close the file because we want to append binary to the
-+		        existin file
++		        existing file
 +		fclose(ftpfile->stream);*/
 +	} else {
 +		fprintf(stderr, "\n[ERROR] Cannot open file %s\n",
