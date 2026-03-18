@@ -837,27 +837,60 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeStreamingChunkForResponsesContains
     std::optional<uint32_t> maxModelLength;
     ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
 
-    std::string firstChunk = apiHandler->serializeStreamingChunk("Hello", ov::genai::GenerationFinishReason::NONE);
-    ASSERT_NE(firstChunk.find("\"type\":\"response.created\""), std::string::npos) << firstChunk;
-    ASSERT_NE(firstChunk.find("\"type\":\"response.output_item.added\""), std::string::npos) << firstChunk;
-    ASSERT_NE(firstChunk.find("\"type\":\"response.content_part.added\""), std::string::npos) << firstChunk;
-    ASSERT_NE(firstChunk.find("\"type\":\"response.output_text.delta\""), std::string::npos) << firstChunk;
-    ASSERT_NE(firstChunk.find("\"delta\":\"Hello\""), std::string::npos) << firstChunk;
+    // Phase 1: Init events emitted even with empty text (before tokenizer produces output)
+    std::string initChunk = apiHandler->serializeStreamingChunk("", ov::genai::GenerationFinishReason::NONE);
+    ASSERT_NE(initChunk.find("\"type\":\"response.created\""), std::string::npos) << initChunk;
+    ASSERT_NE(initChunk.find("\"type\":\"response.in_progress\""), std::string::npos) << initChunk;
+    ASSERT_NE(initChunk.find("\"type\":\"response.output_item.added\""), std::string::npos) << initChunk;
+    ASSERT_NE(initChunk.find("\"type\":\"response.content_part.added\""), std::string::npos) << initChunk;
+    // No delta event when text is empty
+    ASSERT_EQ(initChunk.find("\"type\":\"response.output_text.delta\""), std::string::npos) << initChunk;
 
+    // Verify correct event ordering: created < in_progress < output_item.added < content_part.added
+    auto createdPos = initChunk.find("\"type\":\"response.created\"");
+    auto inProgressPos = initChunk.find("\"type\":\"response.in_progress\"");
+    auto outputItemAddedPos = initChunk.find("\"type\":\"response.output_item.added\"");
+    auto contentPartAddedPos = initChunk.find("\"type\":\"response.content_part.added\"");
+    ASSERT_LT(createdPos, inProgressPos) << "response.created must come before response.in_progress";
+    ASSERT_LT(inProgressPos, outputItemAddedPos) << "response.in_progress must come before response.output_item.added";
+    ASSERT_LT(outputItemAddedPos, contentPartAddedPos) << "response.output_item.added must come before response.content_part.added";
+
+    // Phase 2: Second call should only contain delta, no repeated init events
+    std::string secondChunk = apiHandler->serializeStreamingChunk("", ov::genai::GenerationFinishReason::NONE);
+    ASSERT_TRUE(secondChunk.empty()) << "Empty text after init should produce no output: " << secondChunk;
+
+    // Phase 3: Text delta
+    std::string deltaChunk = apiHandler->serializeStreamingChunk("Hello", ov::genai::GenerationFinishReason::NONE);
+    ASSERT_NE(deltaChunk.find("\"type\":\"response.output_text.delta\""), std::string::npos) << deltaChunk;
+    ASSERT_NE(deltaChunk.find("\"delta\":\"Hello\""), std::string::npos) << deltaChunk;
+    ASSERT_EQ(deltaChunk.find("\"type\":\"response.created\""), std::string::npos) << "No repeated init events: " << deltaChunk;
+
+    // Phase 4: Final chunk with finish reason
     std::string finalChunk = apiHandler->serializeStreamingChunk(" world", ov::genai::GenerationFinishReason::STOP);
+    ASSERT_NE(finalChunk.find("\"type\":\"response.output_text.delta\""), std::string::npos) << finalChunk;
     ASSERT_NE(finalChunk.find("\"type\":\"response.output_text.done\""), std::string::npos) << finalChunk;
     ASSERT_NE(finalChunk.find("\"type\":\"response.content_part.done\""), std::string::npos) << finalChunk;
     ASSERT_NE(finalChunk.find("\"type\":\"response.output_item.done\""), std::string::npos) << finalChunk;
     ASSERT_NE(finalChunk.find("\"type\":\"response.completed\""), std::string::npos) << finalChunk;
     ASSERT_NE(finalChunk.find("\"text\":\"Hello world\""), std::string::npos) << finalChunk;
+
+    // Verify correct event ordering in final chunk: delta < output_text.done < content_part.done < output_item.done < completed
+    auto deltaPos = finalChunk.find("\"type\":\"response.output_text.delta\"");
+    auto textDonePos = finalChunk.find("\"type\":\"response.output_text.done\"");
+    auto partDonePos = finalChunk.find("\"type\":\"response.content_part.done\"");
+    auto itemDonePos = finalChunk.find("\"type\":\"response.output_item.done\"");
+    auto completedPos = finalChunk.find("\"type\":\"response.completed\"");
+    ASSERT_LT(deltaPos, textDonePos) << "delta must come before output_text.done";
+    ASSERT_LT(textDonePos, partDonePos) << "output_text.done must come before content_part.done";
+    ASSERT_LT(partDonePos, itemDonePos) << "content_part.done must come before output_item.done";
+    ASSERT_LT(itemDonePos, completedPos) << "output_item.done must come before response.completed";
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, serializeStreamingUsageChunkForResponsesIsEmpty) {
     std::string json = R"({
     "model": "llama",
     "input": "What is OpenVINO?",
-    "stream": true,
-    "stream_options": {"include_usage": true}
+    "stream": true
   })";
     doc.Parse(json.c_str());
     ASSERT_FALSE(doc.HasParseError());
@@ -1632,12 +1665,11 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingRequestWithNullParametersCompletions
     }
 }
 
-TEST_F(HttpOpenAIHandlerParsingTest, ParsingResponsesConflictingOutputAndCompletionTokensFails) {
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingResponsesMaxOutputTokensSetsLimit) {
     std::string json = R"({
     "model": "llama",
     "input": "valid prompt",
-    "max_output_tokens": 5,
-    "max_completion_tokens": 7
+    "max_output_tokens": 42
   })";
     doc.Parse(json.c_str());
     ASSERT_FALSE(doc.HasParseError());
@@ -1645,7 +1677,43 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingResponsesConflictingOutputAndComplet
     uint32_t bestOfLimit = 0;
     std::optional<uint32_t> maxModelLength;
     std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
-    EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::InvalidArgumentError("max_output_tokens and max_completion_tokens must match when both are provided"));
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+    EXPECT_TRUE(apiHandler->getMaxTokens().has_value());
+    EXPECT_EQ(apiHandler->getMaxTokens().value(), 42);
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingResponsesMaxCompletionTokensIsIgnored) {
+    std::string json = R"({
+    "model": "llama",
+    "input": "valid prompt",
+    "max_completion_tokens": 50
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+    // max_completion_tokens should be ignored for RESPONSES endpoint, so maxTokens should not be 50
+    EXPECT_FALSE(apiHandler->getMaxTokens().has_value() && apiHandler->getMaxTokens().value() == 50);
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingResponsesMaxTokensIsIgnored) {
+    std::string json = R"({
+    "model": "llama",
+    "input": "valid prompt",
+    "max_tokens": 50
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+    // max_tokens should be ignored for RESPONSES endpoint, so maxTokens should not be 50
+    EXPECT_FALSE(apiHandler->getMaxTokens().has_value() && apiHandler->getMaxTokens().value() == 50);
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, ParsingResponsesFlatFunctionToolsSucceeds) {

@@ -1055,22 +1055,6 @@ absl::Status OpenAIChatCompletionsHandler::parseResponsesPart(std::optional<uint
         return toolsStatus;
     }
 
-    std::optional<uint32_t> maxCompletionTokens;
-    std::optional<uint32_t> maxOutputTokens;
-
-    // max_completion_tokens: uint; optional
-    it = doc.FindMember("max_completion_tokens");
-    if (it != doc.MemberEnd() && !it->value.IsNull()) {
-        if (!it->value.IsUint()) {
-            if (it->value.IsUint64())
-                return absl::InvalidArgumentError("max_completion_tokens value can't be greater than 4294967295");
-            return absl::InvalidArgumentError("max_completion_tokens is not an unsigned integer");
-        }
-        if (maxTokensLimit.has_value() && it->value.GetUint() > maxTokensLimit.value())
-            return absl::InvalidArgumentError(absl::StrCat("max_completion_tokens exceeds limit provided in graph config: ", maxTokensLimit.value()));
-        maxCompletionTokens = it->value.GetUint();
-    }
-
     // max_output_tokens: uint; optional
     // OpenAI Responses API uses this field for output token limit.
     it = doc.FindMember("max_output_tokens");
@@ -1082,21 +1066,12 @@ absl::Status OpenAIChatCompletionsHandler::parseResponsesPart(std::optional<uint
         }
         if (maxTokensLimit.has_value() && it->value.GetUint() > maxTokensLimit.value())
             return absl::InvalidArgumentError(absl::StrCat("max_output_tokens exceeds limit provided in graph config: ", maxTokensLimit.value()));
-        maxOutputTokens = it->value.GetUint();
+        request.maxTokens = it->value.GetUint();
     }
 
-    if (maxCompletionTokens.has_value() && maxOutputTokens.has_value() && maxCompletionTokens.value() != maxOutputTokens.value()) {
-        return absl::InvalidArgumentError("max_output_tokens and max_completion_tokens must match when both are provided");
-    }
-    if (maxOutputTokens.has_value()) {
-        request.maxTokens = maxOutputTokens.value();
-    } else if (maxCompletionTokens.has_value()) {
-        request.maxTokens = maxCompletionTokens.value();
-    }
-
-    // specific part of max_tokens validation
+    // specific part of max_output_tokens validation
     if (request.maxTokens == 0) {
-        return absl::InvalidArgumentError("max_tokens value should be greater than 0");
+        return absl::InvalidArgumentError("max_output_tokens value should be greater than 0");
     }
 
     // parse response_format
@@ -1176,16 +1151,23 @@ absl::Status OpenAIChatCompletionsHandler::parseCommonPart(std::optional<uint32_
     // max_tokens: uint; optional
     // Common part checked here, specific parts are checked in parseCompletionsPart and parseChatCompletionsPart
     // TODO: Deprecated - this will need to be removed in the future
-    it = doc.FindMember("max_tokens");
-    if (it != doc.MemberEnd()) {
-        if (!it->value.IsUint()) {
-            if (it->value.IsUint64())
-                return absl::InvalidArgumentError("max_tokens value can't be greater than 4294967295");
-            return absl::InvalidArgumentError("max_tokens is not an unsigned integer");
+    // Not applicable for RESPONSES endpoint which uses max_output_tokens instead
+    if (endpoint != Endpoint::RESPONSES) {
+        it = doc.FindMember("max_tokens");
+        if (it != doc.MemberEnd()) {
+            if (!it->value.IsUint()) {
+                if (it->value.IsUint64())
+                    return absl::InvalidArgumentError("max_tokens value can't be greater than 4294967295");
+                return absl::InvalidArgumentError("max_tokens is not an unsigned integer");
+            }
+            if (maxTokensLimit.has_value() && !(it->value.GetUint() < maxTokensLimit.value()))
+                return absl::InvalidArgumentError(absl::StrCat("max_tokens exceeds limit provided in graph config: ", maxTokensLimit.value()));
+            request.maxTokens = it->value.GetUint();
+        } else {
+            if (maxTokensLimit.has_value()) {
+                request.maxTokens = maxTokensLimit.value();
+            }
         }
-        if (maxTokensLimit.has_value() && !(it->value.GetUint() < maxTokensLimit.value()))
-            return absl::InvalidArgumentError(absl::StrCat("max_tokens exceeds limit provided in graph config: ", maxTokensLimit.value()));
-        request.maxTokens = it->value.GetUint();
     } else {
         if (maxTokensLimit.has_value()) {
             request.maxTokens = maxTokensLimit.value();
@@ -1377,6 +1359,7 @@ std::optional<int> OpenAIChatCompletionsHandler::getNumReturnSequences() const {
 StreamOptions OpenAIChatCompletionsHandler::getStreamOptions() const { return request.streamOptions; }
 
 bool OpenAIChatCompletionsHandler::isStream() const { return request.stream; }
+Endpoint OpenAIChatCompletionsHandler::getEndpoint() const { return endpoint; }
 std::string OpenAIChatCompletionsHandler::getModel() const { return request.model; }
 std::string OpenAIChatCompletionsHandler::getToolChoice() const { return request.toolChoice; }
 const std::unique_ptr<OutputParser>& OpenAIChatCompletionsHandler::getOutputParser() const { return outputParser; }
@@ -1923,6 +1906,17 @@ std::string OpenAIChatCompletionsHandler::serializeStreamingChunk(const std::str
                 writer.StartObject();
                 writer.String("type");
                 writer.String("response.created");
+                writer.String("sequence_number");
+                writer.Uint64(responsesStreamingSequenceNumber++);
+                writer.String("response");
+                serializeResponseObject(writer, "in_progress", "", false);
+                writer.EndObject();
+            }));
+
+            events.emplace_back(serializeResponsesEvent([this, &serializeResponseObject](Writer<StringBuffer>& writer) {
+                writer.StartObject();
+                writer.String("type");
+                writer.String("response.in_progress");
                 writer.String("sequence_number");
                 writer.Uint64(responsesStreamingSequenceNumber++);
                 writer.String("response");
