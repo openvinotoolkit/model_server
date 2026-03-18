@@ -56,6 +56,8 @@ const std::string TTS_SESSION_SIDE_PACKET_TAG = "TTS_NODE_RESOURCES";
 class T2sCalculator : public CalculatorBase {
     static const std::string INPUT_TAG_NAME;
     static const std::string OUTPUT_TAG_NAME;
+    std::string defaultLanguage = "en-us";
+    float defaultSpeed = 1.0f;
 
 public:
     static absl::Status GetContract(CalculatorContract* cc) {
@@ -74,6 +76,13 @@ public:
 
     absl::Status Open(CalculatorContext* cc) final {
         SPDLOG_LOGGER_DEBUG(t2s_calculator_logger, "T2sCalculator  [Node: {}] Open start", cc->NodeName());
+        const auto& options = cc->Options<mediapipe::T2sCalculatorOptions>();
+        if (options.has_language() && !options.language().empty()) {
+            defaultLanguage = options.language();
+        }
+        if (options.has_speed()) {
+            defaultSpeed = options.speed();
+        }
         return absl::OkStatus();
     }
 
@@ -109,24 +118,42 @@ public:
                 SPDLOG_LOGGER_DEBUG(t2s_calculator_logger, "1");
                 std::optional<std::string> voiceName;
                 auto voiceIt = payload.parsedJson->FindMember("voice");
-                if (voiceIt != payload.parsedJson->MemberEnd() && voiceIt->value.IsString()) {
+                if (voiceIt != payload.parsedJson->MemberEnd()) {
+                    if (!voiceIt->value.IsString()) {
+                        return absl::InvalidArgumentError("voice field is not a string");
+                    }
                     voiceName = voiceIt->value.GetString();
-                    if (pipe->voices.find(voiceName.value()) == pipe->voices.end())
-                        return absl::InvalidArgumentError(absl::StrCat("Requested voice not available: ", voiceName.value()));
+                }
+                std::string language = defaultLanguage;
+                auto languageIt = payload.parsedJson->FindMember("language");
+                if (languageIt != payload.parsedJson->MemberEnd()) {
+                    if (!languageIt->value.IsString()) {
+                        return absl::InvalidArgumentError("language field is not a string");
+                    }
+                    language = languageIt->value.GetString();
+                }
+                float speed = defaultSpeed;
+                auto speedIt = payload.parsedJson->FindMember("speed");
+                if (speedIt != payload.parsedJson->MemberEnd()) {
+                    if (!speedIt->value.IsNumber()) {
+                        return absl::InvalidArgumentError("speed field is not a number");
+                    }
+                    speed = speedIt->value.GetFloat();
                 }
                 SPDLOG_LOGGER_DEBUG(t2s_calculator_logger, "2");
                 ov::genai::Text2SpeechDecodedResults generatedSpeech;
                 std::unique_lock lock(pipe->ttsPipelineMutex);
-
+                ov::Tensor speakerEmbedding;
+                std::string selectedVoice = "af_alloy";
                 if (voiceName.has_value()) {
-                    SPDLOG_LOGGER_DEBUG(t2s_calculator_logger, "x");
-                    generatedSpeech = pipe->ttsPipeline->generate(inputIt->value.GetString(), pipe->voices[voiceName.value()]);
-                } else {
-                    SPDLOG_LOGGER_DEBUG(t2s_calculator_logger, "y");
-                    generatedSpeech = pipe->ttsPipeline->generate(inputIt->value.GetString(), ov::Tensor(),
-						   ov::AnyMap{{"voice", "af_alloy"},
-									  {"language", "en-us"}});
+                    selectedVoice = voiceName.value();
+                    auto speakerIt = pipe->voices.find(selectedVoice);
+                    if (speakerIt != pipe->voices.end()) {
+                        speakerEmbedding = speakerIt->second;
+                    }
                 }
+                ov::AnyMap properties{{"voice", selectedVoice}, {"language", language}, {"speed", speed}};
+                generatedSpeech = pipe->ttsPipeline->generate(inputIt->value.GetString(), speakerEmbedding, properties);
                 SPDLOG_LOGGER_DEBUG(t2s_calculator_logger, "3");
                 //auto bitsPerSample = generatedSpeech.speeches[0].get_element_type().bitwidth();
                 auto speechSize = generatedSpeech.speeches[0].get_size();
