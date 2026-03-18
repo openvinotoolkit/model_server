@@ -444,10 +444,10 @@ index 58cb4b424..00ddee9f3 100644
  	git_writestream **out,
 diff --git a/src/libgit2/lfs_filter.c b/src/libgit2/lfs_filter.c
 new file mode 100644
-index 000000000..11616ed94
+index 000000000..eb7ec215f
 --- /dev/null
 +++ b/src/libgit2/lfs_filter.c
-@@ -0,0 +1,1459 @@
+@@ -0,0 +1,1514 @@
 +﻿/*
 +/ Copyright 2025 Intel Corporation
 +/
@@ -640,11 +640,17 @@ index 000000000..11616ed94
 + * Initializes global resume configuration from environment:
 + *   GIT_LFS_RESUME_ATTEMPTS
 + *   GIT_LFS_RESUME_INTERVAL
-+ *
++ * Initializes libcurl and set ups curl cleanup once per process
++ * 
 + * Called exactly once via pthread_once / InitOnce.
 + */
 +static void lfs_resume_env_init(void)
 +{
++	/* initialize curl once per process */
++	curl_global_init(CURL_GLOBAL_ALL);
++	/* register cleanup once */
++	atexit(curl_global_cleanup);
++
 +	parse_env_nonneg_int(
 +	        "GIT_LFS_RESUME_ATTEMPTS", LFS_RESUME_ATTEMPTS_DEFAULT, 0,
 +	        LFS_RESUME_ATTEMPTS_MAX, &g_lfs_resume_attempts);
@@ -706,15 +712,72 @@ index 000000000..11616ed94
 +}
 +#endif
 +
++
 +typedef struct lfs_attrs {
-+	const char *path;
-+	const char *full_path;
-+	const char *workdir;
-+	const char *lfs_oid;
-+	const char *lfs_size;
-+	const char *url;
++	char *path;
++	char *full_path;
++	char *workdir;
++	char *lfs_oid;
++	char *lfs_size;
++	char *url;
 +	bool is_download;
 +} lfs_attrs;
++
++/*
++ * Allocate a clean, fully-owned structure.
++ */
++lfs_attrs *lfs_attrs_new(void)
++{
++	lfs_attrs *a = git__calloc(1, sizeof(lfs_attrs));
++	return a; /* fields are NULL by calloc */
++}
++
++/* Internal helper: replaces a->field with strdup(value). */
++static int lfs_attrs_replace(char **field, const char *value)
++{
++	char *dup = NULL;
++
++	if (value) {
++		dup = git__strdup(value);
++		if (!dup)
++			return -1;
++	}
++
++	/* Free old field */
++	git__free(*field);
++	*field = dup;
++	return 0;
++}
++
++int lfs_attrs_set_path(lfs_attrs *a, const char *path)
++{
++	return lfs_attrs_replace(&a->path, path);
++}
++
++int lfs_attrs_set_full_path(lfs_attrs *a, const char *fp)
++{
++	return lfs_attrs_replace(&a->full_path, fp);
++}
++
++int lfs_attrs_set_workdir(lfs_attrs *a, const char *wd)
++{
++	return lfs_attrs_replace(&a->workdir, wd);
++}
++
++int lfs_attrs_set_oid(lfs_attrs *a, const char *oid)
++{
++	return lfs_attrs_replace(&a->lfs_oid, oid);
++}
++
++int lfs_attrs_set_size(lfs_attrs *a, const char *size)
++{
++	return lfs_attrs_replace(&a->lfs_size, size);
++}
++
++int lfs_attrs_set_url(lfs_attrs *a, const char *url)
++{
++	return lfs_attrs_replace(&a->url, url);
++}
 +
 +/*
 + * Frees heap-allocated strings referenced by the struct fields.
@@ -726,34 +789,24 @@ index 000000000..11616ed94
 + *   - If any field is borrowed (e.g., string literal or external buffer), set
 + * it to NULL before calling this function to avoid invalid free().
 + */
-+static void lfs_attrs_free(lfs_attrs *a)
++void lfs_attrs_free(lfs_attrs *a)
 +{
 +	if (!a)
 +		return;
-+	if (a->path) {
-+		free((void *)a->path);
-+		a->path = NULL;
-+	}
-+	if (a->full_path) {
-+		free((void *)a->full_path);
-+		a->full_path = NULL;
-+	}
-+	if (a->workdir) {
-+		free((void *)a->workdir);
-+		a->workdir = NULL;
-+	}
-+	if (a->lfs_oid) {
-+		free((void *)a->lfs_oid);
-+		a->lfs_oid = NULL;
-+	}
-+	if (a->lfs_size) {
-+		free((void *)a->lfs_size);
-+		a->lfs_size = NULL;
-+	}
-+	if (a->url) {
-+		free((void *)a->url);
-+		a->url = NULL;
-+	}
++
++	git__free(a->path);
++	git__free(a->full_path);
++	git__free(a->workdir);
++	git__free(a->lfs_oid);
++	git__free(a->lfs_size);
++	git__free(a->url);
++
++	a->path = NULL;
++	a->full_path = NULL;
++	a->workdir = NULL;
++	a->lfs_oid = NULL;
++	a->lfs_size = NULL;
++	a->url = NULL;
 +
 +	a->is_download = false;
 +}
@@ -766,13 +819,12 @@ index 000000000..11616ed94
 + * Parameters:
 + *   a - Heap-allocated lfs_attrs struct.
 + */
-+static void lfs_attrs_delete(lfs_attrs *a)
++void lfs_attrs_delete(lfs_attrs *a)
 +{
 +	if (!a)
 +		return;
 +	lfs_attrs_free(a);
-+	free(a);
-+	a = NULL;
++	git__free(a);
 +}
 +
 +/*
@@ -787,10 +839,10 @@ index 000000000..11616ed94
 + *   The parsed integer on success,
 + *   0 on failure.
 + */
-+static size_t get_digit(const char *buffer)
++static unsigned long long get_digit(const char *buffer)
 +{
 +	char *endptr;
-+	size_t number;
++	unsigned long long number;
 +	errno = 0;
 +	if (buffer == NULL) {
 +		fprintf(stderr, "\n[ERROR] get_digit on NULL\n");
@@ -1007,8 +1059,12 @@ index 000000000..11616ed94
 +	git_oid lfs_oid;
 +	/* Init the lfs attrs to indicate git lfs clean, currently only diff
 +	 * support no upload of lfs file supported */
-+	struct lfs_attrs la = { NULL, NULL, NULL, NULL, NULL, NULL, false };
-+	*payload = git__malloc(sizeof(la));
++	lfs_attrs *la = lfs_attrs_new();
++	if (!la)
++		return -1;
++	la->is_download = false;
++
++	*payload = la;
 +	GIT_ERROR_CHECK_ALLOC(*payload);
 +	memcpy(*payload, &la, sizeof(la));
 +
@@ -1089,13 +1145,15 @@ index 000000000..11616ed94
 +	git_repository *repo = git_filter_source_repo(src);
 +	const char *path = git_filter_source_path(src);
 +	const char *workdir = git_repository_workdir(repo);
-+	/* Setup memory for payload struct ownership */
-+	char *full_path_dup;
-+	char *path_dup = git__strdup(path);
-+	char *workdir_dup = git__strdup(workdir);
-+	char *url_dup = git__strdup(repo->url);
-+	struct lfs_attrs la = { path_dup, NULL,    workdir_dup, NULL,
-+		                NULL,     url_dup, true };
++	/* Setup memory for payload struct ownership */	
++	lfs_attrs *la = lfs_attrs_new();
++	if (!la)
++		return -1;
++
++	lfs_attrs_set_path(la, path);
++	lfs_attrs_set_workdir(la, workdir);
++	lfs_attrs_set_url(la, repo->url);
++	la->is_download = true;
 +
 +	lfs_oid.size = from->size;
 +	lfs_oid.asize = from->asize;
@@ -1110,31 +1168,28 @@ index 000000000..11616ed94
 +		        lfs_oid.ptr);
 +		return -1;
 +	}
-+	la.lfs_oid = lfs_oid.ptr;
-+
++	lfs_attrs_set_oid(la, lfs_oid.ptr);
++	git_str_dispose(&lfs_oid);
 +	if (get_lfs_info_match(&lfs_size, size_regexp) < 0) {
 +		fprintf(stderr,
 +		        "\n[ERROR] failure, cannot find lfs size in: %s\n",
 +		        lfs_size.ptr);
 +		return -1;
 +	}
-+	la.lfs_size = lfs_size.ptr;
-+
++	lfs_attrs_set_size(la, lfs_size.ptr);
++	git_str_dispose(&lfs_size);
 +	if (git_repository_workdir_path(&full_path, repo, path) < 0) {
 +		fprintf(stderr,
 +		        "\n[ERROR] failure, cannot get repository path: %s\n",
 +		        path);
 +		return -1;
 +	}
-+	full_path_dup = git__strdup(full_path.ptr);
++	lfs_attrs_set_full_path(la, full_path.ptr);
 +	git_str_dispose(&full_path);
-+	la.full_path = full_path_dup;
 +
-+	*payload = git__malloc(sizeof(la));
-+	GIT_ERROR_CHECK_ALLOC(*payload);
-+	memcpy(*payload, &la, sizeof(la));
++	*payload = la;
 +
-+	/*Just write the oryginal lfs file contents */
++	/*Just write the original lfs file contents */
 +	return git_str_set(to, from->ptr, from->size);
 +}
 +
@@ -1269,7 +1324,7 @@ index 000000000..11616ed94
 +static void
 +print_progress(size_t count, size_t max, bool first_run, size_t elapsed_time)
 +{
-+	float progress;
++	double progress;
 +	int i, bar_length, bar_width;
 +	size_t totalSizeUnitId;
 +	double totalSize;
@@ -1281,7 +1336,7 @@ index 000000000..11616ed94
 +		return;
 +	}
 +
-+	progress = (float)count / max;
++	progress = (double)count / max;
 +	if (!first_run && progress < 0.01 && count > 0)
 +		return;
 +
@@ -1819,7 +1874,7 @@ index 000000000..11616ed94
 +		curl_easy_cleanup(dl_curl);
 +	}
 +
-+	/* Remove lfs file and rename downloaded file to oryginal lfs filename
++	/* Remove lfs file and rename downloaded file to original lfs filename
 +	 */
 +	if (!resumingFileByBlobFilter) {
 +		/* File does not exist when using blob filters */
