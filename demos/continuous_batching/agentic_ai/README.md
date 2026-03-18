@@ -55,13 +55,31 @@ ovms.exe --rest_port 8000 --source_model Junrui2021/Qwen3-VL-8B-Instruct-int4 --
 ```
 
 Use MCP server:
+
+```{image} egypt.png
+:alt: egypt
+:width: 200px
+```
+
 ```bat
-python openai_agent.py --query "What is the current weather in Tokyo?" --model Junrui2021/Qwen3-VL-8B-Instruct-int4 --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather
+python openai_agent.py --query "What is the current weather in location depicted in the image?" --image egypt.png --model Junrui2021/Qwen3-VL-8B-Instruct-int4 --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather
 ```
 
 Exemplary output:
 ```text
-The current weather in Tokyo is overcast with a temperature of 9.4°C (feels like 6.4°C). The relative humidity is at 42%, and the dew point is at -2.9°C. Wind is blowing from the NE at 3.6 km/h with gusts up to 24.8 km/h. The atmospheric pressure is 1018.9 hPa with 84% cloud cover. Visibility is 24.1 km.
+The current weather in Cairo, Egypt (the location depicted in the image of the pyramids) is:
+
+- **Condition**: Overcast
+- **Temperature**: 28.6°C (feels like 25.4°C)
+- **Humidity**: 18%
+- **Dew Point**: 1.9°C
+- **Wind**: Blowing from the SW at 11.5 km/h with gusts up to 41.0 km/h
+- **Atmospheric Pressure**: 999.4 hPa
+- **Cloud Cover**: 100%
+- **UV Index**: 5.5 (Moderate)
+- **Visibility**: 56.2 km
+
+The weather is quite warm and hazy, with strong winds and no direct sunlight due to the overcast conditions.
 ```
 :::
 :::{tab-item} Qwen3-4B
@@ -202,13 +220,31 @@ docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v ${HOME}/models:/mode
 ```
 
 Use MCP server:
+
+```{image} egypt.png
+:alt: egypt
+:width: 200px
+```
+
 ```bash
-python openai_agent.py --query "What is the current weather in Tokyo?" --model Junrui2021/Qwen3-VL-8B-Instruct-int4 --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather
+python openai_agent.py --query "What is the current weather in location depicted in the image?" --image egypt.png --model Junrui2021/Qwen3-VL-8B-Instruct-int4 --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather
 ```
 
 Exemplary output:
 ```text
-The current weather in Tokyo is overcast with a temperature of 9.4°C (feels like 6.4°C). The relative humidity is at 42%, and the dew point is -2.9°C. Wind is blowing from the northeast at 3.6 km/h with gusts up to 24.8 km/h. The atmospheric pressure is 1018.9 hPa, with 84% cloud cover and visibility of 24.1 km.
+The current weather in Cairo, Egypt (the location depicted in the image of the pyramids) is:
+
+- **Condition**: Overcast
+- **Temperature**: 28.6°C (feels like 25.4°C)
+- **Humidity**: 18%
+- **Dew Point**: 1.9°C
+- **Wind**: Blowing from the SW at 11.5 km/h with gusts up to 41.0 km/h
+- **Atmospheric Pressure**: 999.4 hPa
+- **Cloud Cover**: 100%
+- **UV Index**: 5.5 (Moderate)
+- **Visibility**: 56.2 km
+
+The weather is quite warm and hazy, with strong winds and no direct sunlight due to the overcast conditions.
 ```
 :::
 :::{tab-item} Qwen3-4B
@@ -319,13 +355,31 @@ docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v ${HOME}/models:/mode
 ```
 
 Use MCP server:
+
+```{image} egypt.png
+:alt: egypt
+:width: 200px
+```
+
 ```bash
-python openai_agent.py --query "What is the current weather in Tokyo?" --model Junrui2021/Qwen3-VL-8B-Instruct-int4 --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather
+python openai_agent.py --query "What is the current weather in location depicted in the image?" --image egypt.png --model Junrui2021/Qwen3-VL-8B-Instruct-int4 --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather
 ```
 
 Exemplary output:
 ```text
-The current weather in Tokyo is overcast with a temperature of 9.4°C (feels like 6.4°C). The relative humidity is at 42%, and the dew point is -2.9°C. Wind is blowing from the northeast at 3.6 km/h with gusts up to 24.8 km/h. The atmospheric pressure is 1018.9 hPa with 84% cloud cover, and visibility is 24.1 km.
+The current weather in Cairo, Egypt (the location depicted in the image of the pyramids) is:
+
+- **Condition**: Overcast
+- **Temperature**: 28.6°C (feels like 25.4°C)
+- **Humidity**: 18%
+- **Dew Point**: 1.9°C
+- **Wind**: Blowing from the SW at 11.5 km/h with gusts up to 41.0 km/h
+- **Atmospheric Pressure**: 999.4 hPa
+- **Cloud Cover**: 100%
+- **UV Index**: 5.5 (Moderate)
+- **Visibility**: 56.2 km
+
+The weather is quite warm and hazy, with strong winds and no direct sunlight due to the overcast conditions.
 ```
 :::
 :::{tab-item} Qwen3-4B
