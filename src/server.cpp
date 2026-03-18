@@ -530,6 +530,10 @@ int Server::startServerFromSettings(ServerSettingsImpl& serverSettings, ModelsSe
 
 // OVMS Start
 int Server::start(int argc, char** argv) {
+    // This is WA for concurrency handling issue in iGPU. It is expected to be fixed in 2026.2
+    if (getenv("MOE_USE_MICRO_GEMM_PREFILL") == nullptr) {
+        setenv("MOE_USE_MICRO_GEMM_PREFILL", "0", 0);
+    }
     auto paramsOrExit = parseArgs(argc, argv);
     // Check for error in parsing
     if (std::holds_alternative<std::pair<int, std::string>>(paramsOrExit)) {
