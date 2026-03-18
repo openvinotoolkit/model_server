@@ -56,8 +56,10 @@ compress_logs() {
 } 
 
 generate_coverage_report() {
-    test_success_procedure
-    genhtml --output genhtml "$(bazel info output_path)/_coverage/_coverage_report.dat"
+    local coverage_dat="$(bazel info output_path)/_coverage/_coverage_report.dat"
+    lcov --extract "$coverage_dat" 'src/*' --output-file filtered_coverage.dat --ignore-errors negative
+    lcov --remove filtered_coverage.dat 'src/test/*' 'external/*' --output-file filtered_coverage.dat --ignore-errors negative,unused
+    genhtml --ignore-errors negative --output genhtml filtered_coverage.dat
 }
 
 echo "Run test: ${RUN_TESTS}"
@@ -65,11 +67,14 @@ echo "Run GPU test: ${RUN_GPU_TESTS}"
 echo "Run coverage: ${CHECK_COVERAGE}"
 if [ "$RUN_TESTS" == "1" ] ; then
     if [ "$CHECK_COVERAGE" == "1" ] ; then
-        { bazel coverage --instrumentation_filter="-src/test" --combined_report=lcov \
+        if bazel coverage --instrumentation_filter="-src/test" --combined_report=lcov \
             ${SHARED_OPTIONS} ${TEST_FILTER} \
-            //src:ovms_test ${SHARED_OPTIONS} > ${TEST_LOG} 2>&1 || \
-            compress_logs && exit 1; } && \
-            generate_coverage_report;
+            //src:ovms_test ${SHARED_OPTIONS} > ${TEST_LOG} 2>&1 ; then
+            generate_coverage_report
+        else
+            compress_logs
+            exit 1
+        fi
     fi
     bazel test ${SHARED_OPTIONS} "${TEST_FILTER}" //src/python/binding:test_python_binding || exit 1
     bazel build ${SHARED_OPTIONS} //src:ovms_test || exit 1
