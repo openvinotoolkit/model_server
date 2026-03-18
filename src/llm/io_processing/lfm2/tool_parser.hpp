@@ -33,13 +33,12 @@ protected:
     const std::string toolEndIndicator = ")";
     const std::string toolSeparatorStr = ", ";
 
+public:
     struct Argument {
         std::string name;
         std::string value;
         ParameterType type;
     };
-
-public:
     Lfm2ToolParser() = delete;
     explicit Lfm2ToolParser(ov::genai::Tokenizer& tokenizer) : BaseOutputParser(tokenizer) {}
 
@@ -50,10 +49,6 @@ public:
         return parsingStartTags;
     }
 
-    Argument parseSingleArgument(std::string& argumentStr);
-    std::vector<Argument> parseArguments(std::string& argumentsStr);
-    bool parseSingleToolCall(const std::string& toolStr, ToolCall& toolCall);
-
     const std::vector<std::string>& getSpecialParsingStartTags() const override {
         static const std::vector<std::string> beginningOnlyTags = {};
         return beginningOnlyTags;
@@ -63,5 +58,9 @@ public:
         return toolCallEndTag;
     }
 
+private:
+    Argument parseSingleArgument(const std::string& argumentStr);
+    std::vector<Argument> parseArguments(const std::string& argumentsStr);
+    bool parseSingleToolCall(const std::string& toolStr, ToolCall& toolCall);
 };
 }
