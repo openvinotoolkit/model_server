@@ -54,12 +54,9 @@ Pull and start OVMS:
 ovms.exe --rest_port 8000 --source_model Junrui2021/Qwen3-VL-8B-Instruct-int4 --model_repository_path c:\models --tool_parser hermes3 --target_device GPU --task text_generation --pipeline_type VLM_CB --cache_dir .cache
 ```
 
-Use MCP server:
+Use MCP server, with additional image input:
 
-```{image} egypt.png
-:alt: egypt
-:width: 200px
-```
+![egypt](egypt.png){width="200px"}
 
 ```bat
 python openai_agent.py --query "What is the current weather in location depicted in the image?" --image egypt.png --model Junrui2021/Qwen3-VL-8B-Instruct-int4 --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather
@@ -219,12 +216,9 @@ docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v ${HOME}/models:/mode
 --rest_port 8000 --model_repository_path /models --source_model Junrui2021/Qwen3-VL-8B-Instruct-int4 --tool_parser hermes3 --task text_generation --pipeline_type VLM_CB
 ```
 
-Use MCP server:
+Use MCP server, with additional image input:
 
-```{image} egypt.png
-:alt: egypt
-:width: 200px
-```
+![egypt](egypt.png){width="200px"}
 
 ```bash
 python openai_agent.py --query "What is the current weather in location depicted in the image?" --image egypt.png --model Junrui2021/Qwen3-VL-8B-Instruct-int4 --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather
@@ -354,12 +348,9 @@ docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v ${HOME}/models:/mode
 --rest_port 8000 --model_repository_path /models --source_model Junrui2021/Qwen3-VL-8B-Instruct-int4 --tool_parser hermes3 --target_device GPU --task text_generation --pipeline_type VLM_CB
 ```
 
-Use MCP server:
+Use MCP server, with additional image input:
 
-```{image} egypt.png
-:alt: egypt
-:width: 200px
-```
+![egypt](egypt.png){width="200px"}
 
 ```bash
 python openai_agent.py --query "What is the current weather in location depicted in the image?" --image egypt.png --model Junrui2021/Qwen3-VL-8B-Instruct-int4 --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather
