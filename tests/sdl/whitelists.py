@@ -67,7 +67,7 @@ dynamic_libraries = {
     OvmsBaseType.UBUNTU22_PYTHON: {'libpython3.10.so',},
     OvmsBaseType.UBUNTU24: {'libdl.so', 'libm.so', 'libpthread.so',},
     OvmsBaseType.UBUNTU24_PYTHON: {'libpython3.12.so',},
-    OvmsBaseType.REDHAT: {'libdl.so', 'libm.so', 'libpthread.so', 'libcrypt.so',},
+    OvmsBaseType.REDHAT: {'libdl.so', 'libm.so', 'libpthread.so',},
     OvmsBaseType.REDHAT_PYTHON: {'libpython3.12.so'},
 }
 
@@ -282,12 +282,14 @@ packages = {
     },
     OvmsBaseType.REDHAT: {
         "findutils",
+        'libtirpc',
+        'mpdecimal',
+        'libnsl2',
     },
     OvmsBaseType.REDHAT_PYTHON: {
         'expat',
-        'python3-libs',
-        'python3-pip-wheel',
-        'python3-setuptools-wheel',
+        'python3.12-libs',
+        'python3.12-pip-wheel',
     },
     OvmsBaseType.REDHAT_GPU: {
         'intel-gmmlib',
