@@ -444,7 +444,7 @@ index 58cb4b424..00ddee9f3 100644
  	git_writestream **out,
 diff --git a/src/libgit2/lfs_filter.c b/src/libgit2/lfs_filter.c
 new file mode 100644
-index 000000000..ef3499b17
+index 000000000..11616ed94
 --- /dev/null
 +++ b/src/libgit2/lfs_filter.c
 @@ -0,0 +1,1459 @@
@@ -654,7 +654,7 @@ index 000000000..ef3499b17
 +	        LFS_RESUME_INTERVAL_MAX, &g_lfs_resume_interval_secs);
 +
 +	/* log resolved config */
-+	fprintf(stderr, "[INFO] LFS resume: attempts=%d interval=%u s\n",
++	fprintf(stdout, "[INFO] LFS resume: attempts=%d interval=%u s\n",
 +	        g_lfs_resume_attempts, g_lfs_resume_interval_secs);
 +}
 +
