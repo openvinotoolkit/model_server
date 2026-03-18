@@ -57,9 +57,21 @@ compress_logs() {
 
 generate_coverage_report() {
     local coverage_dat="$(bazel info output_path)/_coverage/_coverage_report.dat"
-    lcov --extract "$coverage_dat" 'src/*' --output-file filtered_coverage.dat --ignore-errors negative
-    lcov --remove filtered_coverage.dat 'src/test/*' 'external/*' --output-file filtered_coverage.dat --ignore-errors negative,unused
-    genhtml --ignore-errors negative --output genhtml filtered_coverage.dat
+
+    if ! lcov --extract "$coverage_dat" 'src/*' --output-file filtered_coverage.dat --ignore-errors negative; then
+        echo "Error: lcov extraction failed" >&2
+        return 1
+    fi
+
+    if ! lcov --remove filtered_coverage.dat 'src/test/*' 'external/*' --output-file filtered_coverage.dat --ignore-errors negative,unused; then
+        echo "Error: lcov filtering failed" >&2
+        return 1
+    fi
+
+    if ! genhtml --ignore-errors negative --output genhtml filtered_coverage.dat; then
+        echo "Error: genhtml report generation failed" >&2
+        return 1
+    fi
 }
 
 echo "Run test: ${RUN_TESTS}"
@@ -70,7 +82,10 @@ if [ "$RUN_TESTS" == "1" ] ; then
         if bazel coverage --instrumentation_filter="-src/test" --combined_report=lcov \
             ${SHARED_OPTIONS} ${TEST_FILTER} \
             //src:ovms_test ${SHARED_OPTIONS} > ${TEST_LOG} 2>&1 ; then
-            generate_coverage_report
+            if ! generate_coverage_report ; then
+                compress_logs
+                exit 1
+            fi
         else
             compress_logs
             exit 1
