@@ -56,7 +56,7 @@ ovms.exe --rest_port 8000 --source_model Junrui2021/Qwen3-VL-8B-Instruct-int4 --
 
 Use MCP server, with additional image input:
 
-![egypt](egypt.png){width="200px"}
+![egypt](egypt.png)
 
 ```bat
 python openai_agent.py --query "What is the current weather in location depicted in the image?" --image egypt.png --model Junrui2021/Qwen3-VL-8B-Instruct-int4 --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather
@@ -218,7 +218,7 @@ docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v ${HOME}/models:/mode
 
 Use MCP server, with additional image input:
 
-![egypt](egypt.png){width="200px"}
+![egypt](egypt.png)
 
 ```bash
 python openai_agent.py --query "What is the current weather in location depicted in the image?" --image egypt.png --model Junrui2021/Qwen3-VL-8B-Instruct-int4 --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather
@@ -350,7 +350,7 @@ docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v ${HOME}/models:/mode
 
 Use MCP server, with additional image input:
 
-![egypt](egypt.png){width="200px"}
+![egypt](egypt.png)
 
 ```bash
 python openai_agent.py --query "What is the current weather in location depicted in the image?" --image egypt.png --model Junrui2021/Qwen3-VL-8B-Instruct-int4 --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather
