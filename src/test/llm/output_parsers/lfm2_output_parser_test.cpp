@@ -59,8 +59,8 @@ protected:
 };
 
 TEST_F(LFM2OutputParserTest, ParseToolCallOutputWithSingleToolCall) {
-    std::string inputWithProperClosure = "<tool_call>[example_tool(arg1=\"value1\", arg2=42)]</tool_call>";
-    std::string inputWithImproperClosure = "<tool_call>[example_tool(arg1=\"value1\", arg2=42)";
+    std::string inputWithProperClosure = "<|tool_call_start|>[example_tool(arg1=\"value1\", arg2=42)]<|tool_call_end|>";
+    std::string inputWithImproperClosure = "<|tool_call_start|>[example_tool(arg1=\"value1\", arg2=42)]";
 
     // LFM2 may produce last tool call without closing tag, so we test both cases
     // The results should be identical
@@ -81,8 +81,8 @@ TEST_F(LFM2OutputParserTest, ParseToolCallOutputWithSingleToolCall) {
 }
 
 TEST_F(LFM2OutputParserTest, ParseToolCallOutputWithNoToolsInTheRequest) {
-    std::string inputWithProperClosure = "<tool_call>[\"name\": \"example_tool\", \"arguments\": {\"arg1\": \"value1\", \"arg2\": 42}]</tool_call>";
-    std::string inputWithImproperClosure = "<tool_call>[\"name\": \"example_tool\", \"arguments\": {\"arg1\": \"value1\", \"arg2\": 42}]";
+    std::string inputWithProperClosure = "<|tool_call_start|>[example_tool(arg1=\"value1\", arg2=42)]<|tool_call_end|>";
+    std::string inputWithImproperClosure = "<|tool_call_start|>[example_tool(arg1=\"value1\", arg2=42)]";
 
     // LFM2 may produce last tool call without closing tag, so we test both cases
     // The results should be identical
@@ -100,12 +100,12 @@ TEST_F(LFM2OutputParserTest, ParseToolCallOutputWithNoToolsInTheRequest) {
 }
 
 TEST_F(LFM2OutputParserTest, ParseToolCallOutputWithThreeToolCalls) {
-    std::string inputWithProperClosure = "<tool_call>[example_tool(arg1=\"value1\", arg2=42)]</tool_call>"
-                                         "<tool_call>[another_tool(param1=\"data\", param2=true)]</tool_call>"
-                                         "<tool_call>[third_tool(key=\"value\")]</tool_call>";
-    std::string inputWithImproperClosure = "<tool_call>[example_tool(arg1=\"value1\", arg2=42)]</tool_call>"
-                                           "<tool_call>[another_tool(param1=\"data\", param2=true)]</tool_call>"
-                                           "<tool_call>[third_tool(key=\"value\")]";
+    std::string inputWithProperClosure = "<|tool_call_start|>[example_tool(arg1=\"value1\", arg2=42)]<|tool_call_end|>"
+                                         "<|tool_call_start|>[another_tool(param1=\"data\", param2=true)]<|tool_call_end|>"
+                                         "<|tool_call_start|>[third_tool(key=\"value\")]<|tool_call_end|>";
+    std::string inputWithImproperClosure = "<|tool_call_start|>[example_tool(arg1=\"value1\", arg2=42)]<|tool_call_end|>"
+                                           "<|tool_call_start|>[another_tool(param1=\"data\", param2=true)]<|tool_call_end|>"
+                                           "<|tool_call_start|>[third_tool(key=\"value\")]";
 
     // LFM2 may produce last tool call without closing tag, so we test both cases
     // The results should be identical
@@ -142,12 +142,12 @@ TEST_F(LFM2OutputParserTest, ParseToolCallOutputWithThreeToolCalls) {
 }
 
 TEST_F(LFM2OutputParserTest, ParseToolCallOutputWithTwoValidToolCallsAndOneInvalid) {
-    std::string inputWithProperClosure = "<tool_call>[example_tool(arg1=\"value1\", arg2=42)]</tool_call>"
-                                         "<tool_call>[another_tool(param1=\"data\", param2=true)]</tool_call>"
-                                         "<tool_call>[third_tool(key=\"value\")]</tool_call>";
-    std::string inputWithImproperClosure = "<tool_call>[example_tool(arg1=\"value1\", arg2=42)]</tool_call>"
-                                           "<tool_call>[another_tool(param1=\"data\", param2=true)]</tool_call>"
-                                           "<tool_call>[third_tool(key=\"value\")]";
+    std::string inputWithProperClosure = "<|tool_call_start|>[example_tool(arg1=\"value1\", arg2=42)]<|tool_call_end|>"
+                                         "<|tool_call_start|>[another_tool(param1=\"data\", param2=true)]<|tool_call_end|>"
+                                         "<|tool_call_start|>[third_tool(key=\"value\")]<|tool_call_end|>";
+    std::string inputWithImproperClosure = "<|tool_call_start|>[example_tool(arg1=\"value1\", arg2=42)]<|tool_call_end|>"
+                                           "<|tool_call_start|>[another_tool(param1=\"data\", param2=true)]<|tool_call_end|>"
+                                           "<|tool_call_start|>[third_tool(key=\"value\")]";
     // LFM2 may produce last tool call without closing tag, so we test both cases
     // The results should be identical
     std::vector<std::string> inputs = {inputWithProperClosure, inputWithImproperClosure};
@@ -186,7 +186,7 @@ TEST_F(LFM2OutputParserTest, ParseToolCallOutputWithContentAndNoToolCalls) {
 }
 
 TEST_F(LFM2OutputParserTest, ParseToolCallOutputWithContentAndSingleToolCall) {
-    std::string input = "This is a content part and next will be a tool call.\n\n<tool_call>{\"name\": \"example_tool\", \"arguments\": {\"arg1\": \"value1\", \"arg2\": 42}}</tool_call>";
+    std::string input = "This is a content part and next will be a tool call.\n\n<|tool_call_start|>[example_tool(arg1=\"value1\", arg2=42)]<|tool_call_end|>";
     auto generatedTensor = lfm2Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
     // generatedTokens should now contain content followed by bot token ID and then tool call
@@ -207,7 +207,7 @@ TEST_F(LFM2OutputParserTest, HolisticStreaming) {
     std::vector<std::tuple<std::string, ov::genai::GenerationFinishReason, std::optional<std::string>>> chunkToDeltaVec{
         // Tool call phase
         // Starting first tool. Collecting chunk until full name is received. Don't return until then.
-        {"<tool_call>\n", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"<|tool_call_start|>\n", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"[\"", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"name", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"\":", ov::genai::GenerationFinishReason::NONE, std::nullopt},
@@ -242,9 +242,9 @@ TEST_F(LFM2OutputParserTest, HolisticStreaming) {
         {"\"", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"\\\": \"}}]}}"},
         {"nested_value2", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"\\\"\"}}]}}"},
         {"\"}}}", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"nested_value2\"}}]}}"},
-        {"</tool_call>\n", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"\\\"}}\"}}]}}"},
+        {"<|tool_call_end|>\n", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"\\\"}}\"}}]}}"},
         // Starting second tool. Collecting chunk until full name is received. Don't return until then.
-        {"<tool_call>\n", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"<|tool_call_start|>\n", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"{\"", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"name", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"\":", ov::genai::GenerationFinishReason::NONE, std::nullopt},
@@ -268,9 +268,9 @@ TEST_F(LFM2OutputParserTest, HolisticStreaming) {
         {"\"", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":1,\"function\":{\"arguments\":\"val{{{ue1\"}}]}}"},
         {"}", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":1,\"function\":{\"arguments\":\"\\\"\"}}]}}"},
         {"}", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":1,\"function\":{\"arguments\":\"}\"}}]}}"},  // returning last arguments part
-        {"</tool_call>\n", ov::genai::GenerationFinishReason::NONE, std::nullopt},                                                          // closed main JSON, with the last chunk, now only return nullopt since there is no delta
+        {"<|tool_call_end|>\n", ov::genai::GenerationFinishReason::NONE, std::nullopt},                                                          // closed main JSON, with the last chunk, now only return nullopt since there is no delta
         // Starting third tool. Collecting chunk until full name is received. Don't return until then.
-        {"<tool_call>\n{\"", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"<|tool_call_start|>\n{\"", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"name", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"\":", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {" \"", ov::genai::GenerationFinishReason::NONE, std::nullopt},
@@ -291,9 +291,9 @@ TEST_F(LFM2OutputParserTest, HolisticStreaming) {
         {"\"", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":2,\"function\":{\"arguments\":\"\\\": \"}}]}}"},
         {"val{{{ue1", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":2,\"function\":{\"arguments\":\"\\\"\"}}]}}"},
         {"\"", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":2,\"function\":{\"arguments\":\"val{{{ue1\"}}]}}"},
-        {"}}</tool_call>\n", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":2,\"function\":{\"arguments\":\"\\\"}\"}}]}}"},
+        {"}}<|tool_call_end|>\n", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":2,\"function\":{\"arguments\":\"\\\"}\"}}]}}"},
         // Starting fourth tool (without arguments). Collecting chunk until full name is received. Don't return until then.
-        {"<tool_call>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"<|tool_call_start|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"{\"name", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"\":", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {" \"", ov::genai::GenerationFinishReason::NONE, std::nullopt},
@@ -308,9 +308,9 @@ TEST_F(LFM2OutputParserTest, HolisticStreaming) {
         {"\": {}}\n", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"id\":\"XXXXXXXXX\",\"type\":\"function\",\"index\":3,\"function\":{\"name\":\"super_tool_number_four\"}}]}}"},
         // Both arguments key first appearance and full arguments value is received in the previous chunk, but we cannot return function name and arguments in the same chunk
         // so arguments value is returned in the next chunk
-        {"</tool_call>", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":3,\"function\":{\"arguments\":\"{}\"}}]}}"},
+        {"<|tool_call_end|>", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":3,\"function\":{\"arguments\":\"{}\"}}]}}"},
         // Starting fifth tool. Collecting chunk until full name is received. Don't return until then.
-        {"<tool_call>\n", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"<|tool_call_start|>\n", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"{\"", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"name", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"\":", ov::genai::GenerationFinishReason::NONE, std::nullopt},
@@ -388,7 +388,7 @@ TEST_F(LFM2OutputParserTest, HolisticStreaming) {
 TEST_F(LFM2OutputParserTest, ToolCallsWithoutToolsInTheRequestStreaming) {
     std::vector<std::pair<std::string, std::optional<std::string>>> chunkToDeltaVec{
         // Tool parser is available, but tools are not in the request so every chunk is just a regular content
-        {"<tool_call>\n", "{\"delta\":{\"content\":\"<tool_call>\\n\"}}"},
+        {"<|tool_call_start|>\n", "{\"delta\":{\"content\":\"<|tool_call_start|>\\n\"}}"},
         {"{\"", "{\"delta\":{\"content\":\"{\\\"\"}}"},
         {"name", "{\"delta\":{\"content\":\"name\"}}"},
         {"\":", "{\"delta\":{\"content\":\"\\\":\"}}"},
@@ -410,7 +410,7 @@ TEST_F(LFM2OutputParserTest, ToolCallsWithoutToolsInTheRequestStreaming) {
         {"\"", "{\"delta\":{\"content\":\"\\\"\"}}"},
         {"}", "{\"delta\":{\"content\":\"}\"}}"},
         {"}", "{\"delta\":{\"content\":\"}\"}}"},
-        {"</tool_call>\n", "{\"delta\":{\"content\":\"</tool_call>\\n\"}}"},
+        {"<|tool_call_end|>\n", "{\"delta\":{\"content\":\"<|tool_call_end|>\\n\"}}"},
     };
 
     for (const auto& [chunk, expectedDelta] : chunkToDeltaVec) {
