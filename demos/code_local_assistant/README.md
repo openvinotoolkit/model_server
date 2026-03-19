@@ -20,16 +20,8 @@ set MOE_USE_MICRO_GEMM_PREFILL=0  # temporary workaround to improve accuracy wit
 ovms --model_repository_path c:\models --source_model OpenVINO/Qwen3-Coder-30B-A3B-Instruct-int4-ov --task text_generation --target_device GPU --tool_parser qwen3coder --rest_port 8000 --cache_dir .ovcache --model_name Qwen3-Coder-30B-A3B-Instruct
 ```
 > **Note:** For deployment, the model requires ~16GB disk space and recommended 19GB+ of VRAM on the GPU.
-:::
 
-:::{tab-item} OpenVINO/Qwen3-Coder-30B-A3B-Instruct-int8-ov
-:sync: OpenVINO/Qwen3-Coder-30B-A3B-Instruct-int8-ov
-```bat
-mkdir c:\models
-set MOE_USE_MICRO_GEMM_PREFILL=0  # temporary workaround to improve accuracy with long context
-ovms --model_repository_path c:\models --source_model OpenVINO/Qwen3-Coder-30B-A3B-Instruct-int8-ov --task text_generation --target_device GPU --tool_parser qwen3coder --rest_port 8000 --cache_dir .ovcache --model_name Qwen3-Coder-30B-A3B-Instruct
-```
-> **Note:** For deployment, the model requires ~16GB disk space and recommended 34GB+ of VRAM on the GPU.
+> **Note:** An int8 variant is also available: `OpenVINO/Qwen3-Coder-30B-A3B-Instruct-int8-ov`. It offers higher accuracy but requires 34GB+ of VRAM on the GPU.
 :::
 
 :::{tab-item} OpenVINO/gpt-oss-20b-int4-ov
@@ -57,6 +49,14 @@ ovms --model_repository_path c:\models --source_model OpenVINO/Qwen3-8B-int4-cw-
 ```
 > **Note:** First model initialization might be long. With the compilation cache, sequential model loading will be fast.
 :::
+:::{tab-item} Junrui2021/Qwen3-VL-8B-Instruct-int4
+:sync: Junrui2021/Qwen3-VL-8B-Instruct-int4
+```bat
+mkdir c:\models
+ovms --model_repository_path c:\models --source_model Junrui2021/Qwen3-VL-8B-Instruct-int4 --task text_generation --target_device GPU --pipeline_type VLM_CB --rest_port 8000 --cache_dir .ovcache --model_name Qwen3-VL-8B-Instruct
+```
+> **Note:** This is a Vision Language Model (VLM) that supports image inputs. For deployment, recommended ??+ of VRAM on the GPU.
+:::
 ::::
 
 ### Linux: via Docker
@@ -71,17 +71,8 @@ docker run -d -p 8000:8000 --rm -e MOE_USE_MICRO_GEMM_PREFILL=0 --user $(id -u):
     --model_repository_path /models --source_model OpenVINO/Qwen3-Coder-30B-A3B-Instruct-int4-ov --task text_generation --target_device GPU --tool_parser qwen3coder --rest_port 8000 --model_name Qwen3-Coder-30B-A3B-Instruct
 ```
 > **Note:** For deployment, the model requires ~16GB disk space and recommended 19GB+ of VRAM on the GPU.
-:::
 
-:::{tab-item} OpenVINO/Qwen3-Coder-30B-A3B-Instruct-int8-ov
-:sync: OpenVINO/Qwen3-Coder-30B-A3B-Instruct-int8-ov
-```bash
-mkdir -p models
-docker run -d -p 8000:8000 --rm -e MOE_USE_MICRO_GEMM_PREFILL=0 --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) \
-    openvino/model_server:weekly \
-    --model_repository_path /models --source_model OpenVINO/Qwen3-Coder-30B-A3B-Instruct-int8-ov --task text_generation --target_device GPU --tool_parser qwen3coder --rest_port 8000 --model_name Qwen3-Coder-30B-A3B-Instruct
-```
-> **Note:** For deployment, the model requires ~16GB disk space and recommended 34GB+ of VRAM on the GPU.
+> **Note:** An int8 variant is also available: `OpenVINO/Qwen3-Coder-30B-A3B-Instruct-int8-ov`. It offers higher accuracy but requires 34GB+ of VRAM on the GPU.
 :::
 
 :::{tab-item} OpenVINO/gpt-oss-20B-int4-ov
@@ -114,6 +105,16 @@ docker run -d -p 8000:8000 --rm --user $(id -u):$(id -g) -v $(pwd)/models:/model
     --model_repository_path /models --source_model OpenVINO/Qwen3-8B-int4-cw-ov --task text_generation --target_device NPU --tool_parser hermes3 --rest_port 8000 --max_prompt_len 16384 --plugin_config '{"NPUW_LLM_PREFILL_ATTENTION_HINT":"PYRAMID"}' --model_name Qwen3-8B
 ```
 > **Note:** First model initialization might be long. With the compilation cache, sequential model loading will be fast.
+:::
+:::{tab-item} Junrui2021/Qwen3-VL-8B-Instruct-int4
+:sync: Junrui2021/Qwen3-VL-8B-Instruct-int4
+```bash
+mkdir -p models
+docker run -d -p 8000:8000 --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) \
+    openvino/model_server:weekly \
+    --model_repository_path /models --source_model Junrui2021/Qwen3-VL-8B-Instruct-int4 --task text_generation --target_device GPU --pipeline_type VLM_CB --rest_port 8000 --model_name Qwen3-VL-8B-Instruct
+```
+> **Note:** This is a Vision Language Model (VLM) that supports image inputs. For deployment, recommended ??+ of VRAM on the GPU.
 :::
 ::::
 
@@ -300,7 +301,39 @@ context:
   - provider: folder
   - provider: codebase
 ```
+:::
+:::{tab-item} Qwen3-VL-8B-Instruct
+:sync: Qwen3-VL-8B-Instruct
+```
+name: Local Assistant
+version: 1.0.0
+schema: v1
+models:
+  - name: OVMS Qwen3-VL-8B-Instruct
+    provider: openai
+    model: Qwen3-VL-8B-Instruct
+    apiKey: unused
+    apiBase: http://localhost:8000/v3
+    roles:
+      - chat
+      - edit
+      - apply
+    capabilities:
+      - tool_use
+      - image_input
+context:
+  - provider: code
+  - provider: docs
+  - provider: diff
+  - provider: terminal
+  - provider: problems
+  - provider: folder
+  - provider: codebase
+```
+:::
 ::::
+
+> **Note:** For Vision Language Models (VLM) like Qwen3-VL-8B-Instruct, add `image_input` to the `capabilities` list in the Continue config. This enables the image modality, allowing you to send images in chat messages for the model to analyze.
 
 > **Note:** For more information about this config, see [configuration reference](https://docs.continue.dev/reference#models).
 
@@ -338,6 +371,10 @@ Example use cases for tools:
 * Search files
 
 ![glob](./glob.png)
+
+* Image input
+
+![vision](./image_input.png)
 
 * Extending VRAM allocation to iGPU to enable loading bigger models
 
