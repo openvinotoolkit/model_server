@@ -298,7 +298,8 @@ TEST_F(HfDownloaderPullHfModel, Resume) {
         ASSERT_EQ(hfDownloader->CheckRepositoryStatus(true).getCode(), ovms::StatusCode::HF_GIT_STATUS_UNCLEAN);
 
         exit(0);
-    }, ::testing::ExitedWithCode(0), "");
+    },
+        ::testing::ExitedWithCode(0), "");
 
     std::error_code ec;
     ec.clear();
@@ -499,7 +500,8 @@ TEST(HfDownloaderClassTest, RepositoryStatusCheckErrors) {
         ASSERT_EQ(hfDownloader->CheckRepositoryStatus(true).getCode(), ovms::StatusCode::HF_GIT_LIGIT2_NOT_INITIALIZED);
         ASSERT_EQ(hfDownloader->CheckRepositoryStatus(false).getCode(), ovms::StatusCode::HF_GIT_LIGIT2_NOT_INITIALIZED);
         exit(0);
-    }, ::testing::ExitedWithCode(0), "");
+    },
+        ::testing::ExitedWithCode(0), "");
 
     EXPECT_EXIT({
         std::unique_ptr<TestHfDownloader> hfDownloader = std::make_unique<TestHfDownloader>(modelName, ovms::IModelDownloader::getGraphDirectory(downloadPath, modelName), hfEndpoint, hfToken, httpProxy, false);
@@ -518,7 +520,8 @@ TEST(HfDownloaderClassTest, RepositoryStatusCheckErrors) {
         ASSERT_EQ(existingHfDownloader->CheckRepositoryStatus(true).getCode(), ovms::StatusCode::HF_GIT_STATUS_FAILED);
         ASSERT_EQ(existingHfDownloader->CheckRepositoryStatus(false).getCode(), ovms::StatusCode::HF_GIT_STATUS_FAILED);
         exit(0);
-    }, ::testing::ExitedWithCode(0), "");
+    },
+        ::testing::ExitedWithCode(0), "");
 }
 
 class TestOptimumDownloaderSetup : public ::testing::Test {
