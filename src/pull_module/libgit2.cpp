@@ -16,6 +16,7 @@
 #include "libgit2.hpp"
 
 #include <algorithm>
+#include <atomic>
 #include <iostream>
 #include <memory>
 #include <string>
@@ -49,6 +50,10 @@
 
 namespace ovms {
 namespace fs = std::filesystem;
+
+namespace {
+std::atomic<int> g_activeLibgit2Guards{0};
+}  // namespace
 
 // Callback for clone authentication - will be used when password is not set in repo_url
 // Does not work with LFS download as it requires additional authentication when password is not set in repository url
@@ -119,10 +124,16 @@ Libgt2InitGuard::Libgt2InitGuard(const Libgit2Options& opts) {
         this->status = git_libgit2_opts(GIT_OPT_SET_SSL_CERT_LOCATIONS, NULL, opts.sslCertificateLocation.c_str());
         IF_ERROR_SET_MSG_AND_RETURN();
     }
+
+    this->countedAsInitialized = true;
+    g_activeLibgit2Guards.fetch_add(1, std::memory_order_relaxed);
 }
 
 Libgt2InitGuard::~Libgt2InitGuard() {
     SPDLOG_DEBUG("Shutdown libgit2");
+    if (this->countedAsInitialized) {
+        g_activeLibgit2Guards.fetch_sub(1, std::memory_order_relaxed);
+    }
     git_libgit2_shutdown();
 }
 
@@ -234,6 +245,10 @@ public:
 };
 
 Status HfDownloader::CheckRepositoryStatus(bool checkUntracked) {
+    if (g_activeLibgit2Guards.load(std::memory_order_relaxed) <= 0) {
+        return StatusCode::HF_GIT_LIGIT2_NOT_INITIALIZED;
+    }
+
     GitRepositoryGuard repoGuard(this->downloadPath);
     if (!repoGuard.get()) {
         if (repoGuard.git_error_class == 2)

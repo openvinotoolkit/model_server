@@ -47,6 +47,7 @@ struct Libgit2Options {
 struct Libgt2InitGuard {
     int status;
     std::string errMsg;
+    bool countedAsInitialized = false;
     Libgt2InitGuard(const Libgit2Options& opts);
     ~Libgt2InitGuard();
 };
