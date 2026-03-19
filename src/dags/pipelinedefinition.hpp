@@ -24,8 +24,6 @@
 #include <utility>
 #include <vector>
 
-#include "../kfs_frontend/kfs_utils.hpp"
-#include "../tfs_frontend/tfs_utils.hpp"
 #include "../model_metric_reporter.hpp"
 #include "../modelversion.hpp"
 #include "../notifyreceiver.hpp"

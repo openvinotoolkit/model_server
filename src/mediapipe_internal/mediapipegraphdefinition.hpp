@@ -23,7 +23,6 @@
 #include <vector>
 
 #include "../dags/pipelinedefinitionstatus.hpp"
-#include "../kfs_frontend/kfs_utils.hpp"
 #include "../metric.hpp"
 #include "../model_metric_reporter.hpp"
 #include "../single_version_servable_definition.hpp"
@@ -34,8 +33,6 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "mediapipe/framework/calculator_graph.h"
-#include "mediapipe/framework/port/parse_text_proto.h"
-#include "mediapipe/framework/port/status.h"
 #pragma GCC diagnostic pop
 #pragma warning(pop)
 

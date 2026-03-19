@@ -20,7 +20,7 @@
 #include <utility>
 
 #include <grpcpp/server_context.h>
-#include <openvino/openvino.hpp>
+#include <openvino/core/any.hpp>
 
 #include "kfs_utils.hpp"
 #include "src/kfserving_api/grpc_predict_v2.grpc.pb.h"
