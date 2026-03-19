@@ -23,7 +23,6 @@
 
 #include "customloaderinterface.hpp"
 #include "customloaders.hpp"
-#include "dags/pipelinedefinition.hpp"
 #include "filesystem.hpp"
 #include "localfilesystem.hpp"
 #include "logging.hpp"

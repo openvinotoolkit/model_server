@@ -25,7 +25,6 @@
 #include <vector>
 
 #include "../dags/pipelinedefinitionstatus.hpp"
-#include "../kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "../kfs_frontend/kfs_utils.hpp"
 #include "../metric.hpp"
 #include "../model_metric_reporter.hpp"

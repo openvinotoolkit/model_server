@@ -19,7 +19,6 @@
 
 #include "dags/pipeline_factory.hpp"
 #include "dags/pipelinedefinition.hpp"
-#include "dags/pipelinedefinitionstatus.hpp"
 #include "servable_definition_unload_guard.hpp"
 #include "execution_context.hpp"
 #include "model.hpp"
