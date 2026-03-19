@@ -139,7 +139,7 @@ ImageGenerationPipelines::ImageGenerationPipelines(const ImageGenPipelineArgs& a
     }
 
     // InpaintingPipeline does not support clone(), so concurrent inpainting
-    // requests must be serialized.  Queue size = 1 acts as a mutex.
+    // requests must be serialized
     if (inpaintingPipeline) {
         inpaintingQueue = std::make_unique<Queue<int>>(1);
     }
