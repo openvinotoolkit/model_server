@@ -68,6 +68,8 @@ generate_coverage_report() {
         genhtml_ignore="--ignore-errors negative"
     fi
 
+    # Required filtering fixes below, because for some reason "bazel coverage --instrumentation_filter="-src/test""
+    # is not enough to list just ovms source files.
     if ! lcov --extract "$coverage_dat" 'src/*' --output-file filtered_coverage.dat $lcov_ignore; then
         echo "Error: lcov extraction failed" >&2
         return 1
