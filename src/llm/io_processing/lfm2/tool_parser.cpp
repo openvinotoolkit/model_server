@@ -41,7 +41,7 @@ Lfm2ToolParser::Argument Lfm2ToolParser::parseSingleArgument(const std::string& 
         argument.name = argumentStr;
         argument.value = "";
         argument.type = ParameterType::UNKNOWN;
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Argument string: {} does not contain '=', setting name as entire string and value as empty", argumentStr);
+        SPDLOG_LOGGER_INFO(llm_calculator_logger, "Argument string: {} does not contain '=', setting name as entire string and value as empty", argumentStr);
     }
     return argument;
 }
@@ -68,6 +68,10 @@ std::vector<Lfm2ToolParser::Argument> Lfm2ToolParser::parseArguments(const std::
 }
 
 std::optional<rapidjson::Document> Lfm2ToolParser::parseChunk(const std::string& chunk, ov::genai::GenerationFinishReason finishReason) {
+    if (chunk.empty()) {
+        return std::nullopt;
+    }
+    
     return std::nullopt;
 }
 
@@ -75,11 +79,11 @@ bool Lfm2ToolParser::parseSingleToolCall(const std::string& toolStr, ToolCall& t
     size_t argsPos = toolStr.find(toolArgsStartIndicator);
     if (argsPos != std::string::npos) {
         std::string toolName = toolStr.substr(0, argsPos);                
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Parsed tool name: {}", toolName);
+        SPDLOG_LOGGER_INFO(llm_calculator_logger, "Parsed tool name: {}", toolName);
 
         int argsStrLen = toolStr.length() - argsPos - toolArgsStartIndicator.length() - toolEndIndicator.length();
         std::string argsStr = toolStr.substr(argsPos + toolArgsStartIndicator.length(), argsStrLen);
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Parsed args string: {}", argsStr);
+        SPDLOG_LOGGER_INFO(llm_calculator_logger, "Parsed args string: {}", argsStr);
         std::vector<Lfm2ToolParser::Argument> arguments = parseArguments(argsStr);
 
         toolCall.name = toolName;
@@ -88,15 +92,22 @@ bool Lfm2ToolParser::parseSingleToolCall(const std::string& toolStr, ToolCall& t
         rapidjson::Writer<rapidjson::StringBuffer> argsWriter(sb);
         argsWriter.StartObject();
         for (const Lfm2ToolParser::Argument& argument : arguments) {
+            if(argument.type == ParameterType::UNKNOWN) {
+                SPDLOG_LOGGER_INFO(llm_calculator_logger, "Argument {} has unknown type, treating value as string", argument.name);
+                continue;
+            }
             argsWriter.Key(argument.name.c_str());
-            argsWriter.StartObject();
             if (argument.type == ParameterType::STRING) {
                 argsWriter.String(argument.value.c_str());
             } else if (argument.type == ParameterType::BOOLEAN) {
                 bool boolValue = (argument.value == "true");
                 argsWriter.Bool(boolValue);
             } else if (argument.type == ParameterType::NUMBER) {
-                argsWriter.RawNumber(argument.value.c_str(), argument.value.length());
+                if (argument.value.find('.') != std::string::npos) {
+                    argsWriter.Double(std::stod(argument.value));
+                } else {
+                    argsWriter.Int64(std::stoll(argument.value));
+                }
             }
         }                
         argsWriter.EndObject();
@@ -109,31 +120,47 @@ bool Lfm2ToolParser::parseSingleToolCall(const std::string& toolStr, ToolCall& t
 
 void Lfm2ToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) {
     std::vector<std::string> tools;
+    std::vector<std::pair<size_t, size_t>> toolCallPositions;
     size_t pos = 0;
-    while (true) {
+    uint8_t main_guard = 0;
+    while (pos != std::string::npos && main_guard < 100) {
+        std::pair<size_t, size_t> toolCallPosition;
         size_t start = parsedOutput.content.find(toolCallStartTag, pos);
         if (start == std::string::npos) {
             break;
         }
+        toolCallPosition.first = start;
         start += toolCallStartTag.length();
         size_t end = parsedOutput.content.find(toolCallEndTag, start);
         if(end == std::string::npos) {
-            break;
+            end = parsedOutput.content.find(toolListEndIndicator, start);
+            if (end == std::string::npos) {
+                SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Malformed tool call in content, no tool end tag or tool list end tag found for tool call starting at position {}", start);
+                break;
+            }
+           toolCallPosition.second = end + toolListEndIndicator.length();
+           end += toolListEndIndicator.length();
+           SPDLOG_LOGGER_INFO(llm_calculator_logger, "No tool call end tag found, but found tool list end tag, treating content between start and this position as tool list");
+        } else
+        { 
+            toolCallPosition.second = end + toolCallEndTag.length();
+            SPDLOG_LOGGER_INFO(llm_calculator_logger, "Found tool call end tag for tool call starting at position {}", start);
         }
+        toolCallPositions.push_back(toolCallPosition);
         std::string toolListStr = parsedOutput.content.substr(start + toolListStartIndicator.length(), end - start - toolListStartIndicator.length() - toolListEndIndicator.length());
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Parsed tool list string: {}", toolListStr);
+        SPDLOG_LOGGER_INFO(llm_calculator_logger, "Parsed tool list string: {}", toolListStr);
         uint8_t guard = 0;
         while (!toolListStr.empty() && guard < 100) {
             size_t toolEndPos = toolListStr.find(toolEndIndicator);
             std::string singleTool;
             if (toolEndPos != std::string::npos) {
-                singleTool = toolListStr.substr(0, toolEndPos);
+                singleTool = toolListStr.substr(0, toolEndPos + toolEndIndicator.length());
                 if(toolEndPos + toolEndIndicator.length() < toolListStr.length()) {
-                    toolListStr = toolListStr.substr(toolEndPos + toolEndIndicator.length() + toolSeparatorStr.length());
+                    toolListStr = toolListStr.substr(toolEndPos);
                 } else {
                     toolListStr.clear();
                 }
-                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Parsed single tool string nr {}: {}", guard, singleTool);
+                SPDLOG_LOGGER_INFO(llm_calculator_logger, "Parsed single tool string nr {}: {}", guard, singleTool);
             }
             guard++;
             if (singleTool.empty()) {
@@ -142,16 +169,27 @@ void Lfm2ToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t
                 tools.push_back(singleTool);
             }
         }
-        
-        for (const std::string& tool : tools) {
-            ToolCall toolCall;
-            auto wasToolCallParsed = parseSingleToolCall(tool, toolCall);
-            if (wasToolCallParsed) {
-                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Parsed tool call - name: {}, args: {}", toolCall.name, toolCall.arguments);
-                parsedOutput.toolCalls.push_back(toolCall);
-            } else
-                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Failed to parse tool call from string: {}", tool);
+        if (guard == 100) {
+            SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Guard limit reached while parsing tools, possible malformed tool list string: {}", toolListStr);
         }
+
+        pos = toolCallPositions.empty() ? std::string::npos : toolCallPositions.back().second;
+        main_guard++;
+    }
+
+    for (const std::string& tool : tools) {
+        ToolCall toolCall;
+        auto wasToolCallParsed = parseSingleToolCall(tool, toolCall);
+        if (wasToolCallParsed) {
+            SPDLOG_LOGGER_INFO(llm_calculator_logger, "Parsed tool call - name: {}, args: {}", toolCall.name, toolCall.arguments);
+            parsedOutput.toolCalls.push_back(toolCall);
+        } else
+            SPDLOG_LOGGER_INFO(llm_calculator_logger, "Failed to parse tool call from string: {}", tool);
+    }
+
+    for(int i = toolCallPositions.size() - 1; i >= 0; i--) {
+         const std::pair<size_t, size_t>& toolCallPosition = toolCallPositions[i];
+         parsedOutput.content.erase(toolCallPosition.first, toolCallPosition.second - toolCallPosition.first);
     }
 }
 }
