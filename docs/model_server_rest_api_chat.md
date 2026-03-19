@@ -11,6 +11,10 @@ The endpoint is exposed via a path:
 
 ### Example request
 
+::::{tab-set}
+:::{tab-item} Unary
+:sync: unary
+
 ```
 curl http://localhost/v3/chat/completions \
   -H "Content-Type: application/json" \
@@ -26,11 +30,40 @@ curl http://localhost/v3/chat/completions \
         "content": "hello"
       }
     ],
-    stream: false
+    "stream": false
   }'
 ```
+:::
+
+:::{tab-item} Stream
+:sync: stream
+
+```
+curl http://localhost/v3/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "llama3",
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are a helpful assistant."
+      },
+      {
+        "role": "user",
+        "content": "hello"
+      }
+    ],
+    "stream": true
+  }'
+```
+:::
+::::
 
 ### Example response
+
+::::{tab-set}
+:::{tab-item} Unary
+:sync: unary
 
 ```json
 {
@@ -55,6 +88,25 @@ curl http://localhost/v3/chat/completions \
   }
 }
 ```
+:::
+
+:::{tab-item} Stream
+:sync: stream
+
+```
+data: {"choices":[{"index":0,"delta":{"role":"assistant","content":null},"finish_reason":null}],"created":1772634283,"model":"llama3","object":"chat.completion.chunk"}
+
+data: {"choices":[{"index":0,"logprobs":null,"delta":{"reasoning_content":"Reasoning..."},"finish_reason":null}],"created":1772634283,"model":"llama3","object":"chat.completion.chunk"}
+
+data: {"choices":[{"index":0,"logprobs":null,"delta":{"content":"Hello!"},"finish_reason":"stop"}],"created":1772634283,"model":"llama3","object":"chat.completion.chunk"}
+
+data: [DONE]
+```
+
+**Note**: In Continuous Batching pipelines, the first chunk contains role and content=`null` indicating that the first token has been generated. It can be used to measure Time to First Token on the client side. Last chunk contains content with full message and `data: [DONE]` indicating end of generation.
+:::
+::::
+
 
 In case of VLM models, the request can include the images in three different formats:
 1) Base64 encoding:
@@ -168,7 +220,7 @@ Some parameters, especially related to sampling (like `temperature`, `top_p` etc
 | tools | ✅ | ✅ | ✅ | array | A list of tools the model may call. Currently, only functions are supported as a tool. Use this to provide a list of functions the model may generate JSON inputs for. See [OpenAI API reference](https://platform.openai.com/docs/api-reference/chat/create#chat-create-tools) for more details. |
 | tool_choice | ✅ | ✅ | ✅ | string or object | Controls which (if any) tool is called by the model. `none` means the model will not call any tool and instead generates a message. `auto` means the model can pick between generating a message or calling one or more tools. `required` means that model should call at least one tool. Specifying a particular tool via `{"type": "function", "function": {"name": "my_function"}}` forces the model to call that tool. See [OpenAI API reference](https://platform.openai.com/docs/api-reference/chat/create#chat-create-tool_choice) for more details. |
 | response_format | ✅ | ✅ | ✅ | object | An object specifying the format that the model must output. Setting to `{ "type": "json_schema", "json_schema": {...} }` enables Structured Outputs which ensures the model will match your supplied JSON schema according to [OpenAI reference](https://platform.openai.com/docs/api-reference/chat/create#chat-create-response_format). Learn more in the [Structured Outputs demo](../demos/continuous_batching/structured_output/README.md). Additionally, `response_format` can accept [XGrammar structural tags format](https://github.com/mlc-ai/xgrammar/blob/main/docs/tutorials/structural_tag.md#format-types) (not part of OpenAI API). For example: `{ "type": "const_string", "value": "Hello World!" }`. **Note** that if model server fails to process the format, the request will still be processed, but the format will not be imposed. |
-| chat_template_kwargs | ✅ | ❌ | ✅ |  object | Enables passing additional parameters to chat template engine. Example `{"enable_thinking": false}`. Note that values like `messages`, `eos_token`, `bos_token` etc. are provided natively to the template engine, so including them in `chat_template_kwargs` will cause error. **Effective only in configuration with Python support**. |
+| chat_template_kwargs | ✅ | ❌ | ✅ |  object | Enables passing additional parameters to chat template engine. Example `{"enable_thinking": false}`. Note that values like `messages`, `eos_token`, `bos_token` etc. are provided natively to the template engine, so including them in `chat_template_kwargs` will cause error. |
 
 #### Beam search sampling specific
 | Param | OpenVINO Model Server | OpenAI /chat/completions API | vLLM Serving Sampling Params | Type | Description |
@@ -242,10 +294,10 @@ If any of those parameters is not specified and request is made to Prompt Lookup
 | choices.index | ✅ | ✅ | integer | The index of the choice in the list of choices. |
 | choices.message | ✅ | ✅ | object | A chat completion message generated by the model. **When streaming, the field name is `delta` instead of `message`.** |
 | choices.message.role | ⚠️ | ✅ | string | The role of the author of this message. **_Currently hardcoded as `assistant`_** |
-| choices.message.content | ✅ | ✅ | string | The contents of the message. |
+| choices.message.content | ✅ | ✅ | string or null | The contents of the message |
 | choices.message.reasoning_content | ✅ | ❌ | string | If model supports reasoning and is deployed with appropriate response parser, the reasoning part of the output is stored in the field. |
 | choices.message.tool_calls | ✅ | ✅ | array | The tool calls generated by the model, such as function calls. |
-| choices.finish_reason | ✅ | ✅ | string or null | The reason the model stopped generating tokens. This will be `stop` if the model hit a natural stop point or a provided stop sequence, `length` if the maximum number of tokens specified in the request was reached, or `null` when generation continues (streaming). |
+| choices.finish_reason | ✅ | ✅ | string or null | The reason the model stopped generating tokens. This will be `stop` if the model hit a natural stop point or a provided stop sequence, `length` if the maximum number of tokens specified in the request was reached, `tool_calls` if stopped due to a tool call, or `null` when generation continues (streaming). |
 | choices.logprobs | ⚠️ | ✅ | object or null | Log probability information for the choice. **_In current version, only one logprob per token can be returned._** |
 | created | ✅ | ✅ | string | The Unix timestamp (in seconds) of when the chat completion was created.  |
 | model | ✅ | ✅ | string | The model used for the chat completion. |

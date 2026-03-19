@@ -2,7 +2,7 @@
 
 ## Overview
 
-With rapid development of generative AI, new techniques and algorithms for performance optimization and better resource utilization are introduced to make best use of the hardware and provide best generation performance. OpenVINO implements those state of the art methods in it's [GenAI Library](https://github.com/openvinotoolkit/openvino.genai) like:
+With rapid development of generative AI, new techniques and algorithms for performance optimization and better resource utilization are introduced to make best use of the hardware and provide best generation performance. OpenVINO implements those state of the art methods in its [GenAI Library](https://github.com/openvinotoolkit/openvino.genai) like:
   - Continuous Batching
   - Paged Attention
   - Dynamic Split Fuse
@@ -22,7 +22,7 @@ The servable types are:
 - Visual Language Model Stateful.
 
 First part - Language Model / Visual Language Model - determines whether servable accepts only text or both text and images on the input.
-Seconds part - Continuous Batching / Stateful - determines what kind of GenAI pipeline is used as the engine. By default CPU and GPU devices work on Continuous Batching pipelines. NPU device works only on Stateful servable type.
+Second part - Continuous Batching / Stateful - determines what kind of GenAI pipeline is used as the engine. By default CPU and GPU devices work on Continuous Batching pipelines. NPU device works only with the Stateful servable type.
 
 User does not have to explicitly select servable type. It is inferred based on model directory contents and selected target device.
 Model directory contents determine if model can work only with text or visual input as well. As for target device, setting it to `NPU` will always pick Stateful servable, while any other device will result in deploying Continuous Batching servable. 
@@ -100,7 +100,7 @@ The calculator supports the following `node_options` for tuning the pipeline con
 -    `optional uint64 max_num_seqs` - max number of sequences actively processed by the engine [default = 256];
 -    `optional bool dynamic_split_fuse` - use Dynamic Split Fuse token scheduling [default = true];
 -    `optional string device` - device to load models to. Supported values: "CPU", "GPU" [default = "CPU"]
--    `optional string plugin_config` - [OpenVINO device plugin configuration](https://docs.openvino.ai/2025/openvino-workflow/running-inference/inference-devices-and-modes.html) and additional pipeline options. Should be provided in the same format for regular [models configuration](../parameters.md#model-configuration-options) [default = "{}"]
+-    `optional string plugin_config` - [OpenVINO device plugin configuration](https://docs.openvino.ai/2026/openvino-workflow/running-inference/inference-devices-and-modes.html) and additional pipeline options. Should be provided in the same format for regular [models configuration](../parameters.md#model-configuration-options) [default = "{}"]
 -    `optional uint32 best_of_limit` - max value of best_of parameter accepted by endpoint [default = 20];
 -    `optional uint32 max_tokens_limit` - max value of max_tokens parameter accepted by endpoint;
 -    `optional bool enable_prefix_caching` - enable caching of KV-blocks [default = false];
@@ -223,7 +223,7 @@ In different use cases and load specification, requests and tokens scheduling mi
     optional uint64 xattention_block_size = 6;
     optional uint64 xattention_stride = 7;
     ```
-    Description of parameters in that config can be found in GenAI docs about [SparseAttentionConfig](https://docs.openvino.ai/2025/api/genai_api/_autosummary/openvino_genai.SparseAttentionConfig.html#openvino-genai-sparseattentionconfig).
+    Description of parameters in that config can be found in GenAI docs about [SparseAttentionConfig](https://docs.openvino.ai/2026/api/genai_api/_autosummary/openvino_genai.SparseAttentionConfig.html#openvino-genai-sparseattentionconfig).
 
     Example of graph with sparse attention configured:
 
@@ -354,7 +354,7 @@ Check [tested models](https://github.com/openvinotoolkit/openvino.genai/blob/mas
 
 ### Completions
 
-When sending a request to `/completions` endpoint, model server adds `bos_token_id` during tokenization, so **there is not need to add `bos_token` to the prompt**.
+When sending a request to `/completions` endpoint, model server adds `bos_token_id` during tokenization, so **there is no need to add `bos_token` to the prompt**.
 
 ### Chat Completions
 
@@ -396,18 +396,17 @@ There are several known limitations which are expected to be addressed in the co
 Some servable types introduce additional limitations:
 
 ### Stateful servable limitations
-- `finish_reason` not supported (always set to `stop`),
+- `finish_reason=length` is not supported (only possible are `stop` or `tool_calls`),
 - `logprobs` not supported,
 - sequential request processing (only one request is handled at a time),
 - only a single response can be returned. Parameter `n` is not supported.
 - prompt lookup decoding is not supported
 - `usage` is not supported in streaming mode
-- **[NPU only]** beam_search algorithm is not supported with NPU. Greedy search and multinomial algorithms are supported.
+- Greedy search and multinomial sampling algorithms are supported - **beam search is not**.
 - **[NPU only]** models must be exported with INT4 precision and `--sym --ratio 1.0 --group-size -1` params. This is enforced in the export_model.py script when the target_device in NPU.
 
 ### Visual Language servable limitations
 - works only on `/chat/completions` endpoint,
-- does not work with `tools`,
 - **[NPU only]** requests MUST include one and only one image in the messages context. Other request will be rejected.
 
 ## References

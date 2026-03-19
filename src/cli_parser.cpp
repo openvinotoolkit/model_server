@@ -57,7 +57,7 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
     std::stringstream ss;
     try {
         options = std::make_unique<cxxopts::Options>(argv[0], "OpenVINO Model Server");
-        auto configOptions = std::make_unique<cxxopts::Options>("ovms --model_name <MODEL_NAME> --add_to_config <CONFIG_PATH> --model_repository_path <MODEL_REPO_PATH> \n  ovms --model_path <MODEL_PATH> --model_name <MODEL_NAME> --add_to_config <CONFIG_PATH> \n  ovms --remove_from_config <CONFIG_PATH> --model_name <MODEL_NAME>", "config management commands:");
+        auto configOptions = std::make_unique<cxxopts::Options>("ovms --model_name <MODEL_NAME> --add_to_config --config_path <CONFIG_PATH> --model_repository_path <MODEL_REPO_PATH> \n  ovms --model_path <MODEL_PATH> --model_name <MODEL_NAME> --add_to_config --config_path <CONFIG_PATH> \n  ovms --remove_from_config --config_path <CONFIG_PATH> --model_name <MODEL_NAME>", "config management commands:");
         // Adding this option to parse unrecognised options in another parser
         options->allow_unrecognised_options();
 
@@ -279,10 +279,6 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
                 "Resets model precision.",
                 cxxopts::value<std::string>(),
                 "PRECISION")
-            ("resize",
-                "Resets model resize dimensions.",
-                cxxopts::value<std::string>(),
-                "resize")
             ("model_version_policy",
                 "Model version policy",
                 cxxopts::value<std::string>(),
@@ -447,7 +443,11 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
             std::string project_name(PROJECT_NAME);
             std::string project_version(PROJECT_VERSION);
             ss << project_name + " " + project_version << std::endl;
-            ss << "OpenVINO backend " << OPENVINO_NAME << std::endl;
+            ss << "OpenVINO backend " << ovms::getOpenVINOVersion() << std::endl;
+            const char* genaiVersion = ovms::getGenAIVersion();
+            if (genaiVersion[0] != '\0') {
+                ss << "OpenVINO GenAI backend " << genaiVersion << std::endl;
+            }
             ss << "Bazel build flags: " << BAZEL_BUILD_FLAGS << std::endl;
 #pragma warning(pop)
             return std::make_pair(OVMS_EX_OK, ss.str());

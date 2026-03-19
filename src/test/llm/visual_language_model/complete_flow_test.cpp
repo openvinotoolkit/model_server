@@ -260,6 +260,50 @@ TEST_P(VLMServableExecutionTestParameterized, UnaryRestrictedTagUsed) {
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
+TEST_P(VLMServableExecutionTestParameterized, unaryBasicWithTools) {
+    auto modelName = GetParam();
+    std::vector<std::pair<std::string, std::string>> fields = {
+        {"temperature", "0.0"},
+        {"stream", "false"},
+        {"max_tokens", "5"},
+        {"ignore_eos", "true"},
+        {"tool_choice", R"("auto")"},
+        {"tools", R"([
+            {
+                "type": "function",
+                "function": {
+                    "name": "get_weather",
+                    "description": "Get weather by city",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "city": {
+                                "type": "string"
+                            }
+                        },
+                        "required": ["city"]
+                    }
+                }
+            }
+        ])"}};
+    std::string requestBody = createRequestBody(modelName, fields);
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK);
+
+    parsedResponse.Parse(response.c_str());
+    ASSERT_TRUE(parsedResponse.IsObject());
+    ASSERT_TRUE(parsedResponse.HasMember("choices"));
+    ASSERT_TRUE(parsedResponse["choices"].IsArray());
+    ASSERT_EQ(parsedResponse["choices"].Capacity(), 1);
+    ASSERT_TRUE(parsedResponse["choices"][0].HasMember("message"));
+    ASSERT_TRUE(parsedResponse["choices"][0]["message"].IsObject());
+    ASSERT_TRUE(parsedResponse["choices"][0]["message"]["content"].IsString());
+    EXPECT_STREQ(parsedResponse["object"].GetString(), "chat.completion");
+    EXPECT_STREQ(parsedResponse["model"].GetString(), modelName.c_str());
+}
+
 // Stream flow
 
 TEST_P(VLMServableExecutionTestParameterized, streamBasic) {
@@ -359,6 +403,47 @@ TEST_P(VLMServableExecutionTestParameterized, streamRestrictedTagUsed) {
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::PARTIAL_END);
+}
+
+TEST_P(VLMServableExecutionTestParameterized, streamBasicWithTools) {
+    auto modelName = GetParam();
+    std::vector<std::pair<std::string, std::string>> fields = {
+        {"temperature", "0.0"},
+        {"stream", "true"},
+        {"max_tokens", "5"},
+        {"ignore_eos", "true"},
+        {"tool_choice", R"("auto")"},
+        {"tools", R"([
+            {
+                "type": "function",
+                "function": {
+                    "name": "get_weather",
+                    "description": "Get weather by city",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "city": {
+                                "type": "string"
+                            }
+                        },
+                        "required": ["city"]
+                    }
+                }
+            }
+        ])"}};
+    std::string requestBody = createRequestBody(modelName, fields);
+
+    std::vector<std::string> responses;
+    EXPECT_CALL(*writer, PartialReply(::testing::_))
+        .WillRepeatedly([&responses](std::string response) {
+            responses.push_back(response);
+        });
+    EXPECT_CALL(*writer, PartialReplyEnd()).Times(1);
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::PARTIAL_END);
+    ASSERT_FALSE(responses.empty());
 }
 
 INSTANTIATE_TEST_SUITE_P(

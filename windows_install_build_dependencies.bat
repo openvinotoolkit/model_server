@@ -155,7 +155,7 @@ IF "%OV_USE_BINARY%"=="0" (
 ::::::::::::::::::::::: GENAI/OPENVINO install from ZIP - reinstalled per build trigger
 :: Set default GENAI_PACKAGE_URL if not set
 if "%GENAI_PACKAGE_URL%"=="" (
-    set "GENAI_PACKAGE_URL=https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/pre-release/2026.0.0.0rc2/openvino_genai_windows_2026.0.0.0rc2_x86_64.zip"
+    set "GENAI_PACKAGE_URL=https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/pre-release/2026.1.0.0rc1/openvino_genai_windows_2026.1.0.0rc1_x86_64.zip"
 )
 
 :: Extract genai_ver from GENAI_PACKAGE_URL (filename)
@@ -208,7 +208,7 @@ IF /I EXIST %BAZEL_SHORT_PATH%\openvino (
     rmdir /S /Q %BAZEL_SHORT_PATH%\openvino
 )
 if "%OV_SOURCE_BRANCH%"=="" (
-    set "OV_SOURCE_BRANCH=77501947b70f6c7996f07c068f2067e868e356ed"
+    set "OV_SOURCE_BRANCH=f6221c2f44e9ecfa5ac1f039d0a29a05a13aef1c"
 )
 if "%OV_SOURCE_ORG%"=="" (
     set "OV_SOURCE_ORG=openvinotoolkit"
@@ -217,13 +217,13 @@ if "%TOKENIZER_SOURCE_ORG%"=="" (
     set "TOKENIZER_SOURCE_ORG=openvinotoolkit"
 )
 if "%TOKENIZER_SOURCE_BRANCH%"=="" (
-    set "TOKENIZER_SOURCE_BRANCH=47cea02a2d47b2fcf9152a1891f7360d6fdf4a27"
+    set "TOKENIZER_SOURCE_BRANCH=aeede7f1c441fa49c59c8020b77dfb49d7df443c"
 )
 if "%GENAI_SOURCE_ORG%"=="" (
     set "GENAI_SOURCE_ORG=openvinotoolkit"
 )
 if "%GENAI_SOURCE_BRANCH%"=="" (
-    set "GENAI_SOURCE_BRANCH=67e82bbdcadd740b7d84de7b6586fb1a92836789"
+    set "GENAI_SOURCE_BRANCH=1dabb8c22554c3224227ba7cc6b3c8966f30bded"
 )
 
 echo [INFO] Using OpenVINO source from %OV_SOURCE_ORG%
@@ -248,6 +248,7 @@ git checkout %OV_SOURCE_BRANCH%
 if !errorlevel! neq 0 exit /b !errorlevel!
 git submodule update --init --recursive
 if !errorlevel! neq 0 exit /b !errorlevel!
+git pull --recurse-submodules
 IF /I NOT EXIST build (
     mkdir build
 )
@@ -271,6 +272,7 @@ cd %BAZEL_SHORT_PATH%\openvino_tokenizers_src
 git fetch origin
 git checkout %TOKENIZER_SOURCE_BRANCH%
 if !errorlevel! neq 0 exit /b !errorlevel!
+git pull --recurse-submodules
 IF /I NOT EXIST build (
     mkdir build
 )
@@ -292,6 +294,7 @@ cd %BAZEL_SHORT_PATH%\openvino_genai_src
 git fetch origin
 git checkout %GENAI_SOURCE_BRANCH%
 if !errorlevel! neq 0 exit /b !errorlevel!
+git pull --recurse-submodules
 IF /I NOT EXIST build (
     mkdir build
 )
@@ -301,6 +304,8 @@ if !errorlevel! neq 0 exit /b !errorlevel!
 cmake --build . --config Release --verbose -j
 if !errorlevel! neq 0 exit /b !errorlevel!
 cmake --install . --config Release --prefix %BAZEL_SHORT_PATH%\openvino
+if !errorlevel! neq 0 exit /b !errorlevel!
+copy src\cpp\openvino\genai\version.hpp %BAZEL_SHORT_PATH%\openvino\runtime\include\openvino\genai\
 if !errorlevel! neq 0 exit /b !errorlevel!
 
 echo [INFO] OpenVINO from source installed: %BAZEL_SHORT_PATH%\openvino
@@ -500,11 +505,13 @@ exit /b 0
 :install_curl
 echo [INFO] Installing curl ...
 
-set "curl_dir=curl-8.18.0_4-win64-mingw"
-set "curl_ver=curl-8.18.0_4-win64-mingw.zip"
-set "curl_http=https://curl.se/windows/dl-8.18.0_4/"
+set "curl_version=8.18.0_4"
+set "curl_dir=curl-%curl_version%-win64-mingw"
+set "curl_ver=%curl_dir%.zip"
+set "curl_http=https://curl.se/windows/dl-%curl_version%/"
 
 set "curl_zip=%opt_install_dir%\%curl_ver%"
+set "curl_path=%opt_install_dir%\%curl_dir%"
 
 :: Download curl
 IF /I EXIST %curl_zip% (
@@ -520,13 +527,13 @@ IF /I EXIST %curl_zip% (
     if !errorlevel! neq 0 exit /b !errorlevel!
 )
 :: Extract curl
-IF /I EXIST %opt_install_dir%\%curl_dir% (
+IF /I EXIST %curl_path% (
      if %expunge% EQU 1 (
-        rmdir /S /Q %opt_install_dir%\%curl_dir%
+        rmdir /S /Q %curl_path%
         if !errorlevel! neq 0 exit /b !errorlevel!
         C:\Windows\System32\tar.exe -xf "%curl_zip%" -C %opt_install_dir%
         if !errorlevel! neq 0 exit /b !errorlevel!
-    ) else ( echo [INFO] directory exists %opt_install_dir%\%curl_dir% )
+    ) else ( echo [INFO] directory exists %curl_path% )
     
 ) ELSE (
     C:\Windows\System32\tar.exe -xf "%curl_zip%" -C %opt_install_dir%
@@ -534,7 +541,7 @@ IF /I EXIST %opt_install_dir%\%curl_dir% (
 )
 
 :: Create lib file for libgit2 linking
-set "curl_lib=C:\opt\curl-8.18.0_4-win64-mingw\bin\libcurl-x64.lib"
+set "curl_lib=%curl_path%\bin\libcurl-x64.lib"
 IF /I EXIST %curl_lib% (
     echo [INFO] file exists %curl_lib% 
 ) ELSE (
@@ -549,7 +556,7 @@ IF /I EXIST %curl_lib% (
     exit /b
     :create_lib
 	IF /I EXIST !LIB_EXE! (
-		set "curl_def=C:\opt\curl-8.18.0_4-win64-mingw\bin\libcurl-x64.def"
+		set "curl_def=%curl_path%\bin\libcurl-x64.def"
 		"!LIB_EXE!" /def:!curl_def! /out:%curl_lib% /MACHINE:x64
 		if !errorlevel! neq 0 exit /b !errorlevel!
         echo [INFO] !LIB_EXE! created.

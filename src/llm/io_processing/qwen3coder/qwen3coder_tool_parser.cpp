@@ -179,7 +179,7 @@ void Qwen3CoderToolParserImpl::addParameterToCurrentFunctionDoc(std::string& par
         rapidjson::ParseErrorCode errorCode = temp.GetParseError();
         size_t errorOffset = temp.GetErrorOffset();
         // If error occurred during parsing, we will insert parameter as string
-        SPDLOG_DEBUG("Error parsing parameter: {} value: {}; error at offset: {}; code: {}; Will insert as string", this->currentParameterName, parameterValueAsString, errorOffset, rapidjson::GetParseError_En(errorCode));
+        SPDLOG_TRACE("RapidJSON can not parse parameter: {} with value: {}; error at offset: {}; code: {}; falling back to inserting value as string", this->currentParameterName, parameterValueAsString, errorOffset, rapidjson::GetParseError_En(errorCode));
         // since we are unable to parse with rapidjson generated parameter will be inserted as is as string
         rapidjson::Value v;
         v.SetString(parameterValueAsString.c_str(), static_cast<rapidjson::SizeType>(parameterValueAsString.size()), allocator);

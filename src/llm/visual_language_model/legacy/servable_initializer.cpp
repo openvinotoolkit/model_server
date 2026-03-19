@@ -53,6 +53,14 @@ Status VisualLanguageModelLegacyServableInitializer::initialize(std::shared_ptr<
     if (std::filesystem::exists(modelGenerationConfigPath)) {
         properties->baseGenerationConfig = ov::genai::GenerationConfig(modelGenerationConfigPath.string());
     }
+
+    if (nodeOptions.has_tool_parser()) {
+        properties->toolParserName = nodeOptions.tool_parser();
+    }
+
+    if (nodeOptions.has_reasoning_parser()) {
+        properties->reasoningParserName = nodeOptions.reasoning_parser();
+    }
     properties->schedulerConfig.max_num_batched_tokens = nodeOptions.max_num_batched_tokens();
     properties->schedulerConfig.cache_size = nodeOptions.cache_size();
     properties->schedulerConfig.dynamic_split_fuse = nodeOptions.dynamic_split_fuse();
@@ -83,13 +91,14 @@ Status VisualLanguageModelLegacyServableInitializer::initialize(std::shared_ptr<
         SPDLOG_ERROR("Error during llm node initialization for models_path: {}", parsedModelsPath);
         return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
     }
-
+    loadChatTemplate(properties, parsedModelsPath);
     properties->legacyExecutor = std::make_shared<VisualLanguageModelLegacyExecutorWrapper>(properties->pipeline);
     if (nodeOptions.has_max_tokens_limit()) {
         properties->maxTokensLimit = nodeOptions.max_tokens_limit();
     }
     properties->bestOfLimit = nodeOptions.best_of_limit();
     properties->maxModelLength = parseMaxModelLength(parsedModelsPath);
+    properties->enableToolGuidedGeneration = nodeOptions.enable_tool_guided_generation();
     return StatusCode::OK;
 }
 
