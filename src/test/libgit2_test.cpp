@@ -132,15 +132,14 @@ TEST(LibGit2RtrimCrLfWhitespace, OnlyCRLFAndWhitespace) {
 
 TEST(LibGit2RtrimCrLfWhitespace, NonAsciiBytesAreNotTrimmedByIsspace) {
     // 0xC2 0xA0 is UTF-8 for NO-BREAK SPACE; bytes individually are not ASCII spaces.
-    // isspace() on unsigned char typically returns false for these bytes in the "C" locale.
-    // So they should remain unless at edges and recognized by the current locale (usually not).
+    // Trimming is ASCII-only and locale-independent, so these bytes must remain.
     std::string s = "\xC2"
                     "\xA0"
                     "abc"
                     "\xC2"
                     "\xA0";
     ovms::rtrimCrLfWhitespace(s);
-    // Expect unchanged because these bytes are not recognized by std::isspace in C locale
+    // Expect unchanged.
     EXPECT_EQ(s, "\xC2"
                  "\xA0"
                  "abc"

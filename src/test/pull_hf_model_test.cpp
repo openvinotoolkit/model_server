@@ -488,24 +488,30 @@ TEST(HfDownloaderClassTest, RepositoryStatusCheckErrors) {
     std::string hfEndpoint = "www.new_hf.com/";
     std::string hfToken = "123$$o_O123!AAbb";
     std::string httpProxy = "https://proxy_test1:123";
-    std::unique_ptr<TestHfDownloader> hfDownloader = std::make_unique<TestHfDownloader>(modelName, ovms::IModelDownloader::getGraphDirectory(downloadPath, modelName), hfEndpoint, hfToken, httpProxy, false);
+    EXPECT_EXIT({
+        std::unique_ptr<TestHfDownloader> hfDownloader = std::make_unique<TestHfDownloader>(modelName, ovms::IModelDownloader::getGraphDirectory(downloadPath, modelName), hfEndpoint, hfToken, httpProxy, false);
+        // Fails without libgit init
+        ASSERT_EQ(hfDownloader->CheckRepositoryStatus(true).getCode(), ovms::StatusCode::HF_GIT_LIGIT2_NOT_INITIALIZED);
+        ASSERT_EQ(hfDownloader->CheckRepositoryStatus(false).getCode(), ovms::StatusCode::HF_GIT_LIGIT2_NOT_INITIALIZED);
+        exit(0);
+    }, ::testing::ExitedWithCode(0), "");
 
-    // Fails without libgit init
-    ASSERT_EQ(hfDownloader->CheckRepositoryStatus(true).getCode(), ovms::StatusCode::HF_GIT_LIGIT2_NOT_INITIALIZED);
-    ASSERT_EQ(hfDownloader->CheckRepositoryStatus(false).getCode(), ovms::StatusCode::HF_GIT_LIGIT2_NOT_INITIALIZED);
+    EXPECT_EXIT({
+        std::unique_ptr<TestHfDownloader> hfDownloader = std::make_unique<TestHfDownloader>(modelName, ovms::IModelDownloader::getGraphDirectory(downloadPath, modelName), hfEndpoint, hfToken, httpProxy, false);
+        auto guardOrError = ovms::createGuard();
+        ASSERT_EQ(std::holds_alternative<ovms::Status>(guardOrError), false);
 
-    auto guardOrError = ovms::createGuard();
-    ASSERT_EQ(std::holds_alternative<ovms::Status>(guardOrError), false);
+        // Path does not exist
+        ASSERT_EQ(hfDownloader->CheckRepositoryStatus(true).getCode(), ovms::StatusCode::HF_GIT_STATUS_FAILED_TO_RESOLVE_PATH);
+        ASSERT_EQ(hfDownloader->CheckRepositoryStatus(false).getCode(), ovms::StatusCode::HF_GIT_STATUS_FAILED_TO_RESOLVE_PATH);
 
-    // Path does not exist
-    ASSERT_EQ(hfDownloader->CheckRepositoryStatus(true).getCode(), ovms::StatusCode::HF_GIT_STATUS_FAILED_TO_RESOLVE_PATH);
-    ASSERT_EQ(hfDownloader->CheckRepositoryStatus(false).getCode(), ovms::StatusCode::HF_GIT_STATUS_FAILED_TO_RESOLVE_PATH);
-
-    // Path not a git repository
-    downloadPath = getGenericFullPathForSrcTest("/tmp/");
-    std::unique_ptr<TestHfDownloader> existingHfDownloader = std::make_unique<TestHfDownloader>(modelName, downloadPath, hfEndpoint, hfToken, httpProxy, false);
-    ASSERT_EQ(existingHfDownloader->CheckRepositoryStatus(true).getCode(), ovms::StatusCode::HF_GIT_STATUS_FAILED);
-    ASSERT_EQ(existingHfDownloader->CheckRepositoryStatus(false).getCode(), ovms::StatusCode::HF_GIT_STATUS_FAILED);
+        // Path not a git repository
+        downloadPath = getGenericFullPathForSrcTest("/tmp/");
+        std::unique_ptr<TestHfDownloader> existingHfDownloader = std::make_unique<TestHfDownloader>(modelName, downloadPath, hfEndpoint, hfToken, httpProxy, false);
+        ASSERT_EQ(existingHfDownloader->CheckRepositoryStatus(true).getCode(), ovms::StatusCode::HF_GIT_STATUS_FAILED);
+        ASSERT_EQ(existingHfDownloader->CheckRepositoryStatus(false).getCode(), ovms::StatusCode::HF_GIT_STATUS_FAILED);
+        exit(0);
+    }, ::testing::ExitedWithCode(0), "");
 }
 
 class TestOptimumDownloaderSetup : public ::testing::Test {

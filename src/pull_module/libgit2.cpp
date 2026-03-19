@@ -320,14 +320,17 @@ Status HfDownloader::CheckRepositoryStatus(bool checkUntracked) {
         }                                                                                                                       \
     } while (0)
 
-// Trim trailing '\r' (for CRLF files) and surrounding spaces
+// Trim ASCII leading/trailing whitespace in a locale-independent way.
+// This keeps non-ASCII bytes (e.g. UTF-8 continuation bytes) untouched.
 void rtrimCrLfWhitespace(std::string& s) {
-    if (!s.empty() && s.back() == '\r')
-        s.pop_back();  // remove trailing '\r'
-    while (!s.empty() && std::isspace(static_cast<unsigned char>(s.back())))
+    auto isAsciiWhitespace = [](unsigned char c) {
+        return c == ' ' || c == '\t' || c == '\n' || c == '\v' || c == '\f' || c == '\r';
+    };
+
+    while (!s.empty() && isAsciiWhitespace(static_cast<unsigned char>(s.back())))
         s.pop_back();  // trailing ws
     size_t i = 0;
-    while (i < s.size() && std::isspace(static_cast<unsigned char>(s[i])))
+    while (i < s.size() && isAsciiWhitespace(static_cast<unsigned char>(s[i])))
         ++i;  // leading ws
     if (i > 0)
         s.erase(0, i);
