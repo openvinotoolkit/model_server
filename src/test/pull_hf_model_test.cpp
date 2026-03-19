@@ -289,11 +289,16 @@ TEST_F(HfDownloaderPullHfModel, Resume) {
 
     ASSERT_EQ(expectedGraphContents, removeVersionString(graphContents)) << graphContents;
 
-    // Check status function
-    std::unique_ptr<TestHfDownloader> hfDownloader = std::make_unique<TestHfDownloader>(modelName, ovms::IModelDownloader::getGraphDirectory(downloadPath, modelName), "", "", "", false);
+    EXPECT_EXIT({
+        auto guardOrError = ovms::createGuard();
+        // Check status function
+        std::unique_ptr<TestHfDownloader> hfDownloader = std::make_unique<TestHfDownloader>(modelName, ovms::IModelDownloader::getGraphDirectory(downloadPath, modelName), "", "", "", false);
 
-    // Fails because we want clean and it has the graph.pbtxt after download
-    ASSERT_EQ(hfDownloader->CheckRepositoryStatus(true).getCode(), ovms::StatusCode::HF_GIT_STATUS_UNCLEAN);
+        // Fails because we want clean and it has the graph.pbtxt after download
+        ASSERT_EQ(hfDownloader->CheckRepositoryStatus(true).getCode(), ovms::StatusCode::HF_GIT_STATUS_UNCLEAN);
+
+        exit(0);
+    }, ::testing::ExitedWithCode(0), "");
 
     std::error_code ec;
     ec.clear();
@@ -506,7 +511,9 @@ TEST(HfDownloaderClassTest, RepositoryStatusCheckErrors) {
         ASSERT_EQ(hfDownloader->CheckRepositoryStatus(false).getCode(), ovms::StatusCode::HF_GIT_STATUS_FAILED_TO_RESOLVE_PATH);
 
         // Path not a git repository
-        downloadPath = getGenericFullPathForSrcTest("/tmp/");
+        TempDir td;
+        downloadPath = td.dir.string();
+
         std::unique_ptr<TestHfDownloader> existingHfDownloader = std::make_unique<TestHfDownloader>(modelName, downloadPath, hfEndpoint, hfToken, httpProxy, false);
         ASSERT_EQ(existingHfDownloader->CheckRepositoryStatus(true).getCode(), ovms::StatusCode::HF_GIT_STATUS_FAILED);
         ASSERT_EQ(existingHfDownloader->CheckRepositoryStatus(false).getCode(), ovms::StatusCode::HF_GIT_STATUS_FAILED);

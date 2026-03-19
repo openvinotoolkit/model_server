@@ -15,7 +15,6 @@
 //*****************************************************************************
 #include <filesystem>
 #include <fstream>
-#include <random>
 #include <string>
 #include <system_error>
 #include <vector>
@@ -26,6 +25,7 @@
 #include "src/pull_module/libgit2.hpp"
 
 #include "environment.hpp"
+#include "test_utils.hpp"
 
 namespace fs = std::filesystem;
 
@@ -317,56 +317,6 @@ TEST(LibGit2ReadFirstThreeLinesTest, TrailingWhitespaceNotPreserved) {
     EXPECT_EQ(out[0], "abc");  // spaces preserved
     EXPECT_EQ(out[1], "def");  // tabs preserved
 }
-
-// Optional: If you need to call readFirstThreeLines in any test-specific checks,
-// declare it too (remove if unused here).
-// bool readFirstThreeLines(const fs::path& p, std::vector<std::string>& out);
-
-// ---- Test Utilities ----
-
-// Create a unique temporary directory inside the system temp directory.
-static fs::path createTempDir() {
-    const fs::path base = fs::temp_directory_path();
-    std::random_device rd;
-    std::mt19937_64 gen(rd());
-    std::uniform_int_distribution<uint64_t> dist;
-
-    // Try a reasonable number of times to avoid rare collisions
-    for (int attempt = 0; attempt < 100; ++attempt) {
-        auto candidate = base / ("lfs_kw_tests_" + std::to_string(dist(gen)));
-        std::error_code ec;
-        if (fs::create_directory(candidate, ec)) {
-            return candidate;
-        }
-        // If creation failed due to existing path, loop and try another name
-        // Otherwise (e.g., permissions), fall through and try again up to limit
-    }
-
-    throw std::runtime_error("Failed to create a unique temporary directory");
-}
-
-static fs::path writeFile(const fs::path& dir, const std::string& name, const std::string& content) {
-    fs::path p = dir / name;
-    std::ofstream out(p, std::ios::binary);
-    if (!out)
-        throw std::runtime_error("Failed to create file: " + p.string());
-    out.write(content.data(), static_cast<std::streamsize>(content.size()));
-    return p;
-}
-
-// A simple RAII for a temp directory
-struct TempDir {
-    fs::path dir;
-    TempDir() :
-        dir(createTempDir()) {
-        if (dir.empty())
-            throw std::runtime_error("Failed to create temp directory");
-    }
-    ~TempDir() {
-        std::error_code ec;
-        fs::remove_all(dir, ec);
-    }
-};
 
 class LibGit2FileHasLfsKeywordsFirst3PositionalTest : public ::testing::Test {
 protected:

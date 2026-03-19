@@ -20,6 +20,7 @@
 #include <map>
 #include <memory>
 #include <optional>
+#include <random>
 #include <sstream>
 #include <string>
 #include <thread>
@@ -63,6 +64,7 @@
 
 #include "test_models.hpp"
 
+namespace fs = std::filesystem;
 using inputs_info_t = std::map<std::string, std::tuple<ovms::signed_shape_t, ovms::Precision>>;
 
 void adjustConfigToAllowModelFileRemovalWhenLoaded(ovms::ModelConfig& modelConfig);
@@ -92,6 +94,50 @@ void preparePredictRequest(tensorflow::serving::PredictRequest& request, inputs_
 
 KFSTensorInputProto* findKFSInferInputTensor(::KFSRequest& request, const std::string& name);
 std::string* findKFSInferInputTensorContentInRawInputs(::KFSRequest& request, const std::string& name);
+
+// Create a unique temporary directory inside the system temp directory.
+static fs::path createTempDir() {
+    const fs::path base = fs::temp_directory_path();
+    std::random_device rd;
+    std::mt19937_64 gen(rd());
+    std::uniform_int_distribution<uint64_t> dist;
+
+    // Try a reasonable number of times to avoid rare collisions
+    for (int attempt = 0; attempt < 100; ++attempt) {
+        auto candidate = base / ("lfs_kw_tests_" + std::to_string(dist(gen)));
+        std::error_code ec;
+        if (fs::create_directory(candidate, ec)) {
+            return candidate;
+        }
+        // If creation failed due to existing path, loop and try another name
+        // Otherwise (e.g., permissions), fall through and try again up to limit
+    }
+
+    throw std::runtime_error("Failed to create a unique temporary directory");
+}
+
+static fs::path writeFile(const fs::path& dir, const std::string& name, const std::string& content) {
+    fs::path p = dir / name;
+    std::ofstream out(p, std::ios::binary);
+    if (!out)
+        throw std::runtime_error("Failed to create file: " + p.string());
+    out.write(content.data(), static_cast<std::streamsize>(content.size()));
+    return p;
+}
+
+// A simple RAII for a temp directory
+struct TempDir {
+    fs::path dir;
+    TempDir() :
+        dir(createTempDir()) {
+        if (dir.empty())
+            throw std::runtime_error("Failed to create temp directory");
+    }
+    ~TempDir() {
+        std::error_code ec;
+        fs::remove_all(dir, ec);
+    }
+};
 
 template <typename T = float>
 void prepareKFSInferInputTensor(::KFSRequest& request, const std::string& name, const std::tuple<ovms::signed_shape_t, const std::string>& inputInfo,
