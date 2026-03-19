@@ -24,6 +24,9 @@
 #include <utility>
 #include <vector>
 
+#include "../audio/speech_to_text/s2t_servable.hpp"
+#include "../audio/text_to_speech/t2s_servable.hpp"
+#include "../embeddings/embeddings_servable.hpp"
 #include "../execution_context.hpp"
 #include "../filesystem.hpp"
 #include "../kfs_frontend/kfs_utils.hpp"
@@ -32,8 +35,10 @@
 #include "../metric.hpp"
 #include "../model_metric_reporter.hpp"
 #include "../ov_utils.hpp"
+#include "../rerank/rerank_servable.hpp"
 #include "../servable_definition_unload_guard.hpp"
 #include "../servable_name_checker.hpp"
+#include "../sidepacket_servable.hpp"
 #include "../llm/servable.hpp"
 #include "../llm/servable_initializer.hpp"
 #if (PYTHON_DISABLE == 0)

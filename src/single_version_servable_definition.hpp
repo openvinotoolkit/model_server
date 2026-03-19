@@ -23,6 +23,7 @@
 #include "servable.hpp"
 #include "servable_definition.hpp"
 #include "status.hpp"
+#include "tensorinfo_fwd.hpp"
 
 namespace ovms {
 

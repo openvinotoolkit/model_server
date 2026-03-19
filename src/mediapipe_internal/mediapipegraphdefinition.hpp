@@ -14,11 +14,9 @@
 // limitations under the License.
 //*****************************************************************************
 #pragma once
-#include <iostream>
 #include <map>
 #include <memory>
 #include <shared_mutex>
-#include <sstream>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -44,12 +42,6 @@
 #include "mediapipegraphconfig.hpp"
 #include "packettypes.hpp"
 
-#include "../sidepacket_servable.hpp"
-#include "../embeddings/embeddings_servable.hpp"
-#include "../rerank/rerank_servable.hpp"
-#include "../audio/speech_to_text/s2t_servable.hpp"
-#include "../audio/text_to_speech/t2s_servable.hpp"
-
 namespace ovms {
 class MetricConfig;
 class MetricRegistry;
@@ -58,8 +50,12 @@ class MediapipeGraphExecutor;
 class Status;
 class PythonBackend;
 class PythonNodeResources;
+struct EmbeddingsServable;
 class GenAiServable;
 struct ImageGenerationPipelines;
+struct RerankServable;
+struct SttServable;
+class TtsServable;
 using PythonNodeResourcesMap = std::unordered_map<std::string, std::shared_ptr<PythonNodeResources>>;
 using GenAiServableMap = std::unordered_map<std::string, std::shared_ptr<GenAiServable>>;
 using RerankServableMap = std::unordered_map<std::string, std::shared_ptr<RerankServable>>;
