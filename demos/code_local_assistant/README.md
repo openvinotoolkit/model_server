@@ -55,7 +55,7 @@ ovms --model_repository_path c:\models --source_model OpenVINO/Qwen3-8B-int4-cw-
 mkdir c:\models
 ovms --model_repository_path c:\models --source_model Junrui2021/Qwen3-VL-8B-Instruct-int4 --task text_generation --target_device GPU --pipeline_type VLM_CB --rest_port 8000 --cache_dir .ovcache --model_name Qwen3-VL-8B-Instruct
 ```
-> **Note:** This is a Vision Language Model (VLM) that supports image inputs. For deployment, recommended ??+ of VRAM on the GPU.
+> **Note:** This is a Vision Language Model (VLM) that supports image inputs. For deployment, recommended 7GB+ of VRAM on the GPU.
 :::
 ::::
 
@@ -114,7 +114,7 @@ docker run -d -p 8000:8000 --rm --user $(id -u):$(id -g) -v $(pwd)/models:/model
     openvino/model_server:weekly \
     --model_repository_path /models --source_model Junrui2021/Qwen3-VL-8B-Instruct-int4 --task text_generation --target_device GPU --pipeline_type VLM_CB --rest_port 8000 --model_name Qwen3-VL-8B-Instruct
 ```
-> **Note:** This is a Vision Language Model (VLM) that supports image inputs. For deployment, recommended ??+ of VRAM on the GPU.
+> **Note:** This is a Vision Language Model (VLM) that supports image inputs. For deployment, recommended 7GB+ of VRAM on the GPU.
 :::
 ::::
 
