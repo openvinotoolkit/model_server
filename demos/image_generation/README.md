@@ -381,7 +381,7 @@ curl http://localhost:8000/v3/models
       "id": "OpenVINO/stable-diffusion-v1-5-int8-ov",
       "object": "model",
       "created": 0,
-      "owned_by": "openvinotoolkit"
+      "owned_by": "OVMS"
     }
   ]
 }
@@ -394,6 +394,8 @@ A single servable exposes the following endpoints:
 - **Image-to-image**: `images/edits` — multipart form with `image` + `prompt` (no mask)
 - **Inpainting**: `images/edits` — multipart form with `image` + `mask` + `prompt`
 - **Outpainting**: `images/edits` — multipart form with `image` + `mask` + `prompt` (image placed on larger canvas, mask marks the area to fill)
+
+> **Note:** Inpainting/outpainting requests are processed sequentially — concurrent requests will be queued.
 
 > **Note:** For inpainting/outpainting, dedicated inpainting models (e.g. `stable-diffusion-v1-5/stable-diffusion-inpainting`) only support the `images/edits` endpoint. Check [supported models](https://openvinotoolkit.github.io/openvino.genai/docs/supported-models/#image-generation-models).
 

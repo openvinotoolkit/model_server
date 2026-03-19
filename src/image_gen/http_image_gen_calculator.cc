@@ -96,7 +96,7 @@ static absl::Status generateTensorImg2Img(ov::genai::Image2ImagePipeline& reques
 }
 // written out separately to avoid msvc crashing when using try-catch in process method ...
 static absl::Status generateTensorInpainting(ov::genai::InpaintingPipeline& request,
-    const std::string& prompt, ov::Tensor image, ov::Tensor mask, ov::AnyMap& requestOptions,
+    const std::string& prompt, const ov::Tensor& image, const ov::Tensor& mask, ov::AnyMap& requestOptions,
     std::unique_ptr<ov::Tensor>& images) {
     try {
         requestOptions.insert(ov::genai::callback(progress_bar));

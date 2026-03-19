@@ -22,7 +22,6 @@
 #include <openvino/genai/image_generation/image2image_pipeline.hpp>
 
 #include "src/logging.hpp"
-#include "src/stringutils.hpp"
 
 namespace ovms {
 
