@@ -567,12 +567,9 @@ TEST_F(LibGit2MakeRelativeToBaseTest, DifferentDrivesReturnsFilenameOnly) {
 TEST_F(LibGit2MakeRelativeToBaseTest, NoFilenameEdgeCaseReturnsPathItself) {
     fs::path base = td.dir;  // arbitrary
 #if defined(_WIN32)
-    // Construct a path that has no filename: root-name + root-directory
-    // We can't know the system drive at compile time; use a generic root directory.
-    // For the test, we simulate a root-only path lexically.
     fs::path path = fs::path("C:\\");  // has no filename
 #else
-    fs::path path = fs::path("../..");  // has no filename
+    fs::path path = fs::path("/");  // root directory, has no filename
 #endif
 
     fs::path rel = ovms::makeRelativeToBase(path, base);

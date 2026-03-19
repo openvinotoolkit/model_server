@@ -410,6 +410,11 @@ bool fileHasLfsKeywordsFirst3Positional(const fs::path& p) {
 
 // Helper: make path relative to base (best-effort, non-throwing).
 fs::path makeRelativeToBase(const fs::path& path, const fs::path& base) {
+    // Root-like paths (e.g. "/" or "C:\\") have no filename component.
+    // Keep them unchanged instead of converting to a cwd/base-dependent ".." chain.
+    if (!path.has_filename())
+        return path;
+
     std::error_code ec;
     // Try fs::relative first (handles canonical comparisons, may fail if on different roots)
     fs::path rel = fs::relative(path, base, ec);
