@@ -56,27 +56,15 @@ ovms.exe --rest_port 8000 --source_model Junrui2021/Qwen3-VL-8B-Instruct-int4 --
 
 Use MCP server, with additional image input:
 
-![egypt](egypt.png)
+![poland](https://images.pexels.com/photos/20015887/pexels-photo-20015887.jpeg)
 
 ```bat
-python openai_agent.py --query "What is the current weather in location depicted in the image?" --image egypt.png --model Junrui2021/Qwen3-VL-8B-Instruct-int4 --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather
+python openai_agent.py --query "What is the current weather in location depicted in the image?" --image https://images.pexels.com/photos/20015887/pexels-photo-20015887.jpeg --model Junrui2021/Qwen3-VL-8B-Instruct-int4 --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather
 ```
 
 Exemplary output:
 ```text
-The current weather in Cairo, Egypt (the location depicted in the image of the pyramids) is:
-
-- **Condition**: Overcast
-- **Temperature**: 28.6°C (feels like 25.4°C)
-- **Humidity**: 18%
-- **Dew Point**: 1.9°C
-- **Wind**: Blowing from the SW at 11.5 km/h with gusts up to 41.0 km/h
-- **Atmospheric Pressure**: 999.4 hPa
-- **Cloud Cover**: 100%
-- **UV Index**: 5.5 (Moderate)
-- **Visibility**: 56.2 km
-
-The weather is quite warm and hazy, with strong winds and no direct sunlight due to the overcast conditions.
+The current weather in Gdansk, the location depicted in the image, is partly cloudy with a temperature of 5.7°C (feels like 2.7°C). The relative humidity is 83%, and the wind is blowing from the NNE at 9.8 km/h with gusts up to 23.4 km/h. The atmospheric pressure is 1022.3 hPa, with 72% cloud cover and a moderate UV index of 3.6. Visibility is 20.6 km.
 ```
 :::
 :::{tab-item} Qwen3-4B
@@ -218,27 +206,15 @@ docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v ${HOME}/models:/mode
 
 Use MCP server, with additional image input:
 
-![egypt](egypt.png)
+![poland](https://images.pexels.com/photos/20015887/pexels-photo-20015887.jpeg)
 
 ```bash
-python openai_agent.py --query "What is the current weather in location depicted in the image?" --image egypt.png --model Junrui2021/Qwen3-VL-8B-Instruct-int4 --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather
+python openai_agent.py --query "What is the current weather in location depicted in the image?" --image https://images.pexels.com/photos/20015887/pexels-photo-20015887.jpeg --model Junrui2021/Qwen3-VL-8B-Instruct-int4 --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather
 ```
 
 Exemplary output:
 ```text
-The current weather in Cairo, Egypt (the location depicted in the image of the pyramids) is:
-
-- **Condition**: Overcast
-- **Temperature**: 28.6°C (feels like 25.4°C)
-- **Humidity**: 18%
-- **Dew Point**: 1.9°C
-- **Wind**: Blowing from the SW at 11.5 km/h with gusts up to 41.0 km/h
-- **Atmospheric Pressure**: 999.4 hPa
-- **Cloud Cover**: 100%
-- **UV Index**: 5.5 (Moderate)
-- **Visibility**: 56.2 km
-
-The weather is quite warm and hazy, with strong winds and no direct sunlight due to the overcast conditions.
+The current weather in Gdansk, the location depicted in the image, is partly cloudy with a temperature of 5.7°C (feels like 2.7°C). The relative humidity is 83%, and the wind is blowing from the NNE at 9.8 km/h with gusts up to 23.4 km/h. The atmospheric pressure is 1022.3 hPa, with 72% cloud cover and a moderate UV index of 3.6. Visibility is 20.6 km.
 ```
 :::
 :::{tab-item} Qwen3-4B
@@ -345,32 +321,20 @@ Pull and start OVMS:
 ```bash
 mkdir -p ${HOME}/models
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v ${HOME}/models:/models --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:weekly \
---rest_port 8000 --model_repository_path /models --source_model Junrui2021/Qwen3-VL-8B-Instruct-int4 --tool_parser hermes3 --target_device GPU --task text_generation --pipeline_type VLM_CB
+--rest_port 8000 --model_repository_path /models --source_model Junrui2021/Qwen3-VL-8B-Instruct-int4 --tool_parser hermes3 --target_device GPU --task text_generation --pipeline_type VLM_CB --allowed_media_domains images.pexels.com
 ```
 
 Use MCP server, with additional image input:
 
-![egypt](egypt.png)
+![poland](https://images.pexels.com/photos/20015887/pexels-photo-20015887.jpeg)
 
 ```bash
-python openai_agent.py --query "What is the current weather in location depicted in the image?" --image egypt.png --model Junrui2021/Qwen3-VL-8B-Instruct-int4 --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather
+python openai_agent.py --query "What is the current weather in location depicted in the image?" --image https://images.pexels.com/photos/20015887/pexels-photo-20015887.jpeg --model Junrui2021/Qwen3-VL-8B-Instruct-int4 --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather
 ```
 
 Exemplary output:
 ```text
-The current weather in Cairo, Egypt (the location depicted in the image of the pyramids) is:
-
-- **Condition**: Overcast
-- **Temperature**: 28.6°C (feels like 25.4°C)
-- **Humidity**: 18%
-- **Dew Point**: 1.9°C
-- **Wind**: Blowing from the SW at 11.5 km/h with gusts up to 41.0 km/h
-- **Atmospheric Pressure**: 999.4 hPa
-- **Cloud Cover**: 100%
-- **UV Index**: 5.5 (Moderate)
-- **Visibility**: 56.2 km
-
-The weather is quite warm and hazy, with strong winds and no direct sunlight due to the overcast conditions.
+The current weather in Gdansk, the location depicted in the image, is partly cloudy with a temperature of 5.7°C (feels like 2.7°C). The relative humidity is 83%, and the wind is blowing from the NNE at 9.8 km/h with gusts up to 23.4 km/h. The atmospheric pressure is 1022.3 hPa, with 72% cloud cover and a moderate UV index of 3.6. Visibility is 20.6 km.
 ```
 :::
 :::{tab-item} Qwen3-4B
