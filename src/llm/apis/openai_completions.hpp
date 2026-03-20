@@ -71,7 +71,7 @@ class OpenAIChatCompletionsHandler {
     ov::genai::Tokenizer tokenizer;
     size_t processedTokens = 0;              // tracks overall number of tokens processed by the pipeline
     bool toolCallsDetectedInStream = false;  // tracks whether tool calls were detected in any streaming chunk
-    size_t responsesStreamingSequenceNumber = 0;
+    size_t responsesStreamingSequenceNumber = 1;
     bool responsesStreamingInitialized = false;
     std::string responsesStreamingOutputText;
 
@@ -91,11 +91,13 @@ class OpenAIChatCompletionsHandler {
     void serializeResponsesToolChoice(Writer<StringBuffer>& writer) const;
     void serializeResponsesTools(Writer<StringBuffer>& writer) const;
     void serializeResponsesResponseObject(Writer<StringBuffer>& writer, const std::string& responseId, int64_t createdAt,
-        const char* status, const std::string& fullOutputText, bool includeUsage) const;
+        const char* status, const std::string& fullOutputText, bool includeUsage,
+        const char* incompleteReason = nullptr, const char* errorMessage = nullptr, const char* errorCode = nullptr) const;
     static void serializeResponsesOutputItem(Writer<StringBuffer>& writer, const std::string& outputItemId,
         const std::string& text, const char* status, bool withContent);
     static void serializeResponsesPart(Writer<StringBuffer>& writer, const std::string& text);
-    std::string serializeResponsesUnaryResponse(const std::vector<ParsedOutput>& parsedOutputs) const;
+    std::string serializeResponsesUnaryResponse(const std::vector<ParsedOutput>& parsedOutputs,
+        ov::genai::GenerationFinishReason finishReason = ov::genai::GenerationFinishReason::STOP) const;
 
 public:
     OpenAIChatCompletionsHandler(Document& doc, Endpoint endpoint, std::chrono::time_point<std::chrono::system_clock> creationTime,
@@ -139,6 +141,8 @@ public:
     absl::StatusOr<std::optional<ov::genai::JsonContainer>> parseToolsToJsonContainer();
     absl::StatusOr<std::optional<ov::genai::JsonContainer>> parseChatTemplateKwargsToJsonContainer();
     const bool areToolsAvailable() const;
+    const rapidjson::Value* getRawTools() const;
+    const rapidjson::Value* getRawChatTemplateKwargs() const;
 
     std::string serializeUnaryResponse(const std::vector<ov::genai::GenerationOutput>& generationOutputs);
     std::string serializeUnaryResponse(ov::genai::EncodedResults& results);
@@ -146,5 +150,7 @@ public:
     std::string serializeStreamingChunk(const std::string& chunkResponse, ov::genai::GenerationFinishReason finishReason);
     std::string serializeStreamingUsageChunk();
     std::string serializeStreamingHandshakeChunk();
+    std::string serializeResponsesStreamingInitEvents();
+    std::string serializeResponsesFailedEvent(const std::string& errorMessage, const char* errorCode = "server_error");
 };
 }  // namespace ovms
