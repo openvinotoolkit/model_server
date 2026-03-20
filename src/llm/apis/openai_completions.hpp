@@ -81,7 +81,6 @@ class OpenAIChatCompletionsHandler {
     absl::Status parseCompletionsPart();
     absl::Status parseChatCompletionsPart(std::optional<uint32_t> maxTokensLimit, std::optional<std::string> allowedLocalMediaPath, std::optional<std::vector<std::string>> allowedMediaDomains);
     absl::Status parseResponsesPart(std::optional<uint32_t> maxTokensLimit, std::optional<std::string> allowedLocalMediaPath, std::optional<std::vector<std::string>> allowedMediaDomains);
-    absl::Status parseResponsesInputDirectly(std::optional<std::string> allowedLocalMediaPath, std::optional<std::vector<std::string>> allowedMediaDomains);
     absl::Status parseCommonPart(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength);
 
     ParsedOutput parseOutputIfNeeded(const std::vector<int64_t>& generatedIds);
@@ -141,8 +140,6 @@ public:
     absl::StatusOr<std::optional<ov::genai::JsonContainer>> parseToolsToJsonContainer();
     absl::StatusOr<std::optional<ov::genai::JsonContainer>> parseChatTemplateKwargsToJsonContainer();
     const bool areToolsAvailable() const;
-    const rapidjson::Value* getRawTools() const;
-    const rapidjson::Value* getRawChatTemplateKwargs() const;
 
     std::string serializeUnaryResponse(const std::vector<ov::genai::GenerationOutput>& generationOutputs);
     std::string serializeUnaryResponse(ov::genai::EncodedResults& results);

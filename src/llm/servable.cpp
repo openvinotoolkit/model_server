@@ -209,12 +209,7 @@ absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecution
     case Endpoint::RESPONSES: {
         if (executionContext->apiHandler->getChatHistory().size() > 0) {
 #if (PYTHON_DISABLE == 0)
-            bool success = PyJinjaTemplateProcessor::applyChatTemplate(
-                getProperties()->templateProcessor,
-                executionContext->apiHandler->getChatHistory(),
-                executionContext->apiHandler->getRawTools(),
-                executionContext->apiHandler->getRawChatTemplateKwargs(),
-                inputText);
+            bool success = PyJinjaTemplateProcessor::applyChatTemplate(getProperties()->templateProcessor, getProperties()->modelsPath, executionContext->apiHandler->getProcessedJson(), inputText);
             if (!success) {
                 return absl::Status(absl::StatusCode::kInvalidArgument, inputText);
             }

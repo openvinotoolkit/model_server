@@ -256,7 +256,6 @@ ovms_cc_library(
             "//third_party:openvino",
             "//src:libovmslogging",
             "//src/python:utils",
-            "//src/port:rapidjson_document",
     ] + PYBIND_DEPS,
     visibility = ["//visibility:public"],
     additional_copts = COPTS_PYTHON
