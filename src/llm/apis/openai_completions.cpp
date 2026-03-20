@@ -583,7 +583,7 @@ absl::Status OpenAIChatCompletionsHandler::ensureArgumentsInToolCalls(Value& mes
     return absl::OkStatus();
 }
 
-absl::Status OpenAIChatCompletionsHandler::parseResponsesInputDirectly(std::optional<std::string> allowedLocalMediaPath, std::optional<std::vector<std::string>> allowedMediaDomains) {
+absl::Status OpenAIChatCompletionsHandler::parseResponsesInput(std::optional<std::string> allowedLocalMediaPath, std::optional<std::vector<std::string>> allowedMediaDomains) {
     auto inputIt = doc.FindMember("input");
     if (inputIt == doc.MemberEnd()) {
         return absl::InvalidArgumentError("input missing in request");
@@ -1099,22 +1099,6 @@ const bool OpenAIChatCompletionsHandler::areToolsAvailable() const {
     return !request.toolNameSchemaMap.empty();
 }
 
-const rapidjson::Value* OpenAIChatCompletionsHandler::getRawTools() const {
-    auto it = doc.FindMember("tools");
-    if (it == doc.MemberEnd() || it->value.IsNull()) {
-        return nullptr;
-    }
-    return &it->value;
-}
-
-const rapidjson::Value* OpenAIChatCompletionsHandler::getRawChatTemplateKwargs() const {
-    auto it = doc.FindMember("chat_template_kwargs");
-    if (it == doc.MemberEnd() || it->value.IsNull()) {
-        return nullptr;
-    }
-    return &it->value;
-}
-
 const OpenAIChatCompletionsRequest& OpenAIChatCompletionsHandler::getRequest() const {
     return request;
 }
@@ -1237,11 +1221,56 @@ absl::Status OpenAIChatCompletionsHandler::parseResponsesPart(std::optional<uint
         return absl::InvalidArgumentError("input missing in request");
     }
 
-    auto messagesStatus = parseResponsesInputDirectly(allowedLocalMediaPath, allowedMediaDomains);
+    auto messagesStatus = parseResponsesInput(allowedLocalMediaPath, allowedMediaDomains);
     if (!messagesStatus.ok()) {
         return messagesStatus;
     }
 
+    
+#if (PYTHON_DISABLE == 0)
+    // Build processedJson with "messages" array from chatHistory so that
+    // the Python chat template path (which reads request_json["messages"])
+    // can consume Responses API input without a separate code path.
+    {
+        Document processedDoc;
+        processedDoc.SetObject();
+        auto& alloc = processedDoc.GetAllocator();
+
+        Value messagesArray(kArrayType);
+        for (size_t i = 0; i < request.chatHistory.size(); ++i) {
+            Value msgObj(kObjectType);
+            auto role = request.chatHistory[i]["role"].as_string();
+            if (role.has_value()) {
+                msgObj.AddMember("role", Value(role.value().c_str(), alloc), alloc);
+            }
+            auto content = request.chatHistory[i]["content"].as_string();
+            if (content.has_value()) {
+                msgObj.AddMember("content", Value(content.value().c_str(), alloc), alloc);
+            }
+            messagesArray.PushBack(msgObj, alloc);
+        }
+        processedDoc.AddMember("messages", messagesArray, alloc);
+
+        // Copy tools from original doc if present
+        auto toolsIt = doc.FindMember("tools");
+        if (toolsIt != doc.MemberEnd() && !toolsIt->value.IsNull()) {
+            Value toolsCopy(toolsIt->value, alloc);
+            processedDoc.AddMember("tools", toolsCopy, alloc);
+        }
+
+        // Copy chat_template_kwargs from original doc if present
+        auto kwargsIt = doc.FindMember("chat_template_kwargs");
+        if (kwargsIt != doc.MemberEnd() && !kwargsIt->value.IsNull()) {
+            Value kwargsCopy(kwargsIt->value, alloc);
+            processedDoc.AddMember("chat_template_kwargs", kwargsCopy, alloc);
+        }
+
+        StringBuffer buffer;
+        Writer<StringBuffer> writer(buffer);
+        processedDoc.Accept(writer);
+        request.processedJson = buffer.GetString();
+    }
+#endif
     // logprobs: bool; optional - defaults to false
     it = doc.FindMember("logprobs");
     if (it != doc.MemberEnd() && !it->value.IsNull()) {
