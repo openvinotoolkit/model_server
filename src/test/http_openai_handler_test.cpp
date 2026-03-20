@@ -521,11 +521,7 @@ TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingTextInputCreatesUser
     ASSERT_TRUE(chatHistory[0].contains("content"));
     EXPECT_EQ(chatHistory[0]["role"], "user");
     EXPECT_EQ(chatHistory[0]["content"], "What is OpenVINO?");
-    if (endpoint() == ovms::Endpoint::RESPONSES) {
-        EXPECT_NE(apiHandler->getProcessedJson().find("\"messages\""), std::string::npos);
-    } else {
-        EXPECT_TRUE(apiHandler->getProcessedJson().empty());
-    }
+    EXPECT_TRUE(apiHandler->getProcessedJson().empty());
 }
 
 TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingTokenLimitSetsMaxTokens) {
@@ -836,8 +832,8 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeStreamingChunkForResponsesContains
     std::optional<uint32_t> maxModelLength;
     ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
 
-    // Phase 1: Init events emitted even with empty text (before tokenizer produces output)
-    std::string initChunk = apiHandler->serializeStreamingChunk("", ov::genai::GenerationFinishReason::NONE);
+    // Phase 1: Init events emitted via dedicated method (called right after scheduleExecution in calculator)
+    std::string initChunk = apiHandler->serializeResponsesStreamingInitEvents();
     ASSERT_NE(initChunk.find("\"type\":\"response.created\""), std::string::npos) << initChunk;
     ASSERT_NE(initChunk.find("\"type\":\"response.in_progress\""), std::string::npos) << initChunk;
     ASSERT_NE(initChunk.find("\"type\":\"response.output_item.added\""), std::string::npos) << initChunk;
@@ -901,6 +897,286 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeStreamingUsageChunkForResponsesIsE
     ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
 
     ASSERT_EQ(apiHandler->serializeStreamingUsageChunk(), "");
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, serializeStreamingChunkForResponsesEmitsIncompleteOnLengthFinish) {
+    std::string json = R"({
+    "model": "llama",
+    "input": "What is OpenVINO?",
+    "stream": true
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    auto apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+
+    // Init events
+    apiHandler->serializeResponsesStreamingInitEvents();
+    // Delta
+    apiHandler->serializeStreamingChunk("Hello", ov::genai::GenerationFinishReason::NONE);
+
+    // Final chunk with LENGTH finish reason
+    std::string finalChunk = apiHandler->serializeStreamingChunk("", ov::genai::GenerationFinishReason::LENGTH);
+
+    // Should emit response.incomplete instead of response.completed
+    ASSERT_NE(finalChunk.find("\"type\":\"response.incomplete\""), std::string::npos) << finalChunk;
+    ASSERT_EQ(finalChunk.find("\"type\":\"response.completed\""), std::string::npos) << "Should not contain response.completed: " << finalChunk;
+
+    // Should contain incomplete_details with max_tokens reason
+    ASSERT_NE(finalChunk.find("\"incomplete_details\""), std::string::npos) << finalChunk;
+    ASSERT_NE(finalChunk.find("\"reason\":\"max_tokens\""), std::string::npos) << finalChunk;
+
+    // Response status should be "incomplete"
+    ASSERT_NE(finalChunk.find("\"status\":\"incomplete\""), std::string::npos) << finalChunk;
+
+    // Should NOT contain completed_at
+    // Find the response.incomplete event section and check it doesn't have completed_at
+    auto incompletePos = finalChunk.find("\"type\":\"response.incomplete\"");
+    auto responseSection = finalChunk.substr(incompletePos);
+    ASSERT_EQ(responseSection.find("\"completed_at\""), std::string::npos) << "Incomplete response should not have completed_at: " << responseSection;
+
+    // output_item.done should have status "incomplete"
+    auto itemDonePos = finalChunk.find("\"type\":\"response.output_item.done\"");
+    ASSERT_NE(itemDonePos, std::string::npos) << finalChunk;
+    auto itemSection = finalChunk.substr(itemDonePos);
+    ASSERT_NE(itemSection.find("\"status\":\"incomplete\""), std::string::npos) << "output_item.done should have incomplete status: " << itemSection;
+
+    // Still should have the other finalization events
+    ASSERT_NE(finalChunk.find("\"type\":\"response.output_text.done\""), std::string::npos) << finalChunk;
+    ASSERT_NE(finalChunk.find("\"type\":\"response.content_part.done\""), std::string::npos) << finalChunk;
+    ASSERT_NE(finalChunk.find("\"type\":\"response.output_item.done\""), std::string::npos) << finalChunk;
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, serializeStreamingChunkForResponsesEmitsCompletedOnStopFinish) {
+    std::string json = R"({
+    "model": "llama",
+    "input": "What is OpenVINO?",
+    "stream": true
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    auto apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+
+    // Init events
+    apiHandler->serializeResponsesStreamingInitEvents();
+    // Delta + finish with STOP
+    std::string finalChunk = apiHandler->serializeStreamingChunk("Hello", ov::genai::GenerationFinishReason::STOP);
+
+    // Should emit response.completed, NOT response.incomplete
+    ASSERT_NE(finalChunk.find("\"type\":\"response.completed\""), std::string::npos) << finalChunk;
+    ASSERT_EQ(finalChunk.find("\"type\":\"response.incomplete\""), std::string::npos) << "Should not contain response.incomplete: " << finalChunk;
+    ASSERT_EQ(finalChunk.find("\"incomplete_details\""), std::string::npos) << "Should not contain incomplete_details: " << finalChunk;
+
+    // Response status should be "completed"
+    ASSERT_NE(finalChunk.find("\"status\":\"completed\""), std::string::npos) << finalChunk;
+
+    // Should contain new spec-aligned fields
+    ASSERT_NE(finalChunk.find("\"error\":null"), std::string::npos) << "Should contain error:null: " << finalChunk;
+    ASSERT_NE(finalChunk.find("\"previous_response_id\":null"), std::string::npos) << finalChunk;
+    ASSERT_NE(finalChunk.find("\"reasoning\":null"), std::string::npos) << finalChunk;
+    ASSERT_NE(finalChunk.find("\"store\":true"), std::string::npos) << finalChunk;
+    ASSERT_NE(finalChunk.find("\"truncation\":\"disabled\""), std::string::npos) << finalChunk;
+    ASSERT_NE(finalChunk.find("\"user\":null"), std::string::npos) << finalChunk;
+    ASSERT_NE(finalChunk.find("\"metadata\":{}"), std::string::npos) << finalChunk;
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, serializeResponsesFailedEventContainsCorrectStructure) {
+    std::string json = R"({
+    "model": "llama",
+    "input": "What is OpenVINO?",
+    "stream": true
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    auto apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+
+    std::string failedEvent = apiHandler->serializeResponsesFailedEvent("Something went wrong");
+
+    // Should contain response.failed event type
+    ASSERT_NE(failedEvent.find("\"type\":\"response.failed\""), std::string::npos) << failedEvent;
+    // Should NOT contain response.completed or response.incomplete
+    ASSERT_EQ(failedEvent.find("\"type\":\"response.completed\""), std::string::npos) << failedEvent;
+    ASSERT_EQ(failedEvent.find("\"type\":\"response.incomplete\""), std::string::npos) << failedEvent;
+
+    // Should contain error object with code and message
+    ASSERT_NE(failedEvent.find("\"error\":{"), std::string::npos) << "Should contain error object: " << failedEvent;
+    ASSERT_NE(failedEvent.find("\"code\":\"server_error\""), std::string::npos) << failedEvent;
+    ASSERT_NE(failedEvent.find("\"message\":\"Something went wrong\""), std::string::npos) << failedEvent;
+
+    // Response status should be "failed"
+    ASSERT_NE(failedEvent.find("\"status\":\"failed\""), std::string::npos) << failedEvent;
+
+    // Should include init events since they were not emitted before
+    ASSERT_NE(failedEvent.find("\"type\":\"response.created\""), std::string::npos) << failedEvent;
+
+    // Should contain sequence_number
+    ASSERT_NE(failedEvent.find("\"sequence_number\""), std::string::npos) << failedEvent;
+
+    // Should NOT contain completed_at
+    auto failedPos = failedEvent.find("\"type\":\"response.failed\"");
+    auto responseSection = failedEvent.substr(failedPos);
+    ASSERT_EQ(responseSection.find("\"completed_at\""), std::string::npos) << "Failed response should not have completed_at: " << responseSection;
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, serializeResponsesFailedEventWithCustomErrorCode) {
+    std::string json = R"({
+    "model": "llama",
+    "input": "What is OpenVINO?",
+    "stream": true
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    auto apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+
+    std::string failedEvent = apiHandler->serializeResponsesFailedEvent("Invalid prompt content", "invalid_prompt");
+
+    ASSERT_NE(failedEvent.find("\"code\":\"invalid_prompt\""), std::string::npos) << failedEvent;
+    ASSERT_NE(failedEvent.find("\"message\":\"Invalid prompt content\""), std::string::npos) << failedEvent;
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, serializeResponsesFailedEventAfterPartialStreaming) {
+    std::string json = R"({
+    "model": "llama",
+    "input": "What is OpenVINO?",
+    "stream": true
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    auto apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+
+    // Emit init events and some deltas first
+    apiHandler->serializeResponsesStreamingInitEvents();
+    apiHandler->serializeStreamingChunk("Hello", ov::genai::GenerationFinishReason::NONE);
+
+    // Then fail
+    std::string failedEvent = apiHandler->serializeResponsesFailedEvent("Generation aborted");
+
+    // Should contain response.failed but NOT init events (already sent)
+    ASSERT_NE(failedEvent.find("\"type\":\"response.failed\""), std::string::npos) << failedEvent;
+    ASSERT_EQ(failedEvent.find("\"type\":\"response.created\""), std::string::npos) << "Should not re-emit init events: " << failedEvent;
+
+    // Error should be present
+    ASSERT_NE(failedEvent.find("\"error\":{"), std::string::npos) << failedEvent;
+    ASSERT_NE(failedEvent.find("\"code\":\"server_error\""), std::string::npos) << failedEvent;
+    ASSERT_NE(failedEvent.find("\"message\":\"Generation aborted\""), std::string::npos) << failedEvent;
+
+    // Should NOT contain usage (failed responses don't include usage)
+    ASSERT_EQ(failedEvent.find("\"usage\""), std::string::npos) << "Failed response should not include usage: " << failedEvent;
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseForResponsesIncompleteOnLength) {
+    std::string json = R"({
+    "model": "llama",
+    "input": "What is OpenVINO?",
+    "max_output_tokens": 5
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    auto apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+
+    ov::genai::GenerationOutput genOutput;
+    ov::Tensor outputIds = tokenizer->encode("OVMS", ov::genai::add_special_tokens(false)).input_ids;
+    ASSERT_EQ(outputIds.get_shape().size(), 2);
+    ASSERT_EQ(outputIds.get_shape()[0], 1);
+    ASSERT_EQ(outputIds.get_element_type(), ov::element::i64);
+    int64_t* outputIdsData = reinterpret_cast<int64_t*>(outputIds.data());
+    genOutput.generated_ids = std::vector<int64_t>(outputIdsData, outputIdsData + outputIds.get_shape()[1]);
+    genOutput.finish_reason = ov::genai::GenerationFinishReason::LENGTH;
+
+    std::vector<ov::genai::GenerationOutput> generationOutputs = {genOutput};
+    std::string serialized = apiHandler->serializeUnaryResponse(generationOutputs);
+
+    // Should have status "incomplete"
+    ASSERT_NE(serialized.find("\"status\":\"incomplete\""), std::string::npos) << serialized;
+    // Should have incomplete_details with reason
+    ASSERT_NE(serialized.find("\"incomplete_details\""), std::string::npos) << serialized;
+    ASSERT_NE(serialized.find("\"reason\":\"max_tokens\""), std::string::npos) << serialized;
+    // Should NOT have completed_at
+    ASSERT_EQ(serialized.find("\"completed_at\""), std::string::npos) << serialized;
+    // Should NOT have status "completed"
+    ASSERT_EQ(serialized.find("\"status\":\"completed\""), std::string::npos) << serialized;
+
+    // Should contain new spec-aligned fields
+    ASSERT_NE(serialized.find("\"error\":null"), std::string::npos) << serialized;
+    ASSERT_NE(serialized.find("\"previous_response_id\":null"), std::string::npos) << serialized;
+    ASSERT_NE(serialized.find("\"reasoning\":null"), std::string::npos) << serialized;
+    ASSERT_NE(serialized.find("\"store\":true"), std::string::npos) << serialized;
+    ASSERT_NE(serialized.find("\"truncation\":\"disabled\""), std::string::npos) << serialized;
+    ASSERT_NE(serialized.find("\"user\":null"), std::string::npos) << serialized;
+    ASSERT_NE(serialized.find("\"metadata\":{}"), std::string::npos) << serialized;
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseForResponsesCompletedOnStop) {
+    std::string json = R"({
+    "model": "llama",
+    "input": "What is OpenVINO?",
+    "max_output_tokens": 5
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    auto apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+
+    ov::genai::GenerationOutput genOutput;
+    ov::Tensor outputIds = tokenizer->encode("OVMS", ov::genai::add_special_tokens(false)).input_ids;
+    ASSERT_EQ(outputIds.get_shape().size(), 2);
+    ASSERT_EQ(outputIds.get_shape()[0], 1);
+    ASSERT_EQ(outputIds.get_element_type(), ov::element::i64);
+    int64_t* outputIdsData = reinterpret_cast<int64_t*>(outputIds.data());
+    genOutput.generated_ids = std::vector<int64_t>(outputIdsData, outputIdsData + outputIds.get_shape()[1]);
+    genOutput.finish_reason = ov::genai::GenerationFinishReason::STOP;
+
+    std::vector<ov::genai::GenerationOutput> generationOutputs = {genOutput};
+    std::string serialized = apiHandler->serializeUnaryResponse(generationOutputs);
+
+    // Should have status "completed"
+    ASSERT_NE(serialized.find("\"status\":\"completed\""), std::string::npos) << serialized;
+    // Should have completed_at
+    ASSERT_NE(serialized.find("\"completed_at\""), std::string::npos) << serialized;
+    // Should NOT have incomplete_details
+    ASSERT_EQ(serialized.find("\"incomplete_details\""), std::string::npos) << serialized;
+
+    // Should contain new spec-aligned fields
+    ASSERT_NE(serialized.find("\"error\":null"), std::string::npos) << serialized;
+    ASSERT_NE(serialized.find("\"previous_response_id\":null"), std::string::npos) << serialized;
+    ASSERT_NE(serialized.find("\"reasoning\":null"), std::string::npos) << serialized;
+    ASSERT_NE(serialized.find("\"store\":true"), std::string::npos) << serialized;
+    ASSERT_NE(serialized.find("\"truncation\":\"disabled\""), std::string::npos) << serialized;
+    ASSERT_NE(serialized.find("\"user\":null"), std::string::npos) << serialized;
+    ASSERT_NE(serialized.find("\"metadata\":{}"), std::string::npos) << serialized;
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesSucceedsBase64) {
@@ -1728,7 +2004,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingResponsesNStreamingIsRejected) {
     uint32_t bestOfLimit = 0;
     std::optional<uint32_t> maxModelLength;
     std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
-    EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::InvalidArgumentError("n greater than 1 is not supported for responses streaming"));
+    EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::InvalidArgumentError("n greater than 1 is not supported for Responses API streaming"));
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, ParsingResponsesNUnaryIsAccepted) {

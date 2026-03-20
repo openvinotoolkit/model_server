@@ -147,7 +147,7 @@ curl -s http://localhost:8000/v3/chat/completions -H "Content-Type: application/
 :::
 
 
-### Unary calls to responses endpoint using cURL
+### Unary calls via Responses API using cURL
 
 ::::{tab-set}
 
