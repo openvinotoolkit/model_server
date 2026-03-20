@@ -67,8 +67,8 @@ dynamic_libraries = {
     OvmsBaseType.UBUNTU22_PYTHON: {'libpython3.10.so',},
     OvmsBaseType.UBUNTU24: {'libdl.so', 'libm.so', 'libpthread.so',},
     OvmsBaseType.UBUNTU24_PYTHON: {'libpython3.12.so',},
-    OvmsBaseType.REDHAT: {'libdl.so', 'libm.so', 'libpthread.so', 'libcrypt.so',},
-    OvmsBaseType.REDHAT_PYTHON:{'libpython3.9.so'},
+    OvmsBaseType.REDHAT: {'libdl.so', 'libm.so', 'libpthread.so',},
+    OvmsBaseType.REDHAT_PYTHON: {'libpython3.12.so'},
 }
 
 whitelisted_dynamic_libraries = {
@@ -128,7 +128,9 @@ libraries = {
         'libopenvino_tokenizers.so',
         'libtbb.so',
     },
-    OvmsBaseType.UBUNTU: set(),
+    OvmsBaseType.UBUNTU: {
+        'libopenvino_intel_npu_compiler.so',
+    },
     OvmsBaseType.UBUNTU22: set(),
     OvmsBaseType.UBUNTU24: set(),
     OvmsBaseType.UBUNTU20_PYTHON: set(),
@@ -280,12 +282,14 @@ packages = {
     },
     OvmsBaseType.REDHAT: {
         "findutils",
+        'libtirpc',
+        'mpdecimal',
+        'libnsl2',
     },
     OvmsBaseType.REDHAT_PYTHON: {
         'expat',
-        'python3-libs',
-        'python3-pip-wheel',
-        'python3-setuptools-wheel',
+        'python3.12-libs',
+        'python3.12-pip-wheel',
     },
     OvmsBaseType.REDHAT_GPU: {
         'intel-gmmlib',

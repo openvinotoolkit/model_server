@@ -1,4 +1,4 @@
-# How to serve Embeddings models via OpenAI API {#ovms_demos_embeddings}
+# Text Embeddings models via OpenAI API {#ovms_demos_embeddings}
 This demo shows how to deploy embeddings models in the OpenVINO Model Server for text feature extractions.
 Text generation use case is exposed via OpenAI API `embeddings` endpoint.
 
@@ -247,7 +247,7 @@ python export_model.py embeddings_ov --source_model sentence-transformers/all-mp
 ::::{tab-set}
 :::{tab-item} Qwen/Qwen3-Embedding-0.6B
 :sync: Qwen3-Embedding-0.6B-int8
-```console
+```bash
 docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --pull --model_repository_path /models --source_model OpenVINO/Qwen3-Embedding-0.6B-int8-ov --pooling LAST --task embeddings
 ```
 :::

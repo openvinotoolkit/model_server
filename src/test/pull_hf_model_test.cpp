@@ -532,7 +532,7 @@ public:
         inHfSettings.sourceModel = "model/name";
         inHfSettings.downloadPath = "/path/to/Download";
         inHfSettings.exportSettings.precision = "fp64";
-        inHfSettings.exportSettings.extraQuantizationParams = "--param --param value";
+        inHfSettings.exportSettings.extraQuantizationParams = "--someOptimumParam --anotherOptParam value";
         inHfSettings.task = ovms::TEXT_GENERATION_GRAPH;
         inHfSettings.downloadType = ovms::OPTIMUM_CLI_DOWNLOAD;
 #ifdef _WIN32
@@ -558,7 +558,7 @@ public:
 TEST_F(TestOptimumDownloaderSetup, Methods) {
     std::unique_ptr<TestOptimumDownloader> optimumDownloader = std::make_unique<TestOptimumDownloader>(inHfSettings);
     std::string expectedPath = inHfSettings.downloadPath + "/" + inHfSettings.sourceModel;
-    std::string expectedCmd = "optimum-cli export openvino --model model/name --trust-remote-code  --weight-format fp64 --param --param value \\path\\to\\Download\\model\\name";
+    std::string expectedCmd = "optimum-cli export openvino --model model/name --trust-remote-code  --weight-format fp64 --someOptimumParam --anotherOptParam value \\path\\to\\Download\\model\\name";
     std::string expectedCmd2 = "convert_tokenizer model/name --with-detokenizer -o \\path\\to\\Download\\model\\name";
 #ifdef _WIN32
     std::replace(expectedPath.begin(), expectedPath.end(), '/', '\\');
@@ -575,7 +575,7 @@ TEST_F(TestOptimumDownloaderSetup, Methods) {
 TEST_F(TestOptimumDownloaderSetup, RerankExportCmd) {
     inHfSettings.task = ovms::RERANK_GRAPH;
     std::unique_ptr<TestOptimumDownloader> optimumDownloader = std::make_unique<TestOptimumDownloader>(inHfSettings);
-    std::string expectedCmd = "optimum-cli export openvino --disable-convert-tokenizer --model model/name --trust-remote-code  --weight-format fp64 --task text-classification  \\path\\to\\Download\\model\\name";
+    std::string expectedCmd = "optimum-cli export openvino --disable-convert-tokenizer --model model/name --trust-remote-code  --weight-format fp64 --task text-classification  --someOptimumParam --anotherOptParam value \\path\\to\\Download\\model\\name";
     std::string expectedCmd2 = "convert_tokenizer model/name -o \\path\\to\\Download\\model\\name";
 #ifdef __linux__
     std::replace(expectedCmd.begin(), expectedCmd.end(), '\\', '/');
@@ -587,6 +587,19 @@ TEST_F(TestOptimumDownloaderSetup, RerankExportCmd) {
 
 TEST_F(TestOptimumDownloaderSetup, ImageGenExportCmd) {
     inHfSettings.task = ovms::IMAGE_GENERATION_GRAPH;
+    std::unique_ptr<TestOptimumDownloader> optimumDownloader = std::make_unique<TestOptimumDownloader>(inHfSettings);
+    std::string expectedCmd = "optimum-cli export openvino --model model/name --weight-format fp64 --someOptimumParam --anotherOptParam value \\path\\to\\Download\\model\\name";
+    std::string expectedCmd2 = "";
+#ifdef __linux__
+    std::replace(expectedCmd.begin(), expectedCmd.end(), '\\', '/');
+#endif
+    ASSERT_EQ(optimumDownloader->getExportCmd(), expectedCmd);
+    ASSERT_EQ(optimumDownloader->getConvertCmd(), expectedCmd2);
+}
+
+TEST_F(TestOptimumDownloaderSetup, ImageGenExportCmdNoExtraParams) {
+    inHfSettings.task = ovms::IMAGE_GENERATION_GRAPH;
+    inHfSettings.exportSettings.extraQuantizationParams = std::nullopt;
     std::unique_ptr<TestOptimumDownloader> optimumDownloader = std::make_unique<TestOptimumDownloader>(inHfSettings);
     std::string expectedCmd = "optimum-cli export openvino --model model/name --weight-format fp64 \\path\\to\\Download\\model\\name";
     std::string expectedCmd2 = "";
@@ -600,7 +613,7 @@ TEST_F(TestOptimumDownloaderSetup, ImageGenExportCmd) {
 TEST_F(TestOptimumDownloaderSetup, EmbeddingsExportCmd) {
     inHfSettings.task = ovms::EMBEDDINGS_GRAPH;
     std::unique_ptr<TestOptimumDownloader> optimumDownloader = std::make_unique<TestOptimumDownloader>(inHfSettings);
-    std::string expectedCmd = "optimum-cli export openvino --disable-convert-tokenizer --task feature-extraction --library sentence_transformers --model model/name --trust-remote-code  --weight-format fp64 \\path\\to\\Download\\model\\name";
+    std::string expectedCmd = "optimum-cli export openvino --disable-convert-tokenizer --task feature-extraction --library sentence_transformers --model model/name --trust-remote-code  --weight-format fp64 --someOptimumParam --anotherOptParam value \\path\\to\\Download\\model\\name";
     std::string expectedCmd2 = "convert_tokenizer model/name -o \\path\\to\\Download\\model\\name";
 #ifdef __linux__
     std::replace(expectedCmd.begin(), expectedCmd.end(), '\\', '/');
@@ -614,7 +627,7 @@ TEST_F(TestOptimumDownloaderSetup, TextToSpeechExportCmd) {
     inHfSettings.task = ovms::TEXT_TO_SPEECH_GRAPH;
     inHfSettings.exportSettings.vocoder = "microsoft/speecht5_hifigan";
     std::unique_ptr<TestOptimumDownloader> optimumDownloader = std::make_unique<TestOptimumDownloader>(inHfSettings);
-    std::string expectedCmd = "optimum-cli export openvino --model-kwargs \"{\"vocoder\": \"microsoft/speecht5_hifigan\"}\" --model model/name --trust-remote-code  --weight-format fp64 \\path\\to\\Download\\model\\name";
+    std::string expectedCmd = "optimum-cli export openvino --model-kwargs \"{\"vocoder\": \"microsoft/speecht5_hifigan\"}\" --model model/name --trust-remote-code  --weight-format fp64 --someOptimumParam --anotherOptParam value \\path\\to\\Download\\model\\name";
     std::string expectedCmd2 = "convert_tokenizer model/name -o \\path\\to\\Download\\model\\name";
 #ifdef __linux__
     std::replace(expectedCmd.begin(), expectedCmd.end(), '\\', '/');
@@ -627,7 +640,7 @@ TEST_F(TestOptimumDownloaderSetup, TextToSpeechExportCmd) {
 TEST_F(TestOptimumDownloaderSetup, SpeechToTextExportCmd) {
     inHfSettings.task = ovms::SPEECH_TO_TEXT_GRAPH;
     std::unique_ptr<TestOptimumDownloader> optimumDownloader = std::make_unique<TestOptimumDownloader>(inHfSettings);
-    std::string expectedCmd = "optimum-cli export openvino --model model/name --trust-remote-code  --weight-format fp64 \\path\\to\\Download\\model\\name";
+    std::string expectedCmd = "optimum-cli export openvino --model model/name --trust-remote-code  --weight-format fp64 --someOptimumParam --anotherOptParam value \\path\\to\\Download\\model\\name";
     std::string expectedCmd2 = "convert_tokenizer model/name -o \\path\\to\\Download\\model\\name";
 #ifdef __linux__
     std::replace(expectedCmd.begin(), expectedCmd.end(), '\\', '/');
