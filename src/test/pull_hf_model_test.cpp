@@ -13,8 +13,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <array>
+#include <iomanip>
 #include <memory>
 #include <openssl/sha.h>
+#include <sstream>
 #include <string>
 #include <thread>
 
@@ -172,8 +175,8 @@ TEST_F(HfDownloaderPullHfModel, PositiveDownload) {
 }
 
 // Truncate the file to half its size, keeping the first half.
-bool removeSecondHalf(const std::string& filrStr) {
-    const fs::path& file(filrStr);
+bool removeSecondHalf(const std::string& fileStr) {
+    const fs::path& file(fileStr);
     std::error_code ec;
     ec.clear();
 

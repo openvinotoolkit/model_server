@@ -251,9 +251,9 @@ Status HfDownloader::CheckRepositoryStatus(bool checkUntracked) {
 
     GitRepositoryGuard repoGuard(this->downloadPath);
     if (!repoGuard.get()) {
-        if (repoGuard.git_error_class == 2)
+        if (repoGuard.git_error_class == GIT_ERROR_OS)
             return StatusCode::HF_GIT_STATUS_FAILED_TO_RESOLVE_PATH;
-        else if (repoGuard.git_error_class == 3)
+        else if (repoGuard.git_error_class == GIT_ERROR_INVALID)
             return StatusCode::HF_GIT_LIGIT2_NOT_INITIALIZED;
         else
             return StatusCode::HF_GIT_STATUS_FAILED;
@@ -266,8 +266,11 @@ Status HfDownloader::CheckRepositoryStatus(bool checkUntracked) {
     git_status_options opts = GIT_STATUS_OPTIONS_INIT;
 
     opts.show = GIT_STATUS_SHOW_INDEX_AND_WORKDIR;
-    opts.flags = GIT_STATUS_OPT_INCLUDE_UNTRACKED  // include untracked files // | GIT_STATUS_OPT_RENAMES_HEAD_TO_INDEX    // detect renames HEAD->index - not required currently and impacts performance
-                 | GIT_STATUS_OPT_SORT_CASE_SENSITIVELY;
+    opts.flags = GIT_STATUS_OPT_SORT_CASE_SENSITIVELY;
+    if (checkUntracked) {
+        // Include untracked files only when requested, as this can be expensive on large repositories.
+        opts.flags |= GIT_STATUS_OPT_INCLUDE_UNTRACKED;  // | GIT_STATUS_OPT_RENAMES_HEAD_TO_INDEX    // detect renames HEAD->index - not required currently and impacts performance
+    }
 
     git_status_list* status_list = nullptr;
     int error = git_status_list_new(&status_list, repoGuard.get(), &opts);
@@ -464,6 +467,11 @@ std::vector<fs::path> findLfsLikeFiles(const std::string& directory, bool recurs
     if (recursive) {
         for (fs::recursive_directory_iterator it(directory, ec), end; !ec && it != end; ++it) {
             const auto& p = it->path();
+            std::error_code dirEc;
+            if (it->is_directory(dirEc) && !dirEc && p.filename() == ".git") {
+                it.disable_recursion_pending();
+                continue;
+            }
             if (fileHasLfsKeywordsFirst3Positional(p)) {
                 matches.push_back(makeRelativeToBase(p, directory));
             }
@@ -548,8 +556,8 @@ private:
 void resumeLfsDownloadForFile(git_repository* repo, const char* filePathInRepo) {
     GitScope g;
 
-    // Resolve HEAD tree (origin/main^{tree})
-    CHECK(git_revparse_single(&g.tree_obj, repo, "origin/main^{tree}"));
+    // Resolve HEAD tree (HEAD^{tree})
+    CHECK(git_revparse_single(&g.tree_obj, repo, "HEAD^{tree}"));
 
     // Find the tree entry by path
     CHECK(git_tree_entry_bypath(&g.entry, g.tree(), filePathInRepo));
@@ -566,9 +574,9 @@ void resumeLfsDownloadForFile(git_repository* repo, const char* filePathInRepo) 
     // Configure filter behavior
     git_blob_filter_options opts = GIT_BLOB_FILTER_OPTIONS_INIT;
     // Choose direction:
-    //   GIT_BLOB_FILTER_TO_WORKTREE : apply smudge (as if writing to working tree)
-    //   GIT_BLOB_FILTER_TO_ODB      : apply clean  (as if writing to ODB)
-    // opts.flags = GIT_BLOB_FILTER_TO_WORKTREE;
+    //   GIT_FILTER_TO_WORKTREE : apply smudge (as if writing to working tree)
+    //   GIT_FILTER_TO_ODB      : apply clean  (as if writing to ODB)
+    opts.flags |=GIT_FILTER_TO_WORKTREE;
 
     // Apply filters based on .gitattributes for this path (triggers LFS smudge/clean)
     CHECK(git_blob_filter(&g.out, g.blob, filePathInRepo, &opts));
@@ -602,9 +610,9 @@ Status HfDownloader::downloadModel() {
         GitRepositoryGuard repoGuard(this->downloadPath);
         if (!repoGuard.get()) {
             std::cout << "Path already exists on local filesystem. And is not a git repository: " << this->downloadPath << std::endl;
-            if (repoGuard.git_error_class == 2)
+            if (repoGuard.git_error_class == GIT_ERROR_OS)
                 return StatusCode::HF_GIT_STATUS_FAILED_TO_RESOLVE_PATH;
-            else if (repoGuard.git_error_class == 3)
+            else if (repoGuard.git_error_class == GIT_ERROR_INVALID)
                 return StatusCode::HF_GIT_LIGIT2_NOT_INITIALIZED;
             else
                 return StatusCode::HF_GIT_STATUS_FAILED;
