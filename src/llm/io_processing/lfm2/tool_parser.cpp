@@ -19,28 +19,79 @@
 
 namespace ovms {
 
+void Lfm2ToolParser::writeArgumentOfAnyType(const rapidjson::Value& arg, rapidjson::Writer<rapidjson::StringBuffer>& writer) {
+    if (arg.IsString()) {
+        writer.String(arg.GetString());
+    } else if (arg.IsInt64()) {
+        writer.Int64(arg.GetInt64());
+    } else if (arg.IsDouble()) {
+        writer.Double(arg.GetDouble());
+    } else if (arg.IsBool()) {
+        writer.Bool(arg.GetBool());
+    } else if (arg.IsArray()) {
+        writer.StartArray();
+        for (auto& elem : arg.GetArray()) {
+            writeArgumentOfAnyType(elem, writer);
+        }
+        writer.EndArray();
+     if (arg.IsObject()) {
+        writer.StartObject();
+        for (auto it = arg.MemberBegin(); it != arg.MemberEnd(); ++it) {
+            writer.Key(it->name.GetString());
+            writeArgumentOfAnyType(it->value, writer);
+        }
+        writer.EndObject();
+        } else {
+        SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Argument has unsupported type.");
+        }
+}
+
+void Lfm2ToolParser::writeArgumentOfAnyType(const char* arg, rapidjson::Writer<rapidjson::StringBuffer>& writer) {
+    rapidjson::Document doc;
+    doc.Parse(arg);
+    rapidjson::Value& argumentDoc = doc;
+    writeArgumentOfAnyType(argumentDoc, writer);
+    // if (argumentDoc.IsString()) {
+    //     writer.String(argumentDoc.GetString());
+    // } else if (argumentDoc.IsInt64()) {
+    //     writer.Int64(argumentDoc.GetInt64());
+    // } else if (argumentDoc.IsDouble()) {
+    //     writer.Double(argumentDoc.GetDouble());
+    // } else if (argumentDoc.IsBool()) {
+    //     writer.Bool(argumentDoc.GetBool());
+    // } else if (argumentDoc.IsArray()) {
+    //     writer.StartArray();
+    //     for (auto& elem : argumentDoc.GetArray()) {
+
+    //         writeArgumentOfAnyType(rawVal, writer);
+    //     }
+    //     writer.EndArray();
+    // } else if (argumentDoc.IsObject()) {
+    //     writer.StartObject();
+    //     for (auto it = argumentDoc.MemberBegin(); it != argumentDoc.MemberEnd(); ++it) {
+    //         writer.Key(it->name.GetString());
+    //         const char* rawVal = getRapidjsonRawValue(it->value);
+    //         writeArgumentOfAnyType(rawVal, writer);
+    //     }
+    //     writer.EndObject();
+    // } else {
+    //     SPDLOG_LOGGER_INFO(llm_calculator_logger, "Argument {} has unsupported type, treating value as string", arg);
+    //     writer.String(arg);
+    // }
+}
+
 Lfm2ToolParser::Argument Lfm2ToolParser::parseSingleArgument(const std::string& argumentStr){
     Lfm2ToolParser::Argument argument;
 
     size_t equalPos = argumentStr.find('=');
     if (equalPos != std::string::npos) {
         argument.name = argumentStr.substr(0, equalPos);
-        if (argumentStr[equalPos + 1] == '\"') {
-            argument.value = argumentStr.substr(equalPos + 2, argumentStr.length() - equalPos - 3);
-            argument.type = ParameterType::STRING;
-        // probably it should be also a case for object or array - no info yet 
-        } else {
-            argument.value = argumentStr.substr(equalPos + 1);
-            if (argument.value == "true" || argument.value == "false") {
-                argument.type = ParameterType::BOOLEAN;
-            } else {
-                argument.type = ParameterType::NUMBER;
-            }
-        }
+        argument.value = argumentStr.substr(equalPos + 1);
+        SPDLOG_LOGGER_INFO(llm_calculator_logger, "Parsed argument - name: {}, value: {}", argument.name, argument.value);
     } else {
         argument.name = argumentStr;
         argument.value = "";
-        argument.type = ParameterType::UNKNOWN;
+        argument.isValid = false;
         SPDLOG_LOGGER_INFO(llm_calculator_logger, "Argument string: {} does not contain '=', setting name as entire string and value as empty", argumentStr);
     }
     return argument;
@@ -52,12 +103,35 @@ std::vector<Lfm2ToolParser::Argument> Lfm2ToolParser::parseArguments(const std::
 
     size_t argPos = 0;
     while (argPos < argumentsStr.length()) {
-        size_t commaPos = argumentsStr.find(toolSeparatorStr, argPos);
+        size_t commaPos = std::string::npos;
+        int bracketDepth = 0;
+        int braceDepth = 0;
+        
+        for (size_t i = argPos; i < argumentsStr.length(); ++i) {
+            if (argumentsStr[i] == '{') {
+                braceDepth++;
+            } else if (argumentsStr[i] == '}') {
+                braceDepth--;
+            } else if (argumentsStr[i] == '[') {
+                bracketDepth++;
+            } else if (argumentsStr[i] == ']') {
+                bracketDepth--;
+            } else if (argumentsStr.substr(i, toolSeparatorStr.length()) == toolSeparatorStr && 
+                       bracketDepth == 0 && braceDepth == 0) {
+                commaPos = i;
+                break;
+            }
+        }
+        
         if (commaPos == std::string::npos) {
-            args.push_back(argumentsStr.substr(argPos));
+            auto remainingStr = argumentsStr.substr(argPos);
+            args.push_back(remainingStr);
+            SPDLOG_LOGGER_INFO(llm_calculator_logger, "No more commas found, adding remaining argument string: {}", remainingStr);
             break;
         }
-        args.push_back(argumentsStr.substr(argPos, commaPos - argPos));
+        auto argStr = argumentsStr.substr(argPos, commaPos - argPos);
+        args.push_back(argStr);
+        SPDLOG_LOGGER_INFO(llm_calculator_logger, "Parsed argument string: {}", argStr);
         argPos = commaPos + toolSeparatorStr.length();
     }
 
@@ -92,23 +166,8 @@ bool Lfm2ToolParser::parseSingleToolCall(const std::string& toolStr, ToolCall& t
         rapidjson::Writer<rapidjson::StringBuffer> argsWriter(sb);
         argsWriter.StartObject();
         for (const Lfm2ToolParser::Argument& argument : arguments) {
-            if(argument.type == ParameterType::UNKNOWN) {
-                SPDLOG_LOGGER_INFO(llm_calculator_logger, "Argument {} has unknown type, treating value as string", argument.name);
-                continue;
-            }
             argsWriter.Key(argument.name.c_str());
-            if (argument.type == ParameterType::STRING) {
-                argsWriter.String(argument.value.c_str());
-            } else if (argument.type == ParameterType::BOOLEAN) {
-                bool boolValue = (argument.value == "true");
-                argsWriter.Bool(boolValue);
-            } else if (argument.type == ParameterType::NUMBER) {
-                if (argument.value.find('.') != std::string::npos) {
-                    argsWriter.Double(std::stod(argument.value));
-                } else {
-                    argsWriter.Int64(std::stoll(argument.value));
-                }
-            }
+            writeArgumentOfAnyType(argument.value.c_str(), argsWriter);
         }                
         argsWriter.EndObject();
         toolCall.arguments = sb.GetString();
@@ -133,7 +192,7 @@ void Lfm2ToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t
         start += toolCallStartTag.length();
         size_t end = parsedOutput.content.find(toolCallEndTag, start);
         if(end == std::string::npos) {
-            end = parsedOutput.content.find(toolListEndIndicator, start);
+            end = parsedOutput.content.rfind(toolListEndIndicator, end);
             if (end == std::string::npos) {
                 SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Malformed tool call in content, no tool end tag or tool list end tag found for tool call starting at position {}", start);
                 break;

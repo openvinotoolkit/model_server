@@ -37,7 +37,7 @@ public:
     struct Argument {
         std::string name;
         std::string value;
-        ParameterType type;
+        bool isValid = true;
     };
     Lfm2ToolParser() = delete;
     explicit Lfm2ToolParser(ov::genai::Tokenizer& tokenizer) : BaseOutputParser(tokenizer) {}
@@ -59,6 +59,8 @@ public:
     }
 
 private:
+    void writeArgumentOfAnyType(const char* arg, rapidjson::Writer<rapidjson::StringBuffer>& writer);
+    void writeArgumentOfAnyType(const rapidjson::Value& arg, rapidjson::Writer<rapidjson::StringBuffer>& writer);
     Argument parseSingleArgument(const std::string& argumentStr);
     std::vector<Argument> parseArguments(const std::string& argumentsStr);
     bool parseSingleToolCall(const std::string& toolStr, ToolCall& toolCall);
