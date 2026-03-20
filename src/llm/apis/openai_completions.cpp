@@ -1228,7 +1228,6 @@ absl::Status OpenAIChatCompletionsHandler::parseResponsesPart(std::optional<uint
         return messagesStatus;
     }
 
-    
 #if (PYTHON_DISABLE == 0)
     // Build processedJson with "messages" array from chatHistory so that
     // the Python chat template path (which reads request_json["messages"])
