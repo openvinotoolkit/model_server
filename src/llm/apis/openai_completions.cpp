@@ -1280,6 +1280,9 @@ std::string OpenAIChatCompletionsHandler::serializeStreamingChunk(const std::str
                 // Deep copy the "delta" member value into the choice object
                 choice.AddMember("delta", Value((*delta)["delta"], allocator), allocator);
                 hasToolCalls = hasToolCallsInStreamingDelta(*delta);
+                if (hasToolCalls) {
+                    toolCallsDetectedInStream = true;
+                }
             }
 
         } else {
@@ -1292,7 +1295,7 @@ std::string OpenAIChatCompletionsHandler::serializeStreamingChunk(const std::str
         choice.AddMember("text", Value(chunkResponse.c_str(), allocator), allocator);
     }
 
-    auto serializedFinishReason = mapFinishReason(finishReason, hasToolCalls);
+    auto serializedFinishReason = mapFinishReason(finishReason, hasToolCalls || toolCallsDetectedInStream);
     if (serializedFinishReason.has_value()) {
         choice.AddMember("finish_reason", Value(serializedFinishReason.value().c_str(), allocator), allocator);
     } else {

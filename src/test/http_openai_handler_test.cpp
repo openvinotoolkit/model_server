@@ -466,6 +466,58 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeStreamingChunkReturnsIntermediateN
     }
 }
 
+TEST_F(HttpOpenAIHandlerParsingTest, serializeStreamingChunkReturnsToolCallsFinishReasonWhenEmptyChunkFollowsToolCall) {
+    std::string json = R"({
+    "model": "llama",
+    "stream": true,
+    "messages": [{"role": "user", "content": "What is weather?"}],
+    "tools": [{
+      "type": "function",
+      "function": {
+        "name": "get_humidity",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "location": {"type": "string"}
+          }
+        }
+      }
+    }]
+    })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    auto apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer, "hermes3");
+    uint32_t maxTokensLimit = 100;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+
+    // Simulate scenario where tool call completes with NONE finish reason, then an empty chunk arrives with STOP
+    std::vector<std::pair<std::string, ov::genai::GenerationFinishReason>> stream = {
+        {"<tool_call>", ov::genai::GenerationFinishReason::NONE},
+        {"{\"name\":", ov::genai::GenerationFinishReason::NONE},
+        {" \"get", ov::genai::GenerationFinishReason::NONE},
+        {"_humidity\",", ov::genai::GenerationFinishReason::NONE},
+        {" \"arguments\":", ov::genai::GenerationFinishReason::NONE},
+        {" {\"location\":", ov::genai::GenerationFinishReason::NONE},
+        {" \"Paris\"}}", ov::genai::GenerationFinishReason::NONE},
+        {"</tool_call>", ov::genai::GenerationFinishReason::NONE},
+        {"", ov::genai::GenerationFinishReason::STOP},
+    };
+
+    std::vector<std::string> serializedChunks;
+    for (const auto& [chunk, finishReason] : stream) {
+        std::string serialized = apiHandler->serializeStreamingChunk(chunk, finishReason);
+        if (!serialized.empty()) {
+            serializedChunks.push_back(serialized);
+        }
+    }
+    ASSERT_FALSE(serializedChunks.empty());
+    const std::string& lastChunk = serializedChunks.back();
+    ASSERT_NE(lastChunk.find("\"finish_reason\":\"tool_calls\""), std::string::npos) << lastChunk;
+}
+
 TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseGenerationOutputReturnsToolCallsFinishReason) {
     std::string json = R"({
     "model": "llama",
