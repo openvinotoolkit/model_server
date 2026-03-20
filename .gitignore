@@ -11,6 +11,8 @@ __pycache__/
 report.json
 trace.json
 bazel-bin
+bazel-model_server/
+bazel-openvino-model-server/
 bazel-out
 bazel-ovms
 bazel-ovms-c
@@ -28,8 +30,6 @@ tags
 src/test/llm_testing
 node_modules/
 yarn.*
-bazel-openvino-model-server/
-bazel-model_server/
 out
 .user.bazelrc
 *.log
