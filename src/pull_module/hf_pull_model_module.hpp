@@ -41,5 +41,5 @@ public:
     static const std::string GIT_SSL_CERT_LOCATIONS_ENV;
 };
 
-std::variant<ovms::Status, std::unique_ptr<Libgt2InitGuard>> createGuard();
+std::variant<ovms::Status, std::unique_ptr<Libgt2InitGuard>> createLibGitGuard();
 }  // namespace ovms

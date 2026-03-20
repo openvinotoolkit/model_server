@@ -26,80 +26,81 @@
 
 #include "environment.hpp"
 #include "test_utils.hpp"
+#include "test_file_utils.hpp"
 
 namespace fs = std::filesystem;
 
 TEST(LibGit2RtrimCrLfWhitespace, EmptyString) {
     std::string s;
-    ovms::rtrimCrLfWhitespace(s);
+    ovms::libgit2::rtrimCrLfWhitespace(s);
     EXPECT_TRUE(s.empty());
 }
 
 TEST(LibGit2RtrimCrLfWhitespace, NoWhitespace) {
     std::string s = "abc";
-    ovms::rtrimCrLfWhitespace(s);
+    ovms::libgit2::rtrimCrLfWhitespace(s);
     EXPECT_EQ(s, "abc");
 }
 
 TEST(LibGit2RtrimCrLfWhitespace, OnlySpaces) {
     std::string s = "     ";
-    ovms::rtrimCrLfWhitespace(s);
+    ovms::libgit2::rtrimCrLfWhitespace(s);
     EXPECT_EQ(s, "");
 }
 
 TEST(LibGit2RtrimCrLfWhitespace, LeadingSpacesOnly) {
     std::string s = "   abc";
-    ovms::rtrimCrLfWhitespace(s);
+    ovms::libgit2::rtrimCrLfWhitespace(s);
     EXPECT_EQ(s, "abc");
 }
 
 TEST(LibGit2RtrimCrLfWhitespace, TrailingSpacesOnly) {
     std::string s = "abc   ";
-    ovms::rtrimCrLfWhitespace(s);
+    ovms::libgit2::rtrimCrLfWhitespace(s);
     EXPECT_EQ(s, "abc");
 }
 
 TEST(LibGit2RtrimCrLfWhitespace, LeadingAndTrailingSpaces) {
     std::string s = "   abc   ";
-    ovms::rtrimCrLfWhitespace(s);
+    ovms::libgit2::rtrimCrLfWhitespace(s);
     EXPECT_EQ(s, "abc");
 }
 
 TEST(LibGit2RtrimCrLfWhitespace, TabsAndNewlinesAround) {
     std::string s = "\t\n  abc  \n\t";
-    ovms::rtrimCrLfWhitespace(s);
+    ovms::libgit2::rtrimCrLfWhitespace(s);
     EXPECT_EQ(s, "abc");
 }
 
 TEST(LibGit2RtrimCrLfWhitespace, AllCWhitespaceAround) {
     // Include space, tab, newline, vertical tab, form feed, carriage return
     std::string s = " \t\n\v\f\rabc\r\f\v\n\t ";
-    ovms::rtrimCrLfWhitespace(s);
+    ovms::libgit2::rtrimCrLfWhitespace(s);
     EXPECT_EQ(s, "abc");
 }
 
 TEST(LibGit2RtrimCrLfWhitespace, PreserveInternalSpaces) {
     std::string s = "  a  b   c  ";
-    ovms::rtrimCrLfWhitespace(s);
+    ovms::libgit2::rtrimCrLfWhitespace(s);
     EXPECT_EQ(s, "a  b   c");
 }
 
 TEST(LibGit2RtrimCrLfWhitespace, TrailingCRLF) {
     // Windows-style line ending: "\r\n"
     std::string s = "abc\r\n";
-    ovms::rtrimCrLfWhitespace(s);
+    ovms::libgit2::rtrimCrLfWhitespace(s);
     EXPECT_EQ(s, "abc");
 }
 
 TEST(LibGit2RtrimCrLfWhitespace, TrailingCROnly) {
     std::string s = "abc\r";
-    ovms::rtrimCrLfWhitespace(s);
+    ovms::libgit2::rtrimCrLfWhitespace(s);
     EXPECT_EQ(s, "abc");
 }
 
 TEST(LibGit2RtrimCrLfWhitespace, TrailingLFOnly) {
     std::string s = "abc\n";
-    ovms::rtrimCrLfWhitespace(s);
+    ovms::libgit2::rtrimCrLfWhitespace(s);
     EXPECT_EQ(s, "abc");
 }
 
@@ -107,26 +108,26 @@ TEST(LibGit2RtrimCrLfWhitespace, MultipleTrailingCRs) {
     // Only one trailing '\r' is specially removed first, but then trailing
     // whitespace loop will remove any remaining CRs (since isspace('\r') == true).
     std::string s = "abc\r\r\r";
-    ovms::rtrimCrLfWhitespace(s);
+    ovms::libgit2::rtrimCrLfWhitespace(s);
     EXPECT_EQ(s, "abc");
 }
 
 TEST(LibGit2RtrimCrLfWhitespace, LeadingCRLFAndSpaces) {
     std::string s = "\r\n  abc";
-    ovms::rtrimCrLfWhitespace(s);
+    ovms::libgit2::rtrimCrLfWhitespace(s);
     EXPECT_EQ(s, "abc");
 }
 
 TEST(LibGit2RtrimCrLfWhitespace, InternalCRLFShouldRemainIfNotLeadingOrTrailing) {
     // Internal whitespace should be preserved
     std::string s = "a\r\nb";
-    ovms::rtrimCrLfWhitespace(s);
+    ovms::libgit2::rtrimCrLfWhitespace(s);
     EXPECT_EQ(s, "a\r\nb");
 }
 
 TEST(LibGit2RtrimCrLfWhitespace, OnlyCRLFAndWhitespace) {
     std::string s = "\r\n\t \r";
-    ovms::rtrimCrLfWhitespace(s);
+    ovms::libgit2::rtrimCrLfWhitespace(s);
     EXPECT_EQ(s, "");
 }
 
@@ -138,7 +139,7 @@ TEST(LibGit2RtrimCrLfWhitespace, NonAsciiBytesAreNotTrimmedByIsspace) {
                     "abc"
                     "\xC2"
                     "\xA0";
-    ovms::rtrimCrLfWhitespace(s);
+    ovms::libgit2::rtrimCrLfWhitespace(s);
     // Expect unchanged.
     EXPECT_EQ(s, "\xC2"
                  "\xA0"
@@ -149,73 +150,64 @@ TEST(LibGit2RtrimCrLfWhitespace, NonAsciiBytesAreNotTrimmedByIsspace) {
 
 TEST(LibGit2RtrimCrLfWhitespace, Idempotent) {
     std::string s = "  abc  \n";
-    ovms::rtrimCrLfWhitespace(s);
+    ovms::libgit2::rtrimCrLfWhitespace(s);
     auto once = s;
-    ovms::rtrimCrLfWhitespace(s);
+    ovms::libgit2::rtrimCrLfWhitespace(s);
     EXPECT_EQ(s, once);
 }
 
 TEST(LibGit2ContainsCaseInsensitiveTest, ExactMatch) {
-    EXPECT_TRUE(ovms::containsCaseInsensitive("hello", "hello"));
+    EXPECT_TRUE(ovms::libgit2::containsCaseInsensitive("hello", "hello"));
 }
 
 TEST(LibGit2ContainsCaseInsensitiveTest, MixedCaseMatch) {
-    EXPECT_TRUE(ovms::containsCaseInsensitive("HeLLo WoRLD", "world"));
-    EXPECT_TRUE(ovms::containsCaseInsensitive("HeLLo WoRLD", "HELLO"));
+    EXPECT_TRUE(ovms::libgit2::containsCaseInsensitive("HeLLo WoRLD", "world"));
+    EXPECT_TRUE(ovms::libgit2::containsCaseInsensitive("HeLLo WoRLD", "HELLO"));
 }
 
 TEST(LibGit2ContainsCaseInsensitiveTest, NoMatch) {
-    EXPECT_FALSE(ovms::containsCaseInsensitive("abcdef", "gh"));
+    EXPECT_FALSE(ovms::libgit2::containsCaseInsensitive("abcdef", "gh"));
 }
 
 TEST(LibGit2ContainsCaseInsensitiveTest, EmptyNeedleReturnsTrue) {
     // Consistent with std::string::find("") → 0
-    EXPECT_TRUE(ovms::containsCaseInsensitive("something", ""));
+    EXPECT_TRUE(ovms::libgit2::containsCaseInsensitive("something", ""));
 }
 
 TEST(LibGit2ContainsCaseInsensitiveTest, EmptyHaystackNonEmptyNeedleReturnsFalse) {
-    EXPECT_FALSE(ovms::containsCaseInsensitive("", "abc"));
+    EXPECT_FALSE(ovms::libgit2::containsCaseInsensitive("", "abc"));
 }
 
 TEST(LibGit2ContainsCaseInsensitiveTest, BothEmptyReturnsTrue) {
-    EXPECT_TRUE(ovms::containsCaseInsensitive("", ""));
+    EXPECT_TRUE(ovms::libgit2::containsCaseInsensitive("", ""));
 }
 
 TEST(LibGit2ContainsCaseInsensitiveTest, SubstringAtBeginning) {
-    EXPECT_TRUE(ovms::containsCaseInsensitive("HelloWorld", "hello"));
+    EXPECT_TRUE(ovms::libgit2::containsCaseInsensitive("HelloWorld", "hello"));
 }
 
 TEST(LibGit2ContainsCaseInsensitiveTest, SubstringInMiddle) {
-    EXPECT_TRUE(ovms::containsCaseInsensitive("abcHELLOxyz", "hello"));
+    EXPECT_TRUE(ovms::libgit2::containsCaseInsensitive("abcHELLOxyz", "hello"));
 }
 
 TEST(LibGit2ContainsCaseInsensitiveTest, SubstringAtEnd) {
-    EXPECT_TRUE(ovms::containsCaseInsensitive("testCASE", "case"));
+    EXPECT_TRUE(ovms::libgit2::containsCaseInsensitive("testCASE", "case"));
 }
 
 TEST(LibGit2ContainsCaseInsensitiveTest, NoFalsePositives) {
-    EXPECT_FALSE(ovms::containsCaseInsensitive("aaaaa", "b"));
+    EXPECT_FALSE(ovms::libgit2::containsCaseInsensitive("aaaaa", "b"));
 }
 
 TEST(LibGit2ContainsCaseInsensitiveTest, UnicodeCharactersSafeButNotSpecialHandled) {
     // std::tolower only reliably handles unsigned char range.
     // This ensures your implementation does not crash or behave strangely.
-    EXPECT_FALSE(ovms::containsCaseInsensitive("ĄĆĘŁ", "ę"));  // depends on locale; ASCII-only expected false
-}
-
-// A helper for writing test files.
-static fs::path writeTempFile(const std::string& filename,
-    const std::string& content) {
-    fs::path p = fs::temp_directory_path() / filename;
-    std::ofstream out(p, std::ios::binary);
-    out << content;
-    return p;
+    EXPECT_FALSE(ovms::libgit2::containsCaseInsensitive("ĄĆĘŁ", "ę"));  // depends on locale; ASCII-only expected false
 }
 
 TEST(LibGit2ReadFirstThreeLinesTest, FileNotFoundReturnsFalse) {
     std::vector<std::string> lines;
     fs::path p = fs::temp_directory_path() / "nonexistent_12345.txt";
-    EXPECT_FALSE(ovms::readFirstThreeLines(p, lines));
+    EXPECT_FALSE(ovms::libgit2::readFirstThreeLines(p, lines));
     EXPECT_TRUE(lines.empty());
 }
 
@@ -227,7 +219,7 @@ TEST(LibGit2ReadFirstThreeLinesTest, ReadsExactlyThreeLines) {
         "extra\n");  // should be ignored
 
     std::vector<std::string> out;
-    EXPECT_TRUE(ovms::readFirstThreeLines(p, out));
+    EXPECT_TRUE(ovms::libgit2::readFirstThreeLines(p, out));
     ASSERT_EQ(out.size(), 3u);
     EXPECT_EQ(out[0], "line1");
     EXPECT_EQ(out[1], "line2");
@@ -240,7 +232,7 @@ TEST(LibGit2ReadFirstThreeLinesTest, ReadsFewerThanThreeLines) {
         "beta\n");
 
     std::vector<std::string> out;
-    EXPECT_TRUE(ovms::readFirstThreeLines(p, out));
+    EXPECT_TRUE(ovms::libgit2::readFirstThreeLines(p, out));
     ASSERT_EQ(out.size(), 2u);
     EXPECT_EQ(out[0], "alpha");
     EXPECT_EQ(out[1], "beta");
@@ -250,7 +242,7 @@ TEST(LibGit2ReadFirstThreeLinesTest, ReadsOneLineOnly) {
     fs::path p = writeTempFile("one_line.txt", "solo\n");
 
     std::vector<std::string> out;
-    EXPECT_TRUE(ovms::readFirstThreeLines(p, out));
+    EXPECT_TRUE(ovms::libgit2::readFirstThreeLines(p, out));
     ASSERT_EQ(out.size(), 1u);
     EXPECT_EQ(out[0], "solo");
 }
@@ -259,7 +251,7 @@ TEST(LibGit2ReadFirstThreeLinesTest, EmptyFileProducesZeroLinesAndReturnsTrue) {
     fs::path p = writeTempFile("empty.txt", "");
 
     std::vector<std::string> out;
-    EXPECT_TRUE(ovms::readFirstThreeLines(p, out));
+    EXPECT_TRUE(ovms::libgit2::readFirstThreeLines(p, out));
     EXPECT_TRUE(out.empty());
 }
 
@@ -269,7 +261,7 @@ TEST(LibGit2ReadFirstThreeLinesTest, CRLFIsTrimmedCorrectly) {
         "world\r\n");
 
     std::vector<std::string> out;
-    EXPECT_TRUE(ovms::readFirstThreeLines(p, out));
+    EXPECT_TRUE(ovms::libgit2::readFirstThreeLines(p, out));
     ASSERT_EQ(out.size(), 2u);
     EXPECT_EQ(out[0], "hello");
     EXPECT_EQ(out[1], "world");
@@ -282,7 +274,7 @@ TEST(LibGit2ReadFirstThreeLinesTest, LoneCRAndLFAreTrimmed) {
         "c\r\n");
 
     std::vector<std::string> out;
-    EXPECT_TRUE(ovms::readFirstThreeLines(p, out));
+    EXPECT_TRUE(ovms::libgit2::readFirstThreeLines(p, out));
 
     ASSERT_EQ(out.size(), 3u);
     EXPECT_EQ(out[0], "a");
@@ -297,7 +289,7 @@ TEST(LibGit2ReadFirstThreeLinesTest, HandlesEOFWithoutNewlineAtEnd) {
         "third_without_newline");
 
     std::vector<std::string> out;
-    EXPECT_TRUE(ovms::readFirstThreeLines(p, out));
+    EXPECT_TRUE(ovms::libgit2::readFirstThreeLines(p, out));
 
     ASSERT_EQ(out.size(), 3u);
     EXPECT_EQ(out[0], "first");
@@ -311,7 +303,7 @@ TEST(LibGit2ReadFirstThreeLinesTest, TrailingWhitespaceNotPreserved) {
         "def\t\t\n");
 
     std::vector<std::string> out;
-    EXPECT_TRUE(ovms::readFirstThreeLines(p, out));
+    EXPECT_TRUE(ovms::libgit2::readFirstThreeLines(p, out));
 
     ASSERT_EQ(out.size(), 2u);
     EXPECT_EQ(out[0], "abc");  // spaces preserved
@@ -327,28 +319,28 @@ protected:
 
 TEST_F(LibGit2FileHasLfsKeywordsFirst3PositionalTest, ReturnsFalseForNonExistingFile) {
     fs::path p = td.dir / "does_not_exist.txt";
-    EXPECT_FALSE(ovms::fileHasLfsKeywordsFirst3Positional(p));
+    EXPECT_FALSE(ovms::libgit2::fileHasLfsKeywordsFirst3Positional(p));
 }
 
 TEST_F(LibGit2FileHasLfsKeywordsFirst3PositionalTest, ReturnsFalseForDirectoryPath) {
     // Passing the directory itself (not a regular file)
-    EXPECT_FALSE(ovms::fileHasLfsKeywordsFirst3Positional(td.dir));
+    EXPECT_FALSE(ovms::libgit2::fileHasLfsKeywordsFirst3Positional(td.dir));
 }
 
 TEST_F(LibGit2FileHasLfsKeywordsFirst3PositionalTest, ReturnsFalseForEmptyFile) {
     auto p = writeFile(td.dir, "empty.txt", "");
-    EXPECT_FALSE(ovms::fileHasLfsKeywordsFirst3Positional(p));
+    EXPECT_FALSE(ovms::libgit2::fileHasLfsKeywordsFirst3Positional(p));
 }
 
 TEST_F(LibGit2FileHasLfsKeywordsFirst3PositionalTest, ReturnsFalseForLessThanThreeLines) {
     {
         auto p = writeFile(td.dir, "one_line.txt", "version something\n");
-        EXPECT_FALSE(ovms::fileHasLfsKeywordsFirst3Positional(p));
+        EXPECT_FALSE(ovms::libgit2::fileHasLfsKeywordsFirst3Positional(p));
     }
     {
         auto p = writeFile(td.dir, "two_lines.txt", "version x\n"
                                                     "oid y\n");
-        EXPECT_FALSE(ovms::fileHasLfsKeywordsFirst3Positional(p));
+        EXPECT_FALSE(ovms::libgit2::fileHasLfsKeywordsFirst3Positional(p));
     }
 }
 
@@ -359,7 +351,7 @@ TEST_F(LibGit2FileHasLfsKeywordsFirst3PositionalTest, HappyPathCaseInsensitiveAn
         "\toid Sha256:abcdef1234567890\n"
         "size 999999 \t  \n";
     auto p = writeFile(td.dir, "ok.txt", content);
-    EXPECT_TRUE(ovms::fileHasLfsKeywordsFirst3Positional(p));
+    EXPECT_TRUE(ovms::libgit2::fileHasLfsKeywordsFirst3Positional(p));
 }
 
 TEST_F(LibGit2FileHasLfsKeywordsFirst3PositionalTest, WrongOrderShouldFail) {
@@ -369,7 +361,7 @@ TEST_F(LibGit2FileHasLfsKeywordsFirst3PositionalTest, WrongOrderShouldFail) {
         "version something\n"
         "oid abc\n";
     auto p = writeFile(td.dir, "wrong_order.txt", content);
-    EXPECT_FALSE(ovms::fileHasLfsKeywordsFirst3Positional(p));
+    EXPECT_FALSE(ovms::libgit2::fileHasLfsKeywordsFirst3Positional(p));
 }
 
 TEST_F(LibGit2FileHasLfsKeywordsFirst3PositionalTest, MissingKeywordShouldFail) {
@@ -379,7 +371,7 @@ TEST_F(LibGit2FileHasLfsKeywordsFirst3PositionalTest, MissingKeywordShouldFail) 
         "hash sha256:abc\n"
         "size 42\n";
     auto p = writeFile(td.dir, "missing_keyword.txt", content);
-    EXPECT_FALSE(ovms::fileHasLfsKeywordsFirst3Positional(p));
+    EXPECT_FALSE(ovms::libgit2::fileHasLfsKeywordsFirst3Positional(p));
 }
 
 TEST_F(LibGit2FileHasLfsKeywordsFirst3PositionalTest, MixedNewlines_CR_LF_CRLF_ShouldPass) {
@@ -389,7 +381,7 @@ TEST_F(LibGit2FileHasLfsKeywordsFirst3PositionalTest, MixedNewlines_CR_LF_CRLF_S
         "oid two\n"
         "size three\r\n";
     auto p = writeFile(td.dir, "mixed_newlines.txt", content);
-    EXPECT_TRUE(ovms::fileHasLfsKeywordsFirst3Positional(p));
+    EXPECT_TRUE(ovms::libgit2::fileHasLfsKeywordsFirst3Positional(p));
 }
 
 TEST_F(LibGit2FileHasLfsKeywordsFirst3PositionalTest, LeadingAndTrailingWhitespaceDoesNotBreak) {
@@ -399,7 +391,7 @@ TEST_F(LibGit2FileHasLfsKeywordsFirst3PositionalTest, LeadingAndTrailingWhitespa
         "\t oid\t\n"
         " size \t\n";
     auto p = writeFile(td.dir, "whitespace.txt", content);
-    EXPECT_TRUE(ovms::fileHasLfsKeywordsFirst3Positional(p));
+    EXPECT_TRUE(ovms::libgit2::fileHasLfsKeywordsFirst3Positional(p));
 }
 
 TEST_F(LibGit2FileHasLfsKeywordsFirst3PositionalTest, KeywordsMayAppearWithinLongerTextOnEachLine) {
@@ -408,7 +400,7 @@ TEST_F(LibGit2FileHasLfsKeywordsFirst3PositionalTest, KeywordsMayAppearWithinLon
         "some_oid_here\n"
         "the_size_is_here\n";
     auto p = writeFile(td.dir, "contains_substrings.txt", content);
-    EXPECT_TRUE(ovms::fileHasLfsKeywordsFirst3Positional(p));
+    EXPECT_TRUE(ovms::libgit2::fileHasLfsKeywordsFirst3Positional(p));
 }
 
 TEST_F(LibGit2FileHasLfsKeywordsFirst3PositionalTest, CaseInsensitiveCheck) {
@@ -417,7 +409,7 @@ TEST_F(LibGit2FileHasLfsKeywordsFirst3PositionalTest, CaseInsensitiveCheck) {
         "OID something\n"
         "SiZe 123\n";
     auto p = writeFile(td.dir, "case_insensitive.txt", content);
-    EXPECT_TRUE(ovms::fileHasLfsKeywordsFirst3Positional(p));
+    EXPECT_TRUE(ovms::libgit2::fileHasLfsKeywordsFirst3Positional(p));
 }
 
 TEST_F(LibGit2FileHasLfsKeywordsFirst3PositionalTest, ExtraLinesAfterFirstThreeDoNotMatter) {
@@ -427,7 +419,7 @@ TEST_F(LibGit2FileHasLfsKeywordsFirst3PositionalTest, ExtraLinesAfterFirstThreeD
         "size 42\n"
         "EXTRA LINE THAT SHOULD NOT AFFECT RESULT\n";
     auto p = writeFile(td.dir, "extra_lines.txt", content);
-    EXPECT_TRUE(ovms::fileHasLfsKeywordsFirst3Positional(p));
+    EXPECT_TRUE(ovms::libgit2::fileHasLfsKeywordsFirst3Positional(p));
 }
 
 class LibGit2MakeRelativeToBaseTest : public ::testing::Test {
@@ -443,7 +435,7 @@ TEST_F(LibGit2MakeRelativeToBaseTest, BaseIsAncestor) {
     std::error_code ec;
     fs::create_directories(sub.parent_path(), ec);
 
-    fs::path rel = ovms::makeRelativeToBase(sub, base);
+    fs::path rel = ovms::libgit2::makeRelativeToBase(sub, base);
     // Expected: "a/b/file.txt" (platform-correct separators)
     EXPECT_EQ(rel, fs::path("a") / "b" / "file.txt");
 }
@@ -454,7 +446,7 @@ TEST_F(LibGit2MakeRelativeToBaseTest, PathEqualsBase) {
     std::error_code ec;
     fs::create_directories(base, ec);
 
-    fs::path rel = ovms::makeRelativeToBase(base, base);
+    fs::path rel = ovms::libgit2::makeRelativeToBase(base, base);
     EXPECT_EQ(rel, fs::path("."));
 }
 
@@ -468,7 +460,7 @@ TEST_F(LibGit2MakeRelativeToBaseTest, SiblingSubtree) {
     fs::create_directories(a.parent_path(), ec);
     fs::create_directories(b, ec);
 
-    fs::path rel = ovms::makeRelativeToBase(a, base);
+    fs::path rel = ovms::libgit2::makeRelativeToBase(a, base);
     EXPECT_EQ(rel, fs::path("a") / "deep" / "fileA.txt");
 }
 
@@ -481,7 +473,7 @@ TEST_F(LibGit2MakeRelativeToBaseTest, BaseIsNotAncestorButSameRoot) {
     fs::create_directories(base, ec);
     fs::create_directories(path.parent_path(), ec);
 
-    fs::path rel = ovms::makeRelativeToBase(path, base);
+    fs::path rel = ovms::libgit2::makeRelativeToBase(path, base);
     // From .../top/left to .../top/right/x/y.txt → "../right/x/y.txt"
     EXPECT_EQ(rel, fs::path("..") / "right" / "x" / "y.txt");
 }
@@ -492,7 +484,7 @@ TEST_F(LibGit2MakeRelativeToBaseTest, NonExistingPathsLexicalStillWorks) {
     fs::path path = td.dir / "ghost" / "base" / "sub" / "file.dat";
     // No directories created
 
-    fs::path rel = ovms::makeRelativeToBase(path, base);
+    fs::path rel = ovms::libgit2::makeRelativeToBase(path, base);
     EXPECT_EQ(rel, fs::path("sub") / "file.dat");
 }
 
@@ -506,7 +498,7 @@ TEST_F(LibGit2MakeRelativeToBaseTest, DifferentDrivesReturnsFilenameOnly) {
     fs::path path = fs::path("D:\\folder\\file.txt");
     fs::path base = fs::path("C:\\another\\base");
 
-    fs::path rel = ovms::makeRelativeToBase(path, base);
+    fs::path rel = ovms::libgit2::makeRelativeToBase(path, base);
     EXPECT_EQ(rel, fs::path("file.txt"));
 }
 #endif
@@ -521,13 +513,8 @@ TEST_F(LibGit2MakeRelativeToBaseTest, NoFilenameEdgeCaseReturnsPathItself) {
     fs::path path = fs::path("/");  // root directory, has no filename
 #endif
 
-    fs::path rel = ovms::makeRelativeToBase(path, base);
+    fs::path rel = ovms::libgit2::makeRelativeToBase(path, base);
     EXPECT_EQ(rel, path);
-}
-
-static void mkdirs(const fs::path& p) {
-    std::error_code ec;
-    fs::create_directories(p, ec);
 }
 
 class LibGit2FindLfsLikeFilesTest : public ::testing::Test {
@@ -546,12 +533,12 @@ protected:
 
 TEST_F(LibGit2FindLfsLikeFilesTest, NonExistingDirectoryReturnsEmpty) {
     fs::path nonexist = td.dir / "does_not_exist";
-    auto matches = ovms::findLfsLikeFiles(nonexist.string(), /*recursive=*/true);
+    auto matches = ovms::libgit2::findLfsLikeFiles(nonexist.string(), /*recursive=*/true);
     EXPECT_TRUE(matches.empty());
 }
 
 TEST_F(LibGit2FindLfsLikeFilesTest, EmptyDirectoryReturnsEmpty) {
-    auto matches = ovms::findLfsLikeFiles(td.dir.string(), /*recursive=*/true);
+    auto matches = ovms::libgit2::findLfsLikeFiles(td.dir.string(), /*recursive=*/true);
     EXPECT_TRUE(matches.empty());
 }
 
@@ -583,7 +570,7 @@ TEST_F(LibGit2FindLfsLikeFilesTest, NonRecursiveFindsOnlyTopLevelMatches) {
         "\toid: 123\n"
         "size: 42\n");
 
-    auto matches = ovms::findLfsLikeFiles(td.dir.string(), /*recursive=*/false);
+    auto matches = ovms::libgit2::findLfsLikeFiles(td.dir.string(), /*recursive=*/false);
     sortPaths(matches);
 
     std::vector<fs::path> expected = {fs::path("match_top.txt")};
@@ -614,7 +601,7 @@ TEST_F(LibGit2FindLfsLikeFilesTest, RecursiveFindsNestedMatches) {
         "world\n"
         "!\n");
 
-    auto matches = ovms::findLfsLikeFiles(td.dir.string(), /*recursive=*/true);
+    auto matches = ovms::libgit2::findLfsLikeFiles(td.dir.string(), /*recursive=*/true);
     sortPaths(matches);
 
     std::vector<fs::path> expected = {
@@ -632,7 +619,7 @@ TEST_F(LibGit2FindLfsLikeFilesTest, MixedNewlinesInMatchingFilesAreHandled) {
         "oid two\n"
         "size three\r\n");
 
-    auto matches = ovms::findLfsLikeFiles(td.dir.string(), /*recursive=*/false);
+    auto matches = ovms::libgit2::findLfsLikeFiles(td.dir.string(), /*recursive=*/false);
 
     ASSERT_EQ(matches.size(), 1u);
     EXPECT_EQ(matches[0], fs::path("mixed1.txt"));
@@ -649,7 +636,7 @@ TEST_F(LibGit2FindLfsLikeFilesTest, WrongOrderOrMissingKeywordsAreNotIncluded) {
         "hash something\n"  // missing "oid"
         "size 3\n");
 
-    auto matches = ovms::findLfsLikeFiles(td.dir.string(), /*recursive=*/false);
+    auto matches = ovms::libgit2::findLfsLikeFiles(td.dir.string(), /*recursive=*/false);
     EXPECT_TRUE(matches.empty());
 }
 
@@ -659,7 +646,7 @@ TEST_F(LibGit2FindLfsLikeFilesTest, OnlyRegularFilesConsidered) {
     mkdirs(lfsdir);
 
     // No files → nothing should match
-    auto matches = ovms::findLfsLikeFiles(td.dir.string(), /*recursive=*/true);
+    auto matches = ovms::libgit2::findLfsLikeFiles(td.dir.string(), /*recursive=*/true);
     EXPECT_TRUE(matches.empty());
 }
 
@@ -676,7 +663,7 @@ TEST_F(LibGit2FindLfsLikeFilesTest, ReturnsPathsRelativeToBaseDirectory) {
         "oid o\n"
         "size s\n");
 
-    auto matches = ovms::findLfsLikeFiles(td.dir.string(), /*recursive=*/true);
+    auto matches = ovms::libgit2::findLfsLikeFiles(td.dir.string(), /*recursive=*/true);
     sortPaths(matches);
 
     std::vector<fs::path> expected = {
@@ -701,8 +688,8 @@ TEST_F(LibGit2FindLfsLikeFilesTest, NonRecursiveDoesNotDescendButStillUsesRelati
         "oid b\n"
         "size c\n");
 
-    auto matches_nonrec = ovms::findLfsLikeFiles(td.dir.string(), /*recursive=*/false);
-    auto matches_rec = ovms::findLfsLikeFiles(td.dir.string(), /*recursive=*/true);
+    auto matches_nonrec = ovms::libgit2::findLfsLikeFiles(td.dir.string(), /*recursive=*/false);
+    auto matches_rec = ovms::libgit2::findLfsLikeFiles(td.dir.string(), /*recursive=*/true);
 
     // Non-recursive: only top-level
     ASSERT_EQ(matches_nonrec.size(), 1u);

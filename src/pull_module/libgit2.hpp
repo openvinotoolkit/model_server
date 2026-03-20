@@ -69,10 +69,12 @@ protected:
     Status CheckRepositoryStatus(bool checkUntracked);
 };
 
-void rtrimCrLfWhitespace(std::string& s);
-bool containsCaseInsensitive(const std::string& hay, const std::string& needle);
-bool readFirstThreeLines(const fs::path& p, std::vector<std::string>& outLines);
-bool fileHasLfsKeywordsFirst3Positional(const fs::path& p);
-fs::path makeRelativeToBase(const fs::path& path, const fs::path& base);
-std::vector<fs::path> findLfsLikeFiles(const std::string& directory, bool recursive = true);
+namespace libgit2 {
+    void rtrimCrLfWhitespace(std::string& s);
+    bool containsCaseInsensitive(const std::string& hay, const std::string& needle);
+    bool readFirstThreeLines(const fs::path& p, std::vector<std::string>& outLines);
+    bool fileHasLfsKeywordsFirst3Positional(const fs::path& p);
+    fs::path makeRelativeToBase(const fs::path& path, const fs::path& base);
+    std::vector<fs::path> findLfsLikeFiles(const std::string& directory, bool recursive = true);
+}
 }  // namespace ovms

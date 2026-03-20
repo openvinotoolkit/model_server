@@ -27,6 +27,7 @@
 #include "src/utils/env_guard.hpp"
 #include "src/test/light_test_utils.hpp"
 #include "src/test/test_utils.hpp"
+#include "src/test/test_file_utils.hpp"
 #include "src/test/test_with_temp_dir.hpp"
 #include "src/filesystem.hpp"
 #include "src/pull_module/hf_pull_model_module.hpp"
@@ -293,7 +294,7 @@ TEST_F(HfDownloaderPullHfModel, Resume) {
     ASSERT_EQ(expectedGraphContents, removeVersionString(graphContents)) << graphContents;
 
     EXPECT_EXIT({
-        auto guardOrError = ovms::createGuard();
+        auto guardOrError = ovms::createLibGitGuard();
         // Check status function
         std::unique_ptr<TestHfDownloader> hfDownloader = std::make_unique<TestHfDownloader>(modelName, ovms::IModelDownloader::getGraphDirectory(downloadPath, modelName), "", "", "", false);
 
@@ -500,15 +501,15 @@ TEST(HfDownloaderClassTest, RepositoryStatusCheckErrors) {
     EXPECT_EXIT({
         std::unique_ptr<TestHfDownloader> hfDownloader = std::make_unique<TestHfDownloader>(modelName, ovms::IModelDownloader::getGraphDirectory(downloadPath, modelName), hfEndpoint, hfToken, httpProxy, false);
         // Fails without libgit init
-        ASSERT_EQ(hfDownloader->CheckRepositoryStatus(true).getCode(), ovms::StatusCode::HF_GIT_LIGIT2_NOT_INITIALIZED);
-        ASSERT_EQ(hfDownloader->CheckRepositoryStatus(false).getCode(), ovms::StatusCode::HF_GIT_LIGIT2_NOT_INITIALIZED);
+        ASSERT_EQ(hfDownloader->CheckRepositoryStatus(true).getCode(), ovms::StatusCode::HF_GIT_LIBGIT2_NOT_INITIALIZED);
+        ASSERT_EQ(hfDownloader->CheckRepositoryStatus(false).getCode(), ovms::StatusCode::HF_GIT_LIBGIT2_NOT_INITIALIZED);
         exit(0);
     },
         ::testing::ExitedWithCode(0), "");
 
     EXPECT_EXIT({
         std::unique_ptr<TestHfDownloader> hfDownloader = std::make_unique<TestHfDownloader>(modelName, ovms::IModelDownloader::getGraphDirectory(downloadPath, modelName), hfEndpoint, hfToken, httpProxy, false);
-        auto guardOrError = ovms::createGuard();
+        auto guardOrError = ovms::createLibGitGuard();
         ASSERT_EQ(std::holds_alternative<ovms::Status>(guardOrError), false);
 
         // Path does not exist
@@ -797,7 +798,7 @@ TEST(Libgt2InitGuardTest, LfsFilterCaptureDefaultResumeOptions) {
         // Act: capture stdout during object construction
         testing::internal::CaptureStdout();
         {
-            auto guardOrError = ovms::createGuard();
+            auto guardOrError = ovms::createLibGitGuard();
             ASSERT_EQ(std::holds_alternative<ovms::Status>(guardOrError), false);
         }
         std::string output = testing::internal::GetCapturedStdout();
@@ -822,7 +823,7 @@ TEST(Libgt2InitGuardTest, LfsFilterCaptureNonDefaultResumeOptions) {
         // Act: capture stdout during object construction
         testing::internal::CaptureStdout();
         {
-            auto guardOrError = ovms::createGuard();
+            auto guardOrError = ovms::createLibGitGuard();
             ASSERT_EQ(std::holds_alternative<ovms::Status>(guardOrError), false);
         }
         std::string output = testing::internal::GetCapturedStdout();

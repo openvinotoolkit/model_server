@@ -2824,10 +2824,12 @@ cc_library(
     hdrs = [
         "test/c_api_test_utils.hpp",
         "test/test_utils.hpp",
+        "test/test_file_utils.hpp",
         "test/stress_test_utils.hpp",
         ],
     srcs = [
         "test/c_api_test_utils.cpp",
+        "test/test_file_utils.hpp",
         "test/test_utils.cpp",
         ],
     deps = [
