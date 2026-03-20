@@ -1873,7 +1873,6 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(ov::genai::VLMD
     usage.completionTokens = results.perf_metrics.get_num_generated_tokens();
     if (endpoint == Endpoint::RESPONSES) {
         std::vector<ParsedOutput> parsedOutputs;
-        usage.completionTokens = 0;
         for (const std::string& text : results.texts) {
             auto result = tokenizer.encode(text);
             auto& input_ids = result.input_ids;

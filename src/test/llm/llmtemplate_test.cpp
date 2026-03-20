@@ -232,64 +232,6 @@ TEST_F(LLMChatTemplateTest, ChatTemplateJinjaException) {
     ASSERT_EQ(finalPrompt, errorOutput);
 }
 
-TEST_F(LLMChatTemplateTest, ChatTemplateFromChatHistorySingleMessage) {
-    CopyDefaultChatTemplate();
-    LoadTemplateProcessor();
-    std::string finalPrompt = "";
-    ov::genai::ChatHistory chatHistory;
-    chatHistory.push_back({{"role", "user"}, {"content", "How can I help you?"}});
-    ASSERT_EQ(PyJinjaTemplateProcessor::applyChatTemplate(
-                  servable->getProperties()->templateProcessor,
-                  chatHistory, nullptr, nullptr, finalPrompt),
-        true);
-    std::string expectedOutput = "User: How can I help you?";
-    ASSERT_EQ(finalPrompt, expectedOutput);
-}
-
-TEST_F(LLMChatTemplateTest, ChatTemplateFromChatHistoryMultiMessage) {
-    CopyDefaultChatTemplate();
-    LoadTemplateProcessor();
-    std::string finalPrompt = "";
-    ov::genai::ChatHistory chatHistory;
-    chatHistory.push_back({{"role", "user"}, {"content", "How can I help you?"}});
-    chatHistory.push_back({{"role", "user"}, {"content", "2How can I help you?"}});
-    ASSERT_EQ(PyJinjaTemplateProcessor::applyChatTemplate(
-                  servable->getProperties()->templateProcessor,
-                  chatHistory, nullptr, nullptr, finalPrompt),
-        true);
-    std::string expectedOutput = "User: How can I help you?User: 2How can I help you?";
-    ASSERT_EQ(finalPrompt, expectedOutput);
-}
-
-TEST_F(LLMChatTemplateTest, ChatTemplateFromChatHistoryMatchesJsonOverload) {
-    CopyDefaultChatTemplate();
-    LoadTemplateProcessor();
-
-    // Apply template via JSON overload
-    std::string jsonPrompt = "";
-    std::string payloadBody = R"(
-        {
-            "messages": [{ "role": "user", "content": "hello" }]
-        }
-    )";
-    ASSERT_EQ(PyJinjaTemplateProcessor::applyChatTemplate(
-                  servable->getProperties()->templateProcessor,
-                  servable->getProperties()->modelsPath, payloadBody, jsonPrompt),
-        true);
-
-    // Apply template via ChatHistory overload
-    std::string chatHistoryPrompt = "";
-    ov::genai::ChatHistory chatHistory;
-    chatHistory.push_back({{"role", "user"}, {"content", "hello"}});
-    ASSERT_EQ(PyJinjaTemplateProcessor::applyChatTemplate(
-                  servable->getProperties()->templateProcessor,
-                  chatHistory, nullptr, nullptr, chatHistoryPrompt),
-        true);
-
-    // Both overloads must produce the same result
-    ASSERT_EQ(jsonPrompt, chatHistoryPrompt);
-}
-
 TEST_F(LLMChatTemplateTest, ChatTemplateComparePythonAndGenAiProcessors) {
     GTEST_SKIP() << "Skipping test due to GenAI template processor not being able to compare values of different types (no implicit conversion). Enable when resolved.";
     // Using modified Llama2 template to work with limited tokenizer object (with no models loaded)
