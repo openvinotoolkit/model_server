@@ -1974,7 +1974,7 @@ std::string OpenAIChatCompletionsHandler::serializeResponsesStreamingInitEvents(
         writer.String("sequence_number");
         writer.Uint64(responsesStreamingSequenceNumber++);
         writer.String("output_index");
-        writer.Uint64(0); 
+        writer.Uint64(0);
         writer.String("item");
         serializeResponsesOutputItem(writer, outputItemId, "", "in_progress", false);
         writer.EndObject();
@@ -1987,7 +1987,7 @@ std::string OpenAIChatCompletionsHandler::serializeResponsesStreamingInitEvents(
         writer.String("sequence_number");
         writer.Uint64(responsesStreamingSequenceNumber++);
         writer.String("output_index");
-        writer.Uint64(0); 
+        writer.Uint64(0);
         writer.String("content_index");
         writer.Uint64(0);
         writer.String("item_id");
