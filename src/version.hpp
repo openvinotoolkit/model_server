@@ -16,8 +16,8 @@
 #ifndef SRC_VERSION_HPP_
 #define SRC_VERSION_HPP_
 #define PROJECT_NAME "OpenVINO Model Server"
-#define PROJECT_VERSION "2026.1.0.dc8994f55"
-#define BAZEL_BUILD_FLAGS "--config=win_mp_on_py_on"
+#define PROJECT_VERSION "REPLACE_PROJECT_VERSION"
+#define BAZEL_BUILD_FLAGS "REPLACE_BAZEL_BUILD_FLAGS"
 
 namespace ovms {
 const char* getOpenVINOVersion();
