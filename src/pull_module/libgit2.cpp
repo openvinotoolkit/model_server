@@ -576,7 +576,7 @@ void resumeLfsDownloadForFile(git_repository* repo, const char* filePathInRepo) 
     // Choose direction:
     //   GIT_FILTER_TO_WORKTREE : apply smudge (as if writing to working tree)
     //   GIT_FILTER_TO_ODB      : apply clean  (as if writing to ODB)
-    opts.flags |=GIT_FILTER_TO_WORKTREE;
+    opts.flags |= GIT_FILTER_TO_WORKTREE;
 
     // Apply filters based on .gitattributes for this path (triggers LFS smudge/clean)
     CHECK(git_blob_filter(&g.out, g.blob, filePathInRepo, &opts));
