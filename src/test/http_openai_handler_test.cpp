@@ -522,7 +522,95 @@ TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingTextInputCreatesUser
     ASSERT_TRUE(chatHistory[0].contains("content"));
     EXPECT_EQ(chatHistory[0]["role"], "user");
     EXPECT_EQ(chatHistory[0]["content"], "What is OpenVINO?");
-    EXPECT_TRUE(apiHandler->getProcessedJson().empty());
+    if (endpoint() == ovms::Endpoint::CHAT_COMPLETIONS) {
+        // Chat completions with simple text does not mutate the JSON, so processedJson is empty
+        EXPECT_TRUE(apiHandler->getProcessedJson().empty());
+    }
+}
+
+TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ProcessedJsonContainsEquivalentMessages) {
+    std::string json = createTextRequest("What is OpenVINO?");
+    auto apiHandler = parseCurrentRequest(json);
+
+    // For Responses, processedJson is always built from chatHistory.
+    // For chat/completions with simple text, processedJson is empty (original body is used instead).
+    // In both cases, the chatHistory should be equivalent.
+    auto& chatHistory = apiHandler->getChatHistory();
+    ASSERT_EQ(chatHistory.size(), 1);
+    EXPECT_EQ(chatHistory[0]["role"], "user");
+    EXPECT_EQ(chatHistory[0]["content"], "What is OpenVINO?");
+
+    if (endpoint() == ovms::Endpoint::RESPONSES) {
+        // Responses path builds processedJson with messages array
+        const std::string& processedJson = apiHandler->getProcessedJson();
+        ASSERT_FALSE(processedJson.empty()) << "Responses should build processedJson";
+        // Verify it contains a messages array with the correct content
+        rapidjson::Document processedDoc;
+        processedDoc.Parse(processedJson.c_str());
+        ASSERT_FALSE(processedDoc.HasParseError());
+        ASSERT_TRUE(processedDoc.HasMember("messages"));
+        ASSERT_TRUE(processedDoc["messages"].IsArray());
+        ASSERT_EQ(processedDoc["messages"].Size(), 1u);
+        EXPECT_STREQ(processedDoc["messages"][0]["role"].GetString(), "user");
+        EXPECT_STREQ(processedDoc["messages"][0]["content"].GetString(), "What is OpenVINO?");
+    }
+}
+
+TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ProcessedJsonEquivalentMultiMessage) {
+    // Test with array input containing multiple messages
+    std::string json;
+    if (endpoint() == ovms::Endpoint::RESPONSES) {
+        json = R"({"model":"llama","input":[
+            {"role":"system","content":"You are helpful."},
+            {"role":"user","content":"Hello"}
+        ]})";
+    } else {
+        json = R"({"model":"llama","messages":[
+            {"role":"system","content":"You are helpful."},
+            {"role":"user","content":"Hello"}
+        ]})";
+    }
+    auto apiHandler = parseCurrentRequest(json);
+
+    auto& chatHistory = apiHandler->getChatHistory();
+    ASSERT_EQ(chatHistory.size(), 2);
+    EXPECT_EQ(chatHistory[0]["role"], "system");
+    EXPECT_EQ(chatHistory[0]["content"], "You are helpful.");
+    EXPECT_EQ(chatHistory[1]["role"], "user");
+    EXPECT_EQ(chatHistory[1]["content"], "Hello");
+
+    if (endpoint() == ovms::Endpoint::RESPONSES) {
+        const std::string& processedJson = apiHandler->getProcessedJson();
+        ASSERT_FALSE(processedJson.empty());
+        rapidjson::Document processedDoc;
+        processedDoc.Parse(processedJson.c_str());
+        ASSERT_FALSE(processedDoc.HasParseError());
+        ASSERT_TRUE(processedDoc.HasMember("messages"));
+        ASSERT_EQ(processedDoc["messages"].Size(), 2u);
+        EXPECT_STREQ(processedDoc["messages"][0]["role"].GetString(), "system");
+        EXPECT_STREQ(processedDoc["messages"][0]["content"].GetString(), "You are helpful.");
+        EXPECT_STREQ(processedDoc["messages"][1]["role"].GetString(), "user");
+        EXPECT_STREQ(processedDoc["messages"][1]["content"].GetString(), "Hello");
+    }
+}
+
+TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ProcessedJsonIncludesToolsWhenPresent) {
+    std::string json = createToolRequest("\"auto\"");
+    auto apiHandler = parseCurrentRequest(json);
+
+    EXPECT_TRUE(apiHandler->areToolsAvailable());
+
+    if (endpoint() == ovms::Endpoint::RESPONSES) {
+        const std::string& processedJson = apiHandler->getProcessedJson();
+        ASSERT_FALSE(processedJson.empty());
+        rapidjson::Document processedDoc;
+        processedDoc.Parse(processedJson.c_str());
+        ASSERT_FALSE(processedDoc.HasParseError());
+        ASSERT_TRUE(processedDoc.HasMember("messages"));
+        ASSERT_TRUE(processedDoc.HasMember("tools"));
+        ASSERT_TRUE(processedDoc["tools"].IsArray());
+        ASSERT_GT(processedDoc["tools"].Size(), 0u);
+    }
 }
 
 TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingTokenLimitSetsMaxTokens) {
