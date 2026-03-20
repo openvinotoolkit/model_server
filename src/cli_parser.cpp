@@ -728,6 +728,7 @@ void CLIParser::prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl&
             hfSettings.exportSettings.extraQuantizationParams = result->operator[]("extra_quantization_params").as<std::string>();
         if (result->count("vocoder"))
             hfSettings.exportSettings.vocoder = result->operator[]("vocoder").as<std::string>();
+        hfSettings.exportSettings.restWorkers = serverSettings.restWorkers;
         hfSettings.downloadPath = result->operator[]("model_repository_path").as<std::string>();
         if (result->count("task")) {
             hfSettings.task = stringToEnum(result->operator[]("task").as<std::string>());

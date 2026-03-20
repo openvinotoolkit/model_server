@@ -1689,8 +1689,6 @@ TEST_P(MediapipeFlowAddTest, InferStreamDisconnectionBeforeFirstRequest) {
 }
 
 TEST_F(MediapipeFlowTest, InferWithParams) {
-    GTEST_SKIP() << "Not possible with graph queue";
-    return;
     SetUpServer("/ovms/src/test/mediapipe/config_mediapipe_graph_with_side_packets.json");
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
     KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
@@ -1728,7 +1726,7 @@ TEST_F(MediapipeFlowTest, InferWithParams) {
         ASSERT_EQ(it->shape_size(), 1);
         ASSERT_EQ(it->shape(0), stringParamValue.size());
         const std::string& content = response.raw_output_contents(outputId);
-        SPDLOG_ERROR("Received output size:{} content:{}", content.size(), content);
+        SPDLOG_DEBUG("Received output size:{} content:{}", content.size(), content);
         EXPECT_EQ(content, stringParamValue);
         break;
     }
@@ -1747,7 +1745,7 @@ TEST_F(MediapipeFlowTest, InferWithParams) {
         const std::string& content = response.raw_output_contents(outputId);
         ASSERT_EQ(content.size(), sizeof(bool));
         const bool castContent = *((bool*)content.data());
-        SPDLOG_ERROR("Received output size:{} content:{}; castContent:{}", content.size(), content, castContent);
+        SPDLOG_DEBUG("Received output size:{} content:{}; castContent:{}", content.size(), content, castContent);
         EXPECT_EQ(castContent, boolParamValue);
         break;
     }
@@ -1766,7 +1764,7 @@ TEST_F(MediapipeFlowTest, InferWithParams) {
         const std::string& content = response.raw_output_contents(outputId);
         ASSERT_EQ(content.size(), sizeof(int64_t));
         const int64_t castContent = *((int64_t*)content.data());
-        SPDLOG_ERROR("Received output size:{} content:{}; castContent:{}", content.size(), content, castContent);
+        SPDLOG_DEBUG("Received output size:{} content:{}; castContent:{}", content.size(), content, castContent);
         EXPECT_EQ(castContent, int64ParamValue);
         break;
     }

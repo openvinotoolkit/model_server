@@ -96,10 +96,6 @@ if !errorlevel! neq 0 exit /b !errorlevel!
 call %cd%\windows_prepare_llm_models.bat %cd%\src\test\llm_testing
 if !errorlevel! neq 0 exit /b !errorlevel!
 
-:: FIXME (@atobisze): Temporarily disable graph queue by default in unit tests.
-:: Remove once all tests are validated with graph queue enabled.
-set "OVMS_GRAPH_QUEUE_OFF=1"
-
 :: Start unit test
 echo Running: %runTest%
 %runTest%

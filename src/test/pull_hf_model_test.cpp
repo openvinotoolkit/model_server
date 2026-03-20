@@ -66,10 +66,24 @@ protected:
         TestWithTempDir::TearDown();
     }
 
-    // Removes # OpenVINO Model Server REPLACE_PROJECT_VERSION comment added for debug purpose in graph export at the begging of graph.pbtxt
-    // This string differs per build and setup
-    std::string removeVersionString(std::string input) {
-        return input.erase(0, input.find("\n") + 1);
+    // Removes generated graph header lines (version and optional queue size directive)
+    // which differ across build/runtime setup.
+    std::string removeGeneratedGraphHeaders(std::string input) {
+        auto firstLineEnd = input.find("\n");
+        if (firstLineEnd == std::string::npos) {
+            return "";
+        }
+        input.erase(0, firstLineEnd + 1);
+
+        const std::string queueLinePrefix = "# OVMS_GRAPH_QUEUE_SIZE:";
+        if (input.rfind(queueLinePrefix, 0) == 0) {
+            auto secondLineEnd = input.find("\n");
+            if (secondLineEnd == std::string::npos) {
+                return "";
+            }
+            input.erase(0, secondLineEnd + 1);
+        }
+        return input;
     }
 };
 
@@ -165,7 +179,7 @@ TEST_F(HfDownloaderPullHfModel, PositiveDownload) {
     ASSERT_EQ(std::filesystem::file_size(modelPath), 52417240);
     std::string graphContents = GetFileContents(graphPath);
 
-    ASSERT_EQ(expectedGraphContents, removeVersionString(graphContents)) << graphContents;
+    ASSERT_EQ(expectedGraphContents, removeGeneratedGraphHeaders(graphContents)) << graphContents;
 }
 
 TEST_F(HfDownloaderPullHfModel, PositiveDownloadAndStart) {
@@ -189,7 +203,7 @@ TEST_F(HfDownloaderPullHfModel, PositiveDownloadAndStart) {
     ASSERT_EQ(std::filesystem::file_size(modelPath), 52417240);
     std::string graphContents = GetFileContents(graphPath);
 
-    ASSERT_EQ(expectedGraphContents, removeVersionString(graphContents)) << graphContents;
+    ASSERT_EQ(expectedGraphContents, removeGeneratedGraphHeaders(graphContents)) << graphContents;
 }
 
 TEST_F(HfDownloaderPullHfModel, ModelOutOfOvOrg) {
@@ -217,7 +231,7 @@ TEST_F(HfDownloaderPullHfModel, ModelOutOfOvOrg) {
     ASSERT_EQ(std::filesystem::file_size(modelPath), 52417240);
     std::string graphContents = GetFileContents(graphPath);
 
-    ASSERT_EQ(expectedGraphContents, removeVersionString(graphContents)) << graphContents;
+    ASSERT_EQ(expectedGraphContents, removeGeneratedGraphHeaders(graphContents)) << graphContents;
 
     std::string changePath = ovms::FileSystem::joinPath({this->directoryPath, "OpenVINO"});
     std::string newPath = ovms::FileSystem::joinPath({this->directoryPath, "META"});
@@ -253,7 +267,7 @@ TEST_F(HfDownloaderPullHfModel, PositiveDownloadAndStartModelOutsideOvOrg) {
     ASSERT_EQ(std::filesystem::exists(graphPath), true) << graphPath;
     std::string graphContents = GetFileContents(graphPath);
 
-    ASSERT_EQ(expectedGraphContents, removeVersionString(graphContents)) << graphContents;
+    ASSERT_EQ(expectedGraphContents, removeGeneratedGraphHeaders(graphContents)) << graphContents;
 }
 
 TEST_F(HfDownloaderPullHfModel, DownloadDraftModel) {
@@ -276,7 +290,7 @@ TEST_F(HfDownloaderPullHfModel, DownloadDraftModel) {
     ASSERT_EQ(std::filesystem::file_size(modelPath), 52417240);
     std::string graphContents = GetFileContents(graphPath);
 
-    ASSERT_EQ(expectedGraphContentsDraft, removeVersionString(graphContents)) << graphContents;
+    ASSERT_EQ(expectedGraphContentsDraft, removeGeneratedGraphHeaders(graphContents)) << graphContents;
 
     std::string basePath2 = ovms::FileSystem::joinPath({basePath, "OpenVINO-distil-small.en-int4-ov"});
     std::string modelPath2 = ovms::FileSystem::appendSlash(basePath2) + "openvino_tokenizer.bin";

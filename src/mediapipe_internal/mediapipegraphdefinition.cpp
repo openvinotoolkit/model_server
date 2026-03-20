@@ -16,7 +16,6 @@
 #include "mediapipegraphdefinition.hpp"
 
 #include <algorithm>
-#include <cstdlib>
 #include <iostream>
 #include <memory>
 #include <regex>
@@ -140,26 +139,8 @@ Status MediapipeGraphDefinition::resolveGraphQueueSize() {
         return StatusCode::OK;
     }
 
-    // 2. Env var kill switch — suppresses the auto-enable default.
-    //    Used by unit tests (OVMS_GRAPH_QUEUE_OFF=1) to keep the old no-queue behavior
-    //    unless a graph explicitly opts in via OVMS_GRAPH_QUEUE_SIZE directive above.
-    const char* testGuard = std::getenv("OVMS_GRAPH_QUEUE_OFF");
-    if (testGuard != nullptr && std::string(testGuard) == "1") {
-        SPDLOG_DEBUG("OVMS_GRAPH_QUEUE_OFF=1 set, graph queue disabled by default for mediapipe: {}", getName());
-        return StatusCode::OK;
-    }
-
-    // 3. Python calculator is not yet safe for graph pool reuse
-    for (int i = 0; i < config.node().size(); i++) {
-        if (config.node(i).calculator() == PYTHON_NODE_CALCULATOR_NAME) {
-            SPDLOG_DEBUG("Graph contains Python calculator, graph queue disabled for mediapipe: {}", getName());
-            return StatusCode::OK;
-        }
-    }
-
-    // 4. Default: enable graph queue with AUTO sizing
-    this->mgconfig.setGraphQueueSizeAuto();
-    SPDLOG_DEBUG("Graph queue set to AUTO for mediapipe: {}", getName());
+    // 2. Default: queue disabled unless graph explicitly provides directive.
+    SPDLOG_DEBUG("Graph queue disabled by default for mediapipe: {}. Add '# OVMS_GRAPH_QUEUE_SIZE: <value>' directive in graph.pbtxt to enable.", getName());
     return StatusCode::OK;
 }
 

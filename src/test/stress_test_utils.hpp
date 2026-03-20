@@ -1889,7 +1889,6 @@ public:
 #endif
             }
             timer.stop(EXECUTE);
-            SPDLOG_TRACE("XYZ execution time: {} us", timer.elapsed<std::chrono::microseconds>(EXECUTE));
             createPipelineRetCodesCounters[executePipelineStatus.getCode()]++;
             EXPECT_TRUE((requiredLoadResults.find(executePipelineStatus.getCode()) != requiredLoadResults.end()) ||
                         (allowedLoadResults.find(executePipelineStatus.getCode()) != allowedLoadResults.end()))
@@ -1902,7 +1901,6 @@ public:
                 break;
             }
             timer.stop(STRESS_LOOP);
-            SPDLOG_TRACE("XYZ loop iteration time: {} us", timer.elapsed<std::chrono::microseconds>(STRESS_LOOP));
         }
         for (auto& [retCode, counter] : createPipelineRetCodesCounters) {
             if (counter > 0) {

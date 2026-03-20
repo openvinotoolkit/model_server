@@ -260,10 +260,8 @@ TEST_F(MediapipeFrameworkTest, HotReloadOutputStreamHandlerPOC) {
         float expVal;
         MyFunctor(float expVal) :
             expVal(expVal) {
-            SPDLOG_ERROR("MyFunctor observer constructed:{}", (void*)this);
         }
         absl::Status handlePacket(const ::mediapipe::Packet& packet) override {
-            SPDLOG_ERROR("ER my functor:{}", (void*)this);
             const ov::Tensor& outputTensor =
                 packet.Get<ov::Tensor>();
             auto datatype = ov::element::Type_t::f32;
@@ -286,7 +284,6 @@ TEST_F(MediapipeFrameworkTest, HotReloadOutputStreamHandlerPOC) {
     MP_ERROR_STOP(graph.AddPacketToInputStream(
         inputStreamName, Adopt(inputTensor.release()).At(Timestamp(timestamp++))));
     MP_ERROR_STOP(graph.WaitUntilIdle());
-    SPDLOG_ERROR("Now swap Functor, we don't have to call ObserverOutputStream");
     expVal = 42;
     data[0] = expVal - 1;
     perGraphObserverFunctor = std::make_shared<MyFunctor>(expVal);
@@ -368,10 +365,8 @@ TEST_F(MediapipeFrameworkTest, HotReloadOutputStreamHandlerPOCCompare) {
             float expVal;
             MyFunctor(float expVal) :
                 expVal(expVal) {
-                SPDLOG_ERROR("MyFunctor observer constructed:{}", (void*)this);
             }
             absl::Status handlePacket(const ::mediapipe::Packet& packet) override {
-                SPDLOG_ERROR("YYYYYYYYYYYYYYYYYYYYYYYYYYYYY Getting output tensor:{}", (void*)this);
                 const ov::Tensor& outputTensor =
                     packet.Get<ov::Tensor>();
                 auto datatype = ov::element::Type_t::f32;
@@ -383,7 +378,6 @@ TEST_F(MediapipeFrameworkTest, HotReloadOutputStreamHandlerPOCCompare) {
             }
         };
         absStatus = graph.StartRun({});
-        SPDLOG_ERROR("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX warmup");
         {
             perGraphObserverFunctor = std::make_shared<MyFunctor>(expVal);
             auto copyOfMyFunctor = perGraphObserverFunctor;
@@ -392,25 +386,18 @@ TEST_F(MediapipeFrameworkTest, HotReloadOutputStreamHandlerPOCCompare) {
                 inputStreamName, Adopt(inputTensor.release()).At(Timestamp(timestamp++))));
         }
         std::this_thread::sleep_for(std::chrono::seconds(1));
-        SPDLOG_ERROR("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX warmup end");
-        SPDLOG_ERROR("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX new");
         timer.start(0);
         for (auto i = 0; i < N; ++i) {  // iter begin
             perGraphObserverFunctor = std::make_shared<MyFunctor>(expVal);
             auto copyOfMyFunctor = perGraphObserverFunctor;
             auto inputTensor = std::make_unique<ov::Tensor>(datatype, shape, data.data());
-            SPDLOG_ERROR("YYYYYYYYYYYYYYYYYYYYYYYYYYYYY AddingPacket");
             MP_ERROR_STOP(graph.AddPacketToInputStream(
                 inputStreamName, Adopt(inputTensor.release()).At(Timestamp(timestamp++))));
-            SPDLOG_ERROR("YYYYYYYYYYYYYYYYYYYYYYYYYYYYY WaitUntilIdle");
             MP_ERROR_STOP(graph.WaitUntilIdle());
-            SPDLOG_ERROR("YYYYYYYYYYYYYYYYYYYYYYYYYYYYY After WaitUntilIdle");
         }  // iter end
         timer.stop(0);
-        SPDLOG_ERROR("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX end:{}", timer.elapsed<std::chrono::microseconds>(0) / 1000);
     }  // end of new case ovms
     {  // current ovms case
-        SPDLOG_ERROR("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX ovms");
         timer.start(1);
         for (auto i = 0; i < N; ++i) {  // iter begin
             ::mediapipe::CalculatorGraph graph;
@@ -418,12 +405,10 @@ TEST_F(MediapipeFrameworkTest, HotReloadOutputStreamHandlerPOCCompare) {
             auto absStatusOrPoller = graph.AddOutputStreamPoller(outputName);
             MP_ERROR_STOP(graph.StartRun({}));
             auto inputTensor = std::make_unique<ov::Tensor>(datatype, shape, data.data());
-            SPDLOG_ERROR("YYYYYYYYYYYYYYYYYYYYYYYYYYYYY AddingPacket");
             MP_ERROR_STOP(graph.AddPacketToInputStream(
                 inputStreamName, Adopt(inputTensor.release()).At(Timestamp(timestamp++))));
             ::mediapipe::Packet packet;
             absStatusOrPoller.value().Next(&packet);
-            SPDLOG_ERROR("YYYYYYYYYYYYYYYYYYYYYYYYYYYYY Getting output tensor");
             const ov::Tensor& outputTensor =
                 packet.Get<ov::Tensor>();
             auto datatype = ov::element::Type_t::f32;
@@ -431,19 +416,15 @@ TEST_F(MediapipeFrameworkTest, HotReloadOutputStreamHandlerPOCCompare) {
             EXPECT_THAT(outputTensor.get_shape(), testing::ElementsAre(1, 10));
             const void* outputData = outputTensor.data();
             EXPECT_EQ(*((float*)outputData), expVal);
-            SPDLOG_ERROR("YYYYYYYYYYYYYYYYYYYYYYYYYYYYY WaitUntilIdle");
             MP_ERROR_STOP(graph.WaitUntilIdle());
-            SPDLOG_ERROR("YYYYYYYYYYYYYYYYYYYYYYYYYYYYY After WaitUntilIdle");
             MP_ERROR_STOP(graph.CloseAllPacketSources());
             MP_ERROR_STOP(graph.WaitUntilDone());
         }  // iter end
         timer.stop(1);
-        SPDLOG_ERROR("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX end:{}", timer.elapsed<std::chrono::microseconds>(1) / 1000);
     }
     {  // thread pool case
         // auto sharedThreadPool = std::make_shared<mediapipe::ThreadPoolExecutor>(std::thread::hardware_concurrency());
         auto sharedThreadPool = std::make_shared<mediapipe::ThreadPoolExecutor>(24);
-        SPDLOG_ERROR("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX thread");
         timer.start(2);
         for (auto i = 0; i < N; ++i) {  // iter begin
             ::mediapipe::CalculatorGraph graph;
@@ -452,12 +433,10 @@ TEST_F(MediapipeFrameworkTest, HotReloadOutputStreamHandlerPOCCompare) {
             auto absStatusOrPoller = graph.AddOutputStreamPoller(outputName);
             MP_ERROR_STOP(graph.StartRun({}));
             auto inputTensor = std::make_unique<ov::Tensor>(datatype, shape, data.data());
-            SPDLOG_ERROR("YYYYYYYYYYYYYYYYYYYYYYYYYYYYY AddingPacket");
             MP_ERROR_STOP(graph.AddPacketToInputStream(
                 inputStreamName, Adopt(inputTensor.release()).At(Timestamp(timestamp++))));
             ::mediapipe::Packet packet;
             absStatusOrPoller.value().Next(&packet);
-            SPDLOG_ERROR("YYYYYYYYYYYYYYYYYYYYYYYYYYYYY Getting output tensor");
             const ov::Tensor& outputTensor =
                 packet.Get<ov::Tensor>();
             auto datatype = ov::element::Type_t::f32;
@@ -465,22 +444,19 @@ TEST_F(MediapipeFrameworkTest, HotReloadOutputStreamHandlerPOCCompare) {
             EXPECT_THAT(outputTensor.get_shape(), testing::ElementsAre(1, 10));
             const void* outputData = outputTensor.data();
             EXPECT_EQ(*((float*)outputData), expVal);
-            SPDLOG_ERROR("YYYYYYYYYYYYYYYYYYYYYYYYYYYYY WaitUntilIdle");
             MP_ERROR_STOP(graph.WaitUntilIdle());
-            SPDLOG_ERROR("YYYYYYYYYYYYYYYYYYYYYYYYYYYYY After WaitUntilIdle");
             MP_ERROR_STOP(graph.CloseAllPacketSources());
             MP_ERROR_STOP(graph.WaitUntilDone());
         }  // iter end
         timer.stop(2);
-        SPDLOG_ERROR("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX end:{}", timer.elapsed<std::chrono::microseconds>(2) / 1000);
     }  // end of thread pool case
     double ms = timer.elapsed<std::chrono::microseconds>(0) / 1000;
-    SPDLOG_ERROR("{} iterations of new flow took:{} ms. FPS:{}", N, ms, N / ms * 1000);
+    SPDLOG_DEBUG("{} iterations of new flow took:{} ms. FPS:{}", N, ms, N / ms * 1000);
     ms = timer.elapsed<std::chrono::microseconds>(1) / 1000;
-    SPDLOG_ERROR("{} iterations of old flow took:{} ms. FPS:{}", N, ms, N / ms * 1000);
+    SPDLOG_DEBUG("{} iterations of old flow took:{} ms. FPS:{}", N, ms, N / ms * 1000);
     ms = timer.elapsed<std::chrono::microseconds>(2) / 1000;
-    SPDLOG_ERROR("{} iterations of thread pool flow took:{} ms. FPS:{}", N, ms, N / ms * 1000);
-    SPDLOG_ERROR("Threads: {}", std::thread::hardware_concurrency());
+    SPDLOG_DEBUG("{} iterations of thread pool flow took:{} ms. FPS:{}", N, ms, N / ms * 1000);
+    SPDLOG_DEBUG("Threads: {}", std::thread::hardware_concurrency());
 }
 
 TEST_F(MediapipeNegativeFrameworkTest, NoOutputPacketProduced) {
@@ -503,7 +479,7 @@ TEST_F(MediapipeNegativeFrameworkTest, NoOutputPacketProduced) {
 }
 
 TEST_F(MediapipeNegativeFrameworkTest, ExceptionDuringProcess) {
-    GTEST_SKIP() << "Terminate called otherwise";
+    GTEST_SKIP() << "Terminate called otherwise"; // TODO FIXME check
     SetUpServer(getGenericFullPathForSrcTest("/ovms/src/test/mediapipe/negative/config_exception_during_process.json").c_str());
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
     KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
@@ -525,7 +501,7 @@ TEST_F(MediapipeNegativeFrameworkTest, ExceptionDuringProcess) {
         SPDLOG_ERROR("ER");
     }
 }
-TEST_F(MediapipeNegativeFrameworkTest, ExceptionDuringGetContract) {
+TEST_F(MediapipeNegativeFrameworkTest, ExceptionDuringGetContract) { // TODO FIXME add checks to exception handling?
     SetUpServer(getGenericFullPathForSrcTest("/ovms/src/test/mediapipe/negative/config_exception_during_getcontract.json").c_str());
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
     KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
