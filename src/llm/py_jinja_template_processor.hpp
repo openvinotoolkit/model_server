@@ -18,6 +18,7 @@
 #include <sstream>
 #include <string>
 
+#include <openvino/genai/llm_pipeline.hpp>
 #include <openvino/openvino.hpp>
 #pragma warning(push)
 #pragma warning(disable : 6326 28182 6011 28020)
@@ -27,6 +28,17 @@
 #pragma warning(pop)
 
 #include "src/python/utils.hpp"
+
+namespace rapidjson {
+class CrtAllocator;
+template <typename BaseAllocator>
+class MemoryPoolAllocator;
+template <typename Encoding, typename Allocator>
+class GenericValue;
+template <typename CharType>
+struct UTF8;
+using Value = GenericValue<UTF8<char>, MemoryPoolAllocator<CrtAllocator>>;
+}  // namespace rapidjson
 
 namespace ovms {
 
@@ -38,5 +50,10 @@ public:
     std::unique_ptr<PyObjectWrapper<py::object>> toolTemplate = nullptr;
 
     static bool applyChatTemplate(PyJinjaTemplateProcessor& templateProcessor, std::string modelsPath, const std::string& requestBody, std::string& output);
+    static bool applyChatTemplate(PyJinjaTemplateProcessor& templateProcessor,
+        ov::genai::ChatHistory& messages,
+        const rapidjson::Value* tools,
+        const rapidjson::Value* chatTemplateKwargs,
+        std::string& output);
 };
 }  // namespace ovms

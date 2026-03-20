@@ -103,6 +103,22 @@ std::string serializeResponsesEvent(const std::function<void(Writer<StringBuffer
     return std::string(eventBuffer.GetString());
 }
 
+void serializeNotSupportedNullField(Writer<StringBuffer>& writer, const char* fieldName) {
+    writer.String(fieldName);
+    writer.Null();
+}
+
+void serializeNotSupportedZeroField(Writer<StringBuffer>& writer, const char* fieldName) {
+    writer.String(fieldName);
+    writer.Uint64(0);
+}
+
+void serializeNotSupportedEmptyArrayField(Writer<StringBuffer>& writer, const char* fieldName) {
+    writer.String(fieldName);
+    writer.StartArray();
+    writer.EndArray();
+}
+
 }  // namespace
 
 void OpenAIChatCompletionsHandler::serializeResponsesToolChoice(Writer<StringBuffer>& writer) const {
@@ -138,7 +154,8 @@ void OpenAIChatCompletionsHandler::serializeResponsesTools(Writer<StringBuffer>&
 }
 
 void OpenAIChatCompletionsHandler::serializeResponsesResponseObject(Writer<StringBuffer>& writer, const std::string& responseId, int64_t createdAt,
-    const char* status, const std::string& fullOutputText, bool includeUsage) const {
+    const char* status, const std::string& fullOutputText, bool includeUsage,
+    const char* incompleteReason, const char* errorMessage, const char* errorCode) const {
     writer.StartObject();
     writer.String("id");
     writer.String(responseId.c_str());
@@ -147,8 +164,27 @@ void OpenAIChatCompletionsHandler::serializeResponsesResponseObject(Writer<Strin
     writer.String("created_at");
     writer.Int64(createdAt);
     if (std::string(status) == "completed") {
+        const auto completedAt = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
         writer.String("completed_at");
-        writer.Int64(createdAt);
+        writer.Int64(completedAt);
+    }
+    if (incompleteReason != nullptr) {
+        writer.String("incomplete_details");
+        writer.StartObject();
+        writer.String("reason");
+        writer.String(incompleteReason);
+        writer.EndObject();
+    }
+    writer.String("error");
+    if (errorMessage != nullptr) {
+        writer.StartObject();
+        writer.String("code");
+        writer.String(errorCode != nullptr ? errorCode : "server_error");
+        writer.String("message");
+        writer.String(errorMessage);
+        writer.EndObject();
+    } else {
+        writer.Null();
     }
     writer.String("model");
     writer.String(request.model.c_str());
@@ -157,8 +193,38 @@ void OpenAIChatCompletionsHandler::serializeResponsesResponseObject(Writer<Strin
 
     writer.String("parallel_tool_calls");
     writer.Bool(false);
+    serializeNotSupportedNullField(writer, "previous_response_id");
+    serializeNotSupportedNullField(writer, "reasoning");
+    writer.String("store");
+    writer.Bool(true);
+    writer.String("temperature");
+    if (request.temperature.has_value()) {
+        writer.Double(static_cast<double>(request.temperature.value()));
+    } else {
+        writer.Double(1.0);
+    }
+    writer.String("text");
+    writer.StartObject();
+    writer.String("format");
+    writer.StartObject();
+    writer.String("type");
+    writer.String("text");
+    writer.EndObject();
+    writer.EndObject();
     serializeResponsesToolChoice(writer);
     serializeResponsesTools(writer);
+    writer.String("top_p");
+    if (request.topP.has_value()) {
+        writer.Double(static_cast<double>(request.topP.value()));
+    } else {
+        writer.Double(1.0);
+    }
+    writer.String("truncation");
+    writer.String("disabled");
+    serializeNotSupportedNullField(writer, "user");
+    writer.String("metadata");
+    writer.StartObject();
+    writer.EndObject();
 
     if (request.maxTokens.has_value()) {
         writer.String("max_output_tokens");
@@ -176,7 +242,13 @@ void OpenAIChatCompletionsHandler::serializeResponsesResponseObject(Writer<Strin
         writer.String("role");
         writer.String("assistant");
         writer.String("status");
-        writer.String(std::string(status) == "completed" ? "completed" : "in_progress");
+        if (std::string(status) == "completed") {
+            writer.String("completed");
+        } else if (std::string(status) == "incomplete") {
+            writer.String("incomplete");
+        } else {
+            writer.String("in_progress");
+        }
         writer.String("content");
         writer.StartArray();
         serializeResponsesPart(writer, fullOutputText);
@@ -192,15 +264,13 @@ void OpenAIChatCompletionsHandler::serializeResponsesResponseObject(Writer<Strin
         writer.Uint64(static_cast<uint64_t>(usage.promptTokens));
         writer.String("input_tokens_details");
         writer.StartObject();
-        writer.String("cached_tokens");
-        writer.Uint64(0);
+        serializeNotSupportedZeroField(writer, "cached_tokens");
         writer.EndObject();
         writer.String("output_tokens");
         writer.Uint64(static_cast<uint64_t>(usage.completionTokens));
         writer.String("output_tokens_details");
         writer.StartObject();
-        writer.String("reasoning_tokens");
-        writer.Uint64(0);
+        serializeNotSupportedZeroField(writer, "reasoning_tokens");
         writer.EndObject();
         writer.String("total_tokens");
         writer.Uint64(static_cast<uint64_t>(usage.calculateTotalTokens()));
@@ -242,8 +312,12 @@ void OpenAIChatCompletionsHandler::serializeResponsesPart(Writer<StringBuffer>& 
     writer.EndObject();
 }
 
-std::string OpenAIChatCompletionsHandler::serializeResponsesUnaryResponse(const std::vector<ParsedOutput>& parsedOutputs) const {
+std::string OpenAIChatCompletionsHandler::serializeResponsesUnaryResponse(const std::vector<ParsedOutput>& parsedOutputs,
+    ov::genai::GenerationFinishReason finishReason) const {
+    const bool isIncomplete = (finishReason == ov::genai::GenerationFinishReason::LENGTH);
+    const char* responseStatus = isIncomplete ? "incomplete" : "completed";
     const auto createdAt = std::chrono::duration_cast<std::chrono::seconds>(created.time_since_epoch()).count();
+    const auto completedAt = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
     const std::string responseId = "resp-" + std::to_string(createdAt);
 
     StringBuffer buffer;
@@ -256,17 +330,57 @@ std::string OpenAIChatCompletionsHandler::serializeResponsesUnaryResponse(const 
     writer.String("response");
     writer.String("created_at");
     writer.Int64(createdAt);
-    writer.String("completed_at");
-    writer.Int64(createdAt);
+    if (!isIncomplete) {
+        writer.String("completed_at");
+        writer.Int64(completedAt);
+    }
+    if (isIncomplete) {
+        writer.String("incomplete_details");
+        writer.StartObject();
+        writer.String("reason");
+        writer.String("max_tokens");
+        writer.EndObject();
+    }
+    serializeNotSupportedNullField(writer, "error");
     writer.String("model");
     writer.String(request.model.c_str());
     writer.String("status");
-    writer.String("completed");
+    writer.String(responseStatus);
 
     writer.String("parallel_tool_calls");
     writer.Bool(false);
+    serializeNotSupportedNullField(writer, "previous_response_id");
+    serializeNotSupportedNullField(writer, "reasoning");
+    writer.String("store");
+    writer.Bool(true);
+    writer.String("temperature");
+    if (request.temperature.has_value()) {
+        writer.Double(static_cast<double>(request.temperature.value()));
+    } else {
+        writer.Double(1.0);
+    }
+    writer.String("text");
+    writer.StartObject();
+    writer.String("format");
+    writer.StartObject();
+    writer.String("type");
+    writer.String("text");
+    writer.EndObject();
+    writer.EndObject();
     serializeResponsesToolChoice(writer);
     serializeResponsesTools(writer);
+    writer.String("top_p");
+    if (request.topP.has_value()) {
+        writer.Double(static_cast<double>(request.topP.value()));
+    } else {
+        writer.Double(1.0);
+    }
+    writer.String("truncation");
+    writer.String("disabled");
+    serializeNotSupportedNullField(writer, "user");
+    writer.String("metadata");
+    writer.StartObject();
+    writer.EndObject();
 
     if (request.maxTokens.has_value()) {
         writer.String("max_output_tokens");
@@ -287,7 +401,7 @@ std::string OpenAIChatCompletionsHandler::serializeResponsesUnaryResponse(const 
         writer.String("role");
         writer.String("assistant");
         writer.String("status");
-        writer.String("completed");
+        writer.String(responseStatus);
         writer.String("content");
         writer.StartArray();
         serializeResponsesPart(writer, parsedOutput.content);
@@ -302,15 +416,13 @@ std::string OpenAIChatCompletionsHandler::serializeResponsesUnaryResponse(const 
     writer.Uint64(static_cast<uint64_t>(usage.promptTokens));
     writer.String("input_tokens_details");
     writer.StartObject();
-    writer.String("cached_tokens");
-    writer.Uint64(0);
+    serializeNotSupportedZeroField(writer, "cached_tokens");
     writer.EndObject();
     writer.String("output_tokens");
     writer.Uint64(static_cast<uint64_t>(usage.completionTokens));
     writer.String("output_tokens_details");
     writer.StartObject();
-    writer.String("reasoning_tokens");
-    writer.Uint64(0);
+    serializeNotSupportedZeroField(writer, "reasoning_tokens");
     writer.EndObject();
     writer.String("total_tokens");
     writer.Uint64(static_cast<uint64_t>(usage.calculateTotalTokens()));
@@ -477,23 +589,15 @@ absl::Status OpenAIChatCompletionsHandler::parseResponsesInputDirectly(std::opti
         return absl::InvalidArgumentError("input missing in request");
     }
 
-    auto& allocator = doc.GetAllocator();
-    rapidjson::Value messages(rapidjson::kArrayType);
-
     if (inputIt->value.IsString()) {
         request.prompt = inputIt->value.GetString();
-        if (!request.prompt.has_value() || request.prompt.value().empty()) {
+        if (request.prompt.value().empty()) {
             return absl::InvalidArgumentError("input cannot be empty");
         }
 
         request.chatHistory.push_back({});
         request.chatHistory.last()["role"] = "user";
         request.chatHistory.last()["content"] = request.prompt.value();
-
-        rapidjson::Value messageObj(rapidjson::kObjectType);
-        messageObj.AddMember("role", "user", allocator);
-        messageObj.AddMember("content", rapidjson::Value(request.prompt->c_str(), allocator), allocator);
-        messages.PushBack(messageObj, allocator);
     } else if (inputIt->value.IsArray()) {
         if (inputIt->value.GetArray().Size() == 0) {
             return absl::InvalidArgumentError("Messages array cannot be empty");
@@ -514,18 +618,13 @@ absl::Status OpenAIChatCompletionsHandler::parseResponsesInputDirectly(std::opti
             request.chatHistory.push_back({});
             request.chatHistory.last()["role"] = roleIt->value.GetString();
 
-            rapidjson::Value messageObj(rapidjson::kObjectType);
-            messageObj.AddMember("role", rapidjson::Value(roleIt->value.GetString(), allocator), allocator);
-
             auto contentIt = itemObj.FindMember("content");
             if (contentIt == itemObj.MemberEnd()) {
                 return absl::InvalidArgumentError("input item content is missing");
             }
 
             if (contentIt->value.IsString()) {
-                messageObj.AddMember("content", rapidjson::Value(contentIt->value.GetString(), allocator), allocator);
                 request.chatHistory.last()["content"] = contentIt->value.GetString();
-                messages.PushBack(messageObj, allocator);
                 continue;
             }
 
@@ -635,26 +734,17 @@ absl::Status OpenAIChatCompletionsHandler::parseResponsesInputDirectly(std::opti
                     }
                     request.imageHistory.push_back({i, tensor});
                 } else {
-                    return absl::InvalidArgumentError("Unsupported content type");
+                    return absl::InvalidArgumentError("Unsupported content type. Supported types are input_text and input_image.");
                 }
             }
 
-            messageObj.AddMember("content", rapidjson::Value(contentText.c_str(), allocator), allocator);
             request.chatHistory.last()["content"] = contentText;
-            messages.PushBack(messageObj, allocator);
         }
     } else {
         return absl::InvalidArgumentError("input is not a string or array");
     }
 
-    auto existingMessages = doc.FindMember("messages");
-    if (existingMessages != doc.MemberEnd()) {
-        existingMessages->value = messages;
-    } else {
-        doc.AddMember("messages", messages, allocator);
-    }
-
-    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Parsed responses input directly to chat history");
+    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Parsed responses input directly to chat history without mutating request JSON");
     return absl::OkStatus();
 }
 
@@ -943,7 +1033,7 @@ absl::Status OpenAIChatCompletionsHandler::parseTools() {
                 parametersValue->Accept(writer);
                 std::string parametersStr = buffer.GetString();
                 ToolSchemaWrapper schemaReprs{parametersValue, std::move(parametersStr)};
-                request.toolNameSchemaMap[functionNameCStr] = std::move(schemaReprs);
+                request.toolNameSchemaMap[functionName] = std::move(schemaReprs);
             }
         }
     } else {
@@ -1007,6 +1097,22 @@ absl::StatusOr<std::optional<ov::genai::JsonContainer>> OpenAIChatCompletionsHan
 
 const bool OpenAIChatCompletionsHandler::areToolsAvailable() const {
     return !request.toolNameSchemaMap.empty();
+}
+
+const rapidjson::Value* OpenAIChatCompletionsHandler::getRawTools() const {
+    auto it = doc.FindMember("tools");
+    if (it == doc.MemberEnd() || it->value.IsNull()) {
+        return nullptr;
+    }
+    return &it->value;
+}
+
+const rapidjson::Value* OpenAIChatCompletionsHandler::getRawChatTemplateKwargs() const {
+    auto it = doc.FindMember("chat_template_kwargs");
+    if (it == doc.MemberEnd() || it->value.IsNull()) {
+        return nullptr;
+    }
+    return &it->value;
 }
 
 const OpenAIChatCompletionsRequest& OpenAIChatCompletionsHandler::getRequest() const {
@@ -1180,13 +1286,6 @@ absl::Status OpenAIChatCompletionsHandler::parseResponsesPart(std::optional<uint
             return absl::InvalidArgumentError("response_format is not an object");
         const rapidjson::Value& responseFormat = it->value;
         request.responseFormat = convertOpenAIResponseFormatToStructuralTagStringFormat(responseFormat);
-    }
-
-    {
-        StringBuffer buffer;
-        Writer<StringBuffer> writer(buffer);
-        doc.Accept(writer);
-        request.processedJson = buffer.GetString();
     }
 
     return absl::OkStatus();
@@ -1415,7 +1514,7 @@ absl::Status OpenAIChatCompletionsHandler::parseCommonPart(std::optional<uint32_
         if (it->value.GetUint() == 0)
             return absl::InvalidArgumentError("n value should be greater than 0");
         if (endpoint == Endpoint::RESPONSES && request.stream && it->value.GetUint() > 1)
-            return absl::InvalidArgumentError("n greater than 1 is not supported for responses streaming");
+            return absl::InvalidArgumentError("n greater than 1 is not supported for Responses API streaming");
         size_t bestOf = request.bestOf.has_value() ? request.bestOf.value() : 1;  // 1 is default best_of value
         if (bestOf < it->value.GetUint()) {
             return absl::InvalidArgumentError("n value cannot be greater than best_of");
@@ -1540,11 +1639,15 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const std::vect
     if (endpoint == Endpoint::RESPONSES) {
         std::vector<ParsedOutput> parsedOutputs;
         usage.completionTokens = 0;
+        ov::genai::GenerationFinishReason responsesFinishReason = ov::genai::GenerationFinishReason::STOP;
         for (const ov::genai::GenerationOutput& generationOutput : generationOutputs) {
             updateUsage(usage, generationOutput.generated_ids, request.echo);
             parsedOutputs.push_back(parseOutputIfNeeded(generationOutput.generated_ids));
+            if (generationOutput.finish_reason == ov::genai::GenerationFinishReason::LENGTH) {
+                responsesFinishReason = ov::genai::GenerationFinishReason::LENGTH;
+            }
         }
-        return serializeResponsesUnaryResponse(parsedOutputs);
+        return serializeResponsesUnaryResponse(parsedOutputs, responsesFinishReason);
     }
 
     OpenAiJsonResponse jsonResponse;
@@ -1675,7 +1778,6 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(ov::genai::Enco
     if (endpoint == Endpoint::RESPONSES) {
         std::vector<ParsedOutput> parsedOutputs;
         for (const auto& tokens : results.tokens) {
-            updateUsage(usage, tokens, request.echo);
             parsedOutputs.push_back(parseOutputIfNeeded(tokens));
         }
         return serializeResponsesUnaryResponse(parsedOutputs);
@@ -1836,6 +1938,75 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(ov::genai::VLMD
     return jsonResponse.ToString();
 }
 
+std::string OpenAIChatCompletionsHandler::serializeResponsesStreamingInitEvents() {
+    const auto createdAt = std::chrono::duration_cast<std::chrono::microseconds>(created.time_since_epoch()).count();
+    const std::string responseId = "resp-" + std::to_string(createdAt);
+    const std::string outputItemId = "msg-0";
+
+    std::vector<std::string> events;
+
+    events.emplace_back(serializeResponsesEvent([this, &responseId, createdAt](Writer<StringBuffer>& writer) {
+        writer.StartObject();
+        writer.String("type");
+        writer.String("response.created");
+        writer.String("sequence_number");
+        writer.Uint64(responsesStreamingSequenceNumber++);
+        writer.String("response");
+        serializeResponsesResponseObject(writer, responseId, createdAt, "in_progress", "", false);
+        writer.EndObject();
+    }));
+
+    events.emplace_back(serializeResponsesEvent([this, &responseId, createdAt](Writer<StringBuffer>& writer) {
+        writer.StartObject();
+        writer.String("type");
+        writer.String("response.in_progress");
+        writer.String("sequence_number");
+        writer.Uint64(responsesStreamingSequenceNumber++);
+        writer.String("response");
+        serializeResponsesResponseObject(writer, responseId, createdAt, "in_progress", "", false);
+        writer.EndObject();
+    }));
+
+    events.emplace_back(serializeResponsesEvent([this, &outputItemId](Writer<StringBuffer>& writer) {
+        writer.StartObject();
+        writer.String("type");
+        writer.String("response.output_item.added");
+        writer.String("sequence_number");
+        writer.Uint64(responsesStreamingSequenceNumber++);
+        writer.String("output_index");
+        writer.Uint64(0); 
+        writer.String("item");
+        serializeResponsesOutputItem(writer, outputItemId, "", "in_progress", false);
+        writer.EndObject();
+    }));
+
+    events.emplace_back(serializeResponsesEvent([this, &outputItemId](Writer<StringBuffer>& writer) {
+        writer.StartObject();
+        writer.String("type");
+        writer.String("response.content_part.added");
+        writer.String("sequence_number");
+        writer.Uint64(responsesStreamingSequenceNumber++);
+        writer.String("output_index");
+        writer.Uint64(0); 
+        writer.String("content_index");
+        writer.Uint64(0);
+        writer.String("item_id");
+        writer.String(outputItemId.c_str());
+        writer.String("part");
+        serializeResponsesPart(writer, "");
+        writer.EndObject();
+    }));
+
+    responsesStreamingInitialized = true;
+
+    std::stringstream ss;
+    ss << events.front();
+    for (size_t i = 1; i < events.size(); ++i) {
+        ss << "\n\ndata: " << events[i];
+    }
+    return ss.str();
+}
+
 std::string OpenAIChatCompletionsHandler::serializeStreamingChunk(const std::string& chunkResponse, ov::genai::GenerationFinishReason finishReason) {
     OVMS_PROFILE_FUNCTION();
     if (endpoint == Endpoint::RESPONSES) {
@@ -1845,59 +2016,11 @@ std::string OpenAIChatCompletionsHandler::serializeStreamingChunk(const std::str
 
         std::vector<std::string> events;
         if (!responsesStreamingInitialized) {
-            events.emplace_back(serializeResponsesEvent([this, &responseId, createdAt](Writer<StringBuffer>& writer) {
-                writer.StartObject();
-                writer.String("type");
-                writer.String("response.created");
-                writer.String("sequence_number");
-                writer.Uint64(responsesStreamingSequenceNumber++);
-                writer.String("response");
-                serializeResponsesResponseObject(writer, responseId, createdAt, "in_progress", "", false);
-                writer.EndObject();
-            }));
-
-            events.emplace_back(serializeResponsesEvent([this, &responseId, createdAt](Writer<StringBuffer>& writer) {
-                writer.StartObject();
-                writer.String("type");
-                writer.String("response.in_progress");
-                writer.String("sequence_number");
-                writer.Uint64(responsesStreamingSequenceNumber++);
-                writer.String("response");
-                serializeResponsesResponseObject(writer, responseId, createdAt, "in_progress", "", false);
-                writer.EndObject();
-            }));
-
-            events.emplace_back(serializeResponsesEvent([this, &outputItemId](Writer<StringBuffer>& writer) {
-                writer.StartObject();
-                writer.String("type");
-                writer.String("response.output_item.added");
-                writer.String("sequence_number");
-                writer.Uint64(responsesStreamingSequenceNumber++);
-                writer.String("output_index");
-                writer.Uint64(0);
-                writer.String("item");
-                serializeResponsesOutputItem(writer, outputItemId, "", "in_progress", false);
-                writer.EndObject();
-            }));
-
-            events.emplace_back(serializeResponsesEvent([this, &outputItemId](Writer<StringBuffer>& writer) {
-                writer.StartObject();
-                writer.String("type");
-                writer.String("response.content_part.added");
-                writer.String("sequence_number");
-                writer.Uint64(responsesStreamingSequenceNumber++);
-                writer.String("output_index");
-                writer.Uint64(0);
-                writer.String("content_index");
-                writer.Uint64(0);
-                writer.String("item_id");
-                writer.String(outputItemId.c_str());
-                writer.String("part");
-                serializeResponsesPart(writer, "");
-                writer.EndObject();
-            }));
-
-            responsesStreamingInitialized = true;
+            // Fallback: if init events were not sent earlier, emit them now
+            std::string initEvents = serializeResponsesStreamingInitEvents();
+            if (!initEvents.empty()) {
+                events.emplace_back(std::move(initEvents));
+            }
         }
 
         if (!chunkResponse.empty()) {
@@ -1916,9 +2039,7 @@ std::string OpenAIChatCompletionsHandler::serializeStreamingChunk(const std::str
                 writer.String(outputItemId.c_str());
                 writer.String("delta");
                 writer.String(chunkResponse.c_str());
-                writer.String("logprobs");
-                writer.StartArray();
-                writer.EndArray();
+                serializeNotSupportedEmptyArrayField(writer, "logprobs");
                 writer.EndObject();
             }));
         }
@@ -1938,9 +2059,7 @@ std::string OpenAIChatCompletionsHandler::serializeStreamingChunk(const std::str
                 writer.String(outputItemId.c_str());
                 writer.String("text");
                 writer.String(responsesStreamingOutputText.c_str());
-                writer.String("logprobs");
-                writer.StartArray();
-                writer.EndArray();
+                serializeNotSupportedEmptyArrayField(writer, "logprobs");
                 writer.EndObject();
             }));
 
@@ -1961,7 +2080,8 @@ std::string OpenAIChatCompletionsHandler::serializeStreamingChunk(const std::str
                 writer.EndObject();
             }));
 
-            events.emplace_back(serializeResponsesEvent([this, &outputItemId](Writer<StringBuffer>& writer) {
+            events.emplace_back(serializeResponsesEvent([this, &outputItemId, finishReason](Writer<StringBuffer>& writer) {
+                const char* itemStatus = (finishReason == ov::genai::GenerationFinishReason::LENGTH) ? "incomplete" : "completed";
                 writer.StartObject();
                 writer.String("type");
                 writer.String("response.output_item.done");
@@ -1970,18 +2090,22 @@ std::string OpenAIChatCompletionsHandler::serializeStreamingChunk(const std::str
                 writer.String("output_index");
                 writer.Uint64(0);
                 writer.String("item");
-                serializeResponsesOutputItem(writer, outputItemId, responsesStreamingOutputText, "completed", true);
+                serializeResponsesOutputItem(writer, outputItemId, responsesStreamingOutputText, itemStatus, true);
                 writer.EndObject();
             }));
 
-            events.emplace_back(serializeResponsesEvent([this, &responseId, createdAt](Writer<StringBuffer>& writer) {
+            events.emplace_back(serializeResponsesEvent([this, &responseId, createdAt, finishReason](Writer<StringBuffer>& writer) {
+                const bool isIncomplete = (finishReason == ov::genai::GenerationFinishReason::LENGTH);
+                const char* responseStatus = isIncomplete ? "incomplete" : "completed";
+                const char* eventType = isIncomplete ? "response.incomplete" : "response.completed";
+                const char* incompleteReason = isIncomplete ? "max_tokens" : nullptr;
                 writer.StartObject();
                 writer.String("type");
-                writer.String("response.completed");
+                writer.String(eventType);
                 writer.String("sequence_number");
                 writer.Uint64(responsesStreamingSequenceNumber++);
                 writer.String("response");
-                serializeResponsesResponseObject(writer, responseId, createdAt, "completed", responsesStreamingOutputText, true);
+                serializeResponsesResponseObject(writer, responseId, createdAt, responseStatus, responsesStreamingOutputText, true, incompleteReason);
                 writer.EndObject();
             }));
         }
@@ -2090,6 +2214,38 @@ std::string OpenAIChatCompletionsHandler::serializeStreamingChunk(const std::str
     return buffer.GetString();
 }
 
+std::string OpenAIChatCompletionsHandler::serializeResponsesFailedEvent(const std::string& errorMessage, const char* errorCode) {
+    const auto createdAt = std::chrono::duration_cast<std::chrono::microseconds>(created.time_since_epoch()).count();
+    const std::string responseId = "resp-" + std::to_string(createdAt);
+
+    std::vector<std::string> events;
+    if (!responsesStreamingInitialized) {
+        std::string initEvents = serializeResponsesStreamingInitEvents();
+        if (!initEvents.empty()) {
+            events.emplace_back(std::move(initEvents));
+        }
+    }
+
+    events.emplace_back(serializeResponsesEvent([this, &responseId, createdAt, &errorMessage, errorCode](Writer<StringBuffer>& writer) {
+        writer.StartObject();
+        writer.String("type");
+        writer.String("response.failed");
+        writer.String("sequence_number");
+        writer.Uint64(responsesStreamingSequenceNumber++);
+        writer.String("response");
+        serializeResponsesResponseObject(writer, responseId, createdAt, "failed", responsesStreamingOutputText, false,
+            nullptr, errorMessage.c_str(), errorCode);
+        writer.EndObject();
+    }));
+
+    std::stringstream ss;
+    ss << events.front();
+    for (size_t i = 1; i < events.size(); ++i) {
+        ss << "\n\ndata: " << events[i];
+    }
+    return ss.str();
+}
+
 std::string OpenAIChatCompletionsHandler::serializeStreamingUsageChunk() {
     OVMS_PROFILE_FUNCTION();
     if (endpoint == Endpoint::RESPONSES) {
@@ -2106,7 +2262,7 @@ std::string OpenAIChatCompletionsHandler::serializeStreamingUsageChunk() {
 
     // created: integer; Unix timestamp (in seconds) when the MP graph was created.
     writer.String("created");
-    writer.Int(std::chrono::duration_cast<std::chrono::seconds>(created.time_since_epoch()).count());
+    writer.Int64(std::chrono::duration_cast<std::chrono::seconds>(created.time_since_epoch()).count());
 
     // model: string; copied from the request
     writer.String("model");
@@ -2124,11 +2280,11 @@ std::string OpenAIChatCompletionsHandler::serializeStreamingUsageChunk() {
     writer.String("usage");
     writer.StartObject();  // {
     writer.String("prompt_tokens");
-    writer.Int(usage.promptTokens);
+    writer.Uint64(static_cast<uint64_t>(usage.promptTokens));
     writer.String("completion_tokens");
-    writer.Int(usage.completionTokens);
+    writer.Uint64(static_cast<uint64_t>(usage.completionTokens));
     writer.String("total_tokens");
-    writer.Int(usage.calculateTotalTokens());
+    writer.Uint64(static_cast<uint64_t>(usage.calculateTotalTokens()));
     writer.EndObject();  // }
 
     writer.EndObject();  // }

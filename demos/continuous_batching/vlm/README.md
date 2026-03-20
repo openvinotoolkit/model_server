@@ -119,11 +119,31 @@ curl http://localhost:8000/v3/chat/completions  -H "Content-Type: application/js
 ```
 :::
 
-:::{dropdown} **Unary call with curl using responses endpoint**
-**Note**: using urls in request requires `--allowed_media_domains` parameter described [here](../../../docs/parameters.md)
+:::{dropdown} **Unary call with cURL using Responses API**
+**Note**: Using urls in request requires `--allowed_media_domains` parameter described [here](../../../docs/parameters.md)
 
 ```bash
-curl http://localhost:8000/v3/responses  -H "Content-Type: application/json" -d "{ \"model\": \"OpenGVLab/InternVL2-2B\", \"input\":[{\"role\": \"user\", \"content\": [{\"type\": \"input_text\", \"text\": \"Describe what is on the picture.\"},{\"type\": \"input_image\", \"image_url\": \"http://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/demos/common/static/images/zebra.jpeg\"}]}], \"max_output_tokens\": 100}"
+curl http://localhost:8000/v3/responses \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "OpenGVLab/InternVL2-2B",
+    "input": [
+      {
+        "role": "user",
+        "content": [
+          {
+            "type": "input_text",
+            "text": "Describe what is on the picture."
+          },
+          {
+            "type": "input_image",
+            "image_url": "http://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/demos/common/static/images/zebra.jpeg"
+          }
+        ]
+      }
+    ],
+    "max_output_tokens": 100
+  }'
 ```
 ```json
 {
@@ -262,7 +282,7 @@ The picture features a zebra standing in a grassy area. The zebra is characteriz
 
 :::
 
-:::{dropdown} **Streaming request with OpenAI client using responses endpoint**
+:::{dropdown} **Streaming request with OpenAI client via Responses API**
 
 ```console
 pip3 install openai
@@ -304,37 +324,6 @@ The picture features a zebra standing in a grassy area. The zebra is characteriz
 ```
 
 :::
-
-## Benchmarking text generation with high concurrency
-
-OpenVINO Model Server employs efficient parallelization for text generation. It can be used to generate text also in high concurrency in the environment shared by multiple clients.
-It can be demonstrated using benchmarking app from vLLM repository:
-```console
-git clone --branch v0.7.3 --depth 1 https://github.com/vllm-project/vllm
-cd vllm
-pip3 install -r requirements-cpu.txt --extra-index-url https://download.pytorch.org/whl/cpu
-cd benchmarks
-python benchmark_serving.py --backend openai-chat --dataset-name hf --dataset-path lmarena-ai/vision-arena-bench-v0.1 --hf-split train --host localhost --port 8000 --model OpenGVLab/InternVL2-2B --endpoint /v3/chat/completions --max-concurrency 1 --num-prompts 100 --trust-remote-code
-
-Burstiness factor: 1.0 (Poisson process)
-Maximum request concurrency: None
-============ Serving Benchmark Result ============
-Successful requests:                     100       
-Benchmark duration (s):                  287.81    
-Total input tokens:                      15381     
-Total generated tokens:                  20109     
-Request throughput (req/s):              0.35       
-Output token throughput (tok/s):         69.87     
-Total Token throughput (tok/s):          123.31    
----------------Time to First Token----------------
-Mean TTFT (ms):                          1513.96   
-Median TTFT (ms):                        1368.93   
-P99 TTFT (ms):                           2647.45   
------Time per Output Token (excl. 1st token)------
-Mean TPOT (ms):                          6.68      
-Median TPOT (ms):                        6.68      
-P99 TPOT (ms):                           8.02      
-```
 
 ## Testing the model accuracy over serving API
 
