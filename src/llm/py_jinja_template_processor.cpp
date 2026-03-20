@@ -92,14 +92,22 @@ bool PyJinjaTemplateProcessor::applyChatTemplate(PyJinjaTemplateProcessor& templ
 }
 
 static py::object rapidJsonValueToPyObject(const rapidjson::Value& value) {
-    if (value.IsNull()) return py::none();
-    if (value.IsBool()) return py::bool_(value.GetBool());
-    if (value.IsInt()) return py::int_(value.GetInt());
-    if (value.IsUint()) return py::int_(value.GetUint());
-    if (value.IsInt64()) return py::int_(value.GetInt64());
-    if (value.IsUint64()) return py::int_(value.GetUint64());
-    if (value.IsDouble()) return py::float_(value.GetDouble());
-    if (value.IsString()) return py::str(value.GetString());
+    if (value.IsNull())
+        return py::none();
+    if (value.IsBool())
+        return py::bool_(value.GetBool());
+    if (value.IsInt())
+        return py::int_(value.GetInt());
+    if (value.IsUint())
+        return py::int_(value.GetUint());
+    if (value.IsInt64())
+        return py::int_(value.GetInt64());
+    if (value.IsUint64())
+        return py::int_(value.GetUint64());
+    if (value.IsDouble())
+        return py::float_(value.GetDouble());
+    if (value.IsString())
+        return py::str(value.GetString());
     if (value.IsArray()) {
         py::list list;
         for (const auto& item : value.GetArray()) {
