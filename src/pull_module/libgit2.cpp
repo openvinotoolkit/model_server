@@ -279,6 +279,8 @@ Status HfDownloader::CheckRepositoryStatus(bool checkUntracked) {
     const size_t n = git_status_list_entrycount(status_list);  // iterate entries
     for (size_t i = 0; i < n; ++i) {
         const git_status_entry* e = git_status_byindex(status_list, i);
+        if (!e)
+            continue;
         unsigned s = e->status;
 
         // Staged (index) changes
