@@ -34,16 +34,16 @@ void Lfm2ToolParser::writeArgumentOfAnyType(const rapidjson::Value& arg, rapidjs
             writeArgumentOfAnyType(elem, writer);
         }
         writer.EndArray();
-     if (arg.IsObject()) {
+    } else if (arg.IsObject() || arg.Get) {
         writer.StartObject();
         for (auto it = arg.MemberBegin(); it != arg.MemberEnd(); ++it) {
             writer.Key(it->name.GetString());
             writeArgumentOfAnyType(it->value, writer);
         }
-        writer.EndObject();
-        } else {
+        writer.EndObject();1`
+    } else {
         SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Argument has unsupported type.");
-        }
+    }
 }
 
 void Lfm2ToolParser::writeArgumentOfAnyType(const char* arg, rapidjson::Writer<rapidjson::StringBuffer>& writer) {
@@ -51,33 +51,6 @@ void Lfm2ToolParser::writeArgumentOfAnyType(const char* arg, rapidjson::Writer<r
     doc.Parse(arg);
     rapidjson::Value& argumentDoc = doc;
     writeArgumentOfAnyType(argumentDoc, writer);
-    // if (argumentDoc.IsString()) {
-    //     writer.String(argumentDoc.GetString());
-    // } else if (argumentDoc.IsInt64()) {
-    //     writer.Int64(argumentDoc.GetInt64());
-    // } else if (argumentDoc.IsDouble()) {
-    //     writer.Double(argumentDoc.GetDouble());
-    // } else if (argumentDoc.IsBool()) {
-    //     writer.Bool(argumentDoc.GetBool());
-    // } else if (argumentDoc.IsArray()) {
-    //     writer.StartArray();
-    //     for (auto& elem : argumentDoc.GetArray()) {
-
-    //         writeArgumentOfAnyType(rawVal, writer);
-    //     }
-    //     writer.EndArray();
-    // } else if (argumentDoc.IsObject()) {
-    //     writer.StartObject();
-    //     for (auto it = argumentDoc.MemberBegin(); it != argumentDoc.MemberEnd(); ++it) {
-    //         writer.Key(it->name.GetString());
-    //         const char* rawVal = getRapidjsonRawValue(it->value);
-    //         writeArgumentOfAnyType(rawVal, writer);
-    //     }
-    //     writer.EndObject();
-    // } else {
-    //     SPDLOG_LOGGER_INFO(llm_calculator_logger, "Argument {} has unsupported type, treating value as string", arg);
-    //     writer.String(arg);
-    // }
 }
 
 Lfm2ToolParser::Argument Lfm2ToolParser::parseSingleArgument(const std::string& argumentStr){
