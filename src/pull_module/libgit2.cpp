@@ -341,153 +341,153 @@ Status HfDownloader::CheckRepositoryStatus(bool checkUntracked) {
     } while (0)
 
 namespace libgit2 {
-    // Trim ASCII leading/trailing whitespace in a locale-independent way.
-    // This keeps non-ASCII bytes (e.g. UTF-8 continuation bytes) untouched.
-    void rtrimCrLfWhitespace(std::string& s) {
-        auto isAsciiWhitespace = [](unsigned char c) {
-            return c == ' ' || c == '\t' || c == '\n' || c == '\v' || c == '\f' || c == '\r';
-        };
+// Trim ASCII leading/trailing whitespace in a locale-independent way.
+// This keeps non-ASCII bytes (e.g. UTF-8 continuation bytes) untouched.
+void rtrimCrLfWhitespace(std::string& s) {
+    auto isAsciiWhitespace = [](unsigned char c) {
+        return c == ' ' || c == '\t' || c == '\n' || c == '\v' || c == '\f' || c == '\r';
+    };
 
-        while (!s.empty() && isAsciiWhitespace(static_cast<unsigned char>(s.back())))
-            s.pop_back();  // trailing ws
-        size_t i = 0;
-        while (i < s.size() && isAsciiWhitespace(static_cast<unsigned char>(s[i])))
-            ++i;  // leading ws
-        if (i > 0)
-            s.erase(0, i);
-    }
+    while (!s.empty() && isAsciiWhitespace(static_cast<unsigned char>(s.back())))
+        s.pop_back();  // trailing ws
+    size_t i = 0;
+    while (i < s.size() && isAsciiWhitespace(static_cast<unsigned char>(s[i])))
+        ++i;  // leading ws
+    if (i > 0)
+        s.erase(0, i);
+}
 
-    // Case-insensitive substring search: returns true if 'needle' is found in 'hay'
-    bool containsCaseInsensitive(const std::string& hay, const std::string& needle) {
-        auto toLower = [](std::string v) {
-            std::transform(v.begin(), v.end(), v.begin(),
-                [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
-            return v;
-        };
-        std::string hayLower = toLower(hay);
-        std::string needleLower = toLower(needle);
-        return hayLower.find(needleLower) != std::string::npos;
-    }
+// Case-insensitive substring search: returns true if 'needle' is found in 'hay'
+bool containsCaseInsensitive(const std::string& hay, const std::string& needle) {
+    auto toLower = [](std::string v) {
+        std::transform(v.begin(), v.end(), v.begin(),
+            [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+        return v;
+    };
+    std::string hayLower = toLower(hay);
+    std::string needleLower = toLower(needle);
+    return hayLower.find(needleLower) != std::string::npos;
+}
 
-    // Read at most the first 3 lines of a file, with a per-line cap to avoid huge reads.
-    // Returns true if successful (even if <3 lines exist; vector will just be shorter).
+// Read at most the first 3 lines of a file, with a per-line cap to avoid huge reads.
+// Returns true if successful (even if <3 lines exist; vector will just be shorter).
 
-    bool readFirstThreeLines(const std::filesystem::path& p, std::vector<std::string>& out) {
-        out.clear();
+bool readFirstThreeLines(const std::filesystem::path& p, std::vector<std::string>& out) {
+    out.clear();
 
-        std::ifstream in(p, std::ios::binary);
-        if (!in)
-            return false;
+    std::ifstream in(p, std::ios::binary);
+    if (!in)
+        return false;
 
-        std::string line;
-        line.reserve(256);  // small optimization
-        int c;
+    std::string line;
+    line.reserve(256);  // small optimization
+    int c;
 
-        while (out.size() < 3 && (c = in.get()) != EOF) {
-            if (c == '\r') {
-                // Handle CR or CRLF as one line ending
-                int next = in.peek();
-                if (next == '\n') {
-                    in.get();  // consume '\n'
-                }
-                // finalize current line
-                rtrimCrLfWhitespace(line);
-                out.push_back(std::move(line));
-                line.clear();
-            } else if (c == '\n') {
-                // LF line ending
-                rtrimCrLfWhitespace(line);
-                out.push_back(std::move(line));
-                line.clear();
-            } else {
-                line.push_back(static_cast<char>(c));
+    while (out.size() < 3 && (c = in.get()) != EOF) {
+        if (c == '\r') {
+            // Handle CR or CRLF as one line ending
+            int next = in.peek();
+            if (next == '\n') {
+                in.get();  // consume '\n'
             }
-        }
-
-        // Handle the last line if file did not end with EOL
-        if (!line.empty() && out.size() < 3) {
+            // finalize current line
             rtrimCrLfWhitespace(line);
             out.push_back(std::move(line));
-        }
-
-        return true;
-    }
-
-    // Check if the first 3 lines contain required keywords in positional order:
-    // line1 -> "version", line2 -> "oid", line3 -> "size" (case-insensitive).
-    bool fileHasLfsKeywordsFirst3Positional(const fs::path& p) {
-        std::error_code ec;
-        if (!fs::is_regular_file(p, ec))
-            return false;
-
-        std::vector<std::string> lines;
-        if (!readFirstThreeLines(p, lines))
-            return false;
-
-        if (lines.size() < 3)
-            return false;
-
-        return containsCaseInsensitive(lines[0], "version") &&
-            containsCaseInsensitive(lines[1], "oid") &&
-            containsCaseInsensitive(lines[2], "size");
-    }
-
-    // Helper: make path relative to base (best-effort, non-throwing).
-    fs::path makeRelativeToBase(const fs::path& path, const fs::path& base) {
-        // Root-like paths (e.g. "/" or "C:\\") have no filename component.
-        // Keep them unchanged instead of converting to a cwd/base-dependent ".." chain.
-        if (!path.has_filename())
-            return path;
-
-        std::error_code ec;
-        // Try fs::relative first (handles canonical comparisons, may fail if on different roots)
-        fs::path rel = fs::relative(path, base, ec);
-        if (!ec && !rel.empty())
-            return rel;
-
-        // Fallback: purely lexical relative (doesn't access filesystem)
-        rel = path.lexically_relative(base);
-        if (!rel.empty())
-            return rel;
-
-        // Last resort: return filename only (better than absolute when nothing else works)
-        if (path.has_filename())
-            return path.filename();
-        return path;
-    }
-
-    // Find all files under 'directory' that satisfy the first-3-lines LFS keyword check. Default:  bool recursive = true
-    std::vector<fs::path> findLfsLikeFiles(const std::string& directory, bool recursive) {
-        std::vector<fs::path> matches;
-        std::error_code ec;
-
-        if (!fs::exists(directory, ec) || !fs::is_directory(directory, ec)) {
-            return matches;
-        }
-
-        if (recursive) {
-            for (fs::recursive_directory_iterator it(directory, ec), end; !ec && it != end; ++it) {
-                const auto& p = it->path();
-                std::error_code dirEc;
-                if (it->is_directory(dirEc) && !dirEc && p.filename() == ".git") {
-                    it.disable_recursion_pending();
-                    continue;
-                }
-                if (fileHasLfsKeywordsFirst3Positional(p)) {
-                    matches.push_back(makeRelativeToBase(p, directory));
-                }
-            }
+            line.clear();
+        } else if (c == '\n') {
+            // LF line ending
+            rtrimCrLfWhitespace(line);
+            out.push_back(std::move(line));
+            line.clear();
         } else {
-            for (fs::directory_iterator it(directory, ec), end; !ec && it != end; ++it) {
-                const auto& p = it->path();
-                if (fileHasLfsKeywordsFirst3Positional(p)) {
-                    matches.push_back(makeRelativeToBase(p, directory));
-                }
-            }
+            line.push_back(static_cast<char>(c));
         }
+    }
+
+    // Handle the last line if file did not end with EOL
+    if (!line.empty() && out.size() < 3) {
+        rtrimCrLfWhitespace(line);
+        out.push_back(std::move(line));
+    }
+
+    return true;
+}
+
+// Check if the first 3 lines contain required keywords in positional order:
+// line1 -> "version", line2 -> "oid", line3 -> "size" (case-insensitive).
+bool fileHasLfsKeywordsFirst3Positional(const fs::path& p) {
+    std::error_code ec;
+    if (!fs::is_regular_file(p, ec))
+        return false;
+
+    std::vector<std::string> lines;
+    if (!readFirstThreeLines(p, lines))
+        return false;
+
+    if (lines.size() < 3)
+        return false;
+
+    return containsCaseInsensitive(lines[0], "version") &&
+           containsCaseInsensitive(lines[1], "oid") &&
+           containsCaseInsensitive(lines[2], "size");
+}
+
+// Helper: make path relative to base (best-effort, non-throwing).
+fs::path makeRelativeToBase(const fs::path& path, const fs::path& base) {
+    // Root-like paths (e.g. "/" or "C:\\") have no filename component.
+    // Keep them unchanged instead of converting to a cwd/base-dependent ".." chain.
+    if (!path.has_filename())
+        return path;
+
+    std::error_code ec;
+    // Try fs::relative first (handles canonical comparisons, may fail if on different roots)
+    fs::path rel = fs::relative(path, base, ec);
+    if (!ec && !rel.empty())
+        return rel;
+
+    // Fallback: purely lexical relative (doesn't access filesystem)
+    rel = path.lexically_relative(base);
+    if (!rel.empty())
+        return rel;
+
+    // Last resort: return filename only (better than absolute when nothing else works)
+    if (path.has_filename())
+        return path.filename();
+    return path;
+}
+
+// Find all files under 'directory' that satisfy the first-3-lines LFS keyword check. Default:  bool recursive = true
+std::vector<fs::path> findLfsLikeFiles(const std::string& directory, bool recursive) {
+    std::vector<fs::path> matches;
+    std::error_code ec;
+
+    if (!fs::exists(directory, ec) || !fs::is_directory(directory, ec)) {
         return matches;
     }
-} // namespace libgit2
+
+    if (recursive) {
+        for (fs::recursive_directory_iterator it(directory, ec), end; !ec && it != end; ++it) {
+            const auto& p = it->path();
+            std::error_code dirEc;
+            if (it->is_directory(dirEc) && !dirEc && p.filename() == ".git") {
+                it.disable_recursion_pending();
+                continue;
+            }
+            if (fileHasLfsKeywordsFirst3Positional(p)) {
+                matches.push_back(makeRelativeToBase(p, directory));
+            }
+        }
+    } else {
+        for (fs::directory_iterator it(directory, ec), end; !ec && it != end; ++it) {
+            const auto& p = it->path();
+            if (fileHasLfsKeywordsFirst3Positional(p)) {
+                matches.push_back(makeRelativeToBase(p, directory));
+            }
+        }
+    }
+    return matches;
+}
+}  // namespace libgit2
 
 // pick the right entry pointer type for your libgit2
 #if defined(GIT_LIBGIT2_VER_MAJOR)

@@ -2829,7 +2829,7 @@ cc_library(
         ],
     srcs = [
         "test/c_api_test_utils.cpp",
-        "test/test_file_utils.hpp",
+        "test/test_file_utils.cpp",
         "test/test_utils.cpp",
         ],
     deps = [

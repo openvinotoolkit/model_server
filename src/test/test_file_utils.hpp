@@ -31,11 +31,11 @@ fs::path writeFile(const fs::path& dir, const std::string& name, const std::stri
 fs::path writeTempFile(const std::string& filename,
     const std::string& content);
 
-static void mkdirs(const fs::path& p) {};
+void mkdirs(const fs::path& p);
 
 // A simple RAII for a temp directory
 class TempDir {
-    public:
+public:
     fs::path dir;
     TempDir();
     ~TempDir();
