@@ -441,7 +441,7 @@ std::variant<absl::Status, ov::AnyMap> getImageEditRequestOptions(const ovms::Mu
     // prompt REQUIRED
     // image string (REQUIRED) or array (NOT SUPPORTED)
     // background  REJECTED string NO optional default=auto
-    // mask file NO
+    // mask file DONE
     // model string NO optional default=dall-e-2
     // n optional default=1   ----> num_images_per_prompt
     // output_compression REJECTED  int NO optional default=100
@@ -527,6 +527,7 @@ std::variant<absl::Status, ov::AnyMap> getImageEditRequestOptions(const ovms::Mu
     static std::set<std::string> acceptedFields{
         "prompt", "prompt_2", "prompt_3",
         "image",
+        "mask",
         "negative_prompt", "negative_prompt_2", "negative_prompt_3",
         "size", "height", "width",
         "n", "num_images_per_prompt",
