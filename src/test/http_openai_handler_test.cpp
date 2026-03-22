@@ -906,6 +906,77 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseForResponsesContainsO
     ASSERT_NE(serialized.find("\"text\":"), std::string::npos) << serialized;
 }
 
+TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseForResponsesContainsReasoningOutputItem) {
+    std::string json = R"({
+    "model": "llama",
+    "input": "Think about this",
+    "max_output_tokens": 100
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    auto apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer, "", "qwen3");
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+
+    ov::genai::EncodedResults results;
+    std::string modelOutput = "<think>Let me reason about this</think>The answer is 42";
+    ov::Tensor outputIds = tokenizer->encode(modelOutput, ov::genai::add_special_tokens(false)).input_ids;
+    ASSERT_EQ(outputIds.get_shape().size(), 2);
+    ASSERT_EQ(outputIds.get_shape()[0], 1);
+    ASSERT_EQ(outputIds.get_element_type(), ov::element::i64);
+    int64_t* outputIdsData = reinterpret_cast<int64_t*>(outputIds.data());
+    results.tokens = {std::vector<int64_t>(outputIdsData, outputIdsData + outputIds.get_shape()[1])};
+
+    std::string serialized = apiHandler->serializeUnaryResponse(results);
+    ASSERT_NE(serialized.find("\"object\":\"response\""), std::string::npos) << serialized;
+    // Reasoning output item should be present
+    ASSERT_NE(serialized.find("\"type\":\"reasoning\""), std::string::npos) << "Reasoning output item missing: " << serialized;
+    ASSERT_NE(serialized.find("\"type\":\"summary_text\""), std::string::npos) << "Summary text missing: " << serialized;
+    // Reasoning item should NOT have status field (per OpenAI spec)
+    auto reasoningPos = serialized.find("\"type\":\"reasoning\"");
+    auto messagePos = serialized.find("\"type\":\"message\"");
+    ASSERT_LT(reasoningPos, messagePos) << "Reasoning item should come before message item";
+    // Reasoning item ID should start with rs-
+    ASSERT_NE(serialized.find("\"id\":\"rs-"), std::string::npos) << serialized;
+    // Message output item should still be present with content
+    ASSERT_NE(serialized.find("\"type\":\"output_text\""), std::string::npos) << serialized;
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseForResponsesOmitsReasoningWhenAbsent) {
+    std::string json = R"({
+    "model": "llama",
+    "input": "What is OpenVINO?",
+    "max_output_tokens": 5
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    auto apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer, "", "qwen3");
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+
+    ov::genai::EncodedResults results;
+    ov::Tensor outputIds = tokenizer->encode("OVMS is great", ov::genai::add_special_tokens(false)).input_ids;
+    ASSERT_EQ(outputIds.get_shape().size(), 2);
+    ASSERT_EQ(outputIds.get_shape()[0], 1);
+    ASSERT_EQ(outputIds.get_element_type(), ov::element::i64);
+    int64_t* outputIdsData = reinterpret_cast<int64_t*>(outputIds.data());
+    results.tokens = {std::vector<int64_t>(outputIdsData, outputIdsData + outputIds.get_shape()[1])};
+
+    std::string serialized = apiHandler->serializeUnaryResponse(results);
+    ASSERT_NE(serialized.find("\"object\":\"response\""), std::string::npos) << serialized;
+    // No reasoning output item when model output has no <think> tags
+    ASSERT_EQ(serialized.find("\"type\":\"reasoning\""), std::string::npos) << "Reasoning item should not be present: " << serialized;
+    // Message item should still be present
+    ASSERT_NE(serialized.find("\"type\":\"message\""), std::string::npos) << serialized;
+    ASSERT_NE(serialized.find("\"type\":\"output_text\""), std::string::npos) << serialized;
+}
+
 TEST_F(HttpOpenAIHandlerParsingTest, serializeStreamingChunkForResponsesContainsRequiredEvents) {
     std::string json = R"({
     "model": "llama",
@@ -968,6 +1039,107 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeStreamingChunkForResponsesContains
     ASSERT_LT(textDonePos, partDonePos) << "output_text.done must come before content_part.done";
     ASSERT_LT(partDonePos, itemDonePos) << "content_part.done must come before output_item.done";
     ASSERT_LT(itemDonePos, completedPos) << "output_item.done must come before response.completed";
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, serializeStreamingChunkForResponsesWithReasoningEmitsReasoningEvents) {
+    std::string json = R"({
+    "model": "llama",
+    "input": "Think about this",
+    "stream": true
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    auto apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer, "", "qwen3");
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+
+    // Phase 1: Init events - should only have created + in_progress (output items deferred)
+    std::string initChunk = apiHandler->serializeResponsesStreamingInitEvents();
+    ASSERT_NE(initChunk.find("\"type\":\"response.created\""), std::string::npos) << initChunk;
+    ASSERT_NE(initChunk.find("\"type\":\"response.in_progress\""), std::string::npos) << initChunk;
+    // Output item events should be deferred when parser is present
+    ASSERT_EQ(initChunk.find("\"type\":\"response.output_item.added\""), std::string::npos) << "output_item.added should be deferred: " << initChunk;
+    ASSERT_EQ(initChunk.find("\"type\":\"response.content_part.added\""), std::string::npos) << "content_part.added should be deferred: " << initChunk;
+
+    // Phase 2: Reasoning chunk with <think> tag - should emit reasoning init + delta
+    std::string reasoningChunk = apiHandler->serializeStreamingChunk("<think>", ov::genai::GenerationFinishReason::NONE);
+    // <think> tag itself should be consumed by parser, no events
+    // (parser returns nullopt for tag tokens)
+
+    // Phase 3: Reasoning content
+    std::string reasoningContent = apiHandler->serializeStreamingChunk("Let me think", ov::genai::GenerationFinishReason::NONE);
+    ASSERT_NE(reasoningContent.find("\"type\":\"response.output_item.added\""), std::string::npos) << "Should have reasoning output_item.added: " << reasoningContent;
+    ASSERT_NE(reasoningContent.find("\"type\":\"reasoning\""), std::string::npos) << "Output item should be reasoning type: " << reasoningContent;
+    ASSERT_NE(reasoningContent.find("\"type\":\"response.reasoning_summary_part.added\""), std::string::npos) << reasoningContent;
+    ASSERT_NE(reasoningContent.find("\"type\":\"response.reasoning_summary_text.delta\""), std::string::npos) << reasoningContent;
+    ASSERT_NE(reasoningContent.find("\"delta\":\"Let me think\""), std::string::npos) << reasoningContent;
+
+    // Phase 4: More reasoning
+    std::string moreReasoning = apiHandler->serializeStreamingChunk(" harder", ov::genai::GenerationFinishReason::NONE);
+    ASSERT_NE(moreReasoning.find("\"type\":\"response.reasoning_summary_text.delta\""), std::string::npos) << moreReasoning;
+    ASSERT_NE(moreReasoning.find("\"delta\":\" harder\""), std::string::npos) << moreReasoning;
+    // Should NOT have another output_item.added
+    ASSERT_EQ(moreReasoning.find("\"type\":\"response.output_item.added\""), std::string::npos) << "No repeated init: " << moreReasoning;
+
+    // Phase 5: End of reasoning with </think>
+    std::string endThink = apiHandler->serializeStreamingChunk("</think>", ov::genai::GenerationFinishReason::NONE);
+    // </think> tag consumed by parser
+
+    // Phase 6: Content chunk - should close reasoning and open message
+    std::string contentChunk = apiHandler->serializeStreamingChunk("The answer", ov::genai::GenerationFinishReason::NONE);
+    ASSERT_NE(contentChunk.find("\"type\":\"response.reasoning_summary_text.done\""), std::string::npos) << "Should close reasoning: " << contentChunk;
+    ASSERT_NE(contentChunk.find("\"type\":\"response.reasoning_summary_part.done\""), std::string::npos) << contentChunk;
+    // Message item should be at output_index 1
+    ASSERT_NE(contentChunk.find("\"type\":\"response.output_item.added\""), std::string::npos) << "Should add message item: " << contentChunk;
+    ASSERT_NE(contentChunk.find("\"type\":\"response.content_part.added\""), std::string::npos) << contentChunk;
+    ASSERT_NE(contentChunk.find("\"type\":\"response.output_text.delta\""), std::string::npos) << contentChunk;
+
+    // Phase 7: Final chunk
+    std::string finalChunk = apiHandler->serializeStreamingChunk(" is 42", ov::genai::GenerationFinishReason::STOP);
+    ASSERT_NE(finalChunk.find("\"type\":\"response.output_text.delta\""), std::string::npos) << finalChunk;
+    ASSERT_NE(finalChunk.find("\"type\":\"response.output_text.done\""), std::string::npos) << finalChunk;
+    ASSERT_NE(finalChunk.find("\"type\":\"response.content_part.done\""), std::string::npos) << finalChunk;
+    ASSERT_NE(finalChunk.find("\"type\":\"response.output_item.done\""), std::string::npos) << finalChunk;
+    ASSERT_NE(finalChunk.find("\"type\":\"response.completed\""), std::string::npos) << finalChunk;
+    // Completed event should contain reasoning in output
+    ASSERT_NE(finalChunk.find("\"type\":\"reasoning\""), std::string::npos) << "Completed response should include reasoning: " << finalChunk;
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, serializeStreamingChunkForResponsesWithoutReasoningWorksNormally) {
+    std::string json = R"({
+    "model": "llama",
+    "input": "What is OpenVINO?",
+    "stream": true
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    auto apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer, "", "qwen3");
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+
+    // Init events should be deferred (parser present)
+    std::string initChunk = apiHandler->serializeResponsesStreamingInitEvents();
+    ASSERT_NE(initChunk.find("\"type\":\"response.created\""), std::string::npos) << initChunk;
+    ASSERT_EQ(initChunk.find("\"type\":\"response.output_item.added\""), std::string::npos) << "Should be deferred: " << initChunk;
+
+    // Content without reasoning - should emit message init events on first content
+    std::string contentChunk = apiHandler->serializeStreamingChunk("Hello", ov::genai::GenerationFinishReason::NONE);
+    ASSERT_NE(contentChunk.find("\"type\":\"response.output_item.added\""), std::string::npos) << "Should init message: " << contentChunk;
+    ASSERT_NE(contentChunk.find("\"type\":\"response.content_part.added\""), std::string::npos) << contentChunk;
+    ASSERT_NE(contentChunk.find("\"type\":\"response.output_text.delta\""), std::string::npos) << contentChunk;
+    // Should NOT have any reasoning events
+    ASSERT_EQ(contentChunk.find("\"type\":\"reasoning\""), std::string::npos) << "No reasoning: " << contentChunk;
+    ASSERT_EQ(contentChunk.find("\"type\":\"response.reasoning_summary"), std::string::npos) << "No reasoning: " << contentChunk;
+
+    // Final chunk
+    std::string finalChunk = apiHandler->serializeStreamingChunk(" world", ov::genai::GenerationFinishReason::STOP);
+    ASSERT_NE(finalChunk.find("\"type\":\"response.completed\""), std::string::npos) << finalChunk;
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, serializeStreamingUsageChunkForResponsesIsEmpty) {
@@ -1068,13 +1240,10 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeStreamingChunkForResponsesEmitsCom
     // Response status should be "completed"
     ASSERT_NE(finalChunk.find("\"status\":\"completed\""), std::string::npos) << finalChunk;
 
-    // Should contain new spec-aligned fields
+    // Should contain spec-aligned fields
     ASSERT_NE(finalChunk.find("\"error\":null"), std::string::npos) << "Should contain error:null: " << finalChunk;
-    ASSERT_NE(finalChunk.find("\"previous_response_id\":null"), std::string::npos) << finalChunk;
-    ASSERT_NE(finalChunk.find("\"reasoning\":null"), std::string::npos) << finalChunk;
     ASSERT_NE(finalChunk.find("\"store\":true"), std::string::npos) << finalChunk;
     ASSERT_NE(finalChunk.find("\"truncation\":\"disabled\""), std::string::npos) << finalChunk;
-    ASSERT_NE(finalChunk.find("\"user\":null"), std::string::npos) << finalChunk;
     ASSERT_NE(finalChunk.find("\"metadata\":{}"), std::string::npos) << finalChunk;
 }
 

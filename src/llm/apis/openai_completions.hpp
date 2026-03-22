@@ -74,6 +74,10 @@ class OpenAIChatCompletionsHandler {
     size_t responsesStreamingSequenceNumber = 1;
     bool responsesStreamingInitialized = false;
     std::string responsesStreamingOutputText;
+    bool responsesReasoningInitialized = false;
+    bool responsesReasoningCompleted = false;
+    bool responsesMessageInitialized = false;
+    std::string responsesStreamingReasoningText;
 
     // Output parser is used to parse chat completions response to extract specific fields like tool calls and reasoning.
     std::unique_ptr<OutputParser> outputParser = nullptr;
@@ -98,6 +102,31 @@ class OpenAIChatCompletionsHandler {
     static void serializeResponsesPart(Writer<StringBuffer>& writer, const std::string& text);
     std::string serializeResponsesUnaryResponse(const std::vector<ParsedOutput>& parsedOutputs,
         ov::genai::GenerationFinishReason finishReason = ov::genai::GenerationFinishReason::STOP) const;
+
+    // Responses API streaming event building blocks
+    void writeEventHeader(Writer<StringBuffer>& writer, const char* eventType);
+    static void writeContentLocation(Writer<StringBuffer>& writer, const std::string& itemId, uint64_t outputIndex = 0);
+    static void writeReasoningLocation(Writer<StringBuffer>& writer, const std::string& itemId);
+
+    // Individual Responses API streaming event serializers
+    std::string serializeResponseCreatedEvent(const std::string& responseId, int64_t createdAt);
+    std::string serializeResponseInProgressEvent(const std::string& responseId, int64_t createdAt);
+    std::string serializeOutputItemAddedEvent(const std::string& outputItemId, uint64_t outputIndex = 0);
+    std::string serializeContentPartAddedEvent(const std::string& outputItemId, uint64_t outputIndex = 0);
+    std::string serializeOutputTextDeltaEvent(const std::string& outputItemId, const std::string& delta, uint64_t outputIndex = 0);
+    std::string serializeOutputTextDoneEvent(const std::string& outputItemId, uint64_t outputIndex = 0);
+    std::string serializeContentPartDoneEvent(const std::string& outputItemId, uint64_t outputIndex = 0);
+    std::string serializeOutputItemDoneEvent(const std::string& outputItemId, ov::genai::GenerationFinishReason finishReason, uint64_t outputIndex = 0);
+    std::string serializeResponseCompletedEvent(const std::string& responseId, int64_t createdAt, ov::genai::GenerationFinishReason finishReason);
+
+    // Reasoning streaming event serializers
+    std::string serializeReasoningOutputItemAddedEvent(const std::string& reasoningItemId);
+    std::string serializeReasoningSummaryPartAddedEvent(const std::string& reasoningItemId);
+    std::string serializeReasoningSummaryTextDeltaEvent(const std::string& reasoningItemId, const std::string& delta);
+    std::string serializeReasoningSummaryTextDoneEvent(const std::string& reasoningItemId);
+    std::string serializeReasoningSummaryPartDoneEvent(const std::string& reasoningItemId);
+    std::string serializeReasoningOutputItemDoneEvent(const std::string& reasoningItemId);
+    std::string serializeResponseFailedEventBody(const std::string& responseId, int64_t createdAt, const std::string& errorMessage, const char* errorCode);
 
 public:
     OpenAIChatCompletionsHandler(Document& doc, Endpoint endpoint, std::chrono::time_point<std::chrono::system_clock> creationTime,

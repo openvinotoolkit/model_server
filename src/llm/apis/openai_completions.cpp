@@ -17,7 +17,6 @@
 #include "openai_completions.hpp"
 
 #include <cmath>
-#include <functional>
 #include <limits>
 #include <memory>
 #include <stdexcept>
@@ -98,29 +97,6 @@ ov::genai::JsonContainer rapidJsonValueToJsonContainer(const rapidjson::Value& v
     throw std::invalid_argument("Unsupported JSON value type");
 }
 
-std::string serializeResponsesEvent(const std::function<void(Writer<StringBuffer>&)>& eventSerializer) {
-    StringBuffer eventBuffer;
-    Writer<StringBuffer> eventWriter(eventBuffer);
-    eventSerializer(eventWriter);
-    return std::string(eventBuffer.GetString());
-}
-
-void serializeNotSupportedNullField(Writer<StringBuffer>& writer, const char* fieldName) {
-    writer.String(fieldName);
-    writer.Null();
-}
-
-void serializeNotSupportedZeroField(Writer<StringBuffer>& writer, const char* fieldName) {
-    writer.String(fieldName);
-    writer.Uint64(0);
-}
-
-void serializeNotSupportedEmptyArrayField(Writer<StringBuffer>& writer, const char* fieldName) {
-    writer.String(fieldName);
-    writer.StartArray();
-    writer.EndArray();
-}
-
 }  // namespace
 
 void OpenAIChatCompletionsHandler::serializeResponsesToolChoice(Writer<StringBuffer>& writer) const {
@@ -195,8 +171,7 @@ void OpenAIChatCompletionsHandler::serializeResponsesResponseObject(Writer<Strin
 
     writer.String("parallel_tool_calls");
     writer.Bool(false);
-    serializeNotSupportedNullField(writer, "previous_response_id");
-    serializeNotSupportedNullField(writer, "reasoning");
+    // TODO: previous_response_id not supported
     writer.String("store");
     writer.Bool(true);
     writer.String("temperature");
@@ -223,7 +198,7 @@ void OpenAIChatCompletionsHandler::serializeResponsesResponseObject(Writer<Strin
     }
     writer.String("truncation");
     writer.String("disabled");
-    serializeNotSupportedNullField(writer, "user");
+    // TODO: user not supported
     writer.String("metadata");
     writer.StartObject();
     writer.EndObject();
@@ -235,6 +210,24 @@ void OpenAIChatCompletionsHandler::serializeResponsesResponseObject(Writer<Strin
 
     writer.String("output");
     writer.StartArray();
+    // Include reasoning output item if reasoning was produced during streaming
+    if (!responsesStreamingReasoningText.empty()) {
+        writer.StartObject();
+        writer.String("id");
+        writer.String("rs-0");
+        writer.String("type");
+        writer.String("reasoning");
+        writer.String("summary");
+        writer.StartArray();
+        writer.StartObject();
+        writer.String("type");
+        writer.String("summary_text");
+        writer.String("text");
+        writer.String(responsesStreamingReasoningText.c_str());
+        writer.EndObject();
+        writer.EndArray();
+        writer.EndObject();
+    }
     if (!fullOutputText.empty()) {
         writer.StartObject();
         writer.String("id");
@@ -264,16 +257,10 @@ void OpenAIChatCompletionsHandler::serializeResponsesResponseObject(Writer<Strin
         writer.StartObject();
         writer.String("input_tokens");
         writer.Uint64(static_cast<uint64_t>(usage.promptTokens));
-        writer.String("input_tokens_details");
-        writer.StartObject();
-        serializeNotSupportedZeroField(writer, "cached_tokens");
-        writer.EndObject();
+        // TODO: input_tokens_details.cached_tokens not supported
         writer.String("output_tokens");
         writer.Uint64(static_cast<uint64_t>(usage.completionTokens));
-        writer.String("output_tokens_details");
-        writer.StartObject();
-        serializeNotSupportedZeroField(writer, "reasoning_tokens");
-        writer.EndObject();
+        // TODO: output_tokens_details.reasoning_tokens not supported
         writer.String("total_tokens");
         writer.Uint64(static_cast<uint64_t>(usage.calculateTotalTokens()));
         writer.EndObject();
@@ -343,7 +330,7 @@ std::string OpenAIChatCompletionsHandler::serializeResponsesUnaryResponse(const 
         writer.String("max_tokens");
         writer.EndObject();
     }
-    serializeNotSupportedNullField(writer, "error");
+    // TODO: error not supported in unary response
     writer.String("model");
     writer.String(request.model.c_str());
     writer.String("status");
@@ -351,8 +338,7 @@ std::string OpenAIChatCompletionsHandler::serializeResponsesUnaryResponse(const 
 
     writer.String("parallel_tool_calls");
     writer.Bool(false);
-    serializeNotSupportedNullField(writer, "previous_response_id");
-    serializeNotSupportedNullField(writer, "reasoning");
+    // TODO: previous_response_id not supported
     writer.String("store");
     writer.Bool(true);
     writer.String("temperature");
@@ -379,7 +365,7 @@ std::string OpenAIChatCompletionsHandler::serializeResponsesUnaryResponse(const 
     }
     writer.String("truncation");
     writer.String("disabled");
-    serializeNotSupportedNullField(writer, "user");
+    // TODO: user not supported
     writer.String("metadata");
     writer.StartObject();
     writer.EndObject();
@@ -393,22 +379,67 @@ std::string OpenAIChatCompletionsHandler::serializeResponsesUnaryResponse(const 
     writer.StartArray();
     int outputIndex = 0;
     for (const auto& parsedOutput : parsedOutputs) {
-        const std::string outputId = "msg-" + std::to_string(outputIndex++);
+        // Emit reasoning output item if reasoning is available
+        if (!parsedOutput.reasoning.empty()) {
+            const std::string reasoningId = "rs-" + std::to_string(outputIndex);
+            writer.StartObject();
+            writer.String("id");
+            writer.String(reasoningId.c_str());
+            writer.String("type");
+            writer.String("reasoning");
+            writer.String("summary");
+            writer.StartArray();
+            writer.StartObject();
+            writer.String("type");
+            writer.String("summary_text");
+            writer.String("text");
+            writer.String(parsedOutput.reasoning.c_str());
+            writer.EndObject();
+            writer.EndArray();
+            writer.EndObject();
+        }
 
-        writer.StartObject();
-        writer.String("id");
-        writer.String(outputId.c_str());
-        writer.String("type");
-        writer.String("message");
-        writer.String("role");
-        writer.String("assistant");
-        writer.String("status");
-        writer.String(responseStatus);
-        writer.String("content");
-        writer.StartArray();
-        serializeResponsesPart(writer, parsedOutput.content);
-        writer.EndArray();
-        writer.EndObject();
+        if (!parsedOutput.toolCalls.empty()) {
+            // Emit function_call output items for each tool call
+            for (const auto& toolCall : parsedOutput.toolCalls) {
+                writer.StartObject();
+                writer.String("id");
+                writer.String(toolCall.id.c_str());
+                writer.String("type");
+                writer.String("function_call");
+                writer.String("status");
+                writer.String(responseStatus);
+                writer.String("call_id");
+                writer.String(toolCall.id.c_str());
+                writer.String("name");
+                writer.String(toolCall.name.c_str());
+                writer.String("arguments");
+                writer.String(toolCall.arguments.c_str());
+                writer.EndObject();
+            }
+        }
+
+        // Emit message output item if there is non-empty content or no tool calls
+        if (!parsedOutput.content.empty() || parsedOutput.toolCalls.empty()) {
+            const std::string outputId = "msg-" + std::to_string(outputIndex);
+
+            writer.StartObject();
+            writer.String("id");
+            writer.String(outputId.c_str());
+            writer.String("type");
+            writer.String("message");
+            writer.String("role");
+            writer.String("assistant");
+            writer.String("status");
+            writer.String(responseStatus);
+            writer.String("content");
+            writer.StartArray();
+            serializeResponsesPart(writer, parsedOutput.content);
+            writer.EndArray();
+            writer.EndObject();
+        }
+
+        outputIndex++;
     }
     writer.EndArray();
 
@@ -416,16 +447,10 @@ std::string OpenAIChatCompletionsHandler::serializeResponsesUnaryResponse(const 
     writer.StartObject();
     writer.String("input_tokens");
     writer.Uint64(static_cast<uint64_t>(usage.promptTokens));
-    writer.String("input_tokens_details");
-    writer.StartObject();
-    serializeNotSupportedZeroField(writer, "cached_tokens");
-    writer.EndObject();
+    // TODO: input_tokens_details.cached_tokens not supported
     writer.String("output_tokens");
     writer.Uint64(static_cast<uint64_t>(usage.completionTokens));
-    writer.String("output_tokens_details");
-    writer.StartObject();
-    serializeNotSupportedZeroField(writer, "reasoning_tokens");
-    writer.EndObject();
+    // TODO: output_tokens_details.reasoning_tokens not supported
     writer.String("total_tokens");
     writer.Uint64(static_cast<uint64_t>(usage.calculateTotalTokens()));
     writer.EndObject();
@@ -1656,7 +1681,7 @@ static bool hasToolCallsInStreamingDelta(const rapidjson::Document& delta) {
 ParsedOutput OpenAIChatCompletionsHandler::parseOutputIfNeeded(const std::vector<int64_t>& generatedIds) {
     OVMS_PROFILE_FUNCTION();
     ParsedOutput parsedOutput;
-    if (endpoint != Endpoint::CHAT_COMPLETIONS || outputParser == nullptr) {
+    if ((endpoint != Endpoint::CHAT_COMPLETIONS && endpoint != Endpoint::RESPONSES) || outputParser == nullptr) {
         parsedOutput.content = this->tokenizer.decode(generatedIds);
     } else {
         parsedOutput = outputParser->parse(generatedIds, this->areToolsAvailable());
@@ -1967,6 +1992,248 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(ov::genai::VLMD
     return jsonResponse.ToString();
 }
 
+void OpenAIChatCompletionsHandler::writeEventHeader(Writer<StringBuffer>& writer, const char* eventType) {
+    writer.StartObject();
+    writer.String("type");
+    writer.String(eventType);
+    writer.String("sequence_number");
+    writer.Uint64(responsesStreamingSequenceNumber++);
+}
+
+void OpenAIChatCompletionsHandler::writeContentLocation(Writer<StringBuffer>& writer, const std::string& itemId, uint64_t outputIndex) {
+    writer.String("output_index");
+    writer.Uint64(outputIndex);
+    writer.String("content_index");
+    writer.Uint64(0);
+    writer.String("item_id");
+    writer.String(itemId.c_str());
+}
+
+void OpenAIChatCompletionsHandler::writeReasoningLocation(Writer<StringBuffer>& writer, const std::string& itemId) {
+    writer.String("output_index");
+    writer.Uint64(0);
+    writer.String("summary_index");
+    writer.Uint64(0);
+    writer.String("item_id");
+    writer.String(itemId.c_str());
+}
+
+std::string OpenAIChatCompletionsHandler::serializeResponseCreatedEvent(const std::string& responseId, int64_t createdAt) {
+    StringBuffer buffer;
+    Writer<StringBuffer> writer(buffer);
+    writeEventHeader(writer, "response.created");
+    writer.String("response");
+    serializeResponsesResponseObject(writer, responseId, createdAt, "in_progress", "", false);
+    writer.EndObject();
+    return buffer.GetString();
+}
+
+std::string OpenAIChatCompletionsHandler::serializeResponseInProgressEvent(const std::string& responseId, int64_t createdAt) {
+    StringBuffer buffer;
+    Writer<StringBuffer> writer(buffer);
+    writeEventHeader(writer, "response.in_progress");
+    writer.String("response");
+    serializeResponsesResponseObject(writer, responseId, createdAt, "in_progress", "", false);
+    writer.EndObject();
+    return buffer.GetString();
+}
+
+std::string OpenAIChatCompletionsHandler::serializeOutputItemAddedEvent(const std::string& outputItemId, uint64_t outputIndex) {
+    StringBuffer buffer;
+    Writer<StringBuffer> writer(buffer);
+    writeEventHeader(writer, "response.output_item.added");
+    writer.String("output_index");
+    writer.Uint64(outputIndex);
+    writer.String("item");
+    serializeResponsesOutputItem(writer, outputItemId, "", "in_progress", false);
+    writer.EndObject();
+    return buffer.GetString();
+}
+
+std::string OpenAIChatCompletionsHandler::serializeContentPartAddedEvent(const std::string& outputItemId, uint64_t outputIndex) {
+    StringBuffer buffer;
+    Writer<StringBuffer> writer(buffer);
+    writeEventHeader(writer, "response.content_part.added");
+    writeContentLocation(writer, outputItemId, outputIndex);
+    writer.String("part");
+    serializeResponsesPart(writer, "");
+    writer.EndObject();
+    return buffer.GetString();
+}
+
+std::string OpenAIChatCompletionsHandler::serializeOutputTextDeltaEvent(const std::string& outputItemId, const std::string& delta, uint64_t outputIndex) {
+    StringBuffer buffer;
+    Writer<StringBuffer> writer(buffer);
+    writeEventHeader(writer, "response.output_text.delta");
+    writeContentLocation(writer, outputItemId, outputIndex);
+    writer.String("delta");
+    writer.String(delta.c_str());
+    // TODO: logprobs not supported
+    writer.EndObject();
+    return buffer.GetString();
+}
+
+std::string OpenAIChatCompletionsHandler::serializeOutputTextDoneEvent(const std::string& outputItemId, uint64_t outputIndex) {
+    StringBuffer buffer;
+    Writer<StringBuffer> writer(buffer);
+    writeEventHeader(writer, "response.output_text.done");
+    writeContentLocation(writer, outputItemId, outputIndex);
+    writer.String("text");
+    writer.String(responsesStreamingOutputText.c_str());
+    // TODO: logprobs not supported
+    writer.EndObject();
+    return buffer.GetString();
+}
+
+std::string OpenAIChatCompletionsHandler::serializeContentPartDoneEvent(const std::string& outputItemId, uint64_t outputIndex) {
+    StringBuffer buffer;
+    Writer<StringBuffer> writer(buffer);
+    writeEventHeader(writer, "response.content_part.done");
+    writeContentLocation(writer, outputItemId, outputIndex);
+    writer.String("part");
+    serializeResponsesPart(writer, responsesStreamingOutputText);
+    writer.EndObject();
+    return buffer.GetString();
+}
+
+std::string OpenAIChatCompletionsHandler::serializeOutputItemDoneEvent(const std::string& outputItemId, ov::genai::GenerationFinishReason finishReason, uint64_t outputIndex) {
+    const char* itemStatus = (finishReason == ov::genai::GenerationFinishReason::LENGTH) ? "incomplete" : "completed";
+    StringBuffer buffer;
+    Writer<StringBuffer> writer(buffer);
+    writeEventHeader(writer, "response.output_item.done");
+    writer.String("output_index");
+    writer.Uint64(outputIndex);
+    writer.String("item");
+    serializeResponsesOutputItem(writer, outputItemId, responsesStreamingOutputText, itemStatus, true);
+    writer.EndObject();
+    return buffer.GetString();
+}
+
+std::string OpenAIChatCompletionsHandler::serializeResponseCompletedEvent(const std::string& responseId, int64_t createdAt, ov::genai::GenerationFinishReason finishReason) {
+    const bool isIncomplete = (finishReason == ov::genai::GenerationFinishReason::LENGTH);
+    const char* responseStatus = isIncomplete ? "incomplete" : "completed";
+    const char* eventType = isIncomplete ? "response.incomplete" : "response.completed";
+    const char* incompleteReason = isIncomplete ? "max_tokens" : nullptr;
+    StringBuffer buffer;
+    Writer<StringBuffer> writer(buffer);
+    writeEventHeader(writer, eventType);
+    writer.String("response");
+    serializeResponsesResponseObject(writer, responseId, createdAt, responseStatus, responsesStreamingOutputText, true, incompleteReason);
+    writer.EndObject();
+    return buffer.GetString();
+}
+
+std::string OpenAIChatCompletionsHandler::serializeResponseFailedEventBody(const std::string& responseId, int64_t createdAt, const std::string& errorMessage, const char* errorCode) {
+    StringBuffer buffer;
+    Writer<StringBuffer> writer(buffer);
+    writeEventHeader(writer, "response.failed");
+    writer.String("response");
+    serializeResponsesResponseObject(writer, responseId, createdAt, "failed", responsesStreamingOutputText, false,
+        nullptr, errorMessage.c_str(), errorCode);
+    writer.EndObject();
+    return buffer.GetString();
+}
+
+std::string OpenAIChatCompletionsHandler::serializeReasoningOutputItemAddedEvent(const std::string& reasoningItemId) {
+    StringBuffer buffer;
+    Writer<StringBuffer> writer(buffer);
+    writeEventHeader(writer, "response.output_item.added");
+    writer.String("output_index");
+    writer.Uint64(0);
+    writer.String("item");
+    writer.StartObject();
+    writer.String("id");
+    writer.String(reasoningItemId.c_str());
+    writer.String("type");
+    writer.String("reasoning");
+    writer.String("summary");
+    writer.StartArray();
+    writer.EndArray();
+    writer.EndObject();
+    writer.EndObject();
+    return buffer.GetString();
+}
+
+std::string OpenAIChatCompletionsHandler::serializeReasoningSummaryPartAddedEvent(const std::string& reasoningItemId) {
+    StringBuffer buffer;
+    Writer<StringBuffer> writer(buffer);
+    writeEventHeader(writer, "response.reasoning_summary_part.added");
+    writeReasoningLocation(writer, reasoningItemId);
+    writer.String("part");
+    writer.StartObject();
+    writer.String("type");
+    writer.String("summary_text");
+    writer.String("text");
+    writer.String("");
+    writer.EndObject();
+    writer.EndObject();
+    return buffer.GetString();
+}
+
+std::string OpenAIChatCompletionsHandler::serializeReasoningSummaryTextDeltaEvent(const std::string& reasoningItemId, const std::string& delta) {
+    StringBuffer buffer;
+    Writer<StringBuffer> writer(buffer);
+    writeEventHeader(writer, "response.reasoning_summary_text.delta");
+    writeReasoningLocation(writer, reasoningItemId);
+    writer.String("delta");
+    writer.String(delta.c_str());
+    writer.EndObject();
+    return buffer.GetString();
+}
+
+std::string OpenAIChatCompletionsHandler::serializeReasoningSummaryTextDoneEvent(const std::string& reasoningItemId) {
+    StringBuffer buffer;
+    Writer<StringBuffer> writer(buffer);
+    writeEventHeader(writer, "response.reasoning_summary_text.done");
+    writeReasoningLocation(writer, reasoningItemId);
+    writer.String("text");
+    writer.String(responsesStreamingReasoningText.c_str());
+    writer.EndObject();
+    return buffer.GetString();
+}
+
+std::string OpenAIChatCompletionsHandler::serializeReasoningSummaryPartDoneEvent(const std::string& reasoningItemId) {
+    StringBuffer buffer;
+    Writer<StringBuffer> writer(buffer);
+    writeEventHeader(writer, "response.reasoning_summary_part.done");
+    writeReasoningLocation(writer, reasoningItemId);
+    writer.String("part");
+    writer.StartObject();
+    writer.String("type");
+    writer.String("summary_text");
+    writer.String("text");
+    writer.String(responsesStreamingReasoningText.c_str());
+    writer.EndObject();
+    writer.EndObject();
+    return buffer.GetString();
+}
+
+std::string OpenAIChatCompletionsHandler::serializeReasoningOutputItemDoneEvent(const std::string& reasoningItemId) {
+    StringBuffer buffer;
+    Writer<StringBuffer> writer(buffer);
+    writeEventHeader(writer, "response.output_item.done");
+    writer.String("output_index");
+    writer.Uint64(0);
+    writer.String("item");
+    writer.StartObject();
+    writer.String("id");
+    writer.String(reasoningItemId.c_str());
+    writer.String("type");
+    writer.String("reasoning");
+    writer.String("summary");
+    writer.StartArray();
+    writer.StartObject();
+    writer.String("type");
+    writer.String("summary_text");
+    writer.String("text");
+    writer.String(responsesStreamingReasoningText.c_str());
+    writer.EndObject();
+    writer.EndArray();
+    writer.EndObject();
+    writer.EndObject();
+    return buffer.GetString();
+}
+
 std::string OpenAIChatCompletionsHandler::serializeResponsesStreamingInitEvents() {
     const auto createdAt = std::chrono::duration_cast<std::chrono::microseconds>(created.time_since_epoch()).count();
     const std::string responseId = "resp-" + std::to_string(createdAt);
@@ -1974,57 +2241,16 @@ std::string OpenAIChatCompletionsHandler::serializeResponsesStreamingInitEvents(
 
     std::vector<std::string> events;
 
-    events.emplace_back(serializeResponsesEvent([this, &responseId, createdAt](Writer<StringBuffer>& writer) {
-        writer.StartObject();
-        writer.String("type");
-        writer.String("response.created");
-        writer.String("sequence_number");
-        writer.Uint64(responsesStreamingSequenceNumber++);
-        writer.String("response");
-        serializeResponsesResponseObject(writer, responseId, createdAt, "in_progress", "", false);
-        writer.EndObject();
-    }));
+    events.emplace_back(serializeResponseCreatedEvent(responseId, createdAt));
+    events.emplace_back(serializeResponseInProgressEvent(responseId, createdAt));
 
-    events.emplace_back(serializeResponsesEvent([this, &responseId, createdAt](Writer<StringBuffer>& writer) {
-        writer.StartObject();
-        writer.String("type");
-        writer.String("response.in_progress");
-        writer.String("sequence_number");
-        writer.Uint64(responsesStreamingSequenceNumber++);
-        writer.String("response");
-        serializeResponsesResponseObject(writer, responseId, createdAt, "in_progress", "", false);
-        writer.EndObject();
-    }));
-
-    events.emplace_back(serializeResponsesEvent([this, &outputItemId](Writer<StringBuffer>& writer) {
-        writer.StartObject();
-        writer.String("type");
-        writer.String("response.output_item.added");
-        writer.String("sequence_number");
-        writer.Uint64(responsesStreamingSequenceNumber++);
-        writer.String("output_index");
-        writer.Uint64(0);
-        writer.String("item");
-        serializeResponsesOutputItem(writer, outputItemId, "", "in_progress", false);
-        writer.EndObject();
-    }));
-
-    events.emplace_back(serializeResponsesEvent([this, &outputItemId](Writer<StringBuffer>& writer) {
-        writer.StartObject();
-        writer.String("type");
-        writer.String("response.content_part.added");
-        writer.String("sequence_number");
-        writer.Uint64(responsesStreamingSequenceNumber++);
-        writer.String("output_index");
-        writer.Uint64(0);
-        writer.String("content_index");
-        writer.Uint64(0);
-        writer.String("item_id");
-        writer.String(outputItemId.c_str());
-        writer.String("part");
-        serializeResponsesPart(writer, "");
-        writer.EndObject();
-    }));
+    // When outputParser is present, defer output item events until first chunk
+    // because reasoning items need to come before message items
+    if (outputParser == nullptr) {
+        events.emplace_back(serializeOutputItemAddedEvent(outputItemId));
+        events.emplace_back(serializeContentPartAddedEvent(outputItemId));
+        responsesMessageInitialized = true;
+    }
 
     responsesStreamingInitialized = true;
 
@@ -2042,6 +2268,7 @@ std::string OpenAIChatCompletionsHandler::serializeStreamingChunk(const std::str
         const auto createdAt = std::chrono::duration_cast<std::chrono::microseconds>(created.time_since_epoch()).count();
         const std::string responseId = "resp-" + std::to_string(createdAt);
         const std::string outputItemId = "msg-0";
+        const std::string reasoningItemId = "rs-0";
 
         std::vector<std::string> events;
         if (!responsesStreamingInitialized) {
@@ -2052,91 +2279,69 @@ std::string OpenAIChatCompletionsHandler::serializeStreamingChunk(const std::str
             }
         }
 
-        if (!chunkResponse.empty()) {
-            responsesStreamingOutputText += chunkResponse;
-            events.emplace_back(serializeResponsesEvent([this, &chunkResponse, &outputItemId](Writer<StringBuffer>& writer) {
-                writer.StartObject();
-                writer.String("type");
-                writer.String("response.output_text.delta");
-                writer.String("sequence_number");
-                writer.Uint64(responsesStreamingSequenceNumber++);
-                writer.String("output_index");
-                writer.Uint64(0);
-                writer.String("content_index");
-                writer.Uint64(0);
-                writer.String("item_id");
-                writer.String(outputItemId.c_str());
-                writer.String("delta");
-                writer.String(chunkResponse.c_str());
-                serializeNotSupportedEmptyArrayField(writer, "logprobs");
-                writer.EndObject();
-            }));
+        if (outputParser != nullptr) {
+            // Use output parser to separate reasoning from content
+            std::optional<Document> delta = outputParser->parseChunk(chunkResponse, areToolsAvailable(), finishReason);
+
+            if (delta.has_value() && delta->HasMember("delta") && (*delta)["delta"].IsObject()) {
+                const auto& deltaObj = (*delta)["delta"];
+                if (deltaObj.HasMember("reasoning_content") && deltaObj["reasoning_content"].IsString()) {
+                    // Reasoning chunk
+                    if (!responsesReasoningInitialized) {
+                        events.emplace_back(serializeReasoningOutputItemAddedEvent(reasoningItemId));
+                        events.emplace_back(serializeReasoningSummaryPartAddedEvent(reasoningItemId));
+                        responsesReasoningInitialized = true;
+                    }
+                    const std::string reasoningText = deltaObj["reasoning_content"].GetString();
+                    responsesStreamingReasoningText += reasoningText;
+                    events.emplace_back(serializeReasoningSummaryTextDeltaEvent(reasoningItemId, reasoningText));
+                } else if (deltaObj.HasMember("content") && deltaObj["content"].IsString()) {
+                    // Content chunk - close reasoning if it was active, init message if needed
+                    if (responsesReasoningInitialized && !responsesReasoningCompleted) {
+                        events.emplace_back(serializeReasoningSummaryTextDoneEvent(reasoningItemId));
+                        events.emplace_back(serializeReasoningSummaryPartDoneEvent(reasoningItemId));
+                        events.emplace_back(serializeReasoningOutputItemDoneEvent(reasoningItemId));
+                        responsesReasoningCompleted = true;
+                    }
+                    const uint64_t msgIdx = responsesReasoningInitialized ? 1 : 0;
+                    if (!responsesMessageInitialized) {
+                        events.emplace_back(serializeOutputItemAddedEvent(outputItemId, msgIdx));
+                        events.emplace_back(serializeContentPartAddedEvent(outputItemId, msgIdx));
+                        responsesMessageInitialized = true;
+                    }
+                    const std::string contentText = deltaObj["content"].GetString();
+                    responsesStreamingOutputText += contentText;
+                    events.emplace_back(serializeOutputTextDeltaEvent(outputItemId, contentText, msgIdx));
+                }
+            }
+            // If delta is nullopt, the parser is accumulating tag tokens - skip
+        } else {
+            // No parser - pass through raw text
+            if (!chunkResponse.empty()) {
+                responsesStreamingOutputText += chunkResponse;
+                events.emplace_back(serializeOutputTextDeltaEvent(outputItemId, chunkResponse));
+            }
         }
 
         if (finishReason != ov::genai::GenerationFinishReason::NONE) {
-            events.emplace_back(serializeResponsesEvent([this, &outputItemId](Writer<StringBuffer>& writer) {
-                writer.StartObject();
-                writer.String("type");
-                writer.String("response.output_text.done");
-                writer.String("sequence_number");
-                writer.Uint64(responsesStreamingSequenceNumber++);
-                writer.String("output_index");
-                writer.Uint64(0);
-                writer.String("content_index");
-                writer.Uint64(0);
-                writer.String("item_id");
-                writer.String(outputItemId.c_str());
-                writer.String("text");
-                writer.String(responsesStreamingOutputText.c_str());
-                serializeNotSupportedEmptyArrayField(writer, "logprobs");
-                writer.EndObject();
-            }));
-
-            events.emplace_back(serializeResponsesEvent([this, &outputItemId](Writer<StringBuffer>& writer) {
-                writer.StartObject();
-                writer.String("type");
-                writer.String("response.content_part.done");
-                writer.String("sequence_number");
-                writer.Uint64(responsesStreamingSequenceNumber++);
-                writer.String("output_index");
-                writer.Uint64(0);
-                writer.String("content_index");
-                writer.Uint64(0);
-                writer.String("item_id");
-                writer.String(outputItemId.c_str());
-                writer.String("part");
-                serializeResponsesPart(writer, responsesStreamingOutputText);
-                writer.EndObject();
-            }));
-
-            events.emplace_back(serializeResponsesEvent([this, &outputItemId, finishReason](Writer<StringBuffer>& writer) {
-                const char* itemStatus = (finishReason == ov::genai::GenerationFinishReason::LENGTH) ? "incomplete" : "completed";
-                writer.StartObject();
-                writer.String("type");
-                writer.String("response.output_item.done");
-                writer.String("sequence_number");
-                writer.Uint64(responsesStreamingSequenceNumber++);
-                writer.String("output_index");
-                writer.Uint64(0);
-                writer.String("item");
-                serializeResponsesOutputItem(writer, outputItemId, responsesStreamingOutputText, itemStatus, true);
-                writer.EndObject();
-            }));
-
-            events.emplace_back(serializeResponsesEvent([this, &responseId, createdAt, finishReason](Writer<StringBuffer>& writer) {
-                const bool isIncomplete = (finishReason == ov::genai::GenerationFinishReason::LENGTH);
-                const char* responseStatus = isIncomplete ? "incomplete" : "completed";
-                const char* eventType = isIncomplete ? "response.incomplete" : "response.completed";
-                const char* incompleteReason = isIncomplete ? "max_tokens" : nullptr;
-                writer.StartObject();
-                writer.String("type");
-                writer.String(eventType);
-                writer.String("sequence_number");
-                writer.Uint64(responsesStreamingSequenceNumber++);
-                writer.String("response");
-                serializeResponsesResponseObject(writer, responseId, createdAt, responseStatus, responsesStreamingOutputText, true, incompleteReason);
-                writer.EndObject();
-            }));
+            // Close any open reasoning that wasn't closed by content transition
+            if (responsesReasoningInitialized && !responsesReasoningCompleted) {
+                events.emplace_back(serializeReasoningSummaryTextDoneEvent(reasoningItemId));
+                events.emplace_back(serializeReasoningSummaryPartDoneEvent(reasoningItemId));
+                events.emplace_back(serializeReasoningOutputItemDoneEvent(reasoningItemId));
+                responsesReasoningCompleted = true;
+            }
+            const uint64_t msgIdx = responsesReasoningInitialized ? 1 : 0;
+            // Ensure message item is initialized even if no content was produced
+            if (!responsesMessageInitialized) {
+                events.emplace_back(serializeOutputItemAddedEvent(outputItemId, msgIdx));
+                events.emplace_back(serializeContentPartAddedEvent(outputItemId, msgIdx));
+                responsesMessageInitialized = true;
+            }
+            events.emplace_back(serializeOutputTextDoneEvent(outputItemId, msgIdx));
+            events.emplace_back(serializeContentPartDoneEvent(outputItemId, msgIdx));
+            events.emplace_back(serializeOutputItemDoneEvent(outputItemId, finishReason, msgIdx));
+            events.emplace_back(serializeResponseCompletedEvent(responseId, createdAt, finishReason));
         }
 
         if (events.empty()) {
@@ -2255,17 +2460,7 @@ std::string OpenAIChatCompletionsHandler::serializeResponsesFailedEvent(const st
         }
     }
 
-    events.emplace_back(serializeResponsesEvent([this, &responseId, createdAt, &errorMessage, errorCode](Writer<StringBuffer>& writer) {
-        writer.StartObject();
-        writer.String("type");
-        writer.String("response.failed");
-        writer.String("sequence_number");
-        writer.Uint64(responsesStreamingSequenceNumber++);
-        writer.String("response");
-        serializeResponsesResponseObject(writer, responseId, createdAt, "failed", responsesStreamingOutputText, false,
-            nullptr, errorMessage.c_str(), errorCode);
-        writer.EndObject();
-    }));
+    events.emplace_back(serializeResponseFailedEventBody(responseId, createdAt, errorMessage, errorCode));
 
     std::stringstream ss;
     ss << events.front();
