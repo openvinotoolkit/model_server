@@ -977,6 +977,103 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseForResponsesOmitsReas
     ASSERT_NE(serialized.find("\"type\":\"output_text\""), std::string::npos) << serialized;
 }
 
+TEST_F(HttpOpenAIHandlerParsingTest, parseResponsesReasoningParameterInjectsEnableThinking) {
+    std::string json = R"({
+    "model": "llama",
+    "input": "Think about this",
+    "reasoning": {"effort": "high", "summary": "auto"},
+    "max_output_tokens": 100
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    auto apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer, "", "qwen3");
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+
+    // Verify that chat_template_kwargs was injected with enable_thinking: true
+    auto chatTemplateKwargsStatus = apiHandler->parseChatTemplateKwargsToJsonContainer();
+    ASSERT_TRUE(chatTemplateKwargsStatus.ok());
+    ASSERT_TRUE(chatTemplateKwargsStatus.value().has_value());
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, parseResponsesReasoningParameterAllEffortValuesWork) {
+    for (const auto& effort : {"low", "medium", "high"}) {
+        std::string json = R"({"model": "llama", "input": "test", "reasoning": {"effort": ")" + std::string(effort) + R"("}, "max_output_tokens": 10})";
+        doc.Parse(json.c_str());
+        ASSERT_FALSE(doc.HasParseError()) << json;
+
+        auto apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
+        std::optional<uint32_t> maxTokensLimit;
+        uint32_t bestOfLimit = 0;
+        std::optional<uint32_t> maxModelLength;
+        ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus()) << "Failed for effort: " << effort;
+
+        auto chatTemplateKwargsStatus = apiHandler->parseChatTemplateKwargsToJsonContainer();
+        ASSERT_TRUE(chatTemplateKwargsStatus.ok());
+        ASSERT_TRUE(chatTemplateKwargsStatus.value().has_value()) << "enable_thinking not injected for effort: " << effort;
+    }
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, parseResponsesReasoningParameterInvalidEffortRejected) {
+    std::string json = R"({
+    "model": "llama",
+    "input": "test",
+    "reasoning": {"effort": "invalid"},
+    "max_output_tokens": 10
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    auto apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    ASSERT_NE(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, parseResponsesReasoningParameterDoesNotOverrideExplicitKwargs) {
+    std::string json = R"({
+    "model": "llama",
+    "input": "test",
+    "reasoning": {"effort": "high"},
+    "chat_template_kwargs": {"enable_thinking": false},
+    "max_output_tokens": 10
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    auto apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+
+    // chat_template_kwargs should exist, but the explicit enable_thinking: false should be preserved
+    auto chatTemplateKwargsStatus = apiHandler->parseChatTemplateKwargsToJsonContainer();
+    ASSERT_TRUE(chatTemplateKwargsStatus.ok());
+    ASSERT_TRUE(chatTemplateKwargsStatus.value().has_value());
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, parseResponsesReasoningParameterNotAnObjectRejected) {
+    std::string json = R"({
+    "model": "llama",
+    "input": "test",
+    "reasoning": "high",
+    "max_output_tokens": 10
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    auto apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    ASSERT_NE(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+}
+
 TEST_F(HttpOpenAIHandlerParsingTest, serializeStreamingChunkForResponsesContainsRequiredEvents) {
     std::string json = R"({
     "model": "llama",

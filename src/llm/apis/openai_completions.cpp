@@ -1253,6 +1253,40 @@ absl::Status OpenAIChatCompletionsHandler::parseResponsesPart(std::optional<uint
         return messagesStatus;
     }
 
+    // reasoning: object; optional
+    // OpenAI Responses API reasoning parameter. Any effort value enables thinking mode.
+    it = doc.FindMember("reasoning");
+    if (it != doc.MemberEnd() && !it->value.IsNull()) {
+        if (!it->value.IsObject()) {
+            return absl::InvalidArgumentError("reasoning is not an object");
+        }
+        const auto& reasoningObj = it->value;
+        auto effortIt = reasoningObj.FindMember("effort");
+        if (effortIt != reasoningObj.MemberEnd() && !effortIt->value.IsNull()) {
+            if (!effortIt->value.IsString()) {
+                return absl::InvalidArgumentError("reasoning.effort is not a string");
+            }
+            const std::string effort = effortIt->value.GetString();
+            if (effort != "low" && effort != "medium" && effort != "high") {
+                return absl::InvalidArgumentError("reasoning.effort must be one of: low, medium, high");
+            }
+            // Inject enable_thinking: true into chat_template_kwargs if not already explicitly set
+            auto kwargsIt = doc.FindMember("chat_template_kwargs");
+            if (kwargsIt == doc.MemberEnd()) {
+                rapidjson::Value kwargs(rapidjson::kObjectType);
+                kwargs.AddMember("enable_thinking", true, doc.GetAllocator());
+                doc.AddMember("chat_template_kwargs", kwargs, doc.GetAllocator());
+            } else if (kwargsIt->value.IsObject()) {
+                auto enableThinkingIt = kwargsIt->value.FindMember("enable_thinking");
+                if (enableThinkingIt == kwargsIt->value.MemberEnd()) {
+                    kwargsIt->value.AddMember("enable_thinking", true, doc.GetAllocator());
+                }
+                // If enable_thinking is already set explicitly, the user's value takes precedence
+            }
+        }
+        // summary field is accepted but ignored
+    }
+
 #if (PYTHON_DISABLE == 0)
     // Build processedJson with "messages" array from chatHistory so that
     // the Python chat template path (which reads request_json["messages"])
