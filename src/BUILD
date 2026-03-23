@@ -189,6 +189,7 @@ ovms_cc_library(
         "libovmsmodelversion",
         "libovmsstatus",
     ],
+    visibility = ["//visibility:public"],
 )
 cc_library(
     name = "ovms_header",
@@ -508,65 +509,9 @@ ovms_cc_library(
     visibility = ["//visibility:public",],
 )
 ovms_cc_library(
-    name = "node_initializer",
-    srcs = [
-        "mediapipe_internal/node_initializer.cpp",
-    ],
-    hdrs = [
-        "mediapipe_internal/node_initializer.hpp",
-        "mediapipe_internal/graph_side_packets.hpp",
-    ],
-    deps = [
-        "libovmsstatus",
-    ],
-    visibility = ["//visibility:public",],
-)
-ovms_cc_library(
-    name = "libovms_mediapipe",
-    srcs = [
-        "mediapipe_internal/mediapipefactory.cpp",
-        "mediapipe_internal/mediapipefactory.hpp",
-        "mediapipe_internal/mediapipegraphconfig.hpp",
-        "mediapipe_internal/mediapipegraphconfig.cpp",
-        "mediapipe_internal/mediapipegraphdefinition.cpp",
-        "mediapipe_internal/mediapipegraphdefinition.hpp",
-        "mediapipe_internal/mediapipegraphexecutor.cpp",
-        "mediapipe_internal/mediapipegraphexecutor.hpp",
-        "copyable_object_wrapper.hpp",
-    ],
-    deps = select({
-            "//:not_disable_python": [
-                "//src/python:libovmspythonmodule",
-            ],
-            "//:disable_python": []
-        }) + [
-        "node_initializer",
-        "libovmsmediapipe_utils",
-        "libovms_dags_pipelinedefinitionstatus",
-        "libovms_single_version_servable_definition",
-        "libovms_tensorinfo",
-        "libovmslogging",
-        "libovmsstatus",
-        "model_metric_reporter",
-        "libovmsmetrics",
-        "libovms_ov_utils",
-        "libovmsstring_utils",
-        "libovms_servable_name_checker",
-        "libovms_metric_provider",
-        "libovmsfilesystem",
-        "libovms_version",
-        "libovms_execution_context",
-        "libovmstimer",
-        "libovmsprofiler",
-        "@com_github_tencent_rapidjson//:rapidjson",
-        "//src/port:rapidjson_stringbuffer",
-        "//src/port:rapidjson_writer",
-        "@mediapipe//mediapipe/framework:calculator_graph",
-        "@mediapipe//mediapipe/framework/port:parse_text_proto",
-    ],
-    visibility = ["//visibility:public",],
-    additional_copts = COPTS_PYTHON + COPTS_MEDIAPIPE,
-    alwayslink = 1,
+    name = "copyable_object_wrapper",
+    hdrs = ["copyable_object_wrapper.hpp"],
+    visibility = ["//visibility:public"],
 )
 ovms_cc_library(
     name = "libovms_mediapipe_kfs_executor",
@@ -580,7 +525,7 @@ ovms_cc_library(
             ],
             "//:disable_python": []
         }) + [
-        "libovms_mediapipe",
+        "//src/mediapipe_internal:libovms_mediapipe",
         "predict_request_validation_utils",
         "tfs_utils",
         "libovms_kfs_utils",
@@ -607,7 +552,7 @@ ovms_cc_library(
             ],
             "//:disable_python": []
         }) + [
-        "libovms_mediapipe",
+        "//src/mediapipe_internal:libovms_mediapipe",
         "httppayload",
         "libhttp_async_writer_interface",
         "opencv_dep",
@@ -693,7 +638,7 @@ ovms_cc_library(
         }) + select({
             "//conditions:default": [],
             "//:not_disable_mediapipe" : [
-                "libovms_mediapipe",
+                "//src/mediapipe_internal:libovms_mediapipe",
                 "libovms_mediapipe_kfs_executor",
                 "libovms_mediapipe_http_executor",
                 "@mediapipe_calculators//:mediapipe_calculators",
@@ -818,6 +763,7 @@ ovms_cc_library(
             "libovms_metric_provider",
             "libovms_servable_definition",
             "libovms_single_version_servable_definition",
+            "copyable_object_wrapper",
          ] + select({
                 "//:not_disable_cloud": [
                     "libovmsazurefilesystem",
@@ -1278,17 +1224,6 @@ ovms_cc_library(
     deps = ["libovmslogging",
             "@fmtlib",],
     visibility = ["//visibility:public"],
-)
-
-ovms_cc_library(
-    name = "libovmsmediapipe_utils",
-    hdrs = ["mediapipe_internal/mediapipe_utils.hpp",
-            "mediapipe_internal/packettypes.hpp",],
-    srcs = ["mediapipe_internal/mediapipe_utils.cpp",],
-    deps = ["libovmsstring_utils",
-            "libovmsstatus",
-            "libovmslogging",],
-    visibility = ["//visibility:public",],
 )
 
 ovms_cc_library(

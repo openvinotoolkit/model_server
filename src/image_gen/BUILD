@@ -86,7 +86,7 @@ ovms_cc_library(
         ":imagegenutils",
         "//third_party:genai",
         ":imagegen_init",
-        "//src:node_initializer",
+        "//src/mediapipe_internal:node_initializer",
         "//src:libovmsstring_utils",
         "//third_party:openvino",],
     visibility = ["//visibility:public"],

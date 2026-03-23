@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2025 Intel Corporation
+// Copyright 2026 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@
 #include <string>
 #include <vector>
 
-#include "../status.hpp"
+#include "src/status.hpp"
 
 namespace mediapipe {
 class CalculatorGraphConfig_Node;

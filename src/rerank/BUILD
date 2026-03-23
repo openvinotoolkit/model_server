@@ -83,7 +83,7 @@ ovms_cc_library(
         "//src:executingstreamidguard",
         "//src:libovms_execution_context",
         "//src/tokenize:tokenize_parser",
-        "//src:node_initializer",
+        "//src/mediapipe_internal:node_initializer",
         "//src:libovmsstring_utils",
     ],
     visibility = ["//visibility:public"],

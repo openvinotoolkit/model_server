@@ -47,7 +47,7 @@ ovms_cc_library(
         ":t2s_servable",
         "//src/audio:audio_utils",
         "//src:libmodelconfigjsonparser",
-        "//src:node_initializer",
+        "//src/mediapipe_internal:node_initializer",
         "//src:libovmsstring_utils",
     ],
     visibility = ["//visibility:public"],

@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2025 Intel Corporation
+// Copyright 2026 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,14 +20,14 @@
 
 #include <openvino/core/except.hpp>
 
-#include "../mediapipe_internal/graph_side_packets.hpp"
-#include "../mediapipe_internal/node_initializer.hpp"
-#include "../stringutils.hpp"
+#include "src/mediapipe_internal/graph_side_packets.hpp"
+#include "src/mediapipe_internal/node_initializer.hpp"
+#include "src/stringutils.hpp"
 #include "imagegen_init.hpp"
 #include "pipelines.hpp"
 #include "mediapipe/framework/calculator.pb.h"
 
-#include "../logging.hpp"
+#include "src/logging.hpp"
 
 namespace ovms {
 class ImageGenNodeInitializer : public NodeInitializer {

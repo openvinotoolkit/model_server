@@ -86,7 +86,7 @@ ovms_cc_library(
         "//src:libovms_execution_context",
         ":embeddings_api",
         "//third_party:openvino",
-        "//src:node_initializer",
+        "//src/mediapipe_internal:node_initializer",
         "//src:libovmsstring_utils",
     ],
     visibility = ["//visibility:public"],
