@@ -2024,3 +2024,159 @@ TEST_F(HttpOpenAIHandlerParsingTest, chatTemplateKwargsConsumedByApplyChatTempla
     std::string resultNone = tokenizer->apply_chat_template(apiHandlerNone->getChatHistory(), add_generation_prompt, {}, std::nullopt, kwargsNoneStatus.value());
     EXPECT_EQ(resultNone, "hello");
 }
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParseMessagesToolCallsStoredInChatHistory) {
+    std::string json = R"({
+    "model": "llama",
+    "messages": [
+      {"role": "user", "content": "What is the weather like in Paris today?"},
+      {"role": "assistant", "content": null, "tool_calls": [{"id": "call_123", "type": "function", "function": {"name": "get_weather", "arguments": "{\"location\": \"Paris\"}"}}]},
+      {"role": "tool", "tool_call_id": "call_123", "name": "get_weather", "content": "15 degrees Celsius"}
+    ]
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    auto apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    ASSERT_EQ(apiHandler->parseMessages(), absl::OkStatus());
+
+    ov::genai::ChatHistory& history = apiHandler->getChatHistory();
+    ASSERT_EQ(history.size(), 3);
+
+    // Message 0: user message with role and content
+    auto msg0 = history[0];
+    ASSERT_TRUE(msg0.contains("role"));
+    EXPECT_EQ(msg0["role"].get_string(), "user");
+    ASSERT_TRUE(msg0.contains("content"));
+    EXPECT_EQ(msg0["content"].get_string(), "What is the weather like in Paris today?");
+
+    // Message 1: assistant message with tool_calls array
+    // Note: null content in JSON gets replaced with empty string by parseMessages
+    auto msg1 = history[1];
+    ASSERT_TRUE(msg1.contains("role"));
+    EXPECT_EQ(msg1["role"].get_string(), "assistant");
+    ASSERT_TRUE(msg1.contains("content"));
+    EXPECT_EQ(msg1["content"].get_string(), "");
+    ASSERT_TRUE(msg1.contains("tool_calls"));
+    EXPECT_TRUE(msg1["tool_calls"].is_array());
+    ASSERT_EQ(msg1["tool_calls"].size(), 1);
+    EXPECT_EQ(msg1["tool_calls"][0]["id"].get_string(), "call_123");
+    EXPECT_EQ(msg1["tool_calls"][0]["type"].get_string(), "function");
+    EXPECT_EQ(msg1["tool_calls"][0]["function"]["name"].get_string(), "get_weather");
+    EXPECT_EQ(msg1["tool_calls"][0]["function"]["arguments"].get_string(), "{\"location\": \"Paris\"}");
+
+    // Message 2: tool message with tool_call_id, name, and content
+    auto msg2 = history[2];
+    ASSERT_TRUE(msg2.contains("role"));
+    EXPECT_EQ(msg2["role"].get_string(), "tool");
+    ASSERT_TRUE(msg2.contains("tool_call_id"));
+    EXPECT_EQ(msg2["tool_call_id"].get_string(), "call_123");
+    ASSERT_TRUE(msg2.contains("name"));
+    EXPECT_EQ(msg2["name"].get_string(), "get_weather");
+    ASSERT_TRUE(msg2.contains("content"));
+    EXPECT_EQ(msg2["content"].get_string(), "15 degrees Celsius");
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParseMessagesMultipleToolCallsStoredInChatHistory) {
+    std::string json = R"({
+    "model": "llama",
+    "messages": [
+      {"role": "user", "content": "Compare weather in Paris and London"},
+      {"role": "assistant", "content": null, "tool_calls": [
+        {"id": "call_1", "type": "function", "function": {"name": "get_weather", "arguments": "{\"location\": \"Paris\"}"}},
+        {"id": "call_2", "type": "function", "function": {"name": "get_weather", "arguments": "{\"location\": \"London\"}"}}
+      ]},
+      {"role": "tool", "tool_call_id": "call_1", "name": "get_weather", "content": "15C"},
+      {"role": "tool", "tool_call_id": "call_2", "name": "get_weather", "content": "12C"}
+    ]
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    auto apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    ASSERT_EQ(apiHandler->parseMessages(), absl::OkStatus());
+
+    ov::genai::ChatHistory& history = apiHandler->getChatHistory();
+    ASSERT_EQ(history.size(), 4);
+
+    // Assistant message should have 2 tool calls
+    auto msg1 = history[1];
+    ASSERT_TRUE(msg1.contains("tool_calls"));
+    ASSERT_EQ(msg1["tool_calls"].size(), 2);
+    EXPECT_EQ(msg1["tool_calls"][0]["id"].get_string(), "call_1");
+    EXPECT_EQ(msg1["tool_calls"][1]["id"].get_string(), "call_2");
+
+    // Both tool response messages should have tool_call_id
+    EXPECT_EQ(history[2]["tool_call_id"].get_string(), "call_1");
+    EXPECT_EQ(history[3]["tool_call_id"].get_string(), "call_2");
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParseMessagesAssistantWithNullContentAndNoToolCalls) {
+    std::string json = R"({
+    "model": "llama",
+    "messages": [
+      {"role": "user", "content": "hello"},
+      {"role": "assistant", "content": null}
+    ]
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    auto apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    ASSERT_EQ(apiHandler->parseMessages(), absl::OkStatus());
+
+    ov::genai::ChatHistory& history = apiHandler->getChatHistory();
+    ASSERT_EQ(history.size(), 2);
+
+    // Null content gets replaced with empty string by parseMessages fallback logic
+    auto msg1 = history[1];
+    ASSERT_TRUE(msg1.contains("content"));
+    EXPECT_EQ(msg1["content"].get_string(), "");
+    EXPECT_FALSE(msg1.contains("tool_calls"));
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParseMessagesToolCallsWithMissingArgumentsGetsDefault) {
+    // Verify that ensureArgumentsInToolCalls still works after tool_calls are stored in chat history
+    std::string json = R"({
+    "model": "llama",
+    "messages": [
+      {"role": "user", "content": "hello"},
+      {"role": "assistant", "content": null, "tool_calls": [{"id": "call_1", "type": "function", "function": {"name": "no_args_tool"}}]}
+    ]
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    auto apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    ASSERT_EQ(apiHandler->parseMessages(), absl::OkStatus());
+
+    ov::genai::ChatHistory& history = apiHandler->getChatHistory();
+    ASSERT_EQ(history.size(), 2);
+
+    // tool_calls should be present in chat history
+    auto msg1 = history[1];
+    ASSERT_TRUE(msg1.contains("tool_calls"));
+    EXPECT_EQ(msg1["tool_calls"].size(), 1);
+    EXPECT_EQ(msg1["tool_calls"][0]["function"]["name"].get_string(), "no_args_tool");
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParseMessagesRegularMessageHasNoToolFields) {
+    std::string json = R"({
+    "model": "llama",
+    "messages": [
+      {"role": "system", "content": "You are helpful."},
+      {"role": "user", "content": "hello"}
+    ]
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    auto apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    ASSERT_EQ(apiHandler->parseMessages(), absl::OkStatus());
+
+    ov::genai::ChatHistory& history = apiHandler->getChatHistory();
+    ASSERT_EQ(history.size(), 2);
+
+    // Regular messages should not have tool-related fields
+    EXPECT_FALSE(history[0].contains("tool_calls"));
+    EXPECT_FALSE(history[0].contains("tool_call_id"));
+    EXPECT_FALSE(history[0].contains("name"));
+    EXPECT_FALSE(history[1].contains("tool_calls"));
+    EXPECT_FALSE(history[1].contains("tool_call_id"));
+    EXPECT_FALSE(history[1].contains("name"));
+}
