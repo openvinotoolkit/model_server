@@ -34,21 +34,33 @@ void Lfm2ToolParser::writeArgumentOfAnyType(const rapidjson::Value& arg, rapidjs
             writeArgumentOfAnyType(elem, writer);
         }
         writer.EndArray();
-    } else if (arg.IsObject() || arg.Get) {
+    } else if (arg.IsObject()) {
         writer.StartObject();
         for (auto it = arg.MemberBegin(); it != arg.MemberEnd(); ++it) {
             writer.Key(it->name.GetString());
             writeArgumentOfAnyType(it->value, writer);
         }
-        writer.EndObject();1`
+        writer.EndObject();
     } else {
         SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Argument has unsupported type.");
     }
 }
 
-void Lfm2ToolParser::writeArgumentOfAnyType(const char* arg, rapidjson::Writer<rapidjson::StringBuffer>& writer) {
+void Lfm2ToolParser::writeArgumentOfAnyType(const std::string& arg, rapidjson::Writer<rapidjson::StringBuffer>& writer) {
+    std::string normalized = arg;
+    if (arg.find('{') != std::string::npos || arg.find('}') != std::string::npos) {
+        std::replace(normalized.begin(), normalized.end(), '\'', '"');
+        SPDLOG_LOGGER_INFO(llm_calculator_logger, "Argument contains curly braces, replaced single quotes with double quotes for JSON parsing. Modified string: {}", normalized);
+    } 
+
     rapidjson::Document doc;
-    doc.Parse(arg);
+    doc.Parse(normalized.c_str());
+    
+    if (doc.HasParseError()) {
+        SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Failed to parse argument string as JSON. Argument string: {}", normalized);
+        return;
+    }
+
     rapidjson::Value& argumentDoc = doc;
     writeArgumentOfAnyType(argumentDoc, writer);
 }
@@ -114,11 +126,27 @@ std::vector<Lfm2ToolParser::Argument> Lfm2ToolParser::parseArguments(const std::
     return parsedArgs;
 }
 
-std::optional<rapidjson::Document> Lfm2ToolParser::parseChunk(const std::string& chunk, ov::genai::GenerationFinishReason finishReason) {
+bool Lfm2ToolParser::parseCurrentToolCall(ToolCalls_t& toolCalls) {
+    size_t startTagPos = streamingContent.find(toolCallStartTag);
+    size_t endTagPos = streamingContent.find(toolCallEndTag, startTagPos + toolCallStartTag.length());
+    if (startTagPos != std::string::npos && endTagPos != std::string::npos) {
+        std::string toolStr = streamingContent.substr(startTagPos + toolCallStartTag.length(), endTagPos - startTagPos - toolCallStartTag.length());
+        bool wasToolCallParsed = parseSingleToolCall(toolStr, toolCall);
+        if (wasToolCallParsed) {
+            streamingContent.erase(0, endTagPos + toolCallEndTag.length());
+            return true;
+        }
+    }
+    return false;
+}
+std::optional<ToolCalls_t> Lfm2ToolParser::parseChunk(const std::string& chunk, ov::genai::GenerationFinishReason finishReason) {
     if (chunk.empty()) {
         return std::nullopt;
     }
     
+    ToolCalls_t toolCalls;
+    this->streamingContent += chunk;
+
     return std::nullopt;
 }
 
@@ -140,7 +168,7 @@ bool Lfm2ToolParser::parseSingleToolCall(const std::string& toolStr, ToolCall& t
         argsWriter.StartObject();
         for (const Lfm2ToolParser::Argument& argument : arguments) {
             argsWriter.Key(argument.name.c_str());
-            writeArgumentOfAnyType(argument.value.c_str(), argsWriter);
+            writeArgumentOfAnyType(argument.value, argsWriter);
         }                
         argsWriter.EndObject();
         toolCall.arguments = sb.GetString();
