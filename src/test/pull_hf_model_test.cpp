@@ -817,7 +817,7 @@ TEST(Libgt2InitGuardTest, LfsFilterCaptureNonDefaultResumeOptions) {
     EXPECT_EXIT({
         EnvGuard guard;
         guard.set("GIT_LFS_RESUME_ATTEMPTS", "3");
-        guard.set("GIT_LFS_RESUME_INTERVAL", "20");
+        guard.set("GIT_LFS_RESUME_INTERVAL_SECONDS", "20");
         // Act: capture stdout during object construction
         testing::internal::CaptureStdout();
         {
