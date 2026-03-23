@@ -68,7 +68,7 @@ class OpenAIChatCompletionsHandler {
     OpenAIChatCompletionsRequest request;
     std::chrono::time_point<std::chrono::system_clock> created;
     ov::genai::Tokenizer tokenizer;
-    size_t processedTokens = 0;  // tracks overall number of tokens processed by the pipeline
+    size_t processedTokens = 0;              // tracks overall number of tokens processed by the pipeline
     bool toolCallsDetectedInStream = false;  // tracks whether tool calls were detected in any streaming chunk
 
     // Output parser is used to parse chat completions response to extract specific fields like tool calls and reasoning.
