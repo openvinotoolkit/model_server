@@ -444,10 +444,10 @@ index 58cb4b424..00ddee9f3 100644
  	git_writestream **out,
 diff --git a/src/libgit2/lfs_filter.c b/src/libgit2/lfs_filter.c
 new file mode 100644
-index 000000000..e48657720
+index 000000000..ea806e1ec
 --- /dev/null
 +++ b/src/libgit2/lfs_filter.c
-@@ -0,0 +1,1503 @@
+@@ -0,0 +1,1529 @@
 +﻿/*
 +/ Copyright 2025 Intel Corporation
 +/
@@ -1124,60 +1124,89 @@ index 000000000..e48657720
 +        const git_filter_source *src,
 +        void **payload)
 +{
++	int error = -1; /* default: failure */
++
 +	git_str lfs_oid = GIT_STR_INIT;
 +	git_str lfs_size = GIT_STR_INIT;
 +	git_str full_path = GIT_STR_INIT;
++
 +	const char *obj_regexp = "\noid sha256:(.*)\n";
 +	const char *size_regexp = "\nsize (.*)\n";
++
 +	git_repository *repo = git_filter_source_repo(src);
 +	const char *path = git_filter_source_path(src);
 +	const char *workdir = git_repository_workdir(repo);
-+	/* Setup memory for payload struct ownership */	
++
 +	lfs_attrs *la = lfs_attrs_new();
 +	if (!la)
-+		return -1;
++		goto on_error;
 +
 +	lfs_attrs_set_path(la, path);
 +	lfs_attrs_set_workdir(la, workdir);
 +	lfs_attrs_set_url(la, repo->url);
 +	la->is_download = true;
 +
++	/* Duplicate incoming string so regex functions can modify safely */
 +	lfs_oid.size = from->size;
 +	lfs_oid.asize = from->asize;
 +	lfs_oid.ptr = git__strdup(from->ptr);
++	if (!lfs_oid.ptr)
++		goto on_error;
++
 +	lfs_size.size = from->size;
 +	lfs_size.asize = from->asize;
 +	lfs_size.ptr = git__strdup(from->ptr);
++	if (!lfs_size.ptr)
++		goto on_error;
 +
 +	if (get_lfs_info_match(&lfs_oid, obj_regexp) < 0) {
 +		fprintf(stderr,
 +		        "\n[ERROR] failure, cannot find lfs oid in: %s\n",
 +		        lfs_oid.ptr);
-+		return -1;
++		goto on_error;
 +	}
++
 +	lfs_attrs_set_oid(la, lfs_oid.ptr);
-+	git_str_dispose(&lfs_oid);
++
 +	if (get_lfs_info_match(&lfs_size, size_regexp) < 0) {
 +		fprintf(stderr,
 +		        "\n[ERROR] failure, cannot find lfs size in: %s\n",
 +		        lfs_size.ptr);
-+		return -1;
++		goto on_error;
 +	}
++
 +	lfs_attrs_set_size(la, lfs_size.ptr);
-+	git_str_dispose(&lfs_size);
++
 +	if (git_repository_workdir_path(&full_path, repo, path) < 0) {
 +		fprintf(stderr,
 +		        "\n[ERROR] failure, cannot get repository path: %s\n",
 +		        path);
-+		return -1;
++		goto on_error;
 +	}
-+	lfs_attrs_set_full_path(la, full_path.ptr);
-+	git_str_dispose(&full_path);
 +
++	lfs_attrs_set_full_path(la, full_path.ptr);
++
++	/* Success: give ownership of la to caller */
 +	*payload = la;
 +
-+	/*Just write the original lfs file contents */
-+	return git_str_set(to, from->ptr, from->size);
++	/* Write original LFS pointer contents into output */
++	error = git_str_set(to, from->ptr, from->size);
++
++	/* fallthrough to cleanup internals but leave la intact */
++	goto on_cleanup;
++
++on_error:
++	/* Free lfs_attrs on failure */
++	if (la)
++		lfs_attrs_free(la);
++
++on_cleanup:
++	/* Always dispose temporary git_str buffers */
++	git_str_dispose(&lfs_oid);
++	git_str_dispose(&lfs_size);
++	git_str_dispose(&full_path);
++
++	return error;
 +}
 +
 +/*
@@ -1905,7 +1934,6 @@ index 000000000..e48657720
 + */
 +static void git_lfs_filter_free(git_filter *filter)
 +{
-+	curl_global_cleanup();
 +	git__free(filter);
 +}
 +
@@ -1937,8 +1965,6 @@ index 000000000..e48657720
 +	if (f == NULL)
 +		return NULL;
 +
-+	/* In Windows, this inits the Winsock stuff */
-+	curl_global_init(CURL_GLOBAL_ALL);
 +	/* Initialize env-config exactly once per process */
 +	lfs_resume_env_init_once();
 +
@@ -1952,7 +1978,7 @@ index 000000000..e48657720
 +	return f;
 +}
 diff --git a/src/libgit2/repository.c b/src/libgit2/repository.c
-index 73876424a..f374d7f51 100644
+index 73876424a..0eefde7c9 100644
 --- a/src/libgit2/repository.c
 +++ b/src/libgit2/repository.c
 @@ -190,6 +190,7 @@ void git_repository_free(git_repository *repo)
@@ -1963,7 +1989,7 @@ index 73876424a..f374d7f51 100644
  
  	git__memzero(repo, sizeof(*repo));
  	git__free(repo);
-@@ -1104,6 +1105,16 @@ static int repo_is_worktree(unsigned *out, const git_repository *repo)
+@@ -1104,6 +1105,22 @@ static int repo_is_worktree(unsigned *out, const git_repository *repo)
  	return error;
  }
  
@@ -1973,7 +1999,13 @@ index 73876424a..f374d7f51 100644
 +{
 +	GIT_ASSERT_ARG(repo);
 +	GIT_ASSERT_ARG(url);
-+	repo->url = git__strdup(url);
++	char *new_url;
++	GIT_ASSERT_ARG(repo);
++	GIT_ASSERT_ARG(url);
++	new_url = git__strdup(url);
++	if (!new_url) return -1;
++	if (repo->url) git__free(repo->url);
++	repo->url = new_url;
 +	return 0;
 +}
 +
