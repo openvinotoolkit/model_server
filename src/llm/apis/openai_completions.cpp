@@ -45,6 +45,8 @@ using namespace rapidjson;
 namespace ovms {
 
 constexpr size_t DEFAULT_MAX_STOP_WORDS = 16;  // same as deep-seek
+constexpr std::string_view BASE64_PREFIX = "base64,";
+constexpr int64_t MAX_IMAGE_SIZE_BYTES = 20000000;  // 20MB
 
 namespace {
 
@@ -130,8 +132,8 @@ void OpenAIChatCompletionsHandler::serializeResponsesTools(Writer<StringBuffer>&
 }
 
 void OpenAIChatCompletionsHandler::serializeResponsesResponseObject(Writer<StringBuffer>& writer, const std::string& responseId, int64_t createdAt,
-    const char* status, const std::string& fullOutputText, bool includeUsage,
-    const char* incompleteReason, const char* errorMessage, const char* errorCode) const {
+    const std::string& status, const std::string& fullOutputText, bool includeUsage,
+    const std::optional<std::string>& incompleteReason, const std::optional<std::string>& errorMessage, ResponsesErrorCode errorCode) const {
     writer.StartObject();
     writer.String("id");
     writer.String(responseId.c_str());
@@ -139,25 +141,25 @@ void OpenAIChatCompletionsHandler::serializeResponsesResponseObject(Writer<Strin
     writer.String("response");
     writer.String("created_at");
     writer.Int64(createdAt);
-    if (std::string(status) == "completed") {
+    if (status == "completed") {
         const auto completedAt = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
         writer.String("completed_at");
         writer.Int64(completedAt);
     }
-    if (incompleteReason != nullptr) {
+    if (incompleteReason.has_value()) {
         writer.String("incomplete_details");
         writer.StartObject();
         writer.String("reason");
-        writer.String(incompleteReason);
+        writer.String(incompleteReason.value().c_str());
         writer.EndObject();
     }
     writer.String("error");
-    if (errorMessage != nullptr) {
+    if (errorMessage.has_value()) {
         writer.StartObject();
         writer.String("code");
-        writer.String(errorCode != nullptr ? errorCode : "server_error");
+        writer.String(responsesErrorCodeToString(errorCode));
         writer.String("message");
-        writer.String(errorMessage);
+        writer.String(errorMessage.value().c_str());
         writer.EndObject();
     } else {
         writer.Null();
@@ -165,18 +167,17 @@ void OpenAIChatCompletionsHandler::serializeResponsesResponseObject(Writer<Strin
     writer.String("model");
     writer.String(request.model.c_str());
     writer.String("status");
-    writer.String(status);
+    writer.String(status.c_str());
 
     writer.String("parallel_tool_calls");
     writer.Bool(false);
     // TODO: previous_response_id not supported
     writer.String("store");
     writer.Bool(true);
-    writer.String("temperature");
+    // TODO: temperature/top_p are only included when explicitly provided in the request
     if (request.temperature.has_value()) {
+        writer.String("temperature");
         writer.Double(static_cast<double>(request.temperature.value()));
-    } else {
-        writer.Double(1.0);
     }
     writer.String("text");
     writer.StartObject();
@@ -188,11 +189,9 @@ void OpenAIChatCompletionsHandler::serializeResponsesResponseObject(Writer<Strin
     writer.EndObject();
     serializeResponsesToolChoice(writer);
     serializeResponsesTools(writer);
-    writer.String("top_p");
     if (request.topP.has_value()) {
+        writer.String("top_p");
         writer.Double(static_cast<double>(request.topP.value()));
-    } else {
-        writer.Double(1.0);
     }
     writer.String("truncation");
     writer.String("disabled");
@@ -234,7 +233,7 @@ void OpenAIChatCompletionsHandler::serializeResponsesResponseObject(Writer<Strin
         writer.String("type");
         writer.String("function_call");
         writer.String("status");
-        writer.String(status);
+        writer.String(status.c_str());
         writer.String("call_id");
         writer.String(toolCall.id.c_str());
         writer.String("name");
@@ -252,16 +251,10 @@ void OpenAIChatCompletionsHandler::serializeResponsesResponseObject(Writer<Strin
         writer.String("role");
         writer.String("assistant");
         writer.String("status");
-        if (std::string(status) == "completed") {
-            writer.String("completed");
-        } else if (std::string(status) == "incomplete") {
-            writer.String("incomplete");
-        } else {
-            writer.String("in_progress");
-        }
+        writer.String(status.c_str());
         writer.String("content");
         writer.StartArray();
-        serializeResponsesPart(writer, fullOutputText);
+        serializeOutputTextPart(writer, fullOutputText);
         writer.EndArray();
         writer.EndObject();
     }
@@ -285,7 +278,7 @@ void OpenAIChatCompletionsHandler::serializeResponsesResponseObject(Writer<Strin
 }
 
 void OpenAIChatCompletionsHandler::serializeResponsesOutputItem(Writer<StringBuffer>& writer, const std::string& outputItemId,
-    const std::string& text, const char* status, bool withContent) {
+    const std::string& text, const std::string& status) {
     writer.StartObject();
     writer.String("id");
     writer.String(outputItemId.c_str());
@@ -294,17 +287,17 @@ void OpenAIChatCompletionsHandler::serializeResponsesOutputItem(Writer<StringBuf
     writer.String("role");
     writer.String("assistant");
     writer.String("status");
-    writer.String(status);
+    writer.String(status.c_str());
     writer.String("content");
     writer.StartArray();
-    if (withContent) {
-        serializeResponsesPart(writer, text);
+    if (status != "in_progress") {
+        serializeOutputTextPart(writer, text);
     }
     writer.EndArray();
     writer.EndObject();
 }
 
-void OpenAIChatCompletionsHandler::serializeResponsesPart(Writer<StringBuffer>& writer, const std::string& text) {
+void OpenAIChatCompletionsHandler::serializeOutputTextPart(Writer<StringBuffer>& writer, const std::string& text) {
     writer.StartObject();
     writer.String("type");
     writer.String("output_text");
@@ -319,7 +312,7 @@ void OpenAIChatCompletionsHandler::serializeResponsesPart(Writer<StringBuffer>& 
 std::string OpenAIChatCompletionsHandler::serializeResponsesUnaryResponse(const std::vector<ParsedOutput>& parsedOutputs,
     ov::genai::GenerationFinishReason finishReason) const {
     const bool isIncomplete = (finishReason == ov::genai::GenerationFinishReason::LENGTH);
-    const char* responseStatus = isIncomplete ? "incomplete" : "completed";
+    const std::string responseStatus = isIncomplete ? "incomplete" : "completed";
     const auto createdAt = std::chrono::duration_cast<std::chrono::seconds>(created.time_since_epoch()).count();
     const auto completedAt = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
     const std::string responseId = "resp-" + std::to_string(createdAt);
@@ -349,18 +342,17 @@ std::string OpenAIChatCompletionsHandler::serializeResponsesUnaryResponse(const 
     writer.String("model");
     writer.String(request.model.c_str());
     writer.String("status");
-    writer.String(responseStatus);
+    writer.String(responseStatus.c_str());
 
     writer.String("parallel_tool_calls");
     writer.Bool(false);
     // TODO: previous_response_id not supported
     writer.String("store");
     writer.Bool(true);
-    writer.String("temperature");
+    // TODO: temperature/top_p are only included when explicitly provided in the request
     if (request.temperature.has_value()) {
+        writer.String("temperature");
         writer.Double(static_cast<double>(request.temperature.value()));
-    } else {
-        writer.Double(1.0);
     }
     writer.String("text");
     writer.StartObject();
@@ -372,11 +364,9 @@ std::string OpenAIChatCompletionsHandler::serializeResponsesUnaryResponse(const 
     writer.EndObject();
     serializeResponsesToolChoice(writer);
     serializeResponsesTools(writer);
-    writer.String("top_p");
     if (request.topP.has_value()) {
+        writer.String("top_p");
         writer.Double(static_cast<double>(request.topP.value()));
-    } else {
-        writer.Double(1.0);
     }
     writer.String("truncation");
     writer.String("disabled");
@@ -423,7 +413,7 @@ std::string OpenAIChatCompletionsHandler::serializeResponsesUnaryResponse(const 
                 writer.String("type");
                 writer.String("function_call");
                 writer.String("status");
-                writer.String(responseStatus);
+                writer.String(responseStatus.c_str());
                 writer.String("call_id");
                 writer.String(toolCall.id.c_str());
                 writer.String("name");
@@ -446,10 +436,10 @@ std::string OpenAIChatCompletionsHandler::serializeResponsesUnaryResponse(const 
             writer.String("role");
             writer.String("assistant");
             writer.String("status");
-            writer.String(responseStatus);
+            writer.String(responseStatus.c_str());
             writer.String("content");
             writer.StartArray();
-            serializeResponsesPart(writer, parsedOutput.content);
+            serializeOutputTextPart(writer, parsedOutput.content);
             writer.EndArray();
             writer.EndObject();
         }
@@ -714,13 +704,12 @@ absl::Status OpenAIChatCompletionsHandler::parseResponsesInput(std::optional<std
                         return absl::InvalidArgumentError("input_image.image_url must be a string or object");
                     }
 
-                    std::string pattern = "base64,";
-                    std::size_t pos = imageUrl.find(pattern);
+                    std::size_t pos = imageUrl.find(BASE64_PREFIX);
                     std::string decoded;
                     ov::Tensor tensor;
                     if (pos != std::string::npos) {
                         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Loading image from base64 string");
-                        size_t offset = pos + pattern.length();
+                        size_t offset = pos + BASE64_PREFIX.length();
                         if (!absl::Base64Unescape(std::string_view(imageUrl.data() + offset, imageUrl.size() - offset), &decoded)) {
                             return absl::InvalidArgumentError("Invalid base64 string in request");
                         }
@@ -734,11 +723,10 @@ absl::Status OpenAIChatCompletionsHandler::parseResponsesInput(std::optional<std
                         }
                     } else if (std::regex_match(imageUrl.c_str(), std::regex("^(http|https|ftp|sftp|)://(.*)"))) {
                         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Loading image using curl");
-                        int64_t sizeLimit = 20000000;  // restrict single image size to 20MB
                         if (!allowedMediaDomains.has_value() || !isDomainAllowed(allowedMediaDomains.value(), imageUrl.c_str())) {
                             return absl::InvalidArgumentError("Given url does not match any allowed domain from allowed_media_domains");
                         }
-                        auto status = downloadImage(imageUrl.c_str(), decoded, sizeLimit);
+                        auto status = downloadImage(imageUrl.c_str(), decoded, MAX_IMAGE_SIZE_BYTES);
                         if (status != absl::OkStatus()) {
                             return status;
                         }
@@ -898,6 +886,41 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
                                 SPDLOG_LOGGER_DEBUG(llm_calculator_logger, ss.str());
                                 return absl::InvalidArgumentError("Image parsing failed");
                             }
+                            std::string url = imageUrl["url"].GetString();
+                            std::size_t pos = url.find(BASE64_PREFIX);
+                            std::string decoded;
+                            ov::Tensor tensor;
+                            if (pos != std::string::npos) {
+                                SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Loading image from base64 string");
+                                size_t offset = pos + BASE64_PREFIX.length();
+                                if (!absl::Base64Unescape(std::string_view(url.data() + offset, url.size() - offset), &decoded)) {
+                                    return absl::InvalidArgumentError("Invalid base64 string in request");
+                                }
+                                try {
+                                    tensor = loadImageStbiFromMemory(decoded);
+                                } catch (std::runtime_error& e) {
+                                    std::stringstream ss;
+                                    ss << "Image parsing failed: " << e.what();
+                                    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, ss.str());
+                                    return absl::InvalidArgumentError(ss.str());
+                                }
+                            } else if (std::regex_match(url.c_str(), std::regex("^(http|https|ftp|sftp|)://(.*)"))) {
+                                SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Loading image using curl");
+                                if (!allowedMediaDomains.has_value() || !isDomainAllowed(allowedMediaDomains.value(), url.c_str())) {
+                                    return absl::InvalidArgumentError("Given url does not match any allowed domain from allowed_media_domains");
+                                }
+                                auto status = downloadImage(url.c_str(), decoded, MAX_IMAGE_SIZE_BYTES);
+                                if (status != absl::OkStatus()) {
+                                    return status;
+                                }
+                                try {
+                                    tensor = loadImageStbiFromMemory(decoded);
+                                } catch (std::runtime_error& e) {
+                                    std::stringstream ss;
+                                    ss << "Image parsing failed: " << e.what();
+                                    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, ss.str());
+                                    return absl::InvalidArgumentError("Image parsing failed");
+                                }
 
                         } else {
                             if (!allowedLocalMediaPath.has_value()) {
@@ -1011,23 +1034,22 @@ absl::Status OpenAIChatCompletionsHandler::parseTools() {
             auto& obj = it->value.GetArray()[i];
             if (!obj.IsObject())
                 return absl::InvalidArgumentError("Tool is not a JSON object");
-            rapidjson::Value* functionObj = nullptr;
             rapidjson::Value* parametersValue = nullptr;
-            const char* functionNameCStr = nullptr;
+            std::string functionName;
 
             auto functionIt = obj.FindMember("function");
             if (functionIt != obj.MemberEnd()) {
                 if (!functionIt->value.IsObject()) {
                     return absl::InvalidArgumentError("Function is not a valid JSON object");
                 }
-                functionObj = &functionIt->value;
-                auto nameIt = functionObj->GetObject().FindMember("name");
-                if (nameIt == functionObj->GetObject().MemberEnd() || !nameIt->value.IsString()) {
+                auto& functionObj = functionIt->value;
+                auto nameIt = functionObj.GetObject().FindMember("name");
+                if (nameIt == functionObj.GetObject().MemberEnd() || !nameIt->value.IsString()) {
                     return absl::InvalidArgumentError("Function object does not contain a valid name field");
                 }
-                functionNameCStr = nameIt->value.GetString();
-                auto parametersIt = functionObj->GetObject().FindMember("parameters");
-                if (parametersIt != functionObj->GetObject().MemberEnd()) {
+                functionName = nameIt->value.GetString();
+                auto parametersIt = functionObj.GetObject().FindMember("parameters");
+                if (parametersIt != functionObj.GetObject().MemberEnd()) {
                     parametersValue = &parametersIt->value;
                 }
             } else {
@@ -1043,7 +1065,7 @@ absl::Status OpenAIChatCompletionsHandler::parseTools() {
                 if (nameIt == obj.MemberEnd() || !nameIt->value.IsString()) {
                     return absl::InvalidArgumentError("Function object does not contain a valid name field");
                 }
-                functionNameCStr = nameIt->value.GetString();
+                functionName = nameIt->value.GetString();
 
                 auto parametersIt = obj.FindMember("parameters");
                 if (parametersIt != obj.MemberEnd()) {
@@ -1051,7 +1073,6 @@ absl::Status OpenAIChatCompletionsHandler::parseTools() {
                 }
             }
 
-            std::string functionName = functionNameCStr;
             // If tool_choice is set to "auto", we keep all tools
             // If tool_choice is set to a specific function name, we keep only that tool
             if (tool_choice != "auto" && tool_choice != "required" && tool_choice != functionName) {
@@ -1066,10 +1087,8 @@ absl::Status OpenAIChatCompletionsHandler::parseTools() {
                 if (!parametersValue->IsObject()) {
                     return absl::InvalidArgumentError("Function parameters are not a valid JSON object");
                 }
-                // now we want to insert to a mapping of
-                // tool name -> tool schema representations struct
                 // Dump parameters object to string since this is the schema format expected by GenAI
-                // Keep the rapidjson::Value object as well to avoid re-parsing in outputParsers
+                // Keep the rapidjson::Value pointer as well to avoid re-parsing in outputParsers
                 rapidjson::StringBuffer buffer;
                 rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
                 parametersValue->Accept(writer);
@@ -1647,14 +1666,14 @@ absl::Status OpenAIChatCompletionsHandler::parseCommonPart(std::optional<uint32_
     }
     request.maxModelLength = maxModelLength;
 
-    // logit_bias TODO
-    // top_logprobs TODO
-    // response_format TODO
-    // tools TODO
-    // tool_choice TODO
-    // user TODO
-    // function_call TODO (deprecated)
-    // functions TODO (deprecated)
+    // TODO: logit_bias
+    // TODO: top_logprobs
+    // TODO: response_format
+    // TODO: tools
+    // TODO: tool_choice
+    // TODO: user
+    // TODO: function_call (deprecated)
+    // TODO: functions (deprecated)
     return absl::OkStatus();
 }
 
@@ -1782,7 +1801,7 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const std::vect
         // index: integer; Choice index, only n=1 supported anyway
         jsonResponse.Index(index++);
 
-        // logprobs: object/null; Log probability information for the choice. TODO
+        // TODO: logprobs: object/null; Log probability information for the choice.
         if (this->request.logprobschat || this->request.logprobs) {
             jsonResponse.StartObject("logprobs");
             if (endpoint == Endpoint::CHAT_COMPLETIONS) {
@@ -1863,11 +1882,9 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const std::vect
 
     jsonResponse.UsageObject(usage);
 
-    // TODO
-    // id: string; A unique identifier for the chat completion.
+    // TODO: id: string; A unique identifier for the chat completion.
 
-    // TODO
-    // system_fingerprint: string; This fingerprint represents the backend configuration that the model runs with.
+    // TODO: system_fingerprint: string; This fingerprint represents the backend configuration that the model runs with.
     // Can be used in conjunction with the seed request parameter to understand when backend changes have been made that might impact determinism.
 
     // finish response object
@@ -1931,11 +1948,9 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(ov::genai::Enco
 
     jsonResponse.UsageObject(usage);
 
-    // TODO
-    // id: string; A unique identifier for the chat completion.
+    // TODO: id: string; A unique identifier for the chat completion.
 
-    // TODO
-    // system_fingerprint: string; This fingerprint represents the backend configuration that the model runs with.
+    // TODO: system_fingerprint: string; This fingerprint represents the backend configuration that the model runs with.
     // Can be used in conjunction with the seed request parameter to understand when backend changes have been made that might impact determinism.
 
     // finish response object
@@ -1948,21 +1963,29 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(ov::genai::VLMD
     usage.promptTokens = results.perf_metrics.get_num_input_tokens();
     usage.completionTokens = results.perf_metrics.get_num_generated_tokens();
     if (endpoint == Endpoint::RESPONSES) {
+        // Usage is already correctly set from perf_metrics above — no need for updateUsage.
         std::vector<ParsedOutput> parsedOutputs;
         for (const std::string& text : results.texts) {
-            auto result = tokenizer.encode(text);
-            auto& input_ids = result.input_ids;
-            if (input_ids.get_shape().size() != 2)
-                throw std::runtime_error("input_ids should have 2 dimensions");
-            if (input_ids.get_shape()[0] != 1)
-                throw std::runtime_error("input_ids should have 1 batch size");
-            if (input_ids.get_element_type() != ov::element::i64)
-                throw std::runtime_error("input_ids should have i64 element type");
+            if (outputParser != nullptr) {
+                // Same workaround as in chat completions, line part
+                auto result = tokenizer.encode(text);
+                auto& input_ids = result.input_ids;
+                if (input_ids.get_shape().size() != 2)
+                    throw std::runtime_error("input_ids should have 2 dimensions");
+                if (input_ids.get_shape()[0] != 1)
+                    throw std::runtime_error("input_ids should have 1 batch size");
+                if (input_ids.get_element_type() != ov::element::i64)
+                    throw std::runtime_error("input_ids should have i64 element type");
 
-            int64_t* input_ids_data = reinterpret_cast<int64_t*>(input_ids.data());
-            std::vector<int64_t> generatedTokens(input_ids_data, input_ids_data + input_ids.get_shape()[1]);
-            updateUsage(usage, generatedTokens, request.echo);
-            parsedOutputs.push_back(parseOutputIfNeeded(generatedTokens));
+                int64_t* inputIdsData = reinterpret_cast<int64_t*>(input_ids.data());
+                std::vector<int64_t> generatedTokens(inputIdsData, inputIdsData + input_ids.get_shape()[1]);
+                parsedOutputs.push_back(parseOutputIfNeeded(generatedTokens));
+            } else {
+                // Fast path: no output parser, use decoded text directly.
+                ParsedOutput output;
+                output.content = text;
+                parsedOutputs.push_back(std::move(output));
+            }
         }
         return serializeResponsesUnaryResponse(parsedOutputs);
     }
@@ -2000,7 +2023,7 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(ov::genai::VLMD
         jsonResponse.FinishReason(finishReason.value_or("unknown"));
         // index: integer; Choice index, only n=1 supported anyway
         jsonResponse.Index(index++);
-        // logprobs: object/null; Log probability information for the choice. TODO
+        // TODO: logprobs: object/null; Log probability information for the choice.
 
         if (endpoint == Endpoint::CHAT_COMPLETIONS) {
             jsonResponse.MessageObject(parsedOutput);
@@ -2029,11 +2052,9 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(ov::genai::VLMD
 
     jsonResponse.UsageObject(usage);
 
-    // TODO
-    // id: string; A unique identifier for the chat completion.
+    // TODO: id: string; A unique identifier for the chat completion.
 
-    // TODO
-    // system_fingerprint: string; This fingerprint represents the backend configuration that the model runs with.
+    // TODO: system_fingerprint: string; This fingerprint represents the backend configuration that the model runs with.
     // Can be used in conjunction with the seed request parameter to understand when backend changes have been made that might impact determinism.
 
     // finish response object
@@ -2094,7 +2115,7 @@ std::string OpenAIChatCompletionsHandler::serializeOutputItemAddedEvent(const st
     writer.String("output_index");
     writer.Uint64(outputIndex);
     writer.String("item");
-    serializeResponsesOutputItem(writer, outputItemId, "", "in_progress", false);
+    serializeResponsesOutputItem(writer, outputItemId, "", "in_progress");
     writer.EndObject();
     return buffer.GetString();
 }
@@ -2105,7 +2126,7 @@ std::string OpenAIChatCompletionsHandler::serializeContentPartAddedEvent(const s
     writeEventHeader(writer, "response.content_part.added");
     writeContentLocation(writer, outputItemId, outputIndex);
     writer.String("part");
-    serializeResponsesPart(writer, "");
+    serializeOutputTextPart(writer, "");
     writer.EndObject();
     return buffer.GetString();
 }
@@ -2140,29 +2161,29 @@ std::string OpenAIChatCompletionsHandler::serializeContentPartDoneEvent(const st
     writeEventHeader(writer, "response.content_part.done");
     writeContentLocation(writer, outputItemId, outputIndex);
     writer.String("part");
-    serializeResponsesPart(writer, responsesState.outputText);
+    serializeOutputTextPart(writer, responsesState.outputText);
     writer.EndObject();
     return buffer.GetString();
 }
 
 std::string OpenAIChatCompletionsHandler::serializeOutputItemDoneEvent(const std::string& outputItemId, ov::genai::GenerationFinishReason finishReason, uint64_t outputIndex) {
-    const char* itemStatus = (finishReason == ov::genai::GenerationFinishReason::LENGTH) ? "incomplete" : "completed";
+    const std::string itemStatus = (finishReason == ov::genai::GenerationFinishReason::LENGTH) ? "incomplete" : "completed";
     StringBuffer buffer;
     Writer<StringBuffer> writer(buffer);
     writeEventHeader(writer, "response.output_item.done");
     writer.String("output_index");
     writer.Uint64(outputIndex);
     writer.String("item");
-    serializeResponsesOutputItem(writer, outputItemId, responsesState.outputText, itemStatus, true);
+    serializeResponsesOutputItem(writer, outputItemId, responsesState.outputText, itemStatus);
     writer.EndObject();
     return buffer.GetString();
 }
 
 std::string OpenAIChatCompletionsHandler::serializeResponseCompletedEvent(const std::string& responseId, int64_t createdAt, ov::genai::GenerationFinishReason finishReason) {
     const bool isIncomplete = (finishReason == ov::genai::GenerationFinishReason::LENGTH);
-    const char* responseStatus = isIncomplete ? "incomplete" : "completed";
+    const std::string responseStatus = isIncomplete ? "incomplete" : "completed";
     const char* eventType = isIncomplete ? "response.incomplete" : "response.completed";
-    const char* incompleteReason = isIncomplete ? "max_tokens" : nullptr;
+    std::optional<std::string> incompleteReason = isIncomplete ? std::optional<std::string>("max_tokens") : std::nullopt;
     StringBuffer buffer;
     Writer<StringBuffer> writer(buffer);
     writeEventHeader(writer, eventType);
@@ -2172,13 +2193,13 @@ std::string OpenAIChatCompletionsHandler::serializeResponseCompletedEvent(const 
     return buffer.GetString();
 }
 
-std::string OpenAIChatCompletionsHandler::serializeResponseFailedEventBody(const std::string& responseId, int64_t createdAt, const std::string& errorMessage, const char* errorCode) {
+std::string OpenAIChatCompletionsHandler::serializeResponseFailedEventBody(const std::string& responseId, int64_t createdAt, const std::string& errorMessage, ResponsesErrorCode errorCode) {
     StringBuffer buffer;
     Writer<StringBuffer> writer(buffer);
     writeEventHeader(writer, "response.failed");
     writer.String("response");
     serializeResponsesResponseObject(writer, responseId, createdAt, "failed", responsesState.outputText, false,
-        nullptr, errorMessage.c_str(), errorCode);
+        std::nullopt, errorMessage, errorCode);
     writer.EndObject();
     return buffer.GetString();
 }
@@ -2341,7 +2362,7 @@ std::string OpenAIChatCompletionsHandler::serializeFunctionCallArgumentsDoneEven
 }
 
 std::string OpenAIChatCompletionsHandler::serializeFunctionCallOutputItemDoneEvent(const ToolCall& toolCall, ov::genai::GenerationFinishReason finishReason, uint64_t outputIndex) {
-    const char* itemStatus = (finishReason == ov::genai::GenerationFinishReason::LENGTH) ? "incomplete" : "completed";
+    const std::string itemStatus = (finishReason == ov::genai::GenerationFinishReason::LENGTH) ? "incomplete" : "completed";
     StringBuffer buffer;
     Writer<StringBuffer> writer(buffer);
     writeEventHeader(writer, "response.output_item.done");
@@ -2354,7 +2375,7 @@ std::string OpenAIChatCompletionsHandler::serializeFunctionCallOutputItemDoneEve
     writer.String("type");
     writer.String("function_call");
     writer.String("status");
-    writer.String(itemStatus);
+    writer.String(itemStatus.c_str());
     writer.String("call_id");
     writer.String(toolCall.id.c_str());
     writer.String("name");
@@ -2567,7 +2588,7 @@ std::string OpenAIChatCompletionsHandler::serializeStreamingChunk(const std::str
     // null - natural scenario when the generation has not completed yet
     // index: integer; Choice index, only n=1 supported anyway
     choice.AddMember("index", 0, allocator);
-    // logprobs: object/null; Log probability information for the choice. TODO
+    // TODO: logprobs: object/null; Log probability information for the choice.
     choice.AddMember("logprobs", Value(), allocator);
     if (endpoint == Endpoint::CHAT_COMPLETIONS) {
         if (outputParser != nullptr) {
@@ -2626,11 +2647,9 @@ std::string OpenAIChatCompletionsHandler::serializeStreamingChunk(const std::str
         doc.AddMember("usage", Value(), allocator);
     }
 
-    // TODO
-    // id: string; A unique identifier for the chat completion. Each chunk has the same ID.
+    // TODO: id: string; A unique identifier for the chat completion. Each chunk has the same ID.
 
-    // TODO
-    // system_fingerprint: string; This fingerprint represents the backend configuration that the model runs with.
+    // TODO: system_fingerprint: string; This fingerprint represents the backend configuration that the model runs with.
     // Can be used in conjunction with the seed request parameter to understand when backend changes have been made that might impact determinism.
 
     StringBuffer buffer;
@@ -2639,7 +2658,7 @@ std::string OpenAIChatCompletionsHandler::serializeStreamingChunk(const std::str
     return buffer.GetString();
 }
 
-std::string OpenAIChatCompletionsHandler::serializeResponsesFailedEvent(const std::string& errorMessage, const char* errorCode) {
+std::string OpenAIChatCompletionsHandler::serializeResponsesFailedEvent(const std::string& errorMessage, ResponsesErrorCode errorCode) {
     const auto createdAt = std::chrono::duration_cast<std::chrono::microseconds>(created.time_since_epoch()).count();
     const std::string responseId = "resp-" + std::to_string(createdAt);
 
