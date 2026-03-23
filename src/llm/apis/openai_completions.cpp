@@ -1274,12 +1274,20 @@ std::string OpenAIChatCompletionsHandler::serializeStreamingChunk(const std::str
         if (outputParser != nullptr) {
             std::optional<Document> delta = outputParser->parseChunk(chunkResponse, areToolsAvailable(), finishReason);
             if (!delta.has_value()) {
-                return "";
+                // If the generation is still ongoing, there is nothing to emit yet
+                if (finishReason == ov::genai::GenerationFinishReason::NONE) {
+                    return "";
+                }
+                // Generation finished but parser returned no delta (e.g. empty chunk after tool call).
+                // We still need to emit a chunk with the appropriate finish_reason.
             }
-            if (delta->HasMember("delta")) {
+            if (delta.has_value() && delta->HasMember("delta")) {
                 // Deep copy the "delta" member value into the choice object
                 choice.AddMember("delta", Value((*delta)["delta"], allocator), allocator);
                 hasToolCalls = hasToolCallsInStreamingDelta(*delta);
+                if (hasToolCalls) {
+                    toolCallsDetectedInStream = true;
+                }
             }
 
         } else {
@@ -1292,7 +1300,7 @@ std::string OpenAIChatCompletionsHandler::serializeStreamingChunk(const std::str
         choice.AddMember("text", Value(chunkResponse.c_str(), allocator), allocator);
     }
 
-    auto serializedFinishReason = mapFinishReason(finishReason, hasToolCalls);
+    auto serializedFinishReason = mapFinishReason(finishReason, hasToolCalls || toolCallsDetectedInStream);
     if (serializedFinishReason.has_value()) {
         choice.AddMember("finish_reason", Value(serializedFinishReason.value().c_str(), allocator), allocator);
     } else {
