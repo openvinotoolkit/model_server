@@ -20,7 +20,6 @@
 #include <map>
 #include <memory>
 #include <optional>
-#include <random>
 #include <sstream>
 #include <string>
 #include <thread>
@@ -64,7 +63,6 @@
 
 #include "test_models.hpp"
 
-namespace fs = std::filesystem;
 using inputs_info_t = std::map<std::string, std::tuple<ovms::signed_shape_t, ovms::Precision>>;
 
 void adjustConfigToAllowModelFileRemovalWhenLoaded(ovms::ModelConfig& modelConfig);
