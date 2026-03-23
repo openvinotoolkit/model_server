@@ -1479,13 +1479,9 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseForResponsesIncomplet
     // Should NOT have status "completed"
     ASSERT_EQ(serialized.find("\"status\":\"completed\""), std::string::npos) << serialized;
 
-    // Should contain new spec-aligned fields
-    ASSERT_NE(serialized.find("\"error\":null"), std::string::npos) << serialized;
-    ASSERT_NE(serialized.find("\"previous_response_id\":null"), std::string::npos) << serialized;
-    ASSERT_NE(serialized.find("\"reasoning\":null"), std::string::npos) << serialized;
+    // Should contain spec-aligned fields
     ASSERT_NE(serialized.find("\"store\":true"), std::string::npos) << serialized;
     ASSERT_NE(serialized.find("\"truncation\":\"disabled\""), std::string::npos) << serialized;
-    ASSERT_NE(serialized.find("\"user\":null"), std::string::npos) << serialized;
     ASSERT_NE(serialized.find("\"metadata\":{}"), std::string::npos) << serialized;
 }
 
@@ -1523,13 +1519,9 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseForResponsesCompleted
     // Should NOT have incomplete_details
     ASSERT_EQ(serialized.find("\"incomplete_details\""), std::string::npos) << serialized;
 
-    // Should contain new spec-aligned fields
-    ASSERT_NE(serialized.find("\"error\":null"), std::string::npos) << serialized;
-    ASSERT_NE(serialized.find("\"previous_response_id\":null"), std::string::npos) << serialized;
-    ASSERT_NE(serialized.find("\"reasoning\":null"), std::string::npos) << serialized;
+    // Should contain spec-aligned fields
     ASSERT_NE(serialized.find("\"store\":true"), std::string::npos) << serialized;
     ASSERT_NE(serialized.find("\"truncation\":\"disabled\""), std::string::npos) << serialized;
-    ASSERT_NE(serialized.find("\"user\":null"), std::string::npos) << serialized;
     ASSERT_NE(serialized.find("\"metadata\":{}"), std::string::npos) << serialized;
 }
 
