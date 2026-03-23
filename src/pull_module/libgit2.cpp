@@ -599,7 +599,7 @@ Status HfDownloader::downloadModel() {
         auto matches = libgit2::findLfsLikeFiles(this->downloadPath, true);
 
         if (matches.empty()) {
-            std::cout << "No files to resume download found.\n";
+            SPDLOG_DEBUG("No files to resume download found.");
             std::cout << "Path already exists on local filesystem. Skipping download to path: " << this->downloadPath << std::endl;
             return StatusCode::OK;
         } else {
@@ -611,7 +611,8 @@ Status HfDownloader::downloadModel() {
 
         GitRepositoryGuard repoGuard(this->downloadPath);
         if (!repoGuard.get()) {
-            std::cout << "Path already exists on local filesystem. And is not a git repository: " << this->downloadPath << std::endl;
+            std::cout << "Path already exists on local filesystem. Cannot download model to: " << this->downloadPath << std::endl;
+            std::cout << "Use --override to start download from scratch." << std::endl;
             if (repoGuard.git_error_class == GIT_ERROR_OS)
                 return StatusCode::HF_GIT_STATUS_FAILED_TO_RESOLVE_PATH;
             else if (repoGuard.git_error_class == GIT_ERROR_INVALID)
@@ -631,6 +632,7 @@ Status HfDownloader::downloadModel() {
             else
                 SPDLOG_ERROR("Repository set url failed: {}", error);
             std::cout << "Path already exists on local filesystem. And set git repository url failed: " << this->downloadPath << std::endl;
+            std::cout << "Consider --override to start download from scratch." << std::endl;
             return StatusCode::HF_GIT_CLONE_FAILED;
         }
 
@@ -640,8 +642,16 @@ Status HfDownloader::downloadModel() {
             resumeLfsDownloadForFile(repoGuard.get(), path.c_str());
         }
 
+        // Non blocking check
         SPDLOG_DEBUG("Checking repository status.");
-        return CheckRepositoryStatus(false);
+        auto status =  CheckRepositoryStatus(false);
+        if (!status.ok()) {
+            SPDLOG_DEBUG("[WARNING] Model repository status check failed after resuming download. Status: {}", status.string());
+            SPDLOG_DEBUG("Consider --override to start download from scratch.");
+        } else {
+            SPDLOG_DEBUG("Model repository status check passed after resuming download.");
+        }
+        return StatusCode::OK;
     }
 
     auto status = IModelDownloader::checkIfOverwriteAndRemove();
@@ -687,7 +697,12 @@ Status HfDownloader::downloadModel() {
     SPDLOG_DEBUG("Checking repository status.");
     status = CheckRepositoryStatus(true);
     if (!status.ok()) {
+        SPDLOG_ERROR("Model repository status check failed after model download. Status: {}", status.string());
+        SPDLOG_ERROR("Consider rerunning the command to resume the download after network issues.");
+        SPDLOG_ERROR("Consider --override flag to start download from scratch.");
         return status;
+    } else {
+        SPDLOG_DEBUG("Model repository status check passed after model download.");
     }
 
     // libgit2 clone sets readonly attributes
