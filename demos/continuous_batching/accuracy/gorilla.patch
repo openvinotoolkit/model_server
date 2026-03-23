@@ -93,90 +93,27 @@ index 357584f..e45e12c 100644
              "store": False,
          }
  
-diff --git a/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/qwen.py b/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/qwen.py
-index 10f1a08..50890c7 100644
---- a/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/qwen.py
-+++ b/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/qwen.py
-@@ -7,6 +7,7 @@ from openai import OpenAI
- from overrides import override
- from qwen_agent.llm import get_chat_model
- import time
-+import json
- 
- class QwenAPIHandler(OpenAICompletionsHandler):
-     """
-@@ -28,8 +29,8 @@ class QwenAPIHandler(OpenAICompletionsHandler):
-         super().__init__(model_name, temperature, registry_name, is_fc_model, **kwargs)
-         self.model_style = ModelStyle.OPENAI_COMPLETIONS
-         self.client = OpenAI(
--            base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
--            api_key=os.getenv("QWEN_API_KEY"),
-+            base_url=os.getenv("OPENAI_BASE_URL", "https://localhost:8000/v3"),
-+            api_key=os.getenv("QWEN_API_KEY","unused"),
-         )
- 
-     #### FC methods ####
-@@ -45,9 +46,9 @@ class QwenAPIHandler(OpenAICompletionsHandler):
-             model=self.model_name.replace("-FC", ""),
-             tools=tools,
-             parallel_tool_calls=True,
--            extra_body={
--                "enable_thinking": True
--            },
-+            max_completion_tokens=2048,
-+            tool_choice=os.getenv("TOOL_CHOICE", "auto"),
-+            extra_body={"chat_template_kwargs": json.loads(os.getenv("CHAT_TEMPLATE_KWARGS", "{}"))},
-             stream=True,
-             stream_options={
-                 "include_usage": True
-@@ -352,4 +353,4 @@ class QwenAgentNoThinkHandler(QwenAgentThinkHandler):
-             'timeout': 1000,
-             'max_tokens': 16384
-         }
--    })
-\ No newline at end of file
-+    })
 diff --git a/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/ovms_response.py b/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/ovms_response.py
 new file mode 100644
-index 0000000..55d480d
+index 0000000..f8e19e8
 --- /dev/null
 +++ b/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/ovms_response.py
-@@ -0,0 +1,270 @@
+@@ -0,0 +1,65 @@
 +import json
 +import os
-+import time
 +
-+from bfcl_eval.constants.type_mappings import GORILLA_TO_OPENAPI
-+from bfcl_eval.model_handler.base_handler import BaseHandler
-+from bfcl_eval.constants.enums import ModelStyle
-+from bfcl_eval.model_handler.utils import (
-+    convert_to_function_call,
-+    convert_to_tool,
-+    default_decode_ast_prompting,
-+    default_decode_execute_prompting,
-+    format_execution_results_prompting,
-+    retry_with_backoff,
-+    system_prompt_pre_processing_chat_model,
-+)
-+from openai import OpenAI, RateLimitError
-+from openai.types.responses import Response
++from bfcl_eval.model_handler.api_inference.openai_response import OpenAIResponsesHandler
++from overrides import override
 +
 +
-+class OVMSResponsesHandler(BaseHandler):
-+    """Handler for testing OVMS via the OpenAI Responses API (/v3/responses)."""
++class OVMSResponsesHandler(OpenAIResponsesHandler):
++    """OVMS variant of OpenAIResponsesHandler.
 +
-+    def __init__(
-+        self,
-+        model_name,
-+        temperature,
-+        registry_name,
-+        is_fc_model,
-+        **kwargs,
-+    ) -> None:
-+        super().__init__(model_name, temperature, registry_name, is_fc_model, **kwargs)
-+        self.model_style = ModelStyle.OPENAI_RESPONSES
-+        self.client = OpenAI(**self._build_client_kwargs())
++    Inherits all behavior and only overrides _build_client_kwargs (OVMS defaults),
++    _query_FC and _query_prompting (OVMS-specific kwargs instead of OpenAI reasoning model logic).
++    """
 +
++    @override
 +    def _build_client_kwargs(self):
 +        kwargs = {}
 +
@@ -191,42 +128,7 @@ index 0000000..55d480d
 +
 +        return kwargs
 +
-+    @staticmethod
-+    def _substitute_prompt_role(prompts: list[dict]) -> list[dict]:
-+        # OVMS responses API accepts "system" role, but following OpenAI convention
-+        # we convert to "developer" for compatibility.
-+        for prompt in prompts:
-+            if prompt["role"] == "system":
-+                prompt["role"] = "developer"
-+        return prompts
-+
-+    def decode_ast(self, result, language, has_tool_call_tag):
-+        if self.is_fc_model:
-+            decoded_output = []
-+            for invoked_function in result:
-+                name = list(invoked_function.keys())[0]
-+                params = json.loads(invoked_function[name])
-+                decoded_output.append({name: params})
-+            return decoded_output
-+        else:
-+            return default_decode_ast_prompting(result, language, has_tool_call_tag)
-+
-+    def decode_execute(self, result, has_tool_call_tag):
-+        if self.is_fc_model:
-+            return convert_to_function_call(result)
-+        else:
-+            return default_decode_execute_prompting(result, has_tool_call_tag)
-+
-+    @retry_with_backoff(error_type=RateLimitError)
-+    def generate_with_backoff(self, **kwargs):
-+        start_time = time.time()
-+        api_response = self.client.responses.create(**kwargs)
-+        end_time = time.time()
-+
-+        return api_response, end_time - start_time
-+
-+    #### FC methods ####
-+
++    @override
 +    def _query_FC(self, inference_data: dict):
 +        message: list[dict] = inference_data["message"]
 +        tools = inference_data["tools"]
@@ -250,92 +152,7 @@ index 0000000..55d480d
 +
 +        return self.generate_with_backoff(**kwargs)
 +
-+    def _pre_query_processing_FC(self, inference_data: dict, test_entry: dict) -> dict:
-+        for round_idx in range(len(test_entry["question"])):
-+            test_entry["question"][round_idx] = self._substitute_prompt_role(
-+                test_entry["question"][round_idx]
-+            )
-+
-+        inference_data["message"] = []
-+
-+        return inference_data
-+
-+    def _compile_tools(self, inference_data: dict, test_entry: dict) -> dict:
-+        functions: list = test_entry["function"]
-+
-+        tools = convert_to_tool(functions, GORILLA_TO_OPENAPI, self.model_style)
-+
-+        inference_data["tools"] = tools
-+
-+        return inference_data
-+
-+    def _parse_query_response_FC(self, api_response: Response) -> dict:
-+        model_responses = []
-+        tool_call_ids = []
-+
-+        for func_call in api_response.output:
-+            if func_call.type == "function_call":
-+                model_responses.append({func_call.name: func_call.arguments})
-+                tool_call_ids.append(func_call.call_id)
-+
-+        if not model_responses:  # If there are no function calls
-+            model_responses = api_response.output_text
-+
-+        reasoning_content = ""
-+        for item in api_response.output:
-+            if item.type == "reasoning":
-+                for summary in item.summary:
-+                    reasoning_content += summary.text + "\n"
-+
-+        return {
-+            "model_responses": model_responses,
-+            "model_responses_message_for_chat_history": api_response.output,
-+            "tool_call_ids": tool_call_ids,
-+            "reasoning_content": reasoning_content,
-+            "input_token": api_response.usage.input_tokens,
-+            "output_token": api_response.usage.output_tokens,
-+        }
-+
-+    def add_first_turn_message_FC(
-+        self, inference_data: dict, first_turn_message: list[dict]
-+    ) -> dict:
-+        inference_data["message"].extend(first_turn_message)
-+        return inference_data
-+
-+    def _add_next_turn_user_message_FC(
-+        self, inference_data: dict, user_message: list[dict]
-+    ) -> dict:
-+        inference_data["message"].extend(user_message)
-+        return inference_data
-+
-+    def _add_assistant_message_FC(
-+        self, inference_data: dict, model_response_data: dict
-+    ) -> dict:
-+        inference_data["message"].extend(
-+            model_response_data["model_responses_message_for_chat_history"]
-+        )
-+        return inference_data
-+
-+    def _add_execution_results_FC(
-+        self,
-+        inference_data: dict,
-+        execution_results: list[str],
-+        model_response_data: dict,
-+    ) -> dict:
-+        for execution_result, tool_call_id in zip(
-+            execution_results, model_response_data["tool_call_ids"]
-+        ):
-+            tool_message = {
-+                "type": "function_call_output",
-+                "call_id": tool_call_id,
-+                "output": execution_result,
-+            }
-+            inference_data["message"].append(tool_message)
-+
-+        return inference_data
-+
-+    #### Prompting methods ####
-+
++    @override
 +    def _query_prompting(self, inference_data: dict):
 +        inference_data["inference_input_log"] = {"message": repr(inference_data["message"])}
 +
@@ -347,111 +164,29 @@ index 0000000..55d480d
 +        }
 +
 +        return self.generate_with_backoff(**kwargs)
-+
-+    def _pre_query_processing_prompting(self, test_entry: dict) -> dict:
-+        functions: list = test_entry["function"]
-+        test_entry_id: str = test_entry["id"]
-+
-+        test_entry["question"][0] = system_prompt_pre_processing_chat_model(
-+            test_entry["question"][0], functions, test_entry_id
-+        )
-+
-+        for round_idx in range(len(test_entry["question"])):
-+            test_entry["question"][round_idx] = self._substitute_prompt_role(
-+                test_entry["question"][round_idx]
-+            )
-+
-+        return {"message": []}
-+
-+    def _parse_query_response_prompting(self, api_response: Response) -> dict:
-+        reasoning_content = ""
-+        for item in api_response.output:
-+            if item.type == "reasoning":
-+                for summary in item.summary:
-+                    reasoning_content += summary.text + "\n"
-+
-+        return {
-+            "model_responses": api_response.output_text,
-+            "model_responses_message_for_chat_history": api_response.output,
-+            "reasoning_content": reasoning_content,
-+            "input_token": api_response.usage.input_tokens,
-+            "output_token": api_response.usage.output_tokens,
-+        }
-+
-+    def add_first_turn_message_prompting(
-+        self, inference_data: dict, first_turn_message: list[dict]
-+    ) -> dict:
-+        inference_data["message"].extend(first_turn_message)
-+        return inference_data
-+
-+    def _add_next_turn_user_message_prompting(
-+        self, inference_data: dict, user_message: list[dict]
-+    ) -> dict:
-+        inference_data["message"].extend(user_message)
-+        return inference_data
-+
-+    def _add_assistant_message_prompting(
-+        self, inference_data: dict, model_response_data: dict
-+    ) -> dict:
-+        inference_data["message"].extend(
-+            model_response_data["model_responses_message_for_chat_history"]
-+        )
-+        return inference_data
-+
-+    def _add_execution_results_prompting(
-+        self,
-+        inference_data: dict,
-+        execution_results: list[str],
-+        model_response_data: dict,
-+    ) -> dict:
-+        formatted_results_message = format_execution_results_prompting(
-+            inference_data, execution_results, model_response_data
-+        )
-+        inference_data["message"].append(
-+            {"role": "user", "content": formatted_results_message}
-+        )
-+
-+        return inference_data
 diff --git a/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/ovms_response_stream.py b/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/ovms_response_stream.py
 new file mode 100644
-index 0000000..89c9a65
+index 0000000..0313452
 --- /dev/null
 +++ b/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/ovms_response_stream.py
-@@ -0,0 +1,313 @@
+@@ -0,0 +1,158 @@
 +import json
 +import os
-+import time
 +
-+from bfcl_eval.constants.type_mappings import GORILLA_TO_OPENAPI
-+from bfcl_eval.model_handler.base_handler import BaseHandler
-+from bfcl_eval.constants.enums import ModelStyle
-+from bfcl_eval.model_handler.utils import (
-+    convert_to_function_call,
-+    convert_to_tool,
-+    default_decode_ast_prompting,
-+    default_decode_execute_prompting,
-+    format_execution_results_prompting,
-+    retry_with_backoff,
-+    system_prompt_pre_processing_chat_model,
-+)
-+from openai import OpenAI, RateLimitError
++from bfcl_eval.model_handler.api_inference.openai_response import OpenAIResponsesHandler
++from overrides import override
 +
 +
-+class OVMSResponsesStreamHandler(BaseHandler):
-+    """Handler for testing OVMS via the OpenAI Responses API with streaming (/v3/responses, stream=True)."""
++class OVMSResponsesStreamHandler(OpenAIResponsesHandler):
++    """Streaming variant of OpenAIResponsesHandler.
 +
-+    def __init__(
-+        self,
-+        model_name,
-+        temperature,
-+        registry_name,
-+        is_fc_model,
-+        **kwargs,
-+    ) -> None:
-+        super().__init__(model_name, temperature, registry_name, is_fc_model, **kwargs)
-+        self.model_style = ModelStyle.OPENAI_RESPONSES
-+        self.client = OpenAI(**self._build_client_kwargs())
++    Inherits all behavior from OpenAIResponsesHandler and only overrides
++    _build_client_kwargs (OVMS defaults), _query_FC, _query_prompting
++    (to add stream=True), and the two _parse_query_response methods
++    (to aggregate SSE events).
++    """
 +
++    @override
 +    def _build_client_kwargs(self):
 +        kwargs = {}
 +
@@ -467,43 +202,11 @@ index 0000000..89c9a65
 +        return kwargs
 +
 +    @staticmethod
-+    def _substitute_prompt_role(prompts: list[dict]) -> list[dict]:
-+        for prompt in prompts:
-+            if prompt["role"] == "system":
-+                prompt["role"] = "developer"
-+        return prompts
-+
-+    def decode_ast(self, result, language, has_tool_call_tag):
-+        if self.is_fc_model:
-+            decoded_output = []
-+            for invoked_function in result:
-+                name = list(invoked_function.keys())[0]
-+                params = json.loads(invoked_function[name])
-+                decoded_output.append({name: params})
-+            return decoded_output
-+        else:
-+            return default_decode_ast_prompting(result, language, has_tool_call_tag)
-+
-+    def decode_execute(self, result, has_tool_call_tag):
-+        if self.is_fc_model:
-+            return convert_to_function_call(result)
-+        else:
-+            return default_decode_execute_prompting(result, has_tool_call_tag)
-+
-+    @retry_with_backoff(error_type=RateLimitError)
-+    def generate_with_backoff(self, **kwargs):
-+        start_time = time.time()
-+        api_response = self.client.responses.create(**kwargs)
-+        end_time = time.time()
-+
-+        return api_response, end_time - start_time
-+
-+    @staticmethod
 +    def _parse_stream(stream) -> dict:
 +        """Parse responses API SSE stream and return aggregated results."""
 +        text_content = ""
 +        reasoning_content = ""
-+        tool_calls = {}  # keyed by call_id
++        tool_calls = {}  # keyed by item_id
 +        usage = {"input_tokens": 0, "output_tokens": 0}
 +        output_items = []  # final output items from response.completed
 +
@@ -550,6 +253,7 @@ index 0000000..89c9a65
 +
 +    #### FC methods ####
 +
++    @override
 +    def _query_FC(self, inference_data: dict):
 +        message: list[dict] = inference_data["message"]
 +        tools = inference_data["tools"]
@@ -574,25 +278,7 @@ index 0000000..89c9a65
 +
 +        return self.generate_with_backoff(**kwargs)
 +
-+    def _pre_query_processing_FC(self, inference_data: dict, test_entry: dict) -> dict:
-+        for round_idx in range(len(test_entry["question"])):
-+            test_entry["question"][round_idx] = self._substitute_prompt_role(
-+                test_entry["question"][round_idx]
-+            )
-+
-+        inference_data["message"] = []
-+
-+        return inference_data
-+
-+    def _compile_tools(self, inference_data: dict, test_entry: dict) -> dict:
-+        functions: list = test_entry["function"]
-+
-+        tools = convert_to_tool(functions, GORILLA_TO_OPENAPI, self.model_style)
-+
-+        inference_data["tools"] = tools
-+
-+        return inference_data
-+
++    @override
 +    def _parse_query_response_FC(self, api_response) -> dict:
 +        parsed = self._parse_stream(api_response)
 +
@@ -606,58 +292,18 @@ index 0000000..89c9a65
 +        if not model_responses:
 +            model_responses = parsed["text"]
 +
-+        # Use the output_items from the completed event for chat history
-+        output_items = parsed["output_items"]
-+
 +        return {
 +            "model_responses": model_responses,
-+            "model_responses_message_for_chat_history": output_items,
++            "model_responses_message_for_chat_history": parsed["output_items"],
 +            "tool_call_ids": tool_call_ids,
 +            "reasoning_content": parsed["reasoning"],
 +            "input_token": parsed["usage"]["input_tokens"],
 +            "output_token": parsed["usage"]["output_tokens"],
 +        }
 +
-+    def add_first_turn_message_FC(
-+        self, inference_data: dict, first_turn_message: list[dict]
-+    ) -> dict:
-+        inference_data["message"].extend(first_turn_message)
-+        return inference_data
-+
-+    def _add_next_turn_user_message_FC(
-+        self, inference_data: dict, user_message: list[dict]
-+    ) -> dict:
-+        inference_data["message"].extend(user_message)
-+        return inference_data
-+
-+    def _add_assistant_message_FC(
-+        self, inference_data: dict, model_response_data: dict
-+    ) -> dict:
-+        inference_data["message"].extend(
-+            model_response_data["model_responses_message_for_chat_history"]
-+        )
-+        return inference_data
-+
-+    def _add_execution_results_FC(
-+        self,
-+        inference_data: dict,
-+        execution_results: list[str],
-+        model_response_data: dict,
-+    ) -> dict:
-+        for execution_result, tool_call_id in zip(
-+            execution_results, model_response_data["tool_call_ids"]
-+        ):
-+            tool_message = {
-+                "type": "function_call_output",
-+                "call_id": tool_call_id,
-+                "output": execution_result,
-+            }
-+            inference_data["message"].append(tool_message)
-+
-+        return inference_data
-+
 +    #### Prompting methods ####
 +
++    @override
 +    def _query_prompting(self, inference_data: dict):
 +        inference_data["inference_input_log"] = {"message": repr(inference_data["message"])}
 +
@@ -671,21 +317,7 @@ index 0000000..89c9a65
 +
 +        return self.generate_with_backoff(**kwargs)
 +
-+    def _pre_query_processing_prompting(self, test_entry: dict) -> dict:
-+        functions: list = test_entry["function"]
-+        test_entry_id: str = test_entry["id"]
-+
-+        test_entry["question"][0] = system_prompt_pre_processing_chat_model(
-+            test_entry["question"][0], functions, test_entry_id
-+        )
-+
-+        for round_idx in range(len(test_entry["question"])):
-+            test_entry["question"][round_idx] = self._substitute_prompt_role(
-+                test_entry["question"][round_idx]
-+            )
-+
-+        return {"message": []}
-+
++    @override
 +    def _parse_query_response_prompting(self, api_response) -> dict:
 +        parsed = self._parse_stream(api_response)
 +
@@ -696,38 +328,46 @@ index 0000000..89c9a65
 +            "input_token": parsed["usage"]["input_tokens"],
 +            "output_token": parsed["usage"]["output_tokens"],
 +        }
-+
-+    def add_first_turn_message_prompting(
-+        self, inference_data: dict, first_turn_message: list[dict]
-+    ) -> dict:
-+        inference_data["message"].extend(first_turn_message)
-+        return inference_data
-+
-+    def _add_next_turn_user_message_prompting(
-+        self, inference_data: dict, user_message: list[dict]
-+    ) -> dict:
-+        inference_data["message"].extend(user_message)
-+        return inference_data
-+
-+    def _add_assistant_message_prompting(
-+        self, inference_data: dict, model_response_data: dict
-+    ) -> dict:
-+        inference_data["message"].extend(
-+            model_response_data["model_responses_message_for_chat_history"]
-+        )
-+        return inference_data
-+
-+    def _add_execution_results_prompting(
-+        self,
-+        inference_data: dict,
-+        execution_results: list[str],
-+        model_response_data: dict,
-+    ) -> dict:
-+        formatted_results_message = format_execution_results_prompting(
-+            inference_data, execution_results, model_response_data
-+        )
-+        inference_data["message"].append(
-+            {"role": "user", "content": formatted_results_message}
-+        )
-+
-+        return inference_data
+diff --git a/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/qwen.py b/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/qwen.py
+index 10f1a08..50890c7 100644
+--- a/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/qwen.py
++++ b/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/qwen.py
+@@ -7,6 +7,7 @@ from openai import OpenAI
+ from overrides import override
+ from qwen_agent.llm import get_chat_model
+ import time
++import json
+ 
+ class QwenAPIHandler(OpenAICompletionsHandler):
+     """
+@@ -28,8 +29,8 @@ class QwenAPIHandler(OpenAICompletionsHandler):
+         super().__init__(model_name, temperature, registry_name, is_fc_model, **kwargs)
+         self.model_style = ModelStyle.OPENAI_COMPLETIONS
+         self.client = OpenAI(
+-            base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
+-            api_key=os.getenv("QWEN_API_KEY"),
++            base_url=os.getenv("OPENAI_BASE_URL", "https://localhost:8000/v3"),
++            api_key=os.getenv("QWEN_API_KEY","unused"),
+         )
+ 
+     #### FC methods ####
+@@ -45,9 +46,9 @@ class QwenAPIHandler(OpenAICompletionsHandler):
+             model=self.model_name.replace("-FC", ""),
+             tools=tools,
+             parallel_tool_calls=True,
+-            extra_body={
+-                "enable_thinking": True
+-            },
++            max_completion_tokens=2048,
++            tool_choice=os.getenv("TOOL_CHOICE", "auto"),
++            extra_body={"chat_template_kwargs": json.loads(os.getenv("CHAT_TEMPLATE_KWARGS", "{}"))},
+             stream=True,
+             stream_options={
+                 "include_usage": True
+@@ -352,4 +353,4 @@ class QwenAgentNoThinkHandler(QwenAgentThinkHandler):
+             'timeout': 1000,
+             'max_tokens': 16384
+         }
+-    })
+\ No newline at end of file
++    })
