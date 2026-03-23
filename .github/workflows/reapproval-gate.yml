@@ -1,0 +1,41 @@
+name: Reapproval Gate
+
+# Run only when new commits are pushed to an open PR, or when a review is
+# submitted (so the gate re-evaluates after a fresh approval).
+on:
+  pull_request:
+    types: [synchronize]
+  pull_request_review:
+    types: [submitted]
+
+# Least-privilege token: read code, write pull-request reviews/checks.
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  reapproval-gate:
+    name: reapproval-gate
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Run unit tests for gate logic
+        run: python .github/scripts/test_reapproval_gate.py
+
+      - name: Run reapproval gate
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          MAIN_BRANCH: main
+        run: python .github/scripts/reapproval_gate.py
