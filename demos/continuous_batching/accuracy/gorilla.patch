@@ -1,17 +1,16 @@
 diff --git a/berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py b/berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py
-index bb625d2..d06483d 100644
+index bb625d2..64c01de 100644
 --- a/berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py
 +++ b/berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py
-@@ -24,6 +24,8 @@ from bfcl_eval.model_handler.api_inference.openai_completion import (
+@@ -24,6 +24,7 @@ from bfcl_eval.model_handler.api_inference.openai_completion import (
      OpenAICompletionsHandler,
  )
  from bfcl_eval.model_handler.api_inference.openai_response import OpenAIResponsesHandler
-+from bfcl_eval.model_handler.api_inference.ovms_response import OVMSResponsesHandler
 +from bfcl_eval.model_handler.api_inference.ovms_response_stream import OVMSResponsesStreamHandler
  from bfcl_eval.model_handler.api_inference.qwen import (
      QwenAgentNoThinkHandler,
      QwenAgentThinkHandler,
-@@ -2153,6 +2155,54 @@ third_party_inference_model_map = {
+@@ -2153,6 +2154,54 @@ third_party_inference_model_map = {
          is_fc_model=True,
          underscore_to_dot=True,
      ),
@@ -45,7 +44,7 @@ index bb625d2..d06483d 100644
 +        url="http://localhost:8000/v3",
 +        org="ovms",
 +        license="apache-2.0",
-+        model_handler=OVMSResponsesHandler,
++        model_handler=OpenAIResponsesHandler,
 +        input_price=None,
 +        output_price=None,
 +        is_fc_model=True,
@@ -93,83 +92,85 @@ index 357584f..e45e12c 100644
              "store": False,
          }
  
-diff --git a/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/ovms_response.py b/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/ovms_response.py
-new file mode 100644
-index 0000000..f8e19e8
---- /dev/null
-+++ b/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/ovms_response.py
-@@ -0,0 +1,65 @@
-+import json
-+import os
-+
-+from bfcl_eval.model_handler.api_inference.openai_response import OpenAIResponsesHandler
-+from overrides import override
-+
-+
-+class OVMSResponsesHandler(OpenAIResponsesHandler):
-+    """OVMS variant of OpenAIResponsesHandler.
-+
-+    Inherits all behavior and only overrides _build_client_kwargs (OVMS defaults),
-+    _query_FC and _query_prompting (OVMS-specific kwargs instead of OpenAI reasoning model logic).
-+    """
-+
-+    @override
-+    def _build_client_kwargs(self):
-+        kwargs = {}
-+
-+        if api_key := os.getenv("OPENAI_API_KEY", "unused"):
-+            kwargs["api_key"] = api_key
-+
-+        if base_url := os.getenv("OPENAI_BASE_URL", "http://localhost:8000/v3"):
-+            kwargs["base_url"] = base_url
-+
-+        if headers_env := os.getenv("OPENAI_DEFAULT_HEADERS"):
-+            kwargs["default_headers"] = json.loads(headers_env)
-+
-+        return kwargs
-+
-+    @override
-+    def _query_FC(self, inference_data: dict):
-+        message: list[dict] = inference_data["message"]
-+        tools = inference_data["tools"]
-+
-+        inference_data["inference_input_log"] = {
-+            "message": repr(message),
-+            "tools": tools,
-+        }
-+
-+        kwargs = {
-+            "input": message,
-+            "model": self.model_name,
-+            "temperature": self.temperature,
+diff --git a/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/openai_response.py b/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/openai_response.py
+index 0953fdd..7f6919f 100644
+--- a/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/openai_response.py
++++ b/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/openai_response.py
+@@ -38,10 +38,10 @@ class OpenAIResponsesHandler(BaseHandler):
+ 
+         kwargs = {}
+ 
+-        if api_key := os.getenv("OPENAI_API_KEY"):
++        if api_key := os.getenv("OPENAI_API_KEY","unused"):
+             kwargs["api_key"] = api_key
+ 
+-        if base_url := os.getenv("OPENAI_BASE_URL"):
++        if base_url := os.getenv("OPENAI_BASE_URL","http://localhost:8000/v3"):
+             kwargs["base_url"] = base_url
+ 
+         if headers_env := os.getenv("OPENAI_DEFAULT_HEADERS"):
+@@ -99,25 +99,12 @@ class OpenAIResponsesHandler(BaseHandler):
+         kwargs = {
+             "input": message,
+             "model": self.model_name,
+-            "store": False,
+-            "include": ["reasoning.encrypted_content"],
+-            "reasoning": {"summary": "auto"},
+             "temperature": self.temperature,
 +            "max_output_tokens": 2048,
 +            "tool_choice": os.getenv("TOOL_CHOICE", "auto"),
 +            "extra_body": {"chat_template_kwargs": json.loads(os.getenv("CHAT_TEMPLATE_KWARGS", "{}"))},
-+        }
-+
-+        if len(tools) > 0:
-+            kwargs["tools"] = tools
-+
-+        return self.generate_with_backoff(**kwargs)
-+
-+    @override
-+    def _query_prompting(self, inference_data: dict):
-+        inference_data["inference_input_log"] = {"message": repr(inference_data["message"])}
-+
-+        kwargs = {
-+            "input": inference_data["message"],
-+            "model": self.model_name,
-+            "temperature": self.temperature,
+         }
+ 
+-        # OpenAI reasoning models don't support temperature parameter
+-        if (
+-            "o3" in self.model_name
+-            or "o4-mini" in self.model_name
+-            or "gpt-5" in self.model_name
+-        ):
+-            del kwargs["temperature"]
+-
+-        # Non-reasoning models don't support reasoning parameter
+-        else:
+-            del kwargs["reasoning"]
+-            del kwargs["include"]
+-
+         if len(tools) > 0:
+             kwargs["tools"] = tools
+ 
+@@ -218,25 +205,10 @@ class OpenAIResponsesHandler(BaseHandler):
+         kwargs = {
+             "input": inference_data["message"],
+             "model": self.model_name,
+-            "store": False,
+-            "include": ["reasoning.encrypted_content"],
+-            "reasoning": {"summary": "auto"},
+             "temperature": self.temperature,
 +            "extra_body": {"chat_template_kwargs": json.loads(os.getenv("CHAT_TEMPLATE_KWARGS", "{}"))},
-+        }
-+
-+        return self.generate_with_backoff(**kwargs)
+         }
+ 
+-        # OpenAI reasoning models don't support temperature parameter
+-        if (
+-            "o3" in self.model_name
+-            or "o4-mini" in self.model_name
+-            or "gpt-5" in self.model_name
+-        ):
+-            del kwargs["temperature"]
+-
+-        # Non-reasoning models don't support reasoning parameter
+-        else:
+-            del kwargs["reasoning"]
+-            del kwargs["include"]
+-
+         return self.generate_with_backoff(**kwargs)
+ 
+     def _pre_query_processing_prompting(self, test_entry: dict) -> dict:
 diff --git a/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/ovms_response_stream.py b/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/ovms_response_stream.py
 new file mode 100644
-index 0000000..0313452
+index 0000000..bc5ef1e
 --- /dev/null
 +++ b/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/ovms_response_stream.py
-@@ -0,0 +1,158 @@
+@@ -0,0 +1,144 @@
 +import json
 +import os
 +
@@ -180,26 +181,12 @@ index 0000000..0313452
 +class OVMSResponsesStreamHandler(OpenAIResponsesHandler):
 +    """Streaming variant of OpenAIResponsesHandler.
 +
-+    Inherits all behavior from OpenAIResponsesHandler and only overrides
-+    _build_client_kwargs (OVMS defaults), _query_FC, _query_prompting
-+    (to add stream=True), and the two _parse_query_response methods
-+    (to aggregate SSE events).
++    Inherits all behavior from the (patched) OpenAIResponsesHandler and only overrides
++    _query_FC, _query_prompting (to add stream=True), and the two
++    _parse_query_response methods (to aggregate SSE events).
 +    """
 +
-+    @override
-+    def _build_client_kwargs(self):
-+        kwargs = {}
-+
-+        if api_key := os.getenv("OPENAI_API_KEY", "unused"):
-+            kwargs["api_key"] = api_key
-+
-+        if base_url := os.getenv("OPENAI_BASE_URL", "http://localhost:8000/v3"):
-+            kwargs["base_url"] = base_url
-+
-+        if headers_env := os.getenv("OPENAI_DEFAULT_HEADERS"):
-+            kwargs["default_headers"] = json.loads(headers_env)
-+
-+        return kwargs
++    @staticmethod
 +
 +    @staticmethod
 +    def _parse_stream(stream) -> dict:
