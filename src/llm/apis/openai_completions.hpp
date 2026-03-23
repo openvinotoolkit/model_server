@@ -62,6 +62,19 @@ struct CompletionUsageStatistics {
 
 // Class that wraps OpenAI request, holds and processes raw JSON, provides methods for serialization and keeps track of usage.
 // It is used in the calculator.
+
+// Encapsulates all mutable state accumulated during Responses API streaming.
+struct ResponsesStreamingState {
+    size_t sequenceNumber = 1;
+    bool initialized = false;
+    bool reasoningInitialized = false;
+    bool reasoningCompleted = false;
+    bool messageInitialized = false;
+    std::string outputText;
+    std::string reasoningText;
+    ToolCalls_t toolCalls;
+};
+
 class OpenAIChatCompletionsHandler {
     Document& doc;
     Endpoint endpoint;
@@ -71,13 +84,7 @@ class OpenAIChatCompletionsHandler {
     ov::genai::Tokenizer tokenizer;
     size_t processedTokens = 0;              // tracks overall number of tokens processed by the pipeline
     bool toolCallsDetectedInStream = false;  // tracks whether tool calls were detected in any streaming chunk
-    size_t responsesStreamingSequenceNumber = 1;
-    bool responsesStreamingInitialized = false;
-    std::string responsesStreamingOutputText;
-    bool responsesReasoningInitialized = false;
-    bool responsesReasoningCompleted = false;
-    bool responsesMessageInitialized = false;
-    std::string responsesStreamingReasoningText;
+    ResponsesStreamingState responsesState;
 
     // Output parser is used to parse chat completions response to extract specific fields like tool calls and reasoning.
     std::unique_ptr<OutputParser> outputParser = nullptr;
@@ -127,6 +134,12 @@ class OpenAIChatCompletionsHandler {
     std::string serializeReasoningSummaryPartDoneEvent(const std::string& reasoningItemId);
     std::string serializeReasoningOutputItemDoneEvent(const std::string& reasoningItemId);
     std::string serializeResponseFailedEventBody(const std::string& responseId, int64_t createdAt, const std::string& errorMessage, const char* errorCode);
+
+    // Function call streaming event serializers
+    std::string serializeFunctionCallOutputItemAddedEvent(const ToolCall& toolCall, uint64_t outputIndex);
+    std::string serializeFunctionCallArgumentsDeltaEvent(const std::string& callId, const std::string& delta, uint64_t outputIndex);
+    std::string serializeFunctionCallArgumentsDoneEvent(const ToolCall& toolCall, uint64_t outputIndex);
+    std::string serializeFunctionCallOutputItemDoneEvent(const ToolCall& toolCall, ov::genai::GenerationFinishReason finishReason, uint64_t outputIndex);
 
 public:
     OpenAIChatCompletionsHandler(Document& doc, Endpoint endpoint, std::chrono::time_point<std::chrono::system_clock> creationTime,
