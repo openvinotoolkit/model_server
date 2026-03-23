@@ -51,6 +51,19 @@ enum class Endpoint {
     TOKENIZE,
 };
 
+enum class ResponsesErrorCode {
+    SERVER_ERROR,
+    INVALID_PROMPT,
+};
+
+inline const char* responsesErrorCodeToString(ResponsesErrorCode code) {
+    switch (code) {
+    case ResponsesErrorCode::SERVER_ERROR: return "server_error";
+    case ResponsesErrorCode::INVALID_PROMPT: return "invalid_prompt";
+    default: return "server_error";
+    }
+}
+
 struct CompletionUsageStatistics {
     size_t promptTokens = 0;
     size_t completionTokens = 0;
@@ -102,11 +115,11 @@ class OpenAIChatCompletionsHandler {
     void serializeResponsesToolChoice(Writer<StringBuffer>& writer) const;
     void serializeResponsesTools(Writer<StringBuffer>& writer) const;
     void serializeResponsesResponseObject(Writer<StringBuffer>& writer, const std::string& responseId, int64_t createdAt,
-        const char* status, const std::string& fullOutputText, bool includeUsage,
-        const char* incompleteReason = nullptr, const char* errorMessage = nullptr, const char* errorCode = nullptr) const;
+        const std::string& status, const std::string& fullOutputText, bool includeUsage,
+        const std::optional<std::string>& incompleteReason = std::nullopt, const std::optional<std::string>& errorMessage = std::nullopt, ResponsesErrorCode errorCode = ResponsesErrorCode::SERVER_ERROR) const;
     static void serializeResponsesOutputItem(Writer<StringBuffer>& writer, const std::string& outputItemId,
-        const std::string& text, const char* status, bool withContent);
-    static void serializeResponsesPart(Writer<StringBuffer>& writer, const std::string& text);
+        const std::string& text, const std::string& status);
+    static void serializeOutputTextPart(Writer<StringBuffer>& writer, const std::string& text);
     std::string serializeResponsesUnaryResponse(const std::vector<ParsedOutput>& parsedOutputs,
         ov::genai::GenerationFinishReason finishReason = ov::genai::GenerationFinishReason::STOP) const;
 
@@ -133,7 +146,7 @@ class OpenAIChatCompletionsHandler {
     std::string serializeReasoningSummaryTextDoneEvent(const std::string& reasoningItemId);
     std::string serializeReasoningSummaryPartDoneEvent(const std::string& reasoningItemId);
     std::string serializeReasoningOutputItemDoneEvent(const std::string& reasoningItemId);
-    std::string serializeResponseFailedEventBody(const std::string& responseId, int64_t createdAt, const std::string& errorMessage, const char* errorCode);
+    std::string serializeResponseFailedEventBody(const std::string& responseId, int64_t createdAt, const std::string& errorMessage, ResponsesErrorCode errorCode);
 
     // Function call streaming event serializers
     std::string serializeFunctionCallOutputItemAddedEvent(const ToolCall& toolCall, uint64_t outputIndex);
@@ -191,6 +204,6 @@ public:
     std::string serializeStreamingUsageChunk();
     std::string serializeStreamingHandshakeChunk();
     std::string serializeResponsesStreamingInitEvents();
-    std::string serializeResponsesFailedEvent(const std::string& errorMessage, const char* errorCode = "server_error");
+    std::string serializeResponsesFailedEvent(const std::string& errorMessage, ResponsesErrorCode errorCode = ResponsesErrorCode::SERVER_ERROR);
 };
 }  // namespace ovms

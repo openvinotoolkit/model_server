@@ -1402,7 +1402,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeResponsesFailedEventWithCustomErro
     std::optional<uint32_t> maxModelLength;
     ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
 
-    std::string failedEvent = apiHandler->serializeResponsesFailedEvent("Invalid prompt content", "invalid_prompt");
+    std::string failedEvent = apiHandler->serializeResponsesFailedEvent("Invalid prompt content", ovms::ResponsesErrorCode::INVALID_PROMPT);
 
     ASSERT_NE(failedEvent.find("\"code\":\"invalid_prompt\""), std::string::npos) << failedEvent;
     ASSERT_NE(failedEvent.find("\"message\":\"Invalid prompt content\""), std::string::npos) << failedEvent;
