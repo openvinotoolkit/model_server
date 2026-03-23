@@ -58,9 +58,12 @@ enum class ResponsesErrorCode {
 
 inline const char* responsesErrorCodeToString(ResponsesErrorCode code) {
     switch (code) {
-    case ResponsesErrorCode::SERVER_ERROR: return "server_error";
-    case ResponsesErrorCode::INVALID_PROMPT: return "invalid_prompt";
-    default: return "server_error";
+    case ResponsesErrorCode::SERVER_ERROR:
+        return "server_error";
+    case ResponsesErrorCode::INVALID_PROMPT:
+        return "invalid_prompt";
+    default:
+        return "server_error";
     }
 }
 
