@@ -444,10 +444,10 @@ index 58cb4b424..00ddee9f3 100644
  	git_writestream **out,
 diff --git a/src/libgit2/lfs_filter.c b/src/libgit2/lfs_filter.c
 new file mode 100644
-index 000000000..3d77e9493
+index 000000000..e48657720
 --- /dev/null
 +++ b/src/libgit2/lfs_filter.c
-@@ -0,0 +1,1513 @@
+@@ -0,0 +1,1503 @@
 +﻿/*
 +/ Copyright 2025 Intel Corporation
 +/
@@ -485,9 +485,7 @@ index 000000000..3d77e9493
 +#include "time.h"
 +
 +#define LFS_RESUME_ATTEMPTS_DEFAULT 5
-+#define LFS_RESUME_ATTEMPTS_MAX 100
-+#define LFS_RESUME_INTERVAL_DEFAULT 10
-+#define LFS_RESUME_INTERVAL_MAX 3600
++#define LFS_RESUME_INTERVAL_DEFAULT_SECONDS 10
 +
 +/* Configure how many resume attempts and how long to wait between them */
 +static int g_lfs_resume_attempts = 5; /* <-- make configurable */
@@ -502,7 +500,6 @@ index 000000000..3d77e9493
 + *   env_name      - Name of the environment variable to read.
 + *   default_value - Value to use if the env variable is missing/invalid.
 + *   min_value     - Minimum allowed integer value.
-+ *   max_value     - Maximum allowed integer value.
 + *   out_value     - Output pointer where parsed/clamped value is stored.
 + *
 + * Returns:
@@ -513,7 +510,6 @@ index 000000000..3d77e9493
 +        const char *env_name,
 +        int default_value,
 +        int min_value,
-+        int max_value,
 +        int *out_value)
 +{
 +	char *end;
@@ -552,15 +548,13 @@ index 000000000..3d77e9493
 +
 +	if (val > (unsigned long long)INT_MAX) {
 +		fprintf(stderr, "[WARN] %s: value too large, capping to %d\n",
-+		        env_name, max_value);
-+		val = (unsigned long long)max_value;
++		        env_name, INT_MAX);
++		val = (unsigned long long)INT_MAX;
 +	}
 +
 +	ival = (int)val;
 +	if (ival < min_value)
 +		ival = min_value;
-+	if (ival > max_value)
-+		ival = max_value;
 +
 +	*out_value = ival;
 +	return 0;
@@ -575,7 +569,6 @@ index 000000000..3d77e9493
 + *   env_name      - Environment variable name.
 + *   default_value - Default unsigned value.
 + *   min_value     - Minimum allowed uint.
-+ *   max_value     - Maximum allowed uint.
 + *   out_value     - Output pointer for parsed value.
 + *
 + * Returns:
@@ -586,7 +579,6 @@ index 000000000..3d77e9493
 +        const char *env_name,
 +        unsigned int default_value,
 +        unsigned int min_value,
-+        unsigned int max_value,
 +        unsigned int *out_value)
 +{
 +	char *end;
@@ -627,8 +619,6 @@ index 000000000..3d77e9493
 +	uval = (unsigned int)val;
 +	if (uval < min_value)
 +		uval = min_value;
-+	if (uval > max_value)
-+		uval = max_value;
 +
 +	*out_value = uval;
 +	return 0;
@@ -653,11 +643,11 @@ index 000000000..3d77e9493
 +
 +	parse_env_nonneg_int(
 +	        "GIT_LFS_RESUME_ATTEMPTS", LFS_RESUME_ATTEMPTS_DEFAULT, 0,
-+	        LFS_RESUME_ATTEMPTS_MAX, &g_lfs_resume_attempts);
++	        &g_lfs_resume_attempts);
 +
 +	parse_env_nonneg_uint(
-+	        "GIT_LFS_RESUME_INTERVAL", LFS_RESUME_INTERVAL_DEFAULT, 0,
-+	        LFS_RESUME_INTERVAL_MAX, &g_lfs_resume_interval_secs);
++	        "GIT_LFS_RESUME_INTERVAL", LFS_RESUME_INTERVAL_DEFAULT_SECONDS,
++	        0, &g_lfs_resume_interval_secs);
 +
 +	/* log resolved config */
 +	fprintf(stdout, "[INFO] LFS resume: attempts=%d interval=%u s\n",
