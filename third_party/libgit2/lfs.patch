@@ -444,7 +444,7 @@ index 58cb4b424..00ddee9f3 100644
  	git_writestream **out,
 diff --git a/src/libgit2/lfs_filter.c b/src/libgit2/lfs_filter.c
 new file mode 100644
-index 000000000..ea806e1ec
+index 000000000..9b3990f53
 --- /dev/null
 +++ b/src/libgit2/lfs_filter.c
 @@ -0,0 +1,1529 @@
@@ -629,7 +629,7 @@ index 000000000..ea806e1ec
 + * --------------------
 + * Initializes global resume configuration from environment:
 + *   GIT_LFS_RESUME_ATTEMPTS
-+ *   GIT_LFS_RESUME_INTERVAL
++ *   GIT_LFS_RESUME_INTERVAL_SECONDS
 + * Initializes libcurl and set ups curl cleanup once per process
 + * 
 + * Called exactly once via pthread_once / InitOnce.
@@ -646,7 +646,7 @@ index 000000000..ea806e1ec
 +	        &g_lfs_resume_attempts);
 +
 +	parse_env_nonneg_uint(
-+	        "GIT_LFS_RESUME_INTERVAL", LFS_RESUME_INTERVAL_DEFAULT_SECONDS,
++	        "GIT_LFS_RESUME_INTERVAL_SECONDS", LFS_RESUME_INTERVAL_DEFAULT_SECONDS,
 +	        0, &g_lfs_resume_interval_secs);
 +
 +	/* log resolved config */
