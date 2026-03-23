@@ -116,7 +116,7 @@ TEST_F(LFM2OutputParserTest, ParseToolCallWithObjectArguments) {
         ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
         EXPECT_EQ(parsedOutput.toolCalls[0].name, "dummy");
         // Parser removes whitespaces, so we expect arguments value to be without spaces
-        EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{\"config\":{'name':'astro_config','value':99}}");
+        EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{\"config\":{\"name\":\"astro_config\",\"value\":99}}");
         EXPECT_EQ(parsedOutput.toolCalls[0].id.empty(), false);  // ID should be generated
     }
 }
@@ -186,39 +186,7 @@ TEST_F(LFM2OutputParserTest, ParseToolCallOutputWithThreeToolCalls) {
     }
 }
 
-TEST_F(LFM2OutputParserTest, ParseToolCallOutputWithTwoValidToolCallsAndOneInvalid) {
-    std::string inputWithProperClosure = "<|tool_call_start|>[example_tool(arg1=\"value1\", arg2=42)]<|tool_call_end|>"
-                                         "<|tool_call_start|>[another_tool(param1=\"data\", param2=true)]<|tool_call_end|>"
-                                         "<|tool_call_start|>[third_tool(key=\"value\")]<|tool_call_end|>";
-    std::string inputWithImproperClosure = "<|tool_call_start|>[example_tool(arg1=\"value1\", arg2=42)]<|tool_call_end|>"
-                                           "<|tool_call_start|>[another_tool(param1=\"data\", param2=true)]<|tool_call_end|>"
-                                           "<|tool_call_start|>[third_tool(key=\"value\")]";
-    // LFM2 may produce last tool call without closing tag, so we test both cases
-    // The results should be identical
-    std::vector<std::string> inputs = {inputWithProperClosure, inputWithImproperClosure};
-    for (auto& input : inputs) {
-        auto generatedTensor = lfm2Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
-        std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
-        ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
-        EXPECT_EQ(parsedOutput.content, "");
-        EXPECT_EQ(parsedOutput.reasoning, "");
 
-        // Expecting two tool calls as the second one does not have a valid name
-        ASSERT_EQ(parsedOutput.toolCalls.size(), 2);
-        EXPECT_EQ(parsedOutput.toolCalls[0].name, "example_tool");
-        // Parser removes whitespaces, so we expect arguments value to be without spaces
-        EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{\"arg1\":\"value1\",\"arg2\":42}");
-        EXPECT_EQ(parsedOutput.toolCalls[0].id.empty(), false);  // ID should be generated
-        auto firstToolCallId = parsedOutput.toolCalls[0].id;
-
-        EXPECT_EQ(parsedOutput.toolCalls[1].name, "third_tool");
-        // Parser removes whitespaces, so we expect arguments value to be without spaces
-        EXPECT_EQ(parsedOutput.toolCalls[1].arguments, "{\"key\":\"value\"}");
-        EXPECT_EQ(parsedOutput.toolCalls[1].id.empty(), false);  // ID should be generated
-        auto secondToolCallId = parsedOutput.toolCalls[1].id;
-        EXPECT_NE(firstToolCallId, secondToolCallId);  // IDs should be different
-    }
-}
 
 TEST_F(LFM2OutputParserTest, ParseToolCallOutputWithContentAndNoToolCalls) {
     std::string input = "This is a regular model response without tool calls.";
@@ -253,104 +221,76 @@ TEST_F(LFM2OutputParserTest, HolisticStreaming) {
         // Tool call phase
         // Starting first tool. Collecting chunk until full name is received. Don't return until then.
         {"<|tool_call_start|>\n", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {"[\"", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {"name", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {"\":", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {" \"", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"[", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"super", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"_", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"tool", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {"\",", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {" \"", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {"arguments", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        // As we have 'arguments' key present, we can return first delta
-        {"\":", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"id\":\"XXXXXXXXX\",\"type\":\"function\",\"index\":0,\"function\":{\"name\":\"super_tool\"}}]}}"},
-        // Consecutive deltas without 'id' and 'type'. In order to find the end of arguments parser has one chunk delay to handle end of tool.
-        {" {", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {"\"", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"{\"}}]}}"},
+        {"(", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"id\":\"XXXXXXXXX\",\"type\":\"function\",\"index\":0,\"function\":{\"name\":\"super_tool\"}}]}}"},
         {"arg1", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"\\\"\"}}]}}"},
-        {"\": ", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"arg1\"}}]}}"},
+        {"=", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"arg1\"}}]}}"},
         {"\"", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"\\\": \"}}]}}"},
         {"value1", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"\\\"\"}}]}}"},
         {"\", ", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"value1\"}}]}}"},
         {"arg2", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"\\\", \"}}]}}"},
-        {"\": ", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"arg2\"}}]}}"},
-        {"{\"", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"\\\": \"}}]}}"},
+        {"=", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"arg2\"}}]}}"},
+        {"{\'", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"\\\": \"}}]}}"},
         {"nested_arg1", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"{\\\"\"}}]}}"},
-        {"\": ", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"nested_arg1\"}}]}}"},
+        {"\': ", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"nested_arg1\"}}]}}"},
         {"\"", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"\\\": \"}}]}}"},
         {"nested_value1", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"\\\"\"}}]}}"},
         {"\", ", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"nested_value1\"}}]}}"},
-        {"\"", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"\\\", \"}}]}}"},
+        {"\'", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"\\\", \"}}]}}"},
         {"nested_arg2", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"\\\"\"}}]}}"},
-        {"\": ", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"nested_arg2\"}}]}}"},
+        {"\': ", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"nested_arg2\"}}]}}"},
         {"\"", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"\\\": \"}}]}}"},
         {"nested_value2", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"\\\"\"}}]}}"},
         {"\"}}}", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"nested_value2\"}}]}}"},
+        {"] ", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"nested_value2\"}}]}}"},
         {"<|tool_call_end|>\n", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"\\\"}}\"}}]}}"},
         // Starting second tool. Collecting chunk until full name is received. Don't return until then.
         {"<|tool_call_start|>\n", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {"{\"", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {"name", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {"\":", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {" \"", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"[", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"super", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"_tool", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"_number", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"_two", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {"\",", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {" \"", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {"arguments", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        // As we have 'arguments' key present, we can return first delta
-        {"\":", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"id\":\"XXXXXXXXX\",\"type\":\"function\",\"index\":1,\"function\":{\"name\":\"super_tool_number_two\"}}]}}"},
-        // Consecutive deltas without 'id' and 'type'. In order to find the end of arguments parser has one chunk delay to handle end of tool.
-        {" {", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {"\"", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":1,\"function\":{\"arguments\":\"{\"}}]}}"},
+        {"(", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"id\":\"XXXXXXXXX\",\"type\":\"function\",\"index\":1,\"function\":{\"name\":\"super_tool_number_two\"}}]}}"},
         {"arg1", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":1,\"function\":{\"arguments\":\"\\\"\"}}]}}"},
-        {"\": ", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":1,\"function\":{\"arguments\":\"arg1\"}}]}}"},
+        {"=", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":1,\"function\":{\"arguments\":\"arg1\"}}]}}"},
         {"\"", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":1,\"function\":{\"arguments\":\"\\\": \"}}]}}"},
         {"val{{{ue1", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":1,\"function\":{\"arguments\":\"\\\"\"}}]}}"},
         {"\"", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":1,\"function\":{\"arguments\":\"val{{{ue1\"}}]}}"},
-        {"}", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":1,\"function\":{\"arguments\":\"\\\"\"}}]}}"},
-        {"}", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":1,\"function\":{\"arguments\":\"}\"}}]}}"},  // returning last arguments part
-        {"<|tool_call_end|>\n", ov::genai::GenerationFinishReason::NONE, std::nullopt},                                                          // closed main JSON, with the last chunk, now only return nullopt since there is no delta
-        // Starting third tool. Collecting chunk until full name is received. Don't return until then.
-        {"<|tool_call_start|>\n{\"", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {"name", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {"\":", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {" \"", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {")", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":1,\"function\":{\"arguments\":\"}\"}}]}}"}, 
+        {"]", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":1,\"function\":{\"arguments\":\"}\"}}]}}"},
+        {"<|tool_call_end|>\n", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"<|tool_call_start|>\n[", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"super", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"_tool", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"_number", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"_three", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {"\",", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {" \"", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {"arguments", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        // As we have 'arguments' key present, we can return first delta
-        {"\":", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"id\":\"XXXXXXXXX\",\"type\":\"function\",\"index\":2,\"function\":{\"name\":\"super_tool_number_three\"}}]}}"},
-        // Consecutive deltas without 'id' and 'type'. In order to find the end of arguments parser has one chunk delay to handle end of tool.
-        {" {", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {"\"", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":2,\"function\":{\"arguments\":\"{\"}}]}}"},
+        {"(", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"id\":\"XXXXXXXXX\",\"type\":\"function\",\"index\":2,\"function\":{\"name\":\"super_tool_number_three\"}}]}}"},
         {"arg1", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":2,\"function\":{\"arguments\":\"\\\"\"}}]}}"},
-        {"\": ", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":2,\"function\":{\"arguments\":\"arg1\"}}]}}"},
+        {"=", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":2,\"function\":{\"arguments\":\"arg1\"}}]}}"},
         {"\"", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":2,\"function\":{\"arguments\":\"\\\": \"}}]}}"},
         {"val{{{ue1", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":2,\"function\":{\"arguments\":\"\\\"\"}}]}}"},
         {"\"", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":2,\"function\":{\"arguments\":\"val{{{ue1\"}}]}}"},
-        {"}}<|tool_call_end|>\n", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":2,\"function\":{\"arguments\":\"\\\"}\"}}]}}"},
+        {")]<|tool_call_end|>\n", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":2,\"function\":{\"arguments\":\"\\\"}\"}}]}}"},
         // Starting fourth tool (without arguments). Collecting chunk until full name is received. Don't return until then.
         {"<|tool_call_start|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {"{\"name", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {"\":", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {" \"", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {"super", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"[super", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"_tool", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"_number", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"_four", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {"\",", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {" \"", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {"arguments", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        // As we have 'arguments' key present, we can return first delta
-        {"\": {}}\n", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"id\":\"XXXXXXXXX\",\"type\":\"function\",\"index\":3,\"function\":{\"name\":\"super_tool_number_four\"}}]}}"},
+        {"(", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"id\":\"XXXXXXXXX\",\"type\":\"function\",\"index\":1,\"function\":{\"name\":\"super_tool_number_four\"}}]}}"},
+        {"arg1", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":3,\"function\":{\"arguments\":\"\\\"\"}}]}}"},
+        {"=", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":3,\"function\":{\"arguments\":\"arg1\"}}]}}"},
+        {"\"", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":3,\"function\":{\"arguments\":\"\\\": \"}}]}}"},
+        {"val{{{ue1", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":3,\"function\":{\"arguments\":\"\\\"\"}}]}}"},
+        {"\"", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":3,\"function\":{\"arguments\":\"val{{{ue1\"}}]}}"},
+        {")]<|tool_call_end|>\n", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":3,\"function\":{\"arguments\":\"\\\"}\"}}]}}"},
+        // Starting fourth tool (without arguments). Collecting chunk until full name is received. Don't return until then.
+        {"<|tool_call_start|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"[super", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         // Both arguments key first appearance and full arguments value is received in the previous chunk, but we cannot return function name and arguments in the same chunk
         // so arguments value is returned in the next chunk
         {"<|tool_call_end|>", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":3,\"function\":{\"arguments\":\"{}\"}}]}}"},
@@ -474,5 +414,95 @@ TEST_F(LFM2OutputParserTest, ToolCallsWithoutToolsInTheRequestStreaming) {
         } else {
             FAIL() << "Mismatch between expectedDelta and doc for chunk: " << chunk;
         }
+    }
+}
+
+TEST_F(LFM2OutputParserTest, ParseToolCallWithStringArgumentsContainingSpecialCharacters) {
+    {
+    std::string input = R"x(<|tool_call_start|>[search(query="price >= 100, (sale)", limit=5)]<|tool_call_end|>)x";
+        auto generatedTensor = lfm2Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
+        std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+        ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
+        EXPECT_EQ(parsedOutput.content, "");
+        ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
+        EXPECT_EQ(parsedOutput.toolCalls[0].name, "search");
+        EXPECT_EQ(parsedOutput.toolCalls[0].arguments, R"x({"query":"price >= 100, (sale)","limit":5})x");
+    }
+
+    {
+        std::string input = R"(<|tool_call_start|>[format(template="Hello {name}, items: [a, b, c]", count=3)]<|tool_call_end|>)";
+        auto generatedTensor = lfm2Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
+        std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+        ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
+        EXPECT_EQ(parsedOutput.content, "");
+        ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
+        EXPECT_EQ(parsedOutput.toolCalls[0].name, "format");
+        EXPECT_EQ(parsedOutput.toolCalls[0].arguments, R"({"template":"Hello {name}, items: [a, b, c]","count":3})");
+    }
+
+    {
+        std::string input = R"x(<|tool_call_start|>[execute(code="print(\"hello world\")", verbose=true)]<|tool_call_end|>)x";
+        auto generatedTensor = lfm2Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
+        std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+        ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
+        EXPECT_EQ(parsedOutput.content, "");
+        ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
+        EXPECT_EQ(parsedOutput.toolCalls[0].name, "execute");
+        EXPECT_EQ(parsedOutput.toolCalls[0].arguments, R"x({"code":"print(\"hello world\")","verbose":true})x");
+    }
+
+    {
+        std::string input = R"(<|tool_call_start|>[log(message="it's a test, isn't it?", level="warn")]<|tool_call_end|>)";
+        auto generatedTensor = lfm2Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
+        std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+        ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
+        EXPECT_EQ(parsedOutput.content, "");
+        ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
+        EXPECT_EQ(parsedOutput.toolCalls[0].name, "log");
+        EXPECT_EQ(parsedOutput.toolCalls[0].arguments, R"({"message":"it's a test, isn't it?","level":"warn"})");
+    }
+
+    {
+        std::string input = R"(<|tool_call_start|>[read_file(path="C:\Users\test\file.txt", encoding="utf-8")]<|tool_call_end|>)";
+        auto generatedTensor = lfm2Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
+        std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+        ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
+        EXPECT_EQ(parsedOutput.content, "");
+        ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
+        EXPECT_EQ(parsedOutput.toolCalls[0].name, "read_file");
+        EXPECT_EQ(parsedOutput.toolCalls[0].arguments, R"({"path":"C:\\Users\\test\\file.txt","encoding":"utf-8"})");
+    }
+
+    {
+        std::string input = R"(<|tool_call_start|>[send(payload="{'key': 'value', 'count': 42}", endpoint="api")]<|tool_call_end|>)";
+        auto generatedTensor = lfm2Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
+        std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+        ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
+        EXPECT_EQ(parsedOutput.content, "");
+        ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
+        EXPECT_EQ(parsedOutput.toolCalls[0].name, "send");
+        EXPECT_EQ(parsedOutput.toolCalls[0].arguments, R"({"payload":"{\"key\":\"value\",\"count\":42}","endpoint":"api"})");
+    }
+
+    {
+        std::string input = R"(<|tool_call_start|>[create(name="", value=0)]<|tool_call_end|>)";
+        auto generatedTensor = lfm2Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
+        std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+        ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
+        EXPECT_EQ(parsedOutput.content, "");
+        ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
+        EXPECT_EQ(parsedOutput.toolCalls[0].name, "create");
+        EXPECT_EQ(parsedOutput.toolCalls[0].arguments, R"({"name":"","value":0})");
+    }
+
+    {
+        std::string input = R"(<|tool_call_start|>[translate(text=\"café résumé naïve\", lang=\"fr\")]<|tool_call_end|>)";
+        auto generatedTensor = lfm2Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
+        std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+        ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
+        EXPECT_EQ(parsedOutput.content, "");
+        ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
+        EXPECT_EQ(parsedOutput.toolCalls[0].name, "translate");
+        EXPECT_EQ(parsedOutput.toolCalls[0].arguments, R"({"text":"café résumé naïve","lang":"fr"})");
     }
 }

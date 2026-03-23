@@ -33,6 +33,14 @@ protected:
     const std::string toolEndIndicator = ")";
     const std::string toolSeparatorStr = ", ";
 
+    enum class State {
+        Content,
+        ToolCallStarted,
+        ToolCallFunctionName,
+        ToolCallParameters,
+        ToolCallEnded
+    };
+
 public:
     struct Argument {
         std::string name;
@@ -43,7 +51,7 @@ public:
     explicit Lfm2ToolParser(ov::genai::Tokenizer& tokenizer) : BaseOutputParser(tokenizer) {}
 
     void parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) override;
-    std::optional<rapidjson::Document> parseChunk(const std::string& chunk, ov::genai::GenerationFinishReason finishReason) override;
+    std::optional<ToolCalls_t> parseChunk(const std::string& chunk, ov::genai::GenerationFinishReason finishReason) override;
     const std::vector<std::string>& getParsingStartTags() const override {
         static const std::vector<std::string> parsingStartTags = {toolCallStartTag};
         return parsingStartTags;
@@ -59,10 +67,12 @@ public:
     }
 
 private:
-    void writeArgumentOfAnyType(const char* arg, rapidjson::Writer<rapidjson::StringBuffer>& writer);
+    void writeArgumentOfAnyType(const std::string& arg, rapidjson::Writer<rapidjson::StringBuffer>& writer);
     void writeArgumentOfAnyType(const rapidjson::Value& arg, rapidjson::Writer<rapidjson::StringBuffer>& writer);
     Argument parseSingleArgument(const std::string& argumentStr);
     std::vector<Argument> parseArguments(const std::string& argumentsStr);
     bool parseSingleToolCall(const std::string& toolStr, ToolCall& toolCall);
+
+    std::string streamingContent;
 };
 }
