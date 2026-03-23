@@ -644,7 +644,7 @@ Status HfDownloader::downloadModel() {
 
         // Non blocking check
         SPDLOG_DEBUG("Checking repository status.");
-        auto status =  CheckRepositoryStatus(false);
+        auto status = CheckRepositoryStatus(false);
         if (!status.ok()) {
             SPDLOG_DEBUG("[WARNING] Model repository status check failed after resuming download. Status: {}", status.string());
             SPDLOG_DEBUG("Consider --override to start download from scratch.");
