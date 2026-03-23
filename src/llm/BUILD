@@ -19,7 +19,8 @@ load("//:common_settings.bzl", "ovms_cc_library", "PYBIND_DEPS", "COPTS_PYTHON")
 
 ovms_cc_library(
     name = "llmcalculator",
-    srcs = ["http_llm_calculator.cc"],
+    srcs = ["http_llm_calculator.cc",
+            "llm_node_initializer.cpp"],
     deps = [
         "//third_party:openvino",
         "@mediapipe//mediapipe/framework:calculator_framework",
@@ -28,7 +29,10 @@ ovms_cc_library(
         "//src:libovmsprofiler",
         ":genai_servables",
         "//src:httppayload",
-        "//third_party:genai",],
+        "//third_party:genai",
+        "//src:node_initializer",
+        "//src:libovmslogging",
+        "//src:libovmsstring_utils",],
     visibility = ["//visibility:public"],
     additional_copts = COPTS_PYTHON,
     alwayslink = 1, # needed, so the calculator can be registered by MediaPipe

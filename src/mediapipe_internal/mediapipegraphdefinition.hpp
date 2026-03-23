@@ -26,7 +26,7 @@
 #include "../metric.hpp"
 #include "../model_metric_reporter.hpp"
 #include "../single_version_servable_definition.hpp"
-#include "../tensorinfo.hpp"
+#include "../tensorinfo_fwd.hpp"
 
 #pragma warning(push)
 #pragma warning(disable : 4005 4309 6001 6385 6386 6326 6011 4005 4456 6246)
@@ -37,6 +37,7 @@
 #pragma warning(pop)
 
 #include "mediapipegraphconfig.hpp"
+#include "graph_side_packets.hpp"
 #include "packettypes.hpp"
 
 namespace ovms {
@@ -46,48 +47,6 @@ class ServableNameChecker;
 class MediapipeGraphExecutor;
 class Status;
 class PythonBackend;
-class PythonNodeResources;
-struct EmbeddingsServable;
-class GenAiServable;
-struct ImageGenerationPipelines;
-struct RerankServable;
-struct SttServable;
-class TtsServable;
-using PythonNodeResourcesMap = std::unordered_map<std::string, std::shared_ptr<PythonNodeResources>>;
-using GenAiServableMap = std::unordered_map<std::string, std::shared_ptr<GenAiServable>>;
-using RerankServableMap = std::unordered_map<std::string, std::shared_ptr<RerankServable>>;
-using SttServableMap = std::unordered_map<std::string, std::shared_ptr<SttServable>>;
-using TtsServableMap = std::unordered_map<std::string, std::shared_ptr<TtsServable>>;
-using EmbeddingsServableMap = std::unordered_map<std::string, std::shared_ptr<EmbeddingsServable>>;
-using ImageGenerationPipelinesMap = std::unordered_map<std::string, std::shared_ptr<ImageGenerationPipelines>>;
-
-struct GraphSidePackets {
-    PythonNodeResourcesMap pythonNodeResourcesMap;
-    GenAiServableMap genAiServableMap;
-    ImageGenerationPipelinesMap imageGenPipelinesMap;
-    EmbeddingsServableMap embeddingsServableMap;
-    RerankServableMap rerankServableMap;
-    SttServableMap sttServableMap;
-    TtsServableMap ttsServableMap;
-    void clear() {
-        pythonNodeResourcesMap.clear();
-        genAiServableMap.clear();
-        imageGenPipelinesMap.clear();
-        embeddingsServableMap.clear();
-        rerankServableMap.clear();
-        sttServableMap.clear();
-        ttsServableMap.clear();
-    }
-    bool empty() {
-        return (pythonNodeResourcesMap.empty() &&
-                genAiServableMap.empty() &&
-                imageGenPipelinesMap.empty() &&
-                embeddingsServableMap.empty() &&
-                rerankServableMap.empty() &&
-                sttServableMap.empty() &&
-                ttsServableMap.empty());
-    }
-};
 
 class MediapipeGraphDefinition : public SingleVersionServableDefinition {
 
@@ -119,13 +78,6 @@ public:
     bool isReloadRequired(const MediapipeGraphConfig& config) const;
 
     static const std::string SCHEDULER_CLASS_NAME;
-    static const std::string PYTHON_NODE_CALCULATOR_NAME;
-    static const std::string LLM_NODE_CALCULATOR_NAME;
-    static const std::string IMAGE_GEN_CALCULATOR_NAME;
-    static const std::string EMBEDDINGS_NODE_CALCULATOR_NAME;
-    static const std::string RERANK_NODE_CALCULATOR_NAME;
-    static const std::string STT_NODE_CALCULATOR_NAME;
-    static const std::string TTS_NODE_CALCULATOR_NAME;
 
 protected:
     GraphSidePackets sidePacketMaps;

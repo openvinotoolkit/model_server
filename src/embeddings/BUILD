@@ -68,7 +68,8 @@ mediapipe_proto_library(
 ovms_cc_library(
     name = "embeddingscalculator_ov",
     hdrs = [],
-    srcs = ["embeddings_calculator_ov.cc"],
+    srcs = ["embeddings_calculator_ov.cc",
+            "embeddings_node_initializer.cpp"],
     deps = [
         "@mediapipe//mediapipe/framework:calculator_framework",
         "@com_github_tencent_rapidjson//:rapidjson",
@@ -85,6 +86,8 @@ ovms_cc_library(
         "//src:libovms_execution_context",
         ":embeddings_api",
         "//third_party:openvino",
+        "//src:node_initializer",
+        "//src:libovmsstring_utils",
     ],
     visibility = ["//visibility:public"],
     alwayslink = 1,

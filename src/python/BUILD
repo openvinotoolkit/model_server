@@ -98,7 +98,8 @@ ovms_cc_library(
 
 ovms_cc_library(
     name = "pythonexecutorcalculator",
-    srcs = ["python_executor_calculator.cc",],
+    srcs = ["python_executor_calculator.cc",
+            "python_node_initializer.cpp",],
     deps = PYBIND_DEPS + [
         "//third_party:openvino",
         "@mediapipe//mediapipe/framework:calculator_framework",
@@ -106,6 +107,8 @@ ovms_cc_library(
         "pythonexecutorcalculator_cc_proto",
         "pythonbackend",
         "pythonnoderesources",
+        "//src:node_initializer",
+        "//src:libovmslogging",
     ],
     visibility = ["//visibility:private"],
     alwayslink = 1,

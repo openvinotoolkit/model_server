@@ -508,6 +508,120 @@ ovms_cc_library(
     visibility = ["//visibility:public",],
 )
 ovms_cc_library(
+    name = "node_initializer",
+    srcs = [
+        "mediapipe_internal/node_initializer.cpp",
+    ],
+    hdrs = [
+        "mediapipe_internal/node_initializer.hpp",
+        "mediapipe_internal/graph_side_packets.hpp",
+    ],
+    deps = [
+        "libovmsstatus",
+    ],
+    visibility = ["//visibility:public",],
+)
+ovms_cc_library(
+    name = "libovms_mediapipe",
+    srcs = [
+        "mediapipe_internal/mediapipefactory.cpp",
+        "mediapipe_internal/mediapipefactory.hpp",
+        "mediapipe_internal/mediapipegraphconfig.hpp",
+        "mediapipe_internal/mediapipegraphconfig.cpp",
+        "mediapipe_internal/mediapipegraphdefinition.cpp",
+        "mediapipe_internal/mediapipegraphdefinition.hpp",
+        "mediapipe_internal/mediapipegraphexecutor.cpp",
+        "mediapipe_internal/mediapipegraphexecutor.hpp",
+        "copyable_object_wrapper.hpp",
+    ],
+    deps = select({
+            "//:not_disable_python": [
+                "//src/python:libovmspythonmodule",
+            ],
+            "//:disable_python": []
+        }) + [
+        "node_initializer",
+        "libovmsmediapipe_utils",
+        "libovms_dags_pipelinedefinitionstatus",
+        "libovms_single_version_servable_definition",
+        "libovms_tensorinfo",
+        "libovmslogging",
+        "libovmsstatus",
+        "model_metric_reporter",
+        "libovmsmetrics",
+        "libovms_ov_utils",
+        "libovmsstring_utils",
+        "libovms_servable_name_checker",
+        "libovms_metric_provider",
+        "libovmsfilesystem",
+        "libovms_version",
+        "libovms_execution_context",
+        "libovmstimer",
+        "libovmsprofiler",
+        "@com_github_tencent_rapidjson//:rapidjson",
+        "//src/port:rapidjson_stringbuffer",
+        "//src/port:rapidjson_writer",
+        "@mediapipe//mediapipe/framework:calculator_graph",
+        "@mediapipe//mediapipe/framework/port:parse_text_proto",
+    ],
+    visibility = ["//visibility:public",],
+    additional_copts = COPTS_PYTHON + COPTS_MEDIAPIPE,
+    alwayslink = 1,
+)
+ovms_cc_library(
+    name = "libovms_mediapipe_kfs_executor",
+    srcs = [
+        "kfs_frontend/kfs_graph_executor_impl.cpp",
+        "kfs_frontend/kfs_graph_executor_impl.hpp",
+    ],
+    deps = select({
+            "//:not_disable_python": [
+                "//src/python:libovmspythonmodule",
+            ],
+            "//:disable_python": []
+        }) + [
+        "libovms_mediapipe",
+        "predict_request_validation_utils",
+        "tfs_utils",
+        "libovms_kfs_utils",
+        "libovms_kfs_grpc_inference_service_h",
+        "//src/kfserving_api:kfserving_api_cpp",
+        "opencv_dep",
+        "@mediapipe//mediapipe/framework/formats:image_frame",
+        "@mediapipe//mediapipe/framework/formats:image_frame_opencv",
+        "@mediapipe//mediapipe/framework/formats:tensor",
+    ],
+    visibility = ["//visibility:public",],
+    additional_copts = COPTS_PYTHON + COPTS_MEDIAPIPE,
+    alwayslink = 1,
+)
+ovms_cc_library(
+    name = "libovms_mediapipe_http_executor",
+    srcs = [
+        "http_frontend/http_graph_executor_impl.cpp",
+        "http_frontend/http_graph_executor_impl.hpp",
+    ],
+    deps = select({
+            "//:not_disable_python": [
+                "//src/python:libovmspythonmodule",
+            ],
+            "//:disable_python": []
+        }) + [
+        "libovms_mediapipe",
+        "httppayload",
+        "libhttp_async_writer_interface",
+        "opencv_dep",
+        "//src/port:rapidjson_stringbuffer",
+        "//src/port:rapidjson_writer",
+        "@mediapipe//mediapipe/framework/formats:image_frame",
+        "@mediapipe//mediapipe/framework/formats:image_frame_opencv",
+        "@mediapipe//mediapipe/framework/formats:tensor",
+    ],
+    visibility = ["//visibility:public",],
+    additional_copts = COPTS_PYTHON + COPTS_MEDIAPIPE,
+    alwayslink = 1,
+)
+ovms_cc_library(
     name = "ovms_lib",
     hdrs = [
             "ovms_internal.h",
@@ -570,25 +684,7 @@ ovms_cc_library(
         "server.hpp",
         "statefulmodelinstance.cpp",
         "statefulmodelinstance.hpp",
-         ] + select({
-            "//:not_disable_mediapipe": [
-                "copyable_object_wrapper.hpp",
-                "mediapipe_internal/mediapipefactory.cpp",
-                "mediapipe_internal/mediapipefactory.hpp",
-                "mediapipe_internal/mediapipegraphconfig.hpp",
-                "mediapipe_internal/mediapipegraphconfig.cpp",
-                "mediapipe_internal/mediapipegraphdefinition.cpp",
-                "mediapipe_internal/mediapipegraphdefinition.hpp",
-                "mediapipe_internal/mediapipegraphexecutor.cpp",
-                "mediapipe_internal/mediapipegraphexecutor.hpp",
-                "mediapipe_internal/packettypes.hpp",
-                "kfs_frontend/kfs_graph_executor_impl.cpp",
-                "kfs_frontend/kfs_graph_executor_impl.hpp",
-                "http_frontend/http_graph_executor_impl.cpp",
-                "http_frontend/http_graph_executor_impl.hpp",
-            ],
-            "//:disable_mediapipe" : [],
-        }),
+         ],
         deps = select({
             "//:not_disable_python": [
                 "//src/python:libovmspythonmodule",
@@ -597,16 +693,29 @@ ovms_cc_library(
         }) + select({
             "//conditions:default": [],
             "//:not_disable_mediapipe" : [
+                "libovms_mediapipe",
+                "libovms_mediapipe_kfs_executor",
+                "libovms_mediapipe_http_executor",
+                "@mediapipe_calculators//:mediapipe_calculators",
+                "@mediapipe//mediapipe/graphs/holistic_tracking:holistic_tracking_to_render_data",
+                "@mediapipe//mediapipe/graphs/iris_tracking:iris_tracking_cpu_deps",
+                "@mediapipe//mediapipe/calculators/tensor:image_to_tensor_calculator",
+                "@mediapipe//mediapipe/modules/holistic_landmark:holistic_landmark_cpu",
+                "@mediapipe//mediapipe/calculators/geti/inference:inference_calculators",
+                "@mediapipe//mediapipe/calculators/geti/utils:utils",
+                "@mediapipe//mediapipe/calculators/geti/utils:emptylabel_calculators",
+                "@mediapipe//mediapipe/calculators/geti/serialization:calculators",
+                "//src/llm:openai_completions_api_handler",
                 "//src/image_gen:image_gen_calculator",
                 "//src/audio/speech_to_text:s2t_calculator",
                 "//src/audio/text_to_speech:t2s_calculator",
                 "//src/audio:audio_utils",
                 "//src/image_gen:imagegen_init",
-                "//src/llm:openai_completions_api_handler",
                 "//src/embeddings:embeddingscalculator_ov",
                 "//src/rerank:rerankcalculator",
                 "//src/rerank:rerankcalculator_ov",
-                "//src/llm:llmcalculator",],
+                "//src/llm:llmcalculator",
+            ],
         }) + select({
             "//:enable_drogon": [
                 "libdrogon_http_server",
@@ -721,22 +830,7 @@ ovms_cc_library(
                     "@windows_opencl//:opencl",
                     "@windows_opencl2//:opencl2",
                     ],
-                })
-            + select({
-            "//conditions:default": [
-                "@mediapipe_calculators//:mediapipe_calculators", # Need this dependencies here because we use ovms/src - cannot add in ovms_dependencies because we copy src directory later in Dockerfile
-                "@mediapipe//mediapipe/graphs/holistic_tracking:holistic_tracking_to_render_data",
-                "@mediapipe//mediapipe/graphs/iris_tracking:iris_tracking_cpu_deps",
-                "@mediapipe//mediapipe/calculators/tensor:image_to_tensor_calculator",
-                "@mediapipe//mediapipe/modules/holistic_landmark:holistic_landmark_cpu",
-                "libovmsmediapipe_utils",
-                "@mediapipe//mediapipe/calculators/geti/inference:inference_calculators",
-                "@mediapipe//mediapipe/calculators/geti/utils:utils",
-                "@mediapipe//mediapipe/calculators/geti/utils:emptylabel_calculators",
-                "@mediapipe//mediapipe/calculators/geti/serialization:calculators",
-            ],
-            "//:disable_mediapipe" : [],
-        }),
+                }),
     visibility = ["//visibility:public",],
     additional_copts = COPTS_PYTHON + COPTS_MEDIAPIPE + COPTS_DROGON + COPTS_OV_TRACE,
     additional_linkopts = select({

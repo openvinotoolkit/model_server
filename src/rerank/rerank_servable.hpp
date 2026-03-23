@@ -17,6 +17,7 @@
 
 #include "../sidepacket_servable.hpp"
 #include "../filesystem.hpp"
+#include <rapidjson/document.h>
 #include <rapidjson/istreamwrapper.h>
 #include <rapidjson/error/en.h>
 #include <memory>

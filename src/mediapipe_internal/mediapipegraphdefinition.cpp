@@ -24,26 +24,13 @@
 #include <utility>
 #include <vector>
 
-#include "../audio/speech_to_text/s2t_servable.hpp"
-#include "../audio/text_to_speech/t2s_servable.hpp"
-#include "../embeddings/embeddings_servable.hpp"
 #include "../execution_context.hpp"
 #include "../filesystem.hpp"
-#include "../kfs_frontend/kfs_utils.hpp"
-#include "../kfs_frontend/kfs_request_utils.hpp"
-#include "../deserialization_main.hpp"
 #include "../metric.hpp"
 #include "../model_metric_reporter.hpp"
 #include "../ov_utils.hpp"
-#include "../rerank/rerank_servable.hpp"
 #include "../servable_definition_unload_guard.hpp"
 #include "../servable_name_checker.hpp"
-#include "../sidepacket_servable.hpp"
-#include "../llm/servable.hpp"
-#include "../llm/servable_initializer.hpp"
-#if (PYTHON_DISABLE == 0)
-#include "../python/pythonnoderesources.hpp"
-#endif
 #include "../status.hpp"
 #include "../stringutils.hpp"
 #include "../tensorinfo.hpp"
@@ -53,24 +40,13 @@
 #include "mediapipe/framework/port/status.h"
 #include "mediapipe_utils.hpp"
 #include "mediapipegraphexecutor.hpp"
-#include "src/embeddings/embeddings_calculator_ov.pb.h"
-#include "src/rerank/rerank_calculator_ov.pb.h"
-
-#include "src/image_gen/pipelines.hpp"
-#include "src/image_gen/imagegen_init.hpp"
-#include "src/image_gen/image_gen_calculator.pb.h"
+#include "node_initializer.hpp"
 
 namespace ovms {
 MediapipeGraphConfig MediapipeGraphDefinition::MGC;
 
 const std::string MediapipeGraphDefinition::SCHEDULER_CLASS_NAME{"Mediapipe"};
-const std::string MediapipeGraphDefinition::PYTHON_NODE_CALCULATOR_NAME{"PythonExecutorCalculator"};
-const std::string MediapipeGraphDefinition::LLM_NODE_CALCULATOR_NAME{"LLMCalculator"};
-const std::string MediapipeGraphDefinition::IMAGE_GEN_CALCULATOR_NAME{"ImageGenCalculator"};
-const std::string MediapipeGraphDefinition::STT_NODE_CALCULATOR_NAME{"S2tCalculator"};
-const std::string MediapipeGraphDefinition::TTS_NODE_CALCULATOR_NAME{"T2sCalculator"};
-const std::string MediapipeGraphDefinition::EMBEDDINGS_NODE_CALCULATOR_NAME{"EmbeddingsCalculatorOV"};
-const std::string MediapipeGraphDefinition::RERANK_NODE_CALCULATOR_NAME{"RerankCalculatorOV"};
+
 
 MediapipeGraphDefinition::~MediapipeGraphDefinition() = default;
 
@@ -370,227 +346,16 @@ StatusCode MediapipeGraphDefinition::notLoadedAnymoreCode() const {
     return StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_ANYMORE;
 }
 
-template <typename T>
-class ResourcesCleaningGuard {
-public:
-    bool shouldCleanup{true};
-    T& resources;
-    ResourcesCleaningGuard(T& resources) :
-        resources(resources) {}
-    ~ResourcesCleaningGuard() {
-        if (shouldCleanup) {
-            resources.clear();
-        }
-    }
-    void disableCleaning() {
-        shouldCleanup = false;
-    }
-};
-
 Status MediapipeGraphDefinition::initializeNodes() {
     SPDLOG_INFO("MediapipeGraphDefinition initializing graph nodes");
+    auto& registry = NodeInitializerRegistry::instance();
     for (int i = 0; i < config.node().size(); i++) {
-#if (PYTHON_DISABLE == 0)
-        auto& pythonNodeResourcesMap = this->sidePacketMaps.pythonNodeResourcesMap;
-        if (config.node(i).calculator() == PYTHON_NODE_CALCULATOR_NAME) {
-            ResourcesCleaningGuard<PythonNodeResourcesMap> pythonResourcesCleaningGuard(pythonNodeResourcesMap);
-            if (!config.node(i).node_options().size()) {
-                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Python node missing options in graph: {}. ", getName());
-                return StatusCode::PYTHON_NODE_MISSING_OPTIONS;
-            }
-            if (config.node(i).name().empty()) {
-                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Python node name is missing in graph: {}. ", getName());
-                return StatusCode::PYTHON_NODE_MISSING_NAME;
-            }
-            std::string nodeName = config.node(i).name();
-            if (pythonNodeResourcesMap.find(nodeName) != pythonNodeResourcesMap.end()) {
-                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Python node name: {} already used in graph: {}. ", nodeName, getName());
-                return StatusCode::PYTHON_NODE_NAME_ALREADY_EXISTS;
-            }
-
-            std::shared_ptr<PythonNodeResources> nodeResources = nullptr;
-            Status status = PythonNodeResources::createPythonNodeResources(nodeResources, config.node(i), pythonBackend, mgconfig.getBasePath());
-            if (nodeResources == nullptr || !status.ok()) {
-                SPDLOG_ERROR("Failed to process python node graph {}", getName());
-                return status;
-            }
-
-            pythonNodeResourcesMap.insert(std::pair<std::string, std::shared_ptr<PythonNodeResources>>(nodeName, std::move(nodeResources)));
-            pythonResourcesCleaningGuard.disableCleaning();
-        }
-#endif
-        // Passed to both calculators that require LLM Engine (gRPC KServe & HTTP OpenAI)
-        if (endsWith(config.node(i).calculator(), LLM_NODE_CALCULATOR_NAME)) {
-            auto& genAiServableMap = this->sidePacketMaps.genAiServableMap;
-            ResourcesCleaningGuard<GenAiServableMap> genAiServablesCleaningGuard(genAiServableMap);
-            if (!config.node(i).node_options().size()) {
-                SPDLOG_LOGGER_ERROR(modelmanager_logger, "LLM node missing options in graph: {}. ", getName());
-                return StatusCode::LLM_NODE_MISSING_OPTIONS;
-            }
-            if (config.node(i).name().empty()) {
-                SPDLOG_LOGGER_ERROR(modelmanager_logger, "LLM node name is missing in graph: {}. ", getName());
-                return StatusCode::LLM_NODE_MISSING_NAME;
-            }
-            std::string nodeName = config.node(i).name();
-            if (genAiServableMap.find(nodeName) != genAiServableMap.end()) {
-                SPDLOG_LOGGER_ERROR(modelmanager_logger, "LLM node name: {} already used in graph: {}. ", nodeName, getName());
-                return StatusCode::LLM_NODE_NAME_ALREADY_EXISTS;
-            }
-            std::shared_ptr<GenAiServable> servable;
-            Status status = initializeGenAiServable(servable, config.node(i), mgconfig.getBasePath());
-            if (!status.ok()) {
-                SPDLOG_ERROR("Failed to process LLM node graph {}", getName());
-                return status;
-            }
-            genAiServableMap.insert(std::pair<std::string, std::shared_ptr<GenAiServable>>(nodeName, std::move(servable)));
-            genAiServablesCleaningGuard.disableCleaning();
-        }
-        // Passed to both calculators that require Image Generation pipelines
-        if (endsWith(config.node(i).calculator(), IMAGE_GEN_CALCULATOR_NAME)) {
-            auto& imageGenPipelinesMap = this->sidePacketMaps.imageGenPipelinesMap;
-            ResourcesCleaningGuard<ImageGenerationPipelinesMap> guard(imageGenPipelinesMap);
-            if (!config.node(i).node_options().size()) {
-                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Image Gen node missing options in graph: {}. ", getName());
-                return StatusCode::LLM_NODE_MISSING_OPTIONS;  // TODO: create new error code
-            }
-            if (config.node(i).name().empty()) {
-                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Image Gen node name is missing in graph: {}. ", getName());
-                return StatusCode::LLM_NODE_MISSING_NAME;
-            }
-            std::string nodeName = config.node(i).name();
-            if (imageGenPipelinesMap.find(nodeName) != imageGenPipelinesMap.end()) {
-                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Image Gen node name: {} already used in graph: {}. ", nodeName, getName());
-                return StatusCode::LLM_NODE_NAME_ALREADY_EXISTS;
-            }
-            auto statusOrArgs = prepareImageGenPipelineArgs(config.node(i).node_options(0), mgconfig.getBasePath());
-            if (std::holds_alternative<Status>(statusOrArgs)) {
-                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to prepare Image Gen pipeline args for node: {}. Error: {}", getName(), std::get<Status>(statusOrArgs).string());
-                return std::get<Status>(statusOrArgs);
-            }
-            std::shared_ptr<ImageGenerationPipelines> servable;
-            try {
-                servable = std::make_shared<ImageGenerationPipelines>(std::get<ImageGenPipelineArgs>(statusOrArgs));
-            } catch (ov::Exception& e) {
-                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to create Image Generation pipelines: {}. Error: {}", getName(), e.what());
-                return StatusCode::INTERNAL_ERROR;
-            } catch (...) {
-                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to create Image Generation pipelines: {}. Unknown error", getName());
-                return StatusCode::INTERNAL_ERROR;
-            }
-            imageGenPipelinesMap.insert(std::pair<std::string, std::shared_ptr<ImageGenerationPipelines>>(nodeName, std::move(servable)));
-            guard.disableCleaning();
-        }
-        if (endsWith(config.node(i).calculator(), EMBEDDINGS_NODE_CALCULATOR_NAME)) {
-            auto& embeddingsServableMap = this->sidePacketMaps.embeddingsServableMap;
-            ResourcesCleaningGuard<EmbeddingsServableMap> embeddingsServablesCleaningGuard(embeddingsServableMap);
-            if (!config.node(i).node_options().size()) {
-                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Embeddings node missing options in graph: {}. ", getName());
-                return StatusCode::LLM_NODE_MISSING_OPTIONS;
-            }
-            if (config.node(i).name().empty()) {
-                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Embeddings node name is missing in graph: {}. ", getName());
-                return StatusCode::LLM_NODE_MISSING_NAME;
-            }
-            std::string nodeName = config.node(i).name();
-            if (embeddingsServableMap.find(nodeName) != embeddingsServableMap.end()) {
-                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Embeddings node name: {} already used in graph: {}. ", nodeName, getName());
-                return StatusCode::LLM_NODE_NAME_ALREADY_EXISTS;
-            }
-            mediapipe::EmbeddingsCalculatorOVOptions nodeOptions;
-            config.node(i).node_options(0).UnpackTo(&nodeOptions);
-            std::shared_ptr<EmbeddingsServable> servable = std::make_shared<EmbeddingsServable>(
-                nodeOptions.models_path(),
-                nodeOptions.target_device(),
-                nodeOptions.plugin_config(),
-                mgconfig.getBasePath(),
-                nodeOptions.pooling(),
-                nodeOptions.normalize_embeddings());
-            servable->initialize(
-                nodeOptions.models_path(),
-                nodeOptions.target_device(),
-                nodeOptions.plugin_config(),
-                mgconfig.getBasePath());
-            embeddingsServableMap.insert(std::pair<std::string, std::shared_ptr<EmbeddingsServable>>(nodeName, std::move(servable)));
-            embeddingsServablesCleaningGuard.disableCleaning();
-        }
-        if (endsWith(config.node(i).calculator(), RERANK_NODE_CALCULATOR_NAME)) {
-            auto& rerankServableMap = this->sidePacketMaps.rerankServableMap;
-            ResourcesCleaningGuard<RerankServableMap> rerankServablesCleaningGuard(rerankServableMap);
-            if (!config.node(i).node_options().size()) {
-                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Rerank node missing options in graph: {}. ", getName());
-                return StatusCode::LLM_NODE_MISSING_OPTIONS;
-            }
-            if (config.node(i).name().empty()) {
-                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Rerank node name is missing in graph: {}. ", getName());
-                return StatusCode::LLM_NODE_MISSING_NAME;
-            }
-            std::string nodeName = config.node(i).name();
-            if (rerankServableMap.find(nodeName) != rerankServableMap.end()) {
-                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Rerank node name: {} already used in graph: {}. ", nodeName, getName());
-                return StatusCode::LLM_NODE_NAME_ALREADY_EXISTS;
-            }
-            mediapipe::RerankCalculatorOVOptions nodeOptions;
-            config.node(i).node_options(0).UnpackTo(&nodeOptions);
-            std::shared_ptr<RerankServable> servable = std::make_shared<RerankServable>(nodeOptions.models_path(), nodeOptions.target_device(), nodeOptions.plugin_config(), mgconfig.getBasePath());
-            servable->initialize(nodeOptions.models_path(), nodeOptions.target_device(), nodeOptions.plugin_config(), mgconfig.getBasePath());
-            rerankServableMap.insert(std::pair<std::string, std::shared_ptr<RerankServable>>(nodeName, std::move(servable)));
-            rerankServablesCleaningGuard.disableCleaning();
-        }
-        if (endsWith(config.node(i).calculator(), STT_NODE_CALCULATOR_NAME)) {
-            auto& sttServableMap = this->sidePacketMaps.sttServableMap;
-            ResourcesCleaningGuard<SttServableMap> sttServablesCleaningGuard(sttServableMap);
-            if (!config.node(i).node_options().size()) {
-                SPDLOG_LOGGER_ERROR(modelmanager_logger, "SpeechToText node missing options in graph: {}. ", getName());
-                return StatusCode::LLM_NODE_MISSING_OPTIONS;
-            }
-            if (config.node(i).name().empty()) {
-                SPDLOG_LOGGER_ERROR(modelmanager_logger, "SpeechToText node name is missing in graph: {}. ", getName());
-                return StatusCode::LLM_NODE_MISSING_NAME;
-            }
-            std::string nodeName = config.node(i).name();
-            if (sttServableMap.find(nodeName) != sttServableMap.end()) {
-                SPDLOG_LOGGER_ERROR(modelmanager_logger, "SpeechToText node name: {} already used in graph: {}. ", nodeName, getName());
-                return StatusCode::LLM_NODE_NAME_ALREADY_EXISTS;
-            }
-            mediapipe::S2tCalculatorOptions nodeOptions;
-            auto& calculatorOptions = config.node(i).node_options(0);
-            if (!calculatorOptions.UnpackTo(&nodeOptions)) {
-                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to unpack calculator options");
-                return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
-            }
-            std::shared_ptr<SttServable> servable = std::make_shared<SttServable>(nodeOptions, mgconfig.getBasePath());
-            sttServableMap.insert(std::pair<std::string, std::shared_ptr<SttServable>>(nodeName, std::move(servable)));
-            sttServablesCleaningGuard.disableCleaning();
-        }
-        if (endsWith(config.node(i).calculator(), TTS_NODE_CALCULATOR_NAME)) {
-            auto& ttsServableMap = this->sidePacketMaps.ttsServableMap;
-            ResourcesCleaningGuard<TtsServableMap> ttsServablesCleaningGuard(ttsServableMap);
-            if (!config.node(i).node_options().size()) {
-                SPDLOG_LOGGER_ERROR(modelmanager_logger, "TextToSpeech node missing options in graph: {}. ", getName());
-                return StatusCode::LLM_NODE_MISSING_OPTIONS;
-            }
-            if (config.node(i).name().empty()) {
-                SPDLOG_LOGGER_ERROR(modelmanager_logger, "TextToSpeech node name is missing in graph: {}. ", getName());
-                return StatusCode::LLM_NODE_MISSING_NAME;
-            }
-            std::string nodeName = config.node(i).name();
-            if (ttsServableMap.find(nodeName) != ttsServableMap.end()) {
-                SPDLOG_LOGGER_ERROR(modelmanager_logger, "TextToSpeech node name: {} already used in graph: {}. ", nodeName, getName());
-                return StatusCode::LLM_NODE_NAME_ALREADY_EXISTS;
-            }
-            mediapipe::T2sCalculatorOptions nodeOptions;
-            auto& calculatorOptions = config.node(i).node_options(0);
-            if (!calculatorOptions.UnpackTo(&nodeOptions)) {
-                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to unpack calculator options");
-                return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
-            }
-            try {
-                std::shared_ptr<TtsServable> servable = std::make_shared<TtsServable>(nodeOptions.models_path(), nodeOptions.target_device(), nodeOptions.voices(), nodeOptions.plugin_config(), mgconfig.getBasePath());
-                ttsServableMap.insert(std::pair<std::string, std::shared_ptr<TtsServable>>(nodeName, std::move(servable)));
-                ttsServablesCleaningGuard.disableCleaning();
-            } catch (const std::runtime_error& e) {
-                SPDLOG_LOGGER_ERROR(modelmanager_logger, "TextToSpeech node name: {} initialization failed: {}. ", nodeName, e.what());
-                return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
+        for (const auto& initializer : registry.all()) {
+            if (initializer->matches(config.node(i).calculator())) {
+                Status status = initializer->initialize(config.node(i), getName(), mgconfig.getBasePath(), sidePacketMaps, pythonBackend);
+                if (!status.ok()) {
+                    return status;
+                }
             }
         }
     }
