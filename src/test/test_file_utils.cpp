@@ -21,11 +21,9 @@
 
 #include "test_file_utils.hpp"
 
-namespace fs = std::filesystem;
-
 // Create a unique temporary directory inside the system temp directory.
-fs::path createTempDir() {
-    const fs::path base = fs::temp_directory_path();
+std::filesystem::path createTempDir() {
+    const std::filesystem::path base = std::filesystem::temp_directory_path();
     std::random_device rd;
     std::mt19937_64 gen(rd());
     std::uniform_int_distribution<uint64_t> dist;
@@ -34,7 +32,7 @@ fs::path createTempDir() {
     for (int attempt = 0; attempt < 100; ++attempt) {
         auto candidate = base / ("lfs_kw_tests_" + std::to_string(dist(gen)));
         std::error_code ec;
-        if (fs::create_directory(candidate, ec)) {
+        if (std::filesystem::create_directory(candidate, ec)) {
             return candidate;
         }
         // If creation failed due to existing path, loop and try another name
@@ -44,8 +42,8 @@ fs::path createTempDir() {
     throw std::runtime_error("Failed to create a unique temporary directory");
 }
 
-fs::path writeFile(const fs::path& dir, const std::string& name, const std::string& content) {
-    fs::path p = dir / name;
+std::filesystem::path writeFile(const std::filesystem::path& dir, const std::string& name, const std::string& content) {
+    std::filesystem::path p = dir / name;
     std::ofstream out(p, std::ios::binary);
     if (!out)
         throw std::runtime_error("Failed to create file: " + p.string());
@@ -53,15 +51,15 @@ fs::path writeFile(const fs::path& dir, const std::string& name, const std::stri
     return p;
 }
 
-void mkdirs(const fs::path& p) {
+void mkdirs(const std::filesystem::path& p) {
     std::error_code ec;
-    fs::create_directories(p, ec);
+    std::filesystem::create_directories(p, ec);
 }
 
 // A helper for writing test files.
-fs::path writeTempFile(const std::string& filename,
+std::filesystem::path writeTempFile(const std::string& filename,
     const std::string& content) {
-    fs::path p = fs::temp_directory_path() / filename;
+    std::filesystem::path p = std::filesystem::temp_directory_path() / filename;
     std::ofstream out(p, std::ios::binary);
     out << content;
     return p;
@@ -76,5 +74,5 @@ TempDir::TempDir() :
 
 TempDir::~TempDir() {
     std::error_code ec;
-    fs::remove_all(dir, ec);
+    std::filesystem::remove_all(dir, ec);
 }

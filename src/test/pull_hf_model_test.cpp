@@ -44,8 +44,6 @@
 
 #include "environment.hpp"
 
-namespace fs = std::filesystem;
-
 class HfDownloaderPullHfModel : public TestWithTempDir {
 protected:
     ovms::Server& server = ovms::Server::instance();
@@ -177,22 +175,22 @@ TEST_F(HfDownloaderPullHfModel, PositiveDownload) {
 
 // Truncate the file to half its size, keeping the first half.
 bool removeSecondHalf(const std::string& fileStr) {
-    const fs::path& file(fileStr);
+    const std::filesystem::path& file(fileStr);
     std::error_code ec;
     ec.clear();
 
-    if (!fs::exists(file, ec) || !fs::is_regular_file(file, ec)) {
+    if (!std::filesystem::exists(file, ec) || !std::filesystem::is_regular_file(file, ec)) {
         if (!ec)
             ec = std::make_error_code(std::errc::no_such_file_or_directory);
         return false;
     }
 
-    const std::uintmax_t size = fs::file_size(file, ec);
+    const std::uintmax_t size = std::filesystem::file_size(file, ec);
     if (ec)
         return false;
 
     const std::uintmax_t newSize = size / 2;  // floor(size/2)
-    fs::resize_file(file, newSize, ec);
+    std::filesystem::resize_file(file, newSize, ec);
     return !ec;
 }
 
@@ -315,7 +313,7 @@ TEST_F(HfDownloaderPullHfModel, Resume) {
 
     std::string ovModelPartLfsName = "openvino_model.binlfs_part";
     std::string ovModelPartLfsPath = ovms::FileSystem::appendSlash(basePath) + ovModelPartLfsName;
-    fs::rename(modelPath, ovModelPartLfsPath, ec);
+    std::filesystem::rename(modelPath, ovModelPartLfsPath, ec);
     ASSERT_EQ(ec, std::errc());
     ASSERT_EQ(std::filesystem::file_size(ovModelPartLfsPath), 26208620);
     ASSERT_EQ(createGitLfsPointerFile(modelPath), true);

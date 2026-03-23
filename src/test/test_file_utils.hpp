@@ -20,23 +20,21 @@
 #include <random>
 #include <string>
 
-namespace fs = std::filesystem;
-
 // Create a unique temporary directory inside the system temp directory.
-fs::path createTempDir();
+std::filesystem::path createTempDir();
 
-fs::path writeFile(const fs::path& dir, const std::string& name, const std::string& content);
+std::filesystem::path writeFile(const std::filesystem::path& dir, const std::string& name, const std::string& content);
 
 // A helper for writing test files.
-fs::path writeTempFile(const std::string& filename,
+std::filesystem::path writeTempFile(const std::string& filename,
     const std::string& content);
 
-void mkdirs(const fs::path& p);
+void mkdirs(const std::filesystem::path& p);
 
 // A simple RAII for a temp directory
 class TempDir {
 public:
-    fs::path dir;
+    std::filesystem::path dir;
     TempDir();
     ~TempDir();
 };
