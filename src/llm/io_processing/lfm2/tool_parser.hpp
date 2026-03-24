@@ -22,23 +22,21 @@ class Lfm2ToolParser : public BaseOutputParser {
 protected:
     const std::string toolCallStartTag = "<|tool_call_start|>";
     const std::string toolCallEndTag = "<|tool_call_end|>";
-    const std::string toolListStartTag = "<|tool_list_start|>";
-    const std::string toolListEndTag = "<|tool_list_end|>";
     const std::string toolRepsonseStartTag = "<|tool_response_start|>";
     const std::string toolResponseEndTag = "<|tool_response_end|>";
 
     const std::string toolListStartIndicator = "[";
     const std::string toolListEndIndicator = "]";
     const std::string toolArgsStartIndicator = "(";
-    const std::string toolEndIndicator = ")";
+    const std::string toolArgsEndIndicator = ")";
     const std::string toolSeparatorStr = ", ";
 
     enum class State {
         Content,
         ToolCallStarted,
-        ToolCallFunctionName,
         ToolCallParameters,
-        ToolCallEnded
+        ToolCallEnded,
+        AfterToolCall
     };
 
 public:
@@ -51,7 +49,7 @@ public:
     explicit Lfm2ToolParser(ov::genai::Tokenizer& tokenizer) : BaseOutputParser(tokenizer) {}
 
     void parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) override;
-    std::optional<ToolCalls_t> parseChunk(const std::string& chunk, ov::genai::GenerationFinishReason finishReason) override;
+    std::optional<rapidjson::Document> parseChunk(const std::string& chunk, ov::genai::GenerationFinishReason finishReason) override;
     const std::vector<std::string>& getParsingStartTags() const override {
         static const std::vector<std::string> parsingStartTags = {toolCallStartTag};
         return parsingStartTags;
@@ -72,7 +70,15 @@ private:
     Argument parseSingleArgument(const std::string& argumentStr);
     std::vector<Argument> parseArguments(const std::string& argumentsStr);
     bool parseSingleToolCall(const std::string& toolStr, ToolCall& toolCall);
-
+    bool parseNewContent();
+    rapidjson::Document wrapDeltaContent(const std::string& content);
+    rapidjson::Document wrapDeltaArgs(const std::string& argsStr, int toolCallIndex);
+    
     std::string streamingContent;
+    size_t streamingPosition{0};
+    State currentState{State::Content};
+    ToolCall toolCall;
+    ToolCalls_t toolCalls;
+    int toolCallIndex{-1};
 };
 }
