@@ -59,7 +59,7 @@ def _impl(repository_ctx):
         "BUILD_EXAMPLES": "OFF",
         "BUILD_TESTS": "OFF",
         "BUILD_CLI": "OFF",
-        "CURL_DEPENDENCIES_DIR": "C:/opt/curl-8.18.0_4-win64-mingw",
+        "CURL_DEPENDENCIES_DIR": "C:/opt/curl-8.19.0_4-win64-mingw",
         """
     else:
         lib_name = "libgit2"
