@@ -526,6 +526,12 @@ Output file (`edit_output.png`):
 
 Inpainting replaces a masked region in an image based on the prompt. The `mask` is a black-and-white image where white pixels mark the area to repaint.
 
+Download sample images:
+```console
+curl -O https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/image_generation/cat.png
+curl -O https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/image_generation/cat_mask.png
+```
+
 ![cat](./cat.png) ![cat_mask](./cat_mask.png)
 
 ::::{tab-set}
@@ -596,6 +602,12 @@ image.save('inpaint_output.png')
 Outpainting extends an image beyond its original borders. Prepare two images:
 - **outpaint_input.png** — the original image centered on a larger canvas (e.g. 768×768) with black borders
 - **outpaint_mask.png** — white where the new content should be generated (the borders), black where the original image is
+
+Download sample images:
+```console
+curl -O https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/image_generation/outpaint_input.png
+curl -O https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/image_generation/outpaint_mask.png
+```
 
 ![outpaint_input](./outpaint_input.png) ![outpaint_mask](./outpaint_mask.png)
 
