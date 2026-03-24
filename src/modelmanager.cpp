@@ -56,15 +56,15 @@
 #include "dags/pipeline.hpp"
 #include "dags/pipeline_factory.hpp"
 #include "dags/pipelinedefinition.hpp"
-#include "filesystem.hpp"
-#include "filesystemfactory.hpp"
+#include "filesystem/filesystem.hpp"
+#include "filesystem/filesystemfactory.hpp"
 #include "logging.hpp"
 #if (MEDIAPIPE_DISABLE == 0)
 #include "mediapipe_internal/mediapipefactory.hpp"
 #include "mediapipe_internal/mediapipegraphdefinition.hpp"
 #endif
-#include "metric_config.hpp"
-#include "metric_registry.hpp"
+#include "metrics/metric_config.hpp"
+#include "metrics/metric_registry.hpp"
 #include "model.hpp"
 #include "modelinstance.hpp"  // for logging
 #include "ov_utils.hpp"

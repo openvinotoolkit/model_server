@@ -1,4 +1,4 @@
-//***************************************************************************
+//****************************************************************************
 // Copyright 2022 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,21 +13,27 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include "metric_module.hpp"
+#pragma once
+#include <memory>
 
-#include "metric_registry.hpp"
-#include "status.hpp"
+#include "src/module.hpp"
 
 namespace ovms {
 
-MetricModule::~MetricModule() = default;
+class Config;
+class MetricRegistry;
 
-MetricModule::MetricModule() :
-    registry(std::make_unique<MetricRegistry>()) {}
+class MetricModule : public Module {
+protected:
+    std::unique_ptr<MetricRegistry> registry;
 
-Status MetricModule::start(const Config& config) { return StatusCode::OK; }
+public:
+    MetricModule();
+    ~MetricModule();
+    Status start(const Config& config) override;
 
-void MetricModule::shutdown() {}
+    void shutdown() override;
 
-MetricRegistry& MetricModule::getRegistry() const { return *this->registry; }
+    MetricRegistry& getRegistry() const;
+};
 }  // namespace ovms

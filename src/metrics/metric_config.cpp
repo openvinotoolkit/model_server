@@ -27,10 +27,10 @@
 #pragma warning(pop)
 #include <spdlog/spdlog.h>
 
-#include "logging.hpp"
-#include "schema.hpp"
-#include "status.hpp"
-#include "stringutils.hpp"
+#include "src/logging.hpp"
+#include "src/schema.hpp"
+#include "src/status.hpp"
+#include "src/stringutils.hpp"
 
 #ifndef __linux__
 // Workaround : https://github.com/Tencent/rapidjson/issues/1448

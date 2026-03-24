@@ -190,7 +190,6 @@ private:
          * @brief Allowed configurable layouts
          */
 
-
     /**
          * @brief custom_loader_options config as map
          */

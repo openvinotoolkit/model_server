@@ -17,7 +17,7 @@
 
 #include <string>
 
-#include "src/metric_registry.hpp"
+#include "src/metrics/metric_registry.hpp"
 #include "src/modelmanager.hpp"
 
 class ConstructorEnabledModelManager : public ovms::ModelManager {

@@ -37,10 +37,10 @@
 #include "../dags/pipelinedefinition.hpp"
 #include "../tfs_frontend/deserialization.hpp"
 #include "../inference_executor.hpp"
-#include "../localfilesystem.hpp"
+#include "src/filesystem/localfilesystem.hpp"
 #include "../logging.hpp"
 #include "../mediapipe_internal/mediapipefactory.hpp"
-#include "../metric_registry.hpp"
+#include "src/metrics/metric_registry.hpp"
 #include "../model.hpp"
 #include "../model_metric_reporter.hpp"
 #include "../modelconfig.hpp"
@@ -968,9 +968,36 @@ TEST_F(EnsembleFlowTest, ExecutePipelineWithBatchSizeAny) {
     const int batchSize = 3;
     proto.mutable_tensor_shape()->mutable_dim(0)->set_size(batchSize);
     requestData = {
-        -5, -4, -3, -2, -1, 1, 2, 3, 4, 5,            // batch 1
-        -15, -14, -13, -12, -11, 11, 12, 13, 14, 15,  // batch 2
-        -25, -24, -23, -22, -21, 21, 22, 23, 24, 25,  // batch 3
+        -5,
+        -4,
+        -3,
+        -2,
+        -1,
+        1,
+        2,
+        3,
+        4,
+        5,  // batch 1
+        -15,
+        -14,
+        -13,
+        -12,
+        -11,
+        11,
+        12,
+        13,
+        14,
+        15,  // batch 2
+        -25,
+        -24,
+        -23,
+        -22,
+        -21,
+        21,
+        22,
+        23,
+        24,
+        25,  // batch 3
     };
     proto.mutable_tensor_content()->assign((char*)requestData.data(), requestData.size() * sizeof(float));
 
@@ -1017,9 +1044,36 @@ TEST_F(EnsembleFlowTest, ExecutePipelineWithBatchSizeRange) {
     int batchSize = 3;
     proto.mutable_tensor_shape()->mutable_dim(0)->set_size(batchSize);
     requestData = {
-        -5, -4, -3, -2, -1, 1, 2, 3, 4, 5,            // batch 1
-        -15, -14, -13, -12, -11, 11, 12, 13, 14, 15,  // batch 2
-        -25, -24, -23, -22, -21, 21, 22, 23, 24, 25,  // batch 3
+        -5,
+        -4,
+        -3,
+        -2,
+        -1,
+        1,
+        2,
+        3,
+        4,
+        5,  // batch 1
+        -15,
+        -14,
+        -13,
+        -12,
+        -11,
+        11,
+        12,
+        13,
+        14,
+        15,  // batch 2
+        -25,
+        -24,
+        -23,
+        -22,
+        -21,
+        21,
+        22,
+        23,
+        24,
+        25,  // batch 3
     };
     proto.mutable_tensor_content()->assign((char*)requestData.data(), requestData.size() * sizeof(float));
 
@@ -1089,7 +1143,11 @@ TEST_F(EnsembleFlowTest, ExecutePipelineWithShapeAny) {
     tensorflow::TensorProto& proto = (*request.mutable_inputs())[customPipelineInputName];
     proto.mutable_tensor_shape()->mutable_dim(1)->set_size(5);
     std::vector<float> requestData = {
-        -5, -4, -3, -2, -1,  // batch 1
+        -5,
+        -4,
+        -3,
+        -2,
+        -1,  // batch 1
     };
     proto.mutable_tensor_content()->assign((char*)requestData.data(), requestData.size() * sizeof(float));
 
@@ -1150,7 +1208,11 @@ TEST_F(EnsembleFlowTest, ExecutePipelineWithShapeRange) {
     tensorflow::TensorProto& proto = (*request.mutable_inputs())[customPipelineInputName];
     proto.mutable_tensor_shape()->mutable_dim(1)->set_size(5);
     std::vector<float> requestData = {
-        -5, -4, -3, -2, -1,  // batch 1
+        -5,
+        -4,
+        -3,
+        -2,
+        -1,  // batch 1
     };
     proto.mutable_tensor_content()->assign((char*)requestData.data(), requestData.size() * sizeof(float));
 
@@ -1419,9 +1481,36 @@ TEST_F(EnsembleFlowTest, DISABLED_ExecutePipelineWithDynamicBatchSize) {
     const int batchSize = 3;
     proto.mutable_tensor_shape()->mutable_dim(0)->set_size(batchSize);
     requestData = {
-        -5, -4, -3, -2, -1, 1, 2, 3, 4, 5,            // batch 1
-        -15, -14, -13, -12, -11, 11, 12, 13, 14, 15,  // batch 2
-        -25, -24, -23, -22, -21, 21, 22, 23, 24, 25,  // batch 3
+        -5,
+        -4,
+        -3,
+        -2,
+        -1,
+        1,
+        2,
+        3,
+        4,
+        5,  // batch 1
+        -15,
+        -14,
+        -13,
+        -12,
+        -11,
+        11,
+        12,
+        13,
+        14,
+        15,  // batch 2
+        -25,
+        -24,
+        -23,
+        -22,
+        -21,
+        21,
+        22,
+        23,
+        24,
+        25,  // batch 3
     };
     proto.mutable_tensor_content()->assign((char*)requestData.data(), requestData.size() * sizeof(float));
 
@@ -1469,7 +1558,11 @@ TEST_F(EnsembleFlowTest, DISABLED_ExecutePipelineWithDynamicShape) {
     tensorflow::TensorProto& proto = (*request.mutable_inputs())[customPipelineInputName];
     proto.mutable_tensor_shape()->mutable_dim(1)->set_size(5);
     std::vector<float> requestData = {
-        -5, -4, -3, -2, -1,  // batch 1
+        -5,
+        -4,
+        -3,
+        -2,
+        -1,  // batch 1
     };
     proto.mutable_tensor_content()->assign((char*)requestData.data(), requestData.size() * sizeof(float));
 

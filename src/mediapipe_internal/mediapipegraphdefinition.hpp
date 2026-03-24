@@ -23,7 +23,7 @@
 #include <vector>
 
 #include "../dags/pipelinedefinitionstatus.hpp"
-#include "../metric.hpp"
+#include "src/metrics/metric.hpp"
 #include "../model_metric_reporter.hpp"
 #include "../single_version_servable_definition.hpp"
 #include "../tensorinfo_fwd.hpp"
@@ -49,7 +49,6 @@ class Status;
 class PythonBackend;
 
 class MediapipeGraphDefinition : public SingleVersionServableDefinition {
-
 public:
     virtual ~MediapipeGraphDefinition();
     MediapipeGraphDefinition(const std::string name,

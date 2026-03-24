@@ -26,7 +26,7 @@
 #include <utility>
 #include <vector>
 #include "../logging.hpp"
-#include "../metric_provider.hpp"
+#include "src/metrics/metric_provider.hpp"
 #include "../servable_name_checker.hpp"
 #include "../status.hpp"
 #include "../stringutils.hpp"

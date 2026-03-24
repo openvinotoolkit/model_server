@@ -28,7 +28,6 @@
 #include "../dags/pipeline.hpp"
 #include "../dags/pipeline_factory.hpp"
 #include "../dags/pipelinedefinitionstatus.hpp"
-#include "../servable_definition_unload_guard.hpp"
 #include "../execution_context.hpp"
 #include "../grpc_utils.hpp"
 #if (MEDIAPIPE_DISABLE == 0)
@@ -39,7 +38,7 @@
 #include "../mediapipe_internal/mediapipegraphexecutor.hpp"
 // clang-format on
 #endif
-#include "../metric.hpp"
+#include "src/metrics/metric.hpp"
 #include "../model.hpp"
 #include "../modelinstance.hpp"
 #include "../deserialization_main.hpp"

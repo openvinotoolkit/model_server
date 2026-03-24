@@ -31,7 +31,7 @@
 #pragma warning(pop)
 
 #include "anonymous_input_name.hpp"
-#include "filesystem.hpp"
+#include "filesystem/filesystem.hpp"
 #include "json_parser.hpp"
 #include "logging.hpp"
 #include "model_version_policy.hpp"

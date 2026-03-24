@@ -15,6 +15,8 @@
 //*****************************************************************************
 #include "node_initializer.hpp"
 
+#include <utility>
+
 namespace ovms {
 NodeInitializerRegistry& NodeInitializerRegistry::instance() {
     static NodeInitializerRegistry registry;

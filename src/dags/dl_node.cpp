@@ -21,13 +21,10 @@
 
 #include "../executingstreamidguard.hpp"
 #include "../logging.hpp"
-#include "../metric.hpp"
+#include "src/metrics/metric.hpp"
 #include "../modelinstance.hpp"
 #include "../modelinstanceunloadguard.hpp"
-#include "../modelmanager.hpp"
 #include "../ov_utils.hpp"
-#include "../ovinferrequestsqueue.hpp"
-#include "../prediction_service_utils.hpp"
 #include "../timer.hpp"
 #include "dlnodesession.hpp"
 #include "nodestreamidguard.hpp"
@@ -50,7 +47,7 @@ Status DLNode::getRealOutputName(ModelInstance& model, const std::string& alias,
 DLNode::DLNode(const std::string& nodeName,
     const std::string& modelName,
     std::optional<model_version_t> modelVersion,
-    ModelManager& modelManager,
+    ModelInstanceProvider& modelManager,
     std::unordered_map<std::string, std::string> nodeOutputNameAlias,
     std::optional<int32_t> demultiplyCount, std::set<std::string> gatherFromNode) :
     Node(nodeName, demultiplyCount, std::move(gatherFromNode)),

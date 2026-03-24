@@ -25,8 +25,8 @@
 #include <vector>
 
 #include "../execution_context.hpp"
-#include "../filesystem.hpp"
-#include "../metric.hpp"
+#include "src/filesystem/filesystem.hpp"
+#include "src/metrics/metric.hpp"
 #include "../model_metric_reporter.hpp"
 #include "../ov_utils.hpp"
 #include "../servable_definition_unload_guard.hpp"
@@ -46,7 +46,6 @@ namespace ovms {
 MediapipeGraphConfig MediapipeGraphDefinition::MGC;
 
 const std::string MediapipeGraphDefinition::SCHEDULER_CLASS_NAME{"Mediapipe"};
-
 
 MediapipeGraphDefinition::~MediapipeGraphDefinition() = default;
 

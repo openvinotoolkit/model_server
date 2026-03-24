@@ -21,7 +21,7 @@
 #include <vector>
 
 #include "execution_context.hpp"
-#include "metric.hpp"
+#include "metrics/metric.hpp"
 #include "modelversion.hpp"
 
 namespace ovms {

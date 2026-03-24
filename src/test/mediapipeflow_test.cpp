@@ -46,8 +46,8 @@
 #include "../mediapipe_internal/mediapipefactory.hpp"
 #include "../mediapipe_internal/mediapipegraphdefinition.hpp"
 #include "../mediapipe_internal/mediapipegraphexecutor.hpp"
-#include "../metric_config.hpp"
-#include "../metric_module.hpp"
+#include "src/metrics/metric_config.hpp"
+#include "src/metrics/metric_module.hpp"
 #include "../model.hpp"
 #include "../model_service.hpp"
 #include "../ovms_exit_codes.hpp"
@@ -3714,10 +3714,10 @@ TEST(WhitelistRegistered, MediapipeCalculatorsList) {
         // Expected when building with python
         "CalculatorRunnerSinkCalculator",
         "CalculatorRunnerSourceCalculator",
-        "PyTensorOvTensorConverterCalculator",   // integral OVMS calculator
-        "PythonExecutorCalculator",  // integral OVMS calculator
+        "PyTensorOvTensorConverterCalculator",  // integral OVMS calculator
+        "PythonExecutorCalculator",             // integral OVMS calculator
 #endif
-        "HttpLLMCalculator",  // integral OVMS calculator
+        "HttpLLMCalculator",                    // integral OVMS calculator
         "OpenAIChatCompletionsMockCalculator",  // OVMS test calculator
         "AddHeaderCalculator",
         "AddNumbersMultiInputsOutputsTestCalculator",

@@ -17,7 +17,7 @@
 
 #include "../config.hpp"
 #include "../http_rest_api_handler.hpp"
-#include "../localfilesystem.hpp"
+#include "src/filesystem/localfilesystem.hpp"
 #include "../logging.hpp"
 #include "../modelmanager.hpp"
 #include "../servablemanagermodule.hpp"
@@ -470,10 +470,7 @@ TEST_F(ConfigReload, removeModelFromDiskWhenLoaded) {
 
     // On windows, the test expects inability to remove model
 #ifdef _WIN32
-    EXPECT_THROW({
-        std::filesystem::remove_all(getGenericFullPathForSrcTest("/tmp/dummy"));
-    },
-        std::filesystem::filesystem_error);
+    EXPECT_THROW({ std::filesystem::remove_all(getGenericFullPathForSrcTest("/tmp/dummy")); }, std::filesystem::filesystem_error);
 #else
     // On linux, removing the model should be possible even if ENABLE_MMAP=YES
     std::filesystem::remove_all(getGenericFullPathForSrcTest("/tmp/dummy"));

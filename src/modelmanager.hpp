@@ -32,8 +32,9 @@
 #pragma warning(pop)
 
 #include "global_sequences_viewer.hpp"
-#include "metric_config.hpp"
-#include "metric_provider.hpp"
+#include "metrics/metric_config.hpp"
+#include "metrics/metric_provider.hpp"
+#include "model_instance_provider.hpp"
 #include "modelconfig.hpp"
 #include "servable_name_checker.hpp"
 #include "status.hpp"
@@ -70,7 +71,7 @@ class PythonBackend;
 /**
  * @brief Model manager is managing the list of model topologies enabled for serving and their versions.
  */
-class ModelManager : public ServableNameChecker, public MetricProvider {
+class ModelManager : public ServableNameChecker, public MetricProvider, public ModelInstanceProvider {
 public:
     /**
      * @brief A default constructor is private
@@ -86,7 +87,7 @@ protected:
 
     /**
      * @brief A collection of models
-     * 
+     *
      */
     std::map<std::string, std::shared_ptr<Model>> models;
     std::unique_ptr<ov::Core> ieCore;
@@ -168,13 +169,13 @@ private:
     std::thread cleanerThread;
 
     /**
-         * @brief Metrics config
-         */
+     * @brief Metrics config
+     */
     MetricConfig metricConfig;
 
     /**
-         * @brief Metrics config was loaded flag
-         */
+     * @brief Metrics config was loaded flag
+     */
     bool metricConfigLoadedOnce = false;
 
     /**
@@ -189,7 +190,7 @@ private:
 
     /**
      * @brief A current configurations of models
-     * 
+     *
      */
     std::unordered_map<std::string, ModelConfig> servedModelConfigs;
 
@@ -226,8 +227,8 @@ protected:
 
 private:
     /**
-      * @brief last md5sum of configfile
-      */
+     * @brief last md5sum of configfile
+     */
     std::string lastConfigFileMD5;
 
     /**
@@ -261,7 +262,7 @@ public:
     const std::string getFullPath(const std::string& pathToCheck) const;
 
     /**
-     * @brief Get the config root path 
+     * @brief Get the config root path
      *
      * @return const std::string&
      */
@@ -298,13 +299,13 @@ public:
 
     /**
      * @brief Destroy the Model Manager object
-     * 
+     *
      */
     virtual ~ModelManager();
 
     /**
      * @brief Gets config filename
-     * 
+     *
      * @return config filename
      */
     bool isStartedWithConfigFile() {
@@ -313,7 +314,7 @@ public:
 
     /**
      * @brief Gets models collection
-     * 
+     *
      * @return models collection
      */
     const std::map<std::string, std::shared_ptr<Model>>& getModels() {
@@ -342,14 +343,14 @@ public:
      *
      * @param name of the model to search for
      *
-     * @return pointer to Model or nullptr if not found 
+     * @return pointer to Model or nullptr if not found
      */
     const std::shared_ptr<Model> findModelByName(const std::string& name) const;
 
     Status getModelInstance(const std::string& modelName,
         ovms::model_version_t modelVersionId,
         std::shared_ptr<ovms::ModelInstance>& modelInstance,
-        std::unique_ptr<ModelInstanceUnloadGuard>& modelInstanceUnloadGuardPtr) const;
+        std::unique_ptr<ModelInstanceUnloadGuard>& modelInstanceUnloadGuardPtr) const override;
 
     const bool modelExists(const std::string& name) const {
         if (findModelByName(name) == nullptr)
@@ -364,7 +365,7 @@ public:
      * @param name of the model to search for
      * @param version of the model to search for or 0 if default
      *
-     * @return pointer to ModelInstance or nullptr if not found 
+     * @return pointer to ModelInstance or nullptr if not found
      */
     const std::shared_ptr<ModelInstance> findModelInstance(const std::string& name, model_version_t version = 0) const;
 
@@ -373,7 +374,7 @@ public:
 
     /**
      * @brief Starts model manager using provided config file
-     * 
+     *
      * @param filename
      * @return status
      */
@@ -381,16 +382,16 @@ public:
 
     /**
      * @brief Starts model manager using command line arguments
-     * 
-     * @return Status 
+     *
+     * @return Status
      */
     Status startFromConfig();
 
     /**
-         * @brief Get the metric config
-         * 
-         * @return const std::string&
-         */
+     * @brief Get the metric config
+     *
+     * @return const std::string&
+     */
     const MetricConfig& getMetricConfig() const override {
         return this->metricConfig;
     }
@@ -399,33 +400,33 @@ public:
     Status loadMetricsConfig(rapidjson::Document& configJson);
 
     /**
-         * @brief Set the metric config
-         * 
-         * @param metricConfig 
-         */
+     * @brief Set the metric config
+     *
+     * @param metricConfig
+     */
     void setMetricConfig(const MetricConfig& metricConfig) {
         this->metricConfig = metricConfig;
     }
 
     /**
      * @brief Reload model versions located in base path
-     * 
+     *
      * @param ModelConfig config
-     * 
+     *
      * @return status
      */
     Status reloadModelWithVersions(ModelConfig& config);
 
     /**
      * @brief Starts model manager using ovms::Config
-     * 
+     *
      * @return status
      */
     Status start(const Config& config);
 
     /**
      * @brief Starts monitoring as new thread
-     * 
+     *
      */
     void startWatcher(bool watchConfigFile);
 
@@ -436,18 +437,18 @@ public:
 
     /**
      * @brief Factory for creating a model
-     * 
-     * @return std::shared_ptr<Model> 
+     *
+     * @return std::shared_ptr<Model>
      */
     virtual std::shared_ptr<Model> modelFactory(const std::string& name, const bool isStateful);
 
     /**
      * @brief Reads available versions from given filesystem
-     * 
-     * @param fs 
-     * @param base 
-     * @param versions 
-     * @return Status 
+     *
+     * @param fs
+     * @param base
+     * @param versions
+     * @return Status
      */
     virtual Status readAvailableVersions(
         std::shared_ptr<FileSystem>& fs,
@@ -480,9 +481,9 @@ public:
 
     /**
      * @brief Reads models from configuration file
-     * 
+     *
      * @param jsonFilename configuration file
-     * @return Status 
+     * @return Status
      */
     Status loadConfig();
 

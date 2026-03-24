@@ -17,7 +17,7 @@
 
 #include "../sidepacket_servable.hpp"
 #include "src/embeddings/embeddings_calculator_ov.pb.h"
-#include "../filesystem.hpp"
+#include "src/filesystem/filesystem.hpp"
 #include <rapidjson/istreamwrapper.h>
 #include <rapidjson/error/en.h>
 #include <memory>
