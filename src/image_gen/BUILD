@@ -24,6 +24,7 @@ ovms_cc_library(
     deps = [
         "imagegenpipelineargs",
         "//src:libovmslogging",
+        "//src:libovms_queue",
         "//src:libovmsstring_utils",
         "//third_party:genai",],
     visibility = ["//visibility:public"],

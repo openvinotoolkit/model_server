@@ -49,6 +49,7 @@ public:
     MOCK_METHOD(std::vector<std::string>, getArrayFieldByName, (const std::string&), (const override));
     MOCK_METHOD(std::string, getFieldByName, (const std::string&), (const override));
     MOCK_METHOD(std::string_view, getFileContentByFieldName, (const std::string&), (const override));
+    MOCK_METHOD(std::vector<std::string_view>, getFilesArrayByFieldName, (const std::string&), (const override));
     MOCK_METHOD(std::set<std::string>, getAllFieldNames, (), (const, override));
 };
 

@@ -2408,6 +2408,7 @@ cc_test(
             ":network_utils_test",
             "//src:custom_nodes_common_buffersqueue",
             "@com_google_googletest//:gtest",
+            ":libgit2_test",
             ":pull_hf_model_test",
             ":pull_gguf_hf_model_test",
             ":listdirectorymodels_test",
@@ -2494,6 +2495,22 @@ cc_library(
         "@com_google_googletest//:gtest",
         "//src/pull_module:cmd_exec",
     ],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_TESTS,
+    linkopts = COMMON_STATIC_LIBS_LINKOPTS,
+)
+
+
+cc_library(
+    name = "test_file_utils",
+    linkstatic = 1,
+    hdrs = [
+        "test/test_file_utils.hpp",
+        ],
+    srcs = [
+        "test/test_file_utils.cpp",
+        ],
+    deps = [],
     local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_TESTS,
     linkopts = COMMON_STATIC_LIBS_LINKOPTS,
@@ -2643,6 +2660,25 @@ cc_library(
     copts = COPTS_TESTS,
 )
 cc_library(
+    name = "libgit2_test",
+    linkstatic = 1,
+    alwayslink = True,
+    srcs = ["test/libgit2_test.cpp"],
+    linkopts = [],
+    deps = [
+        ":test_utils",
+        ":test_file_utils",
+        ":test_platform_utils",
+        ":test_test_models",
+        ":libtest_environment",
+        "//src:ovms_lib",
+        "@com_google_googletest//:gtest",
+    ],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_TESTS,
+)
+        
+cc_library(
     name = "pull_hf_model_test",
     linkstatic = 1,
     alwayslink = True,
@@ -2652,6 +2688,7 @@ cc_library(
         "//src/servables_config_manager_module:listmodels",
         "//src/utils:env_guard",
         ":test_utils",
+        ":test_file_utils",
         ":libtest_environment",
         ":test_platform_utils",
         ":test_test_with_temp_dir",
