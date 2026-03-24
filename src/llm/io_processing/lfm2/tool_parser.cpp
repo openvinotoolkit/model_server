@@ -48,10 +48,19 @@ void Lfm2ToolParser::writeArgumentOfAnyType(const rapidjson::Value& arg, rapidjs
 
 void Lfm2ToolParser::writeArgumentOfAnyType(const std::string& arg, rapidjson::Writer<rapidjson::StringBuffer>& writer) {
     std::string normalized = arg;
-    if (arg.find('{') != std::string::npos || arg.find('}') != std::string::npos) {
+    if (arg.find('{') != std::string::npos || arg.find('}') != std::string::npos || arg.find('[') != std::string::npos || arg.find(']') != std::string::npos) {
         std::replace(normalized.begin(), normalized.end(), '\'', '"');
-        SPDLOG_LOGGER_INFO(llm_calculator_logger, "Argument contains curly braces, replaced single quotes with double quotes for JSON parsing. Modified string: {}", normalized);
+        SPDLOG_LOGGER_INFO(llm_calculator_logger, "Argument contains curly braces or square brackets, replaced single quotes with double quotes for JSON parsing. Modified string: {}", normalized);
     } 
+
+    std::string lowerArg = normalized;
+    std::transform(lowerArg.begin(), lowerArg.end(), lowerArg.begin(), ::tolower);
+    
+    if (lowerArg == "true" || lowerArg == "false") {
+        normalized = lowerArg;
+        SPDLOG_LOGGER_INFO(llm_calculator_logger, "Argument contains boolean value, normalized string: {}", normalized);
+
+    }
 
     rapidjson::Document doc;
     doc.Parse(normalized.c_str());
@@ -91,6 +100,7 @@ std::vector<Lfm2ToolParser::Argument> Lfm2ToolParser::parseArguments(const std::
         size_t commaPos = std::string::npos;
         int bracketDepth = 0;
         int braceDepth = 0;
+        int quoteDepth = 0;
         
         for (size_t i = argPos; i < argumentsStr.length(); ++i) {
             if (argumentsStr[i] == '{') {
@@ -101,8 +111,10 @@ std::vector<Lfm2ToolParser::Argument> Lfm2ToolParser::parseArguments(const std::
                 bracketDepth++;
             } else if (argumentsStr[i] == ']') {
                 bracketDepth--;
+            } else if (argumentsStr[i] == '"') {
+                quoteDepth = 1 - quoteDepth;
             } else if (argumentsStr.substr(i, toolSeparatorStr.length()) == toolSeparatorStr && 
-                       bracketDepth == 0 && braceDepth == 0) {
+                       bracketDepth == 0 && braceDepth == 0 && quoteDepth == 0) {
                 commaPos = i;
                 break;
             }
@@ -176,7 +188,6 @@ bool Lfm2ToolParser::parseNewContent() {
                 }                
                 argsWriter.EndObject();
                 this->toolCall.arguments = sb.GetString();
-                this->toolCalls.push_back(this->toolCall);
                 this->currentState = State::ToolCallEnded;
                 this->streamingPosition = pos + toolArgsEndIndicator.length();
                 return true;
