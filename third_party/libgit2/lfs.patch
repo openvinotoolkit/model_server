@@ -444,10 +444,10 @@ index 58cb4b424..00ddee9f3 100644
  	git_writestream **out,
 diff --git a/src/libgit2/lfs_filter.c b/src/libgit2/lfs_filter.c
 new file mode 100644
-index 000000000..1e1e18dd4
+index 000000000..a9207b15d
 --- /dev/null
 +++ b/src/libgit2/lfs_filter.c
-@@ -0,0 +1,1586 @@
+@@ -0,0 +1,1611 @@
 +﻿/*
 +/ Copyright 2025 Intel Corporation
 +/
@@ -1467,9 +1467,14 @@ index 000000000..1e1e18dd4
 +			return 0;
 +		}
 +
-+		remaining = out->expected_size - out->written_size;
-+		if ((uint64_t)to_write > remaining)
-+			to_write = (size_t)remaining;
++		if ((uint64_t)realsize >
++		    (out->expected_size - out->written_size)) {
++			fprintf(stderr,
++			        "\n[ERROR] server sent more data than expected for %s (expected=%" PRIu64
++			        ")\n",
++			        out->filename, out->expected_size);
++			return 0;
++		}
 +	}
 +
 +	written_bytes = fwrite(buffer, 1, to_write, out->stream);
@@ -1621,11 +1626,31 @@ index 000000000..1e1e18dd4
 +		long http_code = 0;
 +		curl_easy_getinfo(dl_curl, CURLINFO_RESPONSE_CODE, &http_code);
 +		if (http_code != 206) {
-+			/* Server did not honor resume — caller may choose to
-+			 * retry or restart */
++			/* Strict resume policy: restart from zero on non-206 */
 +			fprintf(stderr,
-+			        "\n[WARN] Server did not return 206 for resumed request (HTTP %ld)\n",
++			        "\n[ERROR] Server did not return 206 for resumed request (HTTP %ld), restarting from zero\n",
 +			        http_code);
++
++			if (ftpfile->stream) {
++				fclose(ftpfile->stream);
++				ftpfile->stream = NULL;
++			}
++
++			ftpfile->stream = fopen(ftpfile->filename, "wb");
++			if (!ftpfile->stream) {
++				fprintf(stderr,
++				        "\n[ERROR] Cannot truncate file %s\n",
++				        ftpfile->filename);
++				return -1;
++			}
++
++			offset = 0;
++			ftpfile->written_size = 0;
++			curl_easy_setopt(
++			        dl_curl, CURLOPT_RESUME_FROM_LARGE, offset);
++
++			/* Retry exactly once as a full download. */
++			res = curl_easy_perform(dl_curl);
 +		}
 +	}
 +
