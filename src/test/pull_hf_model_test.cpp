@@ -19,7 +19,9 @@
 #include <openssl/sha.h>
 #include <sstream>
 #include <string>
+#include <string_view>
 #include <thread>
+#include <vector>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>

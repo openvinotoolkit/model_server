@@ -13,6 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <algorithm>
 #include <filesystem>
 #include <fstream>
 #include <string>
@@ -308,6 +309,26 @@ TEST(LibGit2ReadFirstThreeLinesTest, TrailingWhitespaceNotPreserved) {
     ASSERT_EQ(out.size(), 2u);
     EXPECT_EQ(out[0], "abc");  // spaces preserved
     EXPECT_EQ(out[1], "def");  // tabs preserved
+}
+
+TEST(LibGit2ReadFirstThreeLinesTest, ReturnsFalseWhenLineExceedsConfiguredCap) {
+    fs::path p = writeTempFile("line_cap_small.txt",
+        "123456\n"
+        "ok\n");
+
+    std::vector<std::string> out;
+    EXPECT_FALSE(ovms::libgit2::readFirstThreeLines(p, out, 5));
+    EXPECT_TRUE(out.empty());
+}
+
+TEST(LibGit2ReadFirstThreeLinesTest, ReturnsFalseWhenLineExceedsDefaultHugeCap) {
+    const size_t cap = ovms::libgit2::READ_FIRST_THREE_LINES_DEFAULT_MAX_LINE_BYTES;
+    const std::string hugeLine(cap + 1, 'a');
+    fs::path p = writeTempFile("line_cap_default.txt", hugeLine + "\nsecond\n");
+
+    std::vector<std::string> out;
+    EXPECT_FALSE(ovms::libgit2::readFirstThreeLines(p, out));
+    EXPECT_TRUE(out.empty());
 }
 
 class LibGit2FileHasLfsKeywordsFirst3PositionalTest : public ::testing::Test {

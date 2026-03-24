@@ -70,9 +70,11 @@ protected:
 };
 
 namespace libgit2 {
+inline constexpr size_t READ_FIRST_THREE_LINES_DEFAULT_MAX_LINE_BYTES = 8U * 1024U * 1024U;
+
 void rtrimCrLfWhitespace(std::string& s);
 bool containsCaseInsensitive(const std::string& hay, const std::string& needle);
-bool readFirstThreeLines(const fs::path& p, std::vector<std::string>& outLines);
+bool readFirstThreeLines(const fs::path& p, std::vector<std::string>& outLines, size_t maxLineBytes = READ_FIRST_THREE_LINES_DEFAULT_MAX_LINE_BYTES);
 bool fileHasLfsKeywordsFirst3Positional(const fs::path& p);
 fs::path makeRelativeToBase(const fs::path& path, const fs::path& base);
 std::vector<fs::path> findLfsLikeFiles(const std::string& directory, bool recursive = true);

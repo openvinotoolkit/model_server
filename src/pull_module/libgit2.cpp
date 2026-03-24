@@ -17,9 +17,12 @@
 
 #include <algorithm>
 #include <atomic>
+#include <cctype>
+#include <fstream>
 #include <iostream>
 #include <memory>
 #include <string>
+#include <sstream>
 #include <utility>
 #include <vector>
 
@@ -209,8 +212,10 @@ public:
             } else {
                 SPDLOG_ERROR("Repository open failed: {}", error);
             }
-            if (repo)
+            if (repo) {
                 git_repository_free(repo);
+                repo = nullptr;
+            }
         }
     }
 
@@ -371,9 +376,10 @@ bool containsCaseInsensitive(const std::string& hay, const std::string& needle) 
 
 // Read at most the first 3 lines of a file, with a per-line cap to avoid huge reads.
 // Returns true if successful (even if <3 lines exist; vector will just be shorter).
-
-bool readFirstThreeLines(const std::filesystem::path& p, std::vector<std::string>& out) {
+bool readFirstThreeLines(const std::filesystem::path& p, std::vector<std::string>& out, size_t maxLineBytes) {
     out.clear();
+    if (maxLineBytes == 0)
+        return false;
 
     std::ifstream in(p, std::ios::binary);
     if (!in)
@@ -401,6 +407,10 @@ bool readFirstThreeLines(const std::filesystem::path& p, std::vector<std::string
             line.clear();
         } else {
             line.push_back(static_cast<char>(c));
+            if (line.size() > maxLineBytes) {
+                out.clear();
+                return false;
+            }
         }
     }
 
