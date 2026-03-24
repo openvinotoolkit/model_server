@@ -78,7 +78,6 @@ private:
     size_t streamingPosition{0};
     State currentState{State::Content};
     ToolCall toolCall;
-    ToolCalls_t toolCalls;
     int toolCallIndex{-1};
 };
 }

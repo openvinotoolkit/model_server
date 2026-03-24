@@ -121,6 +121,68 @@ TEST_F(LFM2OutputParserTest, ParseToolCallWithObjectArguments) {
     }
 }
 
+TEST_F(LFM2OutputParserTest, ParseToolCallWithStringArguments) {
+    std::string inputWithProperClosure = "<|tool_call_start|>[test1(arg1=\"data1, data2\")]<|tool_call_end|>";
+    std::string inputWithImproperClosure = "<|tool_call_start|>[test1(arg1=\"data1, data2\")]";
+
+    // LFM2 may produce last tool call without closing tag, so we test both cases
+    // The results should be identical
+    std::vector<std::string> inputs = {inputWithProperClosure, inputWithImproperClosure};
+    for (auto& input : inputs) {
+        auto generatedTensor = lfm2Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
+        std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+        ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
+        EXPECT_EQ(parsedOutput.content, "");
+        EXPECT_EQ(parsedOutput.reasoning, "");
+
+        ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
+        EXPECT_EQ(parsedOutput.toolCalls[0].name, "test1");
+        // Parser removes whitespaces, so we expect arguments value to be without spaces
+        EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{\"arg1\":\"data1, data2\"}");
+        EXPECT_EQ(parsedOutput.toolCalls[0].id.empty(), false);  // ID should be generated
+    }
+}
+
+TEST_F(LFM2OutputParserTest, ParseToolCallWithListOfStringsAsArgument) {
+    std::string inputWithProperClosure = "<|tool_call_start|>[generate_DNA_sequence(length=100, preferences=['G', 'C'])]<|tool_call_end|>";
+    std::string inputWithImproperClosure = "<|tool_call_start|>[generate_DNA_sequence(length=100, preferences=['G', 'C'])]";
+
+    std::vector<std::string> inputs = {inputWithProperClosure, inputWithImproperClosure};
+    for (auto& input : inputs) {
+        auto generatedTensor = lfm2Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
+        std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+        ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
+        EXPECT_EQ(parsedOutput.content, "");
+        EXPECT_EQ(parsedOutput.reasoning, "");
+
+        ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
+        EXPECT_EQ(parsedOutput.toolCalls[0].name, "generate_DNA_sequence");
+        // Parser removes whitespaces, so we expect arguments value to be without spaces
+        EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{\"length\":100,\"preferences\":[\"G\",\"C\"]}");
+        EXPECT_EQ(parsedOutput.toolCalls[0].id.empty(), false);  // ID should be generated
+    }
+}
+
+TEST_F(LFM2OutputParserTest, ParserToolCallWithBooleanArgument) {
+    std::string inputWithProperClosure = "<|tool_call_start|>[check_status(flag=True)]<|tool_call_end|>";
+    std::string inputWithImproperClosure = "<|tool_call_start|>[check_status(flag=True)]";
+
+    std::vector<std::string> inputs = {inputWithProperClosure, inputWithImproperClosure};
+    for (auto& input : inputs) {
+        auto generatedTensor = lfm2Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
+        std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+        ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
+        EXPECT_EQ(parsedOutput.content, "");
+        EXPECT_EQ(parsedOutput.reasoning, "");
+
+        ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
+        EXPECT_EQ(parsedOutput.toolCalls[0].name, "check_status");
+        // Parser removes whitespaces, so we expect arguments value to be without spaces
+        EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{\"flag\":true}");
+        EXPECT_EQ(parsedOutput.toolCalls[0].id.empty(), false);  // ID should be generated
+    }
+}
+
 TEST_F(LFM2OutputParserTest, ParseTwoToolCallsAtOnce) {
     std::string inputWithProperClosure = "<|tool_call_start|>[dummy1(config={'name': 'astro_config', 'value': 99}), dummy2(config={'name': 'second_config', 'value': 199})]<|tool_call_end|>";
     std::string inputWithImproperClosure = "<|tool_call_start|>[dummy1(config={'name': 'astro_config', 'value': 99}), dummy2(config={'name': 'second_config', 'value': 199})]";
