@@ -129,8 +129,6 @@ std::vector<Lfm2ToolParser::Argument> Lfm2ToolParser::parseArguments(const std::
 bool Lfm2ToolParser::parseNewContent() {
     switch(this->currentState) { // to think about spliting every state into separate functions if it grows too much
         case State::Content: {
-            auto currentStr = this->streamingContent.substr(this->streamingPosition);
-            SPDLOG_LOGGER_INFO(llm_calculator_logger, "Current state: Content. Streaming content from current position: {}", currentStr);
             size_t pos = this->streamingContent.find(toolCallStartTag, this->streamingPosition);
             size_t toolCallEndTagPos = this->streamingContent.find(toolCallEndTag, this->streamingPosition);
             if (toolCallEndTagPos != std::string::npos && pos == std::string::npos) {
@@ -250,6 +248,7 @@ std::optional<rapidjson::Document> Lfm2ToolParser::parseChunk(const std::string&
         }
         if (this->currentState == State::Content) {
             auto content = this->streamingContent.substr(this->streamingPosition);
+            this->streamingPosition += content.size();
             return wrapDeltaContent(content);
         }
         if (this->currentState == State::AfterToolCall) {
