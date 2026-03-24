@@ -2,15 +2,14 @@ diff --git a/berkeley-function-call-leaderboard/bfcl_eval/constants/model_config
 index bb625d2..64c01de 100644
 --- a/berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py
 +++ b/berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py
-@@ -24,6 +24,7 @@ from bfcl_eval.model_handler.api_inference.openai_completion import (
+@@ -24,6 +24,6 @@ from bfcl_eval.model_handler.api_inference.openai_completion import (
      OpenAICompletionsHandler,
  )
  from bfcl_eval.model_handler.api_inference.openai_response import OpenAIResponsesHandler
-+from bfcl_eval.model_handler.api_inference.ovms_response_stream import OVMSResponsesStreamHandler
  from bfcl_eval.model_handler.api_inference.qwen import (
      QwenAgentNoThinkHandler,
      QwenAgentThinkHandler,
-@@ -2153,6 +2154,54 @@ third_party_inference_model_map = {
+@@ -2153,6 +2154,42 @@ third_party_inference_model_map = {
          is_fc_model=True,
          underscore_to_dot=True,
      ),
@@ -45,18 +44,6 @@ index bb625d2..64c01de 100644
 +        org="ovms",
 +        license="apache-2.0",
 +        model_handler=OpenAIResponsesHandler,
-+        input_price=None,
-+        output_price=None,
-+        is_fc_model=True,
-+        underscore_to_dot=True,
-+    ),
-+    "ovms-model-stream-responses": ModelConfig(
-+        model_name="ovms-model-stream-responses",
-+        display_name="ovms-model-stream-responses",
-+        url="http://localhost:8000/v3",
-+        org="ovms",
-+        license="apache-2.0",
-+        model_handler=OVMSResponsesStreamHandler,
 +        input_price=None,
 +        output_price=None,
 +        is_fc_model=True,
@@ -165,156 +152,6 @@ index 0953fdd..7f6919f 100644
          return self.generate_with_backoff(**kwargs)
  
      def _pre_query_processing_prompting(self, test_entry: dict) -> dict:
-diff --git a/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/ovms_response_stream.py b/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/ovms_response_stream.py
-new file mode 100644
-index 0000000..bc5ef1e
---- /dev/null
-+++ b/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/ovms_response_stream.py
-@@ -0,0 +1,144 @@
-+import json
-+import os
-+
-+from bfcl_eval.model_handler.api_inference.openai_response import OpenAIResponsesHandler
-+from overrides import override
-+
-+
-+class OVMSResponsesStreamHandler(OpenAIResponsesHandler):
-+    """Streaming variant of OpenAIResponsesHandler.
-+
-+    Inherits all behavior from the (patched) OpenAIResponsesHandler and only overrides
-+    _query_FC, _query_prompting (to add stream=True), and the two
-+    _parse_query_response methods (to aggregate SSE events).
-+    """
-+
-+    @staticmethod
-+
-+    @staticmethod
-+    def _parse_stream(stream) -> dict:
-+        """Parse responses API SSE stream and return aggregated results."""
-+        text_content = ""
-+        reasoning_content = ""
-+        tool_calls = {}  # keyed by item_id
-+        usage = {"input_tokens": 0, "output_tokens": 0}
-+        output_items = []  # final output items from response.completed
-+
-+        for event in stream:
-+            event_type = event.type
-+
-+            if event_type == "response.output_text.delta":
-+                text_content += event.delta or ""
-+
-+            elif event_type == "response.reasoning.delta":
-+                reasoning_content += event.delta or ""
-+
-+            elif event_type == "response.function_call_arguments.delta":
-+                item_id = event.item_id
-+                if item_id not in tool_calls:
-+                    tool_calls[item_id] = {"call_id": "", "name": "", "arguments": ""}
-+                tool_calls[item_id]["arguments"] += event.delta or ""
-+
-+            elif event_type == "response.output_item.added":
-+                item = event.item
-+                if hasattr(item, "type") and item.type == "function_call":
-+                    item_id = item.id
-+                    tool_calls[item_id] = {
-+                        "call_id": getattr(item, "call_id", "") or "",
-+                        "name": getattr(item, "name", "") or "",
-+                        "arguments": "",
-+                    }
-+
-+            elif event_type in ("response.completed", "response.incomplete"):
-+                resp = event.response
-+                if hasattr(resp, "usage") and resp.usage:
-+                    usage["input_tokens"] = resp.usage.input_tokens
-+                    usage["output_tokens"] = resp.usage.output_tokens
-+                if hasattr(resp, "output"):
-+                    output_items = resp.output
-+
-+        return {
-+            "text": text_content,
-+            "reasoning": reasoning_content,
-+            "tool_calls": tool_calls,
-+            "usage": usage,
-+            "output_items": output_items,
-+        }
-+
-+    #### FC methods ####
-+
-+    @override
-+    def _query_FC(self, inference_data: dict):
-+        message: list[dict] = inference_data["message"]
-+        tools = inference_data["tools"]
-+
-+        inference_data["inference_input_log"] = {
-+            "message": repr(message),
-+            "tools": tools,
-+        }
-+
-+        kwargs = {
-+            "input": message,
-+            "model": self.model_name,
-+            "temperature": self.temperature,
-+            "max_output_tokens": 2048,
-+            "tool_choice": os.getenv("TOOL_CHOICE", "auto"),
-+            "extra_body": {"chat_template_kwargs": json.loads(os.getenv("CHAT_TEMPLATE_KWARGS", "{}"))},
-+            "stream": True,
-+        }
-+
-+        if len(tools) > 0:
-+            kwargs["tools"] = tools
-+
-+        return self.generate_with_backoff(**kwargs)
-+
-+    @override
-+    def _parse_query_response_FC(self, api_response) -> dict:
-+        parsed = self._parse_stream(api_response)
-+
-+        model_responses = []
-+        tool_call_ids = []
-+
-+        for item_id, tc in parsed["tool_calls"].items():
-+            model_responses.append({tc["name"]: tc["arguments"]})
-+            tool_call_ids.append(tc["call_id"])
-+
-+        if not model_responses:
-+            model_responses = parsed["text"]
-+
-+        return {
-+            "model_responses": model_responses,
-+            "model_responses_message_for_chat_history": parsed["output_items"],
-+            "tool_call_ids": tool_call_ids,
-+            "reasoning_content": parsed["reasoning"],
-+            "input_token": parsed["usage"]["input_tokens"],
-+            "output_token": parsed["usage"]["output_tokens"],
-+        }
-+
-+    #### Prompting methods ####
-+
-+    @override
-+    def _query_prompting(self, inference_data: dict):
-+        inference_data["inference_input_log"] = {"message": repr(inference_data["message"])}
-+
-+        kwargs = {
-+            "input": inference_data["message"],
-+            "model": self.model_name,
-+            "temperature": self.temperature,
-+            "extra_body": {"chat_template_kwargs": json.loads(os.getenv("CHAT_TEMPLATE_KWARGS", "{}"))},
-+            "stream": True,
-+        }
-+
-+        return self.generate_with_backoff(**kwargs)
-+
-+    @override
-+    def _parse_query_response_prompting(self, api_response) -> dict:
-+        parsed = self._parse_stream(api_response)
-+
-+        return {
-+            "model_responses": parsed["text"],
-+            "model_responses_message_for_chat_history": parsed["output_items"],
-+            "reasoning_content": parsed["reasoning"],
-+            "input_token": parsed["usage"]["input_tokens"],
-+            "output_token": parsed["usage"]["output_tokens"],
-+        }
 diff --git a/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/qwen.py b/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/qwen.py
 index 10f1a08..50890c7 100644
 --- a/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/qwen.py

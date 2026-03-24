@@ -170,11 +170,11 @@ void OpenAIChatCompletionsHandler::serializeResponsesResponseObject(Writer<Strin
     writer.String(status.c_str());
 
     writer.String("parallel_tool_calls");
-    writer.Bool(false);
+    writer.Bool(true);
     // TODO: previous_response_id not supported
     writer.String("store");
     writer.Bool(true);
-    // TODO: temperature/top_p are only included when explicitly provided in the request
+    // TODO: temperature are only included when explicitly provided in the request
     if (request.temperature.has_value()) {
         writer.String("temperature");
         writer.Double(static_cast<double>(request.temperature.value()));
@@ -189,6 +189,7 @@ void OpenAIChatCompletionsHandler::serializeResponsesResponseObject(Writer<Strin
     writer.EndObject();
     serializeResponsesToolChoice(writer);
     serializeResponsesTools(writer);
+    // TODO: top_p are only included when explicitly provided in the request
     if (request.topP.has_value()) {
         writer.String("top_p");
         writer.Double(static_cast<double>(request.topP.value()));
@@ -242,7 +243,7 @@ void OpenAIChatCompletionsHandler::serializeResponsesResponseObject(Writer<Strin
         writer.String(toolCall.arguments.c_str());
         writer.EndObject();
     }
-    if (!fullOutputText.empty() || responsesState.toolCalls.empty()) {
+    {
         writer.StartObject();
         writer.String("id");
         writer.String("msg-0");
@@ -345,7 +346,7 @@ std::string OpenAIChatCompletionsHandler::serializeResponsesUnaryResponse(const 
     writer.String(responseStatus.c_str());
 
     writer.String("parallel_tool_calls");
-    writer.Bool(false);
+    writer.Bool(true);
     // TODO: previous_response_id not supported
     writer.String("store");
     writer.Bool(true);
@@ -424,8 +425,8 @@ std::string OpenAIChatCompletionsHandler::serializeResponsesUnaryResponse(const 
             }
         }
 
-        // Emit message output item if there is non-empty content or no tool calls
-        if (!parsedOutput.content.empty() || parsedOutput.toolCalls.empty()) {
+        // Always emit message output item
+        {
             const std::string outputId = "msg-" + std::to_string(outputIndex);
 
             writer.StartObject();
@@ -667,7 +668,7 @@ absl::Status OpenAIChatCompletionsHandler::parseResponsesInput(std::optional<std
                 return absl::InvalidArgumentError("Invalid message structure - content array is empty");
             }
 
-            std::string contentText;
+            std::string contentText = "";
             for (auto& contentItem : contentIt->value.GetArray()) {
                 if (!contentItem.IsObject()) {
                     return absl::InvalidArgumentError("input content items must be objects");
@@ -987,20 +988,20 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
 }
 
 absl::Status OpenAIChatCompletionsHandler::parseTools() {
-    auto tool_choice_it = doc.FindMember("tool_choice");
-    std::string tool_choice{"auto"};
-    if (tool_choice_it != doc.MemberEnd() && !tool_choice_it->value.IsNull()) {
-        if (tool_choice_it->value.IsString()) {
-            tool_choice = tool_choice_it->value.GetString();
-            if (tool_choice != "none" && tool_choice != "auto" && tool_choice != "required")
+    auto toolChoiceIt = doc.FindMember("tool_choice");
+    std::string toolChoice{"auto"};
+    if (toolChoiceIt != doc.MemberEnd() && !toolChoiceIt->value.IsNull()) {
+        if (toolChoiceIt->value.IsString()) {
+            toolChoice = toolChoiceIt->value.GetString();
+            if (toolChoice != "none" && toolChoice != "auto" && toolChoice != "required")
                 return absl::InvalidArgumentError("tool_choice should be either 'none' or 'auto' or 'required'");
-        } else if (tool_choice_it->value.IsObject()) {
-            auto toolChoiceObj = tool_choice_it->value.GetObject();
-            auto tool_choice_functionIt = toolChoiceObj.FindMember("function");
-            if (tool_choice_functionIt != toolChoiceObj.MemberEnd() && tool_choice_functionIt->value.IsObject()) {
-                auto nameIt = tool_choice_functionIt->value.GetObject().FindMember("name");
-                if (nameIt != tool_choice_functionIt->value.GetObject().MemberEnd() && nameIt->value.IsString()) {
-                    tool_choice = nameIt->value.GetString();
+        } else if (toolChoiceIt->value.IsObject()) {
+            auto toolChoiceObj = toolChoiceIt->value.GetObject();
+            auto toolChoiceFunctionIt = toolChoiceObj.FindMember("function");
+            if (toolChoiceFunctionIt != toolChoiceObj.MemberEnd() && toolChoiceFunctionIt->value.IsObject()) {
+                auto nameIt = toolChoiceFunctionIt->value.GetObject().FindMember("name");
+                if (nameIt != toolChoiceFunctionIt->value.GetObject().MemberEnd() && nameIt->value.IsString()) {
+                    toolChoice = nameIt->value.GetString();
                 } else {
                     return absl::InvalidArgumentError("tool_choice.function.name is not a valid string");
                 }
@@ -1011,7 +1012,7 @@ absl::Status OpenAIChatCompletionsHandler::parseTools() {
                     if (nameIt == toolChoiceObj.MemberEnd() || !nameIt->value.IsString()) {
                         return absl::InvalidArgumentError("tool_choice.name is not a valid string");
                     }
-                    tool_choice = nameIt->value.GetString();
+                    toolChoice = nameIt->value.GetString();
                 } else {
                     return absl::InvalidArgumentError("tool_choice.function is not a valid JSON object");
                 }
@@ -1021,7 +1022,7 @@ absl::Status OpenAIChatCompletionsHandler::parseTools() {
         }
     }
     bool jsonChanged = false;
-    if (tool_choice == "none") {
+    if (toolChoice == "none") {
         // remove tools from the request
         doc.RemoveMember("tools");
         jsonChanged = true;
@@ -1073,9 +1074,9 @@ absl::Status OpenAIChatCompletionsHandler::parseTools() {
                 }
             }
 
-            // If tool_choice is set to "auto", we keep all tools
-            // If tool_choice is set to a specific function name, we keep only that tool
-            if (tool_choice != "auto" && tool_choice != "required" && tool_choice != functionName) {
+            // If toolChoice is set to "auto", we keep all tools
+            // If toolChoice is set to a specific function name, we keep only that tool
+            if (toolChoice != "auto" && toolChoice != "required" && toolChoice != functionName) {
                 it->value.Erase(&obj);
                 jsonChanged = true;
                 continue;
@@ -1098,10 +1099,10 @@ absl::Status OpenAIChatCompletionsHandler::parseTools() {
             }
         }
     } else {
-        tool_choice = "none";  // If tools are not provided, set tool_choice to "none"
+        toolChoice = "none";  // If tools are not provided, set toolChoice to "none"
     }
 
-    request.toolChoice = tool_choice;
+    request.toolChoice = toolChoice;
     if (jsonChanged) {
         StringBuffer buffer;
         Writer<StringBuffer> writer(buffer);
@@ -1762,9 +1763,10 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const std::vect
     if (endpoint == Endpoint::RESPONSES) {
         std::vector<ParsedOutput> parsedOutputs;
         usage.completionTokens = 0;
+        constexpr bool echo = false;  // echo is not supported in Responses API
         ov::genai::GenerationFinishReason responsesFinishReason = ov::genai::GenerationFinishReason::STOP;
         for (const ov::genai::GenerationOutput& generationOutput : generationOutputs) {
-            updateUsage(usage, generationOutput.generated_ids, request.echo);
+            updateUsage(usage, generationOutput.generated_ids, echo);
             parsedOutputs.push_back(parseOutputIfNeeded(generationOutput.generated_ids));
             if (generationOutput.finish_reason == ov::genai::GenerationFinishReason::LENGTH) {
                 responsesFinishReason = ov::genai::GenerationFinishReason::LENGTH;
@@ -1844,8 +1846,8 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const std::vect
                     if (i == 0) {
                         jsonResponse.TextOffsetValue(0);
                     } else {
-                        std::string text_before_token = tokenizer.decode(std::vector<int64_t>({generationOutput.generated_ids.begin(), generationOutput.generated_ids.begin() + i}));
-                        jsonResponse.TextOffsetValue(text_before_token.size());
+                        std::string textBeforeToken = tokenizer.decode(std::vector<int64_t>({generationOutput.generated_ids.begin(), generationOutput.generated_ids.begin() + i}));
+                        jsonResponse.TextOffsetValue(textBeforeToken.size());
                     }
                 }
                 jsonResponse.EndArray();
@@ -1967,7 +1969,7 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(ov::genai::VLMD
         std::vector<ParsedOutput> parsedOutputs;
         for (const std::string& text : results.texts) {
             if (outputParser != nullptr) {
-                // Same workaround as in chat completions, line part
+                // Same workaround as in chat completions
                 auto result = tokenizer.encode(text);
                 auto& input_ids = result.input_ids;
                 if (input_ids.get_shape().size() != 2)
