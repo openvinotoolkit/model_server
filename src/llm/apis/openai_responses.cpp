@@ -1105,8 +1105,8 @@ std::string OpenAIResponsesHandler::serializeFunctionCallOutputItemDoneEvent(con
 // --- Top-level streaming methods ---
 
 std::string OpenAIResponsesHandler::serializeStreamingCreatedEvent() {
-    if (responsesState.createdSent){
-         return "";
+    if (responsesState.createdSent) {
+        return "";
     }
     responsesState.createdSent = true;
     const auto createdAt = std::chrono::duration_cast<std::chrono::microseconds>(created.time_since_epoch()).count();
@@ -1121,8 +1121,8 @@ std::string OpenAIResponsesHandler::serializeStreamingCreatedEvent() {
 }
 
 std::string OpenAIResponsesHandler::serializeStreamingInProgressEvent() {
-    if (responsesState.inProgressSent){
-         return "";
+    if (responsesState.inProgressSent) {
+        return "";
     }
     responsesState.inProgressSent = true;
     const auto createdAt = std::chrono::duration_cast<std::chrono::microseconds>(created.time_since_epoch()).count();
