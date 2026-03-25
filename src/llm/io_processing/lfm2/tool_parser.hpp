@@ -46,7 +46,6 @@ public:
     struct Argument {
         std::string name;
         std::string value;
-        bool isValid = true;
     };
     Lfm2ToolParser() = delete;
     explicit Lfm2ToolParser(ov::genai::Tokenizer& tokenizer) : BaseOutputParser(tokenizer) {}
