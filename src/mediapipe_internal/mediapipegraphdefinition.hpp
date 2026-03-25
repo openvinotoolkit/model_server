@@ -57,7 +57,6 @@ public:
         const MetricConfig* metricConfig = nullptr,
         PythonBackend* pythonBackend = nullptr);
 
-    const std::string& getName() const override { return SingleVersionServableDefinition::getName(); }
     const PipelineDefinitionStatus& getStatus() const override {
         return this->status;
     }
