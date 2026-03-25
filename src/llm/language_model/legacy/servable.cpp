@@ -21,6 +21,8 @@
 
 #include "../../../logging.hpp"
 #include "../../../status.hpp"
+#include "../../apis/openai_completions.hpp"
+#include "../../apis/openai_responses.hpp"
 
 #pragma warning(push)
 #pragma warning(disable : 4005 4309 6001 6385 6386 6326 6011 4005 4456 6246)
@@ -68,12 +70,21 @@ absl::Status LegacyServable::parseRequest(std::shared_ptr<GenAiServableExecution
     }
 
     legacyExecutionContext->baseGenerationConfig = properties->baseGenerationConfig;
-    legacyExecutionContext->apiHandler = std::make_shared<OpenAIChatCompletionsHandler>(*legacyExecutionContext->payload.parsedJson,
-        legacyExecutionContext->endpoint,
-        std::chrono::system_clock::now(),
-        getProperties()->tokenizer,
-        getProperties()->toolParserName,
-        getProperties()->reasoningParserName);
+    if (legacyExecutionContext->endpoint == Endpoint::RESPONSES) {
+        legacyExecutionContext->apiHandler = std::make_shared<OpenAIResponsesHandler>(*legacyExecutionContext->payload.parsedJson,
+            legacyExecutionContext->endpoint,
+            std::chrono::system_clock::now(),
+            getProperties()->tokenizer,
+            getProperties()->toolParserName,
+            getProperties()->reasoningParserName);
+    } else {
+        legacyExecutionContext->apiHandler = std::make_shared<OpenAIChatCompletionsHandler>(*legacyExecutionContext->payload.parsedJson,
+            legacyExecutionContext->endpoint,
+            std::chrono::system_clock::now(),
+            getProperties()->tokenizer,
+            getProperties()->toolParserName,
+            getProperties()->reasoningParserName);
+    }
 
     auto status = executionContext->apiHandler->parseRequest(getProperties()->maxTokensLimit, getProperties()->bestOfLimit, getProperties()->maxModelLength);
     if (!status.ok()) {

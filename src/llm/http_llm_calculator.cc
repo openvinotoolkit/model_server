@@ -129,17 +129,17 @@ public:
                 // For RESPONSES streaming, emit init events (response.created, response.in_progress, etc.)
                 // immediately after scheduling, before blocking on readPartialExecutionResults.
                 // This reduces perceived latency - the client sees the response is created right away.
-                if (executionContext->apiHandler->isStream() && executionContext->endpoint == Endpoint::RESPONSES) {
-                    std::string initEvents = executionContext->apiHandler->serializeResponsesStreamingInitEvents();
+                if (executionContext->apiHandler->isStream()) {
+                    std::string initEvents = executionContext->apiHandler->serializeStreamingInitEvents();
                     if (!initEvents.empty()) {
                         executionContext->response = wrapTextInServerSideEventMessage(initEvents);
                         cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new std::string{std::move(executionContext->response)}, iterationBeginTimestamp);
                         executionContext->response = "";
+                        cc->Outputs().Tag(LOOPBACK_TAG_NAME).Add(new bool{true}, iterationBeginTimestamp);
+                        auto now = std::chrono::system_clock::now();
+                        iterationBeginTimestamp = ::mediapipe::Timestamp(std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch()).count());
+                        return absl::OkStatus();
                     }
-                    cc->Outputs().Tag(LOOPBACK_TAG_NAME).Add(new bool{true}, iterationBeginTimestamp);
-                    auto now = std::chrono::system_clock::now();
-                    iterationBeginTimestamp = ::mediapipe::Timestamp(std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch()).count());
-                    return absl::OkStatus();
                 }
             }
 
@@ -176,21 +176,25 @@ public:
                     cc->Outputs().Tag(LOOPBACK_TAG_NAME).Add(new bool{true}, iterationBeginTimestamp);
             }
         } catch (ov::AssertFailure& e) {
-            if (executionContext->apiHandler && executionContext->apiHandler->isStream() && executionContext->endpoint == Endpoint::RESPONSES) {
-                std::string failedEvent = executionContext->apiHandler->serializeResponsesFailedEvent(e.what());
-                executionContext->response = wrapTextInServerSideEventMessage(failedEvent);
-                executionContext->response += wrapTextInServerSideEventMessage("[DONE]");
-                cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new std::string{std::move(executionContext->response)}, iterationBeginTimestamp);
-                return absl::OkStatus();
+            if (executionContext->apiHandler && executionContext->apiHandler->isStream()) {
+                std::string failedEvent = executionContext->apiHandler->serializeFailedEvent(e.what());
+                if (!failedEvent.empty()) {
+                    executionContext->response = wrapTextInServerSideEventMessage(failedEvent);
+                    executionContext->response += wrapTextInServerSideEventMessage("[DONE]");
+                    cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new std::string{std::move(executionContext->response)}, iterationBeginTimestamp);
+                    return absl::OkStatus();
+                }
             }
             return absl::InvalidArgumentError(e.what());
         } catch (...) {
-            if (executionContext->apiHandler && executionContext->apiHandler->isStream() && executionContext->endpoint == Endpoint::RESPONSES) {
-                std::string failedEvent = executionContext->apiHandler->serializeResponsesFailedEvent("Response generation failed");
-                executionContext->response = wrapTextInServerSideEventMessage(failedEvent);
-                executionContext->response += wrapTextInServerSideEventMessage("[DONE]");
-                cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new std::string{std::move(executionContext->response)}, iterationBeginTimestamp);
-                return absl::OkStatus();
+            if (executionContext->apiHandler && executionContext->apiHandler->isStream()) {
+                std::string failedEvent = executionContext->apiHandler->serializeFailedEvent("Response generation failed");
+                if (!failedEvent.empty()) {
+                    executionContext->response = wrapTextInServerSideEventMessage(failedEvent);
+                    executionContext->response += wrapTextInServerSideEventMessage("[DONE]");
+                    cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new std::string{std::move(executionContext->response)}, iterationBeginTimestamp);
+                    return absl::OkStatus();
+                }
             }
             return absl::InvalidArgumentError("Response generation failed");
         }
