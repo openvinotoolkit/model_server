@@ -18,6 +18,7 @@
 #include "../../../logging.hpp"
 #include <algorithm>
 #include <cctype>
+#include <utility>
 
 namespace ovms {
 

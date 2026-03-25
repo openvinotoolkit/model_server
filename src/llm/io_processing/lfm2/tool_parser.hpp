@@ -14,6 +14,8 @@
 // limitations under the License.
 //*****************************************************************************
 #pragma once
+#include <string>
+#include <vector>
 #include "src/llm/io_processing/base_output_parser.hpp"
 
 namespace ovms {
