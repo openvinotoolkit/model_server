@@ -379,7 +379,6 @@ TEST_F(LFM2OutputParserTest, HolisticStreaming) {
         {"})]", ov ::genai ::GenerationFinishReason ::NONE, R"({"delta":{"tool_calls":[{"index":1,"function":{"arguments":{"config":{"name":"astro_config","value":99}}}}]}})"},
         {"<|tool_call_end|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"ANOTHER_CONTENT_AFTER_TOOL_CALL", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":"ANOTHER_CONTENT_AFTER_TOOL_CALL"}})"},
-
     };
 
     for (const auto& [chunk, finishReason, expectedDelta] : chunkToDeltaVec) {
@@ -483,7 +482,6 @@ TEST_F(LFM2OutputParserTest, StreamingWithContentBetweenToolCalls) {
         {"})]", ov ::genai ::GenerationFinishReason ::NONE, R"({"delta":{"tool_calls":[{"index":1,"function":{"arguments":{"config":{"name":"astro_config","value":99}}}}]}})"},
         {"<|tool_call_end|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"ANOTHER_CONTENT_AFTER_TOOL_CALL", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":"ANOTHER_CONTENT_AFTER_TOOL_CALL"}})"},
-
     };
 
     for (const auto& [chunk, finishReason, expectedDelta] : chunkToDeltaVec) {
@@ -572,7 +570,7 @@ TEST_F(LFM2OutputParserTest, ToolCallsWithoutToolsInTheRequestStreaming) {
     }
 }
 
-//Malformed tool calls
+// Malformed tool calls
 
 TEST_F(LFM2OutputParserTest, ParseToolCallWithMissingParentheses) {
     std::string input = "<|tool_call_start|>[broken_tool]<|tool_call_end|>";
