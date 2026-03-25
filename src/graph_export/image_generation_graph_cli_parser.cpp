@@ -206,8 +206,7 @@ void ImageGenerationGraphCLIParser::prepare(ServerSettingsImpl& serverSettings, 
                 if (!endsWith(adapter.safetensorsFile, ".safetensors")) {
                     throw std::invalid_argument("URL must point to a .safetensors file in --source_loras entry: '" + entry + "'");
                 }
-            } else if (source[0] == '/' || source.substr(0, 2) == "./" || source.substr(0, 2) == ".\\" ||
-                       (source.size() >= 3 && std::isalpha(source[0]) && source[1] == ':' && (source[2] == '\\' || source[2] == '/'))) {
+            } else if (ovms::isLocalFilePath(source)) {
                 adapter.sourceType = LoraSourceType::LOCAL_FILE;
                 adapter.sourceLora = source;
                 if (!endsWith(source, ".safetensors")) {
