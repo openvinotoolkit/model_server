@@ -41,8 +41,8 @@
 // Forward declarations for types only used by reference in virtual method signatures
 namespace ov {
 namespace genai {
-struct EncodedResults;
-struct VLMDecodedResults;
+class EncodedResults;
+class VLMDecodedResults;
 }  // namespace genai
 }  // namespace ov
 
