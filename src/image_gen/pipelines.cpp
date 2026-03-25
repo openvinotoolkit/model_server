@@ -31,7 +31,8 @@ namespace ovms {
 template <typename PipelineT>
 static void reshapeAndCompile(PipelineT& pipeline,
     const ImageGenPipelineArgs& args,
-    const std::vector<std::string>& device) {
+    const std::vector<std::string>& device,
+    const ov::AnyMap& properties) {
     if (args.staticReshapeSettings.has_value() && args.staticReshapeSettings.value().resolution.size() == 1) {
         auto numImagesPerPrompt = args.staticReshapeSettings.value().numImagesPerPrompt.value_or(ov::genai::ImageGenerationConfig().num_images_per_prompt);
         auto guidanceScale = args.staticReshapeSettings.value().guidanceScale.value_or(ov::genai::ImageGenerationConfig().guidance_scale);
@@ -48,10 +49,10 @@ static void reshapeAndCompile(PipelineT& pipeline,
 
     if (device.size() == 1) {
         SPDLOG_DEBUG("Image Generation Pipeline compiling to device: {}", device[0]);
-        pipeline.compile(device[0], args.pluginConfig);
+        pipeline.compile(device[0], properties);
     } else {
         SPDLOG_DEBUG("Image Generation Pipeline compiling to devices: text_encode={} denoise={} vae={}", device[0], device[1], device[2]);
-        pipeline.compile(device[0], device[1], device[2], args.pluginConfig);
+        pipeline.compile(device[0], device[1], device[2], properties);
     }
 }
 
@@ -66,6 +67,36 @@ ImageGenerationPipelines::ImageGenerationPipelines(const ImageGenPipelineArgs& a
 
     SPDLOG_DEBUG("Image Generation Pipelines weights loading from: {}", args.modelsPath);
 
+    // --- Load LoRA adapters before pipeline compilation ---
+    // Adapters must be registered at compile time so that the AdapterController
+    // is initialized and can apply/disable them at inference time.
+    for (const auto& loraInfo : args.loraAdapters) {
+        SPDLOG_INFO("Loading LoRA adapter: {} from: {}", loraInfo.alias, loraInfo.path);
+        try {
+            loraAdapters.emplace(loraInfo.alias, ov::genai::Adapter(loraInfo.path));
+            SPDLOG_INFO("LoRA adapter loaded: {}", loraInfo.alias);
+        } catch (const std::exception& e) {
+            throw std::runtime_error("Failed to load LoRA adapter '" + loraInfo.alias + "' from " + loraInfo.path + ": " + e.what());
+        }
+    }
+
+    // Build compile-time adapter properties so the pipeline's AdapterController
+    // knows about all adapters. At generate time we select which to activate.
+    ov::AnyMap compileProperties = args.pluginConfig;
+    if (!loraAdapters.empty()) {
+        ov::genai::AdapterConfig adapterConfig;
+        for (const auto& [alias, adapter] : loraAdapters) {
+            adapterConfig.add(adapter, 1.0f);
+        }
+        compileProperties.insert(ov::genai::adapters(adapterConfig));
+    }
+
+    // Populate composite LoRA map from args
+    compositeLoraAdapters = args.compositeLoraAdapters;
+    for (const auto& [alias, components] : compositeLoraAdapters) {
+        SPDLOG_INFO("Registered composite LoRA adapter: {} with {} components", alias, components.size());
+    }
+
     // Pipeline construction strategy:
     //   Preferred chain (weight-sharing, single model load):
     //     INP(disk) → reshape+compile → I2I(INP) → T2I(I2I)
@@ -79,7 +110,7 @@ ImageGenerationPipelines::ImageGenerationPipelines(const ImageGenPipelineArgs& a
     // --- Step 1: InpaintingPipeline from disk ---
     try {
         inpaintingPipeline = std::make_unique<ov::genai::InpaintingPipeline>(args.modelsPath);
-        reshapeAndCompile(*inpaintingPipeline, args, device);
+        reshapeAndCompile(*inpaintingPipeline, args, device, compileProperties);
         SPDLOG_DEBUG("InpaintingPipeline created from disk");
     } catch (const std::exception& e) {
         SPDLOG_WARN("Failed to create InpaintingPipeline from disk: {}", e.what());
@@ -98,7 +129,7 @@ ImageGenerationPipelines::ImageGenerationPipelines(const ImageGenPipelineArgs& a
     if (!image2ImagePipeline) {
         try {
             image2ImagePipeline = std::make_unique<ov::genai::Image2ImagePipeline>(args.modelsPath);
-            reshapeAndCompile(*image2ImagePipeline, args, device);
+            reshapeAndCompile(*image2ImagePipeline, args, device, compileProperties);
             SPDLOG_DEBUG("Image2ImagePipeline created from disk (fallback)");
         } catch (const std::exception& e) {
             SPDLOG_WARN("Failed to create Image2ImagePipeline from disk: {}", e.what());
@@ -126,7 +157,7 @@ ImageGenerationPipelines::ImageGenerationPipelines(const ImageGenPipelineArgs& a
     if (!text2ImagePipeline) {
         try {
             text2ImagePipeline = std::make_unique<ov::genai::Text2ImagePipeline>(args.modelsPath);
-            reshapeAndCompile(*text2ImagePipeline, args, device);
+            reshapeAndCompile(*text2ImagePipeline, args, device, compileProperties);
             SPDLOG_DEBUG("Text2ImagePipeline created from disk (fallback)");
         } catch (const std::exception& e) {
             SPDLOG_WARN("Failed to create Text2ImagePipeline from disk: {}", e.what());
@@ -142,17 +173,6 @@ ImageGenerationPipelines::ImageGenerationPipelines(const ImageGenPipelineArgs& a
     // requests must be serialized
     if (inpaintingPipeline) {
         inpaintingQueue = std::make_unique<Queue<int>>(1);
-    }
-
-    // --- Load LoRA adapters ---
-    for (const auto& loraInfo : args.loraAdapters) {
-        SPDLOG_INFO("Loading LoRA adapter: {} from: {}", loraInfo.alias, loraInfo.path);
-        try {
-            loraAdapters.emplace(loraInfo.alias, ov::genai::Adapter(loraInfo.path));
-            SPDLOG_INFO("LoRA adapter loaded: {}", loraInfo.alias);
-        } catch (const std::exception& e) {
-            throw std::runtime_error("Failed to load LoRA adapter '" + loraInfo.alias + "' from " + loraInfo.path + ": " + e.what());
-        }
     }
 
     SPDLOG_INFO("Image Generation Pipelines ready — T2I: {} | I2I: {} | INP: {} | LoRAs: {}",

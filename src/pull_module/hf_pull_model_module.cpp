@@ -28,6 +28,7 @@
 #include "../filesystem.hpp"
 #include "libgit2.hpp"
 #include "optimum_export.hpp"
+#include "curl_downloader.hpp"
 #include "gguf_downloader.hpp"
 #include "../graph_export/graph_export.hpp"
 #include "../logging.hpp"
@@ -116,12 +117,15 @@ Status HfPullModelModule::start(const ovms::Config& config) {
     return StatusCode::OK;
 }
 
-Status HfPullModelModule::resolveLoraFilenames() {
+Status HfPullModelModule::resolveHfLoraFilenames() {
     if (!std::holds_alternative<ImageGenerationGraphSettingsImpl>(this->hfSettings.graphSettings)) {
         return StatusCode::OK;
     }
     auto& graphSettings = std::get<ImageGenerationGraphSettingsImpl>(this->hfSettings.graphSettings);
     for (auto& adapter : graphSettings.loraAdapters) {
+        if (adapter.sourceType != LoraSourceType::HF_REPO) {
+            continue;
+        }
         if (!adapter.safetensorsFile.empty()) {
             continue;
         }
@@ -201,7 +205,54 @@ Status HfPullModelModule::resolveLoraFilenames() {
     return StatusCode::OK;
 }
 
-Status HfPullModelModule::clone() const {
+Status HfPullModelModule::pullLoraAdapters(const std::string& graphDirectory) {
+    if (!std::holds_alternative<ImageGenerationGraphSettingsImpl>(this->hfSettings.graphSettings)) {
+        return StatusCode::OK;
+    }
+    auto status = this->resolveHfLoraFilenames();
+    if (!status.ok()) {
+        return status;
+    }
+    const auto& graphSettings = std::get<ImageGenerationGraphSettingsImpl>(this->hfSettings.graphSettings);
+    for (const auto& adapter : graphSettings.loraAdapters) {
+        if (adapter.sourceType == LoraSourceType::LOCAL_FILE) {
+            std::cout << "LoRA adapter: " << adapter.alias << " using local file: " << adapter.sourceLora << std::endl;
+            continue;
+        }
+        std::string loraDownloadPath;
+        std::string loraUrl;
+        if (adapter.sourceType == LoraSourceType::HF_REPO) {
+            loraDownloadPath = FileSystem::joinPath({graphDirectory, "loras", adapter.sourceLora});
+            loraUrl = this->GetHfEndpoint() + adapter.sourceLora + "/resolve/main/" + adapter.safetensorsFile;
+        } else if (adapter.sourceType == LoraSourceType::DIRECT_URL) {
+            loraDownloadPath = FileSystem::joinPath({graphDirectory, "loras", adapter.alias});
+            loraUrl = adapter.sourceLora;
+        } else {
+            SPDLOG_ERROR("Unknown LoRA source type for adapter: {}", adapter.alias);
+            return StatusCode::INTERNAL_ERROR;
+        }
+        auto loraFilePath = FileSystem::joinPath({loraDownloadPath, adapter.safetensorsFile});
+        if (!this->hfSettings.overwriteModels && std::filesystem::exists(loraFilePath)) {
+            std::cout << "LoRA adapter: " << adapter.alias << " already exists, skipping download." << std::endl;
+            continue;
+        }
+        if (!std::filesystem::exists(loraDownloadPath)) {
+            if (!std::filesystem::create_directories(loraDownloadPath)) {
+                SPDLOG_ERROR("Failed to create LoRA directory: {}", loraDownloadPath);
+                return StatusCode::DIRECTORY_NOT_CREATED;
+            }
+        }
+        status = downloadFileWithCurl(loraUrl, loraFilePath);
+        if (!status.ok()) {
+            SPDLOG_ERROR("Failed to download LoRA adapter: {} from: {}", adapter.alias, loraUrl);
+            return status;
+        }
+        std::cout << "LoRA adapter: " << adapter.alias << " downloaded to: " << loraDownloadPath << std::endl;
+    }
+    return StatusCode::OK;
+}
+
+Status HfPullModelModule::clone() {
     std::string graphDirectory = "";
     std::unique_ptr<IModelDownloader> downloader;
     std::variant<ovms::Status, std::unique_ptr<Libgt2InitGuard>> guardOrError;
@@ -241,26 +292,10 @@ Status HfPullModelModule::clone() const {
         std::cout << "Draft model: " << GraphExport::getDraftModelDirectoryName(graphSettings.draftModelDirName.value()) << " downloaded to: " << GraphExport::getDraftModelDirectoryPath(graphDirectory, graphSettings.draftModelDirName.value()) << std::endl;
     }
 
-    // Image gen with LoRA adapters case - downloads LoRA safetensors files via curl
-    if (std::holds_alternative<ImageGenerationGraphSettingsImpl>(this->hfSettings.graphSettings)) {
-        const auto& graphSettings = std::get<ImageGenerationGraphSettingsImpl>(this->hfSettings.graphSettings);
-        for (const auto& adapter : graphSettings.loraAdapters) {
-            std::string loraDownloadPath = FileSystem::joinPath({graphDirectory, "loras", adapter.sourceLora});
-            if (!std::filesystem::exists(loraDownloadPath)) {
-                if (!std::filesystem::create_directories(loraDownloadPath)) {
-                    SPDLOG_ERROR("Failed to create LoRA directory: {}", loraDownloadPath);
-                    return StatusCode::DIRECTORY_NOT_CREATED;
-                }
-            }
-            // Download the single safetensors file via curl
-            // URL format: {hfEndpoint}{sourceLora}/resolve/main/{safetensorsFile}
-            status = GGUFDownloader::downloadWithCurl(this->GetHfEndpoint(), adapter.sourceLora, "/resolve/main/", adapter.safetensorsFile, loraDownloadPath);
-            if (!status.ok()) {
-                SPDLOG_ERROR("Failed to download LoRA adapter file: {}/{}", adapter.sourceLora, adapter.safetensorsFile);
-                return status;
-            }
-            std::cout << "LoRA adapter: " << adapter.alias << " (" << adapter.sourceLora << "/" << adapter.safetensorsFile << ") downloaded to: " << loraDownloadPath << std::endl;
-        }
+    // Image gen with LoRA adapters case - resolve filenames and download safetensors files
+    status = this->pullLoraAdapters(graphDirectory);
+    if (!status.ok()) {
+        return status;
     }
 
     GraphExport graphExporter;

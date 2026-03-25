@@ -575,7 +575,7 @@ TEST(OvmsGraphConfigTest, negativeImageGenerationGraph_SourceLorasEmptyFilenameA
         (char*)"--task",
         (char*)"image_generation",
         (char*)"--source_loras",
-        (char*)"org/repo@",
+        (char*)"pokemon=org/repo@",
     };
     int arg_count = 10;
     ConstructorEnabledConfig config;
@@ -1777,7 +1777,7 @@ TEST(OvmsGraphConfigTest, positiveImageGenerationWithSourceLoras) {
         (char*)downloadPath.c_str(),
         (char*)"--task",
         (char*)"image_generation",
-        (char*)"--source_loras=pokemon=juliensimon/sd-pokemon-lora@weights.safetensors,org/anime-lora",
+        (char*)"--source_loras=pokemon=juliensimon/sd-pokemon-lora@weights.safetensors,anime=org/anime-lora",
     };
 
     int arg_count = 9;
@@ -1791,9 +1791,11 @@ TEST(OvmsGraphConfigTest, positiveImageGenerationWithSourceLoras) {
     ASSERT_EQ(imageGenerationGraphSettings.loraAdapters[0].alias, "pokemon");
     ASSERT_EQ(imageGenerationGraphSettings.loraAdapters[0].sourceLora, "juliensimon/sd-pokemon-lora");
     ASSERT_EQ(imageGenerationGraphSettings.loraAdapters[0].safetensorsFile, "weights.safetensors");
-    ASSERT_EQ(imageGenerationGraphSettings.loraAdapters[1].alias, "anime-lora");
+    ASSERT_EQ(imageGenerationGraphSettings.loraAdapters[0].sourceType, ovms::LoraSourceType::HF_REPO);
+    ASSERT_EQ(imageGenerationGraphSettings.loraAdapters[1].alias, "anime");
     ASSERT_EQ(imageGenerationGraphSettings.loraAdapters[1].sourceLora, "org/anime-lora");
     ASSERT_TRUE(imageGenerationGraphSettings.loraAdapters[1].safetensorsFile.empty());
+    ASSERT_EQ(imageGenerationGraphSettings.loraAdapters[1].sourceType, ovms::LoraSourceType::HF_REPO);
 }
 
 TEST(OvmsGraphConfigTest, positiveDefaultImageGeneration) {

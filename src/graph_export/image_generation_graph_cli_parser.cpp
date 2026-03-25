@@ -16,9 +16,11 @@
 #include "image_generation_graph_cli_parser.hpp"
 
 #include <algorithm>
+#include <filesystem>
 #include <iostream>
 #include <optional>
 #include <regex>
+#include <set>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -166,38 +168,122 @@ void ImageGenerationGraphCLIParser::prepare(ServerSettingsImpl& serverSettings, 
     }
 
     // Parse --source_loras
+    // Supports three source types plus composite aliases:
+    //   alias=org/repo              (HF_REPO)
+    //   alias=org/repo@file.safetensors  (HF_REPO with explicit file)
+    //   alias=https://url/file.safetensors  (DIRECT_URL)
+    //   alias=/path/to/file.safetensors     (LOCAL_FILE)
+    //   alias=@ref1:0.7+@ref2:0.5          (COMPOSITE - references other aliases)
     if (!hfSettings.sourceLoras.empty()) {
         auto entries = ovms::tokenize(hfSettings.sourceLoras, ',');
+        // First pass: collect all real adapters
         for (const auto& entry : entries) {
-            LoraAdapterSettings adapter;
             auto eqPos = entry.find('=');
-            std::string repoAndFile;
-            if (eqPos != std::string::npos) {
-                adapter.alias = entry.substr(0, eqPos);
-                repoAndFile = entry.substr(eqPos + 1);
-            } else {
-                repoAndFile = entry;
-            }
-            // Check for @filename suffix
-            auto atPos = repoAndFile.find('@');
-            if (atPos != std::string::npos) {
-                adapter.sourceLora = repoAndFile.substr(0, atPos);
-                adapter.safetensorsFile = repoAndFile.substr(atPos + 1);
-                if (adapter.safetensorsFile.empty()) {
-                    throw std::invalid_argument("Empty filename after @ in --source_loras entry: '" + entry + "'");
-                }
-            } else {
-                adapter.sourceLora = repoAndFile;
-            }
-            // Derive alias from repo name if not explicitly provided
             if (eqPos == std::string::npos) {
-                auto slashPos = adapter.sourceLora.find('/');
-                adapter.alias = (slashPos != std::string::npos) ? adapter.sourceLora.substr(slashPos + 1) : adapter.sourceLora;
+                throw std::invalid_argument("Missing alias in --source_loras entry: '" + entry + "'. Expected format: alias=source");
             }
-            if (adapter.alias.empty() || adapter.sourceLora.empty()) {
-                throw std::invalid_argument("Invalid --source_loras entry: '" + entry + "'. Expected format: alias=org/repo or org/repo");
+            std::string alias = entry.substr(0, eqPos);
+            std::string source = entry.substr(eqPos + 1);
+            if (alias.empty() || source.empty()) {
+                throw std::invalid_argument("Invalid --source_loras entry: '" + entry + "'. Alias and source must not be empty.");
+            }
+            // Skip composite entries in first pass
+            if (source[0] == '@') {
+                continue;
+            }
+
+            LoraAdapterSettings adapter;
+            adapter.alias = alias;
+            // Detect source type
+            if (source.substr(0, 8) == "https://" || source.substr(0, 7) == "http://") {
+                adapter.sourceType = LoraSourceType::DIRECT_URL;
+                adapter.sourceLora = source;
+                auto lastSlash = source.rfind('/');
+                if (lastSlash == std::string::npos || lastSlash == source.size() - 1) {
+                    throw std::invalid_argument("Cannot extract filename from URL in --source_loras entry: '" + entry + "'");
+                }
+                adapter.safetensorsFile = source.substr(lastSlash + 1);
+                if (!endsWith(adapter.safetensorsFile, ".safetensors")) {
+                    throw std::invalid_argument("URL must point to a .safetensors file in --source_loras entry: '" + entry + "'");
+                }
+            } else if (source[0] == '/' || source.substr(0, 2) == "./") {
+                adapter.sourceType = LoraSourceType::LOCAL_FILE;
+                adapter.sourceLora = source;
+                if (!endsWith(source, ".safetensors")) {
+                    throw std::invalid_argument("Local path must point to a .safetensors file in --source_loras entry: '" + entry + "'");
+                }
+                if (!std::filesystem::exists(source)) {
+                    throw std::invalid_argument("Local LoRA file does not exist: '" + source + "' in --source_loras entry: '" + entry + "'");
+                }
+                auto lastSlash = source.rfind('/');
+                adapter.safetensorsFile = (lastSlash != std::string::npos) ? source.substr(lastSlash + 1) : source;
+            } else {
+                adapter.sourceType = LoraSourceType::HF_REPO;
+                auto atPos = source.find('@');
+                if (atPos != std::string::npos) {
+                    adapter.sourceLora = source.substr(0, atPos);
+                    adapter.safetensorsFile = source.substr(atPos + 1);
+                    if (adapter.safetensorsFile.empty()) {
+                        throw std::invalid_argument("Empty filename after @ in --source_loras entry: '" + entry + "'");
+                    }
+                } else {
+                    adapter.sourceLora = source;
+                }
+                if (adapter.sourceLora.empty()) {
+                    throw std::invalid_argument("Invalid --source_loras entry: '" + entry + "'. HF repo source must not be empty.");
+                }
             }
             imageGenerationGraphSettings.loraAdapters.push_back(std::move(adapter));
+        }
+
+        // Collect known adapter aliases for validation
+        std::set<std::string> knownAliases;
+        for (const auto& adapter : imageGenerationGraphSettings.loraAdapters) {
+            knownAliases.insert(adapter.alias);
+        }
+
+        // Second pass: parse composite entries (source starts with @)
+        for (const auto& entry : entries) {
+            auto eqPos = entry.find('=');
+            std::string alias = entry.substr(0, eqPos);
+            std::string source = entry.substr(eqPos + 1);
+            if (source[0] != '@') {
+                continue;
+            }
+            CompositeLoraSettings composite;
+            composite.alias = alias;
+            // Parse @ref1:0.7+@ref2:0.5
+            auto componentTokens = ovms::tokenize(source, '+');
+            for (const auto& compToken : componentTokens) {
+                if (compToken.empty() || compToken[0] != '@') {
+                    throw std::invalid_argument("Invalid composite LoRA component '" + compToken + "' in entry: '" + entry + "'. Each component must start with @");
+                }
+                CompositeLoraComponent component;
+                std::string ref = compToken.substr(1);  // strip @
+                auto colonPos = ref.find(':');
+                if (colonPos != std::string::npos) {
+                    component.adapterAlias = ref.substr(0, colonPos);
+                    std::string weightStr = ref.substr(colonPos + 1);
+                    try {
+                        component.weight = std::stof(weightStr);
+                    } catch (...) {
+                        throw std::invalid_argument("Invalid weight '" + weightStr + "' in composite LoRA component: '" + compToken + "'");
+                    }
+                } else {
+                    component.adapterAlias = ref;
+                }
+                if (component.adapterAlias.empty()) {
+                    throw std::invalid_argument("Empty adapter reference in composite LoRA component: '" + compToken + "'");
+                }
+                if (knownAliases.find(component.adapterAlias) == knownAliases.end()) {
+                    throw std::invalid_argument("Composite LoRA references unknown adapter '" + component.adapterAlias + "' in entry: '" + entry + "'");
+                }
+                composite.components.push_back(std::move(component));
+            }
+            if (composite.components.empty()) {
+                throw std::invalid_argument("Composite LoRA entry has no components: '" + entry + "'");
+            }
+            imageGenerationGraphSettings.compositeLoraAdapters.push_back(std::move(composite));
         }
     }
 

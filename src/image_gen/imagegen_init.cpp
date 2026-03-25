@@ -273,6 +273,16 @@ std::variant<Status, ImageGenPipelineArgs> prepareImageGenPipelineArgs(const goo
         args.loraAdapters.push_back(std::move(info));
     }
 
+    for (int i = 0; i < nodeOptions.composite_lora_adapters_size(); ++i) {
+        const auto& compositeEntry = nodeOptions.composite_lora_adapters(i);
+        std::vector<std::pair<std::string, float>> components;
+        for (int j = 0; j < compositeEntry.components_size(); ++j) {
+            const auto& comp = compositeEntry.components(j);
+            components.emplace_back(comp.adapter_alias(), comp.weight());
+        }
+        args.compositeLoraAdapters.emplace(compositeEntry.alias(), std::move(components));
+    }
+
     return std::move(args);
 }
 }  // namespace ovms

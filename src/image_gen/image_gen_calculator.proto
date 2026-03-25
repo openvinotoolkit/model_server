@@ -46,10 +46,23 @@ message ImageGenCalculatorOptions {
 
     // LoRA adapters
     repeated LoraAdapterEntry lora_adapters = 12;
+
+    // Composite LoRA adapters (multi-LoRA presets)
+    repeated CompositeLoraAdapterEntry composite_lora_adapters = 13;
 }
 
 message LoraAdapterEntry {
     required string alias = 1;
     required string path = 2;
     optional float alpha = 3 [default = 1.0];
+}
+
+message CompositeLoraComponent {
+    required string adapter_alias = 1;
+    optional float weight = 2 [default = 1.0];
+}
+
+message CompositeLoraAdapterEntry {
+    required string alias = 1;
+    repeated CompositeLoraComponent components = 2;
 }

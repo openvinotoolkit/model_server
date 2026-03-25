@@ -214,7 +214,7 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
             cxxopts::value<std::string>(),
             "HF_SOURCE")
             ("source_loras",
-            "LoRA adapters to apply to image generation model in format alias1=org1/repo1,alias2=org2/repo2@file.safetensors",
+            "LoRA adapters for image generation. Format: alias1=org1/repo1,alias2=org2/repo2@file.safetensors,alias3=https://url/file.safetensors,alias4=/local/path/file.safetensors",
             cxxopts::value<std::string>(),
             "SOURCE_LORAS")
             ("gguf_filename",

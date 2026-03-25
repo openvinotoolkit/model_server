@@ -371,10 +371,6 @@ Status Server::startModules(ovms::Config& config) {
             return status;
         }
         auto hfModule = dynamic_cast<HfPullModelModule*>(it->second.get());
-        status = hfModule->resolveLoraFilenames();
-        if (!status.ok()) {
-            return status;
-        }
         status = hfModule->clone();
         // Return from modules only in --pull mode or error, otherwise start the rest of modules
         if (config.getServerSettings().serverMode == HF_PULL_MODE || !status.ok())

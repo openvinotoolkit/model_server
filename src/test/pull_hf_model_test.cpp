@@ -30,6 +30,7 @@
 #include "src/pull_module/optimum_export.hpp"
 #include "src/servables_config_manager_module/listmodels.hpp"
 #include "src/modelextensions.hpp"
+#include "src/capi_frontend/server_settings.hpp"
 
 #include "../module.hpp"
 #include "../server.hpp"
@@ -797,4 +798,119 @@ TEST(ServerModulesBehaviorTests, PullAndStartModeErrorAndExpectFailAndNoOtherMod
     ASSERT_EQ(server.getModule(ovms::HF_MODEL_PULL_MODULE_NAME)->getState(), ovms::ModuleState::INITIALIZED);
     ASSERT_EQ(server.getModule(ovms::SERVABLE_MANAGER_MODULE_NAME), nullptr);
     ASSERT_EQ(server.getModule(ovms::SERVABLES_CONFIG_MANAGER_MODULE_NAME), nullptr);
+}
+
+// ===================== LoRA Pull Module Tests =====================
+
+class TestHfPullModelModuleForLora : public ovms::HfPullModelModule {
+public:
+    ovms::HFSettingsImpl& getHfSettings() { return this->hfSettings; }
+    ovms::Status testResolveHfLoraFilenames() { return this->resolveHfLoraFilenames(); }
+    ovms::Status testPullLoraAdapters(const std::string& graphDirectory) { return this->pullLoraAdapters(graphDirectory); }
+};
+
+class HfPullModelModuleLoraTest : public TestWithTempDir {};
+
+TEST_F(HfPullModelModuleLoraTest, ResolveHfLoraFilenames) {
+    SKIP_AND_EXIT_IF_NOT_RUNNING_UNSTABLE();
+    TestHfPullModelModuleForLora module;
+    auto& settings = module.getHfSettings();
+    settings.task = ovms::IMAGE_GENERATION_GRAPH;
+    ovms::ImageGenerationGraphSettingsImpl graphSettings;
+    ovms::LoraAdapterSettings adapter;
+    adapter.alias = "pokemon";
+    adapter.sourceLora = "juliensimon/sd-pokemon-lora";
+    adapter.safetensorsFile = "";
+    adapter.sourceType = ovms::LoraSourceType::HF_REPO;
+    graphSettings.loraAdapters.push_back(adapter);
+    settings.graphSettings = graphSettings;
+
+    auto status = module.testResolveHfLoraFilenames();
+    ASSERT_TRUE(status.ok()) << status.string();
+
+    const auto& resolved = std::get<ovms::ImageGenerationGraphSettingsImpl>(settings.graphSettings);
+    ASSERT_EQ(resolved.loraAdapters.size(), 1);
+    EXPECT_EQ(resolved.loraAdapters[0].safetensorsFile, "pytorch_lora_weights.safetensors");
+}
+
+TEST_F(HfPullModelModuleLoraTest, PullLoraAdaptersFromHfRepo) {
+    SKIP_AND_EXIT_IF_NOT_RUNNING_UNSTABLE();
+    TestHfPullModelModuleForLora module;
+    auto& settings = module.getHfSettings();
+    settings.task = ovms::IMAGE_GENERATION_GRAPH;
+    ovms::ImageGenerationGraphSettingsImpl graphSettings;
+    ovms::LoraAdapterSettings adapter;
+    adapter.alias = "pokemon";
+    adapter.sourceLora = "juliensimon/sd-pokemon-lora";
+    adapter.safetensorsFile = "";
+    adapter.sourceType = ovms::LoraSourceType::HF_REPO;
+    graphSettings.loraAdapters.push_back(adapter);
+    settings.graphSettings = graphSettings;
+
+    auto status = module.testPullLoraAdapters(this->directoryPath);
+    ASSERT_TRUE(status.ok()) << status.string();
+
+    auto loraFilePath = ovms::FileSystem::joinPath({this->directoryPath, "loras", "juliensimon/sd-pokemon-lora", "pytorch_lora_weights.safetensors"});
+    ASSERT_TRUE(std::filesystem::exists(loraFilePath)) << loraFilePath;
+    EXPECT_GT(std::filesystem::file_size(loraFilePath), 0);
+}
+
+TEST_F(HfPullModelModuleLoraTest, PullLoraAdaptersSkipsLocalFile) {
+    TestHfPullModelModuleForLora module;
+    auto& settings = module.getHfSettings();
+    settings.task = ovms::IMAGE_GENERATION_GRAPH;
+    ovms::ImageGenerationGraphSettingsImpl graphSettings;
+    ovms::LoraAdapterSettings adapter;
+    adapter.alias = "local_lora";
+    adapter.sourceLora = "/some/local/path/model.safetensors";
+    adapter.safetensorsFile = "model.safetensors";
+    adapter.sourceType = ovms::LoraSourceType::LOCAL_FILE;
+    graphSettings.loraAdapters.push_back(adapter);
+    settings.graphSettings = graphSettings;
+
+    auto status = module.testPullLoraAdapters(this->directoryPath);
+    ASSERT_TRUE(status.ok()) << status.string();
+    // No files should have been downloaded to the temp directory
+    EXPECT_TRUE(std::filesystem::is_empty(this->directoryPath));
+}
+
+TEST_F(HfPullModelModuleLoraTest, PullLoraAdaptersNonImageGenGraphIsNoOp) {
+    TestHfPullModelModuleForLora module;
+    auto& settings = module.getHfSettings();
+    settings.task = ovms::TEXT_GENERATION_GRAPH;
+    settings.graphSettings = ovms::TextGenGraphSettingsImpl{};
+
+    auto status = module.testPullLoraAdapters(this->directoryPath);
+    ASSERT_TRUE(status.ok()) << status.string();
+}
+
+// Full-flow test: download SD model + LoRA via --pull mode, verify files and graph.pbtxt.
+// This exercises: CLI parsing -> source_loras -> HF resolution -> LoRA download -> graph.pbtxt generation.
+// Runtime clone()+LoRA behavior is guaranteed by the GenAI API: clone() "reuses underlying models"
+// which share the AdapterController. Adapters are selected per-request via generate() properties.
+TEST_F(HfDownloaderPullHfModel, DownloadImageGenModelWithLoRA) {
+    SKIP_AND_EXIT_IF_NOT_RUNNING_UNSTABLE();
+    this->filesToPrintInCaseOfFailure.emplace_back("graph.pbtxt");
+    std::string modelName = "OpenVINO/stable-diffusion-v1-5-int8-ov";
+    std::string downloadPath = ovms::FileSystem::joinPath({this->directoryPath, "repository"});
+    std::string task = "image_generation";
+    std::string sourceLoras = "pokemon=juliensimon/sd-pokemon-lora";
+    ::SetUpServerForDownloadWithLoras(this->t, this->server, modelName, downloadPath, task, sourceLoras);
+
+    std::string basePath = ovms::FileSystem::joinPath({downloadPath, "OpenVINO", "stable-diffusion-v1-5-int8-ov"});
+    std::string graphPath = ovms::FileSystem::appendSlash(basePath) + "graph.pbtxt";
+
+    // Verify model was downloaded
+    ASSERT_TRUE(std::filesystem::exists(basePath)) << basePath;
+    ASSERT_TRUE(std::filesystem::exists(graphPath)) << graphPath;
+
+    // Verify LoRA adapter was downloaded
+    std::string loraDir = ovms::FileSystem::joinPath({basePath, "loras", "juliensimon", "sd-pokemon-lora"});
+    auto loraFiles = searchFilesRecursively(loraDir, {"pytorch_lora_weights.safetensors"});
+    ASSERT_FALSE(loraFiles.empty()) << "LoRA .safetensors not found in: " << loraDir;
+
+    // Verify graph.pbtxt contains the LoRA adapter entry
+    std::string graphContents = GetFileContents(graphPath);
+    EXPECT_NE(graphContents.find("lora_adapters"), std::string::npos) << "graph.pbtxt should contain lora_adapters";
+    EXPECT_NE(graphContents.find("pokemon"), std::string::npos) << "graph.pbtxt should reference pokemon alias";
 }

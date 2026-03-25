@@ -468,11 +468,34 @@ node: {
     }
 
     for (const auto& adapter : graphSettings.loraAdapters) {
-        std::string loraPath = "loras/" + adapter.sourceLora + "/" + adapter.safetensorsFile;
+        std::string loraPath;
+        if (adapter.sourceType == LoraSourceType::LOCAL_FILE) {
+            loraPath = adapter.sourceLora;
+        } else if (adapter.sourceType == LoraSourceType::HF_REPO) {
+            loraPath = "loras/" + adapter.sourceLora + "/" + adapter.safetensorsFile;
+        } else { // cURL direct link
+            loraPath = "loras/" + adapter.alias + "/" + adapter.safetensorsFile;
+        }
         oss << R"(
           lora_adapters { alias: ")" << adapter.alias << R"(" path: ")" << loraPath << R"(")";
         // Only omit alpha when default (1.0) - let proto handle it
         oss << R"( })";
+    }
+
+    for (const auto& composite : graphSettings.compositeLoraAdapters) {
+        oss << R"(
+          composite_lora_adapters {
+            alias: ")" << composite.alias << R"("
+)";
+        for (const auto& component : composite.components) {
+            oss << R"(            components { adapter_alias: ")" << component.adapterAlias << R"(")";
+            if (component.weight != 1.0f) {
+                oss << R"( weight: )" << component.weight;
+            }
+            oss << R"( }
+)";
+        }
+        oss << R"(          })";
     }
 
     oss << R"(

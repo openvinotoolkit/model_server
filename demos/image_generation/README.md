@@ -539,12 +539,12 @@ curl -O https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demo
 :sync: linux
 ```bash
 curl http://localhost:8000/v3/images/edits \
-  -F "model=diffusers/stable-diffusion-xl-1.0-inpainting-0.1" \
+  -F "model=OpenVINO/stable-diffusion-v1-5-int8-ov" \
   -F "prompt=a golden retriever dog sitting on a bench in a sunny park" \
   -F "image=@cat.png" \
   -F "mask=@cat_mask.png" \
   -F "num_inference_steps=50" \
-  -F "size=1024x1024" | jq -r '.data[0].b64_json' | base64 --decode > inpaint_output.png
+  -F "size=512x512" | jq -r '.data[0].b64_json' | base64 --decode > inpaint_output.png
 ```
 :::
 
@@ -552,12 +552,12 @@ curl http://localhost:8000/v3/images/edits \
 :sync: windows
 ```bat
 curl http://localhost:8000/v3/images/edits ^
-  -F "model=diffusers/stable-diffusion-xl-1.0-inpainting-0.1" ^
+  -F "model=OpenVINO/stable-diffusion-v1-5-int8-ov" ^
   -F "prompt=a golden retriever dog sitting on a bench in a sunny park" ^
   -F "image=@cat.png" ^
   -F "mask=@cat_mask.png" ^
   -F "num_inference_steps=50" ^
-  -F "size=1024x1024"
+  -F "size=512x512"
 ```
 :::
 
@@ -581,13 +581,13 @@ client = OpenAI(
 )
 
 response = client.images.edit(
-            model="diffusers/stable-diffusion-xl-1.0-inpainting-0.1",
+            model="OpenVINO/stable-diffusion-v1-5-int8-ov",
             image=open("cat.png", "rb"),
             mask=open("cat_mask.png", "rb"),
             prompt="a golden retriever dog sitting on a bench in a sunny park",
             extra_body={
                 "num_inference_steps": 50,
-                "size": "1024x1024"
+                "size": "512x512"
             }
         )
 base64_image = response.data[0].b64_json
@@ -616,12 +616,12 @@ curl -O https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demo
 :sync: linux
 ```bash
 curl http://localhost:8000/v3/images/edits \
-  -F "model=stable-diffusion-v1-5/stable-diffusion-inpainting" \
+  -F "model=OpenVINO/stable-diffusion-v1-5-int8-ov" \
   -F "prompt=a cat sitting on a bench in a park" \
   -F "image=@outpaint_input.png" \
   -F "mask=@outpaint_mask.png" \
   -F "num_inference_steps=50" \
-  -F "size=768x768" | jq -r '.data[0].b64_json' | base64 --decode > outpaint_output.png
+  -F "size=512x512" | jq -r '.data[0].b64_json' | base64 --decode > outpaint_output.png
 ```
 :::
 
@@ -629,12 +629,12 @@ curl http://localhost:8000/v3/images/edits \
 :sync: windows
 ```bat
 curl http://localhost:8000/v3/images/edits ^
-  -F "model=stable-diffusion-v1-5/stable-diffusion-inpainting" ^
+  -F "model=OpenVINO/stable-diffusion-v1-5-int8-ov" ^
   -F "prompt=a cat sitting on a bench in a park" ^
   -F "image=@outpaint_input.png" ^
   -F "mask=@outpaint_mask.png" ^
   -F "num_inference_steps=50" ^
-  -F "size=768x768"
+  -F "size=512x512"
 ```
 :::
 
@@ -658,13 +658,13 @@ client = OpenAI(
 )
 
 response = client.images.edit(
-            model="stable-diffusion-v1-5/stable-diffusion-inpainting",
+            model="OpenVINO/stable-diffusion-v1-5-int8-ov",
             image=open("outpaint_input.png", "rb"),
             mask=open("outpaint_mask.png", "rb"),
             prompt="a cat sitting on a bench in a park",
             extra_body={
                 "num_inference_steps": 50,
-                "size": "768x768"
+                "size": "512x512"
             }
         )
 base64_image = response.data[0].b64_json
