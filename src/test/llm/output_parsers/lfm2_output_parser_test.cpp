@@ -294,7 +294,7 @@ TEST_F(LFM2OutputParserTest, ParseToolCallOutputWithThreeToolCalls) {
         EXPECT_EQ(parsedOutput.toolCalls[1].arguments, "{\"param1\":\"data\",\"param2\":true}");
         EXPECT_EQ(parsedOutput.toolCalls[1].id.empty(), false);
         auto secondToolCallId = parsedOutput.toolCalls[1].id;
-        EXPECT_NE(firstToolCallId, secondToolCallId); 
+        EXPECT_NE(firstToolCallId, secondToolCallId);
 
         EXPECT_EQ(parsedOutput.toolCalls[2].name, "third_tool");
         EXPECT_EQ(parsedOutput.toolCalls[2].arguments, "{\"key\":\"value\"}");
