@@ -19,6 +19,17 @@
 
 namespace ovms {
 
+const std::string Lfm2ToolParser::TOOL_CALL_START_TAG = "<|tool_call_start|>";
+const std::string Lfm2ToolParser::TOOL_CALL_END_TAG = "<|tool_call_end|>";
+const std::string Lfm2ToolParser::TOOL_RESPONSE_START_TAG = "<|tool_response_start|>";
+const std::string Lfm2ToolParser::TOOL_RESPONSE_END_TAG = "<|tool_response_end|>";
+
+const std::string Lfm2ToolParser::TOOL_LIST_START_INDICATOR = "[";
+const std::string Lfm2ToolParser::TOOL_LIST_END_INDICATOR = "]";
+const std::string Lfm2ToolParser::TOOL_ARGS_START_INDICATOR = "(";
+const std::string Lfm2ToolParser::TOOL_ARGS_END_INDICATOR = ")";
+const std::string Lfm2ToolParser::TOOL_SEPARATOR_STR = ", ";
+
 void Lfm2ToolParser::writeArgumentOfAnyType(const rapidjson::Value& arg, rapidjson::Writer<rapidjson::StringBuffer>& writer) {
     if (arg.IsString()) {
         writer.String(arg.GetString());
@@ -48,7 +59,8 @@ void Lfm2ToolParser::writeArgumentOfAnyType(const rapidjson::Value& arg, rapidjs
 
 void Lfm2ToolParser::writeArgumentOfAnyType(const std::string& arg, rapidjson::Writer<rapidjson::StringBuffer>& writer) {
     std::string normalized = arg;
-    if (arg.find('{') != std::string::npos || arg.find('}') != std::string::npos || arg.find('[') != std::string::npos || arg.find(']') != std::string::npos) {
+    
+    if (arg[0] == '{' || arg.back() == '}' || arg[0] == '[' || arg.back() == ']') {
         std::replace(normalized.begin(), normalized.end(), '\'', '"');
         SPDLOG_LOGGER_INFO(llm_calculator_logger, "Argument contains curly braces or square brackets, replaced single quotes with double quotes for JSON parsing. Modified string: {}", normalized);
     } 
@@ -81,6 +93,12 @@ Lfm2ToolParser::Argument Lfm2ToolParser::parseSingleArgument(const std::string& 
     if (equalPos != std::string::npos) {
         argument.name = argumentStr.substr(0, equalPos);
         argument.value = argumentStr.substr(equalPos + 1);
+
+        if (argument.value[0] == '\'' && argument.value.back() == '\'') {
+            argument.value[0] = '"';
+            argument.value[argument.value.size() - 1] = '"';
+            SPDLOG_LOGGER_INFO(llm_calculator_logger, "Argument value is enclosed in single quotes, replaced with double quotes. Modified value: {}", argument.value);
+        } 
         SPDLOG_LOGGER_INFO(llm_calculator_logger, "Parsed argument - name: {}, value: {}", argument.name, argument.value);
     } else {
         argument.name = argumentStr;
@@ -111,9 +129,9 @@ std::vector<Lfm2ToolParser::Argument> Lfm2ToolParser::parseArguments(const std::
                 bracketDepth++;
             } else if (argumentsStr[i] == ']') {
                 bracketDepth--;
-            } else if (argumentsStr[i] == '"') {
+            } else if (argumentsStr[i] == '"' && argumentsStr[i-1] != '\\') {
                 quoteDepth = 1 - quoteDepth;
-            } else if (argumentsStr.substr(i, toolSeparatorStr.length()) == toolSeparatorStr && 
+            } else if (argumentsStr.substr(i, TOOL_SEPARATOR_STR.length()) == TOOL_SEPARATOR_STR && 
                        bracketDepth == 0 && braceDepth == 0 && quoteDepth == 0) {
                 commaPos = i;
                 break;
@@ -129,7 +147,7 @@ std::vector<Lfm2ToolParser::Argument> Lfm2ToolParser::parseArguments(const std::
         auto argStr = argumentsStr.substr(argPos, commaPos - argPos);
         args.push_back(argStr);
         SPDLOG_LOGGER_INFO(llm_calculator_logger, "Parsed argument string: {}", argStr);
-        argPos = commaPos + toolSeparatorStr.length();
+        argPos = commaPos + TOOL_SEPARATOR_STR.length();
     }
 
     for (const std::string& arg : args) {
@@ -138,83 +156,104 @@ std::vector<Lfm2ToolParser::Argument> Lfm2ToolParser::parseArguments(const std::
     return parsedArgs;
 }
 
+bool Lfm2ToolParser::parseInContentState() {
+    size_t pos = this->streamingContent.find(TOOL_CALL_START_TAG, this->streamingPosition);
+    size_t toolCallEndTagPos = this->streamingContent.find(TOOL_CALL_END_TAG, this->streamingPosition);
+    if (toolCallEndTagPos != std::string::npos && pos == std::string::npos) {
+        SPDLOG_LOGGER_INFO(llm_calculator_logger, "Detected end of tool call at position: {}", toolCallEndTagPos);
+        this->streamingPosition = toolCallEndTagPos + TOOL_CALL_END_TAG.length();
+        return false;
+    }
+    if (pos != std::string::npos) {
+        this->streamingPosition = pos + TOOL_CALL_START_TAG.length() + TOOL_LIST_START_INDICATOR.length();
+        this->currentState = State::ToolCallStarted;
+        SPDLOG_LOGGER_INFO(llm_calculator_logger, "Detected start of tool call at position: {}", pos);
+        return false;
+    }
+
+    return true;
+}
+
+bool Lfm2ToolParser::parseInToolCallState() {
+    size_t pos = this->streamingContent.find(TOOL_ARGS_START_INDICATOR, this->streamingPosition);
+
+    if (pos == std::string::npos) {
+        return false;
+    }
+
+    std::string toolName = this->streamingContent.substr(this->streamingPosition, pos - this->streamingPosition);
+    this->toolCall = ToolCall{generateRandomId(), toolName, ""};
+    SPDLOG_LOGGER_INFO(llm_calculator_logger, "Parsed tool name: {}", toolName);
+    this->streamingPosition = pos + TOOL_ARGS_START_INDICATOR.length();
+    this->currentState = State::ToolCallParameters;
+    this->toolCallIndex++;
+    return true;
+}
+
+
+bool Lfm2ToolParser::parseToolCallParametersState() {
+    size_t pos = this->streamingContent.find(TOOL_ARGS_END_INDICATOR, this->streamingPosition);
+    if (pos == std::string::npos) {
+        return false;
+    }
+    std::string argumentsStr = this->streamingContent.substr(this->streamingPosition, pos - this->streamingPosition);
+    SPDLOG_LOGGER_INFO(llm_calculator_logger, "Parsed arguments string: {}", argumentsStr);
+    std::vector<Argument> arguments = parseArguments(argumentsStr);
+
+    rapidjson::Document argsDoc(rapidjson::kObjectType);
+    rapidjson::StringBuffer sb;
+    rapidjson::Writer<rapidjson::StringBuffer> argsWriter(sb);
+    argsWriter.StartObject();
+
+    for (const Argument& argument : arguments) {
+        argsWriter.Key(argument.name.c_str());
+        writeArgumentOfAnyType(argument.value, argsWriter);
+    }
+
+    argsWriter.EndObject();
+    this->toolCall.arguments = sb.GetString();
+    this->currentState = State::ToolCallEnded;
+    this->streamingPosition = pos + TOOL_ARGS_END_INDICATOR.length();
+
+    return true;
+}
+
+bool Lfm2ToolParser::parseInToolCallEndedState() {
+    size_t pos = this->streamingContent.find(TOOL_LIST_END_INDICATOR, this->streamingPosition);
+    size_t toolSeparatorPos = this->streamingContent.find(TOOL_SEPARATOR_STR, this->streamingPosition);
+    size_t toolCallEndTagPos = this->streamingContent.find(TOOL_CALL_END_TAG, this->streamingPosition);
+    SPDLOG_LOGGER_INFO(llm_calculator_logger, "Current state: ToolCallEnded. Streaming content from current position: {}", this->streamingContent.substr(this->streamingPosition));
+    if (pos == std::string::npos && toolSeparatorPos == std::string::npos && toolCallEndTagPos == std::string::npos) {
+        return false;
+    } else if (toolSeparatorPos != std::string::npos && toolSeparatorPos < pos) {
+        this->streamingPosition = toolSeparatorPos + TOOL_SEPARATOR_STR.length();
+        this->currentState = State::ToolCallStarted;
+        SPDLOG_LOGGER_INFO(llm_calculator_logger, "Detected separator between tool calls at position: {}, expecting another tool call to start", toolSeparatorPos);
+    } else if (toolCallEndTagPos != std::string::npos) {
+        SPDLOG_LOGGER_INFO(llm_calculator_logger, "Detected end of tool call at position: {}", toolCallEndTagPos);
+        this->streamingPosition = toolCallEndTagPos + TOOL_CALL_END_TAG.length();
+        this->currentState = State::AfterToolCall;
+    } else {
+        this->streamingPosition = pos + TOOL_LIST_END_INDICATOR.length();
+        this->currentState = State::AfterToolCall;
+        SPDLOG_LOGGER_INFO(llm_calculator_logger, "Detected end of tool list at position: {}, returning to content state", pos);
+    }
+    return true;
+}
+
 bool Lfm2ToolParser::parseNewContent() {
     switch(this->currentState) { // to think about spliting every state into separate functions if it grows too much
         case State::Content: {
-            size_t pos = this->streamingContent.find(toolCallStartTag, this->streamingPosition);
-            size_t toolCallEndTagPos = this->streamingContent.find(toolCallEndTag, this->streamingPosition);
-            if (toolCallEndTagPos != std::string::npos && pos == std::string::npos) {
-                SPDLOG_LOGGER_INFO(llm_calculator_logger, "Detected end of tool call at position: {}", toolCallEndTagPos);
-                this->streamingPosition = toolCallEndTagPos + toolCallEndTag.length();
-                return false;
-            }
-            if (pos != std::string::npos) {
-                this->streamingPosition = pos + toolCallStartTag.length() + toolListStartIndicator.length();
-                this->currentState = State::ToolCallStarted;
-                SPDLOG_LOGGER_INFO(llm_calculator_logger, "Detected start of tool call at position: {}", pos);
-                return false;
-            }
-
-            return true;
-            break;
+            return parseInContentState();
         }
         case State::ToolCallStarted: {
-            size_t pos = this->streamingContent.find(toolArgsStartIndicator, this->streamingPosition);
-            if (pos != std::string::npos) {
-                std::string toolName = this->streamingContent.substr(this->streamingPosition, pos - this->streamingPosition);
-                this->toolCall = ToolCall{generateRandomId(), toolName, ""};
-                SPDLOG_LOGGER_INFO(llm_calculator_logger, "Parsed tool name: {}", toolName);
-                this->streamingPosition = pos + toolArgsStartIndicator.length();
-                this->currentState = State::ToolCallParameters;
-                toolCallIndex++;
-                return true;
-            }
-            break;
+            return parseInToolCallState();
         }
         case State::ToolCallParameters: {
-            size_t pos = this->streamingContent.find(toolArgsEndIndicator, this->streamingPosition);
-            if (pos != std::string::npos) {
-                std::string argumentsStr = this->streamingContent.substr(this->streamingPosition, pos - this->streamingPosition);
-                SPDLOG_LOGGER_INFO(llm_calculator_logger, "Parsed arguments string: {}", argumentsStr);
-                std::vector<Argument> arguments = parseArguments(argumentsStr);
-
-                rapidjson::Document argsDoc(rapidjson::kObjectType);
-                rapidjson::StringBuffer sb;
-                rapidjson::Writer<rapidjson::StringBuffer> argsWriter(sb);
-                argsWriter.StartObject();
-                for (const Argument& argument : arguments) {
-                    argsWriter.Key(argument.name.c_str());
-                    writeArgumentOfAnyType(argument.value, argsWriter);
-                }                
-                argsWriter.EndObject();
-                this->toolCall.arguments = sb.GetString();
-                this->currentState = State::ToolCallEnded;
-                this->streamingPosition = pos + toolArgsEndIndicator.length();
-                return true;
-            }
-            break;
+            return parseToolCallParametersState();
         }
         case State::ToolCallEnded: {
-            size_t pos = this->streamingContent.find(toolListEndIndicator, this->streamingPosition);
-            size_t toolSeparatorPos = this->streamingContent.find(toolSeparatorStr, this->streamingPosition);
-            size_t toolCallEndTagPos = this->streamingContent.find(toolCallEndTag, this->streamingPosition);
-            SPDLOG_LOGGER_INFO(llm_calculator_logger, "Current state: ToolCallEnded. Streaming content from current position: {}", this->streamingContent.substr(this->streamingPosition));
-            if (pos == std::string::npos && toolSeparatorPos == std::string::npos && toolCallEndTagPos == std::string::npos) {
-                return false;
-            } else if (toolSeparatorPos != std::string::npos && toolSeparatorPos < pos) {
-                this->streamingPosition = toolSeparatorPos + toolSeparatorStr.length();
-                this->currentState = State::ToolCallStarted;
-                SPDLOG_LOGGER_INFO(llm_calculator_logger, "Detected separator between tool calls at position: {}, expecting another tool call to start", toolSeparatorPos);
-            } else if (toolCallEndTagPos != std::string::npos) {
-                SPDLOG_LOGGER_INFO(llm_calculator_logger, "Detected end of tool call at position: {}", toolCallEndTagPos);
-                this->streamingPosition = toolCallEndTagPos + toolCallEndTag.length();
-                this->currentState = State::AfterToolCall;
-            } else {
-                this->streamingPosition = pos + toolListEndIndicator.length();
-                this->currentState = State::AfterToolCall;
-                SPDLOG_LOGGER_INFO(llm_calculator_logger, "Detected end of tool list at position: {}, returning to content state", pos);
-            }
-            return true;
+            return parseInToolCallEndedState();
         }
         case State::AfterToolCall: break;
     }
@@ -271,13 +310,13 @@ std::optional<rapidjson::Document> Lfm2ToolParser::parseChunk(const std::string&
 }
 
 bool Lfm2ToolParser::parseSingleToolCall(const std::string& toolStr, ToolCall& toolCall) {
-    size_t argsPos = toolStr.find(toolArgsStartIndicator);
+    size_t argsPos = toolStr.find(TOOL_ARGS_START_INDICATOR);
     if (argsPos != std::string::npos) {
         std::string toolName = toolStr.substr(0, argsPos);                
         SPDLOG_LOGGER_INFO(llm_calculator_logger, "Parsed tool name: {}", toolName);
 
-        int argsStrLen = toolStr.length() - argsPos - toolArgsStartIndicator.length() - toolArgsEndIndicator.length();
-        std::string argsStr = toolStr.substr(argsPos + toolArgsStartIndicator.length(), argsStrLen);
+        int argsStrLen = toolStr.length() - argsPos - TOOL_ARGS_START_INDICATOR.length() - TOOL_ARGS_END_INDICATOR.length();
+        std::string argsStr = toolStr.substr(argsPos + TOOL_ARGS_START_INDICATOR.length(), argsStrLen);
         SPDLOG_LOGGER_INFO(llm_calculator_logger, "Parsed args string: {}", argsStr);
         std::vector<Lfm2ToolParser::Argument> arguments = parseArguments(argsStr);
 
@@ -305,37 +344,37 @@ void Lfm2ToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t
     uint8_t main_guard = 0;
     while (pos != std::string::npos && main_guard < 100) {
         std::pair<size_t, size_t> toolCallPosition;
-        size_t start = parsedOutput.content.find(toolCallStartTag, pos);
+        size_t start = parsedOutput.content.find(TOOL_CALL_START_TAG, pos);
         if (start == std::string::npos) {
             break;
         }
         toolCallPosition.first = start;
-        start += toolCallStartTag.length();
-        size_t end = parsedOutput.content.find(toolCallEndTag, start);
+        start += TOOL_CALL_START_TAG.length();
+        size_t end = parsedOutput.content.find(TOOL_CALL_END_TAG, start);
         if(end == std::string::npos) {
-            end = parsedOutput.content.rfind(toolListEndIndicator, end);
+            end = parsedOutput.content.rfind(TOOL_LIST_END_INDICATOR, end);
             if (end == std::string::npos) {
                 SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Malformed tool call in content, no tool end tag or tool list end tag found for tool call starting at position {}", start);
                 break;
             }
-           toolCallPosition.second = end + toolListEndIndicator.length();
-           end += toolListEndIndicator.length();
+           toolCallPosition.second = end + TOOL_LIST_END_INDICATOR.length();
+           end += TOOL_LIST_END_INDICATOR.length();
            SPDLOG_LOGGER_INFO(llm_calculator_logger, "No tool call end tag found, but found tool list end tag, treating content between start and this position as tool list");
         } else { 
-            toolCallPosition.second = end + toolCallEndTag.length();
+            toolCallPosition.second = end + TOOL_CALL_END_TAG.length();
             SPDLOG_LOGGER_INFO(llm_calculator_logger, "Found tool call end tag for tool call starting at position {}", start);
         }
         toolCallPositions.push_back(toolCallPosition);
-        std::string toolListStr = parsedOutput.content.substr(start + toolListStartIndicator.length(), end - start - toolListStartIndicator.length() - toolListEndIndicator.length());
+        std::string toolListStr = parsedOutput.content.substr(start + TOOL_LIST_START_INDICATOR.length(), end - start - TOOL_LIST_START_INDICATOR.length() - TOOL_LIST_END_INDICATOR.length());
         SPDLOG_LOGGER_INFO(llm_calculator_logger, "Parsed tool list string: {}", toolListStr);
         uint8_t guard = 0;
         while (!toolListStr.empty() && guard < 100) {
-            size_t toolEndPos = toolListStr.find(toolArgsEndIndicator);
+            size_t toolEndPos = toolListStr.find(TOOL_ARGS_END_INDICATOR);
             std::string singleTool;
             if (toolEndPos != std::string::npos) {
-                singleTool = toolListStr.substr(0, toolEndPos + toolArgsEndIndicator.length());
-                if(toolEndPos + toolArgsEndIndicator.length() < toolListStr.length()) {
-                    toolListStr = toolListStr.substr(toolEndPos + toolArgsEndIndicator.length() + toolSeparatorStr.length());
+                singleTool = toolListStr.substr(0, toolEndPos + TOOL_ARGS_END_INDICATOR.length());
+                if(toolEndPos + TOOL_ARGS_END_INDICATOR.length() < toolListStr.length()) {
+                    toolListStr = toolListStr.substr(toolEndPos + TOOL_ARGS_END_INDICATOR.length() + TOOL_SEPARATOR_STR.length());
                 } else {
                     toolListStr.clear();
                 }
