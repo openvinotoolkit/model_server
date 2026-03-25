@@ -16,7 +16,6 @@ With the rise of AI PC capabilities, hosting own Visual Studio code assistant is
 :sync: OpenVINO/Qwen3-Coder-30B-A3B-Instruct-int4-ov
 ```bat
 mkdir c:\models
-set MOE_USE_MICRO_GEMM_PREFILL=0  # temporary workaround to improve accuracy with long context
 ovms --model_repository_path c:\models --source_model OpenVINO/Qwen3-Coder-30B-A3B-Instruct-int4-ov --task text_generation --target_device GPU --tool_parser qwen3coder --rest_port 8000 --cache_dir .ovcache --model_name Qwen3-Coder-30B-A3B-Instruct
 ```
 > **Note:** For deployment, the model requires ~16GB disk space and recommended 19GB+ of VRAM on the GPU.
@@ -26,7 +25,6 @@ ovms --model_repository_path c:\models --source_model OpenVINO/Qwen3-Coder-30B-A
 :sync: OpenVINO/Qwen3-Coder-30B-A3B-Instruct-int8-ov
 ```bat
 mkdir c:\models
-set MOE_USE_MICRO_GEMM_PREFILL=0  # temporary workaround to improve accuracy with long context
 ovms --model_repository_path c:\models --source_model OpenVINO/Qwen3-Coder-30B-A3B-Instruct-int8-ov --task text_generation --target_device GPU --tool_parser qwen3coder --rest_port 8000 --cache_dir .ovcache --model_name Qwen3-Coder-30B-A3B-Instruct
 ```
 > **Note:** For deployment, the model requires ~16GB disk space and recommended 34GB+ of VRAM on the GPU.
@@ -66,7 +64,7 @@ ovms --model_repository_path c:\models --source_model OpenVINO/Qwen3-8B-int4-cw-
 :sync: OpenVINO/Qwen3-Coder-30B-A3B-Instruct-int4-ov
 ```bash
 mkdir -p models
-docker run -d -p 8000:8000 --rm -e MOE_USE_MICRO_GEMM_PREFILL=0 --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) \
+docker run -d -p 8000:8000 --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) \
     openvino/model_server:weekly \
     --model_repository_path /models --source_model OpenVINO/Qwen3-Coder-30B-A3B-Instruct-int4-ov --task text_generation --target_device GPU --tool_parser qwen3coder --rest_port 8000 --model_name Qwen3-Coder-30B-A3B-Instruct
 ```
@@ -77,7 +75,7 @@ docker run -d -p 8000:8000 --rm -e MOE_USE_MICRO_GEMM_PREFILL=0 --user $(id -u):
 :sync: OpenVINO/Qwen3-Coder-30B-A3B-Instruct-int8-ov
 ```bash
 mkdir -p models
-docker run -d -p 8000:8000 --rm -e MOE_USE_MICRO_GEMM_PREFILL=0 --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) \
+docker run -d -p 8000:8000 --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) \
     openvino/model_server:weekly \
     --model_repository_path /models --source_model OpenVINO/Qwen3-Coder-30B-A3B-Instruct-int8-ov --task text_generation --target_device GPU --tool_parser qwen3coder --rest_port 8000 --model_name Qwen3-Coder-30B-A3B-Instruct
 ```

@@ -166,6 +166,7 @@ ImageGenerationPipelines::ImageGenerationPipelines(const ImageGenPipelineArgs& a
     }
 
     if (!inpaintingPipeline && !image2ImagePipeline && !text2ImagePipeline) {
+        SPDLOG_ERROR("Failed to create any image generation pipeline from: {}", args.modelsPath);
         throw std::runtime_error("Failed to create any image generation pipeline from: " + args.modelsPath);
     }
 

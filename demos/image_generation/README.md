@@ -381,7 +381,7 @@ curl http://localhost:8000/v3/models
       "id": "OpenVINO/stable-diffusion-v1-5-int8-ov",
       "object": "model",
       "created": 0,
-      "owned_by": "openvinotoolkit"
+      "owned_by": "OVMS"
     }
   ]
 }
@@ -394,6 +394,8 @@ A single servable exposes the following endpoints:
 - **Image-to-image**: `images/edits` — multipart form with `image` + `prompt` (no mask)
 - **Inpainting**: `images/edits` — multipart form with `image` + `mask` + `prompt`
 - **Outpainting**: `images/edits` — multipart form with `image` + `mask` + `prompt` (image placed on larger canvas, mask marks the area to fill)
+
+> **Note:** Inpainting/outpainting requests are processed sequentially — concurrent requests will be queued.
 
 > **Note:** For inpainting/outpainting, dedicated inpainting models (e.g. `stable-diffusion-v1-5/stable-diffusion-inpainting`) only support the `images/edits` endpoint. Check [supported models](https://openvinotoolkit.github.io/openvino.genai/docs/supported-models/#image-generation-models).
 
@@ -526,12 +528,6 @@ Output file (`edit_output.png`):
 
 Inpainting replaces a masked region in an image based on the prompt. The `mask` is a black-and-white image where white pixels mark the area to repaint.
 
-Download sample images:
-```console
-curl -O https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/image_generation/cat.png
-curl -O https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/image_generation/cat_mask.png
-```
-
 ![cat](./cat.png) ![cat_mask](./cat_mask.png)
 
 ::::{tab-set}
@@ -539,12 +535,12 @@ curl -O https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demo
 :sync: linux
 ```bash
 curl http://localhost:8000/v3/images/edits \
-  -F "model=OpenVINO/stable-diffusion-v1-5-int8-ov" \
+  -F "model=diffusers/stable-diffusion-xl-1.0-inpainting-0.1" \
   -F "prompt=a golden retriever dog sitting on a bench in a sunny park" \
   -F "image=@cat.png" \
   -F "mask=@cat_mask.png" \
   -F "num_inference_steps=50" \
-  -F "size=512x512" | jq -r '.data[0].b64_json' | base64 --decode > inpaint_output.png
+  -F "size=1024x1024" | jq -r '.data[0].b64_json' | base64 --decode > inpaint_output.png
 ```
 :::
 
@@ -552,12 +548,12 @@ curl http://localhost:8000/v3/images/edits \
 :sync: windows
 ```bat
 curl http://localhost:8000/v3/images/edits ^
-  -F "model=OpenVINO/stable-diffusion-v1-5-int8-ov" ^
+  -F "model=diffusers/stable-diffusion-xl-1.0-inpainting-0.1" ^
   -F "prompt=a golden retriever dog sitting on a bench in a sunny park" ^
   -F "image=@cat.png" ^
   -F "mask=@cat_mask.png" ^
   -F "num_inference_steps=50" ^
-  -F "size=512x512"
+  -F "size=1024x1024"
 ```
 :::
 
@@ -581,13 +577,13 @@ client = OpenAI(
 )
 
 response = client.images.edit(
-            model="OpenVINO/stable-diffusion-v1-5-int8-ov",
+            model="diffusers/stable-diffusion-xl-1.0-inpainting-0.1",
             image=open("cat.png", "rb"),
             mask=open("cat_mask.png", "rb"),
             prompt="a golden retriever dog sitting on a bench in a sunny park",
             extra_body={
                 "num_inference_steps": 50,
-                "size": "512x512"
+                "size": "1024x1024"
             }
         )
 base64_image = response.data[0].b64_json
@@ -603,12 +599,6 @@ Outpainting extends an image beyond its original borders. Prepare two images:
 - **outpaint_input.png** — the original image centered on a larger canvas (e.g. 768×768) with black borders
 - **outpaint_mask.png** — white where the new content should be generated (the borders), black where the original image is
 
-Download sample images:
-```console
-curl -O https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/image_generation/outpaint_input.png
-curl -O https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/image_generation/outpaint_mask.png
-```
-
 ![outpaint_input](./outpaint_input.png) ![outpaint_mask](./outpaint_mask.png)
 
 ::::{tab-set}
@@ -616,12 +606,12 @@ curl -O https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demo
 :sync: linux
 ```bash
 curl http://localhost:8000/v3/images/edits \
-  -F "model=OpenVINO/stable-diffusion-v1-5-int8-ov" \
+  -F "model=stable-diffusion-v1-5/stable-diffusion-inpainting" \
   -F "prompt=a cat sitting on a bench in a park" \
   -F "image=@outpaint_input.png" \
   -F "mask=@outpaint_mask.png" \
   -F "num_inference_steps=50" \
-  -F "size=512x512" | jq -r '.data[0].b64_json' | base64 --decode > outpaint_output.png
+  -F "size=768x768" | jq -r '.data[0].b64_json' | base64 --decode > outpaint_output.png
 ```
 :::
 
@@ -629,12 +619,12 @@ curl http://localhost:8000/v3/images/edits \
 :sync: windows
 ```bat
 curl http://localhost:8000/v3/images/edits ^
-  -F "model=OpenVINO/stable-diffusion-v1-5-int8-ov" ^
+  -F "model=stable-diffusion-v1-5/stable-diffusion-inpainting" ^
   -F "prompt=a cat sitting on a bench in a park" ^
   -F "image=@outpaint_input.png" ^
   -F "mask=@outpaint_mask.png" ^
   -F "num_inference_steps=50" ^
-  -F "size=512x512"
+  -F "size=768x768"
 ```
 :::
 
@@ -658,13 +648,13 @@ client = OpenAI(
 )
 
 response = client.images.edit(
-            model="OpenVINO/stable-diffusion-v1-5-int8-ov",
+            model="stable-diffusion-v1-5/stable-diffusion-inpainting",
             image=open("outpaint_input.png", "rb"),
             mask=open("outpaint_mask.png", "rb"),
             prompt="a cat sitting on a bench in a park",
             extra_body={
                 "num_inference_steps": 50,
-                "size": "512x512"
+                "size": "768x768"
             }
         )
 base64_image = response.data[0].b64_json

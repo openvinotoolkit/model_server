@@ -505,6 +505,14 @@ int Server::startServerFromSettings(ServerSettingsImpl& serverSettings, ModelsSe
     OvmsExitGuard exitStatusGuard(*this);
     installSignalHandlers();
     int result = OVMS_EX_OK;
+    // TODO This is WA for concurrency handling issue in iGPU for qwen3-MOE models. It is expected to be fixed in 2026.2
+    if (getenv("MOE_USE_MICRO_GEMM_PREFILL") == nullptr) {
+#ifdef _WIN32
+        _putenv_s("MOE_USE_MICRO_GEMM_PREFILL", "0");
+#else
+        setenv("MOE_USE_MICRO_GEMM_PREFILL", "0", 0);
+#endif
+    }
 
     try {
         Status ret = startFromSettings(&serverSettings, &modelsSettings);

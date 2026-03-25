@@ -21,7 +21,7 @@
 #include "../capi_frontend/server_settings.hpp"
 
 namespace ovms {
-
+struct Libgt2InitGuard;
 class HfPullModelModule : public Module {
 protected:
     HFSettingsImpl hfSettings;
@@ -44,4 +44,6 @@ protected:
     Status resolveHfLoraFilenames();
     Status pullLoraAdapters(const std::string& graphDirectory);
 };
+
+std::variant<ovms::Status, std::unique_ptr<Libgt2InitGuard>> createLibGitGuard();
 }  // namespace ovms

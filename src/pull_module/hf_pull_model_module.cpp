@@ -93,7 +93,7 @@ static std::variant<ovms::Status, Libgit2Options> prepareLibgit2Opts() {
     return opts;
 }
 
-std::variant<ovms::Status, std::unique_ptr<Libgt2InitGuard>> createGuard() {
+std::variant<ovms::Status, std::unique_ptr<Libgt2InitGuard>> createLibGitGuard() {
     auto optsOrError = prepareLibgit2Opts();
     RETURN_IF_ERROR(optsOrError);
     auto initGuard = std::make_unique<Libgt2InitGuard>(std::get<Libgit2Options>(optsOrError));
@@ -108,7 +108,7 @@ Status HfPullModelModule::start(const ovms::Config& config) {
     state = ModuleState::STARTED_INITIALIZE;
     SPDLOG_TRACE("{} starting", HF_MODEL_PULL_MODULE_NAME);
     if (config.getServerSettings().hfSettings.downloadType == GIT_CLONE_DOWNLOAD) {
-        auto guardOrError = createGuard();
+        auto guardOrError = createLibGitGuard();
         RETURN_IF_ERROR(guardOrError);
     }
     this->hfSettings = config.getServerSettings().hfSettings;
@@ -257,7 +257,7 @@ Status HfPullModelModule::clone() {
     std::unique_ptr<IModelDownloader> downloader;
     std::variant<ovms::Status, std::unique_ptr<Libgt2InitGuard>> guardOrError;
     if (this->hfSettings.downloadType == GIT_CLONE_DOWNLOAD) {
-        guardOrError = createGuard();
+        guardOrError = createLibGitGuard();
         if (std::holds_alternative<Status>(guardOrError)) {
             return std::get<Status>(guardOrError);
         }

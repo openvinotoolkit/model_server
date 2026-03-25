@@ -33,6 +33,7 @@ namespace ovms {
 // and returns it on destruction, serializing concurrent pipeline access.
 class PipelineSlotGuard {
 public:
+    // Blocks until a pipeline slot becomes available.
     explicit PipelineSlotGuard(Queue<int>& queue) :
         queue_(queue),
         streamId_(queue_.getIdleStream().get()) {}
