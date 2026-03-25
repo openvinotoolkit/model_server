@@ -176,6 +176,10 @@ void updateUsage(CompletionUsageStatistics& usage, const std::vector<int64_t>& g
 std::optional<std::string> mapFinishReason(ov::genai::GenerationFinishReason finishReason, bool hasToolCalls);
 std::string convertOpenAIResponseFormatToStructuralTagStringFormat(const rapidjson::Value& openAIFormat);
 
+// Constants shared by parseMessages and parseInput
+constexpr std::string_view BASE64_PREFIX = "base64,";
+constexpr int64_t MAX_IMAGE_SIZE_BYTES = 20000000;  // 20MB
+
 // Image download utilities shared by parseMessages and parseInput
 absl::Status downloadImage(const char* url, std::string& image, const int64_t& sizeLimit);
 bool isDomainAllowed(const std::vector<std::string>& allowedDomains, const char* url);

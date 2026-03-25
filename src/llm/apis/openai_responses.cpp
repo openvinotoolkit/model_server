@@ -47,9 +47,6 @@ using namespace rapidjson;
 
 namespace ovms {
 
-constexpr std::string_view RESPONSES_BASE64_PREFIX = "base64,";
-constexpr int64_t RESPONSES_MAX_IMAGE_SIZE_BYTES = 20000000;  // 20MB
-
 // --- Request parsing ---
 
 absl::Status OpenAIResponsesHandler::parseRequest(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength,
@@ -150,12 +147,12 @@ absl::Status OpenAIResponsesHandler::parseInput(std::optional<std::string> allow
                         return absl::InvalidArgumentError("input_image.image_url must be a string or object");
                     }
 
-                    std::size_t pos = imageUrl.find(RESPONSES_BASE64_PREFIX);
+                    std::size_t pos = imageUrl.find(BASE64_PREFIX);
                     std::string decoded;
                     ov::Tensor tensor;
                     if (pos != std::string::npos) {
                         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Loading image from base64 string");
-                        size_t offset = pos + RESPONSES_BASE64_PREFIX.length();
+                        size_t offset = pos + BASE64_PREFIX.length();
                         if (!absl::Base64Unescape(std::string_view(imageUrl.data() + offset, imageUrl.size() - offset), &decoded)) {
                             return absl::InvalidArgumentError("Invalid base64 string in request");
                         }
@@ -172,7 +169,7 @@ absl::Status OpenAIResponsesHandler::parseInput(std::optional<std::string> allow
                         if (!allowedMediaDomains.has_value() || !isDomainAllowed(allowedMediaDomains.value(), imageUrl.c_str())) {
                             return absl::InvalidArgumentError("Given url does not match any allowed domain from allowed_media_domains");
                         }
-                        auto status = downloadImage(imageUrl.c_str(), decoded, RESPONSES_MAX_IMAGE_SIZE_BYTES);
+                        auto status = downloadImage(imageUrl.c_str(), decoded, MAX_IMAGE_SIZE_BYTES);
                         if (status != absl::OkStatus()) {
                             return status;
                         }
@@ -1112,7 +1109,7 @@ std::string OpenAIResponsesHandler::serializeStreamingCreatedEvent() {
         return "";
     }
     responsesState.createdSent = true;
-    const auto createdAt = std::chrono::duration_cast<std::chrono::microseconds>(created.time_since_epoch()).count();
+    const auto createdAt = std::chrono::duration_cast<std::chrono::seconds>(created.time_since_epoch()).count();
     const std::string responseId = "resp-" + std::to_string(createdAt);
     StringBuffer buffer;
     Writer<StringBuffer> writer(buffer);
@@ -1128,7 +1125,7 @@ std::string OpenAIResponsesHandler::serializeStreamingInProgressEvent() {
         return "";
     }
     responsesState.inProgressSent = true;
-    const auto createdAt = std::chrono::duration_cast<std::chrono::microseconds>(created.time_since_epoch()).count();
+    const auto createdAt = std::chrono::duration_cast<std::chrono::seconds>(created.time_since_epoch()).count();
     const std::string responseId = "resp-" + std::to_string(createdAt);
     StringBuffer buffer;
     Writer<StringBuffer> writer(buffer);
@@ -1141,24 +1138,20 @@ std::string OpenAIResponsesHandler::serializeStreamingInProgressEvent() {
 
 std::string OpenAIResponsesHandler::serializeStreamingChunk(const std::string& chunkResponse, ov::genai::GenerationFinishReason finishReason) {
     OVMS_PROFILE_FUNCTION();
-    const auto createdAt = std::chrono::duration_cast<std::chrono::microseconds>(created.time_since_epoch()).count();
+    const auto createdAt = std::chrono::duration_cast<std::chrono::seconds>(created.time_since_epoch()).count();
     const std::string responseId = "resp-" + std::to_string(createdAt);
     const std::string outputItemId = "msg-0";
     const std::string reasoningItemId = "rs-0";
 
     std::vector<std::string> events;
-    // Fallback: emit any lifecycle events not yet sent
-    if (!responsesState.createdSent) {
-        std::string createdEvent = serializeStreamingCreatedEvent();
-        if (!createdEvent.empty()) {
-            events.emplace_back(std::move(createdEvent));
-        }
+    // Fallback: emit any lifecycle events not yet sent (methods are idempotent)
+    std::string createdEvent = serializeStreamingCreatedEvent();
+    if (!createdEvent.empty()) {
+        events.emplace_back(std::move(createdEvent));
     }
-    if (!responsesState.inProgressSent) {
-        std::string inProgressEvent = serializeStreamingInProgressEvent();
-        if (!inProgressEvent.empty()) {
-            events.emplace_back(std::move(inProgressEvent));
-        }
+    std::string inProgressEvent = serializeStreamingInProgressEvent();
+    if (!inProgressEvent.empty()) {
+        events.emplace_back(std::move(inProgressEvent));
     }
 
     if (outputParser != nullptr) {
@@ -1303,21 +1296,18 @@ std::string OpenAIResponsesHandler::serializeStreamingChunk(const std::string& c
 }
 
 std::string OpenAIResponsesHandler::serializeFailedEvent(const std::string& errorMessage, ResponsesErrorCode errorCode) {
-    const auto createdAt = std::chrono::duration_cast<std::chrono::microseconds>(created.time_since_epoch()).count();
+    const auto createdAt = std::chrono::duration_cast<std::chrono::seconds>(created.time_since_epoch()).count();
     const std::string responseId = "resp-" + std::to_string(createdAt);
 
     std::vector<std::string> events;
-    if (!responsesState.createdSent) {
-        std::string createdEvent = serializeStreamingCreatedEvent();
-        if (!createdEvent.empty()) {
-            events.emplace_back(std::move(createdEvent));
-        }
+    // Emit any lifecycle events not yet sent (methods are idempotent)
+    std::string createdEvent = serializeStreamingCreatedEvent();
+    if (!createdEvent.empty()) {
+        events.emplace_back(std::move(createdEvent));
     }
-    if (!responsesState.inProgressSent) {
-        std::string inProgressEvent = serializeStreamingInProgressEvent();
-        if (!inProgressEvent.empty()) {
-            events.emplace_back(std::move(inProgressEvent));
-        }
+    std::string inProgressEvent = serializeStreamingInProgressEvent();
+    if (!inProgressEvent.empty()) {
+        events.emplace_back(std::move(inProgressEvent));
     }
 
     events.emplace_back(serializeFailedEventBody(responseId, createdAt, errorMessage, errorCode));

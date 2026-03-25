@@ -208,7 +208,9 @@ absl::Status VisualLanguageModelLegacyServable::preparePartialResponse(std::shar
         executionContext->lastStreamerCallbackOutput = "";
     }
     if (generationStatus != std::future_status::ready) {  // continue
-        if (lastTextChunk.size() > 0) {
+        // For RESPONSES endpoint, always call serializeStreamingChunk so that
+        // output item initialization events are emitted even before the tokenizer produces text.
+        if (lastTextChunk.size() > 0 || executionContext->apiHandler->getEndpoint() == Endpoint::RESPONSES) {
             std::string serializedChunk = executionContext->apiHandler->serializeStreamingChunk(lastTextChunk, ov::genai::GenerationFinishReason::NONE);
             if (!serializedChunk.empty()) {
                 executionContext->response = wrapTextInServerSideEventMessage(serializedChunk);

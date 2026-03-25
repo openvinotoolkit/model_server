@@ -43,8 +43,6 @@ using namespace rapidjson;
 namespace ovms {
 
 constexpr size_t DEFAULT_MAX_STOP_WORDS = 16;  // same as deep-seek
-constexpr std::string_view BASE64_PREFIX = "base64,";
-constexpr int64_t MAX_IMAGE_SIZE_BYTES = 20000000;  // 20MB
 
 namespace {
 

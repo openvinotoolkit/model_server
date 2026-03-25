@@ -48,9 +48,6 @@ using namespace rapidjson;
 
 namespace ovms {
 
-constexpr std::string_view COMPLETIONS_BASE64_PREFIX = "base64,";
-constexpr int64_t COMPLETIONS_MAX_IMAGE_SIZE_BYTES = 20000000;  // 20MB
-
 static bool hasToolCallsInStreamingDelta(const rapidjson::Document& delta) {
     if (!delta.HasMember("delta") || !delta["delta"].IsObject()) {
         return false;
@@ -247,12 +244,12 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
                             return absl::InvalidArgumentError("Invalid message structure - image_url does not have url field");
                         }
                         std::string url = imageUrl["url"].GetString();
-                        std::size_t pos = url.find(COMPLETIONS_BASE64_PREFIX);
+                        std::size_t pos = url.find(BASE64_PREFIX);
                         std::string decoded;
                         ov::Tensor tensor;
                         if (pos != std::string::npos) {
                             SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Loading image from base64 string");
-                            size_t offset = pos + COMPLETIONS_BASE64_PREFIX.length();
+                            size_t offset = pos + BASE64_PREFIX.length();
                             if (!absl::Base64Unescape(std::string_view(url.data() + offset, url.size() - offset), &decoded)) {
                                 return absl::InvalidArgumentError("Invalid base64 string in request");
                             }
@@ -269,7 +266,7 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
                             if (!allowedMediaDomains.has_value() || !isDomainAllowed(allowedMediaDomains.value(), url.c_str())) {
                                 return absl::InvalidArgumentError("Given url does not match any allowed domain from allowed_media_domains");
                             }
-                            auto status = downloadImage(url.c_str(), decoded, COMPLETIONS_MAX_IMAGE_SIZE_BYTES);
+                            auto status = downloadImage(url.c_str(), decoded, MAX_IMAGE_SIZE_BYTES);
                             if (status != absl::OkStatus()) {
                                 return status;
                             }
