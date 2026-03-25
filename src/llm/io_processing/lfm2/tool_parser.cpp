@@ -245,7 +245,7 @@ bool Lfm2ToolParser::parseInToolCallEndedState() {
 }
 
 bool Lfm2ToolParser::parseNewContent() {
-    switch(this->currentState) { // to think about spliting every state into separate functions if it grows too much
+    switch(this->currentState) {
         case State::Content: {
             return parseInContentState();
         }
