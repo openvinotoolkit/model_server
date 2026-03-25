@@ -206,7 +206,8 @@ void ImageGenerationGraphCLIParser::prepare(ServerSettingsImpl& serverSettings, 
                 if (!endsWith(adapter.safetensorsFile, ".safetensors")) {
                     throw std::invalid_argument("URL must point to a .safetensors file in --source_loras entry: '" + entry + "'");
                 }
-            } else if (source[0] == '/' || source.substr(0, 2) == "./") {
+            } else if (source[0] == '/' || source.substr(0, 2) == "./" || source.substr(0, 2) == ".\\" ||
+                       (source.size() >= 3 && std::isalpha(source[0]) && source[1] == ':' && (source[2] == '\\' || source[2] == '/'))) {
                 adapter.sourceType = LoraSourceType::LOCAL_FILE;
                 adapter.sourceLora = source;
                 if (!endsWith(source, ".safetensors")) {
@@ -215,7 +216,7 @@ void ImageGenerationGraphCLIParser::prepare(ServerSettingsImpl& serverSettings, 
                 if (!std::filesystem::exists(source)) {
                     throw std::invalid_argument("Local LoRA file does not exist: '" + source + "' in --source_loras entry: '" + entry + "'");
                 }
-                auto lastSlash = source.rfind('/');
+                auto lastSlash = source.find_last_of("/\\");
                 adapter.safetensorsFile = (lastSlash != std::string::npos) ? source.substr(lastSlash + 1) : source;
             } else {
                 adapter.sourceType = LoraSourceType::HF_REPO;
