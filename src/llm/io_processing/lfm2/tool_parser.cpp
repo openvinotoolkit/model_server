@@ -53,17 +53,37 @@ void Lfm2ToolParser::writeArgumentOfAnyType(const rapidjson::Value& arg, rapidjs
         }
         writer.EndObject();
     } else {
+        writer.String("");
         SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Argument has unsupported type.");
     }
 }
 
-void Lfm2ToolParser::writeArgumentOfAnyType(const std::string& arg, rapidjson::Writer<rapidjson::StringBuffer>& writer) {
+std::string Lfm2ToolParser::normalizeArgStr(const std::string& arg) {   
+    if (arg.empty()) {
+        return arg;
+    }
+
     std::string normalized = arg;
     
     if (arg[0] == '{' || arg.back() == '}' || arg[0] == '[' || arg.back() == ']') {
         std::replace(normalized.begin(), normalized.end(), '\'', '"');
         SPDLOG_LOGGER_INFO(llm_calculator_logger, "Argument contains curly braces or square brackets, replaced single quotes with double quotes for JSON parsing. Modified string: {}", normalized);
-    } 
+    }
+
+    if (normalized[0] == '"' && normalized.back() == '"' && normalized.find("\\") != std::string::npos) {
+        std::string escaped;
+        for (size_t i = 0; i < normalized.size(); ++i) {
+            char c = normalized[i];
+            if (c == '\\' && (i + 1 == normalized.size() || normalized[i + 1] != '"')) {
+                escaped += "\\\\";
+            } else {
+                escaped += c;
+            }
+        }
+        normalized = escaped;
+        SPDLOG_LOGGER_INFO(llm_calculator_logger, "Argument is a quoted string containing backslashes. Modified string: {}", normalized);
+
+    }
 
     std::string lowerArg = normalized;
     std::transform(lowerArg.begin(), lowerArg.end(), lowerArg.begin(), ::tolower);
@@ -73,6 +93,11 @@ void Lfm2ToolParser::writeArgumentOfAnyType(const std::string& arg, rapidjson::W
         SPDLOG_LOGGER_INFO(llm_calculator_logger, "Argument contains boolean value, normalized string: {}", normalized);
 
     }
+    return normalized;
+}
+
+void Lfm2ToolParser::writeArgumentOfAnyType(const std::string& arg, rapidjson::Writer<rapidjson::StringBuffer>& writer) {
+    std::string normalized = normalizeArgStr(arg);
 
     rapidjson::Document doc;
     doc.Parse(normalized.c_str());
@@ -115,29 +140,7 @@ std::vector<Lfm2ToolParser::Argument> Lfm2ToolParser::parseArguments(const std::
 
     size_t argPos = 0;
     while (argPos < argumentsStr.length()) {
-        size_t commaPos = std::string::npos;
-        int bracketDepth = 0;
-        int braceDepth = 0;
-        int quoteDepth = 0;
-        
-        for (size_t i = argPos; i < argumentsStr.length(); ++i) {
-            if (argumentsStr[i] == '{') {
-                braceDepth++;
-            } else if (argumentsStr[i] == '}') {
-                braceDepth--;
-            } else if (argumentsStr[i] == '[') {
-                bracketDepth++;
-            } else if (argumentsStr[i] == ']') {
-                bracketDepth--;
-            } else if (argumentsStr[i] == '"' && argumentsStr[i-1] != '\\') {
-                quoteDepth = 1 - quoteDepth;
-            } else if (argumentsStr.substr(i, TOOL_SEPARATOR_STR.length()) == TOOL_SEPARATOR_STR && 
-                       bracketDepth == 0 && braceDepth == 0 && quoteDepth == 0) {
-                commaPos = i;
-                break;
-            }
-        }
-        
+        size_t commaPos = findInStringRespectingSpecialChars(argumentsStr, TOOL_SEPARATOR_STR, argPos);
         if (commaPos == std::string::npos) {
             auto remainingStr = argumentsStr.substr(argPos);
             args.push_back(remainingStr);
@@ -309,6 +312,34 @@ std::optional<rapidjson::Document> Lfm2ToolParser::parseChunk(const std::string&
     return std::nullopt;
 }
 
+size_t Lfm2ToolParser::findInStringRespectingSpecialChars(const std::string& str, const std::string& target, size_t startPos) {
+    int bracketDepth = 0;
+    int braceDepth = 0;
+    int quoteDepth = 0;
+    int singleQuoteDepth = 0;
+
+    for (size_t i = startPos; i < str.length(); ++i) {
+        if (str[i] == '{') {
+            braceDepth++;
+        } else if (str[i] == '}') {
+            braceDepth--;
+        } else if (str[i] == '[') {
+            bracketDepth++;
+        } else if (str[i] == ']') {
+            bracketDepth--;
+        } else if (str[i] == '"' && (i == 0 || str[i-1] != '\\')) {
+            quoteDepth = 1 - quoteDepth;
+        } else if (str[i] == '\'' && (i == 0 || str[i-1] != '\\')) {
+            singleQuoteDepth = 1 - singleQuoteDepth;
+        } else if (bracketDepth == 0 && braceDepth == 0 && quoteDepth == 0 && singleQuoteDepth == 0 &&
+             str.compare(i, target.length(), target) == 0) {
+            return i;
+        }
+    }
+    return std::string::npos;
+}
+
+
 bool Lfm2ToolParser::parseSingleToolCall(const std::string& toolStr, ToolCall& toolCall) {
     size_t argsPos = toolStr.find(TOOL_ARGS_START_INDICATOR);
     if (argsPos != std::string::npos) {
@@ -341,8 +372,9 @@ void Lfm2ToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t
     std::vector<std::string> tools;
     std::vector<std::pair<size_t, size_t>> toolCallPositions;
     size_t pos = 0;
-    uint8_t main_guard = 0;
-    while (pos != std::string::npos && main_guard < 100) {
+    int main_guard = 0;
+
+    while (pos != std::string::npos && main_guard < MAX_TOOL_CALLS) {
         std::pair<size_t, size_t> toolCallPosition;
         size_t start = parsedOutput.content.find(TOOL_CALL_START_TAG, pos);
         if (start == std::string::npos) {
@@ -367,9 +399,9 @@ void Lfm2ToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t
         toolCallPositions.push_back(toolCallPosition);
         std::string toolListStr = parsedOutput.content.substr(start + TOOL_LIST_START_INDICATOR.length(), end - start - TOOL_LIST_START_INDICATOR.length() - TOOL_LIST_END_INDICATOR.length());
         SPDLOG_LOGGER_INFO(llm_calculator_logger, "Parsed tool list string: {}", toolListStr);
-        uint8_t guard = 0;
-        while (!toolListStr.empty() && guard < 100) {
-            size_t toolEndPos = toolListStr.find(TOOL_ARGS_END_INDICATOR);
+        int tool_guard = 0;
+        while (!toolListStr.empty() && tool_guard < MAX_TOOLS_PER_CALL) {
+            size_t toolEndPos = findInStringRespectingSpecialChars(toolListStr, TOOL_ARGS_END_INDICATOR, 0);
             std::string singleTool;
             if (toolEndPos != std::string::npos) {
                 singleTool = toolListStr.substr(0, toolEndPos + TOOL_ARGS_END_INDICATOR.length());
@@ -378,21 +410,17 @@ void Lfm2ToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t
                 } else {
                     toolListStr.clear();
                 }
-                SPDLOG_LOGGER_INFO(llm_calculator_logger, "Parsed single tool string nr {}: {}", guard, singleTool);
+                SPDLOG_LOGGER_INFO(llm_calculator_logger, "Parsed single tool string {}", singleTool);
             }
-            guard++;
-            if (singleTool.empty()) {
-                continue;
-            } else {
+
+            if (!singleTool.empty()) {
                 tools.push_back(singleTool);
             }
+            tool_guard++;
         }
-        if (guard == 100) {
-            SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Guard limit reached while parsing tools, possible malformed tool list string: {}", toolListStr);
-        }
+        main_guard++;
 
         pos = toolCallPositions.empty() ? std::string::npos : toolCallPositions.back().second;
-        main_guard++;
     }
 
     for (const std::string& tool : tools) {
@@ -401,13 +429,13 @@ void Lfm2ToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t
         if (wasToolCallParsed) {
             SPDLOG_LOGGER_INFO(llm_calculator_logger, "Parsed tool call - name: {}, args: {}", toolCall.name, toolCall.arguments);
             parsedOutput.toolCalls.push_back(toolCall);
-        } else
+        } else {
             SPDLOG_LOGGER_INFO(llm_calculator_logger, "Failed to parse tool call from string: {}", tool);
+        }
     }
 
-    for(int i = toolCallPositions.size() - 1; i >= 0; i--) {
-         const std::pair<size_t, size_t>& toolCallPosition = toolCallPositions[i];
-         parsedOutput.content.erase(toolCallPosition.first, toolCallPosition.second - toolCallPosition.first);
+    for (auto it = toolCallPositions.rbegin(); it != toolCallPositions.rend(); ++it) {
+        parsedOutput.content.erase(it->first, it->second - it->first);
     }
 }
 }

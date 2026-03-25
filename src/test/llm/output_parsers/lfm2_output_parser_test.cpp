@@ -56,6 +56,22 @@ protected:
         // For LFM2 model there is only tool parser available
         outputParserWithRegularToolParsing = std::make_unique<OutputParser>(*lfm2Tokenizer, "lfm2", "", EMPTY_TOOLS_SCHEMA);
     }
+
+    void assertChunkEqual(const std::optional<rapidjson::Document>& doc, const std::optional<std::string>& expectedDelta, const std::string& chunk) {
+        if (!expectedDelta.has_value() && !doc.has_value()) {
+            return;
+        }
+        if (expectedDelta.has_value() && doc.has_value()) {
+            rapidjson::StringBuffer buffer;
+            rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+            doc->Accept(writer);
+            std::string docStr = buffer.GetString();
+            std::string expected = expectedDelta.value();
+            EXPECT_EQ(docStr, expected) << "Mismatch for chunk: " << chunk;
+        } else {
+            FAIL() << "Mismatch between expectedDelta and doc for chunk: " << chunk;
+        }
+    }
 };
 
 TEST_F(LFM2OutputParserTest, ParseToolCallOutputWithSingleToolCall) {
@@ -260,8 +276,6 @@ TEST_F(LFM2OutputParserTest, ParseToolCallOutputWithThreeToolCalls) {
                                            "<|tool_call_start|>[another_tool(param1=\"data\", param2=true)]<|tool_call_end|>"
                                            "<|tool_call_start|>[third_tool(key=\"value\")]";
 
-    // LFM2 may produce last tool call without closing tag, so we test both cases
-    // The results should be identical
     std::vector<std::string> inputs = {inputWithProperClosure, inputWithImproperClosure};
     for (auto& input : inputs) {
         auto generatedTensor = lfm2Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
@@ -272,29 +286,34 @@ TEST_F(LFM2OutputParserTest, ParseToolCallOutputWithThreeToolCalls) {
 
         ASSERT_EQ(parsedOutput.toolCalls.size(), 3);
         EXPECT_EQ(parsedOutput.toolCalls[0].name, "example_tool");
-        // Parser removes whitespaces, so we expect arguments value to be without spaces
         EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{\"arg1\":\"value1\",\"arg2\":42}");
-        EXPECT_EQ(parsedOutput.toolCalls[0].id.empty(), false);  // ID should be generated
+        EXPECT_EQ(parsedOutput.toolCalls[0].id.empty(), false);
         auto firstToolCallId = parsedOutput.toolCalls[0].id;
 
         EXPECT_EQ(parsedOutput.toolCalls[1].name, "another_tool");
-        // Parser removes whitespaces, so we expect arguments value to be without spaces
         EXPECT_EQ(parsedOutput.toolCalls[1].arguments, "{\"param1\":\"data\",\"param2\":true}");
-        EXPECT_EQ(parsedOutput.toolCalls[1].id.empty(), false);  // ID should be generated
+        EXPECT_EQ(parsedOutput.toolCalls[1].id.empty(), false);
         auto secondToolCallId = parsedOutput.toolCalls[1].id;
-        EXPECT_NE(firstToolCallId, secondToolCallId);  // IDs should be different
+        EXPECT_NE(firstToolCallId, secondToolCallId); 
 
         EXPECT_EQ(parsedOutput.toolCalls[2].name, "third_tool");
-        // Parser removes whitespaces, so we expect arguments value to be without spaces
         EXPECT_EQ(parsedOutput.toolCalls[2].arguments, "{\"key\":\"value\"}");
-        EXPECT_EQ(parsedOutput.toolCalls[2].id.empty(), false);  // ID should be generated
+        EXPECT_EQ(parsedOutput.toolCalls[2].id.empty(), false);
         auto thirdToolCallId = parsedOutput.toolCalls[2].id;
-        EXPECT_NE(firstToolCallId, thirdToolCallId);   // IDs should be different
-        EXPECT_NE(secondToolCallId, thirdToolCallId);  // IDs should be different
+        EXPECT_NE(firstToolCallId, thirdToolCallId);
+        EXPECT_NE(secondToolCallId, thirdToolCallId);
     }
 }
 
-
+TEST_F(LFM2OutputParserTest, ParseToolCallWithEmptyArguments) {
+    // Tool call with empty parentheses (no arguments)
+    std::string input = "<|tool_call_start|>[no_args_tool()]<|tool_call_end|>";
+    auto generatedTensor = lfm2Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
+    std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+    ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
+    EXPECT_EQ(parsedOutput.toolCalls[0].name, "no_args_tool");
+}
 
 TEST_F(LFM2OutputParserTest, ParseToolCallOutputWithContentAndNoToolCalls) {
     std::string input = "This is a regular model response without tool calls.";
@@ -310,16 +329,14 @@ TEST_F(LFM2OutputParserTest, ParseToolCallOutputWithContentAndSingleToolCall) {
     std::string input = "This is a content part and next will be a tool call.\n\n<|tool_call_start|>[example_tool(arg1=\"value1\", arg2=42)]<|tool_call_end|>";
     auto generatedTensor = lfm2Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
-    // generatedTokens should now contain content followed by bot token ID and then tool call
     ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
     EXPECT_EQ(parsedOutput.content, "This is a content part and next will be a tool call.\n\n");
     EXPECT_EQ(parsedOutput.reasoning, "");
 
     ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
     EXPECT_EQ(parsedOutput.toolCalls[0].name, "example_tool");
-    // Parser removes whitespaces, so we expect arguments value to be without spaces
     EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{\"arg1\":\"value1\",\"arg2\":42}");
-    EXPECT_EQ(parsedOutput.toolCalls[0].id.empty(), false);  // ID should be generated
+    EXPECT_EQ(parsedOutput.toolCalls[0].id.empty(), false);
 }
 
 TEST_F(LFM2OutputParserTest, HolisticStreaming) {
@@ -551,24 +568,41 @@ TEST_F(LFM2OutputParserTest, ToolCallsWithoutToolsInTheRequestStreaming) {
     for (const auto& [chunk, expectedDelta] : chunkToDeltaVec) {
         // Second argument is false as we simulate the case where tools have not been provided in the request
         std::optional<rapidjson::Document> doc = outputParserWithRegularToolParsing->parseChunk(chunk, false, ov::genai::GenerationFinishReason::NONE);
-        if (!expectedDelta.has_value() && !doc.has_value()) {
-            continue;  // Both are nullopt, OK
-        }
-        if (expectedDelta.has_value() && doc.has_value()) {
-            rapidjson::StringBuffer buffer;
-            rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-            doc->Accept(writer);
-            std::string docStr = buffer.GetString();
-            std::string expected = expectedDelta.value();
-            EXPECT_EQ(docStr, expected) << "Mismatch for chunk: " << chunk;
-        } else {
-            FAIL() << "Mismatch between expectedDelta and doc for chunk: " << chunk;
-        }
+        assertChunkEqual(doc, expectedDelta, chunk);
     }
 }
 
+//Malformed tool calls
+
+TEST_F(LFM2OutputParserTest, ParseToolCallWithMissingParentheses) {
+    std::string input = "<|tool_call_start|>[broken_tool]<|tool_call_end|>";
+    auto generatedTensor = lfm2Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
+    std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+    ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 0);
+}
+
+TEST_F(LFM2OutputParserTest, ParseToolCallWithMissingClosingParenthesis) {
+    std::string input = "<|tool_call_start|>[broken_tool(arg1=\"value1\"]<|tool_call_end|>";
+    auto generatedTensor = lfm2Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
+    std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+    ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 0);
+}
+
+TEST_F(LFM2OutputParserTest, ParseToolCallWithArgumentMissingEquals) {
+    // Argument without '=' sign - parseSingleArgument sets isValid = false
+    std::string input = "<|tool_call_start|>[broken(malformed_arg)]<|tool_call_end|>";
+    auto generatedTensor = lfm2Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
+    std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+    ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
+    // The tool call is parsed but the argument value will be empty and invalid
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
+    EXPECT_EQ(parsedOutput.toolCalls[0].name, "broken");
+}
+
 // Tests with special characters
-TEST_F(LFM2OutputParserTest, DISABLED_ParseToolCallWithStringArgumentsContainingComparison) {
+TEST_F(LFM2OutputParserTest, ParseToolCallWithStringArgumentsContainingComparison) {
     std::string input = R"x(<|tool_call_start|>[search(query="price >= 100, (sale)", limit=5)]<|tool_call_end|>)x";
     auto generatedTensor = lfm2Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
@@ -590,7 +624,7 @@ TEST_F(LFM2OutputParserTest, ParseToolCallWithStringArgumentsContainingBracesAnd
     EXPECT_EQ(parsedOutput.toolCalls[0].arguments, R"({"template":"Hello {name}, items: [a, b, c]","count":3})");
 }
 
-TEST_F(LFM2OutputParserTest, DISABLED_ParseToolCallWithStringArgumentsContainingEscapedQuotes) {
+TEST_F(LFM2OutputParserTest, ParseToolCallWithStringArgumentsContainingEscapedQuotes) {
     std::string input = R"x(<|tool_call_start|>[execute(code="print(\"hello world\")", verbose=true)]<|tool_call_end|>)x";
     auto generatedTensor = lfm2Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
@@ -612,7 +646,7 @@ TEST_F(LFM2OutputParserTest, ParseToolCallWithStringArgumentsContainingApostroph
     EXPECT_EQ(parsedOutput.toolCalls[0].arguments, R"({"message":"it's a test, isn't it?","level":"warn"})");
 }
 
-TEST_F(LFM2OutputParserTest, DISABLED_ParseToolCallWithStringArgumentsContainingBackslashes) {
+TEST_F(LFM2OutputParserTest, ParseToolCallWithStringArgumentsContainingBackslashes) {
     std::string input = R"(<|tool_call_start|>[read_file(path="C:\Users\test\file.txt", encoding="utf-8")]<|tool_call_end|>)";
     auto generatedTensor = lfm2Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());

@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-
+#pragma once
 #include "src/llm/io_processing/base_output_parser.hpp"
 
 
@@ -31,12 +31,15 @@ protected:
     static const std::string TOOL_ARGS_END_INDICATOR;
     static const std::string TOOL_SEPARATOR_STR;
 
+    static constexpr size_t MAX_TOOL_CALLS = 100;
+    static constexpr size_t MAX_TOOLS_PER_CALL = 100;
+
     enum class State {
-        Content,
-        ToolCallStarted,
-        ToolCallParameters,
-        ToolCallEnded,
-        AfterToolCall
+        Content,                // Content -> ToolCallStarted (on TOOL_CALL_START_TAG)
+        ToolCallStarted,        // ToolCallStarted -> ToolCallParameters (on TOOL_ARGS_START_INDICATOR, emits name)
+        ToolCallParameters,     // ToolCallParameters -> ToolCallEnded (on TOOL_ARGS_END_INDICATOR, emits args)
+        ToolCallEnded,          // ToolCallEnded -> ToolCallStarted (on separator) | AfterToolCall (on end tag/list end)
+        AfterToolCall           // AfterToolCall -> Content
     };
 
 public:
@@ -67,8 +70,12 @@ public:
 private:
     void writeArgumentOfAnyType(const std::string& arg, rapidjson::Writer<rapidjson::StringBuffer>& writer);
     void writeArgumentOfAnyType(const rapidjson::Value& arg, rapidjson::Writer<rapidjson::StringBuffer>& writer);
+    
+    size_t findInStringRespectingSpecialChars(const std::string& str, const std::string& target, size_t startPos);
+    std::string normalizeArgStr(const std::string& arg);
     Argument parseSingleArgument(const std::string& argumentStr);
     std::vector<Argument> parseArguments(const std::string& argumentsStr);
+
     bool parseSingleToolCall(const std::string& toolStr, ToolCall& toolCall);
     bool parseNewContent();
     bool parseInContentState();
