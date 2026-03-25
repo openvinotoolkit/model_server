@@ -20,16 +20,16 @@
 namespace ovms {
 class Lfm2ToolParser : public BaseOutputParser {
 protected:
-    const std::string toolCallStartTag = "<|tool_call_start|>";
-    const std::string toolCallEndTag = "<|tool_call_end|>";
-    const std::string toolRepsonseStartTag = "<|tool_response_start|>";
-    const std::string toolResponseEndTag = "<|tool_response_end|>";
+    static const std::string TOOL_CALL_START_TAG;
+    static const std::string TOOL_CALL_END_TAG;
+    static const std::string TOOL_RESPONSE_START_TAG;
+    static const std::string TOOL_RESPONSE_END_TAG;
 
-    const std::string toolListStartIndicator = "[";
-    const std::string toolListEndIndicator = "]";
-    const std::string toolArgsStartIndicator = "(";
-    const std::string toolArgsEndIndicator = ")";
-    const std::string toolSeparatorStr = ", ";
+    static const std::string TOOL_LIST_START_INDICATOR;
+    static const std::string TOOL_LIST_END_INDICATOR;
+    static const std::string TOOL_ARGS_START_INDICATOR;
+    static const std::string TOOL_ARGS_END_INDICATOR;
+    static const std::string TOOL_SEPARATOR_STR;
 
     enum class State {
         Content,
@@ -51,7 +51,7 @@ public:
     void parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) override;
     std::optional<rapidjson::Document> parseChunk(const std::string& chunk, ov::genai::GenerationFinishReason finishReason) override;
     const std::vector<std::string>& getParsingStartTags() const override {
-        static const std::vector<std::string> parsingStartTags = {toolCallStartTag};
+        static const std::vector<std::string> parsingStartTags = {TOOL_CALL_START_TAG};
         return parsingStartTags;
     }
 
@@ -61,7 +61,7 @@ public:
     }
 
     const std::string& getParsingEndTag() const override {
-        return toolCallEndTag;
+        return TOOL_CALL_END_TAG;
     }
 
 private:
@@ -71,6 +71,11 @@ private:
     std::vector<Argument> parseArguments(const std::string& argumentsStr);
     bool parseSingleToolCall(const std::string& toolStr, ToolCall& toolCall);
     bool parseNewContent();
+    bool parseInContentState();
+    bool parseInToolCallState();
+    bool parseToolCallParametersState();
+    bool parseInToolCallEndedState();
+
     rapidjson::Document wrapDeltaContent(const std::string& content);
     rapidjson::Document wrapDeltaArgs(const std::string& argsStr, int toolCallIndex);
     
