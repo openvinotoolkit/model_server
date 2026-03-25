@@ -64,6 +64,10 @@
 #include "vaapitensorfactory.hpp"
 #endif
 
+#ifdef _WIN32
+bool malloc_trim_win();
+#endif
+
 namespace {
 enum : unsigned int {
     GET_INFER_REQUEST,
