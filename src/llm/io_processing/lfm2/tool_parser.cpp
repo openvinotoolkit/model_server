@@ -60,13 +60,13 @@ void Lfm2ToolParser::writeArgumentOfAnyType(const rapidjson::Value& arg, rapidjs
     }
 }
 
-std::string Lfm2ToolParser::normalizeArgStr(const std::string& arg) {   
+std::string Lfm2ToolParser::normalizeArgStr(const std::string& arg) {
     if (arg.empty()) {
         return arg;
     }
 
     std::string normalized = arg;
-    
+
     const char first = normalized.front();
     const char last = normalized.back();
     if ((first == '{' && last == '}') || (first == '[' && last == ']')) {
@@ -86,16 +86,14 @@ std::string Lfm2ToolParser::normalizeArgStr(const std::string& arg) {
         }
         normalized = escaped;
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Argument is a quoted string containing backslashes. Modified string: {}", normalized);
-
     }
 
     std::string lowerArg = normalized;
     std::transform(lowerArg.begin(), lowerArg.end(), lowerArg.begin(), ::tolower);
-    
+
     if (lowerArg == "true" || lowerArg == "false") {
         normalized = lowerArg;
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Argument contains boolean value, normalized string: {}", normalized);
-
     }
     return normalized;
 }
@@ -105,7 +103,7 @@ void Lfm2ToolParser::writeArgumentOfAnyType(const std::string& arg, rapidjson::W
 
     rapidjson::Document doc;
     doc.Parse(normalized.c_str());
-    
+
     if (doc.HasParseError()) {
         SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Failed to parse argument string as JSON. Argument string: {}", normalized);
         return;
@@ -115,7 +113,7 @@ void Lfm2ToolParser::writeArgumentOfAnyType(const std::string& arg, rapidjson::W
     writeArgumentOfAnyType(argumentDoc, writer);
 }
 
-Lfm2ToolParser::Argument Lfm2ToolParser::parseSingleArgument(const std::string& argumentStr){
+Lfm2ToolParser::Argument Lfm2ToolParser::parseSingleArgument(const std::string& argumentStr) {
     Lfm2ToolParser::Argument argument;
 
     size_t equalPos = argumentStr.find('=');
@@ -127,7 +125,7 @@ Lfm2ToolParser::Argument Lfm2ToolParser::parseSingleArgument(const std::string& 
             argument.value[0] = '"';
             argument.value[argument.value.size() - 1] = '"';
             SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Argument value is enclosed in single quotes, replaced with double quotes. Modified value: {}", argument.value);
-        } 
+        }
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Parsed argument - name: {}, value: {}", argument.name, argument.value);
     } else {
         argument.name = argumentStr;
@@ -196,7 +194,6 @@ bool Lfm2ToolParser::parseInToolCallState() {
     return true;
 }
 
-
 bool Lfm2ToolParser::parseToolCallParametersState() {
     size_t pos = this->streamingContent.find(TOOL_ARGS_END_INDICATOR, this->streamingPosition);
     if (pos == std::string::npos) {
@@ -248,26 +245,26 @@ bool Lfm2ToolParser::parseInToolCallEndedState() {
 }
 
 bool Lfm2ToolParser::parseNewContent() {
-    switch(this->currentState) {
-        case State::Content: {
-            return parseInContentState();
-        }
-        case State::ToolCallStarted: {
-            return parseInToolCallState();
-        }
-        case State::ToolCallParameters: {
-            return parseToolCallParametersState();
-        }
-        case State::ToolCallEnded: {
-            return parseInToolCallEndedState();
-        }
-        case State::AfterToolCall: break;
+    switch (this->currentState) {
+    case State::Content: {
+        return parseInContentState();
+    }
+    case State::ToolCallStarted: {
+        return parseInToolCallState();
+    }
+    case State::ToolCallParameters: {
+        return parseToolCallParametersState();
+    }
+    case State::ToolCallEnded: {
+        return parseInToolCallEndedState();
+    }
+    case State::AfterToolCall:
+        break;
     }
     return false;
 }
 
-rapidjson::Document Lfm2ToolParser::wrapDeltaContent(const std::string& content)
-{
+rapidjson::Document Lfm2ToolParser::wrapDeltaContent(const std::string& content) {
     rapidjson::Document doc(rapidjson::kObjectType);
     rapidjson::Value deltaObj(rapidjson::kObjectType);
     deltaObj.AddMember("content", rapidjson::Value(content.c_str(), doc.GetAllocator()), doc.GetAllocator());
@@ -275,8 +272,7 @@ rapidjson::Document Lfm2ToolParser::wrapDeltaContent(const std::string& content)
     return doc;
 }
 
-rapidjson::Document Lfm2ToolParser::wrapDeltaArgs(const std::string& argsStr, int toolCallIndex)
-{
+rapidjson::Document Lfm2ToolParser::wrapDeltaArgs(const std::string& argsStr, int toolCallIndex) {
     rapidjson::Document doc(rapidjson::kObjectType);
     rapidjson::Document argsDoc;
     argsDoc.Parse(argsStr.c_str());
@@ -330,23 +326,22 @@ size_t Lfm2ToolParser::findInStringRespectingSpecialChars(const std::string& str
             bracketDepth++;
         } else if (str[i] == ']') {
             bracketDepth--;
-        } else if (str[i] == '"' && (i == 0 || str[i-1] != '\\')) {
+        } else if (str[i] == '"' && (i == 0 || str[i - 1] != '\\')) {
             quoteDepth = 1 - quoteDepth;
-        } else if (str[i] == '\'' && (i == 0 || str[i-1] != '\\')) {
+        } else if (str[i] == '\'' && (i == 0 || str[i - 1] != '\\')) {
             singleQuoteDepth = 1 - singleQuoteDepth;
         } else if (bracketDepth == 0 && braceDepth == 0 && quoteDepth == 0 && singleQuoteDepth == 0 &&
-             str.compare(i, target.length(), target) == 0) {
+                   str.compare(i, target.length(), target) == 0) {
             return i;
         }
     }
     return std::string::npos;
 }
 
-
 bool Lfm2ToolParser::parseSingleToolCall(const std::string& toolStr, ToolCall& toolCall) {
     size_t argsPos = toolStr.find(TOOL_ARGS_START_INDICATOR);
     if (argsPos != std::string::npos) {
-        std::string toolName = toolStr.substr(0, argsPos);                
+        std::string toolName = toolStr.substr(0, argsPos);
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Parsed tool name: {}", toolName);
 
         int argsStrLen = toolStr.length() - argsPos - TOOL_ARGS_START_INDICATOR.length() - TOOL_ARGS_END_INDICATOR.length();
@@ -362,7 +357,7 @@ bool Lfm2ToolParser::parseSingleToolCall(const std::string& toolStr, ToolCall& t
         for (const Lfm2ToolParser::Argument& argument : arguments) {
             argsWriter.Key(argument.name.c_str());
             writeArgumentOfAnyType(argument.value, argsWriter);
-        }                
+        }
         argsWriter.EndObject();
         toolCall.arguments = sb.GetString();
         toolCall.id = generateRandomId();
@@ -386,16 +381,16 @@ void Lfm2ToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t
         toolCallPosition.first = start;
         start += TOOL_CALL_START_TAG.length();
         size_t end = parsedOutput.content.find(TOOL_CALL_END_TAG, start);
-        if(end == std::string::npos) {
+        if (end == std::string::npos) {
             end = parsedOutput.content.rfind(TOOL_LIST_END_INDICATOR, end);
             if (end == std::string::npos) {
                 SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Malformed tool call in content, no tool end tag or tool list end tag found for tool call starting at position {}", start);
                 break;
             }
-           toolCallPosition.second = end + TOOL_LIST_END_INDICATOR.length();
-           end += TOOL_LIST_END_INDICATOR.length();
-           SPDLOG_LOGGER_TRACE(llm_calculator_logger, "No tool call end tag found, but found tool list end tag, treating content between start and this position as tool list");
-        } else { 
+            toolCallPosition.second = end + TOOL_LIST_END_INDICATOR.length();
+            end += TOOL_LIST_END_INDICATOR.length();
+            SPDLOG_LOGGER_TRACE(llm_calculator_logger, "No tool call end tag found, but found tool list end tag, treating content between start and this position as tool list");
+        } else {
             toolCallPosition.second = end + TOOL_CALL_END_TAG.length();
             SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Found tool call end tag for tool call starting at position {}", start);
         }
@@ -408,7 +403,7 @@ void Lfm2ToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t
             std::string singleTool;
             if (toolEndPos != std::string::npos) {
                 singleTool = toolListStr.substr(0, toolEndPos + TOOL_ARGS_END_INDICATOR.length());
-                if(toolEndPos + TOOL_ARGS_END_INDICATOR.length() < toolListStr.length()) {
+                if (toolEndPos + TOOL_ARGS_END_INDICATOR.length() < toolListStr.length()) {
                     toolListStr = toolListStr.substr(toolEndPos + TOOL_ARGS_END_INDICATOR.length() + TOOL_SEPARATOR_STR.length());
                 } else {
                     toolListStr.clear();
@@ -441,4 +436,4 @@ void Lfm2ToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t
         parsedOutput.content.erase(it->first, it->second - it->first);
     }
 }
-}
+}  // namespace ovms

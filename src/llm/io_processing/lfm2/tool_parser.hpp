@@ -16,7 +16,6 @@
 #pragma once
 #include "src/llm/io_processing/base_output_parser.hpp"
 
-
 namespace ovms {
 class Lfm2ToolParser : public BaseOutputParser {
 protected:
@@ -35,11 +34,11 @@ protected:
     static constexpr size_t MAX_TOOLS_PER_CALL = 100;
 
     enum class State {
-        Content,                // Content -> ToolCallStarted (on TOOL_CALL_START_TAG)
-        ToolCallStarted,        // ToolCallStarted -> ToolCallParameters (on TOOL_ARGS_START_INDICATOR, emits name)
-        ToolCallParameters,     // ToolCallParameters -> ToolCallEnded (on TOOL_ARGS_END_INDICATOR, emits args)
-        ToolCallEnded,          // ToolCallEnded -> ToolCallStarted (on separator) | AfterToolCall (on end tag/list end)
-        AfterToolCall           // AfterToolCall -> Content
+        Content,             // Content -> ToolCallStarted (on TOOL_CALL_START_TAG)
+        ToolCallStarted,     // ToolCallStarted -> ToolCallParameters (on TOOL_ARGS_START_INDICATOR, emits name)
+        ToolCallParameters,  // ToolCallParameters -> ToolCallEnded (on TOOL_ARGS_END_INDICATOR, emits args)
+        ToolCallEnded,       // ToolCallEnded -> ToolCallStarted (on separator) | AfterToolCall (on end tag/list end)
+        AfterToolCall        // AfterToolCall -> Content
     };
 
 public:
@@ -48,7 +47,8 @@ public:
         std::string value;
     };
     Lfm2ToolParser() = delete;
-    explicit Lfm2ToolParser(ov::genai::Tokenizer& tokenizer) : BaseOutputParser(tokenizer) {}
+    explicit Lfm2ToolParser(ov::genai::Tokenizer& tokenizer) :
+        BaseOutputParser(tokenizer) {}
 
     void parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) override;
     std::optional<rapidjson::Document> parseChunk(const std::string& chunk, ov::genai::GenerationFinishReason finishReason) override;
@@ -69,7 +69,7 @@ public:
 private:
     void writeArgumentOfAnyType(const std::string& arg, rapidjson::Writer<rapidjson::StringBuffer>& writer);
     void writeArgumentOfAnyType(const rapidjson::Value& arg, rapidjson::Writer<rapidjson::StringBuffer>& writer);
-    
+
     size_t findInStringRespectingSpecialChars(const std::string& str, const std::string& target, size_t startPos);
     std::string normalizeArgStr(const std::string& arg);
     Argument parseSingleArgument(const std::string& argumentStr);
@@ -84,11 +84,11 @@ private:
 
     rapidjson::Document wrapDeltaContent(const std::string& content);
     rapidjson::Document wrapDeltaArgs(const std::string& argsStr, int toolCallIndex);
-    
+
     std::string streamingContent;
     size_t streamingPosition{0};
     State currentState{State::Content};
     ToolCall toolCall;
     int toolCallIndex{-1};
 };
-}
+}  // namespace ovms
