@@ -347,6 +347,16 @@ StatusCode MediapipeGraphDefinition::notLoadedAnymoreCode() const {
 
 Status MediapipeGraphDefinition::initializeNodes() {
     SPDLOG_INFO("MediapipeGraphDefinition initializing graph nodes");
+    bool success = false;
+    struct CleanupGuard {
+        GraphSidePackets& maps;
+        bool& success;
+        ~CleanupGuard() {
+            if (!success)
+                maps.clear();
+        }
+    } guard{sidePacketMaps, success};
+
     auto& registry = NodeInitializerRegistry::instance();
     for (int i = 0; i < config.node().size(); i++) {
         for (const auto& initializer : registry.all()) {
@@ -358,6 +368,7 @@ Status MediapipeGraphDefinition::initializeNodes() {
             }
         }
     }
+    success = true;
     return StatusCode::OK;
 }
 }  // namespace ovms
