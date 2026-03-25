@@ -159,9 +159,9 @@ RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; git clone ht
 WORKDIR /openvino/build
 RUN if [ "$ov_use_binary" == "0" ]; then \
     if [[ $debug_bazel_flags == *"py_off"* ]]; then \
-        cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DENABLE_SAMPLES=0 -DCMAKE_CXX_FLAGS=" -Wno-error=parentheses " -DENABLE_CPPLINT=OFF -DENABLE_INTEL_NPU_PROTOPIPE=OFF .. \
+        cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DENABLE_SAMPLES=0 -DCMAKE_CXX_FLAGS=" -Wno-error=parentheses " -DENABLE_CPPLINT=OFF -DENABLE_INTEL_NPU_PROTOPIPE=OFF .. ; \
     else \
-        cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DENABLE_PYTHON=ON -DENABLE_SAMPLES=0 -DCMAKE_CXX_FLAGS=" -Wno-error=parentheses " -DENABLE_CPPLINT=OFF -DENABLE_INTEL_NPU_PROTOPIPE=OFF .. \
+        cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DENABLE_PYTHON=ON -DENABLE_SAMPLES=0 -DCMAKE_CXX_FLAGS=" -Wno-error=parentheses " -DENABLE_CPPLINT=OFF -DENABLE_INTEL_NPU_PROTOPIPE=OFF .. ; \
     fi && \
     make --jobs=$JOBS && \
     make install ; \
