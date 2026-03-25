@@ -246,9 +246,9 @@ public:
             std::unordered_map<std::string, float> loraWeightsOverride;
             auto loraWeightsIt = payload.parsedJson->FindMember("lora_weights");
             if (loraWeightsIt != payload.parsedJson->MemberEnd() && loraWeightsIt->value.IsObject()) {
-                for (auto it = loraWeightsIt->value.MemberBegin(); it != loraWeightsIt->value.MemberEnd(); ++it) {
-                    if (it->value.IsNumber()) {
-                        loraWeightsOverride[it->name.GetString()] = it->value.GetFloat();
+                for (auto member = loraWeightsIt->value.MemberBegin(); member != loraWeightsIt->value.MemberEnd(); ++member) {
+                    if (member->value.IsNumber()) {
+                        loraWeightsOverride[member->name.GetString()] = member->value.GetFloat();
                     }
                 }
             }
