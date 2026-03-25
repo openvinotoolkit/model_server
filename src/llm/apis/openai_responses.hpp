@@ -15,6 +15,10 @@
 //*****************************************************************************
 #pragma once
 
+#include <string>
+#include <utility>
+#include <vector>
+
 #include "openai_api_handler.hpp"
 
 namespace ovms {

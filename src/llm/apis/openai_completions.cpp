@@ -23,7 +23,9 @@
 #include "src/port/rapidjson_stringbuffer.hpp"
 #include "src/port/rapidjson_writer.hpp"
 #include <set>
+#include <string>
 #include <string.h>
+#include <vector>
 
 #include <openvino/genai/llm_pipeline.hpp>
 #include <openvino/genai/visual_language/pipeline.hpp>
