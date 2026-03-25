@@ -130,7 +130,7 @@ set "curl_dir=curl-%curl_version%-win64-mingw"
 if !errorlevel! neq 0 exit /b !errorlevel!
 copy C:\opt\%curl_dir%\COPYING.txt %license_dest%LICENSE-CURL.txt
 if !errorlevel! neq 0 exit /b !errorlevel!
-copy C:\opt\%curl_dir%\dep\brotli\LICENSE.txt %license_dest%LICENSE-BROTIL.txt
+copy C:\opt\%curl_dir%\dep\brotli\LICENSE.txt %license_dest%LICENSE-BROTLI.txt
 if !errorlevel! neq 0 exit /b !errorlevel!
 copy C:\opt\%curl_dir%\dep\certdata\LICENSE.url %license_dest%LICENSE-CERTDATA.url
 if !errorlevel! neq 0 exit /b !errorlevel!
