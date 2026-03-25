@@ -1094,35 +1094,36 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeStreamingChunkForResponsesContains
     std::optional<uint32_t> maxModelLength;
     ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
 
-    // Phase 1: Init events emitted via dedicated method (called right after scheduleExecution in calculator)
-    std::string initChunk = apiHandler->serializeStreamingInitEvents();
-    ASSERT_NE(initChunk.find("\"type\":\"response.created\""), std::string::npos) << initChunk;
-    ASSERT_NE(initChunk.find("\"type\":\"response.in_progress\""), std::string::npos) << initChunk;
-    ASSERT_NE(initChunk.find("\"type\":\"response.output_item.added\""), std::string::npos) << initChunk;
-    ASSERT_NE(initChunk.find("\"type\":\"response.content_part.added\""), std::string::npos) << initChunk;
-    // No delta event when text is empty
-    ASSERT_EQ(initChunk.find("\"type\":\"response.output_text.delta\""), std::string::npos) << initChunk;
+    // Phase 1: Created event emitted before scheduling
+    std::string createdChunk = apiHandler->serializeStreamingCreatedEvent();
+    ASSERT_NE(createdChunk.find("\"type\":\"response.created\""), std::string::npos) << createdChunk;
+    ASSERT_EQ(createdChunk.find("\"type\":\"response.in_progress\""), std::string::npos) << "Only created event: " << createdChunk;
 
-    // Verify correct event ordering: created < in_progress < output_item.added < content_part.added
-    auto createdPos = initChunk.find("\"type\":\"response.created\"");
-    auto inProgressPos = initChunk.find("\"type\":\"response.in_progress\"");
-    auto outputItemAddedPos = initChunk.find("\"type\":\"response.output_item.added\"");
-    auto contentPartAddedPos = initChunk.find("\"type\":\"response.content_part.added\"");
-    ASSERT_LT(createdPos, inProgressPos) << "response.created must come before response.in_progress";
-    ASSERT_LT(inProgressPos, outputItemAddedPos) << "response.in_progress must come before response.output_item.added";
-    ASSERT_LT(outputItemAddedPos, contentPartAddedPos) << "response.output_item.added must come before response.content_part.added";
+    // Phase 2: In-progress event emitted after scheduling
+    std::string inProgressChunk = apiHandler->serializeStreamingInProgressEvent();
+    ASSERT_NE(inProgressChunk.find("\"type\":\"response.in_progress\""), std::string::npos) << inProgressChunk;
+    ASSERT_EQ(inProgressChunk.find("\"type\":\"response.created\""), std::string::npos) << "Only in_progress event: " << inProgressChunk;
 
-    // Phase 2: Second call should only contain delta, no repeated init events
+    // Phase 3: Empty chunk should produce no output
     std::string secondChunk = apiHandler->serializeStreamingChunk("", ov::genai::GenerationFinishReason::NONE);
-    ASSERT_TRUE(secondChunk.empty()) << "Empty text after init should produce no output: " << secondChunk;
+    ASSERT_TRUE(secondChunk.empty()) << "Empty text should produce no output: " << secondChunk;
 
-    // Phase 3: Text delta
+    // Phase 4: First text delta - should include output_item.added + content_part.added + delta
     std::string deltaChunk = apiHandler->serializeStreamingChunk("Hello", ov::genai::GenerationFinishReason::NONE);
+    ASSERT_NE(deltaChunk.find("\"type\":\"response.output_item.added\""), std::string::npos) << deltaChunk;
+    ASSERT_NE(deltaChunk.find("\"type\":\"response.content_part.added\""), std::string::npos) << deltaChunk;
     ASSERT_NE(deltaChunk.find("\"type\":\"response.output_text.delta\""), std::string::npos) << deltaChunk;
     ASSERT_NE(deltaChunk.find("\"delta\":\"Hello\""), std::string::npos) << deltaChunk;
     ASSERT_EQ(deltaChunk.find("\"type\":\"response.created\""), std::string::npos) << "No repeated init events: " << deltaChunk;
 
-    // Phase 4: Final chunk with finish reason
+    // Verify correct event ordering: output_item.added < content_part.added < delta
+    auto outputItemAddedPos = deltaChunk.find("\"type\":\"response.output_item.added\"");
+    auto contentPartAddedPos = deltaChunk.find("\"type\":\"response.content_part.added\"");
+    auto firstDeltaPos = deltaChunk.find("\"type\":\"response.output_text.delta\"");
+    ASSERT_LT(outputItemAddedPos, contentPartAddedPos) << "output_item.added must come before content_part.added";
+    ASSERT_LT(contentPartAddedPos, firstDeltaPos) << "content_part.added must come before delta";
+
+    // Phase 5: Final chunk with finish reason
     std::string finalChunk = apiHandler->serializeStreamingChunk(" world", ov::genai::GenerationFinishReason::STOP);
     ASSERT_NE(finalChunk.find("\"type\":\"response.output_text.delta\""), std::string::npos) << finalChunk;
     ASSERT_NE(finalChunk.find("\"type\":\"response.output_text.done\""), std::string::npos) << finalChunk;
@@ -1158,13 +1159,15 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeStreamingChunkForResponsesWithReas
     std::optional<uint32_t> maxModelLength;
     ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
 
-    // Phase 1: Init events - should only have created + in_progress (output items deferred)
-    std::string initChunk = apiHandler->serializeStreamingInitEvents();
-    ASSERT_NE(initChunk.find("\"type\":\"response.created\""), std::string::npos) << initChunk;
-    ASSERT_NE(initChunk.find("\"type\":\"response.in_progress\""), std::string::npos) << initChunk;
-    // Output item events should be deferred when parser is present
-    ASSERT_EQ(initChunk.find("\"type\":\"response.output_item.added\""), std::string::npos) << "output_item.added should be deferred: " << initChunk;
-    ASSERT_EQ(initChunk.find("\"type\":\"response.content_part.added\""), std::string::npos) << "content_part.added should be deferred: " << initChunk;
+    // Phase 1: Created event
+    std::string createdChunk = apiHandler->serializeStreamingCreatedEvent();
+    ASSERT_NE(createdChunk.find("\"type\":\"response.created\""), std::string::npos) << createdChunk;
+
+    // Phase 2: In-progress event
+    std::string inProgressChunk = apiHandler->serializeStreamingInProgressEvent();
+    ASSERT_NE(inProgressChunk.find("\"type\":\"response.in_progress\""), std::string::npos) << inProgressChunk;
+    // Output item events should be deferred to first chunk
+    ASSERT_EQ(inProgressChunk.find("\"type\":\"response.output_item.added\""), std::string::npos) << "output_item.added should be deferred: " << inProgressChunk;
 
     // Phase 2: Reasoning chunk with <think> tag - should emit reasoning init + delta
     std::string reasoningChunk = apiHandler->serializeStreamingChunk("<think>", ov::genai::GenerationFinishReason::NONE);
@@ -1225,10 +1228,13 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeStreamingChunkForResponsesWithoutR
     std::optional<uint32_t> maxModelLength;
     ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
 
-    // Init events should be deferred (parser present)
-    std::string initChunk = apiHandler->serializeStreamingInitEvents();
-    ASSERT_NE(initChunk.find("\"type\":\"response.created\""), std::string::npos) << initChunk;
-    ASSERT_EQ(initChunk.find("\"type\":\"response.output_item.added\""), std::string::npos) << "Should be deferred: " << initChunk;
+    // Created and in-progress events
+    std::string createdChunk = apiHandler->serializeStreamingCreatedEvent();
+    ASSERT_NE(createdChunk.find("\"type\":\"response.created\""), std::string::npos) << createdChunk;
+    std::string inProgressChunk = apiHandler->serializeStreamingInProgressEvent();
+    ASSERT_NE(inProgressChunk.find("\"type\":\"response.in_progress\""), std::string::npos) << inProgressChunk;
+    // Output item events should be deferred to first chunk
+    ASSERT_EQ(inProgressChunk.find("\"type\":\"response.output_item.added\""), std::string::npos) << "Should be deferred: " << inProgressChunk;
 
     // Content without reasoning - should emit message init events on first content
     std::string contentChunk = apiHandler->serializeStreamingChunk("Hello", ov::genai::GenerationFinishReason::NONE);
@@ -1278,7 +1284,8 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeStreamingChunkForResponsesEmitsInc
     ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
 
     // Init events
-    apiHandler->serializeStreamingInitEvents();
+    apiHandler->serializeStreamingCreatedEvent();
+    apiHandler->serializeStreamingInProgressEvent();
     // Delta
     apiHandler->serializeStreamingChunk("Hello", ov::genai::GenerationFinishReason::NONE);
 
@@ -1330,7 +1337,8 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeStreamingChunkForResponsesEmitsCom
     ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
 
     // Init events
-    apiHandler->serializeStreamingInitEvents();
+    apiHandler->serializeStreamingCreatedEvent();
+    apiHandler->serializeStreamingInProgressEvent();
     // Delta + finish with STOP
     std::string finalChunk = apiHandler->serializeStreamingChunk("Hello", ov::genai::GenerationFinishReason::STOP);
 
@@ -1429,7 +1437,8 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeFailedEventAfterPartialStreaming) 
     ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
 
     // Emit init events and some deltas first
-    apiHandler->serializeStreamingInitEvents();
+    apiHandler->serializeStreamingCreatedEvent();
+    apiHandler->serializeStreamingInProgressEvent();
     apiHandler->serializeStreamingChunk("Hello", ov::genai::GenerationFinishReason::NONE);
 
     // Then fail

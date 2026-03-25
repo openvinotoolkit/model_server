@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2025 Intel Corporation
+// Copyright 2026 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -166,7 +166,8 @@ public:
     virtual std::string serializeStreamingHandshakeChunk() = 0;
 
     // Streaming lifecycle events - default no-ops for non-responses handlers
-    virtual std::string serializeStreamingInitEvents();
+    virtual std::string serializeStreamingCreatedEvent();
+    virtual std::string serializeStreamingInProgressEvent();
     virtual std::string serializeFailedEvent(const std::string& errorMessage, ResponsesErrorCode errorCode = ResponsesErrorCode::SERVER_ERROR);
 };
 

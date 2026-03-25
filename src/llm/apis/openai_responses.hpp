@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2025 Intel Corporation
+// Copyright 2026 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,7 +22,8 @@ namespace ovms {
 // Encapsulates all mutable state accumulated during Responses API streaming.
 struct ResponsesStreamingState {
     size_t sequenceNumber = 1;
-    bool initialized = false;
+    bool createdSent = false;
+    bool inProgressSent = false;
     bool reasoningInitialized = false;
     bool reasoningCompleted = false;
     bool messageInitialized = false;
@@ -58,8 +59,6 @@ class OpenAIResponsesHandler : public OpenAIApiHandler {
     static void writeReasoningLocation(Writer<StringBuffer>& writer, const std::string& itemId);
 
     // Individual streaming event serializers
-    std::string serializeCreatedEvent(const std::string& responseId, int64_t createdAt);
-    std::string serializeInProgressEvent(const std::string& responseId, int64_t createdAt);
     std::string serializeOutputItemAddedEvent(const std::string& outputItemId, uint64_t outputIndex = 0);
     std::string serializeContentPartAddedEvent(const std::string& outputItemId, uint64_t outputIndex = 0);
     std::string serializeOutputTextDeltaEvent(const std::string& outputItemId, const std::string& delta, uint64_t outputIndex = 0);
@@ -95,7 +94,8 @@ public:
     std::string serializeStreamingChunk(const std::string& chunkResponse, ov::genai::GenerationFinishReason finishReason) override;
     std::string serializeStreamingUsageChunk() override;
     std::string serializeStreamingHandshakeChunk() override;
-    std::string serializeStreamingInitEvents() override;
+    std::string serializeStreamingCreatedEvent() override;
+    std::string serializeStreamingInProgressEvent() override;
     std::string serializeFailedEvent(const std::string& errorMessage, ResponsesErrorCode errorCode = ResponsesErrorCode::SERVER_ERROR) override;
 };
 

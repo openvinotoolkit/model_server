@@ -126,13 +126,14 @@ public:
                     return status;
                 SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "LLMCalculator  [Node: {}] Pipeline execution scheduled successfully", cc->NodeName());
 
-                // For RESPONSES streaming, emit init events (response.created, response.in_progress, etc.)
-                // immediately after scheduling, before blocking on readPartialExecutionResults.
-                // This reduces perceived latency - the client sees the response is created right away.
+                // For streaming, emit response.created event after scheduling execution.
+                // The response object now exists in the system. response.in_progress will
+                // be emitted later inside serializeStreamingChunk after readPartialExecutionResults
+                // confirms the model has actually started producing tokens.
                 if (executionContext->apiHandler->isStream()) {
-                    std::string initEvents = executionContext->apiHandler->serializeStreamingInitEvents();
-                    if (!initEvents.empty()) {
-                        executionContext->response = wrapTextInServerSideEventMessage(initEvents);
+                    std::string createdEvent = executionContext->apiHandler->serializeStreamingCreatedEvent();
+                    if (!createdEvent.empty()) {
+                        executionContext->response = wrapTextInServerSideEventMessage(createdEvent);
                         cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new std::string{std::move(executionContext->response)}, iterationBeginTimestamp);
                         executionContext->response = "";
                         cc->Outputs().Tag(LOOPBACK_TAG_NAME).Add(new bool{true}, iterationBeginTimestamp);

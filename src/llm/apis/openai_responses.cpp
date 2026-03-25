@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2025 Intel Corporation
+// Copyright 2026 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -819,26 +819,6 @@ void OpenAIResponsesHandler::writeReasoningLocation(Writer<StringBuffer>& writer
 
 // --- Individual streaming event serializers ---
 
-std::string OpenAIResponsesHandler::serializeCreatedEvent(const std::string& responseId, int64_t createdAt) {
-    StringBuffer buffer;
-    Writer<StringBuffer> writer(buffer);
-    writeEventHeader(writer, "response.created");
-    writer.String("response");
-    serializeResponseObject(writer, responseId, createdAt, "in_progress", "", false);
-    writer.EndObject();
-    return buffer.GetString();
-}
-
-std::string OpenAIResponsesHandler::serializeInProgressEvent(const std::string& responseId, int64_t createdAt) {
-    StringBuffer buffer;
-    Writer<StringBuffer> writer(buffer);
-    writeEventHeader(writer, "response.in_progress");
-    writer.String("response");
-    serializeResponseObject(writer, responseId, createdAt, "in_progress", "", false);
-    writer.EndObject();
-    return buffer.GetString();
-}
-
 std::string OpenAIResponsesHandler::serializeOutputItemAddedEvent(const std::string& outputItemId, uint64_t outputIndex) {
     StringBuffer buffer;
     Writer<StringBuffer> writer(buffer);
@@ -1124,32 +1104,36 @@ std::string OpenAIResponsesHandler::serializeFunctionCallOutputItemDoneEvent(con
 
 // --- Top-level streaming methods ---
 
-std::string OpenAIResponsesHandler::serializeStreamingInitEvents() {
+std::string OpenAIResponsesHandler::serializeStreamingCreatedEvent() {
+    if (responsesState.createdSent){
+         return "";
+    }
+    responsesState.createdSent = true;
     const auto createdAt = std::chrono::duration_cast<std::chrono::microseconds>(created.time_since_epoch()).count();
     const std::string responseId = "resp-" + std::to_string(createdAt);
-    const std::string outputItemId = "msg-0";
+    StringBuffer buffer;
+    Writer<StringBuffer> writer(buffer);
+    writeEventHeader(writer, "response.created");
+    writer.String("response");
+    serializeResponseObject(writer, responseId, createdAt, "in_progress", "", false);
+    writer.EndObject();
+    return buffer.GetString();
+}
 
-    std::vector<std::string> events;
-
-    events.emplace_back(serializeCreatedEvent(responseId, createdAt));
-    events.emplace_back(serializeInProgressEvent(responseId, createdAt));
-
-    // When outputParser is present, defer output item events until first chunk
-    // because reasoning items need to come before message items
-    if (outputParser == nullptr) {
-        events.emplace_back(serializeOutputItemAddedEvent(outputItemId));
-        events.emplace_back(serializeContentPartAddedEvent(outputItemId));
-        responsesState.messageInitialized = true;
+std::string OpenAIResponsesHandler::serializeStreamingInProgressEvent() {
+    if (responsesState.inProgressSent){
+         return "";
     }
-
-    responsesState.initialized = true;
-
-    std::stringstream ss;
-    ss << events.front();
-    for (size_t i = 1; i < events.size(); ++i) {
-        ss << "\n\ndata: " << events[i];
-    }
-    return ss.str();
+    responsesState.inProgressSent = true;
+    const auto createdAt = std::chrono::duration_cast<std::chrono::microseconds>(created.time_since_epoch()).count();
+    const std::string responseId = "resp-" + std::to_string(createdAt);
+    StringBuffer buffer;
+    Writer<StringBuffer> writer(buffer);
+    writeEventHeader(writer, "response.in_progress");
+    writer.String("response");
+    serializeResponseObject(writer, responseId, createdAt, "in_progress", "", false);
+    writer.EndObject();
+    return buffer.GetString();
 }
 
 std::string OpenAIResponsesHandler::serializeStreamingChunk(const std::string& chunkResponse, ov::genai::GenerationFinishReason finishReason) {
@@ -1160,11 +1144,17 @@ std::string OpenAIResponsesHandler::serializeStreamingChunk(const std::string& c
     const std::string reasoningItemId = "rs-0";
 
     std::vector<std::string> events;
-    if (!responsesState.initialized) {
-        // Fallback: if init events were not sent earlier, emit them now
-        std::string initEvents = serializeStreamingInitEvents();
-        if (!initEvents.empty()) {
-            events.emplace_back(std::move(initEvents));
+    // Fallback: emit any lifecycle events not yet sent
+    if (!responsesState.createdSent) {
+        std::string createdEvent = serializeStreamingCreatedEvent();
+        if (!createdEvent.empty()) {
+            events.emplace_back(std::move(createdEvent));
+        }
+    }
+    if (!responsesState.inProgressSent) {
+        std::string inProgressEvent = serializeStreamingInProgressEvent();
+        if (!inProgressEvent.empty()) {
+            events.emplace_back(std::move(inProgressEvent));
         }
     }
 
@@ -1255,6 +1245,11 @@ std::string OpenAIResponsesHandler::serializeStreamingChunk(const std::string& c
     } else {
         // No parser - pass through raw text
         if (!chunkResponse.empty()) {
+            if (!responsesState.messageInitialized) {
+                events.emplace_back(serializeOutputItemAddedEvent(outputItemId));
+                events.emplace_back(serializeContentPartAddedEvent(outputItemId));
+                responsesState.messageInitialized = true;
+            }
             responsesState.outputText += chunkResponse;
             events.emplace_back(serializeOutputTextDeltaEvent(outputItemId, chunkResponse));
         }
@@ -1309,10 +1304,16 @@ std::string OpenAIResponsesHandler::serializeFailedEvent(const std::string& erro
     const std::string responseId = "resp-" + std::to_string(createdAt);
 
     std::vector<std::string> events;
-    if (!responsesState.initialized) {
-        std::string initEvents = serializeStreamingInitEvents();
-        if (!initEvents.empty()) {
-            events.emplace_back(std::move(initEvents));
+    if (!responsesState.createdSent) {
+        std::string createdEvent = serializeStreamingCreatedEvent();
+        if (!createdEvent.empty()) {
+            events.emplace_back(std::move(createdEvent));
+        }
+    }
+    if (!responsesState.inProgressSent) {
+        std::string inProgressEvent = serializeStreamingInProgressEvent();
+        if (!inProgressEvent.empty()) {
+            events.emplace_back(std::move(inProgressEvent));
         }
     }
 

@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2025 Intel Corporation
+// Copyright 2026 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -98,13 +98,15 @@ ov::genai::JsonContainer rapidJsonValueToJsonContainer(const rapidjson::Value& v
 }  // namespace
 
 // Default no-op implementations for streaming lifecycle events
-std::string OpenAIApiHandler::serializeStreamingInitEvents() {
+std::string OpenAIApiHandler::serializeStreamingCreatedEvent() {
+    return "";
+}
+
+std::string OpenAIApiHandler::serializeStreamingInProgressEvent() {
     return "";
 }
 
 std::string OpenAIApiHandler::serializeFailedEvent(const std::string& errorMessage, ResponsesErrorCode errorCode) {
-    (void)errorMessage;
-    (void)errorCode;
     return "";
 }
 

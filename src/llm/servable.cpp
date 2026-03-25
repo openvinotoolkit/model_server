@@ -316,8 +316,8 @@ absl::Status GenAiServable::preparePartialResponse(std::shared_ptr<GenAiServable
     ov::genai::GenerationFinishReason finishReason = generationOutput.finish_reason;
     if (finishReason == ov::genai::GenerationFinishReason::NONE) {  // continue
         // For RESPONSES endpoint, always call serializeStreamingChunk so that
-        // initialization events (response.created, response.in_progress, etc.)
-        // are emitted immediately, even before the tokenizer produces text.
+        // output item initialization events (output_item.added, content_part.added)
+        // are emitted on the first chunk, even before the tokenizer produces text.
         if (lastTextChunk.size() > 0 || executionContext->apiHandler->getEndpoint() == Endpoint::RESPONSES) {
             std::string serializedChunk = executionContext->apiHandler->serializeStreamingChunk(lastTextChunk, finishReason);
             if (!serializedChunk.empty()) {
