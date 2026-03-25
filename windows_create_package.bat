@@ -132,7 +132,7 @@ copy C:\opt\%curl_dir%\COPYING.txt %license_dest%LICENSE-CURL.txt
 if !errorlevel! neq 0 exit /b !errorlevel!
 copy C:\opt\%curl_dir%\dep\brotli\LICENSE.txt %license_dest%LICENSE-BROTIL.txt
 if !errorlevel! neq 0 exit /b !errorlevel!
-copy C:\opt\%curl_dir%\dep\cacert\LICENSE.url %license_dest%LICENSE-CACERT.url
+copy C:\opt\%curl_dir%\dep\certdata\LICENSE.url %license_dest%LICENSE-CERTDATA.url
 if !errorlevel! neq 0 exit /b !errorlevel!
 copy C:\opt\%curl_dir%\dep\libpsl\COPYING.txt %license_dest%LICENSE-LIBPSL.txt
 if !errorlevel! neq 0 exit /b !errorlevel!
