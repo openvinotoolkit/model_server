@@ -237,6 +237,7 @@ RUN git clone https://github.com/$ov_tokenizers_org/openvino_tokenizers.git /ope
 WORKDIR /openvino_genai/
 ARG ov_genai_branch=master
 ARG ov_genai_org=openvinotoolkit
+# error: #warning _FORTIFY_SOURCE > 2 is treated like 2 on this platform
 ARG GENAI_SDL_OPS="${SDL_OPS} -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2"
 # hadolint ignore=DL3003
 RUN if [ "$ov_use_binary" == "0" ]; then true ; else exit 0 ; fi ; \
