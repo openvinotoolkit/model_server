@@ -20,6 +20,7 @@
 #include <string>
 #include <utility>
 #include <variant>
+#include <vector>
 
 #include <curl/curl.h>
 #include <nlohmann/json.hpp>
@@ -221,9 +222,11 @@ Status HfPullModelModule::pullLoraAdapters(const std::string& graphDirectory) {
         }
         std::string loraDownloadPath;
         std::string loraUrl;
+        std::string authTokenHF;
         if (adapter.sourceType == LoraSourceType::HF_REPO) {
             loraDownloadPath = FileSystem::joinPath({graphDirectory, "loras", adapter.sourceLora});
             loraUrl = this->GetHfEndpoint() + adapter.sourceLora + "/resolve/main/" + adapter.safetensorsFile;
+            authTokenHF = this->GetHfToken();
         } else if (adapter.sourceType == LoraSourceType::DIRECT_URL) {
             loraDownloadPath = FileSystem::joinPath({graphDirectory, "loras", adapter.alias});
             loraUrl = adapter.sourceLora;
@@ -242,7 +245,7 @@ Status HfPullModelModule::pullLoraAdapters(const std::string& graphDirectory) {
                 return StatusCode::DIRECTORY_NOT_CREATED;
             }
         }
-        status = downloadFileWithCurl(loraUrl, loraFilePath);
+        status = downloadFileWithCurl(loraUrl, loraFilePath, authTokenHF);
         if (!status.ok()) {
             SPDLOG_ERROR("Failed to download LoRA adapter: {} from: {}", adapter.alias, loraUrl);
             return status;

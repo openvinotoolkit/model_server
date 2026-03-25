@@ -473,7 +473,7 @@ node: {
             loraPath = adapter.sourceLora;
         } else if (adapter.sourceType == LoraSourceType::HF_REPO) {
             loraPath = "loras/" + adapter.sourceLora + "/" + adapter.safetensorsFile;
-        } else { // cURL direct link
+        } else {  // cURL direct link
             loraPath = "loras/" + adapter.alias + "/" + adapter.safetensorsFile;
         }
         oss << R"(

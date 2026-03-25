@@ -20,5 +20,6 @@ namespace ovms {
 class Status;
 
 Status downloadFileWithCurl(const std::string& url, const std::string& filePath);
+Status downloadFileWithCurl(const std::string& url, const std::string& filePath, const std::string& authTokenHF);
 
 }  // namespace ovms

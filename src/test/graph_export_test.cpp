@@ -1349,7 +1349,10 @@ TEST_F(ImageGenCLILoraParsingWithTempDir, LocalFileWithAlias) {
     serverSettings.serverMode = ovms::HF_PULL_MODE;
     ovms::HFSettingsImpl hfSettings;
     std::string tmpFile = ovms::FileSystem::joinPath({this->directoryPath, "test_weights.safetensors"});
-    { std::ofstream f(tmpFile); f << "test"; }
+    {
+        std::ofstream f(tmpFile);
+        f << "test";
+    }
     hfSettings.sourceLoras = "pokemon=" + tmpFile;
     ovms::ImageGenerationGraphCLIParser parser;
     parser.prepare(serverSettings, hfSettings, "test_model");
@@ -1366,7 +1369,10 @@ TEST_F(ImageGenCLILoraParsingWithTempDir, MixedSourceTypes) {
     serverSettings.serverMode = ovms::HF_PULL_MODE;
     ovms::HFSettingsImpl hfSettings;
     std::string tmpFile = ovms::FileSystem::joinPath({this->directoryPath, "local.safetensors"});
-    { std::ofstream f(tmpFile); f << "test"; }
+    {
+        std::ofstream f(tmpFile);
+        f << "test";
+    }
     hfSettings.sourceLoras = "hf=org/repo,url=https://example.com/remote.safetensors,local=" + tmpFile;
     ovms::ImageGenerationGraphCLIParser parser;
     parser.prepare(serverSettings, hfSettings, "test_model");

@@ -18,6 +18,8 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <utility>
+#include <vector>
 
 #include <openvino/genai/image_generation/image2image_pipeline.hpp>
 #include <openvino/genai/image_generation/inpainting_pipeline.hpp>

@@ -152,6 +152,10 @@ static int progress_callback(void* clientp,
 }
 
 Status downloadFileWithCurl(const std::string& url, const std::string& filePath) {
+    return downloadFileWithCurl(url, filePath, "");
+}
+
+Status downloadFileWithCurl(const std::string& url, const std::string& filePath, const std::string& authTokenHF) {
     std::string agentString = std::string(PROJECT_NAME) + "/" + std::string(PROJECT_VERSION);
 
     CURL* curl = nullptr;
@@ -169,6 +173,14 @@ Status downloadFileWithCurl(const std::string& url, const std::string& filePath)
     CurlDownloadFile downloadFile{filePath.c_str(), NULL};
     CHECK_CURL_CALL(curl_easy_setopt(curl, CURLOPT_WRITEDATA, &downloadFile));
     CHECK_CURL_CALL(curl_easy_setopt(curl, CURLOPT_USERAGENT, agentString.c_str()));
+    struct curl_slist* headers = nullptr;
+    std::string authHeader;
+    if (!authTokenHF.empty()) {
+        authHeader = "Authorization: Bearer " + authTokenHF;
+        headers = curl_slist_append(headers, authHeader.c_str());
+        CHECK_CURL_CALL(curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers));
+    }
+    auto headersGuard = std::unique_ptr<struct curl_slist, decltype(&curl_slist_free_all)>(headers, curl_slist_free_all);
     ProgressData progressData;
     CHECK_CURL_CALL(curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0L));
     CHECK_CURL_CALL(curl_easy_setopt(curl, CURLOPT_XFERINFOFUNCTION, progress_callback));

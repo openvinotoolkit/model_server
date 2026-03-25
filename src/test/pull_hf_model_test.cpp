@@ -302,9 +302,7 @@ TEST_F(HfDownloaderPullHfModel, Resume) {
         // Fails because we want clean and it has the graph.pbtxt after download
         ASSERT_EQ(hfDownloader->CheckRepositoryStatus(true).getCode(), ovms::StatusCode::HF_GIT_STATUS_UNCLEAN);
 
-        exit(0);
-    },
-        ::testing::ExitedWithCode(0), "");
+        exit(0); }, ::testing::ExitedWithCode(0), "");
 
     std::error_code ec;
     ec.clear();
@@ -504,9 +502,7 @@ TEST(HfDownloaderClassTest, RepositoryStatusCheckErrors) {
         // Fails without libgit init
         ASSERT_EQ(hfDownloader->CheckRepositoryStatus(true).getCode(), ovms::StatusCode::HF_GIT_LIBGIT2_NOT_INITIALIZED);
         ASSERT_EQ(hfDownloader->CheckRepositoryStatus(false).getCode(), ovms::StatusCode::HF_GIT_LIBGIT2_NOT_INITIALIZED);
-        exit(0);
-    },
-        ::testing::ExitedWithCode(0), "");
+        exit(0); }, ::testing::ExitedWithCode(0), "");
 
     EXPECT_EXIT({
         std::unique_ptr<TestHfDownloader> hfDownloader = std::make_unique<TestHfDownloader>(modelName, ovms::IModelDownloader::getGraphDirectory(downloadPath, modelName), hfEndpoint, hfToken, httpProxy, false);
@@ -524,9 +520,7 @@ TEST(HfDownloaderClassTest, RepositoryStatusCheckErrors) {
         std::unique_ptr<TestHfDownloader> existingHfDownloader = std::make_unique<TestHfDownloader>(modelName, downloadPath, hfEndpoint, hfToken, httpProxy, false);
         ASSERT_EQ(existingHfDownloader->CheckRepositoryStatus(true).getCode(), ovms::StatusCode::HF_GIT_STATUS_FAILED);
         ASSERT_EQ(existingHfDownloader->CheckRepositoryStatus(false).getCode(), ovms::StatusCode::HF_GIT_STATUS_FAILED);
-        exit(0);
-    },
-        ::testing::ExitedWithCode(0), "");
+        exit(0); }, ::testing::ExitedWithCode(0), "");
 }
 
 class TestOptimumDownloaderSetup : public ::testing::Test {
@@ -810,9 +804,7 @@ TEST(Libgt2InitGuardTest, LfsFilterCaptureDefaultResumeOptions) {
         }
 
         EXPECT_THAT(output, ::testing::HasSubstr("[INFO] LFS resume: attempts=5 interval=10 s"));
-        exit(0);
-    },
-        ::testing::ExitedWithCode(0), "");
+        exit(0); }, ::testing::ExitedWithCode(0), "");
 }
 
 TEST(Libgt2InitGuardTest, LfsFilterCaptureNonDefaultResumeOptions) {
@@ -835,9 +827,7 @@ TEST(Libgt2InitGuardTest, LfsFilterCaptureNonDefaultResumeOptions) {
         }
 
         EXPECT_THAT(output, ::testing::HasSubstr("[INFO] LFS resume: attempts=3 interval=20 s"));
-        exit(0);
-    },
-        ::testing::ExitedWithCode(0), "");
+        exit(0); }, ::testing::ExitedWithCode(0), "");
 }
 
 TEST_F(HfDownloaderHfEnvTest, Methods) {
@@ -1051,6 +1041,10 @@ class HfPullModelModuleLoraTest : public TestWithTempDir {};
 
 TEST_F(HfPullModelModuleLoraTest, ResolveHfLoraFilenames) {
     SKIP_AND_EXIT_IF_NOT_RUNNING_UNSTABLE();
+    const char* hfToken = std::getenv("HF_TOKEN");
+    if (!hfToken || std::string(hfToken).empty()) {
+        GTEST_SKIP() << "Skipping: HF_TOKEN not set (required for HF API resolution)";
+    }
     TestHfPullModelModuleForLora module;
     auto& settings = module.getHfSettings();
     settings.task = ovms::IMAGE_GENERATION_GRAPH;
@@ -1073,6 +1067,10 @@ TEST_F(HfPullModelModuleLoraTest, ResolveHfLoraFilenames) {
 
 TEST_F(HfPullModelModuleLoraTest, PullLoraAdaptersFromHfRepo) {
     SKIP_AND_EXIT_IF_NOT_RUNNING_UNSTABLE();
+    const char* hfToken = std::getenv("HF_TOKEN");
+    if (!hfToken || std::string(hfToken).empty()) {
+        GTEST_SKIP() << "Skipping: HF_TOKEN not set (required for HF download)";
+    }
     TestHfPullModelModuleForLora module;
     auto& settings = module.getHfSettings();
     settings.task = ovms::IMAGE_GENERATION_GRAPH;
@@ -1080,7 +1078,7 @@ TEST_F(HfPullModelModuleLoraTest, PullLoraAdaptersFromHfRepo) {
     ovms::LoraAdapterSettings adapter;
     adapter.alias = "pokemon";
     adapter.sourceLora = "juliensimon/sd-pokemon-lora";
-    adapter.safetensorsFile = "";
+    adapter.safetensorsFile = "pytorch_lora_weights.safetensors";  // explicit filename — skips HF API resolve
     adapter.sourceType = ovms::LoraSourceType::HF_REPO;
     graphSettings.loraAdapters.push_back(adapter);
     settings.graphSettings = graphSettings;
@@ -1128,11 +1126,15 @@ TEST_F(HfPullModelModuleLoraTest, PullLoraAdaptersNonImageGenGraphIsNoOp) {
 // which share the AdapterController. Adapters are selected per-request via generate() properties.
 TEST_F(HfDownloaderPullHfModel, DownloadImageGenModelWithLoRA) {
     SKIP_AND_EXIT_IF_NOT_RUNNING_UNSTABLE();
+    const char* hfToken = std::getenv("HF_TOKEN");
+    if (!hfToken || std::string(hfToken).empty()) {
+        GTEST_SKIP() << "Skipping: HF_TOKEN not set (required for HF LoRA download)";
+    }
     this->filesToPrintInCaseOfFailure.emplace_back("graph.pbtxt");
     std::string modelName = "OpenVINO/stable-diffusion-v1-5-int8-ov";
     std::string downloadPath = ovms::FileSystem::joinPath({this->directoryPath, "repository"});
     std::string task = "image_generation";
-    std::string sourceLoras = "pokemon=juliensimon/sd-pokemon-lora";
+    std::string sourceLoras = "pokemon=juliensimon/sd-pokemon-lora@pytorch_lora_weights.safetensors";
     ::SetUpServerForDownloadWithLoras(this->t, this->server, modelName, downloadPath, task, sourceLoras);
 
     std::string basePath = ovms::FileSystem::joinPath({downloadPath, "OpenVINO", "stable-diffusion-v1-5-int8-ov"});
