@@ -160,10 +160,10 @@ TEST_F(MediapipeFrameworkTest, HotReloadOutputStreamHandlerCheckNoInputPackets) 
         float expVal;
         MyFunctor(float expVal) :
             expVal(expVal) {
-            SPDLOG_ERROR("MyFunctor observer constructed:{}", (void*)this);
+            SPDLOG_TRACE("MyFunctor observer constructed:{}", (void*)this);
         }
         absl::Status handlePacket(const ::mediapipe::Packet& packet) override {
-            SPDLOG_ERROR("ER my functor:{}", (void*)this);
+            SPDLOG_TRACE("my functor:{}", (void*)this);
             const ov::Tensor& outputTensor =
                 packet.Get<ov::Tensor>();
             auto datatype = ov::element::Type_t::f32;
@@ -186,7 +186,7 @@ TEST_F(MediapipeFrameworkTest, HotReloadOutputStreamHandlerCheckNoInputPackets) 
     MP_ERROR_STOP(graph.AddPacketToInputStream(
         inputStreamName, Adopt(inputTensor.release()).At(Timestamp(timestamp++))));
     MP_ERROR_STOP(graph.WaitUntilIdle());
-    SPDLOG_ERROR("Now swap Functor, we don't have to call ObserverOutputStream");
+    SPDLOG_TRACE("Now swap Functor, we don't have to call ObserverOutputStream");
     expVal = 42;
     data[0] = expVal - 1;
     perGraphObserverFunctor = std::make_shared<MyFunctor>(expVal);
@@ -496,9 +496,9 @@ TEST_F(MediapipeNegativeFrameworkTest, ExceptionDuringProcess) {
         auto status = impl.ModelInfer(nullptr, &request, &response);
         ASSERT_EQ(status.error_code(), grpc::StatusCode::INVALID_ARGUMENT) << status.error_message();
     } catch (std::exception& e) {
-        SPDLOG_ERROR("ERs");
+        SPDLOG_ERROR("ER: {}", e.what());
     } catch (...) {
-        SPDLOG_ERROR("ER");
+        SPDLOG_ERROR("ER: unknown exception");
     }
 }
 TEST_F(MediapipeNegativeFrameworkTest, ExceptionDuringGetContract) { // TODO FIXME add checks to exception handling?
@@ -518,9 +518,9 @@ TEST_F(MediapipeNegativeFrameworkTest, ExceptionDuringGetContract) { // TODO FIX
         auto status = impl.ModelInfer(nullptr, &request, &response);
         ASSERT_EQ(status.error_code(), grpc::StatusCode::UNAVAILABLE) << status.error_message();
     } catch (std::exception& e) {
-        SPDLOG_ERROR("ERs");
+        SPDLOG_ERROR("ER: {}", e.what());
     } catch (...) {
-        SPDLOG_ERROR("ER");
+        SPDLOG_ERROR("ER: unknown exception");
     }
 }
 TEST_F(MediapipeNegativeFrameworkTest, ExceptionDuringGetOpen) {
@@ -541,9 +541,9 @@ TEST_F(MediapipeNegativeFrameworkTest, ExceptionDuringGetOpen) {
         auto status = impl.ModelInfer(nullptr, &request, &response);
         ASSERT_EQ(status.error_code(), grpc::StatusCode::INVALID_ARGUMENT) << status.error_message();
     } catch (std::exception& e) {
-        SPDLOG_ERROR("ERs");
+        SPDLOG_ERROR("ER: {}", e.what());
     } catch (...) {
-        SPDLOG_ERROR("ER");
+        SPDLOG_ERROR("ER: unknown exception");
     }
 }
 TEST_F(MediapipeNegativeFrameworkTest, ExceptionDuringClose) {
@@ -564,8 +564,8 @@ TEST_F(MediapipeNegativeFrameworkTest, ExceptionDuringClose) {
         auto status = impl.ModelInfer(nullptr, &request, &response);
         ASSERT_EQ(status.error_code(), grpc::StatusCode::INVALID_ARGUMENT) << status.error_message();
     } catch (std::exception& e) {
-        SPDLOG_ERROR("ERs");
+        SPDLOG_ERROR("ER: {}", e.what());
     } catch (...) {
-        SPDLOG_ERROR("ER");
+        SPDLOG_ERROR("ER: unknown exception");
     }
 }

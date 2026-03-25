@@ -45,21 +45,26 @@
 namespace ovms {
 class OutputStreamObserverI;
 class NullOutputStreamObserver;
+struct ObserverHolder;
 struct GraphHelper {
-    std::shared_ptr<::mediapipe::CalculatorGraph> graph;  // TODO FIXME this does not have to be shared_ptr
-    std::unordered_map<std::string, std::shared_ptr<OutputStreamObserverI>> outStreamObservers;
+    std::unique_ptr<::mediapipe::CalculatorGraph> graph;
+    // const after construction: keys are fixed, but observer implementations
+    // can be swapped via the mutable ObserverHolder inside each shared_ptr.
+    const std::unordered_map<std::string, std::shared_ptr<ObserverHolder>> outStreamObservers;
     GenAiExecutionContextMap genAiExecutionContextMap;
-    ::mediapipe::Timestamp currentTimestamp;  // TODO FIXME const
-    // TODO FIXME move constr/=
+    ::mediapipe::Timestamp currentTimestamp;
     GraphHelper() = default;
+    // Constructor that takes the pre-built observer map
+    GraphHelper(std::unordered_map<std::string, std::shared_ptr<ObserverHolder>>&& observers) :
+        outStreamObservers(std::move(observers)) {}
     GraphHelper(const GraphHelper&) = delete;
     GraphHelper& operator=(const GraphHelper&) = delete;
     GraphHelper(GraphHelper&& gh) :
         graph(std::move(gh.graph)),
-        outStreamObservers(std::move(gh.outStreamObservers)),
+        outStreamObservers(std::move(const_cast<std::unordered_map<std::string, std::shared_ptr<ObserverHolder>>&>(gh.outStreamObservers))),
         genAiExecutionContextMap(std::move(gh.genAiExecutionContextMap)),
         currentTimestamp(gh.currentTimestamp) {}
-    GraphHelper& operator=(GraphHelper&& gh) = default;
+    GraphHelper& operator=(GraphHelper&&) = delete;
 };
 // we need to keep Graph alive during MP reload hence shared_ptr
 class GraphQueue : public Queue<std::shared_ptr<GraphHelper>> {
@@ -74,8 +79,11 @@ public:
 struct GraphIdGuard {
     std::weak_ptr<GraphQueue> weakQueue;
     const int id;
+    // shared_ptr because GraphIdGuard (and the executor holding it) must keep
+    // the GraphHelper alive even after the GraphQueue is destroyed during
+    // mediapipe graph reload/retire — the in-flight request continues using
+    // the old graph until completion.
     std::shared_ptr<GraphHelper> gh;
-    // TODO FIXME shared_ptr
     ::mediapipe::CalculatorGraph& graph;
     GraphIdGuard(std::shared_ptr<GraphQueue>& queue) :
         weakQueue(queue),

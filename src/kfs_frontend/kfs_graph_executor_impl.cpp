@@ -926,7 +926,7 @@ static Status createPacketAndPushIntoGraph(const std::string& name, std::shared_
     }
     std::unique_ptr<T> inputTensor;
     OVMS_RETURN_ON_FAIL(deserializeTensor(name, *request, inputTensor, pythonBackend));
-    SPDLOG_TRACE("Current Timestamp before actual pyshing:{}", timestamp.Value());
+    SPDLOG_TRACE("Current Timestamp before actual pushing:{}", timestamp.Value());
     MP_RETURN_ON_FAIL(graph.AddPacketToInputStream(
                           name,
                           ::mediapipe::packet_internal::Create(

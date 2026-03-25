@@ -106,7 +106,8 @@ Status MediapipeGraphDefinition::validateForConfigFileExistence() {
 Status MediapipeGraphDefinition::resolveGraphQueueSize() {
     // 1. Explicit pbtxt directive: # OVMS_GRAPH_QUEUE_SIZE: <value>
     //    Always honored regardless of env var or calculator checks.
-    //    Value 0 or -1 disables the queue, AUTO or positive integer enables it.
+    //    Value -1 disables the queue, AUTO or positive integer enables it.
+    //    Value 0 is rejected as invalid.
     static const std::regex directiveRegex(
         R"((?:^|\n)\s*#\s*OVMS_GRAPH_QUEUE_SIZE\s*:\s*(\S+)\s*(?:\r?\n|$))");
     std::smatch match;
@@ -122,18 +123,18 @@ Status MediapipeGraphDefinition::resolveGraphQueueSize() {
             return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
         }
         int queueSize = parsed.value();
-        if (queueSize < -1) {
-            SPDLOG_ERROR("Invalid OVMS_GRAPH_QUEUE_SIZE value: {}. Must be -1 or 0 (disabled), or a positive integer.", queueSize);
+        if (queueSize < -1 || queueSize == 0) {
+            SPDLOG_ERROR("Invalid OVMS_GRAPH_QUEUE_SIZE value: {}. Must be -1 (disabled) or a positive integer.", queueSize);
             return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
         }
-        if (queueSize == 0 || queueSize == -1) {
-            SPDLOG_DEBUG("Graph queue explicitly disabled (OVMS_GRAPH_QUEUE_SIZE={}) for mediapipe: {}", queueSize, getName());
+        if (queueSize == -1) {
+            SPDLOG_DEBUG("Graph queue explicitly disabled (OVMS_GRAPH_QUEUE_SIZE=-1) for mediapipe: {}", getName());
             return StatusCode::OK;
         }
         unsigned int maxThreads = std::thread::hardware_concurrency();
         if (maxThreads > 0 && queueSize > static_cast<int>(maxThreads)) {
-            SPDLOG_ERROR("Invalid OVMS_GRAPH_QUEUE_SIZE value: {}. Exceeds available hardware threads: {}.", queueSize, maxThreads);
-            return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
+            SPDLOG_WARN("OVMS_GRAPH_QUEUE_SIZE value: {} exceeds available hardware threads: {}. Clamping to {}.", queueSize, maxThreads, maxThreads);
+            queueSize = static_cast<int>(maxThreads);
         }
         this->mgconfig.setGraphQueueSize(queueSize);
         return StatusCode::OK;

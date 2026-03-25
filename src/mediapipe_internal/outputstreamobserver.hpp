@@ -56,4 +56,9 @@ public:
         throw std::runtime_error("NullOutputStreamObserver should have been replaced before graph execution");
     }
 };
+// Mutable holder for an observer, allowing the observer implementation to be
+// swapped while the map that owns this holder remains const.
+struct ObserverHolder {
+    std::shared_ptr<OutputStreamObserverI> current;
+};
 }  // namespace ovms

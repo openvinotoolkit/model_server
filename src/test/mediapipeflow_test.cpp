@@ -1559,7 +1559,7 @@ TEST_F(MediapipeStreamFlowAddTest, InferOnUnloadedGraph) {
 
 // Inference on reloaded mediapipe graph, completely different pipeline
 // Expects old stream to still use old configuration
-// Expect new stream to use new configuration XXXXXX
+// Expect new stream to use new configuration
 TEST_F(MediapipeStreamFlowAddTest, InferOnReloadedGraph) {
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
     KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
@@ -4170,7 +4170,8 @@ TEST(MediapipeGraphQueueSizeDirective, ExceedsHardwareThreads) {
     DummyMediapipeGraphDefinition def("test", mgc, pbtxt);
     ovms::ModelManager manager;
     auto status = def.validate(manager);
-    EXPECT_EQ(status, ovms::StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID);
+    // Queue size is clamped to hardware_concurrency with a warning, not rejected
+    EXPECT_EQ(status, ovms::StatusCode::OK);
 }
 
 TEST(MediapipeGraphQueueSizeDirective, InvalidStringRejected) {

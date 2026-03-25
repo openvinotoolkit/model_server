@@ -44,10 +44,18 @@ GraphQueue::GraphQueue(const ::mediapipe::CalculatorGraphConfig& config, std::sh
     Queue(streamsLength),
     sidePacketMaps(sidePacketMaps) {
     inferRequests.reserve(streamsLength);
-    // TODO FIXME split constructor to init to handle retCodes?
     for (auto i = 0; i < streamsLength; ++i) {
-        auto gh = std::make_shared<GraphHelper>();
-        gh->graph = std::make_shared<::mediapipe::CalculatorGraph>();
+        // Build observer map locally before constructing GraphHelper (const map)
+        std::unordered_map<std::string, std::shared_ptr<ObserverHolder>> observers;
+        for (auto& name : config.output_stream()) {
+            std::string streamName = getStreamName(name);
+            auto holder = std::make_shared<ObserverHolder>();
+            holder->current = std::make_shared<NullOutputStreamObserver>();
+            observers[streamName] = holder;
+        }
+
+        auto gh = std::make_shared<GraphHelper>(std::move(observers));
+        gh->graph = std::make_unique<::mediapipe::CalculatorGraph>();
         gh->currentTimestamp = ::mediapipe::Timestamp(0);
 
         auto absStatus = gh->graph->Initialize(config);
@@ -55,11 +63,9 @@ GraphQueue::GraphQueue(const ::mediapipe::CalculatorGraphConfig& config, std::sh
             SPDLOG_ERROR("Graph queue initialization failed: {}", absStatus.ToString());
             throw std::runtime_error(absStatus.ToString());
         }
-        for (auto& name : config.output_stream()) {
-            std::string streamName = getStreamName(name);
-            gh->outStreamObservers[streamName] = std::shared_ptr<OutputStreamObserverI>(new NullOutputStreamObserver());  // TODO use at() FIXME
-            auto& perGraphObserverFunctor = gh->outStreamObservers[streamName];
-            absStatus = gh->graph->ObserveOutputStream(streamName, [&perGraphObserverFunctor](const ::mediapipe::Packet& packet) -> absl::Status { return perGraphObserverFunctor->handlePacket(packet); });
+        for (const auto& [streamName, holder] : gh->outStreamObservers) {
+            // Lambda captures holder (shared_ptr) by value — safe regardless of map layout
+            absStatus = gh->graph->ObserveOutputStream(streamName, [holder](const ::mediapipe::Packet& packet) -> absl::Status { return holder->current->handlePacket(packet); });
             if (!absStatus.ok()) {
                 SPDLOG_ERROR("Graph queue ObserveOutputStream failed: {}", absStatus.ToString());
                 throw std::runtime_error(absStatus.ToString());

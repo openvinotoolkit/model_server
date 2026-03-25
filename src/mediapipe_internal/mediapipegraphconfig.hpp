@@ -19,6 +19,8 @@
 #include <string>
 #include <thread>
 #include <variant>
+
+#include <spdlog/spdlog.h>
 #pragma warning(push)
 #pragma warning(disable : 6313)
 #include <rapidjson/document.h>
@@ -261,12 +263,12 @@ public:
      * @brief Resolve the graph queue size setting to a concrete integer.
      *
      * Returns:
-     *   -1  => queue creation disabled (user set -1)
-     *    0  => queue with size 0 (user set 0)
-     *   >0  => explicit size or resolved AUTO / default
+     *   -1  => queue creation disabled (user set -1 or not set)
+     *   >0  => explicit size or resolved AUTO
      *
+     * Value 0 is rejected at parse time (resolveGraphQueueSize).
      * When not set (nullopt): returns -1 (queue disabled).
-     * When AUTO: returns hardcoded value (TODO FIXME @atobisze determine optimal size).
+     * When AUTO: returns hardware_concurrency() or 16 as fallback.
      */
     int getInitialQueueSize() const {
         if (!this->graphQueueSize.has_value()) {
@@ -274,7 +276,11 @@ public:
         }
         if (std::holds_alternative<GraphQueueAutoTag>(*this->graphQueueSize)) {
             unsigned int hwThreads = std::thread::hardware_concurrency();
-            return (hwThreads > 0) ? static_cast<int>(hwThreads) : 16;
+            if (hwThreads == 0) {
+                SPDLOG_WARN("std::thread::hardware_concurrency() returned 0 (unknown). Falling back to graph queue size 16.");
+                return 16;
+            }
+            return static_cast<int>(hwThreads);
         }
         return std::get<int>(*this->graphQueueSize);
     }

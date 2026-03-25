@@ -188,7 +188,7 @@ public:
                 SPDLOG_DEBUG("Creating Mediapipe graph outputs name failed for: {}", name);
                 return StatusCode::MEDIAPIPE_GRAPH_ADD_OUTPUT_STREAM_ERROR;
             }
-            guard->gh->outStreamObservers[name] = std::make_shared<MyFunctor<RequestType, ResponseType>>(name, this->outputTypes.at(name), *this, *request, *response);
+            guard->gh->outStreamObservers.at(name)->current = std::make_shared<MyFunctor<RequestType, ResponseType>>(name, this->outputTypes.at(name), *this, *request, *response);
         }
 
         size_t numberOfPacketsCreated = 0;
@@ -387,7 +387,7 @@ public:
                     SPDLOG_DEBUG("Creating Mediapipe graph outputs name failed for: {}", outputName);
                     return StatusCode::MEDIAPIPE_GRAPH_ADD_OUTPUT_STREAM_ERROR;
                 }
-                guard->gh->outStreamObservers[outputName] = std::make_shared<StreamingFunctor<ReaderWriterType>>(
+                guard->gh->outStreamObservers.at(outputName)->current = std::make_shared<StreamingFunctor<ReaderWriterType>>(
                     outputName, this->outputTypes.at(outputName),
                     this->name, this->version,
                     serverReaderWriter, sendMutex,
