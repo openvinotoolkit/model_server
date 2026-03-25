@@ -16,6 +16,8 @@
 #include "tool_parser.hpp"
 #include "../utils.hpp"
 #include "../../../logging.hpp"
+#include <algorithm>
+#include <cctype>
 
 namespace ovms {
 
@@ -65,7 +67,9 @@ std::string Lfm2ToolParser::normalizeArgStr(const std::string& arg) {
 
     std::string normalized = arg;
     
-    if (arg[0] == '{' || arg.back() == '}' || arg[0] == '[' || arg.back() == ']') {
+    const char first = normalized.front();
+    const char last = normalized.back();
+    if ((first == '{' && last == '}') || (first == '[' && last == ']')) {
         std::replace(normalized.begin(), normalized.end(), '\'', '"');
         SPDLOG_LOGGER_INFO(llm_calculator_logger, "Argument contains curly braces or square brackets, replaced single quotes with double quotes for JSON parsing. Modified string: {}", normalized);
     }
