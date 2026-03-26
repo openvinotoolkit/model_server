@@ -32,5 +32,17 @@ node {
     }
   }
 }
+node {
+  calculator: "RerankCalculatorOV"
+  input_stream: "REQUEST_PAYLOAD:input"
+  output_stream: "RESPONSE_PAYLOAD:output"
+  input_side_packet: "SESSION:tokenizer"
+  input_side_packet: "SESSION:rerank"
+  node_options: {
+    [type.googleapis.com / mediapipe.RerankCalculatorOVOptions]: {
+      max_position_embeddings: 1
+    }
+  }
+}
 
 
