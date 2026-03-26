@@ -14,24 +14,7 @@
 #
 input_stream: "REQUEST_PAYLOAD:input"
 output_stream: "RESPONSE_PAYLOAD:output"
-node {
-  calculator: "OpenVINOModelServerSessionCalculator"
-  output_side_packet: "SESSION:tokenizer"
-  node_options: {
-    [type.googleapis.com / mediapipe.OpenVINOModelServerSessionCalculatorOptions]: {
-      servable_name: "tokenizer_model"
-    }
-  }
-}
-node {
-  calculator: "OpenVINOModelServerSessionCalculator"
-  output_side_packet: "SESSION:rerank"
-  node_options: {
-    [type.googleapis.com / mediapipe.OpenVINOModelServerSessionCalculatorOptions]: {
-      servable_name: "rerank_model"
-    }
-  }
-}
+
 node {
   calculator: "RerankCalculatorOV"
   input_stream: "REQUEST_PAYLOAD:input"
