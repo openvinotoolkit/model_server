@@ -40,7 +40,8 @@ node {
   input_side_packet: "SESSION:rerank"
   node_options: {
     [type.googleapis.com / mediapipe.RerankCalculatorOVOptions]: {
-      max_position_embeddings: 1
+      max_allowed_chunks: 4
+      max_position_embeddings: 8
     }
   }
 }
