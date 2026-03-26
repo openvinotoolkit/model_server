@@ -35,4 +35,32 @@ std::string generateRandomId() {
     }
     return id;
 }
+
+void writeArgumentOfAnyType(const rapidjson::Value& arg, rapidjson::Writer<rapidjson::StringBuffer>& writer) {
+    if (arg.IsString()) {
+        writer.String(arg.GetString());
+    } else if (arg.IsInt64()) {
+        writer.Int64(arg.GetInt64());
+    } else if (arg.IsDouble()) {
+        writer.Double(arg.GetDouble());
+    } else if (arg.IsBool()) {
+        writer.Bool(arg.GetBool());
+    } else if (arg.IsArray()) {
+        writer.StartArray();
+        for (auto& elem : arg.GetArray()) {
+            writeArgumentOfAnyType(elem, writer);
+        }
+        writer.EndArray();
+    } else if (arg.IsObject()) {
+        writer.StartObject();
+        for (auto it = arg.MemberBegin(); it != arg.MemberEnd(); ++it) {
+            writer.Key(it->name.GetString());
+            writeArgumentOfAnyType(it->value, writer);
+        }
+        writer.EndObject();
+    } else {
+        writer.String("");
+        SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Argument has unsupported type.");
+    }
+}
 }  // namespace ovms

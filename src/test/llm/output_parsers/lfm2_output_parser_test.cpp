@@ -17,6 +17,10 @@
 #include <openvino/genai/tokenizer.hpp>
 #include <string>
 #include <vector>
+#include <optional>
+#include <tuple>
+#include <algorithm>
+#include <cctype>
 
 #include "../../../llm/io_processing/base_output_parser.hpp"
 #include "../../../llm/io_processing/output_parser.hpp"
@@ -376,7 +380,7 @@ TEST_F(LFM2OutputParserTest, HolisticStreaming) {
         {"value", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"':", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {" 99", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {"})]", ov ::genai ::GenerationFinishReason ::NONE, R"({"delta":{"tool_calls":[{"index":1,"function":{"arguments":{"config":{"name":"astro_config","value":99}}}}]}})"},
+        {"})]", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":1,"function":{"arguments":{"config":{"name":"astro_config","value":99}}}}]}})"},
         {"<|tool_call_end|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"ANOTHER_CONTENT_AFTER_TOOL_CALL", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":"ANOTHER_CONTENT_AFTER_TOOL_CALL"}})"},
     };

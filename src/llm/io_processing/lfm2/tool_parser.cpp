@@ -16,6 +16,7 @@
 #include "tool_parser.hpp"
 #include "../utils.hpp"
 #include "../../../logging.hpp"
+#include "../../../stringutils.hpp"
 #include <algorithm>
 #include <cctype>
 #include <utility>
@@ -33,33 +34,6 @@ const std::string Lfm2ToolParser::TOOL_ARGS_START_INDICATOR = "(";
 const std::string Lfm2ToolParser::TOOL_ARGS_END_INDICATOR = ")";
 const std::string Lfm2ToolParser::TOOL_SEPARATOR_STR = ", ";
 
-void Lfm2ToolParser::writeArgumentOfAnyType(const rapidjson::Value& arg, rapidjson::Writer<rapidjson::StringBuffer>& writer) {
-    if (arg.IsString()) {
-        writer.String(arg.GetString());
-    } else if (arg.IsInt64()) {
-        writer.Int64(arg.GetInt64());
-    } else if (arg.IsDouble()) {
-        writer.Double(arg.GetDouble());
-    } else if (arg.IsBool()) {
-        writer.Bool(arg.GetBool());
-    } else if (arg.IsArray()) {
-        writer.StartArray();
-        for (auto& elem : arg.GetArray()) {
-            writeArgumentOfAnyType(elem, writer);
-        }
-        writer.EndArray();
-    } else if (arg.IsObject()) {
-        writer.StartObject();
-        for (auto it = arg.MemberBegin(); it != arg.MemberEnd(); ++it) {
-            writer.Key(it->name.GetString());
-            writeArgumentOfAnyType(it->value, writer);
-        }
-        writer.EndObject();
-    } else {
-        writer.String("");
-        SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Argument has unsupported type.");
-    }
-}
 
 std::string Lfm2ToolParser::normalizeArgStr(const std::string& arg) {
     if (arg.empty()) {
@@ -75,22 +49,11 @@ std::string Lfm2ToolParser::normalizeArgStr(const std::string& arg) {
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Argument contains curly braces or square brackets, replaced single quotes with double quotes for JSON parsing. Modified string: {}", normalized);
     }
 
-    if (normalized[0] == '"' && normalized.back() == '"' && normalized.find("\\") != std::string::npos) {
-        std::string escaped;
-        for (size_t i = 0; i < normalized.size(); ++i) {
-            char c = normalized[i];
-            if (c == '\\' && (i + 1 == normalized.size() || normalized[i + 1] != '"')) {
-                escaped += "\\\\";
-            } else {
-                escaped += c;
-            }
-        }
-        normalized = escaped;
-        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Argument is a quoted string containing backslashes. Modified string: {}", normalized);
-    }
+    escapeSpecialCharacters(normalized);
 
     std::string lowerArg = normalized;
     std::transform(lowerArg.begin(), lowerArg.end(), lowerArg.begin(), ::tolower);
+    trim(lowerArg);
 
     if (lowerArg == "true" || lowerArg == "false") {
         normalized = lowerArg;
@@ -107,6 +70,7 @@ void Lfm2ToolParser::writeArgumentOfAnyType(const std::string& arg, rapidjson::W
 
     if (doc.HasParseError()) {
         SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Failed to parse argument string as JSON. Argument string: {}", normalized);
+        writer.Null();
         return;
     }
 
@@ -162,17 +126,17 @@ std::vector<Lfm2ToolParser::Argument> Lfm2ToolParser::parseArguments(const std::
 }
 
 bool Lfm2ToolParser::parseInContentState() {
-    size_t pos = this->streamingContent.find(TOOL_CALL_START_TAG, this->streamingPosition);
+    size_t toolCallStartTagPos = this->streamingContent.find(TOOL_CALL_START_TAG, this->streamingPosition);
     size_t toolCallEndTagPos = this->streamingContent.find(TOOL_CALL_END_TAG, this->streamingPosition);
-    if (toolCallEndTagPos != std::string::npos && pos == std::string::npos) {
+    if (toolCallEndTagPos != std::string::npos && toolCallStartTagPos == std::string::npos) {
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Detected end of tool call at position: {}", toolCallEndTagPos);
         this->streamingPosition = toolCallEndTagPos + TOOL_CALL_END_TAG.length();
         return false;
     }
-    if (pos != std::string::npos) {
-        this->streamingPosition = pos + TOOL_CALL_START_TAG.length() + TOOL_LIST_START_INDICATOR.length();
+    if (toolCallStartTagPos != std::string::npos) {
+        this->streamingPosition = toolCallStartTagPos + TOOL_CALL_START_TAG.length() + TOOL_LIST_START_INDICATOR.length();
         this->currentState = State::ToolCallStarted;
-        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Detected start of tool call at position: {}", pos);
+        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Detected start of tool call at position: {}", toolCallStartTagPos);
         return false;
     }
 
