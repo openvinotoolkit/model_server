@@ -479,7 +479,7 @@ TEST_F(MediapipeNegativeFrameworkTest, NoOutputPacketProduced) {
 }
 
 TEST_F(MediapipeNegativeFrameworkTest, ExceptionDuringProcess) {
-    GTEST_SKIP() << "Terminate called otherwise"; // TODO FIXME check
+    GTEST_SKIP() << "Terminate called otherwise";  // TODO FIXME check
     SetUpServer(getGenericFullPathForSrcTest("/ovms/src/test/mediapipe/negative/config_exception_during_process.json").c_str());
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
     KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
@@ -501,7 +501,7 @@ TEST_F(MediapipeNegativeFrameworkTest, ExceptionDuringProcess) {
         SPDLOG_ERROR("ER: unknown exception");
     }
 }
-TEST_F(MediapipeNegativeFrameworkTest, ExceptionDuringGetContract) { // TODO FIXME add checks to exception handling?
+TEST_F(MediapipeNegativeFrameworkTest, ExceptionDuringGetContract) {  // TODO FIXME add checks to exception handling?
     SetUpServer(getGenericFullPathForSrcTest("/ovms/src/test/mediapipe/negative/config_exception_during_getcontract.json").c_str());
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
     KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
