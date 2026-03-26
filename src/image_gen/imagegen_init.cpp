@@ -123,9 +123,9 @@ std::variant<Status, ImageGenPipelineArgs> prepareImageGenPipelineArgs(const goo
     auto fsModelsPath = std::filesystem::path(nodeOptions.models_path());
     std::string pipelinePath;
     if (fsModelsPath.is_relative()) {
-        pipelinePath = (std::filesystem::path(graphPath) / fsModelsPath).string();
+        pipelinePath = (std::filesystem::path(graphPath) / fsModelsPath).generic_string();
     } else {
-        pipelinePath = fsModelsPath.string();
+        pipelinePath = fsModelsPath.generic_string();
     }
     ImageGenPipelineArgs args;
     args.modelsPath = pipelinePath;
@@ -265,9 +265,9 @@ std::variant<Status, ImageGenPipelineArgs> prepareImageGenPipelineArgs(const goo
         info.alias = loraEntry.alias();
         auto fsLoraPath = std::filesystem::path(loraEntry.path());
         if (fsLoraPath.is_relative()) {
-            info.path = (std::filesystem::path(graphPath) / fsLoraPath).string();
+            info.path = (std::filesystem::path(graphPath) / fsLoraPath).generic_string();
         } else {
-            info.path = fsLoraPath.string();
+            info.path = fsLoraPath.generic_string();
         }
         info.alpha = loraEntry.alpha();
         args.loraAdapters.push_back(std::move(info));
