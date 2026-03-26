@@ -505,7 +505,7 @@ exit /b 0
 :install_curl
 echo [INFO] Installing curl ...
 
-set "curl_version=8.18.0_4"
+set "curl_version=8.19.0_4"
 set "curl_dir=curl-%curl_version%-win64-mingw"
 set "curl_ver=%curl_dir%.zip"
 set "curl_http=https://curl.se/windows/dl-%curl_version%/"
