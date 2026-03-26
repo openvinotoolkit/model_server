@@ -138,6 +138,7 @@ ovms_cc_library(
     srcs = ["io_processing/lfm2/tool_parser.cpp"],
     deps = [
         "@com_github_tencent_rapidjson//:rapidjson",
+        "//src/port:rapidjson_document",
         "//src:libovmslogging",
         "//src:libovmsstring_utils",
         ":io_processing_utils",

@@ -15,12 +15,8 @@
 //*****************************************************************************
 #pragma once
 #include <string>
-#include <rapidjson/document.h>
-#include <rapidjson/writer.h>
-#include <rapidjson/stringbuffer.h>
 
 namespace ovms {
 // Generates random alphanumeric string of length 9 for tool call ID
 std::string generateRandomId();
-void writeArgumentOfAnyType(const rapidjson::Value& arg, rapidjson::Writer<rapidjson::StringBuffer>& writer);
 }  // namespace ovms

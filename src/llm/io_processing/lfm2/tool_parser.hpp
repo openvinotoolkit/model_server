@@ -68,11 +68,12 @@ public:
         return TOOL_CALL_END_TAG;
     }
 
+    static void writeArgumentOfAnyType(const rapidjson::Value& arg, rapidjson::Writer<rapidjson::StringBuffer>& writer);
+    static std::string normalizeArgStr(const std::string& arg);
 private:
-    void writeArgumentOfAnyType(const std::string& arg, rapidjson::Writer<rapidjson::StringBuffer>& writer);
+    void writeArgumentToWriter(const std::string& arg, rapidjson::Writer<rapidjson::StringBuffer>& writer);
 
     size_t findInStringRespectingSpecialChars(const std::string& str, const std::string& target, size_t startPos);
-    std::string normalizeArgStr(const std::string& arg);
     Argument parseSingleArgument(const std::string& argumentStr);
     std::vector<Argument> parseArguments(const std::string& argumentsStr);
 
