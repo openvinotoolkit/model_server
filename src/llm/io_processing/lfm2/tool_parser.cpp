@@ -17,6 +17,7 @@
 #include "../utils.hpp"
 #include "../../../logging.hpp"
 #include "../../../stringutils.hpp"
+#include "rapidjson/error/en.h"
 #include <algorithm>
 #include <cctype>
 #include <utility>
@@ -40,8 +41,15 @@ std::string Lfm2ToolParser::normalizeArgStr(const std::string& arg) {
         return arg;
     }
 
-    std::string normalized = arg;
+    std::string lower = arg;
+    trim(lower);
+    std::transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
 
+    if (lower == "true" || lower == "false" || lower == "null") {
+        return lower;
+    } 
+
+    std::string normalized = arg;
     const char first = normalized.front();
     const char last = normalized.back();
     if ((first == '{' && last == '}') || (first == '[' && last == ']')) {
@@ -49,30 +57,67 @@ std::string Lfm2ToolParser::normalizeArgStr(const std::string& arg) {
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Argument contains curly braces or square brackets, replaced single quotes with double quotes for JSON parsing. Modified string: {}", normalized);
     }
 
-    escapeSpecialCharacters(normalized);
-
-    std::string lowerArg = normalized;
-    std::transform(lowerArg.begin(), lowerArg.end(), lowerArg.begin(), ::tolower);
-    trim(lowerArg);
-
-    if (lowerArg == "true" || lowerArg == "false") {
-        normalized = lowerArg;
-        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Argument contains boolean value, normalized string: {}", normalized);
+    if ((first == '"' && last == '"') || (first == '\'' && last == '\'')) {
+        normalized = normalized.substr(1, normalized.size() - 2);
+        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Argument is enclosed in quotes, removed outer quotes for JSON parsing. Modified string: {}", normalized);
     }
+
+    rapidjson::Document tempDoc;
+    rapidjson::Value finalValue;
+    tempDoc.Parse(normalized.c_str());
+    if (tempDoc.HasParseError()) {
+        auto errorCode = tempDoc.GetParseError();
+        auto errorMessage = rapidjson::GetParseError_En(errorCode);
+        size_t errorOffset = tempDoc.GetErrorOffset();
+        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Failed to parse argument string as JSON. Argument string: {}, Error: {} Offset: {}", normalized, errorMessage, errorOffset);
+
+        finalValue.SetString(normalized.c_str(), static_cast<rapidjson::SizeType>(normalized.size()), tempDoc.GetAllocator());
+    } else {
+        finalValue.CopyFrom(tempDoc, tempDoc.GetAllocator());
+    }
+    {
+        rapidjson::StringBuffer buffer;
+        rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+        finalValue.Accept(writer);
+        normalized = buffer.GetString();
+    }
+
     return normalized;
 }
 
-void Lfm2ToolParser::writeArgumentOfAnyType(const std::string& arg, rapidjson::Writer<rapidjson::StringBuffer>& writer) {
+void Lfm2ToolParser::writeArgumentOfAnyType(const rapidjson::Value& arg, rapidjson::Writer<rapidjson::StringBuffer>& writer) {
+    if (arg.IsString()) {
+        writer.String(arg.GetString());
+    } else if (arg.IsInt64()) {
+        writer.Int64(arg.GetInt64());
+    } else if (arg.IsDouble()) {
+        writer.Double(arg.GetDouble());
+    } else if (arg.IsBool()) {
+        writer.Bool(arg.GetBool());
+    } else if (arg.IsArray()) {
+        writer.StartArray();
+        for (auto& elem : arg.GetArray()) {
+            Lfm2ToolParser::writeArgumentOfAnyType(elem, writer);
+        }
+        writer.EndArray();
+    } else if (arg.IsObject()) {
+        writer.StartObject();
+        for (auto it = arg.MemberBegin(); it != arg.MemberEnd(); ++it) {
+            writer.Key(it->name.GetString());
+            Lfm2ToolParser::writeArgumentOfAnyType(it->value, writer);
+        }
+        writer.EndObject();
+    } else {
+        writer.String("");
+        SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Argument has unsupported type.");
+    }
+}
+
+void Lfm2ToolParser::writeArgumentToWriter(const std::string& arg, rapidjson::Writer<rapidjson::StringBuffer>& writer) {
     std::string normalized = normalizeArgStr(arg);
 
     rapidjson::Document doc;
     doc.Parse(normalized.c_str());
-
-    if (doc.HasParseError()) {
-        SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Failed to parse argument string as JSON. Argument string: {}", normalized);
-        writer.Null();
-        return;
-    }
 
     rapidjson::Value& argumentDoc = doc;
     writeArgumentOfAnyType(argumentDoc, writer);
@@ -85,12 +130,6 @@ Lfm2ToolParser::Argument Lfm2ToolParser::parseSingleArgument(const std::string& 
     if (equalPos != std::string::npos) {
         argument.name = argumentStr.substr(0, equalPos);
         argument.value = argumentStr.substr(equalPos + 1);
-
-        if (argument.value[0] == '\'' && argument.value.back() == '\'') {
-            argument.value[0] = '"';
-            argument.value[argument.value.size() - 1] = '"';
-            SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Argument value is enclosed in single quotes, replaced with double quotes. Modified value: {}", argument.value);
-        }
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Parsed argument - name: {}, value: {}", argument.name, argument.value);
     } else {
         argument.name = argumentStr;
@@ -175,7 +214,7 @@ bool Lfm2ToolParser::parseToolCallParametersState() {
 
     for (const Argument& argument : arguments) {
         argsWriter.Key(argument.name.c_str());
-        writeArgumentOfAnyType(argument.value, argsWriter);
+        writeArgumentToWriter(argument.value, argsWriter);
     }
 
     argsWriter.EndObject();
@@ -321,7 +360,7 @@ bool Lfm2ToolParser::parseSingleToolCall(const std::string& toolStr, ToolCall& t
         argsWriter.StartObject();
         for (const Lfm2ToolParser::Argument& argument : arguments) {
             argsWriter.Key(argument.name.c_str());
-            writeArgumentOfAnyType(argument.value, argsWriter);
+            writeArgumentToWriter(argument.value, argsWriter);
         }
         argsWriter.EndObject();
         toolCall.arguments = sb.GetString();
@@ -349,7 +388,7 @@ void Lfm2ToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t
         if (end == std::string::npos) {
             end = parsedOutput.content.rfind(TOOL_LIST_END_INDICATOR, end);
             if (end == std::string::npos) {
-                SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Malformed tool call in content, no tool end tag or tool list end tag found for tool call starting at position {}", start);
+                SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Malformed tool call in content, no tool end tag or tool list end tag found for tool call starting at position {}", start);
                 break;
             }
             toolCallPosition.second = end + TOOL_LIST_END_INDICATOR.length();
