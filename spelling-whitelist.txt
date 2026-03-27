@@ -28,3 +28,4 @@ src/test/llm/output_parsers/qwen3coder_output_parser_test.cpp
 demos/vlm_npu/README.md:157: mane ==> main, many, maine
 demos/vlm_npu/README.md:218: mane ==> main, many, maine
 demos/integration_with_OpenWebUI/README.md:423: Buildin ==> Building, Build in
+src/test/llm/output_parsers/lfm2_output_parser_test.cpp
