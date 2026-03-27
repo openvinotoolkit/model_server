@@ -261,7 +261,7 @@ packages = {
         'intel-level-zero-npu',
         'intel-ocloc',
         'intel-opencl-icd',
-        'level-zero',
+        'libze1',
         'libhwloc15',
         'libigdgmm12',
         'libnuma1',
