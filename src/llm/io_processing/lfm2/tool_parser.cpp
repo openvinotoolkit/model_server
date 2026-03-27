@@ -41,15 +41,15 @@ std::string Lfm2ToolParser::normalizeArgStr(const std::string& arg) {
         return arg;
     }
 
-    std::string lower = arg;
-    trim(lower);
+    std::string normalized = arg;
+    trim(normalized);
+    std::string lower = normalized;
     std::transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
 
     if (lower == "true" || lower == "false" || lower == "null") {
         return lower;
     } 
 
-    std::string normalized = arg;
     const char first = normalized.front();
     const char last = normalized.back();
     if ((first == '{' && last == '}') || (first == '[' && last == ']')) {
@@ -57,9 +57,10 @@ std::string Lfm2ToolParser::normalizeArgStr(const std::string& arg) {
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Argument contains curly braces or square brackets, replaced single quotes with double quotes for JSON parsing. Modified string: {}", normalized);
     }
 
-    if ((first == '"' && last == '"') || (first == '\'' && last == '\'')) {
-        normalized = normalized.substr(1, normalized.size() - 2);
-        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Argument is enclosed in quotes, removed outer quotes for JSON parsing. Modified string: {}", normalized);
+    if ((first == '\'' && last == '\'')) {
+        normalized[0] = '"';
+        normalized[normalized.size() - 1] = '"';
+        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Argument is enclosed in quotes, replaced outer quotes with double quotes for JSON parsing. Modified string: {}", normalized);
     }
 
     rapidjson::Document tempDoc;
@@ -70,11 +71,15 @@ std::string Lfm2ToolParser::normalizeArgStr(const std::string& arg) {
         auto errorMessage = rapidjson::GetParseError_En(errorCode);
         size_t errorOffset = tempDoc.GetErrorOffset();
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Failed to parse argument string as JSON. Argument string: {}, Error: {} Offset: {}", normalized, errorMessage, errorOffset);
-
+        
+        if (first == '\"' && last == '\"') {
+            normalized = normalized.substr(1, normalized.size() - 2);
+        }
         finalValue.SetString(normalized.c_str(), static_cast<rapidjson::SizeType>(normalized.size()), tempDoc.GetAllocator());
     } else {
         finalValue.CopyFrom(tempDoc, tempDoc.GetAllocator());
     }
+
     {
         rapidjson::StringBuffer buffer;
         rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
