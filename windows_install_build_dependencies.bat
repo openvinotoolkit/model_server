@@ -35,6 +35,14 @@ IF "%2"=="1" (
     set "expunge=0"
 )
 
+IF "%3"=="1" (
+    echo Argument provided: Enable ENABLE_INTEGRITYCHECK = 1
+    set "ENABLE_INTEGRITYCHECK=1"
+) ELSE (
+    echo No argument provided. Using default ENABLE_INTEGRITYCHECK = 0
+    set "ENABLE_INTEGRITYCHECK=0"
+)
+
 set "BAZEL_SHORT_PATH=C:\%output_user_root%"
 set "opt_install_dir=C:\opt"
 
@@ -605,8 +613,14 @@ mkdir build
 if !errorlevel! neq 0 exit /b !errorlevel!
 cd build
 if !errorlevel! neq 0 exit /b !errorlevel!
+if "%ENABLE_INTEGRITYCHECK%"=="1" (
+    set "SDL_OPS=/GS /sdl /guard:cf /DYNAMICBASE /NXCOMPAT /W4 /WX /LTCG /INTEGRITYCHECK /Qspectre"
+) else (
+    set "SDL_OPS=/GS /sdl /guard:cf /DYNAMICBASE /NXCOMPAT /W4 /WX /LTCG"
+)
+
 :: Expected compilers in CI - -G "Visual Studio 16 2019", local -G "Visual Studio 17 2022" as default
-cmake -T v142 .. -D CMAKE_INSTALL_PREFIX=%opencv_install% -D OPENCV_EXTRA_MODULES_PATH=%opencv_contrib_dir%\modules %opencv_flags%
+cmake -T v142 .. -D CMAKE_INSTALL_PREFIX=%opencv_install% -D OPENCV_EXTRA_MODULES_PATH=%opencv_contrib_dir%\modules %opencv_flags% %SDL_OPS%
 if !errorlevel! neq 0 exit /b !errorlevel!
 cmake --build . --config Release -j %NUMBER_OF_PROCESSORS%
 if !errorlevel! neq 0 exit /b !errorlevel!

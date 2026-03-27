@@ -21,7 +21,7 @@ set -exo pipefail
 os=${os:-auto}
 opencv_branch=${opencv_branch:-4.12.0}
 work_dir=${work_dir:-/opt}
-SDL_OPS="-fexceptions -fasynchronous-unwind-tables -fcf-protection -fpic -O2 -U_FORTIFY_SOURCE -fstack-protector -D_FORTIFY_SOURCE=3 -fno-strict-overflow -Wall -Wno-unknown-pragmas -Wno-error=sign-compare -fno-delete-null-pointer-checks -fwrapv -fstack-clash-protection -Wformat -Wformat-security -Werror=format-security -D_GLIBCXX_USE_CXX11_ABI=1 -Wuninitialized"
+SDL_OPS="-fexceptions -fasynchronous-unwind-tables -fcf-protection -fpic -O2 -U_FORTIFY_SOURCE -fstack-protector -D_FORTIFY_SOURCE=2 -fno-strict-overflow -Wall -Wno-unknown-pragmas -Wno-error=sign-compare -fno-delete-null-pointer-checks -fwrapv -fstack-clash-protection -Wformat -Wformat-security -Werror=format-security -D_GLIBCXX_USE_CXX11_ABI=1 -Wuninitialized"
 
 
 #===================================================================================================
