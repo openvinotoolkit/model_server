@@ -35,7 +35,6 @@ const std::string Lfm2ToolParser::TOOL_ARGS_START_INDICATOR = "(";
 const std::string Lfm2ToolParser::TOOL_ARGS_END_INDICATOR = ")";
 const std::string Lfm2ToolParser::TOOL_SEPARATOR_STR = ", ";
 
-
 std::string Lfm2ToolParser::normalizeArgStr(const std::string& arg) {
     if (arg.empty()) {
         return arg;
@@ -48,7 +47,7 @@ std::string Lfm2ToolParser::normalizeArgStr(const std::string& arg) {
 
     if (lower == "true" || lower == "false" || lower == "null") {
         return lower;
-    } 
+    }
 
     const char first = normalized.front();
     const char last = normalized.back();
@@ -71,7 +70,7 @@ std::string Lfm2ToolParser::normalizeArgStr(const std::string& arg) {
         auto errorMessage = rapidjson::GetParseError_En(errorCode);
         size_t errorOffset = tempDoc.GetErrorOffset();
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Failed to parse argument string as JSON. Argument string: {}, Error: {} Offset: {}", normalized, errorMessage, errorOffset);
-        
+
         if (first == '\"' && last == '\"') {
             normalized = normalized.substr(1, normalized.size() - 2);
         }
