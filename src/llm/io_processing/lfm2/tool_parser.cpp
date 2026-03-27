@@ -177,7 +177,7 @@ bool Lfm2ToolParser::parseInContentState() {
         return false;
     }
     if (toolCallStartTagPos != std::string::npos) {
-        this->streamingPosition = toolCallStartTagPos + TOOL_CALL_START_TAG.length() + TOOL_LIST_START_INDICATOR.length();
+        this->streamingPosition = toolCallStartTagPos + TOOL_CALL_START_TAG.length();
         this->currentState = State::ToolCallStarted;
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Detected start of tool call at position: {}", toolCallStartTagPos);
         return false;
@@ -187,23 +187,28 @@ bool Lfm2ToolParser::parseInContentState() {
 }
 
 bool Lfm2ToolParser::parseInToolCallState() {
-    size_t pos = this->streamingContent.find(TOOL_ARGS_START_INDICATOR, this->streamingPosition);
+    size_t toolListStartPos = this->streamingContent.find(TOOL_LIST_START_INDICATOR, this->streamingPosition);
+    size_t argsPos = this->streamingContent.find(TOOL_ARGS_START_INDICATOR, this->streamingPosition);
 
-    if (pos == std::string::npos) {
+    if (toolListStartPos != std::string::npos ) {
+        this->streamingPosition = toolListStartPos + TOOL_LIST_START_INDICATOR.length();
+    }
+
+    if (argsPos == std::string::npos) {
         return false;
     }
 
-    std::string toolName = this->streamingContent.substr(this->streamingPosition, pos - this->streamingPosition);
+    std::string toolName = this->streamingContent.substr(this->streamingPosition, argsPos - this->streamingPosition);
     this->toolCall = ToolCall{generateRandomId(), toolName, ""};
     SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Parsed tool name: {}", toolName);
-    this->streamingPosition = pos + TOOL_ARGS_START_INDICATOR.length();
+    this->streamingPosition = argsPos + TOOL_ARGS_START_INDICATOR.length();
     this->currentState = State::ToolCallParameters;
     this->toolCallIndex++;
     return true;
 }
 
 bool Lfm2ToolParser::parseToolCallParametersState() {
-    size_t pos = this->streamingContent.find(TOOL_ARGS_END_INDICATOR, this->streamingPosition);
+    size_t pos = findInStringRespectingSpecialChars(this->streamingContent, TOOL_ARGS_END_INDICATOR, this->streamingPosition);
     if (pos == std::string::npos) {
         return false;
     }
