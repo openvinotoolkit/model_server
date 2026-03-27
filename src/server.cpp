@@ -37,6 +37,7 @@
 #include <sysexits.h>
 #elif _WIN32
 #include <csignal>
+#include <io.h>
 
 #include <ntstatus.h>
 #include <winsock2.h>
@@ -140,7 +141,16 @@ static void onTerminate(int status) {
 }
 
 static void onIllegal(int status) {
-    Server::instance().setShutdownRequest(2);
+    const char msg[] = "SIGILL received: illegal instruction, unsupported CPU or device. Terminating.\n";
+#ifdef __linux__
+    write(STDERR_FILENO, msg, sizeof(msg) - 1);
+#elif _WIN32
+    _write(_fileno(stderr), msg, sizeof(msg) - 1);
+#endif
+    // Exit code 128+N is the standard shell convention for signal-terminated
+    // processes (bash, dash, Docker, Kubernetes all follow this).
+    // For SIGILL(4) this gives exit code 132.
+    _exit(128 + SIGILL);
 }
 
 #ifdef __linux__
@@ -524,9 +534,7 @@ int Server::startServerFromSettings(ServerSettingsImpl& serverSettings, ModelsSe
                (serverSettings.serverMode == HF_PULL_AND_START_MODE || serverSettings.serverMode == SERVING_MODELS_MODE)) {
             std::this_thread::sleep_for(std::chrono::milliseconds(200));
         }
-        if (getShutdownStatus() == 2) {
-            SPDLOG_ERROR("Illegal operation. OVMS started on unsupported device");
-        }
+
     } catch (const std::exception& e) {
         SPDLOG_ERROR("Exception; {}", e.what());
         result = OVMS_EX_FAILURE;

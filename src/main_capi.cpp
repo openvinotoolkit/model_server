@@ -26,8 +26,13 @@
 #include <signal.h>
 #include <stdio.h>
 
+#ifdef __linux__
+#include <unistd.h>
+#endif
+
 #ifdef _WIN32
 #include <csignal>
+#include <io.h>
 
 #include <ntstatus.h>
 #include <windows.h>
@@ -54,7 +59,19 @@ static void onTerminate(int status) {
 }
 
 static void onIllegal(int status) {
-    shutdown_request = 2;
+    // SIGILL is synchronous - returning would re-execute the faulting instruction,
+    // causing an infinite loop. We must terminate the process.
+    // Only async-signal-safe functions (write, _exit) are used here.
+    const char msg[] = "SIGILL received: illegal instruction, unsupported CPU or device. Terminating.\n";
+#ifdef __linux__
+    write(STDERR_FILENO, msg, sizeof(msg) - 1);
+#elif _WIN32
+    _write(_fileno(stderr), msg, sizeof(msg) - 1);
+#endif
+    // Exit code 128+N is the standard shell convention for signal-terminated
+    // processes (bash, dash, Docker, Kubernetes all follow this).
+    // For SIGILL(4) this gives exit code 132.
+    _exit(128 + SIGILL);
 }
 
 #ifdef __linux__
