@@ -549,6 +549,22 @@ TEST_F(LFM2OutputParserTest, StreamingWithContentBetweenToolCalls) {
         {"})]", ov ::genai ::GenerationFinishReason ::NONE, R"({"delta":{"tool_calls":[{"index":1,"function":{"arguments":{"config":{"name":"astro_config","value":99}}}}]}})"},
         {"<|tool_call_end|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"ANOTHER_CONTENT_AFTER_TOOL_CALL", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":"ANOTHER_CONTENT_AFTER_TOOL_CALL"}})"},
+        {"<|tool_call_start|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"solve", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"(e" , ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"id":"XXXXXXXXX","type":"function","index":2,"function":{"name":"solve"}}]}})"},
+        {"quation", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"=\"", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"2", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"*", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"(", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"x", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"+", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"5)", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {" =", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {" 13", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"\")]", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":2,"function":{"arguments":{"equation":"2*(x+5) = 13"}}}]}})"},
+        {"<|tool_call_end|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"And some content after second tool call", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":"And some content after second tool call"}})"},  
     };
 
     for (const auto& [chunk, finishReason, expectedDelta] : chunkToDeltaVec) {
