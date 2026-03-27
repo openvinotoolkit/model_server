@@ -162,7 +162,7 @@ bool Lfm2ToolParser::parseInToolCallState() {
     size_t toolListStartPos = this->streamingContent.find(TOOL_LIST_START_INDICATOR, this->streamingPosition);
     size_t argsPos = this->streamingContent.find(TOOL_ARGS_START_INDICATOR, this->streamingPosition);
 
-    if (toolListStartPos != std::string::npos ) {
+    if (toolListStartPos != std::string::npos) {
         this->streamingPosition = toolListStartPos + TOOL_LIST_START_INDICATOR.length();
     }
 
