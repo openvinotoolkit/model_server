@@ -701,6 +701,7 @@ ovms_cc_library(
                 "@mediapipe//mediapipe/graphs/holistic_tracking:holistic_tracking_to_render_data",
                 "@mediapipe//mediapipe/graphs/iris_tracking:iris_tracking_cpu_deps",
                 "@mediapipe//mediapipe/calculators/tensor:image_to_tensor_calculator",
+                "@mediapipe//mediapipe/graphs/tracking:ovms_calculators",
                 "@mediapipe//mediapipe/modules/holistic_landmark:holistic_landmark_cpu",
                 "libovmsmediapipe_utils",
                 "@mediapipe//mediapipe/calculators/geti/inference:inference_calculators",
