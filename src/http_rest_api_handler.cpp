@@ -637,8 +637,6 @@ Status HttpRestApiHandler::processListModelsRequest(std::string& response) {
     time_t timestamp;
     time(&timestamp);
     writer.StartObject();
-    writer.String("object");
-    writer.String("list");
     writer.String("data");
     writer.StartArray();
 
