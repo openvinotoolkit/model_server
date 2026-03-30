@@ -692,6 +692,8 @@ ovms_cc_library(
                 "//src/audio/text_to_speech:t2s_calculator",
                 "//src/audio:audio_utils",
                 "//src/image_gen:imagegen_init",
+                "//src/llm:openai_completions_api_handler",
+                "//src/llm:openai_responses_handler",
                 "//src/embeddings:embeddingscalculator_ov",
                 "//src/rerank:rerankcalculator",
                 "//src/rerank:rerankcalculator_ov",
