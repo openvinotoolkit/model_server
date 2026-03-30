@@ -58,13 +58,15 @@ Use MCP server, with additional image input:
 
 ![poland](https://images.pexels.com/photos/20015887/pexels-photo-20015887.jpeg)
 
+> **Note**: Image source: [Link](https://images.pexels.com/photos/20015887/pexels-photo-20015887.jpeg)
+
 ```bat
-python openai_agent.py --query "What is the current weather in location depicted in the image?" --image https://images.pexels.com/photos/20015887/pexels-photo-20015887.jpeg --model Junrui2021/Qwen3-VL-8B-Instruct-int4 --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather
+python openai_agent.py --query "What is the current weather in location depicted in the image?" --image https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/1/demos/continuous_batching/agentic_ai/photo.jpeg --model Junrui2021/Qwen3-VL-8B-Instruct-int4 --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather
 ```
 
 Exemplary output:
 ```text
-The current weather in Gdansk, the location depicted in the image, is partly cloudy with a temperature of 5.7°C (feels like 2.7°C). The relative humidity is 83%, and the wind is blowing from the NNE at 9.8 km/h with gusts up to 23.4 km/h. The atmospheric pressure is 1022.3 hPa, with 72% cloud cover and a moderate UV index of 3.6. Visibility is 20.6 km.
+The current weather in Gdańsk is overcast with a temperature of 8.8°C (feels like 4.2°C). The relative humidity is 52%, and the wind is blowing from the SSW at 17.0 km/h with gusts up to 36.7 km/h. The atmospheric pressure is 1010.7 hPa with 84% cloud cover. The UV index is moderate at 3.5, and visibility is 40.9 km.
 ```
 :::
 :::{tab-item} Qwen3-4B
@@ -208,13 +210,15 @@ Use MCP server, with additional image input:
 
 ![poland](https://images.pexels.com/photos/20015887/pexels-photo-20015887.jpeg)
 
+> **Note**: Image source: [Link](https://images.pexels.com/photos/20015887/pexels-photo-20015887.jpeg)
+
 ```bash
-python openai_agent.py --query "What is the current weather in location depicted in the image?" --image https://images.pexels.com/photos/20015887/pexels-photo-20015887.jpeg --model Junrui2021/Qwen3-VL-8B-Instruct-int4 --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather
+python openai_agent.py --query "What is the current weather in location depicted in the image?" --image https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/1/demos/continuous_batching/agentic_ai/photo.jpeg --model Junrui2021/Qwen3-VL-8B-Instruct-int4 --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather
 ```
 
 Exemplary output:
 ```text
-The current weather in Gdansk, the location depicted in the image, is partly cloudy with a temperature of 5.7°C (feels like 2.7°C). The relative humidity is 83%, and the wind is blowing from the NNE at 9.8 km/h with gusts up to 23.4 km/h. The atmospheric pressure is 1022.3 hPa, with 72% cloud cover and a moderate UV index of 3.6. Visibility is 20.6 km.
+The current weather in Gdańsk is overcast with a temperature of 8.8°C (feels like 4.2°C). The relative humidity is 52%, and the wind is blowing from the SSW at 17.0 km/h with gusts up to 36.7 km/h. The atmospheric pressure is 1010.7 hPa with 84% cloud cover. The UV index is moderate at 3.5, and visibility is 40.9 km.
 ```
 :::
 :::{tab-item} Qwen3-4B
@@ -328,13 +332,15 @@ Use MCP server, with additional image input:
 
 ![poland](https://images.pexels.com/photos/20015887/pexels-photo-20015887.jpeg)
 
+> **Note**: Image source: [Link](https://images.pexels.com/photos/20015887/pexels-photo-20015887.jpeg)
+
 ```bash
-python openai_agent.py --query "What is the current weather in location depicted in the image?" --image https://images.pexels.com/photos/20015887/pexels-photo-20015887.jpeg --model Junrui2021/Qwen3-VL-8B-Instruct-int4 --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather
+python openai_agent.py --query "What is the current weather in location depicted in the image?" --image https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/1/demos/continuous_batching/agentic_ai/photo.jpeg --model Junrui2021/Qwen3-VL-8B-Instruct-int4 --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather
 ```
 
 Exemplary output:
 ```text
-The current weather in Gdansk, the location depicted in the image, is partly cloudy with a temperature of 5.7°C (feels like 2.7°C). The relative humidity is 83%, and the wind is blowing from the NNE at 9.8 km/h with gusts up to 23.4 km/h. The atmospheric pressure is 1022.3 hPa, with 72% cloud cover and a moderate UV index of 3.6. Visibility is 20.6 km.
+The current weather in Gdańsk is overcast with a temperature of 8.8°C (feels like 4.2°C). The relative humidity is 52%, and the wind is blowing from the SSW at 17.0 km/h with gusts up to 36.7 km/h. The atmospheric pressure is 1010.7 hPa with 84% cloud cover. The UV index is moderate at 3.5, and visibility is 40.9 km.
 ```
 :::
 :::{tab-item} Qwen3-4B
