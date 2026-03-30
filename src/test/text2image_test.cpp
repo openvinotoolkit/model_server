@@ -48,6 +48,7 @@ public:
     MOCK_METHOD(std::vector<std::string>, getArrayFieldByName, (const std::string& name), (const, override));
     MOCK_METHOD(std::string, getFieldByName, (const std::string& name), (const, override));
     MOCK_METHOD(std::string_view, getFileContentByFieldName, (const std::string& name), (const, override));
+    MOCK_METHOD(std::vector<std::string_view>, getFilesArrayByFieldName, (const std::string& name), (const, override));
     MOCK_METHOD(std::set<std::string>, getAllFieldNames, (), (const, override));
 };
 
@@ -796,6 +797,115 @@ TEST(Image2ImageTest, getImageEditRequestOptionsRejectedFields) {
     ASSERT_FALSE(std::holds_alternative<ov::AnyMap>(requestOptions));
 }
 
+TEST(Image2ImageTest, getImageEditRequestOptionsMaskAccepted) {
+    MockedMultiPartParser multipartParser;
+    ON_CALL(multipartParser, getFieldByName("prompt")).WillByDefault(Return("test prompt"));
+    ON_CALL(multipartParser, getAllFieldNames()).WillByDefault(Return(std::set<std::string>{"prompt", "mask"}));
+    auto requestOptions = ovms::getImageEditRequestOptions(multipartParser, DEFAULTIMAGE_GEN_ARGS);
+    ASSERT_TRUE(std::holds_alternative<ov::AnyMap>(requestOptions));
+}
+
+TEST(Image2ImageTest, getImageEditRequestOptionsUnknownFieldRejected) {
+    MockedMultiPartParser multipartParser;
+    ON_CALL(multipartParser, getFieldByName("prompt")).WillByDefault(Return("test prompt"));
+    ON_CALL(multipartParser, getAllFieldNames()).WillByDefault(Return(std::set<std::string>{"prompt", "nonexistent_field"}));
+    auto requestOptions = ovms::getImageEditRequestOptions(multipartParser, DEFAULTIMAGE_GEN_ARGS);
+    ASSERT_TRUE(std::holds_alternative<absl::Status>(requestOptions));
+    EXPECT_EQ(std::get<absl::Status>(requestOptions).code(), absl::StatusCode::kInvalidArgument);
+    EXPECT_THAT(std::get<absl::Status>(requestOptions).message(), ::testing::HasSubstr("nonexistent_field"));
+}
+
+TEST(Image2ImageTest, getImageEditRequestOptionsAllExplicitlyRejectedOpenAIFields) {
+    for (const auto& field : {"background", "moderation", "output_compression", "output_format", "quality", "style"}) {
+        MockedMultiPartParser multipartParser;
+        ON_CALL(multipartParser, getFieldByName("prompt")).WillByDefault(Return("test prompt"));
+        ON_CALL(multipartParser, getFieldByName(field)).WillByDefault(Return("some_value"));
+        auto requestOptions = ovms::getImageEditRequestOptions(multipartParser, DEFAULTIMAGE_GEN_ARGS);
+        ASSERT_TRUE(std::holds_alternative<absl::Status>(requestOptions)) << "Expected rejection for field: " << field;
+        EXPECT_EQ(std::get<absl::Status>(requestOptions).code(), absl::StatusCode::kInvalidArgument);
+        EXPECT_THAT(std::get<absl::Status>(requestOptions).message(), ::testing::HasSubstr(field));
+    }
+}
+
+TEST(Image2ImageTest, getImageEditRequestOptionsUnsupportedResponseFormat) {
+    MockedMultiPartParser multipartParser;
+    ON_CALL(multipartParser, getFieldByName("prompt")).WillByDefault(Return("test prompt"));
+    ON_CALL(multipartParser, getFieldByName("response_format")).WillByDefault(Return("url"));
+    auto requestOptions = ovms::getImageEditRequestOptions(multipartParser, DEFAULTIMAGE_GEN_ARGS);
+    ASSERT_TRUE(std::holds_alternative<absl::Status>(requestOptions));
+    EXPECT_EQ(std::get<absl::Status>(requestOptions).code(), absl::StatusCode::kInvalidArgument);
+    EXPECT_THAT(std::get<absl::Status>(requestOptions).message(), ::testing::HasSubstr("response_format"));
+}
+
+TEST(Image2ImageTest, getImageEditRequestOptionsAllAcceptedFieldsPassValidation) {
+    MockedMultiPartParser multipartParser;
+    ON_CALL(multipartParser, getFieldByName("prompt")).WillByDefault(Return("test prompt"));
+    ON_CALL(multipartParser, getFieldByName("prompt_2")).WillByDefault(Return("prompt 2"));
+    ON_CALL(multipartParser, getFieldByName("size")).WillByDefault(Return("512x1024"));
+    ON_CALL(multipartParser, getFieldByName("n")).WillByDefault(Return("2"));
+    ON_CALL(multipartParser, getFieldByName("response_format")).WillByDefault(Return("b64_json"));
+    ON_CALL(multipartParser, getFieldByName("model")).WillByDefault(Return("test_model"));
+    ON_CALL(multipartParser, getAllFieldNames()).WillByDefault(Return(std::set<std::string>{
+        "prompt", "prompt_2", "prompt_3",
+        "image", "mask",
+        "negative_prompt", "negative_prompt_2", "negative_prompt_3",
+        "size", "height", "width",
+        "n", "num_images_per_prompt",
+        "response_format",
+        "num_inference_steps", "rng_seed", "strength", "guidance_scale", "max_sequence_length", "model"}));
+    auto requestOptions = ovms::getImageEditRequestOptions(multipartParser, DEFAULTIMAGE_GEN_ARGS);
+    ASSERT_TRUE(std::holds_alternative<ov::AnyMap>(requestOptions)) << std::get<absl::Status>(requestOptions).message();
+}
+
+TEST(Image2ImageTest, getImageEditRequestOptionsDefaultSizeBehavior) {
+    MockedMultiPartParser multipartParser;
+    ON_CALL(multipartParser, getFieldByName("prompt")).WillByDefault(Return("test prompt"));
+    // no size, width, or height set — default resolution should be applied
+    auto argsWithDefaults = DEFAULTIMAGE_GEN_ARGS;
+    argsWithDefaults.defaultResolution = std::make_pair(512, 256);
+    auto requestOptions = ovms::getImageEditRequestOptions(multipartParser, argsWithDefaults);
+    ASSERT_TRUE(std::holds_alternative<ov::AnyMap>(requestOptions)) << std::get<absl::Status>(requestOptions).message();
+    auto& options = std::get<ov::AnyMap>(requestOptions);
+    EXPECT_EQ(options.at("width").as<int64_t>(), 512);
+    EXPECT_EQ(options.at("height").as<int64_t>(), 256);
+}
+
+TEST(Image2ImageTest, getImageEditRequestOptionsZeroWidth) {
+    MockedMultiPartParser multipartParser;
+    ON_CALL(multipartParser, getFieldByName("prompt")).WillByDefault(Return("test prompt"));
+    ON_CALL(multipartParser, getFieldByName("width")).WillByDefault(Return("0"));
+    auto requestOptions = ovms::getImageEditRequestOptions(multipartParser, DEFAULTIMAGE_GEN_ARGS);
+    ASSERT_TRUE(std::holds_alternative<absl::Status>(requestOptions));
+    EXPECT_EQ(std::get<absl::Status>(requestOptions).code(), absl::StatusCode::kInvalidArgument);
+}
+
+TEST(Image2ImageTest, getImageEditRequestOptionsZeroHeight) {
+    MockedMultiPartParser multipartParser;
+    ON_CALL(multipartParser, getFieldByName("prompt")).WillByDefault(Return("test prompt"));
+    ON_CALL(multipartParser, getFieldByName("height")).WillByDefault(Return("0"));
+    auto requestOptions = ovms::getImageEditRequestOptions(multipartParser, DEFAULTIMAGE_GEN_ARGS);
+    ASSERT_TRUE(std::holds_alternative<absl::Status>(requestOptions));
+    EXPECT_EQ(std::get<absl::Status>(requestOptions).code(), absl::StatusCode::kInvalidArgument);
+}
+
+TEST(Image2ImageTest, getImageEditRequestOptionsZeroN) {
+    MockedMultiPartParser multipartParser;
+    ON_CALL(multipartParser, getFieldByName("prompt")).WillByDefault(Return("test prompt"));
+    ON_CALL(multipartParser, getFieldByName("n")).WillByDefault(Return("0"));
+    auto requestOptions = ovms::getImageEditRequestOptions(multipartParser, DEFAULTIMAGE_GEN_ARGS);
+    ASSERT_TRUE(std::holds_alternative<absl::Status>(requestOptions));
+    EXPECT_EQ(std::get<absl::Status>(requestOptions).code(), absl::StatusCode::kInvalidArgument);
+}
+
+TEST(Image2ImageTest, getImageEditRequestOptionsZeroNumInferenceSteps) {
+    MockedMultiPartParser multipartParser;
+    ON_CALL(multipartParser, getFieldByName("prompt")).WillByDefault(Return("test prompt"));
+    ON_CALL(multipartParser, getFieldByName("num_inference_steps")).WillByDefault(Return("0"));
+    auto requestOptions = ovms::getImageEditRequestOptions(multipartParser, DEFAULTIMAGE_GEN_ARGS);
+    ASSERT_TRUE(std::holds_alternative<absl::Status>(requestOptions));
+    EXPECT_EQ(std::get<absl::Status>(requestOptions).code(), absl::StatusCode::kInvalidArgument);
+}
+
 using mediapipe::CalculatorGraphConfig;
 using ovms::ImageGenPipelineArgs;
 TEST(ImageGenCalculatorOptionsTest, PositiveAllfields) {
@@ -1387,5 +1497,4 @@ TEST(Text2ImageTest, ResponseFromOvTensorBatch3) {
     testResponseFromOvTensor(n);
 }
 // TODO:
-// -> test for all unhandled OpenAI fields define what to do - ignore/error imageEdit
 // -> test for all unhandled OpenAI fields define what to do - ignore/error imageVariation

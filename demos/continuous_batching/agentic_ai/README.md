@@ -102,7 +102,6 @@ The current weather in Tokyo is Overcast with a temperature of 9.4°C (feels lik
 :sync: Qwen3-30B-A3B-Instruct-2507
 Pull and start OVMS:
 ```bat
-set MOE_USE_MICRO_GEMM_PREFILL=0
 ovms.exe --rest_port 8000 --source_model OpenVINO/Qwen3-30B-A3B-Instruct-2507-int4-ov --model_repository_path c:\models --tool_parser hermes3 --target_device GPU --task text_generation --cache_dir .cache
 ```
 
@@ -254,7 +253,7 @@ The current weather in Tokyo is as follows: The sky is mostly covered with cloud
 Pull and start OVMS:
 ```bash
 mkdir -p ${HOME}/models
-docker run -d --user $(id -u):$(id -g) --rm -e MOE_USE_MICRO_GEMM_PREFILL=0 -p 8000:8000 -v ${HOME}/models:/models openvino/model_server:weekly \
+docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v ${HOME}/models:/models openvino/model_server:weekly \
 --rest_port 8000 --source_model OpenVINO/Qwen3-30B-A3B-Instruct-2507-int4-ov --model_repository_path /models --tool_parser hermes3 --task text_generation
 ```
 
@@ -371,7 +370,7 @@ The current weather in Tokyo is overcast with a temperature of 9.4°C (feels lik
 Pull and start OVMS:
 ```bash
 mkdir -p ${HOME}/models
-docker run -d --user $(id -u):$(id -g) -e MOE_USE_MICRO_GEMM_PREFILL=0 --rm -p 8000:8000 -v ${HOME}/models:/models --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:weekly \
+docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v ${HOME}/models:/models --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:weekly \
 --rest_port 8000 --source_model OpenVINO/Qwen3-30B-A3B-Instruct-2507-int4-ov --model_repository_path /models --tool_parser hermes3 --target_device GPU --task text_generation --enable_tool_guided_generation true
 ```
 

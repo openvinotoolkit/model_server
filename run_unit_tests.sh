@@ -56,8 +56,34 @@ compress_logs() {
 } 
 
 generate_coverage_report() {
-    test_success_procedure
-    genhtml --output genhtml "$(bazel info output_path)/_coverage/_coverage_report.dat"
+    local coverage_dat="$(bazel info output_path)/_coverage/_coverage_report.dat"
+
+    # lcov 2.x supports --ignore-errors negative,unused; lcov 1.x does not
+    local lcov_ver
+    lcov_ver=$(lcov --version | grep -oP '\d+' | head -1)
+    local lcov_ignore=""
+    local genhtml_ignore=""
+    if [ "$lcov_ver" -ge 2 ] 2>/dev/null; then
+        lcov_ignore="--ignore-errors negative,unused"
+        genhtml_ignore="--ignore-errors negative"
+    fi
+
+    # Required filtering fixes below, because for some reason "bazel coverage --instrumentation_filter="-src/test""
+    # is not enough to list just ovms source files.
+    if ! lcov --extract "$coverage_dat" 'src/*' --output-file filtered_coverage.dat $lcov_ignore; then
+        echo "Error: lcov extraction failed" >&2
+        return 1
+    fi
+
+    if ! lcov --remove filtered_coverage.dat 'src/test/*' 'external/*' --output-file filtered_coverage.dat $lcov_ignore; then
+        echo "Error: lcov filtering failed" >&2
+        return 1
+    fi
+
+    if ! genhtml $genhtml_ignore --output genhtml filtered_coverage.dat; then
+        echo "Error: genhtml report generation failed" >&2
+        return 1
+    fi
 }
 
 echo "Run test: ${RUN_TESTS}"
@@ -65,11 +91,17 @@ echo "Run GPU test: ${RUN_GPU_TESTS}"
 echo "Run coverage: ${CHECK_COVERAGE}"
 if [ "$RUN_TESTS" == "1" ] ; then
     if [ "$CHECK_COVERAGE" == "1" ] ; then
-        { bazel coverage --instrumentation_filter="-src/test" --combined_report=lcov \
+        if bazel coverage --instrumentation_filter="-src/test" --combined_report=lcov \
             ${SHARED_OPTIONS} ${TEST_FILTER} \
-            //src:ovms_test ${SHARED_OPTIONS} > ${TEST_LOG} 2>&1 || \
-            compress_logs && exit 1; } && \
-            generate_coverage_report;
+            //src:ovms_test ${SHARED_OPTIONS} > ${TEST_LOG} 2>&1 ; then
+            if ! generate_coverage_report ; then
+                compress_logs
+                exit 1
+            fi
+        else
+            compress_logs
+            exit 1
+        fi
     fi
     bazel test ${SHARED_OPTIONS} "${TEST_FILTER}" //src/python/binding:test_python_binding || exit 1
     bazel build ${SHARED_OPTIONS} //src:ovms_test || exit 1

@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2025 Intel Corporation
+// Copyright 2026 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,17 +15,26 @@
 //*****************************************************************************
 #pragma once
 
+#include <filesystem>
+#include <fstream>
+#include <random>
 #include <string>
-#include <string_view>
-#include <vector>
 
-#include <openvino/runtime/tensor.hpp>
+// Create a unique temporary directory inside the system temp directory.
+std::filesystem::path createTempDir();
 
-namespace ovms {
+std::filesystem::path writeFile(const std::filesystem::path& dir, const std::string& name, const std::string& content);
 
-ov::Tensor loadImageStbi(unsigned char* image, const int x, const int y, const int desiredChannels);
-ov::Tensor loadImageStbiFromMemory(std::string_view imageBytes);
-ov::Tensor loadImageStbiFromFile(const char* filename);
-std::vector<std::string> saveImagesStbi(const ov::Tensor& tensor);
+// A helper for writing test files.
+std::filesystem::path writeTempFile(const std::string& filename,
+    const std::string& content);
 
-}  // namespace ovms
+void mkdirs(const std::filesystem::path& p);
+
+// A simple RAII for a temp directory
+class TempDir {
+public:
+    std::filesystem::path dir;
+    TempDir();
+    ~TempDir();
+};
