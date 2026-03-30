@@ -39,7 +39,7 @@ pip install openai-agents openai
 
 ## Start OVMS
 
-This deployment procedure assumes the model was pulled or exported using the procedure above. The exception are models from OpenVINO organization if they support tools correctly with the default template like "OpenVINO/Qwen3-4B-int4-ov" - they can be deployed in a single command pulling and staring the server.
+This deployment procedure assumes the model was pulled or exported using the procedure above. The exception are models from OpenVINO organization if they support tools correctly with the default template like "OpenVINO/Qwen3-4B-int4-ov" - they can be deployed in a single command pulling and starting the server.
 
 
 ### Deploying on Windows with GPU
