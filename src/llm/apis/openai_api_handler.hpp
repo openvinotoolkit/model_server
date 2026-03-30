@@ -1,0 +1,187 @@
+//*****************************************************************************
+// Copyright 2026 Intel Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//*****************************************************************************
+#pragma once
+
+#include <limits>
+#include <optional>
+#include <memory>
+#include <sstream>
+#include <string>
+#include <unordered_map>
+#include <utility>
+#include <vector>
+
+#include <openvino/genai/generation_config.hpp>
+#include <openvino/genai/generation_handle.hpp>
+#include <openvino/genai/json_container.hpp>
+#include <openvino/genai/tokenizer.hpp>
+#include "src/port/rapidjson_document.hpp"
+#include "src/port/rapidjson_writer.hpp"
+#pragma warning(push)
+#pragma warning(disable : 6001 4324 6385 6386)
+#include "absl/status/status.h"
+#include "absl/status/statusor.h"
+#pragma warning(pop)
+#include "../io_processing/output_parser.hpp"
+#include "openai_request.hpp"
+
+// Forward declarations for types only used by reference in virtual method signatures
+namespace ov {
+namespace genai {
+class EncodedResults;
+class VLMDecodedResults;
+}  // namespace genai
+}  // namespace ov
+
+using namespace rapidjson;
+
+namespace ovms {
+
+enum class Endpoint {
+    CHAT_COMPLETIONS,
+    COMPLETIONS,
+    RESPONSES,
+    TOKENIZE,
+};
+
+enum class ResponsesErrorCode {
+    SERVER_ERROR,
+    INVALID_PROMPT,
+};
+
+inline const char* responsesErrorCodeToString(ResponsesErrorCode code) {
+    switch (code) {
+    case ResponsesErrorCode::SERVER_ERROR:
+        return "server_error";
+    case ResponsesErrorCode::INVALID_PROMPT:
+        return "invalid_prompt";
+    default:
+        return "server_error";
+    }
+}
+
+struct CompletionUsageStatistics {
+    size_t promptTokens = 0;
+    size_t completionTokens = 0;
+
+    size_t calculateTotalTokens() const {
+        return promptTokens + completionTokens;
+    }
+};
+
+// Abstract base class for OpenAI API handlers.
+// Holds common state (request, doc, tokenizer, usage, output parser) and implements
+// shared parsing logic. Endpoint-specific parsing and serialization are pure virtual.
+class OpenAIApiHandler {
+protected:
+    Document& doc;
+    Endpoint endpoint;
+    CompletionUsageStatistics usage;
+    OpenAIChatCompletionsRequest request;
+    std::chrono::time_point<std::chrono::system_clock> created;
+    ov::genai::Tokenizer tokenizer;
+    size_t processedTokens = 0;              // tracks overall number of tokens processed by the pipeline
+    bool toolCallsDetectedInStream = false;  // tracks whether tool calls were detected in any streaming chunk
+
+    // Output parser is used to parse chat completions response to extract specific fields like tool calls and reasoning.
+    std::unique_ptr<OutputParser> outputParser = nullptr;
+
+    // Shared parsing helpers
+    absl::Status parseCommonPart(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength);
+    absl::Status ensureArgumentsInToolCalls(Value& messageObj, bool& jsonChanged);
+    ParsedOutput parseOutputIfNeeded(const std::vector<int64_t>& generatedIds);
+
+public:
+    OpenAIApiHandler(Document& doc, Endpoint endpoint, std::chrono::time_point<std::chrono::system_clock> creationTime,
+        ov::genai::Tokenizer tokenizer, const std::string& toolParserName = "", const std::string& reasoningParserName = "") :
+        doc(doc),
+        endpoint(endpoint),
+        created(creationTime),
+        tokenizer(tokenizer) {
+        // TODO we should delay creating output parser until we have request with toolNameSchemaMap parsed
+        // now we pass it now but it has to be populated first before first use
+        if (!toolParserName.empty() || !reasoningParserName.empty()) {
+            outputParser = std::make_unique<OutputParser>(tokenizer, toolParserName, reasoningParserName, this->request.toolNameSchemaMap);
+        }
+    }
+
+    virtual ~OpenAIApiHandler() = default;
+
+    // Non-copyable, non-movable (holds Document reference)
+    OpenAIApiHandler(const OpenAIApiHandler&) = delete;
+    OpenAIApiHandler& operator=(const OpenAIApiHandler&) = delete;
+    OpenAIApiHandler(OpenAIApiHandler&&) = delete;
+    OpenAIApiHandler& operator=(OpenAIApiHandler&&) = delete;
+
+    // Request parsing - pure virtual, each handler implements its own endpoint-specific dispatch
+    virtual absl::Status parseRequest(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength,
+        std::optional<std::string> allowedLocalMediaPath = std::nullopt, std::optional<std::vector<std::string>> allowedMediaDomains = std::nullopt) = 0;
+
+    // Shared parsing (non-virtual)
+    absl::Status parseTools();
+    absl::StatusOr<std::optional<ov::genai::JsonContainer>> parseToolsToJsonContainer();
+    absl::StatusOr<std::optional<ov::genai::JsonContainer>> parseChatTemplateKwargsToJsonContainer();
+    const bool areToolsAvailable() const;
+
+    // Accessors (non-virtual)
+    const OpenAIChatCompletionsRequest& getRequest() const;
+    std::optional<std::string> getPrompt() const;
+    std::optional<int> getNumReturnSequences() const;
+    StreamOptions getStreamOptions() const;
+    const std::string& getProcessedJson() const;
+    const ImageHistory& getImageHistory() const;
+    ov::genai::ChatHistory& getChatHistory();
+    std::optional<int> getMaxTokens() const;
+    std::optional<std::string> getResponseFormat() const;
+    bool isStream() const;
+    Endpoint getEndpoint() const;
+    std::string getModel() const;
+    std::string getToolChoice() const;
+    const std::unique_ptr<OutputParser>& getOutputParser() const;
+
+    // Usage tracking (non-virtual)
+    void setPromptTokensUsage(size_t promptTokens);
+    void setCompletionTokensUsage(size_t completionTokens);
+    void incrementProcessedTokens(size_t numTokens = 1);
+
+    // Serialization - pure virtual, each handler produces its own response format
+    virtual std::string serializeUnaryResponse(const std::vector<ov::genai::GenerationOutput>& generationOutputs) = 0;
+    virtual std::string serializeUnaryResponse(ov::genai::EncodedResults& results) = 0;
+    virtual std::string serializeUnaryResponse(ov::genai::VLMDecodedResults& results) = 0;
+    virtual std::string serializeStreamingChunk(const std::string& chunkResponse, ov::genai::GenerationFinishReason finishReason) = 0;
+    virtual std::string serializeStreamingUsageChunk() = 0;
+    virtual std::string serializeStreamingHandshakeChunk() = 0;
+
+    // Streaming lifecycle events - default no-ops for non-responses handlers
+    virtual std::string serializeStreamingCreatedEvent();
+    virtual std::string serializeStreamingInProgressEvent();
+    virtual std::string serializeFailedEvent(const std::string& errorMessage, ResponsesErrorCode errorCode = ResponsesErrorCode::SERVER_ERROR);
+};
+
+// Free functions shared across handlers
+void updateUsage(CompletionUsageStatistics& usage, const std::vector<int64_t>& generatedIds, bool echoPrompt);
+std::optional<std::string> mapFinishReason(ov::genai::GenerationFinishReason finishReason, bool hasToolCalls);
+std::string convertOpenAIResponseFormatToStructuralTagStringFormat(const rapidjson::Value& openAIFormat);
+
+// Constants shared by parseMessages and parseInput
+constexpr std::string_view BASE64_PREFIX = "base64,";
+constexpr int64_t MAX_IMAGE_SIZE_BYTES = 20000000;  // 20MB
+
+// Image download utilities shared by parseMessages and parseInput
+absl::Status downloadImage(const char* url, std::string& image, const int64_t& sizeLimit);
+bool isDomainAllowed(const std::vector<std::string>& allowedDomains, const char* url);
+
+}  // namespace ovms

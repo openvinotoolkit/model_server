@@ -15,198 +15,30 @@
 //*****************************************************************************
 #pragma once
 
-#include <limits>
-#include <optional>
-#include <memory>
-#include <sstream>
 #include <string>
-#include <unordered_map>
-#include <utility>
 #include <vector>
 
-#include <openvino/genai/generation_config.hpp>
-#include <openvino/genai/generation_handle.hpp>
-#include <openvino/genai/json_container.hpp>
-#include <openvino/genai/llm_pipeline.hpp>
-#include <openvino/genai/tokenizer.hpp>
-#include <openvino/genai/visual_language/pipeline.hpp>
-#include "src/port/rapidjson_document.hpp"
-#include "src/port/rapidjson_writer.hpp"
-#pragma warning(push)
-#pragma warning(disable : 6001 4324 6385 6386)
-#include "absl/status/status.h"
-#include "absl/status/statusor.h"
-#pragma warning(pop)
-#include "../io_processing/output_parser.hpp"
-#include "openai_request.hpp"
-
-using namespace rapidjson;
+#include "openai_api_handler.hpp"
 
 namespace ovms {
 
-enum class Endpoint {
-    CHAT_COMPLETIONS,
-    COMPLETIONS,
-    RESPONSES,
-    TOKENIZE,
-};
-
-enum class ResponsesErrorCode {
-    SERVER_ERROR,
-    INVALID_PROMPT,
-};
-
-inline const char* responsesErrorCodeToString(ResponsesErrorCode code) {
-    switch (code) {
-    case ResponsesErrorCode::SERVER_ERROR:
-        return "server_error";
-    case ResponsesErrorCode::INVALID_PROMPT:
-        return "invalid_prompt";
-    default:
-        return "server_error";
-    }
-}
-
-struct CompletionUsageStatistics {
-    size_t promptTokens = 0;
-    size_t completionTokens = 0;
-
-    size_t calculateTotalTokens() const {
-        return promptTokens + completionTokens;
-    }
-};
-
-// Class that wraps OpenAI request, holds and processes raw JSON, provides methods for serialization and keeps track of usage.
-// It is used in the calculator.
-
-// Encapsulates all mutable state accumulated during Responses API streaming.
-struct ResponsesStreamingState {
-    size_t sequenceNumber = 1;
-    bool initialized = false;
-    bool reasoningInitialized = false;
-    bool reasoningCompleted = false;
-    bool messageInitialized = false;
-    std::string outputText;
-    std::string reasoningText;
-    ToolCalls_t toolCalls;
-};
-
-class OpenAIChatCompletionsHandler {
-    Document& doc;
-    Endpoint endpoint;
-    CompletionUsageStatistics usage;
-    OpenAIChatCompletionsRequest request;
-    std::chrono::time_point<std::chrono::system_clock> created;
-    ov::genai::Tokenizer tokenizer;
-    size_t processedTokens = 0;              // tracks overall number of tokens processed by the pipeline
-    bool toolCallsDetectedInStream = false;  // tracks whether tool calls were detected in any streaming chunk
-    ResponsesStreamingState responsesState;
-
-    // Output parser is used to parse chat completions response to extract specific fields like tool calls and reasoning.
-    std::unique_ptr<OutputParser> outputParser = nullptr;
-
+// Handler for OpenAI Completions (/v3/completions) and Chat Completions (/v3/chat/completions) APIs.
+class OpenAIChatCompletionsHandler : public OpenAIApiHandler {
     absl::Status parseCompletionsPart();
     absl::Status parseChatCompletionsPart(std::optional<uint32_t> maxTokensLimit, std::optional<std::string> allowedLocalMediaPath, std::optional<std::vector<std::string>> allowedMediaDomains);
-    absl::Status parseResponsesPart(std::optional<uint32_t> maxTokensLimit, std::optional<std::string> allowedLocalMediaPath, std::optional<std::vector<std::string>> allowedMediaDomains);
-    absl::Status parseResponsesInput(std::optional<std::string> allowedLocalMediaPath, std::optional<std::vector<std::string>> allowedMediaDomains);
-    absl::Status parseCommonPart(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength);
-
-    ParsedOutput parseOutputIfNeeded(const std::vector<int64_t>& generatedIds);
-    absl::Status ensureArgumentsInToolCalls(Value& messageObj, bool& jsonChanged);
-
-    // Responses API serialization helpers
-    void serializeResponsesToolChoice(Writer<StringBuffer>& writer) const;
-    void serializeResponsesTools(Writer<StringBuffer>& writer) const;
-    void serializeResponsesResponseObject(Writer<StringBuffer>& writer, const std::string& responseId, int64_t createdAt,
-        const std::string& status, const std::string& fullOutputText, bool includeUsage,
-        const std::optional<std::string>& incompleteReason = std::nullopt, const std::optional<std::string>& errorMessage = std::nullopt, ResponsesErrorCode errorCode = ResponsesErrorCode::SERVER_ERROR) const;
-    static void serializeResponsesOutputItem(Writer<StringBuffer>& writer, const std::string& outputItemId,
-        const std::string& text, const std::string& status);
-    static void serializeOutputTextPart(Writer<StringBuffer>& writer, const std::string& text);
-    std::string serializeResponsesUnaryResponse(const std::vector<ParsedOutput>& parsedOutputs,
-        ov::genai::GenerationFinishReason finishReason = ov::genai::GenerationFinishReason::STOP) const;
-
-    // Responses API streaming event building blocks
-    void writeEventHeader(Writer<StringBuffer>& writer, const char* eventType);
-    static void writeContentLocation(Writer<StringBuffer>& writer, const std::string& itemId, uint64_t outputIndex = 0);
-    static void writeReasoningLocation(Writer<StringBuffer>& writer, const std::string& itemId);
-
-    // Individual Responses API streaming event serializers
-    std::string serializeResponseCreatedEvent(const std::string& responseId, int64_t createdAt);
-    std::string serializeResponseInProgressEvent(const std::string& responseId, int64_t createdAt);
-    std::string serializeOutputItemAddedEvent(const std::string& outputItemId, uint64_t outputIndex = 0);
-    std::string serializeContentPartAddedEvent(const std::string& outputItemId, uint64_t outputIndex = 0);
-    std::string serializeOutputTextDeltaEvent(const std::string& outputItemId, const std::string& delta, uint64_t outputIndex = 0);
-    std::string serializeOutputTextDoneEvent(const std::string& outputItemId, uint64_t outputIndex = 0);
-    std::string serializeContentPartDoneEvent(const std::string& outputItemId, uint64_t outputIndex = 0);
-    std::string serializeOutputItemDoneEvent(const std::string& outputItemId, ov::genai::GenerationFinishReason finishReason, uint64_t outputIndex = 0);
-    std::string serializeResponseCompletedEvent(const std::string& responseId, int64_t createdAt, ov::genai::GenerationFinishReason finishReason);
-
-    // Reasoning streaming event serializers
-    std::string serializeReasoningOutputItemAddedEvent(const std::string& reasoningItemId);
-    std::string serializeReasoningSummaryPartAddedEvent(const std::string& reasoningItemId);
-    std::string serializeReasoningSummaryTextDeltaEvent(const std::string& reasoningItemId, const std::string& delta);
-    std::string serializeReasoningSummaryTextDoneEvent(const std::string& reasoningItemId);
-    std::string serializeReasoningSummaryPartDoneEvent(const std::string& reasoningItemId);
-    std::string serializeReasoningOutputItemDoneEvent(const std::string& reasoningItemId);
-    std::string serializeResponseFailedEventBody(const std::string& responseId, int64_t createdAt, const std::string& errorMessage, ResponsesErrorCode errorCode);
-
-    // Function call streaming event serializers
-    std::string serializeFunctionCallOutputItemAddedEvent(const ToolCall& toolCall, uint64_t outputIndex);
-    std::string serializeFunctionCallArgumentsDeltaEvent(const std::string& callId, const std::string& delta, uint64_t outputIndex);
-    std::string serializeFunctionCallArgumentsDoneEvent(const ToolCall& toolCall, uint64_t outputIndex);
-    std::string serializeFunctionCallOutputItemDoneEvent(const ToolCall& toolCall, ov::genai::GenerationFinishReason finishReason, uint64_t outputIndex);
 
 public:
-    OpenAIChatCompletionsHandler(Document& doc, Endpoint endpoint, std::chrono::time_point<std::chrono::system_clock> creationTime,
-        ov::genai::Tokenizer tokenizer, const std::string& toolParserName = "", const std::string& reasoningParserName = "") :
-        doc(doc),
-        endpoint(endpoint),
-        created(creationTime),
-        tokenizer(tokenizer) {
-        // TODO we should delay creating output parser until we have request with toolNameSchemaMap parsed
-        // now we pass it now but it has to be populated first before first use
-        if (!toolParserName.empty() || !reasoningParserName.empty()) {
-            outputParser = std::make_unique<OutputParser>(tokenizer, toolParserName, reasoningParserName, this->request.toolNameSchemaMap);
-        }
-    }
+    using OpenAIApiHandler::OpenAIApiHandler;  // Inherit constructors
 
-    const OpenAIChatCompletionsRequest& getRequest() const;
-    std::optional<std::string> getPrompt() const;
-    std::optional<int> getNumReturnSequences() const;
-    StreamOptions getStreamOptions() const;
-    const std::string& getProcessedJson() const;
-    const ImageHistory& getImageHistory() const;
-    // User input might be modified by the servable logic, so it is not const
-    ov::genai::ChatHistory& getChatHistory();
-    std::optional<int> getMaxTokens() const;
-    std::optional<std::string> getResponseFormat() const;
-
-    bool isStream() const;
-    Endpoint getEndpoint() const;
-    std::string getModel() const;
-    std::string getToolChoice() const;
-    const std::unique_ptr<OutputParser>& getOutputParser() const;
-
-    void setPromptTokensUsage(size_t promptTokens);
-    void setCompletionTokensUsage(size_t completionTokens);
-
-    void incrementProcessedTokens(size_t numTokens = 1);
-
-    absl::Status parseRequest(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength, std::optional<std::string> allowedLocalMediaPath = std::nullopt, std::optional<std::vector<std::string>> allowedMediaDomains = std::nullopt);
+    absl::Status parseRequest(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength,
+        std::optional<std::string> allowedLocalMediaPath = std::nullopt, std::optional<std::vector<std::string>> allowedMediaDomains = std::nullopt) override;
     absl::Status parseMessages(std::optional<std::string> allowedLocalMediaPath = std::nullopt, std::optional<std::vector<std::string>> allowedMediaDomains = std::nullopt);
-    absl::Status parseTools();
-    absl::StatusOr<std::optional<ov::genai::JsonContainer>> parseToolsToJsonContainer();
-    absl::StatusOr<std::optional<ov::genai::JsonContainer>> parseChatTemplateKwargsToJsonContainer();
-    const bool areToolsAvailable() const;
 
-    std::string serializeUnaryResponse(const std::vector<ov::genai::GenerationOutput>& generationOutputs);
-    std::string serializeUnaryResponse(ov::genai::EncodedResults& results);
-    std::string serializeUnaryResponse(ov::genai::VLMDecodedResults& results);
-    std::string serializeStreamingChunk(const std::string& chunkResponse, ov::genai::GenerationFinishReason finishReason);
-    std::string serializeStreamingUsageChunk();
-    std::string serializeStreamingHandshakeChunk();
-    std::string serializeResponsesStreamingInitEvents();
-    std::string serializeResponsesFailedEvent(const std::string& errorMessage, ResponsesErrorCode errorCode = ResponsesErrorCode::SERVER_ERROR);
+    std::string serializeUnaryResponse(const std::vector<ov::genai::GenerationOutput>& generationOutputs) override;
+    std::string serializeUnaryResponse(ov::genai::EncodedResults& results) override;
+    std::string serializeUnaryResponse(ov::genai::VLMDecodedResults& results) override;
+    std::string serializeStreamingChunk(const std::string& chunkResponse, ov::genai::GenerationFinishReason finishReason) override;
+    std::string serializeStreamingUsageChunk() override;
+    std::string serializeStreamingHandshakeChunk() override;
 };
 }  // namespace ovms
