@@ -74,7 +74,7 @@ curl http://localhost:8000/v3/models
   "object": "list",
   "data": [
     {
-      "id": "Junrui2021/Qwen3-VL-8B-Instruct-int4`",
+      "id": "Junrui2021/Qwen3-VL-8B-Instruct-int4",
       "object": "model",
       "created": 1772928358,
       "owned_by": "OVMS"
