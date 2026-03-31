@@ -569,6 +569,9 @@ ovms_cc_library(
         deps = select({
             "//:not_disable_python": [
                 "//src/python:libovmspython",
+                "//src/python:pythonnoderesources",
+                "//src/python:pythonexecutorcalculator",
+                "//src/python:pytensorovtensorconvertercalculator",
             ],
             "//:disable_python": []
         }) + select({
@@ -1132,6 +1135,9 @@ ovms_cc_library( # TODO split dependencies
     ] + select({
             "//:not_disable_python": [
                 "//src/python:libovmspython",
+                "//src/python:pythonnoderesources",
+                "//src/python:pythonexecutorcalculator",
+                "//src/python:pytensorovtensorconvertercalculator",
             ],
             "//:disable_python": []
         }),
