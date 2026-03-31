@@ -143,7 +143,7 @@ def create_config_settings():
 ###############################
 LINUX_COMMON_STATIC_LIBS_COPTS = [
                     "-Wall",
-                    "-Wextra",
+                    # "-Wextra", Requires more cleanup in code
                     # TODO: was in ovms bin "-Wconversion",
                     "-Wno-unknown-pragmas", 
                     "-Wno-sign-compare",
