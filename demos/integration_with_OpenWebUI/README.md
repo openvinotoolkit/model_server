@@ -30,8 +30,8 @@ This demo was tested on CPU but most of the models could be also run on Intel ac
 :sync: Windows
 ```bat
 mkdir models
-ovms.exe --pull --source_model Godreign/llama-3.2-3b-instruct-openvino-int4-model --model_repository_path models --task text_generation
-ovms.exe --add_to_config --config_path  models\config.json --model_path Godreign\llama-3.2-3b-instruct-openvino-int4-model --model_name Godreign/llama-3.2-3b-instruct-openvino-int4-model
+ovms.exe --pull --source_model OpenVINO/gpt-oss-20b-int4-ov --model_repository_path models --tool_parser gptoss --reasoning_parser gptoss --task text_generation
+ovms.exe --add_to_config --config_path  models\config.json --model_path OpenVINO\gpt-oss-20b-int4-ov --model_name ovms-model
 ovms.exe --rest_port 8000 --config_path models\config.json
 ```
 :::
@@ -39,8 +39,8 @@ ovms.exe --rest_port 8000 --config_path models\config.json
 :sync: Linux
 ```bash
 mkdir models
-docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models openvino/model_server:weekly --pull --source_model Godreign/llama-3.2-3b-instruct-openvino-int4-model --model_repository_path /models --task text_generation
-docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models openvino/model_server:weekly --add_to_config --config_path  /models/config.json --model_path Godreign/llama-3.2-3b-instruct-openvino-int4-model --model_name Godreign/llama-3.2-3b-instruct-openvino-int4-model
+docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models openvino/model_server:weekly --pull --source_model OpenVINO/gpt-oss-20b-int4-ov --model_repository_path /models --task text_generation --tool_parser gptoss --reasoning_parser gptoss 
+docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models openvino/model_server:weekly --add_to_config --config_path  /models/config.json --model_path OpenVINO/gpt-oss-20b-int4-ov --model_name ovms-model
 docker run -d -u $(id -u):$(id -g) -v $PWD/models:/models -p 8000:8000 openvino/model_server:weekly --rest_port 8000 --config_path /models/config.json
 ```
 :::
@@ -49,7 +49,7 @@ docker run -d -u $(id -u):$(id -g) -v $PWD/models:/models -p 8000:8000 openvino/
 Here is the basic call to check if it works:
 
 ```console
-curl http://localhost:8000/v3/chat/completions -H "Content-Type: application/json" -d "{\"model\":\"Godreign/llama-3.2-3b-instruct-openvino-int4-model\",\"messages\":[{\"role\":\"system\",\"content\":\"You are a helpful assistant.\"},{\"role\":\"user\",\"content\":\"Say this is a test\"}]}"
+curl http://localhost:8000/v3/chat/completions -H "Content-Type: application/json" -d "{\"model\":\"ovms-model\",\"messages\":[{\"role\":\"system\",\"content\":\"You are a helpful assistant.\"},{\"role\":\"user\",\"content\":\"Say this is a test\"}]}"
 ```
 
 ## Step 2: Install and start OpenWebUI
@@ -86,7 +86,7 @@ Go to [http://localhost:8080](http://localhost:8080) and create admin account to
 1. Go to **Admin Panel** → **Settings** → **Connections** ([http://localhost:8080/admin/settings/connections](http://localhost:8080/admin/settings/connections))
 2. Click **+Add Connection** under **OpenAI API**
    * URL: `http://localhost:8000/v3`
-   * Model IDs: put `Godreign/llama-3.2-3b-instruct-openvino-int4-model` and click **+** to add the model, or leave empty to include all models
+   * Model IDs: put `ovms-model` and click **+** to add the model, or leave empty to include all models
 3. Click **Save**
 
 ![connection setting](./connection_setting.png)
@@ -278,21 +278,21 @@ Method 2:
 
 ### Step 1: Model Preparation
 
-The vision language model used in this demo is [OpenVINO/InternVL2-2B-int4-ov](https://huggingface.co/OpenVINO/InternVL2-2B-int4-ov). Run the ovms with --pull parameter to download and quantize the model:
+The vision language model used in this demo is `Junrui2021/Qwen3-VL-8B-Instruct-int4`. Run the ovms with --pull parameter to download and quantize the model:
 
 ::::{tab-set}
 :::{tab-item} Windows
 :sync: Windows
 ```bat
-ovms.exe --pull --source_model OpenVINO/InternVL2-2B-int4-ov --model_repository_path models --model_name OpenVINO/InternVL2-2B-int4-ov --task text_generation
-ovms.exe --add_to_config --config_path models\config.json --model_path OpenVINO\InternVL2-2B-int4-ov --model_name OpenVINO/InternVL2-2B-int4-ov
+ovms.exe --pull --source_model Junrui2021/Qwen3-VL-8B-Instruct-int4 --model_repository_path models --model_name ovms-model-vl --task text_generation --pipeline_type VLM_CB
+ovms.exe --add_to_config --config_path models\config.json --model_path Junrui2021/Qwen3-VL-8B-Instruct-int4 --model_name ovms-model-vl
 ```
 :::
 :::{tab-item} Linux (using Docker)
 :sync: Linux
 ```bash
-docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models openvino/model_server:weekly --pull --source_model OpenVINO/InternVL2-2B-int4-ov --model_repository_path models --model_name OpenVINO/InternVL2-2B-int4-ov --task text_generation
-docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models openvino/model_server:weekly --add_to_config --config_path /models/config.json  --model_path OpenVINO/InternVL2-2B-int4-ov --model_name OpenVINO/InternVL2-2B-int4-ov
+docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models openvino/model_server:weekly --pull --source_model Junrui2021/Qwen3-VL-8B-Instruct-int4 --model_repository_path models --model_name ovms-model-vl --task text_generation
+docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models openvino/model_server:weekly --add_to_config --config_path /models/config.json  --model_path Junrui2021/Qwen3-VL-8B-Instruct-int4 --model_name ovms-model-vl
 ```
 :::
 ::::
@@ -300,12 +300,12 @@ docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models openvino/model_serve
 Keep the model server running or restart it. Here is the basic call to check if it works:
 
 ```console
-curl http://localhost:8000/v3/chat/completions  -H "Content-Type: application/json" -d "{ \"model\": \"OpenVINO/InternVL2-2B-int4-ov\", \"messages\":[{\"role\": \"user\", \"content\": [{\"type\": \"text\", \"text\": \"what is in the picture?\"},{\"type\": \"image_url\", \"image_url\": {\"url\": \"http://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/demos/common/static/images/zebra.jpeg\"}}]}], \"max_completion_tokens\": 100}"
+curl http://localhost:8000/v3/chat/completions  -H "Content-Type: application/json" -d "{ \"model\": \"ovms-model-vl\", \"messages\":[{\"role\": \"user\", \"content\": [{\"type\": \"text\", \"text\": \"what is in the picture?\"},{\"type\": \"image_url\", \"image_url\": {\"url\": \"http://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/demos/common/static/images/zebra.jpeg\"}}]}], \"max_completion_tokens\": 100}"
 ```
 
 ### Step 2: Chat with VLM
 
-1. Start a **New Chat** with model set to `OpenVINO/InternVL2-2B-int4-ov`
+1. Start a **New Chat**
 2. Click **+More** to upload images, by capturing the screen or uploading files. The image used in this demo is [http://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/demos/common/static/images/zebra.jpeg](http://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/demos/common/static/images/zebra.jpeg).
 
 ![upload images](./upload_images.png)
@@ -353,6 +353,95 @@ mcpo --port 9000 -- python -m mcp_weather_server
 ### Reference
 [https://docs.openwebui.com/features/plugin/tools/openapi-servers/open-webui](https://docs.openwebui.com/features/plugin/tools/openapi-servers/open-webui#step-2-connect-tool-server-in-open-webui)
 
+
+## Using Web Search
+
+### Step 1: Configure WebSearch
+
+1. Go to **Admin Panel** → **Settings** → **Web Search**
+2. Enable **Web Search**
+3. Choose **Web Search Engine**
+4. Add **API Key**
+5. Click **Save**
+
+![web search configuration](./web_search_config.png)
+
+### Step 2: Enable Web Search in model
+
+1. Go to **Admin Panel** → **Settings** → **Models**
+2. Choose desired model
+3. Enable **Web Search** capability
+4. In **Default Features** enable **Web Search** or toggle it in the chat
+5. In **Advanced Parameters** set **Function Calling** to **Native**
+
+![web search model configuration](./web_search_model_config.png)
+
+
+### Step 3: Use Web Search in the chat
+
+1. Open new Chat (it should have blue Web Search icon blow)
+
+![web search icon](./web_search_icon.png)
+
+2. Send the prompt
+
+![web search usage](./web_search_usage.png)
+
+### Reference 
+
+![https://docs.openwebui.com/features/chat-conversations/web-search/agentic-search/](https://docs.openwebui.com/features/chat-conversations/web-search/agentic-search/)
+
+## Adding Context to the prompt
+
+In Open Web UI user is able to add additional context to their chats using **Memory** feature. Models may get additional information shared through all chats. 
+
+To configure it:
+
+1. Go to **Settings** → **Personalization**
+2. Enable **Memory**
+3. Click **Manage**
+4. Click **Add Memory**
+5. Enter the information
+
+![add memory](./add_memory.png)
+
+It's possible to have multiple manageble memory records.
+
+![multiple memory records](./multiple_memory_records.png)
+
+Then workspace model should be created:
+
+1. Go to **Workspace**  → **Models**
+2. Choose model or create it.
+3. In **Buildin Tools** section enable **Memory**
+4. In **Advanced Parameters** set **Function Calling** to **Native**
+
+![model memory config](./model_memory_configuration.png)
+
+It's now available in all chats:
+
+![memory usage](./memory_usage.png)
+
+> **Note**: There is no way to make searching memory default on the beggingng of the conversation in Open Web UI. User should tell model to use it to make it work.  
+
+### Reference 
+[https://docs.openwebui.com/features/chat-conversations/memory/](https://docs.openwebui.com/features/chat-conversations/memory/)
+
+## Code Interpreting
+
+It's available to use **Code Interpreter** feature in Open Web UI.
+
+1. Go to **Admin Panel** → **Settings** → **Models**
+2. Choose desired model
+3. Enable **Code Interpreter** capability
+4. In **Default Features** enable **Code Interpreter** or toggle it in the chat
+5. In **Advanced Parameters** set **Function Calling** to **Native**
+6. Go to **Admin Panel** → **Settings** → **Code Execution**
+7. Enable **Code Interpreter** and **Code Execution**
+
+Then it's ready to use. In new chat it's possible to toggle **Code Interpreter** and write a prompt.
+
+![code execution](./code_execution.png)
 
 ## Audio
 
