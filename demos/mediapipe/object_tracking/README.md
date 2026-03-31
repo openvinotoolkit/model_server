@@ -12,6 +12,9 @@ make docker_build   OVMS_CPP_DOCKER_IMAGE=ovms_custom   TARGET=release
 ```
 
 Container command
+
+docker run -d -v $PWD:/mediapipe -v $PWD/calculators:/mediapipe/calculators -p 9000:9000 ovms_custom:latest --config_path /mediapipe/config.json --port 9000
+
 ```
 docker run -d -v $PWD:/mediapipe -p 9000:9000 ovms_custom:latest --config_path /mediapipe/config.json --port 9000
 ```
