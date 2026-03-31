@@ -2,7 +2,7 @@
 
 ## Creating models repository for all the endpoints with ovms --pull or python export_model.py script
 
-### 1. Download the preconfigured models using ovms --pull option from [HugginFaces Hub OpenVINO organization](https://huggingface.co/OpenVINO) (Simple usage)
+### 1. Download the preconfigured models using ovms --pull option from [Hugging Face Hub OpenVINO organization](https://huggingface.co/OpenVINO) (Simple usage)
 ::::{tab-set}
 
 :::{tab-item} On Baremetal Host
@@ -39,10 +39,8 @@ ovms --add_to_config --config_path c:\models\config.json --model_name OpenVINO/b
 ::::
 ::::
 
-### 2. Download the preconfigured models using ovms --pull option for models outside [HugginFaces Hub OpenVINO organization](https://huggingface.co/OpenVINO) in HuggingFace Hub. (Advanced usage)
-::::{tab-set}
+### 2. Download the preconfigured models using ovms --pull option for models outside [Hugging Face Hub OpenVINO organization](https://huggingface.co/OpenVINO) in HuggingFace Hub. (Advanced usage)
 
-:::{tab-item} On Baremetal Host
 **Required:** OpenVINO Model Server package - see [deployment instructions](../../../docs/deploying_server_baremetal.md) for details.
 
 ```bat
@@ -58,8 +56,6 @@ ovms --add_to_config --config_path /models/config.json --model_name meta-llama/M
 ovms --add_to_config --config_path /models/config.json --model_name Alibaba-NLP/gte-large-en-v1.5 --model_path Alibaba-NLP/gte-large-en-v1.5
 ovms --add_to_config --config_path /models/config.json --model_name BAAI/bge-reranker-large --model_path BAAI/bge-reranker-large
 ```
-:::
-::::
 
 
 ### 3.  Export models from HuggingFace Hub including conversion to OpenVINO format using the python script
