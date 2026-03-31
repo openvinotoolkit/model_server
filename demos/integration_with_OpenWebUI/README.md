@@ -241,37 +241,45 @@ curl http://localhost:8000/v3/images/generations -H "Content-Type: application/j
 
 ### Step 2: Image Generation Setting
 
+> **Note**: The instructions below were tested with Open WebUI v0.8.x. If you are using an older version (pre-v0.7.0), the settings UI and image generation methods may differ.
+
 1. Go to **Admin Panel** → **Settings** → **Images** ([http://localhost:8080/admin/settings/images](http://localhost:8080/admin/settings/images))
-2. Configure **OpenAI API**:
+
+![admin panel](./owu_admin_panel.png)
+
+2. Set the **Image Generation Engine** to `Open AI`
+3. Configure the **OpenAI API** connection:
    * URL: `http://localhost:8000/v3`
    * Put anything in API key
-3. Enable **Image Generation (Experimental)**
-   * Set Default Model: `OpenVINO/FLUX.1-schnell-int4-ov`
+4. Enable **Image Generation (Experimental)**
+   * Set Default Model: eg `OpenVINO/FLUX.1-schnell-int4-ov`
    * Set Image Size. Must be in WxH format, example: `256x256`
-4. Click **Save**
+5. Click **Save**
 
 ![image generation setting](./image_generation_setting.png)
 
 ### Step 3: Generate Image
 
-Method 1:
-1. Expand `Integrations` menu
+1. In the chat window, expand the `Integrations` menu
 2. Toggle the **Image** switch to on
-3. Enter a query and send
 
-![image generation method 1 demo](./image_generation_method_1_demo.png)
+![generate prompt](./generate_prompt.png)
 
-Method 2:
-1. Send a query, with or without the **Image** switch on
-2. After the response has finished generating, it can be edited to a prompt
-3. Click the **Picture icon** to generate an image
+3. Enter a prompt describing the image you want and send
 
-![image generation method 2 demo](./image_generation_method_2_demo.png)
+![result image](./result_image.png)
+
+> **Alternative methods (Open WebUI v0.7.0+):**
+>
+> **Restore "Generate Image" Button** — The built-in button on assistant messages was removed in v0.7.0. You can restore it by importing a [community action](https://openwebui.com/posts/3fadc3ca-c955-4c9e-9582-7438f0911b62): click **Get** to import, then enable it in **Admin Panel** → **Functions**. Assistant messages will then show a **Generate Image** icon in the action bar.
+>
 
 ### Reference
 [https://docs.openvino.ai/2026/model-server/ovms_demos_image_generation.html](https://docs.openvino.ai/2026/model-server/ovms_demos_image_generation.html#export-model-for-cpu)
 
-[https://docs.openwebui.com/features/image-generation-and-editing](https://docs.openwebui.com/features/image-generation-and-editing/openai)
+[https://docs.openwebui.com/features/media-generation/image-generation-and-editing/openai](https://docs.openwebui.com/features/media-generation/image-generation-and-editing/openai)
+
+[https://docs.openwebui.com/features/media-generation/image-generation-and-editing/usage](https://docs.openwebui.com/features/media-generation/image-generation-and-editing/usage)
 
 ---
 ## VLM
