@@ -568,7 +568,7 @@ ovms_cc_library(
         }),
         deps = select({
             "//:not_disable_python": [
-                "//src/python:libovmspythonmodule",
+                "//src/python:libovmspython",
             ],
             "//:disable_python": []
         }) + select({
@@ -1131,7 +1131,7 @@ ovms_cc_library( # TODO split dependencies
         "//src/kfserving_api:kfserving_api_cpp",
     ] + select({
             "//:not_disable_python": [
-                "//src/python:libovmspythonmodule",
+                "//src/python:libovmspython",
             ],
             "//:disable_python": []
         }),
