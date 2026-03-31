@@ -76,6 +76,19 @@ public:
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "LLMCalculator [Node: {}] Open end", cc->NodeName());
         return absl::OkStatus();
     }
+    absl::Status handleGenerationError(CalculatorContext* cc, const char* errorMessage) {
+        if (executionContext->apiHandler && executionContext->apiHandler->isStream()) {
+            std::string failedEvent = executionContext->apiHandler->serializeFailedEvent(errorMessage);
+            if (!failedEvent.empty()) {
+                executionContext->response = wrapTextInServerSideEventMessage(failedEvent);
+                executionContext->response += wrapTextInServerSideEventMessage("[DONE]");
+                cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new std::string{std::move(executionContext->response)}, iterationBeginTimestamp);
+                return absl::OkStatus();
+            }
+        }
+        return absl::InvalidArgumentError(errorMessage);
+    }
+
     absl::Status Process(CalculatorContext* cc) final {
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "LLMCalculator  [Node: {}] Process start", cc->NodeName());
         OVMS_PROFILE_FUNCTION();
@@ -177,27 +190,9 @@ public:
                     cc->Outputs().Tag(LOOPBACK_TAG_NAME).Add(new bool{true}, iterationBeginTimestamp);
             }
         } catch (ov::AssertFailure& e) {
-            if (executionContext->apiHandler && executionContext->apiHandler->isStream()) {
-                std::string failedEvent = executionContext->apiHandler->serializeFailedEvent(e.what());
-                if (!failedEvent.empty()) {
-                    executionContext->response = wrapTextInServerSideEventMessage(failedEvent);
-                    executionContext->response += wrapTextInServerSideEventMessage("[DONE]");
-                    cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new std::string{std::move(executionContext->response)}, iterationBeginTimestamp);
-                    return absl::OkStatus();
-                }
-            }
-            return absl::InvalidArgumentError(e.what());
+            return handleGenerationError(cc, e.what());
         } catch (...) {
-            if (executionContext->apiHandler && executionContext->apiHandler->isStream()) {
-                std::string failedEvent = executionContext->apiHandler->serializeFailedEvent("Response generation failed");
-                if (!failedEvent.empty()) {
-                    executionContext->response = wrapTextInServerSideEventMessage(failedEvent);
-                    executionContext->response += wrapTextInServerSideEventMessage("[DONE]");
-                    cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new std::string{std::move(executionContext->response)}, iterationBeginTimestamp);
-                    return absl::OkStatus();
-                }
-            }
-            return absl::InvalidArgumentError("Response generation failed");
+            return handleGenerationError(cc, "Response generation failed");
         }
         auto now = std::chrono::system_clock::now();
         iterationBeginTimestamp = ::mediapipe::Timestamp(std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch()).count());

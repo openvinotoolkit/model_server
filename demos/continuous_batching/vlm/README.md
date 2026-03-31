@@ -137,7 +137,7 @@ curl http://localhost:8000/v3/responses \
           },
           {
             "type": "input_image",
-            "image_url": "http://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/demos/common/static/images/zebra.jpeg"
+            "image_url": "http://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/2/demos/common/static/images/zebra.jpeg"
           }
         ]
       }

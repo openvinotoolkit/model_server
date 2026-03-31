@@ -34,15 +34,10 @@
 
 #include "../../logging.hpp"
 #include "../../profiler.hpp"
-#include "../../filesystem.hpp"
 #pragma warning(push)
 #pragma warning(disable : 6001 4324 6385 6386)
-#include "absl/strings/escaping.h"
 #include "absl/strings/str_cat.h"
 #pragma warning(pop)
-
-#include <regex>
-#include "../../image_conversion.hpp"
 
 using namespace rapidjson;
 
@@ -154,18 +149,7 @@ absl::Status OpenAIChatCompletionsHandler::parseChatCompletionsPart(std::optiona
         return absl::InvalidArgumentError("max_tokens value should be greater than 0");
     }
 
-    // parse response_format
-    it = doc.FindMember("response_format");
-    if (it != doc.MemberEnd()) {
-        if (it->value.IsNull())
-            return absl::OkStatus();
-        if (!it->value.IsObject())
-            return absl::InvalidArgumentError("response_format is not an object");
-        const rapidjson::Value& responseFormat = it->value;
-        request.responseFormat = convertOpenAIResponseFormatToStructuralTagStringFormat(responseFormat);
-    }
-
-    return absl::OkStatus();
+    return parseResponseFormat();
 }
 
 absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::string> allowedLocalMediaPath, std::optional<std::vector<std::string>> allowedMediaDomains) {
@@ -244,65 +228,11 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
                             return absl::InvalidArgumentError("Invalid message structure - image_url does not have url field");
                         }
                         std::string url = imageUrl["url"].GetString();
-                        std::size_t pos = url.find(BASE64_PREFIX);
-                        std::string decoded;
-                        ov::Tensor tensor;
-                        if (pos != std::string::npos) {
-                            SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Loading image from base64 string");
-                            size_t offset = pos + BASE64_PREFIX.length();
-                            if (!absl::Base64Unescape(std::string_view(url.data() + offset, url.size() - offset), &decoded)) {
-                                return absl::InvalidArgumentError("Invalid base64 string in request");
-                            }
-                            try {
-                                tensor = loadImageStbiFromMemory(decoded);
-                            } catch (std::runtime_error& e) {
-                                std::stringstream ss;
-                                ss << "Image parsing failed: " << e.what();
-                                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, ss.str());
-                                return absl::InvalidArgumentError(ss.str());
-                            }
-                        } else if (std::regex_match(url.c_str(), std::regex("^(http|https|ftp|sftp|)://(.*)"))) {
-                            SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Loading image using curl");
-                            if (!allowedMediaDomains.has_value() || !isDomainAllowed(allowedMediaDomains.value(), url.c_str())) {
-                                return absl::InvalidArgumentError("Given url does not match any allowed domain from allowed_media_domains");
-                            }
-                            auto status = downloadImage(url.c_str(), decoded, MAX_IMAGE_SIZE_BYTES);
-                            if (status != absl::OkStatus()) {
-                                return status;
-                            }
-                            try {
-                                tensor = loadImageStbiFromMemory(decoded);
-                            } catch (std::runtime_error& e) {
-                                std::stringstream ss;
-                                ss << "Image parsing failed: " << e.what();
-                                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, ss.str());
-                                return absl::InvalidArgumentError("Image parsing failed");
-                            }
-                        } else {
-                            if (!allowedLocalMediaPath.has_value()) {
-                                return absl::InvalidArgumentError("Loading images from local filesystem is disabled.");
-                            }
-                            if (FileSystem::isPathEscaped(url)) {
-                                std::stringstream ss;
-                                ss << "Path " << url.c_str() << " escape with .. is forbidden.";
-                                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, ss.str());
-                                return absl::InvalidArgumentError(ss.str());
-                            }
-                            SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Loading image from local filesystem");
-                            const auto firstMissmatch = std::mismatch(url.begin(), url.end(), allowedLocalMediaPath.value().begin(), allowedLocalMediaPath.value().end());
-                            if (firstMissmatch.second != allowedLocalMediaPath.value().end()) {
-                                return absl::InvalidArgumentError("Given filepath is not subpath of allowed_local_media_path");
-                            }
-                            try {
-                                tensor = loadImageStbiFromFile(url.c_str());
-                            } catch (std::runtime_error& e) {
-                                std::stringstream ss;
-                                ss << "Image file " << url.c_str() << " parsing failed: " << e.what();
-                                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, ss.str());
-                                return absl::InvalidArgumentError(ss.str());
-                            }
+                        auto tensorResult = loadImage(url, allowedLocalMediaPath, allowedMediaDomains);
+                        if (!tensorResult.ok()) {
+                            return tensorResult.status();
                         }
-                        request.imageHistory.push_back({i, tensor});
+                        request.imageHistory.push_back({i, tensorResult.value()});
                     } else {
                         return absl::InvalidArgumentError("Unsupported content type");
                     }
@@ -543,17 +473,7 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(ov::genai::VLMD
 
         // Workaround to use OVMS unary parsers: get tokens from string
         // This way we have detokenized text from GenAI and calculate tokens, to further convert back to text again, in parseOutputIfNeeded...
-        auto result = tokenizer.encode(text);
-        auto& input_ids = result.input_ids;
-        if (input_ids.get_shape().size() != 2)
-            throw std::runtime_error("input_ids should have 2 dimensions");
-        if (input_ids.get_shape()[0] != 1)
-            throw std::runtime_error("input_ids should have 1 batch size");
-        if (input_ids.get_element_type() != ov::element::i64)
-            throw std::runtime_error("input_ids should have i64 element type");
-
-        int64_t* input_ids_data = reinterpret_cast<int64_t*>(input_ids.data());
-        std::vector<int64_t> generatedTokens(input_ids_data, input_ids_data + input_ids.get_shape()[1]);
+        auto generatedTokens = encodeTextToTokens(text);
 
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Generated tokens: {}", generatedTokens);
         ParsedOutput parsedOutput = parseOutputIfNeeded(generatedTokens);
@@ -785,5 +705,11 @@ std::string OpenAIChatCompletionsHandler::serializeStreamingHandshakeChunk() {
     Writer<StringBuffer> writer(buffer);
     doc.Accept(writer);
     return buffer.GetString();
+}
+
+void OpenAIChatCompletionsHandler::incrementProcessedTokens(size_t numTokens) {
+    processedTokens += numTokens;
+    if (!request.echo || processedTokens > usage.promptTokens)
+        usage.completionTokens += numTokens;
 }
 }  // namespace ovms
