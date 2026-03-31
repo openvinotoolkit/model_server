@@ -55,11 +55,11 @@ int BuffersQueue::getBufferId(void* buffer) {
     return (static_cast<char*>(buffer) - memoryPool.get()) / singleBufferSize;
 }
 
-const size_t BuffersQueue::getSize() {
+size_t BuffersQueue::getSize() const {
     return this->size;
 }
 
-const size_t BuffersQueue::getSingleBufferSize() {
+size_t BuffersQueue::getSingleBufferSize() const {
     return this->singleBufferSize;
 }
 }  // namespace custom_nodes_common
