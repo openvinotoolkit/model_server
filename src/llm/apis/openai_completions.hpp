@@ -24,6 +24,9 @@ namespace ovms {
 
 // Handler for OpenAI Completions (/v3/completions) and Chat Completions (/v3/chat/completions) APIs.
 class OpenAIChatCompletionsHandler : public OpenAIApiHandler {
+    bool toolCallsDetectedInStream = false;  // tracks whether tool calls were detected in any streaming chunk
+    size_t processedTokens = 0;              // tracks overall number of tokens processed by the pipeline (echo-aware)
+
     absl::Status parseCompletionsPart();
     absl::Status parseChatCompletionsPart(std::optional<uint32_t> maxTokensLimit, std::optional<std::string> allowedLocalMediaPath, std::optional<std::vector<std::string>> allowedMediaDomains);
 
@@ -40,5 +43,6 @@ public:
     std::string serializeStreamingChunk(const std::string& chunkResponse, ov::genai::GenerationFinishReason finishReason) override;
     std::string serializeStreamingUsageChunk() override;
     std::string serializeStreamingHandshakeChunk() override;
+    void incrementProcessedTokens(size_t numTokens = 1) override;
 };
 }  // namespace ovms

@@ -90,19 +90,21 @@ protected:
     Document& doc;
     Endpoint endpoint;
     CompletionUsageStatistics usage;
-    OpenAIChatCompletionsRequest request;
+    OpenAIRequest request;
     std::chrono::time_point<std::chrono::system_clock> created;
     ov::genai::Tokenizer tokenizer;
-    size_t processedTokens = 0;              // tracks overall number of tokens processed by the pipeline
-    bool toolCallsDetectedInStream = false;  // tracks whether tool calls were detected in any streaming chunk
 
     // Output parser is used to parse chat completions response to extract specific fields like tool calls and reasoning.
     std::unique_ptr<OutputParser> outputParser = nullptr;
 
     // Shared parsing helpers
     absl::Status parseCommonPart(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength);
+    absl::Status parseResponseFormat();
     absl::Status ensureArgumentsInToolCalls(Value& messageObj, bool& jsonChanged);
     ParsedOutput parseOutputIfNeeded(const std::vector<int64_t>& generatedIds);
+
+    // Shared VLM workaround: encode text to tokens using tokenizer, validates shape
+    std::vector<int64_t> encodeTextToTokens(const std::string& text);
 
 public:
     OpenAIApiHandler(Document& doc, Endpoint endpoint, std::chrono::time_point<std::chrono::system_clock> creationTime,
@@ -112,7 +114,7 @@ public:
         created(creationTime),
         tokenizer(tokenizer) {
         // TODO we should delay creating output parser until we have request with toolNameSchemaMap parsed
-        // now we pass it now but it has to be populated first before first use
+        // we pass it now, but it has to be populated first before first use
         if (!toolParserName.empty() || !reasoningParserName.empty()) {
             outputParser = std::make_unique<OutputParser>(tokenizer, toolParserName, reasoningParserName, this->request.toolNameSchemaMap);
         }
@@ -137,7 +139,7 @@ public:
     const bool areToolsAvailable() const;
 
     // Accessors (non-virtual)
-    const OpenAIChatCompletionsRequest& getRequest() const;
+    const OpenAIRequest& getRequest() const;
     std::optional<std::string> getPrompt() const;
     std::optional<int> getNumReturnSequences() const;
     StreamOptions getStreamOptions() const;
@@ -152,10 +154,10 @@ public:
     std::string getToolChoice() const;
     const std::unique_ptr<OutputParser>& getOutputParser() const;
 
-    // Usage tracking (non-virtual)
+    // Usage tracking
     void setPromptTokensUsage(size_t promptTokens);
     void setCompletionTokensUsage(size_t completionTokens);
-    void incrementProcessedTokens(size_t numTokens = 1);
+    virtual void incrementProcessedTokens(size_t numTokens = 1);
 
     // Serialization - pure virtual, each handler produces its own response format
     virtual std::string serializeUnaryResponse(const std::vector<ov::genai::GenerationOutput>& generationOutputs) = 0;
@@ -183,5 +185,10 @@ constexpr int64_t MAX_IMAGE_SIZE_BYTES = 20000000;  // 20MB
 // Image download utilities shared by parseMessages and parseInput
 absl::Status downloadImage(const char* url, std::string& image, const int64_t& sizeLimit);
 bool isDomainAllowed(const std::vector<std::string>& allowedDomains, const char* url);
+
+// Loads image from base64 string, URL, or local file path; returns the decoded tensor
+absl::StatusOr<ov::Tensor> loadImage(const std::string& imageSource,
+    const std::optional<std::string>& allowedLocalMediaPath,
+    const std::optional<std::vector<std::string>>& allowedMediaDomains);
 
 }  // namespace ovms

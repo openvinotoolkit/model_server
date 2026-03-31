@@ -28,6 +28,6 @@ public:
     explicit DevstralGenerationConfigBuilder(const ov::genai::GenerationConfig& baseConfig, bool enableToolGuidedGeneration, DecodingMethod decodingMethod) :
         BaseGenerationConfigBuilder(baseConfig, enableToolGuidedGeneration, decodingMethod) {}
 
-    void parseConfigFromRequest(const OpenAIChatCompletionsRequest& request) override;
+    void parseConfigFromRequest(const OpenAIRequest& request) override;
 };
 }  // namespace ovms
