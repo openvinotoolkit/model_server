@@ -5,21 +5,6 @@
 ### 1. Download the preconfigured models using ovms --pull option from [HugginFaces Hub OpenVINO organization](https://huggingface.co/OpenVINO) (Simple usage)
 ::::{tab-set}
 
-:::{tab-item} With Docker
-**Required:** Docker Engine installed
-
-```bash
-mkdir models
-docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --pull --model_repository_path /models --source_model OpenVINO/Qwen3-8B-int4-ov --task text_generation
-docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --pull --model_repository_path /models --source_model OpenVINO/bge-base-en-v1.5-fp16-ov --task embeddings
-docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --pull --model_repository_path /models --source_model OpenVINO/bge-reranker-base-fp16-ov --task rerank
-
-docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --add_to_config --config_path /models/config.json --model_name OpenVINO/Qwen3-8B-int4-ov --model_path OpenVINO/Qwen3-8B-int4-ov
-docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --add_to_config --config_path /models/config.json --model_name OpenVINO/bge-base-en-v1.5-fp16-ov --model_path OpenVINO/bge-base-en-v1.5-fp16-ov
-docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --add_to_config --config_path /models/config.json --model_name OpenVINO/bge-reranker-base-fp16-ov --model_path OpenVINO/bge-reranker-base-fp16-ov
-```
-:::
-
 :::{tab-item} On Baremetal Host
 **Required:** OpenVINO Model Server package - see [deployment instructions](../../../docs/deploying_server_baremetal.md) for details.
 
@@ -56,20 +41,6 @@ ovms --add_to_config --config_path c:\models\config.json --model_name OpenVINO/b
 
 ### 2. Download the preconfigured models using ovms --pull option for models outside [HugginFaces Hub OpenVINO organization](https://huggingface.co/OpenVINO) in HuggingFace Hub. (Advanced usage)
 ::::{tab-set}
-
-:::{tab-item} With Docker
-**Required:** Docker Engine installed
-```bash
-mkdir models
-docker run --user $(id -u):$(id -g) -e HF_HOME=/hf_home/cache --rm -v $(pwd)/models:/models:rw -v /opt/home/user/.cache/huggingface/:/hf_home/cache openvino/model_server:latest-py --pull --model_repository_path /models --source_model meta-llama/Meta-Llama-3-8B-Instruct --task text_generation --weight-format int8
-docker run --user $(id -u):$(id -g) -e HF_HOME=/hf_home/cache --rm -v $(pwd)/models:/models:rw -v /opt/home/user/.cache/huggingface/:/hf_home/cache openvino/model_server:latest-py --pull --model_repository_path /models --source_model Alibaba-NLP/gte-large-en-v1.5 --task embeddings --weight-format int8
-docker run --user $(id -u):$(id -g) -e HF_HOME=/hf_home/cache --rm -v $(pwd)/models:/models:rw -v /opt/home/user/.cache/huggingface/:/hf_home/cache openvino/model_server:latest-py --pull --model_repository_path /models --source_model BAAI/bge-reranker-large --task rerank --weight-format int8
-
-docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest-py --add_to_config --config_path /models/config.json --model_name meta-llama/Meta-Llama-3-8B-Instruct --model_path meta-llama/Meta-Llama-3-8B-Instruct --weight-format int8
-docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest-py --add_to_config --config_path /models/config.json --model_name Alibaba-NLP/gte-large-en-v1.5 --model_path Alibaba-NLP/gte-large-en-v1.5 --weight-format int8
-docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest-py --add_to_config --config_path /models/config.json --model_name BAAI/bge-reranker-large --model_path BAAI/bge-reranker-large --weight-format int8
-```
-:::
 
 :::{tab-item} On Baremetal Host
 **Required:** OpenVINO Model Server package - see [deployment instructions](../../../docs/deploying_server_baremetal.md) for details.
