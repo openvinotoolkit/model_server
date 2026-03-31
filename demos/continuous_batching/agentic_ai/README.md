@@ -33,7 +33,7 @@ pip install python-dateutil mcp_weather_server
 Install the application requirements
 
 ```console
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/continuous_batching/agentic_ai/openai_agent.py -O -L
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/2026/1/demos/continuous_batching/agentic_ai/openai_agent.py -O -L
 pip install openai-agents openai
 ```
 
@@ -481,7 +481,7 @@ docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v ${HOME}/models:/mode
 You can try also similar implementation based on llama_index library working the same way like openai-agent:
 ```bash
 pip install llama-index-llms-openai-like==0.5.3 llama-index-core==0.14.5 llama-index-tools-mcp==0.4.2
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/continuous_batching/agentic_ai/llama_index_agent.py -o llama_index_agent.py
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/2026/1/demos/continuous_batching/agentic_ai/llama_index_agent.py -o llama_index_agent.py
 python llama_index_agent.py --query "What is the current weather in Tokyo?" --model OpenVINO/Qwen3-8B-int4-ov --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather --stream --enable-thinking
 ```
 
@@ -512,8 +512,8 @@ Use those steps to convert the model from HuggingFace Hub to OpenVINO format and
 
 ```text
 # Download export script, install its dependencies and create directory for the models
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/export_model.py -o export_model.py
-pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/1/demos/common/export_models/export_model.py -o export_model.py
+pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/1/demos/common/export_models/requirements.txt
 mkdir models
 ```
 Run `export_model.py` script to download and quantize the model:

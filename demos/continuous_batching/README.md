@@ -271,11 +271,11 @@ Check the demo [AI agent with MCP server and OpenVINO acceleration](./agentic_ai
 
 The service deployed above can be used in RAG chain using `langchain` library with OpenAI endpoint as the LLM engine.
 
-Check the example in the [RAG notebook](https://github.com/openvinotoolkit/model_server/blob/main/demos/continuous_batching/rag/rag_demo.ipynb)
+Check the example in the [RAG notebook](https://github.com/openvinotoolkit/model_server/blob/releases/2026/1/demos/continuous_batching/rag/rag_demo.ipynb)
 
 ## Scaling the Model Server
 
-Check this simple [text generation scaling demo](https://github.com/openvinotoolkit/model_server/blob/main/demos/continuous_batching/scaling/README.md).
+Check this simple [text generation scaling demo](https://github.com/openvinotoolkit/model_server/blob/releases/2026/1/demos/continuous_batching/scaling/README.md).
 
 ## Use Speculative Decoding
 

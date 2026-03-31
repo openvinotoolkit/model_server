@@ -19,12 +19,12 @@ Check supported [Speech Recognition Models](https://openvinotoolkit.github.io/op
 ### Prepare speaker embeddings
 When generating speech you can use default speaker voice or you can prepare your own speaker embedding file. Here you can see how to do it with downloaded file from online repository, but you can try with your own speech recording as well:
 ```bash
-pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/audio/requirements.txt
+pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/1/demos/audio/requirements.txt
 mkdir -p audio_samples
 curl --output audio_samples/audio.wav "https://www.voiptroubleshooter.com/open_speech/american/OSR_us_000_0032_8k.wav"
 mkdir -p models
 mkdir -p models/speakers
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/audio/create_speaker_embedding.py -o create_speaker_embedding.py
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/1/demos/audio/create_speaker_embedding.py -o create_speaker_embedding.py
 python create_speaker_embedding.py audio_samples/audio.wav models/speakers/voice1.bin
 ```
 
@@ -41,8 +41,8 @@ Execution parameters will be defined inside the `graph.pbtxt` file.
 
 Download export script, install it's dependencies and create directory for the models:
 ```console
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/export_model.py -o export_model.py
-pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/1/demos/common/export_models/export_model.py -o export_model.py
+pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/1/demos/common/export_models/requirements.txt
 mkdir models
 ```
 
@@ -180,8 +180,8 @@ Execution parameters will be defined inside the `graph.pbtxt` file.
 
 Download export script, install it's dependencies and create directory for the models:
 ```console
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/export_model.py -o export_model.py
-pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/1/demos/common/export_models/export_model.py -o export_model.py
+pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/1/demos/common/export_models/requirements.txt
 mkdir models
 ```
 

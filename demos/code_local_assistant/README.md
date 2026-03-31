@@ -123,7 +123,7 @@ Models which are not published in OpenVINO format can be exported and quantized 
 ```
 mkdir models
 python export_model.py text_generation --source_model unsloth/Devstral-Small-2507 --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --tool_parser devstral --target_device GPU
-curl -L -o models/unsloth/Devstral-Small-2507/chat_template.jinja https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/extras/chat_template_examples/chat_template_devstral.jinja
+curl -L -o models/unsloth/Devstral-Small-2507/chat_template.jinja https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/1/extras/chat_template_examples/chat_template_devstral.jinja
 
 ovms --model_repository_path models --source_model unsloth/Devstral-Small-2507 --task text_generation --target_device GPU --tool_parser devstral --rest_port 8000 --cache_dir .ovcache
 ```
