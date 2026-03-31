@@ -115,7 +115,7 @@ if __name__ == '__main__':
     # --- Prepare output video writer ---
     os.makedirs("./results", exist_ok=True)
     output_path = os.path.join("./results", args['output_video'])
-    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    fourcc = cv2.VideoWriter_fourcc(*'avc1')
     out_writer = None  # initialize after first frame so we know output shape
 
     processing_times = np.zeros((0), int)
@@ -132,10 +132,15 @@ if __name__ == '__main__':
         # KEY DIFFERENCE from object_detection:
         # We send frames one by one but as a video stream input
         # The graph maintains tracking state across frames server-side
+        frame_timestamp_us = int((iteration / fps) * 1e6)
+
         inputs = []
         outputs = []
 
-        inputs.append(grpcclient.InferInput(input_name, frame.shape, "UINT8"))
+        # inputs.append(grpcclient.InferInput(input_name, frame.shape, "UINT8"))
+        # nmpy = np.array(frame, dtype=np.uint8)
+        # inputs[0].set_data_from_numpy(nmpy)
+        inputs = [grpcclient.InferInput(input_name, frame.shape, "UINT8")]
         nmpy = np.array(frame, dtype=np.uint8)
         inputs[0].set_data_from_numpy(nmpy)
 
@@ -146,7 +151,8 @@ if __name__ == '__main__':
             results = triton_client.infer(
                 model_name=graph_name,
                 inputs=inputs,
-                outputs=outputs
+                outputs=outputs,
+                headers={"mediapipe-packet-timestamp": str(frame_timestamp_us)}
             )
         except Exception as e:
             print(f"Frame {iteration} inference failed: {str(e)}")
