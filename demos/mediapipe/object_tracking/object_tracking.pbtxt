@@ -4,8 +4,8 @@
 # mediapipie/examples/desktop/object_tracking/
 
 # Images on CPU coming into and out of the graph.
-input_stream: "input_video"
-output_stream: "output_video"
+input_stream: "IMAGE:input_video"
+output_stream: "IMAGE:output_video"
 
 # Resamples the images by specific frame rate. This calculator is used to
 # control the frequecy of subsequent calculators/subgraphs, e.g. less power
