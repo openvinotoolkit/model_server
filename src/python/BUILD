@@ -16,6 +16,7 @@
 
 load("@pybind11_bazel//:build_defs.bzl", "pybind_extension")
 load("@mediapipe//mediapipe/framework/port:build_config.bzl", "mediapipe_cc_proto_library", "mediapipe_proto_library")
+load("@aspect_bazel_lib//:e2e/copy_action/copy.bzl", "simple_copy_file")
 load("//:common_settings.bzl",
      "COMMON_STATIC_LIBS_LINKOPTS",
      "COMMON_FUZZER_COPTS", "COMMON_FUZZER_LINKOPTS",
@@ -54,9 +55,43 @@ _SHARED_LIB_COPTS_LINUX = [
     "-Wno-attributes",
 ]
 
+_SHARED_LIB_COPTS_WINDOWS = [
+    "/guard:cf",
+    "/W4",
+    "/WX",
+    "/external:anglebrackets",
+    "/external:W0",
+    "/sdl",
+    "/analyze",
+    "/Gy",
+    "/GS",
+    "/DYNAMICBASE",
+    "/Qspectre",
+    "/wd4305",
+    "/wd4324",
+    "/wd4068",
+    "/wd4458",
+    "/wd4100",
+    "/wd4389",
+    "/wd4127",
+    "/wd4673",
+    "/wd4670",
+    "/wd4244",
+    "/wd4297",
+    "/wd4702",
+    "/wd4267",
+    "/wd4996",
+    "/wd6240",
+    "/wd6326",
+    "/wd6385",
+    "/wd6294",
+    "/guard:cf",
+    "/utf-8",
+]
+
 COPTS_SO = select({
     "//conditions:default": _SHARED_LIB_COPTS_LINUX,
-    "//src:windows": [],  # Windows builds do not produce this .so
+    "//src:windows": _SHARED_LIB_COPTS_WINDOWS,
 }) + select({
     "//conditions:default": ["-DPYTHON_DISABLE=1"],
     "//:not_disable_python": ["-DPYTHON_DISABLE=0"],
@@ -226,10 +261,17 @@ cc_binary(
     visibility = ["//visibility:public"],
 )
 
+simple_copy_file(
+    name = "copy_libovmspython",
+    src = "libovmspython.so",
+    out = "libovmspython.dll",
+    visibility = ["//visibility:public"],
+)
+
 # cc_import wrapper so that other targets can depend on the shared library
 # the same way they previously depended on :libovmspythonmodule.
 cc_import(
-    name = "libovmspython",
+    name = "libovmspython_unix",
     shared_library = ":libovmspython.so",
     hdrs = [
         "ovms_py_tensor.hpp",
@@ -237,5 +279,27 @@ cc_import(
         "pythoninterpretermodule.hpp",
         "utils.hpp",
     ],
+    visibility = ["//visibility:private"],
+)
+
+cc_import(
+    name = "libovmspython_windows",
+    interface_library = ":libovmspython.so.if.lib",
+    shared_library = ":copy_libovmspython",
+    hdrs = [
+        "ovms_py_tensor.hpp",
+        "python_backend.hpp",
+        "pythoninterpretermodule.hpp",
+        "utils.hpp",
+    ],
+    visibility = ["//visibility:private"],
+)
+
+alias(
+    name = "libovmspython",
+    actual = select({
+        "//src:windows": ":libovmspython_windows",
+        "//conditions:default": ":libovmspython_unix",
+    }),
     visibility = ["//visibility:public"],
 )

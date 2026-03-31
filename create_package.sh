@@ -65,6 +65,13 @@ if [ -f /ovms_release/lib/libsrc_Slibovms_Ushared.so ] ; then \
 fi
 
 # Add Python bindings for pyovms, openvino, openvino_tokenizers and openvino_genai, so they are all available for OVMS Python servables
+if ! [[ $debug_bazel_flags == *"_py_off"* ]]; then
+	if [ ! -f /ovms_release/lib/libovmspython.so ]; then
+		echo "Missing libovmspython.so in package staging. Ensure //src/python:libovmspython is built."
+		exit 1
+	fi
+fi
+
 if ! [[ $debug_bazel_flags == *"_py_off"* ]]; then cp -r /opt/intel/openvino/python /ovms_release/lib/python ; fi
 if ! [[ $debug_bazel_flags == *"_py_off"* ]] && [ "$FUZZER_BUILD" == "0" ]; then mv /ovms_release/lib/pyovms.so /ovms_release/lib/python ; fi
 if ! [[ $debug_bazel_flags == *"_py_off"* ]]; then mv /ovms_release/lib/python/bin/convert_tokenizer /ovms_release/bin/convert_tokenizer ; \
