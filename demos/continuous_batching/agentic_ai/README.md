@@ -421,7 +421,7 @@ Let me know if you'd like forecast details or anything else!
 ### Deploying in a docker container on NPU
 
 The case of NPU is similar to GPU, but `--device` should be set to `/dev/accel`, `--group-add` parameter should be the same.
-Running `docker run` command, use the image with GPU support. Export the models with precision matching the [NPU capacity](https://docs.openvino.ai/nightly/openvino-workflow-generative/inference-with-genai/inference-with-genai-on-npu.html) and adjust pipeline configuration.
+Running `docker run` command, use the image with GPU support. Export the models with precision matching the [NPU capacity](https://docs.openvino.ai/2026/openvino-workflow-generative/inference-with-genai/inference-with-genai-on-npu.html) and adjust pipeline configuration.
 It can be applied using the commands below:
 
 ::::{tab-set}
@@ -529,4 +529,4 @@ curl -L -o models/meta-llama/Llama-3.2-3B-Instruct/chat_template.jinja https://r
 ```text
 python export_model.py text_generation --source_model meta-llama/Llama-3.2-3B-Instruct --weight-format nf4 --config_file_path models/config.json --model_repository_path models --tool_parser llama3 --extra_quantization_params "--library transformers --sym group_size -1" 
 ```
-For more details, see [OpenVINO GenAI on NPU](https://docs.openvino.ai/nightly/openvino-workflow-generative/inference-with-genai/inference-with-genai-on-npu.html).
+For more details, see [OpenVINO GenAI on NPU](https://docs.openvino.ai/2026/openvino-workflow-generative/inference-with-genai/inference-with-genai-on-npu.html).
