@@ -57,7 +57,7 @@ def export_model(model, labels):
 
     return serving_fn
 
-model = keras.applications.MobileNet()
+model = keras.applications.MobileNetV2()
 model_dir = "./model"
 model_version = 1
 model_export_path = f"{model_dir}/{model_version}"

@@ -86,7 +86,12 @@ static void logConfig(const Config& config) {
     std::string project_name(PROJECT_NAME);
     std::string project_version(PROJECT_VERSION);
     SPDLOG_INFO(project_name + " " + project_version);
-    SPDLOG_INFO("OpenVINO backend {}", OPENVINO_NAME);
+    SPDLOG_INFO("OpenVINO backend {}", ovms::getOpenVINOVersion());
+    const char* genaiVersion = ovms::getGenAIVersion();
+    if (genaiVersion[0] != '\0') {
+        SPDLOG_INFO("OpenVINO GenAI backend {}", genaiVersion);
+    }
+    SPDLOG_DEBUG("Bazel build flags: {}", BAZEL_BUILD_FLAGS);
     SPDLOG_DEBUG("CLI parameters passed to ovms server");
     if (config.getServerSettings().serverMode == HF_PULL_MODE) {
         SPDLOG_DEBUG("source_model: {}", config.getServerSettings().hfSettings.sourceModel);
@@ -500,6 +505,14 @@ int Server::startServerFromSettings(ServerSettingsImpl& serverSettings, ModelsSe
     OvmsExitGuard exitStatusGuard(*this);
     installSignalHandlers();
     int result = OVMS_EX_OK;
+    // TODO This is WA for concurrency handling issue in iGPU for qwen3-MOE models. It is expected to be fixed in 2026.2
+    if (getenv("MOE_USE_MICRO_GEMM_PREFILL") == nullptr) {
+#ifdef _WIN32
+        _putenv_s("MOE_USE_MICRO_GEMM_PREFILL", "0");
+#else
+        setenv("MOE_USE_MICRO_GEMM_PREFILL", "0", 0);
+#endif
+    }
 
     try {
         Status ret = startFromSettings(&serverSettings, &modelsSettings);
