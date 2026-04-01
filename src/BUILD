@@ -568,7 +568,6 @@ ovms_cc_library(
         }),
         deps = select({
             "//:not_disable_python": [
-                "//src/python:libovmspython",
                 "//src/python:pythonnoderesources",
                 "//src/python:pythonexecutorcalculator",
                 "//src/python:pytensorovtensorconvertercalculator",
@@ -719,8 +718,11 @@ ovms_cc_library(
                 "//conditions:default": ["-lOpenCL"], # TODO make as direct dependency
                 "//src:windows" : ["/DEFAULTLIB:Rpcrt4.lib"],}),
     data = select({
-        "//:not_disable_python": [
+        ("//:not_disable_python", "@platforms//os:linux"): [
             "//src/python/binding:pyovms.so",
+        ],
+        ("//:not_disable_python", "@platforms//os:windows"): [
+            "//src/python/binding:pyovms.dll",
         ],
         "//:disable_python": []
         }) + select({
@@ -1134,7 +1136,6 @@ ovms_cc_library( # TODO split dependencies
         "//src/kfserving_api:kfserving_api_cpp",
     ] + select({
             "//:not_disable_python": [
-                "//src/python:libovmspython",
                 "//src/python:pythonnoderesources",
                 "//src/python:pythonexecutorcalculator",
                 "//src/python:pytensorovtensorconvertercalculator",
@@ -2455,8 +2456,11 @@ cc_binary(
             "//:disable_mediapipe" : [],
         }),
     data = select({
-        "//:not_disable_python": [
+        ("//:not_disable_python", "@platforms//os:linux"): [
             "//src/python/binding:pyovms.so",
+        ],
+        ("//:not_disable_python", "@platforms//os:windows"): [
+            "//src/python/binding:pyovms.dll",
         ],
         "//:disable_python": []
     }),
@@ -2712,7 +2716,15 @@ cc_test(
         "//src:libcustom_node_image_transformation.so",
         "//src:libcustom_node_add_one.so",
         "//src:libcustom_node_horizontal_ocr.so",
-    ],
+    ] + select({
+        ("//:not_disable_python", "@platforms//os:linux"): [
+            "//src/python:libovmspython.so",
+        ],
+        ("//:not_disable_python", "@platforms//os:windows"): [
+            "//src/python:libovmspython.dll",
+        ],
+        "//:disable_python": [],
+    }),
     deps = [
             "optimum-cli",
             "//src:ovms_lib",
@@ -2766,6 +2778,11 @@ cc_test(
             [
                 "serialization_common",
             ],
+        }) + select({
+            "//:not_disable_python": [
+                "//src/python:pythoninterpretermodule_runtime",
+            ],
+            "//:disable_python": [],
         }),
     copts = COPTS_TESTS,
     local_defines = COMMON_LOCAL_DEFINES,

@@ -233,6 +233,23 @@ ovms_cc_library(
     data = ["//src/python/binding:pyovms.so"],
 )
 
+# Lightweight target for tests that need direct PythonInterpreterModule usage
+# without pulling MediaPipe calculator registration code.
+ovms_cc_library(
+    name = "pythoninterpretermodule_runtime",
+    hdrs = ["pythoninterpretermodule.hpp",],
+    srcs = ["pythoninterpretermodule.cpp",],
+    deps = PYBIND_DEPS + [
+        "//src:cpp_headers",
+        "//src:libovmslogging",
+        "//src:libovms_module",
+        "pythonbackend",
+    ],
+    visibility = ["//src:__pkg__"],
+    alwayslink = 1,
+    data = ["//src/python/binding:pyovms.so"],
+)
+
 # Shared library built from all Python binding sources.
 # Deps whose symbols are compiled with -fvisibility=hidden (the project default)
 # are linked into the .so with hidden visibility; only the python module
@@ -247,6 +264,7 @@ cc_binary(
         "python_backend.hpp",
         "pythoninterpretermodule.cpp",
         "pythoninterpretermodule.hpp",
+        "python_runtime_entry.cpp",
         "utils.hpp",
     ],
     deps = PYBIND_DEPS + [

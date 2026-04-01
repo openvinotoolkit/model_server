@@ -39,8 +39,8 @@
 #include "../metric_config.hpp"
 #include "../metric_module.hpp"
 #include "../model_service.hpp"
+#include "../module.hpp"
 #include "../precision.hpp"
-#include "../python/pythoninterpretermodule.hpp"
 #include "../python/pythonnoderesources.hpp"
 #include "../servablemanagermodule.hpp"
 #include "../server.hpp"
@@ -112,7 +112,15 @@ public:
 };
 
 static PythonBackend* getPythonBackend() {
-    return dynamic_cast<const ovms::PythonInterpreterModule*>(ovms::Server::instance().getModule(PYTHON_INTERPRETER_MODULE_NAME))->getPythonBackend();
+    auto* pythonModule = ovms::Server::instance().getModule(PYTHON_INTERPRETER_MODULE_NAME);
+    if (pythonModule == nullptr) {
+        throw std::runtime_error("Python interpreter module is not available");
+    }
+    auto* pythonBackend = pythonModule->getPythonBackend();
+    if (pythonBackend == nullptr) {
+        throw std::runtime_error("Python backend is not available");
+    }
+    return pythonBackend;
 }
 
 // --------------------------------------- OVMS initializing Python nodes tests
