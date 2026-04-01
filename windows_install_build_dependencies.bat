@@ -208,7 +208,7 @@ IF /I EXIST %BAZEL_SHORT_PATH%\openvino (
     rmdir /S /Q %BAZEL_SHORT_PATH%\openvino
 )
 if "%OV_SOURCE_BRANCH%"=="" (
-    set "OV_SOURCE_BRANCH=9a9b7d7ea005a8aa9b21f8c2cb13010e15e248d2"
+    set "OV_SOURCE_BRANCH=2027bca79802f99e7dbdbb7e376509b5bce24b19"
 )
 if "%OV_SOURCE_ORG%"=="" (
     set "OV_SOURCE_ORG=openvinotoolkit"
@@ -217,13 +217,13 @@ if "%TOKENIZER_SOURCE_ORG%"=="" (
     set "TOKENIZER_SOURCE_ORG=openvinotoolkit"
 )
 if "%TOKENIZER_SOURCE_BRANCH%"=="" (
-    set "TOKENIZER_SOURCE_BRANCH=e7f163b7108790fce8b2936ba5f2a25832ff3003"
+    set "TOKENIZER_SOURCE_BRANCH=84773ba7869b8d6102996eecdfdff3b9e241d080"
 )
 if "%GENAI_SOURCE_ORG%"=="" (
     set "GENAI_SOURCE_ORG=openvinotoolkit"
 )
 if "%GENAI_SOURCE_BRANCH%"=="" (
-    set "GENAI_SOURCE_BRANCH=bb6dc5c1148a7c30af1ec372aad8698427bc0424"
+    set "GENAI_SOURCE_BRANCH=61eba59ded9def1ee529d40acdeeaa9bad3331ad"
 )
 
 echo [INFO] Using OpenVINO source from %OV_SOURCE_ORG%
