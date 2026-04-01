@@ -351,6 +351,7 @@ const std::unordered_map<StatusCode, std::string> Status::statusMessageMap = {
     {StatusCode::HF_GIT_STATUS_FAILED, "Failed in libgit2 execution of status method"},
     {StatusCode::HF_GIT_STATUS_FAILED_TO_RESOLVE_PATH, "Failed in libgit2 to check repository status for a given path"},
     {StatusCode::HF_GIT_LIBGIT2_NOT_INITIALIZED, "Libgit2 was not initialized"},
+    {StatusCode::HF_GIT_LIBGIT2_LFS_DOWNLOAD_FAILED, "Libgit2 LFS download failed"},
     {StatusCode::HF_GIT_STATUS_UNCLEAN, "Unclean status detected in libgit2 repository path"},
 
     {StatusCode::PARTIAL_END, "Request has finished and no further communication is needed"},

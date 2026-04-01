@@ -661,6 +661,15 @@ Status HfDownloader::downloadModel() {
         } else {
             SPDLOG_DEBUG("Model repository status check passed after resuming download.");
         }
+
+        // Checking if git status is ok but we are left with LFS pointer files - no actual lfs download was triggered because of lfs errors
+        matches = libgit2::findLfsLikeFiles(this->downloadPath, true);
+        if (!matches.empty()) {
+            SPDLOG_ERROR("Model repository status check failed after resuming download. Lfs pointer files found.");
+            SPDLOG_DEBUG("Review the log for lfs server connectivity errors.");
+            return StatusCode::HF_GIT_LIBGIT2_LFS_DOWNLOAD_FAILED;
+        }
+
         return StatusCode::OK;
     }
 
@@ -713,6 +722,14 @@ Status HfDownloader::downloadModel() {
         return status;
     } else {
         SPDLOG_DEBUG("Model repository status check passed after model download.");
+    }
+
+    // Checking if git status is ok but we are left with LFS pointer files - no actual lfs download was triggered because of lfs errors
+    auto matches = libgit2::findLfsLikeFiles(this->downloadPath, true);
+    if (!matches.empty()) {
+        SPDLOG_ERROR("Model repository status check failed after git clone. Lfs pointer files found.");
+        SPDLOG_DEBUG("Review the log for lfs server connectivity errors.");
+        return StatusCode::HF_GIT_LIBGIT2_LFS_DOWNLOAD_FAILED;
     }
 
     // libgit2 clone sets readonly attributes
