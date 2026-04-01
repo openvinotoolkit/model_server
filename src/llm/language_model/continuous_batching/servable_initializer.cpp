@@ -199,6 +199,7 @@ Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiSe
         return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
     }
 
+    // TODO: fix code duplicate 3x in the same places
     if (nodeOptions.lora_adapter_size() > 0) {
         SPDLOG_INFO("LoRA adapters will be applied to the model. Number of adapters: {}", nodeOptions.lora_adapter_size());
         for (int i = 0; i < nodeOptions.lora_adapter_size(); ++i) {
@@ -213,12 +214,12 @@ Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiSe
             }
             try {
                 ov::genai::Adapter adapter(loraPath);
-                properties->adapterConfig.add(adapter, loraAdapterOption.alpha());
+                properties->adapterConfig.add(adapter, 1.0f);//loraAdapterOption.alpha());
                 std::string adapterName = loraAdapterOption.has_name()
                     ? loraAdapterOption.name()
                     : std::filesystem::path(loraPath).stem().string();
                 properties->adaptersByName.emplace(adapterName, adapter);
-                SPDLOG_INFO("Registered LoRA adapter '{}' from path: {}", adapterName, loraPath);
+                SPDLOG_INFO("CB Registered LoRA adapter '{}' from path: {}", adapterName, loraPath);
             } catch (const std::exception& e) {
                 SPDLOG_ERROR("Error during LoRA adapter initialization for model_path: {} exception: {}", loraPath, e.what());
                 return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;

@@ -102,7 +102,7 @@ struct LLMExecutor {
     void printMetrics() {
         ov::genai::PipelineMetrics metrics = pipe->get_metrics();
         SPDLOG_LOGGER_INFO(llm_executor_logger, "All requests: {}; Scheduled requests: {}; Cache {};",
-            metrics.requests, metrics.scheduled_requests, metrics.cache_usage);
+            metrics.requests, metrics.scheduled_requests, formatCacheInfo(metrics.cache_usage, metrics.kv_cache_size_in_bytes, this->isDynamicKVCache));
     }
 };
 #pragma GCC diagnostic pop

@@ -89,7 +89,7 @@ Status LegacyServableInitializer::initialize(std::shared_ptr<GenAiServable>& ser
             }
             try {
                 ov::genai::Adapter adapter(loraPath);
-                properties->adapterConfig.add(adapter, loraAdapterOption.alpha());
+                properties->adapterConfig.add(adapter, 1.0f);//loraAdapterOption.alpha());
                 std::string adapterName = loraAdapterOption.has_name()
                     ? loraAdapterOption.name()
                     : std::filesystem::path(loraPath).stem().string();
