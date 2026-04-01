@@ -43,11 +43,27 @@ const uint32_t AVAILABLE_CORES = getCoreCount();
 const uint32_t WIN_MAX_GRPC_WORKERS = 1;
 const uint32_t MAX_PORT_NUMBER = std::numeric_limits<uint16_t>::max();
 
-// For drogon, we need to minimize the number of default workers since this value is set for both: unary and streaming (making it always double)
-const uint64_t DEFAULT_REST_WORKERS = AVAILABLE_CORES;
 const uint32_t DEFAULT_GRPC_MAX_THREADS = AVAILABLE_CORES * 8.0;
 const size_t DEFAULT_GRPC_MEMORY_QUOTA = (size_t)2 * 1024 * 1024 * 1024;  // 2GB
 const uint64_t MAX_REST_WORKERS = 10'000;
+
+// We need to minimize the number of default drogon workers since this value is set for both: unary and streaming (making it always double)
+// on linux, restrict also based on the max allowed number of open files
+#ifdef __linux__
+#include <sys/resource.h>
+const uint64_t MAX_OPEN_FILES = []() {
+    struct rlimit limit;
+    if (getrlimit(RLIMIT_NOFILE, &limit) == 0) {
+        return limit.rlim_cur;
+    }
+    return std::numeric_limits<uint64_t>::max();
+}();
+const uint64_t RESERVED_OPEN_FILES = 10;  // we need to reserve some file descriptors for other operations, so we don't want to use all of them for drogon workers
+const uint64_t DEFAULT_REST_WORKERS = (MAX_OPEN_FILES <= RESERVED_OPEN_FILES) ? AVAILABLE_CORES
+                                                                              : std::min(static_cast<uint64_t>(AVAILABLE_CORES), (MAX_OPEN_FILES - RESERVED_OPEN_FILES) / 5);
+#else
+const uint64_t DEFAULT_REST_WORKERS = AVAILABLE_CORES;
+#endif
 
 Config& Config::parse(int argc, char** argv) {
     ovms::CLIParser parser;
@@ -306,6 +322,12 @@ bool Config::validate() {
         std::cerr << "rest_workers is set but rest_port is not set. rest_port is required to start rest servers" << std::endl;
         return false;
     }
+#ifdef __linux__
+    if (restWorkers() > (MAX_OPEN_FILES - RESERVED_OPEN_FILES) / 5) {
+        std::cerr << "rest_workers count cannot be larger than " << (MAX_OPEN_FILES - RESERVED_OPEN_FILES) / 5 << " due to open files limit. Current open files limit: " << MAX_OPEN_FILES << std::endl;
+        return false;
+    }
+#endif
 
 #ifdef _WIN32
     if (grpcWorkers() > WIN_MAX_GRPC_WORKERS) {

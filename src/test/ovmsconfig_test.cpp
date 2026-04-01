@@ -17,6 +17,7 @@
 #include <filesystem>
 #include <fstream>
 #include <regex>
+#include <sys/resource.h>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -200,6 +201,36 @@ TEST_F(OvmsConfigDeathTest, restWorkersTooLarge) {
     char* n_argv[] = {"ovms", "--config_path", "/path1", "--rest_port", "8080", "--port", "8081", "--rest_workers", "100001"};
     int arg_count = 9;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "rest_workers count should be from 2 to ");
+}
+
+TEST_F(OvmsConfigDeathTest, restWorkersDefaultReducedForOpenFilesLimit) {
+    // limit allowed number of open files to 1024 to make sure that rest_workers count is too large for the limit based on number of cpu cores alone
+    int cpu_cores = ovms::getCoreCount();
+    struct rlimit limit;
+    ASSERT_EQ(getrlimit(RLIMIT_NOFILE, &limit), 0);
+    struct rlimit newLimit = {static_cast<rlim_t>(cpu_cores * 5), limit.rlim_max};
+    std::cout << "Setting open files limit to " << newLimit.rlim_cur << " to test that default rest_workers count is reduced based on open files limit" << std::endl;
+    ASSERT_EQ(setrlimit(RLIMIT_NOFILE, &newLimit), 0);
+
+    char* n_argv[] = {"ovms", "--config_path", "/path1", "--rest_port", "8080", "--port", "8081"};
+    int arg_count = 7;
+    ovms::Config::instance().parse(arg_count, n_argv);
+    EXPECT_TRUE(ovms::Config::instance().validate());
+
+    ASSERT_EQ(setrlimit(RLIMIT_NOFILE, &limit), 0);
+}
+
+TEST_F(OvmsConfigDeathTest, restWorkersTooLargeForOpenFilesLimit) {
+    // limit allowed number of open files to 1024 to make sure that rest_workers count is too large.
+    struct rlimit limit;
+    ASSERT_EQ(getrlimit(RLIMIT_NOFILE, &limit), 0);
+    struct rlimit newLimit = {1024, limit.rlim_max};
+    std::cout << "Setting open files limit to " << newLimit.rlim_cur << " to test that rest_workers count is too large for the limit based on number of cpu cores alone" << std::endl;
+    ASSERT_EQ(setrlimit(RLIMIT_NOFILE, &newLimit), 0);
+    char* n_argv[] = {"ovms", "--config_path", "/path1", "--rest_port", "8080", "--port", "8081", "--rest_workers", "1000"};
+    int arg_count = 9;
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "rest_workers count cannot be larger than 202 due to open files limit. Current open files limit: 1024");
+    ASSERT_EQ(setrlimit(RLIMIT_NOFILE, &limit), 0);
 }
 
 TEST_F(OvmsConfigDeathTest, restWorkersDefinedRestPortUndefined) {
