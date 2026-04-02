@@ -14,7 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 #include "config.hpp"
-
+#include <algorithm>
 #include <filesystem>
 #include <limits>
 #include <regex>
