@@ -206,6 +206,7 @@ TEST_F(OvmsConfigDeathTest, restWorkersTooLarge) {
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "rest_workers count should be from 2 to ");
 }
 
+#ifdef __linux__
 TEST_F(OvmsConfigDeathTest, restWorkersDefaultReducedForOpenFilesLimit) {
     // limit allowed number of open files to 1024 to make sure that rest_workers count is too large for the limit based on number of cpu cores alone
     int cpu_cores = ovms::getCoreCount();
@@ -222,6 +223,7 @@ TEST_F(OvmsConfigDeathTest, restWorkersDefaultReducedForOpenFilesLimit) {
 
     ASSERT_EQ(setrlimit(RLIMIT_NOFILE, &limit), 0);
 }
+#endif
 
 TEST_F(OvmsConfigDeathTest, restWorkersTooLargeForOpenFilesLimit) {
     // limit allowed number of open files to 1024 to make sure that rest_workers count is too large.
