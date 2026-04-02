@@ -63,13 +63,13 @@ static uint64_t getMaxOpenFilesLimit() {
     return std::numeric_limits<uint64_t>::max();
 }
 
-const uint64_t RESERVED_OPEN_FILES = 10;  // we need to reserve some file descriptors for other operations, so we don't want to use all of them for drogon workers
+const uint64_t RESERVED_OPEN_FILES = 15;  // we need to reserve some file descriptors for other operations, so we don't want to use all of them for drogon workers
 uint64_t getDefaultRestWorkers() {
     const uint64_t maxOpenFiles = getMaxOpenFilesLimit();
     if (maxOpenFiles <= RESERVED_OPEN_FILES) {
         return static_cast<uint64_t>(2);  // minimum functional number
     }
-    return std::min(static_cast<uint64_t>(AVAILABLE_CORES), (maxOpenFiles - RESERVED_OPEN_FILES) / 5);
+    return std::min(static_cast<uint64_t>(AVAILABLE_CORES), (maxOpenFiles - RESERVED_OPEN_FILES) / 7); // 5x rest_workers to initialize ovms and 2x rest_workers for new connections 
 }
 #else
 uint64_t getDefaultRestWorkers() {
@@ -335,8 +335,8 @@ bool Config::validate() {
         return false;
     }
 #ifdef __linux__
-    if (restWorkers() > (getMaxOpenFilesLimit() - RESERVED_OPEN_FILES) / 5) {
-        std::cerr << "rest_workers count cannot be larger than " << (getMaxOpenFilesLimit() - RESERVED_OPEN_FILES) / 5 << " due to open files limit. Current open files limit: " << getMaxOpenFilesLimit() << std::endl;
+    if (restWorkers() > (getMaxOpenFilesLimit() - RESERVED_OPEN_FILES) / 6) {
+        std::cerr << "rest_workers count cannot be larger than " << (getMaxOpenFilesLimit() - RESERVED_OPEN_FILES) / 6 << " due to open files limit. Current open files limit: " << getMaxOpenFilesLimit() << std::endl;
         return false;
     }
 #endif
