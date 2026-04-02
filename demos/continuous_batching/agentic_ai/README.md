@@ -54,7 +54,7 @@ Pull and start OVMS:
 ovms.exe --rest_port 8000 --source_model Junrui2021/Qwen3-VL-8B-Instruct-int4 --model_repository_path c:\models --tool_parser hermes3 --target_device GPU --task text_generation --pipeline_type VLM_CB --cache_dir .cache --allowed_media_domains raw.githubusercontent.com
 ```
 
-Use MCP server, with additional image of Gdańsk. VLM model deduces location and calls `get_weather` tool to summarize the weather conditions in the city.
+Use MCP server, with additional image of Gdańsk old town. VLM model deduces location and calls `get_weather` tool to summarize the weather conditions in the city.
 
 ```{image} https://images.pexels.com/photos/20015887/pexels-photo-20015887.jpeg
 :alt: poland
@@ -208,7 +208,7 @@ docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v ${HOME}/models:/mode
 --rest_port 8000 --model_repository_path /models --source_model Junrui2021/Qwen3-VL-8B-Instruct-int4 --tool_parser hermes3 --task text_generation --pipeline_type VLM_CB --allowed_media_domains raw.githubusercontent.com
 ```
 
-Use MCP server, with additional image of Gdańsk. VLM model deduces location and calls `get_weather` tool to summarize the weather conditions in the city.
+Use MCP server, with additional image of Gdańsk old town. VLM model deduces location and calls `get_weather` tool to summarize the weather conditions in the city.
 
 ```{image} https://images.pexels.com/photos/20015887/pexels-photo-20015887.jpeg
 :alt: poland
@@ -333,7 +333,7 @@ docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v ${HOME}/models:/mode
 --rest_port 8000 --model_repository_path /models --source_model Junrui2021/Qwen3-VL-8B-Instruct-int4 --tool_parser hermes3 --target_device GPU --task text_generation --pipeline_type VLM_CB --allowed_media_domains raw.githubusercontent.com
 ```
 
-Use MCP server, with additional image of Gdańsk. VLM model deduces location and calls `get_weather` tool to summarize the weather conditions in the city.
+Use MCP server, with additional image of Gdańsk old town. VLM model deduces location and calls `get_weather` tool to summarize the weather conditions in the city.
 
 ```{image} https://images.pexels.com/photos/20015887/pexels-photo-20015887.jpeg
 :alt: poland
