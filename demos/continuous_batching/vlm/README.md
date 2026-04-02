@@ -123,7 +123,7 @@ curl http://localhost:8000/v3/chat/completions  -H "Content-Type: application/js
 
 ```console
 pip3 install requests
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/static/images/zebra.jpeg -o zebra.jpeg
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/1/demos/common/static/images/zebra.jpeg -o zebra.jpeg
 ```
 ```python
 import requests
@@ -234,7 +234,7 @@ Check [VLM usage with NPU acceleration](../../vlm_npu/README.md)
 
 
 ## References
-- [Export models to OpenVINO format](../common/export_models/README.md)
+- [Export models to OpenVINO format](../../../demos/common/export_models/README.md)
 - [Supported VLM models](https://openvinotoolkit.github.io/openvino.genai/docs/supported-models/#visual-language-models-vlms)
 - [Chat Completions API](../../../docs/model_server_rest_api_chat.md)
 - [Writing client code](../../../docs/clients_genai.md)

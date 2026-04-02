@@ -33,7 +33,7 @@ pip install python-dateutil mcp_weather_server
 Install the application requirements
 
 ```console
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/continuous_batching/agentic_ai/openai_agent.py -O -L
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/2026/1/demos/continuous_batching/agentic_ai/openai_agent.py -O -L
 pip install openai-agents openai
 ```
 
@@ -421,7 +421,7 @@ Let me know if you'd like forecast details or anything else!
 ### Deploying in a docker container on NPU
 
 The case of NPU is similar to GPU, but `--device` should be set to `/dev/accel`, `--group-add` parameter should be the same.
-Running `docker run` command, use the image with GPU support. Export the models with precision matching the [NPU capacity](https://docs.openvino.ai/nightly/openvino-workflow-generative/inference-with-genai/inference-with-genai-on-npu.html) and adjust pipeline configuration.
+Running `docker run` command, use the image with GPU support. Export the models with precision matching the [NPU capacity](https://docs.openvino.ai/2026/openvino-workflow-generative/inference-with-genai/inference-with-genai-on-npu.html) and adjust pipeline configuration.
 It can be applied using the commands below:
 
 ::::{tab-set}
@@ -481,7 +481,7 @@ docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v ${HOME}/models:/mode
 You can try also similar implementation based on llama_index library working the same way like openai-agent:
 ```bash
 pip install llama-index-llms-openai-like==0.5.3 llama-index-core==0.14.5 llama-index-tools-mcp==0.4.2
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/continuous_batching/agentic_ai/llama_index_agent.py -o llama_index_agent.py
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/2026/1/demos/continuous_batching/agentic_ai/llama_index_agent.py -o llama_index_agent.py
 python llama_index_agent.py --query "What is the current weather in Tokyo?" --model OpenVINO/Qwen3-8B-int4-ov --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather --stream --enable-thinking
 ```
 
@@ -512,8 +512,8 @@ Use those steps to convert the model from HuggingFace Hub to OpenVINO format and
 
 ```text
 # Download export script, install its dependencies and create directory for the models
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/export_model.py -o export_model.py
-pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/1/demos/common/export_models/export_model.py -o export_model.py
+pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/1/demos/common/export_models/requirements.txt
 mkdir models
 ```
 Run `export_model.py` script to download and quantize the model:
@@ -529,4 +529,4 @@ curl -L -o models/meta-llama/Llama-3.2-3B-Instruct/chat_template.jinja https://r
 ```text
 python export_model.py text_generation --source_model meta-llama/Llama-3.2-3B-Instruct --weight-format nf4 --config_file_path models/config.json --model_repository_path models --tool_parser llama3 --extra_quantization_params "--library transformers --sym group_size -1" 
 ```
-For more details, see [OpenVINO GenAI on NPU](https://docs.openvino.ai/nightly/openvino-workflow-generative/inference-with-genai/inference-with-genai-on-npu.html).
+For more details, see [OpenVINO GenAI on NPU](https://docs.openvino.ai/2026/openvino-workflow-generative/inference-with-genai/inference-with-genai-on-npu.html).

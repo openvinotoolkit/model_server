@@ -98,7 +98,7 @@ Click **New Chat** and select the model to start chatting
 
 ### (optional) Step 3: Set request parameters
 
-There are multiple configurable parameters in OVMS, all of them for `/v3/chat/completions` endpoint are accessible in [chat api documentation](https://github.com/openvinotoolkit/model_server/blob/main/docs/model_server_rest_api_chat.md#request).
+There are multiple configurable parameters in OVMS, all of them for `/v3/chat/completions` endpoint are accessible in [chat api documentation](https://github.com/openvinotoolkit/model_server/blob/releases/2026/1/docs/model_server_rest_api_chat.md#request).
 
 To configure them in *OpenWebUI* with an example of turning off reasoning:
 1. Go to **Admin Panel** -> **Settings** -> **Models** ([http://localhost:8080/admin/settings/models](http://localhost:8080/admin/settings/models))
@@ -109,7 +109,7 @@ To configure them in *OpenWebUI* with an example of turning off reasoning:
 ![parameter set](./set_chat_template_parameter.png)
 
 ### Reference
-[https://docs.openwebui.com/getting-started/quick-start/starting-with-openai-compatible](https://docs.openwebui.com/getting-started/quick-start/starting-with-openai-compatible/#step-2-connect-your-server-to-open-webui)
+[https://docs.openwebui.com/getting-started/quick-start/starting-with-openai-compatible](https://docs.openwebui.com/getting-started/quick-start/)
 
 ---
 
@@ -271,7 +271,7 @@ Method 2:
 ### Reference
 [https://docs.openvino.ai/2026/model-server/ovms_demos_image_generation.html](https://docs.openvino.ai/2026/model-server/ovms_demos_image_generation.html#export-model-for-cpu)
 
-[https://docs.openwebui.com/features/image-generation-and-editing](https://docs.openwebui.com/features/image-generation-and-editing/openai)
+[https://docs.openwebui.com/features/media-generation/image-generation-and-editing](https://docs.openwebui.com/features/media-generation/image-generation-and-editing/usage)
 
 ---
 ## VLM
@@ -351,7 +351,7 @@ mcpo --port 9000 -- python -m mcp_weather_server
 ![chat with AI Agent demo](./chat_with_AI_Agent_demo.png)
 
 ### Reference
-[https://docs.openwebui.com/features/plugin/tools/openapi-servers/open-webui](https://docs.openwebui.com/features/plugin/tools/openapi-servers/open-webui#step-2-connect-tool-server-in-open-webui)
+[https://docs.openwebui.com/features/extensibility/plugin/tools/openapi-servers/open-webui](https://docs.openwebui.com/features/extensibility/plugin/tools/openapi-servers/open-webui#step-2-connect-tool-server-in-open-webui)
 
 
 ## Audio
@@ -362,8 +362,8 @@ mcpo --port 9000 -- python -m mcp_weather_server
 
 Start by downloading `export_model.py` script and run it to download and quantize the model for speech generation:
 ```console 
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/export_model.py -o export_model.py
-pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/1/demos/common/export_models/export_model.py -o export_model.py
+pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/1/demos/common/export_models/requirements.txt
 python export_model.py text2speech --source_model microsoft/speecht5_tts --weight-format fp32 --model_name microsoft/speecht5_tts --config_file_path models/config.json --model_repository_path models --vocoder microsoft/speecht5_hifigan
 ```
 
