@@ -751,7 +751,7 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
     if (pythonBackend == nullptr) {
         const std::string details = "Python backend is not available. Ensure libovmspython runtime library is accessible when using Python tensor inputs.";
         SPDLOG_DEBUG("[servable name: {} version: {}] {}", request.model_name(), request.model_version(), details);
-        return Status(StatusCode::MEDIAPIPE_PYTHON_EXECUTION_ERROR, details);
+        return Status(StatusCode::MEDIAPIPE_EXECUTION_ERROR, details);
     }
     auto requestInputItr = request.inputs().begin();
     auto status = getRequestInput(requestInputItr, requestedName, request);
