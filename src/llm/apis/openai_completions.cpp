@@ -189,11 +189,7 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
             }
             // Handle tool_calls array for function calling
             if (memberName == "tool_calls" && member->value.IsArray()) {
-                // Use JSON string conversion for tool_calls array
-                rapidjson::StringBuffer tcBuffer;
-                rapidjson::Writer<rapidjson::StringBuffer> tcWriter(tcBuffer);
-                member->value.Accept(tcWriter);
-                request.chatHistory.last()[memberName] = ov::genai::JsonContainer::from_json_string(tcBuffer.GetString());
+                request.chatHistory.last()[memberName] = rapidJsonValueToJsonContainer(member->value);
                 continue;
             }
             if (memberName == "content" && member->value.IsArray()) {

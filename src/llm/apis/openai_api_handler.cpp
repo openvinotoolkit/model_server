@@ -46,8 +46,6 @@ namespace ovms {
 
 constexpr size_t DEFAULT_MAX_STOP_WORDS = 16;  // same as deep-seek
 
-namespace {
-
 ov::genai::JsonContainer rapidJsonValueToJsonContainer(const rapidjson::Value& value) {
     if (value.IsNull()) {
         return ov::genai::JsonContainer(nullptr);
@@ -94,8 +92,6 @@ ov::genai::JsonContainer rapidJsonValueToJsonContainer(const rapidjson::Value& v
     }
     throw std::invalid_argument("Unsupported JSON value type");
 }
-
-}  // namespace
 
 // Default no-op implementations for streaming lifecycle events
 std::string OpenAIApiHandler::serializeStreamingCreatedEvent() {
