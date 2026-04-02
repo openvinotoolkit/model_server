@@ -128,6 +128,33 @@ bool ensurePythonRuntimeLoaded() {
         "bazel-bin\\src\\python\\libovmspython.dll",
         ".\\bazel-bin\\src\\python\\libovmspython.dll"};
 
+    char executablePath[MAX_PATH] = {0};
+    DWORD executablePathLength = GetModuleFileNameA(nullptr, executablePath, MAX_PATH);
+    if (executablePathLength > 0 && executablePathLength < MAX_PATH) {
+        std::string exePath(executablePath, executablePathLength);
+        std::string exeDir = ".";
+        size_t separatorPos = exePath.find_last_of("\\/");
+        if (separatorPos != std::string::npos) {
+            exeDir = exePath.substr(0, separatorPos);
+        }
+
+        std::vector<std::string> executableRelativeCandidates{
+            exeDir + "\\libovmspython.dll",
+            exeDir + "\\src\\python\\libovmspython.dll",
+            exeDir + "\\..\\src\\python\\libovmspython.dll",
+        };
+
+        std::string runfilesRoot = exePath + ".runfiles";
+        std::vector<std::string> runfilesCandidates{
+            runfilesRoot + "\\src\\python\\libovmspython.dll",
+            runfilesRoot + "\\_main\\src\\python\\libovmspython.dll",
+            runfilesRoot + "\\model_server\\src\\python\\libovmspython.dll",
+        };
+
+        candidates.insert(candidates.end(), executableRelativeCandidates.begin(), executableRelativeCandidates.end());
+        candidates.insert(candidates.end(), runfilesCandidates.begin(), runfilesCandidates.end());
+    }
+
     for (const auto& candidate : candidates) {
         pythonRuntimeHandle = LoadLibraryA(candidate.c_str());
         if (pythonRuntimeHandle != nullptr) {
