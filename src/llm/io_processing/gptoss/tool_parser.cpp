@@ -32,7 +32,7 @@ namespace ovms {
 void GptOssToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) {
     openai::Harmony harmony(tokenizer, generatedTokens);
     if (!harmony.parse()) {
-        SPDLOG_LOGGER_INFO(llm_calculator_logger, "Harmony parsing failed");
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Harmony parsing failed");
         return;
     }
 
