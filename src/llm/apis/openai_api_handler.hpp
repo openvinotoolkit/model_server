@@ -50,6 +50,8 @@ using namespace rapidjson;
 
 namespace ovms {
 
+ov::genai::JsonContainer rapidJsonValueToJsonContainer(const rapidjson::Value& value);
+
 enum class Endpoint {
     CHAT_COMPLETIONS,
     COMPLETIONS,

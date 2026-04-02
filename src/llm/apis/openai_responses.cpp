@@ -20,8 +20,6 @@
 #include <limits>
 #include <memory>
 #include <stdexcept>
-#include "src/port/rapidjson_stringbuffer.hpp"
-#include "src/port/rapidjson_writer.hpp"
 #include <set>
 #include <string>
 #include <string.h>
@@ -33,6 +31,8 @@
 
 #include "../../logging.hpp"
 #include "../../profiler.hpp"
+#include "src/port/rapidjson_stringbuffer.hpp"
+#include "src/port/rapidjson_writer.hpp"
 #pragma warning(push)
 #pragma warning(disable : 6001 4324 6385 6386)
 #include "absl/strings/str_cat.h"
@@ -41,6 +41,18 @@
 using namespace rapidjson;
 
 namespace ovms {
+
+static std::string joinServerSideEvents(const std::vector<std::string>& events) {
+    if (events.empty()) {
+        return "";
+    }
+    std::stringstream ss;
+    ss << events.front();
+    for (size_t i = 1; i < events.size(); ++i) {
+        ss << "\n\ndata: " << events[i];
+    }
+    return ss.str();
+}
 
 // --- Request parsing ---
 
@@ -163,6 +175,11 @@ absl::Status OpenAIResponsesHandler::parseInput(std::optional<std::string> allow
 }
 
 absl::Status OpenAIResponsesHandler::parsePart(std::optional<uint32_t> maxTokensLimit, std::optional<std::string> allowedLocalMediaPath, std::optional<std::vector<std::string>> allowedMediaDomains) {
+    // Reject stream_options — usage is always included in response.completed event
+    if (doc.FindMember("stream_options") != doc.MemberEnd()) {
+        return absl::InvalidArgumentError("stream_options is not supported in Responses API. Usage statistics are always included in the response.");
+    }
+
     // input: string; required
     auto it = doc.FindMember("input");
     if (it == doc.MemberEnd()) {
@@ -191,18 +208,17 @@ absl::Status OpenAIResponsesHandler::parsePart(std::optional<uint32_t> maxTokens
             if (effort != "low" && effort != "medium" && effort != "high") {
                 return absl::InvalidArgumentError("reasoning.effort must be one of: low, medium, high");
             }
-            // Inject enable_thinking: true into chat_template_kwargs if not already explicitly set
+            // Inject enable_thinking: true into chat_template_kwargs (merge with existing if present)
             auto kwargsIt = doc.FindMember("chat_template_kwargs");
-            if (kwargsIt == doc.MemberEnd()) {
+            if (kwargsIt != doc.MemberEnd() && kwargsIt->value.IsObject()) {
+                // Merge into existing kwargs
+                if (kwargsIt->value.FindMember("enable_thinking") == kwargsIt->value.MemberEnd()) {
+                    kwargsIt->value.AddMember("enable_thinking", true, doc.GetAllocator());
+                }
+            } else {
                 rapidjson::Value kwargs(rapidjson::kObjectType);
                 kwargs.AddMember("enable_thinking", true, doc.GetAllocator());
                 doc.AddMember("chat_template_kwargs", kwargs, doc.GetAllocator());
-            } else if (kwargsIt->value.IsObject()) {
-                auto enableThinkingIt = kwargsIt->value.FindMember("enable_thinking");
-                if (enableThinkingIt == kwargsIt->value.MemberEnd()) {
-                    kwargsIt->value.AddMember("enable_thinking", true, doc.GetAllocator());
-                }
-                // If enable_thinking is already set explicitly, the user's value takes precedence
             }
         }
         // summary field is accepted but ignored
@@ -1203,16 +1219,7 @@ std::string OpenAIResponsesHandler::serializeStreamingChunk(const std::string& c
         events.emplace_back(serializeCompletedEvent(responseId, createdAt, finishReason));
     }
 
-    if (events.empty()) {
-        return "";
-    }
-
-    std::stringstream ss;
-    ss << events.front();
-    for (size_t i = 1; i < events.size(); ++i) {
-        ss << "\n\ndata: " << events[i];
-    }
-    return ss.str();
+    return joinServerSideEvents(events);
 }
 
 std::string OpenAIResponsesHandler::serializeFailedEvent(const std::string& errorMessage, ResponsesErrorCode errorCode) {
@@ -1232,12 +1239,7 @@ std::string OpenAIResponsesHandler::serializeFailedEvent(const std::string& erro
 
     events.emplace_back(serializeFailedEventBody(responseId, createdAt, errorMessage, errorCode));
 
-    std::stringstream ss;
-    ss << events.front();
-    for (size_t i = 1; i < events.size(); ++i) {
-        ss << "\n\ndata: " << events[i];
-    }
-    return ss.str();
+    return joinServerSideEvents(events);
 }
 
 std::string OpenAIResponsesHandler::serializeStreamingUsageChunk() {
