@@ -43,9 +43,9 @@ This command pulls the `OpenVINO/stable-diffusion-v1-5-int8-ov` quantized model 
 :sync: docker
 Start docker container:
 ```bash
-mkdir -p models
+mkdir -p ${HOME}/models
 
-docker run -d --rm --user $(id -u):$(id -g) -p 8000:8000 -v $(pwd)/models:/models/:rw \
+docker run -d --rm --user $(id -u):$(id -g) -p 8000:8000 -v ${HOME}/models:/models/:rw \
   -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy=$no_proxy \
   openvino/model_server:latest \
     --rest_port 8000 \
@@ -67,10 +67,8 @@ as mentioned in [deployment guide](../../docs/deploying_server_baremetal.md), in
 
 
 ```bat
-mkdir models
-
 ovms --rest_port 8000 ^
-  --model_repository_path ./models/ ^
+  --model_repository_path c:\models ^
   --task image_generation ^
   --source_model OpenVINO/stable-diffusion-v1-5-int8-ov
 ```
@@ -86,9 +84,9 @@ ovms --rest_port 8000 ^
 In case you want to use Intel GPU device to run the generation, add extra docker parameters `--device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1)` to `docker run` command, use the docker image with GPU support. Export the models with precision matching the GPU capacity and adjust pipeline configuration.
 It can be applied using the commands below:
 ```bash
-mkdir -p models
+mkdir -p ${HOME}/models
 
-docker run -d --rm -p 8000:8000 -v $(pwd)/models:/models/:rw \
+docker run -d --rm -p 8000:8000 -v ${HOME}/models:/models/:rw \
   --user $(id -u):$(id -g) --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) \
   -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy=$no_proxy \
   openvino/model_server:latest-gpu \
@@ -106,10 +104,8 @@ docker run -d --rm -p 8000:8000 -v $(pwd)/models:/models/:rw \
 Depending on how you prepared models in the first step of this demo, they are deployed to either CPU or GPU (it's defined in `config.json`). If you run on GPU make sure to have appropriate drivers installed, so the device is accessible for the model server.
 
 ```bat
-mkdir models
-
 ovms --rest_port 8000 ^
-  --model_repository_path ./models/ ^
+  --model_repository_path c:\models ^
   --task image_generation ^
   --source_model OpenVINO/stable-diffusion-v1-5-int8-ov ^
   --target_device GPU
@@ -135,11 +131,11 @@ In this specific case, we also need to use `--device /dev/dri`, because we also 
 
 It can be applied using the commands below:
 ```bash
-mkdir -p models
+mkdir -p ${HOME}/models
 mkdir -p cache
 
 docker run -d --rm -p 8000:8000 \
-  -v $(pwd)/models:/models/:rw \
+  -v ${HOME}/models:/models/:rw \
   -v $(pwd)/cache:/cache/:rw \
   --user $(id -u):$(id -g) --device /dev/accel --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) \
   -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy=$no_proxy \
@@ -159,11 +155,10 @@ docker run -d --rm -p 8000:8000 \
 
 
 ```bat
-mkdir models
 mkdir cache
 
 ovms --rest_port 8000 ^
-  --model_repository_path ./models/ ^
+  --model_repository_path c:\models ^
   --task image_generation ^
   --source_model OpenVINO/stable-diffusion-v1-5-int8-ov ^
   --target_device "NPU NPU NPU" ^
@@ -184,7 +179,7 @@ Download export script, install it's dependencies and create directory for the m
 ```console
 curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/1/demos/common/export_models/export_model.py -o export_model.py
 pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/1/demos/common/export_models/requirements.txt
-mkdir models
+mkdir -p ${HOME}/models
 ```
 
 Run `export_model.py` script to download and quantize the model:
@@ -200,8 +195,8 @@ Run `export_model.py` script to download and quantize the model:
 python export_model.py image_generation \
   --source_model stable-diffusion-v1-5/stable-diffusion-v1-5 \
   --weight-format int8 \
-  --config_file_path models/config.json \
-  --model_repository_path models \
+  --config_file_path ${HOME}/models/config.json \
+  --model_repository_path ${HOME}/models \
   --extra_quantization_params "--group-size 64" \
   --overwrite_models
 ```
@@ -212,8 +207,8 @@ python export_model.py image_generation \
   --source_model stable-diffusion-v1-5/stable-diffusion-v1-5 \
   --weight-format int8 \
   --target_device GPU \
-  --config_file_path models/config.json \
-  --model_repository_path models \
+  --config_file_path ${HOME}/models/config.json \
+  --model_repository_path ${HOME}/models \
   --extra_quantization_params "--group-size 64" \
   --overwrite_models
 ```
@@ -234,8 +229,8 @@ python export_model.py image_generation \
   --target_device "NPU NPU NPU" \
   --resolution 512x512 \
   --ov_cache_dir /cache \
-  --config_file_path models/config.json \
-  --model_repository_path models \
+  --config_file_path ${HOME}/models/config.json \
+  --model_repository_path ${HOME}/models \
   --overwrite_models
 ```
 
@@ -262,7 +257,7 @@ Running this command starts the container with CPU only target device:
 
 Start docker container:
 ```bash
-docker run -d --rm -p 8000:8000 -v $(pwd)/models:/models:rw \
+docker run -d --rm -p 8000:8000 -v ${HOME}/models:/models:rw \
   openvino/model_server:latest \
     --rest_port 8000 \
     --model_name OpenVINO/stable-diffusion-v1-5-int8-ov \
@@ -284,7 +279,7 @@ as mentioned in [deployment guide](../../docs/deploying_server_baremetal.md), in
 ```bat
 ovms --rest_port 8000 ^
   --model_name OpenVINO/stable-diffusion-v1-5-int8-ov ^
-  --model_path ./models/stable-diffusion-v1-5/stable-diffusion-v1-5
+  --model_path c:\models\stable-diffusion-v1-5\stable-diffusion-v1-5
 ```
 :::
 
@@ -300,7 +295,7 @@ In case you want to use GPU device to run the generation, add extra docker param
 to `docker run` command, use the image with GPU support. Export the models with precision matching the GPU capacity and adjust pipeline configuration.
 It can be applied using the commands below:
 ```bash
-docker run -d --rm -p 8000:8000 -v $(pwd)/models:/models:rw \
+docker run -d --rm -p 8000:8000 -v ${HOME}/models:/models:rw \
   --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) \
   openvino/model_server:latest-gpu \
     --rest_port 8000 \
@@ -318,7 +313,7 @@ Depending on how you prepared models in the first step of this demo, they are de
 ```bat
 ovms --rest_port 8000 ^
   --model_name OpenVINO/stable-diffusion-v1-5-int8-ov ^
-  --model_path ./models/stable-diffusion-v1-5/stable-diffusion-v1-5
+  --model_path c:\models\stable-diffusion-v1-5\stable-diffusion-v1-5
 ```
 :::
 
@@ -339,7 +334,7 @@ It can be applied using the commands below:
 mkdir -p cache
 chmod -R 755 cache
 docker run -d --rm -p 8000:8000 \
-  -v $(pwd)/models:/models:rw \
+  -v ${HOME}/models:/models:rw \
   -v $(pwd)/cache:/cache:rw \
   -u $(id -u):$(id -g) \
   --device /dev/accel --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) \
@@ -359,7 +354,7 @@ Depending on how you prepared models in the first step of this demo, they are de
 ```bat
 ovms --rest_port 8000 ^
   --model_name OpenVINO/stable-diffusion-v1-5-int8-ov ^
-  --model_path ./models/stable-diffusion-v1-5/stable-diffusion-v1-5
+  --model_path c:\models\stable-diffusion-v1-5\stable-diffusion-v1-5
 ```
 :::
 
@@ -524,6 +519,55 @@ image.save('edit_output.png')
 Output file (`edit_output.png`):  
 ![edit_output](./edit_output.png)
 
+### Using dedicated inpainting models
+
+While the base `OpenVINO/stable-diffusion-v1-5-int8-ov` model deployed above supports inpainting and outpainting via the `images/edits` endpoint, using a dedicated inpainting model gives significantly better results. These models have a 9-channel UNet specifically trained for masked generation.
+
+Example dedicated models for inpainting:
+- `stable-diffusion-v1-5/stable-diffusion-inpainting` — SD 1.5 based, 512×512 native resolution
+- `diffusers/stable-diffusion-xl-1.0-inpainting-0.1` — SDXL based, 1024×1024 native resolution
+
+For the full list see [supported image generation models](https://openvinotoolkit.github.io/openvino.genai/docs/supported-models/#image-generation-models).
+
+> **Note:** Dedicated inpainting models only expose the `images/edits` endpoint (with mask). Text-to-image and image-to-image requests will return an error indicating the pipeline is not available for this model. Base models (e.g. `stable-diffusion-v1-5/stable-diffusion-v1-5`) support all endpoints including inpainting.
+
+### Deploy inpainting model
+
+The inpainting example below uses `diffusers/stable-diffusion-xl-1.0-inpainting-0.1`. Stop the previous server and deploy the new model:
+
+::::{tab-set}
+:::{tab-item} Docker (Linux) — GPU
+:sync: docker-gpu
+```bash
+mkdir -p ${HOME}/models
+
+docker run -d --rm -p 8000:8000 -v ${HOME}/models:/models/:rw \
+  --user $(id -u):$(id -g) --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) \
+  -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy=$no_proxy \
+  openvino/model_server:latest-gpu \
+    --rest_port 8000 \
+    --model_repository_path /models/ \
+    --task image_generation \
+    --source_model diffusers/stable-diffusion-xl-1.0-inpainting-0.1 \
+    --weight-format int8 \
+    --target_device GPU
+```
+:::
+
+:::{tab-item} Bare metal (Windows)
+:sync: bare-metal
+```bat
+ovms --rest_port 8000 ^
+  --model_repository_path c:\models ^
+  --task image_generation ^
+  --source_model diffusers/stable-diffusion-xl-1.0-inpainting-0.1 ^
+  --weight-format int8 ^
+  --target_device GPU
+```
+:::
+
+::::
+
 ### Requesting inpainting with cURL
 
 Inpainting replaces a masked region in an image based on the prompt. The `mask` is a black-and-white image where white pixels mark the area to repaint.
@@ -598,6 +642,43 @@ image_data = base64.b64decode(base64_image)
 image = Image.open(BytesIO(image_data))
 image.save('inpaint_output.png')
 ```
+
+### Deploy outpainting model
+
+The outpainting example below uses `stable-diffusion-v1-5/stable-diffusion-inpainting`. Stop the previous server and deploy the new model:
+
+::::{tab-set}
+:::{tab-item} Docker (Linux) — GPU
+:sync: docker-gpu
+```bash
+mkdir -p ${HOME}/models
+
+docker run -d --rm -p 8000:8000 -v ${HOME}/models:/models/:rw \
+  --user $(id -u):$(id -g) --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) \
+  -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy=$no_proxy \
+  openvino/model_server:latest-gpu \
+    --rest_port 8000 \
+    --model_repository_path /models/ \
+    --task image_generation \
+    --source_model stable-diffusion-v1-5/stable-diffusion-inpainting \
+    --weight-format int8 \
+    --target_device GPU
+```
+:::
+
+:::{tab-item} Bare metal (Windows)
+:sync: bare-metal
+```bat
+ovms --rest_port 8000 ^
+  --model_repository_path c:\models ^
+  --task image_generation ^
+  --source_model stable-diffusion-v1-5/stable-diffusion-inpainting ^
+  --weight-format int8 ^
+  --target_device GPU
+```
+:::
+
+::::
 
 ### Requesting outpainting with cURL
 
@@ -675,54 +756,6 @@ image_data = base64.b64decode(base64_image)
 image = Image.open(BytesIO(image_data))
 image.save('outpaint_output.png')
 ```
-
-### Using dedicated inpainting models
-
-For best inpainting/outpainting quality, use a dedicated inpainting model. These models have a 9-channel UNet specifically trained for masked generation.
-
-Example models for inpainting:
-- `stable-diffusion-v1-5/stable-diffusion-inpainting` — SD 1.5 based, 512×512 native resolution
-- `diffusers/stable-diffusion-xl-1.0-inpainting-0.1` — SDXL based, 1024×1024 native resolution
-
-For the full list see [supported image generation models](https://openvinotoolkit.github.io/openvino.genai/docs/supported-models/#image-generation-models).
-
-> **Note:** Dedicated inpainting models only expose the `images/edits` endpoint (with mask). Text-to-image and image-to-image requests will return an error indicating the pipeline is not available for this model. Base models (e.g. `stable-diffusion-v1-5/stable-diffusion-v1-5`) support all endpoints including inpainting.
-
-::::{tab-set}
-:::{tab-item} Docker (Linux) — GPU
-:sync: docker-gpu
-```bash
-mkdir -p models
-
-docker run -d --rm -p 8000:8000 -v $(pwd)/models:/models/:rw \
-  --user $(id -u):$(id -g) --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) \
-  -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy=$no_proxy \
-  openvino/model_server:latest-gpu \
-    --rest_port 8000 \
-    --model_repository_path /models/ \
-    --task image_generation \
-    --source_model stable-diffusion-v1-5/stable-diffusion-inpainting \
-    --weight-format int8 \
-    --target_device GPU
-```
-:::
-
-:::{tab-item} Bare metal (Windows)
-:sync: bare-metal
-```bat
-mkdir models
-
-ovms --rest_port 8000 ^
-  --model_repository_path ./models/ ^
-  --task image_generation ^
-  --source_model stable-diffusion-v1-5/stable-diffusion-inpainting ^
-  --weight-format int8 ^
-  --target_device GPU
-```
-:::
-
-::::
-
 
 ### Strength influence on final damage
 
