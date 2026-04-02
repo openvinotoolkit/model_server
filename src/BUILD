@@ -718,13 +718,13 @@ ovms_cc_library(
                 "//conditions:default": ["-lOpenCL"], # TODO make as direct dependency
                 "//src:windows" : ["/DEFAULTLIB:Rpcrt4.lib"],}),
     data = select({
-        ("//:not_disable_python", "@platforms//os:linux"): [
-            "//src/python/binding:pyovms.so",
-        ],
-        ("//:not_disable_python", "@platforms//os:windows"): [
+        "//:is_windows_and_python_is_enabled": [
             "//src/python/binding:pyovms.dll",
         ],
-        "//:disable_python": []
+        "//:disable_python": [],
+        "//conditions:default": [
+            "//src/python/binding:pyovms.so",
+        ],
         }) + select({
             "//:is_windows_and_python_is_enabled": [
                 "//src/python/binding:copy_pyovms",
@@ -2456,13 +2456,13 @@ cc_binary(
             "//:disable_mediapipe" : [],
         }),
     data = select({
-        ("//:not_disable_python", "@platforms//os:linux"): [
-            "//src/python/binding:pyovms.so",
-        ],
-        ("//:not_disable_python", "@platforms//os:windows"): [
+        "//:is_windows_and_python_is_enabled": [
             "//src/python/binding:pyovms.dll",
         ],
-        "//:disable_python": []
+        "//:disable_python": [],
+        "//conditions:default": [
+            "//src/python/binding:pyovms.so",
+        ],
     }),
     # linkstatic = False,  # Use for dynamic linking when necessary
 )
@@ -2717,13 +2717,13 @@ cc_test(
         "//src:libcustom_node_add_one.so",
         "//src:libcustom_node_horizontal_ocr.so",
     ] + select({
-        ("//:not_disable_python", "@platforms//os:linux"): [
-            "//src/python:libovmspython.so",
-        ],
-        ("//:not_disable_python", "@platforms//os:windows"): [
+        "//:is_windows_and_python_is_enabled": [
             "//src/python:libovmspython.dll",
         ],
         "//:disable_python": [],
+        "//conditions:default": [
+            "//src/python:libovmspython.so",
+        ],
     }),
     deps = [
             "optimum-cli",
