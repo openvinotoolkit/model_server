@@ -54,16 +54,25 @@ const uint64_t MAX_REST_WORKERS = 10'000;
 // We need to minimize the number of default drogon workers since this value is set for both: unary and streaming (making it always double)
 // on linux, restrict also based on the max allowed number of open files
 #ifdef __linux__
-const uint64_t MAX_OPEN_FILES = []() {
+
+namespace {
+uint64_t getMaxOpenFilesLimit() {
     struct rlimit limit;
     if (getrlimit(RLIMIT_NOFILE, &limit) == 0) {
         return limit.rlim_cur;
     }
     return std::numeric_limits<uint64_t>::max();
-}();
+}
+}  // namespace
+
 const uint64_t RESERVED_OPEN_FILES = 10;  // we need to reserve some file descriptors for other operations, so we don't want to use all of them for drogon workers
-const uint64_t DEFAULT_REST_WORKERS = (MAX_OPEN_FILES <= RESERVED_OPEN_FILES) ? AVAILABLE_CORES
-                                                                              : std::min(static_cast<uint64_t>(AVAILABLE_CORES), (MAX_OPEN_FILES - RESERVED_OPEN_FILES) / 5);
+const uint64_t DEFAULT_REST_WORKERS = []() {
+    const uint64_t maxOpenFiles = getMaxOpenFilesLimit();
+    if (maxOpenFiles <= RESERVED_OPEN_FILES) {
+        return static_cast<uint64_t>(AVAILABLE_CORES);
+    }
+    return std::min(static_cast<uint64_t>(AVAILABLE_CORES), (maxOpenFiles - RESERVED_OPEN_FILES) / 5);
+}();
 #else
 const uint64_t DEFAULT_REST_WORKERS = AVAILABLE_CORES;
 #endif
