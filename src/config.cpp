@@ -37,6 +37,10 @@
 #include "stringutils.hpp"
 #include "systeminfo.hpp"
 
+#ifdef __linux__
+#include <sys/resource.h>
+#endif
+
 namespace ovms {
 
 const uint32_t AVAILABLE_CORES = getCoreCount();
@@ -50,7 +54,6 @@ const uint64_t MAX_REST_WORKERS = 10'000;
 // We need to minimize the number of default drogon workers since this value is set for both: unary and streaming (making it always double)
 // on linux, restrict also based on the max allowed number of open files
 #ifdef __linux__
-#include <sys/resource.h>
 const uint64_t MAX_OPEN_FILES = []() {
     struct rlimit limit;
     if (getrlimit(RLIMIT_NOFILE, &limit) == 0) {

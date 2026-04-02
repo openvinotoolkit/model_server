@@ -17,7 +17,6 @@
 #include <filesystem>
 #include <fstream>
 #include <regex>
-#include <sys/resource.h>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -31,6 +30,10 @@
 #include "../ovms_exit_codes.hpp"
 #include "../systeminfo.hpp"
 #include "test_utils.hpp"
+
+#ifdef __linux__
+#include <sys/resource.h>
+#endif
 
 using testing::_;
 using testing::ContainerEq;
