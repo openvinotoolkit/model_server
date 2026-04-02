@@ -173,12 +173,12 @@ absl::Status GenAiServable::applyLoraAdapter(std::shared_ptr<GenAiServableExecut
         float alpha = 1.0f;//props->adapterConfig.get_alpha(it->second);
         executionContext->generationConfigBuilder->getConfig().adapters =
             ov::genai::AdapterConfig(it->second, alpha);
-        SPDLOG_INFO("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX");
+        SPDLOG_INFO("XXXX Applying Lora adapter: {}, alpha: {}", request.loraAdapter.value(), alpha);
     } else {
         auto props = getProperties();
         executionContext->generationConfigBuilder->getConfig().adapters =
             ov::genai::AdapterConfig(props->adaptersByName["style-a"], 0.0f);
-        SPDLOG_INFO("YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY");
+        SPDLOG_INFO("YYY Applying default Lora adapter: style-a, alpha: 0.0f");
     }
     return absl::OkStatus();
 }
