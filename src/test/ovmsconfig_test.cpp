@@ -223,7 +223,6 @@ TEST_F(OvmsConfigDeathTest, restWorkersDefaultReducedForOpenFilesLimit) {
 
     ASSERT_EQ(setrlimit(RLIMIT_NOFILE, &limit), 0);
 }
-#endif
 
 TEST_F(OvmsConfigDeathTest, restWorkersTooLargeForOpenFilesLimit) {
     // limit allowed number of open files to 1024 to make sure that rest_workers count is too large.
@@ -237,6 +236,7 @@ TEST_F(OvmsConfigDeathTest, restWorkersTooLargeForOpenFilesLimit) {
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "rest_workers count cannot be larger than 202 due to open files limit. Current open files limit: 1024");
     ASSERT_EQ(setrlimit(RLIMIT_NOFILE, &limit), 0);
 }
+#endif
 
 TEST_F(OvmsConfigDeathTest, restWorkersDefinedRestPortUndefined) {
     char* n_argv[] = {"ovms", "--config_path", "/path1", "--port", "8080", "--rest_workers", "60"};
