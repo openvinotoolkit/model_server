@@ -99,8 +99,7 @@ bool ensurePythonRuntimeLoaded() {
         "src/python/libovmspython.so",
         "./src/python/libovmspython.so",
         "bazel-bin/src/python/libovmspython.so",
-        "./bazel-bin/src/python/libovmspython.so"
-    };
+        "./bazel-bin/src/python/libovmspython.so"};
 
     for (const auto& candidate : candidates) {
         pythonRuntimeHandle = dlopen(candidate.c_str(), RTLD_NOW | RTLD_LOCAL);
@@ -127,8 +126,7 @@ bool ensurePythonRuntimeLoaded() {
         "src\\python\\libovmspython.dll",
         ".\\src\\python\\libovmspython.dll",
         "bazel-bin\\src\\python\\libovmspython.dll",
-        ".\\bazel-bin\\src\\python\\libovmspython.dll"
-    };
+        ".\\bazel-bin\\src\\python\\libovmspython.dll"};
 
     for (const auto& candidate : candidates) {
         pythonRuntimeHandle = LoadLibraryA(candidate.c_str());
