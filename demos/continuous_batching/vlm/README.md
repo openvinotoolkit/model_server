@@ -234,7 +234,7 @@ Check [VLM usage with NPU acceleration](../../vlm_npu/README.md)
 
 
 ## References
-- [Export models to OpenVINO format](../common/export_models/README.md)
+- [Export models to OpenVINO format](../../../demos/common/export_models/README.md)
 - [Supported VLM models](https://openvinotoolkit.github.io/openvino.genai/docs/supported-models/#visual-language-models-vlms)
 - [Chat Completions API](../../../docs/model_server_rest_api_chat.md)
 - [Writing client code](../../../docs/clients_genai.md)
