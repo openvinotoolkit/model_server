@@ -719,7 +719,7 @@ ovms_cc_library(
                 "//src:windows" : ["/DEFAULTLIB:Rpcrt4.lib"],}),
     data = select({
         "//:is_windows_and_python_is_enabled": [
-            "//src/python/binding:pyovms.dll",
+            "//src/python/binding:pyovms.pyd",
         ],
         "//:disable_python": [],
         "//conditions:default": [
@@ -2457,7 +2457,7 @@ cc_binary(
         }),
     data = select({
         "//:is_windows_and_python_is_enabled": [
-            "//src/python/binding:pyovms.dll",
+            "//src/python/binding:pyovms.pyd",
         ],
         "//:disable_python": [],
         "//conditions:default": [
