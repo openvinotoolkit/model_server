@@ -55,26 +55,26 @@ const uint64_t MAX_REST_WORKERS = 10'000;
 // on linux, restrict also based on the max allowed number of open files
 #ifdef __linux__
 
-namespace {
-uint64_t getMaxOpenFilesLimit() {
+static uint64_t getMaxOpenFilesLimit() {
     struct rlimit limit;
     if (getrlimit(RLIMIT_NOFILE, &limit) == 0) {
         return limit.rlim_cur;
     }
     return std::numeric_limits<uint64_t>::max();
 }
-}  // namespace
 
 const uint64_t RESERVED_OPEN_FILES = 10;  // we need to reserve some file descriptors for other operations, so we don't want to use all of them for drogon workers
-const uint64_t DEFAULT_REST_WORKERS = []() {
+uint64_t getDefaultRestWorkers() {
     const uint64_t maxOpenFiles = getMaxOpenFilesLimit();
     if (maxOpenFiles <= RESERVED_OPEN_FILES) {
-        return static_cast<uint64_t>(AVAILABLE_CORES);
+        return static_cast<uint64_t>(2);  // minimum functional number
     }
     return std::min(static_cast<uint64_t>(AVAILABLE_CORES), (maxOpenFiles - RESERVED_OPEN_FILES) / 5);
-}();
+}
 #else
-const uint64_t DEFAULT_REST_WORKERS = AVAILABLE_CORES;
+uint64_t getDefaultRestWorkers() {
+    return AVAILABLE_CORES;
+}
 #endif
 
 Config& Config::parse(int argc, char** argv) {
@@ -335,8 +335,8 @@ bool Config::validate() {
         return false;
     }
 #ifdef __linux__
-    if (restWorkers() > (MAX_OPEN_FILES - RESERVED_OPEN_FILES) / 5) {
-        std::cerr << "rest_workers count cannot be larger than " << (MAX_OPEN_FILES - RESERVED_OPEN_FILES) / 5 << " due to open files limit. Current open files limit: " << MAX_OPEN_FILES << std::endl;
+    if (restWorkers() > (getMaxOpenFilesLimit() - RESERVED_OPEN_FILES) / 5) {
+        std::cerr << "rest_workers count cannot be larger than " << (getMaxOpenFilesLimit() - RESERVED_OPEN_FILES) / 5 << " due to open files limit. Current open files limit: " << getMaxOpenFilesLimit() << std::endl;
         return false;
     }
 #endif
@@ -402,7 +402,7 @@ const std::string Config::restBindAddress() const { return this->serverSettings.
 uint32_t Config::grpcWorkers() const { return this->serverSettings.grpcWorkers; }
 uint32_t Config::grpcMaxThreads() const { return this->serverSettings.grpcMaxThreads.value_or(DEFAULT_GRPC_MAX_THREADS); }
 size_t Config::grpcMemoryQuota() const { return this->serverSettings.grpcMemoryQuota.value_or(DEFAULT_GRPC_MEMORY_QUOTA); }
-uint32_t Config::restWorkers() const { return this->serverSettings.restWorkers.value_or(DEFAULT_REST_WORKERS); }
+uint32_t Config::restWorkers() const { return this->serverSettings.restWorkers.value_or(getDefaultRestWorkers()); }
 const std::string& Config::modelName() const { return this->modelsSettings.modelName; }
 const std::string& Config::modelPath() const { return this->modelsSettings.modelPath; }
 const std::string& Config::batchSize() const {
