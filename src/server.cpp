@@ -141,7 +141,7 @@ static void onTerminate(int status) {
 }
 
 static void onIllegal(int status) {
-    const char msg[] = "SIGILL received: illegal instruction, unsupported CPU or device. Terminating.\n";
+    const char msg[] = "SIGILL received: illegal instruction. This may indicate an unsupported CPU or device or an internal error. Terminating.\n";
 #ifdef __linux__
     ssize_t ret __attribute__((unused)) = write(STDERR_FILENO, msg, sizeof(msg) - 1);
 #elif _WIN32
