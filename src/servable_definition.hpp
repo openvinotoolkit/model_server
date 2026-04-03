@@ -23,7 +23,6 @@ class ServableDefinition {
 public:
     virtual ~ServableDefinition() = default;
     virtual const std::string& getName() const = 0;
-    virtual bool isAvailable() const = 0;
 };
 
 }  // namespace ovms

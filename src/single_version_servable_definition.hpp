@@ -46,6 +46,7 @@ public:
     const std::string& getName() const override { return Servable::getName(); }
     model_version_t getVersion() const override { return Servable::getVersion(); }
 
+    virtual bool isAvailable() const = 0;
     virtual const PipelineDefinitionStatus& getStatus() const = 0;
     virtual const tensor_map_t getInputsInfo() const = 0;
     virtual const tensor_map_t getOutputsInfo() const = 0;

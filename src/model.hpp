@@ -141,8 +141,6 @@ public:
         return name;
     }
 
-    bool isAvailable() const override;
-
     const bool isStateful() const {
         return stateful;
     }
