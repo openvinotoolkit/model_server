@@ -19,7 +19,7 @@ Check supported [Speech Recognition Models](https://openvinotoolkit.github.io/op
 ### Prepare speaker embeddings
 When generating speech you can use default speaker voice or you can prepare your own speaker embedding file. Here you can see how to do it with downloaded file from online repository, but you can try with your own speech recording as well:
 ```bash
-pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/audio/requirements.txt
+pip install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/audio/requirements.txt
 mkdir -p audio_samples
 curl --output audio_samples/audio.wav "https://www.voiptroubleshooter.com/open_speech/american/OSR_us_000_0032_8k.wav"
 mkdir -p models
@@ -42,7 +42,7 @@ Execution parameters will be defined inside the `graph.pbtxt` file.
 Download export script, install it's dependencies and create directory for the models:
 ```console
 curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/export_model.py -o export_model.py
-pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
+pip install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
 mkdir models
 ```
 
@@ -53,7 +53,7 @@ Run `export_model.py` script to download and quantize the model:
 
 **CPU**
 ```console
-python export_model.py text2speech --source_model microsoft/speecht5_tts --weight-format fp16 --model_name microsoft/speecht5_tts --config_file_path models/config.json --model_repository_path models --overwrite_models --vocoder microsoft/speecht5_hifigan --speaker_name voice1 --speaker_path /models/speakers/voice1.bin
+python export_model.py text2speech --source_model microsoft/speecht5_tts --weight-format fp16 --model_name microsoft/speecht5_tts --config_file_path models/config.json --model_repository_path models --overwrite_models --vocoder microsoft/speecht5_hifigan --speaker_name voice1 --speaker_path models/speakers/voice1.bin
 ```
 
 > **Note:** Change the `--weight-format` to quantize the model to `int8` precision to reduce memory consumption and improve performance.
@@ -157,7 +157,7 @@ An asynchronous benchmarking client can be used to access the model server perfo
 git clone https://github.com/openvinotoolkit/model_server
 cd model_server/demos/benchmark/v3/
 pip install -r requirements.txt
-python benchmark.py --api_url http://localhost:8000/v3/audio/speech --model microsoft/speecht5_tts --batch_size 1 --limit 100 --request_rate inf --backend text2speech --dataset edinburghcstr/ami --hf-subset 'ihm' --tokenizer openai/whisper-large-v3-turbo --trust-remote-code True
+python benchmark.py --api_url http://localhost:8000/v3/audio/speech --model microsoft/speecht5_tts --batch_size 1 --limit 100 --request_rate inf --backend text2speech --dataset edinburghcstr/ami --hf-subset ihm --tokenizer openai/whisper-large-v3-turbo --trust-remote-code True
 Number of documents: 100
 100%|████████████████████████████████████████████████████████████████████████████████| 100/100 [01:58<00:00,  1.19s/it]
 Asking to truncate to max_length but no maximum length is provided and the model has no predefined maximum length. Default to no truncation.
@@ -181,7 +181,7 @@ Execution parameters will be defined inside the `graph.pbtxt` file.
 Download export script, install it's dependencies and create directory for the models:
 ```console
 curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/export_model.py -o export_model.py
-pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
+pip install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
 mkdir models
 ```
 
