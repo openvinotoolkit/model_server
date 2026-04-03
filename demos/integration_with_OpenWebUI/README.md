@@ -379,8 +379,9 @@ mcpo --port 9000 -- python -m mcp_weather_server
 
 ### Step 3: Use Web Search in the chat
 
-1. Open new Chat (it should have blue Web Search icon blow)
-2. Send the prompt
+1. Open new Chat
+2. Enable **Web Search**, if it's not displayed as blue icon below.
+3. Send the prompt
 
 ![web search usage](./web_search_usage.png)
 
