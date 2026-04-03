@@ -332,8 +332,8 @@ mcpo --port 9000 -- python -m mcp_weather_server
 
 ### Step 2: Tools Setting
 
-1. Go to **Admin Panel** → **Settings** → **External Tools** 
-2. Click **+Add Connection**
+1. Go to **Admin Panel** → **Settings** → **Integrations** 
+2. Click **+Manage Tool Servers**
    * URL: `http://localhost:9000`
    * Name the tool
 3. Click **Save**
@@ -342,7 +342,7 @@ mcpo --port 9000 -- python -m mcp_weather_server
 
 ### Step 3: Chat with AI Agent
 
-1. Click **+More** and toggle on the tool
+1. Click **Integrations** → **Tools**  and toggle on the tool
    
 ![activate the tool](./activate_the_tool.png)
 
