@@ -37,6 +37,7 @@
 #include <sysexits.h>
 #elif _WIN32
 #include <csignal>
+#include <cstdio>
 #include <io.h>
 
 #include <ntstatus.h>
