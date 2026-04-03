@@ -416,6 +416,8 @@ Then workspace model should be created:
 3. In **Buildin Tools** section enable **Memory**
 4. In **Advanced Parameters** set **Function Calling** to **Native**
 
+![function calling native](./function_calling_native_set_workspace.pngs)
+
 ![model memory config](./model_memory_configuration.png)
 
 It's now available in all chats:
