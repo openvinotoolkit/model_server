@@ -192,7 +192,7 @@ http_archive(
 git_repository(
     name = "mediapipe",
     remote = "https://github.com/Vishwa2684/mediapipe.git",
-    commit = "fdb1f90c87e220b3f479db9edc89b1e1b65d1562", # top of mediapipe main branch as of 26.11.2025
+    commit = "ed7b1f7d27a6e9053c04bc458fd01b3f0bdec020", # top of mediapipe main branch as of 26.11.2025
 )
 
 # DEV mediapipe 1 source - adjust local repository path for build
