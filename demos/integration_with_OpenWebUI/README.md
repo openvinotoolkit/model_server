@@ -374,6 +374,8 @@ mcpo --port 9000 -- python -m mcp_weather_server
 4. In **Default Features** enable **Web Search** or toggle it in the chat
 5. In **Advanced Parameters** set **Function Calling** to **Native**
 
+![function calling native](./funcition_calling_native_set.png)
+
 ![web search model configuration](./web_search_model_config.png)
 
 
@@ -434,6 +436,9 @@ It's available to use **Code Interpreter** feature in Open Web UI.
 3. Enable **Code Interpreter** capability
 4. In **Default Features** enable **Code Interpreter** or toggle it in the chat
 5. In **Advanced Parameters** set **Function Calling** to **Native**
+
+![function calling native](./function_calling_native_set.png)
+
 6. Go to **Admin Panel** → **Settings** → **Code Execution**
 7. Enable **Code Interpreter** and **Code Execution**
 
