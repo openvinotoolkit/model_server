@@ -69,7 +69,7 @@ uint64_t getDefaultRestWorkers() {
     if (maxOpenFiles <= RESERVED_OPEN_FILES) {
         return static_cast<uint64_t>(2);  // minimum functional number
     }
-    return std::min(static_cast<uint64_t>(AVAILABLE_CORES), (maxOpenFiles - RESERVED_OPEN_FILES) / 7); // 5x rest_workers to initialize ovms and 2x rest_workers for new connections 
+    return std::min(static_cast<uint64_t>(AVAILABLE_CORES), (maxOpenFiles - RESERVED_OPEN_FILES) / 7);  // 5x rest_workers to initialize ovms and 2x rest_workers for new connections
 }
 #else
 uint64_t getDefaultRestWorkers() {
