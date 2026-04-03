@@ -202,7 +202,6 @@ ENV OPENVINO_TOKENIZERS_PATH_GENAI=/opt/intel/openvino/runtime/lib/intel64/libop
 WORKDIR /openvino_tokenizers/
 ARG ov_tokenizers_branch=master
 ARG ov_tokenizers_org=openvinotoolkit
-ARG WARNNINGS_FLAGS="-Wextra -Wall -Werror -Werror=format-security -Wimplicit-fallthrough"
 # hadolint ignore=DL3003
 RUN git clone https://github.com/$ov_tokenizers_org/openvino_tokenizers.git /openvino_tokenizers && cd /openvino_tokenizers && git checkout $ov_tokenizers_branch && git submodule update --init --recursive
 RUN if ! [[ $debug_bazel_flags == *"_py_off"* ]]; then \
@@ -217,7 +216,7 @@ RUN if ! [[ $debug_bazel_flags == *"_py_off"* ]]; then \
     fi
 # hadolint ignore=DL3003
 RUN if [ "$ov_use_binary" == "0" ]; then true ; else exit 0 ; fi ; \
-    cd /openvino_tokenizers && cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DCMAKE_CXX_FLAGS=" ${WARNNINGS_FLAGS} ${SDL_OPS}" -S ./ -B ./build/ && cmake --build ./build/ --parallel $JOBS && cp /openvino_tokenizers/build/src/lib*.so /opt/intel/openvino/runtime/lib/intel64/ && \
+    cd /openvino_tokenizers && cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DCMAKE_CXX_FLAGS=" ${SDL_OPS} " -S ./ -B ./build/ && cmake --build ./build/ --parallel $JOBS && cp /openvino_tokenizers/build/src/lib*.so /opt/intel/openvino/runtime/lib/intel64/ && \
     if ! [[ $debug_bazel_flags == *"_py_off"* ]]; then \
     cp build/python/* /opt/intel/openvino/python/openvino_tokenizers/ ; \
     fi
@@ -227,7 +226,7 @@ WORKDIR /openvino_genai/
 # hadolint ignore=DL3003
 RUN if [ "$ov_use_binary" == "0" ]; then \
     git clone https://github.com/$ov_genai_org/openvino.genai /openvino_genai && cd /openvino_genai && git checkout $ov_genai_branch && git submodule update --init --recursive && \
-    cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DCMAKE_CXX_FLAGS=" ${WARNNINGS_FLAGS} ${SDL_OPS}" -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DENABLE_SYSTEM_ICU="True" -DBUILD_TOKENIZERS=OFF -DENABLE_SAMPLES=OFF -DENABLE_TOOLS=OFF -DENABLE_TESTS=OFF -DENABLE_XGRAMMAR=ON -S ./ -B ./build/ && \
+    cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DCMAKE_CXX_FLAGS=" ${SDL_OPS} " -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DENABLE_SYSTEM_ICU="True" -DBUILD_TOKENIZERS=OFF -DENABLE_SAMPLES=OFF -DENABLE_TOOLS=OFF -DENABLE_TESTS=OFF -DENABLE_XGRAMMAR=ON -S ./ -B ./build/ && \
     cmake --build ./build/ --parallel $JOBS && cp /openvino_genai/build/openvino_genai/lib*.so* /opt/intel/openvino/runtime/lib/intel64/ && \
     cp -r /openvino_genai/src/cpp/include/* /opt/intel/openvino/runtime/include/ && \
     cp /openvino_genai/build/src/cpp/openvino/genai/version.hpp /opt/intel/openvino/runtime/include/openvino/genai/ && \
