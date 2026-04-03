@@ -285,14 +285,14 @@ The vision language model used in this demo is `Junrui2021/Qwen3-VL-8B-Instruct-
 :sync: Windows
 ```bat
 ovms.exe --pull --source_model Junrui2021/Qwen3-VL-8B-Instruct-int4 --model_repository_path models --model_name ovms-model-vl --task text_generation --pipeline_type VLM_CB
-ovms.exe --add_to_config --config_path models\config.json --model_path Junrui2021/Qwen3-VL-8B-Instruct-int4 --model_name ovms-model-vl
+ovms.exe --add_to_config --config_path models\config.json --model_path models\Junrui2021\Qwen3-VL-8B-Instruct-int4 --model_name ovms-model-vl
 ```
 :::
 :::{tab-item} Linux (using Docker)
 :sync: Linux
 ```bash
-docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models openvino/model_server:weekly --pull --source_model Junrui2021/Qwen3-VL-8B-Instruct-int4 --model_repository_path /models --model_name ovms-model-vl --task text_generation
-docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models openvino/model_server:weekly --add_to_config --config_path /models/config.json  --model_path Junrui2021/Qwen3-VL-8B-Instruct-int4 --model_name ovms-model-vl
+docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models openvino/model_server:weekly --pull --source_model Junrui2021/Qwen3-VL-8B-Instruct-int4 --model_repository_path /models --model_name ovms-model-vl --task text_generation --pipeline_type VLM_CB
+docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models openvino/model_server:weekly --add_to_config --config_path /models/config.json  --model_path /models/Junrui2021/Qwen3-VL-8B-Instruct-int4 --model_name ovms-model-vl
 ```
 :::
 ::::
@@ -305,7 +305,7 @@ curl http://localhost:8000/v3/chat/completions  -H "Content-Type: application/js
 
 ### Step 2: Chat with VLM
 
-1. Start a **New Chat**
+1. Start a **New Chat** and choose `ovms-model-vl` model
 2. Click **+More** to upload images, by capturing the screen or uploading files. The image used in this demo is [http://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/demos/common/static/images/zebra.jpeg](http://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/demos/common/static/images/zebra.jpeg).
 
 ![upload images](./upload_images.png)
@@ -380,20 +380,17 @@ mcpo --port 9000 -- python -m mcp_weather_server
 ### Step 3: Use Web Search in the chat
 
 1. Open new Chat (it should have blue Web Search icon blow)
-
-![web search icon](./web_search_icon.png)
-
 2. Send the prompt
 
 ![web search usage](./web_search_usage.png)
 
-### Reference 
+### Reference
+[https://docs.openwebui.com/features/chat-conversations/web-search/agentic-search/](https://docs.openwebui.com/features/chat-conversations/web-search/agentic-search/)
 
-![https://docs.openwebui.com/features/chat-conversations/web-search/agentic-search/](https://docs.openwebui.com/features/chat-conversations/web-search/agentic-search/)
 
 ## Adding Context to the prompt
 
-In Open Web UI user is able to add additional context to their chats using **Memory** feature. Models may get additional information shared through all chats. 
+In Open WebUI, users can add additional context to their chats using the **Memory** feature. This allows models to access shared information across all conversations.
 
 To configure it:
 
@@ -405,7 +402,7 @@ To configure it:
 
 ![add memory](./add_memory.png)
 
-It's possible to have multiple manageble memory records.
+It's possible to have multiple manageable memory records.
 
 ![multiple memory records](./multiple_memory_records.png)
 
@@ -422,7 +419,7 @@ It's now available in all chats:
 
 ![memory usage](./memory_usage.png)
 
-> **Note**: There is no way to make searching memory default on the beggingng of the conversation in Open Web UI. User should tell model to use it to make it work.  
+> **Note**: There is no way to make searching memory default on the beginning of the conversation in Open Web UI. User should tell model to use it to make it work.  
 
 ### Reference 
 [https://docs.openwebui.com/features/chat-conversations/memory/](https://docs.openwebui.com/features/chat-conversations/memory/)
