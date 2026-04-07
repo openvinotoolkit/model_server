@@ -1,6 +1,6 @@
 # RAG demo with OpenVINO Model Server {#ovms_demos_continuous_batching_rag}
 
-## Creating models repository for all the endpoints with ovms --pull from [Hugging Face Hub OpenVINO organization](https://huggingface.co/OpenVINO)
+## Creating models repository for all the endpoints
 
 ::::{tab-set}
 
@@ -19,7 +19,7 @@ docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/mo
 ```
 :::
 
-:::{tab-item} On Baremetal Host
+:::{tab-item} On Baremetal Windows
 **Required:** OpenVINO Model Server package - see [deployment instructions](../../../docs/deploying_server_baremetal.md) for details.
 
 ```bat
@@ -37,7 +37,8 @@ ovms --add_to_config --config_path models/config.json --model_name OpenVINO/bge-
 ::::
 
 
-### Optionally, if you want to deploy different models, use the built-in OVMS functionality in `openvino/model_server:latest-py` described in [pull mode with optimum cli](../../../docs/pull_optimum_cli.md)
+** Note If you want to deploy modelss in pytorch format you can use the built-in OVMS optimum-cli functionality of `openvino/model_server:latest-py` described in [pull mode with optimum cli](../../../docs/pull_optimum_cli.md)
+** Note You can also use [the windows service](../../../docs/windows_service.md) setup for the ease of use and shorter commands
 
 ## Deploying the model server
 
