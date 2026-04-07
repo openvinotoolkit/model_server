@@ -69,6 +69,8 @@ public:
     }
 
     static std::string normalizeArgStr(const std::string& arg);
+    static std::string parseArrayParameter(std::string argumentStr);
+    static std::string parseObjectParameter(std::string argumentStr);
 
 private:
     void writeArgumentToWriter(const std::string& arg, rapidjson::Writer<rapidjson::StringBuffer>& writer);

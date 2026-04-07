@@ -35,6 +35,54 @@ const std::string Lfm2ToolParser::TOOL_ARGS_START_INDICATOR = "(";
 const std::string Lfm2ToolParser::TOOL_ARGS_END_INDICATOR = ")";
 const std::string Lfm2ToolParser::TOOL_SEPARATOR_STR = ", ";
 
+
+std::string Lfm2ToolParser::parseArrayParameter(std::string argumentStr) {
+    int quoteDepth = 0;
+
+    for (size_t i = 1; i < argumentStr.size() - 1; ++i) {
+        if (argumentStr[i] != '\'') {
+            continue;
+        }
+
+        bool isLastElement = (i == argumentStr.size() - 2);
+        bool isFollowedByComma = !isLastElement && argumentStr[i + 1] == ',';
+
+        if (i == 1 || quoteDepth == 0) {
+            argumentStr[i] = '"';
+            quoteDepth++;
+        } else if (isFollowedByComma || isLastElement) {
+            argumentStr[i] = '"';
+            quoteDepth--;
+        }
+    }
+
+    return argumentStr;
+}
+
+std::string Lfm2ToolParser::parseObjectParameter(std::string argumentStr) {
+    int quoteDepth = 0;
+
+    for (size_t i = 1; i < argumentStr.size() - 1; ++i) {
+        if (argumentStr[i] != '\'') {
+            continue;
+        }
+
+        bool isLastElement = (i == argumentStr.size() - 2);
+        bool isFollowedByComma = !isLastElement && argumentStr[i + 1] == ',';
+        bool isFollowedByColon = !isLastElement && argumentStr[i + 1] == ':';
+
+        if (i == 1 || quoteDepth == 0) {
+            argumentStr[i] = '"';
+            quoteDepth++;
+        } else if (isFollowedByComma || isLastElement || isFollowedByColon) {
+            argumentStr[i] = '"';
+            quoteDepth--;
+        }
+    }
+
+    return argumentStr;
+}
+
 std::string Lfm2ToolParser::normalizeArgStr(const std::string& arg) {
     if (arg.empty()) {
         return arg;
@@ -51,9 +99,14 @@ std::string Lfm2ToolParser::normalizeArgStr(const std::string& arg) {
 
     const char first = normalized.front();
     const char last = normalized.back();
-    if ((first == '{' && last == '}') || (first == '[' && last == ']')) {
-        std::replace(normalized.begin(), normalized.end(), '\'', '"');
-        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Argument contains curly braces or square brackets, replaced single quotes with double quotes for JSON parsing. Modified string: {}", normalized);
+    if (first == '{' && last == '}') {
+        normalized = parseObjectParameter(normalized);
+        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Argument contains is an object, replaced single quotes with double quotes for JSON parsing. Modified string: {}", normalized);
+    }
+
+    if (first == '[' && last == ']') {
+        normalized = parseArrayParameter(normalized);
+        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Argument is an array, normalized quotes for JSON parsing. Modified string: {}", normalized);
     }
 
     if ((first == '\'' && last == '\'')) {

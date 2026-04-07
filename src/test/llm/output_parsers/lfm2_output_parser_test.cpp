@@ -750,6 +750,28 @@ TEST_F(LFM2OutputParserTest, ParseToolCallWithStringArgumentsContainingBackslash
     EXPECT_EQ(parsedOutput.toolCalls[0].arguments, R"({"path":"C:\\Users\\test\\file.txt","encoding":"utf-8"})");
 }
 
+TEST_F(LFM2OutputParserTest, ParseToolCallWithStringArgumentsArrayWithStringsContainingQuotes) {
+    std::string input = R"(<|tool_call_start|>[save(lines=['it's the wonderful day', 'My name's Jan', 'That's Johns' car.'])]<|tool_call_end|>)";
+    auto generatedTensor = lfm2Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
+    std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+    ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
+    EXPECT_EQ(parsedOutput.content, "");
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
+    EXPECT_EQ(parsedOutput.toolCalls[0].name, "save");
+    EXPECT_EQ(parsedOutput.toolCalls[0].arguments, R"({"lines":["it's the wonderful day","My name's Jan","That's Johns' car."]})");
+}
+
+TEST_F(LFM2OutputParserTest, ParseToolCallWithStringArgumentsObjectWithStringsContainingQuotes) {
+    std::string input = R"(<|tool_call_start|>[save(obj={'name':'it's the wonderful day', 'greeting':'Hello, my name's Jan', 'note':'That's Johns' car.'})]<|tool_call_end|>)";
+    auto generatedTensor = lfm2Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
+    std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+    ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
+    EXPECT_EQ(parsedOutput.content, "");
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
+    EXPECT_EQ(parsedOutput.toolCalls[0].name, "save");
+    EXPECT_EQ(parsedOutput.toolCalls[0].arguments, R"({"obj":{"name":"it's the wonderful day","greeting":"Hello, my name's Jan","note":"That's Johns' car."}})");
+}
+
 TEST_F(LFM2OutputParserTest, ParseToolCallWithStringArgumentsContainingNestedJSON) {
     std::string input = R"(<|tool_call_start|>[send(payload="{'key': 'value', 'count': 42}", endpoint="api")]<|tool_call_end|>)";
     auto generatedTensor = lfm2Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
