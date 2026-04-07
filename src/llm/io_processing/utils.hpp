@@ -16,14 +16,12 @@
 #pragma once
 #include <string>
 
-#ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning(disable : 6313)
 #include <rapidjson/writer.h>
 #include <rapidjson/document.h>
 #include <rapidjson/stringbuffer.h>
 #pragma warning(pop)
-#endif
 
 namespace ovms {
 size_t findInStringRespectingSpecialChars(const std::string& str, const std::string& target, size_t startPos);
