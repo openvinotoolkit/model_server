@@ -194,6 +194,11 @@ Run `export_model.py` script to download and quantize the model:
 python export_model.py speech2text --source_model openai/whisper-large-v3-turbo --weight-format fp16 --model_name openai/whisper-large-v3-turbo --config_file_path models/config.json --model_repository_path models --overwrite_models --enable_word_timestamps
 ```
 
+**GPU**
+```console
+python export_model.py speech2text --source_model openai/whisper-large-v3-turbo --weight-format fp16 --model_name openai/whisper-large-v3-turbo --config_file_path models/config.json --model_repository_path models --overwrite_models --enable_word_timestamps --target_device GPU
+```
+
 > **Note:** Change the `--weight-format` to quantize the model to `int8` precision to reduce memory consumption and improve performance.
 > **Note:** `--enable_word_timestamps` can be omitted if there is no need for word timestamps support. 
 
@@ -208,7 +213,7 @@ Select deployment option depending on how you prepared models in the previous st
 Running this command starts the container with CPU only target device:
 ```bash
 mkdir -p models
-docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models:rw openvino/model_server:latest --rest_port 8000 --source_model openai/whisper-large-v3-turbo --model_repository_path /models --model_name openai/whisper-large-v3-turbo --task speech2text
+docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models:rw openvino/model_server:latest --rest_port 8000 --model_path /models --model_name openai/whisper-large-v3-turbo
 ```
 **GPU**
 
@@ -217,7 +222,7 @@ to `docker run` command, use the image with GPU support.
 It can be applied using the commands below:
 ```bash
 mkdir -p models
-docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -v $(pwd)/models:/models:rw openvino/model_server:latest-gpu --rest_port 8000 --source_model openai/whisper-large-v3-turbo --model_repository_path models --model_name openai/whisper-large-v3-turbo --task speech2text --target_device GPU
+docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -v $(pwd)/models:/models:rw openvino/model_server:latest-gpu --rest_port 8000 --model_path openai/whisper-large-v3-turbo --model_name openai/whisper-large-v3-turbo
 ```
 :::
 
