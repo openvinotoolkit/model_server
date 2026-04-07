@@ -17,8 +17,14 @@
 #include "../module.hpp"
 #include "pythoninterpretermodule.hpp"
 
-namespace ovms {
-extern "C" Module* OVMS_createPythonInterpreterModule() {
-    return new PythonInterpreterModule();
+#if defined(_WIN32)
+#define PYTHON_RUNTIME_EXPORT __declspec(dllexport)
+#else
+#define PYTHON_RUNTIME_EXPORT __attribute__((visibility("default")))
+#endif
+
+extern "C" PYTHON_RUNTIME_EXPORT ovms::Module* OVMS_createPythonInterpreterModule() {
+    return new ovms::PythonInterpreterModule();
 }
-}  // namespace ovms
+
+#undef PYTHON_RUNTIME_EXPORT
