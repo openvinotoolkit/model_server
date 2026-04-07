@@ -126,7 +126,7 @@ curl http://localhost:8000/v3/chat/completions  -H "Content-Type: application/js
 curl http://localhost:8000/v3/responses \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "OpenGVLab/InternVL2-2B",
+    "model": "Junrui2021/Qwen3-VL-8B-Instruct-int4",
     "input": [
       {
         "role": "user",
@@ -150,7 +150,7 @@ curl http://localhost:8000/v3/responses \
   "id": "resp-1741731554",
   "object": "response",
   "created_at": 1741731554,
-  "model": "OpenGVLab/InternVL2-2B",
+  "model": "Junrui2021/Qwen3-VL-8B-Instruct-int4",
   "status": "completed",
   "output": [
     {
@@ -291,7 +291,7 @@ pip3 install openai
 from openai import OpenAI
 import base64
 base_url='http://localhost:8080/v3'
-model_name = "OpenGVLab/InternVL2-2B"
+model_name = "Junrui2021/Qwen3-VL-8B-Instruct-int4"
 
 client = OpenAI(api_key='unused', base_url=base_url)
 
