@@ -2,7 +2,7 @@
 
 ## Creating models repository for all the endpoints with ovms --pull or python export_model.py script
 
-### 1. Download the preconfigured models using ovms --pull option from [Hugging Face Hub OpenVINO organization](https://huggingface.co/OpenVINO) (Simple usage)
+### Download the preconfigured models using ovms --pull option from [Hugging Face Hub OpenVINO organization](https://huggingface.co/OpenVINO) (Simple usage)
 ::::{tab-set}
 
 :::{tab-item} With Docker
@@ -52,42 +52,9 @@ ovms --add_to_config --config_path c:\models\config.json --model_name OpenVINO/b
 ```
 :::
 ::::
-::::
-
-### 2. Download the preconfigured models using ovms --pull option for models outside [Hugging Face Hub OpenVINO organization](https://huggingface.co/OpenVINO) in HuggingFace Hub. (Advanced usage)
-
-**Required:** OpenVINO Model Server package - see [deployment instructions](../../../docs/deploying_server_baremetal.md) for details.
-
-```bat
-pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
-pip3 install -q -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/continuous_batching/rag/requirements.txt
-mkdir models
-set HF_HOME=C:\hf_home\cache # export HF_HOME=/hf_home/cache if using linux
-ovms --pull --model_repository_path models --source_model meta-llama/Meta-Llama-3-8B-Instruct --task text_generation --weight-format int8
-ovms --pull --model_repository_path models --source_model Alibaba-NLP/gte-large-en-v1.5 --task embeddings --weight-format int8
-ovms --pull --model_repository_path models --source_model BAAI/bge-reranker-large --task rerank --weight-format int8
-
-ovms --add_to_config --config_path /models/config.json --model_name meta-llama/Meta-Llama-3-8B-Instruct --model_path meta-llama/Meta-Llama-3-8B-Instruct
-ovms --add_to_config --config_path /models/config.json --model_name Alibaba-NLP/gte-large-en-v1.5 --model_path Alibaba-NLP/gte-large-en-v1.5
-ovms --add_to_config --config_path /models/config.json --model_name BAAI/bge-reranker-large --model_path BAAI/bge-reranker-large
-```
 
 
-### 3.  Alternatively, export models from HuggingFace Hub including conversion to OpenVINO format using the python script
-
-Use this procedure for all the models outside of OpenVINO organization in HuggingFace Hub.
-
-```console
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/export_model.py -o export_model.py
-pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
-
-mkdir models
-python export_model.py text_generation --source_model meta-llama/Meta-Llama-3-8B-Instruct --weight-format int8 --kv_cache_precision u8 --config_file_path models/config.json --model_repository_path models
-python export_model.py embeddings_ov --source_model Alibaba-NLP/gte-large-en-v1.5 --weight-format int8 --config_file_path models/config.json
-python export_model.py rerank_ov --source_model BAAI/bge-reranker-large --weight-format int8  --config_file_path models/config.json
-```
-
-### 4. Alternatively, use the build in ovms functionality in openvino/model_server:latest-py described here [pull mode with optimum cli](../../../docs/pull_optimum_cli.md)
+### Optionally, if you want to deploy different models use the build-in ovms functionality in openvino/model_server:latest-py described here [pull mode with optimum cli](../../../docs/pull_optimum_cli.md)
 
 ## Deploying the model server
 
@@ -114,6 +81,31 @@ sc start ovms
 Wait for the models to load. You can check the status with a simple command:
 ```console
 curl http://localhost:8000/v3/models
+```
+```
+{
+  "data": [
+    {
+      "id": "OpenVINO/Qwen3-8B-int4-ov",
+      "object": "model",
+      "created": 1775552853,
+      "owned_by": "OVMS"
+    },
+    {
+      "id": "OpenVINO/bge-base-en-v1.5-fp16-ov",
+      "object": "model",
+      "created": 1775552853,
+      "owned_by": "OVMS"
+    },
+    {
+      "id": "OpenVINO/bge-reranker-base-fp16-ov",
+      "object": "model",
+      "created": 1775552853,
+      "owned_by": "OVMS"
+    }
+  ],
+  "object": "list"
+}
 ```
 
 ## Using RAG
