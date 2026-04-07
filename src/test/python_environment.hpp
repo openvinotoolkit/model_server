@@ -19,19 +19,21 @@
 #include <gtest/gtest.h>
 #include <memory>
 
-#pragma warning(push)
-#pragma warning(disable : 6326 28182 6011 28020)
-#include <pybind11/embed.h>  // everything needed for embedding
-#pragma warning(pop)
+#include "../python/pythoninterpretermodule.hpp"
 
-namespace py = pybind11;
+namespace ovms {
+class PythonBackend;
+}
 
 class PythonEnvironment : public testing::Environment {
-    mutable std::unique_ptr<py::gil_scoped_release> GILScopedRelease;
+    std::unique_ptr<ovms::PythonInterpreterModule> pythonModule;
 
 public:
     void SetUp() override;
     void TearDown() override;
-    void releaseGILFromThisThread() const;
-    void reacquireGILForThisThread() const;
+    ovms::PythonInterpreterModule* getPythonInterpreterModule() const;
+    ovms::PythonBackend* getPythonBackend() const;
 };
+
+ovms::PythonBackend* getGlobalPythonBackend();
+ovms::PythonInterpreterModule* getGlobalPythonInterpreterModule();

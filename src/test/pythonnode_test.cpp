@@ -41,7 +41,6 @@
 #include "../model_service.hpp"
 #include "../module.hpp"
 #include "../precision.hpp"
-#include "../python/pythoninterpretermodule.hpp"
 #include "../python/pythonnoderesources.hpp"
 #include "../servablemanagermodule.hpp"
 #include "../server.hpp"
@@ -59,6 +58,7 @@
 #include "c_api_test_utils.hpp"
 #include "constructor_enabled_model_manager.hpp"
 #include "platform_utils.hpp"
+#include "python_environment.hpp"
 #include "test_utils.hpp"
 
 namespace py = pybind11;
@@ -74,21 +74,6 @@ We do this because we don't want to restart interpreter in the tests.
 It's launching along with the server and even though most tests will not use the server, the interpreter remains initialized.
 */
 std::unique_ptr<std::thread> serverThread;
-std::unique_ptr<PythonInterpreterModule> standalonePythonModule;
-
-static void ensureStandalonePythonModuleInitialized() {
-    if (standalonePythonModule != nullptr) {
-        return;
-    }
-    standalonePythonModule = std::make_unique<PythonInterpreterModule>();
-    auto status = standalonePythonModule->start(ovms::Config::instance());
-    if (!status.ok()) {
-        throw std::runtime_error("Standalone python interpreter module failed to start");
-    }
-    if (standalonePythonModule->ownsPythonInterpreter()) {
-        standalonePythonModule->releaseGILFromThisThread();
-    }
-}
 
 class PythonFlowTest : public ::testing::Test {
 protected:
@@ -122,11 +107,6 @@ public:
         ovms::Server::instance().setShutdownRequest(1);
         serverThread->join();
         ovms::Server::instance().setShutdownRequest(0);
-        if (standalonePythonModule != nullptr) {
-            standalonePythonModule->reacquireGILForThisThread();
-            standalonePythonModule->shutdown();
-            standalonePythonModule.reset();
-        }
         std::string path = getGenericFullPathForTmp("/tmp/pythonNodeTestRemoveFile.txt");
         ASSERT_TRUE(!std::filesystem::exists(path));
     }
@@ -141,8 +121,7 @@ static PythonBackend* getPythonBackend() {
         }
     }
 
-    ensureStandalonePythonModuleInitialized();
-    auto* pythonBackend = standalonePythonModule->getPythonBackend();
+    auto* pythonBackend = getGlobalPythonBackend();
     if (pythonBackend == nullptr) {
         throw std::runtime_error("Python backend is not available");
     }
