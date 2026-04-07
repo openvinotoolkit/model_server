@@ -142,20 +142,36 @@ if "!output_user_root!" neq "opt" (
     if !errorlevel! neq 0 exit /b !errorlevel!
 )
 
-echo [INFO] OV_USE_BINARY=%OV_USE_BINARY%
-IF "%OV_USE_BINARY%"=="0" (
-    goto :install_openvino_from_src
-)
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: Install in c:\PR-XXXX\ section started - once per build, reinstalled only with expunge clean :::::::::::::::::::::::::::::::::: 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+:: Load dependency version defaults from shared versions.mk (only sets variables not already in environment).
+:: Each line is "VAR ?= VALUE": token 1 = name, token 2 = ?= (skipped), token 3 = value.
+for /f "usebackq eol=# tokens=1,3" %%A in ("%~dp0versions.mk") do (
+    call :setifempty "%%A" "%%B"
+)
+echo [INFO]   OV_USE_BINARY=%OV_USE_BINARY%
+echo [INFO]   OV_SOURCE_BRANCH=%OV_SOURCE_BRANCH%
+echo [INFO]   OV_TOKENIZERS_BRANCH=%OV_TOKENIZERS_BRANCH%
+echo [INFO]   OV_GENAI_BRANCH=%OV_GENAI_BRANCH%
+echo [INFO]   OV_SOURCE_ORG=%OV_SOURCE_ORG%
+echo [INFO]   OV_GENAI_ORG=%OV_GENAI_ORG%
+echo [INFO]   OV_TOKENIZERS_ORG=%OV_TOKENIZERS_ORG%
+echo [INFO]   GENAI_PACKAGE_URL_WINDOWS=%GENAI_PACKAGE_URL_WINDOWS%
+
+echo [INFO] OV_USE_BINARY=%OV_USE_BINARY%
+IF "%OV_USE_BINARY%"=="0" (
+    goto :install_openvino_from_src
+)
+
+
+::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: GENAI/OPENVINO install from ZIP - reinstalled per build trigger
-:: Set default GENAI_PACKAGE_URL if not set
+:: Set GENAI_PACKAGE_URL from versions.mk value (loaded above) if not already set by the environment
 if "%GENAI_PACKAGE_URL%"=="" (
-    set "GENAI_PACKAGE_URL=https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/nightly/2026.2.0.0.dev20260323/openvino_genai_windows_2026.2.0.0.dev20260323_x86_64.zip"
+    set "GENAI_PACKAGE_URL=%GENAI_PACKAGE_URL_WINDOWS%"
 )
 
 :: Extract genai_ver from GENAI_PACKAGE_URL (filename)
@@ -207,24 +223,6 @@ goto :finished_openvino
 IF /I EXIST %BAZEL_SHORT_PATH%\openvino (
     rmdir /S /Q %BAZEL_SHORT_PATH%\openvino
 )
-if "%OV_SOURCE_BRANCH%"=="" (
-    set "OV_SOURCE_BRANCH=2027bca79802f99e7dbdbb7e376509b5bce24b19"
-)
-if "%OV_SOURCE_ORG%"=="" (
-    set "OV_SOURCE_ORG=openvinotoolkit"
-)
-if "%TOKENIZER_SOURCE_ORG%"=="" (
-    set "TOKENIZER_SOURCE_ORG=openvinotoolkit"
-)
-if "%TOKENIZER_SOURCE_BRANCH%"=="" (
-    set "TOKENIZER_SOURCE_BRANCH=84773ba7869b8d6102996eecdfdff3b9e241d080"
-)
-if "%GENAI_SOURCE_ORG%"=="" (
-    set "GENAI_SOURCE_ORG=openvinotoolkit"
-)
-if "%GENAI_SOURCE_BRANCH%"=="" (
-    set "GENAI_SOURCE_BRANCH=61eba59ded9def1ee529d40acdeeaa9bad3331ad"
-)
 
 echo [INFO] Using OpenVINO source from %OV_SOURCE_ORG%
 IF /I EXIST %BAZEL_SHORT_PATH%\openvino_src (
@@ -266,11 +264,11 @@ call %BAZEL_SHORT_PATH%\openvino\setupvars.bat
 ::::::::::::::::::::::: OpenVINO Tokenizers
 
 IF /I NOT EXIST %BAZEL_SHORT_PATH%\openvino_tokenizers_src (
-    git clone https://github.com/%TOKENIZER_SOURCE_ORG%/openvino_tokenizers.git %BAZEL_SHORT_PATH%\openvino_tokenizers_src
+    git clone https://github.com/%OV_TOKENIZERS_ORG%/openvino_tokenizers.git %BAZEL_SHORT_PATH%\openvino_tokenizers_src
 )
 cd %BAZEL_SHORT_PATH%\openvino_tokenizers_src
 git fetch origin
-git checkout %TOKENIZER_SOURCE_BRANCH%
+git checkout %OV_TOKENIZERS_BRANCH%
 if !errorlevel! neq 0 exit /b !errorlevel!
 git pull --recurse-submodules
 IF /I NOT EXIST build (
@@ -288,11 +286,11 @@ if !errorlevel! neq 0 exit /b !errorlevel!
 ::::::::::::::::::::::: OpenVINO GenAI
 
 IF /I NOT EXIST %BAZEL_SHORT_PATH%\openvino_genai_src (
-    git clone https://github.com/%GENAI_SOURCE_ORG%/openvino.genai.git %BAZEL_SHORT_PATH%\openvino_genai_src
+    git clone https://github.com/%OV_GENAI_ORG%/openvino.genai.git %BAZEL_SHORT_PATH%\openvino_genai_src
 )
 cd %BAZEL_SHORT_PATH%\openvino_genai_src
 git fetch origin
-git checkout %GENAI_SOURCE_BRANCH%
+git checkout %OV_GENAI_BRANCH%
 if !errorlevel! neq 0 exit /b !errorlevel!
 git pull --recurse-submodules
 IF /I NOT EXIST build (
@@ -620,3 +618,8 @@ exit /b 0
 echo [ERROR] Some dependencies not installed
 exit /b 1
 endlocal
+
+:: Set VAR to VALUE only if VAR is not already defined in the environment.
+:setifempty
+if "!%~1!"=="" set "%~1=%~2"
+exit /b 0
