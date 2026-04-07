@@ -2,12 +2,12 @@
 --extra-index-url "https://storage.openvinotoolkit.org/simple/wheels/nightly"
 --extra-index-url "https://storage.openvinotoolkit.org/simple/wheels/pre-release"
 --pre
-optimum-intel@git+https://github.com/huggingface/optimum-intel.git
+optimum-intel@git+https://github.com/huggingface/optimum-intel.git@2ca7f8bb09d536c0b6136830dfe31c7fefe14701
 accelerate
 datasets
 diffusers  # for image generation
 einops
-nncf@git+https://github.com/openvinotoolkit/nncf.git
+nncf@git+https://github.com/openvinotoolkit/nncf.git@33992f3974cf84b8e68a74a97c1731f0435550a0
 numpy
 openvino-tokenizers==2026.1.0.0rc2
 openvino==2026.1.0rc2
