@@ -21,7 +21,7 @@
 
 #ifdef _MSC_VER
 #pragma warning(push)
-#pragma warning(disable: 6313)
+#pragma warning(disable : 6313)
 #endif
 
 namespace ovms {
