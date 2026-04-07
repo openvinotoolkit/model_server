@@ -16,7 +16,7 @@ In this demo, OpenVINO Model Server is deployed on Linux with CPU using Docker a
 
 * [Docker Engine](https://docs.docker.com/engine/) installed
 * Host with x86_64 architecture
-* Linux, macOS, or Windows
+* Linux or Windows
 * Python 3.11 with pip 
 * HuggingFace account to download models
 
@@ -70,7 +70,7 @@ Go to [http://localhost:8080](http://localhost:8080) and create admin account to
 
 ![get started with Open WebUI](./get_started_with_Open_WebUI.png)
 
-> **Important Note**: While using NPU device for acceleration or model gpt-oss-20b with GPU, it is recommended to disable `Follow-Up Auto-Generation` in `Settings > Interface` menu. It will improve response time and avoid queuing requests. For gpt-oss model it will avoid concurrent execution which in version 2026.0 has an accuracy issue.
+> **Important Note**: While using NPU device for acceleration it is recommended to disable `Follow-Up Auto-Generation` in `Settings > Interface` menu. It will improve response time and avoid queuing requests.
 
 ### References
 [https://docs.openvino.ai/2026/model-server/ovms_demos_continuous_batching.html](https://docs.openvino.ai/2026/model-server/ovms_demos_continuous_batching.html#model-preparation)
