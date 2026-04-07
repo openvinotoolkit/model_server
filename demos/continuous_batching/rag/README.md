@@ -1,8 +1,7 @@
 # RAG demo with OpenVINO Model Server {#ovms_demos_continuous_batching_rag}
 
-## Creating models repository for all the endpoints with ovms --pull or python export_model.py script
+## Creating models repository for all the endpoints with ovms --pull from [Hugging Face Hub OpenVINO organization](https://huggingface.co/OpenVINO)
 
-### Download the preconfigured models using ovms --pull option from [Hugging Face Hub OpenVINO organization](https://huggingface.co/OpenVINO) (Simple usage)
 ::::{tab-set}
 
 :::{tab-item} With Docker
@@ -26,55 +25,36 @@ docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/mo
 ```bat
 mkdir models
 
-ovms --pull --model_repository_path models --source_model OpenVINO/Qwen3-8B-int4-ov --task text_generation
-ovms --pull --model_repository_path models --source_model OpenVINO/bge-base-en-v1.5-fp16-ov --task embeddings
-ovms --pull --model_repository_path models --source_model OpenVINO/bge-reranker-base-fp16-ov --task rerank
+ovms --pull --model_repository_path models --source_model OpenVINO/Qwen3-8B-int4-ov --task text_generation --target_device GPU
+ovms --pull --model_repository_path models --source_model OpenVINO/bge-base-en-v1.5-fp16-ov --task embeddings --target_device GPU
+ovms --pull --model_repository_path models --source_model OpenVINO/bge-reranker-base-fp16-ov --task rerank --target_device GPU
 
 ovms --add_to_config --config_path models/config.json --model_name OpenVINO/Qwen3-8B-int4-ov --model_path OpenVINO/Qwen3-8B-int4-ov
 ovms --add_to_config --config_path models/config.json --model_name OpenVINO/bge-base-en-v1.5-fp16-ov --model_path OpenVINO/bge-base-en-v1.5-fp16-ov
 ovms --add_to_config --config_path models/config.json --model_name OpenVINO/bge-reranker-base-fp16-ov --model_path OpenVINO/bge-reranker-base-fp16-ov
 ```
 :::
-
-:::{tab-item} Windows service
-**Required:** OpenVINO Model Server package - see [deployment instructions](../../../docs/deploying_server_baremetal.md) for details.
-**Assumption:** install_ovms_service.bat was called without additional parameters - using default c:\models config path.
-```bat
-mkdir c:\models
-
-ovms --pull --model_repository_path c:\models --source_model OpenVINO/Qwen3-8B-int4-ov --task text_generation
-ovms --pull --model_repository_path c:\models --source_model OpenVINO/bge-base-en-v1.5-fp16-ov --task embeddings
-ovms --pull --model_repository_path c:\models --source_model OpenVINO/bge-reranker-base-fp16-ov --task rerank
-
-ovms --add_to_config --config_path c:\models\config.json --model_name OpenVINO/Qwen3-8B-int4-ov --model_path OpenVINO/Qwen3-8B-int4-ov
-ovms --add_to_config --config_path c:\models\config.json --model_name OpenVINO/bge-base-en-v1.5-fp16-ov --model_path OpenVINO/bge-base-en-v1.5-fp16-ov
-ovms --add_to_config --config_path c:\models\config.json --model_name OpenVINO/bge-reranker-base-fp16-ov --model_path OpenVINO/bge-reranker-base-fp16-ov
-```
-:::
 ::::
 
 
-### Optionally, if you want to deploy different models use the build-in ovms functionality in openvino/model_server:latest-py described here [pull mode with optimum cli](../../../docs/pull_optimum_cli.md)
+### Optionally, if you want to deploy different models, use the built-in OVMS functionality in `openvino/model_server:latest-py` described in [pull mode with optimum cli](../../../docs/pull_optimum_cli.md)
 
 ## Deploying the model server
 
-### With Docker
+::::{tab-set}
+
+:::{tab-item} With Docker
 ```bash
 docker run -d --rm -p 8000:8000 -v $(pwd)/models:/workspace:ro openvino/model_server:latest --rest_port 8000 --config_path /workspace/config.json
 ```
-### On Baremetal Unix
-```bash
-ovms --rest_port 8000 --config_path models/config.json
-```
-### Windows
+:::
+
+:::{tab-item} On Baremetal Windows
 ```bat
 ovms --rest_port 8000 --config_path models\config.json
 ```
-
-### Server as Windows Service
-```bat
-sc start ovms
-```
+:::
+::::
 
 ## Readiness Check
 
