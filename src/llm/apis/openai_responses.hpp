@@ -48,6 +48,9 @@ class OpenAIResponsesHandler : public OpenAIApiHandler {
     // Responses serialization helpers
     void serializeToolChoice(Writer<StringBuffer>& writer) const;
     void serializeTools(Writer<StringBuffer>& writer) const;
+    void serializeResponseEnvelope(Writer<StringBuffer>& writer, const std::string& responseId, int64_t createdAt,
+        const std::string& status,
+        const std::optional<std::string>& incompleteReason = std::nullopt, const std::optional<std::string>& errorMessage = std::nullopt, ResponsesErrorCode errorCode = ResponsesErrorCode::SERVER_ERROR) const;
     void serializeResponseObject(Writer<StringBuffer>& writer, const std::string& responseId, int64_t createdAt,
         const std::string& status, const std::string& fullOutputText, bool includeUsage,
         const std::optional<std::string>& incompleteReason = std::nullopt, const std::optional<std::string>& errorMessage = std::nullopt, ResponsesErrorCode errorCode = ResponsesErrorCode::SERVER_ERROR) const;

@@ -340,8 +340,8 @@ void OpenAIResponsesHandler::serializeTools(Writer<StringBuffer>& writer) const 
     writer.EndArray();
 }
 
-void OpenAIResponsesHandler::serializeResponseObject(Writer<StringBuffer>& writer, const std::string& responseId, int64_t createdAt,
-    const std::string& status, const std::string& fullOutputText, bool includeUsage,
+void OpenAIResponsesHandler::serializeResponseEnvelope(Writer<StringBuffer>& writer, const std::string& responseId, int64_t createdAt,
+    const std::string& status,
     const std::optional<std::string>& incompleteReason, const std::optional<std::string>& errorMessage, ResponsesErrorCode errorCode) const {
     writer.StartObject();
     writer.String("id");
@@ -414,6 +414,12 @@ void OpenAIResponsesHandler::serializeResponseObject(Writer<StringBuffer>& write
         writer.String("max_output_tokens");
         writer.Uint64(static_cast<uint64_t>(request.maxTokens.value()));
     }
+}
+
+void OpenAIResponsesHandler::serializeResponseObject(Writer<StringBuffer>& writer, const std::string& responseId, int64_t createdAt,
+    const std::string& status, const std::string& fullOutputText, bool includeUsage,
+    const std::optional<std::string>& incompleteReason, const std::optional<std::string>& errorMessage, ResponsesErrorCode errorCode) const {
+    serializeResponseEnvelope(writer, responseId, createdAt, status, incompleteReason, errorMessage, errorCode);
 
     writer.String("output");
     writer.StartArray();
@@ -524,71 +530,13 @@ std::string OpenAIResponsesHandler::serializeUnaryResponseImpl(const std::vector
     const bool isIncomplete = (finishReason == ov::genai::GenerationFinishReason::LENGTH);
     const std::string responseStatus = isIncomplete ? "incomplete" : "completed";
     const auto createdAt = std::chrono::duration_cast<std::chrono::seconds>(created.time_since_epoch()).count();
-    const auto completedAt = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
     const std::string responseId = "resp-" + std::to_string(createdAt);
+    std::optional<std::string> incompleteReason = isIncomplete ? std::optional<std::string>("max_tokens") : std::nullopt;
 
     StringBuffer buffer;
     Writer<StringBuffer> writer(buffer);
 
-    writer.StartObject();
-    writer.String("id");
-    writer.String(responseId.c_str());
-    writer.String("object");
-    writer.String("response");
-    writer.String("created_at");
-    writer.Int64(createdAt);
-    if (!isIncomplete) {
-        writer.String("completed_at");
-        writer.Int64(completedAt);
-    }
-    if (isIncomplete) {
-        writer.String("incomplete_details");
-        writer.StartObject();
-        writer.String("reason");
-        writer.String("max_tokens");
-        writer.EndObject();
-    }
-    // TODO: error not supported in unary response
-    writer.String("model");
-    writer.String(request.model.c_str());
-    writer.String("status");
-    writer.String(responseStatus.c_str());
-
-    writer.String("parallel_tool_calls");
-    writer.Bool(true);
-    // TODO: previous_response_id not supported
-    writer.String("store");
-    writer.Bool(true);
-    // TODO: temperature/top_p are only included when explicitly provided in the request
-    if (request.temperature.has_value()) {
-        writer.String("temperature");
-        writer.Double(static_cast<double>(request.temperature.value()));
-    }
-    writer.String("text");
-    writer.StartObject();
-    writer.String("format");
-    writer.StartObject();
-    writer.String("type");
-    writer.String("text");
-    writer.EndObject();
-    writer.EndObject();
-    serializeToolChoice(writer);
-    serializeTools(writer);
-    if (request.topP.has_value()) {
-        writer.String("top_p");
-        writer.Double(static_cast<double>(request.topP.value()));
-    }
-    writer.String("truncation");
-    writer.String("disabled");
-    // TODO: user not supported
-    writer.String("metadata");
-    writer.StartObject();
-    writer.EndObject();
-
-    if (request.maxTokens.has_value()) {
-        writer.String("max_output_tokens");
-        writer.Uint64(static_cast<uint64_t>(request.maxTokens.value()));
-    }
+    serializeResponseEnvelope(writer, responseId, createdAt, responseStatus, incompleteReason);
 
     writer.String("output");
     writer.StartArray();
