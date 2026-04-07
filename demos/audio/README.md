@@ -18,7 +18,7 @@ Check supported [Speech Recognition Models](https://openvinotoolkit.github.io/op
 ## Speech generation
 ### Prepare speaker embeddings
 When generating speech you can use default speaker voice or you can prepare your own speaker embedding file. Here you can see how to do it with downloaded file from online repository, but you can try with your own speech recording as well:
-```bash
+```console
 pip install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/audio/requirements.txt
 mkdir -p audio_samples
 curl --output audio_samples/audio.wav "https://www.voiptroubleshooter.com/open_speech/american/OSR_us_000_0032_8k.wav"
@@ -154,9 +154,8 @@ Play speech.wav file to check generated speech.
 An asynchronous benchmarking client can be used to access the model server performance with various load conditions. Below are execution examples captured on Intel(R) Core(TM) Ultra 7 258V.
 
 ```console
-git clone https://github.com/openvinotoolkit/model_server
-cd model_server/demos/benchmark/v3/
-pip install -r requirements.txt
+pip install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/benchmark/v3/requirements.txt
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/benchmark/v3/benchmark.py -o benchmark.py
 python benchmark.py --api_url http://localhost:8000/v3/audio/speech --model microsoft/speecht5_tts --batch_size 1 --limit 100 --request_rate inf --backend text2speech --dataset edinburghcstr/ami --hf-subset ihm --tokenizer openai/whisper-large-v3-turbo --trust-remote-code True
 Number of documents: 100
 100%|████████████████████████████████████████████████████████████████████████████████| 100/100 [01:58<00:00,  1.19s/it]
@@ -330,9 +329,8 @@ print(transcript.words)
 An asynchronous benchmarking client can be used to access the model server performance with various load conditions. Below are execution examples captured on Intel(R) Core(TM) Ultra 7 258V.
 
 ```console
-git clone https://github.com/openvinotoolkit/model_server
-cd model_server/demos/benchmark/v3/
-pip install -r requirements.txt
+pip install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/benchmark/v3/requirements.txt
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/benchmark/v3/benchmark.py -o benchmark.py
 python benchmark.py --api_url http://localhost:8000/v3/audio/transcriptions --model openai/whisper-large-v3-turbo --batch_size 1 --limit 1000 --request_rate inf --dataset edinburghcstr/ami --hf-subset ihm --backend speech2text --trust-remote-code True
 Number of documents: 1000
 100%|██████████████████████████████████████████████████████████████████████████████| 1000/1000 [04:44<00:00,  3.51it/s]
