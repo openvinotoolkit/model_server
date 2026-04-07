@@ -104,7 +104,7 @@ To configure them in *OpenWebUI* with an example of turning off reasoning:
 1. Go to **Admin Panel** -> **Settings** -> **Models** ([http://localhost:8080/admin/settings/models](http://localhost:8080/admin/settings/models))
 2. Click on desired model, unfold **Advanced Params**.
 3. Click **+ Add Custom Parameter**.
-4. Change parameter name to `chat_template_kwargs` and content to `{"enable_thinking": false}`.
+4. Change parameter name to `chat_template_kwargs` and content to `{"reasoning_effort": "low"}`.
 
 ![parameter set](./set_chat_template_parameter.png)
 
