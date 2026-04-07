@@ -19,6 +19,11 @@
 #include <rapidjson/writer.h>
 #include <rapidjson/stringbuffer.h>
 
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable: 6313)
+#endif
+
 namespace ovms {
 size_t findInStringRespectingSpecialChars(const std::string& str, const std::string& target, size_t startPos);
 void writeArgumentOfAnyType(const rapidjson::Value& arg, rapidjson::Writer<rapidjson::StringBuffer>& writer);
