@@ -521,7 +521,7 @@ Output file (`edit_output.png`):
 
 ### Using dedicated inpainting models
 
-While the base `OpenVINO/stable-diffusion-v1-5-int8-ov` model deployed above supports inpainting and outpainting via the `images/edits` endpoint, using a dedicated inpainting model gives significantly better results. These models have a 9-channel UNet specifically trained for masked generation.
+While the base `OpenVINO/stable-diffusion-v1-5-int8-ov` model deployed above supports inpainting and outpainting via the `images/edits` endpoint, using a dedicated inpainting model gives significantly better results.
 
 Example dedicated models for inpainting:
 - `stable-diffusion-v1-5/stable-diffusion-inpainting` — SD 1.5 based, 512×512 native resolution
