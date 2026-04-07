@@ -380,7 +380,7 @@ mcpo --port 9000 -- python -m mcp_weather_server
 4. In **Default Features** enable **Web Search** or toggle it in the chat
 5. In **Advanced Parameters** set **Function Calling** to **Native**
 
-![function calling native](./funcition_calling_native_set.png)
+![function calling native](./function_calling_native_set.png)
 
 ![web search model configuration](./web_search_model_config.png)
 
@@ -422,7 +422,7 @@ Then workspace model should be created:
 3. In **Buildin Tools** section enable **Memory**
 4. In **Advanced Parameters** set **Function Calling** to **Native**
 
-![function calling native](./function_calling_native_set_workspace.pngs)
+![function calling native](./function_calling_native_set_workspace.png)
 
 ![model memory config](./model_memory_configuration.png)
 
@@ -435,7 +435,7 @@ It's now available in all chats:
 ### Reference 
 [https://docs.openwebui.com/features/chat-conversations/memory/](https://docs.openwebui.com/features/chat-conversations/memory/)
 
-## Code Interpreting
+## Code Interpreter
 
 It's available to use **Code Interpreter** feature in Open Web UI.
 
