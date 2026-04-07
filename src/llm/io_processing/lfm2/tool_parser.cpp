@@ -35,7 +35,6 @@ const std::string Lfm2ToolParser::TOOL_ARGS_START_INDICATOR = "(";
 const std::string Lfm2ToolParser::TOOL_ARGS_END_INDICATOR = ")";
 const std::string Lfm2ToolParser::TOOL_SEPARATOR_STR = ", ";
 
-
 std::string Lfm2ToolParser::parseArrayParameter(std::string argumentStr) {
     int quoteDepth = 0;
 
