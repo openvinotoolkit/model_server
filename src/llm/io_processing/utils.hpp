@@ -15,13 +15,14 @@
 //*****************************************************************************
 #pragma once
 #include <string>
-#include <rapidjson/document.h>
-#include <rapidjson/writer.h>
-#include <rapidjson/stringbuffer.h>
 
 #ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning(disable : 6313)
+#include <rapidjson/writer.h>
+#include <rapidjson/document.h>
+#include <rapidjson/stringbuffer.h>
+#pragma warning(pop)
 #endif
 
 namespace ovms {
