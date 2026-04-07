@@ -17,6 +17,8 @@
 from __future__ import annotations
 
 import asyncio
+import base64
+import mimetypes
 import os
 import platform
 import sys
@@ -48,6 +50,33 @@ if https_proxy:
     env_proxy["https_proxy"] = https_proxy
 
 RunConfig.tracing_disabled = False  # Enable tracing for this example
+
+
+def _image_url_from_path(path: str) -> str:
+    """Return a data-URI for a local file or pass through an HTTP(S) URL."""
+    if path.startswith(("http://", "https://")):
+        return path
+    mime_type = mimetypes.guess_type(path)[0] or "image/png"
+    with open(path, "rb") as f:
+        data = base64.b64encode(f.read()).decode("utf-8")
+    return f"data:{mime_type};base64,{data}"
+
+
+def build_multimodal_input(query: str, image_paths: list[str]) -> list[dict]:
+    """Build a Responses-API-style multimodal user message with text and images.
+
+    The OpenAI Agents SDK expects content parts typed as ``input_text`` /
+    ``input_image`` (Responses API format), *not* the Chat Completions
+    ``text`` / ``image_url`` format.
+    """
+    content: list[dict] = [{"type": "input_text", "text": query}]
+    for img in image_paths:
+        content.append({
+            "type": "input_image",
+            "image_url": _image_url_from_path(img),
+        })
+    return [{"role": "user", "content": content}]
+
 
 def check_if_tool_calls_present(result) -> bool:
     if hasattr(result, 'new_items') and result.new_items:
@@ -99,6 +128,8 @@ if __name__ == "__main__":
     parser.add_argument("--mcp-server", type=str, choices=["all", "weather", "fs"], default="all", help="Which MCP server(s) to use: all, weather, or fs")
     parser.add_argument("--tool-choice", type=str, default="auto", choices=["auto", "required"], help="Tool choice for the agent")
     parser.add_argument("--enable-thinking", action="store_true", help="Enable agent thinking (default: False)")
+    parser.add_argument("--image", type=str, nargs="+", default=[], metavar="PATH_OR_URL",
+                        help="One or more image file paths or URLs to include with the prompt")
     args = parser.parse_args()
     mcp_servers = []
     if args.mcp_server in ["all", "weather"]:
@@ -137,8 +168,13 @@ if __name__ == "__main__":
         model_settings=ModelSettings(tool_choice=args.tool_choice, temperature=0.0, max_tokens=1000, extra_body={"chat_template_kwargs": {"enable_thinking": args.enable_thinking}}),
     )
     loop = asyncio.new_event_loop()
-    
-    is_tool_call_present = loop.run_until_complete(run(args.query, agent, OVMS_MODEL_PROVIDER, args.stream))
+
+    if args.image:
+        agent_input = build_multimodal_input(args.query, args.image)
+    else:
+        agent_input = args.query
+
+    is_tool_call_present = loop.run_until_complete(run(agent_input, agent, OVMS_MODEL_PROVIDER, args.stream))
     
     # for testing purposes, exit codes are dependent on whether a tool call was present in the agent's reasoning process
     if is_tool_call_present:

@@ -39,7 +39,7 @@ pip install openai-agents openai
 
 ## Start OVMS
 
-This deployment procedure assumes the model was pulled or exported using the procedure above. The exception are models from OpenVINO organization if they support tools correctly with the default template like "OpenVINO/Qwen3-8B-int4-ov" - they can be deployed in a single command pulling and staring the server.
+This deployment procedure assumes the model was pulled or exported using the procedure above. The exception are models from OpenVINO organization if they support tools correctly with the default template like "OpenVINO/Qwen3-4B-int4-ov" - they can be deployed in a single command pulling and starting the server.
 
 
 ### Deploying on Windows with GPU
@@ -47,21 +47,29 @@ Assuming you have unpacked model server package with python enabled version, mak
 as mentioned in [deployment guide](../../../docs/deploying_server_baremetal.md), in every new shell that will start OpenVINO Model Server.
 
 ::::{tab-set}
-:::{tab-item} Qwen3-8B
-:sync: Qwen3-8B
+:::{tab-item} Qwen3-VL-8B
+:sync: Qwen3-VL-8B
 Pull and start OVMS:
 ```bat
-ovms.exe --rest_port 8000 --source_model OpenVINO/Qwen3-8B-int4-ov --model_repository_path c:\models --tool_parser hermes3 --target_device GPU --task text_generation --cache_dir .cache
+ovms.exe --rest_port 8000 --source_model Junrui2021/Qwen3-VL-8B-Instruct-int4 --model_repository_path c:\models --tool_parser hermes3 --target_device GPU --task text_generation --pipeline_type VLM_CB --cache_dir .cache --allowed_media_domains raw.githubusercontent.com
 ```
 
-Use MCP server:
+Use MCP server, with additional image of Gdańsk old town. VLM model deduces location and calls `get_weather` tool to summarize the weather conditions in the city.
+
+```{image} https://images.pexels.com/photos/20015887/pexels-photo-20015887.jpeg
+:alt: poland
+:width: 360px
+```
+
+> **Note**: Image source: [Link](https://images.pexels.com/photos/20015887/pexels-photo-20015887.jpeg)
+
 ```bat
-python openai_agent.py --query "What is the current weather in Tokyo?" --model OpenVINO/Qwen3-8B-int4-ov --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather
+python openai_agent.py --query "What is the current weather in location depicted in the image?" --image https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/1/demos/continuous_batching/agentic_ai/photo.jpeg --model Junrui2021/Qwen3-VL-8B-Instruct-int4 --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather
 ```
 
 Exemplary output:
 ```text
-The current weather in Tokyo is overcast with a temperature of 9.4°C (feels like 6.4°C). The relative humidity is at 42%, and the dew point is at -2.9°C. Wind is blowing from the NE at 3.6 km/h with gusts up to 24.8 km/h. The atmospheric pressure is 1018.9 hPa with 84% cloud cover. Visibility is 24.1 km.
+The current weather in Gdańsk is overcast with a temperature of 8.8°C (feels like 4.2°C). The relative humidity is 52%, and the wind is blowing from the SSW at 17.0 km/h with gusts up to 36.7 km/h. The atmospheric pressure is 1010.7 hPa with 84% cloud cover. The UV index is moderate at 3.5, and visibility is 40.9 km.
 ```
 :::
 :::{tab-item} Qwen3-4B
@@ -191,23 +199,31 @@ The current weather in Tokyo is overcast with a temperature of 9.4°C (feels lik
 ### Deploying in a docker container on CPU
 
 ::::{tab-set}
-:::{tab-item} Qwen3-8B
-:sync: Qwen3-8B
+:::{tab-item} Qwen3-VL-8B
+:sync: Qwen3-VL-8B
 Pull and start OVMS:
 ```bash
 mkdir -p ${HOME}/models
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v ${HOME}/models:/models openvino/model_server:weekly \
---rest_port 8000 --model_repository_path /models --source_model OpenVINO/Qwen3-8B-int4-ov --tool_parser hermes3 --task text_generation
+--rest_port 8000 --model_repository_path /models --source_model Junrui2021/Qwen3-VL-8B-Instruct-int4 --tool_parser hermes3 --task text_generation --pipeline_type VLM_CB --allowed_media_domains raw.githubusercontent.com
 ```
 
-Use MCP server:
+Use MCP server, with additional image of Gdańsk old town. VLM model deduces location and calls `get_weather` tool to summarize the weather conditions in the city.
+
+```{image} https://images.pexels.com/photos/20015887/pexels-photo-20015887.jpeg
+:alt: poland
+:width: 360px
+```
+
+> **Note**: Image source: [Link](https://images.pexels.com/photos/20015887/pexels-photo-20015887.jpeg)
+
 ```bash
-python openai_agent.py --query "What is the current weather in Tokyo?" --model OpenVINO/Qwen3-8B-int4-ov --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather
+python openai_agent.py --query "What is the current weather in location depicted in the image?" --image https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/1/demos/continuous_batching/agentic_ai/photo.jpeg --model Junrui2021/Qwen3-VL-8B-Instruct-int4 --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather
 ```
 
 Exemplary output:
 ```text
-The current weather in Tokyo is overcast with a temperature of 9.4°C (feels like 6.4°C). The relative humidity is at 42%, and the dew point is -2.9°C. Wind is blowing from the northeast at 3.6 km/h with gusts up to 24.8 km/h. The atmospheric pressure is 1018.9 hPa, with 84% cloud cover and visibility of 24.1 km.
+The current weather in Gdańsk is overcast with a temperature of 8.8°C (feels like 4.2°C). The relative humidity is 52%, and the wind is blowing from the SSW at 17.0 km/h with gusts up to 36.7 km/h. The atmospheric pressure is 1010.7 hPa with 84% cloud cover. The UV index is moderate at 3.5, and visibility is 40.9 km.
 ```
 :::
 :::{tab-item} Qwen3-4B
@@ -308,23 +324,31 @@ to `docker run` command, use the image with GPU support. Export the models with 
 It can be applied using the commands below:
 
 ::::{tab-set}
-:::{tab-item} Qwen3-8B
-:sync: Qwen3-8B
+:::{tab-item} Qwen3-VL-8B
+:sync: Qwen3-VL-8B
 Pull and start OVMS:
 ```bash
 mkdir -p ${HOME}/models
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v ${HOME}/models:/models --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:weekly \
---rest_port 8000 --model_repository_path /models --source_model OpenVINO/Qwen3-8B-int4-ov --tool_parser hermes3 --target_device GPU --task text_generation
+--rest_port 8000 --model_repository_path /models --source_model Junrui2021/Qwen3-VL-8B-Instruct-int4 --tool_parser hermes3 --target_device GPU --task text_generation --pipeline_type VLM_CB --allowed_media_domains raw.githubusercontent.com
 ```
 
-Use MCP server:
+Use MCP server, with additional image of Gdańsk old town. VLM model deduces location and calls `get_weather` tool to summarize the weather conditions in the city.
+
+```{image} https://images.pexels.com/photos/20015887/pexels-photo-20015887.jpeg
+:alt: poland
+:width: 360px
+```
+
+> **Note**: Image source: [Link](https://images.pexels.com/photos/20015887/pexels-photo-20015887.jpeg)
+
 ```bash
-python openai_agent.py --query "What is the current weather in Tokyo?" --model OpenVINO/Qwen3-8B-int4-ov --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather
+python openai_agent.py --query "What is the current weather in location depicted in the image?" --image https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/1/demos/continuous_batching/agentic_ai/photo.jpeg --model Junrui2021/Qwen3-VL-8B-Instruct-int4 --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather
 ```
 
 Exemplary output:
 ```text
-The current weather in Tokyo is overcast with a temperature of 9.4°C (feels like 6.4°C). The relative humidity is at 42%, and the dew point is -2.9°C. Wind is blowing from the northeast at 3.6 km/h with gusts up to 24.8 km/h. The atmospheric pressure is 1018.9 hPa with 84% cloud cover, and visibility is 24.1 km.
+The current weather in Gdańsk is overcast with a temperature of 8.8°C (feels like 4.2°C). The relative humidity is 52%, and the wind is blowing from the SSW at 17.0 km/h with gusts up to 36.7 km/h. The atmospheric pressure is 1010.7 hPa with 84% cloud cover. The UV index is moderate at 3.5, and visibility is 40.9 km.
 ```
 :::
 :::{tab-item} Qwen3-4B
