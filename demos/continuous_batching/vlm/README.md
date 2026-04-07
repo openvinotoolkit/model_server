@@ -25,7 +25,7 @@ Text generation use case is exposed via OpenAI API `chat/completions` endpoint.
 ## Fast deployment with OpenVINO models pulled directly from HuggingFace Hub
 VLM models can be deployed in a single command by using pre-configured models from [OpenVINO HuggingFace organization](https://huggingface.co/OpenVINO)
 For other models go to the model preparation step and deployment for converted models.
-Here is an example of OpenVINO/InternVL2-2B-int4-ov deployment:
+Here is an example of `Qwen3-VL-8B-Instruct-int4` deployment:
 
 :::{dropdown} **Deploying with Docker**
 
@@ -36,7 +36,7 @@ Select deployment option depending on how you prepared models in the previous st
 Running this command starts the container with CPU only target device:
 ```bash
 mkdir -p models
-docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models:rw openvino/model_server:latest --rest_port 8000 --source_model OpenVINO/InternVL2-2B-int4-ov --model_repository_path /models --task text_generation --pipeline_type VLM  --allowed_media_domains raw.githubusercontent.com
+docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models:rw openvino/model_server:latest --rest_port 8000 --source_model Junrui2021/Qwen3-VL-8B-Instruct-int4 --model_repository_path /models --task text_generation --pipeline_type VLM_CB --allowed_media_domains raw.githubusercontent.com
 ```
 **GPU**
 
@@ -45,7 +45,7 @@ to `docker run` command, use the image with GPU support.
 It can be applied using the commands below:
 ```bash
 mkdir -p models
-docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -v $(pwd)/models:/models:rw openvino/model_server:latest-gpu --rest_port 8000 --source_model OpenVINO/InternVL2-2B-int4-ov --model_repository_path models --task text_generation --target_device GPU --pipeline_type VLM  --allowed_media_domains raw.githubusercontent.com
+docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -v $(pwd)/models:/models:rw openvino/model_server:latest-gpu --rest_port 8000 --source_model Junrui2021/Qwen3-VL-8B-Instruct-int4 --model_repository_path /models --task text_generation --target_device GPU --pipeline_type VLM_CB --allowed_media_domains raw.githubusercontent.com
 ```
 :::
 
@@ -55,11 +55,11 @@ If you run on GPU make sure to have appropriate drivers installed, so the device
 
 ```bat
 mkdir models
-ovms --rest_port 8000 --source_model OpenVINO/InternVL2-2B-int4-ov --model_repository_path models --task text_generation --pipeline_type VLM --target_device CPU --allowed_media_domains raw.githubusercontent.com
+ovms --rest_port 8000 --source_model Junrui2021/Qwen3-VL-8B-Instruct-int4 --model_repository_path models --task text_generation --pipeline_type VLM_CB --target_device CPU --allowed_media_domains raw.githubusercontent.com
 ```
 or
 ```bat
-ovms --rest_port 8000 --source_model OpenVINO/InternVL2-2B-int4-ov --model_repository_path models --task text_generation --pipeline_type VLM --target_device GPU --allowed_media_domains raw.githubusercontent.com
+ovms --rest_port 8000 --source_model Junrui2021/Qwen3-VL-8B-Instruct-int4 --model_repository_path models --task text_generation --pipeline_type VLM_CB --target_device GPU --allowed_media_domains raw.githubusercontent.com
 ```
 :::
 
@@ -74,7 +74,7 @@ curl http://localhost:8000/v3/models
   "object": "list",
   "data": [
     {
-      "id": "OpenVINO/InternVL2-2B-int4-ov",
+      "id": "Junrui2021/Qwen3-VL-8B-Instruct-int4",
       "object": "model",
       "created": 1772928358,
       "owned_by": "OVMS"
@@ -92,7 +92,7 @@ Let's send a request with text an image in the messages context.
 **Note**: using urls in request requires `--allowed_media_domains` parameter described [here](../../../docs/parameters.md)
 
 ```bash
-curl http://localhost:8000/v3/chat/completions  -H "Content-Type: application/json" -d "{ \"model\": \"OpenVINO/InternVL2-2B-int4-ov\", \"messages\":[{\"role\": \"user\", \"content\": [{\"type\": \"text\", \"text\": \"Describe what is one the picture.\"},{\"type\": \"image_url\", \"image_url\": {\"url\": \"http://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/demos/common/static/images/zebra.jpeg\"}}]}], \"max_completion_tokens\": 100}"
+curl http://localhost:8000/v3/chat/completions  -H "Content-Type: application/json" -d "{ \"model\": \"Junrui2021/Qwen3-VL-8B-Instruct-int4\", \"messages\":[{\"role\": \"user\", \"content\": [{\"type\": \"text\", \"text\": \"Describe what is one the picture.\"},{\"type\": \"image_url\", \"image_url\": {\"url\": \"http://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/demos/common/static/images/zebra.jpeg\"}}]}], \"max_completion_tokens\": 100}"
 ```
 ```json
 {
@@ -108,7 +108,7 @@ curl http://localhost:8000/v3/chat/completions  -H "Content-Type: application/js
     }
   ],
   "created": 1741731554,
-  "model": "OpenVINO/InternVL2-2B-int4-ov",
+  "model": "Junrui2021/Qwen3-VL-8B-Instruct-int4",
   "object": "chat.completion",
   "usage": {
     "prompt_tokens": 19,
@@ -129,7 +129,7 @@ curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/r
 import requests
 import base64
 base_url='http://127.0.0.1:8000/v3'
-model_name = "OpenVINO/InternVL2-2B-int4-ov"
+model_name = "Junrui2021/Qwen3-VL-8B-Instruct-int4"
 
 def convert_image(Image):
     with open(Image,'rb' ) as file:
@@ -137,7 +137,7 @@ def convert_image(Image):
     return base64_image
 
 import requests
-payload = {"model": "OpenVINO/InternVL2-2B-int4-ov",
+payload = {"model": "Junrui2021/Qwen3-VL-8B-Instruct-int4",
     "messages": [
         {
             "role": "user",
@@ -167,7 +167,7 @@ print(response.text)
     }
   ],
   "created": 1741731554,
-  "model": "OpenVINO/InternVL2-2B-int4-ov",
+  "model": "Junrui2021/Qwen3-VL-8B-Instruct-int4",
   "object": "chat.completion",
   "usage": {
     "prompt_tokens": 19,
@@ -189,7 +189,7 @@ pip3 install openai
 from openai import OpenAI
 import base64
 base_url='http://localhost:8080/v3'
-model_name = "OpenVINO/InternVL2-2B-int4-ov"
+model_name = "Junrui2021/Qwen3-VL-8B-Instruct-int4"
 
 client = OpenAI(api_key='unused', base_url=base_url)
 
