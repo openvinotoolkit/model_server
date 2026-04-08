@@ -20,10 +20,10 @@ Check supported [Speech Recognition Models](https://openvinotoolkit.github.io/op
 When generating speech you can use default speaker voice or you can prepare your own speaker embedding file. Here you can see how to do it with downloaded file from online repository, but you can try with your own speech recording as well:
 ```console
 pip install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/audio/requirements.txt
-mkdir -p audio_samples
+mkdir audio_samples
 curl --output audio_samples/audio.wav "https://www.voiptroubleshooter.com/open_speech/american/OSR_us_000_0032_8k.wav"
-mkdir -p models
-mkdir -p models/speakers
+mkdir models
+mkdir models/speakers
 curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/audio/create_speaker_embedding.py -o create_speaker_embedding.py
 python create_speaker_embedding.py audio_samples/audio.wav models/speakers/voice1.bin
 ```
@@ -346,10 +346,26 @@ Average document length: 10.948 tokens
 ## Translation
 To test translations endpoint we first need to prepare audio file with speech in language other than English, e.g. Spanish. To generate such sample we will use finetuned version of microsoft/speecht5_tts model.
 
-```console
+**Deploying with Docker**
+
+```bash
+mkdir -p models
+
 python export_model.py text2speech --source_model Sandiago21/speecht5_finetuned_facebook_voxpopuli_spanish --weight-format fp16 --model_name speecht5_tts_spanish --config_file_path models/config.json --model_repository_path models --overwrite_models --vocoder microsoft/speecht5_hifigan
 
 docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models:rw openvino/model_server:latest --rest_port 8000 --model_path /models/Sandiago21/speecht5_finetuned_facebook_voxpopuli_spanish --model_name speecht5_tts_spanish
+
+curl http://localhost:8000/v3/audio/speech -H "Content-Type: application/json" -d "{\"model\": \"speecht5_tts_spanish\", \"input\": \"Madrid es la capital de España\"}" -o speech_spanish.wav
+```
+
+**Deploying on Bare Metal**
+
+```bat
+mkdir models
+
+python export_model.py text2speech --source_model Sandiago21/speecht5_finetuned_facebook_voxpopuli_spanish --weight-format fp16 --model_name speecht5_tts_spanish --config_file_path models/config.json --model_repository_path models --overwrite_models --vocoder microsoft/speecht5_hifigan
+
+ovms --rest_port 8000 --model_path /models/Sandiago21/speecht5_finetuned_facebook_voxpopuli_spanish --model_name speecht5_tts_spanish
 
 curl http://localhost:8000/v3/audio/speech -H "Content-Type: application/json" -d "{\"model\": \"speecht5_tts_spanish\", \"input\": \"Madrid es la capital de España\"}" -o speech_spanish.wav
 ```
