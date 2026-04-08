@@ -28,6 +28,7 @@
 #pragma warning(pop)
 
 #include "src/audio/audio_utils.hpp"
+#include "src/client_connection.hpp"
 #include "src/http_payload.hpp"
 #include "src/logging.hpp"
 #include "src/stringutils.hpp"
@@ -129,6 +130,14 @@ static std::string serializeStreamingTextChunk(const std::string& text) {
     writer.String(text.c_str());
     writer.EndObject();
     return buffer.GetString();
+}
+
+static absl::Status checkClientDisconnected(const ovms::HttpPayload& payload, const std::string& nodeName, const char* context) {
+    if (payload.client && payload.client->isDisconnected()) {
+        SPDLOG_LOGGER_DEBUG(s2t_calculator_logger, "Client disconnected {} [Node: {}]", context, nodeName);
+        return absl::CancelledError("Client disconnected");
+    }
+    return absl::OkStatus();
 }
 
 class S2tCalculator : public CalculatorBase {
@@ -257,16 +266,24 @@ private:
                 return status;
 
             std::unique_lock lock(pipe->sttPipelineMutex);
+            auto disconnectStatus = checkClientDisconnected(payload, cc->NodeName(), "before transcription");
+            if (!disconnectStatus.ok()) return disconnectStatus;
             const ov::genai::WhisperDecodedResults result = pipe->sttPipeline->generate(rawSpeech, config);
             lock.unlock();
+            disconnectStatus = checkClientDisconnected(payload, cc->NodeName(), "after transcription");
+            if (!disconnectStatus.ok()) return disconnectStatus;
             const std::string generatedText = result;
             writer.String(generatedText.c_str());
             serializeTimestamps(writer, result, config);
         }
         if (endpoint == Endpoint::TRANSLATIONS) {
             std::unique_lock lock(pipe->sttPipelineMutex);
+            auto disconnectStatus = checkClientDisconnected(payload, cc->NodeName(), "before translation");
+            if (!disconnectStatus.ok()) return disconnectStatus;
             std::string generatedText = pipe->sttPipeline->generate(rawSpeech, ov::genai::task("translate"));
             lock.unlock();
+            disconnectStatus = checkClientDisconnected(payload, cc->NodeName(), "after translation");
+            if (!disconnectStatus.ok()) return disconnectStatus;
             writer.String(generatedText.c_str());
         }
         writer.EndObject();
