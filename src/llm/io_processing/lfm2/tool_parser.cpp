@@ -201,6 +201,10 @@ bool Lfm2ToolParser::parseInContentState() {
         return false;
     }
     if (toolCallStartTagPos != std::string::npos) {
+        if (toolCallStartTagPos > this->streamingPosition) {
+            SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Content found before tool call start tag at position: {}", toolCallStartTagPos);
+            return true;
+        }
         this->streamingPosition = toolCallStartTagPos + TOOL_CALL_START_TAG.length();
         this->currentState = State::ToolCallStarted;
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Detected start of tool call at position: {}", toolCallStartTagPos);
@@ -336,9 +340,17 @@ std::optional<rapidjson::Document> Lfm2ToolParser::parseChunk(const std::string&
             return wrapDeltaArgs(this->toolCall.arguments, toolCallIndex);
         }
         if (this->currentState == State::Content) {
-            auto content = this->streamingContent.substr(this->streamingPosition);
+            size_t contentEnd = this->streamingContent.find(TOOL_CALL_START_TAG, this->streamingPosition);
+            std::string content;
+            if (contentEnd != std::string::npos) {
+                content = this->streamingContent.substr(this->streamingPosition, contentEnd - this->streamingPosition);
+            } else {
+                content = this->streamingContent.substr(this->streamingPosition);
+            }
             this->streamingPosition += content.size();
-            return wrapDeltaContent(content);
+            if (!content.empty()) {
+                return wrapDeltaContent(content);
+            }
         }
         if (this->currentState == State::AfterToolCall) {
             this->currentState = State::Content;
