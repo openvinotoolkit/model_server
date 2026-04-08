@@ -17,6 +17,7 @@
 
 import os
 
+os.environ['WRAPT_DISABLE_EXTENSIONS'] = 'true'
 os.environ["KERAS_BACKEND"] = "tensorflow"
 
 import json
