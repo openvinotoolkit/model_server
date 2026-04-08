@@ -345,6 +345,19 @@ std::optional<rapidjson::Document> Lfm2ToolParser::parseChunk(const std::string&
         }
     }
 
+    if (finishReason != ov::genai::GenerationFinishReason::NONE) {
+        if ((this->currentState == State::ToolCallParameters || this->currentState == State::ToolCallEnded) && !this->toolCall.arguments.empty()) {
+            return wrapDeltaArgs(this->toolCall.arguments, toolCallIndex);
+        }
+
+        if (this->currentState == State::Content && this->streamingPosition < this->streamingContent.size()) {
+            auto content = this->streamingContent.substr(this->streamingPosition);
+            this->streamingPosition += content.size();
+
+            return wrapDeltaContent(content);
+        }
+    }
+
     return std::nullopt;
 }
 
