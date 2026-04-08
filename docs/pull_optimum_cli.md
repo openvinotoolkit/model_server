@@ -85,7 +85,7 @@ You can mount the HuggingFace cache to avoid downloading the original model in c
 Below is an example pull command with optimum model cache directory sharing for model download:
 
 ```bash
-docker run -v /etc/passwd:/etc/passwd -e HF_HOME=/hf_home/cache --user $(id -u):$(id -g) --group-add=$(id -g) -v ${HOME}/.cache/huggingface/:/hf_home/cache -v $(pwd)/models:/models:rw openvino/model_server:latest-py --pull --model_repository_path /models --source_model meta-llama/Llama-3.2-1B-Instruct --task text_generation --weight-format int8
+docker run -e TORCHINDUCTOR_CACHE_DIR=/tmp/torchinductor -e HF_HOME=/hf_home/cache --user $(id -u):$(id -g) --group-add=$(id -g) -v ${HOME}/.cache/huggingface/:/hf_home/cache -v $(pwd)/models:/models:rw openvino/model_server:latest-py --pull --model_repository_path /models --source_model meta-llama/Llama-3.2-1B-Instruct --task text_generation --weight-format int8
 ```
 
 or deploy without caching the model files with passed HF_TOKEN for authorization:
