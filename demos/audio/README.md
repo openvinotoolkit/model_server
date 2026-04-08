@@ -21,10 +21,8 @@ When generating speech you can use default speaker voice or you can prepare your
 ```console
 pip install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/audio/requirements.txt
 mkdir audio_samples
-curl --output audio_samples/audio.wav "https://www.voiptroubleshooter.com/open_speech/american/OSR_us_000_0032_8k.wav"
-mkdir models
-mkdir models\speakers
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/audio/create_speaker_embedding.py -o create_speaker_embedding.py
+curl --create-dirs "https://www.voiptroubleshooter.com/open_speech/american/OSR_us_000_0032_8k.wav" -o audio_samples/audio.wav
+curl --create-dirs https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/audio/create_speaker_embedding.py -o models\speakers\create_speaker_embedding.py
 python create_speaker_embedding.py audio_samples\audio.wav models\speakers\voice1.bin
 ```
 
