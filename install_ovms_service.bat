@@ -52,9 +52,6 @@ popd
 echo Using model repository path !OVMS_MODEL_REPOSITORY_PATH!
 
 set "OVMS_DIR=%~dp0"
-::::::::::::::::::::::: Add persistent OVMS_DIR to PATH
-setx "PATH" "%OVMS_DIR%;%PATH%"
-setx "OVMS_MODEL_REPOSITORY_PATH" !OVMS_MODEL_REPOSITORY_PATH!
 
 ::::::::::::::::::::::: Create the service
 sc create ovms binPath= "%OVMS_DIR%\ovms.exe --rest_port 8000 --config_path !config_path! --log_level INFO --log_path !OVMS_DIR!\ovms_server.log" DisplayName= "OpenVino Model Server"
@@ -70,4 +67,18 @@ if !errorlevel! neq 0 (
     echo [ERROR] ovms.exe install failed !errorlevel!
     exit /b !errorlevel!
 )
+endlocal & (
+    set "OVMS_DIR=%OVMS_DIR%"
+    set "OVMS_MODEL_REPOSITORY_PATH=%OVMS_MODEL_REPOSITORY_PATH%"
+)
+
+::::::::::::::::::::::: Add persistent variables for future cmd.exe sessions
+set "CURRENT_PATH=%PATH%"
+set "PYTHONHOME=%OVMS_DIR%\python"
+setx "OVMS_MODEL_REPOSITORY_PATH" "%OVMS_MODEL_REPOSITORY_PATH%"
+setx "PYTHONHOME" "%PYTHONHOME%"
+setx "PATH" "%OVMS_DIR%;%CURRENT_PATH%"
+
+::::::::::::::::::::::: Update current cmd.exe session
+set "PATH=%OVMS_DIR%;%PYTHONHOME%;%PYTHONHOME%\Scripts;%PATH%"
 echo OpenVINO Model Server Service Installed
