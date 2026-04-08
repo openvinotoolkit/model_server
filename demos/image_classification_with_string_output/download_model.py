@@ -16,9 +16,11 @@
 
 
 import os
+import sys
 
-os.environ['WRAPT_DISABLE_EXTENSIONS'] = 'true'
-os.environ["KERAS_BACKEND"] = "tensorflow"
+if sys.version_info >= (3, 12):
+    os.environ.setdefault("WRAPT_DISABLE_EXTENSIONS", "true")
+os.environ.setdefault("KERAS_BACKEND", "tensorflow")
 
 import json
 import shutil
