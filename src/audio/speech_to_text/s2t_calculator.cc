@@ -25,6 +25,7 @@
 #pragma warning(pop)
 
 #include "src/audio/audio_utils.hpp"
+#include "src/client_connection.hpp"
 #include "src/http_payload.hpp"
 #include "src/logging.hpp"
 #include "src/stringutils.hpp"
@@ -69,6 +70,14 @@ Endpoint getEndpoint(const std::string& url) {
 }
 
 size_t ISO_LANG_CODE_MAX = 3;
+
+static absl::Status checkClientDisconnected(const ovms::HttpPayload& payload, const std::string& nodeName, const char* context) {
+    if (payload.client && payload.client->isDisconnected()) {
+        SPDLOG_LOGGER_DEBUG(s2t_calculator_logger, "Client disconnected {} [Node: {}]", context, nodeName);
+        return absl::CancelledError("Client disconnected");
+    }
+    return absl::OkStatus();
+}
 
 class S2tCalculator : public CalculatorBase {
     static const std::string INPUT_TAG_NAME;
@@ -132,6 +141,7 @@ public:
             } catch (std::exception&) {
                 return absl::InvalidArgumentError("Received input file is not valid wav nor mp3 audio file");
             }
+
             rapidjson::StringBuffer buffer;
             rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
             writer.StartObject();
@@ -176,8 +186,12 @@ public:
                     config.temperature = 1.0;  // default value
                 }
                 std::unique_lock lock(pipe->sttPipelineMutex);
+                auto disconnectStatus = checkClientDisconnected(payload, cc->NodeName(), "before transcription");
+                if (!disconnectStatus.ok()) return disconnectStatus;
                 const ov::genai::WhisperDecodedResults result = pipe->sttPipeline->generate(rawSpeech, config);
                 lock.unlock();
+                disconnectStatus = checkClientDisconnected(payload, cc->NodeName(), "after transcription");
+                if (!disconnectStatus.ok()) return disconnectStatus;
                 const std::string generatedText = result;  // word chunks concatenation to single string
                 writer.String(generatedText.c_str());
                 if (config.word_timestamps) {
@@ -217,8 +231,12 @@ public:
             }
             if (endpoint == Endpoint::TRANSLATIONS) {
                 std::unique_lock lock(pipe->sttPipelineMutex);
+                auto disconnectStatus = checkClientDisconnected(payload, cc->NodeName(), "before translation");
+                if (!disconnectStatus.ok()) return disconnectStatus;
                 std::string generatedText = pipe->sttPipeline->generate(rawSpeech, ov::genai::task("translate"));
                 lock.unlock();
+                disconnectStatus = checkClientDisconnected(payload, cc->NodeName(), "after translation");
+                if (!disconnectStatus.ok()) return disconnectStatus;
                 writer.String(generatedText.c_str());
             }
             writer.EndObject();
