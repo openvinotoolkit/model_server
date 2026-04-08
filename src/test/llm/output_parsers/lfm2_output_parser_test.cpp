@@ -439,7 +439,7 @@ TEST_F(LFM2OutputParserTest, HolisticStreaming) {
 TEST_F(LFM2OutputParserTest, StreamingWithBiggerChunks) {
     std::vector<std::tuple<std::string, ov::genai::GenerationFinishReason, std::optional<std::string>>> chunkToDeltaVec{
         {"SOME_CONTENT", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":"SOME_CONTENT"}})"},
-        {"<|tool_call_start|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"MORE_CONTENT<|tool_call_start|>", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":"MORE_CONTENT"}})"},
         {"[", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"sort(array=", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"id":"XXXXXXXXX","type":"function","index":0,"function":{"name":"sort"}}]}})"},
         {"[42, 17, 89, 5, 33], order=\"descending\"", ov::genai::GenerationFinishReason::NONE, std::nullopt},
