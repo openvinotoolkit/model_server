@@ -29,7 +29,6 @@ message LLMCalculatorOptions {
     message LoraAdapter {
       required string model_path = 1;
       optional float alpha = 2 [default = 1];
-      optional string name = 3;
     }
 
     message KVCrushConfig {

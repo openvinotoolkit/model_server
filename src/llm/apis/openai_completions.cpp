@@ -714,16 +714,6 @@ absl::Status OpenAIChatCompletionsHandler::parseCommonPart(std::optional<uint32_
         return absl::InvalidArgumentError("model missing in request");
     }
 
-    // lora_adapter: string; optional
-    // Extension, select a LoRA adapter to use for this request by name
-    it = doc.FindMember("lora_adapter");
-    if (it != doc.MemberEnd() && !it->value.IsNull()) {
-        if (!it->value.IsString())
-            return absl::InvalidArgumentError("lora_adapter is not a string");
-        SPDLOG_ERROR("Found lora adapter in request => {}", it->value.GetString());
-        request.loraAdapter = it->value.GetString();
-    }
-
     // ignore_eos: bool; optional - defaults to false
     // Extension, unsupported by OpenAI API, however supported by vLLM and CB lib
     it = doc.FindMember("ignore_eos");

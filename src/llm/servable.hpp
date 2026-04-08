@@ -20,8 +20,6 @@
 #include <unordered_map>
 #include <vector>
 
-#include <openvino/genai/lora_adapter.hpp>
-
 #pragma warning(push)
 #pragma warning(disable : 4251 4005 4309 6001 6385 6386 6326 6011 4005 4456 6246)
 #pragma GCC diagnostic push
@@ -113,9 +111,6 @@ struct GenAiServableProperties {
     ov::genai::Tokenizer tokenizer;
     // Specific pipeline properties
     bool eagle3Mode = false;
-    // LoRA adapter support
-    ov::genai::AdapterConfig adapterConfig;
-    std::unordered_map<std::string, ov::genai::Adapter> adaptersByName;
 
 #if (PYTHON_DISABLE == 0)
     PyJinjaTemplateProcessor templateProcessor;
@@ -161,12 +156,6 @@ public:
     Additionally it initializes textStreamer and lastStreamerCallbackOutput for streaming requests.
     */
     virtual absl::Status parseRequest(std::shared_ptr<GenAiServableExecutionContext>& executionContext);
-
-protected:
-    // Sets per-request LoRA adapter on generationConfigBuilder if lora_adapter is specified in the request
-    absl::Status applyLoraAdapter(std::shared_ptr<GenAiServableExecutionContext>& executionContext);
-
-public:
 
     /*
     prepareInputs method implementation MUST fill executionContext inputIds field.

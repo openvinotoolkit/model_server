@@ -73,9 +73,6 @@ struct OpenAIChatCompletionsRequest {
 
     std::optional<uint32_t> maxModelLength;
 
-    // LoRA adapter selection
-    std::optional<std::string> loraAdapter{std::nullopt};
-
     // Guided generation specific
     // String representation of response format object
     std::optional<std::string> responseFormat{std::nullopt};

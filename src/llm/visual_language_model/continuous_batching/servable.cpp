@@ -30,10 +30,9 @@ namespace ovms {
 
 absl::Status VisualLanguageModelServable::addRequestToPipeline(std::shared_ptr<ContinuousBatchingServableExecutionContext>& executionContext) {
     auto vlmExecutionContext = std::static_pointer_cast<VisualLanguageModelServableExecutionContext>(executionContext);
-    auto cfg = vlmExecutionContext->generationConfigBuilder->getConfig();
     vlmExecutionContext->generationHandle = properties->pipeline->add_request(currentRequestId++,  // to be removed from API?
         vlmExecutionContext->inputText, vlmExecutionContext->inputImages,
-        cfg);
+        vlmExecutionContext->generationConfigBuilder->getConfig());
     return absl::OkStatus();
 }
 

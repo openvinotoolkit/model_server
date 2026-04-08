@@ -121,12 +121,6 @@ absl::Status LegacyServable::parseRequest(std::shared_ptr<GenAiServableExecution
         legacyExecutionContext->generationConfigBuilder->unsetStructuredOutputConfig();
     }
 
-    SPDLOG_INFO("Applying lora adapter3");
-    auto adapterStatus = applyLoraAdapter(executionContext);
-    if (!adapterStatus.ok()) {
-        return adapterStatus;
-    }
-
     return absl::OkStatus();
 }
 
