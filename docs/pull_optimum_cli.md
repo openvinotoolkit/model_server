@@ -56,7 +56,7 @@ ovms --pull --source_model "Qwen/Qwen3-4B" --model_repository_path /models --mod
 
 ```bash
 mkdir -p models
-docker run -u $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest-py --pull --source_model "Qwen/Qwen3-4B" --model_repository_path /models --model_name Qwen3-4B --task text_generation --weight-format int8
+docker run -u $(id -u):$(id -g) -e HF_HOME=/tmp -e TORCHINDUCTOR_CACHE_DIR=/tmp/torchinductor --rm -v $(pwd)/models:/models:rw openvino/model_server:latest-py --pull --source_model "Qwen/Qwen3-4B" --model_repository_path /models --model_name Qwen3-4B --task text_generation --weight-format int8
 ```
 :::
 
