@@ -21,6 +21,7 @@
 #include <vector>
 #include <iterator>
 
+#include <openvino/genai/lora_adapter.hpp>
 #include <spdlog/spdlog.h>
 
 #include <fstream>
@@ -313,6 +314,41 @@ void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServ
     }
 }
 #endif
+
+Status initializeLoraAdapters(const mediapipe::LLMCalculatorOptions& nodeOptions, const std::string& graphPath, std::shared_ptr<GenAiServableProperties> properties) {
+    if (nodeOptions.lora_adapter_size() <= 0) {
+        return StatusCode::OK;
+    }
+    SPDLOG_INFO("LoRA adapters will be applied to the model. Number of adapters: {}", nodeOptions.lora_adapter_size());
+    for (int i = 0; i < nodeOptions.lora_adapter_size(); ++i) {
+        const auto& loraAdapterOption = nodeOptions.lora_adapter(i);
+        SPDLOG_INFO("Processing LoRA adapter number {} with model path: {} alpha: {}", i, loraAdapterOption.model_path(), loraAdapterOption.alpha());
+        auto fsLoraPath = std::filesystem::path(loraAdapterOption.model_path());
+        std::string loraPath;
+        if (fsLoraPath.is_relative()) {
+            loraPath = (std::filesystem::path(graphPath) / fsLoraPath).string();
+        } else {
+            loraPath = fsLoraPath.string();
+        }
+        try {
+            ov::genai::Adapter adapter(loraPath);
+            if (loraAdapterOption.alpha() <= 0.0f || loraAdapterOption.alpha() > 1.0f) {
+                SPDLOG_ERROR("LoRA adapter alpha value {} is out of valid range (0.0, 1.0]", loraAdapterOption.alpha());
+                return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
+            }
+            properties->adapterConfig.add(adapter, loraAdapterOption.alpha());
+            SPDLOG_INFO("Registered LoRA adapter from path: {} with alpha: {}", loraPath, loraAdapterOption.alpha());
+        } catch (const std::exception& e) {
+            SPDLOG_ERROR("Error during LoRA adapter initialization for model_path: {} exception: {}", loraPath, e.what());
+            return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
+        } catch (...) {
+            SPDLOG_ERROR("Error during LoRA adapter initialization for model_path: {}", loraPath);
+            return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
+        }
+    }
+    properties->pluginConfig.insert(ov::genai::adapters(properties->adapterConfig));
+    return StatusCode::OK;
+}
 
 Status parseModelsPath(std::string& outPath, std::string modelsPath, std::string graphPath) {
     auto fsModelsPath = std::filesystem::path(modelsPath);

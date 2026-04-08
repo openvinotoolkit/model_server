@@ -19,7 +19,6 @@
 #include <vector>
 
 #include "openvino/genai/llm_pipeline.hpp"
-#include <openvino/genai/lora_adapter.hpp>
 #include <openvino/openvino.hpp>
 #include <spdlog/spdlog.h>
 
@@ -77,33 +76,9 @@ Status LegacyServableInitializer::initialize(std::shared_ptr<GenAiServable>& ser
         return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
     }
 
-    if (nodeOptions.lora_adapter_size() > 0) {
-        for (int i = 0; i < nodeOptions.lora_adapter_size(); ++i) {
-            const auto& loraAdapterOption = nodeOptions.lora_adapter(i);
-            auto fsLoraPath = std::filesystem::path(loraAdapterOption.model_path());
-            std::string loraPath;
-            if (fsLoraPath.is_relative()) {
-                loraPath = (std::filesystem::path(graphPath) / fsLoraPath).string();
-            } else {
-                loraPath = fsLoraPath.string();
-            }
-            try {
-                ov::genai::Adapter adapter(loraPath);
-                properties->adapterConfig.add(adapter, 1.0f);//loraAdapterOption.alpha());
-                std::string adapterName = loraAdapterOption.has_name()
-                    ? loraAdapterOption.name()
-                    : std::filesystem::path(loraPath).stem().string();
-                properties->adaptersByName.emplace(adapterName, adapter);
-                SPDLOG_INFO("Registered LoRA adapter '{}' from path: {}", adapterName, loraPath);
-            } catch (const std::exception& e) {
-                SPDLOG_ERROR("Error during LoRA adapter initialization for model_path: {} exception: {}", loraPath, e.what());
-                return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
-            } catch (...) {
-                SPDLOG_ERROR("Error during LoRA adapter initialization for model_path: {}", loraPath);
-                return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
-            }
-        }
-        properties->pluginConfig.insert(ov::genai::adapters(properties->adapterConfig));
+    status = initializeLoraAdapters(nodeOptions, graphPath, properties);
+    if (!status.ok()) {
+        return status;
     }
 
     status = JsonParser::parsePluginConfig(nodeOptions.plugin_config(), properties->pluginConfig);
