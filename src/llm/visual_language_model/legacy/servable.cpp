@@ -131,6 +131,7 @@ absl::Status VisualLanguageModelLegacyServable::parseRequest(std::shared_ptr<Gen
         legacyExecutionContext->generationConfigBuilder->unsetStructuredOutputConfig();
     }
 
+    SPDLOG_INFO("Applying lora adapter2");
     auto adapterStatus = applyLoraAdapter(executionContext);
     if (!adapterStatus.ok()) {
         return adapterStatus;

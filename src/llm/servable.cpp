@@ -153,6 +153,7 @@ absl::Status GenAiServable::parseRequest(std::shared_ptr<GenAiServableExecutionC
         executionContext->generationConfigBuilder->unsetStructuredOutputConfig();
     }
 
+    SPDLOG_INFO("Applying lora adapter1");
     auto adapterStatus = applyLoraAdapter(executionContext);
     if (!adapterStatus.ok()) {
         return adapterStatus;
