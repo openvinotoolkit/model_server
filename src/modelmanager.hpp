@@ -239,6 +239,10 @@ private:
     MetricRegistry* metricRegistry;
 
     PythonBackend* pythonBackend;
+    /**
+     * @brief Mutex for blocking concurrent add & find of model
+     */
+    mutable std::shared_mutex modelsMtx;
 
     /**
      * @brief Json config directory path
@@ -269,11 +273,6 @@ public:
     const std::string getRootDirectoryPath() const {
         return rootDirectoryPath;
     }
-
-    /**
-     * @brief Mutex for blocking concurrent add & find of model
-     */
-    mutable std::shared_mutex modelsMtx;
 
     /**
      *  @brief Gets the watcher interval timestep in seconds
@@ -497,7 +496,7 @@ public:
      */
     void cleanupResources();
 
-    bool servableExists(const std::string& name, ServableType check = ServableType::All) const override;
+    bool servableExists(const std::string& name, ServableQueryType check = ServableQueryType::All) const override;
 
     ServableDefinition* findServableDefinition(const std::string& name) const;
 

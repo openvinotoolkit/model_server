@@ -1153,7 +1153,7 @@ Status HttpRestApiHandler::processPredictRequest(
     if (this->modelManager.modelExists(modelName)) {
         SPDLOG_DEBUG("Found model with name: {}. Searching for requested version...", modelName);
         status = processSingleModelRequest(modelName, modelVersion, request, requestOrder, responseProto, reporterOut);
-    } else if (this->modelManager.servableExists(modelName, ServableType::Pipeline)) {
+    } else if (this->modelManager.servableExists(modelName, ServableQueryType::Pipeline)) {
         SPDLOG_DEBUG("Found pipeline with name: {}", modelName);
         status = processPipelineRequest(modelName, request, requestOrder, responseProto, reporterOut);
     } else {

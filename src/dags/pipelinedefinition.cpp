@@ -69,7 +69,7 @@ PipelineDefinition::PipelineDefinition(const std::string& pipelineName,
 Status PipelineDefinition::validate(ModelManager& manager) {
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Started validation of pipeline: {}", getName());
     ValidationResultNotifier notifier(status, loadedNotify);
-    if (manager.servableExists(getName(), ServableType::Model | ServableType::Mediapipe)) {
+    if (manager.servableExists(getName(), ServableQueryType::Model | ServableQueryType::Mediapipe)) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Pipeline name: {} is already occupied by model or mediapipe graph.", getName());
         return StatusCode::PIPELINE_NAME_OCCUPIED;
     }

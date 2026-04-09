@@ -43,6 +43,7 @@ public:
     SingleVersionServableDefinition(const std::string& name) :
         Servable(name, VERSION) {}
 
+    // Resolves getName() from both ServableDefinition (pure virtual) and Servable (concrete)
     const std::string& getName() const override { return Servable::getName(); }
     model_version_t getVersion() const override { return Servable::getVersion(); }
 

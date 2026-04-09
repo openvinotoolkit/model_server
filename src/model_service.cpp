@@ -158,24 +158,7 @@ Status GetModelStatusImpl::getModelStatus(
 }
 
 Status GetModelStatusImpl::getAllModelsStatuses(std::map<std::string, tensorflow::serving::GetModelStatusResponse>& modelsStatuses, ModelManager& manager, ExecutionContext context) {
-    std::shared_lock lock(manager.modelsMtx);
     std::map<std::string, tensorflow::serving::GetModelStatusResponse> modelsStatusesTmp;
-
-    const std::map<std::string, std::shared_ptr<Model>>& models = manager.getModels();
-    for (auto const& model : models) {
-        std::optional<int64_t> noValueModelVersion;
-        tensorflow::serving::GetModelStatusRequest request;
-        GetModelStatusImpl::createGrpcRequest(model.first, noValueModelVersion, &request);
-        tensorflow::serving::GetModelStatusResponse response;
-        auto status = GetModelStatusImpl::getModelStatus(&request, &response, manager, context);
-        if (status != StatusCode::OK) {
-            // For now situation when getModelStatus return status other than OK cannot occur because we never remove models and pipelines from model manager.
-            // However, if something in this matter will change we should handle this somehow.
-            continue;
-        }
-        modelsStatusesTmp.insert({model.first, response});
-    }
-    lock.unlock();
 
     const auto servableNames = manager.getServableDefinitionNames();
     for (const auto& servableName : servableNames) {

@@ -913,7 +913,7 @@ Status ModelManager::loadModels(const rapidjson::Value::MemberIterator& modelsCo
         modelConfig.setCacheDir(this->modelCacheDirectory);
 
         const auto& modelName = modelConfig.getName();
-        if (servableExists(modelName, ServableType::Pipeline | ServableType::Mediapipe)) {
+        if (servableExists(modelName, ServableQueryType::Pipeline | ServableQueryType::Mediapipe)) {
             IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(StatusCode::MODEL_NAME_OCCUPIED);
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Model name: {} is already occupied by pipeline or mediapipe graph definition.", modelName);
             continue;
@@ -1736,15 +1736,15 @@ void ModelManager::setRootDirectoryPath(const std::string& configFileFullPath) {
     FileSystem::setRootDirectoryPath(this->rootDirectoryPath, configFileFullPath);
 }
 
-bool ModelManager::servableExists(const std::string& name, ServableType check) const {
-    if (hasFlag(check, ServableType::Model) && findModelByName(name) != nullptr) {
+bool ModelManager::servableExists(const std::string& name, ServableQueryType check) const {
+    if (hasFlag(check, ServableQueryType::Model) && findModelByName(name) != nullptr) {
         return true;
     }
-    if (hasFlag(check, ServableType::Pipeline) && pipelineFactory->definitionExists(name)) {
+    if (hasFlag(check, ServableQueryType::Pipeline) && pipelineFactory->definitionExists(name)) {
         return true;
     }
 #if (MEDIAPIPE_DISABLE == 0)
-    if (hasFlag(check, ServableType::Mediapipe) && mediapipeFactory->definitionExists(name)) {
+    if (hasFlag(check, ServableQueryType::Mediapipe) && mediapipeFactory->definitionExists(name)) {
         return true;
     }
 #endif
@@ -1780,6 +1780,13 @@ ServableDefinition* ModelManager::findServableDefinition(const std::string& name
 
 std::vector<std::string> ModelManager::getServableDefinitionNames() const {
     std::vector<std::string> names;
+    {
+        std::shared_lock lock(modelsMtx);
+        names.reserve(models.size());
+        for (const auto& [name, model] : models) {
+            names.push_back(name);
+        }
+    }
     auto pipelineNames = pipelineFactory->getPipelinesNames();
     names.insert(names.end(), pipelineNames.begin(), pipelineNames.end());
 #if (MEDIAPIPE_DISABLE == 0)

@@ -968,36 +968,9 @@ TEST_F(EnsembleFlowTest, ExecutePipelineWithBatchSizeAny) {
     const int batchSize = 3;
     proto.mutable_tensor_shape()->mutable_dim(0)->set_size(batchSize);
     requestData = {
-        -5,
-        -4,
-        -3,
-        -2,
-        -1,
-        1,
-        2,
-        3,
-        4,
-        5,  // batch 1
-        -15,
-        -14,
-        -13,
-        -12,
-        -11,
-        11,
-        12,
-        13,
-        14,
-        15,  // batch 2
-        -25,
-        -24,
-        -23,
-        -22,
-        -21,
-        21,
-        22,
-        23,
-        24,
-        25,  // batch 3
+        -5, -4, -3, -2, -1, 1, 2, 3, 4, 5,      // batch 1
+        -15, -14, -13, -12, -11, 11, 12, 13, 14, 15,  // batch 2
+        -25, -24, -23, -22, -21, 21, 22, 23, 24, 25,  // batch 3
     };
     proto.mutable_tensor_content()->assign((char*)requestData.data(), requestData.size() * sizeof(float));
 
@@ -1044,36 +1017,9 @@ TEST_F(EnsembleFlowTest, ExecutePipelineWithBatchSizeRange) {
     int batchSize = 3;
     proto.mutable_tensor_shape()->mutable_dim(0)->set_size(batchSize);
     requestData = {
-        -5,
-        -4,
-        -3,
-        -2,
-        -1,
-        1,
-        2,
-        3,
-        4,
-        5,  // batch 1
-        -15,
-        -14,
-        -13,
-        -12,
-        -11,
-        11,
-        12,
-        13,
-        14,
-        15,  // batch 2
-        -25,
-        -24,
-        -23,
-        -22,
-        -21,
-        21,
-        22,
-        23,
-        24,
-        25,  // batch 3
+        -5, -4, -3, -2, -1, 1, 2, 3, 4, 5,      // batch 1
+        -15, -14, -13, -12, -11, 11, 12, 13, 14, 15,  // batch 2
+        -25, -24, -23, -22, -21, 21, 22, 23, 24, 25,  // batch 3
     };
     proto.mutable_tensor_content()->assign((char*)requestData.data(), requestData.size() * sizeof(float));
 
@@ -1481,36 +1427,9 @@ TEST_F(EnsembleFlowTest, DISABLED_ExecutePipelineWithDynamicBatchSize) {
     const int batchSize = 3;
     proto.mutable_tensor_shape()->mutable_dim(0)->set_size(batchSize);
     requestData = {
-        -5,
-        -4,
-        -3,
-        -2,
-        -1,
-        1,
-        2,
-        3,
-        4,
-        5,  // batch 1
-        -15,
-        -14,
-        -13,
-        -12,
-        -11,
-        11,
-        12,
-        13,
-        14,
-        15,  // batch 2
-        -25,
-        -24,
-        -23,
-        -22,
-        -21,
-        21,
-        22,
-        23,
-        24,
-        25,  // batch 3
+        -5, -4, -3, -2, -1, 1, 2, 3, 4, 5,      // batch 1
+        -15, -14, -13, -12, -11, 11, 12, 13, 14, 15,  // batch 2
+        -25, -24, -23, -22, -21, 21, 22, 23, 24, 25,  // batch 3
     };
     proto.mutable_tensor_content()->assign((char*)requestData.data(), requestData.size() * sizeof(float));
 
@@ -4460,7 +4379,7 @@ TEST_F(EnsembleFlowTest, MediapipeConfigModelWithSameNamePipeline) {
 
     ASSERT_FALSE(manager.getMediapipeFactory().definitionExists(MEDIAPIPE_DUMMY_NAME));
 
-    ASSERT_TRUE(manager.servableExists(MEDIAPIPE_DUMMY_NAME, ServableType::Pipeline));
+    ASSERT_TRUE(manager.servableExists(MEDIAPIPE_DUMMY_NAME, ServableQueryType::Pipeline));
 }
 #endif
 TEST_F(EnsembleFlowTest, PipelineConfigModelWithSameName) {
