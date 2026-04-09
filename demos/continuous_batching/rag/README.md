@@ -1,8 +1,7 @@
 # RAG demo with OpenVINO Model Server {#ovms_demos_continuous_batching_rag}
 
-## Creating models repository for all the endpoints with ovms --pull or python export_model.py script
+## Creating models repository for all the endpoints
 
-### 1. Download the preconfigured models using ovms --pull option from [HugginFaces Hub OpenVINO organization](https://huggingface.co/OpenVINO) (Simple usage)
 ::::{tab-set}
 
 :::{tab-item} With Docker
@@ -20,110 +19,77 @@ docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/mo
 ```
 :::
 
-:::{tab-item} On Baremetal Host
+:::{tab-item} On Baremetal Windows
 **Required:** OpenVINO Model Server package - see [deployment instructions](../../../docs/deploying_server_baremetal.md) for details.
 
 ```bat
 mkdir models
 
-ovms --pull --model_repository_path models --source_model OpenVINO/Qwen3-8B-int4-ov --task text_generation
-ovms --pull --model_repository_path models --source_model OpenVINO/bge-base-en-v1.5-fp16-ov --task embeddings
-ovms --pull --model_repository_path models --source_model OpenVINO/bge-reranker-base-fp16-ov --task rerank
+ovms --pull --model_repository_path models --source_model OpenVINO/Qwen3-8B-int4-ov --task text_generation --target_device GPU
+ovms --pull --model_repository_path models --source_model OpenVINO/bge-base-en-v1.5-fp16-ov --task embeddings --target_device GPU
+ovms --pull --model_repository_path models --source_model OpenVINO/bge-reranker-base-fp16-ov --task rerank --target_device GPU
 
 ovms --add_to_config --config_path models/config.json --model_name OpenVINO/Qwen3-8B-int4-ov --model_path OpenVINO/Qwen3-8B-int4-ov
 ovms --add_to_config --config_path models/config.json --model_name OpenVINO/bge-base-en-v1.5-fp16-ov --model_path OpenVINO/bge-base-en-v1.5-fp16-ov
 ovms --add_to_config --config_path models/config.json --model_name OpenVINO/bge-reranker-base-fp16-ov --model_path OpenVINO/bge-reranker-base-fp16-ov
 ```
 :::
-
-:::{tab-item} Windows service
-**Required:** OpenVINO Model Server package - see [deployment instructions](../../../docs/deploying_server_baremetal.md) for details.
-**Assumption:** install_ovms_service.bat was called without additional parameters - using default c:\models config path.
-```bat
-mkdir c:\models
-
-ovms --pull --model_repository_path c:\models --source_model OpenVINO/Qwen3-8B-int4-ov --task text_generation
-ovms --pull --model_repository_path c:\models --source_model OpenVINO/bge-base-en-v1.5-fp16-ov --task embeddings
-ovms --pull --model_repository_path c:\models --source_model OpenVINO/bge-reranker-base-fp16-ov --task rerank
-
-ovms --add_to_config --config_path c:\models\config.json --model_name OpenVINO/Qwen3-8B-int4-ov --model_path OpenVINO/Qwen3-8B-int4-ov
-ovms --add_to_config --config_path c:\models\config.json --model_name OpenVINO/bge-base-en-v1.5-fp16-ov --model_path OpenVINO/bge-base-en-v1.5-fp16-ov
-ovms --add_to_config --config_path c:\models\config.json --model_name OpenVINO/bge-reranker-base-fp16-ov --model_path OpenVINO/bge-reranker-base-fp16-ov
-```
-:::
-::::
-::::
-
-### 2. Download the preconfigured models using ovms --pull option for models outside [HugginFaces Hub OpenVINO organization](https://huggingface.co/OpenVINO) in HuggingFace Hub. (Advanced usage)
-::::{tab-set}
-
-:::{tab-item} With Docker
-**Required:** Docker Engine installed
-```bash
-mkdir models
-docker run --user $(id -u):$(id -g) -e HF_HOME=/hf_home/cache --rm -v $(pwd)/models:/models:rw -v /opt/home/user/.cache/huggingface/:/hf_home/cache openvino/model_server:latest-py --pull --model_repository_path /models --source_model meta-llama/Meta-Llama-3-8B-Instruct --task text_generation --weight-format int8
-docker run --user $(id -u):$(id -g) -e HF_HOME=/hf_home/cache --rm -v $(pwd)/models:/models:rw -v /opt/home/user/.cache/huggingface/:/hf_home/cache openvino/model_server:latest-py --pull --model_repository_path /models --source_model Alibaba-NLP/gte-large-en-v1.5 --task embeddings --weight-format int8
-docker run --user $(id -u):$(id -g) -e HF_HOME=/hf_home/cache --rm -v $(pwd)/models:/models:rw -v /opt/home/user/.cache/huggingface/:/hf_home/cache openvino/model_server:latest-py --pull --model_repository_path /models --source_model BAAI/bge-reranker-large --task rerank --weight-format int8
-
-docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest-py --add_to_config --config_path /models/config.json --model_name meta-llama/Meta-Llama-3-8B-Instruct --model_path meta-llama/Meta-Llama-3-8B-Instruct --weight-format int8
-docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest-py --add_to_config --config_path /models/config.json --model_name Alibaba-NLP/gte-large-en-v1.5 --model_path Alibaba-NLP/gte-large-en-v1.5 --weight-format int8
-docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest-py --add_to_config --config_path /models/config.json --model_name BAAI/bge-reranker-large --model_path BAAI/bge-reranker-large --weight-format int8
-```
-:::
-
-:::{tab-item} On Baremetal Host
-**Required:** OpenVINO Model Server package - see [deployment instructions](../../../docs/deploying_server_baremetal.md) for details.
-
-```bat
-pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/1/demos/common/export_models/requirements.txt
-pip3 install -q -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/1/demos/continuous_batching/rag/requirements.txt
-mkdir models
-set HF_HOME=C:\hf_home\cache # export HF_HOME=/hf_home/cache if using linux
-ovms --pull --model_repository_path models --source_model meta-llama/Meta-Llama-3-8B-Instruct --task text_generation --weight-format int8
-ovms --pull --model_repository_path models --source_model Alibaba-NLP/gte-large-en-v1.5 --task embeddings --weight-format int8
-ovms --pull --model_repository_path models --source_model BAAI/bge-reranker-large --task rerank --weight-format int8
-
-ovms --add_to_config --config_path /models/config.json --model_name meta-llama/Meta-Llama-3-8B-Instruct --model_path meta-llama/Meta-Llama-3-8B-Instruct
-ovms --add_to_config --config_path /models/config.json --model_name Alibaba-NLP/gte-large-en-v1.5 --model_path Alibaba-NLP/gte-large-en-v1.5
-ovms --add_to_config --config_path /models/config.json --model_name BAAI/bge-reranker-large --model_path BAAI/bge-reranker-large
-```
-:::
 ::::
 
 
-### 3.  Export models from HuggingFace Hub including conversion to OpenVINO format using the python script
+> NOTE: If you want to deploy models in pytorch format you can use the built-in OVMS optimum-cli functionality of `openvino/model_server:latest-py` described in [pull mode with optimum cli](../../../docs/pull_optimum_cli.md)
 
-Use this procedure for all the models outside of OpenVINO organization in HuggingFace Hub.
-
-```console
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/1/demos/common/export_models/export_model.py -o export_model.py
-pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/1/demos/common/export_models/requirements.txt
-
-mkdir models
-python export_model.py text_generation --source_model meta-llama/Meta-Llama-3-8B-Instruct --weight-format int8 --kv_cache_precision u8 --config_file_path models/config.json --model_repository_path models
-python export_model.py embeddings_ov --source_model Alibaba-NLP/gte-large-en-v1.5 --weight-format int8 --config_file_path models/config.json
-python export_model.py rerank_ov --source_model BAAI/bge-reranker-large --weight-format int8  --config_file_path models/config.json
-```
+> NOTE: You can also use [the windows service](../../../docs/windows_service.md) setup for the ease of use and shorter commands - with default model_repository_path and config_path
 
 ## Deploying the model server
 
-### With Docker
+::::{tab-set}
+
+:::{tab-item} With Docker
 ```bash
 docker run -d --rm -p 8000:8000 -v $(pwd)/models:/workspace:ro openvino/model_server:latest --rest_port 8000 --config_path /workspace/config.json
 ```
-### On Baremetal Unix
-```bash
-ovms --rest_port 8000 --config_path models/config.json
-```
-### Windows
+:::
+
+:::{tab-item} On Baremetal Windows
 ```bat
 ovms --rest_port 8000 --config_path models\config.json
 ```
+:::
+::::
 
-### Server as Windows Service
-```bat
-sc start ovms
+## Readiness Check
+
+Wait for the models to load. You can check the status with a simple command:
+```console
+curl http://localhost:8000/v3/models
 ```
+```
+{
+  "data": [
+    {
+      "id": "OpenVINO/Qwen3-8B-int4-ov",
+      "object": "model",
+      "created": 1775552853,
+      "owned_by": "OVMS"
+    },
+    {
+      "id": "OpenVINO/bge-base-en-v1.5-fp16-ov",
+      "object": "model",
+      "created": 1775552853,
+      "owned_by": "OVMS"
+    },
+    {
+      "id": "OpenVINO/bge-reranker-base-fp16-ov",
+      "object": "model",
+      "created": 1775552853,
+      "owned_by": "OVMS"
+    }
+  ],
+  "object": "list"
+}
+```
+
 ## Using RAG
 
 When the model server is deployed and serving all 3 endpoints, run the [jupyter notebook](https://github.com/openvinotoolkit/model_server/blob/releases/2026/1/demos/continuous_batching/rag/rag_demo.ipynb) to use RAG chain with a fully remote execution.
