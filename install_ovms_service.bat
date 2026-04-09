@@ -35,15 +35,15 @@ pushd "%CD%"
 cd /d "!OVMS_MODEL_REPOSITORY_PATH!" 2>nul
 if errorlevel 1 (
     echo [INFO] Creating model repository path !OVMS_MODEL_REPOSITORY_PATH!
-    mkdir !OVMS_MODEL_REPOSITORY_PATH!
+    mkdir "!OVMS_MODEL_REPOSITORY_PATH!"
     if !errorlevel! neq 0 exit /b !errorlevel!
 )
 set "OVMS_MODEL_REPOSITORY_PATH=%CD%"
 set "config_path=!OVMS_MODEL_REPOSITORY_PATH!\config.json"
-IF /I EXIST !config_path! (
+IF /I EXIST "!config_path!" (
     echo [INFO] config exists !config_path!
 ) ELSE (
-    echo {"model_config_list":[]} > !config_path!
+    echo {"model_config_list":[]} > "!config_path!"
     if !errorlevel! neq 0 exit /b !errorlevel!
     echo [INFO] created empty server config !config_path!
 )
@@ -54,7 +54,9 @@ echo Using model repository path !OVMS_MODEL_REPOSITORY_PATH!
 set "OVMS_DIR=%~dp0"
 
 ::::::::::::::::::::::: Create the service
-sc create ovms binPath= "%OVMS_DIR%\ovms.exe --rest_port 8000 --config_path !config_path! --log_level INFO --log_path !OVMS_DIR!\ovms_server.log" DisplayName= "OpenVino Model Server"
+REM Build binPath carefully to avoid quoting issues with delayed expansion
+set "binPath_cmd=\"!OVMS_DIR!ovms.exe\" --rest_port 8000 --config_path \"!config_path!\" --log_level INFO --log_path \"!OVMS_DIR!ovms_server.log\""
+sc create ovms binPath= "!binPath_cmd!" DisplayName= "OpenVino Model Server"
 if !errorlevel! neq 0 (
     echo [ERROR] sc create ovms failed !errorlevel!
     exit /b !errorlevel!
@@ -62,7 +64,7 @@ if !errorlevel! neq 0 (
 set "PYTHONHOME=%OVMS_DIR%\python"
 set "PATH=%PYTHONHOME%;%PYTHONHOME%\Scripts;%PATH%"
 ::::::::::::::::::::::: Install the service by adding required environment variables to registry
-!OVMS_DIR!\ovms.exe install
+"!OVMS_DIR!\ovms.exe" install
 if !errorlevel! neq 0 (
     echo [ERROR] ovms.exe install failed !errorlevel!
     exit /b !errorlevel!
@@ -71,14 +73,31 @@ endlocal & (
     set "OVMS_DIR=%OVMS_DIR%"
     set "OVMS_MODEL_REPOSITORY_PATH=%OVMS_MODEL_REPOSITORY_PATH%"
 )
+set "OVMS_DIR_NORM=%OVMS_DIR%"
+if "%OVMS_DIR_NORM:~-1%"=="\" set "OVMS_DIR_NORM=%OVMS_DIR_NORM:~0,-1%"
 
 ::::::::::::::::::::::: Add persistent variables for future cmd.exe sessions
-set "CURRENT_PATH=%PATH%"
-set "PYTHONHOME=%OVMS_DIR%\python"
-setx "OVMS_MODEL_REPOSITORY_PATH" "%OVMS_MODEL_REPOSITORY_PATH%"
-setx "PYTHONHOME" "%PYTHONHOME%"
-setx "PATH" "%OVMS_DIR%;%CURRENT_PATH%"
+set "PYTHONHOME=%OVMS_DIR_NORM%\python"
+powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+    "$ovmsDir=$env:OVMS_DIR_NORM.TrimEnd('\'); $modelRepo=$env:OVMS_MODEL_REPOSITORY_PATH; $pythonHome=Join-Path $ovmsDir 'python';" ^
+    "[Environment]::SetEnvironmentVariable('OVMS_MODEL_REPOSITORY_PATH',$modelRepo,'User');" ^
+    "[Environment]::SetEnvironmentVariable('PYTHONHOME',$pythonHome,'User');" ^
+    "$userPath=[Environment]::GetEnvironmentVariable('Path','User');" ^
+    "$parts=@(); if (-not [string]::IsNullOrWhiteSpace($userPath)) { $parts=@($userPath -split ';' | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }) };" ^
+    "$pythonScripts=Join-Path $pythonHome 'Scripts'; $required=@($ovmsDir,$pythonHome,$pythonScripts);" ^
+    "foreach ($req in $required) { $exists=$false; foreach ($p in $parts) { if ($p.TrimEnd('\\') -ieq $req.TrimEnd('\\')) { $exists=$true; break } }; if (-not $exists) { $parts=@($req)+$parts } };" ^
+    "$newPath=($parts -join ';');" ^
+    "[Environment]::SetEnvironmentVariable('Path',$newPath,'User')"
+if errorlevel 1 (
+    echo [ERROR] Failed to persist user environment variables
+    exit /b %errorlevel%
+)
 
 ::::::::::::::::::::::: Update current cmd.exe session
-set "PATH=%OVMS_DIR%;%PYTHONHOME%;%PYTHONHOME%\Scripts;%PATH%"
+echo ;%PATH%; | findstr /i /c:";%OVMS_DIR_NORM%;" /c:";%OVMS_DIR_NORM%\;" >nul
+if errorlevel 1 set "PATH=%OVMS_DIR_NORM%;%PATH%"
+echo ;%PATH%; | findstr /i /c:";%PYTHONHOME%;" >nul
+if errorlevel 1 set "PATH=%PYTHONHOME%;%PATH%"
+echo ;%PATH%; | findstr /i /c:";%PYTHONHOME%\Scripts;" >nul
+if errorlevel 1 set "PATH=%PYTHONHOME%\Scripts;%PATH%"
 echo OpenVINO Model Server Service Installed
