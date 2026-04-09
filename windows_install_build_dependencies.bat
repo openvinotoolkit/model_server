@@ -173,6 +173,10 @@ IF "%OV_USE_BINARY%"=="0" (
 if "%GENAI_PACKAGE_URL%"=="" (
     set "GENAI_PACKAGE_URL=%GENAI_PACKAGE_URL_WINDOWS%"
 )
+if "%GENAI_PACKAGE_URL%"=="" (
+    echo [ERROR] GENAI_PACKAGE_URL is not set. Ensure versions.mk was loaded or set GENAI_PACKAGE_URL/GENAI_PACKAGE_URL_WINDOWS in the environment.
+    exit /b 1
+)
 
 :: Extract genai_ver from GENAI_PACKAGE_URL (filename)
 for %%F in ("%GENAI_PACKAGE_URL%") do set "genai_ver=%%~nxF"
