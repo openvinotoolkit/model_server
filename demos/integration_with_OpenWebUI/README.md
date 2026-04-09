@@ -22,7 +22,7 @@ In this demo, OpenVINO Model Server is deployed on Linux or windows with GPU usi
 
 There are other options to fulfill the prerequisites like [OpenVINO Model Server deployment on baremetal Linux or Windows](https://docs.openvino.ai/2026/model-server/ovms_docs_deploying_server_baremetal.html) and [Open WebUI installation with Docker](https://docs.openwebui.com/#quick-start-with-docker-). The steps in this demo can be reused across different options, and the reference for each step cover both deployments.
 
-This demo was tested on CPU but most of the models could be also run on Intel accelerators like GPU and NPU.
+This demo was tested on GPU but most of the models could be also run on Intel accelerators like CPU and NPU. To load all models in this demo, free 25 GB of RAM memory.
 
 ## Step 1: Pull model and start the OVMS sever
 ::::{tab-set}
@@ -32,7 +32,7 @@ This demo was tested on CPU but most of the models could be also run on Intel ac
 mkdir models
 ovms.exe --pull --source_model OpenVINO/gpt-oss-20b-int4-ov --model_repository_path models --tool_parser gptoss --reasoning_parser gptoss --task text_generation --target_device GPU
 ovms.exe --add_to_config --config_path  models\config.json --model_path OpenVINO\gpt-oss-20b-int4-ov --model_name ovms-model
-ovms.exe --rest_port 8000 --config_path models\config.json
+ovms.exe --rest_port 8000 --config_path models\config.json --allowed_media_domains raw.githubusercontent.com
 ```
 :::
 :::{tab-item} Linux (using Docker)
@@ -41,7 +41,7 @@ ovms.exe --rest_port 8000 --config_path models\config.json
 mkdir models
 docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:weekly --pull --source_model OpenVINO/gpt-oss-20b-int4-ov --model_repository_path /models --task text_generation --tool_parser gptoss --reasoning_parser gptoss --target_device GPU
 docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models openvino/model_server:weekly --add_to_config --config_path  /models/config.json --model_path OpenVINO/gpt-oss-20b-int4-ov --model_name ovms-model
-docker run -d -u $(id -u):$(id -g) -v $PWD/models:/models -p 8000:8000 --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:weekly --rest_port 8000 --config_path /models/config.json
+docker run -d -u $(id -u):$(id -g) -v $PWD/models:/models -p 8000:8000 --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:weekly --rest_port 8000 --config_path /models/config.json --allowed_media_domains raw.githubusercontent.com
 ```
 :::
 ::::
@@ -56,13 +56,13 @@ curl http://localhost:8000/v3/chat/completions -H "Content-Type: application/jso
 
 Install Open WebUI:
 
-```bash
+```text
 pip install --no-cache-dir open-webui --extra-index-url "https://download.pytorch.org/whl/cpu"
 ```
 
 Running Open WebUI:
 
-```console
+```text
 open-webui serve
 ```
 
