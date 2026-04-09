@@ -187,11 +187,13 @@ public:
                 }
                 std::unique_lock lock(pipe->sttPipelineMutex);
                 auto disconnectStatus = checkClientDisconnected(payload, cc->NodeName(), "before transcription");
-                if (!disconnectStatus.ok()) return disconnectStatus;
+                if (!disconnectStatus.ok())
+                    return disconnectStatus;
                 const ov::genai::WhisperDecodedResults result = pipe->sttPipeline->generate(rawSpeech, config);
                 lock.unlock();
                 disconnectStatus = checkClientDisconnected(payload, cc->NodeName(), "after transcription");
-                if (!disconnectStatus.ok()) return disconnectStatus;
+                if (!disconnectStatus.ok())
+                    return disconnectStatus;
                 const std::string generatedText = result;  // word chunks concatenation to single string
                 writer.String(generatedText.c_str());
                 if (config.word_timestamps) {
@@ -232,11 +234,13 @@ public:
             if (endpoint == Endpoint::TRANSLATIONS) {
                 std::unique_lock lock(pipe->sttPipelineMutex);
                 auto disconnectStatus = checkClientDisconnected(payload, cc->NodeName(), "before translation");
-                if (!disconnectStatus.ok()) return disconnectStatus;
+                if (!disconnectStatus.ok())
+                    return disconnectStatus;
                 std::string generatedText = pipe->sttPipeline->generate(rawSpeech, ov::genai::task("translate"));
                 lock.unlock();
                 disconnectStatus = checkClientDisconnected(payload, cc->NodeName(), "after translation");
-                if (!disconnectStatus.ok()) return disconnectStatus;
+                if (!disconnectStatus.ok())
+                    return disconnectStatus;
                 writer.String(generatedText.c_str());
             }
             writer.EndObject();
