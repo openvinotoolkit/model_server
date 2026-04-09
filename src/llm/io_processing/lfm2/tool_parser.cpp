@@ -46,10 +46,10 @@ std::string Lfm2ToolParser::parseArrayParameter(std::string argumentStr) {
         bool isLastElement = (i == argumentStr.size() - 2);
         bool isFollowedByComma = !isLastElement && argumentStr[i + 1] == ',';
 
-        if (i == 1 || quoteDepth == 0) {
+        if (quoteDepth == 0) {
             argumentStr[i] = '"';
             quoteDepth++;
-        } else if (isFollowedByComma || isLastElement) {
+        } else if (quoteDepth > 0 && (isFollowedByComma || isLastElement)) {
             argumentStr[i] = '"';
             quoteDepth--;
         }
@@ -70,10 +70,10 @@ std::string Lfm2ToolParser::parseObjectParameter(std::string argumentStr) {
         bool isFollowedByComma = !isLastElement && argumentStr[i + 1] == ',';
         bool isFollowedByColon = !isLastElement && argumentStr[i + 1] == ':';
 
-        if (i == 1 || quoteDepth == 0) {
+        if (quoteDepth == 0) {
             argumentStr[i] = '"';
             quoteDepth++;
-        } else if (isFollowedByComma || isLastElement || isFollowedByColon) {
+        } else if (quoteDepth > 0 && (isFollowedByComma || isLastElement || isFollowedByColon)) {
             argumentStr[i] = '"';
             quoteDepth--;
         }
