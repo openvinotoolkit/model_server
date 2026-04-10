@@ -71,7 +71,7 @@ public:
         builder_impl->unsetStructuredOutputConfig();
     }
 
-    void parseConfigFromRequest(const OpenAIChatCompletionsRequest& request) {
+    void parseConfigFromRequest(const OpenAIRequest& request) {
         builder_impl->parseConfigFromRequest(request);
     }
 
