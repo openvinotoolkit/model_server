@@ -23,8 +23,6 @@ class Lfm2ToolParser : public BaseOutputParser {
 protected:
     static const std::string TOOL_CALL_START_TAG;
     static const std::string TOOL_CALL_END_TAG;
-    static const std::string TOOL_RESPONSE_START_TAG;
-    static const std::string TOOL_RESPONSE_END_TAG;
 
     static const std::string TOOL_LIST_START_INDICATOR;
     static const std::string TOOL_LIST_END_INDICATOR;
