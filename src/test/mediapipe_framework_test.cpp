@@ -209,12 +209,7 @@ TEST(NodeInitializerRegistryTest, AllExpectedInitializersRegistered) {
             [&](const auto& init) { return init->matches(name); });
         EXPECT_TRUE(found) << "No NodeInitializer registered for calculator: " << name;
     }
-}
 
-TEST_F(MediapipeFrameworkTest, NodeInitializerRegistryHasExpectedCountAfterServerStart) {
-    SetUpServer(getGenericFullPathForSrcTest("/ovms/src/test/mediapipe/config_mediapipe_dummy_adapter_full.json").c_str());
-
-    const auto& initializers = ovms::NodeInitializerRegistry::instance().all();
 #if (PYTHON_DISABLE == 0)
     constexpr size_t expectedInitializersCount = 7;
 #else
