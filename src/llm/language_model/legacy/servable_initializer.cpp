@@ -76,6 +76,11 @@ Status LegacyServableInitializer::initialize(std::shared_ptr<GenAiServable>& ser
         return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
     }
 
+    status = initializeLoraAdapters(nodeOptions, graphPath, properties);
+    if (!status.ok()) {
+        return status;
+    }
+
     status = JsonParser::parsePluginConfig(nodeOptions.plugin_config(), properties->pluginConfig);
     if (!status.ok()) {
         SPDLOG_ERROR("Error during llm node plugin_config option parsing to JSON: {}", nodeOptions.plugin_config());
