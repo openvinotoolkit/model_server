@@ -1195,11 +1195,11 @@ DLL_PUBLIC OVMS_Status* OVMS_GetServableState(OVMS_Server* serverPtr, const char
         if (!definition) {
             return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::MODEL_NAME_MISSING));
         }
-        auto* svsd = dynamic_cast<ovms::SingleVersionServableDefinition*>(definition);
-        if (!svsd) {
+        auto* singleVersionServableDefinition = dynamic_cast<ovms::SingleVersionServableDefinition*>(definition);
+        if (!singleVersionServableDefinition) {
             return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::MODEL_NAME_MISSING));
         }
-        *state = convertToServableState(svsd->getStatus().getStateCode());
+        *state = convertToServableState(singleVersionServableDefinition->getStatus().getStateCode());
         return nullptr;
     }
     if (!status.ok()) {

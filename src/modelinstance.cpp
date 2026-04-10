@@ -65,7 +65,9 @@
 #endif
 
 #ifdef _WIN32
-#include "cleaner_utils.hpp"
+namespace ovms {
+bool malloc_trim_win();
+}  // namespace ovms
 #endif
 
 namespace {
