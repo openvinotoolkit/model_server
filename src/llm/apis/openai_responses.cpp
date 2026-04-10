@@ -42,6 +42,9 @@ using namespace rapidjson;
 
 namespace ovms {
 
+static constexpr const char* OUTPUT_ITEM_ID = "msg-0";
+static constexpr const char* REASONING_ITEM_ID = "rs-0";
+
 static std::string joinServerSideEvents(const std::vector<std::string>& events) {
     if (events.empty()) {
         return "";
@@ -61,7 +64,7 @@ absl::Status OpenAIResponsesHandler::parseRequest(std::optional<uint32_t> maxTok
     absl::Status status = parseCommonPart(maxTokensLimit, bestOfLimit, maxModelLength);
     if (status != absl::OkStatus())
         return status;
-    status = parsePart(maxTokensLimit, allowedLocalMediaPath, allowedMediaDomains);
+    status = parseResponsesPart(maxTokensLimit, allowedLocalMediaPath, allowedMediaDomains);
     return status;
 }
 
@@ -174,10 +177,10 @@ absl::Status OpenAIResponsesHandler::parseInput(std::optional<std::string> allow
     return absl::OkStatus();
 }
 
-absl::Status OpenAIResponsesHandler::parsePart(std::optional<uint32_t> maxTokensLimit, std::optional<std::string> allowedLocalMediaPath, std::optional<std::vector<std::string>> allowedMediaDomains) {
+absl::Status OpenAIResponsesHandler::parseResponsesPart(std::optional<uint32_t> maxTokensLimit, std::optional<std::string> allowedLocalMediaPath, std::optional<std::vector<std::string>> allowedMediaDomains) {
     // Reject stream_options — usage is always included in response.completed event
     if (doc.FindMember("stream_options") != doc.MemberEnd()) {
-        return absl::InvalidArgumentError("stream_options is not supported in Responses API. Usage statistics are always included in the response.");
+        return absl::InvalidArgumentError("stream_options is not supported in Responses API.");
     }
 
     // input: string; required
@@ -340,7 +343,7 @@ void OpenAIResponsesHandler::serializeTools(Writer<StringBuffer>& writer) const 
     writer.EndArray();
 }
 
-void OpenAIResponsesHandler::serializeResponseEnvelope(Writer<StringBuffer>& writer, const std::string& responseId, int64_t createdAt,
+void OpenAIResponsesHandler::serializeCommonResponseParameters(Writer<StringBuffer>& writer, const std::string& responseId, int64_t createdAt,
     const std::string& status,
     const std::optional<std::string>& incompleteReason, const std::optional<std::string>& errorMessage, ResponsesErrorCode errorCode) const {
     writer.StartObject();
@@ -383,7 +386,7 @@ void OpenAIResponsesHandler::serializeResponseEnvelope(Writer<StringBuffer>& wri
     // TODO: previous_response_id not supported
     writer.String("store");
     writer.Bool(true);
-    // TODO: temperature are only included when explicitly provided in the request
+    // TODO: temperature are only included when explicitly provided in the request, but should be always in the response
     if (request.temperature.has_value()) {
         writer.String("temperature");
         writer.Double(static_cast<double>(request.temperature.value()));
@@ -398,7 +401,7 @@ void OpenAIResponsesHandler::serializeResponseEnvelope(Writer<StringBuffer>& wri
     writer.EndObject();
     serializeToolChoice(writer);
     serializeTools(writer);
-    // TODO: top_p are only included when explicitly provided in the request
+    // TODO: top_p are only included when explicitly provided in the request, but should be always in the response
     if (request.topP.has_value()) {
         writer.String("top_p");
         writer.Double(static_cast<double>(request.topP.value()));
@@ -419,7 +422,7 @@ void OpenAIResponsesHandler::serializeResponseEnvelope(Writer<StringBuffer>& wri
 void OpenAIResponsesHandler::serializeResponseObject(Writer<StringBuffer>& writer, const std::string& responseId, int64_t createdAt,
     const std::string& status, const std::string& fullOutputText, bool includeUsage,
     const std::optional<std::string>& incompleteReason, const std::optional<std::string>& errorMessage, ResponsesErrorCode errorCode) const {
-    serializeResponseEnvelope(writer, responseId, createdAt, status, incompleteReason, errorMessage, errorCode);
+    serializeCommonResponseParameters(writer, responseId, createdAt, status, incompleteReason, errorMessage, errorCode);
 
     writer.String("output");
     writer.StartArray();
@@ -427,7 +430,7 @@ void OpenAIResponsesHandler::serializeResponseObject(Writer<StringBuffer>& write
     if (!responsesState.reasoningText.empty()) {
         writer.StartObject();
         writer.String("id");
-        writer.String("rs-0");
+        writer.String(REASONING_ITEM_ID);
         writer.String("type");
         writer.String("reasoning");
         writer.String("summary");
@@ -461,7 +464,7 @@ void OpenAIResponsesHandler::serializeResponseObject(Writer<StringBuffer>& write
     {
         writer.StartObject();
         writer.String("id");
-        writer.String("msg-0");
+        writer.String(OUTPUT_ITEM_ID);
         writer.String("type");
         writer.String("message");
         writer.String("role");
@@ -536,7 +539,7 @@ std::string OpenAIResponsesHandler::serializeUnaryResponseImpl(const std::vector
     StringBuffer buffer;
     Writer<StringBuffer> writer(buffer);
 
-    serializeResponseEnvelope(writer, responseId, createdAt, responseStatus, incompleteReason);
+    serializeCommonResponseParameters(writer, responseId, createdAt, responseStatus, incompleteReason);
 
     writer.String("output");
     writer.StartArray();
@@ -1024,8 +1027,8 @@ std::string OpenAIResponsesHandler::serializeStreamingChunk(const std::string& c
     OVMS_PROFILE_FUNCTION();
     const auto createdAt = std::chrono::duration_cast<std::chrono::seconds>(created.time_since_epoch()).count();
     const std::string responseId = "resp-" + std::to_string(createdAt);
-    const std::string outputItemId = "msg-0";
-    const std::string reasoningItemId = "rs-0";
+    const std::string outputItemId = OUTPUT_ITEM_ID;
+    const std::string reasoningItemId = REASONING_ITEM_ID;
 
     std::vector<std::string> events;
     // Fallback: emit any lifecycle events not yet sent (methods are idempotent)

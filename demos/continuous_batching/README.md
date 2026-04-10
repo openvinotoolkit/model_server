@@ -207,7 +207,6 @@ curl -s http://localhost:8000/v3/responses -H "Content-Type: application/json" -
     "input_tokens": 27,
     "input_tokens_details": { "cached_tokens": 0 },
     "output_tokens": 30,
-    "output_tokens_details": { "reasoning_tokens": 0 },
     "total_tokens": 57
   }
 }

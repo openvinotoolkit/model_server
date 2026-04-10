@@ -171,7 +171,6 @@ curl http://localhost:8000/v3/responses \
     "input_tokens": 19,
     "input_tokens_details": { "cached_tokens": 0 },
     "output_tokens": 83,
-    "output_tokens_details": { "reasoning_tokens": 0 },
     "total_tokens": 102
   }
 }
