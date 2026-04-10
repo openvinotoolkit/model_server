@@ -57,7 +57,7 @@ curl http://localhost:8000/v3/chat/completions -H "Content-Type: application/jso
 Install Open WebUI:
 
 ```bash
-pip install --no-cache-dir open-webui
+pip install --no-cache-dir open-webui --extra-index-url "https://download.pytorch.org/whl/cpu"
 ```
 
 Running Open WebUI:
