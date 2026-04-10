@@ -43,12 +43,12 @@ class OpenAIResponsesHandler : public OpenAIApiHandler {
 
     // Responses-specific request parsing
     absl::Status parseInput(std::optional<std::string> allowedLocalMediaPath, std::optional<std::vector<std::string>> allowedMediaDomains);
-    absl::Status parsePart(std::optional<uint32_t> maxTokensLimit, std::optional<std::string> allowedLocalMediaPath, std::optional<std::vector<std::string>> allowedMediaDomains);
+    absl::Status parseResponsesPart(std::optional<uint32_t> maxTokensLimit, std::optional<std::string> allowedLocalMediaPath, std::optional<std::vector<std::string>> allowedMediaDomains);
 
     // Responses serialization helpers
     void serializeToolChoice(Writer<StringBuffer>& writer) const;
     void serializeTools(Writer<StringBuffer>& writer) const;
-    void serializeResponseEnvelope(Writer<StringBuffer>& writer, const std::string& responseId, int64_t createdAt,
+    void serializeCommonResponseParameters(Writer<StringBuffer>& writer, const std::string& responseId, int64_t createdAt,
         const std::string& status,
         const std::optional<std::string>& incompleteReason = std::nullopt, const std::optional<std::string>& errorMessage = std::nullopt, ResponsesErrorCode errorCode = ResponsesErrorCode::SERVER_ERROR) const;
     void serializeResponseObject(Writer<StringBuffer>& writer, const std::string& responseId, int64_t createdAt,
