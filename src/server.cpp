@@ -32,11 +32,13 @@
 #include <stdlib.h>
 
 #ifdef __linux__
+#include <dlfcn.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <sysexits.h>
 #elif _WIN32
 #include <csignal>
+#include <system_error>
 
 #include <ntstatus.h>
 #include <winsock2.h>
@@ -69,13 +71,130 @@
 #include "stringutils.hpp"
 #include "version.hpp"
 
-#if (PYTHON_DISABLE == 0)
-#include "python/pythoninterpretermodule.hpp"
-#endif
-
 using grpc::ServerBuilder;
 
 namespace ovms {
+
+#if (PYTHON_DISABLE == 0)
+namespace {
+#ifdef __linux__
+using PythonLibraryHandle = void*;
+#elif _WIN32
+using PythonLibraryHandle = HMODULE;
+#endif
+using CreatePythonInterpreterModuleFn = Module* (*)();
+
+PythonLibraryHandle pythonRuntimeHandle = nullptr;
+CreatePythonInterpreterModuleFn createPythonInterpreterModuleFn = nullptr;
+
+bool ensurePythonRuntimeLoaded() {
+    if (createPythonInterpreterModuleFn != nullptr) {
+        return true;
+    }
+
+#ifdef __linux__
+    std::vector<std::string> candidates{
+        "libovmspython.so",
+        "./libovmspython.so",
+        "src/python/libovmspython.so",
+        "./src/python/libovmspython.so",
+        "bazel-bin/src/python/libovmspython.so",
+        "./bazel-bin/src/python/libovmspython.so"};
+
+    for (const auto& candidate : candidates) {
+        pythonRuntimeHandle = dlopen(candidate.c_str(), RTLD_NOW | RTLD_LOCAL);
+        if (pythonRuntimeHandle != nullptr) {
+            break;
+        }
+    }
+
+    if (pythonRuntimeHandle == nullptr) {
+        SPDLOG_WARN("Python runtime library libovmspython.so failed to load: {}", dlerror());
+        return false;
+    }
+    createPythonInterpreterModuleFn = reinterpret_cast<CreatePythonInterpreterModuleFn>(dlsym(pythonRuntimeHandle, "OVMS_createPythonInterpreterModule"));
+    if (createPythonInterpreterModuleFn == nullptr) {
+        SPDLOG_WARN("Python runtime library libovmspython.so missing symbol OVMS_createPythonInterpreterModule: {}", dlerror());
+        dlclose(pythonRuntimeHandle);
+        pythonRuntimeHandle = nullptr;
+        return false;
+    }
+#elif _WIN32
+    std::vector<std::string> candidates{
+        "libovmspython.dll",
+        ".\\libovmspython.dll",
+        "src\\python\\libovmspython.dll",
+        ".\\src\\python\\libovmspython.dll",
+        "bazel-bin\\src\\python\\libovmspython.dll",
+        ".\\bazel-bin\\src\\python\\libovmspython.dll"};
+
+    char executablePath[MAX_PATH] = {0};
+    DWORD executablePathLength = GetModuleFileNameA(nullptr, executablePath, MAX_PATH);
+    if (executablePathLength > 0 && executablePathLength < MAX_PATH) {
+        std::string exePath(executablePath, executablePathLength);
+        std::string exeDir = ".";
+        size_t separatorPos = exePath.find_last_of("\\/");
+        if (separatorPos != std::string::npos) {
+            exeDir = exePath.substr(0, separatorPos);
+        }
+
+        std::vector<std::string> executableRelativeCandidates{
+            exeDir + "\\libovmspython.dll",
+            exeDir + "\\src\\python\\libovmspython.dll",
+            exeDir + "\\..\\src\\python\\libovmspython.dll",
+        };
+
+        std::string runfilesRoot = exePath + ".runfiles";
+        std::vector<std::string> runfilesCandidates{
+            runfilesRoot + "\\src\\python\\libovmspython.dll",
+            runfilesRoot + "\\_main\\src\\python\\libovmspython.dll",
+            runfilesRoot + "\\model_server\\src\\python\\libovmspython.dll",
+        };
+
+        candidates.insert(candidates.end(), executableRelativeCandidates.begin(), executableRelativeCandidates.end());
+        candidates.insert(candidates.end(), runfilesCandidates.begin(), runfilesCandidates.end());
+    }
+
+    for (const auto& candidate : candidates) {
+        pythonRuntimeHandle = LoadLibraryA(candidate.c_str());
+        if (pythonRuntimeHandle != nullptr) {
+            break;
+        }
+    }
+
+    if (pythonRuntimeHandle == nullptr) {
+        DWORD error = GetLastError();
+        SPDLOG_WARN("Python runtime library libovmspython.dll failed to load: {} ({})", error, std::system_category().message(error));
+        return false;
+    }
+    createPythonInterpreterModuleFn = reinterpret_cast<CreatePythonInterpreterModuleFn>(GetProcAddress(pythonRuntimeHandle, "OVMS_createPythonInterpreterModule"));
+    if (createPythonInterpreterModuleFn == nullptr) {
+        DWORD error = GetLastError();
+        SPDLOG_WARN("Python runtime library libovmspython.dll missing symbol OVMS_createPythonInterpreterModule: {} ({})", error, std::system_category().message(error));
+        FreeLibrary(pythonRuntimeHandle);
+        pythonRuntimeHandle = nullptr;
+        return false;
+    }
+#endif
+
+    SPDLOG_INFO("Python runtime library loaded successfully");
+    return true;
+}
+
+void unloadPythonRuntime() {
+    createPythonInterpreterModuleFn = nullptr;
+    if (pythonRuntimeHandle == nullptr) {
+        return;
+    }
+#ifdef __linux__
+    dlclose(pythonRuntimeHandle);
+#elif _WIN32
+    FreeLibrary(pythonRuntimeHandle);
+#endif
+    pythonRuntimeHandle = nullptr;
+}
+}  // namespace
+#endif
 
 Server& Server::instance() {
     static Server global;
@@ -302,8 +421,12 @@ std::unique_ptr<Module> Server::createModule(const std::string& name) {
     if (name == SERVABLE_MANAGER_MODULE_NAME)
         return std::make_unique<ServableManagerModule>(*this);
 #if (PYTHON_DISABLE == 0)
-    if (name == PYTHON_INTERPRETER_MODULE_NAME)
-        return std::make_unique<PythonInterpreterModule>();
+    if (name == PYTHON_INTERPRETER_MODULE_NAME) {
+        if (!ensurePythonRuntimeLoaded()) {
+            return nullptr;
+        }
+        return std::unique_ptr<Module>(createPythonInterpreterModuleFn());
+    }
 #endif
     if (name == METRICS_MODULE_NAME)
         return std::make_unique<MetricModule>();
@@ -379,8 +502,16 @@ Status Server::startModules(ovms::Config& config) {
 
 #if (PYTHON_DISABLE == 0)
     if (config.getServerSettings().withPython) {
-        INSERT_MODULE(PYTHON_INTERPRETER_MODULE_NAME, it);
-        START_MODULE(it);
+        auto pythonModule = this->createModule(PYTHON_INTERPRETER_MODULE_NAME);
+        if (pythonModule == nullptr) {
+            SPDLOG_WARN("Python requested in configuration, but runtime library could not be loaded. Continuing with Python features disabled.");
+        } else {
+            std::unique_lock lock(modulesMtx);
+            std::tie(it, inserted) = this->modules.emplace(PYTHON_INTERPRETER_MODULE_NAME, std::move(pythonModule));
+            if (!inserted)
+                return Status(StatusCode::MODULE_ALREADY_INSERTED, PYTHON_INTERPRETER_MODULE_NAME);
+            START_MODULE(it);
+        }
     }
 #endif
 #if MTR_ENABLED
@@ -407,12 +538,12 @@ Status Server::startModules(ovms::Config& config) {
     START_MODULE(it);
 #if (PYTHON_DISABLE == 0)
     if (config.getServerSettings().withPython) {
-        GET_MODULE(PYTHON_INTERPRETER_MODULE_NAME, it);
-        auto pythonModule = dynamic_cast<const PythonInterpreterModule*>(it->second.get());
-        if (pythonModule->ownsPythonInterpreter()) {
+        std::shared_lock lock(modulesMtx);
+        auto pythonModuleIt = modules.find(PYTHON_INTERPRETER_MODULE_NAME);
+        if (pythonModuleIt != modules.end() && pythonModuleIt->second != nullptr && pythonModuleIt->second->ownsPythonInterpreter()) {
             // Natively GIL is held by the thread that initialized interpreter, so we only need to release it, if we own the interpreter.
             // If it was initialized externally, then the external thread shall release the GIL before launching that module.
-            pythonModule->releaseGILFromThisThread();
+            pythonModuleIt->second->releaseGILFromThisThread();
         }
     }
 #endif
@@ -472,6 +603,9 @@ void Server::shutdownModules() {
     // this is because the OS can have a delay between freeing up port before it can be requested and used again
     std::shared_lock lock(modulesMtx);
     modules.clear();
+#if (PYTHON_DISABLE == 0)
+    unloadPythonRuntime();
+#endif
 }
 
 static int statusToExitCode(const Status& status) {

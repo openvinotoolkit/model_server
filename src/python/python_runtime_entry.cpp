@@ -13,27 +13,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#pragma once
 
-#include <gmock/gmock.h>
-#include <gtest/gtest.h>
-#include <memory>
+#include "../module.hpp"
+#include "pythoninterpretermodule.hpp"
 
-#include "../python/pythoninterpretermodule.hpp"
+#if defined(_WIN32)
+#define PYTHON_RUNTIME_EXPORT __declspec(dllexport)
+#else
+#define PYTHON_RUNTIME_EXPORT __attribute__((visibility("default")))
+#endif
 
-namespace ovms {
-class PythonBackend;
+extern "C" PYTHON_RUNTIME_EXPORT ovms::Module* OVMS_createPythonInterpreterModule() {
+    return new ovms::PythonInterpreterModule();
 }
 
-class PythonEnvironment : public testing::Environment {
-    std::unique_ptr<ovms::PythonInterpreterModule> pythonModule;
-
-public:
-    void SetUp() override;
-    void TearDown() override;
-    ovms::PythonInterpreterModule* getPythonInterpreterModule() const;
-    ovms::PythonBackend* getPythonBackend() const;
-};
-
-ovms::PythonBackend* getGlobalPythonBackend();
-ovms::PythonInterpreterModule* getGlobalPythonInterpreterModule();
+#undef PYTHON_RUNTIME_EXPORT

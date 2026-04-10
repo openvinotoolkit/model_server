@@ -53,9 +53,18 @@ if !errorlevel! neq 0 exit /b !errorlevel!
 set "dest_dir=C:\opt"
 
 if /i "%with_python%"=="true" (
+    if not exist %cd%\bazel-out\x64_windows-opt\bin\src\python\libovmspython.dll (
+        echo Missing libovmspython.dll in bazel output. Ensure //src/python:libovmspython is built.
+        exit /b 1
+    )
+
     :: Copy pyovms module
     md dist\windows\ovms\python
     copy %cd%\bazel-out\x64_windows-opt\bin\src\python\binding\pyovms.pyd dist\windows\ovms\python
+    if !errorlevel! neq 0 exit /b !errorlevel!
+
+    :: Copy shared OVMS python runtime library required by ovms.exe when Python is enabled.
+    copy %cd%\bazel-out\x64_windows-opt\bin\src\python\libovmspython.dll dist\windows\ovms
     if !errorlevel! neq 0 exit /b !errorlevel!
 
     :: Prepare self-contained python
