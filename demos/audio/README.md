@@ -228,12 +228,7 @@ docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 --device /dev/dri --group-a
 If you run on GPU make sure to have appropriate drivers installed, so the device is accessible for the model server.
 
 ```bat
-mkdir models
-ovms --rest_port 8000 --source_model openai/whisper-large-v3-turbo --model_repository_path models --model_name openai/whisper-large-v3-turbo --task speech2text --target_device CPU
-```
-or
-```bat
-ovms --rest_port 8000 --source_model openai/whisper-large-v3-turbo --model_repository_path models --model_name openai/whisper-large-v3-turbo --task speech2text --target_device GPU
+ovms --rest_port 8000 --model_path /models/openai/whisper-large-v3-turbo --model_name openai/whisper-large-v3-turbo
 ```
 :::
 
