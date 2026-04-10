@@ -13,7 +13,7 @@ This document gives information how to build docker images and the binary packag
 
 ## Makefile and building
 
-Makefile located in root directory of this repository contains all targets needed to build docker images and binary packages. One of these targets is `release_image` which by default builds `openvino/model_server:latest` image.
+Makefile located in root directory of this repository contains all targets needed to build docker images and binary packages. One of these targets is `release_image` which by default builds `openvino/model_server:2026.1` image.
 
 ```bash
 git clone https://github.com/openvinotoolkit/model_server

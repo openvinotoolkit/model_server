@@ -49,13 +49,13 @@ curl https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/mode
 ### Pull the Latest Model Server Image
 Pull the latest version of OpenVINO&trade; Model Server from Docker Hub :
 ```Bash
-docker pull openvino/model_server:latest
+docker pull openvino/model_server:2026.1
 ```
 
 ### Start the Model Server Container with Downloaded Model
 Start the server container with the image pulled in the previous step and mount the `models` directory :
 ```Bash
-docker run --rm -d -v $(pwd)/models:/models -p 9000:9000 -p 8000:8000 openvino/model_server:latest --model_name resnet --model_path /models/resnet --port 9000 --rest_port 8000 --layout NHWC:NCHW
+docker run --rm -d -v $(pwd)/models:/models -p 9000:9000 -p 8000:8000 openvino/model_server:2026.1 --model_name resnet --model_path /models/resnet --port 9000 --rest_port 8000 --layout NHWC:NCHW
 ```
 
 > Note: The model default setting is to accept inputs in layout NCHW, but we change it to NHWC to make it work with samples using either regular, array-like input data or JPEG encoded images.

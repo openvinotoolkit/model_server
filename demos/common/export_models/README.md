@@ -198,7 +198,7 @@ After exporting models using the commands above (which use `--model_repository_p
 ```bash
 docker run -d --rm -p 8000:8000 \
     -v $(pwd)/models:/workspace:ro \
-    openvino/model_server:latest \
+    openvino/model_server:2026.1 \
     --port 9000 --rest_port 8000 \
     --config_path /workspace/config_all.json
 ```
@@ -209,7 +209,7 @@ docker run -d --rm -p 8000:8000 \
     --device /dev/dri \
     --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) \
     -v $(pwd)/models:/workspace:ro \
-    openvino/model_server:latest-gpu \
+    openvino/model_server:2026.1-gpu \
     --port 9000 --rest_port 8000 \
     --config_path /workspace/config_all.json
 ```

@@ -19,7 +19,7 @@ You can use another model from [OpenVINO organization on HuggingFace](https://hu
 
 ```bash
 mkdir models
-docker run --user $(id -u):$(id -g) -d --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) --rm -p 8000:8000 -v $(pwd)/models:/models:rw openvino/model_server:latest-gpu --source_model OpenVINO/Qwen3-8B-int4-ov --model_repository_path models --task text_generation --rest_port 8000 --target_device GPU
+docker run --user $(id -u):$(id -g) -d --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) --rm -p 8000:8000 -v $(pwd)/models:/models:rw openvino/model_server:2026.1-gpu --source_model OpenVINO/Qwen3-8B-int4-ov --model_repository_path models --task text_generation --rest_port 8000 --target_device GPU
 ```
 :::
 

@@ -37,7 +37,7 @@ cd model_server
 
 ### Start the Model Server Container with Dummy Model
 ```Bash
-docker run --rm -d -v $(pwd)/src/test/dummy:/models -p 9000:9000 -p 8000:8000 openvino/model_server:latest --model_name dummy --model_path /models --port 9000 --rest_port 8000
+docker run --rm -d -v $(pwd)/src/test/dummy:/models -p 9000:9000 -p 8000:8000 openvino/model_server:2026.1 --model_name dummy --model_path /models --port 9000 --rest_port 8000
 ```
 
 ### Build client library and samples
@@ -448,7 +448,7 @@ curl https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/mode
 
 ### Start the Model Server Container with Resnet Model
 ```Bash
-docker run --rm -d -v $(pwd)/models:/models -p 9000:9000 -p 8000:8000 openvino/model_server:latest --model_name resnet --model_path /models/resnet --port 9000 --rest_port 8000 --layout NHWC:NCHW --plugin_config '{"PERFORMANCE_HINT":"LATENCY"}'
+docker run --rm -d -v $(pwd)/models:/models -p 9000:9000 -p 8000:8000 openvino/model_server:2026.1 --model_name resnet --model_path /models/resnet --port 9000 --rest_port 8000 --layout NHWC:NCHW --plugin_config '{"PERFORMANCE_HINT":"LATENCY"}'
 ```
 
 Once you finish above steps, you are ready to run the samples.

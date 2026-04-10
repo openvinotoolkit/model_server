@@ -19,7 +19,7 @@ curl --create-dirs https://storage.openvinotoolkit.org/repositories/open_model_z
 Start OVMS container with image pulled in previous step and mount `model` directory :
 ```bash
 chmod -R 755 model
-docker run --rm -d -u $(id -u):$(id -g) -v $(pwd)/model:/models/age_gender -p 9000:9000 -p 8000:8000 openvino/model_server:latest --model_path /models/age_gender --model_name age_gender --port 9000 --rest_port 8000
+docker run --rm -d -u $(id -u):$(id -g) -v $(pwd)/model:/models/age_gender -p 9000:9000 -p 8000:8000 openvino/model_server:2026.1 --model_path /models/age_gender --model_name age_gender --port 9000 --rest_port 8000
 ```
 :::
 :::{dropdown} **Deploying on Bare Metal**

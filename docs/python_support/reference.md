@@ -16,7 +16,7 @@ The publicly available `openvino/model_server` image on Docker Hub supports Pyth
 In that case, your Dockerfile may look like this:
 
 ```dockerfile
-FROM openvino/model_server:latest
+FROM openvino/model_server:2026.1
 USER root
 ENV LD_LIBRARY_PATH=/ovms/lib
 ENV PYTHONPATH=/ovms/lib/python
