@@ -31,7 +31,7 @@
 #include "status.hpp"
 #include "config.hpp"
 
-#include "filesystem.hpp"
+#include "filesystem/filesystem.hpp"
 
 using namespace ov::genai;
 using namespace ov;

@@ -20,12 +20,14 @@
 #include <thread>
 
 #include "../logging.hpp"
+#include "../model.hpp"
 #include "../model_metric_reporter.hpp"
 #include "../modelinstance.hpp"
 #include "../modelinstanceunloadguard.hpp"
 #include "../modelmanager.hpp"
 #include "../ov_utils.hpp"
 #include "../prediction_service_utils.hpp"
+#include "../servable_definition_unload_guard.hpp"
 #include "../status.hpp"
 #include "custom_node.hpp"
 #include "custom_node_library_internal_manager_wrapper.hpp"
@@ -36,7 +38,6 @@
 #include "nodeinfo.hpp"
 #include "nodestreamidguard.hpp"
 #include "pipeline.hpp"
-#include "pipelinedefinitionunloadguard.hpp"
 
 namespace ovms {
 const std::string PipelineDefinition::SCHEDULER_CLASS_NAME{"Pipeline"};
@@ -59,25 +60,19 @@ PipelineDefinition::PipelineDefinition(const std::string& pipelineName,
     const pipeline_connections_t& connections,
     MetricRegistry* registry,
     const MetricConfig* metricConfig) :
-    pipelineName(pipelineName),
+    SingleVersionServableDefinition(pipelineName),
     nodeInfos(nodeInfos),
     connections(connections),
     reporter(std::make_unique<ServableMetricReporter>(metricConfig, registry, pipelineName, VERSION)),
-    status(SCHEDULER_CLASS_NAME, this->pipelineName) {}
+    status(SCHEDULER_CLASS_NAME, getName()) {}
 
 Status PipelineDefinition::validate(ModelManager& manager) {
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Started validation of pipeline: {}", getName());
     ValidationResultNotifier notifier(status, loadedNotify);
-    if (manager.modelExists(this->pipelineName)) {
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Pipeline name: {} is already occupied by model.", pipelineName);
+    if (manager.servableExists(getName(), ServableQueryType::Model | ServableQueryType::Mediapipe)) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Pipeline name: {} is already occupied by model or mediapipe graph.", getName());
         return StatusCode::PIPELINE_NAME_OCCUPIED;
     }
-#if (MEDIAPIPE_DISABLE == 0)
-    if (manager.getMediapipeFactory().definitionExists(this->pipelineName)) {
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Pipeline name: {} is already occupied by mediapipe graph.", pipelineName);
-        return StatusCode::PIPELINE_NAME_OCCUPIED;
-    }
-#endif
     Status validationResult = initializeNodeResources(manager);
     if (!validationResult.ok()) {
         return validationResult;
@@ -118,7 +113,7 @@ Status PipelineDefinition::initializeNodeResources(ModelManager& manager) {
             auto params = createCustomNodeParamArray(nodeInfo.parameters);
             int paramsLength = nodeInfo.parameters.size();
             if (!nodeInfo.library.isValid()) {
-                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Pipeline: {} node: {} refers to invalid library", pipelineName, nodeInfo.nodeName);
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Pipeline: {} node: {} refers to invalid library", getName(), nodeInfo.nodeName);
                 return StatusCode::PIPELINE_DEFINITION_INVALID_NODE_LIBRARY;
             }
             auto status = nodeInfo.library.initialize(&customNodeLibraryInternalManager, params.get(), paramsLength);
@@ -188,50 +183,12 @@ void PipelineDefinition::retire(ModelManager& manager) {
     this->connections.clear();
 }
 
-Status PipelineDefinition::waitForLoaded(std::unique_ptr<PipelineDefinitionUnloadGuard>& unloadGuard, const uint32_t waitForLoadedTimeoutMicroseconds) {
-    unloadGuard = std::make_unique<PipelineDefinitionUnloadGuard>(*this);
+StatusCode PipelineDefinition::notLoadedYetCode() const {
+    return StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET;
+}
 
-    const uint32_t waitLoadedTimestepMicroseconds = 1000;
-    const uint32_t waitCheckpoints = waitForLoadedTimeoutMicroseconds / waitLoadedTimestepMicroseconds;
-    uint32_t waitCheckpointsCounter = waitCheckpoints;
-    std::mutex cvMtx;
-    std::unique_lock<std::mutex> cvLock(cvMtx);
-    while (waitCheckpointsCounter-- != 0) {
-        if (status.isAvailable()) {
-            SPDLOG_DEBUG("Successfully waited for pipeline definition: {}", getName());
-            return StatusCode::OK;
-        }
-        unloadGuard.reset();
-        if (!status.canEndLoaded()) {
-            if (status.getStateCode() != PipelineDefinitionStateCode::RETIRED) {
-                SPDLOG_DEBUG("Waiting for pipeline definition: {} ended due to timeout.", getName());
-                return StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET;
-            } else {
-                SPDLOG_DEBUG("Waiting for pipeline definition: {} ended since it failed to load.", getName());
-                return StatusCode::PIPELINE_DEFINITION_NOT_LOADED_ANYMORE;
-            }
-        }
-        SPDLOG_DEBUG("Waiting for available state for pipeline: {}, with timestep: {}us timeout: {}us check count: {}",
-            getName(), waitLoadedTimestepMicroseconds, waitForLoadedTimeoutMicroseconds, waitCheckpointsCounter);
-        loadedNotify.wait_for(cvLock,
-            std::chrono::microseconds(waitLoadedTimestepMicroseconds),
-            [this]() {
-                return this->status.isAvailable() ||
-                       !this->status.canEndLoaded();
-            });
-        unloadGuard = std::make_unique<PipelineDefinitionUnloadGuard>(*this);
-    }
-    if (!status.isAvailable()) {
-        if (status.getStateCode() != PipelineDefinitionStateCode::RETIRED) {
-            SPDLOG_DEBUG("Waiting for pipeline definition: {} ended due to timeout.", getName());
-            return StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET;
-        } else {
-            SPDLOG_DEBUG("Waiting for pipeline definition: {} ended since it failed to load.", getName());
-            return StatusCode::PIPELINE_DEFINITION_NOT_LOADED_ANYMORE;
-        }
-    }
-    SPDLOG_DEBUG("Successfully waited for pipeline definition: {}", getName());
-    return StatusCode::OK;
+StatusCode PipelineDefinition::notLoadedAnymoreCode() const {
+    return StatusCode::PIPELINE_DEFINITION_NOT_LOADED_ANYMORE;
 }
 
 template <typename RequestType, typename ResponseType>
@@ -239,7 +196,7 @@ Status PipelineDefinition::create(std::unique_ptr<Pipeline>& pipeline,
     const RequestType* request,
     ResponseType* response,
     ModelManager& manager) {
-    std::unique_ptr<PipelineDefinitionUnloadGuard> unloadGuard;
+    std::unique_ptr<ServableDefinitionUnloadGuard> unloadGuard;
     Status status = waitForLoaded(unloadGuard);
     if (!status.ok()) {
         return status;
@@ -300,7 +257,7 @@ Status PipelineDefinition::create(std::unique_ptr<Pipeline>& pipeline,
     }
 #pragma warning(push)
 #pragma warning(disable : 6011)
-    pipeline = std::make_unique<Pipeline>(*entry, *exit, *this->reporter, pipelineName);
+    pipeline = std::make_unique<Pipeline>(*entry, *exit, *this->reporter, getName());
 #pragma warning(pop)
     for (auto& kv : nodes) {
         pipeline->push(std::move(kv.second));
@@ -515,7 +472,7 @@ public:
         }
         if (shape.size() < 3) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Validation of pipeline: {} definition failed. Node: {} demultiply cannot occur due to not enough shape dimensions: {}",
-                this->pipelineName,
+                pipelineName,
                 demultiplicatorNodeInfo.nodeName,
                 shape.size());
             return StatusCode::PIPELINE_NOT_ENOUGH_SHAPE_DIMENSIONS_TO_DEMULTIPLY;
@@ -525,7 +482,7 @@ public:
                 auto demultiplyDimension = Dimension(demultiplicatorNodeInfo.demultiplyCount.value());
                 if (!shape[0].partiallyFitsInto(demultiplyDimension)) {
                     SPDLOG_LOGGER_ERROR(modelmanager_logger, "Validation of pipeline: {} definition failed. Demultiply count: {} of node: {} does not match tensor first dimension value: {}",
-                        this->pipelineName,
+                        pipelineName,
                         demultiplicatorNodeInfo.demultiplyCount.value(),
                         demultiplicatorNodeInfo.nodeName,
                         shape[0].toString());
@@ -533,14 +490,14 @@ public:
                 }
             } else {
                 SPDLOG_LOGGER_WARN(modelmanager_logger, "Pipeline: {}; Demultiply count: {} of node: {} is fixed while first dimension value of node library is not: {}. This pipeline may fail at execution stage.",
-                    this->pipelineName,
+                    pipelineName,
                     demultiplicatorNodeInfo.demultiplyCount.value(),
                     demultiplicatorNodeInfo.nodeName,
                     shape[0].toString());
             }
         } else if (!shape[0].isAny()) {
             SPDLOG_LOGGER_WARN(modelmanager_logger, "Pipeline: {}; Demultiply count: {} of node: {} is dynamic while first dimension value of gather node is not: {}. This pipeline may fail at execution stage.",
-                this->pipelineName,
+                pipelineName,
                 demultiplicatorNodeInfo.demultiplyCount.value(),
                 demultiplicatorNodeInfo.nodeName,
                 shape[0].toString());
@@ -593,7 +550,7 @@ public:
             result = influenceShapeWithDemultiplexer(tensorInputShape, *demultiplicatorNode);
             if (!result.ok()) {
                 SPDLOG_LOGGER_ERROR(dag_executor_logger, "Validation of pipeline: {} definition failed. Demultiply count: {} of gather_from node: {} does not match tensor first dimension value: {} of node: {}",
-                    this->pipelineName,
+                    pipelineName,
                     demultiplicatorNode->demultiplyCount.value(),
                     demultiplicatorNode->nodeName,
                     tensorInputShape[1].toString(),
@@ -602,7 +559,7 @@ public:
             }
         } else if (dependantNodeInfo.gatherFromNode.size() > 1) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Validation of pipeline: {} definition failed. Manual gathering from multiple nodes is not supported in node name: {}",
-                this->pipelineName,
+                pipelineName,
                 dependantNodeInfo.nodeName);
             return StatusCode::PIPELINE_MANUAL_GATHERING_FROM_MULTIPLE_NODES_NOT_SUPPORTED;
         }
@@ -761,7 +718,7 @@ public:
                 dependantNodeInfo,
                 this->inputsInfo,
                 dependantNodeInfo.library.getInputsInfo,
-                this->pipelineName,
+                pipelineName,
                 getCNLIMWrapperPtr(nodeResources.at(dependantNodeInfo.nodeName)));
             if (!result.ok()) {
                 return result;
@@ -770,7 +727,7 @@ public:
                 dependantNodeInfo,
                 this->outputsInfo,
                 dependantNodeInfo.library.getOutputsInfo,
-                this->pipelineName,
+                pipelineName,
                 getCNLIMWrapperPtr(nodeResources.at(dependantNodeInfo.nodeName)));
             if (!result.ok()) {
                 return result;
@@ -789,7 +746,7 @@ public:
             dependencyNodeInfo,
             this->dependencyInputsInfo,
             dependencyNodeInfo.library.getInputsInfo,
-            this->pipelineName,
+            pipelineName,
             getCNLIMWrapperPtr(nodeResources.at(dependencyNodeInfo.nodeName)));
         if (!result.ok()) {
             return result;
@@ -798,7 +755,7 @@ public:
             dependencyNodeInfo,
             this->dependencyOutputsInfo,
             dependencyNodeInfo.library.getOutputsInfo,
-            this->pipelineName,
+            pipelineName,
             getCNLIMWrapperPtr(nodeResources.at(dependencyNodeInfo.nodeName)));
         if (!result.ok()) {
             return result;
@@ -887,7 +844,7 @@ public:
 };
 
 Status PipelineDefinition::validateNode(ModelManager& manager, const NodeInfo& dependantNodeInfo, const bool isMultiBatchAllowed) {
-    NodeValidator validator(this->pipelineName, manager, dependantNodeInfo, connections, nodeInfos, nodeResources, isMultiBatchAllowed);
+    NodeValidator validator(getName(), manager, dependantNodeInfo, connections, nodeInfos, nodeResources, isMultiBatchAllowed);
     return validator.validate();
 }
 
@@ -1038,22 +995,22 @@ Status PipelineDefinition::validateNodes(ModelManager& manager) {
         [](const NodeInfo& info) { return info.kind == NodeKind::EXIT; });
 
     if (entryNodeCount <= 0) {
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "PipelineDefinition: {} is missing request node", pipelineName);
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "PipelineDefinition: {} is missing request node", getName());
         return StatusCode::PIPELINE_MISSING_ENTRY_OR_EXIT;
     }
 
     if (exitNodeCount <= 0) {
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "PipelineDefinition: {} is missing response node", pipelineName);
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "PipelineDefinition: {} is missing response node", getName());
         return StatusCode::PIPELINE_MISSING_ENTRY_OR_EXIT;
     }
 
     if (entryNodeCount > 1) {
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "PipelineDefinition: {} has multiple request nodes", pipelineName);
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "PipelineDefinition: {} has multiple request nodes", getName());
         return StatusCode::PIPELINE_MULTIPLE_ENTRY_NODES;
     }
 
     if (exitNodeCount > 1) {
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "PipelineDefinition: {} has multiple response nodes", pipelineName);
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "PipelineDefinition: {} has multiple response nodes", getName());
         return StatusCode::PIPELINE_MULTIPLE_EXIT_NODES;
     }
 
@@ -1070,7 +1027,7 @@ Status PipelineDefinition::validateNodes(ModelManager& manager) {
         this->nodeInfos.end(),
         [](const NodeInfo& info) { return info.demultiplyCount.has_value(); });
     if (isAnyNodeDynamicDemultiplexer && (demultiplexerCount > 1)) {
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "PipelineDefinition: {} has multiple demultiplexers with at least one dynamic.", pipelineName);
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "PipelineDefinition: {} has multiple demultiplexers with at least one dynamic.", getName());
         return StatusCode::NOT_IMPLEMENTED;
     }
 
@@ -1081,7 +1038,7 @@ Status PipelineDefinition::validateNodes(ModelManager& manager) {
         };
 
         if (std::count_if(nodeInfos.begin(), nodeInfos.end(), findByName) > 1) {
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "PipelineDefinition: {} has multiple nodes with name: {}", pipelineName, node.nodeName);
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "PipelineDefinition: {} has multiple nodes with name: {}", getName(), node.nodeName);
             return StatusCode::PIPELINE_NODE_NAME_DUPLICATE;
         }
 
@@ -1376,7 +1333,7 @@ Shape PipelineDefinition::getNodeGatherShape(const NodeInfo& info) const {
                         someNodeInfo,
                         nodeOutputsInfo,
                         someNodeInfo.library.getOutputsInfo,
-                        this->pipelineName,
+                        getName(),
                         getCNLIMWrapperPtr(nodeResources.at(someNodeInfo.nodeName)));
                     if (!result.ok()) {
                         SPDLOG_ERROR("Failed to read node: {} library metadata with error: {}", nodeName, result.string());

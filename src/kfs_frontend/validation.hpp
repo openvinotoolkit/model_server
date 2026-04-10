@@ -24,7 +24,6 @@
 #include "kfs_utils.hpp"
 #include "../precision.hpp"
 #include "../predict_request_validation_utils.hpp"
-#include "../logging.hpp"
 #include "../profiler.hpp"
 #include "../tensorinfo.hpp"
 #include "../status.hpp"

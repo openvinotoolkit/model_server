@@ -22,6 +22,8 @@
 #include <sstream>
 #include <string>
 
+#include <fmt/ranges.h>
+
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <openvino/genai/continuous_batching_pipeline.hpp>

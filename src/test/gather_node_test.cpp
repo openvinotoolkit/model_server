@@ -197,9 +197,9 @@ static const char* configDummy1BsDummy2Bs = R"(
 
 class DLNodeSessionWithGetInputsExposed : public DLNodeSession {
 public:
-    DLNodeSessionWithGetInputsExposed(const NodeSessionMetadata& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapseDetails& collapsingDetails, ModelManager& manager, const std::string& modelName, model_version_t modelVersion) :
+    DLNodeSessionWithGetInputsExposed(const NodeSessionMetadata& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapseDetails& collapsingDetails, ModelInstanceProvider& manager, const std::string& modelName, model_version_t modelVersion) :
         DLNodeSession(metadata, nodeName, inputsCount, collapsingDetails, manager, modelName, modelVersion) {}
-    DLNodeSessionWithGetInputsExposed(const NodeSessionMetadata&& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapseDetails& collapsingDetails, ModelManager& manager, const std::string& modelName, model_version_t modelVersion) :
+    DLNodeSessionWithGetInputsExposed(const NodeSessionMetadata&& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapseDetails& collapsingDetails, ModelInstanceProvider& manager, const std::string& modelName, model_version_t modelVersion) :
         DLNodeSession(std::move(metadata), nodeName, inputsCount, collapsingDetails, manager, modelName, modelVersion) {}
 
     const auto& getInputs() const {

@@ -26,9 +26,8 @@
 #include "kfs_utils.hpp"
 #include "kfs_request_utils.hpp"
 #include "../dags/pipeline.hpp"
-#include "../dags/pipelinedefinition.hpp"
+#include "../dags/pipeline_factory.hpp"
 #include "../dags/pipelinedefinitionstatus.hpp"
-#include "../dags/pipelinedefinitionunloadguard.hpp"
 #include "../execution_context.hpp"
 #include "../grpc_utils.hpp"
 #if (MEDIAPIPE_DISABLE == 0)
@@ -36,19 +35,22 @@
 // kfs_graph_executor_impl needs to be included before mediapipegraphexecutor
 // because it contains functions required by graph execution template
 #include "kfs_graph_executor_impl.hpp"
-#include "../mediapipe_internal/mediapipegraphdefinition.hpp"
 #include "../mediapipe_internal/mediapipegraphexecutor.hpp"
 // clang-format on
 #endif
-#include "../metric.hpp"
+#include "src/metrics/metric.hpp"
+#include "../model.hpp"
 #include "../modelinstance.hpp"
 #include "../deserialization_main.hpp"
 #include "../inference_executor.hpp"
 #include "../modelinstanceunloadguard.hpp"
 #include "../modelmanager.hpp"
 #include "../ovinferrequestsqueue.hpp"
+#include "../servable_definition.hpp"
+#include "../servable_definition_unload_guard.hpp"
 #include "../servablemanagermodule.hpp"
 #include "../server.hpp"
+#include "../single_version_servable_definition.hpp"
 #include "../status.hpp"
 #include "../stringutils.hpp"
 #include "../tensorinfo.hpp"
@@ -85,7 +87,7 @@ Status KFSInferenceServiceImpl::getPipeline(const KFSRequest* request,
     KFSResponse* response,
     std::unique_ptr<ovms::Pipeline>& pipelinePtr) {
     OVMS_PROFILE_FUNCTION();
-    return this->modelManager.createPipeline(pipelinePtr, request->model_name(), request, response);
+    return this->modelManager.getPipelineFactory().create(pipelinePtr, request->model_name(), request, response, this->modelManager);
 }
 
 const std::string PLATFORM = "OpenVINO";
@@ -118,25 +120,18 @@ Status KFSInferenceServiceImpl::getModelReady(const KFSGetModelStatusRequest* re
     auto model = manager.findModelByName(name);
     SPDLOG_DEBUG("ModelReady requested name: {}, version: {}", name, versionString);
     if (model == nullptr) {
-        SPDLOG_DEBUG("ModelReady requested model {} is missing, trying to find pipeline with such name", name);
-        auto pipelineDefinition = manager.getPipelineFactory().findDefinitionByName(name);
-        if (!pipelineDefinition) {
-#if (MEDIAPIPE_DISABLE == 0)
-            SPDLOG_DEBUG("ModelReady requested pipeline {} is missing, trying to find mediapipe with such name", name);
-            auto mediapipeGraphDefinition = manager.getMediapipeFactory().findDefinitionByName(name);
-            if (!mediapipeGraphDefinition) {
-                return StatusCode::MODEL_NAME_MISSING;
-            }
-            auto status = buildResponse(*mediapipeGraphDefinition, response);
-            INCREMENT_IF_ENABLED(mediapipeGraphDefinition->getMetricReporter().getModelReadyMetric(executionContext, status.ok()));
-            return status;
-#else
+        SPDLOG_DEBUG("ModelReady requested model {} is missing, trying to find definition with such name", name);
+        auto* definition = manager.findServableDefinition(name);
+        if (!definition) {
             return StatusCode::MODEL_NAME_MISSING;
-#endif
         }
-        auto status = buildResponse(*pipelineDefinition, response);
-        INCREMENT_IF_ENABLED(pipelineDefinition->getMetricReporter().getModelReadyMetric(executionContext, status.ok()));
-        return status;
+        auto* svsd = dynamic_cast<SingleVersionServableDefinition*>(definition);
+        if (!svsd) {
+            return StatusCode::MODEL_NAME_MISSING;
+        }
+        response->set_ready(svsd->isAvailable());
+        INCREMENT_IF_ENABLED(svsd->getMetricReporter().getModelReadyMetric(executionContext, true));
+        return StatusCode::OK;
     }
     std::shared_ptr<ModelInstance> instance = nullptr;
     if (!versionString.empty()) {
@@ -201,24 +196,17 @@ Status KFSInferenceServiceImpl::ModelMetadataImpl(::grpc::ServerContext* context
     auto model = this->modelManager.findModelByName(name);
     SPDLOG_DEBUG("ModelMetadata requested name: {}, version: {}", name, versionString);
     if (model == nullptr) {
-        SPDLOG_DEBUG("GetModelMetadata: Model {} is missing, trying to find pipeline with such name", name);
-        auto pipelineDefinition = this->modelManager.getPipelineFactory().findDefinitionByName(name);
-        if (!pipelineDefinition) {
-#if (MEDIAPIPE_DISABLE == 0)
-            SPDLOG_DEBUG("GetModelMetadata: Pipeline {} is missing, trying to find mediapipe with such name", name);
-            auto mediapipeGraphDefinition = this->modelManager.getMediapipeFactory().findDefinitionByName(name);
-            if (!mediapipeGraphDefinition) {
-                return StatusCode::MODEL_NAME_MISSING;
-            }
-            auto status = buildResponse(*mediapipeGraphDefinition, response);
-            INCREMENT_IF_ENABLED(mediapipeGraphDefinition->getMetricReporter().getModelMetadataMetric(executionContext, status.ok()));
-            return status;
-#else
-            return Status(StatusCode::MODEL_NAME_MISSING);
-#endif
+        SPDLOG_DEBUG("GetModelMetadata: Model {} is missing, trying to find definition with such name", name);
+        auto* definition = this->modelManager.findServableDefinition(name);
+        if (!definition) {
+            return StatusCode::MODEL_NAME_MISSING;
         }
-        auto status = buildResponse(*pipelineDefinition, response);
-        INCREMENT_IF_ENABLED(pipelineDefinition->getMetricReporter().getModelMetadataMetric(executionContext, status.ok()));
+        auto* svsd = dynamic_cast<SingleVersionServableDefinition*>(definition);
+        if (!svsd) {
+            return StatusCode::MODEL_NAME_MISSING;
+        }
+        auto status = buildResponse(*svsd, response);
+        INCREMENT_IF_ENABLED(svsd->getMetricReporter().getModelMetadataMetric(executionContext, status.ok()));
         return status;
     }
     std::shared_ptr<ModelInstance> instance = nullptr;
@@ -369,24 +357,13 @@ Status KFSInferenceServiceImpl::buildResponse(
 }
 
 Status KFSInferenceServiceImpl::buildResponse(
-    PipelineDefinition& pipelineDefinition,
-    KFSGetModelStatusResponse* response) {
-    bool isReady = pipelineDefinition.getStatus().isAvailable();
-    SPDLOG_DEBUG("Creating ModelReady response for pipeline: {}; ready: {}", pipelineDefinition.getName(), isReady);
-    response->set_ready(isReady);
-    return StatusCode::OK;
-}
-
-#if (MEDIAPIPE_DISABLE == 0)
-Status KFSInferenceServiceImpl::buildResponse(
-    MediapipeGraphDefinition& definition,
+    SingleVersionServableDefinition& definition,
     KFSGetModelStatusResponse* response) {
     bool isReady = definition.getStatus().isAvailable();
-    SPDLOG_DEBUG("Creating ModelReady response for mediapipe: {}; ready: {}", definition.getName(), isReady);
+    SPDLOG_DEBUG("Creating ModelReady response for definition: {}; ready: {}", definition.getName(), isReady);
     response->set_ready(isReady);
     return StatusCode::OK;
 }
-#endif
 
 static void addReadyVersions(Model& model,
     model_version_t versionAvailableDuringInitialCheck,
@@ -443,60 +420,32 @@ KFSInferenceServiceImpl::KFSInferenceServiceImpl(const Server& server) :
 }
 
 Status KFSInferenceServiceImpl::buildResponse(
-    PipelineDefinition& pipelineDefinition,
+    SingleVersionServableDefinition& definition,
     KFSModelMetadataResponse* response) {
 
-    std::unique_ptr<PipelineDefinitionUnloadGuard> unloadGuard;
+    std::unique_ptr<ServableDefinitionUnloadGuard> unloadGuard;
 
     // 0 meaning immediately return unload guard if possible, otherwise do not wait for available state
-    auto status = pipelineDefinition.waitForLoaded(unloadGuard, 0);
+    auto status = definition.waitForLoaded(unloadGuard, 0);
     if (!status.ok()) {
         return status;
     }
 
     response->Clear();
-    response->set_name(pipelineDefinition.getName());
+    response->set_name(definition.getName());
     response->add_versions("1");
     response->set_platform(PLATFORM);
 
-    for (const auto& input : pipelineDefinition.getInputsInfo()) {
+    for (const auto& input : definition.getInputsInfo()) {
         convert(input, response->add_inputs());
     }
 
-    for (const auto& output : pipelineDefinition.getOutputsInfo()) {
+    for (const auto& output : definition.getOutputsInfo()) {
         convert(output, response->add_outputs());
     }
 
     return StatusCode::OK;
 }
-
-#if (MEDIAPIPE_DISABLE == 0)
-Status KFSInferenceServiceImpl::buildResponse(
-    MediapipeGraphDefinition& mediapipeGraphDefinition,
-    KFSModelMetadataResponse* response) {
-    std::unique_ptr<MediapipeGraphDefinitionUnloadGuard> unloadGuard;
-    // 0 meaning immediately return unload guard if possible, otherwise do not wait for available state
-    auto status = mediapipeGraphDefinition.waitForLoaded(unloadGuard, 0);
-    if (!status.ok()) {
-        return status;
-    }
-
-    response->Clear();
-    response->set_name(mediapipeGraphDefinition.getName());
-    response->add_versions("1");
-    response->set_platform(PLATFORM);
-
-    for (const auto& input : mediapipeGraphDefinition.getInputsInfo()) {
-        convert(input, response->add_inputs());
-    }
-
-    for (const auto& output : mediapipeGraphDefinition.getOutputsInfo()) {
-        convert(output, response->add_outputs());
-    }
-
-    return StatusCode::OK;
-}
-#endif
 
 void KFSInferenceServiceImpl::convert(
     const std::pair<std::string, std::shared_ptr<const TensorInfo>>& from,

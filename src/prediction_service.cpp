@@ -33,6 +33,7 @@
 #include "tfs_frontend/tfs_request_utils.hpp"
 
 #include "dags/pipeline.hpp"
+#include "dags/pipeline_factory.hpp"
 #include "execution_context.hpp"
 #include "get_model_metadata_impl.hpp"
 #include "grpc_utils.hpp"
@@ -88,7 +89,7 @@ Status PredictionServiceImpl::getPipeline(const PredictRequest* request,
     PredictResponse* response,
     std::unique_ptr<ovms::Pipeline>& pipelinePtr) {
     OVMS_PROFILE_FUNCTION();
-    return this->modelManager.createPipeline(pipelinePtr, request->model_spec().name(), request, response);
+    return this->modelManager.getPipelineFactory().create(pipelinePtr, request->model_spec().name(), request, response, this->modelManager);
 }
 
 grpc::Status ovms::PredictionServiceImpl::Predict(

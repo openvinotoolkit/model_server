@@ -19,7 +19,7 @@
 #include <utility>
 
 #include "azurefilesystem.hpp"
-#include "logging.hpp"
+#include "src/logging.hpp"
 
 namespace ovms {
 

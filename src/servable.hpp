@@ -18,7 +18,6 @@
 #include <string>
 
 #include "modelversion.hpp"
-#include "tensorinfo.hpp"
 
 namespace ovms {
 class Servable {
