@@ -26,8 +26,6 @@ namespace ovms {
 
 const std::string Lfm2ToolParser::TOOL_CALL_START_TAG = "<|tool_call_start|>";
 const std::string Lfm2ToolParser::TOOL_CALL_END_TAG = "<|tool_call_end|>";
-const std::string Lfm2ToolParser::TOOL_RESPONSE_START_TAG = "<|tool_response_start|>";
-const std::string Lfm2ToolParser::TOOL_RESPONSE_END_TAG = "<|tool_response_end|>";
 
 const std::string Lfm2ToolParser::TOOL_LIST_START_INDICATOR = "[";
 const std::string Lfm2ToolParser::TOOL_LIST_END_INDICATOR = "]";
@@ -315,13 +313,8 @@ rapidjson::Document Lfm2ToolParser::wrapDeltaContent(const std::string& content)
 
 rapidjson::Document Lfm2ToolParser::wrapDeltaArgs(const std::string& argsStr, int toolCallIndex) {
     rapidjson::Document doc(rapidjson::kObjectType);
-    rapidjson::Document argsDoc;
-    argsDoc.Parse(argsStr.c_str());
-    if (!argsDoc.HasParseError()) {
-        doc.AddMember("arguments", argsDoc, doc.GetAllocator());
-    } else {
-        doc.AddMember("arguments", rapidjson::Value(argsStr.c_str(), doc.GetAllocator()), doc.GetAllocator());
-    }
+    doc.AddMember("arguments", rapidjson::Value(argsStr.c_str(), doc.GetAllocator()), doc.GetAllocator());
+
     return BaseOutputParser::wrapDelta(doc, toolCallIndex);
 }
 
