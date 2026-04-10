@@ -1,4 +1,4 @@
-# Demonstrating integration of Open WebUI with OpenVINO Model Server {#ovms_demos_integration_with_open_webui}
+# Open WebUI with OpenVINO Model Server {#ovms_demos_integration_with_open_webui}
 
 ## Description
 
@@ -57,7 +57,7 @@ curl http://localhost:8000/v3/chat/completions -H "Content-Type: application/jso
 Install Open WebUI:
 
 ```bash
-pip install --no-cache-dir open-webui
+pip install --no-cache-dir open-webui --extra-index-url "https://download.pytorch.org/whl/cpu"
 ```
 
 Running Open WebUI:
@@ -70,7 +70,9 @@ Go to [http://localhost:8080](http://localhost:8080) and create admin account to
 
 ![get started with Open WebUI](./get_started_with_Open_WebUI.png)
 
-### Reference
+> **Important Note**: While using NPU device for acceleration or model gpt-oss-20b with GPU, it is recommended to disable `Follow-Up Auto-Generation` in `Settings > Interface` menu. It will improve response time and avoid queuing requests. For gpt-oss model it will avoid concurrent execution which in version 2026.0 has an accuracy issue.
+
+### References
 [https://docs.openvino.ai/2026/model-server/ovms_demos_continuous_batching.html](https://docs.openvino.ai/2026/model-server/ovms_demos_continuous_batching.html#model-preparation)
 
 [https://docs.openwebui.com](https://docs.openwebui.com/#installation-with-pip)
@@ -107,7 +109,7 @@ To configure them in *OpenWebUI* with an example of turning off reasoning:
 ![parameter set](./set_chat_template_parameter.png)
 
 ### Reference
-[https://docs.openwebui.com/getting-started/quick-start/starting-with-openai-compatible](https://docs.openwebui.com/getting-started/quick-start/starting-with-openai-compatible/#step-2-connect-your-server-to-open-webui)
+[https://docs.openwebui.com/getting-started/quick-start/starting-with-openai-compatible](https://docs.openwebui.com/getting-started/quick-start/)
 
 ---
 
@@ -269,7 +271,7 @@ Method 2:
 ### Reference
 [https://docs.openvino.ai/2026/model-server/ovms_demos_image_generation.html](https://docs.openvino.ai/2026/model-server/ovms_demos_image_generation.html#export-model-for-cpu)
 
-[https://docs.openwebui.com/features/image-generation-and-editing](https://docs.openwebui.com/features/image-generation-and-editing/openai)
+[https://docs.openwebui.com/features/media-generation/image-generation-and-editing](https://docs.openwebui.com/features/media-generation/image-generation-and-editing/usage)
 
 ---
 ## VLM
@@ -349,7 +351,7 @@ mcpo --port 9000 -- python -m mcp_weather_server
 ![chat with AI Agent demo](./chat_with_AI_Agent_demo.png)
 
 ### Reference
-[https://docs.openwebui.com/features/plugin/tools/openapi-servers/open-webui](https://docs.openwebui.com/features/plugin/tools/openapi-servers/open-webui#step-2-connect-tool-server-in-open-webui)
+[https://docs.openwebui.com/features/extensibility/plugin/tools/openapi-servers/open-webui](https://docs.openwebui.com/features/extensibility/plugin/tools/openapi-servers/open-webui#step-2-connect-tool-server-in-open-webui)
 
 
 ## Audio
