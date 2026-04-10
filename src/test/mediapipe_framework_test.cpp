@@ -18,6 +18,7 @@
 #include <sstream>
 #include <string>
 #include <thread>
+#include <chrono>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -29,8 +30,11 @@
 #include "../grpcservermodule.hpp"
 #include "../http_rest_api_handler.hpp"
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
+#include "../mediapipe_internal/outputstreamobserver.hpp"
 #include "../mediapipe_internal/mediapipefactory.hpp"
 #include "../mediapipe_internal/mediapipegraphdefinition.hpp"
+#include "../mediapipe_internal/mediapipe_utils.hpp"
+#include "mediapipe/framework/thread_pool_executor.h"
 #include "../metric_config.hpp"
 #include "../metric_module.hpp"
 #include "../model_service.hpp"
@@ -79,9 +83,385 @@ protected:
 class MediapipeNegativeFrameworkTest : public MediapipeFrameworkTest {
 };
 
-// purpose of this test is to ensure there is no hang in case of one of the graph nodes
-// not producing output packet
+using mediapipe::Adopt;
+using mediapipe::CalculatorGraphConfig;
+using mediapipe::Packet;
+using mediapipe::ParseTextProtoOrDie;
+using mediapipe::Timestamp;
+
+#define MP_ERROR_STOP(A)                                         \
+    {                                                            \
+        absStatus = A;                                           \
+        if (!absStatus.ok()) {                                   \
+            const std::string absMessage = absStatus.ToString(); \
+            SPDLOG_DEBUG("{}", absMessage);                      \
+            ASSERT_TRUE(false);                                  \
+        }                                                        \
+    }
+TEST_F(MediapipeFrameworkTest, HotReloadOutputStreamHandlerCheckNoInputPackets) {
+    // we need it only so that dummy is available via C-API
+    ServerGuard servGuard(getGenericFullPathForSrcTest("/ovms/src/test/configs/config_benchmark.json"));
+    std::string graph_proto = R"(
+      input_stream: "IN:input"
+      output_stream: "OUT:output"
+      node {
+          calculator: "OpenVINOModelServerSessionCalculator"
+          output_side_packet: "SESSION:session"
+          node_options: {
+            [type.googleapis.com / mediapipe.OpenVINOModelServerSessionCalculatorOptions]: {
+              servable_name: "dummy"
+            }
+          }
+      }
+      node {
+        calculator: "OpenVINOInferenceCalculator"
+        input_side_packet: "SESSION:session"
+        input_stream: "OVTENSOR:input"
+        output_stream: "OVTENSOR:output"
+        node_options: {
+            [type.googleapis.com / mediapipe.OpenVINOInferenceCalculatorOptions]: {
+                tag_to_input_tensor_names {
+                    key: "OVTENSOR"
+                    value: "b"
+                }
+                tag_to_output_tensor_names {
+                    key: "OVTENSOR"
+                    value: "a"
+                }
+            }
+        }
+      }
+    )";
+    CalculatorGraphConfig graphConfig =
+        ParseTextProtoOrDie<CalculatorGraphConfig>(graph_proto);
+    const std::string inputStreamName = "input";
+    const std::string outputStreamName = "output";
+    // avoid creating pollers, retrieving packets etc.
+    //////////////////
+    // model mgmt thread
+    //////////////////
+    // std::shared_ptr<ovms::GraphQueue> queue;
+    // queue = std::make_shared<GraphQueue>(graphConfig, 1);
+    ::mediapipe::CalculatorGraph graph;
+    EXPECT_EQ(graph.Initialize(graphConfig).code(), absl::StatusCode::kOk);
+    // Install NullObserver
+    // its not per graph but per output
+    std::shared_ptr<OutputStreamObserverI> perGraphObserverFunctor = std::make_shared<NullOutputStreamObserver>();
+    const std::string outputName{"output"};
+    absl::Status absStatus;
+    MP_ERROR_STOP(graph.ObserveOutputStream(outputStreamName, [&perGraphObserverFunctor](const ::mediapipe::Packet& packet) -> absl::Status { return perGraphObserverFunctor->handlePacket(packet); }));
+    // Here ends model management
+    // Here starts mp graph executor
+    // ovms::GraphIdGuard graphIdGuard(queue); // TODO timeout?
+    // get graphIdGuard from queue
+    // create FrontendAppropriateObserver
+    float expVal = 13.5;
+    struct MyFunctor : public OutputStreamObserverI {
+        float expVal;
+        MyFunctor(float expVal) :
+            expVal(expVal) {
+            SPDLOG_TRACE("MyFunctor observer constructed:{}", (void*)this);
+        }
+        absl::Status handlePacket(const ::mediapipe::Packet& packet) override {
+            SPDLOG_TRACE("my functor:{}", (void*)this);
+            const ov::Tensor& outputTensor =
+                packet.Get<ov::Tensor>();
+            auto datatype = ov::element::Type_t::f32;
+            EXPECT_EQ(datatype, outputTensor.get_element_type());
+            EXPECT_THAT(outputTensor.get_shape(), testing::ElementsAre(1, 10));
+            const void* outputData = outputTensor.data();
+            EXPECT_EQ(*((float*)outputData), expVal);
+            return absl::OkStatus();
+        }
+    };
+    perGraphObserverFunctor = std::make_shared<MyFunctor>(expVal);
+    auto copyOfMyFunctor = perGraphObserverFunctor;
+    // now start execution
+    absStatus = graph.StartRun({});
+    auto datatype = ov::element::Type_t::f32;
+    ov::Shape shape{1, 10};
+    int timestamp{0};
+    std::vector<float> data{expVal - 1, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+    auto inputTensor = std::make_unique<ov::Tensor>(datatype, shape, data.data());
+    MP_ERROR_STOP(graph.AddPacketToInputStream(
+        inputStreamName, Adopt(inputTensor.release()).At(Timestamp(timestamp++))));
+    MP_ERROR_STOP(graph.WaitUntilIdle());
+    SPDLOG_TRACE("Now swap Functor, we don't have to call ObserverOutputStream");
+    expVal = 42;
+    data[0] = expVal - 1;
+    perGraphObserverFunctor = std::make_shared<MyFunctor>(expVal);
+    // now add second packet
+    auto inputTensor2 = std::make_unique<ov::Tensor>(datatype, shape, data.data());
+    // MP_ERROR_STOP(graph.AddPacketToInputStream(
+    //    inputStreamName, Adopt(inputTensor2.release()).At(Timestamp(timestamp++))));
+    // MP_ERROR_STOP(graph.WaitUntilIdle());
+    MP_ERROR_STOP(graph.CloseAllPacketSources());
+    MP_ERROR_STOP(graph.WaitUntilDone());
+}
+TEST_F(MediapipeFrameworkTest, HotReloadOutputStreamHandlerPOC) {
+    // we need it only so that dummy is available via C-API
+    ServerGuard servGuard(getGenericFullPathForSrcTest("/ovms/src/test/configs/config_benchmark.json"));
+    std::string graph_proto = R"(
+      input_stream: "IN:input"
+      output_stream: "OUT:output"
+      node {
+          calculator: "OpenVINOModelServerSessionCalculator"
+          output_side_packet: "SESSION:session"
+          node_options: {
+            [type.googleapis.com / mediapipe.OpenVINOModelServerSessionCalculatorOptions]: {
+              servable_name: "dummy"
+            }
+          }
+      }
+      node {
+        calculator: "OpenVINOInferenceCalculator"
+        input_side_packet: "SESSION:session"
+        input_stream: "OVTENSOR:input"
+        output_stream: "OVTENSOR:output"
+        node_options: {
+            [type.googleapis.com / mediapipe.OpenVINOInferenceCalculatorOptions]: {
+                tag_to_input_tensor_names {
+                    key: "OVTENSOR"
+                    value: "b"
+                }
+                tag_to_output_tensor_names {
+                    key: "OVTENSOR"
+                    value: "a"
+                }
+            }
+        }
+      }
+    )";
+    CalculatorGraphConfig graphConfig =
+        ParseTextProtoOrDie<CalculatorGraphConfig>(graph_proto);
+    const std::string inputStreamName = "input";
+    const std::string outputStreamName = "output";
+    // avoid creating pollers, retrieving packets etc.
+    //////////////////
+    // model mgmt thread
+    //////////////////
+    // std::shared_ptr<ovms::GraphQueue> queue;
+    // queue = std::make_shared<GraphQueue>(graphConfig, 1);
+    ::mediapipe::CalculatorGraph graph;
+    EXPECT_EQ(graph.Initialize(graphConfig).code(), absl::StatusCode::kOk);
+    // Install NullObserver
+    // its not per graph but per output
+    std::shared_ptr<OutputStreamObserverI> perGraphObserverFunctor = std::make_shared<NullOutputStreamObserver>();
+    const std::string outputName{"output"};
+    absl::Status absStatus;
+    MP_ERROR_STOP(graph.ObserveOutputStream(outputStreamName, [&perGraphObserverFunctor](const ::mediapipe::Packet& packet) -> absl::Status { return perGraphObserverFunctor->handlePacket(packet); }));
+    // Here ends model management
+    // Here starts mp graph executor
+    // ovms::GraphIdGuard graphIdGuard(queue); // TODO timeout?
+    // get graphIdGuard from queue
+    // create FrontendAppropriateObserver
+    float expVal = 13.5;
+    struct MyFunctor : public OutputStreamObserverI {
+        float expVal;
+        MyFunctor(float expVal) :
+            expVal(expVal) {
+        }
+        absl::Status handlePacket(const ::mediapipe::Packet& packet) override {
+            const ov::Tensor& outputTensor =
+                packet.Get<ov::Tensor>();
+            auto datatype = ov::element::Type_t::f32;
+            EXPECT_EQ(datatype, outputTensor.get_element_type());
+            EXPECT_THAT(outputTensor.get_shape(), testing::ElementsAre(1, 10));
+            const void* outputData = outputTensor.data();
+            EXPECT_EQ(*((float*)outputData), expVal);
+            return absl::OkStatus();
+        }
+    };
+    perGraphObserverFunctor = std::make_shared<MyFunctor>(expVal);
+    auto copyOfMyFunctor = perGraphObserverFunctor;
+    // now start execution
+    absStatus = graph.StartRun({});
+    auto datatype = ov::element::Type_t::f32;
+    ov::Shape shape{1, 10};
+    int timestamp{0};
+    std::vector<float> data{expVal - 1, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+    auto inputTensor = std::make_unique<ov::Tensor>(datatype, shape, data.data());
+    MP_ERROR_STOP(graph.AddPacketToInputStream(
+        inputStreamName, Adopt(inputTensor.release()).At(Timestamp(timestamp++))));
+    MP_ERROR_STOP(graph.WaitUntilIdle());
+    expVal = 42;
+    data[0] = expVal - 1;
+    perGraphObserverFunctor = std::make_shared<MyFunctor>(expVal);
+    // now add second packet
+    auto inputTensor2 = std::make_unique<ov::Tensor>(datatype, shape, data.data());
+    MP_ERROR_STOP(graph.AddPacketToInputStream(
+        inputStreamName, Adopt(inputTensor2.release()).At(Timestamp(timestamp++))));
+    MP_ERROR_STOP(graph.WaitUntilIdle());
+}
+TEST_F(MediapipeFrameworkTest, HotReloadOutputStreamHandlerPOCCompare) {
+    // we need it only so that dummy is available via C-API
+    ServerGuard servGuard(getGenericFullPathForSrcTest("/ovms/src/test/configs/config_standard_dummy.json"));
+    std::string graph_proto = R"(
+      input_stream: "IN:input"
+      output_stream: "OUT:output"
+      node {
+          calculator: "OpenVINOModelServerSessionCalculator"
+          output_side_packet: "SESSION:session"
+          node_options: {
+            [type.googleapis.com / mediapipe.OpenVINOModelServerSessionCalculatorOptions]: {
+              servable_name: "dummy"
+            }
+          }
+      }
+      node {
+        calculator: "OpenVINOInferenceCalculator"
+        input_side_packet: "SESSION:session"
+        input_stream: "OVTENSOR:input"
+        output_stream: "OVTENSOR:output"
+        node_options: {
+            [type.googleapis.com / mediapipe.OpenVINOInferenceCalculatorOptions]: {
+                tag_to_input_tensor_names {
+                    key: "OVTENSOR"
+                    value: "b"
+                }
+                tag_to_output_tensor_names {
+                    key: "OVTENSOR"
+                    value: "a"
+                }
+            }
+        }
+      }
+    )";
+    CalculatorGraphConfig graphConfig =
+        ParseTextProtoOrDie<CalculatorGraphConfig>(graph_proto);
+    const std::string inputStreamName = "input";
+    const std::string outputStreamName = "output";
+    // avoid creating pollers, retrieving packets etc.
+    //////////////////
+    // model mgmt thread
+    //////////////////
+    // std::shared_ptr<ovms::GraphQueue> queue;
+    // queue = std::make_shared<GraphQueue>(graphConfig, 1);
+    auto datatype = ov::element::Type_t::f32;
+    ov::Shape shape{1, 10};
+    int timestamp{0};
+    float expVal = 13.5;
+    std::vector<float> data{expVal - 1, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+    ovms::Timer<3> timer;
+    const std::string outputName{"output"};
+    int N = 1000;
+
+    absl::Status absStatus;
+    // here starts new case of ovms
+    {  // new case of ovms
+        ::mediapipe::CalculatorGraph graph;
+        EXPECT_EQ(graph.Initialize(graphConfig).code(), absl::StatusCode::kOk);
+        auto inputTensor = std::make_unique<ov::Tensor>(datatype, shape, data.data());
+        // Install NullObserver
+        // its not per graph but per output
+        std::shared_ptr<ovms::OutputStreamObserverI> perGraphObserverFunctor = std::make_shared<NullOutputStreamObserver>();
+        MP_ERROR_STOP(graph.ObserveOutputStream(outputStreamName, [&perGraphObserverFunctor](const ::mediapipe::Packet& packet) -> absl::Status { return perGraphObserverFunctor->handlePacket(packet); }));
+        // Here ends model management
+        // Here starts mp graph executor
+        // ovms::GraphIdGuard graphIdGuard(queue); // TODO timeout?
+        // get graphIdGuard from queue
+        // create FrontendAppropriateObserver
+        struct MyFunctor : public OutputStreamObserverI {
+            float expVal;
+            MyFunctor(float expVal) :
+                expVal(expVal) {
+            }
+            absl::Status handlePacket(const ::mediapipe::Packet& packet) override {
+                const ov::Tensor& outputTensor =
+                    packet.Get<ov::Tensor>();
+                auto datatype = ov::element::Type_t::f32;
+                EXPECT_EQ(datatype, outputTensor.get_element_type());
+                EXPECT_THAT(outputTensor.get_shape(), testing::ElementsAre(1, 10));
+                const void* outputData = outputTensor.data();
+                EXPECT_EQ(*((float*)outputData), expVal);
+                return absl::OkStatus();
+            }
+        };
+        absStatus = graph.StartRun({});
+        {
+            perGraphObserverFunctor = std::make_shared<MyFunctor>(expVal);
+            auto copyOfMyFunctor = perGraphObserverFunctor;
+            auto inputTensor = std::make_unique<ov::Tensor>(datatype, shape, data.data());
+            MP_ERROR_STOP(graph.AddPacketToInputStream(
+                inputStreamName, Adopt(inputTensor.release()).At(Timestamp(timestamp++))));
+        }
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+        timer.start(0);
+        for (auto i = 0; i < N; ++i) {  // iter begin
+            perGraphObserverFunctor = std::make_shared<MyFunctor>(expVal);
+            auto copyOfMyFunctor = perGraphObserverFunctor;
+            auto inputTensor = std::make_unique<ov::Tensor>(datatype, shape, data.data());
+            MP_ERROR_STOP(graph.AddPacketToInputStream(
+                inputStreamName, Adopt(inputTensor.release()).At(Timestamp(timestamp++))));
+            MP_ERROR_STOP(graph.WaitUntilIdle());
+        }  // iter end
+        timer.stop(0);
+    }  // end of new case ovms
+    {  // current ovms case
+        timer.start(1);
+        for (auto i = 0; i < N; ++i) {  // iter begin
+            ::mediapipe::CalculatorGraph graph;
+            EXPECT_EQ(graph.Initialize(graphConfig).code(), absl::StatusCode::kOk);
+            auto absStatusOrPoller = graph.AddOutputStreamPoller(outputName);
+            MP_ERROR_STOP(graph.StartRun({}));
+            auto inputTensor = std::make_unique<ov::Tensor>(datatype, shape, data.data());
+            MP_ERROR_STOP(graph.AddPacketToInputStream(
+                inputStreamName, Adopt(inputTensor.release()).At(Timestamp(timestamp++))));
+            ::mediapipe::Packet packet;
+            absStatusOrPoller.value().Next(&packet);
+            const ov::Tensor& outputTensor =
+                packet.Get<ov::Tensor>();
+            auto datatype = ov::element::Type_t::f32;
+            EXPECT_EQ(datatype, outputTensor.get_element_type());
+            EXPECT_THAT(outputTensor.get_shape(), testing::ElementsAre(1, 10));
+            const void* outputData = outputTensor.data();
+            EXPECT_EQ(*((float*)outputData), expVal);
+            MP_ERROR_STOP(graph.WaitUntilIdle());
+            MP_ERROR_STOP(graph.CloseAllPacketSources());
+            MP_ERROR_STOP(graph.WaitUntilDone());
+        }  // iter end
+        timer.stop(1);
+    }
+    {  // thread pool case
+        // auto sharedThreadPool = std::make_shared<mediapipe::ThreadPoolExecutor>(std::thread::hardware_concurrency());
+        auto sharedThreadPool = std::make_shared<mediapipe::ThreadPoolExecutor>(24);
+        timer.start(2);
+        for (auto i = 0; i < N; ++i) {  // iter begin
+            ::mediapipe::CalculatorGraph graph;
+            MP_ERROR_STOP(graph.SetExecutor("", sharedThreadPool));
+            EXPECT_EQ(graph.Initialize(graphConfig).code(), absl::StatusCode::kOk);
+            auto absStatusOrPoller = graph.AddOutputStreamPoller(outputName);
+            MP_ERROR_STOP(graph.StartRun({}));
+            auto inputTensor = std::make_unique<ov::Tensor>(datatype, shape, data.data());
+            MP_ERROR_STOP(graph.AddPacketToInputStream(
+                inputStreamName, Adopt(inputTensor.release()).At(Timestamp(timestamp++))));
+            ::mediapipe::Packet packet;
+            absStatusOrPoller.value().Next(&packet);
+            const ov::Tensor& outputTensor =
+                packet.Get<ov::Tensor>();
+            auto datatype = ov::element::Type_t::f32;
+            EXPECT_EQ(datatype, outputTensor.get_element_type());
+            EXPECT_THAT(outputTensor.get_shape(), testing::ElementsAre(1, 10));
+            const void* outputData = outputTensor.data();
+            EXPECT_EQ(*((float*)outputData), expVal);
+            MP_ERROR_STOP(graph.WaitUntilIdle());
+            MP_ERROR_STOP(graph.CloseAllPacketSources());
+            MP_ERROR_STOP(graph.WaitUntilDone());
+        }  // iter end
+        timer.stop(2);
+    }  // end of thread pool case
+    double ms = timer.elapsed<std::chrono::microseconds>(0) / 1000;
+    SPDLOG_DEBUG("{} iterations of new flow took:{} ms. FPS:{}", N, ms, N / ms * 1000);
+    ms = timer.elapsed<std::chrono::microseconds>(1) / 1000;
+    SPDLOG_DEBUG("{} iterations of old flow took:{} ms. FPS:{}", N, ms, N / ms * 1000);
+    ms = timer.elapsed<std::chrono::microseconds>(2) / 1000;
+    SPDLOG_DEBUG("{} iterations of thread pool flow took:{} ms. FPS:{}", N, ms, N / ms * 1000);
+    SPDLOG_DEBUG("Threads: {}", std::thread::hardware_concurrency());
+}
+
 TEST_F(MediapipeNegativeFrameworkTest, NoOutputPacketProduced) {
+    // purpose of this test is to ensure there is no hang in case of one of the graph nodes
+    // not producing output packet
     SetUpServer(getGenericFullPathForSrcTest("/ovms/src/test/mediapipe/negative/config_no_calc_output_stream.json").c_str());
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
     KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
@@ -99,7 +479,7 @@ TEST_F(MediapipeNegativeFrameworkTest, NoOutputPacketProduced) {
 }
 
 TEST_F(MediapipeNegativeFrameworkTest, ExceptionDuringProcess) {
-    GTEST_SKIP() << "Terminate called otherwise";
+    GTEST_SKIP() << "Terminate called otherwise";  // TODO FIXME check
     SetUpServer(getGenericFullPathForSrcTest("/ovms/src/test/mediapipe/negative/config_exception_during_process.json").c_str());
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
     KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
@@ -116,12 +496,12 @@ TEST_F(MediapipeNegativeFrameworkTest, ExceptionDuringProcess) {
         auto status = impl.ModelInfer(nullptr, &request, &response);
         ASSERT_EQ(status.error_code(), grpc::StatusCode::INVALID_ARGUMENT) << status.error_message();
     } catch (std::exception& e) {
-        SPDLOG_ERROR("ERs");
+        SPDLOG_ERROR("ER: {}", e.what());
     } catch (...) {
-        SPDLOG_ERROR("ER");
+        SPDLOG_ERROR("ER: unknown exception");
     }
 }
-TEST_F(MediapipeNegativeFrameworkTest, ExceptionDuringGetContract) {
+TEST_F(MediapipeNegativeFrameworkTest, ExceptionDuringGetContract) {  // TODO FIXME add checks to exception handling?
     SetUpServer(getGenericFullPathForSrcTest("/ovms/src/test/mediapipe/negative/config_exception_during_getcontract.json").c_str());
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
     KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
@@ -138,9 +518,9 @@ TEST_F(MediapipeNegativeFrameworkTest, ExceptionDuringGetContract) {
         auto status = impl.ModelInfer(nullptr, &request, &response);
         ASSERT_EQ(status.error_code(), grpc::StatusCode::UNAVAILABLE) << status.error_message();
     } catch (std::exception& e) {
-        SPDLOG_ERROR("ERs");
+        SPDLOG_ERROR("ER: {}", e.what());
     } catch (...) {
-        SPDLOG_ERROR("ER");
+        SPDLOG_ERROR("ER: unknown exception");
     }
 }
 TEST_F(MediapipeNegativeFrameworkTest, ExceptionDuringGetOpen) {
@@ -161,9 +541,9 @@ TEST_F(MediapipeNegativeFrameworkTest, ExceptionDuringGetOpen) {
         auto status = impl.ModelInfer(nullptr, &request, &response);
         ASSERT_EQ(status.error_code(), grpc::StatusCode::INVALID_ARGUMENT) << status.error_message();
     } catch (std::exception& e) {
-        SPDLOG_ERROR("ERs");
+        SPDLOG_ERROR("ER: {}", e.what());
     } catch (...) {
-        SPDLOG_ERROR("ER");
+        SPDLOG_ERROR("ER: unknown exception");
     }
 }
 TEST_F(MediapipeNegativeFrameworkTest, ExceptionDuringClose) {
@@ -184,8 +564,8 @@ TEST_F(MediapipeNegativeFrameworkTest, ExceptionDuringClose) {
         auto status = impl.ModelInfer(nullptr, &request, &response);
         ASSERT_EQ(status.error_code(), grpc::StatusCode::INVALID_ARGUMENT) << status.error_message();
     } catch (std::exception& e) {
-        SPDLOG_ERROR("ERs");
+        SPDLOG_ERROR("ER: {}", e.what());
     } catch (...) {
-        SPDLOG_ERROR("ER");
+        SPDLOG_ERROR("ER: unknown exception");
     }
 }

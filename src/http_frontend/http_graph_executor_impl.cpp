@@ -38,6 +38,10 @@ namespace ovms {
 
 static const std::string UNUSED_REQUEST_ID = "";
 
+bool requestHasInputSidePackets(const HttpPayload& request) {
+    return false;
+}
+
 Status deserializeInputSidePacketsFromFirstRequestImpl(
     std::map<std::string, mediapipe::Packet>& inputSidePackets,  // out
     const HttpPayload& request) {                                // in

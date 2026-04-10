@@ -22,4 +22,5 @@ namespace ovms {
  * @return uint16_t Available number of cores in the system
  */
 uint16_t getCoreCount();
+
 }  // namespace ovms

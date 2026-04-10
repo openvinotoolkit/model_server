@@ -151,6 +151,39 @@ ovms_cc_library(
     visibility = ["//visibility:public",],
 )
 ovms_cc_library(
+    name = "mediapipe_internal_graph_side_packets",
+    hdrs = ["mediapipe_internal/graph_side_packets.hpp"],
+    visibility = ["//visibility:public",],
+)
+ovms_cc_library(
+    name = "mediapipe_internal_graph_executor_constants",
+    hdrs = ["mediapipe_internal/graph_executor_constants.hpp"],
+    visibility = ["//visibility:public"],
+)
+ovms_cc_library(
+    name = "mediapipe_internal_graphqueue",
+    hdrs = [
+    "mediapipe_internal/graphqueue.hpp",
+    "mediapipe_internal/outputstreamobserver.hpp",
+    ], # TODO FIXME
+    srcs = ["mediapipe_internal/graphqueue.cpp"],
+    deps = [
+        "libovms_queue",
+        "libovmslogging",
+        "libovms_execution_context",
+        "libovmstimer",
+        "libovmsmetrics",
+        "model_metric_reporter",
+        "mediapipe_internal_graph_executor_constants",
+        "mediapipe_internal_graph_side_packets",
+        "//third_party:openvino",
+        "@mediapipe//mediapipe/framework:calculator_graph",
+        "//src/python:libovmspythonmodule", # TODO not split
+        "//src/llm:genai_servables", # TODO split!
+    ],
+    visibility = ["//visibility:public",],
+)
+ovms_cc_library(
     name = "libovms_ovinferrequestsqueue",
     hdrs = ["ovinferrequestsqueue.hpp"],
     srcs = ["ovinferrequestsqueue.cpp"],
@@ -556,6 +589,7 @@ ovms_cc_library(
                 "mediapipe_internal/mediapipegraphconfig.cpp",
                 "mediapipe_internal/mediapipegraphdefinition.cpp",
                 "mediapipe_internal/mediapipegraphdefinition.hpp",
+                "mediapipe_internal/outputstreamobserver.hpp",
                 "mediapipe_internal/mediapipegraphexecutor.cpp",
                 "mediapipe_internal/mediapipegraphexecutor.hpp",
                 "mediapipe_internal/packettypes.hpp",
@@ -697,6 +731,8 @@ ovms_cc_library(
                 })
             + select({
             "//conditions:default": [
+                "mediapipe_internal_graph_executor_constants",
+                "mediapipe_internal_graphqueue",
                 "@mediapipe_calculators//:mediapipe_calculators", # Need this dependencies here because we use ovms/src - cannot add in ovms_dependencies because we copy src directory later in Dockerfile
                 "@mediapipe//mediapipe/graphs/holistic_tracking:holistic_tracking_to_render_data",
                 "@mediapipe//mediapipe/graphs/iris_tracking:iris_tracking_cpu_deps",
@@ -3068,6 +3104,7 @@ cc_library(
         ":test_test_with_temp_dir",
         "//src/graph_export:graph_export",
         "//src:libovms_server_settings",
+        "//src:libovms_systeminfo",
         "@com_google_googletest//:gtest",
     ],
     local_defines = COMMON_LOCAL_DEFINES,

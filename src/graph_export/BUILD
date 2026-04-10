@@ -29,6 +29,7 @@ ovms_cc_library(
         "@ovms//src:libovms_module",
         "@ovms//src:libovmsfilesystem",
         "@ovms//src:libovmslocalfilesystem",
+        "@ovms//src:libovms_systeminfo",
         "@com_github_tencent_rapidjson//:rapidjson",
         "@ovms//src:libovmsschema",
         "@ovms//src:libovms_version",

@@ -158,6 +158,7 @@ struct ExportSettings {
     std::string modelName = "";
     std::string modelPath = "./";
     std::string targetDevice = "CPU";
+    std::optional<uint32_t> restWorkers;
     std::optional<std::string> extraQuantizationParams;
     std::optional<std::string> vocoder;
     std::string precision = "int8";

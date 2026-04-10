@@ -15,16 +15,12 @@
 //*****************************************************************************
 #include "systeminfo.hpp"
 
-#include <fstream>
-#include <sstream>
-#include <string>
+#include <cstdint>
 #include <thread>
-
-#include "logging.hpp"
-#include "status.hpp"
 
 namespace ovms {
 uint16_t getCoreCount() {
-    return std::thread::hardware_concurrency();
+    auto cores = std::thread::hardware_concurrency();
+    return cores == 0 ? 1 : static_cast<uint16_t>(cores);
 }
 }  // namespace ovms
