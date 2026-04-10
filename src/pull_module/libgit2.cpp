@@ -497,6 +497,37 @@ std::vector<fs::path> findLfsLikeFiles(const std::string& directory, bool recurs
     }
     return matches;
 }
+
+bool hasLfsErrorFileAndLogContent(const std::string& repositoryRootPath) {
+    const fs::path errorFilePath = fs::path(repositoryRootPath) / "lfs_error.txt";
+    std::error_code ec;
+    if (!fs::exists(errorFilePath, ec) || !fs::is_regular_file(errorFilePath, ec)) {
+        return false;
+    }
+
+    std::ifstream errorFile(errorFilePath, std::ios::binary);
+    if (!errorFile) {
+        SPDLOG_ERROR("Detected lfs_error.txt but failed to open file: {}", errorFilePath.string());
+        // Still attempt to remove the stale error file for clean state
+        fs::remove(errorFilePath, ec);
+        return true;
+    }
+
+    std::ostringstream content;
+    content << errorFile.rdbuf();
+    errorFile.close();
+    SPDLOG_ERROR(content.str());
+
+    // Remove the error file to ensure clean state for subsequent download/resume attempts
+    std::error_code removeEc;
+    if (fs::remove(errorFilePath, removeEc)) {
+        SPDLOG_DEBUG("Removed lfs_error.txt from repository root");
+    } else if (removeEc) {
+        SPDLOG_WARN("Failed to remove lfs_error.txt: {}", removeEc.message());
+    }
+
+    return true;
+}
 }  // namespace libgit2
 
 // pick the right entry pointer type for your libgit2
@@ -661,6 +692,13 @@ Status HfDownloader::downloadModel() {
         } else {
             SPDLOG_DEBUG("Model repository status check passed after resuming download.");
         }
+
+        // Checking if git status is ok but we are left with LFS errors recorded by libgit2 patch in repository root.
+        if (libgit2::hasLfsErrorFileAndLogContent(this->downloadPath)) {
+            SPDLOG_ERROR("Model failed after resuming download.");
+            return StatusCode::HF_GIT_LIBGIT2_LFS_DOWNLOAD_FAILED;
+        }
+
         return StatusCode::OK;
     }
 
@@ -713,6 +751,12 @@ Status HfDownloader::downloadModel() {
         return status;
     } else {
         SPDLOG_DEBUG("Model repository status check passed after model download.");
+    }
+
+    // Checking if git status is ok but we are left with LFS errors recorded by libgit2 patch in repository root.
+    if (libgit2::hasLfsErrorFileAndLogContent(this->downloadPath)) {
+        SPDLOG_ERROR("Model download failed.");
+        return StatusCode::HF_GIT_LIBGIT2_LFS_DOWNLOAD_FAILED;
     }
 
     // libgit2 clone sets readonly attributes
