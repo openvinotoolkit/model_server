@@ -87,6 +87,37 @@ WORKDIR /ovms/third_party/opencv
 RUN ./install_opencv.sh
 ####### End of OpenCV
 
+# Build espeak-ng from sources
+
+ARG ESPEAK_NG_VERSION=1.51.1
+WORKDIR /tmp/espeak_build
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        libtool automake autoconf pkg-config && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
+RUN cd /tmp/espeak_build && \
+    git clone --branch ${ESPEAK_NG_VERSION} https://github.com/espeak-ng/espeak-ng.git espeak-ng-src 2>&1 && \
+    ls -lah /tmp/espeak_build/
+
+RUN cd /tmp/espeak_build/espeak-ng-src && \
+    touch AUTHORS NEWS && \
+    libtoolize --force --copy && \
+    aclocal && \
+    autoheader && \
+    autoconf && \
+    automake --add-missing --copy && \
+    ./configure --prefix=/usr/local \
+        --disable-shared \
+        --enable-static \
+        --disable-mbrola \
+        --disable-klatt \
+        --without-audio && \
+    make -j$(nproc) && \
+    make install
+
+RUN rm -rf /tmp/espeak_build
+
 ################### BASE BUILD ##########################
 FROM base_build as build
 ARG BASE_IMAGE
@@ -99,6 +130,7 @@ RUN if [ "$BASE_OS" == "ubuntu24" ] ; then apt-get update && \
     apt-get install -y software-properties-common --no-install-recommends; add-apt-repository 'ppa:deadsnakes/ppa' -y && \
     apt-get clean && rm -rf /var/lib/apt/lists/* ; fi
 ENV PIP_BREAK_SYSTEM_PACKAGES=1
+
 RUN apt-get update && apt-get install --no-install-recommends -y \
             libgflags-dev \
             bc \
@@ -263,7 +295,6 @@ ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/intel/openvino/runtime/lib/intel64/:
 # FROM BASE BUILD
 COPY --from=base_build /opt/opencv /opt/opencv/
 COPY third_party /ovms/third_party/
-
 # Mediapipe
 COPY BUILD.bazel /ovms/
 COPY *\.bzl /ovms/
@@ -391,6 +422,9 @@ RUN if [ -f /ovms_release/lib/libovms_shared.so ] ; then mv /ovms_release/lib/li
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
 FROM $BASE_IMAGE as release
+ARG http_proxy
+ARG https_proxy
+ARG no_proxy
 ARG INSTALL_RPMS_FROM_URL=
 ARG INSTALL_DRIVER_VERSION="24.26.30049"
 ARG GPU=0
@@ -407,6 +441,9 @@ SHELL ["/bin/bash", "-c"]
 WORKDIR /
 
 COPY release_files/drivers /drivers
+COPY --from=base_build /usr/local/share/espeak-ng-data /usr/local/share/espeak-ng-data
+ENV ESPEAK_DATA_PATH=/usr/local/share/espeak-ng-data
+
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 ARG INSTALL_DRIVER_VERSION="24.39.31294"
 COPY ./install_ubuntu_gpu_drivers.sh /tmp/install_gpu_drivers.sh

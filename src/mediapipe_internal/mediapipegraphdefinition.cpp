@@ -63,6 +63,7 @@ const std::string MediapipeGraphDefinition::LLM_NODE_CALCULATOR_NAME{"LLMCalcula
 const std::string MediapipeGraphDefinition::IMAGE_GEN_CALCULATOR_NAME{"ImageGenCalculator"};
 const std::string MediapipeGraphDefinition::STT_NODE_CALCULATOR_NAME{"S2tCalculator"};
 const std::string MediapipeGraphDefinition::TTS_NODE_CALCULATOR_NAME{"T2sCalculator"};
+const std::string MediapipeGraphDefinition::KOKORO_NODE_CALCULATOR_NAME{"KokoroCalculator"};
 const std::string MediapipeGraphDefinition::EMBEDDINGS_NODE_CALCULATOR_NAME{"EmbeddingsCalculatorOV"};
 const std::string MediapipeGraphDefinition::RERANK_NODE_CALCULATOR_NAME{"RerankCalculatorOV"};
 
@@ -624,6 +625,28 @@ Status MediapipeGraphDefinition::initializeNodes() {
                 SPDLOG_LOGGER_ERROR(modelmanager_logger, "TextToSpeech node name: {} initialization failed: {}. ", nodeName, e.what());
                 return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
             }
+        }
+        if (endsWith(config.node(i).calculator(), KOKORO_NODE_CALCULATOR_NAME)) {
+            auto& kokoroServableMap = this->sidePacketMaps.kokoroServableMap;
+            ResourcesCleaningGuard<KokoroServableMap> kokoroServablesCleaningGuard(kokoroServableMap);
+            if (!config.node(i).node_options().size()) {
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Kokoro node missing options in graph: {}. ", this->name);
+                return StatusCode::LLM_NODE_MISSING_OPTIONS;
+            }
+            if (config.node(i).name().empty()) {
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Kokoro node name is missing in graph: {}. ", this->name);
+                return StatusCode::LLM_NODE_MISSING_NAME;
+            }
+            std::string nodeName = config.node(i).name();
+            if (kokoroServableMap.find(nodeName) != kokoroServableMap.end()) {
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Kokoro node name: {} already used in graph: {}. ", nodeName, this->name);
+                return StatusCode::LLM_NODE_NAME_ALREADY_EXISTS;
+            }
+            mediapipe::KokoroCalculatorOptions nodeOptions;
+            config.node(i).node_options(0).UnpackTo(&nodeOptions);
+            std::shared_ptr<KokoroServable> servable = std::make_shared<KokoroServable>(nodeOptions.models_path(), nodeOptions.target_device(), mgconfig.getBasePath());
+            kokoroServableMap.insert(std::pair<std::string, std::shared_ptr<KokoroServable>>(nodeName, std::move(servable)));
+            kokoroServablesCleaningGuard.disableCleaning();
         }
     }
     return StatusCode::OK;

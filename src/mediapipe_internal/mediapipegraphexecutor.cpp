@@ -49,6 +49,7 @@ MediapipeGraphExecutor::MediapipeGraphExecutor(
     const RerankServableMap& rerankServableMap,
     const SttServableMap& sttServableMap,
     const TtsServableMap& ttsServableMap,
+    const KokoroServableMap& kokoroServableMap,
     PythonBackend* pythonBackend,
     MediapipeServableMetricReporter* mediapipeServableMetricReporter) :
     name(name),
@@ -58,7 +59,7 @@ MediapipeGraphExecutor::MediapipeGraphExecutor(
     outputTypes(std::move(outputTypes)),
     inputNames(std::move(inputNames)),
     outputNames(std::move(outputNames)),
-    sidePacketMaps({pythonNodeResourcesMap, llmNodeResourcesMap, {}, embeddingsServableMap, rerankServableMap, sttServableMap, ttsServableMap}),
+    sidePacketMaps({pythonNodeResourcesMap, llmNodeResourcesMap, {}, embeddingsServableMap, rerankServableMap, sttServableMap, ttsServableMap, kokoroServableMap}),
     pythonBackend(pythonBackend),
     currentStreamTimestamp(STARTING_TIMESTAMP),
     mediapipeServableMetricReporter(mediapipeServableMetricReporter) {}
@@ -92,6 +93,7 @@ const std::string MediapipeGraphExecutor::EMBEDDINGS_SESSION_SIDE_PACKET_TAG = "
 const std::string MediapipeGraphExecutor::RERANK_SESSION_SIDE_PACKET_TAG = "rerank_servable";
 const std::string MediapipeGraphExecutor::STT_SESSION_SIDE_PACKET_TAG = "s2t_servable";
 const std::string MediapipeGraphExecutor::TTS_SESSION_SIDE_PACKET_TAG = "t2s_servable";
+const std::string MediapipeGraphExecutor::KOKORO_SESSION_SIDE_PACKET_TAG = "kokoro_servable";
 const ::mediapipe::Timestamp MediapipeGraphExecutor::STARTING_TIMESTAMP = ::mediapipe::Timestamp(0);
 
 }  // namespace ovms

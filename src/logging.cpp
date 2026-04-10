@@ -35,6 +35,7 @@ std::shared_ptr<spdlog::logger> llm_executor_logger = std::make_shared<spdlog::l
 std::shared_ptr<spdlog::logger> llm_calculator_logger = std::make_shared<spdlog::logger>("llm_calculator");
 std::shared_ptr<spdlog::logger> s2t_calculator_logger = std::make_shared<spdlog::logger>("s2t_calculator");
 std::shared_ptr<spdlog::logger> t2s_calculator_logger = std::make_shared<spdlog::logger>("t2s_calculator");
+std::shared_ptr<spdlog::logger> kokoro_calculator_logger = std::make_shared<spdlog::logger>("kokoro_calculator");
 std::shared_ptr<spdlog::logger> embeddings_calculator_logger = std::make_shared<spdlog::logger>("embeddings_calculator");
 std::shared_ptr<spdlog::logger> rerank_calculator_logger = std::make_shared<spdlog::logger>("rerank_calculator");
 #endif
@@ -78,6 +79,7 @@ static void register_loggers(const std::string& log_level, std::vector<spdlog::s
     llm_calculator_logger->set_pattern(default_pattern);
     s2t_calculator_logger->set_pattern(default_pattern);
     t2s_calculator_logger->set_pattern(default_pattern);
+    kokoro_calculator_logger->set_pattern(default_pattern);
     rerank_calculator_logger->set_pattern(default_pattern);
     embeddings_calculator_logger->set_pattern(default_pattern);
 #endif
@@ -98,6 +100,7 @@ static void register_loggers(const std::string& log_level, std::vector<spdlog::s
         llm_calculator_logger->sinks().push_back(sink);
         s2t_calculator_logger->sinks().push_back(sink);
         t2s_calculator_logger->sinks().push_back(sink);
+        kokoro_calculator_logger->sinks().push_back(sink);
         rerank_calculator_logger->sinks().push_back(sink);
         embeddings_calculator_logger->sinks().push_back(sink);
 #endif
@@ -119,6 +122,7 @@ static void register_loggers(const std::string& log_level, std::vector<spdlog::s
     set_log_level(log_level, llm_calculator_logger);
     set_log_level(log_level, s2t_calculator_logger);
     set_log_level(log_level, t2s_calculator_logger);
+    set_log_level(log_level, kokoro_calculator_logger);
     set_log_level(log_level, rerank_calculator_logger);
     set_log_level(log_level, embeddings_calculator_logger);
 #endif
