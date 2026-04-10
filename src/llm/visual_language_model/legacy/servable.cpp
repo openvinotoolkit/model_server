@@ -275,7 +275,7 @@ absl::Status VisualLanguageModelLegacyServable::prepareInputs(std::shared_ptr<Ge
             chatHistory[chatTurnIndex]["content"] = imageTagString + messageContent;
         }
 
-        constexpr bool add_generation_prompt = true;  // confirm it should be hardcoded
+        constexpr bool addGenerationPrompt = true;  // confirm it should be hardcoded
         auto toolsStatus = vlmExecutionContext->apiHandler->parseToolsToJsonContainer();
         if (!toolsStatus.ok()) {
             return toolsStatus.status();
@@ -286,7 +286,7 @@ absl::Status VisualLanguageModelLegacyServable::prepareInputs(std::shared_ptr<Ge
             return chatTemplateKwargsStatus.status();
         }
         const auto& chatTemplateKwargs = chatTemplateKwargsStatus.value();
-        vlmExecutionContext->inputText = properties->tokenizer.apply_chat_template(chatHistory, add_generation_prompt, {}, tools, chatTemplateKwargs);
+        vlmExecutionContext->inputText = properties->tokenizer.apply_chat_template(chatHistory, addGenerationPrompt, {}, tools, chatTemplateKwargs);
     } else {
         return absl::InvalidArgumentError("Unsupported endpoint");
     }

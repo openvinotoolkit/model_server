@@ -3401,8 +3401,8 @@ TEST_F(HttpOpenAIHandlerParsingTest, chatTemplateKwargsConsumedByApplyChatTempla
     ov::genai::ChatHistory& chatHistory = apiHandler->getChatHistory();
 
     // Call apply_chat_template with extra_context, exactly as the servable does
-    constexpr bool add_generation_prompt = true;
-    std::string result = tokenizer->apply_chat_template(chatHistory, add_generation_prompt, {}, std::nullopt, chatTemplateKwargs);
+    constexpr bool addGenerationPrompt = true;
+    std::string result = tokenizer->apply_chat_template(chatHistory, addGenerationPrompt, {}, std::nullopt, chatTemplateKwargs);
     EXPECT_EQ(result, "<think>hello</think>");
 
     // Now test with enable_thinking = false
@@ -3418,7 +3418,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, chatTemplateKwargsConsumedByApplyChatTempla
     ASSERT_EQ(apiHandlerFalse->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
     auto kwargsFalseStatus = apiHandlerFalse->parseChatTemplateKwargsToJsonContainer();
     ASSERT_TRUE(kwargsFalseStatus.ok());
-    std::string resultFalse = tokenizer->apply_chat_template(apiHandlerFalse->getChatHistory(), add_generation_prompt, {}, std::nullopt, kwargsFalseStatus.value());
+    std::string resultFalse = tokenizer->apply_chat_template(apiHandlerFalse->getChatHistory(), addGenerationPrompt, {}, std::nullopt, kwargsFalseStatus.value());
     EXPECT_EQ(resultFalse, "hello");
 
     // And with no kwargs at all
@@ -3433,7 +3433,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, chatTemplateKwargsConsumedByApplyChatTempla
     ASSERT_EQ(apiHandlerNone->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
     auto kwargsNoneStatus = apiHandlerNone->parseChatTemplateKwargsToJsonContainer();
     ASSERT_TRUE(kwargsNoneStatus.ok());
-    std::string resultNone = tokenizer->apply_chat_template(apiHandlerNone->getChatHistory(), add_generation_prompt, {}, std::nullopt, kwargsNoneStatus.value());
+    std::string resultNone = tokenizer->apply_chat_template(apiHandlerNone->getChatHistory(), addGenerationPrompt, {}, std::nullopt, kwargsNoneStatus.value());
     EXPECT_EQ(resultNone, "hello");
 }
 
