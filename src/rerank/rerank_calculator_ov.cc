@@ -60,6 +60,8 @@ class RerankCalculatorOV : public CalculatorBase {
     static const std::string RERANK_MODEL_INPUT_IDS_NAME;
     static const std::string RERANK_MODEL_ATTENTION_MASK_NAME;
     static const std::string RERANK_MODEL_TOKEN_TYPE_IDS_NAME;
+    static const std::string RERANK_MODEL_POSITION_IDS_NAME;
+    static const std::string RERANK_MODEL_BEAM_IDX_NAME;
     static constexpr size_t NUMBER_OF_SPECIAL_TOKENS = 4;
 
     mediapipe::Timestamp timestamp{0};
@@ -151,6 +153,39 @@ public:
         // Validate batch size before tokenizing
         if (handler.getDocumentsList().size() > this->max_allowed_chunks)
             throw std::runtime_error("Number of documents exceeds max_allowed_chunks");
+        if (rerank_session->isQwen3) {
+            // Qwen3 reranker: format each query-document pair using the chat template
+            // Template from openvino-2026.0-genai/tests/python_tests/utils/qwen3_reranker_utils.py
+            auto batchSize = handler.getDocumentsList().size();
+            std::vector<std::string> data(batchSize);
+
+            std::string prefix = "<|im_start|>system\nJudge whether the Document meets the requirements "
+                "based on the Query and the Instruct provided. Note that the answer can only be "
+                "\"yes\" or \"no\".<|im_end|>\n<|im_start|>user\n"
+                "<Instruct>: Given a web search query, retrieve relevant passages that answer the query\n"
+                "<Query>: " + handler.getQuery() + "\n";
+            std::string suffix = "<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\n";
+
+            for (size_t i = 0; i < batchSize; i++) {
+                data[i] = prefix + "<Document>: " + handler.getDocumentsList()[i] + suffix;
+            }
+
+            chunk_mapping.resize(batchSize);
+            std::iota(chunk_mapping.begin(), chunk_mapping.end(), 0);
+            auto tokens = rerank_session->getTokenizer().encode(data);
+            if (tokens.input_ids.get_shape().size() != 2) {
+                throw std::runtime_error("Tokens shape invalid.");
+            }
+            if (this->max_position_embeddings < tokens.input_ids.get_shape()[1]) {
+                std::ostringstream msg;
+                msg << "Qwen3 rerank request length of " << tokens.input_ids.get_shape()[1]
+                    << " tokens exceeds the model context of " << max_position_embeddings;
+                throw std::runtime_error(msg.str());
+            }
+            SPDLOG_LOGGER_DEBUG(rerank_calculator_logger, "Qwen3 rerank: {} documents, {} tokens per sequence",
+                batchSize, tokens.input_ids.get_shape()[1]);
+            return std::make_pair(tokens.input_ids, tokens.attention_mask);
+        }
         if (!rerank_session->addBosToken) {
             auto batchSize = handler.getDocumentsList().size();
             std::vector<std::string> data(batchSize);
@@ -257,6 +292,27 @@ public:
         if (typeIds.has_value()) {
             inferRequest.set_tensor(RERANK_MODEL_TOKEN_TYPE_IDS_NAME, typeIds.value());
         }
+        // For CausalLM models (e.g. Qwen3 rerankers): set position_ids and beam_idx
+        if (rerank_session->hasPositionIds) {
+            size_t batch = input_ids.get_shape()[0];
+            size_t seq_len = input_ids.get_shape()[1];
+            auto position_ids = ov::Tensor(ov::element::i64, input_ids.get_shape());
+            int64_t* pos_data = position_ids.data<int64_t>();
+            int64_t* attn_data = attention_mask.data<int64_t>();
+            for (size_t b = 0; b < batch; b++) {
+                int64_t pos = 0;
+                for (size_t s = 0; s < seq_len; s++) {
+                    pos_data[b * seq_len + s] = attn_data[b * seq_len + s] ? pos++ : 0;
+                }
+            }
+            inferRequest.set_tensor(RERANK_MODEL_POSITION_IDS_NAME, position_ids);
+        }
+        if (rerank_session->hasBeamIdx) {
+            size_t batch = input_ids.get_shape()[0];
+            auto beam_idx = ov::Tensor(ov::element::i32, {batch});
+            std::fill_n(beam_idx.data<int32_t>(), batch, 0);
+            inferRequest.set_tensor(RERANK_MODEL_BEAM_IDX_NAME, beam_idx);
+        }
         inferRequest.start_async();
         inferRequest.wait();
         auto logits = inferRequest.get_tensor("logits");
@@ -321,7 +377,9 @@ public:
             std::vector<size_t> chunk_mapping;
             auto [input_ids, attention_mask] = PrepareInputsForRerankModel(handler, chunk_mapping);
             std::optional<ov::Tensor> typeIds;
-            if (rerank_session->getNumberOfModelInputs() == 3) {
+            // Only create token_type_ids for non-Qwen3 models with 3 inputs
+            // (Qwen3 CausalLM has position_ids as 3rd input, not token_type_ids)
+            if (!rerank_session->isQwen3 && rerank_session->getNumberOfModelInputs() == 3) {
                 typeIds = ov::Tensor{ov::element::i64, input_ids.get_shape()};
                 std::fill_n(typeIds->data<int64_t>(), input_ids.get_size(), 0);
             }
@@ -359,6 +417,8 @@ const std::string RerankCalculatorOV::OUTPUT_TAG_NAME{"RESPONSE_PAYLOAD"};
 const std::string RerankCalculatorOV::RERANK_MODEL_INPUT_IDS_NAME{"input_ids"};
 const std::string RerankCalculatorOV::RERANK_MODEL_ATTENTION_MASK_NAME{"attention_mask"};
 const std::string RerankCalculatorOV::RERANK_MODEL_TOKEN_TYPE_IDS_NAME{"token_type_ids"};
+const std::string RerankCalculatorOV::RERANK_MODEL_POSITION_IDS_NAME{"position_ids"};
+const std::string RerankCalculatorOV::RERANK_MODEL_BEAM_IDX_NAME{"beam_idx"};
 
 REGISTER_CALCULATOR(RerankCalculatorOV);
 
