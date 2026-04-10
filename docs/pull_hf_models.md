@@ -17,7 +17,7 @@ There is a special OVMS mode to pull the model from Hugging Face without startin
 :sync: docker
 **Required:** Docker Engine installed
 ```text
-docker run $(id -u):$(id -g) --rm -v <model_repository_path>:/models:rw openvino/model_server:weekly --pull --source_model <model_name_in_HF> --model_repository_path /models --model_name <external_model_name> --target_device <DEVICE> [--gguf_filename SPECIFIC_QUANTIZATION_FILENAME.gguf] --task <task> [TASK_SPECIFIC_PARAMETERS]
+docker run $(id -u):$(id -g) --rm -v <model_repository_path>:/models:rw openvino/model_server:2026.1-gpu --pull --source_model <model_name_in_HF> --model_repository_path /models --model_name <external_model_name> --target_device <DEVICE> [--gguf_filename SPECIFIC_QUANTIZATION_FILENAME.gguf] --task <task> [TASK_SPECIFIC_PARAMETERS]
 ```
 :::
 
@@ -41,7 +41,7 @@ Example for pulling `OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov`:
 **Required:** Docker Engine installed
 
 ```text
-docker run $(id -u):$(id -g) --rm -v <model_repository_path>:/models:rw openvino/model_server:latest --pull --source_model "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov" --model_repository_path /models --model_name Phi-3-mini-FastDraft-50M-int8-ov --task text_generation
+docker run $(id -u):$(id -g) --rm -v <model_repository_path>:/models:rw openvino/model_server:2026.1 --pull --source_model "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov" --model_repository_path /models --model_name Phi-3-mini-FastDraft-50M-int8-ov --task text_generation
 ```
 :::
 
@@ -63,7 +63,7 @@ Example for pulling GGUF model `unsloth/Llama-3.2-1B-Instruct-GGUF` with Q4_K_M 
 **Required:** Docker Engine installed
 
 ```text
-docker run $(id -u):$(id -g) --rm -v <model_repository_path>:/models:rw openvino/model_server:weekly --pull --source_model "unsloth/Llama-3.2-1B-Instruct-GGUF" --model_repository_path /models --model_name unsloth/Llama-3.2-1B-Instruct-GGUF --task text_generation --gguf_filename Llama-3.2-1B-Instruct-Q4_K_M.gguf
+docker run $(id -u):$(id -g) --rm -v <model_repository_path>:/models:rw openvino/model_server:2026.1-gpu --pull --source_model "unsloth/Llama-3.2-1B-Instruct-GGUF" --model_repository_path /models --model_name unsloth/Llama-3.2-1B-Instruct-GGUF --task text_generation --gguf_filename Llama-3.2-1B-Instruct-Q4_K_M.gguf
 ```
 :::
 

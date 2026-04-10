@@ -42,7 +42,7 @@ $ docker run hello-world
 Download the Docker image that contains OpenVINO Model Server:
 
 ```bash
-docker pull openvino/model_server:latest
+docker pull openvino/model_server:2026.1
 ```
 
 ### Step 3: Provide a Model 
@@ -74,7 +74,7 @@ For more information about the directory structure and how to deploy multiple mo
 :::{dropdown} **Deploying with Docker**
 ```bash
 chmod -R 755 model
-docker run -d -u $(id -u) --rm -v ${PWD}/model:/model -p 9000:9000 openvino/model_server:latest --model_name faster_rcnn --model_path /model --port 9000
+docker run -d -u $(id -u) --rm -v ${PWD}/model:/model -p 9000:9000 openvino/model_server:2026.1 --model_name faster_rcnn --model_path /model --port 9000
 ```
 
 During this step, the `model` folder is mounted to the Docker container.  This folder will be used as the model storage.

@@ -162,7 +162,7 @@ models
 
 Now let's run the server:
 ```bash
-docker run -it --rm -p 9000:9000 -v $PWD/models:/models openvino/model_server:latest --config_path /models/config.json --port 9000
+docker run -it --rm -p 9000:9000 -v $PWD/models:/models openvino/model_server:2026.1 --config_path /models/config.json --port 9000
 ```
 
 ### Step 6: Create Client Application

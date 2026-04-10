@@ -26,7 +26,7 @@ To enable Performance Hints for your application, use the following command:
 CPU
 
 ```bash
-docker run --rm -d -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest \
+docker run --rm -d -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:2026.1 \
       --model_path /opt/model --model_name resnet --port 9001 \
       --plugin_config "{\"PERFORMANCE_HINT\": \"THROUGHPUT\"}" \
       --target_device CPU
@@ -36,7 +36,7 @@ GPU
 
 ```bash
 docker run --rm -d --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
-      -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest-gpu \
+      -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:2026.1-gpu \
       --model_path /opt/model --model_name resnet --port 9001 \
       --plugin_config "{\"PERFORMANCE_HINT\": \"THROUGHPUT\"}" \
       --target_device GPU
@@ -51,7 +51,7 @@ To enable Performance Hints for your application, use the following command:
 CPU
 
 ```bash
-docker run --rm -d -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest \
+docker run --rm -d -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:2026.1 \
       --model_path /opt/model --model_name resnet --port 9001 \
       --plugin_config "{\"PERFORMANCE_HINT\": \"LATENCY\"}" \
       --target_device CPU
@@ -61,7 +61,7 @@ GPU
 
 ```bash
 docker run --rm -d --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
-      -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest-gpu \
+      -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:2026.1-gpu \
       --model_path /opt/model --model_name resnet --port 9001 \
       --plugin_config "{\"PERFORMANCE_HINT\": \"LATENCY\"}" \
       --target_device GPU
@@ -130,7 +130,7 @@ In case of using CPU plugin to run the inference, it might be also beneficial to
 Following docker command will set `NUM_STREAMS` parameter to a value `1`:
 
 ```bash
-docker run --rm -d --cpuset-cpus 0,1,2,3 -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest \
+docker run --rm -d --cpuset-cpus 0,1,2,3 -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:2026.1 \
 --model_path /opt/model --model_name resnet --port 9001 \
 --plugin_config "{\"NUM_STREAMS\": \"1\"}"
 
@@ -191,7 +191,7 @@ Model's plugin configuration is a dictionary of param:value pairs passed to Open
 Following docker command sets a parameter `NUM_STREAMS` to a value `32` and disables CPU pinning.
 
 ```bash
-docker run --rm -d -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest \
+docker run --rm -d -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:2026.1 \
 --model_path /opt/model --model_name resnet --port 9001 --grpc_workers 8  --nireq 32 \
 --plugin_config "{\"NUM_STREAMS\": 32, \"ENABLE_CPU_PINNING\": false}"
 ```

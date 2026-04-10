@@ -35,7 +35,7 @@ That makes it easy to use and efficient especially on on Intel® Xeon® processo
 Running this command starts the container with CPU only target device:
 ```bash
 mkdir -p ${HOME}/models
-docker run -it -p 8000:8000 --rm --user $(id -u):$(id -g) -v ${HOME}/models:/models/:rw openvino/model_server:weekly --model_repository_path /models --source_model OpenVINO/Qwen3-30B-A3B-Instruct-2507-int4-ov --task text_generation --target_device CPU --tool_parser hermes3 --rest_port 8000 --model_name Qwen3-30B-A3B-Instruct-2507-int4-ov
+docker run -it -p 8000:8000 --rm --user $(id -u):$(id -g) -v ${HOME}/models:/models/:rw openvino/model_server:2026.1-gpu --model_repository_path /models --source_model OpenVINO/Qwen3-30B-A3B-Instruct-2507-int4-ov --task text_generation --target_device CPU --tool_parser hermes3 --rest_port 8000 --model_name Qwen3-30B-A3B-Instruct-2507-int4-ov
 ```
 > **Note:** In case you want to use GPU target device, add extra docker parameters `--device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1)`
 to `docker run` command. The parameter `--target_device` should be also updated to `GPU`. 

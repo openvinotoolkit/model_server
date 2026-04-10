@@ -35,7 +35,7 @@ docker run -u $(id -u):$(id -g) -v $(pwd):/models:rw openvino/ubuntu20_dev:2024.
 * Starting OVMS with stateful model via command line:
 
 ```bash
-docker run -d -u $(id -u):$(id -g) -v $(pwd)/rm_lstm4f:/models/stateful_model -p 9000:9000 openvino/model_server:latest \
+docker run -d -u $(id -u):$(id -g) -v $(pwd)/rm_lstm4f:/models/stateful_model -p 9000:9000 openvino/model_server:2026.1 \
 --port 9000 --model_path /models/stateful_model --model_name rm_lstm4f --stateful
 ```
 
@@ -56,7 +56,7 @@ echo '{
 ```
 
 ```bash
-docker run -d -u $(id -u):$(id -g) -v $(pwd)/rm_lstm4f:/models/stateful_model -v $(pwd)/config.json:/models/config.json -p 9000:9000 openvino/model_server:latest \
+docker run -d -u $(id -u):$(id -g) -v $(pwd)/rm_lstm4f:/models/stateful_model -v $(pwd)/config.json:/models/config.json -p 9000:9000 openvino/model_server:2026.1 \
 --port 9000 --config_path /models/config.json
 ```
 

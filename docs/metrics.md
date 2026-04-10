@@ -72,7 +72,7 @@ To enable default metrics set you need to specify the `metrics_enable` flag or j
 
  ```bash
 wget -N https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.{xml,bin} -P models/resnet50/1
-docker run -d -u $(id -u) -v $(pwd)/models:/models -p 9000:9000 -p 8000:8000 openvino/model_server:latest \
+docker run -d -u $(id -u) -v $(pwd)/models:/models -p 9000:9000 -p 8000:8000 openvino/model_server:2026.1 \
        --model_name resnet --model_path /models/resnet50 --port 9000 \
        --rest_port 8000 \
        --metrics_enable
@@ -105,7 +105,7 @@ echo '{
 ### Start with configuration file
 
 ```bash
-docker run -d -u $(id -u) -v ${PWD}/workspace:/workspace -p 9000:9000 -p 8000:8000 openvino/model_server:latest \
+docker run -d -u $(id -u) -v ${PWD}/workspace:/workspace -p 9000:9000 -p 8000:8000 openvino/model_server:2026.1 \
        --config_path /workspace/config.json \
        --port 9000 --rest_port 8000
 ```
@@ -120,7 +120,7 @@ To enable specific set of metrics you need to specify the metrics_list flag or j
 
 ```bash
 wget -N https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.{xml,bin} -P models/resnet50/1
-docker run -d -u $(id -u) -v $(pwd)/models:/models -p 9000:9000 -p 8000:8000 openvino/model_server:latest \
+docker run -d -u $(id -u) -v $(pwd)/models:/models -p 9000:9000 -p 8000:8000 openvino/model_server:2026.1 \
       --model_name resnet --model_path /models/resnet50  --port 9000 \
       --rest_port 8000 \
       --metrics_enable \
@@ -154,7 +154,7 @@ echo '{
 ### Start with configuration file
 
 ```bash
-docker run -d -u $(id -u) -v ${PWD}/workspace:/workspace -p 9000:9000 -p 8000:8000 openvino/model_server:latest \
+docker run -d -u $(id -u) -v ${PWD}/workspace:/workspace -p 9000:9000 -p 8000:8000 openvino/model_server:2026.1 \
    --config_path /workspace/config.json \
    --port 9000 --rest_port 8000
 ```
@@ -198,7 +198,7 @@ echo '{
 ### Start with the configuration file above
 
 ```bash
-docker run -d -u $(id -u) -v ${PWD}/workspace:/workspace -p 9000:9000 -p 8000:8000 openvino/model_server:latest \
+docker run -d -u $(id -u) -v ${PWD}/workspace:/workspace -p 9000:9000 -p 8000:8000 openvino/model_server:2026.1 \
    --config_path /workspace/config.json \
    --port 9000 --rest_port 8000
 ```

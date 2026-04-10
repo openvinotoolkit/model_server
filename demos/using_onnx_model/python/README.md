@@ -31,7 +31,7 @@ curl --fail -L --create-dirs https://github.com/onnx/models/raw/main/validated/v
 
 Start the OVMS container with additional preprocessing options:
 ```bash
-docker run -d -u $(id -u):$(id -g) -v $(pwd)/workspace:/workspace -p 9001:9001 openvino/model_server:latest \
+docker run -d -u $(id -u):$(id -g) -v $(pwd)/workspace:/workspace -p 9001:9001 openvino/model_server:2026.1 \
 --model_path /workspace/resnet50-onnx --model_name resnet --port 9001 --layout NHWC:NCHW --mean "[123.675,116.28,103.53]" --scale "[58.395,57.12,57.375]" --shape "(1,224,224,3)" --color_format BGR:RGB --precision uint8:fp32
 ```
 

@@ -9,7 +9,7 @@ Supported HW is documented in [OpenVINO system requirements](https://docs.openvi
 Before starting the model server as a binary package, make sure there are installed GPU or/and NPU required drivers like described in [https://docs.openvino.ai/2026/get-started/install-openvino/configurations.html](https://docs.openvino.ai/2026/get-started/install-openvino/configurations.html)
 
 Additional considerations when deploying with docker container:
-- make sure to use the image version including runtime drivers. The public image has a suffix -gpu like `openvino/model_server:latest-gpu`.
+- make sure to use the image version including runtime drivers. The public image has a suffix -gpu like `openvino/model_server:2026.1-gpu`.
 - additional parameters needs to be passed to the docker run command depending on the accelerator.
 - kernel modules needs to be present on the host with support for the accelerators
 
@@ -47,7 +47,7 @@ Use the following command to start the model server container:
 
 ```bash
 docker run --rm -it  --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
--v ${PWD}/model:/opt/model -p 9000:9000 openvino/model_server:latest-gpu \
+-v ${PWD}/model:/opt/model -p 9000:9000 openvino/model_server:2026.1-gpu \
 --model_path /opt/model --model_name resnet --port 9000 --target_device GPU
 ```
 
@@ -56,7 +56,7 @@ Use device `/dev/dxg` instead of `/dev/dri` and mount the volume `/usr/lib/wsl`:
 
 ```
 docker run --rm -it  --device=/dev/dxg --volume /usr/lib/wsl:/usr/lib/wsl -u $(id -u):$(id -g) \
--v ${PWD}/model:/opt/model -p 9000:9000 openvino/model_server:latest-gpu \
+-v ${PWD}/model:/opt/model -p 9000:9000 openvino/model_server:2026.1-gpu \
 --model_path /opt/model --model_name resnet --port 9000 --target_device GPU
 ```
 
@@ -78,7 +78,7 @@ OpenVINO Model Server supports using [NPU device](https://docs.openvino.ai/2026/
 Example command to run container with NPU:
 ```bash
 docker run --device /dev/accel -p 9000:9000 --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
--v ${PWD}/model:/opt/model openvino/model_server:latest-gpu --model_path /opt/model --model_name resnet --port 9000 --target_device NPU --batch_size 1
+-v ${PWD}/model:/opt/model openvino/model_server:2026.1-gpu --model_path /opt/model --model_name resnet --port 9000 --target_device NPU --batch_size 1
 ```
 
 ### Binary package
@@ -106,7 +106,7 @@ Here is a config example using heterogeneous plugin with GPU as the primary devi
 
 ```bash
 docker run --rm -d --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) \
--u $(id -u):$(id -g) -v ${PWD}/model:/opt/model -p 9000:9000 openvino/model_server:latest-gpu \
+-u $(id -u):$(id -g) -v ${PWD}/model:/opt/model -p 9000:9000 openvino/model_server:2026.1-gpu \
 --model_path /opt/model --model_name resnet --port 9000 \
 --target_device "HETERO:GPU,CPU"
 ```
@@ -139,7 +139,7 @@ Below is an example of the command with AUTO Plugin as target device. It include
 
 ```bash
 docker run --rm -d --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) \
--u $(id -u):$(id -g) -v ${PWD}/model:/opt/model -p 9000:9000 openvino/model_server:latest-gpu \
+-u $(id -u):$(id -g) -v ${PWD}/model:/opt/model -p 9000:9000 openvino/model_server:2026.1-gpu \
 --model_path /opt/model --model_name resnet --port 9000 \
 --target_device AUTO
 ```
@@ -150,7 +150,7 @@ LATENCY
 
 ```bash
 docker run --rm -d --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
--v ${PWD}/model:/opt/model -p 9000:9000 openvino/model_server:latest-gpu \
+-v ${PWD}/model:/opt/model -p 9000:9000 openvino/model_server:2026.1-gpu \
 --model_path /opt/model --model_name resnet --port 9000 \
 --plugin_config "{\"PERFORMANCE_HINT\": \"LATENCY\"}" \
 --target_device AUTO
@@ -160,7 +160,7 @@ THROUGHPUT
 
 ```bash
 docker run --rm -d --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
--v ${PWD}/model:/opt/model -p 9000:9000 openvino/model_server:latest-gpu \
+-v ${PWD}/model:/opt/model -p 9000:9000 openvino/model_server:2026.1-gpu \
 --model_path /opt/model --model_name resnet --port 9000 \
 --plugin_config "{\"PERFORMANCE_HINT\": \"THROUGHPUT\"}" \
 --target_device AUTO
@@ -170,7 +170,7 @@ CUMULATIVE_THROUGHPUT
 
 ```bash
 docker run --rm -d --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
--v ${PWD}/model:/opt/model -p 9000:9000 openvino/model_server:latest-gpu \
+-v ${PWD}/model:/opt/model -p 9000:9000 openvino/model_server:2026.1-gpu \
 --model_path /opt/model --model_name resnet --port 9000 \
 --plugin_config '{"PERFORMANCE_HINT": "CUMULATIVE_THROUGHPUT"}' \
 --target_device AUTO:GPU,CPU
@@ -213,7 +213,7 @@ With Automatic Batching, gathering the input and scattering the output from the 
 
 ### Containers
 ```bash
-docker run -v ${PWD}/model:/opt/model -p 9000:9000 openvino/model_server:latest \
+docker run -v ${PWD}/model:/opt/model -p 9000:9000 openvino/model_server:2026.1 \
 --model_path /opt/model --model_name resnet --port 9000 \
 --plugin_config '{"AUTO_BATCH_TIMEOUT": 200}' \
 --target_device "BATCH:CPU(16)"

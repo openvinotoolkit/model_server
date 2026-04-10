@@ -18,7 +18,7 @@ This example shows how to launch the model server with a ResNet50 image classifi
 Pull an image from Docker:
 
 ```bash
-docker pull openvino/model_server:latest
+docker pull openvino/model_server:2026.1
 ```
 
 or [RedHat Ecosystem Catalog](https://catalog.redhat.com/software/containers/intel/openvino-model-server/607833052937385fc98515de):
@@ -35,7 +35,7 @@ docker pull registry.connect.redhat.com/intel/openvino-model-server:latest
 
 ```bash
 wget https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.{xml,bin} -P models/resnet50/1
-docker run -u $(id -u) -v $(pwd)/models:/models -p 9000:9000 openvino/model_server:latest \
+docker run -u $(id -u) -v $(pwd)/models:/models -p 9000:9000 openvino/model_server:2026.1 \
 --model_name resnet --model_path /models/resnet50 \
 --layout NHWC:NCHW --port 9000
 ```
@@ -84,7 +84,7 @@ git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server
 make release_image GPU=1
 ```
-It will create an image called `openvino/model_server:latest`.
+It will create an image called `openvino/model_server:2026.1`.
 > **Note:** This operation might take 40min or more depending on your build host.
 > **Note:** `GPU` parameter in image build command is needed to include dependencies for GPU device.
 > **Note:** The public image from the last release might be not compatible with models exported using the the latest export script. We recommend using export script and docker image from the same release to avoid compatibility issues.

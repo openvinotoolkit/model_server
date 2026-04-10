@@ -80,7 +80,7 @@ curl --create-dirs https://storage.openvinotoolkit.org/repositories/open_model_z
 :::{dropdown} **Deploying with Docker**
 ```bash
 chmod -R 755 model
-docker run --rm -d -u $(id -u):$(id -g) -v `pwd`/model:/models -p 9000:9000 openvino/model_server:latest --model_path /models --model_name face-detection --port 9000  --shape auto
+docker run --rm -d -u $(id -u):$(id -g) -v `pwd`/model:/models -p 9000:9000 openvino/model_server:2026.1 --model_path /models --model_name face-detection --port 9000  --shape auto
 ```
 :::
 :::{dropdown} **Deploying on Bare Metal**
