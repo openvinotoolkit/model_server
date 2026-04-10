@@ -193,7 +193,7 @@ absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecution
         }
 #else
         ov::genai::ChatHistory& chatHistory = executionContext->apiHandler->getChatHistory();
-        constexpr bool add_generation_prompt = true;  // confirm it should be hardcoded
+        constexpr bool addGenerationPrompt = true;  // confirm it should be hardcoded
         auto toolsStatus = executionContext->apiHandler->parseToolsToJsonContainer();
         if (!toolsStatus.ok()) {
             return toolsStatus.status();
@@ -205,7 +205,7 @@ absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecution
         }
         const auto& chatTemplateKwargs = chatTemplateKwargsStatus.value();
         try {
-            inputText = getProperties()->tokenizer.apply_chat_template(chatHistory, add_generation_prompt, {}, tools, chatTemplateKwargs);
+            inputText = getProperties()->tokenizer.apply_chat_template(chatHistory, addGenerationPrompt, {}, tools, chatTemplateKwargs);
         } catch (const std::exception& e) {
             SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Failed to apply chat template: {}", e.what());
             return absl::Status(absl::StatusCode::kInvalidArgument, "Failed to apply chat template. The model either does not have chat template or has an invalid one.");
@@ -225,7 +225,7 @@ absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecution
             }
 #else
             ov::genai::ChatHistory& chatHistory = executionContext->apiHandler->getChatHistory();
-            constexpr bool add_generation_prompt = true;
+            constexpr bool addGenerationPrompt = true;
             auto toolsStatus = executionContext->apiHandler->parseToolsToJsonContainer();
             if (!toolsStatus.ok()) {
                 return toolsStatus.status();
@@ -237,7 +237,7 @@ absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecution
             }
             const auto& chatTemplateKwargs = chatTemplateKwargsStatus.value();
             try {
-                inputText = getProperties()->tokenizer.apply_chat_template(chatHistory, add_generation_prompt, {}, tools, chatTemplateKwargs);
+                inputText = getProperties()->tokenizer.apply_chat_template(chatHistory, addGenerationPrompt, {}, tools, chatTemplateKwargs);
             } catch (const std::exception& e) {
                 SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Failed to apply chat template: {}", e.what());
                 return absl::Status(absl::StatusCode::kInvalidArgument, "Failed to apply chat template. The model either does not have chat template or has an invalid one.");
