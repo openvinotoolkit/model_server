@@ -68,6 +68,10 @@ public:
         return TOOL_CALL_END_TAG;
     }
 
+    bool requiresStreamingWithSpecialTokens() const override {
+        return true;
+    }
+
     static std::string normalizeArgStr(const std::string& arg);
     static std::string parseArrayParameter(std::string argumentStr);
     static std::string parseObjectParameter(std::string argumentStr);
