@@ -272,6 +272,7 @@ public:
 };
 
 TEST_F(HfDownloaderPullHfModel, Resume) {
+    SKIP_AND_EXIT_IF_NOT_RUNNING_UNSTABLE();  // SSL proxy blocked workaround
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string downloadPath = ovms::FileSystem::joinPath({this->directoryPath, "repository"});
     std::string task = "text_generation";
