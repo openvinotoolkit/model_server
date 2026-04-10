@@ -3067,6 +3067,7 @@ cc_library(
         ":test_light_test_utils",
         ":test_test_with_temp_dir",
         "//src/graph_export:graph_export",
+        "//src/graph_export:image_generation_graph_cli_parser",
         "//src:libovms_server_settings",
         "@com_google_googletest//:gtest",
     ],

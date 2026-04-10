@@ -30,6 +30,7 @@
 
 #include "pipelines.hpp"
 #include "imagegenutils.hpp"
+#include <openvino/genai/lora_adapter.hpp>
 
 #pragma warning(push)
 #pragma warning(disable : 6001 4324 6385 6386)
@@ -44,6 +45,68 @@ namespace mediapipe {
 using ImageGenerationPipelinesMap = std::unordered_map<std::string, std::shared_ptr<ImageGenerationPipelines>>;
 
 const std::string IMAGE_GEN_SESSION_SIDE_PACKET_TAG = "IMAGE_GEN_NODE_RESOURCES";
+
+static void applyLoraAdapterIfNeeded(const std::string& modelName,
+    const std::unordered_map<std::string, ov::genai::Adapter>& loraAdapters,
+    const std::unordered_map<std::string, std::vector<std::pair<std::string, float>>>& compositeLoraAdapters,
+    const ImageGenPipelineArgs& args,
+    ov::AnyMap& requestOptions,
+    const std::unordered_map<std::string, float>& loraWeightsOverride = {}) {
+    if (loraAdapters.empty()) {
+        return;
+    }
+    // All adapters were registered at compile time (alpha=1.0 each).
+    // At generate time we must explicitly set the adapter config:
+    //   - If modelName matches a composite alias: activate all component adapters with their weights.
+    //   - If modelName matches a single adapter alias: activate that adapter.
+    //   - Otherwise: disable all adapters (alpha=0) so the base model runs clean.
+    // lora_weights from request body can override default weights.
+    ov::genai::AdapterConfig adapterConfig;
+
+    auto compositeIt = compositeLoraAdapters.find(modelName);
+    if (compositeIt != compositeLoraAdapters.end()) {
+        // Composite adapter — activate multiple adapters
+        for (const auto& [compAlias, defaultWeight] : compositeIt->second) {
+            auto adapterIt = loraAdapters.find(compAlias);
+            if (adapterIt == loraAdapters.end()) {
+                SPDLOG_LOGGER_WARN(llm_calculator_logger, "Composite LoRA '{}' references unknown adapter '{}', skipping", modelName, compAlias);
+                continue;
+            }
+            float weight = defaultWeight;
+            auto overrideIt = loraWeightsOverride.find(compAlias);
+            if (overrideIt != loraWeightsOverride.end()) {
+                weight = overrideIt->second;
+            }
+            adapterConfig.add(adapterIt->second, weight);
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Composite LoRA '{}': applied adapter '{}' with weight: {}", modelName, compAlias, weight);
+        }
+    } else {
+        auto adapterIt = loraAdapters.find(modelName);
+        if (adapterIt != loraAdapters.end()) {
+            float alpha = 1.0f;
+            auto overrideIt = loraWeightsOverride.find(modelName);
+            if (overrideIt != loraWeightsOverride.end()) {
+                alpha = overrideIt->second;
+            } else {
+                for (const auto& info : args.loraAdapters) {
+                    if (info.alias == modelName) {
+                        alpha = info.alpha;
+                        break;
+                    }
+                }
+            }
+            adapterConfig.add(adapterIt->second, alpha);
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Applied LoRA adapter: {} with alpha: {}", modelName, alpha);
+        } else {
+            // Disable all adapters that were registered at compile time
+            for (const auto& [alias, adapter] : loraAdapters) {
+                adapterConfig.add(adapter, 0.0f);
+            }
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "No LoRA adapter matched for model: {}, disabling all adapters", modelName);
+        }
+    }
+    requestOptions[ov::genai::adapters.name()] = adapterConfig;
+}
 
 static bool progress_bar(size_t step, size_t num_steps, ov::Tensor&) {
     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Image Generation Step: {}/{}", step + 1, num_steps);
@@ -179,10 +242,26 @@ public:
             SET_OR_RETURN(std::string, prompt, getPromptField(*payload.parsedJson));
             SET_OR_RETURN(ov::AnyMap, requestOptions, getImageGenerationRequestOptions(*payload.parsedJson, pipe->args));
 
+            // Parse optional lora_weights from request body
+            std::unordered_map<std::string, float> loraWeightsOverride;
+            auto loraWeightsIt = payload.parsedJson->FindMember("lora_weights");
+            if (loraWeightsIt != payload.parsedJson->MemberEnd() && loraWeightsIt->value.IsObject()) {
+                for (auto member = loraWeightsIt->value.MemberBegin(); member != loraWeightsIt->value.MemberEnd(); ++member) {
+                    if (member->value.IsNumber()) {
+                        loraWeightsOverride[member->name.GetString()] = member->value.GetFloat();
+                    }
+                }
+            }
+
+            // Apply LoRA adapter if the requested model name matches an alias
+            applyLoraAdapterIfNeeded(payload.modelName, pipe->loraAdapters, pipe->compositeLoraAdapters, pipe->args, requestOptions, loraWeightsOverride);
             if (!pipe->text2ImagePipeline)
                 return absl::FailedPreconditionError("Text-to-image pipeline is not available for this model");
-            auto t2i = pipe->text2ImagePipeline->clone();
-            auto status = generateTensor(t2i, prompt, requestOptions, images);
+            absl::Status status;
+            {
+                auto t2i = pipe->text2ImagePipeline->clone();
+                status = generateTensor(t2i, prompt, requestOptions, images);
+            }
             if (!status.ok()) {
                 return status;
             }
@@ -203,6 +282,9 @@ public:
 
             SET_OR_RETURN(ov::AnyMap, requestOptions, getImageEditRequestOptions(*payload.multipartParser, pipe->args));
 
+            // Apply LoRA adapter if the requested model name matches an alias
+            applyLoraAdapterIfNeeded(payload.modelName, pipe->loraAdapters, pipe->compositeLoraAdapters, pipe->args, requestOptions);
+
             SET_OR_RETURN(std::optional<std::string_view>, mask, getFileFromPayload(*payload.multipartParser, "mask"));
             SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "ImageGenCalculator [Node: {}] Mask present: {}", cc->NodeName(), mask.has_value() && !mask.value().empty());
 
@@ -218,14 +300,16 @@ public:
                     return status;
                 }
                 SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "ImageGenCalculator [Node: {}] Inpainting: mask tensor decoded, acquiring inpainting queue slot", cc->NodeName());
-                InpaintingQueueGuard inpaintingGuard(*pipe->inpaintingQueue);
+                PipelineSlotGuard inpaintingGuard(*pipe->inpaintingQueue);
                 SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "ImageGenCalculator [Node: {}] Inpainting: queue slot acquired, invoking generate()", cc->NodeName());
                 status = generateTensorInpainting(*pipe->inpaintingPipeline, prompt, imageTensor, maskTensor, requestOptions, images);
             } else {
                 if (!pipe->image2ImagePipeline)
                     return absl::FailedPreconditionError("Image-to-image pipeline is not available for this model");
-                auto i2i = pipe->image2ImagePipeline->clone();
-                status = generateTensorImg2Img(i2i, prompt, imageTensor, requestOptions, images);
+                {
+                    auto i2i = pipe->image2ImagePipeline->clone();
+                    status = generateTensorImg2Img(i2i, prompt, imageTensor, requestOptions, images);
+                }
             }
             if (!status.ok()) {
                 return status;

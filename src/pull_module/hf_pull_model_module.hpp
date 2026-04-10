@@ -35,10 +35,14 @@ public:
     Status start(const ovms::Config& config) override;
     void shutdown() override;
 
-    Status clone() const;
+    Status clone();
     static const std::string GIT_SERVER_CONNECT_TIMEOUT_ENV;
     static const std::string GIT_SERVER_TIMEOUT_ENV;
     static const std::string GIT_SSL_CERT_LOCATIONS_ENV;
+
+protected:
+    Status resolveHfLoraFilenames();
+    Status pullLoraAdapters(const std::string& graphDirectory);
 };
 
 std::variant<ovms::Status, std::unique_ptr<Libgt2InitGuard>> createLibGitGuard();

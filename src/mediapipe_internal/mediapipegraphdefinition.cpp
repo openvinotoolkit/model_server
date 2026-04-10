@@ -511,6 +511,11 @@ Status MediapipeGraphDefinition::initializeNodes() {
             }
             imageGenPipelinesMap.insert(std::pair<std::string, std::shared_ptr<ImageGenerationPipelines>>(nodeName, std::move(servable)));
             guard.disableCleaning();
+            // Register LoRA aliases for routing
+            const auto& loraAdapters = std::get<ImageGenPipelineArgs>(statusOrArgs).loraAdapters;
+            for (const auto& adapter : loraAdapters) {
+                this->loraAliases_.push_back(adapter.alias);
+            }
         }
         if (endsWith(config.node(i).calculator(), EMBEDDINGS_NODE_CALCULATOR_NAME)) {
             auto& embeddingsServableMap = this->sidePacketMaps.embeddingsServableMap;

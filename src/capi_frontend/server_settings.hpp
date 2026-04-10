@@ -143,6 +143,29 @@ struct RerankGraphSettingsImpl {
     uint64_t maxAllowedChunks = 10000;
 };
 
+enum class LoraSourceType {
+    HF_REPO,
+    DIRECT_URL,
+    LOCAL_FILE
+};
+
+struct LoraAdapterSettings {
+    std::string alias;
+    std::string sourceLora;       // HF repo, direct URL, or local file path
+    std::string safetensorsFile;  // resolved filename, empty = auto-detect (HF only)
+    LoraSourceType sourceType = LoraSourceType::HF_REPO;
+};
+
+struct CompositeLoraComponent {
+    std::string adapterAlias;  // references a LoraAdapterSettings alias
+    float weight = 1.0f;
+};
+
+struct CompositeLoraSettings {
+    std::string alias;
+    std::vector<CompositeLoraComponent> components;
+};
+
 struct ImageGenerationGraphSettingsImpl {
     std::string resolution = "";
     std::string maxResolution = "";
@@ -152,6 +175,8 @@ struct ImageGenerationGraphSettingsImpl {
     std::optional<uint32_t> maxNumberImagesPerPrompt;
     std::optional<uint32_t> defaultNumInferenceSteps;
     std::optional<uint32_t> maxNumInferenceSteps;
+    std::vector<LoraAdapterSettings> loraAdapters;
+    std::vector<CompositeLoraSettings> compositeLoraAdapters;
 };
 
 struct ExportSettings {
@@ -169,6 +194,7 @@ struct HFSettingsImpl {
     std::string sourceModel = "";
     std::optional<std::string> ggufFilename;
     std::string downloadPath = "";
+    std::string sourceLoras = "";  // raw --source_loras value, parsed by image gen CLI parser
     bool overwriteModels = false;
     ModelDownlaodType downloadType = GIT_CLONE_DOWNLOAD;
     GraphExportType task = TEXT_GENERATION_GRAPH;

@@ -123,9 +123,9 @@ std::variant<Status, ImageGenPipelineArgs> prepareImageGenPipelineArgs(const goo
     auto fsModelsPath = std::filesystem::path(nodeOptions.models_path());
     std::string pipelinePath;
     if (fsModelsPath.is_relative()) {
-        pipelinePath = (std::filesystem::path(graphPath) / fsModelsPath).string();
+        pipelinePath = (std::filesystem::path(graphPath) / fsModelsPath).generic_string();
     } else {
-        pipelinePath = fsModelsPath.string();
+        pipelinePath = fsModelsPath.generic_string();
     }
     ImageGenPipelineArgs args;
     args.modelsPath = pipelinePath;
@@ -258,6 +258,31 @@ std::variant<Status, ImageGenPipelineArgs> prepareImageGenPipelineArgs(const goo
     args.maxNumImagesPerPrompt = nodeOptions.max_num_images_per_prompt();
     args.defaultNumInferenceSteps = nodeOptions.default_num_inference_steps();
     args.maxNumInferenceSteps = nodeOptions.max_num_inference_steps();
+
+    for (int i = 0; i < nodeOptions.lora_adapters_size(); ++i) {
+        const auto& loraEntry = nodeOptions.lora_adapters(i);
+        LoraAdapterInfo info;
+        info.alias = loraEntry.alias();
+        auto fsLoraPath = std::filesystem::path(loraEntry.path());
+        if (fsLoraPath.is_relative()) {
+            info.path = (std::filesystem::path(graphPath) / fsLoraPath).generic_string();
+        } else {
+            info.path = fsLoraPath.generic_string();
+        }
+        info.alpha = loraEntry.alpha();
+        args.loraAdapters.push_back(std::move(info));
+    }
+
+    for (int i = 0; i < nodeOptions.composite_lora_adapters_size(); ++i) {
+        const auto& compositeEntry = nodeOptions.composite_lora_adapters(i);
+        std::vector<std::pair<std::string, float>> components;
+        for (int j = 0; j < compositeEntry.components_size(); ++j) {
+            const auto& comp = compositeEntry.components(j);
+            components.emplace_back(comp.adapter_alias(), comp.weight());
+        }
+        args.compositeLoraAdapters.emplace(compositeEntry.alias(), std::move(components));
+    }
+
     return std::move(args);
 }
 }  // namespace ovms

@@ -17,10 +17,14 @@
 
 #include <memory>
 #include <string>
+#include <unordered_map>
+#include <utility>
+#include <vector>
 
 #include <openvino/genai/image_generation/image2image_pipeline.hpp>
 #include <openvino/genai/image_generation/inpainting_pipeline.hpp>
 #include <openvino/genai/image_generation/text2image_pipeline.hpp>
+#include <openvino/genai/lora_adapter.hpp>
 
 #include "imagegenpipelineargs.hpp"
 #include "src/queue.hpp"
@@ -28,19 +32,19 @@
 namespace ovms {
 
 // RAII guard that acquires a slot from a Queue<int>(1) on construction
-// and returns it on destruction, serializing concurrent inpainting requests.
-class InpaintingQueueGuard {
+// and returns it on destruction, serializing concurrent pipeline access.
+class PipelineSlotGuard {
 public:
-    // Blocks until an inpainting slot becomes available.
-    explicit InpaintingQueueGuard(Queue<int>& queue) :
+    // Blocks until a pipeline slot becomes available.
+    explicit PipelineSlotGuard(Queue<int>& queue) :
         queue_(queue),
         streamId_(queue_.getIdleStream().get()) {}
-    ~InpaintingQueueGuard() {
+    ~PipelineSlotGuard() {
         queue_.returnStream(streamId_);
     }
 
-    InpaintingQueueGuard(const InpaintingQueueGuard&) = delete;
-    InpaintingQueueGuard& operator=(const InpaintingQueueGuard&) = delete;
+    PipelineSlotGuard(const PipelineSlotGuard&) = delete;
+    PipelineSlotGuard& operator=(const PipelineSlotGuard&) = delete;
 
 private:
     Queue<int>& queue_;
@@ -51,6 +55,9 @@ struct ImageGenerationPipelines {
     std::unique_ptr<ov::genai::Image2ImagePipeline> image2ImagePipeline;
     std::unique_ptr<ov::genai::Text2ImagePipeline> text2ImagePipeline;
     std::unique_ptr<ov::genai::InpaintingPipeline> inpaintingPipeline;
+    std::unordered_map<std::string, ov::genai::Adapter> loraAdapters;  // alias -> loaded adapter
+    // composite alias -> [(component adapter alias, weight)]
+    std::unordered_map<std::string, std::vector<std::pair<std::string, float>>> compositeLoraAdapters;
     ImageGenPipelineArgs args;
 
     // Serializes concurrent inpainting requests (InpaintingPipeline lacks clone()).
