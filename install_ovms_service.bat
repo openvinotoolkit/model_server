@@ -115,7 +115,7 @@ set "OVMS_PERSIST_PS=%OVMS_PERSIST_PS%%OVMS_PERSIST_PS_PART%"
 powershell -NoProfile -ExecutionPolicy Bypass -Command "%OVMS_PERSIST_PS%"
 if errorlevel 1 (
     echo [ERROR] Failed to persist user environment variables
-    exit /b %errorlevel%
+    exit /b
 )
 
 ::::::::::::::::::::::: Update current cmd.exe session
