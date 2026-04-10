@@ -22,7 +22,7 @@ In this demo, OpenVINO Model Server is deployed on Linux or windows with GPU usi
 
 There are other options to fulfill the prerequisites like [OpenVINO Model Server deployment on baremetal Linux or Windows](https://docs.openvino.ai/2026/model-server/ovms_docs_deploying_server_baremetal.html) and [Open WebUI installation with Docker](https://docs.openwebui.com/#quick-start-with-docker-). The steps in this demo can be reused across different options, and the reference for each step cover both deployments.
 
-This demo was tested on GPU but most of the models could be also run on Intel accelerators like CPU and NPU. To load all models in this demo, minimum 25GB of RAM memory should be free.
+This demo was tested on GPU but most of the models could be also run on CPU and NPU. It's recommended to have minimum 35GB of free RAM memory to run all models in this demo. It's also possible to use [llama-swap](https://github.com/openvinotoolkit/model_server/blob/main/extras/llama_swap/README.md) or use smaller models to save resources.
 
 ## Step 1: Pull model and start the OVMS sever
 ::::{tab-set}
