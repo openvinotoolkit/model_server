@@ -31,6 +31,7 @@
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "../mediapipe_internal/mediapipefactory.hpp"
 #include "../mediapipe_internal/mediapipegraphdefinition.hpp"
+#include "../mediapipe_internal/node_initializer.hpp"
 #include "src/metrics/metric_config.hpp"
 #include "src/metrics/metric_module.hpp"
 #include "../model_service.hpp"
@@ -188,4 +189,37 @@ TEST_F(MediapipeNegativeFrameworkTest, ExceptionDuringClose) {
     } catch (...) {
         SPDLOG_ERROR("ER");
     }
+}
+
+TEST(NodeInitializerRegistryTest, AllExpectedInitializersRegistered) {
+    const auto& initializers = ovms::NodeInitializerRegistry::instance().all();
+    const std::vector<std::string> knownCalculators = {
+        "LLMCalculator",
+        "EmbeddingsCalculatorOV",
+        "ImageGenCalculator",
+        "RerankCalculatorOV",
+        "S2tCalculator",
+        "T2sCalculator",
+#if (PYTHON_DISABLE == 0)
+        "PythonExecutorCalculator",
+#endif
+    };
+    for (const auto& name : knownCalculators) {
+        bool found = std::any_of(initializers.begin(), initializers.end(),
+            [&](const auto& init) { return init->matches(name); });
+        EXPECT_TRUE(found) << "No NodeInitializer registered for calculator: " << name;
+    }
+}
+
+TEST_F(MediapipeFrameworkTest, NodeInitializerRegistryHasExpectedCountAfterServerStart) {
+    SetUpServer(getGenericFullPathForSrcTest("/ovms/src/test/mediapipe/config_mediapipe_dummy_adapter_full.json").c_str());
+
+    const auto& initializers = ovms::NodeInitializerRegistry::instance().all();
+#if (PYTHON_DISABLE == 0)
+    constexpr size_t expectedInitializersCount = 7;
+#else
+    constexpr size_t expectedInitializersCount = 6;
+#endif
+    EXPECT_EQ(initializers.size(), expectedInitializersCount)
+        << "Unexpected number of registered NodeInitializers after server start.";
 }
