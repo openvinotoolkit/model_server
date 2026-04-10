@@ -169,6 +169,18 @@ public:
 
             Writer<StringBuffer>::EndObject();
         }
+        for (const ToolCall& toolCall : parsedOutput.builtInToolCalls) {
+            StartObject();
+            String("id", toolCall.id);
+            String("type", "function");
+
+            StartObject("function");
+            String("name", toolCall.name);
+            String("arguments", toolCall.arguments);
+            Writer<StringBuffer>::EndObject();
+
+            Writer<StringBuffer>::EndObject();
+        }
         Writer<StringBuffer>::EndArray();
         Writer<StringBuffer>::EndObject();
         return true;
