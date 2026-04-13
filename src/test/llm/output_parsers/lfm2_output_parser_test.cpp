@@ -288,13 +288,13 @@ TEST_F(LFM2OutputParserTest, ParseToolCallOutputWithThreeToolCalls) {
 }
 
 TEST_F(LFM2OutputParserTest, ParseToolCallOutputWithThreeToolCallsWithContentInBetween) {
-    std::string inputWithProperClosure =    "Before tool calls content. "
-                                        "<|tool_call_start|>[example_tool(arg1=\"value1\", arg2=42)]<|tool_call_end|>"
-                                            "This is some content between tool calls."
+    std::string inputWithProperClosure = "Before tool calls content. "
+                                         "<|tool_call_start|>[example_tool(arg1=\"value1\", arg2=42)]<|tool_call_end|>"
+                                         "This is some content between tool calls."
                                          "<|tool_call_start|>[another_tool(param1=\"data\", param2=true)]<|tool_call_end|>"
-                                            " This is some content between second and third tool call. "
+                                         " This is some content between second and third tool call. "
                                          "<|tool_call_start|>[third_tool(key=\"value\")]<|tool_call_end|>"
-                                            "After tool calls content.";
+                                         "After tool calls content.";
 
     std::vector<std::string> inputs = {inputWithProperClosure};
     for (auto& input : inputs) {
