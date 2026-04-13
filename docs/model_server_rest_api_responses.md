@@ -185,9 +185,9 @@ Note that below parameters are valid only for prompt lookup pipeline. Add `"prom
 | max_output_tokens | ✅ | ✅ | integer | Echoed back from the request (if set). |
 | parallel_tool_calls | ⚠️ | ✅ | bool | Hardcoded to `true` in OVMS. |
 | store | ⚠️ | ✅ | bool | Hardcoded to `true` in OVMS. |
-| temperature | ✅ | ✅ | float | Echoed back from the request. Only included when explicitly provided. |
+| temperature | ⚠️ | ✅ | float | Echoed back from the request. Only included when explicitly provided. OpenAI always returns this field (default: `1.0`). |
 | text | ⚠️ | ✅ | object | Hardcoded to `{"format": {"type": "text"}}` in OVMS. |
-| top_p | ✅ | ✅ | float | Echoed back from the request. Only included when explicitly provided. |
+| top_p | ⚠️ | ✅ | float | Echoed back from the request. Only included when explicitly provided. OpenAI always returns this field (default: `1.0`). |
 | truncation | ⚠️ | ✅ | string | Hardcoded to `"disabled"` in OVMS. |
 | metadata | ⚠️ | ✅ | object | Hardcoded to `{}` in OVMS. |
 
