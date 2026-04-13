@@ -403,7 +403,6 @@ void Lfm2ToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t
     size_t pos = 0;
     int main_guard = 0;
 
-
     while (pos != std::string::npos && main_guard < MAX_TOOL_CALLS) {
         size_t start, end;
         auto it = std::find(generatedTokens.begin() + pos, generatedTokens.end(), botTokenId);
