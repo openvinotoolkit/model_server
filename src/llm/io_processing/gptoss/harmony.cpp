@@ -26,6 +26,36 @@
 namespace ovms {
 namespace openai {
 
+// Helper function to escape a string for JSON
+static std::string escapeJsonString(const std::string& input) {
+    std::string output;
+    output.reserve(input.size() + 16);  // Reserve some extra space for escapes
+    output += '"';
+    for (char c : input) {
+        switch (c) {
+        case '"':
+            output += "\\\"";
+            break;
+        case '\\':
+            output += "\\\\";
+            break;
+        case '\n':
+            output += "\\n";
+            break;
+        case '\r':
+            output += "\\r";
+            break;
+        case '\t':
+            output += "\\t";
+            break;
+        default:
+            output += c;
+        }
+    }
+    output += '"';
+    return output;
+}
+
 Harmony::Harmony(ov::genai::Tokenizer& tokenizer, const std::vector<int64_t>& tokens) :
     tokenizer(tokenizer),
     tokens(tokens) {}
@@ -115,6 +145,63 @@ ToolCalls_t Harmony::getToolCalls() {
                 toolCalls.push_back(std::move(toolCall));
             } else {
                 SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Skipping tool call. Could not find tool name in channel [{}]", msg.getChannel());
+            }
+        }
+    }
+    return toolCalls;
+}
+
+/*
+    Built-in tools calls are extracted from messages in channel "analysis" that contain "to=<builtins>.NAME" in the channel content; example:
+    <|channel|>analysis to=browser.search code<|message|>{"query": "latest developments AI technology 2025", "topn": 10, "source": "news"}<|call|>
+    
+    Also supports:
+    - "to=functions.python" format for Python code execution
+    - "analysis code" channel (implicit Python tool) when no explicit "to=" is present
+*/
+ToolCalls_t Harmony::getBuiltInToolCalls() {
+    static const std::string tool_prefix = "to=";
+    static const std::string functions_prefix = "functions.";
+    ToolCalls_t toolCalls;
+    for (const auto& msg : messages) {
+        if (startsWith(msg.getChannel(), "analysis") || startsWith(msg.getChannel(), "commentary")) {
+            size_t marker = msg.getChannel().find(tool_prefix);
+            if (marker != std::string::npos) {
+                marker += tool_prefix.length();
+                size_t firstWhiteSpaceOrSpecialBegin = msg.getChannel().find_first_of(" \t\n\r<", marker);
+                ToolCall toolCall;
+                std::string rawName;
+                if (firstWhiteSpaceOrSpecialBegin == std::string::npos) {
+                    // Take the remaining part of the string
+                    rawName = msg.getChannel().substr(marker);
+                } else {
+                    // Take up to the first whitespace or special token begin
+                    rawName = msg.getChannel().substr(marker, firstWhiteSpaceOrSpecialBegin - marker);
+                }
+
+                // Strip "functions." prefix if present (e.g., "functions.python" -> "python")
+                if (startsWith(rawName, functions_prefix)) {
+                    toolCall.name = rawName.substr(functions_prefix.length());
+                } else {
+                    toolCall.name = rawName;
+                }
+
+                toolCall.arguments = msg.getContent();
+                toolCall.id = generateRandomId();
+                toolCalls.push_back(std::move(toolCall));
+            } else if (msg.getChannel() == "analysis code" || msg.getChannel() == "commentary code" ||
+                       msg.getChannel() == "analysis json" || msg.getChannel() == "commentary json") {
+                // Implicit Python tool call - channel indicates code/json execution without explicit "to="
+                // This happens when model outputs: <|channel|>commentary to=functions.python<|channel|>commentary json<|message|>...
+                // The first channel with "to=" is lost, but "analysis/commentary code/json" indicates Python code execution
+                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Found implicit Python tool call in channel [{}]", msg.getChannel());
+                ToolCall toolCall;
+                toolCall.name = "python";
+                toolCall.arguments = "{\"code\": " + escapeJsonString(msg.getContent()) + "}";
+                toolCall.id = generateRandomId();
+                toolCalls.push_back(std::move(toolCall));
+            } else {
+                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Skipping message. Could not find tool name in channel [{}]", msg.getChannel());
             }
         }
     }
