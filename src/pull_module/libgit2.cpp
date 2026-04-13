@@ -395,16 +395,6 @@ Status HfDownloader::CheckRepositoryStatus(bool checkUntracked) {
     return StatusCode::OK;
 }
 
-#define CHECK(call)                                                                                                             \
-    do {                                                                                                                        \
-        int _err = (call);                                                                                                      \
-        if (_err < 0) {                                                                                                         \
-            const git_error* e = git_error_last();                                                                              \
-            fprintf(stderr, "[ERROR] %d: %s (%s:%d)\n", _err, e && e->message ? e->message : "no message", __FILE__, __LINE__); \
-            return;                                                                                                             \
-        }                                                                                                                       \
-    } while (0)
-
 namespace libgit2 {
 bool isCloneCancellationRequestedFromServer() {
     return getShutdownRequestValue() != 0;
@@ -660,23 +650,49 @@ private:
     }
 };
 
-void resumeLfsDownloadForFile(git_repository* repo, const char* filePathInRepo) {
+Status resumeLfsDownloadForFile(git_repository* repo, const char* filePathInRepo) {
+    git_lfs_cancel_requested = 0;
+    if (getShutdownRequestValue() != 0) {
+        git_lfs_cancel_requested = 1;
+        return StatusCode::HF_GIT_CLONE_CANCELLED;
+    }
+
+    auto runGitCall = [&](int rc, const char* callName) -> Status {
+        if (rc >= 0) {
+            return StatusCode::OK;
+        }
+        if (getShutdownRequestValue() != 0 || rc == GIT_EUSER) {
+            git_lfs_cancel_requested = 1;
+            SPDLOG_ERROR("LFS resume cancelled in {} for path: {}", callName, filePathInRepo);
+            return StatusCode::HF_GIT_CLONE_CANCELLED;
+        }
+        const git_error* e = git_error_last();
+        SPDLOG_ERROR("LFS resume failed in {} for path: {} rc:{} msg:{}", callName, filePathInRepo, rc, e && e->message ? e->message : "no message");
+        return StatusCode::HF_GIT_LIBGIT2_LFS_DOWNLOAD_FAILED;
+    };
+
     GitScope g;
 
     // Resolve HEAD tree (HEAD^{tree})
-    CHECK(git_revparse_single(&g.tree_obj, repo, "HEAD^{tree}"));
+    auto status = runGitCall(git_revparse_single(&g.tree_obj, repo, "HEAD^{tree}"), "git_revparse_single");
+    if (!status.ok())
+        return status;
 
     // Find the tree entry by path
-    CHECK(git_tree_entry_bypath(&g.entry, g.tree(), filePathInRepo));
+    status = runGitCall(git_tree_entry_bypath(&g.entry, g.tree(), filePathInRepo), "git_tree_entry_bypath");
+    if (!status.ok())
+        return status;
 
     // Ensure it's a blob
     if (git_tree_entry_type(g.entry) != GIT_OBJECT_BLOB) {
         fprintf(stderr, "[ERROR] Path is not a blob: %s\n", filePathInRepo);
-        return;  // Guard cleans up
+        return StatusCode::HF_GIT_LIBGIT2_LFS_DOWNLOAD_FAILED;
     }
 
     // Lookup the blob
-    CHECK(git_blob_lookup(&g.blob, repo, git_tree_entry_id(g.entry)));
+    status = runGitCall(git_blob_lookup(&g.blob, repo, git_tree_entry_id(g.entry)), "git_blob_lookup");
+    if (!status.ok())
+        return status;
 
     // Configure filter behavior
     git_blob_filter_options opts = GIT_BLOB_FILTER_OPTIONS_INIT;
@@ -686,10 +702,13 @@ void resumeLfsDownloadForFile(git_repository* repo, const char* filePathInRepo) 
     opts.flags |= GIT_FILTER_TO_WORKTREE;
 
     // Apply filters based on .gitattributes for this path (triggers LFS smudge/clean)
-    CHECK(git_blob_filter(&g.out, g.blob, filePathInRepo, &opts));
+    status = runGitCall(git_blob_filter(&g.out, g.blob, filePathInRepo, &opts), "git_blob_filter");
+    if (!status.ok())
+        return status;
 
     // We don't need the buffer contents; the filter side-effects are enough.
     // All resources (out, blob, entry, tree_obj) will be freed automatically here.
+    return StatusCode::OK;
 }
 
 Status HfDownloader::downloadModel() {
@@ -742,9 +761,16 @@ Status HfDownloader::downloadModel() {
         }
 
         for (const auto& p : matches) {
+            if (getShutdownRequestValue() != 0) {
+                git_lfs_cancel_requested = 1;
+                return StatusCode::HF_GIT_CLONE_CANCELLED;
+            }
             std::cout << " Resuming " << p.string() << "...\n";
             std::string path = p.string();
-            resumeLfsDownloadForFile(repoGuard.get(), path.c_str());
+            auto resumeStatus = resumeLfsDownloadForFile(repoGuard.get(), path.c_str());
+            if (!resumeStatus.ok()) {
+                return resumeStatus;
+            }
         }
 
         // Non blocking check
