@@ -29,7 +29,6 @@
 #pragma GCC diagnostic pop
 
 #include "../profiler.hpp"
-#include "../logging.hpp"
 #include "../status.hpp"
 #include "../serialization_common.hpp"
 #include "../tensorinfo.hpp"

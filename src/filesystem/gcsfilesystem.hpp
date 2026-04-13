@@ -19,135 +19,145 @@
 #include <string>
 #include <vector>
 
-#include <aws/core/Aws.h>
-#include <aws/s3/S3Client.h>
+#include "google/cloud/storage/client.h"
 
 #include "filesystem.hpp"
-#include "status.hpp"
+#include "src/status.hpp"
 
 namespace ovms {
 
-class S3FileSystem : public FileSystem {
+class GCSFileSystem : public FileSystem {
 public:
     /**
-     * @brief Construct a new S3FileSystem object
-     * 
-     * @param options 
-     * @param s3_path 
+     * @brief Construct a new GCSFileSystem object
+     *
      */
-    S3FileSystem(const Aws::SDKOptions& options, const std::string& s3_path);
+    GCSFileSystem();
+    /**
+     * @brief Construct a new GCSFileSystem object
+     *
+     * @param options
+     */
+    GCSFileSystem(const google::cloud::storage::v1::ClientOptions& options);
 
     /**
-     * @brief Destroy the S3FileSystem object
-     * 
+     * @brief Destroy the GCSFileSystem object
+     *
      */
-    ~S3FileSystem();
+    virtual ~GCSFileSystem();
 
     /**
      * @brief Check if given path or file exists
-     * 
-     * @param path 
-     * @param exists 
-     * @return StatusCode 
+     *
+     * @param path
+     * @param exists
+     * @return StatusCode
      */
     StatusCode fileExists(const std::string& path, bool* exists) override;
 
     /**
      * @brief Check if given path is a directory
-     * 
-     * @param path 
-     * @param is_dir 
-     * @return StatusCode 
+     *
+     * @param path
+     * @param is_dir
+     * @return StatusCode
      */
     StatusCode isDirectory(const std::string& path, bool* is_dir) override;
 
     /**
      * @brief Get the files and directories in given directory
-     * 
-     * @param path 
-     * @param contents 
-     * @return StatusCode 
+     *
+     * @param path
+     * @param contents
+     * @return StatusCode
      */
-    StatusCode getDirectoryContents(const std::string& path, files_list_t* contents) override;
+    StatusCode getDirectoryContents(const std::string& path,
+        files_list_t* contents) override;
 
     /**
      * @brief Get only directories in given directory
-     * 
-     * @param path 
-     * @param subdirs 
-     * @return StatusCode 
+     *
+     * @param path
+     * @param subdirs
+     * @return StatusCode
      */
-    StatusCode getDirectorySubdirs(const std::string& path, files_list_t* subdirs) override;
+    StatusCode getDirectorySubdirs(const std::string& path,
+        files_list_t* subdirs) override;
 
     /**
      * @brief Get only files in given directory
-     * 
-     * @param path 
-     * @param files 
-     * @return StatusCode 
+     *
+     * @param path
+     * @param files
+     * @return StatusCode
      */
-    StatusCode getDirectoryFiles(const std::string& path, files_list_t* files) override;
+    StatusCode getDirectoryFiles(const std::string& path,
+        files_list_t* files) override;
 
     /**
      * @brief Read the content of the given file into a string
-     * 
-     * @param path 
-     * @param contents 
-     * @return StatusCode 
+     *
+     * @param path
+     * @param contents
+     * @return StatusCode
      */
-    StatusCode readTextFile(const std::string& path, std::string* contents) override;
+    StatusCode readTextFile(const std::string& path,
+        std::string* contents) override;
 
     /**
      * @brief Download a remote directory
-     * 
-     * @param path 
-     * @param local_path 
-     * @return StatusCode 
+     *
+     * @param path
+     * @param local_path
+     * @return StatusCode
      */
     StatusCode downloadFileFolder(const std::string& path, const std::string& local_path) override;
 
     /**
      * @brief Download selected model versions
-     * 
-     * @param path 
-     * @param local_path 
-     * @param versions 
-     * @return StatusCode 
+     *
+     * @param path
+     * @param local_path
+     * @param versions
+     * @return StatusCode
      */
     StatusCode downloadModelVersions(const std::string& path, std::string* local_path, const std::vector<model_version_t>& versions) override;
 
     /**
      * @brief Delete a folder
-     * 
-     * @param path 
-     * @return StatusCode 
+     *
+     * @param path
+     * @return StatusCode
      */
     StatusCode deleteFileFolder(const std::string& path) override;
 
 private:
     /**
-     * @brief 
-     * 
-     * @param path 
-     * @param bucket 
-     * @param object 
-     * @return StatusCode 
+     * @brief
+     *
+     * @param path
+     * @param bucket
+     * @param object
+     * @return StatusCode
      */
-    StatusCode parsePath(const std::string& path, std::string* bucket, std::string* object);
+    StatusCode parsePath(const std::string& path, std::string* bucket,
+        std::string* object);
 
     /**
-     * @brief 
-     * 
+     *
+     * @brief
+     *
+     * @param remote_path
+     * @param local_path
      */
-    Aws::SDKOptions options_;
+    StatusCode downloadFile(const std::string& remote_path,
+        const std::string& local_path);
 
     /**
-     * @brief 
-     * 
+     * @brief
+     *
      */
-    Aws::S3::S3Client client_;
-    std::regex s3_regex_;
-    std::regex proxy_regex_;
+    google::cloud::storage::Client client_;
 };
 
 }  // namespace ovms

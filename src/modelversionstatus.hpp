@@ -19,8 +19,9 @@
 #include <string>
 #include <unordered_map>
 
+#include <fmt/format.h>
+
 #include "modelversion.hpp"
-#include "logging.hpp"
 
 // note: think about using https://github.com/Neargye/magic_enum when compatible compiler is supported.
 

@@ -31,7 +31,7 @@
 #include "src/test/test_utils.hpp"
 #include "src/test/test_file_utils.hpp"
 #include "src/test/test_with_temp_dir.hpp"
-#include "src/filesystem.hpp"
+#include "src/filesystem/filesystem.hpp"
 #include "src/pull_module/hf_pull_model_module.hpp"
 #include "src/pull_module/libgit2.hpp"
 #include "src/pull_module/optimum_export.hpp"
@@ -272,6 +272,7 @@ public:
 };
 
 TEST_F(HfDownloaderPullHfModel, Resume) {
+    SKIP_AND_EXIT_IF_NOT_RUNNING_UNSTABLE();  // SSL proxy blocked workaround
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string downloadPath = ovms::FileSystem::joinPath({this->directoryPath, "repository"});
     std::string task = "text_generation";

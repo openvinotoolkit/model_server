@@ -60,6 +60,14 @@ If error occurs during the script execution, please fix the error and rerun the 
 windows_install_build_dependencies.bat
 ```
 
+Optionally, you add parameter to the windows_install_build_dependencies.bat script
+```bat
+windows_install_build_dependencies.bat my_dir_on_c 1 1
+```
+[arg1] - This way you can change default dependency install directory to c:\my_dir_on_c
+[arg2] - Set the clean flag to 0 or 1 - this will cleanup the installation directories and reinstall all dependencies
+[arg3] - Add the compilation integrity flag to 0 or 1 - set the additional integritycheck and Qspectre compilation flag when compiling dependencies
+
 ## COMPILE
 [WARNING] This step consumes up to 13GB of disk space. It can take up to 1h depending on host CPU and internet connection speed.
 This default command compiles ovms.exe without python dependencies, just C++ binary with limited support for chat template processing.
@@ -67,10 +75,15 @@ This default command compiles ovms.exe without python dependencies, just C++ bin
 windows_build.bat
 ```
 
-Optionally you can build ovms.exe with python dependency that allows to use python chat templates for GENAI LLM support.
+Optionally, you add parameter to the windows_build.bat script
 ```bat
-windows_build.bat opt --with_python
+windows_install_build_dependencies.bat my_dir_on_c --with_python --with_tests --integrity
 ```
+[arg1] This way you can change default dependency location directory to c:\my_dir_on_c
+[arg2] --with_python - this will build the ovms.exe with python dependency and support for python chat templates for GENAI LLM
+[arg3] --with_tests - this will also build ovms_test.exe target
+[arg4] --integrity - Add the compilation integrity flag to 0 or 1 - set the additional integritycheck compilation flag when compiling dependencies
+
 # Running unit tests - optional
 The script compiles ovms_test binary with C++ only, downloads and converts test LLM models (src\tests\llm_testing).
 ```bat

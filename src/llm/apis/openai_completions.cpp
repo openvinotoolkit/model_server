@@ -25,11 +25,13 @@
 #include <set>
 #include <string.h>
 
+#include <fmt/ranges.h>
+
 #include "openai_json_response.hpp"
 
 #include "../../logging.hpp"
 #include "../../profiler.hpp"
-#include "../../filesystem.hpp"
+#include "src/filesystem/filesystem.hpp"
 #pragma warning(push)
 #pragma warning(disable : 6001 4324 6385 6386)
 #include "absl/strings/escaping.h"

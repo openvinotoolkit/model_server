@@ -58,7 +58,7 @@
 #include "httpservermodule.hpp"
 #include "kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "logging.hpp"
-#include "metric_module.hpp"
+#include "metrics/metric_module.hpp"
 #include "model_service.hpp"
 #include "modelmanager.hpp"
 #include "ovms_exit_codes.hpp"
