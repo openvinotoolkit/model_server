@@ -142,17 +142,18 @@ static void onTerminate(int status) {
 }
 
 static void onIllegal(int status) {
+    (void)status;
     const char msg[] = "SIGILL received: illegal instruction. This may indicate an unsupported CPU or device or an internal error. Terminating.\n";
 #ifdef __linux__
-    ssize_t ret __attribute__((unused)) = write(STDERR_FILENO, msg, sizeof(msg) - 1);
+    ssize_t ret = write(STDERR_FILENO, msg, sizeof(msg) - 1);
 #elif _WIN32
     int ret = _write(_fileno(stderr), msg, sizeof(msg) - 1);
-    (void)ret;
 #endif
+    (void)ret;
     // Exit code 128+N is the standard shell convention for signal-terminated
     // processes (bash, dash, Docker, Kubernetes all follow this).
     // For SIGILL(4) this gives exit code 132.
-    _exit(128 + SIGILL);
+    std::_Exit(128 + SIGILL);
 }
 
 #ifdef __linux__
