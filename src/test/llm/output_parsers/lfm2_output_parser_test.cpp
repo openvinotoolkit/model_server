@@ -80,11 +80,8 @@ protected:
 
 TEST_F(LFM2OutputParserTest, ParseToolCallOutputWithSingleToolCall) {
     std::string inputWithProperClosure = "<|tool_call_start|>[example_tool(arg1=\"value1\", arg2=42)]<|tool_call_end|>";
-    std::string inputWithImproperClosure = "<|tool_call_start|>[example_tool(arg1=\"value1\", arg2=42)]";
 
-    // LFM2 may produce last tool call without closing tag, so we test both cases
-    // The results should be identical
-    std::vector<std::string> inputs = {inputWithProperClosure, inputWithImproperClosure};
+    std::vector<std::string> inputs = {inputWithProperClosure};
     for (auto& input : inputs) {
         auto generatedTensor = lfm2Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
         std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
@@ -102,11 +99,8 @@ TEST_F(LFM2OutputParserTest, ParseToolCallOutputWithSingleToolCall) {
 
 TEST_F(LFM2OutputParserTest, ParseToolCallOutputWithNoToolsInTheRequest) {
     std::string inputWithProperClosure = "<|tool_call_start|>[example_tool(arg1=\"value1\", arg2=42)]<|tool_call_end|>";
-    std::string inputWithImproperClosure = "<|tool_call_start|>[example_tool(arg1=\"value1\", arg2=42)]";
 
-    // LFM2 may produce last tool call without closing tag, so we test both cases
-    // The results should be identical
-    std::vector<std::string> inputs = {inputWithProperClosure, inputWithImproperClosure};
+    std::vector<std::string> inputs = {inputWithProperClosure};
     for (auto& input : inputs) {
         std::string testInput = input;
         auto generatedTensor = lfm2Tokenizer->encode(testInput, ov::genai::add_special_tokens(false)).input_ids;
@@ -121,11 +115,10 @@ TEST_F(LFM2OutputParserTest, ParseToolCallOutputWithNoToolsInTheRequest) {
 
 TEST_F(LFM2OutputParserTest, ParseToolCallWithObjectArguments) {
     std::string inputWithProperClosure = "<|tool_call_start|>[dummy(config={'name': 'astro_config', 'value': 99})]<|tool_call_end|>";
-    std::string inputWithImproperClosure = "<|tool_call_start|>[dummy(config={'name': 'astro_config', 'value': 99})]";
 
     // LFM2 may produce last tool call without closing tag, so we test both cases
     // The results should be identical
-    std::vector<std::string> inputs = {inputWithProperClosure, inputWithImproperClosure};
+    std::vector<std::string> inputs = {inputWithProperClosure};
     for (auto& input : inputs) {
         auto generatedTensor = lfm2Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
         std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
@@ -143,11 +136,10 @@ TEST_F(LFM2OutputParserTest, ParseToolCallWithObjectArguments) {
 
 TEST_F(LFM2OutputParserTest, ParseToolCallWithStringArguments) {
     std::string inputWithProperClosure = "<|tool_call_start|>[test1(arg1=\"data1, data2\")]<|tool_call_end|>";
-    std::string inputWithImproperClosure = "<|tool_call_start|>[test1(arg1=\"data1, data2\")]";
 
     // LFM2 may produce last tool call without closing tag, so we test both cases
     // The results should be identical
-    std::vector<std::string> inputs = {inputWithProperClosure, inputWithImproperClosure};
+    std::vector<std::string> inputs = {inputWithProperClosure};
     for (auto& input : inputs) {
         auto generatedTensor = lfm2Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
         std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
@@ -165,9 +157,8 @@ TEST_F(LFM2OutputParserTest, ParseToolCallWithStringArguments) {
 
 TEST_F(LFM2OutputParserTest, ParseToolCallWithListOfStringsAsArgument) {
     std::string inputWithProperClosure = "<|tool_call_start|>[generate_DNA_sequence(length=100, preferences=['G', 'C'])]<|tool_call_end|>";
-    std::string inputWithImproperClosure = "<|tool_call_start|>[generate_DNA_sequence(length=100, preferences=['G', 'C'])]";
 
-    std::vector<std::string> inputs = {inputWithProperClosure, inputWithImproperClosure};
+    std::vector<std::string> inputs = {inputWithProperClosure};
     for (auto& input : inputs) {
         auto generatedTensor = lfm2Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
         std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
@@ -185,9 +176,8 @@ TEST_F(LFM2OutputParserTest, ParseToolCallWithListOfStringsAsArgument) {
 
 TEST_F(LFM2OutputParserTest, ParserToolCallWithBooleanArgument) {
     std::string inputWithProperClosure = "<|tool_call_start|>[check_status(flag=True)]<|tool_call_end|>";
-    std::string inputWithImproperClosure = "<|tool_call_start|>[check_status(flag=True)]";
 
-    std::vector<std::string> inputs = {inputWithProperClosure, inputWithImproperClosure};
+    std::vector<std::string> inputs = {inputWithProperClosure};
     for (auto& input : inputs) {
         auto generatedTensor = lfm2Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
         std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
@@ -205,11 +195,8 @@ TEST_F(LFM2OutputParserTest, ParserToolCallWithBooleanArgument) {
 
 TEST_F(LFM2OutputParserTest, ParseTwoToolCallsAtOnce) {
     std::string inputWithProperClosure = "<|tool_call_start|>[dummy1(config={'name': 'astro_config', 'value': 99}), dummy2(config={'name': 'second_config', 'value': 199})]<|tool_call_end|>";
-    std::string inputWithImproperClosure = "<|tool_call_start|>[dummy1(config={'name': 'astro_config', 'value': 99}), dummy2(config={'name': 'second_config', 'value': 199})]";
 
-    // LFM2 may produce last tool call without closing tag, so we test both cases
-    // The results should be identical
-    std::vector<std::string> inputs = {inputWithProperClosure, inputWithImproperClosure};
+    std::vector<std::string> inputs = {inputWithProperClosure};
     for (auto& input : inputs) {
         auto generatedTensor = lfm2Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
         std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
@@ -230,11 +217,8 @@ TEST_F(LFM2OutputParserTest, ParseTwoToolCallsAtOnce) {
 
 TEST_F(LFM2OutputParserTest, ParseToolCallWithArrayArguments) {
     std::string inputWithProperClosure = "<|tool_call_start|>[sort(array=[42, 17, 89, 5, 33], order=\"descending\")]<|tool_call_end|>";
-    std::string inputWithImproperClosure = "<|tool_call_start|>[sort(array=[42, 17, 89, 5, 33], order=\"descending\")]";
 
-    // LFM2 may produce last tool call without closing tag, so we test both cases
-    // The results should be identical
-    std::vector<std::string> inputs = {inputWithProperClosure, inputWithImproperClosure};
+    std::vector<std::string> inputs = {inputWithProperClosure};
     for (auto& input : inputs) {
         auto generatedTensor = lfm2Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
         std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
@@ -252,11 +236,8 @@ TEST_F(LFM2OutputParserTest, ParseToolCallWithArrayArguments) {
 
 TEST_F(LFM2OutputParserTest, ParseToolCallWithStringWithSingleQuotesArguments) {
     std::string inputWithProperClosure = "<|tool_call_start|>[sort(array=[42, 17, 89, 5, 33], order='descending')]<|tool_call_end|>";
-    std::string inputWithImproperClosure = "<|tool_call_start|>[sort(array=[42, 17, 89, 5, 33], order='descending')]";
 
-    // LFM2 may produce last tool call without closing tag, so we test both cases
-    // The results should be identical
-    std::vector<std::string> inputs = {inputWithProperClosure, inputWithImproperClosure};
+    std::vector<std::string> inputs = {inputWithProperClosure};
     for (auto& input : inputs) {
         auto generatedTensor = lfm2Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
         std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
@@ -276,16 +257,51 @@ TEST_F(LFM2OutputParserTest, ParseToolCallOutputWithThreeToolCalls) {
     std::string inputWithProperClosure = "<|tool_call_start|>[example_tool(arg1=\"value1\", arg2=42)]<|tool_call_end|>"
                                          "<|tool_call_start|>[another_tool(param1=\"data\", param2=true)]<|tool_call_end|>"
                                          "<|tool_call_start|>[third_tool(key=\"value\")]<|tool_call_end|>";
-    std::string inputWithImproperClosure = "<|tool_call_start|>[example_tool(arg1=\"value1\", arg2=42)]<|tool_call_end|>"
-                                           "<|tool_call_start|>[another_tool(param1=\"data\", param2=true)]<|tool_call_end|>"
-                                           "<|tool_call_start|>[third_tool(key=\"value\")]";
 
-    std::vector<std::string> inputs = {inputWithProperClosure, inputWithImproperClosure};
+    std::vector<std::string> inputs = {inputWithProperClosure};
     for (auto& input : inputs) {
         auto generatedTensor = lfm2Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
         std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
         ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
         EXPECT_EQ(parsedOutput.content, "");
+        EXPECT_EQ(parsedOutput.reasoning, "");
+
+        ASSERT_EQ(parsedOutput.toolCalls.size(), 3);
+        EXPECT_EQ(parsedOutput.toolCalls[0].name, "example_tool");
+        EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{\"arg1\":\"value1\",\"arg2\":42}");
+        EXPECT_EQ(parsedOutput.toolCalls[0].id.empty(), false);
+        auto firstToolCallId = parsedOutput.toolCalls[0].id;
+
+        EXPECT_EQ(parsedOutput.toolCalls[1].name, "another_tool");
+        EXPECT_EQ(parsedOutput.toolCalls[1].arguments, "{\"param1\":\"data\",\"param2\":true}");
+        EXPECT_EQ(parsedOutput.toolCalls[1].id.empty(), false);
+        auto secondToolCallId = parsedOutput.toolCalls[1].id;
+        EXPECT_NE(firstToolCallId, secondToolCallId);
+
+        EXPECT_EQ(parsedOutput.toolCalls[2].name, "third_tool");
+        EXPECT_EQ(parsedOutput.toolCalls[2].arguments, "{\"key\":\"value\"}");
+        EXPECT_EQ(parsedOutput.toolCalls[2].id.empty(), false);
+        auto thirdToolCallId = parsedOutput.toolCalls[2].id;
+        EXPECT_NE(firstToolCallId, thirdToolCallId);
+        EXPECT_NE(secondToolCallId, thirdToolCallId);
+    }
+}
+
+TEST_F(LFM2OutputParserTest, ParseToolCallOutputWithThreeToolCallsWithContentInBetween) {
+    std::string inputWithProperClosure =    "Before tool calls content. "
+                                        "<|tool_call_start|>[example_tool(arg1=\"value1\", arg2=42)]<|tool_call_end|>"
+                                            "This is some content between tool calls."
+                                         "<|tool_call_start|>[another_tool(param1=\"data\", param2=true)]<|tool_call_end|>"
+                                            " This is some content between second and third tool call. "
+                                         "<|tool_call_start|>[third_tool(key=\"value\")]<|tool_call_end|>"
+                                            "After tool calls content.";
+
+    std::vector<std::string> inputs = {inputWithProperClosure};
+    for (auto& input : inputs) {
+        auto generatedTensor = lfm2Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
+        std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+        ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
+        EXPECT_EQ(parsedOutput.content, "Before tool calls content. This is some content between tool calls. This is some content between second and third tool call. After tool calls content.");
         EXPECT_EQ(parsedOutput.reasoning, "");
 
         ASSERT_EQ(parsedOutput.toolCalls.size(), 3);

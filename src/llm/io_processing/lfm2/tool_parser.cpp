@@ -33,6 +33,9 @@ const std::string Lfm2ToolParser::TOOL_ARGS_START_INDICATOR = "(";
 const std::string Lfm2ToolParser::TOOL_ARGS_END_INDICATOR = ")";
 const std::string Lfm2ToolParser::TOOL_SEPARATOR_STR = ", ";
 
+const int64_t Lfm2ToolParser::botTokenId = 10;
+const int64_t Lfm2ToolParser::eotTokenId = 11;
+
 std::string Lfm2ToolParser::parseArrayParameter(std::string argumentStr) {
     int quoteDepth = 0;
 
@@ -400,32 +403,27 @@ void Lfm2ToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t
     size_t pos = 0;
     int main_guard = 0;
 
+
     while (pos != std::string::npos && main_guard < MAX_TOOL_CALLS) {
-        std::pair<size_t, size_t> toolCallPosition;
-        size_t start = parsedOutput.content.find(TOOL_CALL_START_TAG, pos);
-        if (start == std::string::npos) {
+        size_t start, end;
+        auto it = std::find(generatedTokens.begin() + pos, generatedTokens.end(), botTokenId);
+        if (it != generatedTokens.end()) {
+            start = std::distance(generatedTokens.begin(), it);
+        } else {
             break;
         }
-        toolCallPosition.first = start;
-        start += TOOL_CALL_START_TAG.length();
-        size_t end = parsedOutput.content.find(TOOL_CALL_END_TAG, start);
-        if (end == std::string::npos) {
-            end = parsedOutput.content.rfind(TOOL_LIST_END_INDICATOR, end);
-            if (end == std::string::npos) {
-                SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Malformed tool call in content, no tool end tag or tool list end tag found for tool call starting at position {}", start);
-                break;
-            }
-            toolCallPosition.second = end + TOOL_LIST_END_INDICATOR.length();
-            end += TOOL_LIST_END_INDICATOR.length();
-            SPDLOG_LOGGER_TRACE(llm_calculator_logger, "No tool call end tag found, but found tool list end tag, treating content between start and this position as tool list");
+        auto itArgs = std::find(generatedTokens.begin() + start, generatedTokens.end(), eotTokenId);
+        if (itArgs != generatedTokens.end()) {
+            end = std::distance(generatedTokens.begin(), itArgs);
         } else {
-            toolCallPosition.second = end + TOOL_CALL_END_TAG.length();
-            SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Found tool call end tag for tool call starting at position {}", start);
+            break;
         }
-        toolCallPositions.push_back(toolCallPosition);
-        std::string toolListStr = parsedOutput.content.substr(start + TOOL_LIST_START_INDICATOR.length(), end - start - TOOL_LIST_START_INDICATOR.length() - TOOL_LIST_END_INDICATOR.length());
+
+        std::string toolListStr = tokenizer.decode(std::vector<int64_t>(generatedTokens.begin() + start + 1, generatedTokens.begin() + end), ov::AnyMap{ov::genai::skip_special_tokens(false)});
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Parsed tool list string: {}", toolListStr);
         int tool_guard = 0;
+        toolListStr = toolListStr.substr(TOOL_LIST_START_INDICATOR.length(), toolListStr.length() - TOOL_LIST_START_INDICATOR.length() - TOOL_LIST_END_INDICATOR.length());
+
         while (!toolListStr.empty() && tool_guard < MAX_TOOLS_PER_CALL) {
             size_t toolEndPos = findInStringRespectingSpecialChars(toolListStr, TOOL_ARGS_END_INDICATOR, 0);
             std::string singleTool;
@@ -446,7 +444,8 @@ void Lfm2ToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t
         }
         main_guard++;
 
-        pos = toolCallPositions.empty() ? std::string::npos : toolCallPositions.back().second;
+        pos = end;
+        toolCallPositions.emplace_back(start, end);
     }
 
     for (const std::string& tool : tools) {
@@ -460,8 +459,10 @@ void Lfm2ToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t
         }
     }
 
+    std::vector<int64_t> contentWithoutToolCalls = generatedTokens;
     for (auto it = toolCallPositions.rbegin(); it != toolCallPositions.rend(); ++it) {
-        parsedOutput.content.erase(it->first, it->second - it->first);
+        contentWithoutToolCalls.erase(contentWithoutToolCalls.begin() + it->first, contentWithoutToolCalls.begin() + it->second + 1);
     }
+    parsedOutput.content = tokenizer.decode(contentWithoutToolCalls, ov::AnyMap{ov::genai::skip_special_tokens(true)});
 }
 }  // namespace ovms
