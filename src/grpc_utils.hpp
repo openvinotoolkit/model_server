@@ -15,9 +15,9 @@
 //*****************************************************************************
 #pragma once
 #include <string>
-#include <grpcpp/server_context.h>
 
-#include "logging.hpp"
+#include <fmt/format.h>
+#include <grpcpp/server_context.h>
 
 namespace ovms {
 class Status;

@@ -24,6 +24,7 @@ ovms_cc_library(
     deps = [
         "imagegenpipelineargs",
         "//src:libovmslogging",
+        "//src:libovms_queue",
         "//src:libovmsstring_utils",
         "//third_party:genai",],
     visibility = ["//visibility:public"],
@@ -37,7 +38,7 @@ ovms_cc_library(
     deps = [
         "//src:libovmslogging",
         "//src:libmodelconfigjsonparser",
-        "//src:libovmsfilesystem",
+        "//src/filesystem:libovmsfilesystem",
         "//src:libovmsstring_utils",
         "imagegenutils",
         "imagegenpipelineargs",
@@ -74,7 +75,8 @@ ovms_cc_library(
 
 ovms_cc_library(
     name = "image_gen_calculator",
-    srcs = ["http_image_gen_calculator.cc"],
+    srcs = ["http_image_gen_calculator.cc",
+            "image_gen_node_initializer.cpp"],
     deps = [
         "@mediapipe//mediapipe/framework:calculator_framework",
         "//src:httppayload",
@@ -83,7 +85,11 @@ ovms_cc_library(
         ":pipelines",
         "//src:image_conversion",
         ":imagegenutils",
-        "//third_party:genai",],
+        "//third_party:genai",
+        ":imagegen_init",
+        "//src/mediapipe_internal:node_initializer",
+        "//src:libovmsstring_utils",
+        "//third_party:openvino",],
     visibility = ["//visibility:public"],
     alwayslink = 1,
 )

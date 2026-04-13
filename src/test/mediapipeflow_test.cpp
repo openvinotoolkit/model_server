@@ -36,6 +36,7 @@
 #pragma GCC diagnostic pop
 
 #include "../config.hpp"
+#include "../dags/pipeline_factory.hpp"
 #include "../dags/pipelinedefinition.hpp"
 #include "../grpcservermodule.hpp"
 #include "../http_rest_api_handler.hpp"
@@ -45,8 +46,9 @@
 #include "../mediapipe_internal/mediapipefactory.hpp"
 #include "../mediapipe_internal/mediapipegraphdefinition.hpp"
 #include "../mediapipe_internal/mediapipegraphexecutor.hpp"
-#include "../metric_config.hpp"
-#include "../metric_module.hpp"
+#include "src/metrics/metric_config.hpp"
+#include "src/metrics/metric_module.hpp"
+#include "../model.hpp"
 #include "../model_service.hpp"
 #include "../ovms_exit_codes.hpp"
 #include "../precision.hpp"
@@ -1489,8 +1491,6 @@ TEST_F(MediapipeStreamFlowAddTest, Infer) {
 TEST_F(MediapipeStreamFlowAddTest, InferOnUnloadedGraph) {
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
     KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
-    const ServableManagerModule* smm = dynamic_cast<const ServableManagerModule*>(server.getModule(SERVABLE_MANAGER_MODULE_NAME));
-    ModelManager& modelManager = smm->getServableManager();
 
     auto* definition = this->getMPDefinitionByName(this->modelName);
     ASSERT_NE(definition, nullptr);
@@ -1534,10 +1534,10 @@ TEST_F(MediapipeStreamFlowAddTest, InferOnUnloadedGraph) {
             checkAddResponse("out", this->requestData1[2], this->requestData1[2], this->request[2], msg.infer_response(), 1, 1, this->modelName);
             return true;
         });
-    std::thread unloader([&startUnloading, &finishedUnloading, &definition, &modelManager]() {
+    std::thread unloader([&startUnloading, &finishedUnloading, &definition]() {
         // Wait till first response notifies that we should start unloading
         startUnloading.get_future().get();
-        definition->retire(modelManager);
+        definition->retire();
         // Notify second request to arrive because we unloaded the graph
         finishedUnloading.set_value();
     });
@@ -1656,11 +1656,9 @@ TEST_F(MediapipeStreamFlowAddTest, InferOnReloadedGraph) {
 TEST_F(MediapipeStreamFlowAddTest, NegativeShouldNotReachInferDueToRetiredGraph) {
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
     KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
-    const ServableManagerModule* smm = dynamic_cast<const ServableManagerModule*>(server.getModule(SERVABLE_MANAGER_MODULE_NAME));
-    ModelManager& modelManager = smm->getServableManager();
     auto* definition = this->getMPDefinitionByName(this->modelName);
     ASSERT_NE(definition, nullptr);
-    definition->retire(modelManager);
+    definition->retire();
 
     // Opening new stream, expect graph to be unavailable
     MockedServerReaderWriter<::inference::ModelStreamInferResponse, ::inference::ModelInferRequest> stream;
@@ -3746,10 +3744,10 @@ TEST(WhitelistRegistered, MediapipeCalculatorsList) {
         // Expected when building with python
         "CalculatorRunnerSinkCalculator",
         "CalculatorRunnerSourceCalculator",
-        "PyTensorOvTensorConverterCalculator",   // integral OVMS calculator
-        "PythonExecutorCalculator",  // integral OVMS calculator
+        "PyTensorOvTensorConverterCalculator",  // integral OVMS calculator
+        "PythonExecutorCalculator",             // integral OVMS calculator
 #endif
-        "HttpLLMCalculator",  // integral OVMS calculator
+        "HttpLLMCalculator",                    // integral OVMS calculator
         "OpenAIChatCompletionsMockCalculator",  // OVMS test calculator
         "AddHeaderCalculator",
         "AddNumbersMultiInputsOutputsTestCalculator",

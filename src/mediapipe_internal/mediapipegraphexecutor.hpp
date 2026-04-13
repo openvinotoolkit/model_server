@@ -39,13 +39,14 @@
 #pragma warning(pop)
 #include "graph_executor_constants.hpp"
 #include "mediapipe_utils.hpp"
-#include "mediapipegraphdefinition.hpp"  // for version in response and PythonNodeResourceMap
+#include "graph_side_packets.hpp"
 #include "packettypes.hpp"
 #include "graphqueue.hpp"
 
 namespace ovms {
 class PythonBackend;
 class ServableMetricReporter;
+class MediapipeGraphExecutor;
 
 inline StatusCode mediapipeAbslToOvmsStatus(absl::StatusCode code) {
     if (code == absl::StatusCode::kFailedPrecondition) {  // ovms session calculator returns this status code when loading model fails

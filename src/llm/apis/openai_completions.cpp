@@ -25,11 +25,13 @@
 #include <set>
 #include <string.h>
 
+#include <fmt/ranges.h>
+
 #include "openai_json_response.hpp"
 
 #include "../../logging.hpp"
 #include "../../profiler.hpp"
-#include "../../filesystem.hpp"
+#include "src/filesystem/filesystem.hpp"
 #pragma warning(push)
 #pragma warning(disable : 6001 4324 6385 6386)
 #include "absl/strings/escaping.h"
@@ -260,123 +262,137 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
         auto& obj = it->value.GetArray()[i];
         if (!obj.IsObject())
             return absl::InvalidArgumentError("Message is not a JSON object");
-        // Add new message to chat history. Note that chat history contains only messages with "role" and "content" fields
+        // Add new message to chat history with role, content, and tool-related fields (tool_calls, tool_call_id, name)
         // Other values are not stored in chat history, but are still present in the request object
         request.chatHistory.push_back({});
         for (auto member = obj.MemberBegin(); member != obj.MemberEnd(); member++) {
             if (!member->name.IsString())
                 return absl::InvalidArgumentError("Invalid message structure");
-            if (member->value.IsString() && (member->name.GetString() == std::string("role") || member->name.GetString() == std::string("content"))) {
+            std::string memberName = member->name.GetString();
+            if (member->value.IsString() && (memberName == "role" || memberName == "content")) {
                 // Add new field to the last message in history
-                // tools handing to be done later
-                request.chatHistory.last()[member->name.GetString()] = member->value.GetString();
+                request.chatHistory.last()[memberName] = member->value.GetString();
                 continue;
-            } else {
-                if (member->name.GetString() == std::string("content") && member->value.IsArray()) {
-                    // Adjust content field format when it is passed as an array of objects (typically with images)
-                    if (member->value.GetArray().Size() == 0) {
-                        return absl::InvalidArgumentError("Invalid message structure - content array is empty");
+            }
+            // Handle tool_call_id and name string fields for tool calling
+            if (member->value.IsString() && (memberName == "tool_call_id" || memberName == "name")) {
+                request.chatHistory.last()[memberName] = member->value.GetString();
+                continue;
+            }
+            // Handle null content (common in assistant messages with tool_calls)
+            if (memberName == "content" && member->value.IsNull()) {
+                request.chatHistory.last()[memberName] = ov::genai::JsonContainer(nullptr);
+                continue;
+            }
+            // Handle tool_calls array for function calling
+            if (memberName == "tool_calls" && member->value.IsArray()) {
+                request.chatHistory.last()[memberName] = rapidJsonValueToJsonContainer(member->value);
+                continue;
+            }
+            if (memberName == "content" && member->value.IsArray()) {
+                // Adjust content field format when it is passed as an array of objects (typically with images)
+                if (member->value.GetArray().Size() == 0) {
+                    return absl::InvalidArgumentError("Invalid message structure - content array is empty");
+                }
+                jsonChanged = true;
+                Value contentText(rapidjson::kStringType);
+                contentText.SetString("", doc.GetAllocator());
+                for (auto& v : member->value.GetArray()) {
+                    if (!v.IsObject()) {
+                        return absl::InvalidArgumentError("Invalid message structure - content array should contain objects");
                     }
-                    jsonChanged = true;
-                    Value contentText(rapidjson::kStringType);
-                    contentText.SetString("", doc.GetAllocator());
-                    for (auto& v : member->value.GetArray()) {
-                        if (!v.IsObject()) {
-                            return absl::InvalidArgumentError("Invalid message structure - content array should contain objects");
+                    auto entry = v.GetObject();
+                    if (!entry.HasMember("type") || !entry["type"].IsString()) {
+                        return absl::InvalidArgumentError("Invalid message structure - content object type missing");
+                    }
+                    auto entryType = entry["type"].GetString();
+                    if (entryType == std::string("text")) {
+                        if (!entry.HasMember("text") || !entry["text"].IsString()) {
+                            return absl::InvalidArgumentError("Invalid message structure - content text missing");
                         }
-                        auto entry = v.GetObject();
-                        if (!entry.HasMember("type") || !entry["type"].IsString()) {
-                            return absl::InvalidArgumentError("Invalid message structure - content object type missing");
+                        contentText = entry["text"];
+                        continue;
+                    } else if (entryType == std::string("image_url")) {
+                        if (!entry.HasMember("image_url") || !entry["image_url"].IsObject()) {
+                            return absl::InvalidArgumentError("Invalid message structure - content image_url missing");
                         }
-                        auto entryType = entry["type"].GetString();
-                        if (entryType == std::string("text")) {
-                            if (!entry.HasMember("text") || !entry["text"].IsString()) {
-                                return absl::InvalidArgumentError("Invalid message structure - content text missing");
+                        auto imageUrl = entry["image_url"].GetObject();
+                        if (!imageUrl.HasMember("url") || !imageUrl["url"].IsString()) {
+                            return absl::InvalidArgumentError("Invalid message structure - image_url does not have url field");
+                        }
+                        std::string url = imageUrl["url"].GetString();
+                        std::string pattern = "base64,";
+                        std::size_t pos = url.find(pattern);
+                        std::string decoded;
+                        ov::Tensor tensor;
+                        if (pos != std::string::npos) {
+                            SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Loading image from base64 string");
+                            size_t offset = pos + pattern.length();
+                            if (!absl::Base64Unescape(std::string_view(url.data() + offset, url.size() - offset), &decoded)) {
+                                return absl::InvalidArgumentError("Invalid base64 string in request");
                             }
-                            contentText = entry["text"];
-                            continue;
-                        } else if (entryType == std::string("image_url")) {
-                            if (!entry.HasMember("image_url") || !entry["image_url"].IsObject()) {
-                                return absl::InvalidArgumentError("Invalid message structure - content image_url missing");
+                            try {
+                                tensor = loadImageStbiFromMemory(decoded);
+                            } catch (std::runtime_error& e) {
+                                std::stringstream ss;
+                                ss << "Image parsing failed: " << e.what();
+                                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, ss.str());
+                                return absl::InvalidArgumentError(ss.str());
                             }
-                            auto imageUrl = entry["image_url"].GetObject();
-                            if (!imageUrl.HasMember("url") || !imageUrl["url"].IsString()) {
-                                return absl::InvalidArgumentError("Invalid message structure - image_url does not have url field");
+                        } else if (std::regex_match(url.c_str(), std::regex("^(http|https|ftp|sftp|)://(.*)"))) {
+                            SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Loading image using curl");
+                            int64_t sizeLimit = 20000000;  // restrict single image size to 20MB
+                            if (!allowedMediaDomains.has_value() || !isDomainAllowed(allowedMediaDomains.value(), url.c_str())) {
+                                return absl::InvalidArgumentError("Given url does not match any allowed domain from allowed_media_domains");
                             }
-                            std::string url = imageUrl["url"].GetString();
-                            std::string pattern = "base64,";
-                            std::size_t pos = url.find(pattern);
-                            std::string decoded;
-                            ov::Tensor tensor;
-                            if (pos != std::string::npos) {
-                                SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Loading image from base64 string");
-                                size_t offset = pos + pattern.length();
-                                if (!absl::Base64Unescape(std::string_view(url.data() + offset, url.size() - offset), &decoded)) {
-                                    return absl::InvalidArgumentError("Invalid base64 string in request");
-                                }
-                                try {
-                                    tensor = loadImageStbiFromMemory(decoded);
-                                } catch (std::runtime_error& e) {
-                                    std::stringstream ss;
-                                    ss << "Image parsing failed: " << e.what();
-                                    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, ss.str());
-                                    return absl::InvalidArgumentError(ss.str());
-                                }
-                            } else if (std::regex_match(url.c_str(), std::regex("^(http|https|ftp|sftp|)://(.*)"))) {
-                                SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Loading image using curl");
-                                int64_t sizeLimit = 20000000;  // restrict single image size to 20MB
-                                if (!allowedMediaDomains.has_value() || !isDomainAllowed(allowedMediaDomains.value(), url.c_str())) {
-                                    return absl::InvalidArgumentError("Given url does not match any allowed domain from allowed_media_domains");
-                                }
-                                auto status = downloadImage(url.c_str(), decoded, sizeLimit);
-                                if (status != absl::OkStatus()) {
-                                    return status;
-                                }
-                                try {
-                                    tensor = loadImageStbiFromMemory(decoded);
-                                } catch (std::runtime_error& e) {
-                                    std::stringstream ss;
-                                    ss << "Image parsing failed: " << e.what();
-                                    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, ss.str());
-                                    return absl::InvalidArgumentError("Image parsing failed");
-                                }
+                            auto status = downloadImage(url.c_str(), decoded, sizeLimit);
+                            if (status != absl::OkStatus()) {
+                                return status;
+                            }
+                            try {
+                                tensor = loadImageStbiFromMemory(decoded);
+                            } catch (std::runtime_error& e) {
+                                std::stringstream ss;
+                                ss << "Image parsing failed: " << e.what();
+                                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, ss.str());
+                                return absl::InvalidArgumentError("Image parsing failed");
+                            }
 
-                            } else {
-                                if (!allowedLocalMediaPath.has_value()) {
-                                    return absl::InvalidArgumentError("Loading images from local filesystem is disabled.");
-                                }
-                                if (FileSystem::isPathEscaped(url)) {
-                                    std::stringstream ss;
-                                    ss << "Path " << url.c_str() << " escape with .. is forbidden.";
-                                    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, ss.str());
-                                    return absl::InvalidArgumentError(ss.str());
-                                }
-                                SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Loading image from local filesystem");
-                                const auto firstMissmatch = std::mismatch(url.begin(), url.end(), allowedLocalMediaPath.value().begin(), allowedLocalMediaPath.value().end());
-                                if (firstMissmatch.second != allowedLocalMediaPath.value().end()) {
-                                    return absl::InvalidArgumentError("Given filepath is not subpath of allowed_local_media_path");
-                                }
-                                try {
-                                    tensor = loadImageStbiFromFile(url.c_str());
-                                } catch (std::runtime_error& e) {
-                                    std::stringstream ss;
-                                    ss << "Image file " << url.c_str() << " parsing failed: " << e.what();
-                                    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, ss.str());
-                                    return absl::InvalidArgumentError(ss.str());
-                                }
-                            }
-                            request.imageHistory.push_back({i, tensor});
                         } else {
-                            return absl::InvalidArgumentError("Unsupported content type");
+                            if (!allowedLocalMediaPath.has_value()) {
+                                return absl::InvalidArgumentError("Loading images from local filesystem is disabled.");
+                            }
+                            if (FileSystem::isPathEscaped(url)) {
+                                std::stringstream ss;
+                                ss << "Path " << url.c_str() << " escape with .. is forbidden.";
+                                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, ss.str());
+                                return absl::InvalidArgumentError(ss.str());
+                            }
+                            SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Loading image from local filesystem");
+                            const auto firstMissmatch = std::mismatch(url.begin(), url.end(), allowedLocalMediaPath.value().begin(), allowedLocalMediaPath.value().end());
+                            if (firstMissmatch.second != allowedLocalMediaPath.value().end()) {
+                                return absl::InvalidArgumentError("Given filepath is not subpath of allowed_local_media_path");
+                            }
+                            try {
+                                tensor = loadImageStbiFromFile(url.c_str());
+                            } catch (std::runtime_error& e) {
+                                std::stringstream ss;
+                                ss << "Image file " << url.c_str() << " parsing failed: " << e.what();
+                                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, ss.str());
+                                return absl::InvalidArgumentError(ss.str());
+                            }
                         }
+                        request.imageHistory.push_back({i, tensor});
+                    } else {
+                        return absl::InvalidArgumentError("Unsupported content type");
                     }
-                    // Pulling out text from nested structure to the "content" field for text and replace whole "content" value for image data
-                    // with empty string, since images are stored separately in request.images
-                    member->value = contentText;
-                    // Add new field to the last message in history if content is text
-                    if (member->value.IsString()) {
-                        request.chatHistory.last()[member->name.GetString()] = member->value.GetString();
-                    }
+                }
+                // Pulling out text from nested structure to the "content" field for text and replace whole "content" value for image data
+                // with empty string, since images are stored separately in request.images
+                member->value = contentText;
+                // Add new field to the last message in history if content is text
+                if (member->value.IsString()) {
+                    request.chatHistory.last()[member->name.GetString()] = member->value.GetString();
                 }
             }
         }
@@ -1274,12 +1290,20 @@ std::string OpenAIChatCompletionsHandler::serializeStreamingChunk(const std::str
         if (outputParser != nullptr) {
             std::optional<Document> delta = outputParser->parseChunk(chunkResponse, areToolsAvailable(), finishReason);
             if (!delta.has_value()) {
-                return "";
+                // If the generation is still ongoing, there is nothing to emit yet
+                if (finishReason == ov::genai::GenerationFinishReason::NONE) {
+                    return "";
+                }
+                // Generation finished but parser returned no delta (e.g. empty chunk after tool call).
+                // We still need to emit a chunk with the appropriate finish_reason.
             }
-            if (delta->HasMember("delta")) {
+            if (delta.has_value() && delta->HasMember("delta")) {
                 // Deep copy the "delta" member value into the choice object
                 choice.AddMember("delta", Value((*delta)["delta"], allocator), allocator);
                 hasToolCalls = hasToolCallsInStreamingDelta(*delta);
+                if (hasToolCalls) {
+                    toolCallsDetectedInStream = true;
+                }
             }
 
         } else {
@@ -1292,7 +1316,7 @@ std::string OpenAIChatCompletionsHandler::serializeStreamingChunk(const std::str
         choice.AddMember("text", Value(chunkResponse.c_str(), allocator), allocator);
     }
 
-    auto serializedFinishReason = mapFinishReason(finishReason, hasToolCalls);
+    auto serializedFinishReason = mapFinishReason(finishReason, hasToolCalls || toolCallsDetectedInStream);
     if (serializedFinishReason.has_value()) {
         choice.AddMember("finish_reason", Value(serializedFinishReason.value().c_str(), allocator), allocator);
     } else {
@@ -1371,6 +1395,54 @@ std::string OpenAIChatCompletionsHandler::serializeStreamingUsageChunk() {
     writer.EndObject();  // }
 
     writer.EndObject();  // }
+    return buffer.GetString();
+}
+
+std::string OpenAIChatCompletionsHandler::serializeStreamingHandshakeChunk() {
+    OVMS_PROFILE_FUNCTION();
+    Document doc;
+    doc.SetObject();
+    Document::AllocatorType& allocator = doc.GetAllocator();
+
+    Value choices(kArrayType);
+    Value choice(kObjectType);
+
+    // choices: array of size N, where N is related to n request parameter
+    choices.SetArray();
+    choice.SetObject();
+
+    choice.AddMember("index", 0, allocator);
+    if (endpoint == Endpoint::CHAT_COMPLETIONS) {
+        Value delta(kObjectType);
+        delta.SetObject();
+        delta.AddMember("role", Value("assistant", allocator), allocator);
+        delta.AddMember("content", Value(rapidjson::kNullType), allocator);
+        choice.AddMember("delta", delta, allocator);
+    } else if (endpoint == Endpoint::COMPLETIONS) {
+        choice.AddMember("text", Value(rapidjson::kNullType), allocator);
+    }
+
+    choice.AddMember("finish_reason", Value(rapidjson::kNullType), allocator);
+    choices.PushBack(choice, allocator);
+
+    doc.AddMember("choices", choices, allocator);
+
+    // created: integer; Unix timestamp (in seconds) when the MP graph was created.
+    doc.AddMember("created", std::chrono::duration_cast<std::chrono::seconds>(created.time_since_epoch()).count(), allocator);
+
+    // model: string; copied from the request
+    doc.AddMember("model", Value(request.model.c_str(), allocator), allocator);
+
+    // object: string; defined that the type streamed chunk rather than complete response
+    if (endpoint == Endpoint::CHAT_COMPLETIONS) {
+        doc.AddMember("object", Value("chat.completion.chunk", allocator), allocator);
+    } else if (endpoint == Endpoint::COMPLETIONS) {
+        doc.AddMember("object", Value("text_completion.chunk", allocator), allocator);
+    }
+
+    StringBuffer buffer;
+    Writer<StringBuffer> writer(buffer);
+    doc.Accept(writer);
     return buffer.GetString();
 }
 }  // namespace ovms
