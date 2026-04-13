@@ -68,7 +68,7 @@ ovms --model_path models/resnet/ --model_name resnet --port 9000 --rest_port 800
 
 The required Model Server parameters are listed below. For additional configuration options, see the [Model Server Parameters](parameters.md) section.
 
-`openvino/model_server:2026.1` varies by tag and build process - see tags: https://hub.docker.com/r/openvino/model_server/tags/ for a full tag list.
+`openvino/model_server:latest` varies by tag and build process - see tags: https://hub.docker.com/r/openvino/model_server/tags/ for a full tag list.
 
 - In the command above, port 9000 is exposed for gRPC and port 8000 is exposed for REST API calls.
 - Add model_name for the client gRPC/REST API calls.

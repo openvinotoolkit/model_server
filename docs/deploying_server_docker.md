@@ -84,7 +84,7 @@ git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server
 make release_image GPU=1
 ```
-It will create an image called `openvino/model_server:2026.1`.
+It will create an image called `openvino/model_server:latest`.
 > **Note:** This operation might take 40min or more depending on your build host.
 > **Note:** `GPU` parameter in image build command is needed to include dependencies for GPU device.
 > **Note:** The public image from the last release might be not compatible with models exported using the the latest export script. We recommend using export script and docker image from the same release to avoid compatibility issues.
