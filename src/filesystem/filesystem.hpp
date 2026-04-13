@@ -24,10 +24,10 @@
 #include <utility>
 #include <vector>
 
-#include "logging.hpp"
-#include "model_version_policy.hpp"
+#include "src/logging.hpp"
+#include "src/model_version_policy.hpp"
 #include "openssl/md5.h"
-#include "status.hpp"
+#include "src/status.hpp"
 
 namespace ovms {
 

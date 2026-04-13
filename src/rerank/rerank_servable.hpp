@@ -16,9 +16,13 @@
 #pragma once
 
 #include "../sidepacket_servable.hpp"
-#include "../filesystem.hpp"
+#include "src/filesystem/filesystem.hpp"
+#pragma warning(push)
+#pragma warning(disable : 6313)
+#include <rapidjson/document.h>
 #include <rapidjson/istreamwrapper.h>
 #include <rapidjson/error/en.h>
+#pragma warning(pop)
 #include <memory>
 #include <string>
 #include <unordered_map>

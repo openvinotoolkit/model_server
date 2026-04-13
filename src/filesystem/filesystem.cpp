@@ -21,7 +21,7 @@
 #include <aclapi.h>
 #include <sddl.h>
 #endif
-#include "stringutils.hpp"
+#include "src/stringutils.hpp"
 
 namespace ovms {
 

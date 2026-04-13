@@ -31,8 +31,8 @@
 #include <string>
 #include <vector>
 
-#include "logging.hpp"
-#include "stringutils.hpp"
+#include "src/logging.hpp"
+#include "src/stringutils.hpp"
 
 namespace ovms {
 

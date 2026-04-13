@@ -23,8 +23,8 @@ ovms_cc_library(
     deps = [
         "@com_github_tencent_rapidjson//:rapidjson",
         "//src:libovms_server_settings",
-        "//src:libovmsfilesystem",
-        "//src:libovmslocalfilesystem",
+        "//src/filesystem:libovmsfilesystem",
+        "//src/filesystem:libovmslocalfilesystem",
         "//src:libovmslogging",
         "//src:libovmsschema",
     ],

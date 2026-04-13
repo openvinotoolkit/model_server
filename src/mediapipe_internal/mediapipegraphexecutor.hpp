@@ -37,7 +37,7 @@
 #pragma GCC diagnostic pop
 #pragma warning(pop)
 #include "mediapipe_utils.hpp"
-#include "mediapipegraphdefinition.hpp"  // for version in response and PythonNodeResourceMap
+#include "graph_side_packets.hpp"
 #include "packettypes.hpp"
 
 namespace ovms {

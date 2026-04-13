@@ -26,7 +26,6 @@
 #include "../extractchoice.hpp"
 #include "../requesttensorextractor.hpp"
 #include "../statefulrequestprocessor.hpp"
-#include "../logging.hpp"
 #include "../profiler.hpp"
 #include "../shape.hpp"
 #include "../status.hpp"

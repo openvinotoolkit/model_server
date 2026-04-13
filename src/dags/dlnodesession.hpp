@@ -27,7 +27,7 @@
 
 namespace ovms {
 
-class ModelManager;
+class ModelInstanceProvider;
 class ModelInstance;
 class Node;
 class NodeStreamIdGuard;
@@ -40,13 +40,13 @@ class DLNodeSession : public NodeSession {
     std::unique_ptr<NodeStreamIdGuard> nodeStreamIdGuard;
     std::unique_ptr<ModelInstanceUnloadGuard> modelUnloadGuard;
 
-    ModelManager& modelManager;
+    ModelInstanceProvider& modelManager;
     const std::string& modelName;
     const model_version_t modelVersion;
 
 public:
-    DLNodeSession(const NodeSessionMetadata& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapseDetails& collapsingDetails, ModelManager& manager, const std::string& modelName, model_version_t modelVersion);
-    DLNodeSession(const NodeSessionMetadata&& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapseDetails& collapsingDetails, ModelManager& manager, const std::string& modelName, model_version_t modelVersion);
+    DLNodeSession(const NodeSessionMetadata& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapseDetails& collapsingDetails, ModelInstanceProvider& manager, const std::string& modelName, model_version_t modelVersion);
+    DLNodeSession(const NodeSessionMetadata&& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapseDetails& collapsingDetails, ModelInstanceProvider& manager, const std::string& modelName, model_version_t modelVersion);
     virtual ~DLNodeSession();
 
     ov::InferRequest& getInferRequest(const uint32_t microseconds);

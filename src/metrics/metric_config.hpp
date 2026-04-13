@@ -53,8 +53,8 @@ extern const std::string METRIC_NAME_REQUEST_LATENCY;
 
 class Status;
 /**
-     * @brief This class represents metrics configuration
-     */
+ * @brief This class represents metrics configuration
+ */
 class MetricConfig {
 public:
     bool metricsEnabled;

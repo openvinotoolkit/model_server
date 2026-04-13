@@ -23,7 +23,7 @@
 
 #include "azurestorage.hpp"
 #include "filesystem.hpp"
-#include "status.hpp"
+#include "src/status.hpp"
 
 namespace ovms {
 

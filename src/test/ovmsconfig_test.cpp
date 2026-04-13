@@ -26,7 +26,7 @@
 #include "../capi_frontend/server_settings.hpp"
 #include "../utils/env_guard.hpp"
 #include "../config.hpp"
-#include "../filesystem.hpp"
+#include "src/filesystem/filesystem.hpp"
 #include "../ovms_exit_codes.hpp"
 #include "../systeminfo.hpp"
 #include "test_utils.hpp"

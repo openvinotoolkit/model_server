@@ -25,18 +25,10 @@
 #include <utility>
 #include <vector>
 
-#pragma warning(push)
-#pragma warning(disable : 6001 4324 6308 6387 6246)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wall"
-#include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
-#pragma GCC diagnostic pop
-#pragma warning(pop)
-#include "../kfs_frontend/kfs_grpc_inference_service.hpp"
-
 namespace ovms {
 
-class ModelManager;
+class MetricProvider;
+class ServableNameChecker;
 class Status;
 class MediapipeGraphConfig;
 class MediapipeGraphDefinition;
@@ -53,30 +45,22 @@ public:
     MediapipeFactory(PythonBackend* pythonBackend = nullptr);
     Status createDefinition(const std::string& pipelineName,
         const MediapipeGraphConfig& config,
-        ModelManager& manager);
+        MetricProvider& metrics,
+        const ServableNameChecker& checker);
 
     bool definitionExists(const std::string& name) const;
 
-private:
-    template <typename RequestType, typename ResponseType>
-    Status createInternal(std::unique_ptr<Pipeline>& pipeline,
-        const std::string& name,
-        const RequestType* request,
-        ResponseType* response,
-        ModelManager& manager) const;
-
 public:
     Status create(std::unique_ptr<MediapipeGraphExecutor>& pipeline,
-        const std::string& name,
-        ModelManager& manager) const;
+        const std::string& name) const;
 
     MediapipeGraphDefinition* findDefinitionByName(const std::string& name) const;
     Status reloadDefinition(const std::string& pipelineName,
         const MediapipeGraphConfig& config,
-        ModelManager& manager);
+        const ServableNameChecker& checker);
 
-    void retireOtherThan(std::set<std::string>&& pipelinesInConfigFile, ModelManager& manager);
-    Status revalidatePipelines(ModelManager&);
+    void retireOtherThan(std::set<std::string>&& pipelinesInConfigFile);
+    Status revalidatePipelines();
     const std::vector<std::string> getMediapipePipelinesNames() const;
     const std::vector<std::string> getNamesOfAvailableMediapipePipelines() const;
     ~MediapipeFactory();
