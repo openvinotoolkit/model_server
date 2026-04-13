@@ -445,10 +445,10 @@ index 58cb4b424..00ddee9f3 100644
  	git_writestream **out,
 diff --git a/src/libgit2/lfs_filter.c b/src/libgit2/lfs_filter.c
 new file mode 100644
-index 000000000..61348f14d
+index 000000000..3f70ab3cd
 --- /dev/null
 +++ b/src/libgit2/lfs_filter.c
-@@ -0,0 +1,1813 @@
+@@ -0,0 +1,1841 @@
 +﻿/*
 +/ Copyright 2025 Intel Corporation
 +/
@@ -493,6 +493,22 @@ index 000000000..61348f14d
 +extern int git_lfs_shutdown_requested(void) __attribute__((weak));
 +#endif
 +
++/*
++ * Exported global cancel flag.
++ * The embedding process may set this to non-zero at any time to abort all
++ * ongoing or future LFS downloads in this process.  Resetting it to 0
++ * before a new clone allows reuse.
++ * Access via symbol from the host: extern volatile int git_lfs_cancel_requested;
++ */
++#if defined(_WIN32)
++#define GIT_LFS_CANCEL_EXPORT __declspec(dllexport)
++#elif defined(__GNUC__) || defined(__clang__)
++#define GIT_LFS_CANCEL_EXPORT __attribute__((visibility("default")))
++#else
++#define GIT_LFS_CANCEL_EXPORT
++#endif
++GIT_LFS_CANCEL_EXPORT volatile int git_lfs_cancel_requested = 0;
++
 +#define LFS_RESUME_ATTEMPTS_DEFAULT 5
 +#define LFS_RESUME_INTERVAL_DEFAULT_SECONDS 10
 +
@@ -507,7 +523,12 @@ index 000000000..61348f14d
 +
 +static int lfs_shutdown_requested(void)
 +{
++	/* Check the exported global flag first – reliably set from the host
++	 * without requiring symbol interposition (-rdynamic). */
++	if (git_lfs_cancel_requested)
++		return 1;
 +#if defined(__GNUC__) || defined(__clang__)
++	/* Fallback: weak symbol provided by the host executable. */
 +	if (git_lfs_shutdown_requested)
 +		return git_lfs_shutdown_requested() != 0;
 +#endif
@@ -2009,6 +2030,13 @@ index 000000000..61348f14d
 +	CURL_SETOPT(curl_easy_setopt(
 +	        info_curl, CURLOPT_WRITEDATA, (void *)&response));
 +	CURL_SETOPT(curl_easy_setopt(info_curl, CURLOPT_CERTINFO, 1L));
++	/* Enable xferinfo callback on info_curl so batch request can be
++	 * cancelled mid-transfer by progress_callback returning non-zero. */
++	CURL_SETOPT(curl_easy_setopt(info_curl, CURLOPT_NOPROGRESS, 0L));
++	CURL_SETOPT(curl_easy_setopt(
++	        info_curl, CURLOPT_XFERINFOFUNCTION, progress_callback));
++	CURL_SETOPT(curl_easy_setopt(
++	        info_curl, CURLOPT_XFERINFODATA, &progress_d));
 +
 +	if (status != CURLE_OK) {
 +		lfs_log_error("\n[ERROR] curl_easy_setopt() failed: %s\n",

@@ -52,6 +52,13 @@
 #endif
 #endif
 
+/* Exported global in libgit2.so – set to non-zero to abort LFS downloads.
+ * Reading/writing a symbol exported from a shared library never requires
+ * -rdynamic, so this is more reliable than weak-symbol interposition. */
+extern "C" {
+extern volatile int git_lfs_cancel_requested;
+}
+
 namespace ovms {
 namespace fs = std::filesystem;
 
@@ -61,14 +68,22 @@ std::atomic<int> g_activeLibgit2Guards{0};
 int cloneTransferProgressCb(const git_indexer_progress* stats, void* payload) {
     (void)stats;
     (void)payload;
-    return libgit2::isCloneCancellationRequestedFromServer() ? -1 : 0;
+    if (libgit2::isCloneCancellationRequestedFromServer()) {
+        git_lfs_cancel_requested = 1;
+        return -1;
+    }
+    return 0;
 }
 
 int cloneSidebandProgressCb(const char* str, int len, void* payload) {
     (void)str;
     (void)len;
     (void)payload;
-    return libgit2::isCloneCancellationRequestedFromServer() ? -1 : 0;
+    if (libgit2::isCloneCancellationRequestedFromServer()) {
+        git_lfs_cancel_requested = 1;
+        return -1;
+    }
+    return 0;
 }
 
 int cloneUpdateTipsCb(const char* refname, const git_oid* a, const git_oid* b, void* payload) {
@@ -76,7 +91,11 @@ int cloneUpdateTipsCb(const char* refname, const git_oid* a, const git_oid* b, v
     (void)a;
     (void)b;
     (void)payload;
-    return libgit2::isCloneCancellationRequestedFromServer() ? -1 : 0;
+    if (libgit2::isCloneCancellationRequestedFromServer()) {
+        git_lfs_cancel_requested = 1;
+        return -1;
+    }
+    return 0;
 }
 
 int cloneCheckoutNotifyCb(git_checkout_notify_t why,
@@ -91,7 +110,11 @@ int cloneCheckoutNotifyCb(git_checkout_notify_t why,
     (void)target;
     (void)workdir;
     (void)payload;
-    return libgit2::isCloneCancellationRequestedFromServer() ? -1 : 0;
+    if (libgit2::isCloneCancellationRequestedFromServer()) {
+        git_lfs_cancel_requested = 1;
+        return -1;
+    }
+    return 0;
 }
 }  // namespace
 
@@ -777,6 +800,7 @@ Status HfDownloader::downloadModel() {
     const char* url = passRepoUrl.c_str();
     const char* path = this->downloadPath.c_str();
     SPDLOG_TRACE("Starting git clone to: {}", path);
+    git_lfs_cancel_requested = 0; /* reset for this operation */
     int error = git_clone(&cloned_repo, url, path, &clone_opts);
     SPDLOG_TRACE("Ended git clone");
     if (error != 0) {
