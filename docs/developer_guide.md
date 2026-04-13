@@ -134,7 +134,7 @@ Click the test that needs to be run:
 
 ```bash
 docker run -d --name server-test -v ~/resnet50-binary:/models/resnet50-binary -p 9178:9178 \
-openvino/model_server:latest --model_name resnet-binary --model_path /models/resnet50-binary --port 9178
+openvino/model_server:2026.1 --model_name resnet-binary --model_path /models/resnet50-binary --port 9178
 ```
 
 3. The grpc client connects to the OpenVINO Model Server service that is running on port 9178.
@@ -188,7 +188,7 @@ make test_functional
 2. Add any configuration variables to the command line in this format :
 
 ```bash
-export IMAGE="openvino/model_server:latest"
+export IMAGE="openvino/model_server:2026.1"
 ```
 
 3. To make command repetition easier, create and store the configuration options in a file named `user_config.py`. Put this file in the main project directory.

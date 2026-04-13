@@ -66,7 +66,7 @@ ovms --model_repository_path c:\models --source_model Junrui2021/Qwen3-VL-8B-Ins
 ```bash
 mkdir -p models
 docker run -d -p 8000:8000 --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) \
-    openvino/model_server:weekly \
+    openvino/model_server:2026.1-gpu \
     --model_repository_path /models --source_model OpenVINO/Qwen3-Coder-30B-A3B-Instruct-int4-ov --task text_generation --target_device GPU --tool_parser qwen3coder --rest_port 8000 --model_name Qwen3-Coder-30B-A3B-Instruct
 ```
 > **Note:** For deployment, the model requires ~16GB disk space and recommended 19GB+ of VRAM on the GPU.
@@ -79,7 +79,7 @@ docker run -d -p 8000:8000 --rm --user $(id -u):$(id -g) -v $(pwd)/models:/model
 ```bash
 mkdir -p models
 docker run -d -p 8000:8000 --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) \
-    openvino/model_server:weekly \
+    openvino/model_server:2026.1-gpu \
     --model_repository_path /models --source_model OpenVINO/gpt-oss-20b-int4-ov --task text_generation --target_device GPU --tool_parser gptoss --reasoning_parser gptoss --rest_port 8000 --model_name gpt-oss-20b
 ```
 > **Note:** For deployment, the model requires ~12GB disk space and recommended 16GB+ of VRAM on the GPU.
@@ -90,7 +90,7 @@ docker run -d -p 8000:8000 --rm --user $(id -u):$(id -g) -v $(pwd)/models:/model
 ```bash
 mkdir c:\models
 docker run -d -p 8000:8000 --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) \
-    openvino/model_server:weekly \
+    openvino/model_server:2026.1-gpu \
     --model_repository_path /models --source_model OpenVINO/Qwen3-8B-int4-ov --task text_generation --target_device GPU --tool_parser hermes3 --reasoning_parser qwen3 --rest_port 8000  --model_name Qwen3-8B
 ```
 > **Note:** For deployment, the model requires ~4GB disk space and recommended 6GB+ of VRAM on the GPU.
@@ -100,7 +100,7 @@ docker run -d -p 8000:8000 --rm --user $(id -u):$(id -g) -v $(pwd)/models:/model
 ```bash
 mkdir -p models
 docker run -d -p 8000:8000 --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw --device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) \
-    openvino/model_server:weekly \
+    openvino/model_server:2026.1-gpu \
     --model_repository_path /models --source_model OpenVINO/Qwen3-8B-int4-cw-ov --task text_generation --target_device NPU --tool_parser hermes3 --rest_port 8000 --max_prompt_len 16384 --plugin_config '{"NPUW_LLM_PREFILL_ATTENTION_HINT":"PYRAMID"}' --model_name Qwen3-8B
 ```
 > **Note:** First model initialization might be long. With the compilation cache, sequential model loading will be fast.
@@ -110,7 +110,7 @@ docker run -d -p 8000:8000 --rm --user $(id -u):$(id -g) -v $(pwd)/models:/model
 ```bash
 mkdir -p models
 docker run -d -p 8000:8000 --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) \
-    openvino/model_server:weekly \
+    openvino/model_server:2026.1-gpu \
     --model_repository_path /models --source_model Junrui2021/Qwen3-VL-8B-Instruct-int4 --task text_generation --target_device GPU --pipeline_type VLM_CB --rest_port 8000 --model_name Qwen3-VL-8B-Instruct
 ```
 > **Note:** This is a Vision Language Model (VLM) that supports image inputs. For deployment, recommended 7GB+ of VRAM on the GPU.

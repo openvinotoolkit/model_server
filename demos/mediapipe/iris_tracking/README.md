@@ -28,12 +28,12 @@ curl https://storage.googleapis.com/mediapipe-assets/iris_landmark.tflite -o iri
 :::{dropdown} **Deploying with Docker**
 Pull the latest version of OpenVINO&trade; Model Server from Docker Hub:
 ```Bash
-docker pull openvino/model_server:latest
+docker pull openvino/model_server:2026.1
 
 ```
 ```bash
 chmod -R 755 .
-docker run -d -v $PWD/mediapipe:/mediapipe -v $PWD:/models -p 9000:9000 openvino/model_server:latest --config_path /models/config_iris.json --port 9000
+docker run -d -v $PWD/mediapipe:/mediapipe -v $PWD:/models -p 9000:9000 openvino/model_server:2026.1 --config_path /models/config_iris.json --port 9000
 ```
 :::
 :::{dropdown} **Deploying on Bare Metal**

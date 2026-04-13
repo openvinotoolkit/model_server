@@ -156,7 +156,7 @@ Here is example of the `subconfig.json`:
 
 ### Starting OpenVINO Model Server with Mediapipe servables
 Starting the single graph with `subconfig.json` is achieved by running the server in single model mode  (without `config.json`). Pass the model_path as the folder path with graph.pbtxt and the graph name to be exposed as a model:
-`docker run --rm -it -v <folder with graph.pbtxt>:/model openvino/model_server:latest --model_path /model --model_name mediapipe_graph_name`
+`docker run --rm -it -v <folder with graph.pbtxt>:/model openvino/model_server:2026.1 --model_path /model --model_name mediapipe_graph_name`
 
 This example command will load the `graph.pbtxt` and `subconfig.json` file from the mounted directory the container.
 
@@ -219,7 +219,7 @@ Subconfig file may only contain *model_config_list* section  - in the same forma
 ## Deployment testing
 ### Debug logs
 The simplest method to validate the graph execution is to set the Model Server `log_level` to `DEBUG`.
-`docker run --rm -it -v $(pwd):/config openvino/model_server:latest --config_path /config/config.json --log_level DEBUG`
+`docker run --rm -it -v $(pwd):/config openvino/model_server:2026.1 --config_path /config/config.json --log_level DEBUG`
 
 It will report in a verbose way all the operations in the mediapipe framework from the graph initialization and execution.
 The model server logs could confirm the graph correct format and loading all the required models.

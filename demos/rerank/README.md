@@ -62,7 +62,7 @@ models
 
 **CPU**
 ```bash
-docker run -d --rm -p 8000:8000 -v $(pwd)/models:/workspace:ro openvino/model_server:latest --port 9000 --rest_port 8000 --config_path /workspace/config.json
+docker run -d --rm -p 8000:8000 -v $(pwd)/models:/workspace:ro openvino/model_server:2026.1 --port 9000 --rest_port 8000 --config_path /workspace/config.json
 ```
 **GPU**
 
@@ -70,7 +70,7 @@ In case you want to use GPU device to run the embeddings model, add extra docker
 to `docker run` command, use the image with GPU support and make sure set the target_device in subconfig.json to GPU. Also make sure the export model quantization level and cache size fit to the GPU memory. All of that can be applied with the commands:
 
 ```bash
-docker run -d --rm -p 8000:8000 --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -v $(pwd)/models:/workspace:ro openvino/model_server:latest-gpu --rest_port 8000 --config_path /workspace/config.json
+docker run -d --rm -p 8000:8000 --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -v $(pwd)/models:/workspace:ro openvino/model_server:2026.1-gpu --rest_port 8000 --config_path /workspace/config.json
 ```
 :::
 

@@ -20,7 +20,7 @@ Start the model server by running the following command with your parameters:
 **Required:** Docker Engine installed
 
 ```text
-docker run -d --rm -v <models_repository>:/models -p 9000:9000 -p 8000:8000 openvino/model_server:latest \
+docker run -d --rm -v <models_repository>:/models -p 9000:9000 -p 8000:8000 openvino/model_server:2026.1 \
 --model_path <path_to_model> --model_name <model_name> --port 9000 --rest_port 8000 --log_level DEBUG
 ```
 :::
@@ -51,7 +51,7 @@ wget -P models/resnet/1 https://storage.openvinotoolkit.org/repositories/open_mo
 **Required:** Docker Engine installed
 
 ```bash
-docker run -d --rm -v ${PWD}/models:/models -p 9000:9000 -p 8000:8000 openvino/model_server:latest \
+docker run -d --rm -v ${PWD}/models:/models -p 9000:9000 -p 8000:8000 openvino/model_server:2026.1 \
 --model_path /models/resnet/ --model_name resnet --port 9000 --rest_port 8000 --log_level DEBUG
 ```
 
@@ -85,7 +85,7 @@ In case you do not want to prepare model repository before starting the server a
 **Required:** Docker Engine installed
 
 ```text
-docker run --user $(id -u):$(id -g) -p 9000:9000 -p 8000:8000 --rm -v <model_repository_path>:/models openvino/model_server:latest \
+docker run --user $(id -u):$(id -g) -p 9000:9000 -p 8000:8000 --rm -v <model_repository_path>:/models openvino/model_server:2026.1 \
 --port 8000 --rest_port 9000 --source_model <model_name_in_HF> --model_repository_path /models --model_name <ovms_servable_name> --target_device <DEVICE> --task <task> [TASK_SPECIFIC_OPTIONS]
 ```
 :::
@@ -114,7 +114,7 @@ Example using `Phi-3-mini-FastDraft-50M-int8-ov` model:
 :sync: docker
 **Required:** Docker Engine installed
 ```text
-docker run --user $(id -u):$(id -g) -p 9000:9000 -p 8000:8000 --rm -v <model_repository_path>:/models openvino/model_server:latest \
+docker run --user $(id -u):$(id -g) -p 9000:9000 -p 8000:8000 --rm -v <model_repository_path>:/models openvino/model_server:2026.1 \
 --port 8000 --rest_port 9000 --source_model "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov" --model_repository_path /models/ --model_name Phi-3-mini-FastDraft-50M-int8-ov --target_device CPU --task text_generation
 ```
 :::
@@ -179,7 +179,7 @@ To serve multiple models and pipelines from the same container you will need an 
 :sync: docker
 **Required:** Docker Engine installed
 ```text
-docker run --user $(id -u):$(id -g) --rm -v <models_repository>:/models:ro -p 9000:9000 -p 8000:8000 openvino/model_server:latest \
+docker run --user $(id -u):$(id -g) --rm -v <models_repository>:/models:ro -p 9000:9000 -p 8000:8000 openvino/model_server:2026.1 \
 --config_path /models/config.json --port 9000 --rest_port 8000
 ```
 :::
@@ -206,7 +206,7 @@ Assuming you have models repository already prepared, to check what models/graph
 :sync: docker
 
 ```text
-docker run -d --rm -v <model_repository_path>:/models openvino/model_server:latest \
+docker run -d --rm -v <model_repository_path>:/models openvino/model_server:2026.1 \
 --model_repository_path /models --list_models
 ```
 :::
@@ -216,7 +216,7 @@ docker run -d --rm -v <model_repository_path>:/models openvino/model_server:late
 **Required:** OpenVINO Model Server package - see [deployment instructions](./deploying_server_baremetal.md) for details.
 
 ```text
-docker run -d --rm -v <model_repository_path>:/models:ro openvino/model_server:latest \
+docker run -d --rm -v <model_repository_path>:/models:ro openvino/model_server:2026.1 \
 --model_repository_path /models --list_models
 ```
 :::
@@ -255,7 +255,7 @@ To add model to ovms configuration file you can either do it manually or use:
 **Required:** Docker Engine installed
 
 ```text
-docker run -d --rm -v <model_repository_path>:/models openvino/model_server:latest \
+docker run -d --rm -v <model_repository_path>:/models openvino/model_server:2026.1 \
 --model_repository_path /models/ --add_to_config --config_path <config_file_path> --model_name <name>
 ```
 :::
@@ -277,7 +277,7 @@ When model is directly inside models repository.
 If you want to add model with specific path you can use ```--model_path``` parameter:
 
 ```text
-docker run -d --rm -v <model_repository_path>:/models openvino/model_server:latest \
+docker run -d --rm -v <model_repository_path>:/models openvino/model_server:2026.1 \
 --add_to_config --config_path <config_file_path> --model_name <name> --model_path <model_path>
 ```
 
@@ -298,7 +298,7 @@ If you want to remove model from configuration file you can do it either manuall
 :sync: docker
 **Required:** Docker Engine installed
 ```text
-docker run -d --rm -v <model_repository_path>:/models openvino/model_server:latest \
+docker run -d --rm -v <model_repository_path>:/models openvino/model_server:2026.1 \
 --remove_from_config <config_file_directory_path> --model_name <name>
 ```
 :::

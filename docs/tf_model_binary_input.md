@@ -46,12 +46,12 @@ resnet_v2/models/resnet/1
 ### OVMS Deployment
 Pull the latest openvino model_server image from dockerhub
 ```bash
-docker pull openvino/model_server:latest
+docker pull openvino/model_server:2026.1
 ```
 
 Deploy OVMS using the following command:
 ```bash
-docker run -d -p 9000:9000 -v ${PWD}/resnet_v2/models:/models openvino/model_server:latest --model_path /models/resnet --model_name resnet --port 9000 --layout NHWC
+docker run -d -p 9000:9000 -v ${PWD}/resnet_v2/models:/models openvino/model_server:2026.1 --model_path /models/resnet --model_name resnet --port 9000 --layout NHWC
 ```
 
 **Note:** This model has `N...` layout by default, but binary inputs feature requires model to have `NHWC` or `N?HWC` layout, therefore we specify `--layout NHWC` option.

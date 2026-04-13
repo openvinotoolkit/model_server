@@ -82,7 +82,7 @@ models
 
 :::{dropdown} **Deploying with Docker**
 ```bash
-docker run -d --rm -p 8000:8000 -v $(pwd)/models:/workspace:ro openvino/model_server:weekly --rest_port 8000 --rest_workers 2 --config_path /workspace/config.json
+docker run -d --rm -p 8000:8000 -v $(pwd)/models:/workspace:ro openvino/model_server:2026.1-gpu --rest_port 8000 --rest_workers 2 --config_path /workspace/config.json
 ```
 
 Running above command starts the container with no accelerators support. 
@@ -239,7 +239,7 @@ models
 
 :::{dropdown} **Deploying with Docker**
 ```bash
-docker run -d --rm -p 8000:8000 -v $(pwd)/models:/workspace:ro openvino/model_server:latest --rest_port 8000 --config_path /workspace/config.json
+docker run -d --rm -p 8000:8000 -v $(pwd)/models:/workspace:ro openvino/model_server:2026.1 --rest_port 8000 --config_path /workspace/config.json
 ```
 
 Running above command starts the container with no accelerators support. 

@@ -20,7 +20,7 @@ Start docker container:
 mkdir models
 docker run -d --rm --user $(id -u):$(id -g) -p 8000:8000 -v $(pwd)/models:/models/:rw \
   -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy=$no_proxy \
-  openvino/model_server:weekly \
+  openvino/model_server:2026.1-gpu \
     --rest_port 8000 \
     --model_repository_path /models/ \
     --task text_generation \

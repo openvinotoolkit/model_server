@@ -31,7 +31,7 @@ curl https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/mode
 #### Pull the Latest Model Server Image
 Pull the latest version of OpenVINO&trade; Model Server from Docker Hub :
 ```bash
-docker pull openvino/model_server:latest
+docker pull openvino/model_server:2026.1
 ```
 
 ### Build a Custom Node
@@ -136,7 +136,7 @@ echo '{
 #### Start Model Server Container with Downloaded Model
 Start the container with the image pulled in the previous step and mount `<models_dir>` :
 ```bash
-docker run --rm -d -v ${PWD}:/models -p 9000:9000 openvino/model_server:latest --config_path /models/config.json --port 9000
+docker run --rm -d -v ${PWD}:/models -p 9000:9000 openvino/model_server:2026.1 --config_path /models/config.json --port 9000
 ```
 
 #### Run the Client

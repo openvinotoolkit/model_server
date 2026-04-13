@@ -2,7 +2,7 @@
 
 This document describes how to leverage OpenVINO Model Server (OVMS) pull feature to automate deployment of generative models from HF with conversion and quantization in runtime.
 
-You have to use docker image with optimum-cli `openvino/model_server:latest-py` or install additional python dependencies to the baremetal package. Follow the steps described below.
+You have to use docker image with optimum-cli `openvino/model_server:2026.1-py` or install additional python dependencies to the baremetal package. Follow the steps described below.
 
 > **Note:** This procedure might increase memory usage during the model conversion and requires downloading the original model. Expect memory usage at least to the level of original model size during the conversion.
 
@@ -32,7 +32,7 @@ Using `--pull` parameter, we can use OVMS to download the model, quantize and co
 **Required:** Docker Engine installed
 
 ```text
-docker run -u $(id -u):$(id -g) --rm -v <model_repository_path>:/models:rw openvino/model_server:latest-py --pull --source_model <model_name_in_HF> --model_repository_path /models --model_name <external_model_name> --target_device <DEVICE> --weight-format int8 --task <task> [TASK_SPECIFIC_PARAMETERS]
+docker run -u $(id -u):$(id -g) --rm -v <model_repository_path>:/models:rw openvino/model_server:2026.1-py --pull --source_model <model_name_in_HF> --model_repository_path /models --model_name <external_model_name> --target_device <DEVICE> --weight-format int8 --task <task> [TASK_SPECIFIC_PARAMETERS]
 ```
 :::
 
@@ -56,7 +56,7 @@ ovms --pull --source_model "Qwen/Qwen3-4B" --model_repository_path /models --mod
 
 ```bash
 mkdir -p models
-docker run -u $(id -u):$(id -g) -e HF_HOME=/tmp -e TORCHINDUCTOR_CACHE_DIR=/tmp/torchinductor --rm -v $(pwd)/models:/models:rw openvino/model_server:latest-py --pull --source_model "Qwen/Qwen3-4B" --model_repository_path /models --model_name Qwen3-4B --task text_generation --weight-format int8
+docker run -u $(id -u):$(id -g) -e HF_HOME=/tmp -e TORCHINDUCTOR_CACHE_DIR=/tmp/torchinductor --rm -v $(pwd)/models:/models:rw openvino/model_server:2026.1-py --pull --source_model "Qwen/Qwen3-4B" --model_repository_path /models --model_name Qwen3-4B --task text_generation --weight-format int8
 ```
 :::
 
@@ -85,10 +85,10 @@ You can mount the HuggingFace cache to avoid downloading the original model in c
 Below is an example pull command with optimum model cache directory sharing for model download:
 
 ```bash
-docker run -e TORCHINDUCTOR_CACHE_DIR=/tmp/torchinductor -e HF_HOME=/hf_home/cache --user $(id -u):$(id -g) --group-add=$(id -g) -v ${HOME}/.cache/huggingface/:/hf_home/cache -v $(pwd)/models:/models:rw openvino/model_server:latest-py --pull --model_repository_path /models --source_model meta-llama/Llama-3.2-1B-Instruct --task text_generation --weight-format int8
+docker run -e TORCHINDUCTOR_CACHE_DIR=/tmp/torchinductor -e HF_HOME=/hf_home/cache --user $(id -u):$(id -g) --group-add=$(id -g) -v ${HOME}/.cache/huggingface/:/hf_home/cache -v $(pwd)/models:/models:rw openvino/model_server:2026.1-py --pull --model_repository_path /models --source_model meta-llama/Llama-3.2-1B-Instruct --task text_generation --weight-format int8
 ```
 
 or deploy without caching the model files with passed HF_TOKEN for authorization:
 ```bash
-docker run -p 8000:8000 -e HF_TOKEN=$HF_TOKEN openvino/model_server:latest-py --model_repository_path /tmp --source_model meta-llama/Llama-3.2-1B-Instruct --task text_generation --weight-format int8 --target_device CPU --rest_port 8000
+docker run -p 8000:8000 -e HF_TOKEN=$HF_TOKEN openvino/model_server:2026.1-py --model_repository_path /tmp --source_model meta-llama/Llama-3.2-1B-Instruct --task text_generation --weight-format int8 --target_device CPU --rest_port 8000
 ```

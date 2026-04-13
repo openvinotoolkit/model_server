@@ -15,7 +15,7 @@ wget -P model/1 https://storage.openvinotoolkit.org/repositories/open_model_zoo/
 
 ## Run OpenVINO Model Server
 ```bash
-docker run -d -v $PWD/model:/models -p 9000:9000 openvino/model_server:latest --model_path /models --model_name resnet --port 9000
+docker run -d -v $PWD/model:/models -p 9000:9000 openvino/model_server:2026.1 --model_path /models --model_name resnet --port 9000
 ```
 
 ## Run the client:

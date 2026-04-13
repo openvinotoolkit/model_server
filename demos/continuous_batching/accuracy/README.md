@@ -30,7 +30,7 @@ python demos/common/export_models/export_model.py text_generation --source_model
 
 ### With Docker
 ```bash
-docker run -d --rm -p 8000:8000 -v $(pwd)/models:/workspace:ro openvino/model_server:latest --rest_port 8000 --config_path /workspace/config.json
+docker run -d --rm -p 8000:8000 -v $(pwd)/models:/workspace:ro openvino/model_server:2026.1 --rest_port 8000 --config_path /workspace/config.json
 ```
 
 ### On Baremetal

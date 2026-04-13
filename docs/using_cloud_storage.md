@@ -19,7 +19,7 @@ Example command with blob storage `az://<container_name>/<model_path>:`
 ```bash
 docker run --rm -d -p 9001:9001 \
 -e AZURE_STORAGE_CONNECTION_STRING="${AZURE_STORAGE_CONNECTION_STRING}" \
-openvino/model_server:latest \
+openvino/model_server:2026.1 \
 --model_path az://container/model_path --model_name az_model --port 9001
 ```
 
@@ -28,7 +28,7 @@ Example command with file storage `azfs://<share>/<model_path>:`
 ```bash
 docker run --rm -d -p 9001:9001 \
 -e AZURE_STORAGE_CONNECTION_STRING="${AZURE_STORAGE_CONNECTION_STRING}" \
-openvino/model_server:latest \
+openvino/model_server:2026.1 \
 --model_path azfs://share/model_path --model_name az_model --port 9001
 ```
 Add `-e "http_proxy=$http_proxy" -e "https_proxy=$https_proxy"` to docker run command for proxy cloud storage connection.
@@ -47,7 +47,7 @@ Example command with `gs://<bucket>/<model_path>:`
 docker run --rm -d -p 9001:9001 \
 -e GOOGLE_APPLICATION_CREDENTIALS="${GOOGLE_APPLICATION_CREDENTIALS}" \
 -v ${GOOGLE_APPLICATION_CREDENTIALS}:${GOOGLE_APPLICATION_CREDENTIALS} \
-openvino/model_server:latest \
+openvino/model_server:2026.1 \
 --model_path gs://bucket/model_path --model_name gs_model --port 9001
 ```
 
@@ -65,7 +65,7 @@ docker run --rm -d -p 9001:9001 \
 -e AWS_REGION="${AWS_REGION}" \
 -e S3_ENDPOINT="${S3_ENDPOINT}" \
 -e AWS_SESSION_TOKEN="${AWS_SESSION_TOKEN}" \
-openvino/model_server:latest \
+openvino/model_server:2026.1 \
 --model_path s3://bucket/model_path --model_name s3_model --port 9001
 ```
 In the above command, `S3_ENDPOINT` parameter is required only for [Minio](https://min.io/) storage. `AWS_SESSION_TOKEN` variable is needed only when AWS temporary credentials are used.
@@ -76,7 +76,7 @@ Example command with `s3://<public_bucket>/<model_path>:`
 
 ```bash
 docker run --rm -d -p 9001:9001 \
-openvino/model_server:latest \
+openvino/model_server:2026.1 \
 --model_path s3://public_bucket/model_path --model_name s3_model --port 9001
 ```
 
@@ -91,7 +91,7 @@ docker run --rm -d -p 9001:9001 \
 -e AWS_REGION="${AWS_REGION}" \
 -e S3_ENDPOINT="${S3_ENDPOINT}" \
 -v ${HOME}/.aws/credentials:/home/ovms/.aws/credentials \
-openvino/model_server:latest \
+openvino/model_server:2026.1 \
 --model_path s3://bucket/model_path --model_name s3_model --port 9001
 ```
 ---

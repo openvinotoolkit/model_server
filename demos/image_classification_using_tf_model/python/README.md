@@ -29,7 +29,7 @@ tar xzf model/1/inception_resnet_v2_2018_04_27.tgz -C model/1
 
 ```bash
 chmod -R 755 model
-docker run -d -v $PWD/model:/models -p 9000:9000 openvino/model_server:latest --model_path /models --model_name resnet --port 9000
+docker run -d -v $PWD/model:/models -p 9000:9000 openvino/model_server:2026.1 --model_path /models --model_name resnet --port 9000
 ```
 
 Alternatively see (instructions)[https://github.com/openvinotoolkit/model_server/blob/releases/2026/1/docs/deploying_server_baremetal.md] for deployment on bare metal.
