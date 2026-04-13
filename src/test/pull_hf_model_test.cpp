@@ -13,9 +13,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <array>
+#include <iomanip>
 #include <memory>
+#include <openssl/sha.h>
+#include <sstream>
 #include <string>
+#include <string_view>
 #include <thread>
+#include <vector>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -23,8 +29,9 @@
 #include "src/utils/env_guard.hpp"
 #include "src/test/light_test_utils.hpp"
 #include "src/test/test_utils.hpp"
+#include "src/test/test_file_utils.hpp"
 #include "src/test/test_with_temp_dir.hpp"
-#include "src/filesystem.hpp"
+#include "src/filesystem/filesystem.hpp"
 #include "src/pull_module/hf_pull_model_module.hpp"
 #include "src/pull_module/libgit2.hpp"
 #include "src/pull_module/optimum_export.hpp"
@@ -168,6 +175,168 @@ TEST_F(HfDownloaderPullHfModel, PositiveDownload) {
     ASSERT_EQ(expectedGraphContents, removeVersionString(graphContents)) << graphContents;
 }
 
+// Truncate the file to half its size, keeping the first half.
+bool removeSecondHalf(const std::string& fileStr) {
+    const std::filesystem::path& file(fileStr);
+    std::error_code ec;
+    ec.clear();
+
+    if (!std::filesystem::exists(file, ec) || !std::filesystem::is_regular_file(file, ec)) {
+        if (!ec)
+            ec = std::make_error_code(std::errc::no_such_file_or_directory);
+        return false;
+    }
+
+    const std::uintmax_t size = std::filesystem::file_size(file, ec);
+    if (ec)
+        return false;
+
+    const std::uintmax_t newSize = size / 2;  // floor(size/2)
+    std::filesystem::resize_file(file, newSize, ec);
+    return !ec;
+}
+
+bool createGitLfsPointerFile(const std::string& path) {
+    std::ofstream file(path, std::ios::binary);
+    if (!file.is_open()) {
+        return false;
+    }
+
+    file << "version https://git-lfs.github.com/spec/v1\n"
+            "oid sha256:cecf0224201415144c00cf3a6cf3350306f9c78888d631eb590939a63722fefa\n"
+            "size 52417240\n";
+
+    return true;
+}
+
+// Returns lowercase hex SHA-256 string on success, empty string on failure.
+std::string sha256File(std::string_view path, std::error_code& ec) {
+    ec.clear();
+
+    std::ifstream ifs(std::string(path), std::ios::binary);
+    if (!ifs) {
+        ec = std::make_error_code(std::errc::no_such_file_or_directory);
+        return {};
+    }
+
+    SHA256_CTX ctx;
+    if (SHA256_Init(&ctx) != 1) {
+        ec = std::make_error_code(std::errc::io_error);
+        return {};
+    }
+
+    // Read in chunks to support large files without high memory usage.
+    std::vector<unsigned char> buffer(1 << 20);  // 1 MiB
+    while (ifs) {
+        ifs.read(reinterpret_cast<char*>(buffer.data()), static_cast<std::streamsize>(buffer.size()));
+        std::streamsize got = ifs.gcount();
+        if (got > 0) {
+            if (SHA256_Update(&ctx, buffer.data(), static_cast<size_t>(got)) != 1) {
+                ec = std::make_error_code(std::errc::io_error);
+                return {};
+            }
+        }
+    }
+    if (!ifs.eof()) {  // read failed not due to EOF
+        ec = std::make_error_code(std::errc::io_error);
+        return {};
+    }
+
+    std::array<unsigned char, SHA256_DIGEST_LENGTH> digest{};
+    if (SHA256_Final(digest.data(), &ctx) != 1) {
+        ec = std::make_error_code(std::errc::io_error);
+        return {};
+    }
+
+    // Convert to lowercase hex
+    std::ostringstream oss;
+    oss << std::hex << std::setfill('0') << std::nouppercase;
+    for (unsigned char b : digest) {
+        oss << std::setw(2) << static_cast<unsigned int>(b);
+    }
+    return oss.str();
+}
+
+class TestHfDownloader : public ovms::HfDownloader {
+public:
+    TestHfDownloader(const std::string& sourceModel, const std::string& downloadPath, const std::string& hfEndpoint, const std::string& hfToken, const std::string& httpProxy, bool overwrite) :
+        HfDownloader(sourceModel, downloadPath, hfEndpoint, hfToken, httpProxy, overwrite) {}
+    std::string GetRepoUrl() { return HfDownloader::GetRepoUrl(); }
+    std::string GetRepositoryUrlWithPassword() { return HfDownloader::GetRepositoryUrlWithPassword(); }
+    bool CheckIfProxySet() { return HfDownloader::CheckIfProxySet(); }
+    const std::string& getEndpoint() { return this->hfEndpoint; }
+    const std::string& getProxy() { return this->httpProxy; }
+    std::string getGraphDirectory(const std::string& downloadPath, const std::string& sourceModel) { return IModelDownloader::getGraphDirectory(downloadPath, sourceModel); }
+    std::string getGraphDirectory() { return HfDownloader::getGraphDirectory(); }
+    ovms::Status CheckRepositoryStatus(bool checkUntracked) { return HfDownloader::CheckRepositoryStatus(checkUntracked); }
+};
+
+TEST_F(HfDownloaderPullHfModel, Resume) {
+    SKIP_AND_EXIT_IF_NOT_RUNNING_UNSTABLE();  // SSL proxy blocked workaround
+    std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
+    std::string downloadPath = ovms::FileSystem::joinPath({this->directoryPath, "repository"});
+    std::string task = "text_generation";
+    this->ServerPullHfModel(modelName, downloadPath, task);
+    server.setShutdownRequest(1);
+    if (t)
+        t->join();
+    server.setShutdownRequest(0);
+
+    std::string ovModelName = "openvino_model.bin";
+    std::string basePath = ovms::FileSystem::joinPath({this->directoryPath, "repository", "OpenVINO", "Phi-3-mini-FastDraft-50M-int8-ov"});
+    std::string modelPath = ovms::FileSystem::appendSlash(basePath) + ovModelName;
+    std::string graphPath = ovms::FileSystem::appendSlash(basePath) + "graph.pbtxt";
+
+    ASSERT_EQ(std::filesystem::exists(modelPath), true) << modelPath;
+    ASSERT_EQ(std::filesystem::exists(graphPath), true) << graphPath;
+    ASSERT_EQ(std::filesystem::file_size(modelPath), 52417240);
+    std::string graphContents = GetFileContents(graphPath);
+
+    ASSERT_EQ(expectedGraphContents, removeVersionString(graphContents)) << graphContents;
+
+    EXPECT_EXIT({
+        auto guardOrError = ovms::createLibGitGuard();
+        // Check status function
+        std::unique_ptr<TestHfDownloader> hfDownloader = std::make_unique<TestHfDownloader>(modelName, ovms::IModelDownloader::getGraphDirectory(downloadPath, modelName), "", "", "", false);
+
+        // Fails because we want clean and it has the graph.pbtxt after download
+        ASSERT_EQ(hfDownloader->CheckRepositoryStatus(true).getCode(), ovms::StatusCode::HF_GIT_STATUS_UNCLEAN);
+
+        exit(0);
+    },
+        ::testing::ExitedWithCode(0), "");
+
+    std::error_code ec;
+    ec.clear();
+    std::string expectedDigest = sha256File(modelPath, ec);
+    ASSERT_EQ(ec, std::errc());
+    // Prepare a git repository with a lfs_part file and lfs pointer file to simulate partial download error of a big model
+    ASSERT_EQ(removeSecondHalf(modelPath), true);
+    ASSERT_EQ(std::filesystem::file_size(modelPath), 26208620);
+
+    std::string ovModelPartLfsName = "openvino_model.binlfs_part";
+    std::string ovModelPartLfsPath = ovms::FileSystem::appendSlash(basePath) + ovModelPartLfsName;
+    std::filesystem::rename(modelPath, ovModelPartLfsPath, ec);
+    ASSERT_EQ(ec, std::errc());
+    ASSERT_EQ(std::filesystem::file_size(ovModelPartLfsPath), 26208620);
+    ASSERT_EQ(createGitLfsPointerFile(modelPath), true);
+
+    // Call ovms pull to resume the file
+    this->ServerPullHfModel(modelName, downloadPath, task);
+
+    ASSERT_EQ(std::filesystem::exists(ovModelPartLfsPath), false) << modelPath;
+    ASSERT_EQ(std::filesystem::exists(modelPath), true) << modelPath;
+    ASSERT_EQ(std::filesystem::exists(graphPath), true) << graphPath;
+    ASSERT_EQ(std::filesystem::file_size(modelPath), 52417240);
+    graphContents = GetFileContents(graphPath);
+
+    ASSERT_EQ(expectedGraphContents, removeVersionString(graphContents)) << graphContents;
+
+    std::string resumedDigest = sha256File(modelPath, ec);
+    ASSERT_EQ(ec, std::errc());
+    ASSERT_EQ(expectedDigest, resumedDigest);
+}
+
 TEST_F(HfDownloaderPullHfModel, PositiveDownloadAndStart) {
     SKIP_AND_EXIT_IF_NOT_RUNNING_UNSTABLE();  // CVS-180127
     // EnvGuard guard;
@@ -301,19 +470,6 @@ public:
     bool checkIfTokenizerFileIsExported() { return ovms::OptimumDownloader::checkIfTokenizerFileIsExported(); }
 };
 
-class TestHfDownloader : public ovms::HfDownloader {
-public:
-    TestHfDownloader(const std::string& sourceModel, const std::string& downloadPath, const std::string& hfEndpoint, const std::string& hfToken, const std::string& httpProxy, bool overwrite) :
-        HfDownloader(sourceModel, downloadPath, hfEndpoint, hfToken, httpProxy, overwrite) {}
-    std::string GetRepoUrl() { return HfDownloader::GetRepoUrl(); }
-    std::string GetRepositoryUrlWithPassword() { return HfDownloader::GetRepositoryUrlWithPassword(); }
-    bool CheckIfProxySet() { return HfDownloader::CheckIfProxySet(); }
-    const std::string& getEndpoint() { return this->hfEndpoint; }
-    const std::string& getProxy() { return this->httpProxy; }
-    std::string getGraphDirectory(const std::string& downloadPath, const std::string& sourceModel) { return IModelDownloader::getGraphDirectory(downloadPath, sourceModel); }
-    std::string getGraphDirectory() { return HfDownloader::getGraphDirectory(); }
-};
-
 TEST(HfDownloaderClassTest, Methods) {
     std::string modelName = "model/name";
     std::string downloadPath = "/path/to/Download";
@@ -335,6 +491,42 @@ TEST(HfDownloaderClassTest, Methods) {
 #endif
     ASSERT_EQ(hfDownloader->getGraphDirectory(downloadPath, modelName), expectedPath);
     ASSERT_EQ(hfDownloader->getGraphDirectory(), expectedPath);
+}
+
+TEST(HfDownloaderClassTest, RepositoryStatusCheckErrors) {
+    std::string modelName = "model/name";
+    std::string downloadPath = "/path/to/Download";
+    std::string hfEndpoint = "www.new_hf.com/";
+    std::string hfToken = "123$$o_O123!AAbb";
+    std::string httpProxy = "https://proxy_test1:123";
+    EXPECT_EXIT({
+        std::unique_ptr<TestHfDownloader> hfDownloader = std::make_unique<TestHfDownloader>(modelName, ovms::IModelDownloader::getGraphDirectory(downloadPath, modelName), hfEndpoint, hfToken, httpProxy, false);
+        // Fails without libgit init
+        ASSERT_EQ(hfDownloader->CheckRepositoryStatus(true).getCode(), ovms::StatusCode::HF_GIT_LIBGIT2_NOT_INITIALIZED);
+        ASSERT_EQ(hfDownloader->CheckRepositoryStatus(false).getCode(), ovms::StatusCode::HF_GIT_LIBGIT2_NOT_INITIALIZED);
+        exit(0);
+    },
+        ::testing::ExitedWithCode(0), "");
+
+    EXPECT_EXIT({
+        std::unique_ptr<TestHfDownloader> hfDownloader = std::make_unique<TestHfDownloader>(modelName, ovms::IModelDownloader::getGraphDirectory(downloadPath, modelName), hfEndpoint, hfToken, httpProxy, false);
+        auto guardOrError = ovms::createLibGitGuard();
+        ASSERT_EQ(std::holds_alternative<ovms::Status>(guardOrError), false);
+
+        // Path does not exist
+        ASSERT_EQ(hfDownloader->CheckRepositoryStatus(true).getCode(), ovms::StatusCode::HF_GIT_STATUS_FAILED_TO_RESOLVE_PATH);
+        ASSERT_EQ(hfDownloader->CheckRepositoryStatus(false).getCode(), ovms::StatusCode::HF_GIT_STATUS_FAILED_TO_RESOLVE_PATH);
+
+        // Path not a git repository
+        TempDir td;
+        downloadPath = td.dir.string();
+
+        std::unique_ptr<TestHfDownloader> existingHfDownloader = std::make_unique<TestHfDownloader>(modelName, downloadPath, hfEndpoint, hfToken, httpProxy, false);
+        ASSERT_EQ(existingHfDownloader->CheckRepositoryStatus(true).getCode(), ovms::StatusCode::HF_GIT_STATUS_FAILED);
+        ASSERT_EQ(existingHfDownloader->CheckRepositoryStatus(false).getCode(), ovms::StatusCode::HF_GIT_STATUS_FAILED);
+        exit(0);
+    },
+        ::testing::ExitedWithCode(0), "");
 }
 
 class TestOptimumDownloaderSetup : public ::testing::Test {
@@ -600,6 +792,53 @@ public:
     std::string endpoint_env = "HF_ENDPOINT";
     EnvGuard guard;
 };
+
+TEST(Libgt2InitGuardTest, LfsFilterCaptureDefaultResumeOptions) {
+    // Need new process beacase we use INIT_ONCE in libgit2 lfs filter for env variables and once they are set they are set for the whole process lifetime
+    EXPECT_EXIT({
+        // Act: capture stdout during object construction
+        testing::internal::CaptureStdout();
+        {
+            auto guardOrError = ovms::createLibGitGuard();
+            ASSERT_EQ(std::holds_alternative<ovms::Status>(guardOrError), false);
+        }
+        std::string output = testing::internal::GetCapturedStdout();
+
+        // Optional: trim trailing newline
+        if (!output.empty() && output.back() == '\n') {
+            output.pop_back();
+        }
+
+        EXPECT_THAT(output, ::testing::HasSubstr("[INFO] LFS resume: attempts=5 interval=10 s"));
+        exit(0);
+    },
+        ::testing::ExitedWithCode(0), "");
+}
+
+TEST(Libgt2InitGuardTest, LfsFilterCaptureNonDefaultResumeOptions) {
+    // Need new process beacase we use INIT_ONCE in libgit2 lfs filter for env variables and once they are set they are set for the whole process lifetime
+    EXPECT_EXIT({
+        EnvGuard guard;
+        guard.set("GIT_LFS_RESUME_ATTEMPTS", "3");
+        guard.set("GIT_LFS_RESUME_INTERVAL_SECONDS", "20");
+        // Act: capture stdout during object construction
+        testing::internal::CaptureStdout();
+        {
+            auto guardOrError = ovms::createLibGitGuard();
+            ASSERT_EQ(std::holds_alternative<ovms::Status>(guardOrError), false);
+        }
+        std::string output = testing::internal::GetCapturedStdout();
+
+        // Optional: trim trailing newline
+        if (!output.empty() && output.back() == '\n') {
+            output.pop_back();
+        }
+
+        EXPECT_THAT(output, ::testing::HasSubstr("[INFO] LFS resume: attempts=3 interval=20 s"));
+        exit(0);
+    },
+        ::testing::ExitedWithCode(0), "");
+}
 
 TEST_F(HfDownloaderHfEnvTest, Methods) {
     std::string modelName = "model/name";

@@ -24,7 +24,7 @@
 #pragma warning(pop)
 #include <spdlog/spdlog.h>
 
-#include "../filesystem.hpp"
+#include "src/filesystem/filesystem.hpp"
 #include "../status.hpp"
 
 namespace ovms {

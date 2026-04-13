@@ -84,7 +84,7 @@ void BaseGenerationConfigBuilder::unsetStructuredOutputConfig() {
     config.structured_output_config.reset();
 }
 
-void BaseGenerationConfigBuilder::parseConfigFromRequest(const OpenAIChatCompletionsRequest& request) {
+void BaseGenerationConfigBuilder::parseConfigFromRequest(const OpenAIRequest& request) {
     // Generic
     config.apply_chat_template = false;  // template is applied on the serving side
     if (request.maxTokens.has_value())

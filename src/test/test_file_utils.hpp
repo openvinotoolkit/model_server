@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2020 Intel Corporation
+// Copyright 2026 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,16 +15,26 @@
 //*****************************************************************************
 #pragma once
 
-namespace ovms {
-class PipelineDefinition;
+#include <filesystem>
+#include <fstream>
+#include <random>
+#include <string>
 
-class PipelineDefinitionUnloadGuard {
+// Create a unique temporary directory inside the system temp directory.
+std::filesystem::path createTempDir();
+
+std::filesystem::path writeFile(const std::filesystem::path& dir, const std::string& name, const std::string& content);
+
+// A helper for writing test files.
+std::filesystem::path writeTempFile(const std::string& filename,
+    const std::string& content);
+
+void mkdirs(const std::filesystem::path& p);
+
+// A simple RAII for a temp directory
+class TempDir {
 public:
-    PipelineDefinitionUnloadGuard() = delete;
-    PipelineDefinitionUnloadGuard(PipelineDefinition& pipelineDefinition);
-    ~PipelineDefinitionUnloadGuard();
-
-private:
-    PipelineDefinition& pipelineDefinition;
+    std::filesystem::path dir;
+    TempDir();
+    ~TempDir();
 };
-}  // namespace ovms

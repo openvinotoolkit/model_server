@@ -17,8 +17,8 @@
 
 #include "model_downloader.hpp"
 
-#include "../filesystem.hpp"
-#include "../localfilesystem.hpp"
+#include "src/filesystem/filesystem.hpp"
+#include "src/filesystem/localfilesystem.hpp"
 #include "../logging.hpp"
 
 namespace ovms {

@@ -25,45 +25,45 @@
 #pragma warning(pop)
 #include <spdlog/spdlog.h>
 
-#include "filesystem.hpp"
+#include "filesystem/filesystem.hpp"
 #include "status.hpp"
 #include "stringutils.hpp"
 
 namespace ovms {
 
 /**
-     * @brief This class represents Custom Loader configuration
-     */
+ * @brief This class represents Custom Loader configuration
+ */
 class CustomLoaderConfig {
 private:
     /**
-         * @brief Custom Loader Name
-         */
+     * @brief Custom Loader Name
+     */
     std::string loaderName;
 
     /**
-         * @brief Custom Loader Library Path
-         */
+     * @brief Custom Loader Library Path
+     */
     std::string libraryPath;
 
     /**
-         * @brief Custom Loader Config Path
-         */
+     * @brief Custom Loader Config Path
+     */
     std::string loaderConfigFile;
 
     /**
-         * @brief Json config directory path
-         */
+     * @brief Json config directory path
+     */
     std::string rootDirectoryPath;
 
 public:
     /**
-         * @brief Construct a new Custom Loader Config object
-         *
-         * @param name
-         * @param libraryPath
-         * @param configPath
-         */
+     * @brief Construct a new Custom Loader Config object
+     *
+     * @param name
+     * @param libraryPath
+     * @param configPath
+     */
     CustomLoaderConfig(const std::string& loaderName = "",
         const std::string& libraryPath = "",
         const std::string& loaderConfigFile = "") :
@@ -79,73 +79,73 @@ public:
     }
 
     /**
-         * @brief Get the name
-         *
-         * @return const std::string&
-         */
+     * @brief Get the name
+     *
+     * @return const std::string&
+     */
     const std::string& getLoaderName() const {
         return this->loaderName;
     }
 
     /**
-         * @brief Set the name
-         *
-         * @param name
-         */
+     * @brief Set the name
+     *
+     * @param name
+     */
     void setLoaderName(const std::string& loaderName) {
         this->loaderName = loaderName;
     }
 
     /**
-         * @brief Get the Library Path
-         *
-         * @return const std::string&
-         */
+     * @brief Get the Library Path
+     *
+     * @return const std::string&
+     */
     const std::string& getLibraryPath() const {
         return this->libraryPath;
     }
 
     /**
-         * @brief Set the Library Path
-         *
-         * @param libraryPath
-         */
+     * @brief Set the Library Path
+     *
+     * @param libraryPath
+     */
     void setLibraryPath(const std::string& libraryPath) {
         FileSystem::setPath(this->libraryPath, libraryPath, this->rootDirectoryPath);
     }
 
     /**
-         * @brief Set root directory path
-         *
-         * @param rootDirectoryPath
-         */
+     * @brief Set root directory path
+     *
+     * @param rootDirectoryPath
+     */
     void setRootDirectoryPath(const std::string& rootDirectoryPath) {
         this->rootDirectoryPath = rootDirectoryPath;
     }
 
     /**
-         * @brief Get the Config Path
-         *
-         * @return const std::string&
-         */
+     * @brief Get the Config Path
+     *
+     * @return const std::string&
+     */
     const std::string& getLoaderConfigFile() const {
         return this->loaderConfigFile;
     }
 
     /**
-         * @brief Set the Config Path
-         *
-         * @param configPath
-         */
+     * @brief Set the Config Path
+     *
+     * @param configPath
+     */
     void setLoaderConfigFile(const std::string& loaderConfigFile) {
         this->loaderConfigFile = loaderConfigFile;
     }
 
     /**
      * @brief  Parses all settings from a JSON node
-        *
-        * @return Status
-        */
+     *
+     * @return Status
+     */
     Status parseNode(const rapidjson::Value& v) {
         try {
             this->setLoaderName(v["loader_name"].GetString());

@@ -32,8 +32,8 @@
 
 #include "../capi_frontend/server_settings.hpp"
 #include "../config.hpp"
-#include "../filesystem.hpp"
-#include "../localfilesystem.hpp"
+#include "src/filesystem/filesystem.hpp"
+#include "src/filesystem/localfilesystem.hpp"
 #include "../logging.hpp"
 #include "../status.hpp"
 #include "../stringutils.hpp"

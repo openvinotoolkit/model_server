@@ -35,6 +35,14 @@ IF "%2"=="1" (
     set "expunge=0"
 )
 
+IF "%3"=="1" (
+    echo Argument provided: Enable ENABLE_INTEGRITYCHECK = 1
+    set "ENABLE_INTEGRITYCHECK=1"
+) ELSE (
+    echo No argument provided. Using default ENABLE_INTEGRITYCHECK = 0
+    set "ENABLE_INTEGRITYCHECK=0"
+)
+
 set "BAZEL_SHORT_PATH=C:\%output_user_root%"
 set "opt_install_dir=C:\opt"
 
@@ -142,20 +150,40 @@ if "!output_user_root!" neq "opt" (
     if !errorlevel! neq 0 exit /b !errorlevel!
 )
 
-echo [INFO] OV_USE_BINARY=%OV_USE_BINARY%
-IF "%OV_USE_BINARY%"=="0" (
-    goto :install_openvino_from_src
-)
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: Install in c:\PR-XXXX\ section started - once per build, reinstalled only with expunge clean :::::::::::::::::::::::::::::::::: 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+:: Load dependency version defaults from shared versions.mk (only sets variables not already in environment).
+:: Each line is "VAR ?= VALUE": token 1 = name, token 2 = ?= (skipped), token 3 = value.
+for /f "usebackq eol=# tokens=1,3" %%A in ("%~dp0versions.mk") do (
+    call :setifempty "%%A" "%%B"
+)
+echo [INFO]   OV_USE_BINARY=%OV_USE_BINARY%
+echo [INFO]   OV_SOURCE_BRANCH=%OV_SOURCE_BRANCH%
+echo [INFO]   OV_TOKENIZERS_BRANCH=%OV_TOKENIZERS_BRANCH%
+echo [INFO]   OV_GENAI_BRANCH=%OV_GENAI_BRANCH%
+echo [INFO]   OV_SOURCE_ORG=%OV_SOURCE_ORG%
+echo [INFO]   OV_GENAI_ORG=%OV_GENAI_ORG%
+echo [INFO]   OV_TOKENIZERS_ORG=%OV_TOKENIZERS_ORG%
+echo [INFO]   GENAI_PACKAGE_URL_WINDOWS=%GENAI_PACKAGE_URL_WINDOWS%
+
+echo [INFO] OV_USE_BINARY=%OV_USE_BINARY%
+IF "%OV_USE_BINARY%"=="0" (
+    goto :install_openvino_from_src
+)
+
+
+::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: GENAI/OPENVINO install from ZIP - reinstalled per build trigger
-:: Set default GENAI_PACKAGE_URL if not set
+:: Set GENAI_PACKAGE_URL from versions.mk value (loaded above) if not already set by the environment
 if "%GENAI_PACKAGE_URL%"=="" (
-    set "GENAI_PACKAGE_URL=https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/pre-release/2026.1.0.0rc1/openvino_genai_windows_2026.1.0.0rc1_x86_64.zip"
+    set "GENAI_PACKAGE_URL=%GENAI_PACKAGE_URL_WINDOWS%"
+)
+if "%GENAI_PACKAGE_URL%"=="" (
+    echo [ERROR] GENAI_PACKAGE_URL is not set. Ensure versions.mk was loaded or set GENAI_PACKAGE_URL/GENAI_PACKAGE_URL_WINDOWS in the environment.
+    exit /b 1
 )
 
 :: Extract genai_ver from GENAI_PACKAGE_URL (filename)
@@ -207,24 +235,6 @@ goto :finished_openvino
 IF /I EXIST %BAZEL_SHORT_PATH%\openvino (
     rmdir /S /Q %BAZEL_SHORT_PATH%\openvino
 )
-if "%OV_SOURCE_BRANCH%"=="" (
-    set "OV_SOURCE_BRANCH=f6221c2f44e9ecfa5ac1f039d0a29a05a13aef1c"
-)
-if "%OV_SOURCE_ORG%"=="" (
-    set "OV_SOURCE_ORG=openvinotoolkit"
-)
-if "%TOKENIZER_SOURCE_ORG%"=="" (
-    set "TOKENIZER_SOURCE_ORG=openvinotoolkit"
-)
-if "%TOKENIZER_SOURCE_BRANCH%"=="" (
-    set "TOKENIZER_SOURCE_BRANCH=aeede7f1c441fa49c59c8020b77dfb49d7df443c"
-)
-if "%GENAI_SOURCE_ORG%"=="" (
-    set "GENAI_SOURCE_ORG=openvinotoolkit"
-)
-if "%GENAI_SOURCE_BRANCH%"=="" (
-    set "GENAI_SOURCE_BRANCH=1dabb8c22554c3224227ba7cc6b3c8966f30bded"
-)
 
 echo [INFO] Using OpenVINO source from %OV_SOURCE_ORG%
 IF /I EXIST %BAZEL_SHORT_PATH%\openvino_src (
@@ -266,11 +276,11 @@ call %BAZEL_SHORT_PATH%\openvino\setupvars.bat
 ::::::::::::::::::::::: OpenVINO Tokenizers
 
 IF /I NOT EXIST %BAZEL_SHORT_PATH%\openvino_tokenizers_src (
-    git clone https://github.com/%TOKENIZER_SOURCE_ORG%/openvino_tokenizers.git %BAZEL_SHORT_PATH%\openvino_tokenizers_src
+    git clone https://github.com/%OV_TOKENIZERS_ORG%/openvino_tokenizers.git %BAZEL_SHORT_PATH%\openvino_tokenizers_src
 )
 cd %BAZEL_SHORT_PATH%\openvino_tokenizers_src
 git fetch origin
-git checkout %TOKENIZER_SOURCE_BRANCH%
+git checkout %OV_TOKENIZERS_BRANCH%
 if !errorlevel! neq 0 exit /b !errorlevel!
 git pull --recurse-submodules
 IF /I NOT EXIST build (
@@ -288,11 +298,11 @@ if !errorlevel! neq 0 exit /b !errorlevel!
 ::::::::::::::::::::::: OpenVINO GenAI
 
 IF /I NOT EXIST %BAZEL_SHORT_PATH%\openvino_genai_src (
-    git clone https://github.com/%GENAI_SOURCE_ORG%/openvino.genai.git %BAZEL_SHORT_PATH%\openvino_genai_src
+    git clone https://github.com/%OV_GENAI_ORG%/openvino.genai.git %BAZEL_SHORT_PATH%\openvino_genai_src
 )
 cd %BAZEL_SHORT_PATH%\openvino_genai_src
 git fetch origin
-git checkout %GENAI_SOURCE_BRANCH%
+git checkout %OV_GENAI_BRANCH%
 if !errorlevel! neq 0 exit /b !errorlevel!
 git pull --recurse-submodules
 IF /I NOT EXIST build (
@@ -505,7 +515,7 @@ exit /b 0
 :install_curl
 echo [INFO] Installing curl ...
 
-set "curl_version=8.18.0_4"
+set "curl_version=8.19.0_4"
 set "curl_dir=curl-%curl_version%-win64-mingw"
 set "curl_ver=%curl_dir%.zip"
 set "curl_http=https://curl.se/windows/dl-%curl_version%/"
@@ -605,8 +615,14 @@ mkdir build
 if !errorlevel! neq 0 exit /b !errorlevel!
 cd build
 if !errorlevel! neq 0 exit /b !errorlevel!
+if "%ENABLE_INTEGRITYCHECK%"=="1" (
+    set "SDL_OPS=/GS /sdl /guard:cf /DYNAMICBASE /NXCOMPAT /W4 /WX /LTCG /INTEGRITYCHECK /Qspectre"
+) else (
+    set "SDL_OPS=/GS /sdl /guard:cf /DYNAMICBASE /NXCOMPAT /W4 /WX /LTCG"
+)
+
 :: Expected compilers in CI - -G "Visual Studio 16 2019", local -G "Visual Studio 17 2022" as default
-cmake -T v142 .. -D CMAKE_INSTALL_PREFIX=%opencv_install% -D OPENCV_EXTRA_MODULES_PATH=%opencv_contrib_dir%\modules %opencv_flags%
+cmake -T v142 .. -D CMAKE_INSTALL_PREFIX=%opencv_install% -D OPENCV_EXTRA_MODULES_PATH=%opencv_contrib_dir%\modules %opencv_flags% %SDL_OPS%
 if !errorlevel! neq 0 exit /b !errorlevel!
 cmake --build . --config Release -j %NUMBER_OF_PROCESSORS%
 if !errorlevel! neq 0 exit /b !errorlevel!
@@ -620,3 +636,8 @@ exit /b 0
 echo [ERROR] Some dependencies not installed
 exit /b 1
 endlocal
+
+:: Set VAR to VALUE only if VAR is not already defined in the environment.
+:setifempty
+if "!%~1!"=="" set "%~1=%~2"
+exit /b 0
