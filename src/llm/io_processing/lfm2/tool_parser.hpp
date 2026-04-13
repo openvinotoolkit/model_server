@@ -30,6 +30,9 @@ protected:
     static const std::string TOOL_ARGS_END_INDICATOR;
     static const std::string TOOL_SEPARATOR_STR;
 
+    static const int64_t botTokenId;
+    static const int64_t eotTokenId;
+
     static constexpr size_t MAX_TOOL_CALLS = 100;
     static constexpr size_t MAX_TOOLS_PER_CALL = 100;
 
