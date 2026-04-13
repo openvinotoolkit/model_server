@@ -51,6 +51,7 @@ def _impl(repository_ctx):
         out_static = "out_interface_libs = [\"{lib_name}.lib\"],".format(lib_name=lib_name)
         out_libs = "out_shared_libs = [\"{lib_name}.dll\"],".format(lib_name=lib_name)
         cache_entries = """
+        "EXPERIMENTAL_SHA256": "ON",
         "CMAKE_POSITION_INDEPENDENT_CODE": "ON",
         "CMAKE_CXX_FLAGS": " /guard:cf /GS -s -D_GLIBCXX_USE_CXX11_ABI=1",
         "CMAKE_LIBRARY_OUTPUT_DIRECTORY": "Debug",
@@ -59,13 +60,14 @@ def _impl(repository_ctx):
         "BUILD_EXAMPLES": "OFF",
         "BUILD_TESTS": "OFF",
         "BUILD_CLI": "OFF",
-        "CURL_DEPENDENCIES_DIR": "C:/opt/curl-8.14.1_1-win64-mingw",
+        "CURL_DEPENDENCIES_DIR": "C:/opt/curl-8.19.0_4-win64-mingw",
         """
     else:
         lib_name = "libgit2"
         out_static = ""
         out_libs = "out_shared_libs = [\"{lib_name}.so\"],".format(lib_name=lib_name)
         cache_entries = """
+        "EXPERIMENTAL_SHA256": "ON",
         "CMAKE_POSITION_INDEPENDENT_CODE": "ON",
         "CMAKE_CXX_FLAGS": " /guard:cf -s -D_GLIBCXX_USE_CXX11_ABI=1 -Wno-error=deprecated-declarations -Wuninitialized",
         "CMAKE_ARCHIVE_OUTPUT_DIRECTORY": "lib",

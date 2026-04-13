@@ -101,17 +101,6 @@ parser_speech2text.add_argument('--num_streams', default=0, type=int, help='The 
 parser_speech2text.add_argument('--enable_word_timestamps', default=False, action='store_true', help='Load model with word timestamps support.', dest='enable_word_timestamps')
 args = vars(parser.parse_args())
 
-
-def _default_graph_queue_size(task_name):
-    if task_name == 'image_generation':
-        return 1
-    return 'AUTO'
-
-
-def _prepend_graph_queue_directive(graph_content, task_name):
-    queue_size = _default_graph_queue_size(task_name)
-    return f"# OVMS_GRAPH_QUEUE_SIZE: {queue_size}\n{graph_content}"
-
 t2s_graph_template = """
 input_stream: "HTTP_REQUEST_PAYLOAD:input"
 output_stream: "HTTP_RESPONSE_PAYLOAD:output"
@@ -499,7 +488,6 @@ def export_text_generation_model(model_repository_path, source_model, model_name
     gtemplate = jinja2.Environment(loader=jinja2.BaseLoader).from_string(text_generation_graph_template)
     print("task_parameters", task_parameters)
     graph_content = gtemplate.render(model_path=model_path, draft_model_dir_name=draft_model_dir_name, **task_parameters)
-    graph_content = _prepend_graph_queue_directive(graph_content, 'text_generation')
     with open(os.path.join(model_repository_path, model_name, 'graph.pbtxt'), 'w') as f:
         f.write(graph_content)
     print("Created graph {}".format(os.path.join(model_repository_path, model_name, 'graph.pbtxt')))
@@ -507,19 +495,7 @@ def export_text_generation_model(model_repository_path, source_model, model_name
 
 def export_embeddings_model_ov(model_repository_path, source_model, model_name, precision, task_parameters, config_file_path, truncate=True):
     set_max_context_length = ""
-    destination_path = os.path.join(model_repository_path, model_name)ERROR: /ovms/src/llm/BUILD:196:16: Compiling src/llm/language_model/continuous_batching/servable.cpp failed: (Exit 1): gcc failed: error executing command (from target //src/llm:genai_servables) /usr/bin/gcc -U_FORTIFY_SOURCE -fstack-protector -Wall -Wunused-but-set-parameter -Wno-free-nonheap-object -fno-omit-frame-pointer -g0 -O2 '-D_FORTIFY_SOURCE=1' -DNDEBUG -ffunction-sections ... (remaining 156 arguments skipped)
-In file included from src/llm/language_model/continuous_batching/../../../logging.hpp:24,
-                 from src/llm/language_model/continuous_batching/servable.cpp:22:
-src/llm/language_model/continuous_batching/llm_executor.hpp: In member function 'void ovms::LLMExecutor::printMetrics()':
-src/llm/language_model/continuous_batching/llm_executor.hpp:105:104: error: 'struct ov::genai::PipelineMetrics' has no member named 'kv_cache_size_in_bytes'
-  105 |             metrics.requests, metrics.scheduled_requests, formatCacheInfo(metrics.cache_usage, metrics.kv_cache_size_in_bytes, this->isDynamicKVCache));
-      |                                                                                                        ^~~~~~~~~~~~~~~~~~~~~~
-Target //src:ovms failed to build
-Use --verbose_failures to see the command lines of failed build steps.
-INFO: Elapsed time: 9.590s, Critical Path: 8.22s
-INFO: 64 processes: 64 internal.
-FAILED: Build did NOT complete successfully
-root@b6674760ad87:/ovms# bazel build --config mp_on_py_off //src:ovms
+    destination_path = os.path.join(model_repository_path, model_name)
     print("Exporting embeddings model to ",destination_path)
     if not os.path.isdir(destination_path) or args['overwrite_models']:
         optimum_command = "optimum-cli export openvino --model {} --disable-convert-tokenizer --task feature-extraction --weight-format {} {} --trust-remote-code {}".format(source_model, precision, task_parameters['extra_quantization_params'], destination_path)
@@ -533,7 +509,6 @@ root@b6674760ad87:/ovms# bazel build --config mp_on_py_off //src:ovms
             raise ValueError("Failed to export tokenizer model", source_model)
     gtemplate = jinja2.Environment(loader=jinja2.BaseLoader).from_string(embedding_graph_ov_template)
     graph_content = gtemplate.render(model_path="./", **task_parameters)
-    graph_content = _prepend_graph_queue_directive(graph_content, 'embeddings_ov')
     with open(os.path.join(model_repository_path, model_name, 'graph.pbtxt'), 'w') as f:
         f.write(graph_content)
     print("Created graph {}".format(os.path.join(model_repository_path, model_name, 'graph.pbtxt')))
@@ -548,7 +523,6 @@ def export_text2speech_model(model_repository_path, source_model, model_name, pr
             raise ValueError("Failed to export text2speech model", source_model)
     gtemplate = jinja2.Environment(loader=jinja2.BaseLoader).from_string(t2s_graph_template)
     graph_content = gtemplate.render(model_path="./", **task_parameters)
-    graph_content = _prepend_graph_queue_directive(graph_content, 'text2speech')
     with open(os.path.join(model_repository_path, model_name, 'graph.pbtxt'), 'w') as f:
         f.write(graph_content)
     print("Created graph {}".format(os.path.join(model_repository_path, model_name, 'graph.pbtxt')))
@@ -563,7 +537,6 @@ def export_speech2text_model(model_repository_path, source_model, model_name, pr
             raise ValueError("Failed to export speech2text model", source_model)
     gtemplate = jinja2.Environment(loader=jinja2.BaseLoader).from_string(s2t_graph_template)
     graph_content = gtemplate.render(model_path="./", **task_parameters)
-    graph_content = _prepend_graph_queue_directive(graph_content, 'speech2text')
     with open(os.path.join(model_repository_path, model_name, 'graph.pbtxt'), 'w') as f:
         f.write(graph_content)
     print("Created graph {}".format(os.path.join(model_repository_path, model_name, 'graph.pbtxt')))
@@ -580,7 +553,6 @@ def export_rerank_model_ov(model_repository_path, source_model, model_name, prec
         export_rerank_tokenizer(source_model, destination_path, max_doc_length)
     gtemplate = jinja2.Environment(loader=jinja2.BaseLoader).from_string(rerank_graph_ov_template)
     graph_content = gtemplate.render(model_path="./", **task_parameters)
-    graph_content = _prepend_graph_queue_directive(graph_content, 'rerank_ov')
     with open(os.path.join(model_repository_path, model_name, 'graph.pbtxt'), 'w') as f:
         f.write(graph_content)
     print("Created graph {}".format(os.path.join(model_repository_path, model_name, 'graph.pbtxt')))
@@ -617,7 +589,6 @@ def export_rerank_model(model_repository_path, source_model, model_name, precisi
                 shutil.move(os.path.join(tmpdirname, 'openvino_tokenizer.bin'), os.path.join(tokenizer_path, 'model.bin'))
     gtemplate = jinja2.Environment(loader=jinja2.BaseLoader).from_string(rerank_graph_template)
     graph_content = gtemplate.render(model_name=model_name, **task_parameters)
-    graph_content = _prepend_graph_queue_directive(graph_content, 'rerank')
     with open(os.path.join(model_repository_path, model_name, 'graph.pbtxt'), 'w') as f:
         f.write(graph_content)
     print("Created graph {}".format(os.path.join(model_repository_path, model_name, 'graph.pbtxt')))
@@ -664,7 +635,6 @@ def export_image_generation_model(model_repository_path, source_model, model_nam
 
     gtemplate = jinja2.Environment(loader=jinja2.BaseLoader).from_string(image_generation_graph_template)
     graph_content = gtemplate.render(model_path=model_path, **task_parameters)
-    graph_content = _prepend_graph_queue_directive(graph_content, 'image_generation')
     with open(os.path.join(model_repository_path, model_name, 'graph.pbtxt'), 'w') as f:
          f.write(graph_content)
     print("Created graph {}".format(os.path.join(model_repository_path, model_name, 'graph.pbtxt')))

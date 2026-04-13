@@ -38,7 +38,6 @@
 #pragma warning(pop)
 #include "mediapipe_utils.hpp"
 #include "packettypes.hpp"
-#include "graphqueue.hpp"
 
 namespace ovms {
 class PythonBackend;

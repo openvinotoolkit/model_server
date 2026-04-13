@@ -38,16 +38,17 @@
 
 #include "config.hpp"
 #include "dags/pipeline.hpp"
+#include "dags/pipeline_factory.hpp"
 #include "dags/pipelinedefinition.hpp"
-#include "dags/pipelinedefinitionunloadguard.hpp"
+#include "servable_definition_unload_guard.hpp"
 #include "execution_context.hpp"
-#include "filesystem.hpp"
+#include "filesystem/filesystem.hpp"
 #include "get_model_metadata_impl.hpp"
 #include "grpcservermodule.hpp"
 #include "kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "kfs_frontend/kfs_utils.hpp"
-#include "metric_module.hpp"
-#include "metric_registry.hpp"
+#include "metrics/metric_module.hpp"
+#include "metrics/metric_registry.hpp"
 #include "model_metric_reporter.hpp"
 #include "model_service.hpp"
 #include "modelinstance.hpp"
@@ -68,6 +69,7 @@
 #include "http_payload.hpp"
 #include "http_frontend/http_client_connection.hpp"
 #include "http_frontend/http_graph_executor_impl.hpp"
+#include "mediapipe_internal/mediapipefactory.hpp"
 #include "mediapipe_internal/mediapipegraphexecutor.hpp"
 #endif
 
@@ -637,8 +639,6 @@ Status HttpRestApiHandler::processListModelsRequest(std::string& response) {
     time_t timestamp;
     time(&timestamp);
     writer.StartObject();
-    writer.String("object");
-    writer.String("list");
     writer.String("data");
     writer.StartArray();
 
@@ -1153,7 +1153,7 @@ Status HttpRestApiHandler::processPredictRequest(
     if (this->modelManager.modelExists(modelName)) {
         SPDLOG_DEBUG("Found model with name: {}. Searching for requested version...", modelName);
         status = processSingleModelRequest(modelName, modelVersion, request, requestOrder, responseProto, reporterOut);
-    } else if (this->modelManager.pipelineDefinitionExists(modelName)) {
+    } else if (this->modelManager.servableExists(modelName, ServableQueryType::Pipeline)) {
         SPDLOG_DEBUG("Found pipeline with name: {}", modelName);
         status = processPipelineRequest(modelName, request, requestOrder, responseProto, reporterOut);
     } else {
@@ -1247,7 +1247,7 @@ Status HttpRestApiHandler::getPipelineInputsAndReporter(const std::string& model
     if (!pipelineDefinition) {
         return StatusCode::MODEL_MISSING;
     }
-    std::unique_ptr<PipelineDefinitionUnloadGuard> unloadGuard;
+    std::unique_ptr<ServableDefinitionUnloadGuard> unloadGuard;
     Status status = pipelineDefinition->waitForLoaded(unloadGuard);
     if (!status.ok()) {
         return status;
@@ -1288,7 +1288,7 @@ Status HttpRestApiHandler::processPipelineRequest(const std::string& modelName,
 
     tensorflow::serving::PredictRequest& requestProto = requestParser.getProto();
     requestProto.mutable_model_spec()->set_name(modelName);
-    status = this->modelManager.createPipeline(pipelinePtr, modelName, &requestProto, &responseProto);
+    status = this->modelManager.getPipelineFactory().create(pipelinePtr, modelName, &requestProto, &responseProto, this->modelManager);
     if (!status.ok()) {
         INCREMENT_IF_ENABLED(reporterOut->getInferRequestMetric(executionContext, false));
         return status;

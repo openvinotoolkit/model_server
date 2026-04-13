@@ -31,8 +31,8 @@
 #include "graph_export/s2t_graph_cli_parser.hpp"
 #include "graph_export/image_generation_graph_cli_parser.hpp"
 #include "ovms_exit_codes.hpp"
-#include "filesystem.hpp"
-#include "localfilesystem.hpp"
+#include "filesystem/filesystem.hpp"
+#include "filesystem/localfilesystem.hpp"
 #include "stringutils.hpp"
 #include "version.hpp"
 
@@ -443,8 +443,11 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
             std::string project_name(PROJECT_NAME);
             std::string project_version(PROJECT_VERSION);
             ss << project_name + " " + project_version << std::endl;
-            ss << "OpenVINO backend " << OPENVINO_NAME << std::endl;
-            ss << "OpenVINO GenAI backend " << GENAI_NAME << std::endl;
+            ss << "OpenVINO backend " << ovms::getOpenVINOVersion() << std::endl;
+            const char* genaiVersion = ovms::getGenAIVersion();
+            if (genaiVersion[0] != '\0') {
+                ss << "OpenVINO GenAI backend " << genaiVersion << std::endl;
+            }
             ss << "Bazel build flags: " << BAZEL_BUILD_FLAGS << std::endl;
 #pragma warning(pop)
             return std::make_pair(OVMS_EX_OK, ss.str());

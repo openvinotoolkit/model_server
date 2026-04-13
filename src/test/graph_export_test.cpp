@@ -24,7 +24,7 @@
 #include "light_test_utils.hpp"
 #include "../capi_frontend/server_settings.hpp"
 #include "../graph_export/graph_export.hpp"
-#include "../filesystem.hpp"
+#include "src/filesystem/filesystem.hpp"
 #include "../status.hpp"
 #include "../version.hpp"
 

@@ -39,13 +39,15 @@
 #pragma warning(pop)
 #include "graph_executor_constants.hpp"
 #include "mediapipe_utils.hpp"
-#include "mediapipegraphdefinition.hpp"  // for version in response and PythonNodeResourceMap
+#include "graph_side_packets.hpp"
+#include "side_packet_builder.hpp"
 #include "packettypes.hpp"
 #include "graphqueue.hpp"
 
 namespace ovms {
 class PythonBackend;
 class ServableMetricReporter;
+class MediapipeGraphExecutor;
 
 inline StatusCode mediapipeAbslToOvmsStatus(absl::StatusCode code) {
     if (code == absl::StatusCode::kFailedPrecondition) {  // ovms session calculator returns this status code when loading model fails
@@ -253,16 +255,7 @@ public:
         }
         std::map<std::string, mediapipe::Packet> inputSidePackets;
         OVMS_RETURN_ON_FAIL(deserializeInputSidePacketsFromFirstRequestImpl(inputSidePackets, *request));
-#if (PYTHON_DISABLE == 0)
-        inputSidePackets[PYTHON_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<PythonNodeResourcesMap>(this->sidePacketMaps.pythonNodeResourcesMap).At(::mediapipe::Timestamp(STARTING_TIMESTAMP_VALUE));
-#endif
-        inputSidePackets[LLM_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<GenAiServableMap>(this->sidePacketMaps.genAiServableMap).At(::mediapipe::Timestamp(STARTING_TIMESTAMP_VALUE));
-        inputSidePackets[LLM_EXECUTION_CONTEXT_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<GenAiExecutionContextMap>(this->sidePacketMaps.genAiExecutionContextMap).At(::mediapipe::Timestamp(STARTING_TIMESTAMP_VALUE));
-        inputSidePackets[IMAGE_GEN_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<ImageGenerationPipelinesMap>(this->sidePacketMaps.imageGenPipelinesMap).At(::mediapipe::Timestamp(STARTING_TIMESTAMP_VALUE));
-        inputSidePackets[EMBEDDINGS_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<EmbeddingsServableMap>(this->sidePacketMaps.embeddingsServableMap).At(::mediapipe::Timestamp(STARTING_TIMESTAMP_VALUE));
-        inputSidePackets[RERANK_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<RerankServableMap>(this->sidePacketMaps.rerankServableMap).At(::mediapipe::Timestamp(STARTING_TIMESTAMP_VALUE));
-        inputSidePackets[STT_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<SttServableMap>(this->sidePacketMaps.sttServableMap).At(::mediapipe::Timestamp(STARTING_TIMESTAMP_VALUE));
-        inputSidePackets[TTS_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<TtsServableMap>(this->sidePacketMaps.ttsServableMap).At(::mediapipe::Timestamp(STARTING_TIMESTAMP_VALUE));
+        buildInputSidePackets(inputSidePackets, this->sidePacketMaps);
 
         MP_RETURN_ON_FAIL(graph.StartRun(inputSidePackets), std::string("start MediaPipe graph: ") + this->name, StatusCode::MEDIAPIPE_GRAPH_START_ERROR);
 
@@ -523,14 +516,7 @@ public:
             {
                 OVMS_PROFILE_SCOPE("Mediapipe graph creating input side packets");
                 OVMS_RETURN_ON_FAIL(deserializeInputSidePacketsFromFirstRequestImpl(inputSidePackets, req));
-#if (PYTHON_DISABLE == 0)
-                inputSidePackets[PYTHON_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<PythonNodeResourcesMap>(this->sidePacketMaps.pythonNodeResourcesMap)
-                                                                       .At(::mediapipe::Timestamp(STARTING_TIMESTAMP_VALUE));
-#endif
-                inputSidePackets[LLM_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<GenAiServableMap>(this->sidePacketMaps.genAiServableMap).At(::mediapipe::Timestamp(STARTING_TIMESTAMP_VALUE));
-                inputSidePackets[LLM_EXECUTION_CONTEXT_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<GenAiExecutionContextMap>(this->sidePacketMaps.genAiExecutionContextMap).At(::mediapipe::Timestamp(STARTING_TIMESTAMP_VALUE));
-                inputSidePackets[EMBEDDINGS_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<EmbeddingsServableMap>(this->sidePacketMaps.embeddingsServableMap).At(::mediapipe::Timestamp(STARTING_TIMESTAMP_VALUE));
-                // Add image generation side packet in case image generation allow for streaming
+                buildInputSidePackets(inputSidePackets, this->sidePacketMaps);
             }
 
             {

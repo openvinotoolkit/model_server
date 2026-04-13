@@ -39,6 +39,7 @@
 
 #include "graph_executor_constants.hpp"
 #include "outputstreamobserver.hpp"
+#include "side_packet_builder.hpp"
 namespace ovms {
 GraphQueue::GraphQueue(const ::mediapipe::CalculatorGraphConfig& config, std::shared_ptr<GraphSidePackets> sidePacketMaps, int streamsLength) :
     Queue(streamsLength),
@@ -75,16 +76,9 @@ GraphQueue::GraphQueue(const ::mediapipe::CalculatorGraphConfig& config, std::sh
             gh->genAiExecutionContextMap[nodeName] = std::make_shared<GenAiExecutionContextHolder>();
         }
         std::map<std::string, mediapipe::Packet> inputSidePackets;
-#if (PYTHON_DISABLE == 0)
-        inputSidePackets[PYTHON_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<PythonNodeResourcesMap>(sidePacketMaps->pythonNodeResourcesMap).At(::mediapipe::Timestamp(STARTING_TIMESTAMP_VALUE));
-#endif
-        inputSidePackets[LLM_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<GenAiServableMap>(sidePacketMaps->genAiServableMap).At(::mediapipe::Timestamp(STARTING_TIMESTAMP_VALUE));
+        buildInputSidePackets(inputSidePackets, *sidePacketMaps);
+        // Override execution context with per-graph instance
         inputSidePackets[LLM_EXECUTION_CONTEXT_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<GenAiExecutionContextMap>(gh->genAiExecutionContextMap).At(::mediapipe::Timestamp(STARTING_TIMESTAMP_VALUE));
-        inputSidePackets[IMAGE_GEN_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<ImageGenerationPipelinesMap>(sidePacketMaps->imageGenPipelinesMap).At(::mediapipe::Timestamp(STARTING_TIMESTAMP_VALUE));
-        inputSidePackets[EMBEDDINGS_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<EmbeddingsServableMap>(sidePacketMaps->embeddingsServableMap).At(::mediapipe::Timestamp(STARTING_TIMESTAMP_VALUE));
-        inputSidePackets[RERANK_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<RerankServableMap>(sidePacketMaps->rerankServableMap).At(::mediapipe::Timestamp(STARTING_TIMESTAMP_VALUE));
-        inputSidePackets[STT_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<SttServableMap>(sidePacketMaps->sttServableMap).At(::mediapipe::Timestamp(STARTING_TIMESTAMP_VALUE));
-        inputSidePackets[TTS_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<TtsServableMap>(sidePacketMaps->ttsServableMap).At(::mediapipe::Timestamp(STARTING_TIMESTAMP_VALUE));
         absStatus = gh->graph->StartRun(inputSidePackets);
         if (!absStatus.ok()) {
             SPDLOG_ERROR("Graph queue StartRun failed: {}", absStatus.ToString());

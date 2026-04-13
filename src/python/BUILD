@@ -41,7 +41,7 @@ mediapipe_proto_library(
 ovms_cc_library(
     name = "utils",
     hdrs = ["utils.hpp",],
-    srcs = [],
+    srcs = [], 
     deps = PYBIND_DEPS + [
         "//src:libovmslogging",
     ],
@@ -71,7 +71,7 @@ ovms_cc_library(
         "@mediapipe//mediapipe/framework:calculator_framework",
         "//src:libovmslogging",
         "//src:libovmsstatus",
-        "//src:libovmsmediapipe_utils",
+        "//src/mediapipe_internal:mediapipe_utils",
         "pythonexecutorcalculator_cc_proto",
         "utils",
     ],
@@ -98,7 +98,8 @@ ovms_cc_library(
 
 ovms_cc_library(
     name = "pythonexecutorcalculator",
-    srcs = ["python_executor_calculator.cc",],
+    srcs = ["python_executor_calculator.cc",
+            "python_node_initializer.cpp",],
     deps = PYBIND_DEPS + [
         "//third_party:openvino",
         "@mediapipe//mediapipe/framework:calculator_framework",
@@ -106,6 +107,8 @@ ovms_cc_library(
         "pythonexecutorcalculator_cc_proto",
         "pythonbackend",
         "pythonnoderesources",
+        "//src/mediapipe_internal:node_initializer",
+        "//src:libovmslogging",
     ],
     visibility = ["//visibility:private"],
     alwayslink = 1,
@@ -131,7 +134,7 @@ ovms_cc_library(
         "//src:cpp_headers", # TODO make ovmslib depend on that
         "//src:libovmslogging",
         "//src:libovms_module",
-        "//src:libovmsmediapipe_utils",
+        "//src/mediapipe_internal:mediapipe_utils",
         "ovmspytensor",
         "pytensorovtensorconvertercalculator",
         "pythonbackend",

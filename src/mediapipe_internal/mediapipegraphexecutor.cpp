@@ -29,13 +29,11 @@
 #pragma GCC diagnostic pop
 #pragma warning(pop)
 
+#include "src/llm/servable.hpp"
+
 #if (PYTHON_DISABLE == 0)
 #include "src/python/python_backend.hpp"
 #endif
-
-#include "src/image_gen/pipelines.hpp"
-#include "src/llm/servable.hpp"
-
 namespace ovms {
 
 MediapipeGraphExecutor::MediapipeGraphExecutor(

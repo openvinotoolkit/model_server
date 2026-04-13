@@ -28,14 +28,11 @@
 #pragma warning(pop)
 
 #include "../dags/pipeline.hpp"
+#include "../dags/pipeline_factory.hpp"
 #include "../dags/pipelinedefinition.hpp"
-#include "../dags/pipelinedefinitionstatus.hpp"
-#include "../dags/pipelinedefinitionunloadguard.hpp"
+#include "../servable_definition_unload_guard.hpp"
 #include "../execution_context.hpp"
 #include "../version.hpp"
-#if (MEDIAPIPE_DISABLE == 0)
-#include "../mediapipe_internal/mediapipegraphdefinition.hpp"
-#endif
 #include "../model_service.hpp"
 #include "../modelinstance.hpp"
 #include "capi_request_utils.hpp"  // TODO @atobisze must be before executor
@@ -49,8 +46,11 @@
 #include "../ovms.h"  // NOLINT
 #include "../prediction_service.hpp"
 #include "../profiler.hpp"
+#include "../dags/pipelinedefinitionstatus.hpp"
+#include "../servable_definition.hpp"
 #include "../servablemanagermodule.hpp"
 #include "../server.hpp"
+#include "../single_version_servable_definition.hpp"
 #include "../status.hpp"
 #include "../timer.hpp"
 #include "buffer.hpp"
@@ -73,7 +73,7 @@ using ovms::ModelInstanceUnloadGuard;
 using ovms::ModelManager;
 using ovms::Pipeline;
 using ovms::PipelineDefinition;
-using ovms::PipelineDefinitionUnloadGuard;
+using ovms::ServableDefinitionUnloadGuard;
 using ovms::ServableManagerModule;
 using ovms::Server;
 using ovms::Status;
@@ -120,10 +120,10 @@ static Status getPipeline(ovms::Server& server, const InferenceRequest* request,
     if (!status.ok()) {
         return status;
     }
-    return modelManager->createPipeline(pipelinePtr, request->getServableName(), request, response);
+    return modelManager->getPipelineFactory().create(pipelinePtr, request->getServableName(), request, response, *modelManager);
 }
 
-static Status getPipelineDefinition(Server& server, const std::string& servableName, PipelineDefinition** pipelineDefinition, std::unique_ptr<PipelineDefinitionUnloadGuard>& unloadGuard) {
+static Status getPipelineDefinition(Server& server, const std::string& servableName, PipelineDefinition** pipelineDefinition, std::unique_ptr<ServableDefinitionUnloadGuard>& unloadGuard) {
     ModelManager* modelManager{nullptr};
     Status status = getModelManager(server, &modelManager);
     if (!status.ok()) {
@@ -335,7 +335,7 @@ DLL_PUBLIC OVMS_Status* OVMS_ServerMetadata(OVMS_Server* server, OVMS_Metadata**
     doc->AddMember("name", PROJECT_NAME, doc->GetAllocator());
     doc->AddMember("version", PROJECT_VERSION, doc->GetAllocator());
     rapidjson::Value ovVersion;
-    ovVersion.SetString(OPENVINO_NAME, doc->GetAllocator());
+    ovVersion.SetString(ovms::getOpenVINOVersion(), doc->GetAllocator());
     doc->AddMember("ov_version", std::move(ovVersion), doc->GetAllocator());
     *metadata = reinterpret_cast<OVMS_Metadata*>(doc);
     return nullptr;
@@ -1190,21 +1190,16 @@ DLL_PUBLIC OVMS_Status* OVMS_GetServableState(OVMS_Server* serverPtr, const char
     std::shared_ptr<ovms::ModelInstance> modelInstance = modelManager->findModelInstance(servableName, servableVersion);
 
     if (modelInstance == nullptr) {
-        SPDLOG_DEBUG("Requested model: {} does not exist. Searching for pipeline with that name...", servableName);
-        PipelineDefinition* pipelineDefinition = nullptr;
-        pipelineDefinition = modelManager->getPipelineFactory().findDefinitionByName(servableName);
-        if (!pipelineDefinition) {
-#if (MEDIAPIPE_DISABLE == 0)
-            ovms::MediapipeGraphDefinition* mediapipeDefinition = modelManager->getMediapipeFactory().findDefinitionByName(servableName);
-            if (mediapipeDefinition) {
-                *state = convertToServableState(mediapipeDefinition->getStateCode());
-                return nullptr;
-            }
-#endif
+        SPDLOG_DEBUG("Requested model: {} does not exist. Searching for definition with that name...", servableName);
+        auto* definition = modelManager->findServableDefinition(servableName);
+        if (!definition) {
             return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::MODEL_NAME_MISSING));
         }
-        *state = convertToServableState(pipelineDefinition->getStateCode());
-
+        auto* singleVersionServableDefinition = dynamic_cast<ovms::SingleVersionServableDefinition*>(definition);
+        if (!singleVersionServableDefinition) {
+            return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::MODEL_NAME_MISSING));
+        }
+        *state = convertToServableState(singleVersionServableDefinition->getStatus().getStateCode());
         return nullptr;
     }
     if (!status.ok()) {
@@ -1274,7 +1269,7 @@ DLL_PUBLIC OVMS_Status* OVMS_GetServableMetadata(OVMS_Server* serverPtr, const c
     if (status == StatusCode::MODEL_NAME_MISSING) {
         SPDLOG_DEBUG("Requested model: {} does not exist. Searching for pipeline with that name...", servableName);
         PipelineDefinition* pipelineDefinition = nullptr;
-        std::unique_ptr<PipelineDefinitionUnloadGuard> unloadGuard;
+        std::unique_ptr<ServableDefinitionUnloadGuard> unloadGuard;
         status = getPipelineDefinition(server, servableName, &pipelineDefinition, unloadGuard);
         if (!status.ok() || !pipelineDefinition) {
             return reinterpret_cast<OVMS_Status*>(new Status(std::move(status)));

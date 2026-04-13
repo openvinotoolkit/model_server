@@ -75,13 +75,9 @@ FUZZER_BUILD ?= 0
 #         - uncomment source build section, comment binary section
 #         - adjust binary version path - version variable is not passed to WORKSPACE file!
 
-OV_SOURCE_BRANCH ?= 9a5c0f67aa9bfe780972eaa721ccfa082323e9a4 # master branch
-OV_TOKENIZERS_BRANCH ?= 85480f170beba3a975cf908bc688a4398424aba8 # master branch
-OV_GENAI_BRANCH ?= d93080c377f934a1b4acf371700313cd98f369b9 # master branch
-
-OV_SOURCE_ORG ?= openvinotoolkit
-OV_GENAI_ORG ?= openvinotoolkit
-OV_TOKENIZERS_ORG ?= openvinotoolkit
+# Dependency versions (git commits, orgs, package version) are centralised in versions.mk.
+# Override any variable via the environment or command-line before invoking make.
+include versions.mk
 
 TEST_LLM_PATH ?= "src/test/llm_testing"
 GPU_MODEL_PATH ?= "/tmp/face_detection_adas"
@@ -171,12 +167,12 @@ ifeq ($(findstring ubuntu,$(BASE_OS)),ubuntu)
   BASE_IMAGE_RELEASE=$(BASE_IMAGE)
   ifeq ($(BASE_OS_TAG),24.04)
         OS=ubuntu24
-	INSTALL_DRIVER_VERSION ?= "25.48.36300"
-	DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/nightly/2026.1.0.0.dev20260225/openvino_genai_ubuntu24_2026.1.0.0.dev20260225_x86_64.tar.gz
+	INSTALL_DRIVER_VERSION ?= "26.09.37435"
+	DLDT_PACKAGE_URL ?= $(DLDT_PACKAGE_URL_UBUNTU24)
   else ifeq  ($(BASE_OS_TAG),22.04)
         OS=ubuntu22
 	INSTALL_DRIVER_VERSION ?= "24.39.31294"
-	DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/nightly/2026.1.0.0.dev20260225/openvino_genai_ubuntu22_2026.1.0.0.dev20260225_x86_64.tar.gz
+	DLDT_PACKAGE_URL ?= $(DLDT_PACKAGE_URL_UBUNTU22)
   endif
 endif
 ifeq ($(BASE_OS),redhat)
@@ -185,7 +181,7 @@ ifeq ($(BASE_OS),redhat)
   BASE_IMAGE ?= registry.access.redhat.com/ubi9/ubi:$(BASE_OS_TAG_REDHAT)
   BASE_IMAGE_RELEASE=registry.access.redhat.com/ubi9/ubi-minimal:$(BASE_OS_TAG_REDHAT)
   DIST_OS=redhat
-  DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/nightly/2026.1.0.0.dev20260225/openvino_genai_rhel8_2026.1.0.0.dev20260225_x86_64.tar.gz # not used
+  DLDT_PACKAGE_URL ?= $(DLDT_PACKAGE_URL_RHEL) # not used
   INSTALL_DRIVER_VERSION ?= "24.52.32224"
 endif
 
@@ -198,7 +194,7 @@ OVMS_CPP_IMAGE_TAG ?= latest
 
 OVMS_PYTHON_IMAGE_TAG ?= py
 
-PRODUCT_VERSION ?= "2026.1.0"
+PRODUCT_VERSION ?= "2026.2.0"
 PROJECT_VER_PATCH =
 
 $(eval PROJECT_VER_PATCH:=`git rev-parse --short HEAD`)
@@ -477,7 +473,7 @@ get_coverage:
 	fi
 check_coverage:
 	@echo "Checking if coverage is above threshold..."
-	@docker run $(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG) ./check_coverage.bat | grep success
+	@bash ci/check_coverage.bat
 	
 test_checksec: venv
 	@echo "Running checksec on libovms_shared library..."

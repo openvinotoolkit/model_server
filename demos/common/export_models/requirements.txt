@@ -7,10 +7,10 @@ accelerate
 datasets
 diffusers  # for image generation
 einops
-nncf@git+https://github.com/openvinotoolkit/nncf.git
-numpy==2.2.6 # temporary change until ov tokenizers upgrade
-openvino-tokenizers==2026.1.0.0.dev20260225
-openvino==2026.1.0.dev20260225
+nncf
+numpy
+openvino-tokenizers==2026.2.0.dev20260407
+openvino==2026.2.0.dev20260407
 pillow
 sentence_transformers
 sentencepiece  # Required by: transformers`

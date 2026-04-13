@@ -18,7 +18,10 @@
 
 #include "spdlog/spdlog.h"
 
-#include "../azurefilesystem.hpp"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#include "src/filesystem/azurefilesystem.hpp"
+#pragma GCC diagnostic pop
 #include "gtest/gtest.h"
 
 using namespace ovms;
