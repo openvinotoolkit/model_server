@@ -445,10 +445,10 @@ index 58cb4b424..00ddee9f3 100644
  	git_writestream **out,
 diff --git a/src/libgit2/lfs_filter.c b/src/libgit2/lfs_filter.c
 new file mode 100644
-index 000000000..5a8c27aad
+index 000000000..61348f14d
 --- /dev/null
 +++ b/src/libgit2/lfs_filter.c
-@@ -0,0 +1,1764 @@
+@@ -0,0 +1,1813 @@
 +﻿/*
 +/ Copyright 2025 Intel Corporation
 +/
@@ -486,6 +486,13 @@ index 000000000..5a8c27aad
 +#include "regexp.h"
 +#include "time.h"
 +
++#if defined(__GNUC__) || defined(__clang__)
++/* Optional host-provided cancellation probe.
++ * If not defined by the embedding process, this stays NULL (weak symbol).
++ */
++extern int git_lfs_shutdown_requested(void) __attribute__((weak));
++#endif
++
 +#define LFS_RESUME_ATTEMPTS_DEFAULT 5
 +#define LFS_RESUME_INTERVAL_DEFAULT_SECONDS 10
 +
@@ -497,6 +504,15 @@ index 000000000..5a8c27aad
 +static char g_lfs_log_path[4096];
 +/* Track if we've truncated the log file for the current workdir */
 +static bool g_lfs_log_path_truncated = false;
++
++static int lfs_shutdown_requested(void)
++{
++#if defined(__GNUC__) || defined(__clang__)
++	if (git_lfs_shutdown_requested)
++		return git_lfs_shutdown_requested() != 0;
++#endif
++	return 0;
++}
 +
 +/*
 + * lfs_log_set_path
@@ -1474,6 +1490,9 @@ index 000000000..5a8c27aad
 +	struct progress_data *pcs = (struct progress_data *)clientp;
 +	time_t currentTime = time(NULL);
 +	bool shouldPrintDueToTime = false;
++	if (lfs_shutdown_requested())
++		return 1; /* CURLE_ABORTED_BY_CALLBACK */
++
 +	GIT_UNUSED(ulnow);
 +	GIT_UNUSED(ultotal);
 +	if (dlnow == 0) {
@@ -1757,9 +1776,13 @@ index 000000000..5a8c27aad
 +	/* Tell libcurl to resume */
 +	curl_easy_setopt(dl_curl, CURLOPT_RESUME_FROM_LARGE, offset);
 +	/* Perform the request, res gets the return code */
++	if (lfs_shutdown_requested())
++		return CURLE_ABORTED_BY_CALLBACK;
 +
 +	/* Perform the request, res gets the return code */
 +	res = curl_easy_perform(dl_curl);
++	if (res == CURLE_OK && lfs_shutdown_requested())
++		return CURLE_ABORTED_BY_CALLBACK;
 +
 +	/* Validate that server honored Range (206) when offset > 0 */
 +	if (res == CURLE_OK && offset > 0) {
@@ -1790,7 +1813,11 @@ index 000000000..5a8c27aad
 +			        dl_curl, CURLOPT_RESUME_FROM_LARGE, offset);
 +
 +			/* Retry exactly once as a full download. */
++			if (lfs_shutdown_requested())
++				return CURLE_ABORTED_BY_CALLBACK;
 +			res = curl_easy_perform(dl_curl);
++			if (res == CURLE_OK && lfs_shutdown_requested())
++				return CURLE_ABORTED_BY_CALLBACK;
 +		}
 +	}
 +
@@ -1823,6 +1850,9 @@ index 000000000..5a8c27aad
 +	CURLcode res = CURLE_OK;
 +	int attempt;
 +	for (attempt = 1; attempt <= max_retries; ++attempt) {
++		if (lfs_shutdown_requested())
++			return CURLE_ABORTED_BY_CALLBACK;
++
 +		res = curl_resume_url_execute(dl_curl, ftpfile);
 +
 +		if (res == CURLE_OK) {
@@ -1837,6 +1867,9 @@ index 000000000..5a8c27aad
 +		        attempt, max_retries, curl_easy_strerror(res));
 +
 +		if (attempt < max_retries) {
++			if (lfs_shutdown_requested())
++				return CURLE_ABORTED_BY_CALLBACK;
++
 +			printf("[INFO] Waiting %u seconds before next resume attempt...\n",
 +			       interval_seconds);
 +			fflush(stdout);
@@ -1983,7 +2016,15 @@ index 000000000..5a8c27aad
 +		goto cleanup;
 +	}
 +	/* Perform the request, res gets the return code */
++	if (lfs_shutdown_requested()) {
++		res = CURLE_ABORTED_BY_CALLBACK;
++		goto cleanup;
++	}
 +	res = curl_easy_perform(info_curl);
++	if (res == CURLE_OK && lfs_shutdown_requested()) {
++		res = CURLE_ABORTED_BY_CALLBACK;
++		goto cleanup;
++	}
 +	/* Check for errors */
 +	if (res != CURLE_OK) {
 +		print_curl_error_details(
@@ -2065,7 +2106,15 @@ index 000000000..5a8c27aad
 +	} else {
 +		print_download_info(la->full_path, lfs_expected_size);
 +		/* Perform the request, res gets the return code */
++		if (lfs_shutdown_requested()) {
++			res = CURLE_ABORTED_BY_CALLBACK;
++			goto cleanup;
++		}
 +		res = curl_easy_perform(dl_curl);
++		if (res == CURLE_OK && lfs_shutdown_requested()) {
++			res = CURLE_ABORTED_BY_CALLBACK;
++			goto cleanup;
++		}
 +		if (res == CURLE_OK)
 +			res = ftpfile_validate_final_size(&ftpfile);
 +	}

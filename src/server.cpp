@@ -65,6 +65,7 @@
 #include "profilermodule.hpp"
 #include "pull_module/hf_pull_model_module.hpp"
 #include "servablemanagermodule.hpp"
+#include "shutdown_state.hpp"
 #include "servables_config_manager_module/servablesconfigmanagermodule.hpp"
 #include "stringutils.hpp"
 #include "version.hpp"
@@ -242,8 +243,8 @@ void Server::setShutdownRequest(int i) {
         std::this_thread::sleep_for(std::chrono::milliseconds(200));
     }
     if (counter) {
-        shutdown_request = i;
-        SPDLOG_TRACE("Ovms shutdown request set to: {}", shutdown_request);
+        setShutdownRequestValue(i);
+        SPDLOG_TRACE("Ovms shutdown request set to: {}", getShutdownRequestValue());
     } else {
         SPDLOG_ERROR("Server shutdown mutex lock failed.");
     }
@@ -257,7 +258,7 @@ int Server::getShutdownStatus() {
         return 0;
     }
 
-    return shutdown_request;
+    return getShutdownRequestValue();
 }
 
 int Server::getExitStatus() {
@@ -268,7 +269,7 @@ int Server::getExitStatus() {
         return 0;
     }
 
-    return ovms_exited;
+    return getExitStatusValue();
 }
 
 void Server::setExitStatus(int i) {
@@ -279,8 +280,8 @@ void Server::setExitStatus(int i) {
         std::this_thread::sleep_for(std::chrono::milliseconds(200));
     }
     if (counter) {
-        ovms_exited = i;
-        SPDLOG_TRACE("Ovms exit status set to: {}", ovms_exited);
+        setExitStatusValue(i);
+        SPDLOG_TRACE("Ovms exit status set to: {}", getExitStatusValue());
     } else {
         SPDLOG_ERROR("Server shutdown mutex lock failed.");
     }

@@ -529,6 +529,17 @@ TEST(HfDownloaderClassTest, RepositoryStatusCheckErrors) {
         ::testing::ExitedWithCode(0), "");
 }
 
+TEST(HfDownloaderClassTest, CloneCancellationFollowsServerShutdownRequest) {
+    ovms::Server& server = ovms::Server::instance();
+    server.setShutdownRequest(0);
+    EXPECT_FALSE(ovms::libgit2::isCloneCancellationRequestedFromServer());
+
+    server.setShutdownRequest(1);
+    EXPECT_TRUE(ovms::libgit2::isCloneCancellationRequestedFromServer());
+
+    server.setShutdownRequest(0);
+}
+
 class TestOptimumDownloaderSetup : public ::testing::Test {
 public:
     ovms::HFSettingsImpl inHfSettings;
@@ -776,6 +787,22 @@ TEST_F(HfDownloaderPullHfModel, MethodsNegative) {
     EXPECT_EQ(TestHfDownloader("name/test", "../some/path", "", "", "", false).downloadModel(), ovms::StatusCode::PATH_INVALID);
     // Library not initialized
     EXPECT_EQ(TestHfDownloader("name/test", ovms::IModelDownloader::getGraphDirectory(this->directoryPath, "name2/test"), "", "", "", false).downloadModel(), ovms::StatusCode::HF_GIT_CLONE_FAILED);
+}
+
+TEST_F(HfDownloaderPullHfModel, CloneCancelledByShutdownRequest) {
+    std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
+    std::string downloadPath = ovms::FileSystem::joinPath({this->directoryPath, "repository_cancel"});
+    std::unique_ptr<TestHfDownloader> hfDownloader = std::make_unique<TestHfDownloader>(
+        modelName,
+        ovms::IModelDownloader::getGraphDirectory(downloadPath, modelName),
+        "https://huggingface.co/",
+        "",
+        "",
+        false);
+
+    server.setShutdownRequest(1);
+    EXPECT_EQ(hfDownloader->downloadModel(), ovms::StatusCode::HF_GIT_CLONE_CANCELLED);
+    server.setShutdownRequest(0);
 }
 
 class TestHfPullModelModule : public ovms::HfPullModelModule {

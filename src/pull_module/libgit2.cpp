@@ -39,6 +39,7 @@
 #include "../filesystem.hpp"
 #include "../localfilesystem.hpp"
 #include "../logging.hpp"
+#include "../shutdown_state.hpp"
 #include "../stringutils.hpp"
 #include "../status.hpp"
 
@@ -56,6 +57,42 @@ namespace fs = std::filesystem;
 
 namespace {
 std::atomic<int> g_activeLibgit2Guards{0};
+
+int cloneTransferProgressCb(const git_indexer_progress* stats, void* payload) {
+    (void)stats;
+    (void)payload;
+    return libgit2::isCloneCancellationRequestedFromServer() ? -1 : 0;
+}
+
+int cloneSidebandProgressCb(const char* str, int len, void* payload) {
+    (void)str;
+    (void)len;
+    (void)payload;
+    return libgit2::isCloneCancellationRequestedFromServer() ? -1 : 0;
+}
+
+int cloneUpdateTipsCb(const char* refname, const git_oid* a, const git_oid* b, void* payload) {
+    (void)refname;
+    (void)a;
+    (void)b;
+    (void)payload;
+    return libgit2::isCloneCancellationRequestedFromServer() ? -1 : 0;
+}
+
+int cloneCheckoutNotifyCb(git_checkout_notify_t why,
+    const char* path,
+    const git_diff_file* baseline,
+    const git_diff_file* target,
+    const git_diff_file* workdir,
+    void* payload) {
+    (void)why;
+    (void)path;
+    (void)baseline;
+    (void)target;
+    (void)workdir;
+    (void)payload;
+    return libgit2::isCloneCancellationRequestedFromServer() ? -1 : 0;
+}
 }  // namespace
 
 // Callback for clone authentication - will be used when password is not set in repo_url
@@ -346,6 +383,10 @@ Status HfDownloader::CheckRepositoryStatus(bool checkUntracked) {
     } while (0)
 
 namespace libgit2 {
+bool isCloneCancellationRequestedFromServer() {
+    return getShutdownRequestValue() != 0;
+}
+
 // Trim ASCII leading/trailing whitespace in a locale-independent way.
 // This keeps non-ASCII bytes (e.g. UTF-8 continuation bytes) untouched.
 void rtrimCrLfWhitespace(std::string& s) {
@@ -712,6 +753,13 @@ Status HfDownloader::downloadModel() {
     git_repository* cloned_repo = NULL;
     // clone_opts for progress reporting set in libgit2 lib by patch
     git_clone_options clone_opts = GIT_CLONE_OPTIONS_INIT;
+    clone_opts.fetch_opts.callbacks.transfer_progress = cloneTransferProgressCb;
+    clone_opts.fetch_opts.callbacks.sideband_progress = cloneSidebandProgressCb;
+    clone_opts.fetch_opts.callbacks.update_tips = cloneUpdateTipsCb;
+
+    clone_opts.checkout_opts.notify_flags = GIT_CHECKOUT_NOTIFY_ALL;
+    clone_opts.checkout_opts.notify_cb = cloneCheckoutNotifyCb;
+
     // Credential check function
     clone_opts.fetch_opts.callbacks.credentials = cred_acquire_cb;
     // Use proxy
@@ -732,6 +780,10 @@ Status HfDownloader::downloadModel() {
     int error = git_clone(&cloned_repo, url, path, &clone_opts);
     SPDLOG_TRACE("Ended git clone");
     if (error != 0) {
+        if (getShutdownRequestValue() != 0 || error == GIT_EUSER) {
+            SPDLOG_ERROR("Libgit2 clone cancelled due to shutdown request.");
+            return StatusCode::HF_GIT_CLONE_CANCELLED;
+        }
         const git_error* err = git_error_last();
         if (err)
             SPDLOG_ERROR("Libgit2 clone error: {} message: {}", err->klass, err->message);
@@ -768,3 +820,7 @@ Status HfDownloader::downloadModel() {
 }
 
 }  // namespace ovms
+
+extern "C" int git_lfs_shutdown_requested(void) {
+    return ovms::libgit2::isCloneCancellationRequestedFromServer() ? 1 : 0;
+}

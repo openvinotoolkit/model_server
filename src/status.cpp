@@ -347,6 +347,7 @@ const std::unordered_map<StatusCode, std::string> Status::statusMessageMap = {
     {StatusCode::HF_FAILED_TO_INIT_OPTIMUM_CLI, "Failed to run optimum-cli executable"},
     {StatusCode::HF_RUN_OPTIMUM_CLI_EXPORT_FAILED, "Failed to run optimum-cli export command"},
     {StatusCode::HF_RUN_CONVERT_TOKENIZER_EXPORT_FAILED, "Failed to run convert-tokenizer export command"},
+    {StatusCode::HF_GIT_CLONE_CANCELLED, "Libgit2 clone cancelled due to shutdown request"},
     {StatusCode::HF_GIT_CLONE_FAILED, "Failed in libgit2 execution of clone method"},
     {StatusCode::HF_GIT_STATUS_FAILED, "Failed in libgit2 execution of status method"},
     {StatusCode::HF_GIT_STATUS_FAILED_TO_RESOLVE_PATH, "Failed in libgit2 to check repository status for a given path"},

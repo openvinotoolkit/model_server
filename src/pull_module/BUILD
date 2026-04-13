@@ -45,6 +45,7 @@ ovms_cc_library(
     deps =  [
         "@libgit2_engine//:libgit2_engine",
         "@ovms//src:libovmslogging",
+        "@ovms//src:libovms_shutdown_state",
         "@ovms//src:libovmsfilesystem",
         "@ovms//src:libovmslocalfilesystem",
         "@ovms//src:libovmsstatus",
