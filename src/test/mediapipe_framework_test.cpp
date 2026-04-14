@@ -216,5 +216,5 @@ TEST(NodeInitializerRegistryTest, AllExpectedInitializersRegistered) {
     constexpr size_t expectedInitializersCount = 6;
 #endif
     EXPECT_EQ(initializers.size(), expectedInitializersCount)
-        << "Unexpected number of registered NodeInitializers after server start.";
+        << "Unexpected number of registered NodeInitializers from static registration/link-time inclusion.";
 }
