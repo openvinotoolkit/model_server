@@ -9,7 +9,7 @@ ovms_demos_vlm_npu
 ```
 
 This demo shows how to deploy Vision Language Models in the OpenVINO Model Server.
-Text generation use case is exposed via OpenAI API `chat/completions` endpoint.
+Text generation use case is exposed via OpenAI API `chat/completions` and `responses` endpoints.
 
 > **Note:** This demo was tested on 4th - 6th generation Intel® Xeon® Scalable Processors, Intel® Arc™ GPU Series and Intel® Core Ultra Series on Ubuntu24, RedHat9 and Windows11.
 
@@ -25,7 +25,7 @@ Text generation use case is exposed via OpenAI API `chat/completions` endpoint.
 ## Fast deployment with OpenVINO models pulled directly from HuggingFace Hub
 VLM models can be deployed in a single command by using pre-configured models from [OpenVINO HuggingFace organization](https://huggingface.co/OpenVINO)
 For other models go to the model preparation step and deployment for converted models.
-Here is an example of OpenVINO/InternVL2-2B-int4-ov deployment:
+Here is an example of `Qwen3-VL-8B-Instruct-int4` deployment:
 
 :::{dropdown} **Deploying with Docker**
 
@@ -36,7 +36,7 @@ Select deployment option depending on how you prepared models in the previous st
 Running this command starts the container with CPU only target device:
 ```bash
 mkdir -p models
-docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models:rw openvino/model_server:latest --rest_port 8000 --source_model OpenVINO/InternVL2-2B-int4-ov --model_repository_path /models --task text_generation --pipeline_type VLM  --allowed_media_domains raw.githubusercontent.com
+docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models:rw openvino/model_server:latest --rest_port 8000 --source_model Junrui2021/Qwen3-VL-8B-Instruct-int4 --model_repository_path /models --task text_generation --pipeline_type VLM_CB --allowed_media_domains raw.githubusercontent.com
 ```
 **GPU**
 
@@ -45,7 +45,7 @@ to `docker run` command, use the image with GPU support.
 It can be applied using the commands below:
 ```bash
 mkdir -p models
-docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -v $(pwd)/models:/models:rw openvino/model_server:latest-gpu --rest_port 8000 --source_model OpenVINO/InternVL2-2B-int4-ov --model_repository_path models --task text_generation --target_device GPU --pipeline_type VLM  --allowed_media_domains raw.githubusercontent.com
+docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -v $(pwd)/models:/models:rw openvino/model_server:latest-gpu --rest_port 8000 --source_model Junrui2021/Qwen3-VL-8B-Instruct-int4 --model_repository_path /models --task text_generation --target_device GPU --pipeline_type VLM_CB --allowed_media_domains raw.githubusercontent.com
 ```
 :::
 
@@ -55,11 +55,11 @@ If you run on GPU make sure to have appropriate drivers installed, so the device
 
 ```bat
 mkdir models
-ovms --rest_port 8000 --source_model OpenVINO/InternVL2-2B-int4-ov --model_repository_path models --task text_generation --pipeline_type VLM --target_device CPU --allowed_media_domains raw.githubusercontent.com
+ovms --rest_port 8000 --source_model Junrui2021/Qwen3-VL-8B-Instruct-int4 --model_repository_path models --task text_generation --pipeline_type VLM_CB --target_device CPU --allowed_media_domains raw.githubusercontent.com
 ```
 or
 ```bat
-ovms --rest_port 8000 --source_model OpenVINO/InternVL2-2B-int4-ov --model_repository_path models --task text_generation --pipeline_type VLM --target_device GPU --allowed_media_domains raw.githubusercontent.com
+ovms --rest_port 8000 --source_model Junrui2021/Qwen3-VL-8B-Instruct-int4 --model_repository_path models --task text_generation --pipeline_type VLM_CB --target_device GPU --allowed_media_domains raw.githubusercontent.com
 ```
 :::
 
@@ -74,7 +74,7 @@ curl http://localhost:8000/v3/models
   "object": "list",
   "data": [
     {
-      "id": "OpenVINO/InternVL2-2B-int4-ov",
+      "id": "Junrui2021/Qwen3-VL-8B-Instruct-int4",
       "object": "model",
       "created": 1772928358,
       "owned_by": "OVMS"
@@ -92,7 +92,7 @@ Let's send a request with text an image in the messages context.
 **Note**: using urls in request requires `--allowed_media_domains` parameter described [here](../../../docs/parameters.md)
 
 ```bash
-curl http://localhost:8000/v3/chat/completions  -H "Content-Type: application/json" -d "{ \"model\": \"OpenVINO/InternVL2-2B-int4-ov\", \"messages\":[{\"role\": \"user\", \"content\": [{\"type\": \"text\", \"text\": \"Describe what is one the picture.\"},{\"type\": \"image_url\", \"image_url\": {\"url\": \"http://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/demos/common/static/images/zebra.jpeg\"}}]}], \"max_completion_tokens\": 100}"
+curl http://localhost:8000/v3/chat/completions  -H "Content-Type: application/json" -d "{ \"model\": \"Junrui2021/Qwen3-VL-8B-Instruct-int4\", \"messages\":[{\"role\": \"user\", \"content\": [{\"type\": \"text\", \"text\": \"Describe what is one the picture.\"},{\"type\": \"image_url\", \"image_url\": {\"url\": \"http://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/demos/common/static/images/zebra.jpeg\"}}]}], \"max_completion_tokens\": 100}"
 ```
 ```json
 {
@@ -108,11 +108,69 @@ curl http://localhost:8000/v3/chat/completions  -H "Content-Type: application/js
     }
   ],
   "created": 1741731554,
-  "model": "OpenVINO/InternVL2-2B-int4-ov",
+  "model": "Junrui2021/Qwen3-VL-8B-Instruct-int4",
   "object": "chat.completion",
   "usage": {
     "prompt_tokens": 19,
     "completion_tokens": 83,
+    "total_tokens": 102
+  }
+}
+```
+:::
+
+:::{dropdown} **Unary call with cURL using Responses API**
+**Note**: Using urls in request requires `--allowed_media_domains` parameter described [here](../../../docs/parameters.md)
+
+```bash
+curl http://localhost:8000/v3/responses \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "Junrui2021/Qwen3-VL-8B-Instruct-int4",
+    "input": [
+      {
+        "role": "user",
+        "content": [
+          {
+            "type": "input_text",
+            "text": "Describe what is on the picture."
+          },
+          {
+            "type": "input_image",
+            "image_url": "http://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/2/demos/common/static/images/zebra.jpeg"
+          }
+        ]
+      }
+    ],
+    "max_output_tokens": 100
+  }'
+```
+```json
+{
+  "id": "resp-1741731554",
+  "object": "response",
+  "created_at": 1741731554,
+  "model": "Junrui2021/Qwen3-VL-8B-Instruct-int4",
+  "status": "completed",
+  "output": [
+    {
+      "id": "msg-0",
+      "type": "message",
+      "role": "assistant",
+      "status": "completed",
+      "content": [
+        {
+          "type": "output_text",
+          "text": "The picture features a zebra standing in a grassy plain. Zebras are known for their distinctive black and white striped patterns, which help them blend in for camouflage purposes.",
+          "annotations": []
+        }
+      ]
+    }
+  ],
+  "usage": {
+    "input_tokens": 19,
+    "input_tokens_details": { "cached_tokens": 0 },
+    "output_tokens": 83,
     "total_tokens": 102
   }
 }
@@ -129,7 +187,7 @@ curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/m
 import requests
 import base64
 base_url='http://127.0.0.1:8000/v3'
-model_name = "OpenVINO/InternVL2-2B-int4-ov"
+model_name = "Junrui2021/Qwen3-VL-8B-Instruct-int4"
 
 def convert_image(Image):
     with open(Image,'rb' ) as file:
@@ -137,7 +195,7 @@ def convert_image(Image):
     return base64_image
 
 import requests
-payload = {"model": "OpenVINO/InternVL2-2B-int4-ov",
+payload = {"model": "Junrui2021/Qwen3-VL-8B-Instruct-int4",
     "messages": [
         {
             "role": "user",
@@ -167,7 +225,7 @@ print(response.text)
     }
   ],
   "created": 1741731554,
-  "model": "OpenVINO/InternVL2-2B-int4-ov",
+  "model": "Junrui2021/Qwen3-VL-8B-Instruct-int4",
   "object": "chat.completion",
   "usage": {
     "prompt_tokens": 19,
@@ -177,9 +235,9 @@ print(response.text)
 }
 ```
 :::
-:::{dropdown} **Streaming request with OpenAI client**
+:::{dropdown} **Streaming request with OpenAI client using chat/completions**
 
-The endpoints `chat/completions` is compatible with OpenAI client so it can be easily used to generate code also in streaming mode:
+The endpoints `chat/completions` and `responses` are compatible with OpenAI client so it can be easily used to generate code also in streaming mode:
 
 Install the client library:
 ```console
@@ -189,7 +247,7 @@ pip3 install openai
 from openai import OpenAI
 import base64
 base_url='http://localhost:8080/v3'
-model_name = "OpenVINO/InternVL2-2B-int4-ov"
+model_name = "Junrui2021/Qwen3-VL-8B-Instruct-int4"
 
 client = OpenAI(api_key='unused', base_url=base_url)
 
@@ -223,6 +281,48 @@ The picture features a zebra standing in a grassy area. The zebra is characteriz
 
 :::
 
+:::{dropdown} **Streaming request with OpenAI client via Responses API**
+
+```console
+pip3 install openai
+```
+```python
+from openai import OpenAI
+import base64
+base_url='http://localhost:8080/v3'
+model_name = "Junrui2021/Qwen3-VL-8B-Instruct-int4"
+
+client = OpenAI(api_key='unused', base_url=base_url)
+
+def convert_image(Image):
+    with open(Image,'rb' ) as file:
+        base64_image = base64.b64encode(file.read()).decode("utf-8")
+    return base64_image
+
+stream = client.responses.create(
+    model=model_name,
+    input=[
+        {
+            "role": "user",
+            "content": [
+              {"type": "input_text", "text": "Describe what is on the picture."},
+              {"type": "input_image", "image_url": f"data:image/jpeg;base64,{convert_image('zebra.jpeg')}"}
+            ]
+        }
+        ],
+    stream=True,
+)
+for event in stream:
+    if event.type == "response.output_text.delta":
+        print(event.delta, end="", flush=True)
+```
+
+Output:
+```
+The picture features a zebra standing in a grassy area. The zebra is characterized by its distinctive black and white striped pattern, which covers its entire body, including its legs, neck, and head. Zebras have small, rounded ears and a long, flowing tail. The background appears to be a natural grassy habitat, typical of a savanna or plain.
+```
+
+:::
 
 ## Testing the model accuracy over serving API
 
@@ -234,8 +334,9 @@ Check [VLM usage with NPU acceleration](../../vlm_npu/README.md)
 
 
 ## References
-- [Export models to OpenVINO format](../common/export_models/README.md)
+- [Export models to OpenVINO format](../../../demos/common/export_models/README.md)
 - [Supported VLM models](https://openvinotoolkit.github.io/openvino.genai/docs/supported-models/#visual-language-models-vlms)
 - [Chat Completions API](../../../docs/model_server_rest_api_chat.md)
+- [Responses API](../../../docs/model_server_rest_api_responses.md)
 - [Writing client code](../../../docs/clients_genai.md)
 - [LLM calculator reference](../../../docs/llm/reference.md)

@@ -22,6 +22,8 @@
 
 #include "../../../logging.hpp"
 #include "../../../status.hpp"
+#include "../../apis/openai_completions.hpp"
+#include "../../apis/openai_responses.hpp"
 
 #pragma warning(push)
 #pragma warning(disable : 4005 4309 6001 6385 6386 6326 6011 4005 4456 6246)
@@ -34,7 +36,6 @@
 #include "../../../config.hpp"
 #include "../../../http_payload.hpp"
 #include "../../../mediapipe_internal/mediapipe_utils.hpp"
-#include "../../apis/openai_completions.hpp"
 #include "../../text_utils.hpp"
 #include "../../../tokenize/tokenize_parser.hpp"
 #if (PYTHON_DISABLE == 0)
@@ -53,10 +54,12 @@ absl::Status VisualLanguageModelLegacyServable::loadRequest(std::shared_ptr<GenA
     }
     if (payload.uri == "/v3/chat/completions" || payload.uri == "/v3/v1/chat/completions") {
         executionContext->endpoint = Endpoint::CHAT_COMPLETIONS;
+    } else if (payload.uri == "/v3/responses" || payload.uri == "/v3/v1/responses") {
+        executionContext->endpoint = Endpoint::RESPONSES;
     } else if (TokenizeParser::isTokenizeEndpoint(payload.uri)) {
         executionContext->endpoint = Endpoint::TOKENIZE;
     } else {
-        return absl::InvalidArgumentError("Wrong endpoint. VLM Servable allowed only on /v3/chat/completions endpoint or /v3/tokenize");
+        return absl::InvalidArgumentError("Wrong endpoint. VLM Servable allowed only on /v3/chat/completions, /v3/responses endpoint or /v3/tokenize");
     }
     executionContext->payload = payload;
     return absl::OkStatus();
@@ -78,12 +81,21 @@ absl::Status VisualLanguageModelLegacyServable::parseRequest(std::shared_ptr<Gen
     }
 
     legacyExecutionContext->baseGenerationConfig = properties->baseGenerationConfig;
-    legacyExecutionContext->apiHandler = std::make_shared<OpenAIChatCompletionsHandler>(*legacyExecutionContext->payload.parsedJson,
-        legacyExecutionContext->endpoint,
-        std::chrono::system_clock::now(),
-        getProperties()->tokenizer,
-        getProperties()->toolParserName,
-        getProperties()->reasoningParserName);
+    if (legacyExecutionContext->endpoint == Endpoint::RESPONSES) {
+        legacyExecutionContext->apiHandler = std::make_shared<OpenAIResponsesHandler>(*legacyExecutionContext->payload.parsedJson,
+            legacyExecutionContext->endpoint,
+            std::chrono::system_clock::now(),
+            getProperties()->tokenizer,
+            getProperties()->toolParserName,
+            getProperties()->reasoningParserName);
+    } else {
+        legacyExecutionContext->apiHandler = std::make_shared<OpenAIChatCompletionsHandler>(*legacyExecutionContext->payload.parsedJson,
+            legacyExecutionContext->endpoint,
+            std::chrono::system_clock::now(),
+            getProperties()->tokenizer,
+            getProperties()->toolParserName,
+            getProperties()->reasoningParserName);
+    }
     auto& config = ovms::Config::instance();
 
     auto status = executionContext->apiHandler->parseRequest(getProperties()->maxTokensLimit, getProperties()->bestOfLimit, getProperties()->maxModelLength, config.getServerSettings().allowedLocalMediaPath, config.getServerSettings().allowedMediaDomains);
@@ -196,7 +208,9 @@ absl::Status VisualLanguageModelLegacyServable::preparePartialResponse(std::shar
         executionContext->lastStreamerCallbackOutput = "";
     }
     if (generationStatus != std::future_status::ready) {  // continue
-        if (lastTextChunk.size() > 0) {
+        // For RESPONSES endpoint, always call serializeStreamingChunk so that
+        // output item initialization events are emitted even before the tokenizer produces text.
+        if (lastTextChunk.size() > 0 || executionContext->apiHandler->getEndpoint() == Endpoint::RESPONSES) {
             std::string serializedChunk = executionContext->apiHandler->serializeStreamingChunk(lastTextChunk, ov::genai::GenerationFinishReason::NONE);
             if (!serializedChunk.empty()) {
                 executionContext->response = wrapTextInServerSideEventMessage(serializedChunk);
@@ -237,7 +251,7 @@ absl::Status VisualLanguageModelLegacyServable::prepareInputs(std::shared_ptr<Ge
     if (vlmExecutionContext->apiHandler == nullptr) {
         return absl::Status(absl::StatusCode::kInvalidArgument, "API handler is not initialized");
     }
-    if (executionContext->endpoint == Endpoint::CHAT_COMPLETIONS) {
+    if (executionContext->endpoint == Endpoint::CHAT_COMPLETIONS || executionContext->endpoint == Endpoint::RESPONSES) {
         ov::genai::ChatHistory& chatHistory = vlmExecutionContext->apiHandler->getChatHistory();
 
         for (size_t i = 0; i < chatHistory.size(); i++) {
@@ -261,7 +275,7 @@ absl::Status VisualLanguageModelLegacyServable::prepareInputs(std::shared_ptr<Ge
             chatHistory[chatTurnIndex]["content"] = imageTagString + messageContent;
         }
 
-        constexpr bool add_generation_prompt = true;  // confirm it should be hardcoded
+        constexpr bool addGenerationPrompt = true;  // confirm it should be hardcoded
         auto toolsStatus = vlmExecutionContext->apiHandler->parseToolsToJsonContainer();
         if (!toolsStatus.ok()) {
             return toolsStatus.status();
@@ -272,7 +286,7 @@ absl::Status VisualLanguageModelLegacyServable::prepareInputs(std::shared_ptr<Ge
             return chatTemplateKwargsStatus.status();
         }
         const auto& chatTemplateKwargs = chatTemplateKwargsStatus.value();
-        vlmExecutionContext->inputText = properties->tokenizer.apply_chat_template(chatHistory, add_generation_prompt, {}, tools, chatTemplateKwargs);
+        vlmExecutionContext->inputText = properties->tokenizer.apply_chat_template(chatHistory, addGenerationPrompt, {}, tools, chatTemplateKwargs);
     } else {
         return absl::InvalidArgumentError("Unsupported endpoint");
     }
