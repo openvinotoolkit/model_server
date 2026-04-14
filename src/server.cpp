@@ -78,25 +78,18 @@ using grpc::ServerBuilder;
 
 namespace ovms {
 
-#if defined(__GNUC__) || defined(__clang__)
+#if defined(_WIN32)
+extern "C" volatile int git_lfs_cancel_requested;
+#elif defined(__GNUC__) || defined(__clang__)
 extern "C" volatile int git_lfs_cancel_requested __attribute__((weak));
 #endif
 
 static void setLfsCancelRequestedFromSignal(int value) {
-#if defined(__GNUC__) || defined(__clang__)
+#if defined(_WIN32)
+    git_lfs_cancel_requested = value != 0 ? 1 : 0;
+#elif defined(__GNUC__) || defined(__clang__)
     if (&git_lfs_cancel_requested)
         git_lfs_cancel_requested = value != 0 ? 1 : 0;
-#elif defined(_WIN32)
-    /* Resolve exported variable at runtime to avoid hard link dependency. */
-    using lfs_cancel_t = volatile int*;
-    HMODULE h = GetModuleHandleA("libgit2.dll");
-    if (!h)
-        h = GetModuleHandleA("git2.dll");
-    if (h) {
-        auto p = reinterpret_cast<lfs_cancel_t>(GetProcAddress(h, "git_lfs_cancel_requested"));
-        if (p)
-            *p = value != 0 ? 1 : 0;
-    }
 #endif
 }
 

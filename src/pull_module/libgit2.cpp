@@ -34,9 +34,6 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#if defined(_WIN32)
-#include <windows.h>
-#endif
 
 #include "cmd_exec.hpp"
 #include "../filesystem.hpp"
@@ -55,13 +52,11 @@
 #endif
 #endif
 
-#if !defined(_WIN32)
-/* Exported global in libgit2 shared library – set to non-zero to abort LFS
- * downloads. On Windows we resolve this symbol dynamically at runtime. */
+/* Exported global in libgit2 library – set to non-zero to abort LFS
+ * downloads. */
 extern "C" {
 extern volatile int git_lfs_cancel_requested;
 }
-#endif
 
 namespace ovms {
 namespace fs = std::filesystem;
@@ -70,20 +65,7 @@ namespace {
 std::atomic<int> g_activeLibgit2Guards{0};
 
 static void setLfsCancelRequested(int value) {
-#if defined(_WIN32)
-    using lfs_cancel_t = volatile int*;
-    HMODULE h = GetModuleHandleA("libgit2.dll");
-    if (!h)
-        h = GetModuleHandleA("git2.dll");
-
-    if (h) {
-        auto p = reinterpret_cast<lfs_cancel_t>(GetProcAddress(h, "git_lfs_cancel_requested"));
-        if (p)
-            *p = value != 0 ? 1 : 0;
-    }
-#else
     git_lfs_cancel_requested = value != 0 ? 1 : 0;
-#endif
 }
 
 int cloneTransferProgressCb(const git_indexer_progress* stats, void* payload) {
