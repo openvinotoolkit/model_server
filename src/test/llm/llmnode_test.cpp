@@ -583,6 +583,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJsonSingleStopString) {
             "model": ")" + params.modelName +
                               R"(",
             "stream": false,
+            "temperature": 0,
             "ignore_eos": false,
             "max_tokens": 1000,
             "stop": ".",
@@ -608,7 +609,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJsonSingleStopString) {
             ASSERT_FALSE(choice["logprobs"].IsObject());
         }
         ASSERT_TRUE(choice["text"].IsString());
-        auto text_size = std::string(choice["text"].GetString()).size();
+        auto text_size = std::string(choice["text"].GetString()).size();    
         ASSERT_EQ(choice["text"].GetString()[text_size - 1], '.');
     }
     ASSERT_EQ(parsedResponse["model"], params.modelName.c_str());
@@ -1654,7 +1655,12 @@ TEST_P(LLMFlowHttpTestParameterized, inferCompletionsStream) {
             "prompt": "What is OpenVINO?"
         }
     )";
-    ON_CALL(*writer, PartialReply).WillByDefault([this, &params](std::string response) {
+    int replyCounter = 0;
+    ON_CALL(*writer, PartialReply).WillByDefault([this, &params, &replyCounter](std::string response) {
+        if (replyCounter == 0 && params.checkHandshakeChunk) {
+            replyCounter++;
+            return;
+        }
         rapidjson::Document d;
         std::string dataPrefix = "data:";
         ASSERT_STREQ(response.substr(0, dataPrefix.size()).c_str(), dataPrefix.c_str());
