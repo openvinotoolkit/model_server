@@ -32,8 +32,6 @@
 
 #include <fmt/ranges.h>
 
-#include <fmt/ranges.h>
-
 #include "openai_json_response.hpp"
 
 #include "../../logging.hpp"
