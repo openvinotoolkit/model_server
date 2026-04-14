@@ -34,6 +34,9 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#if defined(_WIN32)
+#include <windows.h>
+#endif
 
 #include "cmd_exec.hpp"
 #include "../filesystem.hpp"
@@ -52,12 +55,13 @@
 #endif
 #endif
 
-/* Exported global in libgit2.so – set to non-zero to abort LFS downloads.
- * Reading/writing a symbol exported from a shared library never requires
- * -rdynamic, so this is more reliable than weak-symbol interposition. */
+#if !defined(_WIN32)
+/* Exported global in libgit2 shared library – set to non-zero to abort LFS
+ * downloads. On Windows we resolve this symbol dynamically at runtime. */
 extern "C" {
 extern volatile int git_lfs_cancel_requested;
 }
+#endif
 
 namespace ovms {
 namespace fs = std::filesystem;
@@ -65,11 +69,28 @@ namespace fs = std::filesystem;
 namespace {
 std::atomic<int> g_activeLibgit2Guards{0};
 
+static void setLfsCancelRequested(int value) {
+#if defined(_WIN32)
+    using lfs_cancel_t = volatile int*;
+    HMODULE h = GetModuleHandleA("libgit2.dll");
+    if (!h)
+        h = GetModuleHandleA("git2.dll");
+
+    if (h) {
+        auto p = reinterpret_cast<lfs_cancel_t>(GetProcAddress(h, "git_lfs_cancel_requested"));
+        if (p)
+            *p = value != 0 ? 1 : 0;
+    }
+#else
+    git_lfs_cancel_requested = value != 0 ? 1 : 0;
+#endif
+}
+
 int cloneTransferProgressCb(const git_indexer_progress* stats, void* payload) {
     (void)stats;
     (void)payload;
     if (libgit2::isCloneCancellationRequestedFromServer()) {
-        git_lfs_cancel_requested = 1;
+        setLfsCancelRequested(1);
         return -1;
     }
     return 0;
@@ -80,7 +101,7 @@ int cloneSidebandProgressCb(const char* str, int len, void* payload) {
     (void)len;
     (void)payload;
     if (libgit2::isCloneCancellationRequestedFromServer()) {
-        git_lfs_cancel_requested = 1;
+        setLfsCancelRequested(1);
         return -1;
     }
     return 0;
@@ -92,7 +113,7 @@ int cloneUpdateTipsCb(const char* refname, const git_oid* a, const git_oid* b, v
     (void)b;
     (void)payload;
     if (libgit2::isCloneCancellationRequestedFromServer()) {
-        git_lfs_cancel_requested = 1;
+        setLfsCancelRequested(1);
         return -1;
     }
     return 0;
@@ -111,7 +132,7 @@ int cloneCheckoutNotifyCb(git_checkout_notify_t why,
     (void)workdir;
     (void)payload;
     if (libgit2::isCloneCancellationRequestedFromServer()) {
-        git_lfs_cancel_requested = 1;
+        setLfsCancelRequested(1);
         return -1;
     }
     return 0;
@@ -651,9 +672,9 @@ private:
 };
 
 Status resumeLfsDownloadForFile(git_repository* repo, const char* filePathInRepo) {
-    git_lfs_cancel_requested = 0;
+    setLfsCancelRequested(0);
     if (getShutdownRequestValue() != 0) {
-        git_lfs_cancel_requested = 1;
+        setLfsCancelRequested(1);
         return StatusCode::HF_GIT_CLONE_CANCELLED;
     }
 
@@ -662,7 +683,7 @@ Status resumeLfsDownloadForFile(git_repository* repo, const char* filePathInRepo
             return StatusCode::OK;
         }
         if (getShutdownRequestValue() != 0 || rc == GIT_EUSER) {
-            git_lfs_cancel_requested = 1;
+            setLfsCancelRequested(1);
             SPDLOG_ERROR("LFS resume cancelled in {} for path: {}", callName, filePathInRepo);
             return StatusCode::HF_GIT_CLONE_CANCELLED;
         }
@@ -762,7 +783,7 @@ Status HfDownloader::downloadModel() {
 
         for (const auto& p : matches) {
             if (getShutdownRequestValue() != 0) {
-                git_lfs_cancel_requested = 1;
+                setLfsCancelRequested(1);
                 return StatusCode::HF_GIT_CLONE_CANCELLED;
             }
             std::cout << " Resuming " << p.string() << "...\n";
@@ -826,7 +847,7 @@ Status HfDownloader::downloadModel() {
     const char* url = passRepoUrl.c_str();
     const char* path = this->downloadPath.c_str();
     SPDLOG_TRACE("Starting git clone to: {}", path);
-    git_lfs_cancel_requested = 0; /* reset for this operation */
+    setLfsCancelRequested(0); /* reset for this operation */
     int error = git_clone(&cloned_repo, url, path, &clone_opts);
     SPDLOG_TRACE("Ended git clone");
     if (error != 0) {
