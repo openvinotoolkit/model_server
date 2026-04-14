@@ -609,7 +609,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJsonSingleStopString) {
             ASSERT_FALSE(choice["logprobs"].IsObject());
         }
         ASSERT_TRUE(choice["text"].IsString());
-        auto text_size = std::string(choice["text"].GetString()).size();    
+        auto text_size = std::string(choice["text"].GetString()).size();
         ASSERT_EQ(choice["text"].GetString()[text_size - 1], '.');
     }
     ASSERT_EQ(parsedResponse["model"], params.modelName.c_str());
