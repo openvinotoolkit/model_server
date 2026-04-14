@@ -144,6 +144,8 @@ cc_library(
     linkopts = select({{
         "@platforms//os:windows": [
             "winhttp.lib",
+            "ole32.lib",
+            "crypt32.lib",
         ],
         "//conditions:default": [],
     }}),
