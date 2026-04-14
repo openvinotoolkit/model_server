@@ -141,6 +141,12 @@ cc_library(
     deps = [
         ":libgit2_cmake",
     ],
+    linkopts = select({
+        "@platforms//os:windows": [
+            "winhttp.lib",
+        ],
+        "//conditions:default": [],
+    }),
     visibility = ["//visibility:public"],
 )
 """
