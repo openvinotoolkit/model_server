@@ -14,6 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 #include <array>
+#include <chrono>
 #include <iomanip>
 #include <memory>
 #include <openssl/sha.h>
@@ -331,6 +332,77 @@ TEST_F(HfDownloaderPullHfModel, Resume) {
     graphContents = GetFileContents(graphPath);
 
     ASSERT_EQ(expectedGraphContents, removeVersionString(graphContents)) << graphContents;
+
+    std::string resumedDigest = sha256File(modelPath, ec);
+    ASSERT_EQ(ec, std::errc());
+    ASSERT_EQ(expectedDigest, resumedDigest);
+}
+
+TEST_F(HfDownloaderPullHfModel, ResumeAfterShutdownRequestAndRerun) {
+    SKIP_AND_EXIT_IF_NOT_RUNNING_UNSTABLE();  // SSL proxy blocked workaround
+    std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
+    std::string downloadPath = ovms::FileSystem::joinPath({this->directoryPath, "repository"});
+    std::string task = "text_generation";
+    this->ServerPullHfModel(modelName, downloadPath, task);
+    server.setShutdownRequest(1);
+    if (t)
+        t->join();
+    server.setShutdownRequest(0);
+
+    std::string basePath = ovms::FileSystem::joinPath({this->directoryPath, "repository", "OpenVINO", "Phi-3-mini-FastDraft-50M-int8-ov"});
+    std::string modelPath = ovms::FileSystem::appendSlash(basePath) + "openvino_model.bin";
+    std::string graphPath = ovms::FileSystem::appendSlash(basePath) + "graph.pbtxt";
+
+    ASSERT_EQ(std::filesystem::exists(modelPath), true) << modelPath;
+    ASSERT_EQ(std::filesystem::exists(graphPath), true) << graphPath;
+    ASSERT_EQ(std::filesystem::file_size(modelPath), 52417240);
+
+    std::error_code ec;
+    ec.clear();
+    std::string expectedDigest = sha256File(modelPath, ec);
+    ASSERT_EQ(ec, std::errc());
+
+    ASSERT_EQ(removeSecondHalf(modelPath), true);
+    ASSERT_EQ(std::filesystem::file_size(modelPath), 26208620);
+
+    std::string ovModelPartLfsPath = ovms::FileSystem::appendSlash(basePath) + "openvino_model.binlfs_part";
+    std::filesystem::rename(modelPath, ovModelPartLfsPath, ec);
+    ASSERT_EQ(ec, std::errc());
+    ASSERT_EQ(std::filesystem::file_size(ovModelPartLfsPath), 26208620);
+    ASSERT_EQ(createGitLfsPointerFile(modelPath), true);
+
+    server.setShutdownRequest(0);
+    int firstRunCode = EXIT_SUCCESS;
+    char* argv[] = {(char*)"ovms",
+        (char*)"--pull",
+        (char*)"--source_model",
+        (char*)modelName.c_str(),
+        (char*)"--model_repository_path",
+        (char*)downloadPath.c_str(),
+        (char*)"--task",
+        (char*)task.c_str()};
+    int argc = 8;
+    t.reset(new std::thread([&argc, &argv, &firstRunCode, this]() {
+        firstRunCode = this->server.start(argc, argv);
+    }));
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    server.setShutdownRequest(1);
+    EnsureServerModelDownloadFinishedWithTimeout(server, 120);
+    if (t)
+        t->join();
+    server.setShutdownRequest(0);
+
+    EXPECT_NE(firstRunCode, EXIT_SUCCESS);
+    auto remainingPointers = ovms::libgit2::findLfsLikeFiles(downloadPath, true);
+    EXPECT_FALSE(remainingPointers.empty());
+
+    this->ServerPullHfModel(modelName, downloadPath, task);
+
+    ASSERT_EQ(std::filesystem::exists(ovModelPartLfsPath), false) << ovModelPartLfsPath;
+    ASSERT_EQ(std::filesystem::exists(modelPath), true) << modelPath;
+    ASSERT_EQ(std::filesystem::exists(graphPath), true) << graphPath;
+    ASSERT_EQ(std::filesystem::file_size(modelPath), 52417240);
 
     std::string resumedDigest = sha256File(modelPath, ec);
     ASSERT_EQ(ec, std::errc());

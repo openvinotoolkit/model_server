@@ -16,6 +16,7 @@
 #include "libgit2.hpp"
 
 #include <algorithm>
+#include <array>
 #include <atomic>
 #include <cctype>
 #include <fstream>
@@ -587,72 +588,6 @@ bool hasLfsErrorFileAndLogContent(const std::string& repositoryRootPath) {
 }
 }  // namespace libgit2
 
-// pick the right entry pointer type for your libgit2
-#if defined(GIT_LIBGIT2_VER_MAJOR)
-// libgit2 ≥ 1.0 generally has const-correct free() (accepts const*)
-using git_tree_entry_ptr = const git_tree_entry*;
-#else
-using git_tree_entry_ptr = git_tree_entry*;
-#endif
-
-// Single guard that owns all temporaries used in resumeLfsDownloadForFile
-struct GitScope {
-    git_object* tree_obj = nullptr;      // owns the tree as a generic git_object
-    git_tree_entry_ptr entry = nullptr;  // owns the entry
-    git_blob* blob = nullptr;            // owns the blob
-    git_buf out = GIT_BUF_INIT;          // owns the buffer
-
-    GitScope() = default;
-    ~GitScope() { cleanup(); }
-
-    GitScope(const GitScope&) = delete;
-    GitScope& operator=(const GitScope&) = delete;
-
-    GitScope(GitScope&& other) noexcept :
-        tree_obj(other.tree_obj),
-        entry(other.entry),
-        blob(other.blob),
-        out(other.out) {
-        other.tree_obj = nullptr;
-        other.entry = nullptr;
-        other.blob = nullptr;
-        other.out = GIT_BUF_INIT;
-    }
-    GitScope& operator=(GitScope&& other) noexcept {
-        if (this != &other) {
-            cleanup();
-            tree_obj = other.tree_obj;
-            entry = other.entry;
-            blob = other.blob;
-            out = other.out;
-            other.tree_obj = nullptr;
-            other.entry = nullptr;
-            other.blob = nullptr;
-            other.out = GIT_BUF_INIT;
-        }
-        return *this;
-    }
-
-    git_tree* tree() const { return reinterpret_cast<git_tree*>(tree_obj); }
-
-private:
-    void cleanup() noexcept {
-        git_buf_dispose(&out);
-        if (blob) {
-            git_blob_free(blob);
-            blob = nullptr;
-        }
-        if (entry) {
-            git_tree_entry_free(entry);
-            entry = nullptr;
-        }
-        if (tree_obj) {
-            git_object_free(tree_obj);
-            tree_obj = nullptr;
-        }
-    }
-};
-
 Status resumeLfsDownloadForFile(git_repository* repo, const char* filePathInRepo) {
     setLfsCancelRequested(0);
     if (getShutdownRequestValue() != 0) {
@@ -674,43 +609,68 @@ Status resumeLfsDownloadForFile(git_repository* repo, const char* filePathInRepo
         return StatusCode::HF_GIT_LIBGIT2_LFS_DOWNLOAD_FAILED;
     };
 
-    GitScope g;
+    // Repair the index entry for this path.
+    // After a Ctrl+C mid-clone the index can be partially written and the
+    // entry for the aborted file may be missing entirely.
+    // git_checkout_head silently skips any path that has no index entry, so
+    // the LFS smudge filter is never reached.
+    // We re-add the correct entry (pointer blob SHA from the HEAD tree) so
+    // that the subsequent git_checkout_head always finds it and triggers the
+    // LFS download.
+    {
+        git_object* headObj = nullptr;
+        if (auto s = runGitCall(git_revparse_single(&headObj, repo, "HEAD^{tree}"), "git_revparse_single"); !s.ok())
+            return s;
+        auto headGuard = std::unique_ptr<git_object, decltype(&git_object_free)>{headObj, git_object_free};
+        git_tree* headTree = reinterpret_cast<git_tree*>(headObj);
 
-    // Resolve HEAD tree (HEAD^{tree})
-    auto status = runGitCall(git_revparse_single(&g.tree_obj, repo, "HEAD^{tree}"), "git_revparse_single");
-    if (!status.ok())
-        return status;
+        git_tree_entry* treeEntry = nullptr;
+        if (auto s = runGitCall(git_tree_entry_bypath(&treeEntry, headTree, filePathInRepo), "git_tree_entry_bypath"); !s.ok())
+            return s;
+        auto treeEntryGuard = std::unique_ptr<git_tree_entry, decltype(&git_tree_entry_free)>{treeEntry, git_tree_entry_free};
 
-    // Find the tree entry by path
-    status = runGitCall(git_tree_entry_bypath(&g.entry, g.tree(), filePathInRepo), "git_tree_entry_bypath");
-    if (!status.ok())
-        return status;
+        git_index* index = nullptr;
+        if (auto s = runGitCall(git_repository_index(&index, repo), "git_repository_index"); !s.ok())
+            return s;
+        auto indexGuard = std::unique_ptr<git_index, decltype(&git_index_free)>{index, git_index_free};
 
-    // Ensure it's a blob
-    if (git_tree_entry_type(g.entry) != GIT_OBJECT_BLOB) {
-        fprintf(stderr, "[ERROR] Path is not a blob: %s\n", filePathInRepo);
-        return StatusCode::HF_GIT_LIBGIT2_LFS_DOWNLOAD_FAILED;
+        git_index_entry idxEntry = {};
+        idxEntry.id = *git_tree_entry_id(treeEntry);
+        idxEntry.mode = git_tree_entry_filemode_raw(treeEntry);
+        idxEntry.path = filePathInRepo;
+        if (auto s = runGitCall(git_index_add(index, &idxEntry), "git_index_add"); !s.ok())
+            return s;
+        if (auto s = runGitCall(git_index_write(index), "git_index_write"); !s.ok())
+            return s;
     }
 
-    // Lookup the blob
-    status = runGitCall(git_blob_lookup(&g.blob, repo, git_tree_entry_id(g.entry)), "git_blob_lookup");
+    // Remove the worktree file before calling git_checkout_head.
+    // After an aborted clone the worktree contains the LFS pointer text and
+    // the index blob is also that pointer text, so git_checkout_head sees
+    // worktree == ODB blob and skips the entry entirely (no smudge filter
+    // is invoked).  Deleting the file first forces libgit2 to recreate it
+    // through the normal checkout/smudge pipeline, which triggers the LFS
+    // filter and downloads the actual binary.
+    const char* workdir = git_repository_workdir(repo);
+    if (workdir) {
+        std::error_code ec;
+        fs::remove(fs::path(workdir) / filePathInRepo, ec);
+        // Deliberately ignore the error: if the file is already absent the
+        // checkout will still recreate it via GIT_CHECKOUT_RECREATE_MISSING.
+    }
+
+    std::array<char*, 1> checkoutPaths = {const_cast<char*>(filePathInRepo)};
+    git_strarray pathspec = {checkoutPaths.data(), checkoutPaths.size()};
+    git_checkout_options checkoutOptions = GIT_CHECKOUT_OPTIONS_INIT;
+    checkoutOptions.checkout_strategy = GIT_CHECKOUT_FORCE | GIT_CHECKOUT_RECREATE_MISSING;
+    checkoutOptions.notify_flags = GIT_CHECKOUT_NOTIFY_ALL;
+    checkoutOptions.notify_cb = cloneCheckoutNotifyCb;
+    checkoutOptions.paths = pathspec;
+
+    auto status = runGitCall(git_checkout_head(repo, &checkoutOptions), "git_checkout_head");
     if (!status.ok())
         return status;
 
-    // Configure filter behavior
-    git_blob_filter_options opts = GIT_BLOB_FILTER_OPTIONS_INIT;
-    // Choose direction:
-    //   GIT_FILTER_TO_WORKTREE : apply smudge (as if writing to working tree)
-    //   GIT_FILTER_TO_ODB      : apply clean  (as if writing to ODB)
-    opts.flags |= GIT_FILTER_TO_WORKTREE;
-
-    // Apply filters based on .gitattributes for this path (triggers LFS smudge/clean)
-    status = runGitCall(git_blob_filter(&g.out, g.blob, filePathInRepo, &opts), "git_blob_filter");
-    if (!status.ok())
-        return status;
-
-    // We don't need the buffer contents; the filter side-effects are enough.
-    // All resources (out, blob, entry, tree_obj) will be freed automatically here.
     return StatusCode::OK;
 }
 
