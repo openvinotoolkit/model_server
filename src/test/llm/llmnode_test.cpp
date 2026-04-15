@@ -4531,9 +4531,6 @@ TEST_F(IsolatedServableTests, PromtSizeBetweenDefaultAndNonDefaultMaxPromptLenNP
     ASSERT_EQ(status, absl::OkStatus());
 }
 
-
-
-
 // TODO: Add missing tests for reading max prompt len property from configuration
 
 class LLMStartWithTaskParameter : public ::testing::Test {
