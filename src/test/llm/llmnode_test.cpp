@@ -4531,4 +4531,50 @@ TEST_F(IsolatedServableTests, PromtSizeBetweenDefaultAndNonDefaultMaxPromptLenNP
     ASSERT_EQ(status, absl::OkStatus());
 }
 
+
+
+
 // TODO: Add missing tests for reading max prompt len property from configuration
+
+class LLMStartWithTaskParameter : public ::testing::Test {
+protected:
+    static std::unique_ptr<std::thread> t;
+    std::string modelDir = getGenericFullPathForSrcTest("/ovms/src/test/llm_testing/HuggingFaceTB/SmolLM2-360M-Instruct");
+    std::string graphPath = modelDir + "/graph.pbtxt";
+    std::string graphPathRenamed = modelDir + "/graph.pbtxt.bak";
+
+    void SetUp() override {
+        // Rename graph.pbtxt so it's not used from file
+        if (std::filesystem::exists(graphPath)) {
+            std::filesystem::rename(graphPath, graphPathRenamed);
+        }
+        // Set model directory to readonly to ensure no file writes happen
+        SetReadonlyFileAttributeFromDir(modelDir);
+    }
+    void TearDown() override {
+        ovms::Server& server = ovms::Server::instance();
+        server.setShutdownRequest(1);
+        if (t && t->joinable())
+            t->join();
+        server.setShutdownRequest(0);
+        // Restore write permissions and rename graph.pbtxt back
+        RemoveReadonlyFileAttributeFromDir(modelDir);
+        if (std::filesystem::exists(graphPathRenamed)) {
+            std::filesystem::rename(graphPathRenamed, graphPath);
+        }
+    }
+};
+
+std::unique_ptr<std::thread> LLMStartWithTaskParameter::t = nullptr;
+
+TEST_F(LLMStartWithTaskParameter, StartWithModelPathAndTaskWithoutGraphFile) {
+    std::string port = "9173";
+    ovms::Server& server = ovms::Server::instance();
+    ::SetUpServer(t, server, port,
+        "/ovms/src/test/llm_testing/HuggingFaceTB/SmolLM2-360M-Instruct",
+        "SmolLM2",
+        60,
+        "text_generation");
+    ASSERT_EQ(server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME), ovms::ModuleState::INITIALIZED);
+    ASSERT_FALSE(std::filesystem::exists(graphPath)) << "graph.pbtxt should not be created when using --task with --model_path";
+}
