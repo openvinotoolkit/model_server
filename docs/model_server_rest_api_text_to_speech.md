@@ -33,7 +33,7 @@ curl http://localhost:8000/v3/audio/speech \
 |-----|----------|----------|---------|-----|
 | model | ✅ | ✅ | string (required) | Name of the model to use. Name assigned to a MediaPipe graph configured to schedule generation using desired embedding model. **Note**: This can also be omitted to fall back to URI based routing. Read more on routing topic **TODO** |
 | input | ✅ | ✅ | string (required) | The text to generate audio for. |
-| voice | ❌ | ✅ | string (required) | The voice to use when generating the audio. |
+| voice | ❌ | ✅ | string | The voice to use when generating the audio. If not provided, model default voice will be used. |
 | instructions | ❌ | ✅ | string | Control the voice of your generated audio with additional instructions. |
 | response_format | ❌ | ✅ | string | The format to audio in. |
 | speed | ❌ | ✅ | number | The speed of the generated audio. |
