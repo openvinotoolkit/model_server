@@ -1722,6 +1722,36 @@ const std::vector<std::string> ModelManager::getNamesOfAvailableModels() const {
     return names;
 }
 
+bool ModelManager::allServablesLoaded() const {
+    {
+        std::shared_lock lock(modelsMtx);
+        for (const auto& [name, model] : models) {
+            auto instance = model->getDefaultModelInstance();
+            if (!instance || instance->getStatus().getState() != ModelVersionState::AVAILABLE) {
+                SPDLOG_DEBUG("Model {} is not available yet", name);
+                return false;
+            }
+        }
+    }
+    for (const auto& name : pipelineFactory->getPipelinesNames()) {
+        auto* definition = pipelineFactory->findDefinitionByName(name);
+        if (!definition || !definition->getStatus().isAvailable()) {
+            SPDLOG_DEBUG("Pipeline {} is not available yet", name);
+            return false;
+        }
+    }
+#if (MEDIAPIPE_DISABLE == 0)
+    for (const auto& name : mediapipeFactory->getMediapipePipelinesNames()) {
+        auto* definition = mediapipeFactory->findDefinitionByName(name);
+        if (!definition || !definition->getStatus().isAvailable()) {
+            SPDLOG_DEBUG("Mediapipe graph {} is not available yet", name);
+            return false;
+        }
+    }
+#endif
+    return true;
+}
+
 Status ModelManager::createPipeline(std::unique_ptr<MediapipeGraphExecutor>& graph,
     const std::string& name) {
 #if (MEDIAPIPE_DISABLE == 0)

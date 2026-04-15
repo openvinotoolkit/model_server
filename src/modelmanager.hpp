@@ -322,6 +322,8 @@ public:
 
     const std::vector<std::string> getNamesOfAvailableModels() const;
 
+    bool allServablesLoaded() const;
+
     /**
      * @brief Starts monitoring cleanup as new thread
      */

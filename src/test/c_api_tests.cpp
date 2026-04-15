@@ -1401,6 +1401,7 @@ public:
         MockModelManager() {
             ov::Core ieCore;
             CAPIState::modelInstance = std::make_shared<MockModelInstanceChangingStates>(servableName, 1, ieCore);
+            CAPIState::modelInstance->setState(ovms::ModelVersionState::AVAILABLE);
             std::shared_ptr<MockModel> model = std::make_shared<MockModel>(servableName, modelInstance);
             models[servableName] = model;
         }
