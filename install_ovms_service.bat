@@ -112,10 +112,10 @@ set "OVMS_PERSIST_PS_PART= $newPath=($parts -join ';');"
 set "OVMS_PERSIST_PS=%OVMS_PERSIST_PS%%OVMS_PERSIST_PS_PART%"
 set "OVMS_PERSIST_PS_PART= [Environment]::SetEnvironmentVariable('Path',$newPath,'User')"
 set "OVMS_PERSIST_PS=%OVMS_PERSIST_PS%%OVMS_PERSIST_PS_PART%"
-powershell -NoProfile -ExecutionPolicy Bypass -Command "%OVMS_PERSIST_PS%"
+powershell -NoProfile -Command "%OVMS_PERSIST_PS%"
 if errorlevel 1 (
     echo [ERROR] Failed to persist user environment variables
-    exit /b %errorlevel%
+    exit /b
 )
 
 ::::::::::::::::::::::: Update current cmd.exe session
