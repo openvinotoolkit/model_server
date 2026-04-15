@@ -1680,7 +1680,7 @@ TEST_P(LLMFlowHttpTestParameterized, inferCompletionsStream) {
                 ASSERT_FALSE(choice["logprobs"].IsObject());
             }
             if (firstChunk && params.checkHandshakeChunk) {
-                 ASSERT_TRUE(choice["text"].IsNull() || choice["text"].IsString());
+                ASSERT_TRUE(choice["text"].IsNull() || choice["text"].IsString());
             } else {
                 ASSERT_TRUE(choice["text"].IsString());
             }
