@@ -30,7 +30,6 @@
 
 #include <openvino/openvino.hpp>
 
-#include "logging.hpp"
 #include "model_metric_reporter.hpp"
 #include "modelchangesubscription.hpp"
 #include "modelconfig.hpp"

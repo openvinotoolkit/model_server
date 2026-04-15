@@ -75,13 +75,9 @@ FUZZER_BUILD ?= 0
 #         - uncomment source build section, comment binary section
 #         - adjust binary version path - version variable is not passed to WORKSPACE file!
 
-OV_SOURCE_BRANCH ?= 2027bca79802f99e7dbdbb7e376509b5bce24b19 # master branch
-OV_TOKENIZERS_BRANCH ?= 84773ba7869b8d6102996eecdfdff3b9e241d080 # master branch
-OV_GENAI_BRANCH ?= 61eba59ded9def1ee529d40acdeeaa9bad3331ad # master branch
-
-OV_SOURCE_ORG ?= openvinotoolkit
-OV_GENAI_ORG ?= openvinotoolkit
-OV_TOKENIZERS_ORG ?= openvinotoolkit
+# Dependency versions (git commits, orgs, package version) are centralised in versions.mk.
+# Override any variable via the environment or command-line before invoking make.
+include versions.mk
 
 TEST_LLM_PATH ?= "src/test/llm_testing"
 GPU_MODEL_PATH ?= "/tmp/face_detection_adas"
@@ -172,11 +168,11 @@ ifeq ($(findstring ubuntu,$(BASE_OS)),ubuntu)
   ifeq ($(BASE_OS_TAG),24.04)
         OS=ubuntu24
 	INSTALL_DRIVER_VERSION ?= "26.09.37435"
-	DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/nightly/2026.2.0.0.dev20260331/openvino_genai_ubuntu24_2026.2.0.0.dev20260331_x86_64.tar.gz
+	DLDT_PACKAGE_URL ?= $(DLDT_PACKAGE_URL_UBUNTU24)
   else ifeq  ($(BASE_OS_TAG),22.04)
         OS=ubuntu22
 	INSTALL_DRIVER_VERSION ?= "24.39.31294"
-	DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/nightly/2026.2.0.0.dev20260331/openvino_genai_ubuntu22_2026.2.0.0.dev20260331_x86_64.tar.gz
+	DLDT_PACKAGE_URL ?= $(DLDT_PACKAGE_URL_UBUNTU22)
   endif
 endif
 ifeq ($(BASE_OS),redhat)
@@ -185,7 +181,7 @@ ifeq ($(BASE_OS),redhat)
   BASE_IMAGE ?= registry.access.redhat.com/ubi9/ubi:$(BASE_OS_TAG_REDHAT)
   BASE_IMAGE_RELEASE=registry.access.redhat.com/ubi9/ubi-minimal:$(BASE_OS_TAG_REDHAT)
   DIST_OS=redhat
-  DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/nightly/2026.2.0.0.dev20260331/openvino_genai_rhel8_2026.2.0.0.dev20260331_x86_64.tar.gz # not used
+  DLDT_PACKAGE_URL ?= $(DLDT_PACKAGE_URL_RHEL) # not used
   INSTALL_DRIVER_VERSION ?= "24.52.32224"
 endif
 

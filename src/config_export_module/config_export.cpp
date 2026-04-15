@@ -24,8 +24,8 @@
 #pragma warning(pop)
 
 #include "../capi_frontend/server_settings.hpp"
-#include "src/filesystem.hpp"
-#include "src/localfilesystem.hpp"
+#include "src/filesystem/filesystem.hpp"
+#include "src/filesystem/localfilesystem.hpp"
 #include "src/logging.hpp"
 #include "src/schema.hpp"
 #include "src/status.hpp"

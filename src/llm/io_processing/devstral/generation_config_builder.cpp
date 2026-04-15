@@ -23,7 +23,7 @@
 
 namespace ovms {
 
-void DevstralGenerationConfigBuilder::parseConfigFromRequest(const OpenAIChatCompletionsRequest& request) {
+void DevstralGenerationConfigBuilder::parseConfigFromRequest(const OpenAIRequest& request) {
     // Call the base class method to fill in common configuration
     BaseGenerationConfigBuilder::parseConfigFromRequest(request);
 

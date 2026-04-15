@@ -25,8 +25,8 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "../filesystem.hpp"
-#include "../localfilesystem.hpp"
+#include "src/filesystem/filesystem.hpp"
+#include "src/filesystem/localfilesystem.hpp"
 
 using namespace testing;
 using ::testing::UnorderedElementsAre;

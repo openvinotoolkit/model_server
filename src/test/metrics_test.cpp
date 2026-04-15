@@ -22,9 +22,9 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "../metric.hpp"
-#include "../metric_family.hpp"
-#include "../metric_registry.hpp"
+#include "src/metrics/metric.hpp"
+#include "src/metrics/metric_family.hpp"
+#include "src/metrics/metric_registry.hpp"
 
 using namespace ovms;
 
