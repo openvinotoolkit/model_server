@@ -1393,6 +1393,7 @@ public:
         MockModel(const std::string& name, std::shared_ptr<ModelInstance> instance) :
             Model(name, false /*stateful*/, nullptr) {
             modelVersions.insert({instance->getVersion(), instance});
+            defaultVersion = instance->getVersion();
         }
     };
     class MockModelManager : public ModelManager {

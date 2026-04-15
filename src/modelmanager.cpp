@@ -1726,8 +1726,14 @@ bool ModelManager::allServablesLoaded() const {
     {
         std::shared_lock lock(modelsMtx);
         for (const auto& [name, model] : models) {
-            auto instance = model->getDefaultModelInstance();
-            if (!instance || instance->getStatus().getState() != ModelVersionState::AVAILABLE) {
+            bool anyVersionAvailable = false;
+            for (const auto& [version, instance] : model->getModelVersions()) {
+                if (instance && instance->getStatus().getState() == ModelVersionState::AVAILABLE) {
+                    anyVersionAvailable = true;
+                    break;
+                }
+            }
+            if (!anyVersionAvailable) {
                 SPDLOG_DEBUG("Model {} is not available yet", name);
                 return false;
             }
