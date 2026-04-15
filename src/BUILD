@@ -2751,6 +2751,7 @@ cc_library(
         ":test_test_with_temp_dir",
         "//src/graph_export:graph_export",
         "//src:libovms_server_settings",
+        "//src:libovms_systeminfo",
         "@com_google_googletest//:gtest",
     ],
     local_defines = COMMON_LOCAL_DEFINES,

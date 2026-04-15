@@ -25,6 +25,7 @@ ovms_cc_library(
         "//third_party:openvino",
         "@mediapipe//mediapipe/framework:calculator_framework",
         "@com_github_tencent_rapidjson//:rapidjson",
+        "//src/mediapipe_internal:graph_side_packets",
         "//src/kfserving_api:kfserving_api_cpp",
         "//src:libovmsprofiler",
         ":genai_servables",

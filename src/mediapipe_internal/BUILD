@@ -31,6 +31,47 @@ ovms_cc_library(
 )
 
 ovms_cc_library(
+    name = "graph_side_packets",
+    hdrs = [
+        "graph_side_packets.hpp",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
+    name = "graphqueue",
+    hdrs = [
+        "graphqueue.hpp",
+        "graph_executor_constants.hpp",
+        "outputstreamobserver.hpp",
+    ],
+    srcs = [
+        "graphqueue.cpp",
+    ],
+    deps = select({
+            "//:not_disable_python": [
+                "//src/python:libovmspythonmodule",
+            ],
+            "//:disable_python": []
+        }) + [
+        ":graph_side_packets",
+        ":mediapipe_utils",
+        "//src:libovms_queue",
+        "//src:libovmslogging",
+        "//src:libovms_execution_context",
+        "//src:libovmstimer",
+        "//src/metrics:libovmsmetrics",
+        "//src:model_metric_reporter",
+        "//src:libovmsprofiler",
+        "//src/llm:genai_servables",
+        "//third_party:openvino",
+        "@mediapipe//mediapipe/framework:calculator_graph",
+    ],
+    visibility = ["//visibility:public"],
+    additional_copts = COPTS_PYTHON + COPTS_MEDIAPIPE,
+)
+
+ovms_cc_library(
     name = "mediapipe_utils",
     hdrs = [
         "mediapipe_utils.hpp",
@@ -65,6 +106,7 @@ ovms_cc_library(
             ],
             "//:disable_python": []
         }) + [
+        ":graphqueue",
         ":node_initializer",
         ":mediapipe_utils",
         "//src/dags:pipelinedefinitionstatus",
