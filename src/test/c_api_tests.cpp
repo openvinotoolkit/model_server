@@ -36,7 +36,7 @@
 #include "../capi_frontend/capi_dag_utils.hpp"
 #include "../capi_frontend/servablemetadata.hpp"
 #include "../dags/pipelinedefinitionstatus.hpp"
-#include "../metric_module.hpp"
+#include "src/metrics/metric_module.hpp"
 #include "../ovms.h"
 #include "../servablemanagermodule.hpp"
 #include "../server.hpp"

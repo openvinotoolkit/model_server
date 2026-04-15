@@ -21,7 +21,7 @@
 #include <unordered_map>
 #include <utility>
 
-#include "logging.hpp"
+#include <fmt/format.h>
 
 namespace ovms {
 

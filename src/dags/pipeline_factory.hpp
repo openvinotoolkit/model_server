@@ -24,11 +24,6 @@
 #include <utility>
 #include <vector>
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wall"
-#include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
-#pragma GCC diagnostic pop
-#include "../kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "nodeinfo.hpp"
 
 namespace ovms {

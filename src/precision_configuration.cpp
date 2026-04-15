@@ -18,6 +18,8 @@
 #include <algorithm>
 #include <vector>
 
+#include "logging.hpp"
+
 namespace ovms {
 
 const char PrecisionConfiguration::PRECISION_DELIMITER = ':';
