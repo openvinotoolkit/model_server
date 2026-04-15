@@ -776,6 +776,12 @@ Status HfDownloader::downloadModel() {
             }
         }
 
+        // Checking if git status is ok but we are left with LFS errors recorded by libgit2 patch in repository root.
+        if (libgit2::hasLfsErrorFileAndLogContent(this->downloadPath)) {
+            SPDLOG_ERROR("Model failed after resuming download.");
+            return StatusCode::HF_GIT_LIBGIT2_LFS_DOWNLOAD_FAILED;
+        }
+
         // Non blocking check
         SPDLOG_DEBUG("Checking repository status.");
         auto status = CheckRepositoryStatus(false);
@@ -784,12 +790,6 @@ Status HfDownloader::downloadModel() {
             SPDLOG_DEBUG("Consider --override to start download from scratch.");
         } else {
             SPDLOG_DEBUG("Model repository status check passed after resuming download.");
-        }
-
-        // Checking if git status is ok but we are left with LFS errors recorded by libgit2 patch in repository root.
-        if (libgit2::hasLfsErrorFileAndLogContent(this->downloadPath)) {
-            SPDLOG_ERROR("Model failed after resuming download.");
-            return StatusCode::HF_GIT_LIBGIT2_LFS_DOWNLOAD_FAILED;
         }
 
         return StatusCode::OK;
@@ -847,6 +847,12 @@ Status HfDownloader::downloadModel() {
         git_repository_free(cloned_repo);
     }
 
+    // Checking if git status is ok but we are left with LFS errors recorded by libgit2 patch in repository root.
+    if (libgit2::hasLfsErrorFileAndLogContent(this->downloadPath)) {
+        SPDLOG_ERROR("Model download failed.");
+        return StatusCode::HF_GIT_LIBGIT2_LFS_DOWNLOAD_FAILED;
+    }
+    
     SPDLOG_DEBUG("Checking repository status.");
     status = CheckRepositoryStatus(true);
     if (!status.ok()) {
@@ -856,12 +862,6 @@ Status HfDownloader::downloadModel() {
         return status;
     } else {
         SPDLOG_DEBUG("Model repository status check passed after model download.");
-    }
-
-    // Checking if git status is ok but we are left with LFS errors recorded by libgit2 patch in repository root.
-    if (libgit2::hasLfsErrorFileAndLogContent(this->downloadPath)) {
-        SPDLOG_ERROR("Model download failed.");
-        return StatusCode::HF_GIT_LIBGIT2_LFS_DOWNLOAD_FAILED;
     }
 
     // libgit2 clone sets readonly attributes
