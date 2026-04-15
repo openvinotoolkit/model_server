@@ -812,7 +812,7 @@ Status HfDownloader::downloadModel() {
         SPDLOG_ERROR("Model download failed.");
         return StatusCode::HF_GIT_LIBGIT2_LFS_DOWNLOAD_FAILED;
     }
-    
+
     SPDLOG_DEBUG("Checking repository status.");
     status = CheckRepositoryStatus(true);
     if (!status.ok()) {
