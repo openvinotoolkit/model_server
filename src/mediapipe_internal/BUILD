@@ -79,6 +79,7 @@ ovms_cc_library(
         "//src:libovms_servable_name_checker",
         "//src/metrics:libovms_metric_provider",
         "//src/filesystem:libovmsfilesystem",
+        "//src/graph_export:graph_export",
         "//src:libovms_version",
         "//src:libovms_execution_context",
         "//src:libovmstimer",

@@ -53,6 +53,7 @@
 #include "capi_frontend/server_settings.hpp"
 #include "cli_parser.hpp"
 #include "config.hpp"
+#include "graph_export/graph_export.hpp"
 #include "grpcservermodule.hpp"
 #include "http_server.hpp"
 #include "httpservermodule.hpp"
@@ -378,16 +379,29 @@ Status Server::startModules(ovms::Config& config) {
         return status;
     }
     if (config.getServerSettings().serverMode == HF_PULL_MODE || config.getServerSettings().serverMode == HF_PULL_AND_START_MODE) {
-        INSERT_MODULE(HF_MODEL_PULL_MODULE_NAME, it);
-        START_MODULE(it);
-        if (!status.ok()) {
-            return status;
+        bool needsHfPull = !config.getServerSettings().hfSettings.sourceModel.empty();
+        if (needsHfPull) {
+            INSERT_MODULE(HF_MODEL_PULL_MODULE_NAME, it);
+            START_MODULE(it);
+            if (!status.ok()) {
+                return status;
+            }
+            auto hfModule = dynamic_cast<const HfPullModelModule*>(it->second.get());
+            status = hfModule->clone();
+            // Return from modules only in --pull mode or error, otherwise start the rest of modules
+            if (config.getServerSettings().serverMode == HF_PULL_MODE || !status.ok())
+                return status;
+        } else {
+            // --task with --model_path: create graph in memory without HF download
+            GraphExport graphExporter;
+            const auto& hfSettings = config.getServerSettings().hfSettings;
+            status = graphExporter.createServableConfig(config.modelPath(), hfSettings, false);
+            if (!status.ok()) {
+                SPDLOG_ERROR("Failed to create in-memory graph config: {}", status.string());
+                return status;
+            }
+            SPDLOG_INFO("Graph config created in memory from model_path: {}", config.modelPath());
         }
-        auto hfModule = dynamic_cast<const HfPullModelModule*>(it->second.get());
-        status = hfModule->clone();
-        // Return from modules only in --pull mode or error, otherwise start the rest of modules
-        if (config.getServerSettings().serverMode == HF_PULL_MODE || !status.ok())
-            return status;
     }
 
 #if (PYTHON_DISABLE == 0)

@@ -797,6 +797,7 @@ ovms_cc_library(
             "//src/kfserving_api:kfserving_api_cpp",
             "capimodule",
             "//src/pull_module:hf_pull_model_module",
+            "//src/graph_export:graph_export",
             "//src/servables_config_manager_module:servablesconfigmanagermodule",
             "predict_request_validation_utils", # to be removed when capi has its own lib and added there @atobisze
             "kfs_backend_impl",
