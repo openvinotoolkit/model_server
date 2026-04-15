@@ -1655,12 +1655,8 @@ TEST_P(LLMFlowHttpTestParameterized, inferCompletionsStream) {
             "prompt": "What is OpenVINO?"
         }
     )";
-    int replyCounter = 0;
+    bool firstChunk = true;
     ON_CALL(*writer, PartialReply).WillByDefault([this, &params, &replyCounter](std::string response) {
-        if (replyCounter == 0 && params.checkHandshakeChunk) {
-            replyCounter++;
-            return;
-        }
         rapidjson::Document d;
         std::string dataPrefix = "data:";
         ASSERT_STREQ(response.substr(0, dataPrefix.size()).c_str(), dataPrefix.c_str());
@@ -1683,7 +1679,12 @@ TEST_P(LLMFlowHttpTestParameterized, inferCompletionsStream) {
             if (params.checkLogprobs) {
                 ASSERT_FALSE(choice["logprobs"].IsObject());
             }
-            ASSERT_TRUE(choice["text"].IsString());
+            if (firstChunk && params.checkHandshakeChunk) {
+                 ASSERT_TRUE(choice["text"].IsNull() || choice["text"].IsString());
+            } else {
+                ASSERT_TRUE(choice["text"].IsString());
+            }
+            firstChunk = false;
         }
         EXPECT_STREQ(d["model"].GetString(), params.modelName.c_str());
         EXPECT_STREQ(d["object"].GetString(), "text_completion.chunk");
