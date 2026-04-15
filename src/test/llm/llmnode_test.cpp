@@ -1656,7 +1656,7 @@ TEST_P(LLMFlowHttpTestParameterized, inferCompletionsStream) {
         }
     )";
     bool firstChunk = true;
-    ON_CALL(*writer, PartialReply).WillByDefault([this, &params, &replyCounter](std::string response) {
+    ON_CALL(*writer, PartialReply).WillByDefault([this, &params, &firstChunk](std::string response) {
         rapidjson::Document d;
         std::string dataPrefix = "data:";
         ASSERT_STREQ(response.substr(0, dataPrefix.size()).c_str(), dataPrefix.c_str());
