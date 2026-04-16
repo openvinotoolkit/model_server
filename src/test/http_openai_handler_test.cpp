@@ -546,6 +546,7 @@ TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ProcessedJsonContainsEquiva
     EXPECT_EQ(chatHistory[0]["role"], "user");
     EXPECT_EQ(chatHistory[0]["content"], "What is OpenVINO?");
 
+#if (PYTHON_DISABLE == 0)
     if (endpoint() == ovms::Endpoint::RESPONSES) {
         // Responses path builds processedJson with messages array
         const std::string& processedJson = apiHandler->getProcessedJson();
@@ -560,6 +561,7 @@ TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ProcessedJsonContainsEquiva
         EXPECT_STREQ(processedDoc["messages"][0]["role"].GetString(), "user");
         EXPECT_STREQ(processedDoc["messages"][0]["content"].GetString(), "What is OpenVINO?");
     }
+#endif
 }
 
 TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ProcessedJsonEquivalentMultiMessage) {
@@ -585,6 +587,7 @@ TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ProcessedJsonEquivalentMult
     EXPECT_EQ(chatHistory[1]["role"], "user");
     EXPECT_EQ(chatHistory[1]["content"], "Hello");
 
+#if (PYTHON_DISABLE == 0)
     if (endpoint() == ovms::Endpoint::RESPONSES) {
         const std::string& processedJson = apiHandler->getProcessedJson();
         ASSERT_FALSE(processedJson.empty());
@@ -598,6 +601,7 @@ TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ProcessedJsonEquivalentMult
         EXPECT_STREQ(processedDoc["messages"][1]["role"].GetString(), "user");
         EXPECT_STREQ(processedDoc["messages"][1]["content"].GetString(), "Hello");
     }
+#endif
 }
 
 TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ProcessedJsonIncludesToolsWhenPresent) {
@@ -606,6 +610,7 @@ TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ProcessedJsonIncludesToolsW
 
     EXPECT_TRUE(apiHandler->areToolsAvailable());
 
+#if (PYTHON_DISABLE == 0)
     if (endpoint() == ovms::Endpoint::RESPONSES) {
         const std::string& processedJson = apiHandler->getProcessedJson();
         ASSERT_FALSE(processedJson.empty());
@@ -617,6 +622,7 @@ TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ProcessedJsonIncludesToolsW
         ASSERT_TRUE(processedDoc["tools"].IsArray());
         ASSERT_GT(processedDoc["tools"].Size(), 0u);
     }
+#endif
 }
 
 TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingTokenLimitSetsMaxTokens) {
