@@ -124,7 +124,8 @@ public:
                 ov::genai::Text2SpeechDecodedResults generatedSpeech;
                 std::unique_lock lock(pipe->ttsPipelineMutex);
                 auto disconnectStatus = checkClientDisconnected(payload, cc->NodeName(), "before generation");
-                if (!disconnectStatus.ok()) return disconnectStatus;
+                if (!disconnectStatus.ok())
+                    return disconnectStatus;
 
                 if (voiceName.has_value()) {
                     generatedSpeech = pipe->ttsPipeline->generate(inputIt->value.GetString(), pipe->voices[voiceName.value()]);
@@ -138,7 +139,8 @@ public:
                 generatedSpeech.speeches[0].copy_to(cpuTensor);
                 lock.unlock();
                 disconnectStatus = checkClientDisconnected(payload, cc->NodeName(), "after generation");
-                if (!disconnectStatus.ok()) return disconnectStatus;
+                if (!disconnectStatus.ok())
+                    return disconnectStatus;
                 void* ppData;
                 size_t pDataSize;
                 prepareAudioOutput(&ppData, pDataSize, bitsPerSample, speechSize, cpuTensor.data<const float>());
