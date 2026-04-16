@@ -13,10 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include <condition_variable>
-#include <fstream>
-#include <future>
-#include <queue>
+#include <string>
 
 #pragma warning(push)
 #pragma warning(disable : 4005 4309 6001 6385 6386 6326 6011 6246 4456 6246)
@@ -31,24 +28,16 @@
 #include "src/client_connection.hpp"
 #include "src/http_payload.hpp"
 #include "src/logging.hpp"
-#include "src/stringutils.hpp"
-#include <mutex>
-#include <thread>
 
 #pragma warning(push)
 #pragma warning(disable : 6001 4324 6385 6386)
-#include "absl/strings/escaping.h"
 #include "absl/strings/str_cat.h"
 #pragma warning(pop)
 
 #include "src/port/rapidjson_writer.hpp"
 #include "src/port/rapidjson_stringbuffer.hpp"
 #include "s2t_servable.hpp"
-
-#ifdef _WIN32
-#include <fcntl.h>
-#include <io.h>
-#endif
+#include "s2t_streaming_handler.hpp"
 
 using namespace ovms;
 
@@ -62,7 +51,7 @@ enum Endpoint {
     UNSUPPORTED
 };
 
-Endpoint getEndpoint(const std::string& url) {
+static Endpoint getEndpoint(const std::string& url) {
     if (absl::StartsWith(url, "/v3/audio/transcriptions")) {
         return Endpoint::TRANSCRIPTIONS;
     }
@@ -70,66 +59,6 @@ Endpoint getEndpoint(const std::string& url) {
         return Endpoint::TRANSLATIONS;
     }
     return Endpoint::UNSUPPORTED;
-}
-
-size_t ISO_LANG_CODE_MAX = 3;
-
-// Thread-safe queue for streaming partial transcription results from the
-// background generate() thread to the MediaPipe LOOPBACK loop.
-class StreamingTextQueue {
-public:
-    void push(std::string text) {
-        std::lock_guard<std::mutex> lock(mutex_);
-        queue_.push(std::move(text));
-        cv_.notify_one();
-    }
-
-    // Signals that generation has finished (successfully or with error).
-    void setDone() {
-        std::lock_guard<std::mutex> lock(mutex_);
-        done_ = true;
-        cv_.notify_one();
-    }
-
-    // Blocks until a text chunk is available or generation is done.
-    // Returns true if a chunk was retrieved, false if done and queue is empty.
-    bool waitAndPop(std::string& out) {
-        std::unique_lock<std::mutex> lock(mutex_);
-        cv_.wait(lock, [this] { return !queue_.empty() || done_; });
-        if (!queue_.empty()) {
-            out = std::move(queue_.front());
-            queue_.pop();
-            return true;
-        }
-        return false;  // done and empty
-    }
-
-    bool isDone() const {
-        std::lock_guard<std::mutex> lock(mutex_);
-        return done_ && queue_.empty();
-    }
-
-private:
-    mutable std::mutex mutex_;
-    std::condition_variable cv_;
-    std::queue<std::string> queue_;
-    bool done_ = false;
-};
-
-static std::string wrapTextInServerSideEventMessage(const std::string& text) {
-    std::stringstream ss;
-    ss << "data: " << text << "\n\n";
-    return ss.str();
-}
-
-static std::string serializeStreamingTextChunk(const std::string& text) {
-    rapidjson::StringBuffer buffer;
-    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-    writer.StartObject();
-    writer.String("text");
-    writer.String(text.c_str());
-    writer.EndObject();
-    return buffer.GetString();
 }
 
 static absl::Status checkClientDisconnected(const ovms::HttpPayload& payload, const std::string& nodeName, const char* context) {
@@ -145,13 +74,8 @@ class S2tCalculator : public CalculatorBase {
     static const std::string OUTPUT_TAG_NAME;
     static const std::string LOOPBACK_TAG_NAME;
 
-    // Streaming state persisted across LOOPBACK iterations
-    bool isStreaming_ = false;
     bool hasLoopback_ = false;
-    std::shared_ptr<StreamingTextQueue> streamingQueue_;
-    std::future<ov::genai::WhisperDecodedResults> generateFuture_;
-    std::string accumulatedText_;
-    mediapipe::Timestamp iterationTimestamp_{0};
+    S2tStreamingHandler streamingHandler_;
 
 public:
     static absl::Status GetContract(CalculatorContract* cc) {
@@ -183,15 +107,14 @@ public:
     absl::Status Process(CalculatorContext* cc) final {
         SPDLOG_LOGGER_DEBUG(s2t_calculator_logger, "SpeechToTextCalculator  [Node: {}] Process start", cc->NodeName());
 
-        // For cases where MediaPipe triggers Process() with no inputs
         bool loopbackEmpty = !hasLoopback_ || cc->Inputs().Tag(LOOPBACK_TAG_NAME).IsEmpty();
         if (cc->Inputs().Tag(INPUT_TAG_NAME).IsEmpty() && loopbackEmpty) {
             return absl::OkStatus();
         }
 
         // --- LOOPBACK iteration: drain streaming queue ---
-        if (hasLoopback_ && !cc->Inputs().Tag(LOOPBACK_TAG_NAME).IsEmpty() && isStreaming_) {
-            return processStreamingIteration(cc);
+        if (hasLoopback_ && !cc->Inputs().Tag(LOOPBACK_TAG_NAME).IsEmpty() && streamingHandler_.isActive()) {
+            return streamingHandler_.processIteration(cc, LOOPBACK_TAG_NAME, OUTPUT_TAG_NAME);
         }
 
         // --- First iteration: new request ---
@@ -238,10 +161,10 @@ public:
             }
 
             if (requestStreaming) {
-                return startStreamingGeneration(cc, pipe, endpoint, payload, std::move(rawSpeech));
+                return streamingHandler_.start(cc, pipe, payload, std::move(rawSpeech),
+                    endpoint == Endpoint::TRANSCRIPTIONS, LOOPBACK_TAG_NAME, OUTPUT_TAG_NAME);
             }
 
-            // --- Non-streaming (unary) path ---
             return processUnaryRequest(cc, pipe, endpoint, payload, rawSpeech);
 
         } catch (ov::AssertFailure& e) {
@@ -255,20 +178,27 @@ public:
 private:
     absl::Status processUnaryRequest(CalculatorContext* cc, std::shared_ptr<ovms::SttServable> pipe,
         Endpoint endpoint, const ovms::HttpPayload& payload, const std::vector<float>& rawSpeech) {
+        auto client = payload.client;
+        auto disconnectCallback = [client](std::string) -> ov::genai::StreamingStatus {
+            if (client && client->isDisconnected()) {
+                return ov::genai::StreamingStatus::CANCEL;
+            }
+            return ov::genai::StreamingStatus::RUNNING;
+        };
         rapidjson::StringBuffer buffer;
         rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
         writer.StartObject();
         writer.String("text");
         if (endpoint == Endpoint::TRANSCRIPTIONS) {
             ov::genai::WhisperGenerationConfig config = pipe->sttPipeline->get_generation_config();
-            auto status = applyTranscriptionConfig(config, pipe, payload);
+            auto status = S2tStreamingHandler::applyTranscriptionConfig(config, pipe, payload);
             if (status != absl::OkStatus())
                 return status;
 
             std::unique_lock lock(pipe->sttPipelineMutex);
             auto disconnectStatus = checkClientDisconnected(payload, cc->NodeName(), "before transcription");
             if (!disconnectStatus.ok()) return disconnectStatus;
-            const ov::genai::WhisperDecodedResults result = pipe->sttPipeline->generate(rawSpeech, config);
+            const ov::genai::WhisperDecodedResults result = pipe->sttPipeline->generate(rawSpeech, config, disconnectCallback);
             lock.unlock();
             disconnectStatus = checkClientDisconnected(payload, cc->NodeName(), "after transcription");
             if (!disconnectStatus.ok()) return disconnectStatus;
@@ -280,7 +210,7 @@ private:
             std::unique_lock lock(pipe->sttPipelineMutex);
             auto disconnectStatus = checkClientDisconnected(payload, cc->NodeName(), "before translation");
             if (!disconnectStatus.ok()) return disconnectStatus;
-            std::string generatedText = pipe->sttPipeline->generate(rawSpeech, ov::genai::task("translate"));
+            std::string generatedText = pipe->sttPipeline->generate(rawSpeech, ov::genai::task("translate"), ov::genai::streamer(disconnectCallback));
             lock.unlock();
             disconnectStatus = checkClientDisconnected(payload, cc->NodeName(), "after translation");
             if (!disconnectStatus.ok()) return disconnectStatus;
@@ -290,145 +220,6 @@ private:
         auto output = std::make_unique<std::string>(buffer.GetString());
         cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(output.release(), cc->InputTimestamp());
         SPDLOG_LOGGER_DEBUG(s2t_calculator_logger, "SpeechToTextCalculator  [Node: {}] Process end", cc->NodeName());
-        return absl::OkStatus();
-    }
-
-    absl::Status startStreamingGeneration(CalculatorContext* cc, std::shared_ptr<ovms::SttServable> pipe,
-        Endpoint endpoint, const ovms::HttpPayload& payload, std::vector<float> rawSpeech) {
-        isStreaming_ = true;
-        accumulatedText_.clear();
-        streamingQueue_ = std::make_shared<StreamingTextQueue>();
-
-        auto queue = streamingQueue_;
-        auto streamerCallback = [queue](std::string text) -> ov::genai::StreamingStatus {
-            if (!text.empty()) {
-                queue->push(std::move(text));
-            }
-            return ov::genai::StreamingStatus::RUNNING;
-        };
-
-        if (endpoint == Endpoint::TRANSCRIPTIONS) {
-            ov::genai::WhisperGenerationConfig config = pipe->sttPipeline->get_generation_config();
-            auto status = applyTranscriptionConfig(config, pipe, payload);
-            if (status != absl::OkStatus()) {
-                isStreaming_ = false;
-                return status;
-            }
-            // Streaming with timestamps: GenAI streams chunk-level batches, not per-token
-            // Streaming without timestamps: GenAI streams per-token decoded text
-            generateFuture_ = std::async(std::launch::async,
-                [pipe, rawSpeech = std::move(rawSpeech), config, streamerCallback, queue]() mutable -> ov::genai::WhisperDecodedResults {
-                    try {
-                        std::unique_lock lock(pipe->sttPipelineMutex);
-                        auto result = pipe->sttPipeline->generate(rawSpeech, config, streamerCallback);
-                        lock.unlock();
-                        queue->setDone();
-                        return result;
-                    } catch (...) {
-                        queue->setDone();
-                        throw;
-                    }
-                });
-        } else {
-            // Translation endpoint
-            generateFuture_ = std::async(std::launch::async,
-                [pipe, rawSpeech = std::move(rawSpeech), streamerCallback, queue]() mutable -> ov::genai::WhisperDecodedResults {
-                    try {
-                        std::unique_lock lock(pipe->sttPipelineMutex);
-                        auto result = pipe->sttPipeline->generate(rawSpeech,
-                            ov::genai::task("translate"),
-                            ov::genai::streamer(streamerCallback));
-                        lock.unlock();
-                        queue->setDone();
-                        return result;
-                    } catch (...) {
-                        queue->setDone();
-                        throw;
-                    }
-                });
-        }
-
-        // Trigger first LOOPBACK iteration
-        iterationTimestamp_ = cc->InputTimestamp();
-        cc->Outputs().Tag(LOOPBACK_TAG_NAME).Add(new bool{true}, iterationTimestamp_);
-        return absl::OkStatus();
-    }
-
-    absl::Status processStreamingIteration(CalculatorContext* cc) {
-        std::string chunk;
-        bool hasData = streamingQueue_->waitAndPop(chunk);
-
-        if (hasData) {
-            accumulatedText_ += chunk;
-            std::string ssePayload = wrapTextInServerSideEventMessage(serializeStreamingTextChunk(chunk));
-            cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new std::string{std::move(ssePayload)}, iterationTimestamp_);
-
-            // Continue looping
-            auto now = std::chrono::system_clock::now();
-            iterationTimestamp_ = ::mediapipe::Timestamp(std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch()).count());
-            cc->Outputs().Tag(LOOPBACK_TAG_NAME).Add(new bool{true}, iterationTimestamp_);
-        } else {
-            // Generation complete - send final event and stop
-            try {
-                if (generateFuture_.valid()) {
-                    generateFuture_.get();  // propagate any exceptions
-                }
-            } catch (ov::AssertFailure& e) {
-                isStreaming_ = false;
-                return absl::InvalidArgumentError(e.what());
-            } catch (...) {
-                isStreaming_ = false;
-                return absl::InvalidArgumentError("Response generation failed");
-            }
-
-            std::string doneEvent = wrapTextInServerSideEventMessage("[DONE]");
-            cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new std::string{std::move(doneEvent)}, iterationTimestamp_);
-            isStreaming_ = false;
-        }
-
-        SPDLOG_LOGGER_DEBUG(s2t_calculator_logger, "SpeechToTextCalculator  [Node: {}] Streaming iteration end", cc->NodeName());
-        return absl::OkStatus();
-    }
-
-    absl::Status applyTranscriptionConfig(ov::genai::WhisperGenerationConfig& config,
-        const std::shared_ptr<ovms::SttServable>& pipe, const ovms::HttpPayload& payload) {
-        std::string language = payload.multipartParser->getFieldByName("language");
-        if (language.size() > 0) {
-            if (language.size() > ISO_LANG_CODE_MAX) {
-                return absl::InvalidArgumentError("Invalid language code.");
-            }
-            SPDLOG_LOGGER_TRACE(s2t_calculator_logger, "Received language: {}");
-            config.language = "<|" + language + "|>";
-        }
-        std::vector<std::string> timestampsTypes = payload.multipartParser->getArrayFieldByName("timestamp_granularities[]");
-        config.word_timestamps = false;
-        for (const auto& timestampsType : timestampsTypes) {
-            SPDLOG_LOGGER_TRACE(s2t_calculator_logger, "Received timestamp type: {}", timestampsType);
-            if (timestampsType == "segment") {
-                config.return_timestamps = true;
-            } else if (timestampsType == "word") {
-                if (!pipe->enableWordTimestamps)
-                    return absl::InvalidArgumentError("Word timestamps not supported for this model");
-                config.word_timestamps = true;
-            } else {
-                return absl::InvalidArgumentError("Invalid timestamp_granularities type. Allowed types: \"segment\", \"word\"");
-            }
-        }
-        std::string temperature = payload.multipartParser->getFieldByName("temperature");
-        if (temperature.size() > 0) {
-            SPDLOG_LOGGER_TRACE(s2t_calculator_logger, "Received temperature: {}", temperature);
-            auto temp = ovms::stof(temperature);
-            if (!temp.has_value()) {
-                temp = stou32(temperature);
-                if (!temp.has_value())
-                    return absl::InvalidArgumentError("Invalid temperature type.");
-            }
-            if (temp.value() < 0.0f || temp.value() > 2.0f)
-                return absl::InvalidArgumentError("Temperature out of range(0.0, 2.0)");
-            config.temperature = temp.value();
-        } else {
-            config.temperature = 1.0;
-        }
         return absl::OkStatus();
     }
 
