@@ -19,6 +19,7 @@
 #include <mutex>
 #include <queue>
 #include <string>
+#include <utility>
 
 namespace ovms {
 

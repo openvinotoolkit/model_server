@@ -166,7 +166,6 @@ public:
             }
 
             return processUnaryRequest(cc, pipe, endpoint, payload, rawSpeech);
-
         } catch (ov::AssertFailure& e) {
             return absl::InvalidArgumentError(e.what());
         } catch (...) {
