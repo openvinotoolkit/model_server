@@ -197,11 +197,13 @@ private:
 
             std::unique_lock lock(pipe->sttPipelineMutex);
             auto disconnectStatus = checkClientDisconnected(payload, cc->NodeName(), "before transcription");
-            if (!disconnectStatus.ok()) return disconnectStatus;
+            if (!disconnectStatus.ok())
+                return disconnectStatus;
             const ov::genai::WhisperDecodedResults result = pipe->sttPipeline->generate(rawSpeech, config, disconnectCallback);
             lock.unlock();
             disconnectStatus = checkClientDisconnected(payload, cc->NodeName(), "after transcription");
-            if (!disconnectStatus.ok()) return disconnectStatus;
+            if (!disconnectStatus.ok())
+                return disconnectStatus;
             const std::string generatedText = result;
             writer.String(generatedText.c_str());
             serializeTimestamps(writer, result, config);
@@ -209,11 +211,13 @@ private:
         if (endpoint == Endpoint::TRANSLATIONS) {
             std::unique_lock lock(pipe->sttPipelineMutex);
             auto disconnectStatus = checkClientDisconnected(payload, cc->NodeName(), "before translation");
-            if (!disconnectStatus.ok()) return disconnectStatus;
+            if (!disconnectStatus.ok())
+                return disconnectStatus;
             std::string generatedText = pipe->sttPipeline->generate(rawSpeech, ov::genai::task("translate"), ov::genai::streamer(disconnectCallback));
             lock.unlock();
             disconnectStatus = checkClientDisconnected(payload, cc->NodeName(), "after translation");
-            if (!disconnectStatus.ok()) return disconnectStatus;
+            if (!disconnectStatus.ok())
+                return disconnectStatus;
             writer.String(generatedText.c_str());
         }
         writer.EndObject();
