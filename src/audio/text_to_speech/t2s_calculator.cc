@@ -137,7 +137,7 @@ public:
                 // copy results to release inference request
                 generatedSpeech.speeches[0].copy_to(cpuTensor);
                 lock.unlock();
-                auto disconnectStatus = checkClientDisconnected(payload, cc->NodeName(), "after generation");
+                disconnectStatus = checkClientDisconnected(payload, cc->NodeName(), "after generation");
                 if (!disconnectStatus.ok()) return disconnectStatus;
                 void* ppData;
                 size_t pDataSize;
