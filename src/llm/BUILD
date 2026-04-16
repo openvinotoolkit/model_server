@@ -281,6 +281,7 @@ ovms_cc_library(
         ":generation_config_builders",
         "//src:httppayload",
         "//src:libhttpclientconnection",
+        "//src:sse_utils",
         "//third_party:genai",] + select({
         "//:disable_python": [],
         "//:not_disable_python" : [":py_jinja_template_processor"],

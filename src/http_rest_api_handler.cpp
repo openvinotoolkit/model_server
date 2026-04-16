@@ -509,6 +509,11 @@ static Status createV3HttpPayload(
         } else {
             SPDLOG_DEBUG("Model name from deduced from MultiPart field: {}", modelName);
         }
+        // Detect stream field in multipart form data (used by audio endpoints)
+        std::string streamField = multiPartParser->getFieldByName("stream");
+        if (streamField == "true") {
+            streamFieldVal = true;
+        }
         ensureJsonParserInErrorState(parsedJson);
     } else if (isApplicationJson) {
         {
