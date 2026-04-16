@@ -15,6 +15,8 @@
 //*****************************************************************************
 #include "s2t_streaming_handler.hpp"
 
+#include <vector>
+
 #include "src/http_payload.hpp"
 #include "src/logging.hpp"
 #include "src/stringutils.hpp"
