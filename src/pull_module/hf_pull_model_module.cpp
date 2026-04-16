@@ -151,11 +151,16 @@ Status HfPullModelModule::clone() const {
     }
 
     GraphExport graphExporter;
-    status = graphExporter.createServableConfig(graphDirectory, this->hfSettings);
+    bool writeToFile = (ovms::Config::instance().getServerSettings().serverMode == HF_PULL_MODE);
+    status = graphExporter.createServableConfig(graphDirectory, this->hfSettings, writeToFile);
     if (!status.ok()) {
         return status;
     }
-    std::cout << "Graph: graph.pbtxt created in: " << graphDirectory << std::endl;
+    if (writeToFile) {
+        std::cout << "Graph: graph.pbtxt created in: " << graphDirectory << std::endl;
+    } else {
+        std::cout << "Graph: graph.pbtxt content stored in memory" << std::endl;
+    }
 
     return StatusCode::OK;
 }

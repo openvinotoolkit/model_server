@@ -712,7 +712,9 @@ void CLIParser::prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl&
         }
         if (result->count("source_model")) {
             hfSettings.sourceModel = result->operator[]("source_model").as<std::string>();
-        } else if (result->count("model_name")) {
+        } else if (result->count("model_name") && !result->count("model_path")) {
+            // Only use model_name as source_model when model_path is not set
+            // (when model_path is set, user wants to use local model without HF pull)
             hfSettings.sourceModel = result->operator[]("model_name").as<std::string>();
         }
         if ((result->count("weight-format") || result->count("extra_quantization_params")) && isOptimumCliDownload(hfSettings.sourceModel, hfSettings.ggufFilename)) {
@@ -732,6 +734,11 @@ void CLIParser::prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl&
         if (result->count("vocoder"))
             hfSettings.exportSettings.vocoder = result->operator[]("vocoder").as<std::string>();
         hfSettings.downloadPath = result->operator[]("model_repository_path").as<std::string>();
+        // When --task is used with --model_path but without --pull/--source_model,
+        // use model_path as the model location (no HF download needed)
+        if (!result->count("pull") && !result->count("source_model") && result->count("model_path")) {
+            hfSettings.exportSettings.modelPath = result->operator[]("model_path").as<std::string>();
+        }
         if (result->count("task")) {
             hfSettings.task = stringToEnum(result->operator[]("task").as<std::string>());
             switch (hfSettings.task) {
@@ -840,11 +847,14 @@ void CLIParser::prepareGraphStart(HFSettingsImpl& hfSettings, ModelsSettingsImpl
     // Model settings
     if (result->count("model_name")) {
         modelsSettings.modelName = result->operator[]("model_name").as<std::string>();
-    } else {
+    } else if (!hfSettings.sourceModel.empty()) {
         modelsSettings.modelName = hfSettings.sourceModel;
     }
 
-    modelsSettings.modelPath = FileSystem::joinPath({hfSettings.downloadPath, hfSettings.sourceModel});
+    // Only override modelPath if it wasn't already set via --model_path
+    if (!result->count("model_path")) {
+        modelsSettings.modelPath = FileSystem::joinPath({hfSettings.downloadPath, hfSettings.sourceModel});
+    }
 }
 
 void CLIParser::prepare(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* modelsSettings) {
