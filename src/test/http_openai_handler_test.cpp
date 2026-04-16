@@ -3592,3 +3592,238 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParseMessagesRegularMessageHasNoToolFields)
     EXPECT_FALSE(history[1].contains("tool_call_id"));
     EXPECT_FALSE(history[1].contains("name"));
 }
+
+// --- Codex CLI Responses API compatibility tests ---
+
+TEST_F(HttpOpenAIHandlerParsingTest, parseResponsesInstructionsFieldPrependsSystemMessage) {
+    std::string json = R"({
+    "model": "llama",
+    "instructions": "You are a coding agent.",
+    "input": [{"type": "message", "role": "user", "content": "Hello"}]
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    auto apiHandler = std::make_shared<ovms::OpenAIResponsesHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+
+    auto& history = apiHandler->getChatHistory();
+    ASSERT_EQ(history.size(), 2);
+    EXPECT_EQ(history[0]["role"].get_string(), "system");
+    EXPECT_EQ(history[0]["content"].get_string(), "You are a coding agent.");
+    EXPECT_EQ(history[1]["role"].get_string(), "user");
+    EXPECT_EQ(history[1]["content"].get_string(), "Hello");
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, parseResponsesInstructionsFieldNullIsIgnored) {
+    std::string json = R"({
+    "model": "llama",
+    "instructions": null,
+    "input": "Hello"
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    auto apiHandler = std::make_shared<ovms::OpenAIResponsesHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+
+    auto& history = apiHandler->getChatHistory();
+    ASSERT_EQ(history.size(), 1);
+    EXPECT_EQ(history[0]["role"].get_string(), "user");
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, parseResponsesInstructionsFieldNotStringRejected) {
+    std::string json = R"({
+    "model": "llama",
+    "instructions": 42,
+    "input": "Hello"
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    auto apiHandler = std::make_shared<ovms::OpenAIResponsesHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    ASSERT_NE(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, parseResponsesDeveloperRoleMappedToSystem) {
+    std::string json = R"({
+    "model": "llama",
+    "input": [
+        {"type": "message", "role": "developer", "content": [{"type": "input_text", "text": "system instructions"}]},
+        {"type": "message", "role": "user", "content": [{"type": "input_text", "text": "Hello"}]}
+    ]
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    auto apiHandler = std::make_shared<ovms::OpenAIResponsesHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+
+    auto& history = apiHandler->getChatHistory();
+    ASSERT_EQ(history.size(), 2);
+    EXPECT_EQ(history[0]["role"].get_string(), "system");
+    EXPECT_EQ(history[0]["content"].get_string(), "system instructions");
+    EXPECT_EQ(history[1]["role"].get_string(), "user");
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, parseResponsesFunctionCallOutputItem) {
+    std::string json = R"({
+    "model": "llama",
+    "input": [
+        {"type": "message", "role": "user", "content": "run ls"},
+        {"type": "function_call", "call_id": "call_123", "name": "exec_command", "arguments": "{\"cmd\": \"ls\"}"},
+        {"type": "function_call_output", "call_id": "call_123", "output": "file1.txt\nfile2.txt"}
+    ]
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    auto apiHandler = std::make_shared<ovms::OpenAIResponsesHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+
+    auto& history = apiHandler->getChatHistory();
+    ASSERT_EQ(history.size(), 3);
+
+    // First: user message
+    EXPECT_EQ(history[0]["role"].get_string(), "user");
+    EXPECT_EQ(history[0]["content"].get_string(), "run ls");
+
+    // Second: assistant with tool_calls
+    EXPECT_EQ(history[1]["role"].get_string(), "assistant");
+    EXPECT_TRUE(history[1]["content"].is_null());
+    EXPECT_TRUE(history[1].contains("tool_calls"));
+
+    // Third: tool response
+    EXPECT_EQ(history[2]["role"].get_string(), "tool");
+    EXPECT_EQ(history[2]["tool_call_id"].get_string(), "call_123");
+    EXPECT_EQ(history[2]["content"].get_string(), "file1.txt\nfile2.txt");
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, parseResponsesFunctionCallOutputMissingCallIdRejected) {
+    std::string json = R"({
+    "model": "llama",
+    "input": [
+        {"type": "function_call_output", "output": "some output"}
+    ]
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    auto apiHandler = std::make_shared<ovms::OpenAIResponsesHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    ASSERT_NE(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, parseResponsesFunctionCallMissingNameRejected) {
+    std::string json = R"({
+    "model": "llama",
+    "input": [
+        {"type": "function_call", "call_id": "call_123", "arguments": "{}"}
+    ]
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    auto apiHandler = std::make_shared<ovms::OpenAIResponsesHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    ASSERT_NE(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, parseResponsesParallelToolCallsPassThrough) {
+    std::string json = R"({
+    "model": "llama",
+    "input": "Hello",
+    "parallel_tool_calls": false,
+    "stream": true
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    auto apiHandler = std::make_shared<ovms::OpenAIResponsesHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+
+    // Verify the created event contains parallel_tool_calls: false
+    std::string createdChunk = apiHandler->serializeStreamingCreatedEvent();
+    EXPECT_NE(createdChunk.find("\"parallel_tool_calls\":false"), std::string::npos) << createdChunk;
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, parseResponsesStorePassThrough) {
+    std::string json = R"({
+    "model": "llama",
+    "input": "Hello",
+    "store": false,
+    "stream": true
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    auto apiHandler = std::make_shared<ovms::OpenAIResponsesHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+
+    // Verify the created event contains store: false
+    std::string createdChunk = apiHandler->serializeStreamingCreatedEvent();
+    EXPECT_NE(createdChunk.find("\"store\":false"), std::string::npos) << createdChunk;
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, parseResponsesCodexFullRequestFormat) {
+    // Simulates a realistic Codex CLI request with instructions, developer messages, and user message
+    std::string json = R"({
+    "model": "gpt-oss:20b",
+    "instructions": "You are a coding agent running in the Codex CLI.",
+    "input": [
+        {"type": "message", "role": "developer", "content": [{"type": "input_text", "text": "sandbox instructions"}]},
+        {"type": "message", "role": "user", "content": [{"type": "input_text", "text": "what is 2+2?"}]}
+    ],
+    "tools": [{"type": "function", "name": "exec_command", "parameters": {"type": "object", "properties": {"cmd": {"type": "string"}}, "required": ["cmd"]}}],
+    "tool_choice": "auto",
+    "parallel_tool_calls": false,
+    "reasoning": null,
+    "store": false,
+    "stream": true
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    auto apiHandler = std::make_shared<ovms::OpenAIResponsesHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+
+    auto& history = apiHandler->getChatHistory();
+    ASSERT_EQ(history.size(), 3);
+    // instructions → system
+    EXPECT_EQ(history[0]["role"].get_string(), "system");
+    EXPECT_EQ(history[0]["content"].get_string(), "You are a coding agent running in the Codex CLI.");
+    // developer → system
+    EXPECT_EQ(history[1]["role"].get_string(), "system");
+    EXPECT_EQ(history[1]["content"].get_string(), "sandbox instructions");
+    // user → user
+    EXPECT_EQ(history[2]["role"].get_string(), "user");
+    EXPECT_EQ(history[2]["content"].get_string(), "what is 2+2?");
+}

@@ -359,6 +359,13 @@ absl::Status OpenAIApiHandler::parseTools() {
 
             auto functionIt = obj.FindMember("function");
             if (functionIt != obj.MemberEnd()) {
+                auto typeIt = obj.FindMember("type");
+                if (typeIt != obj.MemberEnd() && typeIt->value.IsString() && std::string(typeIt->value.GetString()) != "function") {
+                    SPDLOG_WARN("Skipping unsupported tool type: {}", typeIt->value.GetString());
+                    it->value.Erase(&obj);
+                    jsonChanged = true;
+                    continue;
+                }
                 if (!functionIt->value.IsObject()) {
                     return absl::InvalidArgumentError("Function is not a valid JSON object");
                 }
@@ -378,7 +385,10 @@ absl::Status OpenAIApiHandler::parseTools() {
                     return absl::InvalidArgumentError("Tool type is missing or invalid");
                 }
                 if (std::string(typeIt->value.GetString()) != "function") {
-                    return absl::InvalidArgumentError("Only function tools are supported");
+                    SPDLOG_WARN("Skipping unsupported tool type: {}", typeIt->value.GetString());
+                    it->value.Erase(&obj);
+                    jsonChanged = true;
+                    continue;
                 }
 
                 auto nameIt = obj.FindMember("name");

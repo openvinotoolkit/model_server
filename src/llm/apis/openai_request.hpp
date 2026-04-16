@@ -81,6 +81,10 @@ struct OpenAIRequest {
     // Holds value for tool_choice field as described in https://platform.openai.com/docs/api-reference/chat/create#chat_create-tool_choice
     std::string toolChoice;
 
+    // Responses API specific fields
+    bool parallelToolCalls{true};
+    bool store{true};
+
     OpenAIRequest() = default;
     ~OpenAIRequest() = default;
 };

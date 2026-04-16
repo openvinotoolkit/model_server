@@ -178,3 +178,66 @@ TEST_F(ListModelsEndpointTest, simplePositiveRetrieveModelv1v3) {
     ASSERT_TRUE(d["created"].IsInt());
     ASSERT_EQ(d["owned_by"], "OVMS");
 }
+
+TEST_F(ListModelsEndpointTest, ollamaApiTags) {
+    std::string requestBody = "";
+    std::string endpoint = "/api/tags";
+    ASSERT_EQ(handler->parseRequestComponents(comp, "GET", endpoint, headers), ovms::StatusCode::OK);
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK);
+    rapidjson::Document d;
+    rapidjson::ParseResult ok = d.Parse(response.c_str());
+    ASSERT_EQ(ok.Code(), 0);
+    ASSERT_TRUE(d.HasMember("models"));
+    ASSERT_TRUE(d["models"].IsArray());
+    ASSERT_EQ(d["models"].Size(), 2);
+
+    // First model
+    ASSERT_TRUE(d["models"][0].HasMember("name"));
+    ASSERT_TRUE(std::string(d["models"][0]["name"].GetString()).find(":latest") != std::string::npos);
+    ASSERT_TRUE(d["models"][0].HasMember("model"));
+    ASSERT_TRUE(d["models"][0].HasMember("modified_at"));
+    ASSERT_TRUE(d["models"][0].HasMember("size"));
+    ASSERT_TRUE(d["models"][0].HasMember("digest"));
+    ASSERT_TRUE(d["models"][0].HasMember("details"));
+    ASSERT_TRUE(d["models"][0]["details"].HasMember("format"));
+    ASSERT_EQ(std::string(d["models"][0]["details"]["format"].GetString()), "openvino");
+
+    // Second model
+    ASSERT_TRUE(d["models"][1].HasMember("name"));
+    ASSERT_TRUE(std::string(d["models"][1]["name"].GetString()).find(":latest") != std::string::npos);
+}
+
+TEST_F(ListModelsEndpointTest, ollamaApiTagsPostUnsupported) {
+    std::string endpoint = "/api/tags";
+    ASSERT_EQ(handler->parseRequestComponents(comp, "POST", endpoint, headers), ovms::StatusCode::REST_UNSUPPORTED_METHOD);
+}
+
+TEST_F(ListModelsEndpointTest, ollamaApiVersion) {
+    std::string requestBody = "";
+    std::string endpoint = "/api/version";
+    ASSERT_EQ(handler->parseRequestComponents(comp, "GET", endpoint, headers), ovms::StatusCode::OK);
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK);
+    rapidjson::Document d;
+    rapidjson::ParseResult ok = d.Parse(response.c_str());
+    ASSERT_EQ(ok.Code(), 0);
+    ASSERT_TRUE(d.HasMember("version"));
+    ASSERT_TRUE(d["version"].IsString());
+}
+
+TEST_F(ListModelsEndpointTest, ollamaApiVersionV3Prefix) {
+    std::string requestBody = "";
+    std::string endpoint = "/v3/api/version";
+    ASSERT_EQ(handler->parseRequestComponents(comp, "GET", endpoint, headers), ovms::StatusCode::OK);
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK);
+    rapidjson::Document d;
+    rapidjson::ParseResult ok = d.Parse(response.c_str());
+    ASSERT_EQ(ok.Code(), 0);
+    ASSERT_TRUE(d.HasMember("version"));
+    ASSERT_TRUE(d["version"].IsString());
+}

@@ -60,7 +60,9 @@ enum RequestType { Predict,
     V3_RetrieveModel,
     V3,
     Metrics,
-    Options };
+    Options,
+    OllamaApiTags,
+    OllamaApiVersion };
 
 struct HttpRequestComponents {
     RequestType type;
@@ -115,6 +117,9 @@ public:
     static const std::string v3_ListModelsRegexExp;
     static const std::string v3_RetrieveModelRegexExp;
     static const std::string v3_RegexExp;
+
+    static const std::string ollamaApiTagsRegexExp;
+    static const std::string ollamaApiVersionRegexExp;
 
     /**
      * @brief Construct a new HttpRest Api Handler
@@ -247,6 +252,8 @@ public:
     Status processV3(const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser);
     Status processListModelsRequest(std::string& response);
     Status processRetrieveModelRequest(const std::string& name, std::string& response);
+    Status processOllamaTagsRequest(std::string& response);
+    Status processOllamaVersionRequest(std::string& response);
     bool isAuthorized(const std::unordered_map<std::string, std::string>& headers, const std::string& apiKey);
     const std::string apiKey;
 
@@ -269,6 +276,8 @@ private:
     const std::regex v3_Regex;
 
     const std::regex metricsRegex;
+    const std::regex ollamaApiTagsRegex;
+    const std::regex ollamaApiVersionRegex;
 
     std::map<RequestType, HandlerCallbackFn> handlers;
     int timeout_in_ms;

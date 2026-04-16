@@ -95,13 +95,79 @@ absl::Status OpenAIResponsesHandler::parseInput(std::optional<std::string> allow
             }
 
             auto itemObj = item.GetObject();
+
+            // Check for item-level type to distinguish message, function_call_output, function_call
+            auto itemTypeIt = itemObj.FindMember("type");
+            std::string itemType = "message";
+            if (itemTypeIt != itemObj.MemberEnd() && itemTypeIt->value.IsString()) {
+                itemType = itemTypeIt->value.GetString();
+            }
+
+            if (itemType == "function_call_output") {
+                // Codex sends tool results as: {type: "function_call_output", call_id: "...", output: "..."}
+                // Convert to chat history format: {role: "tool", tool_call_id: "...", content: "..."}
+                auto callIdIt = itemObj.FindMember("call_id");
+                if (callIdIt == itemObj.MemberEnd() || !callIdIt->value.IsString()) {
+                    return absl::InvalidArgumentError("function_call_output requires a valid call_id field");
+                }
+                auto outputIt = itemObj.FindMember("output");
+                if (outputIt == itemObj.MemberEnd() || !outputIt->value.IsString()) {
+                    return absl::InvalidArgumentError("function_call_output requires a valid output field");
+                }
+                request.chatHistory.push_back({});
+                request.chatHistory.last()["role"] = "tool";
+                request.chatHistory.last()["tool_call_id"] = callIdIt->value.GetString();
+                request.chatHistory.last()["content"] = outputIt->value.GetString();
+                continue;
+            }
+
+            if (itemType == "function_call") {
+                // Codex sends previous assistant tool calls as: {type: "function_call", id: "...", call_id: "...", name: "...", arguments: "..."}
+                // Convert to chat history format: {role: "assistant", content: null, tool_calls: [...]}
+                auto callIdIt = itemObj.FindMember("call_id");
+                if (callIdIt == itemObj.MemberEnd() || !callIdIt->value.IsString()) {
+                    return absl::InvalidArgumentError("function_call requires a valid call_id field");
+                }
+                auto nameIt = itemObj.FindMember("name");
+                if (nameIt == itemObj.MemberEnd() || !nameIt->value.IsString()) {
+                    return absl::InvalidArgumentError("function_call requires a valid name field");
+                }
+                auto argsIt = itemObj.FindMember("arguments");
+                if (argsIt == itemObj.MemberEnd() || !argsIt->value.IsString()) {
+                    return absl::InvalidArgumentError("function_call requires a valid arguments field");
+                }
+                // Build tool_calls array as JsonContainer
+                ov::genai::JsonContainer toolCallItem;
+                toolCallItem["id"] = callIdIt->value.GetString();
+                toolCallItem["type"] = "function";
+                ov::genai::JsonContainer functionObj;
+                functionObj["name"] = nameIt->value.GetString();
+                functionObj["arguments"] = argsIt->value.GetString();
+                toolCallItem["function"] = functionObj;
+                ov::genai::JsonContainer toolCallsArray = ov::genai::JsonContainer::array();
+                toolCallsArray.push_back(toolCallItem);
+
+                request.chatHistory.push_back({});
+                request.chatHistory.last()["role"] = "assistant";
+                request.chatHistory.last()["content"] = ov::genai::JsonContainer(nullptr);
+                request.chatHistory.last()["tool_calls"] = toolCallsArray;
+                continue;
+            }
+
+            // Default: type == "message" — standard message with role and content
             auto roleIt = itemObj.FindMember("role");
             if (roleIt == itemObj.MemberEnd() || !roleIt->value.IsString()) {
                 return absl::InvalidArgumentError("input item role is missing or invalid");
             }
 
+            // Map "developer" role to "system" for chat template compatibility
+            std::string role = roleIt->value.GetString();
+            if (role == "developer") {
+                role = "system";
+            }
+
             request.chatHistory.push_back({});
-            request.chatHistory.last()["role"] = roleIt->value.GetString();
+            request.chatHistory.last()["role"] = role;
 
             auto contentIt = itemObj.FindMember("content");
             if (contentIt == itemObj.MemberEnd()) {
@@ -183,6 +249,17 @@ absl::Status OpenAIResponsesHandler::parseResponsesPart(std::optional<uint32_t> 
         return absl::InvalidArgumentError("stream_options is not supported in Responses API.");
     }
 
+    // instructions: string; optional — system prompt (Responses API equivalent of system message)
+    auto instructionsIt = doc.FindMember("instructions");
+    if (instructionsIt != doc.MemberEnd() && !instructionsIt->value.IsNull()) {
+        if (!instructionsIt->value.IsString()) {
+            return absl::InvalidArgumentError("instructions is not a string");
+        }
+        request.chatHistory.push_back({});
+        request.chatHistory.last()["role"] = "system";
+        request.chatHistory.last()["content"] = instructionsIt->value.GetString();
+    }
+
     // input: string; required
     auto it = doc.FindMember("input");
     if (it == doc.MemberEnd()) {
@@ -192,6 +269,24 @@ absl::Status OpenAIResponsesHandler::parseResponsesPart(std::optional<uint32_t> 
     auto messagesStatus = parseInput(allowedLocalMediaPath, allowedMediaDomains);
     if (!messagesStatus.ok()) {
         return messagesStatus;
+    }
+
+    // parallel_tool_calls: bool; optional — defaults to true
+    it = doc.FindMember("parallel_tool_calls");
+    if (it != doc.MemberEnd() && !it->value.IsNull()) {
+        if (!it->value.IsBool()) {
+            return absl::InvalidArgumentError("parallel_tool_calls is not a boolean");
+        }
+        request.parallelToolCalls = it->value.GetBool();
+    }
+
+    // store: bool; optional — defaults to true
+    it = doc.FindMember("store");
+    if (it != doc.MemberEnd() && !it->value.IsNull()) {
+        if (!it->value.IsBool()) {
+            return absl::InvalidArgumentError("store is not a boolean");
+        }
+        request.store = it->value.GetBool();
     }
 
     // reasoning: object; optional
@@ -246,6 +341,21 @@ absl::Status OpenAIResponsesHandler::parseResponsesPart(std::optional<uint32_t> 
             auto content = request.chatHistory[i]["content"].as_string();
             if (content.has_value()) {
                 msgObj.AddMember("content", Value(content.value().c_str(), alloc), alloc);
+            } else if (request.chatHistory[i].contains("content") && request.chatHistory[i]["content"].is_null()) {
+                msgObj.AddMember("content", Value(kNullType), alloc);
+            }
+            auto toolCallId = request.chatHistory[i]["tool_call_id"].as_string();
+            if (toolCallId.has_value()) {
+                msgObj.AddMember("tool_call_id", Value(toolCallId.value().c_str(), alloc), alloc);
+            }
+            if (request.chatHistory[i].contains("tool_calls")) {
+                std::string toolCallsStr = request.chatHistory[i]["tool_calls"].to_json_string();
+                Document toolCallsDoc;
+                toolCallsDoc.Parse(toolCallsStr.c_str());
+                if (!toolCallsDoc.HasParseError()) {
+                    Value toolCallsCopy(toolCallsDoc, alloc);
+                    msgObj.AddMember("tool_calls", toolCallsCopy, alloc);
+                }
             }
             messagesArray.PushBack(msgObj, alloc);
         }
@@ -382,10 +492,10 @@ void OpenAIResponsesHandler::serializeCommonResponseParameters(Writer<StringBuff
     writer.String(status.c_str());
 
     writer.String("parallel_tool_calls");
-    writer.Bool(true);
+    writer.Bool(request.parallelToolCalls);
     // TODO: previous_response_id not supported
     writer.String("store");
-    writer.Bool(true);
+    writer.Bool(request.store);
     // TODO: temperature are only included when explicitly provided in the request, but should be always in the response
     if (request.temperature.has_value()) {
         writer.String("temperature");

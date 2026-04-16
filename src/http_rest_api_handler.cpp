@@ -63,6 +63,7 @@
 #include "status.hpp"
 #include "stringutils.hpp"
 #include "timer.hpp"
+#include "version.hpp"
 
 #if (MEDIAPIPE_DISABLE == 0)
 #include "copyable_object_wrapper.hpp"
@@ -125,6 +126,8 @@ const std::string HttpRestApiHandler::v3_RegexExp =
 
 const std::string HttpRestApiHandler::metricsRegexExp = R"((.?)\/metrics(\?(.*))?)";
 
+const std::string HttpRestApiHandler::ollamaApiTagsRegexExp = R"((/v3)?/api/tags)";
+const std::string HttpRestApiHandler::ollamaApiVersionRegexExp = R"((/v3)?/api/version)";
 HttpRestApiHandler::HttpRestApiHandler(ovms::Server& ovmsServer, int timeout_in_ms, const std::string& apiKey) :
     apiKey(apiKey),
     predictionRegex(predictionRegexExp),
@@ -141,6 +144,8 @@ HttpRestApiHandler::HttpRestApiHandler(ovms::Server& ovmsServer, int timeout_in_
     v3_RetrieveModelRegex(v3_RetrieveModelRegexExp),
     v3_Regex(v3_RegexExp),
     metricsRegex(metricsRegexExp),
+    ollamaApiTagsRegex(ollamaApiTagsRegexExp),
+    ollamaApiVersionRegex(ollamaApiVersionRegexExp),
     timeout_in_ms(timeout_in_ms),
     ovmsServer(ovmsServer),
 
@@ -231,6 +236,12 @@ void HttpRestApiHandler::registerAll() {
     });
     registerHandler(Options, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser) -> Status {
         return processOptions(request_components, response, request_body);
+    });
+    registerHandler(OllamaApiTags, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser) {
+        return processOllamaTagsRequest(response);
+    });
+    registerHandler(OllamaApiVersion, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser) {
+        return processOllamaVersionRequest(response);
     });
 }
 
@@ -669,6 +680,94 @@ Status HttpRestApiHandler::processListModelsRequest(std::string& response) {
     return StatusCode::OK;
 }
 
+static void parseOllamaModel(rapidjson::Writer<rapidjson::StringBuffer>& writer, const std::string& name, const std::string& modifiedAt) {
+    std::string taggedName = (name.find(':') != std::string::npos) ? name : name + ":latest";
+    writer.StartObject();
+    writer.String("name");
+    writer.String(taggedName.c_str());
+    writer.String("model");
+    writer.String(taggedName.c_str());
+    writer.String("modified_at");
+    writer.String(modifiedAt.c_str());
+    writer.String("size");
+    writer.Int(0);
+    writer.String("digest");
+    writer.String("");
+    writer.String("details");
+    writer.StartObject();
+    writer.String("parent_model");
+    writer.String("");
+    writer.String("format");
+    writer.String("openvino");
+    writer.String("family");
+    writer.String("");
+    writer.String("families");
+    writer.Null();
+    writer.String("parameter_size");
+    writer.String("");
+    writer.String("quantization_level");
+    writer.String("");
+    writer.EndObject();
+    writer.EndObject();
+}
+
+Status HttpRestApiHandler::processOllamaTagsRequest(std::string& response) {
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+    time_t timestamp;
+    time(&timestamp);
+
+    // Format timestamp as ISO 8601
+    char timeBuf[64];
+    struct tm tmBuf;
+    gmtime_r(&timestamp, &tmBuf);
+    strftime(timeBuf, sizeof(timeBuf), "%Y-%m-%dT%H:%M:%SZ", &tmBuf);
+    std::string modifiedAt(timeBuf);
+
+    writer.StartObject();
+    writer.String("models");
+    writer.StartArray();
+
+    // Single Model
+    auto availableModelNames = modelManager.getNamesOfAvailableModels();
+    for (const auto& name : availableModelNames) {
+        parseOllamaModel(writer, name, modifiedAt);
+    }
+
+    // DAG
+    auto availableModels = modelManager.getPipelineFactory().getNamesOfAvailablePipelines();
+    for (const auto& name : availableModels) {
+        parseOllamaModel(writer, name, modifiedAt);
+    }
+
+    // MediaPipe
+#if (MEDIAPIPE_DISABLE == 0)
+    auto availableMediapipes = modelManager.getMediapipeFactory().getNamesOfAvailableMediapipePipelines();
+    for (const auto& graphName : availableMediapipes) {
+        parseOllamaModel(writer, graphName, modifiedAt);
+    }
+#endif
+    writer.EndArray();
+    writer.EndObject();
+    response = buffer.GetString();
+    return StatusCode::OK;
+}
+
+Status HttpRestApiHandler::processOllamaVersionRequest(std::string& response) {
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+    std::string version = PROJECT_VERSION;
+    if (version.empty() || version.find("REPLACE") != std::string::npos) {
+        version = "0.0.0";
+    }
+    writer.StartObject();
+    writer.String("version");
+    writer.String(version.c_str());
+    writer.EndObject();
+    response = buffer.GetString();
+    return StatusCode::OK;
+}
+
 bool HttpRestApiHandler::isAuthorized(const std::unordered_map<std::string, std::string>& headers, const std::string& apiKey) {
     std::unordered_map<std::string, std::string> lowercaseHeaders;
     for (const auto& [key, value] : headers) {
@@ -994,6 +1093,14 @@ Status HttpRestApiHandler::parseRequestComponents(HttpRequestComponents& request
                 return status;
             return StatusCode::OK;
         }
+        if (std::regex_match(request_path, sm, ollamaApiTagsRegex)) {
+            requestComponents.type = OllamaApiTags;
+            return StatusCode::OK;
+        }
+        if (std::regex_match(request_path, sm, ollamaApiVersionRegex)) {
+            requestComponents.type = OllamaApiVersion;
+            return StatusCode::OK;
+        }
         if (std::regex_match(request_path, sm, v3_Regex)) {
             requestComponents.type = V3;
             auto status = parseInferenceHeaderContentLength(requestComponents, headers);
@@ -1015,7 +1122,9 @@ Status HttpRestApiHandler::parseRequestComponents(HttpRequestComponents& request
                    std::regex_match(request_path, sm, kfs_modelreadyRegex) ||
                    std::regex_match(request_path, sm, v3_ListModelsRegex) ||
                    std::regex_match(request_path, sm, v3_RetrieveModelRegex) ||
-                   std::regex_match(request_path, sm, metricsRegex))
+                   std::regex_match(request_path, sm, metricsRegex) ||
+                   std::regex_match(request_path, sm, ollamaApiTagsRegex) ||
+                   std::regex_match(request_path, sm, ollamaApiVersionRegex))
                    ? StatusCode::REST_UNSUPPORTED_METHOD
                    : StatusCode::REST_INVALID_URL;
 
@@ -1084,6 +1193,14 @@ Status HttpRestApiHandler::parseRequestComponents(HttpRequestComponents& request
             requestComponents.type = Metrics;
             return StatusCode::OK;
         }
+        if (std::regex_match(request_path, sm, ollamaApiTagsRegex)) {
+            requestComponents.type = OllamaApiTags;
+            return StatusCode::OK;
+        }
+        if (std::regex_match(request_path, sm, ollamaApiVersionRegex)) {
+            requestComponents.type = OllamaApiVersion;
+            return StatusCode::OK;
+        }
         if (std::regex_match(request_path, sm, v3_ListModelsRegex)) {
             requestComponents.type = V3_ListModels;
             return StatusCode::OK;
@@ -1124,10 +1241,14 @@ Status HttpRestApiHandler::processRequest(
     HttpRequestComponents requestComponents;
     auto status = parseRequestComponents(requestComponents, http_method, request_path_str, *headers);
 
-    if (!status.ok())
+    if (!status.ok()) {
+        SPDLOG_INFO("{} {} - error parsing request: {}", http_method, request_path, status.string());
         return status;
+    }
     response->clear();
-    return dispatchToProcessor(request_path, request_body, response, requestComponents, responseComponents, std::move(serverReaderWriter), std::move(multiPartParser));
+    status = dispatchToProcessor(request_path, request_body, response, requestComponents, responseComponents, std::move(serverReaderWriter), std::move(multiPartParser));
+    SPDLOG_INFO("{} {} -> status: {} response: {}", http_method, request_path, status.string(), *response);
+    return status;
 }
 
 Status HttpRestApiHandler::processPredictRequest(
