@@ -192,3 +192,22 @@ Items 4-6 are nice-to-have improvements that don't block basic functionality.
 - `src/http_rest_api_handler.cpp` — Implemented endpoint routing and response generation for both endpoints.
 - `src/llm/apis/openai_api_handler.cpp` — Skip non-function tool types with `SPDLOG_WARN` instead of returning error.
 - `src/test/listmodelsendpoint_test.cpp` — Added unit tests for both endpoints.
+
+
+
+## How to setup Codex
+
+### Build
+```
+https://github.com/openai/codex/blob/main/docs/install.md#build-from-source
+```
+
+### Install or copy
+```
+cp target/debug/codex  ~/.cargo/bin/codex
+```
+
+### Run
+```
+CODEX_OSS_BASE_URL=http://localhost:11338/v3 codex --oss -m gpt-oss:20
+```

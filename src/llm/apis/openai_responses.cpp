@@ -344,9 +344,11 @@ absl::Status OpenAIResponsesHandler::parseResponsesPart(std::optional<uint32_t> 
             } else if (request.chatHistory[i].contains("content") && request.chatHistory[i]["content"].is_null()) {
                 msgObj.AddMember("content", Value(kNullType), alloc);
             }
-            auto toolCallId = request.chatHistory[i]["tool_call_id"].as_string();
-            if (toolCallId.has_value()) {
-                msgObj.AddMember("tool_call_id", Value(toolCallId.value().c_str(), alloc), alloc);
+            if (request.chatHistory[i].contains("tool_call_id")) {
+                auto toolCallId = request.chatHistory[i]["tool_call_id"].as_string();
+                if (toolCallId.has_value()) {
+                    msgObj.AddMember("tool_call_id", Value(toolCallId.value().c_str(), alloc), alloc);
+                }
             }
             if (request.chatHistory[i].contains("tool_calls")) {
                 std::string toolCallsStr = request.chatHistory[i]["tool_calls"].to_json_string();
