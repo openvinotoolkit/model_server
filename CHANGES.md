@@ -46,7 +46,15 @@ Both `/api/version` and `/v3/api/version` are accepted.
 
 Codex sends a `tools` array that may contain non-function tool types such as `web_search`. Previously, OVMS rejected the entire request with `"Only function tools are supported"`. Now, non-function tool types are silently removed from the array with a warning log, and only function tools are processed. This allows Codex requests to succeed without modification.
 
-**Affected tool types from Codex:** `web_search`
+**Non-function tool types defined by the Responses API (all skipped by OVMS):**
+- `web_search_preview` / `web_search` — Web search tool
+- `file_search` — File search tool
+- `code_interpreter` — Code interpreter tool
+- `computer_use_preview` — Computer use tool
+- `mcp` — Model Context Protocol tool
+- `image_generation` — Image generation tool
+
+**Observed from Codex CLI:** `web_search`
 
 ---
 
@@ -161,37 +169,22 @@ OVMS emits the following Responses API streaming events, which Codex expects:
 
 The streaming event format appears fully compatible with what Codex expects.
 
-### 4.5 Implementation Priority for Full Codex Support
-
-1. **`instructions` field parsing** — Required for system prompt. Without it, the model has no personality/rules/guidelines. Relatively simple to implement (prepend system message to chatHistory).
-
-2. **`function_call_output` input items** — Required for the agentic tool-use loop. Without it, Codex can't relay command results back. Requires modifying `parseInput()` to handle multiple input item types.
-
-3. **`developer` → `system` role mapping** — Required for correct prompt construction. Simple string replacement in `parseInput()`.
-
-4. **`previous_response_id` support** — Required for truly stateful multi-turn. Currently not implemented (TODO). Would need server-side session/response storage. Lower priority since Codex can re-send full history.
-
-5. **`parallel_tool_calls` pass-through** — Currently hardcoded `true`. Should reflect what client sent. Simple fix but low impact.
-
-6. **`store` pass-through** — Currently hardcoded `true`. Should echo what client sent. Cosmetic.
-
-### 4.6 Summary
+### 4.5 Summary
 
 Items 1-3 are **blocking** for a working Codex CLI agentic session. The first prompt will appear to work (simple Q&A), but:
 - Without `instructions`, the model won't follow Codex's coding agent persona
 - Without `function_call_output` support, Codex cannot complete any tool-call round-trip
 - Without `developer`→`system` mapping, system prompts in the input array may be ignored by the chat template
 
-Items 4-6 are nice-to-have improvements that don't block basic functionality.
-
 ---
 
-## Files modified
+### Bugs fixed
 
-- `src/http_rest_api_handler.hpp` — Added `OllamaApiTags` and `OllamaApiVersion` request types, regex patterns, and handler declarations.
-- `src/http_rest_api_handler.cpp` — Implemented endpoint routing and response generation for both endpoints.
-- `src/llm/apis/openai_api_handler.cpp` — Skip non-function tool types with `SPDLOG_WARN` instead of returning error.
-- `src/test/listmodelsendpoint_test.cpp` — Added unit tests for both endpoints.
+1. **`tool_call_id` crash on regular messages** — The processedJson builder accessed `request.chatHistory[i]["tool_call_id"]` on every message. `JsonContainer::operator[]` throws `ov::Exception` for missing keys, crashing on system/user messages. Fixed by guarding with `contains("tool_call_id")`.
+
+2. **processedJson overwritten by parseTools()** — When Codex sends non-function tools (e.g. `web_search`), `parseTools()` removes them and overwrites `request.processedJson` with the raw doc (which has `input`, not `messages`). The Python chat template then fails with `KeyError: 'messages'`. Fixed by moving the processedJson builder to run after `parseTools()`.
+
+3. **Responses API tool format incompatible with chat templates** — Responses API tools use flat format (`{type, name, parameters}`), but chat templates expect Chat Completions format (`{type, function: {name, parameters}}`). Fixed by converting tool format when building processedJson.
 
 
 
@@ -211,3 +204,5 @@ cp target/debug/codex  ~/.cargo/bin/codex
 ```
 CODEX_OSS_BASE_URL=http://localhost:11338/v3 codex --oss -m gpt-oss:20
 ```
+
+![img](codex.png)
