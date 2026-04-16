@@ -322,10 +322,28 @@ absl::Status OpenAIResponsesHandler::parseResponsesPart(std::optional<uint32_t> 
         // summary field is accepted but ignored
     }
 
+    // logprobs: bool; optional - defaults to false
+    it = doc.FindMember("logprobs");
+    if (it != doc.MemberEnd() && !it->value.IsNull()) {
+        if (!it->value.IsBool())
+            return absl::InvalidArgumentError("logprobs accepts values true or false");
+        request.logprobschat = it->value.GetBool();
+    }
+    if (request.logprobschat && request.stream) {
+        return absl::InvalidArgumentError("logprobs are not supported in streaming mode.");
+    }
+
+    auto toolsStatus = parseTools();
+    if (!toolsStatus.ok()) {
+        return toolsStatus;
+    }
+
 #if (PYTHON_DISABLE == 0)
     // Build processedJson with "messages" array from chatHistory so that
     // the Python chat template path (which reads request_json["messages"])
     // can consume Responses API input without a separate code path.
+    // This must run AFTER parseTools() which may modify doc's tools array
+    // (removing non-function tools) and overwrite processedJson.
     {
         Document processedDoc;
         processedDoc.SetObject();
@@ -363,11 +381,43 @@ absl::Status OpenAIResponsesHandler::parseResponsesPart(std::optional<uint32_t> 
         }
         processedDoc.AddMember("messages", messagesArray, alloc);
 
-        // Copy tools from original doc if present
+        // Copy tools from original doc if present (after parseTools cleaned them).
+        // Responses API tools are flat: {type, name, description, parameters, strict}
+        // Chat templates expect Chat Completions format: {type, function: {name, description, parameters, strict}}
+        // Convert here.
         auto toolsIt = doc.FindMember("tools");
-        if (toolsIt != doc.MemberEnd() && !toolsIt->value.IsNull()) {
-            Value toolsCopy(toolsIt->value, alloc);
-            processedDoc.AddMember("tools", toolsCopy, alloc);
+        if (toolsIt != doc.MemberEnd() && !toolsIt->value.IsNull() && toolsIt->value.IsArray()) {
+            Value convertedTools(kArrayType);
+            for (auto& tool : toolsIt->value.GetArray()) {
+                if (!tool.IsObject())
+                    continue;
+                Value converted(kObjectType);
+                converted.AddMember("type", Value("function", alloc), alloc);
+                Value funcObj(kObjectType);
+                auto nameIt = tool.FindMember("name");
+                if (nameIt != tool.MemberEnd()) {
+                    Value nameCopy(nameIt->value, alloc);
+                    funcObj.AddMember("name", nameCopy, alloc);
+                }
+                auto descIt = tool.FindMember("description");
+                if (descIt != tool.MemberEnd()) {
+                    Value descCopy(descIt->value, alloc);
+                    funcObj.AddMember("description", descCopy, alloc);
+                }
+                auto paramsIt = tool.FindMember("parameters");
+                if (paramsIt != tool.MemberEnd()) {
+                    Value paramsCopy(paramsIt->value, alloc);
+                    funcObj.AddMember("parameters", paramsCopy, alloc);
+                }
+                auto strictIt = tool.FindMember("strict");
+                if (strictIt != tool.MemberEnd()) {
+                    Value strictCopy(strictIt->value, alloc);
+                    funcObj.AddMember("strict", strictCopy, alloc);
+                }
+                converted.AddMember("function", funcObj, alloc);
+                convertedTools.PushBack(converted, alloc);
+            }
+            processedDoc.AddMember("tools", convertedTools, alloc);
         }
 
         // Copy chat_template_kwargs from original doc if present
@@ -383,21 +433,6 @@ absl::Status OpenAIResponsesHandler::parseResponsesPart(std::optional<uint32_t> 
         request.processedJson = buffer.GetString();
     }
 #endif
-    // logprobs: bool; optional - defaults to false
-    it = doc.FindMember("logprobs");
-    if (it != doc.MemberEnd() && !it->value.IsNull()) {
-        if (!it->value.IsBool())
-            return absl::InvalidArgumentError("logprobs accepts values true or false");
-        request.logprobschat = it->value.GetBool();
-    }
-    if (request.logprobschat && request.stream) {
-        return absl::InvalidArgumentError("logprobs are not supported in streaming mode.");
-    }
-
-    auto toolsStatus = parseTools();
-    if (!toolsStatus.ok()) {
-        return toolsStatus;
-    }
 
     // max_output_tokens: uint; optional
     // OpenAI Responses API uses this field for output token limit.
