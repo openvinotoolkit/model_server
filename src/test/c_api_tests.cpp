@@ -1393,6 +1393,7 @@ public:
         MockModel(const std::string& name, std::shared_ptr<ModelInstance> instance) :
             Model(name, false /*stateful*/, nullptr) {
             modelVersions.insert({instance->getVersion(), instance});
+            defaultVersion = instance->getVersion();
         }
     };
     class MockModelManager : public ModelManager {
@@ -1401,6 +1402,7 @@ public:
         MockModelManager() {
             ov::Core ieCore;
             CAPIState::modelInstance = std::make_shared<MockModelInstanceChangingStates>(servableName, 1, ieCore);
+            CAPIState::modelInstance->setState(ovms::ModelVersionState::AVAILABLE);
             std::shared_ptr<MockModel> model = std::make_shared<MockModel>(servableName, modelInstance);
             models[servableName] = model;
         }

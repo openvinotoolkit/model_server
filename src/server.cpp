@@ -213,6 +213,9 @@ bool Server::isReady() const {
         return false;
     if (ModuleState::INITIALIZED != it->second->getState())
         return false;
+    const auto& servableManagerModule = static_cast<const ServableManagerModule&>(*it->second);
+    if (!servableManagerModule.getServableManager().allServablesLoaded())
+        return false;
     return true;
 }
 
