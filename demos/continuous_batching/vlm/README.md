@@ -9,7 +9,7 @@ ovms_demos_vlm_npu
 ```
 
 This demo shows how to deploy Vision Language Models in the OpenVINO Model Server.
-Text generation use case is exposed via OpenAI API `chat/completions` endpoint.
+Text generation use case is exposed via OpenAI API `chat/completions` and `responses` endpoints.
 
 > **Note:** This demo was tested on 4th - 6th generation Intel® Xeon® Scalable Processors, Intel® Arc™ GPU Series and Intel® Core Ultra Series on Ubuntu24, RedHat9 and Windows11.
 
@@ -119,6 +119,64 @@ curl http://localhost:8000/v3/chat/completions  -H "Content-Type: application/js
 ```
 :::
 
+:::{dropdown} **Unary call with cURL using Responses API**
+**Note**: Using urls in request requires `--allowed_media_domains` parameter described [here](../../../docs/parameters.md)
+
+```bash
+curl http://localhost:8000/v3/responses \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "Junrui2021/Qwen3-VL-8B-Instruct-int4",
+    "input": [
+      {
+        "role": "user",
+        "content": [
+          {
+            "type": "input_text",
+            "text": "Describe what is on the picture."
+          },
+          {
+            "type": "input_image",
+            "image_url": "http://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/2/demos/common/static/images/zebra.jpeg"
+          }
+        ]
+      }
+    ],
+    "max_output_tokens": 100
+  }'
+```
+```json
+{
+  "id": "resp-1741731554",
+  "object": "response",
+  "created_at": 1741731554,
+  "model": "Junrui2021/Qwen3-VL-8B-Instruct-int4",
+  "status": "completed",
+  "output": [
+    {
+      "id": "msg-0",
+      "type": "message",
+      "role": "assistant",
+      "status": "completed",
+      "content": [
+        {
+          "type": "output_text",
+          "text": "The picture features a zebra standing in a grassy plain. Zebras are known for their distinctive black and white striped patterns, which help them blend in for camouflage purposes.",
+          "annotations": []
+        }
+      ]
+    }
+  ],
+  "usage": {
+    "input_tokens": 19,
+    "input_tokens_details": { "cached_tokens": 0 },
+    "output_tokens": 83,
+    "total_tokens": 102
+  }
+}
+```
+:::
+
 :::{dropdown} **Unary call with python requests library**
 
 ```console
@@ -177,9 +235,9 @@ print(response.text)
 }
 ```
 :::
-:::{dropdown} **Streaming request with OpenAI client**
+:::{dropdown} **Streaming request with OpenAI client using chat/completions**
 
-The endpoints `chat/completions` is compatible with OpenAI client so it can be easily used to generate code also in streaming mode:
+The endpoints `chat/completions` and `responses` are compatible with OpenAI client so it can be easily used to generate code also in streaming mode:
 
 Install the client library:
 ```console
@@ -223,6 +281,48 @@ The picture features a zebra standing in a grassy area. The zebra is characteriz
 
 :::
 
+:::{dropdown} **Streaming request with OpenAI client via Responses API**
+
+```console
+pip3 install openai
+```
+```python
+from openai import OpenAI
+import base64
+base_url='http://localhost:8080/v3'
+model_name = "Junrui2021/Qwen3-VL-8B-Instruct-int4"
+
+client = OpenAI(api_key='unused', base_url=base_url)
+
+def convert_image(Image):
+    with open(Image,'rb' ) as file:
+        base64_image = base64.b64encode(file.read()).decode("utf-8")
+    return base64_image
+
+stream = client.responses.create(
+    model=model_name,
+    input=[
+        {
+            "role": "user",
+            "content": [
+              {"type": "input_text", "text": "Describe what is on the picture."},
+              {"type": "input_image", "image_url": f"data:image/jpeg;base64,{convert_image('zebra.jpeg')}"}
+            ]
+        }
+        ],
+    stream=True,
+)
+for event in stream:
+    if event.type == "response.output_text.delta":
+        print(event.delta, end="", flush=True)
+```
+
+Output:
+```
+The picture features a zebra standing in a grassy area. The zebra is characterized by its distinctive black and white striped pattern, which covers its entire body, including its legs, neck, and head. Zebras have small, rounded ears and a long, flowing tail. The background appears to be a natural grassy habitat, typical of a savanna or plain.
+```
+
+:::
 
 ## Testing the model accuracy over serving API
 
@@ -237,5 +337,6 @@ Check [VLM usage with NPU acceleration](../../vlm_npu/README.md)
 - [Export models to OpenVINO format](../../../demos/common/export_models/README.md)
 - [Supported VLM models](https://openvinotoolkit.github.io/openvino.genai/docs/supported-models/#visual-language-models-vlms)
 - [Chat Completions API](../../../docs/model_server_rest_api_chat.md)
+- [Responses API](../../../docs/model_server_rest_api_responses.md)
 - [Writing client code](../../../docs/clients_genai.md)
 - [LLM calculator reference](../../../docs/llm/reference.md)

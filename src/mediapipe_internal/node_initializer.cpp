@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2020 Intel Corporation
+// Copyright 2026 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,17 +13,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include "pipelinedefinitionunloadguard.hpp"
+#include "node_initializer.hpp"
 
-#include "pipelinedefinition.hpp"
+#include <utility>
 
 namespace ovms {
-PipelineDefinitionUnloadGuard::PipelineDefinitionUnloadGuard(PipelineDefinition& pipelineDefinition) :
-    pipelineDefinition(pipelineDefinition) {
-    pipelineDefinition.increaseRequestsHandlesCount();
+NodeInitializerRegistry& NodeInitializerRegistry::instance() {
+    static NodeInitializerRegistry registry;
+    return registry;
 }
 
-PipelineDefinitionUnloadGuard::~PipelineDefinitionUnloadGuard() {
-    pipelineDefinition.decreaseRequestsHandlesCount();
+void NodeInitializerRegistry::add(std::unique_ptr<NodeInitializer> initializer) {
+    initializers_.push_back(std::move(initializer));
+}
+
+const std::vector<std::unique_ptr<NodeInitializer>>& NodeInitializerRegistry::all() const {
+    return initializers_;
 }
 }  // namespace ovms

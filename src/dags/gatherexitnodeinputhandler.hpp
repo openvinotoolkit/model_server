@@ -23,7 +23,6 @@
 #include "../capi_frontend/capi_utils.hpp"
 #include "../capi_frontend/capi_dag_utils.hpp"
 #include "../kfs_frontend/kfs_utils.hpp"
-#include "../logging.hpp"
 #include "../profiler.hpp"
 #include "../status.hpp"
 #include "../tfs_frontend/tfs_utils.hpp"

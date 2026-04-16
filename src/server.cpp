@@ -37,6 +37,8 @@
 #include <sysexits.h>
 #elif _WIN32
 #include <csignal>
+#include <cstdio>
+#include <io.h>
 
 #include <ntstatus.h>
 #include <winsock2.h>
@@ -56,7 +58,7 @@
 #include "httpservermodule.hpp"
 #include "kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "logging.hpp"
-#include "metric_module.hpp"
+#include "metrics/metric_module.hpp"
 #include "model_service.hpp"
 #include "modelmanager.hpp"
 #include "ovms_exit_codes.hpp"
@@ -140,7 +142,18 @@ static void onTerminate(int status) {
 }
 
 static void onIllegal(int status) {
-    Server::instance().setShutdownRequest(2);
+    (void)status;
+    const char msg[] = "SIGILL received: illegal instruction. This may indicate an unsupported CPU or device or an internal error. Terminating.\n";
+#ifdef __linux__
+    ssize_t ret = write(STDERR_FILENO, msg, sizeof(msg) - 1);
+#elif _WIN32
+    int ret = _write(_fileno(stderr), msg, sizeof(msg) - 1);
+#endif
+    (void)ret;
+    // Exit code 128+N is the standard shell convention for signal-terminated
+    // processes (bash, dash, Docker, Kubernetes all follow this).
+    // For SIGILL(4) this gives exit code 132.
+    std::_Exit(128 + SIGILL);
 }
 
 #ifdef __linux__
@@ -523,9 +536,6 @@ int Server::startServerFromSettings(ServerSettingsImpl& serverSettings, ModelsSe
         while (!getShutdownStatus() &&
                (serverSettings.serverMode == HF_PULL_AND_START_MODE || serverSettings.serverMode == SERVING_MODELS_MODE)) {
             std::this_thread::sleep_for(std::chrono::milliseconds(200));
-        }
-        if (getShutdownStatus() == 2) {
-            SPDLOG_ERROR("Illegal operation. OVMS started on unsupported device");
         }
     } catch (const std::exception& e) {
         SPDLOG_ERROR("Exception; {}", e.what());

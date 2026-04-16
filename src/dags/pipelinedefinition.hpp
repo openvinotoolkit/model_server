@@ -15,8 +15,6 @@
 //*****************************************************************************
 #pragma once
 
-#include <atomic>
-#include <condition_variable>
 #include <map>
 #include <memory>
 #include <set>
@@ -26,10 +24,10 @@
 #include <utility>
 #include <vector>
 
-#include "../kfs_frontend/kfs_utils.hpp"
-#include "../tfs_frontend/tfs_utils.hpp"
+#include "../model_metric_reporter.hpp"
 #include "../modelversion.hpp"
 #include "../notifyreceiver.hpp"
+#include "../single_version_servable_definition.hpp"
 #include "../tensorinfo.hpp"
 #include "aliases.hpp"
 #include "nodeinfo.hpp"
@@ -40,15 +38,12 @@ struct CNLIMWrapper;
 class MetricConfig;
 class MetricRegistry;
 class ModelManager;
-class ServableMetricReporter;
 class NodeValidator;
 class Pipeline;
-class PipelineDefinitionUnloadGuard;
 class Status;
 
-class PipelineDefinition : public NotifyReceiver {
+class PipelineDefinition : public SingleVersionServableDefinition, public NotifyReceiver {
     friend NodeValidator;
-    friend PipelineDefinitionUnloadGuard;
     struct ValidationResultNotifier {
         ValidationResultNotifier(PipelineDefinitionStatus& status, std::condition_variable& loadedNotify) :
             status(status),
@@ -68,7 +63,6 @@ class PipelineDefinition : public NotifyReceiver {
         std::condition_variable& loadedNotify;
     };
 
-    const std::string pipelineName;
     std::vector<NodeInfo> nodeInfos;
     std::map<std::string, std::shared_ptr<CNLIMWrapper>> nodeResources = {};
     pipeline_connections_t connections;
@@ -79,11 +73,6 @@ protected:
 
 private:
     mutable std::shared_mutex metadataMtx;
-    std::atomic<uint64_t> requestsHandlesCounter = 0;
-    std::condition_variable loadedNotify;
-
-    // Pipelines are not versioned and any available definition has constant version equal 1.
-    static constexpr model_version_t VERSION = 1;
 
     std::unique_ptr<ServableMetricReporter> reporter;
 
@@ -99,7 +88,6 @@ private:
     Shape getNodeGatherShape(const NodeInfo& info) const;
 
 public:
-    static constexpr uint64_t WAIT_FOR_LOADED_DEFAULT_TIMEOUT_MICROSECONDS = 500000;
     PipelineDefinition(const std::string& pipelineName,
         const std::vector<NodeInfo>& nodeInfos,
         const pipeline_connections_t& connections,
@@ -129,15 +117,15 @@ public:
     std::vector<NodeInfo> calculateNodeInfosDiff(const std::vector<NodeInfo>& nodeInfos);
     void deinitializeNodeResources(const std::vector<NodeInfo>& nodeInfosDiff);
 
-    const std::string& getName() const override { return pipelineName; }
+    const std::string& getName() const override { return SingleVersionServableDefinition::getName(); }
     const PipelineDefinitionStateCode getStateCode() const { return status.getStateCode(); }
-    const model_version_t getVersion() const { return VERSION; }
+    bool isAvailable() const override { return status.isAvailable(); }
 
     void receiveNotification(const std::string& ownerDetails) override {
         this->status.handle(UsedModelChangedEvent(ownerDetails));
     }
 
-    const PipelineDefinitionStatus& getStatus() const {
+    const PipelineDefinitionStatus& getStatus() const override {
         return this->status;
     }
 
@@ -148,15 +136,15 @@ public:
     void makeSubscriptions(ModelManager& manager);
     void resetSubscriptions(ModelManager& manager);
 
-    ServableMetricReporter& getMetricReporter() const { return *this->reporter; }
+    ServableMetricReporter& getMetricReporter() const override { return *this->reporter; }
 
 protected:
     Status updateInputsInfo(const ModelManager& manager);
     Status updateOutputsInfo(const ModelManager& manager);
 
 public:
-    const tensor_map_t getInputsInfo() const;
-    const tensor_map_t getOutputsInfo() const;
+    const tensor_map_t getInputsInfo() const override;
+    const tensor_map_t getOutputsInfo() const override;
 
 private:
     static Status getCustomNodeMetadata(const NodeInfo& customNodeInfo, tensor_map_t& inputsInfo, metadata_fn callback, const std::string& pipelineName, void* customNodeLibraryInternalManager);
@@ -175,16 +163,10 @@ private:
         const Aliases& aliases,
         const Shape& gatherShape) const;
 
-    void increaseRequestsHandlesCount() {
-        ++requestsHandlesCounter;
-    }
-
-    void decreaseRequestsHandlesCount() {
-        --requestsHandlesCounter;
-    }
+    StatusCode notLoadedYetCode() const override;
+    StatusCode notLoadedAnymoreCode() const override;
 
 public:
     static const std::string SCHEDULER_CLASS_NAME;
-    Status waitForLoaded(std::unique_ptr<PipelineDefinitionUnloadGuard>& unloadGuard, const uint32_t waitForLoadedTimeoutMicroseconds = WAIT_FOR_LOADED_DEFAULT_TIMEOUT_MICROSECONDS);
 };
 }  // namespace ovms

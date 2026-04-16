@@ -22,7 +22,6 @@
 #include <sstream>
 #include <string>
 
-#include "logging.hpp"
 #include "shape.hpp"
 #include "anonymous_input_name.hpp"
 #include "status.hpp"

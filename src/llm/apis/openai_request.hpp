@@ -38,7 +38,7 @@ struct StreamOptions {
     bool includeUsage = false;
 };
 // Class that maps OpenAI request content.
-struct OpenAIChatCompletionsRequest {
+struct OpenAIRequest {
     ov::genai::ChatHistory chatHistory;
     std::string processedJson;
     ImageHistory imageHistory;
@@ -81,7 +81,7 @@ struct OpenAIChatCompletionsRequest {
     // Holds value for tool_choice field as described in https://platform.openai.com/docs/api-reference/chat/create#chat_create-tool_choice
     std::string toolChoice;
 
-    OpenAIChatCompletionsRequest() = default;
-    ~OpenAIChatCompletionsRequest() = default;
+    OpenAIRequest() = default;
+    ~OpenAIRequest() = default;
 };
 }  // namespace ovms

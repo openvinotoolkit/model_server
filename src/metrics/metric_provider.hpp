@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2020 Intel Corporation
+// Copyright 2026 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,15 +16,15 @@
 #pragma once
 
 namespace ovms {
-class PipelineDefinition;
 
-class PipelineDefinitionUnloadGuard {
+class MetricConfig;
+class MetricRegistry;
+
+class MetricProvider {
 public:
-    PipelineDefinitionUnloadGuard() = delete;
-    PipelineDefinitionUnloadGuard(PipelineDefinition& pipelineDefinition);
-    ~PipelineDefinitionUnloadGuard();
-
-private:
-    PipelineDefinition& pipelineDefinition;
+    virtual ~MetricProvider() = default;
+    virtual MetricRegistry* getMetricRegistry() const = 0;
+    virtual const MetricConfig& getMetricConfig() const = 0;
 };
+
 }  // namespace ovms
