@@ -20,6 +20,8 @@
 #include <future>
 #include <memory>
 #include <string>
+#include <utility>
+#include <vector>
 
 #pragma warning(push)
 #pragma warning(disable : 4005 4309 6001 6385 6386 6326 6011 6246 4456 6246)
