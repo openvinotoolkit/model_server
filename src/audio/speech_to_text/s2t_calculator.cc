@@ -209,11 +209,15 @@ private:
             serializeTimestamps(writer, result, config);
         }
         if (endpoint == Endpoint::TRANSLATIONS) {
+            float temperature = 1.0f;
+            auto tempStatus = S2tStreamingHandler::parseTemperature(payload, temperature);
+            if (tempStatus != absl::OkStatus())
+                return tempStatus;
             std::unique_lock lock(pipe->sttPipelineMutex);
             auto disconnectStatus = checkClientDisconnected(payload, cc->NodeName(), "before translation");
             if (!disconnectStatus.ok())
                 return disconnectStatus;
-            std::string generatedText = pipe->sttPipeline->generate(rawSpeech, ov::genai::task("translate"), ov::genai::streamer(disconnectCallback));
+            std::string generatedText = pipe->sttPipeline->generate(rawSpeech, ov::genai::task("translate"), ov::genai::temperature(temperature), ov::genai::streamer(disconnectCallback));
             lock.unlock();
             disconnectStatus = checkClientDisconnected(payload, cc->NodeName(), "after translation");
             if (!disconnectStatus.ok())
