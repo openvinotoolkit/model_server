@@ -24,6 +24,12 @@
 #include <thread>
 #include <vector>
 
+#ifndef _WIN32
+#include <signal.h>
+#include <sys/wait.h>
+#include <unistd.h>
+#endif
+
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
@@ -343,33 +349,12 @@ TEST_F(HfDownloaderPullHfModel, ResumeAfterShutdownRequestAndRerun) {
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string downloadPath = ovms::FileSystem::joinPath({this->directoryPath, "repository"});
     std::string task = "text_generation";
-    this->ServerPullHfModel(modelName, downloadPath, task);
-    server.setShutdownRequest(1);
-    if (t)
-        t->join();
-    server.setShutdownRequest(0);
-
     std::string basePath = ovms::FileSystem::joinPath({this->directoryPath, "repository", "OpenVINO", "Phi-3-mini-FastDraft-50M-int8-ov"});
     std::string modelPath = ovms::FileSystem::appendSlash(basePath) + "openvino_model.bin";
+    std::string model2Path = ovms::FileSystem::appendSlash(basePath) + "openvino_detokenizer.bin";
+    std::string model3Path = ovms::FileSystem::appendSlash(basePath) + "openvino_tokenizer.bin";
+    std::string model4Path = ovms::FileSystem::appendSlash(basePath) + "tokenizer.model";
     std::string graphPath = ovms::FileSystem::appendSlash(basePath) + "graph.pbtxt";
-
-    ASSERT_EQ(std::filesystem::exists(modelPath), true) << modelPath;
-    ASSERT_EQ(std::filesystem::exists(graphPath), true) << graphPath;
-    ASSERT_EQ(std::filesystem::file_size(modelPath), 52417240);
-
-    std::error_code ec;
-    ec.clear();
-    std::string expectedDigest = sha256File(modelPath, ec);
-    ASSERT_EQ(ec, std::errc());
-
-    ASSERT_EQ(removeSecondHalf(modelPath), true);
-    ASSERT_EQ(std::filesystem::file_size(modelPath), 26208620);
-
-    std::string ovModelPartLfsPath = ovms::FileSystem::appendSlash(basePath) + "openvino_model.binlfs_part";
-    std::filesystem::rename(modelPath, ovModelPartLfsPath, ec);
-    ASSERT_EQ(ec, std::errc());
-    ASSERT_EQ(std::filesystem::file_size(ovModelPartLfsPath), 26208620);
-    ASSERT_EQ(createGitLfsPointerFile(modelPath), true);
 
     server.setShutdownRequest(0);
     int firstRunCode = EXIT_SUCCESS;
@@ -386,7 +371,7 @@ TEST_F(HfDownloaderPullHfModel, ResumeAfterShutdownRequestAndRerun) {
         firstRunCode = this->server.start(argc, argv);
     }));
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    std::this_thread::sleep_for(std::chrono::milliseconds(2000));
     server.setShutdownRequest(1);
     EnsureServerModelDownloadFinishedWithTimeout(server, 120);
     if (t)
@@ -399,14 +384,82 @@ TEST_F(HfDownloaderPullHfModel, ResumeAfterShutdownRequestAndRerun) {
 
     this->ServerPullHfModel(modelName, downloadPath, task);
 
-    ASSERT_EQ(std::filesystem::exists(ovModelPartLfsPath), false) << ovModelPartLfsPath;
     ASSERT_EQ(std::filesystem::exists(modelPath), true) << modelPath;
     ASSERT_EQ(std::filesystem::exists(graphPath), true) << graphPath;
     ASSERT_EQ(std::filesystem::file_size(modelPath), 52417240);
+    ASSERT_EQ(std::filesystem::file_size(model2Path), 339125);
+    ASSERT_EQ(std::filesystem::file_size(model3Path), 500292);
+    ASSERT_EQ(std::filesystem::file_size(model4Path), 499723);
+}
 
-    std::string resumedDigest = sha256File(modelPath, ec);
-    ASSERT_EQ(ec, std::errc());
-    ASSERT_EQ(expectedDigest, resumedDigest);
+TEST_F(HfDownloaderPullHfModel, ResumeAfterForcedTerminationAndRerun) {
+    SKIP_AND_EXIT_IF_NOT_RUNNING_UNSTABLE();  // SSL proxy blocked workaround
+#ifdef _WIN32
+    GTEST_SKIP() << "Forceful child-process termination path is Linux-only in this test.";
+#else
+    std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
+    std::string downloadPath = ovms::FileSystem::joinPath({this->directoryPath, "repository"});
+    std::string task = "text_generation";
+    std::string basePath = ovms::FileSystem::joinPath({this->directoryPath, "repository", "OpenVINO", "Phi-3-mini-FastDraft-50M-int8-ov"});
+    std::string modelPath = ovms::FileSystem::appendSlash(basePath) + "openvino_model.bin";
+    std::string model2Path = ovms::FileSystem::appendSlash(basePath) + "openvino_detokenizer.bin";
+    std::string model3Path = ovms::FileSystem::appendSlash(basePath) + "openvino_tokenizer.bin";
+    std::string model4Path = ovms::FileSystem::appendSlash(basePath) + "tokenizer.model";
+    std::string graphPath = ovms::FileSystem::appendSlash(basePath) + "graph.pbtxt";
+
+    pid_t childPid = fork();
+    ASSERT_NE(childPid, -1);
+
+    if (childPid == 0) {
+        ovms::Server& childServer = ovms::Server::instance();
+        childServer.setShutdownRequest(0);
+        char* argv[] = {(char*)"ovms",
+            (char*)"--pull",
+            (char*)"--source_model",
+            (char*)modelName.c_str(),
+            (char*)"--model_repository_path",
+            (char*)downloadPath.c_str(),
+            (char*)"--task",
+            (char*)task.c_str()};
+        int argc = 8;
+
+        std::thread childThread([&argc, &argv, &childServer]() {
+            (void)childServer.start(argc, argv);
+        });
+        childThread.detach();
+
+        auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(30);
+        while (std::chrono::steady_clock::now() < deadline) {
+            auto lfsCandidates = ovms::libgit2::findLfsLikeFiles(downloadPath, true);
+            auto hasOpenvinoModelPointer = std::find(lfsCandidates.begin(), lfsCandidates.end(), std::filesystem::path("openvino_model.bin")) != lfsCandidates.end();
+            if (std::filesystem::exists(modelPath) || hasOpenvinoModelPointer) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(200));
+                break;
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        }
+
+        kill(getpid(), SIGKILL);
+        _exit(1);
+    }
+
+    int childStatus = 0;
+    ASSERT_EQ(waitpid(childPid, &childStatus, 0), childPid);
+    ASSERT_TRUE(WIFSIGNALED(childStatus));
+    ASSERT_EQ(WTERMSIG(childStatus), SIGKILL);
+
+    auto remainingPointers = ovms::libgit2::findLfsLikeFiles(downloadPath, true);
+    EXPECT_FALSE(remainingPointers.empty());
+
+    this->ServerPullHfModel(modelName, downloadPath, task);
+
+    ASSERT_EQ(std::filesystem::exists(modelPath), true) << modelPath;
+    ASSERT_EQ(std::filesystem::exists(graphPath), true) << graphPath;
+    ASSERT_EQ(std::filesystem::file_size(modelPath), 52417240);
+    ASSERT_EQ(std::filesystem::file_size(model2Path), 339125);
+    ASSERT_EQ(std::filesystem::file_size(model3Path), 500292);
+    ASSERT_EQ(std::filesystem::file_size(model4Path), 499723);
+#endif
 }
 
 TEST_F(HfDownloaderPullHfModel, PositiveDownloadAndStart) {

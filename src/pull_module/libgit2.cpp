@@ -22,6 +22,7 @@
 #include <fstream>
 #include <iostream>
 #include <memory>
+#include <set>
 #include <string>
 #include <sstream>
 #include <utility>
@@ -65,10 +66,26 @@ namespace fs = std::filesystem;
 namespace {
 std::atomic<int> g_activeLibgit2Guards{0};
 
+/**
+ * Sets the LFS (Large File Storage) cancellation flag.
+ * This signal is checked by the patched libgit2 library to abort ongoing LFS downloads.
+ * 
+ * @param value Non-zero to request cancellation, zero to clear the flag.
+ * @note Works on the git LFS domain; controls remote LFS transfers.
+ */
 static void setLfsCancelRequested(int value) {
     git_lfs_cancel_requested = value != 0 ? 1 : 0;
 }
 
+/**
+ * Callback invoked during git clone object transfer to monitor transfer progress.
+ * Checks for cancellation requests from the server shutdown mechanism.
+ * 
+ * @param stats Pointer to git_indexer_progress structure with transfer statistics (unused).
+ * @param payload User-supplied payload pointer (unused).
+ * @return -1 if cancellation requested (aborts transfer), 0 otherwise.
+ * @note Connects to internet during clone operations; works on the clone/fetch domain.
+ */
 int cloneTransferProgressCb(const git_indexer_progress* stats, void* payload) {
     (void)stats;
     (void)payload;
@@ -79,6 +96,16 @@ int cloneTransferProgressCb(const git_indexer_progress* stats, void* payload) {
     return 0;
 }
 
+/**
+ * Callback for sideband progress messages during git operations (clone, fetch).
+ * Provides real-time feedback from the remote server about transfer progress.
+ * 
+ * @param str Sideband progress message from remote server (unused).
+ * @param len Length of the sideband message (unused).
+ * @param payload User-supplied payload pointer (unused).
+ * @return -1 if cancellation requested (aborts operation), 0 otherwise.
+ * @note Connects to internet; works on the clone/fetch domain.
+ */
 int cloneSidebandProgressCb(const char* str, int len, void* payload) {
     (void)str;
     (void)len;
@@ -90,6 +117,17 @@ int cloneSidebandProgressCb(const char* str, int len, void* payload) {
     return 0;
 }
 
+/**
+ * Callback invoked when git references (branches, tags) are updated during clone/fetch.
+ * Triggered for each ref that is fetched from the remote repository.
+ * 
+ * @param refname Reference name being updated (e.g., "refs/heads/main").
+ * @param a Previous OID (old commit ID), or NULL if reference is new.
+ * @param b New OID (new commit ID) being fetched.
+ * @param payload User-supplied payload pointer (unused).
+ * @return -1 if cancellation requested (aborts operation), 0 otherwise.
+ * @note Connects to internet; works on the clone/fetch domain.
+ */
 int cloneUpdateTipsCb(const char* refname, const git_oid* a, const git_oid* b, void* payload) {
     (void)refname;
     (void)a;
@@ -102,6 +140,19 @@ int cloneUpdateTipsCb(const char* refname, const git_oid* a, const git_oid* b, v
     return 0;
 }
 
+/**
+ * Callback fired during git checkout to notify about files being modified in the working tree.
+ * Raised when files are created, updated, or deleted during clone or checkout operations.
+ * 
+ * @param why Notification type (GIT_CHECKOUT_NOTIFY_*) indicating what changed.
+ * @param path Path of the file being checked out in the working directory.
+ * @param baseline Diff file info at HEAD (unused).
+ * @param target Diff file info being checked out (unused).
+ * @param workdir Current working directory file state (unused).
+ * @param payload User-supplied payload pointer (unused).
+ * @return -1 if cancellation requested (aborts checkout), 0 otherwise.
+ * @note Works on the git repository working directory; modifies local filesystem.
+ */
 int cloneCheckoutNotifyCb(git_checkout_notify_t why,
     const char* path,
     const git_diff_file* baseline,
@@ -122,8 +173,19 @@ int cloneCheckoutNotifyCb(git_checkout_notify_t why,
 }
 }  // namespace
 
-// Callback for clone authentication - will be used when password is not set in repo_url
-// Does not work with LFS download as it requires additional authentication when password is not set in repository url
+/**
+ * Callback for acquiring authentication credentials during git clone operations.
+ * Attempts to use HF_TOKEN environment variable for Hugging Face authentication.
+ * 
+ * @param out [out] Pointer to git_credential structure to fill with credentials.
+ * @param url The repository URL requiring authentication.
+ * @param username_from_url Username parsed from URL (if any).
+ * @param allowed_types Bitmask of credential types supported by the remote.
+ * @param payload User-supplied payload pointer (unused).
+ * @return 0 on success, -1 on error, 1 if credential type not supported.
+ * @note Connects to internet for authentication; reads HF_TOKEN environment variable.
+ * @note Limited LFS support: LFS downloads may fail if HF_TOKEN is not set.
+ */
 int cred_acquire_cb(git_credential** out,
     const char* url,
     const char* username_from_url,
@@ -176,6 +238,15 @@ int cred_acquire_cb(git_credential** out,
         }                                                             \
     } while (0)
 
+/**
+ * Initializes the libgit2 library with server connection settings.
+ * Sets timeouts for server connections and LFS operations, and configures SSL certificate locations.
+ * Maintains a reference count of active guards to ensure single initialization.
+ * 
+ * @param opts Configuration options including server timeouts and SSL certificate path.
+ * @note Thread-safe initialization; uses atomic counter to track active guards.
+ * @note Connects to internet: configures timeouts for remote git/LFS operations.
+ */
 Libgt2InitGuard::Libgt2InitGuard(const Libgit2Options& opts) {
     SPDLOG_DEBUG("Initializing libgit2");
     this->status = git_libgit2_init();
@@ -196,6 +267,10 @@ Libgt2InitGuard::Libgt2InitGuard(const Libgit2Options& opts) {
     g_activeLibgit2Guards.fetch_add(1, std::memory_order_relaxed);
 }
 
+/**
+ * Cleans up libgit2 library resources.
+ * Decrements the reference count and shuts down the library when all guards are destroyed.
+ */
 Libgt2InitGuard::~Libgt2InitGuard() {
     SPDLOG_DEBUG("Shutdown libgit2");
     if (this->countedAsInitialized) {
@@ -206,12 +281,27 @@ Libgt2InitGuard::~Libgt2InitGuard() {
 
 const std::string PROTOCOL_SEPARATOR = "://";
 
+/**
+ * Checks if an HTTP proxy is configured for downloads.
+ * 
+ * @return true if httpProxy member is non-empty, false otherwise.
+ * @note Checks local configuration; does not connect to internet.
+ */
 bool HfDownloader::CheckIfProxySet() {
     if (this->httpProxy != "")
         return true;
     return false;
 }
 
+/**
+ * Constructs a repository URL with embedded authentication credentials.
+ * Inserts the HF token as both username and password in the URL if available.
+ * Handles protocol extraction to ensure credentials are placed in the correct position.
+ * 
+ * @return Repository URL with embedded credentials, or plain URL without credentials if token is empty.
+ * @note Works on repository URL strings; does not access git repository filesystem.
+ * @note Connects to internet: URL used for authentication to remote repositories.
+ */
 std::string HfDownloader::GetRepositoryUrlWithPassword() {
     std::string repoPass = "";
     if (this->hfToken != "") {
@@ -236,18 +326,45 @@ std::string HfDownloader::GetRepositoryUrlWithPassword() {
     return outputWithPass;
 }
 
+/**
+ * Constructs the repository URL without credentials.
+ * Concatenates hfEndpoint and sourceModel to form the public repository URL.
+ * 
+ * @return Repository URL without authentication credentials.
+ * @note Works on repository URL strings; does not access git repository filesystem.
+ */
 std::string HfDownloader::GetRepoUrl() {
     std::string repoUrl = "";
     repoUrl += this->hfEndpoint + this->sourceModel;
     return repoUrl;
 }
 
+/**
+ * Constructs an HfDownloader for downloading models from Hugging Face.
+ * 
+ * @param inSourceModel Source model identifier (e.g., "user/model-name").
+ * @param inDownloadPath Local filesystem path where the model will be downloaded.
+ * @param inHfEndpoint Hugging Face endpoint URL (e.g., "https://huggingface.co").
+ * @param inHfToken Authentication token for Hugging Face API (HF_TOKEN).
+ * @param inHttpProxy Optional HTTP proxy URL for outbound connections.
+ * @param inOverwrite If true, overwrite existing models; if false, resume or skip.
+ * @note Connects to internet: stores credentials and proxy settings for remote downloads.
+ */
 HfDownloader::HfDownloader(const std::string& inSourceModel, const std::string& inDownloadPath, const std::string& inHfEndpoint, const std::string& inHfToken, const std::string& inHttpProxy, bool inOverwrite) :
     IModelDownloader(inSourceModel, inDownloadPath, inOverwrite),
     hfEndpoint(inHfEndpoint),
     hfToken(inHfToken),
     httpProxy(inHttpProxy) {}
 
+/**
+ * Recursively removes read-only file attributes from all files in a directory.
+ * Enables modifications to files after git clone (which sets read-only on some systems).
+ * 
+ * @param directoryPath Absolute path to the root directory to process.
+ * @return StatusCode::OK on success, StatusCode::PATH_INVALID on permission errors.
+ * @note Works on local filesystem; modifies file system permissions.
+ * @note Called after successful clone to ensure repository files are writable.
+ */
 Status HfDownloader::RemoveReadonlyFileAttributeFromDir(const std::string& directoryPath) {
     for (const std::filesystem::directory_entry& dir_entry : std::filesystem::recursive_directory_iterator(directoryPath)) {
         try {
@@ -261,11 +378,22 @@ Status HfDownloader::RemoveReadonlyFileAttributeFromDir(const std::string& direc
     return StatusCode::OK;
 }
 
+/**
+ * RAII guard class for opening and managing git repository objects.
+ * Automatically frees the git repository on destruction.
+ * Stores the last error class for error diagnosis after failed opens.
+ */
 class GitRepositoryGuard {
 public:
     git_repository* repo = nullptr;
     int git_error_class = 0;
 
+    /**
+     * Opens a git repository at the specified filesystem path.
+     * 
+     * @param path Absolute or relative path to the git repository directory.
+     * @note Works on specific git repository location (searches for .git directory).
+     */
     GitRepositoryGuard(const std::string& path) {
         int error = git_repository_open_ext(&repo, path.c_str(), 0, nullptr);
         if (error < 0) {
@@ -283,6 +411,9 @@ public:
         }
     }
 
+    /**
+     * Destructor: safely releases the git repository resource.
+     */
     ~GitRepositoryGuard() {
         if (repo) {
             git_repository_free(repo);
@@ -313,6 +444,16 @@ public:
     }
 };
 
+/**
+ * Verifies the cleanliness of a git repository after clone or download operations.
+ * Checks for staged changes, unstaged modifications, untracked files, and merge conflicts.
+ * 
+ * @param checkUntracked If true, also check for untracked files (more expensive on large repos).
+ * @return StatusCode::OK if repository is clean, StatusCode::HF_GIT_STATUS_UNCLEAN if changes exist,
+ *         or error status if repository check fails.
+ * @note Works on specific git repository (at downloadPath);scans the entire working directory.
+ * @note Part of the git domain: analyzes HEAD state, index, and working directory.
+ */
 Status HfDownloader::CheckRepositoryStatus(bool checkUntracked) {
     if (g_activeLibgit2Guards.load(std::memory_order_relaxed) <= 0) {
         return StatusCode::HF_GIT_LIBGIT2_NOT_INITIALIZED;
@@ -400,12 +541,24 @@ Status HfDownloader::CheckRepositoryStatus(bool checkUntracked) {
 }
 
 namespace libgit2 {
+/**
+ * Checks if the server shutdown mechanism has requested cancellation of clone operations.
+ * Used to gracefully abort long-running git clone or LFS download operations.
+ * 
+ * @return true if shutdown/cancellation is requested, false otherwise.
+ * @note Checks internal shutdown state; does not connect to internet.
+ */
 bool isCloneCancellationRequestedFromServer() {
     return getShutdownRequestValue() != 0;
 }
 
-// Trim ASCII leading/trailing whitespace in a locale-independent way.
-// This keeps non-ASCII bytes (e.g. UTF-8 continuation bytes) untouched.
+/**
+ * Removes leading and trailing ASCII whitespace (spaces, tabs, CR, LF) from a string.
+ * Preserves non-ASCII bytes to maintain UTF-8 integrity.
+ * 
+ * @param s [in/out] String to trim; modified in-place.
+ * @note Pure string operation; does not access filesystem or network.
+ */
 void rtrimCrLfWhitespace(std::string& s) {
     auto isAsciiWhitespace = [](unsigned char c) {
         return c == ' ' || c == '\t' || c == '\n' || c == '\v' || c == '\f' || c == '\r';
@@ -420,7 +573,14 @@ void rtrimCrLfWhitespace(std::string& s) {
         s.erase(0, i);
 }
 
-// Case-insensitive substring search: returns true if 'needle' is found in 'hay'
+/**
+ * Performs case-insensitive substring search.
+ * 
+ * @param hay The string being searched ('haystack').
+ * @param needle The substring to find.
+ * @return true if needle is found in hay (case-insensitive), false otherwise.
+ * @note Pure string operation; does not access filesystem or network.
+ */
 bool containsCaseInsensitive(const std::string& hay, const std::string& needle) {
     auto toLower = [](std::string v) {
         std::transform(v.begin(), v.end(), v.begin(),
@@ -432,8 +592,17 @@ bool containsCaseInsensitive(const std::string& hay, const std::string& needle) 
     return hayLower.find(needleLower) != std::string::npos;
 }
 
-// Read at most the first 3 lines of a file, with a per-line cap to avoid huge reads.
-// Returns true if successful (even if <3 lines exist; vector will just be shorter).
+/**
+ * Reads the first three lines from a file with size limits.
+ * Handles CR, LF, and CRLF line endings uniformly.
+ * 
+ * @param p Path to the file to read.
+ * @param out [out] Vector populated with up to 3 lines (post-trimmed).
+ * @param maxLineBytes Maximum bytes per line before rejecting as oversized.
+ * @return true if file read succeeds (vector may contain fewer than 3 lines),
+ *         false if file cannot be opened or a line exceeds maxLineBytes.
+ * @note Works on local filesystem; reads limited file content (only first 3 lines).
+ */
 bool readFirstThreeLines(const std::filesystem::path& p, std::vector<std::string>& out, size_t maxLineBytes) {
     out.clear();
     if (maxLineBytes == 0)
@@ -481,8 +650,15 @@ bool readFirstThreeLines(const std::filesystem::path& p, std::vector<std::string
     return true;
 }
 
-// Check if the first 3 lines contain required keywords in positional order:
-// line1 -> "version", line2 -> "oid", line3 -> "size" (case-insensitive).
+/**
+ * Checks if a file matches the LFS pointer format (Git Large File Storage).
+ * Verifies the first three lines contain "version", "oid", and "size" keywords (case-insensitive).
+ * 
+ * @param p Path to the file to check.
+ * @return true if file is a valid LFS pointer, false otherwise or if file is not accessible.
+ * @note Works on local filesystem; identifies LFS pointer blobs in git repositories.
+ * @note Part of the git LFS domain: detects placeholder files for large objects.
+ */
 bool fileHasLfsKeywordsFirst3Positional(const fs::path& p) {
     std::error_code ec;
     if (!fs::is_regular_file(p, ec))
@@ -500,7 +676,70 @@ bool fileHasLfsKeywordsFirst3Positional(const fs::path& p) {
            containsCaseInsensitive(lines[2], "size");
 }
 
-// Helper: make path relative to base (best-effort, non-throwing).
+/**
+ * Checks if a string buffer contains LFS pointer keywords in the first three lines.
+ * Parses lines from a in-memory string and checks for "version", "oid", "size" keywords.
+ * 
+ * @param content String view containing the content to check.
+ * @return true if first three lines contain the required LFS keywords, false otherwise.
+ * @note Pure string operation; does not access filesystem or network.
+ * @note Part of the git LFS domain: identifies LFS pointer format in memory.
+ */
+bool hasLfsKeywordsFirst3Positional(std::string_view content) {
+    std::array<std::string, 3> lines;
+    size_t lineIndex = 0;
+    size_t position = 0;
+
+    while (lineIndex < lines.size() && position < content.size()) {
+        size_t next = content.find_first_of("\r\n", position);
+        auto line = content.substr(position, next == std::string_view::npos ? content.size() - position : next - position);
+        lines[lineIndex] = std::string(line);
+        rtrimCrLfWhitespace(lines[lineIndex]);
+        ++lineIndex;
+
+        if (next == std::string_view::npos)
+            break;
+        position = next + 1;
+        if (next + 1 < content.size() && content[next] == '\r' && content[next + 1] == '\n')
+            ++position;
+    }
+
+    if (lineIndex < lines.size())
+        return false;
+
+    return containsCaseInsensitive(lines[0], "version") &&
+           containsCaseInsensitive(lines[1], "oid") &&
+           containsCaseInsensitive(lines[2], "size");
+}
+
+/**
+ * Checks if a git blob object is an LFS pointer.
+ * Examines the raw blob content for LFS header keywords.
+ * 
+ * @param blob Pointer to a git_blob object from the repository database.
+ * @return true if blob matches LFS pointer format, false if blob is NULL or doesn't match.
+ * @note Works on git repository object database (ODB); reads blob content.
+ * @note Part of the git LFS domain: identifies LFS pointers in the git object database.
+ */
+bool blobHasLfsKeywordsFirst3Positional(git_blob* blob) {
+    if (!blob)
+        return false;
+    const void* raw = git_blob_rawcontent(blob);
+    if (!raw)
+        return false;
+    size_t rawSize = git_blob_rawsize(blob);
+    return hasLfsKeywordsFirst3Positional(std::string_view(static_cast<const char*>(raw), rawSize));
+}
+
+/**
+ * Converts an absolute path to a relative path with respect to a base directory.
+ * Best-effort operation that handles cross-filesystem and edge cases gracefully.
+ * 
+ * @param path The absolute or relative path to convert.
+ * @param base The base directory to make path relative to.
+ * @return Relative path, or original path/filename if relative conversion fails.
+ * @note Pure path operation; does not access filesystem.
+ */
 fs::path makeRelativeToBase(const fs::path& path, const fs::path& base) {
     // Root-like paths (e.g. "/" or "C:\\") have no filename component.
     // Keep them unchanged instead of converting to a cwd/base-dependent ".." chain.
@@ -524,7 +763,16 @@ fs::path makeRelativeToBase(const fs::path& path, const fs::path& base) {
     return path;
 }
 
-// Find all files under 'directory' that satisfy the first-3-lines LFS keyword check. Default:  bool recursive = true
+/**
+ * Recursively/non-recursively searches a directory for files matching the LFS pointer format.
+ * Skips .git directories to avoid searching the repository metadata.
+ * 
+ * @param directory Root directory to search for LFS-like files.
+ * @param recursive If true, search subdirectories; if false, only search directory root.
+ * @return Vector of relative paths (relative to directory) of files matching LFS format.
+ * @note Works on local filesystem; scans directory tree (may be expensive on large repos).
+ * @note Part of the git LFS domain: identifies LFS pointer files in the working directory.
+ */
 std::vector<fs::path> findLfsLikeFiles(const std::string& directory, bool recursive) {
     std::vector<fs::path> matches;
     std::error_code ec;
@@ -556,6 +804,79 @@ std::vector<fs::path> findLfsLikeFiles(const std::string& directory, bool recurs
     return matches;
 }
 
+struct MissingLfsPathsWalkPayload {
+    git_repository* repo;
+    fs::path worktreeRoot;
+    std::set<fs::path>* matches;
+};
+
+/**
+ * Tree-walk callback that collects paths from HEAD tree that have LFS pointers but missing worktree files.
+ * Used to identify LFS files that need to be downloaded/resumed during clone recovery.
+ * 
+ * @param root Current directory path in the tree traversal (accumulates parent directories).
+ * @param entry Current git_tree_entry being visited.
+ * @param payloadPtr Pointer to MissingLfsPathsWalkPayload containing repo, worktree path, and output set.
+ * @return 0 to continue tree walk; non-zero aborts the walk.
+ * @note Works on git repository object database (ODB) and working directory.
+ * @note Part of the git domain: walks the HEAD commit tree to find tracked LFS files.
+ */
+int collectMissingLfsPathsFromHeadTreeCb(const char* root, const git_tree_entry* entry, void* payloadPtr) {
+    auto* payload = reinterpret_cast<MissingLfsPathsWalkPayload*>(payloadPtr);
+    if (!payload || git_tree_entry_type(entry) != GIT_OBJECT_BLOB)
+        return 0;
+
+    fs::path relativePath = fs::path(root ? root : "") / git_tree_entry_name(entry);
+    std::error_code ec;
+    if (fs::exists(payload->worktreeRoot / relativePath, ec))
+        return 0;
+
+    git_blob* blob = nullptr;
+    if (git_blob_lookup(&blob, payload->repo, git_tree_entry_id(entry)) != 0)
+        return 0;
+    std::unique_ptr<git_blob, decltype(&git_blob_free)> blobGuard(blob, git_blob_free);
+
+    if (blobHasLfsKeywordsFirst3Positional(blob))
+        payload->matches->insert(relativePath);
+
+    return 0;
+}
+
+/**
+ * Identifies LFS files that are safe to resume downloading after interruption.
+ * Combines working directory LFS pointers with missing LFS blobs from the HEAD tree.
+ * Useful for recovery after abrupt clone termination.
+ * 
+ * @param repo Pointer to the git repository object.
+ * @param directory Root directory of the git working tree to search.
+ * @return Vector of relative paths to all resumable LFS files needing download completion.
+ * @note Works on specific git repository; scans both working directory and object database.
+ * @note Part of the git LFS domain: identifies candidates for partial-clone recovery.
+ */
+std::vector<fs::path> findResumableLfsFiles(git_repository* repo, const std::string& directory) {
+    std::set<fs::path> uniqueMatches;
+    auto existingMatches = findLfsLikeFiles(directory, true);
+    uniqueMatches.insert(existingMatches.begin(), existingMatches.end());
+
+    git_object* headTreeObject = nullptr;
+    if (git_revparse_single(&headTreeObject, repo, "HEAD^{tree}") == 0) {
+        std::unique_ptr<git_object, decltype(&git_object_free)> headTreeGuard(headTreeObject, git_object_free);
+        MissingLfsPathsWalkPayload payload{repo, fs::path(directory), &uniqueMatches};
+        (void)git_tree_walk(reinterpret_cast<git_tree*>(headTreeObject), GIT_TREEWALK_PRE, collectMissingLfsPathsFromHeadTreeCb, &payload);
+    }
+
+    return std::vector<fs::path>(uniqueMatches.begin(), uniqueMatches.end());
+}
+
+/**
+ * Checks for LFS download errors recorded by libgit2 patch in the repository root.
+ * Reads and logs error messages from lfs_error.txt, then removes the file for cleanup.
+ * 
+ * @param repositoryRootPath Absolute path to the git repository root directory.
+ * @return true if error file exists (even if unreadable); false if no error file found.
+ * @note Works on specific git repository location; reads and deletes lfs_error.txt.
+ * @note Part of the git LFS domain: detects LFS download failures recorded by patched libgit2.
+ */
 bool hasLfsErrorFileAndLogContent(const std::string& repositoryRootPath) {
     const fs::path errorFilePath = fs::path(repositoryRootPath) / "lfs_error.txt";
     std::error_code ec;
@@ -588,6 +909,19 @@ bool hasLfsErrorFileAndLogContent(const std::string& repositoryRootPath) {
 }
 }  // namespace libgit2
 
+/**
+ * Resumes the download of a single LFS file after an interrupted clone.
+ * Repairs the index entry and forces git checkout to re-trigger the LFS smudge filter.
+ * Removes the stale worktree file to ensure libgit2 re-downloads it.
+ * 
+ * @param repo Pointer to the git repository object.
+ * @param filePathInRepo Path to the LFS file relative to repository root (e.g., "model.bin").
+ * @return StatusCode::OK on successful resume, StatusCode::HF_GIT_CLONE_CANCELLED if shutdown
+ *         requested, StatusCode::HF_GIT_LIBGIT2_LFS_DOWNLOAD_FAILED on download errors.
+ * @note Connects to internet: downloads actual LFS file content from remote.
+ * @note Works on specific git repository; modifies index, working directory, and accesses ODB.
+ * @note Part of the git LFS domain: repairs and completes interrupted LFS transfers.
+ */
 Status resumeLfsDownloadForFile(git_repository* repo, const char* filePathInRepo) {
     setLfsCancelRequested(0);
     if (getShutdownRequestValue() != 0) {
@@ -674,6 +1008,18 @@ Status resumeLfsDownloadForFile(git_repository* repo, const char* filePathInRepo
     return StatusCode::OK;
 }
 
+/**
+ * Main method to download a model from Hugging Face via git clone.
+ * Handles initial full clone, resumption of partial downloads, and validation of repository state.
+ * Applies appropriate authentication, proxy settings, and LFS configuration during clone.
+ * 
+ * @return StatusCode::OK on successful download or if model already exists locally,
+ *         StatusCode::HF_GIT_CLONE_CANCELLED if shutdown requested during operation,
+ *         StatusCode::HF_GIT_CLONE_FAILED or StatusCode::HF_GIT_LIBGIT2_LFS_DOWNLOAD_FAILED on errors.
+ * @note Connects to internet: performs git clone from Hugging Face endpoint (requires network).
+ * @note Works on local filesystem and downloads git repository to downloadPath.
+ * @note Implements the full git domain: clone, LFS, checkout, authentication, and repository validation.
+ */
 Status HfDownloader::downloadModel() {
     if (FileSystem::isPathEscaped(this->downloadPath)) {
         SPDLOG_ERROR("Path {} escape with .. is forbidden.", this->downloadPath);
@@ -682,20 +1028,6 @@ Status HfDownloader::downloadModel() {
 
     // Repository exists and we do not want to overwrite
     if (std::filesystem::is_directory(this->downloadPath) && !this->overwriteModels) {
-        // Checking if the download was partially finished for any files in repository
-        auto matches = libgit2::findLfsLikeFiles(this->downloadPath, true);
-
-        if (matches.empty()) {
-            SPDLOG_DEBUG("No files to resume download found.");
-            std::cout << "Path already exists on local filesystem. Skipping download to path: " << this->downloadPath << std::endl;
-            return StatusCode::OK;
-        } else {
-            std::cout << "Found " << matches.size() << " file(s) to resume partial download:\n";
-            for (const auto& p : matches) {
-                std::cout << "  " << p.string() << "\n";
-            }
-        }
-
         GitRepositoryGuard repoGuard(this->downloadPath);
         if (!repoGuard.get()) {
             std::cout << "Path already exists on local filesystem. Cannot download model to: " << this->downloadPath << std::endl;
@@ -706,6 +1038,21 @@ Status HfDownloader::downloadModel() {
                 return StatusCode::HF_GIT_LIBGIT2_NOT_INITIALIZED;
             else
                 return StatusCode::HF_GIT_STATUS_FAILED;
+        }
+
+        // Checking if the download was partially finished for any files in repository,
+        // including tracked LFS pointer blobs missing from the worktree after abrupt termination.
+        auto matches = libgit2::findResumableLfsFiles(repoGuard.get(), this->downloadPath);
+
+        if (matches.empty()) {
+            SPDLOG_DEBUG("No files to resume download found.");
+            std::cout << "Path already exists on local filesystem. Skipping download to path: " << this->downloadPath << std::endl;
+            return StatusCode::OK;
+        } else {
+            std::cout << "Found " << matches.size() << " file(s) to resume partial download:\n";
+            for (const auto& p : matches) {
+                std::cout << "  " << p.string() << "\n";
+            }
         }
 
         // Set repository url
@@ -834,6 +1181,14 @@ Status HfDownloader::downloadModel() {
 
 }  // namespace ovms
 
+/**
+ * C-style function exported for libgit2 LFS extension to check if LFS downloads should be aborted.
+ * Called by patched libgit2 to determine if server shutdown was requested.
+ * 
+ * @return 1 if LFS shutdown/cancellation is requested, 0 otherwise.
+ * @note Connects to internet: queries shutdown state for ongoing LFS transfers.
+ * @note Extern C interface: for compatibility with libgit2 C library patches.
+ */
 extern "C" int git_lfs_shutdown_requested(void) {
     return ovms::libgit2::isCloneCancellationRequestedFromServer() ? 1 : 0;
 }
