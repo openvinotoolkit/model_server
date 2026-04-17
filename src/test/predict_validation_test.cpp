@@ -19,6 +19,8 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include <openvino/runtime/core.hpp>
+
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "../tfs_frontend/tfs_utils.hpp"
 #include "../modelconfig.hpp"

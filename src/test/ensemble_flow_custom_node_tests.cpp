@@ -35,6 +35,8 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include <openvino/runtime/core.hpp>
+
 #include "../cleaner_utils.hpp"
 #include "../dags/custom_node.hpp"
 #include "../dags/custom_node_library_manager.hpp"
@@ -48,6 +50,7 @@
 #include "../dags/pipeline_factory.hpp"
 #include "../dags/pipelinedefinition.hpp"
 #include "../execution_context.hpp"
+#include "src/metrics/metric_config.hpp"
 #include "src/metrics/metric_registry.hpp"
 #include "../model.hpp"
 #include "../model_metric_reporter.hpp"

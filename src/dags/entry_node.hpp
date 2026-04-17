@@ -19,7 +19,7 @@
 #include <string>
 #include <unordered_map>
 
-#include <openvino/openvino.hpp>
+#include <openvino/runtime/tensor.hpp>
 
 #include "../ovms.h"  // NOLINT
 #include "../regularovtensorfactory.hpp"

@@ -18,6 +18,8 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include <openvino/runtime/core.hpp>
+
 #include "src/filesystem/filesystem.hpp"
 #include "../model.hpp"
 #include "../modelmanager.hpp"

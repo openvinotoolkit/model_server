@@ -21,7 +21,7 @@
 #include <string>
 #include <unordered_map>
 
-#include <openvino/openvino.hpp>
+#include <openvino/runtime/infer_request.hpp>
 
 #include "../executingstreamidguard.hpp"
 #include "../modelversion.hpp"

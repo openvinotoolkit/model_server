@@ -18,7 +18,7 @@
 #include <memory>
 #include <string>
 
-#include <openvino/openvino.hpp>
+#include <openvino/runtime/tensor.hpp>
 
 #include "buffer.hpp"
 #include "capi_utils.hpp"
