@@ -619,6 +619,48 @@ ovms_cc_library(
     visibility = ["//visibility:public"],
 )
 ovms_cc_library(
+    name = "statefulmodelinstance",
+    hdrs = ["statefulmodelinstance.hpp"],
+    srcs = ["statefulmodelinstance.cpp"],
+    deps = [
+        "modelinstance",
+        "modelinstance_h",
+        "global_sequences_viewer",
+        "libovms_sequence_manager",
+        "libovms_sequence_processing_spec",
+        "model_metric_reporter",
+        "modelconfig",
+        "predict_request_validation_utils",
+        "executingstreamidguard",
+        "libovmslogging",
+        "libovmsprofiler",
+        "libovmstimer",
+        "libovmsstatus",
+        "//third_party:openvino",
+    ],
+    visibility = ["//visibility:public"],
+)
+ovms_cc_library(
+    name = "model",
+    hdrs = ["model.hpp"],
+    srcs = ["model.cpp"],
+    deps = [
+        "modelinstance",
+        "modelinstance_h",
+        "statefulmodelinstance",
+        "customloaders",
+        "modelchangesubscription",
+        "modelconfig",
+        "libovms_servable_definition",
+        "libovmsmodelversion",
+        "//src/filesystem:libovmsfilesystem",
+        "//src/filesystem:libovmslocalfilesystem",
+        "libovmslogging",
+        "libovmsstatus",
+    ],
+    visibility = ["//visibility:public"],
+)
+ovms_cc_library(
     name = "ovms_lib",
     hdrs = [
             "ovms_internal.h",
@@ -649,8 +691,6 @@ ovms_cc_library(
         "grpcservermodule.cpp",
         "grpcservermodule.hpp",
         "kfs_frontend/kfs_grpc_inference_service.cpp",
-        "model.cpp",
-        "model.hpp",
         "modelmanager.cpp",
         "modelmanager.hpp",
         "model_service.hpp",
@@ -663,8 +703,6 @@ ovms_cc_library(
         "servablemanagermodule.hpp",
         "server.cpp",
         "server.hpp",
-        "statefulmodelinstance.cpp",
-        "statefulmodelinstance.hpp",
          ],
         deps = select({
             "//:not_disable_python": [
@@ -714,6 +752,8 @@ ovms_cc_library(
             "libovms_capi_servable_metadata",
             "libmodelconfigjsonparser",
             "modelconfig",
+            "model",
+            "statefulmodelinstance",
             "modelinstance",
             "libovmscapibuffer",
             "libovmscapi_utils",
