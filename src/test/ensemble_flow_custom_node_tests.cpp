@@ -48,6 +48,7 @@
 #include "../dags/pipeline_factory.hpp"
 #include "../dags/pipelinedefinition.hpp"
 #include "../execution_context.hpp"
+#include "src/metrics/metric_config.hpp"
 #include "src/metrics/metric_registry.hpp"
 #include "../model.hpp"
 #include "../model_metric_reporter.hpp"

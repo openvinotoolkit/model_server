@@ -35,7 +35,6 @@
 #include "modelconfig.hpp"
 #include "modelversionstatus.hpp"
 #include "ovms.h"  // NOLINT
-#include "ovinferrequestsqueue.hpp"
 #include "status.hpp"
 #include "servable.hpp"
 #include "tensorinfo.hpp"
@@ -66,6 +65,7 @@ class ModelInstanceUnloadGuard;
 class InferenceRequest;
 class InferenceResponse;
 class IOVTensorFactory;
+class OVInferRequestsQueue;
 struct NotifyReceiver;
 class SequenceManager;
 class Status;
@@ -535,9 +535,7 @@ public:
          *
          * @return OVStreamsQueue
          */
-    OVInferRequestsQueue& getInferRequestsQueue() {
-        return *inferRequestsQueue;
-    }
+    OVInferRequestsQueue& getInferRequestsQueue();
 
     /**
          * @brief Combines plugin config from user with default config calculated at runtime

@@ -53,6 +53,7 @@
 #include "modelconfig.hpp"
 #include "modelinstanceunloadguard.hpp"
 #include "ov_utils.hpp"
+#include "ovinferrequestsqueue.hpp"
 #include "profiler.hpp"
 #include "regularovtensorfactory.hpp"
 #include "shape.hpp"
@@ -1421,6 +1422,10 @@ std::optional<Dimension> ModelInstance::getBatchSize() const {
     } catch (...) {
         return std::nullopt;
     }
+}
+
+OVInferRequestsQueue& ModelInstance::getInferRequestsQueue() {
+    return *inferRequestsQueue;
 }
 
 const size_t ModelInstance::getBatchSizeIndex() const {
