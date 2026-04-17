@@ -67,6 +67,7 @@
 #include "profilermodule.hpp"
 #include "pull_module/hf_pull_model_module.hpp"
 #include "servablemanagermodule.hpp"
+#include "shutdown_state.hpp"
 #include "servables_config_manager_module/servablesconfigmanagermodule.hpp"
 #include "stringutils.hpp"
 #include "version.hpp"
@@ -78,6 +79,26 @@
 using grpc::ServerBuilder;
 
 namespace ovms {
+
+#if defined(_WIN32)
+extern "C" volatile int git_lfs_cancel_requested;
+#elif defined(__GNUC__) || defined(__clang__)
+extern "C" volatile int git_lfs_cancel_requested __attribute__((weak));
+#endif
+
+static void setLfsCancelRequestedFromSignal(int value) {
+#if defined(_WIN32)
+    git_lfs_cancel_requested = value != 0 ? 1 : 0;
+#elif defined(__GNUC__) || defined(__clang__)
+    if (&git_lfs_cancel_requested)
+        git_lfs_cancel_requested = value != 0 ? 1 : 0;
+#endif
+}
+
+static void requestShutdownFromSignal(int value) {
+    setShutdownRequestValue(value);
+    setLfsCancelRequestedFromSignal(value);
+}
 
 Server& Server::instance() {
     static Server global;
@@ -134,14 +155,15 @@ static void logConfig(const Config& config) {
 }
 
 static void onInterrupt(int status) {
-    Server::instance().setShutdownRequest(1);
+    requestShutdownFromSignal(1);
 }
 
 static void onTerminate(int status) {
-    Server::instance().setShutdownRequest(1);
+    requestShutdownFromSignal(1);
 }
 
 static void onIllegal(int status) {
+    requestShutdownFromSignal(2);
     (void)status;
     const char msg[] = "SIGILL received: illegal instruction. This may indicate an unsupported CPU or device or an internal error. Terminating.\n";
 #ifdef __linux__
@@ -255,8 +277,9 @@ void Server::setShutdownRequest(int i) {
         std::this_thread::sleep_for(std::chrono::milliseconds(200));
     }
     if (counter) {
-        shutdown_request = i;
-        SPDLOG_TRACE("Ovms shutdown request set to: {}", shutdown_request);
+        setShutdownRequestValue(i);
+        setLfsCancelRequestedFromSignal(i);
+        SPDLOG_TRACE("Ovms shutdown request set to: {}", getShutdownRequestValue());
     } else {
         SPDLOG_ERROR("Server shutdown mutex lock failed.");
     }
@@ -270,7 +293,7 @@ int Server::getShutdownStatus() {
         return 0;
     }
 
-    return shutdown_request;
+    return getShutdownRequestValue();
 }
 
 int Server::getExitStatus() {
@@ -281,7 +304,7 @@ int Server::getExitStatus() {
         return 0;
     }
 
-    return ovms_exited;
+    return getExitStatusValue();
 }
 
 void Server::setExitStatus(int i) {
@@ -292,8 +315,8 @@ void Server::setExitStatus(int i) {
         std::this_thread::sleep_for(std::chrono::milliseconds(200));
     }
     if (counter) {
-        ovms_exited = i;
-        SPDLOG_TRACE("Ovms exit status set to: {}", ovms_exited);
+        setExitStatusValue(i);
+        SPDLOG_TRACE("Ovms exit status set to: {}", getExitStatusValue());
     } else {
         SPDLOG_ERROR("Server shutdown mutex lock failed.");
     }

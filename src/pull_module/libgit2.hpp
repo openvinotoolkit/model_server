@@ -72,6 +72,7 @@ protected:
 namespace libgit2 {
 inline constexpr size_t READ_FIRST_THREE_LINES_DEFAULT_MAX_LINE_BYTES = 8U * 1024U * 1024U;
 
+bool isCloneCancellationRequestedFromServer();
 void rtrimCrLfWhitespace(std::string& s);
 bool containsCaseInsensitive(const std::string& hay, const std::string& needle);
 bool readFirstThreeLines(const fs::path& p, std::vector<std::string>& outLines, size_t maxLineBytes = READ_FIRST_THREE_LINES_DEFAULT_MAX_LINE_BYTES);
