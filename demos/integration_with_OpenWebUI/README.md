@@ -12,36 +12,37 @@ The goal of this demo is to integrate Open WebUI with [OpenVINO Model Server](ht
 
 ### Prerequisites
 
-In this demo, OpenVINO Model Server is deployed on Linux with CPU using Docker and Open WebUI is installed via Python pip. Requirements to follow this demo:
+This demo deploys OpenVINO Model Server on Linux with Docker containers or Windows with a binary package. OpenWebUI is installed via Python pip. 
 
-* [Docker Engine](https://docs.docker.com/engine/) installed
+Requirements:
 * Host with x86_64 architecture
-* Linux, macOS, or Windows
+* Linux or Windows
+* [Docker Engine](https://docs.docker.com/engine/) installed in case of Linux OS.
 * Python 3.11 with pip 
 * HuggingFace account to download models
 
 There are other options to fulfill the prerequisites like [OpenVINO Model Server deployment on baremetal Linux or Windows](https://docs.openvino.ai/2026/model-server/ovms_docs_deploying_server_baremetal.html) and [Open WebUI installation with Docker](https://docs.openwebui.com/#quick-start-with-docker-). The steps in this demo can be reused across different options, and the reference for each step cover both deployments.
 
-This demo was tested on CPU but most of the models could be also run on Intel accelerators like GPU and NPU.
+This demo can be followed without changes on Panther Lake host with 64GB RAM and VRAM allocation to GPU extended using Intel Graphics Software. That way all the mentioned models can be loaded simultaneously. It's also possible to use [llama-swap](https://github.com/openvinotoolkit/model_server/blob/releases/2026/1/extras/llama_swap/README.md) integration to reload the models automatically. On hosts with less VRAM available, use a subset of the models, apply other models or configure different target device like CPU or NPU. Check this list of [preconfigured OpenVINO models](https://huggingface.co/OpenVINO).
 
-## Step 1: Pull model and start the OVMS sever
+## Step 1: Pull model and start the OVMS server
 ::::{tab-set}
 :::{tab-item} Windows
 :sync: Windows
 ```bat
 mkdir models
-ovms.exe --pull --source_model Godreign/llama-3.2-3b-instruct-openvino-int4-model --model_repository_path models --task text_generation
-ovms.exe --add_to_config --config_path  models\config.json --model_path Godreign\llama-3.2-3b-instruct-openvino-int4-model --model_name Godreign/llama-3.2-3b-instruct-openvino-int4-model
-ovms.exe --rest_port 8000 --config_path models\config.json
+ovms.exe --pull --source_model OpenVINO/gpt-oss-20b-int4-ov --model_repository_path models --tool_parser gptoss --reasoning_parser gptoss --task text_generation --target_device GPU
+ovms.exe --add_to_config --config_path  models\config.json --model_path OpenVINO\gpt-oss-20b-int4-ov --model_name ovms-model
+ovms.exe --rest_port 8000 --config_path models\config.json --allowed_media_domains raw.githubusercontent.com
 ```
 :::
 :::{tab-item} Linux (using Docker)
 :sync: Linux
 ```bash
 mkdir models
-docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models openvino/model_server:2026.1-gpu --pull --source_model Godreign/llama-3.2-3b-instruct-openvino-int4-model --model_repository_path /models --task text_generation
-docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models openvino/model_server:2026.1-gpu --add_to_config --config_path  /models/config.json --model_path Godreign/llama-3.2-3b-instruct-openvino-int4-model --model_name Godreign/llama-3.2-3b-instruct-openvino-int4-model
-docker run -d -u $(id -u):$(id -g) -v $PWD/models:/models -p 8000:8000 openvino/model_server:2026.1-gpu --rest_port 8000 --config_path /models/config.json
+docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:2026.1-gpu --pull --source_model OpenVINO/gpt-oss-20b-int4-ov --model_repository_path /models --task text_generation --tool_parser gptoss --reasoning_parser gptoss --target_device GPU
+docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models openvino/model_server:2026.1-gpu --add_to_config --config_path  /models/config.json --model_path OpenVINO/gpt-oss-20b-int4-ov --model_name ovms-model
+docker run -d -u $(id -u):$(id -g) -v $PWD/models:/models -p 8000:8000 --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:2026.1-gpu --rest_port 8000 --config_path /models/config.json --allowed_media_domains raw.githubusercontent.com
 ```
 :::
 ::::
@@ -49,20 +50,20 @@ docker run -d -u $(id -u):$(id -g) -v $PWD/models:/models -p 8000:8000 openvino/
 Here is the basic call to check if it works:
 
 ```console
-curl http://localhost:8000/v3/chat/completions -H "Content-Type: application/json" -d "{\"model\":\"Godreign/llama-3.2-3b-instruct-openvino-int4-model\",\"messages\":[{\"role\":\"system\",\"content\":\"You are a helpful assistant.\"},{\"role\":\"user\",\"content\":\"Say this is a test\"}]}"
+curl http://localhost:8000/v3/chat/completions -H "Content-Type: application/json" -d "{\"model\":\"ovms-model\",\"messages\":[{\"role\":\"system\",\"content\":\"You are a helpful assistant.\"},{\"role\":\"user\",\"content\":\"Say this is a test\"}]}"
 ```
 
 ## Step 2: Install and start OpenWebUI
 
 Install Open WebUI:
 
-```bash
+```text
 pip install --no-cache-dir open-webui --extra-index-url "https://download.pytorch.org/whl/cpu"
 ```
 
 Running Open WebUI:
 
-```console
+```text
 open-webui serve
 ```
 
@@ -70,7 +71,7 @@ Go to [http://localhost:8080](http://localhost:8080) and create admin account to
 
 ![get started with Open WebUI](./get_started_with_Open_WebUI.png)
 
-> **Important Note**: While using NPU device for acceleration or model gpt-oss-20b with GPU, it is recommended to disable `Follow-Up Auto-Generation` in `Settings > Interface` menu. It will improve response time and avoid queuing requests. For gpt-oss model it will avoid concurrent execution which in version 2026.0 has an accuracy issue.
+> **Important Note**: While using NPU device for acceleration it is recommended to disable `Follow-Up Auto-Generation` in `Settings > Interface` menu. It will improve response time and avoid queuing requests.
 
 ### References
 [https://docs.openvino.ai/2026/model-server/ovms_demos_continuous_batching.html](https://docs.openvino.ai/2026/model-server/ovms_demos_continuous_batching.html#model-preparation)
@@ -86,7 +87,7 @@ Go to [http://localhost:8080](http://localhost:8080) and create admin account to
 1. Go to **Admin Panel** → **Settings** → **Connections** ([http://localhost:8080/admin/settings/connections](http://localhost:8080/admin/settings/connections))
 2. Click **+Add Connection** under **OpenAI API**
    * URL: `http://localhost:8000/v3`
-   * Model IDs: put `Godreign/llama-3.2-3b-instruct-openvino-int4-model` and click **+** to add the model, or leave empty to include all models
+   * Model IDs: put `ovms-model` and click **+** to add the model, or leave empty to include all models
 3. Click **Save**
 
 ![connection setting](./connection_setting.png)
@@ -104,7 +105,7 @@ To configure them in *OpenWebUI* with an example of turning off reasoning:
 1. Go to **Admin Panel** -> **Settings** -> **Models** ([http://localhost:8080/admin/settings/models](http://localhost:8080/admin/settings/models))
 2. Click on desired model, unfold **Advanced Params**.
 3. Click **+ Add Custom Parameter**.
-4. Change parameter name to `chat_template_kwargs` and content to `{"enable_thinking": false}`.
+4. Change parameter name to `chat_template_kwargs` and content to `{"reasoning_effort": "low"}`.
 
 ![parameter set](./set_chat_template_parameter.png)
 
@@ -123,18 +124,18 @@ In addition to text generation, endpoints for embedding and reranking in Retriev
 :::{tab-item} Windows
 :sync: Windows
 ```bat
-ovms.exe --pull --source_model OpenVINO/Qwen3-Embedding-0.6B-fp16-ov --model_repository_path models --task embeddings
+ovms.exe --pull --source_model OpenVINO/Qwen3-Embedding-0.6B-fp16-ov --model_repository_path models --task embeddings --target_device GPU
 ovms.exe --add_to_config --config_path models\config.json --model_path OpenVINO\Qwen3-Embedding-0.6B-fp16-ov --model_name OpenVINO/Qwen3-Embedding-0.6B-fp16-ov
-ovms.exe --pull --source_model OpenVINO/Qwen3-Reranker-0.6B-seq-cls-fp16-ov --model_repository_path models --task rerank
+ovms.exe --pull --source_model OpenVINO/Qwen3-Reranker-0.6B-seq-cls-fp16-ov --model_repository_path models --task rerank --target_device GPU
 ovms.exe --add_to_config --config_path models\config.json --model_path OpenVINO\Qwen3-Reranker-0.6B-seq-cls-fp16-ov --model_name OpenVINO/Qwen3-Reranker-0.6B-seq-cls-fp16-ov
 ```
 :::
 :::{tab-item} Linux (using Docker)
 :sync: Linux
 ```bash
-docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models openvino/model_server:2026.1-gpu --pull --source_model OpenVINO/Qwen3-Embedding-0.6B-fp16-ov --model_repository_path models --task embeddings
+docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:2026.1-gpu --pull --source_model OpenVINO/Qwen3-Embedding-0.6B-fp16-ov --model_repository_path models --task embeddings --target_device GPU
 docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models openvino/model_server:2026.1-gpu --add_to_config --config_path /models/config.json  --model_path OpenVINO/Qwen3-Embedding-0.6B-fp16-ov --model_name OpenVINO/Qwen3-Embedding-0.6B-fp16-ov
-docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models openvino/model_server:2026.1-gpu --pull --source_model OpenVINO/Qwen3-Reranker-0.6B-seq-cls-fp16-ov --model_repository_path models --task rerank
+docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:2026.1-gpu --pull --source_model OpenVINO/Qwen3-Reranker-0.6B-seq-cls-fp16-ov --model_repository_path models --task rerank --target_device GPU
 docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models openvino/model_server:2026.1-gpu --add_to_config --config_path /models/config.json  --model_path OpenVINO/Qwen3-Reranker-0.6B-seq-cls-fp16-ov --model_name OpenVINO/Qwen3-Reranker-0.6B-seq-cls-fp16-ov
 ```
 :::
@@ -220,14 +221,14 @@ The image generation model used in this demo is [OpenVINO/FLUX.1-schnell-int4-ov
 :::{tab-item} Windows
 :sync: Windows
 ```bat
-ovms.exe --pull --source_model OpenVINO/FLUX.1-schnell-int4-ov --model_repository_path models --model_name OpenVINO/FLUX.1-schnell-int4-ov --task image_generation --default_num_inference_steps 3
+ovms.exe --pull --source_model OpenVINO/FLUX.1-schnell-int4-ov --model_repository_path models --model_name OpenVINO/FLUX.1-schnell-int4-ov --task image_generation --default_num_inference_steps 3 --target_device GPU
 ovms.exe --add_to_config --config_path models\config.json --model_path OpenVINO\FLUX.1-schnell-int4-ov --model_name OpenVINO/FLUX.1-schnell-int4-ov
 ```
 :::
 :::{tab-item} Linux (using Docker)
 :sync: Linux
 ```bash
-docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models openvino/model_server:2026.1-gpu --pull --source_model OpenVINO/FLUX.1-schnell-int4-ov --model_repository_path models --model_name OpenVINO/FLUX.1-schnell-int4-ov --task image_generation --default_num_inference_steps 3
+docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:2026.1-gpu --pull --source_model OpenVINO/FLUX.1-schnell-int4-ov --model_repository_path models --model_name OpenVINO/FLUX.1-schnell-int4-ov --task image_generation --default_num_inference_steps 3 --target_device GPU
 docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models openvino/model_server:2026.1-gpu  --add_to_config --config_path /models/config.json  --model_path OpenVINO/FLUX.1-schnell-int4-ov --model_name OpenVINO/FLUX.1-schnell-int4-ov
 ```
 :::
@@ -241,58 +242,64 @@ curl http://localhost:8000/v3/images/generations -H "Content-Type: application/j
 
 ### Step 2: Image Generation Setting
 
+> **Note**: The instructions below were tested with Open WebUI v0.8.x. If you are using an older version (pre-v0.7.0), the settings UI and image generation methods may differ.
+
 1. Go to **Admin Panel** → **Settings** → **Images** ([http://localhost:8080/admin/settings/images](http://localhost:8080/admin/settings/images))
-2. Configure **OpenAI API**:
+
+![admin panel](./owu_admin_panel.png)
+
+2. Set the **Image Generation Engine** to `Open AI`
+3. Configure the **OpenAI API** connection:
    * URL: `http://localhost:8000/v3`
    * Put anything in API key
-3. Enable **Image Generation (Experimental)**
-   * Set Default Model: `OpenVINO/FLUX.1-schnell-int4-ov`
+4. Enable **Image Generation (Experimental)**
+   * Set Default Model: eg `OpenVINO/FLUX.1-schnell-int4-ov`
    * Set Image Size. Must be in WxH format, example: `256x256`
-4. Click **Save**
+5. Click **Save**
 
 ![image generation setting](./image_generation_setting.png)
 
 ### Step 3: Generate Image
 
-Method 1:
-1. Expand `Integrations` menu
+1. In the chat window, expand the `Integrations` menu
 2. Toggle the **Image** switch to on
-3. Enter a query and send
 
-![image generation method 1 demo](./image_generation_method_1_demo.png)
+![generate prompt](./generate_prompt.png)
 
-Method 2:
-1. Send a query, with or without the **Image** switch on
-2. After the response has finished generating, it can be edited to a prompt
-3. Click the **Picture icon** to generate an image
+3. Enter a prompt describing the image you want and send
 
-![image generation method 2 demo](./image_generation_method_2_demo.png)
+![result image](./result_image.png)
+
+> **Alternative methods (Open WebUI v0.7.0+):**
+>
+> **Restore "Generate Image" Button** — The built-in button on assistant messages was removed in v0.7.0. You can restore it by importing a [community action](https://openwebui.com/posts/3fadc3ca-c955-4c9e-9582-7438f0911b62): click **Get** to import, then enable it in **Admin Panel** → **Functions**. Assistant messages will then show a **Generate Image** icon in the action bar.
+>
 
 ### Reference
 [https://docs.openvino.ai/2026/model-server/ovms_demos_image_generation.html](https://docs.openvino.ai/2026/model-server/ovms_demos_image_generation.html#export-model-for-cpu)
-
-[https://docs.openwebui.com/features/media-generation/image-generation-and-editing](https://docs.openwebui.com/features/media-generation/image-generation-and-editing/usage)
+[https://docs.openwebui.com/features/chat-conversations/image-generation-and-editing/openai](https://docs.openwebui.com/features/chat-conversations/image-generation-and-editing/openai)
+[https://docs.openwebui.com/features/chat-conversations/image-generation-and-editing/usage/](https://docs.openwebui.com/features/chat-conversations/image-generation-and-editing/usage/)
 
 ---
 ## VLM
 
 ### Step 1: Model Preparation
 
-The vision language model used in this demo is [OpenVINO/InternVL2-2B-int4-ov](https://huggingface.co/OpenVINO/InternVL2-2B-int4-ov). Run the ovms with --pull parameter to download and quantize the model:
+The vision language model used in this demo is `Junrui2021/Qwen3-VL-8B-Instruct-int4`. Run the ovms with --pull parameter to download and quantize the model:
 
 ::::{tab-set}
 :::{tab-item} Windows
 :sync: Windows
 ```bat
-ovms.exe --pull --source_model OpenVINO/InternVL2-2B-int4-ov --model_repository_path models --model_name OpenVINO/InternVL2-2B-int4-ov --task text_generation
-ovms.exe --add_to_config --config_path models\config.json --model_path OpenVINO\InternVL2-2B-int4-ov --model_name OpenVINO/InternVL2-2B-int4-ov
+ovms.exe --pull --source_model Junrui2021/Qwen3-VL-8B-Instruct-int4 --model_repository_path models --model_name ovms-model-vl --task text_generation --pipeline_type VLM_CB --target_device GPU
+ovms.exe --add_to_config --config_path models\config.json --model_path Junrui2021\Qwen3-VL-8B-Instruct-int4 --model_name ovms-model-vl
 ```
 :::
 :::{tab-item} Linux (using Docker)
 :sync: Linux
 ```bash
-docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models openvino/model_server:2026.1-gpu --pull --source_model OpenVINO/InternVL2-2B-int4-ov --model_repository_path models --model_name OpenVINO/InternVL2-2B-int4-ov --task text_generation
-docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models openvino/model_server:2026.1-gpu --add_to_config --config_path /models/config.json  --model_path OpenVINO/InternVL2-2B-int4-ov --model_name OpenVINO/InternVL2-2B-int4-ov
+docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:2026.1-gpu --pull --source_model Junrui2021/Qwen3-VL-8B-Instruct-int4 --model_repository_path /models --model_name ovms-model-vl --task text_generation --pipeline_type VLM_CB --target_device GPU
+docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models openvino/model_server:2026.1-gpu --add_to_config --config_path /models/config.json  --model_path Junrui2021/Qwen3-VL-8B-Instruct-int4 --model_name ovms-model-vl
 ```
 :::
 ::::
@@ -300,13 +307,13 @@ docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models openvino/model_serve
 Keep the model server running or restart it. Here is the basic call to check if it works:
 
 ```console
-curl http://localhost:8000/v3/chat/completions  -H "Content-Type: application/json" -d "{ \"model\": \"OpenVINO/InternVL2-2B-int4-ov\", \"messages\":[{\"role\": \"user\", \"content\": [{\"type\": \"text\", \"text\": \"what is in the picture?\"},{\"type\": \"image_url\", \"image_url\": {\"url\": \"http://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/demos/common/static/images/zebra.jpeg\"}}]}], \"max_completion_tokens\": 100}"
+curl http://localhost:8000/v3/chat/completions  -H "Content-Type: application/json" -d "{ \"model\": \"ovms-model-vl\", \"messages\":[{\"role\": \"user\", \"content\": [{\"type\": \"text\", \"text\": \"what is in the picture?\"},{\"type\": \"image_url\", \"image_url\": {\"url\": \"http://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/1/demos/common/static/images/zebra.jpeg\"}}]}], \"max_completion_tokens\": 100}"
 ```
 
 ### Step 2: Chat with VLM
 
-1. Start a **New Chat** with model set to `OpenVINO/InternVL2-2B-int4-ov`
-2. Click **+More** to upload images, by capturing the screen or uploading files. The image used in this demo is [http://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/demos/common/static/images/zebra.jpeg](http://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/demos/common/static/images/zebra.jpeg).
+1. Start a **New Chat** and choose `ovms-model-vl` model
+2. Click **+More** to upload images, by capturing the screen or uploading files. The image used in this demo is [https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/1/demos/common/static/images/zebra.jpeg](https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/1/demos/common/static/images/zebra.jpeg).
 
 ![upload images](./upload_images.png)
 3. Enter a query and send
@@ -332,8 +339,8 @@ mcpo --port 9000 -- python -m mcp_weather_server
 
 ### Step 2: Tools Setting
 
-1. Go to **Admin Panel** → **Settings** → **External Tools** 
-2. Click **+Add Connection**
+1. Go to **Admin Panel** → **Settings** → **Integrations** 
+2. Click **+Manage Tool Servers**
    * URL: `http://localhost:9000`
    * Name the tool
 3. Click **Save**
@@ -342,7 +349,7 @@ mcpo --port 9000 -- python -m mcp_weather_server
 
 ### Step 3: Chat with AI Agent
 
-1. Click **+More** and toggle on the tool
+1. Click **Integrations** → **Tools**  and toggle on the tool
    
 ![activate the tool](./activate_the_tool.png)
 
@@ -353,6 +360,100 @@ mcpo --port 9000 -- python -m mcp_weather_server
 ### Reference
 [https://docs.openwebui.com/features/extensibility/plugin/tools/openapi-servers/open-webui](https://docs.openwebui.com/features/extensibility/plugin/tools/openapi-servers/open-webui#step-2-connect-tool-server-in-open-webui)
 
+
+## Using Web Search
+
+### Step 1: Configure WebSearch
+
+1. Go to **Admin Panel** → **Settings** → **Web Search**
+2. Enable **Web Search**
+3. Choose **Web Search Engine**
+4. Add **API Key**
+5. Click **Save**
+
+![web search configuration](./web_search_config.png)
+
+### Step 2: Enable Web Search in model
+
+1. Go to **Admin Panel** → **Settings** → **Models**
+2. Choose desired model
+3. Enable **Web Search** capability
+4. In **Default Features** enable **Web Search** or toggle it in the chat
+5. In **Advanced Parameters** set **Function Calling** to **Native**
+
+![function calling native](./function_calling_native_set.png)
+
+![web search model configuration](./web_search_model_config.png)
+
+
+### Step 3: Use Web Search in the chat
+
+1. Open new Chat
+2. Enable **Web Search**, if it's not displayed as blue icon below.
+3. Send the prompt
+
+![web search usage](./web_search_usage.png)
+
+### Reference
+[https://docs.openwebui.com/features/chat-conversations/web-search/agentic-search/](https://docs.openwebui.com/features/chat-conversations/web-search/agentic-search/)
+
+
+## Adding Context to the prompt
+
+In Open WebUI, users can add additional context to their chats using the **Memory** feature. This allows models to access shared information across all conversations.
+
+To configure it:
+
+1. Go to **Settings** → **Personalization**
+2. Enable **Memory**
+3. Click **Manage**
+4. Click **Add Memory**
+5. Enter the information
+
+![add memory](./add_memory.png)
+
+It's possible to have multiple manageable memory records.
+
+![multiple memory records](./multiple_memory_records.png)
+
+Then workspace model should be created:
+
+1. Go to **Workspace**  → **Models**
+2. Choose model or create it.
+3. In **Buildin Tools** section enable **Memory**
+4. In **Advanced Parameters** set **Function Calling** to **Native**
+
+![function calling native](./function_calling_native_set_workspace.png)
+
+![model memory config](./model_memory_configuration.png)
+
+It's now available in all chats:
+
+![memory usage](./memory_usage.png)
+
+> **Note**: There is no way to make searching memory default on the beginning of the conversation in Open Web UI. User should tell model to use it to make it work.  
+
+### Reference 
+[https://docs.openwebui.com/features/chat-conversations/memory/](https://docs.openwebui.com/features/chat-conversations/memory/)
+
+## Code Interpreter
+
+It's available to use **Code Interpreter** feature in Open Web UI.
+
+1. Go to **Admin Panel** → **Settings** → **Models**
+2. Choose desired model
+3. Enable **Code Interpreter** capability
+4. In **Default Features** enable **Code Interpreter** or toggle it in the chat
+5. In **Advanced Parameters** set **Function Calling** to **Native**
+
+![function calling native](./function_calling_native_set.png)
+
+6. Go to **Admin Panel** → **Settings** → **Code Execution**
+7. Enable **Code Interpreter** and **Code Execution**
+
+Then it's ready to use. In new chat it's possible to toggle **Code Interpreter** and write a prompt.
+
+![code execution](./code_execution.png)
 
 ## Audio
 
