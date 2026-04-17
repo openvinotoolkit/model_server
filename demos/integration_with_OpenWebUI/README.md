@@ -25,7 +25,7 @@ There are other options to fulfill the prerequisites like [OpenVINO Model Server
 
 This demo can be followed without changes on Panther Lake host with 64GB RAM and VRAM allocation to GPU extended using Intel Graphics Software. That way all the mentioned models can be loaded simultaneously. It's also possible to use [llama-swap](https://github.com/openvinotoolkit/model_server/blob/releases/2026/1/extras/llama_swap/README.md) integration to reload the models automatically. On hosts with less VRAM available, use a subset of the models, apply other models or configure different target device like CPU or NPU. Check this list of [preconfigured OpenVINO models](https://huggingface.co/OpenVINO).
 
-## Step 1: Pull model and start the OVMS sever
+## Step 1: Pull model and start the OVMS server
 ::::{tab-set}
 :::{tab-item} Windows
 :sync: Windows
