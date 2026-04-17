@@ -17,10 +17,16 @@ load("//:common_settings.bzl", "COMMON_STATIC_LIBS_COPTS", "ovms_cc_library")
 
 # Files still compiled as part of //src:ovms_lib (pending further extraction)
 exports_files([
-    "entry_node.cpp",
+    "entry_node_capi.cpp",
+    "entry_node_kfs.cpp",
+    "entry_node_tfs.cpp",
     "entry_node.hpp",
-    "exit_node.cpp",
+    "entry_node_impl.hpp",
+    "exit_node_capi.cpp",
+    "exit_node_kfs.cpp",
+    "exit_node_tfs.cpp",
     "exit_node.hpp",
+    "exit_node_impl.hpp",
     "exitnodesession.cpp",
     "exitnodesession.hpp",
     "gatherexitnodeinputhandler.hpp",
