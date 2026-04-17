@@ -35,6 +35,8 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include <openvino/runtime/core.hpp>
+
 #include "../cleaner_utils.hpp"
 #include "../dags/custom_node.hpp"
 #include "../dags/custom_node_library_manager.hpp"

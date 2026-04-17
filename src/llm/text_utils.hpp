@@ -18,7 +18,8 @@
 #include <cstdint>
 #include <sstream>
 #include <string>
-#include <openvino/openvino.hpp>
+#include <openvino/core/type/element_type.hpp>
+#include <openvino/runtime/tensor.hpp>
 
 template <typename T>
 static std::string packPromptTokens(T* input, size_t size) {

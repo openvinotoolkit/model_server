@@ -17,7 +17,7 @@
 
 #include <string>
 
-#include <openvino/openvino.hpp>
+
 
 #include "nodeinputhandler.hpp"
 #include "nodesession.hpp"

@@ -15,6 +15,8 @@
 //*****************************************************************************
 #include <gtest/gtest.h>
 
+#include <openvino/runtime/core.hpp>
+
 #include "../dags/pipelinedefinition.hpp"
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "../modelversionstatus.hpp"

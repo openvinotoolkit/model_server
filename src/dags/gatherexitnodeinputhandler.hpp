@@ -18,7 +18,9 @@
 #include <functional>
 #include <string>
 
-#include <openvino/openvino.hpp>
+#include <openvino/core/shape.hpp>
+#include <openvino/core/type/element_type.hpp>
+#include <openvino/runtime/tensor.hpp>
 
 #include "../capi_frontend/capi_utils.hpp"
 #include "../capi_frontend/capi_dag_utils.hpp"
