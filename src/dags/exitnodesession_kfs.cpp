@@ -14,16 +14,12 @@
 // limitations under the License.
 //*****************************************************************************
 #include "../kfs_frontend/kfs_utils.hpp"
-#include "../kfs_frontend/deserialization.hpp"
 
-#include "entry_node_impl.hpp"
+#include "exitnodesession_impl.hpp"
 
 namespace ovms {
 
-template Status EntryNode<::KFSRequest>::execute(session_key_t sessionId, PipelineEventQueue& notifyEndQueue);
-template Status EntryNode<::KFSRequest>::fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs);
-template Status EntryNode<::KFSRequest>::fetchResults(TensorWithSourceMap& outputs);
-template Status EntryNode<::KFSRequest>::createShardedTensor(ov::Tensor& dividedTensor, Precision precision, const shape_t& shape, const ov::Tensor& tensor, size_t i, size_t step, const NodeSessionMetadata& metadata, const std::string tensorName);
-template const Status EntryNode<::KFSRequest>::validate();
+template ExitNodeSession<::KFSResponse>::ExitNodeSession(const NodeSessionMetadata& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapseDetails& collapsingDetails, ::KFSResponse* response);
+template const TensorMap& ExitNodeSession<::KFSResponse>::getInputTensors() const;
 
-}  //  namespace ovms
+}  // namespace ovms
