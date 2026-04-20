@@ -12,7 +12,7 @@ numpy
 openvino-tokenizers==2026.1.0.0rc2
 openvino==2026.1.0rc2
 pillow
-sentence_transformers
+sentence_transformers==5.3.0
 sentencepiece  # Required by: transformers`
 timm==1.0.22
 torchvision
