@@ -533,7 +533,7 @@ static Status createV3HttpPayload(
             return Status(StatusCode::JSON_INVALID, "model field is not a string");
         }
 
-        bool isTextGenerationEndpoint = uri.find("completions") != std::string_view::npos;
+        bool isTextGenerationEndpoint = (uri.find("completions") != std::string_view::npos) || (uri.find("responses") != std::string_view::npos);
         if (isTextGenerationEndpoint) {
             auto streamIt = parsedJson->FindMember("stream");
             if (streamIt != parsedJson->MemberEnd()) {

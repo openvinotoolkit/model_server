@@ -23,7 +23,7 @@
 
 namespace ovms {
 
-void Hermes3GenerationConfigBuilder::parseConfigFromRequest(const OpenAIChatCompletionsRequest& request) {
+void Hermes3GenerationConfigBuilder::parseConfigFromRequest(const OpenAIRequest& request) {
     // Call the base class method to fill in common configuration
     BaseGenerationConfigBuilder::parseConfigFromRequest(request);
 
