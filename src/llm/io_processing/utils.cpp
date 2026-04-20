@@ -35,4 +35,31 @@ std::string generateRandomId() {
     }
     return id;
 }
+
+size_t findInStringRespectingSpecialChars(const std::string& str, const std::string& target, size_t startPos) {
+    int bracketDepth = 0;
+    int braceDepth = 0;
+    int quoteDepth = 0;
+    int singleQuoteDepth = 0;
+
+    for (size_t i = startPos; i < str.length(); ++i) {
+        if (str[i] == '{') {
+            braceDepth++;
+        } else if (str[i] == '}') {
+            braceDepth--;
+        } else if (str[i] == '[') {
+            bracketDepth++;
+        } else if (str[i] == ']') {
+            bracketDepth--;
+        } else if (str[i] == '"' && (i == 0 || str[i - 1] != '\\')) {
+            quoteDepth = 1 - quoteDepth;
+        } else if (str[i] == '\'' && (i == 0 || str[i - 1] != '\\')) {
+            singleQuoteDepth = 1 - singleQuoteDepth;
+        } else if (bracketDepth == 0 && braceDepth == 0 && quoteDepth == 0 && singleQuoteDepth == 0 &&
+                   str.compare(i, target.length(), target) == 0) {
+            return i;
+        }
+    }
+    return std::string::npos;
+}
 }  // namespace ovms

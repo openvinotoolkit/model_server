@@ -23,13 +23,15 @@ class Gemma4ToolParser : public BaseOutputParser {
 protected:
     static const std::string TOOL_CALL_START_TAG;
     static const std::string TOOL_CALL_END_TAG;
-    static const std::string TOOL_RESPONSE_TAG;
+    static const std::string TOOL_CALL_NAME_PREFIX;
 
     static const std::string TOOL_ARGS_START_INDICATOR;
     static const std::string TOOL_ARGS_END_INDICATOR;
+    static const std::string TOOL_ARGS_STRING_INDICATOR;
     static const std::string TOOL_SEPARATOR_STR;
 
     static const int64_t botTokenId;
+    static const int64_t eotTokenId;
 
     enum class State {
         Content,             // Content -> ToolCallStarted (on TOOL_CALL_START_TAG)

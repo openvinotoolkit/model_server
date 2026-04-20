@@ -33,8 +33,8 @@ const std::string Gemma4ToolParser::TOOL_ARGS_END_INDICATOR = "}";
 const std::string Gemma4ToolParser::TOOL_ARGS_STRING_INDICATOR = "<\">";
 const std::string Gemma4ToolParser::TOOL_SEPARATOR_STR = ",";
 
-const int64_t Gemma4ToolParser::botTokenId = 10;
-const int64_t Gemma4ToolParser::eotTokenId = 11;  //to be changed
+const int64_t Gemma4ToolParser::botTokenId = 48;
+const int64_t Gemma4ToolParser::eotTokenId = 49;
 
 std::string Gemma4ToolParser::parseArrayParameter(std::string argumentStr) {
     int quoteDepth = 0;
@@ -146,7 +146,7 @@ void Gemma4ToolParser::writeArgumentToWriter(const std::string& arg, rapidjson::
     // std::string normalized = normalizeArgStr(arg); to be fitted to actual normalization with corner cases handled
 
     rapidjson::Document doc;
-    doc.Parse(normalized.c_str());
+    doc.Parse(arg.c_str());
 
     rapidjson::Value& argumentDoc = doc;
     writeArgumentOfAnyType(argumentDoc, writer);
@@ -216,12 +216,7 @@ bool Gemma4ToolParser::parseInContentState() {
 }
 
 bool Gemma4ToolParser::parseInToolCallState() {
-    size_t toolListStartPos = this->streamingContent.find(TOOL_LIST_START_INDICATOR, this->streamingPosition);
     size_t argsPos = this->streamingContent.find(TOOL_ARGS_START_INDICATOR, this->streamingPosition);
-
-    if (toolListStartPos != std::string::npos) {
-        this->streamingPosition = toolListStartPos + TOOL_LIST_START_INDICATOR.length();
-    }
 
     if (argsPos == std::string::npos) {
         return false;
@@ -264,13 +259,10 @@ bool Gemma4ToolParser::parseToolCallParametersState() {
 }
 
 bool Gemma4ToolParser::parseInToolCallEndedState() {
-    size_t pos = this->streamingContent.find(TOOL_LIST_END_INDICATOR, this->streamingPosition);
     size_t toolSeparatorPos = this->streamingContent.find(TOOL_SEPARATOR_STR, this->streamingPosition);
     size_t toolCallEndTagPos = this->streamingContent.find(TOOL_CALL_END_TAG, this->streamingPosition);
     SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Current state: ToolCallEnded. Streaming content from current position: {}", this->streamingContent.substr(this->streamingPosition));
-    if (pos == std::string::npos && toolSeparatorPos == std::string::npos && toolCallEndTagPos == std::string::npos) {
-        return false;
-    } else if (toolSeparatorPos != std::string::npos && toolSeparatorPos < pos) {
+    if (toolSeparatorPos != std::string::npos && toolSeparatorPos < toolCallEndTagPos) {
         this->streamingPosition = toolSeparatorPos + TOOL_SEPARATOR_STR.length();
         this->currentState = State::ToolCallStarted;
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Detected separator between tool calls at position: {}, expecting another tool call to start", toolSeparatorPos);
@@ -279,9 +271,9 @@ bool Gemma4ToolParser::parseInToolCallEndedState() {
         this->streamingPosition = toolCallEndTagPos + TOOL_CALL_END_TAG.length();
         this->currentState = State::AfterToolCall;
     } else {
-        this->streamingPosition = pos + TOOL_LIST_END_INDICATOR.length();
+        this->streamingPosition = toolCallEndTagPos + TOOL_CALL_END_TAG.length();
         this->currentState = State::AfterToolCall;
-        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Detected end of tool list at position: {}, returning to content state", pos);
+        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Detected end of tool call at position: {}, returning to content state", toolCallEndTagPos);
     }
     return true;
 }
@@ -457,9 +449,7 @@ void Gemma4ToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64
             SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Failed to parse tool call from string: {}", tool);
         }
     }
-    s
-        std::vector<int64_t>
-            contentWithoutToolCalls = generatedTokens;
+    std::vector<int64_t> contentWithoutToolCalls = generatedTokens;
     for (auto it = toolCallPositions.rbegin(); it != toolCallPositions.rend(); ++it) {
         contentWithoutToolCalls.erase(contentWithoutToolCalls.begin() + it->first, contentWithoutToolCalls.begin() + it->second + 1);
     }

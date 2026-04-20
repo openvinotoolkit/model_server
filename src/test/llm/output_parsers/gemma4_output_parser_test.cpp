@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2025 Intel Corporation
+// Copyright 2026 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -29,10 +29,10 @@
 using namespace ovms;
 
 #ifdef _WIN32
-const std::string tokenizerPath = getWindowsRepoRootPath() + "\\src\\test\\llm_testing\\google\\gemma-4-31B-it";
+const std::string tokenizerPath = getWindowsRepoRootPath() + "\\src\\test\\llm_testing\\google\\gemma-4-26B-A4B-it";
 #else
 // Hardcoded for usage in docker container
-const std::string tokenizerPath = "/ovms/src/test/llm_testing/google/gemma-4-31B-it";
+const std::string tokenizerPath = "/ovms/src/test/llm_testing/google/gemma-4-26B-A4B-it";
 #endif
 
 static std::unique_ptr<ov::genai::Tokenizer> gemma4Tokenizer;
