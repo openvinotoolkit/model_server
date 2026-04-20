@@ -1,10 +1,18 @@
-# Changes required to make Codex CLI work
+# What is Codex CLI?
 
-Codex CLI probes several Ollama-compatible endpoints during startup to discover the server and available models. OVMS previously only exposed OpenAI-compatible endpoints under `/v3/`. The following endpoints were added to satisfy Codex's discovery flow.
+[Codex CLI](https://developers.openai.com/codex/cli) is an open-source command-line interface for interacting with large language models, built by OpenAI. It provides a user-friendly way to send prompts, receive responses, and manage conversations with LLMs directly from the terminal. Codex CLI is designed to be compatible with Ollama's API, making it a great tool for testing and demonstrating OVMS's Ollama-compatible endpoints.
+
+Codex CLI is **VERY** popular:
+
+![img](codex_popularity.png)
+
+# Changes required to make Codex CLI work with OVMS
+
+Codex CLI probes several Ollama-compatible endpoints during startup to discover the server and available models. This document is initial draft which changes need to be made to satisfy Codex's Responses API usage.
 
 ## 1. `GET /api/tags` (Ollama model listing)
 
-Codex calls `GET /api/tags` to discover available models. Returns all loaded models (single models, DAG pipelines, MediaPipe graphs) in the Ollama response format.
+Codex calls `GET /api/tags` to discover available models. This branch implements such endpoint and returns all loaded models (single models, DAG pipelines, MediaPipe graphs) in the Ollama response format.
 
 Model names that already contain a tag (colon, e.g. `gpt-oss:20b`) are returned as-is. Names without a tag get `:latest` appended automatically. This ensures Codex's exact string matching works correctly and avoids unwanted pull attempts.
 
@@ -34,7 +42,7 @@ Both `/api/tags` and `/v3/api/tags` are accepted.
 
 ## 2. `GET /api/version` (Ollama version check)
 
-Codex calls `GET /api/version` to verify the server is reachable and Ollama-compatible. Returns the OVMS version:
+Codex calls `GET /api/version` to verify the server is reachable and Ollama-compatible. This branch implements the new endpoint and returns the OVMS version:
 
 ```json
 {"version": "2025.1"}
@@ -44,7 +52,7 @@ Both `/api/version` and `/v3/api/version` are accepted.
 
 ## 3. Skip non-function tool types in tools array
 
-Codex sends a `tools` array that may contain non-function tool types such as `web_search`. Previously, OVMS rejected the entire request with `"Only function tools are supported"`. Now, non-function tool types are silently removed from the array with a warning log, and only function tools are processed. This allows Codex requests to succeed without modification.
+Codex client sends a `tools` array that may contain non-function tool types such as `web_search`. Previously, OVMS rejected the entire request with `"Only function tools are supported"` **error**. Now, non-function tool types are silently removed from the array with a warning log, and only function tools are processed. This allows Codex requests to succeed without modification.
 
 **Non-function tool types defined by the Responses API (all skipped by OVMS):**
 - `web_search_preview` / `web_search` — Web search tool
@@ -54,11 +62,9 @@ Codex sends a `tools` array that may contain non-function tool types such as `we
 - `mcp` — Model Context Protocol tool
 - `image_generation` — Image generation tool
 
-**Observed from Codex CLI:** `web_search`
-
 ---
 
-## 4. Comprehensive Responses API Gap Analysis for Codex CLI
+## 4. Responses API gap analysis
 
 This section documents the complete gap analysis between what Codex CLI sends/expects and what OVMS currently supports in its Responses API (`/v3/responses`).
 
@@ -97,9 +103,9 @@ OVMS does **not** parse the `instructions` field at all. It is silently ignored.
 
 **Fix required:** In `parseResponsesPart()` (openai_responses.cpp), add parsing of the `instructions` field. When present, prepend a `{role: "system", content: instructions}` entry to the beginning of `request.chatHistory` before processing the `input` array.
 
-#### 4.2.2 `function_call_output` input items crash the parser
+#### 4.2.2 `function_call_output` input items breaks the parser
 
-**Impact: HIGH — Multi-turn tool use is broken**
+**Impact: HIGH — Multi-turn tool use with Codex CLI is broken**
 
 After the model returns a function call and Codex executes it, Codex sends the result back as an input item of type `function_call_output`:
 
@@ -175,16 +181,6 @@ Items 1-3 are **blocking** for a working Codex CLI agentic session. The first pr
 - Without `instructions`, the model won't follow Codex's coding agent persona
 - Without `function_call_output` support, Codex cannot complete any tool-call round-trip
 - Without `developer`→`system` mapping, system prompts in the input array may be ignored by the chat template
-
----
-
-### Bugs fixed
-
-1. **`tool_call_id` crash on regular messages** — The processedJson builder accessed `request.chatHistory[i]["tool_call_id"]` on every message. `JsonContainer::operator[]` throws `ov::Exception` for missing keys, crashing on system/user messages. Fixed by guarding with `contains("tool_call_id")`.
-
-2. **processedJson overwritten by parseTools()** — When Codex sends non-function tools (e.g. `web_search`), `parseTools()` removes them and overwrites `request.processedJson` with the raw doc (which has `input`, not `messages`). The Python chat template then fails with `KeyError: 'messages'`. Fixed by moving the processedJson builder to run after `parseTools()`.
-
-3. **Responses API tool format incompatible with chat templates** — Responses API tools use flat format (`{type, name, parameters}`), but chat templates expect Chat Completions format (`{type, function: {name, parameters}}`). Fixed by converting tool format when building processedJson.
 
 
 
