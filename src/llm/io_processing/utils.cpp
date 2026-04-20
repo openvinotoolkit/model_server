@@ -89,5 +89,4 @@ size_t findInStringRespectingSpecialChars(const std::string& str, const std::str
     }
     return std::string::npos;
 }
-
 }  // namespace ovms
