@@ -58,6 +58,7 @@
 #include "dags/pipelinedefinition.hpp"
 #include "filesystem/filesystem.hpp"
 #include "filesystem/filesystemfactory.hpp"
+#include "graph_export/graph_export.hpp"
 #include "logging.hpp"
 #if (MEDIAPIPE_DISABLE == 0)
 #include "mediapipe_internal/mediapipefactory.hpp"
@@ -229,7 +230,8 @@ Status ModelManager::startFromConfig() {
 
     std::vector<MediapipeGraphConfig> mediapipesInConfigFile;
     std::ifstream ifs(mpConfig.getGraphPath());
-    if (ifs.is_open()) {
+    bool graphAvailable = ifs.is_open() || GraphExport::hasInMemoryGraphContent();
+    if (graphAvailable) {
         // Single model with graph.pbtxt, check if user passed model unsupported model parameters in cmd arguments
         status = ModelManager::validateUserSettingsInSingleModelCliGraphStart(config.getModelSettings());
         if (!status.ok())
@@ -473,10 +475,13 @@ bool ModelManager::CheckStartFromGraph(std::string inputPath, MediapipeGraphConf
     if (ifs.is_open()) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Graph: {} path: {} exists", mpConfig.getGraphName(), mpConfig.getGraphPath());
         return true;
-    } else {
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Graph: {} path: {} does not exist", mpConfig.getGraphName(), mpConfig.getGraphPath());
-        return false;
     }
+    if (GraphExport::hasInMemoryGraphContent()) {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Graph: {} using in-memory graph content", mpConfig.getGraphName());
+        return true;
+    }
+    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Graph: {} path: {} does not exist", mpConfig.getGraphName(), mpConfig.getGraphPath());
+    return false;
 }
 
 Status ModelManager::validateUserSettingsInSingleModelCliGraphStart(const ModelsSettingsImpl& modelsSettings) {
