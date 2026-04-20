@@ -61,7 +61,7 @@ public:
     }
 
     bool requiresStreamingWithSpecialTokens() const override {
-        return true; //to be checked if it's actually required
+        return true;  //to be checked if it's actually required
     }
 
     static std::string normalizeArgStr(const std::string& arg);

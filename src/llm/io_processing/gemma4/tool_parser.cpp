@@ -34,7 +34,7 @@ const std::string Gemma4ToolParser::TOOL_ARGS_STRING_INDICATOR = "<\">";
 const std::string Gemma4ToolParser::TOOL_SEPARATOR_STR = ",";
 
 const int64_t Gemma4ToolParser::botTokenId = 10;
-const int64_t Gemma4ToolParser::eotTokenId = 11; //to be changed
+const int64_t Gemma4ToolParser::eotTokenId = 11;  //to be changed
 
 std::string Gemma4ToolParser::parseArrayParameter(std::string argumentStr) {
     int quoteDepth = 0;
@@ -152,7 +152,7 @@ void Gemma4ToolParser::writeArgumentToWriter(const std::string& arg, rapidjson::
     writeArgumentOfAnyType(argumentDoc, writer);
 }
 
-std::pair<std::string,std::string> Gemma4ToolParser::parseSingleArgument(const std::string& argumentStr) {
+std::pair<std::string, std::string> Gemma4ToolParser::parseSingleArgument(const std::string& argumentStr) {
     std::pair<std::string, std::string> argument;
 
     size_t equalPos = argumentStr.find(':');
@@ -457,8 +457,9 @@ void Gemma4ToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64
             SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Failed to parse tool call from string: {}", tool);
         }
     }
-s
-    std::vector<int64_t> contentWithoutToolCalls = generatedTokens;
+    s
+        std::vector<int64_t>
+            contentWithoutToolCalls = generatedTokens;
     for (auto it = toolCallPositions.rbegin(); it != toolCallPositions.rend(); ++it) {
         contentWithoutToolCalls.erase(contentWithoutToolCalls.begin() + it->first, contentWithoutToolCalls.begin() + it->second + 1);
     }
