@@ -29,7 +29,11 @@
 #include "qwen3coder/qwen3coder_tool_parser.hpp"
 #include "devstral/tool_parser.hpp"
 #include "gptoss/reasoning_parser.hpp"
+<<<<<<< HEAD
 #include "lfm2/lfm2_tool_parser.hpp"
+=======
+#include "gemma4/tool_parser.hpp"
+>>>>>>> 0c55d5ad (save)
 
 namespace ovms {
 OutputParser::TagLookupStatus OutputParser::StreamOutputCache::lookupTag(const std::string& tag) const {
@@ -184,6 +188,8 @@ OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string to
         toolParser = std::make_unique<DevstralToolParser>(tokenizer, toolNameSchemaMap);
     } else if (toolParserName == "lfm2") {
         toolParser = std::make_unique<Lfm2ToolParser>(tokenizer);
+    } else if (toolParserName == "gemma4") {
+        toolParser = std::make_unique<Gemma4ToolParser>(tokenizer);
     } else if (!toolParserName.empty()) {
         throw std::runtime_error("Unsupported tool parser: " + toolParserName);
     }
