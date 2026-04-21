@@ -39,7 +39,9 @@
 #include "../inference_executor.hpp"
 #include "src/filesystem/localfilesystem.hpp"
 #include "../logging.hpp"
+#if (MEDIAPIPE_DISABLE == 0)
 #include "../mediapipe_internal/mediapipefactory.hpp"
+#endif
 #include "src/metrics/metric_config.hpp"
 #include "src/metrics/metric_registry.hpp"
 #include "../model.hpp"
