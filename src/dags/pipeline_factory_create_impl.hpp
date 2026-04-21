@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2020 Intel Corporation
+// Copyright 2026 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,21 +14,25 @@
 // limitations under the License.
 //*****************************************************************************
 #pragma once
-#include <map>
+#include "pipeline_factory.hpp"
+
 #include <memory>
 #include <string>
-#include <utility>
 
-#include "shape.hpp"
-#include "status.hpp"
+#include "src/logging.hpp"
+#include "pipelinedefinition.hpp"
 
 namespace ovms {
-class InferenceRequest;
-
-template <typename RequestType>
-std::optional<Dimension> getRequestBatchSize(const RequestType* request, const size_t batchSizeIndex);
-template <typename RequestType>
-std::map<std::string, shape_t> getRequestShapes(const RequestType* request);
-
-bool useSharedOutputContentFn(const InferenceRequest* request);
+template <typename RequestType, typename ResponseType>
+Status PipelineFactory::create(std::unique_ptr<Pipeline>& pipeline, const std::string& name, const RequestType* request, ResponseType* response, ModelInstanceProvider& provider) const {
+    std::shared_lock lock(definitionsMtx);
+    auto it = definitions.find(name);
+    if (it == definitions.end()) {
+        SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Pipeline with requested name: {} does not exist", name);
+        return StatusCode::PIPELINE_DEFINITION_NAME_MISSING;
+    }
+    auto& definition = *it->second;
+    lock.unlock();
+    return definition.create(pipeline, request, response, provider);
+}
 }  // namespace ovms

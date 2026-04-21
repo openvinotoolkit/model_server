@@ -13,17 +13,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include "../kfs_frontend/kfs_utils.hpp"
-#include "../kfs_frontend/deserialization.hpp"
+#pragma once
 
-#include "entry_node_impl.hpp"
+#include <memory>
 
 namespace ovms {
 
-template Status EntryNode<::KFSRequest>::execute(session_key_t sessionId, PipelineEventQueue& notifyEndQueue);
-template Status EntryNode<::KFSRequest>::fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs);
-template Status EntryNode<::KFSRequest>::fetchResults(TensorWithSourceMap& outputs);
-template Status EntryNode<::KFSRequest>::createShardedTensor(ov::Tensor& dividedTensor, Precision precision, const shape_t& shape, const ov::Tensor& tensor, size_t i, size_t step, const NodeSessionMetadata& metadata, const std::string tensorName);
-template const Status EntryNode<::KFSRequest>::validate();
+struct CNLIMWrapper;
 
-}  //  namespace ovms
+class DagResourceManager {
+public:
+    virtual ~DagResourceManager() = default;
+    virtual void addResourceToCleaner(std::shared_ptr<CNLIMWrapper> resource) = 0;
+};
+
+}  // namespace ovms

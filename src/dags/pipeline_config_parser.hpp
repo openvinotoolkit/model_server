@@ -13,16 +13,32 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include "../capi_frontend/inferenceresponse.hpp"
-#include "../capi_frontend/serialization.hpp"
+#pragma once
 
-#include "exit_node_impl.hpp"
+#include <set>
+#include <string>
+
+#include "src/port/rapidjson_document.hpp"
 
 namespace ovms {
 
-const std::string EXIT_NODE_NAME = "response";
-const std::string DEFAULT_PIPELINE_NAME = "";
+class CustomNodeLibraryManager;
+class DagResourceManager;
+class MetricConfig;
+class MetricRegistry;
+class ModelInstanceProvider;
+class PipelineFactory;
+class ServableNameChecker;
+class Status;
 
-template class ExitNode<InferenceResponse>;
+Status loadPipelinesConfig(
+    rapidjson::Document& configJson,
+    PipelineFactory& factory,
+    ModelInstanceProvider& modelInstanceProvider,
+    ServableNameChecker& nameChecker,
+    DagResourceManager& resourceMgr,
+    const CustomNodeLibraryManager& customNodeLibraryManager,
+    MetricRegistry* metricRegistry,
+    const MetricConfig* metricConfig);
 
 }  // namespace ovms

@@ -17,8 +17,6 @@
 
 #include <string>
 
-
-
 #include "nodeinputhandler.hpp"
 #include "nodesession.hpp"
 #include "tensormap.hpp"

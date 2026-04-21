@@ -50,10 +50,7 @@
 #include "customloaderinterface.hpp"
 #include "customloaders.hpp"
 #include "dags/custom_node_library_manager.hpp"
-#include "dags/entry_node.hpp"  // need for ENTRY_NODE_NAME
-#include "dags/exit_node.hpp"   // need for EXIT_NODE_NAME
-#include "dags/node_library.hpp"
-#include "dags/pipeline.hpp"
+#include "dags/pipeline_config_parser.hpp"
 #include "dags/pipeline_factory.hpp"
 #include "dags/pipelinedefinition.hpp"
 #include "filesystem/filesystem.hpp"
@@ -67,6 +64,7 @@
 #include "metrics/metric_registry.hpp"
 #include "model.hpp"
 #include "modelinstance.hpp"  // for logging
+#include "modelinstanceunloadguard.hpp"
 #include "ov_utils.hpp"
 #include "schema.hpp"
 #include "servable_definition.hpp"
@@ -372,77 +370,10 @@ Status ModelManager::startFromFile(const std::string& jsonFilename) {
     return StatusCode::OK;
 }
 
-static void processNodeInputs(const std::string nodeName, const rapidjson::Value::ConstMemberIterator& itro, pipeline_connections_t& connections) {
-    for (const auto& nodeInput : itro->value.GetArray()) {
-        for (const auto& objectNameValue : nodeInput.GetObject()) {
-            const std::string inputName = objectNameValue.name.GetString();
-            const std::string sourceNodeName = objectNameValue.value.GetObject()["node_name"].GetString();
-            const std::string sourceOutputName = objectNameValue.value.GetObject()["data_item"].GetString();
-            SPDLOG_DEBUG("Creating node dependencies mapping request. Node: {} input: {} <- SourceNode: {} output: {}",
-                nodeName, inputName, sourceNodeName, sourceOutputName);
-            if (connections.find(nodeName) == connections.end()) {
-                connections[nodeName] = {
-                    {sourceNodeName,
-                        {{sourceOutputName, inputName}}}};
-            } else {
-                if (connections[nodeName].find(sourceNodeName) == connections[nodeName].end()) {
-                    connections[nodeName].insert({sourceNodeName,
-                        {{sourceOutputName, inputName}}});
-                } else {
-                    connections[nodeName][sourceNodeName].push_back({sourceOutputName, inputName});
-                }
-            }
-        }
-    }
-}
-
-static void processPipelineInputs(const rapidjson::Value::ConstMemberIterator& pipelineInputsPtr, const std::string& nodeName, std::unordered_map<std::string, std::string>& nodeOutputNameAlias, const std::string& pipelineName) {
-    for (const auto& pipelineInput : pipelineInputsPtr->value.GetArray()) {
-        const std::string pipelineInputName = pipelineInput.GetString();
-        SPDLOG_DEBUG("Mapping node:{} output:{}, under alias:{}",
-            nodeName, pipelineInputName, pipelineInputName);
-        auto result = nodeOutputNameAlias.insert({pipelineInputName, pipelineInputName});
-        if (!result.second) {
-            SPDLOG_ERROR("Pipeline {} has duplicated input declaration", pipelineName);
-        }
-    }
-}
-
-static void processNodeOutputs(const rapidjson::Value::ConstMemberIterator& nodeOutputsItr, const std::string& nodeName, const std::string& modelName, std::unordered_map<std::string, std::string>& nodeOutputNameAlias) {
-    for (const auto& nodeOutput : nodeOutputsItr->value.GetArray()) {
-        const std::string modelOutputName = nodeOutput.GetObject()["data_item"].GetString();
-        const std::string nodeOutputName = nodeOutput.GetObject()["alias"].GetString();
-        SPDLOG_DEBUG("Mapping node: {} model_name: {} output: {}, under alias: {}",
-            nodeName, modelName, modelOutputName, nodeOutputName);
-        nodeOutputNameAlias[nodeOutputName] = modelOutputName;
-    }
-}
-
-static void processDLNodeConfig(const rapidjson::Value& nodeConfig, DLNodeInfo& info) {
-    info.modelName = nodeConfig["model_name"].GetString();
-    if (nodeConfig.HasMember("version")) {
-        info.modelVersion = nodeConfig["version"].GetUint64();
-    }
-}
-
 #define IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status) \
     if (firstErrorStatus.ok()) {                                   \
         firstErrorStatus = status;                                 \
     }
-
-static Status processCustomNodeConfig(const rapidjson::Value& nodeConfig, CustomNodeInfo& info, const std::string& pipelineName, ModelManager& manager) {
-    std::string libraryName = nodeConfig["library_name"].GetString();
-    auto status = manager.getCustomNodeLibraryManager().getLibrary(libraryName, info.library);
-    if (!status.ok()) {
-        SPDLOG_LOGGER_WARN(modelmanager_logger, "Pipeline: {} refers to non existing custom node library: {}", pipelineName, libraryName);
-    }
-    if (nodeConfig.HasMember("params")) {
-        for (const auto& param : nodeConfig["params"].GetObject()) {
-            info.parameters.emplace(param.name.GetString(), param.value.GetString());
-        }
-    }
-    return StatusCode::OK;
-}
 
 #if (MEDIAPIPE_DISABLE == 0)
 bool ModelManager::CheckStartFromGraph(std::string inputPath, MediapipeGraphConfig& mpConfig, bool checkModelMeshPath) {
@@ -558,124 +489,6 @@ static Status parseMediapipeConfig(rapidjson::Document& configJson, std::string&
 }
 #endif
 
-static Status processPipelineConfig(rapidjson::Document& configJson, const rapidjson::Value& pipelineConfig, std::set<std::string>& pipelinesInConfigFile, PipelineFactory& factory, ModelManager& manager) {
-    const std::string pipelineName = pipelineConfig["name"].GetString();
-    if (pipelinesInConfigFile.find(pipelineName) != pipelinesInConfigFile.end()) {
-        SPDLOG_LOGGER_WARN(modelmanager_logger, "Duplicated pipeline names: {} defined in config file. Only first definition will be loaded.", pipelineName);
-        return StatusCode::OK;
-    }
-    SPDLOG_LOGGER_INFO(modelmanager_logger, "Reading pipeline: {} configuration", pipelineName);
-    std::set<std::string> demultiplexerNodes;
-    std::set<std::string> gatheredDemultiplexerNodes;
-    std::optional<int32_t> demultiplyCountEntry = std::nullopt;
-    auto demultiplyCountEntryIt = pipelineConfig.FindMember("demultiply_count");
-    if (demultiplyCountEntryIt != pipelineConfig.MemberEnd()) {
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Pipeline: {} does have demultiply at entry node", pipelineName);
-        int32_t parsedDemultiplyCount = pipelineConfig["demultiply_count"].GetInt();
-        if (parsedDemultiplyCount == 0) {
-            parsedDemultiplyCount = -1;
-            SPDLOG_LOGGER_WARN(modelmanager_logger, "demultiply_count 0 will be deprecated. For dynamic count use -1.");
-        }
-        demultiplyCountEntry = parsedDemultiplyCount;
-        demultiplexerNodes.insert(ENTRY_NODE_NAME);
-    } else {
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Pipeline: {} does not have demultiply at entry node", pipelineName);
-    }
-
-    std::vector<NodeInfo> info;
-    NodeInfo entryInfo{NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {}, demultiplyCountEntry};
-    info.emplace_back(std::move(entryInfo));
-    processPipelineInputs(pipelineConfig.FindMember("inputs"), ENTRY_NODE_NAME, info[0].outputNameAliases, pipelineName);
-    pipeline_connections_t connections;
-
-    auto nodesItr = pipelineConfig.FindMember("nodes");
-    for (const auto& nodeConfig : nodesItr->value.GetArray()) {
-        std::string nodeName;
-        nodeName = nodeConfig["name"].GetString();
-
-        const std::string nodeKindStr = nodeConfig["type"].GetString();
-        NodeKind nodeKind;
-        auto status = toNodeKind(nodeKindStr, nodeKind);
-        if (!status.ok()) {
-            SPDLOG_LOGGER_WARN(modelmanager_logger, "Parsing node kind failed: {} for pipeline: {}", nodeKindStr, pipelineName);
-            return status;
-        }
-
-        DLNodeInfo dlNodeInfo;
-        CustomNodeInfo customNodeInfo;
-        if (nodeKind == NodeKind::DL) {
-            processDLNodeConfig(nodeConfig, dlNodeInfo);
-        } else if (nodeKind == NodeKind::CUSTOM) {
-            status = processCustomNodeConfig(nodeConfig, customNodeInfo, pipelineName, manager);
-            if (!status.ok()) {
-                return status;
-            }
-        } else {
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Pipeline {} contains unknown node kind", pipelineName);
-            throw std::invalid_argument("unknown node kind");
-        }
-
-        auto nodeOutputsItr = nodeConfig.FindMember("outputs");
-        if (nodeOutputsItr == nodeConfig.MemberEnd() || !nodeOutputsItr->value.IsArray()) {
-            SPDLOG_LOGGER_WARN(modelmanager_logger, "Pipeline: {} does not have valid outputs configuration", pipelineName);
-            return status;
-        }
-        std::unordered_map<std::string, std::string> nodeOutputNameAlias;  // key:alias, value realName
-        processNodeOutputs(nodeOutputsItr, nodeName, dlNodeInfo.modelName, nodeOutputNameAlias);
-        std::optional<int32_t> demultiplyCount;
-        if (nodeConfig.HasMember("demultiply_count")) {
-            int32_t parsedDemultiplyCount = nodeConfig["demultiply_count"].GetInt();
-            if (parsedDemultiplyCount == 0) {
-                parsedDemultiplyCount = -1;
-                SPDLOG_LOGGER_WARN(modelmanager_logger, "demultiply_count 0 will be deprecated. For dynamic count use -1.");
-            }
-            demultiplyCount = parsedDemultiplyCount;
-            demultiplexerNodes.insert(nodeName);
-        }
-        std::set<std::string> gatherFromNode;
-        if (nodeConfig.HasMember("gather_from_node")) {
-            std::string nodeToGatherFrom = nodeConfig["gather_from_node"].GetString();
-            gatherFromNode.insert(nodeToGatherFrom);
-            gatheredDemultiplexerNodes.insert(nodeToGatherFrom);
-        }
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Creating node: {} type: {} model_name: {} modelVersion: {}",
-            nodeName, nodeKindStr, dlNodeInfo.modelName, dlNodeInfo.modelVersion.value_or(0));
-        info.emplace_back(
-            nodeKind,
-            nodeName,
-            dlNodeInfo.modelName,
-            dlNodeInfo.modelVersion,
-            nodeOutputNameAlias,
-            demultiplyCount,
-            gatherFromNode,
-            customNodeInfo.library,
-            customNodeInfo.parameters);
-        auto nodeInputItr = nodeConfig.FindMember("inputs");
-        processNodeInputs(nodeName, nodeInputItr, connections);
-    }
-    const auto iteratorOutputs = pipelineConfig.FindMember("outputs");
-    // pipeline outputs are node exit inputs
-    processNodeInputs(EXIT_NODE_NAME, iteratorOutputs, connections);
-    std::set<std::string> nonGatheredDemultiplexerNodes;
-    std::set_difference(demultiplexerNodes.begin(), demultiplexerNodes.end(),
-        gatheredDemultiplexerNodes.begin(), gatheredDemultiplexerNodes.end(),
-        std::inserter(nonGatheredDemultiplexerNodes, nonGatheredDemultiplexerNodes.begin()));
-    info.emplace_back(std::move(NodeInfo(NodeKind::EXIT, EXIT_NODE_NAME, "", std::nullopt, {}, std::nullopt, nonGatheredDemultiplexerNodes)));
-    if (!factory.definitionExists(pipelineName)) {
-        SPDLOG_DEBUG("Pipeline:{} was not loaded so far. Triggering load", pipelineName);
-        auto status = factory.createDefinition(pipelineName, info, connections, manager);
-        pipelinesInConfigFile.insert(pipelineName);
-        return status;
-    }
-    SPDLOG_DEBUG("Pipeline:{} is already loaded. Triggering reload", pipelineName);
-    auto status = factory.reloadDefinition(pipelineName,
-        std::move(info),
-        std::move(connections),
-        manager);
-    pipelinesInConfigFile.insert(pipelineName);
-    return status;
-}
-
 struct ModelManager::ConfigLoader {
     static Status loadCustomNodeLibrariesConfig(ModelManager& mm, rapidjson::Document& configJson);
     static Status loadPipelinesConfig(ModelManager& mm, rapidjson::Document& configJson);
@@ -741,22 +554,8 @@ Status ModelManager::loadMediapipeGraphsConfig(std::vector<MediapipeGraphConfig>
 #endif
 
 Status ModelManager::ConfigLoader::loadPipelinesConfig(ModelManager& mm, rapidjson::Document& configJson) {
-    const auto itrp = configJson.FindMember("pipeline_config_list");
-    if (itrp == configJson.MemberEnd() || !itrp->value.IsArray()) {
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Configuration file doesn't have pipelines property.");
-        mm.pipelineFactory->retireOtherThan({}, mm);
-        return StatusCode::OK;
-    }
-    std::set<std::string> pipelinesInConfigFile;
-    Status firstErrorStatus = StatusCode::OK;
-    for (const auto& pipelineConfig : itrp->value.GetArray()) {
-        auto status = processPipelineConfig(configJson, pipelineConfig, pipelinesInConfigFile, *mm.pipelineFactory, mm);
-        if (status != StatusCode::OK) {
-            IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
-        }
-    }
-    mm.pipelineFactory->retireOtherThan(std::move(pipelinesInConfigFile), mm);
-    return firstErrorStatus;
+    return ovms::loadPipelinesConfig(configJson, *mm.pipelineFactory, mm, mm, mm,
+        mm.getCustomNodeLibraryManager(), mm.getMetricRegistry(), &mm.getMetricConfig());
 }
 
 Status ModelManager::createCustomLoader(CustomLoaderConfig& loaderConfig) {
@@ -1192,7 +991,7 @@ Status ModelManager::updateConfigurationWithoutConfigFile() {
             reloadNeeded = true;
         }
     }
-    status = pipelineFactory->revalidatePipelines(*this);
+    status = pipelineFactory->revalidatePipelines(*this, *this, *this);
     if (!status.ok()) {
         IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
     }
@@ -1695,6 +1494,73 @@ const std::shared_ptr<Model> ModelManager::findModelByName(const std::string& na
     std::shared_lock lock(modelsMtx);
     auto it = models.find(name);
     return it != models.end() ? it->second : nullptr;
+}
+
+bool ModelManager::subscribeToModel(const std::string& name, model_version_t version, NotifyReceiver& receiver) {
+    auto model = findModelByName(name);
+    if (!model) {
+        return false;
+    }
+    if (version) {
+        auto instance = model->getModelInstanceByVersion(version);
+        if (!instance) {
+            return false;
+        }
+        instance->subscribe(receiver);
+    } else {
+        model->subscribe(receiver);
+    }
+    return true;
+}
+
+void ModelManager::unsubscribeFromModel(const std::string& name, model_version_t version, NotifyReceiver& receiver) {
+    auto model = findModelByName(name);
+    if (!model) {
+        return;
+    }
+    if (version) {
+        auto instance = model->getModelInstanceByVersion(version);
+        if (instance) {
+            instance->unsubscribe(receiver);
+        }
+    } else {
+        model->unsubscribe(receiver);
+    }
+}
+
+Status ModelManager::getModelInputsInfo(const std::string& name, model_version_t version, tensor_map_t& info) const {
+    std::shared_ptr<ModelInstance> instance;
+    std::unique_ptr<ModelInstanceUnloadGuard> guard;
+    auto status = getModelInstance(name, version, instance, guard);
+    if (!status.ok()) {
+        return status;
+    }
+    info = instance->getInputsInfo();
+    return StatusCode::OK;
+}
+
+Status ModelManager::getModelOutputsInfo(const std::string& name, model_version_t version, tensor_map_t& info) const {
+    std::shared_ptr<ModelInstance> instance;
+    std::unique_ptr<ModelInstanceUnloadGuard> guard;
+    auto status = getModelInstance(name, version, instance, guard);
+    if (!status.ok()) {
+        return status;
+    }
+    info = instance->getOutputsInfo();
+    return StatusCode::OK;
+}
+
+Status ModelManager::hasAutoModelParameters(const std::string& name, model_version_t version, bool& batchAuto, bool& shapeAuto) const {
+    std::shared_ptr<ModelInstance> instance;
+    std::unique_ptr<ModelInstanceUnloadGuard> guard;
+    auto status = getModelInstance(name, version, instance, guard);
+    if (!status.ok()) {
+        return status;
+    }
+    const auto& config = instance->getModelConfig();
+    batchAuto = (config.getBatchingMode() == Mode::AUTO);
+    shapeAuto = config.anyShapeSetToAuto();
+    return StatusCode::OK;
 }
 
 Status ModelManager::getModelInstance(const std::string& modelName,

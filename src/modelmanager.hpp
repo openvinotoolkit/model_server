@@ -26,10 +26,12 @@
 #include <utility>
 #include <vector>
 
+#include "dags/dag_resource_manager.hpp"
 #include "global_sequences_viewer.hpp"
 #include "metrics/metric_provider.hpp"
 #include "model_instance_provider.hpp"
 #include "modelconfig.hpp"
+#include "resources_cleaner.hpp"
 #include "servable_name_checker.hpp"
 #include "status.hpp"
 
@@ -66,7 +68,7 @@ class PythonBackend;
 /**
  * @brief Model manager is managing the list of model topologies enabled for serving and their versions.
  */
-class ModelManager : public ServableNameChecker, public MetricProvider, public ModelInstanceProvider {
+class ModelManager : public ServableNameChecker, public MetricProvider, public ModelInstanceProvider, public ResourcesCleaner, public DagResourceManager {
 public:
     /**
      * @brief A default constructor is private
@@ -281,7 +283,7 @@ public:
     /**
      *  @brief Adds new resource to watch by the cleaner thread
      */
-    void addResourceToCleaner(std::shared_ptr<CNLIMWrapper> resource) {
+    void addResourceToCleaner(std::shared_ptr<CNLIMWrapper> resource) override {
         std::unique_lock resourcesLock(resourcesMtx);
         resources.emplace(resources.end(), std::move(resource));
     }
@@ -334,7 +336,7 @@ public:
      *
      * @return pointer to Model or nullptr if not found
      */
-    const std::shared_ptr<Model> findModelByName(const std::string& name) const;
+    const std::shared_ptr<Model> findModelByName(const std::string& name) const override;
 
     Status getModelInstance(const std::string& modelName,
         ovms::model_version_t modelVersionId,
@@ -356,7 +358,14 @@ public:
      *
      * @return pointer to ModelInstance or nullptr if not found
      */
-    const std::shared_ptr<ModelInstance> findModelInstance(const std::string& name, model_version_t version = 0) const;
+    const std::shared_ptr<ModelInstance> findModelInstance(const std::string& name, model_version_t version = 0) const override;
+
+    bool subscribeToModel(const std::string& name, model_version_t version, NotifyReceiver& receiver) override;
+    void unsubscribeFromModel(const std::string& name, model_version_t version, NotifyReceiver& receiver) override;
+
+    Status getModelInputsInfo(const std::string& name, model_version_t version, tensor_map_t& info) const override;
+    Status getModelOutputsInfo(const std::string& name, model_version_t version, tensor_map_t& info) const override;
+    Status hasAutoModelParameters(const std::string& name, model_version_t version, bool& batchAuto, bool& shapeAuto) const override;
 
     Status createPipeline(std::unique_ptr<MediapipeGraphExecutor>& graph,
         const std::string& name);
@@ -474,7 +483,7 @@ public:
     /**
      * @brief Cleaner thread procedure to cleanup resources that are not used
      */
-    void cleanupResources();
+    void cleanupResources() override;
 
     bool servableExists(const std::string& name, ServableQueryType check = ServableQueryType::All) const override;
 

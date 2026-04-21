@@ -20,8 +20,6 @@
 #include <unordered_map>
 #include <utility>
 
-
-
 #include "session_id.hpp"
 #include "tensormap.hpp"
 

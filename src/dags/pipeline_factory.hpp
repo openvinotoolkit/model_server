@@ -28,10 +28,14 @@
 
 namespace ovms {
 
-class ModelManager;
+class DagResourceManager;
+class MetricConfig;
+class MetricRegistry;
+class ModelInstanceProvider;
 struct NodeInfo;
 class Pipeline;
 class PipelineDefinition;
+class ServableNameChecker;
 class Status;
 
 class PipelineFactory {
@@ -42,7 +46,11 @@ public:
     Status createDefinition(const std::string& pipelineName,
         const std::vector<NodeInfo>& nodeInfos,
         const pipeline_connections_t& connections,
-        ModelManager& manager);
+        ModelInstanceProvider& provider,
+        ServableNameChecker& nameChecker,
+        DagResourceManager& resourceMgr,
+        MetricRegistry* registry = nullptr,
+        const MetricConfig* metricConfig = nullptr);
 
     bool definitionExists(const std::string& name) const;
 
@@ -52,7 +60,7 @@ private:
         const std::string& name,
         const RequestType* request,
         ResponseType* response,
-        ModelManager& manager) const;
+        ModelInstanceProvider& provider) const;
 
 public:
     template <typename RequestType, typename ResponseType>
@@ -60,16 +68,18 @@ public:
         const std::string& name,
         const RequestType* request,
         ResponseType* response,
-        ModelManager& manager) const;
+        ModelInstanceProvider& provider) const;
 
     PipelineDefinition* findDefinitionByName(const std::string& name) const;
     Status reloadDefinition(const std::string& pipelineName,
         const std::vector<NodeInfo>&& nodeInfos,
         const pipeline_connections_t&& connections,
-        ModelManager& manager);
+        ModelInstanceProvider& provider,
+        ServableNameChecker& nameChecker,
+        DagResourceManager& resourceMgr);
 
-    void retireOtherThan(std::set<std::string>&& pipelinesInConfigFile, ModelManager& manager);
-    Status revalidatePipelines(ModelManager&);
+    void retireOtherThan(std::set<std::string>&& pipelinesInConfigFile, ModelInstanceProvider& provider);
+    Status revalidatePipelines(ModelInstanceProvider& provider, ServableNameChecker& nameChecker, DagResourceManager& resourceMgr);
     const std::vector<std::string> getPipelinesNames() const;
     const std::vector<std::string> getNamesOfAvailablePipelines() const;
 };

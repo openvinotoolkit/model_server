@@ -15,17 +15,136 @@
 #
 load("//:common_settings.bzl", "COMMON_STATIC_LIBS_COPTS", "ovms_cc_library")
 
-# Files referenced by //src:ovms_lib
-exports_files([
-    "pipelinedefinition.hpp",
-    "pipelinedefinition.cpp",
-    "pipeline_factory.cpp",
-    "pipeline_factory.hpp",
-])
+ovms_cc_library(
+    name = "pipeline_config_parser",
+    hdrs = ["pipeline_config_parser.hpp"],
+    srcs = ["pipeline_config_parser.cpp"],
+    deps = [
+        "custom_node_library_manager",
+        "entry_node",
+        "exit_node",
+        "nodeinfo",
+        "pipeline_factory",
+        "dag_resource_manager",
+        "//src:libovmslogging",
+        "//src:libovmsstatus",
+        "//src:libovms_model_instance_provider",
+        "//src:libovms_servable_name_checker",
+        "//src/port:rapidjson_document",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
+    name = "pipelinedefinition",
+    hdrs = [
+        "pipelinedefinition.hpp",
+        "pipelinedefinition_create_impl.hpp",
+    ],
+    srcs = ["pipelinedefinition.cpp"],
+    deps = [
+        "custom_node",
+        "custom_node_library_internal_manager_wrapper",
+        "dl_node",
+        "node_library_utils",
+        "nodeinfo",
+        "nodestreamidguard",
+        "pipeline",
+        "//src:libovmslogging",
+        "//src:libovmsstatus",
+        "//src:libovms_ov_utils",
+        "//src:libovms_model_instance_provider",
+        "//src:libovms_servable_name_checker",
+        "//src:model_metric_reporter",
+        "dag_resource_manager",
+        "//src:libovms_single_version_servable_definition",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
+    name = "pipeline_factory",
+    hdrs = [
+        "pipeline_factory.hpp",
+        "pipeline_factory_create_impl.hpp",
+    ],
+    srcs = ["pipeline_factory.cpp"],
+    deps = [
+        "nodeinfo",
+        "pipeline",
+        "pipelinedefinition",
+        "//src:libovmslogging",
+        "//src:libovmsstatus",
+        "//src:model_metric_reporter",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
+    name = "dag_capi",
+    srcs = ["dag_capi.cpp"],
+    deps = [
+        "entry_node",
+        "exit_node",
+        "exitnodesession",
+        "pipelinedefinition",
+        "pipeline_factory",
+        "//src:capi_dag_utils",
+        "//src:capi_deserialization",
+        "//src:capi_request_utils",
+        "//src:capi_serialization",
+        "//src:libovmscapi_utils",
+        "//src:inferencerequest",
+        "//src:inferenceresponse",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
+    name = "dag_kfs",
+    srcs = ["dag_kfs.cpp"],
+    deps = [
+        "entry_node",
+        "exit_node",
+        "exitnodesession",
+        "pipelinedefinition",
+        "pipeline_factory",
+        "//src:kfs_deserialization",
+        "//src:kfs_request_utils",
+        "//src:kfs_serialization",
+        "//src:libovms_kfs_utils",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
+    name = "dag_tfs",
+    srcs = ["dag_tfs.cpp"],
+    deps = [
+        "entry_node",
+        "exit_node",
+        "exitnodesession",
+        "pipelinedefinition",
+        "pipeline_factory",
+        "//src:tfs_deserialization",
+        "//src:tfs_request_utils",
+        "//src:tfs_serialization",
+        "//src:tfs_utils",
+        "//third_party:openvino",
+    ],
+    visibility = ["//visibility:public"],
+)
 
 ovms_cc_library(
     name = "aliases",
     hdrs = ["aliases.hpp"],
+    deps = [],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
+    name = "dag_resource_manager",
+    hdrs = ["dag_resource_manager.hpp"],
     deps = [],
     visibility = ["//visibility:public"],
 )
@@ -380,35 +499,7 @@ ovms_cc_library(
     ],
     visibility = ["//visibility:public"],
 )
-ovms_cc_library(
-    name = "exitnodesession_capi",
-    srcs = ["exitnodesession_capi.cpp",],
-    deps = [
-            "exitnodesession",
-            "//src:inferenceresponse",
-            "//src:capi_dag_utils",
-    ],
-    visibility = ["//visibility:public"],
-)
-ovms_cc_library(
-    name = "exitnodesession_kfs",
-    srcs = ["exitnodesession_kfs.cpp",],
-    deps = [
-            "exitnodesession",
-            "//src:libovms_kfs_utils",
-    ],
-    visibility = ["//visibility:public"],
-)
-ovms_cc_library(
-    name = "exitnodesession_tfs",
-    srcs = ["exitnodesession_tfs.cpp",],
-    deps = [
-            "exitnodesession",
-            "//src:tfs_utils",
-            "//third_party:openvino",
-    ],
-    visibility = ["//visibility:public"],
-)
+
 ovms_cc_library(
     name = "exit_node",
     hdrs = ["exit_node.hpp",
@@ -425,38 +516,7 @@ ovms_cc_library(
     ],
     visibility = ["//visibility:public"],
 )
-ovms_cc_library(
-    name = "exit_node_capi",
-    srcs = ["exit_node_capi.cpp",],
-    deps = [
-            "exit_node",
-            "exitnodesession_capi",
-            "//src:capi_serialization",
-            "//src:inferenceresponse",
-    ],
-    visibility = ["//visibility:public"],
-)
-ovms_cc_library(
-    name = "exit_node_kfs",
-    srcs = ["exit_node_kfs.cpp",],
-    deps = [
-            "exit_node",
-            "exitnodesession_kfs",
-            "//src:kfs_serialization",
-    ],
-    visibility = ["//visibility:public"],
-)
-ovms_cc_library(
-    name = "exit_node_tfs",
-    srcs = ["exit_node_tfs.cpp",],
-    deps = [
-            "exit_node",
-            "exitnodesession_tfs",
-            "//src:tfs_serialization",
-            "//third_party:openvino",
-    ],
-    visibility = ["//visibility:public"],
-)
+
 ovms_cc_library(
     name = "entry_node",
     hdrs = ["entry_node.hpp",
@@ -477,34 +537,4 @@ ovms_cc_library(
     ],
     visibility = ["//visibility:public"],
 )
-ovms_cc_library(
-    name = "entry_node_capi",
-    srcs = ["entry_node_capi.cpp",],
-    deps = [
-            "entry_node",
-            "//src:libovmscapi_utils",
-            "//src:capi_deserialization",
-    ],
-    visibility = ["//visibility:public"],
-)
-ovms_cc_library(
-    name = "entry_node_kfs",
-    srcs = ["entry_node_kfs.cpp",],
-    deps = [
-            "entry_node",
-            "//src:libovms_kfs_utils",
-            "//src:kfs_deserialization",
-    ],
-    visibility = ["//visibility:public"],
-)
-ovms_cc_library(
-    name = "entry_node_tfs",
-    srcs = ["entry_node_tfs.cpp",],
-    deps = [
-            "entry_node",
-            "//src:tfs_utils",
-            "//src:tfs_deserialization",
-            "//third_party:openvino",
-    ],
-    visibility = ["//visibility:public"],
-)
+

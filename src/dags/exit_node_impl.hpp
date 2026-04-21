@@ -17,6 +17,7 @@
 
 #include "exit_node.hpp"
 
+#include <memory>
 #include <string>
 #include <utility>
 

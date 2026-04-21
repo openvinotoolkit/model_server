@@ -18,6 +18,7 @@
 #include "exitnodesession.hpp"
 
 #include <memory>
+#include <string>
 
 #include "gatherexitnodeinputhandler.hpp"
 #include "nodesessionmetadata.hpp"
