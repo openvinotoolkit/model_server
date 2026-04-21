@@ -109,10 +109,10 @@ std::string Gemma4ToolParser::normalizeArgStr(const std::string& arg) {
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Argument is an array, normalized quotes for JSON parsing. Modified string: {}", normalized);
     }
 
-    if ((first == '\'' && last == '\'')) {
-        normalized[0] = '"';
-        normalized[normalized.size() - 1] = '"';
-        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Argument is enclosed in quotes, replaced outer quotes with double quotes for JSON parsing. Modified string: {}", normalized);
+    if (normalized.substr(0, TOOL_ARGS_STRING_INDICATOR.size()) == TOOL_ARGS_STRING_INDICATOR &&
+        normalized.substr(normalized.size() - TOOL_ARGS_STRING_INDICATOR.size(), TOOL_ARGS_STRING_INDICATOR.size()) == TOOL_ARGS_STRING_INDICATOR) {
+        normalized = "\"" + normalized.substr(TOOL_ARGS_STRING_INDICATOR.size(), normalized.size() - 2 * TOOL_ARGS_STRING_INDICATOR.size()) + "\"";
+        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Argument is enclosed in string indicators, removed them for JSON parsing. Modified string: {}", normalized);
     }
 
     rapidjson::Document tempDoc;
@@ -143,10 +143,10 @@ std::string Gemma4ToolParser::normalizeArgStr(const std::string& arg) {
 }
 
 void Gemma4ToolParser::writeArgumentToWriter(const std::string& arg, rapidjson::Writer<rapidjson::StringBuffer>& writer) {
-    // std::string normalized = normalizeArgStr(arg); to be fitted to actual normalization with corner cases handled
+    std::string normalized = normalizeArgStr(arg);
 
     rapidjson::Document doc;
-    doc.Parse(arg.c_str());
+    doc.Parse(normalized.c_str());
 
     rapidjson::Value& argumentDoc = doc;
     writeArgumentOfAnyType(argumentDoc, writer);
@@ -158,7 +158,13 @@ std::pair<std::string, std::string> Gemma4ToolParser::parseSingleArgument(const 
     size_t equalPos = argumentStr.find(':');
     if (equalPos != std::string::npos) {
         argument.first = argumentStr.substr(0, equalPos);
-        argument.second = argumentStr.substr(equalPos + 1);
+        std::string value = argumentStr.substr(equalPos + 1);
+        size_t argsStringIndicatorPos = value.find(TOOL_ARGS_STRING_INDICATOR);
+        size_t argsStringIndicatorEndPos = value.rfind(TOOL_ARGS_STRING_INDICATOR);
+        if(argsStringIndicatorPos != std::string::npos && argsStringIndicatorEndPos != std::string::npos && argsStringIndicatorEndPos > argsStringIndicatorPos) {            
+            value = value.substr(0, argsStringIndicatorPos) + "\"" + value.substr(argsStringIndicatorPos + TOOL_ARGS_STRING_INDICATOR.length(), argsStringIndicatorEndPos - argsStringIndicatorPos - TOOL_ARGS_STRING_INDICATOR.length()) + "\"";
+        }
+        argument.second = value;
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Parsed argument - name: {}, value: {}", argument.first, argument.second);
     } else {
         argument.first = argumentStr;
@@ -181,7 +187,7 @@ std::vector<std::pair<std::string, std::string>> Gemma4ToolParser::parseArgument
             SPDLOG_LOGGER_TRACE(llm_calculator_logger, "No more commas found, adding remaining argument string: {}", remainingStr);
             break;
         }
-        auto argStr = argumentsStr.substr(argPos, commaPos - argPos);
+        std::string argStr = argumentsStr.substr(argPos, commaPos - argPos);
         args.push_back(argStr);
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Parsed argument string: {}", argStr);
         argPos = commaPos + TOOL_SEPARATOR_STR.length();
@@ -414,11 +420,11 @@ void Gemma4ToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64
             break;
         }
 
-        std::string toolCallStr = tokenizer.decode(std::vector<int64_t>(generatedTokens.begin() + start, generatedTokens.begin() + end + 1), ov::AnyMap{ov::genai::skip_special_tokens(false)});
+        std::string toolCallStr = tokenizer.decode(std::vector<int64_t>(generatedTokens.begin() + start + 1, generatedTokens.begin() + end + 1), ov::AnyMap{ov::genai::skip_special_tokens(false)});
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Parsed tool list string: {}", toolCallStr);
 
         while (!toolCallStr.empty()) {
-            size_t toolEndPos = findInStringRespectingSpecialChars(toolCallStr, TOOL_ARGS_END_INDICATOR, 0);
+            size_t toolEndPos = toolCallStr.find(TOOL_ARGS_END_INDICATOR);
             std::string singleTool;
             if (toolEndPos != std::string::npos) {
                 singleTool = toolCallStr.substr(0, toolEndPos + TOOL_ARGS_END_INDICATOR.length());
@@ -428,6 +434,9 @@ void Gemma4ToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64
                     toolCallStr.clear();
                 }
                 SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Parsed single tool string {}", singleTool);
+            } else {
+                break;
+                SPDLOG_LOGGER_TRACE(llm_calculator_logger, "No more tool strings found in the decoded string: {}", toolCallStr);
             }
 
             if (!singleTool.empty()) {
