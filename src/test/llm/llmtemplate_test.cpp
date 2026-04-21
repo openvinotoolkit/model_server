@@ -368,6 +368,49 @@ TEST_F(LLMChatTemplateTest, ChatTemplateKwargsNegative) {
     ASSERT_EQ(finalPrompt, expectedOutput);
 }
 
+TEST_F(LLMChatTemplateTest, ChatTemplateTojsonNoHtmlEscaping) {
+    // Simulates Granite/DeepSeek-R1 style tool_call templates that use tojson
+    // The tojson filter must return plain JSON, not HTML-escaped Markup.
+    // Without the override, Jinja2's default tojson wraps output in Markup,
+    // causing < > & " to be escaped as &lt; &gt; &amp; &quot; when
+    // concatenated with plain strings via + in {% set %} blocks.
+    //
+    // Key: the bug only manifests when tojson output (Markup) is concatenated
+    // with a plain str inside {% set %}, because Markup.__radd__ escapes the
+    // str operand. Direct {{ tojson }} rendering does NOT trigger the bug.
+    std::string jinjaTemplate =
+        "{%- set ns = namespace(tool_text='<tools>') %}"
+        "{%- if tools %}"
+        "  {%- for tool in tools %}"
+        "    {%- set ns.tool_text = ns.tool_text + '\\n' + (tool | tojson) %}"
+        "  {%- endfor %}"
+        "  {%- set ns.tool_text = ns.tool_text + '\\n</tools>' %}"
+        "{%- endif %}"
+        "{{ ns.tool_text }}";
+    ASSERT_EQ(CreateJinjaConfig(jinjaTemplate), true);
+    LoadTemplateProcessor();
+
+    std::string finalPrompt = "";
+    std::string payloadBody = R"(
+        {
+            "model": "gpt",
+            "stream": false,
+            "messages": [{"role": "user", "content": "hello"}],
+            "tools": [{"type": "function", "function": {"name": "get_weather", "parameters": {"type": "object"}}}]
+        }
+    )";
+    ASSERT_EQ(PyJinjaTemplateProcessor::applyChatTemplate(servable->getProperties()->templateProcessor, servable->getProperties()->modelsPath, payloadBody, finalPrompt), true);
+    // Must contain literal <tools> tags, NOT &lt;tools&gt;
+    EXPECT_THAT(finalPrompt, ::testing::HasSubstr("<tools>"));
+    EXPECT_THAT(finalPrompt, ::testing::HasSubstr("</tools>"));
+    // Must not contain any HTML-escaped entities
+    EXPECT_THAT(finalPrompt, ::testing::Not(::testing::HasSubstr("&lt;")));
+    EXPECT_THAT(finalPrompt, ::testing::Not(::testing::HasSubstr("&gt;")));
+    EXPECT_THAT(finalPrompt, ::testing::Not(::testing::HasSubstr("&quot;")));
+    EXPECT_THAT(finalPrompt, ::testing::Not(::testing::HasSubstr("&amp;")));
+    EXPECT_THAT(finalPrompt, ::testing::HasSubstr("get_weather"));
+}
+
 std::string configTemplate = R"(
         {
             "model_config_list": [],
