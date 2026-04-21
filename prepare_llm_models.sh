@@ -38,7 +38,11 @@ PHI4_MODEL="microsoft/Phi-4-mini-instruct"
 MISTRAL_MODEL="mistralai/Mistral-7B-Instruct-v0.3"
 GPT_OSS_MODEL="openai/gpt-oss-20b"
 DEVSTRAL_MODEL="unsloth/Devstral-Small-2507"
+<<<<<<< HEAD
 LFM2_MODEL="LiquidAI/LFM2-2.6B"
+=======
+GEMMA4_MODEL="google/gemma-4-26B-A4B-it"
+>>>>>>> 73a55b89 (save)
 
 if [ "$(python3 -c 'import sys; print(sys.version_info[1])')" -le "8" ]; then echo "Prepare models with python > 3.8."; exit 1 ; fi
 
@@ -227,5 +231,15 @@ else
 fi
 if [ ! -f "$1/$LFM2_MODEL/$TOKENIZER_FILE" ]; then
   echo "[ERROR] Models file $1/$LFM2_MODEL/$TOKENIZER_FILE does not exist."
+  exit 1
+fi
+if [ -f "$1/$GEMMA4_MODEL/$TOKENIZER_FILE" ]; then
+  echo "Models file $1/$GEMMA4_MODEL/$TOKENIZER_FILE exists. Skipping downloading models."
+else
+  mkdir -p $1/$GEMMA4_MODEL
+  convert_tokenizer $GEMMA4_MODEL --with_detokenizer -o $1/$GEMMA4_MODEL
+fi
+if [ ! -f "$1/$GEMMA4_MODEL/$TOKENIZER_FILE" ]; then
+  echo "[ERROR] Models file $1/$GEMMA4_MODEL/$TOKENIZER_FILE does not exist."
   exit 1
 fi
