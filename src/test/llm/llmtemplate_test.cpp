@@ -411,6 +411,44 @@ TEST_F(LLMChatTemplateTest, ChatTemplateTojsonNoHtmlEscaping) {
     EXPECT_THAT(finalPrompt, ::testing::HasSubstr("get_weather"));
 }
 
+TEST_F(LLMChatTemplateTest, ChatTemplateTojsonIndentWorks) {
+    // Verifies that tojson(indent=2) still produces indented JSON output
+    // after the tojson override that prevents HTML escaping.
+    std::string jinjaTemplate =
+        "{%- set ns = namespace(tool_text='<tools>') %}"
+        "{%- if tools %}"
+        "  {%- for tool in tools %}"
+        "    {%- set ns.tool_text = ns.tool_text + '\\n' + (tool | tojson(indent=2)) %}"
+        "  {%- endfor %}"
+        "  {%- set ns.tool_text = ns.tool_text + '\\n</tools>' %}"
+        "{%- endif %}"
+        "{{ ns.tool_text }}";
+    ASSERT_EQ(CreateJinjaConfig(jinjaTemplate), true);
+    LoadTemplateProcessor();
+
+    std::string finalPrompt = "";
+    std::string payloadBody = R"(
+        {
+            "model": "gpt",
+            "stream": false,
+            "messages": [{"role": "user", "content": "hello"}],
+            "tools": [{"type": "function", "function": {"name": "get_weather", "parameters": {"type": "object"}}}]
+        }
+    )";
+    ASSERT_EQ(PyJinjaTemplateProcessor::applyChatTemplate(servable->getProperties()->templateProcessor, servable->getProperties()->modelsPath, payloadBody, finalPrompt), true);
+    // Must contain literal <tools> tags, NOT &lt;tools&gt;
+    EXPECT_THAT(finalPrompt, ::testing::HasSubstr("<tools>"));
+    EXPECT_THAT(finalPrompt, ::testing::HasSubstr("</tools>"));
+    // Must not contain any HTML-escaped entities
+    EXPECT_THAT(finalPrompt, ::testing::Not(::testing::HasSubstr("&lt;")));
+    EXPECT_THAT(finalPrompt, ::testing::Not(::testing::HasSubstr("&gt;")));
+    EXPECT_THAT(finalPrompt, ::testing::Not(::testing::HasSubstr("&quot;")));
+    EXPECT_THAT(finalPrompt, ::testing::Not(::testing::HasSubstr("&amp;")));
+    EXPECT_THAT(finalPrompt, ::testing::HasSubstr("get_weather"));
+    // Verify indentation is present — indent=2 produces newlines and spaces inside JSON
+    EXPECT_THAT(finalPrompt, ::testing::HasSubstr("  \"type\": \"function\""));
+}
+
 std::string configTemplate = R"(
         {
             "model_config_list": [],
