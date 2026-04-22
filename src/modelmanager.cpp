@@ -1726,32 +1726,31 @@ bool ModelManager::allServablesLoaded() const {
     {
         std::shared_lock lock(modelsMtx);
         for (const auto& [name, model] : models) {
-            const std::shared_ptr<ModelInstance> defaultModelInstance = model->getDefaultModelInstance();
-            if (!defaultModelInstance) {
-                // Check if all versions are retired (ended unloading)
-                const auto& versions = model->getModelVersions();
-                bool allRetired = !versions.empty();
-                for (const auto& [version, instance] : versions) {
-                    if (!instance->getStatus().willEndUnloaded()) {
-                        allRetired = false;
-                        break;
-                    }
-                }
-                if (allRetired) {
-                    SPDLOG_DEBUG("Model {} is retired, skipping", name);
-                    continue;
-                }
-                SPDLOG_DEBUG("Model {} is not available yet", name);
+            const auto& versions = model->getModelVersions();
+            if (versions.empty()) {
+                SPDLOG_DEBUG("Model {} has no versions and is not available yet", name);
                 return false;
             }
-            if (defaultModelInstance->getStatus().getState() == ModelVersionState::END) {
+            bool anyAvailable = false;
+            bool allRetiredOrAvailable = true;
+            for (const auto& [version, instance] : versions) {
+                auto state = instance->getStatus().getState();
+                if (state == ModelVersionState::AVAILABLE) {
+                    anyAvailable = true;
+                } else if (!instance->getStatus().willEndUnloaded()) {
+                    allRetiredOrAvailable = false;
+                }
+            }
+            if (anyAvailable) {
+                continue;
+            }
+            if (allRetiredOrAvailable) {
+                // All versions are retired (END/UNLOADING) and none available
                 SPDLOG_DEBUG("Model {} is retired, skipping", name);
                 continue;
             }
-            if (defaultModelInstance->getStatus().getState() != ModelVersionState::AVAILABLE) {
-                SPDLOG_DEBUG("Model {} is not available yet", name);
-                return false;
-            }
+            SPDLOG_DEBUG("Model {} is not available yet", name);
+            return false;
         }
     }
     for (const auto& name : pipelineFactory->getPipelinesNames()) {
