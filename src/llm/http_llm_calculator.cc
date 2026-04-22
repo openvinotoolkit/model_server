@@ -191,6 +191,8 @@ public:
             }
         } catch (ov::AssertFailure& e) {
             return handleGenerationError(cc, e.what());
+        } catch (const std::exception& e) {
+            return handleGenerationError(cc, e.what());
         } catch (...) {
             return handleGenerationError(cc, "Response generation failed");
         }
