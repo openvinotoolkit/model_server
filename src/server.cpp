@@ -518,26 +518,26 @@ int Server::startServerFromSettings(ServerSettingsImpl& serverSettings, ModelsSe
     OvmsExitGuard exitStatusGuard(*this);
     installSignalHandlers();
     int result = OVMS_EX_OK;
-    }
-
-    try {
-        Status ret = startFromSettings(&serverSettings, &modelsSettings);
-        ModulesShutdownGuard shutdownGuard(*this);
-        if (!ret.ok()) {
-            return statusToExitCode(ret);
-        }
-        while (!getShutdownStatus() &&
-               (serverSettings.serverMode == HF_PULL_AND_START_MODE || serverSettings.serverMode == SERVING_MODELS_MODE)) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(200));
-        }
-    } catch (const std::exception& e) {
-        SPDLOG_ERROR("Exception; {}", e.what());
-        result = OVMS_EX_FAILURE;
-        return result;
-    }
-
-    return EXIT_SUCCESS;
 }
+
+try {
+    Status ret = startFromSettings(&serverSettings, &modelsSettings);
+    ModulesShutdownGuard shutdownGuard(*this);
+    if (!ret.ok()) {
+        return statusToExitCode(ret);
+    }
+    while (!getShutdownStatus() &&
+           (serverSettings.serverMode == HF_PULL_AND_START_MODE || serverSettings.serverMode == SERVING_MODELS_MODE)) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    }
+} catch (const std::exception& e) {
+    SPDLOG_ERROR("Exception; {}", e.what());
+    result = OVMS_EX_FAILURE;
+    return result;
+}
+
+return EXIT_SUCCESS;
+}  // namespace ovms
 
 // OVMS Start
 int Server::start(int argc, char** argv) {
