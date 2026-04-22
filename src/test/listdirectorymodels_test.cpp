@@ -21,7 +21,7 @@
 #include <gtest/gtest.h>
 
 #include "test_with_temp_dir.hpp"
-#include "src/filesystem.hpp"
+#include "src/filesystem/filesystem.hpp"
 #include "src/pull_module/hf_pull_model_module.hpp"
 #include "src/pull_module/libgit2.hpp"
 #include "src/servables_config_manager_module/listmodels.hpp"

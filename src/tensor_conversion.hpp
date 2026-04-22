@@ -21,6 +21,7 @@
 #include <utility>
 
 #include "deps/opencv.hpp"
+#include "logging.hpp"
 #include "precision.hpp"
 #include "predict_request_validation_utils_impl.hpp"
 #include "profiler.hpp"

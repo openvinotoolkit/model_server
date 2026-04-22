@@ -20,7 +20,7 @@
 
 #include "config.hpp"
 #include "logging.hpp"
-#include "metric_module.hpp"
+#include "metrics/metric_module.hpp"
 #include "modelmanager.hpp"
 #include "server.hpp"
 #if (PYTHON_DISABLE == 0)

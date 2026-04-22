@@ -37,9 +37,13 @@
 #include "../dags/pipelinedefinition.hpp"
 #include "../tfs_frontend/deserialization.hpp"
 #include "../inference_executor.hpp"
-#include "../localfilesystem.hpp"
+#include "src/filesystem/localfilesystem.hpp"
 #include "../logging.hpp"
-#include "../metric_registry.hpp"
+#if (MEDIAPIPE_DISABLE == 0)
+#include "../mediapipe_internal/mediapipefactory.hpp"
+#endif
+#include "src/metrics/metric_registry.hpp"
+#include "../model.hpp"
 #include "../model_metric_reporter.hpp"
 #include "../modelconfig.hpp"
 #include "../modelinstance.hpp"
@@ -225,10 +229,11 @@ protected:
         ConstructorEnabledModelManager managerWithDummyModel;
         managerWithDummyModel.loadConfig(fileToReload);
         std::unique_ptr<Pipeline> pipeline;
-        auto status = managerWithDummyModel.createPipeline(pipeline,
+        auto status = managerWithDummyModel.getPipelineFactory().create(pipeline,
             "pipeline1Dummy",
             &request,
-            &response);
+            &response,
+            managerWithDummyModel);
         ASSERT_EQ(status, ovms::StatusCode::PIPELINE_DEFINITION_NAME_MISSING) << status.string();
     }
 
@@ -2886,10 +2891,11 @@ TEST_F(EnsembleFlowTest, PipelineFactoryCreationWithInputOutputsMappings) {
     ConstructorEnabledModelManager managerWithDummyModel;
     managerWithDummyModel.loadConfig(fileToReload);
     std::unique_ptr<Pipeline> pipeline;
-    auto status = managerWithDummyModel.createPipeline(pipeline,
+    auto status = managerWithDummyModel.getPipelineFactory().create(pipeline,
         "pipeline1Dummy",
         &request,
-        &response);
+        &response,
+        managerWithDummyModel);
     ASSERT_EQ(status, ovms::StatusCode::OK) << status.string();
     ASSERT_EQ(pipeline->execute(DEFAULT_TEST_CONTEXT), StatusCode::OK);
     const int dummySeriallyConnectedCount = 1;
@@ -2959,10 +2965,11 @@ TEST_F(EnsembleFlowTest, PipelineFactoryCreationWithInputOutputsMappings2Paralle
     ConstructorEnabledModelManager managerWithDummyModel;
     managerWithDummyModel.loadConfig(fileToReload);
     std::unique_ptr<Pipeline> pipeline;
-    auto status = managerWithDummyModel.createPipeline(pipeline,
+    auto status = managerWithDummyModel.getPipelineFactory().create(pipeline,
         "pipeline1Dummy",
         &request,
-        &response);
+        &response,
+        managerWithDummyModel);
     ASSERT_EQ(status, ovms::StatusCode::OK) << status.string();
     ASSERT_EQ(pipeline->execute(DEFAULT_TEST_CONTEXT), StatusCode::OK);
     ASSERT_EQ(response.outputs().count(customPipelineOutputName), 1);
@@ -4362,7 +4369,7 @@ TEST_F(EnsembleFlowTest, MediapipeConfigModelWithSameNamePipeline) {
 
     ASSERT_FALSE(manager.getMediapipeFactory().definitionExists(MEDIAPIPE_DUMMY_NAME));
 
-    ASSERT_TRUE(manager.pipelineDefinitionExists(MEDIAPIPE_DUMMY_NAME));
+    ASSERT_TRUE(manager.servableExists(MEDIAPIPE_DUMMY_NAME, ServableQueryType::Pipeline));
 }
 #endif
 TEST_F(EnsembleFlowTest, PipelineConfigModelWithSameName) {

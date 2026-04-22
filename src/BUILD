@@ -56,7 +56,7 @@ cc_shared_library(
     name = "ovms_shared",
     dynamic_deps = [],
     static_deps = [
-        #"//src:libovmsfilesystemfactory", // TODO missing symbols
+        #"//src/filesystem:libovmsfilesystemfactory", // TODO missing symbols
         "@tensorflow_serving//:__subpackages__",
         "@minitrace//:__subpackages__",
         "@com_github_gabime_spdlog//:__subpackages__",
@@ -164,6 +164,32 @@ ovms_cc_library(
 ovms_cc_library(
     name = "servable",
     hdrs = ["servable.hpp"],
+)
+ovms_cc_library(
+    name = "libovms_servable_definition",
+    hdrs = ["servable_definition.hpp"],
+)
+ovms_cc_library(
+    name = "libovms_single_version_servable_definition",
+    srcs = [
+        "servable_definition_unload_guard.cpp",
+        "single_version_servable_definition.cpp",
+    ],
+    hdrs = [
+        "servable_definition_unload_guard.hpp",
+        "single_version_servable_definition.hpp",
+        "tensorinfo_fwd.hpp",
+    ],
+    deps = [
+        "servable",
+        "libovms_servable_definition",
+        "//src/dags:pipelinedefinitionstatus",
+        "libovms_tensorinfo",
+        "libovmslogging",
+        "libovmsmodelversion",
+        "libovmsstatus",
+    ],
+    visibility = ["//visibility:public"],
 )
 cc_library(
     name = "ovms_header",
@@ -314,8 +340,8 @@ ovms_cc_library(
         "@com_github_jarro2783_cxxopts//:cxxopts",
         "libovms_server_settings",
         "libovms_version",
-        "libovmsfilesystem",
-        "libovmslocalfilesystem",
+        "//src/filesystem:libovmsfilesystem",
+        "//src/filesystem:libovmslocalfilesystem",
         "//src/graph_export:graph_cli_parser",
         "//src/graph_export:rerank_graph_cli_parser",
         "//src/graph_export:embeddings_graph_cli_parser",
@@ -354,7 +380,7 @@ ovms_cc_library(
         "libovmsmodelversion",
         "libovms_execution_context",
         "libovmslogging",
-        "libovmsmetrics",
+        "//src/metrics:libovmsmetrics",
     ],
     visibility = ["//visibility:public",],
 )
@@ -405,31 +431,24 @@ ovms_cc_library(
     visibility = ["//visibility:public",],
 )
 ovms_cc_library(
-    name = "dags_nodestreamidguard",
-    hdrs = ["dags/nodestreamidguard.hpp",],
-    srcs = ["dags/nodestreamidguard.cpp",],
+    name = "modelinstance",
+    srcs = ["modelinstance.cpp"],
     deps = [
-        "libovmsprofiler",
-        "libovms_ovinferrequestsqueue",
-        "model_metric_reporter",
-        "libovmsmodelversion",
-        "libovmslogging",
-    ],
-    visibility = ["//visibility:public",],
-)
-ovms_cc_library(
-    name = "dags_pipeline",
-    hdrs = ["dags/pipeline.hpp",],
-    srcs = ["dags/pipeline.cpp",],
-    deps = [
-        "libovms_dags_aliases",
-        "libovms_dags_node",
-        "libovms_execution_context",
-        "libovmsprofiler",
-        "libovmslogging",
+        "modelinstance_h",
+        "anonymous_input_name",
+        "customloaders",
+        "executingstreamidguard",
+        "//src/filesystem:libovmsfilesystem",
+        "libovmslayout",
+        "libovmslayout_configuration",
+        "libovms_config",
+        "libovms_ov_utils",
+        "libovmsshape",
+        "libovmsstring_utils",
+        "libovmstensorfactory",
+        "libovmstimer",
+        "modelinstanceunloadguard",
         "libovmsstatus",
-        "libovms_dags_pipelineeventqueue",
-        "libovms_dags_nodesession",
     ],
     visibility = ["//visibility:public",],
 )
@@ -483,6 +502,123 @@ ovms_cc_library(
     visibility = ["//visibility:public",],
 )
 ovms_cc_library(
+    name = "copyable_object_wrapper",
+    hdrs = ["copyable_object_wrapper.hpp"],
+    visibility = ["//visibility:public"],
+)
+ovms_cc_library(
+    name = "libovms_mediapipe_kfs_executor",
+    srcs = [
+        "kfs_frontend/kfs_graph_executor_impl.cpp",
+        "kfs_frontend/kfs_graph_executor_impl.hpp",
+    ],
+    deps = select({
+            "//:not_disable_python": [
+                "//src/python:libovmspythonmodule",
+            ],
+            "//:disable_python": []
+        }) + [
+        "//src/mediapipe_internal:libovms_mediapipe",
+        "predict_request_validation_utils",
+        "tfs_utils",
+        "libovms_kfs_utils",
+        "libovms_kfs_grpc_inference_service_h",
+        "//src/kfserving_api:kfserving_api_cpp",
+        "opencv_dep",
+        "@mediapipe//mediapipe/framework/formats:image_frame",
+        "@mediapipe//mediapipe/framework/formats:image_frame_opencv",
+        "@mediapipe//mediapipe/framework/formats:tensor",
+    ],
+    visibility = ["//visibility:public",],
+    additional_copts = COPTS_PYTHON + COPTS_MEDIAPIPE,
+    alwayslink = 1,
+)
+ovms_cc_library(
+    name = "libovms_mediapipe_http_executor",
+    srcs = [
+        "http_frontend/http_graph_executor_impl.cpp",
+        "http_frontend/http_graph_executor_impl.hpp",
+    ],
+    deps = select({
+            "//:not_disable_python": [
+                "//src/python:libovmspythonmodule",
+            ],
+            "//:disable_python": []
+        }) + [
+        "//src/mediapipe_internal:libovms_mediapipe",
+        "httppayload",
+        "libhttp_async_writer_interface",
+        "opencv_dep",
+        "//src/port:rapidjson_stringbuffer",
+        "//src/port:rapidjson_writer",
+        "@mediapipe//mediapipe/framework/formats:image_frame",
+        "@mediapipe//mediapipe/framework/formats:image_frame_opencv",
+        "@mediapipe//mediapipe/framework/formats:tensor",
+    ],
+    visibility = ["//visibility:public",],
+    additional_copts = COPTS_PYTHON + COPTS_MEDIAPIPE,
+    alwayslink = 1,
+)
+ovms_cc_library(
+    name = "global_sequences_viewer",
+    hdrs = ["global_sequences_viewer.hpp"],
+    srcs = ["global_sequences_viewer.cpp"],
+    deps = [
+        "libovmslogging",
+        "libovmsmodelversion",
+        "libovms_sequence_manager",
+        "libovmsstatus",
+    ],
+    visibility = ["//visibility:public"],
+)
+ovms_cc_library(
+    name = "rest_parser_utils",
+    hdrs = [
+        "rest_parser.hpp",
+        "rest_utils.hpp",
+    ],
+    srcs = [
+        "rest_parser.cpp",
+        "rest_utils.cpp",
+    ],
+    deps = [
+        "@com_github_tencent_rapidjson//:rapidjson",
+        "@com_google_absl//absl/strings",
+        "@tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto",
+        "@tensorflow_serving//tensorflow_serving/util:json_tensor",
+        "@org_tensorflow//tensorflow/core:framework",
+        "//src/kfserving_api:kfserving_api_cpp",
+        "libovms_kfs_grpc_inference_service_h",
+        "libovms_kfs_utils",
+        "libovms_tensorinfo",
+        "libovmsprecision",
+        "libovmsprofiler",
+        "libovmsstatus",
+        "libovmstimer",
+        "tfs_utils",
+    ],
+    visibility = ["//visibility:public"],
+)
+ovms_cc_library(
+    name = "customloaders",
+    hdrs = [
+        "customloaders.hpp",
+        "customloaderconfig.hpp",
+        "customloaderinterface.hpp",
+    ],
+    srcs = ["customloaders.cpp"],
+    deps = [
+        "@com_github_tencent_rapidjson//:rapidjson",
+        "//src/port:rapidjson_stringbuffer",
+        "//src/port:rapidjson_writer",
+        "//src/filesystem:libovmsfilesystem",
+        "libovmslogging",
+        "libovmsstatus",
+        "libovmsstring_utils",
+    ],
+    visibility = ["//visibility:public"],
+)
+ovms_cc_library(
     name = "ovms_lib",
     hdrs = [
             "ovms_internal.h",
@@ -491,31 +627,19 @@ ovms_cc_library(
         "capi_frontend/capi.cpp",
         "cleaner_utils.cpp",
         "cleaner_utils.hpp",
-        "customloaderconfig.hpp",
-        "customloaders.hpp",
-        "customloaders.cpp",
-        "customloaderinterface.hpp",
-        "dags/dl_node.cpp",
-        "dags/dl_node.hpp",
-        "dags/dlnodesession.cpp",
-        "dags/dlnodesession.hpp",
-        "dags/entry_node.cpp",
-        "dags/entry_node.hpp",
-        "dags/exit_node.cpp",
-        "dags/exit_node.hpp",
-        "dags/exitnodesession.cpp",
-        "dags/exitnodesession.hpp",
-        "dags/gatherexitnodeinputhandler.hpp",
-        "dags/pipelinedefinition.hpp",
-        "dags/pipelinedefinition.cpp",
-        "dags/pipelinedefinitionunloadguard.cpp",
-        "dags/pipelinedefinitionunloadguard.hpp",
-        "dags/pipeline_factory.cpp",
-        "dags/pipeline_factory.hpp",
+        "//src/dags:entry_node.cpp",
+        "//src/dags:entry_node.hpp",
+        "//src/dags:exit_node.cpp",
+        "//src/dags:exit_node.hpp",
+        "//src/dags:exitnodesession.cpp",
+        "//src/dags:exitnodesession.hpp",
+        "//src/dags:gatherexitnodeinputhandler.hpp",
+        "//src/dags:pipelinedefinition.hpp",
+        "//src/dags:pipelinedefinition.cpp",
+        "//src/dags:pipeline_factory.cpp",
+        "//src/dags:pipeline_factory.hpp",
         "get_model_metadata_impl.cpp",
         "get_model_metadata_impl.hpp",
-        "global_sequences_viewer.hpp",
-        "global_sequences_viewer.cpp",
         "http_server.hpp",
         "http_server.cpp",
         "http_rest_api_handler.hpp",
@@ -529,43 +653,19 @@ ovms_cc_library(
         "model.hpp",
         "modelmanager.cpp",
         "modelmanager.hpp",
-        "modelinstance.cpp",
-        "modelinstance.hpp",
         "model_service.hpp",
         "model_service.cpp",
         "prediction_service.cpp",
         "prediction_service.hpp",
         "prediction_service_utils.hpp",
         "predict_request_validation_utils.hpp",
-        "rest_parser.cpp",
-        "rest_parser.hpp",
-        "rest_utils.cpp",
-        "rest_utils.hpp",
         "servablemanagermodule.cpp",
         "servablemanagermodule.hpp",
         "server.cpp",
         "server.hpp",
         "statefulmodelinstance.cpp",
         "statefulmodelinstance.hpp",
-         ] + select({
-            "//:not_disable_mediapipe": [
-                "copyable_object_wrapper.hpp",
-                "mediapipe_internal/mediapipefactory.cpp",
-                "mediapipe_internal/mediapipefactory.hpp",
-                "mediapipe_internal/mediapipegraphconfig.hpp",
-                "mediapipe_internal/mediapipegraphconfig.cpp",
-                "mediapipe_internal/mediapipegraphdefinition.cpp",
-                "mediapipe_internal/mediapipegraphdefinition.hpp",
-                "mediapipe_internal/mediapipegraphexecutor.cpp",
-                "mediapipe_internal/mediapipegraphexecutor.hpp",
-                "mediapipe_internal/packettypes.hpp",
-                "kfs_frontend/kfs_graph_executor_impl.cpp",
-                "kfs_frontend/kfs_graph_executor_impl.hpp",
-                "http_frontend/http_graph_executor_impl.cpp",
-                "http_frontend/http_graph_executor_impl.hpp",
-            ],
-            "//:disable_mediapipe" : [],
-        }),
+         ],
         deps = select({
             "//:not_disable_python": [
                 "//src/python:libovmspythonmodule",
@@ -574,16 +674,30 @@ ovms_cc_library(
         }) + select({
             "//conditions:default": [],
             "//:not_disable_mediapipe" : [
+                "//src/mediapipe_internal:libovms_mediapipe",
+                "libovms_mediapipe_kfs_executor",
+                "libovms_mediapipe_http_executor",
+                "@mediapipe_calculators//:mediapipe_calculators",
+                "@mediapipe//mediapipe/graphs/holistic_tracking:holistic_tracking_to_render_data",
+                "@mediapipe//mediapipe/graphs/iris_tracking:iris_tracking_cpu_deps",
+                "@mediapipe//mediapipe/calculators/tensor:image_to_tensor_calculator",
+                "@mediapipe//mediapipe/modules/holistic_landmark:holistic_landmark_cpu",
+                "@mediapipe//mediapipe/calculators/geti/inference:inference_calculators",
+                "@mediapipe//mediapipe/calculators/geti/utils:utils",
+                "@mediapipe//mediapipe/calculators/geti/utils:emptylabel_calculators",
+                "@mediapipe//mediapipe/calculators/geti/serialization:calculators",
+                "//src/llm:openai_completions_api_handler",
                 "//src/image_gen:image_gen_calculator",
                 "//src/audio/speech_to_text:s2t_calculator",
                 "//src/audio/text_to_speech:t2s_calculator",
                 "//src/audio:audio_utils",
                 "//src/image_gen:imagegen_init",
-                "//src/llm:openai_completions_api_handler",
+                "//src/llm:openai_responses_handler",
                 "//src/embeddings:embeddingscalculator_ov",
                 "//src/rerank:rerankcalculator",
                 "//src/rerank:rerankcalculator_ov",
-                "//src/llm:llmcalculator",],
+                "//src/llm:llmcalculator",
+            ],
         }) + select({
             "//:enable_drogon": [
                 "libdrogon_http_server",
@@ -600,6 +714,7 @@ ovms_cc_library(
             "libovms_capi_servable_metadata",
             "libmodelconfigjsonparser",
             "modelconfig",
+            "modelinstance",
             "libovmscapibuffer",
             "libovmscapi_utils",
             "capiinferenceparameter",
@@ -607,38 +722,43 @@ ovms_cc_library(
             "inferenceresponse",
             "inferencetensor",
             "capi_dag_utils",
+            "customloaders",
+            "global_sequences_viewer",
+            "rest_parser_utils",
             "libovms_cliparser",
             "libovms_config",
-            "libovms_dags_pipelinedefinitionstatus",
-            "libovms_dags_aliases",
-            "dags_pipeline",
-            "custom_node",
-            "custom_node_library_manager",
-            "libovms_dags_node",
-            "node_library",
-            "node_library_utils",
-            "custom_node_library_internal_manager_wrapper",
-            "nodeinfo",
+            "//src/dags:pipelinedefinitionstatus",
+            "//src/dags:aliases",
+            "//src/dags:pipeline",
+            "//src/dags:dl_node",
+            "//src/dags:dlnodesession",
+            "//src/dags:custom_node",
+            "//src/dags:custom_node_library_manager",
+            "//src/dags:node",
+            "//src/dags:node_library",
+            "//src/dags:node_library_utils",
+            "//src/dags:custom_node_library_internal_manager_wrapper",
+            "//src/dags:nodeinfo",
             "ovms_exit_codes",
-            "dags_nodestreamidguard",
-            "libovms_dags_session_id",
-            "libovms_dags_pipelineeventqueue",
-            "libovms_dags_nodesessionmetadata",
-            "libovms_dags_nodesessionresult",
-            "libovms_dags_nodeinputhandler",
-            "custom_node_output_allocator",
+            "//src/dags:nodestreamidguard",
+            "//src/dags:session_id",
+            "//src/dags:pipelineeventqueue",
+            "//src/dags:nodesessionmetadata",
+            "//src/dags:nodesessionresult",
+            "//src/dags:nodeinputhandler",
+            "//src/dags:custom_node_output_allocator",
             "libovms_execution_context",
             "executingstreamidguard",
-            "libovmsfilesystem",
-            "libovmsfilesystemfactory_h",
-            "libovmsfilesystemfactory", # TODO missing symbols @atobisze when not in ovms_lib
+            "//src/filesystem:libovmsfilesystem",
+            "//src/filesystem:libovmsfilesystemfactory_h",
+            "//src/filesystem:libovmsfilesystemfactory", # TODO missing symbols @atobisze when not in ovms_lib
             "grpc_utils",
             "libovms_kfs_utils",
             "libovms_kfs_grpc_inference_service_h",
             "modelchangesubscription",
-            "libovmslocalfilesystem", # indirectly & directly through factory
+            "//src/filesystem:libovmslocalfilesystem", # indirectly & directly through factory
             "libovmslogging",
-            "libovmsmetrics",
+            "//src/metrics:libovmsmetrics",
             "model_metric_reporter",
             "network_utils",
             "libovms_ov_utils",
@@ -665,7 +785,7 @@ ovms_cc_library(
             "libovms_queue",
             "libovms_ovinferrequestsqueue",
             "libovmstensor_utils",
-            "libovms_dags_tensormap",
+            "//src/dags:tensormap",
             "libovmsstring_utils",
             "libovmsmodelversioning",
             "httppayload",
@@ -682,9 +802,15 @@ ovms_cc_library(
             "kfs_backend_impl",
             "tfs_backend_impl",
             "anonymous_input_name",
+            "libovms_servable_name_checker",
+            "//src/metrics:libovms_metric_provider",
+            "libovms_model_instance_provider",
+            "libovms_servable_definition",
+            "libovms_single_version_servable_definition",
+            "copyable_object_wrapper",
          ] + select({
                 "//:not_disable_cloud": [
-                    "libovmsazurefilesystem",
+                    "//src/filesystem:libovmsazurefilesystem",
                     ],
                 "//:disable_cloud": []
                 })
@@ -694,22 +820,7 @@ ovms_cc_library(
                     "@windows_opencl//:opencl",
                     "@windows_opencl2//:opencl2",
                     ],
-                })
-            + select({
-            "//conditions:default": [
-                "@mediapipe_calculators//:mediapipe_calculators", # Need this dependencies here because we use ovms/src - cannot add in ovms_dependencies because we copy src directory later in Dockerfile
-                "@mediapipe//mediapipe/graphs/holistic_tracking:holistic_tracking_to_render_data",
-                "@mediapipe//mediapipe/graphs/iris_tracking:iris_tracking_cpu_deps",
-                "@mediapipe//mediapipe/calculators/tensor:image_to_tensor_calculator",
-                "@mediapipe//mediapipe/modules/holistic_landmark:holistic_landmark_cpu",
-                "libovmsmediapipe_utils",
-                "@mediapipe//mediapipe/calculators/geti/inference:inference_calculators",
-                "@mediapipe//mediapipe/calculators/geti/utils:utils",
-                "@mediapipe//mediapipe/calculators/geti/utils:emptylabel_calculators",
-                "@mediapipe//mediapipe/calculators/geti/serialization:calculators",
-            ],
-            "//:disable_mediapipe" : [],
-        }),
+                }),
     visibility = ["//visibility:public",],
     additional_copts = COPTS_PYTHON + COPTS_MEDIAPIPE + COPTS_DROGON + COPTS_OV_TRACE,
     additional_linkopts = select({
@@ -1072,7 +1183,7 @@ cc_binary(
     ],
     deps = [
         "//src:ovms_lib",
-        "//src:libovmsfilesystemfactory",
+        "//src/filesystem:libovmsfilesystemfactory",
     ],
     linkstatic = True,
 )
@@ -1104,47 +1215,13 @@ ovms_cc_library(
     visibility = ["//visibility:public"],
 )
 
-# Unused
-ovms_cc_library( # TODO split dependencies
-    name = "libovmshttpservermodule",
-    hdrs = [
-        "http_server.hpp",
-        "http_rest_api_handler.hpp",
-        "httpservermodule.hpp",
-    ],
-    srcs = [
-        "http_rest_api_handler.cpp",
-        "http_server.cpp",
-        "httpservermodule.cpp",
-    ],
-    deps = [
-        "@com_github_jupp0r_prometheus_cpp//core",
-        "@mediapipe//mediapipe/framework:calculator_framework",
-        "@tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto",
-        "@tensorflow_serving//tensorflow_serving/util:threadpool_executor",
-        "@tensorflow_serving//tensorflow_serving/util:json_tensor",
-        "libovms_module",
-        "libovmslogging",
-        "libovmsprofiler",
-        "libovmsstatus",
-        "libdrogon_http_server",
-        "//src/kfserving_api:kfserving_api_cpp",
-    ] + select({
-            "//:not_disable_python": [
-                "//src/python:libovmspythonmodule",
-            ],
-            "//:disable_python": []
-        }),
-    visibility = ["//visibility:public"],
-)
-
 ovms_cc_library(
     name = "libovmsschema",
     hdrs = ["schema.hpp",],
     srcs = ["schema.cpp",],
     deps = [
         "@com_github_tencent_rapidjson//:rapidjson",
-        "libovmsfilesystem",
+        "//src/filesystem:libovmsfilesystem",
         "libovmsstatus",
         "libovmslogging",
         "//src/port:rapidjson_stringbuffer",
@@ -1153,54 +1230,28 @@ ovms_cc_library(
     additional_copts = COPTS_MEDIAPIPE + COPTS_DROGON,
 )
 
-ovms_cc_library(
-    name = "libovmsmetrics",
-    hdrs = [
-        "metric.hpp",
-        "metric_config.hpp",
-        "metric_family.hpp",
-        "metric_module.hpp",
-        "metric_registry.hpp",
-    ],
-    srcs = [
-        "metric.cpp",
-        "metric_config.cpp",
-        "metric_family.cpp",
-        "metric_registry.cpp",
-        "metric_module.cpp",
-    ],
-    deps = [
-        "@com_github_jupp0r_prometheus_cpp//core",
-        "@com_github_tencent_rapidjson//:rapidjson",
-        "//src/port:rapidjson_stringbuffer",
-        "//src/port:rapidjson_writer",
-        "cpp_headers",
-        "libovms_module",
-        "libovmslogging",
-        "libovmsschema",
-        "libovmsstatus",
-        "libovmsstring_utils",
-    ],
-    visibility = ["//visibility:public"],
-)
 
 ovms_cc_library(
     name = "libovmsstatus",
     hdrs = ["status.hpp",],
     srcs = ["status.cpp",],
-    deps = ["libovmslogging"],
+    deps = ["libovmslogging",
+            "@fmtlib",],
     visibility = ["//visibility:public"],
 )
 
 ovms_cc_library(
-    name = "libovmsmediapipe_utils",
-    hdrs = ["mediapipe_internal/mediapipe_utils.hpp",
-            "mediapipe_internal/packettypes.hpp",],
-    srcs = ["mediapipe_internal/mediapipe_utils.cpp",],
-    deps = ["libovmsstring_utils",
-            "libovmsstatus",
-            "libovmslogging",],
-    visibility = ["//visibility:public",],
+    name = "libovms_servable_name_checker",
+    hdrs = ["servable_name_checker.hpp",],
+    deps = [],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
+    name = "libovms_model_instance_provider",
+    hdrs = ["model_instance_provider.hpp",],
+    deps = ["libovmsmodelversion",],
+    visibility = ["//visibility:public"],
 )
 
 ovms_cc_library( # make ovms_lib dependent, use share doptions
@@ -1222,41 +1273,6 @@ ovms_cc_library(
     visibility = ["//visibility:public"],
 )
 
-ovms_cc_library( # make ovms_lib dependent, use share doptions
-    name = "libovmsazurefilesystem",
-    hdrs = ["azurefilesystem.hpp",],
-    srcs = [
-            "azurefilesystem.cpp",
-            "azurestorage.cpp",
-            "azurestorage.hpp",
-    ],
-    deps = [
-        "@azure//:storage",
-        "@cpprest//:sdk",
-        "libovmsfilesystem",
-        "libovmslogging",
-        "libovmsstring_utils",
-        "libovmsmodelversioning",
-        "libovmsstatus",
-    ],
-    visibility = ["//visibility:public"],
-)
-ovms_cc_library(
-    name = "libovmsgcsfilesystem",
-    hdrs = ["gcsfilesystem.hpp",],
-    srcs = [
-            "gcsfilesystem.cpp",
-    ],
-    deps = [
-        "@google_cloud_cpp//:storage",
-        "libovmsfilesystem",
-        "libovmslogging",
-        "libovmsstring_utils",
-        "libovmsmodelversioning",
-        "libovmsstatus",
-    ],
-    visibility = ["//visibility:public"],
-)
 # TODO split
 ovms_cc_library(
     name = "libovmstensorfactory",
@@ -1315,7 +1331,7 @@ ovms_cc_library(
             "libovmsprecision",
             "extractchoice",
             "requesttensorextractor",
-            "libovms_dags_pipelinedefinitionstatus", # TODO @atobisze split further
+            "//src/dags:pipelinedefinitionstatus",
             "predict_request_validation_utils",
     ],
     visibility = ["//visibility:public"],
@@ -1340,7 +1356,7 @@ ovms_cc_library(
     srcs = ["capi_frontend/capi_dag_utils.cpp",],
     deps = [
             "//third_party:openvino",
-            "libovms_dags_pipelinedefinitionstatus",
+            "//src/dags:pipelinedefinitionstatus",
             "ovms_header",
             "libovmslogging",
             "libovmscapi_utils",
@@ -1620,7 +1636,7 @@ ovms_cc_library(
     srcs = ["modelconfig.cpp",],
     deps = [
             "@com_github_tencent_rapidjson//:rapidjson", # TODO split into parser
-            "libovmsfilesystem",
+            "//src/filesystem:libovmsfilesystem",
             "libovmslayout_configuration",
             "libovmscolor_format_configuration",
             "libovmsprecision_configuration",
@@ -1718,6 +1734,7 @@ ovms_cc_library(
     hdrs = ["modelversionstatus.hpp",],
     srcs = ["modelversionstatus.cpp",],
     deps = [
+            "@fmtlib",
             "libovmslogging",
             "libovmsmodelversion",
     ],
@@ -1732,62 +1749,9 @@ ovms_cc_library(
     visibility = ["//visibility:public"],
 )
 ovms_cc_library(
-    name = "libovms_dags_nodesessionresult",
-    hdrs = [
-        "dags/nodesessionresult.hpp",
-    ],
-    srcs = [
-    ],
-    deps = [],
-    visibility = ["//visibility:public"],
-)
-ovms_cc_library(
-    name = "libovms_dags_nodesessionmetadata",
-    hdrs = [
-        "dags/nodesessionmetadata.hpp",
-    ],
-    srcs = [
-        "dags/nodesessionmetadata.cpp",
-    ],
-    deps = [
-        "libovmslogging",
-        "libovms_execution_context",
-        "libovms_dags_session_id",
-    ],
-    visibility = ["//visibility:public"],
-)
-ovms_cc_library(
     name = "custom_node_interface",
     hdrs = ["custom_node_interface.h",],
     deps = [],
-    visibility = ["//visibility:public"],
-)
-ovms_cc_library(
-    name = "libovms_dags_aliases",
-    hdrs = ["dags/aliases.hpp",],
-    deps = [],
-    visibility = ["//visibility:public"],
-)
-ovms_cc_library(
-    name = "nodeinfo",
-    hdrs = ["dags/nodeinfo.hpp",],
-    deps = [
-        "libovms_threadsafequeue",
-        "libovmsmodelversion",
-        "libovms_tensorinfo",
-        "node_library",
-        "libovms_dags_aliases",
-        "libovmslogging",
-    ],
-    visibility = ["//visibility:public"],
-)
-ovms_cc_library(
-    name = "node_library",
-    hdrs = ["dags/node_library.hpp",],
-    srcs = ["dags/node_library.cpp",],
-    deps = [
-        "custom_node_interface",
-    ],
     visibility = ["//visibility:public"],
 )
 ovms_cc_library(
@@ -1797,122 +1761,7 @@ ovms_cc_library(
     deps = [
         "libovmsstatus",
         "@com_github_grpc_grpc//:grpc++",
-        "libovmslogging",
-    ],
-    visibility = ["//visibility:public"],
-)
-ovms_cc_library(
-    # TODO needs further splitting
-    name = "libovms_dags_pipelinedefinition",
-    hdrs = ["dags/pipelinedefinition.hpp",],
-    srcs = ["dags/pipelinedefinition.cpp",],
-    deps = [
-        "@com_github_tencent_rapidjson//:rapidjson",
-        "libovms_kfs_utils",
-        "tfs_utils",
-        "libovms_dags_aliases",
-        "nodeinfo",
-        "libovms_dags_pipelinedefinitionstatus",
-        "libovms_tensorinfo",
-        "notifyreceiver",
-        "libovmsmodelversion",
-    ],
-    visibility = ["//visibility:public"],
-)
-ovms_cc_library(
-    name = "libovms_dags_pipelineeventqueue",
-    hdrs = ["dags/pipelineeventqueue.hpp",],
-    deps = [
-        "libovms_threadsafequeue",
-        "libovms_dags_session_id",
-    ],
-    visibility = ["//visibility:public"],
-)
-ovms_cc_library(
-    name = "node_library_utils",
-    hdrs = ["dags/node_library_utils.hpp",],
-    srcs = ["dags/node_library_utils.cpp",],
-    deps = [
-        "custom_node_interface",
-        "node_library",
-        "libovms_dags_tensormap",
-        "libovmsprecision",
-        "libovmsshape",
-        "libovmslayout",
-        "libovms_ov_utils",
-        "libovms_tensorinfo",
-    ],
-    visibility = ["//visibility:public"],
-)
-ovms_cc_library(
-    name = "custom_node_library_manager",
-    hdrs = ["dags/custom_node_library_manager.hpp",],
-    srcs = ["dags/custom_node_library_manager.cpp",],
-    deps = [
-        "node_library",
-        "libovmsfilesystem",
-        "libovmslogging",
-        "libovmsstatus",
-    ],
-    visibility = ["//visibility:public"],
-)
-ovms_cc_library(
-    name = "custom_node_output_allocator",
-    hdrs = ["dags/custom_node_output_allocator.hpp",],
-    srcs = ["dags/custom_node_output_allocator.cpp",],
-    deps = [
-        "custom_node_interface",
-        "node_library",
-        "libovmslogging",
-    ],
-    visibility = ["//visibility:public"],
-)
-ovms_cc_library(
-    name = "custom_node_library_internal_manager_wrapper",
-    hdrs = ["dags/custom_node_library_internal_manager_wrapper.hpp",],
-    deps = [
-        "node_library",
-    ],
-    visibility = ["//visibility:public"],
-)
-ovms_cc_library(
-    name = "customnodesession",
-    hdrs = ["dags/customnodesession.hpp",],
-    srcs = ["dags/customnodesession.cpp",],
-    deps = [
-        "custom_node_interface",
-        "libovms_dags_pipelineeventqueue",
-#        "nodeinfo",
-        "libovms_dags_node",
-        "node_library",
-        "node_library_utils",
-        "libovms_dags_nodeinputhandler",
-        "libovms_dags_nodesession",
-        "libovms_dags_tensormap",
-        "custom_node_output_allocator",
-        "libovmslogging",
-        "libovmsstatus",
-        "libovmstimer",
-        "libovmsprofiler",
-    ],
-    visibility = ["//visibility:public"],
-)
-ovms_cc_library(
-    name = "custom_node",
-    hdrs = ["dags/custom_node.hpp",],
-    srcs = ["dags/custom_node.cpp",],
-    deps = [
-        "custom_node_interface",
-        "libovms_dags_pipelineeventqueue",
-        "nodeinfo",
-        "node_library",
-        "libovms_dags_node",
-        "node_library_utils",
-        "customnodesession",
-        "custom_node_output_allocator",
-        "custom_node_library_internal_manager_wrapper",
-        "libovmslogging",
-        "libovmsstatus",
+        "@fmtlib",
     ],
     visibility = ["//visibility:public"],
 )
@@ -2096,105 +1945,6 @@ ovms_cc_library(
     visibility = ["//visibility:public"],
 )
 ovms_cc_library(
-    name = "libovms_dags_session_id",
-    hdrs = ["dags/session_id.hpp",],
-    deps = [],
-    visibility = ["//visibility:public"],
-)
-ovms_cc_library(
-    name = "libovms_dags_tensormap",
-    hdrs = ["dags/tensormap.hpp",],
-    deps = [
-            "//third_party:openvino",
-            "libovmstensor_utils",
-    ],
-    visibility = ["//visibility:public"],
-)
-ovms_cc_library(
-    name = "libovms_dags_gathernodeinputhandler",
-    hdrs = ["dags/gathernodeinputhandler.hpp",],
-    srcs = ["dags/gathernodeinputhandler.cpp",],
-    deps = [
-            "//third_party:openvino",
-            "libovmslogging",
-            "libovms_dags_tensormap",
-            "libovms_dags_nodeinputhandler",
-            "libovms_dags_nodesessionmetadata",
-            "libovms_dags_session_id",
-            "libovmsstatus",
-            "libovms_tensorinfo",
-            "libovmsprofiler",
-            "libovms_ov_utils",
-            "libovmsshape",
-            "libovmsprecision",
-    ],
-    visibility = ["//visibility:public"],
-)
-ovms_cc_library(
-    name = "libovms_dags_nodeinputhandler",
-    hdrs = ["dags/nodeinputhandler.hpp",],
-    srcs = ["dags/nodeinputhandler.cpp",],
-    deps = [
-            "libovmslogging",
-            "libovms_dags_tensormap",
-            "libovms_dags_session_id",
-            "libovmstensor_utils",
-            "libovmstimer",
-            "libovmsstatus",
-    ],
-    visibility = ["//visibility:public"],
-)
-ovms_cc_library(
-    name = "libovms_dags_nodesession",
-    hdrs = ["dags/nodesession.hpp",],
-    srcs = ["dags/nodesession.cpp",],
-    deps = [
-            "libovmslogging",
-            "libovms_dags_tensormap",
-            "libovms_dags_nodesessionmetadata",
-            "libovms_dags_gathernodeinputhandler",
-            "libovms_dags_session_id",
-            "libovms_dags_nodeinputhandler",
-            "libovmstensor_utils",
-            "libovmsstatus",
-            "libovmsshape",
-            "libovmsprecision",
-    ],
-    visibility = ["//visibility:public"],
-)
-ovms_cc_library(
-    name = "libovms_dags_node",
-    hdrs = ["dags/node.hpp",],
-    srcs = ["dags/node.cpp",],
-    deps = [
-            "libovmslogging",
-            "libovmsmodelversionstatus",
-            "libovms_execution_context",
-            "libovms_dags_aliases",
-            "libovms_dags_pipelineeventqueue",
-            "libovms_dags_session_id",
-            "libovms_dags_tensormap",
-            "libovms_dags_nodesession",
-            "libovms_dags_nodesessionresult",
-            "libovms_dags_nodesessionmetadata",
-            "libovms_ov_utils",
-            "libovmsprofiler",
-            "libovmsshape",
-            "libovmsstatus",
-    ],
-    visibility = ["//visibility:public"],
-)
-ovms_cc_library(
-    name = "libovms_dags_pipelinedefinitionstatus",
-    hdrs = ["dags/pipelinedefinitionstatus.hpp",],
-    srcs = ["dags/pipelinedefinitionstatus.cpp",],
-    deps = [
-            "libovmslogging",
-            "libovmsmodelversionstatus",
-    ],
-    visibility = ["//visibility:public"],
-)
-ovms_cc_library(
     name = "libovmsoclutils",
     hdrs = ["ocl_utils.hpp",
     ],
@@ -2207,73 +1957,6 @@ ovms_cc_library(
     ],
     visibility = ["//visibility:public"],
 )
-ovms_cc_library(
-    name = "libovmss3filesystem",
-    hdrs = ["s3filesystem.hpp",],
-    srcs = [
-            "s3filesystem.cpp",
-    ],
-    deps = [
-        "@aws-sdk-cpp//:aws-sdk-cpp",
-        "libovmsfilesystem",
-        "libovmslogging",
-        "libovmsstring_utils",
-        "libovmsmodelversioning",
-        "libovmsstatus",
-    ],
-    visibility = ["//visibility:public"],
-)
-ovms_cc_library(
-    name = "libovmsfilesystem",
-    hdrs = ["filesystem.hpp",],
-    srcs = ["filesystem.cpp",],
-    deps = [
-            "libovmslogging",
-            "libovmsmodelversioning",
-            "libovmsstatus",
-            "libovmsstring_utils",
-            "@boringssl//:ssl"],
-    visibility = ["//visibility:public"],
-)
-
-ovms_cc_library(
-    name = "libovmslocalfilesystem",
-    hdrs = ["localfilesystem.hpp",],
-    srcs = ["localfilesystem.cpp",],
-    deps = ["libovmsfilesystem",
-            "libovmsstatus",
-            "libovmslogging"],
-    visibility = ["//visibility:public"],
-)
-
-ovms_cc_library(
-    name = "libovmsfilesystemfactory_h",
-    hdrs = ["filesystemfactory.hpp",],
-    deps = [],
-    visibility = ["//visibility:public"],
-)
-
-ovms_cc_library(
-    name = "libovmsfilesystemfactory",
-    hdrs = [],
-    srcs = ["filesystemfactory.cpp",],
-    deps = ["libovmsfilesystem",
-            "libovmsfilesystemfactory_h",
-            "libovmsstatus",
-            "libovmslocalfilesystem",
-            "libovmslogging"
-            ] + select({
-            "//:not_disable_cloud": [
-                "libovmsazurefilesystem",
-                "libovmsgcsfilesystem",
-                "libovmss3filesystem",
-                ],
-            "//:disable_cloud": []
-            }),
-    additional_copts = COPTS_CLOUD,
-    visibility = ["//visibility:public"],
-)
-
 ovms_cc_library(
     name = "libmodelconfigjsonparser",
     hdrs = [
@@ -2402,7 +2085,7 @@ cc_binary(
     ],
     deps = [
         "//src:ovms_lib",
-        "//src:libovmsfilesystemfactory",
+        "//src/filesystem:libovmsfilesystemfactory",
     ],
     linkstatic = True,
 )
@@ -2431,7 +2114,7 @@ cc_binary(
     copts = COMMON_STATIC_LIBS_COPTS,
     deps = [
         "//src:ovms_lib",
-        "//src:libovmsfilesystemfactory",]
+        "//src/filesystem:libovmsfilesystemfactory",]
     + select({
             "//conditions:default": [
                 "//src:libcustom_node_east_ocr.so",
@@ -2711,7 +2394,7 @@ cc_test(
     deps = [
             "optimum-cli",
             "//src:ovms_lib",
-            "//src:libovmsfilesystemfactory",
+            "//src/filesystem:libovmsfilesystemfactory",
             "@cpp_httplib//:cpp_httplib", # server_test.cpp
             ":test_utils",
             ":test_test_with_temp_dir",
@@ -3279,7 +2962,7 @@ ovms_cc_library(
     deps = ["//src:libovmslogging",
             "//src:libmodelconfigjsonparser",
             "//src:libovmsstatus",
-            "//src:libovmsfilesystem",
+            "//src/filesystem:libovmsfilesystem",
             "//src:libovmsmodelversioning",
             "//src:libovms_ovinferrequestsqueue",
             "@mediapipe//mediapipe/framework:calculator_framework",

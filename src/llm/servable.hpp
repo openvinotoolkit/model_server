@@ -30,7 +30,7 @@
 #pragma warning(pop)
 
 #include "../http_payload.hpp"
-#include "apis/openai_completions.hpp"
+#include "apis/openai_api_handler.hpp"
 #include "io_processing/generation_config_builder.hpp"
 #if (PYTHON_DISABLE == 0)
 #include "py_jinja_template_processor.hpp"
@@ -68,7 +68,7 @@ struct GenAiServableExecutionContext {
     // Common API related members
     ovms::HttpPayload payload;
     Endpoint endpoint;
-    std::shared_ptr<OpenAIChatCompletionsHandler> apiHandler;
+    std::shared_ptr<OpenAIApiHandler> apiHandler;
     std::shared_ptr<GenerationConfigBuilder> generationConfigBuilder;
     // Single tensor with inputIds for the model. This is considered general for all pipelines,
     // but depending on particular pipeline implementation it might be not required or on the other hand, insufficient.

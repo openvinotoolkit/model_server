@@ -88,7 +88,8 @@ Status DrogonHttpServer::startAcceptingRequests() {
     drogon::app().disableSigtermHandling();
 
     drogon::app().setDefaultHandler([this](const drogon::HttpRequestPtr& req, std::function<void(const drogon::HttpResponsePtr&)>&& drogonResponseInitializeCallback) {
-        bool isTextGeneration = req->path().find("/completions") != std::string::npos;
+        bool isTextGeneration = req->path().find("/completions") != std::string::npos ||
+                                req->path().find("/responses") != std::string::npos;
 
         // Here we need to schedule the request to the separate thread pool
         // in order to use disconnection callback of drogon.

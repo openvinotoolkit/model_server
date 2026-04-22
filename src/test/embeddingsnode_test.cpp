@@ -19,6 +19,7 @@
 #include <gtest/gtest.h>
 
 #include "../http_rest_api_handler.hpp"
+#include "../mediapipe_internal/mediapipefactory.hpp"
 #include "../servablemanagermodule.hpp"
 #include "../server.hpp"
 #include "rapidjson/document.h"
