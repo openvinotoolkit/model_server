@@ -39,12 +39,12 @@ PipelineDefinition* PipelineFactory::findDefinitionByName(const std::string& nam
     }
 }
 
-void PipelineFactory::retireOtherThan(std::set<std::string>&& pipelinesInConfigFile, ModelInstanceProvider& provider) {
+void PipelineFactory::retireOtherThan(std::set<std::string>&& pipelinesInConfigFile, ModelInstanceProvider& modelInstanceProvider) {
     std::for_each(definitions.begin(),
         definitions.end(),
-        [&pipelinesInConfigFile, &provider](auto& nameDefinitionPair) {
+        [&pipelinesInConfigFile, &modelInstanceProvider](auto& nameDefinitionPair) {
             if (pipelinesInConfigFile.find(nameDefinitionPair.second->getName()) == pipelinesInConfigFile.end() && nameDefinitionPair.second->getStateCode() != PipelineDefinitionStateCode::RETIRED) {
-                nameDefinitionPair.second->retire(provider);
+                nameDefinitionPair.second->retire(modelInstanceProvider);
             }
         });
 }
@@ -52,7 +52,7 @@ void PipelineFactory::retireOtherThan(std::set<std::string>&& pipelinesInConfigF
 Status PipelineFactory::createDefinition(const std::string& pipelineName,
     const std::vector<NodeInfo>& nodeInfos,
     const pipeline_connections_t& connections,
-    ModelInstanceProvider& provider,
+    ModelInstanceProvider& modelInstanceProvider,
     ServableNameChecker& nameChecker,
     DagResourceManager& resourceMgr,
     MetricRegistry* registry,
@@ -63,12 +63,12 @@ Status PipelineFactory::createDefinition(const std::string& pipelineName,
     }
     std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>(pipelineName, nodeInfos, connections, registry, metricConfig);
 
-    pipelineDefinition->makeSubscriptions(provider);
-    Status validationResult = pipelineDefinition->validate(provider, nameChecker, resourceMgr);
+    pipelineDefinition->makeSubscriptions(modelInstanceProvider);
+    Status validationResult = pipelineDefinition->validate(modelInstanceProvider, nameChecker, resourceMgr);
     if (!validationResult.ok()) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Validation of pipeline definition: {} failed: {}", pipelineName, validationResult.string());
         if (validationResult == StatusCode::PIPELINE_NAME_OCCUPIED) {
-            pipelineDefinition->resetSubscriptions(provider);
+            pipelineDefinition->resetSubscriptions(modelInstanceProvider);
             return validationResult;
         }
     } else {
@@ -84,7 +84,7 @@ Status PipelineFactory::createDefinition(const std::string& pipelineName,
 Status PipelineFactory::reloadDefinition(const std::string& pipelineName,
     const std::vector<NodeInfo>&& nodeInfos,
     const pipeline_connections_t&& connections,
-    ModelInstanceProvider& provider,
+    ModelInstanceProvider& modelInstanceProvider,
     ServableNameChecker& nameChecker,
     DagResourceManager& resourceMgr) {
     auto pd = findDefinitionByName(pipelineName);
@@ -92,14 +92,14 @@ Status PipelineFactory::reloadDefinition(const std::string& pipelineName,
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Requested to reload pipeline definition but it does not exist: {}", pipelineName);
         return StatusCode::UNKNOWN_ERROR;
     }
-    return pd->reload(provider, nameChecker, resourceMgr, std::move(nodeInfos), std::move(connections));
+    return pd->reload(modelInstanceProvider, nameChecker, resourceMgr, std::move(nodeInfos), std::move(connections));
 }
 
-Status PipelineFactory::revalidatePipelines(ModelInstanceProvider& provider, ServableNameChecker& nameChecker, DagResourceManager& resourceMgr) {
+Status PipelineFactory::revalidatePipelines(ModelInstanceProvider& modelInstanceProvider, ServableNameChecker& nameChecker, DagResourceManager& resourceMgr) {
     Status firstErrorStatus = StatusCode::OK;
     for (auto& [name, definition] : definitions) {
         if (definition->getStatus().isRevalidationRequired()) {
-            auto validationResult = definition->validate(provider, nameChecker, resourceMgr);
+            auto validationResult = definition->validate(modelInstanceProvider, nameChecker, resourceMgr);
             if (!validationResult.ok()) {
                 if (firstErrorStatus.ok()) {
                     firstErrorStatus = validationResult;

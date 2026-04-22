@@ -717,7 +717,6 @@ ovms_cc_library(
     srcs = ["model.cpp"],
     deps = [
         "modelinstance",
-        "modelinstance_h",
         "statefulmodelinstance",
         "customloaders",
         "modelchangesubscription",

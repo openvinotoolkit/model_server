@@ -490,20 +490,20 @@ static Status parseMediapipeConfig(rapidjson::Document& configJson, std::string&
 #endif
 
 struct ModelManager::ConfigLoader {
-    static Status loadCustomNodeLibrariesConfig(ModelManager& mm, rapidjson::Document& configJson);
-    static Status loadPipelinesConfig(ModelManager& mm, rapidjson::Document& configJson);
-    static Status loadCustomLoadersConfig(ModelManager& mm, rapidjson::Document& configJson);
-    static Status loadMetricsConfig(ModelManager& mm, rapidjson::Document& configJson);
+    static Status loadCustomNodeLibrariesConfig(ModelManager& modelManager, rapidjson::Document& configJson);
+    static Status loadPipelinesConfig(ModelManager& modelManager, rapidjson::Document& configJson);
+    static Status loadCustomLoadersConfig(ModelManager& modelManager, rapidjson::Document& configJson);
+    static Status loadMetricsConfig(ModelManager& modelManager, rapidjson::Document& configJson);
 #if (MEDIAPIPE_DISABLE == 1)
-    static Status loadModels(ModelManager& mm, const rapidjson::Value::MemberIterator& modelsConfigList, std::vector<ModelConfig>& gatedModelConfigs, std::set<std::string>& modelsInConfigFile, std::set<std::string>& modelsWithInvalidConfig, std::unordered_map<std::string, ModelConfig>& newModelConfigs, const std::string& rootDirectoryPath);
-    static Status loadModelsConfig(ModelManager& mm, rapidjson::Document& configJson, std::vector<ModelConfig>& gatedModelConfigs);
+    static Status loadModelsConfig(ModelManager& modelManager, rapidjson::Document& configJson, std::vector<ModelConfig>& gatedModelConfigs);
+    static Status loadModels(ModelManager& modelManager, const rapidjson::Value::MemberIterator& modelsConfigList, std::vector<ModelConfig>& gatedModelConfigs, std::set<std::string>& modelsInConfigFile, std::set<std::string>& modelsWithInvalidConfig, std::unordered_map<std::string, ModelConfig>& newModelConfigs, const std::string& rootDirectoryPath);
 #else
-    static Status loadModels(ModelManager& mm, const rapidjson::Value::MemberIterator& modelsConfigList, std::vector<ModelConfig>& gatedModelConfigs, std::set<std::string>& modelsInConfigFile, std::set<std::string>& modelsWithInvalidConfig, std::unordered_map<std::string, ModelConfig>& newModelConfigs, const std::string& rootDirectoryPath, std::vector<MediapipeGraphConfig>& mediapipesInConfigFile);
-    static Status loadModelsConfig(ModelManager& mm, rapidjson::Document& configJson, std::vector<ModelConfig>& gatedModelConfigs, std::vector<MediapipeGraphConfig>& mediapipesInConfigFile);
+    static Status loadModelsConfig(ModelManager& modelManager, rapidjson::Document& configJson, std::vector<ModelConfig>& gatedModelConfigs, std::vector<MediapipeGraphConfig>& mediapipesInConfigFile);
+    static Status loadModels(ModelManager& modelManager, const rapidjson::Value::MemberIterator& modelsConfigList, std::vector<ModelConfig>& gatedModelConfigs, std::set<std::string>& modelsInConfigFile, std::set<std::string>& modelsWithInvalidConfig, std::unordered_map<std::string, ModelConfig>& newModelConfigs, const std::string& rootDirectoryPath, std::vector<MediapipeGraphConfig>& mediapipesInConfigFile);
 #endif
 };
 
-Status ModelManager::ConfigLoader::loadCustomNodeLibrariesConfig(ModelManager& mm, rapidjson::Document& configJson) {
+Status ModelManager::ConfigLoader::loadCustomNodeLibrariesConfig(ModelManager& modelManager, rapidjson::Document& configJson) {
     const auto doc = configJson.FindMember("custom_node_library_config_list");
     if (doc == configJson.MemberEnd()) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Configuration file doesn't have custom node libraries property.");
@@ -512,11 +512,11 @@ Status ModelManager::ConfigLoader::loadCustomNodeLibrariesConfig(ModelManager& m
     std::set<std::string> librariesInConfig;
     for (const auto& libraryConfig : doc->value.GetArray()) {
         librariesInConfig.emplace(libraryConfig.FindMember("name")->value.GetString());
-        mm.customNodeLibraryManager->loadLibrary(
+        modelManager.customNodeLibraryManager->loadLibrary(
             libraryConfig.FindMember("name")->value.GetString(),
-            mm.getFullPath(libraryConfig.FindMember("base_path")->value.GetString()));
+            modelManager.getFullPath(libraryConfig.FindMember("base_path")->value.GetString()));
     }
-    mm.customNodeLibraryManager->unloadLibrariesRemovedFromConfig(librariesInConfig);
+    modelManager.customNodeLibraryManager->unloadLibrariesRemovedFromConfig(librariesInConfig);
     return StatusCode::OK;
 }
 
@@ -553,9 +553,9 @@ Status ModelManager::loadMediapipeGraphsConfig(std::vector<MediapipeGraphConfig>
 }
 #endif
 
-Status ModelManager::ConfigLoader::loadPipelinesConfig(ModelManager& mm, rapidjson::Document& configJson) {
-    return ovms::loadPipelinesConfig(configJson, *mm.pipelineFactory, mm, mm, mm,
-        mm.getCustomNodeLibraryManager(), mm.getMetricRegistry(), &mm.getMetricConfig());
+Status ModelManager::ConfigLoader::loadPipelinesConfig(ModelManager& modelManager, rapidjson::Document& configJson) {
+    return ovms::loadPipelinesConfig(configJson, *modelManager.pipelineFactory, modelManager, modelManager, modelManager,
+        modelManager.getCustomNodeLibraryManager(), modelManager.getMetricRegistry(), &modelManager.getMetricConfig());
 }
 
 Status ModelManager::createCustomLoader(CustomLoaderConfig& loaderConfig) {
@@ -608,7 +608,7 @@ Status ModelManager::createCustomLoader(CustomLoaderConfig& loaderConfig) {
     return StatusCode::OK;
 }
 
-Status ModelManager::ConfigLoader::loadCustomLoadersConfig(ModelManager& mm, rapidjson::Document& configJson) {
+Status ModelManager::ConfigLoader::loadCustomLoadersConfig(ModelManager& modelManager, rapidjson::Document& configJson) {
     const auto itrp = configJson.FindMember("custom_loader_config_list");
     if (itrp == configJson.MemberEnd() || !itrp->value.IsArray()) {
         return StatusCode::OK;
@@ -622,14 +622,14 @@ Status ModelManager::ConfigLoader::loadCustomLoadersConfig(ModelManager& mm, rap
         SPDLOG_INFO("Reading Custom Loader: {} configuration", loaderName);
 
         CustomLoaderConfig loaderConfig;
-        loaderConfig.setRootDirectoryPath(mm.rootDirectoryPath);
+        loaderConfig.setRootDirectoryPath(modelManager.rootDirectoryPath);
         auto status = loaderConfig.parseNode(configs["config"]);
         if (status != StatusCode::OK) {
             IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
             SPDLOG_ERROR("Parsing loader: {} config failed", loaderName);
         }
 
-        auto retVal = mm.createCustomLoader(loaderConfig);
+        auto retVal = modelManager.createCustomLoader(loaderConfig);
         if (retVal != StatusCode::OK) {
             IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(retVal);
             SPDLOG_ERROR("Creation of loader: {} failed", loaderName);
@@ -655,12 +655,12 @@ Status ModelManager::loadMetricsFromCLI(const Config& config) {
     return StatusCode::OK;
 }
 
-Status ModelManager::ConfigLoader::loadMetricsConfig(ModelManager& mm, rapidjson::Document& configJson) {
+Status ModelManager::ConfigLoader::loadMetricsConfig(ModelManager& modelManager, rapidjson::Document& configJson) {
     const auto itr2 = configJson.FindMember("monitoring");
     auto& config = ovms::Config::instance();
     if (itr2 == configJson.MemberEnd() || !itr2->value.IsObject()) {
         if (config.metricsEnabled()) {
-            return mm.metricConfig->loadFromCLIString(true, config.metricsList());
+            return modelManager.metricConfig->loadFromCLIString(true, config.metricsList());
         }
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Configuration file doesn't have monitoring property.");
         return StatusCode::OK;
@@ -672,15 +672,15 @@ Status ModelManager::ConfigLoader::loadMetricsConfig(ModelManager& mm, rapidjson
         const auto& metrics = itr2->value.GetObject();
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Parsing monitoring metrics config settings.");
         bool forceFailureIfMetricsAreEnabled = ovms::Config::instance().restPort() == 0;
-        return mm.metricConfig->parseMetricsConfig(metrics, forceFailureIfMetricsAreEnabled);
+        return modelManager.metricConfig->parseMetricsConfig(metrics, forceFailureIfMetricsAreEnabled);
     }
 }
 
 #if (MEDIAPIPE_DISABLE == 1)
-Status ModelManager::ConfigLoader::loadModels(ModelManager& mm, const rapidjson::Value::MemberIterator& modelsConfigList, std::vector<ModelConfig>& gatedModelConfigs, std::set<std::string>& modelsInConfigFile,
+Status ModelManager::ConfigLoader::loadModels(ModelManager& modelManager, const rapidjson::Value::MemberIterator& modelsConfigList, std::vector<ModelConfig>& gatedModelConfigs, std::set<std::string>& modelsInConfigFile,
     std::set<std::string>& modelsWithInvalidConfig, std::unordered_map<std::string, ModelConfig>& newModelConfigs, const std::string& rootDirectoryPath) {
 #else
-Status ModelManager::ConfigLoader::loadModels(ModelManager& mm, const rapidjson::Value::MemberIterator& modelsConfigList, std::vector<ModelConfig>& gatedModelConfigs, std::set<std::string>& modelsInConfigFile,
+Status ModelManager::ConfigLoader::loadModels(ModelManager& modelManager, const rapidjson::Value::MemberIterator& modelsConfigList, std::vector<ModelConfig>& gatedModelConfigs, std::set<std::string>& modelsInConfigFile,
     std::set<std::string>& modelsWithInvalidConfig, std::unordered_map<std::string, ModelConfig>& newModelConfigs, const std::string& rootDirectoryPath,
     std::vector<MediapipeGraphConfig>& mediapipesInConfigFile) {
 #endif
@@ -695,8 +695,8 @@ Status ModelManager::ConfigLoader::loadModels(ModelManager& mm, const rapidjson:
         if (!mpStatus.ok()) {
             SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Parsing : {} config as mediapipe graph failed due to error: {}", mpConfig.getGraphName(), mpStatus.string());
         } else {
-            if (!mm.CheckStartFromGraph(mpConfig.getBasePath(), mpConfig, false)) {
-                mm.CheckStartFromGraph(mpConfig.getBasePath(), mpConfig, true);
+            if (!modelManager.CheckStartFromGraph(mpConfig.getBasePath(), mpConfig, false)) {
+                modelManager.CheckStartFromGraph(mpConfig.getBasePath(), mpConfig, true);
             }
             std::ifstream ifs(mpConfig.getGraphPath());
             if (ifs.is_open()) {
@@ -719,15 +719,15 @@ Status ModelManager::ConfigLoader::loadModels(ModelManager& mm, const rapidjson:
             continue;
         }
 
-        status = validatePluginConfiguration(modelConfig.getPluginConfig(), modelConfig.getTargetDevice(), *mm.ieCore.get());
+        status = validatePluginConfiguration(modelConfig.getPluginConfig(), modelConfig.getTargetDevice(), *modelManager.ieCore.get());
         if (!status.ok()) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Plugin config contains unsupported keys");
             return status;
         }
-        modelConfig.setCacheDir(mm.modelCacheDirectory);
+        modelConfig.setCacheDir(modelManager.modelCacheDirectory);
 
         const auto& modelName = modelConfig.getName();
-        if (mm.servableExists(modelName, ServableQueryType::Pipeline | ServableQueryType::Mediapipe)) {
+        if (modelManager.servableExists(modelName, ServableQueryType::Pipeline | ServableQueryType::Mediapipe)) {
             IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(StatusCode::MODEL_NAME_OCCUPIED);
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Model name: {} is already occupied by pipeline or mediapipe graph definition.", modelName);
             continue;
@@ -738,7 +738,7 @@ Status ModelManager::ConfigLoader::loadModels(ModelManager& mm, const rapidjson:
             continue;
         }
 
-        status = mm.reloadModelWithVersions(modelConfig);
+        status = modelManager.reloadModelWithVersions(modelConfig);
         IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
 
         modelsInConfigFile.emplace(modelName);
@@ -747,13 +747,13 @@ Status ModelManager::ConfigLoader::loadModels(ModelManager& mm, const rapidjson:
         }
         if (status == StatusCode::REQUESTED_DYNAMIC_PARAMETERS_ON_SUBSCRIBED_MODEL || status == StatusCode::REQUESTED_STATEFUL_PARAMETERS_ON_SUBSCRIBED_MODEL) {
             SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Will retry to reload model({}) after pipelines are revalidated", modelName);
-            auto it = mm.servedModelConfigs.find(modelName);
-            if (it == mm.servedModelConfigs.end()) {
+            auto it = modelManager.servedModelConfigs.find(modelName);
+            if (it == modelManager.servedModelConfigs.end()) {
                 continue;
             }
             gatedModelConfigs.emplace_back(std::move(modelConfig));
             newModelConfigs.emplace(modelName, std::move(it->second));
-            mm.servedModelConfigs.erase(modelName);
+            modelManager.servedModelConfigs.erase(modelName);
         } else {
             newModelConfigs.emplace(modelName, std::move(modelConfig));
         }
@@ -817,9 +817,9 @@ Status ModelManager::loadMediapipeSubConfigModels(std::vector<ModelConfig>& gate
     return firstErrorStatus;
 }
 
-Status ModelManager::ConfigLoader::loadModelsConfig(ModelManager& mm, rapidjson::Document& configJson, std::vector<ModelConfig>& gatedModelConfigs, std::vector<MediapipeGraphConfig>& mediapipesInConfigFile)
+Status ModelManager::ConfigLoader::loadModelsConfig(ModelManager& modelManager, rapidjson::Document& configJson, std::vector<ModelConfig>& gatedModelConfigs, std::vector<MediapipeGraphConfig>& mediapipesInConfigFile)
 #else
-Status ModelManager::ConfigLoader::loadModelsConfig(ModelManager& mm, rapidjson::Document& configJson, std::vector<ModelConfig>& gatedModelConfigs)
+Status ModelManager::ConfigLoader::loadModelsConfig(ModelManager& modelManager, rapidjson::Document& configJson, std::vector<ModelConfig>& gatedModelConfigs)
 #endif
 {
     Status firstErrorStatus = StatusCode::OK;
@@ -833,9 +833,9 @@ Status ModelManager::ConfigLoader::loadModelsConfig(ModelManager& mm, rapidjson:
     std::set<std::string> modelsWithInvalidConfig;
     std::unordered_map<std::string, ModelConfig> newModelConfigs;
 #if (MEDIAPIPE_DISABLE == 0)
-    auto status = loadModels(mm, itr, gatedModelConfigs, modelsInConfigFile, modelsWithInvalidConfig, newModelConfigs, mm.rootDirectoryPath, mediapipesInConfigFile);
+    auto status = loadModels(modelManager, itr, gatedModelConfigs, modelsInConfigFile, modelsWithInvalidConfig, newModelConfigs, modelManager.rootDirectoryPath, mediapipesInConfigFile);
 #else
-    auto status = loadModels(mm, itr, gatedModelConfigs, modelsInConfigFile, modelsWithInvalidConfig, newModelConfigs, mm.rootDirectoryPath);
+    auto status = loadModels(modelManager, itr, gatedModelConfigs, modelsInConfigFile, modelsWithInvalidConfig, newModelConfigs, modelManager.rootDirectoryPath);
 #endif
     if (!status.ok()) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Loading main OVMS config models failed.");
@@ -843,10 +843,10 @@ Status ModelManager::ConfigLoader::loadModelsConfig(ModelManager& mm, rapidjson:
     }
 
 #if (MEDIAPIPE_DISABLE == 0)
-    mm.loadMediapipeSubConfigModels(gatedModelConfigs, modelsInConfigFile, modelsWithInvalidConfig, newModelConfigs, mediapipesInConfigFile);
+    modelManager.loadMediapipeSubConfigModels(gatedModelConfigs, modelsInConfigFile, modelsWithInvalidConfig, newModelConfigs, mediapipesInConfigFile);
 #endif
-    mm.servedModelConfigs = std::move(newModelConfigs);
-    mm.retireModelsRemovedFromConfigFile(modelsInConfigFile, modelsWithInvalidConfig);
+    modelManager.servedModelConfigs = std::move(newModelConfigs);
+    modelManager.retireModelsRemovedFromConfigFile(modelsInConfigFile, modelsWithInvalidConfig);
     return firstErrorStatus;
 }
 

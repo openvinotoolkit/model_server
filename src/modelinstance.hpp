@@ -15,6 +15,7 @@
 //*****************************************************************************
 #pragma once
 
+#include <array>
 #include <chrono>
 #include <condition_variable>
 #include <functional>

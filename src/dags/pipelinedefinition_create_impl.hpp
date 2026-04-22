@@ -39,7 +39,7 @@ template <typename RequestType, typename ResponseType>
 Status PipelineDefinition::create(std::unique_ptr<Pipeline>& pipeline,
     const RequestType* request,
     ResponseType* response,
-    ModelInstanceProvider& provider) {
+    ModelInstanceProvider& modelInstanceProvider) {
     std::unique_ptr<ServableDefinitionUnloadGuard> unloadGuard;
     Status status = waitForLoaded(unloadGuard);
     if (!status.ok()) {
@@ -65,7 +65,7 @@ Status PipelineDefinition::create(std::unique_ptr<Pipeline>& pipeline,
                                              info.nodeName,
                                              info.modelName,
                                              info.modelVersion,
-                                             provider,
+                                             modelInstanceProvider,
                                              info.outputNameAliases,
                                              info.demultiplyCount,
                                              info.gatherFromNode));

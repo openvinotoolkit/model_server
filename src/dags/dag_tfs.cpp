@@ -49,13 +49,13 @@ template Status PipelineDefinition::create<tensorflow::serving::PredictRequest, 
     std::unique_ptr<Pipeline>& pipeline,
     const tensorflow::serving::PredictRequest* request,
     tensorflow::serving::PredictResponse* response,
-    ModelInstanceProvider& provider);
+    ModelInstanceProvider& modelInstanceProvider);
 
 template Status PipelineFactory::create<tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse>(
     std::unique_ptr<Pipeline>& pipeline,
     const std::string& name,
     const tensorflow::serving::PredictRequest* request,
     tensorflow::serving::PredictResponse* response,
-    ModelInstanceProvider& provider) const;
+    ModelInstanceProvider& modelInstanceProvider) const;
 
 }  // namespace ovms

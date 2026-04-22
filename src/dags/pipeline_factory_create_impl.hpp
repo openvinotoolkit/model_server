@@ -24,7 +24,7 @@
 
 namespace ovms {
 template <typename RequestType, typename ResponseType>
-Status PipelineFactory::create(std::unique_ptr<Pipeline>& pipeline, const std::string& name, const RequestType* request, ResponseType* response, ModelInstanceProvider& provider) const {
+Status PipelineFactory::create(std::unique_ptr<Pipeline>& pipeline, const std::string& name, const RequestType* request, ResponseType* response, ModelInstanceProvider& modelInstanceProvider) const {
     std::shared_lock lock(definitionsMtx);
     auto it = definitions.find(name);
     if (it == definitions.end()) {
@@ -33,6 +33,6 @@ Status PipelineFactory::create(std::unique_ptr<Pipeline>& pipeline, const std::s
     }
     auto& definition = *it->second;
     lock.unlock();
-    return definition.create(pipeline, request, response, provider);
+    return definition.create(pipeline, request, response, modelInstanceProvider);
 }
 }  // namespace ovms
