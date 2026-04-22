@@ -346,6 +346,8 @@ Status initializeLoraAdapters(const mediapipe::LLMCalculatorOptions& nodeOptions
             return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
         }
     }
+    // since it is only applied once at initialization, static mode is sufficient and more efficient.
+    properties->adapterConfig.set_mode(ov::genai::AdapterConfig::MODE_STATIC);
     properties->pluginConfig.insert(ov::genai::adapters(properties->adapterConfig));
     return StatusCode::OK;
 }
