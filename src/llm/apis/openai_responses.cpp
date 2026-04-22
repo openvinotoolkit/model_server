@@ -268,10 +268,6 @@ absl::Status OpenAIResponsesHandler::parseInput(std::optional<std::string> allow
             }
 
             std::string role = roleIt->value.GetString();
-            if (role == "developer") {
-                // OpenAI Responses may send developer role; normalize to system for template compatibility.
-                role = "system";
-            }
 
             auto contentIt = itemObj.FindMember("content");
             if (contentIt == itemObj.MemberEnd()) {

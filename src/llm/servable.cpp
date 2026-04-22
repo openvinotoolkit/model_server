@@ -137,7 +137,7 @@ absl::Status GenAiServable::parseRequest(std::shared_ptr<GenAiServableExecutionC
         status = executionContext->apiHandler->parseRequest(getProperties()->maxTokensLimit, getProperties()->bestOfLimit, getProperties()->maxModelLength, config.getServerSettings().allowedLocalMediaPath, config.getServerSettings().allowedMediaDomains);
     } catch (const std::exception& e) {
         SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Exception while parsing request: {}", e.what());
-        return absl::InvalidArgumentError(std::string("Exception while parsing request: ") + e.what());
+        return absl::InvalidArgumentError("Exception while parsing request");
     }
     if (!status.ok()) {
         SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Failed to parse request: {}", status.message());
@@ -167,7 +167,7 @@ absl::Status GenAiServable::parseRequest(std::shared_ptr<GenAiServableExecutionC
         executionContext->generationConfigBuilder->adjustConfigForDecodingMethod();
     } catch (const std::exception& e) {
         SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Exception while parsing generation config: {}", e.what());
-        return absl::InvalidArgumentError(std::string("Exception while parsing generation config: ") + e.what());
+        return absl::InvalidArgumentError("Exception while parsing generation config");
     }
     try {
         executionContext->generationConfigBuilder->validateStructuredOutputConfig(getProperties()->tokenizer);
