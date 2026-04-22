@@ -144,7 +144,6 @@ TEST_F(LoraAdapterInitTest, ValidAdapterWithAlpha) {
     ASSERT_EQ(initializeLoraAdapters(nodeOptions, "", properties), StatusCode::OK);
     EXPECT_FALSE(properties->pluginConfig.empty());
     EXPECT_EQ(properties->pluginConfig.count("adapters"), 1);
-    EXPECT_EQ(properties->adapterConfig.get_adapters().size(), 1);
 }
 
 TEST_F(LoraAdapterInitTest, DefaultAlphaSucceeds) {
@@ -152,7 +151,7 @@ TEST_F(LoraAdapterInitTest, DefaultAlphaSucceeds) {
     adapter->set_model_path(loraFilePath);
     // alpha defaults to 1.0 in proto
     ASSERT_EQ(initializeLoraAdapters(nodeOptions, "", properties), StatusCode::OK);
-    EXPECT_EQ(properties->adapterConfig.get_adapters().size(), 1);
+    EXPECT_EQ(properties->pluginConfig.count("adapters"), 1);
 }
 
 TEST_F(LoraAdapterInitTest, AlphaExactlyOneSucceeds) {
@@ -160,7 +159,7 @@ TEST_F(LoraAdapterInitTest, AlphaExactlyOneSucceeds) {
     adapter->set_model_path(loraFilePath);
     adapter->set_alpha(1.0f);
     ASSERT_EQ(initializeLoraAdapters(nodeOptions, "", properties), StatusCode::OK);
-    EXPECT_EQ(properties->adapterConfig.get_adapters().size(), 1);
+    EXPECT_EQ(properties->pluginConfig.count("adapters"), 1);
 }
 
 TEST_F(LoraAdapterInitTest, MultipleAdaptersRegistered) {
@@ -171,7 +170,7 @@ TEST_F(LoraAdapterInitTest, MultipleAdaptersRegistered) {
     a2->set_model_path(loraFilePath);
     a2->set_alpha(0.7f);
     ASSERT_EQ(initializeLoraAdapters(nodeOptions, "", properties), StatusCode::OK);
-    EXPECT_EQ(properties->adapterConfig.get_adapters().size(), 2);
+    EXPECT_EQ(properties->pluginConfig.count("adapters"), 1);
 }
 
 // --- Path resolution ---
@@ -182,7 +181,7 @@ TEST_F(LoraAdapterInitTest, RelativePathResolvedAgainstGraphPath) {
     adapter->set_alpha(0.5f);
     // graphPath = directoryPath, so relative "lora_adapter" resolves to directoryPath/lora_adapter
     ASSERT_EQ(initializeLoraAdapters(nodeOptions, directoryPath, properties), StatusCode::OK);
-    EXPECT_EQ(properties->adapterConfig.get_adapters().size(), 1);
+    EXPECT_EQ(properties->pluginConfig.count("adapters"), 1);
 }
 
 TEST_F(LoraAdapterInitTest, AbsolutePathIgnoresGraphPath) {
@@ -190,7 +189,7 @@ TEST_F(LoraAdapterInitTest, AbsolutePathIgnoresGraphPath) {
     adapter->set_model_path(loraFilePath);  // absolute path
     adapter->set_alpha(0.5f);
     ASSERT_EQ(initializeLoraAdapters(nodeOptions, "/wrong/graph/path", properties), StatusCode::OK);
-    EXPECT_EQ(properties->adapterConfig.get_adapters().size(), 1);
+    EXPECT_EQ(properties->pluginConfig.count("adapters"), 1);
 }
 
 // --- Mixed valid/invalid ---

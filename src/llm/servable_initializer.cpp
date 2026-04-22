@@ -320,9 +320,14 @@ Status initializeLoraAdapters(const mediapipe::LLMCalculatorOptions& nodeOptions
         return StatusCode::OK;
     }
     SPDLOG_INFO("LoRA adapters will be applied to the model. Number of adapters: {}", nodeOptions.lora_adapter_size());
+    ov::genai::AdapterConfig adapterConfig;
     for (int i = 0; i < nodeOptions.lora_adapter_size(); ++i) {
         const auto& loraAdapterOption = nodeOptions.lora_adapter(i);
         SPDLOG_INFO("Processing LoRA adapter number {} with model path: {} alpha: {}", i, loraAdapterOption.model_path(), loraAdapterOption.alpha());
+        if (loraAdapterOption.alpha() <= 0.0f || loraAdapterOption.alpha() > 1.0f) {
+            SPDLOG_ERROR("LoRA adapter alpha value {} is out of valid range (0.0, 1.0]", loraAdapterOption.alpha());
+            return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
+        }
         auto fsLoraPath = std::filesystem::path(loraAdapterOption.model_path());
         std::string loraPath;
         if (fsLoraPath.is_relative()) {
@@ -332,11 +337,7 @@ Status initializeLoraAdapters(const mediapipe::LLMCalculatorOptions& nodeOptions
         }
         try {
             ov::genai::Adapter adapter(loraPath);
-            if (loraAdapterOption.alpha() <= 0.0f || loraAdapterOption.alpha() > 1.0f) {
-                SPDLOG_ERROR("LoRA adapter alpha value {} is out of valid range (0.0, 1.0]", loraAdapterOption.alpha());
-                return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
-            }
-            properties->adapterConfig.add(adapter, loraAdapterOption.alpha());
+            adapterConfig.add(adapter, loraAdapterOption.alpha());
             SPDLOG_INFO("Registered LoRA adapter from path: {} with alpha: {}", loraPath, loraAdapterOption.alpha());
         } catch (const std::exception& e) {
             SPDLOG_ERROR("Error during LoRA adapter initialization for model_path: {} exception: {}", loraPath, e.what());
@@ -347,8 +348,8 @@ Status initializeLoraAdapters(const mediapipe::LLMCalculatorOptions& nodeOptions
         }
     }
     // since it is only applied once at initialization, static mode is sufficient and more efficient.
-    properties->adapterConfig.set_mode(ov::genai::AdapterConfig::MODE_STATIC);
-    properties->pluginConfig.insert(ov::genai::adapters(properties->adapterConfig));
+    adapterConfig.set_mode(ov::genai::AdapterConfig::MODE_STATIC);
+    properties->pluginConfig.insert(ov::genai::adapters(adapterConfig));
     return StatusCode::OK;
 }
 
