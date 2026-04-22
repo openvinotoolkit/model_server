@@ -44,8 +44,10 @@
 #include "../../llm/servable.hpp"
 #include "../../llm/servable_initializer.hpp"
 #include "../../llm/text_utils.hpp"
+#include "../../mediapipe_internal/mediapipefactory.hpp"
 #include "../../ov_utils.hpp"
 #include "../../server.hpp"
+#include "../../servablemanagermodule.hpp"
 #include "rapidjson/document.h"
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/writer.h"
@@ -2600,6 +2602,64 @@ TEST_P(LLMFlowHttpTestParameterized, inferCompletionsStreamClientDisconnectedImm
     ASSERT_EQ(response, "");
 }
 
+// Verify /v2/health/ready returns OK when LLM models are loaded
+TEST_P(LLMFlowHttpTestParameterized, serverReadyWithLLMModel) {
+    ovms::HttpRequestComponents readyComp;
+    ASSERT_EQ(handler->parseRequestComponents(readyComp, "GET", "/v2/health/ready"), ovms::StatusCode::OK);
+    ASSERT_EQ(readyComp.type, ovms::KFS_GetServerReady);
+
+    std::string requestBody;
+    std::string readyResponse;
+    ovms::HttpResponseComponents readyResponseComponents;
+    std::shared_ptr<ovms::HttpAsyncWriter> readyWriter{nullptr};
+    std::shared_ptr<ovms::MultiPartParser> readyMultiPartParser{nullptr};
+
+    ovms::Status status = handler->dispatchToProcessor(
+        "/v2/health/ready", requestBody, &readyResponse, readyComp,
+        readyResponseComponents, readyWriter, readyMultiPartParser);
+
+    ASSERT_EQ(status, ovms::StatusCode::OK);
+}
+
+TEST_P(LLMFlowHttpTestParameterized, modelReadyWithLLMModel) {
+    auto params = GetParam();
+    std::string readyUri = "/v2/models/" + params.modelName + "/ready";
+    ovms::HttpRequestComponents readyComp;
+    ASSERT_EQ(handler->parseRequestComponents(readyComp, "GET", readyUri), ovms::StatusCode::OK);
+
+    std::string requestBody;
+    std::string readyResponse;
+    ovms::HttpResponseComponents readyResponseComponents;
+    std::shared_ptr<ovms::HttpAsyncWriter> readyWriter{nullptr};
+    std::shared_ptr<ovms::MultiPartParser> readyMultiPartParser{nullptr};
+
+    ovms::Status status = handler->dispatchToProcessor(
+        readyUri, requestBody, &readyResponse, readyComp,
+        readyResponseComponents, readyWriter, readyMultiPartParser);
+
+    ASSERT_EQ(status, ovms::StatusCode::OK);
+}
+
+// Verify /v2/models/<nonexistent>/ready returns error when model is not loaded
+TEST_P(LLMFlowHttpTestParameterized, modelReadyNonExistentModelNotFound) {
+    std::string readyUri = "/v2/models/nonexistent_model/ready";
+    ovms::HttpRequestComponents readyComp;
+    ASSERT_EQ(handler->parseRequestComponents(readyComp, "GET", readyUri), ovms::StatusCode::OK);
+
+    std::string requestBody;
+    std::string readyResponse;
+    ovms::HttpResponseComponents readyResponseComponents;
+    std::shared_ptr<ovms::HttpAsyncWriter> readyWriter{nullptr};
+    std::shared_ptr<ovms::MultiPartParser> readyMultiPartParser{nullptr};
+
+    ovms::Status status = handler->dispatchToProcessor(
+        readyUri, requestBody, &readyResponse, readyComp,
+        readyResponseComponents, readyWriter, readyMultiPartParser);
+
+    // MODEL_NAME_MISSING maps to HTTP 404
+    ASSERT_EQ(status, ovms::StatusCode::MODEL_NAME_MISSING);
+}
+
 INSTANTIATE_TEST_SUITE_P(
     LLMFlowHttpTestInstances,
     LLMFlowHttpTestParameterized,
@@ -3422,6 +3482,107 @@ INSTANTIATE_TEST_SUITE_P(
         TestParameters{"lm_legacy_regular", false, false, false, false, false},
         TestParameters{"vlm_cb_regular", false, true, true, false, true},
         TestParameters{"vlm_legacy_regular", false, false, false, false, false}));
+
+// Verify /v2/health/ready returns SERVER_NOT_READY (maps to HTTP 503) when model fails to load
+TEST(LLMServerHealthTest, serverNotReadyWhenModelNotLoaded) {
+    ConstructorEnabledModelManager manager;
+    // Load config with model pointing to non-existent path
+    const std::string configFilePath = "/tmp/ovms_test_not_ready_config.json";
+    const std::string configContent = R"({
+        "model_config_list": [{
+            "config": {
+                "name": "broken_model",
+                "base_path": "/non/existent/path"
+            }
+        }]
+    })";
+    {
+        std::ofstream configFile(configFilePath);
+        ASSERT_TRUE(configFile.is_open());
+        configFile << configContent;
+    }
+    manager.loadConfig(configFilePath);
+    std::remove(configFilePath.c_str());
+
+    // Model failed to load so server should not be ready
+    ASSERT_FALSE(manager.allServablesLoaded());
+}
+
+// Verify allServablesLoaded returns false when LLM mediapipe graph is in LOADING state
+// (LOADING_PRECONDITION_FAILED - failed to initialize, maps to HTTP 503 via SERVER_NOT_READY)
+TEST(LLMServerHealthTest, serverNotReadyWhenMediapipeGraphInLoadingState) {
+    const std::string tmpDir = "/tmp/ovms_test_mp_loading";
+    std::filesystem::create_directories(tmpDir);
+
+    // Create a pbtxt with HttpLLMCalculator pointing to non-existent models_path
+    const std::string graphPbtxt = R"(
+        input_stream: "HTTP_REQUEST_PAYLOAD:input"
+        output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+        node: {
+            name: "llmNode"
+            calculator: "HttpLLMCalculator"
+            input_stream: "LOOPBACK:loopback"
+            input_stream: "HTTP_REQUEST_PAYLOAD:input"
+            input_side_packet: "LLM_NODE_RESOURCES:llm"
+            output_stream: "LOOPBACK:loopback"
+            output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+            input_stream_info: {
+                tag_index: 'LOOPBACK:0',
+                back_edge: true
+            }
+            node_options: {
+                [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
+                    models_path: "/non/existent/llm/model/path"
+                }
+            }
+            input_stream_handler {
+                input_stream_handler: "SyncSetInputStreamHandler",
+                options {
+                    [mediapipe.SyncSetInputStreamHandlerOptions.ext] {
+                        sync_set {
+                            tag_index: "LOOPBACK:0"
+                        }
+                    }
+                }
+            }
+        }
+    )";
+    const std::string graphFilePath = tmpDir + "/graph.pbtxt";
+    {
+        std::ofstream graphFile(graphFilePath);
+        ASSERT_TRUE(graphFile.is_open());
+        graphFile << graphPbtxt;
+    }
+
+    // Create config referencing the mediapipe graph
+    const std::string configContent = R"({
+        "model_config_list": [],
+        "mediapipe_config_list": [{
+            "name": "llm_loading_graph",
+            "graph_path": ")" + graphFilePath + R"("
+        }]
+    })";
+    const std::string configFilePath = tmpDir + "/config.json";
+    {
+        std::ofstream configFile(configFilePath);
+        ASSERT_TRUE(configFile.is_open());
+        configFile << configContent;
+    }
+
+    ConstructorEnabledModelManager manager;
+    manager.loadConfig(configFilePath);
+
+    // Graph should be in a non-available state (failed to load LLM node)
+    const auto& factory = manager.getMediapipeFactory();
+    auto* definition = factory.findDefinitionByName("llm_loading_graph");
+    ASSERT_NE(nullptr, definition);
+    ASSERT_FALSE(definition->getStatus().isAvailable());
+
+    // Server readiness check should fail
+    ASSERT_FALSE(manager.allServablesLoaded());
+
+    std::filesystem::remove_all(tmpDir);
+}
 
 // Common tests for all pipeline types (testing logic executed prior pipeline type selection)
 class LLMConfigHttpTest : public ::testing::Test {};

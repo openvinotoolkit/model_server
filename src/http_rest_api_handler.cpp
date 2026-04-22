@@ -240,7 +240,6 @@ Status HttpRestApiHandler::processServerReadyKFSRequest(const HttpRequestCompone
     if (isReady) {
         return StatusCode::OK;
     }
-    response = "{\"ready\":false}";
     return StatusCode::SERVER_NOT_READY;
 }
 

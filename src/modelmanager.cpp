@@ -1726,14 +1726,29 @@ bool ModelManager::allServablesLoaded() const {
     {
         std::shared_lock lock(modelsMtx);
         for (const auto& [name, model] : models) {
-            bool anyVersionAvailable = false;
-            for (const auto& [version, instance] : model->getModelVersions()) {
-                if (instance && instance->getStatus().getState() == ModelVersionState::AVAILABLE) {
-                    anyVersionAvailable = true;
-                    break;
+            const std::shared_ptr<ModelInstance> defaultModelInstance = model->getDefaultModelInstance();
+            if (!defaultModelInstance) {
+                // Check if all versions are retired (ended unloading)
+                const auto& versions = model->getModelVersions();
+                bool allRetired = !versions.empty();
+                for (const auto& [version, instance] : versions) {
+                    if (!instance->getStatus().willEndUnloaded()) {
+                        allRetired = false;
+                        break;
+                    }
                 }
+                if (allRetired) {
+                    SPDLOG_DEBUG("Model {} is retired, skipping", name);
+                    continue;
+                }
+                SPDLOG_DEBUG("Model {} is not available yet", name);
+                return false;
             }
-            if (!anyVersionAvailable) {
+            if (defaultModelInstance->getStatus().getState() == ModelVersionState::END) {
+                SPDLOG_DEBUG("Model {} is retired, skipping", name);
+                continue;
+            }
+            if (defaultModelInstance->getStatus().getState() != ModelVersionState::AVAILABLE) {
                 SPDLOG_DEBUG("Model {} is not available yet", name);
                 return false;
             }
@@ -1741,7 +1756,15 @@ bool ModelManager::allServablesLoaded() const {
     }
     for (const auto& name : pipelineFactory->getPipelinesNames()) {
         auto* definition = pipelineFactory->findDefinitionByName(name);
-        if (!definition || !definition->getStatus().isAvailable()) {
+        if (!definition) {
+            SPDLOG_DEBUG("Pipeline {} is not available yet", name);
+            return false;
+        }
+        if (definition->getStatus().getStateCode() == PipelineDefinitionStateCode::RETIRED) {
+            SPDLOG_DEBUG("Pipeline {} is retired, skipping", name);
+            continue;
+        }
+        if (!definition->getStatus().isAvailable()) {
             SPDLOG_DEBUG("Pipeline {} is not available yet", name);
             return false;
         }
@@ -1749,7 +1772,15 @@ bool ModelManager::allServablesLoaded() const {
 #if (MEDIAPIPE_DISABLE == 0)
     for (const auto& name : mediapipeFactory->getMediapipePipelinesNames()) {
         auto* definition = mediapipeFactory->findDefinitionByName(name);
-        if (!definition || !definition->getStatus().isAvailable()) {
+        if (!definition) {
+            SPDLOG_DEBUG("Mediapipe graph {} is not available yet", name);
+            return false;
+        }
+        if (definition->getStatus().getStateCode() == PipelineDefinitionStateCode::RETIRED) {
+            SPDLOG_DEBUG("Mediapipe graph {} is retired, skipping", name);
+            continue;
+        }
+        if (!definition->getStatus().isAvailable()) {
             SPDLOG_DEBUG("Mediapipe graph {} is not available yet", name);
             return false;
         }
