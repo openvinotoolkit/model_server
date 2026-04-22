@@ -3559,7 +3559,8 @@ TEST(LLMServerHealthTest, serverNotReadyWhenMediapipeGraphInLoadingState) {
         "model_config_list": [],
         "mediapipe_config_list": [{
             "name": "llm_loading_graph",
-            "graph_path": ")" + graphFilePath + R"("
+            "graph_path": ")" + graphFilePath +
+                                      R"("
         }]
     })";
     const std::string configFilePath = tmpDir + "/config.json";
