@@ -1551,6 +1551,7 @@ ovms_cc_library(
             "statefulrequestprocessor",
     ],
     visibility = ["//visibility:public"],
+    alwayslink = 1,
 )
 ovms_cc_library(
     name = "kfs_backend_impl",

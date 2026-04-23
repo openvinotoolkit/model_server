@@ -45,13 +45,13 @@ template Status PipelineDefinition::create<InferenceRequest, InferenceResponse>(
     std::unique_ptr<Pipeline>& pipeline,
     const InferenceRequest* request,
     InferenceResponse* response,
-    ModelInstanceProvider& provider);
+    ModelInstanceProvider& modelInstanceProvider);
 
 template Status PipelineFactory::create<InferenceRequest, InferenceResponse>(
     std::unique_ptr<Pipeline>& pipeline,
     const std::string& name,
     const InferenceRequest* request,
     InferenceResponse* response,
-    ModelInstanceProvider& provider) const;
+    ModelInstanceProvider& modelInstanceProvider) const;
 
 }  // namespace ovms

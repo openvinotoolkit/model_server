@@ -39,13 +39,13 @@ template Status PipelineDefinition::create<::KFSRequest, ::KFSResponse>(
     std::unique_ptr<Pipeline>& pipeline,
     const ::KFSRequest* request,
     ::KFSResponse* response,
-    ModelInstanceProvider& provider);
+    ModelInstanceProvider& modelInstanceProvider);
 
 template Status PipelineFactory::create<::KFSRequest, ::KFSResponse>(
     std::unique_ptr<Pipeline>& pipeline,
     const std::string& name,
     const ::KFSRequest* request,
     ::KFSResponse* response,
-    ModelInstanceProvider& provider) const;
+    ModelInstanceProvider& modelInstanceProvider) const;
 
 }  // namespace ovms

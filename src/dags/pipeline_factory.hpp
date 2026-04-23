@@ -46,7 +46,7 @@ public:
     Status createDefinition(const std::string& pipelineName,
         const std::vector<NodeInfo>& nodeInfos,
         const pipeline_connections_t& connections,
-        ModelInstanceProvider& provider,
+        ModelInstanceProvider& modelInstanceProvider,
         ServableNameChecker& nameChecker,
         DagResourceManager& resourceMgr,
         MetricRegistry* registry = nullptr,
@@ -60,7 +60,7 @@ private:
         const std::string& name,
         const RequestType* request,
         ResponseType* response,
-        ModelInstanceProvider& provider) const;
+        ModelInstanceProvider& modelInstanceProvider) const;
 
 public:
     template <typename RequestType, typename ResponseType>
@@ -68,18 +68,18 @@ public:
         const std::string& name,
         const RequestType* request,
         ResponseType* response,
-        ModelInstanceProvider& provider) const;
+        ModelInstanceProvider& modelInstanceProvider) const;
 
     PipelineDefinition* findDefinitionByName(const std::string& name) const;
     Status reloadDefinition(const std::string& pipelineName,
         const std::vector<NodeInfo>&& nodeInfos,
         const pipeline_connections_t&& connections,
-        ModelInstanceProvider& provider,
+        ModelInstanceProvider& modelInstanceProvider,
         ServableNameChecker& nameChecker,
         DagResourceManager& resourceMgr);
 
-    void retireOtherThan(std::set<std::string>&& pipelinesInConfigFile, ModelInstanceProvider& provider);
-    Status revalidatePipelines(ModelInstanceProvider& provider, ServableNameChecker& nameChecker, DagResourceManager& resourceMgr);
+    void retireOtherThan(std::set<std::string>&& pipelinesInConfigFile, ModelInstanceProvider& modelInstanceProvider);
+    Status revalidatePipelines(ModelInstanceProvider& modelInstanceProvider, ServableNameChecker& nameChecker, DagResourceManager& resourceMgr);
     const std::vector<std::string> getPipelinesNames() const;
     const std::vector<std::string> getNamesOfAvailablePipelines() const;
 };
