@@ -31,10 +31,6 @@
 
 namespace ovms {
 
-const std::string ENTRY_NODE_NAME = "request";
-const std::string EXIT_NODE_NAME = "response";
-const std::string DEFAULT_PIPELINE_NAME = "";
-
 template class EntryNode<InferenceRequest>;
 
 template class ExitNode<InferenceResponse>;

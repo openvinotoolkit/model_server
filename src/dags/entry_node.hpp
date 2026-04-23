@@ -28,7 +28,7 @@
 
 namespace ovms {
 class IOVTensorFactory;
-extern const std::string ENTRY_NODE_NAME;
+inline const std::string ENTRY_NODE_NAME = "request";
 
 template <typename RequestType>
 class EntryNode : public Node {
