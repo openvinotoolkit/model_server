@@ -377,17 +377,12 @@ Status Server::startModules(ovms::Config& config) {
         START_MODULE(it);
         return status;
     }
-    if (config.getServerSettings().serverMode == HF_PULL_MODE || config.getServerSettings().serverMode == HF_PULL_AND_START_MODE) {
+    if (config.getServerSettings().serverMode == HF_PULL_MODE) {
         INSERT_MODULE(HF_MODEL_PULL_MODULE_NAME, it);
         START_MODULE(it);
-        if (!status.ok()) {
-            return status;
-        }
         auto hfModule = dynamic_cast<const HfPullModelModule*>(it->second.get());
         status = hfModule->clone();
-        // Return from modules only in --pull mode or error, otherwise start the rest of modules
-        if (config.getServerSettings().serverMode == HF_PULL_MODE || !status.ok())
-            return status;
+        return status;
     }
 
 #if (PYTHON_DISABLE == 0)
@@ -415,6 +410,18 @@ Status Server::startModules(ovms::Config& config) {
     if (config.restPort() != 0) {
         INSERT_MODULE(HTTP_SERVER_MODULE_NAME, it);
         START_MODULE(it);
+    }
+    if (config.getServerSettings().serverMode == HF_PULL_AND_START_MODE) {
+        INSERT_MODULE(HF_MODEL_PULL_MODULE_NAME, it);
+        START_MODULE(it);
+        if (!status.ok()) {
+            return status;
+        }
+        auto hfModule = dynamic_cast<const HfPullModelModule*>(it->second.get());
+        status = hfModule->clone();
+        if (!status.ok()) {
+            return status;
+        }
     }
     GET_MODULE(SERVABLE_MANAGER_MODULE_NAME, it);
     START_MODULE(it);
