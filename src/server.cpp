@@ -427,7 +427,6 @@ Status Server::startModules(ovms::Config& config) {
         if (!status.ok()) {
             return status;
         }
-
     }
     GET_MODULE(SERVABLE_MANAGER_MODULE_NAME, it);
     START_MODULE(it);
