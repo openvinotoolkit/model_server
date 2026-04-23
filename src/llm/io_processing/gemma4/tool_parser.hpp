@@ -28,7 +28,7 @@ protected:
     static const std::string TOOL_ARGS_START_INDICATOR;
     static const std::string TOOL_ARGS_END_INDICATOR;
     static const std::string TOOL_ARGS_STRING_INDICATOR;
-    static const std::string TOOL_SEPARATOR_STR;
+    static const std::string TOOL_ARGS_SEPARATOR_STR;
 
     static const int64_t botTokenId;
     static const int64_t eotTokenId;
@@ -37,7 +37,7 @@ protected:
         Content,             // Content -> ToolCallStarted (on TOOL_CALL_START_TAG)
         ToolCallStarted,     // ToolCallStarted -> ToolCallParameters (on TOOL_ARGS_START_INDICATOR, emits name)
         ToolCallParameters,  // ToolCallParameters -> ToolCallEnded (on TOOL_ARGS_END_INDICATOR, emits args)
-        ToolCallEnded,       // ToolCallEnded -> ToolCallStarted (on separator) | AfterToolCall (on end tag/list end)
+        ToolCallEnded,       // ToolCallEnded -> ToolCallStarted (on TOOL_CALL_NAME_PREFIX) | AfterToolCall (on end tag)
         AfterToolCall        // AfterToolCall -> Content
     };
 
