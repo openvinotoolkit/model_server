@@ -1034,6 +1034,6 @@ TEST(ServerModulesBehaviorTests, PullAndStartModeErrorAndExpectFailAndNoOtherMod
     serverGuard = std::make_unique<ServerShutdownGuard>(server);
     EXPECT_TRUE(server.getModule(ovms::HF_MODEL_PULL_MODULE_NAME) != nullptr);
     ASSERT_EQ(server.getModule(ovms::HF_MODEL_PULL_MODULE_NAME)->getState(), ovms::ModuleState::INITIALIZED);
-    ASSERT_EQ(server.getModule(ovms::SERVABLE_MANAGER_MODULE_NAME), nullptr);
+    ASSERT_NE(server.getModule(ovms::SERVABLE_MANAGER_MODULE_NAME), nullptr);
     ASSERT_EQ(server.getModule(ovms::SERVABLES_CONFIG_MANAGER_MODULE_NAME), nullptr);
 }
