@@ -108,6 +108,7 @@ Status StatefulRequestProcessor<tensorflow::serving::PredictRequest, tensorflow:
 }
 template class RequestTensorExtractor<tensorflow::serving::PredictRequest, tensorflow::TensorProto, ExtractChoice::EXTRACT_INPUT>;
 template class RequestTensorExtractor<tensorflow::serving::PredictRequest, tensorflow::TensorProto, ExtractChoice::EXTRACT_OUTPUT>;
+template struct StatefulRequestProcessor<tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse>;
 
 template <>
 Status StatefulRequestProcessor<tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse>::postInferenceProcessing(tensorflow::serving::PredictResponse* response, ov::InferRequest& inferRequest) {
