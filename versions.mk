@@ -32,4 +32,4 @@ OV_TOKENIZERS_ORG ?= openvinotoolkit
 DLDT_PACKAGE_URL_UBUNTU24 ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/nightly/2026.2.0.0.dev20260422/openvino_genai_ubuntu24_2026.2.0.0.dev20260422_x86_64.tar.gz
 DLDT_PACKAGE_URL_UBUNTU22 ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/nightly/2026.2.0.0.dev20260422/openvino_genai_ubuntu22_2026.2.0.0.dev20260422_x86_64.tar.gz
 DLDT_PACKAGE_URL_RHEL ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/nightly/2026.2.0.0.dev20260422/openvino_genai_rhel8_2026.2.0.0.dev20260422_x86_64.tar.gz
-GENAI_PACKAGE_URL_WINDOWS ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/nightly/2026.2.0.0.dev20260421/openvino_genai_windows_2026.2.0.0.dev20260421_x86_64.zip
+GENAI_PACKAGE_URL_WINDOWS ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/nightly/2026.2.0.0.dev20260422/openvino_genai_windows_2026.2.0.0.dev20260422_x86_64.zip
