@@ -30,8 +30,8 @@ const std::string Gemma4ToolParser::TOOL_CALL_NAME_PREFIX = "call:";
 
 const std::string Gemma4ToolParser::TOOL_ARGS_START_INDICATOR = "{";
 const std::string Gemma4ToolParser::TOOL_ARGS_END_INDICATOR = "}";
-const std::string Gemma4ToolParser::TOOL_ARGS_STRING_INDICATOR = "<\">";
-const std::string Gemma4ToolParser::TOOL_SEPARATOR_STR = ",";
+const std::string Gemma4ToolParser::TOOL_ARGS_STRING_INDICATOR = "<|\"|>";
+const std::string Gemma4ToolParser::TOOL_ARGS_SEPARATOR_STR = ",";
 
 const int64_t Gemma4ToolParser::botTokenId = 48;
 const int64_t Gemma4ToolParser::eotTokenId = 49;
@@ -60,27 +60,49 @@ std::string Gemma4ToolParser::parseArrayParameter(std::string argumentStr) {
 }
 
 std::string Gemma4ToolParser::parseObjectParameter(std::string argumentStr) {
-    int quoteDepth = 0;
+    size_t pos = 1;
+    std::vector<std::pair<std::string, std::string>> keyValuePairs;
 
-    for (size_t i = 1; i < argumentStr.size() - 1; ++i) {
-        if (argumentStr[i] != '\'') {
-            continue;
+    while (pos != std::string::npos) {
+        std::string key, value;
+        bool isStringValue = false;
+        size_t keyEndPos = argumentStr.find(':', pos);
+        if (keyEndPos == std::string::npos) {
+            break;
         }
-
-        bool isLastElement = (i == argumentStr.size() - 2);
-        bool isFollowedByComma = !isLastElement && argumentStr[i + 1] == ',';
-        bool isFollowedByColon = !isLastElement && argumentStr[i + 1] == ':';
-
-        if (quoteDepth == 0) {
-            argumentStr[i] = '"';
-            quoteDepth++;
-        } else if (quoteDepth > 0 && (isFollowedByComma || isLastElement || isFollowedByColon)) {
-            argumentStr[i] = '"';
-            quoteDepth--;
+        key = argumentStr.substr(pos, keyEndPos - pos);
+        size_t valueStartPos = keyEndPos + 1;
+        size_t valueEndPos;
+        if ( argumentStr.substr(keyEndPos + 2, TOOL_ARGS_STRING_INDICATOR.size()) == TOOL_ARGS_STRING_INDICATOR) {
+            valueStartPos = keyEndPos + 2 + TOOL_ARGS_STRING_INDICATOR.size();
+            valueEndPos = argumentStr.find(TOOL_ARGS_STRING_INDICATOR, valueStartPos);
+            isStringValue = true;
+        } else {
+             valueEndPos = argumentStr.find(',', valueStartPos);
         }
+        
+        if (valueEndPos == std::string::npos) {
+            valueEndPos = argumentStr.size() - 1;
+        }
+        value = argumentStr.substr(valueStartPos, valueEndPos - valueStartPos);
+        if (isStringValue) {
+            value = "\"" + value + "\"";
+        }
+        keyValuePairs.emplace_back(key, value);
+        pos = (valueEndPos == argumentStr.size() - 1) ? std::string::npos : valueEndPos + 1;
     }
 
-    return argumentStr;
+    if (keyValuePairs.empty()) {
+        return argumentStr;
+    }
+
+    std::string parsedObject = "{";
+    for (const auto& [key, value] : keyValuePairs) {
+        parsedObject += "\"" + key + "\":" + value + ",";
+    }
+    parsedObject.back() = '}';
+    return parsedObject;
+    
 }
 
 std::string Gemma4ToolParser::normalizeArgStr(const std::string& arg) {
@@ -101,7 +123,7 @@ std::string Gemma4ToolParser::normalizeArgStr(const std::string& arg) {
     const char last = normalized.back();
     if (first == '{' && last == '}') {
         normalized = parseObjectParameter(normalized);
-        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Argument contains is an object, replaced single quotes with double quotes for JSON parsing. Modified string: {}", normalized);
+        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Argument contains is an object, changed it to correct JSON format. Modified string: {}", normalized);
     }
 
     if (first == '[' && last == ']') {
@@ -155,15 +177,10 @@ void Gemma4ToolParser::writeArgumentToWriter(const std::string& arg, rapidjson::
 std::pair<std::string, std::string> Gemma4ToolParser::parseSingleArgument(const std::string& argumentStr) {
     std::pair<std::string, std::string> argument;
 
-    size_t equalPos = argumentStr.find(':');
-    if (equalPos != std::string::npos) {
-        argument.first = argumentStr.substr(0, equalPos);
-        std::string value = argumentStr.substr(equalPos + 1);
-        size_t argsStringIndicatorPos = value.find(TOOL_ARGS_STRING_INDICATOR);
-        size_t argsStringIndicatorEndPos = value.rfind(TOOL_ARGS_STRING_INDICATOR);
-        if(argsStringIndicatorPos != std::string::npos && argsStringIndicatorEndPos != std::string::npos && argsStringIndicatorEndPos > argsStringIndicatorPos) {            
-            value = value.substr(0, argsStringIndicatorPos) + "\"" + value.substr(argsStringIndicatorPos + TOOL_ARGS_STRING_INDICATOR.length(), argsStringIndicatorEndPos - argsStringIndicatorPos - TOOL_ARGS_STRING_INDICATOR.length()) + "\"";
-        }
+    size_t colonPos = argumentStr.find(':');
+    if (colonPos != std::string::npos) {
+        argument.first = argumentStr.substr(0, colonPos);
+        std::string value = argumentStr.substr(colonPos + 1);
         argument.second = value;
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Parsed argument - name: {}, value: {}", argument.first, argument.second);
     } else {
@@ -180,7 +197,7 @@ std::vector<std::pair<std::string, std::string>> Gemma4ToolParser::parseArgument
 
     size_t argPos = 0;
     while (argPos < argumentsStr.length()) {
-        size_t commaPos = findInStringRespectingSpecialChars(argumentsStr, TOOL_SEPARATOR_STR, argPos);
+        size_t commaPos = findInStringRespectingSpecialChars(argumentsStr, TOOL_ARGS_SEPARATOR_STR, argPos);
         if (commaPos == std::string::npos) {
             auto remainingStr = argumentsStr.substr(argPos);
             args.push_back(remainingStr);
@@ -190,7 +207,7 @@ std::vector<std::pair<std::string, std::string>> Gemma4ToolParser::parseArgument
         std::string argStr = argumentsStr.substr(argPos, commaPos - argPos);
         args.push_back(argStr);
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Parsed argument string: {}", argStr);
-        argPos = commaPos + TOOL_SEPARATOR_STR.length();
+        argPos = commaPos + TOOL_ARGS_SEPARATOR_STR.length();
     }
 
     for (const std::string& arg : args) {
@@ -201,12 +218,6 @@ std::vector<std::pair<std::string, std::string>> Gemma4ToolParser::parseArgument
 
 bool Gemma4ToolParser::parseInContentState() {
     size_t toolCallStartTagPos = this->streamingContent.find(TOOL_CALL_START_TAG, this->streamingPosition);
-    size_t toolCallEndTagPos = this->streamingContent.find(TOOL_CALL_END_TAG, this->streamingPosition);
-    if (toolCallEndTagPos != std::string::npos && toolCallStartTagPos == std::string::npos) {
-        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Detected end of tool call at position: {}", toolCallEndTagPos);
-        this->streamingPosition = toolCallEndTagPos + TOOL_CALL_END_TAG.length();
-        return false;
-    }
     if (toolCallStartTagPos != std::string::npos) {
         if (toolCallStartTagPos > this->streamingPosition) {
             SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Content found before tool call start tag at position: {}", toolCallStartTagPos);
@@ -223,12 +234,18 @@ bool Gemma4ToolParser::parseInContentState() {
 
 bool Gemma4ToolParser::parseInToolCallState() {
     size_t argsPos = this->streamingContent.find(TOOL_ARGS_START_INDICATOR, this->streamingPosition);
-
     if (argsPos == std::string::npos) {
         return false;
     }
 
-    std::string toolName = this->streamingContent.substr(this->streamingPosition, argsPos - this->streamingPosition);
+    size_t toolNameStart = this->streamingContent.find(TOOL_CALL_NAME_PREFIX, this->streamingPosition);
+    if (toolNameStart != std::string::npos && toolNameStart < argsPos) {
+        toolNameStart += TOOL_CALL_NAME_PREFIX.length();
+    } else {
+        toolNameStart = this->streamingPosition;
+    }
+
+    std::string toolName = this->streamingContent.substr(toolNameStart, argsPos - toolNameStart);
     this->toolCall = ToolCall{generateRandomId(), toolName, ""};
     SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Parsed tool name: {}", toolName);
     this->streamingPosition = argsPos + TOOL_ARGS_START_INDICATOR.length();
@@ -265,13 +282,13 @@ bool Gemma4ToolParser::parseToolCallParametersState() {
 }
 
 bool Gemma4ToolParser::parseInToolCallEndedState() {
-    size_t toolSeparatorPos = this->streamingContent.find(TOOL_SEPARATOR_STR, this->streamingPosition);
+    size_t nextToolCallPos = this->streamingContent.find(TOOL_CALL_NAME_PREFIX, this->streamingPosition);
     size_t toolCallEndTagPos = this->streamingContent.find(TOOL_CALL_END_TAG, this->streamingPosition);
     SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Current state: ToolCallEnded. Streaming content from current position: {}", this->streamingContent.substr(this->streamingPosition));
-    if (toolSeparatorPos != std::string::npos && toolSeparatorPos < toolCallEndTagPos) {
-        this->streamingPosition = toolSeparatorPos + TOOL_SEPARATOR_STR.length();
+    if (nextToolCallPos != std::string::npos && nextToolCallPos < toolCallEndTagPos) {
+        this->streamingPosition = nextToolCallPos;
         this->currentState = State::ToolCallStarted;
-        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Detected separator between tool calls at position: {}, expecting another tool call to start", toolSeparatorPos);
+        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Detected next tool call at position: {}", nextToolCallPos);
     } else if (toolCallEndTagPos != std::string::npos) {
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Detected end of tool call at position: {}", toolCallEndTagPos);
         this->streamingPosition = toolCallEndTagPos + TOOL_CALL_END_TAG.length();
@@ -424,12 +441,18 @@ void Gemma4ToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Parsed tool list string: {}", toolCallStr);
 
         while (!toolCallStr.empty()) {
-            size_t toolEndPos = toolCallStr.find(TOOL_ARGS_END_INDICATOR);
+            size_t nextToolPos = toolCallStr.find(TOOL_CALL_NAME_PREFIX, TOOL_CALL_NAME_PREFIX.length());
+            size_t toolEndPos;
+            if (nextToolPos == std::string::npos) {
+                toolEndPos = toolCallStr.rfind(TOOL_ARGS_END_INDICATOR);
+            } else {
+                toolEndPos = nextToolPos - 1;
+            }
             std::string singleTool;
             if (toolEndPos != std::string::npos) {
                 singleTool = toolCallStr.substr(0, toolEndPos + TOOL_ARGS_END_INDICATOR.length());
                 if (toolEndPos + TOOL_ARGS_END_INDICATOR.length() < toolCallStr.length()) {
-                    toolCallStr = toolCallStr.substr(toolEndPos + TOOL_ARGS_END_INDICATOR.length() + TOOL_SEPARATOR_STR.length());
+                    toolCallStr = toolCallStr.substr(toolEndPos + TOOL_ARGS_END_INDICATOR.length());
                 } else {
                     toolCallStr.clear();
                 }
