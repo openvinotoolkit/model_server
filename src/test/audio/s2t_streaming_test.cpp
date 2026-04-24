@@ -168,39 +168,50 @@ TEST(SseUtilsTest, WrapEmptyMessage) {
     EXPECT_EQ(result, "data: \n\n");
 }
 
-// ====================== S2tStreamingHandler::serializeTextChunk Tests ======================
+// ====================== S2tStreamingHandler event serialization Tests ======================
 
-TEST(S2tStreamingHandlerTest, SerializeTextChunkSimple) {
-    std::string result = mediapipe::S2tStreamingHandler::serializeTextChunk("hello world");
-    EXPECT_EQ(result, "{\"text\":\"hello world\"}");
+TEST(S2tStreamingHandlerTest, SerializeDeltaEventSimple) {
+    std::string result = mediapipe::S2tStreamingHandler::serializeDeltaEvent("hello world");
+    EXPECT_EQ(result, "{\"type\":\"transcript.text.delta\",\"delta\":\"hello world\",\"logprobs\":[]}");
 }
 
-TEST(S2tStreamingHandlerTest, SerializeTextChunkEmpty) {
-    std::string result = mediapipe::S2tStreamingHandler::serializeTextChunk("");
-    EXPECT_EQ(result, "{\"text\":\"\"}");
+TEST(S2tStreamingHandlerTest, SerializeDeltaEventEmpty) {
+    std::string result = mediapipe::S2tStreamingHandler::serializeDeltaEvent("");
+    EXPECT_EQ(result, "{\"type\":\"transcript.text.delta\",\"delta\":\"\",\"logprobs\":[]}");
 }
 
-TEST(S2tStreamingHandlerTest, SerializeTextChunkSpecialCharacters) {
-    std::string result = mediapipe::S2tStreamingHandler::serializeTextChunk("say \"hello\" & <goodbye>");
+TEST(S2tStreamingHandlerTest, SerializeDeltaEventSpecialCharacters) {
+    std::string result = mediapipe::S2tStreamingHandler::serializeDeltaEvent("say \"hello\" & <goodbye>");
     // rapidjson escapes quotes
-    EXPECT_NE(result.find("\"text\""), std::string::npos);
+    EXPECT_NE(result.find("\"delta\""), std::string::npos);
     EXPECT_NE(result.find("say \\\"hello\\\""), std::string::npos);
 }
 
-TEST(S2tStreamingHandlerTest, SerializeTextChunkUnicode) {
-    std::string result = mediapipe::S2tStreamingHandler::serializeTextChunk("日本語テスト");
+TEST(S2tStreamingHandlerTest, SerializeDeltaEventUnicode) {
+    std::string result = mediapipe::S2tStreamingHandler::serializeDeltaEvent("日本語テスト");
+    EXPECT_NE(result.find("\"delta\""), std::string::npos);
+}
+
+TEST(S2tStreamingHandlerTest, SerializeDoneEventSimple) {
+    std::string result = mediapipe::S2tStreamingHandler::serializeDoneEvent("hello world");
+    EXPECT_EQ(result, "{\"type\":\"transcript.text.done\",\"text\":\"hello world\",\"logprobs\":[]}");
+}
+
+TEST(S2tStreamingHandlerTest, SerializeDoneEventUnicode) {
+    std::string result = mediapipe::S2tStreamingHandler::serializeDoneEvent("日本語テスト");
     EXPECT_NE(result.find("\"text\""), std::string::npos);
 }
 
 // ====================== Full SSE streaming chunk formatting ======================
 
 TEST(S2tStreamingHandlerTest, FullStreamingChunkFormat) {
-    std::string json = mediapipe::S2tStreamingHandler::serializeTextChunk("token");
+    std::string json = mediapipe::S2tStreamingHandler::serializeDeltaEvent("token");
     std::string sse = ovms::wrapTextInServerSideEventMessage(json);
-    EXPECT_EQ(sse, "data: {\"text\":\"token\"}\n\n");
+    EXPECT_EQ(sse, "data: {\"type\":\"transcript.text.delta\",\"delta\":\"token\",\"logprobs\":[]}\n\n");
 }
 
 TEST(S2tStreamingHandlerTest, FullDoneEventFormat) {
-    std::string sse = ovms::wrapTextInServerSideEventMessage("[DONE]");
-    EXPECT_EQ(sse, "data: [DONE]\n\n");
+    std::string json = mediapipe::S2tStreamingHandler::serializeDoneEvent("all text");
+    std::string sse = ovms::wrapTextInServerSideEventMessage(json);
+    EXPECT_EQ(sse, "data: {\"type\":\"transcript.text.done\",\"text\":\"all text\",\"logprobs\":[]}\n\n");
 }

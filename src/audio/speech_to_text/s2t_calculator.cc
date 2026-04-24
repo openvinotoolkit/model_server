@@ -113,7 +113,7 @@ public:
         }
 
         // --- LOOPBACK iteration: drain streaming queue ---
-        if (hasLoopback_ && !cc->Inputs().Tag(LOOPBACK_TAG_NAME).IsEmpty() && streamingHandler_.isActive()) {
+        if (hasLoopback_ && !cc->Inputs().Tag(LOOPBACK_TAG_NAME).IsEmpty()) {
             return streamingHandler_.processIteration(cc, LOOPBACK_TAG_NAME, OUTPUT_TAG_NAME);
         }
 
