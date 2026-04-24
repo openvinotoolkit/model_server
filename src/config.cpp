@@ -14,7 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 #include "config.hpp"
-
+#include <algorithm>
 #include <filesystem>
 #include <limits>
 #include <regex>
@@ -37,17 +37,45 @@
 #include "stringutils.hpp"
 #include "systeminfo.hpp"
 
+#ifdef __linux__
+#include <sys/resource.h>
+#endif
+
 namespace ovms {
 
 const uint32_t AVAILABLE_CORES = getCoreCount();
 const uint32_t WIN_MAX_GRPC_WORKERS = 1;
 const uint32_t MAX_PORT_NUMBER = std::numeric_limits<uint16_t>::max();
 
-// For drogon, we need to minimize the number of default workers since this value is set for both: unary and streaming (making it always double)
-const uint64_t DEFAULT_REST_WORKERS = AVAILABLE_CORES;
 const uint32_t DEFAULT_GRPC_MAX_THREADS = AVAILABLE_CORES * 8.0;
 const size_t DEFAULT_GRPC_MEMORY_QUOTA = (size_t)2 * 1024 * 1024 * 1024;  // 2GB
 const uint64_t MAX_REST_WORKERS = 10'000;
+
+// We need to minimize the number of default drogon workers since this value is set for both: unary and streaming (making it always double)
+// on linux, restrict also based on the max allowed number of open files
+#ifdef __linux__
+
+static uint64_t getMaxOpenFilesLimit() {
+    struct rlimit limit;
+    if (getrlimit(RLIMIT_NOFILE, &limit) == 0) {
+        return limit.rlim_cur;
+    }
+    return std::numeric_limits<uint64_t>::max();
+}
+
+const uint64_t RESERVED_OPEN_FILES = 15;  // we need to reserve some file descriptors for other operations, so we don't want to use all of them for drogon workers
+uint64_t getDefaultRestWorkers() {
+    const uint64_t maxOpenFiles = getMaxOpenFilesLimit();
+    if (maxOpenFiles <= RESERVED_OPEN_FILES) {
+        return static_cast<uint64_t>(2);  // minimum functional number
+    }
+    return std::min(static_cast<uint64_t>(AVAILABLE_CORES), (maxOpenFiles - RESERVED_OPEN_FILES) / 7);  // 5x rest_workers to initialize ovms and 2x rest_workers for new connections
+}
+#else
+uint64_t getDefaultRestWorkers() {
+    return AVAILABLE_CORES;
+}
+#endif
 
 Config& Config::parse(int argc, char** argv) {
     ovms::CLIParser parser;
@@ -306,6 +334,12 @@ bool Config::validate() {
         std::cerr << "rest_workers is set but rest_port is not set. rest_port is required to start rest servers" << std::endl;
         return false;
     }
+#ifdef __linux__
+    if (restWorkers() > (getMaxOpenFilesLimit() - RESERVED_OPEN_FILES) / 6) {
+        std::cerr << "rest_workers count cannot be larger than " << (getMaxOpenFilesLimit() - RESERVED_OPEN_FILES) / 6 << " due to open files limit. Current open files limit: " << getMaxOpenFilesLimit() << std::endl;
+        return false;
+    }
+#endif
 
 #ifdef _WIN32
     if (grpcWorkers() > WIN_MAX_GRPC_WORKERS) {
@@ -368,7 +402,7 @@ const std::string Config::restBindAddress() const { return this->serverSettings.
 uint32_t Config::grpcWorkers() const { return this->serverSettings.grpcWorkers; }
 uint32_t Config::grpcMaxThreads() const { return this->serverSettings.grpcMaxThreads.value_or(DEFAULT_GRPC_MAX_THREADS); }
 size_t Config::grpcMemoryQuota() const { return this->serverSettings.grpcMemoryQuota.value_or(DEFAULT_GRPC_MEMORY_QUOTA); }
-uint32_t Config::restWorkers() const { return this->serverSettings.restWorkers.value_or(DEFAULT_REST_WORKERS); }
+uint32_t Config::restWorkers() const { return this->serverSettings.restWorkers.value_or(getDefaultRestWorkers()); }
 const std::string& Config::modelName() const { return this->modelsSettings.modelName; }
 const std::string& Config::modelPath() const { return this->modelsSettings.modelPath; }
 const std::string& Config::batchSize() const {
