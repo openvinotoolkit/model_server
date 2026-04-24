@@ -143,6 +143,12 @@ ovms_cc_library(
     name = "io_processing_utils",
     hdrs = ["io_processing/utils.hpp"],
     srcs = ["io_processing/utils.cpp"],
+    deps = [
+        "@com_github_tencent_rapidjson//:rapidjson",
+        "//src/port:rapidjson_stringbuffer",
+        "//src/port:rapidjson_writer",
+        "//src/port:rapidjson_document",
+    ],
     visibility = ["//visibility:public"],
 )
 
@@ -175,6 +181,23 @@ ovms_cc_library(
     ],
     visibility = ["//visibility:public"],
 )
+
+ovms_cc_library(
+    name = "io_processing_lfm2_tool_parser",
+    hdrs = ["io_processing/lfm2/tool_parser.hpp"],
+    srcs = ["io_processing/lfm2/tool_parser.cpp"],
+    deps = [
+        "@com_github_tencent_rapidjson//:rapidjson",
+        "//src/port:rapidjson_document",
+        "//src:libovmslogging",
+        "//src:libovmsstring_utils",
+        ":io_processing_utils",
+        ":io_processing_base_output_parser",
+        "//third_party:genai",
+    ],
+    visibility = ["//visibility:public"],
+)
+
 ovms_cc_library( # TODO split further so we don't have to recompile everything when changing one parser ...
     name = "output_parsers",
     hdrs = [
@@ -210,6 +233,7 @@ ovms_cc_library( # TODO split further so we don't have to recompile everything w
         ":partial_json_builder",
         ":io_processing_base_output_parser",
         ":io_processing_qwen3coder_tool_parser",
+        ":io_processing_lfm2_tool_parser",
         ":io_processing_utils",
         ":apis_tool_schema_wrapper",
     ],

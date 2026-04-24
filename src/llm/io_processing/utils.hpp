@@ -16,7 +16,16 @@
 #pragma once
 #include <string>
 
+#pragma warning(push)
+#pragma warning(disable : 6313)
+#include <rapidjson/writer.h>
+#include <rapidjson/document.h>
+#include <rapidjson/stringbuffer.h>
+#pragma warning(pop)
+
 namespace ovms {
+size_t findInStringRespectingSpecialChars(const std::string& str, const std::string& target, size_t startPos);
+void writeArgumentOfAnyType(const rapidjson::Value& arg, rapidjson::Writer<rapidjson::StringBuffer>& writer);
 // Generates random alphanumeric string of length 9 for tool call ID
 std::string generateRandomId();
 }  // namespace ovms
