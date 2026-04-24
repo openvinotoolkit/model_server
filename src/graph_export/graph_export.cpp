@@ -365,8 +365,14 @@ node {
     << exportSettings.modelName << R"("
     calculator: "S2tCalculator"
     input_side_packet: "STT_NODE_RESOURCES:s2t_servable"
+    input_stream: "LOOPBACK:loopback"
     input_stream: "HTTP_REQUEST_PAYLOAD:input"
+    output_stream: "LOOPBACK:loopback"
     output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+    input_stream_info: {
+        tag_index: 'LOOPBACK:0',
+        back_edge: true
+    }
     node_options: {
         [type.googleapis.com / mediapipe.S2tCalculatorOptions]: {
             models_path: ")"
@@ -378,6 +384,16 @@ node {
         )";
     }
     oss << R"(}
+    }
+    input_stream_handler {
+        input_stream_handler: "SyncSetInputStreamHandler",
+        options {
+            [mediapipe.SyncSetInputStreamHandlerOptions.ext] {
+                sync_set {
+                    tag_index: "LOOPBACK:0"
+                }
+            }
+        }
     }
 })";
 #if (MEDIAPIPE_DISABLE == 0)

@@ -13,32 +13,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-
 #pragma once
 
-#include <memory>
-
-#include "openvino/genai/llm_pipeline.hpp"
-
-#include "../../../logging.hpp"
-#include "../../../profiler.hpp"
-#include "../../../executor_base.hpp"
+#include <sstream>
+#include <string>
 
 namespace ovms {
-struct LegacyServableExecutionContext;
 
-struct LegacyExecutor : public Executor<std::shared_ptr<LegacyServableExecutionContext>> {
-    std::shared_ptr<ov::genai::LLMPipeline> pipe;
+inline std::string wrapTextInServerSideEventMessage(const std::string& text) {
+    std::stringstream ss;
+    ss << "data: " << text << "\n\n";
+    return ss.str();
+}
 
-    LegacyExecutor(std::shared_ptr<ov::genai::LLMPipeline> pipe);
-
-    void processRequest();
-    void addRequest(std::shared_ptr<LegacyServableExecutionContext> request);
-};
-
-class LegacyExecutorWrapper : public ExecutorWrapper<LegacyExecutor> {
-public:
-    LegacyExecutorWrapper(std::shared_ptr<ov::genai::LLMPipeline> pipe);
-    void addRequest(std::shared_ptr<LegacyServableExecutionContext> request);
-};
 }  // namespace ovms

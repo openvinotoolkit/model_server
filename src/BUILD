@@ -52,6 +52,16 @@ cc_library(
     copts = COMMON_STATIC_LIBS_COPTS,
 )
 
+ovms_cc_library(
+    name = "executor_base",
+    hdrs = ["executor_base.hpp"],
+    deps = [
+        "//src:libovmslogging",
+    ],
+    visibility = ["//visibility:public"],
+    alwayslink = 1,
+)
+
 cc_shared_library(
     name = "ovms_shared",
     dynamic_deps = [],
@@ -1232,6 +1242,12 @@ ovms_cc_library(
 
 
 ovms_cc_library(
+    name = "sse_utils",
+    hdrs = ["sse_utils.hpp"],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
     name = "libovmsstatus",
     hdrs = ["status.hpp",],
     srcs = ["status.cpp",],
@@ -2243,6 +2259,7 @@ cc_test(
                 "test/llm/visual_language_model/initialization_test.cpp",
                 "test/audio/text2speech_test.cpp",
                 "test/audio/speech2text_test.cpp",
+                "test/audio/s2t_streaming_test.cpp",
             ],
             "//:disable_mediapipe" : [
                 "test/disabled_mediapipe_test.cpp",

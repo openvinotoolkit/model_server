@@ -355,15 +355,6 @@ absl::Status GenAiServable::preparePartialResponse(std::shared_ptr<GenAiServable
     return absl::OkStatus();
 }
 
-#pragma warning(push)
-#pragma warning(disable : 4505)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-function";
-std::string wrapTextInServerSideEventMessage(const std::string& text) {
-    std::stringstream ss;
-    ss << "data: " << text << "\n\n";
-    return ss.str();
-}
 void logRequestDetails(const ovms::HttpPayload& payload) {
     auto parsedJson = payload.parsedJson;
     rapidjson::StringBuffer buffer;
@@ -372,7 +363,5 @@ void logRequestDetails(const ovms::HttpPayload& payload) {
     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Request body: {}", buffer.GetString());
     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Request uri: {}", payload.uri);
 }
-#pragma GCC diagnostic pop
-#pragma warning(push)
 
 }  // namespace ovms

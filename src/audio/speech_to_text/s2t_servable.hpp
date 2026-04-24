@@ -15,9 +15,13 @@
 //*****************************************************************************
 #pragma once
 
+#include <future>
 #include <memory>
+#include <mutex>
+#include <stdexcept>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 #pragma warning(push)
@@ -30,6 +34,7 @@
 
 #include "openvino/genai/whisper_pipeline.hpp"
 #include "openvino/genai/speech_generation/text2speech_pipeline.hpp"
+#include "src/audio/speech_to_text/s2t_executor.hpp"
 #include "src/audio/speech_to_text/s2t_calculator.pb.h"
 #include "src/json_parser.hpp"
 #include "src/status.hpp"
@@ -38,10 +43,14 @@
 namespace ovms {
 
 struct SttServable {
+    using StreamingJob = SttStreamingJob;
+
     std::filesystem::path parsedModelsPath;
     std::shared_ptr<ov::genai::WhisperPipeline> sttPipeline;
     std::mutex sttPipelineMutex;
     bool enableWordTimestamps;
+
+    std::unique_ptr<SttExecutorWrapper> streamingExecutor;
 
     SttServable(const ::mediapipe::S2tCalculatorOptions& nodeOptions, const std::string& graphPath) {
         auto fsModelsPath = std::filesystem::path(nodeOptions.models_path());
@@ -61,6 +70,17 @@ struct SttServable {
             config["STATIC_PIPELINE"] = true;
         config["word_timestamps"] = enableWordTimestamps;
         sttPipeline = std::make_shared<ov::genai::WhisperPipeline>(parsedModelsPath.string(), nodeOptions.target_device(), config);
+
+        streamingExecutor = std::make_unique<SttExecutorWrapper>();
+    }
+
+    ~SttServable() = default;
+
+    std::future<ov::genai::WhisperDecodedResults> addRequest(StreamingJob&& job) {
+        if (!streamingExecutor) {
+            throw std::runtime_error("Cannot schedule STT streaming job - executor not initialized");
+        }
+        return streamingExecutor->addRequest(std::move(job));
     }
 };
 
