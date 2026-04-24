@@ -21,6 +21,7 @@
 #include <mutex>
 #include <queue>
 #include <thread>
+#include <utility>
 
 #include <spdlog/spdlog.h>
 
