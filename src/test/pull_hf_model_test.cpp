@@ -14,6 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 #include <array>
+#include <chrono>
 #include <iomanip>
 #include <memory>
 #include <openssl/sha.h>
@@ -22,6 +23,12 @@
 #include <string_view>
 #include <thread>
 #include <vector>
+
+#ifndef _WIN32
+#include <signal.h>
+#include <sys/wait.h>
+#include <unistd.h>
+#endif
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -337,6 +344,124 @@ TEST_F(HfDownloaderPullHfModel, Resume) {
     ASSERT_EQ(expectedDigest, resumedDigest);
 }
 
+TEST_F(HfDownloaderPullHfModel, ResumeAfterShutdownRequestAndRerun) {
+    SKIP_AND_EXIT_IF_NOT_RUNNING_UNSTABLE();  // SSL proxy blocked workaround
+    std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
+    std::string downloadPath = ovms::FileSystem::joinPath({this->directoryPath, "repository"});
+    std::string task = "text_generation";
+    std::string basePath = ovms::FileSystem::joinPath({this->directoryPath, "repository", "OpenVINO", "Phi-3-mini-FastDraft-50M-int8-ov"});
+    std::string modelPath = ovms::FileSystem::appendSlash(basePath) + "openvino_model.bin";
+    std::string model2Path = ovms::FileSystem::appendSlash(basePath) + "openvino_detokenizer.bin";
+    std::string model3Path = ovms::FileSystem::appendSlash(basePath) + "openvino_tokenizer.bin";
+    std::string model4Path = ovms::FileSystem::appendSlash(basePath) + "tokenizer.model";
+    std::string graphPath = ovms::FileSystem::appendSlash(basePath) + "graph.pbtxt";
+
+    server.setShutdownRequest(0);
+    int firstRunCode = EXIT_SUCCESS;
+    char* argv[] = {(char*)"ovms",
+        (char*)"--pull",
+        (char*)"--source_model",
+        (char*)modelName.c_str(),
+        (char*)"--model_repository_path",
+        (char*)downloadPath.c_str(),
+        (char*)"--task",
+        (char*)task.c_str()};
+    int argc = 8;
+    t.reset(new std::thread([&argc, &argv, &firstRunCode, this]() {
+        firstRunCode = this->server.start(argc, argv);
+    }));
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+    server.setShutdownRequest(1);
+    EnsureServerModelDownloadFinishedWithTimeout(server, 120);
+    if (t)
+        t->join();
+    server.setShutdownRequest(0);
+
+    EXPECT_NE(firstRunCode, EXIT_SUCCESS);
+    auto remainingPointers = ovms::libgit2::findLfsLikeFiles(downloadPath, true);
+    EXPECT_FALSE(remainingPointers.empty());
+
+    this->ServerPullHfModel(modelName, downloadPath, task);
+
+    ASSERT_EQ(std::filesystem::exists(modelPath), true) << modelPath;
+    ASSERT_EQ(std::filesystem::exists(graphPath), true) << graphPath;
+    ASSERT_EQ(std::filesystem::file_size(modelPath), 52417240);
+    ASSERT_EQ(std::filesystem::file_size(model2Path), 339125);
+    ASSERT_EQ(std::filesystem::file_size(model3Path), 500292);
+    ASSERT_EQ(std::filesystem::file_size(model4Path), 499723);
+}
+
+TEST_F(HfDownloaderPullHfModel, ResumeAfterForcedTerminationAndRerun) {
+    SKIP_AND_EXIT_IF_NOT_RUNNING_UNSTABLE();  // SSL proxy blocked workaround
+#ifdef _WIN32
+    GTEST_SKIP() << "Forceful child-process termination path is Linux-only in this test.";
+#else
+    std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
+    std::string downloadPath = ovms::FileSystem::joinPath({this->directoryPath, "repository"});
+    std::string task = "text_generation";
+    std::string basePath = ovms::FileSystem::joinPath({this->directoryPath, "repository", "OpenVINO", "Phi-3-mini-FastDraft-50M-int8-ov"});
+    std::string modelPath = ovms::FileSystem::appendSlash(basePath) + "openvino_model.bin";
+    std::string model2Path = ovms::FileSystem::appendSlash(basePath) + "openvino_detokenizer.bin";
+    std::string model3Path = ovms::FileSystem::appendSlash(basePath) + "openvino_tokenizer.bin";
+    std::string model4Path = ovms::FileSystem::appendSlash(basePath) + "tokenizer.model";
+    std::string graphPath = ovms::FileSystem::appendSlash(basePath) + "graph.pbtxt";
+
+    pid_t childPid = fork();
+    ASSERT_NE(childPid, -1);
+
+    if (childPid == 0) {
+        ovms::Server& childServer = ovms::Server::instance();
+        childServer.setShutdownRequest(0);
+        char* argv[] = {(char*)"ovms",
+            (char*)"--pull",
+            (char*)"--source_model",
+            (char*)modelName.c_str(),
+            (char*)"--model_repository_path",
+            (char*)downloadPath.c_str(),
+            (char*)"--task",
+            (char*)task.c_str()};
+        int argc = 8;
+
+        std::thread childThread([&argc, &argv, &childServer]() {
+            (void)childServer.start(argc, argv);
+        });
+        childThread.detach();
+
+        auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(30);
+        while (std::chrono::steady_clock::now() < deadline) {
+            auto lfsCandidates = ovms::libgit2::findLfsLikeFiles(downloadPath, true);
+            auto hasOpenvinoModelPointer = std::find(lfsCandidates.begin(), lfsCandidates.end(), std::filesystem::path("openvino_model.bin")) != lfsCandidates.end();
+            if (std::filesystem::exists(modelPath) || hasOpenvinoModelPointer) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(200));
+                break;
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        }
+
+        kill(getpid(), SIGKILL);
+        _exit(1);
+    }
+
+    int childStatus = 0;
+    ASSERT_EQ(waitpid(childPid, &childStatus, 0), childPid);
+    ASSERT_TRUE(WIFSIGNALED(childStatus));
+    ASSERT_EQ(WTERMSIG(childStatus), SIGKILL);
+
+    auto remainingPointers = ovms::libgit2::findLfsLikeFiles(downloadPath, true);
+    EXPECT_FALSE(remainingPointers.empty());
+
+    this->ServerPullHfModel(modelName, downloadPath, task);
+
+    ASSERT_EQ(std::filesystem::exists(modelPath), true) << modelPath;
+    ASSERT_EQ(std::filesystem::exists(graphPath), true) << graphPath;
+    ASSERT_EQ(std::filesystem::file_size(modelPath), 52417240);
+    ASSERT_EQ(std::filesystem::file_size(model2Path), 339125);
+    ASSERT_EQ(std::filesystem::file_size(model3Path), 500292);
+    ASSERT_EQ(std::filesystem::file_size(model4Path), 499723);
+#endif
+}
+
 TEST_F(HfDownloaderPullHfModel, PositiveDownloadAndStart) {
     SKIP_AND_EXIT_IF_NOT_RUNNING_UNSTABLE();  // CVS-180127
     // EnvGuard guard;
@@ -527,6 +652,17 @@ TEST(HfDownloaderClassTest, RepositoryStatusCheckErrors) {
         exit(0);
     },
         ::testing::ExitedWithCode(0), "");
+}
+
+TEST(HfDownloaderClassTest, CloneCancellationFollowsServerShutdownRequest) {
+    ovms::Server& server = ovms::Server::instance();
+    server.setShutdownRequest(0);
+    EXPECT_FALSE(ovms::libgit2::isCloneCancellationRequestedFromServer());
+
+    server.setShutdownRequest(1);
+    EXPECT_TRUE(ovms::libgit2::isCloneCancellationRequestedFromServer());
+
+    server.setShutdownRequest(0);
 }
 
 class TestOptimumDownloaderSetup : public ::testing::Test {
@@ -776,6 +912,22 @@ TEST_F(HfDownloaderPullHfModel, MethodsNegative) {
     EXPECT_EQ(TestHfDownloader("name/test", "../some/path", "", "", "", false).downloadModel(), ovms::StatusCode::PATH_INVALID);
     // Library not initialized
     EXPECT_EQ(TestHfDownloader("name/test", ovms::IModelDownloader::getGraphDirectory(this->directoryPath, "name2/test"), "", "", "", false).downloadModel(), ovms::StatusCode::HF_GIT_CLONE_FAILED);
+}
+
+TEST_F(HfDownloaderPullHfModel, CloneCancelledByShutdownRequest) {
+    std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
+    std::string downloadPath = ovms::FileSystem::joinPath({this->directoryPath, "repository_cancel"});
+    std::unique_ptr<TestHfDownloader> hfDownloader = std::make_unique<TestHfDownloader>(
+        modelName,
+        ovms::IModelDownloader::getGraphDirectory(downloadPath, modelName),
+        "https://huggingface.co/",
+        "",
+        "",
+        false);
+
+    server.setShutdownRequest(1);
+    EXPECT_EQ(hfDownloader->downloadModel(), ovms::StatusCode::HF_GIT_CLONE_CANCELLED);
+    server.setShutdownRequest(0);
 }
 
 class TestHfPullModelModule : public ovms::HfPullModelModule {

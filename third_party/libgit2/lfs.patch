@@ -9,10 +9,10 @@ index 1b482f038..d0fe70060 100644
 +.vscode
  .idea
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 31da49a88..d61c9735e 100644
+index 3e9747575..96035cdc6 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -121,11 +121,6 @@ include(ExperimentalFeatures)
+@@ -108,11 +108,6 @@ include(ExperimentalFeatures)
  
  add_subdirectory(src)
  
@@ -21,8 +21,8 @@ index 31da49a88..d61c9735e 100644
 -	add_subdirectory(tests)
 -endif()
 -
- if(BUILD_EXAMPLES)
- 	add_subdirectory(examples)
+ if(BUILD_BENCHMARKS)
+ 	add_subdirectory(benchmarks)
  endif()
 diff --git a/cmake/ExperimentalFeatures.cmake b/cmake/ExperimentalFeatures.cmake
 index 7eff40bdb..5562acc77 100644
@@ -36,10 +36,10 @@ index 7eff40bdb..5562acc77 100644
 -	set(LIBGIT2_FILENAME "${LIBGIT2_FILENAME}-experimental")
 -endif()
 diff --git a/include/git2/oid.h b/include/git2/oid.h
-index 0af9737a0..6d9a8b08a 100644
+index f1920648b..726b46614 100644
 --- a/include/git2/oid.h
 +++ b/include/git2/oid.h
-@@ -22,14 +22,8 @@ GIT_BEGIN_DECL
+@@ -21,14 +21,8 @@ GIT_BEGIN_DECL
  
  /** The type of object id. */
  typedef enum {
@@ -55,10 +55,10 @@ index 0af9737a0..6d9a8b08a 100644
  
  /*
 diff --git a/include/git2/repository.h b/include/git2/repository.h
-index b203576af..26309dd3f 100644
+index 62faefa62..3a1353f0f 100644
 --- a/include/git2/repository.h
 +++ b/include/git2/repository.h
-@@ -184,6 +184,15 @@ GIT_EXTERN(int) git_repository_open_ext(
+@@ -185,6 +185,15 @@ GIT_EXTERN(int) git_repository_open_ext(
  	unsigned int flags,
  	const char *ceiling_dirs);
  
@@ -111,7 +111,7 @@ index d121c588a..b54a01a4b 100644
  
  #
 diff --git a/src/cli/cmd_clone.c b/src/cli/cmd_clone.c
-index c18cb28d4..9f89cd1b3 100644
+index c18cb28d4..20b83e410 100644
 --- a/src/cli/cmd_clone.c
 +++ b/src/cli/cmd_clone.c
 @@ -4,9 +4,9 @@
@@ -134,73 +134,74 @@ index c18cb28d4..9f89cd1b3 100644
  
  	if (!checkout)
  		clone_opts.checkout_opts.checkout_strategy = GIT_CHECKOUT_NONE;
-@@ -182,6 +183,69 @@ int cmd_clone(int argc, char **argv)
+@@ -182,6 +183,70 @@ int cmd_clone(int argc, char **argv)
  
  	cli_progress_finish(&progress);
  
-+	// Code below for testing resume in native libgit2
-+	git_repository *repo2 = NULL;
-+	int error = git_repository_open_ext(&repo2, local_path, 0, NULL);
-+	// HEAD state info
-+	bool is_detached = git_repository_head_detached(repo2) == 1;
-+	bool is_unborn = git_repository_head_unborn(repo2) == 1;
++	/* Code below for testing resume in native libgit2 */
++	{
++		git_repository *repo2 = NULL;
++		git_status_options opts = GIT_STATUS_OPTIONS_INIT;
++		git_status_list *status_list = NULL;
++		size_t staged = 0, unstaged = 0, untracked = 0, conflicted = 0;
++		size_t n, i;
++		int is_detached, is_unborn;
 +
-+	// Collect status (staged/unstaged/untracked)
-+	git_status_options opts = GIT_STATUS_OPTIONS_INIT;
++		git_repository_open_ext(&repo2, local_path, 0, NULL);
 +
-+	opts.show = GIT_STATUS_SHOW_INDEX_AND_WORKDIR;
-+	opts.flags = GIT_STATUS_OPT_INCLUDE_UNTRACKED // include untracked files
-+	                                              // // |
-+	                                              // GIT_STATUS_OPT_RENAMES_HEAD_TO_INDEX
-+	                                              // // detect renames
-+	                                              // HEAD->index - not
-+	                                              // required currently and
-+	                                              // impacts performance
-+	             | GIT_STATUS_OPT_SORT_CASE_SENSITIVELY;
++		/* HEAD state info */
++		is_detached = git_repository_head_detached(repo2) == 1;
++		is_unborn   = git_repository_head_unborn(repo2)   == 1;
 +
-+	git_status_list *status_list = NULL;
-+	ret = git_status_list_new(&status_list, repo2, &opts);
++		/* Collect status (staged/unstaged/untracked) */
++		opts.show  = GIT_STATUS_SHOW_INDEX_AND_WORKDIR;
++		opts.flags = GIT_STATUS_OPT_INCLUDE_UNTRACKED
++		             | GIT_STATUS_OPT_SORT_CASE_SENSITIVELY;
 +
-+	size_t staged = 0, unstaged = 0, untracked = 0, conflicted = 0;
-+	const size_t n = git_status_list_entrycount(status_list);
++		ret = git_status_list_new(&status_list, repo2, &opts);
 +
-+	for (size_t i = 0; i < n; ++i) {
-+		const git_status_entry *e = git_status_byindex(status_list, i);
-+		if (!e)
-+			continue;
-+		unsigned s = e->status;
++		n = git_status_list_entrycount(status_list);
++		for (i = 0; i < n; ++i) {
++			const git_status_entry *e = git_status_byindex(status_list, i);
++			unsigned int s;
++			if (!e)
++				continue;
++			s = e->status;
 +
-+		// Staged (index) changes
-+		if (s & (GIT_STATUS_INDEX_NEW | GIT_STATUS_INDEX_MODIFIED |
-+		         GIT_STATUS_INDEX_DELETED | GIT_STATUS_INDEX_RENAMED |
-+		         GIT_STATUS_INDEX_TYPECHANGE))
-+			++staged;
++			/* Staged (index) changes */
++			if (s & (GIT_STATUS_INDEX_NEW | GIT_STATUS_INDEX_MODIFIED |
++			         GIT_STATUS_INDEX_DELETED | GIT_STATUS_INDEX_RENAMED |
++			         GIT_STATUS_INDEX_TYPECHANGE))
++				++staged;
 +
-+		// Unstaged (workdir) changes
-+		if (s & (GIT_STATUS_WT_MODIFIED | GIT_STATUS_WT_DELETED |
-+		         GIT_STATUS_WT_RENAMED | GIT_STATUS_WT_TYPECHANGE))
-+			++unstaged;
++			/* Unstaged (workdir) changes */
++			if (s & (GIT_STATUS_WT_MODIFIED | GIT_STATUS_WT_DELETED |
++			         GIT_STATUS_WT_RENAMED | GIT_STATUS_WT_TYPECHANGE))
++				++unstaged;
 +
-+		// Untracked
-+		if (s & GIT_STATUS_WT_NEW)
-+			++untracked;
++			/* Untracked */
++			if (s & GIT_STATUS_WT_NEW)
++				++untracked;
 +
-+		// Conflicted
-+		if (s & GIT_STATUS_CONFLICTED)
-+			++conflicted;
++			/* Conflicted */
++			if (s & GIT_STATUS_CONFLICTED)
++				++conflicted;
++		}
++
++		/* Print summary */
++		printf("HEAD state      : %s\n",
++		       is_unborn ? "unborn (no commits)" :
++		                   (is_detached ? "detached" : "attached"));
++		printf("Staged changes  : %zu\n", staged);
++		printf("Unstaged changes: %zu\n", unstaged);
++		printf("Untracked files : %zu", untracked);
++		if (conflicted)
++			printf(" (%zu paths flagged)", conflicted);
++		printf("\n");
++
++		git_status_list_free(status_list);
++		git_repository_free(repo2);
 +	}
-+
-+	// Print summary (mirrors your original stream output)
-+	printf("HEAD state      : %s\n",
-+	       is_unborn ? "unborn (no commits)" :
-+                           (is_detached ? "detached" : "attached"));
-+	printf("Staged changes  : %zu\n", staged);
-+	printf("Unstaged changes: %zu\n", unstaged);
-+	printf("Untracked files : %zu", untracked);
-+	if (conflicted) {
-+		printf(" (%zu paths flagged)", conflicted);
-+	}
-+	printf("\n");
  done:
  	cli_progress_dispose(&progress);
  	git__free(computed_path);
@@ -261,7 +262,7 @@ index 05a67fb14..da56c42f6 100644
  	BOOL result;
  
 diff --git a/src/libgit2/CMakeLists.txt b/src/libgit2/CMakeLists.txt
-index a7d3c7ca4..13e9dfc37 100644
+index 195be8002..d3bfe0377 100644
 --- a/src/libgit2/CMakeLists.txt
 +++ b/src/libgit2/CMakeLists.txt
 @@ -5,25 +5,29 @@ add_library(libgit2 OBJECT)
@@ -330,7 +331,7 @@ index a7d3c7ca4..13e9dfc37 100644
  		target_compile_definitions(libgit2package PRIVATE LIBGIT2_FILENAME=\"${LIBGIT2_FILENAME}\")
  		set_target_properties(libgit2package PROPERTIES OUTPUT_NAME ${LIBGIT2_FILENAME})
 diff --git a/src/libgit2/clone.c b/src/libgit2/clone.c
-index 237efc0ba..d439d01cc 100644
+index e4d9c134f..10131ce50 100644
 --- a/src/libgit2/clone.c
 +++ b/src/libgit2/clone.c
 @@ -24,6 +24,7 @@
@@ -444,10 +445,10 @@ index 58cb4b424..00ddee9f3 100644
  	git_writestream **out,
 diff --git a/src/libgit2/lfs_filter.c b/src/libgit2/lfs_filter.c
 new file mode 100644
-index 000000000..630573c3d
+index 000000000..c06bc8008
 --- /dev/null
 +++ b/src/libgit2/lfs_filter.c
-@@ -0,0 +1,1611 @@
+@@ -0,0 +1,1848 @@
 +﻿/*
 +/ Copyright 2025 Intel Corporation
 +/
@@ -471,6 +472,7 @@ index 000000000..630573c3d
 +#include <limits.h>
 +#include <stdlib.h>
 +#include <string.h>
++#include <stdarg.h>
 +#include <stdio.h>
 +
 +#include "array.h"
@@ -484,12 +486,124 @@ index 000000000..630573c3d
 +#include "regexp.h"
 +#include "time.h"
 +
++#if defined(__GNUC__) || defined(__clang__)
++/* Optional host-provided cancellation probe.
++ * If not defined by the embedding process, this stays NULL (weak symbol).
++ */
++extern int git_lfs_shutdown_requested(void) __attribute__((weak));
++#endif
++
++/*
++ * Exported global cancel flag.
++ * The embedding process may set this to non-zero at any time to abort all
++ * ongoing or future LFS downloads in this process.  Resetting it to 0
++ * before a new clone allows reuse.
++ * Access via symbol from the host: extern volatile int git_lfs_cancel_requested;
++ */
++#if defined(_WIN32)
++#define GIT_LFS_CANCEL_EXPORT __declspec(dllexport)
++#elif defined(__GNUC__) || defined(__clang__)
++#define GIT_LFS_CANCEL_EXPORT __attribute__((visibility("default")))
++#else
++#define GIT_LFS_CANCEL_EXPORT
++#endif
++GIT_LFS_CANCEL_EXPORT volatile int git_lfs_cancel_requested = 0;
++
 +#define LFS_RESUME_ATTEMPTS_DEFAULT 5
 +#define LFS_RESUME_INTERVAL_DEFAULT_SECONDS 10
 +
 +/* Configure how many resume attempts and how long to wait between them */
 +static int g_lfs_resume_attempts = 5; /* <-- make configurable */
 +static unsigned int g_lfs_resume_interval_secs = 10; /* <-- make configurable */
++
++/* Log file path (set once per lfs_download call from the repo workdir) */
++static char g_lfs_log_path[4096];
++/* Track if we've truncated the log file for the current workdir */
++static bool g_lfs_log_path_truncated = false;
++
++static int lfs_shutdown_requested(void)
++{
++	/* Check the exported global flag first – reliably set from the host
++	 * without requiring symbol interposition (-rdynamic). */
++	if (git_lfs_cancel_requested)
++		return 1;
++#if defined(__GNUC__) || defined(__clang__)
++	/* Fallback: weak symbol provided by the host executable. */
++	if (git_lfs_shutdown_requested)
++		return git_lfs_shutdown_requested() != 0;
++#endif
++	return 0;
++}
++
++/*
++ * lfs_log_set_path
++ * -----------------
++ * Sets the path for lfs_error.txt using the repository workdir.
++ * workdir must end with a path separator (as returned by
++ * git_repository_workdir).
++ *
++ * The log file is NOT created here. It will be created on the first
++ * error message for the current workdir.
++ */
++static void lfs_log_set_path(const char *workdir)
++{
++	char new_path[4096];
++
++	if (!workdir || !*workdir) {
++		g_lfs_log_path[0] = '\0';
++		g_lfs_log_path_truncated = false;
++		return;
++	}
++
++	snprintf(new_path, sizeof(new_path), "%slfs_error.txt", workdir);
++
++	/* If the path changed (new clone/operation), mark for truncation on
++	 * next error so errors from previous runs don't appear. */
++	if (strcmp(new_path, g_lfs_log_path) != 0) {
++		memcpy(g_lfs_log_path, new_path, strlen(new_path) + 1);
++		g_lfs_log_path_truncated = false;
++	}
++}
++
++/*
++ * lfs_log_error
++ * --------------
++ * Writes a formatted error message to stderr and, if a log path has been
++ * set via lfs_log_set_path(), also appends the message to lfs_error.txt
++ * in the repository root directory.
++ *
++ * The log file is created only when this function is first called for a
++ * given workdir. If no errors occur, the file is never created.
++ */
++static void lfs_log_error(const char *fmt, ...)
++{
++	va_list ap;
++	FILE *f;
++
++	va_start(ap, fmt);
++	vfprintf(stderr, fmt, ap);
++	va_end(ap);
++
++	if (g_lfs_log_path[0] != '\0') {
++		/* On first error for this workdir, truncate the file to clear
++		 * any errors from previous operations */
++		if (!g_lfs_log_path_truncated) {
++			f = fopen(g_lfs_log_path, "w");
++			if (f)
++				fclose(f);
++			g_lfs_log_path_truncated = true;
++		}
++
++		/* Append this error message */
++		f = fopen(g_lfs_log_path, "a");
++		if (f) {
++			va_start(ap, fmt);
++			vfprintf(f, fmt, ap);
++			va_end(ap);
++			fclose(f);
++		}
++	}
++}
 +
 +/*
 + * parse_env_nonneg_int
@@ -530,7 +644,7 @@ index 000000000..630573c3d
 +	val = strtoull(s, &end, 10);
 +
 +	if (errno == ERANGE || end == s) {
-+		fprintf(stderr, "[WARN] %s: invalid number, using default=%d\n",
++		lfs_log_error("[WARN] %s: invalid number, using default=%d\n",
 +		        env_name, default_value);
 +		*out_value = default_value;
 +		return -1;
@@ -539,7 +653,7 @@ index 000000000..630573c3d
 +	while (isspace((unsigned char)*end))
 +		end++;
 +	if (*end != '\0') {
-+		fprintf(stderr,
++		lfs_log_error(
 +		        "[WARN] %s: trailing characters ignored, using default=%d\n",
 +		        env_name, default_value);
 +		*out_value = default_value;
@@ -547,7 +661,7 @@ index 000000000..630573c3d
 +	}
 +
 +	if (val > (unsigned long long)INT_MAX) {
-+		fprintf(stderr, "[WARN] %s: value too large, capping to %d\n",
++		lfs_log_error("[WARN] %s: value too large, capping to %d\n",
 +		        env_name, INT_MAX);
 +		val = (unsigned long long)INT_MAX;
 +	}
@@ -598,7 +712,7 @@ index 000000000..630573c3d
 +	val = strtoull(s, &end, 10);
 +
 +	if (errno == ERANGE || end == s) {
-+		fprintf(stderr, "[WARN] %s: invalid number, using default=%u\n",
++		lfs_log_error("[WARN] %s: invalid number, using default=%u\n",
 +		        env_name, default_value);
 +		*out_value = default_value;
 +		return -1;
@@ -606,7 +720,7 @@ index 000000000..630573c3d
 +	while (isspace((unsigned char)*end))
 +		end++;
 +	if (*end != '\0') {
-+		fprintf(stderr,
++		lfs_log_error(
 +		        "[WARN] %s: trailing characters ignored, using default=%u\n",
 +		        env_name, default_value);
 +		*out_value = default_value;
@@ -835,19 +949,19 @@ index 000000000..630573c3d
 +	unsigned long long number;
 +	errno = 0;
 +	if (buffer == NULL) {
-+		fprintf(stderr, "\n[ERROR] get_digit on NULL\n");
++		lfs_log_error("\n[ERROR] get_digit on NULL\n");
 +		return 0;
 +	}
 +
 +	number = strtoull(buffer, &endptr, 10);
 +
 +	if (errno == ERANGE) {
-+		fprintf(stderr, "\n[ERROR] Conversion error\n");
++		lfs_log_error("\n[ERROR] Conversion error\n");
 +	}
 +	if (endptr == buffer) {
-+		fprintf(stderr, "\n[ERROR] No digits were found\n");
++		lfs_log_error("\n[ERROR] No digits were found\n");
 +	} else if (*endptr != '\0') {
-+		fprintf(stderr,
++		lfs_log_error(
 +		        "\n[ERROR] Additional characters after number: %s\n",
 +		        endptr);
 +	}
@@ -977,7 +1091,7 @@ index 000000000..630573c3d
 +
 +	/* 1) Init SHA-256 hashing context (internal API) */
 +	if (git_hash_ctx_init(&ctx, GIT_HASH_ALGORITHM_SHA256) < 0) {
-+		fprintf(stderr, "\n[ERROR] git_hash_ctx_init failed\n");
++		lfs_log_error("\n[ERROR] git_hash_ctx_init failed\n");
 +		goto error;
 +	}
 +
@@ -989,7 +1103,7 @@ index 000000000..630573c3d
 +	while (remaining > 0) {
 +		size_t n = remaining > CHUNK ? CHUNK : remaining;
 +		if (git_hash_update(&ctx, p, n) < 0) {
-+			fprintf(stderr, "\n[ERROR] git_hash_update failed\n");
++			lfs_log_error("\n[ERROR] git_hash_update failed\n");
 +			goto error;
 +		}
 +		p += n;
@@ -998,7 +1112,7 @@ index 000000000..630573c3d
 +
 +	/* 3) Finalize into git_oid (32-byte raw digest for SHA-256). */
 +	if (git_hash_final(out->id, &ctx) < 0) {
-+		fprintf(stderr, "\n[ERROR] git_hash_final failed\n");
++		lfs_log_error("\n[ERROR] git_hash_final failed\n");
 +		goto error;
 +	}
 +
@@ -1008,7 +1122,7 @@ index 000000000..630573c3d
 +		char hex[64 + 1];
 +		/* Formats full hex; no NUL added. */
 +		if (git_oid_fmt(hex, out) < 0) {
-+			fprintf(stderr,
++			lfs_log_error(
 +			        "\n[ERROR] failure, git_oid_fmt failed\n");
 +			goto error;
 +		}
@@ -1068,7 +1182,7 @@ index 000000000..630573c3d
 +	lfs_oid.type = GIT_OID_SHA256;
 +	if (git_oid_sha256_from_git_str_blob(
 +	            &lfs_oid, from, line, sizeof(line)) < 0) {
-+		fprintf(stderr, "\n[ERROR] failure, cannot calculate sha256\n");
++		lfs_log_error("\n[ERROR] failure, cannot calculate sha256\n");
 +		return -1;
 +	}
 +
@@ -1077,26 +1191,26 @@ index 000000000..630573c3d
 +	/* 1) version line (LFS spec requires this literal string) */
 +	if ((error = git_str_puts(
 +	             to, "version https://git-lfs.github.com/spec/v1\n")) < 0) {
-+		fprintf(stderr, "\n[ERROR] git_str_puts failed\n");
++		lfs_log_error("\n[ERROR] git_str_puts failed\n");
 +		return error;
 +	}
 +
 +	/* 2) the oid line passed by caller (must end with '\n') */
 +	if ((error = git_str_puts(to, line)) < 0) {
-+		fprintf(stderr, "\n[ERROR] git_str_puts failed\n");
++		lfs_log_error("\n[ERROR] git_str_puts failed\n");
 +		return error;
 +	}
 +
 +	if (line[strlen(line) - 1] != '\n') {
 +		if ((error = git_str_putc(to, '\n')) < 0) {
-+			fprintf(stderr, "\n[ERROR] git_str_putc failed\n");
++			lfs_log_error("\n[ERROR] git_str_putc failed\n");
 +			return error;
 +		}
 +	}
 +
 +	/* 3) size line from the original file size */
 +	if ((error = git_str_printf(to, "size %zu\n", from->size)) < 0) {
-+		fprintf(stderr, "\n[ERROR] git_str_printf failed\n");
++		lfs_log_error("\n[ERROR] git_str_printf failed\n");
 +		return error;
 +	}
 +
@@ -1160,7 +1274,7 @@ index 000000000..630573c3d
 +		goto on_error;
 +
 +	if (get_lfs_info_match(&lfs_oid, obj_regexp) < 0) {
-+		fprintf(stderr,
++		lfs_log_error(
 +		        "\n[ERROR] failure, cannot find lfs oid in: %s\n",
 +		        lfs_oid.ptr);
 +		goto on_error;
@@ -1169,7 +1283,7 @@ index 000000000..630573c3d
 +	lfs_attrs_set_oid(la, lfs_oid.ptr);
 +
 +	if (get_lfs_info_match(&lfs_size, size_regexp) < 0) {
-+		fprintf(stderr,
++		lfs_log_error(
 +		        "\n[ERROR] failure, cannot find lfs size in: %s\n",
 +		        lfs_size.ptr);
 +		goto on_error;
@@ -1178,7 +1292,7 @@ index 000000000..630573c3d
 +	lfs_attrs_set_size(la, lfs_size.ptr);
 +
 +	if (git_repository_workdir_path(&full_path, repo, path) < 0) {
-+		fprintf(stderr,
++		lfs_log_error(
 +		        "\n[ERROR] failure, cannot get repository path: %s\n",
 +		        path);
 +		goto on_error;
@@ -1397,6 +1511,9 @@ index 000000000..630573c3d
 +	struct progress_data *pcs = (struct progress_data *)clientp;
 +	time_t currentTime = time(NULL);
 +	bool shouldPrintDueToTime = false;
++	if (lfs_shutdown_requested())
++		return 1; /* CURLE_ABORTED_BY_CALLBACK */
++
 +	GIT_UNUSED(ulnow);
 +	GIT_UNUSED(ultotal);
 +	if (dlnow == 0) {
@@ -1450,7 +1567,7 @@ index 000000000..630573c3d
 +		/* open file for writing */
 +		out->stream = fopen(out->filename, "wb");
 +		if (!out->stream) {
-+			fprintf(stderr,
++			lfs_log_error(
 +			        "\n[ERROR] failure, cannot open file to write: %s\n",
 +			        out->filename);
 +			return 0; /* failure, cannot open file to write */
@@ -1460,7 +1577,7 @@ index 000000000..630573c3d
 +
 +	if (out->expected_size > 0) {
 +		if (out->written_size >= out->expected_size) {
-+			fprintf(stderr,
++			lfs_log_error(
 +			        "\n[ERROR] refusing extra download bytes for %s (expected=%" PRIu64
 +			        ")\n",
 +			        out->filename, out->expected_size);
@@ -1469,7 +1586,7 @@ index 000000000..630573c3d
 +
 +		if ((uint64_t)realsize >
 +		    (out->expected_size - out->written_size)) {
-+			fprintf(stderr,
++			lfs_log_error(
 +			        "\n[ERROR] server sent more data than expected for %s (expected=%" PRIu64
 +			        ")\n",
 +			        out->filename, out->expected_size);
@@ -1484,7 +1601,7 @@ index 000000000..630573c3d
 +		return 0;
 +
 +	if (to_write != realsize) {
-+		fprintf(stderr,
++		lfs_log_error(
 +		        "\n[WARN] server sent more data than expected for %s (expected=%" PRIu64
 +		        ")\n",
 +		        out->filename, out->expected_size);
@@ -1500,7 +1617,7 @@ index 000000000..630573c3d
 +		return CURLE_OK;
 +
 +	if (ftpfile->written_size != ftpfile->expected_size) {
-+		fprintf(stderr,
++		lfs_log_error(
 +		        "\n[ERROR] downloaded size mismatch for %s (got=%" PRIu64
 +		        ", expected=%" PRIu64 ")\n",
 +		        ftpfile->filename, ftpfile->written_size,
@@ -1557,6 +1674,69 @@ index 000000000..630573c3d
 +	}
 +
 +/*
++ * print_curl_error_details
++ * -------------------------
++ * Prints transport/TLS context for easier debugging of cURL failures.
++ */
++static void print_curl_error_details(
++		CURL *curl,
++		CURLcode res,
++		const char *phase,
++		const char *error_buffer)
++{
++	const char *url = NULL;
++	const char *primary_ip = NULL;
++	const char *local_ip = NULL;
++	long response_code = 0;
++	long primary_port = 0;
++	long local_port = 0;
++	long os_errno = 0;
++	long ssl_verify_result = 0;
++
++	if (!curl)
++		return;
++
++	(void)curl_easy_getinfo(curl, CURLINFO_EFFECTIVE_URL, &url);
++	(void)curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);
++	(void)curl_easy_getinfo(curl, CURLINFO_PRIMARY_IP, &primary_ip);
++	(void)curl_easy_getinfo(curl, CURLINFO_PRIMARY_PORT, &primary_port);
++	(void)curl_easy_getinfo(curl, CURLINFO_LOCAL_IP, &local_ip);
++	(void)curl_easy_getinfo(curl, CURLINFO_LOCAL_PORT, &local_port);
++	(void)curl_easy_getinfo(curl, CURLINFO_OS_ERRNO, &os_errno);
++	(void)curl_easy_getinfo(
++			curl, CURLINFO_SSL_VERIFYRESULT, &ssl_verify_result);
++
++	lfs_log_error("[ERROR] LFS %s failed: %s\n", phase,
++	        curl_easy_strerror(res));
++
++	if (error_buffer && *error_buffer)
++		lfs_log_error("[ERROR] cURL detail: %s\n", error_buffer);
++
++	if (url && *url)
++		lfs_log_error("[ERROR] URL: %s\n", url);
++
++	if (response_code > 0)
++		lfs_log_error("[ERROR] HTTP status: %ld\n", response_code);
++
++	if (primary_ip && *primary_ip)
++		lfs_log_error(
++		        "[ERROR] Remote endpoint: %s:%ld (local: %s:%ld)\n",
++		        primary_ip, primary_port, local_ip ? local_ip : "?",
++		        local_port);
++
++	if (os_errno != 0)
++		lfs_log_error("[ERROR] OS errno: %ld (%s)\n", os_errno,
++		        strerror((int)os_errno));
++
++	if (res == CURLE_PEER_FAILED_VERIFICATION ||
++	    res == CURLE_SSL_CACERT ||
++	    res == CURLE_SSL_CONNECT_ERROR)
++		lfs_log_error(
++		        "[ERROR] TLS verify result: %ld (0 means verify passed)\n",
++		        ssl_verify_result);
++}
++
++/*
 + * curl_resume_url_execute
 + * ------------------------
 + * Attempts to resume an interrupted download using HTTP Range.
@@ -1587,7 +1767,7 @@ index 000000000..630573c3d
 +
 +		if (ftpfile->expected_size > 0 &&
 +		    (uint64_t)offset > ftpfile->expected_size) {
-+			fprintf(stderr,
++			lfs_log_error(
 +			        "\n[WARN] local partial file is larger than expected (%" PRIu64
 +			        "), restarting download\n",
 +			        ftpfile->expected_size);
@@ -1595,7 +1775,7 @@ index 000000000..630573c3d
 +			fclose(ftpfile->stream);
 +			ftpfile->stream = fopen(ftpfile->filename, "wb");
 +			if (!ftpfile->stream) {
-+				fprintf(stderr,
++				lfs_log_error(
 +				        "\n[ERROR] Cannot truncate file %s\n",
 +				        ftpfile->filename);
 +				return -1;
@@ -1609,7 +1789,7 @@ index 000000000..630573c3d
 +		        existing file
 +		fclose(ftpfile->stream);*/
 +	} else {
-+		fprintf(stderr, "\n[ERROR] Cannot open file %s\n",
++		lfs_log_error("\n[ERROR] Cannot open file %s\n",
 +		        ftpfile->filename);
 +		return -1;
 +	}
@@ -1617,9 +1797,13 @@ index 000000000..630573c3d
 +	/* Tell libcurl to resume */
 +	curl_easy_setopt(dl_curl, CURLOPT_RESUME_FROM_LARGE, offset);
 +	/* Perform the request, res gets the return code */
++	if (lfs_shutdown_requested())
++		return CURLE_ABORTED_BY_CALLBACK;
 +
 +	/* Perform the request, res gets the return code */
 +	res = curl_easy_perform(dl_curl);
++	if (res == CURLE_OK && lfs_shutdown_requested())
++		return CURLE_ABORTED_BY_CALLBACK;
 +
 +	/* Validate that server honored Range (206) when offset > 0 */
 +	if (res == CURLE_OK && offset > 0) {
@@ -1627,7 +1811,7 @@ index 000000000..630573c3d
 +		curl_easy_getinfo(dl_curl, CURLINFO_RESPONSE_CODE, &http_code);
 +		if (http_code != 206) {
 +			/* Strict resume policy: restart from zero on non-206 */
-+			fprintf(stderr,
++			lfs_log_error(
 +			        "\n[ERROR] Server did not return 206 for resumed request (HTTP %ld), restarting from zero\n",
 +			        http_code);
 +
@@ -1638,7 +1822,7 @@ index 000000000..630573c3d
 +
 +			ftpfile->stream = fopen(ftpfile->filename, "wb");
 +			if (!ftpfile->stream) {
-+				fprintf(stderr,
++				lfs_log_error(
 +				        "\n[ERROR] Cannot truncate file %s\n",
 +				        ftpfile->filename);
 +				return -1;
@@ -1650,7 +1834,11 @@ index 000000000..630573c3d
 +			        dl_curl, CURLOPT_RESUME_FROM_LARGE, offset);
 +
 +			/* Retry exactly once as a full download. */
++			if (lfs_shutdown_requested())
++				return CURLE_ABORTED_BY_CALLBACK;
 +			res = curl_easy_perform(dl_curl);
++			if (res == CURLE_OK && lfs_shutdown_requested())
++				return CURLE_ABORTED_BY_CALLBACK;
 +		}
 +	}
 +
@@ -1682,7 +1870,11 @@ index 000000000..630573c3d
 +{
 +	CURLcode res = CURLE_OK;
 +	int attempt;
++	unsigned int slept;
 +	for (attempt = 1; attempt <= max_retries; ++attempt) {
++		if (lfs_shutdown_requested())
++			return CURLE_ABORTED_BY_CALLBACK;
++
 +		res = curl_resume_url_execute(dl_curl, ftpfile);
 +
 +		if (res == CURLE_OK) {
@@ -1693,14 +1885,23 @@ index 000000000..630573c3d
 +			return CURLE_OK;
 +		}
 +
-+		fprintf(stderr, "[WARN] Resume attempt %d/%d failed: %s\n",
++		lfs_log_error("[WARN] Resume attempt %d/%d failed: %s\n",
 +		        attempt, max_retries, curl_easy_strerror(res));
 +
 +		if (attempt < max_retries) {
++			if (lfs_shutdown_requested())
++				return CURLE_ABORTED_BY_CALLBACK;
++
 +			printf("[INFO] Waiting %u seconds before next resume attempt...\n",
 +			       interval_seconds);
 +			fflush(stdout);
-+			sleep_seconds(interval_seconds);
++			/* Sleep in short chunks so cancellation is responsive during
++			 * backoff waits. */
++			for (slept = 0; slept < interval_seconds; ++slept) {
++				if (lfs_shutdown_requested())
++					return CURLE_ABORTED_BY_CALLBACK;
++				sleep_seconds(1);
++			}
 +		}
 +	}
 +
@@ -1738,6 +1939,8 @@ index 000000000..630573c3d
 +	struct memory response = { 0 };
 +	struct curl_slist *chunk = NULL;
 +	struct FtpFile ftpfile = { 0 };
++	char info_error_buffer[CURL_ERROR_SIZE] = { 0 };
++	char download_error_buffer[CURL_ERROR_SIZE] = { 0 };
 +	const char *href_regexp =
 +	        "\"download\"\\s*:\\s*\\{\\s*\"href\":\"([^\"]+)\"";
 +	GIT_UNUSED(self);
@@ -1750,9 +1953,11 @@ index 000000000..630573c3d
 +		goto done;
 +	}
 +
++	lfs_log_set_path(la->workdir);
++
 +	tmp_out_file = append_cstr_to_buffer(la->full_path, "lfs_part");
 +	if (tmp_out_file == NULL) {
-+		fprintf(stderr, "\n[ERROR] lfs create temp filename failed\n");
++		lfs_log_error("\n[ERROR] lfs create temp filename failed\n");
 +		goto cleanup;
 +	}
 +
@@ -1764,14 +1969,14 @@ index 000000000..630573c3d
 +	/* get a curl handle */
 +	info_curl = curl_easy_init();
 +	if (!info_curl) {
-+		fprintf(stderr, "[ERROR] curl_easy_init(info_curl) failed\n");
++		lfs_log_error("[ERROR] curl_easy_init(info_curl) failed\n");
 +		goto cleanup;
 +	}
 +
 +	if (git_str_join(
 +	            &lfs_info_url, '.', la->url, "git/info/lfs/objects/batch") <
 +	    0) {
-+		fprintf(stderr, "\n[ERROR] failed to create url '%s'\n",
++		lfs_log_error("\n[ERROR] failed to create url '%s'\n",
 +		        la->full_path);
 +		goto cleanup;
 +	}
@@ -1787,6 +1992,8 @@ index 000000000..630573c3d
 +	/* First set the URL that is about to receive our POST. This URL
 +	    can just as well be an https:// URL if that is what should
 +	    receive the data. */
++	CURL_SETOPT(curl_easy_setopt(
++	        info_curl, CURLOPT_ERRORBUFFER, info_error_buffer));
 +	CURL_SETOPT(curl_easy_setopt(info_curl, CURLOPT_URL, lfs_info_url.ptr));
 +	/* Add cURL resiliency */
 +	/* unlimited data */
@@ -1800,7 +2007,7 @@ index 000000000..630573c3d
 +	CURL_SETOPT(curl_easy_setopt(info_curl, CURLOPT_LOW_SPEED_TIME, 30L));
 +
 +	if (status != CURLE_OK) {
-+		fprintf(stderr, "\n[ERROR] curl_easy_setopt() failed: %s\n",
++		lfs_log_error("\n[ERROR] curl_easy_setopt() failed: %s\n",
 +		        curl_easy_strerror(status));
 +		goto cleanup;
 +	}
@@ -1811,7 +2018,7 @@ index 000000000..630573c3d
 +	            &lfs_info_data, '"', 5,
 +	            "{\"operation\":\"download\",\"transfer\":[\"basic\"],\"objects\":[{\"oid\":",
 +	            la->lfs_oid, ",\"size\":", la->lfs_size, "}]}") < 0) {
-+		fprintf(stderr, "\n[ERROR] failed to create url '%s'\n",
++		lfs_log_error("\n[ERROR] failed to create url '%s'\n",
 +		        la->full_path);
 +		goto cleanup;
 +	}
@@ -1829,18 +2036,34 @@ index 000000000..630573c3d
 +	        info_curl, CURLOPT_USERAGENT, "git-lfs/3.5.0"));
 +	CURL_SETOPT(curl_easy_setopt(
 +	        info_curl, CURLOPT_WRITEDATA, (void *)&response));
++	CURL_SETOPT(curl_easy_setopt(info_curl, CURLOPT_CERTINFO, 1L));
++	/* Enable xferinfo callback on info_curl so batch request can be
++	 * cancelled mid-transfer by progress_callback returning non-zero. */
++	CURL_SETOPT(curl_easy_setopt(info_curl, CURLOPT_NOPROGRESS, 0L));
++	CURL_SETOPT(curl_easy_setopt(
++	        info_curl, CURLOPT_XFERINFOFUNCTION, progress_callback));
++	CURL_SETOPT(curl_easy_setopt(
++	        info_curl, CURLOPT_XFERINFODATA, &progress_d));
 +
 +	if (status != CURLE_OK) {
-+		fprintf(stderr, "\n[ERROR] curl_easy_setopt() failed: %s\n",
++		lfs_log_error("\n[ERROR] curl_easy_setopt() failed: %s\n",
 +		        curl_easy_strerror(status));
 +		goto cleanup;
 +	}
 +	/* Perform the request, res gets the return code */
++	if (lfs_shutdown_requested()) {
++		res = CURLE_ABORTED_BY_CALLBACK;
++		goto cleanup;
++	}
 +	res = curl_easy_perform(info_curl);
++	if (res == CURLE_OK && lfs_shutdown_requested()) {
++		res = CURLE_ABORTED_BY_CALLBACK;
++		goto cleanup;
++	}
 +	/* Check for errors */
 +	if (res != CURLE_OK) {
-+		fprintf(stderr, "\n[ERROR] curl_easy_perform() failed: %s\n",
-+		        curl_easy_strerror(res));
++		print_curl_error_details(
++		        info_curl, res, "batch request", info_error_buffer);
 +		goto cleanup;
 +	}
 +
@@ -1852,12 +2075,12 @@ index 000000000..630573c3d
 +	/* get a curl handle */
 +	dl_curl = curl_easy_init();
 +	if (!dl_curl) {
-+		fprintf(stderr, "[ERROR] curl_easy_init(dl_curl) failed\n");
++		lfs_log_error("[ERROR] curl_easy_init(dl_curl) failed\n");
 +		goto cleanup;
 +	}
 +
 +	if (get_lfs_info_match(&res_str, href_regexp) < 0) {
-+		fprintf(stderr, "[ERROR] Cannot extract LFS download URL\n");
++		lfs_log_error("[ERROR] Cannot extract LFS download URL\n");
 +		goto cleanup;
 +	}
 +	/* Progress info */
@@ -1866,10 +2089,13 @@ index 000000000..630573c3d
 +	/* First set the URL that is about to receive our POST. This URL
 +	    can just as well be an https:// URL if that is what should
 +	    receive the data. */
++	CURL_SETOPT(curl_easy_setopt(
++	        dl_curl, CURLOPT_ERRORBUFFER, download_error_buffer));
 +	CURL_SETOPT(curl_easy_setopt(dl_curl, CURLOPT_URL, res_str.ptr));
 +	CURL_SETOPT(curl_easy_setopt(
 +	        dl_curl, CURLOPT_SSL_OPTIONS, CURLSSLOPT_NATIVE_CA));
 +	CURL_SETOPT(curl_easy_setopt(dl_curl, CURLOPT_FOLLOWLOCATION, 1L));
++	CURL_SETOPT(curl_easy_setopt(dl_curl, CURLOPT_CERTINFO, 1L));
 +	CURL_SETOPT(curl_easy_setopt(dl_curl, CURLOPT_USE_SSL, CURLUSESSL_ALL));
 +	CURL_SETOPT(
 +	        curl_easy_setopt(dl_curl, CURLOPT_USERAGENT, "git-lfs/3.5.0"));
@@ -1895,7 +2121,7 @@ index 000000000..630573c3d
 +	/* for 30s */
 +	CURL_SETOPT(curl_easy_setopt(dl_curl, CURLOPT_LOW_SPEED_TIME, 30L));
 +	if (status != CURLE_OK) {
-+		fprintf(stderr, "\n[ERROR] curl_easy_setopt() failed: %s\n",
++		lfs_log_error("\n[ERROR] curl_easy_setopt() failed: %s\n",
 +		        curl_easy_strerror(status));
 +		goto cleanup;
 +	}
@@ -1915,14 +2141,22 @@ index 000000000..630573c3d
 +	} else {
 +		print_download_info(la->full_path, lfs_expected_size);
 +		/* Perform the request, res gets the return code */
++		if (lfs_shutdown_requested()) {
++			res = CURLE_ABORTED_BY_CALLBACK;
++			goto cleanup;
++		}
 +		res = curl_easy_perform(dl_curl);
++		if (res == CURLE_OK && lfs_shutdown_requested()) {
++			res = CURLE_ABORTED_BY_CALLBACK;
++			goto cleanup;
++		}
 +		if (res == CURLE_OK)
 +			res = ftpfile_validate_final_size(&ftpfile);
 +	}
 +
 +	/* Check for resume of partial download error */
 +	if (res == CURLE_PARTIAL_FILE) {
-+		fprintf(stderr,
++		lfs_log_error(
 +		        "[WARN] Got CURLE_PARTIAL_FILE, attempting resume sequence\n");
 +		res = download_with_resume(
 +		        dl_curl, &ftpfile, g_lfs_resume_attempts,
@@ -1931,8 +2165,12 @@ index 000000000..630573c3d
 +
 +	/* Check for errors */
 +	if (res != CURLE_OK) {
-+		fprintf(stderr, "\n[ERROR] curl_easy_perform() failed: %s\n",
-+		        curl_easy_strerror(res));
++		lfs_log_error(
++		        "[ERROR] Error downloading object: %s (%s)\n",
++		        la->path ? la->path : "(unknown)",
++		        la->lfs_oid ? la->lfs_oid : "(unknown)");
++		print_curl_error_details(
++		        dl_curl, res, "object download", download_error_buffer);
 +		/* Very important to close the file to write any bytes
 +		 * downloaded */
 +		if (ftpfile.stream) {
@@ -1953,7 +2191,7 @@ index 000000000..630573c3d
 +	if (!resumingFileByBlobFilter) {
 +		/* File does not exist when using blob filters */
 +		if (p_unlink(la->full_path) < 0) {
-+			fprintf(stderr,
++			lfs_log_error(
 +			        "\n[ERROR] failed to delete file '%s'\n",
 +			        la->full_path);
 +			/* Ignore error here, react on next error */
@@ -1961,7 +2199,7 @@ index 000000000..630573c3d
 +	}
 +
 +	if (p_rename(tmp_out_file, la->full_path) < 0) {
-+		fprintf(stderr, "\n[ERROR] failed to rename file to '%s'\n",
++		lfs_log_error("\n[ERROR] failed to rename file to '%s'\n",
 +		        la->full_path);
 +		goto cleanup;
 +	}
@@ -1976,7 +2214,7 @@ index 000000000..630573c3d
 +	 * ----------------------------------------------------
 +	 */
 +cleanup:
-+	fprintf(stderr, "[ERROR] LFS download failed for %s\n",
++	lfs_log_error("[ERROR] LFS download failed for %s\n",
 +	        la ? la->full_path : "(null)");
 +done:
 +	/* Close stream if open */
@@ -2060,10 +2298,10 @@ index 000000000..630573c3d
 +	return f;
 +}
 diff --git a/src/libgit2/repository.c b/src/libgit2/repository.c
-index 73876424a..b5c7b5c7a 100644
+index 7c629bcc8..811a7ee8e 100644
 --- a/src/libgit2/repository.c
 +++ b/src/libgit2/repository.c
-@@ -190,6 +190,7 @@ void git_repository_free(git_repository *repo)
+@@ -192,6 +192,7 @@ void git_repository_free(git_repository *repo)
  	git__free(repo->namespace);
  	git__free(repo->ident_name);
  	git__free(repo->ident_email);
@@ -2071,7 +2309,7 @@ index 73876424a..b5c7b5c7a 100644
  
  	git__memzero(repo, sizeof(*repo));
  	git__free(repo);
-@@ -1104,6 +1105,20 @@ static int repo_is_worktree(unsigned *out, const git_repository *repo)
+@@ -1127,6 +1128,20 @@ static int repo_is_worktree(unsigned *out, const git_repository *repo)
  	return error;
  }
  
@@ -2093,10 +2331,10 @@ index 73876424a..b5c7b5c7a 100644
  	git_repository **repo_ptr,
  	const char *start_path,
 diff --git a/src/libgit2/repository.h b/src/libgit2/repository.h
-index fbf143894..1890c61c1 100644
+index bdf1562fa..cba259384 100644
 --- a/src/libgit2/repository.h
 +++ b/src/libgit2/repository.h
-@@ -168,6 +168,7 @@ struct git_repository {
+@@ -170,6 +170,7 @@ struct git_repository {
  
  	intptr_t configmap_cache[GIT_CONFIGMAP_CACHE_MAX];
  	git_submodule_cache *submodule_cache;
