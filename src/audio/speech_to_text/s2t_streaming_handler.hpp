@@ -94,7 +94,7 @@ public:
                 isStreaming_ = false;
                 return status;
             }
-            generateFuture_ = std::async(std::launch::async,
+            ovms::SttServable::StreamingJob job(
                 [pipe, rawSpeech = std::move(rawSpeech), config, streamerCallback, queue]() mutable -> ov::genai::WhisperDecodedResults {
                     try {
                         std::unique_lock lock(pipe->sttPipelineMutex);
@@ -107,6 +107,12 @@ public:
                         throw;
                     }
                 });
+            try {
+                generateFuture_ = pipe->addRequest(std::move(job));
+            } catch (const std::exception& e) {
+                isStreaming_ = false;
+                return absl::InternalError(e.what());
+            }
         } else {
             float temperature = 1.0f;
             auto tempStatus = parseTemperature(payload, temperature);
@@ -114,7 +120,7 @@ public:
                 isStreaming_ = false;
                 return tempStatus;
             }
-            generateFuture_ = std::async(std::launch::async,
+            ovms::SttServable::StreamingJob job(
                 [pipe, rawSpeech = std::move(rawSpeech), streamerCallback, queue, temperature]() mutable -> ov::genai::WhisperDecodedResults {
                     try {
                         std::unique_lock lock(pipe->sttPipelineMutex);
@@ -130,6 +136,12 @@ public:
                         throw;
                     }
                 });
+            try {
+                generateFuture_ = pipe->addRequest(std::move(job));
+            } catch (const std::exception& e) {
+                isStreaming_ = false;
+                return absl::InternalError(e.what());
+            }
         }
 
         // Trigger first LOOPBACK iteration
