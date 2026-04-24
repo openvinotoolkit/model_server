@@ -16,57 +16,29 @@
 
 #pragma once
 
-#include <atomic>
-#include <condition_variable>
-#include <cstdint>
 #include <memory>
-#include <mutex>
-#include <thread>
-#include <utility>
-#include <queue>
 
 #include "openvino/genai/llm_pipeline.hpp"
 
 #include "../../../logging.hpp"
 #include "../../../profiler.hpp"
-
-#include <chrono>
-#include <future>
+#include "../../../executor_base.hpp"
 
 namespace ovms {
 struct LegacyServableExecutionContext;
-struct LegacyExecutor;
 
-struct LegacyExecutor {
-    std::condition_variable cv;
-    std::queue<std::shared_ptr<LegacyServableExecutionContext>> requests;
-    std::mutex queueMutex;
+struct LegacyExecutor : public Executor<std::shared_ptr<LegacyServableExecutionContext>> {
     std::shared_ptr<ov::genai::LLMPipeline> pipe;
 
     LegacyExecutor(std::shared_ptr<ov::genai::LLMPipeline> pipe);
 
-    bool hasRequests();
-
-    size_t requestsQueueSize();
     void processRequest();
-
-    void waitForRequests(std::atomic<bool>* receivedEndSignal);
-
     void addRequest(std::shared_ptr<LegacyServableExecutionContext> request);
-
-    void notify();
 };
 
-class LegacyExecutorWrapper {
-    LegacyExecutor legacyExecutor;
-    std::thread legacyExecutorThread;
-    std::atomic<bool> finishExecutorThread = false;
-
-    static void run(LegacyExecutor* legacyExecutor, std::atomic<bool>* receivedEndSignal);
-
+class LegacyExecutorWrapper : public ExecutorWrapper<LegacyExecutor> {
 public:
     LegacyExecutorWrapper(std::shared_ptr<ov::genai::LLMPipeline> pipe);
-    ~LegacyExecutorWrapper();
     void addRequest(std::shared_ptr<LegacyServableExecutionContext> request);
 };
 }  // namespace ovms

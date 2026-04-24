@@ -52,6 +52,16 @@ cc_library(
     copts = COMMON_STATIC_LIBS_COPTS,
 )
 
+ovms_cc_library(
+    name = "executor_base",
+    hdrs = ["executor_base.hpp"],
+    deps = [
+        "//src:libovmslogging",
+    ],
+    visibility = ["//visibility:public"],
+    alwayslink = 1,
+)
+
 cc_shared_library(
     name = "ovms_shared",
     dynamic_deps = [],

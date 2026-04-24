@@ -19,7 +19,13 @@ load("//:common_settings.bzl", "ovms_cc_library")
 
 ovms_cc_library(
     name = "s2t_servable",
-    hdrs = ["s2t_servable.hpp"],
+    hdrs = [
+        "s2t_executor.hpp",
+        "s2t_servable.hpp",
+    ],
+    deps = [
+        "//src:executor_base",
+    ],
     visibility = ["//visibility:public"],
     alwayslink = 1,
 )
