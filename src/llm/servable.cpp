@@ -132,7 +132,13 @@ absl::Status GenAiServable::parseRequest(std::shared_ptr<GenAiServableExecutionC
     }
     auto& config = ovms::Config::instance();
 
-    auto status = executionContext->apiHandler->parseRequest(getProperties()->maxTokensLimit, getProperties()->bestOfLimit, getProperties()->maxModelLength, config.getServerSettings().allowedLocalMediaPath, config.getServerSettings().allowedMediaDomains);
+    absl::Status status;
+    try {
+        status = executionContext->apiHandler->parseRequest(getProperties()->maxTokensLimit, getProperties()->bestOfLimit, getProperties()->maxModelLength, config.getServerSettings().allowedLocalMediaPath, config.getServerSettings().allowedMediaDomains);
+    } catch (const std::exception& e) {
+        SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Exception while parsing request: {}", e.what());
+        return absl::InvalidArgumentError("Exception while parsing request");
+    }
     if (!status.ok()) {
         SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Failed to parse request: {}", status.message());
         return status;
@@ -156,8 +162,13 @@ absl::Status GenAiServable::parseRequest(std::shared_ptr<GenAiServableExecutionC
         getProperties()->toolParserName,
         getProperties()->enableToolGuidedGeneration,
         getProperties()->decodingMethod);
-    executionContext->generationConfigBuilder->parseConfigFromRequest(executionContext->apiHandler->getRequest());
-    executionContext->generationConfigBuilder->adjustConfigForDecodingMethod();
+    try {
+        executionContext->generationConfigBuilder->parseConfigFromRequest(executionContext->apiHandler->getRequest());
+        executionContext->generationConfigBuilder->adjustConfigForDecodingMethod();
+    } catch (const std::exception& e) {
+        SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Exception while parsing generation config: {}", e.what());
+        return absl::InvalidArgumentError("Exception while parsing generation config");
+    }
     try {
         executionContext->generationConfigBuilder->validateStructuredOutputConfig(getProperties()->tokenizer);
     } catch (const std::exception& e) {
@@ -219,8 +230,17 @@ absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecution
     case Endpoint::RESPONSES: {
         if (executionContext->apiHandler->getChatHistory().size() > 0) {
 #if (PYTHON_DISABLE == 0)
-            bool success = PyJinjaTemplateProcessor::applyChatTemplate(getProperties()->templateProcessor, getProperties()->modelsPath, executionContext->apiHandler->getProcessedJson(), inputText);
+            bool success;
+            const std::string& processedJson = executionContext->apiHandler->getProcessedJson();
+            if (processedJson.size() > 0) {
+                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Applying chat template with Responses processedJson (first 500 chars): {}", processedJson.substr(0, 500));
+                success = PyJinjaTemplateProcessor::applyChatTemplate(getProperties()->templateProcessor, getProperties()->modelsPath, processedJson, inputText);
+            } else {
+                SPDLOG_LOGGER_WARN(llm_calculator_logger, "Responses processedJson is empty! Falling back to original body");
+                success = PyJinjaTemplateProcessor::applyChatTemplate(getProperties()->templateProcessor, getProperties()->modelsPath, executionContext->payload.body, inputText);
+            }
             if (!success) {
+                SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Chat template application failed. Error: {}", inputText);
                 return absl::Status(absl::StatusCode::kInvalidArgument, inputText);
             }
 #else
