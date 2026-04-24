@@ -309,6 +309,7 @@ def archive_test_artifacts(){
     archiveArtifacts allowEmptyArchive: true, artifacts: "win_build_test.log"
     archiveArtifacts allowEmptyArchive: true, artifacts: "win_test_summary.log"
     archiveArtifacts allowEmptyArchive: true, artifacts: "win_test_log.zip"
+    archiveArtifacts allowEmptyArchive: true, artifacts: "win_install_service_test.log"
 }
 
 def archive_bdba_reports(){
