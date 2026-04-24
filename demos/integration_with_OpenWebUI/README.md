@@ -483,7 +483,6 @@ ovms.exe --add_to_config --config_path  models\config.json --model_path OpenVINO
 ```bash
 docker run --rm -u $(id -u):$(id -g) --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -v $PWD/models:/models openvino/model_server:2026.1-gpu --pull --source_model OpenVINO/whisper-base-fp16-ov --model_repository_path /models --task speech2text --target_device GPU
 docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models openvino/model_server:2026.1-gpu --add_to_config --config_path /models/config.json --model_path OpenVINO/whisper-base-fp16-ov --model_name OpenVINO/whisper-base-fp16-ov
-docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models openvino/model_server:2026.1-gpu --add_to_config --config_path /models/config.json --model_path OpenVINO/whisper-base-fp16-ov --model_name OpenVINO/whisper-base-fp16-ov
 ```
 :::
 :::: 
