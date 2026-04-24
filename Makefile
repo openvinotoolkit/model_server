@@ -70,7 +70,7 @@ $(error PYTHON_DISABLE cannot be 0 when MEDIAPIPE_DISABLE is 1)
 endif
 endif
 FUZZER_BUILD ?= 0
-
+DOCKER_BUILDKIT ?= 1
 # NOTE: when changing any value below, you'll need to adjust WORKSPACE file by hand:
 #         - uncomment source build section, comment binary section
 #         - adjust binary version path - version variable is not passed to WORKSPACE file!
@@ -355,13 +355,10 @@ ifeq ($(NO_DOCKER_CACHE),true)
 	@docker pull registry.access.redhat.com/ubi9/ubi-minimal:$(BASE_OS_TAG_REDHAT)
   endif
 endif
-ifeq ($(USE_BUILDX),true)
-	$(eval BUILDX:=buildx)
-endif
 
 ifeq ($(BUILD_CUSTOM_NODES),true)
 	@echo "Building custom nodes"
-	@cd src/custom_nodes && make USE_BUILDX=$(USE_BUILDX) NO_DOCKER_CACHE=$(NO_DOCKER_CACHE) BASE_OS=$(OS) BASE_IMAGE=$(BASE_IMAGE) 
+	@cd src/custom_nodes && make NO_DOCKER_CACHE=$(NO_DOCKER_CACHE) BASE_OS=$(OS) BASE_IMAGE=$(BASE_IMAGE) 
 endif
 	@echo "Building docker image $(BASE_OS)"
 	# Provide metadata information into image if defined
@@ -385,15 +382,23 @@ targz_package:
 		--target=pkg && \
 	rm -vrf dist/$(OS) && mkdir -p dist/$(OS) && \
 	ID=$$(docker create $(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG)) && \
-	docker cp $$ID:/ovms_pkg/$(OS) dist/ && \
+	docker cp $$ID:/ovms_pkg/$(OS)/ovms.tar dist/$(OS)/ && \
 	docker rm $$ID
-	cd dist/$(OS) && sha256sum --check ovms.tar.gz.sha256
+	docker $(BUILDX) build -f Dockerfile.$(DIST_OS) . \
+		$(BUILD_ARGS) \
+		--build-arg BUILD_IMAGE=$(BUILD_IMAGE) \
+		-t $(OVMS_CPP_DOCKER_IMAGE)-capi:$(OVMS_CPP_IMAGE_TAG) \
+		--target=capi-build && \
+	ID=$$(docker create $(OVMS_CPP_DOCKER_IMAGE)-capi:$(OVMS_CPP_IMAGE_TAG)) && \
+	docker cp $$ID:/ovms_release/lib/libovms_shared.so dist/$(OS)/ && \
+	docker rm $$ID
+	cd dist/$(OS) && \
+	tar rf ovms.tar --transform 's,^,ovms/lib/,' libovms_shared.so && \
+	gzip ovms.tar && \
+	rm -f libovms_shared.so && \
+	sha256sum ovms.tar.gz > ovms.tar.gz.sha256
 
 ovms_release_images:
-ifeq ($(USE_BUILDX),true)
-	$(eval BUILDX:=buildx)
-	$(eval NO_CACHE_OPTION:=--no-cache-filter release)
-endif
 ifeq ($(BASE_OS),redhat)
 	$(eval NPU:=0)
 else
@@ -441,10 +446,6 @@ ifeq ($(BASE_OS),redhat)
 endif
 
 release_image:
-ifeq ($(USE_BUILDX),true)
-	$(eval BUILDX:=buildx)
-	$(eval NO_CACHE_OPTION:=--no-cache-filter release)
-endif
 	docker $(BUILDX) build $(NO_CACHE_OPTION) -f Dockerfile.$(DIST_OS) . \
 		$(BUILD_ARGS) \
 		--build-arg BUILD_IMAGE=$(BUILD_IMAGE) \
