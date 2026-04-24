@@ -18,6 +18,7 @@
 #include <future>
 #include <mutex>
 #include <stdexcept>
+#include <utility>
 
 #include "openvino/genai/whisper_pipeline.hpp"
 #include "src/executor_base.hpp"

@@ -17,6 +17,8 @@
 #include "legacy_executor.hpp"
 #include "servable.hpp"
 
+#include <utility>
+
 namespace ovms {
 LegacyExecutor::LegacyExecutor(std::shared_ptr<ov::genai::LLMPipeline> pipe) {
     this->pipe = std::move(pipe);

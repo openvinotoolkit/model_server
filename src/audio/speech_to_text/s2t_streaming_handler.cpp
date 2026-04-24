@@ -16,6 +16,7 @@
 #include "s2t_streaming_handler.hpp"
 
 #include <chrono>
+#include <utility>
 #include <vector>
 
 #include "src/port/rapidjson_stringbuffer.hpp"
