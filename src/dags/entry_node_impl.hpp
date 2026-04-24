@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2020 Intel Corporation
+// Copyright 2026 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,6 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#pragma once
+
 #include "entry_node.hpp"
 
 #include <functional>
@@ -22,12 +24,6 @@
 #include <unordered_map>
 #include <utility>
 
-#include "../capi_frontend/capi_utils.hpp"
-#include "../tfs_frontend/tfs_utils.hpp"
-#include "../kfs_frontend/kfs_utils.hpp"
-#include "../capi_frontend/deserialization.hpp"
-#include "../tfs_frontend/deserialization.hpp"
-#include "../kfs_frontend/deserialization.hpp"
 #include "../deserialization_main.hpp"
 #include "../logging.hpp"
 #include "../ov_utils.hpp"
@@ -38,18 +34,8 @@
 #include "../tensorinfo.hpp"
 #include "nodesession.hpp"
 
-#pragma warning(push)
-#pragma warning(disable : 4624 6001 6385 6386 6326 6011 4457 6308 6387 6246)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wall"
-#include "tensorflow/core/framework/tensor.h"
-#include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
-#pragma GCC diagnostic pop
-#pragma warning(pop)
-
 namespace ovms {
 
-const std::string ENTRY_NODE_NAME = "request";
 template <typename RequestType>
 Status EntryNode<RequestType>::execute(session_key_t sessionId, PipelineEventQueue& notifyEndQueue) {
     OVMS_PROFILE_FUNCTION();
@@ -83,12 +69,6 @@ Status EntryNode<RequestType>::fetchResults(TensorWithSourceMap& outputs) {
     InputSink<TensorWithSourceMap&> inputSink(outputs);
     bool isPipeline = true;
     return deserializePredictRequest<ConcreteTensorProtoDeserializator, InputSink<TensorWithSourceMap&>>(*request, inputsInfo, outputsInfo, inputSink, isPipeline, factories);
-}
-
-template <>
-Status InputSink<TensorWithSourceMap&>::give(const std::string& name, ov::Tensor& tensor) {
-    requester.emplace(std::make_pair(name, TensorWithSource(tensor)));
-    return StatusCode::OK;
 }
 
 template <typename RequestType>
@@ -131,15 +111,10 @@ const Status EntryNode<RequestType>::validate() {
         optionalInputNames);  // Pipelines are not versioned and always reports version 1
 }
 
-template class EntryNode<InferenceRequest>;
+template <>
+inline Status InputSink<TensorWithSourceMap&>::give(const std::string& name, ov::Tensor& tensor) {
+    requester.emplace(std::make_pair(name, TensorWithSource(tensor)));
+    return StatusCode::OK;
+}
 
-template Status EntryNode<tensorflow::serving::PredictRequest>::execute(session_key_t sessionId, PipelineEventQueue& notifyEndQueue);
-template Status EntryNode<::KFSRequest>::execute(session_key_t sessionId, PipelineEventQueue& notifyEndQueue);
-template Status EntryNode<tensorflow::serving::PredictRequest>::fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs);
-template Status EntryNode<::KFSRequest>::fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs);
-template Status EntryNode<::KFSRequest>::fetchResults(TensorWithSourceMap& outputs);
-template Status EntryNode<tensorflow::serving::PredictRequest>::createShardedTensor(ov::Tensor& dividedTensor, Precision precision, const shape_t& shape, const ov::Tensor& tensor, size_t i, size_t step, const NodeSessionMetadata& metadata, const std::string tensorName);
-template Status EntryNode<::KFSRequest>::createShardedTensor(ov::Tensor& dividedTensor, Precision precision, const shape_t& shape, const ov::Tensor& tensor, size_t i, size_t step, const NodeSessionMetadata& metadata, const std::string tensorName);
-template const Status EntryNode<tensorflow::serving::PredictRequest>::validate();
-template const Status EntryNode<::KFSRequest>::validate();
 }  //  namespace ovms

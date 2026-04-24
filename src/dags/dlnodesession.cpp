@@ -23,6 +23,7 @@
 #include "../model_instance_provider.hpp"
 #include "../modelinstance.hpp"
 #include "../modelinstanceunloadguard.hpp"
+#include "../ovinferrequestsqueue.hpp"
 #include "../ov_utils.hpp"
 #include "../profiler.hpp"
 #include "../shape.hpp"

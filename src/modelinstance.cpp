@@ -31,6 +31,7 @@
 #include <dirent.h>
 #endif
 #include <malloc.h>
+#include <openvino/core/layout.hpp>
 #include <openvino/runtime/compiled_model.hpp>
 // TODO windows
 #ifdef __linux__
@@ -52,6 +53,7 @@
 #include "modelconfig.hpp"
 #include "modelinstanceunloadguard.hpp"
 #include "ov_utils.hpp"
+#include "ovinferrequestsqueue.hpp"
 #include "profiler.hpp"
 #include "regularovtensorfactory.hpp"
 #include "shape.hpp"
@@ -1412,6 +1414,18 @@ void ModelInstance::checkForOutputTensorResetAbility() {
 }
 bool ModelInstance::doesSupportOutputReset() const {
     return this->supportOutputTensorsReset;
+}
+
+std::optional<Dimension> ModelInstance::getBatchSize() const {
+    try {
+        return Dimension(ov::get_batch(model));
+    } catch (...) {
+        return std::nullopt;
+    }
+}
+
+OVInferRequestsQueue& ModelInstance::getInferRequestsQueue() {
+    return *inferRequestsQueue;
 }
 
 const size_t ModelInstance::getBatchSizeIndex() const {

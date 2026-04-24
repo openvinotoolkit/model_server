@@ -15,6 +15,7 @@
 //*****************************************************************************
 #pragma once
 
+#include <map>
 #include <memory>
 #include <string>
 
@@ -22,9 +23,13 @@
 
 namespace ovms {
 
+class Model;
 class ModelInstance;
 class ModelInstanceUnloadGuard;
+struct NotifyReceiver;
 class Status;
+class TensorInfo;
+using tensor_map_t = std::map<std::string, std::shared_ptr<const TensorInfo>>;
 
 class ModelInstanceProvider {
 public:
@@ -34,6 +39,13 @@ public:
         model_version_t modelVersionId,
         std::shared_ptr<ModelInstance>& modelInstance,
         std::unique_ptr<ModelInstanceUnloadGuard>& modelInstanceUnloadGuardPtr) const = 0;
+    virtual const std::shared_ptr<Model> findModelByName(const std::string& name) const = 0;
+    virtual const std::shared_ptr<ModelInstance> findModelInstance(const std::string& name, model_version_t version = 0) const = 0;
+    virtual bool subscribeToModel(const std::string& name, model_version_t version, NotifyReceiver& receiver) = 0;
+    virtual void unsubscribeFromModel(const std::string& name, model_version_t version, NotifyReceiver& receiver) = 0;
+    virtual Status getModelInputsInfo(const std::string& name, model_version_t version, tensor_map_t& info) const = 0;
+    virtual Status getModelOutputsInfo(const std::string& name, model_version_t version, tensor_map_t& info) const = 0;
+    virtual Status hasAutoModelParameters(const std::string& name, model_version_t version, bool& batchAuto, bool& shapeAuto) const = 0;
 };
 
 }  // namespace ovms
