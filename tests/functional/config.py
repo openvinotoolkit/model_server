@@ -17,8 +17,9 @@
 import os
 
 from tests.functional.constants.target_device import TargetDevice
-from tests.functional.utils.helpers import get_bool, get_int, get_path, get_target_devices
-from tests.functional.utils.parametrization import generate_test_object_name
+from tests.functional.utils.core import TmpDir
+from tests.functional.utils.helpers import generate_test_object_name, get_bool, get_int, get_path, get_target_devices
+
 
 try:
     # In user_config.py, user might export custom environment variables
@@ -37,7 +38,7 @@ test_dir_cleanup = os.environ.get("TEST_DIR_CLEANUP", "True")
 test_dir_cleanup = test_dir_cleanup.lower() == "true"
 
 """BUILD_LOGS -  path to dir where artifacts should be stored"""
-artifacts_dir = os.environ.get("BUILD_LOGS", "")
+artifacts_dir = get_path("BUILD_LOGS", os.path.join("~", "ovms_test_logs"))
 
 """START_CONTAINER_COMMAND - command to start ovms container"""
 start_container_command = os.environ.get("START_CONTAINER_COMMAND", "")
@@ -63,7 +64,7 @@ models_path = path_to_mount if ovms_binary_path else "/opt/ml"
 """TT_MINIO_IMAGE_NAME - Docker image for Minio"""
 minio_image = os.environ.get("TT_MINIO_IMAGE_NAME", "minio/minio:latest")
 
-""" TT_TARGET_DEVICE - list of devices separated by a comma "CPU,GPU" """
+""" TT_TARGET_DEVICE - list of devices separated by a comma "CPU,GPU,NPU" """
 target_devices = get_target_devices()
 target_device = target_devices[0]
 
@@ -78,14 +79,16 @@ start_minio_container_command = 'server --address ":{}" /data'
 
 container_minio_log_line = "Console endpoint is listening on a dynamic port"
 
+# Reservation manager values, for details study common_libs.reservation_manager
 """ TT_GRPC_OVMS_STARTING_PORT - Grpc port where ovms should be exposed"""
-grpc_ovms_starting_port = get_int("TT_GRPC_OVMS_STARTING_PORT", 9001)
+grpc_ovms_starting_port = get_int("TT_GRPC_OVMS_STARTING_PORT", None)
 
 """ TT_REST_OVMS_STARTING_PORT - Rest port where ovms should be exposed"""
-rest_ovms_starting_port = get_int("TT_REST_OVMS_STARTING_PORT", 18001)
+rest_ovms_starting_port = get_int("TT_REST_OVMS_STARTING_PORT", None)
 
 """ TT_PORTS_POOL_SIZE- Ports pool size"""
-ports_pool_size = get_int("TT_PORTS_POOL_SIZE", 5000)
+ports_pool_size = get_int("TT_PORTS_POOL_SIZE", None)
+# NOTE: Above values will be validated and could be changed if invalid
 
 """ TT_CONVERTED_MODELS_EXPIRE_TIME - Time after converted models are not up-to-date and needs to be refreshed(s) """
 converted_models_expire_time = get_int("TT_CONVERTED_MODELS_EXPIRE_TIME", 7*24*3600)  # Set default to one week
@@ -122,3 +125,69 @@ enable_pytest_plugins = get_bool("TT_ENABLE_OVMS_C_PYTEST_PLUGINS", "True")
 
 """ TT_OVMS_C_REPO_PATH - path to ovms-c repository. Can be relative or absolute. """
 ovms_c_repo_path = get_path("TT_OVMS_C_REPO_PATH", get_path("PWD", "./"))
+
+""" TT_REPOSITORY_NAME - repository name provided by user """
+repository_name = os.environ.get("TT_REPOSITORY_NAME", "ovms-c")
+
+""" TT_ENVIRON_NAME - Environment name to be used while reporting test results
+                      to be presented on test reports as a environment name."""
+environment_name = os.environ.get("TT_ENVIRONMENT_NAME", "")
+
+""" TT_PRODUCT_BUILD_NUMBER  - Test product build number provided by user (last number from version - 0.8.0.XXXX)"""
+product_build_number = os.environ.get("TT_PRODUCT_BUILD_NUMBER", "1")
+
+""" TT_PRODUCT_BUILD_FROM_ENV - If set to True, environment build number is taken from tested environment,
+                                If set to False environment build number is taken from TT_PRODUCT_BUILD_NUMBER
+                                If TT_PRODUCT_BUILD_NUMBER not set default environment build number is taken"""
+product_build_number_from_env = get_bool("TT_PRODUCT_BUILD_FROM_ENV", True)
+
+""" TT_PRODUCT_VERSION - Environment version provided by user"""
+product_version = os.environ.get("TT_PRODUCT_VERSION", "1.0.0")
+
+""" TT_PRODUCT_VERSION_FROM_ENV - If set to True, version is taken from tested environment,
+                                  If set to False version is taken from TT_PRODUCT_VERSION
+                                  If TT_PRODUCT_VERSION not set default version is taken"""
+product_version_number_from_env = get_bool("TT_PRODUCT_VERSION_FROM_ENV", False)
+
+""" TT_PRODUCT_VERSION_SUFFIX - Environment version suffix provided by user"""
+product_version_suffix = os.environ.get("TT_PRODUCT_VERSION_SUFFIX", "ovms")
+
+""" TT_DELAY_BETWEEN_TESTS - Time of pause between test case runs"""
+delay_between_test = get_int("TT_DELAY_BETWEEN_TESTS", 0)
+
+""" TEST_TIMEOUT - default timeout (number of hours) for whole test session inherited from CI """
+pytest_global_session_timeout = get_int("TEST_TIMEOUT", 15)
+
+""" TT_BUILD_TEST_IMAGE - build ovms test image (cpu extensions, custom nodes etc.) """
+build_test_image = get_bool("TT_BUILD_TEST_IMAGE", False)
+
+""" TT_RUN_OVMS_WITH_VALGRIND - run ovms using Valgrind """
+run_ovms_with_valgrind = get_bool("TT_RUN_OVMS_WITH_VALGRIND", False)
+
+""" TT_RUN_OVMS_WITH_OPENCL_TRACE - run OVMS with cliloader """
+run_ovms_with_opencl_trace = get_bool("TT_RUN_OVMS_WITH_OPENCL_TRACE", False)
+
+""" TT_SERVER_ADDRESS - OVMS server address"""
+server_address = os.environ.get("TT_SERVER_ADDRESS", "localhost")
+
+""" TT_RESOURCE_MONITOR_ENABLED - Dump ovms container resource statistics once per second """
+resource_monitor_enabled = get_bool("TT_RESOURCE_MONITOR_ENABLED", False)
+
+""" TT_TEST_TEMP_DIR - directory path where all temporary files are stored, default is not set """
+test_temp_dir = os.environ.get("TT_TEST_TEMP_DIR", None)
+tmp_dir = TmpDir(test_temp_dir)
+
+"""TT_LOGGING_LEVEL_OVMS - ovms docker default log level, default: INFO"""
+logging_level_ovms = os.environ.get("TT_LOGGING_LEVEL_OVMS", "INFO")
+
+"""TT_CONTAINER_PROXY - Proxy settings to be used in container """
+container_proxy = os.environ.get("TT_CONTAINER_PROXY", os.environ.get("http_proxy", ""))
+
+"""TT_DISABLE_DMESG_LOG_MONITOR"""
+disable_dmesg_log_monitor = get_bool("TT_DISABLE_DMESG_LOG_MONITOR", False)
+
+""" TT_MACHINE_IS_RESERVED_FOR_TEST_SESSION """
+machine_is_reserved_for_test_session = get_bool("TT_MACHINE_IS_RESERVED_FOR_TEST_SESSION", False)
+
+""" TT_WAIT_FOR_MESSAGES_TIMEOUT - timeout for ovms.wait_for_messages(...) method """
+wait_for_messages_timeout = get_int("TT_WAIT_FOR_MESSAGES_TIMEOUT", 180)

@@ -13,3 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+
+from tests.functional.utils.marks import MarkMeta
+
+
+class OvmsComponents(MarkMeta):
+    OVMS = "ovms"

@@ -13,3 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+
+import re
+
+NOT_A_NUMBER_REGEX = re.compile(r"(NaN|,\s,)", re.IGNORECASE)

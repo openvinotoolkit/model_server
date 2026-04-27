@@ -13,3 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+
+from tests.functional.utils.inference.communication.grpc import GRPC
+from tests.functional.utils.inference.communication.rest import REST

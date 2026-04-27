@@ -13,3 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+
+CONTAINER_STATUS_RUNNING = "running"
+CONTAINER_STATUS_EXITED = "exited"
+CONTAINER_STATUS_DEAD = "dead"
+CONTAINER_STATUS_CREATED = "created"
+CONTAINER_STATUS_RESTARTING = "restarting"

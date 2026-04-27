@@ -13,3 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+
+import os
+
+from tests.functional.utils.logger import get_logger
+
+logger = get_logger(__name__)
+
+
+def log_configuration_variables():
+    logger.info("============== configuration variables ==============")
+    pt_env_vars = list(filter(lambda x: x[0].startswith("TT_"), os.environ.items()))
+    pt_env_vars.sort()
+    for env_var in pt_env_vars:
+        logger.info("{}={}".format(*env_var))

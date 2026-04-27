@@ -13,3 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+
+from tests.functional.utils.inference.serving.kf import KFS
+from tests.functional.utils.inference.serving.openai import OPENAI
+from tests.functional.utils.inference.serving.tf import TFS
+from tests.functional.utils.inference.serving.triton import TRITON
+from tests.functional.utils.inference.serving.cohere import COHERE
