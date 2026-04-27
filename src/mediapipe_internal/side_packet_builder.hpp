@@ -32,6 +32,6 @@ struct GraphSidePackets;
 // Builds standard input side packets from all servable maps in GraphSidePackets.
 // Adds entries to the provided map without clearing existing entries.
 void buildInputSidePackets(std::map<std::string, mediapipe::Packet>& inputSidePackets,
-                           const GraphSidePackets& sidePackets);
+    const GraphSidePackets& sidePackets);
 
 }  // namespace ovms

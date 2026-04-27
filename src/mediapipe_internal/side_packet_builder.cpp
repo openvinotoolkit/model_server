@@ -21,7 +21,7 @@
 namespace ovms {
 
 void buildInputSidePackets(std::map<std::string, mediapipe::Packet>& inputSidePackets,
-                           const GraphSidePackets& sidePackets) {
+    const GraphSidePackets& sidePackets) {
     const auto ts = ::mediapipe::Timestamp(STARTING_TIMESTAMP_VALUE);
 #if (PYTHON_DISABLE == 0)
     inputSidePackets[PYTHON_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<PythonNodeResourcesMap>(sidePackets.pythonNodeResourcesMap).At(ts);
