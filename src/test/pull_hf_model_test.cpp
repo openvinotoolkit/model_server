@@ -369,7 +369,27 @@ TEST_F(HfDownloaderPullHfModel, ResumeAfterShutdownRequestAndRerun) {
         firstRunCode = this->server.start(argc, argv);
     }));
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+    // Wait until the large LFS file (openvino_model.bin) starts downloading before
+    // sending the shutdown request. A fixed sleep is unreliable: on a fast CPU/network
+    // machine the download may finish before the sleep expires, leaving no partial files
+    // and causing the EXPECT_FALSE(remainingPointers.empty()) assertion to fail.
+    // We poll until the model file exists as an LFS pointer or a partial download
+    // is in progress (lfs_part file present), then interrupt immediately.
+    {
+        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(60);
+        while (std::chrono::steady_clock::now() < deadline) {
+            auto lfsCandidates = ovms::libgit2::findLfsLikeFiles(downloadPath, true);
+            const bool hasModelPointer = std::find(lfsCandidates.begin(), lfsCandidates.end(),
+                                             std::filesystem::path("openvino_model.bin")) != lfsCandidates.end();
+            const std::string partPath = ovms::FileSystem::appendSlash(basePath) + "openvino_model.binlfs_part";
+            const bool hasPartFile = std::filesystem::exists(partPath);
+            if (hasModelPointer || hasPartFile) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(200));
+                break;
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        }
+    }
     server.setShutdownRequest(1);
     EnsureServerModelDownloadFinishedWithTimeout(server, 120);
     if (t)
