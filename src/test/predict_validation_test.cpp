@@ -857,7 +857,7 @@ TEST_P(TfsPredictValidationPrecision, ValidPrecisions) {
 INSTANTIATE_TEST_SUITE_P(
     Test,
     TfsPredictValidationPrecision,
-    ::testing::ValuesIn(SUPPORTED_INPUT_PRECISIONS),
+    ::testing::ValuesIn(SUPPORTED_TFS_INPUT_PRECISIONS),
     [](const ::testing::TestParamInfo<TfsPredictValidationPrecision::ParamType>& info) {
         return toString(info.param);
     });

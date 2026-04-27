@@ -2647,10 +2647,23 @@ cc_library(
     hdrs = [
         "test/c_api_test_utils.hpp",
         "test/test_utils.hpp",
+        "test/test_request_utils_tfs.hpp",
+        "test/test_request_utils_kfs.hpp",
+        "test/test_request_utils_capi.hpp",
+        "test/test_server_utils.hpp",
+        "test/test_mediapipe_utils.hpp",
+        "test/test_predict_validation_utils.hpp",
+        "test/test_config_utils.hpp",
+        "test/test_model_manager_utils.hpp",
         "test/stress_test_utils.hpp",
         ],
     srcs = [
         "test/c_api_test_utils.cpp",
+        "test/test_request_utils_tfs.cpp",
+        "test/test_request_utils_kfs.cpp",
+        "test/test_request_utils_capi.cpp",
+        "test/test_server_utils.cpp",
+        "test/test_model_manager_utils.cpp",
         "test/test_utils.cpp",
         ],
     deps = [

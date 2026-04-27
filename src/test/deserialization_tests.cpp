@@ -519,14 +519,14 @@ INSTANTIATE_TEST_SUITE_P(
 INSTANTIATE_TEST_SUITE_P(
     TestDeserialize,
     GRPCPredictRequestNegative,
-    ::testing::ValuesIn(UNSUPPORTED_INPUT_PRECISIONS),
+    ::testing::ValuesIn(UNSUPPORTED_TFS_INPUT_PRECISIONS),
     [](const ::testing::TestParamInfo<GRPCPredictRequestNegative::ParamType>& info) {
         return toString(info.param);
     });
 INSTANTIATE_TEST_SUITE_P(
     TestDeserialize,
     GRPCPredictRequest,
-    ::testing::ValuesIn(SUPPORTED_INPUT_PRECISIONS),
+    ::testing::ValuesIn(SUPPORTED_TFS_INPUT_PRECISIONS),
     [](const ::testing::TestParamInfo<GRPCPredictRequest::ParamType>& info) {
         return toString(info.param);
     });
@@ -534,7 +534,7 @@ INSTANTIATE_TEST_SUITE_P(
 INSTANTIATE_TEST_SUITE_P(
     Test,
     DeserializeTFTensorProtoNegative,
-    ::testing::ValuesIn(UNSUPPORTED_INPUT_PRECISIONS),
+    ::testing::ValuesIn(UNSUPPORTED_TFS_INPUT_PRECISIONS),
     [](const ::testing::TestParamInfo<DeserializeTFTensorProtoNegative::ParamType>& info) {
         return toString(info.param);
     });
@@ -550,7 +550,7 @@ INSTANTIATE_TEST_SUITE_P(
 INSTANTIATE_TEST_SUITE_P(
     Test,
     DeserializeTFTensorProto,
-    ::testing::ValuesIn(SUPPORTED_INPUT_PRECISIONS),
+    ::testing::ValuesIn(SUPPORTED_TFS_INPUT_PRECISIONS),
     [](const ::testing::TestParamInfo<DeserializeTFTensorProto::ParamType>& info) {
         return toString(info.param);
     });
