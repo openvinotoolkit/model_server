@@ -88,13 +88,13 @@ Status DrogonHttpServer::startAcceptingRequests() {
     drogon::app().disableSigtermHandling();
 
     drogon::app().setDefaultHandler([this](const drogon::HttpRequestPtr& req, std::function<void(const drogon::HttpResponsePtr&)>&& drogonResponseInitializeCallback) {
-        bool isLongRunning = req->path().find("/completions") != std::string::npos ||
-                             req->path().find("/responses") != std::string::npos ||
-                             req->path().find("/audio") != std::string::npos;
+        bool isStreamingEndpoint = req->path().find("/completions") != std::string::npos ||
+                                   req->path().find("/responses") != std::string::npos ||
+                                   req->path().find("/audio/transcriptions") != std::string::npos;
 
         // Here we need to schedule the request to the separate thread pool
         // in order to use disconnection callback of drogon.
-        if (isLongRunning) {
+        if (isStreamingEndpoint) {
             this->pool->Schedule([this, req, drogonResponseInitializeCallback = std::move(drogonResponseInitializeCallback)]() mutable {
                 SPDLOG_DEBUG("Request URI {} dispatched to streaming thread pool", req->path());
                 this->dispatch(req, std::move(drogonResponseInitializeCallback));

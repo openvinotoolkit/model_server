@@ -208,7 +208,7 @@ private:
             serializeTimestamps(writer, result, config);
         }
         if (endpoint == Endpoint::TRANSLATIONS) {
-            float temperature = 1.0f;
+            float temperature = pipe->sttPipeline->get_generation_config().temperature;
             auto tempStatus = ovms::SttServable::parseTemperature(payload, temperature);
             if (tempStatus != absl::OkStatus())
                 return tempStatus;
