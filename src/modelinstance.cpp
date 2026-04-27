@@ -938,6 +938,15 @@ Status ModelInstance::loadOVCompiledModel(const ModelConfig& config) {
             getVersion(),
             config.getTargetDevice());
         return status;
+    } catch (...) {
+        Status status = StatusCode::CANNOT_COMPILE_MODEL_INTO_TARGET_DEVICE;
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "{}; error: {}; model: {}; version: {}; device: {}",
+            status.string(),
+            "Unknown error",
+            getName(),
+            getVersion(),
+            config.getTargetDevice());
+        return status;
     }
 
     uint32_t numberOfStreams = getNumOfStreams();
