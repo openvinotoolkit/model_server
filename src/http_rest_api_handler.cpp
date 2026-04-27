@@ -240,7 +240,7 @@ Status HttpRestApiHandler::processServerReadyKFSRequest(const HttpRequestCompone
     if (isReady) {
         return StatusCode::OK;
     }
-    return StatusCode::MODEL_NOT_LOADED;
+    return StatusCode::SERVER_NOT_READY;
 }
 
 Status HttpRestApiHandler::processServerLiveKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) {
