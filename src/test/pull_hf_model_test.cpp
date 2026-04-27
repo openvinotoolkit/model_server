@@ -279,7 +279,6 @@ public:
 };
 
 TEST_F(HfDownloaderPullHfModel, Resume) {
-    SKIP_AND_EXIT_IF_NOT_RUNNING_UNSTABLE();  // SSL proxy blocked workaround
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string downloadPath = ovms::FileSystem::joinPath({this->directoryPath, "repository"});
     std::string task = "text_generation";
@@ -345,7 +344,6 @@ TEST_F(HfDownloaderPullHfModel, Resume) {
 }
 
 TEST_F(HfDownloaderPullHfModel, ResumeAfterShutdownRequestAndRerun) {
-    SKIP_AND_EXIT_IF_NOT_RUNNING_UNSTABLE();  // SSL proxy blocked workaround
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string downloadPath = ovms::FileSystem::joinPath({this->directoryPath, "repository"});
     std::string task = "text_generation";
@@ -390,6 +388,135 @@ TEST_F(HfDownloaderPullHfModel, ResumeAfterShutdownRequestAndRerun) {
     ASSERT_EQ(std::filesystem::file_size(model2Path), 339125);
     ASSERT_EQ(std::filesystem::file_size(model3Path), 500292);
     ASSERT_EQ(std::filesystem::file_size(model4Path), 499723);
+}
+
+TEST_F(HfDownloaderPullHfModel, PullAfterUserRemovedTrackedFileDoesNotRestoreIt) {
+    std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
+    std::string downloadPath = ovms::FileSystem::joinPath({this->directoryPath, "repository"});
+    std::string task = "text_generation";
+    this->ServerPullHfModel(modelName, downloadPath, task);
+    server.setShutdownRequest(1);
+    if (t)
+        t->join();
+    server.setShutdownRequest(0);
+    
+    std::string basePath = ovms::FileSystem::joinPath({this->directoryPath, "repository", "OpenVINO", "Phi-3-mini-FastDraft-50M-int8-ov"});
+    std::string preservedFilePath = ovms::FileSystem::appendSlash(basePath) + "openvino_model.bin";
+    std::string removedFilePath = ovms::FileSystem::appendSlash(basePath) + "openvino_tokenizer.bin";
+    std::string removedFilePath2 = ovms::FileSystem::appendSlash(basePath) + "tokenizer.json";
+
+    ASSERT_TRUE(std::filesystem::exists(preservedFilePath));
+    ASSERT_TRUE(std::filesystem::exists(removedFilePath));
+    ASSERT_TRUE(std::filesystem::exists(removedFilePath2));
+
+    std::error_code ec;
+    std::string preservedDigestBefore = sha256File(preservedFilePath, ec);
+    ASSERT_EQ(ec, std::errc());
+
+    ec.clear();
+    ASSERT_TRUE(std::filesystem::remove(removedFilePath, ec));
+    ASSERT_EQ(ec, std::errc());
+    ASSERT_FALSE(std::filesystem::exists(removedFilePath));
+    ec.clear();
+    ASSERT_TRUE(std::filesystem::remove(removedFilePath2, ec));
+    ASSERT_EQ(ec, std::errc());
+    ASSERT_FALSE(std::filesystem::exists(removedFilePath2));
+
+    int secondRunCode = EXIT_SUCCESS;
+    server.setShutdownRequest(0);
+    char* argv[] = {(char*)"ovms",
+        (char*)"--pull",
+        (char*)"--source_model",
+        (char*)modelName.c_str(),
+        (char*)"--model_repository_path",
+        (char*)downloadPath.c_str(),
+        (char*)"--task",
+        (char*)task.c_str()};
+    int argc = 8;
+    t.reset(new std::thread([&argc, &argv, &secondRunCode, this]() {
+        secondRunCode = this->server.start(argc, argv);
+    }));
+
+    EnsureServerModelDownloadFinishedWithTimeout(server, 120);
+
+    EXPECT_EQ(secondRunCode, EXIT_SUCCESS);
+    EXPECT_FALSE(std::filesystem::exists(removedFilePath));
+    EXPECT_FALSE(std::filesystem::exists(removedFilePath2));
+
+    std::string preservedDigestAfter = sha256File(preservedFilePath, ec);
+    ASSERT_EQ(ec, std::errc());
+    EXPECT_EQ(preservedDigestBefore, preservedDigestAfter);
+}
+
+TEST_F(HfDownloaderPullHfModel, PullAfterUserEditedTrackedFileDoesNotOverwriteIt) {
+    std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
+    std::string downloadPath = ovms::FileSystem::joinPath({this->directoryPath, "repository"});
+    std::string task = "text_generation";
+    this->ServerPullHfModel(modelName, downloadPath, task);
+    server.setShutdownRequest(1);
+    if (t)
+        t->join();
+    server.setShutdownRequest(0);
+
+    std::string basePath = ovms::FileSystem::joinPath({this->directoryPath, "repository", "OpenVINO", "Phi-3-mini-FastDraft-50M-int8-ov"});
+    std::string editedFilePath = ovms::FileSystem::appendSlash(basePath) + "openvino_tokenizer.bin";
+    std::string editedFilePath2 = ovms::FileSystem::appendSlash(basePath) + "tokenizer.json";
+
+    ASSERT_TRUE(std::filesystem::exists(editedFilePath));
+    ASSERT_TRUE(std::filesystem::exists(editedFilePath2));
+    const std::uintmax_t originalSize = std::filesystem::file_size(editedFilePath);
+    const std::uintmax_t originalSize2 = std::filesystem::file_size(editedFilePath2);
+
+    std::error_code ec;
+    std::string originalDigest = sha256File(editedFilePath, ec);
+    ASSERT_EQ(ec, std::errc());
+    std::string originalDigest2 = sha256File(editedFilePath2, ec);
+    ASSERT_EQ(ec, std::errc());
+
+    ASSERT_TRUE(removeSecondHalf(editedFilePath));
+    ASSERT_TRUE(removeSecondHalf(editedFilePath2));
+    const std::uintmax_t editedSize = std::filesystem::file_size(editedFilePath);
+    const std::uintmax_t editedSize2 = std::filesystem::file_size(editedFilePath2);
+    ASSERT_LT(editedSize, originalSize);
+    ASSERT_LT(editedSize2, originalSize2);
+
+    std::string editedDigestBeforeRerun = sha256File(editedFilePath, ec);
+    ASSERT_EQ(ec, std::errc());
+    ASSERT_NE(originalDigest, editedDigestBeforeRerun);
+    std::string editedDigestBeforeRerun2 = sha256File(editedFilePath2, ec);
+    ASSERT_EQ(ec, std::errc());
+    ASSERT_NE(originalDigest2, editedDigestBeforeRerun2);
+
+    int secondRunCode = EXIT_SUCCESS;
+    server.setShutdownRequest(0);
+    char* argv[] = {(char*)"ovms",
+        (char*)"--pull",
+        (char*)"--source_model",
+        (char*)modelName.c_str(),
+        (char*)"--model_repository_path",
+        (char*)downloadPath.c_str(),
+        (char*)"--task",
+        (char*)task.c_str()};
+    int argc = 8;
+    t.reset(new std::thread([&argc, &argv, &secondRunCode, this]() {
+        secondRunCode = this->server.start(argc, argv);
+    }));
+
+    EnsureServerModelDownloadFinishedWithTimeout(server, 120);
+
+    EXPECT_EQ(secondRunCode, EXIT_SUCCESS);
+    EXPECT_EQ(std::filesystem::file_size(editedFilePath), editedSize);
+    EXPECT_EQ(std::filesystem::file_size(editedFilePath2), editedSize2);
+
+    std::string editedDigestAfterRerun = sha256File(editedFilePath, ec);
+    ASSERT_EQ(ec, std::errc());
+    EXPECT_EQ(editedDigestBeforeRerun, editedDigestAfterRerun);
+    EXPECT_NE(originalDigest, editedDigestAfterRerun);
+
+    std::string editedDigestAfterRerun2 = sha256File(editedFilePath2, ec);
+    ASSERT_EQ(ec, std::errc());
+    EXPECT_EQ(editedDigestBeforeRerun2, editedDigestAfterRerun2);
+    EXPECT_NE(originalDigest2, editedDigestAfterRerun2);
 }
 
 TEST_F(HfDownloaderPullHfModel, ResumeAfterForcedTerminationAndRerun) {

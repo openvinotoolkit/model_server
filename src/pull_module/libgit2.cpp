@@ -66,6 +66,35 @@ namespace fs = std::filesystem;
 namespace {
 std::atomic<int> g_activeLibgit2Guards{0};
 
+fs::path getLfsWipMarkerPath(const std::string& repositoryPath) {
+    const fs::path repository = fs::path(repositoryPath);
+    return repository.parent_path() / (repository.filename().string() + ".lfswip");
+}
+
+bool createLfsWipMarker(const std::string& repositoryPath) {
+    const fs::path markerPath = getLfsWipMarkerPath(repositoryPath);
+    std::error_code ec;
+    if (!markerPath.parent_path().empty()) {
+        fs::create_directories(markerPath.parent_path(), ec);
+    }
+    std::ofstream marker(markerPath, std::ios::trunc);
+    return static_cast<bool>(marker);
+}
+
+bool hasLfsWipMarker(const std::string& repositoryPath) {
+    const fs::path markerPath = getLfsWipMarkerPath(repositoryPath);
+    std::error_code ec;
+    return fs::exists(markerPath, ec) && fs::is_regular_file(markerPath, ec);
+}
+
+void removeLfsWipMarker(const std::string& repositoryPath) {
+    const fs::path markerPath = getLfsWipMarkerPath(repositoryPath);
+    std::error_code ec;
+    if (!fs::remove(markerPath, ec) && ec) {
+        SPDLOG_WARN("Failed to remove .lfswip marker {}: {}", markerPath.string(), ec.message());
+    }
+}
+
 /**
  * Sets the LFS (Large File Storage) cancellation flag.
  * This signal is checked by the patched libgit2 library to abort ongoing LFS downloads.
@@ -552,6 +581,12 @@ bool isCloneCancellationRequestedFromServer() {
     return getShutdownRequestValue() != 0;
 }
 
+bool hasLfsErrorFile(const std::string& repositoryRootPath) {
+    const fs::path errorFilePath = fs::path(repositoryRootPath) / "lfs_error.txt";
+    std::error_code ec;
+    return fs::exists(errorFilePath, ec) && fs::is_regular_file(errorFilePath, ec);
+}
+
 /**
  * Removes leading and trailing ASCII whitespace (spaces, tabs, CR, LF) from a string.
  * Preserves non-ASCII bytes to maintain UTF-8 integrity.
@@ -810,6 +845,12 @@ struct MissingLfsPathsWalkPayload {
     std::set<fs::path>* matches;
 };
 
+struct MissingNonLfsPathsWalkPayload {
+    git_repository* repo;
+    fs::path worktreeRoot;
+    std::set<fs::path>* matches;
+};
+
 /**
  * Tree-walk callback that collects paths from HEAD tree that have LFS pointers but missing worktree files.
  * Used to identify LFS files that need to be downloaded/resumed during clone recovery.
@@ -842,6 +883,27 @@ int collectMissingLfsPathsFromHeadTreeCb(const char* root, const git_tree_entry*
     return 0;
 }
 
+int collectMissingNonLfsPathsFromHeadTreeCb(const char* root, const git_tree_entry* entry, void* payloadPtr) {
+    auto* payload = reinterpret_cast<MissingNonLfsPathsWalkPayload*>(payloadPtr);
+    if (!payload || git_tree_entry_type(entry) != GIT_OBJECT_BLOB)
+        return 0;
+
+    fs::path relativePath = fs::path(root ? root : "") / git_tree_entry_name(entry);
+    std::error_code ec;
+    if (fs::exists(payload->worktreeRoot / relativePath, ec))
+        return 0;
+
+    git_blob* blob = nullptr;
+    if (git_blob_lookup(&blob, payload->repo, git_tree_entry_id(entry)) != 0)
+        return 0;
+    std::unique_ptr<git_blob, decltype(&git_blob_free)> blobGuard(blob, git_blob_free);
+
+    if (!blobHasLfsKeywordsFirst3Positional(blob))
+        payload->matches->insert(relativePath);
+
+    return 0;
+}
+
 /**
  * Identifies LFS files that are safe to resume downloading after interruption.
  * Combines working directory LFS pointers with missing LFS blobs from the HEAD tree.
@@ -849,20 +911,36 @@ int collectMissingLfsPathsFromHeadTreeCb(const char* root, const git_tree_entry*
  * 
  * @param repo Pointer to the git repository object.
  * @param directory Root directory of the git working tree to search.
+ * @param parseHeadTreeIfInterrupted If true, also scan HEAD tree for missing tracked LFS blobs.
  * @return Vector of relative paths to all resumable LFS files needing download completion.
  * @note Works on specific git repository; scans both working directory and object database.
  * @note Part of the git LFS domain: identifies candidates for partial-clone recovery.
  */
-std::vector<fs::path> findResumableLfsFiles(git_repository* repo, const std::string& directory) {
+std::vector<fs::path> findResumableLfsFiles(git_repository* repo, const std::string& directory, bool parseHeadTreeIfInterrupted) {
     std::set<fs::path> uniqueMatches;
     auto existingMatches = findLfsLikeFiles(directory, true);
     uniqueMatches.insert(existingMatches.begin(), existingMatches.end());
 
+    if (parseHeadTreeIfInterrupted) {
+        git_object* headTreeObject = nullptr;
+        if (git_revparse_single(&headTreeObject, repo, "HEAD^{tree}") == 0) {
+            std::unique_ptr<git_object, decltype(&git_object_free)> headTreeGuard(headTreeObject, git_object_free);
+            MissingLfsPathsWalkPayload payload{repo, fs::path(directory), &uniqueMatches};
+            (void)git_tree_walk(reinterpret_cast<git_tree*>(headTreeObject), GIT_TREEWALK_PRE, collectMissingLfsPathsFromHeadTreeCb, &payload);
+        }
+    }
+
+    return std::vector<fs::path>(uniqueMatches.begin(), uniqueMatches.end());
+}
+
+std::vector<fs::path> findMissingTrackedNonLfsFiles(git_repository* repo, const std::string& directory) {
+    std::set<fs::path> uniqueMatches;
+
     git_object* headTreeObject = nullptr;
     if (git_revparse_single(&headTreeObject, repo, "HEAD^{tree}") == 0) {
         std::unique_ptr<git_object, decltype(&git_object_free)> headTreeGuard(headTreeObject, git_object_free);
-        MissingLfsPathsWalkPayload payload{repo, fs::path(directory), &uniqueMatches};
-        (void)git_tree_walk(reinterpret_cast<git_tree*>(headTreeObject), GIT_TREEWALK_PRE, collectMissingLfsPathsFromHeadTreeCb, &payload);
+        MissingNonLfsPathsWalkPayload payload{repo, fs::path(directory), &uniqueMatches};
+        (void)git_tree_walk(reinterpret_cast<git_tree*>(headTreeObject), GIT_TREEWALK_PRE, collectMissingNonLfsPathsFromHeadTreeCb, &payload);
     }
 
     return std::vector<fs::path>(uniqueMatches.begin(), uniqueMatches.end());
@@ -908,6 +986,44 @@ bool hasLfsErrorFileAndLogContent(const std::string& repositoryRootPath) {
     return true;
 }
 }  // namespace libgit2
+
+Status restoreMissingTrackedNonLfsFiles(git_repository* repo, const std::vector<fs::path>& missingPaths) {
+    if (missingPaths.empty())
+        return StatusCode::OK;
+
+    std::vector<std::string> ownedPaths;
+    ownedPaths.reserve(missingPaths.size());
+    for (const auto& p : missingPaths) {
+        ownedPaths.emplace_back(p.generic_string());
+    }
+
+    std::vector<char*> checkoutPaths;
+    checkoutPaths.reserve(ownedPaths.size());
+    for (auto& p : ownedPaths) {
+        checkoutPaths.push_back(const_cast<char*>(p.c_str()));
+    }
+
+    git_strarray pathspec = {checkoutPaths.data(), checkoutPaths.size()};
+    git_checkout_options checkoutOptions = GIT_CHECKOUT_OPTIONS_INIT;
+    checkoutOptions.checkout_strategy = GIT_CHECKOUT_FORCE | GIT_CHECKOUT_RECREATE_MISSING;
+    checkoutOptions.notify_flags = GIT_CHECKOUT_NOTIFY_ALL;
+    checkoutOptions.notify_cb = cloneCheckoutNotifyCb;
+    checkoutOptions.paths = pathspec;
+
+    int rc = git_checkout_head(repo, &checkoutOptions);
+    if (rc >= 0)
+        return StatusCode::OK;
+
+    if (getShutdownRequestValue() != 0 || rc == GIT_EUSER) {
+        setLfsCancelRequested(1);
+        SPDLOG_ERROR("Non-LFS restore cancelled by shutdown request.");
+        return StatusCode::HF_GIT_CLONE_CANCELLED;
+    }
+
+    const git_error* e = git_error_last();
+    SPDLOG_ERROR("Non-LFS restore failed rc:{} msg:{}", rc, e && e->message ? e->message : "no message");
+    return StatusCode::HF_GIT_STATUS_FAILED;
+}
 
 /**
  * Resumes the download of a single LFS file after an interrupted clone.
@@ -1040,34 +1156,40 @@ Status HfDownloader::downloadModel() {
                 return StatusCode::HF_GIT_STATUS_FAILED;
         }
 
+        const bool hasWipMarker = hasLfsWipMarker(this->downloadPath);
+        const bool hasLfsErrorFile = libgit2::hasLfsErrorFile(this->downloadPath);
+
         // Checking if the download was partially finished for any files in repository,
         // including tracked LFS pointer blobs missing from the worktree after abrupt termination.
-        auto matches = libgit2::findResumableLfsFiles(repoGuard.get(), this->downloadPath);
+        auto matches = libgit2::findResumableLfsFiles(repoGuard.get(), this->downloadPath, hasWipMarker || hasLfsErrorFile);
+        std::vector<fs::path> missingNonLfsMatches;
+        if (hasWipMarker) {
+            missingNonLfsMatches = libgit2::findMissingTrackedNonLfsFiles(repoGuard.get(), this->downloadPath);
+        }
+        const bool interruptionLikely = hasWipMarker || hasLfsErrorFile || !matches.empty();
 
-        if (matches.empty()) {
-            SPDLOG_DEBUG("No files to resume download found.");
+        if (!interruptionLikely) {
+            SPDLOG_DEBUG("No interruption signals found (.lfswip/lfs_error/LFS pointers/missing tracked files).");
             std::cout << "Path already exists on local filesystem. Skipping download to path: " << this->downloadPath << std::endl;
             return StatusCode::OK;
-        } else {
-            std::cout << "Found " << matches.size() << " file(s) to resume partial download:\n";
+        }
+
+        if (!createLfsWipMarker(this->downloadPath)) {
+            SPDLOG_WARN("Failed to create .lfswip marker before resume at {}", getLfsWipMarkerPath(this->downloadPath).string());
+        }
+
+        if (!matches.empty()) {
+            std::cout << "Found " << matches.size() << " LFS file(s) to resume partial download:\n";
             for (const auto& p : matches) {
                 std::cout << "  " << p.string() << "\n";
             }
         }
 
-        // Set repository url
-        std::string passRepoUrl = GetRepositoryUrlWithPassword();
-        const char* url = passRepoUrl.c_str();
-        int error = git_repository_set_url(repoGuard.get(), url);
-        if (error < 0) {
-            const git_error* err = git_error_last();
-            if (err)
-                SPDLOG_ERROR("Repository set url failed: {} {}", err->klass, err->message);
-            else
-                SPDLOG_ERROR("Repository set url failed: {}", error);
-            std::cout << "Path already exists on local filesystem. And set git repository url failed: " << this->downloadPath << std::endl;
-            std::cout << "Consider --override to start download from scratch." << std::endl;
-            return StatusCode::HF_GIT_CLONE_FAILED;
+        if (!missingNonLfsMatches.empty()) {
+            std::cout << "Found " << missingNonLfsMatches.size() << " missing tracked non-LFS file(s) to restore:\n";
+            for (const auto& p : missingNonLfsMatches) {
+                std::cout << "  " << p.string() << "\n";
+            }
         }
 
         for (const auto& p : matches) {
@@ -1075,12 +1197,24 @@ Status HfDownloader::downloadModel() {
                 setLfsCancelRequested(1);
                 return StatusCode::HF_GIT_CLONE_CANCELLED;
             }
+            if (!createLfsWipMarker(this->downloadPath)) {
+                SPDLOG_WARN("Failed to refresh .lfswip marker before LFS resume at {}", getLfsWipMarkerPath(this->downloadPath).string());
+            }
             std::cout << " Resuming " << p.string() << "...\n";
             std::string path = p.string();
             auto resumeStatus = resumeLfsDownloadForFile(repoGuard.get(), path.c_str());
             if (!resumeStatus.ok()) {
                 return resumeStatus;
             }
+        }
+
+        if (hasWipMarker) {
+            auto restoreMissingStatus = restoreMissingTrackedNonLfsFiles(repoGuard.get(), missingNonLfsMatches);
+            if (!restoreMissingStatus.ok()) {
+                return restoreMissingStatus;
+            }
+        } else if (!missingNonLfsMatches.empty()) {
+            SPDLOG_DEBUG("Skipping non-LFS missing tracked file restoration because .lfswip marker was not found.");
         }
 
         // Checking if git status is ok but we are left with LFS errors recorded by libgit2 patch in repository root.
@@ -1093,11 +1227,13 @@ Status HfDownloader::downloadModel() {
         SPDLOG_DEBUG("Checking repository status.");
         auto status = CheckRepositoryStatus(false);
         if (!status.ok()) {
-            SPDLOG_DEBUG("[WARNING] Model repository status check failed after resuming download. Status: {}", status.string());
-            SPDLOG_DEBUG("Consider --override to start download from scratch.");
-        } else {
-            SPDLOG_DEBUG("Model repository status check passed after resuming download.");
+            SPDLOG_ERROR("Model repository status check failed after resuming download. Status: {}", status.string());
+            SPDLOG_ERROR("Consider --override to start download from scratch.");
+            return status;
         }
+        SPDLOG_DEBUG("Model repository status check passed after resuming download.");
+
+        removeLfsWipMarker(this->downloadPath);
 
         return StatusCode::OK;
     }
@@ -1136,6 +1272,9 @@ Status HfDownloader::downloadModel() {
     const char* url = passRepoUrl.c_str();
     const char* path = this->downloadPath.c_str();
     SPDLOG_TRACE("Starting git clone to: {}", path);
+    if (!createLfsWipMarker(this->downloadPath)) {
+        SPDLOG_WARN("Failed to create .lfswip marker before clone at {}", getLfsWipMarkerPath(this->downloadPath).string());
+    }
     setLfsCancelRequested(0); /* reset for this operation */
     int error = git_clone(&cloned_repo, url, path, &clone_opts);
     SPDLOG_TRACE("Ended git clone");
@@ -1176,6 +1315,9 @@ Status HfDownloader::downloadModel() {
     if (!status.ok()) {
         return status;
     }
+
+    removeLfsWipMarker(this->downloadPath);
+
     return StatusCode::OK;
 }
 
