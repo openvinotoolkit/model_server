@@ -399,7 +399,7 @@ TEST_F(HfDownloaderPullHfModel, PullAfterUserRemovedTrackedFileDoesNotRestoreIt)
     if (t)
         t->join();
     server.setShutdownRequest(0);
-    
+
     std::string basePath = ovms::FileSystem::joinPath({this->directoryPath, "repository", "OpenVINO", "Phi-3-mini-FastDraft-50M-int8-ov"});
     std::string preservedFilePath = ovms::FileSystem::appendSlash(basePath) + "openvino_model.bin";
     std::string removedFilePath = ovms::FileSystem::appendSlash(basePath) + "openvino_tokenizer.bin";
