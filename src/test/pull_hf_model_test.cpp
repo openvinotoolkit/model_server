@@ -53,7 +53,7 @@
 
 #include "environment.hpp"
 
-class HfDownloaderPullHfModel : public TestWithTempDir {
+class HfPull : public TestWithTempDir {
 protected:
     ovms::Server& server = ovms::Server::instance();
     std::unique_ptr<std::thread> t;
@@ -163,7 +163,7 @@ const std::string expectedGraphContentsDraft = R"(
     }
 )";
 
-TEST_F(HfDownloaderPullHfModel, PositiveDownload) {
+TEST_F(HfPull, Download) {
     GTEST_SKIP() << "Skipping test in CI - PositiveDownloadAndStart has full scope testing.";
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string downloadPath = ovms::FileSystem::joinPath({this->directoryPath, "repository"});
@@ -278,7 +278,7 @@ public:
     ovms::Status CheckRepositoryStatus(bool checkUntracked) { return HfDownloader::CheckRepositoryStatus(checkUntracked); }
 };
 
-TEST_F(HfDownloaderPullHfModel, Resume) {
+TEST_F(HfPull, Resume) {
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string downloadPath = ovms::FileSystem::joinPath({this->directoryPath, "repository"});
     std::string task = "text_generation";
@@ -343,7 +343,8 @@ TEST_F(HfDownloaderPullHfModel, Resume) {
     ASSERT_EQ(expectedDigest, resumedDigest);
 }
 
-TEST_F(HfDownloaderPullHfModel, ResumeAfterShutdownRequestAndRerun) {
+// ResumeAfterShutdownRequestAndRerun
+TEST_F(HfPull, ResumeShutdown) {
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string downloadPath = ovms::FileSystem::joinPath({this->directoryPath, "repository"});
     std::string task = "text_generation";
@@ -410,7 +411,8 @@ TEST_F(HfDownloaderPullHfModel, ResumeAfterShutdownRequestAndRerun) {
     ASSERT_EQ(std::filesystem::file_size(model4Path), 499723);
 }
 
-TEST_F(HfDownloaderPullHfModel, PullAfterUserRemovedTrackedFileDoesNotRestoreIt) {
+// PullAfterUserRemovedTrackedFileDoesNotRestoreIt
+TEST_F(HfPull, UserRemoved) {
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string downloadPath = ovms::FileSystem::joinPath({this->directoryPath, "repository"});
     std::string task = "text_generation";
@@ -468,7 +470,8 @@ TEST_F(HfDownloaderPullHfModel, PullAfterUserRemovedTrackedFileDoesNotRestoreIt)
     EXPECT_EQ(preservedDigestBefore, preservedDigestAfter);
 }
 
-TEST_F(HfDownloaderPullHfModel, PullAfterUserEditedTrackedFileDoesNotOverwriteIt) {
+// PullAfterUserEditedTrackedFileDoesNotOverwriteIt
+TEST_F(HfPull, UserEdited) {
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string downloadPath = ovms::FileSystem::joinPath({this->directoryPath, "repository"});
     std::string task = "text_generation";
@@ -539,7 +542,8 @@ TEST_F(HfDownloaderPullHfModel, PullAfterUserEditedTrackedFileDoesNotOverwriteIt
     EXPECT_NE(originalDigest2, editedDigestAfterRerun2);
 }
 
-TEST_F(HfDownloaderPullHfModel, ResumeAfterForcedTerminationAndRerun) {
+// ResumeAfterForcedTerminationAndRerun
+TEST_F(HfPull, ResumeTerminate) {
     SKIP_AND_EXIT_IF_NOT_RUNNING_UNSTABLE();  // SSL proxy blocked workaround
 #ifdef _WIN32
     GTEST_SKIP() << "Forceful child-process termination path is Linux-only in this test.";
@@ -609,7 +613,7 @@ TEST_F(HfDownloaderPullHfModel, ResumeAfterForcedTerminationAndRerun) {
 #endif
 }
 
-TEST_F(HfDownloaderPullHfModel, PositiveDownloadAndStart) {
+TEST_F(HfPull, Start) {
     SKIP_AND_EXIT_IF_NOT_RUNNING_UNSTABLE();  // CVS-180127
     // EnvGuard guard;
     // guard.set("HF_ENDPOINT", "https://modelscope.cn");
@@ -633,7 +637,7 @@ TEST_F(HfDownloaderPullHfModel, PositiveDownloadAndStart) {
     ASSERT_EQ(expectedGraphContents, removeVersionString(graphContents)) << graphContents;
 }
 
-TEST_F(HfDownloaderPullHfModel, ModelOutOfOvOrg) {
+TEST_F(HfPull, OutOfOvOrg) {
     SKIP_AND_EXIT_IF_NOT_RUNNING_UNSTABLE();  // CVS-180127
     // EnvGuard guard;
     // guard.set("HF_ENDPOINT", "https://modelscope.cn");
@@ -677,7 +681,7 @@ TEST_F(HfDownloaderPullHfModel, ModelOutOfOvOrg) {
     ASSERT_EQ(ftime1, ftime2);
 }
 
-TEST_F(HfDownloaderPullHfModel, PositiveDownloadAndStartModelOutsideOvOrg) {
+TEST_F(HfPull, StartOutsideOvOrg) {
     SKIP_AND_EXIT_IF_NOT_RUNNING_UNSTABLE();  // CVS-180127
     this->filesToPrintInCaseOfFailure.emplace_back("graph.pbtxt");
     this->filesToPrintInCaseOfFailure.emplace_back("config.json");
@@ -697,7 +701,7 @@ TEST_F(HfDownloaderPullHfModel, PositiveDownloadAndStartModelOutsideOvOrg) {
     ASSERT_EQ(expectedGraphContents, removeVersionString(graphContents)) << graphContents;
 }
 
-TEST_F(HfDownloaderPullHfModel, DownloadDraftModel) {
+TEST_F(HfPull, DraftModel) {
     SKIP_AND_EXIT_IF_NOT_RUNNING_UNSTABLE();  // CVS-180127
     // EnvGuard guard;
     // guard.set("HF_ENDPOINT", "https://modelscope.cn");
@@ -1055,13 +1059,13 @@ TEST(HfDownloaderClassTest, ProtocollsWithPassword) {
     EXPECT_EQ(TestHfDownloader(modelName, ovms::IModelDownloader::getGraphDirectory(downloadPath, modelName), hfEndpoint, hfToken, "", false).GetRepositoryUrlWithPassword(), "what_ever_is_here://123!$token:123!$token@www.new_hf.com/model/name");
 }
 
-TEST_F(HfDownloaderPullHfModel, MethodsNegative) {
+TEST_F(HfPull, MethodsNegative) {
     EXPECT_EQ(TestHfDownloader("name/test", "../some/path", "", "", "", false).downloadModel(), ovms::StatusCode::PATH_INVALID);
     // Library not initialized
     EXPECT_EQ(TestHfDownloader("name/test", ovms::IModelDownloader::getGraphDirectory(this->directoryPath, "name2/test"), "", "", "", false).downloadModel(), ovms::StatusCode::HF_GIT_CLONE_FAILED);
 }
 
-TEST_F(HfDownloaderPullHfModel, CloneCancelledByShutdownRequest) {
+TEST_F(HfPull, CloneCancelledByShutdownRequest) {
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string downloadPath = ovms::FileSystem::joinPath({this->directoryPath, "repository_cancel"});
     std::unique_ptr<TestHfDownloader> hfDownloader = std::make_unique<TestHfDownloader>(
