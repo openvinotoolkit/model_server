@@ -190,7 +190,7 @@ TEST_F(Gemma4OutputParserTest, ParserToolCallWithBooleanArgument) {
 }
 
 TEST_F(Gemma4OutputParserTest, ParseTwoToolCallsAtOnce) {
-    std::string inputWithProperClosure = "<|tool_call>call:dummy1{config:{name:<|\"|>astro_config<|\"|>,value:99}}call:dummy2{config:{name:<|\"|>second_config<|\"|>,value:199}}<tool_call|>";
+    std::string inputWithProperClosure = "<|tool_call>call:dummy1{config:{name:<|\"|>astro_config<|\"|>,value:99}}call:dummy2{config:{value:199,name:<|\"|>second_config<|\"|>}}<tool_call|>";
 
     std::vector<std::string> inputs = {inputWithProperClosure};
     for (auto& input : inputs) {
@@ -205,7 +205,7 @@ TEST_F(Gemma4OutputParserTest, ParseTwoToolCallsAtOnce) {
         EXPECT_EQ(parsedOutput.toolCalls[1].name, "dummy2");
         // Parser removes whitespaces, so we expect arguments value to be without spaces
         EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{\"config\":{\"name\":\"astro_config\",\"value\":99}}");
-        EXPECT_EQ(parsedOutput.toolCalls[1].arguments, "{\"config\":{\"name\":\"second_config\",\"value\":199}}");
+        EXPECT_EQ(parsedOutput.toolCalls[1].arguments, "{\"config\":{\"value\":199,\"name\":\"second_config\"}}");
         EXPECT_EQ(parsedOutput.toolCalls[0].id.empty(), false);  // ID should be generated
         EXPECT_EQ(parsedOutput.toolCalls[1].id.empty(), false);  // ID should be generated
     }
