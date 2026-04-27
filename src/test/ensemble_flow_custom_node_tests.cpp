@@ -61,7 +61,11 @@
 #include "constructor_enabled_model_manager.hpp"
 #include "test_models_configs.hpp"
 #include "test_utils.hpp"
+#include "src/test/test_request_utils_tfs.hpp"
+#include "src/test/test_request_utils_kfs.hpp"
 #include "light_test_utils.hpp"
+#include "src/test/test_request_utils_tfs.hpp"
+#include "src/test/test_request_utils_kfs.hpp"
 #include "test_with_temp_dir.hpp"
 
 using namespace ovms;

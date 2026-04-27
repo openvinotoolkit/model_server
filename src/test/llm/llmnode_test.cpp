@@ -52,6 +52,7 @@
 #include "../constructor_enabled_model_manager.hpp"
 #include "../platform_utils.hpp"
 #include "../test_http_utils.hpp"
+#include "src/test/test_mediapipe_utils.hpp"
 #include "../test_utils.hpp"
 #include "src/test/environment.hpp"
 

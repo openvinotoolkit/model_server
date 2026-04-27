@@ -22,6 +22,7 @@
 #include "absl/strings/escaping.h"
 #pragma warning(pop)
 #include "test_utils.hpp"
+#include "src/test/test_request_utils_tfs.hpp"
 
 using namespace ovms;
 

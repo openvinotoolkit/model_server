@@ -40,6 +40,9 @@
 #include "../deserialization_main.hpp"
 #include "../regularovtensorfactory.hpp"
 #include "test_utils.hpp"
+#include "src/test/test_request_utils_tfs.hpp"
+#include "src/test/test_request_utils_kfs.hpp"
+#include "src/test/test_request_utils_capi.hpp"
 
 using TFTensorProto = tensorflow::TensorProto;
 

@@ -113,16 +113,3 @@ static ovms::NodeLibrary createLibraryMock() {
 }
 
 std::shared_ptr<const ovms::TensorInfo> createTensorInfoCopyWithPrecision(std::shared_ptr<const ovms::TensorInfo> src, ovms::Precision precision);
-
-// ============================================================================
-// Backward compatibility: re-export split headers.
-// Phase 3 will remove these and update consumers to include directly.
-// ============================================================================
-#include "src/test/test_request_utils_tfs.hpp"
-#include "src/test/test_request_utils_kfs.hpp"
-#include "src/test/test_request_utils_capi.hpp"
-#include "src/test/test_server_utils.hpp"
-#include "src/test/test_model_manager_utils.hpp"
-#include "src/test/test_predict_validation_utils.hpp"
-#include "src/test/test_config_utils.hpp"
-#include "src/test/test_mediapipe_utils.hpp"

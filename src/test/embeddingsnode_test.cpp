@@ -20,10 +20,13 @@
 
 #include "../http_rest_api_handler.hpp"
 #include "../mediapipe_internal/mediapipefactory.hpp"
+#include "../mediapipe_internal/mediapipegraphdefinition.hpp"
+#include "../modelmanager.hpp"
 #include "../servablemanagermodule.hpp"
 #include "../server.hpp"
 #include "rapidjson/document.h"
 #include "test_http_utils.hpp"
+#include "src/test/test_server_utils.hpp"
 #include "test_utils.hpp"
 #include "platform_utils.hpp"
 

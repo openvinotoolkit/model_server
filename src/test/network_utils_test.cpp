@@ -31,6 +31,7 @@
 #include "src/logging.hpp"
 
 #include "test_utils.hpp"
+#include "src/test/test_server_utils.hpp"
 
 TEST(NetworkUtils, IsPortAvailable_Positive) {
     uint64_t availablePort = 12345;

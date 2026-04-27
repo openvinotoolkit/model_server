@@ -29,6 +29,8 @@
 #include "src/utils/env_guard.hpp"
 #include "src/test/light_test_utils.hpp"
 #include "src/test/test_utils.hpp"
+#include "src/test/test_server_utils.hpp"
+#include "src/test/test_config_utils.hpp"
 #include "src/test/test_file_utils.hpp"
 #include "src/test/test_with_temp_dir.hpp"
 #include "src/filesystem/filesystem.hpp"

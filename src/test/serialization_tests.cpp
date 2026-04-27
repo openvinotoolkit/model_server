@@ -39,6 +39,8 @@
 #include "../capi_frontend/serialization.hpp"
 #include "../tfs_frontend/tfs_utils.hpp"
 #include "test_utils.hpp"
+#include "src/test/test_request_utils_tfs.hpp"
+#include "src/test/test_request_utils_kfs.hpp"
 
 using TFTensorProto = tensorflow::TensorProto;
 

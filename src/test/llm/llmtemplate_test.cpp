@@ -46,6 +46,7 @@
 #pragma GCC diagnostic pop
 
 #include "src/test/test_http_utils.hpp"
+#include "src/test/test_server_utils.hpp"
 #include "src/test/test_utils.hpp"
 #include "src/test/light_test_utils.hpp"
 #include "src/test/test_with_temp_dir.hpp"

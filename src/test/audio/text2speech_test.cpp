@@ -23,6 +23,7 @@
 #include "../../server.hpp"
 #include "rapidjson/document.h"
 #include "../test_http_utils.hpp"
+#include "src/test/test_mediapipe_utils.hpp"
 #include "../test_utils.hpp"
 #include "../platform_utils.hpp"
 #include "../constructor_enabled_model_manager.hpp"

@@ -33,6 +33,10 @@
 #include "constructor_enabled_model_manager.hpp"
 #include "platform_utils.hpp"
 #include "test_utils.hpp"
+#include "src/test/test_request_utils_kfs.hpp"
+#include "src/test/test_server_utils.hpp"
+#include "src/test/test_config_utils.hpp"
+#include "src/test/test_mediapipe_utils.hpp"
 
 #if (PYTHON_DISABLE == 0)
 #include "../python/pythoninterpretermodule.hpp"

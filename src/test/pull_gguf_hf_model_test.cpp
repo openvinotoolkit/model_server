@@ -23,6 +23,7 @@
 #include <git2.h>
 #include "../utils/env_guard.hpp"
 #include "test_utils.hpp"
+#include "src/test/test_server_utils.hpp"
 #include "test_with_temp_dir.hpp"
 #include "gguf_environment.hpp"
 #include "src/filesystem/filesystem.hpp"

@@ -30,6 +30,7 @@
 #include "../status.hpp"
 #include "../version.hpp"
 #include "test_utils.hpp"
+#include "src/test/test_server_utils.hpp"
 #include "platform_utils.hpp"
 
 using ovms::Config;

@@ -30,6 +30,7 @@
 #include "../ovms_exit_codes.hpp"
 #include "../systeminfo.hpp"
 #include "test_utils.hpp"
+#include "src/test/test_config_utils.hpp"
 
 using testing::_;
 using testing::ContainerEq;

@@ -23,6 +23,7 @@
 #include <sys/types.h>
 
 #include "../modelconfig.hpp"
+#include "../anonymous_input_name.hpp"
 #include "../status.hpp"
 #include "test_utils.hpp"
 

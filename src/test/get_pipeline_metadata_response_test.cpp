@@ -28,6 +28,8 @@
 
 #include "constructor_enabled_model_manager.hpp"
 #include "test_utils.hpp"
+#include "src/test/test_request_utils_kfs.hpp"
+#include "src/test/test_request_utils_tfs.hpp"
 
 using namespace ovms;
 using namespace rapidjson;
