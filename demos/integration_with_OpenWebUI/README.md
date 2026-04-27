@@ -487,6 +487,9 @@ docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models openvino/model_serve
 :::
 :::: 
 
+> **Note:** Family of Whisper models (except Whisper-large) can be also deployed on NPU or CPU devices by just changing the --target_device parameter.
+
+
 ### Step 2: Audio Settings
 
 1. Go to **Admin Panel** → **Settings** → **Audio** 
