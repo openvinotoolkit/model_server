@@ -15,32 +15,34 @@
 //*****************************************************************************
 #pragma once
 
+#include <filesystem>
 #include <future>
 #include <memory>
 #include <mutex>
-#include <stdexcept>
 #include <string>
 #include <unordered_map>
 #include <utility>
 #include <vector>
 
-#pragma warning(push)
-#pragma warning(disable : 4005 4309 6001 6385 6386 6326 6011 4005 4456 6246)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#include "mediapipe/framework/calculator_graph.h"
-#pragma GCC diagnostic pop
-#pragma warning(pop)
-
-#include "openvino/genai/whisper_pipeline.hpp"
-#include "openvino/genai/speech_generation/text2speech_pipeline.hpp"
 #include "src/audio/speech_to_text/s2t_executor.hpp"
-#include "src/audio/speech_to_text/s2t_calculator.pb.h"
-#include "src/json_parser.hpp"
 #include "src/status.hpp"
-#include "src/logging.hpp"
+
+namespace absl {
+class Status;
+}  // namespace absl
+
+namespace mediapipe {
+class S2tCalculatorOptions;
+}  // namespace mediapipe
+
+namespace ov::genai {
+class WhisperPipeline;
+class WhisperGenerationConfig;
+}  // namespace ov::genai
 
 namespace ovms {
+
+struct HttpPayload;
 
 struct SttServable {
     using StreamingJob = SttStreamingJob;
@@ -52,36 +54,16 @@ struct SttServable {
 
     std::unique_ptr<SttExecutorWrapper> streamingExecutor;
 
-    SttServable(const ::mediapipe::S2tCalculatorOptions& nodeOptions, const std::string& graphPath) {
-        auto fsModelsPath = std::filesystem::path(nodeOptions.models_path());
-        if (fsModelsPath.is_relative()) {
-            parsedModelsPath = (std::filesystem::path(graphPath) / fsModelsPath);
-        } else {
-            parsedModelsPath = fsModelsPath;
-        }
-        ov::AnyMap config;
-        auto status = JsonParser::parsePluginConfig(nodeOptions.plugin_config(), config);
-        if (!status.ok()) {
-            SPDLOG_ERROR("Error during llm node plugin_config option parsing to JSON: {}", nodeOptions.plugin_config());
-            throw std::runtime_error("Error during plugin_config option parsing");
-        }
-        enableWordTimestamps = nodeOptions.enable_word_timestamps();
-        if (enableWordTimestamps && nodeOptions.target_device() == "NPU")
-            config["STATIC_PIPELINE"] = true;
-        config["word_timestamps"] = enableWordTimestamps;
-        sttPipeline = std::make_shared<ov::genai::WhisperPipeline>(parsedModelsPath.string(), nodeOptions.target_device(), config);
-
-        streamingExecutor = std::make_unique<SttExecutorWrapper>();
-    }
+    SttServable(const ::mediapipe::S2tCalculatorOptions& nodeOptions, const std::string& graphPath);
 
     ~SttServable() = default;
 
-    std::future<ov::genai::WhisperDecodedResults> addRequest(StreamingJob&& job) {
-        if (!streamingExecutor) {
-            throw std::runtime_error("Cannot schedule STT streaming job - executor not initialized");
-        }
-        return streamingExecutor->addRequest(std::move(job));
-    }
+    void addRequest(std::shared_ptr<SttServableExecutionContext> executionContext);
+
+    static absl::Status parseTemperature(const HttpPayload& payload, float& temperature);
+
+    static absl::Status applyTranscriptionConfig(ov::genai::WhisperGenerationConfig& config,
+        const std::shared_ptr<SttServable>& servable, const HttpPayload& payload);
 };
 
 using SttServableMap = std::unordered_map<std::string, std::shared_ptr<SttServable>>;

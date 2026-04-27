@@ -55,7 +55,6 @@ TEST(StreamingTextQueueTest, DoneWithEmptyQueue) {
     queue.setDone();
     std::string out;
     EXPECT_FALSE(queue.waitAndPop(out));
-    EXPECT_TRUE(queue.isDone());
 }
 
 TEST(StreamingTextQueueTest, DoneAfterAllPopped) {
@@ -66,22 +65,6 @@ TEST(StreamingTextQueueTest, DoneAfterAllPopped) {
     EXPECT_TRUE(queue.waitAndPop(out));
     EXPECT_EQ(out, "data");
     EXPECT_FALSE(queue.waitAndPop(out));
-    EXPECT_TRUE(queue.isDone());
-}
-
-TEST(StreamingTextQueueTest, IsDoneInitiallyFalse) {
-    StreamingTextQueue queue;
-    EXPECT_FALSE(queue.isDone());
-}
-
-TEST(StreamingTextQueueTest, IsDoneNotTrueWhileItemsRemain) {
-    StreamingTextQueue queue;
-    queue.push("remaining");
-    queue.setDone();
-    EXPECT_FALSE(queue.isDone());
-    std::string out;
-    EXPECT_TRUE(queue.waitAndPop(out));
-    EXPECT_TRUE(queue.isDone());
 }
 
 TEST(StreamingTextQueueTest, WaitAndPopBlocksUntilPush) {

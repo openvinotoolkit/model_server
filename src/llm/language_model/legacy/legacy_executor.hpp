@@ -33,12 +33,10 @@ struct LegacyExecutor : public Executor<std::shared_ptr<LegacyServableExecutionC
     LegacyExecutor(std::shared_ptr<ov::genai::LLMPipeline> pipe);
 
     void processRequest();
-    void addRequest(std::shared_ptr<LegacyServableExecutionContext> request);
 };
 
 class LegacyExecutorWrapper : public ExecutorWrapper<LegacyExecutor> {
 public:
     LegacyExecutorWrapper(std::shared_ptr<ov::genai::LLMPipeline> pipe);
-    void addRequest(std::shared_ptr<LegacyServableExecutionContext> request);
 };
 }  // namespace ovms

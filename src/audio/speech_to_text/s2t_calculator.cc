@@ -113,7 +113,7 @@ public:
         }
 
         // --- LOOPBACK iteration: drain streaming queue ---
-        if (hasLoopback_ && !cc->Inputs().Tag(LOOPBACK_TAG_NAME).IsEmpty()) {
+        if (!loopbackEmpty) {
             return streamingHandler_.processIteration(cc, LOOPBACK_TAG_NAME, OUTPUT_TAG_NAME);
         }
 
@@ -190,7 +190,7 @@ private:
         writer.String("text");
         if (endpoint == Endpoint::TRANSCRIPTIONS) {
             ov::genai::WhisperGenerationConfig config = pipe->sttPipeline->get_generation_config();
-            auto status = S2tStreamingHandler::applyTranscriptionConfig(config, pipe, payload);
+            auto status = ovms::SttServable::applyTranscriptionConfig(config, pipe, payload);
             if (status != absl::OkStatus())
                 return status;
 
@@ -209,7 +209,7 @@ private:
         }
         if (endpoint == Endpoint::TRANSLATIONS) {
             float temperature = 1.0f;
-            auto tempStatus = S2tStreamingHandler::parseTemperature(payload, temperature);
+            auto tempStatus = ovms::SttServable::parseTemperature(payload, temperature);
             if (tempStatus != absl::OkStatus())
                 return tempStatus;
             std::unique_lock lock(pipe->sttPipelineMutex);

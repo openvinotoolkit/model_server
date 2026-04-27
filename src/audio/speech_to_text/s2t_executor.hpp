@@ -17,7 +17,6 @@
 
 #include <future>
 #include <mutex>
-#include <stdexcept>
 #include <utility>
 
 #include "openvino/genai/whisper_pipeline.hpp"
@@ -28,28 +27,27 @@ namespace ovms {
 
 using SttStreamingJob = std::packaged_task<ov::genai::WhisperDecodedResults()>;
 
-struct SttExecutor : public Executor<SttStreamingJob> {
+struct SttServableExecutionContext {
+    SttStreamingJob job;
+    std::future<ov::genai::WhisperDecodedResults> finished;
+
+    explicit SttServableExecutionContext(SttStreamingJob&& streamingJob) :
+        job(std::move(streamingJob)),
+        finished(job.get_future()) {}
+};
+
+struct SttExecutor : public Executor<std::shared_ptr<SttServableExecutionContext>> {
     void processRequest() {
-        SttStreamingJob request;
+        std::shared_ptr<SttServableExecutionContext> requestExecutionContext;
         {
             std::lock_guard<std::mutex> lock(queueMutex);
             if (requests.empty()) {
                 return;
             }
-            request = std::move(requests.front());
+            requestExecutionContext = std::move(requests.front());
             requests.pop();
         }
-        request();
-    }
-
-    std::future<ov::genai::WhisperDecodedResults> addRequest(SttStreamingJob&& request) {
-        auto resultFuture = request.get_future();
-        {
-            std::lock_guard<std::mutex> lock(queueMutex);
-            requests.push(std::move(request));
-        }
-        cv.notify_one();
-        return resultFuture;
+        requestExecutionContext->job();
     }
 };
 
@@ -57,13 +55,6 @@ class SttExecutorWrapper : public ExecutorWrapper<SttExecutor> {
 public:
     SttExecutorWrapper() :
         ExecutorWrapper(s2t_calculator_logger) {}
-
-    std::future<ov::genai::WhisperDecodedResults> addRequest(SttStreamingJob&& request) {
-        if (finishExecutorThread) {
-            throw std::runtime_error("Cannot schedule STT streaming job - executor is stopping");
-        }
-        return executor.addRequest(std::move(request));
-    }
 };
 
 }  // namespace ovms

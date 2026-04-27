@@ -15,6 +15,8 @@
 //*****************************************************************************
 
 #include "legacy_executor.hpp"
+
+#include "../../../logging.hpp"
 #include "servable.hpp"
 
 #include <utility>
@@ -46,16 +48,6 @@ void LegacyExecutor::processRequest() {
     requests.pop();
 }
 
-void LegacyExecutor::addRequest(std::shared_ptr<LegacyServableExecutionContext> request) {
-    std::unique_lock<std::mutex> lock(queueMutex);
-    requests.push(request);
-    cv.notify_one();
-}
-
 LegacyExecutorWrapper::LegacyExecutorWrapper(std::shared_ptr<ov::genai::LLMPipeline> pipe) :
     ExecutorWrapper(llm_executor_logger, std::move(pipe)) {}
-
-void LegacyExecutorWrapper::addRequest(std::shared_ptr<LegacyServableExecutionContext> request) {
-    executor.addRequest(request);
-}
 }  // namespace ovms

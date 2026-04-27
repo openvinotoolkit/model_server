@@ -54,11 +54,6 @@ public:
         return false;  // done and empty
     }
 
-    bool isDone() const {
-        std::lock_guard<std::mutex> lock(mutex_);
-        return done_ && queue_.empty();
-    }
-
 private:
     mutable std::mutex mutex_;
     std::condition_variable cv_;

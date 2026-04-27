@@ -20,6 +20,7 @@
 #include <memory>
 #include <mutex>
 #include <queue>
+#include <stdexcept>
 #include <thread>
 #include <utility>
 
@@ -41,6 +42,8 @@ void runExecutorLoop(ExecutorT* executor, std::atomic<bool>* receivedEndSignal, 
 
 template <typename RequestT>
 struct Executor {
+    using Request = RequestT;
+
     std::condition_variable cv;
     std::queue<RequestT> requests;
     std::mutex queueMutex;
@@ -64,6 +67,12 @@ struct Executor {
         std::lock_guard<std::mutex> lock(queueMutex);
         cv.notify_one();
     }
+
+    void scheduleRequest(RequestT&& request) {
+        std::lock_guard<std::mutex> lock(queueMutex);
+        requests.push(std::move(request));
+        cv.notify_one();
+    }
 };
 
 template <typename ExecutorT>
@@ -84,10 +93,19 @@ protected:
     std::atomic<bool> finishExecutorThread = false;
 
 public:
+    using Request = typename ExecutorT::Request;
+
     template <typename... Args>
     ExecutorWrapper(std::shared_ptr<spdlog::logger> logger, Args&&... args) :
         executor(std::forward<Args>(args)...) {
         executorThread = std::thread(run, &executor, &finishExecutorThread, logger);
+    }
+
+    void addRequest(Request request) {
+        if (finishExecutorThread) {
+            throw std::runtime_error("Cannot schedule request - executor is stopping");
+        }
+        executor.scheduleRequest(std::move(request));
     }
 
     ~ExecutorWrapper() {

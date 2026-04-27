@@ -30,8 +30,6 @@
 
 namespace mediapipe {
 
-static constexpr size_t ISO_LANG_CODE_MAX = 3;
-
 std::string S2tStreamingHandler::serializeDeltaEvent(const std::string& delta) {
     rapidjson::StringBuffer buffer;
     rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
@@ -73,8 +71,8 @@ absl::Status S2tStreamingHandler::start(CalculatorContext* cc,
         return absl::FailedPreconditionError("Streaming request is already active");
     }
     isStreaming_ = true;
-    accumulatedText_.clear();
     streamingQueue_ = std::make_shared<ovms::StreamingTextQueue>();
+    executionContext_.reset();
 
     auto queue = streamingQueue_;
     auto client = payload.client;
@@ -91,12 +89,12 @@ absl::Status S2tStreamingHandler::start(CalculatorContext* cc,
 
     if (isTranscription) {
         ov::genai::WhisperGenerationConfig config = pipe->sttPipeline->get_generation_config();
-        auto status = applyTranscriptionConfig(config, pipe, payload);
+        auto status = ovms::SttServable::applyTranscriptionConfig(config, pipe, payload);
         if (status != absl::OkStatus()) {
             isStreaming_ = false;
             return status;
         }
-        ovms::SttServable::StreamingJob job(
+        auto executionContext = std::make_shared<ovms::SttServableExecutionContext>(ovms::SttServable::StreamingJob(
             [pipe, rawSpeech = std::move(rawSpeech), config, streamerCallback, queue]() mutable -> ov::genai::WhisperDecodedResults {
                 try {
                     std::unique_lock lock(pipe->sttPipelineMutex);
@@ -108,21 +106,22 @@ absl::Status S2tStreamingHandler::start(CalculatorContext* cc,
                     queue->setDone();
                     throw;
                 }
-            });
+            }));
         try {
-            generateFuture_ = pipe->addRequest(std::move(job));
+            pipe->addRequest(executionContext);
+            executionContext_ = std::move(executionContext);
         } catch (const std::exception& e) {
             isStreaming_ = false;
             return absl::InternalError(e.what());
         }
     } else {
         float temperature = pipe->sttPipeline->get_generation_config().temperature;
-        auto tempStatus = parseTemperature(payload, temperature);
+        auto tempStatus = ovms::SttServable::parseTemperature(payload, temperature);
         if (tempStatus != absl::OkStatus()) {
             isStreaming_ = false;
             return tempStatus;
         }
-        ovms::SttServable::StreamingJob job(
+        auto executionContext = std::make_shared<ovms::SttServableExecutionContext>(ovms::SttServable::StreamingJob(
             [pipe, rawSpeech = std::move(rawSpeech), streamerCallback, queue, temperature]() mutable -> ov::genai::WhisperDecodedResults {
                 try {
                     std::unique_lock lock(pipe->sttPipelineMutex);
@@ -137,9 +136,10 @@ absl::Status S2tStreamingHandler::start(CalculatorContext* cc,
                     queue->setDone();
                     throw;
                 }
-            });
+            }));
         try {
-            generateFuture_ = pipe->addRequest(std::move(job));
+            pipe->addRequest(executionContext);
+            executionContext_ = std::move(executionContext);
         } catch (const std::exception& e) {
             isStreaming_ = false;
             return absl::InternalError(e.what());
@@ -159,7 +159,6 @@ absl::Status S2tStreamingHandler::processIteration(CalculatorContext* cc,
     bool hasData = streamingQueue_->waitAndPop(chunk);
 
     if (hasData) {
-        accumulatedText_ += chunk;
         std::string ssePayload = ovms::wrapTextInServerSideEventMessage(serializeDeltaEvent(chunk));
         cc->Outputs().Tag(outputTag).Add(new std::string{std::move(ssePayload)}, iterationTimestamp_);
 
@@ -169,70 +168,28 @@ absl::Status S2tStreamingHandler::processIteration(CalculatorContext* cc,
         cc->Outputs().Tag(loopbackTag).Add(new bool{true}, iterationTimestamp_);
     } else {
         // Generation complete — send final event and stop
+        std::string finalText;
         try {
-            if (generateFuture_.valid()) {
-                generateFuture_.get();  // propagate any exceptions
+            if (executionContext_ && executionContext_->finished.valid()) {
+                const ov::genai::WhisperDecodedResults result = executionContext_->finished.get();
+                finalText = result;
             }
         } catch (ov::AssertFailure& e) {
             isStreaming_ = false;
+            executionContext_.reset();
             return absl::InvalidArgumentError(e.what());
         } catch (...) {
             isStreaming_ = false;
+            executionContext_.reset();
             return absl::InvalidArgumentError("Response generation failed");
         }
 
-        std::string doneEvent = ovms::wrapTextInServerSideEventMessage(serializeDoneEvent(accumulatedText_));
+        std::string doneEvent = ovms::wrapTextInServerSideEventMessage(serializeDoneEvent(finalText));
         cc->Outputs().Tag(outputTag).Add(new std::string{std::move(doneEvent)}, iterationTimestamp_);
         isStreaming_ = false;
+        executionContext_.reset();
     }
 
-    return absl::OkStatus();
-}
-
-absl::Status S2tStreamingHandler::parseTemperature(const ovms::HttpPayload& payload, float& temperature) {
-    std::string temperatureStr = payload.multipartParser->getFieldByName("temperature");
-    if (temperatureStr.size() > 0) {
-        SPDLOG_LOGGER_TRACE(ovms::s2t_calculator_logger, "Received temperature: {}", temperatureStr);
-        auto temp = ovms::stof(temperatureStr);
-        if (!temp.has_value()) {
-            temp = ovms::stou32(temperatureStr);
-            if (!temp.has_value())
-                return absl::InvalidArgumentError("Invalid temperature type.");
-        }
-        if (temp.value() < 0.0f || temp.value() > 2.0f)
-            return absl::InvalidArgumentError("Temperature out of range(0.0, 2.0)");
-        temperature = temp.value();
-    }
-    return absl::OkStatus();
-}
-
-absl::Status S2tStreamingHandler::applyTranscriptionConfig(ov::genai::WhisperGenerationConfig& config,
-    const std::shared_ptr<ovms::SttServable>& pipe, const ovms::HttpPayload& payload) {
-    std::string language = payload.multipartParser->getFieldByName("language");
-    if (language.size() > 0) {
-        if (language.size() > ISO_LANG_CODE_MAX) {
-            return absl::InvalidArgumentError("Invalid language code.");
-        }
-        SPDLOG_LOGGER_TRACE(ovms::s2t_calculator_logger, "Received language: {}", language);
-        config.language = "<|" + language + "|>";
-    }
-    std::vector<std::string> timestampsTypes = payload.multipartParser->getArrayFieldByName("timestamp_granularities[]");
-    config.word_timestamps = false;
-    for (const auto& timestampsType : timestampsTypes) {
-        SPDLOG_LOGGER_TRACE(ovms::s2t_calculator_logger, "Received timestamp type: {}", timestampsType);
-        if (timestampsType == "segment") {
-            config.return_timestamps = true;
-        } else if (timestampsType == "word") {
-            if (!pipe->enableWordTimestamps)
-                return absl::InvalidArgumentError("Word timestamps not supported for this model");
-            config.word_timestamps = true;
-        } else {
-            return absl::InvalidArgumentError("Invalid timestamp_granularities type. Allowed types: \"segment\", \"word\"");
-        }
-    }
-    auto status = parseTemperature(payload, config.temperature);
-    if (status != absl::OkStatus())
-        return status;
     return absl::OkStatus();
 }
 

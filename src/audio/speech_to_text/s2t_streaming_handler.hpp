@@ -35,6 +35,7 @@
 namespace ovms {
 class StreamingTextQueue;
 struct SttServable;
+struct SttServableExecutionContext;
 }  // namespace ovms
 
 namespace mediapipe {
@@ -44,8 +45,6 @@ namespace mediapipe {
 // serialization and LOOPBACK signaling.
 class S2tStreamingHandler {
 public:
-    static absl::Status parseTemperature(const ovms::HttpPayload& payload, float& temperature);
-
     static std::string serializeDeltaEvent(const std::string& delta);
     static std::string serializeDoneEvent(const std::string& text);
 
@@ -61,16 +60,10 @@ public:
         const std::string& loopbackTag,
         const std::string& outputTag);
 
-    // Reused by both streaming start (for config) and unary path.
-    // Kept here to avoid duplicating the parsing logic.
-    static absl::Status applyTranscriptionConfig(ov::genai::WhisperGenerationConfig& config,
-        const std::shared_ptr<ovms::SttServable>& pipe, const ovms::HttpPayload& payload);
-
 private:
     bool isStreaming_ = false;
     std::shared_ptr<ovms::StreamingTextQueue> streamingQueue_;
-    std::future<ov::genai::WhisperDecodedResults> generateFuture_;
-    std::string accumulatedText_;
+    std::shared_ptr<ovms::SttServableExecutionContext> executionContext_;
     ::mediapipe::Timestamp iterationTimestamp_{0};
 };
 
