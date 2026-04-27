@@ -73,8 +73,8 @@ std::string Gemma4ToolParser::parseObjectParameter(std::string argumentStr) {
         key = argumentStr.substr(pos, keyEndPos - pos);
         size_t valueStartPos = keyEndPos + 1;
         size_t valueEndPos;
-        if ( argumentStr.substr(keyEndPos + 2, TOOL_ARGS_STRING_INDICATOR.size()) == TOOL_ARGS_STRING_INDICATOR) {
-            valueStartPos = keyEndPos + 2 + TOOL_ARGS_STRING_INDICATOR.size();
+        if (argumentStr.substr(valueStartPos, TOOL_ARGS_STRING_INDICATOR.size()) == TOOL_ARGS_STRING_INDICATOR) {
+            valueStartPos = valueStartPos + TOOL_ARGS_STRING_INDICATOR.size();
             valueEndPos = argumentStr.find(TOOL_ARGS_STRING_INDICATOR, valueStartPos);
             isStringValue = true;
         } else {
@@ -89,7 +89,13 @@ std::string Gemma4ToolParser::parseObjectParameter(std::string argumentStr) {
             value = "\"" + value + "\"";
         }
         keyValuePairs.emplace_back(key, value);
-        pos = (valueEndPos == argumentStr.size() - 1) ? std::string::npos : valueEndPos + 1;
+        if (valueEndPos == argumentStr.size() - 1) {
+            break;
+        } else if (isStringValue) {
+            pos = valueEndPos + TOOL_ARGS_STRING_INDICATOR.size() + 1;
+        } else {
+            pos = valueEndPos + 1;
+        }
     }
 
     if (keyValuePairs.empty()) {
