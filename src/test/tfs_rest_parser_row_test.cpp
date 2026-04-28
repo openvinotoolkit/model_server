@@ -739,3 +739,26 @@ TEST(TFSRestParserRow, RemoveUnnecessaryInputs) {
     ASSERT_EQ(parser.getProto().inputs().count("k"), 1);
     ASSERT_EQ(parser.getProto().inputs().count("l"), 1);
 }
+
+static std::string makeNestedArrayJson(int depth) {
+    return std::string(depth, '[') + "0" + std::string(depth, ']');
+}
+
+TEST(TFSRestParserRow, NestingDepthExceeded_RowNamedInstances) {
+    TFSRestParser parser(prepareTensors({{"i", {1}}}));
+    std::string request = R"({"signature_name":"","instances":[{"i":)" + makeNestedArrayJson(200) + "}]}";
+    EXPECT_EQ(parser.parse(request.c_str()), StatusCode::REST_COULD_NOT_PARSE_INSTANCE);
+}
+
+TEST(TFSRestParserRow, NestingDepthExceeded_RowNoNamedInstances) {
+    TFSRestParser parser(prepareTensors({{"i", {1}}}));
+    std::string request = R"({"signature_name":"","instances":)" + makeNestedArrayJson(200) + "}";
+    EXPECT_EQ(parser.parse(request.c_str()), StatusCode::REST_COULD_NOT_PARSE_INSTANCE);
+}
+
+TEST(TFSRestParserRow, NestingWithinLimit_RowNamedInstances) {
+    TFSRestParser parser(prepareTensors({{"i", {1}}}));
+    // 5 levels of nesting is well within the limit and valid
+    EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[{"i":[[[[[0]]]]]}]})"),
+        StatusCode::OK);
+}
