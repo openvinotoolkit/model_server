@@ -29,6 +29,8 @@
 
 namespace ovms {
 
+static constexpr int MAX_NESTING_DEPTH = 100;
+
 TFSRestParser::TFSRestParser(const tensor_map_t& tensors) {
     for (const auto& kv : tensors) {
         const auto& name = kv.first;
@@ -122,6 +124,9 @@ static bool isBinary(const rapidjson::Value& value) {
 }
 
 bool TFSRestParser::parseArray(rapidjson::Value& doc, int dim, tensorflow::TensorProto& proto, const std::string& tensorName) {
+    if (dim > MAX_NESTING_DEPTH) {
+        return false;
+    }
     if (isBinary(doc)) {
         if (!addValue(proto, doc)) {
             return false;
@@ -444,7 +449,7 @@ Status TFSRestParser::parseColumnFormat(rapidjson::Value& node) {
 
 Status TFSRestParser::parse(const char* json) {
     rapidjson::Document doc;
-    if (doc.Parse(json).HasParseError()) {
+    if (doc.Parse<rapidjson::kParseIterativeFlag>(json).HasParseError()) {
         std::stringstream ss;
         ss << "Error: " << rapidjson::GetParseError_En(doc.GetParseError())
            << " Offset: " << doc.GetErrorOffset();
@@ -621,7 +626,7 @@ Status KFSRestParser::parseOutputs(rapidjson::Value& node) {
 #define HANDLE_VALUE(CONTENTS, TYPE_GETTER, TYPE_CHECK)                 \
     for (auto& value : node.GetArray()) {                               \
         if (value.IsArray()) {                                          \
-            auto status = parseData(value, input);                      \
+            auto status = parseData(value, input, depth + 1);           \
             if (!status.ok()) {                                         \
                 return status;                                          \
             }                                                           \
@@ -633,7 +638,10 @@ Status KFSRestParser::parseOutputs(rapidjson::Value& node) {
         input.mutable_contents()->CONTENTS()->Add(value.TYPE_GETTER()); \
     }
 
-Status KFSRestParser::parseData(rapidjson::Value& node, ::KFSRequest::InferInputTensor& input) {
+Status KFSRestParser::parseData(rapidjson::Value& node, ::KFSRequest::InferInputTensor& input, int depth) {
+    if (depth > MAX_NESTING_DEPTH) {
+        return StatusCode::REST_COULD_NOT_PARSE_INPUT;
+    }
     if (input.datatype() == "FP32") {
         HANDLE_VALUE(mutable_fp32_contents, GetFloat, IsNumber)
     } else if (input.datatype() == "INT64") {
@@ -659,7 +667,7 @@ Status KFSRestParser::parseData(rapidjson::Value& node, ::KFSRequest::InferInput
     } else if (input.datatype() == "BYTES") {
         for (auto& value : node.GetArray()) {
             if (value.IsArray()) {
-                auto status = parseData(value, input);
+                auto status = parseData(value, input, depth + 1);
                 if (!status.ok()) {
                     return status;
                 }
@@ -765,7 +773,7 @@ Status KFSRestParser::parseInputs(rapidjson::Value& node) {
 
 Status KFSRestParser::parse(const char* json) {
     rapidjson::Document doc;
-    if (doc.Parse(json).HasParseError()) {
+    if (doc.Parse<rapidjson::kParseIterativeFlag>(json).HasParseError()) {
         std::stringstream ss;
         ss << "Error: " << rapidjson::GetParseError_En(doc.GetParseError())
            << " Offset: " << doc.GetErrorOffset();
