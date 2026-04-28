@@ -41,7 +41,7 @@
 #include "gtest/gtest.h"
 #include "platform_utils.hpp"
 #include "test_utils.hpp"
-#include "src/test/test_server_utils.hpp"
+#include "test_server_utils.hpp"
 #include "constructor_enabled_model_manager.hpp"
 #include "test_models_configs.hpp"
 #include "light_test_utils.hpp"

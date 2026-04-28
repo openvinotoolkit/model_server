@@ -22,7 +22,6 @@
 
 #include "../ovms.h"
 #include "../status.hpp"
-#include "test_utils.hpp"
 
 namespace ovms {
 static StatusCode& operator++(StatusCode& statusCode) {

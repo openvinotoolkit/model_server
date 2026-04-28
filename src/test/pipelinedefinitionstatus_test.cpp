@@ -21,7 +21,6 @@
 #include "../prediction_service_utils.hpp"
 #include "../status.hpp"
 #include "../timer.hpp"
-#include "test_utils.hpp"
 
 using namespace ovms;
 

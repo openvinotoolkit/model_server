@@ -22,8 +22,7 @@
 #include "../servablemanagermodule.hpp"
 #include "../server.hpp"
 #include "test_http_utils.hpp"
-#include "src/test/test_server_utils.hpp"
-#include "test_utils.hpp"
+#include "test_server_utils.hpp"
 #include "platform_utils.hpp"
 
 class MultiPartCalculatorTest : public ::testing::Test {

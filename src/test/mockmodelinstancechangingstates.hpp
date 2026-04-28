@@ -23,7 +23,7 @@
 #include "../modelinstance.hpp"
 #include "../modelversionstatus.hpp"
 #include "../status.hpp"
-#include "test_utils.hpp"
+#include "test_models.hpp"
 
 class MockModelInstanceChangingStates : public ovms::ModelInstance {
 public:

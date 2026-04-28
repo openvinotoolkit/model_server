@@ -37,7 +37,7 @@
 #include "src/status.hpp"
 #include "src/tensorinfo.hpp"
 
-#include "src/test/test_models.hpp"
+#include "test_models.hpp"
 
 // ============================================================================
 // Core test utilities (frontend-agnostic)

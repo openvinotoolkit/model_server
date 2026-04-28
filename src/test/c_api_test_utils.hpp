@@ -20,8 +20,7 @@
 #include <gtest/gtest.h>
 
 #include "../ovms.h"  // NOLINT
-#include "test_utils.hpp"
-#include "src/test/test_server_utils.hpp"
+#include "test_server_utils.hpp"
 
 #define THROW_ON_ERROR_CAPI(C_API_CALL)                                        \
     {                                                                          \

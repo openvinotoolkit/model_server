@@ -22,7 +22,7 @@
 
 #include "src/capi_frontend/inferencerequest.hpp"
 #include "src/capi_frontend/inferenceresponse.hpp"
-#include "src/test/test_utils.hpp"
+#include "test_utils.hpp"
 
 using CAPIInterface = std::pair<ovms::InferenceRequest, ovms::InferenceResponse>;
 

@@ -26,9 +26,10 @@
 #include "../modelmanager.hpp"
 #include "../status.hpp"
 #include "mockmodelinstancechangingstates.hpp"
-#include "src/test/test_request_utils_kfs.hpp"
-#include "src/test/test_request_utils_tfs.hpp"
+#include "test_request_utils_kfs.hpp"
+#include "test_request_utils_tfs.hpp"
 #include "test_models_configs.hpp"
+#include "test_models.hpp"
 
 using ::testing::NiceMock;
 using ::testing::Return;

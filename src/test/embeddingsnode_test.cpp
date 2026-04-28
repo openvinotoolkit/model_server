@@ -26,8 +26,7 @@
 #include "../server.hpp"
 #include "rapidjson/document.h"
 #include "test_http_utils.hpp"
-#include "src/test/test_server_utils.hpp"
-#include "test_utils.hpp"
+#include "test_server_utils.hpp"
 #include "platform_utils.hpp"
 
 using namespace ovms;

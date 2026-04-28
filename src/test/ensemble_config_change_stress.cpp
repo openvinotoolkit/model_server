@@ -39,7 +39,7 @@
 #include "../stringutils.hpp"
 #include "../tfs_frontend/tfs_utils.hpp"
 #include "c_api_test_utils.hpp"
-#include "src/test/test_request_utils_tfs.hpp"
+#include "test_request_utils_tfs.hpp"
 #include "stress_test_utils.hpp"
 #include "test_models.hpp"
 #include "test_utils.hpp"

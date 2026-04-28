@@ -29,8 +29,7 @@
 #include "../http_status_code.hpp"
 #include "../multi_part_parser.hpp"
 
-#include "test_utils.hpp"
-#include "src/test/test_server_utils.hpp"
+#include "test_server_utils.hpp"
 
 class MockedServerRequestInterface final : public ovms::HttpAsyncWriter {
 public:

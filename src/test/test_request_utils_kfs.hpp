@@ -27,7 +27,7 @@
 
 #include "src/kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "src/kfs_frontend/kfs_utils.hpp"
-#include "src/test/test_utils.hpp"
+#include "test_utils.hpp"
 
 using KFSInterface = std::pair<KFSRequest, KFSResponse>;
 

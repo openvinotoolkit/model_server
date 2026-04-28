@@ -28,7 +28,7 @@
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
 
-#include "src/test/test_utils.hpp"
+#include "test_utils.hpp"
 
 using TFSRequestType = tensorflow::serving::PredictRequest;
 using TFSResponseType = tensorflow::serving::PredictResponse;

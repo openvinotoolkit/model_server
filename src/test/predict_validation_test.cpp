@@ -27,9 +27,9 @@
 #include "../modelinstance.hpp"
 #include "../predict_request_validation_utils.hpp"
 #include "test_utils.hpp"
-#include "src/test/test_request_utils_tfs.hpp"
-#include "src/test/test_request_utils_kfs.hpp"
-#include "src/test/test_predict_validation_utils.hpp"
+#include "test_request_utils_tfs.hpp"
+#include "test_request_utils_kfs.hpp"
+#include "test_predict_validation_utils.hpp"
 
 using ::testing::NiceMock;
 using ::testing::Return;

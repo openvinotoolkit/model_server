@@ -17,8 +17,10 @@
 
 #include <vector>
 
-#include "../logging.hpp"
-#include "../ovms.h"  // NOLINT
+#include "src/logging.hpp"
+#include "src/status.hpp"
+#include "src/ovms.h"  // NOLINT
+#include "test_models.hpp"
 
 void callbackMarkingItWasUsedWith42AndUnblockingAndCheckingCAPICorrectness(OVMS_InferenceResponse* response, uint32_t flag, void* userStruct) {
     using ovms::StatusCode;
