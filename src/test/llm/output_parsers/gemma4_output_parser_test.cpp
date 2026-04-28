@@ -99,14 +99,14 @@ TEST_F(Gemma4OutputParserTest, ParseToolCallOutputWithSingleToolCall) {
 
 TEST_F(Gemma4OutputParserTest, ParseToolCallOutputWithNoToolsInTheRequest) {
     std::string inputWithProperClosure = "<|tool_call>call:example_tool{arg1:<|\"|>value1<|\"|>,arg2:42}<tool_call|>";
+    std::string inputWithoutSpecialTokens = "call:example_tool{arg1:value1,arg2:42}";
 
     std::vector<std::string> inputs = {inputWithProperClosure};
     for (auto& input : inputs) {
-        std::string testInput = input;
-        auto generatedTensor = gemma4Tokenizer->encode(testInput, ov::genai::add_special_tokens(true)).input_ids;
+        auto generatedTensor = gemma4Tokenizer->encode(input, ov::genai::add_special_tokens(true)).input_ids;
         std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
         ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, false);
-        EXPECT_EQ(parsedOutput.content, testInput);
+        EXPECT_EQ(parsedOutput.content, inputWithoutSpecialTokens);
         EXPECT_EQ(parsedOutput.reasoning, "");
 
         ASSERT_EQ(parsedOutput.toolCalls.size(), 0);
@@ -152,7 +152,7 @@ TEST_F(Gemma4OutputParserTest, ParseToolCallWithStringArguments) {
 }
 
 TEST_F(Gemma4OutputParserTest, ParseToolCallWithListOfStringsAsArgument) {
-    std::string inputWithProperClosure = "<|tool_call>call:generate_DNA_sequence{length:100,preferences:['G','C']}<tool_call|>";
+    std::string inputWithProperClosure = "<|tool_call>call:generate_DNA_sequence{length:100,preferences:[<|\"|>G<|\"|>,<|\"|>C<|\"|>]}<tool_call|>";
 
     std::vector<std::string> inputs = {inputWithProperClosure};
     for (auto& input : inputs) {
@@ -745,14 +745,14 @@ TEST_F(Gemma4OutputParserTest, ParseToolCallWithStringArgumentsContainingBacksla
 }
 
 TEST_F(Gemma4OutputParserTest, ParseToolCallWithStringArgumentsArrayWithStringsContainingQuotes) {
-    std::string input = R"(<|tool_call>call:save{lines:[<|"|>it's the wonderful day<|"|>,<|"|>My name's Jan<|"|>,<|"|>That's Johns' car.<|"|>]}<tool_call|>)";
+    std::string input = R"(<|tool_call>call:save{lines:[<|"|>it's the wonderful day<|"|>,<|"|>He said: "My name's John"<|"|>,<|"|>That's Johns' car.<|"|>]}<tool_call|>)";
     auto generatedTensor = gemma4Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
     ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
     EXPECT_EQ(parsedOutput.content, "");
     ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
     EXPECT_EQ(parsedOutput.toolCalls[0].name, "save");
-    EXPECT_EQ(parsedOutput.toolCalls[0].arguments, R"({"lines":["it's the wonderful day","My name's Jan","That's Johns' car."]})");
+    EXPECT_EQ(parsedOutput.toolCalls[0].arguments, R"({"lines":["it's the wonderful day","He said: \"My name's John\"","That's Johns' car."]})");
 }
 
 TEST_F(Gemma4OutputParserTest, ParseToolCallWithStringArgumentsObjectWithStringsContainingQuotes) {
