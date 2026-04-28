@@ -15,6 +15,7 @@
 //*****************************************************************************
 #include <array>
 #include <chrono>
+#include <cstdlib>
 #include <iomanip>
 #include <memory>
 #include <openssl/sha.h>
@@ -28,6 +29,8 @@
 #include <signal.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#else
+#include <windows.h>
 #endif
 
 #include <gmock/gmock.h>
@@ -542,12 +545,45 @@ TEST_F(HfPull, UserEdited) {
     EXPECT_NE(originalDigest2, editedDigestAfterRerun2);
 }
 
+#ifdef _WIN32
+// Helper test used only as a child process launched by HfPull.ResumeTerminate.
+TEST(HfPullWindowsWorker, ResumeTerminateChildProcess) {
+    const char* runWorker = std::getenv("OVMS_RESUME_TERMINATE_WORKER");
+    if ((runWorker == nullptr) || (std::string(runWorker) != "1")) {
+        GTEST_SKIP() << "Helper test - runs only when launched by HfPull.ResumeTerminate.";
+    }
+
+    const char* modelNameEnv = std::getenv("OVMS_RESUME_TERMINATE_MODEL");
+    const char* downloadPathEnv = std::getenv("OVMS_RESUME_TERMINATE_DOWNLOAD_PATH");
+    const char* taskEnv = std::getenv("OVMS_RESUME_TERMINATE_TASK");
+    ASSERT_NE(modelNameEnv, nullptr);
+    ASSERT_NE(downloadPathEnv, nullptr);
+    ASSERT_NE(taskEnv, nullptr);
+
+    ovms::Server& childServer = ovms::Server::instance();
+    childServer.setShutdownRequest(0);
+
+    std::string modelName = modelNameEnv;
+    std::string downloadPath = downloadPathEnv;
+    std::string task = taskEnv;
+    char* argv[] = {(char*)"ovms",
+        (char*)"--pull",
+        (char*)"--source_model",
+        (char*)modelName.c_str(),
+        (char*)"--model_repository_path",
+        (char*)downloadPath.c_str(),
+        (char*)"--task",
+        (char*)task.c_str()};
+    int argc = 8;
+
+    (void)childServer.start(argc, argv);
+}
+#endif
+
 // ResumeAfterForcedTerminationAndRerun
 TEST_F(HfPull, ResumeTerminate) {
     SKIP_AND_EXIT_IF_NOT_RUNNING_UNSTABLE();  // SSL proxy blocked workaround
-#ifdef _WIN32
-    GTEST_SKIP() << "Forceful child-process termination path is Linux-only in this test.";
-#else
+
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string downloadPath = ovms::FileSystem::joinPath({this->directoryPath, "repository"});
     std::string task = "text_generation";
@@ -558,6 +594,37 @@ TEST_F(HfPull, ResumeTerminate) {
     std::string model4Path = ovms::FileSystem::appendSlash(basePath) + "tokenizer.model";
     std::string graphPath = ovms::FileSystem::appendSlash(basePath) + "graph.pbtxt";
 
+#ifdef _WIN32
+    char testExePath[MAX_PATH] = {0};
+    DWORD exePathLen = GetModuleFileNameA(nullptr, testExePath, MAX_PATH);
+    ASSERT_GT(exePathLen, 0u);
+    ASSERT_LT(exePathLen, static_cast<DWORD>(MAX_PATH));
+
+    ASSERT_TRUE(SetEnvironmentVariableA("OVMS_RESUME_TERMINATE_WORKER", "1"));
+    ASSERT_TRUE(SetEnvironmentVariableA("OVMS_RESUME_TERMINATE_MODEL", modelName.c_str()));
+    ASSERT_TRUE(SetEnvironmentVariableA("OVMS_RESUME_TERMINATE_DOWNLOAD_PATH", downloadPath.c_str()));
+    ASSERT_TRUE(SetEnvironmentVariableA("OVMS_RESUME_TERMINATE_TASK", task.c_str()));
+
+    std::string commandLine = std::string("\"") + testExePath +
+        "\" --gtest_filter=HfPullWindowsWorker.ResumeTerminateChildProcess";
+    STARTUPINFOA si;
+    PROCESS_INFORMATION pi;
+    ZeroMemory(&si, sizeof(si));
+    si.cb = sizeof(si);
+    ZeroMemory(&pi, sizeof(pi));
+
+    ASSERT_TRUE(CreateProcessA(
+        nullptr,
+        commandLine.data(),
+        nullptr,
+        nullptr,
+        TRUE,
+        0,
+        nullptr,
+        nullptr,
+        &si,
+        &pi));
+#else
     pid_t childPid = fork();
     ASSERT_NE(childPid, -1);
 
@@ -594,11 +661,41 @@ TEST_F(HfPull, ResumeTerminate) {
         _exit(1);
     }
 
+#endif
+
+    bool observedPartialDownload = false;
+    auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(60);
+    while (std::chrono::steady_clock::now() < deadline) {
+        auto lfsCandidates = ovms::libgit2::findLfsLikeFiles(downloadPath, true);
+        auto hasOpenvinoModelPointer = std::find(lfsCandidates.begin(), lfsCandidates.end(), std::filesystem::path("openvino_model.bin")) != lfsCandidates.end();
+        const std::string partPath = ovms::FileSystem::appendSlash(basePath) + "openvino_model.binlfs_part";
+        const bool hasPartFile = std::filesystem::exists(partPath);
+        if (hasOpenvinoModelPointer || hasPartFile) {
+            observedPartialDownload = true;
+            std::this_thread::sleep_for(std::chrono::milliseconds(200));
+            break;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+
+#ifdef _WIN32
+    ASSERT_TRUE(TerminateProcess(pi.hProcess, 1));
+    ASSERT_EQ(WaitForSingleObject(pi.hProcess, 10000), WAIT_OBJECT_0);
+    CloseHandle(pi.hThread);
+    CloseHandle(pi.hProcess);
+
+    ASSERT_TRUE(SetEnvironmentVariableA("OVMS_RESUME_TERMINATE_WORKER", nullptr));
+    ASSERT_TRUE(SetEnvironmentVariableA("OVMS_RESUME_TERMINATE_MODEL", nullptr));
+    ASSERT_TRUE(SetEnvironmentVariableA("OVMS_RESUME_TERMINATE_DOWNLOAD_PATH", nullptr));
+    ASSERT_TRUE(SetEnvironmentVariableA("OVMS_RESUME_TERMINATE_TASK", nullptr));
+#else
     int childStatus = 0;
     ASSERT_EQ(waitpid(childPid, &childStatus, 0), childPid);
     ASSERT_TRUE(WIFSIGNALED(childStatus));
     ASSERT_EQ(WTERMSIG(childStatus), SIGKILL);
+#endif
 
+    EXPECT_TRUE(observedPartialDownload);
     auto remainingPointers = ovms::libgit2::findLfsLikeFiles(downloadPath, true);
     EXPECT_FALSE(remainingPointers.empty());
 
@@ -610,7 +707,6 @@ TEST_F(HfPull, ResumeTerminate) {
     ASSERT_EQ(std::filesystem::file_size(model2Path), 339125);
     ASSERT_EQ(std::filesystem::file_size(model3Path), 500292);
     ASSERT_EQ(std::filesystem::file_size(model4Path), 499723);
-#endif
 }
 
 TEST_F(HfPull, Start) {
