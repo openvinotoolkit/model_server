@@ -138,6 +138,9 @@ public:
 
             std::string streamField = payload.multipartParser->getFieldByName("stream");
             bool requestStreaming = (streamField == "true") && hasLoopback_;
+            if (streamField == "true" && endpoint == Endpoint::TRANSLATIONS) {
+                return absl::InvalidArgumentError("streaming is not supported for translations endpoint");
+            }
             if (streamField == "true" && !hasLoopback_) {
                 return absl::InvalidArgumentError("streaming is not supported for this graph configuration (LOOPBACK not configured)");
             }

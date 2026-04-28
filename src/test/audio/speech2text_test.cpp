@@ -281,6 +281,23 @@ TEST_F(Speech2TextStreamingTest, streamingTranscriptionInvalidFileReturnsError) 
         ovms::StatusCode::PARTIAL_END);
 }
 
+TEST_F(Speech2TextStreamingTest, streamingTranslationIsNotSupported) {
+    const std::string translationEndpoint = "/v3/audio/translations";
+    ASSERT_EQ(handler->parseRequestComponents(comp, "POST", translationEndpoint, multipartHeader), ovms::StatusCode::OK);
+
+    auto req = drogon::HttpRequest::newHttpRequest();
+    req->setMethod(drogon::Post);
+    req->addHeader("content-type", "multipart/form-data; boundary=\"12345\"");
+    req->setBody(streamingBody());
+    std::shared_ptr<MultiPartParser> multiPartParserWithRequest = std::make_shared<DrogonMultiPartParser>(req);
+
+    std::string requestBody;
+    auto status = handler->dispatchToProcessor(
+        translationEndpoint, requestBody, &response, comp, responseComponents, writer, multiPartParserWithRequest);
+    ASSERT_EQ(status.getCode(), ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+    EXPECT_NE(status.string().find("streaming is not supported for translations endpoint"), std::string::npos);
+}
+
 TEST_F(Speech2TextHttpTest, simplePositive) {
     auto req = drogon::HttpRequest::newHttpRequest();
     req->setMethod(drogon::Post);

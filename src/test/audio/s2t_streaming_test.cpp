@@ -52,7 +52,7 @@ TEST(StreamingTextQueueTest, FIFOOrder) {
 
 TEST(StreamingTextQueueTest, DoneWithEmptyQueue) {
     StreamingTextQueue queue;
-    queue.setDone();
+    queue.endStreaming();
     std::string out;
     EXPECT_FALSE(queue.waitAndPop(out));
 }
@@ -60,7 +60,7 @@ TEST(StreamingTextQueueTest, DoneWithEmptyQueue) {
 TEST(StreamingTextQueueTest, DoneAfterAllPopped) {
     StreamingTextQueue queue;
     queue.push("data");
-    queue.setDone();
+    queue.endStreaming();
     std::string out;
     EXPECT_TRUE(queue.waitAndPop(out));
     EXPECT_EQ(out, "data");
@@ -87,7 +87,7 @@ TEST(StreamingTextQueueTest, WaitAndPopUnblocksOnDone) {
         return queue.waitAndPop(result);
     });
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
-    queue.setDone();
+    queue.endStreaming();
     EXPECT_FALSE(future.get());
 }
 
@@ -100,7 +100,7 @@ TEST(StreamingTextQueueTest, ConcurrentProducerConsumer) {
         for (int i = 0; i < numItems; ++i) {
             queue.push(std::to_string(i));
         }
-        queue.setDone();
+        queue.endStreaming();
     });
 
     auto consumer = std::async(std::launch::async, [&queue, &received]() {
@@ -122,7 +122,7 @@ TEST(StreamingTextQueueTest, ConcurrentProducerConsumer) {
 TEST(StreamingTextQueueTest, EmptyStringPush) {
     StreamingTextQueue queue;
     queue.push("");
-    queue.setDone();
+    queue.endStreaming();
     std::string out;
     EXPECT_TRUE(queue.waitAndPop(out));
     EXPECT_EQ(out, "");

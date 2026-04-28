@@ -74,11 +74,10 @@ absl::Status S2tStreamingHandler::start(CalculatorContext* cc,
     streamingQueue_ = std::make_shared<ovms::StreamingTextQueue>();
     executionContext_.reset();
 
-    auto queue = streamingQueue_;
     auto client = payload.client;
-    auto streamerCallback = [queue, client](std::string text) -> ov::genai::StreamingStatus {
+    auto streamerCallback = [queue = streamingQueue_, client](std::string text) -> ov::genai::StreamingStatus {
         if (client && client->isDisconnected()) {
-            queue->setDone();
+            queue->endStreaming();
             return ov::genai::StreamingStatus::CANCEL;
         }
         if (!text.empty()) {
@@ -95,15 +94,15 @@ absl::Status S2tStreamingHandler::start(CalculatorContext* cc,
             return status;
         }
         auto executionContext = std::make_shared<ovms::SttServableExecutionContext>(ovms::SttServable::StreamingJob(
-            [pipe, rawSpeech = std::move(rawSpeech), config, streamerCallback, queue]() mutable -> ov::genai::WhisperDecodedResults {
+            [pipe, rawSpeech = std::move(rawSpeech), config, streamerCallback, queue = streamingQueue_]() mutable -> ov::genai::WhisperDecodedResults {
                 try {
                     std::unique_lock lock(pipe->sttPipelineMutex);
                     auto result = pipe->sttPipeline->generate(rawSpeech, config, streamerCallback);
                     lock.unlock();
-                    queue->setDone();
+                    queue->endStreaming();
                     return result;
                 } catch (...) {
-                    queue->setDone();
+                    queue->endStreaming();
                     throw;
                 }
             }));
@@ -122,7 +121,7 @@ absl::Status S2tStreamingHandler::start(CalculatorContext* cc,
             return tempStatus;
         }
         auto executionContext = std::make_shared<ovms::SttServableExecutionContext>(ovms::SttServable::StreamingJob(
-            [pipe, rawSpeech = std::move(rawSpeech), streamerCallback, queue, temperature]() mutable -> ov::genai::WhisperDecodedResults {
+            [pipe, rawSpeech = std::move(rawSpeech), streamerCallback, queue = streamingQueue_, temperature]() mutable -> ov::genai::WhisperDecodedResults {
                 try {
                     std::unique_lock lock(pipe->sttPipelineMutex);
                     auto result = pipe->sttPipeline->generate(rawSpeech,
@@ -130,10 +129,10 @@ absl::Status S2tStreamingHandler::start(CalculatorContext* cc,
                         ov::genai::temperature(temperature),
                         ov::genai::streamer(streamerCallback));
                     lock.unlock();
-                    queue->setDone();
+                    queue->endStreaming();
                     return result;
                 } catch (...) {
-                    queue->setDone();
+                    queue->endStreaming();
                     throw;
                 }
             }));

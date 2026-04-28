@@ -35,7 +35,7 @@ public:
     }
 
     // Signals that generation has finished (successfully or with error).
-    void setDone() {
+    void endStreaming() {
         std::lock_guard<std::mutex> lock(mutex_);
         done_ = true;
         cv_.notify_one();
