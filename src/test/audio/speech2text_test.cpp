@@ -291,11 +291,21 @@ TEST_F(Speech2TextStreamingTest, streamingTranslationIsNotSupported) {
     req->setBody(streamingBody());
     std::shared_ptr<MultiPartParser> multiPartParserWithRequest = std::make_shared<DrogonMultiPartParser>(req);
 
+    EXPECT_CALL(*writer, PartialReplyWithStatus(::testing::_, ::testing::_))
+        .WillOnce([](std::string responseBody, ovms::HTTPStatusCode code) {
+            EXPECT_EQ(code, ovms::HTTPStatusCode::BAD_REQUEST);
+            rapidjson::Document d;
+            ASSERT_EQ(d.Parse(responseBody.c_str()).HasParseError(), false);
+            ASSERT_TRUE(d.HasMember("error"));
+            ASSERT_TRUE(d["error"].IsString());
+            EXPECT_NE(std::string(d["error"].GetString()).find("streaming is not supported for translations endpoint"), std::string::npos);
+        });
+    EXPECT_CALL(*writer, PartialReplyEnd()).Times(1);
+
     std::string requestBody;
-    auto status = handler->dispatchToProcessor(
-        translationEndpoint, requestBody, &response, comp, responseComponents, writer, multiPartParserWithRequest);
-    ASSERT_EQ(status.getCode(), ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
-    EXPECT_NE(status.string().find("streaming is not supported for translations endpoint"), std::string::npos);
+    ASSERT_EQ(
+        handler->dispatchToProcessor(translationEndpoint, requestBody, &response, comp, responseComponents, writer, multiPartParserWithRequest),
+        ovms::StatusCode::PARTIAL_END);
 }
 
 TEST_F(Speech2TextHttpTest, simplePositive) {
