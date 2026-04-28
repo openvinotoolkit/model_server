@@ -152,7 +152,7 @@ std::string Gemma4ToolParser::normalizeArgStr(const std::string& arg) {
         size_t errorOffset = tempDoc.GetErrorOffset();
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Failed to parse argument string as JSON. Argument string: {}, Error: {} Offset: {}", normalized, errorMessage, errorOffset);
 
-        if (first == '\"' && last == '\"') {
+        if (normalized.front() == '\"' && normalized.back() == '\"') {
             normalized = normalized.substr(1, normalized.size() - 2);
         }
         finalValue.SetString(normalized.c_str(), static_cast<rapidjson::SizeType>(normalized.size()), tempDoc.GetAllocator());
@@ -261,8 +261,12 @@ bool Gemma4ToolParser::parseInToolCallState() {
 }
 
 bool Gemma4ToolParser::parseToolCallParametersState() {
+    if(this->streamingContent.back() == TOOL_ARGS_END_INDICATOR.back()) {
+        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Tool arguments end indicator found at the end of streaming content, attempting to parse arguments: {}", this->streamingContent.substr(this->streamingPosition));
+    }
     size_t pos = findInStringRespectingSpecialChars(this->streamingContent, TOOL_ARGS_END_INDICATOR, this->streamingPosition);
     if (pos == std::string::npos) {
+        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Tool arguments end indicator not found in streaming content starting from position: {}", this->streamingPosition);
         return false;
     }
     std::string argumentsStr = this->streamingContent.substr(this->streamingPosition, pos - this->streamingPosition);
