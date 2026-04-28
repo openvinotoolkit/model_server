@@ -2405,6 +2405,86 @@ ovms_test_cc_library(
     ],
 )
 
+ovms_test_cc_library(
+    name = "test_config_utils",
+    hdrs = ["test/test_config_utils.hpp"],
+    deps = [
+        "//src:libovms_config",
+    ],
+)
+
+ovms_test_cc_library(
+    name = "shape_test",
+    srcs = ["test/shape_test.cpp"],
+    deps = [
+        "//src:libovmsshape",
+        "//third_party:openvino",
+    ],
+)
+
+ovms_test_cc_library(
+    name = "ovinferrequestqueue_test",
+    srcs = ["test/ovinferrequestqueue_test.cpp"],
+    deps = [
+        "//src:libovms_ovinferrequestsqueue",
+        "//src:libovmstimer",
+        "//third_party:openvino",
+    ],
+    data = [
+        "test/dummy/1/dummy.xml",
+        "test/dummy/1/dummy.bin",
+    ],
+)
+
+ovms_test_cc_library(
+    name = "modelconfig_test",
+    srcs = ["test/modelconfig_test.cpp"],
+    deps = [
+        "//src:modelconfig",
+        "//src:anonymous_input_name",
+        "//src:libovmsstatus",
+        "//src:test_platform_utils",
+        "//third_party:openvino",
+    ],
+)
+
+ovms_test_cc_library(
+    name = "ovmsconfig_test",
+    srcs = ["test/ovmsconfig_test.cpp"],
+    deps = [
+        "//src:libovms_config",
+        "//src:libovms_server_settings",
+        "//src:ovms_exit_codes",
+        "//src:libovms_systeminfo",
+        "//src/utils:env_guard",
+        "//src/filesystem:libovmsfilesystem",
+        ":test_config_utils",
+        "@com_github_gabime_spdlog//:spdlog",
+    ],
+)
+
+ovms_test_cc_library(
+    name = "pipelinedefinitionstatus_test",
+    srcs = ["test/pipelinedefinitionstatus_test.cpp"],
+    deps = [
+        "//src/dags:pipelinedefinitionstatus",
+        "//src:libovmsstatus",
+        "//src:libovmstimer",
+    ],
+)
+
+ovms_test_cc_library(
+    name = "ov_utils_test",
+    srcs = ["test/ov_utils_test.cpp"],
+    deps = [
+        "//src:libovms_ov_utils",
+        "//src:modelinstance",
+        "//src/filesystem:libovmsfilesystem",
+        ":test_utils",
+        "//third_party:openvino",
+    ],
+)
+
 ovms_cc_test(
     name = "ovms_test",
     srcs = [
@@ -2434,16 +2514,11 @@ ovms_cc_test(
         "test/model_cache_test.cpp",
         "test/model_service_test.cpp",
         "test/model_test.cpp",
-        "test/modelconfig_test.cpp",
         "test/modelinstance_test.cpp",
         "test/modelmanager_test.cpp",
         "test/modelversionstatus_test.cpp",
         "test/node_library_manager_test.cpp",
         "test/nodesessionmetadata_test.cpp",
-        "test/ov_utils_test.cpp",
-        "test/ovinferrequestqueue_test.cpp",
-        "test/ovmsconfig_test.cpp",
-        "test/pipelinedefinitionstatus_test.cpp",
         "test/predict_validation_test.cpp",
         "test/prediction_service_test.cpp",
         "test/rest_utils_test.cpp",
@@ -2451,7 +2526,6 @@ ovms_cc_test(
         "test/sequence_test.cpp",
         "test/serialization_tests.cpp",
         "test/server_test.cpp",
-        "test/shape_test.cpp",
         "test/stateful_config_test.cpp",
         #"test/stateful_modelinstance_test.cpp", # TODO remove?
         "test/stateful_test_utils.hpp",
@@ -2680,6 +2754,13 @@ ovms_cc_test(
             ":systeminfo_test",
             ":localfilesystem_test",
             ":schema_test",
+            ":shape_test",
+            ":ovinferrequestqueue_test",
+            ":modelconfig_test",
+            ":ovmsconfig_test",
+            ":pipelinedefinitionstatus_test",
+            ":ov_utils_test",
+            ":test_config_utils",
             ] + select({
                 "//:not_disable_cloud": [
                     ":gcsfilesystem_test",
@@ -2795,7 +2876,6 @@ cc_library(
         "test/test_server_utils.hpp",
         "test/test_mediapipe_utils.hpp",
         "test/test_predict_validation_utils.hpp",
-        "test/test_config_utils.hpp",
         "test/test_model_manager_utils.hpp",
         "test/stress_test_utils.hpp",
         ],
@@ -2968,6 +3048,7 @@ cc_library(
         "//src/servables_config_manager_module:listmodels",
         "//src/utils:env_guard",
         ":test_utils",
+        ":test_config_utils",
         ":test_file_utils",
         ":libtest_environment",
         ":test_platform_utils",
