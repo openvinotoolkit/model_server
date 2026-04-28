@@ -18,7 +18,10 @@
 
 #include <stdexcept>
 
+#pragma warning(push)
+#pragma warning(disable : 6386)
 #include "absl/status/status.h"
+#pragma warning(pop)
 #include "openvino/genai/whisper_pipeline.hpp"
 
 #include "src/audio/speech_to_text/s2t_calculator.pb.h"
