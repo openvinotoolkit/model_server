@@ -201,6 +201,7 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
                     return absl::InvalidArgumentError("Invalid message structure - content array is empty");
                 }
                 jsonChanged = true;
+                std::string concatenatedText;
                 Value contentText(rapidjson::kStringType);
                 contentText.SetString("", doc.GetAllocator());
                 for (auto& v : member->value.GetArray()) {
@@ -216,7 +217,10 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
                         if (!entry.HasMember("text") || !entry["text"].IsString()) {
                             return absl::InvalidArgumentError("Invalid message structure - content text missing");
                         }
-                        contentText = entry["text"];
+                        if (!concatenatedText.empty()) {
+                            concatenatedText += "\n";
+                        }
+                        concatenatedText += entry["text"].GetString();
                         continue;
                     } else if (entryType == std::string("image_url")) {
                         if (!entry.HasMember("image_url") || !entry["image_url"].IsObject()) {
@@ -238,6 +242,7 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
                 }
                 // Pulling out text from nested structure to the "content" field for text and replace whole "content" value for image data
                 // with empty string, since images are stored separately in request.images
+                contentText.SetString(concatenatedText.c_str(), concatenatedText.size(), doc.GetAllocator());
                 member->value = contentText;
                 // Add new field to the last message in history if content is text
                 if (member->value.IsString()) {
