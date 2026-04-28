@@ -973,7 +973,7 @@ bool hasLfsErrorFileAndLogContent(const std::string& repositoryRootPath) {
     std::ostringstream content;
     content << errorFile.rdbuf();
     errorFile.close();
-    SPDLOG_ERROR(content.str());
+    SPDLOG_ERROR("{}", content.str());
 
     // Remove the error file to ensure clean state for subsequent download/resume attempts
     std::error_code removeEc;
