@@ -37,26 +37,34 @@ const int64_t Gemma4ToolParser::botTokenId = 48;
 const int64_t Gemma4ToolParser::eotTokenId = 49;
 
 std::string Gemma4ToolParser::parseArrayParameter(std::string argumentStr) {
-    int quoteDepth = 0;
-
-    for (size_t i = 1; i < argumentStr.size() - 1; ++i) {
-        if (argumentStr[i] != '\'') {
-            continue;
+    size_t pos = 1;
+    std::string parsedArguments = "[";
+    
+    while (pos != std::string::npos) {
+        size_t stringStartPos = argumentStr.find(TOOL_ARGS_STRING_INDICATOR, pos);
+        if (stringStartPos == std::string::npos) {
+            break;
+        }
+        stringStartPos += TOOL_ARGS_STRING_INDICATOR.size();
+        size_t stringEndPos = argumentStr.find(TOOL_ARGS_STRING_INDICATOR, stringStartPos);
+        if (stringEndPos == std::string::npos) {
+            break;
         }
 
-        bool isLastElement = (i == argumentStr.size() - 2);
-        bool isFollowedByComma = !isLastElement && argumentStr[i + 1] == ',';
-
-        if (quoteDepth == 0) {
-            argumentStr[i] = '"';
-            quoteDepth++;
-        } else if (quoteDepth > 0 && (isFollowedByComma || isLastElement)) {
-            argumentStr[i] = '"';
-            quoteDepth--;
+        std::string originalStr = argumentStr.substr(stringStartPos, stringEndPos - stringStartPos);
+        size_t quotePos = 0;
+        while ((quotePos = originalStr.find('\"', quotePos)) != std::string::npos) {
+            originalStr.insert(quotePos, "\\");
+            quotePos += 2;
         }
+        parsedArguments += "\"" + originalStr + "\",";
+
+        pos = stringEndPos + TOOL_ARGS_STRING_INDICATOR.size() + 1;
     }
 
-    return argumentStr;
+    parsedArguments.back() = ']';
+
+    return parsedArguments;
 }
 
 std::string Gemma4ToolParser::parseObjectParameter(std::string argumentStr) {
@@ -132,7 +140,7 @@ std::string Gemma4ToolParser::normalizeArgStr(const std::string& arg) {
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Argument contains is an object, changed it to correct JSON format. Modified string: {}", normalized);
     }
 
-    if (first == '[' && last == ']') {
+    if (first == '[' && last == ']' && normalized.find(TOOL_ARGS_STRING_INDICATOR) != std::string::npos) {
         normalized = parseArrayParameter(normalized);
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Argument is an array, normalized quotes for JSON parsing. Modified string: {}", normalized);
     }
