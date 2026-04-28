@@ -478,6 +478,35 @@ static void ensureJsonParserInErrorState(std::shared_ptr<Document>& parsedJson) 
     parsedJson->Parse("error");
 }
 
+static constexpr int MAX_JSON_NESTING_DEPTH = 100;
+
+static bool jsonDepthExceedsLimit(const rapidjson::Value& root) {
+    // Iterative depth check to avoid stack overflow on the check itself.
+    struct StackEntry {
+        const rapidjson::Value* value;
+        int depth;
+    };
+    std::vector<StackEntry> stack;
+    stack.push_back({&root, 0});
+    while (!stack.empty()) {
+        auto [value, depth] = stack.back();
+        stack.pop_back();
+        if (depth > MAX_JSON_NESTING_DEPTH) {
+            return true;
+        }
+        if (value->IsArray()) {
+            for (const auto& item : value->GetArray()) {
+                stack.push_back({&item, depth + 1});
+            }
+        } else if (value->IsObject()) {
+            for (auto it = value->MemberBegin(); it != value->MemberEnd(); ++it) {
+                stack.push_back({&it->value, depth + 1});
+            }
+        }
+    }
+    return false;
+}
+
 static Status createV3HttpPayload(
     const std::string_view uri,
     const HttpRequestComponents& request_components,
@@ -513,7 +542,7 @@ static Status createV3HttpPayload(
     } else if (isApplicationJson) {
         {
             OVMS_PROFILE_SCOPE("rapidjson parse");
-            parsedJson->Parse(request_body.c_str());
+            parsedJson->Parse<rapidjson::kParseIterativeFlag>(request_body.c_str());
         }
         OVMS_PROFILE_SCOPE("rapidjson validate");
         if (parsedJson->HasParseError()) {
@@ -522,6 +551,10 @@ static Status createV3HttpPayload(
 
         if (!parsedJson->IsObject()) {
             return Status(StatusCode::JSON_INVALID, "JSON body must be an object");
+        }
+
+        if (jsonDepthExceedsLimit(*parsedJson)) {
+            return Status(StatusCode::JSON_INVALID, "JSON body exceeds maximum nesting depth");
         }
 
         auto modelNameIt = parsedJson->FindMember("model");
