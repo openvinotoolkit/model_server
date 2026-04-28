@@ -481,12 +481,14 @@ static void ensureJsonParserInErrorState(std::shared_ptr<Document>& parsedJson) 
 static constexpr int MAX_JSON_NESTING_DEPTH = 100;
 
 static bool jsonDepthExceedsLimit(const rapidjson::Value& root) {
-    // Iterative depth check to avoid stack overflow on the check itself.
+    // Depth check.
+    // Only container nodes (objects/arrays) are pushed — leaf values are skipped.
     struct StackEntry {
         const rapidjson::Value* value;
         int depth;
     };
     std::vector<StackEntry> stack;
+    stack.reserve(MAX_JSON_NESTING_DEPTH + 1);
     stack.push_back({&root, 0});
     while (!stack.empty()) {
         auto [value, depth] = stack.back();
@@ -494,13 +496,17 @@ static bool jsonDepthExceedsLimit(const rapidjson::Value& root) {
         if (depth > MAX_JSON_NESTING_DEPTH) {
             return true;
         }
-        if (value->IsArray()) {
-            for (const auto& item : value->GetArray()) {
-                stack.push_back({&item, depth + 1});
-            }
-        } else if (value->IsObject()) {
+        if (value->IsObject()) {
             for (auto it = value->MemberBegin(); it != value->MemberEnd(); ++it) {
-                stack.push_back({&it->value, depth + 1});
+                if (it->value.IsObject() || it->value.IsArray()) {
+                    stack.push_back({&it->value, depth + 1});
+                }
+            }
+        } else if (value->IsArray()) {
+            for (const auto& item : value->GetArray()) {
+                if (item.IsObject() || item.IsArray()) {
+                    stack.push_back({&item, depth + 1});
+                }
             }
         }
     }
