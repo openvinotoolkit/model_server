@@ -26,8 +26,8 @@ from tests.functional.utils.core import SelfDeletingFileLock
 from tests.functional.utils.inference.communication.base import AbstractCommunicationInterface
 from tests.functional.utils.logger import get_logger
 from tests.functional.utils.process import Process
-from common_libs.ssl import SslCertificates
-from ovms.constants.ovsa import OVSA
+from tests.functional.utils.ssl import SslCertificates
+from tests.functional.constants.ovsa import OVSA
 
 logger = get_logger(__name__)
 

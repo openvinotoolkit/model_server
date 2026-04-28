@@ -18,7 +18,7 @@ import re
 
 from tests.functional.utils.environment_info import CurrentOsInfo
 from tests.functional.constants.os_type import OsType
-from ovms.config import base_os
+from tests.functional.config import base_os
 from tests.functional.constants.ovms import CurrentOvmsType
 
 

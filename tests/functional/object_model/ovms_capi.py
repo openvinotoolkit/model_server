@@ -47,7 +47,7 @@ from tests.functional.object_model.ovms_instance import OvmsRunContext
 from tests.functional.object_model.ovms_log_monitor import BinaryOvmsLogMonitor
 from tests.functional.object_model.ovms_params import OvmsParams
 from tests.functional.object_model.test_environment import TestEnvironment
-from ovms.remote_test_environment import copy_custom_lib_to_host
+from tests.functional.utils.remote_test_environment import copy_custom_lib_to_host
 
 logger = get_logger(__name__)
 

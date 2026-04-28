@@ -21,7 +21,7 @@ from time import sleep
 
 from tests.functional.utils.assertions import LogMessageNotFoundException, OvmsCrashed, UnwantedMessageError
 from tests.functional.utils.logger import get_logger
-from ovms.config import artifacts_dir, test_build_log_url, wait_for_messages_timeout
+from tests.functional.config import artifacts_dir, wait_for_messages_timeout
 
 logger = get_logger(__name__)
 
@@ -102,7 +102,6 @@ class LogMonitor(ABC):
         with open(file_path, "w", encoding="utf-8") as fd:
             for line in logs:
                 fd.write(f"{line}\n")
-        logger.info(f"Logs saved: {os.path.join(test_build_log_url, 'artifact', 'test_log', filename)}")
         return file_path
 
     def reset_to_logger_creation(self):

@@ -19,10 +19,10 @@ from typing import Union
 
 from tests.functional.utils.logger import get_logger
 from tests.functional.constants.os_type import OsType
-from ovms.config import enable_plugin_config_target_device
+from tests.functional.config import enable_plugin_config_target_device
 from tests.functional.constants.metrics import MetricsPolicy
 from tests.functional.constants.ovms import Ovms, set_plugin_config_boolean_value
-from ovms.constants.ovms_openai import ImagesRequestParamsValues
+from tests.functional.constants.ovms_openai import ImagesRequestParamsValues
 from tests.functional.constants.paths import Paths
 
 logger = get_logger(__name__)

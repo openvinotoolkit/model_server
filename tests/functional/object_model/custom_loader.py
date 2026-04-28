@@ -22,13 +22,11 @@ from tests.functional.utils.assertions import OvmsTestException
 from tests.functional.utils.logger import get_logger
 from tests.functional.utils.process import Process
 from tests.functional.utils.test_framework import skip_if_runtime
-from ovms.config import disable_custom_loader, ovms_test_repo_path
-from ovms.constants.custom_loader import CustomLoaderConsts
+from tests.functional.config import disable_custom_loader, ovms_c_repo_path
+from tests.functional.constants.custom_loader import CustomLoaderConsts
 from tests.functional.constants.ovms import Config, CurrentOvmsType
-from tests.functional.constants.ovms_type import OvmsType
 from tests.functional.constants.paths import Paths
 from tests.functional.object_model.test_environment import TestEnvironment
-from ovms.remote_test_environment import copy_container_folder_to_remote_k8s_cluster, delete_remote_container_folder
 
 logger = get_logger(__name__)
 
@@ -51,12 +49,9 @@ class CustomLoader:
 
         file_name = CustomLoaderConsts.SAMPLE_CUSTOM_LOADER_LIB_NAME
         self.ovms_type = CurrentOvmsType.ovms_type
-        if self.ovms_type == OvmsType.KUBERNETES:
-            internal_path = os.path.join("/config", file_name)
-        else:
-            internal_path = os.path.join(
-                Paths.CUSTOM_LOADER_LIBRARIES_PATH_INTERNAL, CustomLoaderConsts.SAMPLE_CUSTOM_LOADER_NAME, file_name
-            )
+        internal_path = os.path.join(
+            Paths.CUSTOM_LOADER_LIBRARIES_PATH_INTERNAL, CustomLoaderConsts.SAMPLE_CUSTOM_LOADER_NAME, file_name
+        )
         self._loader_config = self.LoaderConfig(name, internal_path, loader_config_file)
 
         self._model = model
@@ -68,7 +63,7 @@ class CustomLoader:
     def get_custom_loader_path(image):
         cmd = f"docker cp $(docker create --rm {image}):{CustomLoaderConsts.SAMPLE_CUSTOM_LOADER_DOCKER_LIB} ."
         proc = Process()
-        cwd = os.path.join(ovms_test_repo_path, "data", "ovms_testing_image")
+        cwd = os.path.join(ovms_c_repo_path, "utils", "ovms_testing_image")
         proc.run_and_check(cmd, cwd=cwd)
         dst_file_path = os.path.join(cwd, CustomLoaderConsts.SAMPLE_CUSTOM_LOADER_LIB_NAME)
         return dst_file_path
@@ -131,19 +126,13 @@ class CustomLoader:
         model_enable_file_path = self.get_model_enable_file_path(container_name)
         if delete_enable_file:
             Path(model_enable_file_path).unlink("")
-            if self.ovms_type == OvmsType.KUBERNETES and ovms_run is not None:
-                delete_remote_container_folder(model_enable_file_path, ovms_run.ovms.remote_ip)
         else:
             Path(model_enable_file_path).write_text("")
-            if self.ovms_type == OvmsType.KUBERNETES and ovms_run is not None:
-                copy_container_folder_to_remote_k8s_cluster(model_enable_file_path, ovms_run.ovms.remote_ip)
 
     def disable_model(self, container_name, ovms_run=None):
         logger.debug(f"Disable model {self.name} in container {container_name}")
         model_enable_file_path = self.get_model_enable_file_path(container_name)
         Path(model_enable_file_path).write_text(CustomLoader.ENABLE_FILE_DISABLE_PHRASE)
-        if self.ovms_type == OvmsType.KUBERNETES and ovms_run is not None:
-            copy_container_folder_to_remote_k8s_cluster(model_enable_file_path, ovms_run.ovms.remote_ip)
 
     def add_enable_file_entry(self, enable_file_value):
         self.model_options["custom_loader_options"]["enable_file"] = enable_file_value

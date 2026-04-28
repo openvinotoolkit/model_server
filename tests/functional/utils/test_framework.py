@@ -16,36 +16,26 @@
 
 import os
 import pytest
-import random
 import re
 import shutil
 import traceback
-from time import strftime
 
 from tests.functional.utils.assertions import CreateVenvError, PipInstallError
-from common_libs.git_operations import clone_git_repository
+from tests.functional.utils.git_operations import clone_git_repository
 from tests.functional.utils.logger import get_logger
 from tests.functional.utils.process import Process, WindowsProcess
 from tests.functional.utils.helpers import get_xdist_worker_count, generate_test_object_name
 
-from ovms.config import (
-    add_notebook_k8s,
-    build_and_verify_package,
+from tests.functional.config import (
     build_test_image,
     language_models_enabled,
     machine_is_reserved_for_test_session,
     mediapipe_disable,
-    openshift_service_mesh,
     python_disable,
-    run_fuzzing,
-    run_ov_tests,
-    run_ovms_media_tests,
-    run_uat_tests,
     run_ovms_with_opencl_trace,
     run_ovms_with_valgrind,
     windows_python_version,
 )
-from tests.functional.constants.ovms import CurrentOvmsType, is_ovms_c_repo_absent
 
 logger = get_logger(__name__)
 
@@ -119,24 +109,8 @@ def skip_if(condition, msg=FrameworkMessages.NOT_TO_BE_REPORTED_IF_SKIPPED):
     return pytest.mark.skipif(condition, reason=get_msg_with_stack_trace(msg))
 
 
-def skip_if_ovms_c_absent():
-    return skip_if(is_ovms_c_repo_absent, msg=FrameworkMessages.OVMS_C_REPO_ABSENT)
-
-
 def skip_not_implemented():
     return pytest.mark.skip(reason=get_msg_with_stack_trace(FrameworkMessages.NOT_IMPLEMENTED))
-
-
-def skip_if_uat_tests_not_enabled():
-    return skip_if(not run_uat_tests, msg=FrameworkMessages.UAT_TESTS_NOT_ENABLED)
-
-
-def skip_if_ov_tests_not_enabled():
-    return skip_if(not run_ov_tests, msg=FrameworkMessages.OV_TESTS_NOT_ENABLED)
-
-
-def skip_if_ovms_media_tests_not_enabled():
-    return skip_if(not run_ovms_media_tests, msg=FrameworkMessages.OVMS_MEDIA_TESTS_NOT_ENABLED)
 
 
 def skip_if_language_models_not_enabled():
@@ -159,14 +133,6 @@ def skip_if_valgrind_disabled():
     return skip_if(not run_ovms_with_valgrind, msg=FrameworkMessages.VALGRIND_DISABLED)
 
 
-def skip_if_build_and_verify_package_disabled():
-    return skip_if(not build_and_verify_package, msg=FrameworkMessages.BUILD_AND_VERIFY_PACKAGE_DISABLED)
-
-
-def skip_if_not_run_fuzzing_tests():
-    return skip_if(not run_fuzzing, msg=FrameworkMessages.FUZZING_TESTS_NOT_ENABLED)
-
-
 def skip_if_build_test_image_not_enabled():
     return skip_if(not build_test_image, msg=FrameworkMessages.TEST_IMAGE_NOT_BUILD)
 
@@ -178,18 +144,6 @@ def skip_if_machine_is_not_reserved_for_test_session():
 
 def skip_if_run_in_parallel():
     return skip_if(not is_single_threaded(), msg=FrameworkMessages.RUN_IN_PARALLEL)
-
-
-def skip_if_openshift_service_mesh_enabled():
-    return skip_if(openshift_service_mesh, msg=FrameworkMessages.OPENSHIFT_SERVICE_MESH_ENABLED)
-
-
-def skip_if_openshift_service_mesh_disabled():
-    return skip_if(not openshift_service_mesh, msg=FrameworkMessages.OPENSHIFT_SERVICE_MESH_DISABLED)
-
-
-def skip_if_add_notebook_k8s_disabled():
-    return skip_if(not add_notebook_k8s, msg=FrameworkMessages.ADD_NOTEBOOK_K8S_DISABLED)
 
 
 def get_xdist_worker_string():

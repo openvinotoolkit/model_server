@@ -13,3 +13,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+
+import os
+from pathlib import Path
+
+from tests.functional.utils.process import Process
+
+
+def copy_custom_lib_to_host(ovms_test_image, custom_library_path, new_library_path):
+    dirpath = Path(os.path.dirname(new_library_path))
+    dirpath.mkdir(parents=True, exist_ok=True)
+    cmd = f"docker cp $(docker create --rm {ovms_test_image}):{custom_library_path} {new_library_path}"
+    proc = Process()
+    proc.run_and_check(cmd)

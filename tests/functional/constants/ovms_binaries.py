@@ -24,7 +24,7 @@ from tests.functional.utils.test_framework import generate_test_object_name
 from tests.functional.constants.os_type import OsType
 from tests.functional.utils.process import Process
 
-from ovms.config import ovms_c_release_artifacts_path
+from tests.functional.config import ovms_c_release_artifacts_path
 from tests.functional.constants.ovms import Ovms
 from tests.functional.constants.ovms_type import OvmsType
 from tests.functional.constants.paths import Paths

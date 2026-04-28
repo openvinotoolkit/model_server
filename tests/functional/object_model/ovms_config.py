@@ -21,18 +21,18 @@ from typing import List
 
 from tests.functional.utils.logger import get_logger
 from tests.functional.constants.os_type import OsType
-from ovms.config import enable_plugin_config_target_device
-from ovms.constants.custom_loader import CustomLoaderConsts
+from tests.functional.config import enable_plugin_config_target_device
+from tests.functional.constants.custom_loader import CustomLoaderConsts
 from tests.functional.constants.models import ModelInfo
 from tests.functional.constants.ovms import Config, CurrentOvmsType, Ovms, set_plugin_config_boolean_value
 from tests.functional.constants.ovms_type import OvmsType
 from tests.functional.constants.paths import Paths
 from tests.functional.constants.pipelines import Pipeline
 from tests.functional.object_model.custom_loader import CustomLoader
-from ovms.object_model.custom_node import CustomNode
+from tests.functional.object_model.custom_node import CustomNode
 from tests.functional.object_model.ovms_params import MetricsPolicy, OvmsParams
 from tests.functional.object_model.test_environment import TestEnvironment
-from ovms.remote_test_environment import copy_container_folder_to_remote_k8s_cluster, copy_custom_lib_to_host
+from tests.functional.utils.remote_test_environment import copy_custom_lib_to_host
 
 logger = get_logger(__name__)
 
@@ -109,12 +109,6 @@ class OvmsConfig(object):
         os.makedirs(os.path.dirname(config_path), exist_ok=True)
         with open(os.path.join(config_path), "w") as outfile:
             outfile.write(config_json)
-
-        if os.environ.get("REMOTE_SERVER_ADDRESS") is not None:
-            copy_container_folder_to_remote_k8s_cluster(
-                f"{os.path.join(TestEnvironment.current.base_dir, name, Paths.MODELS_PATH_NAME)}",
-                os.environ.get("REMOTE_SERVER_ADDRESS"),
-            )
 
         return Paths.CONFIG_PATH_INTERNAL
 

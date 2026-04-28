@@ -21,13 +21,12 @@ import time
 import requests
 from docker import from_env
 
-from tests.functional.utils.assertions import OvmsCrashed, PodNotReadyException
+from tests.functional.utils.assertions import OvmsCrashed
 from tests.functional.utils.logger import get_logger
 from tests.functional.utils.process import PID_STATE_SLEEPING, PID_STATE_ZOMBIE, Process, get_pid_status
-from ovms.command_wrappers.kubectl_helpers import KubeCtl
-from ovms.config import is_nginx_mtls, wait_for_messages_timeout
+from tests.functional.config import is_nginx_mtls, wait_for_messages_timeout
 from tests.functional.constants.core import CONTAINER_STATUS_DEAD, CONTAINER_STATUS_EXITED
-from ovms.constants.custom_loader import CustomLoaderConsts
+from tests.functional.constants.custom_loader import CustomLoaderConsts
 from tests.functional.constants.ovms_messages import OvmsMessages, OvmsMessagesRegex
 from tests.functional.utils.log_monitor import LogMonitor
 
@@ -436,30 +435,3 @@ class OvmsCmdLineDockerLogMonitor(OvmsLogMonitor):
         exit_code, stdout, _ = self.process.run(f"docker logs {self.docker_id} 2>&1")
         self._read_lines = stdout.splitlines()
         return self._read_lines
-
-
-class OvmsPodLogMonitor(OvmsLogMonitor):
-    def __init__(self, kube_client, pod_name, namespace, **kwargs):
-        super().__init__(**kwargs)
-        self.kube_client = kube_client
-        self.pod_name = pod_name
-        self.namespace = namespace
-
-    def get_all_logs(self):
-        raw_logs = KubeCtl.get_logs(
-            self.kube_client,
-            pod_whole_name=self.pod_name,
-            namespace=self.namespace,
-            print_logs=False,
-            ignore_exception=True,
-        )
-        if raw_logs:
-            self._read_lines = raw_logs.splitlines()
-        return self._read_lines
-
-    def is_ovms_running(self):
-        try:
-            KubeCtl.ensure_pod_is_ready(self.kube_client, self.pod_name, self.namespace)
-            return True
-        except (TimeoutError, PodNotReadyException) as e:
-            raise Exception(f"OVMS '{self.pod_name}' is not ready: {e}")

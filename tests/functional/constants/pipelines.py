@@ -22,8 +22,8 @@ from pathlib import Path
 
 import numpy as np
 
-from ovms.config import datasets_path
-from ovms.constants.model_dataset import RandomDataset
+from tests.functional.config import datasets_path
+from tests.functional.constants.model_dataset import RandomDataset
 from tests.functional.constants.models import (
     AgeGender,
     ArgMax,
@@ -46,7 +46,7 @@ from tests.functional.constants.models import (
 )
 from tests.functional.constants.ovms import Config
 from tests.functional.constants.paths import Paths
-from ovms.object_model.custom_node import (
+from tests.functional.object_model.custom_node import (
     CustomNode,
     CustomNodeAddSub,
     CustomNodeChooseMaximum,
@@ -60,7 +60,7 @@ from ovms.object_model.custom_node import (
     CustomNodeImageTransformation,
     CustomNodeVehicles,
 )
-from ovms.object_model.mediapipe_calculators import (
+from tests.functional.object_model.mediapipe_calculators import (
     CorruptedFileCalculator,
     MediaPipeCalculator,
     OpenVINOInferenceCalculator,

@@ -23,14 +23,6 @@ import pytest
 from _pytest._code import ExceptionInfo, filter_traceback  # noqa
 from _pytest.outcomes import OutcomeException
 
-
-from ovms.legacy.object_model.server import Server
-from ovms.legacy.utils.other import reorder_items_by_fixtures_used
-from ovms.legacy.utils.cleanup import clean_hanging_docker_resources, delete_test_directory, \
-    get_containers_with_tests_suffix
-from ovms.legacy.utils.logger import init_logger
-from ovms.legacy.utils.files_operation import get_path_friendly_test_name
-from ovms.legacy.utils.parametrization import get_tests_suffix
 from tests.functional.config import test_dir, test_dir_cleanup, artifacts_dir, enable_pytest_plugins
 from tests.functional.utils import hooks_utils
 

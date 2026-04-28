@@ -19,7 +19,6 @@ import performance
 
 from tests.functional.constants.os_type import OsType
 from ovms import config
-from ovms.constants.ov import OV
 from tests.functional.constants.target_device import TargetDevice
 
 

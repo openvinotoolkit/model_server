@@ -48,8 +48,49 @@ test_dir_cleanup = test_dir_cleanup.lower() == "true"
 """BUILD_LOGS -  path to dir where artifacts should be stored"""
 artifacts_dir = get_path("BUILD_LOGS", os.path.join("~", "ovms_test_logs"))
 
+""" TT_NGNIX_CERTS_DIR - Custom nodes directory path"""
+nginx_certs_dir = get_path("TT_NGINX_CERTS_DIR", os.path.join("~", "ovms_nginx_certs"))
+
+""" TT_DATASETS_PATH - Datasets local repo path"""
+datasets_path = get_path("TT_DATASETS_PATH", os.path.join("~", "ovms_datasets"))
+
 """ TT_CLEAN_ARTIFACTS_DIR """
 clean_artifacts_dir = get_bool("TT_CLEAN_ARTIFACTS_DIR", False)
+
+""" TT_LANGUAGE_MODELS_ENABLED - model UniversalSentenceEncoder added to various models """
+language_models_enabled = get_bool("TT_LANGUAGE_MODELS_ENABLED", True)
+
+""" MEDIAPIE_DISABLE - if OVMS image has mediapipe feature """
+mediapipe_disable = bool(get_int("MEDIAPIPE_DISABLE", 0))
+
+""" PYTHON_DISABLE - if OVMS image has python feature """
+python_disable = bool(get_int("PYTHON_DISABLE", 0))
+
+""" TT_WIN_PY_VERSION - Python version for virtualenv on Windows OS """
+windows_python_version = os.environ.get("TT_WIN_PY_VERSION", "3.12")
+
+""" TT_DOCKER_REGISTRY - Docker registry"""
+docker_registry = os.environ.get("TT_DOCKER_REGISTRY", "registry.toolbox.iotg.sclab.intel.com")
+
+""" OVMS_CPP_DOCKER_IMAGE """
+ovms_cpp_docker_image = os.environ.get("OVMS_CPP_DOCKER_IMAGE", None)
+
+""" TT_OVMS_IMAGE_NAME """
+ovms_image = os.environ.get("TT_OVMS_IMAGE_NAME", None)
+
+""" OVMS_CPP_IMAGE_TAG - tag of OVMS image to test (compatible with build parameter) """
+ovms_image_tag = os.environ.get("OVMS_CPP_IMAGE_TAG", None)
+
+""" TT_OVMS_TEST_IMAGE_NAME - image name for cpu extensions and custom nodes """
+ovms_test_image_name = os.environ.get("TT_OVMS_TEST_IMAGE_NAME", None)
+
+""" TT_FORCE_USE_OVMS_IMAGE - force to use TT_OVMS_IMAGE_NAME """
+force_use_ovms_image = get_bool("TT_FORCE_USE_OVMS_IMAGE", False)
+
+""" TT_OVMS_C_RELEASE_ARTIFACTS_PATH - path to current release artifacts """
+# multiple local and remote location supported
+# example: TT_OVMS_C_RELEASE_ARTIFACTS_PATH="../ubuntu24/ovms.tar.gz,../redat/ovms.tar.gz"
+ovms_c_release_artifacts_path = get_list("TT_OVMS_C_RELEASE_ARTIFACTS_PATH")
 
 """START_CONTAINER_COMMAND - command to start ovms container"""
 start_container_command = os.environ.get("START_CONTAINER_COMMAND", "")
@@ -220,3 +261,9 @@ ovms_image_local = get_bool("TT_OVMS_IMAGE_LOCAL", False)
 """
 __base_os = os.environ.get("BASE_OS", OsType.Ubuntu24)
 base_os = get_list("TT_BASE_OS", fallback=[__base_os])
+
+""" TT_ENABLE_PLUGIN_CONFIG_TARGET_DEVICE - use plugin_config globally set for target devices """
+enable_plugin_config_target_device = get_bool("TT_ENABLE_PLUGIN_CONFIG_TARGET_DEVICE", False)
+
+"""TT_DISABLE_CUSTOM_LOADER"""
+disable_custom_loader = get_bool("TT_DISABLE_CUSTOM_LOADER", True)

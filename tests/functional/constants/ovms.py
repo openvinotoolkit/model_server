@@ -23,8 +23,7 @@ from tensorflow_serving.apis.get_model_status_pb2 import ModelVersionStatus
 
 from tests.functional.constants.os_type import OsType
 
-from ovms.config import ovms_c_repo_path, ovms_operator_repo_path
-from ovms.constants.ov import OV
+from tests.functional.config import ovms_c_repo_path
 from tests.functional.constants.target_device import TargetDevice
 from tests.functional.constants.ovms_type import OvmsType
 
@@ -280,9 +279,6 @@ class CurrentOvmsType:
     is_docker_cmd_line_type = lambda: CurrentOvmsType.ovms_type in [OvmsType.DOCKER_CMD_LINE]
     is_none_type = lambda: CurrentOvmsType.ovms_type in [OvmsType.NONE]
 
-
-is_ovms_c_repo_absent = not Path(ovms_c_repo_path).exists()
-is_ovms_operator_repo_absent = not Path(ovms_operator_repo_path).exists()
 
 TARGET_DEVICE_PARAM_NAME = "target_device"
 OVMS_TYPE_PARAM_NAME = "ovms_type"

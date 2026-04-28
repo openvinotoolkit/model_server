@@ -18,20 +18,18 @@ import re
 
 from tests.functional.utils.environment_info import EnvironmentInfo
 from tests.functional.constants.os_type import OsType, UBUNTU
-from ovms.config import (
+from tests.functional.config import (
     docker_registry,
     is_nginx_mtls,
     ovms_cpp_docker_image,
     ovms_image,
     ovms_image_tag,
     ovms_test_image_name,
-    force_use_ovms_image
+    force_use_ovms_image,
 )
-from ovms.constants.ov import OV
 from tests.functional.constants.target_device import TargetDevice
 from tests.functional.constants.ovms import CurrentOvmsType
 from tests.functional.constants.ovms import CurrentTarget as ct
-from ovms.constants.repositories import Repositories
 
 
 # should be checked periodically with OVMS Dockerfiles
@@ -93,7 +91,7 @@ class OvmsImages:
 
 
 NGINX = "nginx"
-DEFAULT_OVMS_IMAGE_NAME = "model_server"
+DEFAULT_OVMS_IMAGE_NAME = "openvino/model_server"
 DEFAULT_OVMS_IMAGE_SUFFIXES = {
     NGINX: "-nginx-mtls",
     TargetDevice.GPU: "-gpu",
@@ -151,7 +149,7 @@ def calculate_ovms_image_name(target_device=None, base_os=OsType.Ubuntu22):
         image_name = (
             ovms_cpp_docker_image
             if ovms_cpp_docker_image
-            else f"{docker_registry}/{Repositories.OV_REPO_BASENAME}/{DEFAULT_OVMS_IMAGE_NAME}"
+            else f"{docker_registry}/{DEFAULT_OVMS_IMAGE_NAME}"
         )
         image_name = f"{image_name}{calculate_ovms_image_suffix(target_device)}"
         image_tag = ovms_image_tag if ovms_image_tag else DEFAULT_OVMS_IMAGE_TAG[base_os]

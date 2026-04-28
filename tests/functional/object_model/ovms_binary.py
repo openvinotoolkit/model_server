@@ -25,7 +25,6 @@ from tests.functional.utils.logger import get_logger
 from tests.functional.constants.os_type import OsType
 from tests.functional.utils.process import Process
 
-from ovms.command_wrappers.ovms import create_ovms_command
 from tests.functional.constants.core import CONTAINER_STATUS_EXITED, CONTAINER_STATUS_RUNNING
 from tests.functional.constants.models import Muse
 from tests.functional.constants.ovms_binaries import get_ovms_binary_cmd_setup
@@ -34,12 +33,13 @@ from tests.functional.constants.paths import Paths
 from tests.functional.utils.log_monitor import LogMonitor
 from tests.functional.object_model.cpu_extension import MuseModelExtension
 from tests.functional.object_model.mediapipe_calculators import MediaPipeCalculator
+from tests.functional.object_model.ovms_command import create_ovms_command
 from tests.functional.object_model.ovms_config import OvmsConfig
 from tests.functional.object_model.ovms_docker import OvmsDockerLauncher, OvmsDockerParams
 from tests.functional.object_model.ovms_instance import OvmsInstance, OvmsRunContext
-from ovms.object_model.ovms_log_monitor import BinaryOvmsLogMonitor
+from tests.functional.object_model.ovms_log_monitor import BinaryOvmsLogMonitor
 from tests.functional.object_model.test_environment import TestEnvironment
-from ovms.remote_test_environment import copy_custom_lib_to_host
+from tests.functional.utils.remote_test_environment import copy_custom_lib_to_host
 
 logger = get_logger(__name__)
 
