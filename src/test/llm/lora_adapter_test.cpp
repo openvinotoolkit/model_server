@@ -31,10 +31,10 @@
 #pragma GCC diagnostic pop
 #pragma warning(pop)
 
-#include "../../llm/servable.hpp"
-#include "../../llm/servable_initializer.hpp"
-#include "../../status.hpp"
-#include "../test_with_temp_dir.hpp"
+#include "src/llm/servable.hpp"
+#include "src/llm/servable_initializer.hpp"
+#include "src/status.hpp"
+#include "src/test/test_with_temp_dir.hpp"
 
 using namespace ovms;
 
