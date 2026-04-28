@@ -23,12 +23,10 @@
 #include "status.hpp"
 
 namespace ovms {
-class InferenceRequest;
 
 template <typename RequestType>
 std::optional<Dimension> getRequestBatchSize(const RequestType* request, const size_t batchSizeIndex);
 template <typename RequestType>
 std::map<std::string, shape_t> getRequestShapes(const RequestType* request);
 
-bool useSharedOutputContentFn(const InferenceRequest* request);
 }  // namespace ovms

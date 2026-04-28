@@ -21,6 +21,14 @@ namespace ovms {
 
 struct CNLIMWrapper;
 
+/**
+ * @brief Interface for managing resources created during DAG pipeline validation and execution.
+ *
+ * During DAG validation, custom node libraries may be loaded and wrapped in CNLIMWrapper objects.
+ * These resources must outlive individual requests and be cleaned up asynchronously by a background
+ * cleaner thread once they are no longer referenced. DagResourceManager provides the abstraction
+ * for registering such resources for deferred cleanup.
+ */
 class DagResourceManager {
 public:
     virtual ~DagResourceManager() = default;

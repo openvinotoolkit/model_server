@@ -31,6 +31,9 @@ class PipelineFactory;
 class ServableNameChecker;
 class Status;
 
+/**
+ * @brief Loads pipelines configuration from JSON document, creates pipeline definitions and adds them to pipeline factory.
+ */
 Status loadPipelinesConfig(
     rapidjson::Document& configJson,
     PipelineFactory& factory,

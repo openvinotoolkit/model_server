@@ -41,7 +41,22 @@ public:
         std::unique_ptr<ModelInstanceUnloadGuard>& modelInstanceUnloadGuardPtr) const = 0;
     virtual const std::shared_ptr<Model> findModelByName(const std::string& name) const = 0;
     virtual const std::shared_ptr<ModelInstance> findModelInstance(const std::string& name, model_version_t version = 0) const = 0;
+    /**
+     * @brief Subscribe a DAG pipeline definition to notifications about a model version change.
+     *
+     * When a DAG config is loaded, each pipeline definition subscribes to the models it depends on.
+     * When those models are reloaded, retired, or their versions change, the subscriber
+     * (pipeline definition) is notified so it can trigger revalidation of its own graph.
+     *
+     * @return true if subscription succeeded (model exists), false otherwise
+     */
     virtual bool subscribeToModel(const std::string& name, model_version_t version, NotifyReceiver& receiver) = 0;
+    /**
+     * @brief Unsubscribe a DAG pipeline definition from model version change notifications.
+     *
+     * Called when a pipeline definition is retired or its node topology changes during config reload,
+     * so it no longer needs to track the previously referenced model.
+     */
     virtual void unsubscribeFromModel(const std::string& name, model_version_t version, NotifyReceiver& receiver) = 0;
     virtual Status getModelInputsInfo(const std::string& name, model_version_t version, tensor_map_t& info) const = 0;
     virtual Status getModelOutputsInfo(const std::string& name, model_version_t version, tensor_map_t& info) const = 0;

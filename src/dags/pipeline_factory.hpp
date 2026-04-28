@@ -43,6 +43,24 @@ class PipelineFactory {
     mutable std::shared_mutex definitionsMtx;
 
 public:
+    /**
+     * @brief Create and register a new DAG pipeline definition.
+     *
+     * Constructs a PipelineDefinition from the provided graph topology (nodeInfos + connections),
+     * subscribes it to model-change notifications, validates the entire graph, and stores it.
+     *
+     * @param pipelineName      Unique name for the pipeline (must not already exist).
+     * @param nodeInfos         Descriptions of every node in the DAG (DL model nodes, custom nodes, entry/exit).
+     * @param connections       Mapping of node outputs to downstream node inputs that defines the DAG edges.
+     * @param modelInstanceProvider  Provides access to model instances and subscribe/unsubscribe API so the
+     *                               pipeline can resolve model nodes and get notified on model version changes.
+     * @param nameChecker       Used during validation to verify that no other servable (model, mediapipe graph)
+     *                          already occupies the requested pipeline name.
+     * @param resourceMgr       Accepts custom-node library resources created during validation for deferred
+     *                          cleanup by the background cleaner thread.
+     * @param registry          Optional metric registry for registering pipeline-level metrics.
+     * @param metricConfig      Optional metric configuration controlling which metrics are enabled.
+     */
     Status createDefinition(const std::string& pipelineName,
         const std::vector<NodeInfo>& nodeInfos,
         const pipeline_connections_t& connections,
