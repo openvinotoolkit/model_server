@@ -279,7 +279,7 @@ void Server::setShutdownRequest(int i) {
     if (counter) {
         setShutdownRequestValue(i);
         setLfsCancelRequestedFromSignal(i);
-        SPDLOG_TRACE("Ovms shutdown request set to: {}", getShutdownRequestValue());
+        SPDLOG_TRACE("Ovms shutdown request set to: {}", i);
     } else {
         SPDLOG_ERROR("Server shutdown mutex lock failed.");
     }
