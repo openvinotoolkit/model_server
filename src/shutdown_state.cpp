@@ -15,25 +15,27 @@
 //*****************************************************************************
 #include "shutdown_state.hpp"
 
+#include <atomic>
+
 namespace {
-volatile std::sig_atomic_t shutdown_request = 0;
-volatile std::sig_atomic_t ovms_exited = 0;
+std::atomic<int> shutdown_request{0};
+std::atomic<int> ovms_exited{0};
 }  // namespace
 
 namespace ovms {
 int getShutdownRequestValue() {
-    return shutdown_request;
+    return shutdown_request.load(std::memory_order_relaxed);
 }
 
 void setShutdownRequestValue(int value) {
-    shutdown_request = value;
+    shutdown_request.store(value, std::memory_order_relaxed);
 }
 
 int getExitStatusValue() {
-    return ovms_exited;
+    return ovms_exited.load(std::memory_order_relaxed);
 }
 
 void setExitStatusValue(int value) {
-    ovms_exited = value;
+    ovms_exited.store(value, std::memory_order_relaxed);
 }
 }  // namespace ovms
