@@ -16,9 +16,17 @@
 
 import os
 
+from tests.functional.constants.os_type import OsType
 from tests.functional.constants.target_device import TargetDevice
 from tests.functional.utils.core import TmpDir
-from tests.functional.utils.helpers import generate_test_object_name, get_bool, get_int, get_path, get_target_devices
+from tests.functional.utils.helpers import (
+    generate_test_object_name,
+    get_bool,
+    get_int,
+    get_list,
+    get_path,
+    get_target_devices,
+)
 
 
 try:
@@ -39,6 +47,9 @@ test_dir_cleanup = test_dir_cleanup.lower() == "true"
 
 """BUILD_LOGS -  path to dir where artifacts should be stored"""
 artifacts_dir = get_path("BUILD_LOGS", os.path.join("~", "ovms_test_logs"))
+
+""" TT_CLEAN_ARTIFACTS_DIR """
+clean_artifacts_dir = get_bool("TT_CLEAN_ARTIFACTS_DIR", False)
 
 """START_CONTAINER_COMMAND - command to start ovms container"""
 start_container_command = os.environ.get("START_CONTAINER_COMMAND", "")
@@ -191,3 +202,21 @@ machine_is_reserved_for_test_session = get_bool("TT_MACHINE_IS_RESERVED_FOR_TEST
 
 """ TT_WAIT_FOR_MESSAGES_TIMEOUT - timeout for ovms.wait_for_messages(...) method """
 wait_for_messages_timeout = get_int("TT_WAIT_FOR_MESSAGES_TIMEOUT", 180)
+
+""" TT_AIRPLANE_MODE - disable connecting to remote resources, disable all downloads and docker pull/build commands and
+                       expect that all required data is available locally. """
+airplane_mode = get_bool("TT_AIRPLANE_MODE", False)
+
+""" TT_OVMS_IMAGE_LOCAL - ovms image can only be found locally """
+ovms_image_local = get_bool("TT_OVMS_IMAGE_LOCAL", False)
+
+""" TT_BASE_OS - os type used for calculating ovms_image name (if not given explicitly). 
+        Possible options (case insensitive): 
+        ubuntu22 - use default Ubuntu 22.04 image
+        ubuntu24 - use default Ubuntu 24.04 image
+        redhat - use UBI 8.10 based
+        ubuntu22,ubuntu24,redhat - iterate all tests both for ubuntu and redhat   
+        windows - can't iterate (supports only BINARY ovms type)
+"""
+__base_os = os.environ.get("BASE_OS", OsType.Ubuntu24)
+base_os = get_list("TT_BASE_OS", fallback=[__base_os])

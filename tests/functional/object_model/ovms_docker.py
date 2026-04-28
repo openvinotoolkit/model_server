@@ -28,13 +28,13 @@ from tests.functional.utils.inference.communication import REST
 from tests.functional.utils.logger import get_logger
 from tests.functional.utils.process import Process
 from tests.functional.utils.test_framework import generate_test_object_name
-from ovms.command_wrappers.ovms import OvmsCommand, create_ovms_command
+from tests.functional.object_model.command_wrappers.ovms import OvmsCommand, create_ovms_command
 from tests.functional.constants.core import CONTAINER_STATUS_DEAD, CONTAINER_STATUS_EXITED, CONTAINER_STATUS_RUNNING
 from tests.functional.constants.ovms import Config, Ovms
 from tests.functional.constants.ovms_type import OvmsType
 from tests.functional.constants.paths import Paths
 from tests.functional.constants.pipelines import MediaPipe
-from ovms.constants.target_device_configuration import (
+from tests.functional.constants.target_device_configuration import (
     DEVICES,
     DOCKER_PARAMS,
     HOST,
@@ -43,14 +43,14 @@ from ovms.constants.target_device_configuration import (
     TARGET_DEVICE_CONFIGURATION,
     VOLUMES,
 )
-from ovms.docker import DockerContainer, Limits
-from ovms.object_model.mediapipe_calculators import MediaPipeCalculator
-from ovms.object_model.ovms_config import OvmsConfig
+from tests.functional.utils.docker import DockerContainer, Limits
+from tests.functional.object_model.mediapipe_calculators import MediaPipeCalculator
+from tests.functional.object_model.ovms_config import OvmsConfig
 from tests.functional.object_model.ovms_instance import OvmsInstance
-from ovms.object_model.ovms_log_monitor import OvmsCmdLineDockerLogMonitor, OvmsDockerLogMonitor
-from ovms.object_model.ovms_mapping_config import OvmsMappingConfig
+from tests.functional.object_model.ovms_log_monitor import OvmsCmdLineDockerLogMonitor, OvmsDockerLogMonitor
+from tests.functional.object_model.ovms_mapping_config import OvmsMappingConfig
 from tests.functional.object_model.ovms_params import OvmsParams
-from ovms.object_model.ovsa import OvsaCerts
+from tests.functional.object_model.ovsa import OvsaCerts
 from tests.functional.object_model.test_environment import TestEnvironment
 from tests.functional.object_model.ovms_info import OvmsInfo
 

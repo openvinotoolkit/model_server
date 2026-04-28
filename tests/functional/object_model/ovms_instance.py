@@ -45,8 +45,13 @@ from tests.functional.constants.os_type import OsType
 from tests.functional.utils.port_manager import PortManager
 from tests.functional.utils.process import Process
 from tests.functional.utils.test_framework import change_dir_permissions, is_single_threaded
-from ovms.config import artifacts_dir, container_proxy, disable_dmesg_log_monitor, machine_is_reserved_for_test_session, \
-    wait_for_messages_timeout
+from tests.functional.config import (
+    artifacts_dir,
+    container_proxy,
+    disable_dmesg_log_monitor,
+    machine_is_reserved_for_test_session,
+    wait_for_messages_timeout,
+)
 from tests.functional.constants.core import CONTAINER_STATUS_EXITED, CONTAINER_STATUS_RUNNING
 from tests.functional.constants.models import ModelInfo
 from tests.functional.constants.target_device import MAX_WORKERS_PER_TARGET_DEVICE

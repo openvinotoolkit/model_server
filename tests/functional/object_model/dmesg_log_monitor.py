@@ -35,7 +35,7 @@ from tests.functional.utils.core import get_children_from_module
 from tests.functional.utils.logger import get_logger
 from tests.functional.utils.process import Process
 from tests.functional.utils.test_framework import generate_test_object_name
-from ovms.config import artifacts_dir
+from tests.functional.config import artifacts_dir
 from tests.functional.utils.log_monitor import LogMonitor
 
 logger = get_logger(__name__)

@@ -18,8 +18,7 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
-from ovms.config import ovms_c_repo_path
-from tests.functional.config import tmp_dir
+from tests.functional.config import ovms_c_repo_path, tmp_dir
 from tests.functional.constants.paths import Paths
 
 

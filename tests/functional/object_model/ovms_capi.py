@@ -31,7 +31,7 @@ from tests.functional.utils.assertions import CapiException
 from tests.functional.utils.context import Context
 from tests.functional.utils.logger import get_logger
 from tests.functional.utils.test_framework import generate_test_object_name, skip_if_runtime
-from ovms.config import ovms_c_repo_path
+from tests.functional.config import ovms_c_repo_path
 from tests.functional.constants.core import CONTAINER_STATUS_RUNNING
 from tests.functional.constants.models import ModelInfo
 from tests.functional.constants.ovms import Config
@@ -41,10 +41,10 @@ from tests.functional.constants.paths import Paths
 from tests.functional.utils.log_monitor import LogMonitor
 from tests.functional.object_model.cpu_extension import MuseModelExtension
 from tests.functional.object_model.ovms_binary import OvmsBinary
-from ovms.object_model.ovms_config import OvmsConfig
+from tests.functional.object_model.ovms_config import OvmsConfig
 from tests.functional.object_model.ovms_docker import OvmsDockerParams
 from tests.functional.object_model.ovms_instance import OvmsRunContext
-from ovms.object_model.ovms_log_monitor import BinaryOvmsLogMonitor
+from tests.functional.object_model.ovms_log_monitor import BinaryOvmsLogMonitor
 from tests.functional.object_model.ovms_params import OvmsParams
 from tests.functional.object_model.test_environment import TestEnvironment
 from ovms.remote_test_environment import copy_custom_lib_to_host

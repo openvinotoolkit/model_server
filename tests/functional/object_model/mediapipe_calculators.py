@@ -31,7 +31,6 @@ from llm.remote_downloader import link_llm_models
 from ovms.config import mediapipe_repo_branch, ovms_c_repo_path, kv_cache_size_value, kv_cache_precision_value, \
     pipeline_type as config_pipeline_type, max_num_batched_tokens, enable_prefix_caching_config
 from tests.functional.constants.models import ModelInfo
-from ovms.constants.ov import OV
 from tests.functional.constants.target_device import TargetDevice
 from tests.functional.constants.ovms import Config, MediaPipeConstants
 from tests.functional.constants.paths import Paths

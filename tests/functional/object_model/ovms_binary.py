@@ -33,8 +33,8 @@ from tests.functional.constants.ovms_type import OvmsType
 from tests.functional.constants.paths import Paths
 from tests.functional.utils.log_monitor import LogMonitor
 from tests.functional.object_model.cpu_extension import MuseModelExtension
-from ovms.object_model.mediapipe_calculators import MediaPipeCalculator
-from ovms.object_model.ovms_config import OvmsConfig
+from tests.functional.object_model.mediapipe_calculators import MediaPipeCalculator
+from tests.functional.object_model.ovms_config import OvmsConfig
 from tests.functional.object_model.ovms_docker import OvmsDockerLauncher, OvmsDockerParams
 from tests.functional.object_model.ovms_instance import OvmsInstance, OvmsRunContext
 from ovms.object_model.ovms_log_monitor import BinaryOvmsLogMonitor

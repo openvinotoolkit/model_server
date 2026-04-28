@@ -24,7 +24,7 @@ from tests.functional.utils.logger import get_logger
 from tests.functional.constants.os_type import get_host_os_details
 from tests.functional.utils.process import Process
 
-from ovms.config import airplane_mode, base_os, ovms_image_local
+from tests.functional.config import airplane_mode, base_os, ovms_image_local
 from tests.functional.config import tmp_dir
 from tests.functional.constants.ovms_binaries import get_binaries, get_ovms_binary_cmd_setup
 from tests.functional.constants.ovms_type import OvmsType, OVMS_BINARY_PACKAGE_EXTENSIONS
