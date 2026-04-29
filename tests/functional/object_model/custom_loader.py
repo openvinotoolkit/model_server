@@ -63,7 +63,7 @@ class CustomLoader:
     def get_custom_loader_path(image):
         cmd = f"docker cp $(docker create --rm {image}):{CustomLoaderConsts.SAMPLE_CUSTOM_LOADER_DOCKER_LIB} ."
         proc = Process()
-        cwd = os.path.join(ovms_c_repo_path, "utils", "ovms_testing_image")
+        cwd = os.path.join(ovms_c_repo_path, "tests", "functional", "utils", "ovms_testing_image")
         proc.run_and_check(cmd, cwd=cwd)
         dst_file_path = os.path.join(cwd, CustomLoaderConsts.SAMPLE_CUSTOM_LOADER_LIB_NAME)
         return dst_file_path

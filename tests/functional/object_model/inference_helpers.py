@@ -65,10 +65,9 @@ from tests.functional.utils.inference.serving.openai import (
 from tests.functional.utils.inference.serving.tf import TensorFlowServingWrapper
 from tests.functional.utils.logger import get_logger
 from tests.functional.utils.test_framework import FrameworkMessages, skip_if_runtime
-from llm.validation_utils import LLMValidationUtils
-from ovms import config
-from ovms.config import binary_io_images_path
-from ovms.constants.model_dataset import (
+from tests.functional.utils.generative_ai.validation_utils import GenerativeAIValidationUtils
+from tests.functional.config import binary_io_images_path, wait_for_messages_timeout
+from tests.functional.constants.model_dataset import (
     BinaryDummyModelDataset,
     DefaultBinaryDataset,
     ExactShapeBinaryDataset,
@@ -81,8 +80,8 @@ from tests.functional.constants.ovms import MediaPipeConstants, Ovms
 from tests.functional.constants.pipelines import SimpleMediaPipe
 from tests.functional.object_model.ovms_instance import OvmsInstance
 from tests.functional.object_model.ovsa import OvsaCerts
-from ovms.object_model.python_custom_nodes.common import STREAMING_CHANNEL_ARGS
-from ovms.object_model.python_custom_nodes.python_custom_nodes import SimplePythonCustomNodeMediaPipe
+from tests.functional.object_model.python_custom_nodes.common import STREAMING_CHANNEL_ARGS
+from tests.functional.object_model.python_custom_nodes.python_custom_nodes import SimplePythonCustomNodeMediaPipe
 from tests.functional.object_model.test_environment import TestEnvironment
 from tests.functional.object_model.test_helpers import run_all_actions
 
@@ -644,14 +643,14 @@ class LLMInferenceResponse(InferenceResponse):
 class InferenceInfo(object):
 
     @classmethod
-    def create(cls, client, model, timeout=config.wait_for_messages_timeout, input_data=None, inference_request=None):
+    def create(cls, client, model, timeout=wait_for_messages_timeout, input_data=None, inference_request=None):
         if model.is_stateful:
             return StatefulInferenceInfo(client, model, timeout, input_data, inference_request)
         else:
             return InferenceInfo(client, model, timeout, input_data, inference_request)
 
     def __init__(
-        self, client, model, timeout=config.wait_for_messages_timeout, input_data=None, inference_request=None
+        self, client, model, timeout=wait_for_messages_timeout, input_data=None, inference_request=None
     ):
         self.client = client
         self.input_data = input_data
@@ -763,7 +762,7 @@ class StatefulInferenceInfo(InferenceInfo):
 
 
 def prepare_requests(
-    inference_requests: List[InferenceRequest], timeout=config.wait_for_messages_timeout, random_data=False
+    inference_requests: List[InferenceRequest], timeout=wait_for_messages_timeout, random_data=False
 ):
     inference_infos = []
     for inference_request in inference_requests:
@@ -1204,7 +1203,7 @@ def run_llm_inference(
             raw_outputs = infer_request.create_chat_completions(messages, model_name=model_name, timeout=timeout)
             raw_outputs = list(raw_outputs) if infer_request.stream and raw_outputs else raw_outputs
             if validate_outputs:
-                outputs = LLMValidationUtils.validate_chat_completions_outputs(
+                outputs = GenerativeAIValidationUtils.validate_chat_completions_outputs(
                     model_name=model_name,
                     outputs=raw_outputs,
                     stream=infer_request.stream,
@@ -1219,7 +1218,7 @@ def run_llm_inference(
             raw_outputs = infer_request.create_completions(prompt, model_name=model_name, timeout=timeout)
             raw_outputs = list(raw_outputs) if infer_request.stream and raw_outputs else raw_outputs
             if validate_outputs:
-                outputs = LLMValidationUtils.validate_completions_outputs(
+                outputs = GenerativeAIValidationUtils.validate_completions_outputs(
                     model_name=model_name,
                     outputs=raw_outputs,
                     stream=infer_request.stream,
@@ -1235,7 +1234,7 @@ def run_llm_inference(
             raw_outputs = infer_request.create_responses(input_content, model_name=model_name, timeout=timeout)
             raw_outputs = list(raw_outputs) if infer_request.stream and raw_outputs else raw_outputs
             if validate_outputs:
-                outputs = LLMValidationUtils.validate_responses_outputs(
+                outputs = GenerativeAIValidationUtils.validate_responses_outputs(
                     model_name=model_name,
                     outputs=raw_outputs,
                     stream=infer_request.stream,
@@ -1249,7 +1248,7 @@ def run_llm_inference(
                 log_request_info(request_parameters, model_name, embeddings_input)
             raw_outputs = infer_request.create_embeddings(embeddings_input, model_name=model_name, timeout=timeout)
             if validate_outputs:
-                outputs = LLMValidationUtils.validate_embeddings_outputs(
+                outputs = GenerativeAIValidationUtils.validate_embeddings_outputs(
                     model_name=model_name,
                     outputs=raw_outputs,
                     allow_empty_response=allow_empty_response,
@@ -1260,7 +1259,7 @@ def run_llm_inference(
                 log_request_info(request_parameters, model_name, rerank_input)
             raw_outputs = infer_request.create_rerank(rerank_input, model_name=model_name)
             if validate_outputs:
-                outputs = LLMValidationUtils.validate_rerank_outputs(
+                outputs = GenerativeAIValidationUtils.validate_rerank_outputs(
                     model_name=model_name,
                     outputs=raw_outputs,
                     allow_empty_response=allow_empty_response,
@@ -1271,7 +1270,7 @@ def run_llm_inference(
                 log_request_info(request_parameters, model_name, prompt)
             raw_outputs = infer_request.create_image_generation(prompt, model_name=model_name, timeout=timeout)
             if validate_outputs:
-                outputs = LLMValidationUtils.validate_image_outputs(
+                outputs = GenerativeAIValidationUtils.validate_image_outputs(
                     model_name=model_name,
                     outputs=raw_outputs,
                     image_path=kwargs.get("image_path", None),
@@ -1289,7 +1288,7 @@ def run_llm_inference(
             raw_outputs = infer_request.create_image_edit(
                 prompt, image_path, mask_path=mask_path, model_name=model_name, timeout=timeout)
             if validate_outputs:
-                outputs = LLMValidationUtils.validate_image_outputs(
+                outputs = GenerativeAIValidationUtils.validate_image_outputs(
                     model_name=model_name,
                     outputs=raw_outputs,
                     image_path=kwargs.get("image_path", None),
@@ -1298,11 +1297,11 @@ def run_llm_inference(
         elif endpoint == OpenAIWrapper.MODELS_LIST:
             raw_outputs = infer_request.create_models_list()
             if validate_outputs:
-                outputs = LLMValidationUtils.validate_models_list_outputs(models=model, outputs=raw_outputs)
+                outputs = GenerativeAIValidationUtils.validate_models_list_outputs(models=model, outputs=raw_outputs)
         elif endpoint == OpenAIWrapper.MODELS_RETRIEVE:
             raw_outputs = infer_request.create_models_retrieve()
             if validate_outputs:
-                outputs = LLMValidationUtils.validate_models_retrieve_outputs(model_name=model_name, outputs=raw_outputs)
+                outputs = GenerativeAIValidationUtils.validate_models_retrieve_outputs(model_name=model_name, outputs=raw_outputs)
         else:
             raise NotImplementedError
     else:
@@ -1347,7 +1346,7 @@ def run_audio_inference(
                 reference_text, speech_file_path, model_name=model_name, timeout=timeout
             )
             if validate_outputs:
-                outputs = LLMValidationUtils.validate_audio_speech_outputs(
+                outputs = GenerativeAIValidationUtils.validate_audio_speech_outputs(
                     speech_file_path=speech_file_path,
                     allow_empty_response=allow_empty_response,
                 )
@@ -1361,12 +1360,12 @@ def run_audio_inference(
             )
             raw_outputs = create_fn(reference_audio_file, model_name=model_name, timeout=timeout)
             if validate_outputs:
-                outputs = LLMValidationUtils.validate_audio_asr_outputs(
+                outputs = GenerativeAIValidationUtils.validate_audio_asr_outputs(
                     outputs=raw_outputs,
                     allow_empty_response=allow_empty_response,
                 )
                 if validate_output_wer and reference_text:
-                    LLMValidationUtils.validate_wer(reference_text, raw_outputs, threshold=wer_threshold)
+                    GenerativeAIValidationUtils.validate_wer(reference_text, raw_outputs, threshold=wer_threshold)
         else:
             raise NotImplementedError
 

@@ -24,7 +24,7 @@ import numpy as np
 
 from tests.functional.utils.logger import get_logger
 from tests.functional.utils.process import Process
-from ovms.config import custom_nodes_path, ovms_c_repo_path, ovms_test_repo_path
+from tests.functional.config import custom_nodes_path, ovms_c_repo_path
 from tests.functional.constants.models import ModelInfo
 from tests.functional.constants.ovms import CurrentOvmsType
 from tests.functional.constants.ovms_type import OvmsType
@@ -82,7 +82,7 @@ class CustomNode(ModelInfo):
     def get_custom_nodes_path(image):
         cmd = f"docker cp $(docker create --rm {image}):/{Paths.CUSTOM_NODE_PATH_NAME} ."
         proc = Process()
-        cwd = os.path.join(ovms_test_repo_path, "data", "ovms_testing_image")
+        cwd = os.path.join(ovms_c_repo_path, "tests", "functional", "utils", "ovms_testing_image")
         proc.run_and_check(cmd, cwd=cwd)
         dst_file_path = os.path.join(cwd, Paths.CUSTOM_NODE_PATH_NAME)
         return dst_file_path

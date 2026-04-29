@@ -165,8 +165,8 @@ infer_timeouts = {
 }
 infer_timeout = infer_timeouts[target_device]
 
-""" TT_IS_NGINX_MTLS - Specify if given image is OVSA nginx mtls image. If not specified, detect from image name"""
-is_nginx_mtls = get_bool("TT_IS_NGINX_MTLS", "nginx-mtls" in image)
+""" TT_IS_NGINX_MTLS - Specify if given image is OVSA nginx mtls image. """
+is_nginx_mtls = get_bool("TT_IS_NGINX_MTLS", False)
 
 """ TT_SKIP_TEST_IF_IS_NGINX_MTLS """
 skip_nginx_test = get_bool("TT_SKIP_TEST_IF_IS_NGINX_MTLS", "True")
@@ -267,3 +267,27 @@ enable_plugin_config_target_device = get_bool("TT_ENABLE_PLUGIN_CONFIG_TARGET_DE
 
 """TT_DISABLE_CUSTOM_LOADER"""
 disable_custom_loader = get_bool("TT_DISABLE_CUSTOM_LOADER", True)
+
+""" TT_CUSTOM_NODES - Custom nodes directory path"""
+custom_nodes_path = get_path("TT_CUSTOM_NODES", os.path.join("~", "ovms_custom_nodes"))
+
+""" TT_BINARY_IO_IMAGES_PATH - Datasets local repo path"""
+binary_io_images_path = get_path("TT_BINARY_IO_IMAGES_PATH", os.path.join("~", "ovms_binary_io"))
+
+""" TT_KV_CACHE_SIZE - memory size in GB for storing KV cache """
+kv_cache_size_value = get_int("TT_KV_CACHE_SIZE", 0)
+
+""" TT_KV_CACHE_PRECISION - Reduced kv cache precision to u8 lowers the cache size consumption. """
+kv_cache_precision_value = os.environ.get("TT_KV_CACHE_PRECISION", None)
+
+""" "MEDIAPIPE_REPO_BRANCH" - https://github.com/openvinotoolkit/mediapipe/ branch name """
+mediapipe_repo_branch = os.environ.get("MEDIAPIPE_REPO_BRANCH", "main")
+
+""" TT_MAX_NUM_BATCHED_TOKENS -  max number of tokens processed in a single iteration """
+max_num_batched_tokens = get_int("TT_MAX_NUM_BATCHED_TOKENS", None)
+
+""" TT_PIPELINE_TYPE - pipeline type in LLM graph node_options, e.g. VLM, LM """
+pipeline_type = os.environ.get("TT_PIPELINE_TYPE", None)
+
+""" TT_ENABLE_PREFIX_CACHING - enable prefix caching for model """
+enable_prefix_caching_config = get_bool("TT_ENABLE_PREFIX_CACHING", False)

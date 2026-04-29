@@ -21,15 +21,20 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List
 
-from tests.functional.utils.assertions import ConvertModelException, InvalidReturnCodeException
+from tests.functional.utils.assertions import InvalidReturnCodeException
 from tests.functional.utils.logger import get_logger
 from tests.functional.utils.process import Process
 
-from llm.constants import LLMPluginConfig
-from llm.remote_downloader import link_llm_models
-
-from ovms.config import mediapipe_repo_branch, ovms_c_repo_path, kv_cache_size_value, kv_cache_precision_value, \
-    pipeline_type as config_pipeline_type, max_num_batched_tokens, enable_prefix_caching_config
+from tests.functional.constants.generative_ai import GenerativeAIPluginConfig
+from tests.functional.config import (
+    enable_prefix_caching_config,
+    kv_cache_size_value,
+    kv_cache_precision_value,
+    max_num_batched_tokens,
+    pipeline_type as config_pipeline_type,
+    mediapipe_repo_branch,
+    ovms_c_repo_path,
+)
 from tests.functional.constants.models import ModelInfo
 from tests.functional.constants.target_device import TargetDevice
 from tests.functional.constants.ovms import Config, MediaPipeConstants
@@ -537,7 +542,7 @@ class LLMCalculator(PythonCalculator):
     node_name: str = None
     loopback: bool = False
     kv_cache_size: int = kv_cache_size_value
-    plugin_config: dict = field(default_factory={LLMPluginConfig.KV_CACHE_PRECISION: kv_cache_precision_value})
+    plugin_config: dict = field(default_factory={GenerativeAIPluginConfig.KV_CACHE_PRECISION: kv_cache_precision_value})
     best_of_limit: int = None
     max_tokens_limit: int = None
     device: str = None
@@ -604,22 +609,7 @@ node: {{
             except Exception as e:  # pylint: disable=broad-exception-caught
                 if dst.exists():
                     shutil.rmtree(dst, ignore_errors=True)
-                if self.model.is_llm and any([
-                    isinstance(e, FileNotFoundError),   # unix
-                    isinstance(e, InvalidReturnCodeException) and "Code: 16" in e.args[0],  # windows
-                ]):
-                    # try reloading llm model and retry copy
-                    failed_models = link_llm_models([type(self.model)], proc, skip_existing_models=True)
-                    if failed_models:
-                        raise ConvertModelException(f"Couldn't link LLM models: {failed_models}.")
-                    try:
-                        self._copy_model_tree(proc, self.models_path, dst)
-                    except Exception as e:
-                        if dst.exists():
-                            shutil.rmtree(dst, ignore_errors=True)
-                        raise e
-                else:
-                    raise e
+                raise e
         return str(dst_base)
 
     @classmethod
@@ -640,7 +630,7 @@ class HttpLLMCalculator(LLMCalculator):
     node_name: str = None
     loopback: bool = True
     kv_cache_size: int = kv_cache_size_value
-    plugin_config: dict = field(default_factory={LLMPluginConfig.KV_CACHE_PRECISION: kv_cache_precision_value})
+    plugin_config: dict = field(default_factory={GenerativeAIPluginConfig.KV_CACHE_PRECISION: kv_cache_precision_value})
     best_of_limit: int = None
     max_tokens_limit: int = None
     device: str = None
