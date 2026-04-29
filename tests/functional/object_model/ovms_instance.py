@@ -53,7 +53,7 @@ from tests.functional.config import (
     wait_for_messages_timeout,
 )
 from tests.functional.constants.core import CONTAINER_STATUS_EXITED, CONTAINER_STATUS_RUNNING
-from tests.functional.constants.models import ModelInfo
+from tests.functional.models import ModelInfo
 from tests.functional.constants.target_device import MAX_WORKERS_PER_TARGET_DEVICE
 from tests.functional.constants.ovms import CurrentTarget as ct
 from tests.functional.constants.ovms import Ovms

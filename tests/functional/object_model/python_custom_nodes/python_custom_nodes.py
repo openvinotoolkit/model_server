@@ -19,7 +19,7 @@ import numpy as np
 from tests.functional.utils.inference.communication import GRPC
 from tests.functional.utils.logger import get_logger
 from tests.functional.constants.generative_ai import GenerativeAIPluginConfig
-from tests.functional.constants.model_dataset import LanguageModelDataset
+from tests.functional.models.model_dataset import LanguageModelDataset
 from tests.functional.constants.ovms import Ovms
 from tests.functional.constants.pipelines import MediaPipe, NodesConnection, NodeType, PythonGraphNode
 from tests.functional.object_model.mediapipe_calculators import HttpLLMCalculator, PythonCalculator, \

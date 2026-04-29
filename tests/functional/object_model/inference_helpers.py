@@ -67,14 +67,14 @@ from tests.functional.utils.logger import get_logger
 from tests.functional.utils.test_framework import FrameworkMessages, skip_if_runtime
 from tests.functional.utils.generative_ai.validation_utils import GenerativeAIValidationUtils
 from tests.functional.config import binary_io_images_path, wait_for_messages_timeout
-from tests.functional.constants.model_dataset import (
+from tests.functional.models.model_dataset import (
     BinaryDummyModelDataset,
     DefaultBinaryDataset,
     ExactShapeBinaryDataset,
     LanguageModelDataset,
     ModelDataset,
 )
-from tests.functional.constants.models import ModelInfo
+from tests.functional.models import ModelInfo
 from tests.functional.constants.ovms import CurrentTarget as ct
 from tests.functional.constants.ovms import MediaPipeConstants, Ovms
 from tests.functional.constants.pipelines import SimpleMediaPipe

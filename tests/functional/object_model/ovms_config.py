@@ -23,7 +23,7 @@ from tests.functional.utils.logger import get_logger
 from tests.functional.constants.os_type import OsType
 from tests.functional.config import enable_plugin_config_target_device
 from tests.functional.constants.custom_loader import CustomLoaderConsts
-from tests.functional.constants.models import ModelInfo
+from tests.functional.models import ModelInfo
 from tests.functional.constants.ovms import Config, CurrentOvmsType, Ovms, set_plugin_config_boolean_value
 from tests.functional.constants.ovms_type import OvmsType
 from tests.functional.constants.paths import Paths

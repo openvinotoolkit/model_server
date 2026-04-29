@@ -31,9 +31,9 @@ from PIL import Image
 
 from tests.functional.utils.logger import get_logger, step
 from tests.functional.utils.inference.serving.openai import OpenAIWrapper, OpenAIFinishReason
-from ovms.config import save_image_to_artifacts
+from tests.functional.config import save_image_to_artifacts
 from tests.functional.config import artifacts_dir, pipeline_type
-from tests.functional.constants.model_dataset import FeatureExtractionModelDataset
+from tests.functional.models.model_dataset import FeatureExtractionModelDataset
 
 logger = get_logger(__name__)
 

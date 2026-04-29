@@ -33,7 +33,7 @@ from tests.functional.utils.logger import get_logger
 from tests.functional.utils.test_framework import generate_test_object_name, skip_if_runtime
 from tests.functional.config import ovms_c_repo_path
 from tests.functional.constants.core import CONTAINER_STATUS_RUNNING
-from tests.functional.constants.models import ModelInfo
+from tests.functional.models import ModelInfo
 from tests.functional.constants.ovms import Config
 from tests.functional.constants.ovms_messages import OvmsMessages
 from tests.functional.constants.ovms_type import OvmsType

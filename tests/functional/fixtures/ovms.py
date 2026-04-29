@@ -40,7 +40,7 @@ from tests.functional.config import (
     run_ovms_with_opencl_trace,
     run_ovms_with_valgrind,
 )
-from tests.functional.constants.models import ModelInfo
+from tests.functional.models import ModelInfo
 from tests.functional.constants.ovms import CurrentOvmsType, CurrentTarget
 from tests.functional.constants.ovms_binaries import calculate_ovms_binary_name
 from tests.functional.constants.ovms_images import (

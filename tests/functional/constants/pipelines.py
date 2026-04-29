@@ -23,8 +23,9 @@ from pathlib import Path
 import numpy as np
 
 from tests.functional.config import datasets_path
-from tests.functional.constants.model_dataset import RandomDataset
-from tests.functional.constants.models import (
+from tests.functional.models.model_dataset import RandomDataset
+from tests.functional.models import ModelInfo
+from tests.functional.models.models_static import (
     AgeGender,
     ArgMax,
     CrnnTf,
@@ -37,7 +38,6 @@ from tests.functional.constants.models import (
     FaceDetectionRetail,
     GoogleNetV2Fp32,
     Increment4d,
-    ModelInfo,
     Resnet,
     ResnetWrongInputShapeDim,
     ResnetWrongInputShapes,

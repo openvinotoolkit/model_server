@@ -22,11 +22,11 @@ from dataclasses_json import dataclass_json
 
 from tests.functional.utils.core import ComplexEncoder
 from tests.functional.utils.logger import get_logger
-from tests.functional.object_model.command_wrappers.ovms import OvmsCommand
+from tests.functional.object_model.ovms_command import OvmsCommand
 from tests.functional.config import logging_level_ovms
 from tests.functional.constants.metrics import MetricsPolicy
-from tests.functional.constants.models import ModelInfo, Muse
-from tests.functional.constants.models_library import ModelsLib
+from tests.functional.models import ModelInfo, Muse
+from tests.functional.models.models_library import ModelsLib
 from tests.functional.object_model.cpu_extension import MuseModelExtension
 from tests.functional.object_model.custom_loader import CustomLoader
 
