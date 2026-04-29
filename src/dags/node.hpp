@@ -23,7 +23,7 @@
 #include <utility>
 #include <vector>
 
-#include <openvino/openvino.hpp>
+#include <openvino/runtime/tensor.hpp>
 
 #include "../precision.hpp"
 #include "../shape.hpp"

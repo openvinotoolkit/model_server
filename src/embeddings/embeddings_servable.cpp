@@ -24,10 +24,12 @@
 #include "../logging.hpp"
 
 #include "openvino/core/except.hpp"
+#include "openvino/core/preprocess/pre_post_process.hpp"
 #include "openvino/genai/rag/text_embedding_pipeline.hpp"
 #include "openvino/genai/tokenizer.hpp"
 #include "openvino/opsets/opset.hpp"
 #include "openvino/opsets/opset1.hpp"
+#include "openvino/runtime/core.hpp"
 #include "openvino/opsets/opset3.hpp"
 #include "openvino/opsets/opset8.hpp"
 

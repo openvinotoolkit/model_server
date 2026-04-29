@@ -50,7 +50,7 @@ if [ "$RUN_GPU_TESTS" == "1" ]; then
 fi
 
 compress_logs() {
-    tar -czf test_logs.tar.gz ${TEST_LOG}
+    tar -czf test_logs.tar.gz -C "$(dirname "${TEST_LOG}")" "$(basename "${TEST_LOG}")"
     rm -rf ${TEST_LOG}
     rm -rf tmp.log
 } 

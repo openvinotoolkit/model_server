@@ -17,7 +17,7 @@
 
 #include <string>
 
-#include <openvino/openvino.hpp>
+#include <openvino/core/type/element_type.hpp>
 
 namespace ovms {
 
