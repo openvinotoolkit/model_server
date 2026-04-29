@@ -412,7 +412,7 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(ov::genai::Enco
         ParsedOutput parsedOutput = parseOutputIfNeeded(tokens);
         jsonResponse.StartObject();
         // finish_reason: "stop" in regular scenario, "tool_calls" if output contains tool calls
-        auto finishReason = mapFinishReason(ov::genai::GenerationFinishReason::STOP, !parsedOutput.toolCalls.empty());
+        auto finishReason = mapFinishReason(results.finish_reasons[index], !parsedOutput.toolCalls.empty());
         jsonResponse.FinishReason(finishReason.value_or("unknown"));
         // index: integer; Choice index, only n=1 supported anyway
         jsonResponse.Index(index++);
@@ -478,7 +478,7 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(ov::genai::VLMD
         ParsedOutput parsedOutput = parseOutputIfNeeded(generatedTokens);
         jsonResponse.StartObject();
         // finish_reason: "stop" in regular scenario, "tool_calls" if output contains tool calls
-        auto finishReason = mapFinishReason(ov::genai::GenerationFinishReason::STOP, !parsedOutput.toolCalls.empty());
+        auto finishReason = mapFinishReason(results.finish_reasons[index], !parsedOutput.toolCalls.empty());
         jsonResponse.FinishReason(finishReason.value_or("unknown"));
         // index: integer; Choice index, only n=1 supported anyway
         jsonResponse.Index(index++);
