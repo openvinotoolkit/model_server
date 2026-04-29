@@ -19,6 +19,7 @@
 #include <iomanip>
 #include <memory>
 #include <openssl/sha.h>
+#include <mutex>
 #include <sstream>
 #include <string>
 #include <string_view>
@@ -60,6 +61,16 @@ class HfPull : public TestWithTempDir {
 protected:
     ovms::Server& server = ovms::Server::instance();
     std::unique_ptr<std::thread> t;
+    std::string modelName;
+    std::string downloadPath;
+    std::string task;
+
+    void SetUp() override {
+        TestWithTempDir::SetUp();
+        modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
+        downloadPath = ovms::FileSystem::joinPath({this->directoryPath, "repository"});
+        task = "text_generation";
+    }
 
     void ServerPullHfModel(std::string& sourceModel, std::string& downloadPath, std::string& task, int expected_code = 0, int timeoutSeconds = 60) {
         ::SetUpServerForDownload(this->t, this->server, sourceModel, downloadPath, task, expected_code, timeoutSeconds);
@@ -89,6 +100,56 @@ protected:
         return input.erase(0, input.find("\n") + 1);
     }
 };
+
+class HfPullCache : public HfPull {
+protected:
+    static std::once_flag cacheInitFlag;
+    static std::unique_ptr<TempDir> cacheDir;
+    static std::string cachedRepositoryPath;
+
+    static constexpr const char* MODEL_NAME = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
+    static constexpr const char* TASK_NAME = "text_generation";
+
+    void SetUp() override {
+        HfPull::SetUp();
+        initializeSharedCache();
+        seedCurrentTestRepository();
+    }
+
+    void initializeSharedCache() {
+        std::call_once(cacheInitFlag, [this]() {
+            cacheDir = std::make_unique<TempDir>();
+            std::string modelName = MODEL_NAME;
+            std::string downloadPath = ovms::FileSystem::joinPath({cacheDir->dir.string(), "repository"});
+            std::string task = TASK_NAME;
+
+            this->ServerPullHfModel(modelName, downloadPath, task);
+            server.setShutdownRequest(1);
+            if (t)
+                t->join();
+            server.setShutdownRequest(0);
+
+            cachedRepositoryPath = downloadPath;
+            ASSERT_TRUE(std::filesystem::exists(cachedRepositoryPath));
+        });
+    }
+
+    void seedCurrentTestRepository() {
+        const std::string testRepositoryPath = ovms::FileSystem::joinPath({this->directoryPath, "repository"});
+        std::error_code ec;
+        std::filesystem::copy(cachedRepositoryPath,
+            testRepositoryPath,
+            std::filesystem::copy_options::recursive,
+            ec);
+        ASSERT_EQ(ec, std::errc()) << "Failed to copy cached model repository to test directory";
+        std::string mutableRepositoryPath = testRepositoryPath;
+        RemoveReadonlyFileAttributeFromDir(mutableRepositoryPath);
+    }
+};
+
+std::once_flag HfPullCache::cacheInitFlag;
+std::unique_ptr<TempDir> HfPullCache::cacheDir = nullptr;
+std::string HfPullCache::cachedRepositoryPath;
 
 const std::string expectedGraphContents = R"(
     input_stream: "HTTP_REQUEST_PAYLOAD:input"
@@ -168,9 +229,6 @@ const std::string expectedGraphContentsDraft = R"(
 
 TEST_F(HfPull, Download) {
     GTEST_SKIP() << "Skipping test in CI - PositiveDownloadAndStart has full scope testing.";
-    std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
-    std::string downloadPath = ovms::FileSystem::joinPath({this->directoryPath, "repository"});
-    std::string task = "text_generation";
     this->ServerPullHfModel(modelName, downloadPath, task);
 
     std::string basePath = ovms::FileSystem::joinPath({this->directoryPath, "repository", "OpenVINO", "Phi-3-mini-FastDraft-50M-int8-ov"});
@@ -281,15 +339,10 @@ public:
     ovms::Status CheckRepositoryStatus(bool checkUntracked) { return HfDownloader::CheckRepositoryStatus(checkUntracked); }
 };
 
-TEST_F(HfPull, RePull) {
+TEST_F(HfPullCache, RePull) {
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string downloadPath = ovms::FileSystem::joinPath({this->directoryPath, "repository"});
     std::string task = "text_generation";
-    this->ServerPullHfModel(modelName, downloadPath, task);
-    server.setShutdownRequest(1);
-    if (t)
-        t->join();
-    server.setShutdownRequest(0);
 
     testing::internal::CaptureStdout();
     this->ServerPullHfModel(modelName, downloadPath, task);
@@ -302,15 +355,10 @@ TEST_F(HfPull, RePull) {
     EXPECT_EQ(std::filesystem::exists(lfsWipPath), false);
 }
 
-TEST_F(HfPull, Resume) {
+TEST_F(HfPullCache, Resume) {
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string downloadPath = ovms::FileSystem::joinPath({this->directoryPath, "repository"});
     std::string task = "text_generation";
-    this->ServerPullHfModel(modelName, downloadPath, task);
-    server.setShutdownRequest(1);
-    if (t)
-        t->join();
-    server.setShutdownRequest(0);
 
     std::string ovModelName = "openvino_model.bin";
     std::string basePath = ovms::FileSystem::joinPath({this->directoryPath, "repository", "OpenVINO", "Phi-3-mini-FastDraft-50M-int8-ov"});
@@ -369,9 +417,6 @@ TEST_F(HfPull, Resume) {
 
 // ResumeAfterShutdownRequestAndRerun
 TEST_F(HfPull, ResumeShutdown) {
-    std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
-    std::string downloadPath = ovms::FileSystem::joinPath({this->directoryPath, "repository"});
-    std::string task = "text_generation";
     std::string basePath = ovms::FileSystem::joinPath({this->directoryPath, "repository", "OpenVINO", "Phi-3-mini-FastDraft-50M-int8-ov"});
     std::string modelPath = ovms::FileSystem::appendSlash(basePath) + "openvino_model.bin";
     std::string model2Path = ovms::FileSystem::appendSlash(basePath) + "openvino_detokenizer.bin";
@@ -436,15 +481,10 @@ TEST_F(HfPull, ResumeShutdown) {
 }
 
 // PullAfterUserRemovedTrackedFileDoesNotRestoreIt
-TEST_F(HfPull, UserRemoved) {
+TEST_F(HfPullCache, UserRemoved) {
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string downloadPath = ovms::FileSystem::joinPath({this->directoryPath, "repository"});
     std::string task = "text_generation";
-    this->ServerPullHfModel(modelName, downloadPath, task);
-    server.setShutdownRequest(1);
-    if (t)
-        t->join();
-    server.setShutdownRequest(0);
 
     std::string basePath = ovms::FileSystem::joinPath({this->directoryPath, "repository", "OpenVINO", "Phi-3-mini-FastDraft-50M-int8-ov"});
     std::string preservedFilePath = ovms::FileSystem::appendSlash(basePath) + "openvino_model.bin";
@@ -495,15 +535,10 @@ TEST_F(HfPull, UserRemoved) {
 }
 
 // PullAfterUserEditedTrackedFileDoesNotOverwriteIt
-TEST_F(HfPull, UserEdited) {
+TEST_F(HfPullCache, UserEdited) {
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string downloadPath = ovms::FileSystem::joinPath({this->directoryPath, "repository"});
     std::string task = "text_generation";
-    this->ServerPullHfModel(modelName, downloadPath, task);
-    server.setShutdownRequest(1);
-    if (t)
-        t->join();
-    server.setShutdownRequest(0);
 
     std::string basePath = ovms::FileSystem::joinPath({this->directoryPath, "repository", "OpenVINO", "Phi-3-mini-FastDraft-50M-int8-ov"});
     std::string editedFilePath = ovms::FileSystem::appendSlash(basePath) + "openvino_tokenizer.bin";
@@ -603,9 +638,6 @@ TEST(HfPullWindowsWorker, ResumeTerminateChildProcess) {
 
 // ResumeAfterForcedTerminationAndRerun
 TEST_F(HfPull, ResumeTerminate) {
-    std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
-    std::string downloadPath = ovms::FileSystem::joinPath({this->directoryPath, "repository"});
-    std::string task = "text_generation";
     std::string basePath = ovms::FileSystem::joinPath({this->directoryPath, "repository", "OpenVINO", "Phi-3-mini-FastDraft-50M-int8-ov"});
     std::string modelPath = ovms::FileSystem::appendSlash(basePath) + "openvino_model.bin";
     std::string model2Path = ovms::FileSystem::appendSlash(basePath) + "openvino_detokenizer.bin";
@@ -625,7 +657,7 @@ TEST_F(HfPull, ResumeTerminate) {
     ASSERT_TRUE(SetEnvironmentVariableA("OVMS_RESUME_TERMINATE_TASK", task.c_str()));
 
     std::string commandLine = std::string("\"") + testExePath +
-        "\" --gtest_filter=HfPullWindowsWorker.ResumeTerminateChildProcess";
+                              "\" --gtest_filter=HfPullWindowsWorker.ResumeTerminateChildProcess";
     STARTUPINFOA si;
     PROCESS_INFORMATION pi;
     ZeroMemory(&si, sizeof(si));
@@ -735,9 +767,6 @@ TEST_F(HfPull, Start) {
     // guard.set("HF_ENDPOINT", "https://hf-mirror.com");
     this->filesToPrintInCaseOfFailure.emplace_back("graph.pbtxt");
     this->filesToPrintInCaseOfFailure.emplace_back("config.json");
-    std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
-    std::string downloadPath = ovms::FileSystem::joinPath({this->directoryPath, "repository"});
-    std::string task = "text_generation";
     this->SetUpServerForDownloadAndStart(modelName, downloadPath, task);
 
     std::string basePath = ovms::FileSystem::joinPath({this->directoryPath, "repository", "OpenVINO", "Phi-3-mini-FastDraft-50M-int8-ov"});
@@ -758,10 +787,8 @@ TEST_F(HfPull, OutOfOvOrg) {
     // guard.set("HF_ENDPOINT", "https://modelscope.cn");
     // guard.set("HF_ENDPOINT", "https://hf-mirror.com");
 
-    std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
-    std::string downloadPath = this->directoryPath;
-    std::string task = "text_generation";
-    this->ServerPullHfModel(modelName, downloadPath, task);
+    std::string downloadPathRoot = this->directoryPath;
+    this->ServerPullHfModel(modelName, downloadPathRoot, task);
 
     // Shutdown
     server.setShutdownRequest(1);
@@ -791,7 +818,7 @@ TEST_F(HfPull, OutOfOvOrg) {
 
     std::string modelName2 = "META/Phi-3-mini-FastDraft-50M-int8-ov";
     std::filesystem::file_time_type ftime1 = std::filesystem::last_write_time(newPath);
-    this->SetUpServerForDownloadAndStart(modelName2, downloadPath, task);
+    this->SetUpServerForDownloadAndStart(modelName2, downloadPathRoot, task);
     std::filesystem::file_time_type ftime2 = std::filesystem::last_write_time(newPath);
     ASSERT_EQ(ftime1, ftime2);
 }
@@ -822,9 +849,7 @@ TEST_F(HfPull, DraftModel) {
     // guard.set("HF_ENDPOINT", "https://modelscope.cn");
     // guard.set("HF_ENDPOINT", "https://hf-mirror.com");
     this->filesToPrintInCaseOfFailure.emplace_back("graph.pbtxt");
-    std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string draftModel = "OpenVINO/distil-small.en-int4-ov";
-    std::string task = "text_generation";
     this->ServerPullHfModelWithDraft(draftModel, modelName, this->directoryPath, task);
 
     std::string basePath = ovms::FileSystem::joinPath({this->directoryPath, "OpenVINO", "Phi-3-mini-FastDraft-50M-int8-ov"});
@@ -1181,7 +1206,6 @@ TEST_F(HfPull, MethodsNegative) {
 }
 
 TEST_F(HfPull, CloneCancelledByShutdownRequest) {
-    std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string downloadPath = ovms::FileSystem::joinPath({this->directoryPath, "repository_cancel"});
     std::unique_ptr<TestHfDownloader> hfDownloader = std::make_unique<TestHfDownloader>(
         modelName,
