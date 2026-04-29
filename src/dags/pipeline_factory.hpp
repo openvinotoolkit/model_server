@@ -48,6 +48,7 @@ public:
      *
      * Constructs a PipelineDefinition from the provided graph topology (nodeInfos + connections),
      * subscribes it to model-change notifications, validates the entire graph, and stores it.
+     * Using Interface Segregation Principle to not pull ModelManager everywhere
      *
      * @param pipelineName      Unique name for the pipeline (must not already exist).
      * @param nodeInfos         Descriptions of every node in the DAG (DL model nodes, custom nodes, entry/exit).
@@ -100,6 +101,7 @@ public:
     /**
      * @brief Revalidate all existing pipeline definitions against the current model versions and availability.
      * Called after a model reload to ensure all pipelines depending on that model are still valid and can be executed.
+     * Using Interface Segregation Principle to not pull ModelManager everywhere
      *
      * @param modelInstanceProvider Provides access to model instances and subscribe/unsubscribe API
      * @param nameChecker Used during validation to verify that no other servable (model, mediapipe graph) already occupies the requested pipeline name.
