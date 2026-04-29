@@ -20,7 +20,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include <openvino/openvino.hpp>
+#include <openvino/runtime/tensor.hpp>
 
 #include "../tensor_utils.hpp"
 

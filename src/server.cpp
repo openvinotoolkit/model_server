@@ -39,6 +39,8 @@
 #elif _WIN32
 #include <csignal>
 #include <system_error>
+#include <cstdio>
+#include <io.h>
 
 #include <ntstatus.h>
 #include <winsock2.h>
@@ -58,7 +60,7 @@
 #include "httpservermodule.hpp"
 #include "kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "logging.hpp"
-#include "metric_module.hpp"
+#include "metrics/metric_module.hpp"
 #include "model_service.hpp"
 #include "modelmanager.hpp"
 #include "ovms_exit_codes.hpp"
@@ -259,7 +261,18 @@ static void onTerminate(int status) {
 }
 
 static void onIllegal(int status) {
-    Server::instance().setShutdownRequest(2);
+    (void)status;
+    const char msg[] = "SIGILL received: illegal instruction. This may indicate an unsupported CPU or device or an internal error. Terminating.\n";
+#ifdef __linux__
+    ssize_t ret = write(STDERR_FILENO, msg, sizeof(msg) - 1);
+#elif _WIN32
+    int ret = _write(_fileno(stderr), msg, sizeof(msg) - 1);
+#endif
+    (void)ret;
+    // Exit code 128+N is the standard shell convention for signal-terminated
+    // processes (bash, dash, Docker, Kubernetes all follow this).
+    // For SIGILL(4) this gives exit code 132.
+    std::_Exit(128 + SIGILL);
 }
 
 #ifdef __linux__
@@ -487,17 +500,12 @@ Status Server::startModules(ovms::Config& config) {
         START_MODULE(it);
         return status;
     }
-    if (config.getServerSettings().serverMode == HF_PULL_MODE || config.getServerSettings().serverMode == HF_PULL_AND_START_MODE) {
+    if (config.getServerSettings().serverMode == HF_PULL_MODE) {
         INSERT_MODULE(HF_MODEL_PULL_MODULE_NAME, it);
         START_MODULE(it);
-        if (!status.ok()) {
-            return status;
-        }
         auto hfModule = dynamic_cast<const HfPullModelModule*>(it->second.get());
         status = hfModule->clone();
-        // Return from modules only in --pull mode or error, otherwise start the rest of modules
-        if (config.getServerSettings().serverMode == HF_PULL_MODE || !status.ok())
-            return status;
+        return status;
     }
 
 #if (PYTHON_DISABLE == 0)
@@ -533,6 +541,18 @@ Status Server::startModules(ovms::Config& config) {
     if (config.restPort() != 0) {
         INSERT_MODULE(HTTP_SERVER_MODULE_NAME, it);
         START_MODULE(it);
+    }
+    if (config.getServerSettings().serverMode == HF_PULL_AND_START_MODE) {
+        INSERT_MODULE(HF_MODEL_PULL_MODULE_NAME, it);
+        START_MODULE(it);
+        if (!status.ok()) {
+            return status;
+        }
+        auto hfModule = dynamic_cast<const HfPullModelModule*>(it->second.get());
+        status = hfModule->clone();
+        if (!status.ok()) {
+            return status;
+        }
     }
     GET_MODULE(SERVABLE_MANAGER_MODULE_NAME, it);
     START_MODULE(it);
@@ -639,14 +659,6 @@ int Server::startServerFromSettings(ServerSettingsImpl& serverSettings, ModelsSe
     OvmsExitGuard exitStatusGuard(*this);
     installSignalHandlers();
     int result = OVMS_EX_OK;
-    // TODO This is WA for concurrency handling issue in iGPU for qwen3-MOE models. It is expected to be fixed in 2026.2
-    if (getenv("MOE_USE_MICRO_GEMM_PREFILL") == nullptr) {
-#ifdef _WIN32
-        _putenv_s("MOE_USE_MICRO_GEMM_PREFILL", "0");
-#else
-        setenv("MOE_USE_MICRO_GEMM_PREFILL", "0", 0);
-#endif
-    }
 
     try {
         Status ret = startFromSettings(&serverSettings, &modelsSettings);
@@ -657,9 +669,6 @@ int Server::startServerFromSettings(ServerSettingsImpl& serverSettings, ModelsSe
         while (!getShutdownStatus() &&
                (serverSettings.serverMode == HF_PULL_AND_START_MODE || serverSettings.serverMode == SERVING_MODELS_MODE)) {
             std::this_thread::sleep_for(std::chrono::milliseconds(200));
-        }
-        if (getShutdownStatus() == 2) {
-            SPDLOG_ERROR("Illegal operation. OVMS started on unsupported device");
         }
     } catch (const std::exception& e) {
         SPDLOG_ERROR("Exception; {}", e.what());

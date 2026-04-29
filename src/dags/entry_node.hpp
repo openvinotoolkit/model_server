@@ -19,9 +19,8 @@
 #include <string>
 #include <unordered_map>
 
-#include <openvino/openvino.hpp>
+#include <openvino/runtime/tensor.hpp>
 
-#include "../logging.hpp"
 #include "../ovms.h"  // NOLINT
 #include "../regularovtensorfactory.hpp"
 #include "../tensorinfo.hpp"
@@ -29,7 +28,7 @@
 
 namespace ovms {
 class IOVTensorFactory;
-extern const std::string ENTRY_NODE_NAME;
+inline const std::string ENTRY_NODE_NAME = "request";
 
 template <typename RequestType>
 class EntryNode : public Node {

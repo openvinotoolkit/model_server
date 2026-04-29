@@ -22,6 +22,8 @@
 #include <sstream>
 #include <string>
 
+#include <fmt/ranges.h>
+
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <openvino/genai/continuous_batching_pipeline.hpp>
@@ -581,6 +583,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJsonSingleStopString) {
             "model": ")" + params.modelName +
                               R"(",
             "stream": false,
+            "temperature": 0,
             "ignore_eos": false,
             "max_tokens": 1000,
             "stop": ".",
@@ -1652,7 +1655,8 @@ TEST_P(LLMFlowHttpTestParameterized, inferCompletionsStream) {
             "prompt": "What is OpenVINO?"
         }
     )";
-    ON_CALL(*writer, PartialReply).WillByDefault([this, &params](std::string response) {
+    bool firstChunk = true;
+    ON_CALL(*writer, PartialReply).WillByDefault([this, &params, &firstChunk](std::string response) {
         rapidjson::Document d;
         std::string dataPrefix = "data:";
         ASSERT_STREQ(response.substr(0, dataPrefix.size()).c_str(), dataPrefix.c_str());
@@ -1675,7 +1679,12 @@ TEST_P(LLMFlowHttpTestParameterized, inferCompletionsStream) {
             if (params.checkLogprobs) {
                 ASSERT_FALSE(choice["logprobs"].IsObject());
             }
-            ASSERT_TRUE(choice["text"].IsString());
+            if (firstChunk && params.checkHandshakeChunk) {
+                ASSERT_TRUE(choice["text"].IsNull() || choice["text"].IsString());
+            } else {
+                ASSERT_TRUE(choice["text"].IsString());
+            }
+            firstChunk = false;
         }
         EXPECT_STREQ(d["model"].GetString(), params.modelName.c_str());
         EXPECT_STREQ(d["object"].GetString(), "text_completion.chunk");

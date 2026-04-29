@@ -31,7 +31,7 @@
 #include "src/test/test_utils.hpp"
 #include "src/test/test_file_utils.hpp"
 #include "src/test/test_with_temp_dir.hpp"
-#include "src/filesystem.hpp"
+#include "src/filesystem/filesystem.hpp"
 #include "src/pull_module/hf_pull_model_module.hpp"
 #include "src/pull_module/libgit2.hpp"
 #include "src/pull_module/optimum_export.hpp"
@@ -1022,7 +1022,7 @@ TEST(ServerModulesBehaviorTests, PullModeErrorAndExpectFailAndNoOtherModulesStar
     ASSERT_EQ(server.getModule(ovms::SERVABLES_CONFIG_MANAGER_MODULE_NAME), nullptr);
 }
 
-TEST(ServerModulesBehaviorTests, PullAndStartModeErrorAndExpectFailAndNoOtherModulesStarted) {
+TEST(ServerModulesBehaviorTests, PullAndStartModeErrorAndExpectFailAndCheckOtherModules) {
     std::unique_ptr<ServerShutdownGuard> serverGuard;
     ovms::Server& server = ovms::Server::instance();
     DefaultEmptyValuesConfig config;
@@ -1034,6 +1034,6 @@ TEST(ServerModulesBehaviorTests, PullAndStartModeErrorAndExpectFailAndNoOtherMod
     serverGuard = std::make_unique<ServerShutdownGuard>(server);
     EXPECT_TRUE(server.getModule(ovms::HF_MODEL_PULL_MODULE_NAME) != nullptr);
     ASSERT_EQ(server.getModule(ovms::HF_MODEL_PULL_MODULE_NAME)->getState(), ovms::ModuleState::INITIALIZED);
-    ASSERT_EQ(server.getModule(ovms::SERVABLE_MANAGER_MODULE_NAME), nullptr);
+    ASSERT_NE(server.getModule(ovms::SERVABLE_MANAGER_MODULE_NAME), nullptr);  // expected to be started
     ASSERT_EQ(server.getModule(ovms::SERVABLES_CONFIG_MANAGER_MODULE_NAME), nullptr);
 }

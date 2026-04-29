@@ -46,6 +46,17 @@ namespace {
 class MockedServer : public Server {
 public:
     MockedServer() = default;
+    std::unique_ptr<Module> extractModule(const std::string& name) {
+        auto it = modules.find(name);
+        if (it == modules.end())
+            return nullptr;
+        auto mod = std::move(it->second);
+        modules.erase(it);
+        return mod;
+    }
+    void insertModule(const std::string& name, std::unique_ptr<Module> mod) {
+        modules[name] = std::move(mod);
+    }
 };
 }  // namespace
 
@@ -1613,6 +1624,25 @@ TEST_F(HttpRestApiHandlerTest, serverReady) {
     ovms::Status status = handler->dispatchToProcessor("", request, &response, comp, responseComponents, writer, multiPartParser);
 
     ASSERT_EQ(status, ovms::StatusCode::OK);
+}
+
+TEST_F(HttpRestApiHandlerTest, serverNotReady) {
+    // Temporarily remove servable manager module to make isReady() return false
+    auto mod = server->extractModule(ovms::SERVABLE_MANAGER_MODULE_NAME);
+
+    ovms::HttpRequestComponents comp;
+    comp.type = ovms::KFS_GetServerReady;
+    std::string request;
+    std::string response;
+    ovms::HttpResponseComponents responseComponents;
+    std::shared_ptr<ovms::HttpAsyncWriter> writer{nullptr};
+    std::shared_ptr<ovms::MultiPartParser> multiPartParser{nullptr};
+    ovms::Status status = handler->dispatchToProcessor("", request, &response, comp, responseComponents, writer, multiPartParser);
+
+    ASSERT_EQ(status, ovms::StatusCode::SERVER_NOT_READY);
+
+    // Restore the module so other tests are not affected
+    server->insertModule(ovms::SERVABLE_MANAGER_MODULE_NAME, std::move(mod));
 }
 
 TEST_F(HttpRestApiHandlerTest, serverLive) {

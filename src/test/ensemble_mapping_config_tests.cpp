@@ -26,6 +26,7 @@
 #include "../execution_context.hpp"
 #include "../get_model_metadata_impl.hpp"
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
+#include "../model.hpp"
 #include "../model_metric_reporter.hpp"
 #include "../modelconfig.hpp"
 #include "../modelmanager.hpp"
@@ -98,7 +99,7 @@ TEST_F(PipelineWithInputOutputNameMappedModel, SuccessfullyReferToMappedNamesAnd
         {"dummyB", {{"output_tensor", "response_tensor_name"}}}};
 
     // Ensure definition created without errors
-    ASSERT_EQ(factory.createDefinition("pipeline", info, connections, managerWithDummyModel), StatusCode::OK);
+    ASSERT_EQ(factory.createDefinition("pipeline", info, connections, managerWithDummyModel, managerWithDummyModel, managerWithDummyModel), StatusCode::OK);
 
     // Prepare request
     std::unique_ptr<Pipeline> pipeline;
@@ -162,7 +163,7 @@ TEST_F(PipelineWithInputOutputNameMappedModel, ReferingToOriginalInputNameFailsC
     connections[EXIT_NODE_NAME] = {
         {"dummyB", {{"output_tensor", "response_tensor_name"}}}};
 
-    EXPECT_EQ(factory.createDefinition("pipeline", info, connections, managerWithDummyModel), StatusCode::PIPELINE_CONNECTION_TO_MISSING_MODEL_INPUT);
+    EXPECT_EQ(factory.createDefinition("pipeline", info, connections, managerWithDummyModel, managerWithDummyModel, managerWithDummyModel), StatusCode::PIPELINE_CONNECTION_TO_MISSING_MODEL_INPUT);
 }
 
 TEST_F(PipelineWithInputOutputNameMappedModel, ReferingToOriginalOutputNameFailsCreation) {
@@ -198,7 +199,7 @@ TEST_F(PipelineWithInputOutputNameMappedModel, ReferingToOriginalOutputNameFails
     connections[EXIT_NODE_NAME] = {
         {"dummyB", {{"output_tensor", "response_tensor_name"}}}};
 
-    EXPECT_EQ(factory.createDefinition("pipeline", info, connections, managerWithDummyModel), StatusCode::PIPELINE_NODE_REFERING_TO_MISSING_MODEL_OUTPUT);
+    EXPECT_EQ(factory.createDefinition("pipeline", info, connections, managerWithDummyModel, managerWithDummyModel, managerWithDummyModel), StatusCode::PIPELINE_NODE_REFERING_TO_MISSING_MODEL_OUTPUT);
 }
 
 TEST_F(PipelineWithInputOutputNameMappedModel, SuccessfullyReferToMappedNamesAndGetMetadata) {
@@ -234,7 +235,7 @@ TEST_F(PipelineWithInputOutputNameMappedModel, SuccessfullyReferToMappedNamesAnd
     auto def = std::make_unique<PipelineDefinition>(
         "my_new_pipeline", info, connections);
 
-    ASSERT_EQ(def->validate(managerWithDummyModel), StatusCode::OK);
+    ASSERT_EQ(def->validate(managerWithDummyModel, managerWithDummyModel, managerWithDummyModel), StatusCode::OK);
 
     auto inputs = def->getInputsInfo();
     auto outputs = def->getOutputsInfo();
@@ -277,7 +278,7 @@ TEST_F(PipelineWithInputOutputNameMappedModel, SuccessfullyReloadPipelineAfterAd
 
     // Validation fails since mapping is expected
     PipelineDefinition pd("UNUSED_NAME", info, connections);
-    auto status = pd.validate(managerWithDummyModel);
+    auto status = pd.validate(managerWithDummyModel, managerWithDummyModel, managerWithDummyModel);
     EXPECT_TRUE(status.getCode() == ovms::StatusCode::PIPELINE_CONNECTION_TO_MISSING_MODEL_INPUT)
         << status.string();
 
@@ -294,7 +295,7 @@ TEST_F(PipelineWithInputOutputNameMappedModel, SuccessfullyReloadPipelineAfterAd
     modelConfig.setNireq(modelConfig.getNireq() + 1);
     status = managerWithDummyModel.reloadModelWithVersions(modelConfig);
     ASSERT_TRUE(status.ok()) << status.string();
-    status = pd.reload(managerWithDummyModel, std::move(info), std::move(connections));
+    status = pd.reload(managerWithDummyModel, managerWithDummyModel, managerWithDummyModel, std::move(info), std::move(connections));
     ASSERT_TRUE(status.ok()) << status.string();
 
     // Prepare request
@@ -357,7 +358,7 @@ TEST_F(PipelineWithInputOutputNameMappedModel, ReloadPipelineAfterRemovalOfModel
 
     // Ensure definition created without errors
     PipelineDefinition pd("UNUSED_NAME", info, connections);
-    auto status = pd.validate(managerWithDummyModel);
+    auto status = pd.validate(managerWithDummyModel, managerWithDummyModel, managerWithDummyModel);
     ASSERT_TRUE(status.ok()) << status.string();
 
     // reload pipeline definition after removing mapping
@@ -367,7 +368,7 @@ TEST_F(PipelineWithInputOutputNameMappedModel, ReloadPipelineAfterRemovalOfModel
     modelConfig.setNireq(modelConfig.getNireq() + 1);
     status = managerWithDummyModel.reloadModelWithVersions(modelConfig);
     ASSERT_TRUE(status.ok()) << status.string();
-    status = pd.reload(managerWithDummyModel, std::move(info), std::move(connections));
+    status = pd.reload(managerWithDummyModel, managerWithDummyModel, managerWithDummyModel, std::move(info), std::move(connections));
     EXPECT_TRUE(status.getCode() == ovms::StatusCode::PIPELINE_CONNECTION_TO_MISSING_MODEL_INPUT)
         << status.string();
 }

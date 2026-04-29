@@ -24,11 +24,12 @@
 #include <utility>
 #include <vector>
 
+#include <fmt/format.h>
+
 #include "../modelversion.hpp"
 #include "../tensorinfo.hpp"
 #include "aliases.hpp"
 #include "node_library.hpp"
-#include "../logging.hpp"
 
 namespace ovms {
 

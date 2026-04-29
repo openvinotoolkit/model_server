@@ -25,7 +25,7 @@
 #include "../cleaner_utils.hpp"
 #include "../dags/node_library.hpp"
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
-#include "../localfilesystem.hpp"
+#include "src/filesystem/localfilesystem.hpp"
 #include "../logging.hpp"
 #include "../model.hpp"
 #include "../modelinstanceunloadguard.hpp"

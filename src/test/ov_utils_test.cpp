@@ -19,7 +19,9 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "../filesystem.hpp"
+#include <openvino/runtime/core.hpp>
+
+#include "src/filesystem/filesystem.hpp"
 #include "../modelinstance.hpp"
 #include "../ov_utils.hpp"
 #include "test_utils.hpp"

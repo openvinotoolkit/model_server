@@ -21,10 +21,9 @@
 #include <string>
 #include <unordered_map>
 
-#include <openvino/openvino.hpp>
+#include <openvino/runtime/infer_request.hpp>
 
 #include "../executingstreamidguard.hpp"
-#include "../model_version_policy.hpp"  // for model_version_t typename
 #include "../modelversion.hpp"
 #include "node.hpp"
 
@@ -33,13 +32,13 @@ namespace ovms {
 class ModelInstance;
 class ModelInstanceUnloadGuard;
 class NodeStreamIdGuard;
-class ModelManager;
+class ModelInstanceProvider;
 
 class DLNode : public Node {
 protected:
     std::string modelName;
     std::optional<model_version_t> modelVersion;
-    ModelManager& modelManager;
+    ModelInstanceProvider& modelManager;
     const std::unordered_map<std::string, std::string> nodeOutputNameAlias;
 
     std::shared_ptr<ModelInstance> model;
@@ -48,7 +47,7 @@ protected:
 
 public:
     DLNode(const std::string& nodeName, const std::string& modelName, std::optional<model_version_t> modelVersion,
-        ModelManager& modelManager,
+        ModelInstanceProvider& modelManager,
         std::unordered_map<std::string, std::string> nodeOutputNameAlias = {},
         std::optional<int32_t> demultiplyCount = std::nullopt, std::set<std::string> gatherFromNode = {});
 

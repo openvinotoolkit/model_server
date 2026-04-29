@@ -26,7 +26,8 @@ ovms_cc_library(
 
 ovms_cc_library(
     name = "s2t_calculator",
-    srcs = ["s2t_calculator.cc"],
+    srcs = ["s2t_calculator.cc",
+            "stt_node_initializer.cpp"],
     deps = [
         "@mediapipe//mediapipe/framework:calculator_framework",
         "//src:httppayload",
@@ -39,6 +40,8 @@ ovms_cc_library(
         "//third_party:genai",
         "//src/audio:audio_utils",
         "//src:libmodelconfigjsonparser",
+        "//src/mediapipe_internal:node_initializer",
+        "//src:libovmsstring_utils",
     ],
     visibility = ["//visibility:public"],
     alwayslink = 1,

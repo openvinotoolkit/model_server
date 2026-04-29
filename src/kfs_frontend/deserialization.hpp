@@ -20,7 +20,7 @@
 #include <tuple>
 #include <unordered_map>
 
-#include <openvino/openvino.hpp>
+#include <openvino/runtime/tensor.hpp>
 
 #include "../deserialization_common.hpp"
 #include "kfs_utils.hpp"

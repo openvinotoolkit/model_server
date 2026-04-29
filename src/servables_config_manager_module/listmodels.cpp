@@ -19,7 +19,7 @@
 #include <fstream>
 #include <iostream>
 
-#include "src/filesystem.hpp"
+#include "src/filesystem/filesystem.hpp"
 #include "src/modelextensions.hpp"
 #include "src/logging.hpp"
 

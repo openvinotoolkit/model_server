@@ -32,7 +32,7 @@ pipeline {
               } else {  // branches without PR - check changes in last commit
                 git_diff = sh (script: "git diff --name-only HEAD^..HEAD", returnStdout: true).trim()
               }
-              def matched = (git_diff =~ /src|third_party|external|(\n|^)Dockerfile|(\n|^)Makefile|\.c|\.h|\.bazel|\.bzl|\.groovy|BUILD|create_package\.sh|WORKSPACE|(\n|^)run_unit_tests\.sh/)
+              def matched = (git_diff =~ /src|third_party|external|(\n|^)Dockerfile|(\n|^)Makefile|\.c|\.h|\.bazel|\.bzl|\.groovy|BUILD|create_package\.sh|WORKSPACE|(\n|^)run_unit_tests\.sh|versions\.mk/)
                 if (matched){
                   image_build_needed = "true"
               }
@@ -157,7 +157,7 @@ pipeline {
               script {
               println "Running unit tests: NODE_NAME = ${env.NODE_NAME}"
               try {
-                  sh "make run_unit_tests TEST_LLM_PATH=${HOME}/ovms_models/llm_models_ovms/INT8 BASE_OS=redhat OVMS_CPP_IMAGE_TAG=${shortCommit}"
+                  sh "make run_unit_tests TEST_LLM_PATH=${HOME}/ovms_models/llm_models_ovms/OVMS_C BASE_OS=redhat OVMS_CPP_IMAGE_TAG=${shortCommit}"
               }
               finally {
                   archiveArtifacts allowEmptyArchive: true, artifacts: "test_logs.tar.gz"
