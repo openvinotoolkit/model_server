@@ -97,6 +97,14 @@ public:
         DagResourceManager& resourceMgr);
 
     void retireOtherThan(std::set<std::string>&& pipelinesInConfigFile, ModelInstanceProvider& modelInstanceProvider);
+    /**
+     * @brief Revalidate all existing pipeline definitions against the current model versions and availability.
+     * Called after a model reload to ensure all pipelines depending on that model are still valid and can be executed.
+     *
+     * @param modelInstanceProvider Provides access to model instances and subscribe/unsubscribe API
+     * @param nameChecker Used during validation to verify that no other servable (model, mediapipe graph) already occupies the requested pipeline name.
+     * @param resourceMgr Accepts custom-node library resources created during validation for deferred cleanup by the background cleaner thread.
+     */
     Status revalidatePipelines(ModelInstanceProvider& modelInstanceProvider, ServableNameChecker& nameChecker, DagResourceManager& resourceMgr);
     const std::vector<std::string> getPipelinesNames() const;
     const std::vector<std::string> getNamesOfAvailablePipelines() const;
