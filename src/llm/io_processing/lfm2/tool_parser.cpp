@@ -346,7 +346,7 @@ std::optional<rapidjson::Document> Lfm2ToolParser::parseChunk(const std::string&
                 content = this->streamingContent.substr(this->streamingPosition);
             }
             this->streamingPosition += content.size();
-            
+
             if (content.empty() || (this->toolCallIndex > TOOL_CALL_INDEX_START && trim_copy(content) == EOS_TOKEN_STR && finishReason == ov::genai::GenerationFinishReason::STOP)) {
                 return std::nullopt;
             }

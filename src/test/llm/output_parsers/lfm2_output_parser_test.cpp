@@ -536,7 +536,7 @@ TEST_F(LFM2OutputParserTest, StreamingWithToolCallAndFinishReason) {
         {" 99", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"})]", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{\"config\":{\"name\":\"astro_config\",\"value\":99}}"}}]}})"},
         {"<|tool_call_end|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {"<|im_end|>", ov::genai::GenerationFinishReason::STOP,std::nullopt},
+        {"<|im_end|>", ov::genai::GenerationFinishReason::STOP, std::nullopt},
     };
 
     for (const auto& [chunk, finishReason, expectedDelta] : chunkToDeltaVec) {
@@ -589,7 +589,6 @@ TEST_F(LFM2OutputParserTest, StreamingWithToolCallAndFinishReason) {
         }
     }
 }
-
 
 TEST_F(LFM2OutputParserTest, StreamingWithContentBetweenToolCalls) {
     std::vector<std::tuple<std::string, ov::genai::GenerationFinishReason, std::optional<std::string>>> chunkToDeltaVec{
