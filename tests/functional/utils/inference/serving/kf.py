@@ -25,12 +25,12 @@ from tritonclient.grpc import service_pb2, service_pb2_grpc
 from tritonclient.utils import np_to_triton_dtype, triton_to_np_dtype
 
 from tests.functional.utils.assertions import StreamingApiException
-from common_libs.http.base import HttpMethod
+from tests.functional.utils.http.base import HttpMethod
 from tests.functional.utils.inference.communication.grpc import GRPC_TIMEOUT
 from tests.functional.utils.inference.serving.base import AbstractServingWrapper
 from tests.functional.utils.logger import get_logger
 from tests.functional.utils.test_framework import FrameworkMessages, skip_if_runtime
-from ovms.constants.metrics import Metric
+from tests.functional.constants.metrics import Metric
 from tests.functional.constants.ovms import Ovms
 
 logger = get_logger(__name__)

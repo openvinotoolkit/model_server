@@ -213,6 +213,17 @@ pytest_global_session_timeout = get_int("TEST_TIMEOUT", 15)
 """ TT_BUILD_TEST_IMAGE - build ovms test image (cpu extensions, custom nodes etc.) """
 build_test_image = get_bool("TT_BUILD_TEST_IMAGE", False)
 
+""" TT_SAVE_IMAGE_TO_ARTIFACTS - save generated or edited image to artifacts """
+save_image_to_artifacts = get_bool("TT_SAVE_IMAGE_TO_ARTIFACTS", False)
+
+"""TT_SET_NO_PROXY"""
+set_no_proxy = os.environ.get("TT_SET_NO_PROXY", True)
+no_proxy = os.environ.get("no_proxy", "")
+if set_no_proxy:
+    os.environ["NO_PROXY"] = no_proxy
+http_proxy = os.environ.get("http_proxy", "")
+https_proxy = os.environ.get("https_proxy", "")
+
 """ TT_RUN_OVMS_WITH_VALGRIND - run ovms using Valgrind """
 run_ovms_with_valgrind = get_bool("TT_RUN_OVMS_WITH_VALGRIND", False)
 
@@ -291,3 +302,16 @@ pipeline_type = os.environ.get("TT_PIPELINE_TYPE", None)
 
 """ TT_ENABLE_PREFIX_CACHING - enable prefix caching for model """
 enable_prefix_caching_config = get_bool("TT_ENABLE_PREFIX_CACHING", False)
+
+""" TT_SSL_VALIDATION - if set to True for https request ssl protocol validation is performed,
+                           default False"""
+ssl_validation = get_bool("TT_SSL_VALIDATION", False)
+
+"""TT_LOGGED_RESPONSE_BODY_LENGTH - length of http response logged , default: 1024 """
+logged_response_body_length = os.environ.get("TT_LOGGED_RESPONSE_BODY_LENGTH", 1024)
+
+""" TT_C_API_WRAPPER_DIR - Cython wrapper files for C_API """
+c_api_wrapper_dir = get_path("TT_C_API_WRAPPER_DIR", os.path.join("~", "ovms_c_api_wrapper_dir"))
+
+""" TT_OVMS_FILE_LOCKS_DIR """
+ovms_file_locks_dir = get_path("TT_OVMS_FILE_LOCKS_DIR", os.path.join("~", "ovms_locks"))

@@ -19,9 +19,9 @@ from http import HTTPStatus
 
 from tests.functional.constants.ovms import Ovms
 from tests.functional.utils.assertions import AccuracyException, UnexpectedResponseError, assert_raises_http_exception
-from common_libs.http.base import HttpMethod
-from common_libs.http.client_auth.auth import NoAuthConfigurationProvider, SslAuthConfigurationProvider
-from common_libs.http.http_client_factory import HttpClientFactory
+from tests.functional.utils.http.base import HttpMethod
+from tests.functional.utils.http.client_auth.auth import NoAuthConfigurationProvider, SslAuthConfigurationProvider
+from tests.functional.utils.http.http_client_factory import HttpClientFactory
 from tests.functional.utils.logger import get_logger
 from tests.functional.utils.inference.communication.base import AbstractCommunicationInterface
 from tests.functional.utils.inference.communication.constants import NOT_A_NUMBER_REGEX

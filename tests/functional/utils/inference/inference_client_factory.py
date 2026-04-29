@@ -25,7 +25,7 @@ from tests.functional.utils.inference.serving.openai import OPENAI, OpenAIWrappe
 from tests.functional.utils.inference.serving.tf import TFS, TensorFlowServingWrapper
 from tests.functional.utils.inference.serving.triton import TRITON, TritonServingWrapper
 from tests.functional.constants.ovms_type import OvmsType
-from ovms.object_model.ovsa import OvsaCerts
+from tests.functional.object_model.ovsa import OvsaCerts
 
 
 class InferenceClientFactory:

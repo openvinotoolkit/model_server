@@ -26,11 +26,11 @@ from tensorflow_serving.apis import (
     get_model_metadata_pb2, get_model_status_pb2, model_service_pb2_grpc, predict_pb2, prediction_service_pb2_grpc,)
 
 from tests.functional.utils.assertions import InvalidMetadataException, NotSupported
-from common_libs.http.base import HttpMethod
+from tests.functional.utils.http.base import HttpMethod
 from tests.functional.utils.inference.communication.grpc import GRPC_TIMEOUT
 from tests.functional.utils.inference.serving.base import AbstractServingWrapper
 from tests.functional.utils.logger import get_logger
-from ovms.constants.metrics import Metric
+from tests.functional.constants.metrics import Metric
 from tests.functional.constants.ovms import Ovms
 
 logger = get_logger(__name__)

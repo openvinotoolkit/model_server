@@ -16,7 +16,7 @@
 
 import abc
 
-from common_libs.ssl import SslCertificates
+from tests.functional.utils.ssl import SslCertificates
 from tests.functional.object_model.test_environment import TestEnvironment
 
 

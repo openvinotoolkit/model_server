@@ -19,7 +19,7 @@ import pytest
 from tests.functional.utils.assertions import NotSupported, _assert_status_code_and_message
 from tests.functional.utils.inference.communication.base import AbstractCommunicationInterface
 from tests.functional.utils.inference.serving.base import AbstractServingWrapper
-from data.ovms_capi_wrapper.ovms_capi_shared import OvmsInferenceFailed, OvmsModelNotFound
+from tests.functional.data.ovms_capi_wrapper.ovms_capi_shared import OvmsInferenceFailed, OvmsModelNotFound
 
 
 class CapiServingWrapper(AbstractServingWrapper, AbstractCommunicationInterface):
