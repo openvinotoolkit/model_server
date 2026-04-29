@@ -26,6 +26,7 @@ namespace ovms {
 
 const std::string Lfm2ToolParser::TOOL_CALL_START_TAG = "<|tool_call_start|>";
 const std::string Lfm2ToolParser::TOOL_CALL_END_TAG = "<|tool_call_end|>";
+const std::string Lfm2ToolParser::EOS_TOKEN_STR = "<|im_end|>";
 
 const std::string Lfm2ToolParser::TOOL_LIST_START_INDICATOR = "[";
 const std::string Lfm2ToolParser::TOOL_LIST_END_INDICATOR = "]";
@@ -228,6 +229,7 @@ bool Lfm2ToolParser::parseInToolCallState() {
     }
 
     std::string toolName = this->streamingContent.substr(this->streamingPosition, argsPos - this->streamingPosition);
+    trim(toolName);
     this->toolCall = ToolCall{generateRandomId(), toolName, ""};
     SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Parsed tool name: {}", toolName);
     this->streamingPosition = argsPos + TOOL_ARGS_START_INDICATOR.length();
@@ -314,11 +316,11 @@ rapidjson::Document Lfm2ToolParser::wrapDeltaContent(const std::string& content)
     return doc;
 }
 
-rapidjson::Document Lfm2ToolParser::wrapDeltaArgs(const std::string& argsStr, int toolCallIndex) {
+rapidjson::Document Lfm2ToolParser::wrapDeltaArgs(const std::string& argsStr) {
     rapidjson::Document doc(rapidjson::kObjectType);
     doc.AddMember("arguments", rapidjson::Value(argsStr.c_str(), doc.GetAllocator()), doc.GetAllocator());
 
-    return BaseOutputParser::wrapDelta(doc, toolCallIndex);
+    return BaseOutputParser::wrapDelta(doc, this->toolCallIndex);
 }
 
 std::optional<rapidjson::Document> Lfm2ToolParser::parseChunk(const std::string& chunk, ov::genai::GenerationFinishReason finishReason) {
@@ -330,10 +332,10 @@ std::optional<rapidjson::Document> Lfm2ToolParser::parseChunk(const std::string&
 
     if (parseNewContent()) {
         if (this->currentState == State::ToolCallParameters) {
-            return BaseOutputParser::wrapFirstDelta(this->toolCall.name, toolCallIndex);
+            return BaseOutputParser::wrapFirstDelta(this->toolCall.name, this->toolCallIndex);
         }
         if (this->currentState == State::ToolCallEnded) {
-            return wrapDeltaArgs(this->toolCall.arguments, toolCallIndex);
+            return wrapDeltaArgs(this->toolCall.arguments);
         }
         if (this->currentState == State::Content) {
             size_t contentEnd = this->streamingContent.find(TOOL_CALL_START_TAG, this->streamingPosition);
@@ -344,9 +346,12 @@ std::optional<rapidjson::Document> Lfm2ToolParser::parseChunk(const std::string&
                 content = this->streamingContent.substr(this->streamingPosition);
             }
             this->streamingPosition += content.size();
-            if (!content.empty()) {
-                return wrapDeltaContent(content);
+            
+            if (content.empty() || (this->toolCallIndex > TOOL_CALL_INDEX_START && trim_copy(content) == EOS_TOKEN_STR && finishReason == ov::genai::GenerationFinishReason::STOP)) {
+                return std::nullopt;
             }
+
+            return wrapDeltaContent(content);
         }
         if (this->currentState == State::AfterToolCall) {
             this->currentState = State::Content;
@@ -355,7 +360,7 @@ std::optional<rapidjson::Document> Lfm2ToolParser::parseChunk(const std::string&
 
     if (finishReason != ov::genai::GenerationFinishReason::NONE) {
         if ((this->currentState == State::ToolCallParameters || this->currentState == State::ToolCallEnded) && !this->toolCall.arguments.empty()) {
-            return wrapDeltaArgs(this->toolCall.arguments, toolCallIndex);
+            return wrapDeltaArgs(this->toolCall.arguments);
         }
 
         if (this->currentState == State::Content && this->streamingPosition < this->streamingContent.size()) {

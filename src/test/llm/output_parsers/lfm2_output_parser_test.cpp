@@ -515,6 +515,82 @@ TEST_F(LFM2OutputParserTest, StreamingWithBiggerChunks) {
     }
 }
 
+TEST_F(LFM2OutputParserTest, StreamingWithToolCallAndFinishReason) {
+    std::vector<std::tuple<std::string, ov::genai::GenerationFinishReason, std::optional<std::string>>> chunkToDeltaVec{
+        {"JUST_SOME_STRING_BEFORE_SPECIAL_STARTING_TAG", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":"JUST_SOME_STRING_BEFORE_SPECIAL_STARTING_TAG"}})"},
+        {"<|tool_call_start|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"[", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {" d", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"ummy", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"(config", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"id":"XXXXXXXXX","type":"function","index":0,"function":{"name":"dummy"}}]}})"},
+        {"={", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"'", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"name", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"':", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {" '", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"astro_config", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"',", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {" '", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"value", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"':", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {" 99", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"})]", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{\"config\":{\"name\":\"astro_config\",\"value\":99}}"}}]}})"},
+        {"<|tool_call_end|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"<|im_end|>", ov::genai::GenerationFinishReason::STOP,std::nullopt},
+    };
+
+    for (const auto& [chunk, finishReason, expectedDelta] : chunkToDeltaVec) {
+        std::optional<rapidjson::Document> doc = outputParserWithRegularToolParsing->parseChunk(chunk, true, finishReason);
+        if (!expectedDelta.has_value() && !doc.has_value()) {
+            continue;  // Both are nullopt, OK
+        }
+        if (expectedDelta.has_value() && doc.has_value()) {
+            rapidjson::StringBuffer buffer;
+            rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+            doc->Accept(writer);
+            std::string docStr = buffer.GetString();
+            // If both strings contain "id":"...", compare id values by length and alphanumeric, else compare whole strings
+            std::string expected = expectedDelta.value();
+            std::string idKey = "\"id\":\"";
+            auto docIdPos = docStr.find(idKey);
+            auto expectedIdPos = expected.find(idKey);
+            if (docIdPos != std::string::npos && expectedIdPos != std::string::npos) {
+                auto docIdStart = docIdPos + idKey.size();
+                auto docIdEnd = docStr.find("\"", docIdStart);
+                auto expectedIdStart = expectedIdPos + idKey.size();
+                auto expectedIdEnd = expected.find("\"", expectedIdStart);
+                ASSERT_NE(docIdEnd, std::string::npos);
+                ASSERT_NE(expectedIdEnd, std::string::npos);
+                std::string docId = docStr.substr(docIdStart, docIdEnd - docIdStart);
+                std::string expectedId = expected.substr(expectedIdStart, expectedIdEnd - expectedIdStart);
+                EXPECT_EQ(docId.size(), expectedId.size()) << "ID length mismatch for chunk: " << chunk;
+                EXPECT_TRUE(std::all_of(docId.begin(), docId.end(), ::isalnum)) << "ID not alphanumeric for chunk: " << chunk;
+                // Compare everything except the id value
+                std::string docStrNoId = docStr;
+                std::string expectedNoId = expected;
+                docStrNoId.replace(docIdStart, docId.size(), std::string(docId.size(), '*'));
+                expectedNoId.replace(expectedIdStart, expectedId.size(), std::string(expectedId.size(), '*'));
+                EXPECT_EQ(docStrNoId, expectedNoId) << "Mismatch for chunk (ignoring id value): " << chunk;
+            } else {
+                EXPECT_EQ(docStr, expected) << "Mismatch for chunk: " << chunk;
+            }
+        } else {
+            std::string expectedStr = expectedDelta.has_value() ? expectedDelta.value() : "std::nullopt";
+            std::string docStr = doc.has_value() ? [&]() {
+                rapidjson::StringBuffer buffer;
+                rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+                doc->Accept(writer);
+                return std::string(buffer.GetString());
+            }()
+                                                 : "std::nullopt";
+            FAIL() << "Mismatch between expectedDelta and doc for chunk: " << chunk
+                   << "\nexpectedDelta: " << expectedStr
+                   << "\ndoc: " << docStr;
+        }
+    }
+}
+
+
 TEST_F(LFM2OutputParserTest, StreamingWithContentBetweenToolCalls) {
     std::vector<std::tuple<std::string, ov::genai::GenerationFinishReason, std::optional<std::string>>> chunkToDeltaVec{
         // Tool call phase

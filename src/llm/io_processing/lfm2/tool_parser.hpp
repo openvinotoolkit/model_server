@@ -23,6 +23,7 @@ class Lfm2ToolParser : public BaseOutputParser {
 protected:
     static const std::string TOOL_CALL_START_TAG;
     static const std::string TOOL_CALL_END_TAG;
+    static const std::string EOS_TOKEN_STR;
 
     static const std::string TOOL_LIST_START_INDICATOR;
     static const std::string TOOL_LIST_END_INDICATOR;
@@ -35,7 +36,7 @@ protected:
 
     static constexpr size_t MAX_TOOL_CALLS = 100;
     static constexpr size_t MAX_TOOLS_PER_CALL = 100;
-
+    static constexpr int TOOL_CALL_INDEX_START = -1;
     enum class State {
         Content,             // Content -> ToolCallStarted (on TOOL_CALL_START_TAG)
         ToolCallStarted,     // ToolCallStarted -> ToolCallParameters (on TOOL_ARGS_START_INDICATOR, emits name)
@@ -91,12 +92,13 @@ private:
     bool parseInToolCallEndedState();
 
     rapidjson::Document wrapDeltaContent(const std::string& content);
-    rapidjson::Document wrapDeltaArgs(const std::string& argsStr, int toolCallIndex);
+    rapidjson::Document wrapDeltaArgs(const std::string& argsStr);
 
     std::string streamingContent;
     size_t streamingPosition{0};
     State currentState{State::Content};
     ToolCall toolCall;
-    int toolCallIndex{-1};
+
+    int toolCallIndex{TOOL_CALL_INDEX_START};
 };
 }  // namespace ovms
