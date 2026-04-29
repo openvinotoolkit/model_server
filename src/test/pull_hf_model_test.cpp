@@ -142,8 +142,10 @@ protected:
             std::filesystem::copy_options::recursive,
             ec);
         ASSERT_EQ(ec, std::errc()) << "Failed to copy cached model repository to test directory";
+#ifdef _WIN32
         std::string mutableRepositoryPath = testRepositoryPath;
         RemoveReadonlyFileAttributeFromDir(mutableRepositoryPath);
+#endif
     }
 };
 
