@@ -64,6 +64,8 @@ public:
 
     void SetUp() {
         V3HttpTest::SetUp();
+        ON_CALL(*writer, IsDisconnected())
+            .WillByDefault(::testing::Return(false));
         ASSERT_EQ(handler->parseRequestComponents(comp, "POST", endpoint, multipartHeader), ovms::StatusCode::OK);
     }
 
@@ -533,16 +535,16 @@ TEST_F(Speech2TextHttpTest, invalidLanguageTooLong) {
     EXPECT_EQ(status.string(), expectedMsg);
 }
 
-TEST_F(Speech2TextHttpTest, invalidTemperatureOutOfRange) {
+TEST_F(Speech2TextHttpTest, invalidTemperatureType) {
     auto req = drogon::HttpRequest::newHttpRequest();
     req->setMethod(drogon::Post);
     req->addHeader("content-type", "multipart/form-data; boundary=\"12345\"");
-    std::string language = "\r\n"
-                           "Content-Disposition: form-data;name=\"temperature\"\r\n"
-                           "\r\n"
-                           "10.0\r\n"
-                           "--12345";
-    req->setBody(Speech2TextHttpTest::body + language);
+    std::string temperature = "\r\n"
+                              "Content-Disposition: form-data;name=\"temperature\"\r\n"
+                              "\r\n"
+                              "INVALID\r\n"
+                              "--12345";
+    req->setBody(Speech2TextHttpTest::body + temperature);
     std::shared_ptr<MultiPartParser> multiPartParserWithRequest = std::make_shared<DrogonMultiPartParser>(req);
     std::string requestBody = "";
     auto status = handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParserWithRequest);
@@ -550,7 +552,7 @@ TEST_F(Speech2TextHttpTest, invalidTemperatureOutOfRange) {
         status.getCode(),
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
     std::string expectedMsg = "Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed: \n"
-                              "Calculator::Process() for node \"S2tExecutor\" failed: Temperature out of range(0.0, 2.0)";
+                              "Calculator::Process() for node \"S2tExecutor\" failed: Invalid temperature type.";
     EXPECT_EQ(status.string(), expectedMsg);
 }
 
