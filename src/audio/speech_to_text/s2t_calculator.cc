@@ -186,7 +186,6 @@ public:
                 if (status != absl::OkStatus()) {
                     return status;
                 }
-                config.validate();
                 status = streamingHandler_.start(pipe, payload, std::move(rawSpeech), config);
                 if (status != absl::OkStatus()) {
                     return status;
@@ -223,7 +222,6 @@ private:
             auto status = ovms::SttServable::updateTranscriptionConfig(config, pipe, payload);
             if (status != absl::OkStatus())
                 return status;
-            config.validate();
 
             std::unique_lock lock(pipe->sttPipelineMutex);
             auto disconnectStatus = checkClientDisconnected(payload, cc->NodeName(), "before transcription");
@@ -244,7 +242,6 @@ private:
             auto status = ovms::SttServable::parseTemperature(payload, config);
             if (status != absl::OkStatus())
                 return status;
-            config.validate();
             std::unique_lock lock(pipe->sttPipelineMutex);
             auto disconnectStatus = checkClientDisconnected(payload, cc->NodeName(), "before translation");
             if (!disconnectStatus.ok())

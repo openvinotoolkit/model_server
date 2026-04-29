@@ -77,6 +77,7 @@ absl::Status SttServable::parseTemperature(const HttpPayload& payload, ov::genai
                 return absl::InvalidArgumentError("Invalid temperature type.");
         }
         config.temperature = temp.value();
+        config.do_sample = true;
     }
     return absl::OkStatus();
 }
