@@ -18,7 +18,8 @@
 #include <string>
 #include <utility>
 
-#include <openvino/openvino.hpp>
+#include <openvino/core/shape.hpp>
+#include <openvino/core/type/element_type.hpp>
 
 #include "../ovms.h"
 #include "../dags/pipelinedefinitionstatus.hpp"

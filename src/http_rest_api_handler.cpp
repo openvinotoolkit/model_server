@@ -47,6 +47,7 @@
 #include "grpcservermodule.hpp"
 #include "kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "kfs_frontend/kfs_utils.hpp"
+#include "metrics/metric_config.hpp"
 #include "metrics/metric_module.hpp"
 #include "metrics/metric_registry.hpp"
 #include "model_metric_reporter.hpp"
@@ -54,7 +55,6 @@
 #include "modelinstance.hpp"
 #include "modelinstanceunloadguard.hpp"
 #include "modelmanager.hpp"
-#include "prediction_service_utils.hpp"
 #include "profiler.hpp"
 #include "rest_parser.hpp"
 #include "rest_utils.hpp"
@@ -74,7 +74,9 @@
 #endif
 
 #include "tfs_frontend/tfs_utils.hpp"
+#include "tfs_frontend/tfs_request_utils.hpp"
 #include "tfs_frontend/deserialization.hpp"
+#include "kfs_frontend/kfs_request_utils.hpp"
 #include "deserialization_main.hpp"
 #include "inference_executor.hpp"
 
@@ -240,7 +242,7 @@ Status HttpRestApiHandler::processServerReadyKFSRequest(const HttpRequestCompone
     if (isReady) {
         return StatusCode::OK;
     }
-    return StatusCode::MODEL_NOT_LOADED;
+    return StatusCode::SERVER_NOT_READY;
 }
 
 Status HttpRestApiHandler::processServerLiveKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) {

@@ -39,6 +39,8 @@ ovms_cc_library(
         "//src:libovmslogging",
         "//src:sidepacket_servable",
         "//third_party:openvino",
+        "//src/port:rapidjson_istreamwrapper",
+        "//src/port:rapidjson_error",
         "embeddings_calculator_ov_cc_proto",
     ],
     visibility = ["//visibility:public"],

@@ -40,6 +40,7 @@
 #include "../dags/pipelinedefinition.hpp"
 #include "../get_model_metadata_impl.hpp"
 #include "../kfs_frontend/kfs_utils.hpp"
+#include "src/metrics/metric_config.hpp"
 #include "src/filesystem/localfilesystem.hpp"
 #include "../logging.hpp"
 #include "../model_service.hpp"

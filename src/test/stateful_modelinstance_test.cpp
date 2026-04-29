@@ -24,6 +24,8 @@
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+
+#include <openvino/runtime/core.hpp>
 #include <stdlib.h>
 
 #include "../statefulrequestprocessor.hpp"

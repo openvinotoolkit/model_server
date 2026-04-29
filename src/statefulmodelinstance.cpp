@@ -15,8 +15,9 @@
 //*****************************************************************************
 #include "statefulmodelinstance.hpp"
 
-#include <openvino/openvino.hpp>
+#include <openvino/core/except.hpp>
 #include <openvino/pass/low_latency.hpp>
+#include <openvino/runtime/infer_request.hpp>
 
 #include "executingstreamidguard.hpp"
 #include "logging.hpp"

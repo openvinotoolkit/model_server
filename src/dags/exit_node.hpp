@@ -24,8 +24,8 @@
 
 namespace ovms {
 
-extern const std::string EXIT_NODE_NAME;
-extern const std::string DEFAULT_PIPELINE_NAME;
+inline const std::string EXIT_NODE_NAME = "response";
+inline const std::string DEFAULT_PIPELINE_NAME = "";
 
 template <typename ResponseType>
 class ExitNode : public Node {

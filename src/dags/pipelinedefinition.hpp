@@ -35,10 +35,12 @@
 
 namespace ovms {
 struct CNLIMWrapper;
+class DagResourceManager;
 class MetricConfig;
 class MetricRegistry;
-class ModelManager;
+class ModelInstanceProvider;
 class NodeValidator;
+class ServableNameChecker;
 class Pipeline;
 class Status;
 
@@ -82,7 +84,7 @@ protected:
 private:
     std::set<std::pair<const std::string, model_version_t>> subscriptions;
 
-    Status validateNode(ModelManager& manager, const NodeInfo& node, const bool isMultiBatchAllowed);
+    Status validateNode(ModelInstanceProvider& modelInstanceProvider, const NodeInfo& node, const bool isMultiBatchAllowed);
 
     const NodeInfo& findNodeByName(const std::string& name) const;
     Shape getNodeGatherShape(const NodeInfo& info) const;
@@ -97,23 +99,16 @@ public:
     Status create(std::unique_ptr<Pipeline>& pipeline,
         const RequestType* request,
         ResponseType* response,
-        ModelManager& manager);
-
-private:
-    template <typename RequestType, typename ResponseType>
-    Status createPrivate(std::unique_ptr<Pipeline>& pipeline,
-        const RequestType* request,
-        ResponseType* response,
-        ModelManager& manager);
+        ModelInstanceProvider& modelInstanceProvider);
 
 public:
-    Status reload(ModelManager& manager, const std::vector<NodeInfo>&& nodeInfos, const pipeline_connections_t&& connections);
-    void retire(ModelManager& manager);
-    Status validate(ModelManager& manager);
-    Status validateNodes(ModelManager& manager);
+    Status reload(ModelInstanceProvider& modelInstanceProvider, ServableNameChecker& nameChecker, DagResourceManager& resourceMgr, const std::vector<NodeInfo>&& nodeInfos, const pipeline_connections_t&& connections);
+    void retire(ModelInstanceProvider& modelInstanceProvider);
+    Status validate(ModelInstanceProvider& modelInstanceProvider, ServableNameChecker& nameChecker, DagResourceManager& resourceMgr);
+    Status validateNodes(ModelInstanceProvider& modelInstanceProvider);
     Status validateForCycles();
     Status validateDemultiplexerGatherNodesOrder();
-    Status initializeNodeResources(ModelManager& manager);
+    Status initializeNodeResources(DagResourceManager& resourceMgr);
     std::vector<NodeInfo> calculateNodeInfosDiff(const std::vector<NodeInfo>& nodeInfos);
     void deinitializeNodeResources(const std::vector<NodeInfo>& nodeInfosDiff);
 
@@ -133,14 +128,14 @@ public:
         return this->nodeInfos;
     }
 
-    void makeSubscriptions(ModelManager& manager);
-    void resetSubscriptions(ModelManager& manager);
+    void makeSubscriptions(ModelInstanceProvider& modelInstanceProvider);
+    void resetSubscriptions(ModelInstanceProvider& modelInstanceProvider);
 
     ServableMetricReporter& getMetricReporter() const override { return *this->reporter; }
 
 protected:
-    Status updateInputsInfo(const ModelManager& manager);
-    Status updateOutputsInfo(const ModelManager& manager);
+    Status updateInputsInfo(const ModelInstanceProvider& modelInstanceProvider);
+    Status updateOutputsInfo(const ModelInstanceProvider& modelInstanceProvider);
 
 public:
     const tensor_map_t getInputsInfo() const override;
@@ -151,14 +146,13 @@ private:
 
     Status populateOutputsInfoWithDLModelOutputs(
         const NodeInfo& dependencyNodeInfo,
-        const ModelManager& manager,
+        const ModelInstanceProvider& modelInstanceProvider,
         tensor_map_t& outputsInfo,
         const Aliases& aliases,
         const Shape& gatherShape) const;
 
     Status populateOutputsInfoWithCustomNodeOutputs(
         const NodeInfo& dependencyNodeInfo,
-        const ModelManager& manager,
         tensor_map_t& outputsInfo,
         const Aliases& aliases,
         const Shape& gatherShape) const;
