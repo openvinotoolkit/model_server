@@ -1,0 +1,34 @@
+# ============================================================
+# CODEOWNERS — OpenVINO Model Server
+# Docs: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+# ============================================================
+
+# Default owner for everything in the repository
+* @dtrawins
+
+# ── Demos ───────────────────────────────────────────────────
+/demos/ @ngrozae
+
+# ── Accuracy tests ──────────────────────────────────────────
+/tests/accuracy/ @pgladkows
+/demos/continuous_batching/accuracy/ @pgladkows
+
+# ── LLM / VLM ───────────────────────────────────────────────
+/src/llm/ @mzegla
+/src/llm/io_processing/ @przepeck
+
+# ── Audio ───────────────────────────────────────────────────
+/src/audio/ @michalkulakowski
+
+# ── Pull module ─────────────────────────────────────────────
+/src/pull_module/ @rasapala
+
+# ── MediaPipe ───────────────────────────────────────────────
+/src/mediapipe_internal/ @atobiszei
+
+# ── Metrics ─────────────────────────────────────────────────
+/src/metrics/ @dkalinowski
+
+# ── Python bindings ─────────────────────────────────────────
+/src/python/ @mzegla @rasapala
+
