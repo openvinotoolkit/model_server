@@ -16,8 +16,8 @@
 load("@bazel_skylib//lib:selects.bzl", "selects")
 load("@mediapipe//mediapipe/framework:more_selects.bzl", "more_selects")
 load("//:common_settings.bzl",
-     "COMMON_STATIC_TEST_COPTS", "COMMON_STATIC_LIBS_COPTS", "COMMON_STATIC_LIBS_LINKOPTS", "COMMON_FUZZER_COPTS", "COMMON_FUZZER_LINKOPTS", "COMMON_LOCAL_DEFINES", "COPTS_PYTHON", "COPTS_MEDIAPIPE", "COPTS_DROGON",
-     "create_config_settings", "PYBIND_DEPS", "ovms_cc_library")
+     "COMMON_STATIC_TEST_COPTS", "COMMON_STATIC_LIBS_COPTS", "COMMON_STATIC_LIBS_LINKOPTS", "COMMON_FUZZER_COPTS", "COMMON_FUZZER_LINKOPTS", "COMMON_LOCAL_DEFINES", "COPTS_PYTHON", "COPTS_MEDIAPIPE", "COPTS_DROGON", "COPTS_CLOUD",
+     "create_config_settings", "PYBIND_DEPS", "ovms_cc_library", "ovms_test_cc_library", "ovms_cc_test")
 
 COPTS_OV_TRACE = select({
     "//conditions:default": ["-DOV_TRACE=0"],
@@ -27,11 +27,6 @@ LINKOPTS_ADJUSTED = COMMON_STATIC_LIBS_LINKOPTS + select({
     "//conditions:default": [],
     "//:fuzzer_build" : COMMON_FUZZER_LINKOPTS,
 })
-COPTS_CLOUD = select({
-    "//conditions:default": ["-DCLOUD_DISABLE=1"],
-    "//:not_disable_cloud" : ["-DCLOUD_DISABLE=0"],
-})
-
 COPTS_TESTS = COMMON_STATIC_TEST_COPTS + COPTS_PYTHON + COPTS_MEDIAPIPE + COPTS_DROGON + COPTS_CLOUD
 
 config_setting(
@@ -2264,16 +2259,239 @@ cc_binary(
     # linkstatic = False,  # Use for dynamic linking when necessary
 )
 
-cc_test(
+ovms_test_cc_library(
+    name = "stringutils_test",
+    srcs = ["test/stringutils_test.cpp"],
+    deps = [
+        "//src:libovmsstring_utils",
+    ],
+)
+
+ovms_test_cc_library(
+    name = "threadsafequeue_test",
+    srcs = ["test/threadsafequeue_test.cpp"],
+    deps = [
+        "//src:libovms_threadsafequeue",
+        "//src:libovmslogging",
+    ],
+)
+
+ovms_test_cc_library(
+    name = "tensorinfo_test",
+    srcs = ["test/tensorinfo_test.cpp"],
+    deps = [
+        "//src:libovms_tensorinfo",
+    ],
+)
+
+ovms_test_cc_library(
+    name = "layout_test",
+    srcs = ["test/layout_test.cpp"],
+    deps = [
+        "//src:libovmslayout",
+        "//src:libovmsstatus",
+    ],
+)
+
+ovms_test_cc_library(
+    name = "tensorutils_test",
+    srcs = ["test/tensorutils_test.cpp"],
+    deps = [
+        "//src:libovmstensor_utils",
+    ],
+)
+
+ovms_test_cc_library(
+    name = "custom_node_buffersqueue_test",
+    srcs = ["test/custom_node_buffersqueue_test.cpp"],
+    deps = [
+        "//src:custom_nodes_common_buffersqueue",
+    ],
+)
+
+ovms_test_cc_library(
+    name = "model_version_policy_test",
+    srcs = ["test/model_version_policy_test.cpp"],
+    deps = [
+        "//src:libovmsmodelversioning",
+    ],
+)
+
+ovms_test_cc_library(
+    name = "kfs_rest_parser_test",
+    srcs = ["test/kfs_rest_parser_test.cpp"],
+    deps = [
+        "//src:rest_parser_utils",
+        "//src:libovmsstatus",
+    ],
+)
+
+ovms_test_cc_library(
+    name = "rerank_chunking_test",
+    srcs = ["test/rerank_chunking_test.cpp"],
+    deps = [
+        "//src/rerank:rerank_api_handler",
+    ],
+)
+
+ovms_test_cc_library(
+    name = "rerank_handler_test",
+    srcs = ["test/rerank_handler_test.cpp"],
+    deps = [
+        "//src/rerank:rerank_api_handler",
+    ],
+)
+
+ovms_test_cc_library(
+    name = "metrics_test",
+    srcs = ["test/metrics_test.cpp"],
+    deps = [
+        "//src/metrics:libovmsmetrics",
+    ],
+)
+
+ovms_test_cc_library(
+    name = "custom_node_output_allocator_test",
+    srcs = ["test/custom_node_output_allocator_test.cpp"],
+    deps = [
+        "//src/dags:custom_node_output_allocator",
+        "//src:libovmsprecision",
+        "//src:libovmsshape",
+        "//third_party:openvino",
+    ],
+)
+
+ovms_test_cc_library(
+    name = "systeminfo_test",
+    srcs = ["test/systeminfo_test.cpp"],
+    deps = [
+        "//src:libovms_systeminfo",
+        "//src:libovmsstatus",
+    ],
+)
+
+ovms_test_cc_library(
+    name = "localfilesystem_test",
+    srcs = ["test/localfilesystem_test.cpp"],
+    deps = [
+        "//src/filesystem:libovmslocalfilesystem",
+        "//src/filesystem:libovmsfilesystem",
+    ],
+)
+
+
+ovms_test_cc_library(
+    name = "gcsfilesystem_test",
+    srcs = ["test/gcsfilesystem_test.cpp"],
+    deps = [
+        "//src/filesystem:libovmsgcsfilesystem",
+    ],
+)
+
+ovms_test_cc_library(
+    name = "azurefilesystem_test",
+    srcs = ["test/azurefilesystem_test.cpp"],
+    deps = [
+        "//src/filesystem:libovmsazurefilesystem",
+    ],
+)
+
+ovms_test_cc_library(
+    name = "schema_test",
+    srcs = ["test/schema_test.cpp"],
+    deps = [
+        "//src:libovmsschema",
+        "//src:libovmsstatus",
+    ],
+)
+
+ovms_test_cc_library(
+    name = "test_config_utils",
+    hdrs = ["test/test_config_utils.hpp"],
+    deps = [
+        "//src:libovms_config",
+    ],
+)
+
+ovms_test_cc_library(
+    name = "shape_test",
+    srcs = ["test/shape_test.cpp"],
+    deps = [
+        "//src:libovmsshape",
+        "//third_party:openvino",
+    ],
+)
+
+ovms_test_cc_library(
+    name = "ovinferrequestqueue_test",
+    srcs = ["test/ovinferrequestqueue_test.cpp"],
+    deps = [
+        "//src:libovms_ovinferrequestsqueue",
+        "//src:libovmstimer",
+        "//third_party:openvino",
+    ],
+    data = [
+        "test/dummy/1/dummy.xml",
+        "test/dummy/1/dummy.bin",
+    ],
+)
+
+ovms_test_cc_library(
+    name = "modelconfig_test",
+    srcs = ["test/modelconfig_test.cpp"],
+    deps = [
+        "//src:modelconfig",
+        "//src:anonymous_input_name",
+        "//src:libovmsstatus",
+        "//src:test_platform_utils",
+        "//third_party:openvino",
+    ],
+)
+
+ovms_test_cc_library(
+    name = "ovmsconfig_test",
+    srcs = ["test/ovmsconfig_test.cpp"],
+    deps = [
+        "//src:libovms_config",
+        "//src:libovms_server_settings",
+        "//src:ovms_exit_codes",
+        "//src:libovms_systeminfo",
+        "//src/utils:env_guard",
+        "//src/filesystem:libovmsfilesystem",
+        ":test_config_utils",
+        "@com_github_gabime_spdlog//:spdlog",
+    ],
+)
+
+ovms_test_cc_library(
+    name = "pipelinedefinitionstatus_test",
+    srcs = ["test/pipelinedefinitionstatus_test.cpp"],
+    deps = [
+        "//src/dags:pipelinedefinitionstatus",
+        "//src:libovmsstatus",
+        "//src:libovmstimer",
+    ],
+)
+
+ovms_test_cc_library(
+    name = "ov_utils_test",
+    srcs = ["test/ov_utils_test.cpp"],
+    deps = [
+        "//src:libovms_ov_utils",
+        "//src:modelinstance",
+        "//src/filesystem:libovmsfilesystem",
+        ":test_utils",
+        "//third_party:openvino",
+    ],
+)
+
+ovms_cc_test(
     name = "ovms_test",
-    linkstatic = 1,
     srcs = [
         "test/c_api_stress_tests.cpp",
         "test/c_api_tests.cpp",
         "test/capi_predict_validation_test.cpp",
         #"test/custom_loader_test.cpp", # TODO remove?
-        "test/custom_node_buffersqueue_test.cpp",
-        "test/custom_node_output_allocator_test.cpp",
         "test/demultiplexer_node_test.cpp",
         "test/deserialization_tests.cpp",
         "test/ensemble_config_change_stress.cpp",
@@ -2290,56 +2508,37 @@ cc_test(
         "test/http_rest_api_handler_test.cpp",
         "test/kfs_metadata_test.cpp",
         "test/kfs_rest_test.cpp",
-        "test/kfs_rest_parser_test.cpp",
-        "test/layout_test.cpp",
         "test/metric_config_test.cpp",
-        "test/metrics_test.cpp",
         "test/metrics_flow_test.cpp",
         "test/mockmodelinstancechangingstates.hpp",
         "test/model_cache_test.cpp",
         "test/model_service_test.cpp",
         "test/model_test.cpp",
-        "test/model_version_policy_test.cpp",
-        "test/modelconfig_test.cpp",
         "test/modelinstance_test.cpp",
         "test/modelmanager_test.cpp",
         "test/modelversionstatus_test.cpp",
         "test/node_library_manager_test.cpp",
         "test/nodesessionmetadata_test.cpp",
-        "test/ov_utils_test.cpp",
-        "test/ovinferrequestqueue_test.cpp",
-        "test/ovmsconfig_test.cpp",
-        "test/pipelinedefinitionstatus_test.cpp",
         "test/predict_validation_test.cpp",
         "test/prediction_service_test.cpp",
         "test/rest_utils_test.cpp",
-        "test/schema_test.cpp",
         "test/sequence_manager_test.cpp",
         "test/sequence_test.cpp",
         "test/serialization_tests.cpp",
         "test/server_test.cpp",
-        "test/shape_test.cpp",
         "test/stateful_config_test.cpp",
         #"test/stateful_modelinstance_test.cpp", # TODO remove?
         "test/stateful_test_utils.hpp",
         "test/status_test.cpp",
-        "test/stringutils_test.cpp",
-        "test/systeminfo_test.cpp",
         "test/tensor_conversion_test.cpp",
-        "test/tensorinfo_test.cpp",
-        "test/tensorutils_test.cpp",
         "test/test_http_utils.hpp",
         "test/tfs_rest_parser_binary_inputs_test.cpp",
         "test/tfs_rest_parser_column_test.cpp",
         "test/tfs_rest_parser_nonamed_test.cpp",
         "test/tfs_rest_parser_row_test.cpp",
-        "test/threadsafequeue_test.cpp",
         "test/unit_tests.cpp",
-        "test/localfilesystem_test.cpp",
         ] + select({
             "//:not_disable_cloud": [
-                "test/gcsfilesystem_test.cpp",
-                "test/azurefilesystem_test.cpp",
             ],
             "//:disable_cloud": []
             })
@@ -2350,8 +2549,6 @@ cc_test(
                 "test/mediapipeflow_test.cpp",
                 "test/mediapipe/inputsidepacketusertestcalc.cc",
                 "test/reranknode_test.cpp",
-                "test/rerank_handler_test.cpp",
-                "test/rerank_chunking_test.cpp",
                 "test/streaming_test.cpp",
                 "test/mediapipe_validation_test.cpp", # Mediapipe enabled
                 "test/get_mediapipe_graph_metadata_response_test.cpp",
@@ -2544,7 +2741,33 @@ cc_test(
             ":test_test_models",
             ":test_test_models_configs",
             ":test_cmd_exec",
+            ":stringutils_test",
+            ":threadsafequeue_test",
+            ":tensorinfo_test",
+            ":layout_test",
+            ":tensorutils_test",
+            ":custom_node_buffersqueue_test",
+            ":model_version_policy_test",
+            ":kfs_rest_parser_test",
+            ":metrics_test",
+            ":custom_node_output_allocator_test",
+            ":systeminfo_test",
+            ":localfilesystem_test",
+            ":schema_test",
+            ":shape_test",
+            ":ovinferrequestqueue_test",
+            ":modelconfig_test",
+            ":ovmsconfig_test",
+            ":pipelinedefinitionstatus_test",
+            ":ov_utils_test",
+            ":test_config_utils",
             ] + select({
+                "//:not_disable_cloud": [
+                    ":gcsfilesystem_test",
+                    ":azurefilesystem_test",
+                ],
+                "//:disable_cloud": [],
+            }) + select({
                 "//conditions:default": [
                     ":openvino_remote_tensors_tests",
                     ":openvino_tests",
@@ -2557,6 +2780,8 @@ cc_test(
                 "//src/llm:genai_servables",
                 "//src/llm:output_parsers",
                 ":test_llm_output_parser_tests",
+                ":rerank_chunking_test",
+                ":rerank_handler_test",
                 "//src/test/mediapipe/calculators:mediapipe_test_calculators",
                 "//src/test/mediapipe/calculators:dependency_free_http_test_calculators",
                 "@mediapipe//mediapipe/calculators/ovms:ovms_calculator",
@@ -2568,9 +2793,7 @@ cc_test(
                 "serialization_common",
             ],
         }),
-    copts = COPTS_TESTS,
-    local_defines = COMMON_LOCAL_DEFINES,
-    linkopts = LINKOPTS_ADJUSTED,
+    additional_copts = COPTS_PYTHON + COPTS_MEDIAPIPE + COPTS_DROGON + COPTS_CLOUD,
 )
 
 cc_library(
@@ -2647,10 +2870,22 @@ cc_library(
     hdrs = [
         "test/c_api_test_utils.hpp",
         "test/test_utils.hpp",
+        "test/test_request_utils_tfs.hpp",
+        "test/test_request_utils_kfs.hpp",
+        "test/test_request_utils_capi.hpp",
+        "test/test_server_utils.hpp",
+        "test/test_mediapipe_utils.hpp",
+        "test/test_predict_validation_utils.hpp",
+        "test/test_model_manager_utils.hpp",
         "test/stress_test_utils.hpp",
         ],
     srcs = [
         "test/c_api_test_utils.cpp",
+        "test/test_request_utils_tfs.cpp",
+        "test/test_request_utils_kfs.cpp",
+        "test/test_request_utils_capi.cpp",
+        "test/test_server_utils.cpp",
+        "test/test_model_manager_utils.cpp",
         "test/test_utils.cpp",
         ],
     deps = [
@@ -2813,6 +3048,7 @@ cc_library(
         "//src/servables_config_manager_module:listmodels",
         "//src/utils:env_guard",
         ":test_utils",
+        ":test_config_utils",
         ":test_file_utils",
         ":libtest_environment",
         ":test_platform_utils",

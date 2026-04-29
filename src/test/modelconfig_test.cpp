@@ -21,10 +21,11 @@
 #include <gtest/gtest.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include "platform_utils.hpp"
 
 #include "../modelconfig.hpp"
+#include "../anonymous_input_name.hpp"
 #include "../status.hpp"
-#include "test_utils.hpp"
 
 using namespace testing;
 using ::testing::UnorderedElementsAre;

@@ -21,7 +21,7 @@
 #include "../logging.hpp"
 #include "../rest_utils.hpp"
 #include "../status.hpp"
-#include "test_utils.hpp"
+#include "test_request_utils_tfs.hpp"
 
 using namespace ovms;
 

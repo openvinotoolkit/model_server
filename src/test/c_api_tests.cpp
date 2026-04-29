@@ -22,6 +22,7 @@
 #include <thread>
 #include <utility>
 
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 #include <openvino/runtime/core.hpp>
@@ -44,9 +45,11 @@
 #include "../server.hpp"
 #include "../version.hpp"
 #include "c_api_test_utils.hpp"
+#include "test_server_utils.hpp"
+#include "test_model_manager_utils.hpp"
+#include "test_config_utils.hpp"
 #include "mockmodelinstancechangingstates.hpp"
 #include "test_models_configs.hpp"
-#include "test_utils.hpp"
 #include "light_test_utils.hpp"
 #include "platform_utils.hpp"
 #include "test_with_temp_dir.hpp"

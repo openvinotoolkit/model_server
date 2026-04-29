@@ -27,6 +27,8 @@
 #include "../modelconfig.hpp"
 #include "../predict_request_validation_utils.hpp"
 #include "test_utils.hpp"
+#include "test_request_utils_capi.hpp"
+#include "test_predict_validation_utils.hpp"
 
 using ::testing::NiceMock;
 using ::testing::Return;

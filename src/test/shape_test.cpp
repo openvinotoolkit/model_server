@@ -19,7 +19,6 @@
 #include <gtest/gtest.h>
 
 #include "../shape.hpp"
-#include "test_utils.hpp"
 
 using ovms::Dimension;
 using ovms::Shape;

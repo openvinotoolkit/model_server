@@ -34,7 +34,9 @@
 #include "constructor_enabled_model_manager.hpp"
 #include "test_models_configs.hpp"
 #include "test_utils.hpp"
+#include "test_request_utils_tfs.hpp"
 #include "light_test_utils.hpp"
+#include "test_request_utils_tfs.hpp"
 #include "platform_utils.hpp"
 #include "test_with_temp_dir.hpp"
 

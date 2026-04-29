@@ -19,7 +19,8 @@
 #include <gtest/gtest.h>
 
 #include "../get_model_metadata_impl.hpp"
-#include "test_utils.hpp"
+#include "test_request_utils_tfs.hpp"
+#include "test_request_utils_kfs.hpp"
 
 class GetModelMetadataSignature : public ::testing::Test {
     struct Info {

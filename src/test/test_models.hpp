@@ -15,8 +15,11 @@
 //*****************************************************************************
 #pragma once
 
+#include <filesystem>
 #include <string>
 
+#include "src/modelversion.hpp"
+#include "src/shape.hpp"
 #include "platform_utils.hpp"
 
 const std::string dummy_model_location = getGenericFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/dummy", false);

@@ -45,6 +45,9 @@
 #include "constructor_enabled_model_manager.hpp"
 #include "mockmodelinstancechangingstates.hpp"
 #include "test_utils.hpp"
+#include "test_server_utils.hpp"
+#include "test_mediapipe_utils.hpp"
+#include "test_config_utils.hpp"
 #include "light_test_utils.hpp"
 #include "platform_utils.hpp"
 

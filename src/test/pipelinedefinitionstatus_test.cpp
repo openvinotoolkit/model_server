@@ -17,15 +17,10 @@
 #include <gtest/gtest.h>
 
 #include "../dags/pipelinedefinitionstatus.hpp"
-#include "../modelinstance.hpp"
-#include "../prediction_service_utils.hpp"
 #include "../status.hpp"
 #include "../timer.hpp"
-#include "test_utils.hpp"
 
 using namespace ovms;
-using namespace tensorflow;
-using namespace tensorflow::serving;
 
 using testing::_;
 using testing::Return;

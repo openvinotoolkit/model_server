@@ -29,8 +29,9 @@
 #include "../server.hpp"
 #include "../status.hpp"
 #include "../version.hpp"
-#include "test_utils.hpp"
+#include "test_server_utils.hpp"
 #include "platform_utils.hpp"
+#include "test_models.hpp"
 
 using ovms::Config;
 using ovms::HttpRestApiHandler;

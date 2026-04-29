@@ -27,6 +27,7 @@
 
 #include "../rest_parser.hpp"
 #include "test_utils.hpp"
+#include "test_request_utils_tfs.hpp"
 
 using namespace ovms;
 

@@ -27,7 +27,8 @@
 #include "../model_metric_reporter.hpp"
 
 #include "constructor_enabled_model_manager.hpp"
-#include "test_utils.hpp"
+#include "test_request_utils_kfs.hpp"
+#include "test_request_utils_tfs.hpp"
 
 using namespace ovms;
 using namespace rapidjson;

@@ -47,7 +47,8 @@
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/writer.h"
 #include "../test_http_utils.hpp"
-#include "../test_utils.hpp"
+#include "../test_server_utils.hpp"
+#include "../platform_utils.hpp"
 
 using namespace ovms;
 

@@ -23,7 +23,7 @@
 #include "../ov_utils.hpp"
 #include "../ovms.h"  // NOLINT
 #include "c_api_test_utils.hpp"
-#include "test_utils.hpp"
+#include "test_models.hpp"
 
 using namespace ov;
 

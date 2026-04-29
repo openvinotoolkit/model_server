@@ -50,6 +50,63 @@ def ovms_cc_library(**kwargs):
         **kwargs
     )
 
+def ovms_test_cc_library(**kwargs):
+    """
+    Wrapper for cc_library for test utility libraries.
+    Defaults: linkstatic=1, alwayslink=True, copts=COMMON_STATIC_TEST_COPTS,
+    linkopts=COMMON_STATIC_LIBS_LINKOPTS, local_defines=COMMON_LOCAL_DEFINES.
+    gtest is always added to deps. Use additional_copts for feature-flag copts.
+    """
+    if "linkstatic" not in kwargs:
+        kwargs["linkstatic"] = 1
+    if "alwayslink" not in kwargs:
+        kwargs["alwayslink"] = True
+    if "copts" not in kwargs:
+        kwargs["copts"] = COMMON_STATIC_TEST_COPTS
+    if "linkopts" not in kwargs:
+        kwargs["linkopts"] = COMMON_STATIC_LIBS_LINKOPTS
+    if "local_defines" not in kwargs:
+        kwargs["local_defines"] = COMMON_LOCAL_DEFINES
+    if "additional_copts" in kwargs:
+        kwargs["copts"] += kwargs.pop("additional_copts")
+    if "additional_linkopts" in kwargs:
+        kwargs["linkopts"] += kwargs.pop("additional_linkopts")
+    if "deps" in kwargs:
+        kwargs["deps"] = kwargs["deps"] + ["@com_google_googletest//:gtest"]
+    else:
+        kwargs["deps"] = ["@com_google_googletest//:gtest"]
+
+    native.cc_library(
+        **kwargs
+    )
+
+def ovms_cc_test(**kwargs):
+    """
+    Wrapper for cc_test for test binaries.
+    Defaults: linkstatic=1, copts=COMMON_STATIC_TEST_COPTS, linkopts=LINKOPTS_ADJUSTED,
+    local_defines=COMMON_LOCAL_DEFINES.
+    Use additional_copts to add feature-flag copts (COPTS_MEDIAPIPE, COPTS_PYTHON, etc.) as needed.
+    """
+    if "linkstatic" not in kwargs:
+        kwargs["linkstatic"] = 1
+    if "copts" not in kwargs:
+        kwargs["copts"] = COMMON_STATIC_TEST_COPTS
+    if "linkopts" not in kwargs:
+        kwargs["linkopts"] = COMMON_STATIC_LIBS_LINKOPTS + select({
+            "//conditions:default": [],
+            "//:fuzzer_build": COMMON_FUZZER_LINKOPTS,
+        })
+    if "local_defines" not in kwargs:
+        kwargs["local_defines"] = COMMON_LOCAL_DEFINES
+    if "additional_copts" in kwargs:
+        kwargs["copts"] += kwargs.pop("additional_copts")
+    if "additional_linkopts" in kwargs:
+        kwargs["linkopts"] += kwargs.pop("additional_linkopts")
+
+    native.cc_test(
+        **kwargs
+    )
+
 def create_config_settings():
     distro_flag()
     native.config_setting(
@@ -248,6 +305,10 @@ COPTS_MEDIAPIPE = select({
 COPTS_DROGON = select({
     "//conditions:default": ["-DUSE_DROGON=0"],
     "//:enable_drogon" : ["-DUSE_DROGON=1"],
+})
+COPTS_CLOUD = select({
+    "//conditions:default": ["-DCLOUD_DISABLE=1"],
+    "//:not_disable_cloud" : ["-DCLOUD_DISABLE=0"],
 })
 COMMON_FUZZER_COPTS = [
     "-fsanitize=address",

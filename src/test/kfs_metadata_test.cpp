@@ -13,6 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 #include <openvino/runtime/core.hpp>
@@ -23,7 +24,9 @@
 
 #include "constructor_enabled_model_manager.hpp"
 #include "mockmodelinstancechangingstates.hpp"
+#include "test_request_utils_kfs.hpp"
 #include "test_models_configs.hpp"
+#include "test_models.hpp"
 
 using ::testing::NiceMock;
 using ::testing::Return;

@@ -15,10 +15,11 @@
 //*****************************************************************************
 #include <string>
 
-#include "../../llm/servable.hpp"
-#include "../../llm/servable_initializer.hpp"
+#include "src/llm/servable.hpp"
+#include "src/llm/servable_initializer.hpp"
+#include "src/status.hpp"
 #include "gtest/gtest.h"
-#include "../test_utils.hpp"
+#include "../platform_utils.hpp"
 
 class TextStreamerTest : public ::testing::Test {
 public:

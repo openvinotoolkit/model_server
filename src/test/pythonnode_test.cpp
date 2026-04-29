@@ -56,6 +56,9 @@
 
 #include "../python/python_backend.hpp"
 #include "c_api_test_utils.hpp"
+#include "test_request_utils_kfs.hpp"
+#include "test_server_utils.hpp"
+#include "test_mediapipe_utils.hpp"
 #include "constructor_enabled_model_manager.hpp"
 #include "platform_utils.hpp"
 #include "test_utils.hpp"

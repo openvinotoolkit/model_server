@@ -27,6 +27,8 @@
 #include "../precision.hpp"
 #include "../server.hpp"
 #include "test_utils.hpp"
+#include "test_request_utils_kfs.hpp"
+#include "test_server_utils.hpp"
 #include "platform_utils.hpp"
 
 using namespace ovms;

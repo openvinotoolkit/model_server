@@ -27,6 +27,7 @@
 #include "constructor_enabled_model_manager.hpp"
 #include "test_models_configs.hpp"
 #include "test_with_temp_dir.hpp"
+#include "test_models.hpp"
 
 using namespace ovms;
 

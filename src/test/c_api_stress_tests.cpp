@@ -39,7 +39,6 @@
 #include "../stringutils.hpp"
 #include "c_api_test_utils.hpp"
 #include "stress_test_utils.hpp"
-#include "test_utils.hpp"
 
 using namespace ovms;
 using namespace tensorflow;

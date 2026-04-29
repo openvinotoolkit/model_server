@@ -37,6 +37,9 @@
 #include "mockmodelinstancechangingstates.hpp"
 #include "test_models_configs.hpp"
 #include "light_test_utils.hpp"
+#include "test_server_utils.hpp"
+#include "test_model_manager_utils.hpp"
+#include "test_utils.hpp"
 #include "platform_utils.hpp"
 #include "test_with_temp_dir.hpp"
 

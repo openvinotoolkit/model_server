@@ -26,7 +26,6 @@
 #include "src/pull_module/libgit2.hpp"
 
 #include "environment.hpp"
-#include "test_utils.hpp"
 #include "test_file_utils.hpp"
 
 namespace fs = std::filesystem;

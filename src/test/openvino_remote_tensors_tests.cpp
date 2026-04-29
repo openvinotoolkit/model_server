@@ -34,6 +34,8 @@
 #include "../ovms_internal.h"  // NOLINT
 #include "../status.hpp"
 #include "c_api_test_utils.hpp"
+#include "test_models.hpp"
+#include "test_server_utils.hpp"
 #include "gpuenvironment.hpp"
 #include "light_test_utils.hpp"
 #include "test_with_temp_dir.hpp"

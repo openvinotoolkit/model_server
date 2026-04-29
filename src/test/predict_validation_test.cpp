@@ -27,6 +27,9 @@
 #include "../modelinstance.hpp"
 #include "../predict_request_validation_utils.hpp"
 #include "test_utils.hpp"
+#include "test_request_utils_tfs.hpp"
+#include "test_request_utils_kfs.hpp"
+#include "test_predict_validation_utils.hpp"
 
 using ::testing::NiceMock;
 using ::testing::Return;
@@ -857,7 +860,7 @@ TEST_P(TfsPredictValidationPrecision, ValidPrecisions) {
 INSTANTIATE_TEST_SUITE_P(
     Test,
     TfsPredictValidationPrecision,
-    ::testing::ValuesIn(SUPPORTED_INPUT_PRECISIONS),
+    ::testing::ValuesIn(SUPPORTED_TFS_INPUT_PRECISIONS),
     [](const ::testing::TestParamInfo<TfsPredictValidationPrecision::ParamType>& info) {
         return toString(info.param);
     });
