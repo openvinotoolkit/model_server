@@ -80,24 +80,30 @@ using grpc::ServerBuilder;
 
 namespace ovms {
 
-#if defined(_WIN32)
-extern "C" volatile int git_lfs_cancel_requested;
-#elif defined(__GNUC__) || defined(__clang__)
-extern "C" volatile int git_lfs_cancel_requested __attribute__((weak));
-#endif
+extern "C" {
+void git_lfs_cancel_set(int value);
+int git_lfs_cancel_get(void);
+}
 
 static void setLfsCancelRequestedFromSignal(int value) {
-#if defined(_WIN32)
-    git_lfs_cancel_requested = value != 0 ? 1 : 0;
-#elif defined(__GNUC__) || defined(__clang__)
-    if (&git_lfs_cancel_requested)
-        git_lfs_cancel_requested = value != 0 ? 1 : 0;
-#endif
+    git_lfs_cancel_set(value != 0 ? 1 : 0);
 }
 
 static void requestShutdownFromSignal(int value) {
-    setShutdownRequestValue(value);
-    setLfsCancelRequestedFromSignal(value);
+    // Only set the async-signal-safe flag in the signal handler.
+    // Actual shutdown and LFS cancel operations are deferred to a safe polling context.
+    setSignalShutdownRequested(value);
+}
+
+static void processSignalShutdownAndSetLfsCancelFlag() {
+    // This function is called from the polling loop to safely process signal shutdown requests.
+    // It performs the actual shutdown and LFS cancel operations in a safe context.
+    if (isSignalShutdownRequested()) {
+        processSignalShutdownRequest();
+        // Also set LFS cancel flag upon shutdown
+        int shutdownValue = getShutdownRequestValue();
+        setLfsCancelRequestedFromSignal(shutdownValue);
+    }
 }
 
 Server& Server::instance() {
@@ -557,6 +563,8 @@ int Server::startServerFromSettings(ServerSettingsImpl& serverSettings, ModelsSe
         }
         while (!getShutdownStatus() &&
                (serverSettings.serverMode == HF_PULL_AND_START_MODE || serverSettings.serverMode == SERVING_MODELS_MODE)) {
+            // Process any signal shutdown requests in a safe context
+            processSignalShutdownAndSetLfsCancelFlag();
             std::this_thread::sleep_for(std::chrono::milliseconds(200));
         }
     } catch (const std::exception& e) {

@@ -22,4 +22,12 @@ int getShutdownRequestValue();
 void setShutdownRequestValue(int value);
 int getExitStatusValue();
 void setExitStatusValue(int value);
+
+// Signal-safe API: for use in signal handlers and polling contexts
+// Signal handlers should call setSignalShutdownRequested() which is async-signal-safe.
+// Main loop/polling thread should periodically call processSignalShutdownRequest() to
+// perform actual shutdown operations from a safe context.
+bool isSignalShutdownRequested();
+void processSignalShutdownRequest();
+void setSignalShutdownRequested(int value);
 }  // namespace ovms

@@ -16,10 +16,14 @@
 #include "shutdown_state.hpp"
 
 #include <atomic>
+#include <csignal>
 
 namespace {
 std::atomic<int> shutdown_request{0};
 std::atomic<int> ovms_exited{0};
+// Volatile sig_atomic_t flags: async-signal-safe for use in signal handlers
+volatile sig_atomic_t signal_shutdown_requested{0};
+volatile sig_atomic_t signal_shutdown_value{0};
 }  // namespace
 
 namespace ovms {
@@ -37,5 +41,21 @@ int getExitStatusValue() {
 
 void setExitStatusValue(int value) {
     ovms_exited.store(value, std::memory_order_relaxed);
+}
+
+bool isSignalShutdownRequested() {
+    return signal_shutdown_requested != 0;
+}
+
+void processSignalShutdownRequest() {
+    if (isSignalShutdownRequested()) {
+        signal_shutdown_requested = 0;
+        setShutdownRequestValue(signal_shutdown_value);
+    }
+}
+
+void setSignalShutdownRequested(int value) {
+    signal_shutdown_value = value;
+    signal_shutdown_requested = 1;
 }
 }  // namespace ovms

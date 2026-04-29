@@ -55,10 +55,11 @@
 #endif
 #endif
 
-/* Exported global in libgit2 library – set to non-zero to abort LFS
- * downloads. */
+/* Exported cancellation accessors in libgit2 patch – used to abort
+ * ongoing LFS downloads from OVMS. */
 extern "C" {
-extern volatile int git_lfs_cancel_requested;
+void git_lfs_cancel_set(int value);
+int git_lfs_cancel_get(void);
 }
 
 namespace ovms {
@@ -133,7 +134,7 @@ void removeLfsWipMarker(const std::string& repositoryPath) {
  * @note Works on the git LFS domain; controls remote LFS transfers.
  */
 static void setLfsCancelRequested(int value) {
-    git_lfs_cancel_requested = value != 0 ? 1 : 0;
+    git_lfs_cancel_set(value != 0 ? 1 : 0);
 }
 
 /**
