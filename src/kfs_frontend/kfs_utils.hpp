@@ -16,6 +16,9 @@
 #pragma once
 #include <string>
 
+#include <openvino/core/shape.hpp>
+#include <openvino/runtime/tensor.hpp>
+
 #include "../modelversion.hpp"
 #include "../precision.hpp"
 #include "src/kfserving_api/grpc_predict_v2.grpc.pb.h"

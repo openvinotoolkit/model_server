@@ -8,7 +8,7 @@ src/shape.cpp:436: strIn
 src/shape.cpp:438: strIn
 src/shape.cpp:488: strIn
 src/shape.cpp:507: strIn
-src/shape.hpp:121: strIn
+src/shape.hpp:123: strIn
 src/test/modelconfig_test.cpp:650: OptionA
 src/test/modelconfig_test.cpp:656: OptionA
 src/test/modelconfig_test.cpp:662: OptionA

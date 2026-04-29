@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2020 Intel Corporation
+// Copyright 2026 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,33 +13,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#pragma once
+
 #include "exit_node.hpp"
 
+#include <memory>
 #include <string>
 #include <utility>
 
-#include "../capi_frontend/inferenceresponse.hpp"
 #include "../logging.hpp"
 #include "../ov_utils.hpp"
-#include "../capi_frontend/serialization.hpp"
-#include "../kfs_frontend/serialization.hpp"
-#include "../tfs_frontend/serialization.hpp"
-
-#pragma warning(push)
-#pragma warning(disable : 4624 6001 6385 6386 6326 6011 4457 6308 6387 6246)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wall"
-#pragma GCC diagnostic ignored "-Wunused-but-set-variable"
-#include "tensorflow/core/framework/tensor.h"
-#pragma GCC diagnostic pop
-#pragma warning(pop)
+#include "../serialization_common.hpp"
 
 #include "exitnodesession.hpp"
 
 namespace ovms {
-
-const std::string EXIT_NODE_NAME = "response";
-const std::string DEFAULT_PIPELINE_NAME = "";
 
 template <typename ResponseType>
 Status ExitNode<ResponseType>::fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs) {
@@ -55,18 +43,6 @@ Status ExitNode<ResponseType>::execute(session_key_t sessionId, PipelineEventQue
     return StatusCode::OK;
 }
 
-template <>
-Status OutputGetter<const TensorMap&>::get(const std::string& name, ov::Tensor& tensor) {
-    OVMS_PROFILE_FUNCTION();
-    auto it = outputSource.find(name);
-    if (it == outputSource.end()) {
-        SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Failed to find expected pipeline output when serializing response: {}", name);
-        return StatusCode::INTERNAL_ERROR;
-    }
-    tensor = it->second;
-    return StatusCode::OK;
-}
-
 template <typename ResponseType>
 Status ExitNode<ResponseType>::fetchResults(const TensorMap& inputTensors) {
     OutputGetter<const TensorMap&> outputGetter(inputTensors);
@@ -79,13 +55,16 @@ std::unique_ptr<NodeSession> ExitNode<ResponseType>::createNodeSession(const Nod
     return std::make_unique<ExitNodeSession<ResponseType>>(metadata, getName(), previous.size(), collapsingDetails, response);
 }
 
-template class ExitNode<InferenceResponse>;
-template Status ExitNode<::KFSResponse>::fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs);
-template Status ExitNode<tensorflow::serving::PredictResponse>::fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs);
-template Status ExitNode<::KFSResponse>::execute(session_key_t sessionId, PipelineEventQueue& notifyEndQueue);
-template Status ExitNode<tensorflow::serving::PredictResponse>::execute(session_key_t sessionId, PipelineEventQueue& notifyEndQueue);
-template Status ExitNode<::KFSResponse>::fetchResults(const TensorMap& inputTensors);
-template Status ExitNode<tensorflow::serving::PredictResponse>::fetchResults(const TensorMap& inputTensors);
-template std::unique_ptr<NodeSession> ExitNode<::KFSResponse>::createNodeSession(const NodeSessionMetadata& metadata, const CollapseDetails& collapsingDetails);
-template std::unique_ptr<NodeSession> ExitNode<tensorflow::serving::PredictResponse>::createNodeSession(const NodeSessionMetadata& metadata, const CollapseDetails& collapsingDetails);
+template <>
+inline Status OutputGetter<const TensorMap&>::get(const std::string& name, ov::Tensor& tensor) {
+    OVMS_PROFILE_FUNCTION();
+    auto it = outputSource.find(name);
+    if (it == outputSource.end()) {
+        SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Failed to find expected pipeline output when serializing response: {}", name);
+        return StatusCode::INTERNAL_ERROR;
+    }
+    tensor = it->second;
+    return StatusCode::OK;
+}
+
 }  // namespace ovms

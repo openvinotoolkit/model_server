@@ -20,7 +20,7 @@
 #include <unordered_map>
 #include <utility>
 
-#include <openvino/openvino.hpp>
+#include <openvino/core/layout.hpp>
 
 #include "shape.hpp"
 
