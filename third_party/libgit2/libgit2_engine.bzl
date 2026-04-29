@@ -49,10 +49,10 @@ def _impl(repository_ctx):
     if _is_windows(repository_ctx):
         lib_name = "git2"
         out_static = "out_static_libs = [\"{lib_name}.lib\"],".format(lib_name=lib_name)
-        out_libs = ""
+        out_libs = "out_shared_libs = [\"{lib_name}.dll\"],".format(lib_name=lib_name)
         cache_entries = """
         "EXPERIMENTAL_SHA256": "ON",
-        "BUILD_SHARED_LIBS": "OFF",
+        "BUILD_SHARED_LIBS": "ON",
         "CMAKE_POSITION_INDEPENDENT_CODE": "ON",
         "CMAKE_CXX_FLAGS": " /guard:cf /GS -s -D_GLIBCXX_USE_CXX11_ABI=1",
         "CMAKE_LIBRARY_OUTPUT_DIRECTORY": "Debug",
