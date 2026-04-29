@@ -196,14 +196,14 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
                 continue;
             }
             if (memberName == "content" && member->value.IsArray()) {
-                // Adjust content field format when it is passed as an array of objects (typically with images)
+                // Content passed as an array of objects (OpenAI multipart format).
+                // We preserve the array structure so chat templates can decide how to render it.
+                // image_url items are translated to {type:image} so that VLM chat templates
+                // (which use the OpenVINO GenAI MULTIPART_CONTENT convention) see them correctly.
+                // The corresponding decoded tensors are appended in document order to imageHistory.
                 if (member->value.GetArray().Size() == 0) {
                     return absl::InvalidArgumentError("Invalid message structure - content array is empty");
                 }
-                jsonChanged = true;
-                std::string concatenatedText;
-                Value contentText(rapidjson::kStringType);
-                contentText.SetString("", doc.GetAllocator());
                 for (auto& v : member->value.GetArray()) {
                     if (!v.IsObject()) {
                         return absl::InvalidArgumentError("Invalid message structure - content array should contain objects");
@@ -212,17 +212,12 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
                     if (!entry.HasMember("type") || !entry["type"].IsString()) {
                         return absl::InvalidArgumentError("Invalid message structure - content object type missing");
                     }
-                    auto entryType = entry["type"].GetString();
-                    if (entryType == std::string("text")) {
+                    std::string entryType = entry["type"].GetString();
+                    if (entryType == "text") {
                         if (!entry.HasMember("text") || !entry["text"].IsString()) {
                             return absl::InvalidArgumentError("Invalid message structure - content text missing");
                         }
-                        if (!concatenatedText.empty()) {
-                            concatenatedText += "\n";
-                        }
-                        concatenatedText += entry["text"].GetString();
-                        continue;
-                    } else if (entryType == std::string("image_url")) {
+                    } else if (entryType == "image_url") {
                         if (!entry.HasMember("image_url") || !entry["image_url"].IsObject()) {
                             return absl::InvalidArgumentError("Invalid message structure - content image_url missing");
                         }
@@ -235,19 +230,25 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
                         if (!tensorResult.ok()) {
                             return tensorResult.status();
                         }
-                        request.imageHistory.push_back({i, tensorResult.value()});
+                        // Store tensor in flat image list (document order = template rendering order)
+                        request.imageHistory.push_back(std::move(tensorResult.value()));
+                        // Translate image_url item to {type:image} so VLM chat templates
+                        // (which use GenAI MULTIPART_CONTENT convention) see the image in context.
+                        // Remove all existing keys from this object first.
+                        while (v.MemberBegin() != v.MemberEnd()) {
+                            v.RemoveMember(v.MemberBegin());
+                        }
+                        v.AddMember(rapidjson::Value("type", doc.GetAllocator()),
+                                    rapidjson::Value("image", doc.GetAllocator()),
+                                    doc.GetAllocator());
+                        jsonChanged = true;
                     } else {
                         return absl::InvalidArgumentError("Unsupported content type");
                     }
                 }
-                // Pulling out text from nested structure to the "content" field for text and replace whole "content" value for image data
-                // with empty string, since images are stored separately in request.images
-                contentText.SetString(concatenatedText.c_str(), concatenatedText.size(), doc.GetAllocator());
-                member->value = contentText;
-                // Add new field to the last message in history if content is text
-                if (member->value.IsString()) {
-                    request.chatHistory.last()[member->name.GetString()] = member->value.GetString();
-                }
+                // Store the content array (with image_url translated to image) in chatHistory.
+                // The doc is also updated so processedJson carries the translated array.
+                request.chatHistory.last()[memberName] = rapidJsonValueToJsonContainer(member->value);
             }
         }
         auto lastMessage = request.chatHistory.last();

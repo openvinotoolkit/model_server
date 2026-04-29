@@ -351,9 +351,14 @@
             {{- raise_exception("Message has tool role, but there was no previous assistant message with a tool call!") }}
         {%- endif %}
         {{- "<|start|>functions." + last_tool_call.name }}
-        {#- Original: {{- " to=assistant<|channel|>commentary<|message|>" + message.content|tojson + "<|end|>" }} #}
-        {#- Actual version that works, does not escape and allows non-json: #}
-        {{- " to=assistant<|channel|>commentary<|message|>" + message.content + "<|end|>" -}}
+        {#- When content is a plain string we render it directly (no escaping, OpenAI Harmony format). #}
+        {#- When content is an array (OpenAI multipart format) we serialise it as JSON so the model  #}
+        {#- sees the full structured response; this is the original template behaviour with |tojson.  #}
+        {%- if message.content is string -%}
+            {{- " to=assistant<|channel|>commentary<|message|>" + message.content + "<|end|>" -}}
+        {%- else -%}
+            {{- " to=assistant<|channel|>commentary<|message|>" + (message.content | tojson) + "<|end|>" -}}
+        {%- endif -%}
     {%- elif message.role == 'user' -%}
         {{- "<|start|>user<|message|>" + message.content + "<|end|>" }}
     {%- endif -%}

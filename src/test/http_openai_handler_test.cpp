@@ -1586,8 +1586,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesSucceedsBase64) {
     ASSERT_EQ(apiHandler->parseMessages(), absl::OkStatus());
     const ovms::ImageHistory& imageHistory = apiHandler->getImageHistory();
     ASSERT_EQ(imageHistory.size(), 1);
-    auto [index, image] = imageHistory[0];
-    EXPECT_EQ(index, 0);
+    const auto& image = imageHistory[0];
     EXPECT_EQ(image.get_element_type(), ov::element::u8);
     EXPECT_EQ(image.get_size(), 3);
     std::vector<uint8_t> expectedBytes = {110, 181, 160};
@@ -1595,7 +1594,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesSucceedsBase64) {
         EXPECT_EQ(expectedBytes[i], ((uint8_t*)image.data())[i]);
     }
     json = apiHandler->getProcessedJson();
-    EXPECT_EQ(json, std::string("{\"model\":\"llama\",\"messages\":[{\"role\":\"user\",\"content\":\"What is in this image?\"}]}"));
+    EXPECT_EQ(json, std::string("{\"model\":\"llama\",\"messages\":[{\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"What is in this image?\"},{\"type\":\"image\"}]}]}"));
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesSucceedsUrlHttp) {
@@ -1627,12 +1626,11 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesSucceedsUrlHttp) {
     ASSERT_EQ(apiHandler->parseMessages(std::nullopt, allowedDomains), absl::OkStatus());
     const ovms::ImageHistory& imageHistory = apiHandler->getImageHistory();
     ASSERT_EQ(imageHistory.size(), 1);
-    auto [index, image] = imageHistory[0];
-    EXPECT_EQ(index, 0);
+    const auto& image = imageHistory[0];
     EXPECT_EQ(image.get_element_type(), ov::element::u8);
     EXPECT_EQ(image.get_size(), 225792);
     json = apiHandler->getProcessedJson();
-    EXPECT_EQ(json, std::string("{\"model\":\"llama\",\"messages\":[{\"role\":\"user\",\"content\":\"What is in this image?\"}]}"));
+    EXPECT_EQ(json, std::string("{\"model\":\"llama\",\"messages\":[{\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"What is in this image?\"},{\"type\":\"image\"}]}]}"));
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesSucceedsUrlHttpMultipleAllowedDomains) {
@@ -1664,12 +1662,11 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesSucceedsUrlHttpMultipleAllow
     ASSERT_EQ(apiHandler->parseMessages(std::nullopt, allowedDomains), absl::OkStatus());
     const ovms::ImageHistory& imageHistory = apiHandler->getImageHistory();
     ASSERT_EQ(imageHistory.size(), 1);
-    auto [index, image] = imageHistory[0];
-    EXPECT_EQ(index, 0);
+    const auto& image = imageHistory[0];
     EXPECT_EQ(image.get_element_type(), ov::element::u8);
     EXPECT_EQ(image.get_size(), 225792);
     json = apiHandler->getProcessedJson();
-    EXPECT_EQ(json, std::string("{\"model\":\"llama\",\"messages\":[{\"role\":\"user\",\"content\":\"What is in this image?\"}]}"));
+    EXPECT_EQ(json, std::string("{\"model\":\"llama\",\"messages\":[{\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"What is in this image?\"},{\"type\":\"image\"}]}]}"));
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesSucceedsUrlHttps) {
@@ -1701,12 +1698,11 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesSucceedsUrlHttps) {
     ASSERT_EQ(apiHandler->parseMessages(std::nullopt, allowedDomains), absl::OkStatus());
     const ovms::ImageHistory& imageHistory = apiHandler->getImageHistory();
     ASSERT_EQ(imageHistory.size(), 1);
-    auto [index, image] = imageHistory[0];
-    EXPECT_EQ(index, 0);
+    const auto& image = imageHistory[0];
     EXPECT_EQ(image.get_element_type(), ov::element::u8);
     EXPECT_EQ(image.get_size(), 225792);
     json = apiHandler->getProcessedJson();
-    EXPECT_EQ(json, std::string("{\"model\":\"llama\",\"messages\":[{\"role\":\"user\",\"content\":\"What is in this image?\"}]}"));
+    EXPECT_EQ(json, std::string("{\"model\":\"llama\",\"messages\":[{\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"What is in this image?\"},{\"type\":\"image\"}]}]}"));
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesSucceedsUrlHttpsAllowedDomainAll) {
@@ -1738,12 +1734,11 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesSucceedsUrlHttpsAllowedDomai
     ASSERT_EQ(apiHandler->parseMessages(std::nullopt, allowedDomains), absl::OkStatus());
     const ovms::ImageHistory& imageHistory = apiHandler->getImageHistory();
     ASSERT_EQ(imageHistory.size(), 1);
-    auto [index, image] = imageHistory[0];
-    EXPECT_EQ(index, 0);
+    const auto& image = imageHistory[0];
     EXPECT_EQ(image.get_element_type(), ov::element::u8);
     EXPECT_EQ(image.get_size(), 225792);
     json = apiHandler->getProcessedJson();
-    EXPECT_EQ(json, std::string("{\"model\":\"llama\",\"messages\":[{\"role\":\"user\",\"content\":\"What is in this image?\"}]}"));
+    EXPECT_EQ(json, std::string("{\"model\":\"llama\",\"messages\":[{\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"What is in this image?\"},{\"type\":\"image\"}]}]}"));
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, ParsingImageJpegWithNoTextSucceeds) {
@@ -1769,8 +1764,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingImageJpegWithNoTextSucceeds) {
     ASSERT_EQ(apiHandler->parseMessages(), absl::OkStatus());
     const ovms::ImageHistory& imageHistory = apiHandler->getImageHistory();
     ASSERT_EQ(imageHistory.size(), 1);
-    auto [index, image] = imageHistory[0];
-    EXPECT_EQ(index, 0);
+    const auto& image = imageHistory[0];
     EXPECT_EQ(image.get_element_type(), ov::element::u8);
     EXPECT_EQ(image.get_size(), 3);
     std::vector<uint8_t> expectedBytes = {54, 245, 241};
@@ -1778,7 +1772,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingImageJpegWithNoTextSucceeds) {
         EXPECT_EQ(expectedBytes[i], ((uint8_t*)image.data())[i]);
     }
     json = apiHandler->getProcessedJson();
-    EXPECT_EQ(json, std::string("{\"model\":\"llama\",\"messages\":[{\"role\":\"user\",\"content\":\"\"}]}"));
+    EXPECT_EQ(json, std::string("{\"model\":\"llama\",\"messages\":[{\"role\":\"user\",\"content\":[{\"type\":\"image\"}]}]}"));
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageStringWithNoPrefixFails) {
@@ -1948,12 +1942,11 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystem) {
     ASSERT_EQ(apiHandler->parseMessages(getGenericFullPathForSrcTest("/ovms/src/test")), absl::OkStatus());
     const ovms::ImageHistory& imageHistory = apiHandler->getImageHistory();
     ASSERT_EQ(imageHistory.size(), 1);
-    auto [index, image] = imageHistory[0];
-    EXPECT_EQ(index, 0);
+    const auto& image = imageHistory[0];
     EXPECT_EQ(image.get_element_type(), ov::element::u8);
     EXPECT_EQ(image.get_size(), 3);
     json = apiHandler->getProcessedJson();
-    EXPECT_EQ(json, std::string("{\"model\":\"llama\",\"messages\":[{\"role\":\"user\",\"content\":\"What is in this image?\"}]}"));
+    EXPECT_EQ(json, std::string("{\"model\":\"llama\",\"messages\":[{\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"What is in this image?\"},{\"type\":\"image\"}]}]}"));
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemWithinAllowedPath) {
@@ -1984,12 +1977,11 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemWithinAl
     ASSERT_EQ(apiHandler->parseMessages(getGenericFullPathForSrcTest("/ovms/src/test/binaryutils")), absl::OkStatus());
     const ovms::ImageHistory& imageHistory = apiHandler->getImageHistory();
     ASSERT_EQ(imageHistory.size(), 1);
-    auto [index, image] = imageHistory[0];
-    EXPECT_EQ(index, 0);
+    const auto& image = imageHistory[0];
     EXPECT_EQ(image.get_element_type(), ov::element::u8);
     EXPECT_EQ(image.get_size(), 3);
     json = apiHandler->getProcessedJson();
-    EXPECT_EQ(json, std::string("{\"model\":\"llama\",\"messages\":[{\"role\":\"user\",\"content\":\"What is in this image?\"}]}"));
+    EXPECT_EQ(json, std::string("{\"model\":\"llama\",\"messages\":[{\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"What is in this image?\"},{\"type\":\"image\"}]}]}"));
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemNotWithinAllowedPath) {
@@ -2140,10 +2132,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMultipleMessagesSucceeds) {
     const ovms::ImageHistory& imageHistory = apiHandler->getImageHistory();
     ASSERT_EQ(imageHistory.size(), 2);
     std::vector<uint8_t> expectedBytes = {110, 181, 160};
-    std::vector<size_t> expectedImageIndexes = {0, 2};
-    size_t i = 0;
-    for (auto [index, image] : imageHistory) {
-        EXPECT_EQ(index, expectedImageIndexes[i++]);
+    for (const auto& image : imageHistory) {
         EXPECT_EQ(image.get_element_type(), ov::element::u8);
         EXPECT_EQ(image.get_size(), 3);
         for (size_t i = 0; i < image.get_size(); i++) {
@@ -2151,10 +2140,10 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMultipleMessagesSucceeds) {
         }
     }
     json = apiHandler->getProcessedJson();
-    EXPECT_EQ(json, std::string("{\"model\":\"llama\",\"messages\":[{\"role\":\"user\",\"content\":\"What is in this image?\"},"
-                                "{\"role\":\"assistant\",\"content\":\"No idea my friend.\"},"
-                                "{\"role\":\"user\",\"content\":\"What about this one?\"},"
-                                "{\"role\":\"assistant\",\"content\":\"Same thing. I'm not very good with images.\"},"
+    EXPECT_EQ(json, std::string("{\"model\":\"llama\",\"messages\":[{\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"What is in this image?\"},{\"type\":\"image\"}]},"
+                                "{\"role\":\"assistant\",\"content\":[{\"type\":\"text\",\"text\":\"No idea my friend.\"}]},"
+                                "{\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"What about this one?\"},{\"type\":\"image\"}]},"
+                                "{\"role\":\"assistant\",\"content\":[{\"type\":\"text\",\"text\":\"Same thing. I'm not very good with images.\"}]},"
                                 "{\"role\":\"user\",\"content\":\"You were not trained with images, were you?\"}]}"));
 }
 
@@ -3609,4 +3598,76 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParseMessagesRegularMessageHasNoToolFields)
     EXPECT_FALSE(history[1].contains("tool_calls"));
     EXPECT_FALSE(history[1].contains("tool_call_id"));
     EXPECT_FALSE(history[1].contains("name"));
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParseMessagesToolContentArrayPreservedInChatHistory) {
+    // Tool responses may arrive with content as an array of {type, text} objects (OpenAI multipart format).
+    // The array must be preserved end-to-end so the chat template can decide how to render it.
+    std::string json = R"({
+    "model": "llama",
+    "messages": [
+      {"role": "user", "content": "list jobs"},
+      {"role": "assistant", "content": null, "tool_calls": [{"id": "call_1", "type": "function", "function": {"name": "list_jobs", "arguments": "{\"folder_path\":\"ovmsc\"}"}}]},
+      {"role": "tool", "tool_call_id": "call_1", "content": [
+        {"type": "text", "text": "ubuntu"},
+        {"type": "text", "text": "redhat"},
+        {"type": "text", "text": "windows"}
+      ]}
+    ]
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    auto apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    ASSERT_EQ(apiHandler->parseMessages(), absl::OkStatus());
+
+    ov::genai::ChatHistory& history = apiHandler->getChatHistory();
+    ASSERT_EQ(history.size(), 3);
+
+    // Tool message content must be an array with all three items preserved
+    auto toolMsg = history[2];
+    ASSERT_TRUE(toolMsg.contains("content"));
+    ASSERT_TRUE(toolMsg["content"].is_array());
+    ASSERT_EQ(toolMsg["content"].size(), 3);
+    EXPECT_EQ(toolMsg["content"][0]["type"].get_string(), "text");
+    EXPECT_EQ(toolMsg["content"][0]["text"].get_string(), "ubuntu");
+    EXPECT_EQ(toolMsg["content"][1]["text"].get_string(), "redhat");
+    EXPECT_EQ(toolMsg["content"][2]["text"].get_string(), "windows");
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParseMessagesContentArrayPreservedInProcessedJson) {
+    // When other changes force a processedJson re-serialisation (e.g. missing "arguments" added to
+    // tool_calls), the content array must still appear as an array in processedJson, not as a string.
+    std::string json = R"({
+    "model": "llama",
+    "messages": [
+      {"role": "user", "content": "list jobs"},
+      {"role": "assistant", "content": null, "tool_calls": [{"id": "call_1", "type": "function", "function": {"name": "list_jobs"}}]},
+      {"role": "tool", "tool_call_id": "call_1", "content": [
+        {"type": "text", "text": "ubuntu"},
+        {"type": "text", "text": "redhat"},
+        {"type": "text", "text": "windows"}
+      ]}
+    ]
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    auto apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    ASSERT_EQ(apiHandler->parseMessages(), absl::OkStatus());
+
+    // ensureArgumentsInToolCalls adds "arguments": "{}" which triggers jsonChanged → processedJson is set
+    const std::string& processed = apiHandler->getProcessedJson();
+    ASSERT_FALSE(processed.empty());
+
+    // The tool message content in processedJson must still be an array
+    rapidjson::Document processedDoc;
+    processedDoc.Parse(processed.c_str());
+    ASSERT_FALSE(processedDoc.HasParseError());
+    const auto& messages = processedDoc["messages"].GetArray();
+    ASSERT_EQ(messages.Size(), 3);
+    const auto& toolContent = messages[2]["content"];
+    ASSERT_TRUE(toolContent.IsArray());
+    ASSERT_EQ(toolContent.GetArray().Size(), 3);
+    EXPECT_STREQ(toolContent.GetArray()[0]["text"].GetString(), "ubuntu");
+    EXPECT_STREQ(toolContent.GetArray()[1]["text"].GetString(), "redhat");
+    EXPECT_STREQ(toolContent.GetArray()[2]["text"].GetString(), "windows");
 }

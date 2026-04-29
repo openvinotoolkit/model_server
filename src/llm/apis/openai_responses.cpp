@@ -120,7 +120,13 @@ absl::Status OpenAIResponsesHandler::parseInput(std::optional<std::string> allow
                 return absl::InvalidArgumentError("Invalid message structure - content array is empty");
             }
 
-            std::string contentText = "";
+            // Translate Responses API content array into the canonical multipart format
+            // used by chatHistory and VLM chat templates:
+            //   input_text  → {"type":"text",  "text": "<value>"}
+            //   input_image → {"type":"image"} (tensor appended to imageHistory in order)
+            // This mirrors the Chat Completions image_url → image translation so that
+            // both VLM chat templates (GenAI MULTIPART_CONTENT) and Python Jinja2 templates
+            // receive a uniform representation.
             for (auto& contentItem : contentIt->value.GetArray()) {
                 if (!contentItem.IsObject()) {
                     return absl::InvalidArgumentError("input content items must be objects");
@@ -137,7 +143,17 @@ absl::Status OpenAIResponsesHandler::parseInput(std::optional<std::string> allow
                     if (textIt == contentObj.MemberEnd() || !textIt->value.IsString()) {
                         return absl::InvalidArgumentError("input_text requires a valid text field");
                     }
-                    contentText = textIt->value.GetString();
+                    // Normalise to {"type":"text","text":"..."} in-place.
+                    std::string textValue = textIt->value.GetString();
+                    while (contentItem.MemberBegin() != contentItem.MemberEnd()) {
+                        contentItem.RemoveMember(contentItem.MemberBegin());
+                    }
+                    contentItem.AddMember(rapidjson::Value("type", doc.GetAllocator()),
+                                         rapidjson::Value("text", doc.GetAllocator()),
+                                         doc.GetAllocator());
+                    contentItem.AddMember(rapidjson::Value("text", doc.GetAllocator()),
+                                         rapidjson::Value(textValue.c_str(), doc.GetAllocator()),
+                                         doc.GetAllocator());
                 } else if (type == "input_image") {
                     std::string imageUrl;
                     auto imageUrlIt = contentObj.FindMember("image_url");
@@ -161,13 +177,21 @@ absl::Status OpenAIResponsesHandler::parseInput(std::optional<std::string> allow
                     if (!tensorResult.ok()) {
                         return tensorResult.status();
                     }
-                    request.imageHistory.push_back({i, tensorResult.value()});
+                    request.imageHistory.push_back(std::move(tensorResult.value()));
+                    // Translate to {"type":"image"} in-place so VLM chat templates see
+                    // the image at the correct position in the content array.
+                    while (contentItem.MemberBegin() != contentItem.MemberEnd()) {
+                        contentItem.RemoveMember(contentItem.MemberBegin());
+                    }
+                    contentItem.AddMember(rapidjson::Value("type", doc.GetAllocator()),
+                                         rapidjson::Value("image", doc.GetAllocator()),
+                                         doc.GetAllocator());
                 } else {
                     return absl::InvalidArgumentError("Unsupported content type. Supported types are input_text and input_image.");
                 }
             }
 
-            request.chatHistory.last()["content"] = contentText;
+            request.chatHistory.last()["content"] = rapidJsonValueToJsonContainer(contentIt->value);
         }
     } else {
         return absl::InvalidArgumentError("input is not a string or array");

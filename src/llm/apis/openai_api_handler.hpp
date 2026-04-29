@@ -146,6 +146,7 @@ public:
     std::optional<int> getNumReturnSequences() const;
     StreamOptions getStreamOptions() const;
     const std::string& getProcessedJson() const;
+    // Returns the flat ordered list of image tensors (one per image_url item, in document order).
     const ImageHistory& getImageHistory() const;
     ov::genai::ChatHistory& getChatHistory();
     std::optional<int> getMaxTokens() const;
