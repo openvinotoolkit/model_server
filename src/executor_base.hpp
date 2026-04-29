@@ -28,18 +28,6 @@
 
 namespace ovms {
 
-template <typename ExecutorT>
-void runExecutorLoop(ExecutorT* executor, std::atomic<bool>* receivedEndSignal, const std::shared_ptr<spdlog::logger>& logger) {
-    while (!(*receivedEndSignal)) {
-        SPDLOG_LOGGER_INFO(logger, "All requests: {};", executor->requestsQueueSize());
-        if (executor->hasRequests()) {
-            executor->processRequest();
-        } else {
-            executor->waitForRequests(receivedEndSignal);
-        }
-    }
-}
-
 template <typename RequestT>
 struct Executor {
     using Request = RequestT;
@@ -47,6 +35,8 @@ struct Executor {
     std::condition_variable cv;
     std::queue<RequestT> requests;
     std::mutex queueMutex;
+
+    virtual void processRequest() = 0;
 
     bool hasRequests() {
         std::lock_guard<std::mutex> lock(queueMutex);
@@ -75,11 +65,25 @@ struct Executor {
     }
 };
 
+template <typename RequestT>
+void runExecutorLoop(Executor<RequestT>* executor, std::atomic<bool>* receivedEndSignal, const std::shared_ptr<spdlog::logger>& logger) {
+    while (!(*receivedEndSignal)) {
+        SPDLOG_LOGGER_INFO(logger, "All requests: {};", executor->requestsQueueSize());
+        if (executor->hasRequests()) {
+            executor->processRequest();
+        } else {
+            executor->waitForRequests(receivedEndSignal);
+        }
+    }
+}
+
 template <typename ExecutorT>
 class ExecutorWrapper {
     std::thread executorThread;
 
-    static void run(ExecutorT* exec, std::atomic<bool>* stop, std::shared_ptr<spdlog::logger> logger) {
+    using Request = typename ExecutorT::Request;
+
+    static void run(Executor<Request>* exec, std::atomic<bool>* stop, std::shared_ptr<spdlog::logger> logger) {
         try {
             runExecutorLoop(exec, stop, logger);
         } catch (const std::exception& e) {
@@ -89,28 +93,25 @@ class ExecutorWrapper {
     }
 
 protected:
-    ExecutorT executor;
+    std::shared_ptr<ExecutorT> executor;
     std::atomic<bool> finishExecutorThread = false;
 
 public:
-    using Request = typename ExecutorT::Request;
-
-    template <typename... Args>
-    ExecutorWrapper(std::shared_ptr<spdlog::logger> logger, Args&&... args) :
-        executor(std::forward<Args>(args)...) {
-        executorThread = std::thread(run, &executor, &finishExecutorThread, logger);
+    ExecutorWrapper(std::shared_ptr<spdlog::logger> logger, std::shared_ptr<ExecutorT> executor) :
+        executor(std::move(executor)) {
+        executorThread = std::thread(run, this->executor.get(), &finishExecutorThread, logger);
     }
 
     void addRequest(Request request) {
         if (finishExecutorThread) {
             throw std::runtime_error("Cannot schedule request - executor is stopping");
         }
-        executor.scheduleRequest(std::move(request));
+        executor->scheduleRequest(std::move(request));
     }
 
     ~ExecutorWrapper() {
         finishExecutorThread = true;
-        executor.notify();
+        executor->notify();
         if (executorThread.joinable()) {
             executorThread.join();
         }

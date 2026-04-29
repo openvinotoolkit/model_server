@@ -49,5 +49,5 @@ void LegacyExecutor::processRequest() {
 }
 
 LegacyExecutorWrapper::LegacyExecutorWrapper(std::shared_ptr<ov::genai::LLMPipeline> pipe) :
-    ExecutorWrapper(llm_executor_logger, std::move(pipe)) {}
+    ExecutorWrapper(llm_executor_logger, std::make_shared<LegacyExecutor>(std::move(pipe))) {}
 }  // namespace ovms

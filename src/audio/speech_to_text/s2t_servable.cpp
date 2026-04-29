@@ -56,7 +56,7 @@ SttServable::SttServable(const ::mediapipe::S2tCalculatorOptions& nodeOptions, c
     config["word_timestamps"] = enableWordTimestamps;
     sttPipeline = std::make_shared<ov::genai::WhisperPipeline>(parsedModelsPath.string(), nodeOptions.target_device(), config);
 
-    streamingExecutor = std::make_unique<SttExecutorWrapper>();
+    streamingExecutor = std::make_unique<SttExecutorWrapper>(sttPipeline, sttPipelineMutex);
 }
 
 void SttServable::addRequest(std::shared_ptr<SttServableExecutionContext> executionContext) {
@@ -66,7 +66,7 @@ void SttServable::addRequest(std::shared_ptr<SttServableExecutionContext> execut
     streamingExecutor->addRequest(std::move(executionContext));
 }
 
-absl::Status SttServable::parseTemperature(const HttpPayload& payload, float& temperature) {
+absl::Status SttServable::parseTemperature(const HttpPayload& payload, ov::genai::WhisperGenerationConfig& config) {
     std::string temperatureStr = payload.multipartParser->getFieldByName("temperature");
     if (temperatureStr.size() > 0) {
         SPDLOG_LOGGER_TRACE(s2t_calculator_logger, "Received temperature: {}", temperatureStr);
@@ -76,14 +76,12 @@ absl::Status SttServable::parseTemperature(const HttpPayload& payload, float& te
             if (!temp.has_value())
                 return absl::InvalidArgumentError("Invalid temperature type.");
         }
-        if (temp.value() < 0.0f || temp.value() > 2.0f)
-            return absl::InvalidArgumentError("Temperature out of range(0.0, 2.0)");
-        temperature = temp.value();
+        config.temperature = temp.value();
     }
     return absl::OkStatus();
 }
 
-absl::Status SttServable::applyTranscriptionConfig(ov::genai::WhisperGenerationConfig& config,
+absl::Status SttServable::updateTranscriptionConfig(ov::genai::WhisperGenerationConfig& config,
     const std::shared_ptr<SttServable>& servable, const HttpPayload& payload) {
     std::string language = payload.multipartParser->getFieldByName("language");
     if (language.size() > 0) {
@@ -107,7 +105,7 @@ absl::Status SttServable::applyTranscriptionConfig(ov::genai::WhisperGenerationC
             return absl::InvalidArgumentError("Invalid timestamp_granularities type. Allowed types: \"segment\", \"word\"");
         }
     }
-    auto status = parseTemperature(payload, config.temperature);
+    auto status = parseTemperature(payload, config);
     if (status != absl::OkStatus())
         return status;
     return absl::OkStatus();

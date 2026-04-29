@@ -60,13 +60,10 @@ std::string S2tStreamingHandler::serializeDoneEvent(const std::string& text) {
     return buffer.GetString();
 }
 
-absl::Status S2tStreamingHandler::start(CalculatorContext* cc,
-    std::shared_ptr<ovms::SttServable> pipe,
+absl::Status S2tStreamingHandler::start(std::shared_ptr<ovms::SttServable> pipe,
     const ovms::HttpPayload& payload,
     std::vector<float> rawSpeech,
-    bool isTranscription,
-    const std::string& loopbackTag,
-    const std::string&) {
+    const ov::genai::WhisperGenerationConfig& config) {
     if (isStreaming_) {
         return absl::FailedPreconditionError("Streaming request is already active");
     }
@@ -86,85 +83,43 @@ absl::Status S2tStreamingHandler::start(CalculatorContext* cc,
         return ov::genai::StreamingStatus::RUNNING;
     };
 
-    if (isTranscription) {
-        ov::genai::WhisperGenerationConfig config = pipe->sttPipeline->get_generation_config();
-        auto status = ovms::SttServable::applyTranscriptionConfig(config, pipe, payload);
-        if (status != absl::OkStatus()) {
-            isStreaming_ = false;
-            return status;
-        }
-        auto executionContext = std::make_shared<ovms::SttServableExecutionContext>(ovms::SttServable::StreamingJob(
-            [pipe, rawSpeech = std::move(rawSpeech), config, streamerCallback, queue = streamingQueue_]() mutable -> ov::genai::WhisperDecodedResults {
-                try {
-                    std::unique_lock lock(pipe->sttPipelineMutex);
-                    auto result = pipe->sttPipeline->generate(rawSpeech, config, streamerCallback);
-                    lock.unlock();
-                    queue->endStreaming();
-                    return result;
-                } catch (...) {
-                    queue->endStreaming();
-                    throw;
-                }
-            }));
+    auto guardedStreamerCallback = [streamerCallback = std::move(streamerCallback), queue = streamingQueue_](std::string text) mutable -> ov::genai::StreamingStatus {
         try {
-            pipe->addRequest(executionContext);
-            executionContext_ = std::move(executionContext);
-        } catch (const std::exception& e) {
-            isStreaming_ = false;
-            return absl::InternalError(e.what());
+            return streamerCallback(std::move(text));
+        } catch (...) {
+            queue->endStreaming();
+            throw;
         }
-    } else {
-        float temperature = pipe->sttPipeline->get_generation_config().temperature;
-        auto tempStatus = ovms::SttServable::parseTemperature(payload, temperature);
-        if (tempStatus != absl::OkStatus()) {
-            isStreaming_ = false;
-            return tempStatus;
-        }
-        auto executionContext = std::make_shared<ovms::SttServableExecutionContext>(ovms::SttServable::StreamingJob(
-            [pipe, rawSpeech = std::move(rawSpeech), streamerCallback, queue = streamingQueue_, temperature]() mutable -> ov::genai::WhisperDecodedResults {
-                try {
-                    std::unique_lock lock(pipe->sttPipelineMutex);
-                    auto result = pipe->sttPipeline->generate(rawSpeech,
-                        ov::genai::task("translate"),
-                        ov::genai::temperature(temperature),
-                        ov::genai::streamer(streamerCallback));
-                    lock.unlock();
-                    queue->endStreaming();
-                    return result;
-                } catch (...) {
-                    queue->endStreaming();
-                    throw;
-                }
-            }));
-        try {
-            pipe->addRequest(executionContext);
-            executionContext_ = std::move(executionContext);
-        } catch (const std::exception& e) {
-            isStreaming_ = false;
-            return absl::InternalError(e.what());
-        }
+    };
+    auto executionContext = std::make_shared<ovms::SttServableExecutionContext>(
+        std::move(rawSpeech),
+        config,
+        std::move(guardedStreamerCallback),
+        [queue = streamingQueue_]() { queue->endStreaming(); });
+    try {
+        pipe->addRequest(executionContext);
+        executionContext_ = std::move(executionContext);
+    } catch (const std::exception& e) {
+        isStreaming_ = false;
+        return absl::InternalError(e.what());
     }
 
-    // Trigger first LOOPBACK iteration
-    iterationTimestamp_ = cc->InputTimestamp();
-    cc->Outputs().Tag(loopbackTag).Add(new bool{true}, iterationTimestamp_);
     return absl::OkStatus();
 }
 
-absl::Status S2tStreamingHandler::processIteration(CalculatorContext* cc,
-    const std::string& loopbackTag,
-    const std::string& outputTag) {
+absl::Status S2tStreamingHandler::processIteration(std::string& ssePayload,
+    bool& shouldContinueLoopback,
+    bool& hasOutput) {
+    hasOutput = false;
+    shouldContinueLoopback = false;
+
     std::string chunk;
     bool hasData = streamingQueue_->waitAndPop(chunk);
 
     if (hasData) {
-        std::string ssePayload = ovms::wrapTextInServerSideEventMessage(serializeDeltaEvent(chunk));
-        cc->Outputs().Tag(outputTag).Add(new std::string{std::move(ssePayload)}, iterationTimestamp_);
-
-        // Continue looping
-        auto now = std::chrono::system_clock::now();
-        iterationTimestamp_ = ::mediapipe::Timestamp(std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch()).count());
-        cc->Outputs().Tag(loopbackTag).Add(new bool{true}, iterationTimestamp_);
+        ssePayload = ovms::wrapTextInServerSideEventMessage(serializeDeltaEvent(chunk));
+        hasOutput = true;
+        shouldContinueLoopback = true;
     } else {
         // Generation complete — send final event and stop
         std::string finalText;
@@ -183,8 +138,8 @@ absl::Status S2tStreamingHandler::processIteration(CalculatorContext* cc,
             return absl::InvalidArgumentError("Response generation failed");
         }
 
-        std::string doneEvent = ovms::wrapTextInServerSideEventMessage(serializeDoneEvent(finalText));
-        cc->Outputs().Tag(outputTag).Add(new std::string{std::move(doneEvent)}, iterationTimestamp_);
+        ssePayload = ovms::wrapTextInServerSideEventMessage(serializeDoneEvent(finalText));
+        hasOutput = true;
         isStreaming_ = false;
         executionContext_.reset();
     }

@@ -15,10 +15,13 @@
 //*****************************************************************************
 #pragma once
 
+#include <exception>
+#include <functional>
 #include <future>
 #include <memory>
 #include <mutex>
 #include <utility>
+#include <vector>
 
 #include "openvino/genai/whisper_pipeline.hpp"
 #include "src/executor_base.hpp"
@@ -26,18 +29,34 @@
 
 namespace ovms {
 
-using SttStreamingJob = std::packaged_task<ov::genai::WhisperDecodedResults()>;
-
 struct SttServableExecutionContext {
-    SttStreamingJob job;
+    std::vector<float> rawSpeech;
+    ov::genai::WhisperGenerationConfig config;
+    std::function<ov::genai::StreamingStatus(std::string)> streamerCallback;
+    std::function<void()> onFinished;
+    std::promise<ov::genai::WhisperDecodedResults> finishedPromise;
     std::future<ov::genai::WhisperDecodedResults> finished;
 
-    explicit SttServableExecutionContext(SttStreamingJob&& streamingJob) :
-        job(std::move(streamingJob)),
-        finished(job.get_future()) {}
+    SttServableExecutionContext(
+        std::vector<float> rawSpeech,
+        ov::genai::WhisperGenerationConfig config,
+        std::function<ov::genai::StreamingStatus(std::string)> streamerCallback,
+        std::function<void()> onFinished) :
+        rawSpeech(std::move(rawSpeech)),
+        config(std::move(config)),
+        streamerCallback(std::move(streamerCallback)),
+        onFinished(std::move(onFinished)),
+        finished(finishedPromise.get_future()) {}
 };
 
 struct SttExecutor : public Executor<std::shared_ptr<SttServableExecutionContext>> {
+    std::shared_ptr<ov::genai::WhisperPipeline> sttPipeline;
+    std::mutex& sttPipelineMutex;
+
+    SttExecutor(std::shared_ptr<ov::genai::WhisperPipeline> sttPipeline, std::mutex& sttPipelineMutex) :
+        sttPipeline(std::move(sttPipeline)),
+        sttPipelineMutex(sttPipelineMutex) {}
+
     void processRequest() {
         std::shared_ptr<SttServableExecutionContext> requestExecutionContext;
         {
@@ -48,14 +67,25 @@ struct SttExecutor : public Executor<std::shared_ptr<SttServableExecutionContext
             requestExecutionContext = std::move(requests.front());
             requests.pop();
         }
-        requestExecutionContext->job();
+        try {
+            std::unique_lock lock(sttPipelineMutex);
+            auto result = sttPipeline->generate(
+                requestExecutionContext->rawSpeech,
+                requestExecutionContext->config,
+                requestExecutionContext->streamerCallback);
+            lock.unlock();
+            requestExecutionContext->finishedPromise.set_value(std::move(result));
+        } catch (...) {
+            requestExecutionContext->finishedPromise.set_exception(std::current_exception());
+        }
+        requestExecutionContext->onFinished();
     }
 };
 
 class SttExecutorWrapper : public ExecutorWrapper<SttExecutor> {
 public:
-    SttExecutorWrapper() :
-        ExecutorWrapper(s2t_calculator_logger) {}
+    SttExecutorWrapper(std::shared_ptr<ov::genai::WhisperPipeline> sttPipeline, std::mutex& sttPipelineMutex) :
+        ExecutorWrapper(s2t_calculator_logger, std::make_shared<SttExecutor>(std::move(sttPipeline), sttPipelineMutex)) {}
 };
 
 }  // namespace ovms

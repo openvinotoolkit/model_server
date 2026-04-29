@@ -28,31 +28,14 @@ namespace ovms {
 // to bridge ov::genai streamer callbacks and the calculator's Process() cycle.
 class StreamingTextQueue {
 public:
-    void push(std::string text) {
-        std::lock_guard<std::mutex> lock(mutex_);
-        queue_.push(std::move(text));
-        cv_.notify_one();
-    }
+    void push(std::string text);
 
     // Signals that generation has finished (successfully or with error).
-    void endStreaming() {
-        std::lock_guard<std::mutex> lock(mutex_);
-        done_ = true;
-        cv_.notify_one();
-    }
+    void endStreaming();
 
     // Blocks until a text chunk is available or generation is done.
     // Returns true if a chunk was retrieved, false if done and queue is empty.
-    bool waitAndPop(std::string& out) {
-        std::unique_lock<std::mutex> lock(mutex_);
-        cv_.wait(lock, [this] { return !queue_.empty() || done_; });
-        if (!queue_.empty()) {
-            out = std::move(queue_.front());
-            queue_.pop();
-            return true;
-        }
-        return false;  // done and empty
-    }
+    bool waitAndPop(std::string& out);
 
 private:
     mutable std::mutex mutex_;

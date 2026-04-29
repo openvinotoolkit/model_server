@@ -48,23 +48,19 @@ public:
     static std::string serializeDeltaEvent(const std::string& delta);
     static std::string serializeDoneEvent(const std::string& text);
 
-    absl::Status start(CalculatorContext* cc,
-        std::shared_ptr<ovms::SttServable> pipe,
+    absl::Status start(std::shared_ptr<ovms::SttServable> pipe,
         const ovms::HttpPayload& payload,
         std::vector<float> rawSpeech,
-        bool isTranscription,
-        const std::string& loopbackTag,
-        const std::string& outputTag);
+        const ov::genai::WhisperGenerationConfig& config);
 
-    absl::Status processIteration(CalculatorContext* cc,
-        const std::string& loopbackTag,
-        const std::string& outputTag);
+    absl::Status processIteration(std::string& ssePayload,
+        bool& shouldContinueLoopback,
+        bool& hasOutput);
 
 private:
     bool isStreaming_ = false;
     std::shared_ptr<ovms::StreamingTextQueue> streamingQueue_;
     std::shared_ptr<ovms::SttServableExecutionContext> executionContext_;
-    ::mediapipe::Timestamp iterationTimestamp_{0};
 };
 
 }  // namespace mediapipe

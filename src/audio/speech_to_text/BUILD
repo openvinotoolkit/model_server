@@ -40,7 +40,10 @@ ovms_cc_library(
 
 ovms_cc_library(
     name = "s2t_streaming_handler",
-    srcs = ["s2t_streaming_handler.cpp"],
+    srcs = [
+        "s2t_streaming_handler.cpp",
+        "streaming_text_queue.cpp",
+    ],
     hdrs = [
         "s2t_streaming_handler.hpp",
         "streaming_text_queue.hpp",

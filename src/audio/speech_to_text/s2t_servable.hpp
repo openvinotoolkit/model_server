@@ -45,8 +45,6 @@ namespace ovms {
 struct HttpPayload;
 
 struct SttServable {
-    using StreamingJob = SttStreamingJob;
-
     std::filesystem::path parsedModelsPath;
     std::shared_ptr<ov::genai::WhisperPipeline> sttPipeline;
     std::mutex sttPipelineMutex;
@@ -60,9 +58,9 @@ struct SttServable {
 
     void addRequest(std::shared_ptr<SttServableExecutionContext> executionContext);
 
-    static absl::Status parseTemperature(const HttpPayload& payload, float& temperature);
+    static absl::Status parseTemperature(const HttpPayload& payload, ov::genai::WhisperGenerationConfig& config);
 
-    static absl::Status applyTranscriptionConfig(ov::genai::WhisperGenerationConfig& config,
+    static absl::Status updateTranscriptionConfig(ov::genai::WhisperGenerationConfig& config,
         const std::shared_ptr<SttServable>& servable, const HttpPayload& payload);
 };
 

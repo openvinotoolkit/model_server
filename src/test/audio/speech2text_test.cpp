@@ -125,7 +125,7 @@ TEST_F(Speech2TextStreamingTest, streamingTranscriptionReceivesDeltaAndDoneEvent
     for (size_t i = 0; i + 1 < receivedChunks.size(); ++i) {
         const std::string& chunk = receivedChunks[i];
         ASSERT_GE(chunk.size(), dataPrefix.size());
-        EXPECT_EQ(chunk.substr(0, dataPrefix.size()), dataPrefix) << "Chunk " << i << " missing SSE prefix";
+        ASSERT_EQ(chunk.substr(0, dataPrefix.size()), dataPrefix) << "Chunk " << i << " missing SSE prefix";
         std::string json = chunk.substr(dataPrefix.size());
         // Trim trailing newlines
         while (!json.empty() && (json.back() == '\n' || json.back() == '\r'))
@@ -187,7 +187,7 @@ TEST_F(Speech2TextStreamingTest, streamingTranscriptionDoneTextMatchesConcatenat
         return json;
     };
 
-    // Collect all delta text
+    // Collect all but the last delta text
     std::string concatenatedDeltas;
     for (size_t i = 0; i + 1 < receivedChunks.size(); ++i) {
         rapidjson::Document d;

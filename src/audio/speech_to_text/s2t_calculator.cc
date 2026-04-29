@@ -13,6 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <chrono>
 #include <string>
 
 #pragma warning(push)
@@ -114,7 +115,23 @@ public:
 
         // --- LOOPBACK iteration: drain streaming queue ---
         if (!loopbackEmpty) {
-            return streamingHandler_.processIteration(cc, LOOPBACK_TAG_NAME, OUTPUT_TAG_NAME);
+            std::string ssePayload;
+            bool shouldContinueLoopback = false;
+            bool hasOutput = false;
+            auto status = streamingHandler_.processIteration(ssePayload, shouldContinueLoopback, hasOutput);
+            if (status != absl::OkStatus()) {
+                return status;
+            }
+
+            if (hasOutput) {
+                cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new std::string{std::move(ssePayload)}, cc->InputTimestamp());
+            }
+            if (shouldContinueLoopback) {
+                auto now = std::chrono::system_clock::now();
+                const auto nextTimestamp = ::mediapipe::Timestamp(std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch()).count());
+                cc->Outputs().Tag(LOOPBACK_TAG_NAME).Add(new bool{true}, nextTimestamp);
+            }
+            return absl::OkStatus();
         }
 
         // --- First iteration: new request ---
@@ -164,8 +181,18 @@ public:
             }
 
             if (requestStreaming) {
-                return streamingHandler_.start(cc, pipe, payload, std::move(rawSpeech),
-                    endpoint == Endpoint::TRANSCRIPTIONS, LOOPBACK_TAG_NAME, OUTPUT_TAG_NAME);
+                ov::genai::WhisperGenerationConfig config = pipe->sttPipeline->get_generation_config();
+                auto status = ovms::SttServable::updateTranscriptionConfig(config, pipe, payload);
+                if (status != absl::OkStatus()) {
+                    return status;
+                }
+                config.validate();
+                status = streamingHandler_.start(pipe, payload, std::move(rawSpeech), config);
+                if (status != absl::OkStatus()) {
+                    return status;
+                }
+                cc->Outputs().Tag(LOOPBACK_TAG_NAME).Add(new bool{true}, cc->InputTimestamp());
+                return absl::OkStatus();
             }
 
             return processUnaryRequest(cc, pipe, endpoint, payload, rawSpeech);
@@ -193,9 +220,10 @@ private:
         writer.String("text");
         if (endpoint == Endpoint::TRANSCRIPTIONS) {
             ov::genai::WhisperGenerationConfig config = pipe->sttPipeline->get_generation_config();
-            auto status = ovms::SttServable::applyTranscriptionConfig(config, pipe, payload);
+            auto status = ovms::SttServable::updateTranscriptionConfig(config, pipe, payload);
             if (status != absl::OkStatus())
                 return status;
+            config.validate();
 
             std::unique_lock lock(pipe->sttPipelineMutex);
             auto disconnectStatus = checkClientDisconnected(payload, cc->NodeName(), "before transcription");
@@ -211,19 +239,22 @@ private:
             serializeTimestamps(writer, result, config);
         }
         if (endpoint == Endpoint::TRANSLATIONS) {
-            float temperature = pipe->sttPipeline->get_generation_config().temperature;
-            auto tempStatus = ovms::SttServable::parseTemperature(payload, temperature);
-            if (tempStatus != absl::OkStatus())
-                return tempStatus;
+            ov::genai::WhisperGenerationConfig config = pipe->sttPipeline->get_generation_config();
+            config.task = "translate";
+            auto status = ovms::SttServable::parseTemperature(payload, config);
+            if (status != absl::OkStatus())
+                return status;
+            config.validate();
             std::unique_lock lock(pipe->sttPipelineMutex);
             auto disconnectStatus = checkClientDisconnected(payload, cc->NodeName(), "before translation");
             if (!disconnectStatus.ok())
                 return disconnectStatus;
-            std::string generatedText = pipe->sttPipeline->generate(rawSpeech, ov::genai::task("translate"), ov::genai::temperature(temperature), ov::genai::streamer(disconnectCallback));
+            const ov::genai::WhisperDecodedResults result = pipe->sttPipeline->generate(rawSpeech, config, disconnectCallback);
             lock.unlock();
             disconnectStatus = checkClientDisconnected(payload, cc->NodeName(), "after translation");
             if (!disconnectStatus.ok())
                 return disconnectStatus;
+            const std::string generatedText = result;
             writer.String(generatedText.c_str());
         }
         writer.EndObject();
