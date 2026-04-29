@@ -409,17 +409,18 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(ov::genai::Enco
 
     // choices: array of size N, where N is related to n request parameter
     jsonResponse.StartArray("choices");
-    int index = 0;
-    for (int i = 0; i < results.tokens.size(); i++) {
+    for (size_t i = 0; i < results.tokens.size(); ++i) {
         const std::vector<int64_t>& tokens = results.tokens[i];
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Generated tokens: {}", tokens);
         ParsedOutput parsedOutput = parseOutputIfNeeded(tokens);
         jsonResponse.StartObject();
         // finish_reason: "stop" in regular scenario, "tool_calls" if output contains tool calls
-        auto finishReason = mapFinishReason(ov::genai::GenerationFinishReason::STOP, !parsedOutput.toolCalls.empty());
+        const ov::genai::GenerationFinishReason finishReasonRaw =
+            (!results.finish_reasons.empty()) ? results.finish_reasons[0] : ov::genai::GenerationFinishReason::STOP;
+        auto finishReason = mapFinishReason(finishReasonRaw, !parsedOutput.toolCalls.empty());
         jsonResponse.FinishReason(finishReason.value_or("unknown"));
         // index: integer; Choice index, only n=1 supported anyway
-        jsonResponse.Index(index++);
+        jsonResponse.Index(static_cast<int>(i));
 
         if (endpoint == Endpoint::CHAT_COMPLETIONS) {
             jsonResponse.MessageObject(parsedOutput);
@@ -481,7 +482,9 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(ov::genai::VLMD
         ParsedOutput parsedOutput = parseOutputIfNeeded(generatedTokens);
         jsonResponse.StartObject();
         // finish_reason: "stop" in regular scenario, "tool_calls" if output contains tool calls
-        auto finishReason = mapFinishReason(ov::genai::GenerationFinishReason::STOP, !parsedOutput.toolCalls.empty());
+        const ov::genai::GenerationFinishReason finishReasonRaw =
+            (!results.finish_reasons.empty()) ? results.finish_reasons[0] : ov::genai::GenerationFinishReason::STOP;
+        auto finishReason = mapFinishReason(finishReasonRaw, !parsedOutput.toolCalls.empty());
         jsonResponse.FinishReason(finishReason.value_or("unknown"));
         // index: integer; Choice index, only n=1 supported anyway
         jsonResponse.Index(index++);

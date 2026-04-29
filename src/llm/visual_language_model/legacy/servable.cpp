@@ -245,7 +245,11 @@ absl::Status VisualLanguageModelLegacyServable::preparePartialResponse(std::shar
         if (!executionContext->lastStreamerCallbackOutput.empty()) {
             lastTextChunk = lastTextChunk + executionContext->lastStreamerCallbackOutput;
         }
-        std::string serializedChunk = executionContext->apiHandler->serializeStreamingChunk(lastTextChunk, ov::genai::GenerationFinishReason::STOP);
+        ov::genai::GenerationFinishReason finishReason = ov::genai::GenerationFinishReason::STOP;
+        if (!legacyExecutionContext->results.finish_reasons.empty()) {
+            finishReason = legacyExecutionContext->results.finish_reasons[0];
+        }
+        std::string serializedChunk = executionContext->apiHandler->serializeStreamingChunk(lastTextChunk, finishReason);
         if (!serializedChunk.empty()) {
             executionContext->response = wrapTextInServerSideEventMessage(serializedChunk);
         }
