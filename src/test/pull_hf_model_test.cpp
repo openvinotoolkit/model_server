@@ -281,6 +281,27 @@ public:
     ovms::Status CheckRepositoryStatus(bool checkUntracked) { return HfDownloader::CheckRepositoryStatus(checkUntracked); }
 };
 
+TEST_F(HfPull, RePull) {
+    std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
+    std::string downloadPath = ovms::FileSystem::joinPath({this->directoryPath, "repository"});
+    std::string task = "text_generation";
+    this->ServerPullHfModel(modelName, downloadPath, task);
+    server.setShutdownRequest(1);
+    if (t)
+        t->join();
+    server.setShutdownRequest(0);
+
+    testing::internal::CaptureStdout();
+    this->ServerPullHfModel(modelName, downloadPath, task);
+    std::string out = testing::internal::GetCapturedStdout();
+
+    EXPECT_NE(out.find("Path already exists on local filesystem. Skipping download to path: "), std::string::npos);
+    EXPECT_EQ(out.find("LFS file(s) to resume"), std::string::npos);
+    EXPECT_EQ(out.find(" Resuming "), std::string::npos);
+    std::string lfsWipPath = ovms::FileSystem::joinPath({downloadPath, ".lfswip"});
+    EXPECT_EQ(std::filesystem::exists(lfsWipPath), false);
+}
+
 TEST_F(HfPull, Resume) {
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string downloadPath = ovms::FileSystem::joinPath({this->directoryPath, "repository"});
@@ -582,8 +603,6 @@ TEST(HfPullWindowsWorker, ResumeTerminateChildProcess) {
 
 // ResumeAfterForcedTerminationAndRerun
 TEST_F(HfPull, ResumeTerminate) {
-    SKIP_AND_EXIT_IF_NOT_RUNNING_UNSTABLE();  // SSL proxy blocked workaround
-
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string downloadPath = ovms::FileSystem::joinPath({this->directoryPath, "repository"});
     std::string task = "text_generation";
