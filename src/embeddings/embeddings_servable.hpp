@@ -18,11 +18,8 @@
 #include "../sidepacket_servable.hpp"
 #include "src/embeddings/embeddings_calculator_ov.pb.h"
 #include "src/filesystem/filesystem.hpp"
-#pragma warning(push)
-#pragma warning(disable : 6313)
-#include <rapidjson/istreamwrapper.h>
-#include <rapidjson/error/en.h>
-#pragma warning(pop)
+#include "src/port/rapidjson_istreamwrapper.hpp"
+#include "src/port/rapidjson_error.hpp"
 #include <memory>
 #include <string>
 #include <unordered_map>

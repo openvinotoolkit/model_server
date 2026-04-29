@@ -17,7 +17,7 @@
 
 namespace ovms {
 class GlobalSequencesViewer;
-class ModelManager;
+class ResourcesCleaner;
 
 #ifdef _WIN32
 bool malloc_trim_win();
@@ -31,9 +31,9 @@ struct FunctorSequenceCleaner {
 };
 
 struct FunctorResourcesCleaner {
-    ModelManager& modelManager;
+    ResourcesCleaner& resourcesCleaner;
 
-    FunctorResourcesCleaner(ModelManager& modelManager);
+    FunctorResourcesCleaner(ResourcesCleaner& resourcesCleaner);
     virtual void cleanup();
     ~FunctorResourcesCleaner();
 };

@@ -17,6 +17,7 @@
 #include <numeric>
 
 #include "openvino/core/except.hpp"
+#include "openvino/runtime/core.hpp"
 #include "sidepacket_servable.hpp"
 #include "logging.hpp"
 #include <spdlog/spdlog.h>

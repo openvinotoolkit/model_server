@@ -15,6 +15,8 @@
 //*****************************************************************************
 #include "serialization_common.hpp"
 
+#include <openvino/runtime/infer_request.hpp>
+
 #include "logging.hpp"
 #include "status.hpp"
 #include "tensorinfo.hpp"
