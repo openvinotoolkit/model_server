@@ -325,8 +325,7 @@ rapidjson::Document Lfm2ToolParser::wrapDeltaArgs(const std::string& argsStr) {
 
 void Lfm2ToolParser::cutEOSFromContent(std::string& content, const ov::genai::GenerationFinishReason& finishReason) {
     size_t eosPos = content.find(EOS_TOKEN_STR);
-    bool isEndOfStream = this->toolCallIndex > TOOL_CALL_INDEX_START && finishReason == ov::genai::GenerationFinishReason::STOP;
-    if (eosPos != std::string::npos && isEndOfStream) {
+    if (eosPos != std::string::npos && finishReason == ov::genai::GenerationFinishReason::STOP) {
         content = content.substr(0, eosPos);
     }
 }
