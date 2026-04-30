@@ -72,6 +72,11 @@ protected:
 namespace libgit2 {
 inline constexpr size_t READ_FIRST_THREE_LINES_DEFAULT_MAX_LINE_BYTES = 8U * 1024U * 1024U;
 
+fs::path getLfsWipMarkerPath(const std::string& repositoryPath);
+bool createLfsWipMarker(const std::string& repositoryPath);
+bool hasLfsWipMarker(const std::string& repositoryPath);
+void removeLfsWipMarker(const std::string& repositoryPath);
+
 bool isCloneCancellationRequestedFromServer();
 void rtrimCrLfWhitespace(std::string& s);
 bool containsCaseInsensitive(const std::string& hay, const std::string& needle);

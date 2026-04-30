@@ -65,24 +65,24 @@ int git_lfs_cancel_get(void);
 namespace ovms {
 namespace fs = std::filesystem;
 
-namespace {
-std::atomic<int> g_activeLibgit2Guards{0};
+namespace libgit2 {
 
 /**
  * Builds the side-marker path used to track interrupted LFS operations.
- * The marker lives inside the repository directory as <repo>/.lfswip.
- * Created only once the repository directory exists (i.e., after git_clone
- * succeeds or during resume of an existing repository); creating it before
- * git_clone would leave the target directory non-empty and cause libgit2 to
- * reject the clone.
+ * The marker lives next to the repository directory as <repo>.lfswip
+ * (i.e. it is a SIBLING of the repo directory, not a file inside it).
+ * Example: repositoryPath "/opt/models/OV/model1" produces
+ * "/opt/models/OV/model1.lfswip".
  */
 fs::path getLfsWipMarkerPath(const std::string& repositoryPath) {
-    return fs::path(repositoryPath) / ".lfswip";
+    const fs::path repository = fs::path(repositoryPath);
+    return repository.parent_path() / (repository.filename().string() + ".lfswip");
 }
 
 /**
  * Creates or truncates the .lfswip marker file for the target repository.
  * Marker presence indicates clone/download interruption handling is in progress.
+ * Returns true on success, false on filesystem error.
  */
 bool createLfsWipMarker(const std::string& repositoryPath) {
     const fs::path markerPath = getLfsWipMarkerPath(repositoryPath);
@@ -107,6 +107,11 @@ void removeLfsWipMarker(const std::string& repositoryPath) {
         SPDLOG_WARN("Failed to remove .lfswip marker {}: {}", markerPath.string(), ec.message());
     }
 }
+
+}  // namespace libgit2
+
+namespace {
+std::atomic<int> g_activeLibgit2Guards{0};
 
 /**
  * Sets the LFS (Large File Storage) cancellation flag.
@@ -1091,7 +1096,7 @@ Status mapRepositoryOpenFailureToStatus(const GitRepositoryGuard& repoGuard) {
  */
 ResumeCandidates buildResumeCandidates(git_repository* repo, const std::string& downloadPath) {
     ResumeCandidates candidates;
-    candidates.hasWipMarker = hasLfsWipMarker(downloadPath);
+    candidates.hasWipMarker = libgit2::hasLfsWipMarker(downloadPath);
     candidates.hasLfsErrorFile = libgit2::hasLfsErrorFile(downloadPath);
 
     // Checking if the download was partially finished for any files in repository,
@@ -1167,8 +1172,8 @@ Status resumeExistingRepository(git_repository* repo,
     const std::string& downloadPath,
     const ResumeCandidates& candidates,
     const std::function<Status(bool)>& checkRepositoryStatusFn) {
-    if (!createLfsWipMarker(downloadPath)) {
-        SPDLOG_WARN("Failed to create .lfswip marker before pull resume at {}", getLfsWipMarkerPath(downloadPath).string());
+    if (!libgit2::createLfsWipMarker(downloadPath)) {
+        SPDLOG_WARN("Failed to create .lfswip marker before pull resume at {}", libgit2::getLfsWipMarkerPath(downloadPath).string());
     }
 
     printResumeCandidates(candidates);
@@ -1179,8 +1184,8 @@ Status resumeExistingRepository(git_repository* repo,
             SPDLOG_INFO("Model download resume cancelled by shutdown request before resuming LFS file: {}. Re-run the same command to resume.", p.string());
             return StatusCode::HF_GIT_CLONE_CANCELLED;
         }
-        if (!createLfsWipMarker(downloadPath)) {
-            SPDLOG_WARN("Failed to refresh .lfswip marker before pull resume at {}", getLfsWipMarkerPath(downloadPath).string());
+        if (!libgit2::createLfsWipMarker(downloadPath)) {
+            SPDLOG_WARN("Failed to refresh .lfswip marker before pull resume at {}", libgit2::getLfsWipMarkerPath(downloadPath).string());
         }
         std::cout << " Resuming " << p.string() << "...\n";
         std::string path = p.string();
@@ -1220,7 +1225,7 @@ Status resumeExistingRepository(git_repository* repo,
     }
     SPDLOG_DEBUG("Model repository status check passed after resuming download.");
 
-    removeLfsWipMarker(downloadPath);
+    libgit2::removeLfsWipMarker(downloadPath);
     return StatusCode::OK;
 }
 
@@ -1286,11 +1291,9 @@ Status executeClone(const std::string& downloadPath, const std::string& passRepo
     const char* url = passRepoUrl.c_str();
     const char* path = downloadPath.c_str();
     SPDLOG_TRACE("Starting git clone to: {}", path);
-    // Note: .lfswip marker is intentionally NOT created before git_clone.
-    // libgit2 requires the target directory to be empty or non-existent;
-    // a marker file inside would make git_clone fail. Interruption during
-    // the initial clone is still detected on a re-run via leftover LFS
-    // pointer files in the partial repository.
+    if (!libgit2::createLfsWipMarker(downloadPath)) {
+        SPDLOG_WARN("Failed to create .lfswip marker before clone at {}", libgit2::getLfsWipMarkerPath(downloadPath).string());
+    }
     setLfsCancelRequested(0); /* reset for this operation */
     int error = git_clone(&clonedRepo, url, path, &cloneOptions);
     SPDLOG_TRACE("Ended git clone");
@@ -1337,7 +1340,7 @@ Status finalizeAfterClone(const std::string& downloadPath,
         return status;
     }
 
-    removeLfsWipMarker(downloadPath);
+    libgit2::removeLfsWipMarker(downloadPath);
     return StatusCode::OK;
 }
 
