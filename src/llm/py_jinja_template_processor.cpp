@@ -40,7 +40,7 @@ bool PyJinjaTemplateProcessor::applyChatTemplate(PyJinjaTemplateProcessor& templ
         output = "Error: Chat template not loaded correctly, so it cannot be applied";
         return false;
     }
-
+    SPDLOG_DEBUG("Before chat template: \n {}", requestBody);
     py::gil_scoped_acquire acquire;
     try {
         auto locals = py::dict("request_body"_a = requestBody, "chat_template"_a = templateProcessor.chatTemplate->getObject(),

@@ -22,6 +22,7 @@
 #pragma warning(disable : 4005 4309 6001 6385 6386 6326 6011 4005 4456 6246 6313)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#include "absl/strings/str_cat.h"
 #include "mediapipe/framework/calculator_graph.h"
 #include <rapidjson/document.h>
 #include <rapidjson/prettywriter.h>
@@ -209,7 +210,7 @@ absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecution
             inputText = getProperties()->tokenizer.apply_chat_template(chatHistory, addGenerationPrompt, {}, tools, chatTemplateKwargs);
         } catch (const std::exception& e) {
             SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Failed to apply chat template: {}", e.what());
-            return absl::Status(absl::StatusCode::kInvalidArgument, "Failed to apply chat template. The model either does not have chat template or has an invalid one.");
+            return absl::Status(absl::StatusCode::kInvalidArgument, absl::StrCat("Failed to apply chat template: ", e.what()));
         }
 #endif
         if (inputText.size() == 0) {
@@ -241,7 +242,7 @@ absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecution
                 inputText = getProperties()->tokenizer.apply_chat_template(chatHistory, addGenerationPrompt, {}, tools, chatTemplateKwargs);
             } catch (const std::exception& e) {
                 SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Failed to apply chat template: {}", e.what());
-                return absl::Status(absl::StatusCode::kInvalidArgument, "Failed to apply chat template. The model either does not have chat template or has an invalid one.");
+                return absl::Status(absl::StatusCode::kInvalidArgument, absl::StrCat("Failed to apply chat template: ", e.what()));
             }
 #endif
             if (inputText.size() == 0) {
