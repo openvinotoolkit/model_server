@@ -30,7 +30,7 @@ from typing_extensions import TypedDict
 from tests.functional.utils.logger import get_logger
 from tests.functional.utils.process import Process
 from tests.functional.utils.test_framework import generate_test_object_name
-from ovms.config import docker_client_timeout, test_build_log_url
+from tests.functional.config import docker_client_timeout
 from tests.functional.constants.core import CONTAINER_STATUS_RUNNING
 
 logger = get_logger(__name__)
@@ -290,8 +290,6 @@ class DockerContainer(metaclass=ABCMeta):
         self, specific_str: str, acceptable_logs_length_trigger: int = 0, retry_kwargs: dict = None, **kwargs
     ):
         args = [specific_str, acceptable_logs_length_trigger]
-        link = "{}artifact/test_log/{}.log".format(test_build_log_url, self.name)
-        logger.info("Log will be saved at: {}".format(link))
         getting_logs_retry = self.GETTING_LOGS_RETRY.copy()
         if retry_kwargs:
             getting_logs_retry.update(retry_kwargs)

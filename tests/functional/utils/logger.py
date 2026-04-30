@@ -27,7 +27,7 @@ from typing import Generator, List, Tuple, Union, cast
 from tests.functional.constants.os_type import OsType, get_host_os
 from tests.functional.utils.helpers import get_xdist_worker_count
 
-from ovms import config
+from tests.functional import config
 
 
 SEPARATOR = "=" * 20

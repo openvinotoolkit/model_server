@@ -15,6 +15,8 @@
 #
 
 import os
+import re
+from pathlib import Path
 
 from tests.functional.constants.os_type import OsType
 from tests.functional.constants.target_device import TargetDevice
@@ -233,6 +235,9 @@ run_ovms_with_opencl_trace = get_bool("TT_RUN_OVMS_WITH_OPENCL_TRACE", False)
 """ TT_XDIST_WORKERS - number of workers """
 xdist_workers = get_int("TT_XDIST_WORKERS", 0)
 
+""" TT_DOCKER_CLIENT_TIMEOUT - Docker client timeout"""
+docker_client_timeout = get_int("TT_DOCKER_CLIENT_TIMEOUT", 120)
+
 """ TT_SERVER_ADDRESS - OVMS server address"""
 server_address = os.environ.get("TT_SERVER_ADDRESS", "localhost")
 
@@ -318,3 +323,33 @@ c_api_wrapper_dir = get_path("TT_C_API_WRAPPER_DIR", os.path.join("~", "ovms_c_a
 
 """ TT_OVMS_FILE_LOCKS_DIR """
 ovms_file_locks_dir = get_path("TT_OVMS_FILE_LOCKS_DIR", os.path.join("~", "ovms_locks"))
+
+""" TT_USE_LEGACY_MODELS """
+use_legacy_models = get_bool("TT_USE_LEGACY_MODELS", True)
+
+
+class StrippingLists:
+    DEFAULT_SENSITIVE_KEYS_TO_BE_MASKED = [
+        r"(?!zabbix_operator_initial_).*pass(word)?",
+        r".*client_id",
+        r".*(access)?(_)?(?<!ssh_)key(?!s|_path)",
+        r"id_token",
+        r"Authorization",
+        r"database_url",
+        r"gmail_",
+    ]
+
+
+""" Fields for logger """
+host_os_user = os.environ.get("TT_HOST_OS_USER", "root")
+log_username = os.environ.get("TT_LOG_USERNAME", False)
+sensitive_keys = get_list("TT_SENSITIVE_KEYS", fallback=StrippingLists.DEFAULT_SENSITIVE_KEYS_TO_BE_MASKED)
+sensitive_keys_to_be_masked = re.compile("|".join(sensitive_keys), re.IGNORECASE)
+strip_sensitive_data = get_bool("TT_STRIP_SENSITIVE_DATA", False)
+logging_level = os.environ.get("TT_LOGGING_LEVEL", "INFO")
+logger_format = "{}%(asctime)s {}- %(name)s - %(levelname)s: %(message)s".format
+
+"""TEST_LOG_DIR - directory path where all logs are stored, default test_log"""
+test_log_directory = get_path("TEST_LOG_DIR", Path().absolute() / "test_log")
+Path(test_log_directory).mkdir(exist_ok=True, parents=True)
+test_log_directory = str(test_log_directory)

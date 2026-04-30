@@ -23,7 +23,7 @@ import numpy as np
 from dateutil import parser
 
 from tests.functional.utils.logger import get_logger
-from ovms.config import artifacts_dir, test_build_log_url
+from tests.functional.config import artifacts_dir
 
 logger = get_logger(__name__)
 
@@ -96,8 +96,7 @@ class DockerResourceMonitor(ResourceMonitor):
             writer = csv.DictWriter(csvfile, fieldnames=DockerResourceMonitor.FIELDS)
             writer.writeheader()
             writer.writerows(self.rows)
-        url = Path(test_build_log_url, "artifact", "test_log", log_path.name)
-        logger.info(f"Logs saved: {url}")
+        return log_path
 
     def plot_fo_file(self, x, y, field, filename):
         pass  # Uncomment when fixed regressions
