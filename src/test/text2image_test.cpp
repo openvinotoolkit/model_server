@@ -1496,5 +1496,115 @@ TEST(Text2ImageTest, ResponseFromOvTensorBatch3) {
     uint16_t n = 3;
     testResponseFromOvTensor(n);
 }
+// ===================== LoRA Proto Parsing Tests =====================
+
+TEST(ImageGenCalculatorOptionsTest, LoraAdaptersAbsolutePath) {
+#ifdef _WIN32
+    const std::string dummyLocation = dummy_model_location;
+#else
+    const std::string dummyLocation = "/ovms/src/test/dummy";
+#endif
+    std::ostringstream oss;
+    oss << R"pb(
+            name: "ImageGenExecutor"
+            calculator: "ImageGenCalculator"
+            input_stream: "HTTP_REQUEST_PAYLOAD:input"
+            input_side_packet: "IMAGE_GEN_NODE_RESOURCES:pipes"
+            output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+            node_options: {
+                  [type.googleapis.com / mediapipe.ImageGenCalculatorOptions]: {
+                    models_path: ")pb"
+    << dummyLocation;
+    oss << R"(")";
+    oss << R"pb(
+            lora_adapters { alias: "pokemon" path: "/absolute/path/to/lora.safetensors" } # Shariar00/stable-diffusion-v1-5_Finetune_Custom_Fashion_dataset_v1.0
+            lora_adapters { alias: "anime" path: "/another/path/weights.safetensors" alpha: 0.5 }
+          }
+                    }
+)pb";
+    auto nodePbtxt = oss.str();
+    auto node = mediapipe::ParseTextProtoOrDie<CalculatorGraphConfig::Node>(nodePbtxt);
+    const std::string graphPath = "";
+    auto nodeOptions = node.node_options(0);
+    auto imageGenArgsOrStatus = prepareImageGenPipelineArgs(nodeOptions, graphPath);
+    ASSERT_TRUE(std::holds_alternative<ImageGenPipelineArgs>(imageGenArgsOrStatus));
+    auto imageGenArgs = std::get<ImageGenPipelineArgs>(imageGenArgsOrStatus);
+    ASSERT_EQ(imageGenArgs.loraAdapters.size(), 2);
+    EXPECT_EQ(imageGenArgs.loraAdapters[0].alias, "pokemon");
+    EXPECT_EQ(imageGenArgs.loraAdapters[0].path, "/absolute/path/to/lora.safetensors");
+    EXPECT_FLOAT_EQ(imageGenArgs.loraAdapters[0].alpha, 1.0f);
+    EXPECT_EQ(imageGenArgs.loraAdapters[1].alias, "anime");
+    EXPECT_EQ(imageGenArgs.loraAdapters[1].path, "/another/path/weights.safetensors");
+    EXPECT_FLOAT_EQ(imageGenArgs.loraAdapters[1].alpha, 0.5f);
+}
+
+TEST(ImageGenCalculatorOptionsTest, LoraAdaptersRelativePath) {
+#ifdef _WIN32
+    const std::string dummyLocation = dummy_model_location;
+#else
+    const std::string dummyLocation = "/ovms/src/test/dummy";
+#endif
+    std::ostringstream oss;
+    oss << R"pb(
+            name: "ImageGenExecutor"
+            calculator: "ImageGenCalculator"
+            input_stream: "HTTP_REQUEST_PAYLOAD:input"
+            input_side_packet: "IMAGE_GEN_NODE_RESOURCES:pipes"
+            output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+            node_options: {
+                  [type.googleapis.com / mediapipe.ImageGenCalculatorOptions]: {
+                    models_path: ")pb"
+    << dummyLocation;
+    oss << R"(")";
+    oss << R"pb(
+            lora_adapters { alias: "pokemon" path: "loras/org/repo/model.safetensors" }
+          }
+                    }
+)pb";
+    auto nodePbtxt = oss.str();
+    auto node = mediapipe::ParseTextProtoOrDie<CalculatorGraphConfig::Node>(nodePbtxt);
+    const std::string graphPath = "/ovms/graph_dir";
+    auto nodeOptions = node.node_options(0);
+    auto imageGenArgsOrStatus = prepareImageGenPipelineArgs(nodeOptions, graphPath);
+    ASSERT_TRUE(std::holds_alternative<ImageGenPipelineArgs>(imageGenArgsOrStatus));
+    auto imageGenArgs = std::get<ImageGenPipelineArgs>(imageGenArgsOrStatus);
+    ASSERT_EQ(imageGenArgs.loraAdapters.size(), 1);
+    EXPECT_EQ(imageGenArgs.loraAdapters[0].alias, "pokemon");
+    EXPECT_EQ(imageGenArgs.loraAdapters[0].path, "/ovms/graph_dir/loras/org/repo/model.safetensors");
+    EXPECT_FLOAT_EQ(imageGenArgs.loraAdapters[0].alpha, 1.0f);
+}
+
+TEST(ImageGenCalculatorOptionsTest, NoLoraAdaptersProducesEmptyVector) {
+#ifdef _WIN32
+    const std::string dummyLocation = dummy_model_location;
+#else
+    const std::string dummyLocation = "/ovms/src/test/dummy";
+#endif
+    std::ostringstream oss;
+    oss << R"pb(
+            name: "ImageGenExecutor"
+            calculator: "ImageGenCalculator"
+            input_stream: "HTTP_REQUEST_PAYLOAD:input"
+            input_side_packet: "IMAGE_GEN_NODE_RESOURCES:pipes"
+            output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+            node_options: {
+                  [type.googleapis.com / mediapipe.ImageGenCalculatorOptions]: {
+                    models_path: ")pb"
+    << dummyLocation;
+    oss << R"(")";
+    oss << R"pb(
+        }
+        }
+    )pb";
+    auto nodePbtxt = oss.str();
+    auto node = mediapipe::ParseTextProtoOrDie<CalculatorGraphConfig::Node>(nodePbtxt);
+    const std::string graphPath = "";
+    auto nodeOptions = node.node_options(0);
+    auto imageGenArgsOrStatus = prepareImageGenPipelineArgs(nodeOptions, graphPath);
+    ASSERT_TRUE(std::holds_alternative<ImageGenPipelineArgs>(imageGenArgsOrStatus));
+    auto imageGenArgs = std::get<ImageGenPipelineArgs>(imageGenArgsOrStatus);
+    ASSERT_TRUE(imageGenArgs.loraAdapters.empty());
+}
+
 // TODO:
 // -> test for all unhandled OpenAI fields define what to do - ignore/error imageVariation

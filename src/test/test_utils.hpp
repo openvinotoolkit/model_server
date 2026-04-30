@@ -787,6 +787,11 @@ void SetUpServerForDownloadWithDraft(std::unique_ptr<std::thread>& t, ovms::Serv
  */
 void SetUpServerForDownloadAndStartGGUF(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& ggufFilename, std::string& sourceModel, std::string& downloadPath, std::string& task, int timeoutSeconds = 4 * SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS);
 /*
+ *  starts loading OVMS on separate thread but waits until it is shutdowned or model is downloaded and check if model is downloaded in ovms
+ *  --pull --source_model org/model --model_repository_path /models --task image_generation --source_loras alias=org/repo
+ */
+void SetUpServerForDownloadWithLoras(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& source_model, std::string& download_path, std::string& task, std::string& source_loras, int expected_code = EXIT_SUCCESS, int timeoutSeconds = 4 * SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS);
+/*
  *  starts loading OVMS on separate thread but waits until it is shutdowned or model is downloaded and check if model is started in ovms
  *  --source_model OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov  --model_repository_path /models
  */

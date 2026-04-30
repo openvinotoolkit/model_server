@@ -86,6 +86,11 @@ parser_image_generation.add_argument('--default_resolution', default="", help='D
 parser_image_generation.add_argument('--max_num_images_per_prompt', type=int, default=0, help='Max allowed number of images client is allowed to request for a given prompt', dest='max_num_images_per_prompt')
 parser_image_generation.add_argument('--default_num_inference_steps', type=int, default=0, help='Default number of inference steps when not specified by client', dest='default_num_inference_steps')
 parser_image_generation.add_argument('--max_num_inference_steps', type=int, default=0, help='Max allowed number of inference steps client is allowed to request for a given prompt', dest='max_num_inference_steps')
+parser_image_generation.add_argument('--source_loras', default=None,
+    help='LoRA adapters to apply. Format: alias1=org1/repo1,alias2=org2/repo2@lora_file.safetensors '
+         'where @filename is optional and specifies which .safetensors file to use from the downloaded repo '
+         '(auto-detected when repo contains exactly one). Only for image_generation task.',
+    dest='source_loras')
 
 parser_text2speech = subparsers.add_parser('text2speech', help='export model for text2speech endpoint')
 add_common_arguments(parser_text2speech)
@@ -339,6 +344,9 @@ node: {
       default_num_inference_steps: {{default_num_inference_steps}},{% endif %}
       {%- if max_num_inference_steps > 0 %}
       max_num_inference_steps: {{max_num_inference_steps}},{% endif %}
+      {%- for lora in lora_adapters %}
+      lora_adapters { alias: "{{lora.alias}}" path: "{{lora.path}}" }
+      {%- endfor %}
     }
   }
 }"""
@@ -616,7 +624,7 @@ def export_rerank_model(model_repository_path, source_model, model_name, precisi
     add_servable_to_config(config_file_path, model_name, os.path.relpath(os.path.join(model_repository_path, model_name), os.path.dirname(config_file_path)))
 
 
-def export_image_generation_model(model_repository_path, source_model, model_name, precision, task_parameters, config_file_path, num_streams):
+def export_image_generation_model(model_repository_path, source_model, model_name, precision, task_parameters, config_file_path, num_streams, source_loras):
     model_path = "./"
     target_path = os.path.join(model_repository_path, model_name)
     model_index_path = os.path.join(target_path, 'model_index.json')
@@ -628,6 +636,41 @@ def export_image_generation_model(model_repository_path, source_model, model_nam
         print(f'optimum cli command: {optimum_command}')
         if os.system(optimum_command):
             raise ValueError("Failed to export image generation model", source_model)
+
+    # Download and resolve LoRA adapters
+    lora_adapters = []
+    if source_loras:
+        from huggingface_hub import snapshot_download
+        entries = source_loras.split(',')
+        for entry in entries:
+            entry = entry.strip()
+            if '=' in entry:
+                alias, repo_and_file = entry.split('=', 1)
+            else:
+                repo_and_file = entry
+                alias = entry.split('/')[-1] if '/' in entry else entry
+            safetensors_file = ''
+            if '@' in repo_and_file:
+                repo, safetensors_file = repo_and_file.rsplit('@', 1)
+            else:
+                repo = repo_and_file
+            lora_dir = os.path.join(target_path, 'loras', repo)
+            if not os.path.isdir(lora_dir):
+                print(f"Downloading LoRA adapter: {repo} to {lora_dir}")
+                snapshot_download(repo_id=repo, local_dir=lora_dir)
+            else:
+                print(f"LoRA adapter directory already exists: {lora_dir}")
+            if not safetensors_file:
+                st_files = [f for f in os.listdir(lora_dir) if f.endswith('.safetensors')]
+                if len(st_files) == 0:
+                    raise ValueError(f"No .safetensors files found in LoRA adapter: {repo}")
+                if len(st_files) > 1:
+                    raise ValueError(f"Multiple .safetensors files in LoRA adapter: {repo}. Use @filename to specify.")
+                safetensors_file = st_files[0]
+            lora_path = 'loras/' + repo + '/' + safetensors_file
+            lora_adapters.append({'alias': alias, 'path': lora_path})
+            print(f"LoRA adapter: {alias} -> {lora_path}")
+    task_parameters['lora_adapters'] = lora_adapters
 
     plugin_config = {}
     assert num_streams >= 0, "num_streams should be a non-negative integer"
@@ -711,4 +754,4 @@ elif args['task'] == 'image_generation':
         'max_num_inference_steps',
         'extra_quantization_params'
     ]}
-    export_image_generation_model(args['model_repository_path'], args['source_model'], args['model_name'], args['precision'], template_parameters, args['config_file_path'], args['num_streams'])
+    export_image_generation_model(args['model_repository_path'], args['source_model'], args['model_name'], args['precision'], template_parameters, args['config_file_path'], args['num_streams'], args['source_loras'])

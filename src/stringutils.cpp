@@ -301,4 +301,20 @@ void escapeSpecialCharacters(std::string& text) {
     text = std::move(escaped);
 }
 
+bool isLocalFilePath(const std::string& path) {
+    if (path.empty()) {
+        return false;
+    }
+    if (path[0] == '/') {
+        return true;
+    }
+    if (path.size() >= 2 && (path.substr(0, 2) == "./" || path.substr(0, 2) == ".\\")) {
+        return true;
+    }
+    if (path.size() >= 3 && std::isalpha(static_cast<unsigned char>(path[0])) && path[1] == ':' && (path[2] == '\\' || path[2] == '/')) {
+        return true;
+    }
+    return false;
+}
+
 }  // namespace ovms

@@ -414,7 +414,8 @@ std::variant<absl::Status, ov::AnyMap> getImageGenerationRequestOptions(const ra
         "size", "height", "width",
         "n", "num_images_per_prompt",
         "response_format",  // allowed, however only b64_json is supported
-        "num_inference_steps", "rng_seed", "strength", "guidance_scale", "max_sequence_length", "model"};
+        "num_inference_steps", "rng_seed", "strength", "guidance_scale", "max_sequence_length", "model",
+        "lora_weights"};  // per-request LoRA weight overrides
     for (auto it = parser.MemberBegin(); it != parser.MemberEnd(); ++it) {
         if (acceptedFields.find(it->name.GetString()) == acceptedFields.end()) {
             return absl::InvalidArgumentError(absl::StrCat("Unhandled parameter: ", it->name.GetString()));
@@ -532,7 +533,8 @@ std::variant<absl::Status, ov::AnyMap> getImageEditRequestOptions(const ovms::Mu
         "size", "height", "width",
         "n", "num_images_per_prompt",
         "response_format",  // allowed, however only b64_json is supported
-        "num_inference_steps", "rng_seed", "strength", "guidance_scale", "max_sequence_length", "model"};
+        "num_inference_steps", "rng_seed", "strength", "guidance_scale", "max_sequence_length", "model",
+        "lora_weights"};  // per-request LoRA weight overrides
     auto fieldNames = parser.getAllFieldNames();
     for (const auto& fieldName : fieldNames) {
         if (acceptedFields.find(fieldName) == acceptedFields.end()) {

@@ -73,6 +73,11 @@ public:
             return StatusCode::INTERNAL_ERROR;
         }
         imageGenPipelinesMap.insert(std::pair<std::string, std::shared_ptr<ImageGenerationPipelines>>(nodeName, std::move(servable)));
+        // Register LoRA aliases for routing
+        const auto& loraAdapters = std::get<ImageGenPipelineArgs>(statusOrArgs).loraAdapters;
+        for (const auto& adapter : loraAdapters) {
+            sidePackets.loraAliases.push_back(adapter.alias);
+        }
         return StatusCode::OK;
     }
 };

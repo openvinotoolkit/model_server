@@ -37,6 +37,7 @@ class PythonBackend;
 
 class MediapipeFactory {
     std::map<std::string, std::shared_ptr<MediapipeGraphDefinition>> definitions;
+    std::map<std::string, std::string> loraAliases;  // alias -> real graph definition name
     mutable std::shared_mutex definitionsMtx;
     PythonBackend* pythonBackend{nullptr};
 
@@ -55,6 +56,8 @@ public:
         const std::string& name) const;
 
     MediapipeGraphDefinition* findDefinitionByName(const std::string& name) const;
+    void registerLoraAlias(const std::string& alias, const std::string& graphName);
+    void clearLoraAliases(const std::string& graphName);
     Status reloadDefinition(const std::string& pipelineName,
         const MediapipeGraphConfig& config,
         const ServableNameChecker& checker);

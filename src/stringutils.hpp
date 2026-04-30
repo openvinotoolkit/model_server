@@ -123,4 +123,6 @@ bool stringsOverlap(const std::string& lhs, const std::string& rhs);
 
 void escapeSpecialCharacters(std::string& text);
 
+bool isLocalFilePath(const std::string& path);
+
 }  // namespace ovms

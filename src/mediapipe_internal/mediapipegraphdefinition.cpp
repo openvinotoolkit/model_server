@@ -368,6 +368,8 @@ Status MediapipeGraphDefinition::initializeNodes() {
             }
         }
     }
+    // Register LoRA aliases for routing from initialized image gen pipelines
+    this->loraAliases_ = sidePacketMaps.loraAliases;
     success = true;
     return StatusCode::OK;
 }

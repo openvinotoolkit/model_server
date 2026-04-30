@@ -794,6 +794,27 @@ void SetUpServerForDownloadWithDraft(std::unique_ptr<std::thread>& t, ovms::Serv
     EnsureServerModelDownloadFinishedWithTimeout(server, timeoutSeconds);
 }
 
+void SetUpServerForDownloadWithLoras(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& source_model, std::string& download_path, std::string& task, std::string& source_loras, int expected_code, int timeoutSeconds) {
+    server.setShutdownRequest(0);
+    char* argv[] = {(char*)"ovms",
+        (char*)"--pull",
+        (char*)"--source_model",
+        (char*)source_model.c_str(),
+        (char*)"--model_repository_path",
+        (char*)download_path.c_str(),
+        (char*)"--task",
+        (char*)task.c_str(),
+        (char*)"--source_loras",
+        (char*)source_loras.c_str()};
+
+    int argc = 10;
+    t.reset(new std::thread([&argc, &argv, &server, expected_code]() {
+        EXPECT_EQ(expected_code, server.start(argc, argv));
+    }));
+
+    EnsureServerModelDownloadFinishedWithTimeout(server, timeoutSeconds);
+}
+
 void SetUpServerForDownloadAndStart(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& source_model, std::string& download_path, std::string& task, int timeoutSeconds) {
     server.setShutdownRequest(0);
     std::string port = "9133";
