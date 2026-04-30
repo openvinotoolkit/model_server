@@ -773,3 +773,19 @@ TEST(TFSRestParserColumn, RemoveUnnecessaryInputs_UnexpectedScalarInRequest) {
     ASSERT_EQ(parser.getProto().inputs().count("m"), 1);  // missing in endpoint metadata but exists in request, expect exists after conversion
     ASSERT_EQ(parser.getProto().inputs().size(), 3);
 }
+
+static std::string makeNestedArrayJson(int depth) {
+    return std::string(depth, '[') + "0" + std::string(depth, ']');
+}
+
+TEST(TFSRestParserColumn, NestingDepthExceeded_ColumnNamedInputs) {
+    TFSRestParser parser(prepareTensors({{"i", {1}}}));
+    std::string request = R"({"signature_name":"","inputs":{"i":)" + makeNestedArrayJson(200) + "}}";
+    EXPECT_EQ(parser.parse(request.c_str()), StatusCode::REST_COULD_NOT_PARSE_INPUT);
+}
+
+TEST(TFSRestParserColumn, NestingDepthExceeded_ColumnNoNamedInputs) {
+    TFSRestParser parser(prepareTensors({{"i", {1}}}));
+    std::string request = R"({"signature_name":"","inputs":)" + makeNestedArrayJson(200) + "}";
+    EXPECT_EQ(parser.parse(request.c_str()), StatusCode::REST_COULD_NOT_PARSE_INPUT);
+}

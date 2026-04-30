@@ -1021,3 +1021,13 @@ TEST_F(KFSRestParserTest, parseNegativeBatch) {
         ASSERT_NE(status, StatusCode::OK) << "for value: " << replace;
     }
 }
+
+static std::string makeNestedArrayJson(int depth) {
+    return std::string(depth, '[') + "0" + std::string(depth, ']');
+}
+
+TEST_F(KFSRestParserTest, NestingDepthExceeded_FP32) {
+    std::string request = R"({"inputs":[{"name":"input0","shape":[1],"datatype":"FP32","data":)" + makeNestedArrayJson(200) + "}]}";
+    auto status = parser.parse(request.c_str());
+    EXPECT_EQ(status, StatusCode::REST_COULD_NOT_PARSE_INPUT);
+}

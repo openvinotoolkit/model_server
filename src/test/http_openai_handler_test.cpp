@@ -318,6 +318,40 @@ TEST_F(HttpOpenAIHandlerTest, JsonBodyValidButNotAnObject) {
     ASSERT_EQ(status.string(), "The file is not valid json - JSON body must be an object");
 }
 
+TEST_F(HttpOpenAIHandlerTest, JsonBodyExceedsNestingDepth_NestedObjects) {
+    // Deeply nested objects: {"a":{"a":{"a":...}}} - 200 levels
+    // Make it valid JSON by using key-value pairs
+    std::string requestBody;
+    for (int i = 0; i < 200; i++) {
+        requestBody += R"({"a":)";
+    }
+    requestBody += "{}";
+    for (int i = 0; i < 200; i++) {
+        requestBody += "}";
+    }
+
+    EXPECT_CALL(*writer, PartialReplyEnd()).Times(0);
+    EXPECT_CALL(*writer, PartialReply(::testing::_)).Times(0);
+    EXPECT_CALL(*writer, IsDisconnected()).Times(0);
+
+    auto status = handler->dispatchToProcessor("/v3/completions", requestBody, &response, comp, responseComponents, writer, multiPartParser);
+    ASSERT_EQ(status, ovms::StatusCode::JSON_INVALID);
+    ASSERT_EQ(status.string(), "The file is not valid json - JSON body exceeds maximum nesting depth");
+}
+
+TEST_F(HttpOpenAIHandlerTest, JsonBodyExceedsNestingDepth_NestedArrays) {
+    // Deeply nested arrays inside a valid object: {"model":"m","data":[[[...]]]}
+    std::string requestBody = R"({"model":"m","data":)" + std::string(200, '[') + "0" + std::string(200, ']') + "}";
+
+    EXPECT_CALL(*writer, PartialReplyEnd()).Times(0);
+    EXPECT_CALL(*writer, PartialReply(::testing::_)).Times(0);
+    EXPECT_CALL(*writer, IsDisconnected()).Times(0);
+
+    auto status = handler->dispatchToProcessor("/v3/completions", requestBody, &response, comp, responseComponents, writer, multiPartParser);
+    ASSERT_EQ(status, ovms::StatusCode::JSON_INVALID);
+    ASSERT_EQ(status.string(), "The file is not valid json - JSON body exceeds maximum nesting depth");
+}
+
 TEST_F(HttpOpenAIHandlerTest, GraphWithANameDoesNotExist) {
     std::string requestBody = R"(
         {

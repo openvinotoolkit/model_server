@@ -63,6 +63,7 @@
 #include "status.hpp"
 #include "stringutils.hpp"
 #include "timer.hpp"
+#include "utils/rapidjson_utils.hpp"
 
 #if (MEDIAPIPE_DISABLE == 0)
 #include "copyable_object_wrapper.hpp"
@@ -520,13 +521,17 @@ static Status createV3HttpPayload(
     } else if (isApplicationJson) {
         {
             OVMS_PROFILE_SCOPE("rapidjson parse");
-            parsedJson->Parse(request_body.c_str());
+            auto outcome = parseJsonWithDepthLimit(*parsedJson, request_body.c_str());
+            if (outcome == JsonParseOutcome::DepthExceeded) {
+                ensureJsonParserInErrorState(parsedJson);
+                return Status(StatusCode::JSON_INVALID, "JSON body exceeds maximum nesting depth");
+            }
+            if (outcome == JsonParseOutcome::ParseError) {
+                ensureJsonParserInErrorState(parsedJson);
+                return Status(StatusCode::JSON_INVALID, "Cannot parse JSON body");
+            }
         }
         OVMS_PROFILE_SCOPE("rapidjson validate");
-        if (parsedJson->HasParseError()) {
-            return Status(StatusCode::JSON_INVALID, "Cannot parse JSON body");
-        }
-
         if (!parsedJson->IsObject()) {
             return Status(StatusCode::JSON_INVALID, "JSON body must be an object");
         }
