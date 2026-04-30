@@ -337,7 +337,7 @@ client = OpenAI(
 )
 
 stream = client.responses.create(
-    model="meta-llama/Meta-Llama-3-8B-Instruct",
+    model="Qwen3-30B-A3B-Instruct-2507-int4-ov",
     input="Say this is a test",
     stream=True,
 )

@@ -18,6 +18,7 @@
 
 #include <cmath>
 #include <limits>
+#include <map>
 #include <memory>
 #include <stdexcept>
 #include <set>
@@ -44,6 +45,102 @@ namespace ovms {
 
 static constexpr const char* OUTPUT_ITEM_ID = "msg-0";
 static constexpr const char* REASONING_ITEM_ID = "rs-0";
+
+static absl::StatusOr<std::string> parseResponsesTextField(const rapidjson::Value& item, const char* itemType, const char* fieldName) {
+    auto it = item.FindMember(fieldName);
+    if (it == item.MemberEnd() || !it->value.IsString()) {
+        return absl::InvalidArgumentError(absl::StrCat(itemType, " requires a valid ", fieldName, " field"));
+    }
+    return std::string(it->value.GetString(), it->value.GetStringLength());
+}
+
+static absl::StatusOr<std::string> serializeResponsesJsonField(const rapidjson::Value& item, const char* itemType, const char* fieldName) {
+    auto it = item.FindMember(fieldName);
+    if (it == item.MemberEnd() || it->value.IsNull()) {
+        return std::string("{}");
+    }
+    if (it->value.IsString()) {
+        return std::string(it->value.GetString(), it->value.GetStringLength());
+    }
+    if (!it->value.IsObject() && !it->value.IsArray()) {
+        return absl::InvalidArgumentError(absl::StrCat(itemType, " requires ", fieldName, " to be a string, object or array"));
+    }
+
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+    it->value.Accept(writer);
+    return std::string(buffer.GetString(), buffer.GetSize());
+}
+
+static absl::StatusOr<std::string> parseResponsesContentValue(const rapidjson::Value& value, size_t messageIndex,
+    std::optional<std::string> allowedLocalMediaPath, std::optional<std::vector<std::string>> allowedMediaDomains,
+    ImageHistory& imageHistory) {
+    if (value.IsString()) {
+        return std::string(value.GetString(), value.GetStringLength());
+    }
+
+    if (!value.IsArray()) {
+        return absl::InvalidArgumentError("input item content must be a string or array");
+    }
+    if (value.GetArray().Size() == 0) {
+        return absl::InvalidArgumentError("Invalid message structure - content array is empty");
+    }
+
+    std::string contentText;
+    for (const auto& contentItem : value.GetArray()) {
+        if (!contentItem.IsObject()) {
+            return absl::InvalidArgumentError("input content items must be objects");
+        }
+        auto contentObj = contentItem.GetObject();
+        auto typeIt = contentObj.FindMember("type");
+        if (typeIt == contentObj.MemberEnd() || !typeIt->value.IsString()) {
+            return absl::InvalidArgumentError("input content item type is missing or invalid");
+        }
+
+        const std::string type = typeIt->value.GetString();
+        if (type == "input_text" || type == "output_text" || type == "text") {
+            auto textStatus = parseResponsesTextField(contentObj, type.c_str(), "text");
+            if (!textStatus.ok()) {
+                return textStatus.status();
+            }
+            contentText += textStatus.value();
+        } else if (type == "refusal") {
+            auto refusalStatus = parseResponsesTextField(contentObj, "refusal", "refusal");
+            if (!refusalStatus.ok()) {
+                return refusalStatus.status();
+            }
+            contentText += refusalStatus.value();
+        } else if (type == "input_image") {
+            std::string imageUrl;
+            auto imageUrlIt = contentObj.FindMember("image_url");
+            if (imageUrlIt == contentObj.MemberEnd()) {
+                return absl::InvalidArgumentError("input_image requires image_url field");
+            }
+            if (imageUrlIt->value.IsString()) {
+                imageUrl = imageUrlIt->value.GetString();
+            } else if (imageUrlIt->value.IsObject()) {
+                auto imageUrlObj = imageUrlIt->value.GetObject();
+                auto urlIt = imageUrlObj.FindMember("url");
+                if (urlIt == imageUrlObj.MemberEnd() || !urlIt->value.IsString()) {
+                    return absl::InvalidArgumentError("input_image.image_url.url is missing or invalid");
+                }
+                imageUrl = urlIt->value.GetString();
+            } else {
+                return absl::InvalidArgumentError("input_image.image_url must be a string or object");
+            }
+
+            auto tensorResult = loadImage(imageUrl, allowedLocalMediaPath, allowedMediaDomains);
+            if (!tensorResult.ok()) {
+                return tensorResult.status();
+            }
+            imageHistory.push_back({messageIndex, tensorResult.value()});
+        } else {
+            return absl::InvalidArgumentError("Unsupported content type. Supported types are input_text, output_text, text and input_image.");
+        }
+    }
+
+    return contentText;
+}
 
 static std::string joinServerSideEvents(const std::vector<std::string>& events) {
     if (events.empty()) {
@@ -88,6 +185,57 @@ absl::Status OpenAIResponsesHandler::parseInput(std::optional<std::string> allow
             return absl::InvalidArgumentError("Messages array cannot be empty");
         }
 
+        std::map<std::string, std::string> toolNamesByCallId;
+        // Pre-scan: collect function_call items by call_id so we can emit each
+        // assistant{tool_calls:[call]} message immediately followed by its matching
+        // tool message. The gpt-oss/Harmony chat template renders only tool_calls[0]
+        // per assistant message and requires each tool message to be adjacent to its
+        // assistant tool-call message.
+        std::map<std::string, ov::genai::JsonContainer> pendingToolCalls;
+        std::vector<std::string> pendingToolCallOrder;
+        for (size_t k = 0; k < inputIt->value.GetArray().Size(); ++k) {
+            auto& scanItem = inputIt->value.GetArray()[k];
+            if (!scanItem.IsObject()) {
+                continue;
+            }
+            auto scanObj = scanItem.GetObject();
+            auto scanTypeIt = scanObj.FindMember("type");
+            if (scanTypeIt == scanObj.MemberEnd() || !scanTypeIt->value.IsString() ||
+                    std::string(scanTypeIt->value.GetString()) != "function_call") {
+                continue;
+            }
+            auto nameStatus = parseResponsesTextField(scanObj, "function_call", "name");
+            if (!nameStatus.ok()) {
+                return nameStatus.status();
+            }
+            auto callIdStatus = parseResponsesTextField(scanObj, "function_call", "call_id");
+            if (!callIdStatus.ok()) {
+                return callIdStatus.status();
+            }
+            auto argumentsStatus = serializeResponsesJsonField(scanObj, "function_call", "arguments");
+            if (!argumentsStatus.ok()) {
+                return argumentsStatus.status();
+            }
+            ov::genai::JsonContainer toolCall = ov::genai::JsonContainer::object();
+            toolCall["id"] = callIdStatus.value();
+            toolCall["type"] = "function";
+            toolCall["function"] = ov::genai::JsonContainer::object();
+            toolCall["function"]["name"] = nameStatus.value();
+            toolCall["function"]["arguments"] = argumentsStatus.value();
+            if (pendingToolCalls.emplace(callIdStatus.value(), toolCall).second) {
+                pendingToolCallOrder.push_back(callIdStatus.value());
+            }
+            toolNamesByCallId[callIdStatus.value()] = nameStatus.value();
+        }
+
+        auto emitAssistantWithSingleToolCall = [&](const ov::genai::JsonContainer& toolCall) {
+            request.chatHistory.push_back({});
+            request.chatHistory.last()["role"] = "assistant";
+            request.chatHistory.last()["content"] = "";
+            request.chatHistory.last()["tool_calls"] = ov::genai::JsonContainer::array();
+            request.chatHistory.last()["tool_calls"].push_back(toolCall);
+        };
+
         for (size_t i = 0; i < inputIt->value.GetArray().Size(); ++i) {
             auto& item = inputIt->value.GetArray()[i];
             if (!item.IsObject()) {
@@ -95,79 +243,204 @@ absl::Status OpenAIResponsesHandler::parseInput(std::optional<std::string> allow
             }
 
             auto itemObj = item.GetObject();
+            std::string itemType = "message";
+            auto typeIt = itemObj.FindMember("type");
+            if (typeIt != itemObj.MemberEnd()) {
+                if (!typeIt->value.IsString()) {
+                    return absl::InvalidArgumentError("input item type is invalid");
+                }
+                itemType = typeIt->value.GetString();
+            }
+
+            if (itemType == "function_call") {
+                // Already collected during pre-scan; emission is deferred until the
+                // matching function_call_output is seen so each assistant tool-call
+                // message is immediately followed by its tool result.
+                continue;
+            }
+
+            if (itemType == "function_call_output") {
+                auto callIdStatus = parseResponsesTextField(itemObj, "function_call_output", "call_id");
+                if (!callIdStatus.ok()) {
+                    return callIdStatus.status();
+                }
+                auto outputIt = itemObj.FindMember("output");
+                if (outputIt == itemObj.MemberEnd()) {
+                    return absl::InvalidArgumentError("function_call_output requires output field");
+                }
+                auto contentStatus = parseResponsesContentValue(outputIt->value, i, allowedLocalMediaPath, allowedMediaDomains, request.imageHistory);
+                if (!contentStatus.ok()) {
+                    return contentStatus.status();
+                }
+
+                std::string toolName;
+                auto explicitNameIt = itemObj.FindMember("name");
+                if (explicitNameIt != itemObj.MemberEnd() && explicitNameIt->value.IsString()) {
+                    toolName = explicitNameIt->value.GetString();
+                } else {
+                    auto toolNameIt = toolNamesByCallId.find(callIdStatus.value());
+                    if (toolNameIt != toolNamesByCallId.end()) {
+                        toolName = toolNameIt->second;
+                    }
+                }
+
+                // Emit the matching assistant tool-call message immediately before
+                // the tool message, so the chat template's adjacency requirement holds.
+                auto pendingIt = pendingToolCalls.find(callIdStatus.value());
+                if (pendingIt != pendingToolCalls.end()) {
+                    emitAssistantWithSingleToolCall(pendingIt->second);
+                    pendingToolCalls.erase(pendingIt);
+                }
+
+                request.chatHistory.push_back({});
+                request.chatHistory.last()["role"] = "tool";
+                request.chatHistory.last()["tool_call_id"] = callIdStatus.value();
+                request.chatHistory.last()["content"] = contentStatus.value();
+                if (!toolName.empty()) {
+                    request.chatHistory.last()["name"] = toolName;
+                }
+                continue;
+            }
+
+            if (itemType == "reasoning") {
+                std::string reasoningContent;
+                auto summaryIt = itemObj.FindMember("summary");
+                if (summaryIt != itemObj.MemberEnd() && summaryIt->value.IsArray()) {
+                    for (const auto& summaryItem : summaryIt->value.GetArray()) {
+                        if (!summaryItem.IsObject()) {
+                            continue;
+                        }
+                        auto textIt = summaryItem.GetObject().FindMember("text");
+                        if (textIt != summaryItem.GetObject().MemberEnd() && textIt->value.IsString()) {
+                            if (!reasoningContent.empty()) {
+                                reasoningContent += "\n";
+                            }
+                            reasoningContent += std::string(textIt->value.GetString(), textIt->value.GetStringLength());
+                        }
+                    }
+                }
+
+                if (!reasoningContent.empty()) {
+                    // Merge reasoning into the preceding assistant message if one exists.
+                    // This preserves the adjacency between an assistant tool-call message
+                    // and the subsequent tool message, which the chat template requires.
+                    if (!request.chatHistory.empty() && request.chatHistory.last().contains("role")) {
+                        auto lastRole = request.chatHistory.last()["role"].as_string();
+                        if (lastRole.has_value() && lastRole.value() == "assistant") {
+                            std::string existing;
+                            if (request.chatHistory.last().contains("content")) {
+                                auto c = request.chatHistory.last()["content"].as_string();
+                                if (c.has_value()) {
+                                    existing = c.value();
+                                }
+                            }
+                            request.chatHistory.last()["content"] = existing.empty() ? reasoningContent : (existing + "\n" + reasoningContent);
+                            continue;
+                        }
+                    }
+                    request.chatHistory.push_back({});
+                    request.chatHistory.last()["role"] = "assistant";
+                    request.chatHistory.last()["content"] = reasoningContent;
+                }
+                continue;
+            }
+
+            if (itemType != "message") {
+                return absl::InvalidArgumentError(absl::StrCat("Unsupported input item type: ", itemType));
+            }
+
             auto roleIt = itemObj.FindMember("role");
             if (roleIt == itemObj.MemberEnd() || !roleIt->value.IsString()) {
                 return absl::InvalidArgumentError("input item role is missing or invalid");
             }
 
-            request.chatHistory.push_back({});
-            request.chatHistory.last()["role"] = roleIt->value.GetString();
+            std::string role = roleIt->value.GetString();
 
+            std::string content;
             auto contentIt = itemObj.FindMember("content");
-            if (contentIt == itemObj.MemberEnd()) {
-                return absl::InvalidArgumentError("input item content is missing");
-            }
-
-            if (contentIt->value.IsString()) {
-                request.chatHistory.last()["content"] = contentIt->value.GetString();
-                continue;
-            }
-
-            if (!contentIt->value.IsArray()) {
-                return absl::InvalidArgumentError("input item content must be a string or array");
-            }
-            if (contentIt->value.GetArray().Size() == 0) {
-                return absl::InvalidArgumentError("Invalid message structure - content array is empty");
-            }
-
-            std::string contentText = "";
-            for (auto& contentItem : contentIt->value.GetArray()) {
-                if (!contentItem.IsObject()) {
-                    return absl::InvalidArgumentError("input content items must be objects");
+            if (contentIt != itemObj.MemberEnd()) {
+                auto contentStatus = parseResponsesContentValue(contentIt->value, i, allowedLocalMediaPath, allowedMediaDomains, request.imageHistory);
+                if (!contentStatus.ok()) {
+                    return contentStatus.status();
                 }
-                auto contentObj = contentItem.GetObject();
-                auto typeIt = contentObj.FindMember("type");
-                if (typeIt == contentObj.MemberEnd() || !typeIt->value.IsString()) {
-                    return absl::InvalidArgumentError("input content item type is missing or invalid");
-                }
+                content = contentStatus.value();
+            }
 
-                const std::string type = typeIt->value.GetString();
-                if (type == "input_text") {
-                    auto textIt = contentObj.FindMember("text");
-                    if (textIt == contentObj.MemberEnd() || !textIt->value.IsString()) {
-                        return absl::InvalidArgumentError("input_text requires a valid text field");
-                    }
-                    contentText = textIt->value.GetString();
-                } else if (type == "input_image") {
-                    std::string imageUrl;
-                    auto imageUrlIt = contentObj.FindMember("image_url");
-                    if (imageUrlIt == contentObj.MemberEnd()) {
-                        return absl::InvalidArgumentError("input_image requires image_url field");
-                    }
-                    if (imageUrlIt->value.IsString()) {
-                        imageUrl = imageUrlIt->value.GetString();
-                    } else if (imageUrlIt->value.IsObject()) {
-                        auto imageUrlObj = imageUrlIt->value.GetObject();
-                        auto urlIt = imageUrlObj.FindMember("url");
-                        if (urlIt == imageUrlObj.MemberEnd() || !urlIt->value.IsString()) {
-                            return absl::InvalidArgumentError("input_image.image_url.url is missing or invalid");
+            if (role == "assistant") {
+                auto toolCallsIt = itemObj.FindMember("tool_calls");
+                if (toolCallsIt != itemObj.MemberEnd() && toolCallsIt->value.IsArray()) {
+                    request.chatHistory.push_back({});
+                    request.chatHistory.last()["role"] = "assistant";
+                    request.chatHistory.last()["content"] = content;
+                    request.chatHistory.last()["tool_calls"] = rapidJsonValueToJsonContainer(toolCallsIt->value);
+
+                    for (const auto& toolCall : toolCallsIt->value.GetArray()) {
+                        if (!toolCall.IsObject()) {
+                            continue;
                         }
-                        imageUrl = urlIt->value.GetString();
-                    } else {
-                        return absl::InvalidArgumentError("input_image.image_url must be a string or object");
+                        auto idIt = toolCall.GetObject().FindMember("id");
+                        if (idIt != toolCall.GetObject().MemberEnd() && idIt->value.IsString()) {
+                            auto functionIt = toolCall.GetObject().FindMember("function");
+                            if (functionIt != toolCall.GetObject().MemberEnd() && functionIt->value.IsObject()) {
+                                auto nameIt = functionIt->value.GetObject().FindMember("name");
+                                if (nameIt != functionIt->value.GetObject().MemberEnd() && nameIt->value.IsString()) {
+                                    toolNamesByCallId[idIt->value.GetString()] = nameIt->value.GetString();
+                                }
+                            }
+                        }
                     }
-
-                    auto tensorResult = loadImage(imageUrl, allowedLocalMediaPath, allowedMediaDomains);
-                    if (!tensorResult.ok()) {
-                        return tensorResult.status();
-                    }
-                    request.imageHistory.push_back({i, tensorResult.value()});
-                } else {
-                    return absl::InvalidArgumentError("Unsupported content type. Supported types are input_text and input_image.");
+                    continue;
                 }
             }
 
-            request.chatHistory.last()["content"] = contentText;
+            if (role == "tool") {
+                std::string callId;
+                auto toolCallIdIt = itemObj.FindMember("tool_call_id");
+                if (toolCallIdIt != itemObj.MemberEnd() && toolCallIdIt->value.IsString()) {
+                    callId = toolCallIdIt->value.GetString();
+                } else {
+                    auto callIdIt = itemObj.FindMember("call_id");
+                    if (callIdIt != itemObj.MemberEnd() && callIdIt->value.IsString()) {
+                        callId = callIdIt->value.GetString();
+                    }
+                }
+
+                if (!callId.empty()) {
+                    std::string toolName;
+                    auto nameIt = itemObj.FindMember("name");
+                    if (nameIt != itemObj.MemberEnd() && nameIt->value.IsString()) {
+                        toolName = nameIt->value.GetString();
+                    } else {
+                        auto toolNameIt = toolNamesByCallId.find(callId);
+                        if (toolNameIt != toolNamesByCallId.end()) {
+                            toolName = toolNameIt->second;
+                        }
+                    }
+
+                    request.chatHistory.push_back({});
+                    request.chatHistory.last()["role"] = "tool";
+                    request.chatHistory.last()["tool_call_id"] = callId;
+                    request.chatHistory.last()["content"] = content;
+                    if (!toolName.empty()) {
+                        request.chatHistory.last()["name"] = toolName;
+                    }
+                    continue;
+                }
+            }
+
+            request.chatHistory.push_back({});
+            request.chatHistory.last()["role"] = role;
+            request.chatHistory.last()["content"] = content;
+        }
+
+        // Any function_calls without a matching function_call_output (e.g. the model
+        // just made tool calls and there are no results yet) are emitted at the end
+        // in original order, each as its own assistant message.
+        for (const auto& callId : pendingToolCallOrder) {
+            auto pendingIt = pendingToolCalls.find(callId);
+            if (pendingIt != pendingToolCalls.end()) {
+                emitAssistantWithSingleToolCall(pendingIt->second);
+            }
         }
     } else {
         return absl::InvalidArgumentError("input is not a string or array");
@@ -239,23 +512,120 @@ absl::Status OpenAIResponsesHandler::parseResponsesPart(std::optional<uint32_t> 
         Value messagesArray(kArrayType);
         for (size_t i = 0; i < request.chatHistory.size(); ++i) {
             Value msgObj(kObjectType);
-            auto role = request.chatHistory[i]["role"].as_string();
+            const auto& historyItem = request.chatHistory[i];
+            auto role = historyItem["role"].as_string();
             if (role.has_value()) {
                 msgObj.AddMember("role", Value(role.value().c_str(), alloc), alloc);
             }
-            auto content = request.chatHistory[i]["content"].as_string();
+            auto content = historyItem["content"].as_string();
             if (content.has_value()) {
                 msgObj.AddMember("content", Value(content.value().c_str(), alloc), alloc);
+            }
+            if (historyItem.contains("tool_call_id")) {
+                auto toolCallId = historyItem["tool_call_id"].as_string();
+                if (toolCallId.has_value()) {
+                    msgObj.AddMember("tool_call_id", Value(toolCallId.value().c_str(), alloc), alloc);
+                }
+            }
+            if (historyItem.contains("name")) {
+                auto name = historyItem["name"].as_string();
+                if (name.has_value()) {
+                    msgObj.AddMember("name", Value(name.value().c_str(), alloc), alloc);
+                }
+            }
+            if (historyItem.contains("tool_calls") && historyItem["tool_calls"].is_array()) {
+                Value toolCallsArray(kArrayType);
+                const auto& toolCalls = historyItem["tool_calls"];
+                for (size_t j = 0; j < toolCalls.size(); ++j) {
+                    const auto& toolCall = toolCalls[j];
+                    Value toolCallObj(kObjectType);
+
+                    if (toolCall.contains("id")) {
+                        auto id = toolCall["id"].as_string();
+                        if (id.has_value()) {
+                            toolCallObj.AddMember("id", Value(id.value().c_str(), alloc), alloc);
+                        }
+                    }
+                    if (toolCall.contains("type")) {
+                        auto type = toolCall["type"].as_string();
+                        if (type.has_value()) {
+                            toolCallObj.AddMember("type", Value(type.value().c_str(), alloc), alloc);
+                        }
+                    }
+                    if (toolCall.contains("function") && toolCall["function"].is_object()) {
+                        Value functionObj(kObjectType);
+                        const auto& function = toolCall["function"];
+                        if (function.contains("name")) {
+                            auto functionName = function["name"].as_string();
+                            if (functionName.has_value()) {
+                                functionObj.AddMember("name", Value(functionName.value().c_str(), alloc), alloc);
+                            }
+                        }
+                        if (function.contains("arguments")) {
+                            auto arguments = function["arguments"].as_string();
+                            if (arguments.has_value()) {
+                                functionObj.AddMember("arguments", Value(arguments.value().c_str(), alloc), alloc);
+                            }
+                        }
+                        toolCallObj.AddMember("function", functionObj, alloc);
+                    }
+
+                    toolCallsArray.PushBack(toolCallObj, alloc);
+                }
+                msgObj.AddMember("tool_calls", toolCallsArray, alloc);
             }
             messagesArray.PushBack(msgObj, alloc);
         }
         processedDoc.AddMember("messages", messagesArray, alloc);
 
-        // Copy tools from original doc if present
+        // Copy tools from original doc if present. Normalize flat Responses tools
+        // ({"type":"function","name":...,"parameters":...}) into wrapped form
+        // ({"type":"function","function":{...}}) for compatibility with
+        // Jinja templates that reference tool.function.*.
         auto toolsIt = doc.FindMember("tools");
         if (toolsIt != doc.MemberEnd() && !toolsIt->value.IsNull()) {
-            Value toolsCopy(toolsIt->value, alloc);
-            processedDoc.AddMember("tools", toolsCopy, alloc);
+            if (toolsIt->value.IsArray()) {
+                Value normalizedTools(kArrayType);
+                for (const auto& tool : toolsIt->value.GetArray()) {
+                    if (!tool.IsObject()) {
+                        normalizedTools.PushBack(Value(tool, alloc), alloc);
+                        continue;
+                    }
+
+                    auto toolObj = tool.GetObject();
+                    auto functionIt = toolObj.FindMember("function");
+                    if (functionIt != toolObj.MemberEnd() && functionIt->value.IsObject()) {
+                        normalizedTools.PushBack(Value(tool, alloc), alloc);
+                        continue;
+                    }
+
+                    auto typeIt = toolObj.FindMember("type");
+                    if (typeIt != toolObj.MemberEnd() && typeIt->value.IsString() && std::string(typeIt->value.GetString()) == "function") {
+                        Value wrappedTool(kObjectType);
+                        wrappedTool.AddMember("type", Value("function", alloc), alloc);
+
+                        Value functionObj(kObjectType);
+                        for (auto memberIt = toolObj.MemberBegin(); memberIt != toolObj.MemberEnd(); ++memberIt) {
+                            const std::string key = memberIt->name.GetString();
+                            if (key == "type") {
+                                continue;
+                            }
+                            Value memberKey(memberIt->name, alloc);
+                            Value memberValue(memberIt->value, alloc);
+                            functionObj.AddMember(memberKey, memberValue, alloc);
+                        }
+
+                        wrappedTool.AddMember("function", functionObj, alloc);
+                        normalizedTools.PushBack(wrappedTool, alloc);
+                    } else {
+                        normalizedTools.PushBack(Value(tool, alloc), alloc);
+                    }
+                }
+                processedDoc.AddMember("tools", normalizedTools, alloc);
+            } else {
+                Value toolsCopy(toolsIt->value, alloc);
+                processedDoc.AddMember("tools", toolsCopy, alloc);
+            }
         }
 
         // Copy chat_template_kwargs from original doc if present

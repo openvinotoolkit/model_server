@@ -2748,6 +2748,118 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingResponsesToolChoiceNoneRemovesTools)
     EXPECT_EQ(apiHandler->getToolChoice(), "none");
 }
 
+  TEST_F(HttpOpenAIHandlerParsingTest, ParsingResponsesFunctionCallItemsStoredInChatHistory) {
+    std::string json = R"({
+    "model": "llama",
+    "input": [
+      {"type": "message", "role": "user", "content": [{"type": "input_text", "text": "What is the weather like in Paris today?"}]},
+      {"type": "function_call", "call_id": "call_123", "name": "get_weather", "arguments": {"location": "Paris"}},
+      {"type": "function_call_output", "call_id": "call_123", "output": [{"type": "input_text", "text": "15 degrees Celsius"}]}
+    ]
+    })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    std::shared_ptr<ovms::OpenAIResponsesHandler> apiHandler =
+      std::make_shared<ovms::OpenAIResponsesHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+
+    ov::genai::ChatHistory& history = apiHandler->getChatHistory();
+    ASSERT_EQ(history.size(), 3);
+
+    EXPECT_EQ(history[0]["role"].get_string(), "user");
+    EXPECT_EQ(history[0]["content"].get_string(), "What is the weather like in Paris today?");
+
+    EXPECT_EQ(history[1]["role"].get_string(), "assistant");
+    EXPECT_EQ(history[1]["content"].get_string(), "");
+    ASSERT_TRUE(history[1].contains("tool_calls"));
+    ASSERT_EQ(history[1]["tool_calls"].size(), 1);
+    EXPECT_EQ(history[1]["tool_calls"][0]["id"].get_string(), "call_123");
+    EXPECT_EQ(history[1]["tool_calls"][0]["type"].get_string(), "function");
+    EXPECT_EQ(history[1]["tool_calls"][0]["function"]["name"].get_string(), "get_weather");
+    EXPECT_EQ(history[1]["tool_calls"][0]["function"]["arguments"].get_string(), "{\"location\":\"Paris\"}");
+
+    EXPECT_EQ(history[2]["role"].get_string(), "tool");
+    EXPECT_EQ(history[2]["tool_call_id"].get_string(), "call_123");
+    EXPECT_EQ(history[2]["name"].get_string(), "get_weather");
+    EXPECT_EQ(history[2]["content"].get_string(), "15 degrees Celsius");
+
+  #if (PYTHON_DISABLE == 0)
+    const std::string& processedJson = apiHandler->getProcessedJson();
+    ASSERT_FALSE(processedJson.empty());
+    rapidjson::Document processedDoc;
+    processedDoc.Parse(processedJson.c_str());
+    ASSERT_FALSE(processedDoc.HasParseError());
+    ASSERT_TRUE(processedDoc.HasMember("messages"));
+    ASSERT_TRUE(processedDoc["messages"].IsArray());
+    ASSERT_EQ(processedDoc["messages"].Size(), 3u);
+    ASSERT_TRUE(processedDoc["messages"][1].HasMember("tool_calls"));
+    ASSERT_EQ(processedDoc["messages"][1]["tool_calls"].Size(), 1u);
+    EXPECT_STREQ(processedDoc["messages"][1]["tool_calls"][0]["function"]["name"].GetString(), "get_weather");
+    EXPECT_STREQ(processedDoc["messages"][2]["tool_call_id"].GetString(), "call_123");
+    EXPECT_STREQ(processedDoc["messages"][2]["name"].GetString(), "get_weather");
+  #else
+    EXPECT_TRUE(apiHandler->getProcessedJson().empty()) << "processedJson should be empty when Python is disabled";
+  #endif
+  }
+
+  TEST_F(HttpOpenAIHandlerParsingTest, ParsingResponsesDeveloperRoleMappedToSystem) {
+      std::string json = R"({
+      "model": "llama",
+      "input": [
+        {"type": "message", "role": "developer", "content": [{"type": "input_text", "text": "You are helpful."}]},
+        {"type": "message", "role": "user", "content": [{"type": "input_text", "text": "Hello"}]}
+      ]
+    })";
+      doc.Parse(json.c_str());
+      ASSERT_FALSE(doc.HasParseError());
+      std::optional<uint32_t> maxTokensLimit;
+      uint32_t bestOfLimit = 0;
+      std::optional<uint32_t> maxModelLength;
+      std::shared_ptr<ovms::OpenAIResponsesHandler> apiHandler =
+          std::make_shared<ovms::OpenAIResponsesHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
+      ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+
+      ov::genai::ChatHistory& history = apiHandler->getChatHistory();
+      ASSERT_EQ(history.size(), 2);
+      EXPECT_EQ(history[0]["role"].get_string(), "system");
+      EXPECT_EQ(history[0]["content"].get_string(), "You are helpful.");
+      EXPECT_EQ(history[1]["role"].get_string(), "user");
+      EXPECT_EQ(history[1]["content"].get_string(), "Hello");
+  }
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingResponsesConsecutiveDeveloperMessagesAreMerged) {
+    std::string json = R"({
+    "model": "llama",
+    "input": [
+      {"type": "message", "role": "developer", "content": [{"type": "input_text", "text": "Instruction A"}]},
+      {"type": "message", "role": "developer", "content": [{"type": "input_text", "text": "Instruction B"}]},
+      {"type": "message", "role": "user", "content": [{"type": "input_text", "text": "Hello"}]}
+    ]
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    std::shared_ptr<ovms::OpenAIResponsesHandler> apiHandler =
+        std::make_shared<ovms::OpenAIResponsesHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+
+    ov::genai::ChatHistory& history = apiHandler->getChatHistory();
+    // After simplification, consecutive system/developer messages are NOT merged;
+    // each message is preserved separately to let the chat template handle role sequences.
+    ASSERT_EQ(history.size(), 3);
+    EXPECT_EQ(history[0]["role"].get_string(), "system");
+    EXPECT_EQ(history[0]["content"].get_string(), "Instruction A");
+    EXPECT_EQ(history[1]["role"].get_string(), "system");
+    EXPECT_EQ(history[1]["content"].get_string(), "Instruction B");
+    EXPECT_EQ(history[2]["role"].get_string(), "user");
+    EXPECT_EQ(history[2]["content"].get_string(), "Hello");
+}
+
 // Provide get_weather2 but take none
 TEST_F(HttpOpenAIHandlerParsingTest, ParseRequestWithTools_Provided1_ChoiceNone) {
     std::string providedTools = R"(
