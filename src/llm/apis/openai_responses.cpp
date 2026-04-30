@@ -88,6 +88,8 @@ absl::Status OpenAIResponsesHandler::parseInput(std::optional<std::string> allow
             return absl::InvalidArgumentError("Messages array cannot be empty");
         }
 
+        std::string pendingReasoning;
+
         for (size_t i = 0; i < inputIt->value.GetArray().Size(); ++i) {
             auto& item = inputIt->value.GetArray()[i];
             if (!item.IsObject()) {
@@ -95,6 +97,62 @@ absl::Status OpenAIResponsesHandler::parseInput(std::optional<std::string> allow
             }
 
             auto itemObj = item.GetObject();
+
+            // Determine item type (if present)
+            auto itemTypeIt = itemObj.FindMember("type");
+            const std::string itemType = (itemTypeIt != itemObj.MemberEnd() && itemTypeIt->value.IsString())
+                ? itemTypeIt->value.GetString() : "";
+
+            // Parse reasoning items — extract summary text and buffer for the next assistant message
+            if (itemType == "reasoning") {
+                auto summaryIt = itemObj.FindMember("summary");
+                if (summaryIt != itemObj.MemberEnd() && summaryIt->value.IsArray()) {
+                    for (const auto& summaryItem : summaryIt->value.GetArray()) {
+                        if (!summaryItem.IsObject()) continue;
+                        auto stTypeIt = summaryItem.GetObject().FindMember("type");
+                        if (stTypeIt == summaryItem.GetObject().MemberEnd() || !stTypeIt->value.IsString()) continue;
+                        if (std::string(stTypeIt->value.GetString()) == "summary_text") {
+                            auto textIt = summaryItem.GetObject().FindMember("text");
+                            if (textIt != summaryItem.GetObject().MemberEnd() && textIt->value.IsString()) {
+                                if (!pendingReasoning.empty()) pendingReasoning += "\n";
+                                pendingReasoning += textIt->value.GetString();
+                            }
+                        }
+                    }
+                }
+                continue;
+            }
+
+            // Handle function_call items (assistant tool use)
+            // For chatHistory (non-Python path), represent as an assistant message with empty content.
+            // The proper tool_calls structure is reconstructed in processedJson for the Python/Jinja path.
+            if (itemType == "function_call") {
+                request.chatHistory.push_back({});
+                request.chatHistory.last()["role"] = "assistant";
+                request.chatHistory.last()["content"] = "";
+                if (!pendingReasoning.empty()) {
+                    request.chatHistory.last()["reasoning_content"] = pendingReasoning;
+                    pendingReasoning.clear();
+                }
+                continue;
+            }
+
+            // Handle function_call_output items (tool results)
+            if (itemType == "function_call_output") {
+                auto callIdIt = itemObj.FindMember("call_id");
+                auto outputIt = itemObj.FindMember("output");
+                request.chatHistory.push_back({});
+                request.chatHistory.last()["role"] = "tool";
+                if (callIdIt != itemObj.MemberEnd() && callIdIt->value.IsString()) {
+                    request.chatHistory.last()["tool_call_id"] = callIdIt->value.GetString();
+                }
+                const std::string outputContent = (outputIt != itemObj.MemberEnd() && outputIt->value.IsString())
+                    ? outputIt->value.GetString() : "";
+                request.chatHistory.last()["content"] = outputContent;
+                continue;
+            }
+
+            // All remaining items must have a role field
             auto roleIt = itemObj.FindMember("role");
             if (roleIt == itemObj.MemberEnd() || !roleIt->value.IsString()) {
                 return absl::InvalidArgumentError("input item role is missing or invalid");
@@ -102,10 +160,16 @@ absl::Status OpenAIResponsesHandler::parseInput(std::optional<std::string> allow
 
             request.chatHistory.push_back({});
             request.chatHistory.last()["role"] = roleIt->value.GetString();
+            if (!pendingReasoning.empty()) {
+                request.chatHistory.last()["reasoning_content"] = pendingReasoning;
+                pendingReasoning.clear();
+            }
 
             auto contentIt = itemObj.FindMember("content");
             if (contentIt == itemObj.MemberEnd()) {
-                return absl::InvalidArgumentError("input item content is missing");
+                // Allow messages without content (e.g., assistant message paired with tool calls)
+                request.chatHistory.last()["content"] = "";
+                continue;
             }
 
             if (contentIt->value.IsString()) {
@@ -117,7 +181,9 @@ absl::Status OpenAIResponsesHandler::parseInput(std::optional<std::string> allow
                 return absl::InvalidArgumentError("input item content must be a string or array");
             }
             if (contentIt->value.GetArray().Size() == 0) {
-                return absl::InvalidArgumentError("Invalid message structure - content array is empty");
+                // Empty content array is allowed (e.g., assistant message with only tool calls)
+                request.chatHistory.last()["content"] = "";
+                continue;
             }
 
             std::string contentText = "";
@@ -132,10 +198,10 @@ absl::Status OpenAIResponsesHandler::parseInput(std::optional<std::string> allow
                 }
 
                 const std::string type = typeIt->value.GetString();
-                if (type == "input_text") {
+                if (type == "input_text" || type == "output_text") {
                     auto textIt = contentObj.FindMember("text");
                     if (textIt == contentObj.MemberEnd() || !textIt->value.IsString()) {
-                        return absl::InvalidArgumentError("input_text requires a valid text field");
+                        return absl::InvalidArgumentError(absl::StrCat(type, " requires a valid text field"));
                     }
                     contentText = textIt->value.GetString();
                 } else if (type == "input_image") {
@@ -163,7 +229,8 @@ absl::Status OpenAIResponsesHandler::parseInput(std::optional<std::string> allow
                     }
                     request.imageHistory.push_back({i, tensorResult.value()});
                 } else {
-                    return absl::InvalidArgumentError("Unsupported content type. Supported types are input_text and input_image.");
+                    // Skip unrecognised content item types for forward compatibility
+                    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Skipping unsupported content type: {}", type);
                 }
             }
 
@@ -228,34 +295,212 @@ absl::Status OpenAIResponsesHandler::parseResponsesPart(std::optional<uint32_t> 
     }
 
 #if (PYTHON_DISABLE == 0)
-    // Build processedJson with "messages" array from chatHistory so that
-    // the Python chat template path (which reads request_json["messages"])
-    // can consume Responses API input without a separate code path.
+    // Build processedJson with a "messages" array in chat/completions format so that
+    // the Python Jinja template path can consume Responses API input without a separate code path.
+    // Handles reasoning (skipped), function_call (merged into assistant tool_calls), and
+    // function_call_output (converted to role:tool messages).
     {
         Document processedDoc;
         processedDoc.SetObject();
         auto& alloc = processedDoc.GetAllocator();
 
         Value messagesArray(kArrayType);
-        for (size_t i = 0; i < request.chatHistory.size(); ++i) {
-            Value msgObj(kObjectType);
-            auto role = request.chatHistory[i]["role"].as_string();
-            if (role.has_value()) {
-                msgObj.AddMember("role", Value(role.value().c_str(), alloc), alloc);
+
+        auto inputArrIt = doc.FindMember("input");
+        if (inputArrIt != doc.MemberEnd() && inputArrIt->value.IsArray()) {
+            // Pending function_call items to be merged into the next assistant message
+            std::vector<const rapidjson::Value*> pendingFunctionCalls;
+            std::string pendingReasoningJson;
+
+            // Helper: flush pending function_calls as an assistant message with the given text content
+            auto flushPendingFunctionCalls = [&](const std::string& textContent) {
+                if (pendingFunctionCalls.empty()) {
+                    return;
+                }
+                Value msgObj(kObjectType);
+                msgObj.AddMember("role", Value("assistant", alloc), alloc);
+                msgObj.AddMember("content", Value(textContent.c_str(), alloc), alloc);
+                if (!pendingReasoningJson.empty()) {
+                    msgObj.AddMember("reasoning_content", Value(pendingReasoningJson.c_str(), alloc), alloc);
+                    pendingReasoningJson.clear();
+                }
+                Value toolCallsArray(kArrayType);
+                for (const auto* fc : pendingFunctionCalls) {
+                    auto fcObj = fc->GetObject();
+                    Value tcObj(kObjectType);
+                    auto idIt = fcObj.FindMember("id");
+                    const std::string tcId = (idIt != fcObj.MemberEnd() && idIt->value.IsString())
+                        ? idIt->value.GetString() : "";
+                    tcObj.AddMember("id", Value(tcId.c_str(), alloc), alloc);
+                    tcObj.AddMember("type", Value("function", alloc), alloc);
+                    Value funcObj(kObjectType);
+                    auto nameIt = fcObj.FindMember("name");
+                    const std::string funcName = (nameIt != fcObj.MemberEnd() && nameIt->value.IsString())
+                        ? nameIt->value.GetString() : "";
+                    funcObj.AddMember("name", Value(funcName.c_str(), alloc), alloc);
+                    auto argsIt = fcObj.FindMember("arguments");
+                    const std::string args = (argsIt != fcObj.MemberEnd() && argsIt->value.IsString())
+                        ? argsIt->value.GetString() : "";
+                    funcObj.AddMember("arguments", Value(args.c_str(), alloc), alloc);
+                    tcObj.AddMember("function", funcObj, alloc);
+                    toolCallsArray.PushBack(tcObj, alloc);
+                }
+                msgObj.AddMember("tool_calls", toolCallsArray, alloc);
+                messagesArray.PushBack(msgObj, alloc);
+                pendingFunctionCalls.clear();
+            };
+
+            // Helper: extract text content from a Responses API content field (string or array)
+            auto extractTextContent = [&](const rapidjson::Value& contentVal) -> std::string {
+                if (contentVal.IsString()) {
+                    return contentVal.GetString();
+                }
+                if (contentVal.IsArray()) {
+                    for (auto& ci : contentVal.GetArray()) {
+                        if (!ci.IsObject()) continue;
+                        auto ctTypeIt = ci.GetObject().FindMember("type");
+                        if (ctTypeIt == ci.GetObject().MemberEnd() || !ctTypeIt->value.IsString()) continue;
+                        const std::string ctType = ctTypeIt->value.GetString();
+                        if (ctType == "input_text" || ctType == "output_text") {
+                            auto textIt = ci.GetObject().FindMember("text");
+                            if (textIt != ci.GetObject().MemberEnd() && textIt->value.IsString()) {
+                                return textIt->value.GetString();
+                            }
+                        }
+                    }
+                }
+                return "";
+            };
+
+            for (rapidjson::SizeType i = 0; i < inputArrIt->value.GetArray().Size(); ++i) {
+                const auto& item = inputArrIt->value.GetArray()[i];
+                if (!item.IsObject()) continue;
+                auto itemObj = item.GetObject();
+
+                auto itemTypeIt = itemObj.FindMember("type");
+                const std::string itemType = (itemTypeIt != itemObj.MemberEnd() && itemTypeIt->value.IsString())
+                    ? itemTypeIt->value.GetString() : "";
+
+                // Parse reasoning items — extract summary text and buffer for the next assistant message
+                if (itemType == "reasoning") {
+                    auto summaryIt = itemObj.FindMember("summary");
+                    if (summaryIt != itemObj.MemberEnd() && summaryIt->value.IsArray()) {
+                        for (const auto& summaryItem : summaryIt->value.GetArray()) {
+                            if (!summaryItem.IsObject()) continue;
+                            auto stTypeIt = summaryItem.GetObject().FindMember("type");
+                            if (stTypeIt == summaryItem.GetObject().MemberEnd() || !stTypeIt->value.IsString()) continue;
+                            if (std::string(stTypeIt->value.GetString()) == "summary_text") {
+                                auto textIt = summaryItem.GetObject().FindMember("text");
+                                if (textIt != summaryItem.GetObject().MemberEnd() && textIt->value.IsString()) {
+                                    if (!pendingReasoningJson.empty()) pendingReasoningJson += "\n";
+                                    pendingReasoningJson += textIt->value.GetString();
+                                }
+                            }
+                        }
+                    }
+                    continue;
+                }
+
+                // Buffer function_call items — they will be merged with the next assistant message
+                if (itemType == "function_call") {
+                    pendingFunctionCalls.push_back(&item);
+                    continue;
+                }
+
+                // Convert function_call_output to role:tool message
+                if (itemType == "function_call_output") {
+                    flushPendingFunctionCalls("");
+                    Value msgObj(kObjectType);
+                    msgObj.AddMember("role", Value("tool", alloc), alloc);
+                    auto callIdIt = itemObj.FindMember("call_id");
+                    if (callIdIt != itemObj.MemberEnd() && callIdIt->value.IsString()) {
+                        msgObj.AddMember("tool_call_id", Value(callIdIt->value.GetString(), alloc), alloc);
+                    }
+                    auto outputIt = itemObj.FindMember("output");
+                    const std::string outputContent = (outputIt != itemObj.MemberEnd() && outputIt->value.IsString())
+                        ? outputIt->value.GetString() : "";
+                    msgObj.AddMember("content", Value(outputContent.c_str(), alloc), alloc);
+                    messagesArray.PushBack(msgObj, alloc);
+                    continue;
+                }
+
+                // All other items must have a role
+                auto roleIt = itemObj.FindMember("role");
+                if (roleIt == itemObj.MemberEnd() || !roleIt->value.IsString()) {
+                    continue;  // Skip unknown items without a role
+                }
+                const std::string role = roleIt->value.GetString();
+
+                std::string contentText = "";
+                auto contentIt = itemObj.FindMember("content");
+                if (contentIt != itemObj.MemberEnd()) {
+                    contentText = extractTextContent(contentIt->value);
+                }
+
+                if (role == "assistant") {
+                    if (!pendingFunctionCalls.empty()) {
+                        // Merge buffered function_call items into this assistant message
+                        flushPendingFunctionCalls(contentText);
+                    } else {
+                        // Plain assistant message with no associated tool calls
+                        Value msgObj(kObjectType);
+                        msgObj.AddMember("role", Value("assistant", alloc), alloc);
+                        msgObj.AddMember("content", Value(contentText.c_str(), alloc), alloc);
+                        if (!pendingReasoningJson.empty()) {
+                            msgObj.AddMember("reasoning_content", Value(pendingReasoningJson.c_str(), alloc), alloc);
+                            pendingReasoningJson.clear();
+                        }
+                        messagesArray.PushBack(msgObj, alloc);
+                    }
+                } else {
+                    // Non-assistant message — flush any pending function calls first
+                    flushPendingFunctionCalls("");
+                    Value msgObj(kObjectType);
+                    msgObj.AddMember("role", Value(role.c_str(), alloc), alloc);
+                    msgObj.AddMember("content", Value(contentText.c_str(), alloc), alloc);
+                    messagesArray.PushBack(msgObj, alloc);
+                }
             }
-            auto content = request.chatHistory[i]["content"].as_string();
-            if (content.has_value()) {
-                msgObj.AddMember("content", Value(content.value().c_str(), alloc), alloc);
-            }
-            messagesArray.PushBack(msgObj, alloc);
+
+            // Flush any trailing buffered function_calls
+            flushPendingFunctionCalls("");
         }
+
         processedDoc.AddMember("messages", messagesArray, alloc);
 
-        // Copy tools from original doc if present
+        // Convert tools from Responses API flat format to chat/completions nested format.
+        // Responses API: {"type": "function", "name": "foo", "description": "...", "parameters": {...}}
+        // Chat/completions: {"type": "function", "function": {"name": "foo", "description": "...", "parameters": {...}}}
         auto toolsIt = doc.FindMember("tools");
-        if (toolsIt != doc.MemberEnd() && !toolsIt->value.IsNull()) {
-            Value toolsCopy(toolsIt->value, alloc);
-            processedDoc.AddMember("tools", toolsCopy, alloc);
+        if (toolsIt != doc.MemberEnd() && !toolsIt->value.IsNull() && toolsIt->value.IsArray()) {
+            Value toolsArray(kArrayType);
+            for (const auto& tool : toolsIt->value.GetArray()) {
+                if (!tool.IsObject()) continue;
+                auto toolObj = tool.GetObject();
+                // Check if this tool already has a nested "function" key (chat/completions format)
+                if (toolObj.FindMember("function") != toolObj.MemberEnd()) {
+                    // Already in chat/completions format — copy as-is
+                    Value toolCopy(tool, alloc);
+                    toolsArray.PushBack(toolCopy, alloc);
+                } else {
+                    // Responses API flat format — wrap under "function" key
+                    Value convertedTool(kObjectType);
+                    convertedTool.AddMember("type", Value("function", alloc), alloc);
+                    Value funcObj(kObjectType);
+                    // Copy all fields except "type" and "response" into the nested function object
+                    for (auto it2 = toolObj.MemberBegin(); it2 != toolObj.MemberEnd(); ++it2) {
+                        if (!it2->name.IsString()) continue;
+                        const std::string fieldName = it2->name.GetString();
+                        if (fieldName == "type" || fieldName == "response") continue;
+                        Value keyCopy(it2->name, alloc);
+                        Value valCopy(it2->value, alloc);
+                        funcObj.AddMember(keyCopy, valCopy, alloc);
+                    }
+                    convertedTool.AddMember("function", funcObj, alloc);
+                    toolsArray.PushBack(convertedTool, alloc);
+                }
+            }
+            processedDoc.AddMember("tools", toolsArray, alloc);
         }
 
         // Copy chat_template_kwargs from original doc if present
