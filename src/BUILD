@@ -2281,7 +2281,7 @@ cc_binary(
 )
 
 cc_test(
-    name = "ovms_test",
+    name = "ovms_monolithic_test",
     linkstatic = 1,
     srcs = [
         "test/c_api_stress_tests.cpp",
@@ -2588,6 +2588,30 @@ cc_test(
     copts = COPTS_TESTS,
     local_defines = COMMON_LOCAL_DEFINES,
     linkopts = LINKOPTS_ADJUSTED,
+)
+
+cc_test(
+    name = "lora_adapter_test",
+    linkstatic = 1,
+    srcs = [
+        "test/llm/lora_adapter_test.cpp",
+    ],
+    deps = [
+        ":test_test_with_temp_dir",
+        "//src/llm:genai_servables",
+        "@com_google_googletest//:gtest_main",
+    ],
+    copts = COPTS_TESTS,
+    local_defines = COMMON_LOCAL_DEFINES,
+    linkopts = LINKOPTS_ADJUSTED,
+)
+
+test_suite(
+    name = "ovms_test",
+    tests = [
+        ":ovms_monolithic_test",
+        ":lora_adapter_test",
+    ],
 )
 
 cc_library(
