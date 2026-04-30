@@ -110,8 +110,7 @@ find /ovms_release/ovms/lib/python/openvino -name *cpython* | grep -vZ $rls_pyth
 
 mkdir -p /ovms_pkg/${BASE_OS}
 cd /ovms_pkg/${BASE_OS}
-tar czf ovms.tar.gz --transform 's/ovms_release/ovms/' /ovms_release/
-sha256sum ovms.tar.gz > ovms.tar.gz.sha256 && \
+tar cf ovms.tar --transform 's/ovms_release/ovms/' /ovms_release/
 cd /ovms_release
 ls -l
 
