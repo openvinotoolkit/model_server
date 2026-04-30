@@ -63,8 +63,12 @@ curl https://storage.googleapis.com/mediapipe-assets/pose_detection.tflite -o po
 curl https://storage.googleapis.com/mediapipe-assets/pose_landmark_full.tflite -o pose_landmark_full/1/pose_landmark_full.tflite --create-dirs
 ```
 ```bash
+# In Ubuntu, run this command in terminal
 chmod -R 755 .
 docker run -d -v $PWD/mediapipe:/mediapipe -v $PWD:/models -p 9000:9000 openvino/model_server:latest --config_path /models/config_holistic.json --port 9000
+# In windows, run this command in powershell
+docker run -d -v ${PWD}/mediapipe:/mediapipe -v ${PWD}:/models -p 9000:9000 openvino/model_server:latest --config_path /models/config_holistic.json --port 9000
+
 ```
 ```bat
 ovms --config_path config_holistic.json --port 9000
