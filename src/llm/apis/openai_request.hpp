@@ -32,7 +32,11 @@
 #include "tool_schema_wrapper.hpp"
 
 namespace ovms {
-using ImageHistory = std::vector<std::pair<size_t, ov::Tensor>>;
+// Flat ordered list of image tensors extracted from content arrays.
+// Order matches the sequence of image_url items across all messages,
+// which corresponds to the order of {"type":"image"} items in chatHistory
+// after image_url → image translation.
+using ImageHistory = std::vector<ov::Tensor>;
 
 struct StreamOptions {
     bool includeUsage = false;

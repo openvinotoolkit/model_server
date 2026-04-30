@@ -17,7 +17,6 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 #include "../../../logging.hpp"
@@ -256,25 +255,36 @@ absl::Status VisualLanguageModelLegacyServable::prepareInputs(std::shared_ptr<Ge
 
         for (size_t i = 0; i < chatHistory.size(); i++) {
             const auto& message = chatHistory[i];
-            if (message["content"].as_string().value_or("").find("<ov_genai_image_") != std::string::npos) {
+            const auto& contentField = message["content"];
+            if (contentField.is_array()) {
+                for (size_t j = 0; j < contentField.size(); j++) {
+                    const auto& item = contentField[j];
+                    if (item["type"].as_string().value_or("") == "text" &&
+                        item["text"].as_string().value_or("").find("<ov_genai_image_") != std::string::npos) {
+                        return absl::InvalidArgumentError("Message contains restricted <ov_genai_image> tag");
+                    }
+                }
+            } else if (contentField.as_string().value_or("").find("<ov_genai_image_") != std::string::npos) {
                 return absl::InvalidArgumentError("Message contains restricted <ov_genai_image> tag");
             }
         }
 
-        const ImageHistory& imageHistory = vlmExecutionContext->apiHandler->getImageHistory();
-        size_t imageIndex = 0;
-        std::unordered_map<size_t, std::string> imageTags;
-        for (const auto& image : imageHistory) {
-            const auto& [chatTurnIndex, imageTensor] = image;
-            std::string imageTag = "<ov_genai_image_" + std::to_string(imageIndex++) + ">\n";
-            imageTags[chatTurnIndex] = imageTags[chatTurnIndex] + imageTag;
-            vlmExecutionContext->inputImages.push_back(imageTensor);
-        }
-        for (const auto& [chatTurnIndex, imageTagString] : imageTags) {
-            std::string messageContent = chatHistory[chatTurnIndex]["content"].as_string().value_or("");
-            chatHistory[chatTurnIndex]["content"] = imageTagString + messageContent;
-        }
+        // imageHistory is a flat ordered list of tensors matching the {type:image} items in
+        // chatHistory. Pass them directly; the chat template applied below will emit the
+        // model-specific image tokens at the correct positions.
+        vlmExecutionContext->inputImages = vlmExecutionContext->apiHandler->getImageHistory();
 
+#if (PYTHON_DISABLE == 0)
+        bool success;
+        if (vlmExecutionContext->apiHandler->getProcessedJson().size() > 0) {
+            success = PyJinjaTemplateProcessor::applyChatTemplate(getProperties()->templateProcessor, getProperties()->modelsPath, vlmExecutionContext->apiHandler->getProcessedJson(), vlmExecutionContext->inputText);
+        } else {
+            success = PyJinjaTemplateProcessor::applyChatTemplate(getProperties()->templateProcessor, getProperties()->modelsPath, vlmExecutionContext->payload.body, vlmExecutionContext->inputText);
+        }
+        if (!success) {
+            return absl::Status(absl::StatusCode::kInvalidArgument, vlmExecutionContext->inputText);
+        }
+#else
         constexpr bool addGenerationPrompt = true;  // confirm it should be hardcoded
         auto toolsStatus = vlmExecutionContext->apiHandler->parseToolsToJsonContainer();
         if (!toolsStatus.ok()) {
@@ -287,6 +297,7 @@ absl::Status VisualLanguageModelLegacyServable::prepareInputs(std::shared_ptr<Ge
         }
         const auto& chatTemplateKwargs = chatTemplateKwargsStatus.value();
         vlmExecutionContext->inputText = properties->tokenizer.apply_chat_template(chatHistory, addGenerationPrompt, {}, tools, chatTemplateKwargs);
+#endif
     } else {
         return absl::InvalidArgumentError("Unsupported endpoint");
     }
