@@ -26,7 +26,7 @@ from tests.functional.constants.os_type import OsType
 from tests.functional.utils.process import Process
 
 from tests.functional.constants.core import CONTAINER_STATUS_EXITED, CONTAINER_STATUS_RUNNING
-from tests.functional.models import Muse
+from tests.functional.models.models_static import Muse
 from tests.functional.constants.ovms_binaries import get_ovms_binary_cmd_setup
 from tests.functional.constants.ovms_type import OvmsType
 from tests.functional.constants.paths import Paths

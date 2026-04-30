@@ -23,7 +23,7 @@ from pathlib import Path
 import numpy as np
 
 from tests.functional.config import datasets_path
-from tests.functional.models.model_dataset import RandomDataset
+from tests.functional.models.models_datasets import RandomDataset
 from tests.functional.models import ModelInfo
 from tests.functional.models.models_static import (
     AgeGender,

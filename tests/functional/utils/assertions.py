@@ -23,8 +23,6 @@ import yaml
 from pathlib import Path
 from typing import Callable, Type
 
-from yaml.parser import Parser
-
 from tests.functional.utils.logger import get_logger
 from tests.functional.constants.ovms import CurrentOvmsType
 from tests.functional.constants.paths import Paths
