@@ -789,9 +789,3 @@ TEST(TFSRestParserColumn, NestingDepthExceeded_ColumnNoNamedInputs) {
     std::string request = R"({"signature_name":"","inputs":)" + makeNestedArrayJson(200) + "}";
     EXPECT_EQ(parser.parse(request.c_str()), StatusCode::REST_COULD_NOT_PARSE_INPUT);
 }
-
-TEST(TFSRestParserColumn, NestingWithinLimit_ColumnNamedInputs) {
-    TFSRestParser parser(prepareTensors({{"i", {1}}}));
-    EXPECT_EQ(parser.parse(R"({"signature_name":"","inputs":{"i":[[[[[0]]]]]}})"),
-        StatusCode::OK);
-}

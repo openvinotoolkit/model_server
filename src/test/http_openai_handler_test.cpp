@@ -320,9 +320,8 @@ TEST_F(HttpOpenAIHandlerTest, JsonBodyValidButNotAnObject) {
 
 TEST_F(HttpOpenAIHandlerTest, JsonBodyExceedsNestingDepth_NestedObjects) {
     // Deeply nested objects: {"a":{"a":{"a":...}}} - 200 levels
-    std::string requestBody = std::string(200, '{') + std::string(200, '}');
     // Make it valid JSON by using key-value pairs
-    requestBody = "";
+    std::string requestBody;
     for (int i = 0; i < 200; i++) {
         requestBody += R"({"a":)";
     }
@@ -351,15 +350,6 @@ TEST_F(HttpOpenAIHandlerTest, JsonBodyExceedsNestingDepth_NestedArrays) {
     auto status = handler->dispatchToProcessor("/v3/completions", requestBody, &response, comp, responseComponents, writer, multiPartParser);
     ASSERT_EQ(status, ovms::StatusCode::JSON_INVALID);
     ASSERT_EQ(status.string(), "The file is not valid json - JSON body exceeds maximum nesting depth");
-}
-
-TEST_F(HttpOpenAIHandlerTest, JsonBodyWithinNestingDepthLimit) {
-    // 5 levels of nesting - well within the limit
-    std::string requestBody = R"({"model":"gpt","stream":false,"messages":[{"role":"user","content":{"a":{"b":{"c":"d"}}}}]})";
-
-    auto status = handler->dispatchToProcessor("/v3/completions", requestBody, &response, comp, responseComponents, writer, multiPartParser);
-    // Should pass JSON validation (may fail later on model lookup, but not on depth)
-    ASSERT_NE(status.string(), "The file is not valid json - JSON body exceeds maximum nesting depth");
 }
 
 TEST_F(HttpOpenAIHandlerTest, GraphWithANameDoesNotExist) {

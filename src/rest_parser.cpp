@@ -26,6 +26,7 @@
 #include "rest_utils.hpp"
 #include "status.hpp"
 #include "tfs_frontend/tfs_utils.hpp"
+#include "utils/rapidjson_utils.hpp"
 
 namespace ovms {
 
@@ -124,9 +125,6 @@ static bool isBinary(const rapidjson::Value& value) {
 }
 
 bool TFSRestParser::parseArray(rapidjson::Value& doc, int dim, tensorflow::TensorProto& proto, const std::string& tensorName) {
-    if (dim > MAX_NESTING_DEPTH) {
-        return false;
-    }
     if (isBinary(doc)) {
         if (!addValue(proto, doc)) {
             return false;
@@ -449,10 +447,17 @@ Status TFSRestParser::parseColumnFormat(rapidjson::Value& node) {
 
 Status TFSRestParser::parse(const char* json) {
     rapidjson::Document doc;
-    if (doc.Parse<rapidjson::kParseIterativeFlag>(json).HasParseError()) {
+    int errorCode = 0;
+    std::size_t errorOffset = 0;
+    auto outcome = parseJsonWithDepthLimit(doc, json, MAX_NESTING_DEPTH, &errorCode, &errorOffset);
+    if (outcome == JsonParseOutcome::DepthExceeded) {
+        SPDLOG_DEBUG("Request JSON exceeds maximum nesting depth");
+        return Status(StatusCode::JSON_INVALID, "JSON body exceeds maximum nesting depth");
+    }
+    if (outcome == JsonParseOutcome::ParseError) {
         std::stringstream ss;
-        ss << "Error: " << rapidjson::GetParseError_En(doc.GetParseError())
-           << " Offset: " << doc.GetErrorOffset();
+        ss << "Error: " << rapidjson::GetParseError_En(static_cast<rapidjson::ParseErrorCode>(errorCode))
+           << " Offset: " << errorOffset;
         const std::string details = ss.str();
         SPDLOG_DEBUG("Request is not a valid JSON. {}", details);
         return Status(StatusCode::JSON_INVALID, details);
@@ -626,7 +631,7 @@ Status KFSRestParser::parseOutputs(rapidjson::Value& node) {
 #define HANDLE_VALUE(CONTENTS, TYPE_GETTER, TYPE_CHECK)                 \
     for (auto& value : node.GetArray()) {                               \
         if (value.IsArray()) {                                          \
-            auto status = parseData(value, input, depth + 1);           \
+            auto status = parseData(value, input);                      \
             if (!status.ok()) {                                         \
                 return status;                                          \
             }                                                           \
@@ -638,10 +643,7 @@ Status KFSRestParser::parseOutputs(rapidjson::Value& node) {
         input.mutable_contents()->CONTENTS()->Add(value.TYPE_GETTER()); \
     }
 
-Status KFSRestParser::parseData(rapidjson::Value& node, ::KFSRequest::InferInputTensor& input, int depth) {
-    if (depth > MAX_NESTING_DEPTH) {
-        return StatusCode::REST_COULD_NOT_PARSE_INPUT;
-    }
+Status KFSRestParser::parseData(rapidjson::Value& node, ::KFSRequest::InferInputTensor& input) {
     if (input.datatype() == "FP32") {
         HANDLE_VALUE(mutable_fp32_contents, GetFloat, IsNumber)
     } else if (input.datatype() == "INT64") {
@@ -667,7 +669,7 @@ Status KFSRestParser::parseData(rapidjson::Value& node, ::KFSRequest::InferInput
     } else if (input.datatype() == "BYTES") {
         for (auto& value : node.GetArray()) {
             if (value.IsArray()) {
-                auto status = parseData(value, input, depth + 1);
+                auto status = parseData(value, input);
                 if (!status.ok()) {
                     return status;
                 }
@@ -773,10 +775,17 @@ Status KFSRestParser::parseInputs(rapidjson::Value& node) {
 
 Status KFSRestParser::parse(const char* json) {
     rapidjson::Document doc;
-    if (doc.Parse<rapidjson::kParseIterativeFlag>(json).HasParseError()) {
+    int errorCode = 0;
+    std::size_t errorOffset = 0;
+    auto outcome = parseJsonWithDepthLimit(doc, json, MAX_NESTING_DEPTH, &errorCode, &errorOffset);
+    if (outcome == JsonParseOutcome::DepthExceeded) {
+        SPDLOG_DEBUG("Request JSON exceeds maximum nesting depth");
+        return Status(StatusCode::JSON_INVALID, "JSON body exceeds maximum nesting depth");
+    }
+    if (outcome == JsonParseOutcome::ParseError) {
         std::stringstream ss;
-        ss << "Error: " << rapidjson::GetParseError_En(doc.GetParseError())
-           << " Offset: " << doc.GetErrorOffset();
+        ss << "Error: " << rapidjson::GetParseError_En(static_cast<rapidjson::ParseErrorCode>(errorCode))
+           << " Offset: " << errorOffset;
         const std::string details = ss.str();
         SPDLOG_DEBUG("Request is not a valid JSON. {}", details);
         return Status(StatusCode::JSON_INVALID, details);

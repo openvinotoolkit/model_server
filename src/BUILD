@@ -588,6 +588,7 @@ ovms_cc_library(
         "@tensorflow_serving//tensorflow_serving/util:json_tensor",
         "@org_tensorflow//tensorflow/core:framework",
         "//src/kfserving_api:kfserving_api_cpp",
+        "//src/utils:rapidjson_utils",
         "libovms_kfs_grpc_inference_service_h",
         "libovms_kfs_utils",
         "libovms_tensorinfo",

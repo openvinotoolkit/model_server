@@ -15,11 +15,15 @@
 //*****************************************************************************
 #include "rapidjson_utils.hpp"
 
+#include <cstddef>
 #include <string>
 
 #pragma warning(push)
 #pragma warning(disable : 6313)
 #include <rapidjson/document.h>
+#include <rapidjson/error/error.h>
+#include <rapidjson/reader.h>
+#include <rapidjson/stream.h>
 #include "src/port/rapidjson_stringbuffer.hpp"
 #include "src/port/rapidjson_writer.hpp"
 #pragma warning(pop)
@@ -30,5 +34,29 @@ std::string documentToString(const rapidjson::Document& doc) {
     rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
     doc.Accept(writer);
     return buffer.GetString();
+}
+
+JsonParseOutcome parseJsonWithDepthLimit(
+    rapidjson::Document& doc,
+    const char* json,
+    std::size_t maxDepth,
+    int* errorCode,
+    std::size_t* errorOffset) {
+    rapidjson::Reader reader;
+    rapidjson::StringStream ss(json);
+    DepthLimitFilter<rapidjson::Document> filter(doc, maxDepth);
+    if (!reader.Parse<rapidjson::kParseIterativeFlag>(ss, filter)) {
+        if (errorCode != nullptr) {
+            *errorCode = static_cast<int>(reader.GetParseErrorCode());
+        }
+        if (errorOffset != nullptr) {
+            *errorOffset = reader.GetErrorOffset();
+        }
+        if (reader.GetParseErrorCode() == rapidjson::kParseErrorTermination) {
+            return JsonParseOutcome::DepthExceeded;
+        }
+        return JsonParseOutcome::ParseError;
+    }
+    return JsonParseOutcome::Ok;
 }
 }  // namespace ovms
