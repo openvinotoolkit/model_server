@@ -17,8 +17,6 @@
 #include <cstdlib>
 #include <filesystem>
 #include <string>
-#include <sys/wait.h>
-#include <unistd.h>
 #include <vector>
 
 #include <gmock/gmock.h>
@@ -31,87 +29,6 @@
 using testing::HasSubstr;
 
 namespace {
-
-std::filesystem::path getExecutablePath() {
-#ifdef __linux__
-    return std::filesystem::canonical("/proc/self/exe");
-#elif _WIN32
-    return std::filesystem::current_path();
-#endif
-}
-
-std::vector<std::filesystem::path> getRunfilesRoots() {
-    std::vector<std::filesystem::path> roots;
-    if (const char* testSrcDir = std::getenv("TEST_SRCDIR"); testSrcDir != nullptr && testSrcDir[0] != '\0') {
-        roots.emplace_back(testSrcDir);
-    }
-    const auto executablePath = getExecutablePath();
-    roots.emplace_back(executablePath.string() + ".runfiles");
-    return roots;
-}
-
-std::vector<std::string> getWorkspacePrefixes() {
-    std::vector<std::string> prefixes;
-    if (const char* workspace = std::getenv("TEST_WORKSPACE"); workspace != nullptr && workspace[0] != '\0') {
-        prefixes.emplace_back(workspace);
-    }
-    prefixes.emplace_back("_main");
-    prefixes.emplace_back("model_server");
-    return prefixes;
-}
-
-std::filesystem::path findRunfile(const std::filesystem::path& relativePath) {
-    for (const auto& root : getRunfilesRoots()) {
-        for (const auto& prefix : getWorkspacePrefixes()) {
-            const auto candidate = root / prefix / relativePath;
-            if (std::filesystem::exists(candidate)) {
-                return candidate;
-            }
-        }
-        const auto directCandidate = root / relativePath;
-        if (std::filesystem::exists(directCandidate)) {
-            return directCandidate;
-        }
-    }
-    return {};
-}
-
-class ScopedEnvironmentVariable {
-    std::string name;
-    bool hadValue;
-    std::string previousValue;
-
-public:
-    ScopedEnvironmentVariable(const std::string& name, const std::string& value) :
-        name(name),
-        hadValue(false) {
-        if (const char* currentValue = std::getenv(name.c_str()); currentValue != nullptr) {
-            hadValue = true;
-            previousValue = currentValue;
-        }
-#ifdef __linux__
-        setenv(name.c_str(), value.c_str(), 1);
-#elif _WIN32
-        _putenv_s(name.c_str(), value.c_str());
-#endif
-    }
-
-    ~ScopedEnvironmentVariable() {
-        if (hadValue) {
-#ifdef __linux__
-            setenv(name.c_str(), previousValue.c_str(), 1);
-#elif _WIN32
-            _putenv_s(name.c_str(), previousValue.c_str());
-#endif
-        } else {
-#ifdef __linux__
-            unsetenv(name.c_str());
-#elif _WIN32
-            _putenv_s(name.c_str(), "");
-#endif
-        }
-    }
-};
 
 #ifdef __linux__
 using ValidatePythonEnvironmentFn = bool (*)(const char** errorMessage);
@@ -135,28 +52,103 @@ public:
     }
 };
 
-int runIsolatedOvmsTest(const std::string& gtestFilter, const std::string& pythonPath = "") {
-    const auto executablePath = getExecutablePath();
-    const std::string filterArgument = "--gtest_filter=" + gtestFilter;
-    pid_t pid = fork();
-    if (pid == 0) {
-        setenv("OVMS_SKIP_GLOBAL_PYTHON_ENVIRONMENT", "1", 1);
-        unsetenv("TEST_PREMATURE_EXIT_FILE");
-        if (!pythonPath.empty()) {
-            setenv("PYTHONPATH", pythonPath.c_str(), 1);
+class ScopedEnvironmentVariable {
+    std::string name;
+    bool hadValue;
+    std::string previousValue;
+
+public:
+    ScopedEnvironmentVariable(const std::string& name, const std::string& value) :
+        name(name),
+        hadValue(false) {
+        if (const char* currentValue = std::getenv(name.c_str()); currentValue != nullptr) {
+            hadValue = true;
+            previousValue = currentValue;
         }
-        execl(executablePath.c_str(), executablePath.c_str(), filterArgument.c_str(), static_cast<char*>(nullptr));
-        _exit(127);
+        setenv(name.c_str(), value.c_str(), 1);
     }
 
-    int status = 0;
-    if (pid < 0 || waitpid(pid, &status, 0) < 0) {
-        return -1;
+    ~ScopedEnvironmentVariable() {
+        if (hadValue) {
+            setenv(name.c_str(), previousValue.c_str(), 1);
+        } else {
+            unsetenv(name.c_str());
+        }
     }
-    if (!WIFEXITED(status)) {
-        return -1;
+};
+
+std::filesystem::path findLibrary(const std::string& libName) {
+    std::vector<std::filesystem::path> searchPaths;
+
+    if (const char* testSrcDir = std::getenv("TEST_SRCDIR"); testSrcDir != nullptr && testSrcDir[0] != '\0') {
+        std::filesystem::path srcDir(testSrcDir);
+        if (const char* workspace = std::getenv("TEST_WORKSPACE"); workspace != nullptr && workspace[0] != '\0') {
+            searchPaths.emplace_back(srcDir / workspace / "src/python" / libName);
+            searchPaths.emplace_back(srcDir / workspace / "bazel-bin" / "src/python" / libName);
+        }
+        searchPaths.emplace_back(srcDir / "_main" / "src/python" / libName);
+        searchPaths.emplace_back(srcDir / "_main" / "bazel-bin" / "src/python" / libName);
+        searchPaths.emplace_back(srcDir / "model_server" / "src/python" / libName);
+        searchPaths.emplace_back(srcDir / "model_server" / "bazel-bin" / "src/python" / libName);
     }
-    return WEXITSTATUS(status);
+
+    try {
+        const auto testBinaryPath = std::filesystem::canonical("/proc/self/exe");
+        const auto runfilesDir = testBinaryPath.string() + ".runfiles";
+        searchPaths.emplace_back(std::filesystem::path(runfilesDir) / "src/python" / libName);
+        searchPaths.emplace_back(std::filesystem::path(runfilesDir) / "_main" / "src/python" / libName);
+        searchPaths.emplace_back(std::filesystem::path(runfilesDir) / "model_server" / "src/python" / libName);
+    } catch (...) {
+    }
+
+    searchPaths.emplace_back(std::filesystem::path("bazel-bin/src/python") / libName);
+    searchPaths.emplace_back(std::filesystem::path("src/python") / libName);
+    searchPaths.emplace_back(libName);
+
+    for (const auto& path : searchPaths) {
+        if (std::filesystem::exists(path)) {
+            return path;
+        }
+    }
+
+    return {};
+}
+
+std::filesystem::path findPyovmsBinding() {
+    std::vector<std::filesystem::path> searchPaths;
+
+    if (const char* testSrcDir = std::getenv("TEST_SRCDIR"); testSrcDir != nullptr && testSrcDir[0] != '\0') {
+        std::filesystem::path srcDir(testSrcDir);
+        if (const char* workspace = std::getenv("TEST_WORKSPACE"); workspace != nullptr && workspace[0] != '\0') {
+            searchPaths.emplace_back(srcDir / workspace / "src/python/binding" / "pyovms.so");
+            searchPaths.emplace_back(srcDir / workspace / "bazel-bin" / "src/python/binding" / "pyovms.so");
+        }
+        searchPaths.emplace_back(srcDir / "_main" / "src/python/binding" / "pyovms.so");
+        searchPaths.emplace_back(srcDir / "_main" / "bazel-bin" / "src/python/binding" / "pyovms.so");
+        searchPaths.emplace_back(srcDir / "model_server" / "src/python/binding" / "pyovms.so");
+        searchPaths.emplace_back(srcDir / "model_server" / "bazel-bin" / "src/python/binding" / "pyovms.so");
+    }
+
+    try {
+        const auto testBinaryPath = std::filesystem::canonical("/proc/self/exe");
+        const auto runfilesDir = testBinaryPath.string() + ".runfiles";
+        searchPaths.emplace_back(std::filesystem::path(runfilesDir) / "src/python/binding" / "pyovms.so");
+        searchPaths.emplace_back(std::filesystem::path(runfilesDir) / "_main" / "src/python/binding" / "pyovms.so");
+        searchPaths.emplace_back(std::filesystem::path(runfilesDir) / "model_server" / "src/python/binding" / "pyovms.so");
+    } catch (...) {
+    }
+
+    searchPaths.emplace_back(std::filesystem::path("bazel-bin/src/python/binding/pyovms.so"));
+    searchPaths.emplace_back(std::filesystem::path("src/python/binding/pyovms.so"));
+    searchPaths.emplace_back("pyovms.so");
+
+    for (const auto& path : searchPaths) {
+        if (std::filesystem::exists(path)) {
+            return path;
+        }
+    }
+
+    return {};
 }
 #endif
 
@@ -179,8 +171,8 @@ TEST(PythonRuntimeLibrary, ExistingLibraryExportsRequiredSymbols) {
 #ifndef __linux__
     GTEST_SKIP() << "Linux-only libovmspython.so test";
 #else
-    const auto libraryPath = findRunfile("src/python/libovmspython.so");
-    ASSERT_FALSE(libraryPath.empty());
+    const auto libraryPath = findLibrary("libovmspython.so");
+    ASSERT_FALSE(libraryPath.empty()) << "Could not find libovmspython.so";
 
     ScopedSharedLibrary library(libraryPath);
     ASSERT_NE(library.get(), nullptr) << dlerror();
@@ -194,32 +186,15 @@ TEST(PythonRuntimeLibrary, ValidationFailsWithoutBindingOnPythonPath) {
 #ifndef __linux__
     GTEST_SKIP() << "Linux-only libovmspython.so test";
 #else
-    const auto emptyPythonPath = std::filesystem::temp_directory_path() / "ovms_empty_pythonpath";
-    std::filesystem::create_directories(emptyPythonPath);
-    EXPECT_EQ(runIsolatedOvmsTest("PythonRuntimeLibraryIsolated.ValidationFailsWithoutBindingOnPythonPath", emptyPythonPath.string()), 0);
-#endif
-}
-
-TEST(PythonRuntimeLibrary, ValidationSucceedsWithBindingOnPythonPath) {
-#ifndef __linux__
-    GTEST_SKIP() << "Linux-only libovmspython.so test";
-#else
-    const auto bindingPath = findRunfile("src/python/binding/pyovms.so");
-    ASSERT_FALSE(bindingPath.empty());
-    EXPECT_EQ(runIsolatedOvmsTest("PythonRuntimeLibraryIsolated.ValidationSucceedsWithBindingOnPythonPath", bindingPath.parent_path().string()), 0);
-#endif
-}
-
-TEST(PythonRuntimeLibraryIsolated, ValidationFailsWithoutBindingOnPythonPath) {
-#ifndef __linux__
-    GTEST_SKIP() << "Linux-only libovmspython.so test";
-#else
-    const auto libraryPath = findRunfile("src/python/libovmspython.so");
-    ASSERT_FALSE(libraryPath.empty());
-    ASSERT_EQ(std::getenv("OVMS_SKIP_GLOBAL_PYTHON_ENVIRONMENT"), std::string("1"));
+    const auto libraryPath = findLibrary("libovmspython.so");
+    ASSERT_FALSE(libraryPath.empty()) << "Could not find libovmspython.so";
 
     ScopedSharedLibrary library(libraryPath);
     ASSERT_NE(library.get(), nullptr) << dlerror();
+
+    const auto emptyPythonPath = std::filesystem::temp_directory_path() / "ovms_empty_pythonpath";
+    std::filesystem::create_directories(emptyPythonPath);
+    ScopedEnvironmentVariable pythonPathEnv("PYTHONPATH", emptyPythonPath.string());
 
     auto validate = reinterpret_cast<ValidatePythonEnvironmentFn>(dlsym(library.get(), "OVMS_validatePythonEnvironment"));
     ASSERT_NE(validate, nullptr);
@@ -231,16 +206,19 @@ TEST(PythonRuntimeLibraryIsolated, ValidationFailsWithoutBindingOnPythonPath) {
 #endif
 }
 
-TEST(PythonRuntimeLibraryIsolated, ValidationSucceedsWithBindingOnPythonPath) {
+TEST(PythonRuntimeLibrary, ValidationSucceedsWithBindingOnPythonPath) {
 #ifndef __linux__
     GTEST_SKIP() << "Linux-only libovmspython.so test";
 #else
-    const auto libraryPath = findRunfile("src/python/libovmspython.so");
-    ASSERT_FALSE(libraryPath.empty());
-    ASSERT_EQ(std::getenv("OVMS_SKIP_GLOBAL_PYTHON_ENVIRONMENT"), std::string("1"));
+    const auto libraryPath = findLibrary("libovmspython.so");
+    ASSERT_FALSE(libraryPath.empty()) << "Could not find libovmspython.so";
+    const auto bindingPath = findPyovmsBinding();
+    ASSERT_FALSE(bindingPath.empty()) << "Could not find pyovms.so";
 
     ScopedSharedLibrary library(libraryPath);
     ASSERT_NE(library.get(), nullptr) << dlerror();
+
+    ScopedEnvironmentVariable pythonPathEnv("PYTHONPATH", bindingPath.parent_path().string());
 
     auto validate = reinterpret_cast<ValidatePythonEnvironmentFn>(dlsym(library.get(), "OVMS_validatePythonEnvironment"));
     ASSERT_NE(validate, nullptr);

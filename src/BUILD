@@ -2383,7 +2383,6 @@ cc_test(
             "//:not_disable_python": [
                 # OvmsPyTensor is currently not used in OVMS core and is just a base for the binding.
                 # "test/python/ovms_py_tensor_test.cpp",
-                "test/python_runtime_library_test.cpp",
                 "test/pythonnode_test.cpp",
                 # LLM logic uses Python for processing Jinja templates when built with Python enabled
                 "test/llm/llmtemplate_test.cpp",
@@ -2609,6 +2608,34 @@ cc_library(
     copts = COPTS_TESTS,
     linkopts = COMMON_STATIC_LIBS_LINKOPTS,
 )
+
+cc_test(
+    name = "python_runtime_library_test",
+    srcs = [
+        "test/python_runtime_library_test.cpp",
+    ],
+    copts = ["-Wno-format-security"],
+    data = select({
+        "//src:windows": [
+            "//src/python:libovmspython.dll",
+            "//src/python/binding:pyovms.pyd",
+        ],
+        "//:disable_python": [],
+        "//conditions:default": [
+            "//src/python:libovmspython.so",
+            "//src/python/binding:pyovms.so",
+        ],
+    }),
+    linkopts = select({
+        "//src:windows": [],
+        "//conditions:default": ["-ldl"],
+    }),
+    visibility = ["//visibility:public"],
+    deps = [
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
 cc_library(
     name = "test_test_models",
     hdrs = ["test/test_models.hpp",],

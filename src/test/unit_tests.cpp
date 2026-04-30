@@ -27,10 +27,7 @@ int main(int argc, char** argv) {
     ::testing::AddGlobalTestEnvironment(new Environment);
     ::testing::AddGlobalTestEnvironment(new GPUEnvironment);
     ::testing::AddGlobalTestEnvironment(new GGUFEnvironment);
-    if (const char* skipPythonEnvironment = std::getenv("OVMS_SKIP_GLOBAL_PYTHON_ENVIRONMENT");
-        skipPythonEnvironment == nullptr || std::string(skipPythonEnvironment) != "1") {
-        ::testing::AddGlobalTestEnvironment(new PythonEnvironment);
-    }
+    ::testing::AddGlobalTestEnvironment(new PythonEnvironment);
     ::testing::FLAGS_gtest_death_test_style = "threadsafe";
     return RUN_ALL_TESTS();
 }
