@@ -21,6 +21,7 @@
 #include "../../stringutils.hpp"
 #include "output_parser.hpp"
 #include "llama3/tool_parser.hpp"
+#include "llama3/genai_tool_parser.hpp"
 #include "hermes3/tool_parser.hpp"
 #include "phi4/tool_parser.hpp"
 #include "mistral/tool_parser.hpp"
@@ -29,6 +30,7 @@
 #include "qwen3coder/qwen3coder_tool_parser.hpp"
 #include "devstral/tool_parser.hpp"
 #include "gptoss/reasoning_parser.hpp"
+#include "genai_parser_adapter.hpp"
 
 namespace ovms {
 OutputParser::TagLookupStatus OutputParser::StreamOutputCache::lookupTag(const std::string& tag) const {
@@ -159,6 +161,11 @@ OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string to
     tokenizer(tokenizer) {
     if (toolParserName == "llama3") {
         toolParser = std::make_unique<Llama3ToolParser>(tokenizer);
+    } else if (toolParserName == "llama3_genai") {
+        toolParser = std::make_unique<GenAIParserAdapter>(
+            tokenizer,
+            std::make_shared<Llama3GenAIToolParser>(),
+            std::make_shared<Llama3GenAIIncrementalToolParser>());
     } else if (toolParserName == "hermes3") {
         toolParser = std::make_unique<Hermes3ToolParser>(tokenizer);
     } else if (toolParserName == "phi4") {
