@@ -649,10 +649,17 @@ std::string OpenAIResponsesHandler::serializeUnaryResponse(ov::genai::EncodedRes
     usage.promptTokens = results.perf_metrics.get_num_input_tokens();
     usage.completionTokens = results.perf_metrics.get_num_generated_tokens();
     std::vector<ParsedOutput> parsedOutputs;
+    ov::genai::GenerationFinishReason responsesFinishReason = ov::genai::GenerationFinishReason::STOP;
     for (const auto& tokens : results.tokens) {
         parsedOutputs.push_back(parseOutputIfNeeded(tokens));
     }
-    return serializeUnaryResponseImpl(parsedOutputs);
+    for (const auto& finishReason : results.finish_reasons) {
+        if (finishReason == ov::genai::GenerationFinishReason::LENGTH) {
+            responsesFinishReason = ov::genai::GenerationFinishReason::LENGTH;
+            break;
+        }
+    }
+    return serializeUnaryResponseImpl(parsedOutputs, responsesFinishReason);
 }
 
 std::string OpenAIResponsesHandler::serializeUnaryResponse(ov::genai::VLMDecodedResults& results) {
@@ -661,6 +668,7 @@ std::string OpenAIResponsesHandler::serializeUnaryResponse(ov::genai::VLMDecoded
     usage.completionTokens = results.perf_metrics.get_num_generated_tokens();
     // Usage is already correctly set from perf_metrics above — no need for updateUsage.
     std::vector<ParsedOutput> parsedOutputs;
+    ov::genai::GenerationFinishReason responsesFinishReason = ov::genai::GenerationFinishReason::STOP;
     for (const std::string& text : results.texts) {
         if (outputParser != nullptr) {
             // Same workaround as in chat completions
@@ -673,7 +681,13 @@ std::string OpenAIResponsesHandler::serializeUnaryResponse(ov::genai::VLMDecoded
             parsedOutputs.push_back(std::move(output));
         }
     }
-    return serializeUnaryResponseImpl(parsedOutputs);
+    for (const auto& finishReason : results.finish_reasons) {
+        if (finishReason == ov::genai::GenerationFinishReason::LENGTH) {
+            responsesFinishReason = ov::genai::GenerationFinishReason::LENGTH;
+            break;
+        }
+    }
+    return serializeUnaryResponseImpl(parsedOutputs, responsesFinishReason);
 }
 
 // --- Streaming event building blocks ---
