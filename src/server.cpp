@@ -414,10 +414,7 @@ Status Server::startModules(ovms::Config& config) {
     if (config.getServerSettings().serverMode == HF_PULL_AND_START_MODE) {
         INSERT_MODULE(HF_MODEL_PULL_MODULE_NAME, it);
         START_MODULE(it);
-        if (!status.ok()) {
-            return status;
-        }
-        auto hfModule = dynamic_cast<const HfPullModelModule*>(it->second.get());
+        auto hfModule = dynamic_cast<HfPullModelModule*>(it->second.get());
         status = hfModule->clone();
         if (!status.ok()) {
             return status;

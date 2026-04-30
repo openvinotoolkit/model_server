@@ -26,7 +26,7 @@
 #include <nlohmann/json.hpp>
 
 #include "../config.hpp"
-#include "../filesystem.hpp"
+#include "src/filesystem/filesystem.hpp"
 #include "libgit2.hpp"
 #include "optimum_export.hpp"
 #include "curl_downloader.hpp"

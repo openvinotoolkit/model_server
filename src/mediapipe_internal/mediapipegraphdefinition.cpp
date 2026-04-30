@@ -41,7 +41,6 @@
 #include "mediapipe_utils.hpp"
 #include "mediapipegraphexecutor.hpp"
 #include "node_initializer.hpp"
-#include "src/image_gen/pipelines.hpp"
 
 namespace ovms {
 MediapipeGraphConfig MediapipeGraphDefinition::MGC;
@@ -370,11 +369,7 @@ Status MediapipeGraphDefinition::initializeNodes() {
         }
     }
     // Register LoRA aliases for routing from initialized image gen pipelines
-    for (const auto& [nodeName, pipelines] : sidePacketMaps.imageGenPipelinesMap) {
-        for (const auto& [alias, adapter] : pipelines->loraAdapters) {
-            this->loraAliases_.push_back(alias);
-        }
-    }
+    this->loraAliases_ = sidePacketMaps.loraAliases;
     success = true;
     return StatusCode::OK;
 }
