@@ -694,3 +694,41 @@ endif
 
 run_lib_files_test:
 	docker run --entrypoint bash -v $(realpath tests/file_lists):/test $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) ./test/test_release_files.sh ${BAZEL_DEBUG_FLAGS} > file_test.log 2>&1 ; exit_status=$$? ; tail -200 file_test.log ; exit $$exit_status
+
+# ── Build Metrics ──────────────────────────────────────────────
+# Run all 5 build metrics inside an existing -build container:
+#   make build_metrics BUILD_CONTAINER=u24a_ovms1
+#
+# Compare current vs baseline (git diff shows changes after commit):
+#   make build_metrics_compare
+#
+METRICS_TARGET ?= //src/...
+METRICS_DIR    ?= tools/build_metrics/current
+BUILD_CONTAINER ?= $(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX)
+METRICS_BEFORE ?= tools/build_metrics/prebuild_baseline
+METRICS_AFTER  ?= $(METRICS_DIR)
+
+build_metrics:
+	@mkdir -p $(METRICS_DIR)
+	docker exec $(BUILD_CONTAINER) bash -c \
+		"cd /ovms && python3 tools/build_metrics/measure_dep_fanin.py /ovms/$(METRICS_DIR)/deps.csv '$(METRICS_TARGET)'"
+	docker exec $(BUILD_CONTAINER) bash -c \
+		"cd /ovms && python3 tools/build_metrics/measure_tu_sizes.py /ovms/$(METRICS_DIR)/tu.csv '$(METRICS_TARGET)'"
+	docker exec $(BUILD_CONTAINER) bash -c \
+		"cd /ovms && python3 tools/build_metrics/measure_build_graph.py /ovms/$(METRICS_DIR)/trans_srcs.csv /ovms/$(METRICS_DIR)/impact.csv"
+	docker exec $(BUILD_CONTAINER) bash -c \
+		"cd /ovms && python3 tools/build_metrics/measure_header_fanin.py /ovms/$(METRICS_DIR)/headers.csv '$(METRICS_TARGET)'"
+	@# Filter TU and headers to src/ only (drop external/third_party rows)
+	head -1 $(METRICS_DIR)/tu.csv > $(METRICS_DIR)/tu_src.csv
+	grep '^src/' $(METRICS_DIR)/tu.csv >> $(METRICS_DIR)/tu_src.csv || true
+	head -1 $(METRICS_DIR)/headers.csv > $(METRICS_DIR)/headers_src.csv
+	grep '^src/' $(METRICS_DIR)/headers.csv >> $(METRICS_DIR)/headers_src.csv || true
+	@# Remove unfiltered intermediates (only _src variants are committed)
+	rm -f $(METRICS_DIR)/tu.csv $(METRICS_DIR)/headers.csv
+	@echo "=== Metrics saved to $(METRICS_DIR)/ ==="
+
+build_metrics_compare:
+	python3 tools/build_metrics/compare_build_metrics.py \
+		--before-dir $(METRICS_BEFORE) \
+		--after-dir $(METRICS_AFTER) \
+		--scopes all,non-test,test
