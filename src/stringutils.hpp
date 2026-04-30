@@ -46,6 +46,14 @@ void rtrim(std::string& str);
 void trim(std::string& str);
 
 /**
+ * @brief Trims the string's copy
+ * 
+ * @param str
+ * @return trimmed string
+ */
+std::string trim_copy(std::string str);
+
+/**
  * @brief Erases all whitespace characters from string
  * 
  * @param str
