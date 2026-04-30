@@ -113,12 +113,12 @@ static void setLfsCancelRequested(int value) {
     git_lfs_cancel_set(value != 0 ? 1 : 0);
 }
 
-#define RETURN_IF_OVMS_CLONE_CANCELLED()          \
-    do {                                          \
+#define RETURN_IF_OVMS_CLONE_CANCELLED()                         \
+    do {                                                         \
         if (libgit2::isCloneCancellationRequestedFromServer()) { \
-            setLfsCancelRequested(1);             \
-            return -1;                            \
-        }                                         \
+            setLfsCancelRequested(1);                            \
+            return -1;                                           \
+        }                                                        \
     } while (0)
 
 int checkCloneCancellationTransferProgressCallback(const git_indexer_progress* stats, void* payload) {
