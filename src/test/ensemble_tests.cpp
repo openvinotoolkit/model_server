@@ -37,9 +37,14 @@
 #include "../dags/pipelinedefinition.hpp"
 #include "../tfs_frontend/deserialization.hpp"
 #include "../inference_executor.hpp"
-#include "../localfilesystem.hpp"
+#include "src/filesystem/localfilesystem.hpp"
 #include "../logging.hpp"
-#include "../metric_registry.hpp"
+#if (MEDIAPIPE_DISABLE == 0)
+#include "../mediapipe_internal/mediapipefactory.hpp"
+#endif
+#include "src/metrics/metric_config.hpp"
+#include "src/metrics/metric_registry.hpp"
+#include "../model.hpp"
 #include "../model_metric_reporter.hpp"
 #include "../modelconfig.hpp"
 #include "../modelinstance.hpp"
@@ -225,10 +230,11 @@ protected:
         ConstructorEnabledModelManager managerWithDummyModel;
         managerWithDummyModel.loadConfig(fileToReload);
         std::unique_ptr<Pipeline> pipeline;
-        auto status = managerWithDummyModel.createPipeline(pipeline,
+        auto status = managerWithDummyModel.getPipelineFactory().create(pipeline,
             "pipeline1Dummy",
             &request,
-            &response);
+            &response,
+            managerWithDummyModel);
         ASSERT_EQ(status, ovms::StatusCode::PIPELINE_DEFINITION_NAME_MISSING) << status.string();
     }
 
@@ -2632,7 +2638,7 @@ TEST_F(EnsembleFlowTest, SimplePipelineFactoryCreation) {
         {"dummy_node", {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName}}}};
 
     // Create pipeline definition
-    ASSERT_EQ(factory.createDefinition(pipelineName, info, connections, managerWithDummyModel), StatusCode::OK);
+    ASSERT_EQ(factory.createDefinition(pipelineName, info, connections, managerWithDummyModel, managerWithDummyModel, managerWithDummyModel), StatusCode::OK);
 
     std::unique_ptr<Pipeline> pipeline;
 
@@ -2696,7 +2702,7 @@ TEST_F(EnsembleFlowTest, ParallelPipelineFactoryUsage) {
     }
 
     // Create pipeline definition
-    ASSERT_EQ(factory.createDefinition("my_new_pipeline", info, connections, managerWithDummyModel), StatusCode::OK);
+    ASSERT_EQ(factory.createDefinition("my_new_pipeline", info, connections, managerWithDummyModel, managerWithDummyModel, managerWithDummyModel), StatusCode::OK);
 
     auto run = [&]() {
         std::unique_ptr<Pipeline> pipeline;
@@ -2763,7 +2769,7 @@ TEST_F(EnsembleFlowTest, PipelineFactoryWrongConfiguration_MultipleEntryNodes) {
         {NodeKind::EXIT, EXIT_NODE_NAME},
     };
 
-    ASSERT_EQ(factory.createDefinition("pipeline", info, {}, managerWithDummyModel), StatusCode::PIPELINE_MULTIPLE_ENTRY_NODES);
+    ASSERT_EQ(factory.createDefinition("pipeline", info, {}, managerWithDummyModel, managerWithDummyModel, managerWithDummyModel), StatusCode::PIPELINE_MULTIPLE_ENTRY_NODES);
 }
 
 TEST_F(EnsembleFlowTest, PipelineFactoryWrongConfiguration_MultipleExitNodes) {
@@ -2779,7 +2785,7 @@ TEST_F(EnsembleFlowTest, PipelineFactoryWrongConfiguration_MultipleExitNodes) {
         {NodeKind::ENTRY, ENTRY_NODE_NAME},
     };
 
-    ASSERT_EQ(factory.createDefinition("pipeline", info, {}, managerWithDummyModel), StatusCode::PIPELINE_MULTIPLE_EXIT_NODES);
+    ASSERT_EQ(factory.createDefinition("pipeline", info, {}, managerWithDummyModel, managerWithDummyModel, managerWithDummyModel), StatusCode::PIPELINE_MULTIPLE_EXIT_NODES);
 }
 
 TEST_F(EnsembleFlowTest, PipelineFactoryWrongConfiguration_ExitMissing) {
@@ -2793,7 +2799,7 @@ TEST_F(EnsembleFlowTest, PipelineFactoryWrongConfiguration_ExitMissing) {
         {NodeKind::ENTRY, ENTRY_NODE_NAME},
     };
 
-    EXPECT_EQ(factory.createDefinition("pipeline", info, {}, managerWithDummyModel), StatusCode::PIPELINE_MISSING_ENTRY_OR_EXIT);
+    EXPECT_EQ(factory.createDefinition("pipeline", info, {}, managerWithDummyModel, managerWithDummyModel, managerWithDummyModel), StatusCode::PIPELINE_MISSING_ENTRY_OR_EXIT);
 }
 
 TEST_F(EnsembleFlowTest, PipelineFactoryWrongConfiguration_EntryMissing) {
@@ -2807,7 +2813,7 @@ TEST_F(EnsembleFlowTest, PipelineFactoryWrongConfiguration_EntryMissing) {
         {NodeKind::EXIT, EXIT_NODE_NAME},
     };
 
-    EXPECT_EQ(factory.createDefinition("pipeline", info, {}, managerWithDummyModel), StatusCode::PIPELINE_MISSING_ENTRY_OR_EXIT);
+    EXPECT_EQ(factory.createDefinition("pipeline", info, {}, managerWithDummyModel, managerWithDummyModel, managerWithDummyModel), StatusCode::PIPELINE_MISSING_ENTRY_OR_EXIT);
 }
 
 TEST_F(EnsembleFlowTest, PipelineFactoryWrongConfiguration_DefinitionMissing) {
@@ -2834,7 +2840,7 @@ TEST_F(EnsembleFlowTest, PipelineFactoryWrongConfiguration_NodeNameDuplicate) {
         {NodeKind::EXIT, EXIT_NODE_NAME},
     };
 
-    ASSERT_EQ(factory.createDefinition("pipeline", info, {}, managerWithDummyModel), StatusCode::PIPELINE_NODE_NAME_DUPLICATE);
+    ASSERT_EQ(factory.createDefinition("pipeline", info, {}, managerWithDummyModel, managerWithDummyModel, managerWithDummyModel), StatusCode::PIPELINE_NODE_NAME_DUPLICATE);
 }
 
 static const std::string PIPELINE_1_DUMMY_NAME = "pipeline1Dummy";
@@ -2886,10 +2892,11 @@ TEST_F(EnsembleFlowTest, PipelineFactoryCreationWithInputOutputsMappings) {
     ConstructorEnabledModelManager managerWithDummyModel;
     managerWithDummyModel.loadConfig(fileToReload);
     std::unique_ptr<Pipeline> pipeline;
-    auto status = managerWithDummyModel.createPipeline(pipeline,
+    auto status = managerWithDummyModel.getPipelineFactory().create(pipeline,
         "pipeline1Dummy",
         &request,
-        &response);
+        &response,
+        managerWithDummyModel);
     ASSERT_EQ(status, ovms::StatusCode::OK) << status.string();
     ASSERT_EQ(pipeline->execute(DEFAULT_TEST_CONTEXT), StatusCode::OK);
     const int dummySeriallyConnectedCount = 1;
@@ -2959,10 +2966,11 @@ TEST_F(EnsembleFlowTest, PipelineFactoryCreationWithInputOutputsMappings2Paralle
     ConstructorEnabledModelManager managerWithDummyModel;
     managerWithDummyModel.loadConfig(fileToReload);
     std::unique_ptr<Pipeline> pipeline;
-    auto status = managerWithDummyModel.createPipeline(pipeline,
+    auto status = managerWithDummyModel.getPipelineFactory().create(pipeline,
         "pipeline1Dummy",
         &request,
-        &response);
+        &response,
+        managerWithDummyModel);
     ASSERT_EQ(status, ovms::StatusCode::OK) << status.string();
     ASSERT_EQ(pipeline->execute(DEFAULT_TEST_CONTEXT), StatusCode::OK);
     ASSERT_EQ(response.outputs().count(customPipelineOutputName), 1);
@@ -3376,7 +3384,7 @@ TEST_F(EnsembleFlowTest, ReloadPipelineDefinitionWithNewModelNameShouldPass) {
     connections[EXIT_NODE_NAME] = {
         {"dummy_node", {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName}}}};
     PipelineDefinition pd(pipelineName, info, connections);
-    auto status = pd.validate(managerWithDummyModel);
+    auto status = pd.validate(managerWithDummyModel, managerWithDummyModel, managerWithDummyModel);
     ASSERT_TRUE(status.ok());
 
     config.setName("newDummy");
@@ -3387,7 +3395,7 @@ TEST_F(EnsembleFlowTest, ReloadPipelineDefinitionWithNewModelNameShouldPass) {
         {NodeKind::DL, "dummy_node", "newDummy", std::nullopt, {{DUMMY_MODEL_OUTPUT_NAME, DUMMY_MODEL_OUTPUT_NAME}}},
         {NodeKind::EXIT, EXIT_NODE_NAME},
     };
-    status = pd.reload(managerWithDummyModel, std::move(infoNew), std::move(connections));
+    status = pd.reload(managerWithDummyModel, managerWithDummyModel, managerWithDummyModel, std::move(infoNew), std::move(connections));
     EXPECT_TRUE(status.ok()) << status.string();
 }
 const std::string notifierDetails{"UnusedNotifierDetails"};
@@ -3408,7 +3416,7 @@ TEST_F(EnsembleFlowTest, ReloadPipelineDefinitionWithNewNonExistingModelNameShou
     connections[EXIT_NODE_NAME] = {
         {"dummy_node", {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName}}}};
     PipelineDefinition pd(pipelineName, info, connections);
-    auto status = pd.validate(managerWithDummyModel);
+    auto status = pd.validate(managerWithDummyModel, managerWithDummyModel, managerWithDummyModel);
     ASSERT_TRUE(status.ok());
 
     ASSERT_TRUE(status.ok()) << status.string();
@@ -3417,7 +3425,7 @@ TEST_F(EnsembleFlowTest, ReloadPipelineDefinitionWithNewNonExistingModelNameShou
         {NodeKind::DL, "dummy_node", "newDummy", std::nullopt, {{DUMMY_MODEL_OUTPUT_NAME, DUMMY_MODEL_OUTPUT_NAME}}},
         {NodeKind::EXIT, EXIT_NODE_NAME},
     };
-    status = pd.reload(managerWithDummyModel, std::move(infoNew), std::move(connections));
+    status = pd.reload(managerWithDummyModel, managerWithDummyModel, managerWithDummyModel, std::move(infoNew), std::move(connections));
     EXPECT_EQ(status, ovms::StatusCode::PIPELINE_NODE_REFERING_TO_MISSING_MODEL) << status.string();
 }
 
@@ -3437,11 +3445,11 @@ TEST_F(EnsembleFlowTest, ReloadPipelineDefinitionWithAllModelVersionsRetiredShou
     connections[EXIT_NODE_NAME] = {
         {"dummy_node", {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName}}}};
     PipelineDefinition pd(pipelineName, info, connections);
-    auto status = pd.validate(managerWithDummyModel);
+    auto status = pd.validate(managerWithDummyModel, managerWithDummyModel, managerWithDummyModel);
     ASSERT_TRUE(status.ok()) << status.string();
     managerWithDummyModel.findModelByName("dummy")->retireAllVersions();
 
-    status = pd.reload(managerWithDummyModel, std::move(info), std::move(connections));
+    status = pd.reload(managerWithDummyModel, managerWithDummyModel, managerWithDummyModel, std::move(info), std::move(connections));
     EXPECT_EQ(status, ovms::StatusCode::PIPELINE_NODE_REFERING_TO_MISSING_MODEL) << status.string();
 }
 
@@ -3462,16 +3470,16 @@ TEST_F(EnsembleFlowTest, RevalidatePipelineDefinitionWhen1ModelVersionBecomesAva
         {"dummy_node", {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName}}}};
     PipelineDefinition pd(pipelineName, info, connections);
     pd.makeSubscriptions(managerWithDummyModel);
-    auto status = pd.validate(managerWithDummyModel);
+    auto status = pd.validate(managerWithDummyModel, managerWithDummyModel, managerWithDummyModel);
     ASSERT_TRUE(status.ok()) << status.string();
     managerWithDummyModel.findModelByName("dummy")->retireAllVersions();
 
-    status = pd.validate(managerWithDummyModel);
+    status = pd.validate(managerWithDummyModel, managerWithDummyModel, managerWithDummyModel);
     ASSERT_EQ(status, ovms::StatusCode::PIPELINE_NODE_REFERING_TO_MISSING_MODEL) << status.string();
 
     status = managerWithDummyModel.reloadModelWithVersions(config);
     ASSERT_TRUE(status.ok()) << status.string();
-    status = pd.validate(managerWithDummyModel);
+    status = pd.validate(managerWithDummyModel, managerWithDummyModel, managerWithDummyModel);
     EXPECT_TRUE(status.ok()) << status.string();
 }
 
@@ -3491,7 +3499,7 @@ TEST_F(EnsembleFlowTest, RetirePipelineDefinitionExecuteShouldFail) {
     connections[EXIT_NODE_NAME] = {
         {"dummy_node", {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName}}}};
     PipelineDefinition pd(pipelineName, info, connections);
-    auto status = pd.validate(managerWithDummyModel);
+    auto status = pd.validate(managerWithDummyModel, managerWithDummyModel, managerWithDummyModel);
     ASSERT_TRUE(status.ok());
     pd.retire(managerWithDummyModel);
     std::unique_ptr<Pipeline> pipeline;
@@ -3515,7 +3523,7 @@ TEST_F(EnsembleFlowTest, ExecuteOnPipelineCreatedBeforeRetireShouldPass) {
     connections[EXIT_NODE_NAME] = {
         {"dummy_node", {{DUMMY_MODEL_OUTPUT_NAME, customPipelineOutputName}}}};
     PipelineDefinition pd(pipelineName, info, connections);
-    auto status = pd.validate(managerWithDummyModel);
+    auto status = pd.validate(managerWithDummyModel, managerWithDummyModel, managerWithDummyModel);
     ASSERT_TRUE(status.ok());
     std::unique_ptr<Pipeline> pipelineBeforeRetire;
     status = pd.create(pipelineBeforeRetire, &request, &response, managerWithDummyModel);
@@ -3649,7 +3657,7 @@ TEST_F(EnsembleFlowTest, WaitForLoadingPipelineDefinitionFromBeginStatus) {
     std::unique_ptr<Pipeline> pipelineBeforeRetire;
     std::thread t([&managerWithDummyModel, &pd]() {
         std::this_thread::sleep_for(std::chrono::microseconds(PipelineDefinition::WAIT_FOR_LOADED_DEFAULT_TIMEOUT_MICROSECONDS / 4));
-        auto status = pd.validate(managerWithDummyModel);
+        auto status = pd.validate(managerWithDummyModel, managerWithDummyModel, managerWithDummyModel);
         ASSERT_TRUE(status.ok());
         SPDLOG_INFO("Made pd validated");
     });
@@ -3664,7 +3672,7 @@ TEST_F(EnsembleFlowTest, WaitForLoadingPipelineDefinitionFromBeginStatus) {
     ASSERT_EQ(status, ovms::StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET) << status.string();
     std::thread t2([&managerWithDummyModel, &pd]() {
         std::this_thread::sleep_for(std::chrono::microseconds(PipelineDefinition::WAIT_FOR_LOADED_DEFAULT_TIMEOUT_MICROSECONDS / 4));
-        auto status = pd.validate(managerWithDummyModel);
+        auto status = pd.validate(managerWithDummyModel, managerWithDummyModel, managerWithDummyModel);
         ASSERT_TRUE(status.ok()) << status.string();
         SPDLOG_INFO("Made pd validated");
     });
@@ -4362,7 +4370,7 @@ TEST_F(EnsembleFlowTest, MediapipeConfigModelWithSameNamePipeline) {
 
     ASSERT_FALSE(manager.getMediapipeFactory().definitionExists(MEDIAPIPE_DUMMY_NAME));
 
-    ASSERT_TRUE(manager.pipelineDefinitionExists(MEDIAPIPE_DUMMY_NAME));
+    ASSERT_TRUE(manager.servableExists(MEDIAPIPE_DUMMY_NAME, ServableQueryType::Pipeline));
 }
 #endif
 TEST_F(EnsembleFlowTest, PipelineConfigModelWithSameName) {

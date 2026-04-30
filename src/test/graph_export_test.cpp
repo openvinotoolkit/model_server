@@ -26,7 +26,7 @@
 #include "../capi_frontend/server_settings.hpp"
 #include "../graph_export/graph_export.hpp"
 #include "../graph_export/image_generation_graph_cli_parser.hpp"
-#include "../filesystem.hpp"
+#include "src/filesystem/filesystem.hpp"
 #include "../status.hpp"
 #include "../version.hpp"
 
@@ -425,13 +425,29 @@ node {
     name: "myModel"
     calculator: "S2tCalculator"
     input_side_packet: "STT_NODE_RESOURCES:s2t_servable"
+    input_stream: "LOOPBACK:loopback"
     input_stream: "HTTP_REQUEST_PAYLOAD:input"
+    output_stream: "LOOPBACK:loopback"
     output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+    input_stream_info: {
+        tag_index: 'LOOPBACK:0',
+        back_edge: true
+    }
     node_options: {
         [type.googleapis.com / mediapipe.S2tCalculatorOptions]: {
             models_path: "/model1/path"
             target_device: "GPU"
             plugin_config: '{"NUM_STREAMS":"2"}'
+        }
+    }
+    input_stream_handler {
+        input_stream_handler: "SyncSetInputStreamHandler",
+        options {
+            [mediapipe.SyncSetInputStreamHandlerOptions.ext] {
+                sync_set {
+                    tag_index: "LOOPBACK:0"
+                }
+            }
         }
     }
 }
@@ -444,13 +460,29 @@ node {
     name: ""
     calculator: "S2tCalculator"
     input_side_packet: "STT_NODE_RESOURCES:s2t_servable"
+    input_stream: "LOOPBACK:loopback"
     input_stream: "HTTP_REQUEST_PAYLOAD:input"
+    output_stream: "LOOPBACK:loopback"
     output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+    input_stream_info: {
+        tag_index: 'LOOPBACK:0',
+        back_edge: true
+    }
     node_options: {
         [type.googleapis.com / mediapipe.S2tCalculatorOptions]: {
             models_path: "./"
             target_device: "CPU"
             }
+    }
+    input_stream_handler {
+        input_stream_handler: "SyncSetInputStreamHandler",
+        options {
+            [mediapipe.SyncSetInputStreamHandlerOptions.ext] {
+                sync_set {
+                    tag_index: "LOOPBACK:0"
+                }
+            }
+        }
     }
 }
 )";

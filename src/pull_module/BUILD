@@ -32,8 +32,8 @@ ovms_cc_library(
     deps =  [
         "@ovms//src:libovmsstatus",
         "@ovms//src:libovmslogging",
-        "@ovms//src:libovmsfilesystem",
-        "@ovms//src:libovmslocalfilesystem",
+        "@ovms//src/filesystem:libovmsfilesystem",
+        "@ovms//src/filesystem:libovmslocalfilesystem",
     ],
     visibility = ["//visibility:public"],
 )
@@ -45,8 +45,8 @@ ovms_cc_library(
     deps =  [
         "@libgit2_engine//:libgit2_engine",
         "@ovms//src:libovmslogging",
-        "@ovms//src:libovmsfilesystem",
-        "@ovms//src:libovmslocalfilesystem",
+        "@ovms//src/filesystem:libovmsfilesystem",
+        "@ovms//src/filesystem:libovmslocalfilesystem",
         "@ovms//src:libovmsstatus",
         "@ovms//src:libovmsstring_utils",
         ":cmd_exec",
@@ -78,8 +78,9 @@ ovms_cc_library(
         "@ovms//src:libovmsstatus",
         "@ovms//src:libovmsstring_utils",
         "@ovms//src:libovms_server_settings",
-        "@ovms//src:libovmsfilesystem",
-        "@ovms//src:libovmslocalfilesystem",
+        "@ovms//src/filesystem:libovmsfilesystem",
+        "@ovms//src/filesystem:libovmslocalfilesystem",
+        "@ovms//src:libovms_version",
     ],
     visibility = ["//visibility:public"],
 )
@@ -96,8 +97,8 @@ ovms_cc_library(
         "@ovms//src:libovmsstatus",
         "@ovms//src:libovmsstring_utils",
         "@ovms//src:libovms_server_settings",
-        "@ovms//src:libovmsfilesystem",
-        "@ovms//src:libovmslocalfilesystem",
+        "@ovms//src/filesystem:libovmsfilesystem",
+        "@ovms//src/filesystem:libovmslocalfilesystem",
     ],
     visibility = ["//visibility:public"],
 )

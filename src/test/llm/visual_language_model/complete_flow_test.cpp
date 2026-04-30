@@ -49,6 +49,7 @@ public:
     std::unordered_map<std::string, std::string> headers{{"content-type", "application/json"}};
     ovms::HttpRequestComponents comp;
     const std::string endpointChatCompletions = "/v3/chat/completions";
+    const std::string endpointResponses = "/v3/responses";
     std::shared_ptr<MockedServerRequestInterface> writer;
     std::shared_ptr<MockedMultiPartParser> multiPartParser;
     std::string response;
@@ -111,6 +112,50 @@ static std::string createRequestBody(const std::string& modelName, const std::ve
                         "image_url": {
                             "url": "data:image/jpeg;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAAEElEQVR4nGIy+/oREAAA//8DiQIftNKCRwAAAABJRU5ErkJggg=="
                         }
+                    })";
+        if (i < numberOfImages - 1) {
+            oss << ",";
+        }
+    }
+    oss << R"(
+                ]
+            }
+            ]
+        )";
+    for (const auto& field : fields) {
+        oss << R"(, ")" << field.first << R"(": )" << field.second << R"()"
+            << "\n";
+    }
+    oss << "\n}";
+    return oss.str();
+}
+
+static std::string createResponsesRequestBody(const std::string& modelName, const std::vector<std::pair<std::string, std::string>>& fields, bool includeText = true, int numberOfImages = 1, const std::string contentOfTheFirstMessage = "What is in this image?") {
+    std::ostringstream oss;
+    oss << R"(
+        {
+            "model": ")"
+        << modelName << R"(",
+            "input": [
+            {
+                "role": "user",
+                "content": [)";
+    if (includeText) {
+        oss << R"(
+                    {
+                        "type": "input_text",
+                        "text": ")";
+        oss << contentOfTheFirstMessage;
+        oss << R"("})";
+        if (numberOfImages > 0) {
+            oss << ",";
+        }
+    }
+    for (int i = 0; i < numberOfImages; i++) {
+        oss << R"(
+                    {
+                        "type": "input_image",
+                        "image_url": "data:image/jpeg;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAAEElEQVR4nGIy+/oREAAA//8DiQIftNKCRwAAAABJRU5ErkJggg=="
                     })";
         if (i < numberOfImages - 1) {
             oss << ",";
@@ -302,6 +347,152 @@ TEST_P(VLMServableExecutionTestParameterized, unaryBasicWithTools) {
     ASSERT_TRUE(parsedResponse["choices"][0]["message"]["content"].IsString());
     EXPECT_STREQ(parsedResponse["object"].GetString(), "chat.completion");
     EXPECT_STREQ(parsedResponse["model"].GetString(), modelName.c_str());
+}
+
+TEST_P(VLMServableExecutionTestParameterized, unaryResponsesWithImageInput) {
+    auto modelName = GetParam();
+    std::vector<std::pair<std::string, std::string>> fields = {
+        {"max_output_tokens", "5"},
+        {"temperature", "0.0"}};
+    std::string requestBody = createResponsesRequestBody(modelName, fields);
+
+    ovms::HttpRequestComponents responsesComp;
+    ASSERT_EQ(handler->parseRequestComponents(responsesComp, "POST", endpointResponses, headers), ovms::StatusCode::OK);
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointResponses, requestBody, &response, responsesComp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK);
+
+    parsedResponse.Parse(response.c_str());
+    ASSERT_TRUE(parsedResponse.IsObject());
+    ASSERT_TRUE(parsedResponse.HasMember("object"));
+    EXPECT_STREQ(parsedResponse["object"].GetString(), "response");
+    ASSERT_TRUE(parsedResponse.HasMember("model"));
+    EXPECT_STREQ(parsedResponse["model"].GetString(), modelName.c_str());
+    ASSERT_TRUE(parsedResponse.HasMember("output"));
+    ASSERT_TRUE(parsedResponse["output"].IsArray());
+    ASSERT_GT(parsedResponse["output"].GetArray().Size(), 0);
+    ASSERT_TRUE(parsedResponse["output"][0].IsObject());
+    ASSERT_TRUE(parsedResponse["output"][0].HasMember("type"));
+    EXPECT_STREQ(parsedResponse["output"][0]["type"].GetString(), "message");
+    ASSERT_TRUE(parsedResponse["output"][0].HasMember("content"));
+    ASSERT_TRUE(parsedResponse["output"][0]["content"].IsArray());
+    ASSERT_GT(parsedResponse["output"][0]["content"].GetArray().Size(), 0);
+    ASSERT_TRUE(parsedResponse["output"][0]["content"][0].HasMember("type"));
+    EXPECT_STREQ(parsedResponse["output"][0]["content"][0]["type"].GetString(), "output_text");
+
+    ASSERT_TRUE(parsedResponse.HasMember("usage"));
+    ASSERT_TRUE(parsedResponse["usage"].IsObject());
+    ASSERT_TRUE(parsedResponse["usage"].HasMember("input_tokens"));
+    ASSERT_TRUE(parsedResponse["usage"].HasMember("output_tokens"));
+    ASSERT_TRUE(parsedResponse["usage"].HasMember("total_tokens"));
+}
+
+TEST_P(VLMServableExecutionTestParameterized, unaryResponsesOnlyImageInput) {
+    auto modelName = GetParam();
+    std::vector<std::pair<std::string, std::string>> fields = {
+        {"max_output_tokens", "5"},
+        {"temperature", "0.0"}};
+    std::string requestBody = createResponsesRequestBody(modelName, fields, false, 1);
+
+    ovms::HttpRequestComponents responsesComp;
+    ASSERT_EQ(handler->parseRequestComponents(responsesComp, "POST", endpointResponses, headers), ovms::StatusCode::OK);
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointResponses, requestBody, &response, responsesComp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK);
+
+    parsedResponse.Parse(response.c_str());
+    ASSERT_TRUE(parsedResponse.IsObject());
+    ASSERT_TRUE(parsedResponse.HasMember("object"));
+    EXPECT_STREQ(parsedResponse["object"].GetString(), "response");
+    ASSERT_TRUE(parsedResponse.HasMember("output"));
+    ASSERT_TRUE(parsedResponse["output"].IsArray());
+    ASSERT_GT(parsedResponse["output"].GetArray().Size(), 0);
+}
+
+TEST_P(VLMServableExecutionTestParameterized, unaryResponsesWithTools) {
+    auto modelName = GetParam();
+    std::vector<std::pair<std::string, std::string>> fields = {
+        {"max_output_tokens", "5"},
+        {"temperature", "0.0"},
+        {"tool_choice", R"("auto")"},
+        {"tools", R"([
+            {
+                "type": "function",
+                "name": "get_weather",
+                "description": "Get weather by city",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "city": {
+                            "type": "string"
+                        }
+                    },
+                    "required": ["city"]
+                }
+            }
+        ])"}};
+    std::string requestBody = createResponsesRequestBody(modelName, fields);
+
+    ovms::HttpRequestComponents responsesComp;
+    ASSERT_EQ(handler->parseRequestComponents(responsesComp, "POST", endpointResponses, headers), ovms::StatusCode::OK);
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointResponses, requestBody, &response, responsesComp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK);
+
+    parsedResponse.Parse(response.c_str());
+    ASSERT_TRUE(parsedResponse.IsObject());
+    ASSERT_TRUE(parsedResponse.HasMember("object"));
+    EXPECT_STREQ(parsedResponse["object"].GetString(), "response");
+    ASSERT_TRUE(parsedResponse.HasMember("tools"));
+    ASSERT_TRUE(parsedResponse["tools"].IsArray());
+    ASSERT_GT(parsedResponse["tools"].GetArray().Size(), 0);
+    ASSERT_TRUE(parsedResponse.HasMember("tool_choice"));
+    ASSERT_TRUE(parsedResponse["tool_choice"].IsString());
+    EXPECT_STREQ(parsedResponse["tool_choice"].GetString(), "auto");
+}
+
+TEST_P(VLMServableExecutionTestParameterized, unaryResponsesWithFunctionToolChoiceObject) {
+    auto modelName = GetParam();
+    std::vector<std::pair<std::string, std::string>> fields = {
+        {"max_output_tokens", "5"},
+        {"temperature", "0.0"},
+        {"tool_choice", R"({"type":"function","name":"get_weather"})"},
+        {"tools", R"([
+            {
+                "type": "function",
+                "name": "get_weather",
+                "description": "Get weather by city",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "city": {
+                            "type": "string"
+                        }
+                    },
+                    "required": ["city"]
+                }
+            }
+        ])"}};
+    std::string requestBody = createResponsesRequestBody(modelName, fields);
+
+    ovms::HttpRequestComponents responsesComp;
+    ASSERT_EQ(handler->parseRequestComponents(responsesComp, "POST", endpointResponses, headers), ovms::StatusCode::OK);
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointResponses, requestBody, &response, responsesComp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK);
+
+    parsedResponse.Parse(response.c_str());
+    ASSERT_TRUE(parsedResponse.IsObject());
+    ASSERT_TRUE(parsedResponse.HasMember("tool_choice"));
+    ASSERT_TRUE(parsedResponse["tool_choice"].IsObject());
+    ASSERT_TRUE(parsedResponse["tool_choice"].HasMember("type"));
+    EXPECT_STREQ(parsedResponse["tool_choice"]["type"].GetString(), "function");
+    ASSERT_TRUE(parsedResponse["tool_choice"].HasMember("name"));
+    EXPECT_STREQ(parsedResponse["tool_choice"]["name"].GetString(), "get_weather");
 }
 
 // Stream flow

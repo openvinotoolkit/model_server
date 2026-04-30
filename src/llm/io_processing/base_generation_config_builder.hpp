@@ -94,6 +94,6 @@ public:
      * If extended, model specific implementation should call base class method first to fill in common configuration
      * and then set model specific parameters.
      */
-    virtual void parseConfigFromRequest(const OpenAIChatCompletionsRequest& request);
+    virtual void parseConfigFromRequest(const OpenAIRequest& request);
 };
 }  // namespace ovms

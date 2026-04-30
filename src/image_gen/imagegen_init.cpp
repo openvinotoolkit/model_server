@@ -20,10 +20,12 @@
 #include <utility>
 #include <vector>
 
+#include <fmt/ranges.h>
+
 #include "absl/strings/str_replace.h"
 #include "absl/strings/ascii.h"
 
-#include "src/filesystem.hpp"
+#include "src/filesystem/filesystem.hpp"
 #include "src/image_gen/image_gen_calculator.pb.h"
 #include "src/json_parser.hpp"
 #include "src/logging.hpp"

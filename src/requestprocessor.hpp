@@ -15,7 +15,7 @@
 //*****************************************************************************
 #pragma once
 
-#include <openvino/openvino.hpp>
+#include <openvino/runtime/infer_request.hpp>
 
 #include "status.hpp"
 

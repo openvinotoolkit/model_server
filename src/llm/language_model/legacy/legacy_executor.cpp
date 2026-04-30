@@ -15,19 +15,15 @@
 //*****************************************************************************
 
 #include "legacy_executor.hpp"
+
+#include "../../../logging.hpp"
 #include "servable.hpp"
+
+#include <utility>
 
 namespace ovms {
 LegacyExecutor::LegacyExecutor(std::shared_ptr<ov::genai::LLMPipeline> pipe) {
     this->pipe = std::move(pipe);
-}
-
-bool LegacyExecutor::hasRequests() {
-    return requests.size() > 0;
-}
-
-size_t LegacyExecutor::requestsQueueSize() {
-    return requests.size();
 }
 
 void LegacyExecutor::processRequest() {
@@ -52,50 +48,6 @@ void LegacyExecutor::processRequest() {
     requests.pop();
 }
 
-void LegacyExecutor::waitForRequests(std::atomic<bool>* receivedEndSignal) {
-    std::unique_lock<std::mutex> lock(queueMutex);
-    cv.wait(lock, [this, receivedEndSignal] { return (requests.size() > 0 || *receivedEndSignal); });
-}
-
-void LegacyExecutor::addRequest(std::shared_ptr<LegacyServableExecutionContext> request) {
-    std::unique_lock<std::mutex> lock(queueMutex);
-    requests.push(request);
-    cv.notify_one();
-}
-
-void LegacyExecutor::notify() {
-    std::unique_lock<std::mutex> lock(queueMutex);
-    cv.notify_one();
-}
-
-void LegacyExecutorWrapper::run(LegacyExecutor* legacyExecutor, std::atomic<bool>* receivedEndSignal) {
-    // TODO add metrics
-    while (!(*receivedEndSignal)) {
-        try {
-            SPDLOG_LOGGER_INFO(llm_executor_logger, "All requests: {};", legacyExecutor->requestsQueueSize());
-            if (legacyExecutor->hasRequests()) {
-                legacyExecutor->processRequest();
-            } else {
-                legacyExecutor->waitForRequests(receivedEndSignal);
-            }
-        } catch (std::exception& e) {
-            SPDLOG_LOGGER_ERROR(llm_executor_logger, "Error occurred in LLM executor: {}.", e.what());
-            exit(1);
-        }
-    }
-}
-
 LegacyExecutorWrapper::LegacyExecutorWrapper(std::shared_ptr<ov::genai::LLMPipeline> pipe) :
-    legacyExecutor(std::move(pipe)) {
-    legacyExecutorThread = std::thread(LegacyExecutorWrapper::run, &legacyExecutor, &finishExecutorThread);
-}
-
-LegacyExecutorWrapper::~LegacyExecutorWrapper() {
-    finishExecutorThread = true;
-    legacyExecutor.notify();
-    legacyExecutorThread.join();
-}
-void LegacyExecutorWrapper::addRequest(std::shared_ptr<LegacyServableExecutionContext> request) {
-    legacyExecutor.addRequest(request);
-}
+    ExecutorWrapper(llm_executor_logger, std::make_shared<LegacyExecutor>(std::move(pipe))) {}
 }  // namespace ovms

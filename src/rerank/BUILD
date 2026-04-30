@@ -30,7 +30,10 @@ mediapipe_proto_library(
 ovms_cc_library(
     name = "rerank_servable",
     hdrs = ["rerank_servable.hpp"],
-    deps = ["//src:sidepacket_servable",],
+    deps = ["//src:sidepacket_servable",
+            "//src/port:rapidjson_document",
+            "//src/port:rapidjson_istreamwrapper",
+            "//src/port:rapidjson_error",],
     visibility = ["//visibility:public"],
     alwayslink = 1,
 )
@@ -65,7 +68,8 @@ ovms_cc_library(
 
 ovms_cc_library(
     name = "rerankcalculator_ov",
-    srcs = ["rerank_calculator_ov.cc"],
+    srcs = ["rerank_calculator_ov.cc",
+            "rerank_node_initializer.cpp"],
     deps = [
         "@mediapipe//mediapipe/framework:calculator_framework",
         "@com_github_tencent_rapidjson//:rapidjson",
@@ -81,6 +85,8 @@ ovms_cc_library(
         "//src:executingstreamidguard",
         "//src:libovms_execution_context",
         "//src/tokenize:tokenize_parser",
+        "//src/mediapipe_internal:node_initializer",
+        "//src:libovmsstring_utils",
     ],
     visibility = ["//visibility:public"],
     alwayslink = 1,

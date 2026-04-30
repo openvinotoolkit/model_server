@@ -38,22 +38,23 @@
 
 #include "config.hpp"
 #include "dags/pipeline.hpp"
+#include "dags/pipeline_factory.hpp"
 #include "dags/pipelinedefinition.hpp"
-#include "dags/pipelinedefinitionunloadguard.hpp"
+#include "servable_definition_unload_guard.hpp"
 #include "execution_context.hpp"
-#include "filesystem.hpp"
+#include "filesystem/filesystem.hpp"
 #include "get_model_metadata_impl.hpp"
 #include "grpcservermodule.hpp"
 #include "kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "kfs_frontend/kfs_utils.hpp"
-#include "metric_module.hpp"
-#include "metric_registry.hpp"
+#include "metrics/metric_config.hpp"
+#include "metrics/metric_module.hpp"
+#include "metrics/metric_registry.hpp"
 #include "model_metric_reporter.hpp"
 #include "model_service.hpp"
 #include "modelinstance.hpp"
 #include "modelinstanceunloadguard.hpp"
 #include "modelmanager.hpp"
-#include "prediction_service_utils.hpp"
 #include "profiler.hpp"
 #include "rest_parser.hpp"
 #include "rest_utils.hpp"
@@ -68,11 +69,14 @@
 #include "http_payload.hpp"
 #include "http_frontend/http_client_connection.hpp"
 #include "http_frontend/http_graph_executor_impl.hpp"
+#include "mediapipe_internal/mediapipefactory.hpp"
 #include "mediapipe_internal/mediapipegraphexecutor.hpp"
 #endif
 
 #include "tfs_frontend/tfs_utils.hpp"
+#include "tfs_frontend/tfs_request_utils.hpp"
 #include "tfs_frontend/deserialization.hpp"
+#include "kfs_frontend/kfs_request_utils.hpp"
 #include "deserialization_main.hpp"
 #include "inference_executor.hpp"
 
@@ -238,7 +242,7 @@ Status HttpRestApiHandler::processServerReadyKFSRequest(const HttpRequestCompone
     if (isReady) {
         return StatusCode::OK;
     }
-    return StatusCode::MODEL_NOT_LOADED;
+    return StatusCode::SERVER_NOT_READY;
 }
 
 Status HttpRestApiHandler::processServerLiveKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) {
@@ -507,6 +511,11 @@ static Status createV3HttpPayload(
         } else {
             SPDLOG_DEBUG("Model name from deduced from MultiPart field: {}", modelName);
         }
+        // Detect stream field in multipart form data (used by audio endpoints)
+        std::string streamField = multiPartParser->getFieldByName("stream");
+        if (streamField == "true") {
+            streamFieldVal = true;
+        }
         ensureJsonParserInErrorState(parsedJson);
     } else if (isApplicationJson) {
         {
@@ -531,7 +540,7 @@ static Status createV3HttpPayload(
             return Status(StatusCode::JSON_INVALID, "model field is not a string");
         }
 
-        bool isTextGenerationEndpoint = uri.find("completions") != std::string_view::npos;
+        bool isTextGenerationEndpoint = (uri.find("completions") != std::string_view::npos) || (uri.find("responses") != std::string_view::npos);
         if (isTextGenerationEndpoint) {
             auto streamIt = parsedJson->FindMember("stream");
             if (streamIt != parsedJson->MemberEnd()) {
@@ -1152,7 +1161,7 @@ Status HttpRestApiHandler::processPredictRequest(
     if (this->modelManager.modelExists(modelName)) {
         SPDLOG_DEBUG("Found model with name: {}. Searching for requested version...", modelName);
         status = processSingleModelRequest(modelName, modelVersion, request, requestOrder, responseProto, reporterOut);
-    } else if (this->modelManager.pipelineDefinitionExists(modelName)) {
+    } else if (this->modelManager.servableExists(modelName, ServableQueryType::Pipeline)) {
         SPDLOG_DEBUG("Found pipeline with name: {}", modelName);
         status = processPipelineRequest(modelName, request, requestOrder, responseProto, reporterOut);
     } else {
@@ -1246,7 +1255,7 @@ Status HttpRestApiHandler::getPipelineInputsAndReporter(const std::string& model
     if (!pipelineDefinition) {
         return StatusCode::MODEL_MISSING;
     }
-    std::unique_ptr<PipelineDefinitionUnloadGuard> unloadGuard;
+    std::unique_ptr<ServableDefinitionUnloadGuard> unloadGuard;
     Status status = pipelineDefinition->waitForLoaded(unloadGuard);
     if (!status.ok()) {
         return status;
@@ -1287,7 +1296,7 @@ Status HttpRestApiHandler::processPipelineRequest(const std::string& modelName,
 
     tensorflow::serving::PredictRequest& requestProto = requestParser.getProto();
     requestProto.mutable_model_spec()->set_name(modelName);
-    status = this->modelManager.createPipeline(pipelinePtr, modelName, &requestProto, &responseProto);
+    status = this->modelManager.getPipelineFactory().create(pipelinePtr, modelName, &requestProto, &responseProto, this->modelManager);
     if (!status.ok()) {
         INCREMENT_IF_ENABLED(reporterOut->getInferRequestMetric(executionContext, false));
         return status;

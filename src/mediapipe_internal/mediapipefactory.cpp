@@ -25,16 +25,9 @@
 #include <unordered_set>
 #include <utility>
 #include <vector>
-#pragma warning(push)
-#pragma warning(disable : 6001 4324 6385 6326 6308 6387 6246)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wall"
-#include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
-#pragma GCC diagnostic pop
-#pragma warning(pop)
-#include "../kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "../logging.hpp"
-#include "../modelmanager.hpp"
+#include "src/metrics/metric_provider.hpp"
+#include "../servable_name_checker.hpp"
 #include "../status.hpp"
 #include "../stringutils.hpp"
 #pragma warning(push)
@@ -62,13 +55,14 @@ MediapipeFactory::MediapipeFactory(PythonBackend* pythonBackend) {
 
 Status MediapipeFactory::createDefinition(const std::string& pipelineName,
     const MediapipeGraphConfig& config,
-    ModelManager& manager) {
+    MetricProvider& metrics,
+    const ServableNameChecker& checker) {
     if (definitionExists(pipelineName)) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Mediapipe graph definition: {} is already created", pipelineName);
         return StatusCode::PIPELINE_DEFINITION_ALREADY_EXIST;
     }
-    std::shared_ptr<MediapipeGraphDefinition> graphDefinition = std::make_shared<MediapipeGraphDefinition>(pipelineName, config, manager.getMetricRegistry(), &manager.getMetricConfig(), pythonBackend);
-    auto stat = graphDefinition->validate(manager);
+    std::shared_ptr<MediapipeGraphDefinition> graphDefinition = std::make_shared<MediapipeGraphDefinition>(pipelineName, config, metrics.getMetricRegistry(), &metrics.getMetricConfig(), pythonBackend);
+    auto stat = graphDefinition->validate(checker);
     if (stat.getCode() == StatusCode::MEDIAPIPE_GRAPH_NAME_OCCUPIED) {
         return stat;
     }
@@ -108,19 +102,18 @@ MediapipeGraphDefinition* MediapipeFactory::findDefinitionByName(const std::stri
 
 Status MediapipeFactory::reloadDefinition(const std::string& name,
     const MediapipeGraphConfig& config,
-    ModelManager& manager) {
+    const ServableNameChecker& checker) {
     auto mgd = findDefinitionByName(name);
     if (mgd == nullptr) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Requested to reload mediapipe graph definition but it does not exist: {}", name);
         return StatusCode::INTERNAL_ERROR;
     }
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Reloading mediapipe graph: {}", name);
-    return mgd->reload(manager, config);
+    return mgd->reload(checker, config);
 }
 
 Status MediapipeFactory::create(std::unique_ptr<MediapipeGraphExecutor>& pipeline,
-    const std::string& name,
-    ModelManager& manager) const {
+    const std::string& name) const {
     std::shared_lock lock(definitionsMtx);
     auto it = definitions.find(name);
     if (it == definitions.end()) {
@@ -138,17 +131,17 @@ Status MediapipeFactory::create(std::unique_ptr<MediapipeGraphExecutor>& pipelin
     return definition.create(pipeline);
 }
 
-void MediapipeFactory::retireOtherThan(std::set<std::string>&& graphsInConfigFile, ModelManager& manager) {
+void MediapipeFactory::retireOtherThan(std::set<std::string>&& graphsInConfigFile) {
     std::for_each(definitions.begin(),
         definitions.end(),
-        [&graphsInConfigFile, &manager](auto& nameDefinitionPair) {
+        [&graphsInConfigFile](auto& nameDefinitionPair) {
             if (graphsInConfigFile.find(nameDefinitionPair.second->getName()) == graphsInConfigFile.end() && nameDefinitionPair.second->getStateCode() != PipelineDefinitionStateCode::RETIRED) {
-                nameDefinitionPair.second->retire(manager);
+                nameDefinitionPair.second->retire();
             }
         });
 }
 
-Status MediapipeFactory::revalidatePipelines(ModelManager&) {
+Status MediapipeFactory::revalidatePipelines() {
     SPDLOG_LOGGER_WARN(modelmanager_logger, "revalidation of mediapipe graphs not implemented yet");
     return StatusCode::OK;
 }

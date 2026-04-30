@@ -17,10 +17,11 @@
 
 #include <google/protobuf/util/json_util.h>
 
+#include "dags/pipeline_factory.hpp"
 #include "dags/pipelinedefinition.hpp"
-#include "dags/pipelinedefinitionstatus.hpp"
-#include "dags/pipelinedefinitionunloadguard.hpp"
+#include "servable_definition_unload_guard.hpp"
 #include "execution_context.hpp"
+#include "model.hpp"
 #include "modelinstance.hpp"
 #include "modelinstanceunloadguard.hpp"
 #include "modelmanager.hpp"
@@ -168,7 +169,7 @@ Status GetModelMetadataImpl::buildResponse(
     const ModelManager& manager) {
 
     // 0 meaning immediately return unload guard if possible, otherwise do not wait for available state
-    std::unique_ptr<PipelineDefinitionUnloadGuard> unloadGuard;
+    std::unique_ptr<ServableDefinitionUnloadGuard> unloadGuard;
     auto status = pipelineDefinition.waitForLoaded(unloadGuard, 0);
     if (!status.ok()) {
         return status;

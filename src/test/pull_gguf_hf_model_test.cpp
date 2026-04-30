@@ -25,8 +25,8 @@
 #include "test_utils.hpp"
 #include "test_with_temp_dir.hpp"
 #include "gguf_environment.hpp"
-#include "../filesystem.hpp"
-#include "../localfilesystem.hpp"
+#include "src/filesystem/filesystem.hpp"
+#include "src/filesystem/localfilesystem.hpp"
 #include "src/pull_module/gguf_downloader.hpp"
 #include "src/modelextensions.hpp"
 
