@@ -2585,7 +2585,7 @@ cc_test(
             ],
         }) + select({
             "//:not_disable_python": [
-                "//src/python:pythoninterpretermodule_runtime",
+                "//src/python:libovmspythonmodule",
             ],
             "//:disable_python": [],
         }),
@@ -2767,7 +2767,7 @@ cc_library(
     srcs = ["test/python_environment.cpp",],
     linkopts = [],
     deps = PYBIND_DEPS + [
-            "//src/python:pythoninterpretermodule_runtime",
+            "//src/python:libovmspythonmodule",
             "//src:cpp_headers",
             "libovmsstatus",
             "@com_google_googletest//:gtest",
