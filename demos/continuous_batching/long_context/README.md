@@ -22,69 +22,84 @@ Compression reduces this memory usage, enabling longer prompts or more parallel 
 
 Let's demonstrate all the optimizations combined and test it with the real life scenario of sending multiple various questions in the same context. It will illustrate the gain from the prefix caching on the first token latency, improved second token latency thanks to prompt lookup and moderate memory consumption despite very long prompts and parallel execution.
 
-Export the model Qwen/Qwen2.5-7B-Instruct-1M which has the max context length of 1 million tokens! 
-
+Prepare models directory:
 ```bash
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/export_model.py -o export_model.py
-pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
 mkdir models
-python export_model.py text_generation --source_model Qwen/Qwen2.5-7B-Instruct-1M --weight-format int4 --config_file_path models/config.json --model_repository_path models
 ```
 
-Start OVMS:
+::::{tab-set}
+:::{tab-item} CPU
+:sync:CPU
 ```bash
-docker run -it --rm -u $(id -u) -p 8000:8000 -v $(pwd)/models/:/models:rw openvino/model_server:latest --rest_port 8000 --source_model Qwen/Qwen2.5-7B-Instruct-1M --model_repository_path /models --task text_generation --enable_prefix_caching true --kv_cache_precision u8 --target_device CPU
+docker run --user $(id -u):$(id -g) -d --rm -v $(pwd)/models:/models:rw -p 8000:8000 openvino/model_server:latest --rest_port 8000 --model_repository_path /models --source_model OpenVINO/gpt-oss-20b-int4-ov  --tool_parser gptoss --reasoning_parser gptoss --task text_generation --enable_prefix_caching true
 ```
-
-## Dataset for experiments
-
-To test the performance using vllm benchmarking script, let's create a custom dataset with long shared context and a set of questions in each request.  That way we can create a dataset with identical very long context with different queries related to the context. That is a common scenario for RAG applications which generates response based on a complete knowledge base. To make this experiment similar to real live, the context is not synthetic but build with the content of Don Quixote story with 10 different questions related to the story. Because the context is reused, it is a perfect case for benefitting from prefix caching. 
-
+:::
+::: {tab-item} GPU
+:sync: GPU
 ```bash
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/continuous_batching/long_context/custom_dataset.py -o custom_dataset.py
-pip install requests transformers
-python custom_dataset.py --limit_context_tokens 50000
+docker run --user $(id -u):$(id -g) -d --rm -v $(pwd)/models:/models:rw -p 8000:8000 --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:latest-gpu --rest_port 8000 --model_repository_path /models --source_model OpenVINO/gpt-oss-20b-int4-ov  --tool_parser gptoss --reasoning_parser gptoss --task text_generation --enable_prefix_caching true --target_device GPU
 ```
-
-It will create a file called `dataset.jsonl` with 10 requests of shared context body limited to 50000 tokens. 
+:::
+:::{tab-item} NPU
+```bash
+docker run --user $(id -u):$(id -g) -d --rm -v $(pwd)/models:/models:rw -p 8000:8000 --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:latest-gpu --rest_port 8000 --model_repository_path /models --source_model OpenVINO/Qwen3-8B-int4-cw-ov  --target_device NPU --task text_generation --enable_prefix_caching true --max_prompt_len 16000 --tool_parser hermes3 --plugin_config "{\"NPUW_LLM_PREFILL_ATTENTION_HINT\": \"PYRAMID\"}"
+```
+**Note:** It's recommended to set `--max_prompt_len` value to as low as possible. This will improve performence, but limit number of tokens model will accept.
+:::
+::::
 
 ## Testing performance
 
-Let's check the performance 
+Using `vllm` benchmark it's possible to check performence of the model with desired context lenght. It's also available set prefix parameters check performence benefit from prefix caching.
 ```bash
-git clone --branch v0.9.1 --depth 1 https://github.com/vllm-project/vllm
-cd vllm
-pip3 install -r requirements/cpu.txt . --extra-index-url https://download.pytorch.org/whl/cpu
-python benchmarks/benchmark_serving.py --host localhost --port 8000 --endpoint /v3/chat/completions --backend openai-chat --model Qwen/Qwen2.5-7B-Instruct-1M --dataset-name custom --dataset-path ../dataset.jsonl --num-prompts 10 --max-concurrency 1 --custom-output-len 50
-============ Serving Benchmark Result ============
-Successful requests:                     10        
-Benchmark duration (s):                  31.44     
-Total input tokens:                      500414    
-Total generated tokens:                  500       
-Request throughput (req/s):              0.32      
-Output token throughput (tok/s):         15.91     
-Total Token throughput (tok/s):          15934.81  
----------------Time to First Token----------------
-Mean TTFT (ms):                          1551.46   
-Median TTFT (ms):                        518.46    
-P99 TTFT (ms):                           3260.48   
+pip install vllm --extra-index-url https://wheels.vllm.ai/nightly/cpu
+vllm bench serve --backend  openai --base-url http://localhost:8000/ --endpoint v3/completions --model  OpenVINO/gpt-oss-20b-int4-ov --tokenizer openai/gpt-oss-20b --prefix-repetition-prefix-len 50000 --prefix-repetition-suffix-len 10 --prefix-repetition-output-len 20 --prefix-repetition-num-prefixes 1  --num-prompts 2 --max_concurrency 1 --dataset-name prefix_repetition --num-warmups 1 --seed 1
 ```
-
-The results shown above, despite very long context, have much lower TTFT latency with prefix caching. As long as the beginning of the request prompt is reused, KV cache can be also reused to speed up prompt processing.
 
 ## Performance Comparison Table
 
+::::{tab-set}
+:::{tab-item} CPU
+Platform: Intel(R) Xeon(R) Platinum 8480+
 | Context Length (tokens) | TTFT No Caching (ms) | TTFT Prefix Caching (ms) | KV Cache Usage (GB) |
-|------------------------|----------------------|--------------------------|---------------------|
-| 1,000                  | 785               | 141                    | 0.1                 |
-| 5,000                  | 4160              | 172                    | 0.2                 |
-| 10,000                 | 9570              | 217                    | 0.4                 |
-| 50,000                 | 152,589           | 795                    | 1.5                 |
-| 100,000                | 624,713           | 1097                   | 3.1                 |
-| 200,000                |                   | 5406                   | 6.2                 |
+|------------------------|------------------|---------------------|-----------------------|
+| 1,000                  |  4 420          | 190.84                  |          0.03       |
+| 2,500                  |  9 627          | 272.56                  |          0.07       |
+| 5,000                  | 17 736          | 369.66                  |          0.1        |
+| 10,000                 | 36 684          | 680.28                  |          0.2        |
+| 25,000                 | 100 807         | 1570.07                 |         0.6         |
+| 50,000                 | 287 788         | 5133.87                 |          1.3        |
+NOT UPDATED
+:::
+:::{tab-item} iGPU
+:sync: GPU
+Platform: Intel(R) Core(TM) Ultra X7 368H
+| Context Length (tokens) | TTFT No Caching (ms) | TTFT Prefix Caching (ms) | KV Cache Usage (GB) |
+|------------------------|------------------|---------------------|-----------------------|
+| 1,000                  |  1 299          | 185.79                  |          0.03       |
+| 2,500                  |  3 606          | 235.13                  |          0.07       |
+| 5,000                  |  8 851          | 281.75                  |          0.1        |
+| 10,000                 | 23 098          | 654.88                  |          0.2        |
+| 25,000                 | 88 207          | 4 388                   |          0.6        |
+| 50,000                 | 261 835         | 17 348                  |          1.3        |
 
-The results show that the cache usage grows linearly with the context length.
-First token generation without prefix caching is growing significantly with the prompt size. 
+:::
+:::{tab-item} NPU
+:sync: NPU
+Platform: Intel(R) Core(TM) Ultra X7 368H
+| Context Length (tokens) | TTFT No Caching (ms) | TTFT Prefix Caching (ms) |
+|------------------------|------------------|---------------------|
+| 500                    | 1521.75          | 1489.22                  |
+| 1,000                  | 3061.18          | 1729.39                  |
+| 2,000                  | 3072.92          | 1806.56                  |
+| 4,000                  | 6697.62          | 2421.26                  |
+| 8,000                  | 16046.92         | 3232.11                  |
+| 16,000                 | 53378.22         | 6585.93                  |
+NOT UPDATED
+:::
+::::
+
+The results show that the cache usage grows exponentialy with the context length.
 Prefix caching is very effective in reducing the first token generation making the long context calls practical even on slower HW.
 
 ## Testing accuracy
@@ -92,23 +107,10 @@ Prefix caching is very effective in reducing the first token generation making t
 Testing accuracy for use cases with long context can be done via [lm-eval_harness](../accuracy/README.md).
 The only difference is that the configured testing task should include a relevant dataset.
 
-For example:
-```
-lm-eval --model local-chat-completions --tasks longbench_gov_report  --model_args model=Qwen/Qwen2.5-7B-Instruct-1M,base_url=http://localhost:8000/v3/chat/completions,num_concurrent=10,tokenized_requests=False,timeout=3000  --verbosity DEBUG --seed 1 --apply_chat_template
-```
+## Cache Precision
 
-Such experiment can confirm the impact on accuracy from the model quantization and KV cache compression.
-
-## Cache Precision Comparison
-
-| Cache Precision | Plugin Config | Accuracy (longbench_gov_report, concurrency 50) | Max Cache Usage (GB) | Duration (s for 100 requests) |
-|-----------------|--------------|-----------------------------------------------|----------------------|-------------------------------|
-| INT8            | "KV_CACHE_PRECISION":"u8"                                     | 0.3374        | 11                   | 41m6.993s    |
-| BF16            | "KV_CACHE_PRECISION":"bf16"                                   | 0.3297        | 20                   | 40m15.359s   |
-| FP32            | "KV_CACHE_PRECISION":"FP32","EXECUTION_MODE_HINT": "ACCURACY" | 0.331         | 37                   | 105m15.876s  |
-
-The results in an experiment captured on Xeon Gen4 server show that KV cache compression has minimal impact on accuracy and significantly reduces memory consumption.
-Slower execution with FP32 precision is a result of disabled AMX acceleration.
+KV cache compression has minimal impact on accuracy and significantly reduces memory consumption and benchmark time.
+It's recommended to use default KV cache precision which is INT8.
 
 ## Recommendations
 
@@ -116,7 +118,7 @@ Enable prefix caching feature with `--enable_prefix_caching` parameter when you 
 
 Use KV cache compression as INT8 which is the default setting.
 
-Set the KV cache size via `--cache_size` parameter based on the available memory, expected concurrency and context length. It will improve the performance. 
+Set the KV cache size via `--cache_size` parameter based on the available memory, expected concurrency and context length or use default value (`0`) to make it dynamic. It will improve the performance. 
 
 **Note** You can force reducing the concurrency on the server using a parameter `--rest_workers` which by default allows number of connections the same like number of CPU cores. Alternatively the limit can be set on the model level in `--max_num_seqs`.
 
