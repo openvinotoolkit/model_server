@@ -113,7 +113,7 @@ ls -lahR /ovms_release/
 
 # removing 29MB of cpython packages for unsupported python versions
 rls_python=cpython-"$(python3 --version 2>&1 | awk '{gsub(/\./, "", $2); print $2}' | cut -c1-3)"
-find /ovms_release/ovms/lib/python/openvino -name *cpython* | grep -vZ $rls_python | xargs rm -rf --
+find /ovms_release/lib/python/openvino -name *cpython* | grep -vZ $rls_python | xargs rm -rf --
 
 mkdir -p /ovms_pkg/${BASE_OS}
 cd /ovms_pkg/${BASE_OS}

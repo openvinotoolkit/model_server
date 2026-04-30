@@ -85,12 +85,14 @@ using PythonLibraryHandle = void*;
 using PythonLibraryHandle = HMODULE;
 #endif
 using CreatePythonInterpreterModuleFn = Module* (*)();
+using ValidatePythonEnvironmentFn = bool (*)(const char** errorMessage);
 
 PythonLibraryHandle pythonRuntimeHandle = nullptr;
 CreatePythonInterpreterModuleFn createPythonInterpreterModuleFn = nullptr;
+ValidatePythonEnvironmentFn validatePythonEnvironmentFn = nullptr;
 
 bool ensurePythonRuntimeLoaded() {
-    if (createPythonInterpreterModuleFn != nullptr) {
+    if (createPythonInterpreterModuleFn != nullptr && validatePythonEnvironmentFn != nullptr) {
         return true;
     }
 
@@ -117,6 +119,14 @@ bool ensurePythonRuntimeLoaded() {
     createPythonInterpreterModuleFn = reinterpret_cast<CreatePythonInterpreterModuleFn>(dlsym(pythonRuntimeHandle, "OVMS_createPythonInterpreterModule"));
     if (createPythonInterpreterModuleFn == nullptr) {
         SPDLOG_WARN("Python runtime library libovmspython.so missing symbol OVMS_createPythonInterpreterModule: {}", dlerror());
+        dlclose(pythonRuntimeHandle);
+        pythonRuntimeHandle = nullptr;
+        return false;
+    }
+    validatePythonEnvironmentFn = reinterpret_cast<ValidatePythonEnvironmentFn>(dlsym(pythonRuntimeHandle, "OVMS_validatePythonEnvironment"));
+    if (validatePythonEnvironmentFn == nullptr) {
+        SPDLOG_WARN("Python runtime library libovmspython.so missing symbol OVMS_validatePythonEnvironment: {}", dlerror());
+        createPythonInterpreterModuleFn = nullptr;
         dlclose(pythonRuntimeHandle);
         pythonRuntimeHandle = nullptr;
         return false;
@@ -177,7 +187,31 @@ bool ensurePythonRuntimeLoaded() {
         pythonRuntimeHandle = nullptr;
         return false;
     }
+    validatePythonEnvironmentFn = reinterpret_cast<ValidatePythonEnvironmentFn>(GetProcAddress(pythonRuntimeHandle, "OVMS_validatePythonEnvironment"));
+    if (validatePythonEnvironmentFn == nullptr) {
+        DWORD error = GetLastError();
+        SPDLOG_WARN("Python runtime library libovmspython.dll missing symbol OVMS_validatePythonEnvironment: {} ({})", error, std::system_category().message(error));
+        createPythonInterpreterModuleFn = nullptr;
+        FreeLibrary(pythonRuntimeHandle);
+        pythonRuntimeHandle = nullptr;
+        return false;
+    }
 #endif
+
+    const char* pythonRuntimeValidationError = nullptr;
+    if (!validatePythonEnvironmentFn(&pythonRuntimeValidationError)) {
+        SPDLOG_WARN("Python runtime environment validation failed. Ensure Python dependencies and PYTHONPATH are configured. Details: {}",
+            pythonRuntimeValidationError != nullptr ? pythonRuntimeValidationError : "Unknown error");
+        createPythonInterpreterModuleFn = nullptr;
+        validatePythonEnvironmentFn = nullptr;
+#ifdef __linux__
+        dlclose(pythonRuntimeHandle);
+#elif _WIN32
+        FreeLibrary(pythonRuntimeHandle);
+#endif
+        pythonRuntimeHandle = nullptr;
+        return false;
+    }
 
     SPDLOG_INFO("Python runtime library loaded successfully");
     return true;
@@ -185,6 +219,7 @@ bool ensurePythonRuntimeLoaded() {
 
 void unloadPythonRuntime() {
     createPythonInterpreterModuleFn = nullptr;
+    validatePythonEnvironmentFn = nullptr;
     if (pythonRuntimeHandle == nullptr) {
         return;
     }
