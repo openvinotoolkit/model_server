@@ -786,7 +786,9 @@ ovms_cc_library(
          ],
         deps = select({
             "//:not_disable_python": [
-                "//src/python:libovmspythonmodule",
+                "//src/python:pythonnoderesources",
+                "//src/python:pythonexecutorcalculator",
+                "//src/python:pytensorovtensorconvertercalculator",
             ],
             "//:disable_python": []
         }) + select({
@@ -960,10 +962,13 @@ ovms_cc_library(
                 "//conditions:default": ["-lOpenCL"], # TODO make as direct dependency
                 "//src:windows" : ["/DEFAULTLIB:Rpcrt4.lib"],}),
     data = select({
-        "//:not_disable_python": [
+        "//:is_windows_and_python_is_enabled": [
+            "//src/python/binding:pyovms.pyd",
+        ],
+        "//:disable_python": [],
+        "//conditions:default": [
             "//src/python/binding:pyovms.so",
         ],
-        "//:disable_python": []
         }) + select({
             "//:is_windows_and_python_is_enabled": [
                 "//src/python/binding:copy_pyovms",
@@ -2272,10 +2277,13 @@ cc_binary(
             "//:disable_mediapipe" : [],
         }),
     data = select({
-        "//:not_disable_python": [
+        "//:is_windows_and_python_is_enabled": [
+            "//src/python/binding:pyovms.pyd",
+        ],
+        "//:disable_python": [],
+        "//conditions:default": [
             "//src/python/binding:pyovms.so",
         ],
-        "//:disable_python": []
     }),
     # linkstatic = False,  # Use for dynamic linking when necessary
 )
@@ -2530,7 +2538,15 @@ cc_test(
         "//src:libcustom_node_image_transformation.so",
         "//src:libcustom_node_add_one.so",
         "//src:libcustom_node_horizontal_ocr.so",
-    ],
+    ] + select({
+        "//:is_windows_and_python_is_enabled": [
+            "//src/python:libovmspython.dll",
+        ],
+        "//:disable_python": [],
+        "//conditions:default": [
+            "//src/python:libovmspython.so",
+        ],
+    }),
     deps = [
             "optimum-cli",
             "//src:ovms_lib",
@@ -2584,6 +2600,11 @@ cc_test(
             [
                 "serialization_common",
             ],
+        }) + select({
+            "//:not_disable_python": [
+                "//src/python:libovmspythonmodule",
+            ],
+            "//:disable_python": [],
         }),
     copts = COPTS_TESTS,
     local_defines = COMMON_LOCAL_DEFINES,
@@ -2604,6 +2625,34 @@ cc_library(
     copts = COPTS_TESTS,
     linkopts = COMMON_STATIC_LIBS_LINKOPTS,
 )
+
+cc_test(
+    name = "python_runtime_library_test",
+    srcs = [
+        "test/python_runtime_library_test.cpp",
+    ],
+    copts = ["-Wno-format-security"],
+    data = select({
+        "//src:windows": [
+            "//src/python:libovmspython.dll",
+            "//src/python/binding:pyovms.pyd",
+        ],
+        "//:disable_python": [],
+        "//conditions:default": [
+            "//src/python:libovmspython.so",
+            "//src/python/binding:pyovms.so",
+        ],
+    }),
+    linkopts = select({
+        "//src:windows": [],
+        "//conditions:default": ["-ldl"],
+    }),
+    visibility = ["//visibility:public"],
+    deps = [
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
 cc_library(
     name = "test_test_models",
     hdrs = ["test/test_models.hpp",],
@@ -2763,6 +2812,9 @@ cc_library(
     srcs = ["test/python_environment.cpp",],
     linkopts = [],
     deps = PYBIND_DEPS + [
+            "//src/python:libovmspythonmodule",
+            "//src:cpp_headers",
+            "libovmsstatus",
             "@com_google_googletest//:gtest",
     ],
     local_defines = COMMON_LOCAL_DEFINES,

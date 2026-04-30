@@ -31,8 +31,12 @@ set "OVMS_MEDIA_URL_ALLOW_REDIRECTS=1"
 
 IF "%~2"=="--with_python" (
     set "bazelBuildArgs=--config=win_mp_on_py_on --action_env OpenVINO_DIR=%openvino_dir%"
+    set "testTargets=//src:ovms_test //src:python_runtime_library_test"
+    set "runPythonRuntimeTest=%cd%\bazel-bin\src\python_runtime_library_test.exe --gtest_filter=!gtestFilter! >> win_full_test.log 2>&1"
 ) ELSE (
     set "bazelBuildArgs=--config=win_mp_on_py_off --action_env OpenVINO_DIR=%openvino_dir%"
+    set "testTargets=//src:ovms_test"
+    set "runPythonRuntimeTest="
 )
 
 IF "%~3"=="" (
@@ -41,7 +45,7 @@ IF "%~3"=="" (
     set "gtestFilter=%3"
 )
 
-set "buildTestCommand=bazel %bazelStartupCmd% build %bazelBuildArgs% --jobs=%NUMBER_OF_PROCESSORS% --verbose_failures //src:ovms_test"
+set "buildTestCommand=bazel %bazelStartupCmd% build %bazelBuildArgs% --jobs=%NUMBER_OF_PROCESSORS% --verbose_failures %testTargets%"
 set "changeConfigsCmd=python windows_change_test_configs.py"
 set "runTest=%cd%\bazel-bin\src\ovms_test.exe --gtest_filter=!gtestFilter! > win_full_test.log 2>&1"
 
@@ -99,6 +103,13 @@ if !errorlevel! neq 0 exit /b !errorlevel!
 :: Start unit test
 echo Running: %runTest%
 %runTest%
+if !errorlevel! neq 0 goto :exit_build_error
+
+IF "%~2"=="--with_python" (
+    echo Running: %runPythonRuntimeTest%
+    %runPythonRuntimeTest%
+    if !errorlevel! neq 0 goto :exit_build_error
+)
 
 :: Cut tests log to results
 set regex="\[  .* ms"
@@ -111,6 +122,6 @@ if !errorlevel! equ 0 goto :exit_build_error
 echo [INFO] Tests finished with no failures. Check the summary in win_test_summary.log.
 exit /b 0
 :exit_build_error
-echo [ERROR] Check tests summary in 'win_test_summary.log' and tests logs in 'win_full_test.log'. Rerun failed test with: windows_setupvars.bat and %cd%\bazel-bin\src\ovms_test.exe --gtest_filter='*.*'
+echo [ERROR] Check tests summary in 'win_test_summary.log' and tests logs in 'win_full_test.log'. Rerun failed tests with: windows_setupvars.bat and %cd%\bazel-bin\src\ovms_test.exe --gtest_filter='*.*' and %cd%\bazel-bin\src\python_runtime_library_test.exe --gtest_filter='*.*'
 exit /b 1
 endlocal

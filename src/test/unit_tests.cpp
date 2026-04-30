@@ -14,6 +14,8 @@
 // limitations under the License.
 //*****************************************************************************
 
+#include <cstdlib>
+
 #include "environment.hpp"
 #include "gpuenvironment.hpp"
 #include "gguf_environment.hpp"

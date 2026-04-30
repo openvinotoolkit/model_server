@@ -16,29 +16,76 @@
 #include "python_environment.hpp"
 
 #include <memory>
+#include <stdexcept>
+
+#include "../config.hpp"
+#include "../status.hpp"
+
+namespace {
+PythonEnvironment* g_pythonEnvironment = nullptr;
+}
 
 void PythonEnvironment::SetUp() {
 #if (PYTHON_DISABLE == 0)
-    py::initialize_interpreter();
-    releaseGILFromThisThread();
+    pythonModule = std::make_unique<ovms::PythonInterpreterModule>();
+    auto status = pythonModule->start(ovms::Config::instance());
+    if (!status.ok()) {
+        throw std::runtime_error("Global python interpreter module failed to start");
+    }
+    if (pythonModule->ownsPythonInterpreter()) {
+        pythonModule->releaseGILFromThisThread();
+    }
+    g_pythonEnvironment = this;
 #endif
 }
 
 void PythonEnvironment::TearDown() {
 #if (PYTHON_DISABLE == 0)
-    reacquireGILForThisThread();
-    py::finalize_interpreter();
+    g_pythonEnvironment = nullptr;
+    if (pythonModule != nullptr) {
+        if (pythonModule->ownsPythonInterpreter()) {
+            pythonModule->reacquireGILForThisThread();
+        }
+        pythonModule->shutdown();
+        pythonModule.reset();
+    }
 #endif
 }
 
-void PythonEnvironment::releaseGILFromThisThread() const {
+ovms::PythonBackend* PythonEnvironment::getPythonBackend() const {
 #if (PYTHON_DISABLE == 0)
-    this->GILScopedRelease = std::make_unique<py::gil_scoped_release>();
+    if (pythonModule == nullptr) {
+        return nullptr;
+    }
+    return pythonModule->getPythonBackend();
+#else
+    return nullptr;
 #endif
 }
 
-void PythonEnvironment::reacquireGILForThisThread() const {
+ovms::PythonInterpreterModule* PythonEnvironment::getPythonInterpreterModule() const {
 #if (PYTHON_DISABLE == 0)
-    this->GILScopedRelease.reset();
+    return pythonModule.get();
+#else
+    return nullptr;
+#endif
+}
+
+ovms::PythonBackend* getGlobalPythonBackend() {
+    auto* pythonInterpreterModule = getGlobalPythonInterpreterModule();
+    if (pythonInterpreterModule == nullptr) {
+        return nullptr;
+    }
+    return pythonInterpreterModule->getPythonBackend();
+}
+
+ovms::PythonInterpreterModule* getGlobalPythonInterpreterModule() {
+#if (PYTHON_DISABLE == 0)
+    if (g_pythonEnvironment == nullptr) {
+        return nullptr;
+    }
+    return g_pythonEnvironment->getPythonInterpreterModule();
+#else
+    return nullptr;
 #endif
 }
