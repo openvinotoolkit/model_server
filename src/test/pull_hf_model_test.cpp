@@ -353,7 +353,9 @@ TEST_F(HfPullCache, RePull) {
     EXPECT_NE(out.find("Path already exists on local filesystem. Skipping download to path: "), std::string::npos);
     EXPECT_EQ(out.find("LFS file(s) to resume"), std::string::npos);
     EXPECT_EQ(out.find(" Resuming "), std::string::npos);
-    std::string lfsWipPath = ovms::FileSystem::joinPath({downloadPath, ".lfswip"});
+    // The LFS work-in-progress marker is a SIBLING of the repository directory
+    // (e.g. for "<dir>/repository" the marker is "<dir>/repository.lfswip"), not a child of it.
+    std::string lfsWipPath = ovms::libgit2::getLfsWipMarkerPath(downloadPath).string();
     EXPECT_EQ(std::filesystem::exists(lfsWipPath), false);
 }
 
