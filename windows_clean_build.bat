@@ -33,4 +33,5 @@ rm -rf win_build.log
 rm -rf win_build_test.log
 rm -rf win_full_test.log
 rm -rf win_test_summary.log
+rm -rf win_install_service_test.log
 endlocal
