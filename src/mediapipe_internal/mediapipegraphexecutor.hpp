@@ -303,7 +303,7 @@ public:
 #endif
                 inputSidePackets[LLM_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<GenAiServableMap>(this->sidePacketMaps.genAiServableMap).At(STARTING_TIMESTAMP);
                 inputSidePackets[EMBEDDINGS_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<EmbeddingsServableMap>(this->sidePacketMaps.embeddingsServableMap).At(STARTING_TIMESTAMP);
-                // Add image generation side packet in case image generation allow for streaming
+                inputSidePackets[STT_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<SttServableMap>(this->sidePacketMaps.sttServableMap).At(STARTING_TIMESTAMP);
             }
 
             {

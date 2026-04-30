@@ -20,6 +20,7 @@
 #include <vector>
 
 #include "../../../logging.hpp"
+#include "../../../profiler.hpp"
 #include "../../../status.hpp"
 #include "../../apis/openai_completions.hpp"
 #include "../../apis/openai_responses.hpp"

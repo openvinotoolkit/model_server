@@ -14,29 +14,33 @@
 // limitations under the License.
 //*****************************************************************************
 
-#pragma once
+#include "streaming_text_queue.hpp"
 
-#include <memory>
-
-#include "openvino/genai/llm_pipeline.hpp"
-
-#include "../../../logging.hpp"
-#include "../../../profiler.hpp"
-#include "../../../executor_base.hpp"
+#include <utility>
 
 namespace ovms {
-struct LegacyServableExecutionContext;
 
-struct LegacyExecutor : public Executor<std::shared_ptr<LegacyServableExecutionContext>> {
-    std::shared_ptr<ov::genai::LLMPipeline> pipe;
+void StreamingTextQueue::push(std::string text) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    queue_.push(std::move(text));
+    cv_.notify_one();
+}
 
-    LegacyExecutor(std::shared_ptr<ov::genai::LLMPipeline> pipe);
+void StreamingTextQueue::endStreaming() {
+    std::lock_guard<std::mutex> lock(mutex_);
+    done_ = true;
+    cv_.notify_one();
+}
 
-    void processRequest();
-};
+bool StreamingTextQueue::waitAndPop(std::string& out) {
+    std::unique_lock<std::mutex> lock(mutex_);
+    cv_.wait(lock, [this] { return !queue_.empty() || done_; });
+    if (!queue_.empty()) {
+        out = std::move(queue_.front());
+        queue_.pop();
+        return true;
+    }
+    return false;  // done and empty
+}
 
-class LegacyExecutorWrapper : public ExecutorWrapper<LegacyExecutor> {
-public:
-    LegacyExecutorWrapper(std::shared_ptr<ov::genai::LLMPipeline> pipe);
-};
 }  // namespace ovms
