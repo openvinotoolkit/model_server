@@ -217,6 +217,12 @@ ovms_cc_library(
     visibility = ["//visibility:public",],
 )
 ovms_cc_library(
+    name = "libovms_shutdown_state",
+    hdrs = ["shutdown_state.hpp"],
+    srcs = ["shutdown_state.cpp"],
+    visibility = ["//visibility:public",],
+)
+ovms_cc_library(
     name = "prediction_service_utils",
     hdrs = ["prediction_service_utils.hpp"],
     deps = [
@@ -827,6 +833,7 @@ ovms_cc_library(
             ],
         }) + [
             "cpp_headers",
+            "libovms_shutdown_state",
             "ovms_header",
             "capi_backend_impl",
             "libovms_capi_servable_metadata",
