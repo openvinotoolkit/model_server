@@ -849,4 +849,3 @@ TEST(LibGit2LfsWipMarker, MarkersForDifferentRepositoriesAreIndependent) {
     EXPECT_FALSE(ovms::libgit2::hasLfsWipMarker(repoAPath));
     EXPECT_TRUE(ovms::libgit2::hasLfsWipMarker(repoBPath));
 }
-
