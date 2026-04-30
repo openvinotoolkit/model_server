@@ -323,6 +323,14 @@ rapidjson::Document Lfm2ToolParser::wrapDeltaArgs(const std::string& argsStr) {
     return BaseOutputParser::wrapDelta(doc, this->toolCallIndex);
 }
 
+void Lfm2ToolParser::cutEOSFromContent(std::string& content, const ov::genai::GenerationFinishReason& finishReason) {
+    size_t eosPos = content.find(EOS_TOKEN_STR);
+    bool isEndOfStream = this->toolCallIndex > TOOL_CALL_INDEX_START && finishReason == ov::genai::GenerationFinishReason::STOP;
+    if (eosPos != std::string::npos && isEndOfStream) {
+        content = content.substr(0, eosPos);
+    }
+}
+
 std::optional<rapidjson::Document> Lfm2ToolParser::parseChunk(const std::string& chunk, ov::genai::GenerationFinishReason finishReason) {
     if (chunk.empty()) {
         return std::nullopt;
@@ -346,12 +354,11 @@ std::optional<rapidjson::Document> Lfm2ToolParser::parseChunk(const std::string&
                 content = this->streamingContent.substr(this->streamingPosition);
             }
             this->streamingPosition += content.size();
+            cutEOSFromContent(content, finishReason);
 
-            if (content.empty() || (this->toolCallIndex > TOOL_CALL_INDEX_START && trim_copy(content) == EOS_TOKEN_STR && finishReason == ov::genai::GenerationFinishReason::STOP)) {
-                return std::nullopt;
+            if (!content.empty()) {
+                return wrapDeltaContent(content);
             }
-
-            return wrapDeltaContent(content);
         }
         if (this->currentState == State::AfterToolCall) {
             this->currentState = State::Content;
@@ -366,8 +373,11 @@ std::optional<rapidjson::Document> Lfm2ToolParser::parseChunk(const std::string&
         if (this->currentState == State::Content && this->streamingPosition < this->streamingContent.size()) {
             auto content = this->streamingContent.substr(this->streamingPosition);
             this->streamingPosition += content.size();
+            cutEOSFromContent(content, finishReason);
 
-            return wrapDeltaContent(content);
+            if (!content.empty()) {
+                return wrapDeltaContent(content);
+            }
         }
     }
 

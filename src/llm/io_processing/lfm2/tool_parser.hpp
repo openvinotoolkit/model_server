@@ -83,6 +83,7 @@ private:
 
     Argument parseSingleArgument(const std::string& argumentStr);
     std::vector<Argument> parseArguments(const std::string& argumentsStr);
+    void cutEOSFromContent(std::string& content, const ov::genai::GenerationFinishReason& finishReason = ov::genai::GenerationFinishReason::NONE);
 
     bool parseSingleToolCall(const std::string& toolStr, ToolCall& toolCall);
     bool parseNewContent();
