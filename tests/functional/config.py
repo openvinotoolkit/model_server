@@ -230,6 +230,9 @@ run_ovms_with_valgrind = get_bool("TT_RUN_OVMS_WITH_VALGRIND", False)
 """ TT_RUN_OVMS_WITH_OPENCL_TRACE - run OVMS with cliloader """
 run_ovms_with_opencl_trace = get_bool("TT_RUN_OVMS_WITH_OPENCL_TRACE", False)
 
+""" TT_XDIST_WORKERS - number of workers """
+xdist_workers = get_int("TT_XDIST_WORKERS", 0)
+
 """ TT_SERVER_ADDRESS - OVMS server address"""
 server_address = os.environ.get("TT_SERVER_ADDRESS", "localhost")
 
