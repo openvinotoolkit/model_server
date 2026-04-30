@@ -351,16 +351,28 @@
             {{- raise_exception("Message has tool role, but there was no previous assistant message with a tool call!") }}
         {%- endif %}
         {{- "<|start|>functions." + last_tool_call.name }}
-        {#- When content is a plain string we render it directly (no escaping, OpenAI Harmony format). #}
-        {#- When content is an array (OpenAI multipart format) we serialise it as JSON so the model  #}
-        {#- sees the full structured response; this is the original template behaviour with |tojson.  #}
+        {#- When content is a plain string we render it directly.                                    #}
+        {#- When content is an array (OpenAI multipart format) we join the text items with newlines, #}
+        {#- matching what the model was trained on. JSON-serialising the array would add noise.      #}
         {%- if message.content is string -%}
             {{- " to=assistant<|channel|>commentary<|message|>" + message.content + "<|end|>" -}}
         {%- else -%}
-            {{- " to=assistant<|channel|>commentary<|message|>" + (message.content | tojson) + "<|end|>" -}}
+            {%- set ns = namespace(parts=[]) -%}
+            {%- for item in message.content if item.type == "text" -%}
+                {%- set ns.parts = ns.parts + [item.text] -%}
+            {%- endfor -%}
+            {{- " to=assistant<|channel|>commentary<|message|>" + ns.parts | join("\n") + "<|end|>" -}}
         {%- endif -%}
     {%- elif message.role == 'user' -%}
-        {{- "<|start|>user<|message|>" + message.content + "<|end|>" }}
+        {%- if message.content is string -%}
+            {{- "<|start|>user<|message|>" + message.content + "<|end|>" }}
+        {%- else -%}
+            {%- set ns = namespace(parts=[]) -%}
+            {%- for item in message.content if item.type == "text" -%}
+                {%- set ns.parts = ns.parts + [item.text] -%}
+            {%- endfor -%}
+            {{- "<|start|>user<|message|>" + ns.parts | join("\n") + "<|end|>" }}
+        {%- endif -%}
     {%- endif -%}
 {%- endfor -%}
 

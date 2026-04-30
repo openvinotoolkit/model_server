@@ -234,7 +234,6 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
                         request.imageHistory.push_back(std::move(tensorResult.value()));
                         // Translate image_url item to {type:image} so VLM chat templates
                         // (which use GenAI MULTIPART_CONTENT convention) see the image in context.
-                        // Remove all existing keys from this object first.
                         while (v.MemberBegin() != v.MemberEnd()) {
                             v.RemoveMember(v.MemberBegin());
                         }
@@ -246,8 +245,11 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
                         return absl::InvalidArgumentError("Unsupported content type");
                     }
                 }
-                // Store the content array (with image_url translated to image) in chatHistory.
-                // The doc is also updated so processedJson carries the translated array.
+                // Preserve the array (with any image_url translated to {type:image}) in chatHistory.
+                // For the Python Jinja path, processedJson is only written when jsonChanged is true
+                // (i.e. when image_url items were translated or tool_call arguments were injected).
+                // Otherwise the template falls back to payload.body and sees the original OpenAI
+                // format, which is equally correct — template decides how to render content arrays.
                 request.chatHistory.last()[memberName] = rapidJsonValueToJsonContainer(member->value);
             }
         }

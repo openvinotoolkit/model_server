@@ -3601,8 +3601,8 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParseMessagesRegularMessageHasNoToolFields)
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, ParseMessagesToolContentArrayPreservedInChatHistory) {
-    // Tool responses may arrive with content as an array of {type, text} objects (OpenAI multipart format).
-    // The array must be preserved end-to-end so the chat template can decide how to render it.
+    // Tool responses may arrive with content as an array of {type, text} objects (OpenAI multipart
+    // format). The array is preserved end-to-end so the chat template can decide how to render it.
     std::string json = R"({
     "model": "llama",
     "messages": [
@@ -3635,8 +3635,9 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParseMessagesToolContentArrayPreservedInCha
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, ParseMessagesContentArrayPreservedInProcessedJson) {
-    // When other changes force a processedJson re-serialisation (e.g. missing "arguments" added to
-    // tool_calls), the content array must still appear as an array in processedJson, not as a string.
+    // Content arrays are preserved as-is in processedJson when another mutation triggers
+    // jsonChanged (here: ensureArgumentsInToolCalls adds "arguments" to the tool call).
+    // The Python Jinja template receives the full structured content and decides how to render it.
     std::string json = R"({
     "model": "llama",
     "messages": [
@@ -3654,11 +3655,11 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParseMessagesContentArrayPreservedInProcess
     auto apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
     ASSERT_EQ(apiHandler->parseMessages(), absl::OkStatus());
 
-    // ensureArgumentsInToolCalls adds "arguments": "{}" which triggers jsonChanged → processedJson is set
+    // ensureArgumentsInToolCalls adds "arguments": "{}" → jsonChanged → processedJson is written
     const std::string& processed = apiHandler->getProcessedJson();
     ASSERT_FALSE(processed.empty());
 
-    // The tool message content in processedJson must still be an array
+    // The tool message content must remain an array in processedJson
     rapidjson::Document processedDoc;
     processedDoc.Parse(processed.c_str());
     ASSERT_FALSE(processedDoc.HasParseError());
