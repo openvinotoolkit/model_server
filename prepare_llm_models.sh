@@ -26,7 +26,7 @@ TOKENIZER_FILE="openvino_tokenizer.bin"
 LEGACY_MODEL_FILE="1/model.bin"
 EMBEDDING_MODEL="thenlper/gte-small"
 RERANK_MODEL="BAAI/bge-reranker-base"
-VLM_MODEL="OpenVINO/InternVL2-1B"
+VLM_MODEL="OpenVINO/InternVL2-1B-int4-ov"
 TTS_MODEL="microsoft/speecht5_tts"
 STT_MODEL="openai/whisper-tiny"
 

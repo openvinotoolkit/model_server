@@ -32,7 +32,7 @@ set "EMBEDDING_MODEL=thenlper/gte-small"
 set "RERANK_MODEL=BAAI/bge-reranker-base"
 set "TEXT_GENERATION_MODEL=HuggingFaceTB/SmolLM2-360M-Instruct"
 set "FACEBOOK_MODEL=facebook/opt-125m"
-set "VLM_MODEL=OpenVINO/InternVL2-1B"
+set "VLM_MODEL=OpenVINO/InternVL2-1B-int4-ov"
 set "TTS_MODEL=microsoft/speecht5_tts"
 set "STT_MODEL=openai/whisper-tiny"
 
