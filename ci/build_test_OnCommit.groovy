@@ -110,7 +110,7 @@ pipeline {
               steps {
                       script {
                         def runTestsFlag = export_models_changed == "true" ? "0" : "1"
-                        sh "echo Build linux RUN_TESTS=${runTestsFlag} (export_models_changed=${export_models_changed})"
+                        sh "echo 'Build linux RUN_TESTS=${runTestsFlag} (export_models_changed=${export_models_changed})'"
                         sh "echo build --remote_cache=${env.OVMS_BAZEL_REMOTE_CACHE_URL} > .user.bazelrc"
                         sh "echo test:linux --test_env https_proxy=${env.HTTPS_PROXY} >> .user.bazelrc"
                         sh "echo test:linux --test_env http_proxy=${env.HTTP_PROXY} >> .user.bazelrc"
