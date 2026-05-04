@@ -133,7 +133,7 @@ start_minio_container_command = 'server --address ":{}" /data'
 
 container_minio_log_line = "Console endpoint is listening on a dynamic port"
 
-# Reservation manager values, for details study common_libs.reservation_manager
+# Reservation manager values, for details study tests.functional.utils.reservation_manager
 """ TT_GRPC_OVMS_STARTING_PORT - Grpc port where ovms should be exposed"""
 grpc_ovms_starting_port = get_int("TT_GRPC_OVMS_STARTING_PORT", None)
 

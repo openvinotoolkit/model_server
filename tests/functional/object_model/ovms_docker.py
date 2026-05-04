@@ -28,7 +28,7 @@ from tests.functional.utils.inference.communication import REST
 from tests.functional.utils.logger import get_logger
 from tests.functional.utils.process import Process
 from tests.functional.utils.test_framework import generate_test_object_name
-from tests.functional.object_model.command_wrappers.ovms import OvmsCommand, create_ovms_command
+from tests.functional.object_model.ovms_command import OvmsCommand, create_ovms_command
 from tests.functional.constants.core import CONTAINER_STATUS_DEAD, CONTAINER_STATUS_EXITED, CONTAINER_STATUS_RUNNING
 from tests.functional.constants.ovms import Config, Ovms
 from tests.functional.constants.ovms_type import OvmsType

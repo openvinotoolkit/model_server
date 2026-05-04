@@ -30,13 +30,11 @@ from tests.functional.constants.os_type import OsType
 from tests.functional.utils.port_manager import PortManager
 from tests.functional.utils.test_framework import generate_test_object_name, skip_if_runtime
 
+from tests.functional import config
 from tests.functional.config import (
     build_test_image,
     delay_between_test,
-    grpc_ovms_starting_port,
-    ports_pool_size,
     pytest_global_session_timeout,
-    rest_ovms_starting_port,
     run_ovms_with_opencl_trace,
     run_ovms_with_valgrind,
 )
@@ -120,10 +118,10 @@ def context(request, sigterm_cleaner, target_device, ovms_type, base_os):
     CurrentOvmsType.ovms_type = context.ovms_type
 
     context.port_manager_grpc = PortManager(
-        GRPC, starting_port=grpc_ovms_starting_port, pool_size=ports_pool_size
+        GRPC, starting_port=config.grpc_ovms_starting_port, pool_size=config.ports_pool_size
     )
     context.port_manager_rest = PortManager(
-        REST, starting_port=rest_ovms_starting_port, pool_size=ports_pool_size
+        REST, starting_port=config.rest_ovms_starting_port, pool_size=config.ports_pool_size
     )
 
     context.test_object_name = generate_test_object_name()
