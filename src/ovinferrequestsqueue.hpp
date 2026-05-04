@@ -15,7 +15,8 @@
 //*****************************************************************************
 #pragma once
 
-#include <openvino/openvino.hpp>
+#include <openvino/runtime/infer_request.hpp>
+#include <openvino/runtime/compiled_model.hpp>
 
 #include "queue.hpp"
 

@@ -15,24 +15,136 @@
 #
 load("//:common_settings.bzl", "COMMON_STATIC_LIBS_COPTS", "ovms_cc_library")
 
-# Files still compiled as part of //src:ovms_lib (pending further extraction)
-exports_files([
-    "entry_node.cpp",
-    "entry_node.hpp",
-    "exit_node.cpp",
-    "exit_node.hpp",
-    "exitnodesession.cpp",
-    "exitnodesession.hpp",
-    "gatherexitnodeinputhandler.hpp",
-    "pipelinedefinition.hpp",
-    "pipelinedefinition.cpp",
-    "pipeline_factory.cpp",
-    "pipeline_factory.hpp",
-])
+ovms_cc_library(
+    name = "pipeline_config_parser",
+    hdrs = ["pipeline_config_parser.hpp"],
+    srcs = ["pipeline_config_parser.cpp"],
+    deps = [
+        "custom_node_library_manager",
+        "entry_node",
+        "exit_node",
+        "nodeinfo",
+        "pipeline_factory",
+        "dag_resource_manager",
+        "//src:libovmslogging",
+        "//src:libovmsstatus",
+        "//src:libovms_model_instance_provider",
+        "//src:libovms_servable_name_checker",
+        "//src/port:rapidjson_document",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
+    name = "pipelinedefinition",
+    hdrs = [
+        "pipelinedefinition.hpp",
+        "pipelinedefinition_create_impl.hpp",
+    ],
+    srcs = ["pipelinedefinition.cpp"],
+    deps = [
+        "custom_node",
+        "custom_node_library_internal_manager_wrapper",
+        "dl_node",
+        "node_library_utils",
+        "nodeinfo",
+        "nodestreamidguard",
+        "pipeline",
+        "//src:libovmslogging",
+        "//src:libovmsstatus",
+        "//src:libovms_ov_utils",
+        "//src:libovms_model_instance_provider",
+        "//src:libovms_servable_name_checker",
+        "//src:model_metric_reporter",
+        "dag_resource_manager",
+        "//src:libovms_single_version_servable_definition",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
+    name = "pipeline_factory",
+    hdrs = [
+        "pipeline_factory.hpp",
+        "pipeline_factory_create_impl.hpp",
+    ],
+    srcs = ["pipeline_factory.cpp"],
+    deps = [
+        "nodeinfo",
+        "pipeline",
+        "pipelinedefinition",
+        "//src:libovmslogging",
+        "//src:libovmsstatus",
+        "//src:model_metric_reporter",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
+    name = "dag_capi",
+    srcs = ["dag_capi.cpp"],
+    deps = [
+        "entry_node",
+        "exit_node",
+        "exitnodesession",
+        "pipelinedefinition",
+        "pipeline_factory",
+        "//src:capi_dag_utils",
+        "//src:capi_deserialization",
+        "//src:capi_request_utils",
+        "//src:capi_serialization",
+        "//src:libovmscapi_utils",
+        "//src:inferencerequest",
+        "//src:inferenceresponse",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
+    name = "dag_kfs",
+    srcs = ["dag_kfs.cpp"],
+    deps = [
+        "entry_node",
+        "exit_node",
+        "exitnodesession",
+        "pipelinedefinition",
+        "pipeline_factory",
+        "//src:kfs_deserialization",
+        "//src:kfs_request_utils",
+        "//src:kfs_serialization",
+        "//src:libovms_kfs_utils",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
+    name = "dag_tfs",
+    srcs = ["dag_tfs.cpp"],
+    deps = [
+        "entry_node",
+        "exit_node",
+        "exitnodesession",
+        "pipelinedefinition",
+        "pipeline_factory",
+        "//src:tfs_deserialization",
+        "//src:tfs_request_utils",
+        "//src:tfs_serialization",
+        "//src:tfs_utils",
+        "//third_party:openvino",
+    ],
+    visibility = ["//visibility:public"],
+)
 
 ovms_cc_library(
     name = "aliases",
     hdrs = ["aliases.hpp"],
+    deps = [],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
+    name = "dag_resource_manager",
+    hdrs = ["dag_resource_manager.hpp"],
     deps = [],
     visibility = ["//visibility:public"],
 )
@@ -368,3 +480,61 @@ ovms_cc_library(
     ],
     visibility = ["//visibility:public"],
 )
+
+ovms_cc_library(
+    name = "exitnodesession",
+    hdrs = ["exitnodesession.hpp",
+            "exitnodesession_impl.hpp",
+            "gatherexitnodeinputhandler.hpp",],
+    deps = [
+            "nodesession",
+            "nodeinputhandler",
+            "nodesessionmetadata",
+            "gathernodeinputhandler",
+            "tensormap",
+            "//src:libovmslogging",
+            "//src:libovmsprofiler",
+            "//src:libovmsstatus",
+            "//third_party:openvino",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
+    name = "exit_node",
+    hdrs = ["exit_node.hpp",
+            "exit_node_impl.hpp",],
+    deps = [
+            "node",
+            "exitnodesession",
+            "//src:libovmslogging",
+            "//src:libovms_ov_utils",
+            "//src:libovms_tensorinfo",
+            "//src:libovmsprofiler",
+            "//src:serialization_common",
+            "//third_party:openvino",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
+    name = "entry_node",
+    hdrs = ["entry_node.hpp",
+            "entry_node_impl.hpp",],
+    deps = [
+            "node",
+            "nodesession",
+            "//src:deserialization_main",
+            "//src:predict_request_validation_utils",
+            "//src:libovmstensorfactory",
+            "//src:tensor_conversion",
+            "//src:libovms_tensorinfo",
+            "//src:libovmslogging",
+            "//src:libovms_ov_utils",
+            "//src:libovmsprofiler",
+            "//src:ovms_header",
+            "//third_party:openvino",
+    ],
+    visibility = ["//visibility:public"],
+)
+

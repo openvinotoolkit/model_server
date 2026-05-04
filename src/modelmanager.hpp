@@ -26,16 +26,12 @@
 #include <utility>
 #include <vector>
 
-#pragma warning(push)
-#pragma warning(disable : 6313)
-#include <rapidjson/document.h>
-#pragma warning(pop)
-
+#include "dags/dag_resource_manager.hpp"
 #include "global_sequences_viewer.hpp"
-#include "metrics/metric_config.hpp"
 #include "metrics/metric_provider.hpp"
 #include "model_instance_provider.hpp"
 #include "modelconfig.hpp"
+#include "resources_cleaner.hpp"
 #include "servable_name_checker.hpp"
 #include "status.hpp"
 
@@ -53,6 +49,7 @@ struct CNLIMWrapper;
 struct ModelsSettingsImpl;
 class CustomLoaderConfig;
 class CustomNodeLibraryManager;
+class MetricConfig;
 class MetricRegistry;
 class Model;
 class ModelConfig;
@@ -71,7 +68,7 @@ class PythonBackend;
 /**
  * @brief Model manager is managing the list of model topologies enabled for serving and their versions.
  */
-class ModelManager : public ServableNameChecker, public MetricProvider, public ModelInstanceProvider {
+class ModelManager : public ServableNameChecker, public MetricProvider, public ModelInstanceProvider, public ResourcesCleaner, public DagResourceManager {
 public:
     /**
      * @brief A default constructor is private
@@ -107,6 +104,9 @@ private:
 
     ModelManager(const ModelManager&) = delete;
 
+    struct ConfigLoader;
+    friend struct ConfigLoader;
+
     Status lastLoadConfigStatus = StatusCode::OK;
 
     Status cleanupModelTmpFiles(ModelConfig& config);
@@ -114,22 +114,14 @@ private:
     Status addModelVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t>& versionsToStart, std::shared_ptr<model_versions_t>& versionsFailed);
 
 #if (MEDIAPIPE_DISABLE == 0)
-    Status loadModels(const rapidjson::Value::MemberIterator& modelsConfigList, std::vector<ModelConfig>& gatedModelConfigs, std::set<std::string>& modelsInConfigFile, std::set<std::string>& modelsWithInvalidConfig, std::unordered_map<std::string, ModelConfig>& newModelConfigs, const std::string& rootDirectoryPath, std::vector<ovms::MediapipeGraphConfig>& mediapipesInConfigFile);
     Status processMediapipeConfig(const MediapipeGraphConfig& config, std::set<std::string>& mediapipesInConfigFile, MediapipeFactory& factory);
     Status loadMediapipeGraphsConfig(std::vector<MediapipeGraphConfig>& mediapipesInConfigFile);
-    Status loadModelsConfig(rapidjson::Document& configJson, std::vector<ModelConfig>& gatedModelConfigs, std::vector<ovms::MediapipeGraphConfig>& mediapipesInConfigFile);
     Status loadMediapipeSubConfigModels(std::vector<ModelConfig>& gatedModelConfigs, std::set<std::string>& modelsInConfigFile,
         std::set<std::string>& modelsWithInvalidConfig, std::unordered_map<std::string, ModelConfig>& newModelConfigs, std::vector<MediapipeGraphConfig>& mediapipesInConfigFile);
     static Status validateUserSettingsInSingleModelCliGraphStart(const ModelsSettingsImpl& modelsSettings);
     bool CheckStartFromGraph(std::string inputPath, MediapipeGraphConfig& mpConfig, bool checkModelMeshPath);
-#else
-    Status loadModels(const rapidjson::Value::MemberIterator& modelsConfigList, std::vector<ModelConfig>& gatedModelConfigs, std::set<std::string>& modelsInConfigFile, std::set<std::string>& modelsWithInvalidConfig, std::unordered_map<std::string, ModelConfig>& newModelConfigs, const std::string& rootDirectoryPath);
-    Status loadModelsConfig(rapidjson::Document& configJson, std::vector<ModelConfig>& gatedModelConfigs);
 #endif
     Status tryReloadGatedModelConfigs(std::vector<ModelConfig>& gatedModelConfigs);
-    Status loadCustomNodeLibrariesConfig(rapidjson::Document& configJson);
-    Status loadPipelinesConfig(rapidjson::Document& configJson);
-    Status loadCustomLoadersConfig(rapidjson::Document& configJson);
 
     /**
      * @brief creates customloader from the loader configuration
@@ -171,7 +163,7 @@ private:
     /**
      * @brief Metrics config
      */
-    MetricConfig metricConfig;
+    std::unique_ptr<MetricConfig> metricConfig;
 
     /**
      * @brief Metrics config was loaded flag
@@ -291,7 +283,7 @@ public:
     /**
      *  @brief Adds new resource to watch by the cleaner thread
      */
-    void addResourceToCleaner(std::shared_ptr<CNLIMWrapper> resource) {
+    void addResourceToCleaner(std::shared_ptr<CNLIMWrapper> resource) override {
         std::unique_lock resourcesLock(resourcesMtx);
         resources.emplace(resources.end(), std::move(resource));
     }
@@ -344,7 +336,7 @@ public:
      *
      * @return pointer to Model or nullptr if not found
      */
-    const std::shared_ptr<Model> findModelByName(const std::string& name) const;
+    const std::shared_ptr<Model> findModelByName(const std::string& name) const override;
 
     Status getModelInstance(const std::string& modelName,
         ovms::model_version_t modelVersionId,
@@ -366,7 +358,14 @@ public:
      *
      * @return pointer to ModelInstance or nullptr if not found
      */
-    const std::shared_ptr<ModelInstance> findModelInstance(const std::string& name, model_version_t version = 0) const;
+    const std::shared_ptr<ModelInstance> findModelInstance(const std::string& name, model_version_t version = 0) const override;
+
+    bool subscribeToModel(const std::string& name, model_version_t version, NotifyReceiver& receiver) override;
+    void unsubscribeFromModel(const std::string& name, model_version_t version, NotifyReceiver& receiver) override;
+
+    Status getModelInputsInfo(const std::string& name, model_version_t version, tensor_map_t& info) const override;
+    Status getModelOutputsInfo(const std::string& name, model_version_t version, tensor_map_t& info) const override;
+    Status hasAutoModelParameters(const std::string& name, model_version_t version, bool& batchAuto, bool& shapeAuto) const override;
 
     Status createPipeline(std::unique_ptr<MediapipeGraphExecutor>& graph,
         const std::string& name);
@@ -392,20 +391,10 @@ public:
      * @return const std::string&
      */
     const MetricConfig& getMetricConfig() const override {
-        return this->metricConfig;
+        return *this->metricConfig;
     }
 
     Status loadMetricsFromCLI(const Config& config);
-    Status loadMetricsConfig(rapidjson::Document& configJson);
-
-    /**
-     * @brief Set the metric config
-     *
-     * @param metricConfig
-     */
-    void setMetricConfig(const MetricConfig& metricConfig) {
-        this->metricConfig = metricConfig;
-    }
 
     /**
      * @brief Reload model versions located in base path
@@ -494,7 +483,7 @@ public:
     /**
      * @brief Cleaner thread procedure to cleanup resources that are not used
      */
-    void cleanupResources();
+    void cleanupResources() override;
 
     bool servableExists(const std::string& name, ServableQueryType check = ServableQueryType::All) const override;
 

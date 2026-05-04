@@ -31,7 +31,9 @@ ovms_cc_library(
     name = "rerank_servable",
     hdrs = ["rerank_servable.hpp"],
     deps = ["//src:sidepacket_servable",
-            "//src/port:rapidjson_document",],
+            "//src/port:rapidjson_document",
+            "//src/port:rapidjson_istreamwrapper",
+            "//src/port:rapidjson_error",],
     visibility = ["//visibility:public"],
     alwayslink = 1,
 )

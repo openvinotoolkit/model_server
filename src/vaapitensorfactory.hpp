@@ -15,7 +15,9 @@
 //*****************************************************************************
 #pragma once
 
-#include <openvino/openvino.hpp>
+#include <openvino/core/shape.hpp>
+#include <openvino/core/type/element_type.hpp>
+#include <openvino/runtime/tensor.hpp>
 #include <openvino/runtime/intel_gpu/ocl/va.hpp>
 
 #include "./ovms.h"
