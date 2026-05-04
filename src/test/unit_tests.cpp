@@ -14,7 +14,26 @@
 // limitations under the License.
 //*****************************************************************************
 
-#include <cstdlib>
+#include <string>
+
+namespace {
+
+// GTest death tests run assertions in a dedicated child process launched with
+// an internal argument. Detect that child to skip PythonEnvironment setup,
+// which avoids teardown-time crashes in exit-based death-test flows.
+bool isDeathTestSubprocess(int argc, char** argv) {
+    for (int i = 0; i < argc; ++i) {
+        if (argv[i] == nullptr) {
+            continue;
+        }
+        if (std::string(argv[i]).find("gtest_internal_run_death_test") != std::string::npos) {
+            return true;
+        }
+    }
+    return false;
+}
+
+}  // namespace
 
 #include "environment.hpp"
 #include "gpuenvironment.hpp"
@@ -22,12 +41,16 @@
 #include "python_environment.hpp"
 
 int main(int argc, char** argv) {
+    // Check before InitGoogleTest because it can consume/rewrite internal args.
+    const bool deathTestSubprocess = isDeathTestSubprocess(argc, argv);
     ::testing::InitGoogleTest(&argc, argv);
     ::testing::InitGoogleMock(&argc, argv);
     ::testing::AddGlobalTestEnvironment(new Environment);
     ::testing::AddGlobalTestEnvironment(new GPUEnvironment);
     ::testing::AddGlobalTestEnvironment(new GGUFEnvironment);
-    ::testing::AddGlobalTestEnvironment(new PythonEnvironment);
+    if (!deathTestSubprocess) {
+        ::testing::AddGlobalTestEnvironment(new PythonEnvironment);
+    }
     ::testing::FLAGS_gtest_death_test_style = "threadsafe";
     return RUN_ALL_TESTS();
 }
