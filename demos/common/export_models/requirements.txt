@@ -2,7 +2,7 @@
 --extra-index-url "https://storage.openvinotoolkit.org/simple/wheels/nightly"
 --extra-index-url "https://storage.openvinotoolkit.org/simple/wheels/pre-release"
 --pre
-optimum-intel@git+https://github.com/huggingface/optimum-intel.git@1802051c169847fa893f621f3e0f5524ac7553c9
+optimum-intel@git+https://github.com/huggingface/optimum-intel.git@39121884e050a32f9ded590f8597760d7e7ac205
 accelerate
 datasets
 diffusers  # for image generation
