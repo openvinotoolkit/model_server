@@ -129,26 +129,17 @@ static void setLfsCancelRequested(int value) {
         }                                                        \
     } while (0)
 
-int checkCloneCancellationTransferProgressCallback(const git_indexer_progress* stats, void* payload) {
-    (void)stats;
-    (void)payload;
+int checkCloneCancellationTransferProgressCallback(const git_indexer_progress*, void*) {
     RETURN_IF_OVMS_CLONE_CANCELLED();
     return 0;
 }
 
-int checkCloneCancellationSidebandProgressCallback(const char* str, int len, void* payload) {
-    (void)str;
-    (void)len;
-    (void)payload;
+int checkCloneCancellationSidebandProgressCallback(const char*, int, void*) {
     RETURN_IF_OVMS_CLONE_CANCELLED();
     return 0;
 }
 
-int checkCloneCancellationUpdateTipsCallback(const char* refname, const git_oid* a, const git_oid* b, void* payload) {
-    (void)refname;
-    (void)a;
-    (void)b;
-    (void)payload;
+int checkCloneCancellationUpdateTipsCallback(const char*, const git_oid*, const git_oid*, void*) {
     RETURN_IF_OVMS_CLONE_CANCELLED();
     return 0;
 }
@@ -166,18 +157,12 @@ int checkCloneCancellationUpdateTipsCallback(const char* refname, const git_oid*
  * @return -1 if cancellation requested (aborts checkout), 0 otherwise.
  * @note Works on the git repository working directory; modifies local filesystem.
  */
-int checkCloneCancellationCheckoutNotifyCallback(git_checkout_notify_t why,
-    const char* path,
-    const git_diff_file* baseline,
-    const git_diff_file* target,
-    const git_diff_file* workdir,
-    void* payload) {
-    (void)why;
-    (void)path;
-    (void)baseline;
-    (void)target;
-    (void)workdir;
-    (void)payload;
+int checkCloneCancellationCheckoutNotifyCallback(git_checkout_notify_t,
+    const char*,
+    const git_diff_file*,
+    const git_diff_file*,
+    const git_diff_file*,
+    void*) {
     RETURN_IF_OVMS_CLONE_CANCELLED();
     return 0;
 }
@@ -197,10 +182,10 @@ int checkCloneCancellationCheckoutNotifyCallback(git_checkout_notify_t why,
  * @note Limited LFS support: LFS downloads may fail if HF_TOKEN is not set.
  */
 int cred_acquire_cb(git_credential** out,
-    const char* url,
-    const char* username_from_url,
+    const char* /*url*/,
+    const char* /*username_from_url*/,
     unsigned int allowed_types,
-    void* payload) {
+    void* /*payload*/) {
     char *username = NULL, *password = NULL;
     int error = -1;
 
