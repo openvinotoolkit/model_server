@@ -1,5 +1,5 @@
 ---
-applyTo: "**/BUILD"
+applyTo: "**/{BUILD,BUILD.bazel}"
 ---
 # Bazel BUILD File Guidelines (OVMS)
 
