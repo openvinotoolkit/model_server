@@ -1,6 +1,7 @@
 def image_build_needed = "false"
 def win_image_build_needed = "false"
 def client_test_needed = "false"
+def export_models_changed = "false"
 def shortCommit = ""
 def agent_name_windows = ""
 def agent_name_linux = ""
@@ -40,6 +41,10 @@ pipeline {
                 if (matched){
                   client_test_needed = "true"
               }
+                def export_models_matched = (git_diff =~ /(\n|^)(demos\/common\/export_models\/|prepare_llm_models\.sh$)/)
+                if (export_models_matched){
+                  export_models_changed = "true"
+                }
               def win_matched = (git_diff =~ /src|third_party|external|ci|test_install_ovms_service_windows\\.py|\.c|\.h|\.bazel|\.bzl|BUILD|WORKSPACE|\.bat|\.groovy/)
               if (win_matched){
                   win_image_build_needed = "true"
@@ -103,10 +108,14 @@ pipeline {
                 OVMS_BAZEL_REMOTE_CACHE_URL = "${env.OVMS_BAZEL_REMOTE_CACHE_URL ?: 'http://mclx-23.sclab.intel.com:8666'}"
               }
               steps {
-                      sh "echo build --remote_cache=${env.OVMS_BAZEL_REMOTE_CACHE_URL} > .user.bazelrc"
-                      sh "echo test:linux --test_env https_proxy=${env.HTTPS_PROXY} >> .user.bazelrc"
-                      sh "echo test:linux --test_env http_proxy=${env.HTTP_PROXY} >> .user.bazelrc"
-                      sh "make ovms_builder_image RUN_TESTS=0 OPTIMIZE_BUILDING_TESTS=1 OV_USE_BINARY=0 BASE_OS=redhat OVMS_CPP_IMAGE_TAG=${shortCommit} BUILD_IMAGE=openvino/model_server-build:${shortCommit}"
+                      script {
+                        def runTestsFlag = export_models_changed == "true" ? "0" : "1"
+                        sh "echo Build linux RUN_TESTS=${runTestsFlag} (export_models_changed=${export_models_changed})"
+                        sh "echo build --remote_cache=${env.OVMS_BAZEL_REMOTE_CACHE_URL} > .user.bazelrc"
+                        sh "echo test:linux --test_env https_proxy=${env.HTTPS_PROXY} >> .user.bazelrc"
+                        sh "echo test:linux --test_env http_proxy=${env.HTTP_PROXY} >> .user.bazelrc"
+                        sh "make ovms_builder_image RUN_TESTS=${runTestsFlag} OPTIMIZE_BUILDING_TESTS=1 OV_USE_BINARY=0 BASE_OS=redhat OVMS_CPP_IMAGE_TAG=${shortCommit} BUILD_IMAGE=openvino/model_server-build:${shortCommit}"
+                      }
                     }
             }
             stage('Build windows') {
