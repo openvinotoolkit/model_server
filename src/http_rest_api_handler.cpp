@@ -63,6 +63,7 @@
 #include "status.hpp"
 #include "stringutils.hpp"
 #include "timer.hpp"
+#include "utils/rapidjson_utils.hpp"
 
 #if (MEDIAPIPE_DISABLE == 0)
 #include "copyable_object_wrapper.hpp"
@@ -511,17 +512,25 @@ static Status createV3HttpPayload(
         } else {
             SPDLOG_DEBUG("Model name from deduced from MultiPart field: {}", modelName);
         }
+        // Detect stream field in multipart form data (used by audio endpoints)
+        std::string streamField = multiPartParser->getFieldByName("stream");
+        if (streamField == "true") {
+            streamFieldVal = true;
+        }
         ensureJsonParserInErrorState(parsedJson);
     } else if (isApplicationJson) {
         {
             OVMS_PROFILE_SCOPE("rapidjson parse");
-            parsedJson->Parse(request_body.c_str());
+            auto status = parseJsonWithDepthLimit(*parsedJson, request_body.c_str());
+            if (!status.ok()) {
+                ensureJsonParserInErrorState(parsedJson);
+                if (status == StatusCode::JSON_NESTING_DEPTH_EXCEEDED) {
+                    return Status(StatusCode::JSON_INVALID, "JSON body exceeds maximum nesting depth");
+                }
+                return Status(StatusCode::JSON_INVALID, "Cannot parse JSON body");
+            }
         }
         OVMS_PROFILE_SCOPE("rapidjson validate");
-        if (parsedJson->HasParseError()) {
-            return Status(StatusCode::JSON_INVALID, "Cannot parse JSON body");
-        }
-
         if (!parsedJson->IsObject()) {
             return Status(StatusCode::JSON_INVALID, "JSON body must be an object");
         }
@@ -741,7 +750,7 @@ Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpReque
 
     auto status = createV3HttpPayload(uri, request_components, response, request_body, serverReaderWriter, std::move(multiPartParser), *request, modelName, streamFieldVal);
     if (!status.ok()) {
-        SPDLOG_DEBUG("Failed to create V3 payload: {}", status.string());
+        SPDLOG_DEBUG("Failed to create V3 payload: {} [{}]", status.string(), request_body);
         return status;
     }
 

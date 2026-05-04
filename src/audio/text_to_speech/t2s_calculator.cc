@@ -25,6 +25,7 @@
 #pragma warning(pop)
 
 #include "src/audio/audio_utils.hpp"
+#include "src/client_connection.hpp"
 #include "src/http_payload.hpp"
 #include "src/logging.hpp"
 #include <mutex>
@@ -50,6 +51,14 @@ using namespace ovms;
 namespace mediapipe {
 
 const std::string TTS_SESSION_SIDE_PACKET_TAG = "TTS_NODE_RESOURCES";
+
+static absl::Status checkClientDisconnected(const ovms::HttpPayload& payload, const std::string& nodeName, const char* context) {
+    if (payload.client && payload.client->isDisconnected()) {
+        SPDLOG_LOGGER_DEBUG(t2s_calculator_logger, "Client disconnected {} [Node: {}]", context, nodeName);
+        return absl::CancelledError("Client disconnected");
+    }
+    return absl::OkStatus();
+}
 
 class T2sCalculator : public CalculatorBase {
     static const std::string INPUT_TAG_NAME;
@@ -111,8 +120,12 @@ public:
                     if (pipe->voices.find(voiceName.value()) == pipe->voices.end())
                         return absl::InvalidArgumentError(absl::StrCat("Requested voice not available: ", voiceName.value()));
                 }
+
                 ov::genai::Text2SpeechDecodedResults generatedSpeech;
                 std::unique_lock lock(pipe->ttsPipelineMutex);
+                auto disconnectStatus = checkClientDisconnected(payload, cc->NodeName(), "before generation");
+                if (!disconnectStatus.ok())
+                    return disconnectStatus;
 
                 if (voiceName.has_value()) {
                     generatedSpeech = pipe->ttsPipeline->generate(inputIt->value.GetString(), pipe->voices[voiceName.value()]);
@@ -125,6 +138,9 @@ public:
                 // copy results to release inference request
                 generatedSpeech.speeches[0].copy_to(cpuTensor);
                 lock.unlock();
+                disconnectStatus = checkClientDisconnected(payload, cc->NodeName(), "after generation");
+                if (!disconnectStatus.ok())
+                    return disconnectStatus;
                 void* ppData;
                 size_t pDataSize;
                 prepareAudioOutput(&ppData, pDataSize, bitsPerSample, speechSize, cpuTensor.data<const float>());

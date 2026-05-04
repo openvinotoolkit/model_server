@@ -52,6 +52,16 @@ cc_library(
     copts = COMMON_STATIC_LIBS_COPTS,
 )
 
+ovms_cc_library(
+    name = "executor_base",
+    hdrs = ["executor_base.hpp"],
+    deps = [
+        "//src:libovmslogging",
+    ],
+    visibility = ["//visibility:public"],
+    alwayslink = 1,
+)
+
 cc_shared_library(
     name = "ovms_shared",
     dynamic_deps = [],
@@ -659,6 +669,7 @@ ovms_cc_library(
         "@tensorflow_serving//tensorflow_serving/util:json_tensor",
         "@org_tensorflow//tensorflow/core:framework",
         "//src/kfserving_api:kfserving_api_cpp",
+        "//src/utils:rapidjson_utils",
         "libovms_kfs_grpc_inference_service_h",
         "libovms_kfs_utils",
         "libovms_tensorinfo",
@@ -1358,6 +1369,12 @@ ovms_cc_library(
     additional_copts = COPTS_MEDIAPIPE + COPTS_DROGON,
 )
 
+
+ovms_cc_library(
+    name = "sse_utils",
+    hdrs = ["sse_utils.hpp"],
+    visibility = ["//visibility:public"],
+)
 
 ovms_cc_library(
     name = "libovmsstatus",
@@ -2375,6 +2392,7 @@ cc_test(
                 "test/llm/visual_language_model/initialization_test.cpp",
                 "test/audio/text2speech_test.cpp",
                 "test/audio/speech2text_test.cpp",
+                "test/audio/s2t_streaming_test.cpp",
             ],
             "//:disable_mediapipe" : [
                 "test/disabled_mediapipe_test.cpp",
