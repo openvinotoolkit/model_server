@@ -65,7 +65,7 @@ public:
     }
 
     // Interface methods
-    absl::Status loadRequest(std::shared_ptr<GenAiServableExecutionContext>& executionContext, const ovms::HttpPayload& payload);
+    absl::Status loadRequest(std::shared_ptr<GenAiServableExecutionContext>& executionContext, const HttpPayload& payload);
     std::shared_ptr<GenAiServableExecutionContext> createExecutionContext() override;
     std::shared_ptr<GenAiServableProperties> getProperties() override;
     absl::Status parseRequest(std::shared_ptr<GenAiServableExecutionContext>& executionContext) override;

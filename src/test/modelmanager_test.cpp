@@ -20,6 +20,8 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include <openvino/runtime/core.hpp>
+
 #include "../cleaner_utils.hpp"
 #include "../config.hpp"
 #include "../dags/custom_node_library_internal_manager_wrapper.hpp"

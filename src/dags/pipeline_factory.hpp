@@ -28,10 +28,14 @@
 
 namespace ovms {
 
-class ModelManager;
+class DagResourceManager;
+class MetricConfig;
+class MetricRegistry;
+class ModelInstanceProvider;
 struct NodeInfo;
 class Pipeline;
 class PipelineDefinition;
+class ServableNameChecker;
 class Status;
 
 class PipelineFactory {
@@ -39,10 +43,33 @@ class PipelineFactory {
     mutable std::shared_mutex definitionsMtx;
 
 public:
+    /**
+     * @brief Create and register a new DAG pipeline definition.
+     *
+     * Constructs a PipelineDefinition from the provided graph topology (nodeInfos + connections),
+     * subscribes it to model-change notifications, validates the entire graph, and stores it.
+     * Using Interface Segregation Principle to not pull ModelManager everywhere
+     *
+     * @param pipelineName      Unique name for the pipeline (must not already exist).
+     * @param nodeInfos         Descriptions of every node in the DAG (DL model nodes, custom nodes, entry/exit).
+     * @param connections       Mapping of node outputs to downstream node inputs that defines the DAG edges.
+     * @param modelInstanceProvider  Provides access to model instances and subscribe/unsubscribe API so the
+     *                               pipeline can resolve model nodes and get notified on model version changes.
+     * @param nameChecker       Used during validation to verify that no other servable (model, mediapipe graph)
+     *                          already occupies the requested pipeline name.
+     * @param resourceMgr       Accepts custom-node library resources created during validation for deferred
+     *                          cleanup by the background cleaner thread.
+     * @param registry          Optional metric registry for registering pipeline-level metrics.
+     * @param metricConfig      Optional metric configuration controlling which metrics are enabled.
+     */
     Status createDefinition(const std::string& pipelineName,
         const std::vector<NodeInfo>& nodeInfos,
         const pipeline_connections_t& connections,
-        ModelManager& manager);
+        ModelInstanceProvider& modelInstanceProvider,
+        ServableNameChecker& nameChecker,
+        DagResourceManager& resourceMgr,
+        MetricRegistry* registry = nullptr,
+        const MetricConfig* metricConfig = nullptr);
 
     bool definitionExists(const std::string& name) const;
 
@@ -52,7 +79,7 @@ private:
         const std::string& name,
         const RequestType* request,
         ResponseType* response,
-        ModelManager& manager) const;
+        ModelInstanceProvider& modelInstanceProvider) const;
 
 public:
     template <typename RequestType, typename ResponseType>
@@ -60,16 +87,27 @@ public:
         const std::string& name,
         const RequestType* request,
         ResponseType* response,
-        ModelManager& manager) const;
+        ModelInstanceProvider& modelInstanceProvider) const;
 
     PipelineDefinition* findDefinitionByName(const std::string& name) const;
     Status reloadDefinition(const std::string& pipelineName,
         const std::vector<NodeInfo>&& nodeInfos,
         const pipeline_connections_t&& connections,
-        ModelManager& manager);
+        ModelInstanceProvider& modelInstanceProvider,
+        ServableNameChecker& nameChecker,
+        DagResourceManager& resourceMgr);
 
-    void retireOtherThan(std::set<std::string>&& pipelinesInConfigFile, ModelManager& manager);
-    Status revalidatePipelines(ModelManager&);
+    void retireOtherThan(std::set<std::string>&& pipelinesInConfigFile, ModelInstanceProvider& modelInstanceProvider);
+    /**
+     * @brief Revalidate all existing pipeline definitions against the current model versions and availability.
+     * Called after a model reload to ensure all pipelines depending on that model are still valid and can be executed.
+     * Using Interface Segregation Principle to not pull ModelManager everywhere
+     *
+     * @param modelInstanceProvider Provides access to model instances and subscribe/unsubscribe API
+     * @param nameChecker Used during validation to verify that no other servable (model, mediapipe graph) already occupies the requested pipeline name.
+     * @param resourceMgr Accepts custom-node library resources created during validation for deferred cleanup by the background cleaner thread.
+     */
+    Status revalidatePipelines(ModelInstanceProvider& modelInstanceProvider, ServableNameChecker& nameChecker, DagResourceManager& resourceMgr);
     const std::vector<std::string> getPipelinesNames() const;
     const std::vector<std::string> getNamesOfAvailablePipelines() const;
 };

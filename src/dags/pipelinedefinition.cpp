@@ -20,40 +20,20 @@
 #include <thread>
 
 #include "../logging.hpp"
-#include "../model.hpp"
+#include "../model_instance_provider.hpp"
 #include "../model_metric_reporter.hpp"
-#include "../modelinstance.hpp"
-#include "../modelinstanceunloadguard.hpp"
-#include "../modelmanager.hpp"
 #include "../ov_utils.hpp"
-#include "../prediction_service_utils.hpp"
 #include "../servable_definition_unload_guard.hpp"
+#include "../servable_name_checker.hpp"
 #include "../status.hpp"
 #include "custom_node.hpp"
 #include "custom_node_library_internal_manager_wrapper.hpp"
-#include "dl_node.hpp"
-#include "entry_node.hpp"
-#include "exit_node.hpp"
+#include "dag_resource_manager.hpp"
 #include "node_library_utils.hpp"
 #include "nodeinfo.hpp"
-#include "nodestreamidguard.hpp"
-#include "pipeline.hpp"
 
 namespace ovms {
 const std::string PipelineDefinition::SCHEDULER_CLASS_NAME{"Pipeline"};
-
-Status toNodeKind(const std::string& str, NodeKind& nodeKind) {
-    if (str == DL_NODE_CONFIG_TYPE) {
-        nodeKind = NodeKind::DL;
-        return StatusCode::OK;
-    }
-    if (str == CUSTOM_NODE_CONFIG_TYPE) {
-        nodeKind = NodeKind::CUSTOM;
-        return StatusCode::OK;
-    }
-    SPDLOG_LOGGER_ERROR(modelmanager_logger, "Unsupported node type: {}", str);
-    return StatusCode::PIPELINE_NODE_WRONG_KIND_CONFIGURATION;
-}
 
 PipelineDefinition::PipelineDefinition(const std::string& pipelineName,
     const std::vector<NodeInfo>& nodeInfos,
@@ -66,18 +46,18 @@ PipelineDefinition::PipelineDefinition(const std::string& pipelineName,
     reporter(std::make_unique<ServableMetricReporter>(metricConfig, registry, pipelineName, VERSION)),
     status(SCHEDULER_CLASS_NAME, getName()) {}
 
-Status PipelineDefinition::validate(ModelManager& manager) {
+Status PipelineDefinition::validate(ModelInstanceProvider& modelInstanceProvider, ServableNameChecker& nameChecker, DagResourceManager& resourceMgr) {
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Started validation of pipeline: {}", getName());
     ValidationResultNotifier notifier(status, loadedNotify);
-    if (manager.servableExists(getName(), ServableQueryType::Model | ServableQueryType::Mediapipe)) {
+    if (nameChecker.servableExists(getName(), ServableQueryType::Model | ServableQueryType::Mediapipe)) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Pipeline name: {} is already occupied by model or mediapipe graph.", getName());
         return StatusCode::PIPELINE_NAME_OCCUPIED;
     }
-    Status validationResult = initializeNodeResources(manager);
+    Status validationResult = initializeNodeResources(resourceMgr);
     if (!validationResult.ok()) {
         return validationResult;
     }
-    validationResult = validateNodes(manager);
+    validationResult = validateNodes(modelInstanceProvider);
     if (!validationResult.ok()) {
         return validationResult;
     }
@@ -90,11 +70,11 @@ Status PipelineDefinition::validate(ModelManager& manager) {
         return validationResult;
     }
     std::unique_lock lock(metadataMtx);
-    validationResult = updateInputsInfo(manager);
+    validationResult = updateInputsInfo(modelInstanceProvider);
     if (!validationResult.ok()) {
         return validationResult;
     }
-    validationResult = updateOutputsInfo(manager);
+    validationResult = updateOutputsInfo(modelInstanceProvider);
     if (!validationResult.ok()) {
         return validationResult;
     }
@@ -106,7 +86,7 @@ Status PipelineDefinition::validate(ModelManager& manager) {
     return validationResult;
 }
 
-Status PipelineDefinition::initializeNodeResources(ModelManager& manager) {
+Status PipelineDefinition::initializeNodeResources(DagResourceManager& resourceMgr) {
     for (const auto& nodeInfo : nodeInfos) {
         if (nodeInfo.kind == NodeKind::CUSTOM) {
             void* customNodeLibraryInternalManager = nullptr;
@@ -122,7 +102,7 @@ Status PipelineDefinition::initializeNodeResources(ModelManager& manager) {
                 return StatusCode::NODE_LIBRARY_INITIALIZE_FAILED;
             }
             std::shared_ptr<CNLIMWrapper> sharedCustomNodeLibraryInternalManager(new CNLIMWrapper{customNodeLibraryInternalManager, nodeInfo.library.deinitialize});
-            manager.addResourceToCleaner(sharedCustomNodeLibraryInternalManager);
+            resourceMgr.addResourceToCleaner(sharedCustomNodeLibraryInternalManager);
             nodeResources.emplace(std::make_pair(nodeInfo.nodeName, std::move(sharedCustomNodeLibraryInternalManager)));
         }
     }
@@ -154,10 +134,10 @@ void PipelineDefinition::deinitializeNodeResources(const std::vector<NodeInfo>& 
     }
 }
 
-Status PipelineDefinition::reload(ModelManager& manager, const std::vector<NodeInfo>&& nodeInfos, const pipeline_connections_t&& connections) {
+Status PipelineDefinition::reload(ModelInstanceProvider& modelInstanceProvider, ServableNameChecker& nameChecker, DagResourceManager& resourceMgr, const std::vector<NodeInfo>&& nodeInfos, const pipeline_connections_t&& connections) {
     // block creating new unloadGuards
     this->status.handle(ReloadEvent());
-    resetSubscriptions(manager);
+    resetSubscriptions(modelInstanceProvider);
     while (requestsHandlesCounter > 0) {
         std::this_thread::sleep_for(std::chrono::microseconds(1));
     }
@@ -165,13 +145,13 @@ Status PipelineDefinition::reload(ModelManager& manager, const std::vector<NodeI
     deinitializeNodeResources(calculateNodeInfosDiff(nodeInfos));
     this->nodeInfos = std::move(nodeInfos);
     this->connections = std::move(connections);
-    makeSubscriptions(manager);
+    makeSubscriptions(modelInstanceProvider);
 
-    return validate(manager);
+    return validate(modelInstanceProvider, nameChecker, resourceMgr);
 }
 
-void PipelineDefinition::retire(ModelManager& manager) {
-    resetSubscriptions(manager);
+void PipelineDefinition::retire(ModelInstanceProvider& modelInstanceProvider) {
+    resetSubscriptions(modelInstanceProvider);
     this->status.handle(RetireEvent());
     while (requestsHandlesCounter > 0) {
         std::this_thread::sleep_for(std::chrono::microseconds(1));
@@ -191,91 +171,16 @@ StatusCode PipelineDefinition::notLoadedAnymoreCode() const {
     return StatusCode::PIPELINE_DEFINITION_NOT_LOADED_ANYMORE;
 }
 
-template <typename RequestType, typename ResponseType>
-Status PipelineDefinition::create(std::unique_ptr<Pipeline>& pipeline,
-    const RequestType* request,
-    ResponseType* response,
-    ModelManager& manager) {
-    std::unique_ptr<ServableDefinitionUnloadGuard> unloadGuard;
-    Status status = waitForLoaded(unloadGuard);
-    if (!status.ok()) {
-        return status;
-    }
-
-    std::unordered_map<std::string, std::unique_ptr<Node>> nodes;
-    EntryNode<RequestType>* entry = nullptr;
-    ExitNode<ResponseType>* exit = nullptr;
-
-    for (const auto& info : nodeInfos) {
-        SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Creating pipeline: {}. Adding nodeName: {}, modelName: {}",
-            getName(), info.nodeName, info.modelName);
-        switch (info.kind) {
-        case NodeKind::ENTRY: {
-            auto node = std::make_unique<EntryNode<RequestType>>(request, getInputsInfo(), info.demultiplyCount);
-            entry = node.get();
-            nodes.emplace(info.nodeName, std::move(node));
-            break;
-        }
-        case NodeKind::DL:
-            nodes.emplace(info.nodeName, std::make_unique<DLNode>(
-                                             info.nodeName,
-                                             info.modelName,
-                                             info.modelVersion,
-                                             manager,
-                                             info.outputNameAliases,
-                                             info.demultiplyCount,
-                                             info.gatherFromNode));
-            break;
-        case NodeKind::CUSTOM:
-            nodes.emplace(info.nodeName, std::make_unique<CustomNode>(
-                                             info.nodeName,
-                                             info.library,
-                                             info.parameters,
-                                             info.outputNameAliases,
-                                             info.demultiplyCount,
-                                             info.gatherFromNode,
-                                             nodeResources.at(info.nodeName)));
-            break;
-        case NodeKind::EXIT: {
-            auto node = std::make_unique<ExitNode<ResponseType>>(response, getOutputsInfo(), info.gatherFromNode, useSharedOutputContentFn(request), getName());
-            exit = node.get();
-            nodes.emplace(info.nodeName, std::move(node));
-            break;
-        }
-        default:
-            SPDLOG_LOGGER_ERROR(dag_executor_logger, "Requested pipeline: {} contains unknown node kind", getName());
-            throw std::invalid_argument("unknown node kind");
-        }
-    }
-    for (const auto& kv : connections) {
-        const auto& dependantNode = nodes.at(kv.first);
-        for (const auto& pair : kv.second) {
-            const auto& dependencyNode = nodes.at(pair.first);
-            SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Connecting pipeline: {}, from: {}, to: {}", getName(), dependencyNode->getName(), dependantNode->getName());
-            Pipeline::connect(*dependencyNode, *dependantNode, pair.second);
-        }
-    }
-#pragma warning(push)
-#pragma warning(disable : 6011)
-    pipeline = std::make_unique<Pipeline>(*entry, *exit, *this->reporter, getName());
-#pragma warning(pop)
-    for (auto& kv : nodes) {
-        pipeline->push(std::move(kv.second));
-    }
-    return status;
-}
-
-void PipelineDefinition::resetSubscriptions(ModelManager& manager) {
+void PipelineDefinition::resetSubscriptions(ModelInstanceProvider& modelInstanceProvider) {
     for (auto& [modelName, modelVersion] : subscriptions) {
         if (modelVersion) {
             SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Unsubscribing pipeline: {} from model: {}, version: {}",
                 getName(), modelName, modelVersion);
-            manager.findModelByName(modelName)->getModelInstanceByVersion(modelVersion)->unsubscribe(*this);
-        } else {  // using default version
+        } else {
             SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Unsubscribing pipeline: {} from model: {}",
                 getName(), modelName);
-            manager.findModelByName(modelName)->unsubscribe(*this);
         }
+        modelInstanceProvider.unsubscribeFromModel(modelName, modelVersion, *this);
     }
     subscriptions.clear();
 }
@@ -290,26 +195,15 @@ static std::string createSubscriptionErrorMessage(const std::string& pipelineNam
     return ss.str();
 }
 
-void PipelineDefinition::makeSubscriptions(ModelManager& manager) {
+void PipelineDefinition::makeSubscriptions(ModelInstanceProvider& modelInstanceProvider) {
     for (auto& node : nodeInfos) {
         if (node.kind == NodeKind::DL) {
             if (subscriptions.find({node.modelName, node.modelVersion.value_or(0)}) != subscriptions.end()) {
                 continue;
             }
-            auto model = manager.findModelByName(node.modelName);
-            if (nullptr == model) {
+            if (!modelInstanceProvider.subscribeToModel(node.modelName, node.modelVersion.value_or(0), *this)) {
                 SPDLOG_LOGGER_WARN(modelmanager_logger, createSubscriptionErrorMessage(getName(), node));
                 continue;
-            }
-            if (node.modelVersion) {
-                auto modelInstance = model->getModelInstanceByVersion(node.modelVersion.value());
-                if (nullptr == modelInstance) {
-                    SPDLOG_LOGGER_WARN(modelmanager_logger, createSubscriptionErrorMessage(getName(), node));
-                    continue;
-                }
-                modelInstance->subscribe(*this);
-            } else {
-                model->subscribe(*this);
             }
             subscriptions.insert({node.modelName, node.modelVersion.value_or(0)});
         }
@@ -318,15 +212,13 @@ void PipelineDefinition::makeSubscriptions(ModelManager& manager) {
 
 class NodeValidator {
     const std::string& pipelineName;
-    ModelManager& manager;
+    ModelInstanceProvider& modelInstanceProvider;
     const NodeInfo& dependantNodeInfo;
     const pipeline_connections_t& connections;
     const std::vector<NodeInfo>& nodeInfos;
     std::map<std::string, std::shared_ptr<CNLIMWrapper>>& nodeResources;
     const bool isMultiBatchAllowed;
 
-    std::unique_ptr<ModelInstanceUnloadGuard> dependantModelUnloadGuard;
-    std::shared_ptr<ModelInstance> dependantModelInstance;
     std::set<std::string> remainingUnconnectedDependantInputs;
 
     tensor_map_t inputsInfo, outputsInfo;
@@ -335,14 +227,14 @@ class NodeValidator {
 public:
     NodeValidator(
         const std::string& pipelineName,
-        ModelManager& manager,
+        ModelInstanceProvider& modelInstanceProvider,
         const NodeInfo& dependantNodeInfo,
         const pipeline_connections_t& connections,
         const std::vector<NodeInfo>& nodeInfos,
         std::map<std::string, std::shared_ptr<CNLIMWrapper>>& nodeResources,
         const bool isMultiBatchAllowed = true) :
         pipelineName(pipelineName),
-        manager(manager),
+        modelInstanceProvider(modelInstanceProvider),
         dependantNodeInfo(dependantNodeInfo),
         connections(connections),
         nodeInfos(nodeInfos),
@@ -354,18 +246,45 @@ public:
             dependantNodeInfo.kind);
     }
 
-    Status fetchUnderlyingModelInstance() {
-        if (!manager.getModelInstance(
-                        dependantNodeInfo.modelName,
-                        dependantNodeInfo.modelVersion.value_or(0),
-                        dependantModelInstance,
-                        dependantModelUnloadGuard)
-                 .ok()) {
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Validation of pipeline: {} definition failed. Missing model: {}; version: {}",
-                pipelineName,
+    Status fetchDependantMetadata() {
+        if (dependantNodeInfo.kind == NodeKind::DL) {
+            auto status = modelInstanceProvider.getModelInputsInfo(
                 dependantNodeInfo.modelName,
-                dependantNodeInfo.modelVersion.value_or(0));
-            return StatusCode::PIPELINE_NODE_REFERING_TO_MISSING_MODEL;
+                dependantNodeInfo.modelVersion.value_or(0),
+                this->inputsInfo);
+            if (!status.ok()) {
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Validation of pipeline: {} definition failed. Missing model: {}; version: {}",
+                    pipelineName,
+                    dependantNodeInfo.modelName,
+                    dependantNodeInfo.modelVersion.value_or(0));
+                return StatusCode::PIPELINE_NODE_REFERING_TO_MISSING_MODEL;
+            }
+            status = modelInstanceProvider.getModelOutputsInfo(
+                dependantNodeInfo.modelName,
+                dependantNodeInfo.modelVersion.value_or(0),
+                this->outputsInfo);
+            if (!status.ok()) {
+                return StatusCode::PIPELINE_NODE_REFERING_TO_MISSING_MODEL;
+            }
+        } else if (dependantNodeInfo.kind == NodeKind::CUSTOM) {
+            auto result = PipelineDefinition::getCustomNodeMetadata(
+                dependantNodeInfo,
+                this->inputsInfo,
+                dependantNodeInfo.library.getInputsInfo,
+                pipelineName,
+                getCNLIMWrapperPtr(nodeResources.at(dependantNodeInfo.nodeName)));
+            if (!result.ok()) {
+                return result;
+            }
+            result = PipelineDefinition::getCustomNodeMetadata(
+                dependantNodeInfo,
+                this->outputsInfo,
+                dependantNodeInfo.library.getOutputsInfo,
+                pipelineName,
+                getCNLIMWrapperPtr(nodeResources.at(dependantNodeInfo.nodeName)));
+            if (!result.ok()) {
+                return result;
+            }
         }
         return StatusCode::OK;
     }
@@ -394,8 +313,16 @@ public:
     }
 
     Status checkForForbiddenDynamicParameters() {
-        const auto& config = dependantModelInstance->getModelConfig();
-        if (config.getBatchingMode() == Mode::AUTO || config.anyShapeSetToAuto()) {
+        bool batchAuto = false;
+        bool shapeAuto = false;
+        auto status = modelInstanceProvider.hasAutoModelParameters(
+            dependantNodeInfo.modelName,
+            dependantNodeInfo.modelVersion.value_or(0),
+            batchAuto, shapeAuto);
+        if (!status.ok()) {
+            return status;
+        }
+        if (batchAuto || shapeAuto) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Validation of pipeline: {} definition failed. Node name: {} used model name: {} with batch/shape parameter set to 'auto' which is forbidden. Use dynamic shape.",
                 pipelineName,
                 dependantNodeInfo.nodeName,
@@ -652,22 +579,25 @@ public:
     Status validateConnection(const NodeInfo& dependencyNodeInfo, const Aliases& mapping) {
         // At this point dependency node can only be either DL model node, Custom node or entry node.
         // Take care when adding new node types.
-        std::unique_ptr<ModelInstanceUnloadGuard> dependencyModelUnloadGuard;
-        std::shared_ptr<ModelInstance> dependencyModelInstance;
         if (dependencyNodeInfo.kind == NodeKind::DL) {
-            if (!manager.getModelInstance(
-                            dependencyNodeInfo.modelName,
-                            dependencyNodeInfo.modelVersion.value_or(0),
-                            dependencyModelInstance,
-                            dependencyModelUnloadGuard)
-                     .ok()) {
+            auto status = modelInstanceProvider.getModelInputsInfo(
+                dependencyNodeInfo.modelName,
+                dependencyNodeInfo.modelVersion.value_or(0),
+                this->dependencyInputsInfo);
+            if (!status.ok()) {
                 SPDLOG_LOGGER_ERROR(modelmanager_logger, "Validation of pipeline: {} definition failed. Dependency DL model node refers to unavailable model - name: {}; version: {}",
                     pipelineName,
                     dependencyNodeInfo.modelName,
                     dependencyNodeInfo.modelVersion.value_or(0));
                 return StatusCode::PIPELINE_NODE_REFERING_TO_MISSING_MODEL;
             }
-            retrieveModelNodeDependencyMetadata(dependencyModelInstance);
+            status = modelInstanceProvider.getModelOutputsInfo(
+                dependencyNodeInfo.modelName,
+                dependencyNodeInfo.modelVersion.value_or(0),
+                this->dependencyOutputsInfo);
+            if (!status.ok()) {
+                return StatusCode::PIPELINE_NODE_REFERING_TO_MISSING_MODEL;
+            }
         }
 
         if (dependencyNodeInfo.kind == NodeKind::CUSTOM) {
@@ -708,39 +638,6 @@ public:
         return StatusCode::OK;
     }
 
-    Status retrieveDependantMetadata() {
-        if (dependantNodeInfo.kind == NodeKind::DL) {
-            this->inputsInfo = this->dependantModelInstance->getInputsInfo();
-            this->outputsInfo = this->dependantModelInstance->getOutputsInfo();
-            return StatusCode::OK;
-        } else if (dependantNodeInfo.kind == NodeKind::CUSTOM) {
-            auto result = PipelineDefinition::getCustomNodeMetadata(
-                dependantNodeInfo,
-                this->inputsInfo,
-                dependantNodeInfo.library.getInputsInfo,
-                pipelineName,
-                getCNLIMWrapperPtr(nodeResources.at(dependantNodeInfo.nodeName)));
-            if (!result.ok()) {
-                return result;
-            }
-            result = PipelineDefinition::getCustomNodeMetadata(
-                dependantNodeInfo,
-                this->outputsInfo,
-                dependantNodeInfo.library.getOutputsInfo,
-                pipelineName,
-                getCNLIMWrapperPtr(nodeResources.at(dependantNodeInfo.nodeName)));
-            if (!result.ok()) {
-                return result;
-            }
-        }
-        return StatusCode::OK;
-    }
-
-    void retrieveModelNodeDependencyMetadata(const std::shared_ptr<ModelInstance>& dependencyModelInstance) {
-        this->dependencyInputsInfo = dependencyModelInstance->getInputsInfo();
-        this->dependencyOutputsInfo = dependencyModelInstance->getOutputsInfo();
-    }
-
     Status retrieveCustomNodeDependencyMetadata(const NodeInfo& dependencyNodeInfo) {
         auto result = PipelineDefinition::getCustomNodeMetadata(
             dependencyNodeInfo,
@@ -765,12 +662,7 @@ public:
 
     Status validate() {
         if (dependantNodeInfo.kind == NodeKind::DL) {
-            auto result = fetchUnderlyingModelInstance();
-            if (!result.ok()) {
-                return result;
-            }
-
-            result = retrieveDependantMetadata();
+            auto result = fetchDependantMetadata();
             if (!result.ok()) {
                 return result;
             }
@@ -794,7 +686,7 @@ public:
                 return StatusCode::PIPELINE_DEFINITION_INVALID_NODE_LIBRARY;
             }
 
-            auto result = retrieveDependantMetadata();
+            auto result = fetchDependantMetadata();
             if (!result.ok()) {
                 return result;
             }
@@ -843,8 +735,8 @@ public:
     }
 };
 
-Status PipelineDefinition::validateNode(ModelManager& manager, const NodeInfo& dependantNodeInfo, const bool isMultiBatchAllowed) {
-    NodeValidator validator(getName(), manager, dependantNodeInfo, connections, nodeInfos, nodeResources, isMultiBatchAllowed);
+Status PipelineDefinition::validateNode(ModelInstanceProvider& modelInstanceProvider, const NodeInfo& dependantNodeInfo, const bool isMultiBatchAllowed) {
+    NodeValidator validator(getName(), modelInstanceProvider, dependantNodeInfo, connections, nodeInfos, nodeResources, isMultiBatchAllowed);
     return validator.validate();
 }
 
@@ -981,7 +873,7 @@ Status PipelineDefinition::validateDemultiplexerGatherNodesOrder() {
     return StatusCode::OK;
 }
 
-Status PipelineDefinition::validateNodes(ModelManager& manager) {
+Status PipelineDefinition::validateNodes(ModelInstanceProvider& modelInstanceProvider) {
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Validation of pipeline definition: {} nodes started.", getName());
 
     int entryNodeCount = std::count_if(
@@ -1042,7 +934,7 @@ Status PipelineDefinition::validateNodes(ModelManager& manager) {
             return StatusCode::PIPELINE_NODE_NAME_DUPLICATE;
         }
 
-        auto result = validateNode(manager, node, isMultiBatchAllowed);
+        auto result = validateNode(modelInstanceProvider, node, isMultiBatchAllowed);
         if (!result.ok()) {
             return result;
         }
@@ -1114,7 +1006,7 @@ static Status updateInputsInfoWithNodeConnections(tensor_map_t& inputsInfo, cons
     return StatusCode::OK;
 }
 
-Status PipelineDefinition::updateInputsInfo(const ModelManager& manager) {
+Status PipelineDefinition::updateInputsInfo(const ModelInstanceProvider& modelInstanceProvider) {
     // Assumptions: this can only be called on available pipeline definition.
     // Add check if available when pipeline status will be implemented.
     inputsInfo.clear();
@@ -1139,21 +1031,16 @@ Status PipelineDefinition::updateInputsInfo(const ModelManager& manager) {
                 break;
             }
             case NodeKind::DL: {
-                auto instance = manager.findModelInstance(dependantNodeInfo->modelName, dependantNodeInfo->modelVersion.value_or(0));
-                if (!instance) {
+                tensor_map_t modelInputsInfo;
+                auto status = modelInstanceProvider.getModelInputsInfo(dependantNodeInfo->modelName, dependantNodeInfo->modelVersion.value_or(0), modelInputsInfo);
+                if (!status.ok()) {
                     SPDLOG_DEBUG("Model: {} was unavailable during pipeline: {} inputs info fetching", dependantNodeInfo->modelName, this->getName());
                     return StatusCode::MODEL_MISSING;
                 }
-                std::unique_ptr<ModelInstanceUnloadGuard> unloadGuard;
-                auto status = instance->waitForLoaded(0, unloadGuard);
-                if (!status.ok()) {
-                    SPDLOG_DEBUG("Model: {} was unavailable during pipeline: {} inputs info fetching", instance->getName(), this->getName());
-                    return status;
-                }
                 status = updateInputsInfoWithNodeConnections(inputsInfo,
                     specificDependencyMapping,
-                    [&instance](const std::string& realName) -> const TensorInfo& {
-                        return *instance->getInputsInfo().at(realName);
+                    [&modelInputsInfo](const std::string& realName) -> const TensorInfo& {
+                        return *modelInputsInfo.at(realName);
                     });
                 if (!status.ok()) {
                     return status;
@@ -1200,26 +1087,21 @@ Status PipelineDefinition::updateInputsInfo(const ModelManager& manager) {
     return StatusCode::OK;
 }
 
-Status PipelineDefinition::populateOutputsInfoWithDLModelOutputs(const NodeInfo& dependencyNodeInfo, const ModelManager& manager, tensor_map_t& outputsInfo, const Aliases& specificDependencyMapping, const Shape& gatherShape) const {
-    auto instance = manager.findModelInstance(dependencyNodeInfo.modelName, dependencyNodeInfo.modelVersion.value_or(0));
-    if (!instance) {
+Status PipelineDefinition::populateOutputsInfoWithDLModelOutputs(const NodeInfo& dependencyNodeInfo, const ModelInstanceProvider& modelInstanceProvider, tensor_map_t& outputsInfo, const Aliases& specificDependencyMapping, const Shape& gatherShape) const {
+    tensor_map_t modelOutputsInfo;
+    auto status = modelInstanceProvider.getModelOutputsInfo(dependencyNodeInfo.modelName, dependencyNodeInfo.modelVersion.value_or(0), modelOutputsInfo);
+    if (!status.ok()) {
         SPDLOG_DEBUG("Model: {} was unavailable during pipeline: {} outputs info fetching", dependencyNodeInfo.modelName, this->getName());
         return StatusCode::MODEL_MISSING;
     }
-    std::unique_ptr<ModelInstanceUnloadGuard> unloadGuard;
-    auto status = instance->waitForLoaded(0, unloadGuard);
-    if (!status.ok()) {
-        SPDLOG_DEBUG("Model: {} was unavailable during pipeline: {} outputs info fetching", instance->getName(), this->getName());
-        return status;
-    }
     for (const auto& [alias, realName] : specificDependencyMapping) {
         const auto& finalName = dependencyNodeInfo.outputNameAliases.count(alias) > 0 ? dependencyNodeInfo.outputNameAliases.at(alias) : alias;
-        outputsInfo[realName] = createOutputTensorInfoForPipeline(realName, instance->getOutputsInfo().at(finalName), gatherShape, dependencyNodeInfo.demultiplyCount.has_value());
+        outputsInfo[realName] = createOutputTensorInfoForPipeline(realName, modelOutputsInfo.at(finalName), gatherShape, dependencyNodeInfo.demultiplyCount.has_value());
     }
     return StatusCode::OK;
 }
 
-Status PipelineDefinition::populateOutputsInfoWithCustomNodeOutputs(const NodeInfo& dependencyNodeInfo, const ModelManager& manager, tensor_map_t& outputsInfo, const Aliases& specificDependencyMapping, const Shape& gatherShape) const {
+Status PipelineDefinition::populateOutputsInfoWithCustomNodeOutputs(const NodeInfo& dependencyNodeInfo, tensor_map_t& outputsInfo, const Aliases& specificDependencyMapping, const Shape& gatherShape) const {
     if (!dependencyNodeInfo.library.isValid()) {
         return StatusCode::NODE_LIBRARY_MISSING;
     }
@@ -1236,7 +1118,7 @@ Status PipelineDefinition::populateOutputsInfoWithCustomNodeOutputs(const NodeIn
     return StatusCode::OK;
 }
 
-Status PipelineDefinition::updateOutputsInfo(const ModelManager& manager) {
+Status PipelineDefinition::updateOutputsInfo(const ModelInstanceProvider& modelInstanceProvider) {
     // Assumptions: this can only be called on available pipeline definition.
     // Add check if available when pipeline status will be implemented.
     outputsInfo.clear();
@@ -1265,7 +1147,7 @@ Status PipelineDefinition::updateOutputsInfo(const ModelManager& manager) {
             }
             case NodeKind::DL: {
                 auto status = populateOutputsInfoWithDLModelOutputs(
-                    *dependencyNodeInfo, manager, outputsInfo, specificDependencyMapping, gatherShape);
+                    *dependencyNodeInfo, modelInstanceProvider, outputsInfo, specificDependencyMapping, gatherShape);
                 if (!status.ok()) {
                     return status;
                 }
@@ -1273,7 +1155,7 @@ Status PipelineDefinition::updateOutputsInfo(const ModelManager& manager) {
             }
             case NodeKind::CUSTOM: {
                 auto status = populateOutputsInfoWithCustomNodeOutputs(
-                    *dependencyNodeInfo, manager, outputsInfo, specificDependencyMapping, gatherShape);
+                    *dependencyNodeInfo, outputsInfo, specificDependencyMapping, gatherShape);
                 if (!status.ok()) {
                     return status;
                 }
@@ -1369,21 +1251,5 @@ Shape PipelineDefinition::getNodeGatherShape(const NodeInfo& info) const {
     std::reverse(shape.begin(), shape.end());
     return shape;
 }
-// TODO those should be part of frontend templatization
-template Status PipelineDefinition::create<tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse>(
-    std::unique_ptr<Pipeline>& pipeline,
-    const tensorflow::serving::PredictRequest* request,
-    tensorflow::serving::PredictResponse* response,
-    ModelManager& manager);
-template Status PipelineDefinition::create<::KFSRequest, ::KFSResponse>(
-    std::unique_ptr<Pipeline>& pipeline,
-    const ::KFSRequest* request,
-    ::KFSResponse* response,
-    ModelManager& manager);
-template Status PipelineDefinition::create<InferenceRequest, InferenceResponse>(
-    std::unique_ptr<Pipeline>& pipeline,
-    const InferenceRequest* request,
-    InferenceResponse* response,
-    ModelManager& manager);
 
 }  // namespace ovms

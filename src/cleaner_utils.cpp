@@ -26,7 +26,8 @@
 
 #include "global_sequences_viewer.hpp"
 #include "logging.hpp"
-#include "modelmanager.hpp"
+#include "resources_cleaner.hpp"
+#include "status.hpp"
 
 namespace ovms {
 FunctorSequenceCleaner::FunctorSequenceCleaner(GlobalSequencesViewer& globalSequencesViewer) :
@@ -59,10 +60,10 @@ FunctorSequenceCleaner::~FunctorSequenceCleaner() = default;
 
 FunctorResourcesCleaner::~FunctorResourcesCleaner() = default;
 
-FunctorResourcesCleaner::FunctorResourcesCleaner(ModelManager& modelManager) :
-    modelManager(modelManager) {}
+FunctorResourcesCleaner::FunctorResourcesCleaner(ResourcesCleaner& resourcesCleaner) :
+    resourcesCleaner(resourcesCleaner) {}
 
 void FunctorResourcesCleaner::cleanup() {
-    modelManager.cleanupResources();
+    resourcesCleaner.cleanupResources();
 }
 }  // namespace ovms
