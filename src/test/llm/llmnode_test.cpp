@@ -3756,7 +3756,7 @@ public:
 class LLMVLMOptionsHttpTest : public LLMOptionsHttpTestPython {
 public:
     std::string modelsPath;
-    void SetUp() { modelsPath = "/ovms/src/test/llm_testing/OpenGVLab/InternVL2-1B"; }
+    void SetUp() { modelsPath = "/ovms/src/test/llm_testing/OpenVINO/InternVL2-1B"; }
 };
 
 void TestLLMNodeOptionsCheckDefault(std::string& modelsPath) {

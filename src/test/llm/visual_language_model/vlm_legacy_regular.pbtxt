@@ -28,7 +28,7 @@ node {
     }
     node_options: {
         [type.googleapis.com/mediapipe.LLMCalculatorOptions]: {
-          models_path: "/ovms/src/test/llm_testing/OpenGVLab/InternVL2-1B"
+          models_path: "/ovms/src/test/llm_testing/OpenVINO/InternVL2-1B"
           cache_size: 1
           pipeline_type: VLM
         }

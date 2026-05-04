@@ -26,7 +26,7 @@ TOKENIZER_FILE="openvino_tokenizer.bin"
 LEGACY_MODEL_FILE="1/model.bin"
 EMBEDDING_MODEL="thenlper/gte-small"
 RERANK_MODEL="BAAI/bge-reranker-base"
-VLM_MODEL="OpenGVLab/InternVL2-1B"
+VLM_MODEL="OpenVINO/InternVL2-1B"
 TTS_MODEL="microsoft/speecht5_tts"
 STT_MODEL="openai/whisper-tiny"
 
@@ -103,7 +103,7 @@ fi
 if [ -f "$1/$VLM_MODEL/$TOKENIZER_FILE" ]; then
   echo "Model file $1/$VLM_MODEL/$TOKENIZER_FILE exists. Skipping downloading models."
 else
-  python3 demos/common/export_models/export_model.py text_generation --source_model "$VLM_MODEL" --weight-format int4 --kv_cache_precision u8 --model_repository_path $1
+  hf download "$VLM_MODEL" --local-dir $1/$VLM_MODEL
 fi
 if [ ! -f "$1/$VLM_MODEL/$TOKENIZER_FILE" ]; then
   echo "[ERROR] Model file $1/$VLM_MODEL/$TOKENIZER_FILE does not exist."
