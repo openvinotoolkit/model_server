@@ -14,6 +14,20 @@ Before building a new image (which is time-expensive), check if one exists:
 docker images | grep -- -build
 ```
 
+### Finding a container with the current workspace mounted
+
+**Always start here** — search for a running container that already mounts the current repo:
+```bash
+docker ps -q | xargs -I{} docker inspect {} --format '{{.ID}} {{range .Mounts}}{{.Source}}{{end}}' | grep "$(pwd)"
+```
+If found, use `docker exec -it <container_id> bash` to enter it directly.
+
+If no running container matches, check stopped containers too:
+```bash
+docker ps -aq | xargs -I{} docker inspect {} --format '{{.ID}} {{range .Mounts}}{{.Source}}{{end}}' | grep "$(pwd)"
+```
+If found stopped, use `docker start -i <container_id>`.
+
 ### Starting a build container
 
 If a `-build` image exists, start a container with the repo mounted:
@@ -85,7 +99,7 @@ bazel build --//:distro=redhat //src:ovms
 | `make ovms_release_images` | Build CPU and GPU release Docker images |
 | `make run_unit_tests` | Run C++ unit tests in the `-build` container |
 | `make test_functional` | Run Python functional tests |
-| `make style` / `make cpplint` / `make spell` | Code style checks (see Style Checking section) |
+| `make style` | All code style checks: spell, clang-format, cpplint, cppclean (see Style Checking section) |
 
 ### Red Hat build via Make
 ```bash
@@ -108,22 +122,26 @@ Both `Dockerfile.ubuntu` and `Dockerfile.redhat` use multi-stage builds:
 
 ## Style Checking
 
-Run style checks **sequentially** — fix each step before moving to the next:
+**Always run checks individually and sequentially** — never use `make style` (which runs all checks together and wastes time re-running already-passed steps). Fix each step before moving to the next:
 
-1. **clang-format** (formatting):
-   ```bash
-   make style
-   ```
-2. **cpplint** (lint rules):
-   ```bash
-   make cpplint
-   ```
-3. **Spelling**:
+1. **Spelling**:
    ```bash
    make spell
    ```
+2. **clang-format** (formatting):
+   ```bash
+   make clang-format-check
+   ```
+3. **cpplint** (lint rules):
+   ```bash
+   make cpplint
+   ```
+4. **cppclean** (unused includes/code):
+   ```bash
+   make cppclean
+   ```
 
-Each step runs via Make. Fix issues from step N before running step N+1 — later steps produce noise if formatting is off.
+Fix issues from step N before running step N+1 — later steps produce noise if formatting is off.
 
 ## Test Setup
 
