@@ -323,9 +323,9 @@ rapidjson::Document Lfm2ToolParser::wrapDeltaArgs(const std::string& argsStr) {
     return BaseOutputParser::wrapDelta(doc, this->toolCallIndex);
 }
 
-void Lfm2ToolParser::cutEOSFromContent(std::string& content, const ov::genai::GenerationFinishReason& finishReason) {
+void Lfm2ToolParser::cutEOSFromContent(std::string& content) {
     size_t eosPos = content.find(EOS_TOKEN_STR);
-    if (eosPos != std::string::npos && finishReason == ov::genai::GenerationFinishReason::STOP) {
+    if (eosPos != std::string::npos) {
         content = content.substr(0, eosPos);
     }
 }
@@ -353,7 +353,7 @@ std::optional<rapidjson::Document> Lfm2ToolParser::parseChunk(const std::string&
                 content = this->streamingContent.substr(this->streamingPosition);
             }
             this->streamingPosition += content.size();
-            cutEOSFromContent(content, finishReason);
+            cutEOSFromContent(content);
 
             if (!content.empty()) {
                 return wrapDeltaContent(content);
@@ -372,7 +372,7 @@ std::optional<rapidjson::Document> Lfm2ToolParser::parseChunk(const std::string&
         if (this->currentState == State::Content && this->streamingPosition < this->streamingContent.size()) {
             auto content = this->streamingContent.substr(this->streamingPosition);
             this->streamingPosition += content.size();
-            cutEOSFromContent(content, finishReason);
+            cutEOSFromContent(content);
 
             if (!content.empty()) {
                 return wrapDeltaContent(content);
