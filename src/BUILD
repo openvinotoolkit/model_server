@@ -2281,7 +2281,7 @@ cc_binary(
 )
 
 cc_test(
-    name = "ovms_monolithic_test",
+    name = "ovms_test",
     linkstatic = 1,
     srcs = [
         "test/c_api_stress_tests.cpp",
@@ -2579,6 +2579,7 @@ cc_test(
                 "@mediapipe//mediapipe/calculators/ovms:ovms_calculator",
                 "@mediapipe//mediapipe/framework:calculator_runner",
                 ":text2image_test",
+                ":lora_adapter_test",
             ],
             "//:disable_mediapipe" :
             [
@@ -2590,28 +2591,20 @@ cc_test(
     linkopts = LINKOPTS_ADJUSTED,
 )
 
-cc_test(
+cc_library(
     name = "lora_adapter_test",
     linkstatic = 1,
+    alwayslink = True,
     srcs = [
         "test/llm/lora_adapter_test.cpp",
     ],
     deps = [
         ":test_test_with_temp_dir",
         "//src/llm:genai_servables",
-        "@com_google_googletest//:gtest_main",
+        "@com_google_googletest//:gtest",
     ],
     copts = COPTS_TESTS,
     local_defines = COMMON_LOCAL_DEFINES,
-    linkopts = LINKOPTS_ADJUSTED,
-)
-
-test_suite(
-    name = "ovms_test",
-    tests = [
-        ":ovms_monolithic_test",
-        ":lora_adapter_test",
-    ],
 )
 
 cc_library(
