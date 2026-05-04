@@ -23,6 +23,8 @@ ovms_cc_library(
             "//src/port:rapidjson_document",
             "//src/port:rapidjson_writer",
             "//src/port:rapidjson_stringbuffer",
+            "@com_github_tencent_rapidjson//:rapidjson",
+            "@ovms//src:libovmsstatus",
     ],
     visibility = ["//visibility:public",],
 )

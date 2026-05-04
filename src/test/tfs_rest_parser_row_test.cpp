@@ -747,11 +747,11 @@ static std::string makeNestedArrayJson(int depth) {
 TEST(TFSRestParserRow, NestingDepthExceeded_RowNamedInstances) {
     TFSRestParser parser(prepareTensors({{"i", {1}}}));
     std::string request = R"({"signature_name":"","instances":[{"i":)" + makeNestedArrayJson(200) + "}]}";
-    EXPECT_EQ(parser.parse(request.c_str()), StatusCode::REST_COULD_NOT_PARSE_INSTANCE);
+    EXPECT_EQ(parser.parse(request.c_str()), StatusCode::JSON_NESTING_DEPTH_EXCEEDED);
 }
 
 TEST(TFSRestParserRow, NestingDepthExceeded_RowNoNamedInstances) {
     TFSRestParser parser(prepareTensors({{"i", {1}}}));
     std::string request = R"({"signature_name":"","instances":)" + makeNestedArrayJson(200) + "}";
-    EXPECT_EQ(parser.parse(request.c_str()), StatusCode::REST_COULD_NOT_PARSE_INSTANCE);
+    EXPECT_EQ(parser.parse(request.c_str()), StatusCode::JSON_NESTING_DEPTH_EXCEEDED);
 }

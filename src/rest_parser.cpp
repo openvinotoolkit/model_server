@@ -17,10 +17,6 @@
 
 #include <functional>
 #include <string>
-#pragma warning(push)
-#pragma warning(disable : 6313)
-#include <rapidjson/error/en.h>
-#pragma warning(pop)
 
 #include "precision.hpp"
 #include "rest_utils.hpp"
@@ -447,20 +443,10 @@ Status TFSRestParser::parseColumnFormat(rapidjson::Value& node) {
 
 Status TFSRestParser::parse(const char* json) {
     rapidjson::Document doc;
-    int errorCode = 0;
-    std::size_t errorOffset = 0;
-    auto outcome = parseJsonWithDepthLimit(doc, json, MAX_NESTING_DEPTH, &errorCode, &errorOffset);
-    if (outcome == JsonParseOutcome::DepthExceeded) {
-        SPDLOG_DEBUG("Request JSON exceeds maximum nesting depth");
-        return Status(StatusCode::JSON_INVALID, "JSON body exceeds maximum nesting depth");
-    }
-    if (outcome == JsonParseOutcome::ParseError) {
-        std::stringstream ss;
-        ss << "Error: " << rapidjson::GetParseError_En(static_cast<rapidjson::ParseErrorCode>(errorCode))
-           << " Offset: " << errorOffset;
-        const std::string details = ss.str();
-        SPDLOG_DEBUG("Request is not a valid JSON. {}", details);
-        return Status(StatusCode::JSON_INVALID, details);
+    auto status = parseJsonWithDepthLimit(doc, json, MAX_NESTING_DEPTH);
+    if (!status.ok()) {
+        SPDLOG_DEBUG("Request is not a valid JSON: {}", status.string());
+        return status;
     }
     if (!doc.IsObject()) {
         return StatusCode::REST_BODY_IS_NOT_AN_OBJECT;
@@ -775,20 +761,10 @@ Status KFSRestParser::parseInputs(rapidjson::Value& node) {
 
 Status KFSRestParser::parse(const char* json) {
     rapidjson::Document doc;
-    int errorCode = 0;
-    std::size_t errorOffset = 0;
-    auto outcome = parseJsonWithDepthLimit(doc, json, MAX_NESTING_DEPTH, &errorCode, &errorOffset);
-    if (outcome == JsonParseOutcome::DepthExceeded) {
-        SPDLOG_DEBUG("Request JSON exceeds maximum nesting depth");
-        return Status(StatusCode::JSON_INVALID, "JSON body exceeds maximum nesting depth");
-    }
-    if (outcome == JsonParseOutcome::ParseError) {
-        std::stringstream ss;
-        ss << "Error: " << rapidjson::GetParseError_En(static_cast<rapidjson::ParseErrorCode>(errorCode))
-           << " Offset: " << errorOffset;
-        const std::string details = ss.str();
-        SPDLOG_DEBUG("Request is not a valid JSON. {}", details);
-        return Status(StatusCode::JSON_INVALID, details);
+    auto status = parseJsonWithDepthLimit(doc, json, MAX_NESTING_DEPTH);
+    if (!status.ok()) {
+        SPDLOG_DEBUG("Request is not a valid JSON: {}", status.string());
+        return status;
     }
     if (!doc.IsObject()) {
         SPDLOG_DEBUG("Request body is not an object");
@@ -796,7 +772,7 @@ Status KFSRestParser::parse(const char* json) {
     }
     auto idItr = doc.FindMember("id");
     if (idItr != doc.MemberEnd()) {
-        auto status = parseId(idItr->value);
+        status = parseId(idItr->value);
         if (!status.ok()) {
             SPDLOG_DEBUG("Parsing request ID failed");
             return status;
@@ -805,7 +781,7 @@ Status KFSRestParser::parse(const char* json) {
 
     auto parametersItr = doc.FindMember("parameters");
     if (parametersItr != doc.MemberEnd()) {
-        auto status = parseRequestParameters(parametersItr->value);
+        status = parseRequestParameters(parametersItr->value);
         if (!status.ok()) {
             SPDLOG_DEBUG("Parsing request parameters failed");
             return status;
@@ -814,7 +790,7 @@ Status KFSRestParser::parse(const char* json) {
 
     auto outputsItr = doc.FindMember("outputs");
     if (outputsItr != doc.MemberEnd()) {
-        auto status = parseOutputs(outputsItr->value);
+        status = parseOutputs(outputsItr->value);
         if (!status.ok()) {
             SPDLOG_DEBUG("Parsing request outputs failed");
             return status;
@@ -826,7 +802,7 @@ Status KFSRestParser::parse(const char* json) {
         SPDLOG_DEBUG("No inputs found in request");
         return StatusCode::REST_NO_INPUTS_FOUND;
     }
-    auto status = parseInputs(inputsItr->value);
+    status = parseInputs(inputsItr->value);
     if (!status.ok()) {
         SPDLOG_DEBUG("Parsing request inputs failed");
         return status;

@@ -1029,5 +1029,5 @@ static std::string makeNestedArrayJson(int depth) {
 TEST_F(KFSRestParserTest, NestingDepthExceeded_FP32) {
     std::string request = R"({"inputs":[{"name":"input0","shape":[1],"datatype":"FP32","data":)" + makeNestedArrayJson(200) + "}]}";
     auto status = parser.parse(request.c_str());
-    EXPECT_EQ(status, StatusCode::REST_COULD_NOT_PARSE_INPUT);
+    EXPECT_EQ(status, StatusCode::JSON_NESTING_DEPTH_EXCEEDED);
 }

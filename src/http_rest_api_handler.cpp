@@ -521,13 +521,12 @@ static Status createV3HttpPayload(
     } else if (isApplicationJson) {
         {
             OVMS_PROFILE_SCOPE("rapidjson parse");
-            auto outcome = parseJsonWithDepthLimit(*parsedJson, request_body.c_str());
-            if (outcome == JsonParseOutcome::DepthExceeded) {
+            auto status = parseJsonWithDepthLimit(*parsedJson, request_body.c_str());
+            if (!status.ok()) {
                 ensureJsonParserInErrorState(parsedJson);
-                return Status(StatusCode::JSON_INVALID, "JSON body exceeds maximum nesting depth");
-            }
-            if (outcome == JsonParseOutcome::ParseError) {
-                ensureJsonParserInErrorState(parsedJson);
+                if (status == StatusCode::JSON_NESTING_DEPTH_EXCEEDED) {
+                    return Status(StatusCode::JSON_INVALID, "JSON body exceeds maximum nesting depth");
+                }
                 return Status(StatusCode::JSON_INVALID, "Cannot parse JSON body");
             }
         }
@@ -751,7 +750,7 @@ Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpReque
 
     auto status = createV3HttpPayload(uri, request_components, response, request_body, serverReaderWriter, std::move(multiPartParser), *request, modelName, streamFieldVal);
     if (!status.ok()) {
-        SPDLOG_DEBUG("Failed to create V3 payload: {}", status.string());
+        SPDLOG_DEBUG("Failed to create V3 payload: {} [{}]", status.string(), request_body);
         return status;
     }
 
