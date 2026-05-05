@@ -218,7 +218,7 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
                         if (!combinedText.empty()) {
                             combinedText += "\n";
                         }
-                        combinedText += entry["text"].GetString();
+                        combinedText.append(entry["text"].GetString(), entry["text"].GetStringLength());
                         continue;
                     } else if (entryType == std::string("image_url")) {
                         if (!entry.HasMember("image_url") || !entry["image_url"].IsObject()) {
