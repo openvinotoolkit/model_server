@@ -110,11 +110,11 @@ const std::string& OutputParser::StreamOutputCache::getBuffer() const {
 rapidjson::Document OutputParser::parseContentChunk(ProcessingPhase newPhase) {
     std::string chunkContent = streamOutputCache.getBuffer();
     if (toolParser != nullptr) {
-        auto& specialTokensToErase = toolParser->getSpecialTokensToErase();
-        for (const auto& token : specialTokensToErase) {
+        auto& specialTagsToErase = toolParser->getSpecialTagsToErase();
+        for (const auto& tag : specialTagsToErase) {
             size_t pos = 0;
-            while ((pos = chunkContent.find(token, pos)) != std::string::npos) {
-                chunkContent.erase(pos, token.length());
+            while ((pos = chunkContent.find(tag, pos)) != std::string::npos) {
+                chunkContent.erase(pos, tag.length());
             }
         }
     }

@@ -66,9 +66,9 @@ public:
         return beginningOnlyTags;
     }
 
-    const std::vector<std::string>& getSpecialTokensToErase() const override {
-        static const std::vector<std::string> tokensToErase = {EOS_TOKEN_STR};
-        return tokensToErase;
+    const std::vector<std::string>& getSpecialTagsToErase() const override {
+        static const std::vector<std::string> tagsToErase = {EOS_TOKEN_STR};
+        return tagsToErase;
     }
 
     const std::string& getParsingEndTag() const override {
