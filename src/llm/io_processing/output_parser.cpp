@@ -108,13 +108,23 @@ const std::string& OutputParser::StreamOutputCache::getBuffer() const {
 }
 
 rapidjson::Document OutputParser::parseContentChunk(ProcessingPhase newPhase) {
+    std::string chunkContent = streamOutputCache.getBuffer();
+    if (toolParser != nullptr) {
+        auto& specialTokensToErase = toolParser->getSpecialTokensToErase();
+        for (const auto& token : specialTokensToErase) {
+            size_t pos = 0;
+            while ((pos = chunkContent.find(token, pos)) != std::string::npos) {
+                chunkContent.erase(pos, token.length());
+            }
+        }
+    }
     rapidjson::StringBuffer buffer;
     rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
     writer.StartObject();
     writer.String("delta");
     writer.StartObject();
     writer.String("content");
-    writer.String(streamOutputCache.getBuffer().c_str());
+    writer.String(chunkContent.c_str());
     writer.EndObject();
     writer.EndObject();
     rapidjson::Document doc;
