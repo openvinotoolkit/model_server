@@ -33,7 +33,7 @@ from tests.functional.utils.logger import get_logger, step
 from tests.functional.config import is_nginx_mtls
 from tests.functional.constants.components import OvmsComponents
 from tests.functional.models.models_static import Resnet
-from ovms.constants.models_library import ModelsLib
+from tests.functional.models.models_library import ModelsLib
 from tests.functional.constants.ovms import Ovms, get_model_base_path
 from tests.functional.constants.ovms_messages import OvmsMessages
 from tests.functional.constants.ovms_type import OvmsType

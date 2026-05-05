@@ -19,6 +19,7 @@ import re
 from pathlib import Path
 
 from tests.functional.constants.os_type import OsType
+from tests.functional.constants.ovms_type import OvmsType
 from tests.functional.constants.target_device import TargetDevice
 from tests.functional.utils.core import TmpDir
 from tests.functional.utils.helpers import (
@@ -28,6 +29,7 @@ from tests.functional.utils.helpers import (
     get_list,
     get_path,
     get_target_devices,
+    validate_supported_values,
 )
 
 
@@ -354,3 +356,15 @@ logger_format = "{}%(asctime)s {}- %(name)s - %(levelname)s: %(message)s".format
 test_log_directory = get_path("TEST_LOG_DIR", Path().absolute() / "test_log")
 Path(test_log_directory).mkdir(exist_ok=True, parents=True)
 test_log_directory = str(test_log_directory)
+
+
+def get_ovms_types():
+    ovms_types_list = get_list("TT_OVMS_TYPE", fallback=[OvmsType.DOCKER])
+    ovmstype_values = [value for value in vars(OvmsType).values() if isinstance(value, str) and value.isupper()]
+    ovms_types_list = validate_supported_values(detected_list=ovms_types_list, supported_list=ovmstype_values)
+    return ovms_types_list
+
+
+""" TT_OVMS_TYPE - ovms type runtime to be executed: 
+DOCKER, BINARY, BINARY_DOCKER, CAPI, CAPI_DOCKER, DOCKER_CMD_LINE """
+ovms_types = get_ovms_types()

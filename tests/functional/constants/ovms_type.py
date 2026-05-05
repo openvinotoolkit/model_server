@@ -22,11 +22,11 @@ class OvmsType:
     NONE = "NONE"
     DOCKER = "DOCKER"
     DOCKER_CMD_LINE = "DOCKER_CMD_LINE"
-    KUBERNETES = "KUBERNETES"
     BINARY = "BINARY"
     BINARY_DOCKER = "BINARY_DOCKER"
     CAPI = "CAPI"
     CAPI_DOCKER = "CAPI_DOCKER"
+    KUBERNETES = "KUBERNETES"   # legacy
 
 
 # https://github.com/openvinotoolkit/model_server/blob/main/docs/deploying_server.md#deploying-model-server-on-baremetal-without-container

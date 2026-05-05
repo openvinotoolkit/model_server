@@ -40,7 +40,7 @@ class OvmsInfo(BaseInfo):
     _ov_version = None
     _ov_genai_version = None
     _info_read = False
-    _docker_ovms_types = [OvmsType.DOCKER, OvmsType.DOCKER_CMD_LINE, OvmsType.KUBERNETES]
+    _docker_ovms_types = [OvmsType.DOCKER, OvmsType.DOCKER_CMD_LINE]
 
     IMAGES = {}
 

@@ -25,11 +25,15 @@ from tests.functional.models.models import ModelInfo, ModelType
 from tests.functional.object_model.shape import Shape
 from tests.functional.constants.ovms import Ovms
 from tests.functional.models.models_datasets import (
+    BrainDataset,
+    CocoDataset,
     DummyDataset,
     EastDataset,
+    InceptionResnetV2Dataset,
     LanguageModelDataset,
     NumPyImageData,
     RandomDataset,
+    SmallCocoDataset,
 )
 
 
@@ -344,3 +348,178 @@ class Muse(LanguageModel):
     outputs: dict = field(
         default_factory=lambda: {"Func/StatefulPartitionedCall/output/_500": {"shape": [-1, 512], "dtype": str}}
     )
+
+
+@dataclass
+class InceptionResnetV2Legacy(ModelInfo):
+    name: str = "inception-resnet-v2-tf"  # workaround for lack of support in ovms, should be np.float16
+    inputs: dict = field(
+        default_factory=lambda: {
+            "input": {"shape": [1, 3, 299, 299], "dtype": np.float32, "dataset": InceptionResnetV2Dataset()}
+        }
+    )
+    outputs: dict = field(
+        default_factory=lambda: {
+            "InceptionResnetV2/AuxLogits/Logits/BiasAdd/Add": {"shape": [1, 1001], "dtype": np.float32}
+        }
+    )
+
+
+@dataclass
+class InceptionResnetV2FP32(InceptionResnetV2Legacy):
+    name: str = "inception-resnet-v2-tf_FP32"
+
+
+@dataclass
+class SsdliteMobilenetV2Legacy(ModelInfo):
+    name: str = "ssdlite_mobilenet_v2_ov"  # workaround for lack of support in ovms, should be np.float16
+    inputs: dict = field(
+        default_factory=lambda: {
+            "image_tensor": {"shape": [1, 3, 300, 300], "dtype": np.float32, "dataset": CocoDataset()}
+        }
+    )
+    outputs: dict = field(default_factory=lambda: {"DetectionOutput": {"shape": [1, 1, 100, 7], "dtype": np.float32}})
+
+
+@dataclass
+class SsdliteMobilenetV2FP32(SsdliteMobilenetV2Legacy):
+    name: str = "ssdlite_mobilenet_v2_FP32"
+    transpose_axes: str = "0231"
+    outputs: dict = field(default_factory=lambda: {"detection_boxes": {"shape": [1, 1, 100, 7], "dtype": np.float32}})
+
+    def __post_init__(self):
+        super().__post_init__()
+        self.inputs["image_tensor"]["dtype"] = np.uint8
+
+
+@dataclass
+class InstanceSegmentationSecurityLegacy(ModelInfo):
+    name: str = "instance-segmentation-security-0010"
+    inputs: dict = field(
+        default_factory=lambda: {
+            "im_data": {"shape": [1, 3, 800, 1344], "dtype": np.float32, "dataset": SmallCocoDataset.ImgData()},
+            "im_info": {"shape": [1, 3], "dtype": np.float32, "dataset": SmallCocoDataset.ImgInfo()},
+        }
+    )
+    outputs: dict = field(
+        default_factory=lambda: {
+            "boxes": {"shape": [100, 4], "dtype": np.float32},
+            "scores": {"shape": [100], "dtype": np.float32},
+            "classes": {"shape": [100], "dtype": np.int32},
+            "raw_masks": {"shape": [100, 81, 28, 28], "dtype": np.float32},
+        }
+    )
+
+
+@dataclass
+class InstanceSegmentationSecurityFP32(InstanceSegmentationSecurityLegacy):
+    name: str = "instance-segmentation-security-1040_FP32"
+    inputs: dict = field(
+        default_factory=lambda: {
+            "image": {"shape": [1, 3, 608, 608], "dtype": np.float32, "dataset": SmallCocoDataset.ImgData()}
+        }
+    )
+    outputs: dict = field(
+        default_factory=lambda: {
+            "boxes": {"shape": [100, 6], "dtype": np.float32},
+            "labels": {"shape": [100], "dtype": np.int32},
+            "masks": {"shape": [100, 28, 28], "dtype": np.float32},
+        }
+    )
+
+
+if use_legacy_models:
+    SsdliteMobilenetV2 = SsdliteMobilenetV2Legacy
+    InceptionResnetV2 = InceptionResnetV2Legacy
+else:
+    SsdliteMobilenetV2 = SsdliteMobilenetV2FP32
+    InceptionResnetV2 = InceptionResnetV2FP32
+
+InstanceSegmentationSecurity = (
+    InstanceSegmentationSecurityLegacy  # InstanceSegmentationSecurityFP32 needs to be corrected
+)
+
+
+@dataclass
+class BrainLegacy(ModelInfo):
+    name: str = "brain-tumor-segmentation-0002-2"
+    batch_size: int = 1  # workaround for lack of support in ovms, should be np.float16
+    inputs: dict = field(
+        default_factory=lambda: {"0": {"shape": [1, 4, 128, 128, 128], "dtype": np.float32, "dataset": BrainDataset()}}
+    )
+    outputs: dict = field(default_factory=lambda: {"304": {"shape": [1, 3, 128, 128, 128], "dtype": np.float32}})
+    model_type: ModelType = ModelType.ONNX
+    onnx_name: str = "brain-tumor-segmentation-0002"
+
+
+@dataclass
+class BrainFP32(BrainLegacy):
+    name: str = "brain-tumor-segmentation-0002_FP32"
+    model_type: ModelType = ModelType.IR
+
+
+if use_legacy_models:
+    Brain = BrainLegacy
+else:
+    Brain = BrainFP32
+
+
+@dataclass
+class SavedModel(ModelInfo):
+    model_type: ModelType = ModelType.TFSM
+
+
+@dataclass
+class DummySavedModel(SavedModel):
+    name: str = "dummy_saved_model"
+    inputs: dict = field(
+        default_factory=lambda: {
+            "in": {
+                "shape": [-1, 10],
+                "dtype": np.float32,
+                "dataset": DummyDataset(),
+            }
+        }
+    )
+    outputs: dict = field(default_factory=lambda: {"out": {"shape": [-1, 10], "dtype": np.float32}})
+
+
+@dataclass
+class UniversalSentenceEncoder(Muse):
+    name: str = "usem"
+    inputs: dict = field(
+        default_factory=lambda: {"inputs": {"shape": [-1], "dtype": str, "dataset": LanguageModelDataset()}}
+    )
+    outputs: dict = field(default_factory=lambda: {"outputs": {"shape": [-1, 512], "dtype": np.float32}})
+
+    def is_dynamic(self):
+        return True
+
+
+@dataclass
+class Passthrough(LanguageModel):
+    name: str = "passthrough"
+    inputs: dict = field(
+        default_factory=lambda: {"input": {"shape": [-1, -1], "dtype": np.uint8, "dataset": LanguageModelDataset()}}
+    )
+    outputs: dict = field(default_factory=lambda: {"copy:0": {"shape": [-1, -1], "dtype": np.uint8}})
+
+    def validate_outputs(self, outputs, expected_output_shapes=None, provided_input=None):
+        assert outputs, "Prediction returned no output"
+        if expected_output_shapes is None and provided_input is not None:
+            expected_output_shapes = list(self.output_shapes.values())[0]
+            expected_output_shapes[0] = len(list(provided_input.values())[0])
+            for output_name in self.output_names:
+                assert (
+                        output_name in outputs
+                ), f"Incorrect output name, expected: {output_name}, found: {', '.join(outputs.keys())}"
+                output_shapes = [list(o.shape) for o in outputs.values()]
+                assert all(
+                    shape[1] >= len(list(provided_input.values())[0]) in expected_output_shapes
+                    for shape in output_shapes
+                ), f"Incorrect output shape, expected: {expected_output_shapes}, found: {output_shapes}."
+        else:
+            return super().validate_outputs(outputs)
+
+    def is_dynamic(self):
+        return True

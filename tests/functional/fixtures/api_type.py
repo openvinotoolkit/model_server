@@ -17,12 +17,11 @@
 import itertools
 import pytest
 
+from tests.functional.config import ovms_types
+from tests.functional.constants.ovms_type import OvmsType
 from tests.functional.utils.inference.communication import GRPC, REST
 from tests.functional.utils.inference.inference_client_factory import InferenceClientFactory
 from tests.functional.utils.inference.serving import KFS, OPENAI, TFS, TRITON, COHERE
-from tests.functional.constants.ovms_type import OvmsType
-
-from ovms import config as ovms_config
 
 
 def api_type_non_fixture(serving, communication, ovms_type=None):
@@ -30,7 +29,7 @@ def api_type_non_fixture(serving, communication, ovms_type=None):
 
 
 _possible_api_types = list(itertools.product([TFS, KFS], [GRPC, REST]))
-if OvmsType.CAPI in ovms_config.ovms_types:
+if OvmsType.CAPI in ovms_types:
     _possible_api_types += [OvmsType.CAPI]
 
 

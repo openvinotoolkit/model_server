@@ -26,7 +26,7 @@ import cv2
 import numpy as np
 from PIL import Image
 
-from tests.functional.utils.numpy_loader import prepare_data
+from tests.functional.utils.numpy_loader import load_jpeg, prepare_data, transpose_input
 from tests.functional.config import binary_io_images_path, datasets_path
 from tests.functional.constants.ovms import Ovms
 
@@ -250,3 +250,62 @@ class FeatureExtractionModelDataset(ModelDataset):
 
     def get_string_data(self):
         return self.input_data_1
+
+
+class BrainDataset(NumPyDataset):
+
+    def __init__(self):
+        super().__init__("braTS.npy")
+
+
+class InceptionResnetV2Dataset(NumPyDataset):
+
+    def __init__(self):
+        super().__init__("small_imagenet", "dataset")
+
+
+class CocoDataset(ModelDataset):
+
+    def __init__(self):
+        super().__init__()
+        self.name = "coco"
+        self.data_path = os.path.join(datasets_path, self.name)
+
+    def get_data(self, shape, batch_size, transpose_axes, layout=None, datatype=np.float32):
+        return self._load_data(self.data_path, shape, batch_size, transpose_axes, datatype)
+
+    def _load_data(self, data_path, shape, batch_size, transpose_axes, datatype=np.float32):
+        result = []
+        height, width = shape[-2:]
+        # reverse setting used since the first image from dataset produces invalid output
+        images = [file for file in sorted(os.listdir(data_path), reverse=True) if file.endswith(".jpg")]
+        for idx, img in enumerate(images):
+            if idx >= batch_size:
+                break
+            path = os.path.join(data_path, img)
+            data = load_jpeg(path, height, width, [2, 0, 1], datatype)
+            result.append(data)
+        result = np.concatenate(result, axis=0)
+        if transpose_axes:
+            result = transpose_input(images=result, axes=transpose_axes)
+        return result
+
+
+class SmallCocoDataset:
+
+    class ImgData(CocoDataset):
+
+        def __init__(self):
+            super().__init__()
+            self.name = "small_coco_info/dataset"
+            self.data_path = os.path.join(datasets_path, self.name)
+
+        def get_data(self, shape, batch_size, transpose_axes, layout=None, datatype=np.float32):
+            return self._load_data(self.data_path, shape, batch_size, transpose_axes)
+
+    class ImgInfo(ModelDataset):
+
+        def __init__(self):
+            super().__init__()
+            self.name = "small_coco_info/info"
+            self.data_path = os.path.join(datasets_path, self.name, "data.npy")
