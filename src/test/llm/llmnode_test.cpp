@@ -1840,15 +1840,16 @@ TEST_P(LLMFlowHttpTestParameterized, streamChatCompletionsSingleStopString) {
             "model": ")" + params.modelName +
                               R"(",
             "stream": true,
-            "seed" : 1,
+            "temperature" : 0,
             "ignore_eos": false,
             "max_tokens": 1000,
+            "temperature":0,
             "stop": ".",
             "include_stop_str_in_output": true,
             "messages": [
             {
                 "role": "user",
-                "content": "What is OpenVINO? In short"
+                "content": "What is OpenVINO? Give one sentence answer."
             }
             ]
         }
