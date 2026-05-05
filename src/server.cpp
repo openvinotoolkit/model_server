@@ -80,9 +80,17 @@ using grpc::ServerBuilder;
 
 namespace ovms {
 
+// On Windows the import declarations must be marked dllimport so MSVC binds
+// them to the git2.dll exports rather than (silently) to a duplicate
+// static-archive copy with its own backing storage for g_lfs_cancel_requested.
+#if defined(_WIN32)
+#  define OVMS_LIBGIT2_LFS_IMPORT __declspec(dllimport)
+#else
+#  define OVMS_LIBGIT2_LFS_IMPORT
+#endif
 extern "C" {
-void git_lfs_cancel_set(int value);
-int git_lfs_cancel_get(void);
+OVMS_LIBGIT2_LFS_IMPORT void git_lfs_cancel_set(int value);
+OVMS_LIBGIT2_LFS_IMPORT int  git_lfs_cancel_get(void);
 }
 
 static void setLfsCancelRequestedFromSignal(int value) {
@@ -90,9 +98,17 @@ static void setLfsCancelRequestedFromSignal(int value) {
 }
 
 static void requestShutdownFromSignal(int value) {
-    // Only set the async-signal-safe flag in the signal handler.
-    // Actual shutdown and LFS cancel operations are deferred to a safe polling context.
+    // Set the async-signal-safe flag for the deferred main-thread shutdown path.
+    // Actual ovms shutdown is deferred to a safe polling context.
     setSignalShutdownRequested(value);
+    // Also set the libgit2 LFS cancel flag immediately. git_lfs_cancel_set is a
+    // single atomic int store, which is async-signal-safe. Setting it here (rather
+    // than waiting for processSignalShutdownAndSetLfsCancelFlag from the main loop)
+    // is required for Ctrl+C to interrupt an in-progress LFS file download in
+    // HF_PULL_MODE — that mode never enters the polling loop, and the libgit2
+    // weak-symbol fallback (git_lfs_shutdown_requested) is unreliable across
+    // shared-library boundaries (Windows DLL, Linux without -rdynamic).
+    setLfsCancelRequestedFromSignal(value);
 }
 
 static void processSignalShutdownAndSetLfsCancelFlag() {

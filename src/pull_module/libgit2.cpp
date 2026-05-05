@@ -56,10 +56,17 @@
 #endif
 
 /* Exported cancellation accessors in libgit2 patch – used to abort
- * ongoing LFS downloads from OVMS. */
+ * ongoing LFS downloads from OVMS. On Windows the import declarations must
+ * be marked dllimport so MSVC binds them to the git2.dll exports rather than
+ * (silently) to a duplicate static-archive copy with its own backing storage. */
+#if defined(_WIN32)
+#  define OVMS_LIBGIT2_LFS_IMPORT __declspec(dllimport)
+#else
+#  define OVMS_LIBGIT2_LFS_IMPORT
+#endif
 extern "C" {
-void git_lfs_cancel_set(int value);
-int git_lfs_cancel_get(void);
+OVMS_LIBGIT2_LFS_IMPORT void git_lfs_cancel_set(int value);
+OVMS_LIBGIT2_LFS_IMPORT int  git_lfs_cancel_get(void);
 }
 
 namespace ovms {
