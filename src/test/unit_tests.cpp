@@ -15,6 +15,7 @@
 //*****************************************************************************
 
 #include <string>
+#include <cstdlib>
 
 namespace {
 
@@ -22,6 +23,11 @@ namespace {
 // an internal argument. Detect that child to skip PythonEnvironment setup,
 // which avoids teardown-time crashes in exit-based death-test flows.
 bool isDeathTestSubprocess(int argc, char** argv) {
+    const char* deathTestEnv = std::getenv("GTEST_INTERNAL_RUN_DEATH_TEST");
+    if (deathTestEnv != nullptr && deathTestEnv[0] != '\0') {
+        return true;
+    }
+
     for (int i = 0; i < argc; ++i) {
         if (argv[i] == nullptr) {
             continue;
@@ -45,10 +51,12 @@ int main(int argc, char** argv) {
     const bool deathTestSubprocess = isDeathTestSubprocess(argc, argv);
     ::testing::InitGoogleTest(&argc, argv);
     ::testing::InitGoogleMock(&argc, argv);
+
+    // Keep death-test subprocesses minimal to avoid teardown-time side effects.
     ::testing::AddGlobalTestEnvironment(new Environment);
-    ::testing::AddGlobalTestEnvironment(new GPUEnvironment);
-    ::testing::AddGlobalTestEnvironment(new GGUFEnvironment);
     if (!deathTestSubprocess) {
+        ::testing::AddGlobalTestEnvironment(new GPUEnvironment);
+        ::testing::AddGlobalTestEnvironment(new GGUFEnvironment);
         ::testing::AddGlobalTestEnvironment(new PythonEnvironment);
     }
     ::testing::FLAGS_gtest_death_test_style = "threadsafe";
