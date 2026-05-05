@@ -53,6 +53,9 @@ artifacts_dir = get_path("BUILD_LOGS", os.path.join("~", "ovms_test_logs"))
 """ TT_NGNIX_CERTS_DIR - Custom nodes directory path"""
 nginx_certs_dir = get_path("TT_NGINX_CERTS_DIR", os.path.join("~", "ovms_nginx_certs"))
 
+""" TT_MODELS_PATH - Models local repo path"""
+models_path = get_path("TT_MODELS_PATH", os.path.join("~", "ovms_models"))
+
 """ TT_DATASETS_PATH - Datasets local repo path"""
 datasets_path = get_path("TT_DATASETS_PATH", os.path.join("~", "ovms_datasets"))
 
@@ -112,8 +115,6 @@ path_to_mount = os.path.join(test_dir, "saved_models")
 os.makedirs(path_to_mount, exist_ok=True)
 
 path_to_mount_cache = os.path.join(test_dir_cache, "saved_models")
-
-models_path = path_to_mount if ovms_binary_path else "/opt/ml"
 
 """TT_MINIO_IMAGE_NAME - Docker image for Minio"""
 minio_image = os.environ.get("TT_MINIO_IMAGE_NAME", "minio/minio:latest")
