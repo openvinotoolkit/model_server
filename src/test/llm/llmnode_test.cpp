@@ -1843,7 +1843,6 @@ TEST_P(LLMFlowHttpTestParameterized, streamChatCompletionsSingleStopString) {
             "temperature" : 0,
             "ignore_eos": false,
             "max_tokens": 1000,
-            "temperature":0,
             "stop": ".",
             "include_stop_str_in_output": true,
             "messages": [
