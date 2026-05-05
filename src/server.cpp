@@ -98,28 +98,11 @@ static void setLfsCancelRequestedFromSignal(int value) {
 }
 
 static void requestShutdownFromSignal(int value) {
-    // Set the async-signal-safe flag for the deferred main-thread shutdown path.
-    // Actual ovms shutdown is deferred to a safe polling context.
-    setSignalShutdownRequested(value);
-    // Also set the libgit2 LFS cancel flag immediately. git_lfs_cancel_set is a
-    // single atomic int store, which is async-signal-safe. Setting it here (rather
-    // than waiting for processSignalShutdownAndSetLfsCancelFlag from the main loop)
-    // is required for Ctrl+C to interrupt an in-progress LFS file download in
-    // HF_PULL_MODE — that mode never enters the polling loop, and the libgit2
-    // weak-symbol fallback (git_lfs_shutdown_requested) is unreliable across
-    // shared-library boundaries (Windows DLL, Linux without -rdynamic).
+    // setShutdownRequestValue is an std::atomic store — async-signal-safe on POSIX
+    // and safe on Windows where CTRL_C_EVENT fires in a dedicated OS thread.
+    // git_lfs_cancel_set is likewise a single atomic store.
+    setShutdownRequestValue(value);
     setLfsCancelRequestedFromSignal(value);
-}
-
-static void processSignalShutdownAndSetLfsCancelFlag() {
-    // This function is called from the polling loop to safely process signal shutdown requests.
-    // It performs the actual shutdown and LFS cancel operations in a safe context.
-    if (isSignalShutdownRequested()) {
-        processSignalShutdownRequest();
-        // Also set LFS cancel flag upon shutdown
-        int shutdownValue = getShutdownRequestValue();
-        setLfsCancelRequestedFromSignal(shutdownValue);
-    }
 }
 
 Server& Server::instance() {
@@ -579,8 +562,6 @@ int Server::startServerFromSettings(ServerSettingsImpl& serverSettings, ModelsSe
         }
         while (!getShutdownStatus() &&
                (serverSettings.serverMode == HF_PULL_AND_START_MODE || serverSettings.serverMode == SERVING_MODELS_MODE)) {
-            // Process any signal shutdown requests in a safe context
-            processSignalShutdownAndSetLfsCancelFlag();
             std::this_thread::sleep_for(std::chrono::milliseconds(200));
         }
     } catch (const std::exception& e) {
