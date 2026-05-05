@@ -151,6 +151,7 @@ public:
     std::optional<int> getMaxTokens() const;
     std::optional<std::string> getResponseFormat() const;
     bool isStream() const;
+    bool getSkipSpecialTokens() const;
     Endpoint getEndpoint() const;
     std::string getModel() const;
     std::string getToolChoice() const;

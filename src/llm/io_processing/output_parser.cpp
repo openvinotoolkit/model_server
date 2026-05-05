@@ -207,7 +207,7 @@ std::string OutputParser::getToolParserStartTag() const {
     }
 }
 
-ParsedOutput OutputParser::parse(const std::vector<int64_t>& generatedTokens, const bool toolsAvailable) {
+ParsedOutput OutputParser::parse(const std::vector<int64_t>& generatedTokens, const bool toolsAvailable, bool skipSpecialTokens) {
     // Model output is processed by the chain of parsers. Each parser extracts relevant part of the output and fills the ParsedOutput structure.
     // At the beginning, the content field of ParsedOutput is already filled with decoded content from generatedTokens.
     // When parser extracts relevant information, it should remove it from the content field, so we don't duplicate it in the final output.
@@ -216,7 +216,7 @@ ParsedOutput OutputParser::parse(const std::vector<int64_t>& generatedTokens, co
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Raw model output: {}", tokenizer.decode(generatedTokens, ov::genai::skip_special_tokens(false)));
     }
     ParsedOutput parsedOutput;
-    parsedOutput.content = tokenizer.decode(generatedTokens);
+    parsedOutput.content = tokenizer.decode(generatedTokens, ov::genai::skip_special_tokens(skipSpecialTokens));
     if (reasoningParser) {
         reasoningParser->parse(parsedOutput, generatedTokens);
     }

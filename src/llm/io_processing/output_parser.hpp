@@ -80,7 +80,7 @@ public:
     std::string getToolParserStartTag() const;
 
     // Parse model output in the unary mode. Returns ParsedOutput containing data extracted by internal parsers.
-    ParsedOutput parse(const std::vector<int64_t>& generatedTokens, const bool toolsAvailable);
+    ParsedOutput parse(const std::vector<int64_t>& generatedTokens, const bool toolsAvailable, bool skipSpecialTokens = true);
 
     // Parse model output chunk in the steaming mode. Returns a JSON object containing the delta that conforms to OpenAI API
     // or nullopt if no response can be produced.

@@ -73,6 +73,9 @@ struct OpenAIRequest {
 
     std::optional<uint32_t> maxModelLength;
 
+    // Output decoding specific
+    bool skipSpecialTokens = true;
+
     // Guided generation specific
     // String representation of response format object
     std::optional<std::string> responseFormat{std::nullopt};

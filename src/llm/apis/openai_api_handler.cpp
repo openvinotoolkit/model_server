@@ -509,6 +509,7 @@ std::optional<int> OpenAIApiHandler::getNumReturnSequences() const { return requ
 StreamOptions OpenAIApiHandler::getStreamOptions() const { return request.streamOptions; }
 
 bool OpenAIApiHandler::isStream() const { return request.stream; }
+bool OpenAIApiHandler::getSkipSpecialTokens() const { return request.skipSpecialTokens; }
 Endpoint OpenAIApiHandler::getEndpoint() const { return endpoint; }
 std::string OpenAIApiHandler::getModel() const { return request.model; }
 std::string OpenAIApiHandler::getToolChoice() const { return request.toolChoice; }
@@ -530,9 +531,9 @@ ParsedOutput OpenAIApiHandler::parseOutputIfNeeded(const std::vector<int64_t>& g
     OVMS_PROFILE_FUNCTION();
     ParsedOutput parsedOutput;
     if ((endpoint != Endpoint::CHAT_COMPLETIONS && endpoint != Endpoint::RESPONSES) || outputParser == nullptr) {
-        parsedOutput.content = this->tokenizer.decode(generatedIds);
+        parsedOutput.content = this->tokenizer.decode(generatedIds, ov::genai::skip_special_tokens(request.skipSpecialTokens));
     } else {
-        parsedOutput = outputParser->parse(generatedIds, this->areToolsAvailable());
+        parsedOutput = outputParser->parse(generatedIds, this->areToolsAvailable(), request.skipSpecialTokens);
     }
     return parsedOutput;
 }
@@ -854,6 +855,15 @@ absl::Status OpenAIApiHandler::parseCommonPart(std::optional<uint32_t> maxTokens
         request.maxNgramSize = maxNgramSizeIt->value.GetUint();
     }
     request.maxModelLength = maxModelLength;
+
+    // skip_special_tokens: bool; optional - defaults to false
+    // Extension, unsupported by OpenAI API, however supported by vLLM
+    it = doc.FindMember("skip_special_tokens");
+    if (it != doc.MemberEnd() && !it->value.IsNull()) {
+        if (!it->value.IsBool())
+            return absl::InvalidArgumentError("skip_special_tokens accepts values true or false");
+        request.skipSpecialTokens = it->value.GetBool();
+    }
 
     // TODO: logit_bias
     // TODO: top_logprobs

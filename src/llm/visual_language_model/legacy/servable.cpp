@@ -125,10 +125,12 @@ absl::Status VisualLanguageModelLegacyServable::parseRequest(std::shared_ptr<Gen
         return ov::genai::StreamingStatus::RUNNING;
     };
     ov::AnyMap streamerConfig;
+    bool skipSpecialTokens = legacyExecutionContext->apiHandler->getSkipSpecialTokens();
     if (legacyExecutionContext->apiHandler->getOutputParser() != nullptr &&
         (legacyExecutionContext->apiHandler->getOutputParser()->requiresStreamingWithSpecialTokens())) {
-        streamerConfig.insert(ov::genai::skip_special_tokens(false));
+        skipSpecialTokens = false;
     }
+    streamerConfig.insert(ov::genai::skip_special_tokens(skipSpecialTokens));
     legacyExecutionContext->textStreamer = std::make_shared<ov::genai::TextStreamer>(getProperties()->tokenizer, callback, streamerConfig);
     legacyExecutionContext->generationConfigBuilder = std::make_shared<GenerationConfigBuilder>(getProperties()->baseGenerationConfig,
         getProperties()->toolParserName,

@@ -146,10 +146,12 @@ absl::Status GenAiServable::parseRequest(std::shared_ptr<GenAiServableExecutionC
             return ov::genai::StreamingStatus::RUNNING;
         };
         ov::AnyMap streamerConfig;
+        bool skipSpecialTokens = executionContext->apiHandler->getSkipSpecialTokens();
         if (executionContext->apiHandler->getOutputParser() != nullptr &&
             (executionContext->apiHandler->getOutputParser()->requiresStreamingWithSpecialTokens())) {
-            streamerConfig.insert(ov::genai::skip_special_tokens(false));
+            skipSpecialTokens = false;
         }
+        streamerConfig.insert(ov::genai::skip_special_tokens(skipSpecialTokens));
         executionContext->textStreamer = std::make_shared<ov::genai::TextStreamer>(getProperties()->tokenizer, callback, streamerConfig);
     }
     executionContext->generationConfigBuilder = std::make_shared<GenerationConfigBuilder>(getProperties()->baseGenerationConfig,
