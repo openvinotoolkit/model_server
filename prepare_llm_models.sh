@@ -45,7 +45,7 @@ echo "Downloading LLM testing models to directory $1"
 export PIP_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cpu https://storage.openvinotoolkit.org/simple/wheels/nightly"
 if [ "$2" = "docker" ]; then
     export PATH=$PATH:/opt/intel/openvino/python/bin
-    python3 -m pip install "optimum-intel"@git+https://github.com/huggingface/optimum-intel.git nncf sentence_transformers einops timm==1.0.22 sentencepiece requests
+    python3 -m pip install "optimum-intel"@git+https://github.com/huggingface/optimum-intel.git nncf sentence_transformers==5.3.0 sentencepiece requests
 else
     python3 -m venv .venv
     . .venv/bin/activate
@@ -104,6 +104,7 @@ if [ -f "$1/$VLM_MODEL/$TOKENIZER_FILE" ]; then
   echo "Model file $1/$VLM_MODEL/$TOKENIZER_FILE exists. Skipping downloading models."
 else
   hf download "$VLM_MODEL" --local-dir $1/$VLM_MODEL
+  convert_tokenizer OpenGVLab/InternVL2-1B --with_detokenizer -o $1/$VLM_MODEL  # WA to use newer tokenizer model format which supports padding.
 fi
 if [ ! -f "$1/$VLM_MODEL/$TOKENIZER_FILE" ]; then
   echo "[ERROR] Model file $1/$VLM_MODEL/$TOKENIZER_FILE does not exist."

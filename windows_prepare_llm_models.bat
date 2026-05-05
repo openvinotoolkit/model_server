@@ -63,7 +63,7 @@ if not exist "%~1" mkdir "%~1"
 :: Export models
 call :download_export_model_tts "%TTS_MODEL%" "text2speech" "--weight-format int4" "%~1"
 call :download_export_model "%STT_MODEL%" "speech2text" "--weight-format int4" "%~1"
-call :download_openvino "%VLM_MODEL%" "%~1"
+call :download_openvino "%VLM_MODEL%" "%~1" OpenGVLab/InternVL2-1B
 call :download_export_model "%TEXT_GENERATION_MODEL%" "text_generation" "--weight-format int8" "%~1"
 call :download_export_model "%FACEBOOK_MODEL%" "text_generation" "--weight-format int8" "%~1"
 call :download_export_model "%RERANK_MODEL%" "rerank_ov" "--weight-format int8 --model_name %RERANK_MODEL%\ov" "%~1"
@@ -122,6 +122,8 @@ set "repository=%~2"
 if not exist "%repository%\%model%\openvino_tokenizer.bin" (
   echo Downloading model to %repository%\%model% directory.
   hf download "%model%" --local-dir "%repository%\%model%"
+  :: WA to use newer tokenizer model format which supports padding.
+  convert_tokenizer "%~3" --with_detokenizer -o "%~2\%~1"
 ) else (
   echo Models file %repository%\%model%\openvino_tokenizer.bin exists. Skipping downloading models.
 )
