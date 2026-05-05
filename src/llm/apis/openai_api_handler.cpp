@@ -530,10 +530,13 @@ void OpenAIApiHandler::incrementProcessedTokens(size_t numTokens) {
 ParsedOutput OpenAIApiHandler::parseOutputIfNeeded(const std::vector<int64_t>& generatedIds) {
     OVMS_PROFILE_FUNCTION();
     ParsedOutput parsedOutput;
-    if ((endpoint != Endpoint::CHAT_COMPLETIONS && endpoint != Endpoint::RESPONSES) || outputParser == nullptr) {
-        parsedOutput.content = this->tokenizer.decode(generatedIds, ov::genai::skip_special_tokens(request.skipSpecialTokens));
+    if (!request.skipSpecialTokens) {
+        // When user explicitly requests special tokens, bypass parsers and return raw decoded output
+        parsedOutput.content = this->tokenizer.decode(generatedIds, ov::genai::skip_special_tokens(false));
+    } else if ((endpoint != Endpoint::CHAT_COMPLETIONS && endpoint != Endpoint::RESPONSES) || outputParser == nullptr) {
+        parsedOutput.content = this->tokenizer.decode(generatedIds);
     } else {
-        parsedOutput = outputParser->parse(generatedIds, this->areToolsAvailable(), request.skipSpecialTokens);
+        parsedOutput = outputParser->parse(generatedIds, this->areToolsAvailable());
     }
     return parsedOutput;
 }

@@ -2307,7 +2307,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, maxTokensValueDefaultToMaxTokensLimit) {
 TEST_F(HttpOpenAIHandlerParsingTest, ParsingRequestWithNullParametersChat) {
     std::vector<std::string> chatParamsThatAcceptNull = {"stream", "stream_options", "ignore_eos", "frequency_penalty", "presence_penalty", "repetition_penalty",
         "length_penalty", "temperature", "top_p", "top_k", "seed", "stop", "include_stop_str_in_output", "best_of", "n", "num_assistant_tokens", "assistant_confidence_threshold",
-        "logprobs", "max_completion_tokens", "tools", "tool_choice"};
+        "logprobs", "max_completion_tokens", "tools", "tool_choice", "skip_special_tokens"};
     std::optional<uint32_t> maxTokensLimit;
     uint32_t bestOfLimit = 0;
     std::optional<uint32_t> maxModelLength;
@@ -2337,7 +2337,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingRequestWithNullParametersChat) {
 TEST_F(HttpOpenAIHandlerParsingTest, ParsingRequestWithNullParametersCompletions) {
     std::vector<std::string> chatParamsThatAcceptNull = {"stream", "stream_options", "ignore_eos", "frequency_penalty", "presence_penalty", "repetition_penalty",
         "length_penalty", "temperature", "top_p", "top_k", "seed", "stop", "include_stop_str_in_output", "best_of", "n", "num_assistant_tokens", "assistant_confidence_threshold",
-        "logprobs", "echo"};
+        "logprobs", "echo", "skip_special_tokens"};
     std::optional<uint32_t> maxTokensLimit;
     uint32_t bestOfLimit = 0;
     std::optional<uint32_t> maxModelLength;
@@ -3643,4 +3643,70 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParseMessagesRegularMessageHasNoToolFields)
     EXPECT_FALSE(history[1].contains("tool_calls"));
     EXPECT_FALSE(history[1].contains("tool_call_id"));
     EXPECT_FALSE(history[1].contains("name"));
+}
+
+// --- skip_special_tokens parameter tests ---
+
+TEST_F(HttpOpenAIHandlerParsingTest, SkipSpecialTokensDefaultIsTrue) {
+    std::string json = R"({
+        "model": "llama",
+        "messages": [{"role": "user", "content": "hello"}]
+    })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    auto apiHandler = createHandler(ovms::Endpoint::CHAT_COMPLETIONS);
+    ASSERT_EQ(apiHandler->parseRequest(std::nullopt, 0, std::nullopt), absl::OkStatus());
+    EXPECT_TRUE(apiHandler->getSkipSpecialTokens());
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, SkipSpecialTokensSetToFalse) {
+    std::string json = R"({
+        "model": "llama",
+        "skip_special_tokens": false,
+        "messages": [{"role": "user", "content": "hello"}]
+    })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    auto apiHandler = createHandler(ovms::Endpoint::CHAT_COMPLETIONS);
+    ASSERT_EQ(apiHandler->parseRequest(std::nullopt, 0, std::nullopt), absl::OkStatus());
+    EXPECT_FALSE(apiHandler->getSkipSpecialTokens());
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, SkipSpecialTokensSetToTrue) {
+    std::string json = R"({
+        "model": "llama",
+        "skip_special_tokens": true,
+        "messages": [{"role": "user", "content": "hello"}]
+    })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    auto apiHandler = createHandler(ovms::Endpoint::CHAT_COMPLETIONS);
+    ASSERT_EQ(apiHandler->parseRequest(std::nullopt, 0, std::nullopt), absl::OkStatus());
+    EXPECT_TRUE(apiHandler->getSkipSpecialTokens());
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, SkipSpecialTokensNotBoolFails) {
+    std::string json = R"({
+        "model": "llama",
+        "skip_special_tokens": "yes",
+        "messages": [{"role": "user", "content": "hello"}]
+    })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    auto apiHandler = createHandler(ovms::Endpoint::CHAT_COMPLETIONS);
+    EXPECT_EQ(apiHandler->parseRequest(std::nullopt, 0, std::nullopt),
+        absl::InvalidArgumentError("skip_special_tokens accepts values true or false"));
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, SkipSpecialTokensWorksForCompletions) {
+    std::string json = R"({
+        "model": "llama",
+        "skip_special_tokens": false,
+        "prompt": "hello"
+    })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    auto apiHandler = createHandler(ovms::Endpoint::COMPLETIONS);
+    ASSERT_EQ(apiHandler->parseRequest(std::nullopt, 0, std::nullopt), absl::OkStatus());
+    EXPECT_FALSE(apiHandler->getSkipSpecialTokens());
 }

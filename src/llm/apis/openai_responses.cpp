@@ -1041,7 +1041,7 @@ std::string OpenAIResponsesHandler::serializeStreamingChunk(const std::string& c
         events.emplace_back(std::move(inProgressEvent));
     }
 
-    if (outputParser != nullptr) {
+    if (outputParser != nullptr && request.skipSpecialTokens) {
         // Use output parser to separate reasoning from content
         std::optional<Document> delta = outputParser->parseChunk(chunkResponse, areToolsAvailable(), finishReason);
 

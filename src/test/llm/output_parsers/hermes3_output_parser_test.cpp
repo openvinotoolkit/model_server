@@ -435,3 +435,51 @@ TEST_F(Hermes3OutputParserTest, ToolCallsWithoutToolsInTheRequestStreaming) {
         }
     }
 }
+
+// --- skip_special_tokens interaction tests ---
+
+TEST_F(Hermes3OutputParserTest, ParseToolCallWorksWithSkipSpecialTokensFalse) {
+    // When skip_special_tokens=false is requested by the user, the parser should still
+    // correctly parse tool calls because OutputParser::parse() overrides the setting
+    // when parsers are active.
+    std::string input = "<tool_call>{\"name\": \"example_tool\", \"arguments\": {\"arg1\": \"value1\"}}</tool_call>";
+    auto generatedTensor = hermes3Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
+    std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+
+    // skipSpecialTokens=false simulates user requesting "skip_special_tokens": false
+    ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true, false);
+    EXPECT_EQ(parsedOutput.content, "");
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
+    EXPECT_EQ(parsedOutput.toolCalls[0].name, "example_tool");
+    EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{\"arg1\":\"value1\"}");
+}
+
+TEST_F(Hermes3OutputParserTest, ParseToolCallWorksWithSkipSpecialTokensTrue) {
+    std::string input = "<tool_call>{\"name\": \"example_tool\", \"arguments\": {\"arg1\": \"value1\"}}</tool_call>";
+    auto generatedTensor = hermes3Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
+    std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+
+    ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true, true);
+    EXPECT_EQ(parsedOutput.content, "");
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
+    EXPECT_EQ(parsedOutput.toolCalls[0].name, "example_tool");
+    EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{\"arg1\":\"value1\"}");
+}
+
+TEST_F(Hermes3OutputParserTest, PlainContentWithSkipSpecialTokensFalseAndNoTools) {
+    // When no tools are provided in the request (toolsAvailable=false), skip_special_tokens
+    // should be respected because no parser modifies the content.
+    std::string input = "Hello, world!";
+    auto generatedTensor = hermes3Tokenizer->encode(input, ov::genai::add_special_tokens(true)).input_ids;
+    std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+
+    // With tools=false and skipSpecialTokens=false, user's setting should be respected
+    ParsedOutput withSpecial = outputParserWithRegularToolParsing->parse(generatedTokens, false, false);
+    // With tools=false and skipSpecialTokens=true, special tokens should be stripped
+    ParsedOutput withoutSpecial = outputParserWithRegularToolParsing->parse(generatedTokens, false, true);
+
+    // The output with special tokens should contain BOS/EOS markers
+    EXPECT_NE(withSpecial.content, withoutSpecial.content);
+    // The stripped version should be the plain text
+    EXPECT_EQ(withoutSpecial.content, "Hello, world!");
+}

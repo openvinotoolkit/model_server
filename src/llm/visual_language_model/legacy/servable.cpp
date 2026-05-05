@@ -126,7 +126,7 @@ absl::Status VisualLanguageModelLegacyServable::parseRequest(std::shared_ptr<Gen
     };
     ov::AnyMap streamerConfig;
     bool skipSpecialTokens = legacyExecutionContext->apiHandler->getSkipSpecialTokens();
-    if (legacyExecutionContext->apiHandler->getOutputParser() != nullptr &&
+    if (skipSpecialTokens && legacyExecutionContext->apiHandler->getOutputParser() != nullptr &&
         (legacyExecutionContext->apiHandler->getOutputParser()->requiresStreamingWithSpecialTokens())) {
         skipSpecialTokens = false;
     }

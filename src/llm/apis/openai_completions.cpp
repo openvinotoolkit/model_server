@@ -549,7 +549,7 @@ std::string OpenAIChatCompletionsHandler::serializeStreamingChunk(const std::str
     // TODO: logprobs: object/null; Log probability information for the choice.
     choice.AddMember("logprobs", Value(), allocator);
     if (endpoint == Endpoint::CHAT_COMPLETIONS) {
-        if (outputParser != nullptr) {
+        if (outputParser != nullptr && request.skipSpecialTokens) {
             std::optional<Document> delta = outputParser->parseChunk(chunkResponse, areToolsAvailable(), finishReason);
             if (!delta.has_value()) {
                 // If the generation is still ongoing, there is nothing to emit yet
