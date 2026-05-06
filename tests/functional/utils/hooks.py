@@ -15,11 +15,21 @@
 #
 
 import os
+import warnings
+
+from collections import defaultdict
 
 from tests.functional import config
 from tests.functional.models.models_library import ModelsLib
-# from tests.functional.utils.hooks import CURRENT_TARGET_DEVICE_DICT
-from tests.functional.constants.os_type import OsType
+from tests.functional.utils.reservation_manager.args import parse_args
+from tests.functional.utils.reservation_manager.manager import Manager as ReservationManager
+from tests.functional.config import (
+    cleanup_env_on_startup,
+    global_tmp_dir_default,
+    ovms_c_repo_path,
+    tmp_dir,
+)
+from tests.functional.constants.os_type import get_host_os, OsType
 from tests.functional.constants.ovms import (
     BASE_OS_PARAM_NAME,
     OVMS_TYPE_PARAM_NAME,
@@ -29,14 +39,40 @@ from tests.functional.constants.ovms import (
 from tests.functional.constants.ovms_images import calculate_ovms_image_name
 from tests.functional.constants.target_device import TargetDevice
 from tests.functional.object_model.ovms_info import OvmsInfo
+from tests.functional.utils.core import TmpDir
 from tests.functional.utils.environment_info import EnvironmentInfo
 from tests.functional.utils.logger import get_logger
 from tests.functional.utils.marks import MarkTestParameters
+from tests.functional.utils.process import Process
 
 logger = get_logger(__name__)
 
 
 CURRENT_TARGET_DEVICE_DICT = {}
+
+DEVICE_ID_TO_DETAILED_TARGET_DEVICE_NAME_MAP = defaultdict(lambda: ("", []), {})
+
+
+def init_environment(_config):
+    init_cleanup()
+    global CURRENT_TARGET_DEVICE_DICT
+    # additional constant CURRENT_TARGET_DEVICE_DICT needs to be used due to being unable to read
+    # current_target_device_dict from config when using xdist=0
+    _config.current_target_device_dict = CURRENT_TARGET_DEVICE_DICT
+
+
+def init_cleanup():
+    if cleanup_env_on_startup:
+        if get_host_os() != OsType.Windows:
+            cleanup_docker(cleanup_docker_containers)
+        else:
+            proc = Process()
+            proc.disable_check_stderr()
+            proc.run("taskkill /F /IM ovms.exe /T", print_stdout=False)
+
+
+def setup_tmp_repos_dir(config):
+    config.tmp_repos_dir = TmpDir()
 
 
 def get_marker_args(metafunc, marker_name):
@@ -194,6 +230,39 @@ def parametrize_uses_mapping(metafunc):
     metafunc.parametrize(USES_MAPPING_PARAM_NAME, config.uses_mapping, ids=ids)
 
 
+def validate_port_pool(_config):
+    # This function should be called only in master xdist thread.
+    if any([
+        config.ports_pool_size is None,
+        config.grpc_ovms_starting_port is None,
+        config.rest_ovms_starting_port is None,
+    ]):
+        print("Creating pool configuration:")
+        args = parse_args([
+            "--reservation-file-json",
+            os.path.join(tmp_dir, "reservation.json"),
+            "--reservation-file-env",
+            os.path.join(tmp_dir, "reservation.env"),
+            "-c",
+            os.path.join(ovms_c_repo_path, "tests", "reservation_manager.yml"),
+            "--locks-dir",
+            global_tmp_dir_default,
+        ])
+
+        _config.reservation_manager = ReservationManager.manager_from_args(args=args)
+        _config.reservation_manager.independent.create()
+        os.environ.update(_config.reservation_manager.env_mgr.environment)
+        config.ports_pool_size = config.get_int("TT_PORTS_POOL_SIZE")
+        config.grpc_ovms_starting_port = config.get_int("TT_GRPC_OVMS_STARTING_PORT")
+        config.rest_ovms_starting_port = config.get_int("TT_REST_OVMS_STARTING_PORT")
+    else:
+        print("Successfully read reservation manager configuration.")
+    print("Port pool configuration:")
+    print(f"ports_pool_size={config.ports_pool_size}")
+    print(f"grpc_ovms_starting_port={config.grpc_ovms_starting_port}")
+    print(f"rest_ovms_starting_port={config.rest_ovms_starting_port}")
+
+
 def parametrize_base_os(metafunc):
     ids = []
     params = config.base_os
@@ -226,3 +295,24 @@ def log_configuration_variables():
     pt_env_vars.sort()
     for env_var in pt_env_vars:
         logger.info("{}={}".format(*env_var))
+
+
+def mute_warnings():
+    # Mute warning:
+    # ResourceWarning: unclosed <socket.socket fd=17, family=AddressFamily.AF_UNIX ...
+    warnings.filterwarnings(action="ignore", message="unclosed", category=ResourceWarning)
+
+    #  .venv/lib/python3.10/site-packages/flatbuffers/compat.py:19:
+    #  DeprecationWarning: the imp module is deprecated in favour of importlib;
+    #  see the module's documentation for alternative uses import imp
+    warnings.filterwarnings(
+        action="ignore", message="the imp module is deprecated in favour of importlib", category=DeprecationWarning
+    )
+
+    # .venv/lib/python3.10/site-packages/tensorflow/python/framework/dtypes.py:205
+    #   python3.10/site-packages/tensorflow/python/framework/dtypes.py:205:
+    #   DeprecationWarning: `np.bool8` is a deprecated alias for `np.bool_`.  (Deprecated NumPy 1.24)
+    #     np.bool8: (False, True),
+    warnings.filterwarnings(
+        action="ignore", message="`np.bool8` is a deprecated alias for `np.bool_`", category=DeprecationWarning
+    )

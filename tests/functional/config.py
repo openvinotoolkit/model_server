@@ -284,6 +284,9 @@ disable_dmesg_log_monitor = get_bool("TT_DISABLE_DMESG_LOG_MONITOR", False)
 """ TT_MACHINE_IS_RESERVED_FOR_TEST_SESSION """
 machine_is_reserved_for_test_session = get_bool("TT_MACHINE_IS_RESERVED_FOR_TEST_SESSION", False)
 
+""" TT_CLEANUP_ENVIRONMENT_ON_STARTUP """
+cleanup_env_on_startup = get_bool("TT_CLEANUP_ENVIRONMENT_ON_STARTUP", False)
+
 """ TT_WAIT_FOR_MESSAGES_TIMEOUT - timeout for ovms.wait_for_messages(...) method """
 wait_for_messages_timeout = get_int("TT_WAIT_FOR_MESSAGES_TIMEOUT", 180)
 
@@ -304,6 +307,10 @@ ovms_image_local = get_bool("TT_OVMS_IMAGE_LOCAL", False)
 """
 __base_os = os.environ.get("BASE_OS", OsType.Ubuntu24)
 base_os = get_list("TT_BASE_OS", fallback=[__base_os])
+
+""" GLOBAL_TEMP_DIR - global temporary directory """
+global_tmp_dir_default = os.path.join("~", "AppData", "Local", "Temp") if OsType.Windows in base_os else "/tmp"
+global_tmp_dir = get_path("GLOBAL_TEMP_DIR", global_tmp_dir_default)
 
 """ TT_ENABLE_PLUGIN_CONFIG_TARGET_DEVICE - use plugin_config globally set for target devices """
 enable_plugin_config_target_device = get_bool("TT_ENABLE_PLUGIN_CONFIG_TARGET_DEVICE", False)
