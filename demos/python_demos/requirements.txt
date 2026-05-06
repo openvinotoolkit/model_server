@@ -1,15 +1,16 @@
 --extra-index-url "https://download.pytorch.org/whl/cpu"
-optimum-intel@git+https://github.com/huggingface/optimum-intel.git
+optimum-intel[openvino]==1.27.0
 pillow==12.2.0
 tritonclient[grpc]==2.57.0  # Required to use batch string serialization/deserialization (4byte length prepend)
 numpy<2.0
-huggingface_hub==0.32.0
+huggingface_hub>=0.34,<1.0
 nncf>=2.11.0
 sentence_transformers
 sentencepiece==0.2.1
-transformers<5.1
+transformers>=4.54,<4.58
 einops
 torchvision
 timm==1.0.15
+# Requires BUILD_CUDA_EXT=0 in environment when installing (skips CUDA extension build that needs torch present at PEP-517 build time).
 auto_gptq==0.7.1 # for GPTQ models
 diffusers==0.33.1  # for image generation
