@@ -180,6 +180,7 @@ ovms_cc_library( # TODO split further so we don't have to recompile everything w
     hdrs = [
             "io_processing/hermes3/tool_parser.hpp",
             "io_processing/llama3/tool_parser.hpp",
+            "io_processing/llama3/genai_tool_parser.hpp",
             "io_processing/phi4/tool_parser.hpp",
             "io_processing/devstral/tool_parser.hpp",
             "io_processing/mistral/tool_parser.hpp",
@@ -187,11 +188,14 @@ ovms_cc_library( # TODO split further so we don't have to recompile everything w
             "io_processing/gptoss/reasoning_parser.hpp",
             "io_processing/gptoss/tool_parser.hpp",
             "io_processing/gptoss/harmony.hpp",
+            "io_processing/base_genai_parser.hpp",
+            "io_processing/genai_parser_adapter.hpp",
             "io_processing/output_parser.hpp",
     ],
     srcs = [
             "io_processing/hermes3/tool_parser.cpp",
             "io_processing/llama3/tool_parser.cpp",
+            "io_processing/llama3/genai_tool_parser.cpp",
             "io_processing/phi4/tool_parser.cpp",
             "io_processing/devstral/tool_parser.cpp",
             "io_processing/mistral/tool_parser.cpp",
@@ -199,6 +203,7 @@ ovms_cc_library( # TODO split further so we don't have to recompile everything w
             "io_processing/gptoss/reasoning_parser.cpp",
             "io_processing/gptoss/tool_parser.cpp",
             "io_processing/gptoss/harmony.cpp",
+            "io_processing/genai_parser_adapter.cpp",
             "io_processing/output_parser.cpp",
     ],
     deps = [

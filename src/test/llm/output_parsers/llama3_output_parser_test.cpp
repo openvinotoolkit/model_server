@@ -37,7 +37,15 @@ static std::unique_ptr<ov::genai::Tokenizer> llama3Tokenizer;
 // Id of the <|python_tag|> which is a special token used to indicate the start of a tool calls
 constexpr int64_t botTokenId = 128010;
 
-class Llama3OutputParserTest : public ::testing::Test {
+// Parametrized fixture — runs every test with both "llama3" (native) and "llama3_genai" (adapter) parsers.
+//
+// Known behavioral differences between "llama3" and "llama3_genai":
+//
+//  1. Content + tool-call in unary mode (ParseToolCallOutputWithContentAndSingleToolCall):
+//     "llama3"      detects the boundary via the raw botTokenId in the token stream.
+//     "llama3_genai" works on decoded text only; <|python_tag|> is a special token and is
+//     stripped by the tokenizer, so the boundary is invisible → test is skipped for llama3_genai.
+class Llama3OutputParserTest : public ::testing::TestWithParam<std::string> {
 protected:
     std::unique_ptr<OutputParser> outputParserWithRegularToolParsing;
 
@@ -56,11 +64,17 @@ protected:
     }
 
     void SetUp() override {
-        outputParserWithRegularToolParsing = std::make_unique<OutputParser>(*llama3Tokenizer, "llama3", "", EMPTY_TOOLS_SCHEMA);
+        outputParserWithRegularToolParsing = std::make_unique<OutputParser>(*llama3Tokenizer, GetParam(), "", EMPTY_TOOLS_SCHEMA);
     }
 };
 
-TEST_F(Llama3OutputParserTest, ParseToolCallOutputWithSingleToolCall) {
+INSTANTIATE_TEST_SUITE_P(
+    Llama3Parsers,
+    Llama3OutputParserTest,
+    ::testing::Values("llama3", "llama3_genai"),
+    [](const ::testing::TestParamInfo<std::string>& info) { return info.param; });
+
+TEST_P(Llama3OutputParserTest, ParseToolCallOutputWithSingleToolCall) {
     std::string input = "{\"name\": \"example_tool\", \"parameters\": {\"arg1\": \"value1\", \"arg2\": 42}}";
     auto generatedTensor = llama3Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
@@ -74,7 +88,7 @@ TEST_F(Llama3OutputParserTest, ParseToolCallOutputWithSingleToolCall) {
     EXPECT_EQ(parsedOutput.toolCalls[0].id.empty(), false);
 }
 
-TEST_F(Llama3OutputParserTest, ParseToolCallOutputNoToolsInTheRequest) {
+TEST_P(Llama3OutputParserTest, ParseToolCallOutputNoToolsInTheRequest) {
     std::string input = "{\"name\": \"example_tool\", \"parameters\": {\"arg1\": \"value1\", \"arg2\": 42}}";
     auto generatedTensor = llama3Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
@@ -83,7 +97,7 @@ TEST_F(Llama3OutputParserTest, ParseToolCallOutputNoToolsInTheRequest) {
     EXPECT_EQ(parsedOutput.reasoning, "");
     ASSERT_EQ(parsedOutput.toolCalls.size(), 0);
 }
-TEST_F(Llama3OutputParserTest, ParseRegularJsonOutputToolsInTheRequest) {
+TEST_P(Llama3OutputParserTest, ParseRegularJsonOutputToolsInTheRequest) {
     std::string input = "{\"name\": \"Jane Doe\", \"location\": \"unknown\"}";
     auto generatedTensor = llama3Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
@@ -94,7 +108,7 @@ TEST_F(Llama3OutputParserTest, ParseRegularJsonOutputToolsInTheRequest) {
 }
 
 // Tool parser is available, but there are no tools in the request, so all output should be treated as content
-TEST_F(Llama3OutputParserTest, ParseRegularJsonOutputNoToolsInTheRequest) {
+TEST_P(Llama3OutputParserTest, ParseRegularJsonOutputNoToolsInTheRequest) {
     std::string input = "{\"name\": \"Jane Doe\", \"location\": \"unknown\"}";
     auto generatedTensor = llama3Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
@@ -103,7 +117,7 @@ TEST_F(Llama3OutputParserTest, ParseRegularJsonOutputNoToolsInTheRequest) {
     EXPECT_EQ(parsedOutput.reasoning, "");
 }
 
-TEST_F(Llama3OutputParserTest, ParseToolCallOutputWithThreeToolCalls) {
+TEST_P(Llama3OutputParserTest, ParseToolCallOutputWithThreeToolCalls) {
     std::string input = "{\"name\": \"example_tool\", \"parameters\": {\"arg1\": \"value1\", \"arg2\": 42}};"
                         "{\"name\": \"another_tool\", \"parameters\": {\"param1\": \"data\", \"param2\": true}};"
                         "{\"name\": \"third_tool\", \"parameters\": {\"key\": \"value\"}}";
@@ -130,7 +144,7 @@ TEST_F(Llama3OutputParserTest, ParseToolCallOutputWithThreeToolCalls) {
     EXPECT_NE(secondToolCallId, thirdToolCallId);
 }
 
-TEST_F(Llama3OutputParserTest, ParseToolCallOutputWithContentAndNoToolCalls) {
+TEST_P(Llama3OutputParserTest, ParseToolCallOutputWithContentAndNoToolCalls) {
     std::string input = "This is a regular model response without tool calls.";
     auto generatedTensor = llama3Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
@@ -140,7 +154,13 @@ TEST_F(Llama3OutputParserTest, ParseToolCallOutputWithContentAndNoToolCalls) {
     EXPECT_EQ(parsedOutput.reasoning, "");
 }
 
-TEST_F(Llama3OutputParserTest, ParseToolCallOutputWithContentAndSingleToolCall) {
+TEST_P(Llama3OutputParserTest, ParseToolCallOutputWithContentAndSingleToolCall) {
+    // llama3_genai works on decoded text only; <|python_tag|> is a special token stripped by
+    // the tokenizer, so the content/tool-call boundary is invisible to the text-based parser.
+    if (GetParam() == "llama3_genai") {
+        GTEST_SKIP() << "llama3_genai cannot detect tool calls preceded by content: "
+                        "<|python_tag|> is a special token and is stripped during decoding.";
+    }
     std::string content = "This is a content part and next will be a tool call.";
     std::string toolCall = "{\"name\": \"example_tool\", \"parameters\": {\"arg1\": \"value1\", \"arg2\": 42}}";
     auto generatedContentTensor = llama3Tokenizer->encode(content, ov::genai::add_special_tokens(false)).input_ids;
@@ -160,7 +180,7 @@ TEST_F(Llama3OutputParserTest, ParseToolCallOutputWithContentAndSingleToolCall) 
     EXPECT_EQ(parsedOutput.toolCalls[0].id.empty(), false);
 }
 
-TEST_F(Llama3OutputParserTest, HolisticStreaming) {
+TEST_P(Llama3OutputParserTest, HolisticStreaming) {
     std::vector<std::tuple<std::string, ov::genai::GenerationFinishReason, std::optional<std::string>>> chunkToDeltaVec{
         // Tool call phase
         // Starting first tool. Collecting chunk until full name is received. Don't return until then.
@@ -202,7 +222,7 @@ TEST_F(Llama3OutputParserTest, HolisticStreaming) {
 
     for (auto lastFinishReason : {ov::genai::GenerationFinishReason::NONE, ov::genai::GenerationFinishReason::STOP, ov::genai::GenerationFinishReason::LENGTH}) {
         // Need to have new output parser per case to simulate separate request processing
-        outputParserWithRegularToolParsing = std::make_unique<OutputParser>(*llama3Tokenizer, "llama3", "", EMPTY_TOOLS_SCHEMA);
+        outputParserWithRegularToolParsing = std::make_unique<OutputParser>(*llama3Tokenizer, GetParam(), "", EMPTY_TOOLS_SCHEMA);
         auto chunkToDeltaVecCopy = chunkToDeltaVec;
         if (lastFinishReason == ov::genai::GenerationFinishReason::NONE) {
             chunkToDeltaVecCopy.push_back({"Paris\"}}", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":1,"function":{"arguments":" \""}}]}})"});
@@ -264,7 +284,7 @@ TEST_F(Llama3OutputParserTest, HolisticStreaming) {
 }
 
 // Positive test for streaming tool calls with complex arguments containing special characters
-TEST_F(Llama3OutputParserTest, StreamingToolWithComplexArguments) {
+TEST_P(Llama3OutputParserTest, StreamingToolWithComplexArguments) {
     std::vector<std::tuple<std::string, std::optional<std::string>>> chunkToDeltaVec{
         {"{\"", std::nullopt},
         {"name", std::nullopt},
@@ -331,7 +351,7 @@ TEST_F(Llama3OutputParserTest, StreamingToolWithComplexArguments) {
             "{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"nested_value2\"}}]}}"},
     };
 
-    auto outputParser = std::make_unique<OutputParser>(*llama3Tokenizer, "llama3", "", EMPTY_TOOLS_SCHEMA);
+    auto outputParser = std::make_unique<OutputParser>(*llama3Tokenizer, GetParam(), "", EMPTY_TOOLS_SCHEMA);
     for (const auto& [chunk, expectedDelta] : chunkToDeltaVec) {
         std::optional<rapidjson::Document> doc = outputParser->parseChunk(chunk, true, ov::genai::GenerationFinishReason::NONE);
         if (!expectedDelta.has_value() && !doc.has_value()) {
@@ -383,7 +403,7 @@ TEST_F(Llama3OutputParserTest, StreamingToolWithComplexArguments) {
     }
 }
 
-TEST_F(Llama3OutputParserTest, ToolCallsWithoutToolsInTheRequestStreaming) {
+TEST_P(Llama3OutputParserTest, ToolCallsWithoutToolsInTheRequestStreaming) {
     std::vector<std::pair<std::string, std::optional<std::string>>> chunkToDeltaVec{
         // Tool parser is available, but tools are not in the request so every chunk is just a regular content
         {"<|python_tag|>", "{\"delta\":{\"content\":\"<|python_tag|>\"}}"},
