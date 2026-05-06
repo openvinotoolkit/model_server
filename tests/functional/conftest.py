@@ -16,6 +16,7 @@
 
 import logging
 import os
+import sys
 import time
 from logging import FileHandler
 
@@ -24,7 +25,32 @@ from _pytest._code import ExceptionInfo, filter_traceback  # noqa
 from _pytest.outcomes import OutcomeException
 
 from tests.functional.config import test_dir, test_dir_cleanup, artifacts_dir, enable_pytest_plugins
-from tests.functional.utils import hooks_utils
+from tests.functional.constants.os_type import OsType
+from tests.functional.constants.ovms import (
+    BASE_OS_PARAM_NAME,
+    OVMS_TYPE_PARAM_NAME,
+    TARGET_DEVICE_PARAM_NAME,
+    USES_MAPPING_PARAM_NAME,
+)
+from tests.functional.constants.ovms_binaries import calculate_ovms_binary_name
+from tests.functional.constants.ovms_images import calculate_ovms_image_name
+from tests.functional.constants.ovms_type import OvmsType
+from tests.functional.constants.target_device import TargetDevice
+from tests.functional.utils.hooks import (
+    log_configuration_variables,
+    parametrize_all_models,
+    parametrize_base_os,
+    parametrize_input_shape,
+    parametrize_iteration_info,
+    parametrize_many_models,
+    parametrize_model_aux_type,
+    parametrize_model_type,
+    parametrize_ovms_type,
+    parametrize_plugin_config,
+    parametrize_target_device,
+    parametrize_uses_mapping,
+)
+from tests.functional.utils.marks import MarkRunType, MarkTestParameters
 
 logger = logging.getLogger(__name__)
 
@@ -38,11 +64,80 @@ if enable_pytest_plugins:
         ]
 
 
+    def preprocess_collected_items(items):
+        deselected = []
+        all_components = {}
+        all_requirements = {}
+        try:
+            # required_marker_ids, excluded_marker_ids = get_marker_ids_for_test_run()
+            for item in items:
+                if getattr(item, "callspec", None):
+                    # Store calculated image for later use.
+                    ovms_type = item.callspec.params.get(OVMS_TYPE_PARAM_NAME, OvmsType.DOCKER)
+                    base_os = item.callspec.params.get(BASE_OS_PARAM_NAME, OsType.Ubuntu22)
+                    if ovms_type == OvmsType.BINARY or ovms_type == OvmsType.CAPI:
+                        item._image = calculate_ovms_binary_name(base_os=base_os)
+                    else:
+                        target_device = item.callspec.params.get(
+                            TARGET_DEVICE_PARAM_NAME,
+                            TargetDevice.TARGET_DEVICE_CPU,
+                        )
+                        item._image = calculate_ovms_image_name(target_device=target_device, base_os=base_os)
+                # add_dynamic_mark(item)
+                test_type = MarkRunType.get_test_type_mark(item)
+                # set_timeout_per_test_type(item, test_type)
+                # update_parent_markers(item, MarkGeneral.COMPONENTS.mark)
+                # update_parent_markers(item, MarkGeneral.REQIDS.mark)
+                # update_parent_markers(item, MarkPriority.HIGH.mark)
+                # update_parent_markers(item, MarkPriority.MEDIUM.mark)
+                # update_parent_markers(item, MarkPriority.LOW.mark)
+                # if deselect(item, test_type, required_marker_ids, excluded_marker_ids):
+                #     deselected.append(item)
+                #     continue
+                # update_markers(item, test_type, all_components, MarkGeneral.COMPONENTS.mark)
+                # update_markers(item, test_type, all_requirements, MarkGeneral.REQIDS.mark)
+
+        except RuntimeError as e:
+            error_msg = str(e)
+            logger.exception(error_msg)
+            sys.exit(error_msg)
+
+        return deselected, all_components, all_requirements
+
+
 def pytest_sessionstart(session):
     logger.info("Starting test session in the following folder: {}".format(session.startdir))
-    hooks_utils.log_configuration_variables()
+    log_configuration_variables()
     session.start_time = time.time()
 
+
+def pytest_generate_tests(metafunc):
+    if OVMS_TYPE_PARAM_NAME in metafunc.fixturenames:
+        parametrize_ovms_type(metafunc)
+
+    if USES_MAPPING_PARAM_NAME in metafunc.fixturenames:
+        parametrize_uses_mapping(metafunc)
+
+    if BASE_OS_PARAM_NAME in metafunc.fixturenames:
+        parametrize_base_os(metafunc)
+
+    if MarkTestParameters.MODEL_TYPE in metafunc.fixturenames:
+        parametrize_model_type(metafunc)
+    elif MarkTestParameters.ALL_MODELS in metafunc.fixturenames:
+        parametrize_all_models(metafunc)
+    elif MarkTestParameters.MANY_MODELS in metafunc.fixturenames:
+        parametrize_many_models(metafunc)
+    elif MarkTestParameters.ITERATION_INFO in metafunc.fixturenames:
+        parametrize_iteration_info(metafunc)
+    elif MarkTestParameters.INPUT_SHAPE in metafunc.fixturenames:
+        parametrize_input_shape(metafunc)
+    elif MarkTestParameters.PLUGIN_CONFIG in metafunc.fixturenames:
+        parametrize_plugin_config(metafunc)
+    elif TARGET_DEVICE_PARAM_NAME in metafunc.fixturenames:
+        parametrize_target_device(metafunc)
+
+    if MarkTestParameters.MODEL_AUX_TYPE in metafunc.fixturenames:
+        parametrize_model_aux_type(metafunc)
 
     #
     # def pytest_configure():

@@ -39,6 +39,27 @@ try:
 except ImportError:
     pass
 
+
+def get_uses_mapping():
+    _uses_mapping = get_list("TT_USES_MAPPING", fallback=[None])
+    _uses_mapping = list(set([str(x).upper() for x in _uses_mapping]))  # make upper & remove duplicates
+    # Reduce to True/False/None
+    _uses_mapping = [x == "TRUE" if x in ["TRUE", "FALSE"] else None for x in _uses_mapping]
+    validate_supported_values(_uses_mapping, [True, False, None])
+    return _uses_mapping
+
+
+""" 
+    TT_USES_MAPPING - use mapping JSON for model inputs/output name aliasing
+    Possible TT_USES_MAPPING values (case insensitive):
+    - (empty)/""/NONE - Default leave mapping.json provided alongside model untouched (if exists).
+    - FALSE - forcibly remove mapping.json if provided with model.
+    - TRUE - remove any previous mapping and add generic mapping.json 
+            (see: ovms/object_model/ovms_mapping_config.py for details)
+    - TRUE,FALSE,NONE - Iterate each test case from listed values in single test session.
+"""
+uses_mapping = get_uses_mapping()
+
 """TEST_DIR -  location where models and test data should be copied from TEST_DIR_CACHE and deleted after tests"""
 test_dir = os.environ.get("TEST_DIR", "/tmp/{}".format(generate_test_object_name(prefix='ovms_models')))
 
