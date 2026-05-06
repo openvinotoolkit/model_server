@@ -36,7 +36,7 @@ const std::string Gemma4ToolParser::TOOL_ARGS_SEPARATOR_STR = ",";
 const int64_t Gemma4ToolParser::botTokenId = 48;
 const int64_t Gemma4ToolParser::eotTokenId = 49;
 
-std::string Gemma4ToolParser::parseArrayParameter(std::string argumentStr) {
+std::string Gemma4ToolParser::parseArrayParameter(const std::string& argumentStr) {
     size_t pos = 1;
     std::string parsedArguments = "[";
 
