@@ -39,7 +39,7 @@ const int64_t Gemma4ToolParser::eotTokenId = 49;
 std::string Gemma4ToolParser::parseArrayParameter(std::string argumentStr) {
     size_t pos = 1;
     std::string parsedArguments = "[";
-    
+
     while (pos != std::string::npos) {
         size_t stringStartPos = argumentStr.find(TOOL_ARGS_STRING_INDICATOR, pos);
         if (stringStartPos == std::string::npos) {
@@ -86,9 +86,9 @@ std::string Gemma4ToolParser::parseObjectParameter(std::string argumentStr) {
             valueEndPos = argumentStr.find(TOOL_ARGS_STRING_INDICATOR, valueStartPos);
             isStringValue = true;
         } else {
-             valueEndPos = argumentStr.find(',', valueStartPos);
+            valueEndPos = argumentStr.find(',', valueStartPos);
         }
-        
+
         if (valueEndPos == std::string::npos) {
             valueEndPos = argumentStr.size() - 1;
         }
@@ -116,7 +116,6 @@ std::string Gemma4ToolParser::parseObjectParameter(std::string argumentStr) {
     }
     parsedObject.back() = '}';
     return parsedObject;
-    
 }
 
 std::string Gemma4ToolParser::normalizeArgStr(const std::string& arg) {
@@ -269,7 +268,7 @@ bool Gemma4ToolParser::parseInToolCallState() {
 }
 
 bool Gemma4ToolParser::parseToolCallParametersState() {
-    if(this->streamingContent.back() == TOOL_ARGS_END_INDICATOR.back()) {
+    if (this->streamingContent.back() == TOOL_ARGS_END_INDICATOR.back()) {
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Tool arguments end indicator found at the end of streaming content, attempting to parse arguments: {}", this->streamingContent.substr(this->streamingPosition));
     }
     size_t pos = findInStringRespectingSpecialChars(this->streamingContent, TOOL_ARGS_END_INDICATOR, this->streamingPosition);

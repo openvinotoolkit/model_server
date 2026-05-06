@@ -100,7 +100,7 @@ size_t findInStringRespectingSpecialChars(const std::string& str, const std::str
             str.compare(i, target.length(), target) == 0) {
             return i;
         }
-        
+
         if (str[i] == '{') {
             braceDepth++;
         } else if (str[i] == '}') {

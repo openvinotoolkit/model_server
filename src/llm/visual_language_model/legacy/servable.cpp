@@ -181,7 +181,7 @@ absl::Status VisualLanguageModelLegacyServable::prepareCompleteResponse(std::sha
     auto legacyExecutionContext = std::static_pointer_cast<VisualLanguageModelLegacyServableExecutionContext>(executionContext);
 
     // temporary workaround to use streaming logic in unary
-    // to be fixed after require_special_tokens flag implemented 
+    // to be fixed after require_special_tokens flag implemented
     std::string completeText;
     auto generationStatus = legacyExecutionContext->finished.wait_for(std::chrono::nanoseconds::zero());
 
