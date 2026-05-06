@@ -83,7 +83,7 @@ TEST_F(Gemma4OutputParserTest, ParseToolCallOutputWithSingleToolCall) {
 
     std::vector<std::string> inputs = {inputWithProperClosure};
     for (auto& input : inputs) {
-        auto generatedTensor = gemma4Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
+        auto generatedTensor = gemma4Tokenizer->encode(input).input_ids;
         std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
         ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
         EXPECT_EQ(parsedOutput.content, "");
@@ -91,9 +91,8 @@ TEST_F(Gemma4OutputParserTest, ParseToolCallOutputWithSingleToolCall) {
 
         ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
         EXPECT_EQ(parsedOutput.toolCalls[0].name, "example_tool");
-        // Parser removes whitespaces, so we expect arguments value to be without spaces
         EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{\"arg1\":\"value1\",\"arg2\":42}");
-        EXPECT_EQ(parsedOutput.toolCalls[0].id.empty(), false);  // ID should be generated
+        EXPECT_EQ(parsedOutput.toolCalls[0].id.empty(), false);
     }
 }
 
@@ -103,7 +102,7 @@ TEST_F(Gemma4OutputParserTest, ParseToolCallOutputWithNoToolsInTheRequest) {
 
     std::vector<std::string> inputs = {inputWithProperClosure};
     for (auto& input : inputs) {
-        auto generatedTensor = gemma4Tokenizer->encode(input, ov::genai::add_special_tokens(true)).input_ids;
+        auto generatedTensor = gemma4Tokenizer->encode(input).input_ids;
         std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
         ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, false);
         EXPECT_EQ(parsedOutput.content, inputWithoutSpecialTokens);
@@ -118,7 +117,7 @@ TEST_F(Gemma4OutputParserTest, ParseToolCallWithObjectArguments) {
 
     std::vector<std::string> inputs = {inputWithProperClosure};
     for (auto& input : inputs) {
-        auto generatedTensor = gemma4Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
+        auto generatedTensor = gemma4Tokenizer->encode(input).input_ids;
         std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
         ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
         EXPECT_EQ(parsedOutput.content, "");
@@ -126,9 +125,8 @@ TEST_F(Gemma4OutputParserTest, ParseToolCallWithObjectArguments) {
 
         ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
         EXPECT_EQ(parsedOutput.toolCalls[0].name, "dummy");
-        // Parser removes whitespaces, so we expect arguments value to be without spaces
         EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{\"config\":{\"name\":\"astro_config\",\"value\":99}}");
-        EXPECT_EQ(parsedOutput.toolCalls[0].id.empty(), false);  // ID should be generated
+        EXPECT_EQ(parsedOutput.toolCalls[0].id.empty(), false);
     }
 }
 
@@ -137,7 +135,7 @@ TEST_F(Gemma4OutputParserTest, ParseToolCallWithStringArguments) {
 
     std::vector<std::string> inputs = {inputWithProperClosure};
     for (auto& input : inputs) {
-        auto generatedTensor = gemma4Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
+        auto generatedTensor = gemma4Tokenizer->encode(input).input_ids;
         std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
         ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
         EXPECT_EQ(parsedOutput.content, "");
@@ -145,9 +143,8 @@ TEST_F(Gemma4OutputParserTest, ParseToolCallWithStringArguments) {
 
         ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
         EXPECT_EQ(parsedOutput.toolCalls[0].name, "test1");
-        // Parser removes whitespaces, so we expect arguments value to be without spaces
         EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{\"arg1\":\"data1,data2\"}");
-        EXPECT_EQ(parsedOutput.toolCalls[0].id.empty(), false);  // ID should be generated
+        EXPECT_EQ(parsedOutput.toolCalls[0].id.empty(), false);
     }
 }
 
@@ -156,7 +153,7 @@ TEST_F(Gemma4OutputParserTest, ParseToolCallWithListOfStringsAsArgument) {
 
     std::vector<std::string> inputs = {inputWithProperClosure};
     for (auto& input : inputs) {
-        auto generatedTensor = gemma4Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
+        auto generatedTensor = gemma4Tokenizer->encode(input).input_ids;
         std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
         ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
         EXPECT_EQ(parsedOutput.content, "");
@@ -164,9 +161,8 @@ TEST_F(Gemma4OutputParserTest, ParseToolCallWithListOfStringsAsArgument) {
 
         ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
         EXPECT_EQ(parsedOutput.toolCalls[0].name, "generate_DNA_sequence");
-        // Parser removes whitespaces, so we expect arguments value to be without spaces
         EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{\"length\":100,\"preferences\":[\"G\",\"C\"]}");
-        EXPECT_EQ(parsedOutput.toolCalls[0].id.empty(), false);  // ID should be generated
+        EXPECT_EQ(parsedOutput.toolCalls[0].id.empty(), false);
     }
 }
 
@@ -175,7 +171,7 @@ TEST_F(Gemma4OutputParserTest, ParserToolCallWithBooleanArgument) {
 
     std::vector<std::string> inputs = {inputWithProperClosure};
     for (auto& input : inputs) {
-        auto generatedTensor = gemma4Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
+        auto generatedTensor = gemma4Tokenizer->encode(input).input_ids;
         std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
         ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
         EXPECT_EQ(parsedOutput.content, "");
@@ -183,9 +179,8 @@ TEST_F(Gemma4OutputParserTest, ParserToolCallWithBooleanArgument) {
 
         ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
         EXPECT_EQ(parsedOutput.toolCalls[0].name, "check_status");
-        // Parser removes whitespaces, so we expect arguments value to be without spaces
         EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{\"flag\":true}");
-        EXPECT_EQ(parsedOutput.toolCalls[0].id.empty(), false);  // ID should be generated
+        EXPECT_EQ(parsedOutput.toolCalls[0].id.empty(), false);
     }
 }
 
@@ -194,7 +189,7 @@ TEST_F(Gemma4OutputParserTest, ParseTwoToolCallsAtOnce) {
 
     std::vector<std::string> inputs = {inputWithProperClosure};
     for (auto& input : inputs) {
-        auto generatedTensor = gemma4Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
+        auto generatedTensor = gemma4Tokenizer->encode(input).input_ids;
         std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
         ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
         EXPECT_EQ(parsedOutput.content, "");
@@ -203,11 +198,10 @@ TEST_F(Gemma4OutputParserTest, ParseTwoToolCallsAtOnce) {
         ASSERT_EQ(parsedOutput.toolCalls.size(), 2);
         EXPECT_EQ(parsedOutput.toolCalls[0].name, "dummy1");
         EXPECT_EQ(parsedOutput.toolCalls[1].name, "dummy2");
-        // Parser removes whitespaces, so we expect arguments value to be without spaces
         EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{\"config\":{\"name\":\"astro_config\",\"value\":99}}");
         EXPECT_EQ(parsedOutput.toolCalls[1].arguments, "{\"config\":{\"value\":199,\"name\":\"second_config\"}}");
-        EXPECT_EQ(parsedOutput.toolCalls[0].id.empty(), false);  // ID should be generated
-        EXPECT_EQ(parsedOutput.toolCalls[1].id.empty(), false);  // ID should be generated
+        EXPECT_EQ(parsedOutput.toolCalls[0].id.empty(), false);
+        EXPECT_EQ(parsedOutput.toolCalls[1].id.empty(), false);
     }
 }
 
@@ -216,7 +210,7 @@ TEST_F(Gemma4OutputParserTest, ParseToolCallWithArrayArguments) {
 
     std::vector<std::string> inputs = {inputWithProperClosure};
     for (auto& input : inputs) {
-        auto generatedTensor = gemma4Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
+        auto generatedTensor = gemma4Tokenizer->encode(input).input_ids;
         std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
         ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
         EXPECT_EQ(parsedOutput.content, "");
@@ -224,28 +218,8 @@ TEST_F(Gemma4OutputParserTest, ParseToolCallWithArrayArguments) {
 
         ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
         EXPECT_EQ(parsedOutput.toolCalls[0].name, "sort");
-        // Parser removes whitespaces, so we expect arguments value to be without spaces
         EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{\"array\":[42,17,89,5,33],\"order\":\"descending\"}");
-        EXPECT_EQ(parsedOutput.toolCalls[0].id.empty(), false);  // ID should be generated
-    }
-}
-
-TEST_F(Gemma4OutputParserTest, ParseToolCallWithStringWithSingleQuotesArguments) {
-    std::string inputWithProperClosure = "<|tool_call>call:sort{array:[42,17,89,5,33],order:<|\"|>descending<|\"|>}<tool_call|>";
-
-    std::vector<std::string> inputs = {inputWithProperClosure};
-    for (auto& input : inputs) {
-        auto generatedTensor = gemma4Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
-        std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
-        ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
-        EXPECT_EQ(parsedOutput.content, "");
-        EXPECT_EQ(parsedOutput.reasoning, "");
-
-        ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
-        EXPECT_EQ(parsedOutput.toolCalls[0].name, "sort");
-        // Parser removes whitespaces, so we expect arguments value to be without spaces
-        EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{\"array\":[42,17,89,5,33],\"order\":\"descending\"}");
-        EXPECT_EQ(parsedOutput.toolCalls[0].id.empty(), false);  // ID should be generated
+        EXPECT_EQ(parsedOutput.toolCalls[0].id.empty(), false);
     }
 }
 
@@ -256,7 +230,7 @@ TEST_F(Gemma4OutputParserTest, ParseToolCallOutputWithThreeToolCalls) {
 
     std::vector<std::string> inputs = {inputWithProperClosure};
     for (auto& input : inputs) {
-        auto generatedTensor = gemma4Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
+        auto generatedTensor = gemma4Tokenizer->encode(input).input_ids;
         std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
         ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
         EXPECT_EQ(parsedOutput.content, "");
@@ -294,7 +268,7 @@ TEST_F(Gemma4OutputParserTest, ParseToolCallOutputWithThreeToolCallsWithContentI
 
     std::vector<std::string> inputs = {inputWithProperClosure};
     for (auto& input : inputs) {
-        auto generatedTensor = gemma4Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
+        auto generatedTensor = gemma4Tokenizer->encode(input).input_ids;
         std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
         ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
         EXPECT_EQ(parsedOutput.content, "Before tool calls content. This is some content between tool calls. This is some content between second and third tool call. After tool calls content.");
@@ -324,7 +298,7 @@ TEST_F(Gemma4OutputParserTest, ParseToolCallOutputWithThreeToolCallsWithContentI
 TEST_F(Gemma4OutputParserTest, ParseToolCallWithEmptyArguments) {
     // Tool call with empty braces (no arguments)
     std::string input = "<|tool_call>call:no_args_tool{}<tool_call|>";
-    auto generatedTensor = gemma4Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
+    auto generatedTensor = gemma4Tokenizer->encode(input).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
     ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
     ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
@@ -333,7 +307,7 @@ TEST_F(Gemma4OutputParserTest, ParseToolCallWithEmptyArguments) {
 
 TEST_F(Gemma4OutputParserTest, ParseToolCallOutputWithContentAndNoToolCalls) {
     std::string input = "This is a regular model response without tool calls.";
-    auto generatedTensor = gemma4Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
+    auto generatedTensor = gemma4Tokenizer->encode(input).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
     ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
     EXPECT_EQ(parsedOutput.content, "This is a regular model response without tool calls.");
@@ -343,7 +317,7 @@ TEST_F(Gemma4OutputParserTest, ParseToolCallOutputWithContentAndNoToolCalls) {
 
 TEST_F(Gemma4OutputParserTest, ParseToolCallOutputWithContentAndSingleToolCall) {
     std::string input = "This is a content part and next will be a tool call.\n\n<|tool_call>call:example_tool{arg1:<|\"|>value1<|\"|>,arg2:42}<tool_call|>";
-    auto generatedTensor = gemma4Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
+    auto generatedTensor = gemma4Tokenizer->encode(input).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
     ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
     EXPECT_EQ(parsedOutput.content, "This is a content part and next will be a tool call.\n\n");
@@ -470,7 +444,6 @@ TEST_F(Gemma4OutputParserTest, StreamingWithBiggerChunks) {
             rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
             doc->Accept(writer);
             std::string docStr = buffer.GetString();
-            // If both strings contain "id":"...", compare id values by length and alphanumeric, else compare whole strings
             std::string expected = expectedDelta.value();
             std::string idKey = "\"id\":\"";
             auto docIdPos = docStr.find(idKey);
@@ -486,7 +459,6 @@ TEST_F(Gemma4OutputParserTest, StreamingWithBiggerChunks) {
                 std::string expectedId = expected.substr(expectedIdStart, expectedIdEnd - expectedIdStart);
                 EXPECT_EQ(docId.size(), expectedId.size()) << "ID length mismatch for chunk: " << chunk;
                 EXPECT_TRUE(std::all_of(docId.begin(), docId.end(), ::isalnum)) << "ID not alphanumeric for chunk: " << chunk;
-                // Compare everything except the id value
                 std::string docStrNoId = docStr;
                 std::string expectedNoId = expected;
                 docStrNoId.replace(docIdStart, docId.size(), std::string(docId.size(), '*'));
@@ -513,8 +485,6 @@ TEST_F(Gemma4OutputParserTest, StreamingWithBiggerChunks) {
 
 TEST_F(Gemma4OutputParserTest, StreamingWithContentBetweenToolCalls) {
     std::vector<std::tuple<std::string, ov::genai::GenerationFinishReason, std::optional<std::string>>> chunkToDeltaVec{
-        // Tool call phase
-        // Starting first tool. Collecting chunk until full name is received. Don't return until then.
         {"JUST_SOME_STRING_BEFORE_SPECIAL_STARTING_TAG", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":"JUST_SOME_STRING_BEFORE_SPECIAL_STARTING_TAG"}})"},
         {"<|tool_call>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"call:sort", ov::genai::GenerationFinishReason::NONE, std::nullopt},
@@ -586,7 +556,6 @@ TEST_F(Gemma4OutputParserTest, StreamingWithContentBetweenToolCalls) {
             rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
             doc->Accept(writer);
             std::string docStr = buffer.GetString();
-            // If both strings contain "id":"...", compare id values by length and alphanumeric, else compare whole strings
             std::string expected = expectedDelta.value();
             std::string idKey = "\"id\":\"";
             auto docIdPos = docStr.find(idKey);
@@ -629,7 +598,6 @@ TEST_F(Gemma4OutputParserTest, StreamingWithContentBetweenToolCalls) {
 
 TEST_F(Gemma4OutputParserTest, ToolCallsWithoutToolsInTheRequestStreaming) {
     std::vector<std::pair<std::string, std::optional<std::string>>> chunkToDeltaVec{
-        // Tool parser is available, but tools are not in the request so every chunk is just a regular content
         {"<|tool_call>", "{\"delta\":{\"content\":\"<|tool_call>\"}}"},
         {"call:super", "{\"delta\":{\"content\":\"call:super\"}}"},
         {"_tool_number_two", "{\"delta\":{\"content\":\"_tool_number_two\"}}"},
@@ -641,7 +609,6 @@ TEST_F(Gemma4OutputParserTest, ToolCallsWithoutToolsInTheRequestStreaming) {
     };
 
     for (const auto& [chunk, expectedDelta] : chunkToDeltaVec) {
-        // Second argument is false as we simulate the case where tools have not been provided in the request
         std::optional<rapidjson::Document> doc = outputParserWithRegularToolParsing->parseChunk(chunk, false, ov::genai::GenerationFinishReason::NONE);
         assertChunkEqual(doc, expectedDelta, chunk);
     }
@@ -651,7 +618,7 @@ TEST_F(Gemma4OutputParserTest, ToolCallsWithoutToolsInTheRequestStreaming) {
 
 TEST_F(Gemma4OutputParserTest, ParseToolCallWithMissingParentheses) {
     std::string input = "<|tool_call>call:broken_tool<tool_call|>";
-    auto generatedTensor = gemma4Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
+    auto generatedTensor = gemma4Tokenizer->encode(input).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
     ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
     ASSERT_EQ(parsedOutput.toolCalls.size(), 0);
@@ -659,27 +626,24 @@ TEST_F(Gemma4OutputParserTest, ParseToolCallWithMissingParentheses) {
 
 TEST_F(Gemma4OutputParserTest, ParseToolCallWithMissingClosingParenthesis) {
     std::string input = "<|tool_call>call:broken_tool{arg1:<|\"|>value1<|\"|><tool_call|>";
-    auto generatedTensor = gemma4Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
+    auto generatedTensor = gemma4Tokenizer->encode(input).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
     ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
     ASSERT_EQ(parsedOutput.toolCalls.size(), 0);
 }
 
 TEST_F(Gemma4OutputParserTest, ParseToolCallWithArgumentMissingEquals) {
-    // Argument without ':' sign - parseSingleArgument sets value as empty
     std::string input = "<|tool_call>call:broken{malformed_arg}<tool_call|>";
-    auto generatedTensor = gemma4Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
+    auto generatedTensor = gemma4Tokenizer->encode(input).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
     ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
-    // The tool call is parsed but the argument value will be empty and invalid
     ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
     EXPECT_EQ(parsedOutput.toolCalls[0].name, "broken");
 }
 
-// Tests with special characters
 TEST_F(Gemma4OutputParserTest, ParseToolCallWithStringArgumentsContainingComparison) {
     std::string input = R"x(<|tool_call>call:search{query:<|"|>price >= 100, (sale)<|"|>,limit:5}<tool_call|>)x";
-    auto generatedTensor = gemma4Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
+    auto generatedTensor = gemma4Tokenizer->encode(input).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
     ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
     EXPECT_EQ(parsedOutput.content, "");
@@ -690,7 +654,7 @@ TEST_F(Gemma4OutputParserTest, ParseToolCallWithStringArgumentsContainingCompari
 
 TEST_F(Gemma4OutputParserTest, ParseToolCallWithStringArgumentsContainingBracesAndBrackets) {
     std::string input = R"(<|tool_call>call:format{template:<|"|>Hello {name}, items: [a, b, c]<|"|>,count:3}<tool_call|>)";
-    auto generatedTensor = gemma4Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
+    auto generatedTensor = gemma4Tokenizer->encode(input).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
     ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
     EXPECT_EQ(parsedOutput.content, "");
@@ -702,7 +666,7 @@ TEST_F(Gemma4OutputParserTest, ParseToolCallWithStringArgumentsContainingBracesA
 TEST_F(Gemma4OutputParserTest, ParseToolCallWithStringArgumentsContainingSpecialCharacters) {
     std::string impl = "import package\nimport package2\n\ndef func(a, b):\n\td={\"python\": \"dict\"}\n\tl = [\"list \\\"with escaped text\\\"\", 123, []]\n\treturn f\"formatted {a} and {b}\"";
     std::string input = R"(<|tool_call>call:execute{code:<|"|>)" + impl + R"(<|"|>}<tool_call|>)";
-    auto generatedTensor = gemma4Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
+    auto generatedTensor = gemma4Tokenizer->encode(input).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
     ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
     EXPECT_EQ(parsedOutput.content, "");
@@ -713,7 +677,7 @@ TEST_F(Gemma4OutputParserTest, ParseToolCallWithStringArgumentsContainingSpecial
 
 TEST_F(Gemma4OutputParserTest, ParseToolCallWithStringArgumentsContainingEscapedQuotes) {
     std::string input = R"x(<|tool_call>call:execute{code:<|"|>print(\"hello world\")<|"|>,verbose:true}<tool_call|>)x";
-    auto generatedTensor = gemma4Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
+    auto generatedTensor = gemma4Tokenizer->encode(input).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
     ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
     EXPECT_EQ(parsedOutput.content, "");
@@ -724,7 +688,7 @@ TEST_F(Gemma4OutputParserTest, ParseToolCallWithStringArgumentsContainingEscaped
 
 TEST_F(Gemma4OutputParserTest, ParseToolCallWithStringArgumentsContainingApostrophes) {
     std::string input = R"(<|tool_call>call:log{message:<|"|>it's a test, isn't it?<|"|>,level:<|"|>warn<|"|>}<tool_call|>)";
-    auto generatedTensor = gemma4Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
+    auto generatedTensor = gemma4Tokenizer->encode(input).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
     ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
     EXPECT_EQ(parsedOutput.content, "");
@@ -735,7 +699,7 @@ TEST_F(Gemma4OutputParserTest, ParseToolCallWithStringArgumentsContainingApostro
 
 TEST_F(Gemma4OutputParserTest, ParseToolCallWithStringArgumentsContainingBackslashes) {
     std::string input = R"(<|tool_call>call:read_file{path:<|"|>C:\Users\test\file.txt<|"|>,encoding:<|"|>utf-8<|"|>}<tool_call|>)";
-    auto generatedTensor = gemma4Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
+    auto generatedTensor = gemma4Tokenizer->encode(input).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
     ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
     EXPECT_EQ(parsedOutput.content, "");
@@ -746,7 +710,7 @@ TEST_F(Gemma4OutputParserTest, ParseToolCallWithStringArgumentsContainingBacksla
 
 TEST_F(Gemma4OutputParserTest, ParseToolCallWithStringArgumentsArrayWithStringsContainingQuotes) {
     std::string input = R"(<|tool_call>call:save{lines:[<|"|>it's the wonderful day<|"|>,<|"|>He said: "My name's John"<|"|>,<|"|>That's Johns' car.<|"|>]}<tool_call|>)";
-    auto generatedTensor = gemma4Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
+    auto generatedTensor = gemma4Tokenizer->encode(input).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
     ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
     EXPECT_EQ(parsedOutput.content, "");
@@ -757,7 +721,7 @@ TEST_F(Gemma4OutputParserTest, ParseToolCallWithStringArgumentsArrayWithStringsC
 
 TEST_F(Gemma4OutputParserTest, ParseToolCallWithStringArgumentsObjectWithStringsContainingQuotes) {
     std::string input = R"(<|tool_call>call:save{obj:{name:<|"|>it's the wonderful day<|"|>,greeting:<|"|>Hello, my name's Jan<|"|>,note:<|"|>That's Johns' car.<|"|>}}<tool_call|>)";
-    auto generatedTensor = gemma4Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
+    auto generatedTensor = gemma4Tokenizer->encode(input).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
     ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
     EXPECT_EQ(parsedOutput.content, "");
@@ -768,7 +732,7 @@ TEST_F(Gemma4OutputParserTest, ParseToolCallWithStringArgumentsObjectWithStrings
 
 TEST_F(Gemma4OutputParserTest, ParseToolCallWithStringArgumentsContainingNestedJSON) {
     std::string input = R"(<|tool_call>call:send{payload:<|"|>{'key': 'value', 'count': 42}<|"|>,endpoint:<|"|>api<|"|>}<tool_call|>)";
-    auto generatedTensor = gemma4Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
+    auto generatedTensor = gemma4Tokenizer->encode(input).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
     ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
     EXPECT_EQ(parsedOutput.content, "");
@@ -779,7 +743,7 @@ TEST_F(Gemma4OutputParserTest, ParseToolCallWithStringArgumentsContainingNestedJ
 
 TEST_F(Gemma4OutputParserTest, ParseToolCallWithEmptyStringArgument) {
     std::string input = R"(<|tool_call>call:create{name:<|"|><|"|>,value:0}<tool_call|>)";
-    auto generatedTensor = gemma4Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
+    auto generatedTensor = gemma4Tokenizer->encode(input).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
     ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
     EXPECT_EQ(parsedOutput.content, "");
@@ -790,7 +754,7 @@ TEST_F(Gemma4OutputParserTest, ParseToolCallWithEmptyStringArgument) {
 
 TEST_F(Gemma4OutputParserTest, ParseToolCallWithUnicodeCharactersInArguments) {
     std::string input = R"(<|tool_call>call:translate{text:<|"|>zażółć gęślą jaźń<|"|>,lang:<|"|>pl<|"|>}<tool_call|>)";
-    auto generatedTensor = gemma4Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
+    auto generatedTensor = gemma4Tokenizer->encode(input).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
     ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
     EXPECT_EQ(parsedOutput.content, "");
