@@ -13,30 +13,35 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-
 #pragma once
 
-#include <memory>
-
-#include "openvino/genai/llm_pipeline.hpp"
-
-#include "../../../logging.hpp"
-#include "../../../profiler.hpp"
-#include "../../../executor_base.hpp"
+#include <condition_variable>
+#include <mutex>
+#include <queue>
+#include <string>
+#include <utility>
 
 namespace ovms {
-struct LegacyServableExecutionContext;
 
-struct LegacyExecutor : public Executor<std::shared_ptr<LegacyServableExecutionContext>> {
-    std::shared_ptr<ov::genai::LLMPipeline> pipe;
-
-    LegacyExecutor(std::shared_ptr<ov::genai::LLMPipeline> pipe);
-
-    void processRequest();
-};
-
-class LegacyExecutorWrapper : public ExecutorWrapper<LegacyExecutor> {
+// Thread-safe queue for streaming partial results from a background
+// generation thread to the MediaPipe LOOPBACK loop.  Used by S2tCalculator
+// to bridge ov::genai streamer callbacks and the calculator's Process() cycle.
+class StreamingTextQueue {
 public:
-    LegacyExecutorWrapper(std::shared_ptr<ov::genai::LLMPipeline> pipe);
+    void push(std::string text);
+
+    // Signals that generation has finished (successfully or with error).
+    void endStreaming();
+
+    // Blocks until a text chunk is available or generation is done.
+    // Returns true if a chunk was retrieved, false if done and queue is empty.
+    bool waitAndPop(std::string& out);
+
+private:
+    mutable std::mutex mutex_;
+    std::condition_variable cv_;
+    std::queue<std::string> queue_;
+    bool done_ = false;
 };
+
 }  // namespace ovms

@@ -99,6 +99,7 @@ It has two lines.
 
     EXPECT_CALL(*multiPartParser, parse()).WillOnce(::testing::Return(true));
     EXPECT_CALL(*multiPartParser, getFieldByName(::testing::Eq("model"))).WillOnce(::testing::Return("multipart"));
+    EXPECT_CALL(*multiPartParser, getFieldByName(::testing::Eq("stream"))).WillOnce(::testing::Return(""));
     EXPECT_CALL(*multiPartParser, getFieldByName(::testing::Eq("email"))).WillOnce(::testing::Return("john@example.com"));
     EXPECT_CALL(*multiPartParser, getFieldByName(::testing::Eq("username"))).WillOnce(::testing::Return("john_doe"));
     EXPECT_CALL(*multiPartParser, getArrayFieldByName(::testing::Eq("some_param[]"))).WillOnce(::testing::Return(std::vector<std::string>{"val1", "val2"}));
@@ -151,6 +152,7 @@ It has two lines.
 
     EXPECT_CALL(*multiPartParser, parse()).WillOnce(::testing::Return(true));
     EXPECT_CALL(*multiPartParser, getFieldByName(::testing::Eq("model"))).WillOnce(::testing::Return(""));
+    EXPECT_CALL(*multiPartParser, getFieldByName(::testing::Eq("stream"))).WillOnce(::testing::Return(""));
     EXPECT_CALL(*multiPartParser, getFieldByName(::testing::Eq("email"))).WillOnce(::testing::Return("john@example.com"));
     EXPECT_CALL(*multiPartParser, getFieldByName(::testing::Eq("username"))).WillOnce(::testing::Return("john_doe"));
     EXPECT_CALL(*multiPartParser, getArrayFieldByName(::testing::Eq("some_param[]"))).WillOnce(::testing::Return(std::vector<std::string>{"val1", "val2"}));
@@ -196,8 +198,8 @@ It has two lines.
 ------WebKitFormBoundary7MA4YWxkTrZu0gW--)";
 
     EXPECT_CALL(*multiPartParser, parse()).WillOnce(::testing::Return(true));
-    EXPECT_CALL(*multiPartParser, getFieldByName(::testing::_)).Times(0);
     EXPECT_CALL(*multiPartParser, getFieldByName(::testing::Eq("model"))).WillOnce(::testing::Return(""));
+    EXPECT_CALL(*multiPartParser, getFieldByName(::testing::Eq("stream"))).WillOnce(::testing::Return(""));
     EXPECT_CALL(*multiPartParser, getFileContentByFieldName(::testing::_)).Times(0);
 
     // Default routing uses everything that comes after /v3/ as graph name
@@ -232,8 +234,8 @@ It has two lines.
 ------WebKitFormBoundary7MA4YWxkTrZu0gW--)";
 
     EXPECT_CALL(*multiPartParser, parse()).WillOnce(::testing::Return(true));
-    EXPECT_CALL(*multiPartParser, getFieldByName(::testing::_)).Times(0);
     EXPECT_CALL(*multiPartParser, getFieldByName(::testing::Eq("model"))).WillOnce(::testing::Return(""));
+    EXPECT_CALL(*multiPartParser, getFieldByName(::testing::Eq("stream"))).WillOnce(::testing::Return(""));
     EXPECT_CALL(*multiPartParser, getFileContentByFieldName(::testing::_)).Times(0);
 
     // Default routing uses everything that comes after /v3/ as graph name
