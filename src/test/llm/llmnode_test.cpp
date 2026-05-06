@@ -1840,7 +1840,7 @@ TEST_P(LLMFlowHttpTestParameterized, streamChatCompletionsSingleStopString) {
             "model": ")" + params.modelName +
                               R"(",
             "stream": true,
-            "seed" : 1,
+            "temperature" : 0,
             "ignore_eos": false,
             "max_tokens": 1000,
             "stop": ".",
@@ -1848,7 +1848,7 @@ TEST_P(LLMFlowHttpTestParameterized, streamChatCompletionsSingleStopString) {
             "messages": [
             {
                 "role": "user",
-                "content": "What is OpenVINO? In short"
+                "content": "What is OpenVINO? Give one sentence answer."
             }
             ]
         }
@@ -3756,7 +3756,7 @@ public:
 class LLMVLMOptionsHttpTest : public LLMOptionsHttpTestPython {
 public:
     std::string modelsPath;
-    void SetUp() { modelsPath = "/ovms/src/test/llm_testing/OpenGVLab/InternVL2-1B"; }
+    void SetUp() { modelsPath = "/ovms/src/test/llm_testing/OpenVINO/InternVL2-1B-int4-ov"; }
 };
 
 void TestLLMNodeOptionsCheckDefault(std::string& modelsPath) {

@@ -16,6 +16,8 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include <openvino/runtime/tensor.hpp>
+
 #include "../dags/custom_node_output_allocator.hpp"
 #include "../precision.hpp"
 #include "../shape.hpp"

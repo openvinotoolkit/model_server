@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2021-2022 Intel Corporation
+// Copyright 2026 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,11 +13,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#pragma once
+
 #include "exitnodesession.hpp"
 
 #include <memory>
+#include <string>
 
-#include "../capi_frontend/inferenceresponse.hpp"
 #include "gatherexitnodeinputhandler.hpp"
 #include "nodesessionmetadata.hpp"
 
@@ -38,12 +40,5 @@ const TensorMap& ExitNodeSession<ResponseType>::getInputTensors() const {
 
 template <typename ResponseType>
 ExitNodeSession<ResponseType>::~ExitNodeSession() = default;
-
-template class ExitNodeSession<InferenceResponse>;
-template ExitNodeSession<tensorflow::serving::PredictResponse>::ExitNodeSession(const NodeSessionMetadata& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapseDetails& collapsingDetails, tensorflow::serving::PredictResponse* response);
-template ExitNodeSession<::KFSResponse>::ExitNodeSession(const NodeSessionMetadata& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapseDetails& collapsingDetails, ::KFSResponse* response);
-
-template const TensorMap& ExitNodeSession<tensorflow::serving::PredictResponse>::getInputTensors() const;
-template const TensorMap& ExitNodeSession<::KFSResponse>::getInputTensors() const;
 
 }  // namespace ovms

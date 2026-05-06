@@ -19,6 +19,8 @@
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+
+#include <openvino/runtime/core.hpp>
 #include <stdlib.h>
 
 #include "../get_model_metadata_impl.hpp"
@@ -758,10 +760,10 @@ TEST_F(TestLoadModel, SuccessfulLoadDummyDimensionRanges) {
 TEST_F(TestLoadModel, CorrectNumberOfStreamsSet) {
     ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
-    config.setPluginConfig({{"NUM_STREAMS", "3"}});
+    config.setPluginConfig({{"NUM_STREAMS", "4"}});
     ASSERT_EQ(modelInstance.loadModel(config), ovms::StatusCode::OK);
     ASSERT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
-    ASSERT_EQ(modelInstance.getNumOfStreams(), 3);
+    ASSERT_EQ(modelInstance.getNumOfStreams(), 4);
 }
 
 TEST_F(TestLoadModel, ScalarModelWithBatchSetToFixed) {

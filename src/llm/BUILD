@@ -267,6 +267,7 @@ ovms_cc_library(
         "//third_party:openvino",
         "@mediapipe//mediapipe/framework:calculator_framework",
         "@com_github_tencent_rapidjson//:rapidjson",
+        "//src:executor_base",
         "//src:libmodelconfigjsonparser",
         "//src:libovmslogging",
         "//src:libovmsstatus",
@@ -281,6 +282,7 @@ ovms_cc_library(
         ":generation_config_builders",
         "//src:httppayload",
         "//src:libhttpclientconnection",
+        "//src:sse_utils",
         "//third_party:genai",] + select({
         "//:disable_python": [],
         "//:not_disable_python" : [":py_jinja_template_processor"],
