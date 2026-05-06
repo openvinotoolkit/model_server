@@ -1,5 +1,5 @@
 --extra-index-url "https://download.pytorch.org/whl/cpu"
-optimum-intel[openvino]==1.27.0
+optimum-intel==1.27.0  # openvino + openvino-tokenizers come from the base image; do not pull them via the [openvino] extra
 pillow==12.2.0
 tritonclient[grpc]==2.57.0  # Required to use batch string serialization/deserialization (4byte length prepend)
 numpy<2.0
