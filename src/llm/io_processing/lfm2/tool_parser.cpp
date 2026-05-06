@@ -415,9 +415,9 @@ void Lfm2ToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t
     std::vector<std::string> tools;
     std::vector<std::pair<size_t, size_t>> toolCallPositions;
     size_t pos = 0;
-    int main_guard = 0;
+    int mainGuard = 0;
 
-    while (pos != std::string::npos && main_guard < MAX_TOOL_CALLS) {
+    while (pos != std::string::npos && mainGuard < MAX_TOOL_CALLS) {
         size_t start, end;
         auto it = std::find(generatedTokens.begin() + pos, generatedTokens.end(), botTokenId);
         if (it != generatedTokens.end()) {
@@ -434,10 +434,10 @@ void Lfm2ToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t
 
         std::string toolListStr = tokenizer.decode(std::vector<int64_t>(generatedTokens.begin() + start + 1, generatedTokens.begin() + end), ov::AnyMap{ov::genai::skip_special_tokens(false)});
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Parsed tool list string: {}", toolListStr);
-        int tool_guard = 0;
+        int toolGuard = 0;
         toolListStr = toolListStr.substr(TOOL_LIST_START_INDICATOR.length(), toolListStr.length() - TOOL_LIST_START_INDICATOR.length() - TOOL_LIST_END_INDICATOR.length());
 
-        while (!toolListStr.empty() && tool_guard < MAX_TOOLS_PER_CALL) {
+        while (!toolListStr.empty() && toolGuard < MAX_TOOLS_PER_CALL) {
             size_t toolEndPos = findInStringRespectingSpecialChars(toolListStr, TOOL_ARGS_END_INDICATOR, 0);
             std::string singleTool;
             if (toolEndPos != std::string::npos) {
@@ -453,9 +453,9 @@ void Lfm2ToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t
             if (!singleTool.empty()) {
                 tools.push_back(singleTool);
             }
-            tool_guard++;
+            toolGuard++;
         }
-        main_guard++;
+        mainGuard++;
 
         pos = end;
         toolCallPositions.emplace_back(start, end);
