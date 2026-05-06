@@ -28,8 +28,6 @@
 #include <utility>
 #include <vector>
 
-#include "src/queue.hpp"
-
 #pragma warning(push)
 #pragma warning(disable : 4324 6001 6385 6386 6326 6011 4309 4005 4456 6246)
 #pragma GCC diagnostic push
@@ -66,14 +64,36 @@ struct GraphHelper {
         currentTimestamp(gh.currentTimestamp) {}
     GraphHelper& operator=(GraphHelper&&) = delete;
 };
-// we need to keep Graph alive during MP reload hence shared_ptr
-class GraphQueue : public Queue<std::shared_ptr<GraphHelper>> {
-public:  // XXX TODO make private? we need to access in mediapipegraphdefinition to set side packets though
-    std::shared_ptr<GraphSidePackets> sidePacketMaps;
 
+// Dynamic graph pool that starts at initialSize and expands on demand up to maxSize.
+// Does NOT inherit from Queue<T> — isolated from the OV model inference path.
+class GraphQueue {
 public:
-    GraphQueue(const ::mediapipe::CalculatorGraphConfig& config, std::shared_ptr<GraphSidePackets> sidePacketMaps, int streamsLength);
+    GraphQueue(const ::mediapipe::CalculatorGraphConfig& config, std::shared_ptr<GraphSidePackets> sidePacketMaps, int initialSize, int maxSize);
     ~GraphQueue();
+
+    std::future<int> getIdleStream();
+    void returnStream(int id);
+    std::shared_ptr<GraphHelper>& getInferRequest(int id);
+
+    int getCurrentSize() const { return currentSize_.load(std::memory_order_relaxed); }
+    int getMaxSize() const { return maxSize_; }
+
+private:
+    std::shared_ptr<GraphHelper> createOneGraph();
+
+    const ::mediapipe::CalculatorGraphConfig config_;
+    std::shared_ptr<GraphSidePackets> sidePacketMaps_;
+    const int maxSize_;
+    std::atomic<int> currentSize_{0};
+
+    // Pre-allocated to maxSize_; slots filled as pool expands.
+    std::vector<std::shared_ptr<GraphHelper>> inferRequests_;
+
+    // Idle stream management
+    std::mutex mutex_;
+    std::queue<int> idleIds_;
+    std::queue<std::promise<int>> waiters_;
 };
 
 struct GraphIdGuard {

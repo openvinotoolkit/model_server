@@ -83,7 +83,6 @@ ovms_cc_library(
         ":mediapipe_utils",
         ":outputstreamobserver",
         ":side_packet_builder",
-        "//src:libovms_queue",
         "//src:libovmslogging",
         "//src:libovms_execution_context",
         "//src:libovmstimer",

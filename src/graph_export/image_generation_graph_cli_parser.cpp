@@ -27,6 +27,7 @@
 #include "../capi_frontend/server_settings.hpp"
 #include "../ovms_exit_codes.hpp"
 #include "../status.hpp"
+#include "graph_queue_cli_options.hpp"
 
 namespace ovms {
 
@@ -82,6 +83,7 @@ void ImageGenerationGraphCLIParser::createOptions() {
             "The number of parallel execution streams to use for the image generation models. Use at least 2 on 2 socket CPU systems.",
             cxxopts::value<uint32_t>(),
             "NUM_STREAMS");
+    addGraphQueueOptions(*options, "image_generation");
 }
 
 void ImageGenerationGraphCLIParser::printHelp() {
@@ -162,6 +164,7 @@ void ImageGenerationGraphCLIParser::prepare(ServerSettingsImpl& serverSettings, 
                 hfSettings.exportSettings.pluginConfig.cacheDir = serverSettings.cacheDir;
             }
         }
+        extractGraphQueueOptions(*result, hfSettings);
     }
 
     hfSettings.graphSettings = std::move(imageGenerationGraphSettings);

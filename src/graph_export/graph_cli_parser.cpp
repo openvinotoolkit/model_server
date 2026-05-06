@@ -26,6 +26,7 @@
 #include "../capi_frontend/server_settings.hpp"
 #include "../ovms_exit_codes.hpp"
 #include "../status.hpp"
+#include "graph_queue_cli_options.hpp"
 
 namespace ovms {
 
@@ -80,7 +81,7 @@ void GraphCLIParser::createOptions() {
             "Enables enforcing tool schema during generation. Requires setting tool parser. Default: false.",
             cxxopts::value<std::string>()->default_value("false"),
             "ENABLE_TOOL_GUIDED_GENERATION");
-
+    addGraphQueueOptions(*options, "plugin config");
     options->add_options("plugin config")
         ("max_prompt_len",
             "Sets NPU specific property for maximum number of tokens in the prompt.",
@@ -168,6 +169,7 @@ void GraphCLIParser::prepare(OvmsServerMode serverMode, HFSettingsImpl& hfSettin
         if (result->count("kv_cache_precision")) {
             hfSettings.exportSettings.pluginConfig.kvCachePrecision = result->operator[]("kv_cache_precision").as<std::string>();
         }
+        extractGraphQueueOptions(*result, hfSettings);
     }
 
     hfSettings.graphSettings = std::move(graphSettings);

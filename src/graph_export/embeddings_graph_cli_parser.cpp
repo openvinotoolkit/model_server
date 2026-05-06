@@ -26,6 +26,7 @@
 #include "../capi_frontend/server_settings.hpp"
 #include "../ovms_exit_codes.hpp"
 #include "../status.hpp"
+#include "graph_queue_cli_options.hpp"
 
 namespace ovms {
 
@@ -56,6 +57,7 @@ void EmbeddingsGraphCLIParser::createOptions() {
             "Pooling option. One of: CLS, LAST, MEAN.",
             cxxopts::value<std::string>()->default_value("CLS"),
             "POOLING");
+    addGraphQueueOptions(*options, "embeddings");
 }
 
 void EmbeddingsGraphCLIParser::printHelp() {
@@ -97,6 +99,7 @@ void EmbeddingsGraphCLIParser::prepare(OvmsServerMode serverMode, HFSettingsImpl
         embeddingsGraphSettings.normalize = result->operator[]("normalize").as<std::string>();
         embeddingsGraphSettings.truncate = result->operator[]("truncate").as<std::string>();
         embeddingsGraphSettings.pooling = result->operator[]("pooling").as<std::string>();
+        extractGraphQueueOptions(*result, hfSettings);
     }
     if (!(embeddingsGraphSettings.pooling == "CLS" || embeddingsGraphSettings.pooling == "LAST" || embeddingsGraphSettings.pooling == "MEAN")){
         throw std::invalid_argument("Only CLS and LAST pooling modes are supported");

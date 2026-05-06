@@ -73,7 +73,7 @@ protected:
         TestWithTempDir::TearDown();
     }
 
-    // Removes generated graph header lines (version and optional queue size directive)
+    // Removes generated graph header lines (version and optional queue size directives)
     // which differ across build/runtime setup.
     std::string removeGeneratedGraphHeaders(std::string input) {
         auto firstLineEnd = input.find("\n");
@@ -82,13 +82,22 @@ protected:
         }
         input.erase(0, firstLineEnd + 1);
 
-        const std::string queueLinePrefix = "# OVMS_GRAPH_QUEUE_SIZE:";
+        const std::string queueLinePrefix = "# OVMS_GRAPH_INITIAL_QUEUE_SIZE:";
         if (input.rfind(queueLinePrefix, 0) == 0) {
-            auto secondLineEnd = input.find("\n");
-            if (secondLineEnd == std::string::npos) {
+            auto lineEnd = input.find("\n");
+            if (lineEnd == std::string::npos) {
                 return "";
             }
-            input.erase(0, secondLineEnd + 1);
+            input.erase(0, lineEnd + 1);
+        }
+
+        const std::string maxLinePrefix = "# OVMS_GRAPH_QUEUE_MAX_SIZE:";
+        if (input.rfind(maxLinePrefix, 0) == 0) {
+            auto lineEnd = input.find("\n");
+            if (lineEnd == std::string::npos) {
+                return "";
+            }
+            input.erase(0, lineEnd + 1);
         }
         return input;
     }

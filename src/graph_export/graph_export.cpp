@@ -53,20 +53,51 @@
 namespace ovms {
 
 static const std::string OVMS_VERSION_GRAPH_LINE = std::string("# File created with: ") + PROJECT_NAME + std::string(" ") + PROJECT_VERSION + std::string("\n");
-static const std::string OVMS_GRAPH_QUEUE_SIZE_LINE_PREFIX = "# OVMS_GRAPH_QUEUE_SIZE: ";
+static const std::string OVMS_GRAPH_INITIAL_QUEUE_SIZE_LINE_PREFIX = "# OVMS_GRAPH_INITIAL_QUEUE_SIZE: ";
+static const std::string OVMS_GRAPH_QUEUE_MAX_SIZE_LINE_PREFIX = "# OVMS_GRAPH_QUEUE_MAX_SIZE: ";
 static const std::string OVMS_GRAPH_QUEUE_SIZE_AUTO = "AUTO";
 
-static std::string getDefaultGraphQueueSizeDirective(const HFSettingsImpl& hfSettings) {
+static std::optional<std::string> getDefaultInitialGraphQueueSizeDirective(const HFSettingsImpl& hfSettings) {
+    if (hfSettings.exportSettings.graphInitialQueueSize.has_value()) {
+        return hfSettings.exportSettings.graphInitialQueueSize.value();
+    }
     if (hfSettings.task == IMAGE_GENERATION_GRAPH) {
         return "1";
     }
-    return OVMS_GRAPH_QUEUE_SIZE_AUTO;
+    if (hfSettings.task == TEXT_GENERATION_GRAPH ||
+        hfSettings.task == EMBEDDINGS_GRAPH ||
+        hfSettings.task == RERANK_GRAPH) {
+        return "1";
+    }
+    return std::nullopt;
+}
+
+static std::optional<std::string> getDefaultGraphQueueMaxSizeDirective(const HFSettingsImpl& hfSettings) {
+    if (hfSettings.exportSettings.graphQueueMaxSize.has_value()) {
+        return hfSettings.exportSettings.graphQueueMaxSize.value();
+    }
+    if (hfSettings.task == IMAGE_GENERATION_GRAPH) {
+        return "1";
+    }
+    if (hfSettings.task == TEXT_GENERATION_GRAPH ||
+        hfSettings.task == EMBEDDINGS_GRAPH ||
+        hfSettings.task == RERANK_GRAPH) {
+        return OVMS_GRAPH_QUEUE_SIZE_AUTO;
+    }
+    return std::nullopt;
 }
 
 static std::string buildGraphHeader(const HFSettingsImpl& hfSettings) {
     std::ostringstream oss;
     oss << OVMS_VERSION_GRAPH_LINE;
-    oss << OVMS_GRAPH_QUEUE_SIZE_LINE_PREFIX << getDefaultGraphQueueSizeDirective(hfSettings) << "\n";
+    auto queueDirective = getDefaultInitialGraphQueueSizeDirective(hfSettings);
+    if (queueDirective.has_value()) {
+        oss << OVMS_GRAPH_INITIAL_QUEUE_SIZE_LINE_PREFIX << queueDirective.value() << "\n";
+    }
+    auto maxDirective = getDefaultGraphQueueMaxSizeDirective(hfSettings);
+    if (maxDirective.has_value()) {
+        oss << OVMS_GRAPH_QUEUE_MAX_SIZE_LINE_PREFIX << maxDirective.value() << "\n";
+    }
     return oss.str();
 }
 

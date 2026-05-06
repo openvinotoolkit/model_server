@@ -83,7 +83,7 @@ protected:
         std::vector<std::string> outputNames,
         int queueSize = 1) {
         auto sidePackets = std::make_shared<GraphSidePackets>();
-        queue = std::make_shared<GraphQueue>(config, sidePackets, queueSize);
+        queue = std::make_shared<GraphQueue>(config, sidePackets, queueSize, queueSize);
         GraphIdGuard graphIdGuard(queue);
         return MediapipeGraphExecutor{
             this->name,

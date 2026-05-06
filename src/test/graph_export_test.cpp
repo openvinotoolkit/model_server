@@ -14,6 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 #include <memory>
+#include <optional>
 #include <sstream>
 #include <string>
 
@@ -505,11 +506,34 @@ protected:
         TestWithTempDir::TearDown();
     }
 
-    std::string getExpectedGraphQueueSizeDirective(const ovms::HFSettingsImpl& hfSettings) const {
+    std::optional<std::string> getExpectedGraphQueueSizeDirective(const ovms::HFSettingsImpl& hfSettings) const {
+        if (hfSettings.exportSettings.graphInitialQueueSize.has_value()) {
+            return hfSettings.exportSettings.graphInitialQueueSize.value();
+        }
         if (hfSettings.task == ovms::IMAGE_GENERATION_GRAPH) {
             return "1";
         }
-        return "AUTO";
+        if (hfSettings.task == ovms::TEXT_GENERATION_GRAPH ||
+            hfSettings.task == ovms::EMBEDDINGS_GRAPH ||
+            hfSettings.task == ovms::RERANK_GRAPH) {
+            return "1";
+        }
+        return std::nullopt;
+    }
+
+    std::optional<std::string> getExpectedGraphQueueMaxSizeDirective(const ovms::HFSettingsImpl& hfSettings) const {
+        if (hfSettings.exportSettings.graphQueueMaxSize.has_value()) {
+            return hfSettings.exportSettings.graphQueueMaxSize.value();
+        }
+        if (hfSettings.task == ovms::IMAGE_GENERATION_GRAPH) {
+            return "1";
+        }
+        if (hfSettings.task == ovms::TEXT_GENERATION_GRAPH ||
+            hfSettings.task == ovms::EMBEDDINGS_GRAPH ||
+            hfSettings.task == ovms::RERANK_GRAPH) {
+            return "AUTO";
+        }
+        return std::nullopt;
     }
 
     std::string createGraphAndReadContents(const ovms::HFSettingsImpl& hfSettings) {
@@ -524,17 +548,37 @@ protected:
     }
 
     void assertGraphQueueHeader(const std::string& graphContents, const ovms::HFSettingsImpl& hfSettings) {
-        const std::string queueLinePrefix = "# OVMS_GRAPH_QUEUE_SIZE: ";
+        const std::string queueLinePrefix = "# OVMS_GRAPH_INITIAL_QUEUE_SIZE: ";
+        const std::string maxLinePrefix = "# OVMS_GRAPH_QUEUE_MAX_SIZE: ";
+        auto expectedDirective = getExpectedGraphQueueSizeDirective(hfSettings);
+        auto expectedMaxDirective = getExpectedGraphQueueMaxSizeDirective(hfSettings);
         auto firstLineEnd = graphContents.find("\n");
         ASSERT_NE(firstLineEnd, std::string::npos) << graphContents;
         auto queueLineStart = firstLineEnd + 1;
         auto queueLineEnd = graphContents.find("\n", queueLineStart);
         ASSERT_NE(queueLineEnd, std::string::npos) << graphContents;
 
-        std::string actualQueueLine = graphContents.substr(queueLineStart, queueLineEnd - queueLineStart);
-        ASSERT_EQ(0, actualQueueLine.rfind(queueLinePrefix, 0)) << graphContents;
-        std::string expectedQueueLine = queueLinePrefix + getExpectedGraphQueueSizeDirective(hfSettings);
-        ASSERT_EQ(expectedQueueLine, actualQueueLine) << graphContents;
+        std::string secondLine = graphContents.substr(queueLineStart, queueLineEnd - queueLineStart);
+        if (!expectedDirective.has_value()) {
+            // Directive should NOT be present
+            ASSERT_NE(0, secondLine.rfind(queueLinePrefix, 0))
+                << "Queue directive should not be present for this graph type. Got: " << secondLine;
+            return;
+        }
+        ASSERT_EQ(0, secondLine.rfind(queueLinePrefix, 0)) << graphContents;
+        std::string expectedQueueLine = queueLinePrefix + expectedDirective.value();
+        ASSERT_EQ(expectedQueueLine, secondLine) << graphContents;
+
+        // Check max size line
+        if (expectedMaxDirective.has_value()) {
+            auto maxLineStart = queueLineEnd + 1;
+            auto maxLineEnd = graphContents.find("\n", maxLineStart);
+            ASSERT_NE(maxLineEnd, std::string::npos) << graphContents;
+            std::string thirdLine = graphContents.substr(maxLineStart, maxLineEnd - maxLineStart);
+            ASSERT_EQ(0, thirdLine.rfind(maxLinePrefix, 0)) << graphContents;
+            std::string expectedMaxLine = maxLinePrefix + expectedMaxDirective.value();
+            ASSERT_EQ(expectedMaxLine, thirdLine) << graphContents;
+        }
     }
 
     void assertCreatedGraphEquals(const ovms::HFSettingsImpl& hfSettings, const std::string& expectedGraphContents, bool assertVersion = false) {
@@ -546,7 +590,7 @@ protected:
         ASSERT_EQ(expectedGraphContents, removeGeneratedGraphHeaders(graphContents)) << graphContents;
     }
 
-    // Removes generated graph header lines (version and optional queue size directive)
+    // Removes generated graph header lines (version and optional queue size directives)
     // which differ across build/runtime setup.
     std::string removeGeneratedGraphHeaders(std::string input) {
         auto firstLineEnd = input.find("\n");
@@ -555,13 +599,22 @@ protected:
         }
         input.erase(0, firstLineEnd + 1);
 
-        const std::string queueLinePrefix = "# OVMS_GRAPH_QUEUE_SIZE:";
+        const std::string queueLinePrefix = "# OVMS_GRAPH_INITIAL_QUEUE_SIZE:";
         if (input.rfind(queueLinePrefix, 0) == 0) {
-            auto secondLineEnd = input.find("\n");
-            if (secondLineEnd == std::string::npos) {
+            auto lineEnd = input.find("\n");
+            if (lineEnd == std::string::npos) {
                 return "";
             }
-            input.erase(0, secondLineEnd + 1);
+            input.erase(0, lineEnd + 1);
+        }
+
+        const std::string maxLinePrefix = "# OVMS_GRAPH_QUEUE_MAX_SIZE:";
+        if (input.rfind(maxLinePrefix, 0) == 0) {
+            auto lineEnd = input.find("\n");
+            if (lineEnd == std::string::npos) {
+                return "";
+            }
+            input.erase(0, lineEnd + 1);
         }
         return input;
     }

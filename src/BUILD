@@ -2221,6 +2221,7 @@ cc_test(
         + select({
             "//:not_disable_mediapipe": [
                 "test/embeddingsnode_test.cpp",
+                "test/graphqueue_test.cpp",
                 "test/listmodelsendpoint_test.cpp",
                 "test/mediapipeflow_test.cpp",
                 "test/mediapipe/inputsidepacketusertestcalc.cc",

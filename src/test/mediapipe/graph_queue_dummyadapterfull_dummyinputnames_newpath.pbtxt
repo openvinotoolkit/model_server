@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-# OVMS_GRAPH_QUEUE_SIZE: 16
+# OVMS_GRAPH_INITIAL_QUEUE_SIZE: 16
 input_stream: "custom_dummy_input"
 output_stream: "custom_dummy_output"
 node {
