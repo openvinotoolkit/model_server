@@ -1023,7 +1023,7 @@ TEST(ServerModulesBehaviorTests, PullModeErrorAndExpectFailAndNoOtherModulesStar
     ASSERT_EQ(server.getModule(ovms::SERVABLES_CONFIG_MANAGER_MODULE_NAME), nullptr);
 }
 
-TEST(ServerModulesBehaviorTests, PullAndStartModeErrorAndExpectFailAndNoOtherModulesStarted) {
+TEST(ServerModulesBehaviorTests, PullAndStartModeErrorAndExpectFailAndCheckOtherModules) {
     std::unique_ptr<ServerShutdownGuard> serverGuard;
     ovms::Server& server = ovms::Server::instance();
     DefaultEmptyValuesConfig config;
@@ -1033,8 +1033,8 @@ TEST(ServerModulesBehaviorTests, PullAndStartModeErrorAndExpectFailAndNoOtherMod
     // -> GraphExport::createServableConfig fails with PATH_INVALID
     EXPECT_TRUE(!retCode.ok()) << retCode.string();
     serverGuard = std::make_unique<ServerShutdownGuard>(server);
-    // When sourceModel is empty, HF pull module is not inserted
-    ASSERT_EQ(server.getModule(ovms::HF_MODEL_PULL_MODULE_NAME), nullptr);
-    ASSERT_EQ(server.getModule(ovms::SERVABLE_MANAGER_MODULE_NAME), nullptr);
+    EXPECT_TRUE(server.getModule(ovms::HF_MODEL_PULL_MODULE_NAME) != nullptr);
+    ASSERT_EQ(server.getModule(ovms::HF_MODEL_PULL_MODULE_NAME)->getState(), ovms::ModuleState::INITIALIZED);
+    ASSERT_NE(server.getModule(ovms::SERVABLE_MANAGER_MODULE_NAME), nullptr);  // expected to be started
     ASSERT_EQ(server.getModule(ovms::SERVABLES_CONFIG_MANAGER_MODULE_NAME), nullptr);
 }
