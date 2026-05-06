@@ -530,7 +530,7 @@ ParsedOutput OpenAIApiHandler::parseOutputIfNeeded(const std::vector<int64_t>& g
     OVMS_PROFILE_FUNCTION();
     ParsedOutput parsedOutput;
     if ((endpoint != Endpoint::CHAT_COMPLETIONS && endpoint != Endpoint::RESPONSES) || outputParser == nullptr) {
-        parsedOutput.content = this->tokenizer.decode(generatedIds);
+        parsedOutput.content = this->tokenizer.decode(generatedIds, ov::genai::skip_special_tokens(request.skipSpecialTokens));
     } else {
         parsedOutput = outputParser->parse(generatedIds, this->areToolsAvailable());
     }
@@ -853,6 +853,16 @@ absl::Status OpenAIApiHandler::parseCommonPart(std::optional<uint32_t> maxTokens
     if (maxNgramSizeItHasValue) {
         request.maxNgramSize = maxNgramSizeIt->value.GetUint();
     }
+
+    it = doc.FindMember("skip_special_tokens");
+    if (it != doc.MemberEnd() && !it->value.IsNull()) {
+        if (!it->value.IsBool()) return absl::InvalidArgumentError("skip_special_tokens is not a bool");
+        request.skipSpecialTokens = it->value.GetBool();
+    }
+    if (!request.skipSpecialTokens && outputParser != nullptr) {
+        return absl::InvalidArgumentError("skip_special_tokens=false is not supported when tool or reasoning parser is configured");
+    }
+
     request.maxModelLength = maxModelLength;
 
     // TODO: logit_bias

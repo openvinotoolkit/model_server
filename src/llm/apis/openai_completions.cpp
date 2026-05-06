@@ -315,7 +315,7 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const std::vect
                 jsonResponse.StartArray("content");
 
                 for (int i = 0; i < generationOutput.generated_ids.size(); i++) {
-                    std::string token = tokenizer.decode(std::vector<int64_t>({generationOutput.generated_ids[i]}));
+                    std::string token = tokenizer.decode(std::vector<int64_t>({generationOutput.generated_ids[i]}), ov::genai::skip_special_tokens(this->request.skipSpecialTokens));
                     float logprob = generationOutput.generated_log_probs[i];
                     jsonResponse.LogprobObject(token, logprob);
                 }
@@ -324,7 +324,7 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const std::vect
             if (endpoint == Endpoint::COMPLETIONS) {
                 jsonResponse.StartArray("tokens");
                 for (int i = 0; i < generationOutput.generated_ids.size(); i++) {
-                    std::string token = tokenizer.decode(std::vector<int64_t>({generationOutput.generated_ids[i]}));
+                    std::string token = tokenizer.decode(std::vector<int64_t>({generationOutput.generated_ids[i]}), ov::genai::skip_special_tokens(this->request.skipSpecialTokens));
                     jsonResponse.String(token);
                 }
                 jsonResponse.EndArray();
@@ -339,7 +339,7 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const std::vect
                 jsonResponse.StartArray("top_logprobs");
                 for (int i = 0; i < generationOutput.generated_ids.size(); i++) {
                     jsonResponse.StartObject();
-                    std::string token = tokenizer.decode(std::vector<int64_t>({generationOutput.generated_ids[i]}));
+                    std::string token = tokenizer.decode(std::vector<int64_t>({generationOutput.generated_ids[i]}), ov::genai::skip_special_tokens(this->request.skipSpecialTokens));
                     float logprob = generationOutput.generated_log_probs[i];
                     jsonResponse.Logprob(token, logprob);
                     jsonResponse.EndObject();
@@ -351,7 +351,7 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const std::vect
                     if (i == 0) {
                         jsonResponse.TextOffsetValue(0);
                     } else {
-                        std::string textBeforeToken = tokenizer.decode(std::vector<int64_t>({generationOutput.generated_ids.begin(), generationOutput.generated_ids.begin() + i}));
+                        std::string textBeforeToken = tokenizer.decode(std::vector<int64_t>({generationOutput.generated_ids.begin(), generationOutput.generated_ids.begin() + i}), ov::genai::skip_special_tokens(this->request.skipSpecialTokens));
                         jsonResponse.TextOffsetValue(textBeforeToken.size());
                     }
                 }
