@@ -1,16 +1,10 @@
 --extra-index-url "https://download.pytorch.org/whl/cpu"
-optimum-intel==1.27.0  # openvino + openvino-tokenizers come from the base image; do not pull them via the [openvino] extra
+optimum-intel@git+https://github.com/huggingface/optimum-intel.git
 pillow==12.2.0
-tritonclient[grpc]==2.57.0  # Required to use batch string serialization/deserialization (4byte length prepend)
-numpy<2.0
-huggingface_hub>=0.34,<1.0
+tritonclient[grpc]  # Required to use batch string serialization/deserialization (4byte length prepend)
 nncf>=2.11.0
-sentence_transformers
+sentence_transformers==5.3.0
 sentencepiece==0.2.1
-transformers>=4.54,<4.58
-einops
 torchvision
-timm==1.0.15
-# Requires BUILD_CUDA_EXT=0 in environment when installing (skips CUDA extension build that needs torch present at PEP-517 build time).
 auto_gptq==0.7.1 # for GPTQ models
-diffusers==0.33.1  # for image generation
+diffusers  # for image generation
