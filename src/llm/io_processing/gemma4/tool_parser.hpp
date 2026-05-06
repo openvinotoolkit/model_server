@@ -16,6 +16,7 @@
 #pragma once
 #include <string>
 #include <vector>
+#include <utility>
 #include "src/llm/io_processing/base_output_parser.hpp"
 
 namespace ovms {
@@ -63,7 +64,7 @@ public:
     }
 
     bool requiresStreamingWithSpecialTokens() const override {
-        return true;  //to be checked if it's actually required
+        return true;
     }
 
     static std::string normalizeArgStr(const std::string& arg);
