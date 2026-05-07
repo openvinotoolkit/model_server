@@ -1218,8 +1218,7 @@ TEST(CpuThroughputStreamsNotSpecified, NotSetWhenPerfHintSpecified) {
 
 TEST(PluginConfigNormalization, ConvertsKnownTopLevelStringValuesToTypedValues) {
     ovms::ModelConfig config;
-    config.setPluginConfig({
-        {"NUM_STREAMS", "4"},
+    config.setPluginConfig({{"NUM_STREAMS", "4"},
         {"INFERENCE_NUM_THREADS", "2"},
         {"AUTO_BATCH_TIMEOUT", "7"},
         {"ENABLE_CPU_PINNING", "false"},
