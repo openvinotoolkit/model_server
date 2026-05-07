@@ -26,6 +26,7 @@
 #include "../capi_frontend/server_settings.hpp"
 #include "../ovms_exit_codes.hpp"
 #include "../status.hpp"
+#include "graph_queue_cli_options.hpp"
 
 namespace ovms {
 
@@ -44,6 +45,7 @@ void TextToSpeechGraphCLIParser::createOptions() {
             "The number of parallel execution streams to use for the model. Use at least 2 on 2 socket CPU systems.",
             cxxopts::value<uint32_t>()->default_value("1"),
             "NUM_STREAMS");
+    addGraphQueueOptions(*options, "TextToSpeech");
 }
 
 void TextToSpeechGraphCLIParser::printHelp() {
@@ -82,6 +84,7 @@ void TextToSpeechGraphCLIParser::prepare(OvmsServerMode serverMode, HFSettingsIm
         }
     } else {
         hfSettings.exportSettings.pluginConfig.numStreams = result->operator[]("num_streams").as<uint32_t>();
+        extractGraphQueueOptions(*result, hfSettings);
     }
     hfSettings.graphSettings = std::move(textToSpeechGraphSettings);
 }

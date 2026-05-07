@@ -80,44 +80,72 @@ Status MediapipeGraphDefinition::validateForConfigFileExistence() {
 }
 
 Status MediapipeGraphDefinition::resolveGraphQueueSize() {
-    // 1. Explicit pbtxt directive: # OVMS_GRAPH_QUEUE_SIZE: <value>
-    //    Always honored regardless of env var or calculator checks.
-    //    Value -1 disables the queue, AUTO or positive integer enables it.
-    //    Value 0 is rejected as invalid.
-    static const std::regex directiveRegex(
-        R"((?:^|\n)\s*#\s*OVMS_GRAPH_QUEUE_SIZE\s*:\s*(\S+)\s*(?:\r?\n|$))");
+    // 1. Parse OVMS_GRAPH_INITIAL_QUEUE_SIZE directive (initial pool size)
+    static const std::regex sizeRegex(
+        R"((?:^|\n)\s*#\s*OVMS_GRAPH_INITIAL_QUEUE_SIZE\s*:\s*(\S+)\s*(?:\r?\n|$))");
+    // 2. Parse OVMS_GRAPH_QUEUE_MAX_SIZE directive (pool expansion ceiling)
+    static const std::regex maxSizeRegex(
+        R"((?:^|\n)\s*#\s*OVMS_GRAPH_QUEUE_MAX_SIZE\s*:\s*(\S+)\s*(?:\r?\n|$))");
+
     std::smatch match;
-    if (std::regex_search(this->chosenConfig, match, directiveRegex)) {
+
+    if (std::regex_search(this->chosenConfig, match, sizeRegex)) {
         std::string value = match[1].str();
         if (value == "AUTO") {
             this->mgconfig.setGraphQueueSizeAuto();
-            return StatusCode::OK;
+        } else {
+            auto parsed = stoi32(value);
+            if (!parsed.has_value()) {
+                SPDLOG_ERROR("Invalid OVMS_GRAPH_INITIAL_QUEUE_SIZE value: '{}'. Expected integer or 'AUTO'.", value);
+                return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
+            }
+            int queueSize = parsed.value();
+            if (queueSize < -1 || queueSize == 0) {
+                SPDLOG_ERROR("Invalid OVMS_GRAPH_INITIAL_QUEUE_SIZE value: {}. Must be -1 (disabled) or a positive integer.", queueSize);
+                return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
+            }
+            if (queueSize == -1) {
+                SPDLOG_DEBUG("Graph queue explicitly disabled (OVMS_GRAPH_INITIAL_QUEUE_SIZE=-1) for mediapipe: {}", getName());
+                return StatusCode::OK;
+            }
+            unsigned int maxThreads = std::thread::hardware_concurrency();
+            if (maxThreads > 0 && queueSize > static_cast<int>(maxThreads)) {
+                SPDLOG_WARN("OVMS_GRAPH_INITIAL_QUEUE_SIZE value: {} exceeds available hardware threads: {}. Clamping to {}.", queueSize, maxThreads, maxThreads);
+                queueSize = static_cast<int>(maxThreads);
+            }
+            this->mgconfig.setGraphQueueSize(queueSize);
         }
-        auto parsed = stoi32(value);
-        if (!parsed.has_value()) {
-            SPDLOG_ERROR("Invalid OVMS_GRAPH_QUEUE_SIZE value: '{}'. Expected integer or 'AUTO'.", value);
-            return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
-        }
-        int queueSize = parsed.value();
-        if (queueSize < -1 || queueSize == 0) {
-            SPDLOG_ERROR("Invalid OVMS_GRAPH_QUEUE_SIZE value: {}. Must be -1 (disabled) or a positive integer.", queueSize);
-            return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
-        }
-        if (queueSize == -1) {
-            SPDLOG_DEBUG("Graph queue explicitly disabled (OVMS_GRAPH_QUEUE_SIZE=-1) for mediapipe: {}", getName());
-            return StatusCode::OK;
-        }
-        unsigned int maxThreads = std::thread::hardware_concurrency();
-        if (maxThreads > 0 && queueSize > static_cast<int>(maxThreads)) {
-            SPDLOG_WARN("OVMS_GRAPH_QUEUE_SIZE value: {} exceeds available hardware threads: {}. Clamping to {}.", queueSize, maxThreads, maxThreads);
-            queueSize = static_cast<int>(maxThreads);
-        }
-        this->mgconfig.setGraphQueueSize(queueSize);
+    } else {
+        // No directive — queue disabled by default.
+        SPDLOG_DEBUG("Graph queue disabled by default for mediapipe: {}. Add '# OVMS_GRAPH_INITIAL_QUEUE_SIZE: <value>' directive in graph.pbtxt to enable.", getName());
         return StatusCode::OK;
     }
 
-    // 2. Default: queue disabled unless graph explicitly provides directive.
-    SPDLOG_DEBUG("Graph queue disabled by default for mediapipe: {}. Add '# OVMS_GRAPH_QUEUE_SIZE: <value>' directive in graph.pbtxt to enable.", getName());
+    // Parse max size (optional — defaults to same as initial size if absent)
+    if (std::regex_search(this->chosenConfig, match, maxSizeRegex)) {
+        std::string value = match[1].str();
+        if (value == "AUTO") {
+            this->mgconfig.setGraphQueueMaxSizeAuto();
+        } else {
+            auto parsed = stoi32(value);
+            if (!parsed.has_value()) {
+                SPDLOG_ERROR("Invalid OVMS_GRAPH_QUEUE_MAX_SIZE value: '{}'. Expected integer or 'AUTO'.", value);
+                return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
+            }
+            int maxSize = parsed.value();
+            if (maxSize < 1) {
+                SPDLOG_ERROR("Invalid OVMS_GRAPH_QUEUE_MAX_SIZE value: {}. Must be a positive integer.", maxSize);
+                return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
+            }
+            unsigned int maxThreads = std::thread::hardware_concurrency();
+            if (maxThreads > 0 && maxSize > static_cast<int>(maxThreads)) {
+                SPDLOG_WARN("OVMS_GRAPH_QUEUE_MAX_SIZE value: {} exceeds available hardware threads: {}. Clamping to {}.", maxSize, maxThreads, maxThreads);
+                maxSize = static_cast<int>(maxThreads);
+            }
+            this->mgconfig.setGraphQueueMaxSize(maxSize);
+        }
+    }
+
     return StatusCode::OK;
 }
 
@@ -222,13 +250,18 @@ Status MediapipeGraphDefinition::validate(const ServableNameChecker& checker) {
 }
 
 Status MediapipeGraphDefinition::initializeQueueIfRequired() {
-    int initialQueueSize = this->mgconfig.getInitialQueueSize();
-    if (initialQueueSize < 0) {
-        SPDLOG_DEBUG("Graph queue creation disabled for mediapipe: {} (graph_queue_size={})", getName(), initialQueueSize);
+    int initialSize = this->mgconfig.getResolvedQueueSize();
+    if (initialSize < 0) {
+        SPDLOG_DEBUG("Graph queue creation disabled for mediapipe: {} (graph_queue_size={})", getName(), initialSize);
         return StatusCode::OK;
     }
+    int maxQueueSize = this->mgconfig.getResolvedMaxQueueSize();
+    if (maxQueueSize < initialSize) {
+        SPDLOG_WARN("OVMS_GRAPH_QUEUE_MAX_SIZE ({}) < OVMS_GRAPH_QUEUE_SIZE ({}). Clamping max to initial size.", maxQueueSize, initialSize);
+        maxQueueSize = initialSize;
+    }
     try {
-        this->queue = std::make_shared<GraphQueue>(this->config, this->sidePacketMaps, initialQueueSize);
+        this->queue = std::make_shared<GraphQueue>(this->config, this->sidePacketMaps, initialSize, maxQueueSize);
     } catch (const std::exception& e) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to create graph queue for mediapipe: {} error: {}", getName(), e.what());
         return StatusCode::INTERNAL_ERROR;
@@ -236,7 +269,7 @@ Status MediapipeGraphDefinition::initializeQueueIfRequired() {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to create graph queue for mediapipe: {} unknown error", getName());
         return StatusCode::INTERNAL_ERROR;
     }
-    SPDLOG_DEBUG("Created graph queue with size {} for mediapipe: {}", initialQueueSize, getName());
+    SPDLOG_DEBUG("Created graph queue with initial size {} max size {} for mediapipe: {}", initialSize, maxQueueSize, getName());
     return StatusCode::OK;
 }
 

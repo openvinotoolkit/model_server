@@ -1017,7 +1017,7 @@ TEST_F(PythonFlowTest, SerializePyObjectWrapperToKServeResponse) {
     const std::vector<std::string> outputNames;
     const ::mediapipe::CalculatorGraphConfig config;
     auto sidePackets = std::make_shared<GraphSidePackets>();
-    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, sidePackets, 1);
+    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, sidePackets, 1, 1);
     GraphIdGuard guard(queue);
     auto executor = MockedMediapipeGraphExecutorPy("", "", config, mapping, mapping, inputNames, outputNames, *sidePackets, getPythonBackend(), this->reporter.get(), std::move(guard));
 

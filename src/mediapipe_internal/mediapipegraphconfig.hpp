@@ -91,13 +91,22 @@ private:
     std::string currentGraphPbTxtMD5;
 
     /**
-     * @brief Graph queue size configuration.
+     * @brief Graph queue initial size configuration.
      *
      * - std::nullopt              => user did not set this field
      * - int                       => user explicitly set a numeric size
      * - GraphQueueAutoTag         => user explicitly set "AUTO"
      */
     GraphQueueSizeValue graphQueueSize;
+
+    /**
+     * @brief Graph queue max size configuration (pool expansion ceiling).
+     *
+     * - std::nullopt              => defaults to graphQueueSize (no expansion)
+     * - int                       => user explicitly set a numeric max
+     * - GraphQueueAutoTag         => user explicitly set "AUTO"
+     */
+    GraphQueueSizeValue graphQueueMaxSize;
 
 public:
     /**
@@ -246,6 +255,13 @@ public:
     }
 
     /**
+     * @brief Get the graph queue max size setting.
+     */
+    const GraphQueueSizeValue& getGraphQueueMaxSize() const {
+        return this->graphQueueMaxSize;
+    }
+
+    /**
      * @brief Set the graph queue size to an explicit numeric value.
      */
     void setGraphQueueSize(int size) {
@@ -260,29 +276,64 @@ public:
     }
 
     /**
-     * @brief Resolve the graph queue size setting to a concrete integer.
+     * @brief Set the graph queue max size to an explicit numeric value.
+     */
+    void setGraphQueueMaxSize(int size) {
+        this->graphQueueMaxSize = size;
+    }
+
+    /**
+     * @brief Set the graph queue max size to AUTO.
+     */
+    void setGraphQueueMaxSizeAuto() {
+        this->graphQueueMaxSize = GraphQueueAutoTag{};
+    }
+
+    /**
+     * @brief Resolve a GraphQueueSizeValue to a concrete integer.
      *
      * Returns:
-     *   -1  => queue creation disabled (user set -1 or not set)
+     *   -1  => not set / disabled
      *   >0  => explicit size or resolved AUTO
-     *
-     * Value 0 is rejected at parse time (resolveGraphQueueSize).
-     * When not set (nullopt): returns -1 (queue disabled).
-     * When AUTO: returns hardware_concurrency() or 16 as fallback.
      */
-    int getInitialQueueSize() const {
-        if (!this->graphQueueSize.has_value()) {
-            return -1;  // not set - queue disabled by default
+    static int resolveQueueSizeValue(const GraphQueueSizeValue& val) {
+        if (!val.has_value()) {
+            return -1;
         }
-        if (std::holds_alternative<GraphQueueAutoTag>(*this->graphQueueSize)) {
+        if (std::holds_alternative<GraphQueueAutoTag>(*val)) {
             unsigned int hwThreads = std::thread::hardware_concurrency();
             if (hwThreads == 0) {
-                SPDLOG_WARN("std::thread::hardware_concurrency() returned 0 (unknown). Falling back to graph queue size 16.");
+                SPDLOG_WARN("std::thread::hardware_concurrency() returned 0 (unknown). Falling back to 16.");
                 return 16;
             }
             return static_cast<int>(hwThreads);
         }
-        return std::get<int>(*this->graphQueueSize);
+        return std::get<int>(*val);
+    }
+
+    /**
+     * @brief Get the resolved initial queue size.
+     *
+     * Returns:
+     *   -1  => queue creation disabled (not set)
+     *   >0  => explicit size or resolved AUTO
+     */
+    int getResolvedQueueSize() const {
+        return resolveQueueSizeValue(this->graphQueueSize);
+    }
+
+    /**
+     * @brief Get the resolved max queue size (pool expansion ceiling).
+     *
+     * If not explicitly set, defaults to getResolvedQueueSize() (no expansion).
+     */
+    int getResolvedMaxQueueSize() const {
+        int maxVal = resolveQueueSizeValue(this->graphQueueMaxSize);
+        if (maxVal < 0) {
+            // Not set — default to same as queue size (no expansion)
+            return getResolvedQueueSize();
+        }
+        return maxVal;
     }
 
     bool isReloadRequired(const MediapipeGraphConfig& rhs) const;

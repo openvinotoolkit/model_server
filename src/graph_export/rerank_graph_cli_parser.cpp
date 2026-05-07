@@ -26,6 +26,7 @@
 #include "../capi_frontend/server_settings.hpp"
 #include "../ovms_exit_codes.hpp"
 #include "../status.hpp"
+#include "graph_queue_cli_options.hpp"
 
 namespace ovms {
 
@@ -48,6 +49,7 @@ void RerankGraphCLIParser::createOptions() {
             "Maximum allowed chunks.",
             cxxopts::value<uint64_t>()->default_value("10000"),
             "MAX_ALLOWED_CHUNKS");
+    addGraphQueueOptions(*options, "rerank");
 }
 
 void RerankGraphCLIParser::printHelp() {
@@ -88,6 +90,7 @@ void RerankGraphCLIParser::prepare(OvmsServerMode serverMode, HFSettingsImpl& hf
     } else {
         hfSettings.exportSettings.pluginConfig.numStreams = result->operator[]("num_streams").as<uint32_t>();
         rerankGraphSettings.maxAllowedChunks = result->operator[]("max_allowed_chunks").as<uint64_t>();
+        extractGraphQueueOptions(*result, hfSettings);
     }
 
     hfSettings.graphSettings = std::move(rerankGraphSettings);

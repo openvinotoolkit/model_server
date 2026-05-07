@@ -16,18 +16,14 @@
 #include "graphqueue.hpp"
 
 #include <atomic>
-#include <condition_variable>
 #include <future>
 #include <map>
 #include <memory>
 #include <mutex>
-#include <optional>
 #include <queue>
-#include <thread>
 #include <utility>
 #include <vector>
 
-#include "../queue.hpp"
 #include "src/python/pythonnoderesources.hpp"
 #include "src/llm/servable.hpp"
 
@@ -41,54 +37,65 @@
 #include "outputstreamobserver.hpp"
 #include "side_packet_builder.hpp"
 namespace ovms {
-GraphQueue::GraphQueue(const ::mediapipe::CalculatorGraphConfig& config, std::shared_ptr<GraphSidePackets> sidePacketMaps, int streamsLength) :
-    Queue(streamsLength),
-    sidePacketMaps(sidePacketMaps) {
-    inferRequests.reserve(streamsLength);
-    for (auto i = 0; i < streamsLength; ++i) {
-        // Build observer map locally before constructing GraphHelper (const map)
-        std::unordered_map<std::string, std::shared_ptr<ObserverHolder>> observers;
-        for (auto& name : config.output_stream()) {
-            std::string streamName = getStreamName(name);
-            auto holder = std::make_shared<ObserverHolder>();
-            holder->current = std::make_shared<NullOutputStreamObserver>();
-            observers[streamName] = holder;
-        }
 
-        auto gh = std::make_shared<GraphHelper>(std::move(observers));
-        gh->graph = std::make_unique<::mediapipe::CalculatorGraph>();
-        gh->currentTimestamp = ::mediapipe::Timestamp(0);
-
-        auto absStatus = gh->graph->Initialize(config);
-        if (!absStatus.ok()) {
-            SPDLOG_ERROR("Graph queue initialization failed: {}", absStatus.ToString());
-            throw std::runtime_error(absStatus.ToString());
-        }
-        for (const auto& [streamName, holder] : gh->outStreamObservers) {
-            // Lambda captures holder (shared_ptr) by value — safe regardless of map layout
-            absStatus = gh->graph->ObserveOutputStream(streamName, [holder](const ::mediapipe::Packet& packet) -> absl::Status { return holder->current->handlePacket(packet); });
-            if (!absStatus.ok()) {
-                SPDLOG_ERROR("Graph queue ObserveOutputStream failed: {}", absStatus.ToString());
-                throw std::runtime_error(absStatus.ToString());
-            }
-        }
-        for (const auto& [nodeName, _] : sidePacketMaps->genAiServableMap) {
-            gh->genAiExecutionContextMap[nodeName] = std::make_shared<GenAiExecutionContextHolder>();
-        }
-        std::map<std::string, mediapipe::Packet> inputSidePackets;
-        buildInputSidePackets(inputSidePackets, *sidePacketMaps);
-        // Override execution context with per-graph instance
-        inputSidePackets[LLM_EXECUTION_CONTEXT_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<GenAiExecutionContextMap>(gh->genAiExecutionContextMap).At(::mediapipe::Timestamp(STARTING_TIMESTAMP_VALUE));
-        absStatus = gh->graph->StartRun(inputSidePackets);
-        if (!absStatus.ok()) {
-            SPDLOG_ERROR("Graph queue StartRun failed: {}", absStatus.ToString());
-            throw std::runtime_error(absStatus.ToString());
-        }
-        inferRequests.emplace_back(std::move(gh));
+std::shared_ptr<GraphHelper> GraphQueue::createOneGraph() {
+    std::unordered_map<std::string, std::shared_ptr<ObserverHolder>> observers;
+    for (auto& name : config_.output_stream()) {
+        std::string streamName = getStreamName(name);
+        auto holder = std::make_shared<ObserverHolder>();
+        holder->current = std::make_shared<NullOutputStreamObserver>();
+        observers.emplace(std::move(streamName), std::move(holder));
     }
+
+    auto gh = std::make_shared<GraphHelper>(std::move(observers));
+    gh->graph = std::make_unique<::mediapipe::CalculatorGraph>();
+    gh->currentTimestamp = ::mediapipe::Timestamp(0);
+
+    auto absStatus = gh->graph->Initialize(config_);
+    if (!absStatus.ok()) {
+        SPDLOG_ERROR("Graph queue initialization failed: {}", absStatus.ToString());
+        throw std::runtime_error(absStatus.ToString());
+    }
+    for (const auto& [streamName, holder] : gh->outStreamObservers) {
+        absStatus = gh->graph->ObserveOutputStream(streamName, [holder](const ::mediapipe::Packet& packet) -> absl::Status { return holder->current->handlePacket(packet); });
+        if (!absStatus.ok()) {
+            SPDLOG_ERROR("Graph queue ObserveOutputStream failed: {}", absStatus.ToString());
+            throw std::runtime_error(absStatus.ToString());
+        }
+    }
+    for (const auto& [nodeName, _] : sidePacketMaps_->genAiServableMap) {
+        gh->genAiExecutionContextMap[nodeName] = std::make_shared<GenAiExecutionContextHolder>();
+    }
+    std::map<std::string, mediapipe::Packet> inputSidePackets;
+    buildInputSidePackets(inputSidePackets, *sidePacketMaps_);
+    inputSidePackets[LLM_EXECUTION_CONTEXT_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<GenAiExecutionContextMap>(gh->genAiExecutionContextMap).At(::mediapipe::Timestamp(STARTING_TIMESTAMP_VALUE));
+    absStatus = gh->graph->StartRun(inputSidePackets);
+    if (!absStatus.ok()) {
+        SPDLOG_ERROR("Graph queue StartRun failed: {}", absStatus.ToString());
+        throw std::runtime_error(absStatus.ToString());
+    }
+    return gh;
 }
+
+GraphQueue::GraphQueue(const ::mediapipe::CalculatorGraphConfig& config, std::shared_ptr<GraphSidePackets> sidePacketMaps, int initialSize, int maxSize) :
+    config_(config),
+    sidePacketMaps_(sidePacketMaps),
+    maxSize_(maxSize) {
+    inferRequests_.resize(maxSize_);
+    for (int i = 0; i < initialSize; ++i) {
+        inferRequests_[i] = createOneGraph();
+        idleIds_.push(i);
+    }
+    currentSize_.store(initialSize, std::memory_order_relaxed);
+    SPDLOG_DEBUG("Graph queue created with initial size {} and max size {}", initialSize, maxSize_);
+}
+
 GraphQueue::~GraphQueue() {
-    for (auto& graphHelper : inferRequests) {
+    int size = currentSize_.load(std::memory_order_relaxed);
+    for (int i = 0; i < size; ++i) {
+        auto& graphHelper = inferRequests_[i];
+        if (!graphHelper)
+            continue;
         auto absStatus = graphHelper->graph->WaitUntilIdle();
         if (!absStatus.ok()) {
             SPDLOG_DEBUG("Graph queue WaitUntilIdle error: {}", absStatus.ToString());
@@ -105,4 +112,59 @@ GraphQueue::~GraphQueue() {
         graphHelper->graph.reset();
     }
 }
+
+std::future<int> GraphQueue::getIdleStream() {
+    std::promise<int> promise;
+    std::future<int> future = promise.get_future();
+
+    std::unique_lock<std::mutex> lk(mutex_);
+    if (!idleIds_.empty()) {
+        int id = idleIds_.front();
+        idleIds_.pop();
+        lk.unlock();
+        promise.set_value(id);
+        return future;
+    }
+
+    // No idle graph available — try to expand
+    int currentSize = currentSize_.load(std::memory_order_relaxed);
+    if (currentSize < maxSize_) {
+        int newId = currentSize;
+        currentSize_.store(currentSize + 1, std::memory_order_relaxed);
+        lk.unlock();
+        // Create graph outside the lock (expensive but only blocks this request)
+        try {
+            inferRequests_[newId] = createOneGraph();
+            SPDLOG_DEBUG("Graph queue expanded to size {}/{}", newId + 1, maxSize_);
+        } catch (const std::exception& e) {
+            // Rollback size on failure
+            currentSize_.fetch_sub(1, std::memory_order_relaxed);
+            promise.set_exception(std::make_exception_ptr(e));
+            return future;
+        }
+        promise.set_value(newId);
+        return future;
+    }
+
+    // At max capacity — must wait for a graph to be returned
+    waiters_.push(std::move(promise));
+    return future;
+}
+
+void GraphQueue::returnStream(int id) {
+    std::unique_lock<std::mutex> lk(mutex_);
+    if (!waiters_.empty()) {
+        std::promise<int> waiter = std::move(waiters_.front());
+        waiters_.pop();
+        lk.unlock();
+        waiter.set_value(id);
+        return;
+    }
+    idleIds_.push(id);
+}
+
+std::shared_ptr<GraphHelper>& GraphQueue::getInferRequest(int id) {
+    return inferRequests_[id];
+}
+
 }  // namespace ovms

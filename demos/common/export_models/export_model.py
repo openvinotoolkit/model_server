@@ -32,6 +32,8 @@ def add_common_arguments(parser):
     parser.add_argument('--target_device', default="CPU", help='CPU, GPU, NPU or HETERO, default is CPU', dest='target_device')
     parser.add_argument('--ov_cache_dir', default=None, help='Folder path for compilation cache to speedup initialization time', dest='ov_cache_dir')
     parser.add_argument('--extra_quantization_params', required=False, help='Add advanced quantization parameters. Check optimum-intel documentation. Example: "--sym --group-size -1 --ratio 1.0 --awq --scale-estimation --dataset wikitext2"', dest='extra_quantization_params')
+    parser.add_argument('--graph_initial_queue_size', required=False, default=None, help='Initial graph pool size. Use AUTO for hardware_concurrency or a positive integer. If not set, defaults per task are used.', dest='graph_initial_queue_size')
+    parser.add_argument('--graph_queue_max_size', required=False, default=None, help='Maximum graph pool size (expansion ceiling). Use AUTO for hardware_concurrency or a positive integer. If not set, defaults per task are used.', dest='graph_queue_max_size')
 
 parser = argparse.ArgumentParser(description='Export Hugging face models to OVMS models repository including all configuration for deployments')
 
@@ -148,6 +150,8 @@ node {
 """
 
 embedding_graph_ov_template = """
+# OVMS_GRAPH_INITIAL_QUEUE_SIZE: {{graph_initial_queue_size|default("1", true)}}
+# OVMS_GRAPH_QUEUE_MAX_SIZE: {{graph_queue_max_size|default("AUTO", true)}}
 input_stream: "REQUEST_PAYLOAD:input"
 output_stream: "RESPONSE_PAYLOAD:output"
 node {
@@ -172,6 +176,8 @@ node {
 """
 
 rerank_graph_ov_template = """
+# OVMS_GRAPH_INITIAL_QUEUE_SIZE: {{graph_initial_queue_size|default("1", true)}}
+# OVMS_GRAPH_QUEUE_MAX_SIZE: {{graph_queue_max_size|default("AUTO", true)}}
 input_stream: "REQUEST_PAYLOAD:input"
 output_stream: "RESPONSE_PAYLOAD:output"
 node {
@@ -190,7 +196,9 @@ node {
 }
 """
 
-rerank_graph_template = """input_stream: "REQUEST_PAYLOAD:input"
+rerank_graph_template = """# OVMS_GRAPH_INITIAL_QUEUE_SIZE: {{graph_initial_queue_size|default("1", true)}}
+# OVMS_GRAPH_QUEUE_MAX_SIZE: {{graph_queue_max_size|default("AUTO", true)}}
+input_stream: "REQUEST_PAYLOAD:input"
 output_stream: "RESPONSE_PAYLOAD:output"
 node {
   calculator: "OpenVINOModelServerSessionCalculator"
@@ -219,7 +227,9 @@ node {
 }
 """
 
-text_generation_graph_template = """input_stream: "HTTP_REQUEST_PAYLOAD:input"
+text_generation_graph_template = """# OVMS_GRAPH_INITIAL_QUEUE_SIZE: {{graph_initial_queue_size|default("1", true)}}
+# OVMS_GRAPH_QUEUE_MAX_SIZE: {{graph_queue_max_size|default("AUTO", true)}}
+input_stream: "HTTP_REQUEST_PAYLOAD:input"
 output_stream: "HTTP_RESPONSE_PAYLOAD:output"
 
 node: {
@@ -292,7 +302,9 @@ rerank_subconfig_template = """{
    ]
 }"""
 
-image_generation_graph_template = """input_stream: "HTTP_REQUEST_PAYLOAD:input"
+image_generation_graph_template = """# OVMS_GRAPH_INITIAL_QUEUE_SIZE: {{graph_initial_queue_size|default("1", true)}}
+# OVMS_GRAPH_QUEUE_MAX_SIZE: {{graph_queue_max_size|default("1", true)}}
+input_stream: "HTTP_REQUEST_PAYLOAD:input"
 output_stream: "HTTP_RESPONSE_PAYLOAD:output"
 
 node: {

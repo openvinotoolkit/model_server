@@ -162,6 +162,8 @@ struct ExportSettings {
     std::optional<std::string> extraQuantizationParams;
     std::optional<std::string> vocoder;
     std::string precision = "int8";
+    std::optional<std::string> graphInitialQueueSize;
+    std::optional<std::string> graphQueueMaxSize;
     PluginConfigSettingsImpl pluginConfig;
 };
 

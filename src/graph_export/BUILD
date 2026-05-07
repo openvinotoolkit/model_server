@@ -49,7 +49,10 @@ ovms_cc_library(
 ovms_cc_library(
     name = "graph_cli_parser",
     srcs = ["graph_cli_parser.cpp"],
-    hdrs = ["graph_cli_parser.hpp"],
+    hdrs = [
+        "graph_cli_parser.hpp",
+        "graph_queue_cli_options.hpp",
+    ],
     deps =  [
         "@ovms//src:cpp_headers",
         "@ovms//src:libovms_server_settings",
