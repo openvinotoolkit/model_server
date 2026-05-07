@@ -500,6 +500,7 @@ void Server::shutdownModules() {
         ensureModuleShutdown(PYTHON_INTERPRETER_MODULE_NAME);
     }
 #endif
+    GraphExport::clearInMemoryGraphContent();
     // we need to be able to quickly start grpc or start it without port
     // this is because the OS can have a delay between freeing up port before it can be requested and used again
     std::shared_lock lock(modulesMtx);
