@@ -34,9 +34,6 @@ Python environment setup:
 curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/export_model.py -o export_model.py
 pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
 
-# Override optimum-intel with version supporting eagle3
-python -m pip install git+https://github.com/xufang-lisa/optimum-intel.git@xufang/add_eagle3_draft_model_conversion
-
 mkdir models
 ```
 
