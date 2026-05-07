@@ -86,7 +86,7 @@ call :download_tokenizer "%MISTRAL_MODEL%" "%~1\%MISTRAL_MODEL%"
 call :download_tokenizer "%GPTOSS_MODEL%" "%~1\%GPTOSS_MODEL%"
 call :download_tokenizer "%DEVSTRAL_MODEL%" "%~1\%DEVSTRAL_MODEL%"
 call :download_tokenizer "%LFM2_MODEL%" "%~1\%LFM2_MODEL%"
-call :download_tokenizer "%GEMMA4_MODEL%" "%~1\%GEMMA4_MODEL%"
+call :download_openvino "%GEMMA4_MODEL%" "%~1"
 
 exit /b 0
 
@@ -127,7 +127,9 @@ if not exist "%repository%\%model%\openvino_tokenizer.bin" (
   echo Downloading model to %repository%\%model% directory.
   hf download "%model%" --local-dir "%repository%\%model%"
   :: WA to use newer tokenizer model format which supports padding.
-  convert_tokenizer "%~3" --with_detokenizer -o "%~2\%~1"
+  if not "%~3"=="" (
+    convert_tokenizer "%~3" --with_detokenizer -o "%~2\%~1"
+  )
 ) else (
   echo Models file %repository%\%model%\openvino_tokenizer.bin exists. Skipping downloading models.
 )

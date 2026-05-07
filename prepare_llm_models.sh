@@ -233,8 +233,7 @@ fi
 if [ -f "$1/$GEMMA4_MODEL/$TOKENIZER_FILE" ]; then
   echo "Models file $1/$GEMMA4_MODEL/$TOKENIZER_FILE exists. Skipping downloading models."
 else
-  mkdir -p $1/$GEMMA4_MODEL
-  convert_tokenizer $GEMMA4_MODEL --with_detokenizer -o $1/$GEMMA4_MODEL
+  hf download "$GEMMA4_MODEL" --local-dir $1/$GEMMA4_MODEL
 fi
 if [ ! -f "$1/$GEMMA4_MODEL/$TOKENIZER_FILE" ]; then
   echo "[ERROR] Models file $1/$GEMMA4_MODEL/$TOKENIZER_FILE does not exist."
