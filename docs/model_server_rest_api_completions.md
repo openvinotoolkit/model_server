@@ -62,7 +62,7 @@ curl http://localhost/v3/completions \
 | include_stop_str_in_output | ✅ | ❌ | ✅ | bool (default: `false` if `stream=false`, `true` if `stream=true`) | Whether to include matched stop string in output. Setting it to false when `stream=true` is invalid configuration and will result in error. |
 | logprobs | ⚠️ | ✅ | ✅ | integer (optional) | Include the log probabilities on the logprob of the returned output token. **_ in stream mode logprobs are not returned. Only value 1 is accepted which returns logarithm or the chosen token _** |
 | echo | ✅ | ✅ | ✅ | boolean (optional) | Echo back the prompt in addition to the completion |
-| skip_special_tokens | ✅ | ❌ | ✅ | bool (default: `true`) | Whether to remove special tokens (e.g. `<\|endoftext\|>`, `<\|im_end\|>`) from the generated output. Set to `false` to include them, which is useful when the model uses special tokens to encode structured information. Note: support depends on the model's exported detokenizer — models exported without a stateful `VocabDecoder` op will not honour this flag. |
+| skip_special_tokens | ✅ | ❌ | ✅ | bool (default: `true`) | Whether to remove special tokens (e.g. `<\|endoftext\|>`, `<\|im_end\|>`) from the generated output. Set to `false` to include them, which is useful when the model uses special tokens to encode structured information. This option works with most detokenizers exported with OpenVINO Tokenizers 2024.5 or later, unless they are based on custom ops. |
 
 #### Beam search sampling specific
 | Param | OpenVINO Model Server | OpenAI /completions API | vLLM Serving Sampling Params | Type | Description |
