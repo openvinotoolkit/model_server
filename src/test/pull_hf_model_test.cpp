@@ -766,6 +766,177 @@ TEST_F(HfPull, ResumeTerminate) {
     ASSERT_EQ(std::filesystem::file_size(model4Path), 499723);
 }
 
+#ifdef _WIN32
+// Helper test used only as a child process launched by HfPull.ResumeCtrlC.
+// Mirrors HfPullWindowsWorker.ResumeTerminateChildProcess but is invoked separately
+// so the parent test can target this child specifically with GenerateConsoleCtrlEvent.
+TEST(HfPullWindowsWorker, ResumeCtrlCChildProcess) {
+    const char* runWorker = std::getenv("OVMS_RESUME_CTRLC_WORKER");
+    if ((runWorker == nullptr) || (std::string(runWorker) != "1")) {
+        GTEST_SKIP() << "Helper test - runs only when launched by HfPull.ResumeCtrlC.";
+    }
+
+    const char* modelNameEnv = std::getenv("OVMS_RESUME_CTRLC_MODEL");
+    const char* downloadPathEnv = std::getenv("OVMS_RESUME_CTRLC_DOWNLOAD_PATH");
+    const char* taskEnv = std::getenv("OVMS_RESUME_CTRLC_TASK");
+    ASSERT_NE(modelNameEnv, nullptr);
+    ASSERT_NE(downloadPathEnv, nullptr);
+    ASSERT_NE(taskEnv, nullptr);
+
+    ovms::Server& childServer = ovms::Server::instance();
+    childServer.setShutdownRequest(0);
+
+    std::string modelName = modelNameEnv;
+    std::string downloadPath = downloadPathEnv;
+    std::string task = taskEnv;
+    char* argv[] = {(char*)"ovms",
+        (char*)"--pull",
+        (char*)"--source_model",
+        (char*)modelName.c_str(),
+        (char*)"--model_repository_path",
+        (char*)downloadPath.c_str(),
+        (char*)"--task",
+        (char*)task.c_str()};
+    int argc = 8;
+
+    (void)childServer.start(argc, argv);
+}
+#endif
+
+// ResumeAfterCtrlCAndRerun
+// Like HfPull.ResumeTerminate, but interrupts the in-flight pull with a graceful
+// signal (SIGINT on Linux, CTRL_BREAK_EVENT on Windows) instead of an unconditional
+// kill. This exercises the production ctrl+c code path: SIGINT -> onInterrupt() ->
+// requestShutdownFromSignal(1) -> libgit2::isCloneCancellationRequestedFromServer()
+// returns true and the clone aborts cleanly. After the child exits we verify that
+// partial-download artifacts remain on disk and that re-running --pull resumes the
+// download to completion.
+TEST_F(HfPull, ResumeCtrlC) {
+    std::string basePath = ovms::FileSystem::joinPath({this->directoryPath, "repository", "OpenVINO", "Phi-3-mini-FastDraft-50M-int8-ov"});
+    std::string modelPath = ovms::FileSystem::appendSlash(basePath) + "openvino_model.bin";
+    std::string model2Path = ovms::FileSystem::appendSlash(basePath) + "openvino_detokenizer.bin";
+    std::string model3Path = ovms::FileSystem::appendSlash(basePath) + "openvino_tokenizer.bin";
+    std::string model4Path = ovms::FileSystem::appendSlash(basePath) + "tokenizer.model";
+    std::string graphPath = ovms::FileSystem::appendSlash(basePath) + "graph.pbtxt";
+
+#ifdef _WIN32
+    char testExePath[MAX_PATH] = {0};
+    DWORD exePathLen = GetModuleFileNameA(nullptr, testExePath, MAX_PATH);
+    ASSERT_GT(exePathLen, 0u);
+    ASSERT_LT(exePathLen, static_cast<DWORD>(MAX_PATH));
+
+    ASSERT_TRUE(SetEnvironmentVariableA("OVMS_RESUME_CTRLC_WORKER", "1"));
+    ASSERT_TRUE(SetEnvironmentVariableA("OVMS_RESUME_CTRLC_MODEL", modelName.c_str()));
+    ASSERT_TRUE(SetEnvironmentVariableA("OVMS_RESUME_CTRLC_DOWNLOAD_PATH", downloadPath.c_str()));
+    ASSERT_TRUE(SetEnvironmentVariableA("OVMS_RESUME_CTRLC_TASK", task.c_str()));
+
+    std::string commandLine = std::string("\"") + testExePath +
+                              "\" --gtest_filter=HfPullWindowsWorker.ResumeCtrlCChildProcess";
+    STARTUPINFOA si;
+    PROCESS_INFORMATION pi;
+    ZeroMemory(&si, sizeof(si));
+    si.cb = sizeof(si);
+    ZeroMemory(&pi, sizeof(pi));
+
+    // CREATE_NEW_PROCESS_GROUP is required to send GenerateConsoleCtrlEvent only to
+    // the child process group; otherwise the signal would also reach this test runner.
+    ASSERT_TRUE(CreateProcessA(
+        nullptr,
+        commandLine.data(),
+        nullptr,
+        nullptr,
+        TRUE,
+        CREATE_NEW_PROCESS_GROUP,
+        nullptr,
+        nullptr,
+        &si,
+        &pi));
+#else
+    pid_t childPid = fork();
+    ASSERT_NE(childPid, -1);
+
+    if (childPid == 0) {
+        ovms::Server& childServer = ovms::Server::instance();
+        childServer.setShutdownRequest(0);
+        char* argv[] = {(char*)"ovms",
+            (char*)"--pull",
+            (char*)"--source_model",
+            (char*)modelName.c_str(),
+            (char*)"--model_repository_path",
+            (char*)downloadPath.c_str(),
+            (char*)"--task",
+            (char*)task.c_str()};
+        int argc = 8;
+
+        // Run synchronously in this child process so installSignalHandlers() (called
+        // inside server.start) is in effect when SIGINT arrives from the parent.
+        int rc = childServer.start(argc, argv);
+        _exit(rc == EXIT_SUCCESS ? 0 : 1);
+    }
+#endif
+
+    // Wait until the LFS download is in flight before sending the interrupt, so the
+    // cancellation actually exercises the in-progress clone path. A fixed sleep is
+    // unreliable on fast machines.
+    bool observedPartialDownload = false;
+    auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(60);
+    while (std::chrono::steady_clock::now() < deadline) {
+        auto lfsCandidates = ovms::libgit2::findLfsLikeFiles(downloadPath, true);
+        const bool hasOpenvinoModelPointer = std::find_if(lfsCandidates.begin(), lfsCandidates.end(),
+                                                 [](const std::filesystem::path& p) { return p.filename() == "openvino_model.bin"; }) != lfsCandidates.end();
+        const std::string partPath = ovms::FileSystem::appendSlash(basePath) + "openvino_model.binlfs_part";
+        const bool hasPartFile = std::filesystem::exists(partPath);
+        if (hasOpenvinoModelPointer || hasPartFile) {
+            observedPartialDownload = true;
+            std::this_thread::sleep_for(std::chrono::milliseconds(200));
+            break;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+
+#ifdef _WIN32
+    // CTRL_C_EVENT cannot be targeted at a single child via GenerateConsoleCtrlEvent
+    // without also reaching the calling console group. CTRL_BREAK_EVENT can be
+    // delivered to the child's dedicated process group (created with
+    // CREATE_NEW_PROCESS_GROUP above) without disturbing the test runner.
+    ASSERT_TRUE(GenerateConsoleCtrlEvent(CTRL_BREAK_EVENT, pi.dwProcessId));
+    // Allow up to 30 s for the child to drain the in-flight clone and exit.
+    ASSERT_EQ(WaitForSingleObject(pi.hProcess, 30000), WAIT_OBJECT_0);
+    DWORD childExitCode = 0;
+    ASSERT_TRUE(GetExitCodeProcess(pi.hProcess, &childExitCode));
+    EXPECT_NE(childExitCode, static_cast<DWORD>(EXIT_SUCCESS));
+    CloseHandle(pi.hThread);
+    CloseHandle(pi.hProcess);
+
+    ASSERT_TRUE(SetEnvironmentVariableA("OVMS_RESUME_CTRLC_WORKER", nullptr));
+    ASSERT_TRUE(SetEnvironmentVariableA("OVMS_RESUME_CTRLC_MODEL", nullptr));
+    ASSERT_TRUE(SetEnvironmentVariableA("OVMS_RESUME_CTRLC_DOWNLOAD_PATH", nullptr));
+    ASSERT_TRUE(SetEnvironmentVariableA("OVMS_RESUME_CTRLC_TASK", nullptr));
+#else
+    ASSERT_EQ(kill(childPid, SIGINT), 0);
+    int childStatus = 0;
+    ASSERT_EQ(waitpid(childPid, &childStatus, 0), childPid);
+    // SIGINT must be handled gracefully by ovms (onInterrupt -> shutdownRequest),
+    // so the child should exit normally rather than be terminated by the signal.
+    ASSERT_TRUE(WIFEXITED(childStatus)) << "Child was terminated by signal " << (WIFSIGNALED(childStatus) ? WTERMSIG(childStatus) : 0)
+                                        << " instead of exiting normally - SIGINT handler may be missing";
+    EXPECT_NE(WEXITSTATUS(childStatus), EXIT_SUCCESS);
+#endif
+
+    EXPECT_TRUE(observedPartialDownload);
+    auto remainingPointers = ovms::libgit2::findLfsLikeFiles(downloadPath, true);
+    EXPECT_FALSE(remainingPointers.empty());
+
+    this->ServerPullHfModel(modelName, downloadPath, task);
+
+    ASSERT_EQ(std::filesystem::exists(modelPath), true) << modelPath;
+    ASSERT_EQ(std::filesystem::exists(graphPath), true) << graphPath;
+    ASSERT_EQ(std::filesystem::file_size(modelPath), 52417240);
+    ASSERT_EQ(std::filesystem::file_size(model2Path), 339125);
+    ASSERT_EQ(std::filesystem::file_size(model3Path), 500292);
+    ASSERT_EQ(std::filesystem::file_size(model4Path), 499723);
+}
+
 TEST_F(HfPull, Start) {
     SKIP_AND_EXIT_IF_NOT_RUNNING_UNSTABLE();  // CVS-180127
     // EnvGuard guard;
@@ -1340,7 +1511,16 @@ TEST_F(HfDownloadModelModule, TestInvalidProxyTimeout) {
     ConstructorEnabledConfig config;
     {
         EnvGuard eGuard;
+        // Force a no-proxy direct connection so the libgit2 connect timeout option
+        // is actually applied (prepareLibgit2Opts() skips serverConnectTimeoutMs
+        // when https_proxy is non-empty - see hf_pull_model_module.cpp).
         eGuard.set("https_proxy", "");
+        // Point the clone at an unroutable RFC 5737 TEST-NET-1 address so the
+        // connect must time out regardless of whether the host has working
+        // network/DNS access to huggingface.co. Without this override, machines
+        // with direct internet access to huggingface.co would connect within the
+        // 1 s timeout and the clone could succeed, breaking the assertion below.
+        eGuard.set("HF_ENDPOINT", "https://192.0.2.1/");
         const std::string timeoutConnectVal = "1000";
         eGuard.set(ovms::HfPullModelModule::GIT_SERVER_CONNECT_TIMEOUT_ENV, timeoutConnectVal);
         config.parse(arg_count, const_cast<char**>(n_argv));
