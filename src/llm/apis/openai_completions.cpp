@@ -201,8 +201,7 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
                     return absl::InvalidArgumentError("Invalid message structure - content array is empty");
                 }
                 jsonChanged = true;
-                Value contentText(rapidjson::kStringType);
-                contentText.SetString("", doc.GetAllocator());
+                std::string combinedText;
                 for (auto& v : member->value.GetArray()) {
                     if (!v.IsObject()) {
                         return absl::InvalidArgumentError("Invalid message structure - content array should contain objects");
@@ -216,7 +215,10 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
                         if (!entry.HasMember("text") || !entry["text"].IsString()) {
                             return absl::InvalidArgumentError("Invalid message structure - content text missing");
                         }
-                        contentText = entry["text"];
+                        if (!combinedText.empty()) {
+                            combinedText += "\n";
+                        }
+                        combinedText.append(entry["text"].GetString(), entry["text"].GetStringLength());
                         continue;
                     } else if (entryType == std::string("image_url")) {
                         if (!entry.HasMember("image_url") || !entry["image_url"].IsObject()) {
@@ -236,8 +238,10 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
                         return absl::InvalidArgumentError("Unsupported content type");
                     }
                 }
-                // Pulling out text from nested structure to the "content" field for text and replace whole "content" value for image data
-                // with empty string, since images are stored separately in request.images
+                // Flatten all text parts (joined with newlines) into the "content" field.
+                // Images are stored separately in request.imageHistory.
+                Value contentText(rapidjson::kStringType);
+                contentText.SetString(combinedText.c_str(), combinedText.length(), doc.GetAllocator());
                 member->value = contentText;
                 // Add new field to the last message in history if content is text
                 if (member->value.IsString()) {

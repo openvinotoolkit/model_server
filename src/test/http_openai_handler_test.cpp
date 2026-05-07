@@ -318,6 +318,40 @@ TEST_F(HttpOpenAIHandlerTest, JsonBodyValidButNotAnObject) {
     ASSERT_EQ(status.string(), "The file is not valid json - JSON body must be an object");
 }
 
+TEST_F(HttpOpenAIHandlerTest, JsonBodyExceedsNestingDepth_NestedObjects) {
+    // Deeply nested objects: {"a":{"a":{"a":...}}} - 200 levels
+    // Make it valid JSON by using key-value pairs
+    std::string requestBody;
+    for (int i = 0; i < 200; i++) {
+        requestBody += R"({"a":)";
+    }
+    requestBody += "{}";
+    for (int i = 0; i < 200; i++) {
+        requestBody += "}";
+    }
+
+    EXPECT_CALL(*writer, PartialReplyEnd()).Times(0);
+    EXPECT_CALL(*writer, PartialReply(::testing::_)).Times(0);
+    EXPECT_CALL(*writer, IsDisconnected()).Times(0);
+
+    auto status = handler->dispatchToProcessor("/v3/completions", requestBody, &response, comp, responseComponents, writer, multiPartParser);
+    ASSERT_EQ(status, ovms::StatusCode::JSON_INVALID);
+    ASSERT_EQ(status.string(), "The file is not valid json - JSON body exceeds maximum nesting depth");
+}
+
+TEST_F(HttpOpenAIHandlerTest, JsonBodyExceedsNestingDepth_NestedArrays) {
+    // Deeply nested arrays inside a valid object: {"model":"m","data":[[[...]]]}
+    std::string requestBody = R"({"model":"m","data":)" + std::string(200, '[') + "0" + std::string(200, ']') + "}";
+
+    EXPECT_CALL(*writer, PartialReplyEnd()).Times(0);
+    EXPECT_CALL(*writer, PartialReply(::testing::_)).Times(0);
+    EXPECT_CALL(*writer, IsDisconnected()).Times(0);
+
+    auto status = handler->dispatchToProcessor("/v3/completions", requestBody, &response, comp, responseComponents, writer, multiPartParser);
+    ASSERT_EQ(status, ovms::StatusCode::JSON_INVALID);
+    ASSERT_EQ(status.string(), "The file is not valid json - JSON body exceeds maximum nesting depth");
+}
+
 TEST_F(HttpOpenAIHandlerTest, GraphWithANameDoesNotExist) {
     std::string requestBody = R"(
         {
@@ -2242,6 +2276,75 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesEmptyContentArrayFails) {
     ASSERT_FALSE(doc.HasParseError());
     std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
     EXPECT_EQ(apiHandler->parseMessages(), absl::InvalidArgumentError("Invalid message structure - content array is empty"));
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesMultipleTextItemsConcatenatesWithNewline) {
+    std::string json = R"({
+    "model": "llama",
+    "messages": [
+      {
+        "role": "user",
+        "content": [
+          {
+            "type": "text",
+            "text": "First part."
+          },
+          {
+            "type": "text",
+            "text": "Second part."
+          }
+        ]
+      }
+    ]
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    ASSERT_EQ(apiHandler->parseMessages(), absl::OkStatus());
+    // Non-Python path: chatHistory content is the concatenated string
+    auto& chatHistory = apiHandler->getChatHistory();
+    ASSERT_EQ(chatHistory.size(), 1);
+    EXPECT_EQ(chatHistory[0]["content"], "First part.\nSecond part.");
+    // Python Jinja path: processedJson carries the same flattened content for applyChatTemplate
+    EXPECT_EQ(apiHandler->getProcessedJson(), R"({"model":"llama","messages":[{"role":"user","content":"First part.\nSecond part."}]})");
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesTextBeforeAndAfterImageConcatenatesAllText) {
+    std::string json = R"({
+    "model": "llama",
+    "messages": [
+      {
+        "role": "user",
+        "content": [
+          {
+            "type": "text",
+            "text": "Before image."
+          },
+          {
+            "type": "image_url",
+            "image_url": {
+              "url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAAEElEQVR4nGLK27oAEAAA//8DYAHGgEvy5AAAAABJRU5ErkJggg=="
+            }
+          },
+          {
+            "type": "text",
+            "text": "After image."
+          }
+        ]
+      }
+    ]
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    ASSERT_EQ(apiHandler->parseMessages(), absl::OkStatus());
+    // Non-Python path: chatHistory content is the concatenated string
+    auto& chatHistory = apiHandler->getChatHistory();
+    ASSERT_EQ(chatHistory.size(), 1);
+    EXPECT_EQ(chatHistory[0]["content"], "Before image.\nAfter image.");
+    EXPECT_EQ(apiHandler->getImageHistory().size(), 1);
+    // Python Jinja path: processedJson carries the same flattened content for applyChatTemplate
+    EXPECT_EQ(apiHandler->getProcessedJson(), R"({"model":"llama","messages":[{"role":"user","content":"Before image.\nAfter image."}]})");
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, maxTokensValueDefaultToMaxTokensLimit) {
