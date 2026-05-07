@@ -23,8 +23,7 @@ pip3 install -r requirements.txt
 ## Download and convert model
 
 ```bash
-pip3 install -r download_model_requirements.txt
-pip3 install transformers>=4.54,<4.58
+pip3 install --pre --extra-index-url "https://download.pytorch.org/whl/cpu" --extra-index-url "https://storage.openvinotoolkit.org/simple/wheels/nightly" "openvino==2026.1.*" "numpy<2.0" "pillow==12.2.0" "torch==2.8.0+cpu" "transformers<=4.53.0"
 ```
 
 ```bash
