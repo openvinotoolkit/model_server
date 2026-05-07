@@ -18,6 +18,7 @@
 #include <stdexcept>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include "../../../logging.hpp"
@@ -128,7 +129,7 @@ absl::Status VisualLanguageModelLegacyServable::parseRequest(std::shared_ptr<Gen
     };
     ov::AnyMap streamerConfig;
     if ((legacyExecutionContext->apiHandler->getOutputParser() != nullptr &&
-        legacyExecutionContext->apiHandler->getOutputParser()->requiresStreamingWithSpecialTokens()) ||
+            legacyExecutionContext->apiHandler->getOutputParser()->requiresStreamingWithSpecialTokens()) ||
         !legacyExecutionContext->apiHandler->getRequest().skipSpecialTokens) {
         streamerConfig.insert(ov::genai::skip_special_tokens(false));
     }

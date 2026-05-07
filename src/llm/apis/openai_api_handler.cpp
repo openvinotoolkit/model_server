@@ -856,7 +856,8 @@ absl::Status OpenAIApiHandler::parseCommonPart(std::optional<uint32_t> maxTokens
 
     it = doc.FindMember("skip_special_tokens");
     if (it != doc.MemberEnd() && !it->value.IsNull()) {
-        if (!it->value.IsBool()) return absl::InvalidArgumentError("skip_special_tokens is not a bool");
+        if (!it->value.IsBool())
+            return absl::InvalidArgumentError("skip_special_tokens is not a bool");
         request.skipSpecialTokens = it->value.GetBool();
     }
     if (!request.skipSpecialTokens && outputParser != nullptr) {

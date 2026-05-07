@@ -147,7 +147,7 @@ absl::Status GenAiServable::parseRequest(std::shared_ptr<GenAiServableExecutionC
         };
         ov::AnyMap streamerConfig;
         if ((executionContext->apiHandler->getOutputParser() != nullptr &&
-            executionContext->apiHandler->getOutputParser()->requiresStreamingWithSpecialTokens()) ||
+                executionContext->apiHandler->getOutputParser()->requiresStreamingWithSpecialTokens()) ||
             !executionContext->apiHandler->getRequest().skipSpecialTokens) {
             streamerConfig.insert(ov::genai::skip_special_tokens(false));
         }

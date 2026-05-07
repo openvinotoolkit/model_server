@@ -115,8 +115,8 @@ absl::Status LegacyServable::parseRequest(std::shared_ptr<GenAiServableExecution
     ov::AnyMap streamerConfig;
     if (legacyExecutionContext->apiHandler->isStream() &&
         ((legacyExecutionContext->apiHandler->getOutputParser() != nullptr &&
-        legacyExecutionContext->apiHandler->getOutputParser()->requiresStreamingWithSpecialTokens()) ||
-        !legacyExecutionContext->apiHandler->getRequest().skipSpecialTokens)) {
+             legacyExecutionContext->apiHandler->getOutputParser()->requiresStreamingWithSpecialTokens()) ||
+            !legacyExecutionContext->apiHandler->getRequest().skipSpecialTokens)) {
         streamerConfig.insert(ov::genai::skip_special_tokens(false));
     }
     legacyExecutionContext->textStreamer = std::make_shared<ov::genai::TextStreamer>(getProperties()->tokenizer, callback, streamerConfig);
