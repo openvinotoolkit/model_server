@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2019 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,9 +14,8 @@
 # limitations under the License.
 #
 
-MODEL_SERVICE = 1
-PREDICTION_SERVICE = 2
+from tests.functional.utils.marks import MarkMeta
 
-ERROR_SHAPE = 'response has invalid output'
 
-NOT_TO_BE_REPORTED_IF_SKIPPED = "NOT_TO_BE_REPORTED_IF_SKIPPED"
+class OvmsComponents(MarkMeta):
+    OVMS = "ovms"
