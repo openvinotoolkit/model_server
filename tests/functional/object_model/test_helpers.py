@@ -106,7 +106,6 @@ def send_request_to_endpoint(port, address=None, endpoint=None, expected_code=No
     if all([ret.status_code == HTTPStatus.OK.value,
             expected_code == HTTPStatus.CREATED.value,
             endpoint == Endpoints.RELOAD_CONFIG.value]):
-        # Both of those codes are accepted for REST: https://jira.devtools.intel.com/browse/CVS-159242
         logger.warning(f"{msg1} {msg2} Both of those codes are accepted.")
         return ret
     elif not ret.status_code == expected_code:

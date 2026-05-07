@@ -41,7 +41,7 @@ ONE_K = 1024
 ONE_M = ONE_K * ONE_K
 
 
-log_username = f"- [{config.host_os_user}] " if config.log_username else ""
+log_username = f"- [{config.host_os_user}] " if config.log_username and config.host_os_user is not None else ""
 worker_count = get_xdist_worker_count()
 worker_id = os.environ.get("PYTEST_XDIST_WORKER", "")
 worker_string = f"[{worker_id}] " if worker_count > 0 else ""

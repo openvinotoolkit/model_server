@@ -98,7 +98,7 @@ python_disable = bool(get_int("PYTHON_DISABLE", 0))
 windows_python_version = os.environ.get("TT_WIN_PY_VERSION", "3.12")
 
 """ TT_DOCKER_REGISTRY - Docker registry"""
-docker_registry = os.environ.get("TT_DOCKER_REGISTRY", "registry.toolbox.iotg.sclab.intel.com")
+docker_registry = os.environ.get("TT_DOCKER_REGISTRY", None)
 
 """ OVMS_CPP_DOCKER_IMAGE """
 ovms_cpp_docker_image = os.environ.get("OVMS_CPP_DOCKER_IMAGE", None)
@@ -291,10 +291,10 @@ cleanup_env_on_startup = get_bool("TT_CLEANUP_ENVIRONMENT_ON_STARTUP", False)
 teardown_docker_images = get_bool("TT_TEARDOWN_DOCKER_IMAGES", True)
 
 """ TT_TEARDOWN_DOCKER_CONTAINERS - at teardown remove stopped docker containers """
-teardown_docker_containers = get_bool("TT_TEARDOWN_DOCKER_CONTAINERS", True)
+teardown_docker_containers = get_bool("TT_TEARDOWN_DOCKER_CONTAINERS", False)
 
 """ TT_TEARDOWN_OVMS_PROCESSES - at teardown remove all ovms.exe processes """
-teardown_ovms_processes = get_bool("TT_TEARDOWN_OVMS_PROCESSES", True)
+teardown_ovms_processes = get_bool("TT_TEARDOWN_OVMS_PROCESSES", False)
 
 """ TT_WAIT_FOR_MESSAGES_TIMEOUT - timeout for ovms.wait_for_messages(...) method """
 wait_for_messages_timeout = get_int("TT_WAIT_FOR_MESSAGES_TIMEOUT", 180)
@@ -381,7 +381,7 @@ class StrippingLists:
 
 
 """ Fields for logger """
-host_os_user = os.environ.get("TT_HOST_OS_USER", "root")
+host_os_user = os.environ.get("TT_HOST_OS_USER", None)
 log_username = os.environ.get("TT_LOG_USERNAME", False)
 sensitive_keys = get_list("TT_SENSITIVE_KEYS", fallback=StrippingLists.DEFAULT_SENSITIVE_KEYS_TO_BE_MASKED)
 sensitive_keys_to_be_masked = re.compile("|".join(sensitive_keys), re.IGNORECASE)

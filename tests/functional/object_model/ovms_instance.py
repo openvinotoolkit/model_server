@@ -454,9 +454,12 @@ class OvmsInstance(ABC):
                 else:
                     break
             else:
-                if (hasattr(self, "cmd") and self.cmd is not None and self.cmd.base_os == OsType.Windows
-                        and type(error) == PermissionError):
-                    # workaround for Windows: https://jira.devtools.intel.com/browse/CVS-161953
+                if (
+                        hasattr(self, "cmd") and
+                        self.cmd is not None and
+                        self.cmd.base_os == OsType.Windows and
+                        type(error) == PermissionError
+                ):
                     change_dir_permissions(self.container_folder)
                     shutil.rmtree(self.container_folder)
                 else:

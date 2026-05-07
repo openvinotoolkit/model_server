@@ -195,9 +195,6 @@ class Metric:
                 }
 
                 if method not in [Metric.Method_getmodelstatus, Metric.Method_modelready]:
-                    # Defects in documentation:
-                    # https://jira.devtools.intel.com/browse/CVS-92936
-                    # https://jira.devtools.intel.com/browse/CVS-92935
                     content["version"] = str(model.version)
 
                 result.append(Metric(metric_name=base_name, content=content))

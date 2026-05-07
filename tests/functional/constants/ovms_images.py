@@ -146,11 +146,12 @@ def calculate_ovms_image_name(target_device=None, base_os=OsType.Ubuntu22):
         image_name = f"{image_name}{calculate_ovms_image_suffix(target_device)}"
         image_tag = calculate_ovms_image_tag(image_tag, base_os, base_os_list)
     else:
-        image_name = (
-            ovms_cpp_docker_image
-            if ovms_cpp_docker_image
-            else f"{docker_registry}/{DEFAULT_OVMS_IMAGE_NAME}"
-        )
+        if ovms_cpp_docker_image:
+            image_name = ovms_cpp_docker_image
+        elif docker_registry is not None:
+            image_name = f"{docker_registry}/{DEFAULT_OVMS_IMAGE_NAME}"
+        else:
+            image_name = DEFAULT_OVMS_IMAGE_NAME
         image_name = f"{image_name}{calculate_ovms_image_suffix(target_device)}"
         image_tag = ovms_image_tag if ovms_image_tag else DEFAULT_OVMS_IMAGE_TAG[base_os]
         image_tag = calculate_ovms_image_tag(image_tag, base_os, base_os_list)
