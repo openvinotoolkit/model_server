@@ -40,10 +40,6 @@
 #include <sys/resource.h>
 #endif
 
-#ifdef __linux__
-#include <sys/resource.h>
-#endif
-
 namespace ovms {
 
 const uint32_t AVAILABLE_CORES = getCoreCount();
