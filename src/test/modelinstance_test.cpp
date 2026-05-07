@@ -1216,6 +1216,17 @@ TEST(CpuThroughputStreamsNotSpecified, NotSetWhenPerfHintSpecified) {
     EXPECT_EQ(pluginConfig.count("CPU_THROUGHPUT_STREAMS"), 0);
 }
 
+TEST(PluginConfigNormalization, ConvertsStringNumStreamsToInt64) {
+    ovms::ModelConfig config;
+    config.setPluginConfig({{"NUM_STREAMS", "4"}});
+
+    ovms::plugin_config_t pluginConfig = ovms::ModelInstance::prepareDefaultPluginConfig(config);
+
+    ASSERT_EQ(pluginConfig.count("NUM_STREAMS"), 1);
+    ASSERT_TRUE(pluginConfig.at("NUM_STREAMS").is<int64_t>());
+    EXPECT_EQ(pluginConfig.at("NUM_STREAMS").as<int64_t>(), 4);
+}
+
 TEST(TensorMap, TestProcessingHintFromShape) {
     auto servableInputs = ovms::tensor_map_t({
         {"Input_FP32_1_224_224_3_NHWC",

@@ -82,6 +82,45 @@ enum : unsigned int {
     POSTPROCESS,
     TIMER_END
 };
+
+std::string pluginConfigValueToString(const ov::Any& value) {
+    if (value.is<std::string>()) {
+        return value.as<std::string>();
+    }
+    if (value.is<const char*>()) {
+        return value.as<const char*>();
+    }
+    if (value.is<int64_t>()) {
+        return std::to_string(value.as<int64_t>());
+    }
+    if (value.is<int>()) {
+        return std::to_string(value.as<int>());
+    }
+    if (value.is<uint32_t>()) {
+        return std::to_string(value.as<uint32_t>());
+    }
+    if (value.is<double>()) {
+        return std::to_string(value.as<double>());
+    }
+    if (value.is<bool>()) {
+        return value.as<bool>() ? "true" : "false";
+    }
+    return "<non-stringifiable>";
+}
+
+void normalizeNumericPluginConfigValue(ovms::plugin_config_t& pluginConfig, const std::string& key) {
+    auto it = pluginConfig.find(key);
+    if (it == pluginConfig.end() || !it->second.is<std::string>()) {
+        return;
+    }
+
+    const auto& stringValue = it->second.as<std::string>();
+    try {
+        it->second = std::stoll(stringValue);
+    } catch (const std::exception&) {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Keeping plugin config key: {} as string value: {}", key, stringValue);
+    }
+}
 }  // namespace
 
 namespace ov {
@@ -910,6 +949,7 @@ void ModelInstance::loadCompiledModelPtr(const plugin_config_t& pluginConfig) {
 
 plugin_config_t ModelInstance::prepareDefaultPluginConfig(const ModelConfig& config) {
     plugin_config_t pluginConfig = config.getPluginConfig();
+    normalizeNumericPluginConfigValue(pluginConfig, "NUM_STREAMS");
     if ((pluginConfig.count("NUM_STREAMS") == 1) || (pluginConfig.count("PERFORMANCE_HINT") == 1)) {
         return pluginConfig;
     } else {
@@ -958,7 +998,7 @@ Status ModelInstance::loadOVCompiledModel(const ModelConfig& config) {
     for (const auto& pair : pluginConfig) {
         const auto& key = pair.first;
         const auto& value = pair.second;
-        SPDLOG_LOGGER_INFO(modelmanager_logger, "OVMS set plugin settings key: {}; value: {};", key, value.as<std::string>());
+        SPDLOG_LOGGER_INFO(modelmanager_logger, "OVMS set plugin settings key: {}; value: {};", key, pluginConfigValueToString(value));
     }
     logOVPluginConfig([this](const std::string& key) {
             OV_LOGGER("ov::CompiledModel:{} get_property({})", reinterpret_cast<void*>(this->model.get()), key);
