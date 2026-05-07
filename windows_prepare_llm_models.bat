@@ -45,7 +45,7 @@ set "MISTRAL_MODEL=mistralai/Mistral-7B-Instruct-v0.3"
 set "GPTOSS_MODEL=openai/gpt-oss-20b"
 set "DEVSTRAL_MODEL=unsloth/Devstral-Small-2507"
 set "LFM2_MODEL=LiquidAI/LFM2-2.6B"
-set "GEMMA4_MODEL=google/gemma-4-26B-A4B-it"
+set "GEMMA4_MODEL=OpenVINO/gemma-4-E4B-it-int4-ov"
 
 echo Downloading LLM testing models to directory %~1
 set "PIP_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cpu https://storage.openvinotoolkit.org/simple/wheels/nightly"

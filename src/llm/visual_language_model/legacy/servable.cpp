@@ -179,35 +179,13 @@ absl::Status VisualLanguageModelLegacyServable::readCompleteExecutionResults(std
 
 absl::Status VisualLanguageModelLegacyServable::prepareCompleteResponse(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
     auto legacyExecutionContext = std::static_pointer_cast<VisualLanguageModelLegacyServableExecutionContext>(executionContext);
-
-    // temporary workaround to use streaming logic in unary
-    // to be fixed after require_special_tokens flag implemented
-    std::string completeText;
-    auto generationStatus = legacyExecutionContext->finished.wait_for(std::chrono::nanoseconds::zero());
-
-    while (generationStatus != std::future_status::ready) {
-        if (legacyExecutionContext->payload.client->isDisconnected()) {
-            return absl::CancelledError();
-        }
-        std::unique_lock lock(legacyExecutionContext->mutex);
-        while (executionContext->lastStreamerCallbackOutput.size() == 0 && generationStatus != std::future_status::ready) {
-            legacyExecutionContext->executionInProgress.wait_for(lock, std::chrono::milliseconds(10));
-            generationStatus = legacyExecutionContext->finished.wait_for(std::chrono::nanoseconds::zero());
-        }
-        completeText += executionContext->lastStreamerCallbackOutput;
-        executionContext->lastStreamerCallbackOutput = "";
-        generationStatus = legacyExecutionContext->finished.wait_for(std::chrono::nanoseconds::zero());
-    }
-
-    if (!legacyExecutionContext->success) {
-        return absl::InvalidArgumentError("Request processing failed, check its correctness.");
-    }
-
     executionContext->textStreamer->end();
+
+    std::string completeText;
     {
-        std::unique_lock lock(legacyExecutionContext->mutex);
-        completeText += executionContext->lastStreamerCallbackOutput;
-        executionContext->lastStreamerCallbackOutput = "";
+        std::lock_guard<std::mutex> lock(legacyExecutionContext->mutex);
+        completeText = std::move(executionContext->lastStreamerCallbackOutput);
+        executionContext->lastStreamerCallbackOutput.clear();
     }
 
     executionContext->apiHandler->setPromptTokensUsage(legacyExecutionContext->results.perf_metrics.get_num_input_tokens());
