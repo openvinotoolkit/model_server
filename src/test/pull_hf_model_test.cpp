@@ -892,16 +892,27 @@ TEST_F(HfDownloadModelModule, TestInvalidProxyTimeout) {
     ConstructorEnabledConfig config;
     {
         EnvGuard eGuard;
-        // Force a no-proxy direct connection so the libgit2 connect timeout option
-        // is actually applied (prepareLibgit2Opts() skips serverConnectTimeoutMs
-        // when https_proxy is non-empty - see hf_pull_model_module.cpp).
+        // prepareLibgit2Opts() in hf_pull_model_module.cpp only applies the
+        // GIT_OPT_SET_SERVER_CONNECT_TIMEOUT option when https_proxy is empty,
+        // so we always clear https_proxy here.
+        //
+        // To make the timeout actually fire we need the destination to be
+        // unreachable. The behavior depends on the host's network setup:
+        //   * Host originally used a proxy (https_proxy was set in the
+        //     environment): the host is on a proxy-only network where a
+        //     direct connection to huggingface.co will hang and hit the
+        //     timeout. Keep the default HF_ENDPOINT.
+        //   * Host has no proxy configured (direct internet access): a direct
+        //     connection to huggingface.co would succeed within the 1 s
+        //     timeout and the assertion below would fail. Redirect the clone
+        //     to an unroutable RFC 5737 TEST-NET-1 address so the connect
+        //     must time out.
+        const char* hostHttpsProxy = std::getenv("https_proxy");
+        const bool hostHadProxy = (hostHttpsProxy != nullptr) && (std::string(hostHttpsProxy) != "");
         eGuard.set("https_proxy", "");
-        // Point the clone at an unroutable RFC 5737 TEST-NET-1 address so the
-        // connect must time out regardless of whether the host has working
-        // network/DNS access to huggingface.co. Without this override, machines
-        // with direct internet access to huggingface.co would connect within the
-        // 1 s timeout and the clone could succeed, breaking the assertion below.
-        eGuard.set("HF_ENDPOINT", "https://192.0.2.1/");
+        if (!hostHadProxy) {
+            eGuard.set("HF_ENDPOINT", "https://192.0.2.1/");
+        }
         const std::string timeoutConnectVal = "1000";
         eGuard.set(ovms::HfPullModelModule::GIT_SERVER_CONNECT_TIMEOUT_ENV, timeoutConnectVal);
         config.parse(arg_count, const_cast<char**>(n_argv));
