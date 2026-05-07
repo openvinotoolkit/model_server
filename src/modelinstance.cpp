@@ -16,6 +16,7 @@
 #include "modelinstance.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cstdlib>
 #include <iostream>
 #include <memory>
@@ -83,6 +84,23 @@ enum : unsigned int {
     TIMER_END
 };
 
+enum class PluginConfigValueType {
+    INT64,
+    BOOL,
+};
+
+struct PluginConfigNormalizationRule {
+    const char* key;
+    PluginConfigValueType valueType;
+};
+
+const std::array<PluginConfigNormalizationRule, 4> TYPED_PLUGIN_CONFIG_NORMALIZATION_RULES{{
+    {"NUM_STREAMS", PluginConfigValueType::INT64},
+    {"INFERENCE_NUM_THREADS", PluginConfigValueType::INT64},
+    {"AUTO_BATCH_TIMEOUT", PluginConfigValueType::INT64},
+    {"ENABLE_CPU_PINNING", PluginConfigValueType::BOOL},
+}};
+
 std::string pluginConfigValueToString(const ov::Any& value) {
     if (value.is<std::string>()) {
         return value.as<std::string>();
@@ -108,18 +126,65 @@ std::string pluginConfigValueToString(const ov::Any& value) {
     return "<non-stringifiable>";
 }
 
-void normalizeNumericPluginConfigValue(ovms::plugin_config_t& pluginConfig, const std::string& key) {
-    auto it = pluginConfig.find(key);
-    if (it == pluginConfig.end() || !it->second.is<std::string>()) {
+bool normalizePluginConfigValue(ov::Any& value, const PluginConfigNormalizationRule& rule) {
+    if (!value.is<std::string>()) {
+        return false;
+    }
+
+    const auto& stringValue = value.as<std::string>();
+    switch (rule.valueType) {
+    case PluginConfigValueType::INT64: {
+        auto parsedValue = ovms::stoi64(stringValue);
+        if (!parsedValue.has_value()) {
+            return false;
+        }
+        value = parsedValue.value();
+        return true;
+    }
+    case PluginConfigValueType::BOOL: {
+        auto normalized = ovms::toLower(stringValue);
+        if (normalized == "true") {
+            value = true;
+            return true;
+        }
+        if (normalized == "false") {
+            value = false;
+            return true;
+        }
+        return false;
+    }
+    }
+    return false;
+}
+
+template <typename MapType>
+void normalizeTypedPluginConfigValues(MapType& pluginConfig) {
+    for (const auto& rule : TYPED_PLUGIN_CONFIG_NORMALIZATION_RULES) {
+        auto it = pluginConfig.find(rule.key);
+        if (it == pluginConfig.end()) {
+            continue;
+        }
+        if (!normalizePluginConfigValue(it->second, rule) && it->second.is<std::string>()) {
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Keeping plugin config key: {} as string value: {}", rule.key, it->second.as<std::string>());
+        }
+    }
+
+    auto devicePropertiesIt = pluginConfig.find("DEVICE_PROPERTIES");
+    if (devicePropertiesIt == pluginConfig.end() || !devicePropertiesIt->second.is<ov::AnyMap>()) {
         return;
     }
 
-    const auto& stringValue = it->second.as<std::string>();
-    try {
-        it->second = std::stoll(stringValue);
-    } catch (const std::exception&) {
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Keeping plugin config key: {} as string value: {}", key, stringValue);
+    ov::AnyMap deviceProperties = devicePropertiesIt->second.as<ov::AnyMap>();
+    for (auto& devicePropertiesEntry : deviceProperties) {
+        auto& devicePropertiesAny = devicePropertiesEntry.second;
+        if (!devicePropertiesAny.is<ov::AnyMap>()) {
+            continue;
+        }
+        ov::AnyMap nestedDeviceProperties = devicePropertiesAny.as<ov::AnyMap>();
+        normalizeTypedPluginConfigValues(nestedDeviceProperties);
+        devicePropertiesAny = nestedDeviceProperties;
     }
+    devicePropertiesIt->second = deviceProperties;
 }
 }  // namespace
 
@@ -949,7 +1014,7 @@ void ModelInstance::loadCompiledModelPtr(const plugin_config_t& pluginConfig) {
 
 plugin_config_t ModelInstance::prepareDefaultPluginConfig(const ModelConfig& config) {
     plugin_config_t pluginConfig = config.getPluginConfig();
-    normalizeNumericPluginConfigValue(pluginConfig, "NUM_STREAMS");
+    normalizeTypedPluginConfigValues(pluginConfig);
     if ((pluginConfig.count("NUM_STREAMS") == 1) || (pluginConfig.count("PERFORMANCE_HINT") == 1)) {
         return pluginConfig;
     } else {
