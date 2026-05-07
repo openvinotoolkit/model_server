@@ -552,7 +552,7 @@ TEST_P(HttpOpenAIHandlerCommonParsingValidationTest, SkipSpecialTokensTrueWithTo
     EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
 }
 
-TEST_P(HttpOpenAIHandlerCommonParsingValidationTest, SkipSpecialTokensFalseWithToolParserRejected) {
+TEST_P(HttpOpenAIHandlerCommonParsingValidationTest, SkipSpecialTokensFalseWithToolParserSilentlyDisablesParser) {
     std::string json = createRequestWithSkipSpecialTokensRawValue("false");
     doc.Parse(json.c_str());
     ASSERT_FALSE(doc.HasParseError());
@@ -562,11 +562,12 @@ TEST_P(HttpOpenAIHandlerCommonParsingValidationTest, SkipSpecialTokensFalseWithT
     std::optional<uint32_t> maxModelLength;
     auto apiHandler = createHandler(endpoint(), "llama3");
 
-    EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength),
-        absl::InvalidArgumentError("skip_special_tokens=false is not supported when tool or reasoning parser is configured"));
+    EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+    EXPECT_FALSE(apiHandler->getRequest().skipSpecialTokens);
+    EXPECT_EQ(apiHandler->getOutputParser(), nullptr);
 }
 
-TEST_P(HttpOpenAIHandlerCommonParsingValidationTest, SkipSpecialTokensFalseWithReasoningParserRejected) {
+TEST_P(HttpOpenAIHandlerCommonParsingValidationTest, SkipSpecialTokensFalseWithReasoningParserSilentlyDisablesParser) {
     std::string json = createRequestWithSkipSpecialTokensRawValue("false");
     doc.Parse(json.c_str());
     ASSERT_FALSE(doc.HasParseError());
@@ -576,11 +577,12 @@ TEST_P(HttpOpenAIHandlerCommonParsingValidationTest, SkipSpecialTokensFalseWithR
     std::optional<uint32_t> maxModelLength;
     auto apiHandler = createHandler(endpoint(), "", "qwen3");
 
-    EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength),
-        absl::InvalidArgumentError("skip_special_tokens=false is not supported when tool or reasoning parser is configured"));
+    EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+    EXPECT_FALSE(apiHandler->getRequest().skipSpecialTokens);
+    EXPECT_EQ(apiHandler->getOutputParser(), nullptr);
 }
 
-TEST_P(HttpOpenAIHandlerCommonParsingValidationTest, SkipSpecialTokensFalseWithBothParsersRejected) {
+TEST_P(HttpOpenAIHandlerCommonParsingValidationTest, SkipSpecialTokensFalseWithBothParsersSilentlyDisablesParsers) {
     std::string json = createRequestWithSkipSpecialTokensRawValue("false");
     doc.Parse(json.c_str());
     ASSERT_FALSE(doc.HasParseError());
@@ -590,8 +592,9 @@ TEST_P(HttpOpenAIHandlerCommonParsingValidationTest, SkipSpecialTokensFalseWithB
     std::optional<uint32_t> maxModelLength;
     auto apiHandler = createHandler(endpoint(), "llama3", "qwen3");
 
-    EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength),
-        absl::InvalidArgumentError("skip_special_tokens=false is not supported when tool or reasoning parser is configured"));
+    EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+    EXPECT_FALSE(apiHandler->getRequest().skipSpecialTokens);
+    EXPECT_EQ(apiHandler->getOutputParser(), nullptr);
 }
 
 TEST_P(HttpOpenAIHandlerCommonParsingValidationTest, SkipSpecialTokensNotBoolFails) {

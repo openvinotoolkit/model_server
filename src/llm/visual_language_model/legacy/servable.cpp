@@ -117,8 +117,8 @@ absl::Status VisualLanguageModelLegacyServable::parseRequest(std::shared_ptr<Gen
             return ov::genai::StreamingStatus::CANCEL;
         }
 
-        // TODO(mzegla): unconditional streaming-like behavior also for unary flow due to GenAI generate limiations.
-        // This diverges from the general flow - we should have unified systematic aproach.
+        // TODO(mzegla): unconditional streaming-like behavior also for unary flow due to GenAI generate limitations.
+        // This diverges from the general flow - we should have unified systematic approach.
         {
             std::lock_guard<std::mutex> lock(mutex);
             lastStreamerCallbackOutput += text;
@@ -182,8 +182,8 @@ absl::Status VisualLanguageModelLegacyServable::prepareCompleteResponse(std::sha
         return absl::CancelledError();
     }
 
-    // TODO(mzegla): Usage of streaming flow here due to GenAI generate limiations.
-    // This diverges from the general flow - we should have unified systematic aproach.
+    // TODO(mzegla): Usage of streaming flow here due to GenAI generate limitations.
+    // This diverges from the general flow - we should have unified systematic approach.
 
     executionContext->textStreamer->end();
 

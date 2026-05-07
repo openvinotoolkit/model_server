@@ -860,7 +860,7 @@ absl::Status OpenAIApiHandler::parseCommonPart(std::optional<uint32_t> maxTokens
         request.skipSpecialTokens = it->value.GetBool();
     }
     if (!request.skipSpecialTokens && outputParser != nullptr) {
-        return absl::InvalidArgumentError("skip_special_tokens=false is not supported when tool or reasoning parser is configured");
+        outputParser.reset();
     }
 
     request.maxModelLength = maxModelLength;
