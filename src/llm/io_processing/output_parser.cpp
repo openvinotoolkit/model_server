@@ -28,6 +28,7 @@
 #include "qwen3/reasoning_parser.hpp"
 #include "qwen3coder/qwen3coder_tool_parser.hpp"
 #include "devstral/tool_parser.hpp"
+#include "gemma4/reasoning_parser.hpp"
 #include "gptoss/reasoning_parser.hpp"
 <<<<<<< HEAD
 #include "lfm2/lfm2_tool_parser.hpp"
@@ -196,6 +197,8 @@ OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string to
 
     if (reasoningParserName == "qwen3") {
         reasoningParser = std::make_unique<Qwen3ReasoningParser>(tokenizer);
+    } else if (reasoningParserName == "gemma4") {
+        reasoningParser = std::make_unique<Gemma4ReasoningParser>(tokenizer);
     } else if (reasoningParserName == "gptoss") {
         reasoningParser = std::make_unique<GptOssReasoningParser>(tokenizer);
     } else if (!reasoningParserName.empty()) {
