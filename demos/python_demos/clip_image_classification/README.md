@@ -24,6 +24,7 @@ pip3 install -r requirements.txt
 
 ```bash
 pip3 install -r download_model_requirements.txt
+pip3 install transformers>=4.54,<4.58
 ```
 
 ```bash

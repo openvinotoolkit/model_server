@@ -3,6 +3,5 @@
 --pre
 openvino==2026.1.*
 numpy<2.0
-transformers>=4.54,<4.58
 pillow==12.2.0
 torch==2.8.0+cpu
