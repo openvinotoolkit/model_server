@@ -86,12 +86,12 @@ bool isRunningInDocker() {
 uint16_t getCpuAffinityCount() {
     cpu_set_t mask;
     CPU_ZERO(&mask);
-    
+
     if (sched_getaffinity(0, sizeof(mask), &mask) == -1) {
         SPDLOG_DEBUG("sched_getaffinity failed, returning hardware concurrency");
         return std::thread::hardware_concurrency();
     }
-    
+
     int cpu_count = CPU_COUNT(&mask);
     SPDLOG_DEBUG("CPU affinity count: {}", cpu_count);
     return static_cast<uint16_t>(cpu_count);
@@ -124,7 +124,7 @@ uint16_t getDockerCpuQuota() {
     // Try cgroup v1 cpu.cfs_quota_us and cpu.cfs_period_us
     std::ifstream quota_file("/sys/fs/cgroup/cpu/cpu.cfs_quota_us");
     std::ifstream period_file("/sys/fs/cgroup/cpu/cpu.cfs_period_us");
-    
+
     if (quota_file.is_open() && period_file.is_open()) {
         std::string quota_str, period_str;
         if (std::getline(quota_file, quota_str) && std::getline(period_file, period_str)) {
