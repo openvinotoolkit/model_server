@@ -458,7 +458,7 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(ov::genai::Enco
     return jsonResponse.ToString();
 }
 
-std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(ov::genai::VLMDecodedResults& results) {
+std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(ov::genai::VLMDecodedResults& results, const std::string& textResponse) {
     OVMS_PROFILE_FUNCTION();
     usage.promptTokens = results.perf_metrics.get_num_input_tokens();
     usage.completionTokens = results.perf_metrics.get_num_generated_tokens();
@@ -470,13 +470,12 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(ov::genai::VLMD
     jsonResponse.StartArray("choices");
     int index = 0;
 
-    for (int i = 0; i < results.texts.size(); i++) {
-        const std::string& text = results.texts[i];
-        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Generated text: {}", text);
+    if (!textResponse.empty()) {
+        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Generated text: {}", textResponse);
 
         // Workaround to use OVMS unary parsers: get tokens from string
         // This way we have detokenized text from GenAI and calculate tokens, to further convert back to text again, in parseOutputIfNeeded...
-        auto generatedTokens = encodeTextToTokens(text);
+        auto generatedTokens = encodeTextToTokens(textResponse);
 
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Generated tokens: {}", generatedTokens);
         ParsedOutput parsedOutput = parseOutputIfNeeded(generatedTokens);
