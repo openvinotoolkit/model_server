@@ -184,8 +184,8 @@ ovms_cc_library(
 
 ovms_cc_library(
     name = "io_processing_lfm2_tool_parser",
-    hdrs = ["io_processing/lfm2/tool_parser.hpp"],
-    srcs = ["io_processing/lfm2/tool_parser.cpp"],
+    hdrs = ["io_processing/lfm2/lfm2_tool_parser.hpp"],
+    srcs = ["io_processing/lfm2/lfm2_tool_parser.cpp"],
     deps = [
         "@com_github_tencent_rapidjson//:rapidjson",
         "//src/port:rapidjson_document",

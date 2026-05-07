@@ -807,3 +807,20 @@ TEST_F(LFM2OutputParserTest, ParseToolCallWithUnicodeCharactersInArguments) {
     EXPECT_EQ(parsedOutput.toolCalls[0].name, "translate");
     EXPECT_EQ(parsedOutput.toolCalls[0].arguments, R"({"text":"zażółć gęślą jaźń","lang":"pl"})");
 }
+
+TEST_F(LFM2OutputParserTest, ParseToolCallWithPythonCodeAsArgument) {
+    std::string input = R"x(<|tool_call_start|>[string_tool(param="
+    if __name__ == "__main__":
+    addresses = {}
+    addresses["Hodor"] = """The door"""
+    addresses["Arya"] = "Winterfell"
+    for name, address in addresses.items():
+        print(f'\n\t{name} lives at {address}\n\r')")]<|tool_call_end|>)x";
+    auto generatedTensor = lfm2Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
+    std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+    ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
+    EXPECT_EQ(parsedOutput.content, "");
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
+    EXPECT_EQ(parsedOutput.toolCalls[0].name, "string_tool");
+    EXPECT_EQ(parsedOutput.toolCalls[0].arguments, R"x({"param":"\n    if __name__ == \"__main__\":\n    addresses = {}\n    addresses[\"Hodor\"] = \"\"\"The door\"\"\"\n    addresses[\"Arya\"] = \"Winterfell\"\n    for name, address in addresses.items():\n        print(f'\\n\\t{name} lives at {address}\\n\\r')"})x");
+}
