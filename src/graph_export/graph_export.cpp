@@ -108,7 +108,7 @@ std::string GraphExport::getDraftModelDirectoryPath(const std::string& directory
 static Status createPbtxtFile(const std::string& directoryPath, const std::string& pbtxtContent, bool writeToFile) {
 #if (MEDIAPIPE_DISABLE == 0)
     ::mediapipe::CalculatorGraphConfig config;
-    SPDLOG_TRACE("Generated pbtxt: {}", pbtxtContent);
+    SPDLOG_TRACE("Generated pbtxt\n: {}", pbtxtContent);
     bool success = ::google::protobuf::TextFormat::ParseFromString(pbtxtContent, &config);
     if (!success) {
         SPDLOG_ERROR("Created graph config file couldn't be parsed - check used task parameters values.");

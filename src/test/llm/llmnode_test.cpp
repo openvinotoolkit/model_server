@@ -4575,3 +4575,24 @@ TEST_F(LLMStartWithTaskParameter, StartWithModelPathAndTaskWithoutGraphFile) {
     ASSERT_EQ(server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME), ovms::ModuleState::INITIALIZED);
     ASSERT_FALSE(std::filesystem::exists(graphPath)) << "graph.pbtxt should not be created when using --task with --model_path";
 }
+
+TEST_F(LLMStartWithTaskParameter, StartWithModelPathAndTaskDoesNotModifyExistingGraph) {
+    // Restore graph.pbtxt for this test (SetUp renamed it away)
+    if (std::filesystem::exists(graphPathRenamed)) {
+        std::filesystem::rename(graphPathRenamed, graphPath);
+    }
+    ASSERT_TRUE(std::filesystem::exists(graphPath)) << "graph.pbtxt must exist for this test";
+    auto modTimeBefore = std::filesystem::last_write_time(graphPath);
+
+    std::string port = "9174";
+    ovms::Server& server = ovms::Server::instance();
+    ::SetUpServer(t, server, port,
+        "/ovms/src/test/llm_testing/HuggingFaceTB/SmolLM2-360M-Instruct",
+        "SmolLM2",
+        60,
+        "text_generation");
+    ASSERT_EQ(server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME), ovms::ModuleState::INITIALIZED);
+
+    auto modTimeAfter = std::filesystem::last_write_time(graphPath);
+    ASSERT_EQ(modTimeBefore, modTimeAfter) << "graph.pbtxt should not be modified when using --task with --model_path";
+}
