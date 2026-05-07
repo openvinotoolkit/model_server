@@ -4536,17 +4536,17 @@ TEST_F(IsolatedServableTests, PromtSizeBetweenDefaultAndNonDefaultMaxPromptLenNP
 class LLMStartWithTaskParameter : public ::testing::Test {
 protected:
     static std::unique_ptr<std::thread> t;
-    std::string modelDir = getGenericFullPathForSrcTest("/ovms/src/test/llm_testing/HuggingFaceTB/SmolLM2-360M-Instruct");
-    std::string graphPath = modelDir + "/graph.pbtxt";
-    std::string graphPathRenamed = modelDir + "/graph.pbtxt.bak";
+    std::string srcModelDir = getGenericFullPathForSrcTest("/ovms/src/test/llm_testing/HuggingFaceTB/SmolLM2-360M-Instruct");
+    std::string tempDir;
+    std::string modelDir;
+    std::string graphPath;
 
     void SetUp() override {
-        // Rename graph.pbtxt so it's not used from file
-        if (std::filesystem::exists(graphPath)) {
-            std::filesystem::rename(graphPath, graphPathRenamed);
-        }
-        // Set model directory to readonly to ensure no file writes happen
-        SetReadonlyFileAttributeFromDir(modelDir);
+        tempDir = std::filesystem::temp_directory_path().string() + "/LLMStartWithTaskParameter_" + ::testing::UnitTest::GetInstance()->current_test_info()->name();
+        std::filesystem::remove_all(tempDir);
+        std::filesystem::copy(srcModelDir, tempDir, std::filesystem::copy_options::recursive);
+        modelDir = tempDir;
+        graphPath = modelDir + "/graph.pbtxt";
     }
     void TearDown() override {
         ovms::Server& server = ovms::Server::instance();
@@ -4554,21 +4554,22 @@ protected:
         if (t && t->joinable())
             t->join();
         server.setShutdownRequest(0);
-        // Restore write permissions and rename graph.pbtxt back
         RemoveReadonlyFileAttributeFromDir(modelDir);
-        if (std::filesystem::exists(graphPathRenamed)) {
-            std::filesystem::rename(graphPathRenamed, graphPath);
-        }
+        std::filesystem::remove_all(tempDir);
     }
 };
 
 std::unique_ptr<std::thread> LLMStartWithTaskParameter::t = nullptr;
 
 TEST_F(LLMStartWithTaskParameter, StartWithModelPathAndTaskWithoutGraphFile) {
+    // Remove graph.pbtxt and make directory readonly
+    std::filesystem::remove(graphPath);
+    SetReadonlyFileAttributeFromDir(modelDir);
+
     std::string port = "9173";
     ovms::Server& server = ovms::Server::instance();
     ::SetUpServer(t, server, port,
-        "/ovms/src/test/llm_testing/HuggingFaceTB/SmolLM2-360M-Instruct",
+        modelDir.c_str(),
         "SmolLM2",
         60,
         "text_generation");
@@ -4577,17 +4578,15 @@ TEST_F(LLMStartWithTaskParameter, StartWithModelPathAndTaskWithoutGraphFile) {
 }
 
 TEST_F(LLMStartWithTaskParameter, StartWithModelPathAndTaskDoesNotModifyExistingGraph) {
-    // Restore graph.pbtxt for this test (SetUp renamed it away)
-    if (std::filesystem::exists(graphPathRenamed)) {
-        std::filesystem::rename(graphPathRenamed, graphPath);
-    }
+    // Keep graph.pbtxt and make directory readonly
     ASSERT_TRUE(std::filesystem::exists(graphPath)) << "graph.pbtxt must exist for this test";
+    SetReadonlyFileAttributeFromDir(modelDir);
     auto modTimeBefore = std::filesystem::last_write_time(graphPath);
 
     std::string port = "9174";
     ovms::Server& server = ovms::Server::instance();
     ::SetUpServer(t, server, port,
-        "/ovms/src/test/llm_testing/HuggingFaceTB/SmolLM2-360M-Instruct",
+        modelDir.c_str(),
         "SmolLM2",
         60,
         "text_generation");
