@@ -892,7 +892,16 @@ TEST_F(HfDownloadModelModule, TestInvalidProxyTimeout) {
     ConstructorEnabledConfig config;
     {
         EnvGuard eGuard;
+        // Force a no-proxy direct connection so the libgit2 connect timeout option
+        // is actually applied (prepareLibgit2Opts() skips serverConnectTimeoutMs
+        // when https_proxy is non-empty - see hf_pull_model_module.cpp).
         eGuard.set("https_proxy", "");
+        // Point the clone at an unroutable RFC 5737 TEST-NET-1 address so the
+        // connect must time out regardless of whether the host has working
+        // network/DNS access to huggingface.co. Without this override, machines
+        // with direct internet access to huggingface.co would connect within the
+        // 1 s timeout and the clone could succeed, breaking the assertion below.
+        eGuard.set("HF_ENDPOINT", "https://192.0.2.1/");
         const std::string timeoutConnectVal = "1000";
         eGuard.set(ovms::HfPullModelModule::GIT_SERVER_CONNECT_TIMEOUT_ENV, timeoutConnectVal);
         config.parse(arg_count, const_cast<char**>(n_argv));
