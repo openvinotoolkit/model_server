@@ -643,6 +643,7 @@ ovms_cc_library(
         "//src/dags:pipelinedefinition",
         "//src/filesystem:libovmsfilesystem",
         "//src/filesystem:libovmsfilesystemfactory",
+        "//src/graph_export:graph_export",
         "//src/metrics:libovms_metric_provider",
         "//src/metrics:libovmsmetrics",
         "@com_github_tencent_rapidjson//:rapidjson",
