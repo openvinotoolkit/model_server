@@ -4537,16 +4537,24 @@ class LLMStartWithTaskParameter : public ::testing::Test {
 protected:
     static std::unique_ptr<std::thread> t;
     std::string srcModelDir = getGenericFullPathForSrcTest("/ovms/src/test/llm_testing/HuggingFaceTB/SmolLM2-360M-Instruct");
+#ifdef __linux__
     std::string tempDir;
     std::string modelDir;
     std::string graphPath;
+#else
+    std::string modelDir = srcModelDir;
+    std::string graphPath = modelDir + "/graph.pbtxt";
+    std::string graphPathRenamed = modelDir + "/graph.pbtxt.bak";
+#endif
 
     void SetUp() override {
+#ifdef __linux__
         tempDir = std::filesystem::temp_directory_path().string() + "/LLMStartWithTaskParameter_" + ::testing::UnitTest::GetInstance()->current_test_info()->name();
         std::filesystem::remove_all(tempDir);
         std::filesystem::copy(srcModelDir, tempDir, std::filesystem::copy_options::recursive);
         modelDir = tempDir;
         graphPath = modelDir + "/graph.pbtxt";
+#endif
     }
     void TearDown() override {
         ovms::Server& server = ovms::Server::instance();
@@ -4554,17 +4562,32 @@ protected:
         if (t && t->joinable())
             t->join();
         server.setShutdownRequest(0);
-        RemoveReadonlyFileAttributeFromDir(modelDir);
+#ifdef __linux__
         std::filesystem::remove_all(tempDir);
+#else
+        // Restore graph.pbtxt if it was renamed
+        if (std::filesystem::exists(graphPathRenamed)) {
+            if (std::filesystem::exists(graphPath)) {
+                std::filesystem::remove(graphPath);
+            }
+            std::filesystem::rename(graphPathRenamed, graphPath);
+        }
+#endif
     }
 };
 
 std::unique_ptr<std::thread> LLMStartWithTaskParameter::t = nullptr;
 
 TEST_F(LLMStartWithTaskParameter, StartWithModelPathAndTaskWithoutGraphFile) {
-    // Remove graph.pbtxt and make directory readonly
+#ifdef __linux__
+    // On Linux models are on readonly FS - we use a temp copy with graph.pbtxt removed
     std::filesystem::remove(graphPath);
-    SetReadonlyFileAttributeFromDir(modelDir);
+#else
+    // On Windows models are on RW FS - rename graph.pbtxt so we can check it's not recreated
+    if (std::filesystem::exists(graphPath)) {
+        std::filesystem::rename(graphPath, graphPathRenamed);
+    }
+#endif
 
     std::string port = "9173";
     ovms::Server& server = ovms::Server::instance();
@@ -4578,9 +4601,7 @@ TEST_F(LLMStartWithTaskParameter, StartWithModelPathAndTaskWithoutGraphFile) {
 }
 
 TEST_F(LLMStartWithTaskParameter, StartWithModelPathAndTaskDoesNotModifyExistingGraph) {
-    // Keep graph.pbtxt and make directory readonly
     ASSERT_TRUE(std::filesystem::exists(graphPath)) << "graph.pbtxt must exist for this test";
-    SetReadonlyFileAttributeFromDir(modelDir);
     auto modTimeBefore = std::filesystem::last_write_time(graphPath);
 
     std::string port = "9174";
