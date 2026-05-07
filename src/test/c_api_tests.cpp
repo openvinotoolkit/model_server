@@ -24,6 +24,8 @@
 
 #include <gtest/gtest.h>
 
+#include <openvino/runtime/core.hpp>
+
 #include "../capi_frontend/capi_request_utils.hpp"
 #include "../deserialization_main.hpp"
 #include "../inference_executor.hpp"
@@ -36,7 +38,7 @@
 #include "../capi_frontend/capi_dag_utils.hpp"
 #include "../capi_frontend/servablemetadata.hpp"
 #include "../dags/pipelinedefinitionstatus.hpp"
-#include "../metric_module.hpp"
+#include "src/metrics/metric_module.hpp"
 #include "../ovms.h"
 #include "../servablemanagermodule.hpp"
 #include "../server.hpp"

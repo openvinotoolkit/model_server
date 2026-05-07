@@ -18,9 +18,6 @@
 #include <memory>
 #include <string>
 
-#include <fmt/ranges.h>
-#include <spdlog/sinks/basic_file_sink.h>
-#include <spdlog/sinks/stdout_sinks.h>
 #include <spdlog/spdlog.h>
 
 namespace ovms {

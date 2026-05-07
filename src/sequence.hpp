@@ -22,7 +22,8 @@
 #include <unordered_map>
 #include <vector>
 
-#include <openvino/openvino.hpp>
+#include <openvino/runtime/tensor.hpp>
+#include <openvino/runtime/variable_state.hpp>
 
 namespace ovms {
 

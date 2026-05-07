@@ -40,7 +40,8 @@
 #include "../dags/pipelinedefinition.hpp"
 #include "../get_model_metadata_impl.hpp"
 #include "../kfs_frontend/kfs_utils.hpp"
-#include "../localfilesystem.hpp"
+#include "src/metrics/metric_config.hpp"
+#include "src/filesystem/localfilesystem.hpp"
 #include "../logging.hpp"
 #include "../model_service.hpp"
 #include "../modelconfig.hpp"
@@ -1726,7 +1727,7 @@ public:
             RequestType request = preparePipelinePredictRequest(request2);
             ovms::Status createPipelineStatus = StatusCode::UNKNOWN_ERROR;
             if (typeid(ServableType) == typeid(ovms::Pipeline)) {
-                createPipelineStatus = this->manager->createPipeline(pipelinePtr, pipelineName, &request, &response);
+                createPipelineStatus = this->manager->getPipelineFactory().create(pipelinePtr, pipelineName, &request, &response, *(this->manager));
 #if (MEDIAPIPE_DISABLE == 0)
             } else if (typeid(ServableType) == typeid(ovms::MediapipeGraphExecutor)) {
                 mediacreate(executorPtr, *(this->manager), request, response, createPipelineStatus);

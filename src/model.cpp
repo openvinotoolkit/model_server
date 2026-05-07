@@ -23,9 +23,8 @@
 
 #include "customloaderinterface.hpp"
 #include "customloaders.hpp"
-#include "dags/pipelinedefinition.hpp"
-#include "filesystem.hpp"
-#include "localfilesystem.hpp"
+#include "filesystem/filesystem.hpp"
+#include "filesystem/localfilesystem.hpp"
 #include "logging.hpp"
 #include "modelinstance.hpp"
 #include "statefulmodelinstance.hpp"

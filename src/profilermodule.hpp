@@ -17,7 +17,6 @@
 #include <memory>
 #include <utility>
 
-#include "logging.hpp"
 #include "module.hpp"
 
 namespace ovms {

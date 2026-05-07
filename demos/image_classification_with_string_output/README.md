@@ -15,15 +15,6 @@ cd model_server/demos/image_classification_with_string_output
 pip install -r requirements.txt
 python download_model.py
 rm model/1/fingerprint.pb
-
-tree model
-model
-└── 1
-    ├── assets
-    ├── saved_model.pb
-    └── variables
-        ├── variables.data-00000-of-00001
-        └── variables.index
 ```
 
 ### Start the OVMS container:

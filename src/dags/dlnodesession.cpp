@@ -20,9 +20,10 @@
 #include <string>
 
 #include "../logging.hpp"
+#include "../model_instance_provider.hpp"
 #include "../modelinstance.hpp"
 #include "../modelinstanceunloadguard.hpp"
-#include "../modelmanager.hpp"
+#include "../ovinferrequestsqueue.hpp"
 #include "../ov_utils.hpp"
 #include "../profiler.hpp"
 #include "../shape.hpp"
@@ -33,13 +34,13 @@
 #include "nodestreamidguard.hpp"
 
 namespace ovms {
-DLNodeSession::DLNodeSession(const NodeSessionMetadata& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapseDetails& collapsingDetails, ModelManager& manager, const std::string& modelName, model_version_t modelVersion) :
+DLNodeSession::DLNodeSession(const NodeSessionMetadata& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapseDetails& collapsingDetails, ModelInstanceProvider& manager, const std::string& modelName, model_version_t modelVersion) :
     NodeSession(metadata, nodeName, inputsCount, collapsingDetails),
     modelManager(manager),
     modelName(modelName),
     modelVersion(modelVersion) {}
 
-DLNodeSession::DLNodeSession(const NodeSessionMetadata&& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapseDetails& collapsingDetails, ModelManager& manager, const std::string& modelName, model_version_t modelVersion) :
+DLNodeSession::DLNodeSession(const NodeSessionMetadata&& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapseDetails& collapsingDetails, ModelInstanceProvider& manager, const std::string& modelName, model_version_t modelVersion) :
     NodeSession(std::move(metadata), nodeName, inputsCount, collapsingDetails),
     modelManager(manager),
     modelName(modelName),

@@ -18,7 +18,7 @@
 
 #include "spdlog/spdlog.h"
 
-#include "../azurefilesystem.hpp"
+#include "src/filesystem/azurefilesystem.hpp"
 #include "gtest/gtest.h"
 
 using namespace ovms;

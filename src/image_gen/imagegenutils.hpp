@@ -20,7 +20,8 @@
 #include <vector>
 #include <utility>
 
-#include <openvino/openvino.hpp>
+#include <openvino/core/any.hpp>
+#include <openvino/runtime/tensor.hpp>
 #pragma warning(push)
 #pragma warning(disable : 6001 4324 6385 6386)
 #include "absl/status/status.h"

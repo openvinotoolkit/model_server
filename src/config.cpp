@@ -36,6 +36,9 @@
 #include "modelconfig.hpp"
 #include "stringutils.hpp"
 #include "systeminfo.hpp"
+#ifdef __linux__
+#include <sys/resource.h>
+#endif
 
 #ifdef __linux__
 #include <sys/resource.h>
@@ -55,20 +58,13 @@ const uint64_t MAX_REST_WORKERS = 10'000;
 // on linux, restrict also based on the max allowed number of open files
 #ifdef __linux__
 
-static uint64_t getMaxOpenFilesLimit() {
-    struct rlimit limit;
-    if (getrlimit(RLIMIT_NOFILE, &limit) == 0) {
-        return limit.rlim_cur;
-    }
-    return std::numeric_limits<uint64_t>::max();
-}
-
 const uint64_t RESERVED_OPEN_FILES = 15;  // we need to reserve some file descriptors for other operations, so we don't want to use all of them for drogon workers
 uint64_t getDefaultRestWorkers() {
     const uint64_t maxOpenFiles = getMaxOpenFilesLimit();
     if (maxOpenFiles <= RESERVED_OPEN_FILES) {
         return static_cast<uint64_t>(2);  // minimum functional number
     }
+    
     return std::min(static_cast<uint64_t>(AVAILABLE_CORES), (maxOpenFiles - RESERVED_OPEN_FILES) / 7);  // 5x rest_workers to initialize ovms and 2x rest_workers for new connections
 }
 #else
@@ -402,7 +398,25 @@ const std::string Config::restBindAddress() const { return this->serverSettings.
 uint32_t Config::grpcWorkers() const { return this->serverSettings.grpcWorkers; }
 uint32_t Config::grpcMaxThreads() const { return this->serverSettings.grpcMaxThreads.value_or(DEFAULT_GRPC_MAX_THREADS); }
 size_t Config::grpcMemoryQuota() const { return this->serverSettings.grpcMemoryQuota.value_or(DEFAULT_GRPC_MEMORY_QUOTA); }
-uint32_t Config::restWorkers() const { return this->serverSettings.restWorkers.value_or(getDefaultRestWorkers()); }
+uint32_t Config::restWorkers() const {
+    if (this->serverSettings.restWorkers.has_value()) {
+        return this->serverSettings.restWorkers.value();
+    }
+
+    const uint64_t defaultRestWorkers = getDefaultRestWorkers();
+#ifdef __linux__
+    const uint64_t maxOpenFiles = getMaxOpenFilesLimit();
+    const uint16_t detectedCores = getCoreCount();
+    SPDLOG_DEBUG("Detected cores: {} (may be constrained by Docker limits), max open files: {}, calculated default rest workers: {}", detectedCores, maxOpenFiles, defaultRestWorkers);
+    if (isRunningInDocker()) {
+        SPDLOG_DEBUG("Docker CPU quota detected: {}, CPU affinity count: {}", getDockerCpuQuota(), getCpuAffinityCount());
+    }
+#else
+    const uint16_t detectedCores = getCoreCount();
+    SPDLOG_DEBUG("Detected cores: {}, calculated default rest workers: {}", detectedCores, defaultRestWorkers);
+#endif
+    return static_cast<uint32_t>(defaultRestWorkers);
+}
 const std::string& Config::modelName() const { return this->modelsSettings.modelName; }
 const std::string& Config::modelPath() const { return this->modelsSettings.modelPath; }
 const std::string& Config::batchSize() const {

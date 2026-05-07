@@ -31,6 +31,7 @@
 #include <dirent.h>
 #endif
 #include <malloc.h>
+#include <openvino/core/layout.hpp>
 #include <openvino/runtime/compiled_model.hpp>
 // TODO windows
 #ifdef __linux__
@@ -40,12 +41,11 @@
 #include <sys/types.h>
 
 #include "anonymous_input_name.hpp"
-#include "cleaner_utils.hpp"
 #include "config.hpp"
 #include "customloaderinterface.hpp"
 #include "customloaders.hpp"
 #include "executingstreamidguard.hpp"
-#include "filesystem.hpp"
+#include "filesystem/filesystem.hpp"
 #include "layout.hpp"
 #include "layout_configuration.hpp"
 #include "logging.hpp"
@@ -53,6 +53,7 @@
 #include "modelconfig.hpp"
 #include "modelinstanceunloadguard.hpp"
 #include "ov_utils.hpp"
+#include "ovinferrequestsqueue.hpp"
 #include "profiler.hpp"
 #include "regularovtensorfactory.hpp"
 #include "shape.hpp"
@@ -63,6 +64,12 @@
 #ifdef __linux__
 #include "opencltensorfactory.hpp"
 #include "vaapitensorfactory.hpp"
+#endif
+
+#ifdef _WIN32
+namespace ovms {
+bool malloc_trim_win();
+}  // namespace ovms
 #endif
 
 namespace {
@@ -933,6 +940,15 @@ Status ModelInstance::loadOVCompiledModel(const ModelConfig& config) {
             getVersion(),
             config.getTargetDevice());
         return status;
+    } catch (...) {
+        Status status = StatusCode::CANNOT_COMPILE_MODEL_INTO_TARGET_DEVICE;
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "{}; error: {}; model: {}; version: {}; device: {}",
+            status.string(),
+            "Unknown error",
+            getName(),
+            getVersion(),
+            config.getTargetDevice());
+        return status;
     }
 
     uint32_t numberOfStreams = getNumOfStreams();
@@ -1407,6 +1423,18 @@ void ModelInstance::checkForOutputTensorResetAbility() {
 }
 bool ModelInstance::doesSupportOutputReset() const {
     return this->supportOutputTensorsReset;
+}
+
+std::optional<Dimension> ModelInstance::getBatchSize() const {
+    try {
+        return Dimension(ov::get_batch(model));
+    } catch (...) {
+        return std::nullopt;
+    }
+}
+
+OVInferRequestsQueue& ModelInstance::getInferRequestsQueue() {
+    return *inferRequestsQueue;
 }
 
 const size_t ModelInstance::getBatchSizeIndex() const {

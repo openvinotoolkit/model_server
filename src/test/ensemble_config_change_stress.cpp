@@ -27,7 +27,7 @@
 #include "../kfs_frontend/kfs_graph_executor_impl.hpp"
 #endif
 #include "../kfs_frontend/kfs_utils.hpp"
-#include "../localfilesystem.hpp"
+#include "src/filesystem/localfilesystem.hpp"
 #include "../logging.hpp"
 #include "../model_service.hpp"
 #include "../modelconfig.hpp"

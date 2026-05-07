@@ -17,6 +17,7 @@
 
 #include <algorithm>
 #include <filesystem>
+#include <fstream>
 #include <limits>
 #include <optional>
 #include <set>
@@ -29,7 +30,8 @@
 #include "src/port/rapidjson_writer.hpp"
 #pragma warning(pop)
 
-#include "filesystem.hpp"
+#include "anonymous_input_name.hpp"
+#include "filesystem/filesystem.hpp"
 #include "json_parser.hpp"
 #include "logging.hpp"
 #include "model_version_policy.hpp"
@@ -809,6 +811,33 @@ void ModelConfig::setBasePath(const std::string& basePath) {
 }
 const std::string ModelConfig::getPath() const {
     return getLocalPath() + FileSystem::getOsSeparator() + std::to_string(version);
+}
+
+bool ModelConfig::anyShapeSetToAuto() const {
+    for (const auto& [name, shapeInfo] : getShapes()) {
+        if (shapeInfo.shapeMode == AUTO)
+            return true;
+    }
+    return false;
+}
+
+bool ModelConfig::isShapeAuto(const std::string& name) const {
+    auto it = getShapes().find(name);
+    if (it == getShapes().end()) {
+        it = getShapes().find(ANONYMOUS_INPUT_NAME);
+    }
+    if (it == getShapes().end()) {
+        return false;
+    }
+    return it->second.shapeMode == Mode::AUTO;
+}
+
+bool ModelConfig::isShapeAnonymous() const {
+    return getShapes().size() == 1 && getShapes().begin()->first == ANONYMOUS_INPUT_NAME;
+}
+
+bool ModelConfig::isShapeAnonymousFixed() const {
+    return isShapeAnonymous() && !isShapeAuto(ANONYMOUS_INPUT_NAME);
 }
 
 }  // namespace ovms

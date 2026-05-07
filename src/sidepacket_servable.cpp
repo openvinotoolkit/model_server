@@ -17,6 +17,7 @@
 #include <numeric>
 
 #include "openvino/core/except.hpp"
+#include "openvino/runtime/core.hpp"
 #include "sidepacket_servable.hpp"
 #include "logging.hpp"
 #include <spdlog/spdlog.h>
@@ -31,7 +32,7 @@
 #include "status.hpp"
 #include "config.hpp"
 
-#include "filesystem.hpp"
+#include "filesystem/filesystem.hpp"
 
 using namespace ov::genai;
 using namespace ov;

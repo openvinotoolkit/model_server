@@ -96,6 +96,15 @@ if !errorlevel! neq 0 exit /b !errorlevel!
 call %cd%\windows_prepare_llm_models.bat %cd%\src\test\llm_testing
 if !errorlevel! neq 0 exit /b !errorlevel!
 
+:: Run install_ovms_service.bat unit tests
+echo Running install_ovms_service.bat unit tests...
+python -m pytest tests\python\test_install_ovms_service_windows.py -v 2>&1 | tee win_install_service_test.log
+if !errorlevel! neq 0 (
+    echo [ERROR] install_ovms_service.bat unit tests failed. See win_install_service_test.log.
+    exit /b !errorlevel!
+)
+echo [INFO] install_ovms_service.bat unit tests passed.
+
 :: Start unit test
 echo Running: %runTest%
 %runTest%

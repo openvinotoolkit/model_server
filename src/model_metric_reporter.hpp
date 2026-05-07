@@ -15,14 +15,13 @@
 //*****************************************************************************
 #pragma once
 
-#include <iostream>
 #include <memory>
 #include <stdexcept>
 #include <string>
 #include <vector>
 
 #include "execution_context.hpp"
-#include "metric.hpp"
+#include "metrics/metric.hpp"
 #include "modelversion.hpp"
 
 namespace ovms {
@@ -30,7 +29,15 @@ namespace ovms {
 class MetricRegistry;
 class MetricConfig;
 
-class ServableMetricReporter {
+class StatusMetricReporter {
+public:
+    virtual ~StatusMetricReporter() = default;
+    virtual std::unique_ptr<MetricCounter>& getModelReadyMetric(const ExecutionContext& context, bool success = true) = 0;
+    virtual std::unique_ptr<MetricCounter>& getModelMetadataMetric(const ExecutionContext& context, bool success = true) = 0;
+    virtual std::unique_ptr<MetricCounter>& getGetModelStatusRequestSuccessMetric(const ExecutionContext& context) = 0;
+};
+
+class ServableMetricReporter : public StatusMetricReporter {
     MetricRegistry* registry;
 
 protected:
@@ -77,7 +84,7 @@ public:
     std::unique_ptr<MetricHistogram> requestTimeGrpc;
     std::unique_ptr<MetricHistogram> requestTimeRest;
 
-    inline std::unique_ptr<MetricCounter>& getGetModelStatusRequestSuccessMetric(const ExecutionContext& context) {
+    inline std::unique_ptr<MetricCounter>& getGetModelStatusRequestSuccessMetric(const ExecutionContext& context) override {
         if (context.method != ExecutionContext::Method::GetModelStatus) {
             static std::unique_ptr<MetricCounter> empty = nullptr;
             return empty;  // In case something calls it from ConfigReload/ConfigStatus methods
@@ -123,7 +130,7 @@ public:
         }
     }
 
-    inline std::unique_ptr<MetricCounter>& getModelMetadataMetric(const ExecutionContext& context, bool success = true) {
+    inline std::unique_ptr<MetricCounter>& getModelMetadataMetric(const ExecutionContext& context, bool success = true) override {
         if (context.interface == ExecutionContext::Interface::GRPC) {
             return success ? this->requestSuccessGrpcModelMetadata : this->requestFailGrpcModelMetadata;
         } else {
@@ -131,7 +138,7 @@ public:
         }
     }
 
-    inline std::unique_ptr<MetricCounter>& getModelReadyMetric(const ExecutionContext& context, bool success = true) {
+    inline std::unique_ptr<MetricCounter>& getModelReadyMetric(const ExecutionContext& context, bool success = true) override {
         if (context.interface == ExecutionContext::Interface::GRPC) {
             return success ? this->requestSuccessGrpcModelReady : this->requestFailGrpcModelReady;
         } else {
@@ -153,7 +160,7 @@ public:
     ModelMetricReporter(const MetricConfig* metricConfig, MetricRegistry* registry, const std::string& modelName, model_version_t modelVersion);
 };
 
-class MediapipeServableMetricReporter {
+class MediapipeServableMetricReporter : public StatusMetricReporter {
     MetricRegistry* registry;
 
 protected:
@@ -300,7 +307,7 @@ public:
         return nullptr;
     }
 
-    inline std::unique_ptr<MetricCounter>& getModelMetadataMetric(const ExecutionContext& context, bool success = true) {
+    inline std::unique_ptr<MetricCounter>& getModelMetadataMetric(const ExecutionContext& context, bool success = true) override {
         if (context.interface == ExecutionContext::Interface::GRPC) {
             return success ? this->requestSuccessGrpcModelMetadata : this->requestFailGrpcModelMetadata;
         } else {
@@ -308,12 +315,17 @@ public:
         }
     }
 
-    inline std::unique_ptr<MetricCounter>& getModelReadyMetric(const ExecutionContext& context, bool success = true) {
+    inline std::unique_ptr<MetricCounter>& getModelReadyMetric(const ExecutionContext& context, bool success = true) override {
         if (context.interface == ExecutionContext::Interface::GRPC) {
             return success ? this->requestSuccessGrpcModelReady : this->requestFailGrpcModelReady;
         } else {
             return success ? this->requestSuccessRestModelReady : this->requestFailRestModelReady;
         }
+    }
+
+    inline std::unique_ptr<MetricCounter>& getGetModelStatusRequestSuccessMetric(const ExecutionContext& context) override {
+        static std::unique_ptr<MetricCounter> empty{nullptr};
+        return empty;
     }
 
     MediapipeServableMetricReporter(const MetricConfig* metricConfig, MetricRegistry* registry, const std::string& graphName);

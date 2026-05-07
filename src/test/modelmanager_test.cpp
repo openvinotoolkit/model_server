@@ -20,11 +20,13 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include <openvino/runtime/core.hpp>
+
 #include "../cleaner_utils.hpp"
 #include "../config.hpp"
 #include "../dags/custom_node_library_internal_manager_wrapper.hpp"
 #include "../dags/node_library.hpp"
-#include "../localfilesystem.hpp"
+#include "src/filesystem/localfilesystem.hpp"
 #include "../logging.hpp"
 #include "../model.hpp"
 #include "../modelinstanceunloadguard.hpp"

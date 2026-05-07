@@ -23,7 +23,13 @@
 #include <utility>
 #include <vector>
 
-#include <openvino/openvino.hpp>
+#include <openvino/core/any.hpp>
+#include <openvino/core/layout.hpp>
+#include <openvino/core/shape.hpp>
+#include <openvino/core/type/element_type.hpp>
+#include <openvino/runtime/core.hpp>
+#include <openvino/runtime/properties.hpp>
+#include <openvino/runtime/tensor.hpp>
 
 #include "logging.hpp"
 #include "shape.hpp"

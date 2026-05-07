@@ -19,7 +19,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "src/filesystem.hpp"
+#include "src/filesystem/filesystem.hpp"
 #include "src/status.hpp"
 #include "src/stringutils.hpp"
 #include "src/capi_frontend/server_settings.hpp"

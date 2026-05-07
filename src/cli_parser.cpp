@@ -31,8 +31,8 @@
 #include "graph_export/s2t_graph_cli_parser.hpp"
 #include "graph_export/image_generation_graph_cli_parser.hpp"
 #include "ovms_exit_codes.hpp"
-#include "filesystem.hpp"
-#include "localfilesystem.hpp"
+#include "filesystem/filesystem.hpp"
+#include "filesystem/localfilesystem.hpp"
 #include "stringutils.hpp"
 #include "version.hpp"
 

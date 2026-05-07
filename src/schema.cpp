@@ -31,7 +31,7 @@
 #include <windows.h>
 #endif
 
-#include "filesystem.hpp"
+#include "filesystem/filesystem.hpp"
 #include "logging.hpp"
 #include "status.hpp"
 

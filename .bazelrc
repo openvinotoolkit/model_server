@@ -219,6 +219,10 @@ build:windows --host_linkopt=/OPT:REF
 build:windows --linkopt=/OPT:ICF
 build:windows --host_linkopt=/OPT:ICF
 
+# Optional build with INTEGRITYCHECK: bazel build --config=win_integritycheck //src:ovms
+build:win_integritycheck --linkopt=/INTEGRITYCHECK
+build:win_integritycheck --host_linkopt=/INTEGRITYCHECK
+
 build:windows --action_env PYTHON_BIN_PATH="C:/opt/Python312/python.exe"
 build:windows --action_env PYTHON_LIB_PATH="C:/opt/Python312/lib/site-packages"
 build:windows --repo_env PYTHON_BIN_PATH=C:/opt/Python312/python.exe

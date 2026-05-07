@@ -20,6 +20,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cstdlib>
+#include <fstream>
 #include <functional>
 #include <optional>
 #include <unordered_set>

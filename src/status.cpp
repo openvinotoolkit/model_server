@@ -30,6 +30,7 @@ const std::unordered_map<StatusCode, std::string> Status::statusMessageMap = {
     {StatusCode::NO_MODEL_VERSION_AVAILABLE, "Not a single model version directory has valid numeric name"},
     {StatusCode::MODEL_NOT_LOADED, "Error while loading a model"},
     {StatusCode::JSON_INVALID, "The file is not valid json"},
+    {StatusCode::JSON_NESTING_DEPTH_EXCEEDED, "JSON nesting depth exceeds the allowed limit"},
     {StatusCode::JSON_SERIALIZATION_ERROR, "Data serialization to json format failed"},
     {StatusCode::MODELINSTANCE_NOT_FOUND, "ModelInstance not found"},
     {StatusCode::SHAPE_WRONG_FORMAT, "The provided shape is in wrong format"},

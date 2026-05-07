@@ -15,7 +15,7 @@ mkdir models
 ## Add optimum-cli to OVMS installation on windows
 
 ```bat
-curl -L https://github.com/openvinotoolkit/model_server/releases/download/v2026.0/ovms_windows_python_on.zip -o ovms.zip
+curl -L https://github.com/openvinotoolkit/model_server/releases/download/v2026.1/ovms_windows_2026.1.0_python_on.zip -o ovms.zip
 tar -xf ovms.zip
 ovms\setupvars.bat
 ovms\python\python -m pip install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
@@ -56,7 +56,7 @@ ovms --pull --source_model "Qwen/Qwen3-4B" --model_repository_path /models --mod
 
 ```bash
 mkdir -p models
-docker run -u $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest-py --pull --source_model "Qwen/Qwen3-4B" --model_repository_path /models --model_name Qwen3-4B --task text_generation --weight-format int8
+docker run -u $(id -u):$(id -g) -e HF_HOME=/tmp -e TORCHINDUCTOR_CACHE_DIR=/tmp/torchinductor --rm -v $(pwd)/models:/models:rw openvino/model_server:latest-py --pull --source_model "Qwen/Qwen3-4B" --model_repository_path /models --model_name Qwen3-4B --task text_generation --weight-format int8
 ```
 :::
 
@@ -85,7 +85,7 @@ You can mount the HuggingFace cache to avoid downloading the original model in c
 Below is an example pull command with optimum model cache directory sharing for model download:
 
 ```bash
-docker run -v /etc/passwd:/etc/passwd -e HF_HOME=/hf_home/cache --user $(id -u):$(id -g) --group-add=$(id -g) -v ${HOME}/.cache/huggingface/:/hf_home/cache -v $(pwd)/models:/models:rw openvino/model_server:latest-py --pull --model_repository_path /models --source_model meta-llama/Llama-3.2-1B-Instruct --task text_generation --weight-format int8
+docker run -e TORCHINDUCTOR_CACHE_DIR=/tmp/torchinductor -e HF_HOME=/hf_home/cache --user $(id -u):$(id -g) --group-add=$(id -g) -v ${HOME}/.cache/huggingface/:/hf_home/cache -v $(pwd)/models:/models:rw openvino/model_server:latest-py --pull --model_repository_path /models --source_model meta-llama/Llama-3.2-1B-Instruct --task text_generation --weight-format int8
 ```
 
 or deploy without caching the model files with passed HF_TOKEN for authorization:

@@ -39,7 +39,7 @@
 #include "../logging.hpp"
 #include "../mediapipe_internal/mediapipe_utils.hpp"
 #include "../status.hpp"
-#include "../filesystem.hpp"
+#include "src/filesystem/filesystem.hpp"
 #include "../stringutils.hpp"
 #include "language_model/continuous_batching/servable.hpp"
 #include "language_model/continuous_batching/servable_initializer.hpp"
@@ -253,6 +253,8 @@ void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServ
             jinja_env.globals["raise_exception"] = raise_exception
             jinja_env.globals["strftime_now"] = strftime_now
             jinja_env.filters["from_json"] = json.loads
+            # Override tojson to return plain str instead of Markup to prevent HTML escaping in LLM prompts
+            jinja_env.filters["tojson"] = lambda value, indent=None: json.dumps(value, ensure_ascii=False, indent=indent)
 
             # Try to read data from tokenizer_config.json to get additional tool chat template if present
             tokenizer_config_file = Path(templates_directory + "/tokenizer_config.json")

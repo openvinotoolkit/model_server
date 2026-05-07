@@ -30,7 +30,7 @@
 #include "../get_model_metadata_impl.hpp"
 #include "../grpcservermodule.hpp"
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
-#include "../localfilesystem.hpp"
+#include "src/filesystem/localfilesystem.hpp"
 #include "../model.hpp"
 #include "../model_service.hpp"
 #include "../modelinstance.hpp"

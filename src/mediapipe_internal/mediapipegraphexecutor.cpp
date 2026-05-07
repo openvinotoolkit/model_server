@@ -31,8 +31,6 @@
 #include "../python/python_backend.hpp"
 #endif
 
-#include "../image_gen/pipelines.hpp"
-
 namespace ovms {
 
 MediapipeGraphExecutor::MediapipeGraphExecutor(

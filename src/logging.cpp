@@ -15,6 +15,9 @@
 //*****************************************************************************
 #include "logging.hpp"
 
+#include <spdlog/sinks/basic_file_sink.h>
+#include <spdlog/sinks/stdout_sinks.h>
+
 #if (MEDIAPIPE_DISABLE == 0)
 #include <glog/logging.h>
 #endif

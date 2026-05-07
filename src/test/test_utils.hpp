@@ -48,7 +48,7 @@
 #include "../mediapipe_internal/mediapipegraphdefinition.hpp"
 #include "../mediapipe_internal/mediapipegraphexecutor.hpp"
 #endif
-#include "../metric_registry.hpp"
+#include "src/metrics/metric_registry.hpp"
 #include "../modelinstance.hpp"
 #include "../modelmanager.hpp"
 #include "../shape.hpp"

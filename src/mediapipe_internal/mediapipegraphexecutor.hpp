@@ -37,7 +37,7 @@
 #pragma GCC diagnostic pop
 #pragma warning(pop)
 #include "mediapipe_utils.hpp"
-#include "mediapipegraphdefinition.hpp"  // for version in response and PythonNodeResourceMap
+#include "graph_side_packets.hpp"
 #include "packettypes.hpp"
 
 namespace ovms {
@@ -303,7 +303,7 @@ public:
 #endif
                 inputSidePackets[LLM_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<GenAiServableMap>(this->sidePacketMaps.genAiServableMap).At(STARTING_TIMESTAMP);
                 inputSidePackets[EMBEDDINGS_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<EmbeddingsServableMap>(this->sidePacketMaps.embeddingsServableMap).At(STARTING_TIMESTAMP);
-                // Add image generation side packet in case image generation allow for streaming
+                inputSidePackets[STT_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<SttServableMap>(this->sidePacketMaps.sttServableMap).At(STARTING_TIMESTAMP);
             }
 
             {

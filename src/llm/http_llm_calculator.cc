@@ -76,6 +76,19 @@ public:
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "LLMCalculator [Node: {}] Open end", cc->NodeName());
         return absl::OkStatus();
     }
+    absl::Status handleGenerationError(CalculatorContext* cc, const char* errorMessage) {
+        if (executionContext->apiHandler && executionContext->apiHandler->isStream()) {
+            std::string failedEvent = executionContext->apiHandler->serializeFailedEvent(errorMessage);
+            if (!failedEvent.empty()) {
+                executionContext->response = wrapTextInServerSideEventMessage(failedEvent);
+                executionContext->response += wrapTextInServerSideEventMessage("[DONE]");
+                cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new std::string{std::move(executionContext->response)}, iterationBeginTimestamp);
+                return absl::OkStatus();
+            }
+        }
+        return absl::InvalidArgumentError(errorMessage);
+    }
+
     absl::Status Process(CalculatorContext* cc) final {
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "LLMCalculator  [Node: {}] Process start", cc->NodeName());
         OVMS_PROFILE_FUNCTION();
@@ -125,6 +138,23 @@ public:
                 if (status != absl::OkStatus())
                     return status;
                 SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "LLMCalculator  [Node: {}] Pipeline execution scheduled successfully", cc->NodeName());
+
+                // For streaming, emit response.created event after scheduling execution.
+                // The response object now exists in the system. response.in_progress will
+                // be emitted later inside serializeStreamingChunk after readPartialExecutionResults
+                // confirms the model has actually started producing tokens.
+                if (executionContext->apiHandler->isStream()) {
+                    std::string createdEvent = executionContext->apiHandler->serializeStreamingCreatedEvent();
+                    if (!createdEvent.empty()) {
+                        executionContext->response = wrapTextInServerSideEventMessage(createdEvent);
+                        cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new std::string{std::move(executionContext->response)}, iterationBeginTimestamp);
+                        executionContext->response = "";
+                        cc->Outputs().Tag(LOOPBACK_TAG_NAME).Add(new bool{true}, iterationBeginTimestamp);
+                        auto now = std::chrono::system_clock::now();
+                        iterationBeginTimestamp = ::mediapipe::Timestamp(std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch()).count());
+                        return absl::OkStatus();
+                    }
+                }
             }
 
             if (!executionContext->apiHandler->isStream()) {  // Unary scenario
@@ -160,9 +190,9 @@ public:
                     cc->Outputs().Tag(LOOPBACK_TAG_NAME).Add(new bool{true}, iterationBeginTimestamp);
             }
         } catch (ov::AssertFailure& e) {
-            return absl::InvalidArgumentError(e.what());
+            return handleGenerationError(cc, e.what());
         } catch (...) {
-            return absl::InvalidArgumentError("Response generation failed");
+            return handleGenerationError(cc, "Response generation failed");
         }
         auto now = std::chrono::system_clock::now();
         iterationBeginTimestamp = ::mediapipe::Timestamp(std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch()).count());

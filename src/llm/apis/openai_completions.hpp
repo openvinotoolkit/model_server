@@ -15,119 +15,34 @@
 //*****************************************************************************
 #pragma once
 
-#include <limits>
-#include <optional>
-#include <memory>
-#include <sstream>
 #include <string>
-#include <unordered_map>
-#include <utility>
 #include <vector>
 
-#include <openvino/genai/generation_config.hpp>
-#include <openvino/genai/generation_handle.hpp>
-#include <openvino/genai/json_container.hpp>
-#include <openvino/genai/llm_pipeline.hpp>
-#include <openvino/genai/tokenizer.hpp>
-#include <openvino/genai/visual_language/pipeline.hpp>
-#include "src/port/rapidjson_document.hpp"
-#include "src/port/rapidjson_writer.hpp"
-#pragma warning(push)
-#pragma warning(disable : 6001 4324 6385 6386)
-#include "absl/status/status.h"
-#include "absl/status/statusor.h"
-#pragma warning(pop)
-#include "../io_processing/output_parser.hpp"
-#include "openai_request.hpp"
-
-using namespace rapidjson;
+#include "openai_api_handler.hpp"
 
 namespace ovms {
 
-enum class Endpoint {
-    CHAT_COMPLETIONS,
-    COMPLETIONS,
-    TOKENIZE,
-};
-
-struct CompletionUsageStatistics {
-    size_t promptTokens = 0;
-    size_t completionTokens = 0;
-
-    size_t calculateTotalTokens() const {
-        return promptTokens + completionTokens;
-    }
-};
-
-// Class that wraps OpenAI request, holds and processes raw JSON, provides methods for serialization and keeps track of usage.
-// It is used in the calculator.
-class OpenAIChatCompletionsHandler {
-    Document& doc;
-    Endpoint endpoint;
-    CompletionUsageStatistics usage;
-    OpenAIChatCompletionsRequest request;
-    std::chrono::time_point<std::chrono::system_clock> created;
-    ov::genai::Tokenizer tokenizer;
-    size_t processedTokens = 0;              // tracks overall number of tokens processed by the pipeline
+// Handler for OpenAI Completions (/v3/completions) and Chat Completions (/v3/chat/completions) APIs.
+class OpenAIChatCompletionsHandler : public OpenAIApiHandler {
     bool toolCallsDetectedInStream = false;  // tracks whether tool calls were detected in any streaming chunk
-
-    // Output parser is used to parse chat completions response to extract specific fields like tool calls and reasoning.
-    std::unique_ptr<OutputParser> outputParser = nullptr;
+    size_t processedTokens = 0;              // tracks overall number of tokens processed by the pipeline (echo-aware)
 
     absl::Status parseCompletionsPart();
     absl::Status parseChatCompletionsPart(std::optional<uint32_t> maxTokensLimit, std::optional<std::string> allowedLocalMediaPath, std::optional<std::vector<std::string>> allowedMediaDomains);
-    absl::Status parseCommonPart(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength);
-
-    ParsedOutput parseOutputIfNeeded(const std::vector<int64_t>& generatedIds);
-    absl::Status ensureArgumentsInToolCalls(Value& messageObj, bool& jsonChanged);
 
 public:
-    OpenAIChatCompletionsHandler(Document& doc, Endpoint endpoint, std::chrono::time_point<std::chrono::system_clock> creationTime,
-        ov::genai::Tokenizer tokenizer, const std::string& toolParserName = "", const std::string& reasoningParserName = "") :
-        doc(doc),
-        endpoint(endpoint),
-        created(creationTime),
-        tokenizer(tokenizer) {
-        // TODO we should delay creating output parser until we have request with toolNameSchemaMap parsed
-        // now we pass it now but it has to be populated first before first use
-        if (!toolParserName.empty() || !reasoningParserName.empty()) {
-            outputParser = std::make_unique<OutputParser>(tokenizer, toolParserName, reasoningParserName, this->request.toolNameSchemaMap);
-        }
-    }
+    using OpenAIApiHandler::OpenAIApiHandler;  // Inherit constructors
 
-    const OpenAIChatCompletionsRequest& getRequest() const;
-    std::optional<std::string> getPrompt() const;
-    std::optional<int> getNumReturnSequences() const;
-    StreamOptions getStreamOptions() const;
-    const std::string& getProcessedJson() const;
-    const ImageHistory& getImageHistory() const;
-    // User input might be modified by the servable logic, so it is not const
-    ov::genai::ChatHistory& getChatHistory();
-    std::optional<int> getMaxTokens() const;
-    std::optional<std::string> getResponseFormat() const;
-
-    bool isStream() const;
-    std::string getModel() const;
-    std::string getToolChoice() const;
-    const std::unique_ptr<OutputParser>& getOutputParser() const;
-
-    void setPromptTokensUsage(size_t promptTokens);
-    void setCompletionTokensUsage(size_t completionTokens);
-
-    void incrementProcessedTokens(size_t numTokens = 1);
-
-    absl::Status parseRequest(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength, std::optional<std::string> allowedLocalMediaPath = std::nullopt, std::optional<std::vector<std::string>> allowedMediaDomains = std::nullopt);
+    absl::Status parseRequest(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength,
+        std::optional<std::string> allowedLocalMediaPath = std::nullopt, std::optional<std::vector<std::string>> allowedMediaDomains = std::nullopt) override;
     absl::Status parseMessages(std::optional<std::string> allowedLocalMediaPath = std::nullopt, std::optional<std::vector<std::string>> allowedMediaDomains = std::nullopt);
-    absl::Status parseTools();
-    absl::StatusOr<std::optional<ov::genai::JsonContainer>> parseToolsToJsonContainer();
-    absl::StatusOr<std::optional<ov::genai::JsonContainer>> parseChatTemplateKwargsToJsonContainer();
-    const bool areToolsAvailable() const;
 
-    std::string serializeUnaryResponse(const std::vector<ov::genai::GenerationOutput>& generationOutputs);
-    std::string serializeUnaryResponse(ov::genai::EncodedResults& results);
-    std::string serializeUnaryResponse(ov::genai::VLMDecodedResults& results);
-    std::string serializeStreamingChunk(const std::string& chunkResponse, ov::genai::GenerationFinishReason finishReason);
-    std::string serializeStreamingUsageChunk();
-    std::string serializeStreamingHandshakeChunk();
+    std::string serializeUnaryResponse(const std::vector<ov::genai::GenerationOutput>& generationOutputs) override;
+    std::string serializeUnaryResponse(ov::genai::EncodedResults& results) override;
+    std::string serializeUnaryResponse(ov::genai::VLMDecodedResults& results) override;
+    std::string serializeStreamingChunk(const std::string& chunkResponse, ov::genai::GenerationFinishReason finishReason) override;
+    std::string serializeStreamingUsageChunk() override;
+    std::string serializeStreamingHandshakeChunk() override;
+    void incrementProcessedTokens(size_t numTokens = 1) override;
 };
 }  // namespace ovms

@@ -16,9 +16,10 @@
 #pragma once
 
 #include "../sidepacket_servable.hpp"
-#include "../filesystem.hpp"
-#include <rapidjson/istreamwrapper.h>
-#include <rapidjson/error/en.h>
+#include "src/filesystem/filesystem.hpp"
+#include "src/port/rapidjson_document.hpp"
+#include "src/port/rapidjson_istreamwrapper.hpp"
+#include "src/port/rapidjson_error.hpp"
 #include <memory>
 #include <string>
 #include <unordered_map>
