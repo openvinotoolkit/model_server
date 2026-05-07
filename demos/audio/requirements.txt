@@ -5,4 +5,4 @@ soundfile
 speechbrain==1.0.2
 huggingface_hub==0.29.3
 openai==2.21.0
-requests==2.31.0
+requests==2.33.0
