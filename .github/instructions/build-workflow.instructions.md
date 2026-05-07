@@ -3,20 +3,19 @@ description: "Build workflow, Docker setup, Makefile targets, style checks and t
 ---
 # OVMS Build & Test Workflow
 
-## Docker-Based Development
+## Development Environment
 
 Building and testing is done **inside a Docker `-build` container** with the repository mounted. Developers do not run Bazel on the host directly.
 
-### Checking for existing build images
+### Detecting the environment
 
-Before building a new image (which is time-expensive), check if one exists:
-```bash
-docker images | grep -- -build
-```
+Before attempting Docker operations, determine where commands are being executed:
+- If the terminal is **already inside the builder container** (e.g., `/ovms` is the workspace root, or Bazel is available directly), run Bazel and test commands directly — do not search for or start Docker containers.
+- If the terminal is on the **host machine**, use the Docker workflow below to find or create a build container.
 
-### Finding a container with the current workspace mounted
+### Host workflow: finding a container with the current workspace mounted
 
-**Always start here** — search for a running container that already mounts the current repo:
+**Start here when on the host** — search for a running container that already mounts the current repo:
 ```bash
 docker ps -q | xargs -I{} docker inspect {} --format '{{.ID}} {{range .Mounts}}{{.Source}}{{end}}' | grep "$(pwd)"
 ```
@@ -28,7 +27,14 @@ docker ps -aq | xargs -I{} docker inspect {} --format '{{.ID}} {{range .Mounts}}
 ```
 If found stopped, use `docker start -i <container_id>`.
 
-### Starting a build container
+### Host workflow: checking for existing build images
+
+Before building a new image (which is time-expensive), check if one exists:
+```bash
+docker images | grep -- -build
+```
+
+### Host workflow: starting a build container
 
 If a `-build` image exists, start a container with the repo mounted:
 ```bash
@@ -44,7 +50,9 @@ docker start -i <container>
 docker exec -it <container> bash
 ```
 
-## Bazel Commands (inside build container)
+## Bazel Commands (run directly in the build environment)
+
+These commands apply whether you are inside a Docker build container or have a local build environment with Bazel available.
 
 ### Key targets
 
@@ -89,7 +97,9 @@ bazel build --//:distro=redhat //src:ovms
 --config=win_mp_on_py_on
 ```
 
-## Makefile Targets (Docker-based workflow)
+## Makefile Targets (host-only, Docker-based workflow)
+
+These targets manage Docker images and containers from the host. They are **not used when already inside the builder container** — use Bazel commands directly instead.
 
 | Target | Description |
 |--------|-------------|
@@ -122,24 +132,14 @@ Both `Dockerfile.ubuntu` and `Dockerfile.redhat` use multi-stage builds:
 
 ## Style Checking
 
-**Always run checks individually and sequentially** — never use `make style` (which runs all checks together and wastes time re-running already-passed steps). Fix each step before moving to the next:
+**Always run checks individually and sequentially** — fix each step before moving to the next:
 
-1. **Spelling**:
-   ```bash
-   make spell
-   ```
-2. **clang-format** (formatting):
-   ```bash
-   make clang-format-check
-   ```
-3. **cpplint** (lint rules):
-   ```bash
-   make cpplint
-   ```
-4. **cppclean** (unused includes/code):
-   ```bash
-   make cppclean
-   ```
+1. **Spelling**: `make spell`
+2. **clang-format** (formatting): `make clang-format-check`
+3. **cpplint** (lint rules): `make cpplint`
+4. **cppclean** (unused includes/code): `make cppclean`
+
+These Make targets work only from the host. **Style checking is not supported inside the builder container** — if already in the container, inform the user that style checks must be run from the host.
 
 Fix issues from step N before running step N+1 — later steps produce noise if formatting is off.
 
