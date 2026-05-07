@@ -151,17 +151,11 @@ Status HfPullModelModule::clone() const {
     }
 
     GraphExport graphExporter;
-    bool writeToFile = (ovms::Config::instance().getServerSettings().serverMode == HF_PULL_MODE);
-    status = graphExporter.createServableConfig(graphDirectory, this->hfSettings, writeToFile);
+    status = graphExporter.createServableConfig(graphDirectory, this->hfSettings, true);  // when downloading from HF we always create config file, but when using local model with --task we create config in memory without writing to file
     if (!status.ok()) {
         return status;
     }
-    if (writeToFile) {
-        std::cout << "Graph: graph.pbtxt created in: " << graphDirectory << std::endl;
-    } else {
-        std::cout << "Graph: graph.pbtxt content stored in memory" << std::endl;
-    }
-
+    std::cout << "Graph: graph.pbtxt created in: " << graphDirectory << std::endl;
     return StatusCode::OK;
 }
 

@@ -148,6 +148,10 @@ bool Config::validateUserSettingsInConfigAddRemoveModel(const ModelsSettingsImpl
 }
 
 bool Config::validate() {
+    if (!this->serverSettings.hfSettings.sourceModel.empty() && this->serverSettings.hfSettings.task == UNKNOWN_GRAPH) {
+        std::cerr << "--source_model should be used combined with --task" << std::endl;
+        return false;
+    }
     if (this->serverSettings.serverMode == HF_PULL_MODE || this->serverSettings.serverMode == HF_PULL_AND_START_MODE) {
         // When --task is used with --model_path (no HF pulling), sourceModel and downloadPath are not required
         bool taskWithModelPath = this->serverSettings.serverMode == HF_PULL_AND_START_MODE && !this->modelsSettings.modelPath.empty();
@@ -160,10 +164,6 @@ bool Config::validate() {
                 std::cerr << "model_repository_path parameter is required for pull mode";
                 return false;
             }
-        }
-        if (this->serverSettings.hfSettings.task == UNKNOWN_GRAPH) {
-            std::cerr << "Error: --task parameter not set." << std::endl;
-            return false;
         }
         if (this->serverSettings.hfSettings.task == TEXT_GENERATION_GRAPH) {
             if (!std::holds_alternative<TextGenGraphSettingsImpl>(this->serverSettings.hfSettings.graphSettings)) {

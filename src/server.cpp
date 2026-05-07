@@ -420,9 +420,20 @@ Status Server::startModules(ovms::Config& config) {
         }
         auto hfModule = dynamic_cast<const HfPullModelModule*>(it->second.get());
         status = hfModule->clone();
+        // Return from modules only in --pull mode or error, otherwise start the rest of modules
+        if (config.getServerSettings().serverMode == HF_PULL_MODE || !status.ok())
+            return status;
+    }
+    if (config.getServerSettings().serverMode == GENAI_CONFIGURE_AND_START) {
+        // --task with --model_path: create graph in memory without HF download
+        GraphExport graphExporter;
+        const auto& hfSettings = config.getServerSettings().hfSettings;
+        status = graphExporter.createServableConfig(config.modelPath(), hfSettings, false);
         if (!status.ok()) {
+            SPDLOG_ERROR("Failed to create in-memory graph config: {}", status.string());
             return status;
         }
+        SPDLOG_INFO("Graph config created in memory from model_path: {}", config.modelPath());
     }
     GET_MODULE(SERVABLE_MANAGER_MODULE_NAME, it);
     START_MODULE(it);
@@ -534,7 +545,7 @@ int Server::startServerFromSettings(ServerSettingsImpl& serverSettings, ModelsSe
             return statusToExitCode(ret);
         }
         while (!getShutdownStatus() &&
-               (serverSettings.serverMode == HF_PULL_AND_START_MODE || serverSettings.serverMode == SERVING_MODELS_MODE)) {
+               (serverSettings.serverMode == HF_PULL_AND_START_MODE || serverSettings.serverMode == SERVING_MODELS_MODE || serverSettings.serverMode == GENAI_CONFIGURE_AND_START)) {
             std::this_thread::sleep_for(std::chrono::milliseconds(200));
         }
     } catch (const std::exception& e) {
