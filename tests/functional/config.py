@@ -287,6 +287,15 @@ machine_is_reserved_for_test_session = get_bool("TT_MACHINE_IS_RESERVED_FOR_TEST
 """ TT_CLEANUP_ENVIRONMENT_ON_STARTUP """
 cleanup_env_on_startup = get_bool("TT_CLEANUP_ENVIRONMENT_ON_STARTUP", False)
 
+""" TT_TEARDOWN_DOCKER_IMAGES - at teardown remove docker images build during test session """
+teardown_docker_images = get_bool("TT_TEARDOWN_DOCKER_IMAGES", True)
+
+""" TT_TEARDOWN_DOCKER_CONTAINERS - at teardown remove stopped docker containers """
+teardown_docker_containers = get_bool("TT_TEARDOWN_DOCKER_CONTAINERS", True)
+
+""" TT_TEARDOWN_OVMS_PROCESSES - at teardown remove all ovms.exe processes """
+teardown_ovms_processes = get_bool("TT_TEARDOWN_OVMS_PROCESSES", True)
+
 """ TT_WAIT_FOR_MESSAGES_TIMEOUT - timeout for ovms.wait_for_messages(...) method """
 wait_for_messages_timeout = get_int("TT_WAIT_FOR_MESSAGES_TIMEOUT", 180)
 

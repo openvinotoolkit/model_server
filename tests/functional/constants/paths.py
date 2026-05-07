@@ -44,6 +44,16 @@ class Paths:
     # DATASET
     DATASET_MAIN_PATH = os.path.join("/", "opt", "test_data")
 
+    # CAPI OVMS-TEST
+    OVMS_TEST_CAPI_WRAPPER_DIR = os.path.join(
+        config.ovms_c_repo_path, "tests", "functional", "data", "ovms_capi_wrapper"
+    )
+    OVMS_TEST_CAPI_PXD = os.path.join(OVMS_TEST_CAPI_WRAPPER_DIR, "ovms_capi.pxd")
+    OVMS_TEST_CAPI_AUTOPXD_PY = os.path.join(OVMS_TEST_CAPI_WRAPPER_DIR, "ovms_autopxd.py")
+    OVMS_TEST_CAPI_WRAPPER_PYX = os.path.join(OVMS_TEST_CAPI_WRAPPER_DIR, "ovms_capi_wrapper.pyx")
+    OVMS_TEST_CAPI_WRAPPER_MAKEFILE = os.path.join(OVMS_TEST_CAPI_WRAPPER_DIR, "Makefile")
+    OVMS_TEST_CAPI_WRAPPER_SETUP = os.path.join(OVMS_TEST_CAPI_WRAPPER_DIR, "setup.py")
+
     @staticmethod
     def CAPI_WRAPPER_PACKAGE_CONTENT_PATH(base_os):
         return os.path.join(config.c_api_wrapper_dir, base_os, "ovms")

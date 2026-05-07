@@ -15,15 +15,19 @@
 #
 
 import os
+import shutil
 import warnings
 
 from collections import defaultdict
+from docker import errors as docker_errors
+from pathlib import Path
 
 from tests.functional import config
 from tests.functional.models.models_library import ModelsLib
 from tests.functional.utils.reservation_manager.args import parse_args
 from tests.functional.utils.reservation_manager.manager import Manager as ReservationManager
 from tests.functional.config import (
+    c_api_wrapper_dir,
     cleanup_env_on_startup,
     global_tmp_dir_default,
     ovms_c_repo_path,
@@ -37,13 +41,16 @@ from tests.functional.constants.ovms import (
     USES_MAPPING_PARAM_NAME,
 )
 from tests.functional.constants.ovms_images import calculate_ovms_image_name
+from tests.functional.constants.paths import Paths
 from tests.functional.constants.target_device import TargetDevice
 from tests.functional.object_model.ovms_info import OvmsInfo
 from tests.functional.utils.core import TmpDir
+from tests.functional.utils.docker import DockerClient, DockerContainer
 from tests.functional.utils.environment_info import EnvironmentInfo
 from tests.functional.utils.logger import get_logger
 from tests.functional.utils.marks import MarkTestParameters
 from tests.functional.utils.process import Process
+from tests.functional.utils.test_framework import get_test_object_prefix
 
 logger = get_logger(__name__)
 
@@ -63,12 +70,99 @@ def init_environment(_config):
 
 def init_cleanup():
     if cleanup_env_on_startup:
-        if get_host_os() != OsType.Windows:
-            cleanup_docker(cleanup_docker_containers)
+        if get_host_os() == OsType.Windows:
+            cleanup_ovms_processes()
         else:
-            proc = Process()
-            proc.disable_check_stderr()
-            proc.run("taskkill /F /IM ovms.exe /T", print_stdout=False)
+            cleanup_docker(cleanup_docker_containers)
+
+
+def clean_container(container):
+    try:
+        container.stop(timeout=1)
+        container.remove(force=True)
+    except docker_errors.NotFound:
+        logger.warning(f"Container: {container.name} already removed")
+    except docker_errors.APIError:
+        logger.warning(f"Removal of container: {container.name} already in progress")
+    else:
+        logger.warning(f"Killing running container: {container.name}")
+
+
+def cleanup_docker(cleanup_docker_func):
+    try:
+        cleanup_docker_func()
+    except docker_errors.APIError as error:
+        logger.warning(f"Error occured during docker cleanup: {error}")
+
+
+def cleanup_docker_containers():
+    dc = DockerContainer(None)
+    for container in dc.list_containers():
+        clean_container(container)
+    logger.warning("Removing all stopped containers")
+    prune_results = dc.prune()
+    containers_deleted = prune_results.get("ContainersDeleted", [])
+    for container in containers_deleted or []:
+        logger.info(f"Removed container: {str(container)}")
+
+
+def cleanup_docker_images():
+    """Remove docker images build during test session"""
+    if OsType.Windows in config.base_os:
+        return
+    docker_client = DockerClient()
+    test_object_prefix = get_test_object_prefix()
+    for image in docker_client.images.list():
+        for image_tag in image.tags:
+            if test_object_prefix in image_tag:
+                docker_client.images.remove(image=image.id, force=True, noprune=False)
+                logger.info(f"Removed docker image: {image.id}")
+
+
+def teardown_environment():
+    if get_host_os() == OsType.Windows:
+        if config.teardown_ovms_processes:
+            cleanup_ovms_processes()
+    else:
+        if config.teardown_docker_containers:
+            cleanup_docker(cleanup_docker_containers)
+        if config.teardown_docker_images:
+            cleanup_docker(cleanup_docker_images)
+
+
+def cleanup_ovms_processes():
+    proc = Process()
+    proc.disable_check_stderr()
+    proc.run("taskkill /F /IM ovms.exe /T", print_stdout=False)
+
+
+def clear_ovms_capi_artifacts():
+    if not cleanup_env_on_startup:
+        return
+    proc = Process()
+    proc.disable_check_stderr()
+    if get_host_os() == OsType.Windows:
+        if os.path.exists(c_api_wrapper_dir):
+            proc.run_and_check(f"rmdir /S /Q {c_api_wrapper_dir}")
+    else:
+        proc.run_and_check("make clean", cwd=Paths.OVMS_TEST_CAPI_WRAPPER_DIR)
+        proc.run_and_check(f"rm -rf {c_api_wrapper_dir}")
+
+
+def setup_artifacts_dir():
+    if not config.artifacts_dir:
+        return
+    artifacts_dir_path = Path(config.artifacts_dir)
+    if not artifacts_dir_path.exists():
+        artifacts_dir_path.mkdir(parents=True)
+
+    if config.clean_artifacts_dir:
+        for file in artifacts_dir_path.glob("*"):
+            logger.info(f"Deleting old artifacts: {file}")
+            if file.is_dir():
+                shutil.rmtree(file)
+            else:
+                file.unlink()
 
 
 def setup_tmp_repos_dir(config):
