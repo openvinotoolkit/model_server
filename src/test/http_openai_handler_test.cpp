@@ -503,8 +503,6 @@ TEST_P(HttpOpenAIHandlerCommonParsingValidationTest, ModelFieldNotStringFails) {
 }
 
 TEST_P(HttpOpenAIHandlerCommonParsingValidationTest, SkipSpecialTokensDefaultIsTrue) {
-    std::string json = createRequestWithSkipSpecialTokensRawValue("true");
-    // Parse without the field to verify default
     std::string jsonWithoutField;
     if (endpoint() == ovms::Endpoint::COMPLETIONS) {
         jsonWithoutField = "{\"model\":\"llama\",\"prompt\":\"valid prompt\"}";
@@ -525,7 +523,7 @@ TEST_P(HttpOpenAIHandlerCommonParsingValidationTest, SkipSpecialTokensDefaultIsT
     EXPECT_TRUE(apiHandler->getRequest().skipSpecialTokens);
 }
 
-TEST_P(HttpOpenAIHandlerCommonParsingValidationTest, SkipSpecialTokensFalseNoParserAccepted) {
+TEST_P(HttpOpenAIHandlerCommonParsingValidationTest, SkipSpecialTokensFalseNoParser) {
     std::string json = createRequestWithSkipSpecialTokensRawValue("false");
     doc.Parse(json.c_str());
     ASSERT_FALSE(doc.HasParseError());
@@ -537,9 +535,10 @@ TEST_P(HttpOpenAIHandlerCommonParsingValidationTest, SkipSpecialTokensFalseNoPar
 
     EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
     EXPECT_FALSE(apiHandler->getRequest().skipSpecialTokens);
+    EXPECT_EQ(apiHandler->getOutputParser(), nullptr);
 }
 
-TEST_P(HttpOpenAIHandlerCommonParsingValidationTest, SkipSpecialTokensTrueWithToolParserAccepted) {
+TEST_P(HttpOpenAIHandlerCommonParsingValidationTest, SkipSpecialTokensTrueWithToolParser) {
     std::string json = createRequestWithSkipSpecialTokensRawValue("true");
     doc.Parse(json.c_str());
     ASSERT_FALSE(doc.HasParseError());
@@ -550,9 +549,10 @@ TEST_P(HttpOpenAIHandlerCommonParsingValidationTest, SkipSpecialTokensTrueWithTo
     auto apiHandler = createHandler(endpoint(), "llama3");
 
     EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+    EXPECT_TRUE(apiHandler->getRequest().skipSpecialTokens);
+    EXPECT_NE(apiHandler->getOutputParser(), nullptr);
 }
-
-TEST_P(HttpOpenAIHandlerCommonParsingValidationTest, SkipSpecialTokensFalseWithToolParserSilentlyDisablesParser) {
+{
     std::string json = createRequestWithSkipSpecialTokensRawValue("false");
     doc.Parse(json.c_str());
     ASSERT_FALSE(doc.HasParseError());
