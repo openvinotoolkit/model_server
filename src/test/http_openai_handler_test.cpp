@@ -552,7 +552,8 @@ TEST_P(HttpOpenAIHandlerCommonParsingValidationTest, SkipSpecialTokensTrueWithTo
     EXPECT_TRUE(apiHandler->getRequest().skipSpecialTokens);
     EXPECT_NE(apiHandler->getOutputParser(), nullptr);
 }
-{
+
+TEST_P(HttpOpenAIHandlerCommonParsingValidationTest, SkipSpecialTokensFalseWithToolParserSilentlyDisablesParser) {
     std::string json = createRequestWithSkipSpecialTokensRawValue("false");
     doc.Parse(json.c_str());
     ASSERT_FALSE(doc.HasParseError());
@@ -1048,7 +1049,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseVLMSupportsToolCallsF
     ov::genai::VLMDecodedResults results;
     std::string toolCall = R"(<tool_call>{"name": "example_tool", "arguments": {"arg1": "value1", "arg2": 42}}</tool_call>)";
     results.texts = {toolCall};
-    std::string serialized = apiHandler->serializeUnaryResponse(results);
+    std::string serialized = apiHandler->serializeUnaryResponse(results, toolCall);
 
     ASSERT_NE(serialized.find("\"finish_reason\":\"tool_calls\""), std::string::npos) << serialized;
 }
@@ -3091,10 +3092,11 @@ TEST_F(HttpOpenAIHandlerParsingTest, SerializeUnaryResponseVLMDecodedResultsWith
     ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
 
     ov::genai::VLMDecodedResults results;
-    results.texts.push_back(
-        "I will call a tool.<tool_call>{\"name\":\"get_weather\",\"arguments\":{\"location\":\"Paris\"}}</tool_call>");
+    std::string vlmText =
+        "I will call a tool.<tool_call>{\"name\":\"get_weather\",\"arguments\":{\"location\":\"Paris\"}}</tool_call>";
+    results.texts.push_back(vlmText);
 
-    std::string serialized = apiHandler->serializeUnaryResponse(results);
+    std::string serialized = apiHandler->serializeUnaryResponse(results, vlmText);
 
     rapidjson::Document responseDoc;
     responseDoc.Parse(serialized.c_str());
