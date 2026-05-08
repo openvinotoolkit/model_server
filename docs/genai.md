@@ -1,5 +1,16 @@
 # GenAI Endpoints {#ovms_docs_genai}
 
+```{toctree}
+---
+maxdepth: 1
+hidden:
+---
+
+ovms_docs_llm_reference
+ovms_docs_llm_model_parser_mapping
+ovms_docs_image_generation_reference
+```
+
 OpenVINO Model Server allows extending the REST API interface to support arbitrary input format and execute arbitrary pipeline implemented as a MediaPipe graph.
 
 The client makes a call to `http://server:port/v3/...` URL and post a JSON payload. The request is dispatched to the graph based on the `model` field in the JSON content.
