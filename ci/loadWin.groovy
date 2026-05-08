@@ -289,7 +289,21 @@ def check_tests(){
 
     status = bat(returnStatus: true, script: 'grep "  PASSED  " win_full_test.log')
     if (status != 0) {
+        // Check for segfault/termination only if PASSED is not found
+        def segfault_status = bat(returnStatus: true, script: 'grep -i "segmentation fault\\|segfault\\|crashed\\|abnormal termination" win_full_test.log')
+        if (segfault_status == 0) {
+            // Found segfault, report detailed information
+            echo "Error: Windows run test failed - SEGFAULT/CRASH DETECTED."
+            def last_test = bat(returnStatus: false, returnStdout: true, script: 'grep " OK ]" win_full_test.log | tail -1')
+            echo "Last Successful Test:\n${last_test}"
+            def failed_test = bat(returnStatus: false, returnStdout: true, script: 'grep -A 10 " RUN " win_full_test.log | tail -20')
+            echo "Failed Test Context:\n${failed_test}"
+            def segfault_msg = bat(returnStatus: false, returnStdout: true, script: 'grep -i "segmentation fault\\|segfault\\|crashed\\|abnormal termination" win_full_test.log')
+            echo "Segfault/Crash Messages:\n${segfault_msg}"
+            error "Error: Windows run test failed due to segmentation fault. Check win_full_test.log for details."
+        } else {
             error "Error: Windows run test failed ${status}. Expecting   PASSED   at the end of log. Check pipeline.log for details."
+        }
     } else {
         echo "Success: Windows run test finished with success."
     }

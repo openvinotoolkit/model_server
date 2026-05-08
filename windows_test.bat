@@ -98,10 +98,12 @@ if !errorlevel! neq 0 exit /b !errorlevel!
 
 :: Run install_ovms_service.bat unit tests
 echo Running install_ovms_service.bat unit tests...
-python -m pytest tests\python\test_install_ovms_service_windows.py -v 2>&1 | tee win_install_service_test.log
-if !errorlevel! neq 0 (
+python -m pytest tests\python\test_install_ovms_service_windows.py -v > win_install_service_test.log 2>&1
+set "pytestExitCode=!errorlevel!"
+type win_install_service_test.log
+if !pytestExitCode! neq 0 (
     echo [ERROR] install_ovms_service.bat unit tests failed. See win_install_service_test.log.
-    exit /b !errorlevel!
+    exit /b !pytestExitCode!
 )
 echo [INFO] install_ovms_service.bat unit tests passed.
 
@@ -113,13 +115,50 @@ echo Running: %runTest%
 set regex="\[  .* ms"
 set sed_clean="s/ (.* ms)//g"
 C:\Windows\System32\tar.exe -a -c -f win_test_log.zip win_full_test.log
-grep -a %regex% win_full_test.log | sed %sed_clean% > win_test_summary.log
-grep -a %regex% win_full_test.log | sed %sed_clean% | grep -q " FAILED "
+
+:: Create summary log with filtered results, always create the file even if grep finds no matches
+grep -a %regex% win_full_test.log | sed %sed_clean% > win_test_summary.log 2>&1 || (
+    echo No matching test results found >> win_test_summary.log
+)
+
+:: Check if tests completed successfully by looking for PASSED marker at the end
+grep -q "  PASSED  " win_full_test.log
+if !errorlevel! equ 0 goto :exit_build
+
+:: Tests did not complete successfully - check for failures and segfaults
+:: Check if tests failed by looking for FAILED in the full log
+grep -q " FAILED " win_full_test.log
 if !errorlevel! equ 0 goto :exit_build_error
+
+:: Also check for segmentation faults or crashes
+grep -q -i "segmentation fault\|segfault\|crashed\|abnormal termination" win_full_test.log
+if !errorlevel! equ 0 goto :exit_build_error
+
+:: If we reach here, tests didn't complete but no clear failure found
+goto :exit_build_error
+
 :exit_build 
 echo [INFO] Tests finished with no failures. Check the summary in win_test_summary.log.
 exit /b 0
 :exit_build_error
+echo.
+echo [ERROR] FAILED TESTS OR CRASHES DETECTED:
+echo.
+echo === Last Successful Test ===
+grep " OK ]" win_full_test.log | tail -1
+echo.
+echo === Last Running Test (likely the one that failed) ===
+grep " RUN " win_full_test.log | tail -1
+echo.
+echo === Output from Last Running Test to End of Log ===
+:: Find the line number of the last RUN and display everything from that point onwards
+for /F "delims=" %%A in ('grep -n " RUN " win_full_test.log ^| tail -1 ^| cut -d: -f1') do (
+    sed -n "%%A,$p" win_full_test.log | head -100
+)
+echo.
+echo === Segfault/Crash Messages (if any) ===
+grep -i "segmentation fault\|segfault\|crashed\|abnormal termination" win_full_test.log || echo (none found)
+echo.
 echo [ERROR] Check tests summary in 'win_test_summary.log' and tests logs in 'win_full_test.log'. Rerun failed test with: windows_setupvars.bat and %cd%\bazel-bin\src\ovms_test.exe --gtest_filter='*.*'
 exit /b 1
 endlocal
