@@ -35,11 +35,11 @@ const std::string Gemma4ToolParser::TOOL_ARGS_SEPARATOR_STR = ",";
 
 const std::string Gemma4ToolParser::TURN_END_TAG = "<turn|>";
 
-const int64_t Gemma4ToolParser::botTokenId = 48;
-const int64_t Gemma4ToolParser::eotTokenId = 49;
+const int64_t Gemma4ToolParser::botTokenId = 48; // <|tool_call>
+const int64_t Gemma4ToolParser::eotTokenId = 49; // <tool_call|>
 
-const int64_t Gemma4ToolParser::reasoningTokenId = 100;
-const int64_t Gemma4ToolParser::reasoningEndTokenId = 101;
+const int64_t Gemma4ToolParser::reasoningTokenId = 100;    // <|channel>
+const int64_t Gemma4ToolParser::reasoningEndTokenId = 101; // <channel|>
 
 std::string Gemma4ToolParser::parseArrayParameter(const std::string& argumentStr) {
     size_t pos = 1;
@@ -72,7 +72,7 @@ std::string Gemma4ToolParser::parseArrayParameter(const std::string& argumentStr
     return parsedArguments;
 }
 
-std::string Gemma4ToolParser::parseObjectParameter(std::string argumentStr) {
+std::string Gemma4ToolParser::parseObjectParameter(const std::string& argumentStr) {
     size_t pos = 1;
     std::vector<std::pair<std::string, std::string>> keyValuePairs;
 
@@ -85,7 +85,7 @@ std::string Gemma4ToolParser::parseObjectParameter(std::string argumentStr) {
         }
         key = argumentStr.substr(pos, keyEndPos - pos);
         size_t valueStartPos = keyEndPos + 1;
-        size_t valueEndPos;
+        size_t valueEndPos = std::string::npos;
         if (argumentStr.substr(valueStartPos, TOOL_ARGS_STRING_INDICATOR.size()) == TOOL_ARGS_STRING_INDICATOR) {
             valueStartPos = valueStartPos + TOOL_ARGS_STRING_INDICATOR.size();
             valueEndPos = argumentStr.find(TOOL_ARGS_STRING_INDICATOR, valueStartPos);
@@ -445,7 +445,9 @@ void Gemma4ToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64
     size_t pos = 0;
 
     while (pos != std::string::npos) {
-        size_t start, end;
+        size_t start = std::string::npos;
+        size_t end = std::string::npos;
+
         auto it = std::find(generatedTokens.begin() + pos, generatedTokens.end(), botTokenId);
         if (it != generatedTokens.end()) {
             start = std::distance(generatedTokens.begin(), it);
@@ -480,8 +482,8 @@ void Gemma4ToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64
                 }
                 SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Parsed single tool string {}", singleTool);
             } else {
-                break;
                 SPDLOG_LOGGER_TRACE(llm_calculator_logger, "No more tool strings found in the decoded string: {}", toolCallStr);
+                break;
             }
 
             if (!singleTool.empty()) {
