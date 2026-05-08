@@ -57,6 +57,7 @@ struct OpenAIRequest {
     // Multinomial decoding specific
     std::optional<float> temperature{std::nullopt};
     std::optional<float> topP{std::nullopt};
+    std::optional<float> minP{std::nullopt};
     std::optional<int> topK{std::nullopt};
     std::optional<int> seed{std::nullopt};
     std::optional<float> frequencyPenalty{std::nullopt};

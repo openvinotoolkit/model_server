@@ -122,6 +122,8 @@ void BaseGenerationConfigBuilder::parseConfigFromRequest(const OpenAIRequest& re
         config.top_k = request.topK.value();
     if (request.topP.has_value())
         config.top_p = request.topP.value();
+    if (request.minP.has_value())
+        config.min_p = request.minP.value();
     if (request.seed.has_value())
         config.rng_seed = request.seed.value();
     if (request.stop.has_value())

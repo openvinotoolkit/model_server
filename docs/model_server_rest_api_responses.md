@@ -120,11 +120,12 @@ curl http://localhost/v3/responses \
 |-------|----------|----------|---------|-----|
 | temperature | ✅ | ✅ | float (default: `1.0`) | The value is used to modulate token probabilities for multinomial sampling. It enables multinomial sampling when set to `> 0.0`. |
 | top_p | ✅ | ✅ | float (default: `1.0`) | Controls the cumulative probability of the top tokens to consider. Must be in (0, 1]. Set to 1 to consider all tokens. |
-| top_k | ✅ | ❌ | int (default: all tokens) | Controls the number of top tokens to consider. Set to empty or -1 to consider all tokens. |
+| min_p | ✅ | ❌ | float (default: `0.0`) | Minimum probability threshold relative to the most likely token. Tokens with probability below `min_p * p_max` are filtered out. `0.0` (default) disables the filter. Typical values: `0.05`–`0.1`. Must be in `[0.0, 1.0)`. |
+| top_k | ✅ | ❌ | int (default: `40`) | Controls the number of top tokens to consider. Set to empty or -1 to consider all tokens. |
 | repetition_penalty | ✅ | ❌ | float (default: `1.0`) | Penalizes new tokens based on whether they appear in the prompt and the generated text so far. Values > `1.0` encourage the model to use new tokens, while values < `1.0` encourage the model to repeat tokens. `1.0` means no penalty. |
 | frequency_penalty | ✅ | ❌ | float (default: `0.0`) | Number between -2.0 and 2.0. Positive values penalize new tokens based on their existing frequency in the text so far, decreasing the model's likelihood to repeat the same line verbatim. |
 | presence_penalty | ✅ | ❌ | float (default: `0.0`) | Number between -2.0 and 2.0. Positive values penalize new tokens based on whether they appear in the text so far, increasing the model's likelihood to talk about new topics. |
-| seed | ✅ | ❌ | integer (default: `0`) | Random seed to use for the generation. |
+| seed | ✅ | ❌ | integer (default: random) | Random seed to use for the generation. Set explicitly to get reproducible results. |
 
 #### Speculative decoding specific
 
