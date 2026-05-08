@@ -644,6 +644,7 @@ ovms_cc_library(
         "//src/dags:pipelinedefinition",
         "//src/filesystem:libovmsfilesystem",
         "//src/filesystem:libovmsfilesystemfactory",
+        "//src/graph_export:graph_export",
         "//src/metrics:libovms_metric_provider",
         "//src/metrics:libovmsmetrics",
         "@com_github_tencent_rapidjson//:rapidjson",
@@ -932,6 +933,7 @@ ovms_cc_library(
             "//src/kfserving_api:kfserving_api_cpp",
             "capimodule",
             "//src/pull_module:hf_pull_model_module",
+            "//src/graph_export:graph_export",
             "//src/servables_config_manager_module:servablesconfigmanagermodule",
             "predict_request_validation_utils", # to be removed when capi has its own lib and added there @atobisze
             "kfs_backend_impl",

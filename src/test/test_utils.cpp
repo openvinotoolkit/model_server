@@ -875,14 +875,35 @@ void SetUpServer(std::unique_ptr<std::thread>& t, ovms::Server& server, std::str
 void SetUpServer(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& port, const char* modelPath, const char* modelName, int timeoutSeconds) {
     server.setShutdownRequest(0);
     randomizeAndEnsureFree(port);
+    std::string fullModelPath = getGenericFullPathForSrcTest(modelPath);
     char* argv[] = {(char*)"ovms",
         (char*)"--model_name",
         (char*)modelName,
         (char*)"--model_path",
-        (char*)getGenericFullPathForSrcTest(modelPath).c_str(),
+        (char*)fullModelPath.c_str(),
         (char*)"--port",
         (char*)port.c_str()};
     int argc = 7;
+    t.reset(new std::thread([&argc, &argv, &server]() {
+        EXPECT_EQ(EXIT_SUCCESS, server.start(argc, argv));
+    }));
+    EnsureServerStartedWithTimeout(server, timeoutSeconds);
+}
+
+void SetUpServer(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& port, const char* modelPath, const char* modelName, int timeoutSeconds, const char* task) {
+    server.setShutdownRequest(0);
+    randomizeAndEnsureFree(port);
+    std::string fullModelPath = getGenericFullPathForSrcTest(modelPath);
+    char* argv[] = {(char*)"ovms",
+        (char*)"--model_name",
+        (char*)modelName,
+        (char*)"--model_path",
+        (char*)fullModelPath.c_str(),
+        (char*)"--port",
+        (char*)port.c_str(),
+        (char*)"--task",
+        (char*)task};
+    int argc = 9;
     t.reset(new std::thread([&argc, &argv, &server]() {
         EXPECT_EQ(EXIT_SUCCESS, server.start(argc, argv));
     }));

@@ -51,6 +51,7 @@ protected:
     void prepareGraphStart(HFSettingsImpl& hfSettings, ModelsSettingsImpl& modelsSettings);
     void prepareConfigExport(ModelsSettingsImpl& modelsSettings);
     bool isHFPullOrPullAndStart(const std::unique_ptr<cxxopts::ParseResult>& result);
+    bool isGenAIConfigureAndStart(const std::unique_ptr<cxxopts::ParseResult>& result);
 };
 
 }  // namespace ovms

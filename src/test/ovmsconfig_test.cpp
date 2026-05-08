@@ -835,6 +835,18 @@ TEST_F(OvmsConfigDeathTest, hfPullNoSourceModel) {
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "source_model parameter is required for pull mode");
 }
 
+TEST_F(OvmsConfigDeathTest, hfSourceModelWithoutTask) {
+    char* n_argv[] = {
+        "ovms",
+        "--source_model",
+        "some/model",
+        "--model_repository_path",
+        "/some/path",
+    };
+    int arg_count = 5;
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "--source_model should be used combined with --task");
+}
+
 TEST_F(OvmsConfigDeathTest, hfPullNoRepositoryPath) {
     char* n_argv[] = {
         "ovms",
