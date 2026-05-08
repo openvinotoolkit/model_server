@@ -142,9 +142,15 @@ void BaseGenerationConfigBuilder::parseConfigFromRequest(const OpenAIRequest& re
             config.top_k = 40;
             SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Defaulting top_k to 40 for multinomial sampling.");
         }
-        // Use random seed for multinomial sampling to ensure non-deterministic behavior by default
+        // Use random seed for multinomial sampling to ensure non-deterministic behavior by default.
+        // Use a thread_local mt19937 seeded once via std::random_device to avoid per-request overhead
+        // and ensure the seed is non-zero (rng_seed == 0 is reserved as "not set" sentinel).
         if (!request.seed.has_value() && config.rng_seed == 0) {
-            config.rng_seed = std::random_device{}();
+            static thread_local std::mt19937 rng{std::random_device{}()};
+            size_t seed = 0;
+            while (seed == 0)
+                seed = rng();
+            config.rng_seed = seed;
             SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Randomizing rng_seed for multinomial sampling: {}.", config.rng_seed);
         }
     }
