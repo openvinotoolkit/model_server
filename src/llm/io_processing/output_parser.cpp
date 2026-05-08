@@ -168,7 +168,7 @@ std::optional<rapidjson::Document> OutputParser::parseReasoningChunk(ov::genai::
     return result;
 }
 
-OutputParser::OutputParser(ov::genai::Tokenizer & tokenizer, const std::string toolParserName, const std::string reasoningParserName, const ToolsSchemas_t& toolNameSchemaMap) :
+OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string toolParserName, const std::string reasoningParserName, const ToolsSchemas_t& toolNameSchemaMap) :
     tokenizer(tokenizer) {
     if (toolParserName == "llama3") {
         toolParser = std::make_unique<Llama3ToolParser>(tokenizer);
@@ -205,7 +205,7 @@ OutputParser::OutputParser(ov::genai::Tokenizer & tokenizer, const std::string t
     if (toolParser && reasoningParser) {
         if (toolParser->requiresStreamingWithSpecialTokens() != reasoningParser->requiresStreamingWithSpecialTokens()) {
             throw std::runtime_error("Cannot use tool parser " + toolParserName + " with reasoning parser " + reasoningParserName +
-                                        " as they have different requirements for special tokens in streaming mode");
+                                     " as they have different requirements for special tokens in streaming mode");
         }
     }
 }
