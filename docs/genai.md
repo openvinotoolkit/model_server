@@ -17,6 +17,8 @@ Internally it employs continuous batching and paged attention algorithms for eff
 
 Learn more about the [LLM graph configuration](./llm/reference.md) and [exporting the models from Hugging Face for serving](../demos/common/export_models/README.md).
 
+See [Model to Parser Mapping](./llm/model_parser_mapping.md) for a guide on selecting the correct tool/reasoning parser for your model.
+
 Check also the demo of [text generation](../demos/continuous_batching/README.md)
 
 
