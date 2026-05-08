@@ -746,9 +746,10 @@ absl::Status OpenAIApiHandler::parseCommonPart(std::optional<uint32_t> maxTokens
     if (it != doc.MemberEnd() && !it->value.IsNull()) {
         if (!it->value.IsDouble() && !it->value.IsInt())
             return absl::InvalidArgumentError("min_p is not a valid number");
-        request.minP = it->value.GetDouble();
-        if (request.minP < 0.0f || request.minP >= 1.0f)
+        const float minPValue = static_cast<float>(it->value.GetDouble());
+        if (minPValue < 0.0f || minPValue >= 1.0f)
             return absl::InvalidArgumentError("min_p out of range [0.0, 1.0)");
+        request.minP = minPValue;
     }
 
     // top_k: int; optional - defaults to 0
@@ -760,15 +761,15 @@ absl::Status OpenAIApiHandler::parseCommonPart(std::optional<uint32_t> maxTokens
         request.topK = it->value.GetInt();
     }
 
-    // seed: uint32; optional - pass -1 (mapped to UINT32_MAX) to use a random seed
+    // seed: uint32; optional - omit to use a random seed
     it = doc.FindMember("seed");
     if (it != doc.MemberEnd() && !it->value.IsNull()) {
-        if (!it->value.IsInt() && !it->value.IsUint())
+        if (!it->value.IsInt() && !it->value.IsUint() && !it->value.IsInt64() && !it->value.IsUint64())
             return absl::InvalidArgumentError("seed is not an integer");
-        const int64_t raw = it->value.IsInt() ? it->value.GetInt() : static_cast<int64_t>(it->value.GetUint());
-        if (raw < -1 || raw > static_cast<int64_t>(std::numeric_limits<uint32_t>::max()))
-            return absl::InvalidArgumentError("seed out of range [-1, 4294967295]");
-        request.seed = static_cast<uint32_t>(raw);  // -1 wraps to UINT32_MAX (random sentinel)
+        const int64_t raw = it->value.IsUint64() ? static_cast<int64_t>(it->value.GetUint64()) : it->value.GetInt64();
+        if (raw < 0 || raw > static_cast<int64_t>(std::numeric_limits<uint32_t>::max()))
+            return absl::InvalidArgumentError("seed out of range [0, 4294967295]");
+        request.seed = static_cast<uint32_t>(raw);
     }
 
     // stop: string or array; optional - defaults to null (not set)
