@@ -741,18 +741,7 @@ absl::Status OpenAIApiHandler::parseCommonPart(std::optional<uint32_t> maxTokens
     }
 
     // min_p: float; optional - defaults to 0 (disabled)
-    // Extension, unsupported by OpenAI API, however supported by vLLM and CB lib
-    it = doc.FindMember("min_p");
-    if (it != doc.MemberEnd() && !it->value.IsNull()) {
-        if (!it->value.IsDouble() && !it->value.IsInt())
-            return absl::InvalidArgumentError("min_p is not a valid number");
-        request.minP = it->value.GetDouble();
-        if (request.minP < 0.0f || request.minP >= 1.0f)
-            return absl::InvalidArgumentError("min_p out of range [0.0, 1.0)");
-    }
-
-    // min_p: float; optional - defaults to 0 (disabled)
-    // Extension, unsupported by OpenAI API, however supported by vLLM and CB lib
+    // Extension, unsupported by OpenAI API, however supported by vLLM and GenAI
     it = doc.FindMember("min_p");
     if (it != doc.MemberEnd() && !it->value.IsNull()) {
         if (!it->value.IsDouble() && !it->value.IsInt())
@@ -763,7 +752,7 @@ absl::Status OpenAIApiHandler::parseCommonPart(std::optional<uint32_t> maxTokens
     }
 
     // top_k: int; optional - defaults to 0
-    // Extension, unsupported by OpenAI API, however supported by vLLM and CB lib
+    // Extension, unsupported by OpenAI API, however supported by vLLM and GenAI
     it = doc.FindMember("top_k");
     if (it != doc.MemberEnd() && !it->value.IsNull()) {
         if (!it->value.IsInt())
