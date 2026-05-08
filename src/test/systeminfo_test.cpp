@@ -32,4 +32,5 @@ using ovms::StatusCode;
 TEST(SystemInfo, getCoreCount) {
     uint16_t cpuCount = getCoreCount();
     EXPECT_GE(cpuCount, 1);
+    EXPECT_LE(cpuCount, std::thread::hardware_concurrency());
 }
