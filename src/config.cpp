@@ -52,7 +52,7 @@ const uint64_t MAX_REST_WORKERS = 10'000;
 // on linux, restrict also based on the max allowed number of open files
 #ifdef __linux__
 
-const uint64_t RESERVED_OPEN_FILES = 15;  // we need to reserve some file descriptors for other operations, so we don't want to use all of them for drogon workers
+const uint64_t RESERVED_OPEN_FILES = 15;        // we need to reserve some file descriptors for other operations, so we don't want to use all of them for drogon workers
 const uint64_t OPEN_FILES_PER_REST_WORKER = 7;  // 5x rest_workers to initialize ovms and 2x rest_workers for new connections
 uint64_t getDefaultRestWorkers() {
     const uint64_t maxOpenFiles = getMaxOpenFilesLimit();

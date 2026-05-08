@@ -37,7 +37,8 @@
 namespace {
 class ScopedNoFileRlimitRestore {
 public:
-    explicit ScopedNoFileRlimitRestore(const struct rlimit& originalLimit) : originalLimit(originalLimit) {}
+    explicit ScopedNoFileRlimitRestore(const struct rlimit& originalLimit) :
+        originalLimit(originalLimit) {}
     ~ScopedNoFileRlimitRestore() {
         setrlimit(RLIMIT_NOFILE, &originalLimit);
     }
