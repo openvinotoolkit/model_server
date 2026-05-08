@@ -17,6 +17,7 @@
 
 #include <openvino/genai/tokenizer.hpp>
 #include <vector>
+#include <string>
 
 #include "../qwen3/reasoning_parser.hpp"
 
