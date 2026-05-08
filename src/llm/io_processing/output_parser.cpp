@@ -40,10 +40,10 @@ OutputParser::TagLookupStatus OutputParser::StreamOutputCache::lookupTag(const s
     }
     if (tag.size() > buffer.size()) {
         /* 
-    If the tag is longer than the buffer, we check if the buffer and tag overlap (either partially or fully for exact match)
-    They do overlap, we assume that tag may appear in the future, so we return FOUND_INCOMPLETE
-    otherwise we return NOT_FOUND
-    */
+        If the tag is longer than the buffer, we check if the buffer and tag overlap (either partially or fully for exact match)
+        They do overlap, we assume that tag may appear in the future, so we return FOUND_INCOMPLETE
+        otherwise we return NOT_FOUND
+        */
         if (stringsOverlap(buffer, tag)) {
             return TagLookupStatus::FOUND_INCOMPLETE;
         } else {
@@ -51,12 +51,12 @@ OutputParser::TagLookupStatus OutputParser::StreamOutputCache::lookupTag(const s
         }
     } else if (tag.size() < buffer.size()) {
         /* 
-    If the tag is shorter than the buffer, we check:
-        a) if the tag is a substring of the buffer (tag is fully matched)
-        b) if the buffer and tag overlap (part of the tag is matched)
-    in the first case we return FOUND_COMPLETE, in the second FOUND_INCOMPLETE
-    otherwise we return NOT_FOUND
-    */
+        If the tag is shorter than the buffer, we check:
+            a) if the tag is a substring of the buffer (tag is fully matched)
+            b) if the buffer and tag overlap (part of the tag is matched)
+        in the first case we return FOUND_COMPLETE, in the second FOUND_INCOMPLETE
+        otherwise we return NOT_FOUND
+        */
         if (buffer.find(tag) != std::string::npos) {
             return TagLookupStatus::FOUND_COMPLETE;
         } else if (stringsOverlap(buffer, tag)) {
@@ -66,12 +66,12 @@ OutputParser::TagLookupStatus OutputParser::StreamOutputCache::lookupTag(const s
         }
     } else {
         /*
-    If the tag and buffer are of the same length, we check:
-            a) if they are equal (tag is fully matched)
-            b) if they overlap (part of the tag is matched)
-    in the first case we return FOUND_COMPLETE, in the second FOUND_INCOMPLETE
-    otherwise we return NOT_FOUND
-    */
+        If the tag and buffer are of the same length, we check:
+                a) if they are equal (tag is fully matched)
+                b) if they overlap (part of the tag is matched)
+        in the first case we return FOUND_COMPLETE, in the second FOUND_INCOMPLETE
+        otherwise we return NOT_FOUND
+        */
         if (buffer == tag) {
             return TagLookupStatus::FOUND_COMPLETE;
         } else if (stringsOverlap(buffer, tag)) {

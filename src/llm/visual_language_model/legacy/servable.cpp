@@ -179,6 +179,13 @@ absl::Status VisualLanguageModelLegacyServable::readCompleteExecutionResults(std
 
 absl::Status VisualLanguageModelLegacyServable::prepareCompleteResponse(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
     auto legacyExecutionContext = std::static_pointer_cast<VisualLanguageModelLegacyServableExecutionContext>(executionContext);
+    if (legacyExecutionContext->payload.client->isDisconnected()) {
+        return absl::CancelledError();
+    }
+
+    // TODO(mzegla): Usage of streaming flow here due to GenAI generate limitations.
+    // This diverges from the general flow - we should have unified systematic approach.
+    
     executionContext->textStreamer->end();
 
     std::string completeText;

@@ -26,16 +26,48 @@
 
 namespace ovms {
 void Gemma4ReasoningParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) {
-    size_t startPos = std::find(generatedTokens.begin(), generatedTokens.end(), reasoningTokenId) - generatedTokens.begin();
-    size_t endPos = std::find(generatedTokens.begin(), generatedTokens.end(), reasoningEndTokenId) - generatedTokens.begin();
+    auto startPos = std::string::npos;
+    auto endPos = std::string::npos;
+
+    auto startIt = std::find(generatedTokens.begin(), generatedTokens.end(), reasoningTokenId);
+    auto endIt = std::find(generatedTokens.begin(), generatedTokens.end(), reasoningEndTokenId);
+
+    if (startIt != generatedTokens.end() && endIt != generatedTokens.end() && startIt < endIt) {
+        startPos = std::distance(generatedTokens.begin(), startIt);
+        endPos = std::distance(generatedTokens.begin(), endIt);
+    }
 
     if (startPos != std::string::npos && endPos != std::string::npos && startPos < endPos) {
         size_t reasoningStart = startPos + 3;  // deleting "<|channel>thought\n"
         std::string reasoningText = tokenizer.decode(std::vector<int64_t>(generatedTokens.begin() + reasoningStart, generatedTokens.begin() + endPos), ov::genai::skip_special_tokens(true));
         parsedOutput.reasoning = reasoningText;
         // Remove reasoning from content
-        std::string contentWithoutReasoning = tokenizer.decode(std::vector<int64_t>(generatedTokens.begin() + endPos + 1, generatedTokens.end()), ov::genai::skip_special_tokens(true));
+        std::string contentWithoutReasoning = tokenizer.decode(std::vector<int64_t>(generatedTokens.begin() + endPos + 1, generatedTokens.end()), ov::genai::skip_special_tokens(true)); // content MUST never appear before reasoning
         parsedOutput.content = contentWithoutReasoning;
     }
+}
+std::optional<rapidjson::Document> Gemma4ReasoningParser::parseChunk(const std::string& chunk, ov::genai::GenerationFinishReason finishReason) {
+    if (chunk.empty()) {
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Received empty chunk for Gemma4ReasoningParser");
+        return std::nullopt;
+    }
+
+    if (chunk.find(getParsingStartTags()[0]) != std::string::npos || chunk.find(getParsingEndTag()) != std::string::npos) {
+        return std::nullopt;
+    } else {
+        rapidjson::StringBuffer buffer;
+        rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+        writer.StartObject();
+        writer.String("delta");
+        writer.StartObject();
+        writer.String("reasoning_content");
+        writer.String(chunk.c_str());
+        writer.EndObject();
+        writer.EndObject();
+        rapidjson::Document doc;
+        doc.Parse(buffer.GetString());
+        return doc;
+    }
+    return std::nullopt;
 }
 }  // namespace ovms

@@ -30,6 +30,7 @@ protected:
     static const std::string TOOL_ARGS_END_INDICATOR;
     static const std::string TOOL_ARGS_STRING_INDICATOR;
     static const std::string TOOL_ARGS_SEPARATOR_STR;
+    static const std::string TURN_END_TAG;
 
     static const int64_t botTokenId;
     static const int64_t eotTokenId;
@@ -54,6 +55,11 @@ public:
     const std::vector<std::string>& getParsingStartTags() const override {
         static const std::vector<std::string> parsingStartTags = {TOOL_CALL_START_TAG};
         return parsingStartTags;
+    }
+
+    const std::vector<std::string>& getSpecialTagsToErase() const override {
+        static const std::vector<std::string> tagsToErase = {TURN_END_TAG};
+        return tagsToErase;
     }
 
     const std::vector<std::string>& getSpecialParsingStartTags() const override {

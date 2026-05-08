@@ -33,6 +33,8 @@ const std::string Gemma4ToolParser::TOOL_ARGS_END_INDICATOR = "}";
 const std::string Gemma4ToolParser::TOOL_ARGS_STRING_INDICATOR = "<|\"|>";
 const std::string Gemma4ToolParser::TOOL_ARGS_SEPARATOR_STR = ",";
 
+const std::string Gemma4ToolParser::TURN_END_TAG = "<turn|>";
+
 const int64_t Gemma4ToolParser::botTokenId = 48;
 const int64_t Gemma4ToolParser::eotTokenId = 49;
 
