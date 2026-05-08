@@ -17,7 +17,6 @@
 
 #include <algorithm>
 #include <fstream>
-#include <iostream>
 #include <limits>
 #include <sstream>
 #include <string>
@@ -102,10 +101,13 @@ uint16_t getDockerCpuQuota() {
             std::istringstream iss(line);
             std::string quota_str, period_str;
             if (iss >> quota_str >> period_str) {
+                if (quota_str == "max") {
+                    return 0;  // No quota set
+                }
                 try {
                     uint64_t quota = std::stoull(quota_str);
                     uint64_t period = std::stoull(period_str);
-                    if (quota > 0 && period > 0 && quota != ULLONG_MAX) {
+                    if (quota > 0 && period > 0) {
                         uint16_t cpu_count = static_cast<uint16_t>((quota + period - 1) / period);
                         return cpu_count;
                     }
