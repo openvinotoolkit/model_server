@@ -235,6 +235,7 @@ ovms_cc_library( # TODO split further so we don't have to recompile everything w
             "io_processing/devstral/tool_parser.cpp",
             "io_processing/mistral/tool_parser.cpp",
             "io_processing/qwen3/reasoning_parser.cpp",
+            "io_processing/gemma4/reasoning_parser.cpp",
             "io_processing/gptoss/reasoning_parser.cpp",
             "io_processing/gptoss/tool_parser.cpp",
             "io_processing/gptoss/harmony.cpp",

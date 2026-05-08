@@ -25,5 +25,6 @@ public:
     Gemma4ReasoningParser() = delete;
     explicit Gemma4ReasoningParser(ov::genai::Tokenizer& tokenizer) :
         Qwen3ReasoningParser(tokenizer, "<|channel>thought\n", "<channel|>", true) {}
+    void parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) override;
 };
 }  // namespace ovms

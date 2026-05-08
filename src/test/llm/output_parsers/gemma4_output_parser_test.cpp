@@ -58,7 +58,7 @@ protected:
 
     void SetUp() override {
         // For Gemma4 model there is only tool parser available
-        outputParserWithRegularToolParsing = std::make_unique<OutputParser>(*gemma4Tokenizer, "gemma4", "", EMPTY_TOOLS_SCHEMA);
+        outputParserWithRegularToolParsing = std::make_unique<OutputParser>(*gemma4Tokenizer, "gemma4", "gemma4", EMPTY_TOOLS_SCHEMA);
     }
 
     void assertChunkEqual(const std::optional<rapidjson::Document>& doc, const std::optional<std::string>& expectedDelta, const std::string& chunk) {
@@ -88,6 +88,24 @@ TEST_F(Gemma4OutputParserTest, ParseToolCallOutputWithSingleToolCall) {
         ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
         EXPECT_EQ(parsedOutput.content, "");
         EXPECT_EQ(parsedOutput.reasoning, "");
+
+        ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
+        EXPECT_EQ(parsedOutput.toolCalls[0].name, "example_tool");
+        EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{\"arg1\":\"value1\",\"arg2\":42}");
+        EXPECT_EQ(parsedOutput.toolCalls[0].id.empty(), false);
+    }
+}
+
+TEST_F(Gemma4OutputParserTest, ParseToolCallOutputWithSingleToolCallAndReasoning) {
+    std::string inputWithProperClosure = "<|channel>thought\nSome reasoning content<channel|><|tool_call>call:example_tool{arg1:<|\"|>value1<|\"|>,arg2:42}<tool_call|>";
+
+    std::vector<std::string> inputs = {inputWithProperClosure};
+    for (auto& input : inputs) {
+        auto generatedTensor = gemma4Tokenizer->encode(input).input_ids;
+        std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+        ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
+        EXPECT_EQ(parsedOutput.content, "");
+        EXPECT_EQ(parsedOutput.reasoning, "Some reasoning content");
 
         ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
         EXPECT_EQ(parsedOutput.toolCalls[0].name, "example_tool");

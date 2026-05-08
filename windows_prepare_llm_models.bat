@@ -140,7 +140,7 @@ set "repository=%~2"
 if not exist "%repository%\%model%\openvino_tokenizer.bin" (
   echo Downloading tokenizer and detokenizer for %model% model to %repository%\%model% directory.
   mkdir "%repository%\%model%"
-  hf download "%model%" --local-dir "%repository%\%model%" --include *tokenizer* --exclude *detokenizer*
+  hf download "%model%" --local-dir "%repository%\%model%" --include *tokenizer*
 ) else (
   echo Models file %repository%\%model%\openvino_tokenizer.bin exists. Skipping downloading models.
 )
