@@ -30,7 +30,7 @@ void Gemma4ReasoningParser::parse(ParsedOutput& parsedOutput, const std::vector<
     size_t endPos = std::find(generatedTokens.begin(), generatedTokens.end(), reasoningEndTokenId) - generatedTokens.begin();
 
     if (startPos != std::string::npos && endPos != std::string::npos && startPos < endPos) {
-        size_t reasoningStart = startPos + 3; // deleting "<|channel>thought\n"
+        size_t reasoningStart = startPos + 3;  // deleting "<|channel>thought\n"
         std::string reasoningText = tokenizer.decode(std::vector<int64_t>(generatedTokens.begin() + reasoningStart, generatedTokens.begin() + endPos), ov::genai::skip_special_tokens(true));
         parsedOutput.reasoning = reasoningText;
         // Remove reasoning from content

@@ -24,6 +24,7 @@ class Gemma4ReasoningParser : public Qwen3ReasoningParser {
 protected:
     const int64_t reasoningTokenId = 100;
     const int64_t reasoningEndTokenId = 101;
+
 public:
     Gemma4ReasoningParser() = delete;
     explicit Gemma4ReasoningParser(ov::genai::Tokenizer& tokenizer) :
