@@ -16,6 +16,7 @@
 
 #include "../../logging.hpp"
 #include <limits>
+#include <random>
 #include <string>
 #include <openvino/genai/generation_config.hpp>
 #include "base_generation_config_builder.hpp"
@@ -132,6 +133,19 @@ void BaseGenerationConfigBuilder::parseConfigFromRequest(const OpenAIRequest& re
     if (request.presencePenalty.has_value())
         config.presence_penalty = request.presencePenalty.value();
     config.do_sample = config.temperature > 0.0f && config.num_beams == 1;
+
+    // Apply multinomial sampling defaults when not explicitly set
+    if (config.do_sample) {
+        if (!request.topK.has_value() && config.top_k == std::numeric_limits<size_t>::max()) {
+            config.top_k = 40;
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Defaulting top_k to 40 for multinomial sampling.");
+        }
+        // Use random seed for multinomial sampling to ensure non-deterministic behavior by default
+        if (!request.seed.has_value() && config.rng_seed == 0) {
+            config.rng_seed = std::random_device{}();
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Randomizing rng_seed for multinomial sampling: {}.", config.rng_seed);
+        }
+    }
 
     if (request.logprobschat || request.logprobs)
         config.logprobs = 1;
