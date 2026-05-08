@@ -108,5 +108,13 @@ public:
     virtual bool requiresStreamingWithSpecialTokens() const {
         return false;
     }
+
+    // Get the vector of special tags that should be erased from the content before parsing.
+    // This is useful for cleaning up the content from tags that are necessary for parsing
+    // but should not be present in the final output.
+    virtual const std::vector<std::string>& getSpecialTagsToErase() const {
+        static const std::vector<std::string> emptyVector;
+        return emptyVector;
+    }
 };
 }  // namespace ovms
