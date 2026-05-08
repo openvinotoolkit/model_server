@@ -62,6 +62,7 @@ curl http://localhost/v3/completions \
 | include_stop_str_in_output | ✅ | ❌ | ✅ | bool (default: `false` if `stream=false`, `true` if `stream=true`) | Whether to include matched stop string in output. Setting it to false when `stream=true` is invalid configuration and will result in error. |
 | logprobs | ⚠️ | ✅ | ✅ | integer (optional) | Include the log probabilities on the logprob of the returned output token. **_ in stream mode logprobs are not returned. Only value 1 is accepted which returns logarithm or the chosen token _** |
 | echo | ✅ | ✅ | ✅ | boolean (optional) | Echo back the prompt in addition to the completion |
+| skip_special_tokens | ✅ | ❌ | ✅ | bool (default: `true`) | Whether to remove special tokens (e.g. `<\|endoftext\|>`, `<\|im_end\|>`) from the generated output. Set to `false` to include them, which is useful when the model uses special tokens to encode structured information. This option works with most detokenizers exported with OpenVINO Tokenizers 2024.5 or later, unless they are based on custom ops. |
 
 #### Beam search sampling specific
 | Param | OpenVINO Model Server | OpenAI /completions API | vLLM Serving Sampling Params | Type | Description |
@@ -112,7 +113,6 @@ Note that below parameters are valid only for prompt lookup pipeline. Add `"prom
 - min_tokens
 - prompt_logprobs
 - detokenize
-- skip_special_tokens
 - spaces_between_special_tokens
 - logits_processors
 - truncate_prompt_tokens
