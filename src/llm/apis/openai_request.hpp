@@ -59,7 +59,7 @@ struct OpenAIRequest {
     std::optional<float> topP{std::nullopt};
     std::optional<float> minP{std::nullopt};
     std::optional<int> topK{std::nullopt};
-    std::optional<int64_t> seed{std::nullopt};
+    std::optional<uint32_t> seed{std::nullopt};
     std::optional<float> frequencyPenalty{std::nullopt};
     std::optional<float> presencePenalty{std::nullopt};
     std::optional<float> repetitionPenalty{std::nullopt};

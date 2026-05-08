@@ -124,7 +124,7 @@ void BaseGenerationConfigBuilder::parseConfigFromRequest(const OpenAIRequest& re
         config.top_p = request.topP.value();
     if (request.minP.has_value())
         config.min_p = request.minP.value();
-    if (request.seed.has_value())
+    if (request.seed.has_value() && request.seed.value() != std::numeric_limits<uint32_t>::max())
         config.rng_seed = request.seed.value();
     if (request.stop.has_value())
         config.stop_strings = request.stop.value();
@@ -143,9 +143,12 @@ void BaseGenerationConfigBuilder::parseConfigFromRequest(const OpenAIRequest& re
             SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Defaulting top_k to 40 for multinomial sampling.");
         }
         // Use random seed for multinomial sampling to ensure non-deterministic behavior by default.
-        // Use a thread_local mt19937 seeded once via std::random_device to avoid per-request overhead
-        // and ensure the seed is non-zero (rng_seed == 0 is reserved as "not set" sentinel).
-        if (!request.seed.has_value() && config.rng_seed == 0) {
+        // The only user-facing sentinel for "random" is -1 (stored as UINT32_MAX).
+        // Note: rng_seed from generation_config.json is not honoured — only an explicit per-request
+        // seed produces deterministic output.
+        // Use a thread_local mt19937 seeded once via std::random_device to avoid per-request overhead.
+        const bool seedExplicitlySet = request.seed.has_value() && request.seed.value() != std::numeric_limits<uint32_t>::max();
+        if (!seedExplicitlySet) {
             static thread_local std::mt19937 rng{std::random_device{}()};
             size_t seed = 0;
             while (seed == 0)

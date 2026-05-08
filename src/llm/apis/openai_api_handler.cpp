@@ -771,12 +771,15 @@ absl::Status OpenAIApiHandler::parseCommonPart(std::optional<uint32_t> maxTokens
         request.topK = it->value.GetInt();
     }
 
-    // seed: integer; optional - OpenAI spec allows range [−9223372036854776000, 9223372036854776000] (int64)
+    // seed: uint32; optional - pass -1 (mapped to UINT32_MAX) to use a random seed
     it = doc.FindMember("seed");
     if (it != doc.MemberEnd() && !it->value.IsNull()) {
-        if (!it->value.IsInt64() && !it->value.IsInt())
+        if (!it->value.IsInt() && !it->value.IsUint())
             return absl::InvalidArgumentError("seed is not an integer");
-        request.seed = it->value.GetInt64();
+        const int64_t raw = it->value.IsInt() ? it->value.GetInt() : static_cast<int64_t>(it->value.GetUint());
+        if (raw < -1 || raw > static_cast<int64_t>(std::numeric_limits<uint32_t>::max()))
+            return absl::InvalidArgumentError("seed out of range [-1, 4294967295]");
+        request.seed = static_cast<uint32_t>(raw);  // -1 wraps to UINT32_MAX (random sentinel)
     }
 
     // stop: string or array; optional - defaults to null (not set)

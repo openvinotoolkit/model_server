@@ -125,7 +125,7 @@ curl http://localhost/v3/responses \
 | repetition_penalty | ✅ | ❌ | float (default: `1.0`) | Penalizes new tokens based on whether they appear in the prompt and the generated text so far. Values > `1.0` encourage the model to use new tokens, while values < `1.0` encourage the model to repeat tokens. `1.0` means no penalty. |
 | frequency_penalty | ✅ | ❌ | float (default: `0.0`) | Number between -2.0 and 2.0. Positive values penalize new tokens based on their existing frequency in the text so far, decreasing the model's likelihood to repeat the same line verbatim. |
 | presence_penalty | ✅ | ❌ | float (default: `0.0`) | Number between -2.0 and 2.0. Positive values penalize new tokens based on whether they appear in the text so far, increasing the model's likelihood to talk about new topics. |
-| seed | ✅ | ❌ | integer (default: random) | Random seed to use for the generation. Set explicitly to get reproducible results. Value `0` is treated as unset and will result in a random seed being used. |
+| seed | ✅ | ❌ | integer (default: random) | Random seed for generation. Pass `-1` or omit to use a random seed (non-deterministic). Any value in `[0, 4294967295]` produces deterministic output. Note: `rng_seed` set in `generation_config.json` is not honoured for multinomial sampling — only a per-request seed is applied. |
 
 #### Speculative decoding specific
 
