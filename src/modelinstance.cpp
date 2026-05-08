@@ -164,17 +164,17 @@ void normalizeTypedPluginConfigValues(MapType& pluginConfig) {
         if (it == pluginConfig.end()) {
             continue;
         }
-        if (!normalizePluginConfigValue(it->second, rule) && it->second.is<std::string>()) {
-            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Keeping plugin config key: {} as string value: {}", rule.key, it->second.as<std::string>());
+        if (!normalizePluginConfigValue(it->second, rule) && it->second.template is<std::string>()) {
+            SPDLOG_LOGGER_DEBUG(ovms::modelmanager_logger, "Keeping plugin config key: {} as string value: {}", rule.key, it->second.template as<std::string>());
         }
     }
 
     auto devicePropertiesIt = pluginConfig.find("DEVICE_PROPERTIES");
-    if (devicePropertiesIt == pluginConfig.end() || !devicePropertiesIt->second.is<ov::AnyMap>()) {
+    if (devicePropertiesIt == pluginConfig.end() || !devicePropertiesIt->second.template is<ov::AnyMap>()) {
         return;
     }
 
-    ov::AnyMap deviceProperties = devicePropertiesIt->second.as<ov::AnyMap>();
+    ov::AnyMap deviceProperties = devicePropertiesIt->second.template as<ov::AnyMap>();
     for (auto& devicePropertiesEntry : deviceProperties) {
         auto& devicePropertiesAny = devicePropertiesEntry.second;
         if (!devicePropertiesAny.is<ov::AnyMap>()) {
