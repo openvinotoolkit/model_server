@@ -36,6 +36,9 @@ const std::string Gemma4ToolParser::TOOL_ARGS_SEPARATOR_STR = ",";
 const int64_t Gemma4ToolParser::botTokenId = 48;
 const int64_t Gemma4ToolParser::eotTokenId = 49;
 
+const int64_t Gemma4ToolParser::reasoningTokenId = 100;
+const int64_t Gemma4ToolParser::reasoningEndTokenId = 101;
+
 std::string Gemma4ToolParser::parseArrayParameter(const std::string& argumentStr) {
     size_t pos = 1;
     std::string parsedArguments = "[";
@@ -501,6 +504,11 @@ void Gemma4ToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64
     std::vector<int64_t> contentWithoutToolCalls = generatedTokens;
     for (auto it = toolCallPositions.rbegin(); it != toolCallPositions.rend(); ++it) {
         contentWithoutToolCalls.erase(contentWithoutToolCalls.begin() + it->first, contentWithoutToolCalls.begin() + it->second + 1);
+    }
+
+    auto reasoningEnd = std::find(contentWithoutToolCalls.begin(), contentWithoutToolCalls.end(), reasoningEndTokenId);
+    if (reasoningEnd != contentWithoutToolCalls.end()) {
+        contentWithoutToolCalls.erase(contentWithoutToolCalls.begin(), reasoningEnd + 1);
     }
     parsedOutput.content = tokenizer.decode(contentWithoutToolCalls, ov::AnyMap{ov::genai::skip_special_tokens(true)});
 }

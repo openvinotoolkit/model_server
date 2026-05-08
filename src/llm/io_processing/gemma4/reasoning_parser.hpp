@@ -21,10 +21,17 @@
 
 namespace ovms {
 class Gemma4ReasoningParser : public Qwen3ReasoningParser {
+protected:
+    const int64_t reasoningTokenId = 100;
+    const int64_t reasoningEndTokenId = 101;
 public:
     Gemma4ReasoningParser() = delete;
     explicit Gemma4ReasoningParser(ov::genai::Tokenizer& tokenizer) :
-        Qwen3ReasoningParser(tokenizer, "<|channel>thought\n", "<channel|>", true) {}
+        Qwen3ReasoningParser(tokenizer) {}
     void parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) override;
+
+    bool requiresStreamingWithSpecialTokens() const override {
+        return true;
+    }
 };
 }  // namespace ovms

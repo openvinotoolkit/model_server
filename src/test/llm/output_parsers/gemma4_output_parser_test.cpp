@@ -114,6 +114,21 @@ TEST_F(Gemma4OutputParserTest, ParseToolCallOutputWithSingleToolCallAndReasoning
     }
 }
 
+TEST_F(Gemma4OutputParserTest, ParseReasoningWithoutToolCall) {
+    std::string inputWithProperClosure = "<|channel>thought\nSome reasoning content<channel|>SOME CONTENT WITHOUT TOOL CALL";
+
+    std::vector<std::string> inputs = {inputWithProperClosure};
+    for (auto& input : inputs) {
+        auto generatedTensor = gemma4Tokenizer->encode(input).input_ids;
+        std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+        ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
+        EXPECT_EQ(parsedOutput.content, "SOME CONTENT WITHOUT TOOL CALL");
+        EXPECT_EQ(parsedOutput.reasoning, "Some reasoning content");
+
+        ASSERT_EQ(parsedOutput.toolCalls.size(), 0);
+    }
+}
+
 TEST_F(Gemma4OutputParserTest, ParseToolCallOutputWithNoToolsInTheRequest) {
     std::string inputWithProperClosure = "<|tool_call>call:example_tool{arg1:<|\"|>value1<|\"|>,arg2:42}<tool_call|>";
     std::string inputWithoutSpecialTokens = "call:example_tool{arg1:value1,arg2:42}";

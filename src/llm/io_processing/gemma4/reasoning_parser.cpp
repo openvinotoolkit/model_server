@@ -26,19 +26,15 @@
 
 namespace ovms {
 void Gemma4ReasoningParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) {
-    std::string contentWithSpecialTokens = tokenizer.decode(generatedTokens, ov::genai::skip_special_tokens(false));
-    SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Parsing reasoning with Gemma4ReasoningParser. Content with special tokens: {}", contentWithSpecialTokens);
-    std::string startReasoningTag = getParsingStartTags()[0];
-    std::string endReasoningTag = getParsingEndTag();
-    size_t startPos = contentWithSpecialTokens.find(startReasoningTag);
-    size_t endPos = contentWithSpecialTokens.find(endReasoningTag);
+    size_t startPos = std::find(generatedTokens.begin(), generatedTokens.end(), reasoningTokenId) - generatedTokens.begin();
+    size_t endPos = std::find(generatedTokens.begin(), generatedTokens.end(), reasoningEndTokenId) - generatedTokens.begin();
 
     if (startPos != std::string::npos && endPos != std::string::npos && startPos < endPos) {
-        size_t reasoningStart = startPos + startReasoningTag.length();
-        std::string reasoningText = contentWithSpecialTokens.substr(reasoningStart, endPos - reasoningStart);
+        size_t reasoningStart = startPos + 3; // deleting "<|channel>thought\n"
+        std::string reasoningText = tokenizer.decode(std::vector<int64_t>(generatedTokens.begin() + reasoningStart, generatedTokens.begin() + endPos), ov::genai::skip_special_tokens(true));
         parsedOutput.reasoning = reasoningText;
         // Remove reasoning from content
-        std::string contentWithoutReasoning = contentWithSpecialTokens.substr(0, startPos) + contentWithSpecialTokens.substr(endPos + endReasoningTag.length());
+        std::string contentWithoutReasoning = tokenizer.decode(std::vector<int64_t>(generatedTokens.begin() + endPos + 1, generatedTokens.end()), ov::genai::skip_special_tokens(true));
         parsedOutput.content = contentWithoutReasoning;
     }
 }

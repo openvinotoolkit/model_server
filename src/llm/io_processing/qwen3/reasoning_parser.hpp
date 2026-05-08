@@ -28,41 +28,26 @@ namespace ovms {
 class Qwen3ReasoningParser : public BaseOutputParser {
 protected:
     // Tags used to identify the reasoning segment in the content
-    const std::string parsingStartTag;
-    const std::string parsingEndTag;
-    const bool specialTokensRequired;
-    const std::vector<std::string> parsingStartTags;
-    const std::vector<std::string> specialParsingStartTags;
-
-    Qwen3ReasoningParser(ov::genai::Tokenizer& tokenizer,
-        const std::string& startTag,
-        const std::string& endTag,
-        bool requiresSpecialTokens) :
-        BaseOutputParser(tokenizer),
-        parsingStartTag(startTag),
-        parsingEndTag(endTag),
-        specialTokensRequired(requiresSpecialTokens),
-        parsingStartTags{startTag},
-        specialParsingStartTags{} {}
+    const std::string parsingStartTag = "<think>";
+    const std::string parsingEndTag = "</think>";
 
 public:
     Qwen3ReasoningParser() = delete;
     explicit Qwen3ReasoningParser(ov::genai::Tokenizer& tokenizer) :
-        Qwen3ReasoningParser(tokenizer, "<think>", "</think>", false) {}
+        BaseOutputParser(tokenizer) {}
 
     void parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) override;
     std::optional<rapidjson::Document> parseChunk(const std::string& chunk, ov::genai::GenerationFinishReason finishReason) override;
     const std::vector<std::string>& getParsingStartTags() const override {
+        static const std::vector<std::string> parsingStartTags{this->parsingStartTag};
         return parsingStartTags;
     }
     const std::vector<std::string>& getSpecialParsingStartTags() const override {
+        static const std::vector<std::string> specialParsingStartTags{};
         return specialParsingStartTags;
     }
     const std::string& getParsingEndTag() const override {
         return parsingEndTag;
-    }
-    bool requiresStreamingWithSpecialTokens() const override {
-        return specialTokensRequired;
     }
 };
 }  // namespace ovms

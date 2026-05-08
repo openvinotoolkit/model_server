@@ -33,6 +33,8 @@ protected:
 
     static const int64_t botTokenId;
     static const int64_t eotTokenId;
+    static const int64_t reasoningTokenId;
+    static const int64_t reasoningEndTokenId;
 
     enum class State {
         Content,             // Content -> ToolCallStarted (on TOOL_CALL_START_TAG)
