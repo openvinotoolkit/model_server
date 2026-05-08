@@ -3252,6 +3252,40 @@ TEST_P(LLMHttpParametersValidationTest, topKInvalid) {
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
+TEST_P(LLMHttpParametersValidationTest, minPValid) {
+    auto params = GetParam();
+    std::string requestBody = validRequestBodyWithParameter(params.modelName, "min_p", "0.05");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK);
+
+    requestBody = validRequestBodyWithParameter(params.modelName, "min_p", "0");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK);
+}
+
+TEST_P(LLMHttpParametersValidationTest, minPInvalid) {
+    auto params = GetParam();
+    std::string requestBody = validRequestBodyWithParameter(params.modelName, "min_p", "\"INVALID\"");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_P(LLMHttpParametersValidationTest, minPOutOfRange) {
+    auto params = GetParam();
+    // min_p must be in [0.0, 1.0) — value of 1.0 is out of range
+    std::string requestBody = validRequestBodyWithParameter(params.modelName, "min_p", "1.0");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
 TEST_P(LLMHttpParametersValidationTest, seedValid) {
     auto params = GetParam();
     std::string requestBody = validRequestBodyWithParameter(params.modelName, "seed", "1");
