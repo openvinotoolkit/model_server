@@ -80,7 +80,6 @@ const std::string DEFAULT_MODEL_CACHE_DIRECTORY = "c:\\Intel\\openvino_cache";
 const std::string DEFAULT_MODEL_CACHE_DIRECTORY = "/opt/cache";
 #endif
 ModelManager::ModelManager(const std::string& modelCacheDirectory, MetricRegistry* registry, PythonBackend* pythonBackend) :
-    ieCore(std::make_unique<ov::Core>()),
     pipelineFactory(std::make_unique<PipelineFactory>()),
 #if (MEDIAPIPE_DISABLE == 0)
     mediapipeFactory(std::make_unique<MediapipeFactory>(pythonBackend)),
@@ -90,6 +89,23 @@ ModelManager::ModelManager(const std::string& modelCacheDirectory, MetricRegistr
     modelCacheDirectory(modelCacheDirectory),
     metricRegistry(registry),
     pythonBackend(pythonBackend) {
+    try {
+        this->ieCore = std::make_unique<ov::Core>();
+        const uint16_t detectedCoreCount = getCoreCount();
+        SPDLOG_DEBUG("Setting CPU inference_num_threads to: {}", detectedCoreCount);
+        this->ieCore->set_property("CPU", ov::inference_num_threads(static_cast<int>(detectedCoreCount)));
+
+#ifdef __linux__
+        if (isRunningInDocker()) {
+            const bool cpuQuotaDefined = getDockerCpuQuota() > 0;
+            this->ieCore->set_property("CPU", ov::hint::enable_cpu_pinning(!cpuQuotaDefined));
+        }
+#endif
+    } catch (const std::exception& ex) {
+        SPDLOG_CRITICAL("Failed to initialize OpenVINO Core with CPU properties set from detected core count and Docker constraints. Reason: {}", ex.what());
+        throw;
+    }
+
     OV_LOGGER("ov::Core(): {}", reinterpret_cast<void*>(this->ieCore.get()));
     // Take --cache_dir from CLI
     if (this->modelCacheDirectory.empty()) {

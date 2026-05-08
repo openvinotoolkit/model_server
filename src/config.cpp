@@ -37,6 +37,7 @@
 #include "modelconfig.hpp"
 #include "stringutils.hpp"
 #include "systeminfo.hpp"
+#include "utils/env_guard.hpp"
 
 namespace ovms {
 
@@ -57,11 +58,9 @@ const uint64_t OPEN_FILES_PER_REST_WORKER = 7;  // 5x rest_workers to initialize
 uint64_t getDefaultRestWorkers() {
     const uint64_t maxOpenFiles = getMaxOpenFilesLimit();
     if (maxOpenFiles <= RESERVED_OPEN_FILES) {
-        return static_cast<uint64_t>(2);  // minimum functional number
+        return static_cast<uint64_t>(0);
     }
-    // 2 is a minimal number of default rest workers
-    const uint64_t MIN_DEFAULT_REST_WORKERS = 2;
-    return std::max(std::min(static_cast<uint64_t>(AVAILABLE_CORES), (maxOpenFiles - RESERVED_OPEN_FILES) / OPEN_FILES_PER_REST_WORKER), MIN_DEFAULT_REST_WORKERS);
+    return std::min(static_cast<uint64_t>(AVAILABLE_CORES), (maxOpenFiles - RESERVED_OPEN_FILES) / OPEN_FILES_PER_REST_WORKER);
 }
 #else
 uint64_t getDefaultRestWorkers() {
@@ -93,6 +92,14 @@ Config& Config::parse(int argc, char** argv) {
 bool Config::parse(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* modelsSettings) {
     this->serverSettings = *serverSettings;
     this->modelsSettings = *modelsSettings;
+
+    static EnvGuard envGuard;
+#if defined(__linux__) || defined(_WIN32)
+    if (this->serverSettings.logLevel == "DEBUG") {
+        envGuard.set("OPENVINO_LOG_LEVEL", "4");
+    }
+#endif
+
     return validate();
 }
 
@@ -395,7 +402,7 @@ const std::string Config::restBindAddress() const { return this->serverSettings.
 uint32_t Config::grpcWorkers() const { return this->serverSettings.grpcWorkers; }
 uint32_t Config::grpcMaxThreads() const { return this->serverSettings.grpcMaxThreads.value_or(DEFAULT_GRPC_MAX_THREADS); }
 size_t Config::grpcMemoryQuota() const { return this->serverSettings.grpcMemoryQuota.value_or(DEFAULT_GRPC_MEMORY_QUOTA); }
-uint32_t Config::restWorkers() const { return this->serverSettings.restWorkers.value_or(getDefaultRestWorkers()); }
+uint32_t Config::restWorkers() const { return static_cast<uint32_t>(std::max(static_cast<uint64_t>(2), static_cast<uint64_t>(this->serverSettings.restWorkers.value_or(getDefaultRestWorkers())))); }
 const std::string& Config::modelName() const { return this->modelsSettings.modelName; }
 const std::string& Config::modelPath() const { return this->modelsSettings.modelPath; }
 const std::string& Config::batchSize() const {

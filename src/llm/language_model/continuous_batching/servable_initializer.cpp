@@ -32,10 +32,12 @@
 #pragma GCC diagnostic pop
 #pragma warning(pop)
 
+#include "../../../config.hpp"
 #include "../../../json_parser.hpp"
 #include "../../../logging.hpp"
 #include "../../../mediapipe_internal/mediapipe_utils.hpp"
 #include "../../../status.hpp"
+#include "../../../systeminfo.hpp"
 #include "llm_executor.hpp"
 #include "servable.hpp"
 #include "servable_initializer.hpp"
@@ -204,7 +206,10 @@ Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiSe
         return status;
     }
 
-    properties->tokenizerPluginConfig = {{"PERFORMANCE_HINT", "THROUGHPUT"}};
+    const uint32_t numStreams = std::min(static_cast<uint32_t>(Config::instance().restWorkers()), static_cast<uint32_t>(getCoreCount()));
+    SPDLOG_DEBUG("Setting tokenizer/detokenizer NUM_STREAMS to: {}", numStreams);
+    properties->tokenizerPluginConfig = {{"NUM_STREAMS", static_cast<int>(numStreams)}, {"PERFORMANCE_HINT", "THROUGHPUT"}};
+
     try {
         properties->pipeline = std::make_shared<ov::genai::ContinuousBatchingPipeline>(parsedModelsPath,
             properties->schedulerConfig, properties->device,
