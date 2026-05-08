@@ -4619,3 +4619,46 @@ TEST_F(LLMStartWithTaskParameter, StartWithModelPathAndTaskDoesNotModifyExisting
     auto modTimeAfter = std::filesystem::last_write_time(graphPath);
     ASSERT_EQ(modTimeBefore, modTimeAfter) << "graph.pbtxt should not be modified when using --task with --model_path";
 }
+
+TEST_F(LLMStartWithTaskParameter, StartWithModelPathAndTaskAndValidPipelineType) {
+    std::string port = "9175";
+    ovms::Server& server = ovms::Server::instance();
+    server.setShutdownRequest(0);
+    randomizeAndEnsureFree(port);
+    std::string fullModelPath = getGenericFullPathForSrcTest(modelDir.c_str());
+    char* argv[] = {(char*)"ovms",
+        (char*)"--model_name", (char*)"SmolLM2",
+        (char*)"--model_path", (char*)fullModelPath.c_str(),
+        (char*)"--port", (char*)port.c_str(),
+        (char*)"--task", (char*)"text_generation",
+        (char*)"--pipeline_type", (char*)"LM_CB"};
+    int argc = 11;
+    t.reset(new std::thread([&argc, &argv, &server]() {
+        EXPECT_EQ(EXIT_SUCCESS, server.start(argc, argv));
+    }));
+    EnsureServerStartedWithTimeout(server, 60);
+    ASSERT_EQ(server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME), ovms::ModuleState::INITIALIZED);
+}
+
+TEST_F(LLMStartWithTaskParameter, StartWithModelPathAndTaskAndInvalidPipelineType) {
+    std::string port = "9176";
+    ovms::Server& server = ovms::Server::instance();
+    server.setShutdownRequest(0);
+    randomizeAndEnsureFree(port);
+    std::string fullModelPath = getGenericFullPathForSrcTest(modelDir.c_str());
+    char* argv[] = {(char*)"ovms",
+        (char*)"--model_name", (char*)"SmolLM2",
+        (char*)"--model_path", (char*)fullModelPath.c_str(),
+        (char*)"--port", (char*)port.c_str(),
+        (char*)"--task", (char*)"text_generation",
+        (char*)"--pipeline_type", (char*)"invalid"};
+    int argc = 11;
+    t.reset(new std::thread([&argc, &argv, &server]() {
+        EXPECT_NE(EXIT_SUCCESS, server.start(argc, argv));
+    }));
+    // Validation failure should complete quickly
+    if (t && t->joinable())
+        t->join();
+    ASSERT_NE(server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME), ovms::ModuleState::INITIALIZED)
+        << "Server should not start with invalid pipeline_type";
+}
