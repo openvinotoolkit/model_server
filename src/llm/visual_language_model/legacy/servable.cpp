@@ -185,7 +185,7 @@ absl::Status VisualLanguageModelLegacyServable::prepareCompleteResponse(std::sha
 
     // TODO(mzegla): Usage of streaming flow here due to GenAI generate limitations.
     // This diverges from the general flow - we should have unified systematic approach.
-    
+
     executionContext->textStreamer->end();
 
     std::string completeText;

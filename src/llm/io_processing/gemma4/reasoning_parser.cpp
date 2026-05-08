@@ -42,7 +42,7 @@ void Gemma4ReasoningParser::parse(ParsedOutput& parsedOutput, const std::vector<
         std::string reasoningText = tokenizer.decode(std::vector<int64_t>(generatedTokens.begin() + reasoningStart, generatedTokens.begin() + endPos), ov::genai::skip_special_tokens(true));
         parsedOutput.reasoning = reasoningText;
         // Remove reasoning from content
-        std::string contentWithoutReasoning = tokenizer.decode(std::vector<int64_t>(generatedTokens.begin() + endPos + 1, generatedTokens.end()), ov::genai::skip_special_tokens(true)); // content MUST never appear before reasoning
+        std::string contentWithoutReasoning = tokenizer.decode(std::vector<int64_t>(generatedTokens.begin() + endPos + 1, generatedTokens.end()), ov::genai::skip_special_tokens(true));  // content MUST never appear before reasoning
         parsedOutput.content = contentWithoutReasoning;
     }
 }

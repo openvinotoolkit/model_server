@@ -23,11 +23,12 @@
 namespace ovms {
 class Gemma4ReasoningParser : public Qwen3ReasoningParser {
 protected:
-    const int64_t reasoningTokenId = 100; // <|channel>
-    const int64_t reasoningEndTokenId = 101; // <channel|>
+    const int64_t reasoningTokenId = 100;     // <|channel>
+    const int64_t reasoningEndTokenId = 101;  // <channel|>
 
     const std::string parsingStartTag = "<|channel>thought\n";
     const std::string parsingEndTag = "<channel|>";
+
 public:
     Gemma4ReasoningParser() = delete;
     explicit Gemma4ReasoningParser(ov::genai::Tokenizer& tokenizer) :
@@ -38,8 +39,8 @@ public:
     bool requiresStreamingWithSpecialTokens() const override {
         return true;
     }
-    
-     const std::vector<std::string>& getParsingStartTags() const override {
+
+    const std::vector<std::string>& getParsingStartTags() const override {
         static const std::vector<std::string> parsingStartTags{this->parsingStartTag};
         return parsingStartTags;
     }
