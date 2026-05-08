@@ -264,6 +264,7 @@ bool Gemma4ToolParser::parseInToolCallState() {
     }
 
     std::string toolName = this->streamingContent.substr(toolNameStart, argsPos - toolNameStart);
+    trim(toolName);
     this->toolCall = ToolCall{generateRandomId(), toolName, ""};
     SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Parsed tool name: {}", toolName);
     this->streamingPosition = argsPos + TOOL_ARGS_START_INDICATOR.length();
@@ -415,6 +416,7 @@ bool Gemma4ToolParser::parseSingleToolCall(const std::string& toolStr, ToolCall&
             return false;
         }
         std::string toolName = toolNameWithPrefix.substr(TOOL_CALL_NAME_PREFIX.length());
+        trim(toolName);
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Parsed tool name: {}", toolName);
 
         int argsStrLen = toolStr.length() - argsPos - TOOL_ARGS_START_INDICATOR.length() - TOOL_ARGS_END_INDICATOR.length();
