@@ -334,7 +334,7 @@ TEST_F(Gemma4OutputParserTest, ParseToolCallWithEmptyArguments) {
     ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
     ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
     EXPECT_EQ(parsedOutput.toolCalls[0].name, "no_args_tool");
-    EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "");
+    EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{}");
 }
 
 TEST_F(Gemma4OutputParserTest, ParseToolCallWithMultipleUtfChars) {
