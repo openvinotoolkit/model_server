@@ -69,6 +69,7 @@
 #include "schema.hpp"
 #include "servable_definition.hpp"
 #include "stringutils.hpp"
+#include "systeminfo.hpp"
 
 namespace ovms {
 
@@ -151,6 +152,12 @@ ModelManager::ModelManager(const std::string& modelCacheDirectory, MetricRegistr
         throw;
     }
     this->logPluginConfiguration();
+#ifdef __linux__
+    if (isRunningInDocker()) {
+        SPDLOG_INFO("Running inside Docker container");
+        SPDLOG_INFO("cpu quota: {}, cpu affinity: {}, max_open_files: {}", getDockerCpuQuota(), getCpuAffinityCount(), getMaxOpenFilesLimit());
+    }
+#endif
 }
 
 void ModelManager::logPluginConfiguration() {

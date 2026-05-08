@@ -15,6 +15,7 @@
 //*****************************************************************************
 #include "config.hpp"
 #include <algorithm>
+#include <atomic>
 #include <filesystem>
 #include <limits>
 #include <regex>
@@ -36,9 +37,6 @@
 #include "modelconfig.hpp"
 #include "stringutils.hpp"
 #include "systeminfo.hpp"
-#ifdef __linux__
-#include <sys/resource.h>
-#endif
 
 namespace ovms {
 
@@ -55,13 +53,15 @@ const uint64_t MAX_REST_WORKERS = 10'000;
 #ifdef __linux__
 
 const uint64_t RESERVED_OPEN_FILES = 15;  // we need to reserve some file descriptors for other operations, so we don't want to use all of them for drogon workers
+const uint64_t OPEN_FILES_PER_REST_WORKER = 7;  // 5x rest_workers to initialize ovms and 2x rest_workers for new connections
 uint64_t getDefaultRestWorkers() {
     const uint64_t maxOpenFiles = getMaxOpenFilesLimit();
     if (maxOpenFiles <= RESERVED_OPEN_FILES) {
         return static_cast<uint64_t>(2);  // minimum functional number
     }
-
-    return std::min(static_cast<uint64_t>(AVAILABLE_CORES), (maxOpenFiles - RESERVED_OPEN_FILES) / 7);  // 5x rest_workers to initialize ovms and 2x rest_workers for new connections
+    // 2 is a minimal number of default rest workers
+    const uint64_t MIN_DEFAULT_REST_WORKERS = 2;
+    return std::max(std::min(static_cast<uint64_t>(AVAILABLE_CORES), (maxOpenFiles - RESERVED_OPEN_FILES) / OPEN_FILES_PER_REST_WORKER), MIN_DEFAULT_REST_WORKERS);
 }
 #else
 uint64_t getDefaultRestWorkers() {
@@ -317,7 +317,8 @@ bool Config::validate() {
     }
 
     // check rest_workers value
-    if (((restWorkers() > MAX_REST_WORKERS) || (restWorkers() < 2))) {
+    const uint32_t restWorkersValue = restWorkers();  // Cache to avoid multiple calls
+    if (((restWorkersValue > MAX_REST_WORKERS) || (restWorkersValue < 2))) {
         std::cerr << "rest_workers count should be from 2 to " << MAX_REST_WORKERS << std::endl;
         return false;
     }
@@ -327,7 +328,7 @@ bool Config::validate() {
         return false;
     }
 #ifdef __linux__
-    if (restWorkers() > (getMaxOpenFilesLimit() - RESERVED_OPEN_FILES) / 6) {
+    if (restWorkersValue > (getMaxOpenFilesLimit() - RESERVED_OPEN_FILES) / 6) {
         std::cerr << "rest_workers count cannot be larger than " << (getMaxOpenFilesLimit() - RESERVED_OPEN_FILES) / 6 << " due to open files limit. Current open files limit: " << getMaxOpenFilesLimit() << std::endl;
         return false;
     }
@@ -394,25 +395,7 @@ const std::string Config::restBindAddress() const { return this->serverSettings.
 uint32_t Config::grpcWorkers() const { return this->serverSettings.grpcWorkers; }
 uint32_t Config::grpcMaxThreads() const { return this->serverSettings.grpcMaxThreads.value_or(DEFAULT_GRPC_MAX_THREADS); }
 size_t Config::grpcMemoryQuota() const { return this->serverSettings.grpcMemoryQuota.value_or(DEFAULT_GRPC_MEMORY_QUOTA); }
-uint32_t Config::restWorkers() const {
-    if (this->serverSettings.restWorkers.has_value()) {
-        return this->serverSettings.restWorkers.value();
-    }
-
-    const uint64_t defaultRestWorkers = getDefaultRestWorkers();
-#ifdef __linux__
-    const uint64_t maxOpenFiles = getMaxOpenFilesLimit();
-    const uint16_t detectedCores = getCoreCount();
-    SPDLOG_DEBUG("Detected cores: {} (may be constrained by Docker limits), max open files: {}, calculated default rest workers: {}", detectedCores, maxOpenFiles, defaultRestWorkers);
-    if (isRunningInDocker()) {
-        SPDLOG_DEBUG("Docker CPU quota detected: {}, CPU affinity count: {}", getDockerCpuQuota(), getCpuAffinityCount());
-    }
-#else
-    const uint16_t detectedCores = getCoreCount();
-    SPDLOG_DEBUG("Detected cores: {}, calculated default rest workers: {}", detectedCores, defaultRestWorkers);
-#endif
-    return static_cast<uint32_t>(defaultRestWorkers);
-}
+uint32_t Config::restWorkers() const { return this->serverSettings.restWorkers.value_or(getDefaultRestWorkers()); }
 const std::string& Config::modelName() const { return this->modelsSettings.modelName; }
 const std::string& Config::modelPath() const { return this->modelsSettings.modelPath; }
 const std::string& Config::batchSize() const {

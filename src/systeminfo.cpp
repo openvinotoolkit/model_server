@@ -45,7 +45,7 @@ uint16_t getCoreCount() {
         }
     }
 #endif
-    return std::max(static_cast<uint16_t>(2), detectedCoreCount);
+    return detectedCoreCount;
 }
 
 uint64_t getMaxOpenFilesLimit() {
@@ -64,7 +64,6 @@ bool isRunningInDocker() {
     // Check for /.dockerenv file
     std::ifstream dockerenv("/.dockerenv");
     if (dockerenv.good()) {
-        SPDLOG_DEBUG("Running inside Docker container (/.dockerenv detected)");
         return true;
     }
 
@@ -74,7 +73,6 @@ bool isRunningInDocker() {
         std::string line;
         while (std::getline(cgroup, line)) {
             if (line.find("docker") != std::string::npos) {
-                SPDLOG_DEBUG("Running inside Docker container (docker reference in /proc/self/cgroup detected)");
                 return true;
             }
         }
@@ -88,12 +86,10 @@ uint16_t getCpuAffinityCount() {
     CPU_ZERO(&mask);
 
     if (sched_getaffinity(0, sizeof(mask), &mask) == -1) {
-        SPDLOG_DEBUG("sched_getaffinity failed, returning hardware concurrency");
         return std::thread::hardware_concurrency();
     }
 
     int cpu_count = CPU_COUNT(&mask);
-    SPDLOG_DEBUG("CPU affinity count: {}", cpu_count);
     return static_cast<uint16_t>(cpu_count);
 }
 
@@ -111,7 +107,6 @@ uint16_t getDockerCpuQuota() {
                     uint64_t period = std::stoull(period_str);
                     if (quota > 0 && period > 0 && quota != ULLONG_MAX) {
                         uint16_t cpu_count = static_cast<uint16_t>((quota + period - 1) / period);
-                        SPDLOG_DEBUG("Docker CPU quota (v2): {} / {} = {} CPUs", quota, period, cpu_count);
                         return cpu_count;
                     }
                 } catch (const std::exception&) {
@@ -136,7 +131,6 @@ uint16_t getDockerCpuQuota() {
                 uint64_t period = std::stoull(period_str);
                 if (quota > 0 && period > 0) {
                     uint16_t cpu_count = static_cast<uint16_t>((quota + period - 1) / period);
-                    SPDLOG_DEBUG("Docker CPU quota (v1): {} / {} = {} CPUs", quota, period, cpu_count);
                     return cpu_count;
                 }
             } catch (const std::exception&) {

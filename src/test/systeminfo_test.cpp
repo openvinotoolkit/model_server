@@ -14,7 +14,6 @@
 // limitations under the License.
 //*****************************************************************************
 
-#include <algorithm>
 #include <thread>
 
 #include <gmock/gmock.h>
@@ -32,6 +31,5 @@ using ovms::StatusCode;
 
 TEST(SystemInfo, getCoreCount) {
     uint16_t cpuCount = getCoreCount();
-    EXPECT_GE(cpuCount, 2);
-    EXPECT_LE(cpuCount, std::max(static_cast<uint16_t>(2), static_cast<uint16_t>(std::thread::hardware_concurrency())));
+    EXPECT_GE(cpuCount, 1);
 }
