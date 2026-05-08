@@ -85,7 +85,7 @@ size_t findInStringRespectingSpecialChars(const std::string& str, const std::str
             bracketDepth--;
         } else if (str[i] == '"' && (i == 0 || str[i - 1] != '\\')) {
             quoteDepth = 1 - quoteDepth;
-        } else if (str[i] == '\'' && (i == 0 || str[i - 1] != '\\')) {
+        } else if (quoteDepth == 0 && str[i] == '\'' && (i == 0 || str[i - 1] != '\\')) {
             singleQuoteDepth = 1 - singleQuoteDepth;
         }
     }

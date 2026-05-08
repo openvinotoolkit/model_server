@@ -35,11 +35,11 @@ const std::string Gemma4ToolParser::TOOL_ARGS_SEPARATOR_STR = ",";
 
 const std::string Gemma4ToolParser::TURN_END_TAG = "<turn|>";
 
-const int64_t Gemma4ToolParser::botTokenId = 48; // <|tool_call>
-const int64_t Gemma4ToolParser::eotTokenId = 49; // <tool_call|>
+const int64_t Gemma4ToolParser::botTokenId = 48;  // <|tool_call>
+const int64_t Gemma4ToolParser::eotTokenId = 49;  // <tool_call|>
 
-const int64_t Gemma4ToolParser::reasoningTokenId = 100;    // <|channel>
-const int64_t Gemma4ToolParser::reasoningEndTokenId = 101; // <channel|>
+const int64_t Gemma4ToolParser::reasoningTokenId = 100;     // <|channel>
+const int64_t Gemma4ToolParser::reasoningEndTokenId = 101;  // <channel|>
 
 std::string Gemma4ToolParser::parseArrayParameter(const std::string& argumentStr) {
     size_t pos = 1;

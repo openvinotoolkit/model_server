@@ -257,9 +257,7 @@ TEST_F(Gemma4OutputParserTest, ParseToolCallWithArrayArguments) {
 }
 
 TEST_F(Gemma4OutputParserTest, ParseToolCallOutputWithThreeToolCalls) {
-    std::string inputWithProperClosure = "<|tool_call>call:example_tool{arg1:<|\"|>value1<|\"|>,arg2:42}<tool_call|>"
-                                         "<|tool_call>call:another_tool{param1:<|\"|>data<|\"|>,param2:true}<tool_call|>"
-                                         "<|tool_call>call:third_tool{key:<|\"|>value<|\"|>}<tool_call|>";
+    std::string inputWithProperClosure = "<|tool_call>call:example_tool{arg1:<|\"|>value1<|\"|>,arg2:42}call:another_tool{param1:<|\"|>data<|\"|>,param2:true}call:third_tool{key:<|\"|>value<|\"|>}<tool_call|>";
 
     std::vector<std::string> inputs = {inputWithProperClosure};
     for (auto& input : inputs) {
@@ -336,6 +334,105 @@ TEST_F(Gemma4OutputParserTest, ParseToolCallWithEmptyArguments) {
     ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
     ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
     EXPECT_EQ(parsedOutput.toolCalls[0].name, "no_args_tool");
+    EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "");
+}
+
+TEST_F(Gemma4OutputParserTest, ParseToolCallWithMultipleUtfChars) {
+    // Tool call with empty braces (no arguments) and content around
+    std::string input = R"(<|tool_call>call:post_tweet{content:<|"|>Check out the sorted report! 🚀 We've made improvements to the content. Tagging @currenttech and mentioning Julia for our insightful team. #currenttech #trend<|"|>,mentions:[<|"|>@currenttech<|"|>,<|"|>Julia<|"|>],tags:[<|"|>#currenttrend<|"|>]}<tool_call|>)";
+    auto generatedTensor = gemma4Tokenizer->encode(input).input_ids;
+    std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+    ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
+    EXPECT_EQ(parsedOutput.content, "");
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
+    EXPECT_EQ(parsedOutput.toolCalls[0].name, "post_tweet");
+    EXPECT_EQ(parsedOutput.toolCalls[0].arguments, R"({"content":"Check out the sorted report! 🚀 We've made improvements to the content. Tagging @currenttech and mentioning Julia for our insightful team. #currenttech #trend","mentions":["@currenttech","Julia"],"tags":["#currenttrend"]})");
+}
+
+TEST_F(Gemma4OutputParserTest, ParseToolCallWithMultipleUtfCharsStreaming) {
+    std::vector<std::tuple<std::string, ov::genai::GenerationFinishReason, std::optional<std::string>>> chunkToDeltaVec{
+        {"<|tool_call>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"call:", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"post", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"_tweet", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"{content", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"id":"XXXXXXXXX","type":"function","index":0,"function":{"name":"post_tweet"}}]}})"},
+        {":<|\"|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"Check out the sorted report!", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {" 🚀", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {" We've made improvements", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {" to the content.", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {" Tagging @currenttech", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {" and mentioning Julia", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {" for our insightful team.", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {" #currenttech #trend", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"<|\"|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {",", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"mentions", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {":[", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"<|\"|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"@currenttech", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"<|\"|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {",", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"<|\"|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"Julia", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"<|\"|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"],", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"tags", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {":[", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"<|\"|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"#currenttrend", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"<|\"|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"]}", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{\"content\":\"Check out the sorted report! 🚀 We've made improvements to the content. Tagging @currenttech and mentioning Julia for our insightful team. #currenttech #trend\",\"mentions\":[\"@currenttech\",\"Julia\"],\"tags\":[\"#currenttrend\"]}"}}]}})"},
+        {"<tool_call|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+    };
+
+    for (const auto& [chunk, finishReason, expectedDelta] : chunkToDeltaVec) {
+        std::optional<rapidjson::Document> doc = outputParserWithRegularToolParsing->parseChunk(chunk, true, finishReason);
+        if (!expectedDelta.has_value() && !doc.has_value()) {
+            continue;
+        }
+        if (expectedDelta.has_value() && doc.has_value()) {
+            rapidjson::StringBuffer buffer;
+            rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+            doc->Accept(writer);
+            std::string docStr = buffer.GetString();
+            std::string expected = expectedDelta.value();
+            std::string idKey = "\"id\":\"";
+            auto docIdPos = docStr.find(idKey);
+            auto expectedIdPos = expected.find(idKey);
+            if (docIdPos != std::string::npos && expectedIdPos != std::string::npos) {
+                auto docIdStart = docIdPos + idKey.size();
+                auto docIdEnd = docStr.find("\"", docIdStart);
+                auto expectedIdStart = expectedIdPos + idKey.size();
+                auto expectedIdEnd = expected.find("\"", expectedIdStart);
+                ASSERT_NE(docIdEnd, std::string::npos);
+                ASSERT_NE(expectedIdEnd, std::string::npos);
+                std::string docId = docStr.substr(docIdStart, docIdEnd - docIdStart);
+                std::string expectedId = expected.substr(expectedIdStart, expectedIdEnd - expectedIdStart);
+                EXPECT_EQ(docId.size(), expectedId.size()) << "ID length mismatch for chunk: " << chunk;
+                EXPECT_TRUE(std::all_of(docId.begin(), docId.end(), ::isalnum)) << "ID not alphanumeric for chunk: " << chunk;
+                std::string docStrNoId = docStr;
+                std::string expectedNoId = expected;
+                docStrNoId.replace(docIdStart, docId.size(), std::string(docId.size(), '*'));
+                expectedNoId.replace(expectedIdStart, expectedId.size(), std::string(expectedId.size(), '*'));
+                EXPECT_EQ(docStrNoId, expectedNoId) << "Mismatch for chunk (ignoring id value): " << chunk;
+            } else {
+                EXPECT_EQ(docStr, expected) << "Mismatch for chunk: " << chunk;
+            }
+        } else {
+            std::string expectedStr = expectedDelta.has_value() ? expectedDelta.value() : "std::nullopt";
+            std::string docStr = doc.has_value() ? [&]() {
+                rapidjson::StringBuffer buffer;
+                rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+                doc->Accept(writer);
+                return std::string(buffer.GetString());
+            }()
+                                                 : "std::nullopt";
+            FAIL() << "Mismatch between expectedDelta and doc for chunk: " << chunk
+                   << "\nexpectedDelta: " << expectedStr
+                   << "\ndoc: " << docStr;
+        }
+    }
 }
 
 TEST_F(Gemma4OutputParserTest, ParseToolCallOutputWithContentAndNoToolCalls) {
@@ -794,4 +891,21 @@ TEST_F(Gemma4OutputParserTest, ParseToolCallWithUnicodeCharactersInArguments) {
     ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
     EXPECT_EQ(parsedOutput.toolCalls[0].name, "translate");
     EXPECT_EQ(parsedOutput.toolCalls[0].arguments, R"({"text":"zażółć gęślą jaźń","lang":"pl"})");
+}
+
+TEST_F(Gemma4OutputParserTest, ParseToolCallWithPythonCodeAsArgument) {
+    std::string input = R"x(<|tool_call>call:string_tool{param:<|"|>
+    if __name__ == "__main__":
+    addresses = {}
+    addresses["Hodor"] = """The door"""
+    addresses["Arya"] = "Winterfell"
+    for name, address in addresses.items():
+        print(f'\n\t{name} lives at {address}\n\r')<|"|>}<tool_call|>)x";
+    auto generatedTensor = gemma4Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
+    std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+    ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
+    EXPECT_EQ(parsedOutput.content, "");
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
+    EXPECT_EQ(parsedOutput.toolCalls[0].name, "string_tool");
+    EXPECT_EQ(parsedOutput.toolCalls[0].arguments, R"x({"param":"\n    if __name__ == \"__main__\":\n    addresses = {}\n    addresses[\"Hodor\"] = \"\"\"The door\"\"\"\n    addresses[\"Arya\"] = \"Winterfell\"\n    for name, address in addresses.items():\n        print(f'\\n\\t{name} lives at {address}\\n\\r')"})x");
 }
