@@ -52,18 +52,18 @@
 #endif
 namespace ovms {
 
-static std::string s_inMemoryGraphContent;
+static std::string inMemoryGraphContent;
 
 bool GraphExport::hasInMemoryGraphContent() {
-    return !s_inMemoryGraphContent.empty();
+    return !inMemoryGraphContent.empty();
 }
 
 const std::string& GraphExport::getInMemoryGraphContent() {
-    return s_inMemoryGraphContent;
+    return inMemoryGraphContent;
 }
 
 void GraphExport::clearInMemoryGraphContent() {
-    s_inMemoryGraphContent.clear();
+    inMemoryGraphContent.clear();
 }
 
 static const std::string OVMS_VERSION_GRAPH_LINE = std::string("# File created with: ") + PROJECT_NAME + std::string(" ") + PROJECT_VERSION + std::string("\n");
@@ -108,7 +108,7 @@ std::string GraphExport::getDraftModelDirectoryPath(const std::string& directory
 static Status createPbtxtFile(const std::string& directoryPath, const std::string& pbtxtContent, bool writeToFile) {
 #if (MEDIAPIPE_DISABLE == 0)
     ::mediapipe::CalculatorGraphConfig config;
-    SPDLOG_TRACE("Generated pbtxt\n: {}", pbtxtContent);
+    SPDLOG_TRACE("Created graph config file:\n{}", pbtxtContent);
     bool success = ::google::protobuf::TextFormat::ParseFromString(pbtxtContent, &config);
     if (!success) {
         SPDLOG_ERROR("Created graph config file couldn't be parsed - check used task parameters values.");
@@ -116,7 +116,7 @@ static Status createPbtxtFile(const std::string& directoryPath, const std::strin
     }
 #endif
     if (!writeToFile) {
-        s_inMemoryGraphContent = pbtxtContent;
+        inMemoryGraphContent = pbtxtContent;
         return StatusCode::OK;
     }
     // clang-format on
@@ -358,7 +358,7 @@ node {
 #endif
     // clang-format on
     if (!writeToFile) {
-        s_inMemoryGraphContent = oss.str();
+        inMemoryGraphContent = oss.str();
         return StatusCode::OK;
     }
     std::string fullPath = FileSystem::joinPath({directoryPath, "graph.pbtxt"});
@@ -428,7 +428,7 @@ node {
 #endif
     // clang-format on
     if (!writeToFile) {
-        s_inMemoryGraphContent = oss.str();
+        inMemoryGraphContent = oss.str();
         return StatusCode::OK;
     }
     std::string fullPath = FileSystem::joinPath({directoryPath, "graph.pbtxt"});

@@ -343,6 +343,7 @@ TEST_F(HfDownloaderPullHfModel, PositiveDownloadAndStart) {
     // EnvGuard guard;
     // guard.set("HF_ENDPOINT", "https://modelscope.cn");
     // guard.set("HF_ENDPOINT", "https://hf-mirror.com");
+    this->filesToPrintInCaseOfFailure.emplace_back("graph.pbtxt");
     this->filesToPrintInCaseOfFailure.emplace_back("config.json");
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string downloadPath = ovms::FileSystem::joinPath({this->directoryPath, "repository"});
@@ -354,11 +355,9 @@ TEST_F(HfDownloaderPullHfModel, PositiveDownloadAndStart) {
     std::string graphPath = ovms::FileSystem::appendSlash(basePath) + "graph.pbtxt";
 
     ASSERT_EQ(std::filesystem::exists(modelPath), true) << modelPath;
-    // In HF_PULL_AND_START_MODE, graph.pbtxt is stored in memory, not written to file
-    ASSERT_EQ(std::filesystem::exists(graphPath), false) << "graph.pbtxt should not be created in pull-and-start mode";
+    ASSERT_EQ(std::filesystem::exists(graphPath), true) << graphPath;
     ASSERT_EQ(std::filesystem::file_size(modelPath), 52417240);
-    ASSERT_TRUE(ovms::GraphExport::hasInMemoryGraphContent());
-    std::string graphContents = ovms::GraphExport::getInMemoryGraphContent();
+    std::string graphContents = GetFileContents(graphPath);
     ASSERT_EQ(expectedGraphContents, removeVersionString(graphContents)) << graphContents;
 }
 
@@ -408,6 +407,7 @@ TEST_F(HfDownloaderPullHfModel, ModelOutOfOvOrg) {
 
 TEST_F(HfDownloaderPullHfModel, PositiveDownloadAndStartModelOutsideOvOrg) {
     SKIP_AND_EXIT_IF_NOT_RUNNING_UNSTABLE();  // CVS-180127
+    this->filesToPrintInCaseOfFailure.emplace_back("graph.pbtxt");
     this->filesToPrintInCaseOfFailure.emplace_back("config.json");
     std::string modelName = "AIFunOver/SmolLM2-360M-Instruct-openvino-4bit";
     std::string downloadPath = ovms::FileSystem::joinPath({this->directoryPath, "repository"});
@@ -419,10 +419,8 @@ TEST_F(HfDownloaderPullHfModel, PositiveDownloadAndStartModelOutsideOvOrg) {
     std::string graphPath = ovms::FileSystem::appendSlash(basePath) + "graph.pbtxt";
 
     ASSERT_EQ(std::filesystem::exists(modelPath), true) << modelPath;
-    // In HF_PULL_AND_START_MODE, graph.pbtxt is stored in memory, not written to file
-    ASSERT_EQ(std::filesystem::exists(graphPath), false) << "graph.pbtxt should not be created in pull-and-start mode";
-    ASSERT_TRUE(ovms::GraphExport::hasInMemoryGraphContent());
-    std::string graphContents = ovms::GraphExport::getInMemoryGraphContent();
+    ASSERT_EQ(std::filesystem::exists(graphPath), true) << graphPath;
+    std::string graphContents = GetFileContents(graphPath);
     ASSERT_EQ(expectedGraphContents, removeVersionString(graphContents)) << graphContents;
 }
 

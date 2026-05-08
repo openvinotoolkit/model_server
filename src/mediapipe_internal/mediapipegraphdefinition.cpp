@@ -25,6 +25,7 @@
 #include <vector>
 
 #include "../execution_context.hpp"
+#include "../config.hpp"
 #include "src/filesystem/filesystem.hpp"
 #include "src/graph_export/graph_export.hpp"
 #include "src/metrics/metric.hpp"
@@ -61,7 +62,7 @@ const tensor_map_t MediapipeGraphDefinition::getOutputsInfo() const {
 }
 
 Status MediapipeGraphDefinition::validateForConfigFileExistence() {
-    if (GraphExport::hasInMemoryGraphContent()) {
+    if (GraphExport::hasInMemoryGraphContent() && ovms::Config::instance().getServerSettings().serverMode == GENAI_CONFIGURE_AND_START) {
         const std::string& content = GraphExport::getInMemoryGraphContent();
         this->chosenConfig = content;
         this->mgconfig.setCurrentGraphPbTxtMD5(ovms::FileSystem::getStringMD5(content));

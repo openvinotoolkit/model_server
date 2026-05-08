@@ -859,7 +859,7 @@ void CLIParser::prepareGraphStart(HFSettingsImpl& hfSettings, ModelsSettingsImpl
     // Model settings
     if (result->count("model_name")) {
         modelsSettings.modelName = result->operator[]("model_name").as<std::string>();
-    } else if (!hfSettings.sourceModel.empty()) {
+    } else {
         modelsSettings.modelName = hfSettings.sourceModel;
     }
 
