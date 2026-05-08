@@ -692,7 +692,11 @@ void CLIParser::prepareModel(ModelsSettingsImpl& modelsSettings, HFSettingsImpl&
 }
 
 bool CLIParser::isHFPullOrPullAndStart(const std::unique_ptr<cxxopts::ParseResult>& result) {
-    return (result->count("pull") || (result->count("task") && result->count("source_model")));
+    // Keep `--task` in the broad mutually exclusive task/pull CLI category so
+    // parse-time checks that rely on this helper continue to reject combining
+    // task-based flows with config-management modes. More specific mode
+    // differentiation is handled by isGenAIConfigureAndStart().
+    return (result->count("pull") || result->count("task"));
 }
 
 bool CLIParser::isGenAIConfigureAndStart(const std::unique_ptr<cxxopts::ParseResult>& result) {

@@ -420,8 +420,8 @@ Status Server::startModules(ovms::Config& config) {
         }
         auto hfModule = dynamic_cast<const HfPullModelModule*>(it->second.get());
         status = hfModule->clone();
-        // Return from modules only in --pull mode or error, otherwise start the rest of modules
-        if (config.getServerSettings().serverMode == HF_PULL_MODE || !status.ok())
+        // Return only on clone error; otherwise start the rest of modules
+        if (!status.ok())
             return status;
     }
     if (config.getServerSettings().serverMode == GENAI_CONFIGURE_AND_START) {
