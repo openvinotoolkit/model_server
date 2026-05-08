@@ -14,25 +14,13 @@
 # limitations under the License.
 #
 
-from collections import defaultdict
+ACTIVATE := $(PYVENV)/bin/activate
 
+default: ovms_capi_wrapper
 
-class TargetDevice:
-    CPU = "CPU"
-    GPU = "GPU"
-    NPU = "NPU"
-    AUTO = "AUTO:GPU,CPU"
-    HETERO = "HETERO:GPU,CPU"
-    AUTO_CPU_GPU = "AUTO:CPU,GPU"
+ovms_capi_wrapper: setup.py
+	. $(ACTIVATE) && python3 include/ovms_autopxd.py -i include/ovms.h -o ovms_capi.pxd
+	. $(ACTIVATE) && python3 setup.py build_ext --inplace
 
-
-MAX_WORKERS_PER_TARGET_DEVICE = defaultdict(
-    lambda: 1,
-    {  # Quite conservative for any non-listed device
-        TargetDevice.CPU: 0,  # no limits !
-        TargetDevice.GPU: 4,
-        TargetDevice.NPU: 4,
-        TargetDevice.HETERO: 4,  # keep in sync with `TARGET_DEVICE_GPU`
-        TargetDevice.AUTO: 4,
-    },
-)
+clean:
+	-rm *.c* *.html *.pxd *.h build __pycache__

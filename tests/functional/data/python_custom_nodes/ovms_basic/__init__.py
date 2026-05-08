@@ -13,26 +13,3 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
-from collections import defaultdict
-
-
-class TargetDevice:
-    CPU = "CPU"
-    GPU = "GPU"
-    NPU = "NPU"
-    AUTO = "AUTO:GPU,CPU"
-    HETERO = "HETERO:GPU,CPU"
-    AUTO_CPU_GPU = "AUTO:CPU,GPU"
-
-
-MAX_WORKERS_PER_TARGET_DEVICE = defaultdict(
-    lambda: 1,
-    {  # Quite conservative for any non-listed device
-        TargetDevice.CPU: 0,  # no limits !
-        TargetDevice.GPU: 4,
-        TargetDevice.NPU: 4,
-        TargetDevice.HETERO: 4,  # keep in sync with `TARGET_DEVICE_GPU`
-        TargetDevice.AUTO: 4,
-    },
-)

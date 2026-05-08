@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2020 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,10 +13,3 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
-
-def start_ovms_container_command(start_container_command, command_args):
-    command = start_container_command
-    for key, value in command_args.items():
-        command += " --{key} {value}".format(key=key, value=value)
-    return command
