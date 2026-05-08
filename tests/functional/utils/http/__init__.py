@@ -1,6 +1,5 @@
----
 #
-# Copyright (c) 2020 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,17 +13,3 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-config:
-  pool_range:
-    start: 30000
-    stop: 60000
-  pool_part_size: 1000
-  locks_dir: /tmp
-  envs:
-    slices:
-      - start: TT_REST_OVMS_STARTING_PORT
-        size: TT_PORTS_POOL_SIZE
-      - start: TT_GRPC_OVMS_STARTING_PORT
-        size: TT_PORTS_POOL_SIZE
-      - start: TT_HAPROXY_STARTING_PORT
-        size: TT_HAPROXY_PORT_POOL_SIZE

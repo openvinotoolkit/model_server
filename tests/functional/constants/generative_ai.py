@@ -28,3 +28,52 @@ class GenerativeAIPluginConfig:
     NPUW_ONLINE_PIPELINE = "NPUW_ONLINE_PIPELINE"
     MAX_PROMPT_LEN = "MAX_PROMPT_LEN"
     PROMPT_LOOKUP = "prompt_lookup"
+
+
+class Tools:
+    GET_WEATHER_TOOLS = [{
+        "type": "function",
+        "function": {
+            "name": "get_weather",
+            "description": "Get current temperature for a given location.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "location": {
+                        "type": "string",
+                        "description": "City and country e.g. Bogotá, Colombia"
+                    }
+                },
+                "required": [
+                    "location"
+                ],
+                "additionalProperties": False
+            },
+            "strict": True
+        }
+    }]
+    GET_WEATHER_TOOL_CHOICE = {"type": "function", "function": {"name": "get_weather"}}
+
+    GET_POLLUTIONS_TOOLS = [{
+        "type": "function",
+        "function": {
+            "name": "get_pollutions",
+            "description": "Get current level of air pollutions for a given location.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "location": {
+                        "type": "string",
+                        "description": "City and country e.g. Bogotá, Colombia"
+                    }
+                },
+                "required": [
+                    "location"
+                ],
+                "additionalProperties": False
+            },
+            "strict": True
+        }
+    }]
+
+    WEATHER_AND_POLLUTIONS_TOOLS = [GET_WEATHER_TOOLS[0], GET_POLLUTIONS_TOOLS[0]]
