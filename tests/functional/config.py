@@ -195,11 +195,11 @@ infer_timeout = infer_timeouts[target_device]
 is_nginx_mtls = get_bool("TT_IS_NGINX_MTLS", False)
 
 """ TT_SKIP_TEST_IF_IS_NGINX_MTLS """
-skip_nginx_test = get_bool("TT_SKIP_TEST_IF_IS_NGINX_MTLS", "True")
+skip_nginx_test = get_bool("TT_SKIP_TEST_IF_IS_NGINX_MTLS", True)
 skip_nginx_test = skip_nginx_test and is_nginx_mtls
 
 """ TT_ENABLE_OVMS_C_PYTEST_PLUGINS - enable pytest plugins """
-enable_pytest_plugins = get_bool("TT_ENABLE_OVMS_C_PYTEST_PLUGINS", "True")
+enable_pytest_plugins = get_bool("TT_ENABLE_OVMS_C_PYTEST_PLUGINS", True)
 
 """ TT_OVMS_C_REPO_PATH - path to ovms-c repository. Can be relative or absolute. """
 ovms_c_repo_path = get_path("TT_OVMS_C_REPO_PATH", get_path("PWD", "./"))
@@ -266,7 +266,7 @@ docker_client_timeout = get_int("TT_DOCKER_CLIENT_TIMEOUT", 120)
 server_address = os.environ.get("TT_SERVER_ADDRESS", "localhost")
 
 """ TT_RESOURCE_MONITOR_ENABLED - Dump ovms container resource statistics once per second """
-resource_monitor_enabled = get_bool("TT_RESOURCE_MONITOR_ENABLED", False)
+resource_monitor_enabled = get_bool("TT_RESOURCE_MONITOR_ENABLED", True)
 
 """ TT_TEST_TEMP_DIR - directory path where all temporary files are stored, default is not set """
 test_temp_dir = os.environ.get("TT_TEST_TEMP_DIR", None)
