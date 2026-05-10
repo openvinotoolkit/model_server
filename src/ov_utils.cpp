@@ -177,7 +177,8 @@ Status applyDefaultCpuProperties(ov::AnyMap& properties) {
             } catch (...) {
                 try {
                     isThroughput = (perfIt->second.as<std::string>() == "THROUGHPUT");
-                } catch (...) {}
+                } catch (...) {
+                }
             }
             if (isThroughput && properties.find(ov::num_streams.name()) == properties.end()) {
                 properties[ov::num_streams.name()] = static_cast<int>(coreCount);

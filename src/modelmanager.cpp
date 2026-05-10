@@ -171,8 +171,6 @@ ModelManager::ModelManager(const std::string& modelCacheDirectory, MetricRegistr
         SPDLOG_INFO("cpu quota: {}, cpu affinity: {}, max_open_files: {}", getDockerCpuQuota(), getCpuAffinityCount(), getMaxOpenFilesLimit());
     }
 #endif
-
-
 }
 
 void ModelManager::logPluginConfiguration() {
