@@ -217,7 +217,12 @@ Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiSe
     }
 
     ov::AnyMap tokenProperties;
+    const uint32_t tokenizerNumStreams = std::min(
+        static_cast<uint32_t>(Config::instance().restWorkers()),
+        static_cast<uint32_t>(getCoreCount()));
+    tokenProperties[ov::num_streams.name()] = static_cast<int>(tokenizerNumStreams);
     tokenProperties[ov::hint::performance_mode.name()] = ov::hint::PerformanceMode::THROUGHPUT;
+    SPDLOG_DEBUG("Setting tokenizer/detokenizer NUM_STREAMS to: {}", tokenizerNumStreams);
     status = applyDefaultCpuProperties(tokenProperties);
     if (!status.ok()) {
         SPDLOG_ERROR("Failed to apply default CPU properties for tokenizer: {}", status.string());
