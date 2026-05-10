@@ -26,6 +26,7 @@
 #include "logging.hpp"
 #include "profiler.hpp"
 #include "status.hpp"
+#include "systeminfo.hpp"
 #include "tensorinfo.hpp"
 
 namespace ovms {
@@ -148,4 +149,50 @@ Status validatePluginConfiguration(const plugin_config_t& pluginConfig, const st
 
     return StatusCode::OK;
 }
+
+Status applyDefaultCpuProperties(ov::AnyMap& properties) {
+    try {
+        const uint16_t coreCount = getCoreCount();
+
+        if (properties.find(ov::inference_num_threads.name()) == properties.end()) {
+            properties[ov::inference_num_threads.name()] = static_cast<int>(coreCount);
+            SPDLOG_DEBUG("applyDefaultCpuProperties: setting inference_num_threads to {}", coreCount);
+        }
+
+#ifdef __linux__
+        if (properties.find(ov::hint::enable_cpu_pinning.name()) == properties.end()) {
+            if (isRunningInDocker()) {
+                const bool cpuPinning = getDockerCpuQuota() <= 0;
+                properties[ov::hint::enable_cpu_pinning.name()] = cpuPinning;
+                SPDLOG_DEBUG("applyDefaultCpuProperties: setting enable_cpu_pinning to {}", cpuPinning);
+            }
+        }
+#endif
+
+        const auto perfIt = properties.find(ov::hint::performance_mode.name());
+        if (perfIt != properties.end()) {
+            bool isThroughput = false;
+            try {
+                isThroughput = (perfIt->second.as<ov::hint::PerformanceMode>() == ov::hint::PerformanceMode::THROUGHPUT);
+            } catch (...) {
+                try {
+                    isThroughput = (perfIt->second.as<std::string>() == "THROUGHPUT");
+                } catch (...) {
+                }
+            }
+            if (isThroughput && properties.find(ov::num_streams.name()) == properties.end()) {
+                properties[ov::num_streams.name()] = static_cast<int>(coreCount);
+                SPDLOG_DEBUG("applyDefaultCpuProperties: setting num_streams to {} (THROUGHPUT hint active)", coreCount);
+            }
+        }
+    } catch (const std::exception& ex) {
+        SPDLOG_ERROR("Exception while applying default CPU properties: {}", ex.what());
+        return StatusCode::INTERNAL_ERROR;
+    } catch (...) {
+        SPDLOG_ERROR("Unknown exception while applying default CPU properties");
+        return StatusCode::INTERNAL_ERROR;
+    }
+    return StatusCode::OK;
+}
+
 }  // namespace ovms
