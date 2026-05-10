@@ -52,6 +52,13 @@ std::optional<ov::Layout> getLayoutFromRTMap(const ov::RTMap& rtMap);
 
 Status validatePluginConfiguration(const plugin_config_t& pluginConfig, const std::string& targetDevice, const ov::Core& ieCore);
 
+// Applies resource-aware CPU defaults to an OpenVINO property map.
+// Sets inference_num_threads and (on Linux) enable_cpu_pinning only when not
+// already present in the map.  When PERFORMANCE_HINT=THROUGHPUT is set,
+// num_streams is also capped to the detected core count if not already set.
+// Returns StatusCode::INTERNAL_ERROR on any OpenVINO exception.
+Status applyDefaultCpuProperties(ov::AnyMap& properties);
+
 // Logging
 // #1 model/global plugin  CompiledMode:DUMMY / Global OpenVINO plugin:CPU
 // #2 version/_
@@ -96,4 +103,6 @@ static void logOVPluginConfig(PropertyExtractor&& propertyExtractor, const std::
     std::string pluginConfigNameValuesString = joins(pluginConfigNameValues, ", ");
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "{}; {}plugin configuration: {{ {} }}", loggingAuthor, loggingDetails, pluginConfigNameValuesString);
 }
+
+
 }  // namespace ovms

@@ -37,6 +37,7 @@
 #include "../../../json_parser.hpp"
 #include "../../../logging.hpp"
 #include "../../../mediapipe_internal/mediapipe_utils.hpp"
+#include "../../../ov_utils.hpp"
 #include "../../../status.hpp"
 #include "../../../systeminfo.hpp"
 #include "llm_executor.hpp"
@@ -207,9 +208,22 @@ Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiSe
         return status;
     }
 
-    const uint32_t numStreams = std::min(static_cast<uint32_t>(Config::instance().restWorkers()), static_cast<uint32_t>(getCoreCount()));
-    SPDLOG_DEBUG("Setting tokenizer/detokenizer NUM_STREAMS to: {}", numStreams);
-    properties->tokenizerPluginConfig = {{"NUM_STREAMS", static_cast<int>(numStreams)}, {"PERFORMANCE_HINT", "THROUGHPUT"}};
+    if (properties->device == "CPU") {
+        status = applyDefaultCpuProperties(properties->pluginConfig);
+        if (!status.ok()) {
+            SPDLOG_ERROR("Failed to apply default CPU properties for LLM model: {}", status.string());
+            return status;
+        }
+    }
+
+    ov::AnyMap tokenProperties;
+    tokenProperties[ov::hint::performance_mode.name()] = ov::hint::PerformanceMode::THROUGHPUT;
+    status = applyDefaultCpuProperties(tokenProperties);
+    if (!status.ok()) {
+        SPDLOG_ERROR("Failed to apply default CPU properties for tokenizer: {}", status.string());
+        return status;
+    }
+    properties->tokenizerPluginConfig = tokenProperties;
 
     try {
         properties->pipeline = std::make_shared<ov::genai::ContinuousBatchingPipeline>(parsedModelsPath,

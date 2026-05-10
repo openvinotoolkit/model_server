@@ -91,18 +91,15 @@ ModelManager::ModelManager(const std::string& modelCacheDirectory, MetricRegistr
     pythonBackend(pythonBackend) {
     try {
         this->ieCore = std::make_unique<ov::Core>();
-        const uint16_t detectedCoreCount = getCoreCount();
-        SPDLOG_DEBUG("Setting CPU inference_num_threads to: {}", detectedCoreCount);
-        this->ieCore->set_property("CPU", ov::inference_num_threads(static_cast<int>(detectedCoreCount)));
-
-#ifdef __linux__
-        if (isRunningInDocker()) {
-            const bool cpuQuotaDefined = getDockerCpuQuota() > 0;
-            this->ieCore->set_property("CPU", ov::hint::enable_cpu_pinning(!cpuQuotaDefined));
+        ov::AnyMap cpuProperties;
+        Status status = applyDefaultCpuProperties(cpuProperties);
+        if (!status.ok()) {
+            SPDLOG_CRITICAL("Failed to apply default CPU properties. Reason: {}", status.string());
+            throw std::runtime_error("Failed to apply default CPU properties");
         }
-#endif
+        this->ieCore->set_property("CPU", cpuProperties);
     } catch (const std::exception& ex) {
-        SPDLOG_CRITICAL("Failed to initialize OpenVINO Core with CPU properties set from detected core count and Docker constraints. Reason: {}", ex.what());
+        SPDLOG_CRITICAL("Failed to initialize OpenVINO Core with CPU properties. Reason: {}", ex.what());
         throw;
     }
 
@@ -174,6 +171,8 @@ ModelManager::ModelManager(const std::string& modelCacheDirectory, MetricRegistr
         SPDLOG_INFO("cpu quota: {}, cpu affinity: {}, max_open_files: {}", getDockerCpuQuota(), getCpuAffinityCount(), getMaxOpenFilesLimit());
     }
 #endif
+
+
 }
 
 void ModelManager::logPluginConfiguration() {
