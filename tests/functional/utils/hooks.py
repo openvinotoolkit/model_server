@@ -23,7 +23,7 @@ from docker import errors as docker_errors
 from pathlib import Path
 
 from tests.functional import config
-from tests.functional.models.models_library import ModelsLib
+from ovms.constants.models_library import ModelsLib
 from tests.functional.utils.reservation_manager.args import parse_args
 from tests.functional.utils.reservation_manager.manager import Manager as ReservationManager
 from tests.functional.config import (

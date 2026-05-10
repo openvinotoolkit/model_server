@@ -23,9 +23,9 @@ from pathlib import Path
 import numpy as np
 
 from tests.functional.config import datasets_path
-from tests.functional.models.models_datasets import RandomDataset
-from tests.functional.models import ModelInfo
-from tests.functional.models.models_static import (
+from ovms.constants.model_dataset import RandomDataset
+from ovms.constants.models import ModelInfo
+from ovms.constants.models import (
     AgeGender,
     ArgMax,
     CrnnTf,
