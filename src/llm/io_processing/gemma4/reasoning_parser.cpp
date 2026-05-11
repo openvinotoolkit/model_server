@@ -25,6 +25,12 @@
 #include "../utils.hpp"
 
 namespace ovms {
+void Gemma4ReasoningParser::skipToken(const std::vector<int64_t>& generatedTokens, size_t& pos, int64_t tokenId) {
+    if (pos < generatedTokens.size() && generatedTokens[pos] == tokenId) {
+        pos++;
+    }
+}
+
 void Gemma4ReasoningParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) {
     auto startPos = std::string::npos;
     auto endPos = std::string::npos;
@@ -38,8 +44,10 @@ void Gemma4ReasoningParser::parse(ParsedOutput& parsedOutput, const std::vector<
     }
 
     if (startPos != std::string::npos && endPos != std::string::npos && startPos < endPos) {
-        size_t reasoningStart = startPos + 3;  // deleting "<|channel>thought\n"
-        std::string reasoningText = tokenizer.decode(std::vector<int64_t>(generatedTokens.begin() + reasoningStart, generatedTokens.begin() + endPos), ov::genai::skip_special_tokens(true));
+        skipToken(generatedTokens, startPos, reasoningTokenId);
+        skipToken(generatedTokens, startPos, thoughtToken);
+        std::string reasoningText = tokenizer.decode(std::vector<int64_t>(generatedTokens.begin() + startPos, generatedTokens.begin() + endPos), ov::genai::skip_special_tokens(true));
+        trim(reasoningText);
         parsedOutput.reasoning = reasoningText;
         // Remove reasoning from content
         std::string contentWithoutReasoning = tokenizer.decode(std::vector<int64_t>(generatedTokens.begin() + endPos + 1, generatedTokens.end()), ov::genai::skip_special_tokens(true));  // content MUST never appear before reasoning

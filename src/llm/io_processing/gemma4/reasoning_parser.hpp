@@ -26,9 +26,12 @@ class Gemma4ReasoningParser : public Qwen3ReasoningParser {
 protected:
     const int64_t reasoningTokenId = 100;     // <|channel>
     const int64_t reasoningEndTokenId = 101;  // <channel|>
+    const int64_t thoughtToken = 45518;         // thought
 
     const std::string parsingStartTag = "<|channel>thought\n";
     const std::string parsingEndTag = "<channel|>";
+
+    void skipToken(const std::vector<int64_t>& generatedTokens, size_t& pos, int64_t tokenId);
 
 public:
     Gemma4ReasoningParser() = delete;
