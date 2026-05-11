@@ -530,7 +530,7 @@ ParsedOutput OpenAIApiHandler::parseOutputIfNeeded(const std::vector<int64_t>& g
     OVMS_PROFILE_FUNCTION();
     ParsedOutput parsedOutput;
     if ((endpoint != Endpoint::CHAT_COMPLETIONS && endpoint != Endpoint::RESPONSES) || outputParser == nullptr) {
-        parsedOutput.content = this->tokenizer.decode(generatedIds);
+        parsedOutput.content = this->tokenizer.decode(generatedIds, ov::genai::skip_special_tokens(request.skipSpecialTokens));
     } else {
         parsedOutput = outputParser->parse(generatedIds, this->areToolsAvailable());
     }
@@ -740,21 +740,48 @@ absl::Status OpenAIApiHandler::parseCommonPart(std::optional<uint32_t> maxTokens
             return absl::InvalidArgumentError("top_p out of range(0.0, 1.0)");
     }
 
-    // top_k: int; optional - defaults to 0
-    // Extension, unsupported by OpenAI API, however supported by vLLM and CB lib
+    // min_p: float; optional - defaults to 0 (disabled)
+    // Extension, unsupported by OpenAI API, however supported by vLLM and GenAI
+    it = doc.FindMember("min_p");
+    if (it != doc.MemberEnd() && !it->value.IsNull()) {
+        if (!it->value.IsDouble() && !it->value.IsInt())
+            return absl::InvalidArgumentError("min_p is not a valid number");
+        const float minPValue = static_cast<float>(it->value.GetDouble());
+        if (minPValue < 0.0f || minPValue >= 1.0f)
+            return absl::InvalidArgumentError("min_p out of range [0.0, 1.0)");
+        request.minP = minPValue;
+    }
+
+    // top_k: int; optional - when multinomial sampling is active, defaults to 40 if not set. Pass -1 to consider all tokens.
+    // Extension, unsupported by OpenAI API, however supported by vLLM and GenAI
     it = doc.FindMember("top_k");
     if (it != doc.MemberEnd() && !it->value.IsNull()) {
         if (!it->value.IsInt())
             return absl::InvalidArgumentError("top_k is not an integer");
-        request.topK = it->value.GetInt();
+        const int topKValue = it->value.GetInt();
+        if (topKValue < -1 || topKValue == 0)
+            return absl::InvalidArgumentError("top_k must be -1 (all tokens) or a positive integer");
+        request.topK = topKValue;
     }
 
-    // seed: int; optional - defaults to 0 (not set)
+    // seed: uint32; optional - omit to use a random seed
     it = doc.FindMember("seed");
     if (it != doc.MemberEnd() && !it->value.IsNull()) {
-        if (!it->value.IsUint())
-            return absl::InvalidArgumentError("seed is not an unsigned integer");
-        request.seed = it->value.GetUint();
+        if (!it->value.IsInt() && !it->value.IsUint() && !it->value.IsInt64() && !it->value.IsUint64())
+            return absl::InvalidArgumentError("seed is not an integer");
+        if (it->value.IsUint64()) {
+            const uint64_t raw = it->value.GetUint64();
+            if (raw > std::numeric_limits<uint32_t>::max())
+                return absl::InvalidArgumentError("seed out of range [0, 4294967295]");
+            request.seed = static_cast<uint32_t>(raw);
+        } else if (it->value.IsUint()) {
+            request.seed = it->value.GetUint();
+        } else {
+            const int64_t raw = it->value.GetInt64();
+            if (raw < 0 || raw > static_cast<int64_t>(std::numeric_limits<uint32_t>::max()))
+                return absl::InvalidArgumentError("seed out of range [0, 4294967295]");
+            request.seed = static_cast<uint32_t>(raw);
+        }
     }
 
     // stop: string or array; optional - defaults to null (not set)
@@ -853,6 +880,17 @@ absl::Status OpenAIApiHandler::parseCommonPart(std::optional<uint32_t> maxTokens
     if (maxNgramSizeItHasValue) {
         request.maxNgramSize = maxNgramSizeIt->value.GetUint();
     }
+
+    it = doc.FindMember("skip_special_tokens");
+    if (it != doc.MemberEnd() && !it->value.IsNull()) {
+        if (!it->value.IsBool())
+            return absl::InvalidArgumentError("skip_special_tokens is not a bool");
+        request.skipSpecialTokens = it->value.GetBool();
+    }
+    if (!request.skipSpecialTokens && outputParser != nullptr) {
+        outputParser.reset();
+    }
+
     request.maxModelLength = maxModelLength;
 
     // TODO: logit_bias

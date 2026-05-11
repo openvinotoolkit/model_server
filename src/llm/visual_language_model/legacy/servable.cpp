@@ -18,6 +18,7 @@
 #include <stdexcept>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include "../../../logging.hpp"
@@ -110,14 +111,16 @@ absl::Status VisualLanguageModelLegacyServable::parseRequest(std::shared_ptr<Gen
     auto callback = [& executionInProgress = legacyExecutionContext->executionInProgress,
                         &mutex = legacyExecutionContext->mutex,
                         &lastStreamerCallbackOutput = legacyExecutionContext->lastStreamerCallbackOutput,
-                        &clientDisconnected = legacyExecutionContext->clientDisconnected,
-                        streamMode = legacyExecutionContext->apiHandler->isStream()](std::string text) {
+                        &clientDisconnected = legacyExecutionContext->clientDisconnected](std::string text) {
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Streamer callback executed with text: [{}]", text);
         if (clientDisconnected.load()) {
             executionInProgress.notify_one();
             return ov::genai::StreamingStatus::CANCEL;
         }
-        if (streamMode) {
+
+        // TODO(mzegla): unconditional streaming-like behavior also for unary flow due to GenAI generate limitations.
+        // This diverges from the general flow - we should have unified systematic approach.
+        {
             std::lock_guard<std::mutex> lock(mutex);
             lastStreamerCallbackOutput += text;
             executionInProgress.notify_one();
@@ -125,8 +128,9 @@ absl::Status VisualLanguageModelLegacyServable::parseRequest(std::shared_ptr<Gen
         return ov::genai::StreamingStatus::RUNNING;
     };
     ov::AnyMap streamerConfig;
-    if (legacyExecutionContext->apiHandler->getOutputParser() != nullptr &&
-        (legacyExecutionContext->apiHandler->getOutputParser()->requiresStreamingWithSpecialTokens())) {
+    if ((legacyExecutionContext->apiHandler->getOutputParser() != nullptr &&
+            legacyExecutionContext->apiHandler->getOutputParser()->requiresStreamingWithSpecialTokens()) ||
+        !legacyExecutionContext->apiHandler->getRequest().skipSpecialTokens) {
         streamerConfig.insert(ov::genai::skip_special_tokens(false));
     }
     legacyExecutionContext->textStreamer = std::make_shared<ov::genai::TextStreamer>(getProperties()->tokenizer, callback, streamerConfig);
@@ -178,7 +182,20 @@ absl::Status VisualLanguageModelLegacyServable::prepareCompleteResponse(std::sha
     if (legacyExecutionContext->payload.client->isDisconnected()) {
         return absl::CancelledError();
     }
-    executionContext->response = executionContext->apiHandler->serializeUnaryResponse(legacyExecutionContext->results);
+
+    // TODO(mzegla): Usage of streaming flow here due to GenAI generate limitations.
+    // This diverges from the general flow - we should have unified systematic approach.
+
+    executionContext->textStreamer->end();
+
+    std::string completeText;
+    {
+        std::lock_guard<std::mutex> lock(legacyExecutionContext->mutex);
+        completeText = std::move(executionContext->lastStreamerCallbackOutput);
+        executionContext->lastStreamerCallbackOutput.clear();
+    }
+    executionContext->response = executionContext->apiHandler->serializeUnaryResponse(legacyExecutionContext->results, completeText);
+
     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Complete unary response: {}", executionContext->response);
     return absl::OkStatus();
 }

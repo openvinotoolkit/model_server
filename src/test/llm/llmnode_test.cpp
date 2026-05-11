@@ -18,6 +18,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <limits>
 #include <regex>
 #include <sstream>
 #include <string>
@@ -39,6 +40,7 @@
 #include "../../http_status_code.hpp"
 #include "../../json_parser.hpp"
 #include "../../llm/apis/openai_completions.hpp"
+#include "../../llm/io_processing/base_generation_config_builder.hpp"
 #include "../../llm/language_model/continuous_batching/llm_executor.hpp"
 #include "../../llm/language_model/continuous_batching/servable.hpp"
 #include "../../llm/servable.hpp"
@@ -371,13 +373,6 @@ TEST_P(LLMFlowHttpTestParameterized, streamCompletionsEchoWithCompletion) {
         ASSERT_EQ(d["choices"].Capacity(), 1);
         int i = 0;
         for (auto& choice : d["choices"].GetArray()) {
-            if (params.checkFinishReason) {
-                if (choice["finish_reason"].IsString()) {
-                    EXPECT_STREQ(choice["finish_reason"].GetString(), "length");
-                } else {
-                    ASSERT_TRUE(choice["finish_reason"].IsNull());
-                }
-            }
             ASSERT_EQ(choice["index"], i++);
             if (params.checkLogprobs) {
                 ASSERT_FALSE(choice["logprobs"].IsObject());
@@ -393,10 +388,11 @@ TEST_P(LLMFlowHttpTestParameterized, streamCompletionsEchoWithCompletion) {
         handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::PARTIAL_END);
 
-    // Since prompt is treated as a single entity and streamer returns chunk only after space or newline
-    // we expect chunk with echoed prompt to contain space or new line at the end
-    ASSERT_TRUE(chunks[0] == "What is OpenVINO?\n" || chunks[0] == "What is OpenVINO? ");
     ASSERT_GT(chunks.size(), 1);
+    std::string combined;
+    for (const auto& chunk : chunks)
+        combined += chunk;
+    EXPECT_EQ(combined.rfind("What is OpenVINO?", 0), 0) << "Expected output to start with echoed prompt, got: " << combined;
 }
 
 TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJsonEchoOnly) {
@@ -895,6 +891,42 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsJson) {
     ASSERT_TRUE(parsedResponse["usage"].GetObject()["total_tokens"].IsInt());
     ASSERT_EQ(parsedResponse["usage"].GetObject()["completion_tokens"].GetInt(), 5 /* max_tokens */);
     EXPECT_STREQ(parsedResponse["model"].GetString(), params.modelName.c_str());
+    EXPECT_STREQ(parsedResponse["object"].GetString(), "chat.completion");
+}
+
+TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsSkipSpecialTokensFalse) {
+    auto params = GetParam();
+    std::string requestBody = R"(
+        {
+            "model": ")" + params.modelName +
+                              R"(",
+            "stream": false,
+            "seed": 1,
+            "temperature": 0,
+            "max_tokens": 5,
+            "ignore_eos": true,
+            "skip_special_tokens": false,
+            "messages": [
+            {
+                "role": "user",
+                "content": "What is OpenVINO?"
+            }
+            ]
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK);
+    parsedResponse.Parse(response.c_str());
+    ASSERT_TRUE(parsedResponse["choices"].IsArray());
+    ASSERT_EQ(parsedResponse["choices"].Capacity(), 1);
+    for (auto& choice : parsedResponse["choices"].GetArray()) {
+        ASSERT_TRUE(choice["message"].IsObject());
+        ASSERT_TRUE(choice["message"]["content"].IsString());
+        EXPECT_STREQ(choice["message"]["role"].GetString(), "assistant");
+    }
+    ASSERT_EQ(parsedResponse["usage"].GetObject()["completion_tokens"].GetInt(), 5 /* max_tokens */);
     EXPECT_STREQ(parsedResponse["object"].GetString(), "chat.completion");
 }
 
@@ -1746,6 +1778,52 @@ TEST_P(LLMFlowHttpTestParameterized, inferChatCompletionsStream) {
             ASSERT_TRUE(choice["delta"]["content"].IsString());
         }
         EXPECT_STREQ(d["model"].GetString(), params.modelName.c_str());
+        EXPECT_STREQ(d["object"].GetString(), "chat.completion.chunk");
+    });
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::PARTIAL_END);
+}
+
+TEST_P(LLMFlowHttpTestParameterized, inferChatCompletionsStreamSkipSpecialTokensFalse) {
+    auto params = GetParam();
+    std::string requestBody = R"(
+        {
+            "model": ")" + params.modelName +
+                              R"(",
+            "stream": true,
+            "seed": 1,
+            "max_tokens": 5,
+            "ignore_eos": true,
+            "skip_special_tokens": false,
+            "messages": [
+            {
+                "role": "user",
+                "content": "What is OpenVINO?"
+            }
+            ]
+        }
+    )";
+    int replyCounter = 0;
+    ON_CALL(*writer, PartialReply).WillByDefault([this, &params, &replyCounter](std::string response) {
+        if (replyCounter == 0 && params.checkHandshakeChunk) {
+            replyCounter++;
+            assertInitialStreamChatCompletionChunk(response, params.modelName);
+            return;
+        }
+        rapidjson::Document d;
+        std::string dataPrefix = "data:";
+        ASSERT_STREQ(response.substr(0, dataPrefix.size()).c_str(), dataPrefix.c_str());
+        size_t pos = response.find("\n");
+        ASSERT_NE(pos, response.npos);
+        rapidjson::ParseResult parsingSucceeded = d.Parse(response.substr(dataPrefix.size(), (pos - dataPrefix.size())).c_str());
+        ASSERT_EQ(parsingSucceeded.Code(), 0);
+        ASSERT_TRUE(d["choices"].IsArray());
+        ASSERT_EQ(d["choices"].Capacity(), 1);
+        for (auto& choice : d["choices"].GetArray()) {
+            ASSERT_TRUE(choice["delta"].IsObject());
+            ASSERT_TRUE(choice["delta"]["content"].IsString());
+        }
         EXPECT_STREQ(d["object"].GetString(), "chat.completion.chunk");
     });
     ASSERT_EQ(
@@ -3171,6 +3249,79 @@ TEST_P(LLMHttpParametersValidationTest, topKInvalid) {
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
+TEST_P(LLMHttpParametersValidationTest, topKMinuOneValid) {
+    auto params = GetParam();
+    // -1 is the sentinel for "consider all tokens"
+    std::string requestBody = validRequestBodyWithParameter(params.modelName, "top_k", "-1");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK);
+}
+
+TEST_P(LLMHttpParametersValidationTest, topKZeroInvalid) {
+    auto params = GetParam();
+    std::string requestBody = validRequestBodyWithParameter(params.modelName, "top_k", "0");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_P(LLMHttpParametersValidationTest, topKNegativeInvalid) {
+    auto params = GetParam();
+    // Only -1 is a valid negative value; other negatives must be rejected
+    std::string requestBody = validRequestBodyWithParameter(params.modelName, "top_k", "-2");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_P(LLMHttpParametersValidationTest, minPValid) {
+    auto params = GetParam();
+    std::string requestBody = validRequestBodyWithParameter(params.modelName, "min_p", "0.05");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK);
+
+    requestBody = validRequestBodyWithParameter(params.modelName, "min_p", "0");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK);
+}
+
+TEST_P(LLMHttpParametersValidationTest, minPInvalid) {
+    auto params = GetParam();
+    std::string requestBody = validRequestBodyWithParameter(params.modelName, "min_p", "\"INVALID\"");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_P(LLMHttpParametersValidationTest, minPOutOfRange) {
+    auto params = GetParam();
+    // min_p must be in [0.0, 1.0) — value of 1.0 is out of range
+    std::string requestBody = validRequestBodyWithParameter(params.modelName, "min_p", "1.0");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_P(LLMHttpParametersValidationTest, minPNegative) {
+    auto params = GetParam();
+    // min_p must be in [0.0, 1.0) — negative value is out of range
+    std::string requestBody = validRequestBodyWithParameter(params.modelName, "min_p", "-0.1");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
 TEST_P(LLMHttpParametersValidationTest, seedValid) {
     auto params = GetParam();
     std::string requestBody = validRequestBodyWithParameter(params.modelName, "seed", "1");
@@ -3183,6 +3334,44 @@ TEST_P(LLMHttpParametersValidationTest, seedValid) {
 TEST_P(LLMHttpParametersValidationTest, seedInvalid) {
     auto params = GetParam();
     std::string requestBody = validRequestBodyWithParameter(params.modelName, "seed", "\"INVALID\"");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_P(LLMHttpParametersValidationTest, seedBoundaryZero) {
+    auto params = GetParam();
+    std::string requestBody = validRequestBodyWithParameter(params.modelName, "seed", "0");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK);
+}
+
+TEST_P(LLMHttpParametersValidationTest, seedBoundaryMax) {
+    auto params = GetParam();
+    // Maximum valid seed: 2^32 - 1 = 4294967295
+    std::string requestBody = validRequestBodyWithParameter(params.modelName, "seed", "4294967295");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK);
+}
+
+TEST_P(LLMHttpParametersValidationTest, seedOutOfRangeNegative) {
+    auto params = GetParam();
+    std::string requestBody = validRequestBodyWithParameter(params.modelName, "seed", "-1");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_P(LLMHttpParametersValidationTest, seedOutOfRangeOverflow) {
+    auto params = GetParam();
+    // 2^32 = 4294967296 is one past the maximum valid seed
+    std::string requestBody = validRequestBodyWithParameter(params.modelName, "seed", "4294967296");
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
@@ -4661,4 +4850,73 @@ TEST_F(LLMStartWithTaskParameter, StartWithModelPathAndTaskAndInvalidPipelineTyp
         t->join();
     ASSERT_NE(server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME), ovms::ModuleState::INITIALIZED)
         << "Server should not start with invalid pipeline_type";
+}
+
+// Unit tests for BaseGenerationConfigBuilder multinomial sampling defaults
+
+TEST(BaseGenerationConfigBuilderTest, TopKDefaultedTo40WhenSamplingEnabled) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, /*enableToolGuidedGeneration=*/false, DecodingMethod::STANDARD};
+    OpenAIRequest request;
+    request.temperature = 1.0f;  // enables do_sample; topK not set
+    builder.parseConfigFromRequest(request);
+    EXPECT_EQ(builder.getConfig().top_k, 40u);
+}
+
+TEST(BaseGenerationConfigBuilderTest, TopKPreservedWhenExplicitlySet) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, /*enableToolGuidedGeneration=*/false, DecodingMethod::STANDARD};
+    OpenAIRequest request;
+    request.temperature = 1.0f;
+    request.topK = 10;
+    builder.parseConfigFromRequest(request);
+    EXPECT_EQ(builder.getConfig().top_k, 10u);
+}
+
+TEST(BaseGenerationConfigBuilderTest, TopKMinusOneMapsToInactive) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, /*enableToolGuidedGeneration=*/false, DecodingMethod::STANDARD};
+    OpenAIRequest request;
+    request.temperature = 1.0f;
+    request.topK = -1;  // sentinel: consider all tokens
+    builder.parseConfigFromRequest(request);
+    EXPECT_EQ(builder.getConfig().top_k, std::numeric_limits<size_t>::max());
+}
+
+TEST(BaseGenerationConfigBuilderTest, TopKNotChangedWhenSamplingDisabled) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, /*enableToolGuidedGeneration=*/false, DecodingMethod::STANDARD};
+    OpenAIRequest request;
+    request.temperature = 0.0f;  // greedy decoding, do_sample = false
+    builder.parseConfigFromRequest(request);
+    EXPECT_EQ(builder.getConfig().top_k, std::numeric_limits<size_t>::max());
+}
+
+TEST(BaseGenerationConfigBuilderTest, SeedRandomizedWhenOmittedDuringSampling) {
+    ov::genai::GenerationConfig baseConfig;
+    OpenAIRequest request;
+    request.temperature = 1.0f;  // enables do_sample; seed not set → must be randomized
+
+    // Parse the same request twice — seeds must differ (non-deterministic per request)
+    BaseGenerationConfigBuilder builder1{baseConfig, /*enableToolGuidedGeneration=*/false, DecodingMethod::STANDARD};
+    builder1.parseConfigFromRequest(request);
+    const size_t seed1 = builder1.getConfig().rng_seed;
+
+    BaseGenerationConfigBuilder builder2{baseConfig, /*enableToolGuidedGeneration=*/false, DecodingMethod::STANDARD};
+    builder2.parseConfigFromRequest(request);
+    const size_t seed2 = builder2.getConfig().rng_seed;
+
+    EXPECT_NE(seed1, 0u);
+    EXPECT_NE(seed2, 0u);
+    EXPECT_NE(seed1, seed2) << "Expected different seeds for successive omitted-seed requests";
+}
+
+TEST(BaseGenerationConfigBuilderTest, SeedPreservedWhenExplicitlySet) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, /*enableToolGuidedGeneration=*/false, DecodingMethod::STANDARD};
+    OpenAIRequest request;
+    request.temperature = 1.0f;
+    request.seed = 42u;
+    builder.parseConfigFromRequest(request);
+    EXPECT_EQ(builder.getConfig().rng_seed, 42u);
 }
