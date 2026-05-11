@@ -54,6 +54,11 @@ class Paths:
     OVMS_TEST_CAPI_WRAPPER_MAKEFILE = os.path.join(OVMS_TEST_CAPI_WRAPPER_DIR, "Makefile")
     OVMS_TEST_CAPI_WRAPPER_SETUP = os.path.join(OVMS_TEST_CAPI_WRAPPER_DIR, "setup.py")
 
+    # OVMS-C FILES
+    LLM_EXPORT_MODELS_DIR = os.path.join(config.ovms_c_repo_path, "demos", "common", "export_models")
+    LLM_EXPORT_MODELS_REQUIREMENTS = os.path.join(LLM_EXPORT_MODELS_DIR, "requirements.txt")
+    LLM_EXPORT_MODELS_SCRIPT = os.path.join(LLM_EXPORT_MODELS_DIR, "export_model.py")
+
     @staticmethod
     def CAPI_WRAPPER_PACKAGE_CONTENT_PATH(base_os):
         return os.path.join(config.c_api_wrapper_dir, base_os, "ovms")
