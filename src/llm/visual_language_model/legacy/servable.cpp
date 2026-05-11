@@ -245,10 +245,11 @@ absl::Status VisualLanguageModelLegacyServable::preparePartialResponse(std::shar
         if (!executionContext->lastStreamerCallbackOutput.empty()) {
             lastTextChunk = lastTextChunk + executionContext->lastStreamerCallbackOutput;
         }
-        ov::genai::GenerationFinishReason finishReason = ov::genai::GenerationFinishReason::STOP;
-        if (!legacyExecutionContext->results.finish_reasons.empty()) {
-            finishReason = legacyExecutionContext->results.finish_reasons[0];
+        if (legacyExecutionContext->results.finish_reasons.empty()) {
+            return absl::InternalError("Missing finish reason in legacy VLM streaming generation result");
         }
+        // Legacy generation path always runs with batch=1, so we read the single finish reason at index 0.
+        ov::genai::GenerationFinishReason finishReason = legacyExecutionContext->results.finish_reasons[0];
         std::string serializedChunk = executionContext->apiHandler->serializeStreamingChunk(lastTextChunk, finishReason);
         if (!serializedChunk.empty()) {
             executionContext->response = wrapTextInServerSideEventMessage(serializedChunk);
