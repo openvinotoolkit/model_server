@@ -136,9 +136,9 @@ void SidepacketServable::initialize(const std::string& modelDir, const std::stri
     std::shared_ptr<ov::Model> m_model = core.read_model(parsedModelsPath / std::filesystem::path("openvino_model.xml"), {}, properties);
     m_model = this->applyPrePostProcessing(core, m_model, properties);
     if (targetDevice == "CPU") {
-        auto status = applyDefaultCpuProperties(properties);
-        if (!status.ok()) {
-            SPDLOG_ERROR("Failed to apply default CPU properties for embeddings model: {}", status.string());
+        auto cpuPropertiesStatus = applyDefaultCpuProperties(properties);
+        if (!cpuPropertiesStatus.ok()) {
+            SPDLOG_ERROR("Failed to apply default CPU properties for embeddings model: {}", cpuPropertiesStatus.string());
             return;
         }
     }
