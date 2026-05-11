@@ -2189,7 +2189,8 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemPrefixPa
       {
         "type": "image_url",
         "image_url": {
-          "url":  ")" + siblingPrefixPath + R"("
+          "url":  ")" + siblingPrefixPath +
+                       R"("
         }
       }
     ]
