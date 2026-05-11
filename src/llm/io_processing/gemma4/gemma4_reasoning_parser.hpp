@@ -24,9 +24,9 @@
 namespace ovms {
 class Gemma4ReasoningParser : public Qwen3ReasoningParser {
 protected:
-    const int64_t channelStartTokenId = 100;     // <|channel>
-    const int64_t channelEndTokenId = 101;  // <channel|>
-    
+    const int64_t channelStartTokenId = 100;  // <|channel>
+    const int64_t channelEndTokenId = 101;    // <channel|>
+
     const std::string reasoningStrIndicator = "thought\n";
     const std::string parsingStartTag = "<|channel>" + reasoningStrIndicator;
     const std::string parsingEndTag = "<channel|>";
