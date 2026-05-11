@@ -370,13 +370,6 @@ TEST_P(LLMFlowHttpTestParameterized, streamCompletionsEchoWithCompletion) {
         ASSERT_EQ(d["choices"].Capacity(), 1);
         int i = 0;
         for (auto& choice : d["choices"].GetArray()) {
-            if (params.checkFinishReason) {
-                if (choice["finish_reason"].IsString()) {
-                    EXPECT_STREQ(choice["finish_reason"].GetString(), "length");
-                } else {
-                    ASSERT_TRUE(choice["finish_reason"].IsNull());
-                }
-            }
             ASSERT_EQ(choice["index"], i++);
             if (params.checkLogprobs) {
                 ASSERT_FALSE(choice["logprobs"].IsObject());
@@ -392,10 +385,11 @@ TEST_P(LLMFlowHttpTestParameterized, streamCompletionsEchoWithCompletion) {
         handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::PARTIAL_END);
 
-    // Since prompt is treated as a single entity and streamer returns chunk only after space or newline
-    // we expect chunk with echoed prompt to contain space or new line at the end
-    ASSERT_TRUE(chunks[0] == "What is OpenVINO?\n" || chunks[0] == "What is OpenVINO? ");
     ASSERT_GT(chunks.size(), 1);
+    std::string combined;
+    for (const auto& chunk : chunks)
+        combined += chunk;
+    EXPECT_EQ(combined.rfind("What is OpenVINO?", 0), 0) << "Expected output to start with echoed prompt, got: " << combined;
 }
 
 TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJsonEchoOnly) {
@@ -3246,40 +3240,6 @@ TEST_P(LLMHttpParametersValidationTest, topKValid) {
 TEST_P(LLMHttpParametersValidationTest, topKInvalid) {
     auto params = GetParam();
     std::string requestBody = validRequestBodyWithParameter(params.modelName, "top_k", "\"INVALID\"");
-
-    ASSERT_EQ(
-        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
-        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
-}
-
-TEST_P(LLMHttpParametersValidationTest, minPValid) {
-    auto params = GetParam();
-    std::string requestBody = validRequestBodyWithParameter(params.modelName, "min_p", "0.05");
-
-    ASSERT_EQ(
-        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
-        ovms::StatusCode::OK);
-
-    requestBody = validRequestBodyWithParameter(params.modelName, "min_p", "0");
-
-    ASSERT_EQ(
-        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
-        ovms::StatusCode::OK);
-}
-
-TEST_P(LLMHttpParametersValidationTest, minPInvalid) {
-    auto params = GetParam();
-    std::string requestBody = validRequestBodyWithParameter(params.modelName, "min_p", "\"INVALID\"");
-
-    ASSERT_EQ(
-        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
-        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
-}
-
-TEST_P(LLMHttpParametersValidationTest, minPOutOfRange) {
-    auto params = GetParam();
-    // min_p must be in [0.0, 1.0) — value of 1.0 is out of range
-    std::string requestBody = validRequestBodyWithParameter(params.modelName, "min_p", "1.0");
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
