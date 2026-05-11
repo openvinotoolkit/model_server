@@ -48,15 +48,21 @@ constexpr size_t DEFAULT_MAX_STOP_WORDS = 16;  // same as deep-seek
 
 namespace {
 
+std::string normalizePathSeparators(const std::string& path) {
+    std::string normalizedPath = path;
+    std::replace(normalizedPath.begin(), normalizedPath.end(), '\\', '/');
+    return normalizedPath;
+}
+
 std::string normalizeAllowedLocalMediaPath(const std::string& allowedLocalMediaPath) {
-    if (allowedLocalMediaPath.empty()) {
-        return allowedLocalMediaPath;
+    std::string normalizedAllowedLocalMediaPath = normalizePathSeparators(allowedLocalMediaPath);
+    if (normalizedAllowedLocalMediaPath.empty()) {
+        return normalizedAllowedLocalMediaPath;
     }
-    const char lastCharacter = allowedLocalMediaPath.back();
-    if (lastCharacter == '/' || lastCharacter == '\\') {
-        return allowedLocalMediaPath;
+    if (normalizedAllowedLocalMediaPath.back() == '/') {
+        return normalizedAllowedLocalMediaPath;
     }
-    return allowedLocalMediaPath + FileSystem::getOsSeparator();
+    return normalizedAllowedLocalMediaPath + '/';
 }
 
 }  // namespace
@@ -250,8 +256,9 @@ absl::StatusOr<ov::Tensor> loadImage(const std::string& imageSource,
         }
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Loading image from local filesystem");
         const auto normalizedAllowedLocalMediaPath = normalizeAllowedLocalMediaPath(allowedLocalMediaPath.value());
-        const auto firstMissmatch = std::mismatch(imageSource.begin(), imageSource.end(), normalizedAllowedLocalMediaPath.begin(), normalizedAllowedLocalMediaPath.end());
-        if (firstMissmatch.second != normalizedAllowedLocalMediaPath.end()) {
+        const auto normalizedImageSource = normalizePathSeparators(imageSource);
+        const auto firstMismatch = std::mismatch(normalizedImageSource.begin(), normalizedImageSource.end(), normalizedAllowedLocalMediaPath.begin(), normalizedAllowedLocalMediaPath.end());
+        if (firstMismatch.second != normalizedAllowedLocalMediaPath.end()) {
             return absl::InvalidArgumentError("Given filepath is not subpath of allowed_local_media_path");
         }
         try {

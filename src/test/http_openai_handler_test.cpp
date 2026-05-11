@@ -14,6 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 #include <chrono>
+#include <algorithm>
 #include <fstream>
 #include <functional>
 #include <map>
@@ -2144,6 +2145,44 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemWithinAl
     EXPECT_EQ(image.get_size(), 3);
     json = apiHandler->getProcessedJson();
     EXPECT_EQ(json, std::string("{\"model\":\"llama\",\"messages\":[{\"role\":\"user\",\"content\":\"What is in this image?\"}]}"));
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemWithinAllowedPathMixedSeparators) {
+    std::string json = R"({
+"model": "llama",
+"messages": [
+  {
+    "role": "user",
+    "content": [
+      {
+        "type": "text",
+        "text": "What is in this image?"
+      },
+      {
+        "type": "image_url",
+        "image_url": {
+          "url":  ")" + getGenericFullPathForSrcTest("/ovms/src/test/binaryutils/rgb.jpg") +
+                       R"("
+        }
+      }
+    ]
+  }
+]
+})";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    std::string mixedSeparatorAllowedPath = getGenericFullPathForSrcTest("/ovms/src/test/binaryutils");
+    std::replace(mixedSeparatorAllowedPath.begin(), mixedSeparatorAllowedPath.end(), '/', '\\');
+
+    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    ASSERT_EQ(apiHandler->parseMessages(mixedSeparatorAllowedPath), absl::OkStatus());
+    const ovms::ImageHistory& imageHistory = apiHandler->getImageHistory();
+    ASSERT_EQ(imageHistory.size(), 1);
+    auto [index, image] = imageHistory[0];
+    EXPECT_EQ(index, 0);
+    EXPECT_EQ(image.get_element_type(), ov::element::u8);
+    EXPECT_EQ(image.get_size(), 3);
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemNotWithinAllowedPath) {
