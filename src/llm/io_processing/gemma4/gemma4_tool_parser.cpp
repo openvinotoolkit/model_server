@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include "tool_parser.hpp"
+#include "gemma4_tool_parser.hpp"
 #include "../utils.hpp"
 #include "../../../logging.hpp"
 #include "../../../stringutils.hpp"
