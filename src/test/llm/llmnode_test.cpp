@@ -3248,6 +3248,35 @@ TEST_P(LLMHttpParametersValidationTest, topKInvalid) {
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
+TEST_P(LLMHttpParametersValidationTest, topKMinuOneValid) {
+    auto params = GetParam();
+    // -1 is the sentinel for "consider all tokens"
+    std::string requestBody = validRequestBodyWithParameter(params.modelName, "top_k", "-1");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK);
+}
+
+TEST_P(LLMHttpParametersValidationTest, topKZeroInvalid) {
+    auto params = GetParam();
+    std::string requestBody = validRequestBodyWithParameter(params.modelName, "top_k", "0");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_P(LLMHttpParametersValidationTest, topKNegativeInvalid) {
+    auto params = GetParam();
+    // Only -1 is a valid negative value; other negatives must be rejected
+    std::string requestBody = validRequestBodyWithParameter(params.modelName, "top_k", "-2");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
 TEST_P(LLMHttpParametersValidationTest, minPValid) {
     auto params = GetParam();
     std::string requestBody = validRequestBodyWithParameter(params.modelName, "min_p", "0.05");
@@ -4714,6 +4743,16 @@ TEST(BaseGenerationConfigBuilderTest, TopKPreservedWhenExplicitlySet) {
     EXPECT_EQ(builder.getConfig().top_k, 10u);
 }
 
+TEST(BaseGenerationConfigBuilderTest, TopKMinusOneMapsToInactive) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, /*enableToolGuidedGeneration=*/false, DecodingMethod::STANDARD};
+    OpenAIRequest request;
+    request.temperature = 1.0f;
+    request.topK = -1;  // sentinel: consider all tokens
+    builder.parseConfigFromRequest(request);
+    EXPECT_EQ(builder.getConfig().top_k, std::numeric_limits<size_t>::max());
+}
+
 TEST(BaseGenerationConfigBuilderTest, TopKNotChangedWhenSamplingDisabled) {
     ov::genai::GenerationConfig baseConfig;
     BaseGenerationConfigBuilder builder{baseConfig, /*enableToolGuidedGeneration=*/false, DecodingMethod::STANDARD};
@@ -4725,11 +4764,21 @@ TEST(BaseGenerationConfigBuilderTest, TopKNotChangedWhenSamplingDisabled) {
 
 TEST(BaseGenerationConfigBuilderTest, SeedRandomizedWhenOmittedDuringSampling) {
     ov::genai::GenerationConfig baseConfig;
-    BaseGenerationConfigBuilder builder{baseConfig, /*enableToolGuidedGeneration=*/false, DecodingMethod::STANDARD};
     OpenAIRequest request;
     request.temperature = 1.0f;  // enables do_sample; seed not set → must be randomized
-    builder.parseConfigFromRequest(request);
-    EXPECT_NE(builder.getConfig().rng_seed, 0u);
+
+    // Parse the same request twice — seeds must differ (non-deterministic per request)
+    BaseGenerationConfigBuilder builder1{baseConfig, /*enableToolGuidedGeneration=*/false, DecodingMethod::STANDARD};
+    builder1.parseConfigFromRequest(request);
+    const size_t seed1 = builder1.getConfig().rng_seed;
+
+    BaseGenerationConfigBuilder builder2{baseConfig, /*enableToolGuidedGeneration=*/false, DecodingMethod::STANDARD};
+    builder2.parseConfigFromRequest(request);
+    const size_t seed2 = builder2.getConfig().rng_seed;
+
+    EXPECT_NE(seed1, 0u);
+    EXPECT_NE(seed2, 0u);
+    EXPECT_NE(seed1, seed2) << "Expected different seeds for successive omitted-seed requests";
 }
 
 TEST(BaseGenerationConfigBuilderTest, SeedPreservedWhenExplicitlySet) {

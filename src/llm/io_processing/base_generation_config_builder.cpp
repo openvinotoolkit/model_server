@@ -119,7 +119,7 @@ void BaseGenerationConfigBuilder::parseConfigFromRequest(const OpenAIRequest& re
     if (request.temperature.has_value())
         config.temperature = request.temperature.value();
     if (request.topK.has_value())
-        config.top_k = request.topK.value();
+        config.top_k = (request.topK.value() == -1) ? std::numeric_limits<size_t>::max() : static_cast<size_t>(request.topK.value());
     if (request.topP.has_value())
         config.top_p = request.topP.value();
     if (request.minP.has_value())

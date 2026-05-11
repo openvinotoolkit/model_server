@@ -17,6 +17,7 @@
 // Type that holds vector of pairs where first element is chat turn index and second is image tensor
 // this way we store information about which image is associated with which chat turn
 #pragma once
+#include <cstdint>
 #include <map>
 #include <optional>
 #include <string>

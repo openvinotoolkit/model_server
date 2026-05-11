@@ -752,13 +752,16 @@ absl::Status OpenAIApiHandler::parseCommonPart(std::optional<uint32_t> maxTokens
         request.minP = minPValue;
     }
 
-    // top_k: int; optional - defaults to 0
+    // top_k: int; optional - when multinomial sampling is active, defaults to 40 if not set. Pass -1 to consider all tokens.
     // Extension, unsupported by OpenAI API, however supported by vLLM and GenAI
     it = doc.FindMember("top_k");
     if (it != doc.MemberEnd() && !it->value.IsNull()) {
         if (!it->value.IsInt())
             return absl::InvalidArgumentError("top_k is not an integer");
-        request.topK = it->value.GetInt();
+        const int topKValue = it->value.GetInt();
+        if (topKValue < -1 || topKValue == 0)
+            return absl::InvalidArgumentError("top_k must be -1 (all tokens) or a positive integer");
+        request.topK = topKValue;
     }
 
     // seed: uint32; optional - omit to use a random seed
