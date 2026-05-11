@@ -79,7 +79,7 @@ std::unique_ptr<std::thread> Speech2TextHttpTest::t;
 std::string Speech2TextHttpTest::body;
 std::string Speech2TextHttpTest::modelNameForm;
 
-TEST(SttServableParseTemperatureTest, negativeTemperatureDoesNotEnableSampling) {
+TEST(SttServableParseTemperatureTest, negativeTemperatureEnableSampling) {
     HttpPayload payload;
     std::shared_ptr<MockedMultiPartParser> multipartParser = std::make_shared<MockedMultiPartParser>();
     payload.multipartParser = multipartParser;
