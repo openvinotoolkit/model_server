@@ -33,8 +33,9 @@ enum class StatusCode {
     CONFIG_FILE_INVALID,   /*!< Config file not found or cannot open */
     FILESYSTEM_ERROR,      /*!< Underlying filesystem error */
     MODEL_NOT_LOADED,
-    JSON_INVALID,             /*!< The file/content is not valid json */
-    JSON_SERIALIZATION_ERROR, /*!< Data serialization to json format failed */
+    JSON_INVALID,                /*!< The file/content is not valid json */
+    JSON_NESTING_DEPTH_EXCEEDED, /*!< JSON nesting depth exceeds the allowed limit */
+    JSON_SERIALIZATION_ERROR,    /*!< Data serialization to json format failed */
     MODELINSTANCE_NOT_FOUND,
     SHAPE_WRONG_FORMAT,                   /*!< The provided shape param is in wrong format */
     LAYOUT_WRONG_FORMAT,                  /*!< The provided layout param is in wrong format */
@@ -359,10 +360,12 @@ enum class StatusCode {
     HF_FAILED_TO_INIT_OPTIMUM_CLI,
     HF_RUN_OPTIMUM_CLI_EXPORT_FAILED,
     HF_RUN_CONVERT_TOKENIZER_EXPORT_FAILED,
+    HF_GIT_CLONE_CANCELLED,
     HF_GIT_CLONE_FAILED,
     HF_GIT_STATUS_FAILED,
     HF_GIT_STATUS_FAILED_TO_RESOLVE_PATH,
     HF_GIT_LIBGIT2_NOT_INITIALIZED,
+    HF_GIT_LIBGIT2_LFS_DOWNLOAD_FAILED,
     HF_GIT_STATUS_UNCLEAN,
 
     PARTIAL_END,

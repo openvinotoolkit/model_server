@@ -724,3 +724,128 @@ TEST_F(LibGit2FindLfsLikeFilesTest, NonRecursiveDoesNotDescendButStillUsesRelati
     sortPaths(expected);
     EXPECT_EQ(matches_rec, expected);
 }
+
+// ---------------------------------------------------------------------------
+// .lfswip marker helpers
+//
+// The marker is a SIBLING of the repository directory, named
+// "<repo-dir-name>.lfswip" placed in the repository's parent directory.
+// Example: repositoryPath "/opt/models/OV/model1" produces the marker path
+//          "/opt/models/OV/model1.lfswip".
+// The repository directory itself does NOT need to exist for the marker to
+// be written — only its parent must exist (createLfsWipMarker creates it).
+// ---------------------------------------------------------------------------
+
+TEST(LibGit2LfsWipMarker, PathIsSiblingOfRepository) {
+    const std::string repositoryPath = "/opt/models/OV/model1";
+    const fs::path marker = ovms::libgit2::getLfsWipMarkerPath(repositoryPath);
+    EXPECT_EQ(marker, fs::path("/opt/models/OV/model1.lfswip"));
+    EXPECT_EQ(marker.parent_path(), fs::path("/opt/models/OV"));
+    EXPECT_EQ(marker.filename(), fs::path("model1.lfswip"));
+}
+
+TEST(LibGit2LfsWipMarker, PathWithRelativeRepository) {
+    const std::string repositoryPath = "repo/sub";
+    const fs::path marker = ovms::libgit2::getLfsWipMarkerPath(repositoryPath);
+    EXPECT_EQ(marker, fs::path("repo") / "sub.lfswip");
+}
+
+TEST(LibGit2LfsWipMarker, CreateAndDetectAndRemove) {
+    TempDir td;
+    const fs::path repository = td.dir / "model1";
+    const std::string repositoryPath = repository.string();
+    const fs::path expectedMarker = td.dir / "model1.lfswip";
+
+    EXPECT_FALSE(ovms::libgit2::hasLfsWipMarker(repositoryPath));
+    EXPECT_FALSE(fs::exists(expectedMarker));
+
+    ASSERT_TRUE(ovms::libgit2::createLfsWipMarker(repositoryPath));
+
+    EXPECT_TRUE(fs::exists(expectedMarker));
+    EXPECT_TRUE(fs::is_regular_file(expectedMarker));
+    EXPECT_TRUE(ovms::libgit2::hasLfsWipMarker(repositoryPath));
+    // Repository directory itself is NOT created by the marker helpers.
+    EXPECT_FALSE(fs::exists(repository));
+
+    ovms::libgit2::removeLfsWipMarker(repositoryPath);
+
+    EXPECT_FALSE(fs::exists(expectedMarker));
+    EXPECT_FALSE(ovms::libgit2::hasLfsWipMarker(repositoryPath));
+}
+
+TEST(LibGit2LfsWipMarker, CreateOnExistingMarkerTruncates) {
+    TempDir td;
+    const fs::path repository = td.dir / "model1";
+    const std::string repositoryPath = repository.string();
+    const fs::path expectedMarker = td.dir / "model1.lfswip";
+
+    // Pre-populate marker with content; createLfsWipMarker should truncate it.
+    {
+        std::ofstream pre(expectedMarker, std::ios::binary);
+        pre << "stale-content";
+    }
+    ASSERT_TRUE(fs::exists(expectedMarker));
+    ASSERT_GT(fs::file_size(expectedMarker), 0u);
+
+    ASSERT_TRUE(ovms::libgit2::createLfsWipMarker(repositoryPath));
+
+    EXPECT_TRUE(fs::exists(expectedMarker));
+    EXPECT_EQ(fs::file_size(expectedMarker), 0u);
+}
+
+TEST(LibGit2LfsWipMarker, CreateAutoCreatesParentDirectory) {
+    TempDir td;
+    const fs::path repository = td.dir / "nested" / "parent" / "model1";
+    const std::string repositoryPath = repository.string();
+    const fs::path expectedMarker = td.dir / "nested" / "parent" / "model1.lfswip";
+
+    ASSERT_FALSE(fs::exists(expectedMarker.parent_path()));
+
+    ASSERT_TRUE(ovms::libgit2::createLfsWipMarker(repositoryPath));
+
+    EXPECT_TRUE(fs::is_directory(expectedMarker.parent_path()));
+    EXPECT_TRUE(fs::is_regular_file(expectedMarker));
+    EXPECT_TRUE(ovms::libgit2::hasLfsWipMarker(repositoryPath));
+}
+
+TEST(LibGit2LfsWipMarker, RemoveWhenMarkerAbsentIsNoOp) {
+    TempDir td;
+    const fs::path repository = td.dir / "model1";
+    const std::string repositoryPath = repository.string();
+
+    ASSERT_FALSE(ovms::libgit2::hasLfsWipMarker(repositoryPath));
+    // Must not throw or fail when the marker does not exist.
+    ovms::libgit2::removeLfsWipMarker(repositoryPath);
+    EXPECT_FALSE(ovms::libgit2::hasLfsWipMarker(repositoryPath));
+}
+
+TEST(LibGit2LfsWipMarker, HasMarkerReturnsFalseWhenMarkerIsADirectory) {
+    TempDir td;
+    const fs::path repository = td.dir / "model1";
+    const std::string repositoryPath = repository.string();
+    const fs::path expectedMarker = td.dir / "model1.lfswip";
+
+    // Create a directory at the marker location; helper requires regular file.
+    ASSERT_TRUE(fs::create_directories(expectedMarker));
+
+    EXPECT_FALSE(ovms::libgit2::hasLfsWipMarker(repositoryPath));
+}
+
+TEST(LibGit2LfsWipMarker, MarkersForDifferentRepositoriesAreIndependent) {
+    TempDir td;
+    const fs::path repoA = td.dir / "modelA";
+    const fs::path repoB = td.dir / "modelB";
+    const std::string repoAPath = repoA.string();
+    const std::string repoBPath = repoB.string();
+
+    ASSERT_TRUE(ovms::libgit2::createLfsWipMarker(repoAPath));
+    EXPECT_TRUE(ovms::libgit2::hasLfsWipMarker(repoAPath));
+    EXPECT_FALSE(ovms::libgit2::hasLfsWipMarker(repoBPath));
+
+    ASSERT_TRUE(ovms::libgit2::createLfsWipMarker(repoBPath));
+    EXPECT_TRUE(ovms::libgit2::hasLfsWipMarker(repoBPath));
+
+    ovms::libgit2::removeLfsWipMarker(repoAPath);
+    EXPECT_FALSE(ovms::libgit2::hasLfsWipMarker(repoAPath));
+    EXPECT_TRUE(ovms::libgit2::hasLfsWipMarker(repoBPath));
+}

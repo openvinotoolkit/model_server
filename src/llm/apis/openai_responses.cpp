@@ -655,21 +655,21 @@ std::string OpenAIResponsesHandler::serializeUnaryResponse(ov::genai::EncodedRes
     return serializeUnaryResponseImpl(parsedOutputs);
 }
 
-std::string OpenAIResponsesHandler::serializeUnaryResponse(ov::genai::VLMDecodedResults& results) {
+std::string OpenAIResponsesHandler::serializeUnaryResponse(ov::genai::VLMDecodedResults& results, const std::string& textResponse) {
     OVMS_PROFILE_FUNCTION();
     usage.promptTokens = results.perf_metrics.get_num_input_tokens();
     usage.completionTokens = results.perf_metrics.get_num_generated_tokens();
     // Usage is already correctly set from perf_metrics above — no need for updateUsage.
     std::vector<ParsedOutput> parsedOutputs;
-    for (const std::string& text : results.texts) {
+    if (!textResponse.empty()) {
         if (outputParser != nullptr) {
             // Same workaround as in chat completions
-            auto generatedTokens = encodeTextToTokens(text);
+            auto generatedTokens = encodeTextToTokens(textResponse);
             parsedOutputs.push_back(parseOutputIfNeeded(generatedTokens));
         } else {
             // Fast path: no output parser, use decoded text directly.
             ParsedOutput output;
-            output.content = text;
+            output.content = textResponse;
             parsedOutputs.push_back(std::move(output));
         }
     }

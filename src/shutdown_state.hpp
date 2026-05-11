@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2025 Intel Corporation
+// Copyright 2026 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,18 +14,20 @@
 // limitations under the License.
 //*****************************************************************************
 #pragma once
-#include <string>
 
-#pragma warning(push)
-#pragma warning(disable : 6313)
-#include <rapidjson/writer.h>
-#include <rapidjson/document.h>
-#include <rapidjson/stringbuffer.h>
-#pragma warning(pop)
+#include <csignal>
 
 namespace ovms {
-size_t findInStringRespectingSpecialChars(const std::string& str, const std::string& target, size_t startPos);
-void writeArgumentOfAnyType(const rapidjson::Value& arg, rapidjson::Writer<rapidjson::StringBuffer>& writer);
-// Generates random alphanumeric string of length 9 for tool call ID
-std::string generateRandomId();
+int getShutdownRequestValue();
+void setShutdownRequestValue(int value);
+int getExitStatusValue();
+void setExitStatusValue(int value);
+
+// Signal-safe API: for use in signal handlers and polling contexts
+// Signal handlers should call setSignalShutdownRequested() which is async-signal-safe.
+// Main loop/polling thread should periodically call processSignalShutdownRequest() to
+// perform actual shutdown operations from a safe context.
+bool isSignalShutdownRequested();
+void processSignalShutdownRequest();
+void setSignalShutdownRequested(int value);
 }  // namespace ovms

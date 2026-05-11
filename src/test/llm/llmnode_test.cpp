@@ -897,6 +897,42 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsJson) {
     EXPECT_STREQ(parsedResponse["object"].GetString(), "chat.completion");
 }
 
+TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsSkipSpecialTokensFalse) {
+    auto params = GetParam();
+    std::string requestBody = R"(
+        {
+            "model": ")" + params.modelName +
+                              R"(",
+            "stream": false,
+            "seed": 1,
+            "temperature": 0,
+            "max_tokens": 5,
+            "ignore_eos": true,
+            "skip_special_tokens": false,
+            "messages": [
+            {
+                "role": "user",
+                "content": "What is OpenVINO?"
+            }
+            ]
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK);
+    parsedResponse.Parse(response.c_str());
+    ASSERT_TRUE(parsedResponse["choices"].IsArray());
+    ASSERT_EQ(parsedResponse["choices"].Capacity(), 1);
+    for (auto& choice : parsedResponse["choices"].GetArray()) {
+        ASSERT_TRUE(choice["message"].IsObject());
+        ASSERT_TRUE(choice["message"]["content"].IsString());
+        EXPECT_STREQ(choice["message"]["role"].GetString(), "assistant");
+    }
+    ASSERT_EQ(parsedResponse["usage"].GetObject()["completion_tokens"].GetInt(), 5 /* max_tokens */);
+    EXPECT_STREQ(parsedResponse["object"].GetString(), "chat.completion");
+}
+
 TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsJsonContentArray) {
     auto params = GetParam();
     std::string requestBody = R"(
@@ -1752,6 +1788,52 @@ TEST_P(LLMFlowHttpTestParameterized, inferChatCompletionsStream) {
         ovms::StatusCode::PARTIAL_END);
 }
 
+TEST_P(LLMFlowHttpTestParameterized, inferChatCompletionsStreamSkipSpecialTokensFalse) {
+    auto params = GetParam();
+    std::string requestBody = R"(
+        {
+            "model": ")" + params.modelName +
+                              R"(",
+            "stream": true,
+            "seed": 1,
+            "max_tokens": 5,
+            "ignore_eos": true,
+            "skip_special_tokens": false,
+            "messages": [
+            {
+                "role": "user",
+                "content": "What is OpenVINO?"
+            }
+            ]
+        }
+    )";
+    int replyCounter = 0;
+    ON_CALL(*writer, PartialReply).WillByDefault([this, &params, &replyCounter](std::string response) {
+        if (replyCounter == 0 && params.checkHandshakeChunk) {
+            replyCounter++;
+            assertInitialStreamChatCompletionChunk(response, params.modelName);
+            return;
+        }
+        rapidjson::Document d;
+        std::string dataPrefix = "data:";
+        ASSERT_STREQ(response.substr(0, dataPrefix.size()).c_str(), dataPrefix.c_str());
+        size_t pos = response.find("\n");
+        ASSERT_NE(pos, response.npos);
+        rapidjson::ParseResult parsingSucceeded = d.Parse(response.substr(dataPrefix.size(), (pos - dataPrefix.size())).c_str());
+        ASSERT_EQ(parsingSucceeded.Code(), 0);
+        ASSERT_TRUE(d["choices"].IsArray());
+        ASSERT_EQ(d["choices"].Capacity(), 1);
+        for (auto& choice : d["choices"].GetArray()) {
+            ASSERT_TRUE(choice["delta"].IsObject());
+            ASSERT_TRUE(choice["delta"]["content"].IsString());
+        }
+        EXPECT_STREQ(d["object"].GetString(), "chat.completion.chunk");
+    });
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::PARTIAL_END);
+}
+
 TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsStreamOptionsSetFail) {
     auto params = GetParam();
     std::string requestBody = R"(
@@ -1840,7 +1922,7 @@ TEST_P(LLMFlowHttpTestParameterized, streamChatCompletionsSingleStopString) {
             "model": ")" + params.modelName +
                               R"(",
             "stream": true,
-            "seed" : 1,
+            "temperature" : 0,
             "ignore_eos": false,
             "max_tokens": 1000,
             "stop": ".",
@@ -1848,7 +1930,7 @@ TEST_P(LLMFlowHttpTestParameterized, streamChatCompletionsSingleStopString) {
             "messages": [
             {
                 "role": "user",
-                "content": "What is OpenVINO? In short"
+                "content": "What is OpenVINO? Give one sentence answer."
             }
             ]
         }
@@ -3756,7 +3838,7 @@ public:
 class LLMVLMOptionsHttpTest : public LLMOptionsHttpTestPython {
 public:
     std::string modelsPath;
-    void SetUp() { modelsPath = "/ovms/src/test/llm_testing/OpenGVLab/InternVL2-1B"; }
+    void SetUp() { modelsPath = "/ovms/src/test/llm_testing/OpenVINO/InternVL2-1B-int4-ov"; }
 };
 
 void TestLLMNodeOptionsCheckDefault(std::string& modelsPath) {
