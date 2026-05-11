@@ -764,6 +764,17 @@ TEST_F(LFM2OutputParserTest, ParseToolCallWithStringArgumentsArrayWithStringsCon
     EXPECT_EQ(parsedOutput.toolCalls[0].arguments, R"({"lines":["it's the wonderful day","My name's Jan","That's Johns' car."]})");
 }
 
+TEST_F(LFM2OutputParserTest, ParseToolCallWithStringArgumentContainingSingleQuotes) {
+    std::string input = R"(<|tool_call_start|>[save(line="I've had line with single quotes")]<|tool_call_end|>)";
+    auto generatedTensor = lfm2Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
+    std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+    ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
+    EXPECT_EQ(parsedOutput.content, "");
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
+    EXPECT_EQ(parsedOutput.toolCalls[0].name, "save");
+    EXPECT_EQ(parsedOutput.toolCalls[0].arguments, R"({"line":"I've had line with single quotes"})");
+}
+
 TEST_F(LFM2OutputParserTest, ParseToolCallWithStringArgumentsObjectWithStringsContainingQuotes) {
     std::string input = R"(<|tool_call_start|>[save(obj={'name':'it's the wonderful day', 'greeting':'Hello, my name's Jan', 'note':'That's Johns' car.'})]<|tool_call_end|>)";
     auto generatedTensor = lfm2Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;

@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2026 Intel Corporation
+// Copyright 2025 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,25 +14,36 @@
 // limitations under the License.
 //*****************************************************************************
 #pragma once
-#include <string>
-#include <vector>
 
-#include "../base_output_parser.hpp"
+#include <openvino/genai/tokenizer.hpp>
+#include <vector>
+#include <string>
+
+#include "../qwen3/reasoning_parser.hpp"
 
 namespace ovms {
-class Gemma4ReasoningParser : public BaseOutputParser {
+class Gemma4ReasoningParser : public Qwen3ReasoningParser {
 protected:
-    // Tags used to identify the reasoning segment in the content
-    std::string parsingStartTag = "<|channel>thought\n";
-    std::string parsingEndTag = "<channel|>";
+    const int64_t channelStartTokenId = 100;     // <|channel>
+    const int64_t channelEndTokenId = 101;  // <channel|>
+    
+    const std::string reasoningStrIndicator = "thought\n";
+    const std::string parsingStartTag = "<|channel>" + reasoningStrIndicator;
+    const std::string parsingEndTag = "<channel|>";
+
+    void skipToken(const std::vector<int64_t>& generatedTokens, size_t& pos, int64_t tokenId);
 
 public:
     Gemma4ReasoningParser() = delete;
     explicit Gemma4ReasoningParser(ov::genai::Tokenizer& tokenizer) :
-        BaseOutputParser(tokenizer) {}
-
+        Qwen3ReasoningParser(tokenizer) {}
     void parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) override;
     std::optional<rapidjson::Document> parseChunk(const std::string& chunk, ov::genai::GenerationFinishReason finishReason) override;
+
+    bool requiresStreamingWithSpecialTokens() const override {
+        return true;
+    }
+
     const std::vector<std::string>& getParsingStartTags() const override {
         static const std::vector<std::string> parsingStartTags{this->parsingStartTag};
         return parsingStartTags;

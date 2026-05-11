@@ -199,8 +199,8 @@ ovms_cc_library(
 )
 ovms_cc_library(
     name = "io_processing_gemma4_tool_parser",
-    hdrs = ["io_processing/gemma4/tool_parser.hpp", "io_processing/gemma4/reasoning_parser.hpp"],
-    srcs = ["io_processing/gemma4/tool_parser.cpp", "io_processing/gemma4/reasoning_parser.cpp"],
+    hdrs = ["io_processing/gemma4/tool_parser.hpp", "io_processing/gemma4/gemma4_reasoning_parser.hpp"],
+    srcs = ["io_processing/gemma4/tool_parser.cpp", "io_processing/gemma4/gemma4_reasoning_parser.cpp"],
     deps = [
         "@com_github_tencent_rapidjson//:rapidjson",
         "//src/port:rapidjson_document",

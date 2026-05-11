@@ -28,7 +28,7 @@
 #include "qwen3/reasoning_parser.hpp"
 #include "qwen3coder/qwen3coder_tool_parser.hpp"
 #include "devstral/tool_parser.hpp"
-#include "gemma4/reasoning_parser.hpp"
+#include "gemma4/gemma4_reasoning_parser.hpp"
 #include "gptoss/reasoning_parser.hpp"
 #include "lfm2/lfm2_tool_parser.hpp"
 #include "gemma4/tool_parser.hpp"
@@ -52,8 +52,8 @@ OutputParser::TagLookupStatus OutputParser::StreamOutputCache::lookupTag(const s
     } else if (tag.size() < buffer.size()) {
         /* 
         If the tag is shorter than the buffer, we check:
-            a) if the tag is a substring of the buffer (tag is fully matched)
-            b) if the buffer and tag overlap (part of the tag is matched)
+           a) if the tag is a substring of the buffer (tag is fully matched)
+           b) if the buffer and tag overlap (part of the tag is matched)
         in the first case we return FOUND_COMPLETE, in the second FOUND_INCOMPLETE
         otherwise we return NOT_FOUND
         */
@@ -67,8 +67,8 @@ OutputParser::TagLookupStatus OutputParser::StreamOutputCache::lookupTag(const s
     } else {
         /*
         If the tag and buffer are of the same length, we check:
-                a) if they are equal (tag is fully matched)
-                b) if they overlap (part of the tag is matched)
+              a) if they are equal (tag is fully matched)
+              b) if they overlap (part of the tag is matched)
         in the first case we return FOUND_COMPLETE, in the second FOUND_INCOMPLETE
         otherwise we return NOT_FOUND
         */
