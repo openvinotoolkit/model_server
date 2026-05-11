@@ -954,7 +954,6 @@ TEST_F(HfPull, Start) {
     ASSERT_EQ(std::filesystem::exists(graphPath), true) << graphPath;
     ASSERT_EQ(std::filesystem::file_size(modelPath), 52417240);
     std::string graphContents = GetFileContents(graphPath);
-
     ASSERT_EQ(expectedGraphContents, removeVersionString(graphContents)) << graphContents;
 }
 
@@ -1016,7 +1015,6 @@ TEST_F(HfPull, StartOutsideOvOrg) {
     ASSERT_EQ(std::filesystem::exists(modelPath), true) << modelPath;
     ASSERT_EQ(std::filesystem::exists(graphPath), true) << graphPath;
     std::string graphContents = GetFileContents(graphPath);
-
     ASSERT_EQ(expectedGraphContents, removeVersionString(graphContents)) << graphContents;
 }
 
@@ -1667,8 +1665,8 @@ TEST(ServerModulesBehaviorTests, PullAndStartModeErrorAndExpectFailAndCheckOther
     DefaultEmptyValuesConfig config;
     config.getServerSettings().serverMode = ovms::HF_PULL_AND_START_MODE;
     auto retCode = server.startModules(config);
-    // Empty config.getServerSettings().hfSettings.downloadPath
-    // [error][libit2.cpp:336] Libgit2 clone error: 6 message: cannot pick working directory for non-bare repository that isn't a '.git' directory
+    // Empty sourceModel: takes task+model_path path, but model_path is empty
+    // -> GraphExport::createServableConfig fails with PATH_INVALID
     EXPECT_TRUE(!retCode.ok()) << retCode.string();
     serverGuard = std::make_unique<ServerShutdownGuard>(server);
     EXPECT_TRUE(server.getModule(ovms::HF_MODEL_PULL_MODULE_NAME) != nullptr);

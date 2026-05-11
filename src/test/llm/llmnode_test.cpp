@@ -48,6 +48,7 @@
 #include "../../llm/text_utils.hpp"
 #include "../../ov_utils.hpp"
 #include "../../server.hpp"
+#include "src/graph_export/graph_export.hpp"
 #include "rapidjson/document.h"
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/writer.h"
@@ -4721,6 +4722,135 @@ TEST_F(IsolatedServableTests, PromtSizeBetweenDefaultAndNonDefaultMaxPromptLenNP
 }
 
 // TODO: Add missing tests for reading max prompt len property from configuration
+
+class LLMStartWithTaskParameter : public ::testing::Test {
+protected:
+    static std::unique_ptr<std::thread> t;
+    std::string srcModelDir = getGenericFullPathForSrcTest("/ovms/src/test/llm_testing/HuggingFaceTB/SmolLM2-360M-Instruct");
+#ifdef __linux__
+    std::string tempDir;
+    std::string modelDir;
+    std::string graphPath;
+#else
+    std::string modelDir = srcModelDir;
+    std::string graphPath = modelDir + "/graph.pbtxt";
+    std::string graphPathRenamed = modelDir + "/graph.pbtxt.bak";
+#endif
+
+    void SetUp() override {
+        GraphExport::clearInMemoryGraphContent();
+#ifdef __linux__
+        tempDir = std::filesystem::temp_directory_path().string() + "/LLMStartWithTaskParameter_" + ::testing::UnitTest::GetInstance()->current_test_info()->name();
+        std::filesystem::remove_all(tempDir);
+        std::filesystem::copy(srcModelDir, tempDir, std::filesystem::copy_options::recursive);
+        modelDir = tempDir;
+        graphPath = modelDir + "/graph.pbtxt";
+#endif
+    }
+    void TearDown() override {
+        ovms::Server& server = ovms::Server::instance();
+        server.setShutdownRequest(1);
+        if (t && t->joinable())
+            t->join();
+        server.setShutdownRequest(0);
+        GraphExport::clearInMemoryGraphContent();
+#ifdef __linux__
+        std::filesystem::remove_all(tempDir);
+#else
+        // Restore graph.pbtxt if it was renamed
+        if (std::filesystem::exists(graphPathRenamed)) {
+            if (std::filesystem::exists(graphPath)) {
+                std::filesystem::remove(graphPath);
+            }
+            std::filesystem::rename(graphPathRenamed, graphPath);
+        }
+#endif
+    }
+};
+
+std::unique_ptr<std::thread> LLMStartWithTaskParameter::t = nullptr;
+
+TEST_F(LLMStartWithTaskParameter, StartWithModelPathAndTaskWithoutGraphFile) {
+#ifdef __linux__
+    // On Linux models are on readonly FS - we use a temp copy with graph.pbtxt removed
+    std::filesystem::remove(graphPath);
+#else
+    // On Windows models are on RW FS - rename graph.pbtxt so we can check it's not recreated
+    if (std::filesystem::exists(graphPath)) {
+        std::filesystem::rename(graphPath, graphPathRenamed);
+    }
+#endif
+
+    std::string port = "9173";
+    ovms::Server& server = ovms::Server::instance();
+    ::SetUpServer(t, server, port,
+        modelDir.c_str(),
+        "SmolLM2",
+        60,
+        "text_generation");
+    ASSERT_EQ(server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME), ovms::ModuleState::INITIALIZED);
+    ASSERT_FALSE(std::filesystem::exists(graphPath)) << "graph.pbtxt should not be created when using --task with --model_path";
+}
+
+TEST_F(LLMStartWithTaskParameter, StartWithModelPathAndTaskDoesNotModifyExistingGraph) {
+    ASSERT_TRUE(std::filesystem::exists(graphPath)) << "graph.pbtxt must exist for this test";
+    auto modTimeBefore = std::filesystem::last_write_time(graphPath);
+
+    std::string port = "9174";
+    ovms::Server& server = ovms::Server::instance();
+    ::SetUpServer(t, server, port,
+        modelDir.c_str(),
+        "SmolLM2",
+        60,
+        "text_generation");
+    ASSERT_EQ(server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME), ovms::ModuleState::INITIALIZED);
+
+    auto modTimeAfter = std::filesystem::last_write_time(graphPath);
+    ASSERT_EQ(modTimeBefore, modTimeAfter) << "graph.pbtxt should not be modified when using --task with --model_path";
+}
+
+TEST_F(LLMStartWithTaskParameter, StartWithModelPathAndTaskAndValidPipelineType) {
+    std::string port = "9175";
+    ovms::Server& server = ovms::Server::instance();
+    server.setShutdownRequest(0);
+    randomizeAndEnsureFree(port);
+    std::string fullModelPath = getGenericFullPathForSrcTest(modelDir.c_str());
+    char* argv[] = {(char*)"ovms",
+        (char*)"--model_name", (char*)"SmolLM2",
+        (char*)"--model_path", (char*)fullModelPath.c_str(),
+        (char*)"--port", (char*)port.c_str(),
+        (char*)"--task", (char*)"text_generation",
+        (char*)"--pipeline_type", (char*)"LM_CB"};
+    int argc = 11;
+    t.reset(new std::thread([&argc, &argv, &server]() {
+        EXPECT_EQ(EXIT_SUCCESS, server.start(argc, argv));
+    }));
+    EnsureServerStartedWithTimeout(server, 60);
+    ASSERT_EQ(server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME), ovms::ModuleState::INITIALIZED);
+}
+
+TEST_F(LLMStartWithTaskParameter, StartWithModelPathAndTaskAndInvalidPipelineType) {
+    std::string port = "9176";
+    ovms::Server& server = ovms::Server::instance();
+    server.setShutdownRequest(0);
+    randomizeAndEnsureFree(port);
+    std::string fullModelPath = getGenericFullPathForSrcTest(modelDir.c_str());
+    char* argv[] = {(char*)"ovms",
+        (char*)"--model_name", (char*)"SmolLM2",
+        (char*)"--model_path", (char*)fullModelPath.c_str(),
+        (char*)"--port", (char*)port.c_str(),
+        (char*)"--task", (char*)"text_generation",
+        (char*)"--pipeline_type", (char*)"invalid"};
+    int argc = 11;
+    t.reset(new std::thread([&argc, &argv, &server]() {
+        EXPECT_NE(EXIT_SUCCESS, server.start(argc, argv));
+    }));
+    // Validation failure should complete quickly
+    if (t && t->joinable())
+        t->join();
+    ASSERT_NE(server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME), ovms::ModuleState::INITIALIZED)
+        << "Server should not start with invalid pipeline_type";
+}
 
 // Unit tests for BaseGenerationConfigBuilder multinomial sampling defaults
 
