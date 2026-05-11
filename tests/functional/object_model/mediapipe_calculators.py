@@ -908,7 +908,7 @@ class S2tCalculator(LLMCalculator):
     input_streams: str = None
     output_streams: str = None
     node_name: str = None
-    loopback: bool = False
+    loopback: bool = True
     kv_cache_size: int = kv_cache_size_value
     plugin_config: dict = None
     best_of_limit: int = None
@@ -930,12 +930,28 @@ node {{
     calculator: "{self.name}"
     input_side_packet: "STT_NODE_RESOURCES:s2t_servable"
     {input_streams}
+    input_stream: "LOOPBACK:loopback"
+    input_stream_info: {{
+        tag_index: "LOOPBACK:0",
+        back_edge: true
+    }}
     {output_streams}
+    output_stream: "LOOPBACK:loopback"
     node_options: {{
         [type.googleapis.com / mediapipe.S2tCalculatorOptions]: {{
             models_path: "{self.models_path_internal}",
             {target_device_str}
             {plugin_config_str}
+        }}
+    }}
+    input_stream_handler {{
+        input_stream_handler: "SyncSetInputStreamHandler",
+        options {{
+            [mediapipe.SyncSetInputStreamHandlerOptions.ext] {{
+                sync_set {{
+                    tag_index: "LOOPBACK:0"
+                }}
+            }}
         }}
     }}
 }}"""

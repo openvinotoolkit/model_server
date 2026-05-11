@@ -486,6 +486,8 @@ class LLMInferenceRequest(InferenceRequest):
                 **self.request_parameters_dict,
                 timeout=timeout,
             )
+        if self.stream:
+            return self._collect_audio_stream_text(transcript)
         return transcript.text
 
     def create_audio_translation(self, audio_file_path, model_name=None, timeout=None):
@@ -497,7 +499,26 @@ class LLMInferenceRequest(InferenceRequest):
                 **self.request_parameters_dict,
                 timeout=timeout,
             )
+        if self.stream:
+            return self._collect_audio_stream_text(translation)
         return translation.text
+
+    @staticmethod
+    def _collect_audio_stream_text(stream):
+        """Accumulate text from an OpenAI audio transcription/translation stream.
+
+        Concatenates ``delta`` from ``transcript.text.delta`` events and prefers
+        the final ``text`` from ``transcript.text.done`` when present.
+        """
+        collected_delta_chunks = []
+        final_text = None
+        for event in stream:
+            event_type = getattr(event, "type", None)
+            if event_type == "transcript.text.delta":
+                collected_delta_chunks.append(getattr(event, "delta", "") or "")
+            elif event_type == "transcript.text.done":
+                final_text = getattr(event, "text", None)
+        return final_text if final_text is not None else "".join(collected_delta_chunks)
 
 
 @dataclass(frozen=False)
@@ -1166,6 +1187,8 @@ def run_llm_inference(
         api_type,
         port,
         endpoint,
+        tools_enabled=False,
+        validate_tools=False,
         dataset=None,
         input_data_type=None,
         validate_outputs=True,
@@ -1196,11 +1219,12 @@ def run_llm_inference(
             infer_request = infer_request if infer_request is not None else \
                 RerankLLMInferenceRequest(api_type=api_client, request_parameters=request_parameters)
         outputs = None
+        input_content = None
         if endpoint == OpenAIWrapper.CHAT_COMPLETIONS:
-            messages = ChatCompletionsApi.prepare_chat_completions_input_content(input_objects)
+            input_content = ChatCompletionsApi.prepare_chat_completions_input_content(input_objects)
             if log_request:
-                log_request_info(request_parameters, model_name, messages)
-            raw_outputs = infer_request.create_chat_completions(messages, model_name=model_name, timeout=timeout)
+                log_request_info(request_parameters, model_name, input_content)
+            raw_outputs = infer_request.create_chat_completions(input_content, model_name=model_name, timeout=timeout)
             raw_outputs = list(raw_outputs) if infer_request.stream and raw_outputs else raw_outputs
             if validate_outputs:
                 outputs = GenerativeAIValidationUtils.validate_chat_completions_outputs(
@@ -1208,14 +1232,17 @@ def run_llm_inference(
                     outputs=raw_outputs,
                     stream=infer_request.stream,
                     allow_empty_response=allow_empty_response,
+                    tools_enabled=tools_enabled,
+                    validate_tools=validate_tools,
+                    model_instance=model,
                 )
                 if validate_outputs_ttr:
                     validate_ttr(outputs[0], reference=ttr_reference)
         elif endpoint == OpenAIWrapper.COMPLETIONS:
-            prompt = CompletionsApi.prepare_completions_input_content(input_objects)
+            input_content = CompletionsApi.prepare_completions_input_content(input_objects)
             if log_request:
-                log_request_info(request_parameters, model_name, prompt)
-            raw_outputs = infer_request.create_completions(prompt, model_name=model_name, timeout=timeout)
+                log_request_info(request_parameters, model_name, input_content)
+            raw_outputs = infer_request.create_completions(input_content, model_name=model_name, timeout=timeout)
             raw_outputs = list(raw_outputs) if infer_request.stream and raw_outputs else raw_outputs
             if validate_outputs:
                 outputs = GenerativeAIValidationUtils.validate_completions_outputs(
@@ -1239,14 +1266,17 @@ def run_llm_inference(
                     outputs=raw_outputs,
                     stream=infer_request.stream,
                     allow_empty_response=allow_empty_response,
+                    tools_enabled=True,
+                    validate_tools=validate_tools,
+                    model_instance=model,
                 )
                 if validate_outputs_ttr:
                     validate_ttr(outputs[0], reference=ttr_reference)
         elif endpoint == OpenAIWrapper.EMBEDDINGS:
-            embeddings_input = EmbeddingsApi.prepare_embeddings_input_content(input_objects)
+            input_content = EmbeddingsApi.prepare_embeddings_input_content(input_objects)
             if log_request:
-                log_request_info(request_parameters, model_name, embeddings_input)
-            raw_outputs = infer_request.create_embeddings(embeddings_input, model_name=model_name, timeout=timeout)
+                log_request_info(request_parameters, model_name, input_content)
+            raw_outputs = infer_request.create_embeddings(input_content, model_name=model_name, timeout=timeout)
             if validate_outputs:
                 outputs = GenerativeAIValidationUtils.validate_embeddings_outputs(
                     model_name=model_name,
@@ -1254,10 +1284,10 @@ def run_llm_inference(
                     allow_empty_response=allow_empty_response,
                 )
         elif endpoint == CohereWrapper.RERANK:
-            rerank_input = RerankApi.prepare_rerank_input_content(input_objects)
+            input_content = RerankApi.prepare_rerank_input_content(input_objects)
             if log_request:
-                log_request_info(request_parameters, model_name, rerank_input)
-            raw_outputs = infer_request.create_rerank(rerank_input, model_name=model_name)
+                log_request_info(request_parameters, model_name, input_content)
+            raw_outputs = infer_request.create_rerank(input_content, model_name=model_name)
             if validate_outputs:
                 outputs = GenerativeAIValidationUtils.validate_rerank_outputs(
                     model_name=model_name,
@@ -1265,10 +1295,10 @@ def run_llm_inference(
                     allow_empty_response=allow_empty_response,
                 )
         elif endpoint == OpenAIWrapper.IMAGES_GENERATIONS:
-            prompt = ImagesApi.prepare_image_generation_input_content(input_objects)
+            input_content = ImagesApi.prepare_image_generation_input_content(input_objects)
             if log_request:
-                log_request_info(request_parameters, model_name, prompt)
-            raw_outputs = infer_request.create_image_generation(prompt, model_name=model_name, timeout=timeout)
+                log_request_info(request_parameters, model_name, input_content)
+            raw_outputs = infer_request.create_image_generation(input_content, model_name=model_name, timeout=timeout)
             if validate_outputs:
                 outputs = GenerativeAIValidationUtils.validate_image_outputs(
                     model_name=model_name,
@@ -1277,16 +1307,16 @@ def run_llm_inference(
                     request_parameters=request_parameters,
                 )
         elif endpoint == OpenAIWrapper.IMAGES_EDITS:
-            prompt, image_path = ImagesApi.prepare_image_edit_input_content(input_objects)
+            input_content, image_path = ImagesApi.prepare_image_edit_input_content(input_objects)
             mask_path = dataset.mask_path if hasattr(dataset, "mask_path") else None
             if log_request:
                 message = f"Run request with parameters: '{request_parameters}' for model: '{model_name}' " \
-                          f"with prompt: '{prompt}', image_path: '{image_path}'"
+                          f"with prompt: '{input_content}', image_path: '{image_path}'"
                 if mask_path is not None:
                     message += f", mask_path: '{mask_path}'"
                 logger.info(message)
             raw_outputs = infer_request.create_image_edit(
-                prompt, image_path, mask_path=mask_path, model_name=model_name, timeout=timeout)
+                input_content, image_path, mask_path=mask_path, model_name=model_name, timeout=timeout)
             if validate_outputs:
                 outputs = GenerativeAIValidationUtils.validate_image_outputs(
                     model_name=model_name,
@@ -1306,7 +1336,7 @@ def run_llm_inference(
             raise NotImplementedError
     else:
         raise NotImplementedError
-    return outputs, raw_outputs
+    return outputs, raw_outputs, infer_request, input_content
 
 
 def run_audio_inference(
@@ -1381,7 +1411,7 @@ def run_llm_inference_and_validate_against_reference(
     request_parameters,
     reference_outputs,
 ):
-    outputs = run_llm_inference(
+    outputs, _, _, _ = run_llm_inference(
         model,
         api_type,
         port,

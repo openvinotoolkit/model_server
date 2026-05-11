@@ -108,8 +108,8 @@ class GenerativeAIValidationUtils:
                 if endpoint == OpenAIWrapper.RESPONSES:
                     if request_params.stream:
                         if hasattr(raw_output, "response"):
-                            if finish_reason == OpenAIFinishReason.STOP:
-                                stream_finish_reason = OpenAIFinishReason.STOP \
+                            if finish_reason in (OpenAIFinishReason.STOP, OpenAIFinishReason.TOOL_CALLS):
+                                stream_finish_reason = finish_reason \
                                     if raw_output.response.completed_at is not None else \
                                     raw_output.response.completed_at
                             else:
@@ -119,7 +119,7 @@ class GenerativeAIValidationUtils:
                             assert stream_finish_reason in [None, finish_reason], \
                                 error_message.format(stream_finish_reason, finish_reason)
                     else:
-                        if finish_reason == OpenAIFinishReason.STOP:
+                        if finish_reason in (OpenAIFinishReason.STOP, OpenAIFinishReason.TOOL_CALLS):
                             assert raw_output.completed_at is not None, \
                                 error_message.format(raw_output.completed_at, finish_reason)
                         else:
@@ -256,8 +256,28 @@ class GenerativeAIValidationUtils:
 
         return cls.validate_llm_outputs(model_name, outputs, stream, validate_choice, allow_empty_response, **kwargs)
 
+    @staticmethod
+    def _validate_responses_tool_output(output_item, outputs_content):
+        if output_item.type == "function_call":
+            # When tools are enabled content might not be empty
+            assert output_item.arguments is not None, f"Empty tool calls: {output_item.arguments}"
+            logger.info(output_item)
+            outputs_content.append(output_item)
+        elif output_item.type == "message":
+            assert output_item.role == "assistant", f"Unexpected role: {output_item.role}"
+            assert output_item.status == "completed", f"Unexpected status: {output_item.status}"
+
     @classmethod
-    def validate_responses_outputs(cls, model_name, outputs, stream=False, allow_empty_response=False, **kwargs):
+    def validate_responses_outputs(
+            cls,
+            model_name,
+            outputs,
+            stream=False,
+            allow_empty_response=False,
+            tools_enabled=False,
+            validate_tools=False,
+            **kwargs
+    ):
         logger.info(outputs)
         outputs_content = []
         assert outputs is not None and len(outputs) > 0, f"No output collected for node with model: {model_name}"
@@ -272,20 +292,28 @@ class GenerativeAIValidationUtils:
                 elif output.type in ("response.completed", "response.incomplete"):
                     if not allow_empty_response:
                         assert len(stream_content) > 0, f"Empty stream_content: {stream_content}"
-                    assert "".join(stream_content) == output.response.output_text, \
-                        f"stream_content: {stream_content} does not match output_text: {output.response.output_text}"
-                    logger.info(output.response.output_text)
-                    outputs_content.append(output.response.output_text)
+                    if tools_enabled and validate_tools:
+                        for output_item in output.response.output:
+                            cls._validate_responses_tool_output(output_item, outputs_content)
+                    else:
+                        assert "".join(stream_content) == output.response.output_text, \
+                            f"stream_content: {stream_content} does not match output: {output.response.output_text}"
+                        logger.info(output.response.output_text)
+                        outputs_content.append(output.response.output_text)
             else:
                 assert output.model == model_name, f"Invalid model name: {output.model}; Expected: {model_name}"
                 for output_item in output.output:
-                    if output_item.type == "message":
-                        for content_item in output_item.content:
-                            if content_item.type == "output_text":
-                                if not allow_empty_response:
-                                    assert content_item.text, f"Empty response content: {content_item}"
-                                logger.info(content_item.text)
-                                outputs_content.append(content_item.text)
+                    if tools_enabled and validate_tools:
+                        cls._validate_responses_tool_output(output_item, outputs_content)
+                    else:
+                        if output_item.type == "message":
+                            for content_item in output_item.content:
+                                if content_item.type == "output_text":
+                                    if not allow_empty_response:
+                                        assert content_item.text, f"Empty response content: {content_item}"
+                                    logger.info(content_item.text)
+                                    outputs_content.append(content_item.text)
+
         return outputs_content
 
     @classmethod

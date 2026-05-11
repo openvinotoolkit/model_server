@@ -178,17 +178,20 @@ class OvmsCompletionsRequestParams(OvmsCommonCompletionsRequestParams, OpenAICom
 
 @dataclass
 class OvmsResponsesRequestParams(OpenAIResponsesRequestParams, OvmsCommonRequestParams):
-    ignore_eos: bool = None
     stop: Union[str, list] = None
-    top_k: int = None
+    ignore_eos: bool = None
     include_stop_str_in_output: bool = None
+    logprobs: bool = None
+    response_format: dict = None
+    chat_template_kwargs: dict = None
+    n: int = None
+    best_of: int = None
+    length_penalty: float = None
+    top_k: int = None
     repetition_penalty: float = None
     frequency_penalty: float = None
     presence_penalty: float = None
     seed: int = None
-    best_of: int = None
-    length_penalty: float = None
-    n: int = None
     num_assistant_tokens: int = None
     assistant_confidence_threshold: float = None
     max_ngram_size: int = None

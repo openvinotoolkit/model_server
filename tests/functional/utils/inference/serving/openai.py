@@ -43,6 +43,7 @@ class OpenAIWrapper(LLMCommonWrapper):
     AUDIO_TRANSLATIONS = "audio/translations"
     AVAILABLE_COMPLETIONS_ENDPOINTS = [CHAT_COMPLETIONS, COMPLETIONS]
     AVAILABLE_TEXT_GENERATION_ENDPOINTS = [CHAT_COMPLETIONS, COMPLETIONS, RESPONSES]
+    AVAILABLE_TEXT_GENERATION_TOOLS_ENDPOINTS = [CHAT_COMPLETIONS, RESPONSES]
     AVAILABLE_IMAGES_ENDPOINTS = [IMAGES_GENERATIONS, IMAGES_EDITS]
     AVAILABLE_MODELS_ENDPOINTS = [MODELS_LIST, MODELS_RETRIEVE]
     AVAILABLE_AUDIO_ENDPOINTS = [AUDIO_SPEECH, AUDIO_TRANSCRIPTIONS, AUDIO_TRANSLATIONS]
@@ -354,10 +355,11 @@ class OpenAIFinishReason:
 class OpenAIResponsesRequestParams(OpenAIRequestParams):
     stream: bool = None
     max_output_tokens: int = None
-    temperature: float = None
-    top_p: float = None
     tools: list = None
     tool_choice: Union[dict, str] = None
+    reasoning: Union[dict, str] = None
+    temperature: float = None
+    top_p: float = None
 
     def set_default_values(self, **kwargs):
         self.stream = kwargs.get("stream", False)
@@ -386,16 +388,20 @@ class OpenAIAudioTranscriptionsRequestParams(OpenAIRequestParams):
     language: str = None
     temperature: float = None
     timestamp_granularities: list = None
+    stream: bool = None
 
     def set_default_values(self, **kwargs):
         self.language = "en"
         self.temperature = 0.0
         self.timestamp_granularities = ["segment"]
+        self.stream = kwargs.get("stream", None)
 
 
 @dataclass
 class OpenAIAudioTranslationsRequestParams(OpenAIRequestParams):
     temperature: float = None
+    stream: bool = None
 
     def set_default_values(self, **kwargs):
         self.temperature = 0.0
+        self.stream = kwargs.get("stream", None)
