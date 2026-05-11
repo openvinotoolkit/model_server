@@ -1225,9 +1225,27 @@ Status handleExistingRepositoryWithoutOverwrite(const std::string& downloadPath,
     const std::function<Status(bool)>& checkRepositoryStatusFn) {
     GitRepositoryGuard repoGuard(downloadPath);
     if (!repoGuard.get()) {
-        std::cout << "Path already exists on local filesystem. Cannot download model to: " << downloadPath << std::endl;
-        std::cout << "Use --override to start download from scratch." << std::endl;
-        return mapRepositoryOpenFailureToStatus(repoGuard);
+        // libgit2 not being initialized is a configuration issue, but we still want
+        // model loading to proceed against whatever files are already on disk.
+        // Surface it as an additional warning rather than a hard error.
+        if (repoGuard.git_error_class == GIT_ERROR_INVALID) {
+            SPDLOG_WARN("libgit2 is not initialized; cannot inspect existing path \"{}\" for model pull. "
+                        "Skipping pull and using existing files.",
+                downloadPath);
+            std::cout << "Warning: libgit2 is not initialized. Skipping pull and using existing files at: "
+                      << downloadPath << std::endl;
+            return StatusCode::OK;
+        }
+        // The path exists (caller verified is_directory) but it is not a git repository.
+        // Treat it as a user-provided model directory: warn and let model loading proceed
+        // against whatever files are already on disk.
+        SPDLOG_WARN("Path \"{}\" already exists but is not a git repository. Skipping pull and using existing files. "
+                    "Use --overwrite_models to replace the directory with a fresh download.",
+            downloadPath);
+        std::cout << "Path already exists on local filesystem and is not a git repository. "
+                     "Skipping download and using existing files at: "
+                  << downloadPath << std::endl;
+        return StatusCode::OK;
     }
 
     auto candidates = buildResumeCandidates(repoGuard.get(), downloadPath);
