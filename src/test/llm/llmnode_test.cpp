@@ -39,6 +39,7 @@
 #include "../../http_status_code.hpp"
 #include "../../json_parser.hpp"
 #include "../../llm/apis/openai_completions.hpp"
+#include "../../llm/io_processing/base_generation_config_builder.hpp"
 #include "../../llm/language_model/continuous_batching/llm_executor.hpp"
 #include "../../llm/language_model/continuous_batching/servable.hpp"
 #include "../../llm/servable.hpp"
@@ -3246,6 +3247,50 @@ TEST_P(LLMHttpParametersValidationTest, topKInvalid) {
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
+TEST_P(LLMHttpParametersValidationTest, minPValid) {
+    auto params = GetParam();
+    std::string requestBody = validRequestBodyWithParameter(params.modelName, "min_p", "0.05");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK);
+
+    requestBody = validRequestBodyWithParameter(params.modelName, "min_p", "0");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK);
+}
+
+TEST_P(LLMHttpParametersValidationTest, minPInvalid) {
+    auto params = GetParam();
+    std::string requestBody = validRequestBodyWithParameter(params.modelName, "min_p", "\"INVALID\"");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_P(LLMHttpParametersValidationTest, minPOutOfRange) {
+    auto params = GetParam();
+    // min_p must be in [0.0, 1.0) — value of 1.0 is out of range
+    std::string requestBody = validRequestBodyWithParameter(params.modelName, "min_p", "1.0");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_P(LLMHttpParametersValidationTest, minPNegative) {
+    auto params = GetParam();
+    // min_p must be in [0.0, 1.0) — negative value is out of range
+    std::string requestBody = validRequestBodyWithParameter(params.modelName, "min_p", "-0.1");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
 TEST_P(LLMHttpParametersValidationTest, seedValid) {
     auto params = GetParam();
     std::string requestBody = validRequestBodyWithParameter(params.modelName, "seed", "1");
@@ -3258,6 +3303,44 @@ TEST_P(LLMHttpParametersValidationTest, seedValid) {
 TEST_P(LLMHttpParametersValidationTest, seedInvalid) {
     auto params = GetParam();
     std::string requestBody = validRequestBodyWithParameter(params.modelName, "seed", "\"INVALID\"");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_P(LLMHttpParametersValidationTest, seedBoundaryZero) {
+    auto params = GetParam();
+    std::string requestBody = validRequestBodyWithParameter(params.modelName, "seed", "0");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK);
+}
+
+TEST_P(LLMHttpParametersValidationTest, seedBoundaryMax) {
+    auto params = GetParam();
+    // Maximum valid seed: 2^32 - 1 = 4294967295
+    std::string requestBody = validRequestBodyWithParameter(params.modelName, "seed", "4294967295");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK);
+}
+
+TEST_P(LLMHttpParametersValidationTest, seedOutOfRangeNegative) {
+    auto params = GetParam();
+    std::string requestBody = validRequestBodyWithParameter(params.modelName, "seed", "-1");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_P(LLMHttpParametersValidationTest, seedOutOfRangeOverflow) {
+    auto params = GetParam();
+    // 2^32 = 4294967296 is one past the maximum valid seed
+    std::string requestBody = validRequestBodyWithParameter(params.modelName, "seed", "4294967296");
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
@@ -4608,3 +4691,52 @@ TEST_F(IsolatedServableTests, PromtSizeBetweenDefaultAndNonDefaultMaxPromptLenNP
 }
 
 // TODO: Add missing tests for reading max prompt len property from configuration
+
+// Unit tests for BaseGenerationConfigBuilder multinomial sampling defaults
+
+TEST(BaseGenerationConfigBuilderTest, TopKDefaultedTo40WhenSamplingEnabled) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, /*enableToolGuidedGeneration=*/false, DecodingMethod::STANDARD};
+    OpenAIRequest request;
+    request.temperature = 1.0f;  // enables do_sample; topK not set
+    builder.parseConfigFromRequest(request);
+    EXPECT_EQ(builder.getConfig().top_k, 40u);
+}
+
+TEST(BaseGenerationConfigBuilderTest, TopKPreservedWhenExplicitlySet) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, /*enableToolGuidedGeneration=*/false, DecodingMethod::STANDARD};
+    OpenAIRequest request;
+    request.temperature = 1.0f;
+    request.topK = 10;
+    builder.parseConfigFromRequest(request);
+    EXPECT_EQ(builder.getConfig().top_k, 10u);
+}
+
+TEST(BaseGenerationConfigBuilderTest, TopKNotChangedWhenSamplingDisabled) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, /*enableToolGuidedGeneration=*/false, DecodingMethod::STANDARD};
+    OpenAIRequest request;
+    request.temperature = 0.0f;  // greedy decoding, do_sample = false
+    builder.parseConfigFromRequest(request);
+    EXPECT_EQ(builder.getConfig().top_k, std::numeric_limits<size_t>::max());
+}
+
+TEST(BaseGenerationConfigBuilderTest, SeedRandomizedWhenOmittedDuringSampling) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, /*enableToolGuidedGeneration=*/false, DecodingMethod::STANDARD};
+    OpenAIRequest request;
+    request.temperature = 1.0f;  // enables do_sample; seed not set → must be randomized
+    builder.parseConfigFromRequest(request);
+    EXPECT_NE(builder.getConfig().rng_seed, 0u);
+}
+
+TEST(BaseGenerationConfigBuilderTest, SeedPreservedWhenExplicitlySet) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, /*enableToolGuidedGeneration=*/false, DecodingMethod::STANDARD};
+    OpenAIRequest request;
+    request.temperature = 1.0f;
+    request.seed = 42u;
+    builder.parseConfigFromRequest(request);
+    EXPECT_EQ(builder.getConfig().rng_seed, 42u);
+}
