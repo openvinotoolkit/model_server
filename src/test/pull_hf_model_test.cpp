@@ -44,7 +44,6 @@
 #include "src/test/test_with_temp_dir.hpp"
 #include "src/filesystem/filesystem.hpp"
 #include "src/pull_module/hf_pull_model_module.hpp"
-#include "src/graph_export/graph_export.hpp"
 #include "src/pull_module/libgit2.hpp"
 #include "src/pull_module/optimum_export.hpp"
 #include "src/servables_config_manager_module/listmodels.hpp"
