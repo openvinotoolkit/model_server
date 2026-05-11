@@ -1239,7 +1239,7 @@ Status handleExistingRepositoryWithoutOverwrite(const std::string& downloadPath,
     if (!repoGuard.get()) {
         // .git was present but libgit2 still could not open the repository: surface the real error
         // so the operator can act (re-clone, fix permissions, init libgit2, ...).
-        std::cout << "Path already exists on local filesystem. Cannot download model to: " << downloadPath << std::endl;
+        std::cout << "Model is corrupted: " << downloadPath << std::endl;
         std::cout << "Use --override to start download from scratch." << std::endl;
         return mapRepositoryOpenFailureToStatus(repoGuard);
     }
