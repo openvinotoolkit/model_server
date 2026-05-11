@@ -16,6 +16,7 @@
 
 #include "../../logging.hpp"
 #include <limits>
+#include <random>
 #include <string>
 #include <openvino/genai/generation_config.hpp>
 #include "base_generation_config_builder.hpp"
@@ -118,9 +119,11 @@ void BaseGenerationConfigBuilder::parseConfigFromRequest(const OpenAIRequest& re
     if (request.temperature.has_value())
         config.temperature = request.temperature.value();
     if (request.topK.has_value())
-        config.top_k = request.topK.value();
+        config.top_k = (request.topK.value() == -1) ? std::numeric_limits<size_t>::max() : static_cast<size_t>(request.topK.value());
     if (request.topP.has_value())
         config.top_p = request.topP.value();
+    if (request.minP.has_value())
+        config.min_p = request.minP.value();
     if (request.seed.has_value())
         config.rng_seed = request.seed.value();
     if (request.stop.has_value())
@@ -132,6 +135,26 @@ void BaseGenerationConfigBuilder::parseConfigFromRequest(const OpenAIRequest& re
     if (request.presencePenalty.has_value())
         config.presence_penalty = request.presencePenalty.value();
     config.do_sample = config.temperature > 0.0f && config.num_beams == 1;
+
+    // Apply multinomial sampling defaults when not explicitly set
+    if (config.do_sample) {
+        if (!request.topK.has_value() && config.top_k == std::numeric_limits<size_t>::max()) {
+            config.top_k = 40;
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Defaulting top_k to 40 for multinomial sampling.");
+        }
+        // Use random seed for multinomial sampling to ensure non-deterministic behavior by default.
+        // Note: rng_seed from generation_config.json is not honoured — only an explicit per-request
+        // seed produces deterministic output.
+        // Use a thread_local mt19937 seeded once via std::random_device to avoid per-request overhead.
+        if (!request.seed.has_value()) {
+            static thread_local std::mt19937 rng{std::random_device{}()};
+            size_t seed = 0;
+            while (seed == 0)
+                seed = rng();
+            config.rng_seed = seed;
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Randomizing rng_seed for multinomial sampling: {}.", config.rng_seed);
+        }
+    }
 
     if (request.logprobschat || request.logprobs)
         config.logprobs = 1;

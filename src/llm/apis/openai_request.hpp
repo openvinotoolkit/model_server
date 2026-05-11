@@ -17,6 +17,7 @@
 // Type that holds vector of pairs where first element is chat turn index and second is image tensor
 // this way we store information about which image is associated with which chat turn
 #pragma once
+#include <cstdint>
 #include <map>
 #include <optional>
 #include <string>
@@ -57,8 +58,9 @@ struct OpenAIRequest {
     // Multinomial decoding specific
     std::optional<float> temperature{std::nullopt};
     std::optional<float> topP{std::nullopt};
+    std::optional<float> minP{std::nullopt};
     std::optional<int> topK{std::nullopt};
-    std::optional<int> seed{std::nullopt};
+    std::optional<uint32_t> seed{std::nullopt};
     std::optional<float> frequencyPenalty{std::nullopt};
     std::optional<float> presencePenalty{std::nullopt};
     std::optional<float> repetitionPenalty{std::nullopt};
