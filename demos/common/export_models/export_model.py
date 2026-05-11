@@ -430,7 +430,7 @@ def export_text_generation_model(model_repository_path, source_model, model_name
                 additional_options = ""
                 if args["draft_eagle3_mode"]:
                     print("Using eagle3 option for the draft model export")
-                    additional_options += " --eagle3  --task text-generation-with-past"
+                    additional_options += " --task text-generation-with-past"
                 optimum_command = "optimum-cli export openvino --model {} --weight-format {} --trust-remote-code {} {}".format(draft_source_model, precision, additional_options, draft_llm_model_path)
                 if os.system(optimum_command):
                     raise ValueError("Failed to export llm model", source_model)
