@@ -31,6 +31,7 @@ class TestManager:
         (7000, 8000),
     ]
 
+    @pytest.mark.api_enabling
     def test_calculate_all_pool_parts(self, mocker):
         conf_mgr = mocker.MagicMock()
         conf_mgr.pool_range_start = 20000
@@ -45,6 +46,7 @@ class TestManager:
 
         assert len(mgr.all_pool_parts) == expected_pool_size
 
+    @pytest.mark.api_enabling
     def test_get_reservation_json(self, mocker):
         conf_mgr = ManagerConfig()
         env_mgr = EnvManager()
@@ -58,6 +60,7 @@ class TestManager:
         assert "shell_envs_file" in json
         assert env_mgr.get_json.call_count == 1
 
+    @pytest.mark.api_enabling
     def test_get_reservation_shell_envs(self, mocker):
         conf_mgr = ManagerConfig()
         env_mgr = EnvManager()
@@ -93,6 +96,7 @@ class TestPoolPart:
         ((2150, 2200), (2000, 2100), (True)),
     ]
 
+    @pytest.mark.api_enabling
     def test_ranges_good(self):
         for start, stop in TestManager.pool_part_ranges:
             try:
@@ -101,11 +105,13 @@ class TestPoolPart:
                 pytest.fail(f"Creating PoolPart should succeed with range: "
                             f"start {start}, stp: {stop}")
 
+    @pytest.mark.api_enabling
     def test_ranges_bad(self):
         for stop, start in TestManager.pool_part_ranges:
             with pytest.raises(AssertionError):
                 PoolPart(start, stop)
 
+    @pytest.mark.api_enabling
     def test_is_intersect_with(self):
         for range1, range2, should_be_valid in self.intersect_test_set:
             pool_part_range1 = PoolPart(range1[0], range1[1])
@@ -134,6 +140,7 @@ class TestReservation:
         "wrong-2000-1000-range",
     ]
 
+    @pytest.mark.api_enabling
     def test_validate_string_good(self):
         for start, stop in TestManager.pool_part_ranges:
             test_str = (f"{self.prefix}-" f"{start}-{stop}-" f"{self.suffix}")
@@ -144,11 +151,13 @@ class TestReservation:
                 pytest.fail(f"Validating string should succeed: "
                             f"string {test_str}, exception: {exc}")
 
+    @pytest.mark.api_enabling
     def test_validate_string_bad(self):
         for bad_string in self.bad_reservation_strings:
             with pytest.raises(AssertionError):
                 self.reservation.validate_string(bad_string)
 
+    @pytest.mark.api_enabling
     def test_reservation_from_string_good(self):
         for start, stop in TestManager.pool_part_ranges:
             test_str = (f"{self.prefix}-" f"{start}-{stop}-" f"{self.suffix}")
@@ -156,6 +165,7 @@ class TestReservation:
             reservation = self.reservation.from_str(test_str)
             assert test_str == f"{reservation}"
 
+    @pytest.mark.api_enabling
     def test_reservation_from_string_bad(self):
         for stop, start in TestManager.pool_part_ranges:
             test_str = (f"{self.prefix}-" f"{start}-{stop}-" f"{self.suffix}")
