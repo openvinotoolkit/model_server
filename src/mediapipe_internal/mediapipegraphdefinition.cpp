@@ -62,7 +62,7 @@ const tensor_map_t MediapipeGraphDefinition::getOutputsInfo() const {
 }
 
 Status MediapipeGraphDefinition::validateForConfigFileExistence() {
-    if (GraphExport::hasInMemoryGraphContent() && ovms::Config::instance().getServerSettings().serverMode == GENAI_CONFIGURE_AND_START) {
+    if (GraphExport::hasInMemoryGraphContent() && ovms::Config::instance().getServerSettings().serverMode == IN_MEMORY_GRAPH_MODE) {
         const std::string& content = GraphExport::getInMemoryGraphContent();
         this->chosenConfig = content;
         this->mgconfig.setCurrentGraphPbTxtMD5(ovms::FileSystem::getStringMD5(content));

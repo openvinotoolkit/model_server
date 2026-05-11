@@ -424,7 +424,7 @@ Status Server::startModules(ovms::Config& config) {
         if (!status.ok())
             return status;
     }
-    if (config.getServerSettings().serverMode == GENAI_CONFIGURE_AND_START) {
+    if (config.getServerSettings().serverMode == IN_MEMORY_GRAPH_MODE) {
         // --task with --model_path: create graph in memory without HF download
         GraphExport graphExporter;
         const auto& hfSettings = config.getServerSettings().hfSettings;
@@ -546,7 +546,7 @@ int Server::startServerFromSettings(ServerSettingsImpl& serverSettings, ModelsSe
             return statusToExitCode(ret);
         }
         while (!getShutdownStatus() &&
-               (serverSettings.serverMode == HF_PULL_AND_START_MODE || serverSettings.serverMode == SERVING_MODELS_MODE || serverSettings.serverMode == GENAI_CONFIGURE_AND_START)) {
+               (serverSettings.serverMode == HF_PULL_AND_START_MODE || serverSettings.serverMode == SERVING_MODELS_MODE || serverSettings.serverMode == IN_MEMORY_GRAPH_MODE)) {
             std::this_thread::sleep_for(std::chrono::milliseconds(200));
         }
     } catch (const std::exception& e) {

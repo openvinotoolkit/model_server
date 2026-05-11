@@ -711,7 +711,7 @@ void CLIParser::prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl&
     // Ovms Pull models mode || pull and start models mode
     if (isHFPullOrPullAndStart(this->result) || isGenAIConfigureAndStart(this->result)) {
         if (isGenAIConfigureAndStart(this->result)) {
-            serverSettings.serverMode = GENAI_CONFIGURE_AND_START;
+            serverSettings.serverMode = IN_MEMORY_GRAPH_MODE;
         } else if (result->count("pull")) {
             serverSettings.serverMode = HF_PULL_MODE;
         } else {

@@ -152,9 +152,9 @@ bool Config::validate() {
         std::cerr << "--source_model should be used combined with --task" << std::endl;
         return false;
     }
-    if (this->serverSettings.serverMode == HF_PULL_MODE || this->serverSettings.serverMode == HF_PULL_AND_START_MODE || this->serverSettings.serverMode == GENAI_CONFIGURE_AND_START) {
+    if (this->serverSettings.serverMode == HF_PULL_MODE || this->serverSettings.serverMode == HF_PULL_AND_START_MODE || this->serverSettings.serverMode == IN_MEMORY_GRAPH_MODE) {
         // When --task is used with --model_path (no HF pulling), sourceModel and downloadPath are not required
-        bool taskWithModelPath = this->serverSettings.serverMode == GENAI_CONFIGURE_AND_START && !this->modelsSettings.modelPath.empty();
+        bool taskWithModelPath = this->serverSettings.serverMode == IN_MEMORY_GRAPH_MODE && !this->modelsSettings.modelPath.empty();
         if (!taskWithModelPath) {
             if (!serverSettings.hfSettings.sourceModel.size()) {
                 std::cerr << "source_model parameter is required for pull mode";
