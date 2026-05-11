@@ -65,6 +65,11 @@ bool isRunningInDocker() {
     if (dockerenv.good()) {
         return true;
     }
+    // Check for /run/.containerenv file
+    std::ifstream containerenv("/run/.containerenv");
+    if (containerenv.good()) {
+        return true;
+    }
 
     // Check /proc/self/cgroup for docker references
     std::ifstream cgroup("/proc/self/cgroup");
@@ -72,6 +77,9 @@ bool isRunningInDocker() {
         std::string line;
         while (std::getline(cgroup, line)) {
             if (line.find("docker") != std::string::npos) {
+                return true;
+            }
+            if (line.find("kubepods") != std::string::npos) {
                 return true;
             }
         }
