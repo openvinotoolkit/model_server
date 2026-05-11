@@ -766,10 +766,19 @@ absl::Status OpenAIApiHandler::parseCommonPart(std::optional<uint32_t> maxTokens
     if (it != doc.MemberEnd() && !it->value.IsNull()) {
         if (!it->value.IsInt() && !it->value.IsUint() && !it->value.IsInt64() && !it->value.IsUint64())
             return absl::InvalidArgumentError("seed is not an integer");
-        const int64_t raw = it->value.IsUint64() ? static_cast<int64_t>(it->value.GetUint64()) : it->value.GetInt64();
-        if (raw < 0 || raw > static_cast<int64_t>(std::numeric_limits<uint32_t>::max()))
-            return absl::InvalidArgumentError("seed out of range [0, 4294967295]");
-        request.seed = static_cast<uint32_t>(raw);
+        if (it->value.IsUint64()) {
+            const uint64_t raw = it->value.GetUint64();
+            if (raw > std::numeric_limits<uint32_t>::max())
+                return absl::InvalidArgumentError("seed out of range [0, 4294967295]");
+            request.seed = static_cast<uint32_t>(raw);
+        } else if (it->value.IsUint()) {
+            request.seed = it->value.GetUint();
+        } else {
+            const int64_t raw = it->value.GetInt64();
+            if (raw < 0 || raw > static_cast<int64_t>(std::numeric_limits<uint32_t>::max()))
+                return absl::InvalidArgumentError("seed out of range [0, 4294967295]");
+            request.seed = static_cast<uint32_t>(raw);
+        }
     }
 
     // stop: string or array; optional - defaults to null (not set)
