@@ -26,7 +26,7 @@ class Gemma4ReasoningParser : public Qwen3ReasoningParser {
 protected:
     const int64_t reasoningTokenId = 100;     // <|channel>
     const int64_t reasoningEndTokenId = 101;  // <channel|>
-    const int64_t thoughtToken = 45518;         // thought
+    const int64_t thoughtToken = 45518;       // thought - string that appears after start reasoning tag, should be skipped in reasoning content
 
     const std::string parsingStartTag = "<|channel>thought\n";
     const std::string parsingEndTag = "<channel|>";
