@@ -414,7 +414,6 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(ov::genai::Enco
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Generated tokens: {}", tokens);
         ParsedOutput parsedOutput = parseOutputIfNeeded(tokens);
         jsonResponse.StartObject();
-        // finish_reason: "stop" in regular scenario, "tool_calls" if output contains tool calls
         if (results.finish_reasons.empty()) {
             throw std::runtime_error("Missing finish reason in unary LM generation result");
         }
@@ -484,7 +483,6 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(ov::genai::VLMD
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Generated tokens: {}", generatedTokens);
         ParsedOutput parsedOutput = parseOutputIfNeeded(generatedTokens);
         jsonResponse.StartObject();
-        // finish_reason: "stop" in regular scenario, "tool_calls" if output contains tool calls
         if (results.finish_reasons.empty()) {
             throw std::runtime_error("Missing finish reason in unary VLM generation result");
         }
