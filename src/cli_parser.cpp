@@ -345,7 +345,7 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
         result = std::make_unique<cxxopts::ParseResult>(options->parse(argc, argv));
 
         // HF pull mode or pull and start mode or starting from local folder with graph created in memory
-        if (isHFPullOrPullAndStart(this->result) || isGenAIConfigureAndStart(this->result)) {
+        if (isHFPullOrPullAndStart(this->result) || isInMemoryGraphMode(this->result)) {
             std::vector<std::string> unmatchedOptions;
             GraphExportType task;
             if (result->count("task")) {
@@ -695,11 +695,11 @@ bool CLIParser::isHFPullOrPullAndStart(const std::unique_ptr<cxxopts::ParseResul
     // Keep `--task` in the broad mutually exclusive task/pull CLI category so
     // parse-time checks that rely on this helper continue to reject combining
     // task-based flows with config-management modes. More specific mode
-    // differentiation is handled by isGenAIConfigureAndStart().
+    // differentiation is handled by isInMemoryGraphMode().
     return (result->count("pull") || result->count("task"));
 }
 
-bool CLIParser::isGenAIConfigureAndStart(const std::unique_ptr<cxxopts::ParseResult>& result) {
+bool CLIParser::isInMemoryGraphMode(const std::unique_ptr<cxxopts::ParseResult>& result) {
     return (result->count("task") && !result->count("source_model") && !result->count("pull"));
 }
 
@@ -709,8 +709,8 @@ void CLIParser::prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl&
         hfSettings.sourceModel = result->operator[]("source_model").as<std::string>();
     }
     // Ovms Pull models mode || pull and start models mode
-    if (isHFPullOrPullAndStart(this->result) || isGenAIConfigureAndStart(this->result)) {
-        if (isGenAIConfigureAndStart(this->result)) {
+    if (isHFPullOrPullAndStart(this->result) || isInMemoryGraphMode(this->result)) {
+        if (isInMemoryGraphMode(this->result)) {
             serverSettings.serverMode = IN_MEMORY_GRAPH_MODE;
         } else if (result->count("pull")) {
             serverSettings.serverMode = HF_PULL_MODE;
