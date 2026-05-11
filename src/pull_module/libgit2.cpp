@@ -341,11 +341,11 @@ public:
 
     /**
      * Opens a git repository at the specified filesystem path.
-     * 
+     *
      * @param path Absolute or relative path to the git repository directory.
      * @note Works on specific git repository location (searches for .git directory).
      */
-    GitRepositoryGuard(const std::string& path) {
+    explicit GitRepositoryGuard(const std::string& path) {
         int error = git_repository_open_ext(&repo, path.c_str(), 0, nullptr);
         if (error < 0) {
             const git_error* err = git_error_last();
@@ -395,6 +395,16 @@ public:
     }
 };
 
+namespace {
+Status mapRepositoryOpenFailureToStatus(const GitRepositoryGuard& repoGuard) {
+    if (repoGuard.git_error_class == GIT_ERROR_OS)
+        return StatusCode::HF_GIT_STATUS_FAILED_TO_RESOLVE_PATH;
+    if (repoGuard.git_error_class == GIT_ERROR_INVALID)
+        return StatusCode::HF_GIT_LIBGIT2_NOT_INITIALIZED;
+    return StatusCode::HF_GIT_STATUS_FAILED;
+}
+}  // namespace
+
 /**
  * Verifies the cleanliness of a git repository after clone or download operations.
  * Checks for staged changes, unstaged modifications, untracked files, and merge conflicts.
@@ -412,12 +422,7 @@ Status HfDownloader::CheckRepositoryStatus(bool checkUntracked) {
 
     GitRepositoryGuard repoGuard(this->downloadPath);
     if (!repoGuard.get()) {
-        if (repoGuard.git_error_class == GIT_ERROR_OS)
-            return StatusCode::HF_GIT_STATUS_FAILED_TO_RESOLVE_PATH;
-        else if (repoGuard.git_error_class == GIT_ERROR_INVALID)
-            return StatusCode::HF_GIT_LIBGIT2_NOT_INITIALIZED;
-        else
-            return StatusCode::HF_GIT_STATUS_FAILED;
+        return mapRepositoryOpenFailureToStatus(repoGuard);
     }
     // HEAD state info
     bool is_detached = git_repository_head_detached(repoGuard.get()) == 1;
@@ -1070,14 +1075,6 @@ struct ResumeCandidates {
     std::vector<fs::path> missingNonLfsMatches;
 };
 
-Status mapRepositoryOpenFailureToStatus(const GitRepositoryGuard& repoGuard) {
-    if (repoGuard.git_error_class == GIT_ERROR_OS)
-        return StatusCode::HF_GIT_STATUS_FAILED_TO_RESOLVE_PATH;
-    if (repoGuard.git_error_class == GIT_ERROR_INVALID)
-        return StatusCode::HF_GIT_LIBGIT2_NOT_INITIALIZED;
-    return StatusCode::HF_GIT_STATUS_FAILED;
-}
-
 /**
  * Builds resume candidate lists based on interruption markers and repository scan.
  * 
@@ -1223,29 +1220,28 @@ Status resumeExistingRepository(git_repository* repo,
 
 Status handleExistingRepositoryWithoutOverwrite(const std::string& downloadPath,
     const std::function<Status(bool)>& checkRepositoryStatusFn) {
-    GitRepositoryGuard repoGuard(downloadPath);
-    if (!repoGuard.get()) {
-        // libgit2 not being initialized is a configuration issue, but we still want
-        // model loading to proceed against whatever files are already on disk.
-        // Surface it as an additional warning rather than a hard error.
-        if (repoGuard.git_error_class == GIT_ERROR_INVALID) {
-            SPDLOG_WARN("libgit2 is not initialized; cannot inspect existing path \"{}\" for model pull. "
-                        "Skipping pull and using existing files.",
-                downloadPath);
-            std::cout << "Warning: libgit2 is not initialized. Skipping pull and using existing files at: "
-                      << downloadPath << std::endl;
-            return StatusCode::OK;
-        }
-        // The path exists (caller verified is_directory) but it is not a git repository.
-        // Treat it as a user-provided model directory: warn and let model loading proceed
-        // against whatever files are already on disk.
-        SPDLOG_WARN("Path \"{}\" already exists but is not a git repository. Skipping pull and using existing files. "
-                    "Use --overwrite_models to replace the directory with a fresh download.",
+    // If the directory does not contain a .git entry, treat it as a user-provided model directory.
+    // The user has copied model files in by hand; skip the pull and let model loading proceed
+    // against whatever files are already on disk. Use --overwrite_models to replace it with a
+    // fresh download.
+    std::error_code ec;
+    if (!fs::exists(fs::path(downloadPath) / ".git", ec)) {
+        SPDLOG_INFO("Path \"{}\" exists but is not a git repository. "
+                    "Skipping download and using existing files.",
             downloadPath);
         std::cout << "Path already exists on local filesystem and is not a git repository. "
                      "Skipping download and using existing files at: "
                   << downloadPath << std::endl;
         return StatusCode::OK;
+    }
+
+    GitRepositoryGuard repoGuard(downloadPath);
+    if (!repoGuard.get()) {
+        // .git was present but libgit2 still could not open the repository: surface the real error
+        // so the operator can act (re-clone, fix permissions, init libgit2, ...).
+        std::cout << "Path already exists on local filesystem. Cannot download model to: " << downloadPath << std::endl;
+        std::cout << "Use --override to start download from scratch." << std::endl;
+        return mapRepositoryOpenFailureToStatus(repoGuard);
     }
 
     auto candidates = buildResumeCandidates(repoGuard.get(), downloadPath);
