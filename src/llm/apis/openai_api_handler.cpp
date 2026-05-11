@@ -46,6 +46,21 @@ namespace ovms {
 
 constexpr size_t DEFAULT_MAX_STOP_WORDS = 16;  // same as deep-seek
 
+namespace {
+
+std::string normalizeAllowedLocalMediaPath(const std::string& allowedLocalMediaPath) {
+    if (allowedLocalMediaPath.empty()) {
+        return allowedLocalMediaPath;
+    }
+    const char lastCharacter = allowedLocalMediaPath.back();
+    if (lastCharacter == '/' || lastCharacter == '\\') {
+        return allowedLocalMediaPath;
+    }
+    return allowedLocalMediaPath + FileSystem::getOsSeparator();
+}
+
+}  // namespace
+
 ov::genai::JsonContainer rapidJsonValueToJsonContainer(const rapidjson::Value& value) {
     if (value.IsNull()) {
         return ov::genai::JsonContainer(nullptr);
@@ -234,8 +249,9 @@ absl::StatusOr<ov::Tensor> loadImage(const std::string& imageSource,
             return absl::InvalidArgumentError(ss.str());
         }
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Loading image from local filesystem");
-        const auto firstMissmatch = std::mismatch(imageSource.begin(), imageSource.end(), allowedLocalMediaPath.value().begin(), allowedLocalMediaPath.value().end());
-        if (firstMissmatch.second != allowedLocalMediaPath.value().end()) {
+        const auto normalizedAllowedLocalMediaPath = normalizeAllowedLocalMediaPath(allowedLocalMediaPath.value());
+        const auto firstMissmatch = std::mismatch(imageSource.begin(), imageSource.end(), normalizedAllowedLocalMediaPath.begin(), normalizedAllowedLocalMediaPath.end());
+        if (firstMissmatch.second != normalizedAllowedLocalMediaPath.end()) {
             return absl::InvalidArgumentError("Given filepath is not subpath of allowed_local_media_path");
         }
         try {
