@@ -117,24 +117,27 @@ set sed_clean="s/ (.* ms)//g"
 C:\Windows\System32\tar.exe -a -c -f win_test_log.zip win_full_test.log
 
 :: Create summary log with filtered results, always create the file even if grep finds no matches
-grep -a %regex% win_full_test.log | sed %sed_clean% > win_test_summary.log 2>&1 || (
-    echo No matching test results found >> win_test_summary.log
-)
+ grep -a %regex% win_full_test.log > win_test_summary.tmp
+ if !errorlevel! equ 0 (
+     sed %sed_clean% win_test_summary.tmp > win_test_summary.log 2>&1
+ ) else (
+     echo No matching test results found > win_test_summary.log
+ )
+ if exist win_test_summary.tmp del /f /q win_test_summary.tmp
 
-:: Check if tests completed successfully by looking for PASSED marker at the end
-grep -q "  PASSED  " win_full_test.log
-if !errorlevel! equ 0 goto :exit_build
-
-:: Tests did not complete successfully - check for failures and segfaults
-:: Check if tests failed by looking for FAILED in the full log
-grep -q " FAILED " win_full_test.log
+:: Check for FAILED markers first - do not allow PASSED text to mask test failures
+grep -q "\[  FAILED  \]\| FAILED " win_full_test.log
 if !errorlevel! equ 0 goto :exit_build_error
 
 :: Also check for segmentation faults or crashes
 grep -q -i "segmentation fault\|segfault\|crashed\|abnormal termination" win_full_test.log
 if !errorlevel! equ 0 goto :exit_build_error
 
-:: If we reach here, tests didn't complete but no clear failure found
+:: Consider the run successful only if PASSED summary is present near the end of the log
+tail -50 win_full_test.log | grep -q "\[  PASSED  \]"
+if !errorlevel! equ 0 goto :exit_build
+
+:: If we reach here, tests did not complete correctly (no FAILED/crash marker but no final PASSED summary)
 goto :exit_build_error
 
 :exit_build 

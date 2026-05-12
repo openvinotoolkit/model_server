@@ -282,7 +282,8 @@ def check_tests(){
     status = bat(returnStatus: true, script: 'grep "  FAILED  " win_test_summary.log')
     if (status == 0) {
             def failed = bat(returnStatus: false, returnStdout: true, script: 'grep "  FAILED  " win_test_summary.log | wc -l')
-            error "Error: Windows run test failed ${status}. ${failed} failed tests . Check win_test_summary.log for details."
+            def failedTestsList = bat(returnStatus: false, returnStdout: true, script: 'grep "  FAILED  " win_test_summary.log')
+            error "Error: Windows run test failed ${status}. ${failed} failed tests. Failed tests:\n${failedTestsList}\nCheck win_test_summary.log for details."
     } else {
         echo "Run test no FAILED detected."
     }
