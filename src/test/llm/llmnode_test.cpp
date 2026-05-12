@@ -3996,7 +3996,11 @@ void TestLLMNodeOptionsCheckDefault(std::string& modelsPath) {
     ASSERT_EQ(properties->schedulerConfig.max_num_seqs, 256);
     ASSERT_EQ(properties->schedulerConfig.enable_prefix_caching, false);
     ASSERT_EQ(properties->device, "CPU");
-    ASSERT_EQ(properties->pluginConfig.size(), 0);
+    // CPU default properties (inference_num_threads, enable_cpu_pinning) are automatically
+    // added to pluginConfig for CPU device; verify no user-specified entries are present.
+    ASSERT_EQ(properties->pluginConfig.count("PERFORMANCE_HINT"), 0);
+    ASSERT_EQ(properties->pluginConfig.count("NUM_STREAMS"), 0);
+    ASSERT_EQ(properties->pluginConfig.count("KV_CACHE_PRECISION"), 0);
 }
 TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckDefault) {
     TestLLMNodeOptionsCheckDefault(modelsPath);
@@ -4154,7 +4158,7 @@ void LLMNodeOptionsCheckPluginConfig(std::string& modelsPath) {
     ASSERT_EQ(initializeGenAiServable(servable, config.node(0), ""), StatusCode::OK);
     auto properties = std::static_pointer_cast<ContinuousBatchingServableProperties>(servable->getProperties());
 
-    ASSERT_EQ(properties->pluginConfig.size(), 2);
+    // CPU default properties are added automatically; check only the user-specified entries.
     ASSERT_EQ(properties->pluginConfig.count("PERFORMANCE_HINT"), 1);
     ASSERT_EQ(properties->pluginConfig.count("NUM_STREAMS"), 1);
     ASSERT_EQ(properties->pluginConfig["PERFORMANCE_HINT"], "LATENCY");

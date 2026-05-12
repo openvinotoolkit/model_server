@@ -339,6 +339,9 @@ ovms_cc_library(
         "//src:httppayload",
         "//src:libhttpclientconnection",
         "//src:sse_utils",
+        "//src:libovms_systeminfo",
+        "//src:libovms_config",
+        "//src:libovms_ov_utils",
         "//third_party:genai",] + select({
         "//:disable_python": [],
         "//:not_disable_python" : [":py_jinja_template_processor"],
