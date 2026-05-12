@@ -72,17 +72,17 @@ static std::string constructModelsPath(const std::string& modelPath, const std::
     std::string modelsPath;
     if (ggufFilenameOpt.has_value()) {
         modelsPath = FileSystem::joinPath({modelPath, ggufFilenameOpt.value()});
-#if _WIN32
-        // On Windows, file paths use backslashes ('\') as separators. However, the graph parser used in this project expects Unix-style paths with forward slashes ('/').
-        // If Windows-style backslashes are present, the parser may fail to locate files or misinterpret the path. To ensure compatibility, we replace all backslashes with forward slashes.
-        // This is safe because Windows APIs accept forward slashes in file paths.
-        if (FileSystem::getOsSeparator() != "/") {
-            std::replace(modelsPath.begin(), modelsPath.end(), '\\', '/');
-        }
-#endif
     } else {
         modelsPath = modelPath;
     }
+#if _WIN32
+    // On Windows, file paths use backslashes ('\') as separators. However, the graph parser used in this project expects Unix-style paths with forward slashes ('/').
+    // If Windows-style backslashes are present, the parser may fail to locate files or misinterpret the path. To ensure compatibility, we replace all backslashes with forward slashes.
+    // This is safe because Windows APIs accept forward slashes in file paths.
+    if (FileSystem::getOsSeparator() != "/") {
+        std::replace(modelsPath.begin(), modelsPath.end(), '\\', '/');
+    }
+#endif
     SPDLOG_TRACE("Models path: {}, modelPath:{}, ggufFilenameOpt:{}", modelsPath, modelPath, ggufFilenameOpt.value_or("std::nullopt"));
     return modelsPath;
 }

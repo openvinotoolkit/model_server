@@ -310,7 +310,11 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
             ("max_sequence_number",
                 "Determines how many sequences can be processed concurrently by one model instance. When that value is reached, attempt to start a new sequence will result in error.",
                 cxxopts::value<uint32_t>(),
-                "MAX_SEQUENCE_NUMBER");
+                "MAX_SEQUENCE_NUMBER")
+            ("task",
+                "Specifies the generative task for the local model. It should be followed by task specific parameters. Supported tasks: text_generation, embeddings, rerank, image_generation, text2speech, speech2text. It creates the pipeline graph in memory based on provided with task specific options.",
+                cxxopts::value<std::string>(),
+                "TASK");
         configOptions->custom_help("");
         configOptions->add_options(CONFIG_MANAGEMENT_HELP_GROUP)
             ("list_models",

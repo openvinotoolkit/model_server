@@ -37,6 +37,26 @@ ovms --model_path <path_to_model> --model_name <model_name> --port 9000 --rest_p
 
 Server will detect the type of requested servable (classic model, generative model or mediapipe graph) and load it accordingly. This detection is based on the presence of a `graph.pbtxt` file, which defines the Mediapipe graph structure, presence of versions directory for classic models.
 
+When the model is generative, like copied from Hugging Faces or exported using optimum-cli, all the pipeline runtime parameters can be defined with --tasks <TASK> followed by task specific options.
+
+```text
+docker run -d --rm -v $(pwd)/<model>>:/model -p 8000:8000 openvino/model_server:latest \
+--model_path /model --model_name <model_name> --rest_port 8000 --log_level DEBUG \
+--task <TASK> --target_device <DEVICE> ........
+```
+:::
+
+:::{tab-item} On Baremetal Host
+:sync: baremetal
+**Required:** OpenVINO Model Server package - see [deployment instructions](./deploying_server_baremetal.md) for details.
+
+```text
+ovms --model_path <path_to_model> --model_name <model_name> --rest_port 8000 --log_level DEBUG --task <TASK> --target_device <DEVICE> .....
+```
+:::
+::::
+
+
 **Example using a ResNet model:**
 
 ```bash
@@ -62,6 +82,35 @@ docker run -d --rm -v ${PWD}/models:/models -p 9000:9000 -p 8000:8000 openvino/m
 :sync: baremetal
 ```text
 ovms --model_path models/resnet/ --model_name resnet --port 9000 --rest_port 8000 --log_level DEBUG
+```
+:::
+::::
+
+
+**Example using OpenVINO/gemma-4-E4B-it-int4-ov model :**
+
+```bash
+pip install huggingface_hub
+hf download OpenVINO/gemma-4-E4B-it-int4-ov
+```
+
+::::{tab-set}
+:::{tab-item} With Docker
+:sync: docker
+**Required:** Docker Engine installed
+
+```bash
+docker run -d --rm -v ${PWD}/OpenVINO/gemma-4-E4B-it-int4-ov:/model -p 8000:8000 openvino/model_server:latest \
+--model_path /model/ --model_name gemma4 --rest_port 8000 --task text_generation --target_device CPU
+```
+
+- Expose the container ports to **open ports** on your host or virtual machine. 
+:::
+
+:::{tab-item} On Baremetal Host
+:sync: baremetal
+```text
+ovms --model_path OpenVINO/gemma-4-E4B-it-int4-ov --model_name gemma4 --rest_port 8000 --task text_generation --target_device CPU
 ```
 :::
 ::::
