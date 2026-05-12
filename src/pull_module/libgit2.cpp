@@ -1206,7 +1206,7 @@ Status resumeExistingRepository(git_repository* repo,
 
     // Checking if git status is ok but we are left with LFS errors recorded by libgit2 patch in repository root.
     if (libgit2::ifHasLfsErrorFileLogContentAndRemove(downloadPath)) {
-        SPDLOG_ERROR("Model download resume failed: LFS errors recorded above. Re-run the same command to retry, or use --override to restart from scratch.");
+        SPDLOG_ERROR("Model download resume failed: LFS errors recorded above. Re-run the same command to retry, or use --overwrite_models to restart from scratch.");
         return StatusCode::HF_GIT_LIBGIT2_LFS_DOWNLOAD_FAILED;
     }
 
@@ -1215,7 +1215,7 @@ Status resumeExistingRepository(git_repository* repo,
     auto status = checkRepositoryStatusFn(false);
     if (!status.ok()) {
         SPDLOG_ERROR("Model repository status check failed after resuming download. Status: {}", status.string());
-        SPDLOG_ERROR("Consider --override to start download from scratch.");
+        SPDLOG_ERROR("Consider --overwrite_models to start download from scratch.");
         return status;
     }
     SPDLOG_DEBUG("Model repository status check passed after resuming download.");
@@ -1336,7 +1336,7 @@ Status finalizeAfterClone(const std::string& downloadPath,
     const std::function<Status(const std::string&)>& removeReadonlyFn) {
     // Checking if git status is ok but we are left with LFS errors recorded by libgit2 patch in repository root.
     if (libgit2::ifHasLfsErrorFileLogContentAndRemove(downloadPath)) {
-        SPDLOG_ERROR("Model download failed: LFS errors recorded above. Re-run the same command to resume, or use --override to restart from scratch.");
+        SPDLOG_ERROR("Model download failed: LFS errors recorded above. Re-run the same command to resume, or use --overwrite_models to restart from scratch.");
         return StatusCode::HF_GIT_LIBGIT2_LFS_DOWNLOAD_FAILED;
     }
 
@@ -1345,7 +1345,7 @@ Status finalizeAfterClone(const std::string& downloadPath,
     if (!status.ok()) {
         SPDLOG_ERROR("Model repository status check failed after model download. Status: {}", status.string());
         SPDLOG_ERROR("Consider rerunning the command to resume the download after network issues.");
-        SPDLOG_ERROR("Consider --override flag to start download from scratch.");
+        SPDLOG_ERROR("Consider --overwrite_models flag to start download from scratch.");
         return status;
     }
     SPDLOG_DEBUG("Model repository status check passed after model download.");
