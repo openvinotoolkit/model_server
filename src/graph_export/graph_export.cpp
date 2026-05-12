@@ -53,7 +53,7 @@
 namespace ovms {
 
 static const std::string OVMS_VERSION_GRAPH_LINE = std::string("# File created with: ") + PROJECT_NAME + std::string(" ") + PROJECT_VERSION + std::string("\n");
-static const std::string OVMS_GRAPH_QUEUE_SIZE_LINE_PREFIX = "# OVMS_GRAPH_QUEUE_SIZE: ";
+static const std::string OVMS_GRAPH_QUEUE_MAX_SIZE_LINE_PREFIX = "# OVMS_GRAPH_QUEUE_MAX_SIZE: ";
 static const std::string OVMS_GRAPH_QUEUE_SIZE_AUTO = "AUTO";
 
 static std::string getDefaultGraphQueueSizeDirective(const HFSettingsImpl& hfSettings) {
@@ -66,7 +66,7 @@ static std::string getDefaultGraphQueueSizeDirective(const HFSettingsImpl& hfSet
 static std::string buildGraphHeader(const HFSettingsImpl& hfSettings) {
     std::ostringstream oss;
     oss << OVMS_VERSION_GRAPH_LINE;
-    oss << OVMS_GRAPH_QUEUE_SIZE_LINE_PREFIX << getDefaultGraphQueueSizeDirective(hfSettings) << "\n";
+    oss << OVMS_GRAPH_QUEUE_MAX_SIZE_LINE_PREFIX << getDefaultGraphQueueSizeDirective(hfSettings) << "\n";
     return oss.str();
 }
 

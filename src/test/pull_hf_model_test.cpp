@@ -82,7 +82,7 @@ protected:
         }
         input.erase(0, firstLineEnd + 1);
 
-        const std::string queueLinePrefix = "# OVMS_GRAPH_QUEUE_SIZE:";
+        const std::string queueLinePrefix = "# OVMS_GRAPH_QUEUE_MAX_SIZE:";
         if (input.rfind(queueLinePrefix, 0) == 0) {
             auto secondLineEnd = input.find("\n");
             if (secondLineEnd == std::string::npos) {

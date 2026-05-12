@@ -32,42 +32,18 @@ extern const std::string DEFAULT_GRAPH_FILENAME;
 extern const std::string DEFAULT_SUBCONFIG_FILENAME;
 extern const std::string DEFAULT_MODELMESH_SUBCONFIG_FILENAME;
 
-/**
- * @brief Tag type representing AUTO graph queue size (determined at runtime).
- */
 struct GraphQueueAutoTag {
     bool operator==(const GraphQueueAutoTag&) const { return true; }
 };
 
-/**
- * @brief Represents the user's graph_queue_size setting.
- *
- * - std::nullopt              => user did not set this field
- * - int                       => user explicitly set a numeric value
- * - GraphQueueAutoTag         => user explicitly set "AUTO"
- */
 using GraphQueueSizeValue = std::optional<std::variant<int, GraphQueueAutoTag>>;
 
 class Status;
 
-/**
-     * @brief This class represents Mediapie Graph configuration
-     */
 class MediapipeGraphConfig {
 private:
-    /**
-         * @brief Mediapipe Graph Name
-         */
     std::string graphName;
-
-    /**
-         * @brief Mediapipe Base Path
-         */
     std::string basePath;
-
-    /**
-         * @brief Mediapipe Graph Path
-         */
     std::string graphPath;
 
     /**
@@ -103,11 +79,6 @@ public:
     /**
          * @brief Construct a new Mediapie Graph configuration object
          *
-         * @param graphName
-         * @param basePath
-         * @param graphPath
-         * @param subconfigPath
-         * @param currentGraphPbTxtMD5
          */
     MediapipeGraphConfig(const std::string& graphName = "",
         const std::string& basePath = "",
@@ -125,47 +96,22 @@ public:
         graphPath.clear();
     }
 
-    /**
-         * @brief Get the Graph name
-         *
-         * @return const std::string&
-         */
     const std::string& getGraphName() const {
         return this->graphName;
     }
 
-    /**
-         * @brief Set the Graph name
-         *
-         * @param name
-         */
     void setGraphName(const std::string& graphName) {
         this->graphName = graphName;
     }
 
-    /**
-         * @brief Get the Graph Path
-         *
-         * @return const std::string&
-         */
     const std::string& getGraphPath() const {
         return this->graphPath;
     }
 
-    /**
-         * @brief Get the Base Path
-         *
-         * @return const std::string&
-         */
     const std::string& getBasePath() const {
         return this->basePath;
     }
 
-    /**
-         * @brief Set the Graph Path
-         *
-         * @param graphPath
-         */
     void setGraphPath(const std::string& graphPath);
 
     /**
@@ -175,11 +121,6 @@ public:
          */
     void setBasePathWithRootPath();
 
-    /**
-         * @brief Set the Base Path
-         *
-         * @param basePath
-         */
     void setBasePath(const std::string& basePath);
 
     /**
@@ -198,36 +139,15 @@ public:
          */
     void setSubconfigPath(const std::string& subconfigPath);
 
-    /**
-         * @brief Get the ModelMesh ModelsConfig Path
-         *
-         * @return const std::string&
-         */
     const std::string& getModelMeshSubconfigPath() const {
         return this->modelMeshSubconfigPath;
     }
-
-    /**
-           * @brief Set the Model Mesh Models Config Path
-           *
-           * @param subconfigPath
-           */
     void setModelMeshSubconfigPath(const std::string& subconfigPath);
 
-    /**
-         * @brief Set root directory path
-         *
-         * @param rootDirectoryPath
-         */
     void setRootDirectoryPath(const std::string& rootDirectoryPath) {
         this->rootDirectoryPath = rootDirectoryPath;
     }
 
-    /**
-     * @brief Get the root directory path
-     *
-     * @return const std::string&
-     */
     const std::string& getRootDirectoryPath() const {
         return this->rootDirectoryPath;
     }
@@ -245,16 +165,10 @@ public:
         return this->graphQueueSize;
     }
 
-    /**
-     * @brief Set the graph queue size to an explicit numeric value.
-     */
     void setGraphQueueSize(int size) {
         this->graphQueueSize = size;
     }
 
-    /**
-     * @brief Set the graph queue size to AUTO.
-     */
     void setGraphQueueSizeAuto() {
         this->graphQueueSize = GraphQueueAutoTag{};
     }
@@ -263,16 +177,16 @@ public:
      * @brief Resolve the graph queue size setting to a concrete integer.
      *
      * Returns:
-     *   -1  => queue creation disabled (user set -1 or not set)
+     *   0   => queue creation disabled (user set 0 or not set)
      *   >0  => explicit size or resolved AUTO
      *
-     * Value 0 is rejected at parse time (resolveGraphQueueSize).
-     * When not set (nullopt): returns -1 (queue disabled).
+     * Negative values are rejected at parse time (resolveGraphQueueSize).
+     * When not set (nullopt): returns 0 (queue disabled).
      * When AUTO: returns hardware_concurrency() or 16 as fallback.
      */
     int getInitialQueueSize() const {
         if (!this->graphQueueSize.has_value()) {
-            return -1;  // not set - queue disabled by default
+            return 0;  // not set - queue disabled by default
         }
         if (std::holds_alternative<GraphQueueAutoTag>(*this->graphQueueSize)) {
             unsigned int hwThreads = std::thread::hardware_concurrency();
@@ -294,9 +208,6 @@ public:
     */
     Status parseNode(const rapidjson::Value& v);
 
-    /**
-    * @brief  Logs the content of the graph configuration
-    */
     void logGraphConfigContent() const;
 };
 }  // namespace ovms

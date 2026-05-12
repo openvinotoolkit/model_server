@@ -4065,7 +4065,7 @@ TEST(WhitelistRegistered, MediapipeSubgraphList) {
     ASSERT_THAT(mediapipe::SubgraphRegistry::GetRegisteredNames(), UnorderedElementsAreArray(expected)) << readableSetError(mediapipe::SubgraphRegistry::GetRegisteredNames(), expected);
 }
 
-// --- OVMS_GRAPH_QUEUE_SIZE pbtxt directive tests ---
+// --- OVMS_GRAPH_QUEUE_MAX_SIZE pbtxt directive tests ---
 
 // Minimal valid pbtxt that MediaPipe can parse (uses a registered test calculator)
 static const char* MINIMAL_PBTXT_TEMPLATE = R"(
@@ -4105,12 +4105,12 @@ TEST(MediapipeGraphQueueSizeDirective, NoDirectiveMeansDisabled) {
     auto status = def.validate(manager);
     ASSERT_EQ(status, ovms::StatusCode::OK);
     EXPECT_FALSE(mgc.getGraphQueueSize().has_value());
-    // getInitialQueueSize on default mgc returns -1
-    EXPECT_EQ(def.getMediapipeGraphConfig().getInitialQueueSize(), -1);
+    // getInitialQueueSize on default mgc returns 0
+    EXPECT_EQ(def.getMediapipeGraphConfig().getInitialQueueSize(), 0);
 }
 
 TEST(MediapipeGraphQueueSizeDirective, ExplicitPositiveValue) {
-    std::string pbtxt = makePbtxtWithDirective("# OVMS_GRAPH_QUEUE_SIZE: 4");
+    std::string pbtxt = makePbtxtWithDirective("# OVMS_GRAPH_QUEUE_MAX_SIZE: 4");
     ovms::MediapipeGraphConfig mgc;
     DummyMediapipeGraphDefinition def("test", mgc, pbtxt);
     ovms::ModelManager manager;
@@ -4119,18 +4119,8 @@ TEST(MediapipeGraphQueueSizeDirective, ExplicitPositiveValue) {
     EXPECT_EQ(def.getMediapipeGraphConfig().getInitialQueueSize(), 4);
 }
 
-TEST(MediapipeGraphQueueSizeDirective, DisabledExplicitly) {
-    std::string pbtxt = makePbtxtWithDirective("# OVMS_GRAPH_QUEUE_SIZE: -1");
-    ovms::MediapipeGraphConfig mgc;
-    DummyMediapipeGraphDefinition def("test", mgc, pbtxt);
-    ovms::ModelManager manager;
-    auto status = def.validate(manager);
-    ASSERT_EQ(status, ovms::StatusCode::OK);
-    EXPECT_EQ(def.getMediapipeGraphConfig().getInitialQueueSize(), -1);
-}
-
 TEST(MediapipeGraphQueueSizeDirective, AutoValue) {
-    std::string pbtxt = makePbtxtWithDirective("# OVMS_GRAPH_QUEUE_SIZE: AUTO");
+    std::string pbtxt = makePbtxtWithDirective("# OVMS_GRAPH_QUEUE_MAX_SIZE: AUTO");
     ovms::MediapipeGraphConfig mgc;
     DummyMediapipeGraphDefinition def("test", mgc, pbtxt);
     ovms::ModelManager manager;
@@ -4139,17 +4129,18 @@ TEST(MediapipeGraphQueueSizeDirective, AutoValue) {
     EXPECT_GT(def.getMediapipeGraphConfig().getInitialQueueSize(), 0);
 }
 
-TEST(MediapipeGraphQueueSizeDirective, ZeroRejected) {
-    std::string pbtxt = makePbtxtWithDirective("# OVMS_GRAPH_QUEUE_SIZE: 0");
+TEST(MediapipeGraphQueueSizeDirective, ZeroDisablesQueue) {
+    std::string pbtxt = makePbtxtWithDirective("# OVMS_GRAPH_QUEUE_MAX_SIZE: 0");
     ovms::MediapipeGraphConfig mgc;
     DummyMediapipeGraphDefinition def("test", mgc, pbtxt);
     ovms::ModelManager manager;
     auto status = def.validate(manager);
-    EXPECT_EQ(status, ovms::StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID);
+    ASSERT_EQ(status, ovms::StatusCode::OK);
+    EXPECT_EQ(def.getMediapipeGraphConfig().getInitialQueueSize(), 0);
 }
 
-TEST(MediapipeGraphQueueSizeDirective, NegativeBelowMinusOneRejected) {
-    std::string pbtxt = makePbtxtWithDirective("# OVMS_GRAPH_QUEUE_SIZE: -2");
+TEST(MediapipeGraphQueueSizeDirective, NegativeValueRejected) {
+    std::string pbtxt = makePbtxtWithDirective("# OVMS_GRAPH_QUEUE_MAX_SIZE: -1");
     ovms::MediapipeGraphConfig mgc;
     DummyMediapipeGraphDefinition def("test", mgc, pbtxt);
     ovms::ModelManager manager;
@@ -4163,7 +4154,7 @@ TEST(MediapipeGraphQueueSizeDirective, ExceedsHardwareThreads) {
         GTEST_SKIP() << "hardware_concurrency() returned 0, cannot test thread limit";
     }
     int oversized = static_cast<int>(maxThreads) + 1;
-    std::string pbtxt = makePbtxtWithDirective("# OVMS_GRAPH_QUEUE_SIZE: " + std::to_string(oversized));
+    std::string pbtxt = makePbtxtWithDirective("# OVMS_GRAPH_QUEUE_MAX_SIZE: " + std::to_string(oversized));
     ovms::MediapipeGraphConfig mgc;
     DummyMediapipeGraphDefinition def("test", mgc, pbtxt);
     ovms::ModelManager manager;
@@ -4173,7 +4164,7 @@ TEST(MediapipeGraphQueueSizeDirective, ExceedsHardwareThreads) {
 }
 
 TEST(MediapipeGraphQueueSizeDirective, InvalidStringRejected) {
-    std::string pbtxt = makePbtxtWithDirective("# OVMS_GRAPH_QUEUE_SIZE: INVALID");
+    std::string pbtxt = makePbtxtWithDirective("# OVMS_GRAPH_QUEUE_MAX_SIZE: INVALID");
     ovms::MediapipeGraphConfig mgc;
     DummyMediapipeGraphDefinition def("test", mgc, pbtxt);
     ovms::ModelManager manager;
