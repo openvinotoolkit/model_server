@@ -151,19 +151,29 @@ echo === Last Successful Test ===
 grep -a " OK ]" win_full_test.log | tail -1
 echo.
 echo === Last Running Test (likely the one that failed) ===
-grep -a " RUN " win_full_test.log | tail -1
+set "lastRunEntry="
+for /F "delims=" %%A in ('grep -a "\[ RUN" win_full_test.log ^| tail -1') do (
+    set "lastRunEntry=%%A"
+)
+if defined lastRunEntry (
+    echo !lastRunEntry!
+) else (
+    echo [WARN] No gtest RUN marker found in win_full_test.log.
+)
 echo.
 echo === Output from Last Running Test to End of Log ===
 :: Find the line number of the last RUN and display everything from that point onwards
 set "lastRunLine="
-for /F "delims=" %%A in ('grep -a -n " RUN " win_full_test.log ^| tail -1 ^| cut -d: -f1') do (
+for /F "tokens=1 delims=:" %%A in ('grep -a -n "\[ RUN" win_full_test.log ^| tail -1') do (
     set "lastRunLine=%%A"
 )
 echo !lastRunLine! | findstr /R "^[0-9][0-9]*$" > nul
 if !errorlevel! equ 0 (
     sed -n "!lastRunLine!,$p" win_full_test.log | head -200
 ) else (
-    echo [WARN] Could not determine last RUN line. Showing tail of full test log instead.
+    echo [WARN] Could not determine last RUN line. Showing recent RUN markers and log tail.
+    grep -a -n "\[ RUN" win_full_test.log | tail -20
+    echo.
     tail -200 win_full_test.log
 )
 echo.
