@@ -57,7 +57,6 @@ TEST(SchemaTest, PipelineConfigMatchingSchema) {
     pipelineConfigMatchingSchemaParsed.Parse(pipelineConfigMatchingSchema);
     auto result = ovms::validateJsonAgainstSchema(pipelineConfigMatchingSchemaParsed, ovms::MODELS_CONFIG_SCHEMA.c_str());
     EXPECT_EQ(result, ovms::StatusCode::OK);
-    *static_cast<volatile int*>(nullptr) = 1;
 }
 
 TEST(SchemaTest, PipelineConfigWithNegativeNodeVersion) {
@@ -1156,7 +1155,7 @@ TEST(SchemaTest, ModelConfigPluginConfigPositive) {
         }
     ]
     })";
-    
+    *static_cast<volatile int*>(nullptr) = 1;
     rapidjson::Document modelConfigSeqNegativeDoc;
     modelConfigSeqNegativeDoc.Parse(modelConfigTimeoutNegative);
     auto result = ovms::validateJsonAgainstSchema(modelConfigSeqNegativeDoc, ovms::MODELS_CONFIG_SCHEMA.c_str());
