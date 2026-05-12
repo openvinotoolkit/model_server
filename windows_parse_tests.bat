@@ -29,12 +29,17 @@ if not exist "%summaryLog%" (
     echo [WARN] Summary log not found: %summaryLog%
 )
 
+set "parserOutputTmp=%summaryLog%.parse.tmp"
+set "summaryBackupTmp=%summaryLog%.orig.tmp"
+
+set "CRASH_PATTERN=segmentation fault\|segfault\|abnormal termination\|access violation\|sigsegv\|seh exception\|0xc0000005\|unknown file: error:"
+
 :: Check for FAILED markers first - do not allow PASSED text to mask test failures
 grep -a -q "\[  FAILED  \]\| FAILED " "%fullLog%"
 if !errorlevel! equ 0 goto :exit_build_error
 
 :: Also check for segmentation faults or crashes
-grep -a -q -i "segmentation fault\|segfault\|crashed\|abnormal termination\|access violation\|exception\|sigsegv" "%fullLog%"
+grep -a -q -i "%CRASH_PATTERN%" "%fullLog%"
 if !errorlevel! equ 0 goto :exit_build_error
 
 :: Consider the run successful only if PASSED summary is present near the end of the log
@@ -45,12 +50,15 @@ if !errorlevel! equ 0 exit /b 0
 goto :exit_build_error
 
 :exit_build_error
+if exist "%parserOutputTmp%" del /f /q "%parserOutputTmp%"
+if exist "%summaryBackupTmp%" del /f /q "%summaryBackupTmp%"
+
+(
 echo.
 echo [ERROR] FAILED TESTS OR CRASHES DETECTED:
 echo.
 echo === Failed Tests (from summary/full log) ===
-grep -a "^\[  FAILED  \]" "%summaryLog%"
-grep -a "^\[  FAILED  \]" "%fullLog%"
+grep -a "^\[  FAILED  \]" "%fullLog%" | grep -a -v "tests, listed below"
 echo.
 echo === Last Successful Test ===
 grep -a " OK ]" "%fullLog%" | tail -1
@@ -73,12 +81,12 @@ for /F "tokens=1 delims=:" %%A in ('grep -a -n "\[ RUN" "%fullLog%" ^| tail -1')
 )
 echo !lastRunLine! | findstr /R "^[0-9][0-9]*$" > nul
 if !errorlevel! equ 0 (
-    sed -n "!lastRunLine!,$p" "%fullLog%" | head -200
+    sed -n "!lastRunLine!,$p" "%fullLog%" | head -120
 ) else (
     echo [WARN] Could not determine last RUN line. Showing recent RUN markers and log tail.
-    grep -a -n "\[ RUN" "%fullLog%" | tail -20
+    grep -a -n "\[ RUN" "%fullLog%" | tail -3
     echo.
-    tail -200 "%fullLog%"
+    tail -20 "%fullLog%"
 )
 echo.
 echo === Context Around First FAILED Test ===
@@ -124,7 +132,24 @@ if !errorlevel! equ 0 (
 )
 echo.
 echo === Segfault/Crash Messages (if any) ===
-grep -a -i "segmentation fault\|segfault\|crashed\|abnormal termination\|access violation\|exception\|stack trace\|sigsegv" "%fullLog%" || echo (none found)
+grep -a -i "%CRASH_PATTERN%\|stack trace" "%fullLog%" || echo (none found)
 echo.
 echo [ERROR] Check tests summary in '%summaryLog%' and tests logs in '%fullLog%'. Rerun failed test with: windows_setupvars.bat and %cd%\bazel-bin\src\ovms_test.exe --gtest_filter='*.*'
+) > "%parserOutputTmp%" 2>&1
+
+if exist "%summaryLog%" (
+    copy /Y "%summaryLog%" "%summaryBackupTmp%" > nul
+) else (
+    type nul > "%summaryBackupTmp%"
+)
+
+(
+    type "%parserOutputTmp%"
+    echo.
+    type "%summaryBackupTmp%"
+) > "%summaryLog%"
+
+if exist "%parserOutputTmp%" del /f /q "%parserOutputTmp%"
+if exist "%summaryBackupTmp%" del /f /q "%summaryBackupTmp%"
+
 exit /b 1
