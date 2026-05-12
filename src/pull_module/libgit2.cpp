@@ -1245,7 +1245,7 @@ Status handleExistingRepositoryWithoutOverwrite(const std::string& downloadPath,
         // .git was present but libgit2 still could not open the repository: surface the real error
         // so the operator can act (re-clone, fix permissions, init libgit2, ...).
         std::cout << "Model is corrupted: " << downloadPath << std::endl;
-        std::cout << "Use --override to start download from scratch." << std::endl;
+        std::cout << "Use --overwrite_models to start download from scratch." << std::endl;
         return mapRepositoryOpenFailureToStatus(repoGuard);
     }
 
