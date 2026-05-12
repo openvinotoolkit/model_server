@@ -288,9 +288,9 @@ def check_tests(){
         echo "Run test no FAILED detected."
     }
 
-    status = bat(returnStatus: true, script: 'grep "  PASSED  " win_full_test.log')
+    status = bat(returnStatus: true, script: 'tail -50 win_full_test.log | grep "  PASSED  "')
     if (status != 0) {
-        // Check for segfault/termination only if PASSED is not found
+        // Check for segfault/termination only if PASSED is not found near the end of the log
         def segfault_status = bat(returnStatus: true, script: 'grep -i "segmentation fault\\|segfault\\|crashed\\|abnormal termination" win_full_test.log')
         if (segfault_status == 0) {
             // Found segfault, report detailed information
