@@ -343,7 +343,8 @@ public:
      * Opens a git repository at the specified filesystem path.
      *
      * @param path Absolute or relative path to the git repository directory.
-     * @note Works on specific git repository location (searches for .git directory).
+     * @note Opens the repository only at the provided path; parent directories
+     * are not searched for a .git directory.
      */
     explicit GitRepositoryGuard(const std::string& path) {
         // GIT_REPOSITORY_OPEN_NO_SEARCH: open the repository ONLY at `path`.
@@ -1254,7 +1255,7 @@ Status handleExistingRepositoryWithoutOverwrite(const std::string& downloadPath,
         // .git was present but libgit2 still could not open the repository: surface the real error
         // so the operator can act (re-clone, fix permissions, init libgit2, ...).
         std::cout << "Model is corrupted: " << downloadPath << std::endl;
-        std::cout << "Use --override to start download from scratch." << std::endl;
+        std::cout << "Use --overwrite_models to start download from scratch." << std::endl;
         return mapRepositoryOpenFailureToStatus(repoGuard);
     }
 
