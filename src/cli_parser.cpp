@@ -310,7 +310,7 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
 
         options->add_options("generative task (applies to: pull hf model, single model)")
             ("task",
-                "Specifies the generative task for the local model. It should be followed by task specific parameters. Supported tasks: text_generation, embeddings, rerank, image_generation, text2speech, speech2text. It creates the pipeline graph in memory based on provided with task specific options.",
+                "Specifies the generative task for the local model. It should be followed by task specific parameters. Supported tasks: text_generation, embeddings, rerank, image_generation, text2speech, speech2text. It creates the pipeline graph in memory based on the provided task-specific options.",
                 cxxopts::value<std::string>(),
                 "TASK");
         configOptions->custom_help("");

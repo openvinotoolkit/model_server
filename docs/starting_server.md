@@ -37,10 +37,10 @@ ovms --model_path <path_to_model> --model_name <model_name> --port 9000 --rest_p
 
 Server will detect the type of requested servable (classic model, generative model or mediapipe graph) and load it accordingly. This detection is based on the presence of a `graph.pbtxt` file, which defines the Mediapipe graph structure, presence of versions directory for classic models.
 
-When the model is generative, like copied from Hugging Faces or exported using optimum-cli, all the pipeline runtime parameters can be defined with --tasks <TASK> followed by task specific options.
+When the model is generative, like copied from Hugging Face or exported using optimum-cli, all the pipeline runtime parameters can be defined with --tasks <TASK> followed by task specific options.
 
 ```text
-docker run -d --rm -v $(pwd)/<model>>:/model -p 8000:8000 openvino/model_server:latest \
+docker run -d --rm -v ${PWD}/<model>:/model -p 8000:8000 openvino/model_server:latest \
 --model_path /model --model_name <model_name> --rest_port 8000 --log_level DEBUG \
 --task <TASK> --target_device <DEVICE> ........
 ```
