@@ -614,12 +614,11 @@ TEST_F(Gemma4OutputParserTest, StreamingContentWithTurnTokenAtTheEndOfGeneration
         {"This is", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":"This is"}})"},
         {" some content", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":" some content"}})"},
         {" with a turn token at the end.", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":" with a turn token at the end."}})"},
-        {"<turn|>", ov::genai::GenerationFinishReason::STOP, std::nullopt},        
+        {"<turn|>", ov::genai::GenerationFinishReason::STOP, std::nullopt},
     };
 
     assertStreamingVec(chunkToDeltaVec);
 }
-
 
 TEST_F(Gemma4OutputParserTest, ToolCallsWithoutToolsInTheRequestStreaming) {
     std::vector<std::pair<std::string, std::optional<std::string>>> chunkToDeltaVec{

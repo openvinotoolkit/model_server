@@ -126,7 +126,7 @@ std::optional<rapidjson::Document> OutputParser::parseContentChunk(ProcessingPha
         processingPhase = newPhase;
         return std::nullopt;
     }
-    
+
     rapidjson::StringBuffer buffer;
     rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
     writer.StartObject();

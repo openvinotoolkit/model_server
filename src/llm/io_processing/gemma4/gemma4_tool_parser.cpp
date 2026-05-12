@@ -407,7 +407,7 @@ std::optional<rapidjson::Document> Gemma4ToolParser::parseChunk(const std::strin
                     tagPos = content.find(tagToErase, tagPos);
                 }
             }
-            
+
             return wrapDeltaContent(content);
         }
     }
