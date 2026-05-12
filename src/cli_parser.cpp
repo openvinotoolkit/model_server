@@ -41,26 +41,6 @@ namespace ovms {
 constexpr const char* CONFIG_MANAGEMENT_HELP_GROUP{"config management"};
 constexpr const char* API_KEY_ENV_VAR{"API_KEY"};
 
-namespace {
-
-std::string normalizeConfiguredPath(const std::string& pathString) {
-    std::string normalized = pathString;
-    std::replace(normalized.begin(), normalized.end(), '\\', '/');
-    std::filesystem::path path(normalized);
-    if (path.is_relative()) {
-        path = std::filesystem::current_path() / path;
-    }
-    path = path.lexically_normal();
-    std::error_code ec;
-    auto weakCanonicalPath = std::filesystem::weakly_canonical(path, ec);
-    if (!ec) {
-        return weakCanonicalPath.lexically_normal().string();
-    }
-    return path.string();
-}
-
-}  // namespace
-
 std::string getConfigPath(const std::string& configPath) {
     bool isDir = false;
     auto status = LocalFileSystem::isDir(configPath, &isDir);
@@ -552,7 +532,7 @@ void CLIParser::prepareServer(ServerSettingsImpl& serverSettings) {
         serverSettings.allowedMediaDomains = result->operator[]("allowed_media_domains").as<std::vector<std::string>>();
     }
     if (result->count("allowed_local_media_path")) {
-        serverSettings.allowedLocalMediaPath = normalizeConfiguredPath(result->operator[]("allowed_local_media_path").as<std::string>());
+        serverSettings.allowedLocalMediaPath = FileSystem::normalizeConfiguredPath(result->operator[]("allowed_local_media_path").as<std::string>());
     }
 
     if (result->count("grpc_bind_address"))

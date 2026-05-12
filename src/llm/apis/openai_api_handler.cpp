@@ -81,14 +81,10 @@ std::filesystem::path normalizeAndResolvePath(const std::string& pathString) {
 }
 
 bool isPathInsideDirectory(const std::filesystem::path& testedPath, const std::filesystem::path& allowedDirectory) {
-    auto testedIt = testedPath.begin();
-    auto allowedIt = allowedDirectory.begin();
-    for (; allowedIt != allowedDirectory.end() && testedIt != testedPath.end(); ++allowedIt, ++testedIt) {
-        if (*allowedIt != *testedIt) {
-            return false;
-        }
-    }
-    return allowedIt == allowedDirectory.end();
+    const auto mismatch = std::mismatch(
+        allowedDirectory.begin(), allowedDirectory.end(),
+        testedPath.begin(), testedPath.end());
+    return mismatch.first == allowedDirectory.end();
 }
 
 }  // namespace

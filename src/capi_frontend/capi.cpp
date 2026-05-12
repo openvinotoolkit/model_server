@@ -15,7 +15,6 @@
 //*****************************************************************************
 #include <cstdint>
 #include <exception>
-#include <filesystem>
 #include <iterator>
 #include <memory>
 #include <string>
@@ -63,6 +62,7 @@
 #include "servablemetadata.hpp"
 #include "server_settings.hpp"
 #include "serialization.hpp"
+#include "../filesystem/filesystem.hpp"
 
 using ovms::Buffer;
 using ovms::ExecutionContext;
@@ -88,22 +88,6 @@ enum : uint32_t {
     TIMER_CALLBACK,
     TIMER_END
 };
-
-std::string normalizeConfiguredPath(const std::string& pathString) {
-    std::string normalized = pathString;
-    std::replace(normalized.begin(), normalized.end(), '\\', '/');
-    std::filesystem::path path(normalized);
-    if (path.is_relative()) {
-        path = std::filesystem::current_path() / path;
-    }
-    path = path.lexically_normal();
-    std::error_code ec;
-    auto weakCanonicalPath = std::filesystem::weakly_canonical(path, ec);
-    if (!ec) {
-        return weakCanonicalPath.lexically_normal().string();
-    }
-    return path.string();
-}
 
 static Status getModelManager(Server& server, ModelManager** modelManager) {
     if (!server.isLive(ovms::CAPI_MODULE_NAME)) {
@@ -602,7 +586,7 @@ DLL_PUBLIC OVMS_Status* OVMS_ServerSettingsSetAllowedLocalMediaPath(OVMS_ServerS
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "log path"));
     }
     ovms::ServerSettingsImpl* serverSettings = reinterpret_cast<ovms::ServerSettingsImpl*>(settings);
-    serverSettings->allowedLocalMediaPath = normalizeConfiguredPath(allowed_local_media_path);
+    serverSettings->allowedLocalMediaPath = ovms::FileSystem::normalizeConfiguredPath(allowed_local_media_path);
     return nullptr;
 }
 
