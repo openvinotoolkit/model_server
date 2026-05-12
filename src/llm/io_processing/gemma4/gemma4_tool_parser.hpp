@@ -93,7 +93,7 @@ private:
     bool parseToolCallParametersState();
     bool parseInToolCallEndedState();
 
-    rapidjson::Document wrapDeltaContent(const std::string& content);
+    std::optional<rapidjson::Document> wrapDeltaContent(const std::string& content);
     rapidjson::Document wrapDeltaArgs(const std::string& argsStr, int toolCallIndex);
 
     std::string streamingContent;

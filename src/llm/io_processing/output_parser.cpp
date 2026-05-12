@@ -109,7 +109,7 @@ const std::string& OutputParser::StreamOutputCache::getBuffer() const {
     return buffer;
 }
 
-rapidjson::Document OutputParser::parseContentChunk(ProcessingPhase newPhase) {
+std::optional<rapidjson::Document> OutputParser::parseContentChunk(ProcessingPhase newPhase) {
     std::string chunkContent = streamOutputCache.getBuffer();
     if (toolParser != nullptr) {
         auto& specialTagsToErase = toolParser->getSpecialTagsToErase();
@@ -120,6 +120,13 @@ rapidjson::Document OutputParser::parseContentChunk(ProcessingPhase newPhase) {
             }
         }
     }
+
+    if (chunkContent.empty() || chunkContent == "") {
+        streamOutputCache.clear();
+        processingPhase = newPhase;
+        return std::nullopt;
+    }
+    
     rapidjson::StringBuffer buffer;
     rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
     writer.StartObject();

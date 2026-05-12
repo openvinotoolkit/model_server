@@ -594,6 +594,33 @@ TEST_F(Gemma4OutputParserTest, StreamingWithToolCallWithEmptyParams) {
     assertStreamingVec(chunkToDeltaVec);
 }
 
+TEST_F(Gemma4OutputParserTest, StreamingWithToolResponseTokenAtTheEndOfGeneration) {
+    std::vector<std::tuple<std::string, ov::genai::GenerationFinishReason, std::optional<std::string>>> chunkToDeltaVec{
+        {"<|tool_call>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"call:", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"dummy", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"{arg1:", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"id":"XXXXXXXXX","type":"function","index":0,"function":{"name":"dummy"}}]}})"},
+        {"<|\"|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"value1", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"<|\"|>}", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{\"arg1\":\"value1\"}"}}]}})"},
+        {"<tool_call|><|tool_response>", ov::genai::GenerationFinishReason::STOP, std::nullopt},
+    };
+
+    assertStreamingVec(chunkToDeltaVec);
+}
+
+TEST_F(Gemma4OutputParserTest, StreamingContentWithTurnTokenAtTheEndOfGeneration) {
+    std::vector<std::tuple<std::string, ov::genai::GenerationFinishReason, std::optional<std::string>>> chunkToDeltaVec{
+        {"This is", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":"This is"}})"},
+        {" some content", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":" some content"}})"},
+        {" with a turn token at the end.", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":" with a turn token at the end."}})"},
+        {"<turn|>", ov::genai::GenerationFinishReason::STOP, std::nullopt},        
+    };
+
+    assertStreamingVec(chunkToDeltaVec);
+}
+
+
 TEST_F(Gemma4OutputParserTest, ToolCallsWithoutToolsInTheRequestStreaming) {
     std::vector<std::pair<std::string, std::optional<std::string>>> chunkToDeltaVec{
         {"<|tool_call>", "{\"delta\":{\"content\":\"<|tool_call>\"}}"},

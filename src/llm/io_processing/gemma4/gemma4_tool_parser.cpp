@@ -345,7 +345,10 @@ bool Gemma4ToolParser::parseNewContent() {
     return false;
 }
 
-rapidjson::Document Gemma4ToolParser::wrapDeltaContent(const std::string& content) {
+std::optional<rapidjson::Document> Gemma4ToolParser::wrapDeltaContent(const std::string& content) {
+    if (content.empty() || content == "") {
+        return std::nullopt;
+    }
     rapidjson::Document doc(rapidjson::kObjectType);
     rapidjson::Value deltaObj(rapidjson::kObjectType);
     deltaObj.AddMember("content", rapidjson::Value(content.c_str(), doc.GetAllocator()), doc.GetAllocator());
@@ -381,9 +384,7 @@ std::optional<rapidjson::Document> Gemma4ToolParser::parseChunk(const std::strin
                 content = this->streamingContent.substr(this->streamingPosition);
             }
             this->streamingPosition += content.size();
-            if (!content.empty()) {
-                return wrapDeltaContent(content);
-            }
+            return wrapDeltaContent(content);
         }
         if (this->currentState == State::AfterToolCall) {
             this->currentState = State::Content;
@@ -399,6 +400,14 @@ std::optional<rapidjson::Document> Gemma4ToolParser::parseChunk(const std::strin
             auto content = this->streamingContent.substr(this->streamingPosition);
             this->streamingPosition += content.size();
 
+            for (const std::string& tagToErase : getSpecialTagsToErase()) {
+                size_t tagPos = content.find(tagToErase);
+                while (tagPos != std::string::npos) {
+                    content.erase(tagPos, tagToErase.length());
+                    tagPos = content.find(tagToErase, tagPos);
+                }
+            }
+            
             return wrapDeltaContent(content);
         }
     }
