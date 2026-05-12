@@ -125,61 +125,15 @@ C:\Windows\System32\tar.exe -a -c -f win_test_log.zip win_full_test.log
  )
  if exist win_test_summary.tmp del /f /q win_test_summary.tmp
 
-:: Check for FAILED markers first - do not allow PASSED text to mask test failures
-grep -a -q "\[  FAILED  \]\| FAILED " win_full_test.log
-if !errorlevel! equ 0 goto :exit_build_error
+:: Parse logs and decide final test status using dedicated parser script
+call %cd%\windows_parse_tests.bat win_full_test.log win_test_summary.log
+set "parseExitCode=!errorlevel!"
+if !parseExitCode! neq 0 exit /b !parseExitCode!
 
-:: Also check for segmentation faults or crashes
-grep -a -q -i "segmentation fault\|segfault\|crashed\|abnormal termination\|access violation\|exception\|sigsegv" win_full_test.log
-if !errorlevel! equ 0 goto :exit_build_error
-
-:: Consider the run successful only if PASSED summary is present near the end of the log
-tail -50 win_full_test.log | grep -a -q "\[  PASSED  \]"
-if !errorlevel! equ 0 goto :exit_build
-
-:: If we reach here, tests did not complete correctly (no FAILED/crash marker but no final PASSED summary)
-goto :exit_build_error
-
-:exit_build 
 echo [INFO] Tests finished with no failures. Check the summary in win_test_summary.log.
 exit /b 0
+
 :exit_build_error
-echo.
-echo [ERROR] FAILED TESTS OR CRASHES DETECTED:
-echo.
-echo === Last Successful Test ===
-grep -a " OK ]" win_full_test.log | tail -1
-echo.
-echo === Last Running Test (likely the one that failed) ===
-set "lastRunEntry="
-for /F "delims=" %%A in ('grep -a "\[ RUN" win_full_test.log ^| tail -1') do (
-    set "lastRunEntry=%%A"
-)
-if defined lastRunEntry (
-    echo !lastRunEntry!
-) else (
-    echo [WARN] No gtest RUN marker found in win_full_test.log.
-)
-echo.
-echo === Output from Last Running Test to End of Log ===
-:: Find the line number of the last RUN and display everything from that point onwards
-set "lastRunLine="
-for /F "tokens=1 delims=:" %%A in ('grep -a -n "\[ RUN" win_full_test.log ^| tail -1') do (
-    set "lastRunLine=%%A"
-)
-echo !lastRunLine! | findstr /R "^[0-9][0-9]*$" > nul
-if !errorlevel! equ 0 (
-    sed -n "!lastRunLine!,$p" win_full_test.log | head -200
-) else (
-    echo [WARN] Could not determine last RUN line. Showing recent RUN markers and log tail.
-    grep -a -n "\[ RUN" win_full_test.log | tail -20
-    echo.
-    tail -200 win_full_test.log
-)
-echo.
-echo === Segfault/Crash Messages (if any) ===
-grep -a -i "segmentation fault\|segfault\|crashed\|abnormal termination\|access violation\|exception\|stack trace\|sigsegv" win_full_test.log || echo (none found)
-echo.
-echo [ERROR] Check tests summary in 'win_test_summary.log' and tests logs in 'win_full_test.log'. Rerun failed test with: windows_setupvars.bat and %cd%\bazel-bin\src\ovms_test.exe --gtest_filter='*.*'
+echo [ERROR] windows_test.bat failed before test parsing stage.
 exit /b 1
 endlocal
