@@ -49,7 +49,7 @@ def get_uses_mapping():
     return _uses_mapping
 
 
-""" 
+"""
     TT_USES_MAPPING - use mapping JSON for model inputs/output name aliasing
     Possible TT_USES_MAPPING values (case insensitive):
     - (empty)/""/NONE - Default leave mapping.json provided alongside model untouched (if exists).
@@ -402,6 +402,6 @@ def get_ovms_types():
     return ovms_types_list
 
 
-""" TT_OVMS_TYPE - ovms type runtime to be executed: 
+""" TT_OVMS_TYPE - ovms type runtime to be executed:
 DOCKER, BINARY, BINARY_DOCKER, CAPI, CAPI_DOCKER, DOCKER_CMD_LINE """
 ovms_types = get_ovms_types()

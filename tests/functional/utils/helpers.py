@@ -25,8 +25,8 @@ from tests.functional.constants.target_device import TargetDevice
 ALL_AVAILABLE_OPTIONS = "*"
 
 
-def get_int(key_name, fallback=None, environ=os.environ):
-    value = environ.get(key_name, fallback)
+def get_int(key_name, fallback=None):
+    value = os.environ.get(key_name, fallback)
     if value != fallback:
         try:
             value = int(value)
@@ -54,7 +54,7 @@ def get_bool(key_name, fallback=None):
         elif value == "false":
             value = False
         else:
-            raise ValueError("Value of {} env variable is '{}'. Should be 'True' or 'False'.".format(key_name, value))
+            raise ValueError(f"Value of {key_name} env variable is '{value}'. Should be 'True' or 'False'.")
     return value
 
 

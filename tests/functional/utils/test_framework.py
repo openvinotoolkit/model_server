@@ -15,10 +15,11 @@
 #
 
 import os
-import pytest
 import re
 import shutil
 import traceback
+
+import pytest
 
 from tests.functional.utils.assertions import CreateVenvError, PipInstallError
 from tests.functional.utils.git_operations import clone_git_repository

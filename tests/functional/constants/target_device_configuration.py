@@ -20,7 +20,7 @@ except ImportError:
     getgrnam = None
 
 try:
-    from os import getuid
+    from os import getuid  # pylint: disable=unused-import
 except ImportError:
     getuid = None
 
@@ -37,28 +37,27 @@ VOLUMES = "volumes"
 DEVICES = "devices"
 HOST = "host"
 DOCKER_PARAMS = "docker_params"
-""" TARGET_DEVICE_CONFIGURATION: VOLUMES - this map stores a list of devices that should be
-                           mounted for given target device.
-                           String representing device should be in form of:
-                           - <path_on_host>:<path_in_container>:<cgroup_permissions>
+""" 
+TARGET_DEVICE_CONFIGURATION: 
+    VOLUMES - this map stores a list of devices that should be
+       mounted for given target device.
+       String representing device should be in form of:
+       - <path_on_host>:<path_in_container>:<cgroup_permissions>
 
-                           Another representations are possible
-                           - <path_on_host>:<path_in_container>
-                             cgroup_permissions will be set to `mrw` by default
+       Another representations are possible
+       - <path_on_host>:<path_in_container>
+         cgroup_permissions will be set to `mrw` by default
 
-                           - <path_on_host>
-                             path_in_container will be the same as path_on_host
-                             cgroup_permissions will be set to `mrw`
-                           """
-""" TARGET_DEVICE_CONFIGURATION: NETWORK - Name of the network this container will be connected to at creation time. 
-                             :type str
-                           """
-""" TARGET_DEVICE_CONFIGURATION: USER - Username or UID to run commands as inside the container.
-                          :type int or str
-                           """
-""" TARGET_DEVICE_CONFIGURATION: PRIVILEGED - Give extended privileges to this container.
-                                :type bool
-                           """
+       - <path_on_host>
+         path_in_container will be the same as path_on_host
+         cgroup_permissions will be set to `mrw`
+    NETWORK - Name of the network this container will be connected to at creation time. 
+        :type str
+    USER - Username or UID to run commands as inside the container.
+        :type int or str
+    PRIVILEGED - Give extended privileges to this container.
+        :type bool
+"""
 # Currently docker imports are mandatory (even for non-docker types) and this enforce getuid() & getgrnam(...) syscalls
 # for non-docker testruns.
 TARGET_DEVICE_CONFIGURATION = {

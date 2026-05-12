@@ -69,7 +69,7 @@ class BaseInfo:
         return {"version": DEFAULT_FULL_VERSION_NUMBER}
 
 
-class EnvironmentInfo(object):
+class EnvironmentInfo:
     _instances = {}
 
     @classmethod
@@ -140,7 +140,7 @@ class CurrentOsInfo:
         if CurrentOsInfo.LINUX == platform.system():
             if CurrentOsInfo.UBUNTU.lower() in platform.version().lower():
                 return CurrentOsInfo.UBUNTU
-            elif CurrentOsInfo.REDHAT.lower() in platform.version().lower():
+            if CurrentOsInfo.REDHAT.lower() in platform.version().lower():
                 return CurrentOsInfo.REDHAT
         return platform.system()
 
