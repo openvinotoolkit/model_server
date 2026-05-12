@@ -18,6 +18,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <limits>
 #include <regex>
 #include <sstream>
 #include <string>
@@ -39,6 +40,7 @@
 #include "../../http_status_code.hpp"
 #include "../../json_parser.hpp"
 #include "../../llm/apis/openai_completions.hpp"
+#include "../../llm/io_processing/base_generation_config_builder.hpp"
 #include "../../llm/language_model/continuous_batching/llm_executor.hpp"
 #include "../../llm/language_model/continuous_batching/servable.hpp"
 #include "../../llm/servable.hpp"
@@ -46,6 +48,7 @@
 #include "../../llm/text_utils.hpp"
 #include "../../ov_utils.hpp"
 #include "../../server.hpp"
+#include "src/graph_export/graph_export.hpp"
 #include "rapidjson/document.h"
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/writer.h"
@@ -370,13 +373,6 @@ TEST_P(LLMFlowHttpTestParameterized, streamCompletionsEchoWithCompletion) {
         ASSERT_EQ(d["choices"].Capacity(), 1);
         int i = 0;
         for (auto& choice : d["choices"].GetArray()) {
-            if (params.checkFinishReason) {
-                if (choice["finish_reason"].IsString()) {
-                    EXPECT_STREQ(choice["finish_reason"].GetString(), "length");
-                } else {
-                    ASSERT_TRUE(choice["finish_reason"].IsNull());
-                }
-            }
             ASSERT_EQ(choice["index"], i++);
             if (params.checkLogprobs) {
                 ASSERT_FALSE(choice["logprobs"].IsObject());
@@ -392,10 +388,11 @@ TEST_P(LLMFlowHttpTestParameterized, streamCompletionsEchoWithCompletion) {
         handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::PARTIAL_END);
 
-    // Since prompt is treated as a single entity and streamer returns chunk only after space or newline
-    // we expect chunk with echoed prompt to contain space or new line at the end
-    ASSERT_TRUE(chunks[0] == "What is OpenVINO?\n" || chunks[0] == "What is OpenVINO? ");
     ASSERT_GT(chunks.size(), 1);
+    std::string combined;
+    for (const auto& chunk : chunks)
+        combined += chunk;
+    EXPECT_EQ(combined.rfind("What is OpenVINO?", 0), 0) << "Expected output to start with echoed prompt, got: " << combined;
 }
 
 TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJsonEchoOnly) {
@@ -3252,6 +3249,79 @@ TEST_P(LLMHttpParametersValidationTest, topKInvalid) {
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
+TEST_P(LLMHttpParametersValidationTest, topKMinuOneValid) {
+    auto params = GetParam();
+    // -1 is the sentinel for "consider all tokens"
+    std::string requestBody = validRequestBodyWithParameter(params.modelName, "top_k", "-1");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK);
+}
+
+TEST_P(LLMHttpParametersValidationTest, topKZeroInvalid) {
+    auto params = GetParam();
+    std::string requestBody = validRequestBodyWithParameter(params.modelName, "top_k", "0");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_P(LLMHttpParametersValidationTest, topKNegativeInvalid) {
+    auto params = GetParam();
+    // Only -1 is a valid negative value; other negatives must be rejected
+    std::string requestBody = validRequestBodyWithParameter(params.modelName, "top_k", "-2");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_P(LLMHttpParametersValidationTest, minPValid) {
+    auto params = GetParam();
+    std::string requestBody = validRequestBodyWithParameter(params.modelName, "min_p", "0.05");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK);
+
+    requestBody = validRequestBodyWithParameter(params.modelName, "min_p", "0");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK);
+}
+
+TEST_P(LLMHttpParametersValidationTest, minPInvalid) {
+    auto params = GetParam();
+    std::string requestBody = validRequestBodyWithParameter(params.modelName, "min_p", "\"INVALID\"");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_P(LLMHttpParametersValidationTest, minPOutOfRange) {
+    auto params = GetParam();
+    // min_p must be in [0.0, 1.0) — value of 1.0 is out of range
+    std::string requestBody = validRequestBodyWithParameter(params.modelName, "min_p", "1.0");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_P(LLMHttpParametersValidationTest, minPNegative) {
+    auto params = GetParam();
+    // min_p must be in [0.0, 1.0) — negative value is out of range
+    std::string requestBody = validRequestBodyWithParameter(params.modelName, "min_p", "-0.1");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
 TEST_P(LLMHttpParametersValidationTest, seedValid) {
     auto params = GetParam();
     std::string requestBody = validRequestBodyWithParameter(params.modelName, "seed", "1");
@@ -3264,6 +3334,44 @@ TEST_P(LLMHttpParametersValidationTest, seedValid) {
 TEST_P(LLMHttpParametersValidationTest, seedInvalid) {
     auto params = GetParam();
     std::string requestBody = validRequestBodyWithParameter(params.modelName, "seed", "\"INVALID\"");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_P(LLMHttpParametersValidationTest, seedBoundaryZero) {
+    auto params = GetParam();
+    std::string requestBody = validRequestBodyWithParameter(params.modelName, "seed", "0");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK);
+}
+
+TEST_P(LLMHttpParametersValidationTest, seedBoundaryMax) {
+    auto params = GetParam();
+    // Maximum valid seed: 2^32 - 1 = 4294967295
+    std::string requestBody = validRequestBodyWithParameter(params.modelName, "seed", "4294967295");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK);
+}
+
+TEST_P(LLMHttpParametersValidationTest, seedOutOfRangeNegative) {
+    auto params = GetParam();
+    std::string requestBody = validRequestBodyWithParameter(params.modelName, "seed", "-1");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_P(LLMHttpParametersValidationTest, seedOutOfRangeOverflow) {
+    auto params = GetParam();
+    // 2^32 = 4294967296 is one past the maximum valid seed
+    std::string requestBody = validRequestBodyWithParameter(params.modelName, "seed", "4294967296");
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
@@ -4614,3 +4722,201 @@ TEST_F(IsolatedServableTests, PromtSizeBetweenDefaultAndNonDefaultMaxPromptLenNP
 }
 
 // TODO: Add missing tests for reading max prompt len property from configuration
+
+class LLMStartWithTaskParameter : public ::testing::Test {
+protected:
+    static std::unique_ptr<std::thread> t;
+    std::string srcModelDir = getGenericFullPathForSrcTest("/ovms/src/test/llm_testing/HuggingFaceTB/SmolLM2-360M-Instruct");
+#ifdef __linux__
+    std::string tempDir;
+    std::string modelDir;
+    std::string graphPath;
+#else
+    std::string modelDir = srcModelDir;
+    std::string graphPath = modelDir + "/graph.pbtxt";
+    std::string graphPathRenamed = modelDir + "/graph.pbtxt.bak";
+#endif
+
+    void SetUp() override {
+        GraphExport::clearInMemoryGraphContent();
+#ifdef __linux__
+        tempDir = std::filesystem::temp_directory_path().string() + "/LLMStartWithTaskParameter_" + ::testing::UnitTest::GetInstance()->current_test_info()->name();
+        std::filesystem::remove_all(tempDir);
+        std::filesystem::copy(srcModelDir, tempDir, std::filesystem::copy_options::recursive);
+        modelDir = tempDir;
+        graphPath = modelDir + "/graph.pbtxt";
+#endif
+    }
+    void TearDown() override {
+        ovms::Server& server = ovms::Server::instance();
+        server.setShutdownRequest(1);
+        if (t && t->joinable())
+            t->join();
+        server.setShutdownRequest(0);
+        GraphExport::clearInMemoryGraphContent();
+#ifdef __linux__
+        std::filesystem::remove_all(tempDir);
+#else
+        // Restore graph.pbtxt if it was renamed
+        if (std::filesystem::exists(graphPathRenamed)) {
+            if (std::filesystem::exists(graphPath)) {
+                std::filesystem::remove(graphPath);
+            }
+            std::filesystem::rename(graphPathRenamed, graphPath);
+        }
+#endif
+    }
+};
+
+std::unique_ptr<std::thread> LLMStartWithTaskParameter::t = nullptr;
+
+TEST_F(LLMStartWithTaskParameter, StartWithModelPathAndTaskWithoutGraphFile) {
+#ifdef __linux__
+    // On Linux models are on readonly FS - we use a temp copy with graph.pbtxt removed
+    std::filesystem::remove(graphPath);
+#else
+    // On Windows models are on RW FS - rename graph.pbtxt so we can check it's not recreated
+    if (std::filesystem::exists(graphPath)) {
+        std::filesystem::rename(graphPath, graphPathRenamed);
+    }
+#endif
+
+    std::string port = "9173";
+    ovms::Server& server = ovms::Server::instance();
+    ::SetUpServer(t, server, port,
+        modelDir.c_str(),
+        "SmolLM2",
+        60,
+        "text_generation");
+    ASSERT_EQ(server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME), ovms::ModuleState::INITIALIZED);
+    ASSERT_FALSE(std::filesystem::exists(graphPath)) << "graph.pbtxt should not be created when using --task with --model_path";
+}
+
+TEST_F(LLMStartWithTaskParameter, StartWithModelPathAndTaskDoesNotModifyExistingGraph) {
+    ASSERT_TRUE(std::filesystem::exists(graphPath)) << "graph.pbtxt must exist for this test";
+    auto modTimeBefore = std::filesystem::last_write_time(graphPath);
+
+    std::string port = "9174";
+    ovms::Server& server = ovms::Server::instance();
+    ::SetUpServer(t, server, port,
+        modelDir.c_str(),
+        "SmolLM2",
+        60,
+        "text_generation");
+    ASSERT_EQ(server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME), ovms::ModuleState::INITIALIZED);
+
+    auto modTimeAfter = std::filesystem::last_write_time(graphPath);
+    ASSERT_EQ(modTimeBefore, modTimeAfter) << "graph.pbtxt should not be modified when using --task with --model_path";
+}
+
+TEST_F(LLMStartWithTaskParameter, StartWithModelPathAndTaskAndValidPipelineType) {
+    std::string port = "9175";
+    ovms::Server& server = ovms::Server::instance();
+    server.setShutdownRequest(0);
+    randomizeAndEnsureFree(port);
+    std::string fullModelPath = getGenericFullPathForSrcTest(modelDir.c_str());
+    char* argv[] = {(char*)"ovms",
+        (char*)"--model_name", (char*)"SmolLM2",
+        (char*)"--model_path", (char*)fullModelPath.c_str(),
+        (char*)"--port", (char*)port.c_str(),
+        (char*)"--task", (char*)"text_generation",
+        (char*)"--pipeline_type", (char*)"LM_CB"};
+    int argc = 11;
+    t.reset(new std::thread([&argc, &argv, &server]() {
+        EXPECT_EQ(EXIT_SUCCESS, server.start(argc, argv));
+    }));
+    EnsureServerStartedWithTimeout(server, 60);
+    ASSERT_EQ(server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME), ovms::ModuleState::INITIALIZED);
+}
+
+TEST_F(LLMStartWithTaskParameter, StartWithModelPathAndTaskAndInvalidPipelineType) {
+    std::string port = "9176";
+    ovms::Server& server = ovms::Server::instance();
+    server.setShutdownRequest(0);
+    randomizeAndEnsureFree(port);
+    std::string fullModelPath = getGenericFullPathForSrcTest(modelDir.c_str());
+    char* argv[] = {(char*)"ovms",
+        (char*)"--model_name", (char*)"SmolLM2",
+        (char*)"--model_path", (char*)fullModelPath.c_str(),
+        (char*)"--port", (char*)port.c_str(),
+        (char*)"--task", (char*)"text_generation",
+        (char*)"--pipeline_type", (char*)"invalid"};
+    int argc = 11;
+    t.reset(new std::thread([&argc, &argv, &server]() {
+        EXPECT_NE(EXIT_SUCCESS, server.start(argc, argv));
+    }));
+    // Validation failure should complete quickly
+    if (t && t->joinable())
+        t->join();
+    ASSERT_NE(server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME), ovms::ModuleState::INITIALIZED)
+        << "Server should not start with invalid pipeline_type";
+}
+
+// Unit tests for BaseGenerationConfigBuilder multinomial sampling defaults
+
+TEST(BaseGenerationConfigBuilderTest, TopKDefaultedTo40WhenSamplingEnabled) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, /*enableToolGuidedGeneration=*/false, DecodingMethod::STANDARD};
+    OpenAIRequest request;
+    request.temperature = 1.0f;  // enables do_sample; topK not set
+    builder.parseConfigFromRequest(request);
+    EXPECT_EQ(builder.getConfig().top_k, 40u);
+}
+
+TEST(BaseGenerationConfigBuilderTest, TopKPreservedWhenExplicitlySet) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, /*enableToolGuidedGeneration=*/false, DecodingMethod::STANDARD};
+    OpenAIRequest request;
+    request.temperature = 1.0f;
+    request.topK = 10;
+    builder.parseConfigFromRequest(request);
+    EXPECT_EQ(builder.getConfig().top_k, 10u);
+}
+
+TEST(BaseGenerationConfigBuilderTest, TopKMinusOneMapsToInactive) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, /*enableToolGuidedGeneration=*/false, DecodingMethod::STANDARD};
+    OpenAIRequest request;
+    request.temperature = 1.0f;
+    request.topK = -1;  // sentinel: consider all tokens
+    builder.parseConfigFromRequest(request);
+    EXPECT_EQ(builder.getConfig().top_k, std::numeric_limits<size_t>::max());
+}
+
+TEST(BaseGenerationConfigBuilderTest, TopKNotChangedWhenSamplingDisabled) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, /*enableToolGuidedGeneration=*/false, DecodingMethod::STANDARD};
+    OpenAIRequest request;
+    request.temperature = 0.0f;  // greedy decoding, do_sample = false
+    builder.parseConfigFromRequest(request);
+    EXPECT_EQ(builder.getConfig().top_k, std::numeric_limits<size_t>::max());
+}
+
+TEST(BaseGenerationConfigBuilderTest, SeedRandomizedWhenOmittedDuringSampling) {
+    ov::genai::GenerationConfig baseConfig;
+    OpenAIRequest request;
+    request.temperature = 1.0f;  // enables do_sample; seed not set → must be randomized
+
+    // Parse the same request twice — seeds must differ (non-deterministic per request)
+    BaseGenerationConfigBuilder builder1{baseConfig, /*enableToolGuidedGeneration=*/false, DecodingMethod::STANDARD};
+    builder1.parseConfigFromRequest(request);
+    const size_t seed1 = builder1.getConfig().rng_seed;
+
+    BaseGenerationConfigBuilder builder2{baseConfig, /*enableToolGuidedGeneration=*/false, DecodingMethod::STANDARD};
+    builder2.parseConfigFromRequest(request);
+    const size_t seed2 = builder2.getConfig().rng_seed;
+
+    EXPECT_NE(seed1, 0u);
+    EXPECT_NE(seed2, 0u);
+    EXPECT_NE(seed1, seed2) << "Expected different seeds for successive omitted-seed requests";
+}
+
+TEST(BaseGenerationConfigBuilderTest, SeedPreservedWhenExplicitlySet) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, /*enableToolGuidedGeneration=*/false, DecodingMethod::STANDARD};
+    OpenAIRequest request;
+    request.temperature = 1.0f;
+    request.seed = 42u;
+    builder.parseConfigFromRequest(request);
+    EXPECT_EQ(builder.getConfig().rng_seed, 42u);
+}

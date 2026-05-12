@@ -406,6 +406,10 @@ void OpenAIResponsesHandler::serializeCommonResponseParameters(Writer<StringBuff
         writer.String("top_p");
         writer.Double(static_cast<double>(request.topP.value()));
     }
+    if (request.minP.has_value()) {
+        writer.String("min_p");
+        writer.Double(static_cast<double>(request.minP.value()));
+    }
     writer.String("truncation");
     writer.String("disabled");
     // TODO: user not supported
