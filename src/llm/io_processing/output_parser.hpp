@@ -66,7 +66,7 @@ private:
     // Parsing methods below read chunks from streamOutputCache hence no string argument is needed
 
     // Regular content parsing method does not require finishReason as content is always parsed
-    rapidjson::Document parseContentChunk(ProcessingPhase newPhase = CONTENT);
+    std::optional<rapidjson::Document> parseContentChunk(ProcessingPhase newPhase = CONTENT);
 
     std::optional<rapidjson::Document> parseToolCallChunk(ov::genai::GenerationFinishReason finishReason, ProcessingPhase newPhase = TOOL_CALLS_PROCESSING_TOOL);
     std::optional<rapidjson::Document> parseReasoningChunk(ov::genai::GenerationFinishReason finishReason, ProcessingPhase newPhase = REASONING);
