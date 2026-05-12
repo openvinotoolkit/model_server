@@ -19,9 +19,9 @@
 # Any variable can be overridden by the environment or command-line.
 
 # Source repository git commits / branches (used for source builds)
-OV_SOURCE_BRANCH ?= ca5a503027df6ff7fc5627ec3f7bbf318a158444
-OV_TOKENIZERS_BRANCH ?= cb14978d71bf4f578fc05b64689c1277e4b2c79e
-OV_GENAI_BRANCH ?= 637f8fc40f1d71164176fa05cba45b4954bb4bfd
+OV_SOURCE_BRANCH ?= 2492324617a7bf9b4b14b5547e75545449bec1f0
+OV_TOKENIZERS_BRANCH ?= 02bcda8f91fb5093f4028bb44980d03f44dce790
+OV_GENAI_BRANCH ?= 1e7a63d14a18a0d227e5a2413763ee45395af58a
 
 # Source repository organizations
 OV_SOURCE_ORG ?= openvinotoolkit
@@ -29,7 +29,7 @@ OV_GENAI_ORG ?= openvinotoolkit
 OV_TOKENIZERS_ORG ?= openvinotoolkit
 
 # Binary package URLs for each supported platform.
-DLDT_PACKAGE_URL_UBUNTU24 ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/nightly/2026.2.0.0.dev20260407/openvino_genai_ubuntu24_2026.2.0.0.dev20260407_x86_64.tar.gz
-DLDT_PACKAGE_URL_UBUNTU22 ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/nightly/2026.2.0.0.dev20260407/openvino_genai_ubuntu22_2026.2.0.0.dev20260407_x86_64.tar.gz
-DLDT_PACKAGE_URL_RHEL ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/nightly/2026.2.0.0.dev20260407/openvino_genai_rhel8_2026.2.0.0.dev20260407_x86_64.tar.gz
-GENAI_PACKAGE_URL_WINDOWS ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/nightly/2026.2.0.0.dev20260407/openvino_genai_windows_2026.2.0.0.dev20260407_x86_64.zip
+DLDT_PACKAGE_URL_UBUNTU24 ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/nightly/2026.2.0.0.dev20260509/openvino_genai_ubuntu24_2026.2.0.0.dev20260509_x86_64.tar.gz
+DLDT_PACKAGE_URL_UBUNTU22 ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/nightly/2026.2.0.0.dev20260509/openvino_genai_ubuntu22_2026.2.0.0.dev20260509_x86_64.tar.gz
+DLDT_PACKAGE_URL_RHEL ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/nightly/2026.2.0.0.dev20260509/openvino_genai_rhel8_2026.2.0.0.dev20260509_x86_64.tar.gz
+GENAI_PACKAGE_URL_WINDOWS ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/nightly/2026.2.0.0.dev20260509/openvino_genai_windows_2026.2.0.0.dev20260509_x86_64.zip

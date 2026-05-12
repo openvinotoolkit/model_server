@@ -44,7 +44,7 @@ struct HttpPayload {
     std::shared_ptr<ClientConnection> client;
 };
 ```
-The input json content should be compatible with the [chat completions](../model_server_rest_api_chat.md) or [completions](../model_server_rest_api_completions.md) API.
+The input json content should be compatible with the [chat completions](../model_server_rest_api_chat.md), [completions](../model_server_rest_api_completions.md) or [responses](../model_server_rest_api_responses.md) API.
 
 The input also includes a side packet with a reference to `LLM_NODE_RESOURCES` which is a shared object representing an LLM engine. It loads the model, runs the generation cycles and reports the generated results to the LLM calculator via a generation handler.
 

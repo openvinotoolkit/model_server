@@ -423,13 +423,29 @@ node {
     name: "myModel"
     calculator: "S2tCalculator"
     input_side_packet: "STT_NODE_RESOURCES:s2t_servable"
+    input_stream: "LOOPBACK:loopback"
     input_stream: "HTTP_REQUEST_PAYLOAD:input"
+    output_stream: "LOOPBACK:loopback"
     output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+    input_stream_info: {
+        tag_index: 'LOOPBACK:0',
+        back_edge: true
+    }
     node_options: {
         [type.googleapis.com / mediapipe.S2tCalculatorOptions]: {
             models_path: "/model1/path"
             target_device: "GPU"
             plugin_config: '{"NUM_STREAMS":"2"}'
+        }
+    }
+    input_stream_handler {
+        input_stream_handler: "SyncSetInputStreamHandler",
+        options {
+            [mediapipe.SyncSetInputStreamHandlerOptions.ext] {
+                sync_set {
+                    tag_index: "LOOPBACK:0"
+                }
+            }
         }
     }
 }
@@ -442,13 +458,29 @@ node {
     name: ""
     calculator: "S2tCalculator"
     input_side_packet: "STT_NODE_RESOURCES:s2t_servable"
+    input_stream: "LOOPBACK:loopback"
     input_stream: "HTTP_REQUEST_PAYLOAD:input"
+    output_stream: "LOOPBACK:loopback"
     output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+    input_stream_info: {
+        tag_index: 'LOOPBACK:0',
+        back_edge: true
+    }
     node_options: {
         [type.googleapis.com / mediapipe.S2tCalculatorOptions]: {
             models_path: "./"
             target_device: "CPU"
             }
+    }
+    input_stream_handler {
+        input_stream_handler: "SyncSetInputStreamHandler",
+        options {
+            [mediapipe.SyncSetInputStreamHandlerOptions.ext] {
+                sync_set {
+                    tag_index: "LOOPBACK:0"
+                }
+            }
+        }
     }
 }
 )";
@@ -575,6 +607,7 @@ protected:
 
 TEST_F(GraphCreationTest, positiveDefaultWithVersionString) {
     ovms::HFSettingsImpl hfSettings;
+    hfSettings.task = ovms::TEXT_GENERATION_GRAPH;
     assertCreatedGraphEquals(hfSettings, expectedDefaultGraphContents, true);
 }
 
@@ -622,11 +655,13 @@ TEST_F(GraphCreationTest, positiveImageGenWithVersionString) {
 
 TEST_F(GraphCreationTest, positiveDefault) {
     ovms::HFSettingsImpl hfSettings;
+    hfSettings.task = ovms::TEXT_GENERATION_GRAPH;
     assertCreatedGraphEquals(hfSettings, expectedDefaultGraphContents);
 }
 
 TEST_F(GraphCreationTest, positiveDraftAndFuse) {
     ovms::HFSettingsImpl hfSettings;
+    hfSettings.task = ovms::TEXT_GENERATION_GRAPH;
     ovms::TextGenGraphSettingsImpl graphSettings;
     graphSettings.draftModelDirName = "/ovms/src/test/llm_testing/facebook/opt-125m";
     graphSettings.dynamicSplitFuse = "false";
@@ -638,6 +673,7 @@ TEST_F(GraphCreationTest, positiveDraftAndFuse) {
 TEST_F(GraphCreationTest, positiveGGUF) {
     this->filesToPrintInCaseOfFailure.emplace_back("graph.pbtxt");
     ovms::HFSettingsImpl hfSettings;
+    hfSettings.task = ovms::TEXT_GENERATION_GRAPH;
     hfSettings.ggufFilename = "PRETTY_GOOD_GGUF_MODEL.gguf";
     assertCreatedGraphEquals(hfSettings, expectedGGUFGraphContents);
 }
@@ -645,6 +681,7 @@ TEST_F(GraphCreationTest, positiveGGUF) {
 TEST_F(GraphCreationTest, WillOverwriteExistingGraphPbtxtGGUF) {
     this->filesToPrintInCaseOfFailure.emplace_back("graph.pbtxt");
     ovms::HFSettingsImpl hfSettings;
+    hfSettings.task = ovms::TEXT_GENERATION_GRAPH;
     hfSettings.ggufFilename = "PRETTY_GOOD_GGUF_MODEL.gguf";
     assertCreatedGraphEquals(hfSettings, expectedGGUFGraphContents);
 
@@ -838,6 +875,7 @@ TEST_F(GraphCreationTest, speechToTextCreatedPbtxtInvalid) {
 
 TEST_F(GraphCreationTest, positivePluginConfigAll) {
     ovms::HFSettingsImpl hfSettings;
+    hfSettings.task = ovms::TEXT_GENERATION_GRAPH;
     ovms::TextGenGraphSettingsImpl graphSettings;
     hfSettings.exportSettings.pluginConfig.kvCachePrecision = "u8";
     hfSettings.exportSettings.pluginConfig.maxPromptLength = 123;
@@ -850,6 +888,7 @@ TEST_F(GraphCreationTest, positivePluginConfigAll) {
 
 TEST_F(GraphCreationTest, positiveWithParsersAndToolGuidedGeneration) {
     ovms::HFSettingsImpl hfSettings;
+    hfSettings.task = ovms::TEXT_GENERATION_GRAPH;
     ovms::TextGenGraphSettingsImpl graphSettings;
     graphSettings.reasoningParser = "REASONING_PARSER";
     graphSettings.toolParser = "TOOL_PARSER";
@@ -862,6 +901,7 @@ TEST_F(GraphCreationTest, positiveWithParsersAndToolGuidedGeneration) {
 
 TEST_F(GraphCreationTest, positivePluginConfigOne) {
     ovms::HFSettingsImpl hfSettings;
+    hfSettings.task = ovms::TEXT_GENERATION_GRAPH;
     ovms::TextGenGraphSettingsImpl graphSettings;
     hfSettings.exportSettings.pluginConfig.kvCachePrecision = "u8";
     hfSettings.graphSettings = std::move(graphSettings);

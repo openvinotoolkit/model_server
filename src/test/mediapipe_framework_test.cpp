@@ -13,6 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <algorithm>
 #include <fstream>
 #include <set>
 #include <sstream>
@@ -34,6 +35,7 @@
 #include "../mediapipe_internal/mediapipefactory.hpp"
 #include "../mediapipe_internal/mediapipegraphdefinition.hpp"
 #include "../mediapipe_internal/mediapipe_utils.hpp"
+#include "../mediapipe_internal/node_initializer.hpp"
 #include "mediapipe/framework/thread_pool_executor.h"
 #include "mediapipe/framework/port/parse_text_proto.h"
 #include "src/metrics/metric_config.hpp"
@@ -569,4 +571,32 @@ TEST_F(MediapipeNegativeFrameworkTest, ExceptionDuringClose) {
     } catch (...) {
         SPDLOG_ERROR("ER: unknown exception");
     }
+}
+
+TEST(NodeInitializerRegistryTest, AllExpectedInitializersRegistered) {
+    const auto& initializers = ovms::NodeInitializerRegistry::instance().all();
+    const std::vector<std::string> knownCalculators = {
+        "LLMCalculator",
+        "EmbeddingsCalculatorOV",
+        "ImageGenCalculator",
+        "RerankCalculatorOV",
+        "S2tCalculator",
+        "T2sCalculator",
+#if (PYTHON_DISABLE == 0)
+        "PythonExecutorCalculator",
+#endif
+    };
+    for (const auto& name : knownCalculators) {
+        bool found = std::any_of(initializers.begin(), initializers.end(),
+            [&](const auto& init) { return init->matches(name); });
+        EXPECT_TRUE(found) << "No NodeInitializer registered for calculator: " << name;
+    }
+
+#if (PYTHON_DISABLE == 0)
+    constexpr size_t expectedInitializersCount = 7;
+#else
+    constexpr size_t expectedInitializersCount = 6;
+#endif
+    EXPECT_EQ(initializers.size(), expectedInitializersCount)
+        << "Unexpected number of registered NodeInitializers from static registration/link-time inclusion.";
 }

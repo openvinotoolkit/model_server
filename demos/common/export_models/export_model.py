@@ -54,7 +54,7 @@ parser_text.add_argument('--max_prompt_len', required=False, type=int, default=N
                          'Not effective if target device is not NPU', dest='max_prompt_len')
 parser_text.add_argument('--prompt_lookup_decoding', action='store_true', help='Set pipeline to use prompt lookup decoding', dest='prompt_lookup_decoding')
 parser_text.add_argument('--reasoning_parser', choices=["qwen3", "gptoss"], help='Set the type of the reasoning parser for reasoning content extraction', dest='reasoning_parser')
-parser_text.add_argument('--tool_parser', choices=["llama3", "phi4", "hermes3", "mistral", "qwen3coder", "gptoss", "devstral"], help='Set the type of the tool parser for tool calls extraction', dest='tool_parser')
+parser_text.add_argument('--tool_parser', choices=["llama3", "phi4", "hermes3", "mistral", "qwen3coder", "gptoss", "devstral", "lfm2"], help='Set the type of the tool parser for tool calls extraction', dest='tool_parser')
 parser_text.add_argument('--enable_tool_guided_generation', action='store_true', help='Enables enforcing tool schema during generation. Requires setting tool_parser', dest='enable_tool_guided_generation')
 
 parser_embeddings_ov = subparsers.add_parser('embeddings_ov', help='export model for embeddings endpoint with directory structure aligned with OpenVINO tools')
@@ -134,14 +134,30 @@ node {
   name: "S2tExecutor"
   input_side_packet: "STT_NODE_RESOURCES:s2t_servable"
   calculator: "S2tCalculator"
+  input_stream: "LOOPBACK:loopback"
   input_stream: "HTTP_REQUEST_PAYLOAD:input"
+  output_stream: "LOOPBACK:loopback"
   output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+  input_stream_info: {
+    tag_index: 'LOOPBACK:0',
+    back_edge: true
+  }
   node_options: {
     [type.googleapis.com / mediapipe.S2tCalculatorOptions]: {
       models_path: "{{model_path}}",
       plugin_config: '{ "NUM_STREAMS": "{{num_streams|default(1, true)}}" }',
       target_device: "{{target_device|default("CPU", true)}}",
       enable_word_timestamps: {% if not enable_word_timestamps %}false{% else %}true{% endif%},
+    }
+  }
+  input_stream_handler {
+    input_stream_handler: "SyncSetInputStreamHandler",
+    options {
+      [mediapipe.SyncSetInputStreamHandlerOptions.ext] {
+        sync_set {
+          tag_index: "LOOPBACK:0"
+        }
+      }
     }
   }
 }

@@ -344,8 +344,8 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
 
         result = std::make_unique<cxxopts::ParseResult>(options->parse(argc, argv));
 
-        // HF pull mode or pull and start mode
-        if (isHFPullOrPullAndStart(this->result)) {
+        // HF pull mode or pull and start mode or starting from local folder with graph created in memory
+        if (isHFPullOrPullAndStart(this->result) || isInMemoryGraphMode(this->result)) {
             std::vector<std::string> unmatchedOptions;
             GraphExportType task;
             if (result->count("task")) {
@@ -692,13 +692,27 @@ void CLIParser::prepareModel(ModelsSettingsImpl& modelsSettings, HFSettingsImpl&
 }
 
 bool CLIParser::isHFPullOrPullAndStart(const std::unique_ptr<cxxopts::ParseResult>& result) {
+    // Keep `--task` in the broad mutually exclusive task/pull CLI category so
+    // parse-time checks that rely on this helper continue to reject combining
+    // task-based flows with config-management modes. More specific mode
+    // differentiation is handled by isInMemoryGraphMode().
     return (result->count("pull") || result->count("task"));
 }
 
+bool CLIParser::isInMemoryGraphMode(const std::unique_ptr<cxxopts::ParseResult>& result) {
+    return (result->count("task") && !result->count("source_model") && !result->count("pull"));
+}
+
 void CLIParser::prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl& hfSettings, const std::string& modelName) {
+    // Always propagate source_model so validation can detect misuse
+    if (result->count("source_model")) {
+        hfSettings.sourceModel = result->operator[]("source_model").as<std::string>();
+    }
     // Ovms Pull models mode || pull and start models mode
-    if (isHFPullOrPullAndStart(this->result)) {
-        if (result->count("pull")) {
+    if (isHFPullOrPullAndStart(this->result) || isInMemoryGraphMode(this->result)) {
+        if (isInMemoryGraphMode(this->result)) {
+            serverSettings.serverMode = IN_MEMORY_GRAPH_MODE;
+        } else if (result->count("pull")) {
             serverSettings.serverMode = HF_PULL_MODE;
         } else {
             serverSettings.serverMode = HF_PULL_AND_START_MODE;
@@ -711,8 +725,11 @@ void CLIParser::prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl&
             hfSettings.overwriteModels = result->operator[]("overwrite_models").as<bool>();
         }
         if (result->count("source_model")) {
+            // Already set above, but keep the original flow for downloadType logic
             hfSettings.sourceModel = result->operator[]("source_model").as<std::string>();
-        } else if (result->count("model_name")) {
+        } else if (result->count("model_name") && !result->count("model_path")) {
+            // Only use model_name as source_model when model_path is not set
+            // (when model_path is set, user wants to use local model without HF pull)
             hfSettings.sourceModel = result->operator[]("model_name").as<std::string>();
         }
         if ((result->count("weight-format") || result->count("extra_quantization_params")) && isOptimumCliDownload(hfSettings.sourceModel, hfSettings.ggufFilename)) {
@@ -733,6 +750,11 @@ void CLIParser::prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl&
             hfSettings.exportSettings.vocoder = result->operator[]("vocoder").as<std::string>();
         hfSettings.exportSettings.restWorkers = serverSettings.restWorkers;
         hfSettings.downloadPath = result->operator[]("model_repository_path").as<std::string>();
+        // When --task is used with --model_path but without --pull/--source_model,
+        // use model_path as the model location (no HF download needed)
+        if (!result->count("pull") && !result->count("source_model") && result->count("model_path")) {
+            hfSettings.exportSettings.modelPath = result->operator[]("model_path").as<std::string>();
+        }
         if (result->count("task")) {
             hfSettings.task = stringToEnum(result->operator[]("task").as<std::string>());
             switch (hfSettings.task) {
@@ -799,7 +821,8 @@ void CLIParser::prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl&
         if (!serverSettings.cacheDir.empty()) {
             hfSettings.exportSettings.pluginConfig.cacheDir = serverSettings.cacheDir;
         }
-    // No pull nor pull and start mode
+
+    // No pull nor pull and start mode and no start with local model_path
     } else {
         if (result->count("weight-format")) {
             throw std::logic_error("--weight-format parameter unsupported for Openvino huggingface organization models.");
@@ -841,11 +864,14 @@ void CLIParser::prepareGraphStart(HFSettingsImpl& hfSettings, ModelsSettingsImpl
     // Model settings
     if (result->count("model_name")) {
         modelsSettings.modelName = result->operator[]("model_name").as<std::string>();
-    } else {
+    } else if (!hfSettings.sourceModel.empty()) {
         modelsSettings.modelName = hfSettings.sourceModel;
     }
 
-    modelsSettings.modelPath = FileSystem::joinPath({hfSettings.downloadPath, hfSettings.sourceModel});
+    // Only override modelPath if it wasn't already set via --model_path
+    if (!result->count("model_path")) {
+        modelsSettings.modelPath = FileSystem::joinPath({hfSettings.downloadPath, hfSettings.sourceModel});
+    }
 }
 
 void CLIParser::prepare(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* modelsSettings) {

@@ -90,6 +90,7 @@ enum OvmsServerMode : int {
     HF_PULL_AND_START_MODE,
     LIST_MODELS_MODE,
     MODIFY_CONFIG_MODE,
+    IN_MEMORY_GRAPH_MODE,
     UNKNOWN_MODE
 };
 
@@ -172,7 +173,7 @@ struct HFSettingsImpl {
     std::string downloadPath = "";
     bool overwriteModels = false;
     ModelDownlaodType downloadType = GIT_CLONE_DOWNLOAD;
-    GraphExportType task = TEXT_GENERATION_GRAPH;
+    GraphExportType task = UNKNOWN_GRAPH;
     std::variant<TextGenGraphSettingsImpl, RerankGraphSettingsImpl, EmbeddingsGraphSettingsImpl, TextToSpeechGraphSettingsImpl, SpeechToTextGraphSettingsImpl, ImageGenerationGraphSettingsImpl> graphSettings;
 };
 

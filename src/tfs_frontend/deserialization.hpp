@@ -20,7 +20,9 @@
 #include <tuple>
 #include <unordered_map>
 
-#include <openvino/openvino.hpp>
+#include <openvino/core/shape.hpp>
+#include <openvino/core/type/element_type.hpp>
+#include <openvino/runtime/tensor.hpp>
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-but-set-variable"

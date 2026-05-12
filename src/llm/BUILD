@@ -50,6 +50,25 @@ mediapipe_proto_library(
 )
 
 ovms_cc_library(
+    name = "openai_api_handler",
+    hdrs = ["apis/openai_api_handler.hpp"],
+    srcs = ["apis/openai_api_handler.cpp"],
+    deps = [
+        "@com_github_tencent_rapidjson//:rapidjson",
+        "@mediapipe//mediapipe/framework:calculator_framework", # required for absl status
+        "//src:libovmsprofiler",
+        "//third_party:curl",
+        "//src:image_conversion",
+        "//src/filesystem:libovmsfilesystem",
+        "@stb//:image",
+        ":openai_request",
+        ":output_parsers",
+        "//third_party:genai",],
+    visibility = ["//visibility:public"],
+    additional_copts = COPTS_PYTHON
+)
+
+ovms_cc_library(
     name = "openai_completions_api_handler",
     hdrs = ["apis/openai_completions.hpp", "apis/openai_json_response.hpp"],
     srcs = ["apis/openai_completions.cpp"],
@@ -61,6 +80,27 @@ ovms_cc_library(
         "//src:image_conversion",
         "//src/filesystem:libovmsfilesystem",
         "@stb//:image",
+        ":openai_api_handler",
+        ":openai_request",
+        ":output_parsers",
+        "//third_party:genai",],
+    visibility = ["//visibility:public"],
+    additional_copts = COPTS_PYTHON
+)
+
+ovms_cc_library(
+    name = "openai_responses_handler",
+    hdrs = ["apis/openai_responses.hpp"],
+    srcs = ["apis/openai_responses.cpp"],
+    deps = [
+        "@com_github_tencent_rapidjson//:rapidjson",
+        "@mediapipe//mediapipe/framework:calculator_framework", # required for absl status
+        "//src:libovmsprofiler",
+        "//third_party:curl",
+        "//src:image_conversion",
+        "//src/filesystem:libovmsfilesystem",
+        "@stb//:image",
+        ":openai_api_handler",
         ":openai_request",
         ":output_parsers",
         "//third_party:genai",],
@@ -104,6 +144,12 @@ ovms_cc_library(
     name = "io_processing_utils",
     hdrs = ["io_processing/utils.hpp"],
     srcs = ["io_processing/utils.cpp"],
+    deps = [
+        "@com_github_tencent_rapidjson//:rapidjson",
+        "//src/port:rapidjson_stringbuffer",
+        "//src/port:rapidjson_writer",
+        "//src/port:rapidjson_document",
+    ],
     visibility = ["//visibility:public"],
 )
 
@@ -136,6 +182,23 @@ ovms_cc_library(
     ],
     visibility = ["//visibility:public"],
 )
+
+ovms_cc_library(
+    name = "io_processing_lfm2_tool_parser",
+    hdrs = ["io_processing/lfm2/lfm2_tool_parser.hpp"],
+    srcs = ["io_processing/lfm2/lfm2_tool_parser.cpp"],
+    deps = [
+        "@com_github_tencent_rapidjson//:rapidjson",
+        "//src/port:rapidjson_document",
+        "//src:libovmslogging",
+        "//src:libovmsstring_utils",
+        ":io_processing_utils",
+        ":io_processing_base_output_parser",
+        "//third_party:genai",
+    ],
+    visibility = ["//visibility:public"],
+)
+
 ovms_cc_library( # TODO split further so we don't have to recompile everything when changing one parser ...
     name = "output_parsers",
     hdrs = [
@@ -171,6 +234,7 @@ ovms_cc_library( # TODO split further so we don't have to recompile everything w
         ":partial_json_builder",
         ":io_processing_base_output_parser",
         ":io_processing_qwen3coder_tool_parser",
+        ":io_processing_lfm2_tool_parser",
         ":io_processing_utils",
         ":apis_tool_schema_wrapper",
     ],
@@ -228,6 +292,7 @@ ovms_cc_library(
         "//third_party:openvino",
         "@mediapipe//mediapipe/framework:calculator_framework",
         "@com_github_tencent_rapidjson//:rapidjson",
+        "//src:executor_base",
         "//src:libmodelconfigjsonparser",
         "//src:libovmslogging",
         "//src:libovmsstatus",
@@ -238,9 +303,11 @@ ovms_cc_library(
         "//src/tokenize:tokenize_parser",
         "llmcalculator_cc_proto",
         ":openai_completions_api_handler",
+        ":openai_responses_handler",
         ":generation_config_builders",
         "//src:httppayload",
         "//src:libhttpclientconnection",
+        "//src:sse_utils",
         "//third_party:genai",] + select({
         "//:disable_python": [],
         "//:not_disable_python" : [":py_jinja_template_processor"],

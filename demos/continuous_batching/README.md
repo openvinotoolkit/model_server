@@ -16,7 +16,7 @@ ovms_demos_continuous_batching_accuracy
 ```
 
 This demo shows how to deploy LLM models in the OpenVINO Model Server using continuous batching and paged attention algorithms.
-Text generation use case is exposed via OpenAI API `chat/completions` and `completions` endpoints.
+Text generation use case is exposed via OpenAI API `chat/completions`, `completions` and `responses` endpoints.
 That makes it easy to use and efficient especially on on Intel® Xeon® processors and ARC GPUs.
 
 > **Note:** This demo was tested on 4th - 6th generation Intel® Xeon® Scalable Processors, and Intel® Core Ultra Series on Ubuntu24 and Windows11.
@@ -72,7 +72,7 @@ curl http://localhost:8000/v3/models
 
 ## Request Generation
 
-Model exposes both `chat/completions` and `completions` endpoints with and without stream capabilities.
+Model exposes both `chat/completions`, `completions` and `responses` endpoints with and without stream capabilities.
 Chat endpoint is expected to be used for scenarios where conversation context should be pasted by the client and the model prompt is created by the server based on the jinja model template.
 Completion endpoint should be used to pass the prompt directly by the client and for models without the jinja template. Here is demonstrated model `Qwen/Qwen3-30B-A3B-Instruct-2507` in int4 precision. It has chat capability so `chat/completions` endpoint will be employed:
 
@@ -147,9 +147,75 @@ curl -s http://localhost:8000/v3/chat/completions -H "Content-Type: application/
 :::
 
 
+### Unary calls via Responses API using cURL
+
+::::{tab-set}
+
+:::{tab-item} Linux
+```bash
+curl http://localhost:8000/v3/responses \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "meta-llama/Meta-Llama-3-8B-Instruct",
+    "max_output_tokens":30,
+    "input": "What is OpenVINO?"
+  }'| jq .
+```
+:::
+
+:::{tab-item} Windows
+Windows Powershell
+```powershell
+(Invoke-WebRequest -Uri "http://localhost:8000/v3/responses" `
+ -Method POST `
+ -Headers @{ "Content-Type" = "application/json" } `
+ -Body '{"model": "meta-llama/Meta-Llama-3-8B-Instruct", "max_output_tokens": 30, "input": "What is OpenVINO?"}').Content
+```
+
+Windows Command Prompt
+```bat
+curl -s http://localhost:8000/v3/responses -H "Content-Type: application/json" -d "{\"model\": \"meta-llama/Meta-Llama-3-8B-Instruct\", \"max_output_tokens\": 30, \"input\": \"What is OpenVINO?\"}"
+```
+:::
+
+::::
+
+:::{dropdown} Expected Response
+```json
+{
+  "id": "resp-1724405400",
+  "object": "response",
+  "created_at": 1724405400,
+  "model": "meta-llama/Meta-Llama-3-8B-Instruct",
+  "status": "completed",
+  "output": [
+    {
+      "id": "msg-0",
+      "type": "message",
+      "role": "assistant",
+      "status": "completed",
+      "content": [
+        {
+          "type": "output_text",
+          "text": "OpenVINO is an open-source software framework developed by Intel for optimizing and deploying computer vision, machine learning, and deep learning models on various devices,",
+          "annotations": []
+        }
+      ]
+    }
+  ],
+  "usage": {
+    "input_tokens": 27,
+    "input_tokens_details": { "cached_tokens": 0 },
+    "output_tokens": 30,
+    "total_tokens": 57
+  }
+}
+```
+:::
+
 ### OpenAI Python package
 
-The endpoints `chat/completions` and `completions` are compatible with OpenAI client so it can be easily used to generate code also in streaming mode:
+The endpoints `chat/completions`, `completions` and `responses` are compatible with OpenAI client so it can be easily used to generate code also in streaming mode:
 
 Install the client library:
 ```console
@@ -261,6 +327,31 @@ So, **6 = 3**.
 ```
 :::
 
+:::{tab-item} Responses
+```python
+from openai import OpenAI
+
+client = OpenAI(
+  base_url="http://localhost:8000/v3",
+  api_key="unused"
+)
+
+stream = client.responses.create(
+    model="meta-llama/Meta-Llama-3-8B-Instruct",
+    input="Say this is a test",
+    stream=True,
+)
+for event in stream:
+    if event.type == "response.output_text.delta":
+        print(event.delta, end="", flush=True)
+```
+
+Output:
+```
+It looks like you're testing me!
+```
+:::
+
 ::::
 
 ## Check how to use AI agents with MCP servers and language models
@@ -299,5 +390,6 @@ Check the [guide of using lm-evaluation-harness](./accuracy/README.md)
 - [Official OpenVINO LLM models in HuggingFace](https://huggingface.co/collections/OpenVINO/llm)
 - [Chat Completions API](../../docs/model_server_rest_api_chat.md)
 - [Completions API](../../docs/model_server_rest_api_completions.md)
+- [Responses API](../../docs/model_server_rest_api_responses.md)
 - [Writing client code](../../docs/clients_genai.md)
 - [LLM calculator reference](../../docs/llm/reference.md)

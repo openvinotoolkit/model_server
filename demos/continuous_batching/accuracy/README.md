@@ -81,7 +81,7 @@ export OPENAI_BASE_URL=http://localhost:8000/v3
 export OPENAI_API_KEY="unused"
 git clone https://github.com/EvolvingLMMs-Lab/lmms-eval
 cd lmms-eval
-git checkout f64dfa5fd063e989a0a665d2fd0615df23888c83
+git checkout 88b23e2bfa16a1edbc16e9e238ed82130b3a4f56
 pip install -e . --extra-index-url "https://download.pytorch.org/whl/cpu"
 python -m lmms_eval \
     --model openai_compatible \

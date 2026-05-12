@@ -19,6 +19,8 @@
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+
+#include <openvino/runtime/core.hpp>
 #include <stdlib.h>
 
 #include "../get_model_metadata_impl.hpp"
@@ -758,10 +760,10 @@ TEST_F(TestLoadModel, SuccessfulLoadDummyDimensionRanges) {
 TEST_F(TestLoadModel, CorrectNumberOfStreamsSet) {
     ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
-    config.setPluginConfig({{"NUM_STREAMS", "3"}});
+    config.setPluginConfig({{"NUM_STREAMS", "4"}});
     ASSERT_EQ(modelInstance.loadModel(config), ovms::StatusCode::OK);
     ASSERT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
-    ASSERT_EQ(modelInstance.getNumOfStreams(), 3);
+    ASSERT_EQ(modelInstance.getNumOfStreams(), 4);
 }
 
 TEST_F(TestLoadModel, ScalarModelWithBatchSetToFixed) {
@@ -1212,6 +1214,60 @@ TEST(CpuThroughputStreamsNotSpecified, NotSetWhenPerfHintSpecified) {
     config.setPluginConfig({{"PERFORMANCE_HINT", "THROUGHPUT"}});
     pluginConfig = ovms::ModelInstance::prepareDefaultPluginConfig(config);
     EXPECT_EQ(pluginConfig.count("CPU_THROUGHPUT_STREAMS"), 0);
+}
+
+TEST(PluginConfigNormalization, ConvertsKnownTopLevelStringValuesToTypedValues) {
+    ovms::ModelConfig config;
+    config.setPluginConfig({{"NUM_STREAMS", "4"},
+        {"INFERENCE_NUM_THREADS", "2"},
+        {"AUTO_BATCH_TIMEOUT", "7"},
+        {"ENABLE_CPU_PINNING", "false"},
+        {"PERFORMANCE_HINT", "LATENCY"}});
+
+    ovms::plugin_config_t pluginConfig = ovms::ModelInstance::prepareDefaultPluginConfig(config);
+
+    ASSERT_EQ(pluginConfig.count("NUM_STREAMS"), 1);
+    ASSERT_TRUE(pluginConfig.at("NUM_STREAMS").is<int64_t>());
+    EXPECT_EQ(pluginConfig.at("NUM_STREAMS").as<int64_t>(), 4);
+    ASSERT_TRUE(pluginConfig.at("INFERENCE_NUM_THREADS").is<int64_t>());
+    EXPECT_EQ(pluginConfig.at("INFERENCE_NUM_THREADS").as<int64_t>(), 2);
+    ASSERT_TRUE(pluginConfig.at("AUTO_BATCH_TIMEOUT").is<int64_t>());
+    EXPECT_EQ(pluginConfig.at("AUTO_BATCH_TIMEOUT").as<int64_t>(), 7);
+    ASSERT_TRUE(pluginConfig.at("ENABLE_CPU_PINNING").is<bool>());
+    EXPECT_FALSE(pluginConfig.at("ENABLE_CPU_PINNING").as<bool>());
+    ASSERT_TRUE(pluginConfig.at("PERFORMANCE_HINT").is<std::string>());
+    EXPECT_EQ(pluginConfig.at("PERFORMANCE_HINT").as<std::string>(), "LATENCY");
+}
+
+TEST(PluginConfigNormalization, ConvertsKnownNestedDevicePropertiesStringValuesToTypedValues) {
+    ovms::ModelConfig config;
+    ov::AnyMap cpuProperties;
+    cpuProperties["NUM_STREAMS"] = std::string("3");
+    cpuProperties["INFERENCE_NUM_THREADS"] = std::string("5");
+    cpuProperties["ENABLE_CPU_PINNING"] = std::string("true");
+    cpuProperties["PERFORMANCE_HINT"] = std::string("LATENCY");
+
+    ov::AnyMap deviceProperties;
+    deviceProperties["CPU"] = cpuProperties;
+
+    ovms::plugin_config_t rawPluginConfig;
+    rawPluginConfig["DEVICE_PROPERTIES"] = deviceProperties;
+    config.setPluginConfig(rawPluginConfig);
+
+    ovms::plugin_config_t pluginConfig = ovms::ModelInstance::prepareDefaultPluginConfig(config);
+
+    ASSERT_TRUE(pluginConfig.at("DEVICE_PROPERTIES").is<ov::AnyMap>());
+    auto normalizedDeviceProperties = pluginConfig.at("DEVICE_PROPERTIES").as<ov::AnyMap>();
+    ASSERT_TRUE(normalizedDeviceProperties.at("CPU").is<ov::AnyMap>());
+    auto normalizedCpuProperties = normalizedDeviceProperties.at("CPU").as<ov::AnyMap>();
+    ASSERT_TRUE(normalizedCpuProperties.at("NUM_STREAMS").is<int64_t>());
+    EXPECT_EQ(normalizedCpuProperties.at("NUM_STREAMS").as<int64_t>(), 3);
+    ASSERT_TRUE(normalizedCpuProperties.at("INFERENCE_NUM_THREADS").is<int64_t>());
+    EXPECT_EQ(normalizedCpuProperties.at("INFERENCE_NUM_THREADS").as<int64_t>(), 5);
+    ASSERT_TRUE(normalizedCpuProperties.at("ENABLE_CPU_PINNING").is<bool>());
+    EXPECT_TRUE(normalizedCpuProperties.at("ENABLE_CPU_PINNING").as<bool>());
+    ASSERT_TRUE(normalizedCpuProperties.at("PERFORMANCE_HINT").is<std::string>());
+    EXPECT_EQ(normalizedCpuProperties.at("PERFORMANCE_HINT").as<std::string>(), "LATENCY");
 }
 
 TEST(TensorMap, TestProcessingHintFromShape) {

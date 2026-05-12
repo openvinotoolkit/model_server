@@ -24,6 +24,10 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include <openvino/runtime/compiled_model.hpp>
+#include <openvino/runtime/core.hpp>
+#include <openvino/runtime/infer_request.hpp>
+
 #include "../sequence.hpp"
 #include "../sequence_manager.hpp"
 #include "../status.hpp"

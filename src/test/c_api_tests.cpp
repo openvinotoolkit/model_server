@@ -24,6 +24,8 @@
 
 #include <gtest/gtest.h>
 
+#include <openvino/runtime/core.hpp>
+
 #include "../capi_frontend/capi_request_utils.hpp"
 #include "../deserialization_main.hpp"
 #include "../inference_executor.hpp"

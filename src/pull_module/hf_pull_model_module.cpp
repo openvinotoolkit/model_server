@@ -151,12 +151,11 @@ Status HfPullModelModule::clone() const {
     }
 
     GraphExport graphExporter;
-    status = graphExporter.createServableConfig(graphDirectory, this->hfSettings);
+    status = graphExporter.createServableConfig(graphDirectory, this->hfSettings, true);  // when downloading from HF we always create config file, but when using local model with --task we create config in memory without writing to file
     if (!status.ok()) {
         return status;
     }
     std::cout << "Graph: graph.pbtxt created in: " << graphDirectory << std::endl;
-
     return StatusCode::OK;
 }
 

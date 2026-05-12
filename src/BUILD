@@ -52,6 +52,16 @@ cc_library(
     copts = COMMON_STATIC_LIBS_COPTS,
 )
 
+ovms_cc_library(
+    name = "executor_base",
+    hdrs = ["executor_base.hpp"],
+    deps = [
+        "//src:libovmslogging",
+    ],
+    visibility = ["//visibility:public"],
+    alwayslink = 1,
+)
+
 cc_shared_library(
     name = "ovms_shared",
     dynamic_deps = [],
@@ -207,12 +217,28 @@ ovms_cc_library(
     visibility = ["//visibility:public",],
 )
 ovms_cc_library(
+    name = "libovms_shutdown_state",
+    hdrs = ["shutdown_state.hpp"],
+    srcs = ["shutdown_state.cpp"],
+    visibility = ["//visibility:public",],
+)
+ovms_cc_library(
+    name = "prediction_service_utils",
+    hdrs = ["prediction_service_utils.hpp"],
+    deps = [
+        "libovmsshape",
+        "libovmsstatus",
+    ],
+    visibility = ["//visibility:public"],
+)
+ovms_cc_library(
     name = "inference_executor",
     hdrs = ["inference_executor.hpp"],
     deps = ["libovms_outputkeeper",
             "modelinstance_h",
             "statefulrequestprocessor",
             "modelinstanceunloadguard",
+            "prediction_service_utils",
     ],
     visibility = ["//visibility:public",],
 )
@@ -572,6 +598,68 @@ ovms_cc_library(
     visibility = ["//visibility:public"],
 )
 ovms_cc_library(
+    name = "resources_cleaner",
+    hdrs = ["resources_cleaner.hpp"],
+    deps = [],
+    visibility = ["//visibility:public"],
+)
+ovms_cc_library(
+    name = "cleaner_utils",
+    hdrs = ["cleaner_utils.hpp"],
+    srcs = ["cleaner_utils.cpp"],
+    deps = [
+        "resources_cleaner",
+        "global_sequences_viewer",
+        "libovmslogging",
+        "libovmsstatus",
+    ],
+    visibility = ["//visibility:public"],
+)
+ovms_cc_library(
+    name = "modelmanager",
+    hdrs = ["modelmanager.hpp"],
+    srcs = ["modelmanager.cpp"],
+    deps = select({
+        "//conditions:default": [],
+        "//:not_disable_mediapipe" : [
+            "//src/mediapipe_internal:libovms_mediapipe",
+        ],
+    }) + [
+        "cleaner_utils",
+        "customloaders",
+        "global_sequences_viewer",
+        "libovms_config",
+        "libovms_model_instance_provider",
+        "libovms_ov_utils",
+        "libovms_servable_definition",
+        "libovms_servable_name_checker",
+        "libovmslogging",
+        "libovmsschema",
+        "libovmsstring_utils",
+        "libovmsstatus",
+        "model",
+        "modelconfig",
+        "modelinstance",
+        "modelinstanceunloadguard",
+        "resources_cleaner",
+        "//src/dags:custom_node_library_manager",
+        "//src/dags:dag_resource_manager",
+        "//src/dags:pipeline_config_parser",
+        "//src/dags:pipeline_factory",
+        "//src/dags:pipelinedefinition",
+        "//src/filesystem:libovmsfilesystem",
+        "//src/filesystem:libovmsfilesystemfactory",
+        "//src/graph_export:graph_export",
+        "//src/metrics:libovms_metric_provider",
+        "//src/metrics:libovmsmetrics",
+        "@com_github_tencent_rapidjson//:rapidjson",
+        "//src/port:rapidjson_stringbuffer",
+        "//src/port:rapidjson_writer",
+    ],
+    visibility = ["//visibility:public"],
+    additional_copts = COPTS_MEDIAPIPE,
+)
+ovms_cc_library(
     name = "rest_parser_utils",
     hdrs = [
         "rest_parser.hpp",
@@ -588,6 +676,7 @@ ovms_cc_library(
         "@tensorflow_serving//tensorflow_serving/util:json_tensor",
         "@org_tensorflow//tensorflow/core:framework",
         "//src/kfserving_api:kfserving_api_cpp",
+        "//src/utils:rapidjson_utils",
         "libovms_kfs_grpc_inference_service_h",
         "libovms_kfs_utils",
         "libovms_tensorinfo",
@@ -619,25 +708,72 @@ ovms_cc_library(
     visibility = ["//visibility:public"],
 )
 ovms_cc_library(
+    name = "statefulmodelinstance",
+    hdrs = ["statefulmodelinstance.hpp"],
+    srcs = ["statefulmodelinstance.cpp"],
+    deps = [
+        "modelinstance",
+        "modelinstance_h",
+        "global_sequences_viewer",
+        "libovms_sequence_manager",
+        "libovms_sequence_processing_spec",
+        "model_metric_reporter",
+        "modelconfig",
+        "predict_request_validation_utils",
+        "executingstreamidguard",
+        "libovmslogging",
+        "libovmsprofiler",
+        "libovmstimer",
+        "libovmsstatus",
+        "//third_party:openvino",
+    ],
+    visibility = ["//visibility:public"],
+)
+ovms_cc_library(
+    name = "model",
+    hdrs = ["model.hpp"],
+    srcs = ["model.cpp"],
+    deps = [
+        "modelinstance",
+        "statefulmodelinstance",
+        "customloaders",
+        "modelchangesubscription",
+        "modelconfig",
+        "libovms_servable_definition",
+        "libovmsmodelversion",
+        "//src/filesystem:libovmsfilesystem",
+        "//src/filesystem:libovmslocalfilesystem",
+        "libovmslogging",
+        "libovmsstatus",
+    ],
+    visibility = ["//visibility:public"],
+)
+ovms_cc_library(
+    name = "servablemanagermodule",
+    hdrs = ["servablemanagermodule.hpp"],
+    srcs = ["servablemanagermodule.cpp"],
+    deps = select({
+        "//:not_disable_python": [
+            "//src/python:libovmspythonmodule",
+        ],
+        "//:disable_python": []
+    }) + [
+        "cpp_headers",
+        "libovms_module",
+        "libovmslogging",
+        "modelmanager",
+        "//src/metrics:libovmsmetrics",
+    ],
+    additional_copts = COPTS_PYTHON,
+    visibility = ["//visibility:public"],
+)
+ovms_cc_library(
     name = "ovms_lib",
     hdrs = [
             "ovms_internal.h",
     ],
     srcs = [
         "capi_frontend/capi.cpp",
-        "cleaner_utils.cpp",
-        "cleaner_utils.hpp",
-        "//src/dags:entry_node.cpp",
-        "//src/dags:entry_node.hpp",
-        "//src/dags:exit_node.cpp",
-        "//src/dags:exit_node.hpp",
-        "//src/dags:exitnodesession.cpp",
-        "//src/dags:exitnodesession.hpp",
-        "//src/dags:gatherexitnodeinputhandler.hpp",
-        "//src/dags:pipelinedefinition.hpp",
-        "//src/dags:pipelinedefinition.cpp",
-        "//src/dags:pipeline_factory.cpp",
-        "//src/dags:pipeline_factory.hpp",
         "get_model_metadata_impl.cpp",
         "get_model_metadata_impl.hpp",
         "http_server.hpp",
@@ -649,22 +785,12 @@ ovms_cc_library(
         "grpcservermodule.cpp",
         "grpcservermodule.hpp",
         "kfs_frontend/kfs_grpc_inference_service.cpp",
-        "model.cpp",
-        "model.hpp",
-        "modelmanager.cpp",
-        "modelmanager.hpp",
         "model_service.hpp",
         "model_service.cpp",
         "prediction_service.cpp",
         "prediction_service.hpp",
-        "prediction_service_utils.hpp",
-        "predict_request_validation_utils.hpp",
-        "servablemanagermodule.cpp",
-        "servablemanagermodule.hpp",
         "server.cpp",
         "server.hpp",
-        "statefulmodelinstance.cpp",
-        "statefulmodelinstance.hpp",
          ],
         deps = select({
             "//:not_disable_python": [
@@ -692,6 +818,7 @@ ovms_cc_library(
                 "//src/audio/text_to_speech:t2s_calculator",
                 "//src/audio:audio_utils",
                 "//src/image_gen:imagegen_init",
+                "//src/llm:openai_responses_handler",
                 "//src/embeddings:embeddingscalculator_ov",
                 "//src/rerank:rerankcalculator",
                 "//src/rerank:rerankcalculator_ov",
@@ -708,11 +835,14 @@ ovms_cc_library(
             ],
         }) + [
             "cpp_headers",
+            "libovms_shutdown_state",
             "ovms_header",
             "capi_backend_impl",
             "libovms_capi_servable_metadata",
             "libmodelconfigjsonparser",
             "modelconfig",
+            "model",
+            "statefulmodelinstance",
             "modelinstance",
             "libovmscapibuffer",
             "libovmscapi_utils",
@@ -723,6 +853,8 @@ ovms_cc_library(
             "capi_dag_utils",
             "customloaders",
             "global_sequences_viewer",
+            "cleaner_utils",
+            "prediction_service_utils",
             "rest_parser_utils",
             "libovms_cliparser",
             "libovms_config",
@@ -732,11 +864,20 @@ ovms_cc_library(
             "//src/dags:dl_node",
             "//src/dags:dlnodesession",
             "//src/dags:custom_node",
+            "//src/dags:entry_node",
+            "//src/dags:exit_node",
+            "//src/dags:exitnodesession",
+            "//src/dags:pipelinedefinition",
+            "//src/dags:pipeline_factory",
+            "//src/dags:dag_capi",
+            "//src/dags:dag_kfs",
+            "//src/dags:dag_tfs",
             "//src/dags:custom_node_library_manager",
             "//src/dags:node",
             "//src/dags:node_library",
             "//src/dags:node_library_utils",
             "//src/dags:custom_node_library_internal_manager_wrapper",
+            "//src/dags:dag_resource_manager",
             "//src/dags:nodeinfo",
             "ovms_exit_codes",
             "//src/dags:nodestreamidguard",
@@ -755,6 +896,8 @@ ovms_cc_library(
             "libovms_kfs_utils",
             "libovms_kfs_grpc_inference_service_h",
             "modelchangesubscription",
+            "modelmanager",
+            "servablemanagermodule",
             "//src/filesystem:libovmslocalfilesystem", # indirectly & directly through factory
             "libovmslogging",
             "//src/metrics:libovmsmetrics",
@@ -796,6 +939,7 @@ ovms_cc_library(
             "//src/kfserving_api:kfserving_api_cpp",
             "capimodule",
             "//src/pull_module:hf_pull_model_module",
+            "//src/graph_export:graph_export",
             "//src/servables_config_manager_module:servablesconfigmanagermodule",
             "predict_request_validation_utils", # to be removed when capi has its own lib and added there @atobisze
             "kfs_backend_impl",
@@ -1231,6 +1375,12 @@ ovms_cc_library(
 
 
 ovms_cc_library(
+    name = "sse_utils",
+    hdrs = ["sse_utils.hpp"],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
     name = "libovmsstatus",
     hdrs = ["status.hpp",],
     srcs = ["status.cpp",],
@@ -1427,6 +1577,7 @@ ovms_cc_library(
             "statefulrequestprocessor",
     ],
     visibility = ["//visibility:public"],
+    alwayslink = 1,
 )
 ovms_cc_library(
     name = "kfs_backend_impl",
@@ -2242,6 +2393,7 @@ cc_test(
                 "test/llm/visual_language_model/initialization_test.cpp",
                 "test/audio/text2speech_test.cpp",
                 "test/audio/speech2text_test.cpp",
+                "test/audio/s2t_streaming_test.cpp",
             ],
             "//:disable_mediapipe" : [
                 "test/disabled_mediapipe_test.cpp",

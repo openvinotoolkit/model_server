@@ -27,6 +27,10 @@
 #include <vector>
 
 #include "../execution_context.hpp"
+#include "../config.hpp"
+#include "src/filesystem/filesystem.hpp"
+#include "src/graph_export/graph_export.hpp"
+#include "src/metrics/metric.hpp"
 #include "../model_metric_reporter.hpp"
 #include "../ov_utils.hpp"
 #include "../servable_definition_unload_guard.hpp"
@@ -63,6 +67,13 @@ const tensor_map_t MediapipeGraphDefinition::getOutputsInfo() const {
 }
 
 Status MediapipeGraphDefinition::validateForConfigFileExistence() {
+    if (GraphExport::hasInMemoryGraphContent() && ovms::Config::instance().getServerSettings().serverMode == IN_MEMORY_GRAPH_MODE) {
+        const std::string& content = GraphExport::getInMemoryGraphContent();
+        this->chosenConfig = content;
+        this->mgconfig.setCurrentGraphPbTxtMD5(ovms::FileSystem::getStringMD5(content));
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Using in-memory graph content for mediapipe graph definition: {}", this->getName());
+        return StatusCode::OK;
+    }
     std::ifstream ifs(this->mgconfig.getGraphPath());
     if (!ifs.is_open()) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to open mediapipe graph definition: {}, file: {}\n", this->getName(), this->mgconfig.getGraphPath());

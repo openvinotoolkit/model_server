@@ -19,7 +19,50 @@ load("//:common_settings.bzl", "ovms_cc_library")
 
 ovms_cc_library(
     name = "s2t_servable",
-    hdrs = ["s2t_servable.hpp"],
+    srcs = ["s2t_servable.cpp"],
+    hdrs = [
+        "s2t_executor.hpp",
+        "s2t_servable.hpp",
+    ],
+    deps = [
+        "//src:executor_base",
+        "//src:httppayload",
+        "//src:libovmslogging",
+        "//src:libmodelconfigjsonparser",
+        "//src:libovmsstring_utils",
+        "s2t_calculator_cc_proto",
+        "@com_google_absl//absl/status",
+        "//third_party:genai",
+    ],
+    visibility = ["//visibility:public"],
+    alwayslink = 1,
+)
+
+ovms_cc_library(
+    name = "s2t_streaming_handler",
+    srcs = [
+        "s2t_streaming_handler.cpp",
+        "streaming_text_queue.cpp",
+    ],
+    hdrs = [
+        "s2t_streaming_handler.hpp",
+        "streaming_text_queue.hpp",
+    ],
+    deps = [
+        "@mediapipe//mediapipe/framework:calculator_framework",
+        "//src:httppayload",
+        "//src:libovmsclient_connection",
+        "//src:libovmslogging",
+        "//src:libovmsstring_utils",
+        "//src:libovmsstatus",
+        "//src:libmodelconfigjsonparser",
+        "//src:sse_utils",
+        "//src/port:rapidjson_stringbuffer",
+        "//src/port:rapidjson_writer",
+        ":s2t_servable",
+        "s2t_calculator_cc_proto",
+        "//third_party:genai",
+    ],
     visibility = ["//visibility:public"],
     alwayslink = 1,
 )
@@ -37,11 +80,11 @@ ovms_cc_library(
         "//src/port:rapidjson_stringbuffer",
         "//src/port:rapidjson_writer",
         ":s2t_servable",
+        ":s2t_streaming_handler",
         "//third_party:genai",
         "//src/audio:audio_utils",
         "//src:libmodelconfigjsonparser",
         "//src/mediapipe_internal:node_initializer",
-        "//src:libovmsstring_utils",
     ],
     visibility = ["//visibility:public"],
     alwayslink = 1,
