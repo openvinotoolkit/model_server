@@ -1236,17 +1236,12 @@ Status handleExistingRepositoryWithoutOverwrite(const std::string& downloadPath,
         // Probe itself failed (permission denied, I/O error, ...). Do not silently fall through
         // to the "not a git repository" branch, that would mask real filesystem problems.
         SPDLOG_ERROR("Failed to probe \"{}/.git\": {}", downloadPath, ec.message());
-        std::cout << "Failed to access path on local filesystem: " << downloadPath
-                  << " (" << ec.message() << ")" << std::endl;
         return StatusCode::HF_GIT_STATUS_FAILED_TO_RESOLVE_PATH;
     }
     if (!gitEntryExists) {
         SPDLOG_INFO("Path \"{}\" exists but is not a git repository. "
                     "Skipping download and using existing files.",
             downloadPath);
-        std::cout << "Path already exists on local filesystem and is not a git repository. "
-                     "Skipping download and using existing files at: "
-                  << downloadPath << std::endl;
         return StatusCode::OK;
     }
 
@@ -1254,15 +1249,15 @@ Status handleExistingRepositoryWithoutOverwrite(const std::string& downloadPath,
     if (!repoGuard.get()) {
         // .git was present but libgit2 still could not open the repository: surface the real error
         // so the operator can act (re-clone, fix permissions, init libgit2, ...).
-        std::cout << "Model is corrupted: " << downloadPath << std::endl;
-        std::cout << "Use --overwrite_models to start download from scratch." << std::endl;
+        SPDLOG_ERROR("Model is corrupted: {}", downloadPath);
+        SPDLOG_ERROR("Use --overwrite_models to start download from scratch.");
         return mapRepositoryOpenFailureToStatus(repoGuard);
     }
 
     auto candidates = buildResumeCandidates(repoGuard.get(), downloadPath);
     if (!candidates.interruptionLikely) {
         SPDLOG_DEBUG("Model pull operation found no interruption signals for this path: {}", downloadPath);
-        std::cout << "Path already exists on local filesystem. Skipping download to path: " << downloadPath << std::endl;
+        SPDLOG_INFO("Path already exists on local filesystem. Skipping download to path: {}", downloadPath);
         return StatusCode::OK;
     }
 
