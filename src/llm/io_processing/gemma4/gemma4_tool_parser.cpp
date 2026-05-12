@@ -34,6 +34,7 @@ const std::string Gemma4ToolParser::TOOL_ARGS_STRING_INDICATOR = "<|\"|>";
 const std::string Gemma4ToolParser::TOOL_ARGS_SEPARATOR_STR = ",";
 
 const std::string Gemma4ToolParser::TURN_END_TAG = "<turn|>";
+const std::string Gemma4ToolParser::TOOL_RESPONSE_START_TAG = "<|tool_response>";
 
 const int64_t Gemma4ToolParser::botTokenId = 48;  // <|tool_call>
 const int64_t Gemma4ToolParser::eotTokenId = 49;  // <tool_call|>
@@ -360,11 +361,9 @@ rapidjson::Document Gemma4ToolParser::wrapDeltaArgs(const std::string& argsStr, 
 }
 
 std::optional<rapidjson::Document> Gemma4ToolParser::parseChunk(const std::string& chunk, ov::genai::GenerationFinishReason finishReason) {
-    if (chunk.empty()) {
-        return std::nullopt;
+    if (!chunk.empty()) {
+        this->streamingContent += chunk;
     }
-
-    this->streamingContent += chunk;
 
     if (parseNewContent()) {
         if (this->currentState == State::ToolCallParameters) {

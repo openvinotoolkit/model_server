@@ -256,7 +256,7 @@ absl::Status VisualLanguageModelLegacyServable::preparePartialResponse(std::shar
 
         executionContext->response += wrapTextInServerSideEventMessage("[DONE]");
 
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Generated complete streaming response: {}", lastTextChunk);
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Generated complete streaming response: {}", executionContext->response);
         executionContext->sendLoopbackSignal = false;
         return absl::OkStatus();
     }

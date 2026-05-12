@@ -31,6 +31,7 @@ protected:
     static const std::string TOOL_ARGS_STRING_INDICATOR;
     static const std::string TOOL_ARGS_SEPARATOR_STR;
     static const std::string TURN_END_TAG;
+    static const std::string TOOL_RESPONSE_START_TAG;
 
     static const int64_t botTokenId;
     static const int64_t eotTokenId;
@@ -58,7 +59,7 @@ public:
     }
 
     const std::vector<std::string>& getSpecialTagsToErase() const override {
-        static const std::vector<std::string> tagsToErase = {TURN_END_TAG};
+        static const std::vector<std::string> tagsToErase = {TURN_END_TAG, TOOL_RESPONSE_START_TAG};
         return tagsToErase;
     }
 
