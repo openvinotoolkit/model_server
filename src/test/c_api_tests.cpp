@@ -258,6 +258,22 @@ TEST(CAPIConfigTest, SingleModelConfiguration) {
     GTEST_SKIP() << "Use C-API to initialize in next stages, currently not supported";
 }
 
+TEST(CAPIConfigTest, AllowedLocalMediaPathRelativeIsNormalized) {
+    OVMS_ServerSettings* serverSettingsRaw = nullptr;
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsNew(&serverSettingsRaw));
+    ASSERT_NE(serverSettingsRaw, nullptr);
+    ServerSettingsImpl* serverSettings = reinterpret_cast<ServerSettingsImpl*>(serverSettingsRaw);
+
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetAllowedLocalMediaPath(serverSettingsRaw, "src/test"));
+    ASSERT_TRUE(serverSettings->allowedLocalMediaPath.has_value());
+
+    const auto configuredPath = std::filesystem::path(serverSettings->allowedLocalMediaPath.value());
+    const auto expectedPath = (std::filesystem::current_path() / "src/test").lexically_normal();
+    EXPECT_EQ(configuredPath.lexically_normal(), expectedPath);
+
+    OVMS_ServerSettingsDelete(serverSettingsRaw);
+}
+
 TEST(CAPIStartTest, InitializingMultipleServers) {
     OVMS_Server* srv1 = nullptr;
     OVMS_Server* srv2 = nullptr;

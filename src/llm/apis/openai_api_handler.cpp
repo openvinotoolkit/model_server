@@ -18,6 +18,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <filesystem>
 #include <limits>
 #include <memory>
 #include <sstream>
@@ -63,6 +64,31 @@ std::string normalizeAllowedLocalMediaPath(const std::string& allowedLocalMediaP
         return normalizedAllowedLocalMediaPath;
     }
     return normalizedAllowedLocalMediaPath + '/';
+}
+
+std::filesystem::path normalizeAndResolvePath(const std::string& pathString) {
+    std::filesystem::path path = normalizePathSeparators(pathString);
+    if (path.is_relative()) {
+        path = std::filesystem::current_path() / path;
+    }
+    path = path.lexically_normal();
+    std::error_code ec;
+    auto weakCanonicalPath = std::filesystem::weakly_canonical(path, ec);
+    if (!ec) {
+        return weakCanonicalPath.lexically_normal();
+    }
+    return path;
+}
+
+bool isPathInsideDirectory(const std::filesystem::path& testedPath, const std::filesystem::path& allowedDirectory) {
+    auto testedIt = testedPath.begin();
+    auto allowedIt = allowedDirectory.begin();
+    for (; allowedIt != allowedDirectory.end() && testedIt != testedPath.end(); ++allowedIt, ++testedIt) {
+        if (*allowedIt != *testedIt) {
+            return false;
+        }
+    }
+    return allowedIt == allowedDirectory.end();
 }
 
 }  // namespace
@@ -256,9 +282,13 @@ absl::StatusOr<ov::Tensor> loadImage(const std::string& imageSource,
         }
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Loading image from local filesystem");
         const auto normalizedAllowedLocalMediaPath = normalizeAllowedLocalMediaPath(allowedLocalMediaPath.value());
-        const auto normalizedImageSource = normalizePathSeparators(imageSource);
-        const auto firstMismatch = std::mismatch(normalizedImageSource.begin(), normalizedImageSource.end(), normalizedAllowedLocalMediaPath.begin(), normalizedAllowedLocalMediaPath.end());
-        if (firstMismatch.second != normalizedAllowedLocalMediaPath.end()) {
+        const auto imagePath = std::filesystem::path(normalizePathSeparators(imageSource));
+        if (imagePath.is_relative()) {
+            return absl::InvalidArgumentError("Relative paths are not allowed for local filesystem access");
+        }
+        const auto resolvedAllowedPath = normalizeAndResolvePath(normalizedAllowedLocalMediaPath);
+        const auto resolvedImagePath = normalizeAndResolvePath(imageSource);
+        if (!isPathInsideDirectory(resolvedImagePath, resolvedAllowedPath)) {
             return absl::InvalidArgumentError("Given filepath is not subpath of allowed_local_media_path");
         }
         try {

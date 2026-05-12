@@ -2446,6 +2446,24 @@ TEST(OvmsConfigTest, positiveMulti) {
 #endif
 }
 
+TEST(OvmsConfigTest, allowedLocalMediaPathRelativeIsNormalized) {
+    char* n_argv[] = {
+        "ovms",
+        "--allowed_local_media_path",
+        "src/test",
+        "--config_path",
+        "/config.json"};
+
+    int arg_count = 5;
+    ConstructorEnabledConfig config;
+    config.parse(arg_count, n_argv);
+
+    ASSERT_TRUE(config.getServerSettings().allowedLocalMediaPath.has_value());
+    const auto configuredPath = std::filesystem::path(config.getServerSettings().allowedLocalMediaPath.value());
+    const auto expectedPath = (std::filesystem::current_path() / "src/test").lexically_normal();
+    EXPECT_EQ(configuredPath.lexically_normal(), expectedPath);
+}
+
 TEST(OvmsConfigTest, positiveSingle) {
 #ifdef _WIN32
     const std::string cpu_extension_lib_path = "tmp_cpu_extension_library_dir";
