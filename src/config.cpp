@@ -15,7 +15,6 @@
 //*****************************************************************************
 #include "config.hpp"
 #include <algorithm>
-#include <atomic>
 #include <filesystem>
 #include <limits>
 #include <regex>

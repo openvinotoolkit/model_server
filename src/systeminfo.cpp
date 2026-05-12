@@ -44,7 +44,7 @@ uint16_t getCoreCount() {
         }
     }
 #endif
-    return detectedCoreCount;
+    return std::max<uint16_t>(detectedCoreCount, 1);
 }
 
 uint64_t getMaxOpenFilesLimit() {

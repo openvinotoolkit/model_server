@@ -153,10 +153,11 @@ Status validatePluginConfiguration(const plugin_config_t& pluginConfig, const st
 Status applyDefaultCpuProperties(ov::AnyMap& properties) {
     try {
         const uint16_t coreCount = getCoreCount();
+        const uint16_t sanitizedCoreCount = coreCount > 0 ? coreCount : 1;
 
         if (properties.find(ov::inference_num_threads.name()) == properties.end()) {
-            properties[ov::inference_num_threads.name()] = static_cast<int>(coreCount);
-            SPDLOG_DEBUG("applyDefaultCpuProperties: setting inference_num_threads to {}", coreCount);
+            properties[ov::inference_num_threads.name()] = static_cast<int>(sanitizedCoreCount);
+            SPDLOG_DEBUG("applyDefaultCpuProperties: setting inference_num_threads to {}", sanitizedCoreCount);
         }
 
 #ifdef __linux__
