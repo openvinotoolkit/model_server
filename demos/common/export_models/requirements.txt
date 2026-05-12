@@ -1,14 +1,14 @@
 --extra-index-url "https://download.pytorch.org/whl/cpu"
 --extra-index-url "https://storage.openvinotoolkit.org/simple/wheels/nightly"
 --extra-index-url "https://storage.openvinotoolkit.org/simple/wheels/pre-release"
-optimum-intel@git+https://github.com/huggingface/optimum-intel.git@39121884e050a32f9ded590f8597760d7e7ac205
+optimum-intel@git+https://github.com/huggingface/optimum-intel.git@d4dd21a3aa89c0671d85b704847ac06a378e761c
 accelerate
 datasets
 diffusers  # for image generation
 nncf
 numpy
-openvino-tokenizers==2026.2.0.dev20260501
-openvino==2026.2.0.dev20260501
+openvino-tokenizers==2026.2.0.dev20260509
+openvino==2026.2.0.dev20260509
 pillow
 sentence_transformers==5.3.0
 sentencepiece  # Required by: transformers`

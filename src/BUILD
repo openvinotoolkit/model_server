@@ -217,6 +217,12 @@ ovms_cc_library(
     visibility = ["//visibility:public",],
 )
 ovms_cc_library(
+    name = "libovms_shutdown_state",
+    hdrs = ["shutdown_state.hpp"],
+    srcs = ["shutdown_state.cpp"],
+    visibility = ["//visibility:public",],
+)
+ovms_cc_library(
     name = "prediction_service_utils",
     hdrs = ["prediction_service_utils.hpp"],
     deps = [
@@ -644,6 +650,7 @@ ovms_cc_library(
         "//src/dags:pipelinedefinition",
         "//src/filesystem:libovmsfilesystem",
         "//src/filesystem:libovmsfilesystemfactory",
+        "//src/graph_export:graph_export",
         "//src/metrics:libovms_metric_provider",
         "//src/metrics:libovmsmetrics",
         "@com_github_tencent_rapidjson//:rapidjson",
@@ -829,6 +836,7 @@ ovms_cc_library(
             ],
         }) + [
             "cpp_headers",
+            "libovms_shutdown_state",
             "ovms_header",
             "capi_backend_impl",
             "libovms_capi_servable_metadata",
@@ -932,6 +940,7 @@ ovms_cc_library(
             "//src/kfserving_api:kfserving_api_cpp",
             "capimodule",
             "//src/pull_module:hf_pull_model_module",
+            "//src/graph_export:graph_export",
             "//src/servables_config_manager_module:servablesconfigmanagermodule",
             "predict_request_validation_utils", # to be removed when capi has its own lib and added there @atobisze
             "kfs_backend_impl",

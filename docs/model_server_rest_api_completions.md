@@ -62,6 +62,7 @@ curl http://localhost/v3/completions \
 | include_stop_str_in_output | ✅ | ❌ | ✅ | bool (default: `false` if `stream=false`, `true` if `stream=true`) | Whether to include matched stop string in output. Setting it to false when `stream=true` is invalid configuration and will result in error. |
 | logprobs | ⚠️ | ✅ | ✅ | integer (optional) | Include the log probabilities on the logprob of the returned output token. **_ in stream mode logprobs are not returned. Only value 1 is accepted which returns logarithm or the chosen token _** |
 | echo | ✅ | ✅ | ✅ | boolean (optional) | Echo back the prompt in addition to the completion |
+| skip_special_tokens | ✅ | ❌ | ✅ | bool (default: `true`) | Whether to remove special tokens (e.g. `<\|endoftext\|>`, `<\|im_end\|>`) from the generated output. Set to `false` to include them, which is useful when the model uses special tokens to encode structured information. This option works with most detokenizers exported with OpenVINO Tokenizers 2024.5 or later, unless they are based on custom ops. |
 
 #### Beam search sampling specific
 | Param | OpenVINO Model Server | OpenAI /completions API | vLLM Serving Sampling Params | Type | Description |
@@ -75,11 +76,12 @@ curl http://localhost/v3/completions \
 |-------|----------|----------|----------|---------|-----|
 | temperature | ✅ | ✅ | ✅ | float (default: `1.0`) | The value is used to modulate token probabilities for multinomial sampling. It enables multinomial sampling when set to `> 0.0`. |
 | top_p | ✅ | ✅ | ✅ | float (default: `1.0`) | Controls the cumulative probability of the top tokens to consider. Must be in (0, 1]. Set to 1 to consider all tokens. |
-| top_k | ✅ | ❌ | ✅ | int (default: all tokens) | Controls the number of top tokens to consider. Set to empty or -1 to consider all tokens. |
+| min_p | ✅ | ❌ | ✅ | float (default: `0.0`) | Minimum probability threshold relative to the most likely token. Tokens with probability below `min_p` × the top token probability are filtered out. `0.0` (default) disables the filter. Typical values: `0.05`–`0.1`. Must be in `[0.0, 1.0)`. |
+| top_k | ✅ | ❌ | ✅ | int (default: `40`) | Controls the number of top tokens to consider. When multinomial sampling is active, defaults to `40` if not set. Set to `-1` to consider all tokens. |
 | repetition_penalty | ✅ | ❌ | ✅ | float (default: `1.0`) | Penalizes new tokens based on whether they appear in the prompt and the generated text so far. Values > `1.0` encourage the model to use new tokens, while values < `1.0` encourage the model to repeat tokens. `1.0` means no penalty. |
 | frequency_penalty | ✅ | ✅ | ✅ | float (default: `0.0`) | Number between -2.0 and 2.0. Positive values penalize new tokens based on their existing frequency in the text so far, decreasing the model's likelihood to repeat the same line verbatim. |
 | presence_penalty | ✅ | ✅ | ✅ | float (default: `0.0`) | Number between -2.0 and 2.0. Positive values penalize new tokens based on whether they appear in the text so far, increasing the model's likelihood to talk about new topics. |
-| seed | ✅ | ✅ | ✅ | integer (default: `0`) | Random seed to use for the generation. |
+| seed | ✅ | ✅ | ✅ | integer (default: random) | Random seed for generation in range `[0, 4294967295]`. Omit to use a random seed (non-deterministic). Set explicitly to get reproducible output. Note: `rng_seed` set in `generation_config.json` is not honoured for multinomial sampling — only a per-request seed is applied. |
 
 #### Speculative decoding specific
 
@@ -105,14 +107,12 @@ Note that below parameters are valid only for prompt lookup pipeline. Add `"prom
 
 
 #### Unsupported params from vLLM:
-- min_p
 - use_beam_search (**In OpenVINO Model Server just simply increase _best_of_ param to enable beam search**)
 - early_stopping
 - stop_token_ids
 - min_tokens
 - prompt_logprobs
 - detokenize
-- skip_special_tokens
 - spaces_between_special_tokens
 - logits_processors
 - truncate_prompt_tokens
