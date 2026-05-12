@@ -643,7 +643,7 @@ class OvmsCmdLineDockerInstance(OvmsInstance):
         )
 
     def fetch_and_store_ovms_pid(self, timeout=60):
-        self._dmesg_log.ovms_pid = None  # Not implemetned yet
+        self._dmesg_log.ovms_pid = None  # Not implemented yet
 
     def _create_logger(self):
         return OvmsCmdLineDockerLogMonitor(self.docker_id)

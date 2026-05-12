@@ -66,6 +66,8 @@ class DockerResourceMonitor(ResourceMonitor):
         # "CPU_USAGE": lambda x:
         #     [cpu / x['cpu_stats']['cpu_usage']['total_usage'] for cpu in x['cpu_stats']['cpu_usage']['percpu_usage']],
     }
+    # Optional callback invoked after save_data with (log_path).
+    on_data_saved = None
 
     def __init__(self, container):
         super().__init__()
@@ -96,6 +98,8 @@ class DockerResourceMonitor(ResourceMonitor):
             writer = csv.DictWriter(csvfile, fieldnames=DockerResourceMonitor.FIELDS)
             writer.writeheader()
             writer.writerows(self.rows)
+        if DockerResourceMonitor.on_data_saved:
+            DockerResourceMonitor.on_data_saved(log_path)
         return log_path
 
     def plot_fo_file(self, x, y, field, filename):

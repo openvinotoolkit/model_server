@@ -90,7 +90,7 @@ class EnvManager:
 
             ports_prefixes += f"{str(slice_start)[:-2]} "
 
-            # Update environemnt but don't fail if no slice keys were provided
+            # Update environment but don't fail if no slice keys were provided
             self.update_env_for_slice(pool_part_slice, "start", slice_start)
             self.update_env_for_slice(pool_part_slice, "end", slice_stop)
             self.update_env_for_slice(pool_part_slice, "size", slice_size)

@@ -256,7 +256,7 @@ class OvmsMessages:
     ERROR_EXCEPTION_CATCH = "Exception catch:"
 
     CPU_EXTENSION_LOADING_CUSTOM_CPU_EXT = "Loading custom CPU extension from {}"
-    CPU_EXTENSION_LOADED = "Custom CPU extention loaded. Adding it."
+    CPU_EXTENSION_LOADED = "Custom CPU extension loaded. Adding it."
     CPU_EXTENSION_ADDED = "Extension added."
 
     ERROR_CPU_EXTENSION_WILL_NOW_TERMINATE = "- will now terminate."

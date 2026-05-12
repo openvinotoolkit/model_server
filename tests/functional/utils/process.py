@@ -438,7 +438,7 @@ def get_pid_details_as_dict(pid):
             proc_status_dict[key.strip()] = ":".join(val).strip()   # If len(val) > 1 again join val into string.
         return proc_status_dict
     except FileNotFoundError:
-        pass    # Do not worry about it proc was killed definitly, most likely hazard during process killing
+        pass    # Do not worry about it proc was killed definitely, most likely hazard during process killing
     except Exception as exc:
         logger.exception(str(exc))
     return None

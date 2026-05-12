@@ -243,7 +243,7 @@ build_test_image = get_bool("TT_BUILD_TEST_IMAGE", False)
 save_image_to_artifacts = get_bool("TT_SAVE_IMAGE_TO_ARTIFACTS", False)
 
 """TT_SET_NO_PROXY"""
-set_no_proxy = os.environ.get("TT_SET_NO_PROXY", True)
+set_no_proxy = get_bool("TT_SET_NO_PROXY", True)
 no_proxy = os.environ.get("no_proxy", "")
 if set_no_proxy:
     os.environ["NO_PROXY"] = no_proxy

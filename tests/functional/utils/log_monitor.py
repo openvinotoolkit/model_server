@@ -27,6 +27,8 @@ logger = get_logger(__name__)
 
 
 class LogMonitor(ABC):
+    # Optional callback invoked after save_to_file with (file_path, filename).
+    on_file_saved = None
 
     def __init__(self, **kwargs):
         self.context = None
@@ -102,6 +104,8 @@ class LogMonitor(ABC):
         with open(file_path, "w", encoding="utf-8") as fd:
             for line in logs:
                 fd.write(f"{line}\n")
+        if LogMonitor.on_file_saved:
+            LogMonitor.on_file_saved(filename)
         return file_path
 
     def reset_to_logger_creation(self):

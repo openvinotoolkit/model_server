@@ -107,6 +107,8 @@ class DockerContainer(metaclass=ABCMeta):
     NOT_ON_LIST_RETRY = {"tries": 10, "delay": 2}
     GETTING_LOGS_RETRY = COMMON_RETRY
     GETTING_STATUS_RETRY = COMMON_RETRY
+    # Optional callback invoked before log check with (container_name).
+    on_log_check = None
 
     def __init__(
         self,
@@ -289,6 +291,8 @@ class DockerContainer(metaclass=ABCMeta):
     def ensure_logs_contain_specific_str(
         self, specific_str: str, acceptable_logs_length_trigger: int = 0, retry_kwargs: dict = None, **kwargs
     ):
+        if DockerContainer.on_log_check:
+            DockerContainer.on_log_check(self.name)
         args = [specific_str, acceptable_logs_length_trigger]
         getting_logs_retry = self.GETTING_LOGS_RETRY.copy()
         if retry_kwargs:

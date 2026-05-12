@@ -140,7 +140,9 @@ class OvmsCUnitTestCustomNode(DevCustomNode):
 @dataclass
 class OvmsTestDevCustomNode(DevCustomNode):
     def __post_init__(self):
-        self.src_dir = os.path.join(ovms_test_repo_path, "data", "ovms_testing_image", Paths.CUSTOM_NODE_PATH_NAME)
+        self.src_dir = os.path.join(
+            ovms_c_repo_path, "tests", "functional", "utils", "ovms_testing_image", Paths.CUSTOM_NODE_PATH_NAME
+        )
         self.src_file_path = os.path.join(self.src_dir, self.name, f"{self.name}.{self.src_type}")
         super().__post_init__()
 

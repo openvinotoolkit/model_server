@@ -92,7 +92,7 @@ def cleanup_docker(cleanup_docker_func):
     try:
         cleanup_docker_func()
     except docker_errors.APIError as error:
-        logger.warning(f"Error occured during docker cleanup: {error}")
+        logger.warning(f"Error occurred during docker cleanup: {error}")
 
 
 def cleanup_docker_containers():

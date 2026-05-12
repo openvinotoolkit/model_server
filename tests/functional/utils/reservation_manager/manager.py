@@ -112,7 +112,7 @@ class Manager:
     def _create_reservation_file(self, reservation):
         """
         Create and save information about reservation file.
-        Concurently not safe.
+        Concurrently not safe.
         Exceptions:
         - pathlib.FileExistsError if file exists
         """
@@ -177,13 +177,13 @@ class Manager:
     def reserve_and_return(self):
         """
         Create reservation and return.
-        Concurently safe.
+        Concurrently safe.
         """
 
         logger.info("Locking reservation procedure")
         try:
             self.reservation_lock.acquire()
-            logger.info("Reservation lock aquired")
+            logger.info("Reservation lock acquired")
 
             logger.info("Attempting reservation")
             reservation = self.get_available_reservation()
@@ -588,16 +588,16 @@ class Reservation:
     @staticmethod
     def validate_string(reservation):
         """Checks if string represents valid reservation"""
-        splitted = reservation.split("-")
+        elements = reservation.split("-")
 
-        assert len(splitted) == 4, (
+        assert len(elements) == 4, (
             "Reservation string should consist of 4 elements: "
-            "splitted with dash '-': "
+            "split with dash '-': "
             "'locks prefix', 'pool part start', "
             "'pool part stop', 'reserver identifier'")
 
-        pool_part_start_str = splitted[1]
-        pool_part_stop_str = splitted[2]
+        pool_part_start_str = elements[1]
+        pool_part_stop_str = elements[2]
 
         try:
             pool_part_start = int(pool_part_start_str)

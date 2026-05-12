@@ -33,7 +33,7 @@ public:
         This extension was written against Resnet50-Binary model.
         Intention is to "hijack" all layers with type="Multiply" (Our method 'evaluate(...)' will be called instead).
         We use "Multiply" because it is first layer type that use input tensor values applied to model.
-        Whole purpose of this extension is to use insted "<layer id="2" ... >" from resnet50-binary-0001.xml:
+        Whole purpose of this extension is to use instead "<layer id="2" ... >" from resnet50-binary-0001.xml:
             <layer id="2" name="Mul_/Fused_Mul_" type="Multiply" version="opset1">
                 <input>
                         <port id="0"> ... </port>   // id="0" - input parameter layer.

@@ -37,11 +37,11 @@ class TestEnvironment(object):
         if hasattr(model, "max_position_embeddings") and model.max_position_embeddings is not None:
             config_file_path = os.path.join(models_dir[0], model.name, "config.json")
             if os.path.exists(config_file_path):
-                with open(config_file_path, "r") as fo:
-                    config_data = json.load(fo)
+                with open(config_file_path, "r") as file_object:
+                    config_data = json.load(file_object)
                 config_data["max_position_embeddings"] = model.max_position_embeddings
-                with open(config_file_path, "w") as fo:
-                    json.dump(config_data, fo)
+                with open(config_file_path, "w") as file_object:
+                    json.dump(config_data, file_object)
                 logger.info(
                     f"max_position_embeddings value was updated to {model.max_position_embeddings} "
                     f"in model's config file: {config_file_path}."

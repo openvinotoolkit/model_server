@@ -73,5 +73,5 @@ if __name__ == "__main__":
     input_file_path = Path(args.input_file)
     output_file_path = Path(args.output_file)
 
-    with open(output_file_path, "w") as fo:
-        fo.write(OvmsAutoPxd(input_file_path.name).translate(input_file_path.read_text()))
+    with open(output_file_path, "w") as file_object:
+        file_object.write(OvmsAutoPxd(input_file_path.name).translate(input_file_path.read_text()))

@@ -22,7 +22,7 @@ from tests.functional.utils.reservation_manager.exceptions import ReservationNot
 
 class Runner:
     """
-    Manage running command, setup evironment variables
+    Manage running command, setup environment variables
     accoarding to Manager.Reservation instance.
     """
     def __init__(self, command, env_mgr):

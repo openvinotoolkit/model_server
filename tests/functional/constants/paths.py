@@ -68,7 +68,7 @@ class Paths:
         if isinstance(target_device, str):
             assert not all(x in target_device for x in [TargetDevice.GPU, TargetDevice.NPU])
 
-            # generalize HETERO/AUTO/MUTLI:X => `X`
+            # generalize HETERO/AUTO/MULTI:X => `X`
             if TargetDevice.GPU in target_device:
                 return os.path.join(config.ovms_file_locks_dir, f"target_device_{TargetDevice.GPU}_{i}.lock")
             if TargetDevice.NPU in target_device:
