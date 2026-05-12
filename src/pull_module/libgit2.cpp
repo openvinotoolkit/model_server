@@ -1230,7 +1230,16 @@ Status handleExistingRepositoryWithoutOverwrite(const std::string& downloadPath,
     // against whatever files are already on disk. Use --overwrite_models to replace it with a
     // fresh download.
     std::error_code ec;
-    if (!fs::exists(fs::path(downloadPath) / ".git", ec)) {
+    const bool gitEntryExists = fs::exists(fs::path(downloadPath) / ".git", ec);
+    if (ec) {
+        // Probe itself failed (permission denied, I/O error, ...). Do not silently fall through
+        // to the "not a git repository" branch, that would mask real filesystem problems.
+        SPDLOG_ERROR("Failed to probe \"{}/.git\": {}", downloadPath, ec.message());
+        std::cout << "Failed to access path on local filesystem: " << downloadPath
+                  << " (" << ec.message() << ")" << std::endl;
+        return StatusCode::HF_GIT_STATUS_FAILED_TO_RESOLVE_PATH;
+    }
+    if (!gitEntryExists) {
         SPDLOG_INFO("Path \"{}\" exists but is not a git repository. "
                     "Skipping download and using existing files.",
             downloadPath);
