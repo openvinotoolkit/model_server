@@ -45,6 +45,7 @@ set "MISTRAL_MODEL=mistralai/Mistral-7B-Instruct-v0.3"
 set "GPTOSS_MODEL=openai/gpt-oss-20b"
 set "DEVSTRAL_MODEL=unsloth/Devstral-Small-2507"
 set "LFM2_MODEL=LiquidAI/LFM2-2.6B"
+set "GEMMA4_MODEL=OpenVINO/gemma-4-E4B-it-int4-ov"
 
 echo Downloading LLM testing models to directory %~1
 set "PIP_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cpu https://storage.openvinotoolkit.org/simple/wheels/nightly"
@@ -85,6 +86,7 @@ call :download_tokenizer "%MISTRAL_MODEL%" "%~1\%MISTRAL_MODEL%"
 call :download_tokenizer "%GPTOSS_MODEL%" "%~1\%GPTOSS_MODEL%"
 call :download_tokenizer "%DEVSTRAL_MODEL%" "%~1\%DEVSTRAL_MODEL%"
 call :download_tokenizer "%LFM2_MODEL%" "%~1\%LFM2_MODEL%"
+call :download_openvino_tokenizer "%GEMMA4_MODEL%" "%~1"
 
 exit /b 0
 
@@ -130,6 +132,18 @@ if not exist "%repository%\%model%\openvino_tokenizer.bin" (
   echo Models file %repository%\%model%\openvino_tokenizer.bin exists. Skipping downloading models.
 )
 exit /b 0
+
+:download_openvino_tokenizer
+set "model=%~1"
+set "repository=%~2"
+
+if not exist "%repository%\%model%\openvino_tokenizer.bin" (
+  echo Downloading tokenizer and detokenizer for %model% model to %repository%\%model% directory.
+  mkdir "%repository%\%model%"
+  hf download "%model%" --local-dir "%repository%\%model%" --include *tokenizer*
+) else (
+  echo Models file %repository%\%model%\openvino_tokenizer.bin exists. Skipping downloading models.
+)
 
 :: Helper subroutine to download tokenizers
 :download_tokenizer
