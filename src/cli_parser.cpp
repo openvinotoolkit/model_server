@@ -225,10 +225,6 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
             "HF model destination download path",
             cxxopts::value<std::string>()->default_value(defaultModelRepoPath),
             "MODEL_REPOSITORY_PATH")
-            ("task",
-                "Choose type of model export: text_generation - chat and completion endpoints, embeddings - embeddings endpoint, rerank - rerank endpoint, image_generation - image generation/edit/inpainting endpoints, text2speech - audio/speech endpoint, speech2text - audio/transcriptions endpoint.",
-                cxxopts::value<std::string>(),
-                "TASK")
             ("weight-format",
             "Model precision used in optimum-cli export with conversion",
             cxxopts::value<std::string>()->default_value("int8"),
@@ -311,6 +307,12 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
                 "Determines how many sequences can be processed concurrently by one model instance. When that value is reached, attempt to start a new sequence will result in error.",
                 cxxopts::value<uint32_t>(),
                 "MAX_SEQUENCE_NUMBER");
+
+        options->add_options("generative task (applies to: pull hf model, single model)")
+            ("task",
+                "Specifies the generative task for the local model. It should be followed by task specific parameters. Supported tasks: text_generation, embeddings, rerank, image_generation, text2speech, speech2text. It creates the pipeline graph in memory based on the provided task-specific options.",
+                cxxopts::value<std::string>(),
+                "TASK");
         configOptions->custom_help("");
         configOptions->add_options(CONFIG_MANAGEMENT_HELP_GROUP)
             ("list_models",
