@@ -343,7 +343,8 @@ public:
      * Opens a git repository at the specified filesystem path.
      *
      * @param path Absolute or relative path to the git repository directory.
-     * @note Works on specific git repository location (searches for .git directory).
+     * @note Opens the repository only at the provided path; parent directories
+     * are not searched for a .git directory.
      */
     explicit GitRepositoryGuard(const std::string& path) {
         // GIT_REPOSITORY_OPEN_NO_SEARCH: open the repository ONLY at `path`.
