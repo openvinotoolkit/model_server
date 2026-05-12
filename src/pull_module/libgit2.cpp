@@ -346,7 +346,12 @@ public:
      * @note Works on specific git repository location (searches for .git directory).
      */
     explicit GitRepositoryGuard(const std::string& path) {
-        int error = git_repository_open_ext(&repo, path.c_str(), 0, nullptr);
+        // GIT_REPOSITORY_OPEN_NO_SEARCH: open the repository ONLY at `path`.
+        // Without this flag (i.e. flags=0) libgit2 walks up the parent directory
+        // tree looking for a .git, which on hosts where the model directory is
+        // nested under another git checkout (e.g. Jenkins workspace) would
+        // misidentify the outer repo as ours and skip the download silently.
+        int error = git_repository_open_ext(&repo, path.c_str(), GIT_REPOSITORY_OPEN_NO_SEARCH, nullptr);
         if (error < 0) {
             const git_error* err = git_error_last();
             if (err) {
