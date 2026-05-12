@@ -21,6 +21,8 @@
 #include <drogon/drogon.h>
 #include "../../http_frontend/multi_part_parser_drogon_impl.hpp"
 #include "../../audio/audio_utils.hpp"
+#include "../../audio/speech_to_text/s2t_servable.hpp"
+#include "../../http_payload.hpp"
 #include "../../http_rest_api_handler.hpp"
 #include "../../server.hpp"
 #include "rapidjson/document.h"
@@ -76,6 +78,54 @@ public:
 std::unique_ptr<std::thread> Speech2TextHttpTest::t;
 std::string Speech2TextHttpTest::body;
 std::string Speech2TextHttpTest::modelNameForm;
+
+TEST(SttServableParseTemperatureTest, negativeTemperatureEnableSampling) {
+    HttpPayload payload;
+    std::shared_ptr<MockedMultiPartParser> multipartParser = std::make_shared<MockedMultiPartParser>();
+    payload.multipartParser = multipartParser;
+    EXPECT_CALL(*multipartParser, getFieldByName("temperature"))
+        .WillOnce(::testing::Return("-1.0"));
+
+    ov::genai::WhisperGenerationConfig config;
+    config.do_sample = false;
+
+    auto status = SttServable::parseTemperature(payload, config);
+    EXPECT_TRUE(status.ok());
+    EXPECT_FLOAT_EQ(config.temperature, -1.0f);
+    EXPECT_TRUE(config.do_sample);
+}
+
+TEST(SttServableParseTemperatureTest, zeroTemperatureDoesNotEnableSampling) {
+    HttpPayload payload;
+    std::shared_ptr<MockedMultiPartParser> multipartParser = std::make_shared<MockedMultiPartParser>();
+    payload.multipartParser = multipartParser;
+    EXPECT_CALL(*multipartParser, getFieldByName("temperature"))
+        .WillOnce(::testing::Return("0"));
+
+    ov::genai::WhisperGenerationConfig config;
+    config.do_sample = false;
+
+    auto status = SttServable::parseTemperature(payload, config);
+    EXPECT_TRUE(status.ok());
+    EXPECT_FLOAT_EQ(config.temperature, 0.0f);
+    EXPECT_FALSE(config.do_sample);
+}
+
+TEST(SttServableParseTemperatureTest, positiveTemperatureEnablesSampling) {
+    HttpPayload payload;
+    std::shared_ptr<MockedMultiPartParser> multipartParser = std::make_shared<MockedMultiPartParser>();
+    payload.multipartParser = multipartParser;
+    EXPECT_CALL(*multipartParser, getFieldByName("temperature"))
+        .WillOnce(::testing::Return("1.0"));
+
+    ov::genai::WhisperGenerationConfig config;
+    config.do_sample = false;
+
+    auto status = SttServable::parseTemperature(payload, config);
+    EXPECT_TRUE(status.ok());
+    EXPECT_FLOAT_EQ(config.temperature, 1.0f);
+    EXPECT_TRUE(config.do_sample);
+}
 
 // ====================== Speech2Text Streaming Tests ======================
 
