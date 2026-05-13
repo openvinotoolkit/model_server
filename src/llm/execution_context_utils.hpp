@@ -15,19 +15,12 @@
 //*****************************************************************************
 #pragma once
 
-#include <cstdint>
-#include <string>
+#include "src/mediapipe_internal/graph_side_packets.hpp"
+#include "src/status.hpp"
 
 namespace ovms {
 
-inline const std::string PYTHON_SESSION_SIDE_PACKET_TAG = "py";
-inline const std::string LLM_SESSION_SIDE_PACKET_TAG = "llm";
-inline const std::string LLM_EXECUTION_CONTEXT_SESSION_SIDE_PACKET_TAG = "llm_ctx";
-inline const std::string IMAGE_GEN_SESSION_SIDE_PACKET_TAG = "pipes";
-inline const std::string EMBEDDINGS_SESSION_SIDE_PACKET_TAG = "embeddings_servable";
-inline const std::string RERANK_SESSION_SIDE_PACKET_TAG = "rerank_servable";
-inline const std::string STT_SESSION_SIDE_PACKET_TAG = "s2t_servable";
-inline const std::string TTS_SESSION_SIDE_PACKET_TAG = "t2s_servable";
-inline constexpr int64_t STARTING_TIMESTAMP_VALUE = 0;
+Status initializeLlmExecutionContexts(const GenAiServableMap& servableMap, GenAiExecutionContextMap& executionContextMap);
+void resetLlmExecutionContexts(GenAiExecutionContextMap& executionContextMap);
 
 }  // namespace ovms

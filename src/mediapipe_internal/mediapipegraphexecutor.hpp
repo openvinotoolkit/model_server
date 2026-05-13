@@ -29,6 +29,7 @@
 #include "../profiler.hpp"
 #include "../status.hpp"
 #include "../timer.hpp"
+#include "src/llm/execution_context_utils.hpp"
 #pragma warning(push)
 #pragma warning(disable : 4324 6001 6385 6386 6326 6011 4309 4005 4456 6246)
 #pragma GCC diagnostic push
@@ -161,10 +162,6 @@ public:
         PythonBackend* pythonBackend,
         MediapipeServableMetricReporter* mediapipeServableMetricReporter);
 
-    Status initializeLlmExecutionContexts(GenAiExecutionContextMap& executionContextMap);
-
-    void resetLlmExecutionContexts(GenAiExecutionContextMap& executionContextMap);
-
     template <typename RequestType, typename ResponseType>
     Status infer(const RequestType* request, ResponseType* response, ExecutionContext executionContext) {
         OVMS_PROFILE_FUNCTION();
@@ -181,7 +178,7 @@ public:
     template <typename RequestType, typename ResponseType>
     Status inferWithQueue(const RequestType* request, ResponseType* response, ExecutionContext executionContext, MetricCounterGuard& failedRequestsGuard) {
         ::mediapipe::CalculatorGraph& graph = this->guard->graph;
-        auto llmContextStatus = initializeLlmExecutionContexts(this->guard->gh->genAiExecutionContextMap);
+        auto llmContextStatus = initializeLlmExecutionContexts(this->sidePacketMaps.genAiServableMap, this->guard->gh->genAiExecutionContextMap);
         if (!llmContextStatus.ok()) {
             return llmContextStatus;
         }
@@ -231,7 +228,7 @@ public:
     Status inferWithoutQueue(const RequestType* request, ResponseType* response, ExecutionContext executionContext, MetricCounterGuard& failedRequestsGuard) {
         ::mediapipe::CalculatorGraph graph;
         MP_RETURN_ON_FAIL(graph.Initialize(this->config), std::string("failed initialization of MediaPipe graph: ") + this->name, StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR);
-        auto llmContextStatus = initializeLlmExecutionContexts(this->sidePacketMaps.genAiExecutionContextMap);
+        auto llmContextStatus = initializeLlmExecutionContexts(this->sidePacketMaps.genAiServableMap, this->sidePacketMaps.genAiExecutionContextMap);
         if (!llmContextStatus.ok()) {
             return llmContextStatus;
         }
@@ -358,7 +355,7 @@ public:
             }
             MetricGaugeGuard currentGraphs(this->mediapipeServableMetricReporter->currentGraphs.get());
             ::mediapipe::CalculatorGraph& graph = this->guard->graph;
-            auto llmContextStatus = initializeLlmExecutionContexts(this->guard->gh->genAiExecutionContextMap);
+            auto llmContextStatus = initializeLlmExecutionContexts(this->sidePacketMaps.genAiServableMap, this->guard->gh->genAiExecutionContextMap);
             if (!llmContextStatus.ok()) {
                 return llmContextStatus;
             }
@@ -470,7 +467,7 @@ public:
                 // Init
                 MP_RETURN_ON_FAIL(graph.Initialize(this->config), "graph initialization", StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR);
             }
-            auto llmContextStatus = initializeLlmExecutionContexts(this->sidePacketMaps.genAiExecutionContextMap);
+            auto llmContextStatus = initializeLlmExecutionContexts(this->sidePacketMaps.genAiServableMap, this->sidePacketMaps.genAiExecutionContextMap);
             if (!llmContextStatus.ok()) {
                 return llmContextStatus;
             }

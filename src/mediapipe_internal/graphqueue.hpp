@@ -68,7 +68,6 @@ struct GraphHelper {
 };
 // we need to keep Graph alive during MP reload hence shared_ptr
 class GraphQueue : public Queue<std::shared_ptr<GraphHelper>> {
-public:  // XXX TODO make private? we need to access in mediapipegraphdefinition to set side packets though
     std::shared_ptr<GraphSidePackets> sidePacketMaps;
 
 public:

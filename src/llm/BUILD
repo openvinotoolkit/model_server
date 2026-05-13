@@ -317,6 +317,19 @@ ovms_cc_library(
 )
 
 ovms_cc_library(
+    name = "execution_context_utils",
+    hdrs = ["execution_context_utils.hpp"],
+    srcs = ["execution_context_utils.cpp"],
+    deps = [
+        ":genai_servables",
+        "//src/mediapipe_internal:graph_side_packets",
+        "//src:libovmslogging",
+        "//src:libovmsstatus",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
     name = "py_jinja_template_processor",
     hdrs = ["py_jinja_template_processor.hpp"],
     srcs = ["py_jinja_template_processor.cpp"],

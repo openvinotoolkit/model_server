@@ -29,7 +29,7 @@
 #pragma GCC diagnostic pop
 #pragma warning(pop)
 
-#include "src/llm/servable.hpp"
+#include "src/llm/execution_context_utils.hpp"
 
 #if (PYTHON_DISABLE == 0)
 #include "src/python/python_backend.hpp"
@@ -82,33 +82,5 @@ MediapipeGraphExecutor::MediapipeGraphExecutor(
     pythonBackend(pythonBackend),
     currentStreamTimestamp(::mediapipe::Timestamp(STARTING_TIMESTAMP_VALUE)),
     mediapipeServableMetricReporter(mediapipeServableMetricReporter) {}
-
-Status MediapipeGraphExecutor::initializeLlmExecutionContexts(GenAiExecutionContextMap& executionContextMap) {
-    for (const auto& [nodeName, servable] : this->sidePacketMaps.genAiServableMap) {
-        auto it = executionContextMap.find(nodeName);
-        if (it == executionContextMap.end() || !it->second) {
-            SPDLOG_DEBUG("Missing LLM execution context holder for node: {}", nodeName);
-            return StatusCode::INTERNAL_ERROR;
-        }
-        auto& holder = it->second;
-        std::lock_guard<std::mutex> lock(holder->mutex);
-        holder->executionContext = servable->createExecutionContext();
-        if (!holder->executionContext) {
-            SPDLOG_DEBUG("Failed to create LLM execution context for node: {}", nodeName);
-            return StatusCode::INTERNAL_ERROR;
-        }
-    }
-    return StatusCode::OK;
-}
-
-void MediapipeGraphExecutor::resetLlmExecutionContexts(GenAiExecutionContextMap& executionContextMap) {
-    for (auto& [_, holder] : executionContextMap) {
-        if (!holder) {
-            continue;
-        }
-        std::lock_guard<std::mutex> lock(holder->mutex);
-        holder->executionContext.reset();
-    }
-}
 
 }  // namespace ovms
