@@ -63,6 +63,11 @@ void trim(std::string& str) {
     rtrim(str);
 }
 
+std::string trim_copy(std::string str) {
+    trim(str);
+    return str;
+}
+
 void erase_spaces(std::string& str) {
     str.erase(std::remove_if(str.begin(), str.end(),
                   [](char c) -> bool {

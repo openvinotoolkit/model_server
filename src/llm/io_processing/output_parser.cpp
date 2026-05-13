@@ -28,7 +28,10 @@
 #include "qwen3/reasoning_parser.hpp"
 #include "qwen3coder/qwen3coder_tool_parser.hpp"
 #include "devstral/tool_parser.hpp"
+#include "gemma4/gemma4_reasoning_parser.hpp"
 #include "gptoss/reasoning_parser.hpp"
+#include "lfm2/lfm2_tool_parser.hpp"
+#include "gemma4/gemma4_tool_parser.hpp"
 
 namespace ovms {
 OutputParser::TagLookupStatus OutputParser::StreamOutputCache::lookupTag(const std::string& tag) const {
@@ -106,14 +109,31 @@ const std::string& OutputParser::StreamOutputCache::getBuffer() const {
     return buffer;
 }
 
-rapidjson::Document OutputParser::parseContentChunk(ProcessingPhase newPhase) {
+std::optional<rapidjson::Document> OutputParser::parseContentChunk(ProcessingPhase newPhase) {
+    std::string chunkContent = streamOutputCache.getBuffer();
+    if (toolParser != nullptr) {
+        auto& specialTagsToErase = toolParser->getSpecialTagsToErase();
+        for (const auto& tag : specialTagsToErase) {
+            size_t pos = 0;
+            while ((pos = chunkContent.find(tag, pos)) != std::string::npos) {
+                chunkContent.erase(pos, tag.length());
+            }
+        }
+    }
+
+    if (chunkContent.empty() || chunkContent == "") {
+        streamOutputCache.clear();
+        processingPhase = newPhase;
+        return std::nullopt;
+    }
+
     rapidjson::StringBuffer buffer;
     rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
     writer.StartObject();
     writer.String("delta");
     writer.StartObject();
     writer.String("content");
-    writer.String(streamOutputCache.getBuffer().c_str());
+    writer.String(chunkContent.c_str());
     writer.EndObject();
     writer.EndObject();
     rapidjson::Document doc;
@@ -171,12 +191,18 @@ OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string to
         toolParser = std::make_unique<Qwen3CoderToolParser>(tokenizer, toolNameSchemaMap);
     } else if (toolParserName == "devstral") {
         toolParser = std::make_unique<DevstralToolParser>(tokenizer, toolNameSchemaMap);
+    } else if (toolParserName == "lfm2") {
+        toolParser = std::make_unique<Lfm2ToolParser>(tokenizer);
+    } else if (toolParserName == "gemma4") {
+        toolParser = std::make_unique<Gemma4ToolParser>(tokenizer);
     } else if (!toolParserName.empty()) {
         throw std::runtime_error("Unsupported tool parser: " + toolParserName);
     }
 
     if (reasoningParserName == "qwen3") {
         reasoningParser = std::make_unique<Qwen3ReasoningParser>(tokenizer);
+    } else if (reasoningParserName == "gemma4") {
+        reasoningParser = std::make_unique<Gemma4ReasoningParser>(tokenizer);
     } else if (reasoningParserName == "gptoss") {
         reasoningParser = std::make_unique<GptOssReasoningParser>(tokenizer);
     } else if (!reasoningParserName.empty()) {

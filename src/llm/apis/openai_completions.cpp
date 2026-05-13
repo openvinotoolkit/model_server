@@ -201,8 +201,7 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
                     return absl::InvalidArgumentError("Invalid message structure - content array is empty");
                 }
                 jsonChanged = true;
-                Value contentText(rapidjson::kStringType);
-                contentText.SetString("", doc.GetAllocator());
+                std::string combinedText;
                 for (auto& v : member->value.GetArray()) {
                     if (!v.IsObject()) {
                         return absl::InvalidArgumentError("Invalid message structure - content array should contain objects");
@@ -216,7 +215,10 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
                         if (!entry.HasMember("text") || !entry["text"].IsString()) {
                             return absl::InvalidArgumentError("Invalid message structure - content text missing");
                         }
-                        contentText = entry["text"];
+                        if (!combinedText.empty()) {
+                            combinedText += "\n";
+                        }
+                        combinedText.append(entry["text"].GetString(), entry["text"].GetStringLength());
                         continue;
                     } else if (entryType == std::string("image_url")) {
                         if (!entry.HasMember("image_url") || !entry["image_url"].IsObject()) {
@@ -236,8 +238,10 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
                         return absl::InvalidArgumentError("Unsupported content type");
                     }
                 }
-                // Pulling out text from nested structure to the "content" field for text and replace whole "content" value for image data
-                // with empty string, since images are stored separately in request.images
+                // Flatten all text parts (joined with newlines) into the "content" field.
+                // Images are stored separately in request.imageHistory.
+                Value contentText(rapidjson::kStringType);
+                contentText.SetString(combinedText.c_str(), combinedText.length(), doc.GetAllocator());
                 member->value = contentText;
                 // Add new field to the last message in history if content is text
                 if (member->value.IsString()) {
@@ -311,7 +315,7 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const std::vect
                 jsonResponse.StartArray("content");
 
                 for (int i = 0; i < generationOutput.generated_ids.size(); i++) {
-                    std::string token = tokenizer.decode(std::vector<int64_t>({generationOutput.generated_ids[i]}));
+                    std::string token = tokenizer.decode(std::vector<int64_t>({generationOutput.generated_ids[i]}), ov::genai::skip_special_tokens(this->request.skipSpecialTokens));
                     float logprob = generationOutput.generated_log_probs[i];
                     jsonResponse.LogprobObject(token, logprob);
                 }
@@ -320,7 +324,7 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const std::vect
             if (endpoint == Endpoint::COMPLETIONS) {
                 jsonResponse.StartArray("tokens");
                 for (int i = 0; i < generationOutput.generated_ids.size(); i++) {
-                    std::string token = tokenizer.decode(std::vector<int64_t>({generationOutput.generated_ids[i]}));
+                    std::string token = tokenizer.decode(std::vector<int64_t>({generationOutput.generated_ids[i]}), ov::genai::skip_special_tokens(this->request.skipSpecialTokens));
                     jsonResponse.String(token);
                 }
                 jsonResponse.EndArray();
@@ -335,7 +339,7 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const std::vect
                 jsonResponse.StartArray("top_logprobs");
                 for (int i = 0; i < generationOutput.generated_ids.size(); i++) {
                     jsonResponse.StartObject();
-                    std::string token = tokenizer.decode(std::vector<int64_t>({generationOutput.generated_ids[i]}));
+                    std::string token = tokenizer.decode(std::vector<int64_t>({generationOutput.generated_ids[i]}), ov::genai::skip_special_tokens(this->request.skipSpecialTokens));
                     float logprob = generationOutput.generated_log_probs[i];
                     jsonResponse.Logprob(token, logprob);
                     jsonResponse.EndObject();
@@ -347,7 +351,7 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const std::vect
                     if (i == 0) {
                         jsonResponse.TextOffsetValue(0);
                     } else {
-                        std::string textBeforeToken = tokenizer.decode(std::vector<int64_t>({generationOutput.generated_ids.begin(), generationOutput.generated_ids.begin() + i}));
+                        std::string textBeforeToken = tokenizer.decode(std::vector<int64_t>({generationOutput.generated_ids.begin(), generationOutput.generated_ids.begin() + i}), ov::genai::skip_special_tokens(this->request.skipSpecialTokens));
                         jsonResponse.TextOffsetValue(textBeforeToken.size());
                     }
                 }
@@ -454,7 +458,7 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(ov::genai::Enco
     return jsonResponse.ToString();
 }
 
-std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(ov::genai::VLMDecodedResults& results) {
+std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(ov::genai::VLMDecodedResults& results, const std::string& textResponse) {
     OVMS_PROFILE_FUNCTION();
     usage.promptTokens = results.perf_metrics.get_num_input_tokens();
     usage.completionTokens = results.perf_metrics.get_num_generated_tokens();
@@ -466,13 +470,12 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(ov::genai::VLMD
     jsonResponse.StartArray("choices");
     int index = 0;
 
-    for (int i = 0; i < results.texts.size(); i++) {
-        const std::string& text = results.texts[i];
-        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Generated text: {}", text);
+    if (!textResponse.empty()) {
+        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Generated text: {}", textResponse);
 
         // Workaround to use OVMS unary parsers: get tokens from string
         // This way we have detokenized text from GenAI and calculate tokens, to further convert back to text again, in parseOutputIfNeeded...
-        auto generatedTokens = encodeTextToTokens(text);
+        auto generatedTokens = encodeTextToTokens(textResponse);
 
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Generated tokens: {}", generatedTokens);
         ParsedOutput parsedOutput = parseOutputIfNeeded(generatedTokens);

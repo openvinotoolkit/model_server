@@ -47,7 +47,7 @@ curl -X POST http://localhost:8000/v3/audio/translations \
 | prompt | ❌ | ✅ | string | An optional text to guide the model's style or continue a previous audio segment. |
 | response_format | ❌ | ✅ | string | The format of the output. |
 | stream | ❌ | ✅ | boolean | Generate the response in streaming mode. |
-| temperature | ⚠️ | ✅ | number | The sampling temperature, between 0 and 1. |
+| temperature | ✅ | ✅ | float (default: `1.0`) | The sampling temperature, cannot be negative. |
 | timestamp_granularities | ⚠️ | ✅ | array | The timestamp granularities to populate for this transcription. Supported values: "word" and "segment" (⚠️**Note**: To enable word timestamps `enable_word_timestamps: true` need to be set in graph.pbtxt) |
 
 
@@ -58,7 +58,7 @@ curl -X POST http://localhost:8000/v3/audio/translations \
 | file | ⚠️ | ✅ | file (required) | The audio file object to transcribe, in one of these formats: flac, mp3, mp4, mpeg, mpga, m4a, ogg, wav, or webm. (⚠️**Note**: For now supported formats are mp3 and wav) |
 | prompt | ❌ | ✅ | string | An optional text to guide the model's style or continue a previous audio segment. |
 | response_format | ❌ | ✅ | string | The format of the output. |
-| temperature | ❌ | ✅ | number | The sampling temperature, between 0 and 1. |
+| temperature |  ✅ | ✅ | float (default: `1.0`) | The sampling temperature, cannot be negative. |
 
 ## Response
 ### Transcription
