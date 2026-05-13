@@ -13,24 +13,24 @@
 :: See the License for the specific language governing permissions and
 :: limitations under the License.
 ::
-@echo off
+@echo on
 setlocal EnableExtensions EnableDelayedExpansion
 
 set "fullLog=%~1"
 set "summaryLog=%~2"
-if "%fullLog%"=="" set "fullLog=win_full_test.log"
-if "%summaryLog%"=="" set "summaryLog=win_test_summary.log"
+if not defined fullLog set "fullLog=win_full_test.log"
+if not defined summaryLog set "summaryLog=win_test_summary.log"
 
-if not exist "%fullLog%" (
-    echo [ERROR] Full test log not found: %fullLog%
+if not exist "!fullLog!" (
+    echo [ERROR] Full test log not found: !fullLog!
     exit /b 1
 )
-if not exist "%summaryLog%" (
-    echo [WARN] Summary log not found: %summaryLog%
+if not exist "!summaryLog!" (
+    echo [WARN] Summary log not found: !summaryLog!
 )
 
-set "parserOutputTmp=%summaryLog%.parse.tmp"
-set "summaryBackupTmp=%summaryLog%.orig.tmp"
+set "parserOutputTmp=!summaryLog!.parse.tmp"
+set "summaryBackupTmp=!summaryLog!.orig.tmp"
 
 set "CRASH_PATTERN=segmentation fault\|segfault\|abnormal termination\|access violation\|sigsegv\|seh exception\|0xc0000005\|unknown file: error:"
 
@@ -79,8 +79,7 @@ set "lastRunLine="
 for /F "tokens=1 delims=:" %%A in ('grep -a -n "\[ RUN" "!fullLog!" ^| tail -1') do (
     set "lastRunLine=%%A"
 )
-echo !lastRunLine! | findstr /R "^[0-9][0-9]*$" > nul
-if !errorlevel! equ 0 (
+if defined lastRunLine (
     sed -n "!lastRunLine!,$p" "!fullLog!" | head -120
 ) else (
     echo [WARN] Could not determine last RUN line. Showing recent RUN markers and log tail.
@@ -95,13 +94,11 @@ set "firstFailedRunLine="
 for /F "tokens=1 delims=:" %%A in ('grep -a -n "^\[  FAILED  \]" "!fullLog!" ^| grep -a -v "tests, listed below" ^| head -1') do (
     set "firstFailedLine=%%A"
 )
-echo !firstFailedLine! | findstr /R "^[0-9][0-9]*$" > nul
-if !errorlevel! equ 0 (
+if defined firstFailedLine (
     for /F "tokens=1 delims=:" %%B in ('sed -n "1,!firstFailedLine!p" "!fullLog!" ^| grep -a -n "\[ RUN" ^| tail -1') do (
         set "firstFailedRunLine=%%B"
     )
-    echo !firstFailedRunLine! | findstr /R "^[0-9][0-9]*$" > nul
-    if !errorlevel! equ 0 (
+    if defined firstFailedRunLine (
         sed -n "!firstFailedRunLine!,$p" "!fullLog!" | head -160
     ) else (
         echo [WARN] Could not determine RUN line for first FAILED test.
@@ -114,11 +111,10 @@ echo === SEH/Access Violation Context ===
 set "firstSehLine="
 set "firstSehRunLine="
 set "firstSehRunEntry="
-for /F "tokens=1 delims=:" %%A in ('findstr /N /I /C:"SEH exception" /C:"0xc0000005" /C:"access violation" "!fullLog!" ^| head -1') do (
+for /F "tokens=1 delims=:" %%A in ('grep -a -n -i "unknown file: error: SEH exception\|0xc0000005\|access violation\|SEH exception" "!fullLog!" ^| head -1') do (
     set "firstSehLine=%%A"
 )
-echo !firstSehLine! | findstr /R "^[0-9][0-9]*$" > nul
-if !errorlevel! equ 0 (
+if defined firstSehLine (
     for /F "tokens=1 delims=:" %%B in ('sed -n "1,!firstSehLine!p" "!fullLog!" ^| grep -a -n "\[ RUN" ^| tail -1') do (
         set "firstSehRunLine=%%B"
     )
@@ -127,17 +123,16 @@ if !errorlevel! equ 0 (
     )
     if defined firstSehRunEntry (
         echo [INFO] Unit test at first SEH marker: !firstSehRunEntry!
+    ) else (
+        echo [WARN] Could not determine unit test name at first SEH marker.
     )
-    echo !firstSehRunLine! | findstr /R "^[0-9][0-9]*$" > nul
-    if !errorlevel! equ 0 (
+    if defined firstSehRunLine (
         sed -n "!firstSehRunLine!,$p" "!fullLog!" | head -160
     ) else (
         echo [WARN] Could not determine RUN line for SEH exception entry.
-        if defined lastRunEntry echo [INFO] Fallback unit test attribution: !lastRunEntry!
     )
 ) else (
     echo [INFO] No SEH/Access Violation entry found.
-    if defined lastRunEntry echo [INFO] Fallback unit test attribution: !lastRunEntry!
 )
 echo.
 echo === Segfault/Crash Messages ^(if any^) ===
@@ -146,10 +141,10 @@ echo.
 echo [ERROR] Check tests summary in '!summaryLog!' and tests logs in '!fullLog!'. Rerun failed test with: windows_setupvars.bat and %cd%\bazel-bin\src\ovms_test.exe --gtest_filter='*.*'
 ) > "!parserOutputTmp!" 2>&1
 
-if exist "%summaryLog%" (
-    copy /Y "%summaryLog%" "%summaryBackupTmp%" > nul
+if exist "!summaryLog!" (
+    copy /Y "!summaryLog!" "!summaryBackupTmp!" > nul
 ) else (
-    type nul > "%summaryBackupTmp%"
+    type nul > "!summaryBackupTmp!"
 )
 
 (
@@ -158,7 +153,7 @@ if exist "%summaryLog%" (
     type "%summaryBackupTmp%"
 ) > "%summaryLog%"
 
-if exist "%parserOutputTmp%" del /f /q "%parserOutputTmp%"
-if exist "%summaryBackupTmp%" del /f /q "%summaryBackupTmp%"
+if exist "!parserOutputTmp!" del /f /q "!parserOutputTmp!"
+if exist "!summaryBackupTmp!" del /f /q "!summaryBackupTmp!"
 
 exit /b 1
