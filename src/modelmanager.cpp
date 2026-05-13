@@ -55,6 +55,7 @@
 #include "dags/pipelinedefinition.hpp"
 #include "filesystem/filesystem.hpp"
 #include "filesystem/filesystemfactory.hpp"
+#include "graph_export/graph_export.hpp"
 #include "logging.hpp"
 #if (MEDIAPIPE_DISABLE == 0)
 #include "mediapipe_internal/mediapipefactory.hpp"
@@ -69,6 +70,7 @@
 #include "schema.hpp"
 #include "servable_definition.hpp"
 #include "stringutils.hpp"
+#include "systeminfo.hpp"
 
 namespace ovms {
 
@@ -79,7 +81,6 @@ const std::string DEFAULT_MODEL_CACHE_DIRECTORY = "c:\\Intel\\openvino_cache";
 const std::string DEFAULT_MODEL_CACHE_DIRECTORY = "/opt/cache";
 #endif
 ModelManager::ModelManager(const std::string& modelCacheDirectory, MetricRegistry* registry, PythonBackend* pythonBackend) :
-    ieCore(std::make_unique<ov::Core>()),
     pipelineFactory(std::make_unique<PipelineFactory>()),
 #if (MEDIAPIPE_DISABLE == 0)
     mediapipeFactory(std::make_unique<MediapipeFactory>(pythonBackend)),
@@ -89,6 +90,20 @@ ModelManager::ModelManager(const std::string& modelCacheDirectory, MetricRegistr
     modelCacheDirectory(modelCacheDirectory),
     metricRegistry(registry),
     pythonBackend(pythonBackend) {
+    try {
+        this->ieCore = std::make_unique<ov::Core>();
+        ov::AnyMap cpuProperties;
+        Status status = applyDefaultCpuProperties(cpuProperties);
+        if (!status.ok()) {
+            SPDLOG_CRITICAL("Failed to apply default CPU properties. Reason: {}", status.string());
+            throw std::runtime_error("Failed to apply default CPU properties");
+        }
+        this->ieCore->set_property("CPU", cpuProperties);
+    } catch (const std::exception& ex) {
+        SPDLOG_CRITICAL("Failed to initialize OpenVINO Core with CPU properties. Reason: {}", ex.what());
+        throw;
+    }
+
     OV_LOGGER("ov::Core(): {}", reinterpret_cast<void*>(this->ieCore.get()));
     // Take --cache_dir from CLI
     if (this->modelCacheDirectory.empty()) {
@@ -151,6 +166,12 @@ ModelManager::ModelManager(const std::string& modelCacheDirectory, MetricRegistr
         throw;
     }
     this->logPluginConfiguration();
+#ifdef __linux__
+    if (isRunningInDocker()) {
+        SPDLOG_INFO("Running inside Docker container");
+        SPDLOG_INFO("cpu quota: {}, cpu affinity: {}, max_open_files: {}", getDockerCpuQuota(), getCpuAffinityCount(), getMaxOpenFilesLimit());
+    }
+#endif
 }
 
 void ModelManager::logPluginConfiguration() {
@@ -228,7 +249,8 @@ Status ModelManager::startFromConfig() {
 
     std::vector<MediapipeGraphConfig> mediapipesInConfigFile;
     std::ifstream ifs(mpConfig.getGraphPath());
-    if (ifs.is_open()) {
+    bool graphAvailable = ifs.is_open() || (GraphExport::hasInMemoryGraphContent() && config.getServerSettings().serverMode == IN_MEMORY_GRAPH_MODE);
+    if (graphAvailable) {
         // Single model with graph.pbtxt, check if user passed model unsupported model parameters in cmd arguments
         status = ModelManager::validateUserSettingsInSingleModelCliGraphStart(config.getModelSettings());
         if (!status.ok())
@@ -405,10 +427,13 @@ bool ModelManager::CheckStartFromGraph(std::string inputPath, MediapipeGraphConf
     if (ifs.is_open()) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Graph: {} path: {} exists", mpConfig.getGraphName(), mpConfig.getGraphPath());
         return true;
-    } else {
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Graph: {} path: {} does not exist", mpConfig.getGraphName(), mpConfig.getGraphPath());
-        return false;
     }
+    if (GraphExport::hasInMemoryGraphContent() && Config::instance().getServerSettings().serverMode == IN_MEMORY_GRAPH_MODE) {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Graph: {} using in-memory graph content", mpConfig.getGraphName());
+        return true;
+    }
+    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Graph: {} path: {} does not exist", mpConfig.getGraphName(), mpConfig.getGraphPath());
+    return false;
 }
 
 Status ModelManager::validateUserSettingsInSingleModelCliGraphStart(const ModelsSettingsImpl& modelsSettings) {

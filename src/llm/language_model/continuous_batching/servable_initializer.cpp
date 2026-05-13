@@ -13,6 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <algorithm>
 #include <fstream>
 #include <memory>
 #include <stdexcept>
@@ -32,10 +33,13 @@
 #pragma GCC diagnostic pop
 #pragma warning(pop)
 
+#include "../../../config.hpp"
 #include "../../../json_parser.hpp"
 #include "../../../logging.hpp"
 #include "../../../mediapipe_internal/mediapipe_utils.hpp"
+#include "../../../ov_utils.hpp"
 #include "../../../status.hpp"
+#include "../../../systeminfo.hpp"
 #include "llm_executor.hpp"
 #include "servable.hpp"
 #include "servable_initializer.hpp"
@@ -209,7 +213,26 @@ Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiSe
         return status;
     }
 
-    properties->tokenizerPluginConfig = {{"PERFORMANCE_HINT", "THROUGHPUT"}};
+    if (properties->device == "CPU") {
+        status = applyDefaultCpuProperties(properties->pluginConfig);
+        if (!status.ok()) {
+            SPDLOG_ERROR("Failed to apply default CPU properties for LLM model: {}", status.string());
+            return status;
+        }
+    }
+
+    ov::AnyMap tokenProperties;
+    const uint32_t tokenizerNumStreams = std::min(static_cast<uint32_t>(Config::instance().restWorkers()), static_cast<uint32_t>(getCoreCount()));
+    tokenProperties[ov::num_streams.name()] = static_cast<int>(tokenizerNumStreams);
+    tokenProperties[ov::hint::performance_mode.name()] = ov::hint::PerformanceMode::THROUGHPUT;
+    SPDLOG_DEBUG("Setting tokenizer/detokenizer NUM_STREAMS to: {}", tokenizerNumStreams);
+    status = applyDefaultCpuProperties(tokenProperties);
+    if (!status.ok()) {
+        SPDLOG_ERROR("Failed to apply default CPU properties for tokenizer: {}", status.string());
+        return status;
+    }
+    properties->tokenizerPluginConfig = tokenProperties;
+
     try {
         properties->pipeline = std::make_shared<ov::genai::ContinuousBatchingPipeline>(parsedModelsPath,
             properties->schedulerConfig, properties->device,

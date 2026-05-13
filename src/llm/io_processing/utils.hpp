@@ -28,4 +28,7 @@ size_t findInStringRespectingSpecialChars(const std::string& str, const std::str
 void writeArgumentOfAnyType(const rapidjson::Value& arg, rapidjson::Writer<rapidjson::StringBuffer>& writer);
 // Generates random alphanumeric string of length 9 for tool call ID
 std::string generateRandomId();
+
+size_t findInStringRespectingSpecialChars(const std::string& str, const std::string& target, size_t startPos);
+void writeArgumentOfAnyType(const rapidjson::Value& arg, rapidjson::Writer<rapidjson::StringBuffer>& writer);
 }  // namespace ovms
