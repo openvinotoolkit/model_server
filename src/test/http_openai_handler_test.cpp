@@ -4292,3 +4292,764 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParseMessagesRegularMessageHasNoToolFields)
     EXPECT_FALSE(history[1].contains("tool_call_id"));
     EXPECT_FALSE(history[1].contains("name"));
 }
+
+namespace {
+std::shared_ptr<ovms::OpenAIResponsesHandler> parseResponses(rapidjson::Document& doc, ov::genai::Tokenizer& tokenizer, const std::string& json) {
+    doc.Parse(json.c_str());
+    EXPECT_FALSE(doc.HasParseError()) << json;
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    auto apiHandler = std::make_shared<ovms::OpenAIResponsesHandler>(
+        doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), tokenizer);
+    EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus()) << json;
+    return apiHandler;
+}
+
+// Variant for negative tests: returns the parseRequest status without asserting
+// it is OK, so the caller can verify the failure mode.
+absl::Status tryParseResponses(rapidjson::Document& doc, ov::genai::Tokenizer& tokenizer, const std::string& json) {
+    doc.Parse(json.c_str());
+    EXPECT_FALSE(doc.HasParseError()) << json;
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    auto apiHandler = std::make_shared<ovms::OpenAIResponsesHandler>(
+        doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), tokenizer);
+    return apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength);
+}
+}  // namespace
+
+TEST_F(HttpOpenAIHandlerParsingTest, ResponsesFlatToolsNormalisedToNestedInDoc) {
+    // The chat template (e.g. gpt-oss) iterates tools looking up tool.function.name /
+    // tool.function.parameters. The Responses-flat shape ({type, name, parameters})
+    // must be rewritten in-place to chat/completions nested shape before it is
+    // forwarded to the template.
+    std::string json = R"({
+        "model": "llama",
+        "input": "hello",
+        "tools": [{
+            "type": "function",
+            "name": "get_weather",
+            "description": "Get current weather",
+            "parameters": {"type":"object","properties":{"city":{"type":"string"}},"required":["city"]}
+        }]
+    })";
+    auto apiHandler = parseResponses(doc, *tokenizer, json);
+    EXPECT_TRUE(apiHandler->areToolsAvailable());
+
+    // Inspect the (now normalised) tools array on the request document directly.
+    ASSERT_TRUE(doc.HasMember("tools"));
+    ASSERT_TRUE(doc["tools"].IsArray());
+    ASSERT_EQ(doc["tools"].Size(), 1u);
+    const auto& tool = doc["tools"][0];
+    ASSERT_TRUE(tool.HasMember("function"));
+    ASSERT_TRUE(tool["function"].IsObject());
+    EXPECT_STREQ(tool["function"]["name"].GetString(), "get_weather");
+    EXPECT_STREQ(tool["function"]["description"].GetString(), "Get current weather");
+    ASSERT_TRUE(tool["function"].HasMember("parameters"));
+    EXPECT_TRUE(tool["function"]["parameters"].IsObject());
+    // The flat fields should have been moved under `function`, leaving only `type` + `function`.
+    EXPECT_FALSE(tool.HasMember("name"));
+    EXPECT_FALSE(tool.HasMember("parameters"));
+    EXPECT_FALSE(tool.HasMember("description"));
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ResponsesAlreadyNestedToolsAreLeftIntact) {
+    // Tools that are already in chat/completions nested shape must pass through
+    // untouched (no double-wrapping).
+    std::string json = R"({
+        "model": "llama",
+        "input": "hello",
+        "tools": [{
+            "type": "function",
+            "function": {
+                "name": "get_weather",
+                "parameters": {"type":"object","properties":{"city":{"type":"string"}},"required":["city"]}
+            }
+        }]
+    })";
+    auto apiHandler = parseResponses(doc, *tokenizer, json);
+    EXPECT_TRUE(apiHandler->areToolsAvailable());
+    ASSERT_TRUE(doc["tools"][0].HasMember("function"));
+    EXPECT_STREQ(doc["tools"][0]["function"]["name"].GetString(), "get_weather");
+    // No spurious nested wrap.
+    EXPECT_FALSE(doc["tools"][0]["function"].HasMember("function"));
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ResponsesReasoningBufferedOntoNextAssistantMessage) {
+    // A bare reasoning item, then an assistant message: the reasoning text should
+    // ride on the next assistant message as reasoning_content (matching the
+    // gpt-oss template's expected field). It must NOT produce its own message.
+    std::string json = R"({
+        "model": "llama",
+        "input": [
+            {"role": "user", "content": [{"type":"input_text","text":"hi"}]},
+            {"type": "reasoning", "summary": [{"type":"summary_text","text":"think first"}]},
+            {"role": "assistant", "content": [{"type":"output_text","text":"hello"}]}
+        ]
+    })";
+    auto apiHandler = parseResponses(doc, *tokenizer, json);
+    auto& history = apiHandler->getChatHistory();
+    ASSERT_EQ(history.size(), 2);
+    EXPECT_EQ(history[0]["role"].get_string(), "user");
+    EXPECT_EQ(history[1]["role"].get_string(), "assistant");
+    EXPECT_EQ(history[1]["content"].get_string(), "hello");
+    ASSERT_TRUE(history[1].contains("reasoning_content"));
+    EXPECT_EQ(history[1]["reasoning_content"].get_string(), "think first");
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ResponsesStandaloneReasoningWithoutAssistantIsEmitted) {
+    // Reasoning followed directly by a user message (no assistant/function_call
+    // in between) is emitted as a standalone assistant turn with empty content
+    // and the buffered text attached as reasoning_content. This preserves the
+    // model's chain-of-thought across turns even when the prior turn produced
+    // no visible output.
+    std::string json = R"({
+        "model": "llama",
+        "input": [
+            {"role": "user", "content": [{"type":"input_text","text":"hi"}]},
+            {"type": "reasoning", "summary": [{"type":"summary_text","text":"orphan"}]},
+            {"role": "user", "content": [{"type":"input_text","text":"again"}]}
+        ]
+    })";
+    auto apiHandler = parseResponses(doc, *tokenizer, json);
+    auto& history = apiHandler->getChatHistory();
+    ASSERT_EQ(history.size(), 3);
+    EXPECT_EQ(history[0]["role"].get_string(), "user");
+
+    EXPECT_EQ(history[1]["role"].get_string(), "assistant");
+    EXPECT_FALSE(history[1].contains("content"));
+    ASSERT_TRUE(history[1].contains("reasoning_content"));
+    EXPECT_EQ(history[1]["reasoning_content"].get_string(), "orphan");
+    EXPECT_FALSE(history[1].contains("tool_calls"));
+
+    EXPECT_EQ(history[2]["role"].get_string(), "user");
+    EXPECT_FALSE(history[2].contains("reasoning_content"));
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ResponsesTrailingStandaloneReasoningIsEmitted) {
+    // Input ending with a reasoning item (no following assistant/function_call)
+    // — the buffered reasoning is flushed as a standalone trailing assistant
+    // turn rather than silently lost.
+    std::string json = R"({
+        "model": "llama",
+        "input": [
+            {"role": "user", "content": [{"type":"input_text","text":"hi"}]},
+            {"type": "reasoning", "summary": [{"type":"summary_text","text":"trailing"}]}
+        ]
+    })";
+    auto apiHandler = parseResponses(doc, *tokenizer, json);
+    auto& history = apiHandler->getChatHistory();
+    ASSERT_EQ(history.size(), 2);
+    EXPECT_EQ(history[1]["role"].get_string(), "assistant");
+    EXPECT_FALSE(history[1].contains("content"));
+    ASSERT_TRUE(history[1].contains("reasoning_content"));
+    EXPECT_EQ(history[1]["reasoning_content"].get_string(), "trailing");
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ResponsesFunctionCallMergedIntoAssistantToolCalls) {
+    // function_call followed by function_call_output should produce:
+    //   user -> assistant(content="", tool_calls=[...]) -> tool(tool_call_id=...)
+    // The assistant message MUST own a tool_calls field; otherwise gpt-oss
+    // raises "Message has tool role, but there was no previous assistant
+    // message with a tool call!".
+    std::string json = R"({
+        "model": "llama",
+        "input": [
+            {"role": "user", "content": [{"type":"input_text","text":"weather?"}]},
+            {"type": "function_call", "id": "call_1", "call_id": "call_1",
+             "name": "get_weather", "arguments": "{\"city\":\"Paris\"}"},
+            {"type": "function_call_output", "call_id": "call_1",
+             "output": "{\"temp_c\":17}"}
+        ]
+    })";
+    auto apiHandler = parseResponses(doc, *tokenizer, json);
+    auto& history = apiHandler->getChatHistory();
+    ASSERT_EQ(history.size(), 3);
+
+    EXPECT_EQ(history[0]["role"].get_string(), "user");
+
+    EXPECT_EQ(history[1]["role"].get_string(), "assistant");
+    EXPECT_EQ(history[1]["content"].get_string(), "");
+    ASSERT_TRUE(history[1].contains("tool_calls"));
+    ASSERT_TRUE(history[1]["tool_calls"].is_array());
+    ASSERT_EQ(history[1]["tool_calls"].size(), 1);
+    EXPECT_EQ(history[1]["tool_calls"][0]["id"].get_string(), "call_1");
+    EXPECT_EQ(history[1]["tool_calls"][0]["type"].get_string(), "function");
+    EXPECT_EQ(history[1]["tool_calls"][0]["function"]["name"].get_string(), "get_weather");
+    EXPECT_EQ(history[1]["tool_calls"][0]["function"]["arguments"].get_string(), "{\"city\":\"Paris\"}");
+
+    EXPECT_EQ(history[2]["role"].get_string(), "tool");
+    EXPECT_EQ(history[2]["tool_call_id"].get_string(), "call_1");
+    EXPECT_EQ(history[2]["content"].get_string(), "{\"temp_c\":17}");
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ResponsesReasoningPlusFunctionCallRidesOnAssistant) {
+    // reasoning + function_call should both attach to the synthesised assistant
+    // turn that owns the tool_calls.
+    std::string json = R"({
+        "model": "llama",
+        "input": [
+            {"role": "user", "content": [{"type":"input_text","text":"weather?"}]},
+            {"type": "reasoning", "summary": [{"type":"summary_text","text":"need to call get_weather"}]},
+            {"type": "function_call", "id": "call_1", "call_id": "call_1",
+             "name": "get_weather", "arguments": "{\"city\":\"Paris\"}"},
+            {"type": "function_call_output", "call_id": "call_1", "output": "ok"}
+        ]
+    })";
+    auto apiHandler = parseResponses(doc, *tokenizer, json);
+    auto& history = apiHandler->getChatHistory();
+    ASSERT_EQ(history.size(), 3);
+    EXPECT_EQ(history[1]["role"].get_string(), "assistant");
+    ASSERT_TRUE(history[1].contains("tool_calls"));
+    ASSERT_TRUE(history[1].contains("reasoning_content"));
+    EXPECT_EQ(history[1]["reasoning_content"].get_string(), "need to call get_weather");
+    EXPECT_EQ(history[2]["role"].get_string(), "tool");
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ResponsesMultipleFunctionCallsMergedInOneAssistant) {
+    // Two function_calls back-to-back must produce a single assistant message
+    // with two entries in tool_calls, not two assistant turns.
+    std::string json = R"({
+        "model": "llama",
+        "input": [
+            {"role": "user", "content": [{"type":"input_text","text":"weather?"}]},
+            {"type": "function_call", "id": "call_1", "call_id": "call_1",
+             "name": "get_weather", "arguments": "{\"city\":\"Paris\"}"},
+            {"type": "function_call", "id": "call_2", "call_id": "call_2",
+             "name": "get_weather", "arguments": "{\"city\":\"London\"}"},
+            {"type": "function_call_output", "call_id": "call_1", "output": "15C"}
+        ]
+    })";
+    auto apiHandler = parseResponses(doc, *tokenizer, json);
+    auto& history = apiHandler->getChatHistory();
+    // user, assistant(2 tool_calls), tool
+    ASSERT_EQ(history.size(), 3);
+    EXPECT_EQ(history[1]["role"].get_string(), "assistant");
+    ASSERT_TRUE(history[1].contains("tool_calls"));
+    ASSERT_EQ(history[1]["tool_calls"].size(), 2);
+    EXPECT_EQ(history[1]["tool_calls"][0]["id"].get_string(), "call_1");
+    EXPECT_EQ(history[1]["tool_calls"][1]["id"].get_string(), "call_2");
+    EXPECT_EQ(history[2]["role"].get_string(), "tool");
+    EXPECT_EQ(history[2]["tool_call_id"].get_string(), "call_1");
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ResponsesTrailingFunctionCallFlushedAsAssistant) {
+    // Input ending with a function_call (no matching output) — the trailing
+    // function_call must still be flushed as an assistant message rather than
+    // silently lost.
+    std::string json = R"({
+        "model": "llama",
+        "input": [
+            {"role": "user", "content": [{"type":"input_text","text":"weather?"}]},
+            {"type": "function_call", "id": "call_1", "call_id": "call_1",
+             "name": "get_weather", "arguments": "{\"city\":\"Paris\"}"}
+        ]
+    })";
+    auto apiHandler = parseResponses(doc, *tokenizer, json);
+    auto& history = apiHandler->getChatHistory();
+    ASSERT_EQ(history.size(), 2);
+    EXPECT_EQ(history[1]["role"].get_string(), "assistant");
+    ASSERT_TRUE(history[1].contains("tool_calls"));
+    ASSERT_EQ(history[1]["tool_calls"].size(), 1);
+    EXPECT_EQ(history[1]["tool_calls"][0]["id"].get_string(), "call_1");
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ResponsesAssistantMessageAbsorbsBufferedFunctionCall) {
+    // If an assistant role item follows a function_call, its text content should
+    // ride on the same merged message (assistant-with-tool_calls), not produce
+    // a second assistant turn.
+    std::string json = R"({
+        "model": "llama",
+        "input": [
+            {"role": "user", "content": [{"type":"input_text","text":"weather?"}]},
+            {"type": "function_call", "id": "call_1", "call_id": "call_1",
+             "name": "get_weather", "arguments": "{\"city\":\"Paris\"}"},
+            {"role": "assistant", "content": "calling tool"}
+        ]
+    })";
+    auto apiHandler = parseResponses(doc, *tokenizer, json);
+    auto& history = apiHandler->getChatHistory();
+    ASSERT_EQ(history.size(), 2);
+    EXPECT_EQ(history[1]["role"].get_string(), "assistant");
+    EXPECT_EQ(history[1]["content"].get_string(), "calling tool");
+    ASSERT_TRUE(history[1].contains("tool_calls"));
+    ASSERT_EQ(history[1]["tool_calls"].size(), 1);
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ResponsesReasoningContentArrayShapeAccepted) {
+    // The newer reasoning shape: content[].text instead of summary[].text.
+    // OVMS accepts both.
+    std::string json = R"({
+        "model": "llama",
+        "input": [
+            {"role": "user", "content": [{"type":"input_text","text":"hi"}]},
+            {"type": "reasoning", "content": [{"type":"reasoning_text","text":"new shape"}]},
+            {"role": "assistant", "content": "ok"}
+        ]
+    })";
+    auto apiHandler = parseResponses(doc, *tokenizer, json);
+    auto& history = apiHandler->getChatHistory();
+    ASSERT_EQ(history.size(), 2);
+    ASSERT_TRUE(history[1].contains("reasoning_content"));
+    EXPECT_EQ(history[1]["reasoning_content"].get_string(), "new shape");
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ResponsesFunctionCallOutputWithoutCallIdAccepted) {
+    // function_call_output without call_id: should still emit a tool message
+    // (with no tool_call_id field) rather than failing parsing.
+    std::string json = R"({
+        "model": "llama",
+        "input": [
+            {"role": "user", "content": [{"type":"input_text","text":"weather?"}]},
+            {"type": "function_call", "id": "call_1", "call_id": "call_1",
+             "name": "get_weather", "arguments": "{}"},
+            {"type": "function_call_output", "output": "ok"}
+        ]
+    })";
+    auto apiHandler = parseResponses(doc, *tokenizer, json);
+    auto& history = apiHandler->getChatHistory();
+    ASSERT_EQ(history.size(), 3);
+    EXPECT_EQ(history[2]["role"].get_string(), "tool");
+    EXPECT_FALSE(history[2].contains("tool_call_id"));
+    EXPECT_EQ(history[2]["content"].get_string(), "ok");
+}
+
+#if (PYTHON_DISABLE == 0)
+// processedJson (the chat/completions-shaped messages array fed to the Python
+// Jinja chat template) must mirror the chat history layout for the same input.
+// These tests assert the same buffering invariants on that path.
+
+TEST_F(HttpOpenAIHandlerParsingTest, ResponsesProcessedJsonMirrorsFunctionCallMerge) {
+    std::string json = R"({
+        "model": "llama",
+        "input": [
+            {"role": "user", "content": [{"type":"input_text","text":"weather?"}]},
+            {"type": "function_call", "id": "call_1", "call_id": "call_1",
+             "name": "get_weather", "arguments": "{\"city\":\"Paris\"}"},
+            {"type": "function_call_output", "call_id": "call_1", "output": "ok"}
+        ]
+    })";
+    auto apiHandler = parseResponses(doc, *tokenizer, json);
+    rapidjson::Document processedDoc;
+    processedDoc.Parse(apiHandler->getProcessedJson().c_str());
+    ASSERT_FALSE(processedDoc.HasParseError());
+    ASSERT_TRUE(processedDoc.HasMember("messages"));
+    const auto& messages = processedDoc["messages"];
+    ASSERT_TRUE(messages.IsArray());
+    ASSERT_EQ(messages.Size(), 3u);
+
+    EXPECT_STREQ(messages[1]["role"].GetString(), "assistant");
+    ASSERT_TRUE(messages[1].HasMember("tool_calls"));
+    ASSERT_TRUE(messages[1]["tool_calls"].IsArray());
+    ASSERT_EQ(messages[1]["tool_calls"].Size(), 1u);
+    EXPECT_STREQ(messages[1]["tool_calls"][0]["id"].GetString(), "call_1");
+    EXPECT_STREQ(messages[1]["tool_calls"][0]["type"].GetString(), "function");
+    EXPECT_STREQ(messages[1]["tool_calls"][0]["function"]["name"].GetString(), "get_weather");
+
+    EXPECT_STREQ(messages[2]["role"].GetString(), "tool");
+    EXPECT_STREQ(messages[2]["tool_call_id"].GetString(), "call_1");
+    EXPECT_STREQ(messages[2]["content"].GetString(), "ok");
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ResponsesProcessedJsonContainsNormalisedTools) {
+    // The tools forwarded to the template via processedJson must be in the
+    // chat/completions nested shape (because convertResponsesToolsInPlace
+    // normalised the doc before processedJson is built).
+    std::string json = R"({
+        "model": "llama",
+        "input": "hello",
+        "tools": [{
+            "type": "function",
+            "name": "get_weather",
+            "parameters": {"type":"object","properties":{"city":{"type":"string"}},"required":["city"]}
+        }]
+    })";
+    auto apiHandler = parseResponses(doc, *tokenizer, json);
+    rapidjson::Document processedDoc;
+    processedDoc.Parse(apiHandler->getProcessedJson().c_str());
+    ASSERT_FALSE(processedDoc.HasParseError());
+    ASSERT_TRUE(processedDoc.HasMember("tools"));
+    ASSERT_TRUE(processedDoc["tools"].IsArray());
+    ASSERT_EQ(processedDoc["tools"].Size(), 1u);
+    ASSERT_TRUE(processedDoc["tools"][0].HasMember("function"));
+    EXPECT_STREQ(processedDoc["tools"][0]["function"]["name"].GetString(), "get_weather");
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ResponsesProcessedJsonAttachesReasoningOnAssistant) {
+    std::string json = R"({
+        "model": "llama",
+        "input": [
+            {"role": "user", "content": [{"type":"input_text","text":"hi"}]},
+            {"type": "reasoning", "summary": [{"type":"summary_text","text":"think"}]},
+            {"role": "assistant", "content": [{"type":"output_text","text":"answer"}]}
+        ]
+    })";
+    auto apiHandler = parseResponses(doc, *tokenizer, json);
+    rapidjson::Document processedDoc;
+    processedDoc.Parse(apiHandler->getProcessedJson().c_str());
+    ASSERT_FALSE(processedDoc.HasParseError());
+    const auto& messages = processedDoc["messages"];
+    ASSERT_EQ(messages.Size(), 2u);
+    EXPECT_STREQ(messages[1]["role"].GetString(), "assistant");
+    EXPECT_STREQ(messages[1]["content"].GetString(), "answer");
+    ASSERT_TRUE(messages[1].HasMember("reasoning_content"));
+    EXPECT_STREQ(messages[1]["reasoning_content"].GetString(), "think");
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ResponsesProcessedJsonStandaloneReasoningOmitsContent) {
+    // Mirror of ResponsesStandaloneReasoningWithoutAssistantIsEmitted on the
+    // processedJson path: an assistant turn carrying only reasoning_content
+    // (no `content`, no `tool_calls`).
+    std::string json = R"({
+        "model": "llama",
+        "input": [
+            {"role": "user", "content": [{"type":"input_text","text":"hi"}]},
+            {"type": "reasoning", "summary": [{"type":"summary_text","text":"orphan"}]},
+            {"role": "user", "content": [{"type":"input_text","text":"again"}]}
+        ]
+    })";
+    auto apiHandler = parseResponses(doc, *tokenizer, json);
+    rapidjson::Document processedDoc;
+    processedDoc.Parse(apiHandler->getProcessedJson().c_str());
+    ASSERT_FALSE(processedDoc.HasParseError());
+    const auto& messages = processedDoc["messages"];
+    ASSERT_EQ(messages.Size(), 3u);
+    EXPECT_STREQ(messages[1]["role"].GetString(), "assistant");
+    EXPECT_FALSE(messages[1].HasMember("content"));
+    EXPECT_FALSE(messages[1].HasMember("tool_calls"));
+    ASSERT_TRUE(messages[1].HasMember("reasoning_content"));
+    EXPECT_STREQ(messages[1]["reasoning_content"].GetString(), "orphan");
+    EXPECT_STREQ(messages[2]["role"].GetString(), "user");
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ResponsesProcessedJsonTrailingStandaloneReasoningOmitsContent) {
+    std::string json = R"({
+        "model": "llama",
+        "input": [
+            {"role": "user", "content": [{"type":"input_text","text":"hi"}]},
+            {"type": "reasoning", "content": [{"type":"reasoning_text","text":"trailing"}]}
+        ]
+    })";
+    auto apiHandler = parseResponses(doc, *tokenizer, json);
+    rapidjson::Document processedDoc;
+    processedDoc.Parse(apiHandler->getProcessedJson().c_str());
+    ASSERT_FALSE(processedDoc.HasParseError());
+    const auto& messages = processedDoc["messages"];
+    ASSERT_EQ(messages.Size(), 2u);
+    EXPECT_STREQ(messages[1]["role"].GetString(), "assistant");
+    EXPECT_FALSE(messages[1].HasMember("content"));
+    EXPECT_FALSE(messages[1].HasMember("tool_calls"));
+    ASSERT_TRUE(messages[1].HasMember("reasoning_content"));
+    EXPECT_STREQ(messages[1]["reasoning_content"].GetString(), "trailing");
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ResponsesProcessedJsonReasoningPlusFunctionCallRidesOnAssistant) {
+    // Mirror of ResponsesReasoningPlusFunctionCallRidesOnAssistant: reasoning
+    // and tool_calls must land on the same JSON object.
+    std::string json = R"({
+        "model": "llama",
+        "input": [
+            {"role": "user", "content": [{"type":"input_text","text":"weather?"}]},
+            {"type": "reasoning", "summary": [{"type":"summary_text","text":"need to call get_weather"}]},
+            {"type": "function_call", "id": "call_1", "call_id": "call_1",
+             "name": "get_weather", "arguments": "{\"city\":\"Paris\"}"},
+            {"type": "function_call_output", "call_id": "call_1", "output": "ok"}
+        ]
+    })";
+    auto apiHandler = parseResponses(doc, *tokenizer, json);
+    rapidjson::Document processedDoc;
+    processedDoc.Parse(apiHandler->getProcessedJson().c_str());
+    ASSERT_FALSE(processedDoc.HasParseError());
+    const auto& messages = processedDoc["messages"];
+    ASSERT_EQ(messages.Size(), 3u);
+    EXPECT_STREQ(messages[1]["role"].GetString(), "assistant");
+    ASSERT_TRUE(messages[1].HasMember("tool_calls"));
+    ASSERT_EQ(messages[1]["tool_calls"].Size(), 1u);
+    ASSERT_TRUE(messages[1].HasMember("reasoning_content"));
+    EXPECT_STREQ(messages[1]["reasoning_content"].GetString(), "need to call get_weather");
+    EXPECT_STREQ(messages[2]["role"].GetString(), "tool");
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ResponsesProcessedJsonMultipleFunctionCallsMergedInOneAssistant) {
+    // Mirror of ResponsesMultipleFunctionCallsMergedInOneAssistant: validates
+    // the rapidjson tool_calls array growth across PushBack calls.
+    std::string json = R"({
+        "model": "llama",
+        "input": [
+            {"role": "user", "content": [{"type":"input_text","text":"weather?"}]},
+            {"type": "function_call", "id": "call_1", "call_id": "call_1",
+             "name": "get_weather", "arguments": "{\"city\":\"Paris\"}"},
+            {"type": "function_call", "id": "call_2", "call_id": "call_2",
+             "name": "get_weather", "arguments": "{\"city\":\"London\"}"},
+            {"type": "function_call_output", "call_id": "call_1", "output": "15C"}
+        ]
+    })";
+    auto apiHandler = parseResponses(doc, *tokenizer, json);
+    rapidjson::Document processedDoc;
+    processedDoc.Parse(apiHandler->getProcessedJson().c_str());
+    ASSERT_FALSE(processedDoc.HasParseError());
+    const auto& messages = processedDoc["messages"];
+    ASSERT_EQ(messages.Size(), 3u);
+    EXPECT_STREQ(messages[1]["role"].GetString(), "assistant");
+    ASSERT_TRUE(messages[1].HasMember("tool_calls"));
+    ASSERT_EQ(messages[1]["tool_calls"].Size(), 2u);
+    EXPECT_STREQ(messages[1]["tool_calls"][0]["id"].GetString(), "call_1");
+    EXPECT_STREQ(messages[1]["tool_calls"][1]["id"].GetString(), "call_2");
+    EXPECT_STREQ(messages[1]["tool_calls"][0]["function"]["name"].GetString(), "get_weather");
+    EXPECT_STREQ(messages[1]["tool_calls"][1]["function"]["arguments"].GetString(), "{\"city\":\"London\"}");
+    EXPECT_STREQ(messages[2]["role"].GetString(), "tool");
+    EXPECT_STREQ(messages[2]["tool_call_id"].GetString(), "call_1");
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ResponsesProcessedJsonTrailingFunctionCallFlushedAsAssistant) {
+    // Mirror of ResponsesTrailingFunctionCallFlushedAsAssistant: trailing
+    // function_call without output produces an assistant turn with tool_calls
+    // and no following tool message.
+    std::string json = R"({
+        "model": "llama",
+        "input": [
+            {"role": "user", "content": [{"type":"input_text","text":"weather?"}]},
+            {"type": "function_call", "id": "call_1", "call_id": "call_1",
+             "name": "get_weather", "arguments": "{\"city\":\"Paris\"}"}
+        ]
+    })";
+    auto apiHandler = parseResponses(doc, *tokenizer, json);
+    rapidjson::Document processedDoc;
+    processedDoc.Parse(apiHandler->getProcessedJson().c_str());
+    ASSERT_FALSE(processedDoc.HasParseError());
+    const auto& messages = processedDoc["messages"];
+    ASSERT_EQ(messages.Size(), 2u);
+    EXPECT_STREQ(messages[1]["role"].GetString(), "assistant");
+    ASSERT_TRUE(messages[1].HasMember("tool_calls"));
+    ASSERT_EQ(messages[1]["tool_calls"].Size(), 1u);
+    EXPECT_STREQ(messages[1]["tool_calls"][0]["id"].GetString(), "call_1");
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ResponsesProcessedJsonAssistantMessageAbsorbsBufferedFunctionCall) {
+    // Mirror of ResponsesAssistantMessageAbsorbsBufferedFunctionCall: assistant
+    // text content and tool_calls coexist on a single JSON object.
+    std::string json = R"({
+        "model": "llama",
+        "input": [
+            {"role": "user", "content": [{"type":"input_text","text":"weather?"}]},
+            {"type": "function_call", "id": "call_1", "call_id": "call_1",
+             "name": "get_weather", "arguments": "{\"city\":\"Paris\"}"},
+            {"role": "assistant", "content": "calling tool"}
+        ]
+    })";
+    auto apiHandler = parseResponses(doc, *tokenizer, json);
+    rapidjson::Document processedDoc;
+    processedDoc.Parse(apiHandler->getProcessedJson().c_str());
+    ASSERT_FALSE(processedDoc.HasParseError());
+    const auto& messages = processedDoc["messages"];
+    ASSERT_EQ(messages.Size(), 2u);
+    EXPECT_STREQ(messages[1]["role"].GetString(), "assistant");
+    ASSERT_TRUE(messages[1].HasMember("content"));
+    EXPECT_STREQ(messages[1]["content"].GetString(), "calling tool");
+    ASSERT_TRUE(messages[1].HasMember("tool_calls"));
+    ASSERT_EQ(messages[1]["tool_calls"].Size(), 1u);
+    EXPECT_STREQ(messages[1]["tool_calls"][0]["id"].GetString(), "call_1");
+}
+#endif  // PYTHON_DISABLE == 0
+
+// --- Tools normalisation edge cases ---
+
+TEST_F(HttpOpenAIHandlerParsingTest, ResponsesFlatToolWithoutParametersIsNormalised) {
+    // Flat Responses tools may omit `parameters` for zero-arg functions. The
+    // nested form should still be produced (with no `parameters` key under
+    // function), not fail or fabricate one.
+    std::string json = R"({
+        "model": "llama",
+        "input": "hello",
+        "tools": [{"type": "function", "name": "ping", "description": "no args"}]
+    })";
+    parseResponses(doc, *tokenizer, json);
+    ASSERT_TRUE(doc.HasMember("tools"));
+    ASSERT_TRUE(doc["tools"].IsArray());
+    ASSERT_EQ(doc["tools"].Size(), 1u);
+    const auto& tool = doc["tools"][0];
+    ASSERT_TRUE(tool.HasMember("function"));
+    EXPECT_STREQ(tool["function"]["name"].GetString(), "ping");
+    EXPECT_STREQ(tool["function"]["description"].GetString(), "no args");
+    EXPECT_FALSE(tool["function"].HasMember("parameters"));
+    // The flat-shape `name` field at top level must have been removed.
+    EXPECT_FALSE(tool.HasMember("name"));
+    EXPECT_FALSE(tool.HasMember("description"));
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ResponsesNonFunctionToolLeftIntact) {
+    // Tools with an unrecognised `type` (e.g. a future built-in tool) must be
+    // passed through verbatim rather than being incorrectly rewrapped.
+    std::string json = R"({
+        "model": "llama",
+        "input": "hello",
+        "tools": [{"type": "web_search", "name": "search"}]
+    })";
+    parseResponses(doc, *tokenizer, json);
+    ASSERT_TRUE(doc["tools"].IsArray());
+    ASSERT_EQ(doc["tools"].Size(), 1u);
+    const auto& tool = doc["tools"][0];
+    EXPECT_STREQ(tool["type"].GetString(), "web_search");
+    EXPECT_STREQ(tool["name"].GetString(), "search");
+    EXPECT_FALSE(tool.HasMember("function"));
+}
+
+// --- Error paths ---
+
+TEST_F(HttpOpenAIHandlerParsingTest, ResponsesInputItemMissingRoleIsRejected) {
+    // An input item with no recognised `type` and no `role` cannot be
+    // classified — the chat-history sink must surface this as an
+    // InvalidArgumentError rather than silently dropping the turn.
+    std::string json = R"({
+        "model": "llama",
+        "input": [
+            {"role": "user", "content": [{"type":"input_text","text":"hi"}]},
+            {"content": [{"type":"output_text","text":"orphaned"}]}
+        ]
+    })";
+    auto status = tryParseResponses(doc, *tokenizer, json);
+    EXPECT_EQ(status.code(), absl::StatusCode::kInvalidArgument);
+    EXPECT_THAT(std::string(status.message()), ::testing::HasSubstr("role"));
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ResponsesInputContentNotStringOrArrayIsRejected) {
+    std::string json = R"({
+        "model": "llama",
+        "input": [
+            {"role": "user", "content": 42}
+        ]
+    })";
+    auto status = tryParseResponses(doc, *tokenizer, json);
+    EXPECT_EQ(status.code(), absl::StatusCode::kInvalidArgument);
+    EXPECT_THAT(std::string(status.message()), ::testing::HasSubstr("content"));
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ResponsesInputContentItemMissingTypeIsRejected) {
+    std::string json = R"({
+        "model": "llama",
+        "input": [
+            {"role": "user", "content": [{"text":"no type field"}]}
+        ]
+    })";
+    auto status = tryParseResponses(doc, *tokenizer, json);
+    EXPECT_EQ(status.code(), absl::StatusCode::kInvalidArgument);
+    EXPECT_THAT(std::string(status.message()), ::testing::HasSubstr("type"));
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ResponsesInputTextMissingTextFieldIsRejected) {
+    std::string json = R"({
+        "model": "llama",
+        "input": [
+            {"role": "user", "content": [{"type":"input_text"}]}
+        ]
+    })";
+    auto status = tryParseResponses(doc, *tokenizer, json);
+    EXPECT_EQ(status.code(), absl::StatusCode::kInvalidArgument);
+    EXPECT_THAT(std::string(status.message()), ::testing::HasSubstr("text"));
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ResponsesInputArrayItemNotObjectIsRejected) {
+    std::string json = R"({
+        "model": "llama",
+        "input": ["not an object"]
+    })";
+    auto status = tryParseResponses(doc, *tokenizer, json);
+    EXPECT_EQ(status.code(), absl::StatusCode::kInvalidArgument);
+    EXPECT_THAT(std::string(status.message()), ::testing::HasSubstr("must be objects"));
+}
+
+// --- Multi-turn composite ---
+
+TEST_F(HttpOpenAIHandlerParsingTest, ResponsesMultiTurnReasoningFunctionCallAndFollowupAssistant) {
+    // End-to-end: user -> reasoning + function_call (merged on synthesised
+    // assistant) -> function_call_output -> reasoning + assistant final answer.
+    // Validates that buffering state is correctly reset between turns.
+    std::string json = R"({
+        "model": "llama",
+        "input": [
+            {"role": "user", "content": [{"type":"input_text","text":"weather in Paris?"}]},
+            {"type": "reasoning", "summary": [{"type":"summary_text","text":"need to call get_weather"}]},
+            {"type": "function_call", "id": "call_1", "call_id": "call_1",
+             "name": "get_weather", "arguments": "{\"city\":\"Paris\"}"},
+            {"type": "function_call_output", "call_id": "call_1", "output": "sunny, 22C"},
+            {"type": "reasoning", "summary": [{"type":"summary_text","text":"format the answer"}]},
+            {"role": "assistant", "content": [{"type":"output_text","text":"It is sunny and 22C in Paris."}]}
+        ]
+    })";
+    auto apiHandler = parseResponses(doc, *tokenizer, json);
+    auto& history = apiHandler->getChatHistory();
+    ASSERT_EQ(history.size(), 4);
+
+    // user
+    EXPECT_EQ(history[0]["role"].get_string(), "user");
+
+    // synthesised assistant: empty content + reasoning + tool_calls
+    EXPECT_EQ(history[1]["role"].get_string(), "assistant");
+    EXPECT_EQ(history[1]["content"].get_string(), "");
+    ASSERT_TRUE(history[1].contains("reasoning_content"));
+    EXPECT_EQ(history[1]["reasoning_content"].get_string(), "need to call get_weather");
+    ASSERT_TRUE(history[1].contains("tool_calls"));
+    ASSERT_EQ(history[1]["tool_calls"].size(), 1);
+    EXPECT_EQ(history[1]["tool_calls"][0]["id"].get_string(), "call_1");
+    EXPECT_EQ(history[1]["tool_calls"][0]["function"]["name"].get_string(), "get_weather");
+
+    // tool result
+    EXPECT_EQ(history[2]["role"].get_string(), "tool");
+    EXPECT_EQ(history[2]["tool_call_id"].get_string(), "call_1");
+    EXPECT_EQ(history[2]["content"].get_string(), "sunny, 22C");
+    EXPECT_FALSE(history[2].contains("reasoning_content"));
+    EXPECT_FALSE(history[2].contains("tool_calls"));
+
+    // final assistant turn: second reasoning buffer must have been used here,
+    // not leaked from the first turn or carried over.
+    EXPECT_EQ(history[3]["role"].get_string(), "assistant");
+    EXPECT_EQ(history[3]["content"].get_string(), "It is sunny and 22C in Paris.");
+    ASSERT_TRUE(history[3].contains("reasoning_content"));
+    EXPECT_EQ(history[3]["reasoning_content"].get_string(), "format the answer");
+    EXPECT_FALSE(history[3].contains("tool_calls"));
+}
+
+#if (PYTHON_DISABLE == 0)
+// Re-open the PYTHON_DISABLE block to keep the processedJson companion next to
+// the chat-history multi-turn test above.
+TEST_F(HttpOpenAIHandlerParsingTest, ResponsesProcessedJsonMultiTurnMirrorsChatHistory) {
+    std::string json = R"({
+        "model": "llama",
+        "input": [
+            {"role": "user", "content": [{"type":"input_text","text":"weather in Paris?"}]},
+            {"type": "reasoning", "summary": [{"type":"summary_text","text":"need to call get_weather"}]},
+            {"type": "function_call", "id": "call_1", "call_id": "call_1",
+             "name": "get_weather", "arguments": "{\"city\":\"Paris\"}"},
+            {"type": "function_call_output", "call_id": "call_1", "output": "sunny, 22C"},
+            {"type": "reasoning", "summary": [{"type":"summary_text","text":"format the answer"}]},
+            {"role": "assistant", "content": [{"type":"output_text","text":"It is sunny and 22C in Paris."}]}
+        ]
+    })";
+    auto apiHandler = parseResponses(doc, *tokenizer, json);
+    rapidjson::Document processedDoc;
+    processedDoc.Parse(apiHandler->getProcessedJson().c_str());
+    ASSERT_FALSE(processedDoc.HasParseError());
+    const auto& messages = processedDoc["messages"];
+    ASSERT_EQ(messages.Size(), 4u);
+
+    EXPECT_STREQ(messages[1]["role"].GetString(), "assistant");
+    EXPECT_STREQ(messages[1]["content"].GetString(), "");
+    ASSERT_TRUE(messages[1].HasMember("reasoning_content"));
+    EXPECT_STREQ(messages[1]["reasoning_content"].GetString(), "need to call get_weather");
+    ASSERT_TRUE(messages[1].HasMember("tool_calls"));
+    ASSERT_EQ(messages[1]["tool_calls"].Size(), 1u);
+    EXPECT_STREQ(messages[1]["tool_calls"][0]["function"]["name"].GetString(), "get_weather");
+
+    EXPECT_STREQ(messages[2]["role"].GetString(), "tool");
+    EXPECT_STREQ(messages[2]["tool_call_id"].GetString(), "call_1");
+    EXPECT_STREQ(messages[2]["content"].GetString(), "sunny, 22C");
+
+    EXPECT_STREQ(messages[3]["role"].GetString(), "assistant");
+    EXPECT_STREQ(messages[3]["content"].GetString(), "It is sunny and 22C in Paris.");
+    ASSERT_TRUE(messages[3].HasMember("reasoning_content"));
+    EXPECT_STREQ(messages[3]["reasoning_content"].GetString(), "format the answer");
+    EXPECT_FALSE(messages[3].HasMember("tool_calls"));
+}
+#endif  // PYTHON_DISABLE == 0

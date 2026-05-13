@@ -330,7 +330,7 @@ Pull and start OVMS:
 ```bash
 mkdir -p ${HOME}/models
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v ${HOME}/models:/models --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:weekly \
---rest_port 8000 --model_repository_path /models --source_model Junrui2021/Qwen3-VL-8B-Instruct-int4 --tool_parser hermes3 --target_device GPU --task text_generation --pipeline_type VLM_CB --allowed_media_domains raw.githubusercontent.com
+--rest_port 8122 --model_repository_path /models --source_model Junrui2021/Qwen3-VL-8B-Instruct-int4 --model_name ovms-model --tool_parser hermes3 --target_device GPU --task text_generation --pipeline_type VLM_CB --allowed_media_domains raw.githubusercontent.com
 ```
 
 Use MCP server, with additional image of Gdańsk old town. VLM model deduces location and calls `get_weather` tool to summarize the weather conditions in the city.

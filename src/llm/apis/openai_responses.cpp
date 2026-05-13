@@ -224,6 +224,12 @@ static absl::StatusOr<ResponsesInputItemKind> classifyInputItem(const rapidjson:
 // "Message has tool role, but there was no previous assistant message with a
 // tool call!").
 //
+// Reasoning that is not followed by an assistant or function_call item is
+// emitted as a standalone assistant turn with empty content and the buffered
+// reasoning attached as `reasoning_content`. This preserves the model's
+// chain-of-thought across turns even when the prior turn produced no visible
+// output.
+//
 // The algorithm is sink-agnostic; concrete output (ov::genai::ChatHistory vs a
 // rapidjson messages array) is provided by the Sink template parameter, which
 // must implement:
@@ -231,6 +237,7 @@ static absl::StatusOr<ResponsesInputItemKind> classifyInputItem(const rapidjson:
 //   void emitToolMessage(callId, output);
 //   void emitMessage(role, contentText, reasoning);  // reasoning empty -> skip
 //   void emitAssistantWithToolCalls(contentText, reasoning, toolCalls);
+//   void emitStandaloneReasoning(reasoning);  // assistant turn carrying only reasoning_content
 //   absl::Status onMissingRole(itemObj);
 template <typename Sink>
 class ResponsesInputBuilder {
@@ -313,7 +320,8 @@ private:
             return absl::OkStatus();
         }
         // Non-assistant items must not absorb pending tool_calls; flush first.
-        // (flushPendingFunctionCalls also clears any orphan reasoning content.)
+        // (flushPendingFunctionCalls also emits any standalone reasoning content
+        // as a standalone assistant turn.)
         if (role != "assistant") {
             flushPendingFunctionCalls("");
         }
@@ -329,7 +337,16 @@ private:
 
     void flushPendingFunctionCalls(const std::string& assistantText) {
         if (pendingFunctionCalls.empty()) {
-            pendingReasoningContent.clear();
+            // No tool calls, but possibly buffered reasoning to flush as a
+            // standalone assistant turn carrying only reasoning_content (no
+            // `content` field at all, so templates that gate on `message.content`
+            // skip the content branch and templates that gate on
+            // `message.reasoning_content` still see the buffered text).
+            if (!pendingReasoningContent.empty()) {
+                std::string reasoning = std::move(pendingReasoningContent);
+                pendingReasoningContent.clear();
+                sink.emitStandaloneReasoning(reasoning);
+            }
             return;
         }
         std::string reasoning = std::move(pendingReasoningContent);
@@ -427,6 +444,15 @@ public:
         chatHistory.last()["tool_calls"] = rapidJsonValueToJsonContainer(toolCallsArray);
     }
 
+    // Emit an assistant turn that carries only reasoning_content (no content,
+    // no tool_calls). Used when reasoning is not followed by an assistant or
+    // function_call item.
+    void emitStandaloneReasoning(const std::string& reasoning) {
+        chatHistory.push_back({});
+        chatHistory.last()["role"] = "assistant";
+        chatHistory.last()["reasoning_content"] = reasoning;
+    }
+
     absl::Status onMissingRole(const rapidjson::Value::ConstObject&) {
         return absl::InvalidArgumentError("input item role is missing or invalid");
     }
@@ -512,6 +538,15 @@ public:
         msgObj.AddMember("content", rapidjson::Value(contentText.c_str(), alloc), alloc);
         if (!reasoning.empty())
             msgObj.AddMember("reasoning_content", rapidjson::Value(reasoning.c_str(), alloc), alloc);
+        messagesArray.PushBack(msgObj, alloc);
+    }
+
+    // Emit an assistant turn that carries only reasoning_content (no content,
+    // no tool_calls). See ChatHistorySink::emitStandaloneReasoning for rationale.
+    void emitStandaloneReasoning(const std::string& reasoning) {
+        rapidjson::Value msgObj(rapidjson::kObjectType);
+        msgObj.AddMember("role", rapidjson::Value("assistant", alloc), alloc);
+        msgObj.AddMember("reasoning_content", rapidjson::Value(reasoning.c_str(), alloc), alloc);
         messagesArray.PushBack(msgObj, alloc);
     }
 
