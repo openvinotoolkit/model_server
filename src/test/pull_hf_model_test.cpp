@@ -1906,6 +1906,8 @@ TEST_F(HfPullModelModuleLoraTest, PullLoraAdaptersNonImageGenGraphIsNoOp) {
     ASSERT_TRUE(status.ok()) << status.string();
 }
 
+class HfDownloaderPullHfModel : public HfPull {};
+
 // Full-flow test: download SD model + LoRA via --pull mode, verify files and graph.pbtxt.
 // This exercises: CLI parsing -> source_loras -> HF resolution -> LoRA download -> graph.pbtxt generation.
 // Runtime clone()+LoRA behavior is guaranteed by the GenAI API: clone() "reuses underlying models"

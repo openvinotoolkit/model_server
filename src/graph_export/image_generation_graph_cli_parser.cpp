@@ -16,6 +16,7 @@
 #include "image_generation_graph_cli_parser.hpp"
 
 #include <algorithm>
+#include <cctype>
 #include <filesystem>
 #include <iostream>
 #include <optional>
@@ -29,9 +30,21 @@
 #include "../capi_frontend/server_settings.hpp"
 #include "../ovms_exit_codes.hpp"
 #include "../status.hpp"
-#include "src/stringutils.hpp"
+#include "../stringutils.hpp"
 
 namespace ovms {
+
+static bool isValidLoraAlias(const std::string& alias) {
+    if (alias.empty()) {
+        return false;
+    }
+    for (char c : alias) {
+        if (!std::isalnum(static_cast<unsigned char>(c)) && c != '-' && c != '_' && c != '.') {
+            return false;
+        }
+    }
+    return true;
+}
 
 static bool isValidResolution(const std::string& resolution) {
     static const std::regex pattern(R"(\d+x\d+)");
@@ -186,6 +199,10 @@ void ImageGenerationGraphCLIParser::prepare(ServerSettingsImpl& serverSettings, 
             std::string source = entry.substr(eqPos + 1);
             if (alias.empty() || source.empty()) {
                 throw std::invalid_argument("Invalid --source_loras entry: '" + entry + "'. Alias and source must not be empty.");
+            }
+            if (!isValidLoraAlias(alias)) {
+                throw std::invalid_argument("Invalid LoRA alias '" + alias + "' in --source_loras entry: '" + entry +
+                    "'. Alias must contain only alphanumeric characters, hyphens, underscores, or dots.");
             }
             // Skip composite entries in first pass
             if (source[0] == '@') {

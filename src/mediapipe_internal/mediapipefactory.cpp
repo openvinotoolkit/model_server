@@ -61,7 +61,8 @@ Status MediapipeFactory::createDefinition(const std::string& pipelineName,
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Mediapipe graph definition: {} is already created", pipelineName);
         return StatusCode::PIPELINE_DEFINITION_ALREADY_EXIST;
     }
-    std::shared_ptr<MediapipeGraphDefinition> graphDefinition = std::make_shared<MediapipeGraphDefinition>(pipelineName, config, metrics.getMetricRegistry(), &metrics.getMetricConfig(), pythonBackend);
+    std::shared_ptr<MediapipeGraphDefinition> graphDefinition = std::make_shared<MediapipeGraphDefinition>(
+        pipelineName, config, metrics.getMetricRegistry(), &metrics.getMetricConfig(), pythonBackend);
     auto stat = graphDefinition->validate(checker);
     if (stat.getCode() == StatusCode::MEDIAPIPE_GRAPH_NAME_OCCUPIED) {
         return stat;
@@ -71,6 +72,14 @@ Status MediapipeFactory::createDefinition(const std::string& pipelineName,
     // Register LoRA aliases discovered during validation (image gen graphs)
     auto* def = definitions[pipelineName].get();
     for (const auto& alias : def->getLoraAliases()) {
+        if (definitions.find(alias) != definitions.end()) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "LoRA alias '{}' conflicts with existing graph definition name", alias);
+            continue;
+        }
+        if (checker.servableExists(alias, ServableQueryType::Model | ServableQueryType::Pipeline)) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "LoRA alias '{}' conflicts with existing model or pipeline name", alias);
+            continue;
+        }
         loraAliases[alias] = pipelineName;
         SPDLOG_LOGGER_INFO(modelmanager_logger, "Registered LoRA alias: {} -> {}", alias, pipelineName);
     }
