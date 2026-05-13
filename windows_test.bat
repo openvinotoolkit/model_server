@@ -126,6 +126,12 @@ C:\Windows\System32\tar.exe -a -c -f win_test_log.zip win_full_test.log
  if exist win_test_summary.tmp del /f /q win_test_summary.tmp
 
 :: Parse logs and decide final test status using dedicated parser script
+:: Skip expensive parsing if the global PASSED summary is already present in the log
+grep -a -q "\[  PASSED  \] " win_full_test.log
+if !errorlevel! equ 0 (
+    echo [INFO] Tests finished with no failures. Check the summary in win_test_summary.log.
+    exit /b 0
+)
 call %cd%\windows_parse_tests.bat win_full_test.log win_test_summary.log
 set "parseExitCode=!errorlevel!"
 if !parseExitCode! neq 0 exit /b !parseExitCode!

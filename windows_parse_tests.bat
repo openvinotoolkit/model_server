@@ -42,8 +42,9 @@ if !errorlevel! equ 0 goto :exit_build_error
 grep -a -q -i "%CRASH_PATTERN%" "%fullLog%"
 if !errorlevel! equ 0 goto :exit_build_error
 
-:: Consider the run successful only if PASSED summary is present near the end of the log
-tail -50 "%fullLog%" | grep -a -q "\[  PASSED  \]"
+:: Consider the run successful only if the global PASSED summary is present anywhere in the log
+:: (it can appear hundreds of lines before EOF due to SKIPPED and debug trace lines following it)
+grep -a -q "\[  PASSED  \] [0-9]" "%fullLog%"
 if !errorlevel! equ 0 exit /b 0
 
 :: If we reach here, tests did not complete correctly (no FAILED/crash marker but no final PASSED summary)
