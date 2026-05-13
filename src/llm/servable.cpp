@@ -263,6 +263,9 @@ absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecution
     case Endpoint::TOKENIZE:
         return absl::InternalError("Tokenize endpoint should not reach prepareInputs stage");
     }
+    if (Config::instance().getServerSettings().verboseResponse) {
+        executionContext->apiHandler->enableVerboseResponse(inputText);
+    }
     bool encodeAddSpecialTokens = (executionContext->endpoint == Endpoint::COMPLETIONS);
     executionContext->inputIds = getProperties()->tokenizer.encode(inputText, ov::genai::add_special_tokens(encodeAddSpecialTokens)).input_ids;
     if (getProperties()->maxModelLength.has_value()) {

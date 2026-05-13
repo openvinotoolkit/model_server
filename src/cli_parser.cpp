@@ -105,6 +105,12 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
             ("log_path",
                 "Optional path to the log file",
                 cxxopts::value<std::string>(), "LOG_PATH")
+            ("verbose_response",
+                "When enabled, LLM chat/text completion unary responses include an extra "
+                "\"__verbose\" object with the raw prompt (after chat template) and the raw "
+                "model output (before tool/reasoning parsing). Useful for debugging.",
+                cxxopts::value<bool>()->default_value("false"),
+                "VERBOSE_RESPONSE")
 #ifdef MTR_ENABLED
             ("trace_path",
                 "Path to the trace file",
@@ -518,6 +524,8 @@ void CLIParser::prepareServer(ServerSettingsImpl& serverSettings) {
         serverSettings.logLevel = result->operator[]("log_level").as<std::string>();
     if (result->count("log_path"))
         serverSettings.logPath = result->operator[]("log_path").as<std::string>();
+    if (result->count("verbose_response"))
+        serverSettings.verboseResponse = result->operator[]("verbose_response").as<bool>();
 
     if (result->count("grpc_channel_arguments"))
         serverSettings.grpcChannelArguments = result->operator[]("grpc_channel_arguments").as<std::string>();

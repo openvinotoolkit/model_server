@@ -191,6 +191,10 @@ struct ServerSettingsImpl {
     std::optional<std::vector<std::string>> allowedMediaDomains;
     std::string logLevel = "INFO";
     std::string logPath;
+    // When enabled, LLM chat/text completion unary responses include an extra
+    // "__verbose" object with the raw model input (after chat template) and the
+    // raw model output (before tool/reasoning parsing). Inspired by llama.cpp -v.
+    bool verboseResponse = false;
     bool allowCredentials = false;
     std::string allowedOrigins{"*"};
     std::string allowedMethods{"*"};

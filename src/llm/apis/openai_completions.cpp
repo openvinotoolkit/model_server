@@ -394,6 +394,18 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const std::vect
     // TODO: system_fingerprint: string; This fingerprint represents the backend configuration that the model runs with.
     // Can be used in conjunction with the seed request parameter to understand when backend changes have been made that might impact determinism.
 
+    if (isVerboseResponse()) {
+        jsonResponse.StartObject("__verbose");
+        jsonResponse.String("prompt", getVerbosePrompt());
+        jsonResponse.StartArray("raw_outputs");
+        for (const ov::genai::GenerationOutput& generationOutput : generationOutputs) {
+            std::string rawText = tokenizer.decode(generationOutput.generated_ids, ov::genai::skip_special_tokens(false));
+            jsonResponse.String(rawText);
+        }
+        jsonResponse.EndArray();
+        jsonResponse.EndObject();
+    }
+
     // finish response object
     jsonResponse.EndObject();
     return jsonResponse.ToString();
@@ -452,6 +464,18 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(ov::genai::Enco
 
     // TODO: system_fingerprint: string; This fingerprint represents the backend configuration that the model runs with.
     // Can be used in conjunction with the seed request parameter to understand when backend changes have been made that might impact determinism.
+
+    if (isVerboseResponse()) {
+        jsonResponse.StartObject("__verbose");
+        jsonResponse.String("prompt", getVerbosePrompt());
+        jsonResponse.StartArray("raw_outputs");
+        for (const auto& tokens : results.tokens) {
+            std::string rawText = tokenizer.decode(tokens, ov::genai::skip_special_tokens(false));
+            jsonResponse.String(rawText);
+        }
+        jsonResponse.EndArray();
+        jsonResponse.EndObject();
+    }
 
     // finish response object
     jsonResponse.EndObject();
@@ -518,6 +542,18 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(ov::genai::VLMD
 
     // TODO: system_fingerprint: string; This fingerprint represents the backend configuration that the model runs with.
     // Can be used in conjunction with the seed request parameter to understand when backend changes have been made that might impact determinism.
+
+    if (isVerboseResponse()) {
+        jsonResponse.StartObject("__verbose");
+        jsonResponse.String("prompt", getVerbosePrompt());
+        jsonResponse.StartArray("raw_outputs");
+        // For VLM the raw decoded text is provided by GenAI directly.
+        if (!textResponse.empty()) {
+            jsonResponse.String(textResponse);
+        }
+        jsonResponse.EndArray();
+        jsonResponse.EndObject();
+    }
 
     // finish response object
     jsonResponse.EndObject();
