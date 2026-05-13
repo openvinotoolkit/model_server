@@ -2201,7 +2201,8 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemNotWithi
       {
         "type": "image_url",
         "image_url": {
-          "url":  ")" + imageUrl + R"("
+          "url":  ")" + imageUrl +
+                       R"("
         }
       }
     ]
@@ -2260,7 +2261,8 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemInvalidP
         {
           "type": "image_url",
           "image_url": {
-            "url":  ")" + imageUrl + R"("
+            "url":  ")" +
+                       imageUrl + R"("
           }
         }
       ]
