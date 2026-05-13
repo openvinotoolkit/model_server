@@ -537,6 +537,30 @@ ParsedOutput OpenAIApiHandler::parseOutputIfNeeded(const std::vector<int64_t>& g
     return parsedOutput;
 }
 
+std::string OpenAIApiHandler::serializeStreamingVerboseChunk() {
+    if (!verboseResponse) {
+        return std::string();
+    }
+    std::string rawOutput;
+    if (!verboseRawTokens.empty()) {
+        rawOutput = tokenizer.decode(verboseRawTokens, ov::genai::skip_special_tokens(false));
+    } else {
+        rawOutput = verboseRawText;
+    }
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+    writer.StartObject();
+    writer.String("__verbose");
+    writer.StartObject();
+    writer.String("prompt");
+    writer.String(verbosePrompt.c_str());
+    writer.String("raw_output");
+    writer.String(rawOutput.c_str());
+    writer.EndObject();
+    writer.EndObject();
+    return buffer.GetString();
+}
+
 // --- Free functions ---
 
 void updateUsage(CompletionUsageStatistics& usage, const std::vector<int64_t>& generatedIds, bool echoPrompt) {

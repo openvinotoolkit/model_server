@@ -224,6 +224,9 @@ absl::Status VisualLanguageModelLegacyServable::preparePartialResponse(std::shar
         lastTextChunk = executionContext->lastStreamerCallbackOutput;
         executionContext->lastStreamerCallbackOutput = "";
     }
+    if (executionContext->apiHandler->isVerboseResponse() && !lastTextChunk.empty()) {
+        executionContext->apiHandler->appendVerboseRawText(lastTextChunk);
+    }
     if (generationStatus != std::future_status::ready) {  // continue
         // For RESPONSES endpoint, always call serializeStreamingChunk so that
         // output item initialization events are emitted even before the tokenizer produces text.
@@ -244,6 +247,9 @@ absl::Status VisualLanguageModelLegacyServable::preparePartialResponse(std::shar
         // if streamer::put returned a value, streamer::end() result will not contain it, so we add it manually
         if (!executionContext->lastStreamerCallbackOutput.empty()) {
             lastTextChunk = lastTextChunk + executionContext->lastStreamerCallbackOutput;
+            if (executionContext->apiHandler->isVerboseResponse()) {
+                executionContext->apiHandler->appendVerboseRawText(executionContext->lastStreamerCallbackOutput);
+            }
         }
         std::string serializedChunk = executionContext->apiHandler->serializeStreamingChunk(lastTextChunk, ov::genai::GenerationFinishReason::STOP);
         if (!serializedChunk.empty()) {

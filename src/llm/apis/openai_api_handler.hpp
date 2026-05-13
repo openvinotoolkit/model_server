@@ -105,6 +105,9 @@ protected:
     // parsing). Inspired by llama.cpp -v.
     bool verboseResponse = false;
     std::string verbosePrompt;
+    // Streaming accumulators for raw model output.
+    std::vector<int64_t> verboseRawTokens;
+    std::string verboseRawText;
 
     // Shared parsing helpers
     absl::Status parseCommonPart(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength);
@@ -170,6 +173,20 @@ public:
     }
     bool isVerboseResponse() const { return verboseResponse; }
     const std::string& getVerbosePrompt() const { return verbosePrompt; }
+    // Accumulators used to assemble the "raw model output" for streaming responses.
+    void appendVerboseRawTokens(const std::vector<int64_t>& tokens) {
+        verboseRawTokens.insert(verboseRawTokens.end(), tokens.begin(), tokens.end());
+    }
+    void appendVerboseRawText(const std::string& chunk) {
+        verboseRawText.append(chunk);
+    }
+    void setVerboseRawText(std::string text) {
+        verboseRawText = std::move(text);
+    }
+    const std::vector<int64_t>& getVerboseRawTokens() const { return verboseRawTokens; }
+    const std::string& getVerboseRawText() const { return verboseRawText; }
+    // Builds a SSE-ready JSON chunk with the accumulated verbose info, or empty string if disabled.
+    std::string serializeStreamingVerboseChunk();
 
     // Usage tracking
     void setPromptTokensUsage(size_t promptTokens);

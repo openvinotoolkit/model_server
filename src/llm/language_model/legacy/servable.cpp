@@ -229,6 +229,9 @@ absl::Status LegacyServable::preparePartialResponse(std::shared_ptr<GenAiServabl
         if (!executionContext->lastStreamerCallbackOutput.empty()) {
             lastTextChunk = lastTextChunk + executionContext->lastStreamerCallbackOutput;
         }
+        if (executionContext->apiHandler->isVerboseResponse() && !legacyExecutionContext->results.tokens.empty()) {
+            executionContext->apiHandler->appendVerboseRawTokens(legacyExecutionContext->results.tokens[0]);
+        }
         std::string serializedChunk = executionContext->apiHandler->serializeStreamingChunk(lastTextChunk, ov::genai::GenerationFinishReason::STOP);
         if (!serializedChunk.empty()) {
             executionContext->response = wrapTextInServerSideEventMessage(serializedChunk);

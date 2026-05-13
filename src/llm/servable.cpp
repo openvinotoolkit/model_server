@@ -302,6 +302,9 @@ absl::Status GenAiServable::preparePartialResponse(std::shared_ptr<GenAiServable
     }
     auto& generationOutput = executionContext->generationOutputs[0];
     executionContext->apiHandler->incrementProcessedTokens(generationOutput.generated_ids.size());
+    if (executionContext->apiHandler->isVerboseResponse()) {
+        executionContext->apiHandler->appendVerboseRawTokens(generationOutput.generated_ids);
+    }
 
     std::stringstream ss;
     executionContext->textStreamer->write(generationOutput.generated_ids);
