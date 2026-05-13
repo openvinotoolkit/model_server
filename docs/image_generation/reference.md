@@ -165,6 +165,117 @@ We recommend using [export script](../../demos/common/export_models/README.md) t
 
 Check [tested models](https://github.com/openvinotoolkit/openvino.genai/blob/master/tests/python_tests/models/real_models).
 
+## LoRA Adapters
+
+[LoRA (Low-Rank Adaptation)](https://arxiv.org/abs/2106.09685) adapters allow fine-tuning image generation models without retraining the full model. OVMS supports loading multiple LoRA adapters at startup and dynamically selecting/blending them per request.
+
+### Registering LoRA Adapters
+
+LoRA adapters are registered at server startup via the `--source_loras` CLI parameter. The format is a comma-separated list of `alias=source` entries:
+
+```
+--source_loras=alias1=source1,alias2=source2,...
+```
+
+**Supported source types:**
+
+| Source Type | Format | Example |
+|------------|--------|---------|
+| HuggingFace repo | `org/repo` | `pokemon=juliensimon/sd-pokemon-lora` |
+| HuggingFace repo with explicit file | `org/repo@filename.safetensors` | `xray=DoctorDiffusion/doctor-diffusion-s-xray-xl-lora@DD-xray-v1.safetensors` |
+| Direct URL | `https://...` | `style=https://huggingface.co/user/repo/resolve/main/model.safetensors` |
+| Local file path | `/path/to/file.safetensors` | `custom=/models/loras/my_style.safetensors` |
+
+**Example:**
+```bash
+ovms --rest_port 8000 \
+  --model_repository_path /models/ \
+  --task image_generation \
+  --source_model stabilityai/stable-diffusion-xl-base-1.0 \
+  --source_loras "xray=DoctorDiffusion/doctor-diffusion-s-xray-xl-lora@DD-xray-v1.safetensors,ukiyo=KappaNeuro/ukiyo-e-art@Ukiyo-e Art.safetensors,vector=DoctorDiffusion/doctor-diffusion-s-controllable-vector-art-xl-lora@DD-vector-v2.safetensors"
+```
+
+> **Important:** LoRA adapters must be compatible with the base model architecture. For example, SDXL adapters can only be used with an SDXL base model.
+
+### Composite Adapters
+
+You can define composite adapters that blend multiple adapters with specified weights:
+
+```
+--source_loras="pokemon=juliensimon/sd-pokemon-lora,anime=user/anime-lora,mix=@pokemon:0.7+@anime:0.5"
+```
+
+The `mix` adapter is a composite that blends `pokemon` at weight 0.7 and `anime` at weight 0.5.
+
+### Per-Request LoRA Selection via Model Name Routing
+
+Adapter selection is driven by the `model` field in the request. When the `model` field matches a registered adapter alias, that adapter is automatically applied:
+
+```bash
+curl http://localhost:8000/v3/images/generations \
+  -H "Content-Type: application/json" \
+  -d '{"model": "xray", "prompt": "xray a human hand", "num_inference_steps": 20}'
+```
+
+In this example, `xray` is the alias defined in `--source_loras` (e.g. `xray=DoctorDiffusion/doctor-diffusion-s-xray-xl-lora@DD-xray-v1.safetensors`). The adapter is applied with its default weight.
+
+When the `model` field matches a **composite** adapter alias, all component adapters are activated with their pre-defined weights:
+
+```bash
+curl http://localhost:8000/v3/images/generations \
+  -H "Content-Type: application/json" \
+  -d '{"model": "mix", "prompt": "a landscape"}'
+```
+
+When the `model` field is the **base model name** (not matching any adapter alias), generation proceeds without any LoRA adapter applied (base model only).
+
+### Overriding Adapter Weights with `lora_weights`
+
+The `lora_weights` field in the request body allows overriding the default weight of the active adapter(s). It does **not** independently select which adapters to activate — adapter selection is always based on the `model` field.
+
+**Override a single adapter weight:**
+```json
+{
+  "model": "xray",
+  "prompt": "xray a cute cat in sunglasses",
+  "lora_weights": {"xray": 0.5},
+  "num_inference_steps": 20
+}
+```
+
+**Override component weights in a composite adapter:**
+```json
+{
+  "model": "mix",
+  "prompt": "a landscape in mixed style",
+  "lora_weights": {"ukiyo": 0.3, "vector": 0.8}
+}
+```
+
+### Blending Multiple Adapters
+
+To blend multiple adapters simultaneously, define a **composite adapter** at startup:
+
+```
+--source_loras="xray=DoctorDiffusion/doctor-diffusion-s-xray-xl-lora@DD-xray-v1.safetensors,ukiyo=KappaNeuro/ukiyo-e-art@Ukiyo-e Art.safetensors,blend=@xray:0.5+@ukiyo:0.4"
+```
+
+Then use the composite alias in requests:
+```bash
+curl http://localhost:8000/v3/images/generations \
+  -H "Content-Type: application/json" \
+  -d '{"model": "blend", "prompt": "a cat"}'
+```
+
+You can override individual component weights at request time via `lora_weights`:
+```json
+{
+  "model": "blend",
+  "prompt": "a cat",
+  "lora_weights": {"xray": 0.8, "ukiyo": 0.2}
+}
+```
+
 ## References
 - [Image Generation API](../model_server_rest_api_image_generation.md)
 - [Image Edit API](../model_server_rest_api_image_edit.md)

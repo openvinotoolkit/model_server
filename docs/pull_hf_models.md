@@ -93,3 +93,22 @@ Check [parameters page](./parameters.md) for detailed descriptions of configurat
 In case you want to setup model and start server in one step, follow [instructions](./starting_server.md).
 
 > **Note:**  When using pull mode you need both read and write access rights to models repository.
+
+## Pulling Image Generation Models with LoRA Adapters
+
+For image generation tasks, you can additionally specify LoRA adapters to be downloaded alongside the base model using the `--source_loras` parameter:
+
+```text
+ovms --rest_port 8000 \
+  --model_repository_path /models/ \
+  --task image_generation \
+  --source_model stabilityai/stable-diffusion-xl-base-1.0 \
+  --source_loras "xray=DoctorDiffusion/doctor-diffusion-s-xray-xl-lora@DD-xray-v1.safetensors,ukiyo=KappaNeuro/ukiyo-e-art@Ukiyo-e Art.safetensors"
+```
+
+The `--source_loras` format is a comma-separated list of `alias=source` entries. Supported source types:
+- HuggingFace repository: `alias=org/repo` or `alias=org/repo@filename.safetensors`
+- Direct URL: `alias=https://url/to/file.safetensors`
+- Local file: `alias=/path/to/file.safetensors`
+
+For more details, see the [LoRA Adapters documentation](./image_generation/reference.md#lora-adapters).
