@@ -2449,12 +2449,13 @@ TEST(OvmsConfigTest, positiveMulti) {
 TEST(OvmsConfigTest, allowedLocalMediaPathRelativeIsNormalized) {
     char* n_argv[] = {
         "ovms",
+        "--rest_port", "45",
         "--allowed_local_media_path",
         "src/test",
         "--config_path",
         "/config.json"};
 
-    int arg_count = 5;
+    int arg_count = 7;
     ConstructorEnabledConfig config;
     config.parse(arg_count, n_argv);
 
