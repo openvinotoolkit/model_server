@@ -20,7 +20,6 @@
 
 namespace ovms {
 uint16_t getCoreCount() {
-    auto cores = std::thread::hardware_concurrency();
-    return cores == 0 ? 1 : static_cast<uint16_t>(cores);
+    return std::thread::hardware_concurrency();
 }
 }  // namespace ovms

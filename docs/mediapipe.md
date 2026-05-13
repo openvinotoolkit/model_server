@@ -245,7 +245,7 @@ The graph pool size is controlled via a comment directive in the graph `.pbtxt` 
 **Generated graphs from exporters:**
 - `demos/common/export_models/export_model.py` and OVMS `--pull --task ...` graph export emit `OVMS_GRAPH_QUEUE_MAX_SIZE` automatically.
 - In `export_model.py`: image generation graphs use `1`, and all other graph types use `AUTO`.
-- In OVMS `--task ...` graph export: image generation graphs use `1`, and other graph types use `min(physical_cores, rest_workers)` (with OVMS default REST worker calculation when `rest_workers` is not provided explicitly).
+- In OVMS `--task ...` graph export: image generation graphs use `1`, and all other graph types use `AUTO`.
 
 #### Important considerations for graph developers
 

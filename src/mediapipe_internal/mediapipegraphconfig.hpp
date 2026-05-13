@@ -76,10 +76,6 @@ private:
     GraphQueueSizeValue graphQueueSize;
 
 public:
-    /**
-         * @brief Construct a new Mediapie Graph configuration object
-         *
-         */
     MediapipeGraphConfig(const std::string& graphName = "",
         const std::string& basePath = "",
         const std::string& graphPath = "",

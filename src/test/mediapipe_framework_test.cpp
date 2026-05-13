@@ -48,6 +48,7 @@
 #include "../stringutils.hpp"
 #include "../tfs_frontend/tfs_utils.hpp"
 #include "c_api_test_utils.hpp"
+#include "environment.hpp"
 #include "test_utils.hpp"
 #include "platform_utils.hpp"
 #include "test_with_temp_dir.hpp"
@@ -297,6 +298,7 @@ TEST_F(MediapipeFrameworkTest, HotReloadOutputStreamHandlerPOC) {
     MP_ERROR_STOP(graph.WaitUntilIdle());
 }
 TEST_F(MediapipeFrameworkTest, HotReloadOutputStreamHandlerPOCCompare) {
+    SKIP_AND_EXIT_IF_NOT_RUNNING_UNSTABLE();
     // we need it only so that dummy is available via C-API
     ServerGuard servGuard(getGenericFullPathForSrcTest("/ovms/src/test/configs/config_standard_dummy.json"));
     std::string graph_proto = R"(

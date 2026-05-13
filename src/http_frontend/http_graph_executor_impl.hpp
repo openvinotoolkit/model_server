@@ -48,7 +48,6 @@ class PythonBackend;
 
 using HttpReaderWriter = HttpAsyncWriter;
 
-// Checks whether the request contains user-provided input side packets.
 bool requestHasInputSidePackets(const HttpPayload& request);
 
 // Deserialization of parameters inside KServe gRPC request

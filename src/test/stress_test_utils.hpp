@@ -1197,7 +1197,7 @@ enum StressTimerSlot : unsigned int {
 
 class ConfigChangeStressTest : public TestWithTempDir {
 protected:
-    const uint32_t loadThreadCount = 16;
+    const uint32_t loadThreadCount = 20;
     const uint32_t beforeConfigChangeLoadTimeMs = 30;
     const uint32_t afterConfigChangeLoadTimeMs = 50;
     const int stressIterationsLimit = 10000;
@@ -1867,7 +1867,7 @@ public:
 #endif
             }
             timer.stop(CREATE);
-            SPDLOG_TRACE("XYZ creation time: {} us", timer.elapsed<std::chrono::microseconds>(CREATE));
+            SPDLOG_TRACE("Executor creation time: {} us", timer.elapsed<std::chrono::microseconds>(CREATE));
             // we need to make sure that expected status happened and still accept
             // some that could happen but we may not hit them
             EXPECT_TRUE((requiredLoadResults.find(createPipelineStatus.getCode()) != requiredLoadResults.end()) ||
@@ -1902,6 +1902,7 @@ public:
                 break;
             }
             timer.stop(STRESS_LOOP);
+            SPDLOG_TRACE("Execution time: {} us", timer.elapsed<std::chrono::microseconds>(CREATE));
         }
         for (auto& [retCode, counter] : createPipelineRetCodesCounters) {
             if (counter > 0) {

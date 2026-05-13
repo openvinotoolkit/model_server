@@ -40,8 +40,6 @@
 #include "../tensorinfo.hpp"
 #include "../timer.hpp"
 #include "../version.hpp"
-#include "src/filesystem/filesystem.hpp"
-#include "src/metrics/metric.hpp"
 #include "mediapipe/framework/port/parse_text_proto.h"
 #include "mediapipe/framework/port/status.h"
 #include "mediapipe_utils.hpp"
@@ -93,8 +91,8 @@ Status MediapipeGraphDefinition::validateForConfigFileExistence() {
 Status MediapipeGraphDefinition::resolveGraphQueueSize() {
     // 1. Explicit pbtxt directive: # OVMS_GRAPH_QUEUE_MAX_SIZE: <value>
     //    Always honored regardless of env var or calculator checks.
-    //    Value -1 disables the queue, AUTO or positive integer enables it.
-    //    Value 0 is rejected as invalid.
+    //    Value 0 disables the queue, AUTO or positive integer enables it.
+    //    Negative values are rejected as invalid.
     static const std::regex directiveRegex(
         R"((?:^|\n)\s*#\s*OVMS_GRAPH_QUEUE_MAX_SIZE\s*:\s*(\S+)\s*(?:\r?\n|$))");
     std::smatch match;
@@ -126,8 +124,6 @@ Status MediapipeGraphDefinition::resolveGraphQueueSize() {
         this->mgconfig.setGraphQueueSize(queueSize);
         return StatusCode::OK;
     }
-
-    // 2. Default: queue disabled unless graph explicitly provides directive.
     SPDLOG_DEBUG("Graph queue disabled by default for mediapipe: {}. Add '# OVMS_GRAPH_QUEUE_MAX_SIZE: <value>' directive in graph.pbtxt to enable.", getName());
     return StatusCode::OK;
 }
