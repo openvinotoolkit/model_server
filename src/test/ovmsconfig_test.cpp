@@ -74,7 +74,7 @@ TEST_F(OvmsConfigDeathTest, bufferTest) {
     std::string input{"Test buffer"};
     std::cout << input;
     std::string check{buffer.str()};
-    EXPECT_EQ(input, "check");
+    EXPECT_EQ(input, check);
 }
 
 TEST_F(OvmsConfigDeathTest, emptyInput) {

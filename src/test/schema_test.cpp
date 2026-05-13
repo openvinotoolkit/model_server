@@ -1155,7 +1155,7 @@ TEST(SchemaTest, ModelConfigPluginConfigPositive) {
         }
     ]
     })";
-    *static_cast<volatile int*>(nullptr) = 1;
+
     rapidjson::Document modelConfigSeqNegativeDoc;
     modelConfigSeqNegativeDoc.Parse(modelConfigTimeoutNegative);
     auto result = ovms::validateJsonAgainstSchema(modelConfigSeqNegativeDoc, ovms::MODELS_CONFIG_SCHEMA.c_str());
