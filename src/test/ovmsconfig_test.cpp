@@ -2425,7 +2425,7 @@ TEST(OvmsConfigTest, positiveMulti) {
 #endif
     EXPECT_EQ(config.cacheDir(), "/tmp/model_cache");
     ASSERT_TRUE(config.getServerSettings().allowedLocalMediaPath.has_value());
-    EXPECT_EQ(config.getServerSettings().allowedLocalMediaPath.value(), "/tmp/path");
+    EXPECT_EQ(config.getServerSettings().allowedLocalMediaPath.value(), ovms::FileSystem::normalizeConfiguredPath("/tmp/path"));
     ASSERT_TRUE(config.getServerSettings().allowedMediaDomains.has_value());
     EXPECT_EQ(config.getServerSettings().allowedMediaDomains.value().size(), 3);
     EXPECT_EQ(config.getServerSettings().allowedMediaDomains.value()[0], "raw.githubusercontent.com");
@@ -2461,8 +2461,8 @@ TEST(OvmsConfigTest, allowedLocalMediaPathRelativeIsNormalized) {
 
     ASSERT_TRUE(config.getServerSettings().allowedLocalMediaPath.has_value());
     const auto configuredPath = std::filesystem::path(config.getServerSettings().allowedLocalMediaPath.value());
-    const auto expectedPath = (std::filesystem::current_path() / "src/test").lexically_normal();
-    EXPECT_EQ(configuredPath.lexically_normal(), expectedPath);
+    const auto expectedPath = std::filesystem::path(ovms::FileSystem::normalizeConfiguredPath("src/test"));
+    EXPECT_EQ(configuredPath.lexically_normal(), expectedPath.lexically_normal());
 }
 
 TEST(OvmsConfigTest, positiveSingle) {

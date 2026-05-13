@@ -38,6 +38,7 @@
 #include "../capi_frontend/capi_dag_utils.hpp"
 #include "../capi_frontend/servablemetadata.hpp"
 #include "../dags/pipelinedefinitionstatus.hpp"
+#include "../filesystem/filesystem.hpp"
 #include "src/metrics/metric_module.hpp"
 #include "../ovms.h"
 #include "../servablemanagermodule.hpp"
@@ -183,7 +184,7 @@ TEST(CAPIConfigTest, MultiModelConfiguration) {
     EXPECT_EQ(serverSettings->logLevel, "TRACE");
     EXPECT_EQ(serverSettings->logPath, getGenericFullPathForTmp("/tmp/logs"));
     ASSERT_TRUE(serverSettings->allowedLocalMediaPath.has_value());
-    EXPECT_EQ(serverSettings->allowedLocalMediaPath.value(), getGenericFullPathForTmp("/tmp/path"));
+    EXPECT_EQ(serverSettings->allowedLocalMediaPath.value(), ovms::FileSystem::normalizeConfiguredPath(getGenericFullPathForTmp("/tmp/path")));
     ASSERT_TRUE(serverSettings->allowedMediaDomains.has_value());
     EXPECT_EQ(serverSettings->allowedMediaDomains.value().size(), 3);
     EXPECT_EQ(serverSettings->allowedMediaDomains.value()[0], "raw.githubusercontent.com");
@@ -268,8 +269,8 @@ TEST(CAPIConfigTest, AllowedLocalMediaPathRelativeIsNormalized) {
     ASSERT_TRUE(serverSettings->allowedLocalMediaPath.has_value());
 
     const auto configuredPath = std::filesystem::path(serverSettings->allowedLocalMediaPath.value());
-    const auto expectedPath = (std::filesystem::current_path() / "src/test").lexically_normal();
-    EXPECT_EQ(configuredPath.lexically_normal(), expectedPath);
+    const auto expectedPath = std::filesystem::path(ovms::FileSystem::normalizeConfiguredPath("src/test"));
+    EXPECT_EQ(configuredPath.lexically_normal(), expectedPath.lexically_normal());
 
     OVMS_ServerSettingsDelete(serverSettingsRaw);
 }
