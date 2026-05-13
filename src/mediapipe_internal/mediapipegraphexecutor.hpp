@@ -177,13 +177,6 @@ public:
 
     template <typename RequestType, typename ResponseType>
     Status inferWithQueue(const RequestType* request, ResponseType* response, ExecutionContext executionContext, MetricCounterGuard& failedRequestsGuard) {
-        if (requestHasInputSidePackets(*request)) {
-            SPDLOG_DEBUG("Graph queue does not support user-provided input side packets. "
-                         "Side packets are set at graph queue construction time. Graph: {}",
-                this->name);
-            return Status(StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR,
-                "Input side packets are not supported for graphs with queue enabled");
-        }
         ::mediapipe::CalculatorGraph& graph = this->guard->graph;
         auto llmContextStatus = initializeLlmExecutionContexts(this->sidePacketMaps.genAiServableMap, this->guard->gh->genAiExecutionContextMap);
         if (!llmContextStatus.ok()) {
@@ -622,7 +615,7 @@ absl::Status MyFunctor<RequestType, ResponseType>::handlePacket(const ::mediapip
         this->packetType,
         packet,
         response);
-    return status.ok() ? absl::OkStatus() : absl::Status(absl::StatusCode::kInternal, status.string());
+    return status.ok() ? absl::OkStatus() : absl::Status(absl::StatusCode::kInternal, "Some error");
 }
 
 template <typename ReaderWriterType>

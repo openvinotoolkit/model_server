@@ -48,10 +48,9 @@ class NullOutputStreamObserver;
 struct ObserverHolder;
 struct GraphHelper {
     std::unique_ptr<::mediapipe::CalculatorGraph> graph;
-    // Do not modify after construction: keys are fixed, but observer implementations
+    // const after construction: keys are fixed, but observer implementations
     // can be swapped via the mutable ObserverHolder inside each shared_ptr.
-    // Non-const to allow proper move semantics in the move constructor.
-    std::unordered_map<std::string, std::shared_ptr<ObserverHolder>> outStreamObservers;
+    const std::unordered_map<std::string, std::shared_ptr<ObserverHolder>> outStreamObservers;
     GenAiExecutionContextMap genAiExecutionContextMap;
     ::mediapipe::Timestamp currentTimestamp;
     GraphHelper() = default;
@@ -62,7 +61,7 @@ struct GraphHelper {
     GraphHelper& operator=(const GraphHelper&) = delete;
     GraphHelper(GraphHelper&& gh) :
         graph(std::move(gh.graph)),
-        outStreamObservers(std::move(gh.outStreamObservers)),
+        outStreamObservers(std::move(const_cast<std::unordered_map<std::string, std::shared_ptr<ObserverHolder>>&>(gh.outStreamObservers))),
         genAiExecutionContextMap(std::move(gh.genAiExecutionContextMap)),
         currentTimestamp(gh.currentTimestamp) {}
     GraphHelper& operator=(GraphHelper&&) = delete;

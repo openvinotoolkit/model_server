@@ -81,13 +81,6 @@ MediapipeGraphExecutor::MediapipeGraphExecutor(
     sidePacketMaps(sidePacketMaps),
     pythonBackend(pythonBackend),
     currentStreamTimestamp(::mediapipe::Timestamp(STARTING_TIMESTAMP_VALUE)),
-    mediapipeServableMetricReporter(mediapipeServableMetricReporter) {
-    // Deep-copy execution context holders so each per-request executor
-    // gets independent holders, avoiding shared-state races when the
-    // calculator reads the holder from the side packet.
-    for (auto& [name, holder] : this->sidePacketMaps.genAiExecutionContextMap) {
-        holder = std::make_shared<GenAiExecutionContextHolder>();
-    }
-}
+    mediapipeServableMetricReporter(mediapipeServableMetricReporter) {}
 
 }  // namespace ovms

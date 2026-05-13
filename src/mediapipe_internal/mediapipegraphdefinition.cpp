@@ -414,10 +414,13 @@ Status MediapipeGraphDefinition::reload(const ServableNameChecker& checker, cons
 }
 
 void MediapipeGraphDefinition::retire() {
-    this->queue.reset();
-    // Reset the shared maps so in-flight executions can keep their own snapshot alive.
-    this->sidePacketMaps.reset();
+    // Block creating new unloadGuards
     this->status.handle(RetireEvent());
+    while (requestsHandlesCounter > 0) {
+        std::this_thread::sleep_for(std::chrono::microseconds(1));
+    }
+    this->queue.reset();
+    this->sidePacketMaps.reset();
 }
 
 bool MediapipeGraphDefinition::isReloadRequired(const MediapipeGraphConfig& config) const {
