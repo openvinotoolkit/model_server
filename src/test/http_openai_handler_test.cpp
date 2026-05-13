@@ -2246,8 +2246,8 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemPrefixPa
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemInvalidPath) {
-    const std::string allowedPath = getGenericFullPathForSrcTest("/ovms/");
-    const std::string imageUrl = getGenericFullPathForSrcTest("/ovms/not_exisiting.jpeg");
+    const std::string allowedPath = getGenericFullPathForSrcTest("/ovms/src/test/");
+    const std::string imageUrl = getGenericFullPathForSrcTest("/ovms/src/test/not_exisiting.jpeg");
     std::string json = R"({
   "model": "llama",
   "messages": [
