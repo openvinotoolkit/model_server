@@ -308,6 +308,10 @@ absl::Status VisualLanguageModelLegacyServable::prepareInputs(std::shared_ptr<Ge
         return absl::InvalidArgumentError("Unsupported endpoint");
     }
 
+    if (Config::instance().getServerSettings().verboseResponse) {
+        vlmExecutionContext->apiHandler->enableVerboseResponse(vlmExecutionContext->inputText);
+    }
+
     // Below logic is used only for the statistics and debugging purposes and does not affect the model execution.
     SPDLOG_LOGGER_TRACE(llm_calculator_logger, "VLM input text: {}", vlmExecutionContext->inputText);
     bool encodeAddSpecialTokens = false;  // assuming chat template application added special tokens

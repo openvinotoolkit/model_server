@@ -22,6 +22,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "../../../config.hpp"
 #include "../../../logging.hpp"
 #include "../../text_utils.hpp"
 #include "../../../tokenize/tokenize_parser.hpp"
@@ -108,6 +109,10 @@ absl::Status VisualLanguageModelServable::prepareInputs(std::shared_ptr<GenAiSer
         vlmExecutionContext->inputText = properties->tokenizer.apply_chat_template(chatHistory, addGenerationPrompt, {}, tools, chatTemplateKwargs);
     } else {
         return absl::InvalidArgumentError("Unsupported endpoint");
+    }
+
+    if (Config::instance().getServerSettings().verboseResponse) {
+        vlmExecutionContext->apiHandler->enableVerboseResponse(vlmExecutionContext->inputText);
     }
 
     // Below logic is used only for the statistics and debugging purposes and does not affect the model execution.
