@@ -551,6 +551,7 @@ protected:
 
 TEST_F(GraphCreationTest, positiveDefaultWithVersionString) {
     ovms::HFSettingsImpl hfSettings;
+    hfSettings.task = ovms::TEXT_GENERATION_GRAPH;
     std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
     std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
     auto status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
@@ -640,6 +641,7 @@ TEST_F(GraphCreationTest, positiveImageGenWithVersionString) {
 
 TEST_F(GraphCreationTest, positiveDefault) {
     ovms::HFSettingsImpl hfSettings;
+    hfSettings.task = ovms::TEXT_GENERATION_GRAPH;
     std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
     std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
     auto status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
@@ -651,6 +653,7 @@ TEST_F(GraphCreationTest, positiveDefault) {
 
 TEST_F(GraphCreationTest, positiveDraftAndFuse) {
     ovms::HFSettingsImpl hfSettings;
+    hfSettings.task = ovms::TEXT_GENERATION_GRAPH;
     ovms::TextGenGraphSettingsImpl graphSettings;
     graphSettings.draftModelDirName = "/ovms/src/test/llm_testing/facebook/opt-125m";
     graphSettings.dynamicSplitFuse = "false";
@@ -668,6 +671,7 @@ TEST_F(GraphCreationTest, positiveDraftAndFuse) {
 TEST_F(GraphCreationTest, positiveGGUF) {
     this->filesToPrintInCaseOfFailure.emplace_back("graph.pbtxt");
     ovms::HFSettingsImpl hfSettings;
+    hfSettings.task = ovms::TEXT_GENERATION_GRAPH;
     hfSettings.ggufFilename = "PRETTY_GOOD_GGUF_MODEL.gguf";
     std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
     std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
@@ -681,6 +685,7 @@ TEST_F(GraphCreationTest, positiveGGUF) {
 TEST_F(GraphCreationTest, WillOverwriteExistingGraphPbtxtGGUF) {
     this->filesToPrintInCaseOfFailure.emplace_back("graph.pbtxt");
     ovms::HFSettingsImpl hfSettings;
+    hfSettings.task = ovms::TEXT_GENERATION_GRAPH;
     std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
     std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
 
@@ -931,6 +936,7 @@ TEST_F(GraphCreationTest, speechToTextCreatedPbtxtInvalid) {
 
 TEST_F(GraphCreationTest, positivePluginConfigAll) {
     ovms::HFSettingsImpl hfSettings;
+    hfSettings.task = ovms::TEXT_GENERATION_GRAPH;
     ovms::TextGenGraphSettingsImpl graphSettings;
     hfSettings.exportSettings.pluginConfig.kvCachePrecision = "u8";
     hfSettings.exportSettings.pluginConfig.maxPromptLength = 123;
@@ -949,6 +955,7 @@ TEST_F(GraphCreationTest, positivePluginConfigAll) {
 
 TEST_F(GraphCreationTest, positiveWithParsersAndToolGuidedGeneration) {
     ovms::HFSettingsImpl hfSettings;
+    hfSettings.task = ovms::TEXT_GENERATION_GRAPH;
     ovms::TextGenGraphSettingsImpl graphSettings;
     graphSettings.reasoningParser = "REASONING_PARSER";
     graphSettings.toolParser = "TOOL_PARSER";
@@ -967,6 +974,7 @@ TEST_F(GraphCreationTest, positiveWithParsersAndToolGuidedGeneration) {
 
 TEST_F(GraphCreationTest, positivePluginConfigOne) {
     ovms::HFSettingsImpl hfSettings;
+    hfSettings.task = ovms::TEXT_GENERATION_GRAPH;
     ovms::TextGenGraphSettingsImpl graphSettings;
     hfSettings.exportSettings.pluginConfig.kvCachePrecision = "u8";
     hfSettings.graphSettings = std::move(graphSettings);
@@ -1090,6 +1098,42 @@ TEST_F(GraphCreationTest, imageGenerationPositiveFull) {
     std::string graphContents = GetFileContents(graphPath);
     ASSERT_EQ(expectedImageGenerationGraphContents, removeVersionString(graphContents)) << graphContents;
 }
+
+#ifdef _WIN32
+TEST_F(GraphCreationTest, windowsBackslashesInModelPathAreNormalized) {
+    // On Windows, model_path may contain backslashes. The graph parser expects forward slashes,
+    // so constructModelsPath must convert them. Verify the written pbtxt uses forward slashes.
+    ovms::HFSettingsImpl hfSettings;
+    hfSettings.task = ovms::TEXT_GENERATION_GRAPH;
+    ovms::TextGenGraphSettingsImpl graphSettings;
+    hfSettings.exportSettings.modelPath = "c:\\models\\Qwen3-35B";
+    hfSettings.graphSettings = std::move(graphSettings);
+    std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
+    std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
+    auto status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
+    ASSERT_EQ(status, ovms::StatusCode::OK);
+
+    std::string graphContents = GetFileContents(graphPath);
+    EXPECT_NE(std::string::npos, graphContents.find("models_path: \"c:/models/Qwen3-35B\"")) << graphContents;
+    EXPECT_EQ(std::string::npos, graphContents.find("models_path: \"c:\\models")) << "Backslashes must not appear in models_path";
+}
+
+TEST_F(GraphCreationTest, windowsBackslashesInGGUFModelPathAreNormalized) {
+    // Same as above but for GGUF paths, where a filename is joined to the model path.
+    ovms::HFSettingsImpl hfSettings;
+    hfSettings.task = ovms::TEXT_GENERATION_GRAPH;
+    hfSettings.exportSettings.modelPath = "c:\\models\\Qwen3-35B";
+    hfSettings.ggufFilename = "model.gguf";
+    std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
+    std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
+    auto status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
+    ASSERT_EQ(status, ovms::StatusCode::OK);
+
+    std::string graphContents = GetFileContents(graphPath);
+    EXPECT_NE(std::string::npos, graphContents.find("models_path: \"c:/models/Qwen3-35B/model.gguf\"")) << graphContents;
+    EXPECT_EQ(std::string::npos, graphContents.find("models_path: \"c:\\models")) << "Backslashes must not appear in models_path";
+}
+#endif  // _WIN32
 TEST_F(GraphCreationTest, pluginConfigAsString) {
     ovms::ExportSettings exportSettings;
 

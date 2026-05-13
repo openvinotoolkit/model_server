@@ -22,4 +22,18 @@ namespace ovms {
  * @return uint16_t Available number of cores in the system
  */
 uint16_t getCoreCount();
+uint64_t getMaxOpenFilesLimit();
+#ifdef __linux__
+bool isRunningInDocker();
+/**
+ * @brief Get number of CPUs available via CPU affinity mask
+ * @return uint16_t Number of CPUs in the affinity mask, or total hardware concurrency if affinity is not set
+ */
+uint16_t getCpuAffinityCount();
+/**
+ * @brief Get CPU limit from cgroup (docker run --cpus constraint)
+ * @return uint16_t Number of CPUs allowed by quota, or 0 if no quota is set
+ */
+uint16_t getDockerCpuQuota();
+#endif
 }  // namespace ovms

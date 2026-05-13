@@ -197,6 +197,38 @@ ovms_cc_library(
     ],
     visibility = ["//visibility:public"],
 )
+ovms_cc_library(
+    name = "io_processing_gemma4_tool_parser",
+    hdrs = ["io_processing/gemma4/gemma4_tool_parser.hpp", "io_processing/gemma4/gemma4_reasoning_parser.hpp"],
+    srcs = ["io_processing/gemma4/gemma4_tool_parser.cpp", "io_processing/gemma4/gemma4_reasoning_parser.cpp"],
+    deps = [
+        "@com_github_tencent_rapidjson//:rapidjson",
+        "//src/port:rapidjson_document",
+        "//src:libovmslogging",
+        "//src:libovmsstring_utils",
+        ":io_processing_utils",
+        ":io_processing_base_output_parser",
+        ":io_processing_qwen3_reasoning_parser",
+        "//third_party:genai",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
+    name = "io_processing_qwen3_reasoning_parser",
+    hdrs = ["io_processing/qwen3/reasoning_parser.hpp"],
+    srcs = ["io_processing/qwen3/reasoning_parser.cpp"],
+    deps = [
+        "@com_github_tencent_rapidjson//:rapidjson",
+        "//src/port:rapidjson_document",
+        "//src:libovmslogging",
+        "//src:libovmsstring_utils",
+        ":io_processing_utils",
+        ":io_processing_base_output_parser",
+        "//third_party:genai",
+    ],
+    visibility = ["//visibility:public"],
+)
 
 ovms_cc_library( # TODO split further so we don't have to recompile everything when changing one parser ...
     name = "output_parsers",
@@ -206,7 +238,6 @@ ovms_cc_library( # TODO split further so we don't have to recompile everything w
             "io_processing/phi4/tool_parser.hpp",
             "io_processing/devstral/tool_parser.hpp",
             "io_processing/mistral/tool_parser.hpp",
-            "io_processing/qwen3/reasoning_parser.hpp",
             "io_processing/gptoss/reasoning_parser.hpp",
             "io_processing/gptoss/tool_parser.hpp",
             "io_processing/gptoss/harmony.hpp",
@@ -218,7 +249,6 @@ ovms_cc_library( # TODO split further so we don't have to recompile everything w
             "io_processing/phi4/tool_parser.cpp",
             "io_processing/devstral/tool_parser.cpp",
             "io_processing/mistral/tool_parser.cpp",
-            "io_processing/qwen3/reasoning_parser.cpp",
             "io_processing/gptoss/reasoning_parser.cpp",
             "io_processing/gptoss/tool_parser.cpp",
             "io_processing/gptoss/harmony.cpp",
@@ -234,6 +264,8 @@ ovms_cc_library( # TODO split further so we don't have to recompile everything w
         ":io_processing_base_output_parser",
         ":io_processing_qwen3coder_tool_parser",
         ":io_processing_lfm2_tool_parser",
+        ":io_processing_gemma4_tool_parser",
+        ":io_processing_qwen3_reasoning_parser",
         ":io_processing_utils",
         ":apis_tool_schema_wrapper",
     ],
@@ -307,6 +339,9 @@ ovms_cc_library(
         "//src:httppayload",
         "//src:libhttpclientconnection",
         "//src:sse_utils",
+        "//src:libovms_systeminfo",
+        "//src:libovms_config",
+        "//src:libovms_ov_utils",
         "//third_party:genai",] + select({
         "//:disable_python": [],
         "//:not_disable_python" : [":py_jinja_template_processor"],

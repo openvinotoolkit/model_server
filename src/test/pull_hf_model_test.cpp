@@ -605,6 +605,154 @@ TEST_F(HfPullCache, UserEdited) {
     EXPECT_NE(originalDigest2, editedDigestAfterRerun2);
 }
 
+// PullAgainstNonGitDirectoryWarnsAndSucceedsWithoutChangingFiles
+//
+// Verifies the production behavior of handleExistingRepositoryWithoutOverwrite()
+// when --model_repository_path/<source_model> already contains a user-prepared
+// model directory that is NOT a git repository. The expected behavior is:
+//   * pull returns success (so subsequent model loading proceeds),
+//   * existing files are left untouched (no clone, no resume, no overwrite),
+//   * no .lfswip work-in-progress marker is created next to the directory,
+//   * the user-facing warning is emitted to stdout.
+//
+// We simulate the non-git directory by removing the .git folder from the cached
+// HfPullCache repository. The model artifacts (openvino_model.bin, tokenizer*,
+// graph.pbtxt, etc.) remain in place exactly as a user-supplied directory would.
+TEST_F(HfPullCache, PullNonGit) {
+    std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
+    std::string downloadPath = ovms::FileSystem::joinPath({this->directoryPath, "repository"});
+    std::string task = "text_generation";
+
+    std::string basePath = ovms::FileSystem::joinPath({downloadPath, "OpenVINO", "Phi-3-mini-FastDraft-50M-int8-ov"});
+    std::string modelPath = ovms::FileSystem::appendSlash(basePath) + "openvino_model.bin";
+    std::string tokenizerPath = ovms::FileSystem::appendSlash(basePath) + "openvino_tokenizer.bin";
+    std::string gitDir = ovms::FileSystem::appendSlash(basePath) + ".git";
+
+    ASSERT_TRUE(std::filesystem::exists(modelPath));
+    ASSERT_TRUE(std::filesystem::exists(tokenizerPath));
+    ASSERT_TRUE(std::filesystem::is_directory(gitDir));
+
+    // Capture pre-pull file fingerprints so we can confirm pull did not modify them.
+    std::error_code ec;
+    const std::uintmax_t modelSizeBefore = std::filesystem::file_size(modelPath, ec);
+    ASSERT_EQ(ec, std::errc());
+    const std::uintmax_t tokenizerSizeBefore = std::filesystem::file_size(tokenizerPath, ec);
+    ASSERT_EQ(ec, std::errc());
+    std::string modelDigestBefore = sha256File(modelPath, ec);
+    ASSERT_EQ(ec, std::errc());
+    std::string tokenizerDigestBefore = sha256File(tokenizerPath, ec);
+    ASSERT_EQ(ec, std::errc());
+
+    // Turn the cached repository into an opaque user-provided model directory by
+    // removing .git. Drop readonly attributes first so std::filesystem::remove_all
+    // succeeds on Windows where libgit2 marks pack files read-only.
+    RemoveReadonlyFileAttributeFromDir(gitDir);
+    ec.clear();
+    std::filesystem::remove_all(gitDir, ec);
+    ASSERT_EQ(ec, std::errc()) << "Failed to remove .git from cached repository: " << ec.message();
+    ASSERT_FALSE(std::filesystem::exists(gitDir));
+
+    testing::internal::CaptureStdout();
+    this->ServerPullHfModel(modelName, downloadPath, task);
+    std::string out = testing::internal::GetCapturedStdout();
+
+    EXPECT_NE(out.find("not a git repository"), std::string::npos)
+        << "Expected non-git-repository warning in stdout, got:\n"
+        << out;
+    EXPECT_EQ(out.find("LFS file(s) to resume"), std::string::npos);
+    EXPECT_EQ(out.find(" Resuming "), std::string::npos);
+
+    // No work-in-progress marker should be created next to the model directory.
+    const std::string lfsWipPath = ovms::libgit2::getLfsWipMarkerPath(basePath).string();
+    EXPECT_FALSE(std::filesystem::exists(lfsWipPath));
+
+    // Files must be left exactly as the user provided them.
+    ASSERT_TRUE(std::filesystem::exists(modelPath));
+    ASSERT_TRUE(std::filesystem::exists(tokenizerPath));
+    EXPECT_EQ(std::filesystem::file_size(modelPath), modelSizeBefore);
+    EXPECT_EQ(std::filesystem::file_size(tokenizerPath), tokenizerSizeBefore);
+
+    std::string modelDigestAfter = sha256File(modelPath, ec);
+    ASSERT_EQ(ec, std::errc());
+    std::string tokenizerDigestAfter = sha256File(tokenizerPath, ec);
+    ASSERT_EQ(ec, std::errc());
+    EXPECT_EQ(modelDigestBefore, modelDigestAfter);
+    EXPECT_EQ(tokenizerDigestBefore, tokenizerDigestAfter);
+
+    // .git must NOT have been recreated (no fresh clone happened).
+    EXPECT_FALSE(std::filesystem::exists(gitDir));
+}
+
+// PullAgainstDirectoryWithEmptyDotGitFailsWithRepositoryError
+//
+// Companion to HfPullCache.PullNonGit. Verifies that when .git IS present but is
+// empty (a corrupt / partially-initialized repository) handleExistingRepositoryWithoutOverwrite()
+// does NOT silently succeed: the .git probe passes, GitRepositoryGuard then fails to open
+// the repository and the real error is propagated via mapRepositoryOpenFailureToStatus()
+// so the operator can act (re-clone, fix permissions, --overwrite_models, ...).
+TEST_F(HfPullCache, PullEmptyGitDir) {
+    std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
+    std::string downloadPath = ovms::FileSystem::joinPath({this->directoryPath, "repository"});
+    std::string task = "text_generation";
+
+    std::string basePath = ovms::FileSystem::joinPath({downloadPath, "OpenVINO", "Phi-3-mini-FastDraft-50M-int8-ov"});
+    std::string modelPath = ovms::FileSystem::appendSlash(basePath) + "openvino_model.bin";
+    std::string tokenizerPath = ovms::FileSystem::appendSlash(basePath) + "openvino_tokenizer.bin";
+    std::string gitDir = ovms::FileSystem::appendSlash(basePath) + ".git";
+
+    ASSERT_TRUE(std::filesystem::exists(modelPath));
+    ASSERT_TRUE(std::filesystem::exists(tokenizerPath));
+    ASSERT_TRUE(std::filesystem::is_directory(gitDir));
+
+    // Capture pre-pull file fingerprints so we can confirm pull did not modify them.
+    std::error_code ec;
+    const std::uintmax_t modelSizeBefore = std::filesystem::file_size(modelPath, ec);
+    ASSERT_EQ(ec, std::errc());
+    const std::uintmax_t tokenizerSizeBefore = std::filesystem::file_size(tokenizerPath, ec);
+    ASSERT_EQ(ec, std::errc());
+    std::string modelDigestBefore = sha256File(modelPath, ec);
+    ASSERT_EQ(ec, std::errc());
+    std::string tokenizerDigestBefore = sha256File(tokenizerPath, ec);
+    ASSERT_EQ(ec, std::errc());
+
+    // Replace the cached .git with an empty directory to simulate corruption / partial init.
+    // Drop readonly attributes first so std::filesystem::remove_all succeeds on Windows.
+    RemoveReadonlyFileAttributeFromDir(gitDir);
+    ec.clear();
+    std::filesystem::remove_all(gitDir, ec);
+    ASSERT_EQ(ec, std::errc()) << "Failed to remove .git from cached repository: " << ec.message();
+    ec.clear();
+    std::filesystem::create_directory(gitDir, ec);
+    ASSERT_EQ(ec, std::errc()) << "Failed to recreate empty .git directory: " << ec.message();
+    ASSERT_TRUE(std::filesystem::is_directory(gitDir));
+    ASSERT_TRUE(std::filesystem::is_empty(gitDir));
+
+    // Pull must NOT silently succeed: handleExistingRepositoryWithoutOverwrite should
+    // surface the libgit2 open failure (mapRepositoryOpenFailureToStatus -> non-OK).
+    this->ServerPullHfModel(modelName, downloadPath, task, EXIT_FAILURE);
+
+    // No work-in-progress marker should be created next to the model directory.
+    const std::string lfsWipPath = ovms::libgit2::getLfsWipMarkerPath(basePath).string();
+    EXPECT_FALSE(std::filesystem::exists(lfsWipPath));
+
+    // Files must be left exactly as they were on disk.
+    ASSERT_TRUE(std::filesystem::exists(modelPath));
+    ASSERT_TRUE(std::filesystem::exists(tokenizerPath));
+    EXPECT_EQ(std::filesystem::file_size(modelPath), modelSizeBefore);
+    EXPECT_EQ(std::filesystem::file_size(tokenizerPath), tokenizerSizeBefore);
+
+    std::string modelDigestAfter = sha256File(modelPath, ec);
+    ASSERT_EQ(ec, std::errc());
+    std::string tokenizerDigestAfter = sha256File(tokenizerPath, ec);
+    ASSERT_EQ(ec, std::errc());
+    EXPECT_EQ(modelDigestBefore, modelDigestAfter);
+    EXPECT_EQ(tokenizerDigestBefore, tokenizerDigestAfter);
+
+    // .git is still present (we left an empty directory there); no fresh clone happened.
+    EXPECT_TRUE(std::filesystem::is_directory(gitDir));
+    EXPECT_TRUE(std::filesystem::is_empty(gitDir));
+}
+
 #ifdef _WIN32
 // Helper test used only as a child process launched by HfPull.ResumeTerminate.
 TEST(HfPullWindowsWorker, ResumeTerminateChildProcess) {
@@ -954,7 +1102,6 @@ TEST_F(HfPull, Start) {
     ASSERT_EQ(std::filesystem::exists(graphPath), true) << graphPath;
     ASSERT_EQ(std::filesystem::file_size(modelPath), 52417240);
     std::string graphContents = GetFileContents(graphPath);
-
     ASSERT_EQ(expectedGraphContents, removeVersionString(graphContents)) << graphContents;
 }
 
@@ -1016,7 +1163,6 @@ TEST_F(HfPull, StartOutsideOvOrg) {
     ASSERT_EQ(std::filesystem::exists(modelPath), true) << modelPath;
     ASSERT_EQ(std::filesystem::exists(graphPath), true) << graphPath;
     std::string graphContents = GetFileContents(graphPath);
-
     ASSERT_EQ(expectedGraphContents, removeVersionString(graphContents)) << graphContents;
 }
 
@@ -1667,8 +1813,8 @@ TEST(ServerModulesBehaviorTests, PullAndStartModeErrorAndExpectFailAndCheckOther
     DefaultEmptyValuesConfig config;
     config.getServerSettings().serverMode = ovms::HF_PULL_AND_START_MODE;
     auto retCode = server.startModules(config);
-    // Empty config.getServerSettings().hfSettings.downloadPath
-    // [error][libit2.cpp:336] Libgit2 clone error: 6 message: cannot pick working directory for non-bare repository that isn't a '.git' directory
+    // Empty sourceModel: takes task+model_path path, but model_path is empty
+    // -> GraphExport::createServableConfig fails with PATH_INVALID
     EXPECT_TRUE(!retCode.ok()) << retCode.string();
     serverGuard = std::make_unique<ServerShutdownGuard>(server);
     EXPECT_TRUE(server.getModule(ovms::HF_MODEL_PULL_MODULE_NAME) != nullptr);
