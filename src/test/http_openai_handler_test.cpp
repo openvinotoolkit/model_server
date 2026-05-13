@@ -2186,6 +2186,8 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemWithinAl
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemNotWithinAllowedPath) {
+    const std::string imageUrl = getGenericFullPathForSrcTest("/ovms/src/test/binaryutils/rgb.jpg");
+    const std::string allowedPath = getGenericFullPathForSrcTest("/ovms/src/test/llm");
     std::string json = R"({
 "model": "llama",
 "messages": [
@@ -2199,7 +2201,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemNotWithi
       {
         "type": "image_url",
         "image_url": {
-          "url":  "/ovms/src/test/binaryutils/rgb.jpg"
+          "url":  ")" + imageUrl + R"("
         }
       }
     ]
@@ -2209,7 +2211,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemNotWithi
     doc.Parse(json.c_str());
     ASSERT_FALSE(doc.HasParseError());
     std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
-    ASSERT_EQ(apiHandler->parseMessages("src/test"), absl::InvalidArgumentError("Given filepath is not subpath of allowed_local_media_path"));
+    ASSERT_EQ(apiHandler->parseMessages(allowedPath), absl::InvalidArgumentError("Given filepath is not subpath of allowed_local_media_path"));
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemPrefixPathBypassPrevented) {
@@ -2243,6 +2245,8 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemPrefixPa
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemInvalidPath) {
+    const std::string allowedPath = getGenericFullPathForSrcTest("/ovms/");
+    const std::string imageUrl = getGenericFullPathForSrcTest("/ovms/not_exisiting.jpeg");
     std::string json = R"({
   "model": "llama",
   "messages": [
@@ -2256,7 +2260,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemInvalidP
         {
           "type": "image_url",
           "image_url": {
-            "url":  "/ovms/not_exisiting.jpeg"
+            "url":  ")" + imageUrl + R"("
           }
         }
       ]
@@ -2266,7 +2270,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemInvalidP
     doc.Parse(json.c_str());
     ASSERT_FALSE(doc.HasParseError());
     std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
-    EXPECT_EQ(apiHandler->parseMessages("/ovms/"), absl::InvalidArgumentError("Image file /ovms/not_exisiting.jpeg parsing failed: can't fopen"));
+    EXPECT_EQ(apiHandler->parseMessages(allowedPath), absl::InvalidArgumentError("Image file " + imageUrl + " parsing failed: can't fopen"));
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemInvalidEscaped) {
