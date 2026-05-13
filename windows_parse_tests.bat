@@ -57,52 +57,52 @@ if exist "%summaryBackupTmp%" del /f /q "%summaryBackupTmp%"
 echo.
 echo [ERROR] FAILED TESTS OR CRASHES DETECTED:
 echo.
-echo === Failed Tests (from summary/full log) ===
-grep -a "^\[  FAILED  \]" "%fullLog%" | grep -a -v "tests, listed below"
+echo === Failed Tests ^(from summary/full log^) ===
+grep -a "^\[  FAILED  \]" "!fullLog!" | grep -a -v "tests, listed below"
 echo.
 echo === Last Successful Test ===
-grep -a " OK ]" "%fullLog%" | tail -1
+grep -a " OK ]" "!fullLog!" | tail -1
 echo.
-echo === Last Running Test (likely the one that failed) ===
+echo === Last Running Test ^(likely the one that failed^) ===
 set "lastRunEntry="
-for /F "delims=" %%A in ('grep -a "\[ RUN" "%fullLog%" ^| tail -1') do (
+for /F "delims=" %%A in ('grep -a "\[ RUN" "!fullLog!" ^| tail -1') do (
     set "lastRunEntry=%%A"
 )
 if defined lastRunEntry (
     echo !lastRunEntry!
 ) else (
-    echo [WARN] No gtest RUN marker found in %fullLog%.
+    echo [WARN] No gtest RUN marker found in !fullLog!.
 )
 echo.
 echo === Output from Last Running Test to End of Log ===
 set "lastRunLine="
-for /F "tokens=1 delims=:" %%A in ('grep -a -n "\[ RUN" "%fullLog%" ^| tail -1') do (
+for /F "tokens=1 delims=:" %%A in ('grep -a -n "\[ RUN" "!fullLog!" ^| tail -1') do (
     set "lastRunLine=%%A"
 )
 echo !lastRunLine! | findstr /R "^[0-9][0-9]*$" > nul
 if !errorlevel! equ 0 (
-    sed -n "!lastRunLine!,$p" "%fullLog%" | head -120
+    sed -n "!lastRunLine!,$p" "!fullLog!" | head -120
 ) else (
     echo [WARN] Could not determine last RUN line. Showing recent RUN markers and log tail.
-    grep -a -n "\[ RUN" "%fullLog%" | tail -3
+    grep -a -n "\[ RUN" "!fullLog!" | tail -3
     echo.
-    tail -20 "%fullLog%"
+    tail -20 "!fullLog!"
 )
 echo.
 echo === Context Around First FAILED Test ===
 set "firstFailedLine="
 set "firstFailedRunLine="
-for /F "tokens=1 delims=:" %%A in ('grep -a -n "^\[  FAILED  \].*(" "%fullLog%" ^| head -1') do (
+for /F "tokens=1 delims=:" %%A in ('grep -a -n "^\[  FAILED  \]" "!fullLog!" ^| grep -a -v "tests, listed below" ^| head -1') do (
     set "firstFailedLine=%%A"
 )
 echo !firstFailedLine! | findstr /R "^[0-9][0-9]*$" > nul
 if !errorlevel! equ 0 (
-    for /F "tokens=1 delims=:" %%B in ('sed -n "1,!firstFailedLine!p" "%fullLog%" ^| grep -a -n "\[ RUN" ^| tail -1') do (
+    for /F "tokens=1 delims=:" %%B in ('sed -n "1,!firstFailedLine!p" "!fullLog!" ^| grep -a -n "\[ RUN" ^| tail -1') do (
         set "firstFailedRunLine=%%B"
     )
     echo !firstFailedRunLine! | findstr /R "^[0-9][0-9]*$" > nul
     if !errorlevel! equ 0 (
-        sed -n "!firstFailedRunLine!,$p" "%fullLog%" | head -160
+        sed -n "!firstFailedRunLine!,$p" "!fullLog!" | head -160
     ) else (
         echo [WARN] Could not determine RUN line for first FAILED test.
     )
@@ -113,29 +113,38 @@ echo.
 echo === SEH/Access Violation Context ===
 set "firstSehLine="
 set "firstSehRunLine="
-for /F "tokens=1 delims=:" %%A in ('grep -a -n -i "unknown file: error: SEH exception\|0xc0000005\|access violation\|SEH exception" "%fullLog%" ^| head -1') do (
+set "firstSehRunEntry="
+for /F "tokens=1 delims=:" %%A in ('findstr /N /I /C:"SEH exception" /C:"0xc0000005" /C:"access violation" "!fullLog!" ^| head -1') do (
     set "firstSehLine=%%A"
 )
 echo !firstSehLine! | findstr /R "^[0-9][0-9]*$" > nul
 if !errorlevel! equ 0 (
-    for /F "tokens=1 delims=:" %%B in ('sed -n "1,!firstSehLine!p" "%fullLog%" ^| grep -a -n "\[ RUN" ^| tail -1') do (
+    for /F "tokens=1 delims=:" %%B in ('sed -n "1,!firstSehLine!p" "!fullLog!" ^| grep -a -n "\[ RUN" ^| tail -1') do (
         set "firstSehRunLine=%%B"
+    )
+    for /F "delims=" %%C in ('sed -n "1,!firstSehLine!p" "!fullLog!" ^| grep -a "\[ RUN" ^| tail -1') do (
+        set "firstSehRunEntry=%%C"
+    )
+    if defined firstSehRunEntry (
+        echo [INFO] Unit test at first SEH marker: !firstSehRunEntry!
     )
     echo !firstSehRunLine! | findstr /R "^[0-9][0-9]*$" > nul
     if !errorlevel! equ 0 (
-        sed -n "!firstSehRunLine!,$p" "%fullLog%" | head -160
+        sed -n "!firstSehRunLine!,$p" "!fullLog!" | head -160
     ) else (
         echo [WARN] Could not determine RUN line for SEH exception entry.
+        if defined lastRunEntry echo [INFO] Fallback unit test attribution: !lastRunEntry!
     )
 ) else (
     echo [INFO] No SEH/Access Violation entry found.
+    if defined lastRunEntry echo [INFO] Fallback unit test attribution: !lastRunEntry!
 )
 echo.
-echo === Segfault/Crash Messages (if any) ===
-grep -a -i "%CRASH_PATTERN%\|stack trace" "%fullLog%" || echo (none found)
+echo === Segfault/Crash Messages ^(if any^) ===
+grep -a -i "%CRASH_PATTERN%\|stack trace" "!fullLog!" || echo ^(none found^)
 echo.
-echo [ERROR] Check tests summary in '%summaryLog%' and tests logs in '%fullLog%'. Rerun failed test with: windows_setupvars.bat and %cd%\bazel-bin\src\ovms_test.exe --gtest_filter='*.*'
-) > "%parserOutputTmp%" 2>&1
+echo [ERROR] Check tests summary in '!summaryLog!' and tests logs in '!fullLog!'. Rerun failed test with: windows_setupvars.bat and %cd%\bazel-bin\src\ovms_test.exe --gtest_filter='*.*'
+) > "!parserOutputTmp!" 2>&1
 
 if exist "%summaryLog%" (
     copy /Y "%summaryLog%" "%summaryBackupTmp%" > nul
