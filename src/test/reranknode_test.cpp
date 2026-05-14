@@ -607,45 +607,17 @@ TEST_F(RerankTokenizeHttpTest, tokenizeIgnoreAddSpecialTokensParameter) {
 }
 
 TEST_F(RerankTokenizeHttpTest, tokenizeEmptyNestedArray) {
-    std::string requestBody = R"(
-        {
-            "model": "rerank_ov",
-            "text": [[]]
-        }
-    )";
-    Status status = handler->dispatchToProcessor(endpointTokenize, requestBody, &response, comp, responseComponents, writer, multiPartParser);
-    ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR) << status.string();
+    assertTokenizeWithInvalidTextReturnsError(handler.get(), "rerank_ov", "[[]]", response, comp, responseComponents, writer, multiPartParser);
 }
 
 TEST_F(RerankTokenizeHttpTest, tokenizeMultipleEmptyNestedArrays) {
-    std::string requestBody = R"(
-        {
-            "model": "rerank_ov",
-            "text": [[], [], []]
-        }
-    )";
-    Status status = handler->dispatchToProcessor(endpointTokenize, requestBody, &response, comp, responseComponents, writer, multiPartParser);
-    ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR) << status.string();
+    assertTokenizeWithInvalidTextReturnsError(handler.get(), "rerank_ov", "[[], [], []]", response, comp, responseComponents, writer, multiPartParser);
 }
 
 TEST_F(RerankTokenizeHttpTest, tokenizeMultipleEmptyNestedArraysAndOneNonEmpty) {
-    std::string requestBody = R"(
-        {
-            "model": "rerank_ov",
-            "text": [[], ["hello world"], []]
-        }
-    )";
-    Status status = handler->dispatchToProcessor(endpointTokenize, requestBody, &response, comp, responseComponents, writer, multiPartParser);
-    ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR) << status.string();
+    assertTokenizeWithInvalidTextReturnsError(handler.get(), "rerank_ov", R"([[], ["hello world"], []])", response, comp, responseComponents, writer, multiPartParser);
 }
 
 TEST_F(RerankTokenizeHttpTest, tokenizeEmptyWithArrayMultipleLevelsOfNesting) {
-    std::string requestBody = R"(
-        {
-            "model": "rerank_ov",
-            "text": [[[[[]]]]]
-        }
-    )";
-    Status status = handler->dispatchToProcessor(endpointTokenize, requestBody, &response, comp, responseComponents, writer, multiPartParser);
-    ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR) << status.string();
+    assertTokenizeWithInvalidTextReturnsError(handler.get(), "rerank_ov", "[[[[[]]]]]", response, comp, responseComponents, writer, multiPartParser);
 }

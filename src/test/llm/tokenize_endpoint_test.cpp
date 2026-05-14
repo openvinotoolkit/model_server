@@ -442,55 +442,22 @@ TEST_P(LLMTokenizeTests, tokenizeStringWithAddSpecialTokens) {
 
 TEST_P(LLMTokenizeTests, tokenizeEmptyNestedArray) {
     auto params = GetParam();
-
-    std::string requestBody = R"(
-        {
-            "model": ")" + params.modelName +
-                              R"(",
-            "text": [[]]
-        }
-    )";
-    Status status = handler->dispatchToProcessor(endpointTokenize, requestBody, &response, comp, responseComponents, writer, multiPartParser);
-    ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR) << status.string();
+    assertTokenizeWithInvalidTextReturnsError(handler.get(), params.modelName, "[[]]", response, comp, responseComponents, writer, multiPartParser);
 }
 
 TEST_P(LLMTokenizeTests, tokenizeMultipleEmptyNestedArrays) {
     auto params = GetParam();
-    std::string requestBody = R"(
-        {
-            "model": ")" + params.modelName +
-                              R"(",
-            "text": [[], [], []]
-        }
-    )";
-    Status status = handler->dispatchToProcessor(endpointTokenize, requestBody, &response, comp, responseComponents, writer, multiPartParser);
-    ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR) << status.string();
+    assertTokenizeWithInvalidTextReturnsError(handler.get(), params.modelName, "[[], [], []]", response, comp, responseComponents, writer, multiPartParser);
 }
 
 TEST_P(LLMTokenizeTests, tokenizeMultipleEmptyNestedArraysAndOneNonEmpty) {
     auto params = GetParam();
-    std::string requestBody = R"(
-        {
-            "model": ")" + params.modelName +
-                              R"(",
-            "text": [[], ["hello world"], []]
-        }
-    )";
-    Status status = handler->dispatchToProcessor(endpointTokenize, requestBody, &response, comp, responseComponents, writer, multiPartParser);
-    ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR) << status.string();
+    assertTokenizeWithInvalidTextReturnsError(handler.get(), params.modelName, R"([[], ["hello world"], []])", response, comp, responseComponents, writer, multiPartParser);
 }
 
 TEST_P(LLMTokenizeTests, tokenizeEmptyWithArrayMultipleLevelsOfNesting) {
     auto params = GetParam();
-    std::string requestBody = R"(
-        {
-            "model": ")" + params.modelName +
-                              R"(",
-            "text": [[[[[]]]]]
-        }
-    )";
-    Status status = handler->dispatchToProcessor(endpointTokenize, requestBody, &response, comp, responseComponents, writer, multiPartParser);
-    ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR) << status.string();
+    assertTokenizeWithInvalidTextReturnsError(handler.get(), params.modelName, "[[[[[]]]]]", response, comp, responseComponents, writer, multiPartParser);
 }
 
 INSTANTIATE_TEST_SUITE_P(
