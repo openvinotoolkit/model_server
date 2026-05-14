@@ -751,7 +751,7 @@ TEST_F(TestLoadModel, SuccessfulLoadDummyDimensionRanges) {
     config.setBatchingParams("");
     ASSERT_EQ(config.parseShapeParameter("(20:30,40:50)"), ovms::StatusCode::OK);
     ASSERT_EQ(modelInstance.loadModel(config), ovms::StatusCode::OK);
-    ASSERT_NE(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
+    ASSERT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
     ASSERT_NE(modelInstance.getInputsInfo().begin(), modelInstance.getInputsInfo().end());
     ASSERT_EQ(modelInstance.getInputsInfo().begin()->second->getShape(), ovms::Shape(
                                                                              {{20, 30}, {40, 50}}));
