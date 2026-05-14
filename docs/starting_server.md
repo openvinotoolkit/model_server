@@ -44,8 +44,7 @@ docker run -d --rm -v ${PWD}/<model>:/model -p 8000:8000 openvino/model_server:l
 --model_path /model --model_name <model_name> --rest_port 8000 --log_level DEBUG \
 --task <TASK> --target_device <DEVICE> ........
 ```
-:::
-
+::::{tab-set}
 :::{tab-item} On Baremetal Host
 :sync: baremetal
 **Required:** OpenVINO Model Server package - see [deployment instructions](./deploying_server_baremetal.md) for details.
