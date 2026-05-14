@@ -717,9 +717,9 @@ absl::Status OpenAIResponsesHandler::parseResponsesPart(std::optional<uint32_t> 
 
         // Tools were already normalised to chat/completions nested format by
         // convertResponsesToolsInPlace earlier in parseResponsesPart — just copy verbatim.
-        auto toolsIt = doc.FindMember("tools");
-        if (toolsIt != doc.MemberEnd() && !toolsIt->value.IsNull()) {
-            Value toolsCopy(toolsIt->value, alloc);
+        auto processedToolsIt = doc.FindMember("tools");
+        if (processedToolsIt != doc.MemberEnd() && !processedToolsIt->value.IsNull()) {
+            Value toolsCopy(processedToolsIt->value, alloc);
             processedDoc.AddMember("tools", toolsCopy, alloc);
         }
 
