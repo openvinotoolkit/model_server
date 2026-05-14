@@ -653,7 +653,7 @@ std::string OpenAIResponsesHandler::serializeUnaryResponse(ov::genai::EncodedRes
     usage.promptTokens = results.perf_metrics.get_num_input_tokens();
     usage.completionTokens = results.perf_metrics.get_num_generated_tokens();
     if (results.finish_reasons.empty()) {
-        throw std::runtime_error("Missing finish reason in unary LM responses generation result");
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Missing finish reason in unary LM responses generation result, defaulting to STOP");
     }
     std::vector<ParsedOutput> parsedOutputs;
     ov::genai::GenerationFinishReason responsesFinishReason = ov::genai::GenerationFinishReason::STOP;
@@ -674,7 +674,7 @@ std::string OpenAIResponsesHandler::serializeUnaryResponse(ov::genai::VLMDecoded
     usage.promptTokens = results.perf_metrics.get_num_input_tokens();
     usage.completionTokens = results.perf_metrics.get_num_generated_tokens();
     if (results.finish_reasons.empty()) {
-        throw std::runtime_error("Missing finish reason in unary VLM responses generation result");
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Missing finish reason in unary VLM responses generation result, defaulting to STOP");
     }
     // Usage is already correctly set from perf_metrics above — no need for updateUsage.
     std::vector<ParsedOutput> parsedOutputs;

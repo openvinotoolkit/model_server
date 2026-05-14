@@ -415,10 +415,10 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(ov::genai::Enco
         ParsedOutput parsedOutput = parseOutputIfNeeded(tokens);
         jsonResponse.StartObject();
         if (results.finish_reasons.empty()) {
-            throw std::runtime_error("Missing finish reason in unary LM generation result");
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Missing finish reason in unary LM generation result, defaulting to STOP");
         }
         // Current generation flow uses batch=1, so only finish_reasons[0] is expected here.
-        const ov::genai::GenerationFinishReason finishReasonRaw = results.finish_reasons[0];
+        const ov::genai::GenerationFinishReason finishReasonRaw = results.finish_reasons.empty() ? ov::genai::GenerationFinishReason::STOP : results.finish_reasons[0];
         auto finishReason = mapFinishReason(finishReasonRaw, !parsedOutput.toolCalls.empty());
         jsonResponse.FinishReason(finishReason.value_or("unknown"));
         // index: integer; Choice index, only n=1 supported anyway
@@ -484,10 +484,10 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(ov::genai::VLMD
         ParsedOutput parsedOutput = parseOutputIfNeeded(generatedTokens);
         jsonResponse.StartObject();
         if (results.finish_reasons.empty()) {
-            throw std::runtime_error("Missing finish reason in unary VLM generation result");
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Missing finish reason in unary VLM generation result, defaulting to STOP");
         }
         // Current generation flow uses batch=1, so only finish_reasons[0] is expected here.
-        const ov::genai::GenerationFinishReason finishReasonRaw = results.finish_reasons[0];
+        const ov::genai::GenerationFinishReason finishReasonRaw = results.finish_reasons.empty() ? ov::genai::GenerationFinishReason::STOP : results.finish_reasons[0];
         auto finishReason = mapFinishReason(finishReasonRaw, !parsedOutput.toolCalls.empty());
         jsonResponse.FinishReason(finishReason.value_or("unknown"));
         // index: integer; Choice index, only n=1 supported anyway
