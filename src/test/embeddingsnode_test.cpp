@@ -819,3 +819,14 @@ TEST_F(EmbeddingsTokenizeHttpTest, tokenizeMultipleEmptyNestedArraysAndOneNonEmp
     Status status = handler->dispatchToProcessor(endpointTokenize, requestBody, &response, comp, responseComponents, writer, multiPartParser);
     ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR) << status.string();
 }
+
+TEST_F(EmbeddingsTokenizeHttpTest, tokenizeEmptyWithArrayMultipleLevelsOfNesting) {
+    std::string requestBody = R"(
+        {
+            "model": "embeddings_ov",
+            "text": [[[[[]]]]]
+        }
+    )";
+    Status status = handler->dispatchToProcessor(endpointTokenize, requestBody, &response, comp, responseComponents, writer, multiPartParser);
+    ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR) << status.string();
+}

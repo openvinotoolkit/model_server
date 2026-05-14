@@ -480,6 +480,21 @@ TEST_P(LLMTokenizeTests, tokenizeMultipleEmptyNestedArraysAndOneNonEmpty) {
     ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR) << status.string();
 }
 
+TEST_P(LLMTokenizeTests, tokenizeEmptyWithArrayMultipleLevelsOfNesting) {
+    auto params = GetParam();
+    std::string requestBody = R"(
+        {
+            "model": ")" + params.modelName +
+                              R"(",
+            "text": [[[[[]]]]]
+        }
+    )";
+    Status status = handler->dispatchToProcessor(endpointTokenize, requestBody, &response, comp, responseComponents, writer, multiPartParser);
+    ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR) << status.string();
+}
+
+
+
 INSTANTIATE_TEST_SUITE_P(
     LLMTokenizeTestInstances,
     LLMTokenizeTests,
