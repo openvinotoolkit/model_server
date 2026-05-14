@@ -786,3 +786,25 @@ TEST_F(EmbeddingsTokenizeHttpTest, tokenizeBatchWithPadToMaxLen) {
         ovms::StatusCode::OK);
     AssertTokenizationResult(response, expectedTokens);
 }
+
+TEST_F(EmbeddingsTokenizeHttpTest, tokenizeEmptyNestedArray) {
+    std::string requestBody = R"(
+        {
+            "model": "embeddings_ov",
+            "text": [[]]
+        }
+    )";
+    Status status = handler->dispatchToProcessor(endpointTokenize, requestBody, &response, comp, responseComponents, writer, multiPartParser);
+    ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR) << status.string();
+}
+
+TEST_F(EmbeddingsTokenizeHttpTest, tokenizeMultipleEmptyNestedArrays) {
+    std::string requestBody = R"(
+        {
+            "model": "embeddings_ov",
+            "text": [[], [], []]
+        }
+    )";
+    Status status = handler->dispatchToProcessor(endpointTokenize, requestBody, &response, comp, responseComponents, writer, multiPartParser);
+    ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR) << status.string();
+}

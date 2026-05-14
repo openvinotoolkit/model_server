@@ -605,3 +605,25 @@ TEST_F(RerankTokenizeHttpTest, tokenizeIgnoreAddSpecialTokensParameter) {
         ovms::StatusCode::OK);
     AssertTokenizationResult(response, expectedTokens);
 }
+
+TEST_F(RerankTokenizeHttpTest, tokenizeEmptyNestedArray) {
+    std::string requestBody = R"(
+        {
+            "model": "rerank_ov",
+            "text": [[]]
+        }
+    )";
+    Status status = handler->dispatchToProcessor(endpointTokenize, requestBody, &response, comp, responseComponents, writer, multiPartParser);
+    ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR) << status.string();
+}
+
+TEST_F(RerankTokenizeHttpTest, tokenizeMultipleEmptyNestedArrays) {
+    std::string requestBody = R"(
+        {
+            "model": "rerank_ov",
+            "text": [[], [], []]
+        }
+    )";
+    Status status = handler->dispatchToProcessor(endpointTokenize, requestBody, &response, comp, responseComponents, writer, multiPartParser);
+    ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR) << status.string();
+}

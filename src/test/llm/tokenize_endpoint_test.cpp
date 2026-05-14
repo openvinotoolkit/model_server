@@ -417,9 +417,6 @@ TEST_P(LLMTokenizeTests, tokenizeArrayOfStringsWithPaddingSideLeft) {
 
 TEST_P(LLMTokenizeTests, tokenizeStringWithAddSpecialTokens) {
     auto params = GetParam();
-    if (params.modelName == "vlm_cb_regular" || params.modelName == "vlm_legacy_regular") {
-        GTEST_SKIP() << "Skipping test for " << params.modelName;
-    }
 
     std::string requestBody = R"(
         {
@@ -441,6 +438,33 @@ TEST_P(LLMTokenizeTests, tokenizeStringWithAddSpecialTokens) {
     const auto& tokens = parsedResponse["tokens"];
     ASSERT_TRUE(tokens.IsArray());
     ASSERT_GE(tokens.Size(), params.expectedTokens.size());
+}
+
+TEST_P(LLMTokenizeTests, tokenizeEmptyNestedArray) {
+    auto params = GetParam();
+
+    std::string requestBody = R"(
+        {
+            "model": ")"+ params.modelName +
+                              R"(",
+            "text": [[]]
+        }
+    )";
+    Status status = handler->dispatchToProcessor(endpointTokenize, requestBody, &response, comp, responseComponents, writer, multiPartParser);
+    ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR) << status.string();
+}
+
+TEST_P(LLMTokenizeTests, tokenizeMultipleEmptyNestedArrays) {
+    auto params = GetParam();
+    std::string requestBody = R"(
+        {
+            "model": ")"+ params.modelName +
+                              R"(",
+            "text": [[], [], []]
+        }
+    )";
+    Status status = handler->dispatchToProcessor(endpointTokenize, requestBody, &response, comp, responseComponents, writer, multiPartParser);
+    ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR) << status.string();
 }
 
 INSTANTIATE_TEST_SUITE_P(

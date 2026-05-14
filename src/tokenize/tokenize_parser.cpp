@@ -147,28 +147,32 @@ std::variant<TokenizeRequest::InputDataType, std::string> TokenizeParser::parseI
             InputType input_type = InputType::NONE;
             for (auto& input : it->value.GetArray()) {
                 if (input.IsArray()) {
+                    auto array = input.GetArray();
+                    if (array.Size() == 0) {
+                        return "inner arrays in " + field_name + " should not be empty";
+                    }
                     if (input_type != InputType::NONE && input_type != InputType::INT_VEC && input_type != InputType::STRING_VEC)
                         return field_name + " must be homogeneous";
-                    if (input.GetArray()[0].IsInt()) {
+                    if (array[0].IsInt()) {
                         if (input_type == InputType::STRING_VEC)
                             return field_name + " must be homogeneous";
                         input_type = InputType::INT_VEC;
                         std::vector<int64_t> ints;
-                        ints.reserve(input.GetArray().Size());
-                        for (auto& val : input.GetArray()) {
+                        ints.reserve(array.Size());
+                        for (auto& val : array) {
                             if (val.IsInt())
                                 ints.push_back(val.GetInt());
                             else
                                 return field_name + " must be homogeneous";
                         }
                         input_tokens.emplace_back(std::move(ints));
-                    } else if (input.GetArray()[0].IsString()) {
+                    } else if (array[0].IsString()) {
                         if (input_type == InputType::INT_VEC)
                             return field_name + " must be homogeneous";
                         input_type = InputType::STRING_VEC;
                         std::vector<std::string> strings;
-                        strings.reserve(input.GetArray().Size());
-                        for (auto& val : input.GetArray()) {
+                        strings.reserve(array.Size());
+                        for (auto& val : array) {
                             if (val.IsString())
                                 strings.push_back(val.GetString());
                             else
