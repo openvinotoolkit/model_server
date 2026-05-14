@@ -1730,8 +1730,12 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseForResponsesEncodedRe
 
     ov::genai::EncodedResults results;
     ov::Tensor outputIds = tokenizer->encode("OVMS", ov::genai::add_special_tokens(false)).input_ids;
+    const auto& shape = outputIds.get_shape();
+    ASSERT_EQ(shape.size(), 2);
+    ASSERT_EQ(shape[0], 1);
+    ASSERT_EQ(outputIds.get_element_type(), ov::element::i64);
     int64_t* outputIdsData = reinterpret_cast<int64_t*>(outputIds.data());
-    results.tokens = {std::vector<int64_t>(outputIdsData, outputIdsData + outputIds.get_shape()[1])};
+    results.tokens = {std::vector<int64_t>(outputIdsData, outputIdsData + shape[1])};
     results.finish_reasons = {ov::genai::GenerationFinishReason::LENGTH};
 
     std::string serialized = apiHandler->serializeUnaryResponse(results);
