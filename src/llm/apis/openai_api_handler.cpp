@@ -246,9 +246,6 @@ absl::StatusOr<ov::Tensor> loadImage(const std::string& imageSource,
             return absl::InvalidArgumentError(ss.str());
         }
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Loading image from local filesystem");
-        if (std::filesystem::path(imageSource).is_relative()) {
-            return absl::InvalidArgumentError("Relative paths are not allowed for local filesystem access");
-        }
         const std::filesystem::path resolvedAllowedPath = FileSystem::normalizeConfiguredPath(allowedLocalMediaPath.value());
         const std::string resolvedImagePathStr = FileSystem::normalizeConfiguredPath(imageSource);
         const std::filesystem::path resolvedImagePath = resolvedImagePathStr;

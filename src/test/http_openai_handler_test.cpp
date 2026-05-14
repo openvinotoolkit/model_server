@@ -2250,6 +2250,167 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemPrefixPa
     ASSERT_EQ(apiHandler->parseMessages(allowedLocalMediaPath), absl::InvalidArgumentError("Given filepath is not subpath of allowed_local_media_path"));
 }
 
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemRelativeImagePathInsideAllowedPath) {
+    // Verify that a relative image path is resolved against the current working directory
+    // and accepted when the resolved location is inside allowed_local_media_path.
+    // Copy the fixture into cwd so the relative path is a single component (no "..",
+    // which FileSystem::isPathEscaped would reject before normalization).
+    const std::filesystem::path absoluteImage = getGenericFullPathForSrcTest("/ovms/src/test/binaryutils/rgb.jpg");
+    const std::string relativeImageName = "ovms_relative_image_test_inside.jpg";
+    const std::filesystem::path relativeImageInCwd = std::filesystem::current_path() / relativeImageName;
+    std::error_code ec;
+    std::filesystem::copy_file(absoluteImage, relativeImageInCwd, std::filesystem::copy_options::overwrite_existing, ec);
+    ASSERT_FALSE(ec) << "Cannot copy fixture into cwd: " << ec.message();
+    const std::string allowedPath = std::filesystem::current_path().generic_string();
+    std::string json = R"({
+"model": "llama",
+"messages": [
+  {
+    "role": "user",
+    "content": [
+      {
+        "type": "text",
+        "text": "What is in this image?"
+      },
+      {
+        "type": "image_url",
+        "image_url": {
+          "url":  ")" + relativeImageName +
+                       R"("
+        }
+      }
+    ]
+  }
+]
+})";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    const auto status = apiHandler->parseMessages(allowedPath);
+    std::filesystem::remove(relativeImageInCwd, ec);
+    ASSERT_EQ(status, absl::OkStatus());
+    const ovms::ImageHistory& imageHistory = apiHandler->getImageHistory();
+    ASSERT_EQ(imageHistory.size(), 1);
+    auto [index, image] = imageHistory[0];
+    EXPECT_EQ(index, 0);
+    EXPECT_EQ(image.get_element_type(), ov::element::u8);
+    EXPECT_EQ(image.get_size(), 3);
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemRelativeImagePathOutsideAllowedPath) {
+    // A relative image path resolves against the current working directory; if the resolved
+    // location is outside allowed_local_media_path the request must be rejected.
+    const std::string imageUrl = "rgb.jpg";
+    const std::string allowedPath = getGenericFullPathForSrcTest("/ovms/src/test/binaryutils");
+    std::string json = R"({
+"model": "llama",
+"messages": [
+  {
+    "role": "user",
+    "content": [
+      {
+        "type": "text",
+        "text": "What is in this image?"
+      },
+      {
+        "type": "image_url",
+        "image_url": {
+          "url":  ")" + imageUrl +
+                       R"("
+        }
+      }
+    ]
+  }
+]
+})";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    ASSERT_EQ(apiHandler->parseMessages(allowedPath), absl::InvalidArgumentError("Given filepath is not subpath of allowed_local_media_path"));
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemRelativeAllowedPathInside) {
+    // A relative allowed_local_media_path is resolved against the current working directory.
+    // Use "." so allowlist resolves to cwd; copy the fixture into cwd so the (absolute) image
+    // path falls inside the resolved allowlist.
+    const std::filesystem::path absoluteImage = getGenericFullPathForSrcTest("/ovms/src/test/binaryutils/rgb.jpg");
+    const std::string relativeImageName = "ovms_relative_allowed_test_inside.jpg";
+    const std::filesystem::path imageInCwd = std::filesystem::current_path() / relativeImageName;
+    std::error_code ec;
+    std::filesystem::copy_file(absoluteImage, imageInCwd, std::filesystem::copy_options::overwrite_existing, ec);
+    ASSERT_FALSE(ec) << "Cannot copy fixture into cwd: " << ec.message();
+    const std::string imageUrl = imageInCwd.generic_string();
+    std::string json = R"({
+"model": "llama",
+"messages": [
+  {
+    "role": "user",
+    "content": [
+      {
+        "type": "text",
+        "text": "What is in this image?"
+      },
+      {
+        "type": "image_url",
+        "image_url": {
+          "url":  ")" + imageUrl +
+                       R"("
+        }
+      }
+    ]
+  }
+]
+})";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    const auto status = apiHandler->parseMessages(".");
+    std::filesystem::remove(imageInCwd, ec);
+    ASSERT_EQ(status, absl::OkStatus());
+    const ovms::ImageHistory& imageHistory = apiHandler->getImageHistory();
+    ASSERT_EQ(imageHistory.size(), 1);
+    auto [index, image] = imageHistory[0];
+    EXPECT_EQ(index, 0);
+    EXPECT_EQ(image.get_element_type(), ov::element::u8);
+    EXPECT_EQ(image.get_size(), 3);
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemRelativeAllowedPathOutside) {
+    // A relative allowed_local_media_path resolves against the current working directory; an
+    // absolute image path located outside of that resolved directory must still be rejected.
+    const std::string allowedPath = ".";
+    const std::string imageUrl = getGenericFullPathForSrcTest("/ovms/src/test/binaryutils/rgb.jpg");
+    if (std::filesystem::path(imageUrl).lexically_normal().string().rfind(
+            std::filesystem::current_path().lexically_normal().string(), 0) == 0) {
+        GTEST_SKIP() << "Image path is inside the current working directory; cannot exercise the outside-of-allowlist case.";
+    }
+    std::string json = R"({
+"model": "llama",
+"messages": [
+  {
+    "role": "user",
+    "content": [
+      {
+        "type": "text",
+        "text": "What is in this image?"
+      },
+      {
+        "type": "image_url",
+        "image_url": {
+          "url":  ")" + imageUrl +
+                       R"("
+        }
+      }
+    ]
+  }
+]
+})";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    ASSERT_EQ(apiHandler->parseMessages(allowedPath), absl::InvalidArgumentError("Given filepath is not subpath of allowed_local_media_path"));
+}
+
 TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemSymlinkEscapeIsRejected) {
 #ifdef _WIN32
     GTEST_SKIP() << "Creating filesystem symlinks on Windows requires elevated privileges and is unreliable in CI.";
