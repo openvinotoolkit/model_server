@@ -288,23 +288,18 @@ def check_tests(){
         echo "Run test no FAILED detected."
     }
 
-    status = bat(returnStatus: true, script: 'tail -50 win_full_test.log | grep "  PASSED  "')
+    // PASSED/crash detection is handled by windows_test.bat (via windows_parse_tests.bat).
+    // The bat exit code is the authoritative signal; win_test_summary.log contains diagnostics.
+    status = bat(returnStatus: true, script: 'grep -a "\[  PASSED  \] " win_full_test.log')
     if (status != 0) {
-        // Check for segfault/termination only if PASSED is not found near the end of the log
-        def segfault_status = bat(returnStatus: true, script: 'grep -i "segmentation fault\\|segfault\\|crashed\\|abnormal termination" win_full_test.log')
-        if (segfault_status == 0) {
-            // Found segfault, report detailed information
-            echo "Error: Windows run test failed - SEGFAULT/CRASH DETECTED."
-            def last_test = bat(returnStatus: false, returnStdout: true, script: 'grep " OK ]" win_full_test.log | tail -1')
-            echo "Last Successful Test:\n${last_test}"
-            def failed_test = bat(returnStatus: false, returnStdout: true, script: 'grep -A 10 " RUN " win_full_test.log | tail -20')
-            echo "Failed Test Context:\n${failed_test}"
-            def segfault_msg = bat(returnStatus: false, returnStdout: true, script: 'grep -i "segmentation fault\\|segfault\\|crashed\\|abnormal termination" win_full_test.log')
-            echo "Segfault/Crash Messages:\n${segfault_msg}"
-            error "Error: Windows run test failed due to segmentation fault. Check win_full_test.log for details."
+        def markerLine = bat(returnStatus: true, script: 'grep -n "Check tests summary in" win_test_summary.log | head -1')
+        def summaryContent
+        if (markerLine == 0) {
+            summaryContent = bat(returnStatus: false, returnStdout: true, script: 'grep -n "Check tests summary in" win_test_summary.log | head -1 | cut -d: -f1 | xargs -I{} head -{} win_test_summary.log')
         } else {
-            error "Error: Windows run test failed ${status}. Expecting   PASSED   at the end of log. Check pipeline.log for details."
+            summaryContent = bat(returnStatus: false, returnStdout: true, script: 'head -150 win_test_summary.log')
         }
+        error "Error: Windows run test failed. PASSED summary not found in win_full_test.log.\n${summaryContent}"
     } else {
         echo "Success: Windows run test finished with success."
     }
