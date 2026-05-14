@@ -1018,7 +1018,6 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseEncodedResultsReturns
 
     ov::genai::EncodedResults results;
     results.tokens = {createHermes3ToolCallTokens(*tokenizer)};
-    results.finish_reasons = {ov::genai::GenerationFinishReason::STOP};
     std::string serialized = apiHandler->serializeUnaryResponse(results);
 
     ASSERT_NE(serialized.find("\"finish_reason\":\"tool_calls\""), std::string::npos) << serialized;
@@ -1050,7 +1049,6 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseVLMSupportsToolCallsF
     ov::genai::VLMDecodedResults results;
     std::string toolCall = R"(<tool_call>{"name": "example_tool", "arguments": {"arg1": "value1", "arg2": 42}}</tool_call>)";
     results.texts = {toolCall};
-    results.finish_reasons = {ov::genai::GenerationFinishReason::STOP};
     std::string serialized = apiHandler->serializeUnaryResponse(results, toolCall);
 
     ASSERT_NE(serialized.find("\"finish_reason\":\"tool_calls\""), std::string::npos) << serialized;
@@ -1078,7 +1076,6 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseForResponsesContainsO
     ASSERT_EQ(outputIds.get_element_type(), ov::element::i64);
     int64_t* outputIdsData = reinterpret_cast<int64_t*>(outputIds.data());
     results.tokens = {std::vector<int64_t>(outputIdsData, outputIdsData + outputIds.get_shape()[1])};
-    results.finish_reasons = {ov::genai::GenerationFinishReason::STOP};
 
     std::string serialized = apiHandler->serializeUnaryResponse(results);
     ASSERT_NE(serialized.find("\"object\":\"response\""), std::string::npos) << serialized;
@@ -1110,7 +1107,6 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseForResponsesContainsR
     ASSERT_EQ(outputIds.get_element_type(), ov::element::i64);
     int64_t* outputIdsData = reinterpret_cast<int64_t*>(outputIds.data());
     results.tokens = {std::vector<int64_t>(outputIdsData, outputIdsData + outputIds.get_shape()[1])};
-    results.finish_reasons = {ov::genai::GenerationFinishReason::STOP};
 
     std::string serialized = apiHandler->serializeUnaryResponse(results);
     ASSERT_NE(serialized.find("\"object\":\"response\""), std::string::npos) << serialized;
@@ -1149,7 +1145,6 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseForResponsesOmitsReas
     ASSERT_EQ(outputIds.get_element_type(), ov::element::i64);
     int64_t* outputIdsData = reinterpret_cast<int64_t*>(outputIds.data());
     results.tokens = {std::vector<int64_t>(outputIdsData, outputIdsData + outputIds.get_shape()[1])};
-    results.finish_reasons = {ov::genai::GenerationFinishReason::STOP};
 
     std::string serialized = apiHandler->serializeUnaryResponse(results);
     ASSERT_NE(serialized.find("\"object\":\"response\""), std::string::npos) << serialized;
@@ -2746,7 +2741,6 @@ TEST_F(HttpOpenAIHandlerParsingTest, SerializeResponsesUnaryResponseContainsFunc
     ASSERT_EQ(outputIds.get_element_type(), ov::element::i64);
     int64_t* outputIdsData = reinterpret_cast<int64_t*>(outputIds.data());
     results.tokens = {std::vector<int64_t>(outputIdsData, outputIdsData + outputIds.get_shape()[1])};
-    results.finish_reasons = {ov::genai::GenerationFinishReason::STOP};
 
     std::string serialized = apiHandler->serializeUnaryResponse(results);
     ASSERT_NE(serialized.find("\"object\":\"response\""), std::string::npos) << serialized;
@@ -2792,7 +2786,6 @@ TEST_F(HttpOpenAIHandlerParsingTest, SerializeResponsesUnaryResponseContainsFunc
     ASSERT_EQ(outputIds.get_element_type(), ov::element::i64);
     int64_t* outputIdsData = reinterpret_cast<int64_t*>(outputIds.data());
     results.tokens = {std::vector<int64_t>(outputIdsData, outputIdsData + outputIds.get_shape()[1])};
-    results.finish_reasons = {ov::genai::GenerationFinishReason::STOP};
 
     std::string serialized = apiHandler->serializeUnaryResponse(results);
     ASSERT_NE(serialized.find("\"tool_choice\":{"), std::string::npos) << serialized;
@@ -3102,7 +3095,6 @@ TEST_F(HttpOpenAIHandlerParsingTest, SerializeUnaryResponseVLMDecodedResultsWith
     std::string vlmText =
         "I will call a tool.<tool_call>{\"name\":\"get_weather\",\"arguments\":{\"location\":\"Paris\"}}</tool_call>";
     results.texts.push_back(vlmText);
-    results.finish_reasons = {ov::genai::GenerationFinishReason::STOP};
 
     std::string serialized = apiHandler->serializeUnaryResponse(results, vlmText);
 
