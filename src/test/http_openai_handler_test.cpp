@@ -25,6 +25,7 @@
 #include <gtest/gtest.h>
 
 #include "../http_rest_api_handler.hpp"
+#include "../filesystem/filesystem.hpp"
 #include "../llm/apis/openai_completions.hpp"
 #include "../llm/apis/openai_responses.hpp"
 #include <openvino/genai/visual_language/pipeline.hpp>
@@ -2326,7 +2327,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemInvalidP
     doc.Parse(json.c_str());
     ASSERT_FALSE(doc.HasParseError());
     std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
-    EXPECT_EQ(apiHandler->parseMessages(allowedPath), absl::InvalidArgumentError("Image file " + imageUrl + " parsing failed: can't fopen"));
+    EXPECT_EQ(apiHandler->parseMessages(allowedPath), absl::InvalidArgumentError("Image file " + ovms::FileSystem::normalizeConfiguredPath(imageUrl) + " parsing failed: can't fopen"));
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemInvalidEscaped) {
