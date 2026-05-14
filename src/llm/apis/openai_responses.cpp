@@ -711,6 +711,13 @@ absl::Status OpenAIResponsesHandler::parseResponsesPart(std::optional<uint32_t> 
             if (!processedStatus.ok()) {
                 return processedStatus;
             }
+        } else if (inputArrIt != doc.MemberEnd() && inputArrIt->value.IsString()) {
+            // String input: emit a single user message so the Python Jinja path
+            // sees the same content the C++ chatHistory path does.
+            Value msgObj(kObjectType);
+            msgObj.AddMember("role", Value("user", alloc), alloc);
+            msgObj.AddMember("content", Value(inputArrIt->value.GetString(), alloc), alloc);
+            messagesArray.PushBack(msgObj, alloc);
         }
 
         processedDoc.AddMember("messages", messagesArray, alloc);
