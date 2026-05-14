@@ -49,37 +49,6 @@ constexpr size_t DEFAULT_MAX_STOP_WORDS = 16;  // same as deep-seek
 
 namespace {
 
-std::string normalizePathSeparators(const std::string& path) {
-    std::string normalizedPath = path;
-    std::replace(normalizedPath.begin(), normalizedPath.end(), '\\', '/');
-    return normalizedPath;
-}
-
-std::string normalizeAllowedLocalMediaPath(const std::string& allowedLocalMediaPath) {
-    std::string normalizedAllowedLocalMediaPath = normalizePathSeparators(allowedLocalMediaPath);
-    if (normalizedAllowedLocalMediaPath.empty()) {
-        return normalizedAllowedLocalMediaPath;
-    }
-    if (normalizedAllowedLocalMediaPath.back() == '/') {
-        return normalizedAllowedLocalMediaPath;
-    }
-    return normalizedAllowedLocalMediaPath + '/';
-}
-
-std::filesystem::path normalizeAndResolvePath(const std::string& pathString) {
-    std::filesystem::path path = normalizePathSeparators(pathString);
-    if (path.is_relative()) {
-        path = std::filesystem::current_path() / path;
-    }
-    path = path.lexically_normal();
-    std::error_code ec;
-    auto weakCanonicalPath = std::filesystem::weakly_canonical(path, ec);
-    if (!ec) {
-        return weakCanonicalPath.lexically_normal();
-    }
-    return path;
-}
-
 bool isPathInsideDirectory(const std::filesystem::path& testedPath, const std::filesystem::path& allowedDirectory) {
     const auto mismatch = std::mismatch(
         allowedDirectory.begin(), allowedDirectory.end(),
@@ -277,21 +246,20 @@ absl::StatusOr<ov::Tensor> loadImage(const std::string& imageSource,
             return absl::InvalidArgumentError(ss.str());
         }
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Loading image from local filesystem");
-        const auto normalizedAllowedLocalMediaPath = normalizeAllowedLocalMediaPath(allowedLocalMediaPath.value());
-        const auto imagePath = std::filesystem::path(normalizePathSeparators(imageSource));
-        if (imagePath.is_relative()) {
+        if (std::filesystem::path(imageSource).is_relative()) {
             return absl::InvalidArgumentError("Relative paths are not allowed for local filesystem access");
         }
-        const auto resolvedAllowedPath = normalizeAndResolvePath(normalizedAllowedLocalMediaPath);
-        const auto resolvedImagePath = normalizeAndResolvePath(imageSource);
+        const std::filesystem::path resolvedAllowedPath = FileSystem::normalizeConfiguredPath(allowedLocalMediaPath.value());
+        const std::string resolvedImagePathStr = FileSystem::normalizeConfiguredPath(imageSource);
+        const std::filesystem::path resolvedImagePath = resolvedImagePathStr;
         if (!isPathInsideDirectory(resolvedImagePath, resolvedAllowedPath)) {
             return absl::InvalidArgumentError("Given filepath is not subpath of allowed_local_media_path");
         }
         try {
-            tensor = loadImageStbiFromFile(imageSource.c_str());
+            tensor = loadImageStbiFromFile(resolvedImagePathStr.c_str());
         } catch (std::runtime_error& e) {
             std::stringstream ss;
-            ss << "Image file " << imageSource.c_str() << " parsing failed: " << e.what();
+            ss << "Image file " << resolvedImagePathStr << " parsing failed: " << e.what();
             SPDLOG_LOGGER_DEBUG(llm_calculator_logger, ss.str());
             return absl::InvalidArgumentError(ss.str());
         }

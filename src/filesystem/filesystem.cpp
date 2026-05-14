@@ -203,7 +203,13 @@ Status FileSystem::createFileOverwrite(const std::string& filePath, const std::s
 
 std::string FileSystem::normalizeConfiguredPath(const std::string& pathString) {
     std::string normalized = pathString;
+#ifdef _WIN32
+    // Backslash is a path separator only on Windows. On POSIX it is a valid
+    // filename character; rewriting it would let a path like
+    // "/allowed\secret.jpg" be authorized as "/allowed/secret.jpg" while
+    // actually opening a sibling file outside the allowlist.
     std::replace(normalized.begin(), normalized.end(), '\\', '/');
+#endif
     std::filesystem::path path(normalized);
     if (path.is_relative()) {
         path = std::filesystem::current_path() / path;
