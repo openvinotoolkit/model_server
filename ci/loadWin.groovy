@@ -273,7 +273,7 @@ def unit_test(){
         errorReasons << "Windows run test failed ${status}. Expecting passed tests and no passed tests detected. Check win_test_summary.log for details."
     } else {
         def passed = bat(returnStatus: false, returnStdout: true, script: '@grep "       OK " win_test_summary.log | wc -l').trim()
-        echo "Success: Windows run test passed ${status}. ${passed} passed tests . Check win_test_summary.log for details."
+        echo "Detected ${passed} passed tests . Check win_test_summary.log for details."
     }
 
     status = bat(returnStatus: true, script: '@grep "  FAILED  " win_test_summary.log')
@@ -281,9 +281,9 @@ def unit_test(){
         hasError = true
         def failed = bat(returnStatus: false, returnStdout: true, script: '@grep "  FAILED  " win_test_summary.log | wc -l').trim()
         def failedTestsList = bat(returnStatus: false, returnStdout: true, script: '@grep "  FAILED  " win_test_summary.log').trim()
-        errorReasons << "Windows run test failed ${status}. ${failed} failed tests. Failed tests:\n${failedTestsList}\nCheck win_test_summary.log for details."
+        errorReasons << "Windows run test failed with ${failed} failed tests. Failed tests:\n${failedTestsList}\nCheck win_test_summary.log for details."
     } else {
-        echo "Run test no FAILED detected."
+        echo "no FAILED tests detected."
     }
 
     // PASSED/crash detection is handled by windows_test.bat (via windows_parse_tests.bat).
