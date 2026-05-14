@@ -2148,6 +2148,9 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemWithinAl
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemWithinAllowedPathMixedSeparators) {
+#ifndef _WIN32
+    GTEST_SKIP() << "Backslash is a valid filename character on POSIX and is not treated as a path separator.";
+#else
     std::string json = R"({
 "model": "llama",
 "messages": [
@@ -2183,6 +2186,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemWithinAl
     EXPECT_EQ(index, 0);
     EXPECT_EQ(image.get_element_type(), ov::element::u8);
     EXPECT_EQ(image.get_size(), 3);
+#endif
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemNotWithinAllowedPath) {
@@ -2243,6 +2247,56 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemPrefixPa
     ASSERT_FALSE(doc.HasParseError());
     std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
     ASSERT_EQ(apiHandler->parseMessages(allowedLocalMediaPath), absl::InvalidArgumentError("Given filepath is not subpath of allowed_local_media_path"));
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemSymlinkEscapeIsRejected) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Creating filesystem symlinks on Windows requires elevated privileges and is unreliable in CI.";
+#else
+    // Build an allowed directory that contains a symlink pointing to a sibling directory holding the
+    // real image. The image, when accessed through the symlink, appears to live inside the allowlist,
+    // but its canonical location is outside it. This regression test ensures the authorization check
+    // resolves the symlink (via weakly_canonical) before the allowlist comparison.
+    const std::filesystem::path realImageDir = getGenericFullPathForSrcTest("/ovms/src/test/binaryutils");
+    const std::filesystem::path allowedRoot = std::filesystem::temp_directory_path() / "ovms_symlink_allowlist_test";
+    std::error_code ec;
+    std::filesystem::remove_all(allowedRoot, ec);
+    ASSERT_TRUE(std::filesystem::create_directories(allowedRoot, ec)) << ec.message();
+    const std::filesystem::path symlinkInsideAllowed = allowedRoot / "linked";
+    std::filesystem::create_directory_symlink(realImageDir, symlinkInsideAllowed, ec);
+    if (ec) {
+        std::filesystem::remove_all(allowedRoot);
+        GTEST_SKIP() << "Cannot create symlink for test: " << ec.message();
+    }
+    const std::string imageUrl = (symlinkInsideAllowed / "rgb.jpg").string();
+    std::string json = R"({
+"model": "llama",
+"messages": [
+  {
+    "role": "user",
+    "content": [
+      {
+        "type": "text",
+        "text": "What is in this image?"
+      },
+      {
+        "type": "image_url",
+        "image_url": {
+          "url":  ")" + imageUrl +
+                       R"("
+        }
+      }
+    ]
+  }
+]
+})";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    const auto status = apiHandler->parseMessages(allowedRoot.string());
+    std::filesystem::remove_all(allowedRoot, ec);
+    ASSERT_EQ(status, absl::InvalidArgumentError("Given filepath is not subpath of allowed_local_media_path"));
+#endif
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemInvalidPath) {
