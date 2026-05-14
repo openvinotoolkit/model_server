@@ -290,7 +290,7 @@ def check_tests(){
 
     // PASSED/crash detection is handled by windows_test.bat (via windows_parse_tests.bat).
     // The bat exit code is the authoritative signal; win_test_summary.log contains diagnostics.
-    status = bat(returnStatus: true, script: 'grep -a "\[  PASSED  \] " win_full_test.log')
+    status = bat(returnStatus: true, script: 'grep -a "\\[  PASSED  \\] " win_full_test.log')
     if (status != 0) {
         def markerLine = bat(returnStatus: true, script: 'grep -n "Check tests summary in" win_test_summary.log | head -1')
         def summaryContent
