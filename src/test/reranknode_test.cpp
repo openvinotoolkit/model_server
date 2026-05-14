@@ -627,3 +627,14 @@ TEST_F(RerankTokenizeHttpTest, tokenizeMultipleEmptyNestedArrays) {
     Status status = handler->dispatchToProcessor(endpointTokenize, requestBody, &response, comp, responseComponents, writer, multiPartParser);
     ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR) << status.string();
 }
+
+TEST_F(RerankTokenizeHttpTest, tokenizeMultipleEmptyNestedArraysAndOneNonEmpty) {
+    std::string requestBody = R"(
+        {
+            "model": "rerank_ov",
+            "text": [[], ["hello world"], []]
+        }
+    )";
+    Status status = handler->dispatchToProcessor(endpointTokenize, requestBody, &response, comp, responseComponents, writer, multiPartParser);
+    ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR) << status.string();
+}

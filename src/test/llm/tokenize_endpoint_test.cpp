@@ -445,7 +445,7 @@ TEST_P(LLMTokenizeTests, tokenizeEmptyNestedArray) {
 
     std::string requestBody = R"(
         {
-            "model": ")"+ params.modelName +
+            "model": ")" + params.modelName +
                               R"(",
             "text": [[]]
         }
@@ -458,7 +458,7 @@ TEST_P(LLMTokenizeTests, tokenizeMultipleEmptyNestedArrays) {
     auto params = GetParam();
     std::string requestBody = R"(
         {
-            "model": ")"+ params.modelName +
+            "model": ")" + params.modelName +
                               R"(",
             "text": [[], [], []]
         }
@@ -466,6 +466,20 @@ TEST_P(LLMTokenizeTests, tokenizeMultipleEmptyNestedArrays) {
     Status status = handler->dispatchToProcessor(endpointTokenize, requestBody, &response, comp, responseComponents, writer, multiPartParser);
     ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR) << status.string();
 }
+
+TEST_P(LLMTokenizeTests, tokenizeMultipleEmptyNestedArraysAndOneNonEmpty) {
+    auto params = GetParam();
+    std::string requestBody = R"(
+        {
+            "model": ")" + params.modelName +
+                              R"(",
+            "text": [[], ["hello world"], []]
+        }
+    )";
+    Status status = handler->dispatchToProcessor(endpointTokenize, requestBody, &response, comp, responseComponents, writer, multiPartParser);
+    ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR) << status.string();
+}
+
 
 INSTANTIATE_TEST_SUITE_P(
     LLMTokenizeTestInstances,
