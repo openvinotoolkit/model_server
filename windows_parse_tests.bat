@@ -54,6 +54,10 @@ goto :exit_build_error
 if exist "%parserOutputTmp%" del /f /q "%parserOutputTmp%"
 if exist "%summaryBackupTmp%" del /f /q "%summaryBackupTmp%"
 
+set "segfaultDetected=0"
+grep -a -q -i "%CRASH_PATTERN%" "!fullLog!"
+if !errorlevel! equ 0 set "segfaultDetected=1"
+
 (
 echo.
 echo [ERROR] FAILED TESTS OR CRASHES DETECTED:
@@ -64,31 +68,33 @@ echo.
 echo === Last Successful Test ===
 grep -a " OK ]" "!fullLog!" | tail -1
 echo.
-echo === Last Running Test ^(likely the one that failed^) ===
-set "lastRunEntry="
-for /F "delims=" %%A in ('grep -a "\[ RUN" "!fullLog!" ^| tail -1') do (
-    set "lastRunEntry=%%A"
-)
-if defined lastRunEntry (
-    echo !lastRunEntry!
-) else (
-    echo [WARN] No gtest RUN marker found in !fullLog!.
-)
-echo.
-echo === Output from Last Running Test to End of Log ===
-set "lastRunLine="
-for /F "tokens=1 delims=:" %%A in ('grep -a -n "\[ RUN" "!fullLog!" ^| tail -1') do (
-    set "lastRunLine=%%A"
-)
-if defined lastRunLine (
-    sed -n "!lastRunLine!,$p" "!fullLog!" | head -120
-) else (
-    echo [WARN] Could not determine last RUN line. Showing recent RUN markers and log tail.
-    grep -a -n "\[ RUN" "!fullLog!" | tail -3
+if "!segfaultDetected!"=="1" (
+    echo === Last Running Test ^(likely the one that failed^) ===
+    set "lastRunEntry="
+    for /F "delims=" %%A in ('grep -a "\[ RUN" "!fullLog!" ^| tail -1') do (
+        set "lastRunEntry=%%A"
+    )
+    if defined lastRunEntry (
+        echo !lastRunEntry!
+    ) else (
+        echo [WARN] No gtest RUN marker found in !fullLog!.
+    )
     echo.
-    tail -20 "!fullLog!"
+    echo === Output from Last Running Test to End of Log ===
+    set "lastRunLine="
+    for /F "tokens=1 delims=:" %%A in ('grep -a -n "\[ RUN" "!fullLog!" ^| tail -1') do (
+        set "lastRunLine=%%A"
+    )
+    if defined lastRunLine (
+        sed -n "!lastRunLine!,$p" "!fullLog!" | head -120
+    ) else (
+        echo [WARN] Could not determine last RUN line. Showing recent RUN markers and log tail.
+        grep -a -n "\[ RUN" "!fullLog!" | tail -3
+        echo.
+        tail -20 "!fullLog!"
+    )
+    echo.
 )
-echo.
 echo === Context Around First FAILED Test ===
 set "firstFailedLine="
 set "firstFailedRunLine="

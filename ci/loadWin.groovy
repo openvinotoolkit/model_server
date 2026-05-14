@@ -256,24 +256,21 @@ def download_package(){
 def unit_test(){
     println "OVMS_PYTHON_ENABLED=${env.OVMS_PYTHON_ENABLED}"
     def pythonOption = env.OVMS_PYTHON_ENABLED == "0" ? "--no_python" : "--with_python"
-    status = bat(returnStatus: true, script: 'windows_test.bat ' + get_short_bazel_path() + ' ' + pythonOption)
-    if (status != 0) {
-        error "Error: Windows build test failed ${status}. Check win_build_test.log for details."
-    } else {
-        echo "Build successful."
-    }
-    status = bat(returnStatus: true, script: 'grep -A 4 bazel-bin/src/ovms_test.exe win_build_test.log | grep "Build completed successfully"')
-    if (status != 0) {
-        error "Error: Windows build test failed ${status}. Check win_build_test.log for details."
-    } else {
-        echo "Build successful."
-    }
-}
+    boolean hasError = false
+    def errorReasons = []
 
-def check_tests(){
-    def status = bat(returnStatus: true, script: 'grep "       OK " win_test_summary.log')
+    def status = bat(returnStatus: true, script: 'windows_test.bat ' + get_short_bazel_path() + ' ' + pythonOption)
     if (status != 0) {
-            error "Error: Windows run test failed ${status}. Expecting passed tests and no passed tests detected. Check win_test_summary.log for details."
+        hasError = true
+        errorReasons << "Windows build test failed ${status}. Check win_build_test.log for details."
+    } else {
+        echo "Build successful."
+    }
+
+    status = bat(returnStatus: true, script: 'grep "       OK " win_test_summary.log')
+    if (status != 0) {
+        hasError = true
+        errorReasons << "Windows run test failed ${status}. Expecting passed tests and no passed tests detected. Check win_test_summary.log for details."
     } else {
         def passed = bat(returnStatus: false, returnStdout: true, script: 'grep "       OK " win_test_summary.log | wc -l')
         echo "Success: Windows run test passed ${status}. ${passed} passed tests . Check win_test_summary.log for details."
@@ -281,9 +278,10 @@ def check_tests(){
 
     status = bat(returnStatus: true, script: 'grep "  FAILED  " win_test_summary.log')
     if (status == 0) {
-            def failed = bat(returnStatus: false, returnStdout: true, script: 'grep "  FAILED  " win_test_summary.log | wc -l')
-            def failedTestsList = bat(returnStatus: false, returnStdout: true, script: 'grep "  FAILED  " win_test_summary.log')
-            error "Error: Windows run test failed ${status}. ${failed} failed tests. Failed tests:\n${failedTestsList}\nCheck win_test_summary.log for details."
+        hasError = true
+        def failed = bat(returnStatus: false, returnStdout: true, script: 'grep "  FAILED  " win_test_summary.log | wc -l')
+        def failedTestsList = bat(returnStatus: false, returnStdout: true, script: 'grep "  FAILED  " win_test_summary.log')
+        errorReasons << "Windows run test failed ${status}. ${failed} failed tests. Failed tests:\n${failedTestsList}\nCheck win_test_summary.log for details."
     } else {
         echo "Run test no FAILED detected."
     }
@@ -292,6 +290,7 @@ def check_tests(){
     // The bat exit code is the authoritative signal; win_test_summary.log contains diagnostics.
     status = bat(returnStatus: true, script: 'grep -a "\\[  PASSED  \\] " win_full_test.log')
     if (status != 0) {
+        hasError = true
         def markerLine = bat(returnStatus: true, script: 'grep -n "Check tests summary in" win_test_summary.log | head -1')
         def summaryContent
         if (markerLine == 0) {
@@ -299,11 +298,22 @@ def check_tests(){
         } else {
             summaryContent = bat(returnStatus: false, returnStdout: true, script: 'head -150 win_test_summary.log')
         }
-        error "Error: Windows run test failed. PASSED summary not found in win_full_test.log.\n${summaryContent}"
+        errorReasons << "Windows run test failed. PASSED summary not found in win_full_test.log.\n${summaryContent}"
     } else {
         echo "Success: Windows run test finished with success."
     }
 
+    status = bat(returnStatus: true, script: 'grep -A 4 bazel-bin/src/ovms_test.exe win_build_test.log | grep "Build completed successfully"')
+    if (status != 0) {
+        hasError = true
+        errorReasons << "Windows build test failed ${status}. Check win_build_test.log for details."
+    } else {
+        echo "Build successful."
+    }
+
+    if (hasError) {
+        error "Error: unit_test() detected failures:\n- " + errorReasons.join("\n- ")
+    }
 }
 
 // Post build steps
