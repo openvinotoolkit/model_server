@@ -2512,7 +2512,7 @@ TEST(OvmsConfigTest, positiveMulti) {
 #endif
     EXPECT_EQ(config.cacheDir(), "/tmp/model_cache");
     ASSERT_TRUE(config.getServerSettings().allowedLocalMediaPath.has_value());
-    EXPECT_EQ(config.getServerSettings().allowedLocalMediaPath.value(), "/tmp/path");
+    EXPECT_EQ(config.getServerSettings().allowedLocalMediaPath.value(), ovms::FileSystem::normalizeConfiguredPath("/tmp/path"));
     ASSERT_TRUE(config.getServerSettings().allowedMediaDomains.has_value());
     EXPECT_EQ(config.getServerSettings().allowedMediaDomains.value().size(), 3);
     EXPECT_EQ(config.getServerSettings().allowedMediaDomains.value()[0], "raw.githubusercontent.com");
@@ -2531,6 +2531,25 @@ TEST(OvmsConfigTest, positiveMulti) {
 #ifdef _WIN32
     std::filesystem::remove_all(cpu_extension_lib_path);
 #endif
+}
+
+TEST(OvmsConfigTest, allowedLocalMediaPathRelativeIsNormalized) {
+    char* n_argv[] = {
+        "ovms",
+        "--rest_port", "45",
+        "--allowed_local_media_path",
+        "src/test",
+        "--config_path",
+        "/config.json"};
+
+    int arg_count = 7;
+    ConstructorEnabledConfig config;
+    config.parse(arg_count, n_argv);
+
+    ASSERT_TRUE(config.getServerSettings().allowedLocalMediaPath.has_value());
+    const auto configuredPath = std::filesystem::path(config.getServerSettings().allowedLocalMediaPath.value());
+    const auto expectedPath = std::filesystem::path(ovms::FileSystem::normalizeConfiguredPath("src/test"));
+    EXPECT_EQ(configuredPath.lexically_normal(), expectedPath.lexically_normal());
 }
 
 TEST(OvmsConfigTest, positiveSingle) {
