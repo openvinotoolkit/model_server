@@ -1661,3 +1661,102 @@ TEST_F(GraphCreationTest, imageGenerationWithCompositeLora) {
     std::string graphContents = GetFileContents(graphPath);
     ASSERT_EQ(expectedImageGenWithCompositeLora, removeVersionString(graphContents)) << graphContents;
 }
+
+// ===================== LoRA Alias Validation Tests =====================
+
+TEST(ImageGenCLILoraParsingTest, InvalidAliasWithSpacesThrows) {
+    ovms::ServerSettingsImpl serverSettings;
+    serverSettings.serverMode = ovms::HF_PULL_MODE;
+    ovms::HFSettingsImpl hfSettings;
+    hfSettings.sourceLoras = "my pokemon=org/repo";
+    ovms::ImageGenerationGraphCLIParser parser;
+    EXPECT_THROW(parser.prepare(serverSettings, hfSettings, "test_model"), std::invalid_argument);
+}
+
+TEST(ImageGenCLILoraParsingTest, InvalidAliasWithSlashThrows) {
+    ovms::ServerSettingsImpl serverSettings;
+    serverSettings.serverMode = ovms::HF_PULL_MODE;
+    ovms::HFSettingsImpl hfSettings;
+    hfSettings.sourceLoras = "my/pokemon=org/repo";
+    ovms::ImageGenerationGraphCLIParser parser;
+    EXPECT_THROW(parser.prepare(serverSettings, hfSettings, "test_model"), std::invalid_argument);
+}
+
+TEST(ImageGenCLILoraParsingTest, InvalidAliasWithSpecialCharsThrows) {
+    ovms::ServerSettingsImpl serverSettings;
+    serverSettings.serverMode = ovms::HF_PULL_MODE;
+    ovms::HFSettingsImpl hfSettings;
+    hfSettings.sourceLoras = "poke@mon=org/repo";
+    ovms::ImageGenerationGraphCLIParser parser;
+    EXPECT_THROW(parser.prepare(serverSettings, hfSettings, "test_model"), std::invalid_argument);
+}
+
+TEST(ImageGenCLILoraParsingTest, ValidAliasWithHyphensUnderscoresDots) {
+    ovms::ServerSettingsImpl serverSettings;
+    serverSettings.serverMode = ovms::HF_PULL_MODE;
+    ovms::HFSettingsImpl hfSettings;
+    hfSettings.sourceLoras = "my-lora_v1.0=org/repo";
+    ovms::ImageGenerationGraphCLIParser parser;
+    parser.prepare(serverSettings, hfSettings, "test_model");
+    auto& graphSettings = std::get<ovms::ImageGenerationGraphSettingsImpl>(hfSettings.graphSettings);
+    ASSERT_EQ(graphSettings.loraAdapters.size(), 1);
+    EXPECT_EQ(graphSettings.loraAdapters[0].alias, "my-lora_v1.0");
+}
+
+// ===================== LoRA Local File Path Tests =====================
+
+TEST_F(ImageGenCLILoraParsingWithTempDir, LocalFileAbsoluteUnixPath) {
+    ovms::ServerSettingsImpl serverSettings;
+    serverSettings.serverMode = ovms::HF_PULL_MODE;
+    ovms::HFSettingsImpl hfSettings;
+    std::string tmpFile = ovms::FileSystem::joinPath({this->directoryPath, "model.safetensors"});
+    {
+        std::ofstream f(tmpFile);
+        f << "test";
+    }
+    hfSettings.sourceLoras = "pokemon=" + tmpFile;
+    ovms::ImageGenerationGraphCLIParser parser;
+    parser.prepare(serverSettings, hfSettings, "test_model");
+    auto& graphSettings = std::get<ovms::ImageGenerationGraphSettingsImpl>(hfSettings.graphSettings);
+    ASSERT_EQ(graphSettings.loraAdapters.size(), 1);
+    EXPECT_EQ(graphSettings.loraAdapters[0].sourceType, ovms::LoraSourceType::LOCAL_FILE);
+    EXPECT_EQ(graphSettings.loraAdapters[0].safetensorsFile, "model.safetensors");
+}
+
+#ifdef _WIN32
+TEST_F(ImageGenCLILoraParsingWithTempDir, LocalFileWindowsAbsolutePath) {
+    ovms::ServerSettingsImpl serverSettings;
+    serverSettings.serverMode = ovms::HF_PULL_MODE;
+    ovms::HFSettingsImpl hfSettings;
+    std::string tmpFile = ovms::FileSystem::joinPath({this->directoryPath, "model.safetensors"});
+    {
+        std::ofstream f(tmpFile);
+        f << "test";
+    }
+    // On Windows, directoryPath uses native path with backslashes
+    hfSettings.sourceLoras = "pokemon=" + tmpFile;
+    ovms::ImageGenerationGraphCLIParser parser;
+    parser.prepare(serverSettings, hfSettings, "test_model");
+    auto& graphSettings = std::get<ovms::ImageGenerationGraphSettingsImpl>(hfSettings.graphSettings);
+    ASSERT_EQ(graphSettings.loraAdapters.size(), 1);
+    EXPECT_EQ(graphSettings.loraAdapters[0].sourceType, ovms::LoraSourceType::LOCAL_FILE);
+}
+
+TEST_F(ImageGenCLILoraParsingWithTempDir, LocalFileWindowsRelativeDotBackslash) {
+    ovms::ServerSettingsImpl serverSettings;
+    serverSettings.serverMode = ovms::HF_PULL_MODE;
+    ovms::HFSettingsImpl hfSettings;
+    // Create file at CWD-relative path
+    std::string tmpFile = ovms::FileSystem::joinPath({this->directoryPath, "model.safetensors"});
+    {
+        std::ofstream f(tmpFile);
+        f << "test";
+    }
+    // Use .\ relative path (Windows-style)
+    hfSettings.sourceLoras = "pokemon=.\\" + std::filesystem::path(tmpFile).filename().string();
+    ovms::ImageGenerationGraphCLIParser parser;
+    // This will throw because relative path won't resolve to existing file from CWD,
+    // but it should at least be detected as LOCAL_FILE source type (i.e. not HF_REPO)
+    EXPECT_THROW(parser.prepare(serverSettings, hfSettings, "test_model"), std::invalid_argument);
+}
+#endif

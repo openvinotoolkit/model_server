@@ -28,6 +28,7 @@
 #include <vector>
 
 #include "../capi_frontend/server_settings.hpp"
+#include "src/logging.hpp"
 #include "../ovms_exit_codes.hpp"
 #include "../status.hpp"
 #include "../stringutils.hpp"
@@ -301,6 +302,23 @@ void ImageGenerationGraphCLIParser::prepare(ServerSettingsImpl& serverSettings, 
                 throw std::invalid_argument("Composite LoRA entry has no components: '" + entry + "'");
             }
             imageGenerationGraphSettings.compositeLoraAdapters.push_back(std::move(composite));
+        }
+    }
+
+    // NPU + LoRA validation: NPU uses MODE_STATIC (fixed alpha at compile time), runtime switching is impossible.
+    bool targetHasNPU = hfSettings.exportSettings.targetDevice.find("NPU") != std::string::npos;
+    if (targetHasNPU && !imageGenerationGraphSettings.loraAdapters.empty()) {
+        if (!imageGenerationGraphSettings.compositeLoraAdapters.empty()) {
+            throw std::invalid_argument(
+                "NPU device does not support composite LoRA adapters (runtime switching unavailable). "
+                "Remove composite entries from --source_loras or switch to CPU device.");
+        }
+        if (imageGenerationGraphSettings.loraAdapters.size() > 1) {
+            SPDLOG_WARN(
+                "NPU device with multiple LoRA adapters: all {} adapters will be permanently compiled "
+                "with MODE_STATIC. Runtime alias-based switching is not available. "
+                "Consider using a single LoRA adapter for NPU deployment.",
+                imageGenerationGraphSettings.loraAdapters.size());
         }
     }
 

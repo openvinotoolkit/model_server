@@ -1517,7 +1517,7 @@ TEST(ImageGenCalculatorOptionsTest, LoraAdaptersAbsolutePath) {
     << dummyLocation;
     oss << R"(")";
     oss << R"pb(
-            lora_adapters { alias: "pokemon" path: "/absolute/path/to/lora.safetensors" } # Shariar00/stable-diffusion-v1-5_Finetune_Custom_Fashion_dataset_v1.0
+            lora_adapters { alias: "pokemon" path: "/absolute/path/to/lora.safetensors" }
             lora_adapters { alias: "anime" path: "/another/path/weights.safetensors" alpha: 0.5 }
           }
                     }
@@ -1604,6 +1604,56 @@ TEST(ImageGenCalculatorOptionsTest, NoLoraAdaptersProducesEmptyVector) {
     ASSERT_TRUE(std::holds_alternative<ImageGenPipelineArgs>(imageGenArgsOrStatus));
     auto imageGenArgs = std::get<ImageGenPipelineArgs>(imageGenArgsOrStatus);
     ASSERT_TRUE(imageGenArgs.loraAdapters.empty());
+}
+
+TEST(ImageGenCalculatorOptionsTest, CompositeLoraAdaptersFromPbtxt) {
+#ifdef _WIN32
+    const std::string dummyLocation = dummy_model_location;
+#else
+    const std::string dummyLocation = "/ovms/src/test/dummy";
+#endif
+    std::ostringstream oss;
+    oss << R"pb(
+            name: "ImageGenExecutor"
+            calculator: "ImageGenCalculator"
+            input_stream: "HTTP_REQUEST_PAYLOAD:input"
+            input_side_packet: "IMAGE_GEN_NODE_RESOURCES:pipes"
+            output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+            node_options: {
+                  [type.googleapis.com / mediapipe.ImageGenCalculatorOptions]: {
+                    models_path: ")pb"
+    << dummyLocation;
+    oss << R"(")";
+    oss << R"pb(
+            lora_adapters { alias: "pokemon" path: "/path/to/pokemon.safetensors" }
+            lora_adapters { alias: "anime" path: "/path/to/anime.safetensors" alpha: 0.8 }
+            composite_lora_adapters {
+              alias: "blend"
+              components { adapter_alias: "pokemon" weight: 0.7 }
+              components { adapter_alias: "anime" weight: 0.5 }
+            }
+          }
+                    }
+)pb";
+    auto nodePbtxt = oss.str();
+    auto node = mediapipe::ParseTextProtoOrDie<CalculatorGraphConfig::Node>(nodePbtxt);
+    const std::string graphPath = "";
+    auto nodeOptions = node.node_options(0);
+    auto imageGenArgsOrStatus = prepareImageGenPipelineArgs(nodeOptions, graphPath);
+    ASSERT_TRUE(std::holds_alternative<ImageGenPipelineArgs>(imageGenArgsOrStatus));
+    auto imageGenArgs = std::get<ImageGenPipelineArgs>(imageGenArgsOrStatus);
+    ASSERT_EQ(imageGenArgs.loraAdapters.size(), 2);
+    EXPECT_EQ(imageGenArgs.loraAdapters[0].alias, "pokemon");
+    EXPECT_EQ(imageGenArgs.loraAdapters[1].alias, "anime");
+    EXPECT_FLOAT_EQ(imageGenArgs.loraAdapters[1].alpha, 0.8f);
+    ASSERT_EQ(imageGenArgs.compositeLoraAdapters.size(), 1);
+    auto it = imageGenArgs.compositeLoraAdapters.find("blend");
+    ASSERT_NE(it, imageGenArgs.compositeLoraAdapters.end());
+    ASSERT_EQ(it->second.size(), 2);
+    EXPECT_EQ(it->second[0].first, "pokemon");
+    EXPECT_FLOAT_EQ(it->second[0].second, 0.7f);
+    EXPECT_EQ(it->second[1].first, "anime");
+    EXPECT_FLOAT_EQ(it->second[1].second, 0.5f);
 }
 
 // TODO:

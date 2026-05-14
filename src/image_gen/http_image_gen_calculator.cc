@@ -253,8 +253,11 @@ public:
                 }
             }
 
-            // Apply LoRA adapter if the requested model name matches an alias
-            applyLoraAdapterIfNeeded(payload.modelName, pipe->loraAdapters, pipe->compositeLoraAdapters, pipe->args, requestOptions, loraWeightsOverride);
+            // Apply LoRA adapter if the requested model name matches an alias.
+            // Skip under NPU MODE_STATIC — adapters are always active.
+            if (!pipe->npuLoraStaticMode) {
+                applyLoraAdapterIfNeeded(payload.modelName, pipe->loraAdapters, pipe->compositeLoraAdapters, pipe->args, requestOptions, loraWeightsOverride);
+            }
             if (!pipe->text2ImagePipeline)
                 return absl::FailedPreconditionError("Text-to-image pipeline is not available for this model");
             absl::Status status;
@@ -282,8 +285,11 @@ public:
 
             SET_OR_RETURN(ov::AnyMap, requestOptions, getImageEditRequestOptions(*payload.multipartParser, pipe->args));
 
-            // Apply LoRA adapter if the requested model name matches an alias
-            applyLoraAdapterIfNeeded(payload.modelName, pipe->loraAdapters, pipe->compositeLoraAdapters, pipe->args, requestOptions);
+            // Apply LoRA adapter if the requested model name matches an alias.
+            // Skip under NPU MODE_STATIC — adapters are always active.
+            if (!pipe->npuLoraStaticMode) {
+                applyLoraAdapterIfNeeded(payload.modelName, pipe->loraAdapters, pipe->compositeLoraAdapters, pipe->args, requestOptions);
+            }
 
             SET_OR_RETURN(std::optional<std::string_view>, mask, getFileFromPayload(*payload.multipartParser, "mask"));
             SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "ImageGenCalculator [Node: {}] Mask present: {}", cc->NodeName(), mask.has_value() && !mask.value().empty());

@@ -60,6 +60,10 @@ struct ImageGenerationPipelines {
     std::unordered_map<std::string, std::vector<std::pair<std::string, float>>> compositeLoraAdapters;
     ImageGenPipelineArgs args;
 
+    // When true, LoRA adapters were compiled with MODE_STATIC (NPU).
+    // Runtime adapter switching is not possible — adapters are always active.
+    bool npuLoraStaticMode = false;
+
     // Serializes concurrent inpainting requests (InpaintingPipeline lacks clone()).
     // Queue size = 1: only one inpainting inference runs at a time.
     std::unique_ptr<Queue<int>> inpaintingQueue;

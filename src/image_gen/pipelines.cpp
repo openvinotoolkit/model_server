@@ -15,6 +15,7 @@
 //*****************************************************************************
 #include "pipelines.hpp"
 
+#include <algorithm>
 #include <vector>
 
 #include <openvino/genai/image_generation/inpainting_pipeline.hpp>
@@ -86,7 +87,23 @@ ImageGenerationPipelines::ImageGenerationPipelines(const ImageGenPipelineArgs& a
     if (!loraAdapters.empty()) {
         ov::genai::AdapterConfig adapterConfig;
         for (const auto& [alias, adapter] : loraAdapters) {
-            adapterConfig.add(adapter, 1.0f);
+            // Use the configured alpha from args for each adapter
+            float alpha = 1.0f;
+            for (const auto& info : args.loraAdapters) {
+                if (info.alias == alias) {
+                    alpha = info.alpha;
+                    break;
+                }
+            }
+            adapterConfig.add(adapter, alpha);
+        }
+        // NPU requires MODE_STATIC — adapters are compiled with fixed alpha values.
+        // Runtime switching is not possible; all adapters remain active at their compile-time alpha.
+        bool hasNPU = std::find(device.begin(), device.end(), "NPU") != device.end();
+        if (hasNPU) {
+            adapterConfig.set_mode(ov::genai::AdapterConfig::MODE_STATIC);
+            npuLoraStaticMode = true;
+            SPDLOG_INFO("NPU detected: LoRA adapters compiled with MODE_STATIC (no runtime switching)");
         }
         compileProperties.insert(ov::genai::adapters(adapterConfig));
     }

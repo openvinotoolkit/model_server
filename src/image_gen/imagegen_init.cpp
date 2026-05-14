@@ -20,8 +20,6 @@
 #include <utility>
 #include <vector>
 
-#include <fmt/ranges.h>
-
 #include "absl/strings/str_replace.h"
 #include "absl/strings/ascii.h"
 
@@ -283,6 +281,23 @@ std::variant<Status, ImageGenPipelineArgs> prepareImageGenPipelineArgs(const goo
             components.emplace_back(comp.adapter_alias(), comp.weight());
         }
         args.compositeLoraAdapters.emplace(compositeEntry.alias(), std::move(components));
+    }
+
+    // NPU + LoRA validation: NPU uses MODE_STATIC (fixed alpha at compile time), so runtime
+    // adapter switching is impossible. Composite LoRAs (which imply dynamic selection) are invalid.
+    if (isNPU && !args.loraAdapters.empty()) {
+        if (!args.compositeLoraAdapters.empty()) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger,
+                "NPU device does not support composite LoRA adapters (runtime switching unavailable). "
+                "Remove composite_lora_adapters or switch to CPU device.");
+            return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
+        }
+        if (args.loraAdapters.size() > 1) {
+            SPDLOG_LOGGER_WARN(modelmanager_logger,
+                "NPU device with multiple LoRA adapters: all {} adapters will be permanently compiled "
+                "with MODE_STATIC. Runtime alias-based switching is not available.",
+                args.loraAdapters.size());
+        }
     }
 
     return std::move(args);
