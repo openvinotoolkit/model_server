@@ -4,23 +4,23 @@ def cleanup_directories() {
     // First delete directories older than 14 days
     deleteOldDirectories()
     def command = 'ls c:\\Jenkins\\workspace | grep -oE "(PR-[0-9]*)$"'
-    def status = bat(returnStatus: true, script: command)
+    def status = bat(returnStatus: true, script: '@' + command)
     if ( status != 0) {
         error "Error: trying to list jenkins workspaces."
     }
-    def existing_workspace_string = bat(returnStatus: false, returnStdout: true, script: command)
+    def existing_workspace_string = bat(returnStatus: false, returnStdout: true, script: '@' + command)
 
     println existing_workspace_string
     def existing_workspace = existing_workspace_string.split(/\n/)
 
     command = 'ls c:\\ | grep -oE "(PR-[0-9]*)$"'
-    status = bat(returnStatus: true, script: command)
+    status = bat(returnStatus: true, script: '@' + command)
     if ( status != 0) {
         println "No PR-XXXX detected for cleanup."
         return
     }
 
-    def existing_prs_string = bat(returnStatus: false, returnStdout: true, script: command)
+    def existing_prs_string = bat(returnStatus: false, returnStdout: true, script: '@' + command)
 
     println existing_prs_string
     def existing_prs = existing_prs_string.split(/\n/)
@@ -46,7 +46,7 @@ def cleanup_directories() {
                 error "Error: trying to delete a directory that is not expected: " + pathToDelete
             } else {
                 println "Deleting: " + pathToDelete
-                status = bat(returnStatus: true, script: 'rmdir /s /q ' + pathToDelete)
+                status = bat(returnStatus: true, script: '@rmdir /s /q ' + pathToDelete)
                 if (status != 0) {
                     error "Error: Deleting directory ${pathToDelete} failed: ${status}. Check pipeline.log for details."
                 } else {
@@ -66,14 +66,14 @@ def get_short_bazel_path() {
 
 def deleteOldDirectories() {
     command = 'forfiles /P c:\\ /D -14 | grep -oE "(PR-[0-9]*)"'
-    status = bat(returnStatus: true, script: command)
+    status = bat(returnStatus: true, script: '@' + command)
     if ( status != 0) {
         println "No PR-XXXX older than 14 days for cleanup."
         return
     }
 
     // Check if directory was created more than 14 days ago
-    def existing_prs_string = bat(returnStatus: false, returnStdout: true, script: command)
+    def existing_prs_string = bat(returnStatus: false, returnStdout: true, script: '@' + command)
 
     println existing_prs_string
 
@@ -88,7 +88,7 @@ def deleteOldDirectories() {
             error "Error: trying to delete a directory that is not expected: " + pathToDelete
         } else {
             println "Deleting: " + pathToDelete
-            status = bat(returnStatus: true, script: 'rmdir /s /q ' + pathToDelete)
+            status = bat(returnStatus: true, script: '@rmdir /s /q ' + pathToDelete)
             if (status != 0) {
                 error "Error: Deleting directory ${pathToDelete} failed: ${status}. Check pipeline.log for details."
             } else {
@@ -100,7 +100,7 @@ def deleteOldDirectories() {
 
 def install_dependencies() {
     println "Install dependencies on node: NODE_NAME = ${env.NODE_NAME}"
-    def status = bat(returnStatus: true, script: 'windows_install_build_dependencies.bat ' + get_short_bazel_path() + ' ' + env.OVMS_CLEAN_EXPUNGE)
+    def status = bat(returnStatus: true, script: '@windows_install_build_dependencies.bat ' + get_short_bazel_path() + ' ' + env.OVMS_CLEAN_EXPUNGE)
     if (status != 0) {
         error "Error: Windows install dependencies failed: ${status}. Check pipeline.log for details."
     } else {
@@ -109,9 +109,9 @@ def install_dependencies() {
 }
 
 def clean() {
-    def output1 = bat(returnStdout: true, script: 'windows_clean_build.bat ' + get_short_bazel_path() + ' ' + env.OVMS_CLEAN_EXPUNGE)
+    def output1 = bat(returnStdout: true, script: '@windows_clean_build.bat ' + get_short_bazel_path() + ' ' + env.OVMS_CLEAN_EXPUNGE)
     if(fileExists('dist\\windows\\ovms')){
-        def status_del = bat(returnStatus: true, script: 'rmdir /s /q dist\\windows\\ovms')
+        def status_del = bat(returnStatus: true, script: '@rmdir /s /q dist\\windows\\ovms')
         if (status_del != 0) {
             error "Error: Deleting existing ovms directory failed ${status_del}. Check pipeline.log for details."
         } else {
@@ -123,21 +123,21 @@ def clean() {
 def build(){
     println "OVMS_PYTHON_ENABLED=${env.OVMS_PYTHON_ENABLED}"
     def pythonOption = env.OVMS_PYTHON_ENABLED == "0" ? "--no_python" : "--with_python"
-    def status = bat(returnStatus: true, script: 'windows_build.bat ' + get_short_bazel_path() + ' ' + pythonOption + ' --with_tests') 
-    status = bat(returnStatus: true, script: 'grep "Build completed successfully" win_build.log"')
+    def status = bat(returnStatus: true, script: '@windows_build.bat ' + get_short_bazel_path() + ' ' + pythonOption + ' --with_tests') 
+    status = bat(returnStatus: true, script: '@grep "Build completed successfully" win_build.log"')
     if (status != 0) {
         error "Error: Windows build failed ${status}. Check win_build.log for details."
     } else {
         echo "Build successful."
     }
-    def status_pkg = bat(returnStatus: true, script: 'windows_create_package.bat ' + get_short_bazel_path() + ' ' + pythonOption)
+    def status_pkg = bat(returnStatus: true, script: '@windows_create_package.bat ' + get_short_bazel_path() + ' ' + pythonOption)
     if (status_pkg != 0) {
         error "Error: Windows package failed ${status_pkg}."
     } else {
         echo "Windows package created successfully."
     }
     def unzipCmd = "tar -xf dist\\windows\\ovms.zip"
-    def status_unzip = bat(returnStatus: true, script: "${unzipCmd}")
+    def status_unzip = bat(returnStatus: true, script: '@' + "${unzipCmd}")
     if (status_unzip != 0) {
         error "Error: Unzipping package failed: ${status_unzip}."
     } else {
@@ -149,7 +149,7 @@ def clone_sdl_repo()
 {
     if(!fileExists('sdl_repo')){
         println "Starting code signing"
-        def statusPull = bat(returnStatus: true, script: 'git clone -b ' + env.SIGN_REPO_BRANCH + ' ' + env.SIGN_REPO + ' sdl_repo')
+        def statusPull = bat(returnStatus: true, script: '@git clone -b ' + env.SIGN_REPO_BRANCH + ' ' + env.SIGN_REPO + ' sdl_repo')
         if (statusPull != 0) {
             error "Error: Downloading sdl_repo failed ${statusPull}. Check pipeline.log for details."
         } else {
@@ -158,7 +158,7 @@ def clone_sdl_repo()
     }else{
         println "Pulling latest changes in sdl_repo"
         dir('sdl_repo') {
-            def statusPull = bat(returnStatus: true, script: 'git fetch && git reset --hard origin/'+env.SIGN_REPO_BRANCH)
+            def statusPull = bat(returnStatus: true, script: '@git fetch && git reset --hard origin/'+env.SIGN_REPO_BRANCH)
             if (statusPull != 0) {
                 error "Error: Pulling latest changes in sdl_repo failed ${statusPull}. Check pipeline.log for details."
             } else {
@@ -172,7 +172,7 @@ def clone_bdba_repo()
 {
     if(!fileExists('repo_ci_infra')){
         println "Starting BDBA infrastructure download"
-        def statusPull = bat(returnStatus: true, script: 'git clone -b ' + env.BDBA_REPO_BRANCH + ' ' + env.BDBA_REPO + ' repo_ci_infra')
+        def statusPull = bat(returnStatus: true, script: '@git clone -b ' + env.BDBA_REPO_BRANCH + ' ' + env.BDBA_REPO + ' repo_ci_infra')
         if (statusPull != 0) {
             error "Error: Downloading BDBA infrastructure failed ${statusPull}. Check pipeline.log for details."
         } else {
@@ -181,7 +181,7 @@ def clone_bdba_repo()
     }else{
         println "Pulling latest changes in BDBA infrastructure"
         dir('repo_ci_infra') {
-            def statusPull = bat(returnStatus: true, script: 'git fetch && git reset --hard origin/'+env.BDBA_REPO_BRANCH)
+            def statusPull = bat(returnStatus: true, script: '@git fetch && git reset --hard origin/'+env.BDBA_REPO_BRANCH)
             if (statusPull != 0) {
                 error "Error: Pulling latest changes in BDBA infrastructure failed ${statusPull}. Check pipeline.log for details."
             } else {
@@ -193,7 +193,7 @@ def clone_bdba_repo()
 
 def sign(){
     println "SIGNING_USER=${env.SIGNING_USER}"
-    def status = bat(returnStatus: true, script: 'ci\\windows_sign.bat ' + env.SIGNING_USER + ' dist\\windows ' + env.OVMS_PYTHON_ENABLED)
+    def status = bat(returnStatus: true, script: '@ci\\windows_sign.bat ' + env.SIGNING_USER + ' dist\\windows ' + env.OVMS_PYTHON_ENABLED)
     if (status != 0) {
         error "Error: Windows code signing failed ${status}. Check win_sign.log for details."
     } else {
@@ -203,7 +203,7 @@ def sign(){
 
 def bdba(){
     println "Starting BDBA scan"
-    def status = bat(returnStatus: true, script: 'ci\\windows_bdba.bat ' + env.BDBA_CREDS_PSW + ' dist\\windows sdl_repo\\ovms-package')
+    def status = bat(returnStatus: true, script: '@ci\\windows_bdba.bat ' + env.BDBA_CREDS_PSW + ' dist\\windows sdl_repo\\ovms-package')
     if (status != 0) {
         error "Error: Windows BDBA scan failed ${status}. Check win_bdba.log for details."
     } else {
@@ -214,7 +214,7 @@ def bdba(){
 def download_package(){
     println "Downloading package from URL: ${env.PACKAGE_URL}"
     if(!fileExists('dist\\windows')){
-        def status = bat(returnStatus: true, script: 'mkdir dist\\windows')
+        def status = bat(returnStatus: true, script: '@mkdir dist\\windows')
         if (status != 0) {
             error "Error: Creating dist\\windows directory failed ${status}. Check pipeline.log for details."
         } else {
@@ -223,7 +223,7 @@ def download_package(){
     }
     dir('dist\\windows') {
         if(fileExists('ovms.zip')){
-            def status_del = bat(returnStatus: true, script: 'del /f ovms.zip')
+            def status_del = bat(returnStatus: true, script: '@del /f ovms.zip')
             if (status_del != 0) {
                 error "Error: Deleting existing ovms.zip failed ${status_del}. Check pipeline.log for details."
             } else {
@@ -231,20 +231,20 @@ def download_package(){
             }
         }
         if(fileExists('ovms')){
-            def status_del = bat(returnStatus: true, script: 'rmdir /s /q ovms')
+            def status_del = bat(returnStatus: true, script: '@rmdir /s /q ovms')
             if (status_del != 0) {
                 error "Error: Deleting existing ovms directory failed ${status_del}. Check pipeline.log for details."
             } else {
                 echo "Existing ovms directory deleted successfully."
             }
         }
-        def status = bat(returnStatus: true, script: 'curl -L -k -o ovms.zip ' + env.PACKAGE_URL)
+        def status = bat(returnStatus: true, script: '@curl -L -k -o ovms.zip ' + env.PACKAGE_URL)
         if (status != 0) {
             error "Error: Downloading package failed ${status}. Check pipeline.log for details."
         } else {
             echo "Package downloaded successfully."
         }
-        def status_unzip = bat(returnStatus: true, script: 'tar -xf ovms.zip')
+        def status_unzip = bat(returnStatus: true, script: '@tar -xf ovms.zip')
         if (status_unzip != 0) {
             error "Error: Unzipping package failed: ${status_unzip}."
         } else {
@@ -259,7 +259,7 @@ def unit_test(){
     boolean hasError = false
     def errorReasons = []
 
-    def status = bat(returnStatus: true, script: 'windows_test.bat ' + get_short_bazel_path() + ' ' + pythonOption)
+    def status = bat(returnStatus: true, script: '@windows_test.bat ' + get_short_bazel_path() + ' ' + pythonOption)
     if (status != 0) {
         hasError = true
         errorReasons << "Windows build test failed ${status}. Check win_build_test.log for details."
@@ -267,20 +267,20 @@ def unit_test(){
         echo "Build successful."
     }
 
-    status = bat(returnStatus: true, script: 'grep "       OK " win_test_summary.log')
+    status = bat(returnStatus: true, script: '@grep "       OK " win_test_summary.log')
     if (status != 0) {
         hasError = true
         errorReasons << "Windows run test failed ${status}. Expecting passed tests and no passed tests detected. Check win_test_summary.log for details."
     } else {
-        def passed = bat(returnStatus: false, returnStdout: true, script: 'grep "       OK " win_test_summary.log | wc -l')
+        def passed = bat(returnStatus: false, returnStdout: true, script: '@grep "       OK " win_test_summary.log | wc -l').trim()
         echo "Success: Windows run test passed ${status}. ${passed} passed tests . Check win_test_summary.log for details."
     }
 
-    status = bat(returnStatus: true, script: 'grep "  FAILED  " win_test_summary.log')
+    status = bat(returnStatus: true, script: '@grep "  FAILED  " win_test_summary.log')
     if (status == 0) {
         hasError = true
-        def failed = bat(returnStatus: false, returnStdout: true, script: 'grep "  FAILED  " win_test_summary.log | wc -l')
-        def failedTestsList = bat(returnStatus: false, returnStdout: true, script: 'grep "  FAILED  " win_test_summary.log')
+        def failed = bat(returnStatus: false, returnStdout: true, script: '@grep "  FAILED  " win_test_summary.log | wc -l').trim()
+        def failedTestsList = bat(returnStatus: false, returnStdout: true, script: '@grep "  FAILED  " win_test_summary.log').trim()
         errorReasons << "Windows run test failed ${status}. ${failed} failed tests. Failed tests:\n${failedTestsList}\nCheck win_test_summary.log for details."
     } else {
         echo "Run test no FAILED detected."
@@ -288,22 +288,22 @@ def unit_test(){
 
     // PASSED/crash detection is handled by windows_test.bat (via windows_parse_tests.bat).
     // The bat exit code is the authoritative signal; win_test_summary.log contains diagnostics.
-    status = bat(returnStatus: true, script: 'grep -a "\\[  PASSED  \\] " win_full_test.log')
+    status = bat(returnStatus: true, script: '@grep -a "\\[  PASSED  \\] " win_full_test.log')
     if (status != 0) {
         hasError = true
-        def markerLine = bat(returnStatus: true, script: 'grep -n "Check tests summary in" win_test_summary.log | head -1')
+        def markerLine = bat(returnStatus: true, script: '@grep -n "Check tests summary in" win_test_summary.log | head -1')
         def summaryContent
         if (markerLine == 0) {
-            summaryContent = bat(returnStatus: false, returnStdout: true, script: 'grep -n "Check tests summary in" win_test_summary.log | head -1 | cut -d: -f1 | xargs -I{} head -{} win_test_summary.log')
+            summaryContent = bat(returnStatus: false, returnStdout: true, script: '@grep -n "Check tests summary in" win_test_summary.log | head -1 | cut -d: -f1 | xargs -I{} head -{} win_test_summary.log').trim()
         } else {
-            summaryContent = bat(returnStatus: false, returnStdout: true, script: 'head -150 win_test_summary.log')
+            summaryContent = bat(returnStatus: false, returnStdout: true, script: '@head -150 win_test_summary.log').trim()
         }
         errorReasons << "Windows run test failed. PASSED summary not found in win_full_test.log.\n${summaryContent}"
     } else {
         echo "Success: Windows run test finished with success."
     }
 
-    status = bat(returnStatus: true, script: 'grep -A 4 bazel-bin/src/ovms_test.exe win_build_test.log | grep "Build completed successfully"')
+    status = bat(returnStatus: true, script: '@grep -A 4 bazel-bin/src/ovms_test.exe win_build_test.log | grep "Build completed successfully"')
     if (status != 0) {
         hasError = true
         errorReasons << "Windows build test failed ${status}. Check win_build_test.log for details."
@@ -349,13 +349,13 @@ def setup_bazel_remote_cache(){
     def content = "build --remote_cache=\"${bazel_remote_cache_url}\""
     def filePath = '.user.bazelrc'
     def command = "echo ${content} > ${filePath}"
-    status = bat(returnStatus: true, script: command)
+    status = bat(returnStatus: true, script: '@' + command)
     if ( status != 0) {
         println "Failed to set up bazel remote cache for Windows"
         return
     }
     command = "cat ${filePath}"
-    status = bat(returnStatus: true, script: command)
+    status = bat(returnStatus: true, script: '@' + command)
     if ( status != 0) {
         println "Failed to read file"
         return
