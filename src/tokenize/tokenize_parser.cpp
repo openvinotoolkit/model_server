@@ -147,7 +147,7 @@ std::variant<TokenizeRequest::InputDataType, std::string> TokenizeParser::parseI
             InputType input_type = InputType::NONE;
             for (auto& input : it->value.GetArray()) {
                 if (input.IsArray()) {
-                    auto array = input.GetArray();
+                    const auto array = input.GetArray();
                     if (array.Size() == 0) {
                         return "inner arrays in " + field_name + " should not be empty";
                     }
