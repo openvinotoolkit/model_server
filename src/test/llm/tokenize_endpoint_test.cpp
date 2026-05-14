@@ -480,7 +480,6 @@ TEST_P(LLMTokenizeTests, tokenizeMultipleEmptyNestedArraysAndOneNonEmpty) {
     ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR) << status.string();
 }
 
-
 INSTANTIATE_TEST_SUITE_P(
     LLMTokenizeTestInstances,
     LLMTokenizeTests,
