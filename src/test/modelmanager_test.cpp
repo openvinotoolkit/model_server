@@ -14,6 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 #include <condition_variable>
+#include <fstream>
 #include <iostream>
 #include <mutex>
 
@@ -876,6 +877,50 @@ TEST_F(ModelManager, ReadsVersionsFromDiskRelativePath) {
     }
 }
 
+TEST_F(ModelManager, ReadsVersionsFromSingleFilePathForSupportedFormats) {
+    const std::string path = getGenericFullPathForTmp("/tmp/test_model_single_file/");
+    std::filesystem::create_directories(path);
+
+    const std::vector<std::string> extensions = {
+        ".xml",
+        ".bin",
+        ".onnx",
+        ".pdmodel",
+        ".pdiparams",
+        ".pb",
+        ".tflite"};
+
+    std::shared_ptr<ovms::FileSystem> fs = std::make_shared<ovms::LocalFileSystem>();
+    for (const auto& extension : extensions) {
+        const std::string modelFilePath = path + "model" + extension;
+        std::ofstream(modelFilePath).close();
+
+        ovms::model_versions_t versions;
+        auto status = fixtureManager.readAvailableVersions(fs, modelFilePath, versions);
+        EXPECT_EQ(status, ovms::StatusCode::OK);
+        EXPECT_THAT(versions, ::testing::UnorderedElementsAre(1));
+
+        std::filesystem::remove(modelFilePath);
+    }
+
+    std::filesystem::remove(path);
+}
+
+TEST_F(ModelManager, ReadsVersionsFromSingleFilePathWithUnsupportedExtension) {
+    const std::string path = getGenericFullPathForTmp("/tmp/test_model_single_file_invalid/");
+    std::filesystem::create_directories(path);
+    const std::string modelFilePath = path + "model.invalid";
+    std::ofstream(modelFilePath).close();
+
+    ovms::model_versions_t versions;
+    std::shared_ptr<ovms::FileSystem> fs = std::make_shared<ovms::LocalFileSystem>();
+    auto status = fixtureManager.readAvailableVersions(fs, modelFilePath, versions);
+    EXPECT_EQ(status, ovms::StatusCode::FILE_INVALID);
+
+    std::filesystem::remove(modelFilePath);
+    std::filesystem::remove(path);
+}
+
 TEST_F(ModelManager, PathEscapeError1) {
     const std::string path = getGenericFullPathForTmp("/tmp/../test_model/");
 
@@ -979,6 +1024,30 @@ TEST_F(ModelManagerWatcher, StartFromFileWhenModelFilesMissing) {
     auto status = manager.startFromFile(fileToReload);
     EXPECT_EQ(status, ovms::StatusCode::OK);
     manager.join();
+}
+
+TEST_F(ModelManagerWatcher, StartFromFileSingleModelXmlPath) {
+        const std::string config = std::string(R"({
+     "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": ")") +
+                getGenericFullPathForSrcTest("/ovms/src/test/dummy/1/dummy.xml") + R"(",
+                "target_device": "CPU",
+                "model_version_policy": {"all": {}}
+            }
+     }]
+})";
+
+        std::string fileToReload = this->getFilePath("/ovms_config_file_single_file.json");
+        createConfigFileWithContent(config, fileToReload);
+        ConstructorEnabledModelManager manager;
+
+        auto status = manager.startFromFile(fileToReload);
+        EXPECT_EQ(status, ovms::StatusCode::OK);
+        auto modelInstance = manager.findModelInstance("dummy", 1);
+        EXPECT_NE(modelInstance, nullptr);
 }
 
 TEST_F(ModelManagerWatcher, StartFromFileWhenModelFilesMissingRelativePath) {

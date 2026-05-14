@@ -1098,6 +1098,59 @@ Status ModelInstance::fetchModelFilepaths() {
     }
 
     SPDLOG_DEBUG("Getting model files from path: {}", path);
+
+    std::error_code ec;
+    if (FileSystem::isLocalFilesystem(path) && std::filesystem::is_regular_file(path, ec)) {
+        const auto modelFile = std::filesystem::path(path);
+        const auto extension = modelFile.extension().string();
+        const auto modelDirectory = modelFile.parent_path().string();
+        modelFiles.clear();
+
+        if (extension == ".xml") {
+            path = modelDirectory;
+            bool found = false;
+            fetchModelFiles(found, OV_MODEL_FILES_EXTENSIONS);
+            if (!found) {
+                SPDLOG_ERROR("Error loading model. Invalid model file.");
+                return StatusCode::FILE_INVALID;
+            }
+            return StatusCode::OK;
+        }
+
+        if (extension == ".onnx") {
+            modelFiles.push_back(path);
+            return StatusCode::OK;
+        }
+
+        if (extension == ".pdmodel" || extension == ".pdiparams") {
+            path = modelDirectory;
+            bool found = false;
+            fetchModelFiles(found, PADDLE_MODEL_FILES_EXTENSIONS);
+            if (!found) {
+                SPDLOG_ERROR("Error loading model. Invalid model file.");
+                return StatusCode::FILE_INVALID;
+            }
+            return StatusCode::OK;
+        }
+
+        if (extension == ".pb") {
+            if (modelFile.filename().string() == "saved_model.pb") {
+                modelFiles.push_back(modelDirectory + FileSystem::getOsSeparator());
+            } else {
+                modelFiles.push_back(path);
+            }
+            return StatusCode::OK;
+        }
+
+        if (extension == ".tflite") {
+            modelFiles.push_back(path);
+            return StatusCode::OK;
+        }
+
+        SPDLOG_ERROR("Error loading model. Invalid model file.");
+        return StatusCode::FILE_INVALID;
+    }
+
     if (!FileSystem::dirExists(path)) {
         SPDLOG_ERROR("Missing model directory {}", path);
         return StatusCode::PATH_INVALID;
@@ -1111,7 +1164,7 @@ Status ModelInstance::fetchModelFilepaths() {
     fetchModelFiles(found, TFLITE_MODEL_FILES_EXTENSIONS);
 
     if (!found) {
-        SPDLOG_ERROR("Could not find file for model: {} version: {} in path: {}", getName(), getVersion(), path);
+        SPDLOG_ERROR("Error loading model. Invalid model file.");
         return StatusCode::FILE_INVALID;
     }
 

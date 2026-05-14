@@ -62,6 +62,7 @@ models/
 - Each model directory should include a sub-folder for each of its versions (1,2, etc). The versions and their folder names should be positive integer values.
 **Note:** In execution, the versions are enabled according to a pre-defined version policy. If the client does not specify
 the version number in parameters, by default, the latest version is served.
+- As an alternative for local filesystem only, `model_path` / `base_path` can point directly to a single model file (`.xml`, `.bin`, `.onnx`, `.pdmodel`, `.pdiparams`, `.pb`, `.tflite`). In this mode, Model Server exposes synthetic version `1`.
 - Every version folder _must_ include model files, that is, .bin and .xml for IR, .onnx for ONNX, .pdiparams and .pdmodel for Paddlepaddle. The file name can be arbitrary.
 - Each model defines input and output tensors in the AI graph. The client passes data to model input tensors by filling appropriate entries in the request input map.
 - Prediction results can be read from the response output map. By default, OpenVINO™ Model Server uses model tensor names as input and output names in prediction requests and responses. The client passes the input values to the request and reads the results by referring to the corresponding output names.

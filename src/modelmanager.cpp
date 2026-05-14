@@ -17,6 +17,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <filesystem>
 #include <fstream>
 #include <memory>
 #include <mutex>
@@ -1291,6 +1292,13 @@ const std::string ModelManager::getFullPath(const std::string& pathToCheck) cons
 
 Status ModelManager::readAvailableVersions(std::shared_ptr<FileSystem>& fs, const std::string& base, model_versions_t& versions) {
     files_list_t dirs;
+    static const std::set<std::string> supportedSingleFileModelExtensions = {
+        ".xml",
+        ".onnx",
+        ".pdmodel",
+        ".pdiparams",
+        ".pb",
+        ".tflite"};
 
     bool is_directory = false;
     if (FileSystem::isPathEscaped(base)) {
@@ -1304,6 +1312,19 @@ Status ModelManager::readAvailableVersions(std::shared_ptr<FileSystem>& fs, cons
         return status;
     }
     if (!is_directory) {
+        if (FileSystem::isLocalFilesystem(base)) {
+            std::error_code ec;
+            if (std::filesystem::is_regular_file(base, ec)) {
+                const auto extension = std::filesystem::path(base).extension().string();
+                if (supportedSingleFileModelExtensions.count(extension) == 0) {
+                    SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error loading model. Invalid model file.");
+                    return StatusCode::FILE_INVALID;
+                }
+                versions.push_back(1);
+                SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Detected single model file path: {}. Serving synthetic version: 1", base);
+                return StatusCode::OK;
+            }
+        }
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Directory does not exist: {}", base);
         return StatusCode::PATH_INVALID;
     }
