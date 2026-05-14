@@ -2354,8 +2354,7 @@ TEST_F(PythonFlowTest, ConverterCalculator_HttpJsonRequestToPyDict) {
     payload->parsedJson->Parse(payload->body.c_str());
     ASSERT_FALSE(payload->parsedJson->HasParseError());
 
-    runner.MutableInputs()->Tag("HTTP_REQUEST_PAYLOAD").packets.push_back(
-        mediapipe::Adopt<ovms::HttpPayload>(payload.release()).At(mediapipe::Timestamp(0)));
+    runner.MutableInputs()->Tag("HTTP_REQUEST_PAYLOAD").packets.push_back(mediapipe::Adopt<ovms::HttpPayload>(payload.release()).At(mediapipe::Timestamp(0)));
 
     py::gil_scoped_acquire acquire;
     {
@@ -2386,8 +2385,7 @@ TEST_F(PythonFlowTest, ConverterCalculator_HttpRawJsonBodyToPyDict) {
     auto payload = std::make_unique<ovms::HttpPayload>();
     payload->body = R"({"a":1,"b":[2,3]})";
     // parsedJson left null - exercise the json.loads(body) fallback.
-    runner.MutableInputs()->Tag("HTTP_REQUEST_PAYLOAD").packets.push_back(
-        mediapipe::Adopt<ovms::HttpPayload>(payload.release()).At(mediapipe::Timestamp(0)));
+    runner.MutableInputs()->Tag("HTTP_REQUEST_PAYLOAD").packets.push_back(mediapipe::Adopt<ovms::HttpPayload>(payload.release()).At(mediapipe::Timestamp(0)));
 
     py::gil_scoped_acquire acquire;
     {
@@ -2419,8 +2417,7 @@ TEST_F(PythonFlowTest, ConverterCalculator_HttpRawNonJsonBodyToPyString) {
 
     auto payload = std::make_unique<ovms::HttpPayload>();
     payload->body = "not json at all";
-    runner.MutableInputs()->Tag("HTTP_REQUEST_PAYLOAD").packets.push_back(
-        mediapipe::Adopt<ovms::HttpPayload>(payload.release()).At(mediapipe::Timestamp(0)));
+    runner.MutableInputs()->Tag("HTTP_REQUEST_PAYLOAD").packets.push_back(mediapipe::Adopt<ovms::HttpPayload>(payload.release()).At(mediapipe::Timestamp(0)));
 
     py::gil_scoped_acquire acquire;
     {
@@ -2460,8 +2457,7 @@ TEST_F(PythonFlowTest, ConverterCalculator_HttpMultipartToPyDict) {
 
     auto payload = std::make_unique<ovms::HttpPayload>();
     payload->multipartParser = parser;
-    runner.MutableInputs()->Tag("HTTP_REQUEST_PAYLOAD").packets.push_back(
-        mediapipe::Adopt<ovms::HttpPayload>(payload.release()).At(mediapipe::Timestamp(0)));
+    runner.MutableInputs()->Tag("HTTP_REQUEST_PAYLOAD").packets.push_back(mediapipe::Adopt<ovms::HttpPayload>(payload.release()).At(mediapipe::Timestamp(0)));
 
     py::gil_scoped_acquire acquire;
     {
@@ -2503,10 +2499,7 @@ TEST_F(PythonFlowTest, ConverterCalculator_PyDictToHttpResponse) {
         py::dict d;
         d["status"] = py::str("ok");
         d["count"] = py::int_(7);
-        runner.MutableInputs()->Tag("OVMS_PY_TENSOR").packets.push_back(
-            mediapipe::Adopt<PyObjectWrapper<py::object>>(
-                new PyObjectWrapper<py::object>(static_cast<py::object>(d)))
-                .At(mediapipe::Timestamp(0)));
+        runner.MutableInputs()->Tag("OVMS_PY_TENSOR").packets.push_back(mediapipe::Adopt<PyObjectWrapper<py::object>>(new PyObjectWrapper<py::object>(static_cast<py::object>(d))).At(mediapipe::Timestamp(0)));
     }
 
     {
@@ -2540,10 +2533,7 @@ TEST_F(PythonFlowTest, ConverterCalculator_PyStringToHttpResponse) {
     py::gil_scoped_acquire acquire;
     {
         py::object s = py::str("raw response body");
-        runner.MutableInputs()->Tag("OVMS_PY_TENSOR").packets.push_back(
-            mediapipe::Adopt<PyObjectWrapper<py::object>>(
-                new PyObjectWrapper<py::object>(s))
-                .At(mediapipe::Timestamp(0)));
+        runner.MutableInputs()->Tag("OVMS_PY_TENSOR").packets.push_back(mediapipe::Adopt<PyObjectWrapper<py::object>>(new PyObjectWrapper<py::object>(s)).At(mediapipe::Timestamp(0)));
     }
 
     {
