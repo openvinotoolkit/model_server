@@ -4789,3 +4789,49 @@ TEST_F(HttpOpenAIHandlerParsingTest, ResponsesMultiTurnReasoningFunctionCallAndF
             ]
         })");
 }
+
+// Real BFCL replay shape: between every function_call and its function_call_output
+// the OpenAI SDK echoes back the empty assistant message that ovms returned in
+// `output[]`. With multiple turns this looks like:
+//   user -> fc1 -> {id:msg-0,role:assistant,type:message,content:[{type:output_text,text:""}]}
+//        -> fco1 -> fc2 -> msg-0 -> fco2 -> ...
+// The 4th request OVMS sees while running BFCL multi_turn_base_0 reports 128
+// MORE input_tokens on /responses than the equivalent /chat/completions call,
+// even though the message lists are structurally equivalent. This test
+// reproduces the exact shape so processedJson can be compared head-to-head.
+TEST_F(HttpOpenAIHandlerParsingTest, ResponsesBfclReplayShapeWithEchoedAssistantMessages) {
+    expectResponsesEquivalentToChatCompletions(doc, *tokenizer,
+        R"({
+            "model": "llama",
+            "input": [
+                {"role": "user", "content": "do work"},
+                {"type": "function_call", "id": "fc1", "call_id": "fc1",
+                 "name": "mkdir", "arguments": "{\"dir_name\":\"temp\"}",
+                 "namespace": null, "status": "completed"},
+                {"id": "msg-0", "type": "message", "role": "assistant", "status": "completed",
+                 "content": [{"type": "output_text", "text": "", "annotations": [], "logprobs": null}],
+                 "phase": null},
+                {"type": "function_call_output", "call_id": "fc1", "output": "None"},
+                {"type": "function_call", "id": "fc2", "call_id": "fc2",
+                 "name": "mv", "arguments": "{\"source\":\"a\",\"destination\":\"temp\"}",
+                 "namespace": null, "status": "completed"},
+                {"id": "msg-0", "type": "message", "role": "assistant", "status": "completed",
+                 "content": [{"type": "output_text", "text": "", "annotations": [], "logprobs": null}],
+                 "phase": null},
+                {"type": "function_call_output", "call_id": "fc2", "output": "{\"error\":\"no\"}"}
+            ]
+        })",
+        R"({
+            "messages": [
+                {"role":"user","content":"do work"},
+                {"role":"assistant","content":"","tool_calls":[
+                    {"id":"fc1","type":"function","function":{"name":"mkdir","arguments":"{\"dir_name\":\"temp\"}"}}
+                ]},
+                {"role":"tool","tool_call_id":"fc1","content":"None"},
+                {"role":"assistant","content":"","tool_calls":[
+                    {"id":"fc2","type":"function","function":{"name":"mv","arguments":"{\"source\":\"a\",\"destination\":\"temp\"}"}}
+                ]},
+                {"role":"tool","tool_call_id":"fc2","content":"{\"error\":\"no\"}"}
+            ]
+        })");
+}

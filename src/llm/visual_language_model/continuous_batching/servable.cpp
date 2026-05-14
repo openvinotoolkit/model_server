@@ -105,6 +105,12 @@ absl::Status VisualLanguageModelServable::prepareInputs(std::shared_ptr<GenAiSer
             return chatTemplateKwargsStatus.status();
         }
         const auto& chatTemplateKwargs = chatTemplateKwargsStatus.value();
+        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "VLM chatHistory messages: {}", chatHistory.get_messages().to_json_string());
+        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "VLM chatHistory.get_tools(): {}", chatHistory.get_tools().to_json_string());
+        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "VLM chatHistory.get_extra_context(): {}", chatHistory.get_extra_context().to_json_string());
+        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "VLM tools: {}", tools.has_value() ? tools->to_json_string() : std::string("<none>"));
+        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "VLM chatTemplateKwargs: {}", chatTemplateKwargs.has_value() ? chatTemplateKwargs->to_json_string() : std::string("<none>"));
+        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "VLM addGenerationPrompt: {}", addGenerationPrompt);
         vlmExecutionContext->inputText = properties->tokenizer.apply_chat_template(chatHistory, addGenerationPrompt, {}, tools, chatTemplateKwargs);
     } else {
         return absl::InvalidArgumentError("Unsupported endpoint");

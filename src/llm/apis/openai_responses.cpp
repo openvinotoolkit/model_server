@@ -90,8 +90,12 @@ static void convertResponsesToolsInPlace(rapidjson::Value& toolsArray, rapidjson
                 continue;
             }
             const std::string fieldName = memberIt->name.GetString();
-            if (fieldName == "type" || fieldName == "response") {
+            if (fieldName == "type") {
                 ++memberIt;
+                continue;
+            }
+            if (fieldName == "response") {
+                memberIt = tool.EraseMember(memberIt);
                 continue;
             }
             rapidjson::Value keyCopy(memberIt->name, alloc);
