@@ -235,7 +235,9 @@ std::variant<Status, ImageGenPipelineArgs> prepareImageGenPipelineArgs(const goo
         args.defaultResolution = std::get<std::optional<resolution_t>>(defaultResOptOrStatus);
         if (args.defaultResolution.value().first > args.maxResolution.first ||
             args.defaultResolution.value().second > args.maxResolution.second) {
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Default resolution exceeds maximum allowed resolution: {} > {}", args.defaultResolution.value(), args.maxResolution);
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Default resolution exceeds maximum allowed resolution: ({}x{}) > ({}x{})",
+                args.defaultResolution.value().first, args.defaultResolution.value().second,
+                args.maxResolution.first, args.maxResolution.second);
             return StatusCode::DEFAULT_EXCEEDS_MAXIMUM_ALLOWED_RESOLUTION;
         }
         // default resolution is not among the ones allowed
@@ -243,7 +245,12 @@ std::variant<Status, ImageGenPipelineArgs> prepareImageGenPipelineArgs(const goo
             auto& resolutions = args.staticReshapeSettings.value().resolution;
             auto it = std::find(resolutions.begin(), resolutions.end(), args.defaultResolution.value());
             if (it == resolutions.end()) {
-                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Default resolution {} is not among the static resolutions: {}", args.defaultResolution.value(), resolutions);
+                std::string resStr;
+                for (const auto& r : resolutions) {
+                    resStr += "(" + std::to_string(r.first) + "x" + std::to_string(r.second) + ") ";
+                }
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Default resolution ({}x{}) is not among the static resolutions: {}",
+                    args.defaultResolution.value().first, args.defaultResolution.value().second, resStr);
                 return StatusCode::SHAPE_WRONG_FORMAT;
             }
         }
@@ -278,25 +285,19 @@ std::variant<Status, ImageGenPipelineArgs> prepareImageGenPipelineArgs(const goo
         std::vector<std::pair<std::string, float>> components;
         for (int j = 0; j < compositeEntry.components_size(); ++j) {
             const auto& comp = compositeEntry.components(j);
-            components.emplace_back(comp.adapter_alias(), comp.weight());
+            components.emplace_back(comp.adapter_alias(), comp.alpha());
         }
         args.compositeLoraAdapters.emplace(compositeEntry.alias(), std::move(components));
     }
 
     // NPU + LoRA validation: NPU uses MODE_STATIC (fixed alpha at compile time), so runtime
-    // adapter switching is impossible. Composite LoRAs (which imply dynamic selection) are invalid.
+    // adapter switching is impossible. Multiple LoRAs require a composite definition.
     if (isNPU && !args.loraAdapters.empty()) {
-        if (!args.compositeLoraAdapters.empty()) {
+        if (args.loraAdapters.size() > 1 && args.compositeLoraAdapters.empty()) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger,
-                "NPU device does not support composite LoRA adapters (runtime switching unavailable). "
-                "Remove composite_lora_adapters or switch to CPU device.");
+                "NPU device with multiple LoRA adapters requires composite_lora_adapters definition. "
+                "All adapters are compiled with MODE_STATIC and runtime switching is unavailable.");
             return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
-        }
-        if (args.loraAdapters.size() > 1) {
-            SPDLOG_LOGGER_WARN(modelmanager_logger,
-                "NPU device with multiple LoRA adapters: all {} adapters will be permanently compiled "
-                "with MODE_STATIC. Runtime alias-based switching is not available.",
-                args.loraAdapters.size());
         }
     }
 

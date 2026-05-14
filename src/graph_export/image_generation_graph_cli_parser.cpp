@@ -281,11 +281,11 @@ void ImageGenerationGraphCLIParser::prepare(ServerSettingsImpl& serverSettings, 
                 auto colonPos = ref.find(':');
                 if (colonPos != std::string::npos) {
                     component.adapterAlias = ref.substr(0, colonPos);
-                    std::string weightStr = ref.substr(colonPos + 1);
+                    std::string alphaStr = ref.substr(colonPos + 1);
                     try {
-                        component.weight = std::stof(weightStr);
+                        component.alpha = std::stof(alphaStr);
                     } catch (...) {
-                        throw std::invalid_argument("Invalid weight '" + weightStr + "' in composite LoRA component: '" + compToken + "'");
+                        throw std::invalid_argument("Invalid alpha '" + alphaStr + "' in composite LoRA component: '" + compToken + "'");
                     }
                 } else {
                     component.adapterAlias = ref;

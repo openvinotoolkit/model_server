@@ -168,6 +168,11 @@ Status MediapipeGraphDefinition::validate(const ServableNameChecker& checker) {
         return status;
     }
 
+    if (!this->loraAliases_.empty() && checker.aliasesConflict(this->loraAliases_, getName())) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "LoRA alias in graph '{}' conflicts with an existing servable", getName());
+        return StatusCode::MEDIAPIPE_GRAPH_NAME_OCCUPIED;
+    }
+
     lock.unlock();
     notifier.passed = true;
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Finished validation of mediapipe: {}", getName());

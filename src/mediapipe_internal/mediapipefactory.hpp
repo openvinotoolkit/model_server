@@ -58,6 +58,7 @@ public:
     MediapipeGraphDefinition* findDefinitionByName(const std::string& name) const;
     void registerLoraAlias(const std::string& alias, const std::string& graphName);
     void clearLoraAliases(const std::string& graphName);
+    bool aliasesConflictExcluding(const std::vector<std::string>& aliases, const std::string& ownGraphName) const;
     Status reloadDefinition(const std::string& pipelineName,
         const MediapipeGraphConfig& config,
         const ServableNameChecker& checker);

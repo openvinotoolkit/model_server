@@ -531,8 +531,8 @@ node: {
 )";
         for (const auto& component : composite.components) {
             oss << R"(            components { adapter_alias: ")" << component.adapterAlias << R"(")";
-            if (component.weight != 1.0f) {
-                oss << R"( weight: )" << component.weight;
+            if (component.alpha != 1.0f) {
+                oss << R"( alpha: )" << component.alpha;
             }
             oss << R"( }
 )";

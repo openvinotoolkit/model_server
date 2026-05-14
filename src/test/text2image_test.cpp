@@ -1629,8 +1629,8 @@ TEST(ImageGenCalculatorOptionsTest, CompositeLoraAdaptersFromPbtxt) {
             lora_adapters { alias: "anime" path: "/path/to/anime.safetensors" alpha: 0.8 }
             composite_lora_adapters {
               alias: "blend"
-              components { adapter_alias: "pokemon" weight: 0.7 }
-              components { adapter_alias: "anime" weight: 0.5 }
+              components { adapter_alias: "pokemon" alpha: 0.7 }
+              components { adapter_alias: "anime" alpha: 0.5 }
             }
           }
                     }

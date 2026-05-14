@@ -74,9 +74,12 @@ public:
         }
         imageGenPipelinesMap.insert(std::pair<std::string, std::shared_ptr<ImageGenerationPipelines>>(nodeName, std::move(servable)));
         // Register LoRA aliases for routing
-        const auto& loraAdapters = std::get<ImageGenPipelineArgs>(statusOrArgs).loraAdapters;
-        for (const auto& adapter : loraAdapters) {
+        const auto& args = std::get<ImageGenPipelineArgs>(statusOrArgs);
+        for (const auto& adapter : args.loraAdapters) {
             sidePackets.loraAliases.push_back(adapter.alias);
+        }
+        for (const auto& [compositeAlias, components] : args.compositeLoraAdapters) {
+            sidePackets.loraAliases.push_back(compositeAlias);
         }
         return StatusCode::OK;
     }

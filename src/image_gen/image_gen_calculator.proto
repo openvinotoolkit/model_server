@@ -59,7 +59,7 @@ message LoraAdapterEntry {
 
 message CompositeLoraComponent {
     required string adapter_alias = 1;
-    optional float weight = 2 [default = 1.0];
+    optional float alpha = 2 [default = 1.0];
 }
 
 message CompositeLoraAdapterEntry {

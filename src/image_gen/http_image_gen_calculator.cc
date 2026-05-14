@@ -66,19 +66,19 @@ static void applyLoraAdapterIfNeeded(const std::string& modelName,
     auto compositeIt = compositeLoraAdapters.find(modelName);
     if (compositeIt != compositeLoraAdapters.end()) {
         // Composite adapter — activate multiple adapters
-        for (const auto& [compAlias, defaultWeight] : compositeIt->second) {
+        for (const auto& [compAlias, defaultAlpha] : compositeIt->second) {
             auto adapterIt = loraAdapters.find(compAlias);
             if (adapterIt == loraAdapters.end()) {
                 SPDLOG_LOGGER_WARN(llm_calculator_logger, "Composite LoRA '{}' references unknown adapter '{}', skipping", modelName, compAlias);
                 continue;
             }
-            float weight = defaultWeight;
+            float alpha = defaultAlpha;
             auto overrideIt = loraWeightsOverride.find(compAlias);
             if (overrideIt != loraWeightsOverride.end()) {
-                weight = overrideIt->second;
+                alpha = overrideIt->second;
             }
-            adapterConfig.add(adapterIt->second, weight);
-            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Composite LoRA '{}': applied adapter '{}' with weight: {}", modelName, compAlias, weight);
+            adapterConfig.add(adapterIt->second, alpha);
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Composite LoRA '{}': applied adapter '{}' with alpha: {}", modelName, compAlias, alpha);
         }
     } else {
         auto adapterIt = loraAdapters.find(modelName);
@@ -254,8 +254,27 @@ public:
             }
 
             // Apply LoRA adapter if the requested model name matches an alias.
-            // Skip under NPU MODE_STATIC — adapters are always active.
-            if (!pipe->npuLoraStaticMode) {
+            // Under NPU MODE_STATIC adapters are always active — reject requests
+            // that don't target a valid LoRA alias since the base model is unavailable.
+            if (pipe->npuLoraStaticMode) {
+                if (!pipe->loraAdapters.empty()) {
+                    if (!pipe->compositeLoraAdapters.empty()) {
+                        // Multi-LoRA NPU: only composite aliases are valid targets
+                        if (pipe->compositeLoraAdapters.find(payload.modelName) == pipe->compositeLoraAdapters.end()) {
+                            return absl::InvalidArgumentError(absl::StrCat(
+                                "Model '", payload.modelName, "' uses NPU with statically fused LoRA adapters. "
+                                "Send requests to the composite LoRA alias name instead."));
+                        }
+                    } else {
+                        // Single LoRA NPU: only the individual alias is a valid target
+                        if (pipe->loraAdapters.find(payload.modelName) == pipe->loraAdapters.end()) {
+                            return absl::InvalidArgumentError(absl::StrCat(
+                                "Model '", payload.modelName, "' uses NPU with statically fused LoRA. "
+                                "Send requests to the LoRA alias name instead."));
+                        }
+                    }
+                }
+            } else {
                 applyLoraAdapterIfNeeded(payload.modelName, pipe->loraAdapters, pipe->compositeLoraAdapters, pipe->args, requestOptions, loraWeightsOverride);
             }
             if (!pipe->text2ImagePipeline)
@@ -286,8 +305,27 @@ public:
             SET_OR_RETURN(ov::AnyMap, requestOptions, getImageEditRequestOptions(*payload.multipartParser, pipe->args));
 
             // Apply LoRA adapter if the requested model name matches an alias.
-            // Skip under NPU MODE_STATIC — adapters are always active.
-            if (!pipe->npuLoraStaticMode) {
+            // Under NPU MODE_STATIC adapters are always active — reject requests
+            // that don't target a valid LoRA alias since the base model is unavailable.
+            if (pipe->npuLoraStaticMode) {
+                if (!pipe->loraAdapters.empty()) {
+                    if (!pipe->compositeLoraAdapters.empty()) {
+                        // Multi-LoRA NPU: only composite aliases are valid targets
+                        if (pipe->compositeLoraAdapters.find(payload.modelName) == pipe->compositeLoraAdapters.end()) {
+                            return absl::InvalidArgumentError(absl::StrCat(
+                                "Model '", payload.modelName, "' uses NPU with statically fused LoRA adapters. "
+                                "Send requests to the composite LoRA alias name instead."));
+                        }
+                    } else {
+                        // Single LoRA NPU: only the individual alias is a valid target
+                        if (pipe->loraAdapters.find(payload.modelName) == pipe->loraAdapters.end()) {
+                            return absl::InvalidArgumentError(absl::StrCat(
+                                "Model '", payload.modelName, "' uses NPU with statically fused LoRA. "
+                                "Send requests to the LoRA alias name instead."));
+                        }
+                    }
+                }
+            } else {
                 applyLoraAdapterIfNeeded(payload.modelName, pipe->loraAdapters, pipe->compositeLoraAdapters, pipe->args, requestOptions);
             }
 

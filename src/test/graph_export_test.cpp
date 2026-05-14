@@ -1580,12 +1580,12 @@ TEST(ImageGenCLILoraParsingTest, CompositeLoraBasic) {
     EXPECT_EQ(graphSettings.compositeLoraAdapters[0].alias, "pokemon_anime");
     ASSERT_EQ(graphSettings.compositeLoraAdapters[0].components.size(), 2);
     EXPECT_EQ(graphSettings.compositeLoraAdapters[0].components[0].adapterAlias, "pokemon");
-    EXPECT_FLOAT_EQ(graphSettings.compositeLoraAdapters[0].components[0].weight, 1.0f);
+    EXPECT_FLOAT_EQ(graphSettings.compositeLoraAdapters[0].components[0].alpha, 1.0f);
     EXPECT_EQ(graphSettings.compositeLoraAdapters[0].components[1].adapterAlias, "anime");
-    EXPECT_FLOAT_EQ(graphSettings.compositeLoraAdapters[0].components[1].weight, 1.0f);
+    EXPECT_FLOAT_EQ(graphSettings.compositeLoraAdapters[0].components[1].alpha, 1.0f);
 }
 
-TEST(ImageGenCLILoraParsingTest, CompositeLoraWithWeights) {
+TEST(ImageGenCLILoraParsingTest, CompositeLoraWithAlphas) {
     ovms::ServerSettingsImpl serverSettings;
     serverSettings.serverMode = ovms::HF_PULL_MODE;
     ovms::HFSettingsImpl hfSettings;
@@ -1596,8 +1596,8 @@ TEST(ImageGenCLILoraParsingTest, CompositeLoraWithWeights) {
     ASSERT_EQ(graphSettings.compositeLoraAdapters.size(), 1);
     EXPECT_EQ(graphSettings.compositeLoraAdapters[0].alias, "blend");
     ASSERT_EQ(graphSettings.compositeLoraAdapters[0].components.size(), 2);
-    EXPECT_FLOAT_EQ(graphSettings.compositeLoraAdapters[0].components[0].weight, 0.7f);
-    EXPECT_FLOAT_EQ(graphSettings.compositeLoraAdapters[0].components[1].weight, 0.5f);
+    EXPECT_FLOAT_EQ(graphSettings.compositeLoraAdapters[0].components[0].alpha, 0.7f);
+    EXPECT_FLOAT_EQ(graphSettings.compositeLoraAdapters[0].components[1].alpha, 0.5f);
 }
 
 TEST(ImageGenCLILoraParsingTest, CompositeLoraUnknownRefThrows) {
@@ -1636,8 +1636,8 @@ node: {
           lora_adapters { alias: "anime" path: "loras/org/anime-lora/weights.safetensors" }
           composite_lora_adapters {
             alias: "blend"
-            components { adapter_alias: "pokemon" weight: 0.7 }
-            components { adapter_alias: "anime" weight: 0.5 }
+            components { adapter_alias: "pokemon" alpha: 0.7 }
+            components { adapter_alias: "anime" alpha: 0.5 }
           }
       }
   }

@@ -159,7 +159,7 @@ struct LoraAdapterSettings {
 
 struct CompositeLoraComponent {
     std::string adapterAlias;  // references a LoraAdapterSettings alias
-    float weight = 1.0f;
+    float alpha = 1.0f;
 };
 
 struct CompositeLoraSettings {
