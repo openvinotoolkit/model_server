@@ -1027,27 +1027,27 @@ TEST_F(ModelManagerWatcher, StartFromFileWhenModelFilesMissing) {
 }
 
 TEST_F(ModelManagerWatcher, StartFromFileSingleModelXmlPath) {
-        const std::string config = std::string(R"({
+    const std::string config = std::string(R"({
      "model_config_list": [
         {
             "config": {
                 "name": "dummy",
                 "base_path": ")") +
-                getGenericFullPathForSrcTest("/ovms/src/test/dummy/1/dummy.xml") + R"(",
+                               getGenericFullPathForSrcTest("/ovms/src/test/dummy/1/dummy.xml") + R"(",
                 "target_device": "CPU",
                 "model_version_policy": {"all": {}}
             }
      }]
 })";
 
-        std::string fileToReload = this->getFilePath("/ovms_config_file_single_file.json");
-        createConfigFileWithContent(config, fileToReload);
-        ConstructorEnabledModelManager manager;
+    std::string fileToReload = this->getFilePath("/ovms_config_file_single_file.json");
+    createConfigFileWithContent(config, fileToReload);
+    ConstructorEnabledModelManager manager;
 
-        auto status = manager.startFromFile(fileToReload);
-        EXPECT_EQ(status, ovms::StatusCode::OK);
-        auto modelInstance = manager.findModelInstance("dummy", 1);
-        EXPECT_NE(modelInstance, nullptr);
+    auto status = manager.startFromFile(fileToReload);
+    EXPECT_EQ(status, ovms::StatusCode::OK);
+    auto modelInstance = manager.findModelInstance("dummy", 1);
+    EXPECT_NE(modelInstance, nullptr);
 }
 
 TEST_F(ModelManagerWatcher, StartFromFileWhenModelFilesMissingRelativePath) {
