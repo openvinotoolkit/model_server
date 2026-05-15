@@ -1,3 +1,5 @@
+def shortCommit = ''
+
 pipeline {
     agent {
       label 'ovms-coordinator'

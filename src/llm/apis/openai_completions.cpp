@@ -409,17 +409,22 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(ov::genai::Enco
 
     // choices: array of size N, where N is related to n request parameter
     jsonResponse.StartArray("choices");
-    int index = 0;
-    for (int i = 0; i < results.tokens.size(); i++) {
+    if (results.finish_reasons.empty()) {
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Missing finish reason in unary LM generation result, defaulting to STOP for all choices");
+    } else if (results.finish_reasons.size() != results.tokens.size()) {
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Finish reasons size ({}) does not match tokens size ({}) in unary LM generation result, defaulting missing entries to STOP",
+            results.finish_reasons.size(), results.tokens.size());
+    }
+    for (size_t i = 0; i < results.tokens.size(); ++i) {
         const std::vector<int64_t>& tokens = results.tokens[i];
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Generated tokens: {}", tokens);
         ParsedOutput parsedOutput = parseOutputIfNeeded(tokens);
         jsonResponse.StartObject();
-        // finish_reason: "stop" in regular scenario, "tool_calls" if output contains tool calls
-        auto finishReason = mapFinishReason(ov::genai::GenerationFinishReason::STOP, !parsedOutput.toolCalls.empty());
+        const ov::genai::GenerationFinishReason finishReasonRaw = i < results.finish_reasons.size() ? results.finish_reasons[i] : ov::genai::GenerationFinishReason::STOP;
+        auto finishReason = mapFinishReason(finishReasonRaw, !parsedOutput.toolCalls.empty());
         jsonResponse.FinishReason(finishReason.value_or("unknown"));
         // index: integer; Choice index, only n=1 supported anyway
-        jsonResponse.Index(index++);
+        jsonResponse.Index(static_cast<int>(i));
 
         if (endpoint == Endpoint::CHAT_COMPLETIONS) {
             jsonResponse.MessageObject(parsedOutput);
@@ -480,8 +485,12 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(ov::genai::VLMD
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Generated tokens: {}", generatedTokens);
         ParsedOutput parsedOutput = parseOutputIfNeeded(generatedTokens);
         jsonResponse.StartObject();
-        // finish_reason: "stop" in regular scenario, "tool_calls" if output contains tool calls
-        auto finishReason = mapFinishReason(ov::genai::GenerationFinishReason::STOP, !parsedOutput.toolCalls.empty());
+        if (results.finish_reasons.empty()) {
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Missing finish reason in unary VLM generation result, defaulting to STOP");
+        }
+        // Current generation flow uses batch=1, so only finish_reasons[0] is expected here.
+        const ov::genai::GenerationFinishReason finishReasonRaw = results.finish_reasons.empty() ? ov::genai::GenerationFinishReason::STOP : results.finish_reasons[0];
+        auto finishReason = mapFinishReason(finishReasonRaw, !parsedOutput.toolCalls.empty());
         jsonResponse.FinishReason(finishReason.value_or("unknown"));
         // index: integer; Choice index, only n=1 supported anyway
         jsonResponse.Index(index++);
