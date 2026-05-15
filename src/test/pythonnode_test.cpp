@@ -2586,7 +2586,9 @@ TEST_F(PythonFlowTest, ConverterCalculator_PyBytesToHttpResponse) {
     mediapipe::CalculatorRunner runner(testPbtxt);
 
     // Binary payload: embedded NUL plus high (non-UTF-8) bytes. Must round-trip byte-for-byte.
-    const std::string expected{"\x00\x01\xff\x80\x7f\x00" "ABC\xfe", 10};
+    const std::string expected{"\x00\x01\xff\x80\x7f\x00"
+                               "ABC\xfe",
+        10};
 
     py::gil_scoped_acquire acquire;
     {
