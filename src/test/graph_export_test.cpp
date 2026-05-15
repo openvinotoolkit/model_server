@@ -1199,7 +1199,7 @@ node: {
       [type.googleapis.com / mediapipe.ImageGenCalculatorOptions]: {
           models_path: "./"
           device: "CPU"
-          lora_adapters { alias: "pokemon" path: "loras/juliensimon/sd-pokemon-lora/pytorch_lora_weights.safetensors" }
+          lora_adapters { alias: "pokemon" path: "loras/juliensimon/sd-pokemon-lora/pytorch_lora_weights.safetensors" alpha: 1 mode: DYNAMIC }
       }
   }
 }
@@ -1221,8 +1221,8 @@ node: {
           models_path: "./"
           device: "GPU"
           max_resolution: "1024x1024"
-          lora_adapters { alias: "pokemon" path: "loras/juliensimon/sd-pokemon-lora/model.safetensors" }
-          lora_adapters { alias: "anime-style" path: "loras/org2/anime-lora/weights.safetensors" }
+          lora_adapters { alias: "pokemon" path: "loras/juliensimon/sd-pokemon-lora/model.safetensors" alpha: 1 mode: DYNAMIC }
+          lora_adapters { alias: "anime-style" path: "loras/org2/anime-lora/weights.safetensors" alpha: 1 mode: DYNAMIC }
       }
   }
 }
@@ -1507,7 +1507,7 @@ node: {
       [type.googleapis.com / mediapipe.ImageGenCalculatorOptions]: {
           models_path: "./"
           device: "CPU"
-          lora_adapters { alias: "pokemon" path: "loras/pokemon/pytorch_lora_weights.safetensors" }
+          lora_adapters { alias: "pokemon" path: "loras/pokemon/pytorch_lora_weights.safetensors" alpha: 1 mode: DYNAMIC }
       }
   }
 }
@@ -1543,7 +1543,7 @@ node: {
       [type.googleapis.com / mediapipe.ImageGenCalculatorOptions]: {
           models_path: "./"
           device: "CPU"
-          lora_adapters { alias: "pokemon" path: "/path/to/weights.safetensors" }
+          lora_adapters { alias: "pokemon" path: "/path/to/weights.safetensors" alpha: 1 mode: DYNAMIC }
       }
   }
 }
@@ -1618,6 +1618,114 @@ TEST(ImageGenCLILoraParsingTest, CompositeLoraInvalidComponentThrows) {
     EXPECT_THROW(parser.prepare(serverSettings, hfSettings, "test_model"), std::invalid_argument);
 }
 
+TEST(ImageGenCLILoraParsingTest, SingleLoraWithAlpha) {
+    ovms::ServerSettingsImpl serverSettings;
+    serverSettings.serverMode = ovms::HF_PULL_MODE;
+    ovms::HFSettingsImpl hfSettings;
+    hfSettings.sourceLoras = "pokemon=org/pokemon-lora:0.75";
+    ovms::ImageGenerationGraphCLIParser parser;
+    parser.prepare(serverSettings, hfSettings, "test_model");
+    auto& graphSettings = std::get<ovms::ImageGenerationGraphSettingsImpl>(hfSettings.graphSettings);
+    ASSERT_EQ(graphSettings.loraAdapters.size(), 1);
+    EXPECT_EQ(graphSettings.loraAdapters[0].alias, "pokemon");
+    EXPECT_EQ(graphSettings.loraAdapters[0].sourceLora, "org/pokemon-lora");
+    EXPECT_FLOAT_EQ(graphSettings.loraAdapters[0].alpha, 0.75f);
+}
+
+TEST(ImageGenCLILoraParsingTest, SingleLoraWithAlphaOne) {
+    ovms::ServerSettingsImpl serverSettings;
+    serverSettings.serverMode = ovms::HF_PULL_MODE;
+    ovms::HFSettingsImpl hfSettings;
+    hfSettings.sourceLoras = "pokemon=org/pokemon-lora:1.0";
+    ovms::ImageGenerationGraphCLIParser parser;
+    parser.prepare(serverSettings, hfSettings, "test_model");
+    auto& graphSettings = std::get<ovms::ImageGenerationGraphSettingsImpl>(hfSettings.graphSettings);
+    ASSERT_EQ(graphSettings.loraAdapters.size(), 1);
+    EXPECT_FLOAT_EQ(graphSettings.loraAdapters[0].alpha, 1.0f);
+}
+
+TEST(ImageGenCLILoraParsingTest, InvalidAlphaThrows) {
+    ovms::ServerSettingsImpl serverSettings;
+    serverSettings.serverMode = ovms::HF_PULL_MODE;
+    ovms::HFSettingsImpl hfSettings;
+    hfSettings.sourceLoras = "pokemon=org/pokemon-lora:abc";
+    ovms::ImageGenerationGraphCLIParser parser;
+    EXPECT_THROW(parser.prepare(serverSettings, hfSettings, "test_model"), std::invalid_argument);
+}
+
+TEST(ImageGenCLILoraParsingTest, InvalidAlphaPartialFloatThrows) {
+    ovms::ServerSettingsImpl serverSettings;
+    serverSettings.serverMode = ovms::HF_PULL_MODE;
+    ovms::HFSettingsImpl hfSettings;
+    hfSettings.sourceLoras = "pokemon=org/pokemon-lora:0.5abc";
+    ovms::ImageGenerationGraphCLIParser parser;
+    EXPECT_THROW(parser.prepare(serverSettings, hfSettings, "test_model"), std::invalid_argument);
+}
+
+TEST(ImageGenCLILoraParsingTest, InvalidAlphaWithFilenameThrows) {
+    ovms::ServerSettingsImpl serverSettings;
+    serverSettings.serverMode = ovms::HF_PULL_MODE;
+    ovms::HFSettingsImpl hfSettings;
+    hfSettings.sourceLoras = "pokemon=org/repo@some.safetensors:potocznie";
+    ovms::ImageGenerationGraphCLIParser parser;
+    EXPECT_THROW(parser.prepare(serverSettings, hfSettings, "test_model"), std::invalid_argument);
+}
+
+TEST(ImageGenCLILoraParsingTest, InvalidAlphaMultipleDotsThrows) {
+    ovms::ServerSettingsImpl serverSettings;
+    serverSettings.serverMode = ovms::HF_PULL_MODE;
+    ovms::HFSettingsImpl hfSettings;
+    hfSettings.sourceLoras = "pokemon=org/repo@some.safetensors:2.5.32";
+    ovms::ImageGenerationGraphCLIParser parser;
+    EXPECT_THROW(parser.prepare(serverSettings, hfSettings, "test_model"), std::invalid_argument);
+}
+
+TEST(ImageGenCLILoraParsingTest, UrlLoraWithAlpha) {
+    ovms::ServerSettingsImpl serverSettings;
+    serverSettings.serverMode = ovms::HF_PULL_MODE;
+    ovms::HFSettingsImpl hfSettings;
+    hfSettings.sourceLoras = "pokemon=https://huggingface.co/org/repo/resolve/main/weights.safetensors:0.5";
+    ovms::ImageGenerationGraphCLIParser parser;
+    parser.prepare(serverSettings, hfSettings, "test_model");
+    auto& graphSettings = std::get<ovms::ImageGenerationGraphSettingsImpl>(hfSettings.graphSettings);
+    ASSERT_EQ(graphSettings.loraAdapters.size(), 1);
+    EXPECT_EQ(graphSettings.loraAdapters[0].sourceLora, "https://huggingface.co/org/repo/resolve/main/weights.safetensors");
+    EXPECT_FLOAT_EQ(graphSettings.loraAdapters[0].alpha, 0.5f);
+}
+
+TEST(ImageGenCLILoraParsingTest, UrlLoraWithoutAlphaPreservesDefault) {
+    ovms::ServerSettingsImpl serverSettings;
+    serverSettings.serverMode = ovms::HF_PULL_MODE;
+    ovms::HFSettingsImpl hfSettings;
+    hfSettings.sourceLoras = "pokemon=https://huggingface.co/org/repo/resolve/main/weights.safetensors";
+    ovms::ImageGenerationGraphCLIParser parser;
+    parser.prepare(serverSettings, hfSettings, "test_model");
+    auto& graphSettings = std::get<ovms::ImageGenerationGraphSettingsImpl>(hfSettings.graphSettings);
+    ASSERT_EQ(graphSettings.loraAdapters.size(), 1);
+    EXPECT_EQ(graphSettings.loraAdapters[0].sourceLora, "https://huggingface.co/org/repo/resolve/main/weights.safetensors");
+    EXPECT_FLOAT_EQ(graphSettings.loraAdapters[0].alpha, 1.0f);
+}
+
+TEST(ImageGenCLILoraParsingTest, NPURejectsMultiLoraWithoutComposites) {
+    ovms::ServerSettingsImpl serverSettings;
+    serverSettings.serverMode = ovms::HF_PULL_MODE;
+    ovms::HFSettingsImpl hfSettings;
+    hfSettings.sourceLoras = "pokemon=org/pokemon-lora,anime=org/anime-lora";
+    hfSettings.exportSettings.targetDevice = "NPU";
+    ovms::ImageGenerationGraphCLIParser parser;
+    EXPECT_THROW(parser.prepare(serverSettings, hfSettings, "test_model"), std::invalid_argument);
+}
+
+TEST(ImageGenCLILoraParsingTest, NPUAllowsCompositeAdapters) {
+    ovms::ServerSettingsImpl serverSettings;
+    serverSettings.serverMode = ovms::HF_PULL_MODE;
+    ovms::HFSettingsImpl hfSettings;
+    hfSettings.sourceLoras = "pokemon=org/pokemon-lora,anime=org/anime-lora,blend=@pokemon:0.5+@anime:0.5";
+    hfSettings.exportSettings.targetDevice = "NPU";
+    ovms::ImageGenerationGraphCLIParser parser;
+    EXPECT_NO_THROW(parser.prepare(serverSettings, hfSettings, "test_model"));
+}
+
 const std::string expectedImageGenWithCompositeLora = R"(
 input_stream: "HTTP_REQUEST_PAYLOAD:input"
 output_stream: "HTTP_RESPONSE_PAYLOAD:output"
@@ -1632,8 +1740,8 @@ node: {
       [type.googleapis.com / mediapipe.ImageGenCalculatorOptions]: {
           models_path: "./"
           device: "CPU"
-          lora_adapters { alias: "pokemon" path: "loras/org/pokemon-lora/weights.safetensors" }
-          lora_adapters { alias: "anime" path: "loras/org/anime-lora/weights.safetensors" }
+          lora_adapters { alias: "pokemon" path: "loras/org/pokemon-lora/weights.safetensors" alpha: 1 mode: DYNAMIC }
+          lora_adapters { alias: "anime" path: "loras/org/anime-lora/weights.safetensors" alpha: 1 mode: DYNAMIC }
           composite_lora_adapters {
             alias: "blend"
             components { adapter_alias: "pokemon" alpha: 0.7 }
@@ -1807,8 +1915,8 @@ node: {
       [type.googleapis.com / mediapipe.ImageGenCalculatorOptions]: {
           models_path: "./"
           device: "CPU"
-          lora_adapters { alias: "landscape" path: "loras/civitai/landscapes-lora/Fantastic_Landscape.safetensors" }
-          lora_adapters { alias: "portrait" path: "loras/org/portrait-lora/weights.safetensors" }
+          lora_adapters { alias: "landscape" path: "loras/civitai/landscapes-lora/Fantastic_Landscape.safetensors" alpha: 1 mode: DYNAMIC }
+          lora_adapters { alias: "portrait" path: "loras/org/portrait-lora/weights.safetensors" alpha: 1 mode: DYNAMIC }
           composite_lora_adapters {
             alias: "scenic_blend"
             components { adapter_alias: "landscape" alpha: 0.3 }
@@ -1835,4 +1943,41 @@ TEST_F(GraphCreationTest, imageGenerationFullCompositeWithAlphas) {
 
     std::string graphContents = GetFileContents(graphPath);
     ASSERT_EQ(expectedImageGenFullComposite, removeVersionString(graphContents)) << graphContents;
+}
+
+const std::string expectedImageGenNpuStatic = R"(
+input_stream: "HTTP_REQUEST_PAYLOAD:input"
+output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+
+node: {
+  name: "ImageGenExecutor"
+  calculator: "ImageGenCalculator"
+  input_stream: "HTTP_REQUEST_PAYLOAD:input"
+  input_side_packet: "IMAGE_GEN_NODE_RESOURCES:pipes"
+  output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+  node_options: {
+      [type.googleapis.com / mediapipe.ImageGenCalculatorOptions]: {
+          models_path: "./"
+          device: "NPU"
+          lora_adapters { alias: "pokemon" path: "loras/org/pokemon-lora/weights.safetensors" alpha: 0.8 mode: STATIC }
+      }
+  }
+}
+
+)";
+
+TEST_F(GraphCreationTest, imageGenerationNpuAutoStaticMode) {
+    ovms::HFSettingsImpl hfSettings;
+    hfSettings.task = ovms::IMAGE_GENERATION_GRAPH;
+    hfSettings.exportSettings.targetDevice = "NPU";
+    ovms::ImageGenerationGraphSettingsImpl imageGenerationGraphSettings;
+    imageGenerationGraphSettings.loraAdapters.push_back({"pokemon", "org/pokemon-lora", "weights.safetensors", ovms::LoraSourceType::HF_REPO, 0.8f});
+    hfSettings.graphSettings = std::move(imageGenerationGraphSettings);
+    std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
+    std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
+    auto status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
+    ASSERT_EQ(status, ovms::StatusCode::OK);
+
+    std::string graphContents = GetFileContents(graphPath);
+    ASSERT_EQ(expectedImageGenNpuStatic, removeVersionString(graphContents)) << graphContents;
 }

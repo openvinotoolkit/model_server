@@ -278,10 +278,18 @@ std::variant<Status, ImageGenPipelineArgs> prepareImageGenPipelineArgs(const goo
         }
         info.alpha = loraEntry.alpha();
         switch (loraEntry.mode()) {
-        case ::mediapipe::DYNAMIC: info.mode = LoraLoadMode::DYNAMIC; break;
-        case ::mediapipe::STATIC: info.mode = LoraLoadMode::STATIC; break;
-        case ::mediapipe::FUSE: info.mode = LoraLoadMode::FUSE; break;
-        default: info.mode = LoraLoadMode::DYNAMIC; break;
+        case ::mediapipe::DYNAMIC:
+            info.mode = LoraLoadMode::DYNAMIC;
+            break;
+        case ::mediapipe::STATIC:
+            info.mode = LoraLoadMode::STATIC;
+            break;
+        case ::mediapipe::FUSE:
+            info.mode = LoraLoadMode::FUSE;
+            break;
+        default:
+            info.mode = LoraLoadMode::DYNAMIC;
+            break;
         }
         args.loraAdapters.push_back(std::move(info));
     }
@@ -296,6 +304,24 @@ std::variant<Status, ImageGenPipelineArgs> prepareImageGenPipelineArgs(const goo
         args.compositeLoraAdapters.emplace(compositeEntry.alias(), std::move(components));
     }
 
+    // Warn when adapter has non-default alpha but is used via composites (composite alpha takes precedence)
+    if (!args.compositeLoraAdapters.empty()) {
+        std::set<std::string> compositeReferencedAdapters;
+        for (const auto& [alias, components] : args.compositeLoraAdapters) {
+            for (const auto& [compAlias, alpha] : components) {
+                compositeReferencedAdapters.insert(compAlias);
+            }
+        }
+        for (const auto& adapter : args.loraAdapters) {
+            if (adapter.alpha != 1.0f && compositeReferencedAdapters.count(adapter.alias)) {
+                SPDLOG_LOGGER_WARN(modelmanager_logger,
+                    "LoRA adapter '{}' has alpha={} but is used in composite_lora_adapters. "
+                    "The composite component alpha will take precedence at runtime.",
+                    adapter.alias, adapter.alpha);
+            }
+        }
+    }
+
     // NPU + LoRA validation: NPU uses MODE_STATIC (fixed alpha at compile time), so runtime
     // adapter switching is impossible. Multiple LoRAs require a composite definition.
     if (isNPU && !args.loraAdapters.empty()) {
@@ -304,6 +330,24 @@ std::variant<Status, ImageGenPipelineArgs> prepareImageGenPipelineArgs(const goo
                 "NPU device with multiple LoRA adapters requires composite_lora_adapters definition. "
                 "All adapters are compiled with MODE_STATIC and runtime switching is unavailable.");
             return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
+        }
+        // When composites exist on NPU, every adapter must appear in at least one composite
+        if (!args.compositeLoraAdapters.empty()) {
+            std::set<std::string> referencedAdapters;
+            for (const auto& [alias, components] : args.compositeLoraAdapters) {
+                for (const auto& [compAlias, alpha] : components) {
+                    referencedAdapters.insert(compAlias);
+                }
+            }
+            for (const auto& adapter : args.loraAdapters) {
+                if (referencedAdapters.find(adapter.alias) == referencedAdapters.end()) {
+                    SPDLOG_LOGGER_ERROR(modelmanager_logger,
+                        "NPU device: LoRA adapter '{}' is not referenced by any composite_lora_adapters entry. "
+                        "On NPU all adapters are static and only composite aliases are routable.",
+                        adapter.alias);
+                    return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
+                }
+            }
         }
     }
 

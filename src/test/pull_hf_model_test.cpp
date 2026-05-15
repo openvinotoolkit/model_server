@@ -1993,10 +1993,12 @@ static void saveGeneratedImage(const std::string& responseBody, const std::strin
     // Find b64_json value in JSON response
     std::string marker = "\"b64_json\":\"";
     auto pos = responseBody.find(marker);
-    if (pos == std::string::npos) return;
+    if (pos == std::string::npos)
+        return;
     pos += marker.size();
     auto endPos = responseBody.find("\"", pos);
-    if (endPos == std::string::npos) return;
+    if (endPos == std::string::npos)
+        return;
     std::string b64 = responseBody.substr(pos, endPos - pos);
 
     // Decode base64 — simple decoder for test purposes
@@ -2004,11 +2006,13 @@ static void saveGeneratedImage(const std::string& responseBody, const std::strin
     std::string decoded;
     decoded.reserve(b64.size() * 3 / 4);
     std::vector<int> T(256, -1);
-    for (int i = 0; i < 64; i++) T[chars[i]] = i;
+    for (int i = 0; i < 64; i++)
+        T[chars[i]] = i;
 
     int val = 0, valb = -8;
     for (unsigned char c : b64) {
-        if (T[c] == -1) break;
+        if (T[c] == -1)
+            break;
         val = (val << 6) + T[c];
         valb += 6;
         if (valb >= 0) {
@@ -2037,8 +2041,9 @@ TEST(HfPullImageGenWithLora, PullServeAndGenerateWithLoras) {
     // ==================== PART 1: Pull model + LoRAs ====================
     std::string sourceLoras =
         "xray=" + LORA_XRAY_URL + ","
-        "chalkboard=" + LORA_CHALKBOARD_URL + ","
-        "combo=@xray:0.8+@chalkboard:0.45";
+                                  "chalkboard=" +
+        LORA_CHALKBOARD_URL + ","
+                              "combo=@xray:0.8+@chalkboard:0.45";
     // Alternative LoRAs (swap in as needed):
     // "point=" + LORA_POINT_URL + ","
     // "ukiyoe=" + LORA_UKIYOE_URL + ","
@@ -2084,8 +2089,9 @@ TEST(HfPullImageGenWithLora, PullServeAndGenerateWithLoras) {
     // Re-configure with local file paths for the second server launch
     std::string sourceLorasLocal =
         "xray=" + xrayLoraPath + ","
-        "chalkboard=" + chalkboardLoraPath + ","
-        "combo=@xray:0.8+@chalkboard:0.45";
+                                 "chalkboard=" +
+        chalkboardLoraPath + ","
+                             "combo=@xray:0.8+@chalkboard:0.45";
 
     std::string restPort = "9233";
     ::SetUpServerForDownloadAndStartWithLoras(t, server,
@@ -2102,7 +2108,8 @@ TEST(HfPullImageGenWithLora, PullServeAndGenerateWithLoras) {
 
     // --- Generate: base model ---
     std::string baseRequestBody = R"({
-        "model": ")" + SDXL_MODEL_NAME + R"(",
+        "model": ")" + SDXL_MODEL_NAME +
+                                  R"(",
         "prompt": "a simple red circle on white background",
         "size": "256x256",
         "num_inference_steps": 4

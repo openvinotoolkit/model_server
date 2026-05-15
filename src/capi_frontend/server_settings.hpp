@@ -155,6 +155,7 @@ struct LoraAdapterSettings {
     std::string sourceLora;       // HF repo, direct URL, or local file path
     std::string safetensorsFile;  // resolved filename, empty = auto-detect (HF only)
     LoraSourceType sourceType = LoraSourceType::HF_REPO;
+    float alpha = 1.0f;
 };
 
 struct CompositeLoraComponent {

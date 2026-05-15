@@ -212,6 +212,20 @@ void ImageGenerationGraphCLIParser::prepare(ServerSettingsImpl& serverSettings, 
 
             LoraAdapterSettings adapter;
             adapter.alias = alias;
+            // Parse optional :alpha suffix
+            auto lastColon = source.rfind(':');
+            if (lastColon != std::string::npos && lastColon > 0) {
+                std::string alphaStr = source.substr(lastColon + 1);
+                // Skip protocol colons (https:// or http://)
+                if (alphaStr.substr(0, 2) != "//") {
+                    auto alpha = ovms::stof(alphaStr);
+                    if (!alpha.has_value()) {
+                        throw std::invalid_argument("Invalid alpha value '" + alphaStr + "' in --source_loras entry: '" + entry + "'");
+                    }
+                    adapter.alpha = alpha.value();
+                    source = source.substr(0, lastColon);
+                }
+            }
             // Detect source type
             if (source.substr(0, 8) == "https://" || source.substr(0, 7) == "http://") {
                 adapter.sourceType = LoraSourceType::DIRECT_URL;
@@ -305,20 +319,15 @@ void ImageGenerationGraphCLIParser::prepare(ServerSettingsImpl& serverSettings, 
         }
     }
 
-    // NPU + LoRA validation: NPU uses MODE_STATIC (fixed alpha at compile time), runtime switching is impossible.
+    // NPU + LoRA validation: all adapters are compiled with STATIC mode, no runtime switching.
+    // Multiple LoRAs on NPU require composites to define the static blend ratios.
     bool targetHasNPU = hfSettings.exportSettings.targetDevice.find("NPU") != std::string::npos;
     if (targetHasNPU && !imageGenerationGraphSettings.loraAdapters.empty()) {
-        if (!imageGenerationGraphSettings.compositeLoraAdapters.empty()) {
+        if (imageGenerationGraphSettings.loraAdapters.size() > 1 && imageGenerationGraphSettings.compositeLoraAdapters.empty()) {
             throw std::invalid_argument(
-                "NPU device does not support composite LoRA adapters (runtime switching unavailable). "
-                "Remove composite entries from --source_loras or switch to CPU device.");
-        }
-        if (imageGenerationGraphSettings.loraAdapters.size() > 1) {
-            SPDLOG_WARN(
-                "NPU device with multiple LoRA adapters: all {} adapters will be permanently compiled "
-                "with MODE_STATIC. Runtime alias-based switching is not available. "
-                "Consider using a single LoRA adapter for NPU deployment.",
-                imageGenerationGraphSettings.loraAdapters.size());
+                "NPU device with multiple LoRA adapters requires composite definitions to specify "
+                "blend ratios. All adapters are loaded with STATIC mode and runtime switching is unavailable. "
+                "Add composite entries to --source_loras or use a single adapter.");
         }
     }
 

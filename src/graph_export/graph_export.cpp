@@ -509,6 +509,8 @@ node: {
           max_num_inference_steps: )" << graphSettings.maxNumInferenceSteps.value();
     }
 
+    bool targetIsNPU = exportSettings.targetDevice.find("NPU") != std::string::npos;
+
     for (const auto& adapter : graphSettings.loraAdapters) {
         std::string loraPath;
         if (adapter.sourceType == LoraSourceType::LOCAL_FILE) {
@@ -519,8 +521,8 @@ node: {
             loraPath = "loras/" + adapter.alias + "/" + adapter.safetensorsFile;
         }
         oss << R"(
-          lora_adapters { alias: ")" << adapter.alias << R"(" path: ")" << loraPath << R"(")";
-        // Only omit alpha when default (1.0) - let proto handle it
+          lora_adapters { alias: ")" << adapter.alias << R"(" path: ")" << loraPath << R"(" alpha: )" << adapter.alpha;
+        oss << (targetIsNPU ? R"( mode: STATIC)" : R"( mode: DYNAMIC)");
         oss << R"( })";
     }
 

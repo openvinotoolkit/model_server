@@ -61,6 +61,7 @@ public:
         return this->status;
     }
     const std::vector<std::string>& getLoraAliases() const { return loraAliases_; }
+    bool shouldHideBaseModel() const { return hideBaseModel_; }
 
     const PipelineDefinitionStateCode getStateCode() const { return status.getStateCode(); }
     bool isAvailable() const override { return status.isAvailable(); }
@@ -135,6 +136,7 @@ private:
     std::vector<std::string> inputSidePacketNames;
 
     std::vector<std::string> loraAliases_;
+    bool hideBaseModel_ = false;
 
     PythonBackend* pythonBackend;
 

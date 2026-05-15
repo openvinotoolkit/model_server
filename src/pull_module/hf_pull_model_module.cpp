@@ -245,10 +245,20 @@ Status HfPullModelModule::pullLoraAdapters(const std::string& graphDirectory) {
                 return StatusCode::DIRECTORY_NOT_CREATED;
             }
         }
-        status = downloadFileWithCurl(loraUrl, loraFilePath, authTokenHF);
+        auto loraTmpFilePath = loraFilePath + ".tmp";
+        std::error_code ec;
+        std::filesystem::remove(loraTmpFilePath, ec);
+        status = downloadFileWithCurl(loraUrl, loraTmpFilePath, authTokenHF);
         if (!status.ok()) {
             SPDLOG_ERROR("Failed to download LoRA adapter: {} from: {}", adapter.alias, loraUrl);
+            std::filesystem::remove(loraTmpFilePath, ec);
             return status;
+        }
+        std::filesystem::rename(loraTmpFilePath, loraFilePath, ec);
+        if (ec) {
+            SPDLOG_ERROR("Failed to rename LoRA temp file: {} -> {}: {}", loraTmpFilePath, loraFilePath, ec.message());
+            std::filesystem::remove(loraTmpFilePath, ec);
+            return StatusCode::INTERNAL_ERROR;
         }
         std::cout << "LoRA adapter: " << adapter.alias << " downloaded to: " << loraDownloadPath << std::endl;
     }
