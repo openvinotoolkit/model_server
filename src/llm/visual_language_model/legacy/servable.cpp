@@ -14,6 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 
+#include <algorithm>
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -45,6 +46,23 @@
 #include "servable.hpp"
 
 namespace ovms {
+
+static void logVLMPerfMetricsDebug(ov::genai::VLMPerfMetrics& perfMetrics) {
+    constexpr double minPrefillDurationMs = 1e-9;
+    const double prepareEmbeddingsTimeMs = perfMetrics.get_prepare_embeddings_duration().mean;
+    const double ttftMs = perfMetrics.get_ttft().mean;
+    const double prefillDurationMs = std::max(ttftMs - prepareEmbeddingsTimeMs, minPrefillDurationMs);
+    const double prefillSpeedTps = (1000.0 * perfMetrics.get_num_input_tokens()) / prefillDurationMs;
+
+    SPDLOG_LOGGER_DEBUG(
+        llm_calculator_logger,
+        "VLM perf metrics | input_token_count: {} | prepare_embeddings_time_ms: {:.3f} | ttft_ms: {:.3f} | prefill_speed_tps: {:.3f} | image_slice_count: {}",
+        perfMetrics.get_num_input_tokens(),
+        prepareEmbeddingsTimeMs,
+        ttftMs,
+        prefillSpeedTps,
+        perfMetrics.get_image_slice_count());
+}
 
 absl::Status VisualLanguageModelLegacyServable::loadRequest(std::shared_ptr<GenAiServableExecutionContext>& executionContext, const ovms::HttpPayload& payload) {
     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Request body: {}", payload.body);
@@ -196,6 +214,7 @@ absl::Status VisualLanguageModelLegacyServable::prepareCompleteResponse(std::sha
     }
 
     executionContext->response = executionContext->apiHandler->serializeUnaryResponse(legacyExecutionContext->results, completeText);
+    logVLMPerfMetricsDebug(legacyExecutionContext->results.perf_metrics);
     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Complete unary response: {}", executionContext->response);
     return absl::OkStatus();
 }
@@ -256,6 +275,7 @@ absl::Status VisualLanguageModelLegacyServable::preparePartialResponse(std::shar
 
         executionContext->response += wrapTextInServerSideEventMessage("[DONE]");
 
+        logVLMPerfMetricsDebug(legacyExecutionContext->results.perf_metrics);
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Generated complete streaming response: {}", executionContext->response);
         executionContext->sendLoopbackSignal = false;
         return absl::OkStatus();
