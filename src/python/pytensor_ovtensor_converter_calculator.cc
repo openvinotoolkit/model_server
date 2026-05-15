@@ -120,7 +120,13 @@ public:
         const bool pyToOv = (inputTag == OVMS_PY_TENSOR_TAG_NAME && outputTag == OV_TENSOR_TAG_NAME);
         const bool httpToPy = (inputTag == HTTP_REQUEST_TAG_NAME && outputTag == OVMS_PY_TENSOR_TAG_NAME);
         const bool pyToHttp = (inputTag == OVMS_PY_TENSOR_TAG_NAME && outputTag == HTTP_RESPONSE_TAG_NAME);
-        RET_CHECK(ovToPy || pyToOv || httpToPy || pyToHttp);
+        RET_CHECK(ovToPy || pyToOv || httpToPy || pyToHttp)
+            << "PyTensorOvTensorConverterCalculator supports only the following input/output tag pairings: "
+            << OV_TENSOR_TAG_NAME << "->" << OVMS_PY_TENSOR_TAG_NAME << ", "
+            << OVMS_PY_TENSOR_TAG_NAME << "->" << OV_TENSOR_TAG_NAME << ", "
+            << HTTP_REQUEST_TAG_NAME << "->" << OVMS_PY_TENSOR_TAG_NAME << ", "
+            << OVMS_PY_TENSOR_TAG_NAME << "->" << HTTP_RESPONSE_TAG_NAME
+            << ". Received: " << inputTag << "->" << outputTag;
         if (ovToPy) {
             RET_CHECK(cc->Options<PyTensorOvTensorConverterCalculatorOptions>().tag_to_output_tensor_names().count(OVMS_PY_TENSOR_TAG_NAME) > 0);
             if (cc->Options<PyTensorOvTensorConverterCalculatorOptions>().tag_to_output_tensor_names().count(OVMS_PY_TENSOR_TAG_NAME) > 1)
