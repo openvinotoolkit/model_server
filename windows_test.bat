@@ -129,7 +129,7 @@ C:\Windows\System32\tar.exe -a -c -f win_test_log.zip win_full_test.log
 :: Skip expensive parsing only if PASSED summary exists AND no FAILED markers
 grep -a -q "\[  PASSED  \] " win_full_test.log
 set "hasPassed=!errorlevel!"
-grep -a -q "^\[  FAILED  \].*([0-9][0-9]* ms)$" win_full_test.log
+grep -a -q "\[  FAILED  \] " win_full_test.log
 set "hasFailed=!errorlevel!"
 if !hasPassed! equ 0 if !hasFailed! neq 0 (
     echo [INFO] Tests finished with no failures. Check the summary in win_test_summary.log.
