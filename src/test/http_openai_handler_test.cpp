@@ -24,6 +24,8 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include <absl/strings/str_cat.h>
+
 #include "../http_rest_api_handler.hpp"
 #include "../filesystem/filesystem.hpp"
 #include "../llm/apis/openai_completions.hpp"
@@ -684,6 +686,7 @@ protected:
 TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingTextInputCreatesUserChatMessage) {
     std::string json = createTextRequest("What is OpenVINO?");
     auto apiHandler = parseCurrentRequest(json);
+    ASSERT_NE(apiHandler, nullptr);
 
     auto& chatHistory = apiHandler->getChatHistory();
     ASSERT_EQ(chatHistory.size(), 1);
@@ -700,6 +703,7 @@ TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingTextInputCreatesUser
 TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ProcessedJsonContainsEquivalentMessages) {
     std::string json = createTextRequest("What is OpenVINO?");
     auto apiHandler = parseCurrentRequest(json);
+    ASSERT_NE(apiHandler, nullptr);
 
     // For Responses, processedJson is always built from chatHistory.
     // For chat/completions with simple text, processedJson is empty (original body is used instead).
@@ -746,6 +750,7 @@ TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ProcessedJsonEquivalentMult
         ]})";
     }
     auto apiHandler = parseCurrentRequest(json);
+    ASSERT_NE(apiHandler, nullptr);
 
     auto& chatHistory = apiHandler->getChatHistory();
     ASSERT_EQ(chatHistory.size(), 2);
@@ -778,6 +783,7 @@ TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ProcessedJsonEquivalentMult
 TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ProcessedJsonIncludesToolsWhenPresent) {
     std::string json = createToolRequest("\"auto\"");
     auto apiHandler = parseCurrentRequest(json);
+    ASSERT_NE(apiHandler, nullptr);
 
     EXPECT_TRUE(apiHandler->areToolsAvailable());
 
@@ -804,6 +810,7 @@ TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingTokenLimitSetsMaxTok
     std::string tokenField = endpoint() == ovms::Endpoint::RESPONSES ? "max_output_tokens" : "max_completion_tokens";
     std::string json = createTextRequest("valid prompt", ",\"" + tokenField + "\":7");
     auto apiHandler = parseCurrentRequest(json);
+    ASSERT_NE(apiHandler, nullptr);
 
     EXPECT_TRUE(apiHandler->getMaxTokens().has_value());
     EXPECT_EQ(apiHandler->getMaxTokens().value(), 7);
@@ -812,6 +819,7 @@ TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingTokenLimitSetsMaxTok
 TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingFunctionToolsWithAutoChoiceSucceeds) {
     std::string json = createToolRequest("\"auto\"");
     auto apiHandler = parseCurrentRequest(json);
+    ASSERT_NE(apiHandler, nullptr);
 
     EXPECT_TRUE(apiHandler->areToolsAvailable());
     EXPECT_EQ(apiHandler->getToolChoice(), "auto");
@@ -820,6 +828,7 @@ TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingFunctionToolsWithAut
 TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingToolChoiceFunctionObjectSucceeds) {
     std::string json = createToolRequest("{\"type\":\"function\",\"function\":{\"name\":\"get_current_weather\"}}");
     auto apiHandler = parseCurrentRequest(json);
+    ASSERT_NE(apiHandler, nullptr);
 
     EXPECT_TRUE(apiHandler->areToolsAvailable());
     EXPECT_EQ(apiHandler->getToolChoice(), "get_current_weather");
@@ -828,6 +837,7 @@ TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingToolChoiceFunctionOb
 TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingToolChoiceNoneRemovesTools) {
     std::string json = createToolRequest("\"none\"");
     auto apiHandler = parseCurrentRequest(json);
+    ASSERT_NE(apiHandler, nullptr);
 
     EXPECT_FALSE(apiHandler->areToolsAvailable());
     EXPECT_EQ(apiHandler->getToolChoice(), "none");
@@ -837,6 +847,7 @@ TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingMultimodalInputImage
     const std::string base64Image = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAAEElEQVR4nGLK27oAEAAA//8DYAHGgEvy5AAAAABJRU5ErkJggg==";
     std::string json = createMultimodalRequestWithImageUrl(base64Image);
     auto apiHandler = parseCurrentRequest(json);
+    ASSERT_NE(apiHandler, nullptr);
 
     EXPECT_EQ(apiHandler->getImageHistory().size(), 1);
 }
@@ -4417,6 +4428,7 @@ absl::Status tryParseResponses(rapidjson::Document& doc, ov::genai::Tokenizer& t
 void expectResponsesEquivalentToChatCompletions(rapidjson::Document& doc, ov::genai::Tokenizer& tokenizer,
     const std::string& responsesRequest, const std::string& expectedChatCompletions) {
     auto handler = parseResponses(doc, tokenizer, responsesRequest);
+    ASSERT_NE(handler, nullptr);
 
     rapidjson::Document expectedDoc;
     expectedDoc.Parse(expectedChatCompletions.c_str());
@@ -4515,6 +4527,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ResponsesAlreadyNestedToolsAreLeftIntact) {
         }]
     })";
     auto apiHandler = parseResponses(doc, *tokenizer, json);
+    ASSERT_NE(apiHandler, nullptr);
     EXPECT_TRUE(apiHandler->areToolsAvailable());
     ASSERT_TRUE(doc["tools"][0].HasMember("function"));
     EXPECT_STREQ(doc["tools"][0]["function"]["name"].GetString(), "get_weather");

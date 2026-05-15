@@ -444,12 +444,14 @@ public:
         chatHistory.last()["tool_calls"] = rapidJsonValueToJsonContainer(toolCallsArray);
     }
 
-    // Emit an assistant turn that carries only reasoning_content (no content,
-    // no tool_calls). Used when reasoning is not followed by an assistant or
-    // function_call item.
+    // Emit an assistant turn that carries only reasoning_content (no
+    // tool_calls). Used when reasoning is not followed by an assistant or
+    // function_call item. content is set to an empty string so chat templates
+    // that access message.content unconditionally do not raise UndefinedError.
     void emitStandaloneReasoning(const std::string& reasoning) {
         chatHistory.push_back({});
         chatHistory.last()["role"] = "assistant";
+        chatHistory.last()["content"] = "";
         chatHistory.last()["reasoning_content"] = reasoning;
     }
 
@@ -541,11 +543,12 @@ public:
         messagesArray.PushBack(msgObj, alloc);
     }
 
-    // Emit an assistant turn that carries only reasoning_content (no content,
-    // no tool_calls). See ChatHistorySink::emitStandaloneReasoning for rationale.
+    // Emit an assistant turn that carries only reasoning_content (no
+    // tool_calls). See ChatHistorySink::emitStandaloneReasoning for rationale.
     void emitStandaloneReasoning(const std::string& reasoning) {
         rapidjson::Value msgObj(rapidjson::kObjectType);
         msgObj.AddMember("role", rapidjson::Value("assistant", alloc), alloc);
+        msgObj.AddMember("content", rapidjson::Value("", alloc), alloc);
         msgObj.AddMember("reasoning_content", rapidjson::Value(reasoning.c_str(), alloc), alloc);
         messagesArray.PushBack(msgObj, alloc);
     }
@@ -687,11 +690,32 @@ absl::Status OpenAIResponsesHandler::parseResponsesPart(std::optional<uint32_t> 
         // summary field is accepted but ignored
     }
 
+    // logprobs: bool; optional - defaults to false
+    it = doc.FindMember("logprobs");
+    if (it != doc.MemberEnd() && !it->value.IsNull()) {
+        if (!it->value.IsBool())
+            return absl::InvalidArgumentError("logprobs accepts values true or false");
+        request.logprobschat = it->value.GetBool();
+    }
+    if (request.logprobschat && request.stream) {
+        return absl::InvalidArgumentError("logprobs are not supported in streaming mode.");
+    }
+
+    auto toolsStatus = parseTools();
+    if (!toolsStatus.ok()) {
+        return toolsStatus;
+    }
+
 #if (PYTHON_DISABLE == 0)
     // Build processedJson with a "messages" array in chat/completions format so that
     // the Python Jinja template path can consume Responses API input without a separate code path.
     // Handles reasoning, function_call (merged into assistant tool_calls), and
     // function_call_output (converted to role:tool messages).
+    //
+    // Built after parseTools() so any tool filtering (e.g. tool_choice removing
+    // unselected tools) is reflected here, and so parseTools()'s own write to
+    // request.processedJson (Responses-shaped doc with "input") does not
+    // clobber the chat/completions-shaped JSON the Python Jinja path expects.
     {
         Document processedDoc;
         processedDoc.SetObject();
@@ -739,21 +763,6 @@ absl::Status OpenAIResponsesHandler::parseResponsesPart(std::optional<uint32_t> 
         request.processedJson = buffer.GetString();
     }
 #endif
-    // logprobs: bool; optional - defaults to false
-    it = doc.FindMember("logprobs");
-    if (it != doc.MemberEnd() && !it->value.IsNull()) {
-        if (!it->value.IsBool())
-            return absl::InvalidArgumentError("logprobs accepts values true or false");
-        request.logprobschat = it->value.GetBool();
-    }
-    if (request.logprobschat && request.stream) {
-        return absl::InvalidArgumentError("logprobs are not supported in streaming mode.");
-    }
-
-    auto toolsStatus = parseTools();
-    if (!toolsStatus.ok()) {
-        return toolsStatus;
-    }
 
     // max_output_tokens: uint; optional
     // OpenAI Responses API uses this field for output token limit.
