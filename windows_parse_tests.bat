@@ -33,7 +33,7 @@ set "parserOutputTmp=!summaryLog!.parse.tmp"
 set "summaryBackupTmp=!summaryLog!.orig.tmp"
 
 set "CRASH_PATTERN=segmentation fault\|segfault\|abnormal termination\|access violation\|sigsegv\|seh exception\|0xc0000005\|unknown file: error:"
-set "FAILED_TEST_PATTERN=^\[  FAILED  \].*( [0-9][0-9]* ms)$"
+set "FAILED_TEST_PATTERN=^\[  FAILED  \].*([0-9][0-9]* ms)$"
 
 :: Check for per-test FAILED markers first - do not allow PASSED text to mask test failures
 :: Match only timed gtest FAILED lines to avoid duplicates from the final "listed below" section.
@@ -65,7 +65,7 @@ echo.
 echo [ERROR] FAILED TESTS OR CRASHES DETECTED:
 echo.
 echo === Failed Tests ^(from summary/full log^) ===
-grep -a "!FAILED_TEST_PATTERN!" "!fullLog!"
+grep -a "!FAILED_TEST_PATTERN!" "!fullLog!" | awk "!seen[$0]++"
 echo.
 echo === Last Successful Test ===
 grep -a " OK ]" "!fullLog!" | tail -1

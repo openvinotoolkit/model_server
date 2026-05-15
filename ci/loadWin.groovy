@@ -276,11 +276,11 @@ def unit_test(){
         echo "Detected ${passed} passed tests . Check win_test_summary.log for details."
     }
 
-    status = bat(returnStatus: true, script: '@grep -E "^\\[  FAILED  \\].*\\([0-9]+ ms\\)$" win_test_summary.log')
+    status = bat(returnStatus: true, script: '@grep -a -E "^\\[  FAILED  \\].*\([0-9]+ ms\)$" win_full_test.log')
     if (status == 0) {
         hasError = true
-        def failed = bat(returnStatus: false, returnStdout: true, script: '@grep -E "^\\[  FAILED  \\].*\\([0-9]+ ms\\)$" win_test_summary.log | wc -l').trim()
-        def failedTestsList = bat(returnStatus: false, returnStdout: true, script: '@grep -E "^\\[  FAILED  \\].*\\([0-9]+ ms\\)$" win_test_summary.log').trim()
+        def failed = bat(returnStatus: false, returnStdout: true, script: '@grep -a -E "^\\[  FAILED  \\].*\([0-9]+ ms\)$" win_full_test.log | awk "!seen[$0]++" | wc -l').trim()
+        def failedTestsList = bat(returnStatus: false, returnStdout: true, script: '@grep -a -E "^\\[  FAILED  \\].*\([0-9]+ ms\)$" win_full_test.log | awk "!seen[$0]++"').trim()
         errorReasons << "Windows run test failed with ${failed} failed tests. Failed tests:\n${failedTestsList}\nCheck win_test_summary.log for details."
     } else {
         echo "no FAILED tests detected."
