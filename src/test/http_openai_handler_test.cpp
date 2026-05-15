@@ -1715,6 +1715,173 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseForResponsesCompleted
     ASSERT_NE(serialized.find("\"metadata\":{}"), std::string::npos) << serialized;
 }
 
+TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseForResponsesEncodedResultsIncompleteOnLength) {
+    std::string json = R"({
+    "model": "llama",
+    "input": "What is OpenVINO?",
+    "max_output_tokens": 5
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    auto apiHandler = std::make_shared<ovms::OpenAIResponsesHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+
+    ov::genai::EncodedResults results;
+    ov::Tensor outputIds = tokenizer->encode("OVMS", ov::genai::add_special_tokens(false)).input_ids;
+    const auto& shape = outputIds.get_shape();
+    ASSERT_EQ(shape.size(), 2);
+    ASSERT_EQ(shape[0], 1);
+    ASSERT_EQ(outputIds.get_element_type(), ov::element::i64);
+    int64_t* outputIdsData = reinterpret_cast<int64_t*>(outputIds.data());
+    results.tokens = {std::vector<int64_t>(outputIdsData, outputIdsData + shape[1])};
+    results.finish_reasons = {ov::genai::GenerationFinishReason::LENGTH};
+
+    std::string serialized = apiHandler->serializeUnaryResponse(results);
+
+    ASSERT_NE(serialized.find("\"status\":\"incomplete\""), std::string::npos) << serialized;
+    ASSERT_NE(serialized.find("\"incomplete_details\""), std::string::npos) << serialized;
+    ASSERT_NE(serialized.find("\"reason\":\"max_tokens\""), std::string::npos) << serialized;
+    ASSERT_EQ(serialized.find("\"completed_at\""), std::string::npos) << serialized;
+    ASSERT_EQ(serialized.find("\"status\":\"completed\""), std::string::npos) << serialized;
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseForResponsesEncodedResultsCompletedOnStop) {
+    std::string json = R"({
+    "model": "llama",
+    "input": "What is OpenVINO?",
+    "max_output_tokens": 5
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    auto apiHandler = std::make_shared<ovms::OpenAIResponsesHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+
+    ov::genai::EncodedResults results;
+    ov::Tensor outputIds = tokenizer->encode("OVMS", ov::genai::add_special_tokens(false)).input_ids;
+    int64_t* outputIdsData = reinterpret_cast<int64_t*>(outputIds.data());
+    results.tokens = {std::vector<int64_t>(outputIdsData, outputIdsData + outputIds.get_shape()[1])};
+    results.finish_reasons = {ov::genai::GenerationFinishReason::STOP};
+
+    std::string serialized = apiHandler->serializeUnaryResponse(results);
+
+    ASSERT_NE(serialized.find("\"status\":\"completed\""), std::string::npos) << serialized;
+    ASSERT_NE(serialized.find("\"completed_at\""), std::string::npos) << serialized;
+    ASSERT_EQ(serialized.find("\"incomplete_details\""), std::string::npos) << serialized;
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseForResponsesVLMDecodedResultsIncompleteOnLength) {
+    std::string json = R"({
+    "model": "llama",
+    "input": "What is OpenVINO?",
+    "max_output_tokens": 5
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    auto apiHandler = std::make_shared<ovms::OpenAIResponsesHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+
+    ov::genai::VLMDecodedResults results;
+    std::string text = "OVMS";
+    results.texts = {text};
+    results.finish_reasons = {ov::genai::GenerationFinishReason::LENGTH};
+
+    std::string serialized = apiHandler->serializeUnaryResponse(results, text);
+
+    ASSERT_NE(serialized.find("\"status\":\"incomplete\""), std::string::npos) << serialized;
+    ASSERT_NE(serialized.find("\"incomplete_details\""), std::string::npos) << serialized;
+    ASSERT_NE(serialized.find("\"reason\":\"max_tokens\""), std::string::npos) << serialized;
+    ASSERT_EQ(serialized.find("\"completed_at\""), std::string::npos) << serialized;
+    ASSERT_EQ(serialized.find("\"status\":\"completed\""), std::string::npos) << serialized;
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseForResponsesVLMDecodedResultsCompletedOnStop) {
+    std::string json = R"({
+    "model": "llama",
+    "input": "What is OpenVINO?",
+    "max_output_tokens": 5
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    auto apiHandler = std::make_shared<ovms::OpenAIResponsesHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+
+    ov::genai::VLMDecodedResults results;
+    std::string text = "OVMS";
+    results.texts = {text};
+    results.finish_reasons = {ov::genai::GenerationFinishReason::STOP};
+
+    std::string serialized = apiHandler->serializeUnaryResponse(results, text);
+
+    ASSERT_NE(serialized.find("\"status\":\"completed\""), std::string::npos) << serialized;
+    ASSERT_NE(serialized.find("\"completed_at\""), std::string::npos) << serialized;
+    ASSERT_EQ(serialized.find("\"incomplete_details\""), std::string::npos) << serialized;
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseChatCompletionsEncodedResultsLengthFinishReason) {
+    std::string json = R"({
+    "model": "llama",
+    "stream": false,
+    "messages": [{"role": "user", "content": "What is OpenVINO?"}]
+    })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    auto apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    uint32_t maxTokensLimit = 100;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+
+    ov::genai::EncodedResults results;
+    ov::Tensor outputIds = tokenizer->encode("OVMS", ov::genai::add_special_tokens(false)).input_ids;
+    int64_t* outputIdsData = reinterpret_cast<int64_t*>(outputIds.data());
+    results.tokens = {std::vector<int64_t>(outputIdsData, outputIdsData + outputIds.get_shape()[1])};
+    results.finish_reasons = {ov::genai::GenerationFinishReason::LENGTH};
+
+    std::string serialized = apiHandler->serializeUnaryResponse(results);
+    ASSERT_NE(serialized.find("\"finish_reason\":\"length\""), std::string::npos) << serialized;
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseChatCompletionsVLMDecodedResultsLengthFinishReason) {
+    std::string json = R"({
+    "model": "llama",
+    "stream": false,
+    "messages": [{"role": "user", "content": "What is OpenVINO?"}]
+    })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    auto apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    uint32_t maxTokensLimit = 100;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+
+    ov::genai::VLMDecodedResults results;
+    std::string text = "OVMS";
+    results.texts = {text};
+    results.finish_reasons = {ov::genai::GenerationFinishReason::LENGTH};
+
+    std::string serialized = apiHandler->serializeUnaryResponse(results, text);
+    ASSERT_NE(serialized.find("\"finish_reason\":\"length\""), std::string::npos) << serialized;
+}
+
 TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesSucceedsBase64) {
     std::string json = R"({
     "model": "llama",
