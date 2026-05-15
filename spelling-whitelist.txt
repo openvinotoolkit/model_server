@@ -32,6 +32,7 @@ src/test/llm/output_parsers/lfm2_output_parser_test.cpp
 windows_parse_tests.bat:35: seh ==> she
 windows_parse_tests.bat:119: SEH ==> SHE
 windows_parse_tests.bat:123: SEH ==> SHE
+windows_parse_tests.bat:134: SEH ==> SHE
 windows_parse_tests.bat:136: SEH ==> SHE
 windows_parse_tests.bat:141: SEH ==> SHE
 windows_parse_tests.bat:144: SEH ==> SHE
