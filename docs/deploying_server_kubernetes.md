@@ -6,10 +6,10 @@ The recommended deployment method in Kubernetes is via Kserve operator for Kuber
 
 ```
 curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/extras/kserve/kserve-openvino.yaml -O
-sed -i 's/openvino\/model_server:replace/openvino\/model_server:2025.4-py/' kserve-openvino.yaml
+sed -i 's/openvino\/model_server:replace/openvino\/model_server:weekly/' kserve-openvino.yaml
 kubectl apply -f kserve-openvino.yaml
 ```
-Note: Alternatively use the image tag `2025.4` to employ smaller image with support to GPU only or `2025.4-gpu` with support for GPU and CPU.
+Note: Alternatively use the image tag `2026.2` to employ smaller image with support to GPU only or `2025.2-gpu` with support for GPU and CPU.
 
 ## Deploying inference service with a generative model from HuggingFace
 
@@ -23,15 +23,15 @@ spec:
   predictor:
     model:
       runtime: kserve-openvino
+      storageUri: "hf://OpenVINO/Qwen3-8B-int4-ov"
       modelFormat:
         name: huggingface
       args:
-        - --source_model=OpenVINO/Qwen3-8B-int4-ov
-        - --model_repository_path=/tmp
         - --task=text_generation
-        - --enable_prefix_caching=true
-        - --tool_parser=hermes3 
+        - --tool_parser=hermes3
+        - --reasoning_parser=qwen3 
         - --target_device=CPU
+        - --log_level=DEBUG
       resources:
         requests:
           cpu: "16"
@@ -57,6 +57,23 @@ spec:
       storageUri: "s3://bucket_name/model"
 ```
 Note that using s3 or minio bucket requires configuring credentials like described in [KServer documentation](https://kserve.github.io/archive/0.15/modelserving/storage/s3/s3/)
+
+
+## OpenShift AI deployment
+
+OVMS can be used in RedHat OpenShift AI environment to run classic models or generative pipelines. 
+
+
+The latest version can be enabled in Settings > Model resources and operations > Serving runtimes. Add new runtime with [spec](../../extras/openshift_AI/ServingRuntime.yaml)
+
+In first step specify the source models. Below is an example from Hugging Face
+![image1](./openshift1.png)
+
+After configuring the resources for the model, specify runtime parameters for a specific model:
+![image2](./openshift2.png)
+
+Whe the model is running, it can be used in the Workbenches like below:
+![image3](./openshift3.png)
 
 
 ## Deprecation notice about OpenVINO operator
