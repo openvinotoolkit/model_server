@@ -160,8 +160,6 @@ public:
         LOG(INFO) << "PyTensorOvTensorConverterCalculator [Node: " << cc->NodeName() << "] Process start";
         py::gil_scoped_acquire acquire;
         try {
-            PythonBackend pythonBackend;
-
             for (const std::string& tag : cc->Inputs().GetTags()) {
                 if (cc->Inputs().Tag(tag).IsEmpty()) {
                     LOG(INFO) << "PyTensorOvTensorConverterCalculator [Node: " << cc->NodeName() << "] Error occurred during reading inputs. Unexpected empty packet received on input: " << tag;
@@ -181,8 +179,9 @@ public:
                     py::dict result;
                     const std::set<std::string> fieldNames = payload.multipartParser->getAllFieldNames();
                     for (const std::string& fieldName : fieldNames) {
-                        const std::string_view fileContent = payload.multipartParser->getFileContentByFieldName(fieldName);
-                        if (!fileContent.empty()) {
+                        const std::vector<std::string_view> files = payload.multipartParser->getFilesArrayByFieldName(fieldName);
+                        if (!files.empty()) {
+                            const std::string_view fileContent = files.front();
                             py::bytes raw(fileContent.data(), fileContent.size());
                             result[py::str(fieldName)] = numpy.attr("frombuffer")(raw, "dtype"_a = uint8);
                         } else {
@@ -243,6 +242,7 @@ public:
                            << "Undefined precision in input tensor: " << inputTensor.get_element_type();
                 }
 
+                PythonBackend pythonBackend;
                 pythonBackend.createOvmsPyTensor(
                     outputName,
                     const_cast<void*>((const void*)inputTensor.data()),
@@ -255,6 +255,7 @@ public:
             } else {
                 if (*(cc->Inputs().GetTags().begin()) == OVMS_PY_TENSOR_TAG_NAME) {
                     auto& inputTensor = cc->Inputs().Tag(OVMS_PY_TENSOR_TAG_NAME).Get<PyObjectWrapper<py::object>>();
+                    PythonBackend pythonBackend;
                     pythonBackend.validateOvmsPyTensor(inputTensor.getObject());
                     const auto precision = ovmsPrecisionToIE2Precision(fromKfsString(inputTensor.getProperty<std::string>("datatype")));
                     if (precision == ov::element::Type_t::dynamic) {

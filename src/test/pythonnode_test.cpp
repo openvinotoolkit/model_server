@@ -54,31 +54,19 @@
 #pragma GCC diagnostic pop
 #include "opencv2/opencv.hpp"
 
+#include "../http_payload.hpp"
+#include "../http_rest_api_handler.hpp"
 #include "../python/python_backend.hpp"
 #include "c_api_test_utils.hpp"
 #include "constructor_enabled_model_manager.hpp"
 #include "platform_utils.hpp"
+#include "test_http_utils.hpp"
 #include "test_utils.hpp"
 
-#include "../http_payload.hpp"
-#include "../multi_part_parser.hpp"
 #pragma warning(push)
 #pragma warning(disable : 6313)
 #include <rapidjson/document.h>
 #pragma warning(pop)
-
-namespace {
-class LocalMockedMultiPartParser final : public ovms::MultiPartParser {
-public:
-    MOCK_METHOD(bool, parse, (), (override));
-    MOCK_METHOD(bool, hasParseError, (), (const override));
-    MOCK_METHOD(std::vector<std::string>, getArrayFieldByName, (const std::string&), (const override));
-    MOCK_METHOD(std::string, getFieldByName, (const std::string&), (const override));
-    MOCK_METHOD(std::string_view, getFileContentByFieldName, (const std::string&), (const override));
-    MOCK_METHOD(std::vector<std::string_view>, getFilesArrayByFieldName, (const std::string&), (const override));
-    MOCK_METHOD(std::set<std::string>, getAllFieldNames, (), (const, override));
-};
-}  // namespace
 
 namespace py = pybind11;
 using namespace ovms;
@@ -2444,14 +2432,14 @@ TEST_F(PythonFlowTest, ConverterCalculator_HttpMultipartToPyDict) {
 
     // Lifetime of file content must outlive runner.Run() because parser returns string_view.
     static const std::string fileBytes{"\x01\x02\x03\x04\x05", 5};
-    auto parser = std::make_shared<LocalMockedMultiPartParser>();
+    auto parser = std::make_shared<MockedMultiPartParser>();
     EXPECT_CALL(*parser, hasParseError()).WillRepeatedly(::testing::Return(false));
     EXPECT_CALL(*parser, getAllFieldNames())
         .WillRepeatedly(::testing::Return(std::set<std::string>{"file", "model"}));
-    EXPECT_CALL(*parser, getFileContentByFieldName(::testing::Eq("file")))
-        .WillRepeatedly(::testing::Return(std::string_view{fileBytes}));
-    EXPECT_CALL(*parser, getFileContentByFieldName(::testing::Eq("model")))
-        .WillRepeatedly(::testing::Return(std::string_view{}));
+    EXPECT_CALL(*parser, getFilesArrayByFieldName(::testing::Eq("file")))
+        .WillRepeatedly(::testing::Return(std::vector<std::string_view>{std::string_view{fileBytes}}));
+    EXPECT_CALL(*parser, getFilesArrayByFieldName(::testing::Eq("model")))
+        .WillRepeatedly(::testing::Return(std::vector<std::string_view>{}));
     EXPECT_CALL(*parser, getFieldByName(::testing::Eq("model")))
         .WillRepeatedly(::testing::Return(std::string{"my-model"}));
 
@@ -2483,6 +2471,47 @@ TEST_F(PythonFlowTest, ConverterCalculator_HttpMultipartToPyDict) {
     EXPECT_EQ(bytesOut, fileBytes);
 
     EXPECT_EQ(d["model"].cast<std::string>(), "my-model");
+}
+
+TEST_F(PythonFlowTest, ConverterCalculator_HttpMultipartEmptyFileToPyEmptyArray) {
+    std::string testPbtxt = R"(
+        calculator: "PyTensorOvTensorConverterCalculator"
+        name: "conversionNode"
+        input_stream: "HTTP_REQUEST_PAYLOAD:input"
+        output_stream: "OVMS_PY_TENSOR:output"
+    )";
+    mediapipe::CalculatorRunner runner(testPbtxt);
+
+    auto parser = std::make_shared<MockedMultiPartParser>();
+    EXPECT_CALL(*parser, hasParseError()).WillRepeatedly(::testing::Return(false));
+    EXPECT_CALL(*parser, getAllFieldNames())
+        .WillRepeatedly(::testing::Return(std::set<std::string>{"file"}));
+    // File is present in the multipart upload but its content is empty.
+    EXPECT_CALL(*parser, getFilesArrayByFieldName(::testing::Eq("file")))
+        .WillRepeatedly(::testing::Return(std::vector<std::string_view>{std::string_view{}}));
+
+    auto payload = std::make_unique<ovms::HttpPayload>();
+    payload->multipartParser = parser;
+    runner.MutableInputs()->Tag("HTTP_REQUEST_PAYLOAD").packets.push_back(mediapipe::Adopt<ovms::HttpPayload>(payload.release()).At(mediapipe::Timestamp(0)));
+
+    py::gil_scoped_acquire acquire;
+    {
+        py::gil_scoped_release release;
+        auto status = runner.Run();
+        ASSERT_TRUE(status.ok()) << status.code() << " " << status.message();
+    }
+
+    const PyObjectWrapper<py::object>& out =
+        runner.Outputs().Tag("OVMS_PY_TENSOR").packets[0].Get<PyObjectWrapper<py::object>>();
+    const py::object& obj = out.getObject();
+    ASSERT_TRUE(py::isinstance<py::dict>(obj));
+    py::dict d = obj.cast<py::dict>();
+    ASSERT_TRUE(d.contains("file"));
+    py::module_ numpy = py::module_::import("numpy");
+    py::object ndarray = d["file"];
+    ASSERT_TRUE(py::isinstance(ndarray, numpy.attr("ndarray")));
+    EXPECT_EQ(ndarray.attr("dtype").attr("name").cast<std::string>(), "uint8");
+    EXPECT_EQ(ndarray.attr("size").cast<size_t>(), 0u);
 }
 
 TEST_F(PythonFlowTest, ConverterCalculator_PyDictToHttpResponse) {
@@ -2545,6 +2574,36 @@ TEST_F(PythonFlowTest, ConverterCalculator_PyStringToHttpResponse) {
     const std::string& response =
         runner.Outputs().Tag("HTTP_RESPONSE_PAYLOAD").packets[0].Get<std::string>();
     EXPECT_EQ(response, "raw response body");
+}
+
+TEST_F(PythonFlowTest, ConverterCalculator_PyBytesToHttpResponse) {
+    std::string testPbtxt = R"(
+        calculator: "PyTensorOvTensorConverterCalculator"
+        name: "conversionNode"
+        input_stream: "OVMS_PY_TENSOR:input"
+        output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+    )";
+    mediapipe::CalculatorRunner runner(testPbtxt);
+
+    // Binary payload: embedded NUL plus high (non-UTF-8) bytes. Must round-trip byte-for-byte.
+    const std::string expected{"\x00\x01\xff\x80\x7f\x00" "ABC\xfe", 10};
+
+    py::gil_scoped_acquire acquire;
+    {
+        py::object b = py::bytes(expected.data(), expected.size());
+        runner.MutableInputs()->Tag("OVMS_PY_TENSOR").packets.push_back(mediapipe::Adopt<PyObjectWrapper<py::object>>(new PyObjectWrapper<py::object>(b)).At(mediapipe::Timestamp(0)));
+    }
+
+    {
+        py::gil_scoped_release release;
+        auto status = runner.Run();
+        ASSERT_TRUE(status.ok()) << status.code() << " " << status.message();
+    }
+
+    const std::string& response =
+        runner.Outputs().Tag("HTTP_RESPONSE_PAYLOAD").packets[0].Get<std::string>();
+    ASSERT_EQ(response.size(), expected.size());
+    EXPECT_EQ(response, expected);
 }
 
 TEST_F(PythonFlowTest, ConverterCalculator_InvalidTagPairRejected) {
