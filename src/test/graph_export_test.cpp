@@ -1760,3 +1760,79 @@ TEST_F(ImageGenCLILoraParsingWithTempDir, LocalFileWindowsRelativeDotBackslash) 
     EXPECT_THROW(parser.prepare(serverSettings, hfSettings, "test_model"), std::invalid_argument);
 }
 #endif
+
+// ===================== Full Composite LoRA End-to-End CLI Test =====================
+
+TEST(ImageGenCLILoraParsingTest, FullCompositeWithAlphasAndTwoLoras) {
+    // Two individual LoRAs + one composite referencing both with explicit alphas
+    ovms::ServerSettingsImpl serverSettings;
+    serverSettings.serverMode = ovms::HF_PULL_MODE;
+    ovms::HFSettingsImpl hfSettings;
+    hfSettings.sourceLoras = "landscape=civitai/landscapes-lora@Fantastic_Landscape.safetensors,"
+                             "portrait=org/portrait-lora,"
+                             "scenic_blend=@landscape:0.3+@portrait:0.8";
+    ovms::ImageGenerationGraphCLIParser parser;
+    parser.prepare(serverSettings, hfSettings, "sd_model");
+    auto& graphSettings = std::get<ovms::ImageGenerationGraphSettingsImpl>(hfSettings.graphSettings);
+
+    // Verify individual LoRAs
+    ASSERT_EQ(graphSettings.loraAdapters.size(), 2);
+    EXPECT_EQ(graphSettings.loraAdapters[0].alias, "landscape");
+    EXPECT_EQ(graphSettings.loraAdapters[0].sourceLora, "civitai/landscapes-lora");
+    EXPECT_EQ(graphSettings.loraAdapters[0].safetensorsFile, "Fantastic_Landscape.safetensors");
+    EXPECT_EQ(graphSettings.loraAdapters[1].alias, "portrait");
+    EXPECT_EQ(graphSettings.loraAdapters[1].sourceLora, "org/portrait-lora");
+
+    // Verify composite
+    ASSERT_EQ(graphSettings.compositeLoraAdapters.size(), 1);
+    EXPECT_EQ(graphSettings.compositeLoraAdapters[0].alias, "scenic_blend");
+    ASSERT_EQ(graphSettings.compositeLoraAdapters[0].components.size(), 2);
+    EXPECT_EQ(graphSettings.compositeLoraAdapters[0].components[0].adapterAlias, "landscape");
+    EXPECT_FLOAT_EQ(graphSettings.compositeLoraAdapters[0].components[0].alpha, 0.3f);
+    EXPECT_EQ(graphSettings.compositeLoraAdapters[0].components[1].adapterAlias, "portrait");
+    EXPECT_FLOAT_EQ(graphSettings.compositeLoraAdapters[0].components[1].alpha, 0.8f);
+}
+
+const std::string expectedImageGenFullComposite = R"(
+input_stream: "HTTP_REQUEST_PAYLOAD:input"
+output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+
+node: {
+  name: "ImageGenExecutor"
+  calculator: "ImageGenCalculator"
+  input_stream: "HTTP_REQUEST_PAYLOAD:input"
+  input_side_packet: "IMAGE_GEN_NODE_RESOURCES:pipes"
+  output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+  node_options: {
+      [type.googleapis.com / mediapipe.ImageGenCalculatorOptions]: {
+          models_path: "./"
+          device: "CPU"
+          lora_adapters { alias: "landscape" path: "loras/civitai/landscapes-lora/Fantastic_Landscape.safetensors" }
+          lora_adapters { alias: "portrait" path: "loras/org/portrait-lora/weights.safetensors" }
+          composite_lora_adapters {
+            alias: "scenic_blend"
+            components { adapter_alias: "landscape" alpha: 0.3 }
+            components { adapter_alias: "portrait" alpha: 0.8 }
+          }
+      }
+  }
+}
+
+)";
+
+TEST_F(GraphCreationTest, imageGenerationFullCompositeWithAlphas) {
+    ovms::HFSettingsImpl hfSettings;
+    hfSettings.task = ovms::IMAGE_GENERATION_GRAPH;
+    ovms::ImageGenerationGraphSettingsImpl imageGenerationGraphSettings;
+    imageGenerationGraphSettings.loraAdapters.push_back({"landscape", "civitai/landscapes-lora", "Fantastic_Landscape.safetensors", ovms::LoraSourceType::HF_REPO});
+    imageGenerationGraphSettings.loraAdapters.push_back({"portrait", "org/portrait-lora", "weights.safetensors", ovms::LoraSourceType::HF_REPO});
+    imageGenerationGraphSettings.compositeLoraAdapters.push_back({"scenic_blend", {{"landscape", 0.3f}, {"portrait", 0.8f}}});
+    hfSettings.graphSettings = std::move(imageGenerationGraphSettings);
+    std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
+    std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
+    auto status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
+    ASSERT_EQ(status, ovms::StatusCode::OK);
+
+    std::string graphContents = GetFileContents(graphPath);
+    ASSERT_EQ(expectedImageGenFullComposite, removeVersionString(graphContents)) << graphContents;
+}

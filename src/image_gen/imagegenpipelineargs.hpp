@@ -40,10 +40,17 @@ struct StaticReshapeSettingsArgs {
         guidanceScale(guidance) {}
 };
 
+enum class LoraLoadMode {
+    DYNAMIC = 0,  // Apply/remove at inference time (hot-swap between requests)
+    STATIC = 1,   // Compile with fixed alpha (NPU - no runtime switching)
+    FUSE = 2      // Permanently merge into base weights (always active, not selectable)
+};
+
 struct LoraAdapterInfo {
     std::string alias;
     std::string path;  // absolute path to .safetensors file
     float alpha = 1.0f;
+    LoraLoadMode mode = LoraLoadMode::DYNAMIC;
 };
 
 struct ImageGenPipelineArgs {

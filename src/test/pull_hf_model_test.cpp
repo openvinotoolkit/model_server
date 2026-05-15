@@ -36,6 +36,7 @@
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+#include <httplib.h>
 
 #include "src/utils/env_guard.hpp"
 #include "src/test/light_test_utils.hpp"
@@ -1941,4 +1942,222 @@ TEST_F(HfDownloaderPullHfModel, DownloadImageGenModelWithLoRA) {
     std::string graphContents = GetFileContents(graphPath);
     EXPECT_NE(graphContents.find("lora_adapters"), std::string::npos) << "graph.pbtxt should contain lora_adapters";
     EXPECT_NE(graphContents.find("pokemon"), std::string::npos) << "graph.pbtxt should reference pokemon alias";
+}
+
+// ===================== Full Image Generation with Pull + LoRA Integration Test =====================
+// Single test that:
+//   1. Pulls SDXL-int8 model from HuggingFace + 2 LoRA adapters from direct HF URLs
+//   2. Verifies downloaded files and graph.pbtxt
+//   3. Starts serving from the pulled directory (second server launch — no re-download)
+//   4. Makes REST requests: base model, individual LoRA, composite LoRA
+//   5. Saves generated images to disk for manual inspection
+//
+// Model directory persists at: /tmp/ovms_test_sdxl_lora/
+// Output images saved to:     /tmp/ovms_test_sdxl_lora_output/
+//
+// LoRA adapters (all SDXL-compatible, from openvino_notebooks/multilora-image-generation):
+//   - xray: DoctorDiffusion/doctor-diffusion-s-xray-xl-lora / DD-xray-v1.safetensors (weight 0.8)
+//   - chalkboard: Norod78/sdxl-chalkboarddrawing-lora / SDXL_ChalkBoardDrawing_LoRA_r8.safetensors (weight 0.45)
+//   - combo: composite of @xray:0.8+@chalkboard:0.45
+//
+// Additional LoRAs available (commented out, can be swapped in):
+//   - point: alvdansen/the-point / araminta_k_the_point.safetensors (weight 0.6)
+//   - ukiyoe: KappaNeuro/ukiyo-e-art / Ukiyo-e Art.safetensors (weight 0.8)
+//   - vector: DoctorDiffusion/doctor-diffusion-s-controllable-vector-art-xl-lora / DD-vector-v2.safetensors (weight 0.8)
+//
+// Manual reproduction (run inside docker container):
+//   # Pull:
+//   ./bazel-bin/src/ovms --pull --source_model OpenVINO/stable-diffusion-xl-base-1.0-int8-ov --model_repository_path /tmp/ovms_test_sdxl_lora --task image_generation --source_loras "xray=https://huggingface.co/DoctorDiffusion/doctor-diffusion-s-xray-xl-lora/resolve/main/DD-xray-v1.safetensors,chalkboard=https://huggingface.co/Norod78/sdxl-chalkboarddrawing-lora/resolve/main/SDXL_ChalkBoardDrawing_LoRA_r8.safetensors,combo=@xray:0.8+@chalkboard:0.45"
+//
+//   # Serve:
+//   ./bazel-bin/src/ovms --source_model OpenVINO/stable-diffusion-xl-base-1.0-int8-ov --model_repository_path /tmp/ovms_test_sdxl_lora --task image_generation --source_loras "xray=/tmp/ovms_test_sdxl_lora/OpenVINO/stable-diffusion-xl-base-1.0-int8-ov/loras/xray/DD-xray-v1.safetensors,chalkboard=/tmp/ovms_test_sdxl_lora/OpenVINO/stable-diffusion-xl-base-1.0-int8-ov/loras/chalkboard/SDXL_ChalkBoardDrawing_LoRA_r8.safetensors,combo=@xray:0.8+@chalkboard:0.45" --rest_port 8080
+//
+//   # Generate (curl):
+//   curl -s http://localhost:8080/v3/images/generations -H "Content-Type: application/json" -d '{"model":"xray","prompt":"xray a castle on a hill","size":"256x256","num_inference_steps":4}' | python3 -c "import sys,json,base64; d=json.load(sys.stdin); open('/tmp/xray.png','wb').write(base64.b64decode(d['data'][0]['b64_json']))"
+//   curl -s http://localhost:8080/v3/images/generations -H "Content-Type: application/json" -d '{"model":"chalkboard","prompt":"A colorful chalkboard drawing of a castle","size":"256x256","num_inference_steps":4}' | python3 -c "import sys,json,base64; d=json.load(sys.stdin); open('/tmp/chalkboard.png','wb').write(base64.b64decode(d['data'][0]['b64_json']))"
+//   curl -s http://localhost:8080/v3/images/generations -H "Content-Type: application/json" -d '{"model":"combo","prompt":"xray chalkboard castle","size":"256x256","num_inference_steps":4}' | python3 -c "import sys,json,base64; d=json.load(sys.stdin); open('/tmp/combo.png','wb').write(base64.b64decode(d['data'][0]['b64_json']))"
+
+// LoRA direct download URLs
+static const std::string LORA_XRAY_URL = "https://huggingface.co/DoctorDiffusion/doctor-diffusion-s-xray-xl-lora/resolve/main/DD-xray-v1.safetensors";
+static const std::string LORA_CHALKBOARD_URL = "https://huggingface.co/Norod78/sdxl-chalkboarddrawing-lora/resolve/main/SDXL_ChalkBoardDrawing_LoRA_r8.safetensors";
+// static const std::string LORA_POINT_URL = "https://huggingface.co/alvdansen/the-point/resolve/main/araminta_k_the_point.safetensors";
+// static const std::string LORA_UKIYOE_URL = "https://huggingface.co/KappaNeuro/ukiyo-e-art/resolve/main/Ukiyo-e%20Art.safetensors";
+// static const std::string LORA_VECTOR_URL = "https://huggingface.co/DoctorDiffusion/doctor-diffusion-s-controllable-vector-art-xl-lora/resolve/main/DD-vector-v2.safetensors";
+
+static const std::string SDXL_MODEL_NAME = "OpenVINO/stable-diffusion-xl-base-1.0-int8-ov";
+static const std::string SDXL_DOWNLOAD_PATH = "/tmp/ovms_test_sdxl_lora";
+static const std::string SDXL_OUTPUT_PATH = "/tmp/ovms_test_sdxl_lora_output";
+
+// Helper: extract b64_json from response body and save as PNG file
+static void saveGeneratedImage(const std::string& responseBody, const std::string& outputPath) {
+    // Find b64_json value in JSON response
+    std::string marker = "\"b64_json\":\"";
+    auto pos = responseBody.find(marker);
+    if (pos == std::string::npos) return;
+    pos += marker.size();
+    auto endPos = responseBody.find("\"", pos);
+    if (endPos == std::string::npos) return;
+    std::string b64 = responseBody.substr(pos, endPos - pos);
+
+    // Decode base64 — simple decoder for test purposes
+    static const std::string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    std::string decoded;
+    decoded.reserve(b64.size() * 3 / 4);
+    std::vector<int> T(256, -1);
+    for (int i = 0; i < 64; i++) T[chars[i]] = i;
+
+    int val = 0, valb = -8;
+    for (unsigned char c : b64) {
+        if (T[c] == -1) break;
+        val = (val << 6) + T[c];
+        valb += 6;
+        if (valb >= 0) {
+            decoded.push_back(char((val >> valb) & 0xFF));
+            valb -= 8;
+        }
+    }
+
+    std::ofstream out(outputPath, std::ios::binary);
+    out.write(decoded.data(), decoded.size());
+    std::cout << "Saved generated image (" << decoded.size() << " bytes) to: " << outputPath << std::endl;
+}
+
+TEST(HfPullImageGenWithLora, PullServeAndGenerateWithLoras) {
+    SKIP_AND_EXIT_IF_NOT_RUNNING_UNSTABLE();
+
+    ovms::Server& server = ovms::Server::instance();
+    std::unique_ptr<std::thread> t;
+    std::string downloadPath = SDXL_DOWNLOAD_PATH;
+    std::string modelName = SDXL_MODEL_NAME;
+    std::string task = "image_generation";
+
+    // Prepare output directory for generated images
+    std::filesystem::create_directories(SDXL_OUTPUT_PATH);
+
+    // ==================== PART 1: Pull model + LoRAs ====================
+    std::string sourceLoras =
+        "xray=" + LORA_XRAY_URL + ","
+        "chalkboard=" + LORA_CHALKBOARD_URL + ","
+        "combo=@xray:0.8+@chalkboard:0.45";
+    // Alternative LoRAs (swap in as needed):
+    // "point=" + LORA_POINT_URL + ","
+    // "ukiyoe=" + LORA_UKIYOE_URL + ","
+    // "vector=" + LORA_VECTOR_URL + ","
+
+    ::SetUpServerForDownloadWithLoras(t, server, modelName, downloadPath, task, sourceLoras,
+        EXIT_SUCCESS, 8 * SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS);
+
+    // Server exits after pull — join and reset
+    server.setShutdownRequest(1);
+    t->join();
+    t.reset();
+    server.setShutdownRequest(0);
+
+    // Verify model was downloaded
+    std::string modelBasePath = ovms::FileSystem::joinPath({downloadPath, "OpenVINO", "stable-diffusion-xl-base-1.0-int8-ov"});
+    ASSERT_TRUE(std::filesystem::exists(modelBasePath)) << "Model not downloaded to: " << modelBasePath;
+
+    std::string graphPath = ovms::FileSystem::appendSlash(modelBasePath) + "graph.pbtxt";
+    ASSERT_TRUE(std::filesystem::exists(graphPath)) << "graph.pbtxt not found: " << graphPath;
+
+    // Verify graph.pbtxt references all LoRA aliases
+    std::string graphContents = GetFileContents(graphPath);
+    EXPECT_NE(graphContents.find("lora_adapters"), std::string::npos) << "graph.pbtxt should contain lora_adapters";
+    EXPECT_NE(graphContents.find("xray"), std::string::npos) << "graph.pbtxt should reference xray alias";
+    EXPECT_NE(graphContents.find("chalkboard"), std::string::npos) << "graph.pbtxt should reference chalkboard alias";
+    EXPECT_NE(graphContents.find("combo"), std::string::npos) << "graph.pbtxt should reference combo composite alias";
+
+    // Verify LoRA files were downloaded
+    std::string lorasDir = ovms::FileSystem::joinPath({modelBasePath, "loras"});
+    std::string xrayLoraPath = ovms::FileSystem::joinPath({lorasDir, "xray", "DD-xray-v1.safetensors"});
+    std::string chalkboardLoraPath = ovms::FileSystem::joinPath({lorasDir, "chalkboard", "SDXL_ChalkBoardDrawing_LoRA_r8.safetensors"});
+    ASSERT_TRUE(std::filesystem::exists(xrayLoraPath)) << "X-ray LoRA not found at: " << xrayLoraPath;
+    ASSERT_TRUE(std::filesystem::exists(chalkboardLoraPath)) << "Chalkboard LoRA not found at: " << chalkboardLoraPath;
+
+    std::cout << "=== PULL COMPLETE ===" << std::endl;
+    std::cout << "Model path: " << modelBasePath << std::endl;
+    std::cout << "Graph: " << graphPath << std::endl;
+    std::cout << "X-ray LoRA: " << xrayLoraPath << std::endl;
+    std::cout << "Chalkboard LoRA: " << chalkboardLoraPath << std::endl;
+
+    // ==================== PART 2: Serve from pulled directory + generate ====================
+    // Re-configure with local file paths for the second server launch
+    std::string sourceLorasLocal =
+        "xray=" + xrayLoraPath + ","
+        "chalkboard=" + chalkboardLoraPath + ","
+        "combo=@xray:0.8+@chalkboard:0.45";
+
+    std::string restPort = "9233";
+    ::SetUpServerForDownloadAndStartWithLoras(t, server,
+        modelName, downloadPath, task, sourceLorasLocal, restPort, 8 * SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS);
+
+    std::cout << "=== SERVER STARTED === REST port: " << restPort << std::endl;
+
+    auto cli = std::make_unique<httplib::Client>(std::string("http://localhost:") + restPort);
+    cli->set_read_timeout(600);  // SDXL image generation is slow on CPU
+
+    auto healthRes = cli->Get("/v2/health/live");
+    ASSERT_TRUE(healthRes) << "Failed to reach server health endpoint";
+    ASSERT_EQ(healthRes->status, 200) << "Server not healthy";
+
+    // --- Generate: base model ---
+    std::string baseRequestBody = R"({
+        "model": ")" + SDXL_MODEL_NAME + R"(",
+        "prompt": "a simple red circle on white background",
+        "size": "256x256",
+        "num_inference_steps": 4
+    })";
+    auto baseRes = cli->Post("/v3/images/generations", baseRequestBody, "application/json");
+    ASSERT_TRUE(baseRes) << "Base model request failed";
+    ASSERT_EQ(baseRes->status, 200) << "Base model failed: " << baseRes->status << " body: " << baseRes->body.substr(0, 500);
+    EXPECT_NE(baseRes->body.find("\"b64_json\""), std::string::npos);
+    saveGeneratedImage(baseRes->body, SDXL_OUTPUT_PATH + "/base_model.png");
+
+    // --- Generate: X-ray LoRA ---
+    std::string xrayRequestBody = R"({
+        "model": "xray",
+        "prompt": "xray a castle on a hill, detailed architecture",
+        "size": "256x256",
+        "num_inference_steps": 4
+    })";
+    auto xrayRes = cli->Post("/v3/images/generations", xrayRequestBody, "application/json");
+    ASSERT_TRUE(xrayRes) << "X-ray LoRA request failed";
+    ASSERT_EQ(xrayRes->status, 200) << "X-ray failed: " << xrayRes->status << " body: " << xrayRes->body.substr(0, 500);
+    EXPECT_NE(xrayRes->body.find("\"b64_json\""), std::string::npos);
+    saveGeneratedImage(xrayRes->body, SDXL_OUTPUT_PATH + "/xray_lora.png");
+
+    // --- Generate: Chalkboard LoRA ---
+    std::string chalkboardRequestBody = R"({
+        "model": "chalkboard",
+        "prompt": "A colorful chalkboard drawing of a castle on a hill",
+        "size": "256x256",
+        "num_inference_steps": 4
+    })";
+    auto chalkboardRes = cli->Post("/v3/images/generations", chalkboardRequestBody, "application/json");
+    ASSERT_TRUE(chalkboardRes) << "Chalkboard LoRA request failed";
+    ASSERT_EQ(chalkboardRes->status, 200) << "Chalkboard failed: " << chalkboardRes->status << " body: " << chalkboardRes->body.substr(0, 500);
+    EXPECT_NE(chalkboardRes->body.find("\"b64_json\""), std::string::npos);
+    saveGeneratedImage(chalkboardRes->body, SDXL_OUTPUT_PATH + "/chalkboard_lora.png");
+
+    // --- Generate: Composite LoRA (combo = xray:0.8 + chalkboard:0.45) ---
+    std::string comboRequestBody = R"({
+        "model": "combo",
+        "prompt": "xray A colorful chalkboard drawing of a castle on a hill, detailed architecture",
+        "size": "256x256",
+        "num_inference_steps": 4
+    })";
+    auto comboRes = cli->Post("/v3/images/generations", comboRequestBody, "application/json");
+    ASSERT_TRUE(comboRes) << "Composite LoRA request failed";
+    ASSERT_EQ(comboRes->status, 200) << "Composite failed: " << comboRes->status << " body: " << comboRes->body.substr(0, 500);
+    EXPECT_NE(comboRes->body.find("\"b64_json\""), std::string::npos);
+    saveGeneratedImage(comboRes->body, SDXL_OUTPUT_PATH + "/combo_lora.png");
+
+    std::cout << "=== ALL IMAGES GENERATED ===" << std::endl;
+    std::cout << "Output directory: " << SDXL_OUTPUT_PATH << std::endl;
+
+    // Shutdown
+    server.setShutdownRequest(1);
+    t->join();
+    t.reset();
+    server.setShutdownRequest(0);
 }

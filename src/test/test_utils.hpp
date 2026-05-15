@@ -796,6 +796,11 @@ void SetUpServerForDownloadWithLoras(std::unique_ptr<std::thread>& t, ovms::Serv
  *  --source_model OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov  --model_repository_path /models
  */
 void SetUpServerForDownloadAndStart(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& source_model, std::string& download_path, std::string& task, int timeoutSeconds = SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS);
+void SetUpServerForDownloadAndStart(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& source_model, std::string& download_path, std::string& task, std::string& restPort, int timeoutSeconds = SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS);
+/*
+ *  starts loading OVMS on separate thread with LoRA adapters, waits until model is downloaded and serving
+ */
+void SetUpServerForDownloadAndStartWithLoras(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& source_model, std::string& download_path, std::string& task, std::string& source_loras, std::string& restPort, int timeoutSeconds = 4 * SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS);
 /*
  *  starts loading OVMS on separate thread but waits until it is ready
  */

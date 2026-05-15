@@ -263,14 +263,14 @@ public:
                         if (pipe->compositeLoraAdapters.find(payload.modelName) == pipe->compositeLoraAdapters.end()) {
                             return absl::InvalidArgumentError(absl::StrCat(
                                 "Model '", payload.modelName, "' uses NPU with statically fused LoRA adapters. "
-                                "Send requests to the composite LoRA alias name instead."));
+                                                              "Send requests to the composite LoRA alias name instead."));
                         }
                     } else {
                         // Single LoRA NPU: only the individual alias is a valid target
                         if (pipe->loraAdapters.find(payload.modelName) == pipe->loraAdapters.end()) {
                             return absl::InvalidArgumentError(absl::StrCat(
                                 "Model '", payload.modelName, "' uses NPU with statically fused LoRA. "
-                                "Send requests to the LoRA alias name instead."));
+                                                              "Send requests to the LoRA alias name instead."));
                         }
                     }
                 }
@@ -314,14 +314,14 @@ public:
                         if (pipe->compositeLoraAdapters.find(payload.modelName) == pipe->compositeLoraAdapters.end()) {
                             return absl::InvalidArgumentError(absl::StrCat(
                                 "Model '", payload.modelName, "' uses NPU with statically fused LoRA adapters. "
-                                "Send requests to the composite LoRA alias name instead."));
+                                                              "Send requests to the composite LoRA alias name instead."));
                         }
                     } else {
                         // Single LoRA NPU: only the individual alias is a valid target
                         if (pipe->loraAdapters.find(payload.modelName) == pipe->loraAdapters.end()) {
                             return absl::InvalidArgumentError(absl::StrCat(
                                 "Model '", payload.modelName, "' uses NPU with statically fused LoRA. "
-                                "Send requests to the LoRA alias name instead."));
+                                                              "Send requests to the LoRA alias name instead."));
                         }
                     }
                 }

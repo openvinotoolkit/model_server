@@ -2850,6 +2850,7 @@ cc_library(
         "//src/pull_module:hf_pull_model_module",
         "//src:ovms_lib",
         "libovmsstring_utils",
+        "@cpp_httplib//:cpp_httplib",
         "@com_google_googletest//:gtest",
     ],
     local_defines = COMMON_LOCAL_DEFINES,

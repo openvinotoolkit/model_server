@@ -277,6 +277,12 @@ std::variant<Status, ImageGenPipelineArgs> prepareImageGenPipelineArgs(const goo
             info.path = fsLoraPath.generic_string();
         }
         info.alpha = loraEntry.alpha();
+        switch (loraEntry.mode()) {
+        case ::mediapipe::DYNAMIC: info.mode = LoraLoadMode::DYNAMIC; break;
+        case ::mediapipe::STATIC: info.mode = LoraLoadMode::STATIC; break;
+        case ::mediapipe::FUSE: info.mode = LoraLoadMode::FUSE; break;
+        default: info.mode = LoraLoadMode::DYNAMIC; break;
+        }
         args.loraAdapters.push_back(std::move(info));
     }
 

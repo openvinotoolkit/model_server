@@ -51,10 +51,17 @@ message ImageGenCalculatorOptions {
     repeated CompositeLoraAdapterEntry composite_lora_adapters = 13;
 }
 
+enum LoraLoadMode {
+    DYNAMIC = 0;   // Default: apply/remove at inference time (hot-swap between requests)
+    STATIC = 1;    // Compile into model with fixed alpha (NPU - no runtime switching)
+    FUSE = 2;      // Permanently merge into base weights (irreversible, always active)
+}
+
 message LoraAdapterEntry {
     required string alias = 1;
     required string path = 2;
     optional float alpha = 3 [default = 1.0];
+    optional LoraLoadMode mode = 4 [default = DYNAMIC];
 }
 
 message CompositeLoraComponent {

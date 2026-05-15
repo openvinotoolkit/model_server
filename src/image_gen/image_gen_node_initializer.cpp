@@ -73,9 +73,12 @@ public:
             return StatusCode::INTERNAL_ERROR;
         }
         imageGenPipelinesMap.insert(std::pair<std::string, std::shared_ptr<ImageGenerationPipelines>>(nodeName, std::move(servable)));
-        // Register LoRA aliases for routing
+        // Register LoRA aliases for routing (skip FUSE adapters — they're always active, not selectable)
         const auto& args = std::get<ImageGenPipelineArgs>(statusOrArgs);
         for (const auto& adapter : args.loraAdapters) {
+            if (adapter.mode == LoraLoadMode::FUSE) {
+                continue;
+            }
             sidePackets.loraAliases.push_back(adapter.alias);
         }
         for (const auto& [compositeAlias, components] : args.compositeLoraAdapters) {
