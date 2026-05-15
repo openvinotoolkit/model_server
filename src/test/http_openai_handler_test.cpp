@@ -1388,6 +1388,47 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeStreamingChunkForResponsesWithReas
     ASSERT_NE(finalChunk.find("\"type\":\"reasoning\""), std::string::npos) << "Completed response should include reasoning: " << finalChunk;
 }
 
+// Regression test: the Responses streaming path may call serializeStreamingChunk("")
+// before the first token is generated to flush lifecycle events
+// (response.created / response.in_progress). That priming call must NOT feed
+// the empty chunk to the output parser, otherwise the parser advances its
+// processing phase from UNKNOWN to CONTENT on an empty buffer and subsequent
+// reasoning-tag chunks (e.g. <think>...</think>) are misclassified as content.
+TEST_F(HttpOpenAIHandlerParsingTest, serializeStreamingChunkEmptyPrimingDoesNotPoisonReasoningParser) {
+    std::string json = R"({
+    "model": "llama",
+    "input": "Think about this",
+    "stream": true
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    auto apiHandler = std::make_shared<ovms::OpenAIResponsesHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer, "", "qwen3");
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+
+    // Empty priming call: should emit only lifecycle events, never output_text.delta,
+    // and must not move the parser past the reasoning start tag.
+    std::string primingChunk = apiHandler->serializeStreamingChunk("", ov::genai::GenerationFinishReason::NONE);
+    ASSERT_NE(primingChunk.find("\"type\":\"response.created\""), std::string::npos) << primingChunk;
+    ASSERT_NE(primingChunk.find("\"type\":\"response.in_progress\""), std::string::npos) << primingChunk;
+    ASSERT_EQ(primingChunk.find("\"type\":\"response.output_text.delta\""), std::string::npos)
+        << "Empty priming chunk must not produce content delta: " << primingChunk;
+    ASSERT_EQ(primingChunk.find("\"type\":\"response.output_item.added\""), std::string::npos)
+        << "Empty priming chunk must not open an output item: " << primingChunk;
+
+    // Now the parser must still recognise the reasoning start tag and route the
+    // following text to reasoning, not content.
+    apiHandler->serializeStreamingChunk("<think>", ov::genai::GenerationFinishReason::NONE);
+    std::string reasoningChunk = apiHandler->serializeStreamingChunk("hello", ov::genai::GenerationFinishReason::NONE);
+    ASSERT_NE(reasoningChunk.find("\"type\":\"response.reasoning_summary_text.delta\""), std::string::npos)
+        << "Reasoning text must be routed to reasoning_summary_text.delta: " << reasoningChunk;
+    ASSERT_EQ(reasoningChunk.find("\"type\":\"response.output_text.delta\""), std::string::npos)
+        << "Reasoning text must NOT be emitted as output_text.delta: " << reasoningChunk;
+}
+
 TEST_F(HttpOpenAIHandlerParsingTest, serializeStreamingChunkForResponsesWithoutReasoningWorksNormally) {
     std::string json = R"({
     "model": "llama",

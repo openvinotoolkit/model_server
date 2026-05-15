@@ -1537,6 +1537,16 @@ std::string OpenAIResponsesHandler::serializeStreamingChunk(const std::string& c
         events.emplace_back(std::move(inProgressEvent));
     }
 
+    // Lifecycle priming: when the servable invokes serializeStreamingChunk("")
+    // before the first token is generated (Responses-only behavior), we must
+    // only emit lifecycle events and skip the parser. Feeding an empty chunk
+    // into outputParser->parseChunk would advance processingPhase from UNKNOWN
+    // to CONTENT and cause subsequent reasoning-tag chunks to leak into
+    // delta.content.
+    if (chunkResponse.empty() && finishReason == ov::genai::GenerationFinishReason::NONE) {
+        return joinServerSideEvents(events);
+    }
+
     if (outputParser != nullptr) {
         // Use output parser to separate reasoning from content
         std::optional<Document> delta = outputParser->parseChunk(chunkResponse, areToolsAvailable(), finishReason);
