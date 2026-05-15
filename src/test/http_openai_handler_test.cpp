@@ -664,12 +664,19 @@ protected:
 
     std::shared_ptr<ovms::OpenAIApiHandler> parseCurrentRequest(const std::string& json) {
         doc.Parse(json.c_str());
-        EXPECT_FALSE(doc.HasParseError()) << json;
+        if (doc.HasParseError()) {
+            ADD_FAILURE() << "Failed to parse JSON: " << json;
+            return nullptr;
+        }
         std::optional<uint32_t> maxTokensLimit;
         uint32_t bestOfLimit = 0;
         std::optional<uint32_t> maxModelLength;
         auto apiHandler = createHandler(endpoint());
-        EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus()) << json;
+        auto status = apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength);
+        if (!status.ok()) {
+            ADD_FAILURE() << "parseRequest failed: " << status << " for JSON: " << json;
+            return nullptr;
+        }
         return apiHandler;
     }
 };
@@ -3421,6 +3428,29 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingResponsesInputImageUrlInvalidTypeFai
     EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::InvalidArgumentError("input_image.image_url must be a string or object"));
 }
 
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingResponsesUnsupportedContentTypeFails) {
+    std::string json = R"({
+    "model": "llama",
+    "input": [
+      {
+        "role": "user",
+        "content": [
+          {"type": "input_text", "text": "hi"},
+          {"type": "input_audio", "audio": "abc"}
+        ]
+      }
+    ]
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    std::shared_ptr<ovms::OpenAIResponsesHandler> apiHandler =
+        std::make_shared<ovms::OpenAIResponsesHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
+    EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::InvalidArgumentError("unsupported input content item type: input_audio"));
+}
+
 TEST_F(HttpOpenAIHandlerParsingTest, ParsingResponsesUnsupportedToolTypeFails) {
     std::string json = R"({
     "model": "llama",
@@ -4337,13 +4367,20 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParseMessagesRegularMessageHasNoToolFields)
 namespace {
 std::shared_ptr<ovms::OpenAIResponsesHandler> parseResponses(rapidjson::Document& doc, ov::genai::Tokenizer& tokenizer, const std::string& json) {
     doc.Parse(json.c_str());
-    EXPECT_FALSE(doc.HasParseError()) << json;
+    if (doc.HasParseError()) {
+        ADD_FAILURE() << "Failed to parse JSON: " << json;
+        return nullptr;
+    }
     std::optional<uint32_t> maxTokensLimit;
     uint32_t bestOfLimit = 0;
     std::optional<uint32_t> maxModelLength;
     auto apiHandler = std::make_shared<ovms::OpenAIResponsesHandler>(
         doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), tokenizer);
-    EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus()) << json;
+    auto status = apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength);
+    if (!status.ok()) {
+        ADD_FAILURE() << "parseRequest failed: " << status << " for JSON: " << json;
+        return nullptr;
+    }
     return apiHandler;
 }
 
@@ -4351,7 +4388,8 @@ std::shared_ptr<ovms::OpenAIResponsesHandler> parseResponses(rapidjson::Document
 // it is OK, so the caller can verify the failure mode.
 absl::Status tryParseResponses(rapidjson::Document& doc, ov::genai::Tokenizer& tokenizer, const std::string& json) {
     doc.Parse(json.c_str());
-    EXPECT_FALSE(doc.HasParseError()) << json;
+    if (doc.HasParseError())
+        return absl::InvalidArgumentError(absl::StrCat("Failed to parse JSON: ", json));
     std::optional<uint32_t> maxTokensLimit;
     uint32_t bestOfLimit = 0;
     std::optional<uint32_t> maxModelLength;

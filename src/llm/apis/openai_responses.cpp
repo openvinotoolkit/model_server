@@ -217,9 +217,6 @@ static absl::StatusOr<ResponsesInputItemKind> classifyInputItem(const rapidjson:
 //
 // Reasoning items are buffered and attached as `reasoning_content` on the next
 // assistant message (matching the gpt-oss template's expected field).
-// Reasoning that is not followed by an assistant/function_call item is dropped,
-// since emitting a standalone {role:assistant, reasoning_content:...} message
-// with no content/tool_calls would confuse most chat templates.
 //
 // Pending function_call items are merged into the next assistant message as a
 // chat/completions-shaped tool_calls[] array. Without this, the assistant turn
@@ -411,8 +408,7 @@ public:
                 if (!status.ok())
                     return status;
             } else {
-                // Skip unrecognised content item types for forward compatibility.
-                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Skipping unsupported content type: {}", type);
+                return absl::InvalidArgumentError(absl::StrCat("unsupported input content item type: ", type));
             }
         }
         return absl::OkStatus();
