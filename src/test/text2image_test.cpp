@@ -1933,3 +1933,48 @@ TEST(Text2ImageTest, parseLoraAlphasOverrideNegativeAndZeroAlpha) {
     EXPECT_FLOAT_EQ(result["pokemon"], -0.5f);
     EXPECT_FLOAT_EQ(result["anime"], 0.0f);
 }
+
+TEST(Text2ImageTest, validateLoraAlphasRejectedWhenNoDynamicAdapters) {
+    std::unordered_map<std::string, float> loraAlphas = {{"pokemon", 0.5f}};
+    auto status = ovms::validateLoraAlphasAllowed(false, loraAlphas);
+    EXPECT_FALSE(status.ok());
+    EXPECT_EQ(status.code(), absl::StatusCode::kInvalidArgument);
+    EXPECT_THAT(std::string(status.message()), ::testing::HasSubstr("lora_alphas is not supported"));
+}
+
+TEST(Text2ImageTest, validateLoraAlphasAllowedWithDynamicAdapters) {
+    std::unordered_map<std::string, float> loraAlphas = {{"pokemon", 0.5f}};
+    auto status = ovms::validateLoraAlphasAllowed(true, loraAlphas);
+    EXPECT_TRUE(status.ok());
+}
+
+TEST(Text2ImageTest, validateLoraAlphasEmptyPassesWithoutDynamicAdapters) {
+    std::unordered_map<std::string, float> loraAlphas;
+    auto status = ovms::validateLoraAlphasAllowed(false, loraAlphas);
+    EXPECT_TRUE(status.ok());
+}
+
+TEST(Text2ImageTest, getImageGenerationRequestOptionsRejectsLoraAlphasWithoutDynamicAdapters) {
+    rapidjson::Document doc;
+    doc.Parse(R"({
+        "prompt": "test prompt",
+        "model": "pokemon",
+        "lora_alphas": {"pokemon": 0.5}
+    })");
+    auto result = ovms::getImageGenerationRequestOptions(doc, DEFAULTIMAGE_GEN_ARGS, false);
+    ASSERT_TRUE(std::holds_alternative<absl::Status>(result));
+    auto& err = std::get<absl::Status>(result);
+    EXPECT_EQ(err.code(), absl::StatusCode::kInvalidArgument);
+    EXPECT_THAT(std::string(err.message()), ::testing::HasSubstr("lora_alphas is not supported"));
+}
+
+TEST(Text2ImageTest, getImageGenerationRequestOptionsAllowsLoraAlphasWithDynamicAdapters) {
+    rapidjson::Document doc;
+    doc.Parse(R"({
+        "prompt": "test prompt",
+        "model": "pokemon",
+        "lora_alphas": {"pokemon": 0.5}
+    })");
+    auto result = ovms::getImageGenerationRequestOptions(doc, DEFAULTIMAGE_GEN_ARGS, true);
+    ASSERT_TRUE(std::holds_alternative<ov::AnyMap>(result));
+}

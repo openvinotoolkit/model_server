@@ -515,13 +515,21 @@ node: {
         std::string loraPath;
         if (adapter.sourceType == LoraSourceType::LOCAL_FILE) {
             loraPath = adapter.sourceLora;
+        } else if (!adapter.effectiveSafetensorsFile().has_value()) {
+            SPDLOG_ERROR("LoRA adapter '{}': safetensors filename not resolved. "
+                "For HF repos, use @filename syntax (e.g. org/repo@weights.safetensors) or run with --pull to auto-resolve.",
+                adapter.alias);
+            return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
         } else if (adapter.sourceType == LoraSourceType::HF_REPO) {
-            loraPath = "loras/" + adapter.sourceLora + "/" + adapter.safetensorsFile;
+            loraPath = "loras/" + adapter.sourceLora + "/" + adapter.effectiveSafetensorsFile().value();
         } else {  // cURL direct link
-            loraPath = "loras/" + adapter.alias + "/" + adapter.safetensorsFile;
+            loraPath = "loras/" + adapter.alias + "/" + adapter.effectiveSafetensorsFile().value();
         }
         oss << R"(
-          lora_adapters { alias: ")" << adapter.alias << R"(" path: ")" << loraPath << R"(" alpha: )" << adapter.alpha;
+          lora_adapters { alias: ")" << adapter.alias << R"(" path: ")" << loraPath << R"(")";
+        if (adapter.alpha.has_value()) {
+            oss << R"( alpha: )" << adapter.alpha.value();
+        }
         oss << (targetIsNPU ? R"( mode: STATIC)" : R"( mode: DYNAMIC)");
         oss << R"( })";
     }

@@ -46,10 +46,12 @@ enum class LoraLoadMode {
     FUSE = 2      // Permanently merge into base weights (always active, not selectable)
 };
 
+constexpr float DEFAULT_ALPHA = 1.0f;
+
 struct LoraAdapterInfo {
     std::string alias;
     std::string path;  // absolute path to .safetensors file
-    float alpha = 1.0f;
+    float alpha = DEFAULT_ALPHA;
     LoraLoadMode mode = LoraLoadMode::DYNAMIC;
 };
 

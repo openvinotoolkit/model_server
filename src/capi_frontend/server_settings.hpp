@@ -152,10 +152,16 @@ enum class LoraSourceType {
 
 struct LoraAdapterSettings {
     std::string alias;
-    std::string sourceLora;       // HF repo, direct URL, or local file path
-    std::string safetensorsFile;  // resolved filename, empty = auto-detect (HF only)
+    std::string sourceLora;                      // HF repo, direct URL, or local file path
+    std::optional<std::string> safetensorsFile;  // user-specified filename (via @filename, extracted from URL/path)
     LoraSourceType sourceType = LoraSourceType::HF_REPO;
-    float alpha = 1.0f;
+    std::optional<float> alpha;                          // user-specified adapter weight; std::nullopt = use default (1.0)
+    std::optional<std::string> resolvedSafetensorsFile;  // auto-resolved by HF API during pull
+
+    // Returns the effective filename: user-specified takes priority over auto-resolved.
+    const std::optional<std::string>& effectiveSafetensorsFile() const {
+        return safetensorsFile.has_value() ? safetensorsFile : resolvedSafetensorsFile;
+    }
 };
 
 struct CompositeLoraComponent {
@@ -196,7 +202,7 @@ struct HFSettingsImpl {
     std::string sourceModel = "";
     std::optional<std::string> ggufFilename;
     std::string downloadPath = "";
-    std::string sourceLoras = "";  // raw --source_loras value, parsed by image gen CLI parser
+    std::optional<std::string> sourceLoras;
     bool overwriteModels = false;
     ModelDownlaodType downloadType = GIT_CLONE_DOWNLOAD;
     GraphExportType task = UNKNOWN_GRAPH;

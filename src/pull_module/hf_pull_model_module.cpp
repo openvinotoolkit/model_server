@@ -22,7 +22,6 @@
 #include <variant>
 #include <vector>
 
-#include <curl/curl.h>
 #include <nlohmann/json.hpp>
 
 #include "../config.hpp"
@@ -36,7 +35,6 @@
 #include "../module_names.hpp"
 #include "../status.hpp"
 #include "../stringutils.hpp"
-#include "../version.hpp"
 
 namespace ovms {
 const std::string DEFAULT_EMPTY_ENV_VALUE{""};
@@ -127,51 +125,21 @@ Status HfPullModelModule::resolveHfLoraFilenames() {
         if (adapter.sourceType != LoraSourceType::HF_REPO) {
             continue;
         }
-        if (!adapter.safetensorsFile.empty()) {
+        if (adapter.safetensorsFile.has_value()) {
+            continue;
+        }
+        if (adapter.resolvedSafetensorsFile.has_value()) {
             continue;
         }
         // Query HF API to find the .safetensors file in the LoRA repo
         std::string apiUrl = this->GetHfEndpoint() + "api/models/" + adapter.sourceLora;
         SPDLOG_DEBUG("Querying HF API for LoRA adapter files: {}", apiUrl);
-        std::string agentString = std::string(PROJECT_NAME) + "/" + std::string(PROJECT_VERSION);
         std::string responseBody;
-        CURL* curl = curl_easy_init();
-        if (!curl) {
-            SPDLOG_ERROR("Failed to initialize cURL for HF API query");
-            return StatusCode::INTERNAL_ERROR;
-        }
-        auto handleGuard = std::unique_ptr<CURL, decltype(&curl_easy_cleanup)>(curl, curl_easy_cleanup);
-        auto writeCallback = +[](void* buffer, size_t size, size_t nmemb, void* userData) -> size_t {
-            auto* body = static_cast<std::string*>(userData);
-            body->append(static_cast<char*>(buffer), size * nmemb);
-            return size * nmemb;
-        };
-        curl_easy_setopt(curl, CURLOPT_URL, apiUrl.c_str());
-        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeCallback);
-        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &responseBody);
-        curl_easy_setopt(curl, CURLOPT_USERAGENT, agentString.c_str());
-        curl_easy_setopt(curl, CURLOPT_SSL_OPTIONS, CURLSSLOPT_NATIVE_CA);
-        curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
         std::string hfToken = this->GetHfToken();
-        struct curl_slist* headers = nullptr;
-        if (!hfToken.empty()) {
-            std::string authHeader = "Authorization: Bearer " + hfToken;
-            headers = curl_slist_append(headers, authHeader.c_str());
-            curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
-        }
-        CURLcode res = curl_easy_perform(curl);
-        if (headers) {
-            curl_slist_free_all(headers);
-        }
-        if (res != CURLE_OK) {
-            SPDLOG_ERROR("cURL error querying HF API for LoRA {}: {}", adapter.sourceLora, curl_easy_strerror(res));
-            return StatusCode::INTERNAL_ERROR;
-        }
-        int32_t httpCode = 0;
-        curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpCode);
-        if (httpCode != 200) {
-            SPDLOG_ERROR("HF API returned HTTP {} for LoRA adapter: {}", httpCode, adapter.sourceLora);
-            return StatusCode::PATH_INVALID;
+        auto status = fetchUrlToString(apiUrl, hfToken, responseBody);
+        if (!status.ok()) {
+            SPDLOG_ERROR("Failed to query HF API for LoRA adapter: {}", adapter.sourceLora);
+            return status;
         }
         // Parse JSON response to find .safetensors files in siblings array
         // Example: { "siblings": [{"rfilename": "file1.safetensors"}, ...] }
@@ -196,8 +164,8 @@ Status HfPullModelModule::resolveHfLoraFilenames() {
                 SPDLOG_ERROR("Multiple .safetensors files found for LoRA adapter: {}. Use @filename to specify.", adapter.sourceLora);
                 return StatusCode::PATH_INVALID;
             }
-            adapter.safetensorsFile = safetensorsFiles[0];
-            SPDLOG_DEBUG("Resolved LoRA safetensors file for {}: {}", adapter.sourceLora, adapter.safetensorsFile);
+            adapter.resolvedSafetensorsFile = safetensorsFiles[0];
+            SPDLOG_DEBUG("Resolved LoRA safetensors file for {}: {}", adapter.sourceLora, adapter.resolvedSafetensorsFile.value());
         } catch (const nlohmann::json::exception& e) {
             SPDLOG_ERROR("Failed to parse HF API JSON response for LoRA adapter {}: {}", adapter.sourceLora, e.what());
             return StatusCode::INTERNAL_ERROR;
@@ -225,7 +193,7 @@ Status HfPullModelModule::pullLoraAdapters(const std::string& graphDirectory) {
         std::string authTokenHF;
         if (adapter.sourceType == LoraSourceType::HF_REPO) {
             loraDownloadPath = FileSystem::joinPath({graphDirectory, "loras", adapter.sourceLora});
-            loraUrl = this->GetHfEndpoint() + adapter.sourceLora + "/resolve/main/" + adapter.safetensorsFile;
+            loraUrl = this->GetHfEndpoint() + adapter.sourceLora + "/resolve/main/" + adapter.effectiveSafetensorsFile().value();
             authTokenHF = this->GetHfToken();
         } else if (adapter.sourceType == LoraSourceType::DIRECT_URL) {
             loraDownloadPath = FileSystem::joinPath({graphDirectory, "loras", adapter.alias});
@@ -234,7 +202,7 @@ Status HfPullModelModule::pullLoraAdapters(const std::string& graphDirectory) {
             SPDLOG_ERROR("Unknown LoRA source type for adapter: {}", adapter.alias);
             return StatusCode::INTERNAL_ERROR;
         }
-        auto loraFilePath = FileSystem::joinPath({loraDownloadPath, adapter.safetensorsFile});
+        auto loraFilePath = FileSystem::joinPath({loraDownloadPath, adapter.effectiveSafetensorsFile().value()});
         if (!this->hfSettings.overwriteModels && std::filesystem::exists(loraFilePath)) {
             std::cout << "LoRA adapter: " << adapter.alias << " already exists, skipping download." << std::endl;
             continue;

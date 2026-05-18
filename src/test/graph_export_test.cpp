@@ -1199,7 +1199,7 @@ node: {
       [type.googleapis.com / mediapipe.ImageGenCalculatorOptions]: {
           models_path: "./"
           device: "CPU"
-          lora_adapters { alias: "pokemon" path: "loras/juliensimon/sd-pokemon-lora/pytorch_lora_weights.safetensors" alpha: 1 mode: DYNAMIC }
+          lora_adapters { alias: "pokemon" path: "loras/juliensimon/sd-pokemon-lora/pytorch_lora_weights.safetensors" mode: DYNAMIC }
       }
   }
 }
@@ -1221,8 +1221,8 @@ node: {
           models_path: "./"
           device: "GPU"
           max_resolution: "1024x1024"
-          lora_adapters { alias: "pokemon" path: "loras/juliensimon/sd-pokemon-lora/model.safetensors" alpha: 1 mode: DYNAMIC }
-          lora_adapters { alias: "anime-style" path: "loras/org2/anime-lora/weights.safetensors" alpha: 1 mode: DYNAMIC }
+          lora_adapters { alias: "pokemon" path: "loras/juliensimon/sd-pokemon-lora/model.safetensors" mode: DYNAMIC }
+          lora_adapters { alias: "anime-style" path: "loras/org2/anime-lora/weights.safetensors" mode: DYNAMIC }
       }
   }
 }
@@ -1289,7 +1289,7 @@ TEST(ImageGenCLILoraParsingTest, SingleLoraWithAlias) {
     ASSERT_EQ(graphSettings.loraAdapters.size(), 1);
     EXPECT_EQ(graphSettings.loraAdapters[0].alias, "pokemon");
     EXPECT_EQ(graphSettings.loraAdapters[0].sourceLora, "juliensimon/sd-pokemon-lora");
-    EXPECT_TRUE(graphSettings.loraAdapters[0].safetensorsFile.empty());
+    EXPECT_FALSE(graphSettings.loraAdapters[0].safetensorsFile.has_value());
 }
 
 TEST(ImageGenCLILoraParsingTest, MissingAliasThrows) {
@@ -1312,7 +1312,7 @@ TEST(ImageGenCLILoraParsingTest, SingleLoraWithAliasAndFilename) {
     ASSERT_EQ(graphSettings.loraAdapters.size(), 1);
     EXPECT_EQ(graphSettings.loraAdapters[0].alias, "pokemon");
     EXPECT_EQ(graphSettings.loraAdapters[0].sourceLora, "juliensimon/sd-pokemon-lora");
-    EXPECT_EQ(graphSettings.loraAdapters[0].safetensorsFile, "custom_lora.safetensors");
+    EXPECT_EQ(graphSettings.loraAdapters[0].safetensorsFile.value(), "custom_lora.safetensors");
 }
 
 TEST(ImageGenCLILoraParsingTest, MultipleLoras) {
@@ -1326,10 +1326,10 @@ TEST(ImageGenCLILoraParsingTest, MultipleLoras) {
     ASSERT_EQ(graphSettings.loraAdapters.size(), 2);
     EXPECT_EQ(graphSettings.loraAdapters[0].alias, "pokemon");
     EXPECT_EQ(graphSettings.loraAdapters[0].sourceLora, "org1/repo1");
-    EXPECT_TRUE(graphSettings.loraAdapters[0].safetensorsFile.empty());
+    EXPECT_FALSE(graphSettings.loraAdapters[0].safetensorsFile.has_value());
     EXPECT_EQ(graphSettings.loraAdapters[1].alias, "anime");
     EXPECT_EQ(graphSettings.loraAdapters[1].sourceLora, "org2/repo2");
-    EXPECT_EQ(graphSettings.loraAdapters[1].safetensorsFile, "weights.safetensors");
+    EXPECT_EQ(graphSettings.loraAdapters[1].safetensorsFile.value(), "weights.safetensors");
 }
 
 TEST(ImageGenCLILoraParsingTest, EmptySourceLorasProducesNoAdapters) {
@@ -1383,7 +1383,7 @@ TEST(ImageGenCLILoraParsingTest, DirectUrlWithAlias) {
     ASSERT_EQ(graphSettings.loraAdapters.size(), 1);
     EXPECT_EQ(graphSettings.loraAdapters[0].alias, "pokemon");
     EXPECT_EQ(graphSettings.loraAdapters[0].sourceLora, "https://huggingface.co/juliensimon/sd-pokemon-lora/resolve/main/pytorch_lora_weights.safetensors");
-    EXPECT_EQ(graphSettings.loraAdapters[0].safetensorsFile, "pytorch_lora_weights.safetensors");
+    EXPECT_EQ(graphSettings.loraAdapters[0].safetensorsFile.value(), "pytorch_lora_weights.safetensors");
     EXPECT_EQ(graphSettings.loraAdapters[0].sourceType, ovms::LoraSourceType::DIRECT_URL);
 }
 
@@ -1397,7 +1397,7 @@ TEST(ImageGenCLILoraParsingTest, DirectUrlHttpWithAlias) {
     auto& graphSettings = std::get<ovms::ImageGenerationGraphSettingsImpl>(hfSettings.graphSettings);
     ASSERT_EQ(graphSettings.loraAdapters.size(), 1);
     EXPECT_EQ(graphSettings.loraAdapters[0].sourceType, ovms::LoraSourceType::DIRECT_URL);
-    EXPECT_EQ(graphSettings.loraAdapters[0].safetensorsFile, "weights.safetensors");
+    EXPECT_EQ(graphSettings.loraAdapters[0].safetensorsFile.value(), "weights.safetensors");
 }
 
 TEST(ImageGenCLILoraParsingTest, DirectUrlMissingAliasThrows) {
@@ -1436,7 +1436,7 @@ TEST_F(ImageGenCLILoraParsingWithTempDir, LocalFileWithAlias) {
     ASSERT_EQ(graphSettings.loraAdapters.size(), 1);
     EXPECT_EQ(graphSettings.loraAdapters[0].alias, "pokemon");
     EXPECT_EQ(graphSettings.loraAdapters[0].sourceLora, tmpFile);
-    EXPECT_EQ(graphSettings.loraAdapters[0].safetensorsFile, "test_weights.safetensors");
+    EXPECT_EQ(graphSettings.loraAdapters[0].safetensorsFile.value(), "test_weights.safetensors");
     EXPECT_EQ(graphSettings.loraAdapters[0].sourceType, ovms::LoraSourceType::LOCAL_FILE);
 }
 
@@ -1458,10 +1458,10 @@ TEST_F(ImageGenCLILoraParsingWithTempDir, MixedSourceTypes) {
     EXPECT_EQ(graphSettings.loraAdapters[0].alias, "hf");
     EXPECT_EQ(graphSettings.loraAdapters[1].sourceType, ovms::LoraSourceType::DIRECT_URL);
     EXPECT_EQ(graphSettings.loraAdapters[1].alias, "url");
-    EXPECT_EQ(graphSettings.loraAdapters[1].safetensorsFile, "remote.safetensors");
+    EXPECT_EQ(graphSettings.loraAdapters[1].safetensorsFile.value(), "remote.safetensors");
     EXPECT_EQ(graphSettings.loraAdapters[2].sourceType, ovms::LoraSourceType::LOCAL_FILE);
     EXPECT_EQ(graphSettings.loraAdapters[2].alias, "local");
-    EXPECT_EQ(graphSettings.loraAdapters[2].safetensorsFile, "local.safetensors");
+    EXPECT_EQ(graphSettings.loraAdapters[2].safetensorsFile.value(), "local.safetensors");
 }
 
 TEST(ImageGenCLILoraParsingTest, LocalFileMissingAliasThrows) {
@@ -1507,7 +1507,7 @@ node: {
       [type.googleapis.com / mediapipe.ImageGenCalculatorOptions]: {
           models_path: "./"
           device: "CPU"
-          lora_adapters { alias: "pokemon" path: "loras/pokemon/pytorch_lora_weights.safetensors" alpha: 1 mode: DYNAMIC }
+          lora_adapters { alias: "pokemon" path: "loras/pokemon/pytorch_lora_weights.safetensors" mode: DYNAMIC }
       }
   }
 }
@@ -1543,7 +1543,7 @@ node: {
       [type.googleapis.com / mediapipe.ImageGenCalculatorOptions]: {
           models_path: "./"
           device: "CPU"
-          lora_adapters { alias: "pokemon" path: "/path/to/weights.safetensors" alpha: 1 mode: DYNAMIC }
+          lora_adapters { alias: "pokemon" path: "/path/to/weights.safetensors" mode: DYNAMIC }
       }
   }
 }
@@ -1563,6 +1563,18 @@ TEST_F(GraphCreationTest, imageGenerationWithLocalLora) {
 
     std::string graphContents = GetFileContents(graphPath);
     ASSERT_EQ(expectedImageGenWithLocalLora, removeVersionString(graphContents)) << graphContents;
+}
+
+TEST_F(GraphCreationTest, imageGenerationHfRepoLoraWithoutFilenameReturnsError) {
+    ovms::HFSettingsImpl hfSettings;
+    hfSettings.task = ovms::IMAGE_GENERATION_GRAPH;
+    ovms::ImageGenerationGraphSettingsImpl imageGenerationGraphSettings;
+    // HF_REPO adapter without @filename and without pull — safetensorsFile is nullopt
+    imageGenerationGraphSettings.loraAdapters.push_back({"pokemon", "juliensimon/sd-pokemon-lora", std::nullopt, ovms::LoraSourceType::HF_REPO});
+    hfSettings.graphSettings = std::move(imageGenerationGraphSettings);
+    std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
+    auto status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
+    ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID);
 }
 
 // ===================== Composite LoRA Tests =====================
@@ -1629,7 +1641,8 @@ TEST(ImageGenCLILoraParsingTest, SingleLoraWithAlpha) {
     ASSERT_EQ(graphSettings.loraAdapters.size(), 1);
     EXPECT_EQ(graphSettings.loraAdapters[0].alias, "pokemon");
     EXPECT_EQ(graphSettings.loraAdapters[0].sourceLora, "org/pokemon-lora");
-    EXPECT_FLOAT_EQ(graphSettings.loraAdapters[0].alpha, 0.75f);
+    ASSERT_TRUE(graphSettings.loraAdapters[0].alpha.has_value());
+    EXPECT_FLOAT_EQ(graphSettings.loraAdapters[0].alpha.value(), 0.75f);
 }
 
 TEST(ImageGenCLILoraParsingTest, SingleLoraWithAlphaOne) {
@@ -1641,7 +1654,8 @@ TEST(ImageGenCLILoraParsingTest, SingleLoraWithAlphaOne) {
     parser.prepare(serverSettings, hfSettings, "test_model");
     auto& graphSettings = std::get<ovms::ImageGenerationGraphSettingsImpl>(hfSettings.graphSettings);
     ASSERT_EQ(graphSettings.loraAdapters.size(), 1);
-    EXPECT_FLOAT_EQ(graphSettings.loraAdapters[0].alpha, 1.0f);
+    ASSERT_TRUE(graphSettings.loraAdapters[0].alpha.has_value());
+    EXPECT_FLOAT_EQ(graphSettings.loraAdapters[0].alpha.value(), 1.0f);
 }
 
 TEST(ImageGenCLILoraParsingTest, InvalidAlphaThrows) {
@@ -1690,7 +1704,8 @@ TEST(ImageGenCLILoraParsingTest, UrlLoraWithAlpha) {
     auto& graphSettings = std::get<ovms::ImageGenerationGraphSettingsImpl>(hfSettings.graphSettings);
     ASSERT_EQ(graphSettings.loraAdapters.size(), 1);
     EXPECT_EQ(graphSettings.loraAdapters[0].sourceLora, "https://huggingface.co/org/repo/resolve/main/weights.safetensors");
-    EXPECT_FLOAT_EQ(graphSettings.loraAdapters[0].alpha, 0.5f);
+    ASSERT_TRUE(graphSettings.loraAdapters[0].alpha.has_value());
+    EXPECT_FLOAT_EQ(graphSettings.loraAdapters[0].alpha.value(), 0.5f);
 }
 
 TEST(ImageGenCLILoraParsingTest, UrlLoraWithoutAlphaPreservesDefault) {
@@ -1703,7 +1718,7 @@ TEST(ImageGenCLILoraParsingTest, UrlLoraWithoutAlphaPreservesDefault) {
     auto& graphSettings = std::get<ovms::ImageGenerationGraphSettingsImpl>(hfSettings.graphSettings);
     ASSERT_EQ(graphSettings.loraAdapters.size(), 1);
     EXPECT_EQ(graphSettings.loraAdapters[0].sourceLora, "https://huggingface.co/org/repo/resolve/main/weights.safetensors");
-    EXPECT_FLOAT_EQ(graphSettings.loraAdapters[0].alpha, 1.0f);
+    EXPECT_FALSE(graphSettings.loraAdapters[0].alpha.has_value());
 }
 
 TEST(ImageGenCLILoraParsingTest, NPURejectsMultiLoraWithoutComposites) {
@@ -1740,8 +1755,8 @@ node: {
       [type.googleapis.com / mediapipe.ImageGenCalculatorOptions]: {
           models_path: "./"
           device: "CPU"
-          lora_adapters { alias: "pokemon" path: "loras/org/pokemon-lora/weights.safetensors" alpha: 1 mode: DYNAMIC }
-          lora_adapters { alias: "anime" path: "loras/org/anime-lora/weights.safetensors" alpha: 1 mode: DYNAMIC }
+          lora_adapters { alias: "pokemon" path: "loras/org/pokemon-lora/weights.safetensors" mode: DYNAMIC }
+          lora_adapters { alias: "anime" path: "loras/org/anime-lora/weights.safetensors" mode: DYNAMIC }
           composite_lora_adapters {
             alias: "blend"
             components { adapter_alias: "pokemon" alpha: 0.7 }
@@ -1828,7 +1843,7 @@ TEST_F(ImageGenCLILoraParsingWithTempDir, LocalFileAbsoluteUnixPath) {
     auto& graphSettings = std::get<ovms::ImageGenerationGraphSettingsImpl>(hfSettings.graphSettings);
     ASSERT_EQ(graphSettings.loraAdapters.size(), 1);
     EXPECT_EQ(graphSettings.loraAdapters[0].sourceType, ovms::LoraSourceType::LOCAL_FILE);
-    EXPECT_EQ(graphSettings.loraAdapters[0].safetensorsFile, "model.safetensors");
+    EXPECT_EQ(graphSettings.loraAdapters[0].safetensorsFile.value(), "model.safetensors");
 }
 
 #ifdef _WIN32
@@ -1885,8 +1900,9 @@ TEST_F(ImageGenCLILoraParsingWithTempDir, LocalFileWindowsAbsolutePathWithAlpha)
     auto& graphSettings = std::get<ovms::ImageGenerationGraphSettingsImpl>(hfSettings.graphSettings);
     ASSERT_EQ(graphSettings.loraAdapters.size(), 1);
     EXPECT_EQ(graphSettings.loraAdapters[0].sourceType, ovms::LoraSourceType::LOCAL_FILE);
-    EXPECT_EQ(graphSettings.loraAdapters[0].safetensorsFile, "model.safetensors");
-    EXPECT_FLOAT_EQ(graphSettings.loraAdapters[0].alpha, 0.6f);
+    EXPECT_EQ(graphSettings.loraAdapters[0].safetensorsFile.value(), "model.safetensors");
+    ASSERT_TRUE(graphSettings.loraAdapters[0].alpha.has_value());
+    EXPECT_FLOAT_EQ(graphSettings.loraAdapters[0].alpha.value(), 0.6f);
 }
 #endif
 
@@ -1908,7 +1924,7 @@ TEST(ImageGenCLILoraParsingTest, FullCompositeWithAlphasAndTwoLoras) {
     ASSERT_EQ(graphSettings.loraAdapters.size(), 2);
     EXPECT_EQ(graphSettings.loraAdapters[0].alias, "landscape");
     EXPECT_EQ(graphSettings.loraAdapters[0].sourceLora, "civitai/landscapes-lora");
-    EXPECT_EQ(graphSettings.loraAdapters[0].safetensorsFile, "Fantastic_Landscape.safetensors");
+    EXPECT_EQ(graphSettings.loraAdapters[0].safetensorsFile.value(), "Fantastic_Landscape.safetensors");
     EXPECT_EQ(graphSettings.loraAdapters[1].alias, "portrait");
     EXPECT_EQ(graphSettings.loraAdapters[1].sourceLora, "org/portrait-lora");
 
@@ -1936,8 +1952,8 @@ node: {
       [type.googleapis.com / mediapipe.ImageGenCalculatorOptions]: {
           models_path: "./"
           device: "CPU"
-          lora_adapters { alias: "landscape" path: "loras/civitai/landscapes-lora/Fantastic_Landscape.safetensors" alpha: 1 mode: DYNAMIC }
-          lora_adapters { alias: "portrait" path: "loras/org/portrait-lora/weights.safetensors" alpha: 1 mode: DYNAMIC }
+          lora_adapters { alias: "landscape" path: "loras/civitai/landscapes-lora/Fantastic_Landscape.safetensors" mode: DYNAMIC }
+          lora_adapters { alias: "portrait" path: "loras/org/portrait-lora/weights.safetensors" mode: DYNAMIC }
           composite_lora_adapters {
             alias: "scenic_blend"
             components { adapter_alias: "landscape" alpha: 0.3 }

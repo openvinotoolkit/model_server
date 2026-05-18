@@ -1839,7 +1839,6 @@ TEST_F(HfPullModelModuleLoraTest, ResolveHfLoraFilenames) {
     ovms::LoraAdapterSettings adapter;
     adapter.alias = "pokemon";
     adapter.sourceLora = "juliensimon/sd-pokemon-lora";
-    adapter.safetensorsFile = "";
     adapter.sourceType = ovms::LoraSourceType::HF_REPO;
     graphSettings.loraAdapters.push_back(adapter);
     settings.graphSettings = graphSettings;
@@ -1849,7 +1848,9 @@ TEST_F(HfPullModelModuleLoraTest, ResolveHfLoraFilenames) {
 
     const auto& resolved = std::get<ovms::ImageGenerationGraphSettingsImpl>(settings.graphSettings);
     ASSERT_EQ(resolved.loraAdapters.size(), 1);
-    EXPECT_EQ(resolved.loraAdapters[0].safetensorsFile, "pytorch_lora_weights.safetensors");
+    EXPECT_FALSE(resolved.loraAdapters[0].safetensorsFile.has_value());
+    EXPECT_EQ(resolved.loraAdapters[0].resolvedSafetensorsFile.value(), "pytorch_lora_weights.safetensors");
+    EXPECT_EQ(resolved.loraAdapters[0].effectiveSafetensorsFile().value(), "pytorch_lora_weights.safetensors");
 }
 
 TEST_F(HfPullModelModuleLoraTest, PullLoraAdaptersFromHfRepo) {
@@ -1976,6 +1977,7 @@ TEST_F(HfDownloaderPullHfModel, DownloadImageGenModelWithLoRA) {
 //   curl -s http://localhost:8080/v3/images/generations -H "Content-Type: application/json" -d '{"model":"xray","prompt":"xray a castle on a hill","size":"256x256","num_inference_steps":4}' | python3 -c "import sys,json,base64; d=json.load(sys.stdin); open('/tmp/xray.png','wb').write(base64.b64decode(d['data'][0]['b64_json']))"
 //   curl -s http://localhost:8080/v3/images/generations -H "Content-Type: application/json" -d '{"model":"chalkboard","prompt":"A colorful chalkboard drawing of a castle","size":"256x256","num_inference_steps":4}' | python3 -c "import sys,json,base64; d=json.load(sys.stdin); open('/tmp/chalkboard.png','wb').write(base64.b64decode(d['data'][0]['b64_json']))"
 //   curl -s http://localhost:8080/v3/images/generations -H "Content-Type: application/json" -d '{"model":"combo","prompt":"xray chalkboard castle","size":"256x256","num_inference_steps":4}' | python3 -c "import sys,json,base64; d=json.load(sys.stdin); open('/tmp/combo.png','wb').write(base64.b64decode(d['data'][0]['b64_json']))"
+#ifndef _WIN32
 
 // LoRA direct download URLs
 static const std::string LORA_XRAY_URL = "https://huggingface.co/DoctorDiffusion/doctor-diffusion-s-xray-xl-lora/resolve/main/DD-xray-v1.safetensors";
@@ -2168,3 +2170,4 @@ TEST(HfPullImageGenWithLora, PullServeAndGenerateWithLoras) {
     t.reset();
     server.setShutdownRequest(0);
 }
+#endif  // !_WIN32

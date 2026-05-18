@@ -1851,11 +1851,11 @@ TEST(OvmsGraphConfigTest, positiveImageGenerationWithSourceLoras) {
     ASSERT_EQ(imageGenerationGraphSettings.loraAdapters.size(), 2);
     ASSERT_EQ(imageGenerationGraphSettings.loraAdapters[0].alias, "pokemon");
     ASSERT_EQ(imageGenerationGraphSettings.loraAdapters[0].sourceLora, "juliensimon/sd-pokemon-lora");
-    ASSERT_EQ(imageGenerationGraphSettings.loraAdapters[0].safetensorsFile, "weights.safetensors");
+    ASSERT_EQ(imageGenerationGraphSettings.loraAdapters[0].safetensorsFile.value(), "weights.safetensors");
     ASSERT_EQ(imageGenerationGraphSettings.loraAdapters[0].sourceType, ovms::LoraSourceType::HF_REPO);
     ASSERT_EQ(imageGenerationGraphSettings.loraAdapters[1].alias, "anime");
     ASSERT_EQ(imageGenerationGraphSettings.loraAdapters[1].sourceLora, "org/anime-lora");
-    ASSERT_TRUE(imageGenerationGraphSettings.loraAdapters[1].safetensorsFile.empty());
+    ASSERT_FALSE(imageGenerationGraphSettings.loraAdapters[1].safetensorsFile.has_value());
     ASSERT_EQ(imageGenerationGraphSettings.loraAdapters[1].sourceType, ovms::LoraSourceType::HF_REPO);
 }
 

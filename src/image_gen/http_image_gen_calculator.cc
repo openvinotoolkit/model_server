@@ -55,10 +55,10 @@ static void applyLoraAdapterIfNeeded(const std::string& modelName,
     if (loraAdapters.empty()) {
         return;
     }
-    // All adapters were registered at compile time (alpha=1.0 each).
-    // At generate time we must explicitly set the adapter config:
-    //   - If modelName matches a composite alias: activate all component adapters with their weights.
-    //   - If modelName matches a single adapter alias: activate that adapter.
+    // Adapters are registered at compile time with their configured alpha values.
+    // At generate time we explicitly build the adapter config:
+    //   - If modelName matches a composite alias: activate all component adapters with their default alphas.
+    //   - If modelName matches a single adapter alias: activate that adapter with its configured alpha.
     //   - Otherwise: disable all adapters (alpha=0) so the base model runs clean.
     // lora_alphas from request body can override default alphas.
     ov::genai::AdapterConfig adapterConfig;
@@ -83,7 +83,7 @@ static void applyLoraAdapterIfNeeded(const std::string& modelName,
     } else {
         auto adapterIt = loraAdapters.find(modelName);
         if (adapterIt != loraAdapters.end()) {
-            float alpha = 1.0f;
+            float alpha = DEFAULT_ALPHA;
             auto overrideIt = loraAlphasOverride.find(modelName);
             if (overrideIt != loraAlphasOverride.end()) {
                 alpha = overrideIt->second;
@@ -240,7 +240,8 @@ public:
             }
 
             SET_OR_RETURN(std::string, prompt, getPromptField(*payload.parsedJson));
-            SET_OR_RETURN(ov::AnyMap, requestOptions, getImageGenerationRequestOptions(*payload.parsedJson, pipe->args));
+            bool hasDynamicAdapters = !pipe->loraAdapters.empty() && !pipe->npuLoraStaticMode;
+            SET_OR_RETURN(ov::AnyMap, requestOptions, getImageGenerationRequestOptions(*payload.parsedJson, pipe->args, hasDynamicAdapters));
 
             // Parse optional lora_alphas from request body
             auto loraAlphasOverride = ovms::parseLoraAlphasOverride(*payload.parsedJson);
@@ -294,7 +295,7 @@ public:
                 return status;
             }
 
-            SET_OR_RETURN(ov::AnyMap, requestOptions, getImageEditRequestOptions(*payload.multipartParser, pipe->args));
+            SET_OR_RETURN(ov::AnyMap, requestOptions, getImageEditRequestOptions(*payload.multipartParser, pipe->args, !pipe->loraAdapters.empty() && !pipe->npuLoraStaticMode));
 
             // Apply LoRA adapter if the requested model name matches an alias.
             // Under NPU MODE_STATIC adapters are always active — reject requests

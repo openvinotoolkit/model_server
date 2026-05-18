@@ -188,8 +188,8 @@ void ImageGenerationGraphCLIParser::prepare(ServerSettingsImpl& serverSettings, 
     //   alias=https://url/file.safetensors  (DIRECT_URL)
     //   alias=/path/to/file.safetensors     (LOCAL_FILE)
     //   alias=@ref1:0.7+@ref2:0.5          (COMPOSITE - references other aliases)
-    if (!hfSettings.sourceLoras.empty()) {
-        auto entries = ovms::tokenize(hfSettings.sourceLoras, ',');
+    if (hfSettings.sourceLoras.has_value() && !hfSettings.sourceLoras.value().empty()) {
+        auto entries = ovms::tokenize(hfSettings.sourceLoras.value(), ',');
         // First pass: collect all real adapters
         for (const auto& entry : entries) {
             auto eqPos = entry.find('=');
@@ -230,17 +230,19 @@ void ImageGenerationGraphCLIParser::prepare(ServerSettingsImpl& serverSettings, 
             if (source.substr(0, 8) == "https://" || source.substr(0, 7) == "http://") {
                 adapter.sourceType = LoraSourceType::DIRECT_URL;
                 adapter.sourceLora = source;
+                SPDLOG_DEBUG("LoRA '{}': detected source type DIRECT_URL (source: {})", alias, source);
                 auto lastSlash = source.rfind('/');
                 if (lastSlash == std::string::npos || lastSlash == source.size() - 1) {
                     throw std::invalid_argument("Cannot extract filename from URL in --source_loras entry: '" + entry + "'");
                 }
                 adapter.safetensorsFile = source.substr(lastSlash + 1);
-                if (!endsWith(adapter.safetensorsFile, ".safetensors")) {
+                if (!endsWith(adapter.safetensorsFile.value(), ".safetensors")) {
                     throw std::invalid_argument("URL must point to a .safetensors file in --source_loras entry: '" + entry + "'");
                 }
             } else if (ovms::isLocalFilePath(source)) {
                 adapter.sourceType = LoraSourceType::LOCAL_FILE;
                 adapter.sourceLora = source;
+                SPDLOG_DEBUG("LoRA '{}': detected source type LOCAL_FILE (source: {})", alias, source);
                 if (!endsWith(source, ".safetensors")) {
                     throw std::invalid_argument("Local path must point to a .safetensors file in --source_loras entry: '" + entry + "'");
                 }
@@ -251,11 +253,12 @@ void ImageGenerationGraphCLIParser::prepare(ServerSettingsImpl& serverSettings, 
                 adapter.safetensorsFile = (lastSlash != std::string::npos) ? source.substr(lastSlash + 1) : source;
             } else {
                 adapter.sourceType = LoraSourceType::HF_REPO;
+                SPDLOG_DEBUG("LoRA '{}': detected source type HF_REPO (source: {})", alias, source);
                 auto atPos = source.find('@');
                 if (atPos != std::string::npos) {
                     adapter.sourceLora = source.substr(0, atPos);
                     adapter.safetensorsFile = source.substr(atPos + 1);
-                    if (adapter.safetensorsFile.empty()) {
+                    if (adapter.safetensorsFile.value().empty()) {
                         throw std::invalid_argument("Empty filename after @ in --source_loras entry: '" + entry + "'");
                     }
                 } else {

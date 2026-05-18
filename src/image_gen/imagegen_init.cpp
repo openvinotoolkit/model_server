@@ -130,7 +130,7 @@ static Status validateLoraAdapterConfig(ImageGenPipelineArgs& args, bool isNPU) 
         for (const auto& [compositeAlias, components] : args.compositeLoraAdapters) {
             for (const auto& [compAlias, compAlpha] : components) {
                 auto it = compositeAlphaForAdapter.find(compAlias);
-                if (it != compositeAlphaForAdapter.end() && it->second != compAlpha && isNPU) {
+                if (isNPU && it != compositeAlphaForAdapter.end() && it->second != compAlpha) {
                     SPDLOG_LOGGER_ERROR(modelmanager_logger,
                         "NPU device: LoRA adapter '{}' is referenced by multiple composites with different alphas "
                         "({} vs {}). In STATIC mode only one compile-time alpha per adapter is possible.",
@@ -146,8 +146,8 @@ static Status validateLoraAdapterConfig(ImageGenPipelineArgs& args, bool isNPU) 
             if (compIt == compositeAlphaForAdapter.end()) {
                 continue;
             }
-            bool adapterHasNonDefaultAlpha = (adapter.alpha != 1.0f);
-            bool compositeHasNonDefaultAlpha = (compIt->second != 1.0f);
+            bool adapterHasNonDefaultAlpha = adapter.alpha != DEFAULT_ALPHA;
+            bool compositeHasNonDefaultAlpha = (compIt->second != DEFAULT_ALPHA);
 
             if (adapterHasNonDefaultAlpha && compositeHasNonDefaultAlpha) {
                 SPDLOG_LOGGER_ERROR(modelmanager_logger,
@@ -362,7 +362,7 @@ std::variant<Status, ImageGenPipelineArgs> prepareImageGenPipelineArgs(const goo
         } else {
             info.path = fsLoraPath.generic_string();
         }
-        info.alpha = loraEntry.alpha();
+        info.alpha = loraEntry.has_alpha() ? loraEntry.alpha() : DEFAULT_ALPHA;
         switch (loraEntry.mode()) {
         case ::mediapipe::DYNAMIC:
             info.mode = LoraLoadMode::DYNAMIC;

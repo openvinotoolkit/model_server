@@ -110,7 +110,7 @@ ImageGenerationPipelines::ImageGenerationPipelines(const ImageGenPipelineArgs& a
         ov::genai::AdapterConfig adapterConfig;
         for (const auto& [alias, adapter] : loraAdapters) {
             // Use the configured alpha from args for each adapter
-            float alpha = 1.0f;
+            float alpha = DEFAULT_ALPHA;
             for (const auto& info : args.loraAdapters) {
                 if (info.alias == alias) {
                     alpha = info.alpha;
@@ -136,13 +136,12 @@ ImageGenerationPipelines::ImageGenerationPipelines(const ImageGenPipelineArgs& a
                 SPDLOG_INFO("STATIC mode requested: LoRA adapters compiled with MODE_STATIC");
             }
         }
-        // Merge with any existing fuse config (both can coexist if GenAI supports it)
+        // FUSE adapters are permanently merged into base weights at compile time (irreversible).
+        // DYNAMIC/STATIC adapters are registered separately for runtime switching.
+        // GenAI handles fuse internally during compile — here we overwrite the adapter config
+        // property with the DYNAMIC/STATIC config since fuse is already applied to weights.
         if (compileProperties.count(ov::genai::adapters.name())) {
-            // Fuse adapters already set — we need to add dynamic adapters to the same config
-            // GenAI doesn't support two adapter configs; dynamic adapters on top of fused is handled
-            // by applying fuse first, then compiling with dynamic adapters separately.
-            // For now, replace — GenAI fuses first during compile, then registers dynamic adapters.
-            SPDLOG_INFO("Both FUSE and DYNAMIC/STATIC adapters present — combining in compile properties");
+            SPDLOG_INFO("Both FUSE and DYNAMIC/STATIC adapters present — overwriting adapter config (FUSE already applied to weights)");
         }
         compileProperties.insert_or_assign(ov::genai::adapters.name(), ov::genai::adapters(adapterConfig).second);
     }
