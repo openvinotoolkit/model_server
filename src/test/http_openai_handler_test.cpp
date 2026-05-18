@@ -4904,7 +4904,8 @@ TEST_F(HttpOpenAIHandlerParsingTest, ResponsesImageHistoryIndexMatchesChatHistor
             {"role": "assistant", "content": [{"type":"output_text","text":"calling tool"}]},
             {"role": "user", "content": [
                 {"type":"input_text","text":"and now?"},
-                {"type":"input_image","image_url":")" + base64Image + R"("}
+                {"type":"input_image","image_url":")" +
+                       base64Image + R"("}
             ]}
         ]
     })";
