@@ -24,8 +24,6 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include <absl/strings/str_cat.h>
-
 #include "../http_rest_api_handler.hpp"
 #include "../filesystem/filesystem.hpp"
 #include "../llm/apis/openai_completions.hpp"
@@ -4400,7 +4398,7 @@ std::shared_ptr<ovms::OpenAIResponsesHandler> parseResponses(rapidjson::Document
 absl::Status tryParseResponses(rapidjson::Document& doc, ov::genai::Tokenizer& tokenizer, const std::string& json) {
     doc.Parse(json.c_str());
     if (doc.HasParseError())
-        return absl::InvalidArgumentError(absl::StrCat("Failed to parse JSON: ", json));
+        return absl::InvalidArgumentError("Failed to parse JSON: " + json);
     std::optional<uint32_t> maxTokensLimit;
     uint32_t bestOfLimit = 0;
     std::optional<uint32_t> maxModelLength;
