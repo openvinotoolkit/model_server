@@ -63,10 +63,9 @@ set "envPath=win_environment.log"
 set "setPythonPath=%cd%\bazel-out\x64_windows-opt\bin\src\python\binding"
 set "BAZEL_SH=C:\opt\msys64\usr\bin\bash.exe"
 
-:: Read OPENCV_VERSION from versions.mk
-for /f "tokens=2 delims==" %%A in ('findstr /R "OPENCV_VERSION" %cd%\versions.mk') do set "opencv_version=%%A"
-if "!opencv_version!"=="" (
-    set "opencv_version=4.12.0"
+:: Load chosen dependency versions from versions.mk
+for /f "usebackq eol=# tokens=1,3" %%A in ("%cd%\versions.mk") do (
+    if "%%A"=="OPENCV_VERSION" if "!opencv_version!"=="" set "opencv_version=%%B"
 )
 
 :: Bazel compilation settings
