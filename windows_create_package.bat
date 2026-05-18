@@ -133,27 +133,28 @@ copy %cd%\release_files\thirdparty-licenses\* %license_dest%
 if !errorlevel! neq 0 exit /b !errorlevel!
 
 set "curl_dir=curl-!curl_version!-win64-mingw"
-copy C:\opt\%curl_dir%\COPYING.txt %license_dest%LICENSE-CURL.txt
+echo Adding curl licenses from !curl_dir!...
+copy C:\opt\!curl_dir!\COPYING.txt %license_dest%LICENSE-CURL.txt
 if !errorlevel! neq 0 exit /b !errorlevel!
-copy C:\opt\%curl_dir%\dep\brotli\LICENSE.txt %license_dest%LICENSE-BROTLI.txt
+copy C:\opt\!curl_dir!\dep\brotli\LICENSE.txt %license_dest%LICENSE-BROTLI.txt
 if !errorlevel! neq 0 exit /b !errorlevel!
-copy C:\opt\%curl_dir%\dep\certdata\LICENSE.url %license_dest%LICENSE-CERTDATA.url
+copy C:\opt\!curl_dir!\dep\certdata\LICENSE.url %license_dest%LICENSE-CERTDATA.url
 if !errorlevel! neq 0 exit /b !errorlevel!
-copy C:\opt\%curl_dir%\dep\libpsl\COPYING.txt %license_dest%LICENSE-LIBPSL.txt
+copy C:\opt\!curl_dir!\dep\libpsl\COPYING.txt %license_dest%LICENSE-LIBPSL.txt
 if !errorlevel! neq 0 exit /b !errorlevel!
-copy C:\opt\%curl_dir%\dep\libressl\COPYING.txt %license_dest%LICENSE-LIBRESSL.txt
+copy C:\opt\!curl_dir!\dep\libressl\COPYING.txt %license_dest%LICENSE-LIBRESSL.txt
 if !errorlevel! neq 0 exit /b !errorlevel!
-copy C:\opt\%curl_dir%\dep\libssh2\COPYING.txt %license_dest%LICENSE-LIBSSH2.txt
+copy C:\opt\!curl_dir!\dep\libssh2\COPYING.txt %license_dest%LICENSE-LIBSSH2.txt
 if !errorlevel! neq 0 exit /b !errorlevel!
-copy C:\opt\%curl_dir%\dep\nghttp2\COPYING.txt %license_dest%LICENSE-NGHTTP2.txt
+copy C:\opt\!curl_dir!\dep\nghttp2\COPYING.txt %license_dest%LICENSE-NGHTTP2.txt
 if !errorlevel! neq 0 exit /b !errorlevel!
-copy C:\opt\%curl_dir%\dep\nghttp3\COPYING.txt %license_dest%LICENSE-NGHTTP3.txt
+copy C:\opt\!curl_dir!\dep\nghttp3\COPYING.txt %license_dest%LICENSE-NGHTTP3.txt
 if !errorlevel! neq 0 exit /b !errorlevel!
-copy C:\opt\%curl_dir%\dep\ngtcp2\COPYING.txt %license_dest%LICENSE-NGTCP2.txt
+copy C:\opt\!curl_dir!\dep\ngtcp2\COPYING.txt %license_dest%LICENSE-NGTCP2.txt
 if !errorlevel! neq 0 exit /b !errorlevel!
-copy C:\opt\%curl_dir%\dep\zlibng\LICENSE.md %license_dest%LICENSE-ZLIBNG.md
+copy C:\opt\!curl_dir!\dep\zlibng\LICENSE.md %license_dest%LICENSE-ZLIBNG.md
 if !errorlevel! neq 0 exit /b !errorlevel!
-copy C:\opt\%curl_dir%\dep\zstd\LICENSE.txt %license_dest%LICENSE-ZSTD.txt
+copy C:\opt\!curl_dir!\dep\zstd\LICENSE.txt %license_dest%LICENSE-ZSTD.txt
 
 :: Add when CAPI enabled and tested
 ::mkdir -vp /ovms_release/include && cp /ovms/src/ovms.h /ovms_release/include
