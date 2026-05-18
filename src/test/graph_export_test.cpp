@@ -1666,7 +1666,7 @@ TEST(ImageGenCLILoraParsingTest, InvalidAlphaWithFilenameThrows) {
     ovms::ServerSettingsImpl serverSettings;
     serverSettings.serverMode = ovms::HF_PULL_MODE;
     ovms::HFSettingsImpl hfSettings;
-    hfSettings.sourceLoras = "pokemon=org/repo@some.safetensors:potocznie";
+    hfSettings.sourceLoras = "pokemon=org/repo@some.safetensors:wikingowie";
     ovms::ImageGenerationGraphCLIParser parser;
     EXPECT_THROW(parser.prepare(serverSettings, hfSettings, "test_model"), std::invalid_argument);
 }
@@ -1866,6 +1866,27 @@ TEST_F(ImageGenCLILoraParsingWithTempDir, LocalFileWindowsRelativeDotBackslash) 
     // This will throw because relative path won't resolve to existing file from CWD,
     // but it should at least be detected as LOCAL_FILE source type (i.e. not HF_REPO)
     EXPECT_THROW(parser.prepare(serverSettings, hfSettings, "test_model"), std::invalid_argument);
+}
+
+TEST_F(ImageGenCLILoraParsingWithTempDir, LocalFileWindowsAbsolutePathWithAlpha) {
+    ovms::ServerSettingsImpl serverSettings;
+    serverSettings.serverMode = ovms::HF_PULL_MODE;
+    ovms::HFSettingsImpl hfSettings;
+    std::string tmpFile = ovms::FileSystem::joinPath({this->directoryPath, "model.safetensors"});
+    {
+        std::ofstream f(tmpFile);
+        f << "test";
+    }
+    // Windows path with alpha: C:\path\to\model.safetensors:0.6
+    // The drive letter colon (C:) must not be confused with alpha separator
+    hfSettings.sourceLoras = "pokemon=" + tmpFile + ":0.6";
+    ovms::ImageGenerationGraphCLIParser parser;
+    parser.prepare(serverSettings, hfSettings, "test_model");
+    auto& graphSettings = std::get<ovms::ImageGenerationGraphSettingsImpl>(hfSettings.graphSettings);
+    ASSERT_EQ(graphSettings.loraAdapters.size(), 1);
+    EXPECT_EQ(graphSettings.loraAdapters[0].sourceType, ovms::LoraSourceType::LOCAL_FILE);
+    EXPECT_EQ(graphSettings.loraAdapters[0].safetensorsFile, "model.safetensors");
+    EXPECT_FLOAT_EQ(graphSettings.loraAdapters[0].alpha, 0.6f);
 }
 #endif
 

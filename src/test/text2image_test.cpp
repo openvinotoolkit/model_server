@@ -1626,7 +1626,7 @@ TEST(ImageGenCalculatorOptionsTest, CompositeLoraAdaptersFromPbtxt) {
     oss << R"(")";
     oss << R"pb(
             lora_adapters { alias: "pokemon" path: "/path/to/pokemon.safetensors" }
-            lora_adapters { alias: "anime" path: "/path/to/anime.safetensors" alpha: 0.8 }
+            lora_adapters { alias: "anime" path: "/path/to/anime.safetensors" }
             composite_lora_adapters {
               alias: "blend"
               components { adapter_alias: "pokemon" alpha: 0.7 }
@@ -1644,8 +1644,10 @@ TEST(ImageGenCalculatorOptionsTest, CompositeLoraAdaptersFromPbtxt) {
     auto imageGenArgs = std::get<ImageGenPipelineArgs>(imageGenArgsOrStatus);
     ASSERT_EQ(imageGenArgs.loraAdapters.size(), 2);
     EXPECT_EQ(imageGenArgs.loraAdapters[0].alias, "pokemon");
+    // Composite alpha is applied to adapter (individual was default 1.0)
+    EXPECT_FLOAT_EQ(imageGenArgs.loraAdapters[0].alpha, 0.7f);
     EXPECT_EQ(imageGenArgs.loraAdapters[1].alias, "anime");
-    EXPECT_FLOAT_EQ(imageGenArgs.loraAdapters[1].alpha, 0.8f);
+    EXPECT_FLOAT_EQ(imageGenArgs.loraAdapters[1].alpha, 0.5f);
     ASSERT_EQ(imageGenArgs.compositeLoraAdapters.size(), 1);
     auto it = imageGenArgs.compositeLoraAdapters.find("blend");
     ASSERT_NE(it, imageGenArgs.compositeLoraAdapters.end());
@@ -1654,6 +1656,213 @@ TEST(ImageGenCalculatorOptionsTest, CompositeLoraAdaptersFromPbtxt) {
     EXPECT_FLOAT_EQ(it->second[0].second, 0.7f);
     EXPECT_EQ(it->second[1].first, "anime");
     EXPECT_FLOAT_EQ(it->second[1].second, 0.5f);
+}
+
+TEST(ImageGenCalculatorOptionsTest, AlphaOnlyAtIndividualLevelIsValid) {
+#ifdef _WIN32
+    const std::string dummyLocation = dummy_model_location;
+#else
+    const std::string dummyLocation = "/ovms/src/test/dummy";
+#endif
+    std::ostringstream oss;
+    oss << R"pb(
+            name: "ImageGenExecutor"
+            calculator: "ImageGenCalculator"
+            input_stream: "HTTP_REQUEST_PAYLOAD:input"
+            input_side_packet: "IMAGE_GEN_NODE_RESOURCES:pipes"
+            output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+            node_options: {
+                  [type.googleapis.com / mediapipe.ImageGenCalculatorOptions]: {
+                    models_path: ")pb"
+    << dummyLocation;
+    oss << R"(")";
+    oss << R"pb(
+            lora_adapters { alias: "pokemon" path: "/path/to/pokemon.safetensors" alpha: 0.8 }
+            lora_adapters { alias: "anime" path: "/path/to/anime.safetensors" alpha: 0.6 }
+            composite_lora_adapters {
+              alias: "blend"
+              components { adapter_alias: "pokemon" }
+              components { adapter_alias: "anime" }
+            }
+          }
+                    }
+)pb";
+    auto nodePbtxt = oss.str();
+    auto node = mediapipe::ParseTextProtoOrDie<CalculatorGraphConfig::Node>(nodePbtxt);
+    const std::string graphPath = "";
+    auto nodeOptions = node.node_options(0);
+    auto imageGenArgsOrStatus = prepareImageGenPipelineArgs(nodeOptions, graphPath);
+    ASSERT_TRUE(std::holds_alternative<ImageGenPipelineArgs>(imageGenArgsOrStatus));
+    auto imageGenArgs = std::get<ImageGenPipelineArgs>(imageGenArgsOrStatus);
+    ASSERT_EQ(imageGenArgs.loraAdapters.size(), 2);
+    // Individual alphas preserved (composite has default 1.0)
+    EXPECT_FLOAT_EQ(imageGenArgs.loraAdapters[0].alpha, 0.8f);
+    EXPECT_FLOAT_EQ(imageGenArgs.loraAdapters[1].alpha, 0.6f);
+}
+
+TEST(ImageGenCalculatorOptionsTest, AlphaOnlyAtCompositeLevelIsValid) {
+#ifdef _WIN32
+    const std::string dummyLocation = dummy_model_location;
+#else
+    const std::string dummyLocation = "/ovms/src/test/dummy";
+#endif
+    std::ostringstream oss;
+    oss << R"pb(
+            name: "ImageGenExecutor"
+            calculator: "ImageGenCalculator"
+            input_stream: "HTTP_REQUEST_PAYLOAD:input"
+            input_side_packet: "IMAGE_GEN_NODE_RESOURCES:pipes"
+            output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+            node_options: {
+                  [type.googleapis.com / mediapipe.ImageGenCalculatorOptions]: {
+                    models_path: ")pb"
+    << dummyLocation;
+    oss << R"(")";
+    oss << R"pb(
+            lora_adapters { alias: "pokemon" path: "/path/to/pokemon.safetensors" }
+            lora_adapters { alias: "anime" path: "/path/to/anime.safetensors" }
+            composite_lora_adapters {
+              alias: "blend"
+              components { adapter_alias: "pokemon" alpha: 0.7 }
+              components { adapter_alias: "anime" alpha: 0.4 }
+            }
+          }
+                    }
+)pb";
+    auto nodePbtxt = oss.str();
+    auto node = mediapipe::ParseTextProtoOrDie<CalculatorGraphConfig::Node>(nodePbtxt);
+    const std::string graphPath = "";
+    auto nodeOptions = node.node_options(0);
+    auto imageGenArgsOrStatus = prepareImageGenPipelineArgs(nodeOptions, graphPath);
+    ASSERT_TRUE(std::holds_alternative<ImageGenPipelineArgs>(imageGenArgsOrStatus));
+    auto imageGenArgs = std::get<ImageGenPipelineArgs>(imageGenArgsOrStatus);
+    ASSERT_EQ(imageGenArgs.loraAdapters.size(), 2);
+    // Composite alpha applied to adapters (individual was default 1.0)
+    EXPECT_FLOAT_EQ(imageGenArgs.loraAdapters[0].alpha, 0.7f);
+    EXPECT_FLOAT_EQ(imageGenArgs.loraAdapters[1].alpha, 0.4f);
+}
+
+TEST(ImageGenCalculatorOptionsTest, ExplicitAlpha1AtIndividualLevelAllowsCompositeOverride) {
+#ifdef _WIN32
+    const std::string dummyLocation = dummy_model_location;
+#else
+    const std::string dummyLocation = "/ovms/src/test/dummy";
+#endif
+    std::ostringstream oss;
+    oss << R"pb(
+            name: "ImageGenExecutor"
+            calculator: "ImageGenCalculator"
+            input_stream: "HTTP_REQUEST_PAYLOAD:input"
+            input_side_packet: "IMAGE_GEN_NODE_RESOURCES:pipes"
+            output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+            node_options: {
+                  [type.googleapis.com / mediapipe.ImageGenCalculatorOptions]: {
+                    models_path: ")pb"
+    << dummyLocation;
+    oss << R"(")";
+    oss << R"pb(
+            lora_adapters { alias: "pokemon" path: "/path/to/pokemon.safetensors" alpha: 1.0 }
+            lora_adapters { alias: "anime" path: "/path/to/anime.safetensors" alpha: 1.0 }
+            composite_lora_adapters {
+              alias: "blend"
+              components { adapter_alias: "pokemon" alpha: 0.7 }
+              components { adapter_alias: "anime" alpha: 0.4 }
+            }
+          }
+                    }
+)pb";
+    auto nodePbtxt = oss.str();
+    auto node = mediapipe::ParseTextProtoOrDie<CalculatorGraphConfig::Node>(nodePbtxt);
+    const std::string graphPath = "";
+    auto nodeOptions = node.node_options(0);
+    auto imageGenArgsOrStatus = prepareImageGenPipelineArgs(nodeOptions, graphPath);
+    // alpha=1.0 is the default, so composite alpha should override
+    ASSERT_TRUE(std::holds_alternative<ImageGenPipelineArgs>(imageGenArgsOrStatus));
+    auto imageGenArgs = std::get<ImageGenPipelineArgs>(imageGenArgsOrStatus);
+    ASSERT_EQ(imageGenArgs.loraAdapters.size(), 2);
+    EXPECT_FLOAT_EQ(imageGenArgs.loraAdapters[0].alpha, 0.7f);
+    EXPECT_FLOAT_EQ(imageGenArgs.loraAdapters[1].alpha, 0.4f);
+}
+
+TEST(ImageGenCalculatorOptionsTest, ExplicitAlpha1AtCompositeLevelKeepsIndividualAlpha) {
+#ifdef _WIN32
+    const std::string dummyLocation = dummy_model_location;
+#else
+    const std::string dummyLocation = "/ovms/src/test/dummy";
+#endif
+    std::ostringstream oss;
+    oss << R"pb(
+            name: "ImageGenExecutor"
+            calculator: "ImageGenCalculator"
+            input_stream: "HTTP_REQUEST_PAYLOAD:input"
+            input_side_packet: "IMAGE_GEN_NODE_RESOURCES:pipes"
+            output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+            node_options: {
+                  [type.googleapis.com / mediapipe.ImageGenCalculatorOptions]: {
+                    models_path: ")pb"
+    << dummyLocation;
+    oss << R"(")";
+    oss << R"pb(
+            lora_adapters { alias: "pokemon" path: "/path/to/pokemon.safetensors" alpha: 0.8 }
+            lora_adapters { alias: "anime" path: "/path/to/anime.safetensors" alpha: 0.6 }
+            composite_lora_adapters {
+              alias: "blend"
+              components { adapter_alias: "pokemon" alpha: 1.0 }
+              components { adapter_alias: "anime" alpha: 1.0 }
+            }
+          }
+                    }
+)pb";
+    auto nodePbtxt = oss.str();
+    auto node = mediapipe::ParseTextProtoOrDie<CalculatorGraphConfig::Node>(nodePbtxt);
+    const std::string graphPath = "";
+    auto nodeOptions = node.node_options(0);
+    auto imageGenArgsOrStatus = prepareImageGenPipelineArgs(nodeOptions, graphPath);
+    // composite alpha=1.0 is default, so individual alpha is kept
+    ASSERT_TRUE(std::holds_alternative<ImageGenPipelineArgs>(imageGenArgsOrStatus));
+    auto imageGenArgs = std::get<ImageGenPipelineArgs>(imageGenArgsOrStatus);
+    ASSERT_EQ(imageGenArgs.loraAdapters.size(), 2);
+    EXPECT_FLOAT_EQ(imageGenArgs.loraAdapters[0].alpha, 0.8f);
+    EXPECT_FLOAT_EQ(imageGenArgs.loraAdapters[1].alpha, 0.6f);
+}
+
+TEST(ImageGenCalculatorOptionsTest, AlphaAtBothLevelsReturnsError) {
+#ifdef _WIN32
+    const std::string dummyLocation = dummy_model_location;
+#else
+    const std::string dummyLocation = "/ovms/src/test/dummy";
+#endif
+    std::ostringstream oss;
+    oss << R"pb(
+            name: "ImageGenExecutor"
+            calculator: "ImageGenCalculator"
+            input_stream: "HTTP_REQUEST_PAYLOAD:input"
+            input_side_packet: "IMAGE_GEN_NODE_RESOURCES:pipes"
+            output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+            node_options: {
+                  [type.googleapis.com / mediapipe.ImageGenCalculatorOptions]: {
+                    models_path: ")pb"
+    << dummyLocation;
+    oss << R"(")";
+    oss << R"pb(
+            lora_adapters { alias: "pokemon" path: "/path/to/pokemon.safetensors" alpha: 0.8 }
+            lora_adapters { alias: "anime" path: "/path/to/anime.safetensors" }
+            composite_lora_adapters {
+              alias: "blend"
+              components { adapter_alias: "pokemon" alpha: 0.5 }
+              components { adapter_alias: "anime" alpha: 0.4 }
+            }
+          }
+                    }
+)pb";
+    auto nodePbtxt = oss.str();
+    auto node = mediapipe::ParseTextProtoOrDie<CalculatorGraphConfig::Node>(nodePbtxt);
+    const std::string graphPath = "";
+    auto nodeOptions = node.node_options(0);
+    auto imageGenArgsOrStatus = prepareImageGenPipelineArgs(nodeOptions, graphPath);
+    // Should return error because "pokemon" has alpha at both levels
+    ASSERT_TRUE(std::holds_alternative<ovms::Status>(imageGenArgsOrStatus));
+    EXPECT_EQ(std::get<ovms::Status>(imageGenArgsOrStatus).getCode(), ovms::StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID);
 }
 
 // TODO:

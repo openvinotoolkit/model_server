@@ -106,10 +106,14 @@ ovms --rest_port 8000 \
   --source_loras "xray=DoctorDiffusion/doctor-diffusion-s-xray-xl-lora@DD-xray-v1.safetensors,ukiyo=KappaNeuro/ukiyo-e-art@Ukiyo-e Art.safetensors"
 ```
 
-The `--source_loras` format is a comma-separated list of `alias=source` entries. Supported source types:
+The `--source_loras` format is a comma-separated list of `alias=source[:alpha]` entries. Supported source types:
 - HuggingFace repository: `alias=org/repo` or `alias=org/repo@filename.safetensors`
 - Direct URL: `alias=https://url/to/file.safetensors`
-- Local file: `alias=/path/to/file.safetensors`
+- Local file (Linux): `alias=/path/to/file.safetensors`
+- Local file (Windows): `alias=C:\path\to\file.safetensors`
+- Relative local file: `alias=./path/to/file.safetensors`
+
+Each adapter can optionally specify a default alpha weight: `alias=source:0.7` (default: `1.0`).
 
 For more details, see the [LoRA Adapters documentation](./image_generation/reference.md#lora-adapters).
 

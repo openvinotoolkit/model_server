@@ -67,6 +67,23 @@ Static model resolution settings:
 -    `optional uint64 num_images_per_prompt` - used together with max_resolution, to define batch size in static model shape.
 -    `optional float guidance_scale` - used together with max_resolution
 
+LoRA adapter settings:
+-    `repeated LoraAdapterEntry lora_adapters` - list of LoRA adapters to load. Each entry defines:
+     -    `required string alias` - unique name used for request routing (the `model` field in API requests)
+     -    `required string path` - path to the `.safetensors` file (absolute, or relative to the graph directory)
+     -    `optional float alpha` - adapter weight/strength [default = 1.0]
+     -    `optional LoraLoadMode mode` - how the adapter is loaded [default = DYNAMIC]. Possible values:
+          -    `DYNAMIC` - adapter is applied/removed at inference time (hot-swap between requests). Used on CPU and GPU.
+          -    `STATIC` - adapter is compiled into the model with fixed alpha at load time. No runtime switching is possible. This is the mode used on NPU.
+          -    `FUSE` - adapter is permanently merged into the base model weights. Always active, not selectable via routing, and irreversible.
+-    `repeated CompositeLoraAdapterEntry composite_lora_adapters` - composite adapters that blend multiple individual adapters. Each entry defines:
+     -    `required string alias` - composite name used for request routing
+     -    `repeated CompositeLoraComponent components` - list of component adapters with:
+          -    `required string adapter_alias` - reference to a registered `lora_adapters` alias
+          -    `optional float alpha` - component weight [default = 1.0]. Only effective in DYNAMIC mode.
+
+> **Note:** When using `--source_loras` CLI parameter, the `lora_adapters` and `composite_lora_adapters` fields in `graph.pbtxt` are generated automatically. The `mode` field is set based on the target device: NPU → `STATIC`, everything else → `DYNAMIC`. Manual editing is only needed for advanced configurations like `FUSE` mode.
+
 ## Models Directory
 
 In node configuration we set `models_path` indicating location of the directory with files loaded by LLM engine. It loads following files:
@@ -184,7 +201,42 @@ LoRA adapters are registered at server startup via the `--source_loras` CLI para
 | HuggingFace repo | `org/repo` | `pokemon=juliensimon/sd-pokemon-lora` |
 | HuggingFace repo with explicit file | `org/repo@filename.safetensors` | `xray=DoctorDiffusion/doctor-diffusion-s-xray-xl-lora@DD-xray-v1.safetensors` |
 | Direct URL | `https://...` | `style=https://huggingface.co/user/repo/resolve/main/model.safetensors` |
-| Local file path | `/path/to/file.safetensors` | `custom=/models/loras/my_style.safetensors` |
+| Local file path (Linux) | `/path/to/file.safetensors` | `custom=/models/loras/my_style.safetensors` |
+| Local file path (Windows) | `C:\path\to\file.safetensors` | `custom=C:\models\loras\my_style.safetensors` |
+| Relative local path | `./path/to/file.safetensors` | `custom=./loras/my_style.safetensors` |
+
+**Source type detection rules:**
+
+The source type is determined automatically based on the source string:
+
+1. If the source starts with `https://` or `http://` → **Direct URL**
+2. If the source starts with `/` (Unix absolute), `./` or `.\` (relative), or matches `X:\` / `X:/` (Windows drive letter) → **Local file path**
+3. Otherwise → **HuggingFace repository** (with optional `@filename` suffix)
+
+**Default alpha (adapter weight):**
+
+Each individual adapter can optionally specify a default alpha weight by appending `:alpha` to the source:
+
+```
+--source_loras="alias=source:alpha"
+```
+
+The alpha value controls how strongly the adapter influences generation (default: `1.0`). Examples:
+
+```bash
+# Linux - adapter with alpha 0.6
+--source_loras="pokemon=/models/loras/pokemon.safetensors:0.6"
+
+# Windows - adapter with alpha 0.75
+--source_loras="pokemon=C:\models\loras\pokemon.safetensors:0.75"
+
+# HuggingFace repo with alpha
+--source_loras="pokemon=juliensimon/sd-pokemon-lora:0.8"
+```
+
+> **Note:** For composite adapters, alpha is specified per-component using the `@ref:alpha` syntax (see [Composite Adapters](#composite-adapters)). The `:alpha` suffix on the source applies only to individual adapters.
+>
+> **Important:** Alpha must be specified at only one level — either on the individual adapter OR on the composite components, not both. If both have non-default values, the server will reject the configuration with an error.
 
 **Example:**
 ```bash
@@ -275,6 +327,39 @@ You can override individual component weights at request time via `lora_weights`
   "lora_weights": {"xray": 0.8, "ukiyo": 0.2}
 }
 ```
+
+### LoRA Adapter Modes
+
+The adapter loading mode determines how LoRA weights interact with the base model. The mode is set automatically based on the target device when using `--source_loras`, or can be specified manually in `graph.pbtxt`.
+
+| Mode | Device | Behavior |
+|------|--------|----------|
+| `DYNAMIC` | CPU, GPU | Default. Adapters are applied/removed per request. Multiple adapters can be hot-swapped. Base model is accessible without any adapter. |
+| `STATIC` | NPU (default) | Adapters are compiled into the model at load time with fixed alpha values. No runtime switching — all adapters are always active. Base model is not independently accessible. |
+| `FUSE` | Any | Adapter is permanently merged into base weights. Always active, invisible to routing, and irreversible. Only configurable via manual `graph.pbtxt` editing. |
+
+**DYNAMIC mode (CPU/GPU):**
+- Adapters are registered at compile time but activated/deactivated per request based on the `model` field.
+- `lora_weights` in the request body can override adapter strengths at runtime.
+- Sending `"model": "<base_model_name>"` disables all adapters (pure base model).
+
+**STATIC mode (NPU):**
+- All adapters are compiled with their configured `alpha` and remain active permanently.
+- The `alpha` value determines the fixed adapter strength — it cannot be changed at runtime.
+- `lora_weights` in requests is **ignored** — weights are baked in at compile time.
+- The base model is **not accessible** (always has adapters applied).
+- With a single adapter: only the adapter's alias is a valid `model` name.
+- With multiple adapters: composites are **required**. Only composite aliases are valid `model` names.
+- Alpha source priority: if alpha is specified only at the individual adapter level, it is used. If alpha is specified only at the composite component level (individual stays at default 1.0), the composite alpha is used for compilation. Specifying alpha at both levels is an error.
+
+**FUSE mode:**
+- The adapter is merged into base weights during model compilation using `MODE_FUSE`.
+- It is always active — the base model without the adapter is **not accessible**.
+- Does not appear in the list of routable adapters and cannot be selected or deselected via the `model` field.
+- Typically combined with DYNAMIC adapters: the FUSE adapter permanently enhances the base, while DYNAMIC adapters can be hot-swapped on top.
+- Only configurable via manual `graph.pbtxt` editing.
+
+> **Important:** STATIC mode is automatically applied when targeting NPU via `--source_loras`. On NPU with multiple LoRAs, composite definitions are mandatory to define the routing aliases. The `alpha` specified per adapter in `--source_loras` (e.g., `pokemon=org/repo:0.8`) is the compile-time weight that gets permanently baked into the model.
 
 ## References
 - [Image Generation API](../model_server_rest_api_image_generation.md)

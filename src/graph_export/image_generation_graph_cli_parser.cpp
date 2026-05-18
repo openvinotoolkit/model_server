@@ -214,7 +214,7 @@ void ImageGenerationGraphCLIParser::prepare(ServerSettingsImpl& serverSettings, 
             adapter.alias = alias;
             // Parse optional :alpha suffix
             auto lastColon = source.rfind(':');
-            if (lastColon != std::string::npos && lastColon > 0) {
+            if (lastColon != std::string::npos && lastColon > 1) {
                 std::string alphaStr = source.substr(lastColon + 1);
                 // Skip protocol colons (https:// or http://)
                 if (alphaStr.substr(0, 2) != "//") {
