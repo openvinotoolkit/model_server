@@ -166,6 +166,13 @@ static std::string extractTextContent(const rapidjson::Value& contentVal) {
 }
 
 // Read the three string fields (id, name, arguments) out of a function_call item.
+//
+// The Responses API function_call item carries both "id" (the *item* id, e.g.
+// "fc_...") and "call_id" (the *call* identifier, e.g. "call_...", referenced
+// by function_call_output.call_id and by tool messages' tool_call_id). We
+// prefer "call_id" so the chat/completions-shaped assistant.tool_calls[].id
+// matches the subsequent tool message's tool_call_id, and fall back to "id"
+// only when "call_id" is absent.
 struct FunctionCallFields {
     std::string id;
     std::string name;
@@ -174,9 +181,14 @@ struct FunctionCallFields {
 static FunctionCallFields readFunctionCallFields(const rapidjson::Value& item) {
     FunctionCallFields out;
     auto fcObj = item.GetObject();
-    auto idIt = fcObj.FindMember("id");
-    if (idIt != fcObj.MemberEnd() && idIt->value.IsString())
-        out.id = idIt->value.GetString();
+    auto callIdIt = fcObj.FindMember("call_id");
+    if (callIdIt != fcObj.MemberEnd() && callIdIt->value.IsString()) {
+        out.id = callIdIt->value.GetString();
+    } else {
+        auto idIt = fcObj.FindMember("id");
+        if (idIt != fcObj.MemberEnd() && idIt->value.IsString())
+            out.id = idIt->value.GetString();
+    }
     auto nameIt = fcObj.FindMember("name");
     if (nameIt != fcObj.MemberEnd() && nameIt->value.IsString())
         out.name = nameIt->value.GetString();
@@ -184,6 +196,23 @@ static FunctionCallFields readFunctionCallFields(const rapidjson::Value& item) {
     if (argsIt != fcObj.MemberEnd() && argsIt->value.IsString())
         out.arguments = argsIt->value.GetString();
     return out;
+}
+
+// Reject function_call items that would translate to a syntactically valid but
+// semantically broken assistant.tool_calls entry (missing identifier, name, or
+// arguments). The call_id/id mismatch is also what breaks tool_call_id linkage
+// with subsequent tool messages, so surfacing it here as 400 is better than
+// passing through and producing a malformed prompt.
+static absl::Status validateFunctionCallItem(const rapidjson::Value& item) {
+    const FunctionCallFields fields = readFunctionCallFields(item);
+    if (fields.id.empty())
+        return absl::InvalidArgumentError("function_call item is missing required call_id (or id) field");
+    if (fields.name.empty())
+        return absl::InvalidArgumentError("function_call item is missing required name field");
+    auto argsIt = item.GetObject().FindMember("arguments");
+    if (argsIt == item.GetObject().MemberEnd() || !argsIt->value.IsString())
+        return absl::InvalidArgumentError("function_call item is missing required arguments field");
+    return absl::OkStatus();
 }
 
 // Classification of a Responses API input item used to dispatch to per-type
@@ -265,7 +294,9 @@ public:
                 status = onReasoningItem(item.GetObject());
                 break;
             case ResponsesInputItemKind::FUNCTION_CALL:
-                pendingFunctionCalls.push_back(&item);
+                status = validateFunctionCallItem(item);
+                if (status.ok())
+                    pendingFunctionCalls.push_back(&item);
                 break;
             case ResponsesInputItemKind::FUNCTION_CALL_OUTPUT:
                 status = onFunctionCallOutputItem(item.GetObject());

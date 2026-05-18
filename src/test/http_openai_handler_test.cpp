@@ -4800,6 +4800,93 @@ TEST_F(HttpOpenAIHandlerParsingTest, ResponsesFunctionCallOutputWithoutCallIdAcc
         })");
 }
 
+TEST_F(HttpOpenAIHandlerParsingTest, ResponsesFunctionCallPrefersCallIdOverId) {
+    // When id and call_id differ, the assistant.tool_calls[].id must use
+    // call_id so it matches the subsequent tool message's tool_call_id (which
+    // is built from function_call_output.call_id). Otherwise chat templates
+    // see a tool result with no matching call (e.g. gpt-oss raises "Message
+    // has tool role, but there was no previous assistant message with a tool
+    // call!").
+    expectResponsesEquivalentToChatCompletions(doc, *tokenizer,
+        R"({
+            "model": "llama",
+            "input": [
+                {"role": "user", "content": [{"type":"input_text","text":"weather?"}]},
+                {"type": "function_call", "id": "fc_abc", "call_id": "call_xyz",
+                 "name": "get_weather", "arguments": "{}"},
+                {"type": "function_call_output", "call_id": "call_xyz", "output": "ok"}
+            ]
+        })",
+        R"({
+            "messages": [
+                {"role":"user","content":"weather?"},
+                {"role":"assistant","content":"","tool_calls":[
+                    {"id":"call_xyz","type":"function","function":{"name":"get_weather","arguments":"{}"}}
+                ]},
+                {"role":"tool","tool_call_id":"call_xyz","content":"ok"}
+            ]
+        })");
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ResponsesFunctionCallOnlyCallIdSupplied) {
+    // call_id alone (no "id") is accepted; it is used as the tool_calls[].id.
+    expectResponsesEquivalentToChatCompletions(doc, *tokenizer,
+        R"({
+            "model": "llama",
+            "input": [
+                {"role": "user", "content": [{"type":"input_text","text":"weather?"}]},
+                {"type": "function_call", "call_id": "call_xyz",
+                 "name": "get_weather", "arguments": "{}"},
+                {"type": "function_call_output", "call_id": "call_xyz", "output": "ok"}
+            ]
+        })",
+        R"({
+            "messages": [
+                {"role":"user","content":"weather?"},
+                {"role":"assistant","content":"","tool_calls":[
+                    {"id":"call_xyz","type":"function","function":{"name":"get_weather","arguments":"{}"}}
+                ]},
+                {"role":"tool","tool_call_id":"call_xyz","content":"ok"}
+            ]
+        })");
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ResponsesFunctionCallMissingIdRejected) {
+    std::string json = R"({
+        "model": "llama",
+        "input": [
+            {"role": "user", "content": [{"type":"input_text","text":"weather?"}]},
+            {"type": "function_call", "name": "get_weather", "arguments": "{}"}
+        ]
+    })";
+    auto status = tryParseResponses(doc, *tokenizer, json);
+    EXPECT_EQ(status, absl::InvalidArgumentError("function_call item is missing required call_id (or id) field"));
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ResponsesFunctionCallMissingNameRejected) {
+    std::string json = R"({
+        "model": "llama",
+        "input": [
+            {"role": "user", "content": [{"type":"input_text","text":"weather?"}]},
+            {"type": "function_call", "call_id": "call_1", "arguments": "{}"}
+        ]
+    })";
+    auto status = tryParseResponses(doc, *tokenizer, json);
+    EXPECT_EQ(status, absl::InvalidArgumentError("function_call item is missing required name field"));
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ResponsesFunctionCallMissingArgumentsRejected) {
+    std::string json = R"({
+        "model": "llama",
+        "input": [
+            {"role": "user", "content": [{"type":"input_text","text":"weather?"}]},
+            {"type": "function_call", "call_id": "call_1", "name": "get_weather"}
+        ]
+    })";
+    auto status = tryParseResponses(doc, *tokenizer, json);
+    EXPECT_EQ(status, absl::InvalidArgumentError("function_call item is missing required arguments field"));
+}
+
 // --- Tools normalisation edge cases ---
 
 TEST_F(HttpOpenAIHandlerParsingTest, ResponsesFlatToolWithoutParametersIsNormalised) {
