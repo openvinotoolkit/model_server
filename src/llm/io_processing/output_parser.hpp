@@ -79,6 +79,16 @@ public:
     bool isReasoningParserAvailable() const;
     std::string getToolParserStartTag() const;
 
+    // Configure parser to treat the output as already-in-reasoning from the first token.
+    // Used when the chat template appends the reasoning start tag (e.g. "<think>\n") as
+    // the prompt suffix - the model then emits only the reasoning body and the closing tag.
+    // No-op when no reasoning parser is configured.
+    void setImplicitReasoningStart(bool value);
+
+    // Auto-detect and apply implicit reasoning start based on the prompt produced by
+    // the chat template. Returns true if implicit start was activated.
+    bool detectAndSetImplicitReasoningStart(const std::string& renderedPrompt);
+
     // Parse model output in the unary mode. Returns ParsedOutput containing data extracted by internal parsers.
     ParsedOutput parse(const std::vector<int64_t>& generatedTokens, const bool toolsAvailable);
 

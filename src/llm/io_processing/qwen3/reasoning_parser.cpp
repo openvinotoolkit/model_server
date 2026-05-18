@@ -38,6 +38,19 @@ void Qwen3ReasoningParser::parse(ParsedOutput& parsedOutput, const std::vector<i
         parsedOutput.reasoning = reasoningText;
         // Remove reasoning from content
         parsedOutput.content.erase(startPos, endPos - startPos + endReasoningTag.length());
+        return;
+    }
+
+    // Implicit-start mode: the chat template already emitted the start tag as the prompt
+    // suffix, so the model output begins inside the reasoning segment.
+    if (implicitStart && startPos == std::string::npos) {
+        if (endPos != std::string::npos) {
+            parsedOutput.reasoning = parsedOutput.content.substr(0, endPos);
+            parsedOutput.content.erase(0, endPos + endReasoningTag.length());
+        } else {
+            parsedOutput.reasoning = parsedOutput.content;
+            parsedOutput.content.clear();
+        }
     }
 }
 
