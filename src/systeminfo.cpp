@@ -15,16 +15,143 @@
 //*****************************************************************************
 #include "systeminfo.hpp"
 
+#include <algorithm>
 #include <fstream>
+#include <limits>
 #include <sstream>
 #include <string>
 #include <thread>
+
+#ifdef __linux__
+#include <sched.h>
+#include <sys/resource.h>
+#endif
 
 #include "logging.hpp"
 #include "status.hpp"
 
 namespace ovms {
 uint16_t getCoreCount() {
-    return std::thread::hardware_concurrency();
+    uint16_t detectedCoreCount = static_cast<uint16_t>(std::thread::hardware_concurrency());
+#ifdef __linux__
+    if (isRunningInDocker()) {
+        const uint16_t affinityCount = getCpuAffinityCount();
+        const uint16_t quotaCount = getDockerCpuQuota();
+        if (quotaCount > 0) {
+            detectedCoreCount = std::min(affinityCount, quotaCount);
+        } else {
+            detectedCoreCount = affinityCount;
+        }
+    }
+#endif
+    return std::max<uint16_t>(detectedCoreCount, 1);
 }
+
+uint64_t getMaxOpenFilesLimit() {
+#ifdef __linux__
+    struct rlimit limit;
+    if (getrlimit(RLIMIT_NOFILE, &limit) == 0) {
+        return limit.rlim_cur;
+    }
+#endif
+    return std::numeric_limits<uint64_t>::max();
+}
+
+#ifdef __linux__
+
+bool isRunningInDocker() {
+    // Check for /.dockerenv file
+    std::ifstream dockerenv("/.dockerenv");
+    if (dockerenv.good()) {
+        return true;
+    }
+    // Check for /run/.containerenv file
+    std::ifstream containerenv("/run/.containerenv");
+    if (containerenv.good()) {
+        return true;
+    }
+
+    // Check /proc/self/cgroup for docker references
+    std::ifstream cgroup("/proc/self/cgroup");
+    if (cgroup.is_open()) {
+        std::string line;
+        while (std::getline(cgroup, line)) {
+            if (line.find("docker") != std::string::npos) {
+                return true;
+            }
+            if (line.find("kubepods") != std::string::npos) {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+uint16_t getCpuAffinityCount() {
+    cpu_set_t mask;
+    CPU_ZERO(&mask);
+
+    if (sched_getaffinity(0, sizeof(mask), &mask) == -1) {
+        return std::thread::hardware_concurrency();
+    }
+
+    int cpu_count = CPU_COUNT(&mask);
+    return static_cast<uint16_t>(cpu_count);
+}
+
+uint16_t getDockerCpuQuota() {
+    // Try cgroup v2 cpu.max (format: "quota period")
+    std::ifstream cpu_max_v2("/sys/fs/cgroup/cpu.max");
+    if (cpu_max_v2.is_open()) {
+        std::string line;
+        if (std::getline(cpu_max_v2, line)) {
+            std::istringstream iss(line);
+            std::string quota_str, period_str;
+            if (iss >> quota_str >> period_str) {
+                if (quota_str == "max") {
+                    return 0;  // No quota set
+                }
+                try {
+                    uint64_t quota = std::stoull(quota_str);
+                    uint64_t period = std::stoull(period_str);
+                    if (quota > 0 && period > 0) {
+                        uint16_t cpu_count = static_cast<uint16_t>((quota + period - 1) / period);
+                        return cpu_count;
+                    }
+                } catch (const std::exception&) {
+                    // Parsing failed, continue
+                }
+            }
+        }
+    }
+
+    // Try cgroup v1 cpu.cfs_quota_us and cpu.cfs_period_us
+    std::ifstream quota_file("/sys/fs/cgroup/cpu/cpu.cfs_quota_us");
+    std::ifstream period_file("/sys/fs/cgroup/cpu/cpu.cfs_period_us");
+
+    if (quota_file.is_open() && period_file.is_open()) {
+        std::string quota_str, period_str;
+        if (std::getline(quota_file, quota_str) && std::getline(period_file, period_str)) {
+            // Trim whitespace
+            quota_str.erase(quota_str.find_last_not_of(" \n\r\t") + 1);
+            period_str.erase(period_str.find_last_not_of(" \n\r\t") + 1);
+            try {
+                uint64_t quota = std::stoull(quota_str);
+                uint64_t period = std::stoull(period_str);
+                if (quota > 0 && period > 0) {
+                    uint16_t cpu_count = static_cast<uint16_t>((quota + period - 1) / period);
+                    return cpu_count;
+                }
+            } catch (const std::exception&) {
+                // Parsing failed, continue
+            }
+        }
+    }
+
+    return 0;  // No quota set
+}
+
+#endif  // __linux__
+
 }  // namespace ovms

@@ -70,6 +70,7 @@
 #include "schema.hpp"
 #include "servable_definition.hpp"
 #include "stringutils.hpp"
+#include "systeminfo.hpp"
 
 namespace ovms {
 
@@ -80,7 +81,6 @@ const std::string DEFAULT_MODEL_CACHE_DIRECTORY = "c:\\Intel\\openvino_cache";
 const std::string DEFAULT_MODEL_CACHE_DIRECTORY = "/opt/cache";
 #endif
 ModelManager::ModelManager(const std::string& modelCacheDirectory, MetricRegistry* registry, PythonBackend* pythonBackend) :
-    ieCore(std::make_unique<ov::Core>()),
     pipelineFactory(std::make_unique<PipelineFactory>()),
 #if (MEDIAPIPE_DISABLE == 0)
     mediapipeFactory(std::make_unique<MediapipeFactory>(pythonBackend)),
@@ -90,6 +90,20 @@ ModelManager::ModelManager(const std::string& modelCacheDirectory, MetricRegistr
     modelCacheDirectory(modelCacheDirectory),
     metricRegistry(registry),
     pythonBackend(pythonBackend) {
+    try {
+        this->ieCore = std::make_unique<ov::Core>();
+        ov::AnyMap cpuProperties;
+        Status status = applyDefaultCpuProperties(cpuProperties);
+        if (!status.ok()) {
+            SPDLOG_CRITICAL("Failed to apply default CPU properties. Reason: {}", status.string());
+            throw std::runtime_error("Failed to apply default CPU properties");
+        }
+        this->ieCore->set_property("CPU", cpuProperties);
+    } catch (const std::exception& ex) {
+        SPDLOG_CRITICAL("Failed to initialize OpenVINO Core with CPU properties. Reason: {}", ex.what());
+        throw;
+    }
+
     OV_LOGGER("ov::Core(): {}", reinterpret_cast<void*>(this->ieCore.get()));
     // Take --cache_dir from CLI
     if (this->modelCacheDirectory.empty()) {
@@ -152,6 +166,12 @@ ModelManager::ModelManager(const std::string& modelCacheDirectory, MetricRegistr
         throw;
     }
     this->logPluginConfiguration();
+#ifdef __linux__
+    if (isRunningInDocker()) {
+        SPDLOG_INFO("Running inside Docker container");
+        SPDLOG_INFO("cpu quota: {}, cpu affinity: {}, max_open_files: {}", getDockerCpuQuota(), getCpuAffinityCount(), getMaxOpenFilesLimit());
+    }
+#endif
 }
 
 void ModelManager::logPluginConfiguration() {
