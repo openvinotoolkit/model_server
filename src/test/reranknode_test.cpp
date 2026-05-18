@@ -605,3 +605,19 @@ TEST_F(RerankTokenizeHttpTest, tokenizeIgnoreAddSpecialTokensParameter) {
         ovms::StatusCode::OK);
     AssertTokenizationResult(response, expectedTokens);
 }
+
+TEST_F(RerankTokenizeHttpTest, tokenizeEmptyNestedArray) {
+    assertTokenizeWithInvalidTextReturnsError(handler.get(), "rerank_ov", "[[]]", response, comp, responseComponents, writer, multiPartParser);
+}
+
+TEST_F(RerankTokenizeHttpTest, tokenizeMultipleEmptyNestedArrays) {
+    assertTokenizeWithInvalidTextReturnsError(handler.get(), "rerank_ov", "[[], [], []]", response, comp, responseComponents, writer, multiPartParser);
+}
+
+TEST_F(RerankTokenizeHttpTest, tokenizeMultipleEmptyNestedArraysAndOneNonEmpty) {
+    assertTokenizeWithInvalidTextReturnsError(handler.get(), "rerank_ov", R"([[], ["hello world"], []])", response, comp, responseComponents, writer, multiPartParser);
+}
+
+TEST_F(RerankTokenizeHttpTest, tokenizeEmptyWithArrayMultipleLevelsOfNesting) {
+    assertTokenizeWithInvalidTextReturnsError(handler.get(), "rerank_ov", "[[[[[]]]]]", response, comp, responseComponents, writer, multiPartParser);
+}
