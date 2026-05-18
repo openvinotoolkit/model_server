@@ -158,7 +158,7 @@ void Phi4ToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t
     }
 }
 
-std::optional<rapidjson::Document> Phi4ToolParser::parseChunk(const std::string& chunk, ov::genai::GenerationFinishReason finishReason) {
+std::optional<rapidjson::Document> Phi4ToolParser::parseChunk(const std::string& chunk, const std::vector<int64_t>& /*tokens*/, ov::genai::GenerationFinishReason finishReason) {
     /* 
     Phi4 with vLLM template produces tool calls in the format:
     functools[{"name": [function name], "arguments": [function arguments as JSON]}, ...]
@@ -205,7 +205,7 @@ std::optional<rapidjson::Document> Phi4ToolParser::parseChunk(const std::string&
                 if (remainingChunk.empty()) {
                     return std::nullopt;  // Nothing more to process in this chunk
                 } else {
-                    return parseChunk(remainingChunk, finishReason);
+                    return parseChunk(remainingChunk, {}, finishReason);
                 }
             } else {                  // modifiedChunk.length() == parsingStartTag.length() as at this state, chunk cannot be smaller
                 return std::nullopt;  // Nothing more to process in this chunk
@@ -224,7 +224,7 @@ std::optional<rapidjson::Document> Phi4ToolParser::parseChunk(const std::string&
                 return std::nullopt;  // Nothing more to process in this chunk
             } else {
                 // Process the remaining chunk as part of tool call processing
-                return parseChunk(remainingChunk, finishReason);
+                return parseChunk(remainingChunk, {}, finishReason);
             }
         } else {
             // Still waiting for the opening bracket, ignore this chunk
@@ -242,7 +242,7 @@ std::optional<rapidjson::Document> Phi4ToolParser::parseChunk(const std::string&
             if (remainingChunk.empty()) {
                 return std::nullopt;  // Nothing more to process in this chunk
             } else {
-                return parseChunk(remainingChunk, finishReason);
+                return parseChunk(remainingChunk, {}, finishReason);
             }
         } else {
             // Still waiting for the opening brace, ignore this chunk

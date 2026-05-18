@@ -257,7 +257,7 @@ TEST_F(Qwen3OutputParserTest, HolisticStreaming) {
     };
 
     for (const auto& [chunk, expectedDelta] : chunkToDeltaVec) {
-        std::optional<rapidjson::Document> doc = outputParser->parseChunk(chunk, true, ov::genai::GenerationFinishReason::NONE);
+        std::optional<rapidjson::Document> doc = outputParser->parseChunk(chunk, {}, true, ov::genai::GenerationFinishReason::NONE);
         if (!expectedDelta.has_value() && !doc.has_value()) {
             continue;  // Both are nullopt, OK
         }
@@ -380,7 +380,7 @@ TEST_F(Qwen3OutputParserTest, StreamingToolWithComplexArguments) {
     };
 
     for (const auto& [chunk, expectedDelta] : chunkToDeltaVec) {
-        std::optional<rapidjson::Document> doc = outputParser->parseChunk(chunk, true, ov::genai::GenerationFinishReason::NONE);
+        std::optional<rapidjson::Document> doc = outputParser->parseChunk(chunk, {}, true, ov::genai::GenerationFinishReason::NONE);
         if (!expectedDelta.has_value() && !doc.has_value()) {
             continue;  // Both are nullopt, OK
         }
@@ -465,7 +465,7 @@ TEST_F(Qwen3OutputParserTest, ToolCallsInsideReasoningStreaming) {
     };
 
     for (const auto& [chunk, expectedDelta] : chunkToDeltaVec) {
-        std::optional<rapidjson::Document> doc = outputParser->parseChunk(chunk, true, ov::genai::GenerationFinishReason::NONE);
+        std::optional<rapidjson::Document> doc = outputParser->parseChunk(chunk, {}, true, ov::genai::GenerationFinishReason::NONE);
         if (!expectedDelta.has_value() && !doc.has_value()) {
             continue;  // Both are nullopt, OK
         }
@@ -502,10 +502,10 @@ TEST_F(Qwen3OutputParserTest, ToolCallsBrokenJson) {
     };
     for (const auto& [chunk, shouldThrow] : chunkToErrorVec) {
         if (shouldThrow) {
-            EXPECT_THROW(outputParser->parseChunk(chunk, true, ov::genai::GenerationFinishReason::NONE), std::runtime_error) << "Expected error for chunk: " << chunk;
+            EXPECT_THROW(outputParser->parseChunk(chunk, {}, true, ov::genai::GenerationFinishReason::NONE), std::runtime_error) << "Expected error for chunk: " << chunk;
         } else {
             EXPECT_NO_THROW({
-                auto doc = outputParser->parseChunk(chunk, true, ov::genai::GenerationFinishReason::NONE);
+                auto doc = outputParser->parseChunk(chunk, {}, true, ov::genai::GenerationFinishReason::NONE);
                 // No further checks, just ensure no exception
             }) << "Unexpected error for chunk: "
                << chunk;
@@ -532,10 +532,10 @@ TEST_F(Qwen3OutputParserTest, ToolCallsDataAfterToolCall) {
         {"Buffer is not cleared, JSON is still broken", true}};
     for (const auto& [chunk, shouldThrow] : chunkToErrorVec) {
         if (shouldThrow) {
-            EXPECT_THROW(outputParser->parseChunk(chunk, true, ov::genai::GenerationFinishReason::NONE), std::runtime_error) << "Expected error for chunk: " << chunk;
+            EXPECT_THROW(outputParser->parseChunk(chunk, {}, true, ov::genai::GenerationFinishReason::NONE), std::runtime_error) << "Expected error for chunk: " << chunk;
         } else {
             EXPECT_NO_THROW({
-                auto doc = outputParser->parseChunk(chunk, true, ov::genai::GenerationFinishReason::NONE);
+                auto doc = outputParser->parseChunk(chunk, {}, true, ov::genai::GenerationFinishReason::NONE);
                 // No further checks, just ensure no exception
             }) << "Unexpected error for chunk: "
                << chunk;

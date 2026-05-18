@@ -43,7 +43,7 @@ void LegacyExecutor::processRequest() {
         SPDLOG_LOGGER_TRACE(llm_executor_logger, "Generation ended");
     }
     requestExecutionContext->readySignal.set_value();
-    requestExecutionContext->executionInProgress.notify_one();
+    requestExecutionContext->deltaChannel.signalComplete();
     std::unique_lock<std::mutex> lock(queueMutex);
     requests.pop();
 }
