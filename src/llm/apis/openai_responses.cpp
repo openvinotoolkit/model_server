@@ -214,6 +214,24 @@ static absl::Status validateFunctionCallItem(const rapidjson::Value& item) {
     return absl::OkStatus();
 }
 
+// Build a chat/completions tool_calls[] array into outArr using the given
+// allocator. Shared by ChatHistorySink and ProcessedJsonSink so the two paths
+// cannot drift on id/call_id handling or field layout.
+static void buildToolCallsArray(const std::vector<const rapidjson::Value*>& toolCalls,
+    rapidjson::Value& outArr, rapidjson::Document::AllocatorType& alloc) {
+    for (const auto* fc : toolCalls) {
+        const FunctionCallFields fields = readFunctionCallFields(*fc);
+        rapidjson::Value funcObj(rapidjson::kObjectType);
+        funcObj.AddMember("name", rapidjson::Value(fields.name.c_str(), alloc), alloc);
+        funcObj.AddMember("arguments", rapidjson::Value(fields.arguments.c_str(), alloc), alloc);
+        rapidjson::Value tcObj(rapidjson::kObjectType);
+        tcObj.AddMember("id", rapidjson::Value(fields.id.c_str(), alloc), alloc);
+        tcObj.AddMember("type", rapidjson::Value("function", alloc), alloc);
+        tcObj.AddMember("function", funcObj, alloc);
+        outArr.PushBack(tcObj, alloc);
+    }
+}
+
 // Classification of a Responses API input item used to dispatch to per-type
 // handlers in the builders below.
 enum class ResponsesInputItemKind {
@@ -521,22 +539,6 @@ private:
         return absl::OkStatus();
     }
 
-    // Build a chat/completions tool_calls[] array into outArr using the given allocator.
-    static void buildToolCallsArray(const std::vector<const rapidjson::Value*>& toolCalls,
-        rapidjson::Value& outArr, rapidjson::Document::AllocatorType& alloc) {
-        for (const auto* fc : toolCalls) {
-            const FunctionCallFields fields = readFunctionCallFields(*fc);
-            rapidjson::Value funcObj(rapidjson::kObjectType);
-            funcObj.AddMember("name", rapidjson::Value(fields.name.c_str(), alloc), alloc);
-            funcObj.AddMember("arguments", rapidjson::Value(fields.arguments.c_str(), alloc), alloc);
-            rapidjson::Value tcObj(rapidjson::kObjectType);
-            tcObj.AddMember("id", rapidjson::Value(fields.id.c_str(), alloc), alloc);
-            tcObj.AddMember("type", rapidjson::Value("function", alloc), alloc);
-            tcObj.AddMember("function", funcObj, alloc);
-            outArr.PushBack(tcObj, alloc);
-        }
-    }
-
     ov::genai::ChatHistory& chatHistory;
     ImageHistory& imageHistory;
     const std::optional<std::string>& allowedLocalMediaPath;
@@ -597,17 +599,7 @@ public:
         if (!reasoning.empty())
             msgObj.AddMember("reasoning_content", rapidjson::Value(reasoning.c_str(), alloc), alloc);
         rapidjson::Value toolCallsArray(rapidjson::kArrayType);
-        for (const auto* fc : toolCalls) {
-            const FunctionCallFields fields = readFunctionCallFields(*fc);
-            rapidjson::Value funcObj(rapidjson::kObjectType);
-            funcObj.AddMember("name", rapidjson::Value(fields.name.c_str(), alloc), alloc);
-            funcObj.AddMember("arguments", rapidjson::Value(fields.arguments.c_str(), alloc), alloc);
-            rapidjson::Value tcObj(rapidjson::kObjectType);
-            tcObj.AddMember("id", rapidjson::Value(fields.id.c_str(), alloc), alloc);
-            tcObj.AddMember("type", rapidjson::Value("function", alloc), alloc);
-            tcObj.AddMember("function", funcObj, alloc);
-            toolCallsArray.PushBack(tcObj, alloc);
-        }
+        buildToolCallsArray(toolCalls, toolCallsArray, alloc);
         msgObj.AddMember("tool_calls", toolCallsArray, alloc);
         messagesArray.PushBack(msgObj, alloc);
     }
