@@ -306,6 +306,7 @@ void escapeSpecialCharacters(std::string& text) {
     text = std::move(escaped);
 }
 
+// TODO move to image gen cli parser file?
 bool isLocalFilePath(const std::string& path) {
     if (path.empty()) {
         return false;

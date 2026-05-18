@@ -185,6 +185,7 @@ Status downloadFileWithCurl(const std::string& url, const std::string& filePath,
     CHECK_CURL_CALL(curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0L));
     CHECK_CURL_CALL(curl_easy_setopt(curl, CURLOPT_XFERINFOFUNCTION, progress_callback));
     CHECK_CURL_CALL(curl_easy_setopt(curl, CURLOPT_XFERINFODATA, &progressData));
+    CHECK_CURL_CALL(curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 30L));
     CHECK_CURL_CALL(curl_easy_setopt(curl, CURLOPT_SSL_OPTIONS, CURLSSLOPT_NATIVE_CA));
     CHECK_CURL_CALL(curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L));
     CHECK_CURL_CALL(curl_easy_setopt(curl, CURLOPT_USE_SSL, CURLUSESSL_ALL));
@@ -197,6 +198,52 @@ Status downloadFileWithCurl(const std::string& url, const std::string& filePath,
         return StatusCode::PATH_INVALID;
     }
     downloadFile.success = true;
+    return StatusCode::OK;
+}
+
+static size_t string_write_callback(void* buffer, size_t size, size_t nmemb, void* userData) {
+    auto* body = static_cast<std::string*>(userData);
+    body->append(static_cast<char*>(buffer), size * nmemb);
+    return size * nmemb;
+}
+
+Status fetchUrlToString(const std::string& url, const std::string& authToken, std::string& responseBody) {
+    std::string agentString = std::string(PROJECT_NAME) + "/" + std::string(PROJECT_VERSION);
+
+    CURL* curl = nullptr;
+    CHECK_CURL_CALL(curl_global_init(CURL_GLOBAL_DEFAULT));
+    auto globalCurlGuard = std::unique_ptr<void, void (*)(void*)>(
+        nullptr, [](void*) { curl_global_cleanup(); });
+    curl = curl_easy_init();
+    if (!curl) {
+        SPDLOG_ERROR("Failed to initialize cURL.");
+        return StatusCode::INTERNAL_ERROR;
+    }
+    auto handleGuard = std::unique_ptr<CURL, decltype(&curl_easy_cleanup)>(curl, curl_easy_cleanup);
+    CHECK_CURL_CALL(curl_easy_setopt(curl, CURLOPT_URL, url.c_str()));
+    CHECK_CURL_CALL(curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, string_write_callback));
+    CHECK_CURL_CALL(curl_easy_setopt(curl, CURLOPT_WRITEDATA, &responseBody));
+    CHECK_CURL_CALL(curl_easy_setopt(curl, CURLOPT_USERAGENT, agentString.c_str()));
+    struct curl_slist* headers = nullptr;
+    std::string authHeader;
+    if (!authToken.empty()) {
+        authHeader = "Authorization: Bearer " + authToken;
+        headers = curl_slist_append(headers, authHeader.c_str());
+        CHECK_CURL_CALL(curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers));
+    }
+    auto headersGuard = std::unique_ptr<struct curl_slist, decltype(&curl_slist_free_all)>(headers, curl_slist_free_all);
+    CHECK_CURL_CALL(curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 30L));
+    CHECK_CURL_CALL(curl_easy_setopt(curl, CURLOPT_TIMEOUT, 60L));
+    CHECK_CURL_CALL(curl_easy_setopt(curl, CURLOPT_SSL_OPTIONS, CURLSSLOPT_NATIVE_CA));
+    CHECK_CURL_CALL(curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L));
+    CHECK_CURL_CALL(curl_easy_setopt(curl, CURLOPT_USE_SSL, CURLUSESSL_ALL));
+    CHECK_CURL_CALL(curl_easy_perform(curl));
+    int32_t httpCode = 0;
+    CHECK_CURL_CALL(curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpCode));
+    if (httpCode != 200) {
+        SPDLOG_ERROR("HTTP request to {} failed with code: {}", url, httpCode);
+        return StatusCode::PATH_INVALID;
+    }
     return StatusCode::OK;
 }
 

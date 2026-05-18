@@ -87,7 +87,7 @@ public:
         }
         // When any adapter is fused/static, the base model is not independently usable
         if (hasFusedOrStaticAdapter) {
-            sidePackets.hideBaseModel = true;
+            sidePackets.hideBaseModelInRouting = true;
         }
         return StatusCode::OK;
     }

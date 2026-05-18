@@ -2567,6 +2567,7 @@ cc_test(
             ":pull_gguf_hf_model_test",
             ":listdirectorymodels_test",
             ":graph_export_test",
+            ":lora_graph_export_test",
             ":config_export_test",
             ":config_export_full_test",
             ":test_constructor_enabled_model_manager",
@@ -2899,6 +2900,22 @@ cc_library(
     linkstatic = 1,
     alwayslink = True,
     srcs = ["test/graph_export_test.cpp"],
+    linkopts = [],
+    deps = [
+        ":test_light_test_utils",
+        ":test_test_with_temp_dir",
+        "//src/graph_export:graph_export",
+        "//src:libovms_server_settings",
+        "@com_google_googletest//:gtest",
+    ],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_TESTS,
+)
+cc_library(
+    name = "lora_graph_export_test",
+    linkstatic = 1,
+    alwayslink = True,
+    srcs = ["test/lora_graph_export_test.cpp"],
     linkopts = [],
     deps = [
         ":test_light_test_utils",

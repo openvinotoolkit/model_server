@@ -45,7 +45,7 @@ struct GraphSidePackets {
     SttServableMap sttServableMap;
     TtsServableMap ttsServableMap;
     std::vector<std::string> loraAliases;
-    bool hideBaseModel = false;
+    bool hideBaseModelInRouting = false;
     void clear() {
         pythonNodeResourcesMap.clear();
         genAiServableMap.clear();
@@ -55,7 +55,7 @@ struct GraphSidePackets {
         sttServableMap.clear();
         ttsServableMap.clear();
         loraAliases.clear();
-        hideBaseModel = false;
+        hideBaseModelInRouting = false;
     }
     bool empty() {
         return (pythonNodeResourcesMap.empty() &&

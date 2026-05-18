@@ -317,7 +317,7 @@ absl::Status ensureAcceptableAndDefaultsSetRequestOptions(ov::AnyMap& requestOpt
     return absl::OkStatus();
 }
 
-std::variant<absl::Status, ov::AnyMap> getImageGenerationRequestOptions(const rapidjson::Document& parser, const ovms::ImageGenPipelineArgs& args) {
+std::variant<absl::Status, ov::AnyMap> getImageGenerationRequestOptions(const rapidjson::Document& parser, const ovms::ImageGenPipelineArgs& args, bool hasDynamicAdapters) {
     // NO -not handled yet
     // OpenAI parameters
     // https://platform.openai.com/docs/api-reference/images/create 15/05/2025
@@ -421,6 +421,12 @@ std::variant<absl::Status, ov::AnyMap> getImageGenerationRequestOptions(const ra
             return absl::InvalidArgumentError(absl::StrCat("Unhandled parameter: ", it->name.GetString()));
         }
     }
+    // Reject lora_alphas when no dynamic adapters are available (STATIC/FUSE modes)
+    auto loraAlphasOverride = parseLoraAlphasOverride(parser);
+    auto loraAlphaStatus = validateLoraAlphasAllowed(hasDynamicAdapters, loraAlphasOverride);
+    if (!loraAlphaStatus.ok()) {
+        return loraAlphaStatus;
+    }
     auto status = ensureAcceptableAndDefaultsSetRequestOptions(requestOptions, args);
     if (!status.ok()) {
         return status;
@@ -435,7 +441,7 @@ std::variant<absl::Status, ov::AnyMap> getImageGenerationRequestOptions(const ra
     return std::move(requestOptions);
 }
 
-std::variant<absl::Status, ov::AnyMap> getImageEditRequestOptions(const ovms::MultiPartParser& parser, const ovms::ImageGenPipelineArgs& args) {
+std::variant<absl::Status, ov::AnyMap> getImageEditRequestOptions(const ovms::MultiPartParser& parser, const ovms::ImageGenPipelineArgs& args, bool hasDynamicAdapters) {
     // NO -not handled yet
     // OpenAI parameters
     // https://platform.openai.com/docs/api-reference/images/createEdit 20/05/2025
@@ -541,6 +547,11 @@ std::variant<absl::Status, ov::AnyMap> getImageEditRequestOptions(const ovms::Mu
             return absl::InvalidArgumentError(absl::StrCat("Unhandled parameter: ", fieldName));
         }
     }
+    // Reject lora_alphas when no dynamic adapters are available (STATIC/FUSE modes)
+    auto loraAlphaStatus = validateLoraAlphasAllowed(hasDynamicAdapters, parser);
+    if (!loraAlphaStatus.ok()) {
+        return loraAlphaStatus;
+    }
     auto status = ensureAcceptableAndDefaultsSetRequestOptions(requestOptions, args);
     if (!status.ok()) {
         return status;
@@ -609,5 +620,23 @@ std::unordered_map<std::string, float> parseLoraAlphasOverride(const rapidjson::
         }
     }
     return result;
+}
+
+absl::Status validateLoraAlphasAllowed(bool hasDynamicAdapters, const std::unordered_map<std::string, float>& loraAlphasOverride) {
+    if (!hasDynamicAdapters && !loraAlphasOverride.empty()) {
+        return absl::InvalidArgumentError(
+            "lora_alphas is not supported when no dynamic LoRA adapters are available. "
+            "Alpha values cannot be overridden for STATIC (NPU) or FUSE mode adapters.");
+    }
+    return absl::OkStatus();
+}
+
+absl::Status validateLoraAlphasAllowed(bool hasDynamicAdapters, const ovms::MultiPartParser& parser) {
+    if (!hasDynamicAdapters && !parser.getFieldByName("lora_alphas").empty()) {
+        return absl::InvalidArgumentError(
+            "lora_alphas is not supported when no dynamic LoRA adapters are available. "
+            "Alpha values cannot be overridden for STATIC (NPU) or FUSE mode adapters.");
+    }
+    return absl::OkStatus();
 }
 }  // namespace ovms

@@ -95,12 +95,6 @@ protected:
         RemoveReadonlyFileAttributeFromDir(this->directoryPath);
         TestWithTempDir::TearDown();
     }
-
-    // Removes # OpenVINO Model Server REPLACE_PROJECT_VERSION comment added for debug purpose in graph export at the begging of graph.pbtxt
-    // This string differs per build and setup
-    std::string removeVersionString(std::string input) {
-        return input.erase(0, input.find("\n") + 1);
-    }
 };
 
 class HfPullCache : public HfPull {

@@ -172,7 +172,7 @@ const std::vector<std::string> MediapipeFactory::getNamesOfAvailableMediapipePip
     std::vector<std::string> names;
     std::shared_lock lock(definitionsMtx);
     for (auto& [name, definition] : definitions) {
-        if (definition->getStatus().isAvailable() && !definition->shouldHideBaseModel()) {
+        if (definition->getStatus().isAvailable() && !definition->shouldHideBaseModelInRouting()) {
             names.push_back(definition->getName());
         }
     }

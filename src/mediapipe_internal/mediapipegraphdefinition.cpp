@@ -168,7 +168,7 @@ Status MediapipeGraphDefinition::validate(const ServableNameChecker& checker) {
         return status;
     }
 
-    if (!this->loraAliases_.empty() && checker.aliasesConflict(this->loraAliases_, getName())) {
+    if (!this->loraAliases.empty() && checker.aliasesConflict(this->loraAliases, getName())) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "LoRA alias in graph '{}' conflicts with an existing servable", getName());
         return StatusCode::MEDIAPIPE_GRAPH_NAME_OCCUPIED;
     }
@@ -383,8 +383,8 @@ Status MediapipeGraphDefinition::initializeNodes() {
         }
     }
     // Register LoRA aliases for routing from initialized image gen pipelines
-    this->loraAliases_ = sidePacketMaps.loraAliases;
-    this->hideBaseModel_ = sidePacketMaps.hideBaseModel;
+    this->loraAliases = sidePacketMaps.loraAliases;
+    this->hideBaseModelInRouting = sidePacketMaps.hideBaseModelInRouting;
     success = true;
     return StatusCode::OK;
 }

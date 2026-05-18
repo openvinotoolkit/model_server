@@ -330,7 +330,7 @@ You can override individual component alphas at request time via `lora_alphas`:
 
 ### LoRA Adapter Modes
 
-The adapter loading mode determines how LoRA weights interact with the base model. The mode is set automatically based on the target device when using `--source_loras`, or can be specified manually in `graph.pbtxt`.
+The adapter loading mode determines how LoRA weights interact with the base model. The mode is set automatically to dynamic unless model will use NPU. This can be adjusted manually in `graph.pbtxt`.
 
 | Mode | Device | Behavior |
 |------|--------|----------|
@@ -346,7 +346,7 @@ The adapter loading mode determines how LoRA weights interact with the base mode
 **STATIC mode (NPU):**
 - All adapters are compiled with their configured `alpha` and remain active permanently.
 - The `alpha` value determines the fixed adapter strength — it cannot be changed at runtime.
-- `lora_alphas` in requests is **ignored** — alphas are baked in at compile time.
+- `lora_alphas` in requests is **rejected** — alphas are baked in at compile time and cannot be overridden per request.
 - The base model is **not accessible** (always has adapters applied).
 - With a single adapter: only the adapter's alias is a valid `model` name.
 - With multiple adapters: composites are **required**. Only composite aliases are valid `model` names.

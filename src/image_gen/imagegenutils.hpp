@@ -66,12 +66,17 @@ std::variant<absl::Status, std::optional<size_t>> getSizetFromPayload(const ovms
 std::variant<absl::Status, std::optional<float>> getFloatFromPayload(const rapidjson::Document& doc, const std::string& keyName);
 std::variant<absl::Status, std::optional<float>> getFloatFromPayload(const ovms::MultiPartParser& payload, const std::string& keyName);
 
-std::variant<absl::Status, ov::AnyMap> getImageGenerationRequestOptions(const rapidjson::Document& doc, const ImageGenPipelineArgs& args);
-std::variant<absl::Status, ov::AnyMap> getImageEditRequestOptions(const ovms::MultiPartParser& payload, const ImageGenPipelineArgs& args);
+std::variant<absl::Status, ov::AnyMap> getImageGenerationRequestOptions(const rapidjson::Document& doc, const ImageGenPipelineArgs& args, bool hasDynamicAdapters = true);
+std::variant<absl::Status, ov::AnyMap> getImageEditRequestOptions(const ovms::MultiPartParser& payload, const ImageGenPipelineArgs& args, bool hasDynamicAdapters = true);
 
 std::unique_ptr<std::string> generateJSONResponseFromB64Images(const std::vector<std::string>& base64Images);
 
 std::variant<absl::Status, std::unique_ptr<std::string>> generateJSONResponseFromOvTensor(const ov::Tensor& tensor);
 
 std::unordered_map<std::string, float> parseLoraAlphasOverride(const rapidjson::Document& doc);
+
+// Returns an error if lora_alphas override is present but no dynamic adapters exist.
+// lora_alphas is only valid when adapters use DYNAMIC mode (runtime alpha switching).
+absl::Status validateLoraAlphasAllowed(bool hasDynamicAdapters, const std::unordered_map<std::string, float>& loraAlphasOverride);
+absl::Status validateLoraAlphasAllowed(bool hasDynamicAdapters, const ovms::MultiPartParser& parser);
 }  // namespace ovms
