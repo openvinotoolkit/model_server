@@ -417,9 +417,6 @@ TEST_P(LLMTokenizeTests, tokenizeArrayOfStringsWithPaddingSideLeft) {
 
 TEST_P(LLMTokenizeTests, tokenizeStringWithAddSpecialTokens) {
     auto params = GetParam();
-    if (params.modelName == "vlm_cb_regular" || params.modelName == "vlm_legacy_regular") {
-        GTEST_SKIP() << "Skipping test for " << params.modelName;
-    }
 
     std::string requestBody = R"(
         {
@@ -441,6 +438,26 @@ TEST_P(LLMTokenizeTests, tokenizeStringWithAddSpecialTokens) {
     const auto& tokens = parsedResponse["tokens"];
     ASSERT_TRUE(tokens.IsArray());
     ASSERT_GE(tokens.Size(), params.expectedTokens.size());
+}
+
+TEST_P(LLMTokenizeTests, tokenizeEmptyNestedArray) {
+    auto params = GetParam();
+    assertTokenizeWithInvalidTextReturnsError(handler.get(), params.modelName, "[[]]", response, comp, responseComponents, writer, multiPartParser);
+}
+
+TEST_P(LLMTokenizeTests, tokenizeMultipleEmptyNestedArrays) {
+    auto params = GetParam();
+    assertTokenizeWithInvalidTextReturnsError(handler.get(), params.modelName, "[[], [], []]", response, comp, responseComponents, writer, multiPartParser);
+}
+
+TEST_P(LLMTokenizeTests, tokenizeMultipleEmptyNestedArraysAndOneNonEmpty) {
+    auto params = GetParam();
+    assertTokenizeWithInvalidTextReturnsError(handler.get(), params.modelName, R"([[], ["hello world"], []])", response, comp, responseComponents, writer, multiPartParser);
+}
+
+TEST_P(LLMTokenizeTests, tokenizeEmptyWithArrayMultipleLevelsOfNesting) {
+    auto params = GetParam();
+    assertTokenizeWithInvalidTextReturnsError(handler.get(), params.modelName, "[[[[[]]]]]", response, comp, responseComponents, writer, multiPartParser);
 }
 
 INSTANTIATE_TEST_SUITE_P(
