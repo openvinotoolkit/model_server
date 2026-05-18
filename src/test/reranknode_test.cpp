@@ -33,6 +33,7 @@ using namespace ovms;
 class RerankHttpTest : public V3HttpTest {
 protected:
     std::string endpoint = "/v3/rerank";
+    std::string modelName = "rerank_ov";
     static std::unique_ptr<std::thread> t;
 
 public:
@@ -54,7 +55,6 @@ public:
 std::unique_ptr<std::thread> RerankHttpTest::t;
 
 TEST_F(RerankHttpTest, simplePositive) {
-    std::string modelName = "rerank_ov";
     std::string requestBody = R"(
         {
             "model": ")" + modelName +
@@ -87,7 +87,6 @@ TEST_F(RerankHttpTest, simplePositive) {
 }
 
 TEST_F(RerankHttpTest, positiveTopN) {
-    std::string modelName = "rerank_ov";
     std::string requestBody = R"(
         {
             "model": ")" + modelName +
@@ -121,7 +120,6 @@ TEST_F(RerankHttpTest, positiveTopN) {
 }
 
 TEST_F(RerankHttpTest, positiveReturnDocuments) {
-    std::string modelName = "rerank_ov";
     std::string requestBody = R"(
         {
             "model": ")" + modelName +
@@ -165,7 +163,8 @@ protected:
     static std::unique_ptr<std::thread> t;
 
 public:
-    const size_t MAX_POSITION_EMBEDDINGS = 12;
+    cod::string modelName = "rerank_ov";
+    stnst size_t MAX_POSITION_EMBEDDINGS = 12;
     const size_t MAX_ALLOWED_CHUNKS = 4;
 
     static void SetUpTestSuite() {
@@ -199,7 +198,6 @@ TEST_F(RerankWithParamsHttpTest, PositiveMaxAllowedChunksNotExceeded) {
     rapidjson::Document document;
     document.SetObject();
     rapidjson::Document::AllocatorType& allocator = document.GetAllocator();
-    std::string modelName = "rerank_ov";
     // Populate the JSON document with data
     document.AddMember("model", rapidjson::StringRef(modelName.c_str()), allocator);
     document.AddMember("query", "What is the capital of the United States?", allocator);  // Will be trimmed to 6 tokens
@@ -227,7 +225,6 @@ TEST_F(RerankWithParamsHttpTest, MaxAllowedChunksExceededByDocumentsBeforeChunki
     rapidjson::Document document;
     document.SetObject();
     rapidjson::Document::AllocatorType& allocator = document.GetAllocator();
-    std::string modelName = "rerank_ov";
     // Populate the JSON document with data
     document.AddMember("model", rapidjson::StringRef(modelName.c_str()), allocator);
     document.AddMember("query", "What is the capital of the United States?", allocator);  // Will be trimmed to 6 tokens
@@ -256,7 +253,6 @@ TEST_F(RerankWithParamsHttpTest, MaxAllowedChunksExceededAfterChunking) {
     rapidjson::Document document;
     document.SetObject();
     rapidjson::Document::AllocatorType& allocator = document.GetAllocator();
-    std::string modelName = "rerank_ov";
     // Populate the JSON document with data
     document.AddMember("model", rapidjson::StringRef(modelName.c_str()), allocator);
     document.AddMember("query", "What is the capital of the United States?", allocator);  // Will be trimmed to 6 tokens
@@ -292,6 +288,7 @@ public:
     const size_t MAX_POSITION_EMBEDDINGS = 8;
     const size_t MAX_ALLOWED_CHUNKS = 4;
 
+    std::string modelName = "rerank_ov";
     static void SetUpTestSuite() {
         std::string port = "9173";
         /*
@@ -321,7 +318,6 @@ TEST_F(RerankWithInvalidParamsHttpTest, AnyRequestNegativeWithInvalidSetup) {
     rapidjson::Document document;
     document.SetObject();
     rapidjson::Document::AllocatorType& allocator = document.GetAllocator();
-    std::string modelName = "rerank_ov";
     // Populate the JSON document with data
     document.AddMember("model", rapidjson::StringRef(modelName.c_str()), allocator);
     document.AddMember("query", "What is the capital of the United States?", allocator);
