@@ -391,10 +391,11 @@ private:
     void flushPendingFunctionCalls(const std::string& assistantText) {
         if (pendingFunctionCalls.empty()) {
             // No tool calls, but possibly buffered reasoning to flush as a
-            // standalone assistant turn carrying only reasoning_content (no
-            // `content` field at all, so templates that gate on `message.content`
-            // skip the content branch and templates that gate on
-            // `message.reasoning_content` still see the buffered text).
+            // standalone assistant turn carrying reasoning_content alongside
+            // an empty string `content` (templates that gate on
+            // `message.content` then see an empty body and skip the content
+            // branch, while templates that gate on `message.reasoning_content`
+            // still pick up the buffered text).
             if (!pendingReasoningContent.empty()) {
                 std::string reasoning = std::move(pendingReasoningContent);
                 pendingReasoningContent.clear();
