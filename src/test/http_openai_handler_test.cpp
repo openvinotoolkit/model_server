@@ -14,6 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 #include <chrono>
+#include <algorithm>
 #include <fstream>
 #include <functional>
 #include <map>
@@ -24,6 +25,7 @@
 #include <gtest/gtest.h>
 
 #include "../http_rest_api_handler.hpp"
+#include "../filesystem/filesystem.hpp"
 #include "../llm/apis/openai_completions.hpp"
 #include "../llm/apis/openai_responses.hpp"
 #include <openvino/genai/visual_language/pipeline.hpp>
@@ -1713,6 +1715,173 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseForResponsesCompleted
     ASSERT_NE(serialized.find("\"metadata\":{}"), std::string::npos) << serialized;
 }
 
+TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseForResponsesEncodedResultsIncompleteOnLength) {
+    std::string json = R"({
+    "model": "llama",
+    "input": "What is OpenVINO?",
+    "max_output_tokens": 5
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    auto apiHandler = std::make_shared<ovms::OpenAIResponsesHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+
+    ov::genai::EncodedResults results;
+    ov::Tensor outputIds = tokenizer->encode("OVMS", ov::genai::add_special_tokens(false)).input_ids;
+    const auto& shape = outputIds.get_shape();
+    ASSERT_EQ(shape.size(), 2);
+    ASSERT_EQ(shape[0], 1);
+    ASSERT_EQ(outputIds.get_element_type(), ov::element::i64);
+    int64_t* outputIdsData = reinterpret_cast<int64_t*>(outputIds.data());
+    results.tokens = {std::vector<int64_t>(outputIdsData, outputIdsData + shape[1])};
+    results.finish_reasons = {ov::genai::GenerationFinishReason::LENGTH};
+
+    std::string serialized = apiHandler->serializeUnaryResponse(results);
+
+    ASSERT_NE(serialized.find("\"status\":\"incomplete\""), std::string::npos) << serialized;
+    ASSERT_NE(serialized.find("\"incomplete_details\""), std::string::npos) << serialized;
+    ASSERT_NE(serialized.find("\"reason\":\"max_tokens\""), std::string::npos) << serialized;
+    ASSERT_EQ(serialized.find("\"completed_at\""), std::string::npos) << serialized;
+    ASSERT_EQ(serialized.find("\"status\":\"completed\""), std::string::npos) << serialized;
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseForResponsesEncodedResultsCompletedOnStop) {
+    std::string json = R"({
+    "model": "llama",
+    "input": "What is OpenVINO?",
+    "max_output_tokens": 5
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    auto apiHandler = std::make_shared<ovms::OpenAIResponsesHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+
+    ov::genai::EncodedResults results;
+    ov::Tensor outputIds = tokenizer->encode("OVMS", ov::genai::add_special_tokens(false)).input_ids;
+    int64_t* outputIdsData = reinterpret_cast<int64_t*>(outputIds.data());
+    results.tokens = {std::vector<int64_t>(outputIdsData, outputIdsData + outputIds.get_shape()[1])};
+    results.finish_reasons = {ov::genai::GenerationFinishReason::STOP};
+
+    std::string serialized = apiHandler->serializeUnaryResponse(results);
+
+    ASSERT_NE(serialized.find("\"status\":\"completed\""), std::string::npos) << serialized;
+    ASSERT_NE(serialized.find("\"completed_at\""), std::string::npos) << serialized;
+    ASSERT_EQ(serialized.find("\"incomplete_details\""), std::string::npos) << serialized;
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseForResponsesVLMDecodedResultsIncompleteOnLength) {
+    std::string json = R"({
+    "model": "llama",
+    "input": "What is OpenVINO?",
+    "max_output_tokens": 5
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    auto apiHandler = std::make_shared<ovms::OpenAIResponsesHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+
+    ov::genai::VLMDecodedResults results;
+    std::string text = "OVMS";
+    results.texts = {text};
+    results.finish_reasons = {ov::genai::GenerationFinishReason::LENGTH};
+
+    std::string serialized = apiHandler->serializeUnaryResponse(results, text);
+
+    ASSERT_NE(serialized.find("\"status\":\"incomplete\""), std::string::npos) << serialized;
+    ASSERT_NE(serialized.find("\"incomplete_details\""), std::string::npos) << serialized;
+    ASSERT_NE(serialized.find("\"reason\":\"max_tokens\""), std::string::npos) << serialized;
+    ASSERT_EQ(serialized.find("\"completed_at\""), std::string::npos) << serialized;
+    ASSERT_EQ(serialized.find("\"status\":\"completed\""), std::string::npos) << serialized;
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseForResponsesVLMDecodedResultsCompletedOnStop) {
+    std::string json = R"({
+    "model": "llama",
+    "input": "What is OpenVINO?",
+    "max_output_tokens": 5
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    auto apiHandler = std::make_shared<ovms::OpenAIResponsesHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+
+    ov::genai::VLMDecodedResults results;
+    std::string text = "OVMS";
+    results.texts = {text};
+    results.finish_reasons = {ov::genai::GenerationFinishReason::STOP};
+
+    std::string serialized = apiHandler->serializeUnaryResponse(results, text);
+
+    ASSERT_NE(serialized.find("\"status\":\"completed\""), std::string::npos) << serialized;
+    ASSERT_NE(serialized.find("\"completed_at\""), std::string::npos) << serialized;
+    ASSERT_EQ(serialized.find("\"incomplete_details\""), std::string::npos) << serialized;
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseChatCompletionsEncodedResultsLengthFinishReason) {
+    std::string json = R"({
+    "model": "llama",
+    "stream": false,
+    "messages": [{"role": "user", "content": "What is OpenVINO?"}]
+    })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    auto apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    uint32_t maxTokensLimit = 100;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+
+    ov::genai::EncodedResults results;
+    ov::Tensor outputIds = tokenizer->encode("OVMS", ov::genai::add_special_tokens(false)).input_ids;
+    int64_t* outputIdsData = reinterpret_cast<int64_t*>(outputIds.data());
+    results.tokens = {std::vector<int64_t>(outputIdsData, outputIdsData + outputIds.get_shape()[1])};
+    results.finish_reasons = {ov::genai::GenerationFinishReason::LENGTH};
+
+    std::string serialized = apiHandler->serializeUnaryResponse(results);
+    ASSERT_NE(serialized.find("\"finish_reason\":\"length\""), std::string::npos) << serialized;
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseChatCompletionsVLMDecodedResultsLengthFinishReason) {
+    std::string json = R"({
+    "model": "llama",
+    "stream": false,
+    "messages": [{"role": "user", "content": "What is OpenVINO?"}]
+    })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    auto apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    uint32_t maxTokensLimit = 100;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+
+    ov::genai::VLMDecodedResults results;
+    std::string text = "OVMS";
+    results.texts = {text};
+    results.finish_reasons = {ov::genai::GenerationFinishReason::LENGTH};
+
+    std::string serialized = apiHandler->serializeUnaryResponse(results, text);
+    ASSERT_NE(serialized.find("\"finish_reason\":\"length\""), std::string::npos) << serialized;
+}
+
 TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesSucceedsBase64) {
     std::string json = R"({
     "model": "llama",
@@ -2146,7 +2315,10 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemWithinAl
     EXPECT_EQ(json, std::string("{\"model\":\"llama\",\"messages\":[{\"role\":\"user\",\"content\":\"What is in this image?\"}]}"));
 }
 
-TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemNotWithinAllowedPath) {
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemWithinAllowedPathMixedSeparators) {
+#ifndef _WIN32
+    GTEST_SKIP() << "Backslash is a valid filename character on POSIX and is not treated as a path separator.";
+#else
     std::string json = R"({
 "model": "llama",
 "messages": [
@@ -2160,7 +2332,49 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemNotWithi
       {
         "type": "image_url",
         "image_url": {
-          "url":  "/ovms/src/test/binaryutils/rgb.jpg"
+          "url":  ")" + getGenericFullPathForSrcTest("/ovms/src/test/binaryutils/rgb.jpg") +
+                       R"("
+        }
+      }
+    ]
+  }
+]
+})";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    std::string mixedSeparatorAllowedPath = getGenericFullPathForSrcTest("/ovms/src/test/binaryutils");
+    std::replace(mixedSeparatorAllowedPath.begin(), mixedSeparatorAllowedPath.end(), '/', '\\');
+
+    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    ASSERT_EQ(apiHandler->parseMessages(mixedSeparatorAllowedPath), absl::OkStatus());
+    const ovms::ImageHistory& imageHistory = apiHandler->getImageHistory();
+    ASSERT_EQ(imageHistory.size(), 1);
+    auto [index, image] = imageHistory[0];
+    EXPECT_EQ(index, 0);
+    EXPECT_EQ(image.get_element_type(), ov::element::u8);
+    EXPECT_EQ(image.get_size(), 3);
+#endif
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemNotWithinAllowedPath) {
+    const std::string imageUrl = getGenericFullPathForSrcTest("/ovms/src/test/binaryutils/rgb.jpg");
+    const std::string allowedPath = getGenericFullPathForSrcTest("/ovms/src/test/llm");
+    std::string json = R"({
+"model": "llama",
+"messages": [
+  {
+    "role": "user",
+    "content": [
+      {
+        "type": "text",
+        "text": "What is in this image?"
+      },
+      {
+        "type": "image_url",
+        "image_url": {
+          "url":  ")" + imageUrl +
+                       R"("
         }
       }
     ]
@@ -2170,10 +2384,253 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemNotWithi
     doc.Parse(json.c_str());
     ASSERT_FALSE(doc.HasParseError());
     std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
-    ASSERT_EQ(apiHandler->parseMessages("src/test"), absl::InvalidArgumentError("Given filepath is not subpath of allowed_local_media_path"));
+    ASSERT_EQ(apiHandler->parseMessages(allowedPath), absl::InvalidArgumentError("Given filepath is not subpath of allowed_local_media_path"));
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemPrefixPathBypassPrevented) {
+    const std::string allowedLocalMediaPath = getGenericFullPathForSrcTest("/ovms/src/test/binaryutils");
+    const std::string siblingPrefixPath = allowedLocalMediaPath + "_private/rgb.jpg";
+    std::string json = R"({
+"model": "llama",
+"messages": [
+  {
+    "role": "user",
+    "content": [
+      {
+        "type": "text",
+        "text": "What is in this image?"
+      },
+      {
+        "type": "image_url",
+        "image_url": {
+          "url":  ")" + siblingPrefixPath +
+                       R"("
+        }
+      }
+    ]
+  }
+]
+})";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    ASSERT_EQ(apiHandler->parseMessages(allowedLocalMediaPath), absl::InvalidArgumentError("Given filepath is not subpath of allowed_local_media_path"));
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemRelativeImagePathInsideAllowedPath) {
+    // Verify that a relative image path is resolved against the current working directory
+    // and accepted when the resolved location is inside allowed_local_media_path.
+    // Copy the fixture into cwd so the relative path is a single component (no "..",
+    // which FileSystem::isPathEscaped would reject before normalization).
+    const std::filesystem::path absoluteImage = getGenericFullPathForSrcTest("/ovms/src/test/binaryutils/rgb.jpg");
+    const std::string relativeImageName = "ovms_relative_image_test_inside.jpg";
+    const std::filesystem::path relativeImageInCwd = std::filesystem::current_path() / relativeImageName;
+    std::error_code ec;
+    std::filesystem::copy_file(absoluteImage, relativeImageInCwd, std::filesystem::copy_options::overwrite_existing, ec);
+    ASSERT_FALSE(ec) << "Cannot copy fixture into cwd: " << ec.message();
+    const std::string allowedPath = std::filesystem::current_path().generic_string();
+    std::string json = R"({
+"model": "llama",
+"messages": [
+  {
+    "role": "user",
+    "content": [
+      {
+        "type": "text",
+        "text": "What is in this image?"
+      },
+      {
+        "type": "image_url",
+        "image_url": {
+          "url":  ")" + relativeImageName +
+                       R"("
+        }
+      }
+    ]
+  }
+]
+})";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    const auto status = apiHandler->parseMessages(allowedPath);
+    std::filesystem::remove(relativeImageInCwd, ec);
+    ASSERT_EQ(status, absl::OkStatus());
+    const ovms::ImageHistory& imageHistory = apiHandler->getImageHistory();
+    ASSERT_EQ(imageHistory.size(), 1);
+    auto [index, image] = imageHistory[0];
+    EXPECT_EQ(index, 0);
+    EXPECT_EQ(image.get_element_type(), ov::element::u8);
+    EXPECT_EQ(image.get_size(), 3);
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemRelativeImagePathOutsideAllowedPath) {
+    // A relative image path resolves against the current working directory; if the resolved
+    // location is outside allowed_local_media_path the request must be rejected.
+    const std::string imageUrl = "rgb.jpg";
+    const std::string allowedPath = getGenericFullPathForSrcTest("/ovms/src/test/binaryutils");
+    std::string json = R"({
+"model": "llama",
+"messages": [
+  {
+    "role": "user",
+    "content": [
+      {
+        "type": "text",
+        "text": "What is in this image?"
+      },
+      {
+        "type": "image_url",
+        "image_url": {
+          "url":  ")" + imageUrl +
+                       R"("
+        }
+      }
+    ]
+  }
+]
+})";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    ASSERT_EQ(apiHandler->parseMessages(allowedPath), absl::InvalidArgumentError("Given filepath is not subpath of allowed_local_media_path"));
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemRelativeAllowedPathInside) {
+    // A relative allowed_local_media_path is resolved against the current working directory.
+    // Use "." so allowlist resolves to cwd; copy the fixture into cwd so the (absolute) image
+    // path falls inside the resolved allowlist.
+    const std::filesystem::path absoluteImage = getGenericFullPathForSrcTest("/ovms/src/test/binaryutils/rgb.jpg");
+    const std::string relativeImageName = "ovms_relative_allowed_test_inside.jpg";
+    const std::filesystem::path imageInCwd = std::filesystem::current_path() / relativeImageName;
+    std::error_code ec;
+    std::filesystem::copy_file(absoluteImage, imageInCwd, std::filesystem::copy_options::overwrite_existing, ec);
+    ASSERT_FALSE(ec) << "Cannot copy fixture into cwd: " << ec.message();
+    const std::string imageUrl = imageInCwd.generic_string();
+    std::string json = R"({
+"model": "llama",
+"messages": [
+  {
+    "role": "user",
+    "content": [
+      {
+        "type": "text",
+        "text": "What is in this image?"
+      },
+      {
+        "type": "image_url",
+        "image_url": {
+          "url":  ")" + imageUrl +
+                       R"("
+        }
+      }
+    ]
+  }
+]
+})";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    const auto status = apiHandler->parseMessages(".");
+    std::filesystem::remove(imageInCwd, ec);
+    ASSERT_EQ(status, absl::OkStatus());
+    const ovms::ImageHistory& imageHistory = apiHandler->getImageHistory();
+    ASSERT_EQ(imageHistory.size(), 1);
+    auto [index, image] = imageHistory[0];
+    EXPECT_EQ(index, 0);
+    EXPECT_EQ(image.get_element_type(), ov::element::u8);
+    EXPECT_EQ(image.get_size(), 3);
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemRelativeAllowedPathOutside) {
+    // A relative allowed_local_media_path resolves against the current working directory; an
+    // absolute image path located outside of that resolved directory must still be rejected.
+    const std::string allowedPath = ".";
+    const std::string imageUrl = getGenericFullPathForSrcTest("/ovms/src/test/binaryutils/rgb.jpg");
+    if (std::filesystem::path(imageUrl).lexically_normal().string().rfind(
+            std::filesystem::current_path().lexically_normal().string(), 0) == 0) {
+        GTEST_SKIP() << "Image path is inside the current working directory; cannot exercise the outside-of-allowlist case.";
+    }
+    std::string json = R"({
+"model": "llama",
+"messages": [
+  {
+    "role": "user",
+    "content": [
+      {
+        "type": "text",
+        "text": "What is in this image?"
+      },
+      {
+        "type": "image_url",
+        "image_url": {
+          "url":  ")" + imageUrl +
+                       R"("
+        }
+      }
+    ]
+  }
+]
+})";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    ASSERT_EQ(apiHandler->parseMessages(allowedPath), absl::InvalidArgumentError("Given filepath is not subpath of allowed_local_media_path"));
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemSymlinkEscapeIsRejected) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Creating filesystem symlinks on Windows requires elevated privileges and is unreliable in CI.";
+#else
+    // Build an allowed directory that contains a symlink pointing to a sibling directory holding the
+    // real image. The image, when accessed through the symlink, appears to live inside the allowlist,
+    // but its canonical location is outside it. This regression test ensures the authorization check
+    // resolves the symlink (via weakly_canonical) before the allowlist comparison.
+    const std::filesystem::path realImageDir = getGenericFullPathForSrcTest("/ovms/src/test/binaryutils");
+    const std::filesystem::path allowedRoot = std::filesystem::temp_directory_path() / "ovms_symlink_allowlist_test";
+    std::error_code ec;
+    std::filesystem::remove_all(allowedRoot, ec);
+    ASSERT_TRUE(std::filesystem::create_directories(allowedRoot, ec)) << ec.message();
+    const std::filesystem::path symlinkInsideAllowed = allowedRoot / "linked";
+    std::filesystem::create_directory_symlink(realImageDir, symlinkInsideAllowed, ec);
+    if (ec) {
+        std::filesystem::remove_all(allowedRoot);
+        GTEST_SKIP() << "Cannot create symlink for test: " << ec.message();
+    }
+    const std::string imageUrl = (symlinkInsideAllowed / "rgb.jpg").string();
+    std::string json = R"({
+"model": "llama",
+"messages": [
+  {
+    "role": "user",
+    "content": [
+      {
+        "type": "text",
+        "text": "What is in this image?"
+      },
+      {
+        "type": "image_url",
+        "image_url": {
+          "url":  ")" + imageUrl +
+                       R"("
+        }
+      }
+    ]
+  }
+]
+})";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    const auto status = apiHandler->parseMessages(allowedRoot.string());
+    std::filesystem::remove_all(allowedRoot, ec);
+    ASSERT_EQ(status, absl::InvalidArgumentError("Given filepath is not subpath of allowed_local_media_path"));
+#endif
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemInvalidPath) {
+    const std::string allowedPath = getGenericFullPathForSrcTest("/ovms/src/test/");
+    const std::string imageUrl = getGenericFullPathForSrcTest("/ovms/src/test/not_existing.jpeg");
     std::string json = R"({
   "model": "llama",
   "messages": [
@@ -2187,7 +2644,8 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemInvalidP
         {
           "type": "image_url",
           "image_url": {
-            "url":  "/ovms/not_exisiting.jpeg"
+            "url":  ")" +
+                       imageUrl + R"("
           }
         }
       ]
@@ -2197,7 +2655,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemInvalidP
     doc.Parse(json.c_str());
     ASSERT_FALSE(doc.HasParseError());
     std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
-    EXPECT_EQ(apiHandler->parseMessages("/ovms/"), absl::InvalidArgumentError("Image file /ovms/not_exisiting.jpeg parsing failed: can't fopen"));
+    EXPECT_EQ(apiHandler->parseMessages(allowedPath), absl::InvalidArgumentError("Image file " + ovms::FileSystem::normalizeConfiguredPath(imageUrl) + " parsing failed: can't fopen"));
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemInvalidEscaped) {

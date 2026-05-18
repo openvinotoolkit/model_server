@@ -18,6 +18,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <filesystem>
 #include <limits>
 #include <memory>
 #include <sstream>
@@ -45,6 +46,17 @@ using namespace rapidjson;
 namespace ovms {
 
 constexpr size_t DEFAULT_MAX_STOP_WORDS = 16;  // same as deep-seek
+
+namespace {
+
+bool isPathInsideDirectory(const std::filesystem::path& testedPath, const std::filesystem::path& allowedDirectory) {
+    const auto mismatch = std::mismatch(
+        allowedDirectory.begin(), allowedDirectory.end(),
+        testedPath.begin(), testedPath.end());
+    return mismatch.first == allowedDirectory.end();
+}
+
+}  // namespace
 
 ov::genai::JsonContainer rapidJsonValueToJsonContainer(const rapidjson::Value& value) {
     if (value.IsNull()) {
@@ -234,15 +246,17 @@ absl::StatusOr<ov::Tensor> loadImage(const std::string& imageSource,
             return absl::InvalidArgumentError(ss.str());
         }
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Loading image from local filesystem");
-        const auto firstMissmatch = std::mismatch(imageSource.begin(), imageSource.end(), allowedLocalMediaPath.value().begin(), allowedLocalMediaPath.value().end());
-        if (firstMissmatch.second != allowedLocalMediaPath.value().end()) {
+        const std::filesystem::path resolvedAllowedPath = FileSystem::normalizeConfiguredPath(allowedLocalMediaPath.value());
+        const std::string resolvedImagePathStr = FileSystem::normalizeConfiguredPath(imageSource);
+        const std::filesystem::path resolvedImagePath = resolvedImagePathStr;
+        if (!isPathInsideDirectory(resolvedImagePath, resolvedAllowedPath)) {
             return absl::InvalidArgumentError("Given filepath is not subpath of allowed_local_media_path");
         }
         try {
-            tensor = loadImageStbiFromFile(imageSource.c_str());
+            tensor = loadImageStbiFromFile(resolvedImagePathStr.c_str());
         } catch (std::runtime_error& e) {
             std::stringstream ss;
-            ss << "Image file " << imageSource.c_str() << " parsing failed: " << e.what();
+            ss << "Image file " << resolvedImagePathStr << " parsing failed: " << e.what();
             SPDLOG_LOGGER_DEBUG(llm_calculator_logger, ss.str());
             return absl::InvalidArgumentError(ss.str());
         }

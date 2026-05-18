@@ -231,6 +231,8 @@ public:
         return !path.empty() && (path[0] == '/');
     }
 
+    static std::string normalizeConfiguredPath(const std::string& pathString);
+
     static std::string joinPath(std::initializer_list<std::string> segments) {
         std::string joined;
 
