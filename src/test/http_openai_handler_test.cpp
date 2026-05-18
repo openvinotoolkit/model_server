@@ -4887,6 +4887,47 @@ TEST_F(HttpOpenAIHandlerParsingTest, ResponsesFunctionCallMissingArgumentsReject
     EXPECT_EQ(status, absl::InvalidArgumentError("function_call item is missing required arguments field"));
 }
 
+TEST_F(HttpOpenAIHandlerParsingTest, ResponsesImageHistoryIndexMatchesChatHistoryTurn) {
+    // Regression test for the image-index drift bug: when an input item is
+    // merged (function_call buffered, then absorbed into the next assistant
+    // message), the Responses input-array index no longer matches the
+    // resulting chatHistory index. ChatHistorySink::appendInputImage must
+    // record the actual chatHistory turn index so the VLM servable can
+    // prepend the <ov_genai_image_*> tag to the correct message (and not
+    // index out-of-bounds).
+    const std::string base64Image = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAAEElEQVR4nGLK27oAEAAA//8DYAHGgEvy5AAAAABJRU5ErkJggg==";
+    std::string json = R"({
+        "model": "llama",
+        "input": [
+            {"role": "user", "content": [{"type":"input_text","text":"hi"}]},
+            {"type": "function_call", "call_id": "call_1", "name": "x", "arguments": "{}"},
+            {"role": "assistant", "content": [{"type":"output_text","text":"calling tool"}]},
+            {"role": "user", "content": [
+                {"type":"input_text","text":"and now?"},
+                {"type":"input_image","image_url":")" + base64Image + R"("}
+            ]}
+        ]
+    })";
+    auto apiHandler = parseResponses(doc, *tokenizer, json);
+    ASSERT_NE(apiHandler, nullptr);
+
+    // Input has 4 items but item [1] (function_call) is buffered and merged
+    // into item [2] (assistant) — chatHistory ends up with 3 entries:
+    //   [0] user "hi"
+    //   [1] assistant "calling tool" with tool_calls
+    //   [2] user "and now?" (image-bearing)
+    auto& chatHistory = apiHandler->getChatHistory();
+    ASSERT_EQ(chatHistory.size(), 3u);
+
+    const ovms::ImageHistory& imageHistory = apiHandler->getImageHistory();
+    ASSERT_EQ(imageHistory.size(), 1u);
+    auto [turnIndex, image] = imageHistory[0];
+    // Must point at the second user (chatHistory[2]) — NOT the input-array
+    // index 3, which would be out-of-bounds for chatHistory[3].
+    EXPECT_EQ(turnIndex, 2u);
+    EXPECT_LT(turnIndex, chatHistory.size());
+}
+
 // --- Tools normalisation edge cases ---
 
 TEST_F(HttpOpenAIHandlerParsingTest, ResponsesFlatToolWithoutParametersIsNormalised) {

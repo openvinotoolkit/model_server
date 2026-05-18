@@ -361,6 +361,19 @@ private:
 
     absl::Status onRoleItem(const rapidjson::Value::ConstObject& itemObj, rapidjson::SizeType index) {
         const std::string role = itemObj.FindMember("role")->value.GetString();
+        // Non-assistant items must not absorb pending tool_calls; flush first.
+        // (flushPendingFunctionCalls also emits any standalone reasoning content
+        // as a standalone assistant turn.)
+        //
+        // Flushing BEFORE extractContent is intentional: it makes
+        // chatHistory.size() equal the index this item's message will land at,
+        // so the ChatHistorySink can record image-history turn indices directly
+        // from chatHistory.size() instead of from the Responses input-array
+        // index (which drifts when items are buffered/merged).
+        if (role != "assistant") {
+            flushPendingFunctionCalls("");
+        }
+
         std::string contentText;
         auto status = sink.extractContent(itemObj, index, contentText);
         if (!status.ok())
@@ -371,12 +384,6 @@ private:
         if (role == "assistant" && !pendingFunctionCalls.empty()) {
             flushPendingFunctionCalls(contentText);
             return absl::OkStatus();
-        }
-        // Non-assistant items must not absorb pending tool_calls; flush first.
-        // (flushPendingFunctionCalls also emits any standalone reasoning content
-        // as a standalone assistant turn.)
-        if (role != "assistant") {
-            flushPendingFunctionCalls("");
         }
 
         std::string reasoning;
@@ -431,7 +438,7 @@ public:
     }
 
     absl::Status extractContent(const rapidjson::Value::ConstObject& itemObj,
-        rapidjson::SizeType index, std::string& outText) {
+        rapidjson::SizeType /*index*/, std::string& outText) {
         outText.clear();
         auto contentIt = itemObj.FindMember("content");
         if (contentIt == itemObj.MemberEnd())
@@ -459,7 +466,7 @@ public:
                 // Last text-bearing item wins, matching pre-refactor behaviour.
                 outText = textIt->value.GetString();
             } else if (type == "input_image") {
-                auto status = appendInputImage(contentObj, index);
+                auto status = appendInputImage(contentObj);
                 if (!status.ok())
                     return status;
             } else {
@@ -515,7 +522,12 @@ public:
     }
 
 private:
-    absl::Status appendInputImage(const rapidjson::Value::ConstObject& contentObj, rapidjson::SizeType index) {
+    // Record (chatTurnIndex, tensor) immediately. This is correct because
+    // onRoleItem() flushes any buffered standalone messages BEFORE calling
+    // extractContent(), so at this point chatHistory.size() is the index that
+    // the upcoming emitMessage()/emitAssistantWithToolCalls() will push the
+    // image-bearing message into.
+    absl::Status appendInputImage(const rapidjson::Value::ConstObject& contentObj) {
         auto imageUrlIt = contentObj.FindMember("image_url");
         if (imageUrlIt == contentObj.MemberEnd())
             return absl::InvalidArgumentError("input_image requires image_url field");
@@ -536,7 +548,7 @@ private:
         auto tensorResult = loadImage(imageUrl, allowedLocalMediaPath, allowedMediaDomains);
         if (!tensorResult.ok())
             return tensorResult.status();
-        imageHistory.push_back({index, tensorResult.value()});
+        imageHistory.push_back({chatHistory.size(), tensorResult.value()});
         return absl::OkStatus();
     }
 
