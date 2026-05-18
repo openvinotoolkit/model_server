@@ -163,8 +163,8 @@ protected:
     static std::unique_ptr<std::thread> t;
 
 public:
-    cod::string modelName = "rerank_ov";
-    stnst size_t MAX_POSITION_EMBEDDINGS = 12;
+    std::string modelName = "rerank_ov";
+    const size_t MAX_POSITION_EMBEDDINGS = 12;
     const size_t MAX_ALLOWED_CHUNKS = 4;
 
     static void SetUpTestSuite() {
