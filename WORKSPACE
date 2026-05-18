@@ -299,6 +299,7 @@ new_local_repository(
 new_local_repository(
     name = "windows_opencv",
     build_file = "@//third_party/opencv:opencv_windows.BUILD",
+    # NOTE: Path must match OPENCV_VERSION in versions.mk
     path = "C:\\opt\\opencv_4.12.0",
 )
 

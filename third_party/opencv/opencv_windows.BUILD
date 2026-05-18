@@ -20,7 +20,7 @@ licenses(["notice"])  # BSD license
 
 exports_files(["LICENSE"])
 
-OPENCV_VERSION = "4120"  # 4.12.0
+OPENCV_VERSION = "4120"  # 4.12.0 – keep in sync with OPENCV_VERSION in versions.mk
 
 config_setting(
     name = "opt_build",

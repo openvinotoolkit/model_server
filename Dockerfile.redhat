@@ -97,7 +97,8 @@ RUN CASABLANCA_DIR=/azure/cpprestsdk cmake .. -DCMAKE_CXX_FLAGS="${SDL_OPS} ${LT
 ####### Build OpenCV
 COPY third_party/opencv /ovms/third_party/opencv
 WORKDIR /ovms/third_party/opencv
-RUN if [ "$VERBOSE_LOGS" == "ON" ] ; then export VERBOSE=1 ; fi && ./install_opencv.sh
+ARG OPENCV_VERSION=4.13.0
+RUN if [ "$VERBOSE_LOGS" == "ON" ] ; then export VERBOSE=1 ; fi && OPENCV_VERSION=${OPENCV_VERSION} ./install_opencv.sh
 ####### End of OpenCV
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
