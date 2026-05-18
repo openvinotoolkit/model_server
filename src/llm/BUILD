@@ -295,7 +295,8 @@ ovms_cc_library(
 
 ovms_cc_library(
     name = "genai_servables",
-    hdrs = ["servable.hpp", 
+    hdrs = ["servable.hpp",
+            "ovms_text_streamer.hpp",
             "servable_initializer.hpp", 
             "language_model/continuous_batching/servable.hpp",
             "language_model/continuous_batching/llm_executor.hpp",
@@ -310,6 +311,7 @@ ovms_cc_library(
             "text_utils.hpp"],
     srcs = ["servable.cpp",
             "servable_initializer.cpp",
+            "ovms_text_streamer.cpp",
             "language_model/continuous_batching/servable.cpp",
             "language_model/continuous_batching/servable_initializer.cpp",
             "visual_language_model/continuous_batching/servable.cpp",

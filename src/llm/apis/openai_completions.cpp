@@ -535,7 +535,7 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(ov::genai::VLMD
 
 // --- Streaming serialization ---
 
-std::string OpenAIChatCompletionsHandler::serializeStreamingChunk(const std::string& chunkResponse, ov::genai::GenerationFinishReason finishReason) {
+std::string OpenAIChatCompletionsHandler::serializeStreamingChunk(rapidjson::Document parsedDelta, ov::genai::GenerationFinishReason finishReason) {
     OVMS_PROFILE_FUNCTION();
 
     Document doc;
@@ -561,33 +561,25 @@ std::string OpenAIChatCompletionsHandler::serializeStreamingChunk(const std::str
     // TODO: logprobs: object/null; Log probability information for the choice.
     choice.AddMember("logprobs", Value(), allocator);
     if (endpoint == Endpoint::CHAT_COMPLETIONS) {
-        if (outputParser != nullptr) {
-            std::optional<Document> delta = outputParser->parseChunk(chunkResponse, areToolsAvailable(), finishReason);
-            if (!delta.has_value()) {
-                // If the generation is still ongoing, there is nothing to emit yet
-                if (finishReason == ov::genai::GenerationFinishReason::NONE) {
-                    return "";
-                }
-                // Generation finished but parser returned no delta (e.g. empty chunk after tool call).
-                // We still need to emit a chunk with the appropriate finish_reason.
+        // parsedDelta is a pre-parsed Document produced by OVMSTextStreamer::flush_chunk.
+        // Shape: {"delta":{...}} for content/reasoning/tool_calls, or an empty Document{}
+        // for finish-only chunks (generation ended on a swallowed token).
+        if (parsedDelta.HasMember("delta")) {
+            choice.AddMember("delta", Value(parsedDelta["delta"], allocator), allocator);
+            hasToolCalls = hasToolCallsInStreamingDelta(parsedDelta);
+            if (hasToolCalls) {
+                toolCallsDetectedInStream = true;
             }
-            if (delta.has_value() && delta->HasMember("delta")) {
-                // Deep copy the "delta" member value into the choice object
-                choice.AddMember("delta", Value((*delta)["delta"], allocator), allocator);
-                hasToolCalls = hasToolCallsInStreamingDelta(*delta);
-                if (hasToolCalls) {
-                    toolCallsDetectedInStream = true;
-                }
-            }
-
-        } else {
-            Value delta(kObjectType);
-            delta.SetObject();
-            delta.AddMember("content", Value(chunkResponse.c_str(), allocator), allocator);
-            choice.AddMember("delta", delta, allocator);
         }
+        // If no "delta" member, choice has no delta — valid for the final finish_reason chunk.
     } else if (endpoint == Endpoint::COMPLETIONS) {
-        choice.AddMember("text", Value(chunkResponse.c_str(), allocator), allocator);
+        // For /v1/completions, extract the plain text from the content delta.
+        if (parsedDelta.HasMember("delta") && parsedDelta["delta"].IsObject() &&
+            parsedDelta["delta"].HasMember("content") && parsedDelta["delta"]["content"].IsString()) {
+            choice.AddMember("text", Value(parsedDelta["delta"]["content"].GetString(), allocator), allocator);
+        } else {
+            choice.AddMember("text", Value("", allocator), allocator);
+        }
     }
 
     auto serializedFinishReason = mapFinishReason(finishReason, hasToolCalls || toolCallsDetectedInStream);

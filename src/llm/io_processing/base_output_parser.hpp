@@ -84,7 +84,8 @@ public:
 
     // Parse model output chunk in the streaming mode. If in result of processing the chunk we cannot produce meaningful response, we return std::nullopt.
     // Otherwise we return a JSON object containing the delta that conforms to OpenAI API.
-    virtual std::optional<rapidjson::Document> parseChunk(const std::string& chunkResponse, ov::genai::GenerationFinishReason finishReason) = 0;
+    // tokens holds the token IDs that produced chunkResponse (may be empty; currently informational for future use).
+    virtual std::optional<rapidjson::Document> parseChunk(const std::string& chunkResponse, const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason) = 0;
 
     // Get the tags that marks the beginning of the segment that should be processed by the parser.
     // This method is used in streaming mode to determine if the parser should start processing the content.
