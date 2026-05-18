@@ -136,7 +136,10 @@ static std::string extractReasoningText(const rapidjson::Value::ConstObject& ite
 }
 
 // Extract a flat text string from a Responses API content field which may be
-// either a string or an array of {type,text} objects.
+// either a string or an array of {type,text} objects. When multiple text items
+// are present, the last one wins, matching ChatHistorySink::extractContent so
+// the Python/Jinja processedJson path and the C++ chatHistory path produce the
+// same prompt.
 static std::string extractTextContent(const rapidjson::Value& contentVal) {
     if (contentVal.IsString()) {
         return contentVal.GetString();
@@ -144,6 +147,7 @@ static std::string extractTextContent(const rapidjson::Value& contentVal) {
     if (!contentVal.IsArray()) {
         return "";
     }
+    std::string result;
     for (const auto& ci : contentVal.GetArray()) {
         if (!ci.IsObject())
             continue;
@@ -154,11 +158,11 @@ static std::string extractTextContent(const rapidjson::Value& contentVal) {
         if (ctType == "input_text" || ctType == "output_text") {
             auto textIt = ci.GetObject().FindMember("text");
             if (textIt != ci.GetObject().MemberEnd() && textIt->value.IsString()) {
-                return textIt->value.GetString();
+                result = textIt->value.GetString();
             }
         }
     }
-    return "";
+    return result;
 }
 
 // Read the three string fields (id, name, arguments) out of a function_call item.
@@ -382,13 +386,15 @@ public:
         outText.clear();
         auto contentIt = itemObj.FindMember("content");
         if (contentIt == itemObj.MemberEnd())
-            return absl::OkStatus();
+            return absl::InvalidArgumentError("input item is missing required content field");
         if (contentIt->value.IsString()) {
             outText = contentIt->value.GetString();
             return absl::OkStatus();
         }
         if (!contentIt->value.IsArray())
             return absl::InvalidArgumentError("input item content must be a string or array");
+        if (contentIt->value.Empty())
+            return absl::InvalidArgumentError("input item content array must not be empty");
         for (const auto& contentItem : contentIt->value.GetArray()) {
             if (!contentItem.IsObject())
                 return absl::InvalidArgumentError("input content items must be objects");

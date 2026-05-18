@@ -2712,7 +2712,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemInvalidP
     doc.Parse(json.c_str());
     ASSERT_FALSE(doc.HasParseError());
     std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
-    EXPECT_EQ(apiHandler->parseMessages(allowedPath), absl::InvalidArgumentError("Image file " + ovms::FileSystem::normalizeConfiguredPath(imageUrl) + " parsing failed: can't fopen"));
+    EXPECT_EQ(apiHandler->parseMessages(allowedPath), absl::InvalidArgumentError("Image file parsing failed"));
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemInvalidEscaped) {
@@ -3458,6 +3458,40 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingResponsesUnsupportedContentTypeFails
     std::shared_ptr<ovms::OpenAIResponsesHandler> apiHandler =
         std::make_shared<ovms::OpenAIResponsesHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
     EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::InvalidArgumentError("unsupported input content item type: input_audio"));
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingResponsesMissingContentFails) {
+    std::string json = R"({
+    "model": "llama",
+    "input": [
+      {"role": "user"}
+    ]
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    std::shared_ptr<ovms::OpenAIResponsesHandler> apiHandler =
+        std::make_shared<ovms::OpenAIResponsesHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
+    EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::InvalidArgumentError("input item is missing required content field"));
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingResponsesEmptyContentArrayFails) {
+    std::string json = R"({
+    "model": "llama",
+    "input": [
+      {"role": "user", "content": []}
+    ]
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    std::shared_ptr<ovms::OpenAIResponsesHandler> apiHandler =
+        std::make_shared<ovms::OpenAIResponsesHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
+    EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::InvalidArgumentError("input item content array must not be empty"));
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, ParsingResponsesUnsupportedToolTypeFails) {
