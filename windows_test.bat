@@ -45,9 +45,15 @@ set "buildTestCommand=bazel %bazelStartupCmd% build %bazelBuildArgs% --jobs=%NUM
 set "changeConfigsCmd=python windows_change_test_configs.py"
 set "runTest=%cd%\bazel-bin\src\ovms_test.exe --gtest_filter=!gtestFilter! > win_full_test.log 2>&1"
 
+:: Read CURL_VERSION from versions.mk to set proper path for curl binaries in tests
+for /f "tokens=2 delims==" %%A in ('findstr /R "CURL_VERSION" %cd%\versions.mk') do set "curl_version=%%A"
+if "!curl_version!"=="" (
+    set "curl_version=8.20.0_2"
+)
+
 :: Setting PATH environment variable based on default windows node settings: Added ovms_windows specific python settings and c:/opt and removed unused Nvidia and OCL specific tools.
 :: When changing the values here you can print the node default PATH value and base your changes on it.
-set "setPath=C:\opt;C:\opt\Python312\;C:\opt\Python312\Scripts\;C:\opt\msys64\usr\bin\;C:\opt\curl-8.19.0_4-win64-mingw\bin;c:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\;%PATH%;"
+set "setPath=C:\opt;C:\opt\Python312\;C:\opt\Python312\Scripts\;C:\opt\msys64\usr\bin\;C:\opt\curl-!curl_version!-win64-mingw\bin;c:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\;%PATH%;"
 set "setPythonPath=%cd%\bazel-out\x64_windows-opt\bin\src\python\binding"
 set "BAZEL_SH=C:\opt\msys64\usr\bin\bash.exe"
 

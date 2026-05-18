@@ -14,8 +14,13 @@
 :: limitations under the License.
 ::
 @echo on
+:: Read CURL_VERSION 
+for /f "tokens=2 delims==" %%A in ('findstr /R "CURL_VERSION" %cd%\versions.mk') do set "curl_version=%%A"
+if "!curl_version!"=="" (
+    set "curl_version=8.20.0_2"
+)
 :: Setting up default OVMS compilation environment variables
-set "setPath=C:\opt;C:\opt\Python312\;C:\opt\Python312\Scripts\;C:\opt\msys64\usr\bin\;C:\opt\curl-8.19.0_4-win64-mingw\bin;%PATH%;"
+set "setPath=C:\opt;C:\opt\Python312\;C:\opt\Python312\Scripts\;C:\opt\msys64\usr\bin\;C:\opt\curl-!curl_version!-win64-mingw\bin;%PATH%;"
 set "setPythonPath=%cd%\bazel-out\x64_windows-opt\bin\src\python\binding"
 set "BAZEL_SH=C:\opt\msys64\usr\bin\bash.exe"
 

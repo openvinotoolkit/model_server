@@ -124,8 +124,13 @@ if !errorlevel! neq 0 exit /b !errorlevel!
 copy %cd%\release_files\thirdparty-licenses\* %license_dest%
 if !errorlevel! neq 0 exit /b !errorlevel!
 
-set "curl_version=8.19.0_4"
-set "curl_dir=curl-%curl_version%-win64-mingw"
+:: Read CURL_VERSION from versions.mk
+for /f "tokens=2 delims==" %%A in ('findstr /R "CURL_VERSION" %cd%\versions.mk') do set "curl_version=%%A"
+if "!curl_version!"=="" (
+    set "curl_version=8.20.0_2"
+)
+
+set "curl_dir=curl-!curl_version!-win64-mingw"
 
 if !errorlevel! neq 0 exit /b !errorlevel!
 copy C:\opt\%curl_dir%\COPYING.txt %license_dest%LICENSE-CURL.txt
