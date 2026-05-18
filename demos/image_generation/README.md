@@ -823,14 +823,14 @@ curl http://localhost:8000/v3/images/generations \
   }' | jq -r '.data[0].b64_json' | base64 --decode > chalk_cat.png
 ```
 
-Optionally override the adapter weight using `lora_weights`:
+Optionally override the adapter alpha using `lora_alphas`:
 ```bash
 curl http://localhost:8000/v3/images/generations \
   -H "Content-Type: application/json" \
   -d '{
     "model": "xray",
     "prompt": "xray a cute cat in sunglasses",
-    "lora_weights": {"xray": 0.5},
+    "lora_alphas": {"xray": 0.5},
     "num_inference_steps": 20,
     "guidance_scale": 0.0,
     "size": "1024x1024"
@@ -904,7 +904,7 @@ response = client.images.generate(
     model="blend",
     prompt="a cute cat in sunglasses",
     extra_body={
-        "lora_weights": {"xray": 0.8, "ukiyo": 0.2},
+        "lora_alphas": {"xray": 0.8, "ukiyo": 0.2},
         "num_inference_steps": 20,
         "guidance_scale": 0.0,
         "size": "1024x1024",

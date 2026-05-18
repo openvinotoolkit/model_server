@@ -51,7 +51,7 @@ static void applyLoraAdapterIfNeeded(const std::string& modelName,
     const std::unordered_map<std::string, std::vector<std::pair<std::string, float>>>& compositeLoraAdapters,
     const ImageGenPipelineArgs& args,
     ov::AnyMap& requestOptions,
-    const std::unordered_map<std::string, float>& loraWeightsOverride = {}) {
+    const std::unordered_map<std::string, float>& loraAlphasOverride = {}) {
     if (loraAdapters.empty()) {
         return;
     }
@@ -60,7 +60,7 @@ static void applyLoraAdapterIfNeeded(const std::string& modelName,
     //   - If modelName matches a composite alias: activate all component adapters with their weights.
     //   - If modelName matches a single adapter alias: activate that adapter.
     //   - Otherwise: disable all adapters (alpha=0) so the base model runs clean.
-    // lora_weights from request body can override default weights.
+    // lora_alphas from request body can override default alphas.
     ov::genai::AdapterConfig adapterConfig;
 
     auto compositeIt = compositeLoraAdapters.find(modelName);
@@ -73,8 +73,8 @@ static void applyLoraAdapterIfNeeded(const std::string& modelName,
                 continue;
             }
             float alpha = defaultAlpha;
-            auto overrideIt = loraWeightsOverride.find(compAlias);
-            if (overrideIt != loraWeightsOverride.end()) {
+            auto overrideIt = loraAlphasOverride.find(compAlias);
+            if (overrideIt != loraAlphasOverride.end()) {
                 alpha = overrideIt->second;
             }
             adapterConfig.add(adapterIt->second, alpha);
@@ -84,8 +84,8 @@ static void applyLoraAdapterIfNeeded(const std::string& modelName,
         auto adapterIt = loraAdapters.find(modelName);
         if (adapterIt != loraAdapters.end()) {
             float alpha = 1.0f;
-            auto overrideIt = loraWeightsOverride.find(modelName);
-            if (overrideIt != loraWeightsOverride.end()) {
+            auto overrideIt = loraAlphasOverride.find(modelName);
+            if (overrideIt != loraAlphasOverride.end()) {
                 alpha = overrideIt->second;
             } else {
                 for (const auto& info : args.loraAdapters) {
@@ -242,16 +242,8 @@ public:
             SET_OR_RETURN(std::string, prompt, getPromptField(*payload.parsedJson));
             SET_OR_RETURN(ov::AnyMap, requestOptions, getImageGenerationRequestOptions(*payload.parsedJson, pipe->args));
 
-            // Parse optional lora_weights from request body
-            std::unordered_map<std::string, float> loraWeightsOverride;
-            auto loraWeightsIt = payload.parsedJson->FindMember("lora_weights");
-            if (loraWeightsIt != payload.parsedJson->MemberEnd() && loraWeightsIt->value.IsObject()) {
-                for (auto member = loraWeightsIt->value.MemberBegin(); member != loraWeightsIt->value.MemberEnd(); ++member) {
-                    if (member->value.IsNumber()) {
-                        loraWeightsOverride[member->name.GetString()] = member->value.GetFloat();
-                    }
-                }
-            }
+            // Parse optional lora_alphas from request body
+            auto loraAlphasOverride = ovms::parseLoraAlphasOverride(*payload.parsedJson);
 
             // Apply LoRA adapter if the requested model name matches an alias.
             // Under NPU MODE_STATIC adapters are always active — reject requests
@@ -275,7 +267,7 @@ public:
                     }
                 }
             } else {
-                applyLoraAdapterIfNeeded(payload.modelName, pipe->loraAdapters, pipe->compositeLoraAdapters, pipe->args, requestOptions, loraWeightsOverride);
+                applyLoraAdapterIfNeeded(payload.modelName, pipe->loraAdapters, pipe->compositeLoraAdapters, pipe->args, requestOptions, loraAlphasOverride);
             }
             if (!pipe->text2ImagePipeline)
                 return absl::FailedPreconditionError("Text-to-image pipeline is not available for this model");

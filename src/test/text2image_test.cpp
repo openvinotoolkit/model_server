@@ -1867,3 +1867,69 @@ TEST(ImageGenCalculatorOptionsTest, AlphaAtBothLevelsReturnsError) {
 
 // TODO:
 // -> test for all unhandled OpenAI fields define what to do - ignore/error imageVariation
+
+TEST(Text2ImageTest, parseLoraAlphasOverrideValidObject) {
+    rapidjson::Document doc;
+    doc.Parse(R"({
+        "prompt": "test",
+        "lora_alphas": {
+            "pokemon": 0.7,
+            "anime": 0.4
+        }
+    })");
+    auto result = ovms::parseLoraAlphasOverride(doc);
+    ASSERT_EQ(result.size(), 2);
+    EXPECT_FLOAT_EQ(result["pokemon"], 0.7f);
+    EXPECT_FLOAT_EQ(result["anime"], 0.4f);
+}
+
+TEST(Text2ImageTest, parseLoraAlphasOverrideMissingField) {
+    rapidjson::Document doc;
+    doc.Parse(R"({"prompt": "test"})");
+    auto result = ovms::parseLoraAlphasOverride(doc);
+    EXPECT_TRUE(result.empty());
+}
+
+TEST(Text2ImageTest, parseLoraAlphasOverrideNotAnObject) {
+    rapidjson::Document doc;
+    doc.Parse(R"({"prompt": "test", "lora_alphas": "invalid"})");
+    auto result = ovms::parseLoraAlphasOverride(doc);
+    EXPECT_TRUE(result.empty());
+}
+
+TEST(Text2ImageTest, parseLoraAlphasOverrideNonNumericValuesIgnored) {
+    rapidjson::Document doc;
+    doc.Parse(R"({
+        "prompt": "test",
+        "lora_alphas": {
+            "pokemon": 0.7,
+            "anime": "not_a_number",
+            "style": true
+        }
+    })");
+    auto result = ovms::parseLoraAlphasOverride(doc);
+    ASSERT_EQ(result.size(), 1);
+    EXPECT_FLOAT_EQ(result["pokemon"], 0.7f);
+}
+
+TEST(Text2ImageTest, parseLoraAlphasOverrideEmptyObject) {
+    rapidjson::Document doc;
+    doc.Parse(R"({"prompt": "test", "lora_alphas": {}})");
+    auto result = ovms::parseLoraAlphasOverride(doc);
+    EXPECT_TRUE(result.empty());
+}
+
+TEST(Text2ImageTest, parseLoraAlphasOverrideNegativeAndZeroAlpha) {
+    rapidjson::Document doc;
+    doc.Parse(R"({
+        "prompt": "test",
+        "lora_alphas": {
+            "pokemon": -0.5,
+            "anime": 0.0
+        }
+    })");
+    auto result = ovms::parseLoraAlphasOverride(doc);
+    ASSERT_EQ(result.size(), 2);
+    EXPECT_FLOAT_EQ(result["pokemon"], -0.5f);
+    EXPECT_FLOAT_EQ(result["anime"], 0.0f);
+}

@@ -281,16 +281,16 @@ curl http://localhost:8000/v3/images/generations \
 
 When the `model` field is the **base model name** (not matching any adapter alias), generation proceeds without any LoRA adapter applied (base model only).
 
-### Overriding Adapter Weights with `lora_weights`
+### Overriding Adapter Alphas with `lora_alphas`
 
-The `lora_weights` field in the request body allows overriding the default weight of the active adapter(s). It does **not** independently select which adapters to activate — adapter selection is always based on the `model` field.
+The `lora_alphas` field in the request body allows overriding the default alpha of the active adapter(s). It does **not** independently select which adapters to activate — adapter selection is always based on the `model` field.
 
 **Override a single adapter weight:**
 ```json
 {
   "model": "xray",
   "prompt": "xray a cute cat in sunglasses",
-  "lora_weights": {"xray": 0.5},
+  "lora_alphas": {"xray": 0.5},
   "num_inference_steps": 20
 }
 ```
@@ -300,7 +300,7 @@ The `lora_weights` field in the request body allows overriding the default weigh
 {
   "model": "mix",
   "prompt": "a landscape in mixed style",
-  "lora_weights": {"ukiyo": 0.3, "vector": 0.8}
+  "lora_alphas": {"ukiyo": 0.3, "vector": 0.8}
 }
 ```
 
@@ -319,12 +319,12 @@ curl http://localhost:8000/v3/images/generations \
   -d '{"model": "blend", "prompt": "a cat"}'
 ```
 
-You can override individual component weights at request time via `lora_weights`:
+You can override individual component alphas at request time via `lora_alphas`:
 ```json
 {
   "model": "blend",
   "prompt": "a cat",
-  "lora_weights": {"xray": 0.8, "ukiyo": 0.2}
+  "lora_alphas": {"xray": 0.8, "ukiyo": 0.2}
 }
 ```
 
@@ -340,13 +340,13 @@ The adapter loading mode determines how LoRA weights interact with the base mode
 
 **DYNAMIC mode (CPU/GPU):**
 - Adapters are registered at compile time but activated/deactivated per request based on the `model` field.
-- `lora_weights` in the request body can override adapter strengths at runtime.
+- `lora_alphas` in the request body can override adapter strengths at runtime.
 - Sending `"model": "<base_model_name>"` disables all adapters (pure base model).
 
 **STATIC mode (NPU):**
 - All adapters are compiled with their configured `alpha` and remain active permanently.
 - The `alpha` value determines the fixed adapter strength — it cannot be changed at runtime.
-- `lora_weights` in requests is **ignored** — weights are baked in at compile time.
+- `lora_alphas` in requests is **ignored** — alphas are baked in at compile time.
 - The base model is **not accessible** (always has adapters applied).
 - With a single adapter: only the adapter's alias is a valid `model` name.
 - With multiple adapters: composites are **required**. Only composite aliases are valid `model` names.

@@ -16,6 +16,7 @@
 //*****************************************************************************
 #include <string>
 #include <memory>
+#include <unordered_map>
 #include <variant>
 #include <vector>
 #include <utility>
@@ -71,4 +72,6 @@ std::variant<absl::Status, ov::AnyMap> getImageEditRequestOptions(const ovms::Mu
 std::unique_ptr<std::string> generateJSONResponseFromB64Images(const std::vector<std::string>& base64Images);
 
 std::variant<absl::Status, std::unique_ptr<std::string>> generateJSONResponseFromOvTensor(const ov::Tensor& tensor);
+
+std::unordered_map<std::string, float> parseLoraAlphasOverride(const rapidjson::Document& doc);
 }  // namespace ovms

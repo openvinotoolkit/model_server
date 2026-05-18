@@ -415,7 +415,7 @@ std::variant<absl::Status, ov::AnyMap> getImageGenerationRequestOptions(const ra
         "n", "num_images_per_prompt",
         "response_format",  // allowed, however only b64_json is supported
         "num_inference_steps", "rng_seed", "strength", "guidance_scale", "max_sequence_length", "model",
-        "lora_weights"};  // per-request LoRA weight overrides
+        "lora_alphas"};  // per-request LoRA alpha overrides
     for (auto it = parser.MemberBegin(); it != parser.MemberEnd(); ++it) {
         if (acceptedFields.find(it->name.GetString()) == acceptedFields.end()) {
             return absl::InvalidArgumentError(absl::StrCat("Unhandled parameter: ", it->name.GetString()));
@@ -534,7 +534,7 @@ std::variant<absl::Status, ov::AnyMap> getImageEditRequestOptions(const ovms::Mu
         "n", "num_images_per_prompt",
         "response_format",  // allowed, however only b64_json is supported
         "num_inference_steps", "rng_seed", "strength", "guidance_scale", "max_sequence_length", "model",
-        "lora_weights"};  // per-request LoRA weight overrides
+        "lora_alphas"};  // per-request LoRA alpha overrides
     auto fieldNames = parser.getAllFieldNames();
     for (const auto& fieldName : fieldNames) {
         if (acceptedFields.find(fieldName) == acceptedFields.end()) {
@@ -596,5 +596,18 @@ std::unique_ptr<std::string> generateJSONResponseFromB64Images(const std::vector
     jsonStream << "{\"b64_json\":\"" << base64Images[base64Images.size() - 1] << "\"}"
                << "]}" << std::endl;
     return std::make_unique<std::string>(jsonStream.str());
+}
+
+std::unordered_map<std::string, float> parseLoraAlphasOverride(const rapidjson::Document& doc) {
+    std::unordered_map<std::string, float> result;
+    auto it = doc.FindMember("lora_alphas");
+    if (it != doc.MemberEnd() && it->value.IsObject()) {
+        for (auto member = it->value.MemberBegin(); member != it->value.MemberEnd(); ++member) {
+            if (member->value.IsNumber()) {
+                result[member->name.GetString()] = member->value.GetFloat();
+            }
+        }
+    }
+    return result;
 }
 }  // namespace ovms
