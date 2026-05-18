@@ -72,19 +72,18 @@ static void convertResponsesToolsInPlace(rapidjson::Value& toolsArray, rapidjson
         if (!tool.IsObject()) {
             continue;
         }
-        auto toolObj = tool.GetObject();
-        if (toolObj.FindMember("function") != toolObj.MemberEnd()) {
+        if (tool.FindMember("function") != tool.MemberEnd()) {
             continue;  // Already in nested chat/completions format.
         }
-        auto typeIt = toolObj.FindMember("type");
-        const std::string toolType = (typeIt != toolObj.MemberEnd() && typeIt->value.IsString())
+        auto typeIt = tool.FindMember("type");
+        const std::string toolType = (typeIt != tool.MemberEnd() && typeIt->value.IsString())
                                          ? typeIt->value.GetString()
                                          : "";
         if (toolType != "function") {
             continue;  // Preserve non-function tools as-is.
         }
         rapidjson::Value funcObj(rapidjson::kObjectType);
-        for (auto memberIt = toolObj.MemberBegin(); memberIt != toolObj.MemberEnd();) {
+        for (auto memberIt = tool.MemberBegin(); memberIt != tool.MemberEnd();) {
             if (!memberIt->name.IsString()) {
                 ++memberIt;
                 continue;
@@ -652,7 +651,7 @@ absl::Status OpenAIResponsesHandler::parseInput(std::optional<std::string> allow
         request.chatHistory.last()["content"] = request.prompt.value();
     } else if (inputIt->value.IsArray()) {
         if (inputIt->value.GetArray().Size() == 0) {
-            return absl::InvalidArgumentError("Messages array cannot be empty");
+            return absl::InvalidArgumentError("input array must not be empty");
         }
         ChatHistorySink sink(request.chatHistory, request.imageHistory,
             allowedLocalMediaPath, allowedMediaDomains);
