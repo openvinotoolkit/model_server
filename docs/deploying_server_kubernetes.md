@@ -9,7 +9,7 @@ curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/m
 sed -i 's/openvino\/model_server:replace/openvino\/model_server:weekly/' kserve-openvino.yaml
 kubectl apply -f kserve-openvino.yaml
 ```
-Note: Alternatively use the image tag `2026.2` to employ smaller image with support to GPU only or `2025.2-gpu` with support for GPU and CPU.
+Note: Alternatively use the official image tag `2026.2` to deploy smaller image with support for CPU only or `2026.2-gpu` with support for GPU and CPU.
 
 ## Deploying inference service with a generative model from HuggingFace
 
@@ -72,7 +72,7 @@ In first step specify the source models. Below is an example from Hugging Face
 After configuring the resources for the model, specify runtime parameters for a specific model:
 ![image2](./openshift2.png)
 
-Whe the model is running, it can be used in the Workbenches like below:
+When the model is running, it can be used in the Workbenches like presented below:
 ![image3](./openshift3.png)
 
 
