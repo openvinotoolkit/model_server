@@ -4604,7 +4604,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ResponsesStandaloneReasoningWithoutAssistan
         R"({
             "messages": [
                 {"role":"user","content":"hi"},
-                {"role":"assistant","reasoning_content":"orphan"},
+                {"role":"assistant","content":"","reasoning_content":"orphan"},
                 {"role":"user","content":"again"}
             ]
         })");
@@ -4624,7 +4624,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ResponsesTrailingStandaloneReasoningIsEmitt
         R"({
             "messages": [
                 {"role":"user","content":"hi"},
-                {"role":"assistant","reasoning_content":"trailing"}
+                {"role":"assistant","content":"","reasoning_content":"trailing"}
             ]
         })");
 }
