@@ -154,7 +154,7 @@ uint16_t getDockerCpuQuota() {
     return 0;  // No quota set
 }
 
-uint16_t getNumberOfPhysicalCores() {
+uint16_t getPhysicalCoresPerSocket() {
     std::set<std::string> uniqueCores;
     std::ifstream cpuInfo("/proc/cpuinfo");
     if (!cpuInfo.is_open()) {
@@ -170,24 +170,6 @@ uint16_t getNumberOfPhysicalCores() {
         return std::max<uint16_t>(static_cast<uint16_t>(std::thread::hardware_concurrency()), 1);
     }
     return static_cast<uint16_t>(uniqueCores.size());
-}
-
-uint16_t getNumberOfSockets() {
-    std::set<std::string> uniqueSockets;
-    std::ifstream cpuInfo("/proc/cpuinfo");
-    if (!cpuInfo.is_open()) {
-        return 1;
-    }
-    std::string line;
-    while (std::getline(cpuInfo, line)) {
-        if (line.find("physical id") != std::string::npos) {
-            uniqueSockets.insert(line);
-        }
-    }
-    if (uniqueSockets.empty()) {
-        return 1;
-    }
-    return static_cast<uint16_t>(uniqueSockets.size());
 }
 
 #endif  // __linux__

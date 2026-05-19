@@ -186,8 +186,7 @@ Status applyDefaultCpuProperties(ov::AnyMap& properties) {
             if (isThroughput) {
                 numThreads = static_cast<int>(coreCount);
             } else {
-                const uint16_t sockets = getNumberOfSockets();
-                numThreads = std::max(1, std::min(static_cast<int>(coreCount), static_cast<int>(getNumberOfPhysicalCores() / sockets)));
+                numThreads = std::min(static_cast<int>(coreCount), static_cast<int>(getPhysicalCoresPerSocket()));
             }
             properties[ov::inference_num_threads.name()] = numThreads;
             SPDLOG_DEBUG("applyDefaultCpuProperties: setting inference_num_threads to {}", numThreads);
