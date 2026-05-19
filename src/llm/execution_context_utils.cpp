@@ -15,6 +15,8 @@
 //*****************************************************************************
 #include "execution_context_utils.hpp"
 
+#include <utility>
+
 #include "servable.hpp"
 
 namespace ovms {
@@ -27,12 +29,12 @@ Status initializeLlmExecutionContexts(const GenAiServableMap& servableMap, GenAi
             return StatusCode::INTERNAL_ERROR;
         }
         auto& holder = it->second;
-        std::lock_guard<std::mutex> lock(holder->mutex);
-        holder->executionContext = servable->createExecutionContext();
-        if (!holder->executionContext) {
+        auto ctx = servable->createExecutionContext();
+        if (!ctx) {
             SPDLOG_DEBUG("Failed to create LLM execution context for node: {}", nodeName);
             return StatusCode::INTERNAL_ERROR;
         }
+        holder->set(std::move(ctx));
     }
     return StatusCode::OK;
 }
@@ -42,8 +44,7 @@ void resetLlmExecutionContexts(GenAiExecutionContextMap& executionContextMap) {
         if (!holder) {
             continue;
         }
-        std::lock_guard<std::mutex> lock(holder->mutex);
-        holder->executionContext.reset();
+        holder->reset();
     }
 }
 

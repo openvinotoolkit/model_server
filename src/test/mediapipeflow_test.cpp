@@ -4173,3 +4173,102 @@ TEST(MediapipeGraphQueueSizeDirective, InvalidStringRejected) {
     auto status = def.validate(manager);
     EXPECT_EQ(status, ovms::StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID);
 }
+
+TEST(MediapipeGraphQueueSizeDirective, PythonLoopbackWithQueueRejected) {
+    static const char* PYTHON_LOOPBACK_PBTXT = R"(
+# OVMS_GRAPH_QUEUE_MAX_SIZE: 4
+input_stream: "OVMS_PY_TENSOR:input"
+output_stream: "OVMS_PY_TENSOR:output"
+node: {
+  calculator: "PythonExecutorCalculator"
+  input_side_packet: "PYTHON_NODE_RESOURCES:py"
+  input_stream: "LOOPBACK:loopback"
+  input_stream: "OVMS_PY_TENSOR:input"
+  output_stream: "LOOPBACK:loopback"
+  output_stream: "OVMS_PY_TENSOR:output"
+  input_stream_info: {
+    tag_index: 'LOOPBACK:0',
+    back_edge: true
+  }
+}
+)";
+    ovms::MediapipeGraphConfig mgc;
+    DummyMediapipeGraphDefinition def("test", mgc, PYTHON_LOOPBACK_PBTXT);
+    ovms::ModelManager manager;
+    auto status = def.validate(manager);
+    EXPECT_EQ(status, ovms::StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID);
+}
+
+TEST(MediapipeGraphQueueSizeDirective, PythonLoopbackWithAutoQueueRejected) {
+    static const char* PYTHON_LOOPBACK_AUTO_PBTXT = R"(
+# OVMS_GRAPH_QUEUE_MAX_SIZE: AUTO
+input_stream: "OVMS_PY_TENSOR:input"
+output_stream: "OVMS_PY_TENSOR:output"
+node: {
+  calculator: "PythonExecutorCalculator"
+  input_side_packet: "PYTHON_NODE_RESOURCES:py"
+  input_stream: "LOOPBACK:loopback"
+  input_stream: "OVMS_PY_TENSOR:input"
+  output_stream: "LOOPBACK:loopback"
+  output_stream: "OVMS_PY_TENSOR:output"
+  input_stream_info: {
+    tag_index: 'LOOPBACK:0',
+    back_edge: true
+  }
+}
+)";
+    ovms::MediapipeGraphConfig mgc;
+    DummyMediapipeGraphDefinition def("test", mgc, PYTHON_LOOPBACK_AUTO_PBTXT);
+    ovms::ModelManager manager;
+    auto status = def.validate(manager);
+    EXPECT_EQ(status, ovms::StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID);
+}
+
+TEST(MediapipeGraphQueueSizeDirective, PythonWithoutLoopbackAllowsQueue) {
+    // PythonExecutorCalculator in regular (non-generative) mode is compatible with graph queue
+    static const char* PYTHON_NO_LOOPBACK_PBTXT = R"(
+# OVMS_GRAPH_QUEUE_MAX_SIZE: 4
+input_stream: "OVMS_PY_TENSOR:input"
+output_stream: "OVMS_PY_TENSOR:output"
+node: {
+  calculator: "PythonExecutorCalculator"
+  input_side_packet: "PYTHON_NODE_RESOURCES:py"
+  input_stream: "OVMS_PY_TENSOR:input"
+  output_stream: "OVMS_PY_TENSOR:output"
+}
+)";
+    ovms::MediapipeGraphConfig mgc;
+    DummyMediapipeGraphDefinition def("test", mgc, PYTHON_NO_LOOPBACK_PBTXT);
+    ovms::ModelManager manager;
+    auto status = def.validate(manager);
+    // resolveGraphQueueSize should pass; later stages may fail (calculator not registered)
+    // but it should NOT be MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID from our check
+    EXPECT_NE(status, ovms::StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID);
+}
+
+TEST(MediapipeGraphQueueSizeDirective, PythonLoopbackWithQueueDisabledAllowed) {
+    // Queue explicitly disabled (0) — LOOPBACK Python node is fine
+    static const char* PYTHON_LOOPBACK_DISABLED_PBTXT = R"(
+# OVMS_GRAPH_QUEUE_MAX_SIZE: 0
+input_stream: "OVMS_PY_TENSOR:input"
+output_stream: "OVMS_PY_TENSOR:output"
+node: {
+  calculator: "PythonExecutorCalculator"
+  input_side_packet: "PYTHON_NODE_RESOURCES:py"
+  input_stream: "LOOPBACK:loopback"
+  input_stream: "OVMS_PY_TENSOR:input"
+  output_stream: "LOOPBACK:loopback"
+  output_stream: "OVMS_PY_TENSOR:output"
+  input_stream_info: {
+    tag_index: 'LOOPBACK:0',
+    back_edge: true
+  }
+}
+)";
+    ovms::MediapipeGraphConfig mgc;
+    DummyMediapipeGraphDefinition def("test", mgc, PYTHON_LOOPBACK_DISABLED_PBTXT);
+    ovms::ModelManager manager;
+    auto status = def.validate(manager);
+    // Queue is disabled so the LOOPBACK check should not trigger
+    EXPECT_NE(status, ovms::StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID);
+}

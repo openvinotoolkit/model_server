@@ -54,36 +54,36 @@ GraphQueue::GraphQueue(const ::mediapipe::CalculatorGraphConfig& config, std::sh
             observers[streamName] = holder;
         }
 
-        auto gh = std::make_shared<GraphHelper>(std::move(observers));
-        gh->graph = std::make_unique<::mediapipe::CalculatorGraph>();
-        gh->currentTimestamp = ::mediapipe::Timestamp(0);
+        auto graphHelper = std::make_shared<GraphHelper>(std::move(observers));
+        graphHelper->graph = std::make_unique<::mediapipe::CalculatorGraph>();
+        graphHelper->currentTimestamp = ::mediapipe::Timestamp(0);
 
-        auto absStatus = gh->graph->Initialize(config);
+        auto absStatus = graphHelper->graph->Initialize(config);
         if (!absStatus.ok()) {
             SPDLOG_ERROR("Graph queue initialization failed: {}", absStatus.ToString());
             throw std::runtime_error(absStatus.ToString());
         }
-        for (const auto& [streamName, holder] : gh->outStreamObservers) {
+        for (const auto& [streamName, holder] : graphHelper->outStreamObservers) {
             // Lambda captures holder (shared_ptr) by value — safe regardless of map layout
-            absStatus = gh->graph->ObserveOutputStream(streamName, [holder](const ::mediapipe::Packet& packet) -> absl::Status { return holder->current->handlePacket(packet); });
+            absStatus = graphHelper->graph->ObserveOutputStream(streamName, [holder](const ::mediapipe::Packet& packet) -> absl::Status { return holder->current->handlePacket(packet); });
             if (!absStatus.ok()) {
                 SPDLOG_ERROR("Graph queue ObserveOutputStream failed: {}", absStatus.ToString());
                 throw std::runtime_error(absStatus.ToString());
             }
         }
         for (const auto& [nodeName, _] : sidePacketMaps->genAiServableMap) {
-            gh->genAiExecutionContextMap[nodeName] = std::make_shared<GenAiExecutionContextHolder>();
+            graphHelper->genAiExecutionContextMap[nodeName] = std::make_shared<GenAiExecutionContextHolder>();
         }
         std::map<std::string, mediapipe::Packet> inputSidePackets;
         buildInputSidePackets(inputSidePackets, *sidePacketMaps);
         // Override execution context with per-graph instance
-        inputSidePackets[LLM_EXECUTION_CONTEXT_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<GenAiExecutionContextMap>(gh->genAiExecutionContextMap).At(::mediapipe::Timestamp(STARTING_TIMESTAMP_VALUE));
-        absStatus = gh->graph->StartRun(inputSidePackets);
+        inputSidePackets[LLM_EXECUTION_CONTEXT_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<GenAiExecutionContextMap>(graphHelper->genAiExecutionContextMap).At(::mediapipe::Timestamp(STARTING_TIMESTAMP_VALUE));
+        absStatus = graphHelper->graph->StartRun(inputSidePackets);
         if (!absStatus.ok()) {
             SPDLOG_ERROR("Graph queue StartRun failed: {}", absStatus.ToString());
             throw std::runtime_error(absStatus.ToString());
         }
-        inferRequests.emplace_back(std::move(gh));
+        inferRequests.emplace_back(std::move(graphHelper));
     }
 }
 GraphQueue::~GraphQueue() {

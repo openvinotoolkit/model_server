@@ -118,7 +118,7 @@ protected:
     PipelineDefinitionStatus status;
 
     MediapipeGraphConfig mgconfig;
-    ::mediapipe::CalculatorGraphConfig config;  // TODO rename configs
+    ::mediapipe::CalculatorGraphConfig config;
 
     Status createInputsInfo();
     Status createOutputsInfo();

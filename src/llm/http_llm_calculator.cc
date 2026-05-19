@@ -112,8 +112,7 @@ public:
         RET_CHECK(this->servable != nullptr);
 
         if (this->executionContextHolder) {
-            std::lock_guard<std::mutex> lock(this->executionContextHolder->mutex);
-            this->executionContext = this->executionContextHolder->executionContext;
+            this->executionContext = this->executionContextHolder->get();
         }
         RET_CHECK(this->executionContext != nullptr) << "LLM execution context not initialized for node: " << cc->NodeName();
 

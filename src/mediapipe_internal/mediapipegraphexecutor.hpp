@@ -177,8 +177,17 @@ public:
 
     template <typename RequestType, typename ResponseType>
     Status inferWithQueue(const RequestType* request, ResponseType* response, ExecutionContext executionContext, MetricCounterGuard& failedRequestsGuard) {
+        // Graph queue does not support user-provided input side packets.
+        // Side packets are set at queue construction time.
+        if (requestHasInputSidePackets(*request)) {
+            SPDLOG_DEBUG("Graph queue does not support user-provided input side packets. "
+                         "Side packets are set at graph queue construction time. Graph: {}",
+                this->name);
+            return Status(StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR,
+                "Input side packets are not supported for graphs with queue enabled");
+        }
         ::mediapipe::CalculatorGraph& graph = this->guard->graph;
-        auto llmContextStatus = initializeLlmExecutionContexts(this->sidePacketMaps.genAiServableMap, this->guard->gh->genAiExecutionContextMap);
+        auto llmContextStatus = initializeLlmExecutionContexts(this->sidePacketMaps.genAiServableMap, this->guard->graphHelper->genAiExecutionContextMap);
         if (!llmContextStatus.ok()) {
             return llmContextStatus;
         }
@@ -187,7 +196,7 @@ public:
                 SPDLOG_DEBUG("Creating Mediapipe graph outputs name failed for: {}", name);
                 return StatusCode::MEDIAPIPE_GRAPH_ADD_OUTPUT_STREAM_ERROR;
             }
-            guard->gh->outStreamObservers.at(name)->current = std::make_shared<MyFunctor<RequestType, ResponseType>>(name, this->outputTypes.at(name), *this, *request, *response);
+            guard->graphHelper->outStreamObservers.at(name)->current = std::make_shared<MyFunctor<RequestType, ResponseType>>(name, this->outputTypes.at(name), *this, *request, *response);
         }
 
         size_t numberOfPacketsCreated = 0;
@@ -196,7 +205,7 @@ public:
             this->inputTypes,
             this->pythonBackend,
             graph,
-            this->guard->gh->currentTimestamp,
+            this->guard->graphHelper->currentTimestamp,
             numberOfPacketsCreated);
         if (!ovms_status.ok()) {
             INCREMENT_IF_ENABLED(this->mediapipeServableMetricReporter->getGraphErrorMetric(executionContext));
@@ -216,10 +225,10 @@ public:
         if (!status.ok()) {
             INCREMENT_IF_ENABLED(this->mediapipeServableMetricReporter->getGraphErrorMetric(executionContext));
         }
-        resetLlmExecutionContexts(this->guard->gh->genAiExecutionContextMap);
+        resetLlmExecutionContexts(this->guard->graphHelper->genAiExecutionContextMap);
         MP_RETURN_ON_FAIL(status, "graph wait until idle", mediapipeAbslToOvmsStatus(status.code()));
         // Increment timestamp for next request reusing this graph from the queue
-        this->guard->gh->currentTimestamp = ::mediapipe::Timestamp(this->guard->gh->currentTimestamp.Value() + 1);
+        this->guard->graphHelper->currentTimestamp = ::mediapipe::Timestamp(this->guard->graphHelper->currentTimestamp.Value() + 1);
         SPDLOG_DEBUG("Received all output stream packets for graph: {}", this->name);
         return StatusCode::OK;
     }
@@ -355,7 +364,7 @@ public:
             }
             MetricGaugeGuard currentGraphs(this->mediapipeServableMetricReporter->currentGraphs.get());
             ::mediapipe::CalculatorGraph& graph = this->guard->graph;
-            auto llmContextStatus = initializeLlmExecutionContexts(this->sidePacketMaps.genAiServableMap, this->guard->gh->genAiExecutionContextMap);
+            auto llmContextStatus = initializeLlmExecutionContexts(this->sidePacketMaps.genAiServableMap, this->guard->graphHelper->genAiExecutionContextMap);
             if (!llmContextStatus.ok()) {
                 return llmContextStatus;
             }
@@ -377,7 +386,7 @@ public:
                     SPDLOG_DEBUG("Creating Mediapipe graph outputs name failed for: {}", outputName);
                     return StatusCode::MEDIAPIPE_GRAPH_ADD_OUTPUT_STREAM_ERROR;
                 }
-                guard->gh->outStreamObservers.at(outputName)->current = std::make_shared<StreamingFunctor<ReaderWriterType>>(
+                guard->graphHelper->outStreamObservers.at(outputName)->current = std::make_shared<StreamingFunctor<ReaderWriterType>>(
                     outputName, this->outputTypes.at(outputName),
                     this->name, this->version,
                     serverReaderWriter, sendMutex,
@@ -395,7 +404,7 @@ public:
                         this->inputTypes,
                         this->pythonBackend,
                         graph,
-                        this->guard->gh->currentTimestamp,
+                        this->guard->graphHelper->currentTimestamp,
                         numberOfPacketsCreated),
                     "partial deserialization of first request", isSuccess);
                 INCREMENT_IF_ENABLED(this->mediapipeServableMetricReporter->getRequestsMetric(executionContext, isSuccess));
@@ -417,7 +426,7 @@ public:
                             this->inputTypes,
                             this->pythonBackend,
                             graph,
-                            this->guard->gh->currentTimestamp,
+                            this->guard->graphHelper->currentTimestamp,
                             numberOfPacketsCreated),
                         "partial deserialization of subsequent requests", isSuccess);
                 } else {
@@ -439,10 +448,10 @@ public:
             if (!status.ok()) {
                 INCREMENT_IF_ENABLED(this->mediapipeServableMetricReporter->getGraphErrorMetric(executionContext));
             }
-            resetLlmExecutionContexts(this->guard->gh->genAiExecutionContextMap);
+            resetLlmExecutionContexts(this->guard->graphHelper->genAiExecutionContextMap);
             MP_RETURN_ON_FAIL(status, "graph wait until idle", mediapipeAbslToOvmsStatus(status.code()));
             // Increment timestamp for next request reusing this graph from the queue
-            this->guard->gh->currentTimestamp = ::mediapipe::Timestamp(this->guard->gh->currentTimestamp.Value() + 1);
+            this->guard->graphHelper->currentTimestamp = ::mediapipe::Timestamp(this->guard->graphHelper->currentTimestamp.Value() + 1);
             SPDLOG_DEBUG("Graph {}: Done streaming execution (queue path)", this->name);
 
             timer.stop(PROCESS);
@@ -615,7 +624,7 @@ absl::Status MyFunctor<RequestType, ResponseType>::handlePacket(const ::mediapip
         this->packetType,
         packet,
         response);
-    return status.ok() ? absl::OkStatus() : absl::Status(absl::StatusCode::kInternal, "Some error");
+    return status.ok() ? absl::OkStatus() : absl::Status(absl::StatusCode::kInternal, status.string());
 }
 
 template <typename ReaderWriterType>

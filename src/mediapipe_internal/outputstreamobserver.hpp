@@ -52,7 +52,7 @@ public:
     NullOutputStreamObserver() = default;
     absl::Status handlePacket(const ::mediapipe::Packet& packet) override {
         SPDLOG_ERROR("NullOutputStreamObserver::handlePacket called - graph observer was not replaced before execution");
-        throw std::runtime_error("NullOutputStreamObserver should have been replaced before graph execution");
+        return absl::InternalError("NullOutputStreamObserver should have been replaced before graph execution");
     }
 };
 // Mutable holder for an observer, allowing the observer implementation to be

@@ -221,7 +221,7 @@ OpenVINO Model Server can pre-initialize a pool of MediaPipe `CalculatorGraph` i
 
 #### How it works
 
-Without graph pool (legacy behavior), each incoming request creates a new `CalculatorGraph`, calls `StartRun()` with side packets, processes the request, then tears down the graph via `CloseAllPacketSources()` and `WaitUntilDone()`.
+Without graph pool, each incoming request creates a new `CalculatorGraph`, calls `StartRun()` with side packets, processes the request, then tears down the graph via `CloseAllPacketSources()` and `WaitUntilDone()`.
 
 With graph pool enabled, a fixed number of graphs are pre-initialized and kept in a queue. When a request arrives, an idle graph is acquired from the queue. After processing, the graph is returned to the queue for the next request. The graph is never torn down — instead, `WaitUntilIdle()` is called between requests and the internal timestamp is incremented.
 
@@ -240,7 +240,7 @@ The graph pool size is controlled via a comment directive in the graph `.pbtxt` 
 | `0` | Graph pool disabled — falls back to per-request graph creation |
 | *(directive absent)* | Default: graph pool is disabled |
 
-**Default behavior:** graph pool stays disabled unless `OVMS_GRAPH_QUEUE_MAX_SIZE` is explicitly present in `graph.pbtxt`.
+**Default behavior:** graph pool stays disabled unless `OVMS_GRAPH_QUEUE_MAX_SIZE` is explicitly present in `graph.pbtxt`. Since graph exporters (`--pull --task` and `export_model.py`) always emit this directive, **graphs created via exporters have the pool enabled by default**.
 
 **Generated graphs from exporters:**
 - `demos/common/export_models/export_model.py` and OVMS `--pull --task ...` graph export emit `OVMS_GRAPH_QUEUE_MAX_SIZE` automatically.
@@ -256,6 +256,9 @@ Since graphs in the pool are reused across requests, any state held by a calcula
 
 **Input side packets from requests are not supported:**
 When graph pool is enabled, side packets are set once at pool construction time and cannot be overridden per request. If a client sends request parameters that would normally become input side packets (e.g. KServe request parameters other than `OVMS_MP_TIMESTAMP`), the request will be rejected with an error. If your graph relies on per-request side packets to configure calculator behavior, either disable the graph pool (`# OVMS_GRAPH_QUEUE_MAX_SIZE: 0`) or redesign the graph to accept such parameters as regular input stream packets instead of side packets.
+
+**Python generative nodes (LOOPBACK) are not compatible with graph pool:**
+Python nodes using generative mode (`execute` that `yield`s) rely on per-calculator state (`pyIteratorPtr`) that persists across `Process()` calls within a single request. With graph pool enabled, if a generator does not fully complete (e.g. client disconnects mid-stream), the stale iterator remains on the reused graph instance and subsequent requests will fail. Only Python nodes using regular mode (stateless `execute` that `return`s a list) are safe to use with graph pool.
 
 
 ## Deployment testing

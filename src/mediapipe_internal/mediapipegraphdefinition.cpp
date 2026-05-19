@@ -88,7 +88,13 @@ Status MediapipeGraphDefinition::validateForConfigFileExistence() {
     return StatusCode::OK;
 }
 
+// Precondition: chosenConfig must be populated (call after validateForConfigFileExistence).
+// Uses this->chosenConfig to parse the directive and this->config (parsed protobuf) for node inspection.
 Status MediapipeGraphDefinition::resolveGraphQueueSize() {
+    if (this->chosenConfig.empty()) {
+        SPDLOG_ERROR("Internal error: resolveGraphQueueSize called with empty chosenConfig for mediapipe: {}", getName());
+        return StatusCode::INTERNAL_ERROR;
+    }
     // 1. Explicit pbtxt directive: # OVMS_GRAPH_QUEUE_MAX_SIZE: <value>
     //    Always honored regardless of env var or calculator checks.
     //    Value 0 disables the queue, AUTO or positive integer enables it.
@@ -100,28 +106,47 @@ Status MediapipeGraphDefinition::resolveGraphQueueSize() {
         std::string value = match[1].str();
         if (value == "AUTO") {
             this->mgconfig.setGraphQueueSizeAuto();
-            return StatusCode::OK;
+        } else {
+            auto parsed = stoi32(value);
+            if (!parsed.has_value()) {
+                SPDLOG_ERROR("Invalid OVMS_GRAPH_QUEUE_MAX_SIZE value: '{}'. Expected integer or 'AUTO'.", value);
+                return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
+            }
+            int queueSize = parsed.value();
+            if (queueSize < 0) {
+                SPDLOG_ERROR("Invalid OVMS_GRAPH_QUEUE_MAX_SIZE value: {}. Must be 0 (disabled) or a positive integer.", queueSize);
+                return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
+            }
+            if (queueSize == 0) {
+                SPDLOG_DEBUG("Graph queue explicitly disabled (OVMS_GRAPH_QUEUE_MAX_SIZE=0) for mediapipe: {}", getName());
+                return StatusCode::OK;
+            }
+            unsigned int maxThreads = std::thread::hardware_concurrency();
+            if (maxThreads > 0 && queueSize > static_cast<int>(maxThreads)) {
+                SPDLOG_WARN("OVMS_GRAPH_QUEUE_MAX_SIZE value: {} exceeds available hardware threads: {}. Clamping to {}.", queueSize, maxThreads, maxThreads);
+                queueSize = static_cast<int>(maxThreads);
+            }
+            this->mgconfig.setGraphQueueSize(queueSize);
         }
-        auto parsed = stoi32(value);
-        if (!parsed.has_value()) {
-            SPDLOG_ERROR("Invalid OVMS_GRAPH_QUEUE_MAX_SIZE value: '{}'. Expected integer or 'AUTO'.", value);
-            return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
+        // 2. Reject PythonExecutorCalculator nodes using LOOPBACK with graph queue enabled.
+        //    Generative Python nodes hold per-request iterator state that cannot be shared
+        //    across pooled graph instances.
+        for (int i = 0; i < this->config.node_size(); ++i) {
+            const auto& node = this->config.node(i);
+            if (node.calculator() != "PythonExecutorCalculator") {
+                continue;
+            }
+            for (const auto& inputStream : node.input_stream()) {
+                if (inputStream.find("LOOPBACK") == 0) {
+                    SPDLOG_ERROR("PythonExecutorCalculator with LOOPBACK stream is incompatible with graph queue "
+                                 "(OVMS_GRAPH_QUEUE_MAX_SIZE) in mediapipe: {}. "
+                                 "Generative Python nodes hold per-request state that cannot be shared across pooled graphs. "
+                                 "Set OVMS_GRAPH_QUEUE_MAX_SIZE to 0 or remove the LOOPBACK stream.",
+                        getName());
+                    return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
+                }
+            }
         }
-        int queueSize = parsed.value();
-        if (queueSize < 0) {
-            SPDLOG_ERROR("Invalid OVMS_GRAPH_QUEUE_MAX_SIZE value: {}. Must be 0 (disabled) or a positive integer.", queueSize);
-            return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
-        }
-        if (queueSize == 0) {
-            SPDLOG_DEBUG("Graph queue explicitly disabled (OVMS_GRAPH_QUEUE_MAX_SIZE=0) for mediapipe: {}", getName());
-            return StatusCode::OK;
-        }
-        unsigned int maxThreads = std::thread::hardware_concurrency();
-        if (maxThreads > 0 && queueSize > static_cast<int>(maxThreads)) {
-            SPDLOG_WARN("OVMS_GRAPH_QUEUE_MAX_SIZE value: {} exceeds available hardware threads: {}. Clamping to {}.", queueSize, maxThreads, maxThreads);
-            queueSize = static_cast<int>(maxThreads);
-        }
-        this->mgconfig.setGraphQueueSize(queueSize);
         return StatusCode::OK;
     }
     SPDLOG_DEBUG("Graph queue disabled by default for mediapipe: {}. Add '# OVMS_GRAPH_QUEUE_MAX_SIZE: <value>' directive in graph.pbtxt to enable.", getName());
@@ -129,12 +154,12 @@ Status MediapipeGraphDefinition::resolveGraphQueueSize() {
 }
 
 Status MediapipeGraphDefinition::validateForConfigLoadableness() {
-    if (chosenConfig.empty()) {
+    if (this->chosenConfig.empty()) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Trying to parse empty mediapipe graph definition: {} failed", this->getName(), this->chosenConfig);
         return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
     }
     SPDLOG_TRACE("Will try to load pbtxt config: {}", this->chosenConfig);
-    bool success = ::google::protobuf::TextFormat::ParseFromString(chosenConfig, &this->config);
+    bool success = ::google::protobuf::TextFormat::ParseFromString(this->chosenConfig, &this->config);
     if (!success) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Trying to parse mediapipe graph definition: {} failed", this->getName(), this->chosenConfig);
         return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
@@ -179,6 +204,10 @@ Status MediapipeGraphDefinition::validate(const ServableNameChecker& checker) {
     if (!validationResult.ok()) {
         return validationResult;
     }
+    validationResult = resolveGraphQueueSize();
+    if (!validationResult.ok()) {
+        return validationResult;
+    }
     std::unique_lock lock(metadataMtx);
     auto status = createInputsInfo();
     if (!status.ok()) {
@@ -207,10 +236,6 @@ Status MediapipeGraphDefinition::validate(const ServableNameChecker& checker) {
     }
 
     status = this->initializeNodes();
-    if (!status.ok()) {
-        return status;
-    }
-    status = this->resolveGraphQueueSize();
     if (!status.ok()) {
         return status;
     }
@@ -441,7 +466,6 @@ StatusCode MediapipeGraphDefinition::notLoadedAnymoreCode() const {
 
 Status MediapipeGraphDefinition::initializeNodes() {
     SPDLOG_INFO("MediapipeGraphDefinition initializing graph nodes");
-    static constexpr const char* llmCalculatorName = "LLMCalculator";
     bool success = false;
     struct CleanupGuard {
         GraphSidePackets& maps;
@@ -460,20 +484,6 @@ Status MediapipeGraphDefinition::initializeNodes() {
                 if (!status.ok()) {
                     return status;
                 }
-            }
-        }
-        if (endsWith(config.node(i).calculator(), llmCalculatorName)) {
-            const auto& nodeName = config.node(i).name();
-            if (nodeName.empty()) {
-                SPDLOG_LOGGER_ERROR(modelmanager_logger, "LLM node name is missing in graph: {}. ", getName());
-                return StatusCode::LLM_NODE_MISSING_NAME;
-            }
-            const auto [_, inserted] = sidePacketMaps->genAiExecutionContextMap.emplace(
-                nodeName,
-                std::make_shared<GenAiExecutionContextHolder>());
-            if (!inserted) {
-                SPDLOG_LOGGER_ERROR(modelmanager_logger, "LLM execution context holder for node name: {} already exists in graph: {}. ", nodeName, getName());
-                return StatusCode::LLM_NODE_NAME_ALREADY_EXISTS;
             }
         }
     }

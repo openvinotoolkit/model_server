@@ -15,14 +15,14 @@
 //*****************************************************************************
 #pragma once
 
-#include <mutex>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <unordered_map>
+#include <utility>
 
 namespace ovms {
 
-// Forward declarations - only shared_ptrs are stored so full definitions are not needed
 class PythonNodeResources;
 class GenAiServable;
 struct GenAiServableExecutionContext;
@@ -40,8 +40,28 @@ using TtsServableMap = std::unordered_map<std::string, std::shared_ptr<TtsServab
 using EmbeddingsServableMap = std::unordered_map<std::string, std::shared_ptr<EmbeddingsServable>>;
 using ImageGenerationPipelinesMap = std::unordered_map<std::string, std::shared_ptr<ImageGenerationPipelines>>;
 
-struct GenAiExecutionContextHolder {
-    std::mutex mutex;
+// Holds a per-graph LLM execution context that is swapped between requests.
+// The mutex synchronizes the handoff between the executor thread (which creates
+// a fresh context before each request via set()) and the MediaPipe scheduler
+// thread (which reads it in the calculator's Process() via get()).
+// In the queue path these run concurrently because the graph stays running.
+class GenAiExecutionContextHolder {
+public:
+    std::shared_ptr<GenAiServableExecutionContext> get() {
+        std::lock_guard<std::mutex> lock(executionContextMtx);
+        return executionContext;
+    }
+    void set(std::shared_ptr<GenAiServableExecutionContext> ctx) {
+        std::lock_guard<std::mutex> lock(executionContextMtx);
+        executionContext = std::move(ctx);
+    }
+    void reset() {
+        std::lock_guard<std::mutex> lock(executionContextMtx);
+        executionContext.reset();
+    }
+
+private:
+    std::mutex executionContextMtx;
     std::shared_ptr<GenAiServableExecutionContext> executionContext;
 };
 using GenAiExecutionContextMap = std::unordered_map<std::string, std::shared_ptr<GenAiExecutionContextHolder>>;

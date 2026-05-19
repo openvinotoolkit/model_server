@@ -82,13 +82,13 @@ struct GraphIdGuard {
     // the GraphHelper alive even after the GraphQueue is destroyed during
     // mediapipe graph reload/retire — the in-flight request continues using
     // the old graph until completion.
-    std::shared_ptr<GraphHelper> gh;
+    std::shared_ptr<GraphHelper> graphHelper;
     ::mediapipe::CalculatorGraph& graph;
     GraphIdGuard(std::shared_ptr<GraphQueue>& queue) :
         weakQueue(queue),
         id(queue->getIdleStream().get()),
-        gh((queue->getInferRequest(id))),
-        graph(*gh->graph) {
+        graphHelper((queue->getInferRequest(id))),
+        graph(*graphHelper->graph) {
     }
     GraphIdGuard(GraphIdGuard&&) = default;
     GraphIdGuard(const GraphIdGuard&) = delete;
