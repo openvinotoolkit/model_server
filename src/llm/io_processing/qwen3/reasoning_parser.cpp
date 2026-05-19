@@ -50,7 +50,6 @@ void Qwen3ReasoningParser::parse(ParsedOutput& parsedOutput, const std::vector<i
         parsedOutput.reasoning = reasoningText;
         // Remove reasoning from content
         parsedOutput.content.erase(startPos, endPos - startPos + endReasoningTag.length());
-        return;
     }
 }
 

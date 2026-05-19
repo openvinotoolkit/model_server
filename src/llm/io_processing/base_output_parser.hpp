@@ -64,7 +64,7 @@ protected:
     // When true, the chat template has already emitted the parser's start tag as the
     // trailing tokens of the prompt, so the model output is expected to begin already
     // inside the parsed segment (e.g. reasoning) without producing the start tag itself.
-    // Used by reasoning parsers for models like Qwen3/DeepSeek-R1/GLM whose templates
+    // Used by reasoning parsers for models like Qwen3.6, Qwen3-VL.
     // append "<think>\n" at the end of the prompt when thinking is enabled.
     bool implicitStart = false;
 
