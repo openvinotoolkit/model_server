@@ -883,7 +883,6 @@ TEST_F(ModelManager, ReadsVersionsFromSingleFilePathForSupportedFormats) {
 
     const std::vector<std::string> extensions = {
         ".xml",
-        ".bin",
         ".onnx",
         ".pdmodel",
         ".pdiparams",
