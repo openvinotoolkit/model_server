@@ -18,6 +18,7 @@
 #include <algorithm>
 #include <array>
 #include <cstdlib>
+#include <filesystem>
 #include <iostream>
 #include <memory>
 #include <optional>
@@ -1109,13 +1110,15 @@ Status ModelInstance::fetchModelFilepaths() {
         modelFiles.clear();
 
         if (extension == ".xml") {
-            path = modelDirectory;
-            bool found = false;
-            fetchModelFiles(found, OV_MODEL_FILES_EXTENSIONS);
-            if (!found) {
-                SPDLOG_ERROR("Error loading model. Invalid model file.");
+            const auto stem = modelFile.stem().string();
+            const auto binFile = modelDirectory + FileSystem::getOsSeparator() + stem + ".bin";
+            if (!std::filesystem::is_regular_file(binFile, ec)) {
+                SPDLOG_ERROR("Error loading model. Missing .bin file for: {}", path);
                 return StatusCode::FILE_INVALID;
             }
+            modelFiles.push_back(path);
+            modelFiles.push_back(binFile);
+            path = modelDirectory;
             return StatusCode::OK;
         }
 
@@ -1125,13 +1128,16 @@ Status ModelInstance::fetchModelFilepaths() {
         }
 
         if (extension == ".pdmodel" || extension == ".pdiparams") {
-            path = modelDirectory;
-            bool found = false;
-            fetchModelFiles(found, PADDLE_MODEL_FILES_EXTENSIONS);
-            if (!found) {
-                SPDLOG_ERROR("Error loading model. Invalid model file.");
+            const auto stem = modelFile.stem().string();
+            const auto pdmodelFile = modelDirectory + FileSystem::getOsSeparator() + stem + ".pdmodel";
+            const auto pdiparamsFile = modelDirectory + FileSystem::getOsSeparator() + stem + ".pdiparams";
+            if (!std::filesystem::is_regular_file(pdmodelFile, ec) || !std::filesystem::is_regular_file(pdiparamsFile, ec)) {
+                SPDLOG_ERROR("Error loading model. Missing .pdmodel or .pdiparams file for: {}", path);
                 return StatusCode::FILE_INVALID;
             }
+            modelFiles.push_back(pdmodelFile);
+            modelFiles.push_back(pdiparamsFile);
+            path = modelDirectory;
             return StatusCode::OK;
         }
 
@@ -1149,7 +1155,10 @@ Status ModelInstance::fetchModelFilepaths() {
             return StatusCode::OK;
         }
 
-        SPDLOG_ERROR("Error loading model. Invalid model file.");
+        SPDLOG_ERROR("Error loading model: no valid model file found for model: {}, version: {}, path: {}",
+            getName(),
+            getVersion(),
+            path);
         return StatusCode::FILE_INVALID;
     }
 
@@ -1166,7 +1175,10 @@ Status ModelInstance::fetchModelFilepaths() {
     fetchModelFiles(found, TFLITE_MODEL_FILES_EXTENSIONS);
 
     if (!found) {
-        SPDLOG_ERROR("Error loading model. Invalid model file.");
+        SPDLOG_ERROR("Error loading model: no valid model file found for model: {}, version: {}, path: {}",
+            getName(),
+            getVersion(),
+            path);
         return StatusCode::FILE_INVALID;
     }
 
