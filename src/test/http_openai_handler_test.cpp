@@ -652,6 +652,52 @@ protected:
         return std::string("{\"model\":\"llama\",\"messages\":[{\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"what is in this image?\"},{\"type\":\"image_url\",\"image_url\":{\"url\":\"") + dataUrl + "\"}}]}]}";
     }
 
+    // Builds a single image content item in the natural shape for the current endpoint.
+    std::string formatImageContentItem(const std::string& url) const {
+        if (endpoint() == ovms::Endpoint::RESPONSES) {
+            return std::string("{\"type\":\"input_image\",\"image_url\":\"") + url + "\"}";
+        }
+        return std::string("{\"type\":\"image_url\",\"image_url\":{\"url\":\"") + url + "\"}}";
+    }
+
+    std::string formatTextContentItem(const std::string& text) const {
+        if (endpoint() == ovms::Endpoint::RESPONSES) {
+            return std::string("{\"type\":\"input_text\",\"text\":\"") + text + "\"}";
+        }
+        return std::string("{\"type\":\"text\",\"text\":\"") + text + "\"}";
+    }
+
+    // Builds a multimodal request whose single user message has the given content items
+    // (already formatted by formatTextContentItem / formatImageContentItem).
+    std::string createMultimodalRequestFromItems(const std::vector<std::string>& items) const {
+        std::string contentArray = "[";
+        for (size_t i = 0; i < items.size(); ++i) {
+            if (i > 0)
+                contentArray += ",";
+            contentArray += items[i];
+        }
+        contentArray += "]";
+        if (endpoint() == ovms::Endpoint::RESPONSES) {
+            return std::string("{\"model\":\"llama\",\"input\":[{\"role\":\"user\",\"content\":") + contentArray + "}]}";
+        }
+        return std::string("{\"model\":\"llama\",\"messages\":[{\"role\":\"user\",\"content\":") + contentArray + "}]}";
+    }
+
+    // Builds an image-only (no text) request.
+    std::string createImageOnlyRequest(const std::string& url) const {
+        return createMultimodalRequestFromItems({formatImageContentItem(url)});
+    }
+
+    // Builds a request with multiple images interleaved with one text item in the same user turn.
+    std::string createMultipleImagesRequest(const std::vector<std::string>& urls) const {
+        std::vector<std::string> items;
+        items.push_back(formatTextContentItem("what is in these images?"));
+        for (const auto& u : urls) {
+            items.push_back(formatImageContentItem(u));
+        }
+        return createMultimodalRequestFromItems(items);
+    }
+
     std::string createToolRequest(const std::string& toolChoiceJson) const {
         std::string base = createTextRequest("What is the weather like in Boston today?", ",\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"get_current_weather\",\"parameters\":{\"type\":\"object\",\"properties\":{\"location\":{\"type\":\"string\"}},\"required\":[\"location\"]}}}]");
         if (toolChoiceJson.empty()) {
@@ -678,6 +724,27 @@ protected:
             return nullptr;
         }
         return apiHandler;
+    }
+
+    // Parses the request with media-auth parameters plumbed through parseRequest. Returns
+    // the handler (regardless of status) and the parse status separately so that both
+    // success and failure cases can assert on the resulting status.
+    absl::Status parseCurrentRequestWithMediaAuth(
+        std::shared_ptr<ovms::OpenAIApiHandler>& outHandler,
+        const std::string& json,
+        std::optional<std::string> allowedLocalMediaPath = std::nullopt,
+        std::optional<std::vector<std::string>> allowedMediaDomains = std::nullopt) {
+        doc.Parse(json.c_str());
+        if (doc.HasParseError()) {
+            outHandler.reset();
+            return absl::InvalidArgumentError("json parse error");
+        }
+        std::optional<uint32_t> maxTokensLimit;
+        uint32_t bestOfLimit = 0;
+        std::optional<uint32_t> maxModelLength;
+        outHandler = createHandler(endpoint());
+        return outHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength,
+            std::move(allowedLocalMediaPath), std::move(allowedMediaDomains));
     }
 };
 
@@ -848,6 +915,171 @@ TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingMultimodalInputImage
     ASSERT_NE(apiHandler, nullptr);
 
     EXPECT_EQ(apiHandler->getImageHistory().size(), 1);
+}
+
+TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingImageJpegBase64Succeeds) {
+    const std::string base64Image = "data:image/jpeg;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAAEElEQVR4nGIy+/oREAAA//8DiQIftNKCRwAAAABJRU5ErkJggg==";
+    std::string json = createMultimodalRequestWithImageUrl(base64Image);
+    auto apiHandler = parseCurrentRequest(json);
+    ASSERT_NE(apiHandler, nullptr);
+    EXPECT_EQ(apiHandler->getImageHistory().size(), 1);
+}
+
+TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingImageOnlyNoTextSucceeds) {
+    const std::string base64Image = "data:image/jpeg;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAAEElEQVR4nGIy+/oREAAA//8DiQIftNKCRwAAAABJRU5ErkJggg==";
+    std::string json = createImageOnlyRequest(base64Image);
+    auto apiHandler = parseCurrentRequest(json);
+    ASSERT_NE(apiHandler, nullptr);
+    EXPECT_EQ(apiHandler->getImageHistory().size(), 1);
+}
+
+TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingMultipleImagesInOneTurnSucceeds) {
+    const std::string base64Image = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAAEElEQVR4nGLK27oAEAAA//8DYAHGgEvy5AAAAABJRU5ErkJggg==";
+    std::string json = createMultipleImagesRequest({base64Image, base64Image, base64Image});
+    auto apiHandler = parseCurrentRequest(json);
+    ASSERT_NE(apiHandler, nullptr);
+
+    const ovms::ImageHistory& imageHistory = apiHandler->getImageHistory();
+    ASSERT_EQ(imageHistory.size(), 3);
+    // All images belong to the same user turn (chat history index 0).
+    for (const auto& entry : imageHistory) {
+        EXPECT_EQ(entry.first, 0u);
+    }
+}
+
+TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingImageEmptyUrlFails) {
+    std::string json = createImageOnlyRequest("");
+    std::shared_ptr<ovms::OpenAIApiHandler> apiHandler;
+    auto status = parseCurrentRequestWithMediaAuth(apiHandler, json);
+    // Empty URL is treated as a (non-existent) local filesystem path; with no allowed_local_media_path
+    // configured, the loader rejects it as "Loading images from local filesystem is disabled."
+    EXPECT_EQ(status, absl::InvalidArgumentError("Loading images from local filesystem is disabled."));
+}
+
+TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingImageMalformedBase64Fails) {
+    std::string json = createImageOnlyRequest("data:image/png;base64,NOT_BASE64!@#");
+    std::shared_ptr<ovms::OpenAIApiHandler> apiHandler;
+    auto status = parseCurrentRequestWithMediaAuth(apiHandler, json);
+    EXPECT_EQ(status, absl::InvalidArgumentError("Invalid base64 string in request"));
+}
+
+TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingImageStringWithNoMimePrefixFails) {
+    // Without a "data:..." prefix the URL falls through to the local-filesystem loader,
+    // which is disabled by default.
+    std::string json = createImageOnlyRequest("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAAEElEQVR4nGLK27oAEAAA//8DYAHGgEvy5AAAAABJRU5ErkJggg==");
+    std::shared_ptr<ovms::OpenAIApiHandler> apiHandler;
+    auto status = parseCurrentRequestWithMediaAuth(apiHandler, json);
+    EXPECT_EQ(status, absl::InvalidArgumentError("Loading images from local filesystem is disabled."));
+}
+
+TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingImageLocalFilesystemSucceeds) {
+    const std::string imageUrl = getGenericFullPathForSrcTest("/ovms/src/test/binaryutils/rgb.jpg");
+    std::string json = createImageOnlyRequest(imageUrl);
+    std::shared_ptr<ovms::OpenAIApiHandler> apiHandler;
+    auto status = parseCurrentRequestWithMediaAuth(apiHandler, json,
+        getGenericFullPathForSrcTest("/ovms/src/test/binaryutils"));
+    ASSERT_EQ(status, absl::OkStatus());
+    ASSERT_NE(apiHandler, nullptr);
+    ASSERT_EQ(apiHandler->getImageHistory().size(), 1);
+    auto [index, image] = apiHandler->getImageHistory()[0];
+    EXPECT_EQ(index, 0u);
+    EXPECT_EQ(image.get_element_type(), ov::element::u8);
+}
+
+TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingImageLocalFilesystemNotWithinAllowedPathFails) {
+    const std::string imageUrl = getGenericFullPathForSrcTest("/ovms/src/test/binaryutils/rgb.jpg");
+    std::string json = createImageOnlyRequest(imageUrl);
+    std::shared_ptr<ovms::OpenAIApiHandler> apiHandler;
+    auto status = parseCurrentRequestWithMediaAuth(apiHandler, json,
+        getGenericFullPathForSrcTest("/ovms/src/test/llm"));
+    EXPECT_EQ(status, absl::InvalidArgumentError("Given filepath is not subpath of allowed_local_media_path"));
+}
+
+TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingImageLocalFilesystemPathTraversalRejected) {
+    std::string imageUrlWithEscape = getGenericFullPathForSrcTest("/ovms/src/test/../test/binaryutils/rgb.jpg");
+    std::string json = createImageOnlyRequest(imageUrlWithEscape);
+    std::shared_ptr<ovms::OpenAIApiHandler> apiHandler;
+    auto status = parseCurrentRequestWithMediaAuth(apiHandler, json, std::string("/ovms/"));
+    std::string expectedMessage = "Path " + imageUrlWithEscape + " escape with .. is forbidden.";
+    EXPECT_EQ(status, absl::InvalidArgumentError(expectedMessage.c_str()));
+}
+
+TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingImageLocalFilesystemPrefixPathBypassPrevented) {
+    const std::string allowedLocalMediaPath = getGenericFullPathForSrcTest("/ovms/src/test/binaryutils");
+    const std::string siblingPrefixPath = allowedLocalMediaPath + "_private/rgb.jpg";
+    std::string json = createImageOnlyRequest(siblingPrefixPath);
+    std::shared_ptr<ovms::OpenAIApiHandler> apiHandler;
+    auto status = parseCurrentRequestWithMediaAuth(apiHandler, json, allowedLocalMediaPath);
+    EXPECT_EQ(status, absl::InvalidArgumentError("Given filepath is not subpath of allowed_local_media_path"));
+}
+
+TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingImageLocalFilesystemNonexistentPath) {
+    const std::string allowedPath = getGenericFullPathForSrcTest("/ovms/src/test/");
+    const std::string imageUrl = getGenericFullPathForSrcTest("/ovms/src/test/not_existing.jpeg");
+    std::string json = createImageOnlyRequest(imageUrl);
+    std::shared_ptr<ovms::OpenAIApiHandler> apiHandler;
+    auto status = parseCurrentRequestWithMediaAuth(apiHandler, json, allowedPath);
+    EXPECT_EQ(status, absl::InvalidArgumentError("Image file parsing failed"));
+}
+
+TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingImageLocalFilesystemSymlinkEscapeIsRejected) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Creating filesystem symlinks on Windows requires elevated privileges and is unreliable in CI.";
+#else
+    // The allowed directory contains a symlink pointing to a sibling directory where the real
+    // image lives. Accessing the image through the symlink appears to be inside the allowlist,
+    // but its canonical location is outside it - the authorization check must resolve the
+    // symlink before the allowlist comparison.
+    const std::filesystem::path realImageDir = getGenericFullPathForSrcTest("/ovms/src/test/binaryutils");
+    const std::filesystem::path allowedRoot = std::filesystem::temp_directory_path() / "ovms_symlink_allowlist_test_param";
+    std::error_code ec;
+    std::filesystem::remove_all(allowedRoot, ec);
+    ASSERT_TRUE(std::filesystem::create_directories(allowedRoot, ec)) << ec.message();
+    const std::filesystem::path symlinkInsideAllowed = allowedRoot / "linked";
+    std::filesystem::create_directory_symlink(realImageDir, symlinkInsideAllowed, ec);
+    if (ec) {
+        std::filesystem::remove_all(allowedRoot);
+        GTEST_SKIP() << "Cannot create symlink for test: " << ec.message();
+    }
+    const std::string imageUrl = (symlinkInsideAllowed / "rgb.jpg").string();
+    std::string json = createImageOnlyRequest(imageUrl);
+    std::shared_ptr<ovms::OpenAIApiHandler> apiHandler;
+    auto status = parseCurrentRequestWithMediaAuth(apiHandler, json, allowedRoot.string());
+    std::filesystem::remove_all(allowedRoot, ec);
+    EXPECT_EQ(status, absl::InvalidArgumentError("Given filepath is not subpath of allowed_local_media_path"));
+#endif
+}
+
+TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingImageUrlNotInAllowedDomainsFails) {
+    std::string json = createImageOnlyRequest("http://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/static/images/zebra.jpeg");
+    std::shared_ptr<ovms::OpenAIApiHandler> apiHandler;
+    auto status = parseCurrentRequestWithMediaAuth(apiHandler, json, std::nullopt,
+        std::vector<std::string>{"wikipedia.com"});
+    EXPECT_EQ(status, absl::InvalidArgumentError("Given url does not match any allowed domain from allowed_media_domains"));
+}
+
+TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingImageUrlPartialDomainMatchFails) {
+    std::string json = createImageOnlyRequest("http://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/static/images/zebra.jpeg");
+    std::shared_ptr<ovms::OpenAIApiHandler> apiHandler;
+    auto status = parseCurrentRequestWithMediaAuth(apiHandler, json, std::nullopt,
+        std::vector<std::string>{"githubusercontent.com"});
+    EXPECT_EQ(status, absl::InvalidArgumentError("Given url does not match any allowed domain from allowed_media_domains"));
+}
+
+TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingImageUrlSuffixMatchAllowedDomainFails) {
+    std::string json = createImageOnlyRequest("http://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/static/images/zebra.jpeg");
+    std::shared_ptr<ovms::OpenAIApiHandler> apiHandler;
+    auto status = parseCurrentRequestWithMediaAuth(apiHandler, json, std::nullopt,
+        std::vector<std::string>{"host.raw.githubusercontent.com"});
+    EXPECT_EQ(status, absl::InvalidArgumentError("Given url does not match any allowed domain from allowed_media_domains"));
+}
+
+TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingImageUrlWildcardPatternNotSupported) {
+    std::string json = createImageOnlyRequest("http://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/static/images/zebra.jpeg");
+    std::shared_ptr<ovms::OpenAIApiHandler> apiHandler;
+    auto status = parseCurrentRequestWithMediaAuth(apiHandler, json, std::nullopt,
+        std::vector<std::string>{"*githubusercontent.com"});
+    EXPECT_EQ(status, absl::InvalidArgumentError("Given url does not match any allowed domain from allowed_media_domains"));
 }
 
 INSTANTIATE_TEST_SUITE_P(
@@ -1171,6 +1403,47 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseForResponsesOmitsReas
     // Message item should still be present
     ASSERT_NE(serialized.find("\"type\":\"message\""), std::string::npos) << serialized;
     ASSERT_NE(serialized.find("\"type\":\"output_text\""), std::string::npos) << serialized;
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseForResponsesOmitsEmptyMessageItemWhenOnlyToolCalls) {
+    // When the model produces only tool calls (no text content), the
+    // Responses output[] must NOT include an empty `message` item. Mirrors
+    // vllm responses_parser.py's `if content:` guard: emitting an empty
+    // message item makes clients (OpenAI SDK, BFCL) echo it back verbatim
+    // into the next request's input[], polluting the chat history with
+    // stale empty assistant turns that are tokenised by the chat template
+    // and shift the model's sampling state.
+    std::string json = R"({
+    "model": "llama",
+    "input": "What is weather?",
+    "tools": [{
+      "type": "function",
+      "name": "example_tool",
+      "parameters": {"type": "object"}
+    }]
+    })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    auto apiHandler = std::make_shared<ovms::OpenAIResponsesHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer, "hermes3");
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+
+    ov::genai::GenerationOutput generationOutput;
+    generationOutput.generated_ids = createHermes3ToolCallTokens(*tokenizer);
+    generationOutput.finish_reason = ov::genai::GenerationFinishReason::STOP;
+    std::string serialized = apiHandler->serializeUnaryResponse(std::vector<ov::genai::GenerationOutput>{generationOutput});
+
+    ASSERT_NE(serialized.find("\"object\":\"response\""), std::string::npos) << serialized;
+    // The function_call output item must be present.
+    ASSERT_NE(serialized.find("\"type\":\"function_call\""), std::string::npos) << serialized;
+    // The empty message output item must NOT be present.
+    ASSERT_EQ(serialized.find("\"type\":\"message\""), std::string::npos)
+        << "Empty message item must not be emitted when only tool_calls are produced: " << serialized;
+    ASSERT_EQ(serialized.find("\"type\":\"output_text\""), std::string::npos)
+        << "Empty output_text must not be emitted when only tool_calls are produced: " << serialized;
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, parseResponsesReasoningParameterInjectsEnableThinking) {
@@ -5087,4 +5360,178 @@ TEST_F(HttpOpenAIHandlerParsingTest, ResponsesBfclReplayShapeWithEchoedAssistant
                 {"role":"tool","tool_call_id":"fc2","content":"{\"error\":\"no\"}"}
             ]
         })");
+}
+
+// ---------------------------------------------------------------------------
+// Responses-only input_image shape coverage. The OpenAI Responses API accepts
+// `image_url` either as a flat string or as an object `{"url": "..."}`. Both
+// shapes must produce identical behavior.
+// ---------------------------------------------------------------------------
+
+enum class ResponsesImageUrlShape {
+    FlatString,
+    ObjectWithUrl,
+};
+
+class HttpOpenAIHandlerResponsesImageUrlShapeTest : public HttpOpenAIHandlerParsingTest,
+                                                    public ::testing::WithParamInterface<ResponsesImageUrlShape> {
+protected:
+    // Formats one input_image content item with the parametrized image_url shape.
+    std::string formatInputImageItem(const std::string& url) const {
+        if (GetParam() == ResponsesImageUrlShape::FlatString) {
+            return std::string("{\"type\":\"input_image\",\"image_url\":\"") + url + "\"}";
+        }
+        return std::string("{\"type\":\"input_image\",\"image_url\":{\"url\":\"") + url + "\"}}";
+    }
+
+    std::string createResponsesRequest(const std::vector<std::string>& userTurnsContent) const {
+        std::string input = "[";
+        for (size_t i = 0; i < userTurnsContent.size(); ++i) {
+            if (i > 0)
+                input += ",";
+            input += std::string("{\"role\":\"user\",\"content\":") + userTurnsContent[i] + "}";
+        }
+        input += "]";
+        return std::string("{\"model\":\"llama\",\"input\":") + input + "}";
+    }
+
+    std::shared_ptr<ovms::OpenAIResponsesHandler> parseResponses(const std::string& json) {
+        doc.Parse(json.c_str());
+        if (doc.HasParseError()) {
+            ADD_FAILURE() << "Failed to parse JSON: " << json;
+            return nullptr;
+        }
+        std::optional<uint32_t> maxTokensLimit;
+        uint32_t bestOfLimit = 0;
+        std::optional<uint32_t> maxModelLength;
+        auto apiHandler = std::make_shared<ovms::OpenAIResponsesHandler>(
+            doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
+        auto status = apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength);
+        if (!status.ok()) {
+            ADD_FAILURE() << "parseRequest failed: " << status << " for JSON: " << json;
+            return nullptr;
+        }
+        return apiHandler;
+    }
+};
+
+TEST_P(HttpOpenAIHandlerResponsesImageUrlShapeTest, ValidBase64ImageSucceeds) {
+    const std::string base64Image = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAAEElEQVR4nGLK27oAEAAA//8DYAHGgEvy5AAAAABJRU5ErkJggg==";
+    std::string content = "[" + formatInputImageItem(base64Image) + "]";
+    std::string json = createResponsesRequest({content});
+    auto apiHandler = parseResponses(json);
+    ASSERT_NE(apiHandler, nullptr);
+    ASSERT_EQ(apiHandler->getImageHistory().size(), 1);
+    EXPECT_EQ(apiHandler->getImageHistory()[0].first, 0u);
+}
+
+TEST_P(HttpOpenAIHandlerResponsesImageUrlShapeTest, MultipleImagesAcrossTurnsHaveCorrectIndices) {
+    const std::string base64Image = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAAEElEQVR4nGLK27oAEAAA//8DYAHGgEvy5AAAAABJRU5ErkJggg==";
+    // Turn 0 (user): image + text
+    // Turn 1 (assistant) - skipped by the helper; we'll inline-build
+    // Turn 2 (user): another image
+    std::string json = std::string(R"({"model":"llama","input":[)") +
+                       R"({"role":"user","content":[)" + formatInputImageItem(base64Image) + R"(,{"type":"input_text","text":"first"}]},)" +
+                       R"({"role":"assistant","content":[{"type":"output_text","text":"ok"}]},)" +
+                       R"({"role":"user","content":[)" + formatInputImageItem(base64Image) + R"(]})" +
+                       R"(]})";
+    auto apiHandler = parseResponses(json);
+    ASSERT_NE(apiHandler, nullptr);
+    const ovms::ImageHistory& imageHistory = apiHandler->getImageHistory();
+    ASSERT_EQ(imageHistory.size(), 2);
+    EXPECT_EQ(imageHistory[0].first, 0u);
+    EXPECT_EQ(imageHistory[1].first, 2u);
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    ResponsesImageUrlShapes,
+    HttpOpenAIHandlerResponsesImageUrlShapeTest,
+    ::testing::Values(ResponsesImageUrlShape::FlatString, ResponsesImageUrlShape::ObjectWithUrl),
+    [](const testing::TestParamInfo<ResponsesImageUrlShape>& info) {
+        return info.param == ResponsesImageUrlShape::FlatString ? "FlatString" : "ObjectWithUrl";
+    });
+
+// ---------------------------------------------------------------------------
+// Responses-only structural / negative cases not covered by the parametrized
+// chat+responses fixture.
+// ---------------------------------------------------------------------------
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingResponsesInputImageObjectMissingUrlFieldFails) {
+    std::string json = R"({
+        "model": "llama",
+        "input": [
+          {"role": "user", "content": [{"type": "input_image", "image_url": {}}]}
+        ]
+    })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    auto apiHandler = std::make_shared<ovms::OpenAIResponsesHandler>(
+        doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
+    EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength),
+        absl::InvalidArgumentError("input_image.image_url.url is missing or invalid"));
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingResponsesInputImageObjectUrlNotStringFails) {
+    std::string json = R"({
+        "model": "llama",
+        "input": [
+          {"role": "user", "content": [{"type": "input_image", "image_url": {"url": 123}}]}
+        ]
+    })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    auto apiHandler = std::make_shared<ovms::OpenAIResponsesHandler>(
+        doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
+    EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength),
+        absl::InvalidArgumentError("input_image.image_url.url is missing or invalid"));
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingResponsesInputFileTypeRejected) {
+    // The Responses API may carry input_file items (e.g. PDFs) - OVMS does not yet
+    // support them and must reject with a clear "unsupported" error.
+    std::string json = R"({
+        "model": "llama",
+        "input": [
+          {"role": "user", "content": [
+            {"type": "input_text", "text": "summarize"},
+            {"type": "input_file", "file_id": "file-abc"}
+          ]}
+        ]
+    })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    auto apiHandler = std::make_shared<ovms::OpenAIResponsesHandler>(
+        doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
+    EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength),
+        absl::InvalidArgumentError("unsupported input content item type: input_file"));
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingResponsesStreamOptionsRejected) {
+    // Responses streams always include usage in the response.completed event, so
+    // stream_options is intentionally rejected to avoid silently ignoring the field.
+    std::string json = R"({
+        "model": "llama",
+        "stream": true,
+        "input": "hi",
+        "stream_options": {"include_usage": true}
+    })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    auto apiHandler = std::make_shared<ovms::OpenAIResponsesHandler>(
+        doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
+    auto status = apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength);
+    EXPECT_EQ(status,
+        absl::InvalidArgumentError("stream_options is not supported in Responses API."));
 }
