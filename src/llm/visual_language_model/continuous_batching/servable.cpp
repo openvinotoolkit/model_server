@@ -106,6 +106,9 @@ absl::Status VisualLanguageModelServable::prepareInputs(std::shared_ptr<GenAiSer
         }
         const auto& chatTemplateKwargs = chatTemplateKwargsStatus.value();
         vlmExecutionContext->inputText = properties->tokenizer.apply_chat_template(chatHistory, addGenerationPrompt, {}, tools, chatTemplateKwargs);
+        if (vlmExecutionContext->apiHandler->getOutputParser() != nullptr) {
+            vlmExecutionContext->apiHandler->getOutputParser()->detectAndSetImplicitReasoningStart(vlmExecutionContext->inputText);
+        }
     } else {
         return absl::InvalidArgumentError("Unsupported endpoint");
     }

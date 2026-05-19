@@ -233,6 +233,32 @@ std::string OutputParser::getToolParserStartTag() const {
     }
 }
 
+void OutputParser::setImplicitReasoningStart(bool value) {
+    if (!reasoningParser) {
+        return;
+    }
+    reasoningParser->setImplicitStart(value);
+    // Bias the streaming state machine: the model output is expected to begin already
+    // inside the reasoning segment, so skip the UNKNOWN phase and go straight to REASONING.
+    // When value is false, restore the default initial phase.
+    if (processingPhase == UNKNOWN || processingPhase == REASONING) {
+        processingPhase = value ? REASONING : UNKNOWN;
+    }
+}
+
+bool OutputParser::detectAndSetImplicitReasoningStart(const std::string& renderedPrompt) {
+    if (!reasoningParser) {
+        return false;
+    }
+    std::string trimmed = renderedPrompt;
+    rtrim(trimmed);
+    const auto& startTags = reasoningParser->getParsingStartTags();
+    bool detected = std::any_of(startTags.begin(), startTags.end(),
+        [&](const std::string& tag) { return !tag.empty() && endsWith(trimmed, tag); });
+    setImplicitReasoningStart(detected);
+    return detected;
+}
+
 ParsedOutput OutputParser::parse(const std::vector<int64_t>& generatedTokens, const bool toolsAvailable) {
     // Model output is processed by the chain of parsers. Each parser extracts relevant part of the output and fills the ParsedOutput structure.
     // At the beginning, the content field of ParsedOutput is already filled with decoded content from generatedTokens.
