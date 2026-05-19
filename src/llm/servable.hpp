@@ -135,7 +135,7 @@ struct GenAiServableExecutionContext {
     std::shared_ptr<ov::genai::TextStreamer> textStreamer;
     bool sendLoopbackSignal = false;
     bool lifecyclePrimed = false;  // true once RESPONSES lifecycle events have been primed
-    DeltaChannel deltaChannel;  // thread-safe delta queue used by all streaming paths
+    DeltaChannel deltaChannel;     // thread-safe delta queue used by all streaming paths
     GenerationPhase generationPhase = GenerationPhase::INPUT_TOKEN_PROCESSING;
 };
 
