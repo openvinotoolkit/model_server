@@ -41,7 +41,7 @@ For every use case subcommand there is adjusted list of parameters:
 python export_model.py text_generation --help
 ```
 
-> Note: Exporting some models might require different transformers version than specified in requirements.txt Check [supported models](https://openvinotoolkit.github.io/openvino.genai/docs/supported-models/). If custom transformers version is required, install it afterwards via `pip install transformers==<version>`
+> Note: Exporting some models might require different transformers version than specified in requirements.txt. Check [supported models](https://openvinotoolkit.github.io/openvino.genai/docs/supported-models/). If custom transformers version is required, install it afterwards via `pip install transformers==<version>`
 
 
 
