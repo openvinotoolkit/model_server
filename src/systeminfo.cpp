@@ -101,7 +101,6 @@ uint16_t getCpuAffinityCount() {
     return static_cast<uint16_t>(cpu_count);
 }
 
-
 uint16_t getDockerCpuQuota() {
     // Try cgroup v2 cpu.max (format: "quota period")
     std::ifstream cpu_max_v2("/sys/fs/cgroup/cpu.max");
