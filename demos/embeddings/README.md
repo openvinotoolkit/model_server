@@ -154,7 +154,8 @@ python export_model.py embeddings_ov --source_model intfloat/multilingual-e5-lar
 :::
 :::{tab-item} Alibaba-NLP/gte-large-en-v1.5
 :sync: gte-large-en-v1.5
-```console
+```text
+pip install "transformers<5"  # WA for optimum-intel and model support for new transformers
 python export_model.py embeddings_ov --source_model Alibaba-NLP/gte-large-en-v1.5 --pooling CLS --extra_quantization_params "--library sentence_transformers"
 ```
 :::
@@ -225,7 +226,8 @@ python export_model.py embeddings_ov --source_model intfloat/multilingual-e5-lar
 :::
 :::{tab-item} Alibaba-NLP/gte-large-en-v1.5
 :sync: gte-large-en-v1.5
-```console
+```text
+pip install "transformers<5"  # WA for optimum-intel and model support for new transformers
 python export_model.py embeddings_ov --source_model Alibaba-NLP/gte-large-en-v1.5 --pooling CLS --weight-format int8 --target_device GPU --extra_quantization_params "--library sentence_transformers" --config_file_path models/config.json --model_repository_path models
 ```
 :::
