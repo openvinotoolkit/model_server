@@ -42,7 +42,12 @@ python export_model.py text_generation --help
 ```
 
 > Note: Exporting some models might require different transformers version than specified in requirements.txt Check [supported models](https://openvinotoolkit.github.io/openvino.genai/docs/supported-models/). If custom transformers version is required, install it afterwards via `pip install transformers==<version>`
-
+Some of the exceptions include:
+- Alibaba-NLP/gte-large-en-v1.5 - `transformers<5.0`
+- OpenGVLab/InternVL - `transformers<5.0`
+- Qwen3-80B-Next and Qwen3-coder-next - `transformers<5.0`
+- gemma4 - `transformers==5.5`
+- Qwen3.5 and Qwen3.6 - `transformers==5.2`
 
 
 ## Model Export Examples
@@ -100,7 +105,7 @@ python export_model.py embeddings_ov --source_model Qwen/Qwen3-Embedding-0.6B --
 #### Embeddings with `sentence_transformers` library
 Some embedding models require special handling during export. For example:
 ```console
-python export_model.py embeddings_ov --source_model Alibaba-NLP/gte-large-en-v1.5 --extra_quantization_params "--library sentence_transformers" --weight-format fp16 --config_file_path models/config_all.json
+python export_model.py embeddings_ov --source_model nomic-ai/nomic-embed-text-v1.5 --extra_quantization_params "--library sentence_transformers" --pooling MEAN --weight-format fp16 --config_file_path models/config_all.json
 ```
 Known models that require it:
 - Alibaba-NLP/gte-large-en-v1.5
