@@ -532,7 +532,7 @@ void CLIParser::prepareServer(ServerSettingsImpl& serverSettings) {
         serverSettings.allowedMediaDomains = result->operator[]("allowed_media_domains").as<std::vector<std::string>>();
     }
     if (result->count("allowed_local_media_path")) {
-        serverSettings.allowedLocalMediaPath = result->operator[]("allowed_local_media_path").as<std::string>();
+        serverSettings.allowedLocalMediaPath = FileSystem::normalizeConfiguredPath(result->operator[]("allowed_local_media_path").as<std::string>());
     }
 
     if (result->count("grpc_bind_address"))

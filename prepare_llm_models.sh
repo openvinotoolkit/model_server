@@ -123,16 +123,6 @@ if [ ! -f "$1/$EMBEDDING_MODEL/ov/$TOKENIZER_FILE" ]; then
   exit 1
 fi
 
-if [ -f "$1/$RERANK_MODEL/rerank/$LEGACY_MODEL_FILE" ]; then
-  echo "Model file $1/$RERANK_MODEL/rerank/$LEGACY_MODEL_FILE exists. Skipping downloading models."
-else
-  python3 demos/common/export_models/export_model.py rerank --source_model "$RERANK_MODEL" --weight-format int8 --model_repository_path $1
-fi
-if [ ! -f "$1/$RERANK_MODEL/rerank/$LEGACY_MODEL_FILE" ]; then
-  echo "[ERROR] Model file $1/$RERANK_MODEL/rerank/$LEGACY_MODEL_FILE does not exist."
-  exit 1
-fi
-
 if [ -f "$1/$RERANK_MODEL/ov/$TOKENIZER_FILE" ]; then
   echo "Model file $1/$RERANK_MODEL/ov/$TOKENIZER_FILE exists. Skipping downloading models."
 else

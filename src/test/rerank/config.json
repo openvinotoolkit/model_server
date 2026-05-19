@@ -2,10 +2,6 @@
     "model_config_list": [],
     "mediapipe_config_list": [
         {
-            "name": "rerank",
-            "base_path": "/ovms/src/test/llm_testing/BAAI/bge-reranker-base"
-        },
-        {
             "name": "rerank_ov",
             "graph_path": "/ovms/src/test/rerank/graph_ov.pbtxt"
         }

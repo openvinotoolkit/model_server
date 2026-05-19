@@ -94,8 +94,10 @@ struct PluginConfigNormalizationRule {
     PluginConfigValueType valueType;
 };
 
-const std::array<PluginConfigNormalizationRule, 4> TYPED_PLUGIN_CONFIG_NORMALIZATION_RULES{{
-    {"NUM_STREAMS", PluginConfigValueType::INT64},
+const std::array<PluginConfigNormalizationRule, 3> TYPED_PLUGIN_CONFIG_NORMALIZATION_RULES{{
+    // NUM_STREAMS is intentionally NOT normalized to int64: OpenVINO's new strict
+    // plugin_config (e.g. intel_gpu) types NUM_STREAMS as ov::streams::Num and rejects
+    // int64_t via is_valid_value, while accepting the original "N" string form.
     {"INFERENCE_NUM_THREADS", PluginConfigValueType::INT64},
     {"AUTO_BATCH_TIMEOUT", PluginConfigValueType::INT64},
     {"ENABLE_CPU_PINNING", PluginConfigValueType::BOOL},
