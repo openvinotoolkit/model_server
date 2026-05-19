@@ -1730,7 +1730,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeStreamingChunkEmptyPrimingDoesNotP
 
     // Empty priming call: should emit only lifecycle events, never output_text.delta,
     // and must not move the parser past the reasoning start tag.
-    std::string primingChunk = apiHandler->serializeStreamingChunk("", ov::genai::GenerationFinishReason::NONE);
+    std::string primingChunk = apiHandler->serializeStreamingChunk(rapidjson::Document{}, ov::genai::GenerationFinishReason::NONE);
     ASSERT_NE(primingChunk.find("\"type\":\"response.created\""), std::string::npos) << primingChunk;
     ASSERT_NE(primingChunk.find("\"type\":\"response.in_progress\""), std::string::npos) << primingChunk;
     ASSERT_EQ(primingChunk.find("\"type\":\"response.output_text.delta\""), std::string::npos)
@@ -1740,8 +1740,8 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeStreamingChunkEmptyPrimingDoesNotP
 
     // Now the parser must still recognise the reasoning start tag and route the
     // following text to reasoning, not content.
-    apiHandler->serializeStreamingChunk("<think>", ov::genai::GenerationFinishReason::NONE);
-    std::string reasoningChunk = apiHandler->serializeStreamingChunk("hello", ov::genai::GenerationFinishReason::NONE);
+    serializeStreamingChunkFromText(*apiHandler, "<think>", ov::genai::GenerationFinishReason::NONE);
+    std::string reasoningChunk = serializeStreamingChunkFromText(*apiHandler, "hello", ov::genai::GenerationFinishReason::NONE);
     ASSERT_NE(reasoningChunk.find("\"type\":\"response.reasoning_summary_text.delta\""), std::string::npos)
         << "Reasoning text must be routed to reasoning_summary_text.delta: " << reasoningChunk;
     ASSERT_EQ(reasoningChunk.find("\"type\":\"response.output_text.delta\""), std::string::npos)
