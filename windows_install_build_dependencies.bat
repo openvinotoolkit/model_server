@@ -576,7 +576,7 @@ IF /I EXIST %curl_lib% (
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: OpenCV
-:install_opencv2
+:install_opencv
 set "opencv_git=https://github.com/opencv/opencv.git"
 set "opencv_contrib=https://github.com/opencv/opencv_contrib.git"
 set "opencv_ver=%OPENCV_VERSION%"
