@@ -10,7 +10,7 @@ It reports end to end quality of served model from the client application point 
 ## Preparing the lm-evaluation-harness framework 
 
 Install the framework via pip:
-```bash
+```text
 pip3 install --extra-index-url "https://download.pytorch.org/whl/cpu" lm_eval[api] langdetect immutabledict dotenv openai
 ```
 
@@ -65,11 +65,10 @@ export OPENAI_BASE_URL=http://localhost:8000/v3
 export OPENAI_API_KEY="unused"
 git clone https://github.com/EvolvingLMMs-Lab/lmms-eval
 cd lmms-eval
-git checkout 88b23e2bfa16a1edbc16e9e238ed82130b3a4f56
 pip install -e . --extra-index-url "https://download.pytorch.org/whl/cpu"
 python -m lmms_eval \
     --model openai_compatible \
-    --model_args model_version=OpenVINO/InternVL2_5-8B_int4-ov,max_retries=1 \
+    --model_args model_version=OpenVINO/InternVL2-8B_int4-ov,max_retries=1 \
     --tasks mme,mmmu_val \
     --batch_size 1 \
     --log_samples \
@@ -105,7 +104,7 @@ pip install -e . --extra-index-url "https://download.pytorch.org/whl/cpu"
 The commands below assumes the models is deployed with the name `ovms-model`. It must match the name set in the `bfcl_eval/constants/model_config.py`.
 ```text
 export OPENAI_BASE_URL=http://localhost:8000/v3
-export CHAT_TEMPLATE_KWARGS='{"enable_thinking":false, "reasoning_effort":"low"}'
+export CHAT_TEMPLATE_KWARGS='{"enable_thinking":false, "reasoning_effort":"low", "preserve_reasoning":false}'
 
 bfcl generate --model ovms-model --test-category simple_python,multiple --temperature 0.0 --num-threads 100 -o --result-dir model_name_dir
 bfcl evaluate --model ovms-model --result-dir model_name_dir 
@@ -114,7 +113,7 @@ bfcl evaluate --model ovms-model --result-dir model_name_dir
 Alternatively, use the model name `ovms-model-stream` to run the tests with stream requests. The results should be the same.
 ```text
 export OPENAI_BASE_URL=http://localhost:8000/v3
-bfcl generate --model ovms-model-stream --test-category simple_python,multiple --temperature 0.0 --num-threads 100 -o --result-dir model_name_dir
+bfcl generate --model ovms-model-stream --test-category simple_python,multiple,multi_turn_base --temperature 0.0 --num-threads 10 -o --result-dir model_name_dir
 bfcl evaluate --model ovms-model-stream --result-dir model_name_dir 
 ```
 
@@ -122,7 +121,7 @@ bfcl evaluate --model ovms-model-stream --result-dir model_name_dir
 The output artifacts will be stored in `result` and `scores`. For example:
 
 ```text
-cat score/openvino-qwen3-8b-int4-FC/BFCL_v3_simple_python_score.json | head -1
+cat score/openvino-qwen3-8b-int4-FC/BFCL_v4_simple_python_score.json | head -1
 {"accuracy": 0.95, "correct_count": 380, "total_count": 400}
 ```
 Those results can be compared with the reference from the [berkeley leaderbaord](https://gorilla.cs.berkeley.edu/leaderboard.html#leaderboard).
