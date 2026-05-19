@@ -31,16 +31,6 @@ void Qwen3ReasoningParser::parse(ParsedOutput& parsedOutput, const std::vector<i
     size_t startPos = parsedOutput.content.find(startReasoningTag);
     size_t endPos = parsedOutput.content.find(endReasoningTag);
 
-    if (startPos != std::string::npos && endPos != std::string::npos && startPos < endPos) {
-        // Extract reasoning between <think> and </think>
-        size_t reasoningStart = startPos + startReasoningTag.length();
-        std::string reasoningText = parsedOutput.content.substr(reasoningStart, endPos - reasoningStart);
-        parsedOutput.reasoning = reasoningText;
-        // Remove reasoning from content
-        parsedOutput.content.erase(startPos, endPos - startPos + endReasoningTag.length());
-        return;
-    }
-
     // Implicit-start mode: the chat template already emitted the start tag as the prompt
     // suffix, so the model output begins inside the reasoning segment.
     if (implicitStart && startPos == std::string::npos) {
@@ -51,6 +41,16 @@ void Qwen3ReasoningParser::parse(ParsedOutput& parsedOutput, const std::vector<i
             parsedOutput.reasoning = parsedOutput.content;
             parsedOutput.content.clear();
         }
+    }
+
+    if (startPos != std::string::npos && endPos != std::string::npos && startPos < endPos) {
+        // Extract reasoning between <think> and </think>
+        size_t reasoningStart = startPos + startReasoningTag.length();
+        std::string reasoningText = parsedOutput.content.substr(reasoningStart, endPos - reasoningStart);
+        parsedOutput.reasoning = reasoningText;
+        // Remove reasoning from content
+        parsedOutput.content.erase(startPos, endPos - startPos + endReasoningTag.length());
+        return;
     }
 }
 

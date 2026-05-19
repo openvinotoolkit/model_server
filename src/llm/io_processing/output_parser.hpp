@@ -71,6 +71,12 @@ private:
     std::optional<rapidjson::Document> parseToolCallChunk(ov::genai::GenerationFinishReason finishReason, ProcessingPhase newPhase = TOOL_CALLS_PROCESSING_TOOL);
     std::optional<rapidjson::Document> parseReasoningChunk(ov::genai::GenerationFinishReason finishReason, ProcessingPhase newPhase = REASONING);
 
+    // Configure parser to treat the output as already-in-reasoning from the first token.
+    // Used when the chat template appends the reasoning start tag (e.g. "<think>\n") as
+    // the prompt suffix - the model then emits only the reasoning body and the closing tag.
+    // No-op when no reasoning parser is configured.
+    void setImplicitReasoningStart(bool value);
+
 public:
     OutputParser() = delete;
     explicit OutputParser(ov::genai::Tokenizer& tokenizer, const std::string toolParserName, const std::string reasoningParserName, const ToolsSchemas_t& toolNameSchemaMap);
@@ -79,15 +85,8 @@ public:
     bool isReasoningParserAvailable() const;
     std::string getToolParserStartTag() const;
 
-    // Configure parser to treat the output as already-in-reasoning from the first token.
-    // Used when the chat template appends the reasoning start tag (e.g. "<think>\n") as
-    // the prompt suffix - the model then emits only the reasoning body and the closing tag.
-    // No-op when no reasoning parser is configured.
-    void setImplicitReasoningStart(bool value);
-
-    // Auto-detect and apply implicit reasoning start based on the prompt produced by
-    // the chat template. Returns true if implicit start was activated.
-    bool detectAndSetImplicitReasoningStart(const std::string& renderedPrompt);
+    // Auto-detect and apply implicit reasoning start based on the prompt produced by the chat template.
+    void detectAndSetImplicitReasoningStart(const std::string& renderedPrompt);
 
     // Parse model output in the unary mode. Returns ParsedOutput containing data extracted by internal parsers.
     ParsedOutput parse(const std::vector<int64_t>& generatedTokens, const bool toolsAvailable);

@@ -246,9 +246,9 @@ void OutputParser::setImplicitReasoningStart(bool value) {
     }
 }
 
-bool OutputParser::detectAndSetImplicitReasoningStart(const std::string& renderedPrompt) {
+void OutputParser::detectAndSetImplicitReasoningStart(const std::string& renderedPrompt) {
     if (!reasoningParser) {
-        return false;
+        return;
     }
     std::string trimmed = renderedPrompt;
     rtrim(trimmed);
@@ -256,7 +256,7 @@ bool OutputParser::detectAndSetImplicitReasoningStart(const std::string& rendere
     bool detected = std::any_of(startTags.begin(), startTags.end(),
         [&](const std::string& tag) { return !tag.empty() && endsWith(trimmed, tag); });
     setImplicitReasoningStart(detected);
-    return detected;
+    return;
 }
 
 ParsedOutput OutputParser::parse(const std::vector<int64_t>& generatedTokens, const bool toolsAvailable) {
