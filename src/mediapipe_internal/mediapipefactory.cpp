@@ -70,7 +70,7 @@ Status MediapipeFactory::createDefinition(const std::string& pipelineName,
     std::unique_lock lock(definitionsMtx);
     definitions.insert({pipelineName, std::move(graphDefinition)});
     // Register LoRA aliases discovered during validation (image gen graphs)
-    auto* def = definitions[pipelineName].get();
+    const auto& def = definitions[pipelineName];
     for (const auto& alias : def->getLoraAliases()) {
         loraAliases[alias] = pipelineName;
         SPDLOG_LOGGER_INFO(modelmanager_logger, "Registered LoRA alias: {} -> {}", alias, pipelineName);

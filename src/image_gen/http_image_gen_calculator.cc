@@ -124,6 +124,22 @@ static bool progress_bar(size_t step, size_t num_steps, ov::Tensor&) {
     return false;
 }
 
+static std::string extractModelName(const ovms::HttpPayload& payload) {
+    if (payload.parsedJson && !payload.parsedJson->HasParseError() && payload.parsedJson->IsObject()) {
+        auto it = payload.parsedJson->FindMember("model");
+        if (it != payload.parsedJson->MemberEnd() && it->value.IsString()) {
+            return it->value.GetString();
+        }
+    }
+    if (payload.multipartParser) {
+        std::string name = payload.multipartParser->getFieldByName("model");
+        if (!name.empty()) {
+            return name;
+        }
+    }
+    return "";
+}
+
 // written out separately to avoid msvc crashing when using try-catch in process method ...
 static absl::Status generateTensor(ov::genai::Text2ImagePipeline& request,
     const std::string& prompt, ov::AnyMap& requestOptions,
@@ -237,6 +253,7 @@ public:
         auto pipe = it->second;
 
         auto payload = cc->Inputs().Tag(INPUT_TAG_NAME).Get<ovms::HttpPayload>();
+        const std::string modelName = extractModelName(payload);
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "ImageGenCalculator [Node: {}] Request URI: {}", cc->NodeName(), payload.uri);
 
         std::unique_ptr<ov::Tensor> images;  // output
@@ -264,22 +281,22 @@ public:
                 if (!pipe->loraAdapters.empty()) {
                     if (!pipe->compositeLoraAdapters.empty()) {
                         // Multi-LoRA NPU: only composite aliases are valid targets
-                        if (pipe->compositeLoraAdapters.find(payload.modelName) == pipe->compositeLoraAdapters.end()) {
+                        if (pipe->compositeLoraAdapters.find(modelName) == pipe->compositeLoraAdapters.end()) {
                             return absl::InvalidArgumentError(absl::StrCat(
-                                "Model '", payload.modelName, "' uses NPU with statically fused LoRA adapters. "
+                                "Model '", modelName, "' uses NPU with statically fused LoRA adapters. "
                                                               "Send requests to the composite LoRA alias name instead."));
                         }
                     } else {
                         // Single LoRA NPU: only the individual alias is a valid target
-                        if (pipe->loraAdapters.find(payload.modelName) == pipe->loraAdapters.end()) {
+                        if (pipe->loraAdapters.find(modelName) == pipe->loraAdapters.end()) {
                             return absl::InvalidArgumentError(absl::StrCat(
-                                "Model '", payload.modelName, "' uses NPU with statically fused LoRA. "
+                                "Model '", modelName, "' uses NPU with statically fused LoRA. "
                                                               "Send requests to the LoRA alias name instead."));
                         }
                     }
                 }
             } else {
-                applyLoraAdapterIfNeeded(payload.modelName, pipe->loraAdapters, pipe->compositeLoraAdapters, pipe->args, requestOptions, loraAlphasOverride);
+                applyLoraAdapterIfNeeded(modelName, pipe->loraAdapters, pipe->compositeLoraAdapters, pipe->args, requestOptions, loraAlphasOverride);
             }
             if (!pipe->text2ImagePipeline)
                 return absl::FailedPreconditionError("Text-to-image pipeline is not available for this model");
@@ -315,22 +332,22 @@ public:
                 if (!pipe->loraAdapters.empty()) {
                     if (!pipe->compositeLoraAdapters.empty()) {
                         // Multi-LoRA NPU: only composite aliases are valid targets
-                        if (pipe->compositeLoraAdapters.find(payload.modelName) == pipe->compositeLoraAdapters.end()) {
+                        if (pipe->compositeLoraAdapters.find(modelName) == pipe->compositeLoraAdapters.end()) {
                             return absl::InvalidArgumentError(absl::StrCat(
-                                "Model '", payload.modelName, "' uses NPU with statically fused LoRA adapters. "
+                                "Model '", modelName, "' uses NPU with statically fused LoRA adapters. "
                                                               "Send requests to the composite LoRA alias name instead."));
                         }
                     } else {
                         // Single LoRA NPU: only the individual alias is a valid target
-                        if (pipe->loraAdapters.find(payload.modelName) == pipe->loraAdapters.end()) {
+                        if (pipe->loraAdapters.find(modelName) == pipe->loraAdapters.end()) {
                             return absl::InvalidArgumentError(absl::StrCat(
-                                "Model '", payload.modelName, "' uses NPU with statically fused LoRA. "
+                                "Model '", modelName, "' uses NPU with statically fused LoRA. "
                                                               "Send requests to the LoRA alias name instead."));
                         }
                     }
                 }
             } else {
-                applyLoraAdapterIfNeeded(payload.modelName, pipe->loraAdapters, pipe->compositeLoraAdapters, pipe->args, requestOptions);
+                applyLoraAdapterIfNeeded(modelName, pipe->loraAdapters, pipe->compositeLoraAdapters, pipe->args, requestOptions);
             }
 
             SET_OR_RETURN(std::optional<std::string_view>, mask, getFileFromPayload(*payload.multipartParser, "mask"));

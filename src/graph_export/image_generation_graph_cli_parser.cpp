@@ -33,6 +33,24 @@
 #include "../status.hpp"
 #include "../stringutils.hpp"
 
+namespace {
+static bool isLocalFilePath(const std::string& path) {
+    if (path.empty()) {
+        return false;
+    }
+    if (path[0] == '/') {
+        return true;
+    }
+    if (path.size() >= 2 && (path.substr(0, 2) == "./" || path.substr(0, 2) == ".\\")) {
+        return true;
+    }
+    if (path.size() >= 3 && std::isalpha(static_cast<unsigned char>(path[0])) && path[1] == ':' && (path[2] == '\\' || path[2] == '/')) {
+        return true;
+    }
+    return false;
+}
+}  // namespace
+
 namespace ovms {
 
 static bool isValidLoraAlias(const std::string& alias) {
@@ -239,7 +257,7 @@ void ImageGenerationGraphCLIParser::prepare(ServerSettingsImpl& serverSettings, 
                 if (!endsWith(adapter.safetensorsFile.value(), ".safetensors")) {
                     throw std::invalid_argument("URL must point to a .safetensors file in --source_loras entry: '" + entry + "'");
                 }
-            } else if (ovms::isLocalFilePath(source)) {
+            } else if (isLocalFilePath(source)) {
                 adapter.sourceType = LoraSourceType::LOCAL_FILE;
                 adapter.sourceLora = source;
                 SPDLOG_DEBUG("LoRA '{}': detected source type LOCAL_FILE (source: {})", alias, source);

@@ -579,7 +579,6 @@ static Status createV3HttpPayload(
     request.body = request_body;
     request.parsedJson = std::move(parsedJson);
     request.uri = std::string(uri);
-    request.modelName = modelName;
     request.client = std::make_shared<HttpClientConnection>(serverReaderWriter);
     request.multipartParser = std::move(multiPartParser);
 

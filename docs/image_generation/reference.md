@@ -71,16 +71,16 @@ LoRA adapter settings:
 -    `repeated LoraAdapterEntry lora_adapters` - list of LoRA adapters to load. Each entry defines:
      -    `required string alias` - unique name used for request routing (the `model` field in API requests)
      -    `required string path` - path to the `.safetensors` file (absolute, or relative to the graph directory)
-     -    `optional float alpha` - adapter weight/strength [default = 1.0]
+     -    `optional float alpha` - adapter weight/strength (float value; typical range 0.0–1.0) [default = 1.0]
      -    `optional LoraLoadMode mode` - how the adapter is loaded [default = DYNAMIC]. Possible values:
-          -    `DYNAMIC` - adapter is applied/removed at inference time (hot-swap between requests). Used on CPU and GPU.
-          -    `STATIC` - adapter is compiled into the model with fixed alpha at load time. No runtime switching is possible. This is the mode used on NPU.
-          -    `FUSE` - adapter is permanently merged into the base model weights. Always active, not selectable via routing, and irreversible.
+          -    `DYNAMIC` - adapter is applied/removed at inference time (hot-swap between requests). Used on CPU and GPU. Alpha can be overridden per request via `lora_alphas`.
+          -    `STATIC` - adapter is compiled into the model with fixed alpha at load time. No runtime switching is possible. This is the mode used on NPU. The adapter is selectable via the `model` field, but its alpha cannot change.
+          -    `FUSE` - adapter is permanently merged into the base model weights. Always active, **not** selectable via routing (invisible to the `model` field). Use this to create an enhanced base model on top of which DYNAMIC adapters can be switched.
 -    `repeated CompositeLoraAdapterEntry composite_lora_adapters` - composite adapters that blend multiple individual adapters. Each entry defines:
      -    `required string alias` - composite name used for request routing
      -    `repeated CompositeLoraComponent components` - list of component adapters with:
           -    `required string adapter_alias` - reference to a registered `lora_adapters` alias
-          -    `optional float alpha` - component weight [default = 1.0]. Only effective in DYNAMIC mode.
+          -    `optional float alpha` - component weight (any float; typical range 0.0–1.0) [default = 1.0]. On NPU (STATIC mode), merged at compile time. In DYNAMIC mode, applied at runtime.
 
 > **Note:** When using `--source_loras` CLI parameter, the `lora_adapters` and `composite_lora_adapters` fields in `graph.pbtxt` are generated automatically. The `mode` field is set based on the target device: NPU → `STATIC`, everything else → `DYNAMIC`. Manual editing is only needed for advanced configurations like `FUSE` mode.
 
@@ -350,7 +350,16 @@ The adapter loading mode determines how LoRA weights interact with the base mode
 - The base model is **not accessible** (always has adapters applied).
 - With a single adapter: only the adapter's alias is a valid `model` name.
 - With multiple adapters: composites are **required**. Only composite aliases are valid `model` names.
-- Alpha source priority: if alpha is specified only at the individual adapter level, it is used. If alpha is specified only at the composite component level (individual stays at default 1.0), the composite alpha is used for compilation. Specifying alpha at both levels is an error.
+- Alpha source priority (resolved at load time): composite component alpha overrides individual adapter alpha when set.
+
+> **STATIC vs FUSE — user-visible differences:**
+>
+> | | STATIC | FUSE |
+> |---|--------|------|
+> | Selectable via `model` field? | Yes — adapter alias or composite alias | No — invisible to routing |
+> | Can be deactivated? | No (always compiled in) | No (always merged) |
+> | Multiple allowed? | Yes (via composites) | Yes (each merged independently) |
+> | Combinable with DYNAMIC? | No (NPU-only, no runtime switching) | Yes — FUSE creates enhanced base, DYNAMIC adapters switch on top |
 
 **FUSE mode:**
 - The adapter is merged into base weights during model compilation using `MODE_FUSE`.
@@ -358,6 +367,16 @@ The adapter loading mode determines how LoRA weights interact with the base mode
 - Does not appear in the list of routable adapters and cannot be selected or deselected via the `model` field.
 - Typically combined with DYNAMIC adapters: the FUSE adapter permanently enhances the base, while DYNAMIC adapters can be hot-swapped on top.
 - Only configurable via manual `graph.pbtxt` editing.
+
+**Example: FUSE + DYNAMIC combination** (in `graph.pbtxt`):
+```protobuf
+# This adapter is permanently merged — always active, not routable
+lora_adapters { alias: "style_base" path: "/loras/style.safetensors" alpha: 1.0 mode: FUSE }
+# These adapters can be hot-swapped per request via the "model" field
+lora_adapters { alias: "pokemon" path: "/loras/pokemon.safetensors" alpha: 1.0 mode: DYNAMIC }
+lora_adapters { alias: "anime" path: "/loras/anime.safetensors" alpha: 0.8 mode: DYNAMIC }
+```
+With this configuration, every request runs against `style_base`-enhanced weights. Sending `"model": "pokemon"` activates the pokemon adapter on top. Sending `"model": "<graph_name>"` (base) runs with only the fused style adapter active.
 
 > **Important:** STATIC mode is automatically applied when targeting NPU via `--source_loras`. On NPU with multiple LoRAs, composite definitions are mandatory to define the routing aliases. The `alpha` specified per adapter in `--source_loras` (e.g., `pokemon=org/repo:0.8`) is the compile-time weight that gets permanently baked into the model.
 
