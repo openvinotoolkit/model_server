@@ -68,8 +68,10 @@ struct ImageGenPipelineArgs {
 
     std::optional<StaticReshapeSettingsArgs> staticReshapeSettings;
     std::vector<LoraAdapterInfo> loraAdapters;
-    // Maps a composite alias to its component (adapter alias, weight) pairs.
-    using CompositeLoraMap = std::unordered_map<std::string, std::vector<std::pair<std::string, float>>>;
+    // Maps a composite alias to its component (adapter alias, alpha) pairs.
+    // Alpha is optional: nullopt means "not explicitly set in config" — at runtime,
+    // the priority chain (request > composite > individual adapter) determines the effective value.
+    using CompositeLoraMap = std::unordered_map<std::string, std::vector<std::pair<std::string, std::optional<float>>>>;
     CompositeLoraMap compositeLoraAdapters;
 };
 }  // namespace ovms

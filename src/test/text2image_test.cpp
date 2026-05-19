@@ -1644,18 +1644,20 @@ TEST(ImageGenCalculatorOptionsTest, CompositeLoraAdaptersFromPbtxt) {
     auto imageGenArgs = std::get<ImageGenPipelineArgs>(imageGenArgsOrStatus);
     ASSERT_EQ(imageGenArgs.loraAdapters.size(), 2);
     EXPECT_EQ(imageGenArgs.loraAdapters[0].alias, "pokemon");
-    // Composite alpha is applied to adapter (individual was default 1.0)
-    EXPECT_FLOAT_EQ(imageGenArgs.loraAdapters[0].alpha, 0.7f);
+    // No compile-time merge for non-NPU: adapter keeps its own alpha (default 1.0)
+    EXPECT_FLOAT_EQ(imageGenArgs.loraAdapters[0].alpha, 1.0f);
     EXPECT_EQ(imageGenArgs.loraAdapters[1].alias, "anime");
-    EXPECT_FLOAT_EQ(imageGenArgs.loraAdapters[1].alpha, 0.5f);
+    EXPECT_FLOAT_EQ(imageGenArgs.loraAdapters[1].alpha, 1.0f);
     ASSERT_EQ(imageGenArgs.compositeLoraAdapters.size(), 1);
     auto it = imageGenArgs.compositeLoraAdapters.find("blend");
     ASSERT_NE(it, imageGenArgs.compositeLoraAdapters.end());
     ASSERT_EQ(it->second.size(), 2);
     EXPECT_EQ(it->second[0].first, "pokemon");
-    EXPECT_FLOAT_EQ(it->second[0].second, 0.7f);
+    ASSERT_TRUE(it->second[0].second.has_value());
+    EXPECT_FLOAT_EQ(it->second[0].second.value(), 0.7f);
     EXPECT_EQ(it->second[1].first, "anime");
-    EXPECT_FLOAT_EQ(it->second[1].second, 0.5f);
+    ASSERT_TRUE(it->second[1].second.has_value());
+    EXPECT_FLOAT_EQ(it->second[1].second.value(), 0.5f);
 }
 
 TEST(ImageGenCalculatorOptionsTest, AlphaOnlyAtIndividualLevelIsValid) {
@@ -1737,12 +1739,12 @@ TEST(ImageGenCalculatorOptionsTest, AlphaOnlyAtCompositeLevelIsValid) {
     ASSERT_TRUE(std::holds_alternative<ImageGenPipelineArgs>(imageGenArgsOrStatus));
     auto imageGenArgs = std::get<ImageGenPipelineArgs>(imageGenArgsOrStatus);
     ASSERT_EQ(imageGenArgs.loraAdapters.size(), 2);
-    // Composite alpha applied to adapters (individual was default 1.0)
-    EXPECT_FLOAT_EQ(imageGenArgs.loraAdapters[0].alpha, 0.7f);
-    EXPECT_FLOAT_EQ(imageGenArgs.loraAdapters[1].alpha, 0.4f);
+    // No compile-time merge for non-NPU: adapter keeps default alpha
+    EXPECT_FLOAT_EQ(imageGenArgs.loraAdapters[0].alpha, 1.0f);
+    EXPECT_FLOAT_EQ(imageGenArgs.loraAdapters[1].alpha, 1.0f);
 }
 
-TEST(ImageGenCalculatorOptionsTest, ExplicitAlpha1AtIndividualLevelAllowsCompositeOverride) {
+TEST(ImageGenCalculatorOptionsTest, IndividualAlphaPreservedWhenCompositeAlsoSet) {
 #ifdef _WIN32
     const std::string dummyLocation = dummy_model_location;
 #else
@@ -1761,8 +1763,8 @@ TEST(ImageGenCalculatorOptionsTest, ExplicitAlpha1AtIndividualLevelAllowsComposi
     << dummyLocation;
     oss << R"(")";
     oss << R"pb(
-            lora_adapters { alias: "pokemon" path: "/path/to/pokemon.safetensors" alpha: 1.0 }
-            lora_adapters { alias: "anime" path: "/path/to/anime.safetensors" alpha: 1.0 }
+            lora_adapters { alias: "pokemon" path: "/path/to/pokemon.safetensors" alpha: 0.9 }
+            lora_adapters { alias: "anime" path: "/path/to/anime.safetensors" alpha: 0.3 }
             composite_lora_adapters {
               alias: "blend"
               components { adapter_alias: "pokemon" alpha: 0.7 }
@@ -1776,12 +1778,23 @@ TEST(ImageGenCalculatorOptionsTest, ExplicitAlpha1AtIndividualLevelAllowsComposi
     const std::string graphPath = "";
     auto nodeOptions = node.node_options(0);
     auto imageGenArgsOrStatus = prepareImageGenPipelineArgs(nodeOptions, graphPath);
-    // alpha=1.0 is the default, so composite alpha should override
+    // No compile-time merge for non-NPU: adapter keeps its explicit alpha
     ASSERT_TRUE(std::holds_alternative<ImageGenPipelineArgs>(imageGenArgsOrStatus));
     auto imageGenArgs = std::get<ImageGenPipelineArgs>(imageGenArgsOrStatus);
     ASSERT_EQ(imageGenArgs.loraAdapters.size(), 2);
-    EXPECT_FLOAT_EQ(imageGenArgs.loraAdapters[0].alpha, 0.7f);
-    EXPECT_FLOAT_EQ(imageGenArgs.loraAdapters[1].alpha, 0.4f);
+    EXPECT_FLOAT_EQ(imageGenArgs.loraAdapters[0].alpha, 0.9f);
+    EXPECT_FLOAT_EQ(imageGenArgs.loraAdapters[1].alpha, 0.3f);
+    // Composite map stores its own alphas independently
+    ASSERT_EQ(imageGenArgs.compositeLoraAdapters.size(), 1);
+    auto it = imageGenArgs.compositeLoraAdapters.find("blend");
+    ASSERT_NE(it, imageGenArgs.compositeLoraAdapters.end());
+    ASSERT_EQ(it->second.size(), 2);
+    EXPECT_EQ(it->second[0].first, "pokemon");
+    ASSERT_TRUE(it->second[0].second.has_value());
+    EXPECT_FLOAT_EQ(it->second[0].second.value(), 0.7f);
+    EXPECT_EQ(it->second[1].first, "anime");
+    ASSERT_TRUE(it->second[1].second.has_value());
+    EXPECT_FLOAT_EQ(it->second[1].second.value(), 0.4f);
 }
 
 TEST(ImageGenCalculatorOptionsTest, ExplicitAlpha1AtCompositeLevelKeepsIndividualAlpha) {
@@ -1818,7 +1831,7 @@ TEST(ImageGenCalculatorOptionsTest, ExplicitAlpha1AtCompositeLevelKeepsIndividua
     const std::string graphPath = "";
     auto nodeOptions = node.node_options(0);
     auto imageGenArgsOrStatus = prepareImageGenPipelineArgs(nodeOptions, graphPath);
-    // composite alpha=1.0 is default, so individual alpha is kept
+    // No compile-time merge for non-NPU: individual alpha is kept
     ASSERT_TRUE(std::holds_alternative<ImageGenPipelineArgs>(imageGenArgsOrStatus));
     auto imageGenArgs = std::get<ImageGenPipelineArgs>(imageGenArgsOrStatus);
     ASSERT_EQ(imageGenArgs.loraAdapters.size(), 2);
@@ -1826,7 +1839,7 @@ TEST(ImageGenCalculatorOptionsTest, ExplicitAlpha1AtCompositeLevelKeepsIndividua
     EXPECT_FLOAT_EQ(imageGenArgs.loraAdapters[1].alpha, 0.6f);
 }
 
-TEST(ImageGenCalculatorOptionsTest, AlphaAtBothLevelsReturnsError) {
+TEST(ImageGenCalculatorOptionsTest, AlphaAtBothLevelsIsValid) {
 #ifdef _WIN32
     const std::string dummyLocation = dummy_model_location;
 #else
@@ -1860,9 +1873,24 @@ TEST(ImageGenCalculatorOptionsTest, AlphaAtBothLevelsReturnsError) {
     const std::string graphPath = "";
     auto nodeOptions = node.node_options(0);
     auto imageGenArgsOrStatus = prepareImageGenPipelineArgs(nodeOptions, graphPath);
-    // Should return error because "pokemon" has alpha at both levels
-    ASSERT_TRUE(std::holds_alternative<ovms::Status>(imageGenArgsOrStatus));
-    EXPECT_EQ(std::get<ovms::Status>(imageGenArgsOrStatus).getCode(), ovms::StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID);
+    // Alpha at both levels is valid - no compile-time merge for non-NPU
+    ASSERT_TRUE(std::holds_alternative<ImageGenPipelineArgs>(imageGenArgsOrStatus));
+    auto imageGenArgs = std::get<ImageGenPipelineArgs>(imageGenArgsOrStatus);
+    ASSERT_EQ(imageGenArgs.loraAdapters.size(), 2);
+    // Individual alpha preserved
+    EXPECT_FLOAT_EQ(imageGenArgs.loraAdapters[0].alpha, 0.8f);
+    EXPECT_FLOAT_EQ(imageGenArgs.loraAdapters[1].alpha, 1.0f);
+    // Composite map stores its own alphas
+    ASSERT_EQ(imageGenArgs.compositeLoraAdapters.size(), 1);
+    auto it = imageGenArgs.compositeLoraAdapters.find("blend");
+    ASSERT_NE(it, imageGenArgs.compositeLoraAdapters.end());
+    ASSERT_EQ(it->second.size(), 2);
+    EXPECT_EQ(it->second[0].first, "pokemon");
+    ASSERT_TRUE(it->second[0].second.has_value());
+    EXPECT_FLOAT_EQ(it->second[0].second.value(), 0.5f);
+    EXPECT_EQ(it->second[1].first, "anime");
+    ASSERT_TRUE(it->second[1].second.has_value());
+    EXPECT_FLOAT_EQ(it->second[1].second.value(), 0.4f);
 }
 
 // TODO:

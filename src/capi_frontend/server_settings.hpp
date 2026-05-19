@@ -155,7 +155,7 @@ struct LoraAdapterSettings {
     std::string sourceLora;                      // HF repo, direct URL, or local file path
     std::optional<std::string> safetensorsFile;  // user-specified filename (via @filename, extracted from URL/path)
     LoraSourceType sourceType = LoraSourceType::HF_REPO;
-    std::optional<float> alpha;                          // user-specified adapter weight; std::nullopt = use default (1.0)
+    std::optional<float> alpha;
     std::optional<std::string> resolvedSafetensorsFile;  // auto-resolved by HF API during pull
 
     // Returns the effective filename: user-specified takes priority over auto-resolved.

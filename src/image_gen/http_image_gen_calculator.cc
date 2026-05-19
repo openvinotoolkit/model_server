@@ -48,34 +48,45 @@ const std::string IMAGE_GEN_SESSION_SIDE_PACKET_TAG = "IMAGE_GEN_NODE_RESOURCES"
 
 static void applyLoraAdapterIfNeeded(const std::string& modelName,
     const std::unordered_map<std::string, ov::genai::Adapter>& loraAdapters,
-    const std::unordered_map<std::string, std::vector<std::pair<std::string, float>>>& compositeLoraAdapters,
+    const std::unordered_map<std::string, std::vector<std::pair<std::string, std::optional<float>>>>& compositeLoraAdapters,
     const ImageGenPipelineArgs& args,
     ov::AnyMap& requestOptions,
     const std::unordered_map<std::string, float>& loraAlphasOverride = {}) {
     if (loraAdapters.empty()) {
         return;
     }
-    // Adapters are registered at compile time with their configured alpha values.
-    // At generate time we explicitly build the adapter config:
-    //   - If modelName matches a composite alias: activate all component adapters with their default alphas.
-    //   - If modelName matches a single adapter alias: activate that adapter with its configured alpha.
-    //   - Otherwise: disable all adapters (alpha=0) so the base model runs clean.
-    // lora_alphas from request body can override default alphas.
+    // Alpha priority chain (per adapter):
+    //   1. Request-level override (lora_alphas in JSON body)
+    //   2. Composite component alpha (if explicitly set in graph config)
+    //   3. Individual adapter alpha (from lora_adapters in graph config)
+    //   4. DEFAULT_ALPHA (1.0)
     ov::genai::AdapterConfig adapterConfig;
 
     auto compositeIt = compositeLoraAdapters.find(modelName);
     if (compositeIt != compositeLoraAdapters.end()) {
         // Composite adapter — activate multiple adapters
-        for (const auto& [compAlias, defaultAlpha] : compositeIt->second) {
+        for (const auto& [compAlias, compositeAlpha] : compositeIt->second) {
             auto adapterIt = loraAdapters.find(compAlias);
             if (adapterIt == loraAdapters.end()) {
                 SPDLOG_LOGGER_WARN(llm_calculator_logger, "Composite LoRA '{}' references unknown adapter '{}', skipping", modelName, compAlias);
                 continue;
             }
-            float alpha = defaultAlpha;
+            float alpha = DEFAULT_ALPHA;
             auto overrideIt = loraAlphasOverride.find(compAlias);
             if (overrideIt != loraAlphasOverride.end()) {
+                // 1. Request override
                 alpha = overrideIt->second;
+            } else if (compositeAlpha.has_value()) {
+                // 2. Composite component alpha (explicitly set)
+                alpha = compositeAlpha.value();
+            } else {
+                // 3. Fall back to individual adapter alpha
+                for (const auto& info : args.loraAdapters) {
+                    if (info.alias == compAlias) {
+                        alpha = info.alpha;
+                        break;
+                    }
+                }
             }
             adapterConfig.add(adapterIt->second, alpha);
             SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Composite LoRA '{}': applied adapter '{}' with alpha: {}", modelName, compAlias, alpha);

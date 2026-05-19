@@ -88,9 +88,9 @@ parser_image_generation.add_argument('--default_num_inference_steps', type=int, 
 parser_image_generation.add_argument('--max_num_inference_steps', type=int, default=0, help='Max allowed number of inference steps client is allowed to request for a given prompt', dest='max_num_inference_steps')
 parser_image_generation.add_argument('--source_loras', default=None,
     help='LoRA adapters to apply. Format: alias1=org1/repo1[:alpha],alias2=org2/repo2[@file.safetensors][:alpha],'
-         'composite=@alias1:alpha+@alias2:alpha. '
+         'composite=@alias1:alpha+@alias2:alpha '
          '@filename specifies which .safetensors file (auto-detected when repo has exactly one). '
-         ':alpha sets adapter weight (default 1.0). '
+         ':alpha sets adapter alpha (default 1.0). '
          'Composite entries (source starts with @) blend multiple adapters. Only for image_generation task.',
     dest='source_loras')
 
@@ -635,6 +635,7 @@ def export_rerank_model(model_repository_path, source_model, model_name, precisi
 
 
 def export_image_generation_model(model_repository_path, source_model, model_name, precision, task_parameters, config_file_path, num_streams, source_loras):
+    from huggingface_hub import snapshot_download
     model_path = "./"
     target_path = os.path.join(model_repository_path, model_name)
     model_index_path = os.path.join(target_path, 'model_index.json')
@@ -651,7 +652,6 @@ def export_image_generation_model(model_repository_path, source_model, model_nam
     lora_adapters = []
     composite_lora_adapters = []
     if source_loras:
-        from huggingface_hub import snapshot_download
         entries = source_loras.split(',')
         for entry in entries:
             entry = entry.strip()

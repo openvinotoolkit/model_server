@@ -16,6 +16,7 @@
 #pragma once
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -56,8 +57,8 @@ struct ImageGenerationPipelines {
     std::unique_ptr<ov::genai::Text2ImagePipeline> text2ImagePipeline;
     std::unique_ptr<ov::genai::InpaintingPipeline> inpaintingPipeline;
     std::unordered_map<std::string, ov::genai::Adapter> loraAdapters;  // alias -> loaded adapter
-    // composite alias -> [(component adapter alias, weight)]
-    std::unordered_map<std::string, std::vector<std::pair<std::string, float>>> compositeLoraAdapters;
+    // composite alias -> [(component adapter alias, alpha)] where alpha is optional
+    std::unordered_map<std::string, std::vector<std::pair<std::string, std::optional<float>>>> compositeLoraAdapters;
     ImageGenPipelineArgs args;
 
     // When true, LoRA adapters were compiled with MODE_STATIC (NPU).
