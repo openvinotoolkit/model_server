@@ -354,7 +354,7 @@ void SetReadonlyFileAttributeFromDir(std::string& directoryPath) {
 
 // Resume-related tests poll the repository while another process mutates it.
 // Use non-throwing iterator increments to avoid flaky failures on Windows.
-// To be used when accesing the same directory and modyfing it in another thread or process.
+// To be used when accessing the same directory and modifying it in another thread or process.
 std::vector<std::filesystem::path> findLfsLikeFilesNoThrow(const std::string& directory, bool recursive) {
     std::vector<std::filesystem::path> matches;
     std::error_code ec;
