@@ -422,7 +422,9 @@ std::variant<absl::Status, ov::AnyMap> getImageGenerationRequestOptions(const ra
         }
     }
     // Reject lora_alphas when no dynamic adapters are available (STATIC/FUSE modes)
-    auto loraAlphasOverride = parseLoraAlphasOverride(parser);
+    auto loraAlphasOverride_OPT = parseLoraAlphasOverride(parser);
+    RETURN_IF_HOLDS_STATUS(loraAlphasOverride_OPT)
+    auto loraAlphasOverride = std::get<std::unordered_map<std::string, float>>(loraAlphasOverride_OPT);
     auto loraAlphaStatus = validateLoraAlphasAllowed(hasDynamicAdapters, loraAlphasOverride);
     if (!loraAlphaStatus.ok()) {
         return loraAlphaStatus;
@@ -609,15 +611,20 @@ std::unique_ptr<std::string> generateJSONResponseFromB64Images(const std::vector
     return std::make_unique<std::string>(jsonStream.str());
 }
 
-std::unordered_map<std::string, float> parseLoraAlphasOverride(const rapidjson::Document& doc) {
+std::variant<absl::Status, std::unordered_map<std::string, float>> parseLoraAlphasOverride(const rapidjson::Document& doc) {
     std::unordered_map<std::string, float> result;
     auto it = doc.FindMember("lora_alphas");
-    if (it != doc.MemberEnd() && it->value.IsObject()) {
-        for (auto member = it->value.MemberBegin(); member != it->value.MemberEnd(); ++member) {
-            if (member->value.IsNumber()) {
-                result[member->name.GetString()] = member->value.GetFloat();
-            }
+    if (it == doc.MemberEnd()) {
+        return result;
+    }
+    if (!it->value.IsObject()) {
+        return absl::InvalidArgumentError("lora_alphas must be an object");
+    }
+    for (auto member = it->value.MemberBegin(); member != it->value.MemberEnd(); ++member) {
+        if (!member->value.IsNumber()) {
+            return absl::InvalidArgumentError(absl::StrCat("lora_alphas value for '", member->name.GetString(), "' must be a number"));
         }
+        result[member->name.GetString()] = member->value.GetFloat();
     }
     return result;
 }

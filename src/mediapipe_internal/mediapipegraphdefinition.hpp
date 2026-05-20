@@ -136,6 +136,8 @@ private:
     std::vector<std::string> inputSidePacketNames;
 
     std::vector<std::string> loraAliases;
+    // When using LoRA adapters with STATIC/FUSE Adapter Config mode, lora weights are always active
+    // and since thats true we want to expose only lora aliases/composite aliases in routing, and hide base model.
     bool hideBaseModelInRouting = false;
 
     PythonBackend* pythonBackend;

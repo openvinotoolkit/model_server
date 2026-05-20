@@ -21,6 +21,7 @@ import json
 import shutil
 import tempfile
 from pathlib import Path
+from huggingface_hub import snapshot_download
 
 def add_common_arguments(parser):
     parser.add_argument('--model_repository_path', required=False, default='models', help='Where the model should be exported to', dest='model_repository_path')
@@ -635,7 +636,6 @@ def export_rerank_model(model_repository_path, source_model, model_name, precisi
 
 
 def export_image_generation_model(model_repository_path, source_model, model_name, precision, task_parameters, config_file_path, num_streams, source_loras):
-    from huggingface_hub import snapshot_download
     model_path = "./"
     target_path = os.path.join(model_repository_path, model_name)
     model_index_path = os.path.join(target_path, 'model_index.json')

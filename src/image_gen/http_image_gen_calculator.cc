@@ -272,7 +272,11 @@ public:
             SET_OR_RETURN(ov::AnyMap, requestOptions, getImageGenerationRequestOptions(*payload.parsedJson, pipe->args, hasDynamicAdapters));
 
             // Parse optional lora_alphas from request body
-            auto loraAlphasOverride = ovms::parseLoraAlphasOverride(*payload.parsedJson);
+            auto loraAlphasOverride_OPT = ovms::parseLoraAlphasOverride(*payload.parsedJson);
+            if (std::holds_alternative<absl::Status>(loraAlphasOverride_OPT)) {
+                return std::get<absl::Status>(loraAlphasOverride_OPT);
+            }
+            auto loraAlphasOverride = std::get<std::unordered_map<std::string, float>>(loraAlphasOverride_OPT);
 
             // Apply LoRA adapter if the requested model name matches an alias.
             // Under NPU MODE_STATIC adapters are always active — reject requests
