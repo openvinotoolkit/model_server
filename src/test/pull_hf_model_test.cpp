@@ -452,7 +452,7 @@ TEST_F(HfPull, ResumeShutdown) {
     {
         const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(60);
         while (std::chrono::steady_clock::now() < deadline) {
-            auto lfsCandidates = findLfsLikeFilesNoThrow(downloadPath, true);
+            auto lfsCandidates = ovms::libgit2::findLfsLikeFiles(downloadPath, true);
             const bool hasModelPointer = std::find_if(lfsCandidates.begin(), lfsCandidates.end(),
                                              [](const std::filesystem::path& p) { return p.filename() == "openvino_model.bin"; }) != lfsCandidates.end();
             const std::string partPath = ovms::FileSystem::appendSlash(basePath) + "openvino_model.binlfs_part";
@@ -471,7 +471,7 @@ TEST_F(HfPull, ResumeShutdown) {
     server.setShutdownRequest(0);
 
     EXPECT_NE(firstRunCode, EXIT_SUCCESS);
-    auto remainingPointers = findLfsLikeFilesNoThrow(downloadPath, true);
+    auto remainingPointers = ovms::libgit2::findLfsLikeFiles(downloadPath, true);
     EXPECT_FALSE(remainingPointers.empty());
 
     this->ServerPullHfModel(modelName, downloadPath, task);
@@ -851,7 +851,7 @@ TEST_F(HfPull, ResumeTerminate) {
 
         auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(30);
         while (std::chrono::steady_clock::now() < deadline) {
-            auto lfsCandidates = findLfsLikeFilesNoThrow(downloadPath, true);
+            auto lfsCandidates = ovms::libgit2::findLfsLikeFiles(downloadPath, true);
             auto hasOpenvinoModelPointer = std::find_if(lfsCandidates.begin(), lfsCandidates.end(),
                                                [](const std::filesystem::path& p) { return p.filename() == "openvino_model.bin"; }) != lfsCandidates.end();
             if (std::filesystem::exists(modelPath) || hasOpenvinoModelPointer) {
@@ -870,7 +870,7 @@ TEST_F(HfPull, ResumeTerminate) {
     bool observedPartialDownload = false;
     auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(60);
     while (std::chrono::steady_clock::now() < deadline) {
-        auto lfsCandidates = findLfsLikeFilesNoThrow(downloadPath, true);
+        auto lfsCandidates = ovms::libgit2::findLfsLikeFiles(downloadPath, true);
         auto hasOpenvinoModelPointer = std::find_if(lfsCandidates.begin(), lfsCandidates.end(),
                                            [](const std::filesystem::path& p) { return p.filename() == "openvino_model.bin"; }) != lfsCandidates.end();
         const std::string partPath = ovms::FileSystem::appendSlash(basePath) + "openvino_model.binlfs_part";
@@ -901,7 +901,7 @@ TEST_F(HfPull, ResumeTerminate) {
 #endif
 
     EXPECT_TRUE(observedPartialDownload);
-    auto remainingPointers = findLfsLikeFilesNoThrow(downloadPath, true);
+    auto remainingPointers = ovms::libgit2::findLfsLikeFiles(downloadPath, true);
     EXPECT_FALSE(remainingPointers.empty());
 
     this->ServerPullHfModel(modelName, downloadPath, task);
@@ -1029,7 +1029,7 @@ TEST_F(HfPull, ResumeCtrlC) {
     bool observedPartialDownload = false;
     auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(60);
     while (std::chrono::steady_clock::now() < deadline) {
-        auto lfsCandidates = findLfsLikeFilesNoThrow(downloadPath, true);
+        auto lfsCandidates = ovms::libgit2::findLfsLikeFiles(downloadPath, true);
         const bool hasOpenvinoModelPointer = std::find_if(lfsCandidates.begin(), lfsCandidates.end(),
                                                  [](const std::filesystem::path& p) { return p.filename() == "openvino_model.bin"; }) != lfsCandidates.end();
         const std::string partPath = ovms::FileSystem::appendSlash(basePath) + "openvino_model.binlfs_part";
@@ -1072,7 +1072,7 @@ TEST_F(HfPull, ResumeCtrlC) {
 #endif
 
     EXPECT_TRUE(observedPartialDownload);
-    auto remainingPointers = findLfsLikeFilesNoThrow(downloadPath, true);
+    auto remainingPointers = ovms::libgit2::findLfsLikeFiles(downloadPath, true);
     EXPECT_FALSE(remainingPointers.empty());
 
     this->ServerPullHfModel(modelName, downloadPath, task);

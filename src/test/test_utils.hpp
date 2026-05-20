@@ -540,12 +540,6 @@ public:
 
 void RemoveReadonlyFileAttributeFromDir(std::string& directoryPath);
 void SetReadonlyFileAttributeFromDir(std::string& directoryPath);
-// Test-only helper for polling repositories while clone/resume is in progress.
-// On Windows, recursive_directory_iterator can throw when paths disappear
-// between iterator steps; this helper uses non-throwing traversal so tests
-// can keep polling instead of failing with intermittent filesystem exceptions.
-std::vector<std::filesystem::path> findLfsLikeFilesNoThrow(const std::string& directory, bool recursive = true);
-
 /**
  * Wait until ModelManager::configFileReloadNeeded returns false or timeout is reached
  */
