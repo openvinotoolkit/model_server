@@ -14,6 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 #include "imagegenutils.hpp"
+#include <algorithm>
 #include <utility>
 #include <set>
 #include <string>
@@ -422,9 +423,9 @@ std::variant<absl::Status, ov::AnyMap> getImageGenerationRequestOptions(const ra
         }
     }
     // Reject lora_alphas when no dynamic adapters are available (STATIC/FUSE modes)
-    auto loraAlphasOverride_OPT = parseLoraAlphasOverride(parser);
-    RETURN_IF_HOLDS_STATUS(loraAlphasOverride_OPT)
-    auto loraAlphasOverride = std::get<std::unordered_map<std::string, float>>(loraAlphasOverride_OPT);
+    auto loraAlphasOverrideOrStatus = parseLoraAlphasOverride(parser);
+    RETURN_IF_HOLDS_STATUS(loraAlphasOverrideOrStatus)
+    auto loraAlphasOverride = std::get<LoraAlphaMap>(loraAlphasOverrideOrStatus);
     auto loraAlphaStatus = validateLoraAlphasAllowed(hasDynamicAdapters, loraAlphasOverride);
     if (!loraAlphaStatus.ok()) {
         return loraAlphaStatus;
@@ -611,8 +612,8 @@ std::unique_ptr<std::string> generateJSONResponseFromB64Images(const std::vector
     return std::make_unique<std::string>(jsonStream.str());
 }
 
-std::variant<absl::Status, std::unordered_map<std::string, float>> parseLoraAlphasOverride(const rapidjson::Document& doc) {
-    std::unordered_map<std::string, float> result;
+std::variant<absl::Status, LoraAlphaMap> parseLoraAlphasOverride(const rapidjson::Document& doc) {
+    LoraAlphaMap result;
     auto it = doc.FindMember("lora_alphas");
     if (it == doc.MemberEnd()) {
         return result;
@@ -629,7 +630,7 @@ std::variant<absl::Status, std::unordered_map<std::string, float>> parseLoraAlph
     return result;
 }
 
-absl::Status validateLoraAlphasAllowed(bool hasDynamicAdapters, const std::unordered_map<std::string, float>& loraAlphasOverride) {
+absl::Status validateLoraAlphasAllowed(bool hasDynamicAdapters, const LoraAlphaMap& loraAlphasOverride) {
     if (!hasDynamicAdapters && !loraAlphasOverride.empty()) {
         return absl::InvalidArgumentError(
             "lora_alphas is not supported when no dynamic LoRA adapters are available. "
@@ -643,6 +644,41 @@ absl::Status validateLoraAlphasAllowed(bool hasDynamicAdapters, const ovms::Mult
         return absl::InvalidArgumentError(
             "lora_alphas is not supported when no dynamic LoRA adapters are available. "
             "Alpha values cannot be overridden for STATIC (NPU) or FUSE mode adapters.");
+    }
+    return absl::OkStatus();
+}
+
+absl::Status validateLoraAlphasForModel(
+    const std::string& modelName,
+    const LoraAlphaMap& loraAlphasOverride,
+    const std::vector<std::string>& adapterAliases,
+    const ImageGenPipelineArgs::CompositeLoraMap& compositeLoraAdapters) {
+    if (loraAlphasOverride.empty()) {
+        return absl::OkStatus();
+    }
+    auto compositeIt = compositeLoraAdapters.find(modelName);
+    if (compositeIt != compositeLoraAdapters.end()) {
+        // Composite: only allow alphas for adapters in this composite
+        for (const auto& [alias, _] : loraAlphasOverride) {
+            bool found = std::any_of(compositeIt->second.begin(), compositeIt->second.end(),
+                [&alias](const auto& compositeComponent) { return compositeComponent.first == alias; });
+            if (!found) {
+                return absl::InvalidArgumentError(
+                    absl::StrCat("lora_alphas key '", alias, "' is not part of composite '", modelName, "'"));
+            }
+        }
+    } else {
+        bool isAdapter = std::find(adapterAliases.begin(), adapterAliases.end(), modelName) != adapterAliases.end();
+        if (isAdapter) {
+            // Single adapter: only allow alpha override for this adapter
+            if (loraAlphasOverride.find(modelName) == loraAlphasOverride.end() || loraAlphasOverride.size() > 1) {
+                auto badIt = std::find_if(loraAlphasOverride.begin(), loraAlphasOverride.end(),
+                    [&modelName](const auto& requestedLoraOverrideName) { return requestedLoraOverrideName.first != modelName; });
+                return absl::InvalidArgumentError(
+                    absl::StrCat("lora_alphas key '", badIt->first, "' not allowed when targeting adapter '", modelName, "'"));
+            }
+        }
+        // Base model (no adapter matched): allow any registered adapter alpha
     }
     return absl::OkStatus();
 }

@@ -38,6 +38,8 @@
 #include <gtest/gtest.h>
 #include <httplib.h>
 
+#include "absl/strings/escaping.h"
+
 #include "src/utils/env_guard.hpp"
 #include "src/test/light_test_utils.hpp"
 #include "src/test/test_utils.hpp"
@@ -1997,24 +1999,11 @@ static void saveGeneratedImage(const std::string& responseBody, const std::strin
         return;
     std::string b64 = responseBody.substr(pos, endPos - pos);
 
-    // Decode base64 — simple decoder for test purposes
-    static const std::string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    // Decode base64
     std::string decoded;
-    decoded.reserve(b64.size() * 3 / 4);
-    std::vector<int> T(256, -1);
-    for (int i = 0; i < 64; i++)
-        T[chars[i]] = i;
-
-    int val = 0, valb = -8;
-    for (unsigned char c : b64) {
-        if (T[c] == -1)
-            break;
-        val = (val << 6) + T[c];
-        valb += 6;
-        if (valb >= 0) {
-            decoded.push_back(char((val >> valb) & 0xFF));
-            valb -= 8;
-        }
+    if (!absl::Base64Unescape(b64, &decoded)) {
+        std::cerr << "Failed to decode base64 image" << std::endl;
+        return;
     }
 
     std::ofstream out(outputPath, std::ios::binary);

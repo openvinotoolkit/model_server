@@ -1895,6 +1895,7 @@ TEST(ImageGenCalculatorOptionsTest, AlphaAtBothLevelsIsValid) {
 
 // TODO:
 // -> test for all unhandled OpenAI fields define what to do - ignore/error imageVariation
+using ovms::LoraAlphaMap;
 
 TEST(Text2ImageTest, parseLoraAlphasOverrideValidObject) {
     rapidjson::Document doc;
@@ -1906,8 +1907,8 @@ TEST(Text2ImageTest, parseLoraAlphasOverrideValidObject) {
         }
     })");
     auto resultOrStatus = ovms::parseLoraAlphasOverride(doc);
-    ASSERT_TRUE(std::holds_alternative<std::unordered_map<std::string, float>>(resultOrStatus));
-    auto result = std::get<std::unordered_map<std::string, float>>(resultOrStatus);
+    ASSERT_TRUE(std::holds_alternative<LoraAlphaMap>(resultOrStatus));
+    auto result = std::get<LoraAlphaMap>(resultOrStatus);
     ASSERT_EQ(result.size(), 2);
     EXPECT_FLOAT_EQ(result["pokemon"], 0.7f);
     EXPECT_FLOAT_EQ(result["anime"], 0.4f);
@@ -1917,8 +1918,8 @@ TEST(Text2ImageTest, parseLoraAlphasOverrideMissingField) {
     rapidjson::Document doc;
     doc.Parse(R"({"prompt": "test"})");
     auto resultOrStatus = ovms::parseLoraAlphasOverride(doc);
-    ASSERT_TRUE(std::holds_alternative<std::unordered_map<std::string, float>>(resultOrStatus));
-    EXPECT_TRUE(std::get<std::unordered_map<std::string, float>>(resultOrStatus).empty());
+    ASSERT_TRUE(std::holds_alternative<LoraAlphaMap>(resultOrStatus));
+    EXPECT_TRUE(std::get<LoraAlphaMap>(resultOrStatus).empty());
 }
 
 TEST(Text2ImageTest, parseLoraAlphasOverrideNotAnObject) {
@@ -1948,8 +1949,8 @@ TEST(Text2ImageTest, parseLoraAlphasOverrideEmptyObject) {
     rapidjson::Document doc;
     doc.Parse(R"({"prompt": "test", "lora_alphas": {}})");
     auto resultOrStatus = ovms::parseLoraAlphasOverride(doc);
-    ASSERT_TRUE(std::holds_alternative<std::unordered_map<std::string, float>>(resultOrStatus));
-    EXPECT_TRUE(std::get<std::unordered_map<std::string, float>>(resultOrStatus).empty());
+    ASSERT_TRUE(std::holds_alternative<LoraAlphaMap>(resultOrStatus));
+    EXPECT_TRUE(std::get<LoraAlphaMap>(resultOrStatus).empty());
 }
 
 TEST(Text2ImageTest, parseLoraAlphasOverrideNegativeAndZeroAlpha) {
@@ -1962,8 +1963,8 @@ TEST(Text2ImageTest, parseLoraAlphasOverrideNegativeAndZeroAlpha) {
         }
     })");
     auto resultOrStatus = ovms::parseLoraAlphasOverride(doc);
-    ASSERT_TRUE(std::holds_alternative<std::unordered_map<std::string, float>>(resultOrStatus));
-    auto result = std::get<std::unordered_map<std::string, float>>(resultOrStatus);
+    ASSERT_TRUE(std::holds_alternative<LoraAlphaMap>(resultOrStatus));
+    auto result = std::get<LoraAlphaMap>(resultOrStatus);
     ASSERT_EQ(result.size(), 2);
     EXPECT_FLOAT_EQ(result["pokemon"], -0.5f);
     EXPECT_FLOAT_EQ(result["anime"], 0.0f);
@@ -2012,4 +2013,67 @@ TEST(Text2ImageTest, getImageGenerationRequestOptionsAllowsLoraAlphasWithDynamic
     })");
     auto result = ovms::getImageGenerationRequestOptions(doc, DEFAULTIMAGE_GEN_ARGS, true);
     ASSERT_TRUE(std::holds_alternative<ov::AnyMap>(result));
+}
+
+// ===================== LoRA Alpha Per-Model Validation Tests =====================
+
+TEST(Text2ImageTest, validateLoraAlphasForModel_BaseModelAllowsAnyAlpha) {
+    // Rule: base model can override any adapter's alpha
+    LoraAlphaMap alphas = {{"xray", 0.5f}, {"anime", 0.3f}};
+    std::vector<std::string> aliases = {"xray", "anime", "vector"};
+    ImageGenPipelineArgs::CompositeLoraMap composites;
+    auto status = ovms::validateLoraAlphasForModel("base_model", alphas, aliases, composites);
+    EXPECT_TRUE(status.ok());
+}
+
+TEST(Text2ImageTest, validateLoraAlphasForModel_SingleLoraAllowsSelfAlpha) {
+    // Rule: targeting a lora adapter, can override own alpha
+    LoraAlphaMap alphas = {{"xray", 0.5f}};
+    std::vector<std::string> aliases = {"xray", "anime"};
+    ImageGenPipelineArgs::CompositeLoraMap composites;
+    auto status = ovms::validateLoraAlphasForModel("xray", alphas, aliases, composites);
+    EXPECT_TRUE(status.ok());
+}
+
+TEST(Text2ImageTest, validateLoraAlphasForModel_SingleLoraRejectsOtherAlpha) {
+    // Rule: targeting lora "xray" but trying to change "anime" alpha is illegal
+    LoraAlphaMap alphas = {{"anime", 0.5f}};
+    std::vector<std::string> aliases = {"xray", "anime"};
+    ImageGenPipelineArgs::CompositeLoraMap composites;
+    auto status = ovms::validateLoraAlphasForModel("xray", alphas, aliases, composites);
+    EXPECT_FALSE(status.ok());
+    EXPECT_EQ(status.code(), absl::StatusCode::kInvalidArgument);
+    EXPECT_THAT(std::string(status.message()), ::testing::HasSubstr("anime"));
+    EXPECT_THAT(std::string(status.message()), ::testing::HasSubstr("xray"));
+}
+
+TEST(Text2ImageTest, validateLoraAlphasForModel_CompositeAllowsComponentAlpha) {
+    // Rule: composite can override alphas of its components
+    LoraAlphaMap alphas = {{"xray", 0.7f}, {"anime", 0.4f}};
+    std::vector<std::string> aliases = {"xray", "anime", "vector"};
+    ImageGenPipelineArgs::CompositeLoraMap composites = {
+        {"blend", {{"xray", 0.5f}, {"anime", 0.5f}}}};
+    auto status = ovms::validateLoraAlphasForModel("blend", alphas, aliases, composites);
+    EXPECT_TRUE(status.ok());
+}
+
+TEST(Text2ImageTest, validateLoraAlphasForModel_CompositeRejectsNonComponentAlpha) {
+    // Rule: composite "blend" has xray+anime, overriding "vector" is illegal
+    LoraAlphaMap alphas = {{"vector", 0.5f}};
+    std::vector<std::string> aliases = {"xray", "anime", "vector"};
+    ImageGenPipelineArgs::CompositeLoraMap composites = {
+        {"blend", {{"xray", 0.5f}, {"anime", 0.5f}}}};
+    auto status = ovms::validateLoraAlphasForModel("blend", alphas, aliases, composites);
+    EXPECT_FALSE(status.ok());
+    EXPECT_EQ(status.code(), absl::StatusCode::kInvalidArgument);
+    EXPECT_THAT(std::string(status.message()), ::testing::HasSubstr("vector"));
+    EXPECT_THAT(std::string(status.message()), ::testing::HasSubstr("blend"));
+}
+
+TEST(Text2ImageTest, validateLoraAlphasForModel_EmptyAlphasAlwaysOk) {
+    LoraAlphaMap alphas;
+    std::vector<std::string> aliases = {"xray"};
+    ImageGenPipelineArgs::CompositeLoraMap composites;
+    auto status = ovms::validateLoraAlphasForModel("xray", alphas, aliases, composites);
+    EXPECT_TRUE(status.ok());
 }

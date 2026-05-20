@@ -47,6 +47,9 @@
 
 namespace ovms {
 class MultiPartParser;
+
+using LoraAlphaMap = std::unordered_map<std::string, float>;
+
 std::variant<absl::Status, std::optional<resolution_t>> getDimensions(const std::string& dimensions);
 std::variant<absl::Status, std::optional<resolution_t>> getDimensions(const rapidjson::Document& doc);
 std::variant<absl::Status, std::optional<resolution_t>> getDimensions(const ovms::MultiPartParser& parser);
@@ -73,10 +76,20 @@ std::unique_ptr<std::string> generateJSONResponseFromB64Images(const std::vector
 
 std::variant<absl::Status, std::unique_ptr<std::string>> generateJSONResponseFromOvTensor(const ov::Tensor& tensor);
 
-std::variant<absl::Status, std::unordered_map<std::string, float>> parseLoraAlphasOverride(const rapidjson::Document& doc);
+std::variant<absl::Status, LoraAlphaMap> parseLoraAlphasOverride(const rapidjson::Document& doc);
 
 // Returns an error if lora_alphas override is present but no dynamic adapters exist.
 // lora_alphas is only valid when adapters use DYNAMIC mode (runtime alpha switching).
-absl::Status validateLoraAlphasAllowed(bool hasDynamicAdapters, const std::unordered_map<std::string, float>& loraAlphasOverride);
+absl::Status validateLoraAlphasAllowed(bool hasDynamicAdapters, const LoraAlphaMap& loraAlphasOverride);
 absl::Status validateLoraAlphasAllowed(bool hasDynamicAdapters, const ovms::MultiPartParser& parser);
+
+// Validates that lora_alphas keys are permitted for the given model routing target.
+// - Single adapter: only that adapter's alpha may be overridden.
+// - Composite adapter: only component adapters' alphas may be overridden.
+// - Base model (no adapter matched): any registered adapter alpha is allowed.
+absl::Status validateLoraAlphasForModel(
+    const std::string& modelName,
+    const LoraAlphaMap& loraAlphasOverride,
+    const std::vector<std::string>& adapterAliases,
+    const ImageGenPipelineArgs::CompositeLoraMap& compositeLoraAdapters);
 }  // namespace ovms

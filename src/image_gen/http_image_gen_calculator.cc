@@ -51,7 +51,7 @@ static void applyLoraAdapterIfNeeded(const std::string& modelName,
     const std::unordered_map<std::string, std::vector<std::pair<std::string, std::optional<float>>>>& compositeLoraAdapters,
     const ImageGenPipelineArgs& args,
     ov::AnyMap& requestOptions,
-    const std::unordered_map<std::string, float>& loraAlphasOverride = {}) {
+    const ovms::LoraAlphaMap& loraAlphasOverride = {}) {
     if (loraAdapters.empty()) {
         return;
     }
@@ -272,11 +272,24 @@ public:
             SET_OR_RETURN(ov::AnyMap, requestOptions, getImageGenerationRequestOptions(*payload.parsedJson, pipe->args, hasDynamicAdapters));
 
             // Parse optional lora_alphas from request body
-            auto loraAlphasOverride_OPT = ovms::parseLoraAlphasOverride(*payload.parsedJson);
-            if (std::holds_alternative<absl::Status>(loraAlphasOverride_OPT)) {
-                return std::get<absl::Status>(loraAlphasOverride_OPT);
+            auto loraAlphasOverrideOrStatus = ovms::parseLoraAlphasOverride(*payload.parsedJson);
+            if (std::holds_alternative<absl::Status>(loraAlphasOverrideOrStatus)) {
+                return std::get<absl::Status>(loraAlphasOverrideOrStatus);
             }
-            auto loraAlphasOverride = std::get<std::unordered_map<std::string, float>>(loraAlphasOverride_OPT);
+            auto loraAlphasOverride = std::get<ovms::LoraAlphaMap>(loraAlphasOverrideOrStatus);
+
+            // Validate that lora_alphas keys are allowed for the targeted model
+            if (!loraAlphasOverride.empty() && !pipe->loraAdapters.empty()) {
+                std::vector<std::string> adapterAliases;
+                adapterAliases.reserve(pipe->loraAdapters.size());
+                for (const auto& [alias, _] : pipe->loraAdapters) {
+                    adapterAliases.push_back(alias);
+                }
+                auto alphaValidation = ovms::validateLoraAlphasForModel(modelName, loraAlphasOverride, adapterAliases, pipe->compositeLoraAdapters);
+                if (!alphaValidation.ok()) {
+                    return alphaValidation;
+                }
+            }
 
             // Apply LoRA adapter if the requested model name matches an alias.
             // Under NPU MODE_STATIC adapters are always active — reject requests
