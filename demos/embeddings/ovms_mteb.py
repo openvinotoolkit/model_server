@@ -16,65 +16,44 @@
 
 from __future__ import annotations
 
-import logging
-from functools import partial
-from typing import Any
-
-import numpy as np
-import mteb
-logger = logging.getLogger(__name__)
 import argparse
 
-parser = argparse.ArgumentParser(description='Compare embeddings responses from HF transformers, OVSentenceTransformer and OVMS')
-parser.add_argument('--service_url', required=False, default='http://localhost:6000/v3/embeddings',
+import mteb
+from mteb.models.model_implementations.openai_models import OpenAIModel
+from openai import OpenAI
+
+parser = argparse.ArgumentParser(description='Run MTEB benchmark against OVMS embeddings endpoint')
+parser.add_argument('--service_url', required=False, default='http://localhost:8000/v3/embeddings',
                     help='Specify url to embeddings endpoint. default:http://localhost:8000/v3/embeddings', dest='service_url')
 parser.add_argument('--model_name', default='Alibaba-NLP/gte-large-en-v1.5', help='Model name to query. default: Alibaba-NLP/gte-large-en-v1.5',
                     dest='model_name')
 parser.add_argument('--dataset', default='Banking77Classification', help='Dataset to benchmark. default: Banking77Classification',
                     dest='dataset')
+parser.add_argument('--embed_dim', type=int, default=None, help='Embedding dimension. Auto-detected if not provided.',
+                    dest='embed_dim')
+parser.add_argument('--max_tokens', type=int, default=999999, help='Max input tokens for truncation. default: 512',
+                    dest='max_tokens')
 args = vars(parser.parse_args())
 
+client = OpenAI(base_url=args['service_url'], api_key="unused")
 
-class OVMSModel:
-    def __init__(self, model_name: str, base_url:str, embed_dim: int | None = None, **kwargs) -> None:
-        from openai import OpenAI
+embed_dim = args['embed_dim']
+if embed_dim is None:
+    resp = client.embeddings.create(input=['dim probe'], model=args['model_name'])
+    embed_dim = len(resp.data[0].embedding)
 
-        self._client = OpenAI(base_url=base_url,api_key="unused")
-        self._model_name = model_name
-        self._embed_dim = embed_dim
+model = OpenAIModel(
+    model_name=args['model_name'],
+    max_tokens=args['max_tokens'],
+    embed_dim=embed_dim,
+    client=client,
+)
 
-    def encode(
-        self, sentences: list[str], **kwargs: Any
-    ) -> torch.Tensor | np.ndarray:
-        max_batch_size = 32
-        sublists = [
-            sentences[i : i + max_batch_size]
-            for i in range(0, len(sentences), max_batch_size)
-        ]
-        all_embeddings = []
-        for sublist in sublists:
-            response = self._client.embeddings.create(
-                input=sublist,
-                model=self._model_name,
-                encoding_format="float",
-                dimensions=self._embed_dim or NotGiven(),
-            )
-            all_embeddings.extend(self._to_numpy(response))
-
-        return np.array(all_embeddings)
-    def encode_queries(self, queries: list[str], **kwargs: Any) -> np.ndarray:
-        return self.encode(queries, **kwargs)
-
-
-    def _to_numpy(self, embedding_response) -> np.ndarray:
-        return np.array([e.embedding for e in embedding_response.data])
-
-model = OVMSModel(args['model_name'], args['service_url'] ,1)
 tasks = mteb.get_task(args['dataset'])
 evaluation = mteb.MTEB(tasks=[tasks])
-evaluation.run(model,verbosity=3,overwrite_results=True,output_folder='results')
+evaluation.run(model, verbosity=3, overwrite_results=True, output_folder='results')
 # For full leaderboard tests set run:
 # benchmark = mteb.get_benchmark("MTEB(eng)")
 # evaluation = mteb.MTEB(tasks=benchmark)
-# evaluation.run(model,verbosity=3,overwrite_results=True,output_folder='results')
+# evaluation.run(model, verbosity=3, overwrite_results=True, output_folder='results')
 
