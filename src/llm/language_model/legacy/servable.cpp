@@ -204,7 +204,7 @@ absl::Status LegacyServable::preparePartialResponse(std::shared_ptr<GenAiServabl
                 std::string serialized = executionContext->apiHandler->serializeStreamingChunk(
                     std::move(delta), ov::genai::GenerationFinishReason::NONE);
                 if (!serialized.empty()) {
-                    executionContext->response = wrapTextInServerSideEventMessage(serialized);
+                    executionContext->response += wrapTextInServerSideEventMessage(serialized);
                     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Generated subsequent streaming response: {}", serialized);
                 }
             }

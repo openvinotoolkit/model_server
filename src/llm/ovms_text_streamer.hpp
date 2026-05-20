@@ -55,21 +55,29 @@ public:
     // an empty Document{} is passed so the caller can emit the finish_reason chunk.
     using Callback = std::function<ov::genai::StreamingStatus(rapidjson::Document)>;
 
-    // outputParser may be nullptr.
+    // outputParser may be nullptr (e.g. for the unary VLM path).
+    // TODO(phase3): rework ownership — OVMSTextStreamer should not need to keep
+    // the parser alive; it will be restructured in the next refactor phase.
     // toolsAvailable must be evaluated after parseRequest() has processed the body.
     // decodeParams controls skip_special_tokens etc. — static for Phase 1.
     OVMSTextStreamer(
         const ov::genai::Tokenizer& tokenizer,
-        const std::unique_ptr<OutputParser>& output_parser,
+        std::shared_ptr<OutputParser> output_parser,
         bool tools_available,
         Callback callback,
         const ov::AnyMap& decode_params);
 
     ov::genai::StreamingStatus write(int64_t token) override;
+    // TextStreamer::write(const vector<int64_t>&) calls ov::genai::TextStreamer::write(token)
+    // with a qualified (non-virtual) call, bypassing this class's write(int64_t) override.
+    // Override here to ensure our flush logic fires for every token.
+    // TODO(phase2): revisit once GenAI provides a cleaner extensibility hook.
+    ov::genai::StreamingStatus write(const std::vector<int64_t>& tokens) override;
     void end() override;
 
 private:
-    const std::unique_ptr<OutputParser>& m_output_parser;  // non-owning ref; lifetime is the HTTP request
+    // TODO(phase3): see constructor comment — ownership will be reworked.
+    std::shared_ptr<OutputParser> m_output_parser;
     bool m_tools_available;
     Callback m_callback;
 

@@ -97,7 +97,7 @@ protected:
     ov::genai::Tokenizer tokenizer;
 
     // Output parser is used to parse chat completions response to extract specific fields like tool calls and reasoning.
-    std::unique_ptr<OutputParser> outputParser = nullptr;
+    std::shared_ptr<OutputParser> outputParser = nullptr;
 
     // Shared parsing helpers
     absl::Status parseCommonPart(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength);
@@ -118,7 +118,7 @@ public:
         // TODO we should delay creating output parser until we have request with toolNameSchemaMap parsed
         // we pass it now, but it has to be populated first before first use
         if (!toolParserName.empty() || !reasoningParserName.empty()) {
-            outputParser = std::make_unique<OutputParser>(tokenizer, toolParserName, reasoningParserName, this->request.toolNameSchemaMap);
+            outputParser = std::make_shared<OutputParser>(tokenizer, toolParserName, reasoningParserName, this->request.toolNameSchemaMap);
         }
     }
 
@@ -154,7 +154,7 @@ public:
     Endpoint getEndpoint() const;
     std::string getModel() const;
     std::string getToolChoice() const;
-    const std::unique_ptr<OutputParser>& getOutputParser() const;
+    const std::shared_ptr<OutputParser>& getOutputParser() const;
 
     // Usage tracking
     void setPromptTokensUsage(size_t promptTokens);

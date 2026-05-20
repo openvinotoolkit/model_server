@@ -104,7 +104,9 @@ struct DeltaChannel {
     // Move all pending deltas out atomically. Returns an empty vector if none pending.
     std::vector<rapidjson::Document> drain() {
         std::lock_guard<std::mutex> lock(m_mutex);
-        return std::move(m_deltas);
+        std::vector<rapidjson::Document> result;
+        result.swap(m_deltas);
+        return result;
     }
 
     // Returns true after signalComplete() has been called.

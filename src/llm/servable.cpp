@@ -357,7 +357,9 @@ absl::Status GenAiServable::preparePartialResponse(std::shared_ptr<GenAiServable
             }
         } else if (isFirstToken) {
             std::string serializedChunk = executionContext->apiHandler->serializeStreamingHandshakeChunk();
-            executionContext->response = wrapTextInServerSideEventMessage(serializedChunk);
+            if (!serializedChunk.empty()) {
+                executionContext->response = wrapTextInServerSideEventMessage(serializedChunk);
+            }
         }
         executionContext->sendLoopbackSignal = true;
     } else {

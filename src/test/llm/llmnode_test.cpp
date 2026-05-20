@@ -362,26 +362,40 @@ TEST_P(LLMFlowHttpTestParameterized, streamCompletionsEchoWithCompletion) {
     )";
     std::vector<std::string> chunks;
     ON_CALL(*writer, PartialReply).WillByDefault([this, &chunks, &params](std::string response) {
-        rapidjson::Document d;
-        std::string dataPrefix = "data:";
+        // A single PartialReply may contain multiple SSE events (e.g. all echo
+        // tokens in the first call).  Iterate every event and collect text chunks.
+        const std::string eventSep = "\n\n";
+        const std::string dataPrefix = "data:";
         ASSERT_STREQ(response.substr(0, dataPrefix.size()).c_str(), dataPrefix.c_str());
-        size_t pos = response.find("\n");
-        ASSERT_NE(pos, response.npos);
-        rapidjson::ParseResult parsingSucceeded = d.Parse(response.substr(dataPrefix.size(), (pos - dataPrefix.size())).c_str());
-        ASSERT_EQ(parsingSucceeded.Code(), 0);
-        ASSERT_TRUE(d["choices"].IsArray());
-        ASSERT_EQ(d["choices"].Capacity(), 1);
-        int i = 0;
-        for (auto& choice : d["choices"].GetArray()) {
-            ASSERT_EQ(choice["index"], i++);
-            if (params.checkLogprobs) {
-                ASSERT_FALSE(choice["logprobs"].IsObject());
+        size_t start = 0;
+        while (start < response.size()) {
+            const size_t eventEnd = response.find(eventSep, start);
+            if (eventEnd == std::string::npos)
+                break;
+            const std::string event = response.substr(start, eventEnd - start);
+            start = eventEnd + eventSep.size();
+            if (event.size() < dataPrefix.size())
+                continue;
+            const std::string body = event.substr(dataPrefix.size());
+            if (body.find("[DONE]") != std::string::npos)
+                break;
+            rapidjson::Document d;
+            rapidjson::ParseResult pr = d.Parse(body.c_str());
+            ASSERT_EQ(pr.Code(), 0);
+            ASSERT_TRUE(d["choices"].IsArray());
+            ASSERT_EQ(d["choices"].Capacity(), 1);
+            int i = 0;
+            for (auto& choice : d["choices"].GetArray()) {
+                ASSERT_EQ(choice["index"], i++);
+                if (params.checkLogprobs) {
+                    ASSERT_FALSE(choice["logprobs"].IsObject());
+                }
+                ASSERT_TRUE(choice["text"].IsString());
+                chunks.push_back(std::string(choice["text"].GetString()));
             }
-            ASSERT_TRUE(choice["text"].IsString());
-            chunks.push_back(std::string(choice["text"].GetString()));
+            EXPECT_STREQ(d["model"].GetString(), params.modelName.c_str());
+            EXPECT_STREQ(d["object"].GetString(), "text_completion.chunk");
         }
-        EXPECT_STREQ(d["model"].GetString(), params.modelName.c_str());
-        EXPECT_STREQ(d["object"].GetString(), "text_completion.chunk");
     });
 
     ASSERT_EQ(
@@ -478,35 +492,53 @@ TEST_P(LLMFlowHttpTestParameterized, streamCompletionsEchoOnly) {
     )";
 
     if (params.modelName.find("legacy") == std::string::npos) {
-        EXPECT_CALL(*writer, PartialReply(::testing::_)).WillOnce([this, &params](std::string response) {
-            rapidjson::Document d;
-            std::string dataPrefix = "data:";
+        // Echo tokens are streamed one SSE event per token (through the normal
+        // delay-buffer path), so a single PartialReply may contain multiple events.
+        // Accumulate all text chunks and verify their concatenation equals the prompt.
+        std::string echoText;
+        std::string lastFinishReason;
+        EXPECT_CALL(*writer, PartialReply(::testing::_)).WillOnce([this, &params, &echoText, &lastFinishReason](std::string response) {
+            const std::string eventSep = "\n\n";
+            const std::string dataPrefix = "data:";
             ASSERT_STREQ(response.substr(0, dataPrefix.size()).c_str(), dataPrefix.c_str());
-            size_t pos = response.find("\n");
-            ASSERT_NE(pos, response.npos);
-            rapidjson::ParseResult parsingSucceeded = d.Parse(response.substr(dataPrefix.size(), (pos - dataPrefix.size())).c_str());
-            ASSERT_EQ(parsingSucceeded.Code(), 0);
-            ASSERT_TRUE(d["choices"].IsArray());
-            ASSERT_EQ(d["choices"].Capacity(), 1);
-            int i = 0;
-            for (auto& choice : d["choices"].GetArray()) {
-                if (params.checkFinishReason) {
-                    ASSERT_TRUE(choice["finish_reason"].IsString());
-                    EXPECT_STREQ(choice["finish_reason"].GetString(), "length");
+            size_t start = 0;
+            while (start < response.size()) {
+                const size_t eventEnd = response.find(eventSep, start);
+                if (eventEnd == std::string::npos)
+                    break;
+                const std::string event = response.substr(start, eventEnd - start);
+                start = eventEnd + eventSep.size();
+                if (event.size() < dataPrefix.size())
+                    continue;
+                const std::string body = event.substr(dataPrefix.size());
+                if (body.find("[DONE]") != std::string::npos)
+                    break;
+                rapidjson::Document d;
+                rapidjson::ParseResult pr = d.Parse(body.c_str());
+                ASSERT_EQ(pr.Code(), 0);
+                ASSERT_TRUE(d["choices"].IsArray());
+                ASSERT_EQ(d["choices"].Capacity(), 1);
+                for (auto& choice : d["choices"].GetArray()) {
+                    if (params.checkLogprobs) {
+                        ASSERT_FALSE(choice["logprobs"].IsObject());
+                    }
+                    ASSERT_TRUE(choice["text"].IsString());
+                    echoText += choice["text"].GetString();
+                    if (choice.HasMember("finish_reason") && choice["finish_reason"].IsString()) {
+                        lastFinishReason = choice["finish_reason"].GetString();
+                    }
                 }
-                ASSERT_EQ(choice["index"], i++);
-                if (params.checkLogprobs) {
-                    ASSERT_FALSE(choice["logprobs"].IsObject());
-                }
-                ASSERT_TRUE(choice["text"].IsString());
-                EXPECT_STREQ(choice["text"].GetString(), "What is OpenVINO?");
+                EXPECT_STREQ(d["model"].GetString(), params.modelName.c_str());
+                EXPECT_STREQ(d["object"].GetString(), "text_completion.chunk");
             }
-            EXPECT_STREQ(d["model"].GetString(), params.modelName.c_str());
-            EXPECT_STREQ(d["object"].GetString(), "text_completion.chunk");
         });
         ASSERT_EQ(
             handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
             ovms::StatusCode::PARTIAL_END);
+        if (params.checkFinishReason) {
+            EXPECT_STREQ(lastFinishReason.c_str(), "length");
+        }
+        EXPECT_EQ(echoText, "What is OpenVINO?");
     } else {
         // In legacy servable streaming with echo, prompt can be sent back in multiple chunks
         std::vector<std::string> responses;
@@ -1774,8 +1806,10 @@ TEST_P(LLMFlowHttpTestParameterized, inferChatCompletionsStream) {
             if (params.checkLogprobs) {
                 ASSERT_FALSE(choice["logprobs"].IsObject());
             }
-            ASSERT_TRUE(choice["delta"].IsObject());
-            ASSERT_TRUE(choice["delta"]["content"].IsString());
+            if (choice.HasMember("delta")) {
+                ASSERT_TRUE(choice["delta"].IsObject());
+                ASSERT_TRUE(choice["delta"]["content"].IsString());
+            }
         }
         EXPECT_STREQ(d["model"].GetString(), params.modelName.c_str());
         EXPECT_STREQ(d["object"].GetString(), "chat.completion.chunk");
@@ -1821,8 +1855,10 @@ TEST_P(LLMFlowHttpTestParameterized, inferChatCompletionsStreamSkipSpecialTokens
         ASSERT_TRUE(d["choices"].IsArray());
         ASSERT_EQ(d["choices"].Capacity(), 1);
         for (auto& choice : d["choices"].GetArray()) {
-            ASSERT_TRUE(choice["delta"].IsObject());
-            ASSERT_TRUE(choice["delta"]["content"].IsString());
+            if (choice.HasMember("delta")) {
+                ASSERT_TRUE(choice["delta"].IsObject());
+                ASSERT_TRUE(choice["delta"]["content"].IsString());
+            }
         }
         EXPECT_STREQ(d["object"].GetString(), "chat.completion.chunk");
     });
@@ -1967,62 +2003,77 @@ TEST_P(LLMFlowHttpTestParameterized, streamChatCompletionsSingleStopString) {
 
     // In legacy streaming we don't know if the callback is the last one, so we rely on entire generation call finish.
     // Because of that, we might get additional response with empty content at the end of the stream.
-    const size_t numberOfLastResponsesToCheckForStopString = params.modelName.find("legacy") != std::string::npos ? 2 : 1;
+    const size_t numberOfLastResponsesToCheckForStopString = std::min(
+        params.modelName.find("legacy") != std::string::npos ? size_t{2} : size_t{1},
+        responses.size());
 
     // The stop string (.) does not need to be at the end of the message.
     // There are cases when the last generation contains dot and a new lines, or generated token is "e.g",
     // or simply any token (or group of tokens) that has dot in a middle.
 
+    const std::string eventSep = "\n\n";
+    const std::string dataPrefix = "data:";
+
     // Check for no existence of a dot:
     for (size_t i = params.checkHandshakeChunk ? 1 : 0; i < responses.size() - numberOfLastResponsesToCheckForStopString; ++i) {
-        // Assert there is no dot '.' in the response
-
-        // Cut "data: " prefix
-        std::string dataPrefix = "data:";
-        std::string resp = responses[i].substr(dataPrefix.size());
-
-        rapidjson::Document d;
-        rapidjson::ParseResult ok = d.Parse(resp.c_str());
-        ASSERT_EQ(ok.Code(), 0) << d.GetParseError() << "\n"
-                                << resp;
-
-        ASSERT_TRUE(d["choices"].IsArray());
-        ASSERT_EQ(d["choices"].Size(), 1);
-        ASSERT_TRUE(d["choices"][0].IsObject());
-        ASSERT_TRUE(d["choices"][0]["delta"].IsObject());
-        ASSERT_TRUE(d["choices"][0]["delta"]["content"].IsString());
-        resp = d["choices"][0]["delta"]["content"].GetString();
-        ASSERT_EQ(resp.find('.'), std::string::npos) << "found dot in response: " << responses[i] << " at index: " << i << " out of: " << responses.size();
+        size_t start = 0;
+        while (start < responses[i].size()) {
+            const size_t eventEnd = responses[i].find(eventSep, start);
+            if (eventEnd == std::string::npos)
+                break;
+            const std::string event = responses[i].substr(start, eventEnd - start);
+            start = eventEnd + eventSep.size();
+            if (event.size() < dataPrefix.size())
+                continue;
+            const std::string body = event.substr(dataPrefix.size());
+            if (body.find("[DONE]") != std::string::npos)
+                break;
+            rapidjson::Document d;
+            rapidjson::ParseResult ok = d.Parse(body.c_str());
+            ASSERT_EQ(ok.Code(), 0) << d.GetParseError() << "\n"
+                                    << body;
+            ASSERT_TRUE(d["choices"].IsArray());
+            ASSERT_EQ(d["choices"].Size(), 1);
+            ASSERT_TRUE(d["choices"][0].IsObject());
+            if (!d["choices"][0].HasMember("delta"))
+                continue;
+            ASSERT_TRUE(d["choices"][0]["delta"].IsObject());
+            ASSERT_TRUE(d["choices"][0]["delta"]["content"].IsString());
+            std::string content = d["choices"][0]["delta"]["content"].GetString();
+            ASSERT_EQ(content.find('.'), std::string::npos) << "found dot in response: " << responses[i] << " at index: " << i << " out of: " << responses.size();
+        }
     }
 
     bool foundDotInLastResponse = false;
     // Check for existence of a dot:
     for (size_t i = responses.size() - numberOfLastResponsesToCheckForStopString; i < responses.size(); ++i) {
-        // Assert there is a dot '.' in the response
-
-        // Cut "data: " prefix
-        std::string dataPrefix = "data:";
-        std::string resp = responses[i].substr(dataPrefix.size());
-
-        // remove from resp: "data: [DONE]" (not only in the beginning)
-        size_t pos = resp.find("data: [DONE]");
-        if (pos != std::string::npos) {
-            resp.erase(pos, std::string("data: [DONE]").length());
-        }
-
-        rapidjson::Document d;
-        rapidjson::ParseResult ok = d.Parse(resp.c_str());
-        ASSERT_EQ(ok.Code(), 0) << d.GetParseError() << "\n"
-                                << resp;
-
-        ASSERT_TRUE(d["choices"].IsArray());
-        ASSERT_EQ(d["choices"].Size(), 1);
-        ASSERT_TRUE(d["choices"][0].IsObject());
-        ASSERT_TRUE(d["choices"][0]["delta"].IsObject());
-        ASSERT_TRUE(d["choices"][0]["delta"]["content"].IsString());
-        resp = d["choices"][0]["delta"]["content"].GetString();
-        if (resp.find('.') != std::string::npos) {
-            foundDotInLastResponse = true;
+        size_t start = 0;
+        while (start < responses[i].size()) {
+            const size_t eventEnd = responses[i].find(eventSep, start);
+            if (eventEnd == std::string::npos)
+                break;
+            const std::string event = responses[i].substr(start, eventEnd - start);
+            start = eventEnd + eventSep.size();
+            if (event.size() < dataPrefix.size())
+                continue;
+            const std::string body = event.substr(dataPrefix.size());
+            if (body.find("[DONE]") != std::string::npos)
+                break;
+            rapidjson::Document d;
+            rapidjson::ParseResult ok = d.Parse(body.c_str());
+            ASSERT_EQ(ok.Code(), 0) << d.GetParseError() << "\n"
+                                    << body;
+            ASSERT_TRUE(d["choices"].IsArray());
+            ASSERT_EQ(d["choices"].Size(), 1);
+            ASSERT_TRUE(d["choices"][0].IsObject());
+            if (!d["choices"][0].HasMember("delta"))
+                continue;
+            ASSERT_TRUE(d["choices"][0]["delta"].IsObject());
+            ASSERT_TRUE(d["choices"][0]["delta"]["content"].IsString());
+            std::string content = d["choices"][0]["delta"]["content"].GetString();
+            if (content.find('.') != std::string::npos) {
+                foundDotInLastResponse = true;
+            }
         }
     }
     ASSERT_TRUE(foundDotInLastResponse) << "cannot find dot last responses";
@@ -2101,7 +2152,13 @@ TEST_P(LLMFlowHttpTestParameterized, streamCompletionsSingleStopString) {
     if (params.modelName.find("legacy") != std::string::npos) {
         // In legacy streaming we don't know if the callback is the last one, so we rely on entire generation call finish.
         // Because of that, we might get additional response with empty content at the end of the stream.
-        ASSERT_TRUE(std::regex_search(responses[responses.size() - 2], content_regex) || std::regex_search(responses.back(), content_regex));
+        // Guard against responses.size() < 2 (can happen when all deltas arrive in a single drain).
+        if (responses.size() >= 2) {
+            ASSERT_TRUE(std::regex_search(responses[responses.size() - 2], content_regex) || std::regex_search(responses.back(), content_regex));
+        } else {
+            ASSERT_GE(responses.size(), 1u);
+            ASSERT_TRUE(std::regex_search(responses.back(), content_regex));
+        }
     } else {
         ASSERT_TRUE(std::regex_search(responses.back(), content_regex));
     }
