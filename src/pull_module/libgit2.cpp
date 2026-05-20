@@ -678,8 +678,8 @@ fs::path makeRelativeToBase(const fs::path& path, const fs::path& base) {
  * @note Part of the git LFS domain: identifies LFS pointer files in the working directory.
  */
 std::vector<fs::path> findLfsLikeFiles(const std::string& directory, bool recursive) {
+    std::vector<fs::path> matches;
     try {
-        std::vector<fs::path> matches;
         std::error_code ec;
 
         if (!fs::exists(directory, ec) || !fs::is_directory(directory, ec)) {
@@ -708,12 +708,33 @@ std::vector<fs::path> findLfsLikeFiles(const std::string& directory, bool recurs
         }
         return matches;
     } catch (const fs::filesystem_error& e) {
-        SPDLOG_ERROR("findLfsLikeFiles failed while scanning {} recursive={} error:{}", directory, recursive, e.what());
+        const std::error_code code = e.code();
+        const bool expectedTransient =
+            (code == std::make_error_code(std::errc::no_such_file_or_directory)) ||
+            (code == std::make_error_code(std::errc::not_a_directory));
+
+        if (expectedTransient) {
+            SPDLOG_DEBUG("findLfsLikeFiles transient scan interruption at {} recursive={} error:{}; returning {} partial match(es)",
+                directory,
+                recursive,
+                e.what(),
+                matches.size());
+        } else {
+            SPDLOG_WARN("findLfsLikeFiles failed while scanning {} recursive={} error:{}; returning {} partial match(es)",
+                directory,
+                recursive,
+                e.what(),
+                matches.size());
+        }
     } catch (const std::exception& e) {
-        SPDLOG_ERROR("findLfsLikeFiles failed while scanning {} recursive={} error:{}", directory, recursive, e.what());
+        SPDLOG_WARN("findLfsLikeFiles failed while scanning {} recursive={} error:{}; returning {} partial match(es)",
+            directory,
+            recursive,
+            e.what(),
+            matches.size());
     }
 
-    return {};
+    return matches;
 }
 
 struct MissingLfsPathsWalkPayload {
