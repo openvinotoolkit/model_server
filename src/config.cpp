@@ -94,7 +94,7 @@ bool Config::parse(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* model
 
     static EnvGuard envGuard;
 #if defined(__linux__) || defined(_WIN32)
-    if (this->serverSettings.logLevel == "DEBUG") {
+    if (this->serverSettings.logLevel == "DEBUG" || this->serverSettings.logLevel == "TRACE") {
         envGuard.set("OPENVINO_LOG_LEVEL", "4");
     }
 #endif
