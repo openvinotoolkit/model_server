@@ -127,7 +127,8 @@ static Status validateLoraAdapterConfig(ImageGenPipelineArgs& args, bool isNPU) 
         if (args.compositeLoraAdapters.size() > 1) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger,
                 "NPU device supports only a single composite_lora_adapters entry. "
-                "Found {} composites.", args.compositeLoraAdapters.size());
+                "Found {} composites.",
+                args.compositeLoraAdapters.size());
             return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
         }
         const auto& [compositeAlias, components] = *args.compositeLoraAdapters.begin();

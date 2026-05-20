@@ -724,7 +724,7 @@ ovms --rest_port 8000 ^
 ::::
 
 
-### Strength influence on final damage
+### Strength influence on final image
 
 ![strength](./strength.png)
 
@@ -772,7 +772,7 @@ ovms --rest_port 8000 ^
 
 The registered adapters and their recommended use:
 
-| Alias | Repository | Style | Recommended Weight | Prompt Template |
+| Alias | Repository | Style | Recommended Alpha | Prompt Template |
 |-------|-----------|-------|-------------------|-----------------|
 | `xray` | DoctorDiffusion/doctor-diffusion-s-xray-xl-lora | X-Ray style | 0.8 | `xray <subject>` |
 | `thepoint` | alvdansen/the-point | Artistic illustration | 0.6 | `<subject>` |
@@ -834,7 +834,7 @@ curl http://localhost:8000/v3/images/generations \
     "num_inference_steps": 20,
     "guidance_scale": 0.0,
     "size": "1024x1024"
-  }' | jq -r '.data[0].b64_json' | base64 --decode > xray_cat_half_weight.png
+  }' | jq -r '.data[0].b64_json' | base64 --decode > xray_cat_half_alpha.png
 ```
 ### Using OpenAI Python Client with LoRA
 
@@ -879,7 +879,7 @@ for style_name, style_config in styles.items():
 
 ### Blending Multiple Adapters
 
-To blend multiple adapters, define a **composite adapter** at startup using the `@alias:weight` syntax:
+To blend multiple adapters, define a **composite adapter** at startup using the `@alias:alpha` syntax:
 
 ```bash
 --source_loras="xray=...,ukiyo=...,blend=@xray:0.5+@ukiyo:0.4"
@@ -898,7 +898,7 @@ response = client.images.generate(
 )
 ```
 
-You can override individual component weights at request time:
+You can override individual component alphas at request time:
 ```python
 response = client.images.generate(
     model="blend",

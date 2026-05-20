@@ -43,8 +43,8 @@ static void reshapeAndCompile(PipelineT& pipeline,
 
         pipeline.reshape(
             numImagesPerPrompt,
-            args.staticReshapeSettings.value().resolution[0].first,
-            args.staticReshapeSettings.value().resolution[0].second,
+            args.staticReshapeSettings.value().resolution[0].second,  // height
+            args.staticReshapeSettings.value().resolution[0].first,   // width
             guidanceScale);
     }
 
@@ -229,6 +229,12 @@ ImageGenerationPipelines::ImageGenerationPipelines(const ImageGenPipelineArgs& a
     // requests must be serialized
     if (inpaintingPipeline) {
         inpaintingQueue = std::make_unique<Queue<int>>(1);
+    }
+
+    // clone() shares underlying model weights — parallel LoRA adapter switching
+    // corrupts adapter state.  Serialize when dynamic LoRA is active.
+    if (!loraAdapters.empty() && !npuLoraStaticMode) {
+        loraQueue = std::make_unique<Queue<int>>(1);
     }
 
     SPDLOG_INFO("Image Generation Pipelines ready — T2I: {} | I2I: {} | INP: {} | LoRAs: {}",

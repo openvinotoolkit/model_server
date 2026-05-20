@@ -284,14 +284,14 @@ public:
                         if (pipe->compositeLoraAdapters.find(modelName) == pipe->compositeLoraAdapters.end()) {
                             return absl::InvalidArgumentError(absl::StrCat(
                                 "Model '", modelName, "' uses NPU with statically fused LoRA adapters. "
-                                                              "Send requests to the composite LoRA alias name instead."));
+                                                      "Send requests to the composite LoRA alias name instead."));
                         }
                     } else {
                         // Single LoRA NPU: only the individual alias is a valid target
                         if (pipe->loraAdapters.find(modelName) == pipe->loraAdapters.end()) {
                             return absl::InvalidArgumentError(absl::StrCat(
                                 "Model '", modelName, "' uses NPU with statically fused LoRA. "
-                                                              "Send requests to the LoRA alias name instead."));
+                                                      "Send requests to the LoRA alias name instead."));
                         }
                     }
                 }
@@ -301,7 +301,12 @@ public:
             if (!pipe->text2ImagePipeline)
                 return absl::FailedPreconditionError("Text-to-image pipeline is not available for this model");
             absl::Status status;
-            {
+            if (pipe->loraQueue) {
+                // LoRA active: serialize and use pipeline directly so adapter
+                // state tracking remains consistent across requests.
+                PipelineSlotGuard loraGuard(*pipe->loraQueue);
+                status = generateTensor(*pipe->text2ImagePipeline, prompt, requestOptions, images);
+            } else {
                 auto t2i = pipe->text2ImagePipeline->clone();
                 status = generateTensor(t2i, prompt, requestOptions, images);
             }
@@ -335,14 +340,14 @@ public:
                         if (pipe->compositeLoraAdapters.find(modelName) == pipe->compositeLoraAdapters.end()) {
                             return absl::InvalidArgumentError(absl::StrCat(
                                 "Model '", modelName, "' uses NPU with statically fused LoRA adapters. "
-                                                              "Send requests to the composite LoRA alias name instead."));
+                                                      "Send requests to the composite LoRA alias name instead."));
                         }
                     } else {
                         // Single LoRA NPU: only the individual alias is a valid target
                         if (pipe->loraAdapters.find(modelName) == pipe->loraAdapters.end()) {
                             return absl::InvalidArgumentError(absl::StrCat(
                                 "Model '", modelName, "' uses NPU with statically fused LoRA. "
-                                                              "Send requests to the LoRA alias name instead."));
+                                                      "Send requests to the LoRA alias name instead."));
                         }
                     }
                 }
@@ -371,7 +376,10 @@ public:
             } else {
                 if (!pipe->image2ImagePipeline)
                     return absl::FailedPreconditionError("Image-to-image pipeline is not available for this model");
-                {
+                if (pipe->loraQueue) {
+                    PipelineSlotGuard loraGuard(*pipe->loraQueue);
+                    status = generateTensorImg2Img(*pipe->image2ImagePipeline, prompt, imageTensor, requestOptions, images);
+                } else {
                     auto i2i = pipe->image2ImagePipeline->clone();
                     status = generateTensorImg2Img(i2i, prompt, imageTensor, requestOptions, images);
                 }

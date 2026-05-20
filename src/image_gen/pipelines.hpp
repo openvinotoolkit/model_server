@@ -69,6 +69,12 @@ struct ImageGenerationPipelines {
     // Queue size = 1: only one inpainting inference runs at a time.
     std::unique_ptr<Queue<int>> inpaintingQueue;
 
+    // Serializes all image generation requests when LoRA adapters are configured
+    // in dynamic mode. The pipeline is used directly (without clone) so that adapter
+    // state tracking remains consistent across requests with different adapters.
+    // Queue size = 1: only one inference runs at a time for this pipeline.
+    std::unique_ptr<Queue<int>> loraQueue;
+
     ImageGenerationPipelines() = delete;
     ImageGenerationPipelines(const ImageGenPipelineArgs& args);
     ImageGenerationPipelines(const ImageGenerationPipelines&) = delete;
