@@ -65,6 +65,7 @@
 #include "mediapipe/framework/formats/tensor.h"
 #include "opencv2/opencv.hpp"
 #include "platform_utils.hpp"
+#include "src/utils/env_guard.hpp"
 #include "test_utils.hpp"
 #include "light_test_utils.hpp"
 #include "test_with_temp_dir.hpp"
@@ -4271,4 +4272,27 @@ node: {
     auto status = def.validate(manager);
     // Queue is disabled so the LOOPBACK check should not trigger
     EXPECT_NE(status, ovms::StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID);
+}
+
+TEST(MediapipeGraphQueueSizeDirective, EnvVarOVMS_GRAPH_QUEUE_OFF_DisablesPool) {
+    std::string pbtxt = makePbtxtWithDirective("# OVMS_GRAPH_QUEUE_MAX_SIZE: AUTO");
+    ovms::MediapipeGraphConfig mgc;
+    SetEnvironmentVar("OVMS_GRAPH_QUEUE_OFF", "1");
+    DummyMediapipeGraphDefinition def("test", mgc, pbtxt);
+    ovms::ModelManager manager;
+    auto status = def.validate(manager);
+    UnSetEnvironmentVar("OVMS_GRAPH_QUEUE_OFF");
+    ASSERT_EQ(status, ovms::StatusCode::OK);
+    EXPECT_EQ(def.getMediapipeGraphConfig().getInitialQueueSize(), 0);
+}
+
+TEST(MediapipeGraphQueueSizeDirective, EnvVarOVMS_GRAPH_QUEUE_OFF_NotSetDoesNotDisable) {
+    UnSetEnvironmentVar("OVMS_GRAPH_QUEUE_OFF");
+    std::string pbtxt = makePbtxtWithDirective("# OVMS_GRAPH_QUEUE_MAX_SIZE: AUTO");
+    ovms::MediapipeGraphConfig mgc;
+    DummyMediapipeGraphDefinition def("test", mgc, pbtxt);
+    ovms::ModelManager manager;
+    auto status = def.validate(manager);
+    ASSERT_EQ(status, ovms::StatusCode::OK);
+    EXPECT_GT(def.getMediapipeGraphConfig().getInitialQueueSize(), 0);
 }

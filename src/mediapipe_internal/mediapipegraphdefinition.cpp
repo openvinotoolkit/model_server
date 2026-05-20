@@ -28,6 +28,7 @@
 
 #include "../execution_context.hpp"
 #include "../config.hpp"
+#include "src/utils/env_guard.hpp"
 #include "src/filesystem/filesystem.hpp"
 #include "src/graph_export/graph_export.hpp"
 #include "src/metrics/metric.hpp"
@@ -95,8 +96,13 @@ Status MediapipeGraphDefinition::resolveGraphQueueSize() {
         SPDLOG_ERROR("Internal error: resolveGraphQueueSize called with empty chosenConfig for mediapipe: {}", getName());
         return StatusCode::INTERNAL_ERROR;
     }
+    // 0. Runtime kill-switch: OVMS_GRAPH_QUEUE_OFF disables all graph pools.
+    if (GetEnvVar("OVMS_GRAPH_QUEUE_OFF") == "1") {
+        SPDLOG_INFO("Graph queue globally disabled via OVMS_GRAPH_QUEUE_OFF=1 for mediapipe: {}", getName());
+        return StatusCode::OK;
+    }
     // 1. Explicit pbtxt directive: # OVMS_GRAPH_QUEUE_MAX_SIZE: <value>
-    //    Always honored regardless of env var or calculator checks.
+    //    Always honored regardless of calculator checks.
     //    Value 0 disables the queue, AUTO or positive integer enables it.
     //    Negative values are rejected as invalid.
     static const std::regex directiveRegex(

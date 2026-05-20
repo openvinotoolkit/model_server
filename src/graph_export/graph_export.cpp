@@ -70,17 +70,10 @@ static const std::string OVMS_VERSION_GRAPH_LINE = std::string("# File created w
 static const std::string OVMS_GRAPH_QUEUE_MAX_SIZE_LINE_PREFIX = "# OVMS_GRAPH_QUEUE_MAX_SIZE: ";
 static const std::string OVMS_GRAPH_QUEUE_SIZE_AUTO = "AUTO";
 
-static std::string getDefaultGraphQueueSizeDirective(const HFSettingsImpl& hfSettings) {
-    if (hfSettings.task == IMAGE_GENERATION_GRAPH) {
-        return "1";
-    }
-    return OVMS_GRAPH_QUEUE_SIZE_AUTO;
-}
-
-static std::string buildGraphHeader(const HFSettingsImpl& hfSettings) {
+static std::string buildGraphHeader() {
     std::ostringstream oss;
     oss << OVMS_VERSION_GRAPH_LINE;
-    oss << OVMS_GRAPH_QUEUE_MAX_SIZE_LINE_PREFIX << getDefaultGraphQueueSizeDirective(hfSettings) << "\n";
+    oss << OVMS_GRAPH_QUEUE_MAX_SIZE_LINE_PREFIX << OVMS_GRAPH_QUEUE_SIZE_AUTO << "\n";
     return oss.str();
 }
 
@@ -150,7 +143,7 @@ static Status createTextGenerationGraphTemplate(const std::string& directoryPath
     auto& exportSettings = hfSettings.exportSettings;
 
     std::ostringstream oss;
-    oss << buildGraphHeader(hfSettings);
+    oss << buildGraphHeader();
     std::string modelsPath = constructModelsPath(exportSettings.modelPath, ggufFilename);
     SPDLOG_TRACE("modelsPath: {}, directoryPath: {}, ggufFilename: {}", modelsPath, directoryPath, ggufFilename.value_or("std::nullopt"));
     GET_PLUGIN_CONFIG_OPT_OR_FAIL_AND_RETURN(exportSettings);
@@ -245,7 +238,7 @@ static Status createRerankGraphTemplate(const std::string& directoryPath, const 
     auto& exportSettings = hfSettings.exportSettings;
 
     std::ostringstream oss;
-    oss << buildGraphHeader(hfSettings);
+    oss << buildGraphHeader();
     // Windows path creation - graph parser needs forward slashes in paths
     std::string modelsPath = constructModelsPath(exportSettings.modelPath, ggufFilename);
     SPDLOG_TRACE("modelsPath: {}, directoryPath: {}, ggufFilename: {}", modelsPath, directoryPath, ggufFilename.value_or("std::nullopt"));
@@ -289,7 +282,7 @@ static Status createEmbeddingsGraphTemplate(const std::string& directoryPath, co
     auto& exportSettings = hfSettings.exportSettings;
 
     std::ostringstream oss;
-    oss << buildGraphHeader(hfSettings);
+    oss << buildGraphHeader();
     std::string modelsPath = constructModelsPath(exportSettings.modelPath, ggufFilename);
     SPDLOG_TRACE("modelsPath: {}, directoryPath: {}, ggufFilename: {}", modelsPath, directoryPath, ggufFilename.value_or("std::nullopt"));
     GET_PLUGIN_CONFIG_OPT_OR_FAIL_AND_RETURN(exportSettings);
@@ -335,7 +328,7 @@ static Status createTextToSpeechGraphTemplate(const std::string& directoryPath, 
     auto& exportSettings = hfSettings.exportSettings;
 
     std::ostringstream oss;
-    oss << buildGraphHeader(hfSettings);
+    oss << buildGraphHeader();
     std::string modelsPath = constructModelsPath(exportSettings.modelPath, ggufFilename);
     SPDLOG_TRACE("modelsPath: {}, directoryPath: {}, ggufFilename: {}", modelsPath, directoryPath, ggufFilename.value_or("std::nullopt"));
     GET_PLUGIN_CONFIG_OPT_OR_FAIL_AND_RETURN(exportSettings);
@@ -390,7 +383,7 @@ static Status createSpeechToTextGraphTemplate(const std::string& directoryPath, 
     auto& exportSettings = hfSettings.exportSettings;
 
     std::ostringstream oss;
-    oss << buildGraphHeader(hfSettings);
+    oss << buildGraphHeader();
     std::string modelsPath = constructModelsPath(exportSettings.modelPath, ggufFilename);
     SPDLOG_TRACE("modelsPath: {}, directoryPath: {}, ggufFilename: {}", modelsPath, directoryPath, ggufFilename.value_or("std::nullopt"));
     GET_PLUGIN_CONFIG_OPT_OR_FAIL_AND_RETURN(exportSettings);
@@ -464,7 +457,7 @@ static Status createImageGenerationGraphTemplate(const std::string& directoryPat
     GET_PLUGIN_CONFIG_OPT_OR_FAIL_AND_RETURN(exportSettings);
 
     std::ostringstream oss;
-    oss << buildGraphHeader(hfSettings);
+    oss << buildGraphHeader();
     // clang-format off
     oss << R"(
 input_stream: "HTTP_REQUEST_PAYLOAD:input"

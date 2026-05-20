@@ -189,6 +189,7 @@ ovms_cc_library(
         "//src:libovmstimer",
         "//src:libovmsprofiler",
         "//src/llm:execution_context_utils",
+        "//src/utils:env_guard",
         "@mediapipe//mediapipe/framework:calculator_graph",
         "@mediapipe//mediapipe/framework/port:parse_text_proto",
     ],
