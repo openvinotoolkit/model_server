@@ -39,6 +39,7 @@ MISTRAL_MODEL="mistralai/Mistral-7B-Instruct-v0.3"
 GPT_OSS_MODEL="openai/gpt-oss-20b"
 DEVSTRAL_MODEL="unsloth/Devstral-Small-2507"
 LFM2_MODEL="LiquidAI/LFM2-2.6B"
+GEMMA4_MODEL="OpenVINO/gemma-4-E4B-it-int4-ov"
 
 if [ "$(python3 -c 'import sys; print(sys.version_info[1])')" -le "8" ]; then echo "Prepare models with python > 3.8."; exit 1 ; fi
 
@@ -119,16 +120,6 @@ else
 fi
 if [ ! -f "$1/$EMBEDDING_MODEL/ov/$TOKENIZER_FILE" ]; then
   echo "[ERROR] Model file $1/$EMBEDDING_MODEL/ov/$TOKENIZER_FILE does not exist."
-  exit 1
-fi
-
-if [ -f "$1/$RERANK_MODEL/rerank/$LEGACY_MODEL_FILE" ]; then
-  echo "Model file $1/$RERANK_MODEL/rerank/$LEGACY_MODEL_FILE exists. Skipping downloading models."
-else
-  python3 demos/common/export_models/export_model.py rerank --source_model "$RERANK_MODEL" --weight-format int8 --model_repository_path $1
-fi
-if [ ! -f "$1/$RERANK_MODEL/rerank/$LEGACY_MODEL_FILE" ]; then
-  echo "[ERROR] Model file $1/$RERANK_MODEL/rerank/$LEGACY_MODEL_FILE does not exist."
   exit 1
 fi
 
@@ -227,5 +218,14 @@ else
 fi
 if [ ! -f "$1/$LFM2_MODEL/$TOKENIZER_FILE" ]; then
   echo "[ERROR] Models file $1/$LFM2_MODEL/$TOKENIZER_FILE does not exist."
+  exit 1
+fi
+if [ -f "$1/$GEMMA4_MODEL/$TOKENIZER_FILE" ]; then
+  echo "Models file $1/$GEMMA4_MODEL/$TOKENIZER_FILE exists. Skipping downloading models."
+else
+  hf download "$GEMMA4_MODEL" --local-dir $1/$GEMMA4_MODEL --include *tokenizer*
+fi
+if [ ! -f "$1/$GEMMA4_MODEL/$TOKENIZER_FILE" ]; then
+  echo "[ERROR] Models file $1/$GEMMA4_MODEL/$TOKENIZER_FILE does not exist."
   exit 1
 fi

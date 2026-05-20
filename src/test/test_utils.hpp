@@ -540,7 +540,6 @@ public:
 
 void RemoveReadonlyFileAttributeFromDir(std::string& directoryPath);
 void SetReadonlyFileAttributeFromDir(std::string& directoryPath);
-
 /**
  * Wait until ModelManager::configFileReloadNeeded returns false or timeout is reached
  */

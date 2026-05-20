@@ -354,6 +354,7 @@ ovms_cc_library(
         "libovms_cliparser",
         "libovms_systeminfo",
         "ovms_exit_codes",
+        "//src/utils:env_guard",
     ],
     visibility = ["//visibility:public",],
     additional_copts = COPTS_DROGON,
@@ -820,7 +821,6 @@ ovms_cc_library(
                 "//src/image_gen:imagegen_init",
                 "//src/llm:openai_responses_handler",
                 "//src/embeddings:embeddingscalculator_ov",
-                "//src/rerank:rerankcalculator",
                 "//src/rerank:rerankcalculator_ov",
                 "//src/llm:llmcalculator",
             ],
@@ -2085,6 +2085,7 @@ ovms_cc_library(
             "libovmsshape",
             "libovmsprofiler",
             "libovms_tensorinfo",
+            "libovms_systeminfo",
     ],
     visibility = ["//visibility:public"],
 )
@@ -3126,7 +3127,8 @@ ovms_cc_library(
             "@mediapipe//mediapipe/framework:calculator_framework",
             "//third_party:openvino",
             "@com_github_tencent_rapidjson//:rapidjson", 
-            "//third_party:genai",],
+            "//third_party:genai",
+            "//src:libovms_ov_utils",],
     visibility = ["//visibility:public"],
     alwayslink = 1,
 )

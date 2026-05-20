@@ -341,12 +341,18 @@ public:
 
     /**
      * Opens a git repository at the specified filesystem path.
-     * 
+     *
      * @param path Absolute or relative path to the git repository directory.
-     * @note Works on specific git repository location (searches for .git directory).
+     * @note Opens the repository only at the provided path; parent directories
+     * are not searched for a .git directory.
      */
-    GitRepositoryGuard(const std::string& path) {
-        int error = git_repository_open_ext(&repo, path.c_str(), 0, nullptr);
+    explicit GitRepositoryGuard(const std::string& path) {
+        // GIT_REPOSITORY_OPEN_NO_SEARCH: open the repository ONLY at `path`.
+        // Without this flag (i.e. flags=0) libgit2 walks up the parent directory
+        // tree looking for a .git, which on hosts where the model directory is
+        // nested under another git checkout (e.g. Jenkins workspace) would
+        // misidentify the outer repo as ours and skip the download silently.
+        int error = git_repository_open_ext(&repo, path.c_str(), GIT_REPOSITORY_OPEN_NO_SEARCH, nullptr);
         if (error < 0) {
             const git_error* err = git_error_last();
             if (err) {
@@ -395,6 +401,16 @@ public:
     }
 };
 
+namespace {
+Status mapRepositoryOpenFailureToStatus(const GitRepositoryGuard& repoGuard) {
+    if (repoGuard.git_error_class == GIT_ERROR_OS)
+        return StatusCode::HF_GIT_STATUS_FAILED_TO_RESOLVE_PATH;
+    if (repoGuard.git_error_class == GIT_ERROR_INVALID)
+        return StatusCode::HF_GIT_LIBGIT2_NOT_INITIALIZED;
+    return StatusCode::HF_GIT_STATUS_FAILED;
+}
+}  // namespace
+
 /**
  * Verifies the cleanliness of a git repository after clone or download operations.
  * Checks for staged changes, unstaged modifications, untracked files, and merge conflicts.
@@ -412,12 +428,7 @@ Status HfDownloader::CheckRepositoryStatus(bool checkUntracked) {
 
     GitRepositoryGuard repoGuard(this->downloadPath);
     if (!repoGuard.get()) {
-        if (repoGuard.git_error_class == GIT_ERROR_OS)
-            return StatusCode::HF_GIT_STATUS_FAILED_TO_RESOLVE_PATH;
-        else if (repoGuard.git_error_class == GIT_ERROR_INVALID)
-            return StatusCode::HF_GIT_LIBGIT2_NOT_INITIALIZED;
-        else
-            return StatusCode::HF_GIT_STATUS_FAILED;
+        return mapRepositoryOpenFailureToStatus(repoGuard);
     }
     // HEAD state info
     bool is_detached = git_repository_head_detached(repoGuard.get()) == 1;
@@ -668,32 +679,54 @@ fs::path makeRelativeToBase(const fs::path& path, const fs::path& base) {
  */
 std::vector<fs::path> findLfsLikeFiles(const std::string& directory, bool recursive) {
     std::vector<fs::path> matches;
-    std::error_code ec;
+    try {
+        std::error_code ec;
 
-    if (!fs::exists(directory, ec) || !fs::is_directory(directory, ec)) {
+        if (!fs::exists(directory, ec) || !fs::is_directory(directory, ec)) {
+            return matches;
+        }
+
+        if (recursive) {
+            for (fs::recursive_directory_iterator it(directory), end; it != end; ++it) {
+                const auto& p = it->path();
+                std::error_code dirEc;
+                if (it->is_directory(dirEc) && !dirEc && p.filename() == ".git") {
+                    it.disable_recursion_pending();
+                    continue;
+                }
+                if (fileHasLfsKeywordsFirst3Positional(p)) {
+                    matches.push_back(makeRelativeToBase(p, directory));
+                }
+            }
+        } else {
+            for (fs::directory_iterator it(directory), end; it != end; ++it) {
+                const auto& p = it->path();
+                if (fileHasLfsKeywordsFirst3Positional(p)) {
+                    matches.push_back(makeRelativeToBase(p, directory));
+                }
+            }
+        }
         return matches;
+    } catch (const fs::filesystem_error& e) {
+        const std::error_code code = e.code();
+        const bool expectedTransient =
+            (code == std::make_error_code(std::errc::no_such_file_or_directory)) ||
+            (code == std::make_error_code(std::errc::not_a_directory));
+
+        SPDLOG_WARN("findLfsLikeFiles {} {} recursive={} error:{}; returning {} partial match(es)",
+            expectedTransient ? "directory contents changed during scan" : "failed while scanning",
+            directory,
+            recursive,
+            e.what(),
+            matches.size());
+    } catch (const std::exception& e) {
+        SPDLOG_WARN("findLfsLikeFiles failed while scanning {} recursive={} error:{}; returning {} partial match(es)",
+            directory,
+            recursive,
+            e.what(),
+            matches.size());
     }
 
-    if (recursive) {
-        for (fs::recursive_directory_iterator it(directory, ec), end; !ec && it != end; ++it) {
-            const auto& p = it->path();
-            std::error_code dirEc;
-            if (it->is_directory(dirEc) && !dirEc && p.filename() == ".git") {
-                it.disable_recursion_pending();
-                continue;
-            }
-            if (fileHasLfsKeywordsFirst3Positional(p)) {
-                matches.push_back(makeRelativeToBase(p, directory));
-            }
-        }
-    } else {
-        for (fs::directory_iterator it(directory, ec), end; !ec && it != end; ++it) {
-            const auto& p = it->path();
-            if (fileHasLfsKeywordsFirst3Positional(p)) {
-                matches.push_back(makeRelativeToBase(p, directory));
-            }
-        }
-    }
     return matches;
 }
 
@@ -1070,14 +1103,6 @@ struct ResumeCandidates {
     std::vector<fs::path> missingNonLfsMatches;
 };
 
-Status mapRepositoryOpenFailureToStatus(const GitRepositoryGuard& repoGuard) {
-    if (repoGuard.git_error_class == GIT_ERROR_OS)
-        return StatusCode::HF_GIT_STATUS_FAILED_TO_RESOLVE_PATH;
-    if (repoGuard.git_error_class == GIT_ERROR_INVALID)
-        return StatusCode::HF_GIT_LIBGIT2_NOT_INITIALIZED;
-    return StatusCode::HF_GIT_STATUS_FAILED;
-}
-
 /**
  * Builds resume candidate lists based on interruption markers and repository scan.
  * 
@@ -1203,7 +1228,7 @@ Status resumeExistingRepository(git_repository* repo,
 
     // Checking if git status is ok but we are left with LFS errors recorded by libgit2 patch in repository root.
     if (libgit2::ifHasLfsErrorFileLogContentAndRemove(downloadPath)) {
-        SPDLOG_ERROR("Model download resume failed: LFS errors recorded above. Re-run the same command to retry, or use --override to restart from scratch.");
+        SPDLOG_ERROR("Model download resume failed: LFS errors recorded above. Re-run the same command to retry, or use --overwrite_models to restart from scratch.");
         return StatusCode::HF_GIT_LIBGIT2_LFS_DOWNLOAD_FAILED;
     }
 
@@ -1212,7 +1237,7 @@ Status resumeExistingRepository(git_repository* repo,
     auto status = checkRepositoryStatusFn(false);
     if (!status.ok()) {
         SPDLOG_ERROR("Model repository status check failed after resuming download. Status: {}", status.string());
-        SPDLOG_ERROR("Consider --override to start download from scratch.");
+        SPDLOG_ERROR("Consider --overwrite_models to start download from scratch.");
         return status;
     }
     SPDLOG_DEBUG("Model repository status check passed after resuming download.");
@@ -1223,17 +1248,38 @@ Status resumeExistingRepository(git_repository* repo,
 
 Status handleExistingRepositoryWithoutOverwrite(const std::string& downloadPath,
     const std::function<Status(bool)>& checkRepositoryStatusFn) {
+    // If the directory does not contain a .git entry, treat it as a user-provided model directory.
+    // The user has copied model files in by hand; skip the pull and let model loading proceed
+    // against whatever files are already on disk. Use --overwrite_models to replace it with a
+    // fresh download.
+    std::error_code ec;
+    const bool gitEntryExists = fs::exists(fs::path(downloadPath) / ".git", ec);
+    if (ec) {
+        // Probe itself failed (permission denied, I/O error, ...). Do not silently fall through
+        // to the "not a git repository" branch, that would mask real filesystem problems.
+        SPDLOG_ERROR("Failed to probe \"{}/.git\": {}", downloadPath, ec.message());
+        return StatusCode::HF_GIT_STATUS_FAILED_TO_RESOLVE_PATH;
+    }
+    if (!gitEntryExists) {
+        SPDLOG_INFO("Path \"{}\" exists but is not a git repository. "
+                    "Skipping download and using existing files.",
+            downloadPath);
+        return StatusCode::OK;
+    }
+
     GitRepositoryGuard repoGuard(downloadPath);
     if (!repoGuard.get()) {
-        std::cout << "Path already exists on local filesystem. Cannot download model to: " << downloadPath << std::endl;
-        std::cout << "Use --override to start download from scratch." << std::endl;
+        // .git was present but libgit2 still could not open the repository: surface the real error
+        // so the operator can act (re-clone, fix permissions, init libgit2, ...).
+        SPDLOG_ERROR("Model is corrupted: {}", downloadPath);
+        SPDLOG_ERROR("Use --overwrite_models to start download from scratch.");
         return mapRepositoryOpenFailureToStatus(repoGuard);
     }
 
     auto candidates = buildResumeCandidates(repoGuard.get(), downloadPath);
     if (!candidates.interruptionLikely) {
         SPDLOG_DEBUG("Model pull operation found no interruption signals for this path: {}", downloadPath);
-        std::cout << "Path already exists on local filesystem. Skipping download to path: " << downloadPath << std::endl;
+        SPDLOG_INFO("Path already exists on local filesystem. Skipping download to path: {}", downloadPath);
         return StatusCode::OK;
     }
 
@@ -1312,7 +1358,7 @@ Status finalizeAfterClone(const std::string& downloadPath,
     const std::function<Status(const std::string&)>& removeReadonlyFn) {
     // Checking if git status is ok but we are left with LFS errors recorded by libgit2 patch in repository root.
     if (libgit2::ifHasLfsErrorFileLogContentAndRemove(downloadPath)) {
-        SPDLOG_ERROR("Model download failed: LFS errors recorded above. Re-run the same command to resume, or use --override to restart from scratch.");
+        SPDLOG_ERROR("Model download failed: LFS errors recorded above. Re-run the same command to resume, or use --overwrite_models to restart from scratch.");
         return StatusCode::HF_GIT_LIBGIT2_LFS_DOWNLOAD_FAILED;
     }
 
@@ -1321,7 +1367,7 @@ Status finalizeAfterClone(const std::string& downloadPath,
     if (!status.ok()) {
         SPDLOG_ERROR("Model repository status check failed after model download. Status: {}", status.string());
         SPDLOG_ERROR("Consider rerunning the command to resume the download after network issues.");
-        SPDLOG_ERROR("Consider --override flag to start download from scratch.");
+        SPDLOG_ERROR("Consider --overwrite_models flag to start download from scratch.");
         return status;
     }
     SPDLOG_DEBUG("Model repository status check passed after model download.");
