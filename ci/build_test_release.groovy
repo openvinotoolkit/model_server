@@ -13,6 +13,10 @@ pipeline {
             when { expression { env.PACKAGE_URL == "" } }
             steps {
                 script {
+                    def buildstamp = new Date().format('yyyyMMddHHmmss')
+                    echo "Buildstamp: ${buildstamp}"
+                    echo "PRODUCT_VERSION: ${env.PRODUCT_VERSION}"
+                    echo "RELEASE_TAG: ${env.RELEASE_TAG}"
                     echo "JOB_BASE_NAME: ${env.JOB_BASE_NAME}"
                     echo "WORKSPACE: ${env.WORKSPACE}"
                     echo "OVMS_PYTHON_ENABLED: ${env.OVMS_PYTHON_ENABLED}"
@@ -26,13 +30,16 @@ pipeline {
                           windows.unit_test()
                           windows.check_tests()
                           def safeBranchName = env.BRANCH_NAME.replaceAll('/', '_')
-                          def python_presence = ""
+                          def python_suffix = ""
                           if (env.OVMS_PYTHON_ENABLED == "1") {
-                              python_presence = "with_python"
+                              python_suffix = "on"
                           } else {
-                              python_presence = "without_python"
+                              python_suffix = "off"
                           }
-                          bat(returnStatus:true, script: "ECHO F | xcopy /Y /E ${env.WORKSPACE}\\dist\\windows\\ovms.zip \\\\${env.OV_SHARE_05_IP}\\data\\cv_bench_cache\\OVMS_do_not_remove\\ovms-windows-${python_presence}-${safeBranchName}-latest.zip")
+                          def destPath = "\\\\${env.OV_SHARE_05_IP}\\data\\cv_bench_cache\\OVMS_do_not_remove\\omvs_artifacts\\${env.PRODUCT_VERSION}\\${env.RELEASE_TAG}\\windows"
+                          def artifactsPath = "${buildstamp}\\ovms_windows_${env.PRODUCT_VERSION}_${env.RELEASE_TAG}_python_${python_suffix}.zip"
+                          bat(returnStatus:true, script: "ECHO F | xcopy /Y /E ${env.WORKSPACE}\\dist\\windows\\ovms.zip ${destPath}\\${artifactsPath}")
+                          bat(returnStatus:true, script: "cd /d ${destPath} && mklink /D latest ${artifactsPath}")
                           } finally {
                             windows.archive_build_artifacts()
                             windows.archive_test_artifacts()
