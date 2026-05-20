@@ -91,14 +91,12 @@ Config& Config::parse(int argc, char** argv) {
 bool Config::parse(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* modelsSettings) {
     this->serverSettings = *serverSettings;
     this->modelsSettings = *modelsSettings;
-
     static EnvGuard envGuard;
 #if defined(__linux__) || defined(_WIN32)
     if (this->serverSettings.logLevel == "DEBUG" || this->serverSettings.logLevel == "TRACE") {
         envGuard.set("OPENVINO_LOG_LEVEL", "4");
     }
 #endif
-
     return validate();
 }
 
