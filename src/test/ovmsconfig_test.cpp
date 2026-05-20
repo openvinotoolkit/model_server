@@ -31,6 +31,24 @@
 #include "../systeminfo.hpp"
 #include "test_utils.hpp"
 
+#ifdef __linux__
+#include <sys/resource.h>
+
+namespace {
+class ScopedNoFileRlimitRestore {
+public:
+    explicit ScopedNoFileRlimitRestore(const struct rlimit& originalLimit) :
+        originalLimit(originalLimit) {}
+    ~ScopedNoFileRlimitRestore() {
+        setrlimit(RLIMIT_NOFILE, &originalLimit);
+    }
+
+private:
+    struct rlimit originalLimit;
+};
+}  // namespace
+#endif
+
 using testing::_;
 using testing::ContainerEq;
 using testing::Return;
@@ -201,6 +219,37 @@ TEST_F(OvmsConfigDeathTest, restWorkersTooLarge) {
     int arg_count = 9;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "rest_workers count should be from 2 to ");
 }
+
+#ifdef __linux__
+TEST_F(OvmsConfigDeathTest, restWorkersDefaultReducedForOpenFilesLimit) {
+    // limit allowed number of open files to value that enforce default rest_workers to be determined based on open files limit instead of number of cpu cores alone. This is to test that default rest_workers count is reduced when open files limit is low.
+    int cpu_cores = ovms::getCoreCount();
+    struct rlimit limit;
+    ASSERT_EQ(getrlimit(RLIMIT_NOFILE, &limit), 0);
+    ScopedNoFileRlimitRestore restoreOriginalLimit(limit);
+    struct rlimit newLimit = {std::min(static_cast<rlim_t>(cpu_cores * 5), limit.rlim_max), limit.rlim_max};
+    std::cout << "Setting open files limit to " << newLimit.rlim_cur << " to test that default rest_workers count is reduced based on open files limit" << std::endl;
+    ASSERT_EQ(setrlimit(RLIMIT_NOFILE, &newLimit), 0);
+
+    char* n_argv[] = {"ovms", "--config_path", "/path1", "--rest_port", "8080", "--port", "8081"};
+    int arg_count = 7;
+    ovms::Config::instance().parse(arg_count, n_argv);
+    EXPECT_TRUE(ovms::Config::instance().validate());
+}
+
+TEST_F(OvmsConfigDeathTest, restWorkersTooLargeForOpenFilesLimit) {
+    // limit allowed number of open files to 1024 to make sure that rest_workers count is too large.
+    struct rlimit limit;
+    ASSERT_EQ(getrlimit(RLIMIT_NOFILE, &limit), 0);
+    ScopedNoFileRlimitRestore restoreOriginalLimit(limit);
+    struct rlimit newLimit = {std::min(static_cast<rlim_t>(1024), limit.rlim_max), limit.rlim_max};
+    std::cout << "Setting open files limit to " << newLimit.rlim_cur << " to test that rest_workers count is too large for the limit based on number of cpu cores alone" << std::endl;
+    ASSERT_EQ(setrlimit(RLIMIT_NOFILE, &newLimit), 0);
+    char* n_argv[] = {"ovms", "--config_path", "/path1", "--rest_port", "8080", "--port", "8081", "--rest_workers", "1000"};
+    int arg_count = 9;
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "rest_workers count cannot be larger than .* due to open files limit. Current open files limit: .*1024");
+}
+#endif
 
 TEST_F(OvmsConfigDeathTest, restWorkersDefinedRestPortUndefined) {
     char* n_argv[] = {"ovms", "--config_path", "/path1", "--port", "8080", "--rest_workers", "60"};
@@ -784,6 +833,18 @@ TEST_F(OvmsConfigDeathTest, hfPullNoSourceModel) {
     };
     int arg_count = 8;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "source_model parameter is required for pull mode");
+}
+
+TEST_F(OvmsConfigDeathTest, hfSourceModelWithoutTask) {
+    char* n_argv[] = {
+        "ovms",
+        "--source_model",
+        "some/model",
+        "--model_repository_path",
+        "/some/path",
+    };
+    int arg_count = 5;
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "--source_model should be used combined with --task");
 }
 
 TEST_F(OvmsConfigDeathTest, hfPullNoRepositoryPath) {
@@ -2364,7 +2425,7 @@ TEST(OvmsConfigTest, positiveMulti) {
 #endif
     EXPECT_EQ(config.cacheDir(), "/tmp/model_cache");
     ASSERT_TRUE(config.getServerSettings().allowedLocalMediaPath.has_value());
-    EXPECT_EQ(config.getServerSettings().allowedLocalMediaPath.value(), "/tmp/path");
+    EXPECT_EQ(config.getServerSettings().allowedLocalMediaPath.value(), ovms::FileSystem::normalizeConfiguredPath("/tmp/path"));
     ASSERT_TRUE(config.getServerSettings().allowedMediaDomains.has_value());
     EXPECT_EQ(config.getServerSettings().allowedMediaDomains.value().size(), 3);
     EXPECT_EQ(config.getServerSettings().allowedMediaDomains.value()[0], "raw.githubusercontent.com");
@@ -2383,6 +2444,25 @@ TEST(OvmsConfigTest, positiveMulti) {
 #ifdef _WIN32
     std::filesystem::remove_all(cpu_extension_lib_path);
 #endif
+}
+
+TEST(OvmsConfigTest, allowedLocalMediaPathRelativeIsNormalized) {
+    char* n_argv[] = {
+        "ovms",
+        "--rest_port", "45",
+        "--allowed_local_media_path",
+        "src/test",
+        "--config_path",
+        "/config.json"};
+
+    int arg_count = 7;
+    ConstructorEnabledConfig config;
+    config.parse(arg_count, n_argv);
+
+    ASSERT_TRUE(config.getServerSettings().allowedLocalMediaPath.has_value());
+    const auto configuredPath = std::filesystem::path(config.getServerSettings().allowedLocalMediaPath.value());
+    const auto expectedPath = std::filesystem::path(ovms::FileSystem::normalizeConfiguredPath("src/test"));
+    EXPECT_EQ(configuredPath.lexically_normal(), expectedPath.lexically_normal());
 }
 
 TEST(OvmsConfigTest, positiveSingle) {

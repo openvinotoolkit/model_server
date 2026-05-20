@@ -39,7 +39,7 @@ public:
 
     std::string serializeUnaryResponse(const std::vector<ov::genai::GenerationOutput>& generationOutputs) override;
     std::string serializeUnaryResponse(ov::genai::EncodedResults& results) override;
-    std::string serializeUnaryResponse(ov::genai::VLMDecodedResults& results) override;
+    std::string serializeUnaryResponse(ov::genai::VLMDecodedResults& results, const std::string& textResponse) override;
     std::string serializeStreamingChunk(const std::string& chunkResponse, ov::genai::GenerationFinishReason finishReason) override;
     std::string serializeStreamingUsageChunk() override;
     std::string serializeStreamingHandshakeChunk() override;

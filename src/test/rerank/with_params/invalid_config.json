@@ -19,10 +19,6 @@
     ],
     "mediapipe_config_list": [
         {
-            "name": "rerank",
-            "graph_path": "/ovms/src/test/rerank/with_params/invalid_graph.pbtxt"
-        },
-        {
             "name": "rerank_ov",
             "graph_path": "/ovms/src/test/rerank/with_params/invalid_graph_ov.pbtxt"
         }

@@ -73,7 +73,7 @@ if  ! [[ $debug_bazel_flags == *"_py_off"* ]]; then	mkdir -p /ovms_release/lib/p
 	echo $'Metadata-Version: 1.0\nName: openvino-genai\nVersion: 2026.2\nRequires-Python: >=3.9\nRequires-Dist: openvino-genai~=2026.2.0' > /ovms_release/lib/python/openvino_genai-2026.2.dist-info/METADATA; fi
 
 if [ -f /opt/intel/openvino/runtime/lib/intel64/plugins.xml ]; then cp /opt/intel/openvino/runtime/lib/intel64/plugins.xml /ovms_release/lib/ ; fi
-find /opt/intel/openvino/runtime/lib/intel64/ -iname '*.mvcmd*' -exec cp -v {} /ovms_release/lib/ \;
+find /opt/intel/openvino/runtime/lib/intel64/ -iname '*.mvcmd*' -exec cp -vP {} /ovms_release/lib/ \;
 if [ -d /opt/intel/openvino/runtime/3rdparty ] ; then find /opt/intel/openvino/runtime/3rdparty/ -iname '*libtbb.so*' -exec cp -vP {} /ovms_release/lib/ \;; fi
 if [[ $debug_bazel_flags == *"--copt=-g -c dbg"* ]]; then find /opt/intel/openvino/runtime/3rdparty/ -iname '*libtbb_debug*' -exec cp -vP {} /ovms_release/lib/ \;; fi
 find /opt/opencv/lib/ -iname '*.so*' -exec cp -vP {} /ovms_release/lib/ \;
@@ -92,8 +92,6 @@ patchelf --debug --set-rpath '$ORIGIN' /ovms_release/lib/libopenvino.so
 patchelf --debug --set-rpath '$ORIGIN' /ovms_release/lib/libopenvino_tokenizers.so
 patchelf --debug --set-rpath '$ORIGIN' /ovms_release/lib/lib*plugin.so
 if [ -e /ovms_release/lib/libopenvino_genai_c.so ]; then rm -rf /ovms_release/lib/libopenvino_genai_c.so* ; fi
-if [[ "$BASE_OS" =~ "redhat" ]] && [ -f /ovms_release/lib/libopenvino_genai.so ]; then cd /ovms_release/lib/ ; rm -rf libopenvino_genai.so.* ; ln -s libopenvino_genai.so libopenvino_genai.so.2620 ; ln -s libopenvino_genai.so libopenvino_genai.so.2026.2.0.0 ; fi
-if [[ "$BASE_OS" =~ "ubuntu" ]] && [ -f /ovms_release/lib/libopenvino_genai.so.2026.2.0.0 ]; then cd /ovms_release/lib/ ; rm -rf libopenvino_genai.so ; rm -rf libopenvino_genai.so.2620 ; ln -s libopenvino_genai.so.2026.2.0.0 libopenvino_genai.so.2620 ; ln -s libopenvino_genai.so.2026.2.0.0 libopenvino_genai.so ; fi
 
 cd /ovms
 cp -v /ovms/release_files/LICENSE /ovms_release/

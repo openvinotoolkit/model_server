@@ -127,7 +127,7 @@ index 10f1a08..b67d39c 100644
          )
  
      #### FC methods ####
-@@ -45,9 +46,9 @@ class QwenAPIHandler(OpenAICompletionsHandler):
+@@ -45,9 +46,10 @@ class QwenAPIHandler(OpenAICompletionsHandler):
              model=self.model_name.replace("-FC", ""),
              tools=tools,
              parallel_tool_calls=True,
@@ -137,10 +137,11 @@ index 10f1a08..b67d39c 100644
 +            max_completion_tokens=2048,
 +            tool_choice=os.getenv("TOOL_CHOICE", "auto"),
 +            extra_body={"chat_template_kwargs": json.loads(os.getenv("CHAT_TEMPLATE_KWARGS", "{}"))},
++            temperature=self.temperature,
              stream=True,
              stream_options={
                  "include_usage": True
-@@ -352,4 +353,4 @@ class QwenAgentNoThinkHandler(QwenAgentThinkHandler):
+@@ -352,4 +354,4 @@ class QwenAgentNoThinkHandler(QwenAgentThinkHandler):
              'timeout': 1000,
              'max_tokens': 16384
          }

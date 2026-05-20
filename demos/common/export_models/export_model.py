@@ -54,7 +54,7 @@ parser_text.add_argument('--max_prompt_len', required=False, type=int, default=N
                          'Not effective if target device is not NPU', dest='max_prompt_len')
 parser_text.add_argument('--prompt_lookup_decoding', action='store_true', help='Set pipeline to use prompt lookup decoding', dest='prompt_lookup_decoding')
 parser_text.add_argument('--reasoning_parser', choices=["qwen3", "gptoss"], help='Set the type of the reasoning parser for reasoning content extraction', dest='reasoning_parser')
-parser_text.add_argument('--tool_parser', choices=["llama3", "phi4", "hermes3", "mistral", "qwen3coder", "gptoss", "devstral"], help='Set the type of the tool parser for tool calls extraction', dest='tool_parser')
+parser_text.add_argument('--tool_parser', choices=["llama3", "phi4", "hermes3", "mistral", "qwen3coder", "gptoss", "devstral", "lfm2"], help='Set the type of the tool parser for tool calls extraction', dest='tool_parser')
 parser_text.add_argument('--enable_tool_guided_generation', action='store_true', help='Enables enforcing tool schema during generation. Requires setting tool_parser', dest='enable_tool_guided_generation')
 
 parser_embeddings_ov = subparsers.add_parser('embeddings_ov', help='export model for embeddings endpoint with directory structure aligned with OpenVINO tools')
@@ -63,12 +63,6 @@ parser_embeddings_ov.add_argument('--skip_normalize', default=True, action='stor
 parser_embeddings_ov.add_argument('--pooling', default="CLS", choices=["CLS", "LAST", "MEAN"], help='Embeddings pooling mode', dest='pooling')
 parser_embeddings_ov.add_argument('--truncate', default=False, action='store_true', help='Truncate the prompts to fit to the embeddings model', dest='truncate')
 parser_embeddings_ov.add_argument('--num_streams', default=1,type=int, help='The number of parallel execution streams to use for the model. Use at least 2 on 2 socket CPU systems.', dest='num_streams')
-
-parser_rerank = subparsers.add_parser('rerank', help='[deprecated] export model for rerank endpoint with models split into separate, versioned directories')
-add_common_arguments(parser_rerank)
-parser_rerank.add_argument('--num_streams', default=1, type=int, help='The number of parallel execution streams to use for the model. Use at least 2 on 2 socket CPU systems.', dest='num_streams')
-parser_rerank.add_argument('--max_doc_length', default=16000, type=int, help='Maximum length of input documents in tokens', dest='max_doc_length')
-parser_rerank.add_argument('--version', default="1", help='version of the model', dest='version')
 
 parser_rerank_ov = subparsers.add_parser('rerank_ov', help='export model for rerank endpoint with directory structure aligned with OpenVINO tools')
 add_common_arguments(parser_rerank_ov)
@@ -134,14 +128,30 @@ node {
   name: "S2tExecutor"
   input_side_packet: "STT_NODE_RESOURCES:s2t_servable"
   calculator: "S2tCalculator"
+  input_stream: "LOOPBACK:loopback"
   input_stream: "HTTP_REQUEST_PAYLOAD:input"
+  output_stream: "LOOPBACK:loopback"
   output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+  input_stream_info: {
+    tag_index: 'LOOPBACK:0',
+    back_edge: true
+  }
   node_options: {
     [type.googleapis.com / mediapipe.S2tCalculatorOptions]: {
       models_path: "{{model_path}}",
       plugin_config: '{ "NUM_STREAMS": "{{num_streams|default(1, true)}}" }',
       target_device: "{{target_device|default("CPU", true)}}",
       enable_word_timestamps: {% if not enable_word_timestamps %}false{% else %}true{% endif%},
+    }
+  }
+  input_stream_handler {
+    input_stream_handler: "SyncSetInputStreamHandler",
+    options {
+      [mediapipe.SyncSetInputStreamHandlerOptions.ext] {
+        sync_set {
+          tag_index: "LOOPBACK:0"
+        }
+      }
     }
   }
 }
@@ -187,35 +197,6 @@ node {
       target_device: "{{target_device|default("CPU", true)}}"
     }
   }
-}
-"""
-
-rerank_graph_template = """input_stream: "REQUEST_PAYLOAD:input"
-output_stream: "RESPONSE_PAYLOAD:output"
-node {
-  calculator: "OpenVINOModelServerSessionCalculator"
-  output_side_packet: "SESSION:tokenizer"
-  node_options: {
-    [type.googleapis.com / mediapipe.OpenVINOModelServerSessionCalculatorOptions]: {
-      servable_name: "{{model_name}}_tokenizer_model"
-    }
-  }
-}
-node {
-  calculator: "OpenVINOModelServerSessionCalculator"
-  output_side_packet: "SESSION:rerank"
-  node_options: {
-    [type.googleapis.com / mediapipe.OpenVINOModelServerSessionCalculatorOptions]: {
-      servable_name: "{{model_name}}_rerank_model"
-    }
-  }
-}
-node {
-    input_side_packet: "TOKENIZER_SESSION:tokenizer"
-    input_side_packet: "RERANK_SESSION:rerank"
-    calculator: "RerankCalculator"
-    input_stream: "REQUEST_PAYLOAD:input"
-    output_stream: "RESPONSE_PAYLOAD:output"
 }
 """
 
@@ -271,25 +252,6 @@ node: {
       }
     }
   }
-}"""
-
-rerank_subconfig_template = """{
-    "model_config_list": [
-    { "config": 
-	    {
-                "name": "{{model_name}}_tokenizer_model",
-                "base_path": "tokenizer"
-            }
-	},
-    { "config": 
-	    {
-                "name": "{{model_name}}_rerank_model",
-                "base_path": "rerank",
-                "target_device": "{{target_device|default("CPU", true)}}",
-                "plugin_config": { "NUM_STREAMS": "{{num_streams|default(1, true)}}" }
-            }
-	}
-   ]
 }"""
 
 image_generation_graph_template = """input_stream: "HTTP_REQUEST_PAYLOAD:input"
@@ -558,47 +520,6 @@ def export_rerank_model_ov(model_repository_path, source_model, model_name, prec
     print("Created graph {}".format(os.path.join(model_repository_path, model_name, 'graph.pbtxt')))
     add_servable_to_config(config_file_path, model_name, os.path.relpath(os.path.join(model_repository_path, model_name), os.path.dirname(config_file_path)))
 
-def export_rerank_model(model_repository_path, source_model, model_name, precision, task_parameters, version, config_file_path, max_doc_length):
-    if os.path.isfile(os.path.join(model_name, 'openvino_model.xml')):
-        print("OV model is source folder. Skipping conversion.")
-        os.makedirs(os.path.join(model_repository_path, model_name, 'rerank', version), exist_ok=True)
-        os.makedirs(os.path.join(model_repository_path, model_name, 'tokenizer', version), exist_ok=True)
-        shutil.move(os.path.join(model_repository_path, model_name, 'openvino_tokenizer.xml'), os.path.join(model_repository_path, model_name, 'tokenizer', version, 'model.xml'))
-        shutil.move(os.path.join(model_repository_path, model_name, 'openvino_tokenizer.bin'), os.path.join(model_repository_path, model_name, 'tokenizer', version, 'model.bin'))
-        shutil.move(os.path.join(model_repository_path, model_name, 'openvino_model.xml'), os.path.join(model_repository_path, model_name, 'rerank', version, 'model.xml'))
-        shutil.move(os.path.join(model_repository_path, model_name, 'openvino_model.bin'), os.path.join(model_repository_path, model_name, 'rerank', version, 'model.bin'))
-    else: # assume HF model name
-        with tempfile.TemporaryDirectory() as tmpdirname:
-            embeddings_path = os.path.join(model_repository_path, model_name, 'rerank', version)
-            print("Exporting rerank model to ",embeddings_path)
-            if not os.path.isdir(embeddings_path) or args['overwrite_models']:
-                optimum_command = "optimum-cli export openvino --disable-convert-tokenizer --model {} --task text-classification --weight-format {} {} --trust-remote-code {}".format(source_model, precision, task_parameters['extra_quantization_params'], tmpdirname)
-                if os.system(optimum_command):
-                    raise ValueError("Failed to export rerank model", source_model)
-                set_rt_info(tmpdirname, 'openvino_model.xml', 'config.json')
-                os.makedirs(embeddings_path, exist_ok=True)
-                shutil.move(os.path.join(tmpdirname, 'openvino_model.xml'), os.path.join(embeddings_path, 'model.xml'))
-                shutil.move(os.path.join(tmpdirname, 'openvino_model.bin'), os.path.join(embeddings_path, 'model.bin'))
-            tokenizer_path = os.path.join(model_repository_path, model_name,'tokenizer', version)
-            print("Exporting tokenizer to ",tokenizer_path)
-            if not os.path.isdir(tokenizer_path) or args['overwrite_models']:
-                export_rerank_tokenizer(source_model, tmpdirname, max_doc_length)
-                set_rt_info(tmpdirname, 'openvino_tokenizer.xml', 'tokenizer_config.json')
-                os.makedirs(tokenizer_path, exist_ok=True)
-                shutil.move(os.path.join(tmpdirname, 'openvino_tokenizer.xml'), os.path.join(tokenizer_path, 'model.xml'))
-                shutil.move(os.path.join(tmpdirname, 'openvino_tokenizer.bin'), os.path.join(tokenizer_path, 'model.bin'))
-    gtemplate = jinja2.Environment(loader=jinja2.BaseLoader).from_string(rerank_graph_template)
-    graph_content = gtemplate.render(model_name=model_name, **task_parameters)
-    with open(os.path.join(model_repository_path, model_name, 'graph.pbtxt'), 'w') as f:
-        f.write(graph_content)
-    print("Created graph {}".format(os.path.join(model_repository_path, model_name, 'graph.pbtxt')))
-    stemplate = jinja2.Environment(loader=jinja2.BaseLoader).from_string(rerank_subconfig_template)
-    subconfig_content = stemplate.render(model_name=model_name, **task_parameters)
-    with open(os.path.join(model_repository_path, model_name, 'subconfig.json'), 'w') as f:
-        f.write(subconfig_content)
-    print("Created subconfig {}".format(os.path.join(model_repository_path, model_name, 'subconfig.json')))
-    add_servable_to_config(config_file_path, model_name, os.path.relpath(os.path.join(model_repository_path, model_name), os.path.dirname(config_file_path)))
-
 
 def export_image_generation_model(model_repository_path, source_model, model_name, precision, task_parameters, config_file_path, num_streams):
     model_path = "./"
@@ -669,9 +590,6 @@ if args['task'] == 'text_generation':
 
 elif args['task'] == 'embeddings_ov':
     export_embeddings_model_ov(args['model_repository_path'], args['source_model'], args['model_name'],  args['precision'], template_parameters, args['config_file_path'], args['truncate'])
-
-elif args['task'] == 'rerank':
-    export_rerank_model(args['model_repository_path'], args['source_model'], args['model_name'] ,args['precision'], template_parameters, str(args['version']), args['config_file_path'], args['max_doc_length'])
 
 elif args['task'] == 'rerank_ov':
     export_rerank_model_ov(args['model_repository_path'], args['source_model'], args['model_name'] ,args['precision'], template_parameters, args['config_file_path'], args['max_doc_length'])

@@ -15,18 +15,8 @@
 //*****************************************************************************
 #include "pipeline_factory.hpp"
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wall"
-#include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
-#pragma GCC diagnostic pop
-#include "../kfs_frontend/kfs_utils.hpp"
-
-#include "../capi_frontend/inferencerequest.hpp"
-#include "../capi_frontend/inferenceresponse.hpp"
 #include "../logging.hpp"
 #include "../model_metric_reporter.hpp"
-#include "../modelmanager.hpp"
-#include "../prediction_service_utils.hpp"
 #include "../status.hpp"
 #include "nodeinfo.hpp"
 #include "pipeline.hpp"
@@ -49,12 +39,12 @@ PipelineDefinition* PipelineFactory::findDefinitionByName(const std::string& nam
     }
 }
 
-void PipelineFactory::retireOtherThan(std::set<std::string>&& pipelinesInConfigFile, ModelManager& manager) {
+void PipelineFactory::retireOtherThan(std::set<std::string>&& pipelinesInConfigFile, ModelInstanceProvider& modelInstanceProvider) {
     std::for_each(definitions.begin(),
         definitions.end(),
-        [&pipelinesInConfigFile, &manager](auto& nameDefinitionPair) {
+        [&pipelinesInConfigFile, &modelInstanceProvider](auto& nameDefinitionPair) {
             if (pipelinesInConfigFile.find(nameDefinitionPair.second->getName()) == pipelinesInConfigFile.end() && nameDefinitionPair.second->getStateCode() != PipelineDefinitionStateCode::RETIRED) {
-                nameDefinitionPair.second->retire(manager);
+                nameDefinitionPair.second->retire(modelInstanceProvider);
             }
         });
 }
@@ -62,19 +52,23 @@ void PipelineFactory::retireOtherThan(std::set<std::string>&& pipelinesInConfigF
 Status PipelineFactory::createDefinition(const std::string& pipelineName,
     const std::vector<NodeInfo>& nodeInfos,
     const pipeline_connections_t& connections,
-    ModelManager& manager) {
+    ModelInstanceProvider& modelInstanceProvider,
+    ServableNameChecker& nameChecker,
+    DagResourceManager& resourceMgr,
+    MetricRegistry* registry,
+    const MetricConfig* metricConfig) {
     if (definitionExists(pipelineName)) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "pipeline definition: {} is already created", pipelineName);
         return StatusCode::PIPELINE_DEFINITION_ALREADY_EXIST;
     }
-    std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>(pipelineName, nodeInfos, connections, manager.getMetricRegistry(), &manager.getMetricConfig());
+    std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>(pipelineName, nodeInfos, connections, registry, metricConfig);
 
-    pipelineDefinition->makeSubscriptions(manager);
-    Status validationResult = pipelineDefinition->validate(manager);
+    pipelineDefinition->makeSubscriptions(modelInstanceProvider);
+    Status validationResult = pipelineDefinition->validate(modelInstanceProvider, nameChecker, resourceMgr);
     if (!validationResult.ok()) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Validation of pipeline definition: {} failed: {}", pipelineName, validationResult.string());
         if (validationResult == StatusCode::PIPELINE_NAME_OCCUPIED) {
-            pipelineDefinition->resetSubscriptions(manager);
+            pipelineDefinition->resetSubscriptions(modelInstanceProvider);
             return validationResult;
         }
     } else {
@@ -90,20 +84,22 @@ Status PipelineFactory::createDefinition(const std::string& pipelineName,
 Status PipelineFactory::reloadDefinition(const std::string& pipelineName,
     const std::vector<NodeInfo>&& nodeInfos,
     const pipeline_connections_t&& connections,
-    ModelManager& manager) {
+    ModelInstanceProvider& modelInstanceProvider,
+    ServableNameChecker& nameChecker,
+    DagResourceManager& resourceMgr) {
     auto pd = findDefinitionByName(pipelineName);
     if (pd == nullptr) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Requested to reload pipeline definition but it does not exist: {}", pipelineName);
         return StatusCode::UNKNOWN_ERROR;
     }
-    return pd->reload(manager, std::move(nodeInfos), std::move(connections));
+    return pd->reload(modelInstanceProvider, nameChecker, resourceMgr, std::move(nodeInfos), std::move(connections));
 }
 
-Status PipelineFactory::revalidatePipelines(ModelManager& manager) {
+Status PipelineFactory::revalidatePipelines(ModelInstanceProvider& modelInstanceProvider, ServableNameChecker& nameChecker, DagResourceManager& resourceMgr) {
     Status firstErrorStatus = StatusCode::OK;
     for (auto& [name, definition] : definitions) {
         if (definition->getStatus().isRevalidationRequired()) {
-            auto validationResult = definition->validate(manager);
+            auto validationResult = definition->validate(modelInstanceProvider, nameChecker, resourceMgr);
             if (!validationResult.ok()) {
                 if (firstErrorStatus.ok()) {
                     firstErrorStatus = validationResult;
@@ -138,20 +134,4 @@ const std::vector<std::string> PipelineFactory::getNamesOfAvailablePipelines() c
     return names;
 }
 
-template <typename RequestType, typename ResponseType>
-Status PipelineFactory::create(std::unique_ptr<Pipeline>& pipeline, const std::string& name, const RequestType* request, ResponseType* response, ModelManager& manager) const {
-    std::shared_lock lock(definitionsMtx);
-    auto it = definitions.find(name);
-    if (it == definitions.end()) {
-        SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Pipeline with requested name: {} does not exist", name);
-        return StatusCode::PIPELINE_DEFINITION_NAME_MISSING;
-    }
-    auto& definition = *it->second;
-    lock.unlock();
-    return definition.create(pipeline, request, response, manager);
-}
-
-template Status PipelineFactory::create<::KFSRequest, ::KFSResponse>(std::unique_ptr<Pipeline>& pipeline, const std::string& name, const ::KFSRequest* request, ::KFSResponse* response, ModelManager& manager) const;
-template Status PipelineFactory::create<tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse>(std::unique_ptr<Pipeline>& pipeline, const std::string& name, const tensorflow::serving::PredictRequest* request, tensorflow::serving::PredictResponse* response, ModelManager& manager) const;
-template Status PipelineFactory::create<InferenceRequest, InferenceResponse>(std::unique_ptr<Pipeline>& pipeline, const std::string& name, const InferenceRequest* request, InferenceResponse* response, ModelManager& manager) const;
 }  // namespace ovms

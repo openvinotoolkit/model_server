@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2024 Intel Corporation
+// Copyright 2025 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,20 +13,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#pragma once
 
-syntax = "proto2";
-package mediapipe;
+#include <sstream>
+#include <string>
 
-import "mediapipe/framework/calculator.proto";
+namespace ovms {
 
-message RerankCalculatorOptions {
-  extend mediapipe.CalculatorOptions {
-    // https://github.com/google/mediapipe/issues/634 have to be unique in app
-    // no rule to obtain this
-    optional RerankCalculatorOptions ext = 113473741;
-    }
-
-    optional uint64 max_allowed_chunks = 1 [default = 10000];  // Default taken from Cohere API documentation
-
-    optional uint64 max_position_embeddings = 2;
+inline std::string wrapTextInServerSideEventMessage(const std::string& text) {
+    std::stringstream ss;
+    ss << "data: " << text << "\n\n";
+    return ss.str();
 }
+
+}  // namespace ovms

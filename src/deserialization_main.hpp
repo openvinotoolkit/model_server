@@ -20,7 +20,8 @@
 #include <tuple>
 #include <unordered_map>
 
-#include <openvino/openvino.hpp>
+#include <openvino/core/except.hpp>
+#include <openvino/runtime/tensor.hpp>
 
 #include "extractchoice.hpp"
 #include "logging.hpp"

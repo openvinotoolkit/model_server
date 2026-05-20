@@ -20,6 +20,7 @@
 #include <vector>
 
 #include "../../../logging.hpp"
+#include "../../../profiler.hpp"
 #include "../../../status.hpp"
 #include "../../apis/openai_completions.hpp"
 #include "../../apis/openai_responses.hpp"
@@ -113,8 +114,9 @@ absl::Status LegacyServable::parseRequest(std::shared_ptr<GenAiServableExecution
     };
     ov::AnyMap streamerConfig;
     if (legacyExecutionContext->apiHandler->isStream() &&
-        legacyExecutionContext->apiHandler->getOutputParser() != nullptr &&
-        (legacyExecutionContext->apiHandler->getOutputParser()->requiresStreamingWithSpecialTokens())) {
+        ((legacyExecutionContext->apiHandler->getOutputParser() != nullptr &&
+             legacyExecutionContext->apiHandler->getOutputParser()->requiresStreamingWithSpecialTokens()) ||
+            !legacyExecutionContext->apiHandler->getRequest().skipSpecialTokens)) {
         streamerConfig.insert(ov::genai::skip_special_tokens(false));
     }
     legacyExecutionContext->textStreamer = std::make_shared<ov::genai::TextStreamer>(getProperties()->tokenizer, callback, streamerConfig);
@@ -227,7 +229,12 @@ absl::Status LegacyServable::preparePartialResponse(std::shared_ptr<GenAiServabl
         if (!executionContext->lastStreamerCallbackOutput.empty()) {
             lastTextChunk = lastTextChunk + executionContext->lastStreamerCallbackOutput;
         }
-        std::string serializedChunk = executionContext->apiHandler->serializeStreamingChunk(lastTextChunk, ov::genai::GenerationFinishReason::STOP);
+        if (legacyExecutionContext->results.finish_reasons.empty()) {
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Missing finish reason in legacy LM streaming generation result, defaulting to STOP");
+        }
+        // Legacy generation path always runs with batch=1, so we read the single finish reason at index 0.
+        ov::genai::GenerationFinishReason finishReason = legacyExecutionContext->results.finish_reasons.empty() ? ov::genai::GenerationFinishReason::STOP : legacyExecutionContext->results.finish_reasons[0];
+        std::string serializedChunk = executionContext->apiHandler->serializeStreamingChunk(lastTextChunk, finishReason);
         if (!serializedChunk.empty()) {
             executionContext->response = wrapTextInServerSideEventMessage(serializedChunk);
         }

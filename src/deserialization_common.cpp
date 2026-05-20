@@ -15,6 +15,8 @@
 //*****************************************************************************
 #include "deserialization_common.hpp"
 
+#include <openvino/runtime/infer_request.hpp>
+
 #include "itensorfactory.hpp"
 #include "logging.hpp"
 

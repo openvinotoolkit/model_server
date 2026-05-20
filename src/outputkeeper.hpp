@@ -18,7 +18,8 @@
 #include <unordered_map>
 #include <string>
 
-#include <openvino/openvino.hpp>
+#include <openvino/runtime/infer_request.hpp>
+#include <openvino/runtime/tensor.hpp>
 
 #include "tensorinfo.hpp"
 

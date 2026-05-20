@@ -25,7 +25,7 @@ There are other options to fulfill the prerequisites like [OpenVINO Model Server
 
 This demo can be followed without changes on Panther Lake host with 64GB RAM and VRAM allocation to GPU extended using Intel Graphics Software. That way all the mentioned models can be loaded simultaneously. It's also possible to use [llama-swap](https://github.com/openvinotoolkit/model_server/blob/main/extras/llama_swap/README.md) integration to reload the models automatically. On hosts with less VRAM available, use a subset of the models, apply other models or configure different target device like CPU or NPU. Check this list of [preconfigured OpenVINO models](https://huggingface.co/OpenVINO).
 
-## Step 1: Pull model and start the OVMS sever
+## Step 1: Pull model and start the OVMS server
 ::::{tab-set}
 :::{tab-item} Windows
 :sync: Windows
@@ -285,21 +285,21 @@ curl http://localhost:8000/v3/images/generations -H "Content-Type: application/j
 
 ### Step 1: Model Preparation
 
-The vision language model used in this demo is `Junrui2021/Qwen3-VL-8B-Instruct-int4`. Run the ovms with --pull parameter to download and quantize the model:
+The vision language model used in this demo is `OpenVINO/Qwen3-VL-8B-Instruct-int4-ov`. Run the ovms with --pull parameter to download and quantize the model:
 
 ::::{tab-set}
 :::{tab-item} Windows
 :sync: Windows
 ```bat
-ovms.exe --pull --source_model Junrui2021/Qwen3-VL-8B-Instruct-int4 --model_repository_path models --model_name ovms-model-vl --task text_generation --pipeline_type VLM_CB --target_device GPU
-ovms.exe --add_to_config --config_path models\config.json --model_path Junrui2021\Qwen3-VL-8B-Instruct-int4 --model_name ovms-model-vl
+ovms.exe --pull --source_model OpenVINO/Qwen3-VL-8B-Instruct-int4-ov --model_repository_path models --model_name ovms-model-vl --task text_generation --pipeline_type VLM_CB --target_device GPU
+ovms.exe --add_to_config --config_path models\config.json --model_path OpenVINO/Qwen3-VL-8B-Instruct-int4-ov --model_name ovms-model-vl
 ```
 :::
 :::{tab-item} Linux (using Docker)
 :sync: Linux
 ```bash
-docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:weekly --pull --source_model Junrui2021/Qwen3-VL-8B-Instruct-int4 --model_repository_path /models --model_name ovms-model-vl --task text_generation --pipeline_type VLM_CB --target_device GPU
-docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models openvino/model_server:weekly --add_to_config --config_path /models/config.json  --model_path Junrui2021/Qwen3-VL-8B-Instruct-int4 --model_name ovms-model-vl
+docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:weekly --pull --source_model OpenVINO/Qwen3-VL-8B-Instruct-int4-ov --model_repository_path /models --model_name ovms-model-vl --task text_generation --pipeline_type VLM_CB --target_device GPU
+docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models openvino/model_server:weekly --add_to_config --config_path /models/config.json  --model_path OpenVINO/Qwen3-VL-8B-Instruct-int4-ov --model_name ovms-model-vl
 ```
 :::
 ::::
@@ -363,7 +363,7 @@ mcpo --port 9000 -- python -m mcp_weather_server
 
 ## Using Web Search
 
-### Step 1: Configure WebSearch
+### Step 1: Configure Web Search
 
 1. Go to **Admin Panel** → **Settings** → **Web Search**
 2. Enable **Web Search**
@@ -474,18 +474,20 @@ Next, download and add to config model for transcription:
 :::{tab-item} Windows
 :sync: Windows
 ```bat
-ovms.exe --pull --source_model OpenVINO/whisper-base-fp16-ov --model_repository_path models --task speech2text
+ovms.exe --pull --source_model OpenVINO/whisper-base-fp16-ov --model_repository_path models --task speech2text --target_device GPU
 ovms.exe --add_to_config --config_path  models\config.json --model_path OpenVINO\whisper-base-fp16-ov --model_name OpenVINO/whisper-base-fp16-ov
 ```
 :::
 :::{tab-item} Linux (using Docker)
 :sync: Linux
 ```bash
-docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models openvino/model_server:weekly --pull --source_model OpenVINO/whisper-base-fp16-ov --model_repository_path /models --task speech2text
+docker run --rm -u $(id -u):$(id -g) --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -v $PWD/models:/models openvino/model_server:weekly --pull --source_model OpenVINO/whisper-base-fp16-ov --model_repository_path /models --task speech2text --target_device GPU
 docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models openvino/model_server:weekly --add_to_config --config_path /models/config.json --model_path OpenVINO/whisper-base-fp16-ov --model_name OpenVINO/whisper-base-fp16-ov
 ```
 :::
 :::: 
+
+> **Note:** Family of Whisper models (except Whisper-large) can be also deployed on NPU or CPU devices by just changing the --target_device parameter.
 
 ### Step 2: Audio Settings
 

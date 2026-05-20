@@ -24,7 +24,7 @@ def libgit2_engine():
     new_git_repository(
         name = "libgit2_engine",
         remote = "https://github.com/libgit2/libgit2.git",
-        commit = "338e6fb681369ff0537719095e22ce9dc602dbf0", # Dec 28, 2024 - v1.9.0
+        commit = "1f34e2a57a3d03f174771203b64aed2b17e8522c", # Tue Mar 31 20:34:06 2026 main
         build_file = "@_libgit2_engine//:BUILD",
         patch_args = ["-p1"],
         # Patch implements git-lfs filter, required for HF models download

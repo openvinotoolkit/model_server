@@ -20,7 +20,7 @@
 #include <utility>
 #include <vector>
 
-#include <openvino/openvino.hpp>
+#include <openvino/core/any.hpp>
 
 namespace ovms {
 
