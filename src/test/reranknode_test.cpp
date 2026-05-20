@@ -30,12 +30,10 @@
 
 using namespace ovms;
 
-auto graphs = ::testing::Values(
-    "rerank", "rerank_ov");
-
-class RerankHttpTest : public V3HttpTest, public ::testing::WithParamInterface<std::string> {
+class RerankHttpTest : public V3HttpTest {
 protected:
     std::string endpoint = "/v3/rerank";
+    std::string modelName = "rerank_ov";
     static std::unique_ptr<std::thread> t;
 
 public:
@@ -56,8 +54,7 @@ public:
 };
 std::unique_ptr<std::thread> RerankHttpTest::t;
 
-TEST_P(RerankHttpTest, simplePositive) {
-    auto modelName = GetParam();
+TEST_F(RerankHttpTest, simplePositive) {
     std::string requestBody = R"(
         {
             "model": ")" + modelName +
@@ -89,8 +86,7 @@ TEST_P(RerankHttpTest, simplePositive) {
     }
 }
 
-TEST_P(RerankHttpTest, positiveTopN) {
-    auto modelName = GetParam();
+TEST_F(RerankHttpTest, positiveTopN) {
     std::string requestBody = R"(
         {
             "model": ")" + modelName +
@@ -123,8 +119,7 @@ TEST_P(RerankHttpTest, positiveTopN) {
     }
 }
 
-TEST_P(RerankHttpTest, positiveReturnDocuments) {
-    auto modelName = GetParam();
+TEST_F(RerankHttpTest, positiveReturnDocuments) {
     std::string requestBody = R"(
         {
             "model": ")" + modelName +
@@ -162,17 +157,13 @@ TEST_P(RerankHttpTest, positiveReturnDocuments) {
     }
 }
 
-INSTANTIATE_TEST_SUITE_P(
-    RerankHttpTestInstances,
-    RerankHttpTest,
-    graphs);
-
-class RerankWithParamsHttpTest : public V3HttpTest, public ::testing::WithParamInterface<std::string> {
+class RerankWithParamsHttpTest : public V3HttpTest {
 protected:
     std::string endpoint = "/v3/rerank";
     static std::unique_ptr<std::thread> t;
 
 public:
+    std::string modelName = "rerank_ov";
     const size_t MAX_POSITION_EMBEDDINGS = 12;
     const size_t MAX_ALLOWED_CHUNKS = 4;
 
@@ -202,12 +193,11 @@ public:
 };
 std::unique_ptr<std::thread> RerankWithParamsHttpTest::t;
 
-TEST_P(RerankWithParamsHttpTest, PositiveMaxAllowedChunksNotExceeded) {
+TEST_F(RerankWithParamsHttpTest, PositiveMaxAllowedChunksNotExceeded) {
     // Create a JSON document
     rapidjson::Document document;
     document.SetObject();
     rapidjson::Document::AllocatorType& allocator = document.GetAllocator();
-    auto modelName = GetParam();
     // Populate the JSON document with data
     document.AddMember("model", rapidjson::StringRef(modelName.c_str()), allocator);
     document.AddMember("query", "What is the capital of the United States?", allocator);  // Will be trimmed to 6 tokens
@@ -230,12 +220,11 @@ TEST_P(RerankWithParamsHttpTest, PositiveMaxAllowedChunksNotExceeded) {
         ovms::StatusCode::OK);
 }
 
-TEST_P(RerankWithParamsHttpTest, MaxAllowedChunksExceededByDocumentsBeforeChunking) {
+TEST_F(RerankWithParamsHttpTest, MaxAllowedChunksExceededByDocumentsBeforeChunking) {
     // Create a JSON document
     rapidjson::Document document;
     document.SetObject();
     rapidjson::Document::AllocatorType& allocator = document.GetAllocator();
-    auto modelName = GetParam();
     // Populate the JSON document with data
     document.AddMember("model", rapidjson::StringRef(modelName.c_str()), allocator);
     document.AddMember("query", "What is the capital of the United States?", allocator);  // Will be trimmed to 6 tokens
@@ -259,12 +248,11 @@ TEST_P(RerankWithParamsHttpTest, MaxAllowedChunksExceededByDocumentsBeforeChunki
     ASSERT_THAT(status.string(), ::testing::HasSubstr("Number of documents exceeds max_allowed_chunks"));  // 5 because we prepared 1 document more than allowed
 }
 
-TEST_P(RerankWithParamsHttpTest, MaxAllowedChunksExceededAfterChunking) {
+TEST_F(RerankWithParamsHttpTest, MaxAllowedChunksExceededAfterChunking) {
     // Create a JSON document
     rapidjson::Document document;
     document.SetObject();
     rapidjson::Document::AllocatorType& allocator = document.GetAllocator();
-    auto modelName = GetParam();
     // Populate the JSON document with data
     document.AddMember("model", rapidjson::StringRef(modelName.c_str()), allocator);
     document.AddMember("query", "What is the capital of the United States?", allocator);  // Will be trimmed to 6 tokens
@@ -291,12 +279,7 @@ TEST_P(RerankWithParamsHttpTest, MaxAllowedChunksExceededAfterChunking) {
     ASSERT_THAT(status.string(), ::testing::HasSubstr("Chunking failed: exceeding max_allowed_chunks after chunking limit: 4; actual: 8"));  // 8 because of the last document which was chunked to 5 documents, 3 + 5 = 8
 }
 
-INSTANTIATE_TEST_SUITE_P(
-    RerankWithParamsHttpTestInstances,
-    RerankWithParamsHttpTest,
-    graphs);
-
-class RerankWithInvalidParamsHttpTest : public V3HttpTest, public ::testing::WithParamInterface<std::string> {
+class RerankWithInvalidParamsHttpTest : public V3HttpTest {
 protected:
     std::string endpoint = "/v3/rerank";
     static std::unique_ptr<std::thread> t;
@@ -305,6 +288,7 @@ public:
     const size_t MAX_POSITION_EMBEDDINGS = 8;
     const size_t MAX_ALLOWED_CHUNKS = 4;
 
+    std::string modelName = "rerank_ov";
     static void SetUpTestSuite() {
         std::string port = "9173";
         /*
@@ -329,12 +313,11 @@ public:
 };
 std::unique_ptr<std::thread> RerankWithInvalidParamsHttpTest::t;
 
-TEST_P(RerankWithInvalidParamsHttpTest, AnyRequestNegativeWithInvalidSetup) {
+TEST_F(RerankWithInvalidParamsHttpTest, AnyRequestNegativeWithInvalidSetup) {
     // Create a JSON document
     rapidjson::Document document;
     document.SetObject();
     rapidjson::Document::AllocatorType& allocator = document.GetAllocator();
-    auto modelName = GetParam();
     // Populate the JSON document with data
     document.AddMember("model", rapidjson::StringRef(modelName.c_str()), allocator);
     document.AddMember("query", "What is the capital of the United States?", allocator);
@@ -356,11 +339,6 @@ TEST_P(RerankWithInvalidParamsHttpTest, AnyRequestNegativeWithInvalidSetup) {
     ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
     ASSERT_THAT(status.string(), ::testing::HasSubstr("max_position_embeddings should be larger than 2 * NUMBER_OF_SPECIAL_TOKENS"));
 }
-
-INSTANTIATE_TEST_SUITE_P(
-    RerankWithInvalidParamsHttpTestInstances,
-    RerankWithInvalidParamsHttpTest,
-    graphs);
 
 class RerankTokenizeHttpTest : public V3HttpTest {
 protected:

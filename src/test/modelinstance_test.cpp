@@ -1227,8 +1227,10 @@ TEST(PluginConfigNormalization, ConvertsKnownTopLevelStringValuesToTypedValues) 
     ovms::plugin_config_t pluginConfig = ovms::ModelInstance::prepareDefaultPluginConfig(config);
 
     ASSERT_EQ(pluginConfig.count("NUM_STREAMS"), 1);
-    ASSERT_TRUE(pluginConfig.at("NUM_STREAMS").is<int64_t>());
-    EXPECT_EQ(pluginConfig.at("NUM_STREAMS").as<int64_t>(), 4);
+    // NUM_STREAMS is intentionally left as a string to satisfy OpenVINO's new strict
+    // plugin_config validation for ov::streams::Num typed properties (e.g. on GPU).
+    ASSERT_TRUE(pluginConfig.at("NUM_STREAMS").is<std::string>());
+    EXPECT_EQ(pluginConfig.at("NUM_STREAMS").as<std::string>(), "4");
     ASSERT_TRUE(pluginConfig.at("INFERENCE_NUM_THREADS").is<int64_t>());
     EXPECT_EQ(pluginConfig.at("INFERENCE_NUM_THREADS").as<int64_t>(), 2);
     ASSERT_TRUE(pluginConfig.at("AUTO_BATCH_TIMEOUT").is<int64_t>());
@@ -1260,8 +1262,8 @@ TEST(PluginConfigNormalization, ConvertsKnownNestedDevicePropertiesStringValuesT
     auto normalizedDeviceProperties = pluginConfig.at("DEVICE_PROPERTIES").as<ov::AnyMap>();
     ASSERT_TRUE(normalizedDeviceProperties.at("CPU").is<ov::AnyMap>());
     auto normalizedCpuProperties = normalizedDeviceProperties.at("CPU").as<ov::AnyMap>();
-    ASSERT_TRUE(normalizedCpuProperties.at("NUM_STREAMS").is<int64_t>());
-    EXPECT_EQ(normalizedCpuProperties.at("NUM_STREAMS").as<int64_t>(), 3);
+    ASSERT_TRUE(normalizedCpuProperties.at("NUM_STREAMS").is<std::string>());
+    EXPECT_EQ(normalizedCpuProperties.at("NUM_STREAMS").as<std::string>(), "3");
     ASSERT_TRUE(normalizedCpuProperties.at("INFERENCE_NUM_THREADS").is<int64_t>());
     EXPECT_EQ(normalizedCpuProperties.at("INFERENCE_NUM_THREADS").as<int64_t>(), 5);
     ASSERT_TRUE(normalizedCpuProperties.at("ENABLE_CPU_PINNING").is<bool>());
