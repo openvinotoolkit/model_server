@@ -714,7 +714,7 @@ std::vector<fs::path> findLfsLikeFiles(const std::string& directory, bool recurs
             (code == std::make_error_code(std::errc::not_a_directory));
 
         SPDLOG_WARN("findLfsLikeFiles {} {} recursive={} error:{}; returning {} partial match(es)",
-                expectedTransient ? "transient scan interruption" : "failed while scanning",
+                expectedTransient ? "directory contents changed during scan" : "failed while scanning",
                 directory,
                 recursive,
                 e.what(),
