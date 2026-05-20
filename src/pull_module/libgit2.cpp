@@ -679,32 +679,54 @@ fs::path makeRelativeToBase(const fs::path& path, const fs::path& base) {
  */
 std::vector<fs::path> findLfsLikeFiles(const std::string& directory, bool recursive) {
     std::vector<fs::path> matches;
-    std::error_code ec;
+    try {
+        std::error_code ec;
 
-    if (!fs::exists(directory, ec) || !fs::is_directory(directory, ec)) {
+        if (!fs::exists(directory, ec) || !fs::is_directory(directory, ec)) {
+            return matches;
+        }
+
+        if (recursive) {
+            for (fs::recursive_directory_iterator it(directory), end; it != end; ++it) {
+                const auto& p = it->path();
+                std::error_code dirEc;
+                if (it->is_directory(dirEc) && !dirEc && p.filename() == ".git") {
+                    it.disable_recursion_pending();
+                    continue;
+                }
+                if (fileHasLfsKeywordsFirst3Positional(p)) {
+                    matches.push_back(makeRelativeToBase(p, directory));
+                }
+            }
+        } else {
+            for (fs::directory_iterator it(directory), end; it != end; ++it) {
+                const auto& p = it->path();
+                if (fileHasLfsKeywordsFirst3Positional(p)) {
+                    matches.push_back(makeRelativeToBase(p, directory));
+                }
+            }
+        }
         return matches;
+    } catch (const fs::filesystem_error& e) {
+        const std::error_code code = e.code();
+        const bool expectedTransient =
+            (code == std::make_error_code(std::errc::no_such_file_or_directory)) ||
+            (code == std::make_error_code(std::errc::not_a_directory));
+
+        SPDLOG_WARN("findLfsLikeFiles {} {} recursive={} error:{}; returning {} partial match(es)",
+            expectedTransient ? "directory contents changed during scan" : "failed while scanning",
+            directory,
+            recursive,
+            e.what(),
+            matches.size());
+    } catch (const std::exception& e) {
+        SPDLOG_WARN("findLfsLikeFiles failed while scanning {} recursive={} error:{}; returning {} partial match(es)",
+            directory,
+            recursive,
+            e.what(),
+            matches.size());
     }
 
-    if (recursive) {
-        for (fs::recursive_directory_iterator it(directory, ec), end; !ec && it != end; ++it) {
-            const auto& p = it->path();
-            std::error_code dirEc;
-            if (it->is_directory(dirEc) && !dirEc && p.filename() == ".git") {
-                it.disable_recursion_pending();
-                continue;
-            }
-            if (fileHasLfsKeywordsFirst3Positional(p)) {
-                matches.push_back(makeRelativeToBase(p, directory));
-            }
-        }
-    } else {
-        for (fs::directory_iterator it(directory, ec), end; !ec && it != end; ++it) {
-            const auto& p = it->path();
-            if (fileHasLfsKeywordsFirst3Positional(p)) {
-                matches.push_back(makeRelativeToBase(p, directory));
-            }
-        }
-    }
     return matches;
 }
 
