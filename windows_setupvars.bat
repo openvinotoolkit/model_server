@@ -14,6 +14,7 @@
 :: limitations under the License.
 ::
 @echo on
+setlocal EnableExtensions EnableDelayedExpansion
 :: Load chosen dependency versions from versions.mk
 for /f "usebackq eol=# tokens=1,3" %%A in ("%cd%\versions.mk") do (
     if "%%A"=="OPENCV_VERSION" if "!opencv_version!"=="" set "opencv_version=%%B"
