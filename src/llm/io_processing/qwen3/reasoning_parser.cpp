@@ -33,7 +33,9 @@ void Qwen3ReasoningParser::parse(ParsedOutput& parsedOutput, const std::vector<i
 
     // Implicit-start mode: the chat template already emitted the start tag as the prompt
     // suffix, so the model output begins inside the reasoning segment.
-    if (implicitStart && startPos == std::string::npos) {
+    // When active, implicit-start always takes priority - everything up to the first
+    // </think> is reasoning, even if the content contains nested <think> tags.
+    if (implicitStart) {
         if (endPos != std::string::npos) {
             parsedOutput.reasoning = parsedOutput.content.substr(0, endPos);
             parsedOutput.content.erase(0, endPos + endReasoningTag.length());
@@ -41,6 +43,7 @@ void Qwen3ReasoningParser::parse(ParsedOutput& parsedOutput, const std::vector<i
             parsedOutput.reasoning = parsedOutput.content;
             parsedOutput.content.clear();
         }
+        return;
     }
 
     if (startPos != std::string::npos && endPos != std::string::npos && startPos < endPos) {

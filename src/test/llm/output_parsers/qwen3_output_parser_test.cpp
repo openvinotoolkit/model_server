@@ -651,8 +651,8 @@ TEST_F(Qwen3OutputParserTest, ImplicitStart_UnaryExplicitThinkInOutputStillHonor
     auto generatedTensor = qwen3Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
     ParsedOutput parsedOutput = outputParser->parse(generatedTokens, false);
-    EXPECT_EQ(parsedOutput.reasoning, "inner");
-    EXPECT_EQ(parsedOutput.content, "prefixsuffix");
+    EXPECT_EQ(parsedOutput.reasoning, "prefix<think>inner");
+    EXPECT_EQ(parsedOutput.content, "suffix");
 }
 
 TEST_F(Qwen3OutputParserTest, NoImplicitStart_UnaryMissingStartTagDoesNotExtractReasoning) {

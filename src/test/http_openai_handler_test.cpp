@@ -3602,6 +3602,28 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParseRequestWithTools_ParsesToolsJsonContai
     EXPECT_EQ((*tools)[0]["function"]["name"].as_string().value(), "get_weather");
 }
 
+TEST_F(HttpOpenAIHandlerParsingTest, ParseMessagesPreservesStringReasoningContentInChatHistory) {
+    std::string json = R"({
+    "model": "llama",
+    "messages": [
+      {"role": "user", "content": "Hello"},
+      {"role": "assistant", "reasoning_content": "thinking about greeting", "content": "Hi there!"}
+    ]
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler =
+        std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    ASSERT_EQ(apiHandler->parseMessages(), absl::OkStatus());
+
+    auto& chatHistory = apiHandler->getChatHistory();
+    ASSERT_EQ(chatHistory.size(), 2);
+    EXPECT_EQ(chatHistory[1]["role"], "assistant");
+    EXPECT_EQ(chatHistory[1]["content"], "Hi there!");
+    ASSERT_TRUE(chatHistory[1].contains("reasoning_content"));
+    EXPECT_EQ(chatHistory[1]["reasoning_content"], "thinking about greeting");
+}
+
 TEST_F(HttpOpenAIHandlerParsingTest, OutputParserInitializationDependsOnParserNames) {
     std::string json = R"({
     "model": "llama",

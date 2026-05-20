@@ -1,4 +1,9 @@
-{%- set image_count = namespace(value=0) %}
+{#-
+  Modifications to original chat template:
+    * Expanded tool_call args serialization to handle booleans/None correctly —
+      Jinja's tojson outputs JSON (true/false/null) but the model expects
+      Python literals (True/False/None), so we patch them explicitly.
+#}{%- set image_count = namespace(value=0) %}
 {%- set video_count = namespace(value=0) %}
 {%- macro render_content(content, do_vision_count, is_system_content=false) %}
     {%- if content is string %}
@@ -118,6 +123,9 @@
                 {%- if tool_call.arguments is defined %}
                     {%- for args_name, args_value in tool_call.arguments|items %}
                         {{- '<parameter=' + args_name + '>\n' }}
+                        {#- BEGINNING OF PATCH #}
+                        {#- {%- set args_value = args_value | string if args_value is string else args_value | tojson | safe %} #}
+                        {#- Here we ensure boolean values/None end up capital letter #}
                         {%- if args_value is string %}
                             {# leave as-is #}
                         {%- elif args_value is none %}
@@ -133,6 +141,7 @@
                                 {%- set args_value = 'False' %}
                             {%- endif %}
                         {%- endif %}
+                        {#- END OF PATCH #}
                         {{- args_value }}
                         {{- '\n</parameter>\n' }}
                     {%- endfor %}
