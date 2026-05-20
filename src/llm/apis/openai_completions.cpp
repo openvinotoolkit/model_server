@@ -709,6 +709,9 @@ std::string OpenAIChatCompletionsHandler::serializeStreamingUsageChunk() {
 
 std::string OpenAIChatCompletionsHandler::serializeStreamingHandshakeChunk() {
     OVMS_PROFILE_FUNCTION();
+    // The handshake chunk signals that prefill is complete and generation has started.
+    // Emitted on every endpoint so clients can distinguish prefill latency from
+    // time-to-first-token.
     Document doc;
     doc.SetObject();
     Document::AllocatorType& allocator = doc.GetAllocator();
@@ -728,7 +731,8 @@ std::string OpenAIChatCompletionsHandler::serializeStreamingHandshakeChunk() {
         delta.AddMember("content", Value(rapidjson::kNullType), allocator);
         choice.AddMember("delta", delta, allocator);
     } else if (endpoint == Endpoint::COMPLETIONS) {
-        choice.AddMember("text", Value(rapidjson::kNullType), allocator);
+        // Empty string (not null) so the field is present and typed as string.
+        choice.AddMember("text", Value("", allocator), allocator);
     }
 
     choice.AddMember("finish_reason", Value(rapidjson::kNullType), allocator);
@@ -742,7 +746,6 @@ std::string OpenAIChatCompletionsHandler::serializeStreamingHandshakeChunk() {
     // model: string; copied from the request
     doc.AddMember("model", Value(request.model.c_str(), allocator), allocator);
 
-    // object: string; defined that the type streamed chunk rather than complete response
     if (endpoint == Endpoint::CHAT_COMPLETIONS) {
         doc.AddMember("object", Value("chat.completion.chunk", allocator), allocator);
     } else if (endpoint == Endpoint::COMPLETIONS) {

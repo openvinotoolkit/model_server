@@ -97,7 +97,7 @@ protected:
     ov::genai::Tokenizer tokenizer;
 
     // Output parser is used to parse chat completions response to extract specific fields like tool calls and reasoning.
-    std::unique_ptr<OutputParser> outputParser = nullptr;
+    std::shared_ptr<OutputParser> outputParser = nullptr;
 
     // Verbose response support (enabled via --verbose_response). When set, the
     // serialized response includes a "__verbose" object with the raw prompt
@@ -129,7 +129,7 @@ public:
         // TODO we should delay creating output parser until we have request with toolNameSchemaMap parsed
         // we pass it now, but it has to be populated first before first use
         if (!toolParserName.empty() || !reasoningParserName.empty()) {
-            outputParser = std::make_unique<OutputParser>(tokenizer, toolParserName, reasoningParserName, this->request.toolNameSchemaMap);
+            outputParser = std::make_shared<OutputParser>(tokenizer, toolParserName, reasoningParserName, this->request.toolNameSchemaMap);
         }
     }
 
@@ -165,7 +165,7 @@ public:
     Endpoint getEndpoint() const;
     std::string getModel() const;
     std::string getToolChoice() const;
-    const std::unique_ptr<OutputParser>& getOutputParser() const;
+    const std::shared_ptr<OutputParser>& getOutputParser() const;
 
     // Verbose response configuration
     void enableVerboseResponse(const std::string& promptAfterTemplate) {

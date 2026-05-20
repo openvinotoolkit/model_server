@@ -32,7 +32,7 @@ static ov::genai::StreamingStatus noop_string_callback(std::string) {
 
 OVMSTextStreamer::OVMSTextStreamer(
     const ov::genai::Tokenizer& tokenizer,
-    const std::unique_ptr<OutputParser>& output_parser,
+    std::shared_ptr<OutputParser> output_parser,
     bool tools_available,
     Callback callback,
     const ov::AnyMap& decode_params) :
@@ -91,8 +91,18 @@ ov::genai::StreamingStatus OVMSTextStreamer::write(int64_t token) {
         ov::genai::GenerationFinishReason::NONE);
 }
 
+ov::genai::StreamingStatus OVMSTextStreamer::write(const std::vector<int64_t>& tokens) {
+    ov::genai::StreamingStatus status = ov::genai::StreamingStatus::RUNNING;
+    for (const int64_t token : tokens) {
+        status = write(token);
+        if (status != ov::genai::StreamingStatus::RUNNING) {
+            return status;
+        }
+    }
+    return status;
+}
+
 // -----------------------------------------------------------------------------
-// end() — final flush
 //
 // Decodes the remaining token cache (up to DELAY_N_TOKENS - 1 tokens that
 // write() deliberately held back) and flushes with GenerationFinishReason::STOP.

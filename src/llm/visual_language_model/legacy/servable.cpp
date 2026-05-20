@@ -133,9 +133,15 @@ absl::Status VisualLanguageModelLegacyServable::parseRequest(std::shared_ptr<Gen
         // results.texts[0] is decoded by the VLM pipeline with its own hardcoded
         // config — using the streamer callback is the only way to respect the user's
         // setting here.
-        if ((legacyExecutionContext->apiHandler->getOutputParser() != nullptr &&
-                legacyExecutionContext->apiHandler->getOutputParser()->requiresStreamingWithSpecialTokens()) ||
-            !legacyExecutionContext->apiHandler->getRequest().skipSpecialTokens) {
+        //
+        // Crucially, we pass nullptr as the output parser: serializeUnaryResponse
+        // feeds accumulatedUnaryText back through encodeTextToTokens() and the
+        // batch parser (parseOutputIfNeeded), which expects raw decoded text with
+        // structural tags intact (e.g. <think>, <tool_call>). Passing a non-null
+        // parser here would strip those tags via parseChunk before accumulation
+        // and break the downstream unary parsing of reasoning/tool_calls.
+        // Will be further reworked in next refactor phases.
+        if (!legacyExecutionContext->apiHandler->getRequest().skipSpecialTokens) {
             streamerConfig.insert(ov::genai::skip_special_tokens(false));
         }
         auto unaryCallback = [& ctx = *legacyExecutionContext](rapidjson::Document delta) -> ov::genai::StreamingStatus {
@@ -147,8 +153,8 @@ absl::Status VisualLanguageModelLegacyServable::parseRequest(std::shared_ptr<Gen
         };
         legacyExecutionContext->textStreamer = std::make_shared<OVMSTextStreamer>(
             getProperties()->tokenizer,
-            legacyExecutionContext->apiHandler->getOutputParser(),
-            legacyExecutionContext->apiHandler->areToolsAvailable(),
+            nullptr,  // no parser: accumulate raw decoded text for batch unary parsing
+            false,
             std::move(unaryCallback),
             streamerConfig);
     }
@@ -201,8 +207,8 @@ absl::Status VisualLanguageModelLegacyServable::prepareCompleteResponse(std::sha
         return absl::CancelledError();
     }
 
-    // Flush the streamer's delay buffer so all decoded text is in accumulatedUnaryText.
-    executionContext->textStreamer->end();
+    // pipe->generate() called streamer->end() before returning, so accumulatedUnaryText is
+    // already fully populated by the callbacks fired from OVMSTextStreamer::write()/end().
     const std::string& completeText = legacyExecutionContext->accumulatedUnaryText;
     executionContext->response = executionContext->apiHandler->serializeUnaryResponse(
         legacyExecutionContext->results, completeText);
