@@ -678,34 +678,42 @@ fs::path makeRelativeToBase(const fs::path& path, const fs::path& base) {
  * @note Part of the git LFS domain: identifies LFS pointer files in the working directory.
  */
 std::vector<fs::path> findLfsLikeFiles(const std::string& directory, bool recursive) {
-    std::vector<fs::path> matches;
-    std::error_code ec;
+    try {
+        std::vector<fs::path> matches;
+        std::error_code ec;
 
-    if (!fs::exists(directory, ec) || !fs::is_directory(directory, ec)) {
+        if (!fs::exists(directory, ec) || !fs::is_directory(directory, ec)) {
+            return matches;
+        }
+
+        if (recursive) {
+            for (fs::recursive_directory_iterator it(directory), end; it != end; ++it) {
+                const auto& p = it->path();
+                std::error_code dirEc;
+                if (it->is_directory(dirEc) && !dirEc && p.filename() == ".git") {
+                    it.disable_recursion_pending();
+                    continue;
+                }
+                if (fileHasLfsKeywordsFirst3Positional(p)) {
+                    matches.push_back(makeRelativeToBase(p, directory));
+                }
+            }
+        } else {
+            for (fs::directory_iterator it(directory), end; it != end; ++it) {
+                const auto& p = it->path();
+                if (fileHasLfsKeywordsFirst3Positional(p)) {
+                    matches.push_back(makeRelativeToBase(p, directory));
+                }
+            }
+        }
         return matches;
+    } catch (const fs::filesystem_error& e) {
+        SPDLOG_ERROR("findLfsLikeFiles failed while scanning {} recursive={} error:{}", directory, recursive, e.what());
+    } catch (const std::exception& e) {
+        SPDLOG_ERROR("findLfsLikeFiles failed while scanning {} recursive={} error:{}", directory, recursive, e.what());
     }
 
-    if (recursive) {
-        for (fs::recursive_directory_iterator it(directory, ec), end; !ec && it != end; ++it) {
-            const auto& p = it->path();
-            std::error_code dirEc;
-            if (it->is_directory(dirEc) && !dirEc && p.filename() == ".git") {
-                it.disable_recursion_pending();
-                continue;
-            }
-            if (fileHasLfsKeywordsFirst3Positional(p)) {
-                matches.push_back(makeRelativeToBase(p, directory));
-            }
-        }
-    } else {
-        for (fs::directory_iterator it(directory, ec), end; !ec && it != end; ++it) {
-            const auto& p = it->path();
-            if (fileHasLfsKeywordsFirst3Positional(p)) {
-                matches.push_back(makeRelativeToBase(p, directory));
-            }
-        }
-    }
-    return matches;
+    return {};
 }
 
 struct MissingLfsPathsWalkPayload {

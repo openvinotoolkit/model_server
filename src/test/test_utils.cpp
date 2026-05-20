@@ -16,6 +16,7 @@
 #include "test_utils.hpp"
 #include "light_test_utils.hpp"
 #include "platform_utils.hpp"
+#include "src/pull_module/libgit2.hpp"
 
 #include <algorithm>
 #include <chrono>
@@ -349,6 +350,55 @@ void SetReadonlyFileAttributeFromDir(std::string& directoryPath) {
         std::filesystem::permissions(dir_entry, std::filesystem::perms::owner_write | std::filesystem::perms::owner_exec | std::filesystem::perms::group_write, std::filesystem::perm_options::remove);
         std::filesystem::permissions(dir_entry, std::filesystem::perms::owner_read | std::filesystem::perms::group_read | std::filesystem::perms::others_read, std::filesystem::perm_options::add);
     }
+}
+
+// Resume-related tests poll the repository while another process mutates it.
+// Use non-throwing iterator increments to avoid flaky failures on Windows.
+// To be used when accesing the same directory and modyfing it in another thread or process.
+std::vector<std::filesystem::path> findLfsLikeFilesNoThrow(const std::string& directory, bool recursive) {
+    std::vector<std::filesystem::path> matches;
+    std::error_code ec;
+
+    if (!std::filesystem::exists(directory, ec) || !std::filesystem::is_directory(directory, ec)) {
+        return matches;
+    }
+
+    if (recursive) {
+        std::filesystem::recursive_directory_iterator it(directory, std::filesystem::directory_options::skip_permission_denied, ec), end;
+        while (!ec && it != end) {
+            const auto& p = it->path();
+            std::error_code dirEc;
+            if (it->is_directory(dirEc) && !dirEc && p.filename() == ".git") {
+                it.disable_recursion_pending();
+            } else if (ovms::libgit2::fileHasLfsKeywordsFirst3Positional(p)) {
+                matches.push_back(ovms::libgit2::makeRelativeToBase(p, directory));
+            }
+
+            it.increment(ec);
+            if (ec) {
+                // Clone/resume can mutate the tree while tests poll this directory.
+                // Ignore transient iterator errors and keep scanning.
+                ec.clear();
+            }
+        }
+    } else {
+        std::filesystem::directory_iterator it(directory, std::filesystem::directory_options::skip_permission_denied, ec), end;
+        while (!ec && it != end) {
+            const auto& p = it->path();
+            if (ovms::libgit2::fileHasLfsKeywordsFirst3Positional(p)) {
+                matches.push_back(ovms::libgit2::makeRelativeToBase(p, directory));
+            }
+
+            it.increment(ec);
+            if (ec) {
+                // Clone/resume can mutate the tree while tests poll this directory.
+                // Ignore transient iterator errors and keep scanning.
+                ec.clear();
+            }
+        }
+    }
+
+    return matches;
 }
 
 bool isShapeTheSame(const tensorflow::TensorShapeProto& actual, const std::vector<int64_t>&& expected) {
