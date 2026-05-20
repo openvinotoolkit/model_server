@@ -713,19 +713,12 @@ std::vector<fs::path> findLfsLikeFiles(const std::string& directory, bool recurs
             (code == std::make_error_code(std::errc::no_such_file_or_directory)) ||
             (code == std::make_error_code(std::errc::not_a_directory));
 
-        if (expectedTransient) {
-            SPDLOG_DEBUG("findLfsLikeFiles transient scan interruption at {} recursive={} error:{}; returning {} partial match(es)",
+        SPDLOG_WARN("findLfsLikeFiles {} {} recursive={} error:{}; returning {} partial match(es)",
+                expectedTransient ? "transient scan interruption" : "failed while scanning",
                 directory,
                 recursive,
                 e.what(),
                 matches.size());
-        } else {
-            SPDLOG_WARN("findLfsLikeFiles failed while scanning {} recursive={} error:{}; returning {} partial match(es)",
-                directory,
-                recursive,
-                e.what(),
-                matches.size());
-        }
     } catch (const std::exception& e) {
         SPDLOG_WARN("findLfsLikeFiles failed while scanning {} recursive={} error:{}; returning {} partial match(es)",
             directory,
