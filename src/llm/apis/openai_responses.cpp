@@ -1599,22 +1599,24 @@ std::string OpenAIResponsesHandler::serializeStreamingChunk(rapidjson::Document 
             responsesState.reasoningText += reasoningText;
             events.emplace_back(serializeReasoningSummaryTextDeltaEvent(reasoningItemId, reasoningText));
         } else if (deltaObj.HasMember("content") && deltaObj["content"].IsString()) {
-            // Content chunk - close reasoning if it was active, init message if needed
-            if (responsesState.reasoningInitialized && !responsesState.reasoningCompleted) {
-                events.emplace_back(serializeReasoningSummaryTextDoneEvent(reasoningItemId));
-                events.emplace_back(serializeReasoningSummaryPartDoneEvent(reasoningItemId));
-                events.emplace_back(serializeReasoningOutputItemDoneEvent(reasoningItemId));
-                responsesState.reasoningCompleted = true;
-            }
-            const uint64_t msgIdx = responsesState.reasoningInitialized ? 1 : 0;
-            if (!responsesState.messageInitialized) {
-                events.emplace_back(serializeOutputItemAddedEvent(outputItemId, msgIdx));
-                events.emplace_back(serializeContentPartAddedEvent(outputItemId, msgIdx));
-                responsesState.messageInitialized = true;
-            }
             const std::string contentText = deltaObj["content"].GetString();
-            responsesState.outputText += contentText;
-            events.emplace_back(serializeOutputTextDeltaEvent(outputItemId, contentText, msgIdx));
+            if (!contentText.empty()) {
+                // Content chunk - close reasoning if it was active, init message if needed
+                if (responsesState.reasoningInitialized && !responsesState.reasoningCompleted) {
+                    events.emplace_back(serializeReasoningSummaryTextDoneEvent(reasoningItemId));
+                    events.emplace_back(serializeReasoningSummaryPartDoneEvent(reasoningItemId));
+                    events.emplace_back(serializeReasoningOutputItemDoneEvent(reasoningItemId));
+                    responsesState.reasoningCompleted = true;
+                }
+                const uint64_t msgIdx = responsesState.reasoningInitialized ? 1 : 0;
+                if (!responsesState.messageInitialized) {
+                    events.emplace_back(serializeOutputItemAddedEvent(outputItemId, msgIdx));
+                    events.emplace_back(serializeContentPartAddedEvent(outputItemId, msgIdx));
+                    responsesState.messageInitialized = true;
+                }
+                responsesState.outputText += contentText;
+                events.emplace_back(serializeOutputTextDeltaEvent(outputItemId, contentText, msgIdx));
+            }
         } else if (deltaObj.HasMember("tool_calls") && deltaObj["tool_calls"].IsArray()) {
             // Tool call chunk - close reasoning if active
             if (responsesState.reasoningInitialized && !responsesState.reasoningCompleted) {
