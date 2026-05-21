@@ -630,6 +630,29 @@ std::variant<absl::Status, LoraAlphaMap> parseLoraAlphasOverride(const rapidjson
     return result;
 }
 
+std::variant<absl::Status, LoraAlphaMap> parseLoraAlphasOverride(const ovms::MultiPartParser& parser) {
+    LoraAlphaMap result;
+    std::string fieldValue = parser.getFieldByName("lora_alphas");
+    if (fieldValue.empty()) {
+        return result;
+    }
+    rapidjson::Document doc;
+    doc.Parse(fieldValue.c_str());
+    if (doc.HasParseError()) {
+        return absl::InvalidArgumentError("lora_alphas field must be valid JSON");
+    }
+    if (!doc.IsObject()) {
+        return absl::InvalidArgumentError("lora_alphas must be an object");
+    }
+    for (auto member = doc.MemberBegin(); member != doc.MemberEnd(); ++member) {
+        if (!member->value.IsNumber()) {
+            return absl::InvalidArgumentError(absl::StrCat("lora_alphas value for '", member->name.GetString(), "' must be a number"));
+        }
+        result[member->name.GetString()] = member->value.GetFloat();
+    }
+    return result;
+}
+
 absl::Status validateLoraAlphasAllowed(bool hasDynamicAdapters, const LoraAlphaMap& loraAlphasOverride) {
     if (!hasDynamicAdapters && !loraAlphasOverride.empty()) {
         return absl::InvalidArgumentError(

@@ -77,6 +77,7 @@ std::unique_ptr<std::string> generateJSONResponseFromB64Images(const std::vector
 std::variant<absl::Status, std::unique_ptr<std::string>> generateJSONResponseFromOvTensor(const ov::Tensor& tensor);
 
 std::variant<absl::Status, LoraAlphaMap> parseLoraAlphasOverride(const rapidjson::Document& doc);
+std::variant<absl::Status, LoraAlphaMap> parseLoraAlphasOverride(const ovms::MultiPartParser& parser);
 
 // Returns an error if lora_alphas override is present but no dynamic adapters exist.
 // lora_alphas is only valid when adapters use DYNAMIC mode (runtime alpha switching).

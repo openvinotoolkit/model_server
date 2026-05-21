@@ -1997,7 +1997,8 @@ TEST(Text2ImageTest, getImageGenerationRequestOptionsRejectsLoraAlphasWithoutDyn
         "model": "pokemon",
         "lora_alphas": {"pokemon": 0.5}
     })");
-    auto result = ovms::getImageGenerationRequestOptions(doc, DEFAULTIMAGE_GEN_ARGS, false);
+    bool hasDynamicAdapters = false;
+    auto result = ovms::getImageGenerationRequestOptions(doc, DEFAULTIMAGE_GEN_ARGS, hasDynamicAdapters);
     ASSERT_TRUE(std::holds_alternative<absl::Status>(result));
     auto& err = std::get<absl::Status>(result);
     EXPECT_EQ(err.code(), absl::StatusCode::kInvalidArgument);
@@ -2011,7 +2012,8 @@ TEST(Text2ImageTest, getImageGenerationRequestOptionsAllowsLoraAlphasWithDynamic
         "model": "pokemon",
         "lora_alphas": {"pokemon": 0.5}
     })");
-    auto result = ovms::getImageGenerationRequestOptions(doc, DEFAULTIMAGE_GEN_ARGS, true);
+    bool hasDynamicAdapters = true;
+    auto result = ovms::getImageGenerationRequestOptions(doc, DEFAULTIMAGE_GEN_ARGS, hasDynamicAdapters);
     ASSERT_TRUE(std::holds_alternative<ov::AnyMap>(result));
 }
 
@@ -2076,4 +2078,80 @@ TEST(Text2ImageTest, validateLoraAlphasForModel_EmptyAlphasAlwaysOk) {
     ImageGenPipelineArgs::CompositeLoraMap composites;
     auto status = ovms::validateLoraAlphasForModel("xray", alphas, aliases, composites);
     EXPECT_TRUE(status.ok());
+}
+
+// ===================== Multipart LoRA Alpha Parsing Tests =====================
+
+TEST(Text2ImageTest, parseLoraAlphasOverrideMultipartValidObject) {
+    MockedMultiPartParser parser;
+    ON_CALL(parser, getFieldByName("lora_alphas")).WillByDefault(Return(R"({"xray": 0.5, "anime": 0.3})"));
+    auto resultOrStatus = ovms::parseLoraAlphasOverride(parser);
+    ASSERT_TRUE(std::holds_alternative<LoraAlphaMap>(resultOrStatus));
+    auto result = std::get<LoraAlphaMap>(resultOrStatus);
+    ASSERT_EQ(result.size(), 2);
+    EXPECT_FLOAT_EQ(result["xray"], 0.5f);
+    EXPECT_FLOAT_EQ(result["anime"], 0.3f);
+}
+
+TEST(Text2ImageTest, parseLoraAlphasOverrideMultipartEmptyField) {
+    MockedMultiPartParser parser;
+    ON_CALL(parser, getFieldByName("lora_alphas")).WillByDefault(Return(""));
+    auto resultOrStatus = ovms::parseLoraAlphasOverride(parser);
+    ASSERT_TRUE(std::holds_alternative<LoraAlphaMap>(resultOrStatus));
+    auto result = std::get<LoraAlphaMap>(resultOrStatus);
+    EXPECT_TRUE(result.empty());
+}
+
+TEST(Text2ImageTest, parseLoraAlphasOverrideMultipartInvalidJson) {
+    MockedMultiPartParser parser;
+    ON_CALL(parser, getFieldByName("lora_alphas")).WillByDefault(Return("{not valid json"));
+    auto resultOrStatus = ovms::parseLoraAlphasOverride(parser);
+    ASSERT_TRUE(std::holds_alternative<absl::Status>(resultOrStatus));
+    EXPECT_EQ(std::get<absl::Status>(resultOrStatus).code(), absl::StatusCode::kInvalidArgument);
+    EXPECT_THAT(std::string(std::get<absl::Status>(resultOrStatus).message()), ::testing::HasSubstr("valid JSON"));
+}
+
+TEST(Text2ImageTest, parseLoraAlphasOverrideMultipartNotObject) {
+    MockedMultiPartParser parser;
+    ON_CALL(parser, getFieldByName("lora_alphas")).WillByDefault(Return("[1, 2, 3]"));
+    auto resultOrStatus = ovms::parseLoraAlphasOverride(parser);
+    ASSERT_TRUE(std::holds_alternative<absl::Status>(resultOrStatus));
+    EXPECT_EQ(std::get<absl::Status>(resultOrStatus).code(), absl::StatusCode::kInvalidArgument);
+    EXPECT_THAT(std::string(std::get<absl::Status>(resultOrStatus).message()), ::testing::HasSubstr("must be an object"));
+}
+
+TEST(Text2ImageTest, parseLoraAlphasOverrideMultipartNonNumericValue) {
+    MockedMultiPartParser parser;
+    ON_CALL(parser, getFieldByName("lora_alphas")).WillByDefault(Return(R"({"xray": "high"})"));
+    auto resultOrStatus = ovms::parseLoraAlphasOverride(parser);
+    ASSERT_TRUE(std::holds_alternative<absl::Status>(resultOrStatus));
+    EXPECT_EQ(std::get<absl::Status>(resultOrStatus).code(), absl::StatusCode::kInvalidArgument);
+    EXPECT_THAT(std::string(std::get<absl::Status>(resultOrStatus).message()), ::testing::HasSubstr("must be a number"));
+}
+
+TEST(Text2ImageTest, getImageEditRequestOptionsRejectsLoraAlphasWithoutDynamicAdapters) {
+    MockedMultiPartParser parser;
+    ON_CALL(parser, getFieldByName("lora_alphas")).WillByDefault(Return(R"({"xray": 0.5})"));
+    ON_CALL(parser, getFieldByName("prompt")).WillByDefault(Return("test prompt"));
+    ON_CALL(parser, getFieldByName("size")).WillByDefault(Return(""));
+    ON_CALL(parser, getFieldByName("model")).WillByDefault(Return("xray"));
+    ON_CALL(parser, getAllFieldNames()).WillByDefault(Return(std::set<std::string>{"prompt", "model", "lora_alphas"}));
+    bool hasDynamicAdapters = false;
+    auto result = ovms::getImageEditRequestOptions(parser, DEFAULTIMAGE_GEN_ARGS, hasDynamicAdapters);
+    ASSERT_TRUE(std::holds_alternative<absl::Status>(result));
+    auto& err = std::get<absl::Status>(result);
+    EXPECT_EQ(err.code(), absl::StatusCode::kInvalidArgument);
+    EXPECT_THAT(std::string(err.message()), ::testing::HasSubstr("lora_alphas is not supported"));
+}
+
+TEST(Text2ImageTest, getImageEditRequestOptionsAllowsLoraAlphasWithDynamicAdapters) {
+    MockedMultiPartParser parser;
+    ON_CALL(parser, getFieldByName("lora_alphas")).WillByDefault(Return(R"({"xray": 0.5})"));
+    ON_CALL(parser, getFieldByName("prompt")).WillByDefault(Return("test prompt"));
+    ON_CALL(parser, getFieldByName("size")).WillByDefault(Return(""));
+    ON_CALL(parser, getFieldByName("model")).WillByDefault(Return("xray"));
+    ON_CALL(parser, getAllFieldNames()).WillByDefault(Return(std::set<std::string>{"prompt", "model", "lora_alphas"}));
+    bool hasDynamicAdapters = true;
+    auto result = ovms::getImageEditRequestOptions(parser, DEFAULTIMAGE_GEN_ARGS, hasDynamicAdapters);
+    ASSERT_TRUE(std::holds_alternative<ov::AnyMap>(result));
 }
