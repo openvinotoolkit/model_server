@@ -95,7 +95,7 @@ parser_speech2text.add_argument('--num_streams', default=0, type=int, help='The 
 parser_speech2text.add_argument('--enable_word_timestamps', default=False, action='store_true', help='Load model with word timestamps support.', dest='enable_word_timestamps')
 args = vars(parser.parse_args())
 
-t2s_graph_template = """
+t2s_graph_template = """# OVMS_GRAPH_QUEUE_MAX_SIZE: AUTO
 input_stream: "HTTP_REQUEST_PAYLOAD:input"
 output_stream: "HTTP_RESPONSE_PAYLOAD:output"
 node {
@@ -121,7 +121,7 @@ node {
 }
 """
 
-s2t_graph_template = """
+s2t_graph_template = """# OVMS_GRAPH_QUEUE_MAX_SIZE: AUTO
 input_stream: "HTTP_REQUEST_PAYLOAD:input"
 output_stream: "HTTP_RESPONSE_PAYLOAD:output"
 node {
@@ -157,7 +157,7 @@ node {
 }
 """
 
-embedding_graph_ov_template = """
+embedding_graph_ov_template = """# OVMS_GRAPH_QUEUE_MAX_SIZE: AUTO
 input_stream: "REQUEST_PAYLOAD:input"
 output_stream: "RESPONSE_PAYLOAD:output"
 node {
@@ -181,7 +181,7 @@ node {
 }
 """
 
-rerank_graph_ov_template = """
+rerank_graph_ov_template = """# OVMS_GRAPH_QUEUE_MAX_SIZE: AUTO
 input_stream: "REQUEST_PAYLOAD:input"
 output_stream: "RESPONSE_PAYLOAD:output"
 node {
@@ -200,7 +200,8 @@ node {
 }
 """
 
-text_generation_graph_template = """input_stream: "HTTP_REQUEST_PAYLOAD:input"
+text_generation_graph_template = """# OVMS_GRAPH_QUEUE_MAX_SIZE: AUTO
+input_stream: "HTTP_REQUEST_PAYLOAD:input"
 output_stream: "HTTP_RESPONSE_PAYLOAD:output"
 
 node: {
@@ -254,7 +255,8 @@ node: {
   }
 }"""
 
-image_generation_graph_template = """input_stream: "HTTP_REQUEST_PAYLOAD:input"
+image_generation_graph_template = """# OVMS_GRAPH_QUEUE_MAX_SIZE: AUTO
+input_stream: "HTTP_REQUEST_PAYLOAD:input"
 output_stream: "HTTP_RESPONSE_PAYLOAD:output"
 
 node: {
