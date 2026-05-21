@@ -20,14 +20,63 @@
 #include "audio_utils.hpp"
 #include "src/timer.hpp"
 #include "src/logging.hpp"
+#include <cstdlib>
+#include <limits>
+#include <stdexcept>
 #include <string>
 #include <vector>
 #include <random>
 #include <algorithm>
 #pragma warning(push)
 #define PIPELINE_SUPPORTED_SAMPLE_RATE 16000
+// Default bounds for the sample rate read from an attacker-supplied audio header.
+// Anything outside this range either makes no audio sense or would cause the resampling
+// output buffer to balloon into a denial-of-service-grade allocation. Operators can
+// override the bounds via the OVMS_AUDIO_MIN_SAMPLE_RATE / OVMS_AUDIO_MAX_SAMPLE_RATE
+// environment variables.
+#define DEFAULT_MIN_SAMPLE_RATE 4000u
+#define DEFAULT_MAX_SAMPLE_RATE 384000u
 
 using namespace ovms;
+
+namespace {
+uint32_t parseSampleRateEnv(const char* envName, uint32_t defaultValue) {
+    const char* raw = std::getenv(envName);
+    if (raw == nullptr || *raw == '\0') {
+        return defaultValue;
+    }
+    try {
+        uint64_t parsed = std::stoull(raw);
+        if (parsed == 0 || parsed > std::numeric_limits<uint32_t>::max()) {
+            SPDLOG_LOGGER_WARN(s2t_calculator_logger, "Ignoring out-of-range value '{}' for {}; using default {}", raw, envName, defaultValue);
+            return defaultValue;
+        }
+        return static_cast<uint32_t>(parsed);
+    } catch (const std::exception&) {
+        SPDLOG_LOGGER_WARN(s2t_calculator_logger, "Ignoring invalid value '{}' for {}; using default {}", raw, envName, defaultValue);
+        return defaultValue;
+    }
+}
+
+uint32_t getMinSampleRate() {
+    static const uint32_t value = parseSampleRateEnv("OVMS_AUDIO_MIN_SAMPLE_RATE", DEFAULT_MIN_SAMPLE_RATE);
+    return value;
+}
+
+uint32_t getMaxSampleRate() {
+    static const uint32_t value = parseSampleRateEnv("OVMS_AUDIO_MAX_SAMPLE_RATE", DEFAULT_MAX_SAMPLE_RATE);
+    return value;
+}
+
+void validateSampleRate(uint32_t sampleRate, const char* sourceFormat) {
+    const uint32_t minRate = getMinSampleRate();
+    const uint32_t maxRate = getMaxSampleRate();
+    if (sampleRate < minRate || sampleRate > maxRate) {
+        throw std::runtime_error(std::string(sourceFormat) + " file sample rate " + std::to_string(sampleRate) +
+                                 " is out of supported range [" + std::to_string(minRate) + ", " + std::to_string(maxRate) + "]");
+    }
+}
+}  // namespace
 
 bool isWavBuffer(const std::string buf) {
     // RIFF ref: https://en.wikipedia.org/wiki/Resource_Interchange_File_Format
@@ -86,9 +135,19 @@ std::vector<float> readWav(const std::string_view& wavData) {
         drwav_uninit(&wav);
         throw std::runtime_error("WAV file must be mono or stereo");
     }
+    // dr_wav accepts bitsPerSample in [1, 64]; reject anything that is not a
+    // whole-byte PCM width since the rest of this function and downstream
+    // pipeline assume drwav_read_pcm_frames_s16 produces well-formed samples.
+    if (wav.bitsPerSample < 8 || (wav.bitsPerSample % 8) != 0) {
+        drwav_uninit(&wav);
+        throw std::runtime_error("WAV file has unsupported bits per sample");
+    }
 
-    const uint64_t n =
-        wavData.empty() ? wav.totalPCMFrameCount : wavData.size() / (wav.channels * wav.bitsPerSample / 8ul);
+    // dr_wav already parsed the `data` chunk header, so totalPCMFrameCount is the
+    // authoritative sample count. The previous formula divided the whole-file size
+    // by bytesPerSample, which over-counted by (header_bytes / bytesPerSample) and
+    // produced a trailing tail of silence in the decoded output.
+    const uint64_t n = wav.totalPCMFrameCount;
 
     std::vector<int16_t> pcm16;
     pcm16.resize(n * wav.channels);
@@ -113,6 +172,7 @@ std::vector<float> readWav(const std::string_view& wavData) {
     if (wav.sampleRate == PIPELINE_SUPPORTED_SAMPLE_RATE) {
         return pcmf32;
     }
+    validateSampleRate(wav.sampleRate, "WAV");
 
     timer.start(RESAMPLING);
     size_t outputLength = (size_t)(pcmf32.size() * PIPELINE_SUPPORTED_SAMPLE_RATE / wav.sampleRate);
@@ -138,10 +198,22 @@ std::vector<float> readMp3(const std::string_view& mp3Data) {
         drmp3_uninit(&mp3);
         throw std::runtime_error("MP3 file must be mono or stereo");
     }
-    const uint64_t n = mp3.totalPCMFrameCount;
+    // Decode in a streaming loop instead of trusting mp3.totalPCMFrameCount, which
+    // dr_mp3 lifts verbatim from the Xing/Info "FRAMES" tag without any sanity
+    // check. A malicious file can claim ~4.3e9 PCM frames in a few hundred bytes,
+    // which would otherwise translate into a multi-TB pre-allocation. Output
+    // capacity here grows in proportion to the bytes the decoder actually
+    // produces, so it is naturally bounded by the input length.
+    constexpr size_t MP3_DECODE_CHUNK_FRAMES = 1152;  // maximum PCM frames produced by one MPEG audio frame
     std::vector<float> pcmf32;
-    pcmf32.resize(n * mp3.channels);
-    drmp3_read_pcm_frames_f32(&mp3, n, pcmf32.data());
+    float tempBuffer[MP3_DECODE_CHUNK_FRAMES * 2];  // *2 to accommodate stereo
+    for (;;) {
+        drmp3_uint64 framesRead = drmp3_read_pcm_frames_f32(&mp3, MP3_DECODE_CHUNK_FRAMES, tempBuffer);
+        if (framesRead == 0) {
+            break;
+        }
+        pcmf32.insert(pcmf32.end(), tempBuffer, tempBuffer + framesRead * mp3.channels);
+    }
     drmp3_uninit(&mp3);
     timer.stop(TENSOR_PREPARATION);
     auto tensorPreparationTime = (timer.elapsed<std::chrono::microseconds>(TENSOR_PREPARATION)) / 1000;
@@ -149,6 +221,7 @@ std::vector<float> readMp3(const std::string_view& mp3Data) {
     if (mp3.sampleRate == PIPELINE_SUPPORTED_SAMPLE_RATE) {
         return pcmf32;
     }
+    validateSampleRate(mp3.sampleRate, "MP3");
     timer.start(RESAMPLING);
     size_t outputLength = (size_t)(pcmf32.size() * PIPELINE_SUPPORTED_SAMPLE_RATE / mp3.sampleRate);
     std::vector<float> output(outputLength);
