@@ -65,13 +65,7 @@ std::string buildWavBuffer(uint32_t sampleRate, uint32_t numSamples) {
     return out;
 }
 
-class AudioUtilsSampleRateTest : public ::testing::Test {
-protected:
-    void SetUp() override {
-        UnSetEnvironmentVar("OVMS_AUDIO_MIN_SAMPLE_RATE");
-        UnSetEnvironmentVar("OVMS_AUDIO_MAX_SAMPLE_RATE");
-    }
-};
+class AudioUtilsSampleRateTest : public ::testing::Test {};
 
 TEST_F(AudioUtilsSampleRateTest, acceptsSupportedSampleRateWithoutResampling) {
     const std::string wav = buildWavBuffer(/*sampleRate=*/16000, /*numSamples=*/16);
@@ -139,4 +133,60 @@ TEST_F(AudioUtilsSampleRateTest, decodesMp3WithInflatedXingFrameCountWithoutOomA
     EXPECT_LE(decoded.size(), MAX_PLAUSIBLE_PCM_FRAMES);
 }
 
-}  // namespace
+TEST_F(AudioUtilsSampleRateTest, wavFileRejectedWhenExceedsMaxFileSizeEnv) {
+    const std::string wav = buildWavBuffer(/*sampleRate=*/16000, /*numSamples=*/16);
+    std::string_view view(wav);
+    size_t expectedDecodedSize = (size_t)(16 * sizeof(float)); 
+    // Set max file size to one less than needed
+    SetEnvironmentVar("OVMS_AUDIO_MAX_FILE_SIZE_BYTES", std::to_string(expectedDecodedSize - 1));
+    std::vector<float> decoded;
+    EXPECT_THROW({ decoded = readWav(view); }, std::runtime_error);
+    UnSetEnvironmentVar("OVMS_AUDIO_MAX_FILE_SIZE_BYTES");
+}
+
+TEST_F(AudioUtilsSampleRateTest, wavFileAcceptedWhenAtMaxFileSizeEnv) {
+    const std::string wav = buildWavBuffer(/*sampleRate=*/16000, /*numSamples=*/16);
+    std::string_view view(wav);
+    size_t expectedDecodedSize = (size_t)(16 * sizeof(float)); 
+    // Set max file size to exactly the needed size
+    SetEnvironmentVar("OVMS_AUDIO_MAX_FILE_SIZE_BYTES", std::to_string(expectedDecodedSize));
+    std::vector<float> decoded;
+    EXPECT_NO_THROW({ decoded = readWav(view); });
+    UnSetEnvironmentVar("OVMS_AUDIO_MAX_FILE_SIZE_BYTES");
+}
+
+TEST_F(AudioUtilsSampleRateTest, mp3FileRejectedWhenExceedsMaxFileSizeEnv) {
+    // Minimal valid MP3 frame (see previous test for structure)
+    std::string mp3;
+    mp3.reserve(417);
+    mp3.push_back(static_cast<char>(0xFF));
+    mp3.push_back(static_cast<char>(0xFB));
+    mp3.push_back(static_cast<char>(0x90));
+    mp3.push_back(static_cast<char>(0x40));
+    mp3.append(413, '\0');
+    std::string_view view(mp3);
+    // For this frame, actual decoded size is 2304 samples (stereo or decoder output)
+    size_t expectedDecodedSize = 2304 * sizeof(float);
+    SetEnvironmentVar("OVMS_AUDIO_MAX_FILE_SIZE_BYTES", std::to_string(expectedDecodedSize - 1));
+    std::vector<float> decoded;
+    EXPECT_THROW({ decoded = readMp3(view); }, std::runtime_error);
+    UnSetEnvironmentVar("OVMS_AUDIO_MAX_FILE_SIZE_BYTES");
+}
+
+TEST_F(AudioUtilsSampleRateTest, mp3FileAcceptedWhenAtMaxFileSizeEnv) {
+    std::string mp3;
+    mp3.reserve(417);
+    mp3.push_back(static_cast<char>(0xFF));
+    mp3.push_back(static_cast<char>(0xFB));
+    mp3.push_back(static_cast<char>(0x90));
+    mp3.push_back(static_cast<char>(0x40));
+    mp3.append(413, '\0');
+    std::string_view view(mp3);
+    // For this frame, actual decoded size is 2304 samples (stereo or decoder output)
+    size_t expectedDecodedSize = 2304 * sizeof(float);
+    SetEnvironmentVar("OVMS_AUDIO_MAX_FILE_SIZE_BYTES", std::to_string(expectedDecodedSize));
+    std::vector<float> decoded;
+    EXPECT_NO_THROW({ decoded = readMp3(view); });
+    UnSetEnvironmentVar("OVMS_AUDIO_MAX_FILE_SIZE_BYTES");
+}
+}
