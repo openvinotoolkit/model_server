@@ -244,7 +244,7 @@ The graph pool size is controlled via a comment directive in the graph `.pbtxt` 
 
 **Generated graphs from exporters:**
 - OVMS `--task ...` graph export emits `# OVMS_GRAPH_QUEUE_MAX_SIZE: AUTO` for all graph types.
-- `demos/common/export_models/export_model.py` does not emit this directive (graph pool disabled for graphs created by it).
+- `demos/common/export_models/export_model.py` also emits `# OVMS_GRAPH_QUEUE_MAX_SIZE: AUTO` for all graph types.
 
 **Runtime kill-switch:**
 Setting the environment variable `OVMS_GRAPH_QUEUE_OFF=1` globally disables graph pools at runtime, regardless of the directive in `graph.pbtxt`. 
