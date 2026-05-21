@@ -158,6 +158,12 @@ RUN curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHT
 
 RUN  dnf install -y https://github.com/linux-test-project/lcov/releases/download/v1.16/lcov-1.16-1.noarch.rpm && dnf clean all
 
+WORKDIR /patchelf
+# hadolint ignore=DL3003
+RUN wget -q https://github.com/NixOS/patchelf/archive/0.10.tar.gz && \
+    tar -xf 0.10.tar.gz && cd patchelf-0.10 && \
+    ./bootstrap.sh && ./configure && make && make install
+
 ENV TF_SYSTEM_LIBS="curl"
 ENV TEST_LOG="/root/.cache/bazel/_bazel_root/bc57d4817a53cab8c785464da57d1983/execroot/ovms/bazel-out/test.log"
 ARG ov_source_branch=c01cd93e24d1cd78bfbb401eed51c08fb93e0816
@@ -274,7 +280,7 @@ RUN cp -v /etc/ssl/certs/ca-bundle.crt /etc/ssl/certs/ca-certificates.crt
 
 ARG KONFLUX=1  # This is a workaround to avoid bazel fetching dependencies during build, which causes issues in Konflux. Should be disabled when building outside of Konflux to speed up the build by using bazel cache and avoid fetching dependencies which are alread cached.
 RUN if [ "$KONFLUX" == "0" ] ; then true ; else exit 0 ; fi ; \
-    bazel build --jobs=$JOBS ${debug_bazel_flags} //:ovms_dependencies @com_google_googletest//:gtest
+    bazel build --jobs=$JOBS ${debug_bazel_flags} //:ovms_dependencies @com_google_googletest//:gtest && \
 
 COPY src/ /ovms/src/
 
@@ -286,12 +292,6 @@ RUN if ! [[ $debug_bazel_flags == *"py_off"* ]]; then true ; else exit 0 ; fi ; 
     mkdir -p /opt/intel/openvino/python/openvino-4.dist-info && \
     echo $'Metadata-Version: 1.0\nName: openvino\nVersion: 2026.2' > /opt/intel/openvino/python/openvino-4.dist-info/METADATA
 ENV PYTHONPATH=/opt/intel/openvino/python:/ovms/bazel-bin/src/python/binding
-
-WORKDIR /patchelf
-# hadolint ignore=DL3003
-RUN wget -q https://github.com/NixOS/patchelf/archive/0.10.tar.gz && \
-    tar -xf 0.10.tar.gz && cd patchelf-0.10 && \
-    ./bootstrap.sh && ./configure && make && make install
 
 WORKDIR /ovms
 
