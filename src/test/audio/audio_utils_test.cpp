@@ -142,7 +142,7 @@ TEST_F(AudioUtilsSampleRateTest, decodesMp3WithInflatedXingFrameCountWithoutOomA
     try {
         decoded = readMp3(view);
     } catch (const std::runtime_error&) {
-        // Acceptable: dr_mp3 may decide the synthetic frame is unparseable. The
+        // Acceptable: dr_mp3 may decide the synthetic frame is unparsable. The
         // attack surface we are guarding against is OOM, not validity rejection.
         return;
     }
