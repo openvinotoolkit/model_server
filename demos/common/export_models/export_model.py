@@ -21,6 +21,7 @@ import json
 import shutil
 import tempfile
 from pathlib import Path
+from huggingface_hub import snapshot_download
 
 def add_common_arguments(parser):
     parser.add_argument('--model_repository_path', required=False, default='models', help='Where the model should be exported to', dest='model_repository_path')
@@ -80,6 +81,13 @@ parser_image_generation.add_argument('--default_resolution', default="", help='D
 parser_image_generation.add_argument('--max_num_images_per_prompt', type=int, default=0, help='Max allowed number of images client is allowed to request for a given prompt', dest='max_num_images_per_prompt')
 parser_image_generation.add_argument('--default_num_inference_steps', type=int, default=0, help='Default number of inference steps when not specified by client', dest='default_num_inference_steps')
 parser_image_generation.add_argument('--max_num_inference_steps', type=int, default=0, help='Max allowed number of inference steps client is allowed to request for a given prompt', dest='max_num_inference_steps')
+parser_image_generation.add_argument('--source_loras', default=None,
+    help='LoRA adapters to apply. Format: alias1=org1/repo1[:alpha],alias2=org2/repo2[@file.safetensors][:alpha],'
+         'composite=@alias1:alpha+@alias2:alpha '
+         '@filename specifies which .safetensors file (auto-detected when repo has exactly one). '
+         ':alpha sets adapter alpha (default 1.0). '
+         'Composite entries (source starts with @) blend multiple adapters. Only for image_generation task.',
+    dest='source_loras')
 
 parser_text2speech = subparsers.add_parser('text2speech', help='export model for text2speech endpoint')
 add_common_arguments(parser_text2speech)
@@ -285,6 +293,17 @@ node: {
       default_num_inference_steps: {{default_num_inference_steps}},{% endif %}
       {%- if max_num_inference_steps > 0 %}
       max_num_inference_steps: {{max_num_inference_steps}},{% endif %}
+      {%- for lora in lora_adapters %}
+      lora_adapters { alias: "{{lora.alias}}" path: "{{lora.path}}"{% if lora.alpha is not none %} alpha: {{lora.alpha}}{% endif %} mode: DYNAMIC }
+      {%- endfor %}
+      {%- for composite in composite_lora_adapters %}
+      composite_lora_adapters {
+            alias: "{{composite.alias}}"
+      {%- for comp in composite.components %}
+            components { adapter_alias: "{{comp.adapter_alias}}"{% if comp.alpha != 1.0 %} alpha: {{comp.alpha}}{% endif %} }
+      {%- endfor %}
+          }
+      {%- endfor %}
     }
   }
 }"""
@@ -521,7 +540,7 @@ def export_rerank_model_ov(model_repository_path, source_model, model_name, prec
     add_servable_to_config(config_file_path, model_name, os.path.relpath(os.path.join(model_repository_path, model_name), os.path.dirname(config_file_path)))
 
 
-def export_image_generation_model(model_repository_path, source_model, model_name, precision, task_parameters, config_file_path, num_streams):
+def export_image_generation_model(model_repository_path, source_model, model_name, precision, task_parameters, config_file_path, num_streams, source_loras):
     model_path = "./"
     target_path = os.path.join(model_repository_path, model_name)
     model_index_path = os.path.join(target_path, 'model_index.json')
@@ -533,6 +552,73 @@ def export_image_generation_model(model_repository_path, source_model, model_nam
         print(f'optimum cli command: {optimum_command}')
         if os.system(optimum_command):
             raise ValueError("Failed to export image generation model", source_model)
+
+    # Download and resolve LoRA adapters
+    lora_adapters = []
+    composite_lora_adapters = []
+    if source_loras:
+        entries = source_loras.split(',')
+        for entry in entries:
+            entry = entry.strip()
+            if '=' in entry:
+                alias, source = entry.split('=', 1)
+            else:
+                source = entry
+                alias = entry.split('/')[-1] if '/' in entry else entry
+
+            # Composite LoRA: source starts with @
+            if source.startswith('@'):
+                components = []
+                for comp_token in source.split('+'):
+                    comp_token = comp_token.strip().lstrip('@')
+                    if ':' in comp_token:
+                        ref, alpha_str = comp_token.rsplit(':', 1)
+                        alpha = float(alpha_str)
+                    else:
+                        ref = comp_token
+                        alpha = 1.0
+                    components.append({'adapter_alias': ref, 'alpha': alpha})
+                composite_lora_adapters.append({'alias': alias, 'components': components})
+                print(f"Composite LoRA: {alias} -> {components}")
+                continue
+
+            # Parse optional alpha (trailing :float after repo or filename)
+            alpha = None
+            repo_and_file = source
+            # Check for alpha suffix: alias=org/repo:0.8 or alias=org/repo@file.safetensors:0.8
+            if ':' in repo_and_file:
+                last_colon = repo_and_file.rfind(':')
+                potential_alpha = repo_and_file[last_colon + 1:]
+                try:
+                    alpha = float(potential_alpha)
+                    repo_and_file = repo_and_file[:last_colon]
+                except ValueError:
+                    pass  # Not an alpha suffix (could be part of URL)
+
+            safetensors_file = ''
+            if '@' in repo_and_file:
+                repo, safetensors_file = repo_and_file.rsplit('@', 1)
+            else:
+                repo = repo_and_file
+            lora_dir = os.path.join(target_path, 'loras', repo)
+            if not os.path.isdir(lora_dir):
+                print(f"Downloading LoRA adapter: {repo} to {lora_dir}")
+                snapshot_download(repo_id=repo, local_dir=lora_dir)
+            else:
+                print(f"LoRA adapter directory already exists: {lora_dir}")
+            if not safetensors_file:
+                st_files = [f for f in os.listdir(lora_dir) if f.endswith('.safetensors')]
+                if len(st_files) == 0:
+                    raise ValueError(f"No .safetensors files found in LoRA adapter: {repo}")
+                if len(st_files) > 1:
+                    raise ValueError(f"Multiple .safetensors files in LoRA adapter: {repo}. Use @filename to specify.")
+                safetensors_file = st_files[0]
+            lora_path = 'loras/' + repo + '/' + safetensors_file
+            lora_entry = {'alias': alias, 'path': lora_path, 'alpha': alpha}
+            lora_adapters.append(lora_entry)
+            print(f"LoRA adapter: {alias} -> {lora_path}" + (f" (alpha={alpha})" if alpha else ""))
+    task_parameters['lora_adapters'] = lora_adapters
+    task_parameters['composite_lora_adapters'] = composite_lora_adapters
 
     plugin_config = {}
     assert num_streams >= 0, "num_streams should be a non-negative integer"
@@ -613,4 +699,4 @@ elif args['task'] == 'image_generation':
         'max_num_inference_steps',
         'extra_quantization_params'
     ]}
-    export_image_generation_model(args['model_repository_path'], args['source_model'], args['model_name'], args['precision'], template_parameters, args['config_file_path'], args['num_streams'])
+    export_image_generation_model(args['model_repository_path'], args['source_model'], args['model_name'], args['precision'], template_parameters, args['config_file_path'], args['num_streams'], args['source_loras'])

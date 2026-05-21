@@ -1,6 +1,6 @@
 #pragma once
 //*****************************************************************************
-// Copyright 2025 Intel Corporation
+// Copyright 2026 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,12 +14,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-
 #include <string>
-std::string GetFileContents(const std::string& filePath);
-bool createConfigFileWithContent(const std::string& content, std::string filename = "/tmp/ovms_config_file.json");
 
-// Removes the version comment line from the beginning of graph.pbtxt content
-inline std::string removeVersionString(std::string input) {
-    return input.erase(0, input.find("\n") + 1);
-}
+namespace ovms {
+class Status;
+
+Status downloadFileWithCurl(const std::string& url, const std::string& filePath);
+Status downloadFileWithCurl(const std::string& url, const std::string& filePath, const std::string& authTokenHF);
+Status fetchUrlToString(const std::string& url, const std::string& authToken, std::string& responseBody);
+
+}  // namespace ovms

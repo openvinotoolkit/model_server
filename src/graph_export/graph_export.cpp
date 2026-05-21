@@ -509,6 +509,47 @@ node: {
           max_num_inference_steps: )" << graphSettings.maxNumInferenceSteps.value();
     }
 
+    bool targetIsNPU = exportSettings.targetDevice.find("NPU") != std::string::npos;
+
+    for (const auto& adapter : graphSettings.loraAdapters) {
+        std::string loraPath;
+        if (adapter.sourceType == LoraSourceType::LOCAL_FILE) {
+            loraPath = adapter.sourceLora;
+        } else if (!adapter.effectiveSafetensorsFile().has_value()) {
+            SPDLOG_ERROR("LoRA adapter '{}': safetensors filename not resolved. "
+                "For HF repos, use @filename syntax (e.g. org/repo@weights.safetensors) or run with --pull to auto-resolve.",
+                adapter.alias);
+            return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
+        } else if (adapter.sourceType == LoraSourceType::HF_REPO) {
+            loraPath = "loras/" + adapter.sourceLora + "/" + adapter.effectiveSafetensorsFile().value();
+        } else {  // cURL direct link
+            loraPath = "loras/" + adapter.alias + "/" + adapter.effectiveSafetensorsFile().value();
+        }
+        oss << R"(
+          lora_adapters { alias: ")" << adapter.alias << R"(" path: ")" << loraPath << R"(")";
+        if (adapter.alpha.has_value()) {
+            oss << R"( alpha: )" << adapter.alpha.value();
+        }
+        oss << (targetIsNPU ? R"( mode: STATIC)" : R"( mode: DYNAMIC)");
+        oss << R"( })";
+    }
+
+    for (const auto& composite : graphSettings.compositeLoraAdapters) {
+        oss << R"(
+          composite_lora_adapters {
+            alias: ")" << composite.alias << R"("
+)";
+        for (const auto& component : composite.components) {
+            oss << R"(            components { adapter_alias: ")" << component.adapterAlias << R"(")";
+            if (component.alpha != 1.0f) {
+                oss << R"( alpha: )" << component.alpha;
+            }
+            oss << R"( }
+)";
+        }
+        oss << R"(          })";
+    }
+
     oss << R"(
       }
   }

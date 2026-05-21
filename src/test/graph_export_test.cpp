@@ -13,6 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <filesystem>
+#include <fstream>
 #include <memory>
 #include <string>
 
@@ -534,12 +536,6 @@ class GraphCreationTest : public TestWithTempDir {
 protected:
     void TearDown() {
         TestWithTempDir::TearDown();
-    }
-
-    // Removes # OpenVINO Model Server REPLACE_PROJECT_VERSION comment added for debug purpose in graph export at the begging of graph.pbtxt
-    // This string differs per build and setup
-    std::string removeVersionString(std::string input) {
-        return input.erase(0, input.find("\n") + 1);
     }
 
     std::string getVersionString() {
