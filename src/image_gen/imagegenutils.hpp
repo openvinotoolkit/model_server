@@ -30,10 +30,7 @@
 
 #include "imagegenpipelineargs.hpp"
 
-#pragma warning(push)
-#pragma warning(disable : 4996 4244 4267 4127)
-#include "rapidjson/document.h"
-#pragma warning(pop)
+#include "src/port/rapidjson_document.hpp"
 
 #define RETURN_IF_HOLDS_STATUS(NAME)                  \
     if (std::holds_alternative<absl::Status>(NAME)) { \

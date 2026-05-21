@@ -637,7 +637,7 @@ std::variant<absl::Status, LoraAlphaMap> parseLoraAlphasOverride(const ovms::Mul
         return result;
     }
     rapidjson::Document doc;
-    doc.Parse(fieldValue.c_str());
+    doc.Parse<rapidjson::kParseIterativeFlag>(fieldValue.c_str());
     if (doc.HasParseError()) {
         return absl::InvalidArgumentError("lora_alphas field must be valid JSON");
     }
