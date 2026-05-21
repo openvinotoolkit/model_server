@@ -240,7 +240,7 @@ TEST_F(HfPull, Download) {
     ASSERT_EQ(std::filesystem::file_size(modelPath), 52417240);
     std::string graphContents = GetFileContents(graphPath);
 
-    ASSERT_EQ(expectedGraphContents, removeVersionString(graphContents)) << graphContents;
+    ASSERT_EQ(expectedGraphContents, removeGeneratedGraphHeaders(graphContents)) << graphContents;
 }
 
 // Truncate the file to half its size, keeping the first half.
@@ -278,6 +278,8 @@ bool createGitLfsPointerFile(const std::string& path) {
 }
 
 // Returns lowercase hex SHA-256 string on success, empty string on failure.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 std::string sha256File(std::string_view path, std::error_code& ec) {
     ec.clear();
 
@@ -324,6 +326,7 @@ std::string sha256File(std::string_view path, std::error_code& ec) {
     }
     return oss.str();
 }
+#pragma GCC diagnostic pop
 
 class TestHfDownloader : public ovms::HfDownloader {
 public:
@@ -372,7 +375,7 @@ TEST_F(HfPullCache, Resume) {
     ASSERT_EQ(std::filesystem::file_size(modelPath), 52417240);
     std::string graphContents = GetFileContents(graphPath);
 
-    ASSERT_EQ(expectedGraphContents, removeVersionString(graphContents)) << graphContents;
+    ASSERT_EQ(expectedGraphContents, removeGeneratedGraphHeaders(graphContents)) << graphContents;
 
     EXPECT_EXIT({
         auto guardOrError = ovms::createLibGitGuard();
@@ -408,7 +411,7 @@ TEST_F(HfPullCache, Resume) {
     ASSERT_EQ(std::filesystem::file_size(modelPath), 52417240);
     graphContents = GetFileContents(graphPath);
 
-    ASSERT_EQ(expectedGraphContents, removeVersionString(graphContents)) << graphContents;
+    ASSERT_EQ(expectedGraphContents, removeGeneratedGraphHeaders(graphContents)) << graphContents;
 
     std::string resumedDigest = sha256File(modelPath, ec);
     ASSERT_EQ(ec, std::errc());
@@ -1098,7 +1101,8 @@ TEST_F(HfPull, Start) {
     ASSERT_EQ(std::filesystem::exists(graphPath), true) << graphPath;
     ASSERT_EQ(std::filesystem::file_size(modelPath), 52417240);
     std::string graphContents = GetFileContents(graphPath);
-    ASSERT_EQ(expectedGraphContents, removeVersionString(graphContents)) << graphContents;
+
+    ASSERT_EQ(expectedGraphContents, removeGeneratedGraphHeaders(graphContents)) << graphContents;
 }
 
 TEST_F(HfPull, OutOfOvOrg) {
@@ -1124,7 +1128,7 @@ TEST_F(HfPull, OutOfOvOrg) {
     ASSERT_EQ(std::filesystem::file_size(modelPath), 52417240);
     std::string graphContents = GetFileContents(graphPath);
 
-    ASSERT_EQ(expectedGraphContents, removeVersionString(graphContents)) << graphContents;
+    ASSERT_EQ(expectedGraphContents, removeGeneratedGraphHeaders(graphContents)) << graphContents;
 
     std::string changePath = ovms::FileSystem::joinPath({this->directoryPath, "OpenVINO"});
     std::string newPath = ovms::FileSystem::joinPath({this->directoryPath, "META"});
@@ -1159,7 +1163,8 @@ TEST_F(HfPull, StartOutsideOvOrg) {
     ASSERT_EQ(std::filesystem::exists(modelPath), true) << modelPath;
     ASSERT_EQ(std::filesystem::exists(graphPath), true) << graphPath;
     std::string graphContents = GetFileContents(graphPath);
-    ASSERT_EQ(expectedGraphContents, removeVersionString(graphContents)) << graphContents;
+
+    ASSERT_EQ(expectedGraphContents, removeGeneratedGraphHeaders(graphContents)) << graphContents;
 }
 
 TEST_F(HfPull, DraftModel) {
@@ -1180,7 +1185,7 @@ TEST_F(HfPull, DraftModel) {
     ASSERT_EQ(std::filesystem::file_size(modelPath), 52417240);
     std::string graphContents = GetFileContents(graphPath);
 
-    ASSERT_EQ(expectedGraphContentsDraft, removeVersionString(graphContents)) << graphContents;
+    ASSERT_EQ(expectedGraphContentsDraft, removeGeneratedGraphHeaders(graphContents)) << graphContents;
 
     std::string basePath2 = ovms::FileSystem::joinPath({basePath, "OpenVINO-distil-small.en-int4-ov"});
     std::string modelPath2 = ovms::FileSystem::appendSlash(basePath2) + "openvino_tokenizer.bin";

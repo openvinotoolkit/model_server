@@ -19,7 +19,22 @@
 std::string GetFileContents(const std::string& filePath);
 bool createConfigFileWithContent(const std::string& content, std::string filename = "/tmp/ovms_config_file.json");
 
-// Removes the version comment line from the beginning of graph.pbtxt content
-inline std::string removeVersionString(std::string input) {
-    return input.erase(0, input.find("\n") + 1);
+// Removes generated graph header lines (version and optional queue size directive)
+// which differ across build/runtime setup.
+inline std::string removeGeneratedGraphHeaders(std::string input) {
+    auto firstLineEnd = input.find("\n");
+    if (firstLineEnd == std::string::npos) {
+        return "";
+    }
+    input.erase(0, firstLineEnd + 1);
+
+    const std::string queueLinePrefix = "# OVMS_GRAPH_QUEUE_MAX_SIZE:";
+    if (input.rfind(queueLinePrefix, 0) == 0) {
+        auto secondLineEnd = input.find("\n");
+        if (secondLineEnd == std::string::npos) {
+            return "";
+        }
+        input.erase(0, secondLineEnd + 1);
+    }
+    return input;
 }

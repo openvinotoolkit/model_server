@@ -39,6 +39,7 @@
 #include "mediapipegraphconfig.hpp"
 #include "graph_side_packets.hpp"
 #include "packettypes.hpp"
+#include "graphqueue.hpp"
 
 namespace ovms {
 class MetricConfig;
@@ -80,7 +81,7 @@ public:
     static const std::string SCHEDULER_CLASS_NAME;
 
 protected:
-    GraphSidePackets sidePacketMaps;
+    std::shared_ptr<GraphSidePackets> sidePacketMaps;
 
     struct ValidationResultNotifier {
         ValidationResultNotifier(PipelineDefinitionStatus& status, std::condition_variable& loadedNotify) :
@@ -103,10 +104,13 @@ protected:
     };
 
     virtual Status validateForConfigFileExistence();
+    Status resolveGraphQueueSize();
     Status validateForConfigLoadableness();
 
     Status setStreamTypes();
     Status dryInitializeTest();
+    Status initializeQueueIfRequired();
+
     std::string chosenConfig;
     static MediapipeGraphConfig MGC;
 
@@ -143,5 +147,6 @@ private:
     PythonBackend* pythonBackend;
 
     std::unique_ptr<MediapipeServableMetricReporter> reporter;
+    std::shared_ptr<GraphQueue> queue;
 };
 }  // namespace ovms

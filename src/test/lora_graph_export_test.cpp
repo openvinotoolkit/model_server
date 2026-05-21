@@ -89,7 +89,7 @@ TEST_F(LoraGraphCreationTest, imageGenerationWithOneLora) {
     ASSERT_EQ(status, ovms::StatusCode::OK);
 
     std::string graphContents = GetFileContents(graphPath);
-    ASSERT_EQ(expectedImageGenWithOneLora, removeVersionString(graphContents)) << graphContents;
+    ASSERT_EQ(expectedImageGenWithOneLora, removeGeneratedGraphHeaders(graphContents)) << graphContents;
 }
 
 TEST_F(LoraGraphCreationTest, imageGenerationWithTwoLoras) {
@@ -107,7 +107,7 @@ TEST_F(LoraGraphCreationTest, imageGenerationWithTwoLoras) {
     ASSERT_EQ(status, ovms::StatusCode::OK);
 
     std::string graphContents = GetFileContents(graphPath);
-    ASSERT_EQ(expectedImageGenWithTwoLoras, removeVersionString(graphContents)) << graphContents;
+    ASSERT_EQ(expectedImageGenWithTwoLoras, removeGeneratedGraphHeaders(graphContents)) << graphContents;
 }
 
 const std::string expectedImageGenerationGraphContentsDefault = R"(
@@ -141,7 +141,7 @@ TEST_F(LoraGraphCreationTest, imageGenerationNoLorasRemainsUnchanged) {
     ASSERT_EQ(status, ovms::StatusCode::OK);
 
     std::string graphContents = GetFileContents(graphPath);
-    ASSERT_EQ(expectedImageGenerationGraphContentsDefault, removeVersionString(graphContents)) << graphContents;
+    ASSERT_EQ(expectedImageGenerationGraphContentsDefault, removeGeneratedGraphHeaders(graphContents)) << graphContents;
 }
 
 // ===================== LoRA CLI-to-Settings Tests =====================
@@ -394,7 +394,7 @@ TEST_F(LoraGraphCreationTest, imageGenerationWithUrlLora) {
     ASSERT_EQ(status, ovms::StatusCode::OK);
 
     std::string graphContents = GetFileContents(graphPath);
-    ASSERT_EQ(expectedImageGenWithUrlLora, removeVersionString(graphContents)) << graphContents;
+    ASSERT_EQ(expectedImageGenWithUrlLora, removeGeneratedGraphHeaders(graphContents)) << graphContents;
 }
 
 const std::string expectedImageGenWithLocalLora = R"(
@@ -430,7 +430,7 @@ TEST_F(LoraGraphCreationTest, imageGenerationWithLocalLora) {
     ASSERT_EQ(status, ovms::StatusCode::OK);
 
     std::string graphContents = GetFileContents(graphPath);
-    ASSERT_EQ(expectedImageGenWithLocalLora, removeVersionString(graphContents)) << graphContents;
+    ASSERT_EQ(expectedImageGenWithLocalLora, removeGeneratedGraphHeaders(graphContents)) << graphContents;
 }
 
 TEST_F(LoraGraphCreationTest, imageGenerationHfRepoLoraWithoutFilenameReturnsError) {
@@ -650,7 +650,7 @@ TEST_F(LoraGraphCreationTest, imageGenerationWithCompositeLora) {
     ASSERT_EQ(status, ovms::StatusCode::OK);
 
     std::string graphContents = GetFileContents(graphPath);
-    ASSERT_EQ(expectedImageGenWithCompositeLora, removeVersionString(graphContents)) << graphContents;
+    ASSERT_EQ(expectedImageGenWithCompositeLora, removeGeneratedGraphHeaders(graphContents)) << graphContents;
 }
 
 // ===================== LoRA Alias Validation Tests =====================
@@ -847,7 +847,7 @@ TEST_F(LoraGraphCreationTest, imageGenerationFullCompositeWithAlphas) {
     ASSERT_EQ(status, ovms::StatusCode::OK);
 
     std::string graphContents = GetFileContents(graphPath);
-    ASSERT_EQ(expectedImageGenFullComposite, removeVersionString(graphContents)) << graphContents;
+    ASSERT_EQ(expectedImageGenFullComposite, removeGeneratedGraphHeaders(graphContents)) << graphContents;
 }
 
 const std::string expectedImageGenNpuStatic = R"(
@@ -884,5 +884,5 @@ TEST_F(LoraGraphCreationTest, imageGenerationNpuAutoStaticMode) {
     ASSERT_EQ(status, ovms::StatusCode::OK);
 
     std::string graphContents = GetFileContents(graphPath);
-    ASSERT_EQ(expectedImageGenNpuStatic, removeVersionString(graphContents)) << graphContents;
+    ASSERT_EQ(expectedImageGenNpuStatic, removeGeneratedGraphHeaders(graphContents)) << graphContents;
 }

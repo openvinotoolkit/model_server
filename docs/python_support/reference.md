@@ -749,6 +749,8 @@ node {
 
 When using generative mode, the `execute` method in [`OvmsPythonModel`](#ovmspythonmodel-class) class must `yield` value.
 
+> **Note:** Generative mode is not compatible with the [graph pool](../mediapipe.md#graph-pool-scalability-feature). Do not add `# OVMS_GRAPH_QUEUE_MAX_SIZE` directive to graphs that use generative Python nodes with LOOPBACK.
+
 ```python
 from pyovms import Tensor
 ...

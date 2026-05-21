@@ -757,6 +757,7 @@ void CLIParser::prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl&
             hfSettings.exportSettings.extraQuantizationParams = result->operator[]("extra_quantization_params").as<std::string>();
         if (result->count("vocoder"))
             hfSettings.exportSettings.vocoder = result->operator[]("vocoder").as<std::string>();
+        hfSettings.exportSettings.restWorkers = serverSettings.restWorkers;
         hfSettings.downloadPath = result->operator[]("model_repository_path").as<std::string>();
         // When --task is used with --model_path but without --pull/--source_model,
         // use model_path as the model location (no HF download needed)

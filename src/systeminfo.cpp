@@ -16,6 +16,7 @@
 #include "systeminfo.hpp"
 
 #include <algorithm>
+#include <cstdint>
 #include <fstream>
 #include <limits>
 #include <sstream>
