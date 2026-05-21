@@ -20,12 +20,6 @@
 #include <vector>
 #include <stdint.h>
 
-// Note: Sample rate bounds are read from the environment only once per process, on first use.
-// Changes to OVMS_AUDIO_MIN_SAMPLE_RATE or OVMS_AUDIO_MAX_SAMPLE_RATE after startup are ignored.
-uint32_t getMinSampleRate();
-uint32_t getMaxSampleRate();
-void validateSampleRate(uint32_t sampleRate, const char* sourceFormat);
-
 bool isWavBuffer(const std::string buf);
 
 std::vector<float> readWav(const std::string_view& wavData);
