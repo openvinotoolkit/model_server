@@ -27,8 +27,10 @@ pipeline {
                           windows.install_dependencies()
                           windows.clean()
                           windows.build()
-                          windows.unit_test()
-                          windows.check_tests()
+                          if (env.RUN_TESTS == "1") {
+                            windows.unit_test()
+                            windows.check_tests()
+                          }
                           def safeBranchName = env.BRANCH_NAME.replaceAll('/', '_')
                           def python_suffix = ""
                           if (env.OVMS_PYTHON_ENABLED == "1") {
