@@ -29,10 +29,10 @@
 #include <algorithm>
 #pragma warning(push)
 #define PIPELINE_SUPPORTED_SAMPLE_RATE 16000
-#define DEFAULT_MIN_SAMPLE_RATE 4000u
-#define DEFAULT_MAX_SAMPLE_RATE 384000u
 
 using namespace ovms;
+
+static void validateAudioFileSizeAgainstMaxValue(size_t fileSize);
 
 bool isWavBuffer(const std::string buf) {
     // RIFF ref: https://en.wikipedia.org/wiki/Resource_Interchange_File_Format
@@ -157,8 +157,12 @@ std::vector<float> readMp3(const std::string_view& mp3Data) {
         drmp3_uninit(&mp3);
         throw std::runtime_error("MP3 file must be mono or stereo");
     }
-    // Validate expected output buffer size before any allocation or decoding, using metadata
-    validateAudioFileSize(mp3.totalPCMFrameCount, mp3.sampleRate, PIPELINE_SUPPORTED_SAMPLE_RATE, mp3.channels, sizeof(float));
+    // Validate expected output buffer size before any allocation or decoding, using metadata.
+    // dr_mp3 sets totalPCMFrameCount to UINT64_MAX when no Xing/VBRI tag is present (unknown length).
+    // In that case skip metadata-based validation; post-decode validation will guard against OOM.
+    if (mp3.totalPCMFrameCount != std::numeric_limits<uint64_t>::max()) {
+        validateAudioFileSize(mp3.totalPCMFrameCount, mp3.sampleRate, PIPELINE_SUPPORTED_SAMPLE_RATE, mp3.channels, sizeof(float));
+    }
     constexpr size_t MP3_DECODE_CHUNK_FRAMES = 1152;  // 1152 is the maximum number of PCM samples per channel produced by a single MPEG-1 Layer III MP3 frame. Reference: ISO/IEC 11172-3
     // We cannot know the decoded sample count up front, but we can check the maximum possible size based on file size and sample rate
     // For safety, check the decoded buffer after filling
@@ -177,12 +181,13 @@ std::vector<float> readMp3(const std::string_view& mp3Data) {
     timer.stop(TENSOR_PREPARATION);
     auto tensorPreparationTime = (timer.elapsed<std::chrono::microseconds>(TENSOR_PREPARATION)) / 1000;
     SPDLOG_LOGGER_DEBUG(s2t_calculator_logger, "Tensor preparation time: {} ms size: {}", tensorPreparationTime, pcmf32.size());
+    validateAudioFileSizeAgainstMaxValue(pcmf32.size() * sizeof(float));
     if (mp3.sampleRate == PIPELINE_SUPPORTED_SAMPLE_RATE) {
         return pcmf32;
     }
     timer.start(RESAMPLING);
     size_t outputLength = (size_t)(pcmf32.size() * PIPELINE_SUPPORTED_SAMPLE_RATE / mp3.sampleRate);
-    // Validate resampled buffer size before allocation
+    validateAudioFileSizeAgainstMaxValue(outputLength * sizeof(float));
     std::vector<float> output(outputLength);
     resample_audio(reinterpret_cast<float*>(pcmf32.data()), pcmf32.size(), mp3.sampleRate, PIPELINE_SUPPORTED_SAMPLE_RATE, output);
     timer.stop(RESAMPLING);
@@ -220,7 +225,7 @@ void prepareAudioOutput(void** ppData, size_t& pDataSize, uint16_t bitsPerSample
     auto outputPreparationTime = (timer.elapsed<std::chrono::microseconds>(OUTPUT_PREPARATION)) / 1000;
     SPDLOG_LOGGER_DEBUG(t2s_calculator_logger, "Output preparation time: {} ms", outputPreparationTime);
 }
-void validateAudioFileSizeAgainstMaxValue(size_t fileSize) {
+static void validateAudioFileSizeAgainstMaxValue(size_t fileSize) {
     constexpr size_t DEFAULT_MAX_FILE_SIZE = 1024ull * 1024 * 1024; // 1GB
     size_t maxFileSize = DEFAULT_MAX_FILE_SIZE;
     const char* env = std::getenv("OVMS_AUDIO_MAX_FILE_SIZE_BYTES");
@@ -234,22 +239,32 @@ void validateAudioFileSizeAgainstMaxValue(size_t fileSize) {
             // Ignore invalid env, use default
         }
     }
-    SPDLOG_ERROR("{} : {}", maxFileSize, fileSize);
+    SPDLOG_DEBUG("{} : {}", maxFileSize, fileSize);
     if (fileSize > maxFileSize) {
         throw std::runtime_error("Audio file size " + std::to_string(fileSize) +
             " exceeds maximum allowed size (" + std::to_string(maxFileSize) + ")");
     }
 }
 
-// Returns true if the estimated resampled audio buffer size is within the maximum allowed size
+// Throws if the estimated resampled audio buffer size would exceed the maximum allowed size
 void validateAudioFileSize(
     size_t inputSamples,
     uint32_t inputRate,
     uint32_t targetRate,
     uint32_t channels,
     size_t bytesPerSample) {
+    // Detect overflow: if inputSamples is large enough that inputSamples * targetRate
+    // would overflow size_t, the output is certainly too large.
+    if (inputSamples > std::numeric_limits<size_t>::max() / targetRate) {
+        throw std::runtime_error("Audio file estimated output size overflows maximum representable value");
+    }
+    size_t product = inputSamples * targetRate;
+    // Guard the ceiling-division addition against overflow as well.
+    if (product > std::numeric_limits<size_t>::max() - (inputRate - 1)) {
+        throw std::runtime_error("Audio file estimated output size overflows maximum representable value");
+    }
     // Estimate output samples after resampling (ceil division)
-    size_t outputSamples = (inputSamples * targetRate + inputRate - 1) / inputRate;
+    size_t outputSamples = (product + inputRate - 1) / inputRate;
     size_t expectedSize = outputSamples * channels * bytesPerSample;
-    return validateAudioFileSizeAgainstMaxValue(expectedSize);
+    validateAudioFileSizeAgainstMaxValue(expectedSize);
 }

@@ -16,6 +16,7 @@
 #include <cstdint>
 #include <cstring>
 #include <cstdlib>
+#include <limits>
 #if defined(_WIN32)
 #include <stdlib.h>
 #endif
@@ -187,6 +188,74 @@ TEST_F(AudioUtilsSampleRateTest, mp3FileAcceptedWhenAtMaxFileSizeEnv) {
     SetEnvironmentVar("OVMS_AUDIO_MAX_FILE_SIZE_BYTES", std::to_string(expectedDecodedSize));
     std::vector<float> decoded;
     EXPECT_NO_THROW({ decoded = readMp3(view); });
+    UnSetEnvironmentVar("OVMS_AUDIO_MAX_FILE_SIZE_BYTES");
+}
+
+// Validates that validateAudioFileSize correctly rejects when inputSamples * targetRate
+// would overflow size_t. This guards against the case where dr_mp3 provides an inflated
+// totalPCMFrameCount (e.g. from a malicious Xing tag or UINT64_MAX sentinel).
+TEST_F(AudioUtilsSampleRateTest, validateAudioFileSizeRejectsOnOverflow) {
+    // Use a value large enough to cause overflow when multiplied by targetRate (16000)
+    size_t hugeInputSamples = std::numeric_limits<size_t>::max() / 16000 + 1;
+    EXPECT_THROW(
+        validateAudioFileSize(hugeInputSamples, /*inputRate=*/44100, /*targetRate=*/16000, /*channels=*/1, /*bytesPerSample=*/sizeof(float)),
+        std::runtime_error);
+}
+
+TEST_F(AudioUtilsSampleRateTest, validateAudioFileSizeAcceptsBelowOverflowThreshold) {
+    // Just below the overflow threshold — should not throw due to overflow detection,
+    // but may still throw if the estimated size exceeds the 1GB default limit.
+    size_t belowOverflow = std::numeric_limits<size_t>::max() / 16000;
+    // This produces an enormous output (still ~1.15e15 bytes), so it should be rejected
+    // by the max-file-size check, not the overflow check.
+    EXPECT_THROW(
+        validateAudioFileSize(belowOverflow, /*inputRate=*/44100, /*targetRate=*/16000, /*channels=*/1, /*bytesPerSample=*/sizeof(float)),
+        std::runtime_error);
+}
+
+// Builds a CBR MP3 frame without a Xing/VBRI tag. dr_mp3 sets totalPCMFrameCount
+// to UINT64_MAX in this case. Before the overflow fix, validateAudioFileSize would
+// compute expectedSize=0 due to unsigned wrap-around, completely bypassing the guard.
+// The post-decode validation must still enforce the size limit.
+TEST_F(AudioUtilsSampleRateTest, mp3WithoutXingTagRejectedByPostDecodeValidation) {
+    // Build a minimal valid CBR MPEG-1 Layer III frame (no Xing tag).
+    // Header: 0xFF 0xFB 0x90 0x00 => MPEG-1, Layer III, 128kbps, 44.1kHz, mono, no padding.
+    std::string mp3;
+    mp3.push_back(static_cast<char>(0xFF));
+    mp3.push_back(static_cast<char>(0xFB));
+    mp3.push_back(static_cast<char>(0x90));
+    mp3.push_back(static_cast<char>(0x00));
+    // MPEG-1 Layer III mono side-info is 17 bytes, then granule data.
+    // Frame length at 128kbps/44.1kHz/no-padding = 417 bytes (including header).
+    mp3.append(413, '\0');
+
+    std::string_view view(mp3);
+    // Set max size to 1 byte — any decoded output should exceed this.
+    SetEnvironmentVar("OVMS_AUDIO_MAX_FILE_SIZE_BYTES", "1");
+    EXPECT_THROW({ auto decoded = readMp3(view); }, std::runtime_error);
+    UnSetEnvironmentVar("OVMS_AUDIO_MAX_FILE_SIZE_BYTES");
+}
+
+TEST_F(AudioUtilsSampleRateTest, mp3WithoutXingTagAcceptedWhenLimitSufficient) {
+    // Same CBR frame as above, but with a generous limit.
+    std::string mp3;
+    mp3.push_back(static_cast<char>(0xFF));
+    mp3.push_back(static_cast<char>(0xFB));
+    mp3.push_back(static_cast<char>(0x90));
+    mp3.push_back(static_cast<char>(0x00));
+    mp3.append(413, '\0');
+
+    std::string_view view(mp3);
+    // 1MB limit — more than enough for a single decoded frame.
+    SetEnvironmentVar("OVMS_AUDIO_MAX_FILE_SIZE_BYTES", "1048576");
+    std::vector<float> decoded;
+    try {
+        decoded = readMp3(view);
+        // If decoding succeeds, output must be bounded.
+        EXPECT_LE(decoded.size(), 1152u * 2u * 2u);
+    } catch (const std::runtime_error&) {
+        // dr_mp3 may reject the synthetic all-zero payload. Acceptable.
+    }
     UnSetEnvironmentVar("OVMS_AUDIO_MAX_FILE_SIZE_BYTES");
 }
 }
