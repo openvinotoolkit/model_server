@@ -62,6 +62,26 @@ Check [supported models](https://openvinotoolkit.github.io/openvino.genai/docs/s
 ### Speech to text calculator limitations
 - Streaming is not supported
 
+## Audio Sample Rate Environment Variables
+
+OpenVINO Model Server allows you to control the accepted sample rate range for audio (WAV/MP3) inputs using environment variables:
+
+- **OVMS_AUDIO_MIN_SAMPLE_RATE**: Minimum allowed sample rate in Hz (default: 8000)
+- **OVMS_AUDIO_MAX_SAMPLE_RATE**: Maximum allowed sample rate in Hz (default: 192000)
+
+**Important:** These variables are read only once per process, on first use of audio input validation. Changing them after the server has started (or after the first audio request) will not affect the running process. To apply new values, restart the server.
+
+If an audio file's sample rate is outside the configured range, the request will be rejected with an error.
+
+**Example usage:**
+```bash
+export OVMS_AUDIO_MIN_SAMPLE_RATE=16000
+export OVMS_AUDIO_MAX_SAMPLE_RATE=48000
+ovms --model_path <path_to_model> ...
+```
+
+Use these settings to restrict accepted audio input for security or compatibility reasons, or to harden the server against denial-of-service attacks using extreme sample rates.
+
 ## References
 - [Transcription API](../model_server_rest_api_speech_to_text.md#transcription)
 - [Translation API](../model_server_rest_api_speech_to_text.md#translation)

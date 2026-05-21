@@ -29,11 +29,6 @@
 #include <algorithm>
 #pragma warning(push)
 #define PIPELINE_SUPPORTED_SAMPLE_RATE 16000
-// Default bounds for the sample rate read from an attacker-supplied audio header.
-// Anything outside this range either makes no audio sense or would cause the resampling
-// output buffer to balloon into a denial-of-service-grade allocation. Operators can
-// override the bounds via the OVMS_AUDIO_MIN_SAMPLE_RATE / OVMS_AUDIO_MAX_SAMPLE_RATE
-// environment variables.
 #define DEFAULT_MIN_SAMPLE_RATE 4000u
 #define DEFAULT_MAX_SAMPLE_RATE 384000u
 
@@ -71,6 +66,9 @@ uint32_t getMaxSampleRate() {
 void validateSampleRate(uint32_t sampleRate, const char* sourceFormat) {
     const uint32_t minRate = getMinSampleRate();
     const uint32_t maxRate = getMaxSampleRate();
+    if (minRate >= maxRate) {
+        throw std::runtime_error("Invalid audio sample rate configuration: OVMS_AUDIO_MIN_SAMPLE_RATE >= OVMS_AUDIO_MAX_SAMPLE_RATE");
+    }
     if (sampleRate < minRate || sampleRate > maxRate) {
         throw std::runtime_error(std::string(sourceFormat) + " file sample rate " + std::to_string(sampleRate) +
                                  " is out of supported range [" + std::to_string(minRate) + ", " + std::to_string(maxRate) + "]");
@@ -143,10 +141,12 @@ std::vector<float> readWav(const std::string_view& wavData) {
         throw std::runtime_error("WAV file has unsupported bits per sample");
     }
 
-    // dr_wav already parsed the `data` chunk header, so totalPCMFrameCount is the
-    // authoritative sample count. The previous formula divided the whole-file size
-    // by bytesPerSample, which over-counted by (header_bytes / bytesPerSample) and
-    // produced a trailing tail of silence in the decoded output.
+    const uint64_t blockAlign = wav.channels * (wav.bitsPerSample / 8);
+    const uint64_t maxPossibleFrames = blockAlign ? (wavData.size() / blockAlign) : 0;
+    if (wav.totalPCMFrameCount > maxPossibleFrames) {
+        drwav_uninit(&wav);
+        throw std::runtime_error("WAV file header claims more frames than possible from data chunk size");
+    }
     const uint64_t n = wav.totalPCMFrameCount;
 
     std::vector<int16_t> pcm16;
@@ -156,7 +156,7 @@ std::vector<float> readWav(const std::string_view& wavData) {
 
     // convert to mono, float
     std::vector<float> pcmf32;
-    pcmf32.resize(n);
+    pcmf32.reserve(n);
     if (wav.channels == 1) {
         for (uint64_t i = 0; i < n; i++) {
             pcmf32[i] = float(pcm16[i]) / 32768.0f;
@@ -198,15 +198,12 @@ std::vector<float> readMp3(const std::string_view& mp3Data) {
         drmp3_uninit(&mp3);
         throw std::runtime_error("MP3 file must be mono or stereo");
     }
-    // Decode in a streaming loop instead of trusting mp3.totalPCMFrameCount, which
-    // dr_mp3 lifts verbatim from the Xing/Info "FRAMES" tag without any sanity
-    // check. A malicious file can claim ~4.3e9 PCM frames in a few hundred bytes,
-    // which would otherwise translate into a multi-TB pre-allocation. Output
-    // capacity here grows in proportion to the bytes the decoder actually
-    // produces, so it is naturally bounded by the input length.
-    constexpr size_t MP3_DECODE_CHUNK_FRAMES = 1152;  // maximum PCM frames produced by one MPEG audio frame
+
+    constexpr size_t MP3_DECODE_CHUNK_FRAMES = 1152;  // 1152 is the maximum number of PCM samples per channel produced by a single MPEG-1 Layer III MP3 frame. Reference: ISO/IEC 11172-3
     std::vector<float> pcmf32;
     float tempBuffer[MP3_DECODE_CHUNK_FRAMES * 2];  // *2 to accommodate stereo
+    // Reserve assuming every input byte could yield a float sample per channel.
+    pcmf32.reserve(mp3Data.size() * mp3.channels);
     for (;;) {
         drmp3_uint64 framesRead = drmp3_read_pcm_frames_f32(&mp3, MP3_DECODE_CHUNK_FRAMES, tempBuffer);
         if (framesRead == 0) {
