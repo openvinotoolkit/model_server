@@ -538,9 +538,7 @@ protected:
     }
 
     std::string getExpectedGraphQueueSizeDirective(const ovms::HFSettingsImpl& hfSettings) const {
-        if (hfSettings.task == ovms::IMAGE_GENERATION_GRAPH) {
-            return "1";
-        }
+        (void)hfSettings;
         return "AUTO";
     }
 
