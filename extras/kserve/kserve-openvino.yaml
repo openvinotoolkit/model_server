@@ -20,6 +20,12 @@ spec:
     - --file_system_poll_wait_seconds=0
     image: openvino/model_server:replace
     name: kserve-container
+    startupProbe:
+      periodSeconds: 5
+      failureThreshold: 9999
+      httpGet:
+        path: /v2/health/ready
+        port: rest
     resources:
       limits:
         cpu: "1"
