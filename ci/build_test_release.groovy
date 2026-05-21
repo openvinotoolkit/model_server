@@ -38,10 +38,10 @@ pipeline {
                           } else {
                               python_suffix = "off"
                           }
-                          def destPath = "\\\\${env.OV_SHARE_05_IP}\\data\\cv_bench_cache\\OVMS_do_not_remove\\omvs_artifacts\\${env.PRODUCT_VERSION}\\${env.RELEASE_TAG}\\windows"
+                          def destPath = "\\\\${env.OV_SHARE_05_IP}\\data\\cv_bench_cache\\OVMS_do_not_remove\\ovms_artifacts\\${env.PRODUCT_VERSION}\\${env.RELEASE_TAG}\\windows"
                           def artifactsPath = "${buildstamp}\\ovms_windows_${env.PRODUCT_VERSION}_${env.RELEASE_TAG}_python_${python_suffix}.zip"
                           bat(returnStatus:true, script: "ECHO F | xcopy /Y /E ${env.WORKSPACE}\\dist\\windows\\ovms.zip ${destPath}\\${artifactsPath}")
-                          bat(returnStatus:true, script: "cd /d ${destPath} && mklink /D latest ${artifactsPath}")
+                          bat(returnStatus:true, script: "cd /d ${destPath} && if exist latest rmdir latest & mklink /D latest ${buildstamp}")
                           } finally {
                             windows.archive_build_artifacts()
                             windows.archive_test_artifacts()
