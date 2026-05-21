@@ -278,7 +278,7 @@ COPY package.json /ovms/
 # hadolint ignore=DL3059
 RUN cp -v /etc/ssl/certs/ca-bundle.crt /etc/ssl/certs/ca-certificates.crt
 
-ARG KONFLUX=1  # This is a workaround to avoid bazel fetching dependencies during build, which causes issues in Konflux. Should be disabled when building outside of Konflux to speed up the build by using bazel cache and avoid fetching dependencies which are alread cached.
+ARG KONFLUX=1  # This is a workaround to avoid bazel fetching dependencies during build, which causes issues in Konflux. Should be disabled when building outside of Konflux to speed up the build by using bazel cache and avoid fetching dependencies which are already cached.
 RUN if [ "$KONFLUX" == "0" ] ; then true ; else exit 0 ; fi ; \
     bazel build --jobs=$JOBS ${debug_bazel_flags} //:ovms_dependencies @com_google_googletest//:gtest && \
 
