@@ -14,6 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 #include "imagegenutils.hpp"
+#include <algorithm>
 #include <utility>
 #include <set>
 #include <string>
@@ -317,7 +318,7 @@ absl::Status ensureAcceptableAndDefaultsSetRequestOptions(ov::AnyMap& requestOpt
     return absl::OkStatus();
 }
 
-std::variant<absl::Status, ov::AnyMap> getImageGenerationRequestOptions(const rapidjson::Document& parser, const ovms::ImageGenPipelineArgs& args) {
+std::variant<absl::Status, ov::AnyMap> getImageGenerationRequestOptions(const rapidjson::Document& parser, const ovms::ImageGenPipelineArgs& args, bool hasDynamicAdapters) {
     // NO -not handled yet
     // OpenAI parameters
     // https://platform.openai.com/docs/api-reference/images/create 15/05/2025
@@ -414,11 +415,20 @@ std::variant<absl::Status, ov::AnyMap> getImageGenerationRequestOptions(const ra
         "size", "height", "width",
         "n", "num_images_per_prompt",
         "response_format",  // allowed, however only b64_json is supported
-        "num_inference_steps", "rng_seed", "strength", "guidance_scale", "max_sequence_length", "model"};
+        "num_inference_steps", "rng_seed", "strength", "guidance_scale", "max_sequence_length", "model",
+        "lora_alphas"};  // per-request LoRA alpha overrides
     for (auto it = parser.MemberBegin(); it != parser.MemberEnd(); ++it) {
         if (acceptedFields.find(it->name.GetString()) == acceptedFields.end()) {
             return absl::InvalidArgumentError(absl::StrCat("Unhandled parameter: ", it->name.GetString()));
         }
+    }
+    // Reject lora_alphas when no dynamic adapters are available (STATIC/FUSE modes)
+    auto loraAlphasOverrideOrStatus = parseLoraAlphasOverride(parser);
+    RETURN_IF_HOLDS_STATUS(loraAlphasOverrideOrStatus)
+    auto loraAlphasOverride = std::get<LoraAlphaMap>(loraAlphasOverrideOrStatus);
+    auto loraAlphaStatus = validateLoraAlphasAllowed(hasDynamicAdapters, loraAlphasOverride);
+    if (!loraAlphaStatus.ok()) {
+        return loraAlphaStatus;
     }
     auto status = ensureAcceptableAndDefaultsSetRequestOptions(requestOptions, args);
     if (!status.ok()) {
@@ -434,7 +444,7 @@ std::variant<absl::Status, ov::AnyMap> getImageGenerationRequestOptions(const ra
     return std::move(requestOptions);
 }
 
-std::variant<absl::Status, ov::AnyMap> getImageEditRequestOptions(const ovms::MultiPartParser& parser, const ovms::ImageGenPipelineArgs& args) {
+std::variant<absl::Status, ov::AnyMap> getImageEditRequestOptions(const ovms::MultiPartParser& parser, const ovms::ImageGenPipelineArgs& args, bool hasDynamicAdapters) {
     // NO -not handled yet
     // OpenAI parameters
     // https://platform.openai.com/docs/api-reference/images/createEdit 20/05/2025
@@ -532,12 +542,18 @@ std::variant<absl::Status, ov::AnyMap> getImageEditRequestOptions(const ovms::Mu
         "size", "height", "width",
         "n", "num_images_per_prompt",
         "response_format",  // allowed, however only b64_json is supported
-        "num_inference_steps", "rng_seed", "strength", "guidance_scale", "max_sequence_length", "model"};
+        "num_inference_steps", "rng_seed", "strength", "guidance_scale", "max_sequence_length", "model",
+        "lora_alphas"};  // per-request LoRA alpha overrides
     auto fieldNames = parser.getAllFieldNames();
     for (const auto& fieldName : fieldNames) {
         if (acceptedFields.find(fieldName) == acceptedFields.end()) {
             return absl::InvalidArgumentError(absl::StrCat("Unhandled parameter: ", fieldName));
         }
+    }
+    // Reject lora_alphas when no dynamic adapters are available (STATIC/FUSE modes)
+    auto loraAlphaStatus = validateLoraAlphasAllowed(hasDynamicAdapters, parser);
+    if (!loraAlphaStatus.ok()) {
+        return loraAlphaStatus;
     }
     auto status = ensureAcceptableAndDefaultsSetRequestOptions(requestOptions, args);
     if (!status.ok()) {
@@ -594,5 +610,99 @@ std::unique_ptr<std::string> generateJSONResponseFromB64Images(const std::vector
     jsonStream << "{\"b64_json\":\"" << base64Images[base64Images.size() - 1] << "\"}"
                << "]}" << std::endl;
     return std::make_unique<std::string>(jsonStream.str());
+}
+
+std::variant<absl::Status, LoraAlphaMap> parseLoraAlphasOverride(const rapidjson::Document& doc) {
+    LoraAlphaMap result;
+    auto it = doc.FindMember("lora_alphas");
+    if (it == doc.MemberEnd()) {
+        return result;
+    }
+    if (!it->value.IsObject()) {
+        return absl::InvalidArgumentError("lora_alphas must be an object");
+    }
+    for (auto member = it->value.MemberBegin(); member != it->value.MemberEnd(); ++member) {
+        if (!member->value.IsNumber()) {
+            return absl::InvalidArgumentError(absl::StrCat("lora_alphas value for '", member->name.GetString(), "' must be a number"));
+        }
+        result[member->name.GetString()] = member->value.GetFloat();
+    }
+    return result;
+}
+
+std::variant<absl::Status, LoraAlphaMap> parseLoraAlphasOverride(const ovms::MultiPartParser& parser) {
+    LoraAlphaMap result;
+    std::string fieldValue = parser.getFieldByName("lora_alphas");
+    if (fieldValue.empty()) {
+        return result;
+    }
+    rapidjson::Document doc;
+    doc.Parse<rapidjson::kParseIterativeFlag>(fieldValue.c_str());
+    if (doc.HasParseError()) {
+        return absl::InvalidArgumentError("lora_alphas field must be valid JSON");
+    }
+    if (!doc.IsObject()) {
+        return absl::InvalidArgumentError("lora_alphas must be an object");
+    }
+    for (auto member = doc.MemberBegin(); member != doc.MemberEnd(); ++member) {
+        if (!member->value.IsNumber()) {
+            return absl::InvalidArgumentError(absl::StrCat("lora_alphas value for '", member->name.GetString(), "' must be a number"));
+        }
+        result[member->name.GetString()] = member->value.GetFloat();
+    }
+    return result;
+}
+
+absl::Status validateLoraAlphasAllowed(bool hasDynamicAdapters, const LoraAlphaMap& loraAlphasOverride) {
+    if (!hasDynamicAdapters && !loraAlphasOverride.empty()) {
+        return absl::InvalidArgumentError(
+            "lora_alphas is not supported when no dynamic LoRA adapters are available. "
+            "Alpha values cannot be overridden for STATIC (NPU) or FUSE mode adapters.");
+    }
+    return absl::OkStatus();
+}
+
+absl::Status validateLoraAlphasAllowed(bool hasDynamicAdapters, const ovms::MultiPartParser& parser) {
+    if (!hasDynamicAdapters && !parser.getFieldByName("lora_alphas").empty()) {
+        return absl::InvalidArgumentError(
+            "lora_alphas is not supported when no dynamic LoRA adapters are available. "
+            "Alpha values cannot be overridden for STATIC (NPU) or FUSE mode adapters.");
+    }
+    return absl::OkStatus();
+}
+
+absl::Status validateLoraAlphasForModel(
+    const std::string& modelName,
+    const LoraAlphaMap& loraAlphasOverride,
+    const std::vector<std::string>& adapterAliases,
+    const ImageGenPipelineArgs::CompositeLoraMap& compositeLoraAdapters) {
+    if (loraAlphasOverride.empty()) {
+        return absl::OkStatus();
+    }
+    auto compositeIt = compositeLoraAdapters.find(modelName);
+    if (compositeIt != compositeLoraAdapters.end()) {
+        // Composite: only allow alphas for adapters in this composite
+        for (const auto& [alias, _] : loraAlphasOverride) {
+            bool found = std::any_of(compositeIt->second.begin(), compositeIt->second.end(),
+                [&alias](const auto& compositeComponent) { return compositeComponent.first == alias; });
+            if (!found) {
+                return absl::InvalidArgumentError(
+                    absl::StrCat("lora_alphas key '", alias, "' is not part of composite '", modelName, "'"));
+            }
+        }
+    } else {
+        bool isAdapter = std::find(adapterAliases.begin(), adapterAliases.end(), modelName) != adapterAliases.end();
+        if (isAdapter) {
+            // Single adapter: only allow alpha override for this adapter
+            if (loraAlphasOverride.find(modelName) == loraAlphasOverride.end() || loraAlphasOverride.size() > 1) {
+                auto badIt = std::find_if(loraAlphasOverride.begin(), loraAlphasOverride.end(),
+                    [&modelName](const auto& requestedLoraOverrideName) { return requestedLoraOverrideName.first != modelName; });
+                return absl::InvalidArgumentError(
+                    absl::StrCat("lora_alphas key '", badIt->first, "' not allowed when targeting adapter '", modelName, "'"));
+            }
+        }
+        // Base model (no adapter matched): allow any registered adapter alpha
+    }
+    return absl::OkStatus();
 }
 }  // namespace ovms

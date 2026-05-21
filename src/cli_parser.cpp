@@ -213,6 +213,10 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
             "HF source model path",
             cxxopts::value<std::string>(),
             "HF_SOURCE")
+            ("source_loras",
+            "LoRA adapters for image generation. Format: alias1=org1/repo1,alias2=org2/repo2@file.safetensors,alias3=https://url/file.safetensors,alias4=/local/path/file.safetensors",
+            cxxopts::value<std::string>(),
+            "SOURCE_LORAS")
             ("gguf_filename",
             "Name of the GGUF file",
             cxxopts::value<std::string>(),
@@ -733,6 +737,9 @@ void CLIParser::prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl&
             // Only use model_name as source_model when model_path is not set
             // (when model_path is set, user wants to use local model without HF pull)
             hfSettings.sourceModel = result->operator[]("model_name").as<std::string>();
+        }
+        if (result->count("source_loras")) {
+            hfSettings.sourceLoras = result->operator[]("source_loras").as<std::string>();
         }
         if ((result->count("weight-format") || result->count("extra_quantization_params")) && isOptimumCliDownload(hfSettings.sourceModel, hfSettings.ggufFilename)) {
             hfSettings.downloadType = OPTIMUM_CLI_DOWNLOAD;

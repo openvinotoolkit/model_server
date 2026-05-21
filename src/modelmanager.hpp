@@ -486,6 +486,7 @@ public:
     void cleanupResources() override;
 
     bool servableExists(const std::string& name, ServableQueryType check = ServableQueryType::All) const override;
+    bool aliasesConflict(const std::vector<std::string>& aliases, const std::string& ownGraphName) const override;
 
     ServableDefinition* findServableDefinition(const std::string& name) const;
 

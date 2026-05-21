@@ -20,6 +20,7 @@
 #include <string>
 #include <unordered_map>
 #include <utility>
+#include <vector>
 
 namespace ovms {
 
@@ -75,6 +76,8 @@ struct GraphSidePackets {
     RerankServableMap rerankServableMap;
     SttServableMap sttServableMap;
     TtsServableMap ttsServableMap;
+    std::vector<std::string> loraAliases;
+    bool hideBaseModelInRouting = false;
     void clear() {
         pythonNodeResourcesMap.clear();
         genAiServableMap.clear();
@@ -84,6 +87,8 @@ struct GraphSidePackets {
         rerankServableMap.clear();
         sttServableMap.clear();
         ttsServableMap.clear();
+        loraAliases.clear();
+        hideBaseModelInRouting = false;
     }
     bool empty() {
         return (pythonNodeResourcesMap.empty() &&

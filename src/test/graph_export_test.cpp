@@ -13,6 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <filesystem>
+#include <fstream>
 #include <memory>
 #include <sstream>
 #include <string>
@@ -574,26 +576,6 @@ protected:
         }
         assertGraphQueueHeader(graphContents, hfSettings);
         ASSERT_EQ(expectedGraphContents, removeGeneratedGraphHeaders(graphContents)) << graphContents;
-    }
-
-    // Removes generated graph header lines (version and optional queue size directive)
-    // which differ across build/runtime setup.
-    std::string removeGeneratedGraphHeaders(std::string input) {
-        auto firstLineEnd = input.find("\n");
-        if (firstLineEnd == std::string::npos) {
-            return "";
-        }
-        input.erase(0, firstLineEnd + 1);
-
-        const std::string queueLinePrefix = "# OVMS_GRAPH_QUEUE_MAX_SIZE:";
-        if (input.rfind(queueLinePrefix, 0) == 0) {
-            auto secondLineEnd = input.find("\n");
-            if (secondLineEnd == std::string::npos) {
-                return "";
-            }
-            input.erase(0, secondLineEnd + 1);
-        }
-        return input;
     }
 
     std::string getVersionString() {
