@@ -424,10 +424,10 @@ index 58cb4b424..00ddee9f3 100644
  	git_writestream **out,
 diff --git a/src/libgit2/lfs_filter.c b/src/libgit2/lfs_filter.c
 new file mode 100644
-index 000000000..3e9f96f73
+index 000000000..794a22bba
 --- /dev/null
 +++ b/src/libgit2/lfs_filter.c
-@@ -0,0 +1,2011 @@
+@@ -0,0 +1,2009 @@
 +﻿/*
 +/ Copyright 2025 Intel Corporation
 +/
@@ -2007,7 +2007,7 @@ index 000000000..3e9f96f73
 +			return CURLE_OK;
 +		}
 +
-+		lfs_log_error_with_state(ftpfile->log_state, "[WARN] Resume attempt %d/%d failed: %s\n",
++		printf("[WARN] Resume attempt %d/%d failed: %s\n",
 +		        attempt, max_retries, curl_easy_strerror(res));
 +
 +		if (attempt < max_retries) {
@@ -2277,9 +2277,7 @@ index 000000000..3e9f96f73
 +
 +	/* Check for resume of partial download error */
 +	if (res == CURLE_PARTIAL_FILE) {
-+		lfs_log_error_with_state(
-+		        &la->log_state,
-+		        "[WARN] Got CURLE_PARTIAL_FILE, attempting resume sequence\n");
++		printf("[WARN] Got CURLE_PARTIAL_FILE, attempting resume sequence\n");
 +		res = download_with_resume(
 +		        dl_curl, &ftpfile, g_lfs_resume_attempts,
 +		        g_lfs_resume_interval_secs);

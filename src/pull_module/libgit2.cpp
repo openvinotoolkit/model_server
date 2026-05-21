@@ -1193,6 +1193,10 @@ Status resumeExistingRepository(git_repository* repo,
         SPDLOG_WARN("Failed to create .lfswip marker before pull resume at {}", libgit2::getLfsWipMarkerPath(downloadPath).string());
     }
 
+    // Clear any stale lfs_error.txt from previous failed attempts to avoid false error reports
+    std::error_code ec;
+    fs::remove(fs::path(downloadPath) / "lfs_error.txt", ec);
+
     printResumeCandidates(candidates);
 
     for (const auto& p : candidates.lfsMatches) {
@@ -1390,6 +1394,10 @@ Status handleFreshClone(const std::string& downloadPath,
     const std::function<Status(bool)>& checkRepositoryStatusFn,
     const std::function<Status(const std::string&)>& removeReadonlyFn) {
     SPDLOG_DEBUG("Downloading to path: {}", downloadPath);
+
+    // Clear any stale lfs_error.txt from previous failed attempts to avoid false error reports
+    std::error_code ec;
+    fs::remove(fs::path(downloadPath) / "lfs_error.txt", ec);
 
     git_clone_options cloneOptions = GIT_CLONE_OPTIONS_INIT;
     configureCloneOptions(cloneOptions, useProxy, proxyUrl);
