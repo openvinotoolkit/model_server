@@ -139,6 +139,7 @@ static std::string extractReasoningText(const rapidjson::Value::ConstObject& ite
 // are present, the last one wins, matching ChatHistorySink::extractContent so
 // the Python/Jinja processedJson path and the C++ chatHistory path produce the
 // same prompt.
+#if (PYTHON_DISABLE == 0)
 static std::string extractTextContent(const rapidjson::Value& contentVal) {
     if (contentVal.IsString()) {
         return contentVal.GetString();
@@ -163,6 +164,7 @@ static std::string extractTextContent(const rapidjson::Value& contentVal) {
     }
     return result;
 }
+#endif
 
 // Read the three string fields (id, name, arguments) out of a function_call item.
 //
