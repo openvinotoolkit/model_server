@@ -159,6 +159,12 @@ RUN curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHT
 
 RUN  dnf install -y https://github.com/linux-test-project/lcov/releases/download/v1.16/lcov-1.16-1.noarch.rpm && dnf clean all
 
+WORKDIR /patchelf
+# hadolint ignore=DL3003
+RUN wget -q https://github.com/NixOS/patchelf/archive/0.10.tar.gz && \
+    tar -xf 0.10.tar.gz && cd patchelf-0.10 && \
+    ./bootstrap.sh && ./configure && make && make install
+
 ENV TF_SYSTEM_LIBS="curl"
 ENV TEST_LOG="/root/.cache/bazel/_bazel_root/bc57d4817a53cab8c785464da57d1983/execroot/ovms/bazel-out/test.log"
 ARG ov_source_branch=c01cd93e24d1cd78bfbb401eed51c08fb93e0816
@@ -264,25 +270,20 @@ COPY src/python/binding/tests/requirements.txt /ovms/src/python/binding/tests/re
 
 WORKDIR /ovms
 
-# hadolint ignore=DL3059
-
 # Mediapipe
 COPY BUILD.bazel /ovms/
 COPY *\.bzl /ovms/
 COPY yarn.lock /ovms/
 COPY package.json /ovms/
 
-# prebuild dependencies before copying sources
-# hadolint ignore=DL3059
-RUN bazel build --jobs=$JOBS ${debug_bazel_flags} //:ovms_dependencies @com_google_googletest//:gtest
-
 # hadolint ignore=DL3059
 RUN cp -v /etc/ssl/certs/ca-bundle.crt /etc/ssl/certs/ca-certificates.crt
 
-COPY src/ /ovms/src/
+ARG KONFLUX=1  # This is a workaround to avoid bazel fetching dependencies during build, which causes issues in Konflux. Should be disabled when building outside of Konflux to speed up the build by using bazel cache and avoid fetching dependencies which are already cached.
+RUN if [ "$KONFLUX" == "0" ] ; then true ; else exit 0 ; fi ; \
+    bazel build --jobs=$JOBS ${debug_bazel_flags} //:ovms_dependencies @com_google_googletest//:gtest
 
-# hadolint ignore=DL3059
-RUN bazel build --jobs=$JOBS ${debug_bazel_flags} @org_tensorflow//tensorflow/core:framework
+COPY src/ /ovms/src/
 
 # Sample CPU Extension
 WORKDIR /ovms/src/example/SampleCpuExtension/
@@ -293,12 +294,6 @@ RUN if ! [[ $debug_bazel_flags == *"py_off"* ]]; then true ; else exit 0 ; fi ; 
     echo $'Metadata-Version: 1.0\nName: openvino\nVersion: 2026.2' > /opt/intel/openvino/python/openvino-4.dist-info/METADATA
 ENV PYTHONPATH=/opt/intel/openvino/python:/ovms/bazel-bin/src/python/binding
 
-WORKDIR /patchelf
-# hadolint ignore=DL3003
-RUN wget -q https://github.com/NixOS/patchelf/archive/0.10.tar.gz && \
-    tar -xf 0.10.tar.gz && cd patchelf-0.10 && \
-    ./bootstrap.sh && ./configure && make && make install
-
 WORKDIR /ovms
 
 ARG PROJECT_VERSION="2026.2.0"
@@ -308,9 +303,6 @@ ARG minitrace_flags
 # Set OVMS version strings
 RUN bash -c "sed -i -e 's|REPLACE_PROJECT_VERSION|${PROJECT_VERSION}|g' /ovms/src/version.hpp" && \
     bash -c "sed -i -e 's|REPLACE_BAZEL_BUILD_FLAGS|${debug_bazel_flags}${minitrace_flags}|g' /ovms/src/version.hpp"
-
-# Custom Nodes
-RUN bazel build --jobs=$JOBS ${debug_bazel_flags} //src:release_custom_nodes
 
 # OVMS
 ARG OPTIMIZE_BUILDING_TESTS=0
@@ -371,16 +363,12 @@ ARG BASE_OS=redhat
 ARG ov_use_binary=0
 ARG FUZZER_BUILD=0
 ARG debug_bazel_flags="--strip=always  --config=mp_on_py_on --//:distro=redhat"
-COPY --from=capi-build /ovms_release/lib/libovms_shared.so /ovms_release/lib/
 COPY create_package.sh /
 RUN ./create_package.sh
 
 # hadolint ignore=DL3059
 RUN chown -R ovms:ovms /ovms_release
 RUN mkdir /licenses && ln -s /ovms_release/LICENSE /licenses && ln -s /ovms_release/thirdparty-licenses /licenses/thirdparty-licenses
-# Remove capi library
-RUN if [ -f /ovms_release/lib/libovms_shared.so ] ; then mv /ovms_release/lib/libovms_shared.so / ; else exit 0 ; fi ;
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
 
 FROM $RELEASE_BASE_IMAGE as release
