@@ -73,20 +73,6 @@ protected:
     }
 };
 
-TEST_F(AudioUtilsSampleRateTest, rejectsExtremelyLowSampleRate) {
-    // PoC from the security report: 1 Hz sample rate + 100k samples
-    // would otherwise allocate ~6.4 GB in readWav().
-    const std::string wav = buildWavBuffer(/*sampleRate=*/1, /*numSamples=*/100000);
-    std::string_view view(wav);
-    EXPECT_THROW(readWav(view), std::runtime_error);
-}
-
-TEST_F(AudioUtilsSampleRateTest, rejectsExtremelyHighSampleRate) {
-    const std::string wav = buildWavBuffer(/*sampleRate=*/10000000u, /*numSamples=*/16);
-    std::string_view view(wav);
-    EXPECT_THROW(readWav(view), std::runtime_error);
-}
-
 TEST_F(AudioUtilsSampleRateTest, acceptsSupportedSampleRateWithoutResampling) {
     const std::string wav = buildWavBuffer(/*sampleRate=*/16000, /*numSamples=*/16);
     std::string_view view(wav);

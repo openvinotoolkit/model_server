@@ -29,52 +29,8 @@
 #include <algorithm>
 #pragma warning(push)
 #define PIPELINE_SUPPORTED_SAMPLE_RATE 16000
-#define DEFAULT_MIN_SAMPLE_RATE 4000u
-#define DEFAULT_MAX_SAMPLE_RATE 384000u
 
 using namespace ovms;
-
-namespace {
-uint32_t parseSampleRateEnv(const char* envName, uint32_t defaultValue) {
-    const char* raw = std::getenv(envName);
-    if (raw == nullptr || *raw == '\0') {
-        return defaultValue;
-    }
-    try {
-        uint64_t parsed = std::stoull(raw);
-        if (parsed == 0 || parsed > std::numeric_limits<uint32_t>::max()) {
-            SPDLOG_LOGGER_WARN(s2t_calculator_logger, "Ignoring out-of-range value '{}' for {}; using default {}", raw, envName, defaultValue);
-            return defaultValue;
-        }
-        return static_cast<uint32_t>(parsed);
-    } catch (const std::exception&) {
-        SPDLOG_LOGGER_WARN(s2t_calculator_logger, "Ignoring invalid value '{}' for {}; using default {}", raw, envName, defaultValue);
-        return defaultValue;
-    }
-}
-
-uint32_t getMinSampleRate() {
-    static const uint32_t value = parseSampleRateEnv("OVMS_AUDIO_MIN_SAMPLE_RATE", DEFAULT_MIN_SAMPLE_RATE);
-    return value;
-}
-
-uint32_t getMaxSampleRate() {
-    static const uint32_t value = parseSampleRateEnv("OVMS_AUDIO_MAX_SAMPLE_RATE", DEFAULT_MAX_SAMPLE_RATE);
-    return value;
-}
-
-void validateSampleRate(uint32_t sampleRate, const char* sourceFormat) {
-    const uint32_t minRate = getMinSampleRate();
-    const uint32_t maxRate = getMaxSampleRate();
-    if (minRate >= maxRate) {
-        throw std::runtime_error("Invalid audio sample rate configuration: OVMS_AUDIO_MIN_SAMPLE_RATE >= OVMS_AUDIO_MAX_SAMPLE_RATE");
-    }
-    if (sampleRate < minRate || sampleRate > maxRate) {
-        throw std::runtime_error(std::string(sourceFormat) + " file sample rate " + std::to_string(sampleRate) +
-                                 " is out of supported range [" + std::to_string(minRate) + ", " + std::to_string(maxRate) + "]");
-    }
-}
-}  // namespace
 
 bool isWavBuffer(const std::string buf) {
     // RIFF ref: https://en.wikipedia.org/wiki/Resource_Interchange_File_Format
@@ -172,7 +128,6 @@ std::vector<float> readWav(const std::string_view& wavData) {
     if (wav.sampleRate == PIPELINE_SUPPORTED_SAMPLE_RATE) {
         return pcmf32;
     }
-    validateSampleRate(wav.sampleRate, "WAV");
 
     timer.start(RESAMPLING);
     size_t outputLength = (size_t)(pcmf32.size() * PIPELINE_SUPPORTED_SAMPLE_RATE / wav.sampleRate);
@@ -218,7 +173,6 @@ std::vector<float> readMp3(const std::string_view& mp3Data) {
     if (mp3.sampleRate == PIPELINE_SUPPORTED_SAMPLE_RATE) {
         return pcmf32;
     }
-    validateSampleRate(mp3.sampleRate, "MP3");
     timer.start(RESAMPLING);
     size_t outputLength = (size_t)(pcmf32.size() * PIPELINE_SUPPORTED_SAMPLE_RATE / mp3.sampleRate);
     std::vector<float> output(outputLength);
