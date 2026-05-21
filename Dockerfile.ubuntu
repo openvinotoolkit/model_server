@@ -84,7 +84,8 @@ RUN CASABLANCA_DIR=/azure/cpprestsdk cmake .. -DCMAKE_CXX_FLAGS="${SDL_OPS}" -DC
 ####### Build OpenCV
 COPY third_party/opencv /ovms/third_party/opencv
 WORKDIR /ovms/third_party/opencv
-RUN ./install_opencv.sh
+ARG OPENCV_VERSION=4.13.0
+RUN OPENCV_VERSION=${OPENCV_VERSION} ./install_opencv.sh
 ####### End of OpenCV
 
 ################### BASE BUILD ##########################
