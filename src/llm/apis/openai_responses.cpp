@@ -139,6 +139,7 @@ static std::string extractReasoningText(const rapidjson::Value::ConstObject& ite
 // are present, the last one wins, matching ChatHistorySink::extractContent so
 // the Python/Jinja processedJson path and the C++ chatHistory path produce the
 // same prompt.
+#if (PYTHON_DISABLE == 0)
 static std::string extractTextContent(const rapidjson::Value& contentVal) {
     if (contentVal.IsString()) {
         return contentVal.GetString();
@@ -163,6 +164,7 @@ static std::string extractTextContent(const rapidjson::Value& contentVal) {
     }
     return result;
 }
+#endif
 
 // Read the three string fields (id, name, arguments) out of a function_call item.
 //
@@ -983,7 +985,13 @@ void OpenAIResponsesHandler::serializeResponseObject(Writer<StringBuffer>& write
         writer.String(toolCall.arguments.c_str());
         writer.EndObject();
     }
-    {
+    // Skip the message output item when no text was produced (e.g. the model
+    // emitted only tool_calls). Mirrors vllm responses_parser.py: emitting an
+    // empty message item makes clients (the OpenAI SDK, BFCL, etc.) echo it
+    // back verbatim into the next request's input[], polluting the chat
+    // history with stale empty assistant turns. Also matches the in_progress
+    // / created snapshot shape, where output[] is empty before any tokens.
+    if (!fullOutputText.empty()) {
         writer.StartObject();
         writer.String("id");
         writer.String(OUTPUT_ITEM_ID);
@@ -1107,8 +1115,11 @@ std::string OpenAIResponsesHandler::serializeUnaryResponseImpl(const std::vector
             }
         }
 
-        // Always emit message output item
-        {
+        // Emit message output item only when text was produced. See the
+        // matching guard in serializeResponseObject for rationale (avoids
+        // round-tripping empty assistant turns through the Responses API
+        // input[] on the next request).
+        if (!parsedOutput.content.empty()) {
             const std::string outputId = "msg-" + std::to_string(outputIndex);
 
             writer.StartObject();
