@@ -15,6 +15,10 @@
 //*****************************************************************************
 #include <cstdint>
 #include <cstring>
+#include <cstdlib>
+#if defined(_WIN32)
+#include <stdlib.h>
+#endif
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -22,6 +26,7 @@
 #include <gtest/gtest.h>
 
 #include "../../audio/audio_utils.hpp"
+#include "../../utils/env_guard.hpp"
 
 namespace {
 
@@ -63,9 +68,8 @@ std::string buildWavBuffer(uint32_t sampleRate, uint32_t numSamples) {
 class AudioUtilsSampleRateTest : public ::testing::Test {
 protected:
     void SetUp() override {
-        // Ensure tests run with default bounds unless they explicitly override them.
-        unsetenv("OVMS_AUDIO_MIN_SAMPLE_RATE");
-        unsetenv("OVMS_AUDIO_MAX_SAMPLE_RATE");
+        UnSetEnvironmentVar("OVMS_AUDIO_MIN_SAMPLE_RATE");
+        UnSetEnvironmentVar("OVMS_AUDIO_MAX_SAMPLE_RATE");
     }
 };
 
