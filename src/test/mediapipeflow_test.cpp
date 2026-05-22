@@ -4112,6 +4112,8 @@ TEST(MediapipeGraphQueueSizeDirective, NoDirectiveMeansDisabled) {
 }
 
 TEST(MediapipeGraphQueueSizeDirective, ExplicitPositiveValue) {
+    EnvGuard guard;
+    guard.unset("OVMS_GRAPH_QUEUE_OFF");
     std::string pbtxt = makePbtxtWithDirective("# OVMS_GRAPH_QUEUE_MAX_SIZE: 4");
     ovms::MediapipeGraphConfig mgc;
     DummyMediapipeGraphDefinition def("test", mgc, pbtxt);
@@ -4122,6 +4124,8 @@ TEST(MediapipeGraphQueueSizeDirective, ExplicitPositiveValue) {
 }
 
 TEST(MediapipeGraphQueueSizeDirective, AutoValue) {
+    EnvGuard guard;
+    guard.unset("OVMS_GRAPH_QUEUE_OFF");
     std::string pbtxt = makePbtxtWithDirective("# OVMS_GRAPH_QUEUE_MAX_SIZE: AUTO");
     ovms::MediapipeGraphConfig mgc;
     DummyMediapipeGraphDefinition def("test", mgc, pbtxt);
@@ -4142,6 +4146,8 @@ TEST(MediapipeGraphQueueSizeDirective, ZeroDisablesQueue) {
 }
 
 TEST(MediapipeGraphQueueSizeDirective, NegativeValueRejected) {
+    EnvGuard guard;
+    guard.unset("OVMS_GRAPH_QUEUE_OFF");
     std::string pbtxt = makePbtxtWithDirective("# OVMS_GRAPH_QUEUE_MAX_SIZE: -1");
     ovms::MediapipeGraphConfig mgc;
     DummyMediapipeGraphDefinition def("test", mgc, pbtxt);
@@ -4166,6 +4172,8 @@ TEST(MediapipeGraphQueueSizeDirective, ExceedsHardwareThreads) {
 }
 
 TEST(MediapipeGraphQueueSizeDirective, InvalidStringRejected) {
+    EnvGuard guard;
+    guard.unset("OVMS_GRAPH_QUEUE_OFF");
     std::string pbtxt = makePbtxtWithDirective("# OVMS_GRAPH_QUEUE_MAX_SIZE: INVALID");
     ovms::MediapipeGraphConfig mgc;
     DummyMediapipeGraphDefinition def("test", mgc, pbtxt);
@@ -4175,6 +4183,8 @@ TEST(MediapipeGraphQueueSizeDirective, InvalidStringRejected) {
 }
 
 TEST(MediapipeGraphQueueSizeDirective, PythonLoopbackWithQueueRejected) {
+    EnvGuard guard;
+    guard.unset("OVMS_GRAPH_QUEUE_OFF");
     static const char* PYTHON_LOOPBACK_PBTXT = R"(
 # OVMS_GRAPH_QUEUE_MAX_SIZE: 4
 input_stream: "OVMS_PY_TENSOR:input"
@@ -4200,6 +4210,8 @@ node: {
 }
 
 TEST(MediapipeGraphQueueSizeDirective, PythonLoopbackWithAutoQueueRejected) {
+    EnvGuard guard;
+    guard.unset("OVMS_GRAPH_QUEUE_OFF");
     static const char* PYTHON_LOOPBACK_AUTO_PBTXT = R"(
 # OVMS_GRAPH_QUEUE_MAX_SIZE: AUTO
 input_stream: "OVMS_PY_TENSOR:input"

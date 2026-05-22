@@ -97,6 +97,9 @@ bool Config::parse(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* model
         envGuard.set("OPENVINO_LOG_LEVEL", "4");
     }
 #endif
+    if (GetEnvVar("OVMS_GRAPH_QUEUE_OFF").empty()) {
+        envGuard.set("OVMS_GRAPH_QUEUE_OFF", "1");
+    }
     return validate();
 }
 
