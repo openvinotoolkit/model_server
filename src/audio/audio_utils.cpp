@@ -146,7 +146,7 @@ std::vector<float> readWav(const std::string_view& wavData) {
 }
 #pragma warning(push)
 #pragma warning(disable : 6262)
-static const size_t vectorSizelimit = std::numeric_limits<size_t>::max() / sizeof(float);
+static const size_t AUDIO_BUFFER_SIZE_LIMIT = std::numeric_limits<size_t>::max() / sizeof(float);
 std::vector<float> readMp3(const std::string_view& mp3Data) {
     Timer<TIMER_END> timer;
     timer.start(TENSOR_PREPARATION);
