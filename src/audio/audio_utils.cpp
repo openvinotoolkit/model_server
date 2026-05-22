@@ -28,7 +28,6 @@
 #include <vector>
 #include <random>
 #include <algorithm>
-#include <string_view>
 #pragma warning(push)
 #define PIPELINE_SUPPORTED_SAMPLE_RATE 16000
 
@@ -80,7 +79,7 @@ enum : unsigned int {
     RESAMPLING,
     TIMER_END
 };
-
+static const size_t AUDIO_BUFFER_SIZE_LIMIT = std::numeric_limits<size_t>::max() / sizeof(float);
 std::vector<float> readWav(const std::string_view& wavData) {
     Timer<TIMER_END> timer;
     timer.start(TENSOR_PREPARATION);
@@ -112,6 +111,10 @@ std::vector<float> readWav(const std::string_view& wavData) {
 
     const uint64_t n = wav.totalPCMFrameCount;
     std::vector<int16_t> pcm16;
+    if (n > AUDIO_BUFFER_SIZE_LIMIT/wav.channels) {
+        drwav_uninit(&wav);
+        throw std::overflow_error("Decoded audio buffer size overflow");
+    }
     pcm16.resize(n * wav.channels);
     drwav_read_pcm_frames_s16(&wav, n, pcm16.data());
     drwav_uninit(&wav);
@@ -146,7 +149,6 @@ std::vector<float> readWav(const std::string_view& wavData) {
 }
 #pragma warning(push)
 #pragma warning(disable : 6262)
-static const size_t AUDIO_BUFFER_SIZE_LIMIT = std::numeric_limits<size_t>::max() / sizeof(float);
 std::vector<float> readMp3(const std::string_view& mp3Data) {
     Timer<TIMER_END> timer;
     timer.start(TENSOR_PREPARATION);
@@ -182,7 +184,8 @@ std::vector<float> readMp3(const std::string_view& mp3Data) {
             if (framesRead == 0) {
                 break;
             }
-            if (pcmf32.size() > vectorSizelimit) {
+            if (pcmf32.size() > AUDIO_BUFFER_SIZE_LIMIT) {
+                drmp3_uninit(&mp3);
                 throw std::overflow_error("Decoded audio buffer size overflow");
             }
             pcmf32.insert(pcmf32.end(), tempBuffer, tempBuffer + framesRead * mp3.channels);
@@ -201,7 +204,7 @@ std::vector<float> readMp3(const std::string_view& mp3Data) {
     }
     timer.start(RESAMPLING);
     size_t outputLength = (size_t)(pcmf32.size() * PIPELINE_SUPPORTED_SAMPLE_RATE / mp3.sampleRate);
-    if (outputLength > vectorSizelimit) {
+    if (outputLength > AUDIO_BUFFER_SIZE_LIMIT) {
         throw std::overflow_error("Decoded audio buffer size overflow");
     }
     validateAudioFileSizeAgainstMaxValue(outputLength * sizeof(float));

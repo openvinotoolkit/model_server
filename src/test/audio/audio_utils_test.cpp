@@ -23,6 +23,7 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
+#include <string_view>
 
 #include <gtest/gtest.h>
 

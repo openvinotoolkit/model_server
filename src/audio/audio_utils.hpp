@@ -19,6 +19,7 @@
 #include <string>
 #include <vector>
 #include <stdint.h>
+#include <string_view>
 
 bool isWavBuffer(const std::string buf);
 
