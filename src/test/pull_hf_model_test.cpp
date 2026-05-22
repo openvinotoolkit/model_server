@@ -652,6 +652,11 @@ TEST_F(HfPullCache, PullNonGit) {
     ASSERT_EQ(ec, std::errc()) << "Failed to remove .git from cached repository: " << ec.message();
     ASSERT_FALSE(std::filesystem::exists(gitDir));
 
+#ifdef _WIN32
+    // On Windows, gtest stdout capture can conflict with SPDLOG stdout sink.
+    this->ServerPullHfModel(modelName, downloadPath, task);
+#else
+    // On Linux this warning is emitted to stdout and can be asserted directly.
     testing::internal::CaptureStdout();
     this->ServerPullHfModel(modelName, downloadPath, task);
     std::string out = testing::internal::GetCapturedStdout();
@@ -661,6 +666,7 @@ TEST_F(HfPullCache, PullNonGit) {
         << out;
     EXPECT_EQ(out.find("LFS file(s) to resume"), std::string::npos);
     EXPECT_EQ(out.find(" Resuming "), std::string::npos);
+#endif
 
     // No work-in-progress marker should be created next to the model directory.
     const std::string lfsWipPath = ovms::libgit2::getLfsWipMarkerPath(basePath).string();
