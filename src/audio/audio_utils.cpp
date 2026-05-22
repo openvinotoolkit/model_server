@@ -146,6 +146,7 @@ std::vector<float> readWav(const std::string_view& wavData) {
 }
 #pragma warning(push)
 #pragma warning(disable : 6262)
+static const size_t vectorSizelimit = std::numeric_limits<size_t>::max() / sizeof(float);
 std::vector<float> readMp3(const std::string_view& mp3Data) {
     Timer<TIMER_END> timer;
     timer.start(TENSOR_PREPARATION);
@@ -175,7 +176,6 @@ std::vector<float> readMp3(const std::string_view& mp3Data) {
     // For safety, check the decoded buffer after filling
     float tempBuffer[MP3_DECODE_CHUNK_FRAMES * 2];  // 2 is max channels we validated earlier
     std::vector<float> pcmf32;
-    size_t vectorSizelimit = std::numeric_limits<size_t>::max() / sizeof(float);
     try {
         for (;;) {
             drmp3_uint64 framesRead = drmp3_read_pcm_frames_f32(&mp3, MP3_DECODE_CHUNK_FRAMES, tempBuffer);
