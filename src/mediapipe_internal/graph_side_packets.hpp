@@ -14,13 +14,19 @@
 // limitations under the License.
 //*****************************************************************************
 #pragma once
+
 #include <memory>
+#include <mutex>
 #include <string>
 #include <unordered_map>
+#include <utility>
+#include <vector>
 
 namespace ovms {
+
 class PythonNodeResources;
 class GenAiServable;
+struct GenAiServableExecutionContext;
 struct ImageGenerationPipelines;
 struct EmbeddingsServable;
 struct RerankServable;
@@ -35,26 +41,59 @@ using TtsServableMap = std::unordered_map<std::string, std::shared_ptr<TtsServab
 using EmbeddingsServableMap = std::unordered_map<std::string, std::shared_ptr<EmbeddingsServable>>;
 using ImageGenerationPipelinesMap = std::unordered_map<std::string, std::shared_ptr<ImageGenerationPipelines>>;
 
+// Holds a per-graph LLM execution context that is swapped between requests.
+// The mutex synchronizes the handoff between the executor thread (which creates
+// a fresh context before each request via set()) and the MediaPipe scheduler
+// thread (which reads it in the calculator's Process() via get()).
+// In the queue path these run concurrently because the graph stays running.
+class GenAiExecutionContextHolder {
+public:
+    std::shared_ptr<GenAiServableExecutionContext> get() {
+        std::lock_guard<std::mutex> lock(executionContextMtx);
+        return executionContext;
+    }
+    void set(std::shared_ptr<GenAiServableExecutionContext> ctx) {
+        std::lock_guard<std::mutex> lock(executionContextMtx);
+        executionContext = std::move(ctx);
+    }
+    void reset() {
+        std::lock_guard<std::mutex> lock(executionContextMtx);
+        executionContext.reset();
+    }
+
+private:
+    std::mutex executionContextMtx;
+    std::shared_ptr<GenAiServableExecutionContext> executionContext;
+};
+using GenAiExecutionContextMap = std::unordered_map<std::string, std::shared_ptr<GenAiExecutionContextHolder>>;
+
 struct GraphSidePackets {
     PythonNodeResourcesMap pythonNodeResourcesMap;
     GenAiServableMap genAiServableMap;
+    GenAiExecutionContextMap genAiExecutionContextMap;
     ImageGenerationPipelinesMap imageGenPipelinesMap;
     EmbeddingsServableMap embeddingsServableMap;
     RerankServableMap rerankServableMap;
     SttServableMap sttServableMap;
     TtsServableMap ttsServableMap;
+    std::vector<std::string> loraAliases;
+    bool hideBaseModelInRouting = false;
     void clear() {
         pythonNodeResourcesMap.clear();
         genAiServableMap.clear();
+        genAiExecutionContextMap.clear();
         imageGenPipelinesMap.clear();
         embeddingsServableMap.clear();
         rerankServableMap.clear();
         sttServableMap.clear();
         ttsServableMap.clear();
+        loraAliases.clear();
+        hideBaseModelInRouting = false;
     }
     bool empty() {
         return (pythonNodeResourcesMap.empty() &&
                 genAiServableMap.empty() &&
+                genAiExecutionContextMap.empty() &&
                 imageGenPipelinesMap.empty() &&
                 embeddingsServableMap.empty() &&
                 rerankServableMap.empty() &&

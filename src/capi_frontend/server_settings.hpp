@@ -144,6 +144,36 @@ struct RerankGraphSettingsImpl {
     uint64_t maxAllowedChunks = 10000;
 };
 
+enum class LoraSourceType {
+    HF_REPO,
+    DIRECT_URL,
+    LOCAL_FILE
+};
+
+struct LoraAdapterSettings {
+    std::string alias;
+    std::string sourceLora;                      // HF repo, direct URL, or local file path
+    std::optional<std::string> safetensorsFile;  // user-specified filename (via @filename, extracted from URL/path)
+    LoraSourceType sourceType = LoraSourceType::HF_REPO;
+    std::optional<float> alpha;
+    std::optional<std::string> resolvedSafetensorsFile;  // auto-resolved by HF API during pull
+
+    // Returns the effective filename: user-specified takes priority over auto-resolved.
+    const std::optional<std::string>& effectiveSafetensorsFile() const {
+        return safetensorsFile.has_value() ? safetensorsFile : resolvedSafetensorsFile;
+    }
+};
+
+struct CompositeLoraComponent {
+    std::string adapterAlias;  // references a LoraAdapterSettings alias
+    float alpha = 1.0f;
+};
+
+struct CompositeLoraSettings {
+    std::string alias;
+    std::vector<CompositeLoraComponent> components;
+};
+
 struct ImageGenerationGraphSettingsImpl {
     std::string resolution = "";
     std::string maxResolution = "";
@@ -153,12 +183,15 @@ struct ImageGenerationGraphSettingsImpl {
     std::optional<uint32_t> maxNumberImagesPerPrompt;
     std::optional<uint32_t> defaultNumInferenceSteps;
     std::optional<uint32_t> maxNumInferenceSteps;
+    std::vector<LoraAdapterSettings> loraAdapters;
+    std::vector<CompositeLoraSettings> compositeLoraAdapters;
 };
 
 struct ExportSettings {
     std::string modelName = "";
     std::string modelPath = "./";
     std::string targetDevice = "CPU";
+    std::optional<uint32_t> restWorkers;
     std::optional<std::string> extraQuantizationParams;
     std::optional<std::string> vocoder;
     std::string precision = "int8";
@@ -170,6 +203,7 @@ struct HFSettingsImpl {
     std::string sourceModel = "";
     std::optional<std::string> ggufFilename;
     std::string downloadPath = "";
+    std::optional<std::string> sourceLoras;
     bool overwriteModels = false;
     ModelDownlaodType downloadType = GIT_CLONE_DOWNLOAD;
     GraphExportType task = UNKNOWN_GRAPH;

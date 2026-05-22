@@ -17,6 +17,7 @@
 
 #include <string>
 #include <type_traits>
+#include <vector>
 
 namespace ovms {
 
@@ -41,6 +42,7 @@ class ServableNameChecker {
 public:
     virtual ~ServableNameChecker() = default;
     virtual bool servableExists(const std::string& name, ServableQueryType check = ServableQueryType::All) const = 0;
+    virtual bool aliasesConflict(const std::vector<std::string>& aliases, const std::string& ownGraphName) const = 0;
 };
 
 }  // namespace ovms

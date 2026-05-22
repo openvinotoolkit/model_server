@@ -39,6 +39,7 @@
 #include "mediapipegraphconfig.hpp"
 #include "graph_side_packets.hpp"
 #include "packettypes.hpp"
+#include "graphqueue.hpp"
 
 namespace ovms {
 class MetricConfig;
@@ -60,6 +61,8 @@ public:
     const PipelineDefinitionStatus& getStatus() const override {
         return this->status;
     }
+    const std::vector<std::string>& getLoraAliases() const { return loraAliases; }
+    bool shouldHideBaseModelInRouting() const { return hideBaseModelInRouting; }
 
     const PipelineDefinitionStateCode getStateCode() const { return status.getStateCode(); }
     bool isAvailable() const override { return status.isAvailable(); }
@@ -78,7 +81,7 @@ public:
     static const std::string SCHEDULER_CLASS_NAME;
 
 protected:
-    GraphSidePackets sidePacketMaps;
+    std::shared_ptr<GraphSidePackets> sidePacketMaps;
 
     struct ValidationResultNotifier {
         ValidationResultNotifier(PipelineDefinitionStatus& status, std::condition_variable& loadedNotify) :
@@ -101,10 +104,13 @@ protected:
     };
 
     virtual Status validateForConfigFileExistence();
+    Status resolveGraphQueueSize();
     Status validateForConfigLoadableness();
 
     Status setStreamTypes();
     Status dryInitializeTest();
+    Status initializeQueueIfRequired();
+
     std::string chosenConfig;
     static MediapipeGraphConfig MGC;
 
@@ -133,8 +139,14 @@ private:
     std::vector<std::string> outputNames;
     std::vector<std::string> inputSidePacketNames;
 
+    std::vector<std::string> loraAliases;
+    // When using LoRA adapters with STATIC/FUSE Adapter Config mode, lora weights are always active
+    // and since that's true we want to expose only lora aliases/composite aliases in routing, and hide base model.
+    bool hideBaseModelInRouting = false;
+
     PythonBackend* pythonBackend;
 
     std::unique_ptr<MediapipeServableMetricReporter> reporter;
+    std::shared_ptr<GraphQueue> queue;
 };
 }  // namespace ovms
