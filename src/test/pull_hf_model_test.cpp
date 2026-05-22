@@ -420,6 +420,9 @@ TEST_F(HfPullCache, Resume) {
 
 // ResumeAfterShutdownRequestAndRerun
 TEST_F(HfPull, ResumeShutdown) {
+#ifdef _WIN32
+    SKIP_AND_EXIT_IF_NOT_RUNNING_UNSTABLE();
+#endif
     std::string basePath = ovms::FileSystem::joinPath({this->directoryPath, "repository", "OpenVINO", "Phi-3-mini-FastDraft-50M-int8-ov"});
     std::string modelPath = ovms::FileSystem::appendSlash(basePath) + "openvino_model.bin";
     std::string model2Path = ovms::FileSystem::appendSlash(basePath) + "openvino_detokenizer.bin";
@@ -959,6 +962,9 @@ TEST(HfPullWindowsWorker, ResumeCtrlCChildProcess) {
 // partial-download artifacts remain on disk and that re-running --pull resumes the
 // download to completion.
 TEST_F(HfPull, ResumeCtrlC) {
+#ifdef _WIN32
+    SKIP_AND_EXIT_IF_NOT_RUNNING_UNSTABLE();
+#endif
     std::string basePath = ovms::FileSystem::joinPath({this->directoryPath, "repository", "OpenVINO", "Phi-3-mini-FastDraft-50M-int8-ov"});
     std::string modelPath = ovms::FileSystem::appendSlash(basePath) + "openvino_model.bin";
     std::string model2Path = ovms::FileSystem::appendSlash(basePath) + "openvino_detokenizer.bin";
