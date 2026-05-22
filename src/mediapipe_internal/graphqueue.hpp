@@ -65,7 +65,40 @@ struct GraphHelper {
         genAiExecutionContextMap(std::move(gh.genAiExecutionContextMap)),
         currentTimestamp(gh.currentTimestamp) {}
     GraphHelper& operator=(GraphHelper&&) = delete;
+    ~GraphHelper();
+    // Tears down the current (errored) graph and rebuilds a fresh one
+    // with the same observers and side packets. Called when inference
+    // encounters a graph error to avoid returning a poisoned graph to the pool.
+    void reinitialize(const ::mediapipe::CalculatorGraphConfig& config, const GraphSidePackets& sidePacketMaps);
 };
+
+// RAII guard that reinitializes the graph if inference exits with an error.
+// Construct before the first graph interaction (packet push). Call dismiss()
+// on the success path. If not dismissed, the destructor rebuilds the graph
+// so the next request from the pool gets a clean graph.
+class GraphReinitGuard {
+    GraphHelper& helper;
+    const ::mediapipe::CalculatorGraphConfig& config;
+    const GraphSidePackets& sidePacketMaps;
+    bool dismissed = false;
+
+public:
+    GraphReinitGuard(GraphHelper& helper,
+        const ::mediapipe::CalculatorGraphConfig& config,
+        const GraphSidePackets& sidePacketMaps) :
+        helper(helper),
+        config(config),
+        sidePacketMaps(sidePacketMaps) {}
+    void dismiss() { dismissed = true; }
+    ~GraphReinitGuard() {
+        if (!dismissed) {
+            helper.reinitialize(config, sidePacketMaps);
+        }
+    }
+    GraphReinitGuard(const GraphReinitGuard&) = delete;
+    GraphReinitGuard& operator=(const GraphReinitGuard&) = delete;
+};
+
 // we need to keep Graph alive during MP reload hence shared_ptr
 class GraphQueue : public Queue<std::shared_ptr<GraphHelper>> {
     std::shared_ptr<GraphSidePackets> sidePacketMaps;

@@ -85,25 +85,82 @@ GraphQueue::GraphQueue(const ::mediapipe::CalculatorGraphConfig& config, std::sh
             SPDLOG_ERROR("Graph queue StartRun failed: {}", absStatus.ToString());
             throw std::runtime_error(absStatus.ToString());
         }
-        inferRequests.emplace_back(std::move(graphHelper));
+        this->inferRequests.emplace_back(std::move(graphHelper));
     }
 }
-GraphQueue::~GraphQueue() {
-    for (auto& graphHelper : inferRequests) {
-        auto absStatus = graphHelper->graph->WaitUntilIdle();
-        if (!absStatus.ok()) {
-            SPDLOG_DEBUG("Graph queue WaitUntilIdle error: {}", absStatus.ToString());
-        }
-        absStatus = graphHelper->graph->CloseAllPacketSources();
-        if (!absStatus.ok()) {
-            SPDLOG_DEBUG("Graph queue CloseAllPacketSources error: {}", absStatus.ToString());
-        }
-        absStatus = graphHelper->graph->WaitUntilDone();
-        if (!absStatus.ok()) {
-            SPDLOG_DEBUG("Graph queue WaitUntilDone error: {}", absStatus.ToString());
-        }
-        graphHelper->graph->Cancel();
-        graphHelper->graph.reset();
+GraphHelper::~GraphHelper() {
+    if (!graph) {
+        return;
     }
+    auto absStatus = graph->WaitUntilIdle();
+    if (!absStatus.ok()) {
+        SPDLOG_DEBUG("GraphHelper WaitUntilIdle error: {}", absStatus.ToString());
+    }
+    absStatus = graph->CloseAllPacketSources();
+    if (!absStatus.ok()) {
+        SPDLOG_DEBUG("GraphHelper CloseAllPacketSources error: {}", absStatus.ToString());
+    }
+    absStatus = graph->WaitUntilDone();
+    if (!absStatus.ok()) {
+        SPDLOG_DEBUG("GraphHelper WaitUntilDone error: {}", absStatus.ToString());
+    }
+    graph->Cancel();
 }
+
+void GraphHelper::reinitialize(const ::mediapipe::CalculatorGraphConfig& config, const GraphSidePackets& sidePacketMaps) {
+    SPDLOG_DEBUG("Reinitializing graph after error");
+    // Tear down the old graph (best-effort, errors expected since graph is in bad state)
+    if (this->graph) {
+        auto absStatus = this->graph->CloseAllPacketSources();
+        if (!absStatus.ok()) {
+            SPDLOG_DEBUG("reinitialize: CloseAllPacketSources: {}", absStatus.ToString());
+        }
+        absStatus = this->graph->WaitUntilDone();
+        if (!absStatus.ok()) {
+            SPDLOG_DEBUG("reinitialize: WaitUntilDone: {}", absStatus.ToString());
+        }
+        this->graph->Cancel();
+    }
+    // Create fresh graph
+    graph = std::make_unique<::mediapipe::CalculatorGraph>();
+    currentTimestamp = ::mediapipe::Timestamp(0);
+
+    auto absStatus = graph->Initialize(config);
+    if (!absStatus.ok()) {
+        SPDLOG_ERROR("Graph reinitialize: Initialize failed: {}", absStatus.ToString());
+        graph.reset();
+        return;
+    }
+    for (const auto& [streamName, holder] : outStreamObservers) {
+        absStatus = graph->ObserveOutputStream(streamName, [holder](const ::mediapipe::Packet& packet) -> absl::Status {
+            return holder->current->handlePacket(packet);
+        });
+        if (!absStatus.ok()) {
+            SPDLOG_ERROR("Graph reinitialize: ObserveOutputStream failed: {}", absStatus.ToString());
+            graph.reset();
+            return;
+        }
+    }
+    // Reset observers to null sentinel
+    for (const auto& [streamName, holder] : outStreamObservers) {
+        holder->current = std::make_shared<NullOutputStreamObserver>();
+    }
+    // Reset execution contexts
+    for (auto& [nodeName, ctx] : genAiExecutionContextMap) {
+        ctx->reset();
+    }
+    std::map<std::string, mediapipe::Packet> inputSidePackets;
+    buildInputSidePackets(inputSidePackets, sidePacketMaps);
+    inputSidePackets[LLM_EXECUTION_CONTEXT_SESSION_SIDE_PACKET_TAG] =
+        mediapipe::MakePacket<GenAiExecutionContextMap>(genAiExecutionContextMap)
+            .At(::mediapipe::Timestamp(STARTING_TIMESTAMP_VALUE));
+    absStatus = graph->StartRun(inputSidePackets);
+    if (!absStatus.ok()) {
+        SPDLOG_ERROR("Graph reinitialize: StartRun failed: {}", absStatus.ToString());
+        graph.reset();
+        return;
+    }
+    SPDLOG_DEBUG("Graph reinitialized successfully");
+}
+GraphQueue::~GraphQueue() = default;
 }  // namespace ovms
