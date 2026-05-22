@@ -244,7 +244,6 @@ std::string buildWavBufferEx(uint32_t sampleRate, uint32_t numSamples, uint16_t 
     return out;
 }
 
-// 1. WAV with stereo input — verify stereo-to-mono downmix produces correct sample count
 TEST_F(AudioUtilsSampleRateTest, wavStereoDownmixProducesCorrectSampleCount) {
     const uint32_t numSamples = 32;
     const std::string wav = buildWavBufferEx(/*sampleRate=*/16000, numSamples, /*channels=*/2, /*bitsPerSample=*/16);
@@ -255,36 +254,30 @@ TEST_F(AudioUtilsSampleRateTest, wavStereoDownmixProducesCorrectSampleCount) {
     EXPECT_EQ(decoded.size(), numSamples);
 }
 
-// 2. WAV with invalid channel count (0 channels)
 TEST_F(AudioUtilsSampleRateTest, wavWithZeroChannelsThrows) {
     const std::string wav = buildWavBufferEx(/*sampleRate=*/16000, /*numSamples=*/16, /*channels=*/0, /*bitsPerSample=*/16);
     std::string_view view(wav);
     EXPECT_THROW({ auto decoded = readWav(view); }, std::runtime_error);
 }
 
-// 2b. WAV with invalid channel count (3 channels)
 TEST_F(AudioUtilsSampleRateTest, wavWithThreeChannelsThrows) {
     const std::string wav = buildWavBufferEx(/*sampleRate=*/16000, /*numSamples=*/16, /*channels=*/3, /*bitsPerSample=*/16);
     std::string_view view(wav);
     EXPECT_THROW({ auto decoded = readWav(view); }, std::runtime_error);
 }
 
-// 3. WAV with unsupported bitsPerSample (12-bit, not byte-aligned)
 TEST_F(AudioUtilsSampleRateTest, wavWithNonByteAlignedBitsPerSampleThrows) {
     const std::string wav = buildWavBufferEx(/*sampleRate=*/16000, /*numSamples=*/16, /*channels=*/1, /*bitsPerSample=*/12);
     std::string_view view(wav);
     EXPECT_THROW({ auto decoded = readWav(view); }, std::runtime_error);
 }
 
-// 3b. WAV with unsupported bitsPerSample (3-bit)
 TEST_F(AudioUtilsSampleRateTest, wavWith3BitSamplesThrows) {
     const std::string wav = buildWavBufferEx(/*sampleRate=*/16000, /*numSamples=*/16, /*channels=*/1, /*bitsPerSample=*/3);
     std::string_view view(wav);
     EXPECT_THROW({ auto decoded = readWav(view); }, std::runtime_error);
 }
 
-// 4. WAV with truncated data section — dr_wav clamps totalPCMFrameCount to
-//    available data, so readWav succeeds but returns fewer samples.
 TEST_F(AudioUtilsSampleRateTest, wavTruncatedDataReturnsFewerSamples) {
     // Build a valid WAV with 100 samples then truncate the data section to 10 bytes (5 frames)
     std::string wav = buildWavBuffer(/*sampleRate=*/16000, /*numSamples=*/100);
@@ -298,8 +291,6 @@ TEST_F(AudioUtilsSampleRateTest, wavTruncatedDataReturnsFewerSamples) {
     EXPECT_LE(decoded.size(), 5u);
 }
 
-// 5. WAV with very low sample rate (1 Hz) — resampling to 16kHz would produce
-//    huge output; should be rejected by validateAudioFileSize
 TEST_F(AudioUtilsSampleRateTest, wavWithVeryLowSampleRateRejected) {
     // 100 samples at 1 Hz resampled to 16000 Hz = 1,600,000 output samples = 6.4MB
     SetEnvironmentVar("OVMS_AUDIO_MAX_FILE_SIZE_BYTES", "1000");
@@ -309,7 +300,6 @@ TEST_F(AudioUtilsSampleRateTest, wavWithVeryLowSampleRateRejected) {
     UnSetEnvironmentVar("OVMS_AUDIO_MAX_FILE_SIZE_BYTES");
 }
 
-// 6. WAV with high sample rate (96 kHz) — downsampling to 16 kHz
 TEST_F(AudioUtilsSampleRateTest, wavWithHighSampleRateDownsamples) {
     const uint32_t numSamples = 96;
     const std::string wav = buildWavBuffer(/*sampleRate=*/96000, numSamples);
@@ -320,21 +310,18 @@ TEST_F(AudioUtilsSampleRateTest, wavWithHighSampleRateDownsamples) {
     EXPECT_EQ(decoded.size(), static_cast<size_t>(numSamples * 16000 / 96000));
 }
 
-// 7. Truncated/corrupt WAV header — should throw
 TEST_F(AudioUtilsSampleRateTest, wavCorruptHeaderThrows) {
     std::string corrupt = "RIFF\x00\x00\x00\x00WAVE";
     std::string_view view(corrupt);
     EXPECT_THROW({ auto decoded = readWav(view); }, std::runtime_error);
 }
 
-// 7b. Completely empty input
 TEST_F(AudioUtilsSampleRateTest, wavEmptyInputThrows) {
     std::string empty;
     std::string_view view(empty);
     EXPECT_THROW({ auto decoded = readWav(view); }, std::runtime_error);
 }
 
-// 8. MP3 with corrupt header — should throw "MP3 file parsing failed"
 TEST_F(AudioUtilsSampleRateTest, mp3CorruptHeaderThrows) {
     std::string corrupt = "not an mp3 file at all";
     std::string_view view(corrupt);
@@ -348,11 +335,6 @@ TEST_F(AudioUtilsSampleRateTest, mp3EmptyInputThrows) {
     EXPECT_THROW({ auto decoded = readMp3(view); }, std::runtime_error);
 }
 
-// 9. MP3 with 3+ channels — cannot be tested because MPEG-1 Layer III
-// only supports mono (1) or stereo/joint-stereo/dual-channel (2).
-// dr_mp3 will never report channels > 2 from a valid header.
-
-// 10. Zero-length WAV (0 samples) — should succeed with empty output
 TEST_F(AudioUtilsSampleRateTest, wavZeroSamplesReturnsEmpty) {
     const std::string wav = buildWavBuffer(/*sampleRate=*/16000, /*numSamples=*/0);
     std::string_view view(wav);
@@ -361,24 +343,20 @@ TEST_F(AudioUtilsSampleRateTest, wavZeroSamplesReturnsEmpty) {
     EXPECT_EQ(decoded.size(), 0u);
 }
 
-// 11. isWavBuffer with valid input
 TEST_F(AudioUtilsSampleRateTest, isWavBufferReturnsTrueForValidWav) {
     const std::string wav = buildWavBuffer(/*sampleRate=*/16000, /*numSamples=*/16);
     EXPECT_TRUE(isWavBuffer(wav));
 }
 
-// 11b. isWavBuffer with non-WAV input
 TEST_F(AudioUtilsSampleRateTest, isWavBufferReturnsFalseForNonWav) {
     EXPECT_FALSE(isWavBuffer("not a wav file"));
 }
 
-// 11c. isWavBuffer with too-short input
 TEST_F(AudioUtilsSampleRateTest, isWavBufferReturnsFalseForShortInput) {
     EXPECT_FALSE(isWavBuffer("RIFF"));
     EXPECT_FALSE(isWavBuffer(""));
 }
 
-// 11d. isWavBuffer with wrong chunk_size
 TEST_F(AudioUtilsSampleRateTest, isWavBufferReturnsFalseForWrongChunkSize) {
     std::string wav = buildWavBuffer(/*sampleRate=*/16000, /*numSamples=*/16);
     // Corrupt the chunk_size field at offset 4
@@ -387,7 +365,6 @@ TEST_F(AudioUtilsSampleRateTest, isWavBufferReturnsFalseForWrongChunkSize) {
     EXPECT_FALSE(isWavBuffer(wav));
 }
 
-// 12. validateAudioFileSize with channels > 1 — multiplied into expectedSize
 TEST_F(AudioUtilsSampleRateTest, validateAudioFileSizeRejectsWithMultipleChannels) {
     // 100 samples at 16000->16000 (no ratio change) = 100 output samples
     // With 2 channels and 4 bytes/sample: 100 * 2 * 4 = 800 bytes — under default 1GB
@@ -401,7 +378,6 @@ TEST_F(AudioUtilsSampleRateTest, validateAudioFileSizeRejectsWithMultipleChannel
     UnSetEnvironmentVar("OVMS_AUDIO_MAX_FILE_SIZE_BYTES");
 }
 
-// 13. Env var edge cases — non-numeric value (should use default)
 TEST_F(AudioUtilsSampleRateTest, envVarNonNumericUsesDefault) {
     SetEnvironmentVar("OVMS_AUDIO_MAX_FILE_SIZE_BYTES", "not_a_number");
     const std::string wav = buildWavBuffer(/*sampleRate=*/16000, /*numSamples=*/16);
@@ -412,7 +388,6 @@ TEST_F(AudioUtilsSampleRateTest, envVarNonNumericUsesDefault) {
     UnSetEnvironmentVar("OVMS_AUDIO_MAX_FILE_SIZE_BYTES");
 }
 
-// 13b. Env var with value "0" — should use default (parsed > 0 check fails)
 TEST_F(AudioUtilsSampleRateTest, envVarZeroUsesDefault) {
     SetEnvironmentVar("OVMS_AUDIO_MAX_FILE_SIZE_BYTES", "0");
     const std::string wav = buildWavBuffer(/*sampleRate=*/16000, /*numSamples=*/16);
@@ -422,7 +397,6 @@ TEST_F(AudioUtilsSampleRateTest, envVarZeroUsesDefault) {
     UnSetEnvironmentVar("OVMS_AUDIO_MAX_FILE_SIZE_BYTES");
 }
 
-// 13c. Env var with empty string — should use default
 TEST_F(AudioUtilsSampleRateTest, envVarEmptyStringUsesDefault) {
     SetEnvironmentVar("OVMS_AUDIO_MAX_FILE_SIZE_BYTES", "");
     const std::string wav = buildWavBuffer(/*sampleRate=*/16000, /*numSamples=*/16);
@@ -432,7 +406,6 @@ TEST_F(AudioUtilsSampleRateTest, envVarEmptyStringUsesDefault) {
     UnSetEnvironmentVar("OVMS_AUDIO_MAX_FILE_SIZE_BYTES");
 }
 
-// 14. validateAudioFileSize ceiling-division overflow — trigger product > max - (inputRate - 1)
 TEST_F(AudioUtilsSampleRateTest, validateAudioFileSizeRejectsOnCeilingDivisionOverflow) {
     size_t maxVal = std::numeric_limits<size_t>::max();
     uint32_t targetRate = 16000;
@@ -445,7 +418,6 @@ TEST_F(AudioUtilsSampleRateTest, validateAudioFileSizeRejectsOnCeilingDivisionOv
         std::runtime_error);
 }
 
-// 15. WAV at exact size limit boundary — decoded output size == limit (should pass)
 TEST_F(AudioUtilsSampleRateTest, wavAtExactSizeLimitPasses) {
     const uint32_t numSamples = 32;
     // At 16kHz no resampling needed. Output = 32 floats = 128 bytes
@@ -459,7 +431,6 @@ TEST_F(AudioUtilsSampleRateTest, wavAtExactSizeLimitPasses) {
     UnSetEnvironmentVar("OVMS_AUDIO_MAX_FILE_SIZE_BYTES");
 }
 
-// 15b. WAV one byte over the limit — should be rejected
 TEST_F(AudioUtilsSampleRateTest, wavOneByteOverLimitThrows) {
     const uint32_t numSamples = 32;
     size_t expectedSize = numSamples * sizeof(float);
