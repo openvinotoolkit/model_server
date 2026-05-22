@@ -111,7 +111,7 @@ std::vector<float> readWav(const std::string_view& wavData) {
 
     const uint64_t n = wav.totalPCMFrameCount;
     std::vector<int16_t> pcm16;
-    if (n > AUDIO_BUFFER_SIZE_LIMIT/wav.channels) {
+    if (n > AUDIO_BUFFER_SIZE_LIMIT / wav.channels) {
         drwav_uninit(&wav);
         throw std::overflow_error("Decoded audio buffer size overflow");
     }
