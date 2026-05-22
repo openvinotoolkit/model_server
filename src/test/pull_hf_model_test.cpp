@@ -854,8 +854,12 @@ TEST_F(HfPull, ResumeTerminate) {
 
         auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(30);
         while (std::chrono::steady_clock::now() < deadline) {
-            const std::string partPath = std::string(downloadPath) + "/OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov/openvino_model.binlfs_part";
-            if (std::filesystem::exists(modelPath) || std::filesystem::exists(partPath)) {
+            // Wait for ANY .lfs_part file in the model directory, not just large model's part.
+            // This ensures child exits after download has started, even if only small files are in progress.
+            auto lfsCandidates = ovms::libgit2::findLfsLikeFiles(downloadPath, true);
+            const bool hasAnyPartFile = std::find_if(lfsCandidates.begin(), lfsCandidates.end(),
+                                              [](const std::filesystem::path& p) { return p.filename().string().find("lfs_part") != std::string::npos; }) != lfsCandidates.end();
+            if (std::filesystem::exists(modelPath) || hasAnyPartFile) {
                 std::this_thread::sleep_for(std::chrono::milliseconds(200));
                 break;
             }

@@ -424,7 +424,7 @@ index 58cb4b424..00ddee9f3 100644
  	git_writestream **out,
 diff --git a/src/libgit2/lfs_filter.c b/src/libgit2/lfs_filter.c
 new file mode 100644
-index 000000000..579bdf9fa
+index 000000000..d8dc13544
 --- /dev/null
 +++ b/src/libgit2/lfs_filter.c
 @@ -0,0 +1,2014 @@
@@ -467,6 +467,7 @@ index 000000000..579bdf9fa
 +#include "regexp.h"
 +#include "thread.h"
 +#include "time.h"
++#include "ctype_compat.h"
 +
 +#if defined(__GNUC__) || defined(__clang__)
 +/* Optional host-provided cancellation probe.
@@ -1082,8 +1083,7 @@ index 000000000..579bdf9fa
 +#ifdef _WIN32
 +	/* For drive-root paths like "C:\\file", keep the trailing separator so
 +	 * p_stat checks "C:\\" instead of "C:". */
-+	if (dir_len == 2 && isalpha((unsigned char)path[0]) && path[1] == ':' &&
-+	    (*sep == '/' || *sep == '\\'))
++	if (dir_len == 2 && git__isalpha(path[0]) && path[1] == ':')
 +		dir_len = 3;
 +#endif
 +
