@@ -62,6 +62,15 @@ Check [supported models](https://openvinotoolkit.github.io/openvino.genai/docs/s
 ### Speech to text calculator limitations
 - Streaming is not supported
 
+## Environment Variables
+
+- **OVMS_AUDIO_MAX_FILE_SIZE_BYTES**: Maximum allowed decoded audio buffer size in bytes (default: 1073741824 / 1 GB). Controls the upper bound on memory that a single audio request can allocate for decoded PCM data. If the value is invalid, zero, or empty, the default 1 GB limit is used.
+
+```bash
+# Limit decoded audio buffers to 100 MB
+export OVMS_AUDIO_MAX_FILE_SIZE_BYTES=104857600
+```
+
 ## References
 - [Transcription API](../model_server_rest_api_speech_to_text.md#transcription)
 - [Translation API](../model_server_rest_api_speech_to_text.md#translation)
