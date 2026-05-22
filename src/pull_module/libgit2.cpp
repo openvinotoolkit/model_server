@@ -115,6 +115,33 @@ void removeLfsWipMarker(const std::string& repositoryPath) {
     }
 }
 
+/**
+ * Attempts to remove stale lfs_error.txt file from a repository.
+ * If the file cannot be checked or deleted, logs a warning but does not fail the operation.
+ * This function clears error artifacts that would otherwise interfere with resume/clone detection.
+ * 
+ * @param repositoryPath Path to the git repository root directory.
+ * @note Logs warnings if file operations fail; operation continues on error.
+ */
+void clearStaleErrorFile(const std::string& repositoryPath) {
+    std::error_code ec;
+    const fs::path errorFilePath = fs::path(repositoryPath) / "lfs_error.txt";
+    
+    bool fileExists = fs::exists(errorFilePath, ec);
+    if (ec) {
+        SPDLOG_WARN("Failed to check if lfs_error.txt exists at {}: {}. May interfere with resume/clone detection.", 
+                    errorFilePath.string(), ec.message());
+        return;
+    }
+    
+    if (fileExists) {
+        if (!fs::remove(errorFilePath, ec)) {
+            SPDLOG_WARN("Failed to remove stale lfs_error.txt at {}: {}. May interfere with resume/clone detection.", 
+                        errorFilePath.string(), ec.message());
+        }
+    }
+}
+
 }  // namespace libgit2
 
 namespace {
@@ -1194,8 +1221,7 @@ Status resumeExistingRepository(git_repository* repo,
     }
 
     // Clear any stale lfs_error.txt from previous failed attempts to avoid false error reports
-    std::error_code ec;
-    fs::remove(fs::path(downloadPath) / "lfs_error.txt", ec);
+    libgit2::clearStaleErrorFile(downloadPath);
 
     printResumeCandidates(candidates);
 
@@ -1396,8 +1422,7 @@ Status handleFreshClone(const std::string& downloadPath,
     SPDLOG_DEBUG("Downloading to path: {}", downloadPath);
 
     // Clear any stale lfs_error.txt from previous failed attempts to avoid false error reports
-    std::error_code ec;
-    fs::remove(fs::path(downloadPath) / "lfs_error.txt", ec);
+    libgit2::clearStaleErrorFile(downloadPath);
 
     git_clone_options cloneOptions = GIT_CLONE_OPTIONS_INIT;
     configureCloneOptions(cloneOptions, useProxy, proxyUrl);
