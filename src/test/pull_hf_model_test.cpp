@@ -889,7 +889,7 @@ TEST_F(HfPull, ResumeTerminate) {
         // Downloads happen sequentially; small files may finish before large model.bin starts.
         auto lfsCandidates = ovms::libgit2::findLfsLikeFiles(downloadPath, true);
         const bool hasAnyPartFile = std::find_if(lfsCandidates.begin(), lfsCandidates.end(),
-                                          [](const std::filesystem::path& p) { return p.filename().string().find("lfs_part") != std::string::npos; }) != lfsCandidates.end();
+                                        [](const std::filesystem::path& p) { return p.filename().string().find("lfs_part") != std::string::npos; }) != lfsCandidates.end();
         if (hasAnyPartFile) {
             observedPartialDownload = true;
             SPDLOG_INFO("ResumeTerminate: observed partial download, waiting 200ms before interrupt");
@@ -944,8 +944,8 @@ TEST_F(HfPull, ResumeTerminate) {
     }
 
     auto remainingPointers = ovms::libgit2::findLfsLikeFiles(downloadPath, true);
-    SPDLOG_INFO("ResumeTerminate test state: observedPartialDownload={}, interruptionSent={}, usedDeterministicFallback={}, remainingPointers count={}", 
-                observedPartialDownload, interruptionSent, usedDeterministicFallback, remainingPointers.size());
+    SPDLOG_INFO("ResumeTerminate test state: observedPartialDownload={}, interruptionSent={}, usedDeterministicFallback={}, remainingPointers count={}",
+        observedPartialDownload, interruptionSent, usedDeterministicFallback, remainingPointers.size());
     for (const auto& p : remainingPointers) {
         SPDLOG_INFO("  - {}", p.string());
     }
@@ -1086,7 +1086,7 @@ TEST_F(HfPull, ResumeCtrlC) {
         // files when interruption is triggered.
         auto lfsCandidates = ovms::libgit2::findLfsLikeFiles(downloadPath, true);
         const bool hasAnyPartFile = std::find_if(lfsCandidates.begin(), lfsCandidates.end(),
-                                          [](const std::filesystem::path& p) { return p.filename().string().find("lfs_part") != std::string::npos; }) != lfsCandidates.end();
+                                        [](const std::filesystem::path& p) { return p.filename().string().find("lfs_part") != std::string::npos; }) != lfsCandidates.end();
         if (hasAnyPartFile) {
             observedPartialDownload = true;
             std::this_thread::sleep_for(std::chrono::milliseconds(200));
@@ -1149,7 +1149,7 @@ TEST_F(HfPull, ResumeCtrlC) {
     }
 
     SPDLOG_INFO("ResumeCtrlC test state: observedPartialDownload={}, interruptionSent={}, usedDeterministicFallback={}",
-                observedPartialDownload, interruptionSent, usedDeterministicFallback);
+        observedPartialDownload, interruptionSent, usedDeterministicFallback);
     auto remainingPointers = ovms::libgit2::findLfsLikeFiles(downloadPath, true);
     EXPECT_FALSE(remainingPointers.empty());
 

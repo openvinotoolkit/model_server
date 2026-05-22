@@ -126,18 +126,18 @@ void removeLfsWipMarker(const std::string& repositoryPath) {
 void clearStaleErrorFile(const std::string& repositoryPath) {
     std::error_code ec;
     const fs::path errorFilePath = fs::path(repositoryPath) / "lfs_error.txt";
-    
+
     bool fileExists = fs::exists(errorFilePath, ec);
     if (ec) {
-        SPDLOG_WARN("Failed to check if lfs_error.txt exists at {}: {}. May interfere with resume/clone detection.", 
-                    errorFilePath.string(), ec.message());
+        SPDLOG_WARN("Failed to check if lfs_error.txt exists at {}: {}. May interfere with resume/clone detection.",
+            errorFilePath.string(), ec.message());
         return;
     }
-    
+
     if (fileExists) {
         if (!fs::remove(errorFilePath, ec)) {
-            SPDLOG_WARN("Failed to remove stale lfs_error.txt at {}: {}. May interfere with resume/clone detection.", 
-                        errorFilePath.string(), ec.message());
+            SPDLOG_WARN("Failed to remove stale lfs_error.txt at {}: {}. May interfere with resume/clone detection.",
+                errorFilePath.string(), ec.message());
         }
     }
 }
