@@ -280,13 +280,13 @@ void validateAudioFileSize(
     }
     // Estimate output samples after resampling (ceil division)
     size_t outputSamples = (product + inputRate - 1) / inputRate;
-     if ((channels != 0) && (outputSamples > std::numeric_limits<size_t>::max() / channels)) {
-         throw std::runtime_error("Audio file estimated output size overflows maximum representable value");
-     }
-     size_t expectedSize = outputSamples * channels;
-     if ((bytesPerSample != 0) && (expectedSize > std::numeric_limits<size_t>::max() / bytesPerSample)) {
-         throw std::runtime_error("Audio file estimated output size overflows maximum representable value");
-     }
-     expectedSize *= bytesPerSample;
+    if ((channels != 0) && (outputSamples > std::numeric_limits<size_t>::max() / channels)) {
+        throw std::runtime_error("Audio file estimated output size overflows maximum representable value");
+    }
+    size_t expectedSize = outputSamples * channels;
+    if ((bytesPerSample != 0) && (expectedSize > std::numeric_limits<size_t>::max() / bytesPerSample)) {
+        throw std::runtime_error("Audio file estimated output size overflows maximum representable value");
+    }
+    expectedSize *= bytesPerSample;
     validateAudioFileSizeAgainstMaxValue(expectedSize);
 }
