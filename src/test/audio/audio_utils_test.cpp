@@ -146,7 +146,7 @@ TEST_F(AudioUtilsSampleRateTest, wavFileRejectedWhenExceedsMaxFileSizeEnv) {
 }
 
 TEST_F(AudioUtilsSampleRateTest, wavFileAcceptedWhenAtMaxFileSizeEnv) {
-    const std::string wav = buildWavBuffer(/*sampleRate=*/16000, /*numSamples=*/16);
+    const std::string wav = buildWavBuffer(/*sampleRate=*/32000, /*numSamples=*/16);
     std::string_view view(wav);
     size_t expectedDecodedSize = (size_t)(16 * sizeof(float)); 
     // Set max file size to exactly the needed size

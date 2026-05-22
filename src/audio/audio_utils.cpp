@@ -140,6 +140,7 @@ std::vector<float> readWav(const std::string_view& wavData) {
     timer.stop(RESAMPLING);
     auto resamplingTime = (timer.elapsed<std::chrono::microseconds>(RESAMPLING)) / 1000;
     SPDLOG_LOGGER_DEBUG(s2t_calculator_logger, "Resampling time: {} ms", resamplingTime);
+    SPDLOG_LOGGER_DEBUG(s2t_calculator_logger, "XXXXXXXXXXXXXX FINAL OUTPUT SIZE: {}", output.size());
     return output;
 }
 #pragma warning(push)
@@ -166,26 +167,30 @@ std::vector<float> readMp3(const std::string_view& mp3Data) {
     constexpr size_t MP3_DECODE_CHUNK_FRAMES = 1152;  // 1152 is the maximum number of PCM samples per channel produced by a single MPEG-1 Layer III MP3 frame. Reference: ISO/IEC 11172-3
     // We cannot know the decoded sample count up front, but we can check the maximum possible size based on file size and sample rate
     // For safety, check the decoded buffer after filling
+    float tempBuffer[MP3_DECODE_CHUNK_FRAMES * 2];  // 2 is max channels we validated earlier
     std::vector<float> pcmf32;
-    float tempBuffer[MP3_DECODE_CHUNK_FRAMES * 2];  // *2 to accommodate stereo
-    pcmf32.reserve(mp3Data.size() * mp3.channels);
+    //pcmf32.reserve(mp3.totalPCMFrameCount * mp3.channels);
     for (;;) {
         drmp3_uint64 framesRead = drmp3_read_pcm_frames_f32(&mp3, MP3_DECODE_CHUNK_FRAMES, tempBuffer);
         if (framesRead == 0) {
             break;
         }
         pcmf32.insert(pcmf32.end(), tempBuffer, tempBuffer + framesRead * mp3.channels);
+        // TODO: drmp3_uninit not called, leak
+        validateAudioFileSizeAgainstMaxValue(pcmf32.size() * sizeof(float));
         // Optionally, check after each chunk if needed
     }
     drmp3_uninit(&mp3);
     timer.stop(TENSOR_PREPARATION);
     auto tensorPreparationTime = (timer.elapsed<std::chrono::microseconds>(TENSOR_PREPARATION)) / 1000;
     SPDLOG_LOGGER_DEBUG(s2t_calculator_logger, "Tensor preparation time: {} ms size: {}", tensorPreparationTime, pcmf32.size());
-    validateAudioFileSizeAgainstMaxValue(pcmf32.size() * sizeof(float));
+    //validateAudioFileSizeAgainstMaxValue(pcmf32.size() * sizeof(float));
     if (mp3.sampleRate == PIPELINE_SUPPORTED_SAMPLE_RATE) {
         return pcmf32;
     }
     timer.start(RESAMPLING);
+    //validateAudioFileSize(mp3.totalPCMFrameCount, mp3.sampleRate, PIPELINE_SUPPORTED_SAMPLE_RATE, mp3.channels, sizeof(float));
+
     size_t outputLength = (size_t)(pcmf32.size() * PIPELINE_SUPPORTED_SAMPLE_RATE / mp3.sampleRate);
     validateAudioFileSizeAgainstMaxValue(outputLength * sizeof(float));
     std::vector<float> output(outputLength);
