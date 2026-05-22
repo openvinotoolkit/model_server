@@ -18,6 +18,7 @@
 #define DR_MP3_IMPLEMENTATION
 #include "src/port/dr_audio.hpp"
 #include "audio_utils.hpp"
+#include "src/stringutils.hpp"
 #include "src/timer.hpp"
 #include "src/logging.hpp"
 #include <cstdlib>
@@ -243,16 +244,11 @@ static void validateAudioFileSizeAgainstMaxValue(size_t fileSize) {
     size_t maxFileSize = DEFAULT_MAX_FILE_SIZE;
     const char* env = std::getenv("OVMS_AUDIO_MAX_FILE_SIZE_BYTES");
     if (env && *env) {
-        try {
-            size_t parsed = std::stoull(env);
-            if (parsed > 0) {
-                maxFileSize = parsed;
-            }
-        } catch (...) {
-            // Ignore invalid env, use default
+        auto parsed = ovms::stou64(env);
+        if (parsed.has_value() && parsed.value() > 0) {
+            maxFileSize = parsed.value();
         }
     }
-    SPDLOG_DEBUG("{} : {}", maxFileSize, fileSize);
     if (fileSize > maxFileSize) {
         throw std::runtime_error("Audio file size " + std::to_string(fileSize) +
                                  " exceeds maximum allowed size (" + std::to_string(maxFileSize) + ")");
