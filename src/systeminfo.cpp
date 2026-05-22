@@ -16,8 +16,10 @@
 #include "systeminfo.hpp"
 
 #include <algorithm>
+#include <cstdint>
 #include <fstream>
 #include <limits>
+#include <set>
 #include <sstream>
 #include <string>
 #include <thread>
@@ -150,6 +152,24 @@ uint16_t getDockerCpuQuota() {
     }
 
     return 0;  // No quota set
+}
+
+uint16_t getPhysicalCoresPerSocket() {
+    std::set<std::string> uniqueCores;
+    std::ifstream cpuInfo("/proc/cpuinfo");
+    if (!cpuInfo.is_open()) {
+        return std::max<uint16_t>(static_cast<uint16_t>(std::thread::hardware_concurrency()), 1);
+    }
+    std::string line;
+    while (std::getline(cpuInfo, line)) {
+        if (line.find("core id") != std::string::npos) {
+            uniqueCores.insert(line);
+        }
+    }
+    if (uniqueCores.empty()) {
+        return std::max<uint16_t>(static_cast<uint16_t>(std::thread::hardware_concurrency()), 1);
+    }
+    return static_cast<uint16_t>(uniqueCores.size());
 }
 
 #endif  // __linux__

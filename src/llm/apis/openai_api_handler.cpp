@@ -213,10 +213,8 @@ absl::StatusOr<ov::Tensor> loadImage(const std::string& imageSource,
         try {
             tensor = loadImageStbiFromMemory(decoded);
         } catch (std::runtime_error& e) {
-            std::stringstream ss;
-            ss << "Image parsing failed: " << e.what();
-            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, ss.str());
-            return absl::InvalidArgumentError(ss.str());
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Image parsing failed: {}", e.what());
+            return absl::InvalidArgumentError("Image parsing failed");
         }
     } else if (std::regex_match(imageSource.c_str(), std::regex("^(http|https|ftp|sftp|)://(.*)"))) {
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Loading image using curl");
@@ -230,9 +228,7 @@ absl::StatusOr<ov::Tensor> loadImage(const std::string& imageSource,
         try {
             tensor = loadImageStbiFromMemory(decoded);
         } catch (std::runtime_error& e) {
-            std::stringstream ss;
-            ss << "Image parsing failed: " << e.what();
-            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, ss.str());
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Image parsing failed: {}", e.what());
             return absl::InvalidArgumentError("Image parsing failed");
         }
     } else {
@@ -255,10 +251,8 @@ absl::StatusOr<ov::Tensor> loadImage(const std::string& imageSource,
         try {
             tensor = loadImageStbiFromFile(resolvedImagePathStr.c_str());
         } catch (std::runtime_error& e) {
-            std::stringstream ss;
-            ss << "Image file " << resolvedImagePathStr << " parsing failed: " << e.what();
-            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, ss.str());
-            return absl::InvalidArgumentError(ss.str());
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Image file {} parsing failed: {}", resolvedImagePathStr, e.what());
+            return absl::InvalidArgumentError("Image file parsing failed");
         }
     }
     return tensor;

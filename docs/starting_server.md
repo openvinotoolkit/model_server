@@ -39,6 +39,11 @@ Server will detect the type of requested servable (classic model, generative mod
 
 When the model is generative, like copied from Hugging Face or exported using optimum-cli, all the pipeline runtime parameters can be defined with --tasks <TASK> followed by task specific options.
 
+::::{tab-set}
+:::{tab-item} With Docker
+:sync: docker
+**Required:** Docker Engine installed
+
 ```text
 docker run -d --rm -v ${PWD}/<model>:/model -p 8000:8000 openvino/model_server:latest \
 --model_path /model --model_name <model_name> --rest_port 8000 --log_level DEBUG \
