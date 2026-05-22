@@ -107,7 +107,7 @@ std::vector<float> readWav(const std::string_view& wavData) {
     }
     // Validate decoded buffer size before resampling (float32 mono output)
     validateAudioFileSize(wav.totalPCMFrameCount, wav.sampleRate, PIPELINE_SUPPORTED_SAMPLE_RATE, wav.channels, sizeof(float));
-    
+
     const uint64_t n = wav.totalPCMFrameCount;
     std::vector<int16_t> pcm16;
     pcm16.resize(n * wav.channels);
@@ -239,7 +239,7 @@ void prepareAudioOutput(void** ppData, size_t& pDataSize, uint16_t bitsPerSample
     SPDLOG_LOGGER_DEBUG(t2s_calculator_logger, "Output preparation time: {} ms", outputPreparationTime);
 }
 static void validateAudioFileSizeAgainstMaxValue(size_t fileSize) {
-    constexpr size_t DEFAULT_MAX_FILE_SIZE = 1024ull * 1024 * 1024; // 1GB
+    constexpr size_t DEFAULT_MAX_FILE_SIZE = 1024ull * 1024 * 1024;  // 1GB
     size_t maxFileSize = DEFAULT_MAX_FILE_SIZE;
     const char* env = std::getenv("OVMS_AUDIO_MAX_FILE_SIZE_BYTES");
     if (env && *env) {
@@ -255,7 +255,7 @@ static void validateAudioFileSizeAgainstMaxValue(size_t fileSize) {
     SPDLOG_DEBUG("{} : {}", maxFileSize, fileSize);
     if (fileSize > maxFileSize) {
         throw std::runtime_error("Audio file size " + std::to_string(fileSize) +
-            " exceeds maximum allowed size (" + std::to_string(maxFileSize) + ")");
+                                 " exceeds maximum allowed size (" + std::to_string(maxFileSize) + ")");
     }
 }
 

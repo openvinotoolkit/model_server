@@ -28,8 +28,8 @@ void prepareAudioOutput(void** ppData, size_t& pDataSize, uint16_t bitsPerSample
 
 // Throws if the estimated resampled audio buffer size would exceed the maximum allowed size
 void validateAudioFileSize(
-	size_t inputSamples,
-	uint32_t inputRate,
-	uint32_t targetRate,
-	uint32_t channels,
-	size_t bytesPerSample);
+    size_t inputSamples,
+    uint32_t inputRate,
+    uint32_t targetRate,
+    uint32_t channels,
+    size_t bytesPerSample);
