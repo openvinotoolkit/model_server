@@ -447,17 +447,14 @@ TEST_F(HfPull, ResumeShutdown) {
     // sending the shutdown request. A fixed sleep is unreliable: on a fast CPU/network
     // machine the download may finish before the sleep expires, leaving no partial files
     // and causing the EXPECT_FALSE(remainingPointers.empty()) assertion to fail.
-    // We poll until the model file exists as an LFS pointer or a partial download
-    // is in progress (lfs_part file present), then interrupt immediately.
+    // Only detect .lfs_part (not the pointer file which exists before download starts),
+    // ensuring shutdown arrives while curl is actually downloading.
     {
         const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(60);
         while (std::chrono::steady_clock::now() < deadline) {
-            auto lfsCandidates = ovms::libgit2::findLfsLikeFiles(downloadPath, true);
-            const bool hasModelPointer = std::find_if(lfsCandidates.begin(), lfsCandidates.end(),
-                                             [](const std::filesystem::path& p) { return p.filename() == "openvino_model.bin"; }) != lfsCandidates.end();
             const std::string partPath = ovms::FileSystem::appendSlash(basePath) + "openvino_model.binlfs_part";
             const bool hasPartFile = std::filesystem::exists(partPath);
-            if (hasModelPointer || hasPartFile) {
+            if (hasPartFile) {
                 std::this_thread::sleep_for(std::chrono::milliseconds(200));
                 break;
             }
@@ -857,10 +854,8 @@ TEST_F(HfPull, ResumeTerminate) {
 
         auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(30);
         while (std::chrono::steady_clock::now() < deadline) {
-            auto lfsCandidates = ovms::libgit2::findLfsLikeFiles(downloadPath, true);
-            auto hasOpenvinoModelPointer = std::find_if(lfsCandidates.begin(), lfsCandidates.end(),
-                                               [](const std::filesystem::path& p) { return p.filename() == "openvino_model.bin"; }) != lfsCandidates.end();
-            if (std::filesystem::exists(modelPath) || hasOpenvinoModelPointer) {
+            const std::string partPath = std::string(downloadPath) + "/OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov/openvino_model.binlfs_part";
+            if (std::filesystem::exists(modelPath) || std::filesystem::exists(partPath)) {
                 std::this_thread::sleep_for(std::chrono::milliseconds(200));
                 break;
             }
@@ -876,12 +871,9 @@ TEST_F(HfPull, ResumeTerminate) {
     bool observedPartialDownload = false;
     auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(60);
     while (std::chrono::steady_clock::now() < deadline) {
-        auto lfsCandidates = ovms::libgit2::findLfsLikeFiles(downloadPath, true);
-        auto hasOpenvinoModelPointer = std::find_if(lfsCandidates.begin(), lfsCandidates.end(),
-                                           [](const std::filesystem::path& p) { return p.filename() == "openvino_model.bin"; }) != lfsCandidates.end();
         const std::string partPath = ovms::FileSystem::appendSlash(basePath) + "openvino_model.binlfs_part";
         const bool hasPartFile = std::filesystem::exists(partPath);
-        if (hasOpenvinoModelPointer || hasPartFile) {
+        if (hasPartFile) {
             observedPartialDownload = true;
             std::this_thread::sleep_for(std::chrono::milliseconds(200));
             break;
@@ -1032,15 +1024,14 @@ TEST_F(HfPull, ResumeCtrlC) {
     // Wait until the LFS download is in flight before sending the interrupt, so the
     // cancellation actually exercises the in-progress clone path. A fixed sleep is
     // unreliable on fast machines.
+    // Only detect .lfs_part (not the pointer file which exists before download starts),
+    // ensuring SIGINT arrives while curl is actually downloading.
     bool observedPartialDownload = false;
     auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(60);
     while (std::chrono::steady_clock::now() < deadline) {
-        auto lfsCandidates = ovms::libgit2::findLfsLikeFiles(downloadPath, true);
-        const bool hasOpenvinoModelPointer = std::find_if(lfsCandidates.begin(), lfsCandidates.end(),
-                                                 [](const std::filesystem::path& p) { return p.filename() == "openvino_model.bin"; }) != lfsCandidates.end();
         const std::string partPath = ovms::FileSystem::appendSlash(basePath) + "openvino_model.binlfs_part";
         const bool hasPartFile = std::filesystem::exists(partPath);
-        if (hasOpenvinoModelPointer || hasPartFile) {
+        if (hasPartFile) {
             observedPartialDownload = true;
             std::this_thread::sleep_for(std::chrono::milliseconds(200));
             break;
