@@ -175,7 +175,6 @@ std::vector<float> readMp3(const std::string_view& mp3Data) {
     // For safety, check the decoded buffer after filling
     float tempBuffer[MP3_DECODE_CHUNK_FRAMES * 2];  // 2 is max channels we validated earlier
     std::vector<float> pcmf32;
-    //pcmf32.reserve(mp3.totalPCMFrameCount * mp3.channels);
     try {
         for (;;) {
             drmp3_uint64 framesRead = drmp3_read_pcm_frames_f32(&mp3, MP3_DECODE_CHUNK_FRAMES, tempBuffer);
@@ -193,12 +192,10 @@ std::vector<float> readMp3(const std::string_view& mp3Data) {
     timer.stop(TENSOR_PREPARATION);
     auto tensorPreparationTime = (timer.elapsed<std::chrono::microseconds>(TENSOR_PREPARATION)) / 1000;
     SPDLOG_LOGGER_DEBUG(s2t_calculator_logger, "Tensor preparation time: {} ms size: {}", tensorPreparationTime, pcmf32.size());
-    //validateAudioFileSizeAgainstMaxValue(pcmf32.size() * sizeof(float));
     if (mp3.sampleRate == PIPELINE_SUPPORTED_SAMPLE_RATE) {
         return pcmf32;
     }
     timer.start(RESAMPLING);
-    //validateAudioFileSize(mp3.totalPCMFrameCount, mp3.sampleRate, PIPELINE_SUPPORTED_SAMPLE_RATE, mp3.channels, sizeof(float));
 
     size_t outputLength = (size_t)(pcmf32.size() * PIPELINE_SUPPORTED_SAMPLE_RATE / mp3.sampleRate);
     validateAudioFileSizeAgainstMaxValue(outputLength * sizeof(float));
