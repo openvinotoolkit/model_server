@@ -362,6 +362,7 @@ ovms_cc_library(
         "//src:libovmsstatus",
     ],
     visibility = ["//visibility:public"],
+    additional_copts = COPTS_PYTHON
 )
 
 ovms_cc_library(
