@@ -28,6 +28,7 @@
 #include <vector>
 #include <random>
 #include <algorithm>
+#include <string_view>
 #pragma warning(push)
 #define PIPELINE_SUPPORTED_SAMPLE_RATE 16000
 
@@ -107,7 +108,7 @@ std::vector<float> readWav(const std::string_view& wavData) {
         throw std::runtime_error("WAV file header claims more frames than possible from data chunk size");
     }
     // Validate decoded buffer size before resampling (float32 mono output)
-    validateAudioFileSize(wav.totalPCMFrameCount, wav.sampleRate, PIPELINE_SUPPORTED_SAMPLE_RATE, wav.channels, sizeof(float));
+    validateAudioFileSize(wav.totalPCMFrameCount, wav.sampleRate, PIPELINE_SUPPORTED_SAMPLE_RATE, /*will be downmixed to mono*/ 1, sizeof(float));
 
     const uint64_t n = wav.totalPCMFrameCount;
     std::vector<int16_t> pcm16;
@@ -141,7 +142,6 @@ std::vector<float> readWav(const std::string_view& wavData) {
     timer.stop(RESAMPLING);
     auto resamplingTime = (timer.elapsed<std::chrono::microseconds>(RESAMPLING)) / 1000;
     SPDLOG_LOGGER_DEBUG(s2t_calculator_logger, "Resampling time: {} ms", resamplingTime);
-    SPDLOG_LOGGER_DEBUG(s2t_calculator_logger, "XXXXXXXXXXXXXX FINAL OUTPUT SIZE: {}", output.size());
     return output;
 }
 #pragma warning(push)
@@ -175,11 +175,15 @@ std::vector<float> readMp3(const std::string_view& mp3Data) {
     // For safety, check the decoded buffer after filling
     float tempBuffer[MP3_DECODE_CHUNK_FRAMES * 2];  // 2 is max channels we validated earlier
     std::vector<float> pcmf32;
+    size_t vectorSizelimit = std::numeric_limits<size_t>::max() / sizeof(float);
     try {
         for (;;) {
             drmp3_uint64 framesRead = drmp3_read_pcm_frames_f32(&mp3, MP3_DECODE_CHUNK_FRAMES, tempBuffer);
             if (framesRead == 0) {
                 break;
+            }
+            if (pcmf32.size() > vectorSizelimit) {
+                throw std::overflow_error("Decoded audio buffer size overflow");
             }
             pcmf32.insert(pcmf32.end(), tempBuffer, tempBuffer + framesRead * mp3.channels);
             validateAudioFileSizeAgainstMaxValue(pcmf32.size() * sizeof(float));
@@ -196,8 +200,10 @@ std::vector<float> readMp3(const std::string_view& mp3Data) {
         return pcmf32;
     }
     timer.start(RESAMPLING);
-
     size_t outputLength = (size_t)(pcmf32.size() * PIPELINE_SUPPORTED_SAMPLE_RATE / mp3.sampleRate);
+    if (outputLength > vectorSizelimit) {
+        throw std::overflow_error("Decoded audio buffer size overflow");
+    }
     validateAudioFileSizeAgainstMaxValue(outputLength * sizeof(float));
     std::vector<float> output(outputLength);
     resample_audio(reinterpret_cast<float*>(pcmf32.data()), pcmf32.size(), mp3.sampleRate, PIPELINE_SUPPORTED_SAMPLE_RATE, output);
@@ -259,6 +265,9 @@ void validateAudioFileSize(
     uint32_t targetRate,
     uint32_t channels,
     size_t bytesPerSample) {
+    if (inputRate <= 0) {
+        throw std::runtime_error("Audio file rate should be greater than 0");
+    }
     // Detect overflow: if inputSamples is large enough that inputSamples * targetRate
     // would overflow size_t, the output is certainly too large.
     if (inputSamples > std::numeric_limits<size_t>::max() / targetRate) {
@@ -271,6 +280,13 @@ void validateAudioFileSize(
     }
     // Estimate output samples after resampling (ceil division)
     size_t outputSamples = (product + inputRate - 1) / inputRate;
-    size_t expectedSize = outputSamples * channels * bytesPerSample;
+     if ((channels != 0) && (outputSamples > std::numeric_limits<size_t>::max() / channels)) {
+         throw std::runtime_error("Audio file estimated output size overflows maximum representable value");
+     }
+     size_t expectedSize = outputSamples * channels;
+     if ((bytesPerSample != 0) && (expectedSize > std::numeric_limits<size_t>::max() / bytesPerSample)) {
+         throw std::runtime_error("Audio file estimated output size overflows maximum representable value");
+     }
+     expectedSize *= bytesPerSample;
     validateAudioFileSizeAgainstMaxValue(expectedSize);
 }

@@ -148,11 +148,12 @@ TEST_F(AudioUtilsSampleRateTest, wavFileRejectedWhenExceedsMaxFileSizeEnv) {
 TEST_F(AudioUtilsSampleRateTest, wavFileAcceptedWhenAtMaxFileSizeEnv) {
     const std::string wav = buildWavBuffer(/*sampleRate=*/32000, /*numSamples=*/16);
     std::string_view view(wav);
-    size_t expectedDecodedSize = (size_t)(16 * sizeof(float));
+    size_t expectedDecodedSize = static_cast<size_t>(8 * sizeof(float));
     // Set max file size to exactly the needed size
     SetEnvironmentVar("OVMS_AUDIO_MAX_FILE_SIZE_BYTES", std::to_string(expectedDecodedSize));
     std::vector<float> decoded;
     EXPECT_NO_THROW({ decoded = readWav(view); });
+    EXPECT_EQ(decoded.size(), 8u);
     UnSetEnvironmentVar("OVMS_AUDIO_MAX_FILE_SIZE_BYTES");
 }
 
