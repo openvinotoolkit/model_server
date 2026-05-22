@@ -162,7 +162,12 @@ std::vector<float> readMp3(const std::string_view& mp3Data) {
     // dr_mp3 sets totalPCMFrameCount to UINT64_MAX when no Xing/VBRI tag is present (unknown length).
     // In that case skip metadata-based validation; post-decode validation will guard against OOM.
     if (mp3.totalPCMFrameCount != std::numeric_limits<uint64_t>::max()) {
-        validateAudioFileSize(mp3.totalPCMFrameCount, mp3.sampleRate, PIPELINE_SUPPORTED_SAMPLE_RATE, mp3.channels, sizeof(float));
+        try {
+            validateAudioFileSize(mp3.totalPCMFrameCount, mp3.sampleRate, PIPELINE_SUPPORTED_SAMPLE_RATE, mp3.channels, sizeof(float));
+        } catch (...) {
+            drmp3_uninit(&mp3);
+            throw;
+        }
     }
     constexpr size_t MP3_DECODE_CHUNK_FRAMES = 1152;  // 1152 is the maximum number of PCM samples per channel produced by a single MPEG-1 Layer III MP3 frame. Reference: ISO/IEC 11172-3
     // We cannot know the decoded sample count up front, but we can check the maximum possible size based on file size and sample rate
@@ -170,15 +175,18 @@ std::vector<float> readMp3(const std::string_view& mp3Data) {
     float tempBuffer[MP3_DECODE_CHUNK_FRAMES * 2];  // 2 is max channels we validated earlier
     std::vector<float> pcmf32;
     //pcmf32.reserve(mp3.totalPCMFrameCount * mp3.channels);
-    for (;;) {
-        drmp3_uint64 framesRead = drmp3_read_pcm_frames_f32(&mp3, MP3_DECODE_CHUNK_FRAMES, tempBuffer);
-        if (framesRead == 0) {
-            break;
+    try {
+        for (;;) {
+            drmp3_uint64 framesRead = drmp3_read_pcm_frames_f32(&mp3, MP3_DECODE_CHUNK_FRAMES, tempBuffer);
+            if (framesRead == 0) {
+                break;
+            }
+            pcmf32.insert(pcmf32.end(), tempBuffer, tempBuffer + framesRead * mp3.channels);
+            validateAudioFileSizeAgainstMaxValue(pcmf32.size() * sizeof(float));
         }
-        pcmf32.insert(pcmf32.end(), tempBuffer, tempBuffer + framesRead * mp3.channels);
-        // TODO: drmp3_uninit not called, leak
-        validateAudioFileSizeAgainstMaxValue(pcmf32.size() * sizeof(float));
-        // Optionally, check after each chunk if needed
+    } catch (...) {
+        drmp3_uninit(&mp3);
+        throw;
     }
     drmp3_uninit(&mp3);
     timer.stop(TENSOR_PREPARATION);
