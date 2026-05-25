@@ -21,6 +21,7 @@
 #if (MEDIAPIPE_DISABLE == 0)
 #include <glog/logging.h>
 #endif
+#include <cstdlib>
 #include <vector>
 
 namespace ovms {
@@ -163,6 +164,13 @@ void configure_logger(const std::string& log_level, const std::string& log_path)
         FLAGS_minloglevel = google::GLOG_ERROR;
 #endif
 #endif
+    if (log_level == "DEBUG" || log_level == "TRACE") {
+#ifdef _WIN32
+        _putenv_s("OPENVINO_LOG_LEVEL", "4");
+#else
+        ::setenv("OPENVINO_LOG_LEVEL", "4", 1);
+#endif
+    }
 }
 
 }  // namespace ovms

@@ -15,7 +15,7 @@
 //*****************************************************************************
 #include "env_guard.hpp"
 
-#include "../logging.hpp"
+#include "src/logging.hpp"
 
 #include <stdlib.h>
 
