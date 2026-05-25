@@ -94,12 +94,9 @@ bool Config::parse(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* model
     static EnvGuard envGuard;
 #if defined(__linux__) || defined(_WIN32)
     if (this->serverSettings.logLevel == "DEBUG" || this->serverSettings.logLevel == "TRACE") {
-        envGuard.set("OPENVINO_LOG_LEVEL", "4");
+       envGuard.set("OPENVINO_LOG_LEVEL", "4");
     }
 #endif
-    if (GetEnvVar("OVMS_GRAPH_QUEUE_OFF").empty()) {
-        envGuard.set("OVMS_GRAPH_QUEUE_OFF", "1");
-    }
     return validate();
 }
 
