@@ -45,6 +45,8 @@ def ovms_cc_library(**kwargs):
         kwargs["copts"] += kwargs.pop("additional_copts")
     if "additional_linkopts" in kwargs:
         kwargs["linkopts"] += kwargs.pop("additional_linkopts")
+    if "additional_local_defines" in kwargs:
+        kwargs["local_defines"] += kwargs.pop("additional_local_defines")
 
     native.cc_library(
         **kwargs
@@ -235,17 +237,17 @@ COMMON_STATIC_LIBS_LINKOPTS = select({
                     "/LTCG",
                 ],
                 })
-COPTS_PYTHON = select({
-    "//conditions:default": ["-DPYTHON_DISABLE=1"],
-    "//:not_disable_python" : ["-DPYTHON_DISABLE=0"],
-})
-COPTS_MEDIAPIPE = select({
-    "//conditions:default": ["-DMEDIAPIPE_DISABLE=1"],
-    "//:not_disable_mediapipe" : ["-DMEDIAPIPE_DISABLE=0"],
-})
 COPTS_DROGON = select({
     "//conditions:default": ["-DUSE_DROGON=0"],
     "//:enable_drogon" : ["-DUSE_DROGON=1"],
+})
+LOCAL_DEFINES_PYTHON = select({
+    "//conditions:default": ["PYTHON_DISABLE=1"],
+    "//:not_disable_python" : ["PYTHON_DISABLE=0"],
+})
+LOCAL_DEFINES_MEDIAPIPE = select({
+    "//conditions:default": ["MEDIAPIPE_DISABLE=1"],
+    "//:not_disable_mediapipe" : ["MEDIAPIPE_DISABLE=0"],
 })
 COMMON_FUZZER_COPTS = [
     "-fsanitize=address",

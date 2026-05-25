@@ -15,7 +15,7 @@
 #
 
 load("@mediapipe//mediapipe/framework/port:build_config.bzl", "mediapipe_cc_proto_library", "mediapipe_proto_library")
-load("//:common_settings.bzl", "COPTS_MEDIAPIPE", "ovms_cc_library")
+load("//:common_settings.bzl", "ovms_cc_library", "LOCAL_DEFINES_MEDIAPIPE")
 
 ovms_cc_library(
     name = "graph_export",
@@ -42,8 +42,8 @@ ovms_cc_library(
                 ],
             "//:disable_mediapipe": []
             }),
-    additional_copts = COPTS_MEDIAPIPE,
     visibility = ["//visibility:public"],
+    additional_local_defines = LOCAL_DEFINES_MEDIAPIPE,
 )
 
 ovms_cc_library(

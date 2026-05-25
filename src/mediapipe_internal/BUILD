@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-load("//:common_settings.bzl", "COPTS_PYTHON", "COPTS_MEDIAPIPE", "ovms_cc_library")
+load("//:common_settings.bzl", "ovms_cc_library", "LOCAL_DEFINES_PYTHON", "LOCAL_DEFINES_MEDIAPIPE")
 
 ovms_cc_library(
     name = "node_initializer",
@@ -61,7 +61,7 @@ ovms_cc_library(
         "@mediapipe//mediapipe/framework:calculator_graph",
     ],
     visibility = ["//visibility:public"],
-    additional_copts = COPTS_MEDIAPIPE,
+    additional_local_defines = LOCAL_DEFINES_MEDIAPIPE,
 )
 
 ovms_cc_library(
@@ -94,7 +94,7 @@ ovms_cc_library(
         "@mediapipe//mediapipe/framework:calculator_graph",
     ],
     visibility = ["//visibility:public"],
-    additional_copts = COPTS_PYTHON + COPTS_MEDIAPIPE,
+    additional_local_defines = LOCAL_DEFINES_PYTHON + LOCAL_DEFINES_MEDIAPIPE,
 )
 
 ovms_cc_library(
@@ -128,7 +128,7 @@ ovms_cc_library(
         "@mediapipe//mediapipe/framework:calculator_graph",
     ],
     visibility = ["//visibility:public"],
-    additional_copts = COPTS_PYTHON + COPTS_MEDIAPIPE,
+    additional_local_defines = LOCAL_DEFINES_PYTHON + LOCAL_DEFINES_MEDIAPIPE,
 )
 
 ovms_cc_library(
@@ -194,6 +194,6 @@ ovms_cc_library(
         "@mediapipe//mediapipe/framework/port:parse_text_proto",
     ],
     visibility = ["//visibility:public"],
-    additional_copts = COPTS_PYTHON + COPTS_MEDIAPIPE,
+    additional_local_defines = LOCAL_DEFINES_PYTHON + LOCAL_DEFINES_MEDIAPIPE,
     alwayslink = 1,
 )
