@@ -181,7 +181,7 @@ curl http://localhost:8000/v3/responses \
 
 ```console
 pip3 install requests
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/static/images/zebra.jpeg -o zebra.jpeg
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/2/demos/common/static/images/zebra.jpeg -o zebra.jpeg
 ```
 ```python
 import requests

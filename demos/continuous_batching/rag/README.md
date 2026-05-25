@@ -92,4 +92,4 @@ curl http://localhost:8000/v3/models
 
 ## Using RAG
 
-When the model server is deployed and serving all 3 endpoints, run the [jupyter notebook](https://github.com/openvinotoolkit/model_server/blob/main/demos/continuous_batching/rag/rag_demo.ipynb) to use RAG chain with a fully remote execution.
+When the model server is deployed and serving all 3 endpoints, run the [jupyter notebook](https://github.com/openvinotoolkit/model_server/blob/releases/2026/2/demos/continuous_batching/rag/rag_demo.ipynb) to use RAG chain with a fully remote execution.
