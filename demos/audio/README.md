@@ -2,6 +2,7 @@
 
 This demo shows how to deploy audio models in the OpenVINO Model Server.
 Speech generation and speech recognition models are exposed via OpenAI API `audio/speech`, `audio/transcriptions` and `audio/translations` endpoints.
+Speech-to-text streaming responses are supported for `audio/transcriptions` endpoint.
 
 Check supported [Speech Recognition Models](https://openvinotoolkit.github.io/openvino.genai/docs/supported-models/#speech-recognition-models-whisper-based) and [Speech Generation Models](https://openvinotoolkit.github.io/openvino.genai/docs/supported-models/#speech-generation-models).
 
@@ -237,6 +238,8 @@ The default configuration should work in most cases but the parameters can be tu
 ### Request Generation 
 Transcript file that was previously generated with audio/speech endpoint.
 
+> **Note:** Streaming responses are supported for `audio/transcriptions`. `audio/translations` does not support streaming.
+
 :::{dropdown} **Unary call with cURL**
 
 
@@ -274,6 +277,28 @@ print(transcript.text)
 The quick brown fox jumped over the lazy dog.
 ```
 :::
+
+:::{dropdown} **Streaming call with cURL**
+
+```bash
+curl -N http://localhost:8000/v3/audio/transcriptions \
+  -H "Content-Type: multipart/form-data" \
+  -F file="@speech.wav" \
+  -F model="openai/whisper-large-v3-turbo" \
+  -F language="en" \
+  -F stream="true"
+```
+
+Example streamed chunks (SSE format):
+```text
+data: {"type":"transcript.text.delta","delta":"The quick ","logprobs":[]}
+
+data: {"type":"transcript.text.delta","delta":"brown fox ","logprobs":[]}
+
+data: {"type":"transcript.text.done","text":"The quick brown fox jumped over the lazy dog.","logprobs":[]}
+```
+:::
+
 :::{dropdown} **Unary call with timestamps**
 
 
