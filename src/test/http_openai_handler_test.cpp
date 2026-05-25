@@ -5652,3 +5652,104 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingResponsesStreamOptionsRejected) {
     EXPECT_EQ(status,
         absl::InvalidArgumentError("stream_options is not supported in Responses API."));
 }
+
+TEST_F(HttpOpenAIHandlerParsingTest, streamingResponsesCompletedEventHasCorrectUsageWhenSetBeforeFinalChunk) {
+    std::string json = R"({
+        "model": "llama",
+        "input": "What is OpenVINO?",
+        "stream": true
+    })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    auto apiHandler = std::make_shared<ovms::OpenAIResponsesHandler>(
+        doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+
+    apiHandler->serializeStreamingCreatedEvent();
+    apiHandler->serializeStreamingInProgressEvent();
+
+    // Simulate a mid-stream token delta
+    apiHandler->serializeStreamingChunk("Hello", ov::genai::GenerationFinishReason::NONE);
+
+    // Fixed order: set usage BEFORE the final serializeStreamingChunk call
+    apiHandler->setPromptTokensUsage(7);
+    apiHandler->setCompletionTokensUsage(3);
+    std::string finalChunk = apiHandler->serializeStreamingChunk(" world", ov::genai::GenerationFinishReason::STOP);
+
+    // The response.completed event must carry the correct usage values
+    ASSERT_NE(finalChunk.find("\"type\":\"response.completed\""), std::string::npos) << finalChunk;
+    ASSERT_NE(finalChunk.find("\"input_tokens\":7"), std::string::npos)
+        << "input_tokens must reflect value set before final chunk: " << finalChunk;
+    ASSERT_NE(finalChunk.find("\"output_tokens\":3"), std::string::npos)
+        << "output_tokens must reflect value set before final chunk: " << finalChunk;
+    ASSERT_NE(finalChunk.find("\"total_tokens\":10"), std::string::npos)
+        << "total_tokens must be input+output: " << finalChunk;
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, streamingResponsesCompletedEventHasZeroUsageWhenSetAfterFinalChunk) {
+    std::string json = R"({
+        "model": "llama",
+        "input": "What is OpenVINO?",
+        "stream": true
+    })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    auto apiHandler = std::make_shared<ovms::OpenAIResponsesHandler>(
+        doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+
+    apiHandler->serializeStreamingCreatedEvent();
+    apiHandler->serializeStreamingInProgressEvent();
+    apiHandler->serializeStreamingChunk("Hello", ov::genai::GenerationFinishReason::NONE);
+
+    // Buggy order: final chunk first — response.completed is built with usage still at 0
+    std::string finalChunk = apiHandler->serializeStreamingChunk(" world", ov::genai::GenerationFinishReason::STOP);
+    apiHandler->setPromptTokensUsage(7);
+    apiHandler->setCompletionTokensUsage(3);
+
+    // Confirm the bug: output_tokens in the completed event is 0
+    ASSERT_NE(finalChunk.find("\"type\":\"response.completed\""), std::string::npos) << finalChunk;
+    ASSERT_NE(finalChunk.find("\"output_tokens\":0"), std::string::npos)
+        << "output_tokens must be 0 when usage is set after the final chunk (documents the pre-fix bug): " << finalChunk;
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, streamingChatCompletionsUsageChunkCorrectRegardlessOfSetOrder) {
+    std::string json = R"({
+        "model": "llama",
+        "stream": true,
+        "stream_options": {"include_usage": true},
+        "messages": [{"role": "user", "content": "hi"}]
+    })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    auto apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(
+        doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    uint32_t maxTokensLimit = 100;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+
+    apiHandler->serializeStreamingChunk("Hello", ov::genai::GenerationFinishReason::NONE);
+
+    // For chat/completions the final chunk does NOT embed usage, so setting it after is fine
+    apiHandler->serializeStreamingChunk("", ov::genai::GenerationFinishReason::STOP);
+    apiHandler->setPromptTokensUsage(7);
+    apiHandler->setCompletionTokensUsage(3);
+
+    std::string usageChunk = apiHandler->serializeStreamingUsageChunk();
+    ASSERT_NE(usageChunk.find("\"prompt_tokens\":7"), std::string::npos)
+        << "prompt_tokens must be correct in usage chunk: " << usageChunk;
+    ASSERT_NE(usageChunk.find("\"completion_tokens\":3"), std::string::npos)
+        << "completion_tokens must be correct in usage chunk: " << usageChunk;
+    ASSERT_NE(usageChunk.find("\"total_tokens\":10"), std::string::npos)
+        << "total_tokens must be correct in usage chunk: " << usageChunk;
+}
