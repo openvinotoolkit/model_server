@@ -424,11 +424,11 @@ index 58cb4b424..00ddee9f3 100644
  	git_writestream **out,
 diff --git a/src/libgit2/lfs_filter.c b/src/libgit2/lfs_filter.c
 new file mode 100644
-index 000000000..d8dc13544
+index 000000000..18490e5ad
 --- /dev/null
 +++ b/src/libgit2/lfs_filter.c
 @@ -0,0 +1,2014 @@
-+﻿/*
++/*
 +/ Copyright 2025 Intel Corporation
 +/
 +/ Licensed under the Apache License, Version 2.0 (the "License");
@@ -1049,15 +1049,15 @@ index 000000000..d8dc13544
 +
 +static const char *lfs_last_path_sep(const char *path)
 +{
-+	const char *slash = strrchr(path, '/');
++	const char *forward_sep_position = strrchr(path, '/');
 +
 +#ifdef _WIN32
-+	const char *backslash = strrchr(path, '\\');
-+	if (!slash || (backslash && backslash > slash))
-+		slash = backslash;
++	const char *backward_sep_position = strrchr(path, '\\');
++	if (!forward_sep_position || (backward_sep_position && backward_sep_position > forward_sep_position))
++		forward_sep_position = backward_sep_position;
 +#endif
 +
-+	return slash;
++	return forward_sep_position;
 +}
 +
 +static int lfs_parent_dir_exists(const char *path)
