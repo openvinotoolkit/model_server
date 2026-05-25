@@ -25,7 +25,7 @@ Text generation use case is exposed via OpenAI API `chat/completions` and `respo
 ## Fast deployment with OpenVINO models pulled directly from HuggingFace Hub
 VLM models can be deployed in a single command by using pre-configured models from [OpenVINO HuggingFace organization](https://huggingface.co/OpenVINO)
 For other models go to the model preparation step and deployment for converted models.
-Here is an example of `Qwen3-VL-8B-Instruct-int4` deployment:
+Here is an example of `Qwen3-VL-8B-Instruct-int4` deployment. Other VLM models from the OpenVINO organization can be served with the same procedure by replacing the `--source_model` value, for example `OpenVINO/Qwen3.6-35B-A3B-int4-ov` (a 35B / 3B-active MoE VLM that requires OpenVINO 2026.2 or newer and a device with enough memory to fit the INT4 weights).
 
 :::{dropdown} **Deploying with Docker**
 

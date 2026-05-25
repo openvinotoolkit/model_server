@@ -123,6 +123,28 @@ Exemplary output:
 The current weather in Tokyo is Overcast with a temperature of 9.4°C (feels like 6.4°C), relative humidity at 42%, and dew point at -2.9°C. The wind is blowing from the northeast at 3.6 km/h with gusts up to 24.8 km/h. The atmospheric pressure is 1018.9 hPa with 84% cloud cover. Visibility is 24.1 km.
 ```
 :::
+:::{tab-item} Qwen3.6-35B-A3B
+:sync: Qwen3.6-35B-A3B
+Vision Language MoE model (35B total / 3B active parameters). Requires OpenVINO 2026.2 or newer and a GPU with sufficient memory to fit the INT4 weights.
+
+Pull and start OVMS:
+```bat
+ovms.exe --rest_port 8000 --source_model OpenVINO/Qwen3.6-35B-A3B-int4-ov --model_repository_path c:\models --tool_parser hermes3 --target_device GPU --task text_generation --pipeline_type VLM_CB --cache_dir .cache --allowed_media_domains raw.githubusercontent.com
+```
+
+Use MCP server, with additional image of Gdańsk old town. VLM model deduces location and calls `get_weather` tool to summarize the weather conditions in the city.
+
+```{image} https://images.pexels.com/photos/20015887/pexels-photo-20015887.jpeg
+:alt: poland
+:width: 360px
+```
+
+> **Note**: Image source: [Link](https://images.pexels.com/photos/20015887/pexels-photo-20015887.jpeg)
+
+```bat
+python openai_agent.py --query "What is the current weather in location depicted in the image?" --image https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/1/demos/continuous_batching/agentic_ai/photo.jpeg --model OpenVINO/Qwen3.6-35B-A3B-int4-ov --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather
+```
+:::
 :::{tab-item} gpt-oss-20b
 :sync: gpt-oss-20b
 Pull and start OVMS:
@@ -283,6 +305,30 @@ Exemplary output:
 The current weather in Tokyo is overcast with a temperature of 9.4°C (feels like 6.4°C). The relative humidity is 42%, and the dew point is -2.9°C. Wind is blowing from the northeast at 3.6 km/h, with gusts up to 24.8 km/h. The atmospheric pressure is 1018.9 hPa, and there is 84% cloud cover. Visibility is 24.1 km.
 ```
 :::
+:::{tab-item} Qwen3.6-35B-A3B
+:sync: Qwen3.6-35B-A3B
+Vision Language MoE model (35B total / 3B active parameters). Requires OpenVINO 2026.2 or newer and enough host memory to fit the INT4 weights.
+
+Pull and start OVMS:
+```bash
+mkdir -p ${HOME}/models
+docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v ${HOME}/models:/models openvino/model_server:weekly \
+--rest_port 8000 --source_model OpenVINO/Qwen3.6-35B-A3B-int4-ov --model_repository_path /models --tool_parser hermes3 --task text_generation --pipeline_type VLM_CB --allowed_media_domains raw.githubusercontent.com
+```
+
+Use MCP server, with additional image of Gdańsk old town. VLM model deduces location and calls `get_weather` tool to summarize the weather conditions in the city.
+
+```{image} https://images.pexels.com/photos/20015887/pexels-photo-20015887.jpeg
+:alt: poland
+:width: 360px
+```
+
+> **Note**: Image source: [Link](https://images.pexels.com/photos/20015887/pexels-photo-20015887.jpeg)
+
+```bash
+python openai_agent.py --query "What is the current weather in location depicted in the image?" --image https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/1/demos/continuous_batching/agentic_ai/photo.jpeg --model OpenVINO/Qwen3.6-35B-A3B-int4-ov --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather
+```
+:::
 :::{tab-item} gpt-oss-20b
 :sync: gpt-oss-20b
 Pull and start OVMS:
@@ -406,6 +452,30 @@ python openai_agent.py --query "What is the current weather in Tokyo?" --model O
 Exemplary output:
 ```text
 The current weather in Tokyo is overcast with a temperature of 9.4°C (feels like 6.4°C). The relative humidity is 42%, and the dew point is -2.9°C. Wind is blowing from the northeast at 3.6 km/h, with gusts up to 24.8 km/h. The atmospheric pressure is 1018.9 hPa, and there is 84% cloud cover. Visibility is 24.1 km.
+```
+:::
+:::{tab-item} Qwen3.6-35B-A3B
+:sync: Qwen3.6-35B-A3B
+Vision Language MoE model (35B total / 3B active parameters). Requires OpenVINO 2026.2 or newer and a GPU with sufficient memory to fit the INT4 weights.
+
+Pull and start OVMS:
+```bash
+mkdir -p ${HOME}/models
+docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v ${HOME}/models:/models --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:weekly \
+--rest_port 8000 --source_model OpenVINO/Qwen3.6-35B-A3B-int4-ov --model_repository_path /models --tool_parser hermes3 --target_device GPU --task text_generation --pipeline_type VLM_CB --allowed_media_domains raw.githubusercontent.com
+```
+
+Use MCP server, with additional image of Gdańsk old town. VLM model deduces location and calls `get_weather` tool to summarize the weather conditions in the city.
+
+```{image} https://images.pexels.com/photos/20015887/pexels-photo-20015887.jpeg
+:alt: poland
+:width: 360px
+```
+
+> **Note**: Image source: [Link](https://images.pexels.com/photos/20015887/pexels-photo-20015887.jpeg)
+
+```bash
+python openai_agent.py --query "What is the current weather in location depicted in the image?" --image https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/1/demos/continuous_batching/agentic_ai/photo.jpeg --model OpenVINO/Qwen3.6-35B-A3B-int4-ov --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather
 ```
 :::
 :::{tab-item} gpt-oss-20b
