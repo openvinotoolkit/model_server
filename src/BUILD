@@ -2395,6 +2395,7 @@ cc_test(
                 "test/audio/text2speech_test.cpp",
                 "test/audio/speech2text_test.cpp",
                 "test/audio/s2t_streaming_test.cpp",
+                "test/audio/audio_utils_test.cpp",
             ],
             "//:disable_mediapipe" : [
                 "test/disabled_mediapipe_test.cpp",
