@@ -23,7 +23,7 @@ Requirements:
 
 There are other options to fulfill the prerequisites like [OpenVINO Model Server deployment on baremetal Linux or Windows](https://docs.openvino.ai/2026/model-server/ovms_docs_deploying_server_baremetal.html) and [Open WebUI installation with Docker](https://docs.openwebui.com/#quick-start-with-docker-). The steps in this demo can be reused across different options, and the reference for each step cover both deployments.
 
-This demo can be followed without changes on Panther Lake host with 64GB RAM and VRAM allocation to GPU extended using Intel Graphics Software. That way all the mentioned models can be loaded simultaneously. It's also possible to use [llama-swap](https://github.com/openvinotoolkit/model_server/blob/main/extras/llama_swap/README.md) integration to reload the models automatically. On hosts with less VRAM available, use a subset of the models, apply other models or configure different target device like CPU or NPU. Check this list of [preconfigured OpenVINO models](https://huggingface.co/OpenVINO).
+This demo can be followed without changes on Panther Lake host with 64GB RAM and VRAM allocation to GPU extended using Intel Graphics Software. That way all the mentioned models can be loaded simultaneously. It's also possible to use [llama-swap](https://github.com/openvinotoolkit/model_server/blob/releases/2026/2/extras/llama_swap/README.md) integration to reload the models automatically. On hosts with less VRAM available, use a subset of the models, apply other models or configure different target device like CPU or NPU. Check this list of [preconfigured OpenVINO models](https://huggingface.co/OpenVINO).
 
 ## Step 1: Pull model and start the OVMS server
 ::::{tab-set}
@@ -99,7 +99,7 @@ Click **New Chat** and select the model to start chatting
 
 ### (optional) Step 3: Set request parameters
 
-There are multiple configurable parameters in OVMS, all of them for `/v3/chat/completions` endpoint are accessible in [chat api documentation](https://github.com/openvinotoolkit/model_server/blob/main/docs/model_server_rest_api_chat.md#request).
+There are multiple configurable parameters in OVMS, all of them for `/v3/chat/completions` endpoint are accessible in [chat api documentation](https://github.com/openvinotoolkit/model_server/blob/releases/2026/2/docs/model_server_rest_api_chat.md#request).
 
 To configure them in *OpenWebUI* with an example of turning off reasoning:
 1. Go to **Admin Panel** -> **Settings** -> **Models** ([http://localhost:8080/admin/settings/models](http://localhost:8080/admin/settings/models))
@@ -207,7 +207,7 @@ curl http://localhost:8000/v3/rerank -H "Content-Type: application/json" -d "{\"
 
 [https://docs.openvino.ai/2026/model-server/ovms_demos_continuous_batching_rag.html](https://docs.openvino.ai/2026/model-server/ovms_demos_continuous_batching_rag.html#export-models-from-huggingface-hub-including-conversion-to-openvino-format-using-the-python-script)
 
-[https://docs.openwebui.com/tutorials/tips/rag-tutorial](https://docs.openwebui.com/tutorials/tips/rag-tutorial/#setup)
+[https://docs.openwebui.com/features/chat-conversations/rag/](https://docs.openwebui.com/features/chat-conversations/rag/)
 
 ---
 
@@ -463,8 +463,8 @@ Then it's ready to use. In new chat it's possible to toggle **Code Interpreter**
 
 Start by downloading `export_model.py` script and run it to download and quantize the model for speech generation:
 ```console 
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/export_model.py -o export_model.py
-pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/2/demos/common/export_models/export_model.py -o export_model.py
+pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/2/demos/common/export_models/requirements.txt
 python export_model.py text2speech --source_model microsoft/speecht5_tts --weight-format fp32 --model_name microsoft/speecht5_tts --config_file_path models/config.json --model_repository_path models --vocoder microsoft/speecht5_hifigan
 ```
 

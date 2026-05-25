@@ -182,8 +182,8 @@ Image generation pipeline parameters will be defined inside the `graph.pbtxt` fi
 
 Download export script, install it's dependencies and create directory for the models:
 ```console
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/export_model.py -o export_model.py
-pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/2/demos/common/export_models/export_model.py -o export_model.py
+pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/2/demos/common/export_models/requirements.txt
 mkdir models
 ```
 
@@ -530,8 +530,8 @@ Inpainting replaces a masked region in an image based on the prompt. The `mask` 
 
 Download sample images:
 ```console
-curl -O https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/image_generation/cat.png
-curl -O https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/image_generation/cat_mask.png
+curl -O https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/2026/2/demos/image_generation/cat.png
+curl -O https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/2026/2/demos/image_generation/cat_mask.png
 ```
 
 ![cat](./cat.png) ![cat_mask](./cat_mask.png)
@@ -607,8 +607,8 @@ Outpainting extends an image beyond its original borders. Prepare two images:
 
 Download sample images:
 ```console
-curl -O https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/image_generation/outpaint_input.png
-curl -O https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/image_generation/outpaint_mask.png
+curl -O https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/2026/2/demos/image_generation/outpaint_input.png
+curl -O https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/2026/2/demos/image_generation/outpaint_mask.png
 ```
 
 ![outpaint_input](./outpaint_input.png) ![outpaint_mask](./outpaint_mask.png)

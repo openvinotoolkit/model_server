@@ -5,7 +5,7 @@ The recommended deployment method in Kubernetes is via Kserve operator for Kuber
 ## ServingRuntime configuration:
 
 ```
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/extras/kserve/kserve-openvino.yaml -O
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/2/extras/kserve/kserve-openvino.yaml -O
 sed -i 's/openvino\/model_server:replace/openvino\/model_server:weekly/' kserve-openvino.yaml
 kubectl apply -f kserve-openvino.yaml
 ```
@@ -64,7 +64,7 @@ Note that using s3 or minio bucket requires configuring credentials like describ
 OVMS can be used in RedHat OpenShift AI environment to run classic models or generative pipelines. 
 
 
-The latest version can be enabled in Settings > Model resources and operations > Serving runtimes. Add new runtime with [spec](../../extras/openshift_AI/ServingRuntime.yaml)
+The latest version can be enabled in Settings > Model resources and operations > Serving runtimes. Add new runtime with [spec](../extras/openshift_AI/ServingRuntime.yaml)
 
 In first step specify the source models. Below is an example from Hugging Face
 ![image1](./openshift1.png)
