@@ -260,7 +260,7 @@ COMMON_FUZZER_LINKOPTS = [
     "-fsanitize-coverage=trace-pc",
     "-static-libasan",
 ]
-COMMON_LOCAL_DEFINES = ["SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE"]
+COMMON_LOCAL_DEFINES = ["SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE"] + LOCAL_DEFINES_PYTHON + LOCAL_DEFINES_MEDIAPIPE
 PYBIND_DEPS = [
     "//third_party:python3",
     "@pybind11//:pybind11_embed",

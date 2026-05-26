@@ -17,7 +17,6 @@ load("@bazel_skylib//lib:selects.bzl", "selects")
 load("@mediapipe//mediapipe/framework:more_selects.bzl", "more_selects")
 load("//:common_settings.bzl",
      "COMMON_STATIC_TEST_COPTS", "COMMON_STATIC_LIBS_COPTS", "COMMON_STATIC_LIBS_LINKOPTS", "COMMON_FUZZER_COPTS", "COMMON_FUZZER_LINKOPTS", "COMMON_LOCAL_DEFINES", "COPTS_DROGON",
-     "LOCAL_DEFINES_PYTHON", "LOCAL_DEFINES_MEDIAPIPE",
      "create_config_settings", "PYBIND_DEPS", "ovms_cc_library")
 
 COPTS_OV_TRACE = select({
@@ -35,7 +34,7 @@ COPTS_CLOUD = select({
 
 COPTS_TESTS = COMMON_STATIC_TEST_COPTS + COPTS_DROGON + COPTS_CLOUD
 
-LOCAL_DEFINES_TESTS = COMMON_LOCAL_DEFINES + LOCAL_DEFINES_PYTHON + LOCAL_DEFINES_MEDIAPIPE
+LOCAL_DEFINES_TESTS = COMMON_LOCAL_DEFINES
 
 config_setting(
     name = "windows",
@@ -323,7 +322,6 @@ ovms_cc_library(
         "//:not_disable_mediapipe": ["//third_party:genai"],
         "//conditions:default": [],
     }),
-    additional_local_defines = LOCAL_DEFINES_MEDIAPIPE,
     visibility = ["//visibility:public",],
     alwayslink = 1,
 )
@@ -560,7 +558,6 @@ ovms_cc_library(
         "@mediapipe//mediapipe/framework/formats:tensor",
     ],
     visibility = ["//visibility:public",],
-    additional_local_defines = LOCAL_DEFINES_PYTHON + LOCAL_DEFINES_MEDIAPIPE,
     alwayslink = 1,
 )
 ovms_cc_library(
@@ -586,7 +583,6 @@ ovms_cc_library(
         "@mediapipe//mediapipe/framework/formats:tensor",
     ],
     visibility = ["//visibility:public",],
-    additional_local_defines = LOCAL_DEFINES_PYTHON + LOCAL_DEFINES_MEDIAPIPE,
     alwayslink = 1,
 )
 ovms_cc_library(
@@ -661,7 +657,6 @@ ovms_cc_library(
         "//src/port:rapidjson_writer",
     ],
     visibility = ["//visibility:public"],
-    additional_local_defines = LOCAL_DEFINES_MEDIAPIPE,
 )
 ovms_cc_library(
     name = "rest_parser_utils",
@@ -768,7 +763,6 @@ ovms_cc_library(
         "modelmanager",
         "//src/metrics:libovmsmetrics",
     ],
-    additional_local_defines = LOCAL_DEFINES_PYTHON,
     visibility = ["//visibility:public"],
 )
 ovms_cc_library(
@@ -969,7 +963,6 @@ ovms_cc_library(
                 }),
     visibility = ["//visibility:public",],
     additional_copts = COPTS_DROGON + COPTS_OV_TRACE,
-    additional_local_defines = LOCAL_DEFINES_PYTHON + LOCAL_DEFINES_MEDIAPIPE,
     additional_linkopts = select({
                 "//conditions:default": ["-lOpenCL"], # TODO make as direct dependency
                 "//src:windows" : ["/DEFAULTLIB:Rpcrt4.lib"],}),
@@ -1016,7 +1009,6 @@ ovms_cc_library(
     ],
     visibility = ["//visibility:public",],
     additional_copts = COPTS_OV_TRACE,
-    additional_local_defines = LOCAL_DEFINES_MEDIAPIPE,
 )
 ovms_cc_library(
     name = "notifyreceiver",
@@ -1376,7 +1368,6 @@ ovms_cc_library(
     ],
     visibility = ["//visibility:public"],
     additional_copts = COPTS_DROGON,
-    additional_local_defines = LOCAL_DEFINES_MEDIAPIPE,
 )
 
 
