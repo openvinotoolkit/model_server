@@ -28,6 +28,9 @@
 #include "../filesystem/filesystem.hpp"
 #include "../llm/apis/openai_completions.hpp"
 #include "../llm/apis/openai_responses.hpp"
+#include "../llm/language_model/legacy/servable.hpp"
+#include "../llm/visual_language_model/legacy/servable.hpp"
+#include "../client_connection.hpp"
 #include <openvino/genai/visual_language/pipeline.hpp>
 #include "../module_names.hpp"
 #include "../servablemanagermodule.hpp"
@@ -5653,103 +5656,160 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingResponsesStreamOptionsRejected) {
         absl::InvalidArgumentError("stream_options is not supported in Responses API."));
 }
 
-TEST_F(HttpOpenAIHandlerParsingTest, streamingResponsesCompletedEventHasCorrectUsageWhenSetBeforeFinalChunk) {
-    std::string json = R"({
-        "model": "llama",
-        "input": "What is OpenVINO?",
-        "stream": true
-    })";
-    doc.Parse(json.c_str());
-    ASSERT_FALSE(doc.HasParseError());
+// Stub client that is never disconnected, used by the LM legacy servable tests below.
+namespace {
+struct NeverDisconnectedClient : public ovms::ClientConnection {
+    bool isDisconnected() const override { return false; }
+    void registerDisconnectionCallback(std::function<void()>) override {}
+};
+}  // namespace
+
+static std::shared_ptr<ovms::LegacyServableExecutionContext> makeLegacyResponsesContext(
+    const std::shared_ptr<ov::genai::Tokenizer>& tok,
+    size_t numInputTokens, size_t numGeneratedTokens,
+    ov::genai::GenerationFinishReason finishReason = ov::genai::GenerationFinishReason::STOP) {
+    auto ctx = std::make_shared<ovms::LegacyServableExecutionContext>();
+
+    ctx->payload.client = std::make_shared<NeverDisconnectedClient>();
+    ctx->payload.parsedJson = std::make_shared<rapidjson::Document>();
+    ctx->payload.parsedJson->Parse(R"({"model":"llama","input":"test","stream":true})");
+    ctx->endpoint = ovms::Endpoint::RESPONSES;
 
     auto apiHandler = std::make_shared<ovms::OpenAIResponsesHandler>(
-        doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
+        *ctx->payload.parsedJson, ovms::Endpoint::RESPONSES,
+        std::chrono::system_clock::now(), *tok);
     std::optional<uint32_t> maxTokensLimit;
-    uint32_t bestOfLimit = 0;
-    std::optional<uint32_t> maxModelLength;
-    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+    apiHandler->parseRequest(maxTokensLimit, 0, std::nullopt);
+    ctx->apiHandler = apiHandler;
 
-    apiHandler->serializeStreamingCreatedEvent();
-    apiHandler->serializeStreamingInProgressEvent();
+    ctx->results.finish_reasons.push_back(finishReason);
+    ctx->results.perf_metrics.num_input_tokens = numInputTokens;
+    ctx->results.perf_metrics.num_generated_tokens = numGeneratedTokens;
+    ctx->success = true;
+    // Signal that generation is done so preparePartialResponse goes straight to
+    // the "finish generation" branch without waiting.
+    ctx->readySignal.set_value();
 
-    // Simulate a mid-stream token delta
-    apiHandler->serializeStreamingChunk("Hello", ov::genai::GenerationFinishReason::NONE);
+    ctx->textStreamer = std::make_shared<ov::genai::TextStreamer>(
+        *tok, [](std::string) { return ov::genai::StreamingStatus::RUNNING; });
 
-    // Fixed order: set usage BEFORE the final serializeStreamingChunk call
-    apiHandler->setPromptTokensUsage(7);
-    apiHandler->setCompletionTokensUsage(3);
-    std::string finalChunk = apiHandler->serializeStreamingChunk(" world", ov::genai::GenerationFinishReason::STOP);
-
-    // The response.completed event must carry the correct usage values
-    ASSERT_NE(finalChunk.find("\"type\":\"response.completed\""), std::string::npos) << finalChunk;
-    ASSERT_NE(finalChunk.find("\"input_tokens\":7"), std::string::npos)
-        << "input_tokens must reflect value set before final chunk: " << finalChunk;
-    ASSERT_NE(finalChunk.find("\"output_tokens\":3"), std::string::npos)
-        << "output_tokens must reflect value set before final chunk: " << finalChunk;
-    ASSERT_NE(finalChunk.find("\"total_tokens\":10"), std::string::npos)
-        << "total_tokens must be input+output: " << finalChunk;
+    return ctx;
 }
 
-TEST_F(HttpOpenAIHandlerParsingTest, streamingResponsesCompletedEventHasZeroUsageWhenSetAfterFinalChunk) {
-    std::string json = R"({
-        "model": "llama",
-        "input": "What is OpenVINO?",
-        "stream": true
-    })";
-    doc.Parse(json.c_str());
-    ASSERT_FALSE(doc.HasParseError());
+TEST_F(HttpOpenAIHandlerParsingTest, legacyServablePreparePartialResponseResponsesEndpointHasCorrectUsageInCompletedEvent) {
+    auto ctx = makeLegacyResponsesContext(tokenizer, /*numInputTokens=*/10, /*numGeneratedTokens=*/5);
+    std::shared_ptr<ovms::GenAiServableExecutionContext> ctxBase = ctx;
+
+    ovms::LegacyServable servable;
+    ASSERT_EQ(servable.preparePartialResponse(ctxBase), absl::OkStatus());
+
+    const std::string& response = ctxBase->response;
+    ASSERT_NE(response.find("\"type\":\"response.completed\""), std::string::npos)
+        << "response.completed event must be present: " << response;
+    ASSERT_NE(response.find("\"output_tokens\":5"), std::string::npos)
+        << "output_tokens must equal num_generated_tokens from perf_metrics: " << response;
+    ASSERT_NE(response.find("\"input_tokens\":10"), std::string::npos)
+        << "input_tokens must equal num_input_tokens from perf_metrics: " << response;
+    ASSERT_NE(response.find("\"total_tokens\":15"), std::string::npos)
+        << "total_tokens must be input+output: " << response;
+    ASSERT_FALSE(ctxBase->sendLoopbackSignal);
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, legacyServablePreparePartialResponseResponsesEndpointHasCorrectUsageOnLength) {
+    auto ctx = makeLegacyResponsesContext(tokenizer, /*numInputTokens=*/8, /*numGeneratedTokens=*/3,
+        ov::genai::GenerationFinishReason::LENGTH);
+    std::shared_ptr<ovms::GenAiServableExecutionContext> ctxBase = ctx;
+
+    ovms::LegacyServable servable;
+    ASSERT_EQ(servable.preparePartialResponse(ctxBase), absl::OkStatus());
+
+    const std::string& response = ctxBase->response;
+    ASSERT_NE(response.find("\"type\":\"response.incomplete\""), std::string::npos)
+        << "response.incomplete event must be present for LENGTH finish reason: " << response;
+    ASSERT_NE(response.find("\"output_tokens\":3"), std::string::npos)
+        << "output_tokens must equal num_generated_tokens from perf_metrics: " << response;
+    ASSERT_NE(response.find("\"input_tokens\":8"), std::string::npos)
+        << "input_tokens must equal num_input_tokens from perf_metrics: " << response;
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, vlmLegacyServablePreparePartialResponseResponsesEndpointHasCorrectUsageInCompletedEvent) {
+    auto ctx = std::make_shared<ovms::VisualLanguageModelLegacyServableExecutionContext>();
+
+    ctx->payload.client = std::make_shared<NeverDisconnectedClient>();
+    ctx->payload.parsedJson = std::make_shared<rapidjson::Document>();
+    ctx->payload.parsedJson->Parse(R"({"model":"llama","input":"test","stream":true})");
+    ctx->endpoint = ovms::Endpoint::RESPONSES;
 
     auto apiHandler = std::make_shared<ovms::OpenAIResponsesHandler>(
-        doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
+        *ctx->payload.parsedJson, ovms::Endpoint::RESPONSES,
+        std::chrono::system_clock::now(), *tokenizer);
     std::optional<uint32_t> maxTokensLimit;
-    uint32_t bestOfLimit = 0;
-    std::optional<uint32_t> maxModelLength;
-    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+    apiHandler->parseRequest(maxTokensLimit, 0, std::nullopt);
+    ctx->apiHandler = apiHandler;
 
-    apiHandler->serializeStreamingCreatedEvent();
-    apiHandler->serializeStreamingInProgressEvent();
-    apiHandler->serializeStreamingChunk("Hello", ov::genai::GenerationFinishReason::NONE);
+    ctx->results.finish_reasons.push_back(ov::genai::GenerationFinishReason::STOP);
+    ctx->results.perf_metrics.num_input_tokens = 12;
+    ctx->results.perf_metrics.num_generated_tokens = 6;
+    ctx->success = true;
+    ctx->readySignal.set_value();
+    ctx->textStreamer = std::make_shared<ov::genai::TextStreamer>(
+        *tokenizer, [](std::string) { return ov::genai::StreamingStatus::RUNNING; });
 
-    // Buggy order: final chunk first — response.completed is built with usage still at 0
-    std::string finalChunk = apiHandler->serializeStreamingChunk(" world", ov::genai::GenerationFinishReason::STOP);
-    apiHandler->setPromptTokensUsage(7);
-    apiHandler->setCompletionTokensUsage(3);
+    ovms::VisualLanguageModelLegacyServable servable;
+    std::shared_ptr<ovms::GenAiServableExecutionContext> ctxBase = ctx;
+    ASSERT_EQ(servable.preparePartialResponse(ctxBase), absl::OkStatus());
 
-    // Confirm the bug: output_tokens in the completed event is 0
-    ASSERT_NE(finalChunk.find("\"type\":\"response.completed\""), std::string::npos) << finalChunk;
-    ASSERT_NE(finalChunk.find("\"output_tokens\":0"), std::string::npos)
-        << "output_tokens must be 0 when usage is set after the final chunk (documents the pre-fix bug): " << finalChunk;
+    const std::string& response = ctxBase->response;
+    ASSERT_NE(response.find("\"type\":\"response.completed\""), std::string::npos)
+        << "response.completed event must be present: " << response;
+    ASSERT_NE(response.find("\"output_tokens\":6"), std::string::npos)
+        << "output_tokens must equal num_generated_tokens from perf_metrics: " << response;
+    ASSERT_NE(response.find("\"input_tokens\":12"), std::string::npos)
+        << "input_tokens must equal num_input_tokens from perf_metrics: " << response;
+    ASSERT_NE(response.find("\"total_tokens\":18"), std::string::npos)
+        << "total_tokens must be input+output: " << response;
+    ASSERT_FALSE(ctxBase->sendLoopbackSignal);
 }
 
-TEST_F(HttpOpenAIHandlerParsingTest, streamingChatCompletionsUsageChunkCorrectRegardlessOfSetOrder) {
-    std::string json = R"({
-        "model": "llama",
-        "stream": true,
-        "stream_options": {"include_usage": true},
-        "messages": [{"role": "user", "content": "hi"}]
-    })";
-    doc.Parse(json.c_str());
-    ASSERT_FALSE(doc.HasParseError());
+TEST_F(HttpOpenAIHandlerParsingTest, legacyServablePreparePartialResponseChatCompletionsStreamingHasCorrectUsageChunk) {
+    auto ctx = std::make_shared<ovms::LegacyServableExecutionContext>();
+
+    ctx->payload.client = std::make_shared<NeverDisconnectedClient>();
+    ctx->payload.parsedJson = std::make_shared<rapidjson::Document>();
+    ctx->payload.parsedJson->Parse(
+        R"({"model":"llama","stream":true,"stream_options":{"include_usage":true},"messages":[{"role":"user","content":"hi"}]})");
+    ctx->endpoint = ovms::Endpoint::CHAT_COMPLETIONS;
 
     auto apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(
-        doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+        *ctx->payload.parsedJson, ovms::Endpoint::CHAT_COMPLETIONS,
+        std::chrono::system_clock::now(), *tokenizer);
     uint32_t maxTokensLimit = 100;
-    uint32_t bestOfLimit = 0;
-    std::optional<uint32_t> maxModelLength;
-    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+    apiHandler->parseRequest(maxTokensLimit, 0, std::nullopt);
+    ctx->apiHandler = apiHandler;
 
-    apiHandler->serializeStreamingChunk("Hello", ov::genai::GenerationFinishReason::NONE);
+    ctx->results.finish_reasons.push_back(ov::genai::GenerationFinishReason::STOP);
+    ctx->results.perf_metrics.num_input_tokens = 10;
+    ctx->results.perf_metrics.num_generated_tokens = 5;
+    ctx->success = true;
+    ctx->readySignal.set_value();
+    ctx->textStreamer = std::make_shared<ov::genai::TextStreamer>(
+        *tokenizer, [](std::string) { return ov::genai::StreamingStatus::RUNNING; });
 
-    // For chat/completions the final chunk does NOT embed usage, so setting it after is fine
-    apiHandler->serializeStreamingChunk("", ov::genai::GenerationFinishReason::STOP);
-    apiHandler->setPromptTokensUsage(7);
-    apiHandler->setCompletionTokensUsage(3);
+    ovms::LegacyServable servable;
+    std::shared_ptr<ovms::GenAiServableExecutionContext> ctxBase = ctx;
+    ASSERT_EQ(servable.preparePartialResponse(ctxBase), absl::OkStatus());
 
-    std::string usageChunk = apiHandler->serializeStreamingUsageChunk();
-    ASSERT_NE(usageChunk.find("\"prompt_tokens\":7"), std::string::npos)
-        << "prompt_tokens must be correct in usage chunk: " << usageChunk;
-    ASSERT_NE(usageChunk.find("\"completion_tokens\":3"), std::string::npos)
-        << "completion_tokens must be correct in usage chunk: " << usageChunk;
-    ASSERT_NE(usageChunk.find("\"total_tokens\":10"), std::string::npos)
-        << "total_tokens must be correct in usage chunk: " << usageChunk;
+    // For chat_completions, usage is in the separate SSE usage chunk (not in the
+    // final delta chunk), so it should be present even though set*Usage was called
+    // before serializeStreamingChunk in the fixed code.
+    const std::string& response = ctxBase->response;
+    ASSERT_NE(response.find("\"completion_tokens\":5"), std::string::npos)
+        << "completion_tokens must be in usage chunk: " << response;
+    ASSERT_NE(response.find("\"prompt_tokens\":10"), std::string::npos)
+        << "prompt_tokens must be in usage chunk: " << response;
+    ASSERT_NE(response.find("\"total_tokens\":15"), std::string::npos)
+        << "total_tokens must be in usage chunk: " << response;
+    ASSERT_NE(response.find("[DONE]"), std::string::npos)
+        << "[DONE] must be present: " << response;
+    ASSERT_FALSE(ctxBase->sendLoopbackSignal);
 }
