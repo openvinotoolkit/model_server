@@ -13,8 +13,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include <cstring>
-
 #include <openvino/openvino.hpp>
 
 #pragma GCC diagnostic push
@@ -213,31 +211,9 @@ public:
     }
 };
 
-class ErrorOnNegativeTestCalculator : public CalculatorBase {
-public:
-    static absl::Status GetContract(CalculatorContract* cc) {
-        cc->Inputs().Index(0).Set<ov::Tensor>();
-        cc->Outputs().Index(0).Set<ov::Tensor>();
-        return absl::OkStatus();
-    }
-    absl::Status Open(CalculatorContext* cc) final { return absl::OkStatus(); }
-    absl::Status Close(CalculatorContext* cc) final { return absl::OkStatus(); }
-    absl::Status Process(CalculatorContext* cc) final {
-        ov::Tensor input = cc->Inputs().Index(0).Get<ov::Tensor>();
-        if (static_cast<float*>(input.data())[0] < 0.0f) {
-            return absl::InvalidArgumentError("Negative input value");
-        }
-        ov::Tensor output(input.get_element_type(), input.get_shape());
-        std::memcpy(output.data(), input.data(), input.get_byte_size());
-        cc->Outputs().Index(0).Add(new ov::Tensor(output), cc->InputTimestamp());
-        return absl::OkStatus();
-    }
-};
-
 REGISTER_CALCULATOR(AddOneSingleStreamTestCalculator);
 REGISTER_CALCULATOR(AddOne3CycleIterationsTestCalculator);
 REGISTER_CALCULATOR(AddNumbersMultiInputsOutputsTestCalculator);
 REGISTER_CALCULATOR(ErrorInProcessTestCalculator);
-REGISTER_CALCULATOR(ErrorOnNegativeTestCalculator);
 REGISTER_CALCULATOR(AddSidePacketToSingleStreamTestCalculator);
 }  // namespace mediapipe
