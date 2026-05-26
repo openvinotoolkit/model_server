@@ -3855,6 +3855,7 @@ TEST(WhitelistRegistered, MediapipeCalculatorsList) {
         "EndLoopTensorCalculator",
         "EndLoopTfLiteTensorCalculator",
         "ErrorInProcessTestCalculator",
+        "ErrorOnNegativeTestCalculator",
         "ExceptionDuringCloseCalculator",
         "ExceptionDuringGetContractCalculator",
         "ExceptionDuringOpenCalculator",
