@@ -64,7 +64,7 @@ Note that using s3 or minio bucket requires configuring credentials like describ
 OVMS can be used in RedHat OpenShift AI environment to run classic models or generative pipelines. 
 
 
-The latest version can be enabled in Settings > Model resources and operations > Serving runtimes. Add new runtime with [spec](../../extras/openshift_AI/ServingRuntime.yaml)
+The latest version can be enabled in Settings > Model resources and operations > Serving runtimes. Add new runtime with [spec](../extras/openshift_AI/ServingRuntime.yaml)
 
 In first step specify the source models. Below is an example from Hugging Face
 ![image1](./openshift1.png)

@@ -24,6 +24,7 @@ ovms_cc_library(
     visibility = ["//visibility:public"],
         deps = [
         "//src:libovmslogging",
+        "//src:libovmsstring_utils",
         "//src/port:dr_audio",
         "//src:libovmstimer",
     ],
