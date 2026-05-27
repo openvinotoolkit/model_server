@@ -90,6 +90,13 @@ curl http://localhost/v3/completions \
 | num_assistant_tokens | ✅ | ❌ | ⚠️ | int | This value defines how many tokens should a draft model generate before main model validates them. Equivalent of `num_speculative_tokens` in vLLM. Cannot be used with `assistant_confidence_threshold`. |
 | assistant_confidence_threshold | ✅ | ❌ | ❌ | float | This parameter determines confidence level for continuing generation. If draft model generates token with confidence below that threshold, it stops generation for the current cycle and main model starts validation. Cannot be used with `num_assistant_tokens`. |
 
+If neither parameter is specified in the request, the server resolves the value using the following priority order:
+1. **Request body** – `num_assistant_tokens` or `assistant_confidence_threshold` sent by the client.
+2. **`generation_config.json`** in the main model's directory – add `"num_assistant_tokens": N` (or `"assistant_confidence_threshold": F`) to set a deployment-level default that applies to all requests that do not specify it. This is the recommended way to persist a tuned value without requiring every client to send it.
+3. **Built-in fallback** – `num_assistant_tokens = 5` if neither of the above is present.
+
+> **Note:** `generation_config.json` is shipped alongside model weights from Hugging Face, but it is fully operator-editable. Changes take effect on the next server start.
+
 #### Prompt lookup decoding specific
 
 Note that below parameters are valid only for prompt lookup pipeline. Add `"prompt_lookup": true` to `plugin_config` in your graph config node options to serve it.
