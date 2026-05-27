@@ -34,16 +34,13 @@ Python environment setup:
 curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/export_model.py -o export_model.py
 pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
 
-# Override optimum-intel with version supporting eagle3
-python -m pip install git+https://github.com/xufang-lisa/optimum-intel.git@xufang/add_eagle3_draft_model_conversion
-
 mkdir models
 ```
 
 Run `export_model.py` script to download and quantize the model:
 
 ```console
-python export_model.py text_generation --source_model Qwen/Qwen3-8B --draft_source_model Tengyunw/qwen3_8b_eagle3 --draft_eagle3_mode --weight-format int4 --config_file_path models/config.json --model_repository_path models
+python export_model.py text_generation --source_model Qwen/Qwen3-8B --draft_source_model AngelSlim/Qwen3-8B_eagle3 --draft_eagle3_mode --weight-format int4 --config_file_path models/config.json --model_repository_path models
 ```
 
 Draft model inherits all scheduler properties from the main model.
@@ -55,6 +52,12 @@ models
 └── Qwen
     └── Qwen3-8B
         ├── added_tokens.json
+        ├── AngelSlim-Qwen3-8B_eagle3
+        │   ├── config.json
+        │   ├── generation_config.json
+        │   ├── openvino_config.json
+        │   ├── openvino_model.bin
+        │   └── openvino_model.xml
         ├── chat_template.jinja
         ├── config.json
         ├── generation_config.json
@@ -68,14 +71,10 @@ models
         ├── openvino_tokenizer.bin
         ├── openvino_tokenizer.xml
         ├── special_tokens_map.json
-        ├── Tengyunw-qwen3_8b_eagle3
-        │   ├── config.json
-        │   ├── generation_config.json
-        │   ├── openvino_model.bin
-        │   └── openvino_model.xml
         ├── tokenizer_config.json
         ├── tokenizer.json
         └── vocab.json
+
 ```
 
 ## Server Deployment
@@ -316,6 +315,8 @@ for chunk in stream:
 ```
 
 Output:
+
+```
 if len(numbers) <= 1:
   return numbers
 else:

@@ -403,11 +403,13 @@ def export_text_generation_model(model_repository_path, source_model, model_name
                     print("Using default quantization parameters for NPU: --sym --ratio 1.0 --group-size -1")
                     task_parameters['extra_quantization_params'] = "--sym --ratio 1.0 --group-size -1"
             optimum_command = "optimum-cli export openvino --model {} --weight-format {} {} --trust-remote-code {}".format(source_model, precision, task_parameters['extra_quantization_params'], llm_model_path)
+            print('Running command: ', optimum_command)  # for debug purposes
             if os.system(optimum_command):
                 raise ValueError("Failed to export llm model", source_model)
             if not (os.path.isfile(os.path.join(llm_model_path, 'openvino_detokenizer.xml'))):
                 print("Tokenizer and detokenizer not found in the exported model. Exporting tokenizer and detokenizer from HF model")
                 convert_tokenizer_command = f"convert_tokenizer --with-detokenizer --trust-remote-code -o {llm_model_path} {source_model}"
+                print('Running command: ', convert_tokenizer_command)  # for debug purposes
                 if os.system(convert_tokenizer_command):
                     raise ValueError("Failed to export tokenizer and detokenizer", source_model)
     ### Export draft model for speculative decoding 
@@ -430,8 +432,9 @@ def export_text_generation_model(model_repository_path, source_model, model_name
                 additional_options = ""
                 if args["draft_eagle3_mode"]:
                     print("Using eagle3 option for the draft model export")
-                    additional_options += " --eagle3  --task text-generation-with-past"
+                    additional_options += " --task text-generation-with-past"
                 optimum_command = "optimum-cli export openvino --model {} --weight-format {} --trust-remote-code {} {}".format(draft_source_model, precision, additional_options, draft_llm_model_path)
+                print('Running command: ', optimum_command)  # for debug purposes
                 if os.system(optimum_command):
                     raise ValueError("Failed to export llm model", source_model)
 
@@ -482,12 +485,12 @@ def export_embeddings_model_ov(model_repository_path, source_model, model_name, 
     print("Exporting embeddings model to ",destination_path)
     if not os.path.isdir(destination_path) or args['overwrite_models']:
         optimum_command = "optimum-cli export openvino --model {} --disable-convert-tokenizer --task feature-extraction --weight-format {} {} --trust-remote-code {}".format(source_model, precision, task_parameters['extra_quantization_params'], destination_path)
-        print('Running command:', optimum_command)  # for debug purposes
+        print('Running command: ', optimum_command)  # for debug purposes
         if os.system(optimum_command):
             raise ValueError("Failed to export embeddings model", source_model)
         print("Exporting tokenizer to ", destination_path)
         convert_tokenizer_command = "convert_tokenizer -o {} {} {}".format(destination_path, source_model, set_max_context_length) 
-        print('Running command:', convert_tokenizer_command)  # for debug purposes
+        print('Running command: ', convert_tokenizer_command)  # for debug purposes
         if (os.system(convert_tokenizer_command)):
             raise ValueError("Failed to export tokenizer model", source_model)
     gtemplate = jinja2.Environment(loader=jinja2.BaseLoader).from_string(embedding_graph_ov_template)
@@ -502,6 +505,7 @@ def export_text2speech_model(model_repository_path, source_model, model_name, pr
     print("Exporting text2speech model to ",destination_path)
     if not os.path.isdir(destination_path) or args['overwrite_models']:
         optimum_command = "optimum-cli export openvino --model {} --weight-format {} --trust-remote-code --model-kwargs \"{{\\\"vocoder\\\": \\\"{}\\\"}}\" {}".format(source_model, precision, task_parameters['vocoder'], destination_path)
+        print('Running command: ', optimum_command)  # for debug purposes
         if os.system(optimum_command):
             raise ValueError("Failed to export text2speech model", source_model)
     gtemplate = jinja2.Environment(loader=jinja2.BaseLoader).from_string(t2s_graph_template)
@@ -516,6 +520,7 @@ def export_speech2text_model(model_repository_path, source_model, model_name, pr
     print("Exporting speech2text model to ",destination_path)
     if not os.path.isdir(destination_path) or args['overwrite_models']:
         optimum_command = "optimum-cli export openvino --model {} --weight-format {} --trust-remote-code {}".format(source_model, precision, destination_path)
+        print('Running command: ', optimum_command)  # for debug purposes
         if os.system(optimum_command):
             raise ValueError("Failed to export speech2text model", source_model)
     gtemplate = jinja2.Environment(loader=jinja2.BaseLoader).from_string(s2t_graph_template)
@@ -530,6 +535,7 @@ def export_rerank_model_ov(model_repository_path, source_model, model_name, prec
     print("Exporting rerank model to ",destination_path)
     if not os.path.isdir(destination_path) or args['overwrite_models']:
         optimum_command = "optimum-cli export openvino --model {} --disable-convert-tokenizer --task text-classification --weight-format {} {} --trust-remote-code {}".format(source_model, precision, task_parameters['extra_quantization_params'], destination_path)
+        print('Running command: ', optimum_command)  # for debug purposes
         if os.system(optimum_command):
             raise ValueError("Failed to export rerank model", source_model)
         print("Exporting tokenizer to ", destination_path)
@@ -551,7 +557,7 @@ def export_image_generation_model(model_repository_path, source_model, model_nam
         print("Model index file already exists. Skipping conversion, re-generating graph only.")
     else:
         optimum_command = "optimum-cli export openvino --model {} --weight-format {} {} {}".format(source_model, precision, task_parameters['extra_quantization_params'], target_path)
-        print(f'optimum cli command: {optimum_command}')
+        print('Running command: ', optimum_command)  # for debug purposes
         if os.system(optimum_command):
             raise ValueError("Failed to export image generation model", source_model)
 
