@@ -2,6 +2,7 @@
 
 This demo shows how to deploy audio models in the OpenVINO Model Server.
 Speech generation and speech recognition models are exposed via OpenAI API `audio/speech`, `audio/transcriptions` and `audio/translations` endpoints.
+Speech-to-text streaming responses are supported for `audio/transcriptions` endpoint.
 
 Check supported [Speech Recognition Models](https://openvinotoolkit.github.io/openvino.genai/docs/supported-models/#speech-recognition-models-whisper-based) and [Speech Generation Models](https://openvinotoolkit.github.io/openvino.genai/docs/supported-models/#speech-generation-models).
 
@@ -157,7 +158,6 @@ curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/r
 python benchmark.py --api_url http://localhost:8000/v3/audio/speech --model microsoft/speecht5_tts --batch_size 1 --limit 100 --request_rate inf --backend text2speech --dataset edinburghcstr/ami --hf-subset ihm --tokenizer openai/whisper-large-v3-turbo --trust-remote-code True
 Number of documents: 100
 100%|████████████████████████████████████████████████████████████████████████████████| 100/100 [01:58<00:00,  1.19s/it]
-Asking to truncate to max_length but no maximum length is provided and the model has no predefined maximum length. Default to no truncation.
 Tokens: 1802
 Success rate: 100.0%. (100/100)
 Throughput - Tokens per second: 15.2
@@ -237,6 +237,8 @@ The default configuration should work in most cases but the parameters can be tu
 ### Request Generation 
 Transcript file that was previously generated with audio/speech endpoint.
 
+> **Note:** Streaming responses are supported for `audio/transcriptions`. `audio/translations` does not support streaming.
+
 :::{dropdown} **Unary call with cURL**
 
 
@@ -274,6 +276,28 @@ print(transcript.text)
 The quick brown fox jumped over the lazy dog.
 ```
 :::
+
+:::{dropdown} **Streaming call with cURL**
+
+```bash
+curl -N http://localhost:8000/v3/audio/transcriptions \
+  -H "Content-Type: multipart/form-data" \
+  -F file="@speech.wav" \
+  -F model="openai/whisper-large-v3-turbo" \
+  -F language="en" \
+  -F stream="true"
+```
+
+Example streamed chunks (SSE format):
+```text
+data: {"type":"transcript.text.delta","delta":"The quick ","logprobs":[]}
+
+data: {"type":"transcript.text.delta","delta":"brown fox ","logprobs":[]}
+
+data: {"type":"transcript.text.done","text":"The quick brown fox jumped over the lazy dog.","logprobs":[]}
+```
+:::
+
 :::{dropdown} **Unary call with timestamps**
 
 
@@ -327,7 +351,6 @@ curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/r
 python benchmark.py --api_url http://localhost:8000/v3/audio/transcriptions --model openai/whisper-large-v3-turbo --batch_size 1 --limit 1000 --request_rate inf --dataset edinburghcstr/ami --hf-subset ihm --backend speech2text --trust-remote-code True
 Number of documents: 1000
 100%|██████████████████████████████████████████████████████████████████████████████| 1000/1000 [04:44<00:00,  3.51it/s]
-Asking to truncate to max_length but no maximum length is provided and the model has no predefined maximum length. Default to no truncation.
 Tokens: 10948
 Success rate: 100.0%. (1000/1000)
 Throughput - Tokens per second: 38.5
