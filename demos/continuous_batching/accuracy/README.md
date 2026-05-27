@@ -10,37 +10,21 @@ It reports end to end quality of served model from the client application point 
 ## Preparing the lm-evaluation-harness framework 
 
 Install the framework via pip:
-```bash
+```text
 pip3 install --extra-index-url "https://download.pytorch.org/whl/cpu" lm_eval[api] langdetect immutabledict dotenv openai
-```
-
-## Exporting the models
-```bash
-git clone https://github.com/openvinotoolkit/model_server.git
-cd model_server
-pip3 install -U -r demos/common/export_models/requirements.txt
-mkdir models 
-python demos/common/export_models/export_model.py text_generation --source_model meta-llama/Meta-Llama-3.1-8B-Instruct --weight-format fp16 --kv_cache_precision u8 --config_file_path models/config.json --model_repository_path models
-python demos/common/export_models/export_model.py text_generation --source_model meta-llama/Meta-Llama-3.1-8B --weight-format fp16 --kv_cache_precision u8 --config_file_path models/config.json --model_repository_path models
-python demos/common/export_models/export_model.py text_generation --source_model OpenGVLab/InternVL2_5-8B --weight-format fp16 --config_file_path models/config.json --model_repository_path models
-python demos/common/export_models/export_model.py text_generation --source_model Qwen/Qwen3-8B --model_name openvino-qwen3-8b-int8 --weight-format int8 --config_file_path models/config.json --model_repository_path models --tool_parser hermes3 --overwrite_models
 ```
 
 ## Starting the model server
 
-### With Docker
-```bash
-docker run -d --rm -p 8000:8000 -v $(pwd)/models:/workspace:ro openvino/model_server:latest --rest_port 8000 --config_path /workspace/config.json
-```
 
-### On Baremetal
-```bash
-ovms --rest_port 8000 --config_path ./models/config.json
-```
+Example of LLM and VLM models deployment is documented in other demos like
+[Agentic usage for LLM models](../agentic_ai/README.md) 
+[Using VLM models](../vlm/README.md)
+
 
 ## Running the tests for LLM models
 
-```bash
+```text
 lm-eval --model local-chat-completions --tasks gsm8k --model_args model=meta-llama/Meta-Llama-3.1-8B-Instruct,base_url=http://localhost:8000/v3/chat/completions,num_concurrent=1,max_retries=3,tokenized_requests=False --verbosity DEBUG  --log_samples --output_path test/ --seed 1 --apply_chat_template --limit 100
 
 local-chat-completions ({'model': 'meta-llama/Meta-Llama-3.1-8B-Instruct', 'base_url': 'http://localhost:8000/v3/chat/completions', 'num_concurrent': 10, 'max_retries': 3, 'tokenized_requests': False}), gen_kwargs: ({}), limit: 100.0, num_fewshot: None, batch_size: 1
@@ -52,7 +36,7 @@ local-chat-completions ({'model': 'meta-llama/Meta-Llama-3.1-8B-Instruct', 'base
 
 While testing the non chat model and `completion` endpoint, the command would look like this:
 
-```bash
+```text
 lm-eval --model local-completions --tasks gsm8k --model_args model=meta-llama/Meta-Llama-3.1-8B,base_url=http://localhost:8000/v3/completions,num_concurrent=1,max_retries=3,tokenized_requests=False --verbosity DEBUG  --log_samples --output_path results/ --seed 1 --limit 100
 
 local-completions ({'model': 'meta-llama/Meta-Llama-3.1-8B', 'base_url': 'http://localhost:8000/v3/completions', 'num_concurrent': 10, 'max_retries': 3, 'tokenized_requests': False}), gen_kwargs: ({}), limit: 100.0, num_fewshot: None, batch_size: 1
@@ -64,11 +48,11 @@ local-completions ({'model': 'meta-llama/Meta-Llama-3.1-8B', 'base_url': 'http:/
 
 Other examples are below:
 
-```bash
+```text
 lm-eval --model local-chat-completions --tasks leaderboard_ifeval --model_args model=meta-llama/Meta-Llama-3.1-8B-Instruct,base_url=http://localhost:8000/v3/chat/completions,num_concurrent=10,max_retries=3,tokenized_requests=False --verbosity DEBUG --log_samples --output_path test/ --seed 1 --limit 100 --apply_chat_template  
 ```
 
-```bash
+```text
 lm-eval --model local-completions --tasks wikitext --model_args model=meta-llama/Meta-Llama-3.1-8B,base_url=http://localhost:8000/v3/completions,num_concurrent=10,max_retries=3,tokenized_requests=False --verbosity DEBUG --log_samples --output_path test/ --seed 1 --limit 100
 ```
 
@@ -76,16 +60,15 @@ lm-eval --model local-completions --tasks wikitext --model_args model=meta-llama
 
 Use [lmms-eval project](https://github.com/EvolvingLMMs-Lab/lmms-eval) - mme and mmmu_val tasks. 
 
-```bash
+```text
 export OPENAI_BASE_URL=http://localhost:8000/v3
 export OPENAI_API_KEY="unused"
 git clone https://github.com/EvolvingLMMs-Lab/lmms-eval
 cd lmms-eval
-git checkout 88b23e2bfa16a1edbc16e9e238ed82130b3a4f56
 pip install -e . --extra-index-url "https://download.pytorch.org/whl/cpu"
 python -m lmms_eval \
     --model openai_compatible \
-    --model_args model_version=OpenGVLab/InternVL2_5-8B,max_retries=1 \
+    --model_args model_version=OpenVINO/InternVL2-8B_int4-ov,max_retries=1 \
     --tasks mme,mmmu_val \
     --batch_size 1 \
     --log_samples \
@@ -121,16 +104,16 @@ pip install -e . --extra-index-url "https://download.pytorch.org/whl/cpu"
 The commands below assumes the models is deployed with the name `ovms-model`. It must match the name set in the `bfcl_eval/constants/model_config.py`.
 ```text
 export OPENAI_BASE_URL=http://localhost:8000/v3
-export CHAT_TEMPLATE_KWARGS='{"enable_thinking":false, "reasoning_effort":"low"}'
+export CHAT_TEMPLATE_KWARGS='{"enable_thinking":false, "reasoning_effort":"low", "preserve_reasoning":false}'
 
-bfcl generate --model ovms-model --test-category simple_python,multiple --temperature 0.0 --num-threads 100 -o --result-dir model_name_dir
+bfcl generate --model ovms-model --test-category simple_python,multiple,multi_turn_base --temperature 0.0 --num-threads 10 -o --result-dir model_name_dir
 bfcl evaluate --model ovms-model --result-dir model_name_dir 
 ```
 
 Alternatively, use the model name `ovms-model-stream` to run the tests with stream requests. The results should be the same.
 ```text
 export OPENAI_BASE_URL=http://localhost:8000/v3
-bfcl generate --model ovms-model-stream --test-category simple_python,multiple --temperature 0.0 --num-threads 100 -o --result-dir model_name_dir
+bfcl generate --model ovms-model-stream --test-category simple_python,multiple,multi_turn_base --temperature 0.0 --num-threads 10 -o --result-dir model_name_dir
 bfcl evaluate --model ovms-model-stream --result-dir model_name_dir 
 ```
 
@@ -138,7 +121,7 @@ bfcl evaluate --model ovms-model-stream --result-dir model_name_dir
 The output artifacts will be stored in `result` and `scores`. For example:
 
 ```text
-cat score/openvino-qwen3-8b-int4-FC/BFCL_v3_simple_python_score.json | head -1
+cat score/openvino-qwen3-8b-int4-FC/BFCL_v4_simple_python_score.json | head -1
 {"accuracy": 0.95, "correct_count": 380, "total_count": 400}
 ```
 Those results can be compared with the reference from the [berkeley leaderbaord](https://gorilla.cs.berkeley.edu/leaderboard.html#leaderboard).
