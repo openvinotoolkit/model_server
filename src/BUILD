@@ -2555,8 +2555,6 @@ cc_test(
             ":test_utils",
             ":test_test_with_temp_dir",
             ":test_platform_utils",
-            "//src/rerank:rerank_api_handler",
-            ":embeddings_handler_tests",
             ":tokenize_parser_tests",
             ":inferencerequest_test",
             ":libtest_environment",
@@ -2596,6 +2594,8 @@ cc_test(
                 "@mediapipe//mediapipe/calculators/ovms:ovms_calculator",
                 "@mediapipe//mediapipe/framework:calculator_runner",
                 ":text2image_test",
+                "//src/rerank:rerank_api_handler",
+                ":embeddings_handler_tests",
             ],
             "//:disable_mediapipe" :
             [

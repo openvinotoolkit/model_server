@@ -28,6 +28,8 @@ load("//:distro.bzl", "distro_flag")
 def ovms_cc_library(**kwargs):
     """
     Wrapper for cc_library that sets default copts and linkopts if not provided.
+    Transitive defines (PYTHON_DISABLE, MEDIAPIPE_DISABLE) are always set via 'defines'
+    so that any target depending on an ovms_cc_library automatically gets these macros.
     """
     if "copts" not in kwargs:
         kwargs["copts"] = COMMON_STATIC_LIBS_COPTS + select({
@@ -41,6 +43,8 @@ def ovms_cc_library(**kwargs):
         })
     if "local_defines" not in kwargs:
         kwargs["local_defines"] = COMMON_LOCAL_DEFINES
+    if "defines" not in kwargs:
+        kwargs["defines"] = COMMON_DEFINES
     if "additional_copts" in kwargs:
         kwargs["copts"] += kwargs.pop("additional_copts")
     if "additional_linkopts" in kwargs:
@@ -260,7 +264,8 @@ COMMON_FUZZER_LINKOPTS = [
     "-fsanitize-coverage=trace-pc",
     "-static-libasan",
 ]
-COMMON_LOCAL_DEFINES = ["SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE"] + LOCAL_DEFINES_PYTHON + LOCAL_DEFINES_MEDIAPIPE
+COMMON_LOCAL_DEFINES = ["SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE"]
+COMMON_DEFINES = LOCAL_DEFINES_PYTHON + LOCAL_DEFINES_MEDIAPIPE
 PYBIND_DEPS = [
     "//third_party:python3",
     "@pybind11//:pybind11_embed",
