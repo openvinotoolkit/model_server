@@ -632,7 +632,7 @@ docker run -d --rm --user $(id -u):$(id -g) -p 8000:8000 -v $(pwd)/models:/model
     --rest_port 8000 \
     --model_repository_path /models/ \
     --task image_generation \
-    --source_model stabilityai/stable-diffusion-xl-base-1.0 \
+    --source_model OpenVINO/stable-diffusion-xl-base-1.0-int8-ov \
     --source_loras "xray=DoctorDiffusion/doctor-diffusion-s-xray-xl-lora@DD-xray-v1.safetensors,thepoint=alvdansen/the-point@araminta_k_the_point.safetensors,ukiyo=KappaNeuro/ukiyo-e-art@Ukiyo-e Art.safetensors,vector=DoctorDiffusion/doctor-diffusion-s-controllable-vector-art-xl-lora@DD-vector-v2.safetensors,chalk=Norod78/sdxl-chalkboarddrawing-lora@SDXL_ChalkBoardDrawing_LoRA_r8.safetensors"
 ```
 :::
@@ -645,7 +645,7 @@ mkdir models
 ovms --rest_port 8000 ^
   --model_repository_path ./models/ ^
   --task image_generation ^
-  --source_model stabilityai/stable-diffusion-xl-base-1.0 ^
+  --source_model OpenVINO/stable-diffusion-xl-base-1.0-int8-ov ^
   --source_loras "xray=DoctorDiffusion/doctor-diffusion-s-xray-xl-lora@DD-xray-v1.safetensors,thepoint=alvdansen/the-point@araminta_k_the_point.safetensors,ukiyo=KappaNeuro/ukiyo-e-art@Ukiyo-e Art.safetensors,vector=DoctorDiffusion/doctor-diffusion-s-controllable-vector-art-xl-lora@DD-vector-v2.safetensors,chalk=Norod78/sdxl-chalkboarddrawing-lora@SDXL_ChalkBoardDrawing_LoRA_r8.safetensors"
 ```
 :::
@@ -656,11 +656,11 @@ The registered adapters and their recommended use:
 
 | Alias | Repository | Style | Recommended Alpha | Prompt Template |
 |-------|-----------|-------|-------------------|-----------------|
-| `xray` | DoctorDiffusion/doctor-diffusion-s-xray-xl-lora | X-Ray style | 0.8 | `xray <subject>` |
-| `thepoint` | alvdansen/the-point | Artistic illustration | 0.6 | `<subject>` |
-| `ukiyo` | KappaNeuro/ukiyo-e-art | Ukiyo-e Japanese art | 0.8 | `an illustration of <subject> in Ukiyo-e Art style` |
-| `vector` | DoctorDiffusion/doctor-diffusion-s-controllable-vector-art-xl-lora | Vector art | 0.8 | `vector <subject>` |
-| `chalk` | Norod78/sdxl-chalkboarddrawing-lora | Chalkboard drawing | 0.45 | `A colorful chalkboard drawing of <subject>` |
+| `xray` | DoctorDiffusion/doctor-diffusion-s-xray-xl-lora | X-Ray style | 1.0 | `xray <subject>` |
+| `thepoint` | alvdansen/the-point | Artistic illustration | 1.0 | `<subject>` |
+| `ukiyo` | KappaNeuro/ukiyo-e-art | Ukiyo-e Japanese art | 1.0 | `an illustration of <subject> in Ukiyo-e Art style` |
+| `vector` | DoctorDiffusion/doctor-diffusion-s-controllable-vector-art-xl-lora | Vector art | 1.0 | `vector <subject>` |
+| `chalk` | Norod78/sdxl-chalkboarddrawing-lora | Chalkboard drawing | 1.0 | `A colorful chalkboard drawing of <subject>` |
 
 ### Generate Images with Different Styles
 
@@ -673,8 +673,8 @@ curl http://localhost:8000/v3/images/generations \
   -d '{
     "model": "xray",
     "prompt": "xray a cute cat in sunglasses",
-    "num_inference_steps": 20,
-    "guidance_scale": 0.0,
+    "num_inference_steps": 40,
+    "guidance_scale": 7.5,
     "size": "1024x1024"
   }' | jq -r '.data[0].b64_json' | base64 --decode > xray_cat.png
 ```
@@ -686,10 +686,23 @@ curl http://localhost:8000/v3/images/generations \
   -d '{
     "model": "ukiyo",
     "prompt": "an illustration of a cute cat in sunglasses in Ukiyo-e Art style",
-    "num_inference_steps": 20,
-    "guidance_scale": 0.0,
+    "num_inference_steps": 40,
+    "guidance_scale": 7.5,
     "size": "1024x1024"
   }' | jq -r '.data[0].b64_json' | base64 --decode > ukiyo_cat.png
+```
+
+**Vector art:**
+```bash
+curl http://localhost:8000/v3/images/generations \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "vector",
+    "prompt": "vector a cute cat in sunglasses",
+    "num_inference_steps": 40,
+    "guidance_scale": 7.5,
+    "size": "1024x1024"
+  }' | jq -r '.data[0].b64_json' | base64 --decode > vector_cat.png
 ```
 
 **Chalkboard drawing:**
@@ -699,11 +712,15 @@ curl http://localhost:8000/v3/images/generations \
   -d '{
     "model": "chalk",
     "prompt": "A colorful chalkboard drawing of a cute cat in sunglasses",
-    "num_inference_steps": 20,
-    "guidance_scale": 0.0,
+    "num_inference_steps": 40,
+    "guidance_scale": 7.5,
     "size": "1024x1024"
   }' | jq -r '.data[0].b64_json' | base64 --decode > chalk_cat.png
 ```
+
+Expected outputs:
+
+![xray_cat](./xray_cat.png) ![thepoint_cat](./thepoint_cat.png) ![vector_cat](./vector_cat.png) ![chalk_cat](./chalk_cat.png)
 
 Optionally override the adapter alpha using `lora_alphas`:
 ```bash
@@ -713,8 +730,8 @@ curl http://localhost:8000/v3/images/generations \
     "model": "xray",
     "prompt": "xray a cute cat in sunglasses",
     "lora_alphas": {"xray": 0.5},
-    "num_inference_steps": 20,
-    "guidance_scale": 0.0,
+    "num_inference_steps": 40,
+    "guidance_scale": 7.5,
     "size": "1024x1024"
   }' | jq -r '.data[0].b64_json' | base64 --decode > xray_cat_half_alpha.png
 ```
@@ -748,8 +765,8 @@ for style_name, style_config in styles.items():
         model=style_name,  # adapter alias activates the LoRA
         prompt=prompt,
         extra_body={
-            "num_inference_steps": 20,
-            "guidance_scale": 0.0,
+            "num_inference_steps": 40,
+            "guidance_scale": 7.5,
             "size": "1024x1024",
         }
     )
@@ -773,8 +790,8 @@ response = client.images.generate(
     model="blend",  # activates both xray and ukiyo
     prompt="a cute cat in sunglasses",
     extra_body={
-        "num_inference_steps": 20,
-        "guidance_scale": 0.0,
+        "num_inference_steps": 40,
+        "guidance_scale": 7.5,
         "size": "1024x1024",
     }
 )
@@ -787,8 +804,8 @@ response = client.images.generate(
     prompt="a cute cat in sunglasses",
     extra_body={
         "lora_alphas": {"xray": 0.8, "ukiyo": 0.2},
-        "num_inference_steps": 20,
-        "guidance_scale": 0.0,
+        "num_inference_steps": 40,
+        "guidance_scale": 7.5,
         "size": "1024x1024",
     }
 )
