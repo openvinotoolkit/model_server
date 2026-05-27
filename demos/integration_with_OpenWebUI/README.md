@@ -285,9 +285,7 @@ curl http://localhost:8000/v3/images/generations -H "Content-Type: application/j
 
 ### Step 1: Model Preparation
 
-The vision language model used in this demo is `OpenVINO/Qwen3-VL-8B-Instruct-int4-ov`. Run the ovms with --pull parameter to download and quantize the model.
-
-> **Note:** Other VLM models from the OpenVINO Hugging Face organization can be substituted by changing the `--source_model` value. For example, `OpenVINO/Qwen3.6-35B-A3B-int4-ov` is a 35B / 3B-active MoE VLM with continuous batching support; it requires OpenVINO 2026.2 or newer and a device with enough memory to fit the INT4 weights.
+The vision language model used in this demo is `OpenVINO/Qwen3-VL-8B-Instruct-int4-ov`. Run the ovms with --pull parameter to download and quantize the model:
 
 ::::{tab-set}
 :::{tab-item} Windows

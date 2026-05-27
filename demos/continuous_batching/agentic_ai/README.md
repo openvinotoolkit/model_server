@@ -129,7 +129,7 @@ Vision Language MoE model (35B total / 3B active parameters). Requires OpenVINO 
 
 Pull and start OVMS:
 ```bat
-ovms.exe --rest_port 8000 --source_model OpenVINO/Qwen3.6-35B-A3B-int4-ov --model_repository_path c:\models --tool_parser hermes3 --target_device GPU --task text_generation --pipeline_type VLM_CB --cache_dir .cache --allowed_media_domains raw.githubusercontent.com
+ovms.exe --rest_port 8000 --source_model OpenVINO/Qwen3.6-35B-A3B-int4-ov --model_repository_path c:\models --reasoning_parser qwen3 --tool_parser qwen3coder --target_device GPU --task text_generation --cache_dir .cache --allowed_media_domains raw.githubusercontent.com
 ```
 
 Use MCP server, with additional image of Gdańsk old town. VLM model deduces location and calls `get_weather` tool to summarize the weather conditions in the city.
@@ -313,7 +313,7 @@ Pull and start OVMS:
 ```bash
 mkdir -p ${HOME}/models
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v ${HOME}/models:/models openvino/model_server:weekly \
---rest_port 8000 --source_model OpenVINO/Qwen3.6-35B-A3B-int4-ov --model_repository_path /models --tool_parser hermes3 --task text_generation --pipeline_type VLM_CB --allowed_media_domains raw.githubusercontent.com
+--rest_port 8000 --source_model OpenVINO/Qwen3.6-35B-A3B-int4-ov --model_repository_path /models --reasoning_parser qwen3 --tool_parser qwen3coder --task text_generation --allowed_media_domains raw.githubusercontent.com
 ```
 
 Use MCP server, with additional image of Gdańsk old town. VLM model deduces location and calls `get_weather` tool to summarize the weather conditions in the city.
@@ -462,7 +462,7 @@ Pull and start OVMS:
 ```bash
 mkdir -p ${HOME}/models
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v ${HOME}/models:/models --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:weekly \
---rest_port 8000 --source_model OpenVINO/Qwen3.6-35B-A3B-int4-ov --model_repository_path /models --tool_parser hermes3 --target_device GPU --task text_generation --pipeline_type VLM_CB --allowed_media_domains raw.githubusercontent.com
+--rest_port 8000 --source_model OpenVINO/Qwen3.6-35B-A3B-int4-ov --model_repository_path /models --reasoning_parser qwen3 --tool_parser qwen3coder --target_device GPU --task text_generation --allowed_media_domains raw.githubusercontent.com
 ```
 
 Use MCP server, with additional image of Gdańsk old town. VLM model deduces location and calls `get_weather` tool to summarize the weather conditions in the city.
