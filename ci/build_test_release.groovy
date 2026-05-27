@@ -42,7 +42,7 @@ pipeline {
                           def destPath = "w:\\${env.PRODUCT_VERSION}\\${env.RELEASE_TAG}\\windows"
                           def artifactsPath = "${buildstamp}\\ovms_windows_${env.PRODUCT_VERSION}_${env.RELEASE_TAG}_python_${python_suffix}.zip"
                           bat(returnStatus:true, script: "ECHO F | xcopy /Y /E ${env.WORKSPACE}\\dist\\windows\\ovms.zip ${destPath}\\${artifactsPath}")
-                          bat(returnStatus:true, script: "rm -f ${destPath}\\latest && ln -sf ${destPath}\\${buildstamp} ${destPath}\\latest")
+                          bat(returnStatus:true, script: "rm -f ${destPath}\\latest && mklink /D ${destPath}\\latest ${destPath}\\${buildstamp} ")
                         } finally {
                             windows.archive_build_artifacts()
                             windows.archive_test_artifacts()
