@@ -353,7 +353,7 @@ Check [tested models](https://github.com/openvinotoolkit/openvino.genai/blob/mas
 
 ### Defining default generation parameters
 
-`generation_config.json` is a file placed in the model directory that, if exists, is the source of default generation and sampling paramters. Any field from [OpenVINO GenAI `GenerationConfig`](https://github.com/openvinotoolkit/openvino.genai/blob/master/src/cpp/src/generation_config.cpp) can be set in it. For each generation parameter the server applies the following resolution order:
+`generation_config.json` is a file placed in the model directory that, if it exists, is the source of default generation and sampling parameters.
 
 **request body → `generation_config.json` → OVMS built-in default**
 
@@ -362,7 +362,7 @@ Example:
 {
   "temperature": 0.7,
   "top_k": 20,
-  "min_p": 0.05,
+  "min_p": 0.05
 }
 ```
 
