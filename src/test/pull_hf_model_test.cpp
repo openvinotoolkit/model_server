@@ -113,6 +113,269 @@ bool trackProbeError(ProbeErrorTracker& tracker, const std::error_code& probeErr
     return false;
 }
 
+::testing::AssertionResult waitForResumableInProgressPull(
+    const std::string& modelBasePath,
+    const std::string& modelPath,
+    const std::string& downloadPath,
+    std::uintmax_t expectedFullModelSize,
+    std::string_view context,
+    int timeoutSeconds,
+    int pollIntervalMs,
+    int postObservationDelayMs,
+    std::size_t maxConsecutiveProbeErrors) {
+    ProbeErrorTracker probeErrorTracker;
+    const std::string mainRefPath = ovms::FileSystem::appendSlash(modelBasePath) + ".git/refs/heads/main";
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(timeoutSeconds);
+    while (std::chrono::steady_clock::now() < deadline) {
+        std::error_code ec;
+        const bool hasMainRef = std::filesystem::exists(mainRefPath, ec);
+        if (trackProbeError(probeErrorTracker, ec, "exists", mainRefPath, context, maxConsecutiveProbeErrors)) {
+            return ::testing::AssertionFailure() << probeErrorTracker.persistentFailureReason;
+        }
+
+        ec.clear();
+        const bool modelExists = std::filesystem::exists(modelPath, ec);
+        if (trackProbeError(probeErrorTracker, ec, "exists", modelPath, context, maxConsecutiveProbeErrors)) {
+            return ::testing::AssertionFailure() << probeErrorTracker.persistentFailureReason;
+        }
+
+        std::uintmax_t modelSize = 0;
+        if (modelExists) {
+            ec.clear();
+            modelSize = std::filesystem::file_size(modelPath, ec);
+            if (ec) {
+                if (trackProbeError(probeErrorTracker, ec, "file_size", modelPath, context, maxConsecutiveProbeErrors)) {
+                    return ::testing::AssertionFailure() << probeErrorTracker.persistentFailureReason;
+                }
+                modelSize = 0;
+            }
+        }
+
+        auto lfsCandidates = ovms::libgit2::findLfsLikeFiles(downloadPath, true);
+        const bool hasLfsArtifacts = !lfsCandidates.empty();
+        const bool modelInFlight = modelExists && (modelSize > 0) && (modelSize < expectedFullModelSize);
+        if (hasMainRef && (hasLfsArtifacts || modelInFlight)) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(postObservationDelayMs));
+            return ::testing::AssertionSuccess();
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(pollIntervalMs));
+    }
+
+    return ::testing::AssertionFailure() << context << ": did not observe in-progress pull within timeout.";
+}
+
+#ifdef _WIN32
+struct WindowsResumeWorkerConfig {
+    const char* workerFlagEnv;
+    const char* modelEnv;
+    const char* downloadPathEnv;
+    const char* taskEnv;
+    const char* gtestFilter;
+    DWORD processCreationFlags;
+};
+
+const WindowsResumeWorkerConfig RESUME_TERMINATE_WORKER_CONFIG = {
+    "OVMS_RESUME_TERMINATE_WORKER",
+    "OVMS_RESUME_TERMINATE_MODEL",
+    "OVMS_RESUME_TERMINATE_DOWNLOAD_PATH",
+    "OVMS_RESUME_TERMINATE_TASK",
+    "HfPullWindowsWorker.ResumeTerminateChildProcess",
+    0};
+
+const WindowsResumeWorkerConfig RESUME_CTRLC_WORKER_CONFIG = {
+    "OVMS_RESUME_CTRLC_WORKER",
+    "OVMS_RESUME_CTRLC_MODEL",
+    "OVMS_RESUME_CTRLC_DOWNLOAD_PATH",
+    "OVMS_RESUME_CTRLC_TASK",
+    "HfPullWindowsWorker.ResumeCtrlCChildProcess",
+    CREATE_NEW_PROCESS_GROUP};
+
+::testing::AssertionResult setWindowsResumeWorkerEnvironment(
+    const WindowsResumeWorkerConfig& config,
+    const std::string& modelName,
+    const std::string& downloadPath,
+    const std::string& task) {
+    if (!SetEnvironmentVariableA(config.workerFlagEnv, "1")) {
+        return ::testing::AssertionFailure() << "Failed to set env var: " << config.workerFlagEnv;
+    }
+    if (!SetEnvironmentVariableA(config.modelEnv, modelName.c_str())) {
+        return ::testing::AssertionFailure() << "Failed to set env var: " << config.modelEnv;
+    }
+    if (!SetEnvironmentVariableA(config.downloadPathEnv, downloadPath.c_str())) {
+        return ::testing::AssertionFailure() << "Failed to set env var: " << config.downloadPathEnv;
+    }
+    if (!SetEnvironmentVariableA(config.taskEnv, task.c_str())) {
+        return ::testing::AssertionFailure() << "Failed to set env var: " << config.taskEnv;
+    }
+    return ::testing::AssertionSuccess();
+}
+
+::testing::AssertionResult clearWindowsResumeWorkerEnvironment(const WindowsResumeWorkerConfig& config) {
+    if (!SetEnvironmentVariableA(config.workerFlagEnv, nullptr)) {
+        return ::testing::AssertionFailure() << "Failed to clear env var: " << config.workerFlagEnv;
+    }
+    if (!SetEnvironmentVariableA(config.modelEnv, nullptr)) {
+        return ::testing::AssertionFailure() << "Failed to clear env var: " << config.modelEnv;
+    }
+    if (!SetEnvironmentVariableA(config.downloadPathEnv, nullptr)) {
+        return ::testing::AssertionFailure() << "Failed to clear env var: " << config.downloadPathEnv;
+    }
+    if (!SetEnvironmentVariableA(config.taskEnv, nullptr)) {
+        return ::testing::AssertionFailure() << "Failed to clear env var: " << config.taskEnv;
+    }
+    return ::testing::AssertionSuccess();
+}
+
+::testing::AssertionResult launchWindowsResumeWorkerProcess(const WindowsResumeWorkerConfig& config, PROCESS_INFORMATION& pi) {
+    char testExePath[MAX_PATH] = {0};
+    const DWORD exePathLen = GetModuleFileNameA(nullptr, testExePath, MAX_PATH);
+    if ((exePathLen == 0u) || (exePathLen >= static_cast<DWORD>(MAX_PATH))) {
+        return ::testing::AssertionFailure() << "Failed to resolve current test executable path";
+    }
+
+    std::string commandLine = std::string("\"") + testExePath + "\" --gtest_filter=" + config.gtestFilter;
+    STARTUPINFOA si;
+    ZeroMemory(&si, sizeof(si));
+    si.cb = sizeof(si);
+    ZeroMemory(&pi, sizeof(pi));
+
+    if (!CreateProcessA(
+            nullptr,
+            commandLine.data(),
+            nullptr,
+            nullptr,
+            TRUE,
+            config.processCreationFlags,
+            nullptr,
+            nullptr,
+            &si,
+            &pi)) {
+        return ::testing::AssertionFailure() << "CreateProcessA failed for filter: " << config.gtestFilter;
+    }
+    return ::testing::AssertionSuccess();
+}
+
+::testing::AssertionResult startWindowsResumeWorker(
+    const WindowsResumeWorkerConfig& config,
+    const std::string& modelName,
+    const std::string& downloadPath,
+    const std::string& task,
+    PROCESS_INFORMATION& pi) {
+    auto envStatus = setWindowsResumeWorkerEnvironment(config, modelName, downloadPath, task);
+    if (!envStatus) {
+        return envStatus;
+    }
+
+    auto launchStatus = launchWindowsResumeWorkerProcess(config, pi);
+    if (!launchStatus) {
+        (void)clearWindowsResumeWorkerEnvironment(config);
+        return launchStatus;
+    }
+    return ::testing::AssertionSuccess();
+}
+
+void closeWindowsWorkerHandles(PROCESS_INFORMATION& pi) {
+    if (pi.hThread != nullptr) {
+        CloseHandle(pi.hThread);
+        pi.hThread = nullptr;
+    }
+    if (pi.hProcess != nullptr) {
+        CloseHandle(pi.hProcess);
+        pi.hProcess = nullptr;
+    }
+}
+
+::testing::AssertionResult terminateWindowsWorker(PROCESS_INFORMATION& pi, int timeoutSeconds) {
+    if (!TerminateProcess(pi.hProcess, 1)) {
+        return ::testing::AssertionFailure() << "TerminateProcess failed";
+    }
+    if (WaitForSingleObject(pi.hProcess, timeoutSeconds * 1000) != WAIT_OBJECT_0) {
+        return ::testing::AssertionFailure() << "Timed out waiting for terminated child process";
+    }
+    return ::testing::AssertionSuccess();
+}
+
+::testing::AssertionResult sendCtrlBreakToWindowsWorker(PROCESS_INFORMATION& pi, int timeoutSeconds) {
+    if (!GenerateConsoleCtrlEvent(CTRL_BREAK_EVENT, pi.dwProcessId)) {
+        return ::testing::AssertionFailure() << "GenerateConsoleCtrlEvent(CTRL_BREAK_EVENT) failed";
+    }
+    if (WaitForSingleObject(pi.hProcess, timeoutSeconds * 1000) != WAIT_OBJECT_0) {
+        return ::testing::AssertionFailure() << "Timed out waiting for CTRL_BREAK child process shutdown";
+    }
+    DWORD childExitCode = 0;
+    if (!GetExitCodeProcess(pi.hProcess, &childExitCode)) {
+        return ::testing::AssertionFailure() << "GetExitCodeProcess failed";
+    }
+    if (childExitCode == static_cast<DWORD>(EXIT_SUCCESS)) {
+        return ::testing::AssertionFailure()
+               << "Child process exited with EXIT_SUCCESS after CTRL_BREAK, expected interrupted failure";
+    }
+    return ::testing::AssertionSuccess();
+}
+#else
+::testing::AssertionResult launchPosixResumeWorker(
+    const std::string& modelName,
+    const std::string& downloadPath,
+    const std::string& task,
+    pid_t& childPid) {
+    childPid = fork();
+    if (childPid == -1) {
+        return ::testing::AssertionFailure() << "fork() failed";
+    }
+    if (childPid == 0) {
+        ovms::Server& childServer = ovms::Server::instance();
+        childServer.setShutdownRequest(0);
+        char* argv[] = {(char*)"ovms",
+            (char*)"--pull",
+            (char*)"--source_model",
+            (char*)modelName.c_str(),
+            (char*)"--model_repository_path",
+            (char*)downloadPath.c_str(),
+            (char*)"--task",
+            (char*)task.c_str()};
+        int argc = 8;
+        int rc = childServer.start(argc, argv);
+        _exit(rc == EXIT_SUCCESS ? 0 : 1);
+    }
+    return ::testing::AssertionSuccess();
+}
+
+::testing::AssertionResult killPosixWorkerAndExpectSigKill(pid_t childPid) {
+    if (kill(childPid, SIGKILL) != 0) {
+        return ::testing::AssertionFailure() << "Failed to send SIGKILL to child process";
+    }
+
+    int childStatus = 0;
+    if (waitpid(childPid, &childStatus, 0) != childPid) {
+        return ::testing::AssertionFailure() << "waitpid failed for SIGKILL child process";
+    }
+    if (!WIFSIGNALED(childStatus) || (WTERMSIG(childStatus) != SIGKILL)) {
+        return ::testing::AssertionFailure() << "Child did not terminate due to SIGKILL";
+    }
+    return ::testing::AssertionSuccess();
+}
+
+::testing::AssertionResult interruptPosixWorkerAndExpectGracefulExit(pid_t childPid) {
+    if (kill(childPid, SIGINT) != 0) {
+        return ::testing::AssertionFailure() << "Failed to send SIGINT to child process";
+    }
+
+    int childStatus = 0;
+    if (waitpid(childPid, &childStatus, 0) != childPid) {
+        return ::testing::AssertionFailure() << "waitpid failed for SIGINT child process";
+    }
+    if (!WIFEXITED(childStatus)) {
+        return ::testing::AssertionFailure()
+               << "Child was terminated by signal " << (WIFSIGNALED(childStatus) ? WTERMSIG(childStatus) : 0)
+               << " instead of graceful exit after SIGINT";
+    }
+    if (WEXITSTATUS(childStatus) == EXIT_SUCCESS) {
+        return ::testing::AssertionFailure() << "Child exited with EXIT_SUCCESS after SIGINT, expected interrupted failure";
+    }
+    return ::testing::AssertionSuccess();
+}
+#endif
+
 }  // namespace
 
 // RAII helper class for managing log file lifecycle.
@@ -122,7 +385,8 @@ private:
     std::string logFilePath;
 
 public:
-    explicit LogFileGuard(const std::string& path) : logFilePath(path) {}
+    explicit LogFileGuard(const std::string& path) :
+        logFilePath(path) {}
 
     ~LogFileGuard() {
         if (std::filesystem::exists(logFilePath)) {
@@ -417,7 +681,8 @@ bool createGitLfsPointerFile(const std::string& path) {
 
     file << "version https://git-lfs.github.com/spec/v1\n"
             "oid sha256:cecf0224201415144c00cf3a6cf3350306f9c78888d631eb590939a63722fefa\n"
-            "size " << MODEL_FULL_SIZE_BYTES << "\n";
+            "size "
+         << MODEL_FULL_SIZE_BYTES << "\n";
 
     return true;
 }
@@ -928,132 +1193,36 @@ TEST(HfPullWindowsWorker, ResumeTerminateChildProcess) {
 // ResumeAfterForcedTerminationAndRerun
 TEST_F(HfPull, ResumeTerminate) {
 #ifdef _WIN32
-    char testExePath[MAX_PATH] = {0};
-    DWORD exePathLen = GetModuleFileNameA(nullptr, testExePath, MAX_PATH);
-    ASSERT_GT(exePathLen, 0u);
-    ASSERT_LT(exePathLen, static_cast<DWORD>(MAX_PATH));
-
-    // Mark spawned gtest process as the terminate worker.
-    ASSERT_TRUE(SetEnvironmentVariableA("OVMS_RESUME_TERMINATE_WORKER", "1"));
-    // Pass source model to worker.
-    ASSERT_TRUE(SetEnvironmentVariableA("OVMS_RESUME_TERMINATE_MODEL", modelName.c_str()));
-    // Pass repository path to worker.
-    ASSERT_TRUE(SetEnvironmentVariableA("OVMS_RESUME_TERMINATE_DOWNLOAD_PATH", downloadPath.c_str()));
-    // Pass task to worker.
-    ASSERT_TRUE(SetEnvironmentVariableA("OVMS_RESUME_TERMINATE_TASK", task.c_str()));
-
-    std::string commandLine = std::string("\"") + testExePath +
-                              "\" --gtest_filter=HfPullWindowsWorker.ResumeTerminateChildProcess";
-    STARTUPINFOA si;
     PROCESS_INFORMATION pi;
-    ZeroMemory(&si, sizeof(si));
-    si.cb = sizeof(si);
-    ZeroMemory(&pi, sizeof(pi));
-
-    ASSERT_TRUE(CreateProcessA(
-        nullptr,
-        commandLine.data(),
-        nullptr,
-        nullptr,
-        TRUE,
-        0,
-        nullptr,
-        nullptr,
-        &si,
-        &pi));
+    ASSERT_TRUE(startWindowsResumeWorker(RESUME_TERMINATE_WORKER_CONFIG, modelName, downloadPath, task, pi));
 #else
-    pid_t childPid = fork();
-    ASSERT_NE(childPid, -1);
-
-    if (childPid == 0) {
-        ovms::Server& childServer = ovms::Server::instance();
-        childServer.setShutdownRequest(0);
-        char* argv[] = {(char*)"ovms",
-            (char*)"--pull",
-            (char*)"--source_model",
-            (char*)modelName.c_str(),
-            (char*)"--model_repository_path",
-            (char*)downloadPath.c_str(),
-            (char*)"--task",
-            (char*)task.c_str()};
-        int argc = 8;
-
-        int rc = childServer.start(argc, argv);
-        _exit(rc == EXIT_SUCCESS ? 0 : 1);
-    }
+    pid_t childPid = -1;
+    ASSERT_TRUE(launchPosixResumeWorker(modelName, downloadPath, task, childPid));
 
 #endif
 
-    bool observedPartialDownload = false;
-    bool interruptionSent = false;
-    ProbeErrorTracker probeErrorTracker;
-    const std::string mainRefPath = ovms::FileSystem::appendSlash(modelBasePath) + ".git/refs/heads/main";
-    auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(180);
-    while (std::chrono::steady_clock::now() < deadline) {
-        // Wait until pull is in progress and repository is already resumable.
-        std::error_code ec;
-        const bool hasMainRef = std::filesystem::exists(mainRefPath, ec);
-        if (trackProbeError(probeErrorTracker, ec, "exists", mainRefPath, "ResumeTerminate", HF_PULL_MAX_CONSECUTIVE_FS_PROBE_ERRORS)) {
-            break;
-        }
-        ec.clear();
-        const bool modelExists = std::filesystem::exists(modelPath, ec);
-        if (trackProbeError(probeErrorTracker, ec, "exists", modelPath, "ResumeTerminate", HF_PULL_MAX_CONSECUTIVE_FS_PROBE_ERRORS)) {
-            break;
-        }
-        std::uintmax_t modelSize = 0;
-        if (modelExists) {
-            ec.clear();
-            modelSize = std::filesystem::file_size(modelPath, ec);
-            if (ec) {
-                if (trackProbeError(probeErrorTracker, ec, "file_size", modelPath, "ResumeTerminate", HF_PULL_MAX_CONSECUTIVE_FS_PROBE_ERRORS)) {
-                    break;
-                }
-                modelSize = 0;
-            }
-        }
-        auto lfsCandidates = ovms::libgit2::findLfsLikeFiles(downloadPath, true);
-        const bool hasLfsArtifacts = !lfsCandidates.empty();
-        const bool modelInFlight = modelExists && (modelSize > 0) && (modelSize < MODEL_FULL_SIZE_BYTES);
-        if (hasMainRef && (hasLfsArtifacts || modelInFlight)) {
-            observedPartialDownload = true;
-            SPDLOG_INFO("ResumeTerminate: observed in-progress pull, waiting {}ms before interrupt", HF_PULL_INTERRUPT_DELAY_MS);
-            std::this_thread::sleep_for(std::chrono::milliseconds(HF_PULL_INTERRUPT_DELAY_MS));
-            break;
-        }
-        std::this_thread::sleep_for(std::chrono::milliseconds(HF_PULL_POLL_INTERVAL_MS));
-    }
+    ASSERT_TRUE(waitForResumableInProgressPull(
+        modelBasePath,
+        modelPath,
+        downloadPath,
+        MODEL_FULL_SIZE_BYTES,
+        "ResumeTerminate",
+        HF_PULL_DETECT_TIMEOUT_SECONDS,
+        HF_PULL_POLL_INTERVAL_MS,
+        HF_PULL_INTERRUPT_DELAY_MS,
+        HF_PULL_MAX_CONSECUTIVE_FS_PROBE_ERRORS));
 
-    ASSERT_TRUE(observedPartialDownload)
-        << (!probeErrorTracker.persistentFailureReason.empty() ? probeErrorTracker.persistentFailureReason :
-                                                    "Did not observe in-progress pull within timeout, cannot verify SIGKILL interruption path.");
+    const bool observedPartialDownload = true;
+    bool interruptionSent = false;
 
 #ifdef _WIN32
-    ASSERT_TRUE(TerminateProcess(pi.hProcess, 1));
+    ASSERT_TRUE(terminateWindowsWorker(pi, HF_PULL_SHUTDOWN_TIMEOUT_SECONDS));
     interruptionSent = true;
-    ASSERT_EQ(WaitForSingleObject(pi.hProcess, HF_PULL_SHUTDOWN_TIMEOUT_SECONDS * 1000), WAIT_OBJECT_0);
-
-    CloseHandle(pi.hThread);
-    CloseHandle(pi.hProcess);
-
-    // Remove worker flag after child exits.
-    ASSERT_TRUE(SetEnvironmentVariableA("OVMS_RESUME_TERMINATE_WORKER", nullptr));
-    // Remove source model handoff variable.
-    ASSERT_TRUE(SetEnvironmentVariableA("OVMS_RESUME_TERMINATE_MODEL", nullptr));
-    // Remove repository path handoff variable.
-    ASSERT_TRUE(SetEnvironmentVariableA("OVMS_RESUME_TERMINATE_DOWNLOAD_PATH", nullptr));
-    // Remove task handoff variable.
-    ASSERT_TRUE(SetEnvironmentVariableA("OVMS_RESUME_TERMINATE_TASK", nullptr));
+    closeWindowsWorkerHandles(pi);
+    ASSERT_TRUE(clearWindowsResumeWorkerEnvironment(RESUME_TERMINATE_WORKER_CONFIG));
 #else
-    if (kill(childPid, SIGKILL) == 0) {
-        interruptionSent = true;
-    }
-    ASSERT_TRUE(interruptionSent) << "Failed to send SIGKILL to child process";
-
-    int childStatus = 0;
-    ASSERT_EQ(waitpid(childPid, &childStatus, 0), childPid);
-    ASSERT_TRUE(WIFSIGNALED(childStatus));
-    ASSERT_EQ(WTERMSIG(childStatus), SIGKILL);
+    ASSERT_TRUE(killPosixWorkerAndExpectSigKill(childPid));
+    interruptionSent = true;
 #endif
 
     auto remainingPointers = ovms::libgit2::findLfsLikeFiles(downloadPath, true);
@@ -1126,142 +1295,35 @@ TEST(HfPullWindowsWorker, ResumeCtrlCChildProcess) {
 // download to completion.
 TEST_F(HfPull, ResumeCtrlC) {
 #ifdef _WIN32
-    char testExePath[MAX_PATH] = {0};
-    DWORD exePathLen = GetModuleFileNameA(nullptr, testExePath, MAX_PATH);
-    ASSERT_GT(exePathLen, 0u);
-    ASSERT_LT(exePathLen, static_cast<DWORD>(MAX_PATH));
-
-    // Mark spawned gtest process as the ctrl-c worker.
-    ASSERT_TRUE(SetEnvironmentVariableA("OVMS_RESUME_CTRLC_WORKER", "1"));
-    // Pass source model to worker.
-    ASSERT_TRUE(SetEnvironmentVariableA("OVMS_RESUME_CTRLC_MODEL", modelName.c_str()));
-    // Pass repository path to worker.
-    ASSERT_TRUE(SetEnvironmentVariableA("OVMS_RESUME_CTRLC_DOWNLOAD_PATH", downloadPath.c_str()));
-    // Pass task to worker.
-    ASSERT_TRUE(SetEnvironmentVariableA("OVMS_RESUME_CTRLC_TASK", task.c_str()));
-
-    std::string commandLine = std::string("\"") + testExePath +
-                              "\" --gtest_filter=HfPullWindowsWorker.ResumeCtrlCChildProcess";
-    STARTUPINFOA si;
     PROCESS_INFORMATION pi;
-    ZeroMemory(&si, sizeof(si));
-    si.cb = sizeof(si);
-    ZeroMemory(&pi, sizeof(pi));
-
-    // CREATE_NEW_PROCESS_GROUP is required to send GenerateConsoleCtrlEvent only to
-    // the child process group; otherwise the signal would also reach this test runner.
-    ASSERT_TRUE(CreateProcessA(
-        nullptr,
-        commandLine.data(),
-        nullptr,
-        nullptr,
-        TRUE,
-        CREATE_NEW_PROCESS_GROUP,
-        nullptr,
-        nullptr,
-        &si,
-        &pi));
+    ASSERT_TRUE(startWindowsResumeWorker(RESUME_CTRLC_WORKER_CONFIG, modelName, downloadPath, task, pi));
 #else
-    pid_t childPid = fork();
-    ASSERT_NE(childPid, -1);
-
-    if (childPid == 0) {
-        ovms::Server& childServer = ovms::Server::instance();
-        childServer.setShutdownRequest(0);
-        char* argv[] = {(char*)"ovms",
-            (char*)"--pull",
-            (char*)"--source_model",
-            (char*)modelName.c_str(),
-            (char*)"--model_repository_path",
-            (char*)downloadPath.c_str(),
-            (char*)"--task",
-            (char*)task.c_str()};
-        int argc = 8;
-
-        // Run synchronously in this child process so installSignalHandlers() (called
-        // inside server.start) is in effect when SIGINT arrives from the parent.
-        int rc = childServer.start(argc, argv);
-        _exit(rc == EXIT_SUCCESS ? 0 : 1);
-    }
+    pid_t childPid = -1;
+    ASSERT_TRUE(launchPosixResumeWorker(modelName, downloadPath, task, childPid));
 #endif
 
-    // Wait until pull is clearly in progress before sending the interrupt, so the
-    // cancellation actually exercises the in-progress clone path. A fixed sleep is
-    // unreliable on fast machines.
-    bool observedPartialDownload = false;
-    bool interruptionSent = false;
-    ProbeErrorTracker probeErrorTracker;
-    const std::string mainRefPath = ovms::FileSystem::appendSlash(modelBasePath) + ".git/refs/heads/main";
-    auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(180);
-    while (std::chrono::steady_clock::now() < deadline) {
-        std::error_code ec;
-        const bool hasMainRef = std::filesystem::exists(mainRefPath, ec);
-        if (trackProbeError(probeErrorTracker, ec, "exists", mainRefPath, "ResumeCtrlC", HF_PULL_MAX_CONSECUTIVE_FS_PROBE_ERRORS)) {
-            break;
-        }
-        ec.clear();
-        const bool modelExists = std::filesystem::exists(modelPath, ec);
-        if (trackProbeError(probeErrorTracker, ec, "exists", modelPath, "ResumeCtrlC", HF_PULL_MAX_CONSECUTIVE_FS_PROBE_ERRORS)) {
-            break;
-        }
-        std::uintmax_t modelSize = 0;
-        if (modelExists) {
-            ec.clear();
-            modelSize = std::filesystem::file_size(modelPath, ec);
-            if (ec) {
-                if (trackProbeError(probeErrorTracker, ec, "file_size", modelPath, "ResumeCtrlC", HF_PULL_MAX_CONSECUTIVE_FS_PROBE_ERRORS)) {
-                    break;
-                }
-                modelSize = 0;
-            }
-        }
-        auto lfsCandidates = ovms::libgit2::findLfsLikeFiles(downloadPath, true);
-        const bool hasLfsArtifacts = !lfsCandidates.empty();
-        const bool modelInFlight = modelExists && (modelSize > 0) && (modelSize < MODEL_FULL_SIZE_BYTES);
-        if (hasMainRef && (hasLfsArtifacts || modelInFlight)) {
-            observedPartialDownload = true;
-            std::this_thread::sleep_for(std::chrono::milliseconds(HF_PULL_INTERRUPT_DELAY_MS));
-            break;
-        }
-        std::this_thread::sleep_for(std::chrono::milliseconds(HF_PULL_POLL_INTERVAL_MS));
-    }
+    ASSERT_TRUE(waitForResumableInProgressPull(
+        modelBasePath,
+        modelPath,
+        downloadPath,
+        MODEL_FULL_SIZE_BYTES,
+        "ResumeCtrlC",
+        HF_PULL_DETECT_TIMEOUT_SECONDS,
+        HF_PULL_POLL_INTERVAL_MS,
+        HF_PULL_INTERRUPT_DELAY_MS,
+        HF_PULL_MAX_CONSECUTIVE_FS_PROBE_ERRORS));
 
-    ASSERT_TRUE(observedPartialDownload)
-        << (!probeErrorTracker.persistentFailureReason.empty() ? probeErrorTracker.persistentFailureReason :
-                                                    "Did not observe in-progress pull within timeout, cannot verify SIGINT/CTRL_BREAK interruption path.");
+    const bool observedPartialDownload = true;
+    bool interruptionSent = false;
 
 #ifdef _WIN32
-    // CTRL_C_EVENT cannot be targeted at a single child via GenerateConsoleCtrlEvent
-    // without also reaching the calling console group. CTRL_BREAK_EVENT can be
-    // delivered to the child's dedicated process group (created with
-    // CREATE_NEW_PROCESS_GROUP above) without disturbing the test runner.
-    ASSERT_TRUE(GenerateConsoleCtrlEvent(CTRL_BREAK_EVENT, pi.dwProcessId));
+    ASSERT_TRUE(sendCtrlBreakToWindowsWorker(pi, HF_PULL_SHUTDOWN_TIMEOUT_SECONDS));
     interruptionSent = true;
-    ASSERT_EQ(WaitForSingleObject(pi.hProcess, HF_PULL_SHUTDOWN_TIMEOUT_SECONDS * 1000), WAIT_OBJECT_0);
-    DWORD childExitCode = 0;
-    ASSERT_TRUE(GetExitCodeProcess(pi.hProcess, &childExitCode));
-    EXPECT_NE(childExitCode, static_cast<DWORD>(EXIT_SUCCESS));
-    CloseHandle(pi.hThread);
-    CloseHandle(pi.hProcess);
-
-    // Remove worker flag after child exits.
-    ASSERT_TRUE(SetEnvironmentVariableA("OVMS_RESUME_CTRLC_WORKER", nullptr));
-    // Remove source model handoff variable.
-    ASSERT_TRUE(SetEnvironmentVariableA("OVMS_RESUME_CTRLC_MODEL", nullptr));
-    // Remove repository path handoff variable.
-    ASSERT_TRUE(SetEnvironmentVariableA("OVMS_RESUME_CTRLC_DOWNLOAD_PATH", nullptr));
-    // Remove task handoff variable.
-    ASSERT_TRUE(SetEnvironmentVariableA("OVMS_RESUME_CTRLC_TASK", nullptr));
+    closeWindowsWorkerHandles(pi);
+    ASSERT_TRUE(clearWindowsResumeWorkerEnvironment(RESUME_CTRLC_WORKER_CONFIG));
 #else
-    ASSERT_EQ(kill(childPid, SIGINT), 0);
+    ASSERT_TRUE(interruptPosixWorkerAndExpectGracefulExit(childPid));
     interruptionSent = true;
-    int childStatus = 0;
-    ASSERT_EQ(waitpid(childPid, &childStatus, 0), childPid);
-    // SIGINT must be handled gracefully by ovms (onInterrupt -> shutdownRequest),
-    // so the child should exit normally rather than be terminated by the signal.
-    ASSERT_TRUE(WIFEXITED(childStatus)) << "Child was terminated by signal " << (WIFSIGNALED(childStatus) ? WTERMSIG(childStatus) : 0)
-                                        << " instead of exiting normally - SIGINT handler may be missing";
-    EXPECT_NE(WEXITSTATUS(childStatus), EXIT_SUCCESS);
 #endif
 
     SPDLOG_DEBUG("ResumeCtrlC test state: observedPartialDownload={}, interruptionSent={}",
