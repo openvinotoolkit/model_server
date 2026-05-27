@@ -7,6 +7,7 @@ pipeline {
     }
     environment {
         BDBA_CREDS = credentials('BDBA_KEY')
+        WORKER_CREDS = credentials('sys_k8sworker')
     }
     stages {
         stage ("Build and test windows") {
@@ -42,7 +43,7 @@ pipeline {
                           def artifactsPath = "${buildstamp}\\ovms_windows_${env.PRODUCT_VERSION}_${env.RELEASE_TAG}_python_${python_suffix}.zip"
                           bat(returnStatus:true, script: "ECHO F | xcopy /Y /E ${env.WORKSPACE}\\dist\\windows\\ovms.zip ${destPath}\\${artifactsPath}")
                           def remotePath = destPath.replace("\\\\${env.OV_SHARE_05_IP}\\data", "/data").replace("\\", "/")
-                          bat(returnStatus:true, script: "ssh k8sworker@${env.OV_SHARE_05_IP} \"rm -f ${remotePath}/latest && ln -sf ${remotePath}/${buildstamp} ${remotePath}/latest\"")
+                          bat(returnStatus:true, script: "sshpass -p \"${env.WORKER_CREDS_PSW}\" ssh ${env.WORKER_CREDS_USR}@${env.OV_SHARE_05_IP} \"rm -f ${remotePath}/latest && ln -sf ${remotePath}/${buildstamp} ${remotePath}/latest\"")
                           } finally {
                             windows.archive_build_artifacts()
                             windows.archive_test_artifacts()
