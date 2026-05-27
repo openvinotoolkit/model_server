@@ -106,7 +106,7 @@ The commands below assumes the models is deployed with the name `ovms-model`. It
 export OPENAI_BASE_URL=http://localhost:8000/v3
 export CHAT_TEMPLATE_KWARGS='{"enable_thinking":false, "reasoning_effort":"low", "preserve_reasoning":false}'
 
-bfcl generate --model ovms-model --test-category simple_python,multiple --temperature 0.0 --num-threads 100 -o --result-dir model_name_dir
+bfcl generate --model ovms-model --test-category simple_python,multiple,multi_turn_base --temperature 0.0 --num-threads 10 -o --result-dir model_name_dir
 bfcl evaluate --model ovms-model --result-dir model_name_dir 
 ```
 
