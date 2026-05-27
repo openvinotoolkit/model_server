@@ -31,7 +31,7 @@ parser.add_argument('--dataset', default='Banking77Classification', help='Datase
                     dest='dataset')
 parser.add_argument('--embed_dim', type=int, default=None, help='Embedding dimension. Auto-detected if not provided.',
                     dest='embed_dim')
-parser.add_argument('--max_tokens', type=int, default=999999, help='Max input tokens for truncation. default: 512',
+parser.add_argument('--max_tokens', type=int, default=99999, help='Max input tokens for truncation. default: 99999',
                     dest='max_tokens')
 args = vars(parser.parse_args())
 
