@@ -22,12 +22,79 @@ ovms_cc_library(
     ],
     hdrs = [
         "node_initializer.hpp",
-        "graph_side_packets.hpp",
     ],
     deps = [
+        ":graph_side_packets",
         "//src:libovmsstatus",
     ],
     visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
+    name = "graph_side_packets",
+    hdrs = [
+        "graph_side_packets.hpp",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
+    name = "graph_executor_constants",
+    hdrs = [
+        "graph_executor_constants.hpp",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
+    name = "outputstreamobserver",
+    hdrs = [
+        "outputstreamobserver.hpp",
+    ],
+    deps = [
+        ":mediapipe_utils",
+        "//src:libovms_execution_context",
+        "//src:model_metric_reporter",
+        "//src:libovmsprofiler",
+        "//src:libovmsstatus",
+        "//src:libovmstimer",
+        "@mediapipe//mediapipe/framework:calculator_graph",
+    ],
+    visibility = ["//visibility:public"],
+    additional_copts = COPTS_MEDIAPIPE,
+)
+
+ovms_cc_library(
+    name = "graphqueue",
+    hdrs = [
+        "graphqueue.hpp",
+    ],
+    srcs = [
+        "graphqueue.cpp",
+    ],
+    deps = select({
+            "//:not_disable_python": [
+                "//src/python:libovmspythonmodule",
+            ],
+            "//:disable_python": []
+        }) + [
+        ":graph_executor_constants",
+        ":graph_side_packets",
+        ":mediapipe_utils",
+        ":outputstreamobserver",
+        ":side_packet_builder",
+        "//src:libovms_queue",
+        "//src:libovmslogging",
+        "//src:libovms_execution_context",
+        "//src:libovmstimer",
+        "//src/metrics:libovmsmetrics",
+        "//src:model_metric_reporter",
+        "//src:libovmsprofiler",
+        "//third_party:openvino",
+        "@mediapipe//mediapipe/framework:calculator_graph",
+    ],
+    visibility = ["//visibility:public"],
+    additional_copts = COPTS_PYTHON + COPTS_MEDIAPIPE,
 )
 
 ovms_cc_library(
@@ -48,12 +115,46 @@ ovms_cc_library(
 )
 
 ovms_cc_library(
+    name = "side_packet_builder",
+    srcs = [
+        "side_packet_builder.cpp",
+    ],
+    hdrs = [
+        "side_packet_builder.hpp",
+    ],
+    deps = [
+        ":graph_executor_constants",
+        ":graph_side_packets",
+        "@mediapipe//mediapipe/framework:calculator_graph",
+    ],
+    visibility = ["//visibility:public"],
+    additional_copts = COPTS_PYTHON + COPTS_MEDIAPIPE,
+)
+
+ovms_cc_library(
+    name = "mediapipegraphconfig",
+    srcs = [
+        "mediapipegraphconfig.cpp",
+    ],
+    hdrs = [
+        "mediapipegraphconfig.hpp",
+    ],
+    deps = [
+        "//src/filesystem:libovmsfilesystem",
+        "//src:libovmsstatus",
+        "//src/graph_export:graph_export",
+        "@com_github_tencent_rapidjson//:rapidjson",
+        "//src/port:rapidjson_stringbuffer",
+        "//src/port:rapidjson_writer",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
     name = "libovms_mediapipe",
     srcs = [
         "mediapipefactory.cpp",
         "mediapipefactory.hpp",
-        "mediapipegraphconfig.hpp",
-        "mediapipegraphconfig.cpp",
         "mediapipegraphdefinition.cpp",
         "mediapipegraphdefinition.hpp",
         "mediapipegraphexecutor.cpp",
@@ -65,8 +166,11 @@ ovms_cc_library(
             ],
             "//:disable_python": []
         }) + [
+        ":graphqueue",
+        ":mediapipegraphconfig",
         ":node_initializer",
         ":mediapipe_utils",
+        ":side_packet_builder",
         "//src/dags:pipelinedefinitionstatus",
         "//src:libovms_single_version_servable_definition",
         "//src:libovms_tensorinfo",
@@ -84,9 +188,8 @@ ovms_cc_library(
         "//src:libovms_execution_context",
         "//src:libovmstimer",
         "//src:libovmsprofiler",
-        "@com_github_tencent_rapidjson//:rapidjson",
-        "//src/port:rapidjson_stringbuffer",
-        "//src/port:rapidjson_writer",
+        "//src/llm:execution_context_utils",
+        "//src/utils:env_guard",
         "@mediapipe//mediapipe/framework:calculator_graph",
         "@mediapipe//mediapipe/framework/port:parse_text_proto",
     ],

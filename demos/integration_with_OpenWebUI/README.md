@@ -207,7 +207,7 @@ curl http://localhost:8000/v3/rerank -H "Content-Type: application/json" -d "{\"
 
 [https://docs.openvino.ai/2026/model-server/ovms_demos_continuous_batching_rag.html](https://docs.openvino.ai/2026/model-server/ovms_demos_continuous_batching_rag.html#export-models-from-huggingface-hub-including-conversion-to-openvino-format-using-the-python-script)
 
-[https://docs.openwebui.com/tutorials/tips/rag-tutorial](https://docs.openwebui.com/tutorials/tips/rag-tutorial/#setup)
+[https://docs.openwebui.com/features/chat-conversations/rag/](https://docs.openwebui.com/features/chat-conversations/rag/)
 
 ---
 
@@ -285,21 +285,21 @@ curl http://localhost:8000/v3/images/generations -H "Content-Type: application/j
 
 ### Step 1: Model Preparation
 
-The vision language model used in this demo is `Junrui2021/Qwen3-VL-8B-Instruct-int4`. Run the ovms with --pull parameter to download and quantize the model:
+The vision language model used in this demo is `OpenVINO/Qwen3-VL-8B-Instruct-int4-ov`. Run the ovms with --pull parameter to download and quantize the model:
 
 ::::{tab-set}
 :::{tab-item} Windows
 :sync: Windows
 ```bat
-ovms.exe --pull --source_model Junrui2021/Qwen3-VL-8B-Instruct-int4 --model_repository_path models --model_name ovms-model-vl --task text_generation --pipeline_type VLM_CB --target_device GPU
-ovms.exe --add_to_config --config_path models\config.json --model_path Junrui2021\Qwen3-VL-8B-Instruct-int4 --model_name ovms-model-vl
+ovms.exe --pull --source_model OpenVINO/Qwen3-VL-8B-Instruct-int4-ov --model_repository_path models --model_name ovms-model-vl --task text_generation --pipeline_type VLM_CB --target_device GPU
+ovms.exe --add_to_config --config_path models\config.json --model_path OpenVINO/Qwen3-VL-8B-Instruct-int4-ov --model_name ovms-model-vl
 ```
 :::
 :::{tab-item} Linux (using Docker)
 :sync: Linux
 ```bash
-docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:weekly --pull --source_model Junrui2021/Qwen3-VL-8B-Instruct-int4 --model_repository_path /models --model_name ovms-model-vl --task text_generation --pipeline_type VLM_CB --target_device GPU
-docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models openvino/model_server:weekly --add_to_config --config_path /models/config.json  --model_path Junrui2021/Qwen3-VL-8B-Instruct-int4 --model_name ovms-model-vl
+docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:weekly --pull --source_model OpenVINO/Qwen3-VL-8B-Instruct-int4-ov --model_repository_path /models --model_name ovms-model-vl --task text_generation --pipeline_type VLM_CB --target_device GPU
+docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models openvino/model_server:weekly --add_to_config --config_path /models/config.json  --model_path OpenVINO/Qwen3-VL-8B-Instruct-int4-ov --model_name ovms-model-vl
 ```
 :::
 ::::
@@ -486,6 +486,8 @@ docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models openvino/model_serve
 ```
 :::
 :::: 
+
+> **Note:** Family of Whisper models (except Whisper-large) can be also deployed on NPU or CPU devices by just changing the --target_device parameter.
 
 ### Step 2: Audio Settings
 

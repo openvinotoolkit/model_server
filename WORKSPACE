@@ -87,9 +87,9 @@ git_repository(
 http_archive(
     name = "zlib",
     build_file = "@mediapipe//third_party:zlib.BUILD",
-    sha256 = "9a93b2b7dfdac77ceba5a558a580e74667dd6fede4585b91eefb60f03b72df23",
-    strip_prefix = "zlib-1.3.1",
-    url = "http://zlib.net/fossils/zlib-1.3.1.tar.gz",
+    sha256 = "bb329a0a2cd0274d05519d61c667c062e06990d72e125ee2dfa8de64f0119d16",
+    strip_prefix = "zlib-1.3.2",
+    url = "http://zlib.net/fossils/zlib-1.3.2.tar.gz",
 )
 
 # RapidJSON
@@ -138,7 +138,7 @@ cc_library(
 
 new_local_repository(
     name = "windows_curl",
-    path = "C:\\opt\\curl-8.19.0_4-win64-mingw",
+    path = "C:\\opt\\curl-8.20.0_2-win64-mingw",
     build_file_content = """
 cc_import(
     name = "curl_lib",
@@ -299,7 +299,7 @@ new_local_repository(
 new_local_repository(
     name = "windows_opencv",
     build_file = "@//third_party/opencv:opencv_windows.BUILD",
-    path = "C:\\opt\\opencv_4.12.0",
+    path = "C:\\opt\\opencv_4.13.0",
 )
 
 new_local_repository(
@@ -640,11 +640,11 @@ cc_library(
 new_git_repository(
     name = "dr_libs",
     remote = "https://github.com/mackron/dr_libs",
-    commit = "24d738be2349fd4b6fe50eeaa81f5bd586267fd0",
+    commit = "47a4f08e777faddf59a8955c4ea84f69f41020d5",
     build_file_content = """
 cc_library(
     name = "dr",
-    hdrs = ["dr_flac.h", "dr_mp3.h", "dr_wav.h"],
+    hdrs = ["dr_mp3.h", "dr_wav.h"],
     visibility = ["//visibility:public"],
     local_defines = [
     ],

@@ -63,6 +63,11 @@ set "envPath=win_environment.log"
 set "setPythonPath=%cd%\bazel-out\x64_windows-opt\bin\src\python\binding"
 set "BAZEL_SH=C:\opt\msys64\usr\bin\bash.exe"
 
+:: Load chosen dependency versions from versions.mk
+for /f "usebackq eol=# tokens=1,3" %%A in ("%cd%\versions.mk") do (
+    if "%%A"=="OPENCV_VERSION" if "!opencv_version!"=="" set "opencv_version=%%B"
+)
+
 :: Bazel compilation settings
 set VS_2022_BT="C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools"
 IF /I EXIST %VS_2022_BT% goto :msvc_bt ELSE goto :msvc_error
@@ -84,7 +89,7 @@ set "PATH=%setPath%"
 
 :: Set paths with libs for execution - affects PATH
 set "openvinoBatch=call !BAZEL_SHORT_PATH!\openvino\setupvars.bat"
-set "opencvBatch=call C:\opt\opencv_4.12.0\setup_vars_opencv4.cmd"
+set "opencvBatch=call C:\opt\opencv_!opencv_version!\setup_vars_opencv4.cmd"
 set "PYTHONPATH=%PYTHONPATH%;%setPythonPath%"
 
 :: Set required libraries paths

@@ -25,6 +25,7 @@ ovms_cc_library(
         "//third_party:openvino",
         "@mediapipe//mediapipe/framework:calculator_framework",
         "@com_github_tencent_rapidjson//:rapidjson",
+        "//src/mediapipe_internal:graph_side_packets",
         "//src/kfserving_api:kfserving_api_cpp",
         "//src:libovmsprofiler",
         ":genai_servables",
@@ -346,6 +347,20 @@ ovms_cc_library(
         "//:disable_python": [],
         "//:not_disable_python" : [":py_jinja_template_processor"],
     }),
+    visibility = ["//visibility:public"],
+    additional_copts = COPTS_PYTHON
+)
+
+ovms_cc_library(
+    name = "execution_context_utils",
+    hdrs = ["execution_context_utils.hpp"],
+    srcs = ["execution_context_utils.cpp"],
+    deps = [
+        ":genai_servables",
+        "//src/mediapipe_internal:graph_side_packets",
+        "//src:libovmslogging",
+        "//src:libovmsstatus",
+    ],
     visibility = ["//visibility:public"],
     additional_copts = COPTS_PYTHON
 )

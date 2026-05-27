@@ -438,4 +438,8 @@ print(f"Success rate: {sum(benchmark_results['successes'])/len(benchmark_results
 print(f"Throughput - Tokens per second: {num_tokens / benchmark_results['duration']:^,.1f}")
 print(f"Mean latency: {np.mean(benchmark_results['latencies'])*1000:.2f} ms")
 print(f"Median latency: {np.median(benchmark_results['latencies'])*1000:.2f} ms")
+# add printing 10 percentiles of latency to better understand latency distribution
+percentiles = [10, 25, 50, 75, 90, 95, 99]
+for p in percentiles:
+    print(f"{p}th percentile latency: {np.percentile(benchmark_results['latencies'], p)*1000:.2f} ms")
 print(f"Average document length: {num_tokens / len(docs)} tokens")

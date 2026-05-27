@@ -61,25 +61,43 @@ Status MediapipeFactory::createDefinition(const std::string& pipelineName,
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Mediapipe graph definition: {} is already created", pipelineName);
         return StatusCode::PIPELINE_DEFINITION_ALREADY_EXIST;
     }
-    std::shared_ptr<MediapipeGraphDefinition> graphDefinition = std::make_shared<MediapipeGraphDefinition>(pipelineName, config, metrics.getMetricRegistry(), &metrics.getMetricConfig(), pythonBackend);
+    std::shared_ptr<MediapipeGraphDefinition> graphDefinition = std::make_shared<MediapipeGraphDefinition>(
+        pipelineName, config, metrics.getMetricRegistry(), &metrics.getMetricConfig(), pythonBackend);
     auto stat = graphDefinition->validate(checker);
     if (stat.getCode() == StatusCode::MEDIAPIPE_GRAPH_NAME_OCCUPIED) {
         return stat;
     }
     std::unique_lock lock(definitionsMtx);
     definitions.insert({pipelineName, std::move(graphDefinition)});
+    // Register LoRA aliases discovered during validation (image gen graphs)
+    const auto& def = definitions[pipelineName];
+    for (const auto& alias : def->getLoraAliases()) {
+        loraAliases[alias] = pipelineName;
+        SPDLOG_LOGGER_INFO(modelmanager_logger, "Registered LoRA alias: {} -> {}", alias, pipelineName);
+    }
     return stat;
 }
 
 bool MediapipeFactory::definitionExists(const std::string& name) const {
     std::shared_lock lock(definitionsMtx);
-    return this->definitions.find(name) != this->definitions.end();
+    if (this->definitions.find(name) != this->definitions.end()) {
+        return true;
+    }
+    return loraAliases.find(name) != loraAliases.end();
 }
 
 MediapipeGraphDefinition* MediapipeFactory::findDefinitionByName(const std::string& name) const {
     std::shared_lock lock(definitionsMtx);
     auto it = definitions.find(name);
     if (it == std::end(definitions)) {
+        // Check LoRA aliases
+        auto aliasIt = loraAliases.find(name);
+        if (aliasIt != loraAliases.end()) {
+            it = definitions.find(aliasIt->second);
+            if (it != std::end(definitions)) {
+                return it->second.get();
+            }
+        }
         return nullptr;
     } else {
         return it->second.get();
@@ -95,13 +113,29 @@ Status MediapipeFactory::reloadDefinition(const std::string& name,
         return StatusCode::INTERNAL_ERROR;
     }
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Reloading mediapipe graph: {}", name);
-    return mgd->reload(checker, config);
+    clearLoraAliases(name);
+    auto status = mgd->reload(checker, config);
+    if (status.ok()) {
+        std::unique_lock lock(definitionsMtx);
+        for (const auto& alias : mgd->getLoraAliases()) {
+            loraAliases[alias] = name;
+            SPDLOG_LOGGER_INFO(modelmanager_logger, "Registered LoRA alias: {} -> {}", alias, name);
+        }
+    }
+    return status;
 }
 
 Status MediapipeFactory::create(std::unique_ptr<MediapipeGraphExecutor>& pipeline,
     const std::string& name) const {
     std::shared_lock lock(definitionsMtx);
     auto it = definitions.find(name);
+    if (it == definitions.end()) {
+        // Check LoRA aliases
+        auto aliasIt = loraAliases.find(name);
+        if (aliasIt != loraAliases.end()) {
+            it = definitions.find(aliasIt->second);
+        }
+    }
     if (it == definitions.end()) {
         SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Mediapipe with requested name: {} does not exist", name);
         return StatusCode::MEDIAPIPE_DEFINITION_NAME_MISSING;
@@ -138,11 +172,51 @@ const std::vector<std::string> MediapipeFactory::getNamesOfAvailableMediapipePip
     std::vector<std::string> names;
     std::shared_lock lock(definitionsMtx);
     for (auto& [name, definition] : definitions) {
-        if (definition->getStatus().isAvailable()) {
+        if (definition->getStatus().isAvailable() && !definition->shouldHideBaseModelInRouting()) {
             names.push_back(definition->getName());
         }
     }
+    // Add LoRA aliases that point to available definitions
+    for (const auto& [alias, graphName] : loraAliases) {
+        auto it = definitions.find(graphName);
+        if (it != definitions.end() && it->second->getStatus().isAvailable()) {
+            names.push_back(alias);
+        }
+    }
     return names;
+}
+
+void MediapipeFactory::registerLoraAlias(const std::string& alias, const std::string& graphName) {
+    std::unique_lock lock(definitionsMtx);
+    loraAliases[alias] = graphName;
+    SPDLOG_LOGGER_INFO(modelmanager_logger, "Registered LoRA alias: {} -> {}", alias, graphName);
+}
+
+void MediapipeFactory::clearLoraAliases(const std::string& graphName) {
+    std::unique_lock lock(definitionsMtx);
+    for (auto it = loraAliases.begin(); it != loraAliases.end();) {
+        if (it->second == graphName) {
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Removing LoRA alias: {} -> {}", it->first, graphName);
+            it = loraAliases.erase(it);
+        } else {
+            ++it;
+        }
+    }
+}
+
+bool MediapipeFactory::aliasesConflictExcluding(const std::vector<std::string>& aliases, const std::string& ownGraphName) const {
+    std::shared_lock lock(definitionsMtx);
+    for (const auto& alias : aliases) {
+        auto defIt = definitions.find(alias);
+        if (defIt != definitions.end() && defIt->first != ownGraphName) {
+            return true;
+        }
+        auto aliasIt = loraAliases.find(alias);
+        if (aliasIt != loraAliases.end() && aliasIt->second != ownGraphName) {
+            return true;
+        }
+    }
+    return false;
 }
 
 MediapipeFactory::~MediapipeFactory() = default;

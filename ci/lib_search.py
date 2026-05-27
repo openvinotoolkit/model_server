@@ -153,6 +153,7 @@ def check_dir(start_dir):
         "windows_sign.bat",
         "config.yaml",
         "kserve-openvino.yaml",
+        "ServingRuntime.yaml",
         "dummy_facebook_template.jinja",
         ]
 
