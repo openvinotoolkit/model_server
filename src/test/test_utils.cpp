@@ -733,6 +733,21 @@ void randomizeAndEnsureFrees(std::string& port1, std::string& port2) {
 
 const int64_t SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS = 60;
 
+namespace {
+
+void startServerWithArgs(std::unique_ptr<std::thread>& t, ovms::Server& server, std::vector<std::string> args, int expectedCode) {
+    t.reset(new std::thread([args = std::move(args), &server, expectedCode]() mutable {
+        std::vector<char*> argv;
+        argv.reserve(args.size());
+        for (auto& arg : args) {
+            argv.push_back(const_cast<char*>(arg.c_str()));
+        }
+        EXPECT_EQ(expectedCode, server.start(static_cast<int>(argv.size()), argv.data()));
+    }));
+}
+
+}  // namespace
+
 void EnsureServerStartedWithTimeout(ovms::Server& server, int timeoutSeconds) {
     auto start = std::chrono::high_resolution_clock::now();
     int timestepMs = 20;
@@ -772,6 +787,23 @@ void SetUpServerForDownload(std::unique_ptr<std::thread>& t, ovms::Server& serve
     EnsureServerModelDownloadFinishedWithTimeout(server, timeoutSeconds);
 }
 
+void SetUpServerForDownload(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& source_model, std::string& download_path, std::string& task, const std::string& logPath, int expected_code, int timeoutSeconds) {
+    server.setShutdownRequest(0);
+    std::vector<std::string> args = {"ovms",
+        "--pull",
+        "--source_model",
+        source_model,
+        "--model_repository_path",
+        download_path,
+        "--task",
+        task,
+        "--log_path",
+        logPath};
+    startServerWithArgs(t, server, std::move(args), expected_code);
+
+    EnsureServerModelDownloadFinishedWithTimeout(server, timeoutSeconds);
+}
+
 void SetUpServerForDownloadWithDraft(std::unique_ptr<std::thread>& t, ovms::Server& server,
     std::string& draftModel, std::string& source_model, std::string& download_path, std::string& task, int expected_code, int timeoutSeconds) {
     server.setShutdownRequest(0);
@@ -790,6 +822,26 @@ void SetUpServerForDownloadWithDraft(std::unique_ptr<std::thread>& t, ovms::Serv
     t.reset(new std::thread([&argc, &argv, &server, expected_code]() {
         EXPECT_EQ(expected_code, server.start(argc, argv));
     }));
+
+    EnsureServerModelDownloadFinishedWithTimeout(server, timeoutSeconds);
+}
+
+void SetUpServerForDownloadWithDraft(std::unique_ptr<std::thread>& t, ovms::Server& server,
+    std::string& draftModel, std::string& source_model, std::string& download_path, std::string& task, const std::string& logPath, int expected_code, int timeoutSeconds) {
+    server.setShutdownRequest(0);
+    std::vector<std::string> args = {"ovms",
+        "--pull",
+        "--source_model",
+        source_model,
+        "--model_repository_path",
+        download_path,
+        "--task",
+        task,
+        "--draft_source_model",
+        draftModel,
+        "--log_path",
+        logPath};
+    startServerWithArgs(t, server, std::move(args), expected_code);
 
     EnsureServerModelDownloadFinishedWithTimeout(server, timeoutSeconds);
 }

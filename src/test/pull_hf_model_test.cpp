@@ -16,6 +16,7 @@
 #include <array>
 #include <chrono>
 #include <cstdlib>
+#include <fstream>
 #include <iomanip>
 #include <memory>
 #include <openssl/sha.h>
@@ -61,11 +62,123 @@
 
 #include "environment.hpp"
 
+namespace {
+
+constexpr std::uintmax_t MODEL_FULL_SIZE_BYTES = 52417240;
+constexpr std::uintmax_t MODEL_HALF_SIZE_BYTES = 26208620;
+constexpr std::uintmax_t MODEL2_FULL_SIZE_BYTES = 339125;
+constexpr std::uintmax_t MODEL3_FULL_SIZE_BYTES = 500292;
+constexpr std::uintmax_t MODEL4_FULL_SIZE_BYTES = 499723;
+constexpr std::uintmax_t DRAFT_MODEL_TOKENIZER_SIZE_BYTES = 2022483;
+
+struct ProbeErrorTracker {
+    std::size_t consecutiveErrors = 0;
+    std::error_code lastError;
+    std::string lastOperation;
+    std::string lastPath;
+    std::string persistentFailureReason;
+};
+
+bool trackProbeError(ProbeErrorTracker& tracker, const std::error_code& probeError, std::string_view operation, const std::string& path,
+    std::string_view context, std::size_t maxConsecutiveErrors) {
+    if (!probeError || probeError == std::errc::no_such_file_or_directory) {
+        tracker.consecutiveErrors = 0;
+        tracker.lastError.clear();
+        tracker.lastOperation.clear();
+        tracker.lastPath.clear();
+        return false;
+    }
+
+    if ((probeError == tracker.lastError) && (tracker.lastOperation == operation) && (tracker.lastPath == path)) {
+        ++tracker.consecutiveErrors;
+    } else {
+        tracker.consecutiveErrors = 1;
+        tracker.lastError = probeError;
+        tracker.lastOperation = operation;
+        tracker.lastPath = path;
+    }
+
+    if ((tracker.consecutiveErrors == 1) || (tracker.consecutiveErrors % 5 == 0)) {
+        SPDLOG_WARN("{}: non-benign filesystem probe error repeated {} time(s): op={} path={} ec={} ({})",
+            context, tracker.consecutiveErrors, operation, path, probeError.value(), probeError.message());
+    }
+    if (tracker.consecutiveErrors >= maxConsecutiveErrors) {
+        tracker.persistentFailureReason = "Persistent non-benign filesystem probe error while waiting for in-progress pull: op=" + std::string(operation) +
+                                          " path=" + path +
+                                          " ec=" + std::to_string(probeError.value()) +
+                                          " (" + probeError.message() + ") repeated " +
+                                          std::to_string(tracker.consecutiveErrors) + " time(s)";
+        return true;
+    }
+    return false;
+}
+
+}  // namespace
+
+// RAII helper class for managing log file lifecycle.
+// Creates a log file path and automatically removes it on destruction.
+class LogFileGuard {
+private:
+    std::string logFilePath;
+
+public:
+    explicit LogFileGuard(const std::string& path) : logFilePath(path) {}
+
+    ~LogFileGuard() {
+        if (std::filesystem::exists(logFilePath)) {
+            std::error_code ec;
+            std::filesystem::remove(logFilePath, ec);
+        }
+    }
+
+    bool create() {
+        std::error_code ec;
+        std::filesystem::remove(logFilePath, ec);
+        std::ofstream file(logFilePath);
+        return file.is_open();
+    }
+
+    std::string getContent() const {
+        std::ifstream file(logFilePath);
+        if (!file.is_open()) {
+            return "";
+        }
+        std::stringstream buffer;
+        buffer << file.rdbuf();
+        return buffer.str();
+    }
+
+    bool contains(const std::string& text) const {
+        return getContent().find(text) != std::string::npos;
+    }
+
+    const std::string& getPath() const {
+        return logFilePath;
+    }
+
+    bool exists() const {
+        return std::filesystem::exists(logFilePath);
+    }
+};
+
 class HfPull : public TestWithTempDir {
 protected:
     static constexpr const char* MODEL_NAMESPACE = "OpenVINO";
     static constexpr const char* MODEL_ID = "Phi-3-mini-FastDraft-50M-int8-ov";
     static constexpr const char* TASK_NAME = "text_generation";
+
+    // Timeout (seconds) for detecting in-progress pull in interrupt tests
+    static constexpr int HF_PULL_DETECT_TIMEOUT_SECONDS = 180;
+    // Timeout (seconds) for waiting on shutdown request acknowledgement
+    static constexpr int HF_PULL_SHUTDOWN_TIMEOUT_SECONDS = 120;
+    // Timeout (seconds) for regular server operations
+    static constexpr int HF_PULL_SERVER_TIMEOUT_SECONDS = 60;
+    // Delay (milliseconds) before sending interrupt signal
+    static constexpr int HF_PULL_INTERRUPT_DELAY_MS = 200;
+    // Poll interval (milliseconds) when checking for in-progress download
+    static constexpr int HF_PULL_POLL_INTERVAL_MS = 100;
+    // Max consecutive non-benign filesystem probe errors before failing diagnostics.
+    static constexpr int HF_PULL_MAX_CONSECUTIVE_FS_PROBE_ERRORS = 15;
 
     ovms::Server& server = ovms::Server::instance();
     std::unique_ptr<std::thread> t;
@@ -102,8 +215,20 @@ protected:
         ::SetUpServerForDownload(this->t, this->server, sourceModel, downloadPath, task, expected_code, timeoutSeconds);
     }
 
+    // Variant that captures output to a log file for assertions
+    void ServerPullHfModel(std::string& sourceModel, std::string& downloadPath, std::string& task, LogFileGuard& logFile, int expected_code = 0, int timeoutSeconds = 60) {
+        ASSERT_TRUE(logFile.create()) << "Failed to create log file at: " << logFile.getPath();
+        ::SetUpServerForDownload(this->t, this->server, sourceModel, downloadPath, task, logFile.getPath(), expected_code, timeoutSeconds);
+    }
+
     void ServerPullHfModelWithDraft(std::string& draftModel, std::string& sourceModel, std::string& downloadPath, std::string& task, int expected_code = 0, int timeoutSeconds = 60) {
         ::SetUpServerForDownloadWithDraft(this->t, this->server, draftModel, sourceModel, downloadPath, task, expected_code, timeoutSeconds);
+    }
+
+    // Variant with draft model that captures output to a log file for assertions
+    void ServerPullHfModelWithDraft(std::string& draftModel, std::string& sourceModel, std::string& downloadPath, std::string& task, LogFileGuard& logFile, int expected_code = 0, int timeoutSeconds = 60) {
+        ASSERT_TRUE(logFile.create()) << "Failed to create log file at: " << logFile.getPath();
+        ::SetUpServerForDownloadWithDraft(this->t, this->server, draftModel, sourceModel, downloadPath, task, logFile.getPath(), expected_code, timeoutSeconds);
     }
 
     void SetUpServerForDownloadAndStart(std::string& sourceModel, std::string& downloadPath, std::string& task, int timeoutSeconds = 60) {
@@ -257,13 +382,13 @@ TEST_F(HfPull, Download) {
 
     ASSERT_EQ(std::filesystem::exists(modelPath), true) << modelPath;
     ASSERT_EQ(std::filesystem::exists(graphPath), true) << graphPath;
-    ASSERT_EQ(std::filesystem::file_size(modelPath), 52417240);
+    ASSERT_EQ(std::filesystem::file_size(modelPath), MODEL_FULL_SIZE_BYTES);
     std::string graphContents = GetFileContents(graphPath);
 
     ASSERT_EQ(expectedGraphContents, removeGeneratedGraphHeaders(graphContents)) << graphContents;
 }
 
-// Truncate the file to half its size, keeping the first half.
+// Truncate the file to half its size (MODEL_FULL_SIZE_BYTES / 2), keeping the first half.
 bool removeSecondHalf(const std::string& fileStr) {
     const std::filesystem::path& file(fileStr);
     std::error_code ec;
@@ -292,7 +417,7 @@ bool createGitLfsPointerFile(const std::string& path) {
 
     file << "version https://git-lfs.github.com/spec/v1\n"
             "oid sha256:cecf0224201415144c00cf3a6cf3350306f9c78888d631eb590939a63722fefa\n"
-            "size 52417240\n";
+            "size " << MODEL_FULL_SIZE_BYTES << "\n";
 
     return true;
 }
@@ -379,7 +504,7 @@ TEST_F(HfPullCache, RePull) {
 TEST_F(HfPullCache, Resume) {
     ASSERT_EQ(std::filesystem::exists(modelPath), true) << modelPath;
     ASSERT_EQ(std::filesystem::exists(graphPath), true) << graphPath;
-    ASSERT_EQ(std::filesystem::file_size(modelPath), 52417240);
+    ASSERT_EQ(std::filesystem::file_size(modelPath), MODEL_FULL_SIZE_BYTES);
     std::string graphContents = GetFileContents(graphPath);
 
     ASSERT_EQ(expectedGraphContents, removeGeneratedGraphHeaders(graphContents)) << graphContents;
@@ -400,11 +525,11 @@ TEST_F(HfPullCache, Resume) {
     ASSERT_EQ(ec, std::errc());
     // Prepare a git repository with a lfs_part file and lfs pointer file to simulate partial download error of a big model
     ASSERT_EQ(removeSecondHalf(modelPath), true);
-    ASSERT_EQ(std::filesystem::file_size(modelPath), 26208620);
+    ASSERT_EQ(std::filesystem::file_size(modelPath), MODEL_HALF_SIZE_BYTES);
 
     std::filesystem::rename(modelPath, modelPartPath, ec);
     ASSERT_EQ(ec, std::errc());
-    ASSERT_EQ(std::filesystem::file_size(modelPartPath), 26208620);
+    ASSERT_EQ(std::filesystem::file_size(modelPartPath), MODEL_HALF_SIZE_BYTES);
     ASSERT_EQ(createGitLfsPointerFile(modelPath), true);
 
     // Call ovms pull to resume the file
@@ -413,7 +538,7 @@ TEST_F(HfPullCache, Resume) {
     ASSERT_EQ(std::filesystem::exists(modelPartPath), false) << modelPath;
     ASSERT_EQ(std::filesystem::exists(modelPath), true) << modelPath;
     ASSERT_EQ(std::filesystem::exists(graphPath), true) << graphPath;
-    ASSERT_EQ(std::filesystem::file_size(modelPath), 52417240);
+    ASSERT_EQ(std::filesystem::file_size(modelPath), MODEL_FULL_SIZE_BYTES);
     graphContents = GetFileContents(graphPath);
 
     ASSERT_EQ(expectedGraphContents, removeGeneratedGraphHeaders(graphContents)) << graphContents;
@@ -425,9 +550,6 @@ TEST_F(HfPullCache, Resume) {
 
 // ResumeAfterShutdownRequestAndRerun
 TEST_F(HfPull, ResumeShutdown) {
-#ifdef _WIN32
-    SKIP_AND_EXIT_IF_NOT_RUNNING_UNSTABLE();
-#endif
     server.setShutdownRequest(0);
     int firstRunCode = EXIT_SUCCESS;
     char* argv[] = {(char*)"ovms",
@@ -443,17 +565,38 @@ TEST_F(HfPull, ResumeShutdown) {
         firstRunCode = this->server.start(argc, argv);
     }));
 
-    // Wait until the large LFS file (openvino_model.bin) starts downloading before
-    // sending the shutdown request. A fixed sleep is unreliable: on a fast CPU/network
-    // machine the download may finish before the sleep expires, leaving no partial files
-    // and causing the EXPECT_FALSE(remainingPointers.empty()) assertion to fail.
-    // Only detect .lfs_part (not the pointer file which exists before download starts),
-    // ensuring shutdown arrives while curl is actually downloading.
+    // Wait until pull is clearly in-progress before sending shutdown request.
+    // A fixed sleep is unreliable: on fast CPU/network setups download may finish
+    // before sleep expires, leaving no resumable artifacts.
+    bool observedPartialDownload = false;
+    ProbeErrorTracker probeErrorTracker;
     {
-        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(60);
+        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(HF_PULL_SERVER_TIMEOUT_SECONDS);
         while (std::chrono::steady_clock::now() < deadline) {
-            const bool hasPartFile = std::filesystem::exists(modelPartPath);
-            if (hasPartFile) {
+            std::error_code ec;
+            const bool hasPartFile = std::filesystem::exists(modelPartPath, ec);
+            if (trackProbeError(probeErrorTracker, ec, "exists", modelPartPath, "ResumeShutdown", HF_PULL_MAX_CONSECUTIVE_FS_PROBE_ERRORS)) {
+                break;
+            }
+            ec.clear();
+            const bool modelExists = std::filesystem::exists(modelPath, ec);
+            if (trackProbeError(probeErrorTracker, ec, "exists", modelPath, "ResumeShutdown", HF_PULL_MAX_CONSECUTIVE_FS_PROBE_ERRORS)) {
+                break;
+            }
+            std::uintmax_t modelSize = 0;
+            if (modelExists) {
+                ec.clear();
+                modelSize = std::filesystem::file_size(modelPath, ec);
+                if (ec) {
+                    if (trackProbeError(probeErrorTracker, ec, "file_size", modelPath, "ResumeShutdown", HF_PULL_MAX_CONSECUTIVE_FS_PROBE_ERRORS)) {
+                        break;
+                    }
+                    modelSize = 0;
+                }
+            }
+            const bool modelInFlight = modelExists && (modelSize > 0) && (modelSize < MODEL_FULL_SIZE_BYTES);
+            if (hasPartFile || modelInFlight) {
+                observedPartialDownload = true;
                 std::this_thread::sleep_for(std::chrono::milliseconds(200));
                 break;
             }
@@ -466,6 +609,14 @@ TEST_F(HfPull, ResumeShutdown) {
         t->join();
     server.setShutdownRequest(0);
 
+    if (!probeErrorTracker.persistentFailureReason.empty()) {
+        FAIL() << probeErrorTracker.persistentFailureReason;
+    }
+
+    if (!observedPartialDownload) {
+        FAIL() << "Did not observe in-progress pull before timeout; cannot validate resume-after-shutdown path.";
+    }
+
     EXPECT_NE(firstRunCode, EXIT_SUCCESS);
     auto remainingPointers = ovms::libgit2::findLfsLikeFiles(downloadPath, true);
     EXPECT_FALSE(remainingPointers.empty());
@@ -474,10 +625,10 @@ TEST_F(HfPull, ResumeShutdown) {
 
     ASSERT_EQ(std::filesystem::exists(modelPath), true) << modelPath;
     ASSERT_EQ(std::filesystem::exists(graphPath), true) << graphPath;
-    ASSERT_EQ(std::filesystem::file_size(modelPath), 52417240);
-    ASSERT_EQ(std::filesystem::file_size(model2Path), 339125);
-    ASSERT_EQ(std::filesystem::file_size(model3Path), 500292);
-    ASSERT_EQ(std::filesystem::file_size(model4Path), 499723);
+    ASSERT_EQ(std::filesystem::file_size(modelPath), MODEL_FULL_SIZE_BYTES);
+    ASSERT_EQ(std::filesystem::file_size(model2Path), MODEL2_FULL_SIZE_BYTES);
+    ASSERT_EQ(std::filesystem::file_size(model3Path), MODEL3_FULL_SIZE_BYTES);
+    ASSERT_EQ(std::filesystem::file_size(model4Path), MODEL4_FULL_SIZE_BYTES);
 }
 
 // PullAfterUserRemovedTrackedFileDoesNotRestoreIt
@@ -574,7 +725,7 @@ TEST_F(HfPullCache, UserEdited) {
         secondRunCode = this->server.start(argc, argv);
     }));
 
-    EnsureServerModelDownloadFinishedWithTimeout(server, 120);
+    EnsureServerModelDownloadFinishedWithTimeout(server, HF_PULL_SHUTDOWN_TIMEOUT_SECONDS);
 
     EXPECT_EQ(secondRunCode, EXIT_SUCCESS);
     EXPECT_EQ(std::filesystem::file_size(editedFilePath), editedSize);
@@ -634,10 +785,10 @@ TEST_F(HfPullCache, PullNonGit) {
     ASSERT_FALSE(std::filesystem::exists(gitDir));
 
 #ifdef _WIN32
-    // On Windows, gtest stdout capture can conflict with SPDLOG stdout sink.
+    // Logger configuration is process-global and initialized earlier in the test
+    // binary, so a per-test --log_path does not reliably capture this warning.
     this->ServerPullHfModel(modelName, downloadPath, task);
 #else
-    // On Linux this warning is emitted to stdout and can be asserted directly.
     testing::internal::CaptureStdout();
     this->ServerPullHfModel(modelName, downloadPath, task);
     std::string out = testing::internal::GetCapturedStdout();
@@ -738,13 +889,17 @@ TEST_F(HfPullCache, PullEmptyGitDir) {
 #ifdef _WIN32
 // Helper test used only as a child process launched by HfPull.ResumeTerminate.
 TEST(HfPullWindowsWorker, ResumeTerminateChildProcess) {
+    // Enables this helper body only for the parent-launched worker process.
     const char* runWorker = std::getenv("OVMS_RESUME_TERMINATE_WORKER");
     if ((runWorker == nullptr) || (std::string(runWorker) != "1")) {
         GTEST_SKIP() << "Helper test - runs only when launched by HfPull.ResumeTerminate.";
     }
 
+    // Model identifier passed from parent to child worker.
     const char* modelNameEnv = std::getenv("OVMS_RESUME_TERMINATE_MODEL");
+    // Target repository path passed from parent to child worker.
     const char* downloadPathEnv = std::getenv("OVMS_RESUME_TERMINATE_DOWNLOAD_PATH");
+    // Pull task passed from parent to child worker.
     const char* taskEnv = std::getenv("OVMS_RESUME_TERMINATE_TASK");
     ASSERT_NE(modelNameEnv, nullptr);
     ASSERT_NE(downloadPathEnv, nullptr);
@@ -778,9 +933,13 @@ TEST_F(HfPull, ResumeTerminate) {
     ASSERT_GT(exePathLen, 0u);
     ASSERT_LT(exePathLen, static_cast<DWORD>(MAX_PATH));
 
+    // Mark spawned gtest process as the terminate worker.
     ASSERT_TRUE(SetEnvironmentVariableA("OVMS_RESUME_TERMINATE_WORKER", "1"));
+    // Pass source model to worker.
     ASSERT_TRUE(SetEnvironmentVariableA("OVMS_RESUME_TERMINATE_MODEL", modelName.c_str()));
+    // Pass repository path to worker.
     ASSERT_TRUE(SetEnvironmentVariableA("OVMS_RESUME_TERMINATE_DOWNLOAD_PATH", downloadPath.c_str()));
+    // Pass task to worker.
     ASSERT_TRUE(SetEnvironmentVariableA("OVMS_RESUME_TERMINATE_TASK", task.c_str()));
 
     std::string commandLine = std::string("\"") + testExePath +
@@ -827,48 +986,63 @@ TEST_F(HfPull, ResumeTerminate) {
 
     bool observedPartialDownload = false;
     bool interruptionSent = false;
+    ProbeErrorTracker probeErrorTracker;
     const std::string mainRefPath = ovms::FileSystem::appendSlash(modelBasePath) + ".git/refs/heads/main";
     auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(180);
     while (std::chrono::steady_clock::now() < deadline) {
         // Wait until pull is in progress and repository is already resumable.
         std::error_code ec;
         const bool hasMainRef = std::filesystem::exists(mainRefPath, ec);
+        if (trackProbeError(probeErrorTracker, ec, "exists", mainRefPath, "ResumeTerminate", HF_PULL_MAX_CONSECUTIVE_FS_PROBE_ERRORS)) {
+            break;
+        }
         ec.clear();
         const bool modelExists = std::filesystem::exists(modelPath, ec);
+        if (trackProbeError(probeErrorTracker, ec, "exists", modelPath, "ResumeTerminate", HF_PULL_MAX_CONSECUTIVE_FS_PROBE_ERRORS)) {
+            break;
+        }
         std::uintmax_t modelSize = 0;
         if (modelExists) {
             ec.clear();
             modelSize = std::filesystem::file_size(modelPath, ec);
             if (ec) {
+                if (trackProbeError(probeErrorTracker, ec, "file_size", modelPath, "ResumeTerminate", HF_PULL_MAX_CONSECUTIVE_FS_PROBE_ERRORS)) {
+                    break;
+                }
                 modelSize = 0;
             }
         }
         auto lfsCandidates = ovms::libgit2::findLfsLikeFiles(downloadPath, true);
         const bool hasLfsArtifacts = !lfsCandidates.empty();
-        const bool modelInFlight = modelExists && (modelSize > 0) && (modelSize < 52417240);
+        const bool modelInFlight = modelExists && (modelSize > 0) && (modelSize < MODEL_FULL_SIZE_BYTES);
         if (hasMainRef && (hasLfsArtifacts || modelInFlight)) {
             observedPartialDownload = true;
-            SPDLOG_INFO("ResumeTerminate: observed in-progress pull, waiting 200ms before interrupt");
-            std::this_thread::sleep_for(std::chrono::milliseconds(200));
+            SPDLOG_INFO("ResumeTerminate: observed in-progress pull, waiting {}ms before interrupt", HF_PULL_INTERRUPT_DELAY_MS);
+            std::this_thread::sleep_for(std::chrono::milliseconds(HF_PULL_INTERRUPT_DELAY_MS));
             break;
         }
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        std::this_thread::sleep_for(std::chrono::milliseconds(HF_PULL_POLL_INTERVAL_MS));
     }
 
     ASSERT_TRUE(observedPartialDownload)
-        << "Did not observe in-progress pull within timeout, cannot verify SIGKILL interruption path.";
+        << (!probeErrorTracker.persistentFailureReason.empty() ? probeErrorTracker.persistentFailureReason :
+                                                    "Did not observe in-progress pull within timeout, cannot verify SIGKILL interruption path.");
 
 #ifdef _WIN32
     ASSERT_TRUE(TerminateProcess(pi.hProcess, 1));
     interruptionSent = true;
-    ASSERT_EQ(WaitForSingleObject(pi.hProcess, 120000), WAIT_OBJECT_0);
+    ASSERT_EQ(WaitForSingleObject(pi.hProcess, HF_PULL_SHUTDOWN_TIMEOUT_SECONDS * 1000), WAIT_OBJECT_0);
 
     CloseHandle(pi.hThread);
     CloseHandle(pi.hProcess);
 
+    // Remove worker flag after child exits.
     ASSERT_TRUE(SetEnvironmentVariableA("OVMS_RESUME_TERMINATE_WORKER", nullptr));
+    // Remove source model handoff variable.
     ASSERT_TRUE(SetEnvironmentVariableA("OVMS_RESUME_TERMINATE_MODEL", nullptr));
+    // Remove repository path handoff variable.
     ASSERT_TRUE(SetEnvironmentVariableA("OVMS_RESUME_TERMINATE_DOWNLOAD_PATH", nullptr));
+    // Remove task handoff variable.
     ASSERT_TRUE(SetEnvironmentVariableA("OVMS_RESUME_TERMINATE_TASK", nullptr));
 #else
     if (kill(childPid, SIGKILL) == 0) {
@@ -895,10 +1069,10 @@ TEST_F(HfPull, ResumeTerminate) {
 
     ASSERT_EQ(std::filesystem::exists(modelPath), true) << modelPath;
     ASSERT_EQ(std::filesystem::exists(graphPath), true) << graphPath;
-    ASSERT_EQ(std::filesystem::file_size(modelPath), 52417240);
-    ASSERT_EQ(std::filesystem::file_size(model2Path), 339125);
-    ASSERT_EQ(std::filesystem::file_size(model3Path), 500292);
-    ASSERT_EQ(std::filesystem::file_size(model4Path), 499723);
+    ASSERT_EQ(std::filesystem::file_size(modelPath), MODEL_FULL_SIZE_BYTES);
+    ASSERT_EQ(std::filesystem::file_size(model2Path), MODEL2_FULL_SIZE_BYTES);
+    ASSERT_EQ(std::filesystem::file_size(model3Path), MODEL3_FULL_SIZE_BYTES);
+    ASSERT_EQ(std::filesystem::file_size(model4Path), MODEL4_FULL_SIZE_BYTES);
 }
 
 #ifdef _WIN32
@@ -906,13 +1080,17 @@ TEST_F(HfPull, ResumeTerminate) {
 // Mirrors HfPullWindowsWorker.ResumeTerminateChildProcess but is invoked separately
 // so the parent test can target this child specifically with GenerateConsoleCtrlEvent.
 TEST(HfPullWindowsWorker, ResumeCtrlCChildProcess) {
+    // Enables this helper body only for the parent-launched worker process.
     const char* runWorker = std::getenv("OVMS_RESUME_CTRLC_WORKER");
     if ((runWorker == nullptr) || (std::string(runWorker) != "1")) {
         GTEST_SKIP() << "Helper test - runs only when launched by HfPull.ResumeCtrlC.";
     }
 
+    // Model identifier passed from parent to child worker.
     const char* modelNameEnv = std::getenv("OVMS_RESUME_CTRLC_MODEL");
+    // Target repository path passed from parent to child worker.
     const char* downloadPathEnv = std::getenv("OVMS_RESUME_CTRLC_DOWNLOAD_PATH");
+    // Pull task passed from parent to child worker.
     const char* taskEnv = std::getenv("OVMS_RESUME_CTRLC_TASK");
     ASSERT_NE(modelNameEnv, nullptr);
     ASSERT_NE(downloadPathEnv, nullptr);
@@ -953,9 +1131,13 @@ TEST_F(HfPull, ResumeCtrlC) {
     ASSERT_GT(exePathLen, 0u);
     ASSERT_LT(exePathLen, static_cast<DWORD>(MAX_PATH));
 
+    // Mark spawned gtest process as the ctrl-c worker.
     ASSERT_TRUE(SetEnvironmentVariableA("OVMS_RESUME_CTRLC_WORKER", "1"));
+    // Pass source model to worker.
     ASSERT_TRUE(SetEnvironmentVariableA("OVMS_RESUME_CTRLC_MODEL", modelName.c_str()));
+    // Pass repository path to worker.
     ASSERT_TRUE(SetEnvironmentVariableA("OVMS_RESUME_CTRLC_DOWNLOAD_PATH", downloadPath.c_str()));
+    // Pass task to worker.
     ASSERT_TRUE(SetEnvironmentVariableA("OVMS_RESUME_CTRLC_TASK", task.c_str()));
 
     std::string commandLine = std::string("\"") + testExePath +
@@ -1008,34 +1190,45 @@ TEST_F(HfPull, ResumeCtrlC) {
     // unreliable on fast machines.
     bool observedPartialDownload = false;
     bool interruptionSent = false;
+    ProbeErrorTracker probeErrorTracker;
     const std::string mainRefPath = ovms::FileSystem::appendSlash(modelBasePath) + ".git/refs/heads/main";
     auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(180);
     while (std::chrono::steady_clock::now() < deadline) {
         std::error_code ec;
         const bool hasMainRef = std::filesystem::exists(mainRefPath, ec);
+        if (trackProbeError(probeErrorTracker, ec, "exists", mainRefPath, "ResumeCtrlC", HF_PULL_MAX_CONSECUTIVE_FS_PROBE_ERRORS)) {
+            break;
+        }
         ec.clear();
         const bool modelExists = std::filesystem::exists(modelPath, ec);
+        if (trackProbeError(probeErrorTracker, ec, "exists", modelPath, "ResumeCtrlC", HF_PULL_MAX_CONSECUTIVE_FS_PROBE_ERRORS)) {
+            break;
+        }
         std::uintmax_t modelSize = 0;
         if (modelExists) {
             ec.clear();
             modelSize = std::filesystem::file_size(modelPath, ec);
             if (ec) {
+                if (trackProbeError(probeErrorTracker, ec, "file_size", modelPath, "ResumeCtrlC", HF_PULL_MAX_CONSECUTIVE_FS_PROBE_ERRORS)) {
+                    break;
+                }
                 modelSize = 0;
             }
         }
         auto lfsCandidates = ovms::libgit2::findLfsLikeFiles(downloadPath, true);
         const bool hasLfsArtifacts = !lfsCandidates.empty();
-        const bool modelInFlight = modelExists && (modelSize > 0) && (modelSize < 52417240);
+        const bool modelInFlight = modelExists && (modelSize > 0) && (modelSize < MODEL_FULL_SIZE_BYTES);
         if (hasMainRef && (hasLfsArtifacts || modelInFlight)) {
             observedPartialDownload = true;
-            std::this_thread::sleep_for(std::chrono::milliseconds(200));
+            std::this_thread::sleep_for(std::chrono::milliseconds(HF_PULL_INTERRUPT_DELAY_MS));
             break;
         }
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        std::this_thread::sleep_for(std::chrono::milliseconds(HF_PULL_POLL_INTERVAL_MS));
     }
 
     ASSERT_TRUE(observedPartialDownload)
-        << "Did not observe in-progress pull within timeout, cannot verify SIGINT/CTRL_BREAK interruption path.";
+        << (!probeErrorTracker.persistentFailureReason.empty() ? probeErrorTracker.persistentFailureReason :
+                                                    "Did not observe in-progress pull within timeout, cannot verify SIGINT/CTRL_BREAK interruption path.");
 
 #ifdef _WIN32
     // CTRL_C_EVENT cannot be targeted at a single child via GenerateConsoleCtrlEvent
@@ -1044,16 +1237,20 @@ TEST_F(HfPull, ResumeCtrlC) {
     // CREATE_NEW_PROCESS_GROUP above) without disturbing the test runner.
     ASSERT_TRUE(GenerateConsoleCtrlEvent(CTRL_BREAK_EVENT, pi.dwProcessId));
     interruptionSent = true;
-    ASSERT_EQ(WaitForSingleObject(pi.hProcess, 120000), WAIT_OBJECT_0);
+    ASSERT_EQ(WaitForSingleObject(pi.hProcess, HF_PULL_SHUTDOWN_TIMEOUT_SECONDS * 1000), WAIT_OBJECT_0);
     DWORD childExitCode = 0;
     ASSERT_TRUE(GetExitCodeProcess(pi.hProcess, &childExitCode));
     EXPECT_NE(childExitCode, static_cast<DWORD>(EXIT_SUCCESS));
     CloseHandle(pi.hThread);
     CloseHandle(pi.hProcess);
 
+    // Remove worker flag after child exits.
     ASSERT_TRUE(SetEnvironmentVariableA("OVMS_RESUME_CTRLC_WORKER", nullptr));
+    // Remove source model handoff variable.
     ASSERT_TRUE(SetEnvironmentVariableA("OVMS_RESUME_CTRLC_MODEL", nullptr));
+    // Remove repository path handoff variable.
     ASSERT_TRUE(SetEnvironmentVariableA("OVMS_RESUME_CTRLC_DOWNLOAD_PATH", nullptr));
+    // Remove task handoff variable.
     ASSERT_TRUE(SetEnvironmentVariableA("OVMS_RESUME_CTRLC_TASK", nullptr));
 #else
     ASSERT_EQ(kill(childPid, SIGINT), 0);
@@ -1067,7 +1264,7 @@ TEST_F(HfPull, ResumeCtrlC) {
     EXPECT_NE(WEXITSTATUS(childStatus), EXIT_SUCCESS);
 #endif
 
-    SPDLOG_INFO("ResumeCtrlC test state: observedPartialDownload={}, interruptionSent={}",
+    SPDLOG_DEBUG("ResumeCtrlC test state: observedPartialDownload={}, interruptionSent={}",
         observedPartialDownload, interruptionSent);
     auto remainingPointers = ovms::libgit2::findLfsLikeFiles(downloadPath, true);
     EXPECT_FALSE(remainingPointers.empty());
@@ -1076,10 +1273,10 @@ TEST_F(HfPull, ResumeCtrlC) {
 
     ASSERT_EQ(std::filesystem::exists(modelPath), true) << modelPath;
     ASSERT_EQ(std::filesystem::exists(graphPath), true) << graphPath;
-    ASSERT_EQ(std::filesystem::file_size(modelPath), 52417240);
-    ASSERT_EQ(std::filesystem::file_size(model2Path), 339125);
-    ASSERT_EQ(std::filesystem::file_size(model3Path), 500292);
-    ASSERT_EQ(std::filesystem::file_size(model4Path), 499723);
+    ASSERT_EQ(std::filesystem::file_size(modelPath), MODEL_FULL_SIZE_BYTES);
+    ASSERT_EQ(std::filesystem::file_size(model2Path), MODEL2_FULL_SIZE_BYTES);
+    ASSERT_EQ(std::filesystem::file_size(model3Path), MODEL3_FULL_SIZE_BYTES);
+    ASSERT_EQ(std::filesystem::file_size(model4Path), MODEL4_FULL_SIZE_BYTES);
 }
 
 TEST_F(HfPull, Start) {
@@ -1093,7 +1290,7 @@ TEST_F(HfPull, Start) {
 
     ASSERT_EQ(std::filesystem::exists(modelPath), true) << modelPath;
     ASSERT_EQ(std::filesystem::exists(graphPath), true) << graphPath;
-    ASSERT_EQ(std::filesystem::file_size(modelPath), 52417240);
+    ASSERT_EQ(std::filesystem::file_size(modelPath), MODEL_FULL_SIZE_BYTES);
     std::string graphContents = GetFileContents(graphPath);
 
     ASSERT_EQ(expectedGraphContents, removeGeneratedGraphHeaders(graphContents)) << graphContents;
@@ -1119,7 +1316,7 @@ TEST_F(HfPull, OutOfOvOrg) {
 
     ASSERT_EQ(std::filesystem::exists(modelPath), true) << modelPath;
     ASSERT_EQ(std::filesystem::exists(graphPath), true) << graphPath;
-    ASSERT_EQ(std::filesystem::file_size(modelPath), 52417240);
+    ASSERT_EQ(std::filesystem::file_size(modelPath), MODEL_FULL_SIZE_BYTES);
     std::string graphContents = GetFileContents(graphPath);
 
     ASSERT_EQ(expectedGraphContents, removeGeneratedGraphHeaders(graphContents)) << graphContents;
@@ -1176,7 +1373,7 @@ TEST_F(HfPull, DraftModel) {
 
     ASSERT_EQ(std::filesystem::exists(modelPath), true) << modelPath;
     ASSERT_EQ(std::filesystem::exists(graphPath), true) << graphPath;
-    ASSERT_EQ(std::filesystem::file_size(modelPath), 52417240);
+    ASSERT_EQ(std::filesystem::file_size(modelPath), MODEL_FULL_SIZE_BYTES);
     std::string graphContents = GetFileContents(graphPath);
 
     ASSERT_EQ(expectedGraphContentsDraft, removeGeneratedGraphHeaders(graphContents)) << graphContents;
@@ -1185,7 +1382,7 @@ TEST_F(HfPull, DraftModel) {
     std::string modelPath2 = ovms::FileSystem::appendSlash(basePath2) + "openvino_tokenizer.bin";
 
     ASSERT_EQ(std::filesystem::exists(modelPath2), true) << modelPath2;
-    ASSERT_EQ(std::filesystem::file_size(modelPath2), 2022483);
+    ASSERT_EQ(std::filesystem::file_size(modelPath2), DRAFT_MODEL_TOKENIZER_SIZE_BYTES);
 }
 
 class TestOptimumDownloader : public ovms::OptimumDownloader {

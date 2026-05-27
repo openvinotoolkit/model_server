@@ -123,7 +123,7 @@ void removeLfsWipMarker(const std::string& repositoryPath) {
  * @param repositoryPath Path to the git repository root directory.
  * @note Logs warnings if file operations fail; operation continues on error.
  */
-void clearStaleErrorFile(const std::string& repositoryPath) {
+static void clearStaleErrorFile(const std::string& repositoryPath) {
     std::error_code ec;
     const fs::path errorFilePath = fs::path(repositoryPath) / "lfs_error.txt";
 
