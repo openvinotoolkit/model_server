@@ -849,3 +849,75 @@ TEST(LibGit2LfsWipMarker, MarkersForDifferentRepositoriesAreIndependent) {
     EXPECT_FALSE(ovms::libgit2::hasLfsWipMarker(repoAPath));
     EXPECT_TRUE(ovms::libgit2::hasLfsWipMarker(repoBPath));
 }
+
+// ---------------------------------------------------------------------------
+// Libgt2InitGuard initialization behavior
+//
+// These tests exercise the process-global libgit2 options set in
+// Libgt2InitGuard's constructor: ownership-validation suppression and config
+// search-path isolation.  Each test creates its own guard so that the options
+// are set fresh; as git_libgit2_init() is ref-counted by libgit2 it is safe to
+// call it multiple times within the same process.
+// ---------------------------------------------------------------------------
+
+class Libgt2InitGuardTest : public ::testing::Test {
+protected:
+    TempDir td;
+    ovms::Libgit2Options defaultOpts;
+};
+
+TEST_F(Libgt2InitGuardTest, ConstructionSucceeds) {
+    ovms::Libgt2InitGuard guard(defaultOpts);
+    EXPECT_GE(guard.status, 0);
+    EXPECT_TRUE(guard.errMsg.empty());
+    EXPECT_TRUE(guard.countedAsInitialized);
+}
+
+// After the guard is constructed, libgit2 must have owner-validation disabled
+// so that repositories owned by a different OS user can be opened.
+TEST_F(Libgt2InitGuardTest, OwnerValidationIsDisabled) {
+    ovms::Libgt2InitGuard guard(defaultOpts);
+    ASSERT_GE(guard.status, 0);
+
+    int ownerValidation = 1;  // preset to non-zero; guard must set it to 0
+    int rc = git_libgit2_opts(GIT_OPT_GET_OWNER_VALIDATION, &ownerValidation);
+    EXPECT_EQ(rc, 0);
+    EXPECT_EQ(ownerValidation, 0);
+}
+
+// The guard must clear the config search paths for all host-level config
+// scopes so that no host gitconfig can interfere with OVMS's settings.
+TEST_F(Libgt2InitGuardTest, ConfigSearchPathsAreCleared) {
+    ovms::Libgt2InitGuard guard(defaultOpts);
+    ASSERT_GE(guard.status, 0);
+
+    static const int levels[] = {
+        GIT_CONFIG_LEVEL_SYSTEM,
+        GIT_CONFIG_LEVEL_XDG,
+        GIT_CONFIG_LEVEL_GLOBAL,
+    };
+    for (int level : levels) {
+        git_buf buf = GIT_BUF_INIT;
+        int rc = git_libgit2_opts(GIT_OPT_GET_SEARCH_PATH, level, &buf);
+        EXPECT_EQ(rc, 0) << "GIT_OPT_GET_SEARCH_PATH failed for config level " << level;
+        const char* path = (buf.ptr != nullptr) ? buf.ptr : "";
+        EXPECT_STREQ(path, "") << "Config search path not cleared for level " << level;
+        git_buf_dispose(&buf);
+    }
+}
+
+#if defined(_WIN32)
+// On Windows, libgit2 also supports GIT_CONFIG_LEVEL_PROGRAMDATA which maps to
+// %PROGRAMDATA%\Git\config — a machine-wide config that must also be suppressed.
+TEST_F(Libgt2InitGuardTest, ConfigSearchPathProgramdataClearedOnWindows) {
+    ovms::Libgt2InitGuard guard(defaultOpts);
+    ASSERT_GE(guard.status, 0);
+
+    git_buf buf = GIT_BUF_INIT;
+    int rc = git_libgit2_opts(GIT_OPT_GET_SEARCH_PATH, GIT_CONFIG_LEVEL_PROGRAMDATA, &buf);
+    EXPECT_EQ(rc, 0);
+    const char* path = (buf.ptr != nullptr) ? buf.ptr : "";
+    EXPECT_STREQ(path, "");
+    git_buf_dispose(&buf);
+}
+#endif
