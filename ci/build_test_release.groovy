@@ -14,6 +14,7 @@ pipeline {
             steps {
                 script {
                     def buildstamp = new Date().format('yyyyMMddHHmmss')
+                    def shortCommit = bat(script: "git rev-parse --short=8 HEAD", returnStdout: true).trim().readLines().last()
                     echo "Buildstamp: ${buildstamp}"
                     echo "PRODUCT_VERSION: ${env.PRODUCT_VERSION}"
                     echo "RELEASE_TAG: ${env.RELEASE_TAG}"
@@ -38,17 +39,15 @@ pipeline {
                           } else {
                               python_suffix = "off"
                           }
-                          def packageName = "ovms_windows_${env.PRODUCT_VERSION}_${env.RELEASE_TAG}_python_${python_suffix}.zip"
+                          def packageName = "ovms_windows_${env.PRODUCT_VERSION}_${env.RELEASE_TAG}_${shortCommit}_python_${python_suffix}.zip"
                           bat(returnStatus:true, script: "net use w: /delete /y 2>nul & net use w: \\\\10.102.76.118\\data\\cv_bench_cache\\OVMS_do_not_remove\\ovms_artefacts\\")
                           def destPath = "w:\\${env.PRODUCT_VERSION}\\${env.RELEASE_TAG}\\windows"
                           def latestPath = "${destPath}\\latest"
                           bat(returnStatus:true, script: "if not exist \"${destPath}\\${buildstamp}\" mkdir \"${destPath}\\${buildstamp}\"")
                           bat(returnStatus:true, script: "copy /Y \"${env.WORKSPACE}\\dist\\windows\\ovms.zip\" \"${destPath}\\${buildstamp}\\${packageName}\"")
-                          bat(returnStatus:true, script: "copy /Y \"${env.WORKSPACE}\\dist\\windows\\ovms.zip.sha256\" \"${destPath}\\${buildstamp}\\${packageName}.sha256\"")
                           bat(returnStatus:true, script: "if exist \"${latestPath}\" rmdir /S /Q \"${latestPath}\"")
                           bat(returnStatus:true, script: "mkdir \"${latestPath}\"")
                           bat(returnStatus:true, script: "copy /Y \"${env.WORKSPACE}\\dist\\windows\\ovms.zip\" \"${latestPath}\\${packageName}\"")
-                          bat(returnStatus:true, script: "copy /Y \"${env.WORKSPACE}\\dist\\windows\\ovms.zip.sha256\" \"${latestPath}\\${packageName}.sha256\"")
                         } finally {
                             windows.archive_build_artifacts()
                             windows.archive_test_artifacts()
