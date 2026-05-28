@@ -22,8 +22,8 @@ SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
 RUN groupadd --gid 5000 ovms && useradd --home-dir /home/ovms --create-home --uid 5000 \
              --gid 5000 --shell /bin/bash --skel /dev/null ovms
 
-COPY ovms.tar.gz /
-RUN tar -xf ovms.tar.gz
+COPY ovms.tar /
+RUN tar -xf ovms.tar
 RUN chown -R ovms:ovms /ovms
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
