@@ -136,11 +136,10 @@ In this specific case, we also need to use `--device /dev/dri`, because we also 
 It can be applied using the commands below:
 ```bash
 mkdir -p ${HOME}/models
-mkdir -p ${HOME}/cache
+mkdir -p ${HOME}/models/cache
 
 docker run -d --rm -p 8000:8000 \
   -v ${HOME}/models:/models:rw \
-  -v ${HOME}/cache:/cache:rw \
   --user $(id -u):$(id -g) --device /dev/accel --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) \
   -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy=$no_proxy \
   openvino/model_server:latest-gpu \
@@ -150,7 +149,7 @@ docker run -d --rm -p 8000:8000 \
     --source_model OpenVINO/stable-diffusion-v1-5-int8-ov \
     --target_device 'NPU NPU NPU' \
     --resolution 512x512 \
-    --cache_dir /cache
+    --cache_dir /models/cache
 ```
 :::
 
@@ -160,7 +159,7 @@ docker run -d --rm -p 8000:8000 \
 
 ```bat
 if not exist c:\models mkdir c:\models
-if not exist c:\cache mkdir c:\cache
+if not exist c:\models\cache mkdir c:\models\cache
 
 ovms --rest_port 8000 ^
   --model_repository_path c:\models ^
@@ -168,7 +167,7 @@ ovms --rest_port 8000 ^
   --source_model OpenVINO/stable-diffusion-v1-5-int8-ov ^
   --target_device "NPU NPU NPU" ^
   --resolution 512x512 ^
-  --cache_dir c:\cache
+  --cache_dir C:/models/cache
 ```
 :::
 
@@ -640,10 +639,10 @@ docker run -d --rm --user $(id -u):$(id -g) -p 8000:8000 -v $(pwd)/models:/model
 :::{tab-item} Bare metal (Windows)
 :sync: bare-metal
 ```bat
-mkdir models
+if not exist c:\models mkdir c:\models
 
 ovms --rest_port 8000 ^
-  --model_repository_path ./models/ ^
+  --model_repository_path c:\models ^
   --task image_generation ^
   --source_model OpenVINO/stable-diffusion-xl-base-1.0-int8-ov ^
   --source_loras "xray=DoctorDiffusion/doctor-diffusion-s-xray-xl-lora@DD-xray-v1.safetensors,thepoint=alvdansen/the-point@araminta_k_the_point.safetensors,ukiyo=KappaNeuro/ukiyo-e-art@Ukiyo-e Art.safetensors,vector=DoctorDiffusion/doctor-diffusion-s-controllable-vector-art-xl-lora@DD-vector-v2.safetensors,chalk=Norod78/sdxl-chalkboarddrawing-lora@SDXL_ChalkBoardDrawing_LoRA_r8.safetensors"
