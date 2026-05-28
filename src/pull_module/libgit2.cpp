@@ -1324,7 +1324,7 @@ Status checkSufficientResumeConditions(const std::string& downloadPath, ResumeCa
     // Probe interruption markers once and reuse them later when building candidates.
     candidates.hasWipMarker = libgit2::hasLfsWipMarker(downloadPath);
     candidates.hasLfsErrorFile = libgit2::hasLfsErrorFile(downloadPath);
-    
+
     candidates.shouldResume = resumeCheckSecondCondition(downloadPath, candidates);
     return StatusCode::OK;
 }
