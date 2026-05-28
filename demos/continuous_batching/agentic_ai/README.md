@@ -125,7 +125,7 @@ The current weather in Tokyo is Overcast with a temperature of 9.4°C (feels lik
 :::
 :::{tab-item} Qwen3.6-35B-A3B
 :sync: Qwen3.6-35B-A3B
-Vision Language MoE model (35B total / 3B active parameters). Requires OpenVINO 2026.2 or newer and a GPU with sufficient memory to fit the INT4 weights.
+Vision Language MoE model (35B total / 3B active parameters). Requires OpenVINO 2026.2 or newer and a GPU with sufficient memory to fit the INT4 weights. Tested on PantherLake iGPU with 32GB RAM with iGPU allocation increase and B70 dGPU.
 
 Pull and start OVMS:
 ```bat
@@ -307,7 +307,7 @@ The current weather in Tokyo is overcast with a temperature of 9.4°C (feels lik
 :::
 :::{tab-item} Qwen3.6-35B-A3B
 :sync: Qwen3.6-35B-A3B
-Vision Language MoE model (35B total / 3B active parameters). Requires OpenVINO 2026.2 or newer and enough host memory to fit the INT4 weights.
+Vision Language MoE model (35B total / 3B active parameters). Requires OpenVINO 2026.2 or newer and enough host memory to fit the INT4 weights. Tested on PantherLake iGPU with 32GB RAM with iGPU allocation increase and B70 dGPU.
 
 Pull and start OVMS:
 ```bash
@@ -456,7 +456,7 @@ The current weather in Tokyo is overcast with a temperature of 9.4°C (feels lik
 :::
 :::{tab-item} Qwen3.6-35B-A3B
 :sync: Qwen3.6-35B-A3B
-Vision Language MoE model (35B total / 3B active parameters). Requires OpenVINO 2026.2 or newer and a GPU with sufficient memory to fit the INT4 weights.
+Vision Language MoE model (35B total / 3B active parameters). Requires OpenVINO 2026.2 or newer and a GPU with sufficient memory to fit the INT4 weights. Tested on PantherLake iGPU with 32GB RAM with iGPU allocation increase and B70 dGPU.
 
 Pull and start OVMS:
 ```bash
