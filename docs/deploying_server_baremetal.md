@@ -16,12 +16,12 @@ You can download model server package in two configurations. One with Python sup
 Download precompiled package (without python):
 ```{code} sh
 wget https://github.com/openvinotoolkit/model_server/releases/download/v2026.2/ovms_ubuntu22_2026.2.0_python_off.tar.gz
-tar -xzvf ovms_ubuntu22_2026.1.0_python_off.tar.gz
+tar -xzvf ovms_ubuntu22_2026.2.0_python_off.tar.gz
 ```
 or precompiled package (with python):
 ```{code} sh
 wget https://github.com/openvinotoolkit/model_server/releases/download/v2026.2/ovms_ubuntu22_2026.2.0_python_on.tar.gz
-tar -xzvf ovms_ubuntu22_2026.1.0_python_on.tar.gz
+tar -xzvf ovms_ubuntu22_2026.2.0_python_on.tar.gz
 ```
 Install required libraries:
 ```{code} sh
@@ -56,7 +56,7 @@ tar -xzvf ovms_ubuntu24_2026.2.0_python_off.tar.gz
 or precompiled package (with python):
 ```{code} sh
 wget https://github.com/openvinotoolkit/model_server/releases/download/v2026.2/ovms_ubuntu24_2026.2.0_python_on.tar.gz
-tar -xzvf ovms_ubuntu24_2026.1.0_python_on.tar.gz
+tar -xzvf ovms_ubuntu24_2026.2.0_python_on.tar.gz
 ```
 Install required libraries:
 ```{code} sh
@@ -91,7 +91,7 @@ tar -xzvf ovms_redhat_2026.2.0_python_off.tar.gz
 or precompiled package (with python):
 ```{code} sh
 wget https://github.com/openvinotoolkit/model_server/releases/download/v2026.2/ovms_redhat_2026.2.0_python_on.tar.gz
-tar -xzvf ovms_redhat_2026.1.0_python_on.tar.gz
+tar -xzvf ovms_redhat_2026.2.0_python_on.tar.gz
 ```
 Install required libraries:
 ```{code} sh
