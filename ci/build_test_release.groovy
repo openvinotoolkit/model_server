@@ -40,10 +40,14 @@ pipeline {
                               python_suffix = "off"
                           }
                           def packageName = "ovms_windows_${env.PRODUCT_VERSION}_${env.RELEASE_TAG}_python_${python_suffix}.zip"
+                          bat(returnStatus:true, script: "if not exist w:\\ net use w: \\\\10.102.76.118\\data\\cv_bench_cache\\OVMS_do_not_remove\\ovms_artefacts\\")
                           def destPath = "w:\\${env.PRODUCT_VERSION}\\${env.RELEASE_TAG}\\windows"
                           def latestPath = "${destPath}\\latest"
-                          bat(returnStatus:true, script: "ECHO F | xcopy /Y /E ${env.WORKSPACE}\\dist\\windows\\ovms.zip ${destPath}\\${buildstamp}\\${packageName}")
-                          bat(returnStatus:true, script: "rmdir /S /Q ${latestPath} && ECHO F | xcopy /Y /E ${env.WORKSPACE}\\dist\\windows\\ovms.zip ${latestPath}\\${packageName}")
+                          bat(returnStatus:true, script: "if not exist \"${destPath}\\${buildstamp}\" mkdir \"${destPath}\\${buildstamp}\"")
+                          bat(returnStatus:true, script: "copy /Y \"${env.WORKSPACE}\\dist\\windows\\ovms.zip\" \"${destPath}\\${buildstamp}\\${packageName}\"")
+                          bat(returnStatus:true, script: "if exist \"${latestPath}\" rmdir /S /Q \"${latestPath}\"")
+                          bat(returnStatus:true, script: "mkdir \"${latestPath}\"")
+                          bat(returnStatus:true, script: "copy /Y \"${env.WORKSPACE}\\dist\\windows\\ovms.zip\" \"${latestPath}\\${packageName}\"")
                         } finally {
                             windows.archive_build_artifacts()
                             windows.archive_test_artifacts()
