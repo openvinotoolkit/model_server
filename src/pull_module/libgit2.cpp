@@ -1128,6 +1128,7 @@ Status resumeLfsDownloadForFile(git_repository* repo, const char* filePathInRepo
 namespace {
 
 struct ResumeCandidates {
+    bool shouldResume = false;
     bool hasWipMarker = false;
     bool hasLfsErrorFile = false;
     bool interruptionLikely = false;
@@ -1143,10 +1144,7 @@ struct ResumeCandidates {
  * @return ResumeCandidates containing LFS and non-LFS recovery targets.
  * @note Works on local repository metadata and filesystem; no network operations.
  */
-ResumeCandidates buildResumeCandidates(git_repository* repo, const std::string& downloadPath) {
-    ResumeCandidates candidates;
-    candidates.hasWipMarker = libgit2::hasLfsWipMarker(downloadPath);
-    candidates.hasLfsErrorFile = libgit2::hasLfsErrorFile(downloadPath);
+ResumeCandidates buildResumeCandidates(git_repository* repo, const std::string& downloadPath, ResumeCandidates candidates) {
 
     // Checking if the download was partially finished for any files in repository,
     // including tracked LFS pointer blobs missing from the worktree after abrupt termination.
@@ -1278,14 +1276,20 @@ Status resumeExistingRepository(git_repository* repo,
     return StatusCode::OK;
 }
 
-Status handleExistingRepositoryWithoutOverwrite(const std::string& downloadPath,
-    const std::function<Status(bool)>& checkRepositoryStatusFn) {
-    // If the directory does not contain a .git entry, treat it as a user-provided model directory.
-    // The user has copied model files in by hand; skip the pull and let model loading proceed
-    // against whatever files are already on disk. Use --overwrite_models to replace it with a
-    // fresh download.
+bool resumeCheckSecondCondition(const std::string& downloadPath, const ResumeCandidates& candidates) {
+    // Use repository object only when interruption markers indicate a previous
+    // pull likely failed and resume logic may be required.
+    if (!candidates.hasWipMarker && !candidates.hasLfsErrorFile) {
+        SPDLOG_DEBUG("Model pull operation found no interruption markers for this path: {}", downloadPath);
+        SPDLOG_INFO("Path already exists on local filesystem. Skipping download to path: {}", downloadPath);
+        return false;
+    }
+    return true;
+}
+
+Status resumeCheckFirstCondition(const std::string& downloadPath, bool& gitEntryExists) {
     std::error_code ec;
-    const bool gitEntryExists = fs::exists(fs::path(downloadPath) / ".git", ec);
+    gitEntryExists = fs::exists(fs::path(downloadPath) / ".git", ec);
     if (ec) {
         // Probe itself failed (permission denied, I/O error, ...). Do not silently fall through
         // to the "not a git repository" branch, that would mask real filesystem problems.
@@ -1296,6 +1300,41 @@ Status handleExistingRepositoryWithoutOverwrite(const std::string& downloadPath,
         SPDLOG_INFO("Path \"{}\" exists but is not a git repository. "
                     "Skipping download and using existing files.",
             downloadPath);
+    }
+    return StatusCode::OK;
+}
+
+Status checkSufficientResumeConditions(const std::string& downloadPath, ResumeCandidates& candidates) {
+    candidates.shouldResume = false;
+
+    bool gitEntryExists = false;
+    auto firstConditionStatus = resumeCheckFirstCondition(downloadPath, gitEntryExists);
+    if (!firstConditionStatus.ok()) {
+        return firstConditionStatus;
+    }
+    if (!gitEntryExists) {
+        return StatusCode::OK;
+    }
+
+    // Probe interruption markers once and reuse them later when building candidates.
+    candidates.hasWipMarker = libgit2::hasLfsWipMarker(downloadPath);
+    candidates.hasLfsErrorFile = libgit2::hasLfsErrorFile(downloadPath);
+    candidates.shouldResume = resumeCheckSecondCondition(downloadPath, candidates);
+    return StatusCode::OK;
+}
+
+Status handleExistingRepositoryWithoutOverwrite(const std::string& downloadPath,
+    const std::function<Status(bool)>& checkRepositoryStatusFn) {
+    // If the directory does not contain a .git entry, treat it as a user-provided model directory.
+    // The user has copied model files in by hand; skip the pull and let model loading proceed
+    // against whatever files are already on disk. Use --overwrite_models to replace it with a
+    // fresh download.
+    ResumeCandidates candidates;
+    auto sufficientConditionsStatus = checkSufficientResumeConditions(downloadPath, candidates);
+    if (!sufficientConditionsStatus.ok()) {
+        return sufficientConditionsStatus;
+    }
+    if (!candidates.shouldResume) {
         return StatusCode::OK;
     }
 
@@ -1308,9 +1347,9 @@ Status handleExistingRepositoryWithoutOverwrite(const std::string& downloadPath,
         return mapRepositoryOpenFailureToStatus(repoGuard);
     }
 
-    auto candidates = buildResumeCandidates(repoGuard.get(), downloadPath);
+    candidates = buildResumeCandidates(repoGuard.get(), downloadPath, std::move(candidates));
     if (!candidates.interruptionLikely) {
-        SPDLOG_DEBUG("Model pull operation found no interruption signals for this path: {}", downloadPath);
+        SPDLOG_WARN("Interruption marker(s) were found but no resumable candidates were detected for path: {}", downloadPath);
         SPDLOG_INFO("Path already exists on local filesystem. Skipping download to path: {}", downloadPath);
         return StatusCode::OK;
     }
