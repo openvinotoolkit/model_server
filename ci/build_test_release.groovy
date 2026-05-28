@@ -43,7 +43,7 @@ pipeline {
                           def destPath = "w:\\${env.PRODUCT_VERSION}\\${env.RELEASE_TAG}\\windows"
                           def latestPath = "${destPath}\\latest"
                           bat(returnStatus:true, script: "ECHO F | xcopy /Y /E ${env.WORKSPACE}\\dist\\windows\\ovms.zip ${destPath}\\${buildstamp}\\${packageName}")
-                          bat(returnStatus:true, script: "rm -f ${latestPath} && ECHO F | xcopy /Y /E ${env.WORKSPACE}\\dist\\windows\\ovms.zip ${latestPath}\\${packageName}")  ")
+                          bat(returnStatus:true, script: "rmdir /S /Q ${latestPath} && ECHO F | xcopy /Y /E ${env.WORKSPACE}\\dist\\windows\\ovms.zip ${latestPath}\\${packageName}")
                         } finally {
                             windows.archive_build_artifacts()
                             windows.archive_test_artifacts()
