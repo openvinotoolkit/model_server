@@ -1564,7 +1564,7 @@ public:
     EnvGuard guard;
 };
 
-TEST(Libgt2InitGuardTest, LfsFilterCaptureDefaultResumeOptions) {
+TEST(Libgt2InitGuardLfsFilterTest, LfsFilterCaptureDefaultResumeOptions) {
     // Need new process beacase we use INIT_ONCE in libgit2 lfs filter for env variables and once they are set they are set for the whole process lifetime
     EXPECT_EXIT({
         // Act: capture stdout during object construction
@@ -1584,7 +1584,7 @@ TEST(Libgt2InitGuardTest, LfsFilterCaptureDefaultResumeOptions) {
         exit(0); }, ::testing::ExitedWithCode(0), "");
 }
 
-TEST(Libgt2InitGuardTest, LfsFilterCaptureNonDefaultResumeOptions) {
+TEST(Libgt2InitGuardLfsFilterTest, LfsFilterCaptureNonDefaultResumeOptions) {
     // Need new process beacase we use INIT_ONCE in libgit2 lfs filter for env variables and once they are set they are set for the whole process lifetime
     EXPECT_EXIT({
         EnvGuard guard;
