@@ -280,32 +280,6 @@ Libgt2InitGuard::Libgt2InitGuard(const Libgit2Options& opts) {
     SPDLOG_DEBUG("Initializing libgit2");
     this->status = git_libgit2_init();
     IF_ERROR_SET_MSG_AND_RETURN();
-    // Disable ownership check so repositories owned by a different OS user can be
-    // opened for reading (equivalent to git's `safe.directory = *`).  This is safe
-    // in a serving context where the operator intentionally mounts model directories
-    // that may have been downloaded by a different UID (e.g. root in the build
-    // container vs. a non-root serving user).
-    this->status = git_libgit2_opts(GIT_OPT_SET_OWNER_VALIDATION, 0);
-    IF_ERROR_SET_MSG_AND_RETURN();
-    // Redirect all git config search paths (system, XDG, global) to an empty string so
-    // libgit2 never reads the operator's ~/.gitconfig or /etc/gitconfig.  Without this,
-    // a host gitconfig that sets credential.helper, http.proxy, lfs.*, or safe.directory
-    // can silently override OVMS's intended proxy/token settings and cause spurious
-    // failures or credential leaks in multi-tenant environments.
-    this->status = git_libgit2_opts(GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_SYSTEM, "");
-    IF_ERROR_SET_MSG_AND_RETURN();
-    this->status = git_libgit2_opts(GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_XDG, "");
-    IF_ERROR_SET_MSG_AND_RETURN();
-    this->status = git_libgit2_opts(GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, "");
-    IF_ERROR_SET_MSG_AND_RETURN();
-    // Skip .keep file existence checks when reading packfiles.  libgit2 performs one
-    // stat() per pack per operation to honour .keep files (which prevent gc from
-    // collecting referenced packs).  In an OVMS deployment the model directory is
-    // never garbage-collected and may live on NFS or other high-latency remote
-    // filesystems, so removing this stat() per open noticeably reduces latency on
-    // resume/status operations against large repositories.
-    this->status = git_libgit2_opts(GIT_OPT_DISABLE_PACK_KEEP_FILE_CHECKS, 1);
-    IF_ERROR_SET_MSG_AND_RETURN();
     SPDLOG_TRACE("Setting libgit2 server connection timeout:{}", opts.serverConnectTimeoutMs);
     this->status = git_libgit2_opts(GIT_OPT_SET_SERVER_CONNECT_TIMEOUT, opts.serverConnectTimeoutMs);
     IF_ERROR_SET_MSG_AND_RETURN();
