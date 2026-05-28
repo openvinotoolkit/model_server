@@ -1276,12 +1276,18 @@ Status resumeExistingRepository(git_repository* repo,
 }
 
 bool resumeCheckSecondCondition(const std::string& downloadPath, const ResumeCandidates& candidates) {
+    auto existingMatches = ovms::libgit2::findLfsLikeFiles(downloadPath, true);
+
     // Use repository object only when interruption markers indicate a previous
     // pull likely failed and resume logic may be required.
-    if (!candidates.hasWipMarker && !candidates.hasLfsErrorFile) {
+    if (!candidates.hasWipMarker && !candidates.hasLfsErrorFile && existingMatches.empty()) {
         SPDLOG_DEBUG("Model pull operation found no interruption markers for this path: {}", downloadPath);
         SPDLOG_INFO("Path already exists on local filesystem. Skipping download to path: {}", downloadPath);
         return false;
+    }
+
+    if (!existingMatches.empty()) {
+        SPDLOG_DEBUG("Found {} LFS-like file(s) under path: {}. Enabling resume check.", existingMatches.size(), downloadPath);
     }
     return true;
 }
@@ -1318,6 +1324,7 @@ Status checkSufficientResumeConditions(const std::string& downloadPath, ResumeCa
     // Probe interruption markers once and reuse them later when building candidates.
     candidates.hasWipMarker = libgit2::hasLfsWipMarker(downloadPath);
     candidates.hasLfsErrorFile = libgit2::hasLfsErrorFile(downloadPath);
+    
     candidates.shouldResume = resumeCheckSecondCondition(downloadPath, candidates);
     return StatusCode::OK;
 }
