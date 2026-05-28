@@ -626,13 +626,15 @@ The following command starts OVMS with Stable Diffusion XL and 5 LoRA adapters f
 mkdir -p models
 
 docker run -d --rm --user $(id -u):$(id -g) -p 8000:8000 -v $(pwd)/models:/models/:rw \
+  --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) \
   -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy=$no_proxy \
-  openvino/model_server:latest \
+  openvino/model_server:latest-gpu \
     --rest_port 8000 \
     --model_repository_path /models/ \
     --task image_generation \
     --source_model OpenVINO/stable-diffusion-xl-base-1.0-int8-ov \
-    --source_loras "xray=DoctorDiffusion/doctor-diffusion-s-xray-xl-lora@DD-xray-v1.safetensors,thepoint=alvdansen/the-point@araminta_k_the_point.safetensors,ukiyo=KappaNeuro/ukiyo-e-art@Ukiyo-e Art.safetensors,vector=DoctorDiffusion/doctor-diffusion-s-controllable-vector-art-xl-lora@DD-vector-v2.safetensors,chalk=Norod78/sdxl-chalkboarddrawing-lora@SDXL_ChalkBoardDrawing_LoRA_r8.safetensors"
+    --target_device GPU \
+    --source_loras "xray=DoctorDiffusion/doctor-diffusion-s-xray-xl-lora@DD-xray-v1.safetensors,thepoint=alvdansen/the-point@araminta_k_the_point.safetensors,ukiyo=KappaNeuro/ukiyo-e-art@Ukiyo-e%20Art.safetensors,vector=DoctorDiffusion/doctor-diffusion-s-controllable-vector-art-xl-lora@DD-vector-v2.safetensors,chalk=Norod78/sdxl-chalkboarddrawing-lora@SDXL_ChalkBoardDrawing_LoRA_r8.safetensors"
 ```
 :::
 
@@ -645,7 +647,8 @@ ovms --rest_port 8000 ^
   --model_repository_path c:\models ^
   --task image_generation ^
   --source_model OpenVINO/stable-diffusion-xl-base-1.0-int8-ov ^
-  --source_loras "xray=DoctorDiffusion/doctor-diffusion-s-xray-xl-lora@DD-xray-v1.safetensors,thepoint=alvdansen/the-point@araminta_k_the_point.safetensors,ukiyo=KappaNeuro/ukiyo-e-art@Ukiyo-e Art.safetensors,vector=DoctorDiffusion/doctor-diffusion-s-controllable-vector-art-xl-lora@DD-vector-v2.safetensors,chalk=Norod78/sdxl-chalkboarddrawing-lora@SDXL_ChalkBoardDrawing_LoRA_r8.safetensors"
+  --target_device GPU ^
+  --source_loras "xray=DoctorDiffusion/doctor-diffusion-s-xray-xl-lora@DD-xray-v1.safetensors,thepoint=alvdansen/the-point@araminta_k_the_point.safetensors,ukiyo=KappaNeuro/ukiyo-e-art@Ukiyo-e%20Art.safetensors,vector=DoctorDiffusion/doctor-diffusion-s-controllable-vector-art-xl-lora@DD-vector-v2.safetensors,chalk=Norod78/sdxl-chalkboarddrawing-lora@SDXL_ChalkBoardDrawing_LoRA_r8.safetensors"
 ```
 :::
 
@@ -678,6 +681,23 @@ curl http://localhost:8000/v3/images/generations \
   }' | jq -r '.data[0].b64_json' | base64 --decode > xray_cat.png
 ```
 
+![xray_cat](./xray_cat.png)
+
+**Artistic illustration (The Point):**
+```bash
+curl http://localhost:8000/v3/images/generations \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "thepoint",
+    "prompt": "a cute cat in sunglasses",
+    "num_inference_steps": 40,
+    "guidance_scale": 7.5,
+    "size": "1024x1024"
+  }' | jq -r '.data[0].b64_json' | base64 --decode > thepoint_cat.png
+```
+
+![thepoint_cat](./thepoint_cat.png)
+
 **Ukiyo-e Japanese art:**
 ```bash
 curl http://localhost:8000/v3/images/generations \
@@ -690,6 +710,8 @@ curl http://localhost:8000/v3/images/generations \
     "size": "1024x1024"
   }' | jq -r '.data[0].b64_json' | base64 --decode > ukiyo_cat.png
 ```
+
+![ukiyo_cat](./ukiyo_cat.png)
 
 **Vector art:**
 ```bash
@@ -704,6 +726,8 @@ curl http://localhost:8000/v3/images/generations \
   }' | jq -r '.data[0].b64_json' | base64 --decode > vector_cat.png
 ```
 
+![vector_cat](./vector_cat.png)
+
 **Chalkboard drawing:**
 ```bash
 curl http://localhost:8000/v3/images/generations \
@@ -717,9 +741,7 @@ curl http://localhost:8000/v3/images/generations \
   }' | jq -r '.data[0].b64_json' | base64 --decode > chalk_cat.png
 ```
 
-Expected outputs:
-
-![xray_cat](./xray_cat.png) ![thepoint_cat](./thepoint_cat.png) ![vector_cat](./vector_cat.png) ![chalk_cat](./chalk_cat.png)
+![chalk_cat](./chalk_cat.png)
 
 Optionally override the adapter alpha using `lora_alphas`:
 ```bash
