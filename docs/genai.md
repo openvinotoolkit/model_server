@@ -11,7 +11,7 @@ Use cases currently built-in in the model server:
 
 ## Text generation
 
-The implementation is compatible with the OpenAI API for [chat/completions](./model_server_rest_api_chat.md) and [completions](./model_server_rest_api_completions.md).
+The implementation is compatible with the OpenAI API for [chat/completions](./model_server_rest_api_chat.md), [completions](./model_server_rest_api_completions.md) and responses(./model_server_rest_api_responses.md).
 It supports a wide range of text generation models from Hugging Face Hub.
 Internally it employs continuous batching and paged attention algorithms for efficient execution both on CPU and GPU.
 
