@@ -806,7 +806,6 @@ TEST_F(HfPullCache, EmptyGitDirLfsMarker) {
     const std::string lfsWipPath = ovms::libgit2::getLfsWipMarkerPath(basePath).string();
     ASSERT_TRUE(std::filesystem::exists(lfsWipPath));
 
-    
     // Pull will not silently succeed: handleExistingRepositoryWithoutOverwrite
     // will  surface the libgit2 open failure because there are interruption file markers present
     this->ServerPullHfModel(modelName, downloadPath, task, EXIT_FAILURE);
@@ -886,7 +885,6 @@ TEST_F(HfPullCache, EmptyGitDirErrorMarker) {
     }
     ASSERT_TRUE(std::filesystem::exists(lfsErrorPath));
 
-    
     // Pull will not silently succeed: handleExistingRepositoryWithoutOverwrite
     // will  surface the libgit2 open failure because there are interruption file markers present
     this->ServerPullHfModel(modelName, downloadPath, task, EXIT_FAILURE);
