@@ -1145,7 +1145,6 @@ struct ResumeCandidates {
  * @note Works on local repository metadata and filesystem; no network operations.
  */
 ResumeCandidates buildResumeCandidates(git_repository* repo, const std::string& downloadPath, ResumeCandidates candidates) {
-
     // Checking if the download was partially finished for any files in repository,
     // including tracked LFS pointer blobs missing from the worktree after abrupt termination.
     candidates.lfsMatches = libgit2::findResumableLfsFiles(repo, downloadPath, candidates.hasWipMarker || candidates.hasLfsErrorFile);
