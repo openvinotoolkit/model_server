@@ -250,7 +250,7 @@ int cred_acquire_cb(git_credential** out,
  * @note Connects to internet: configures timeouts for remote git/LFS operations.
  */
 Libgt2InitGuard::Libgt2InitGuard(const Libgit2Options& opts) {
-SPDLOG_DEBUG("Initializing libgit2");
+    SPDLOG_DEBUG("Initializing libgit2");
     this->status = git_libgit2_init();
     IF_ERROR_SET_MSG_AND_RETURN();
     // Disable ownership check so repositories owned by a different OS user can be
