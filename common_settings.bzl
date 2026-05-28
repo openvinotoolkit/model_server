@@ -209,8 +209,6 @@ COMMON_STATIC_TEST_COPTS = select({
                     "-Wall",
                     "-Wno-unknown-pragmas",
                     "-Werror",
-                    # ov::Tensor::data method call results in deprecated warning and we use it in multiple places
-                    "-Wno-deprecated-declarations",
                     "-Isrc",
                     "-fconcepts", # for gmock related utils
                     "-fvisibility=hidden",# Needed for pybind targets

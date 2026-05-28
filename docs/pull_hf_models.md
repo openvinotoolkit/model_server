@@ -94,6 +94,29 @@ In case you want to setup model and start server in one step, follow [instructio
 
 > **Note:**  When using pull mode you need both read and write access rights to models repository.
 
+## Pulling Image Generation Models with LoRA Adapters
+
+For image generation tasks, you can additionally specify LoRA adapters to be downloaded alongside the base model using the `--source_loras` parameter:
+
+```text
+ovms --rest_port 8000 \
+  --model_repository_path /models/ \
+  --task image_generation \
+  --source_model stabilityai/stable-diffusion-xl-base-1.0 \
+  --source_loras "xray=DoctorDiffusion/doctor-diffusion-s-xray-xl-lora@DD-xray-v1.safetensors,ukiyo=KappaNeuro/ukiyo-e-art@Ukiyo-e Art.safetensors"
+```
+
+The `--source_loras` format is a comma-separated list of `alias=source[:alpha]` entries. Supported source types:
+- HuggingFace repository: `alias=org/repo` or `alias=org/repo@filename.safetensors`
+- Direct URL: `alias=https://url/to/file.safetensors`
+- Local file (Linux): `alias=/path/to/file.safetensors`
+- Local file (Windows): `alias=C:\path\to\file.safetensors`
+- Relative local file: `alias=./path/to/file.safetensors`
+
+Each adapter can optionally specify a default alpha weight: `alias=source:0.7` (default: `1.0`).
+
+For more details, see the [LoRA Adapters documentation](./image_generation/reference.md#lora-adapters).
+
 ## Resuming an interrupted pull
 
 Pulling Generative AI models from Hugging Face often involves transferring multi-gigabyte LFS files (e.g. `openvino_model.bin`). To make this robust against network errors and operator interventions, OVMS pull mode persists the in-progress download state on disk and resumes from where it stopped on the next `--pull` invocation. No extra flags are required — simply re-run the same `--pull` command against the same `--model_repository_path` and OVMS will continue any partially downloaded LFS files instead of starting from scratch.
@@ -147,4 +170,3 @@ On startup OVMS logs the resolved configuration, e.g.:
 ```
 
 > **Note:** Resume relies on the remote server honoring HTTP `Range` requests. Hugging Face Hub supports this by default; private mirrors must allow ranged GETs for resume to work.
-

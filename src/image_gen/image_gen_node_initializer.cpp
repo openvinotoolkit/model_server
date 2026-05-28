@@ -73,6 +73,22 @@ public:
             return StatusCode::INTERNAL_ERROR;
         }
         imageGenPipelinesMap.insert(std::pair<std::string, std::shared_ptr<ImageGenerationPipelines>>(nodeName, std::move(servable)));
+        // Register LoRA aliases for routing
+        const auto& args = std::get<ImageGenPipelineArgs>(statusOrArgs);
+        bool hasFusedOrStaticAdapter = false;
+        for (const auto& adapter : args.loraAdapters) {
+            sidePackets.loraAliases.push_back(adapter.alias);
+            if (adapter.mode == LoraLoadMode::FUSE || adapter.mode == LoraLoadMode::STATIC) {
+                hasFusedOrStaticAdapter = true;
+            }
+        }
+        for (const auto& [compositeAlias, components] : args.compositeLoraAdapters) {
+            sidePackets.loraAliases.push_back(compositeAlias);
+        }
+        // When any adapter is fused/static, the base model is not independently usable
+        if (hasFusedOrStaticAdapter) {
+            sidePackets.hideBaseModelInRouting = true;
+        }
         return StatusCode::OK;
     }
 };

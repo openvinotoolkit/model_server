@@ -61,6 +61,8 @@ public:
             return status;
         }
         genAiServableMap.insert(std::pair<std::string, std::shared_ptr<GenAiServable>>(nodeName, std::move(servable)));
+        sidePackets.genAiExecutionContextMap.emplace(
+            nodeName, std::make_shared<GenAiExecutionContextHolder>());
         return StatusCode::OK;
     }
 };

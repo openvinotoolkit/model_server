@@ -114,6 +114,9 @@ absl::Status VisualLanguageModelServable::prepareInputs(std::shared_ptr<GenAiSer
             SPDLOG_LOGGER_TRACE(llm_calculator_logger, "VLM addGenerationPrompt: {}", addGenerationPrompt);
         }
         vlmExecutionContext->inputText = properties->tokenizer.apply_chat_template(chatHistory, addGenerationPrompt, {}, tools, chatTemplateKwargs);
+        if (vlmExecutionContext->apiHandler->getOutputParser() != nullptr) {
+            vlmExecutionContext->apiHandler->getOutputParser()->detectAndSetImplicitReasoningStart(vlmExecutionContext->inputText);
+        }
     } else {
         return absl::InvalidArgumentError("Unsupported endpoint");
     }
