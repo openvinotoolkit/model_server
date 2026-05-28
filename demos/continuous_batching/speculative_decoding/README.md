@@ -22,7 +22,7 @@ Currently using [EAGLE3](https://github.com/SafeAILab/EAGLE) requires some speci
 
 For this demo we picked a pair of models from [available models](https://github.com/SafeAILab/EAGLE#eagle-3-models-on-hugging-face):
 - [Qwen/Qwen3-8B](https://huggingface.co/Qwen/Qwen3-8B) as a main model
-- [Tengyunw/qwen3_8b_eagle3](https://huggingface.co/Tengyunw/qwen3_8b_eagle3) as a draft model
+- [AngelSlim/Qwen3-8B_eagle3](https://huggingface.co/AngelSlim/Qwen3-8B_eagle3) as a draft model
 
 both in INT4 precision.
 
@@ -152,6 +152,20 @@ Median ITL (ms):                         66.75
 P99 ITL (ms):                            72.11
 ==================================================
 ```
+
+## Setting default generation parameters
+
+The main model's `generation_config.json` (e.g. `models/Qwen/Qwen3-8B/generation_config.json`) is read at server start-up as the default generation configuration for all requests that do not specify a given parameter. It ships with the model weights from Hugging Face, but is fully operator-editable.
+
+For each generation parameter the server applies the following resolution order:
+
+**request body → `generation_config.json` → OVMS built-in default**
+
+For example, to set a deployment-level default for `num_assistant_tokens`:
+```json
+{ "num_assistant_tokens": 7 }
+```
+The built-in fallback is `5`. The same applies to `assistant_confidence_threshold` and all other generation parameters such as `temperature`, `max_new_tokens`, etc.
 
 ## Limitations
 
@@ -288,7 +302,9 @@ curl http://localhost:8000/v1/config
 
 Models used in this demo - `meta-llama/CodeLlama-7b-hf` and `AMD-Llama-135m` are not chat models, so we will use `completions` endpoint to interact with the pipeline.
 
-Below you can see an exemplary unary request (you can switch `stream` parameter to enable streamed response). Compared to calls to regular continuous batching model, this request has additional parameter `num_assistant_tokens` which specifies how many tokens should a draft model generate before main model validates them. 
+Below you can see an exemplary unary request (you can switch `stream` parameter to enable streamed response). Compared to calls to regular continuous batching model, this request has additional parameter `num_assistant_tokens` which specifies how many tokens should a draft model generate before main model validates them.
+
+`num_assistant_tokens` does not have to be sent on every request — see [Setting default generation parameters](#setting-default-generation-parameters) for how to configure a deployment-level default via `generation_config.json`.
 
 ```console
 pip3 install openai
