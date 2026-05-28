@@ -229,7 +229,7 @@ If you already have a model on disk (downloaded via Option 1 with `--pull`, or v
 docker run -d --rm -p 8000:8000 -v ${HOME}/models:/models:rw \
   openvino/model_server:latest \
     --rest_port 8000 \
-    --model_name sd15 \
+    --model_name OpenVINO/stable-diffusion-v1-5-int8-ov \
     --model_path /models/OpenVINO/stable-diffusion-v1-5-int8-ov
 ```
 :::
@@ -239,7 +239,7 @@ docker run -d --rm -p 8000:8000 -v ${HOME}/models:/models:rw \
 
 ```bat
 ovms --rest_port 8000 ^
-  --model_name sd15 ^
+  --model_name OpenVINO/stable-diffusion-v1-5-int8-ov ^
   --model_path c:\models\OpenVINO\stable-diffusion-v1-5-int8-ov
 ```
 :::
