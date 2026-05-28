@@ -760,11 +760,37 @@ void EnsureServerStartedWithTimeout(ovms::Server& server, int timeoutSeconds) {
 
 void EnsureServerModelDownloadFinishedWithTimeout(ovms::Server& server, int timeoutSeconds) {
     auto start = std::chrono::high_resolution_clock::now();
-    while ((server.getModuleState(ovms::HF_MODEL_PULL_MODULE_NAME) != ovms::ModuleState::SHUTDOWN) &&
-           (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < timeoutSeconds)) {
+    auto elapsed = [&] {
+        return std::chrono::duration_cast<std::chrono::seconds>(
+            std::chrono::high_resolution_clock::now() - start)
+            .count();
+    };
+
+    // Phase 1: yield until the HF pull module appears in the server's module map.
+    // std::this_thread::yield() is required — a bare busy-spin starves the server thread
+    // (especially on machines with few cores or under load) and the module never starts.
+    while (server.getModuleState(ovms::HF_MODEL_PULL_MODULE_NAME) == ovms::ModuleState::NOT_INITIALIZED &&
+           elapsed() < timeoutSeconds) {
+        std::this_thread::yield();
+    }
+    if (server.getModuleState(ovms::HF_MODEL_PULL_MODULE_NAME) == ovms::ModuleState::NOT_INITIALIZED) {
+        FAIL() << "HF pull module never started within " << timeoutSeconds << "s. Check machine load and network load";
+        return;
     }
 
-    ASSERT_EQ(server.getModuleState(ovms::HF_MODEL_PULL_MODULE_NAME), ovms::ModuleState::SHUTDOWN) << "OVMS did not download model in allowed time:" << timeoutSeconds << "s. Check machine load and network load";
+    // Phase 2: wait for the module to finish.
+    // Accept SHUTDOWN (normal) or NOT_INITIALIZED — the latter happens when the pull is so
+    // fast (e.g. model already cached, no download needed) that server.start() returns and
+    // shutdownModules() calls modules.clear() before this thread re-enters the check, making
+    // getModuleState return NOT_INITIALIZED rather than SHUTDOWN.
+    while (server.getModuleState(ovms::HF_MODEL_PULL_MODULE_NAME) != ovms::ModuleState::SHUTDOWN &&
+           server.getModuleState(ovms::HF_MODEL_PULL_MODULE_NAME) != ovms::ModuleState::NOT_INITIALIZED &&
+           elapsed() < timeoutSeconds) {
+    }
+
+    const auto finalState = server.getModuleState(ovms::HF_MODEL_PULL_MODULE_NAME);
+    ASSERT_TRUE(finalState == ovms::ModuleState::SHUTDOWN || finalState == ovms::ModuleState::NOT_INITIALIZED)
+        << "OVMS did not download model in allowed time:" << timeoutSeconds << "s. Check machine load and network load";
 }
 
 // --pull --source_model OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov --model_repository_path c:\download
