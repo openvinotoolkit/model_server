@@ -7,7 +7,6 @@ pipeline {
     }
     environment {
         BDBA_CREDS = credentials('BDBA_KEY')
-        WORKER_CREDS = credentials('sys_k8sworker')
     }
     stages {
         stage ("Build and test windows") {
@@ -45,9 +44,11 @@ pipeline {
                           def latestPath = "${destPath}\\latest"
                           bat(returnStatus:true, script: "if not exist \"${destPath}\\${buildstamp}\" mkdir \"${destPath}\\${buildstamp}\"")
                           bat(returnStatus:true, script: "copy /Y \"${env.WORKSPACE}\\dist\\windows\\ovms.zip\" \"${destPath}\\${buildstamp}\\${packageName}\"")
+                          bat(returnStatus:true, script: "copy /Y \"${env.WORKSPACE}\\dist\\windows\\ovms.zip.sha256\" \"${destPath}\\${buildstamp}\\${packageName}.sha256\"")
                           bat(returnStatus:true, script: "if exist \"${latestPath}\" rmdir /S /Q \"${latestPath}\"")
                           bat(returnStatus:true, script: "mkdir \"${latestPath}\"")
                           bat(returnStatus:true, script: "copy /Y \"${env.WORKSPACE}\\dist\\windows\\ovms.zip\" \"${latestPath}\\${packageName}\"")
+                          bat(returnStatus:true, script: "copy /Y \"${env.WORKSPACE}\\dist\\windows\\ovms.zip.sha256\" \"${latestPath}\\${packageName}.sha256\"")
                         } finally {
                             windows.archive_build_artifacts()
                             windows.archive_test_artifacts()
