@@ -246,7 +246,7 @@ ovms --rest_port 8000 ^
 
 ::::
 
-> **NOTE:** The model directory must contain a valid `graph.pbtxt` file. This file is auto-generated when using `--pull` or `--source_model`. If you downloaded the model manually (e.g., via `huggingface-cli`), you can generate it by running `ovms --pull` with the same `--model_repository_path` and `--source_model` parameters, or create it manually — see [Image Generation calculator reference](../../docs/image_generation/reference.md) for all available options.
+> **NOTE:** The `graph.pbtxt` configuration file is auto-generated at runtime when using `--task image_generation`. You can also customize it manually — see [Image Generation calculator reference](../../docs/image_generation/reference.md) for all available options.
 
 
 ## Readiness Check
