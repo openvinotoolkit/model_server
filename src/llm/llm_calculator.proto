@@ -135,4 +135,6 @@ message LLMCalculatorOptions {
     optional bool enable_tool_guided_generation = 23 [default = false];
 
     optional SparseAttentionConfig sparse_attention_config = 24;
+
+    optional uint64 cache_interval_multiplier = 25 [default = 64];
 }
