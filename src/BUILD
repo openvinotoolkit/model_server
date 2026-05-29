@@ -2599,6 +2599,7 @@ cc_test(
                 "@mediapipe//mediapipe/calculators/ovms:ovms_calculator",
                 "@mediapipe//mediapipe/framework:calculator_runner",
                 ":text2image_test",
+                ":lora_adapter_test",
             ],
             "//:disable_mediapipe" :
             [
@@ -2608,6 +2609,22 @@ cc_test(
     copts = COPTS_TESTS,
     local_defines = COMMON_LOCAL_DEFINES,
     linkopts = LINKOPTS_ADJUSTED,
+)
+
+cc_library(
+    name = "lora_adapter_test",
+    linkstatic = 1,
+    alwayslink = True,
+    srcs = [
+        "test/llm/lora_adapter_test.cpp",
+    ],
+    deps = [
+        ":test_test_with_temp_dir",
+        "//src/llm:genai_servables",
+        "@com_google_googletest//:gtest",
+    ],
+    copts = COPTS_TESTS,
+    local_defines = COMMON_LOCAL_DEFINES,
 )
 
 cc_library(
