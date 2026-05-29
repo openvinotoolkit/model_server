@@ -79,7 +79,11 @@ void GraphCLIParser::createOptions() {
         ("enable_tool_guided_generation",
             "Enables enforcing tool schema during generation. Requires setting tool parser. Default: false.",
             cxxopts::value<std::string>()->default_value("false"),
-            "ENABLE_TOOL_GUIDED_GENERATION");
+            "ENABLE_TOOL_GUIDED_GENERATION")
+        ("cache_interval_multiplier",
+            "Multiplier for the KV cache block interval. Controls the granularity of cache allocation. Default: unset.",
+            cxxopts::value<uint64_t>(),
+            "CACHE_INTERVAL_MULTIPLIER");
 
     options->add_options("plugin config")
         ("max_prompt_len",
@@ -157,6 +161,9 @@ void GraphCLIParser::prepare(OvmsServerMode serverMode, HFSettingsImpl& hfSettin
             graphSettings.toolParser = result->operator[]("tool_parser").as<std::string>();
         }
         graphSettings.enableToolGuidedGeneration = result->operator[]("enable_tool_guided_generation").as<std::string>();
+        if (result->count("cache_interval_multiplier")) {
+            graphSettings.cacheIntervalMultiplier = result->operator[]("cache_interval_multiplier").as<uint64_t>();
+        }
 
         // Plugin configuration
         if (result->count("max_prompt_len")) {
