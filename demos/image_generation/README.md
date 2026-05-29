@@ -47,7 +47,7 @@ mkdir -p ${HOME}/models
 
 docker run -d --rm --user $(id -u):$(id -g) -p 8000:8000 -v ${HOME}/models:/models:rw \
   -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy=$no_proxy \
-  openvino/model_server:latest \
+  openvino/model_server:2026.2 \
     --rest_port 8000 \
     --model_repository_path /models \
     --task image_generation \
@@ -91,7 +91,7 @@ mkdir -p ${HOME}/models
 docker run -d --rm -p 8000:8000 -v ${HOME}/models:/models:rw \
   --user $(id -u):$(id -g) --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) \
   -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy=$no_proxy \
-  openvino/model_server:latest-gpu \
+  openvino/model_server:2026.2-gpu \
     --rest_port 8000 \
     --model_repository_path /models \
     --task image_generation \
@@ -142,7 +142,7 @@ docker run -d --rm -p 8000:8000 \
   -v ${HOME}/models:/models:rw \
   --user $(id -u):$(id -g) --device /dev/accel --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) \
   -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy=$no_proxy \
-  openvino/model_server:latest-gpu \
+  openvino/model_server:2026.2-gpu \
     --rest_port 8000 \
     --model_repository_path /models \
     --task image_generation \
@@ -189,7 +189,7 @@ mkdir -p ${HOME}/models
 docker run -d --rm -p 8000:8000 -v ${HOME}/models:/models:rw \
   --user $(id -u):$(id -g) --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) \
   -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy=$no_proxy \
-  openvino/model_server:latest-gpu \
+  openvino/model_server:2026.2-gpu \
     --rest_port 8000 \
     --model_repository_path /models \
     --task image_generation \
@@ -227,7 +227,7 @@ If you already have a model on disk (downloaded via Option 1 with `--pull`, or v
 
 ```bash
 docker run -d --rm -p 8000:8000 -v ${HOME}/models:/models:rw \
-  openvino/model_server:latest \
+  openvino/model_server:2026.2 \
     --rest_port 8000 \
     --model_name OpenVINO/stable-diffusion-v1-5-int8-ov \
     --model_path /models/OpenVINO/stable-diffusion-v1-5-int8-ov
@@ -580,7 +580,7 @@ mkdir -p ${HOME}/models
 docker run -d --rm -p 8000:8000 -v ${HOME}/models:/models:rw \
   --user $(id -u):$(id -g) --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) \
   -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy=$no_proxy \
-  openvino/model_server:latest-gpu \
+  openvino/model_server:2026.2-gpu \
     --rest_port 8000 \
     --model_repository_path /models \
     --task image_generation \
@@ -628,7 +628,7 @@ mkdir -p models
 docker run -d --rm --user $(id -u):$(id -g) -p 8000:8000 -v $(pwd)/models:/models/:rw \
   --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) \
   -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy=$no_proxy \
-  openvino/model_server:latest-gpu \
+  openvino/model_server:2026.2-gpu \
     --rest_port 8000 \
     --model_repository_path /models/ \
     --task image_generation \
