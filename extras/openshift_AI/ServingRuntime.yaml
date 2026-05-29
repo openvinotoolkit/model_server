@@ -21,7 +21,7 @@ spec:
         - --model_path=/mnt/models
         - --file_system_poll_wait_seconds=0
         - --metrics_enable
-      image: docker.io/openvino/model_server:latest-gpu
+      image: docker.io/openvino/model_server:weekly
       startupProbe:
         periodSeconds: 5
         failureThreshold: 9999
