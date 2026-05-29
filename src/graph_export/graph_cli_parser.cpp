@@ -81,7 +81,7 @@ void GraphCLIParser::createOptions() {
             cxxopts::value<std::string>()->default_value("false"),
             "ENABLE_TOOL_GUIDED_GENERATION")
         ("cache_interval_multiplier",
-            "Multiplier for the KV cache block interval. Controls the granularity of cache allocation. Default: 64.",
+            "Multiplier for the KV cache block interval. Controls the granularity of cache allocation. Default: unset.",
             cxxopts::value<uint64_t>(),
             "CACHE_INTERVAL_MULTIPLIER");
 
