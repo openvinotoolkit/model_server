@@ -245,11 +245,11 @@ COPTS_DROGON = select({
     "//conditions:default": ["-DUSE_DROGON=0"],
     "//:enable_drogon" : ["-DUSE_DROGON=1"],
 })
-LOCAL_DEFINES_PYTHON = select({
+DEFINES_PYTHON = select({
     "//conditions:default": ["PYTHON_DISABLE=1"],
     "//:not_disable_python" : ["PYTHON_DISABLE=0"],
 })
-LOCAL_DEFINES_MEDIAPIPE = select({
+DEFINES_MEDIAPIPE = select({
     "//conditions:default": ["MEDIAPIPE_DISABLE=1"],
     "//:not_disable_mediapipe" : ["MEDIAPIPE_DISABLE=0"],
 })
@@ -265,7 +265,7 @@ COMMON_FUZZER_LINKOPTS = [
     "-static-libasan",
 ]
 COMMON_LOCAL_DEFINES = ["SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE"]
-COMMON_DEFINES = LOCAL_DEFINES_PYTHON + LOCAL_DEFINES_MEDIAPIPE
+COMMON_DEFINES = DEFINES_PYTHON + DEFINES_MEDIAPIPE
 PYBIND_DEPS = [
     "//third_party:python3",
     "@pybind11//:pybind11_embed",
