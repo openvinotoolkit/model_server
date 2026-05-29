@@ -45,7 +45,7 @@ pipeline {
                 if (export_models_matched){
                   export_models_changed = "true"
                 }
-              def win_matched = (git_diff =~ /src|third_party|external|ci|test_install_ovms_service_windows\\.py|\.c|\.h|\.bazel|\.bzl|BUILD|WORKSPACE|\.bat|\.groovy/)
+              def win_matched = (git_diff =~ /src|third_party|external|ci|test_install_ovms_service_windows\\.py|\.c|\.h|\.bazel|\.bzl|BUILD|WORKSPACE|versions\.mk|\.bat|\.groovy/)
               if (win_matched){
                   win_image_build_needed = "true"
               }
