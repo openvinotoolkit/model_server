@@ -128,7 +128,6 @@ void GraphHelper::reinitialize(const ::mediapipe::CalculatorGraphConfig& config,
     auto absStatus = graph->Initialize(config);
     if (!absStatus.ok()) {
         SPDLOG_ERROR("Graph reinitialize: Initialize failed: {}", absStatus.ToString());
-        graph.reset();
         return;
     }
     for (const auto& [streamName, holder] : outStreamObservers) {
@@ -137,7 +136,6 @@ void GraphHelper::reinitialize(const ::mediapipe::CalculatorGraphConfig& config,
         });
         if (!absStatus.ok()) {
             SPDLOG_ERROR("Graph reinitialize: ObserveOutputStream failed: {}", absStatus.ToString());
-            graph.reset();
             return;
         }
     }
@@ -157,7 +155,6 @@ void GraphHelper::reinitialize(const ::mediapipe::CalculatorGraphConfig& config,
     absStatus = graph->StartRun(inputSidePackets);
     if (!absStatus.ok()) {
         SPDLOG_ERROR("Graph reinitialize: StartRun failed: {}", absStatus.ToString());
-        graph.reset();
         return;
     }
     SPDLOG_DEBUG("Graph reinitialized successfully");
