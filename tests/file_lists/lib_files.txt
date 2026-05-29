@@ -54,7 +54,7 @@ libopenvino_ir_frontend.so.2026.3.0
 libopenvino_ir_frontend.so.2630->libopenvino_ir_frontend.so.2026.3.0
 libopenvino_jax_frontend.so->libopenvino_jax_frontend.so.2630
 libopenvino_jax_frontend.so.2026.3.0
-libopenvino_jax_frontend.so.2620->libopenvino_jax_frontend.so.2026.3.0
+libopenvino_jax_frontend.so.2630->libopenvino_jax_frontend.so.2026.3.0
 libopenvino_onnx_frontend.so->libopenvino_onnx_frontend.so.2630
 libopenvino_onnx_frontend.so.2026.3.0
 libopenvino_onnx_frontend.so.2630->libopenvino_onnx_frontend.so.2026.3.0
