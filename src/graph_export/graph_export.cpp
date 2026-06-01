@@ -67,6 +67,15 @@ void GraphExport::clearInMemoryGraphContent() {
 }
 
 static const std::string OVMS_VERSION_GRAPH_LINE = std::string("# File created with: ") + PROJECT_NAME + std::string(" ") + PROJECT_VERSION + std::string("\n");
+static const std::string OVMS_GRAPH_QUEUE_MAX_SIZE_LINE_PREFIX = "# OVMS_GRAPH_QUEUE_MAX_SIZE: ";
+static const std::string OVMS_GRAPH_QUEUE_SIZE_AUTO = "AUTO";
+
+static std::string buildGraphHeader() {
+    std::ostringstream oss;
+    oss << OVMS_VERSION_GRAPH_LINE;
+    oss << OVMS_GRAPH_QUEUE_MAX_SIZE_LINE_PREFIX << OVMS_GRAPH_QUEUE_SIZE_AUTO << "\n";
+    return oss.str();
+}
 
 static std::string constructModelsPath(const std::string& modelPath, const std::optional<std::string>& ggufFilenameOpt) {
     std::string modelsPath;
@@ -134,7 +143,7 @@ static Status createTextGenerationGraphTemplate(const std::string& directoryPath
     auto& exportSettings = hfSettings.exportSettings;
 
     std::ostringstream oss;
-    oss << OVMS_VERSION_GRAPH_LINE;
+    oss << buildGraphHeader();
     std::string modelsPath = constructModelsPath(exportSettings.modelPath, ggufFilename);
     SPDLOG_TRACE("modelsPath: {}, directoryPath: {}, ggufFilename: {}", modelsPath, directoryPath, ggufFilename.value_or("std::nullopt"));
     GET_PLUGIN_CONFIG_OPT_OR_FAIL_AND_RETURN(exportSettings);
@@ -192,6 +201,10 @@ static Status createTextGenerationGraphTemplate(const std::string& directoryPath
         oss << R"(
             enable_tool_guided_generation: true,)";
     }
+    if (graphSettings.cacheIntervalMultiplier.has_value()) {
+        oss << R"(
+            cache_interval_multiplier: )" << graphSettings.cacheIntervalMultiplier.value() << R"(,)";
+    }
     if (graphSettings.dynamicSplitFuse != "true") {
         oss << R"(
             dynamic_split_fuse: false,)";
@@ -229,7 +242,7 @@ static Status createRerankGraphTemplate(const std::string& directoryPath, const 
     auto& exportSettings = hfSettings.exportSettings;
 
     std::ostringstream oss;
-    oss << OVMS_VERSION_GRAPH_LINE;
+    oss << buildGraphHeader();
     // Windows path creation - graph parser needs forward slashes in paths
     std::string modelsPath = constructModelsPath(exportSettings.modelPath, ggufFilename);
     SPDLOG_TRACE("modelsPath: {}, directoryPath: {}, ggufFilename: {}", modelsPath, directoryPath, ggufFilename.value_or("std::nullopt"));
@@ -273,7 +286,7 @@ static Status createEmbeddingsGraphTemplate(const std::string& directoryPath, co
     auto& exportSettings = hfSettings.exportSettings;
 
     std::ostringstream oss;
-    oss << OVMS_VERSION_GRAPH_LINE;
+    oss << buildGraphHeader();
     std::string modelsPath = constructModelsPath(exportSettings.modelPath, ggufFilename);
     SPDLOG_TRACE("modelsPath: {}, directoryPath: {}, ggufFilename: {}", modelsPath, directoryPath, ggufFilename.value_or("std::nullopt"));
     GET_PLUGIN_CONFIG_OPT_OR_FAIL_AND_RETURN(exportSettings);
@@ -319,7 +332,7 @@ static Status createTextToSpeechGraphTemplate(const std::string& directoryPath, 
     auto& exportSettings = hfSettings.exportSettings;
 
     std::ostringstream oss;
-    oss << OVMS_VERSION_GRAPH_LINE;
+    oss << buildGraphHeader();
     std::string modelsPath = constructModelsPath(exportSettings.modelPath, ggufFilename);
     SPDLOG_TRACE("modelsPath: {}, directoryPath: {}, ggufFilename: {}", modelsPath, directoryPath, ggufFilename.value_or("std::nullopt"));
     GET_PLUGIN_CONFIG_OPT_OR_FAIL_AND_RETURN(exportSettings);
@@ -374,7 +387,7 @@ static Status createSpeechToTextGraphTemplate(const std::string& directoryPath, 
     auto& exportSettings = hfSettings.exportSettings;
 
     std::ostringstream oss;
-    oss << OVMS_VERSION_GRAPH_LINE;
+    oss << buildGraphHeader();
     std::string modelsPath = constructModelsPath(exportSettings.modelPath, ggufFilename);
     SPDLOG_TRACE("modelsPath: {}, directoryPath: {}, ggufFilename: {}", modelsPath, directoryPath, ggufFilename.value_or("std::nullopt"));
     GET_PLUGIN_CONFIG_OPT_OR_FAIL_AND_RETURN(exportSettings);
@@ -448,7 +461,7 @@ static Status createImageGenerationGraphTemplate(const std::string& directoryPat
     GET_PLUGIN_CONFIG_OPT_OR_FAIL_AND_RETURN(exportSettings);
 
     std::ostringstream oss;
-    oss << OVMS_VERSION_GRAPH_LINE;
+    oss << buildGraphHeader();
     // clang-format off
     oss << R"(
 input_stream: "HTTP_REQUEST_PAYLOAD:input"
@@ -507,6 +520,47 @@ node: {
     if (graphSettings.maxNumInferenceSteps.has_value()) {
         oss << R"(
           max_num_inference_steps: )" << graphSettings.maxNumInferenceSteps.value();
+    }
+
+    bool targetIsNPU = exportSettings.targetDevice.find("NPU") != std::string::npos;
+
+    for (const auto& adapter : graphSettings.loraAdapters) {
+        std::string loraPath;
+        if (adapter.sourceType == LoraSourceType::LOCAL_FILE) {
+            loraPath = adapter.sourceLora;
+        } else if (!adapter.effectiveSafetensorsFile().has_value()) {
+            SPDLOG_ERROR("LoRA adapter '{}': safetensors filename not resolved. "
+                "For HF repos, use @filename syntax (e.g. org/repo@weights.safetensors) or run with --pull to auto-resolve.",
+                adapter.alias);
+            return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
+        } else if (adapter.sourceType == LoraSourceType::HF_REPO) {
+            loraPath = "loras/" + adapter.sourceLora + "/" + adapter.effectiveSafetensorsFile().value();
+        } else {  // cURL direct link
+            loraPath = "loras/" + adapter.alias + "/" + adapter.effectiveSafetensorsFile().value();
+        }
+        oss << R"(
+          lora_adapters { alias: ")" << adapter.alias << R"(" path: ")" << loraPath << R"(")";
+        if (adapter.alpha.has_value()) {
+            oss << R"( alpha: )" << adapter.alpha.value();
+        }
+        oss << (targetIsNPU ? R"( mode: STATIC)" : R"( mode: DYNAMIC)");
+        oss << R"( })";
+    }
+
+    for (const auto& composite : graphSettings.compositeLoraAdapters) {
+        oss << R"(
+          composite_lora_adapters {
+            alias: ")" << composite.alias << R"("
+)";
+        for (const auto& component : composite.components) {
+            oss << R"(            components { adapter_alias: ")" << component.adapterAlias << R"(")";
+            if (component.alpha != 1.0f) {
+                oss << R"( alpha: )" << component.alpha;
+            }
+            oss << R"( }
+)";
+        }
+        oss << R"(          })";
     }
 
     oss << R"(

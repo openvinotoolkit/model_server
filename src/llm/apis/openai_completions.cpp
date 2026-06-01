@@ -180,8 +180,8 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
                 request.chatHistory.last()[memberName] = member->value.GetString();
                 continue;
             }
-            // Handle tool_call_id and name string fields for tool calling
-            if (member->value.IsString() && (memberName == "tool_call_id" || memberName == "name")) {
+            // Handle tool_call_id and name string fields for tool calling, and reasoning_content for assistant messages
+            if (member->value.IsString() && (memberName == "tool_call_id" || memberName == "name" || memberName == "reasoning_content")) {
                 request.chatHistory.last()[memberName] = member->value.GetString();
                 continue;
             }

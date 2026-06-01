@@ -21,6 +21,7 @@ import json
 import shutil
 import tempfile
 from pathlib import Path
+from huggingface_hub import snapshot_download
 
 def add_common_arguments(parser):
     parser.add_argument('--model_repository_path', required=False, default='models', help='Where the model should be exported to', dest='model_repository_path')
@@ -80,6 +81,13 @@ parser_image_generation.add_argument('--default_resolution', default="", help='D
 parser_image_generation.add_argument('--max_num_images_per_prompt', type=int, default=0, help='Max allowed number of images client is allowed to request for a given prompt', dest='max_num_images_per_prompt')
 parser_image_generation.add_argument('--default_num_inference_steps', type=int, default=0, help='Default number of inference steps when not specified by client', dest='default_num_inference_steps')
 parser_image_generation.add_argument('--max_num_inference_steps', type=int, default=0, help='Max allowed number of inference steps client is allowed to request for a given prompt', dest='max_num_inference_steps')
+parser_image_generation.add_argument('--source_loras', default=None,
+    help='LoRA adapters to apply. Format: alias1=org1/repo1[:alpha],alias2=org2/repo2[@file.safetensors][:alpha],'
+         'composite=@alias1:alpha+@alias2:alpha '
+         '@filename specifies which .safetensors file (auto-detected when repo has exactly one). '
+         ':alpha sets adapter alpha (default 1.0). '
+         'Composite entries (source starts with @) blend multiple adapters. Only for image_generation task.',
+    dest='source_loras')
 
 parser_text2speech = subparsers.add_parser('text2speech', help='export model for text2speech endpoint')
 add_common_arguments(parser_text2speech)
@@ -95,7 +103,7 @@ parser_speech2text.add_argument('--num_streams', default=0, type=int, help='The 
 parser_speech2text.add_argument('--enable_word_timestamps', default=False, action='store_true', help='Load model with word timestamps support.', dest='enable_word_timestamps')
 args = vars(parser.parse_args())
 
-t2s_graph_template = """
+t2s_graph_template = """# OVMS_GRAPH_QUEUE_MAX_SIZE: AUTO
 input_stream: "HTTP_REQUEST_PAYLOAD:input"
 output_stream: "HTTP_RESPONSE_PAYLOAD:output"
 node {
@@ -121,7 +129,7 @@ node {
 }
 """
 
-s2t_graph_template = """
+s2t_graph_template = """# OVMS_GRAPH_QUEUE_MAX_SIZE: AUTO
 input_stream: "HTTP_REQUEST_PAYLOAD:input"
 output_stream: "HTTP_RESPONSE_PAYLOAD:output"
 node {
@@ -157,7 +165,7 @@ node {
 }
 """
 
-embedding_graph_ov_template = """
+embedding_graph_ov_template = """# OVMS_GRAPH_QUEUE_MAX_SIZE: AUTO
 input_stream: "REQUEST_PAYLOAD:input"
 output_stream: "RESPONSE_PAYLOAD:output"
 node {
@@ -181,7 +189,7 @@ node {
 }
 """
 
-rerank_graph_ov_template = """
+rerank_graph_ov_template = """# OVMS_GRAPH_QUEUE_MAX_SIZE: AUTO
 input_stream: "REQUEST_PAYLOAD:input"
 output_stream: "RESPONSE_PAYLOAD:output"
 node {
@@ -200,7 +208,8 @@ node {
 }
 """
 
-text_generation_graph_template = """input_stream: "HTTP_REQUEST_PAYLOAD:input"
+text_generation_graph_template = """# OVMS_GRAPH_QUEUE_MAX_SIZE: AUTO
+input_stream: "HTTP_REQUEST_PAYLOAD:input"
 output_stream: "HTTP_RESPONSE_PAYLOAD:output"
 
 node: {
@@ -254,7 +263,8 @@ node: {
   }
 }"""
 
-image_generation_graph_template = """input_stream: "HTTP_REQUEST_PAYLOAD:input"
+image_generation_graph_template = """# OVMS_GRAPH_QUEUE_MAX_SIZE: AUTO
+input_stream: "HTTP_REQUEST_PAYLOAD:input"
 output_stream: "HTTP_RESPONSE_PAYLOAD:output"
 
 node: {
@@ -285,6 +295,17 @@ node: {
       default_num_inference_steps: {{default_num_inference_steps}},{% endif %}
       {%- if max_num_inference_steps > 0 %}
       max_num_inference_steps: {{max_num_inference_steps}},{% endif %}
+      {%- for lora in lora_adapters %}
+      lora_adapters { alias: "{{lora.alias}}" path: "{{lora.path}}"{% if lora.alpha is not none %} alpha: {{lora.alpha}}{% endif %} mode: DYNAMIC }
+      {%- endfor %}
+      {%- for composite in composite_lora_adapters %}
+      composite_lora_adapters {
+            alias: "{{composite.alias}}"
+      {%- for comp in composite.components %}
+            components { adapter_alias: "{{comp.adapter_alias}}"{% if comp.alpha != 1.0 %} alpha: {{comp.alpha}}{% endif %} }
+      {%- endfor %}
+          }
+      {%- endfor %}
     }
   }
 }"""
@@ -382,11 +403,13 @@ def export_text_generation_model(model_repository_path, source_model, model_name
                     print("Using default quantization parameters for NPU: --sym --ratio 1.0 --group-size -1")
                     task_parameters['extra_quantization_params'] = "--sym --ratio 1.0 --group-size -1"
             optimum_command = "optimum-cli export openvino --model {} --weight-format {} {} --trust-remote-code {}".format(source_model, precision, task_parameters['extra_quantization_params'], llm_model_path)
+            print('Running command: ', optimum_command)  # for debug purposes
             if os.system(optimum_command):
                 raise ValueError("Failed to export llm model", source_model)
             if not (os.path.isfile(os.path.join(llm_model_path, 'openvino_detokenizer.xml'))):
                 print("Tokenizer and detokenizer not found in the exported model. Exporting tokenizer and detokenizer from HF model")
                 convert_tokenizer_command = f"convert_tokenizer --with-detokenizer --trust-remote-code -o {llm_model_path} {source_model}"
+                print('Running command: ', convert_tokenizer_command)  # for debug purposes
                 if os.system(convert_tokenizer_command):
                     raise ValueError("Failed to export tokenizer and detokenizer", source_model)
     ### Export draft model for speculative decoding 
@@ -409,8 +432,9 @@ def export_text_generation_model(model_repository_path, source_model, model_name
                 additional_options = ""
                 if args["draft_eagle3_mode"]:
                     print("Using eagle3 option for the draft model export")
-                    additional_options += " --eagle3  --task text-generation-with-past"
+                    additional_options += " --task text-generation-with-past"
                 optimum_command = "optimum-cli export openvino --model {} --weight-format {} --trust-remote-code {} {}".format(draft_source_model, precision, additional_options, draft_llm_model_path)
+                print('Running command: ', optimum_command)  # for debug purposes
                 if os.system(optimum_command):
                     raise ValueError("Failed to export llm model", source_model)
 
@@ -461,12 +485,12 @@ def export_embeddings_model_ov(model_repository_path, source_model, model_name, 
     print("Exporting embeddings model to ",destination_path)
     if not os.path.isdir(destination_path) or args['overwrite_models']:
         optimum_command = "optimum-cli export openvino --model {} --disable-convert-tokenizer --task feature-extraction --weight-format {} {} --trust-remote-code {}".format(source_model, precision, task_parameters['extra_quantization_params'], destination_path)
-        print('Running command:', optimum_command)  # for debug purposes
+        print('Running command: ', optimum_command)  # for debug purposes
         if os.system(optimum_command):
             raise ValueError("Failed to export embeddings model", source_model)
         print("Exporting tokenizer to ", destination_path)
         convert_tokenizer_command = "convert_tokenizer -o {} {} {}".format(destination_path, source_model, set_max_context_length) 
-        print('Running command:', convert_tokenizer_command)  # for debug purposes
+        print('Running command: ', convert_tokenizer_command)  # for debug purposes
         if (os.system(convert_tokenizer_command)):
             raise ValueError("Failed to export tokenizer model", source_model)
     gtemplate = jinja2.Environment(loader=jinja2.BaseLoader).from_string(embedding_graph_ov_template)
@@ -481,6 +505,7 @@ def export_text2speech_model(model_repository_path, source_model, model_name, pr
     print("Exporting text2speech model to ",destination_path)
     if not os.path.isdir(destination_path) or args['overwrite_models']:
         optimum_command = "optimum-cli export openvino --model {} --weight-format {} --trust-remote-code --model-kwargs \"{{\\\"vocoder\\\": \\\"{}\\\"}}\" {}".format(source_model, precision, task_parameters['vocoder'], destination_path)
+        print('Running command: ', optimum_command)  # for debug purposes
         if os.system(optimum_command):
             raise ValueError("Failed to export text2speech model", source_model)
     gtemplate = jinja2.Environment(loader=jinja2.BaseLoader).from_string(t2s_graph_template)
@@ -495,6 +520,7 @@ def export_speech2text_model(model_repository_path, source_model, model_name, pr
     print("Exporting speech2text model to ",destination_path)
     if not os.path.isdir(destination_path) or args['overwrite_models']:
         optimum_command = "optimum-cli export openvino --model {} --weight-format {} --trust-remote-code {}".format(source_model, precision, destination_path)
+        print('Running command: ', optimum_command)  # for debug purposes
         if os.system(optimum_command):
             raise ValueError("Failed to export speech2text model", source_model)
     gtemplate = jinja2.Environment(loader=jinja2.BaseLoader).from_string(s2t_graph_template)
@@ -509,6 +535,7 @@ def export_rerank_model_ov(model_repository_path, source_model, model_name, prec
     print("Exporting rerank model to ",destination_path)
     if not os.path.isdir(destination_path) or args['overwrite_models']:
         optimum_command = "optimum-cli export openvino --model {} --disable-convert-tokenizer --task text-classification --weight-format {} {} --trust-remote-code {}".format(source_model, precision, task_parameters['extra_quantization_params'], destination_path)
+        print('Running command: ', optimum_command)  # for debug purposes
         if os.system(optimum_command):
             raise ValueError("Failed to export rerank model", source_model)
         print("Exporting tokenizer to ", destination_path)
@@ -521,7 +548,7 @@ def export_rerank_model_ov(model_repository_path, source_model, model_name, prec
     add_servable_to_config(config_file_path, model_name, os.path.relpath(os.path.join(model_repository_path, model_name), os.path.dirname(config_file_path)))
 
 
-def export_image_generation_model(model_repository_path, source_model, model_name, precision, task_parameters, config_file_path, num_streams):
+def export_image_generation_model(model_repository_path, source_model, model_name, precision, task_parameters, config_file_path, num_streams, source_loras):
     model_path = "./"
     target_path = os.path.join(model_repository_path, model_name)
     model_index_path = os.path.join(target_path, 'model_index.json')
@@ -530,9 +557,76 @@ def export_image_generation_model(model_repository_path, source_model, model_nam
         print("Model index file already exists. Skipping conversion, re-generating graph only.")
     else:
         optimum_command = "optimum-cli export openvino --model {} --weight-format {} {} {}".format(source_model, precision, task_parameters['extra_quantization_params'], target_path)
-        print(f'optimum cli command: {optimum_command}')
+        print('Running command: ', optimum_command)  # for debug purposes
         if os.system(optimum_command):
             raise ValueError("Failed to export image generation model", source_model)
+
+    # Download and resolve LoRA adapters
+    lora_adapters = []
+    composite_lora_adapters = []
+    if source_loras:
+        entries = source_loras.split(',')
+        for entry in entries:
+            entry = entry.strip()
+            if '=' in entry:
+                alias, source = entry.split('=', 1)
+            else:
+                source = entry
+                alias = entry.split('/')[-1] if '/' in entry else entry
+
+            # Composite LoRA: source starts with @
+            if source.startswith('@'):
+                components = []
+                for comp_token in source.split('+'):
+                    comp_token = comp_token.strip().lstrip('@')
+                    if ':' in comp_token:
+                        ref, alpha_str = comp_token.rsplit(':', 1)
+                        alpha = float(alpha_str)
+                    else:
+                        ref = comp_token
+                        alpha = 1.0
+                    components.append({'adapter_alias': ref, 'alpha': alpha})
+                composite_lora_adapters.append({'alias': alias, 'components': components})
+                print(f"Composite LoRA: {alias} -> {components}")
+                continue
+
+            # Parse optional alpha (trailing :float after repo or filename)
+            alpha = None
+            repo_and_file = source
+            # Check for alpha suffix: alias=org/repo:0.8 or alias=org/repo@file.safetensors:0.8
+            if ':' in repo_and_file:
+                last_colon = repo_and_file.rfind(':')
+                potential_alpha = repo_and_file[last_colon + 1:]
+                try:
+                    alpha = float(potential_alpha)
+                    repo_and_file = repo_and_file[:last_colon]
+                except ValueError:
+                    pass  # Not an alpha suffix (could be part of URL)
+
+            safetensors_file = ''
+            if '@' in repo_and_file:
+                repo, safetensors_file = repo_and_file.rsplit('@', 1)
+            else:
+                repo = repo_and_file
+            lora_dir = os.path.join(target_path, 'loras', repo)
+            if not os.path.isdir(lora_dir):
+                print(f"Downloading LoRA adapter: {repo} to {lora_dir}")
+                snapshot_download(repo_id=repo, local_dir=lora_dir)
+            else:
+                print(f"LoRA adapter directory already exists: {lora_dir}")
+            if not safetensors_file:
+                st_files = [f for f in os.listdir(lora_dir) if f.endswith('.safetensors')]
+                if len(st_files) == 0:
+                    raise ValueError(f"No .safetensors files found in LoRA adapter: {repo}")
+                if len(st_files) > 1:
+                    raise ValueError(f"Multiple .safetensors files in LoRA adapter: {repo}. Use @filename to specify.")
+                safetensors_file = st_files[0]
+            lora_path = 'loras/' + repo + '/' + safetensors_file
+            lora_entry = {'alias': alias, 'path': lora_path, 'alpha': alpha}
+            lora_adapters.append(lora_entry)
+            print(f"LoRA adapter: {alias} -> {lora_path}" + (f" (alpha={alpha})" if alpha else ""))
+    task_parameters['lora_adapters'] = lora_adapters
+    task_parameters['composite_lora_adapters'] = composite_lora_adapters
 
     plugin_config = {}
     assert num_streams >= 0, "num_streams should be a non-negative integer"
@@ -613,4 +707,4 @@ elif args['task'] == 'image_generation':
         'max_num_inference_steps',
         'extra_quantization_params'
     ]}
-    export_image_generation_model(args['model_repository_path'], args['source_model'], args['model_name'], args['precision'], template_parameters, args['config_file_path'], args['num_streams'])
+    export_image_generation_model(args['model_repository_path'], args['source_model'], args['model_name'], args['precision'], template_parameters, args['config_file_path'], args['num_streams'], args['source_loras'])

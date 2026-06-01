@@ -5,12 +5,14 @@ optimum-intel@git+https://github.com/huggingface/optimum-intel.git@d4dd21a3aa89c
 accelerate
 datasets
 diffusers  # for image generation
+einops
 nncf
 numpy
-openvino-tokenizers==2026.2.0.0rc1 
-openvino==2026.2.0rc1 
+openvino-tokenizers==2026.3.0.dev20260528
+openvino==2026.3.0.dev20260528
 pillow
 sentence_transformers==5.3.0
 sentencepiece  # Required by: transformers`
 torchvision
 requests
+einops

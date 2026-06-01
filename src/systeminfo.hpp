@@ -35,5 +35,10 @@ uint16_t getCpuAffinityCount();
  * @return uint16_t Number of CPUs allowed by quota, or 0 if no quota is set
  */
 uint16_t getDockerCpuQuota();
+/**
+ * @brief Get number of physical (non-hyperthreaded) CPU cores
+ * @return uint16_t Number of physical cores, or hardware_concurrency if detection fails
+ */
+uint16_t getPhysicalCoresPerSocket();
 #endif
 }  // namespace ovms
