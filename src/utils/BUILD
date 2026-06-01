@@ -34,8 +34,7 @@ ovms_cc_library(
     hdrs = ["env_guard.hpp",],
     srcs = ["env_guard.cpp",],
     deps = [
-        "@ovms//src:libovmslogging",
-        "@com_google_googletest//:gtest",
+        "@com_github_gabime_spdlog//:spdlog",
     ],
     visibility = ["//visibility:public"],
 )

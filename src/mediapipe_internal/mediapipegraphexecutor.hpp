@@ -199,9 +199,7 @@ public:
             guard->graphHelper->outStreamObservers.at(name)->current = std::make_shared<MyFunctor<RequestType, ResponseType>>(name, this->outputTypes.at(name), *this, *request, *response);
         }
 
-        // Guard: if inference fails after this point, reinitialize the graph
-        // so the next request from the pool gets a clean graph (not poisoned).
-        GraphReinitGuard reinitGuard(*this->guard->graphHelper, this->config, this->sidePacketMaps);
+        GraphReinitGuard reinitOnFailureGuard(*this->guard->graphHelper, this->config, this->sidePacketMaps);
 
         size_t numberOfPacketsCreated = 0;
         auto ovms_status = createAndPushPacketsImpl(
@@ -231,8 +229,7 @@ public:
         }
         resetLlmExecutionContexts(this->guard->graphHelper->genAiExecutionContextMap);
         MP_RETURN_ON_FAIL(status, "graph wait until idle", mediapipeAbslToOvmsStatus(status.code()));
-        // Success — dismiss the guard, graph is healthy
-        reinitGuard.dismiss();
+        reinitOnFailureGuard.dismiss();
         // Increment timestamp for next request reusing this graph from the queue
         this->guard->graphHelper->currentTimestamp = ::mediapipe::Timestamp(this->guard->graphHelper->currentTimestamp.Value() + 1);
         SPDLOG_DEBUG("Received all output stream packets for graph: {}", this->name);
@@ -399,9 +396,7 @@ public:
                     executionContext, this->mediapipeServableMetricReporter);
             }
 
-            // Guard: if streaming inference fails, reinitialize the graph
-            // so the next request from the pool gets a clean graph (not poisoned).
-            GraphReinitGuard reinitGuard(*this->guard->graphHelper, this->config, this->sidePacketMaps);
+            GraphReinitGuard reinitOnFailureGuard(*this->guard->graphHelper, this->config, this->sidePacketMaps);
 
             size_t numberOfPacketsCreated = 0;
             {
@@ -460,8 +455,7 @@ public:
             }
             resetLlmExecutionContexts(this->guard->graphHelper->genAiExecutionContextMap);
             MP_RETURN_ON_FAIL(status, "graph wait until idle", mediapipeAbslToOvmsStatus(status.code()));
-            // Success — dismiss the guard, graph is healthy
-            reinitGuard.dismiss();
+            reinitOnFailureGuard.dismiss();
             // Increment timestamp for next request reusing this graph from the queue
             this->guard->graphHelper->currentTimestamp = ::mediapipe::Timestamp(this->guard->graphHelper->currentTimestamp.Value() + 1);
             SPDLOG_DEBUG("Graph {}: Done streaming execution (queue path)", this->name);
