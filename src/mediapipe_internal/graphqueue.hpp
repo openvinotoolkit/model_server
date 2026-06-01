@@ -17,6 +17,7 @@
 
 #include <atomic>
 #include <condition_variable>
+#include <exception>
 #include <future>
 #include <memory>
 #include <mutex>
@@ -38,6 +39,8 @@
 #include "mediapipe/framework/port/status.h"
 #pragma GCC diagnostic pop
 #pragma warning(pop)
+
+#include "src/logging.hpp"
 
 #include "graph_executor_constants.hpp"
 #include "graph_side_packets.hpp"
@@ -95,7 +98,13 @@ public:
     void dismiss() { dismissed = true; }
     ~GraphReinitGuard() {
         if (!dismissed) {
-            helper.reinitialize(config, sidePacketMaps);
+            try {
+                helper.reinitialize(config, sidePacketMaps);
+            } catch (const std::exception& e) {
+                SPDLOG_ERROR("GraphReinitGuard: reinitialize threw: {}", e.what());
+            } catch (...) {
+                SPDLOG_ERROR("GraphReinitGuard: reinitialize threw unknown exception");
+            }
         }
     }
     GraphReinitGuard(const GraphReinitGuard&) = delete;
