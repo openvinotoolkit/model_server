@@ -66,6 +66,9 @@ struct GraphHelper {
         currentTimestamp(gh.currentTimestamp) {}
     GraphHelper& operator=(GraphHelper&&) = delete;
     ~GraphHelper();
+    // Creates a fresh CalculatorGraph, initializes it with the config,
+    // wires up output stream observers, builds side packets and starts the run.
+    absl::Status initialize(const ::mediapipe::CalculatorGraphConfig& config, const GraphSidePackets& sidePacketMaps);
     // Tears down the current (errored) graph and rebuilds a fresh one
     // with the same observers and side packets. Called when inference
     // encounters a graph error to avoid returning a poisoned graph to the pool.

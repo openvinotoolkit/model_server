@@ -186,7 +186,6 @@ public:
             return Status(StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR,
                 "Input side packets are not supported for graphs with queue enabled");
         }
-        ::mediapipe::CalculatorGraph& graph = this->guard->graph;
         auto llmContextStatus = initializeLlmExecutionContexts(this->sidePacketMaps.genAiServableMap, this->guard->graphHelper->genAiExecutionContextMap);
         if (!llmContextStatus.ok()) {
             return llmContextStatus;
@@ -202,6 +201,7 @@ public:
         GraphReinitGuard reinitOnFailureGuard(*this->guard->graphHelper, this->config, this->sidePacketMaps);
 
         size_t numberOfPacketsCreated = 0;
+        ::mediapipe::CalculatorGraph& graph = this->guard->graph;
         auto ovms_status = createAndPushPacketsImpl(
             std::shared_ptr<const RequestType>(request, [](const RequestType*) {}),
             this->inputTypes,
@@ -366,7 +366,6 @@ public:
                     "Input side packets are not supported for graphs with queue enabled");
             }
             MetricGaugeGuard currentGraphs(this->mediapipeServableMetricReporter->currentGraphs.get());
-            ::mediapipe::CalculatorGraph& graph = this->guard->graph;
             auto llmContextStatus = initializeLlmExecutionContexts(this->sidePacketMaps.genAiServableMap, this->guard->graphHelper->genAiExecutionContextMap);
             if (!llmContextStatus.ok()) {
                 return llmContextStatus;
@@ -399,6 +398,7 @@ public:
             GraphReinitGuard reinitOnFailureGuard(*this->guard->graphHelper, this->config, this->sidePacketMaps);
 
             size_t numberOfPacketsCreated = 0;
+            ::mediapipe::CalculatorGraph& graph = this->guard->graph;
             {
                 OVMS_PROFILE_SCOPE("Mediapipe graph deserializing first request");
                 bool isSuccess = true;
