@@ -141,7 +141,9 @@ absl::Status VisualLanguageModelLegacyServable::parseRequest(std::shared_ptr<Gen
         // parser here would strip those tags via parseChunk before accumulation
         // and break the downstream unary parsing of reasoning/tool_calls.
         // Will be further reworked in next refactor phases.
-        if (!legacyExecutionContext->apiHandler->getRequest().skipSpecialTokens) {
+        if ((legacyExecutionContext->apiHandler->getOutputParser() != nullptr &&
+                legacyExecutionContext->apiHandler->getOutputParser()->requiresStreamingWithSpecialTokens()) ||
+            !legacyExecutionContext->apiHandler->getRequest().skipSpecialTokens) {
             streamerConfig.insert(ov::genai::skip_special_tokens(false));
         }
         auto unaryCallback = [& ctx = *legacyExecutionContext](rapidjson::Document delta) -> ov::genai::StreamingStatus {

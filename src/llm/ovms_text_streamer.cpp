@@ -111,16 +111,20 @@ ov::genai::StreamingStatus OVMSTextStreamer::write(const std::vector<int64_t>& t
 // and attempt to clear the protected state that we have already managed.
 // -----------------------------------------------------------------------------
 void OVMSTextStreamer::end() {
+    // Always send a STOP flush so parsers that rely on finish_reason == STOP for
+    // cleanup (e.g. Hermes3 closing the argument string) receive the signal even
+    // when m_tokens_cache was cleared by a prior newline flush in write().
     if (!m_tokens_cache.empty()) {
         const std::string text = m_tokenizer.decode(m_tokens_cache, m_additional_detokenization_params);
         if (text.size() > m_printed_len) {
             flush_chunk(text, text.size(), ov::genai::GenerationFinishReason::STOP);
         } else {
-            // Nothing new to emit from the token cache, but we still need to
-            // signal end-of-stream so parseChunk can do its STOP-path cleanup
-            // (e.g. Hermes3 closes the argument string via finish_reason == STOP).
             flush_chunk(text, m_printed_len, ov::genai::GenerationFinishReason::STOP);
         }
+    } else {
+        // Cache already cleared (e.g. by a newline flush). No new text, but the
+        // STOP signal must still reach the parser.
+        flush_chunk("", 0, ov::genai::GenerationFinishReason::STOP);
     }
     m_tokens_cache.clear();
     m_decoded_lengths.clear();
@@ -168,8 +172,9 @@ ov::genai::StreamingStatus OVMSTextStreamer::flush_chunk(
     std::optional<rapidjson::Document> delta;
     if (m_output_parser != nullptr) {
         delta = m_output_parser->parseChunk(chunk, tokens, m_tools_available, finish_reason);
-    } else {
+    } else if (!chunk.empty()) {
         // No parser: wrap raw text in a trivial {"delta":{"content":"..."}} document.
+        // Skip when chunk is empty (e.g. STOP flush after a newline-clearing write).
         rapidjson::Document doc;
         doc.SetObject();
         rapidjson::Document::AllocatorType& alloc = doc.GetAllocator();
