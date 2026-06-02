@@ -149,6 +149,7 @@ Task specific parameters for different tasks (text generation/image generation/e
 | `--default_num_inference_steps`   | `integer`    | Default number of inference steps when not specified by the client.                                                 |
 | `--max_num_inference_steps`       | `integer`    | Maximum number of inference steps a client can request for a given model.                                           |
 | `--num_streams`                   | `integer`    | Number of parallel execution streams for image generation models. Use at least 2 on 2-socket CPU systems.           |
+| `--source_loras`                  | `string`     | LoRA adapters for image generation. Comma-separated list in format: `alias=source`. Source can be: HF repo (`org/repo`), HF repo with explicit file (`org/repo@file.safetensors`), direct URL (`https://url/file.safetensors`), local path (`/path/to/file.safetensors`), or composite referencing other aliases (`@alias1:weight+@alias2:weight`). |
 
 ### Embeddings
 | option                    | Value format | Description                                                                    |
