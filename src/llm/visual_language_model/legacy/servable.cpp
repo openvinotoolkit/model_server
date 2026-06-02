@@ -141,7 +141,9 @@ absl::Status VisualLanguageModelLegacyServable::parseRequest(std::shared_ptr<Gen
         // parser here would strip those tags via parseChunk before accumulation
         // and break the downstream unary parsing of reasoning/tool_calls.
         // Will be further reworked in next refactor phases.
-        if (!legacyExecutionContext->apiHandler->getRequest().skipSpecialTokens) {
+        if ((legacyExecutionContext->apiHandler->getOutputParser() != nullptr &&
+                legacyExecutionContext->apiHandler->getOutputParser()->requiresStreamingWithSpecialTokens()) ||
+            !legacyExecutionContext->apiHandler->getRequest().skipSpecialTokens) {
             streamerConfig.insert(ov::genai::skip_special_tokens(false));
         }
         auto unaryCallback = [& ctx = *legacyExecutionContext](rapidjson::Document delta) -> ov::genai::StreamingStatus {
@@ -234,8 +236,8 @@ absl::Status VisualLanguageModelLegacyServable::preparePartialResponse(std::shar
         if (deltas.size() > 0 || executionContext->apiHandler->getEndpoint() == Endpoint::RESPONSES) {
             for (auto& delta : deltas) {
                 if (executionContext->apiHandler->isVerboseResponse() &&
-                        delta.HasMember("delta") && delta["delta"].IsObject() &&
-                        delta["delta"].HasMember("content") && delta["delta"]["content"].IsString()) {
+                    delta.HasMember("delta") && delta["delta"].IsObject() &&
+                    delta["delta"].HasMember("content") && delta["delta"]["content"].IsString()) {
                     executionContext->apiHandler->appendVerboseRawText(delta["delta"]["content"].GetString());
                 }
                 std::string serialized = executionContext->apiHandler->serializeStreamingChunk(
@@ -263,10 +265,8 @@ absl::Status VisualLanguageModelLegacyServable::preparePartialResponse(std::shar
             return absl::InvalidArgumentError("Request processing failed, check its correctness.");
         }
         OVMS_PROFILE_SCOPE("Generation of last streaming response");
-        // Flush held-back tokens from the delay buffer; fires OVMSTextStreamer callback
-        // which pushes final delta(s) into deltaChannel.
-        executionContext->textStreamer->end();
-        // Drain again to collect the end-flush delta(s) and merge with any pre-end ones.
+        // end() was already called by pipe->generate() internally; all deltas are
+        // already in deltaChannel before signalComplete() fired. Drain any remaining.
         for (auto& d : executionContext->deltaChannel.drain()) {
             deltas.push_back(std::move(d));
         }
@@ -281,8 +281,8 @@ absl::Status VisualLanguageModelLegacyServable::preparePartialResponse(std::shar
             for (size_t i = 0; i < deltas.size(); ++i) {
                 const bool isLast = (i == deltas.size() - 1);
                 if (executionContext->apiHandler->isVerboseResponse() &&
-                        deltas[i].HasMember("delta") && deltas[i]["delta"].IsObject() &&
-                        deltas[i]["delta"].HasMember("content") && deltas[i]["delta"]["content"].IsString()) {
+                    deltas[i].HasMember("delta") && deltas[i]["delta"].IsObject() &&
+                    deltas[i]["delta"].HasMember("content") && deltas[i]["delta"]["content"].IsString()) {
                     executionContext->apiHandler->appendVerboseRawText(deltas[i]["delta"]["content"].GetString());
                 }
                 std::string serialized = executionContext->apiHandler->serializeStreamingChunk(
