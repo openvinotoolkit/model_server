@@ -207,7 +207,7 @@ curl http://localhost:8000/v3/rerank -H "Content-Type: application/json" -d "{\"
 
 [https://docs.openvino.ai/2026/model-server/ovms_demos_continuous_batching_rag.html](https://docs.openvino.ai/2026/model-server/ovms_demos_continuous_batching_rag.html#export-models-from-huggingface-hub-including-conversion-to-openvino-format-using-the-python-script)
 
-[https://docs.openwebui.com/tutorials/tips/rag-tutorial](https://docs.openwebui.com/tutorials/tips/rag-tutorial/#setup)
+[https://docs.openwebui.com/features/chat-conversations/rag/](https://docs.openwebui.com/features/chat-conversations/rag/)
 
 ---
 
