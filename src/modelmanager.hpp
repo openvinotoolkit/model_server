@@ -129,7 +129,7 @@ private:
     void watcher(std::future<void> exitSignal, bool watchConfigFile);
 
     /**
-     * @brief Cleaner thread for sequence and resources cleanup
+     * @brief Cleaner thread for resources cleanup
      */
     void cleanerRoutine(uint32_t resourcesCleanupIntervalMillisec, std::future<void> cleanerExitSignal);
 

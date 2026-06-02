@@ -134,8 +134,6 @@ public:
     const cl_context* getOclCContext() const { return &oclContextC; }
 #endif
 
-public:
-
 protected:
 #ifdef __linux__
     std::unique_ptr<ov::intel_gpu::ocl::ClContext> oclContextCpp;
