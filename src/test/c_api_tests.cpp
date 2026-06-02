@@ -69,10 +69,6 @@ static void testDefaultSingleModelOptions(ModelsSettingsImpl* modelsSettings) {
     EXPECT_EQ(modelsSettings->nireq, 0);
     EXPECT_EQ(modelsSettings->targetDevice, "");
     EXPECT_EQ(modelsSettings->pluginConfig, "");
-    EXPECT_EQ(modelsSettings->stateful, std::nullopt);
-    EXPECT_EQ(modelsSettings->lowLatencyTransformation, std::nullopt);
-    EXPECT_EQ(modelsSettings->maxSequenceNumber, std::nullopt);
-    EXPECT_EQ(modelsSettings->idleSequenceCleanup, std::nullopt);
 }
 
 const uint32_t AVAILABLE_CORES = std::thread::hardware_concurrency();
@@ -109,7 +105,6 @@ TEST(CAPIConfigTest, MultiModelConfiguration) {
     EXPECT_EQ(serverSettings->grpcMaxThreads, std::nullopt);
     EXPECT_EQ(serverSettings->grpcMemoryQuota, std::nullopt);
     EXPECT_EQ(serverSettings->filesystemPollWaitMilliseconds, 1000);
-    EXPECT_EQ(serverSettings->sequenceCleanerPollWaitMinutes, 5);
     EXPECT_EQ(serverSettings->resourcesCleanerPollWaitSeconds, 300);
     EXPECT_EQ(serverSettings->cacheDir, "");
 
@@ -127,7 +122,6 @@ TEST(CAPIConfigTest, MultiModelConfiguration) {
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetGrpcMaxThreads(_serverSettings, 100));
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetGrpcMemoryQuota(_serverSettings, (size_t)1000000));
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetFileSystemPollWaitSeconds(_serverSettings, 2));
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetSequenceCleanerPollWaitMinutes(_serverSettings, 3));
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetCustomNodeResourcesCleanerIntervalSeconds(_serverSettings, 4));
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetCpuExtensionPath(_serverSettings, getGenericFullPathForSrcTest("/ovms/src/test").c_str()));
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetCacheDir(_serverSettings, getGenericFullPathForTmp("/tmp/cache").c_str()));
@@ -155,7 +149,6 @@ TEST(CAPIConfigTest, MultiModelConfiguration) {
     ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerSettingsSetGrpcMaxThreads(nullptr, 100), StatusCode::NONEXISTENT_PTR);
     ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerSettingsSetGrpcMemoryQuota(nullptr, 1000000), StatusCode::NONEXISTENT_PTR);
     ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerSettingsSetFileSystemPollWaitSeconds(nullptr, 2), StatusCode::NONEXISTENT_PTR);
-    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerSettingsSetSequenceCleanerPollWaitMinutes(nullptr, 3), StatusCode::NONEXISTENT_PTR);
     ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerSettingsSetCustomNodeResourcesCleanerIntervalSeconds(nullptr, 4), StatusCode::NONEXISTENT_PTR);
     ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerSettingsSetCpuExtensionPath(nullptr, "/ovms/src/test"), StatusCode::NONEXISTENT_PTR);
     ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerSettingsSetCpuExtensionPath(_serverSettings, nullptr), StatusCode::NONEXISTENT_PTR);
@@ -195,7 +188,6 @@ TEST(CAPIConfigTest, MultiModelConfiguration) {
     EXPECT_EQ(serverSettings->grpcMaxThreads, 100);
     EXPECT_EQ(serverSettings->grpcMemoryQuota, (size_t)1000000);
     EXPECT_EQ(serverSettings->filesystemPollWaitMilliseconds, 2000);
-    EXPECT_EQ(serverSettings->sequenceCleanerPollWaitMinutes, 3);
     EXPECT_EQ(serverSettings->resourcesCleanerPollWaitSeconds, 4);
     EXPECT_EQ(serverSettings->cacheDir, getGenericFullPathForTmp("/tmp/cache"));
 
@@ -225,7 +217,6 @@ TEST(CAPIConfigTest, MultiModelConfiguration) {
     // trace path  // not tested since it is not supported in C-API
     EXPECT_EQ(cfg.grpcChannelArguments(), "grpcargs");
     EXPECT_EQ(cfg.filesystemPollWaitMilliseconds(), 2000);
-    EXPECT_EQ(cfg.sequenceCleanerPollWaitMinutes(), 3);
     EXPECT_EQ(cfg.resourcesCleanerPollWaitSeconds(), 4);
     EXPECT_EQ(cfg.cacheDir(), getGenericFullPathForTmp("/tmp/cache"));
 
@@ -242,10 +233,6 @@ TEST(CAPIConfigTest, MultiModelConfiguration) {
     EXPECT_EQ(cfg.nireq(), 0);
     EXPECT_EQ(cfg.targetDevice(), "CPU");
     EXPECT_EQ(cfg.pluginConfig(), "");
-    EXPECT_FALSE(cfg.stateful());
-    EXPECT_FALSE(cfg.lowLatencyTransformation());
-    EXPECT_EQ(cfg.maxSequenceNumber(), DEFAULT_MAX_SEQUENCE_NUMBER);
-    EXPECT_TRUE(cfg.idleSequenceCleanup());
 
     EXPECT_EQ(cfg.configPath(), getGenericFullPathForTmp("/tmp/config"));
 
@@ -1410,7 +1397,7 @@ public:
     class MockModel : public Model {
     public:
         MockModel(const std::string& name, std::shared_ptr<ModelInstance> instance) :
-            Model(name, false /*stateful*/, nullptr) {
+            Model(name) {
             modelVersions.insert({instance->getVersion(), instance});
         }
     };
