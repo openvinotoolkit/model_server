@@ -619,6 +619,42 @@ This section demonstrates how to serve multiple LoRA adapters with a single SDXL
 
 The following command starts OVMS with Stable Diffusion XL and 5 LoRA adapters for different artistic styles:
 
+### CPU
+
+::::{tab-set}
+:::{tab-item} Docker (Linux)
+:sync: docker
+```bash
+mkdir -p models
+
+docker run -d --rm --user $(id -u):$(id -g) -p 8000:8000 -v $(pwd)/models:/models/:rw \
+  -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy=$no_proxy \
+  openvino/model_server:latest \
+    --rest_port 8000 \
+    --model_repository_path /models/ \
+    --task image_generation \
+    --source_model OpenVINO/stable-diffusion-xl-base-1.0-int8-ov \
+    --source_loras "xray=DoctorDiffusion/doctor-diffusion-s-xray-xl-lora@DD-xray-v1.safetensors,thepoint=alvdansen/the-point@araminta_k_the_point.safetensors,ukiyo=KappaNeuro/ukiyo-e-art@Ukiyo-e%20Art.safetensors,vector=DoctorDiffusion/doctor-diffusion-s-controllable-vector-art-xl-lora@DD-vector-v2.safetensors,chalk=Norod78/sdxl-chalkboarddrawing-lora@SDXL_ChalkBoardDrawing_LoRA_r8.safetensors"
+```
+:::
+
+:::{tab-item} Bare metal (Windows)
+:sync: bare-metal
+```bat
+if not exist c:\models mkdir c:\models
+
+ovms --rest_port 8000 ^
+  --model_repository_path c:\models ^
+  --task image_generation ^
+  --source_model OpenVINO/stable-diffusion-xl-base-1.0-int8-ov ^
+  --source_loras "xray=DoctorDiffusion/doctor-diffusion-s-xray-xl-lora@DD-xray-v1.safetensors,thepoint=alvdansen/the-point@araminta_k_the_point.safetensors,ukiyo=KappaNeuro/ukiyo-e-art@Ukiyo-e%20Art.safetensors,vector=DoctorDiffusion/doctor-diffusion-s-controllable-vector-art-xl-lora@DD-vector-v2.safetensors,chalk=Norod78/sdxl-chalkboarddrawing-lora@SDXL_ChalkBoardDrawing_LoRA_r8.safetensors"
+```
+:::
+
+::::
+
+### GPU
+
 ::::{tab-set}
 :::{tab-item} Docker (Linux)
 :sync: docker
@@ -801,7 +837,7 @@ for style_name, style_config in styles.items():
 
 To blend multiple adapters, define a **composite adapter** at startup using the `@alias:alpha` syntax:
 
-```bash
+```text
 --source_loras="xray=...,ukiyo=...,blend=@xray:0.5+@ukiyo:0.4"
 ```
 
