@@ -34,7 +34,6 @@ COPTS_CLOUD = select({
 
 COPTS_TESTS = COMMON_STATIC_TEST_COPTS + COPTS_DROGON + COPTS_CLOUD
 
-LOCAL_DEFINES_TESTS = COMMON_LOCAL_DEFINES
 
 config_setting(
     name = "windows",
@@ -2603,7 +2602,7 @@ cc_test(
             ],
         }),
     copts = COPTS_TESTS,
-    local_defines = LOCAL_DEFINES_TESTS,
+    local_defines = COMMON_LOCAL_DEFINES,
     linkopts = LINKOPTS_ADJUSTED,
 )
 
@@ -2617,7 +2616,7 @@ cc_library(
         ":ovms_lib",
     ],
     linkstatic = 1,
-    local_defines = LOCAL_DEFINES_TESTS,
+    local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_TESTS,
     linkopts = COMMON_STATIC_LIBS_LINKOPTS,
 )
@@ -2628,7 +2627,7 @@ cc_library(
         "@com_google_googletest//:gtest",
     ],
     linkstatic = 1,
-    local_defines = LOCAL_DEFINES_TESTS,
+    local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_TESTS,
     linkopts = COMMON_STATIC_LIBS_LINKOPTS,
 )
@@ -2640,7 +2639,7 @@ cc_library(
             ":modelconfig",
     ],
     linkstatic = 1,
-    local_defines = LOCAL_DEFINES_TESTS,
+    local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_TESTS,
     linkopts = COMMON_STATIC_LIBS_LINKOPTS,
 )
@@ -2654,7 +2653,7 @@ cc_library(
         "@com_google_googletest//:gtest",
         "//src/pull_module:cmd_exec",
     ],
-    local_defines = LOCAL_DEFINES_TESTS,
+    local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_TESTS,
     linkopts = COMMON_STATIC_LIBS_LINKOPTS,
 )
@@ -2670,7 +2669,7 @@ cc_library(
         "test/test_file_utils.cpp",
         ],
     deps = [],
-    local_defines = LOCAL_DEFINES_TESTS,
+    local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_TESTS,
     linkopts = COMMON_STATIC_LIBS_LINKOPTS,
 )
@@ -2695,7 +2694,7 @@ cc_library(
         "//src:test_light_test_utils",
         "@com_google_googletest//:gtest",
     ],
-    local_defines = LOCAL_DEFINES_TESTS,
+    local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_TESTS,
     linkopts = COMMON_STATIC_LIBS_LINKOPTS,
 )
@@ -2710,7 +2709,7 @@ cc_library(
         "@com_google_googletest//:gtest",
     ],
     linkstatic = 1,
-    local_defines = LOCAL_DEFINES_TESTS,
+    local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_TESTS,
     linkopts = COMMON_STATIC_LIBS_LINKOPTS,
 )
@@ -2722,7 +2721,7 @@ cc_library( # DO NOT ADD BIG DEPENDENCIES HERE
             "@com_github_gabime_spdlog//:spdlog",
     ],
     linkstatic = 1,
-    local_defines = LOCAL_DEFINES_TESTS,
+    local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_TESTS,
     linkopts = COMMON_STATIC_LIBS_LINKOPTS,
 )
@@ -2735,7 +2734,7 @@ cc_library(
         "@com_google_googletest//:gtest",
     ],
     linkstatic = 1,
-    local_defines = LOCAL_DEFINES_TESTS,
+    local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_TESTS,
     linkopts = COMMON_STATIC_LIBS_LINKOPTS,
 )
@@ -2750,7 +2749,7 @@ cc_library(
     srcs = [
         "test/environment.cpp",
         ],
-    local_defines = LOCAL_DEFINES_TESTS,
+    local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_TESTS,
     linkopts = [],
     deps = [
@@ -2769,7 +2768,7 @@ cc_library(
             "libovmslogging",
             "@com_google_googletest//:gtest",
     ],
-    local_defines = LOCAL_DEFINES_TESTS,
+    local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_TESTS,
 )
 cc_library(
@@ -2782,7 +2781,7 @@ cc_library(
     deps = PYBIND_DEPS + [
             "@com_google_googletest//:gtest",
     ],
-    local_defines = LOCAL_DEFINES_TESTS,
+    local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_TESTS,
 )
 cc_library(
@@ -2796,7 +2795,7 @@ cc_library(
             "libovmslogging",
             "@com_google_googletest//:gtest",
     ],
-    local_defines = LOCAL_DEFINES_TESTS,
+    local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_TESTS,
 )
 cc_library(
@@ -2817,7 +2816,7 @@ cc_library(
             "@com_google_googletest//:gtest",
     ],
     copts = COPTS_TESTS,
-    local_defines = LOCAL_DEFINES_TESTS,
+    local_defines = COMMON_LOCAL_DEFINES,
 )
 cc_library(
     name = "libgit2_test",
@@ -2834,7 +2833,7 @@ cc_library(
         "//src:ovms_lib",
         "@com_google_googletest//:gtest",
     ],
-    local_defines = LOCAL_DEFINES_TESTS,
+    local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_TESTS,
 )
         
@@ -2859,7 +2858,7 @@ cc_library(
         "@cpp_httplib//:cpp_httplib",
         "@com_google_googletest//:gtest",
     ],
-    local_defines = LOCAL_DEFINES_TESTS,
+    local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_TESTS,
 )
 cc_library(
@@ -2881,7 +2880,7 @@ cc_library(
         "libovmsstring_utils",
         "@com_google_googletest//:gtest",
     ],
-    local_defines = LOCAL_DEFINES_TESTS,
+    local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_TESTS,
 )
 cc_library(
@@ -2896,7 +2895,7 @@ cc_library(
         "libovmsstring_utils",
         "@com_google_googletest//:gtest",
     ],
-    local_defines = LOCAL_DEFINES_TESTS,
+    local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_TESTS,
 )
 
@@ -2914,7 +2913,7 @@ cc_library(
         "//src:libovms_systeminfo",
         "@com_google_googletest//:gtest",
     ],
-    local_defines = LOCAL_DEFINES_TESTS,
+    local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_TESTS,
 )
 cc_library(
@@ -2931,7 +2930,7 @@ cc_library(
         "//src:libovms_server_settings",
         "@com_google_googletest//:gtest",
     ],
-    local_defines = LOCAL_DEFINES_TESTS,
+    local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_TESTS,
 )
 cc_library(
@@ -2948,7 +2947,7 @@ cc_library(
         "//src:libovms_server_settings",
         "@com_google_googletest//:gtest",
     ],
-    local_defines = LOCAL_DEFINES_TESTS,
+    local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_TESTS,
 )
 cc_library(
@@ -2967,7 +2966,7 @@ cc_library(
         "//src:libovms_server_settings",
         "@com_google_googletest//:gtest",
     ],
-    local_defines = LOCAL_DEFINES_TESTS,
+    local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_TESTS,
 )
 cc_library(
@@ -3002,7 +3001,7 @@ cc_library(
 	":libovmsoclutils",
         "@com_google_googletest//:gtest",
     ],
-    local_defines = LOCAL_DEFINES_TESTS,
+    local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_TESTS + ["-lOpenCL",
         ] + select({
             "//:redhat_build": [],
@@ -3019,7 +3018,7 @@ cc_library(
         "//src:network_utils",
         "@com_google_googletest//:gtest",
     ],
-    local_defines = LOCAL_DEFINES_TESTS,
+    local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_TESTS,
 )
 
@@ -3034,7 +3033,7 @@ cc_library(
         "//src/image_gen:imagegenutils",
         "//src/image_gen:imagegen_init",
     ],
-    local_defines = LOCAL_DEFINES_TESTS,
+    local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_TESTS,
 )
 
@@ -3066,7 +3065,7 @@ cc_library(
         "@com_google_googletest//:gtest",
     ],
     copts = COPTS_TESTS,
-    local_defines = LOCAL_DEFINES_TESTS,
+    local_defines = COMMON_LOCAL_DEFINES,
     linkopts = [],
 )
 cc_library(
@@ -3080,7 +3079,7 @@ cc_library(
         "@com_google_googletest//:gtest",
     ],
     copts = COPTS_TESTS,
-    local_defines = LOCAL_DEFINES_TESTS,
+    local_defines = COMMON_LOCAL_DEFINES,
     linkopts = [],
 )
 
@@ -3095,7 +3094,7 @@ cc_library(
         "@com_google_googletest//:gtest",
     ],
     copts = COPTS_TESTS,
-    local_defines = LOCAL_DEFINES_TESTS,
+    local_defines = COMMON_LOCAL_DEFINES,
     linkopts = [],
 )
 
@@ -3111,7 +3110,7 @@ cc_library(
         "//src/llm:output_parsers",
     ],
     copts = COPTS_TESTS,
-    local_defines = LOCAL_DEFINES_TESTS,
+    local_defines = COMMON_LOCAL_DEFINES,
 )
 
 ovms_cc_library(
