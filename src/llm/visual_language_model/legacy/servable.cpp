@@ -260,10 +260,8 @@ absl::Status VisualLanguageModelLegacyServable::preparePartialResponse(std::shar
             return absl::InvalidArgumentError("Request processing failed, check its correctness.");
         }
         OVMS_PROFILE_SCOPE("Generation of last streaming response");
-        // Flush held-back tokens from the delay buffer; fires OVMSTextStreamer callback
-        // which pushes final delta(s) into deltaChannel.
-        executionContext->textStreamer->end();
-        // Drain again to collect the end-flush delta(s) and merge with any pre-end ones.
+        // end() was already called by pipe->generate() internally; all deltas are
+        // already in deltaChannel before signalComplete() fired. Drain any remaining.
         for (auto& d : executionContext->deltaChannel.drain()) {
             deltas.push_back(std::move(d));
         }
