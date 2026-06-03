@@ -227,9 +227,9 @@ pipeline {
                         unstash 'ovms-release-image'
                         sh "gunzip -c ovms_release_image.tar.gz | docker load"
                         sh "rm -f ovms_release_image.tar.gz"
-                        sh "TT_RUN_REGRESSION_TESTS=True TT_REGRESSION_WEEKLY_TESTS=True TT_XDIST_WORKERS=3 TT_BASE_OS=redhat TT_OVMS_IMAGE_NAME=openvino/model_server:${shortCommit} TT_OVMS_IMAGE_LOCAL=True make tests/non_functional/documentation -k '${doc_changed_files_str}'"
+                        sh "TT_RUN_REGRESSION_TESTS=True TT_REGRESSION_WEEKLY_TESTS=True TT_XDIST_WORKERS=3 TT_BASE_OS=redhat TT_PYTEST_PARAMS=\"tests/non_functional/documentation -k '${doc_changed_files_str}'\" TT_OVMS_IMAGE_NAME=openvino/model_server:${shortCommit} TT_OVMS_IMAGE_LOCAL=True make tests"
                     } else {
-                        sh "TT_RUN_REGRESSION_TESTS=True TT_REGRESSION_WEEKLY_TESTS=True TT_XDIST_WORKERS=3 TT_BASE_OS=redhat make tests/non_functional/documentation -k '${doc_changed_files_str}'"
+                        sh "TT_RUN_REGRESSION_TESTS=True TT_REGRESSION_WEEKLY_TESTS=True TT_XDIST_WORKERS=3 TT_BASE_OS=redhat TT_PYTEST_PARAMS=\"tests/non_functional/documentation -k '${doc_changed_files_str}'\" make tests"
                     }
 
                   }

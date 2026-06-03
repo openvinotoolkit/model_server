@@ -18,11 +18,11 @@
 # Checks git diff for .md files and reports those where changes
 # fall inside ```bash, ```bat, or ```console fenced code blocks.
 # Usage: ./check_md_code_changes.sh [base_ref]
-#   base_ref: optional git ref to diff against (default: HEAD)
+#   base_ref: optional git ref to diff against (default: HEAD~1)
 
 set -euo pipefail
 
-BASE_REF="${1:-HEAD}"
+BASE_REF="${1:-HEAD~1}"
 
 # Get list of changed .md files
 changed_md_files=$(git diff --name-only "$BASE_REF" HEAD -- '*.md')
@@ -37,7 +37,7 @@ while IFS= read -r file; do
     [ -z "$file" ] && continue
 
     # Extract changed line numbers in the new version from hunk headers
-    changed_lines=$(git diff "$BASE_REF" HEAD -- "$file" \
+    changed_lines=$(git diff --unified=0 "$BASE_REF" HEAD -- "$file" \
         | awk '/^@@/ {
             match($0, /\+([0-9]+)(,([0-9]+))?/, arr)
             start = arr[1]
