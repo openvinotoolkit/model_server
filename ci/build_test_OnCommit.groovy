@@ -38,6 +38,7 @@ pipeline {
                 diffBase = 'HEAD^'
                 git_diff = sh (script: "git diff --name-only HEAD^..HEAD", returnStdout: true).trim()
               }
+              doc_changed_files = sh (script: "./ci/check_md_code_changes.sh ${diffBase}", returnStdout: true).trim()
               def matched = (git_diff =~ /src|third_party|external|(\n|^)Dockerfile|(\n|^)Makefile|\.c|\.h|\.bazel|\.bzl|\.groovy|BUILD|create_package\.sh|WORKSPACE|(\n|^)run_unit_tests\.sh|versions\.mk/)
                 if (matched){
                   image_build_needed = "true"
@@ -54,7 +55,6 @@ pipeline {
               if (win_matched){
                   win_image_build_needed = "true"
               }
-              doc_changed_files = sh (script: "./ci/check_md_code_changes.sh ${diffBase}", returnStdout: true).trim()
             }
           }
         }
