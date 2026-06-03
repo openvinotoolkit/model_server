@@ -16,9 +16,19 @@
 
 #include "cleaner_utils.hpp"
 
+#ifdef _WIN32
+#include <crtdbg.h>
+#endif
+
 #include "resources_cleaner.hpp"
 
 namespace ovms {
+
+#ifdef _WIN32
+bool malloc_trim_win() {
+    return (_heapmin() == 0);
+}
+#endif
 
 FunctorResourcesCleaner::~FunctorResourcesCleaner() = default;
 

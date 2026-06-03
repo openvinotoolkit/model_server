@@ -18,6 +18,10 @@
 namespace ovms {
 class ResourcesCleaner;
 
+#ifdef _WIN32
+bool malloc_trim_win();
+#endif
+
 struct FunctorResourcesCleaner {
     ResourcesCleaner& resourcesCleaner;
 

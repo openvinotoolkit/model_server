@@ -451,6 +451,7 @@ ovms_cc_library(
     deps = [
         "modelinstance_h",
         "anonymous_input_name",
+        "cleaner_utils",
         "customloaders",
         "executingstreamidguard",
         "//src/filesystem:libovmsfilesystem",
