@@ -397,12 +397,11 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const std::vect
     if (isVerboseResponse()) {
         jsonResponse.StartObject("__verbose");
         jsonResponse.String("prompt", getVerbosePrompt());
-        jsonResponse.StartArray("raw_outputs");
-        for (const ov::genai::GenerationOutput& generationOutput : generationOutputs) {
-            std::string rawText = tokenizer.decode(generationOutput.generated_ids, ov::genai::skip_special_tokens(false));
-            jsonResponse.String(rawText);
+        std::string rawContent;
+        if (!generationOutputs.empty()) {
+            rawContent = tokenizer.decode(generationOutputs.front().generated_ids, ov::genai::skip_special_tokens(false));
         }
-        jsonResponse.EndArray();
+        jsonResponse.String("content", rawContent);
         jsonResponse.EndObject();
     }
 
@@ -473,12 +472,11 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(ov::genai::Enco
     if (isVerboseResponse()) {
         jsonResponse.StartObject("__verbose");
         jsonResponse.String("prompt", getVerbosePrompt());
-        jsonResponse.StartArray("raw_outputs");
-        for (const auto& tokens : results.tokens) {
-            std::string rawText = tokenizer.decode(tokens, ov::genai::skip_special_tokens(false));
-            jsonResponse.String(rawText);
+        std::string rawContent;
+        if (!results.tokens.empty()) {
+            rawContent = tokenizer.decode(results.tokens.front(), ov::genai::skip_special_tokens(false));
         }
-        jsonResponse.EndArray();
+        jsonResponse.String("content", rawContent);
         jsonResponse.EndObject();
     }
 
@@ -555,12 +553,8 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(ov::genai::VLMD
     if (isVerboseResponse()) {
         jsonResponse.StartObject("__verbose");
         jsonResponse.String("prompt", getVerbosePrompt());
-        jsonResponse.StartArray("raw_outputs");
         // For VLM the raw decoded text is provided by GenAI directly.
-        if (!textResponse.empty()) {
-            jsonResponse.String(textResponse);
-        }
-        jsonResponse.EndArray();
+        jsonResponse.String("content", textResponse);
         jsonResponse.EndObject();
     }
 
@@ -669,7 +663,7 @@ std::string OpenAIChatCompletionsHandler::serializeStreamingChunk(const std::str
 
         Value verboseObject(kObjectType);
         verboseObject.AddMember("prompt", Value(getVerbosePrompt().c_str(), allocator), allocator);
-        verboseObject.AddMember("raw_output", Value(rawOutput.c_str(), allocator), allocator);
+        verboseObject.AddMember("content", Value(rawOutput.c_str(), allocator), allocator);
         doc.AddMember("__verbose", verboseObject, allocator);
     }
 
