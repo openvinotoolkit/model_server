@@ -15,7 +15,12 @@
 //*****************************************************************************
 #pragma once
 
+#include <optional>
 #include <string>
+#include <thread>
+#include <variant>
+
+#include <spdlog/spdlog.h>
 #pragma warning(push)
 #pragma warning(disable : 6313)
 #include <rapidjson/document.h>
@@ -27,26 +32,18 @@ extern const std::string DEFAULT_GRAPH_FILENAME;
 extern const std::string DEFAULT_SUBCONFIG_FILENAME;
 extern const std::string DEFAULT_MODELMESH_SUBCONFIG_FILENAME;
 
+struct GraphQueueAutoTag {
+    bool operator==(const GraphQueueAutoTag&) const { return true; }
+};
+
+using GraphQueueSizeValue = std::optional<std::variant<int, GraphQueueAutoTag>>;
+
 class Status;
 
-/**
-     * @brief This class represents Mediapie Graph configuration
-     */
 class MediapipeGraphConfig {
 private:
-    /**
-         * @brief Mediapipe Graph Name
-         */
     std::string graphName;
-
-    /**
-         * @brief Mediapipe Base Path
-         */
     std::string basePath;
-
-    /**
-         * @brief Mediapipe Graph Path
-         */
     std::string graphPath;
 
     /**
@@ -69,16 +66,16 @@ private:
      */
     std::string currentGraphPbTxtMD5;
 
-public:
     /**
-         * @brief Construct a new Mediapie Graph configuration object
-         *
-         * @param graphName
-         * @param basePath
-         * @param graphPath
-         * @param subconfigPath
-         * @param currentGraphPbTxtMD5
-         */
+     * @brief Graph queue size configuration.
+     *
+     * - std::nullopt              => user did not set this field
+     * - int                       => user explicitly set a numeric size
+     * - GraphQueueAutoTag         => user explicitly set "AUTO"
+     */
+    GraphQueueSizeValue graphQueueSize;
+
+public:
     MediapipeGraphConfig(const std::string& graphName = "",
         const std::string& basePath = "",
         const std::string& graphPath = "",
@@ -95,47 +92,22 @@ public:
         graphPath.clear();
     }
 
-    /**
-         * @brief Get the Graph name
-         *
-         * @return const std::string&
-         */
     const std::string& getGraphName() const {
         return this->graphName;
     }
 
-    /**
-         * @brief Set the Graph name
-         *
-         * @param name
-         */
     void setGraphName(const std::string& graphName) {
         this->graphName = graphName;
     }
 
-    /**
-         * @brief Get the Graph Path
-         *
-         * @return const std::string&
-         */
     const std::string& getGraphPath() const {
         return this->graphPath;
     }
 
-    /**
-         * @brief Get the Base Path
-         *
-         * @return const std::string&
-         */
     const std::string& getBasePath() const {
         return this->basePath;
     }
 
-    /**
-         * @brief Set the Graph Path
-         *
-         * @param graphPath
-         */
     void setGraphPath(const std::string& graphPath);
 
     /**
@@ -145,11 +117,6 @@ public:
          */
     void setBasePathWithRootPath();
 
-    /**
-         * @brief Set the Base Path
-         *
-         * @param basePath
-         */
     void setBasePath(const std::string& basePath);
 
     /**
@@ -168,42 +135,64 @@ public:
          */
     void setSubconfigPath(const std::string& subconfigPath);
 
-    /**
-         * @brief Get the ModelMesh ModelsConfig Path
-         *
-         * @return const std::string&
-         */
     const std::string& getModelMeshSubconfigPath() const {
         return this->modelMeshSubconfigPath;
     }
-
-    /**
-           * @brief Set the Model Mesh Models Config Path
-           *
-           * @param subconfigPath
-           */
     void setModelMeshSubconfigPath(const std::string& subconfigPath);
 
-    /**
-         * @brief Set root directory path
-         *
-         * @param rootDirectoryPath
-         */
     void setRootDirectoryPath(const std::string& rootDirectoryPath) {
         this->rootDirectoryPath = rootDirectoryPath;
     }
 
-    /**
-     * @brief Get the root directory path
-     *
-     * @return const std::string&
-     */
     const std::string& getRootDirectoryPath() const {
         return this->rootDirectoryPath;
     }
 
     void setCurrentGraphPbTxtMD5(const std::string& currentGraphPbTxtMD5) {
         this->currentGraphPbTxtMD5 = currentGraphPbTxtMD5;
+    }
+
+    /**
+     * @brief Get the graph queue size setting.
+     *
+     * @return const GraphQueueSizeValue& - nullopt if not set, int or GraphQueueAutoTag
+     */
+    const GraphQueueSizeValue& getGraphQueueSize() const {
+        return this->graphQueueSize;
+    }
+
+    void setGraphQueueSize(int size) {
+        this->graphQueueSize = size;
+    }
+
+    void setGraphQueueSizeAuto() {
+        this->graphQueueSize = GraphQueueAutoTag{};
+    }
+
+    /**
+     * @brief Resolve the graph queue size setting to a concrete integer.
+     *
+     * Returns:
+     *   0   => queue creation disabled (user set 0 or not set)
+     *   >0  => explicit size or resolved AUTO
+     *
+     * Negative values are rejected at parse time (resolveGraphQueueSize).
+     * When not set (nullopt): returns 0 (queue disabled).
+     * When AUTO: returns hardware_concurrency() or 16 as fallback.
+     */
+    int getInitialQueueSize() const {
+        if (!this->graphQueueSize.has_value()) {
+            return 0;  // not set - queue disabled by default
+        }
+        if (std::holds_alternative<GraphQueueAutoTag>(*this->graphQueueSize)) {
+            unsigned int hwThreads = std::thread::hardware_concurrency();
+            if (hwThreads == 0) {
+                SPDLOG_WARN("std::thread::hardware_concurrency() returned 0 (unknown). Falling back to graph queue size 16.");
+                return 16;
+            }
+            return static_cast<int>(hwThreads);
+        }
+        return std::get<int>(*this->graphQueueSize);
     }
 
     bool isReloadRequired(const MediapipeGraphConfig& rhs) const;
@@ -215,9 +204,6 @@ public:
     */
     Status parseNode(const rapidjson::Value& v);
 
-    /**
-    * @brief  Logs the content of the graph configuration
-    */
     void logGraphConfigContent() const;
 };
 }  // namespace ovms

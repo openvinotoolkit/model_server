@@ -48,6 +48,8 @@ class PythonBackend;
 
 using HttpReaderWriter = HttpAsyncWriter;
 
+bool requestHasInputSidePackets(const HttpPayload& request);
+
 // Deserialization of parameters inside KServe gRPC request
 // into mediapipe Packets.
 // To be used by both - infer & inferStream.

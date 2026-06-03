@@ -68,6 +68,7 @@ ovms_cc_library(
         "//src:libovmslogging",
         "//src:image_conversion",
         "//src:libovmsstring_utils",
+        "//src/port:rapidjson_document",
         "imagegenpipelineargs",
         "//third_party:genai",],
     visibility = ["//visibility:public"],

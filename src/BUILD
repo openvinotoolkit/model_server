@@ -16,7 +16,7 @@
 load("@bazel_skylib//lib:selects.bzl", "selects")
 load("@mediapipe//mediapipe/framework:more_selects.bzl", "more_selects")
 load("//:common_settings.bzl",
-     "COMMON_STATIC_TEST_COPTS", "COMMON_STATIC_LIBS_COPTS", "COMMON_STATIC_LIBS_LINKOPTS", "COMMON_FUZZER_COPTS", "COMMON_FUZZER_LINKOPTS", "COMMON_LOCAL_DEFINES", "COPTS_PYTHON", "COPTS_MEDIAPIPE", "COPTS_DROGON",
+     "COMMON_STATIC_TEST_COPTS", "COMMON_STATIC_LIBS_COPTS", "COMMON_STATIC_LIBS_LINKOPTS", "COMMON_FUZZER_COPTS", "COMMON_FUZZER_LINKOPTS", "COMMON_LOCAL_DEFINES", "COPTS_DROGON",
      "create_config_settings", "PYBIND_DEPS", "ovms_cc_library")
 
 COPTS_OV_TRACE = select({
@@ -32,7 +32,8 @@ COPTS_CLOUD = select({
     "//:not_disable_cloud" : ["-DCLOUD_DISABLE=0"],
 })
 
-COPTS_TESTS = COMMON_STATIC_TEST_COPTS + COPTS_PYTHON + COPTS_MEDIAPIPE + COPTS_DROGON + COPTS_CLOUD
+COPTS_TESTS = COMMON_STATIC_TEST_COPTS + COPTS_DROGON + COPTS_CLOUD
+
 
 config_setting(
     name = "windows",
@@ -320,7 +321,6 @@ ovms_cc_library(
         "//:not_disable_mediapipe": ["//third_party:genai"],
         "//conditions:default": [],
     }),
-    additional_copts = COPTS_MEDIAPIPE,
     visibility = ["//visibility:public",],
     alwayslink = 1,
 )
@@ -557,7 +557,6 @@ ovms_cc_library(
         "@mediapipe//mediapipe/framework/formats:tensor",
     ],
     visibility = ["//visibility:public",],
-    additional_copts = COPTS_PYTHON + COPTS_MEDIAPIPE,
     alwayslink = 1,
 )
 ovms_cc_library(
@@ -583,7 +582,6 @@ ovms_cc_library(
         "@mediapipe//mediapipe/framework/formats:tensor",
     ],
     visibility = ["//visibility:public",],
-    additional_copts = COPTS_PYTHON + COPTS_MEDIAPIPE,
     alwayslink = 1,
 )
 ovms_cc_library(
@@ -658,7 +656,6 @@ ovms_cc_library(
         "//src/port:rapidjson_writer",
     ],
     visibility = ["//visibility:public"],
-    additional_copts = COPTS_MEDIAPIPE,
 )
 ovms_cc_library(
     name = "rest_parser_utils",
@@ -765,7 +762,6 @@ ovms_cc_library(
         "modelmanager",
         "//src/metrics:libovmsmetrics",
     ],
-    additional_copts = COPTS_PYTHON,
     visibility = ["//visibility:public"],
 )
 ovms_cc_library(
@@ -821,7 +817,6 @@ ovms_cc_library(
                 "//src/image_gen:imagegen_init",
                 "//src/llm:openai_responses_handler",
                 "//src/embeddings:embeddingscalculator_ov",
-                "//src/rerank:rerankcalculator",
                 "//src/rerank:rerankcalculator_ov",
                 "//src/llm:llmcalculator",
             ],
@@ -966,7 +961,7 @@ ovms_cc_library(
                     ],
                 }),
     visibility = ["//visibility:public",],
-    additional_copts = COPTS_PYTHON + COPTS_MEDIAPIPE + COPTS_DROGON + COPTS_OV_TRACE,
+    additional_copts = COPTS_DROGON + COPTS_OV_TRACE,
     additional_linkopts = select({
                 "//conditions:default": ["-lOpenCL"], # TODO make as direct dependency
                 "//src:windows" : ["/DEFAULTLIB:Rpcrt4.lib"],}),
@@ -1371,7 +1366,7 @@ ovms_cc_library(
         "//src/port:rapidjson_stringbuffer",
     ],
     visibility = ["//visibility:public"],
-    additional_copts = COPTS_MEDIAPIPE + COPTS_DROGON,
+    additional_copts = COPTS_DROGON,
 )
 
 
@@ -2396,6 +2391,7 @@ cc_test(
                 "test/audio/text2speech_test.cpp",
                 "test/audio/speech2text_test.cpp",
                 "test/audio/s2t_streaming_test.cpp",
+                "test/audio/audio_utils_test.cpp",
             ],
             "//:disable_mediapipe" : [
                 "test/disabled_mediapipe_test.cpp",
@@ -2433,8 +2429,10 @@ cc_test(
         "test/configs/config_dummy_dynamic_shape.json",
         "test/configs/emptyConfigWithMetrics.json",
         "test/llm/config.json",
+        "test/llm/config_queue.json",
         "test/llm/assisted_decoding_config.json",
         "test/llm/lm_cb_regular.pbtxt",
+        "test/llm/lm_cb_regular_queue.pbtxt",
         "test/llm/lm_cb_with_tool_parser.pbtxt",
         "test/llm/lm_legacy_regular.pbtxt",
         "test/llm/lm_cb_speculative.pbtxt",
@@ -2455,6 +2453,7 @@ cc_test(
         "test/increment_1x3x4x5/1/increment_1x3x4x5.xml",
         "test/increment_1x3x4x5/1/increment_1x3x4x5.bin",
         "test/mediapipe/config_mediapipe_openai_chat_completions_mock.json",
+        "test/mediapipe/config_mediapipe_openai_chat_completions_mock_with_queue.json",
         "test/mediapipe/config_mediapipe_add_adapter_full.json",
         "test/mediapipe/config_mediapipe_all_graphs_adapter_full.json",
         "test/mediapipe/config_mediapipe_dummy_adapter_full_dag.json",
@@ -2484,6 +2483,10 @@ cc_test(
         "test/mediapipe/graphscalar.pbtxt",
         "test/mediapipe/graphWithParams.pbtxt",
         "test/mediapipe/graphdummyadapterfull_dummyinputnames.pbtxt",
+        "test/mediapipe/graphdummyadapterfull_dummyinputnames_newpath.pbtxt",
+        "test/mediapipe/graph_gpt_with_queue.pbtxt",
+        "test/mediapipe/graph_queue_dummyadapterfull_dummyinputnames.pbtxt",
+        "test/mediapipe/graph_queue_dummyadapterfull_dummyinputnames_newpath.pbtxt",
         "test/mediapipe/graphadapterfull_two_outputs_dag.pbtxt",
         "test/mediapipe/graphdummyadapterfull_two_outputs.pbtxt",
         "test/mediapipe/graph_multipart.pbtxt",
@@ -2551,8 +2554,6 @@ cc_test(
             ":test_utils",
             ":test_test_with_temp_dir",
             ":test_platform_utils",
-            "//src/rerank:rerank_api_handler",
-            ":embeddings_handler_tests",
             ":tokenize_parser_tests",
             ":inferencerequest_test",
             ":libtest_environment",
@@ -2567,6 +2568,7 @@ cc_test(
             ":pull_gguf_hf_model_test",
             ":listdirectorymodels_test",
             ":graph_export_test",
+            ":lora_graph_export_test",
             ":config_export_test",
             ":config_export_full_test",
             ":test_constructor_enabled_model_manager",
@@ -2591,6 +2593,8 @@ cc_test(
                 "@mediapipe//mediapipe/calculators/ovms:ovms_calculator",
                 "@mediapipe//mediapipe/framework:calculator_runner",
                 ":text2image_test",
+                "//src/rerank:rerank_api_handler",
+                ":embeddings_handler_tests",
             ],
             "//:disable_mediapipe" :
             [
@@ -2812,6 +2816,7 @@ cc_library(
             "@com_google_googletest//:gtest",
     ],
     copts = COPTS_TESTS,
+    local_defines = COMMON_LOCAL_DEFINES,
 )
 cc_library(
     name = "libgit2_test",
@@ -2850,6 +2855,7 @@ cc_library(
         "//src/pull_module:hf_pull_model_module",
         "//src:ovms_lib",
         "libovmsstring_utils",
+        "@cpp_httplib//:cpp_httplib",
         "@com_google_googletest//:gtest",
     ],
     local_defines = COMMON_LOCAL_DEFINES,
@@ -2903,6 +2909,24 @@ cc_library(
         ":test_light_test_utils",
         ":test_test_with_temp_dir",
         "//src/graph_export:graph_export",
+        "//src:libovms_server_settings",
+        "//src:libovms_systeminfo",
+        "@com_google_googletest//:gtest",
+    ],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_TESTS,
+)
+cc_library(
+    name = "lora_graph_export_test",
+    linkstatic = 1,
+    alwayslink = True,
+    srcs = ["test/lora_graph_export_test.cpp"],
+    linkopts = [],
+    deps = [
+        ":test_light_test_utils",
+        ":test_test_with_temp_dir",
+        "//src/graph_export:graph_export",
+        "//src/graph_export:image_generation_graph_cli_parser",
         "//src:libovms_server_settings",
         "@com_google_googletest//:gtest",
     ],
@@ -3041,6 +3065,7 @@ cc_library(
         "@com_google_googletest//:gtest",
     ],
     copts = COPTS_TESTS,
+    local_defines = COMMON_LOCAL_DEFINES,
     linkopts = [],
 )
 cc_library(
@@ -3054,6 +3079,7 @@ cc_library(
         "@com_google_googletest//:gtest",
     ],
     copts = COPTS_TESTS,
+    local_defines = COMMON_LOCAL_DEFINES,
     linkopts = [],
 )
 
@@ -3068,6 +3094,7 @@ cc_library(
         "@com_google_googletest//:gtest",
     ],
     copts = COPTS_TESTS,
+    local_defines = COMMON_LOCAL_DEFINES,
     linkopts = [],
 )
 

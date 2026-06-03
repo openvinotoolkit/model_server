@@ -251,7 +251,12 @@ absl::Status VisualLanguageModelLegacyServable::preparePartialResponse(std::shar
                 executionContext->apiHandler->appendVerboseRawText(executionContext->lastStreamerCallbackOutput);
             }
         }
-        std::string serializedChunk = executionContext->apiHandler->serializeStreamingChunk(lastTextChunk, ov::genai::GenerationFinishReason::STOP);
+        if (legacyExecutionContext->results.finish_reasons.empty()) {
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Missing finish reason in legacy VLM streaming generation result, defaulting to STOP");
+        }
+        // Legacy generation path always runs with batch=1, so we read the single finish reason at index 0.
+        ov::genai::GenerationFinishReason finishReason = legacyExecutionContext->results.finish_reasons.empty() ? ov::genai::GenerationFinishReason::STOP : legacyExecutionContext->results.finish_reasons[0];
+        std::string serializedChunk = executionContext->apiHandler->serializeStreamingChunk(lastTextChunk, finishReason);
         if (!serializedChunk.empty()) {
             executionContext->response = wrapTextInServerSideEventMessage(serializedChunk);
         }
@@ -310,6 +315,9 @@ absl::Status VisualLanguageModelLegacyServable::prepareInputs(std::shared_ptr<Ge
         }
         const auto& chatTemplateKwargs = chatTemplateKwargsStatus.value();
         vlmExecutionContext->inputText = properties->tokenizer.apply_chat_template(chatHistory, addGenerationPrompt, {}, tools, chatTemplateKwargs);
+        if (vlmExecutionContext->apiHandler->getOutputParser() != nullptr) {
+            vlmExecutionContext->apiHandler->getOutputParser()->detectAndSetImplicitReasoningStart(vlmExecutionContext->inputText);
+        }
     } else {
         return absl::InvalidArgumentError("Unsupported endpoint");
     }
