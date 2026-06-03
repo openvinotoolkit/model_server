@@ -3,10 +3,13 @@ def win_image_build_needed = "false"
 def client_test_needed = "false"
 def export_models_changed = "false"
 def doc_changed_files = ""
+def doc_changed_files_str = ""
 def shortCommit = ""
 def agent_name_windows = ""
+def agent_name_windows_doc = "ovms_win_ptl"
 def agent_name_linux = ""
 def agent_name_linux_doc = "ovms_ptl"
+def enable_doc_tests_unix = true
 
 pipeline {
     agent {
@@ -39,6 +42,10 @@ pipeline {
                 git_diff = sh (script: "git diff --name-only HEAD^..HEAD", returnStdout: true).trim()
               }
               doc_changed_files = sh (script: "./ci/check_md_code_changes.sh ${diffBase}", returnStdout: true).trim()
+              if (doc_changed_files) {
+                doc_changed_files_str = doc_changed_files.split('\n').join(' or ')
+              }
+
               def matched = (git_diff =~ /src|third_party|external|(\n|^)Dockerfile|(\n|^)Makefile|\.c|\.h|\.bazel|\.bzl|\.groovy|BUILD|create_package\.sh|WORKSPACE|(\n|^)run_unit_tests\.sh|versions\.mk/)
                 if (matched){
                   image_build_needed = "true"
@@ -121,6 +128,15 @@ pipeline {
                     sh "echo test:linux --test_env https_proxy=${env.HTTPS_PROXY} >> .user.bazelrc"
                     sh "echo test:linux --test_env http_proxy=${env.HTTP_PROXY} >> .user.bazelrc"
                     sh "make ovms_builder_image RUN_TESTS=${runTestsFlag} OPTIMIZE_BUILDING_TESTS=1 OV_USE_BINARY=0 BASE_OS=redhat OVMS_CPP_IMAGE_TAG=${shortCommit} BUILD_IMAGE=openvino/model_server-build:${shortCommit}"
+
+                    // release_image
+                    sh "make release_image RUN_TESTS=0 OV_USE_BINARY=0 BASE_OS=redhat OVMS_CPP_IMAGE_TAG=${shortCommit} BUILD_IMAGE=openvino/model_server-build:${shortCommit}"
+                    sh "make run_lib_files_test BASE_OS=redhat OVMS_CPP_IMAGE_TAG=${shortCommit}"
+                    if ( doc_changed_files ) {
+                        sh "docker save openvino/model_server:${shortCommit} | gzip > ovms_release_image.tar.gz"
+                        stash name: 'ovms-release-image', includes: 'ovms_release_image.tar.gz'
+                        sh "rm -f ovms_release_image.tar.gz"
+                    }
                   }
               }
             }
@@ -147,6 +163,7 @@ pipeline {
                           windows.install_dependencies()
                           windows.clean()
                           windows.build()
+                          stash name: 'ovms-windows-package', includes: 'dist\\windows\\ovms.zip'
                         } finally {
                           windows.archive_build_artifacts()
                         }
@@ -158,20 +175,7 @@ pipeline {
             }
           }
         }
-        stage('Build linux release image') {
-          agent {
-            label "${agent_name_linux}"
-          }
-          when { expression { image_build_needed == "true" } }
-          steps {
-              sh "make release_image RUN_TESTS=0 OV_USE_BINARY=0 BASE_OS=redhat OVMS_CPP_IMAGE_TAG=${shortCommit} BUILD_IMAGE=openvino/model_server-build:${shortCommit}"
-              sh "make run_lib_files_test BASE_OS=redhat OVMS_CPP_IMAGE_TAG=${shortCommit}"
-              sh "docker save openvino/model_server:${shortCommit} | gzip > ovms_release_image.tar.gz"
-              stash name: 'ovms-release-image', includes: 'ovms_release_image.tar.gz'
-              sh "rm -f ovms_release_image.tar.gz"
-          }
-        }
-        stage("Release image and tests in parallel") {
+        stage("Tests in parallel") {
           options {
             timeout(time: 120, unit: 'MINUTES')
           }
@@ -214,23 +218,25 @@ pipeline {
               agent {
                 label "${agent_name_linux_doc}"
               }
-              when { expression { doc_changed_files } }
+              when { expression { doc_changed_files && enable_doc_tests_unix } }
               steps {
                 script {
                   dir ('documentation_tests') {
                     checkout scmGit(branches: [[name: 'develop']], userRemoteConfigs: [[credentialsId: 'workflow-lab', url: 'https://github.com/intel-innersource/frameworks.ai.openvino.model-server.tests.git']])
                     sh "pwd"
                     pwd = sh(returnStdout:true, script: "pwd").strip()
-                    doc_changed_files_str = doc_changed_files.split('\n').join(' or ')
                     sh "make create-venv && rm -f tests/functional && ln -s ${pwd}/../tests/functional tests/functional"
+                    def cmd_export = "TT_RUN_REGRESSION_TESTS=True TT_REGRESSION_WEEKLY_TESTS=True TT_XDIST_WORKERS=3 TT_BASE_OS=redhat TT_ENABLE_UAT_TESTS=True TT_PYTEST_PARAMS=\"tests/non_functional/documentation -k '${doc_changed_files_str}'\""
+                    def cmd = ""
                     if ( image_build_needed == "true" ) {
                         unstash 'ovms-release-image'
                         sh "gunzip -c ovms_release_image.tar.gz | docker load"
                         sh "rm -f ovms_release_image.tar.gz"
-                        sh "TT_RUN_REGRESSION_TESTS=True TT_REGRESSION_WEEKLY_TESTS=True TT_XDIST_WORKERS=3 TT_BASE_OS=redhat TT_PYTEST_PARAMS=\"tests/non_functional/documentation -k '${doc_changed_files_str}'\" TT_OVMS_IMAGE_NAME=openvino/model_server:${shortCommit} TT_OVMS_IMAGE_LOCAL=True make tests"
+                        cmd = "${cmd_export} TT_OVMS_IMAGE_NAME=openvino/model_server:${shortCommit} TT_OVMS_IMAGE_LOCAL=True make tests"
                     } else {
-                        sh "TT_RUN_REGRESSION_TESTS=True TT_REGRESSION_WEEKLY_TESTS=True TT_XDIST_WORKERS=3 TT_BASE_OS=redhat TT_PYTEST_PARAMS=\"tests/non_functional/documentation -k '${doc_changed_files_str}'\" make tests"
+                        cmd = "${cmd_export} make tests"
                     }
+                    sh cmd
 
                   }
                 }
@@ -259,6 +265,33 @@ pipeline {
                           error "Cannot load ci/loadWin.groovy file."
                       }
                   }
+              }
+            }
+            stage("Documentation tests windows") {
+              agent {
+                label "${agent_name_windows_doc}"
+              }
+              when { expression { doc_changed_files } }
+              steps {
+                script {
+                  dir ('documentation_tests') {
+                    checkout scmGit(branches: [[name: 'develop']], userRemoteConfigs: [[credentialsId: 'workflow-lab', url: 'https://github.com/intel-innersource/frameworks.ai.openvino.model-server.tests.git']])
+                    def current_path = bat(returnStdout: true, script: 'cd').trim().split('\n').last().trim()
+                    def ovms_c_repo_path = bat(returnStdout: true, script: 'cd .. && cd').trim().split('\n').last().trim()
+                    def cmd_link_ovms = "mklink /D ${current_path}\\tests\\functional ${ovms_c_repo_path}\\tests\\functional"
+                    def cmd_requirements = "virtualenv .venv --python=python3.12 && .venv\\Scripts\\activate.bat && pip install -r requirements.txt"
+                    def cmd_export = "set TT_RUN_REGRESSION_TESTS=True && set TT_REGRESSION_WEEKLY_TESTS=True && set TT_BASE_OS=windows && set TT_ENABLE_UAT_TESTS=True"
+                    def cmd_pytest = "pytest tests/non_functional/documentation -k \"${doc_changed_files_str}\" -n 3 --dist loadgroup --basetemp=\"C:\\tmp\\pytest-${shortCommit}\""
+                    def cmd = ""
+                    if ( win_image_build_needed == "true" ) {
+                        unstash 'ovms-windows-package'
+                        cmd = "${cmd_link_ovms} && ${cmd_requirements} && set TT_OVMS_C_RELEASE_ARTIFACTS_PATH=\"dist\\windows\\ovms.zip\" && ${cmd_export} && ${cmd_pytest}"
+                    } else {
+                        cmd = "${cmd_link_ovms} && ${cmd_requirements} && ${cmd_export} && ${cmd_pytest}"
+                    }
+                    bat cmd
+                  }
+                }
               }
             }
           }
