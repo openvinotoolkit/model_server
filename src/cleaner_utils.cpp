@@ -18,15 +18,28 @@
 
 #ifdef _WIN32
 #include <crtdbg.h>
+#include <malloc.h>
+#include <windows.h>
+
+#include <string>
+#include <system_error>
 #endif
 
+#include "logging.hpp"
 #include "resources_cleaner.hpp"
 
 namespace ovms {
 
 #ifdef _WIN32
 bool malloc_trim_win() {
-    return (_heapmin() == 0);
+    int result = _heapmin();
+    if (result != 0) {
+        DWORD error = GetLastError();
+        std::string message = std::system_category().message(error);
+        SPDLOG_ERROR("Failed to trim heap: {}", message);
+        return false;
+    }
+    return true;
 }
 #endif
 
