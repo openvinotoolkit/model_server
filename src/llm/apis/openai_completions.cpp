@@ -395,6 +395,7 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const std::vect
     // Can be used in conjunction with the seed request parameter to understand when backend changes have been made that might impact determinism.
 
     if (isVerboseResponse()) {
+        jsonResponse.StartObject("__verbose");
         jsonResponse.String("prompt", getVerbosePrompt());
         jsonResponse.StartArray("raw_outputs");
         for (const ov::genai::GenerationOutput& generationOutput : generationOutputs) {
@@ -402,6 +403,7 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const std::vect
             jsonResponse.String(rawText);
         }
         jsonResponse.EndArray();
+        jsonResponse.EndObject();
     }
 
     // finish response object
@@ -469,6 +471,7 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(ov::genai::Enco
     // Can be used in conjunction with the seed request parameter to understand when backend changes have been made that might impact determinism.
 
     if (isVerboseResponse()) {
+        jsonResponse.StartObject("__verbose");
         jsonResponse.String("prompt", getVerbosePrompt());
         jsonResponse.StartArray("raw_outputs");
         for (const auto& tokens : results.tokens) {
@@ -476,6 +479,7 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(ov::genai::Enco
             jsonResponse.String(rawText);
         }
         jsonResponse.EndArray();
+        jsonResponse.EndObject();
     }
 
     // finish response object
@@ -549,6 +553,7 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(ov::genai::VLMD
     // Can be used in conjunction with the seed request parameter to understand when backend changes have been made that might impact determinism.
 
     if (isVerboseResponse()) {
+        jsonResponse.StartObject("__verbose");
         jsonResponse.String("prompt", getVerbosePrompt());
         jsonResponse.StartArray("raw_outputs");
         // For VLM the raw decoded text is provided by GenAI directly.
@@ -556,6 +561,7 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(ov::genai::VLMD
             jsonResponse.String(textResponse);
         }
         jsonResponse.EndArray();
+        jsonResponse.EndObject();
     }
 
     // finish response object
@@ -654,14 +660,17 @@ std::string OpenAIChatCompletionsHandler::serializeStreamingChunk(const std::str
 
     // Verbose mode: attach prompt and raw model output to the FINAL chunk only.
     if (isVerboseResponse() && finishReason != ov::genai::GenerationFinishReason::NONE) {
-        doc.AddMember("prompt", Value(getVerbosePrompt().c_str(), allocator), allocator);
         std::string rawOutput;
         if (!getVerboseRawTokens().empty()) {
             rawOutput = tokenizer.decode(getVerboseRawTokens(), ov::genai::skip_special_tokens(false));
         } else {
             rawOutput = getVerboseRawText();
         }
-        doc.AddMember("raw_output", Value(rawOutput.c_str(), allocator), allocator);
+
+        Value verboseObject(kObjectType);
+        verboseObject.AddMember("prompt", Value(getVerbosePrompt().c_str(), allocator), allocator);
+        verboseObject.AddMember("raw_output", Value(rawOutput.c_str(), allocator), allocator);
+        doc.AddMember("__verbose", verboseObject, allocator);
     }
 
     StringBuffer buffer;

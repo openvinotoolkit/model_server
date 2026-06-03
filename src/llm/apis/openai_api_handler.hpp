@@ -185,8 +185,6 @@ public:
     }
     const std::vector<int64_t>& getVerboseRawTokens() const { return verboseRawTokens; }
     const std::string& getVerboseRawText() const { return verboseRawText; }
-    // Builds a SSE-ready JSON chunk with the accumulated verbose info, or empty string if disabled.
-    std::string serializeStreamingVerboseChunk();
 
     // Usage tracking
     void setPromptTokensUsage(size_t promptTokens);
