@@ -201,6 +201,10 @@ static Status createTextGenerationGraphTemplate(const std::string& directoryPath
         oss << R"(
             enable_tool_guided_generation: true,)";
     }
+    if (graphSettings.cacheIntervalMultiplier.has_value()) {
+        oss << R"(
+            cache_interval_multiplier: )" << graphSettings.cacheIntervalMultiplier.value() << R"(,)";
+    }
     if (graphSettings.dynamicSplitFuse != "true") {
         oss << R"(
             dynamic_split_fuse: false,)";
