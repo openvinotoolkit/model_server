@@ -150,14 +150,6 @@ void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServ
     std::string chatTemplate = properties->tokenizer.get_original_chat_template();
     std::string bosToken = properties->tokenizer.get_bos_token();
     std::string eosToken = properties->tokenizer.get_eos_token();
-    if (bosToken.empty()) {
-        SPDLOG_ERROR("BOS token was not found in model files.");
-        return;
-    }
-    if (eosToken.empty()) {
-        SPDLOG_ERROR("EOS token was not found in model files.");
-        return;
-    }
     if (chatTemplate.empty()) {
         SPDLOG_ERROR("Chat template was not found in model files.");
         return;
