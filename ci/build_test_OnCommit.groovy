@@ -9,7 +9,7 @@ def agent_name_windows = ""
 def agent_name_windows_doc = "ovms_win_ptl"
 def agent_name_linux = ""
 def agent_name_linux_doc = "ovms_ptl"
-def enable_doc_tests_unix = true
+def enable_doc_tests_linux = true
 
 pipeline {
     agent {
@@ -218,7 +218,7 @@ pipeline {
               agent {
                 label "${agent_name_linux_doc}"
               }
-              when { expression { doc_changed_files && enable_doc_tests_unix } }
+              when { expression { doc_changed_files && enable_doc_tests_linux } }
               steps {
                 script {
                   dir ('documentation_tests') {
@@ -226,7 +226,7 @@ pipeline {
                     sh "pwd"
                     pwd = sh(returnStdout:true, script: "pwd").strip()
                     sh "make create-venv && rm -f tests/functional && ln -s ${pwd}/../tests/functional tests/functional"
-                    def cmd_export = "TT_RUN_REGRESSION_TESTS=True TT_REGRESSION_WEEKLY_TESTS=True TT_XDIST_WORKERS=3 TT_BASE_OS=redhat TT_ENABLE_UAT_TESTS=True TT_PYTEST_PARAMS=\"tests/non_functional/documentation -k '${doc_changed_files_str}'\""
+                    def cmd_export = "TT_RUN_REGRESSION_TESTS=True TT_REGRESSION_WEEKLY_TESTS=True TT_XDIST_WORKERS=0 TT_TARGET_DEVICE=CPU TT_BASE_OS=redhat TT_ENABLE_UAT_TESTS=True TT_PYTEST_PARAMS=\"tests/non_functional/documentation -k '${doc_changed_files_str}'\""
                     def cmd = ""
                     if ( image_build_needed == "true" ) {
                         unstash 'ovms-release-image'
@@ -280,8 +280,8 @@ pipeline {
                     def ovms_c_repo_path = bat(returnStdout: true, script: 'cd .. && cd').trim().split('\n').last().trim()
                     def cmd_link_ovms = "mklink /D ${current_path}\\tests\\functional ${ovms_c_repo_path}\\tests\\functional"
                     def cmd_requirements = "virtualenv .venv --python=python3.12 && .venv\\Scripts\\activate.bat && pip install -r requirements.txt"
-                    def cmd_export = "set TT_RUN_REGRESSION_TESTS=True && set TT_REGRESSION_WEEKLY_TESTS=True && set TT_BASE_OS=windows && set TT_ENABLE_UAT_TESTS=True"
-                    def cmd_pytest = "pytest tests/non_functional/documentation -k \"${doc_changed_files_str}\" -n 3 --dist loadgroup --basetemp=\"C:\\tmp\\pytest-${shortCommit}\""
+                    def cmd_export = "set \"TT_RUN_REGRESSION_TESTS=True\" && set \"TT_REGRESSION_WEEKLY_TESTS=True\" && set \"TT_TARGET_DEVICE=CPU,GPU,NPU\" && set \"TT_BASE_OS=windows\" && set \"TT_ENABLE_UAT_TESTS=True\""
+                    def cmd_pytest = "pytest tests/non_functional/documentation -k \"${doc_changed_files_str}\" -n 3 --dist loadgroup --basetemp=\"C:\\tmp\\pytest-${BRANCH_NAME}-${BUILD_NUMBER}\""
                     def cmd = ""
                     if ( win_image_build_needed == "true" ) {
                         unstash 'ovms-windows-package'
