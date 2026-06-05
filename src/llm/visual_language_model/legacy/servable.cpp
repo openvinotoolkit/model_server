@@ -300,21 +300,15 @@ absl::Status VisualLanguageModelLegacyServable::prepareInputs(std::shared_ptr<Ge
             chatHistory[chatTurnIndex]["content"] = imageTagString + messageContent;
         }
 
-        SPDLOG_LOGGER_INFO(llm_calculator_logger, "XXXXXXXXXXXXXXXXXXXXXXXXXXX");
-
 #if (PYTHON_DISABLE == 0)
         std::string jsonForTemplate;
         if (vlmExecutionContext->apiHandler->getProcessedJson().size() > 0) {
-            SPDLOG_LOGGER_INFO(llm_calculator_logger, "YYYYYYYYYYYYYYYY");
             jsonForTemplate = vlmExecutionContext->apiHandler->getProcessedJson();
         } else {
-            SPDLOG_LOGGER_INFO(llm_calculator_logger, "ZZZZZZZZZZZZZZZZZZZZ");
             jsonForTemplate = vlmExecutionContext->payload.body;
         }
-        SPDLOG_LOGGER_INFO(llm_calculator_logger, "AAAAAAAAAAAAAAAAAA");
         // Inject image tags into the JSON messages for Python Jinja template processing
         if (!imageTags.empty()) {
-            SPDLOG_LOGGER_INFO(llm_calculator_logger, "BBBBBBBBBBBBB");
             rapidjson::Document jsonDoc;
             jsonDoc.Parse(jsonForTemplate.c_str());
             if (!jsonDoc.HasParseError() && jsonDoc.HasMember("messages") && jsonDoc["messages"].IsArray()) {
@@ -335,14 +329,10 @@ absl::Status VisualLanguageModelLegacyServable::prepareInputs(std::shared_ptr<Ge
             }
         }
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "VLM Legacy: Applying chat template using Python Jinja processor");
-        SPDLOG_LOGGER_INFO(llm_calculator_logger, "CCCCCCCCCCCCCCCCCCCCCCC");
         bool success = PyJinjaTemplateProcessor::applyChatTemplate(getProperties()->templateProcessor, getProperties()->modelsPath, jsonForTemplate, vlmExecutionContext->inputText);
-        SPDLOG_LOGGER_INFO(llm_calculator_logger, "DDDDDDDDDDDDDDDDDDDDD");
         if (!success) {
-            SPDLOG_LOGGER_INFO(llm_calculator_logger, "EEEEEEEEEEEEEEEEEEE");
             return absl::Status(absl::StatusCode::kInvalidArgument, vlmExecutionContext->inputText);
         }
-        SPDLOG_LOGGER_INFO(llm_calculator_logger, "FFFFFFFFFFFFFFFFFFFFFFF");
 #else
         constexpr bool addGenerationPrompt = true;  // confirm it should be hardcoded
         auto toolsStatus = vlmExecutionContext->apiHandler->parseToolsToJsonContainer();
