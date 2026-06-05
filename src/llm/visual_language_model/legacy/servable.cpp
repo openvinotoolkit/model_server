@@ -275,26 +275,38 @@ absl::Status VisualLanguageModelLegacyServable::prepareInputs(std::shared_ptr<Ge
     }
     if (executionContext->endpoint == Endpoint::CHAT_COMPLETIONS || executionContext->endpoint == Endpoint::RESPONSES) {
         ov::genai::ChatHistory& chatHistory = vlmExecutionContext->apiHandler->getChatHistory();
+        const ImageHistory& imageHistory = vlmExecutionContext->apiHandler->getImageHistory();
 
-        for (size_t i = 0; i < chatHistory.size(); i++) {
-            const auto& message = chatHistory[i];
-            if (message["content"].as_string().value_or("").find("<ov_genai_image_") != std::string::npos) {
-                return absl::InvalidArgumentError("Message contains restricted <ov_genai_image> tag");
+        // Responses parsing keeps images in imageHistory only; Chat Completions parsing
+        // already inserts placeholders in content to preserve multipart order.
+        if (executionContext->endpoint == Endpoint::RESPONSES) {
+            for (size_t i = 0; i < chatHistory.size(); i++) {
+                const auto& message = chatHistory[i];
+                if (message["content"].as_string().value_or("").find("<ov_genai_image_") != std::string::npos) {
+                    return absl::InvalidArgumentError("Message contains restricted <ov_genai_image> tag");
+                }
             }
         }
 
-        const ImageHistory& imageHistory = vlmExecutionContext->apiHandler->getImageHistory();
-        size_t imageIndex = 0;
-        std::unordered_map<size_t, std::string> imageTags;
-        for (const auto& image : imageHistory) {
-            const auto& [chatTurnIndex, imageTensor] = image;
-            std::string imageTag = "<ov_genai_image_" + std::to_string(imageIndex++) + ">\n";
-            imageTags[chatTurnIndex] = imageTags[chatTurnIndex] + imageTag;
-            vlmExecutionContext->inputImages.push_back(imageTensor);
-        }
-        for (const auto& [chatTurnIndex, imageTagString] : imageTags) {
-            std::string messageContent = chatHistory[chatTurnIndex]["content"].as_string().value_or("");
-            chatHistory[chatTurnIndex]["content"] = imageTagString + messageContent;
+        if (executionContext->endpoint == Endpoint::RESPONSES) {
+            size_t imageIndex = 0;
+            std::unordered_map<size_t, std::string> imageTags;
+            for (const auto& image : imageHistory) {
+                const auto& [chatTurnIndex, imageTensor] = image;
+                std::string imageTag = "<ov_genai_image_" + std::to_string(imageIndex++) + ">\n";
+                imageTags[chatTurnIndex] = imageTags[chatTurnIndex] + imageTag;
+                vlmExecutionContext->inputImages.push_back(imageTensor);
+            }
+            for (const auto& [chatTurnIndex, imageTagString] : imageTags) {
+                std::string messageContent = chatHistory[chatTurnIndex]["content"].as_string().value_or("");
+                chatHistory[chatTurnIndex]["content"] = imageTagString + messageContent;
+            }
+        } else {
+            for (const auto& image : imageHistory) {
+                const auto& [chatTurnIndex, imageTensor] = image;
+                (void)chatTurnIndex;
+                vlmExecutionContext->inputImages.push_back(imageTensor);
+            }
         }
 
         constexpr bool addGenerationPrompt = true;  // confirm it should be hardcoded
