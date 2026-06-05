@@ -297,10 +297,10 @@ TEST_P(InputProcessingIntegrationTest, InterleavedTextAndImage_BothTextPartsInPr
     ASSERT_TRUE(result.parseStatus.ok()) << result.parseStatus.message();
     ASSERT_TRUE(result.processStatus.ok()) << result.processStatus.message();
 
-    // [text("Before."), image, text("After.")] → image tag before joined text.
+    // Preserve the multipart order: [text("Before."), image, text("After.")].
     const std::string expected =
         std::string(SMOL_DEFAULT_SYSTEM) +
-        "<|im_start|>user\n<ov_genai_image_0>\nBefore.\nAfter.<|im_end|>\n"
+        "<|im_start|>user\nBefore.<ov_genai_image_0>\nAfter.<|im_end|>\n"
         "<|im_start|>assistant\n";
     ASSERT_EQ(result.req.inputImages.size(), 1u);
     EXPECT_EQ(result.req.promptText, expected);
