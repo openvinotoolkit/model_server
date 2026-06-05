@@ -1678,6 +1678,20 @@ bool ModelManager::servableExists(const std::string& name, ServableQueryType che
     return false;
 }
 
+bool ModelManager::aliasesConflict(const std::vector<std::string>& aliases, const std::string& ownGraphName) const {
+    for (const auto& alias : aliases) {
+        if (servableExists(alias, ServableQueryType::Model | ServableQueryType::Pipeline)) {
+            return true;
+        }
+    }
+#if (MEDIAPIPE_DISABLE == 0)
+    if (mediapipeFactory->aliasesConflictExcluding(aliases, ownGraphName)) {
+        return true;
+    }
+#endif
+    return false;
+}
+
 const PipelineFactory& ModelManager::getPipelineFactory() const {
     return *pipelineFactory;
 }

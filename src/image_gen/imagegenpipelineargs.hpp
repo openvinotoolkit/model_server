@@ -17,6 +17,7 @@
 
 #include <string>
 #include <optional>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -39,6 +40,21 @@ struct StaticReshapeSettingsArgs {
         guidanceScale(guidance) {}
 };
 
+enum class LoraLoadMode {
+    DYNAMIC = 0,  // Apply/remove at inference time (hot-swap between requests)
+    STATIC = 1,   // Compile with fixed alpha (NPU - no runtime switching)
+    FUSE = 2      // Permanently merge into base weights (always active, not selectable)
+};
+
+constexpr float DEFAULT_ALPHA = 1.0f;
+
+struct LoraAdapterInfo {
+    std::string alias;
+    std::string path;  // absolute path to .safetensors file
+    float alpha = DEFAULT_ALPHA;
+    LoraLoadMode mode = LoraLoadMode::DYNAMIC;
+};
+
 struct ImageGenPipelineArgs {
     std::string modelsPath;
     std::vector<std::string> device;
@@ -51,5 +67,11 @@ struct ImageGenPipelineArgs {
     uint64_t maxNumInferenceSteps;
 
     std::optional<StaticReshapeSettingsArgs> staticReshapeSettings;
+    std::vector<LoraAdapterInfo> loraAdapters;
+    // Maps a composite alias to its component (adapter alias, alpha) pairs.
+    // Alpha is optional: nullopt means "not explicitly set in config" — at runtime,
+    // the priority chain (request > composite > individual adapter) determines the effective value.
+    using CompositeLoraMap = std::unordered_map<std::string, std::vector<std::pair<std::string, std::optional<float>>>>;
+    CompositeLoraMap compositeLoraAdapters;
 };
 }  // namespace ovms
