@@ -41,7 +41,7 @@ IF "%~3"=="" (
     set "gtestFilter=%3"
 )
 
-set "buildTestCommand=bazel %bazelStartupCmd% build %bazelBuildArgs% --jobs=%NUMBER_OF_PROCESSORS% --verbose_failures //src:ovms_test"
+set "buildTestCommand=bazel %bazelStartupCmd% build %bazelBuildArgs% --jobs=6 --verbose_failures //src:ovms_test"
 set "changeConfigsCmd=python windows_change_test_configs.py"
 set "runTest=%cd%\bazel-bin\src\ovms_test.exe --gtest_filter=!gtestFilter! > win_full_test.log 2>&1"
 
