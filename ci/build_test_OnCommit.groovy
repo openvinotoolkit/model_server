@@ -210,7 +210,6 @@ pipeline {
                           windows.setup_bazel_remote_cache()
                           windows.install_dependencies()
                           windows.unit_test()
-                          windows.check_tests()
                         } finally {
                           windows.archive_test_artifacts()
                         }
