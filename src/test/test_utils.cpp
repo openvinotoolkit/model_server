@@ -788,7 +788,7 @@ void EnsureServerModelDownloadFinishedWithTimeout(ovms::Server& server, int star
     const auto phase2Start = std::chrono::high_resolution_clock::now();
     while (state != ovms::ModuleState::SHUTDOWN &&
            state != ovms::ModuleState::NOT_INITIALIZED &&
-            (std::chrono::high_resolution_clock::now() - phase2Start) < completionTimeout) {
+           (std::chrono::high_resolution_clock::now() - phase2Start) < completionTimeout) {
         std::this_thread::yield();
         std::this_thread::sleep_for(pollInterval);
         state = server.getModuleState(ovms::HF_MODEL_PULL_MODULE_NAME);
