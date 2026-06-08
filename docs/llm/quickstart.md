@@ -167,6 +167,7 @@ The `tokenize` endpoint provides a simple API for tokenizing input text using th
 
 Example usage:
 ```console
+echo "TEST"
 curl http://localhost:8000/v3/tokenize -H "Content-Type: application/json" -d "{ \"model\": \"Qwen/Qwen3-8B\", \"text\": \"hello world\"}"
 ```
 Response:

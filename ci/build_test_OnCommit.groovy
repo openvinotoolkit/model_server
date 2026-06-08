@@ -66,26 +66,34 @@ pipeline {
                   disable_doc_tests_windows = true
                   println "Commit override: disable_doc_tests_windows = true"
               }
-              def agentLinuxDocMatch = (commitMsg =~ /\[agent_name_linux_doc=([^\]]+)\]/)
-              if (agentLinuxDocMatch) {
-                  agent_name_linux_doc = agentLinuxDocMatch[0][1]
+              def agentLinuxDocMatcher = (commitMsg =~ /\[agent_name_linux_doc=([^\]]+)\]/)
+              def agentLinuxDocValue = agentLinuxDocMatcher ? agentLinuxDocMatcher[0][1] : null
+              agentLinuxDocMatcher = null // Matcher is not serializable; null it before CPS checkpoint
+              if (agentLinuxDocValue) {
+                  agent_name_linux_doc = agentLinuxDocValue
                   println "Commit override: agent_name_linux_doc = ${agent_name_linux_doc}"
               }
-              def agentWindowsDocMatch = (commitMsg =~ /\[agent_name_windows_doc=([^\]]+)\]/)
-              if (agentWindowsDocMatch) {
-                  agent_name_windows_doc = agentWindowsDocMatch[0][1]
+              def agentWindowsDocMatcher = (commitMsg =~ /\[agent_name_windows_doc=([^\]]+)\]/)
+              def agentWindowsDocValue = agentWindowsDocMatcher ? agentWindowsDocMatcher[0][1] : null
+              agentWindowsDocMatcher = null // Matcher is not serializable; null it before CPS checkpoint
+              if (agentWindowsDocValue) {
+                  agent_name_windows_doc = agentWindowsDocValue
                   println "Commit override: agent_name_windows_doc = ${agent_name_windows_doc}"
               }
-              def docChangedFilesLinuxMatch = (commitMsg =~ /\[doc_changed_files_linux=([^\]]+)\]/)
-              if (docChangedFilesLinuxMatch) {
-                  doc_changed_files_linux = docChangedFilesLinuxMatch[0][1].replaceAll(' ', '\n')
+              def docChangedFilesLinuxMatcher = (commitMsg =~ /\[doc_changed_files_linux=([^\]]+)\]/)
+              def docChangedFilesLinuxValue = docChangedFilesLinuxMatcher ? docChangedFilesLinuxMatcher[0][1] : null
+              docChangedFilesLinuxMatcher = null // Matcher is not serializable; null it before CPS checkpoint
+              if (docChangedFilesLinuxValue) {
+                  doc_changed_files_linux = docChangedFilesLinuxValue.replaceAll(' ', '\n')
                   println "Commit override: doc_changed_files_linux = ${doc_changed_files_linux}"
               } else {
                   doc_changed_files_linux = sh (script: "./ci/check_md_code_changes.sh linux ${diffBase}", returnStdout: true).trim()
               }
-              def docChangedFilesWindowsMatch = (commitMsg =~ /\[doc_changed_files_windows=([^\]]+)\]/)
-              if (docChangedFilesWindowsMatch) {
-                  doc_changed_files_windows = docChangedFilesWindowsMatch[0][1].replaceAll(' ', '\n')
+              def docChangedFilesWindowsMatcher = (commitMsg =~ /\[doc_changed_files_windows=([^\]]+)\]/)
+              def docChangedFilesWindowsValue = docChangedFilesWindowsMatcher ? docChangedFilesWindowsMatcher[0][1] : null
+              docChangedFilesWindowsMatcher = null // Matcher is not serializable; null it before CPS checkpoint
+              if (docChangedFilesWindowsValue) {
+                  doc_changed_files_windows = docChangedFilesWindowsValue.replaceAll(' ', '\n')
                   println "Commit override: doc_changed_files_windows = ${doc_changed_files_windows}"
               } else {
                   doc_changed_files_windows = sh (script: "./ci/check_md_code_changes.sh windows ${diffBase}", returnStdout: true).trim()
@@ -266,7 +274,7 @@ pipeline {
                       def doc_changed_files_str = doc_changed_files_linux.split('\n').join(' or ')
                       sh "make create-venv && rm -f tests/functional && ln -s ${pwd}/../tests/functional tests/functional"
                       def cmd_venv_activate = ". .venv/bin/activate"
-                      def cmd_export = "export TT_RUN_REGRESSION_TESTS=True && export TT_REGRESSION_WEEKLY_TESTS=True && export TT_TARGET_DEVICE=CPU,GPU,NPU && export TT_ENABLE_UAT_TESTS=True && export TT_OVMS_C_REPO_PATH=${ovms_c_repo_path} && export TT_WAIT_FOR_MESSAGES_TIMEOUT=1500"
+                      def cmd_export = "export TT_RUN_REGRESSION_TESTS=True && export TT_REGRESSION_WEEKLY_TESTS=True && export TT_TARGET_DEVICE=CPU,GPU,NPU && export TT_ENABLE_UAT_TESTS=True && export TT_ENABLE_SMOKE_TESTS=False && export TT_OVMS_C_REPO_PATH=${ovms_c_repo_path} && export TT_WAIT_FOR_MESSAGES_TIMEOUT=1500"
                       def cmd_pytest = "pytest tests/non_functional/documentation -k '${doc_changed_files_str}' -n 0 --dist loadgroup"
                       def cmd = ""
                       if ( image_build_needed == "true" ) {
@@ -332,7 +340,7 @@ pipeline {
                       def ovms_c_repo_path = bat(returnStdout: true, script: 'cd .. && cd').trim().split('\n').last().trim()
                       def cmd_link_ovms = "(if exist ${current_path}\\tests\\functional rmdir ${current_path}\\tests\\functional) && mklink /D ${current_path}\\tests\\functional ${ovms_c_repo_path}\\tests\\functional"
                       def cmd_requirements = "(if not exist .venv virtualenv .venv --python=python3.12) && call .venv\\Scripts\\activate.bat && pip install -r requirements.txt"
-                      def cmd_export = "set \"TT_RUN_REGRESSION_TESTS=True\" && set \"TT_REGRESSION_WEEKLY_TESTS=True\" && set \"TT_TARGET_DEVICE=CPU,GPU,NPU\" && set \"TT_BASE_OS=windows\" && set \"TT_OVMS_TYPE=BINARY\" && set \"TT_ENABLE_UAT_TESTS=True\" && set \"TT_ENABLE_SMOKE_TESTS=False\" && set \"TT_OVMS_C_REPO_PATH=${ovms_c_repo_path}\" && set \"TT_WAIT_FOR_MESSAGES_TIMEOUT=1500\""
+                      def cmd_export = "set \"TT_RUN_REGRESSION_TESTS=True\" && set \"TT_REGRESSION_WEEKLY_TESTS=True\" && set \"TT_TARGET_DEVICE=CPU,GPU,NPU\" && set \"TT_BASE_OS=windows\" && set \"TT_OVMS_TYPE=BINARY\" && set \"TT_ENABLE_UAT_TESTS=True\" && set \"TT_ENABLE_SMOKE_TESTS=False\" && set \"TT_DISABLE_DMESG_LOG_MONITOR=True\" && set \"TT_OVMS_C_REPO_PATH=${ovms_c_repo_path}\" && set \"TT_WAIT_FOR_MESSAGES_TIMEOUT=1500\" && set \"PYTHONUTF8=1\" && set \"PYTHONIOENCODING=utf-8\""
                       def cmd_pytest = "pytest tests/non_functional/documentation -k \"${doc_changed_files_str}\" -n 0 --dist loadgroup --basetemp=\"C:\\tmp\\pytest-${BRANCH_NAME}-${BUILD_NUMBER}\""
                       def cmd = ""
                       if ( win_image_build_needed == "true" ) {

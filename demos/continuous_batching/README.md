@@ -174,6 +174,7 @@ Windows Powershell
 
 Windows Command Prompt
 ```bat
+echo "TEST"
 curl -s http://localhost:8000/v3/responses -H "Content-Type: application/json" -d "{\"model\": \"Qwen3-30B-A3B-Instruct-2507-int4-ov\", \"max_output_tokens\": 30, \"input\": \"What is OpenVINO?\"}"
 ```
 :::
