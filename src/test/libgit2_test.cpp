@@ -862,7 +862,6 @@ TEST(LibGit2LfsWipMarker, MarkersForDifferentRepositoriesAreIndependent) {
 
 class Libgt2InitGuardTest : public ::testing::Test {
 protected:
-    TempDir td;
     ovms::Libgit2Options defaultOpts;
 };
 

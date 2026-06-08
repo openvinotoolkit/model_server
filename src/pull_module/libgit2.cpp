@@ -1137,14 +1137,16 @@ struct ResumeCandidates {
 };
 
 /**
- * Builds resume candidate lists based on interruption markers and repository scan.
+ * Populates resume candidate lists based on interruption markers and repository scan.
  * 
  * @param repo Pointer to the git repository object.
  * @param downloadPath Repository worktree root path.
- * @return ResumeCandidates containing LFS and non-LFS recovery targets.
+ * @param candidates [in/out] Resume candidates to populate; hasWipMarker and hasLfsErrorFile
+ *        must already be set by the caller. On return, lfsMatches, missingNonLfsMatches,
+ *        and interruptionLikely are filled in.
  * @note Works on local repository metadata and filesystem; no network operations.
  */
-ResumeCandidates buildResumeCandidates(git_repository* repo, const std::string& downloadPath, ResumeCandidates candidates) {
+void buildResumeCandidates(git_repository* repo, const std::string& downloadPath, ResumeCandidates& candidates) {
     // Checking if the download was partially finished for any files in repository,
     // including tracked LFS pointer blobs missing from the worktree after abrupt termination.
     candidates.lfsMatches = libgit2::findResumableLfsFiles(repo, downloadPath, candidates.hasWipMarker || candidates.hasLfsErrorFile);
@@ -1153,7 +1155,6 @@ ResumeCandidates buildResumeCandidates(git_repository* repo, const std::string& 
     }
 
     candidates.interruptionLikely = candidates.hasWipMarker || candidates.hasLfsErrorFile || !candidates.lfsMatches.empty();
-    return candidates;
 }
 
 void printResumeCandidates(const ResumeCandidates& candidates) {
@@ -1275,7 +1276,7 @@ Status resumeExistingRepository(git_repository* repo,
     return StatusCode::OK;
 }
 
-bool resumeCheckSecondCondition(const std::string& downloadPath, const ResumeCandidates& candidates) {
+bool hasResumableStateBasedOnFiles(const std::string& downloadPath, const ResumeCandidates& candidates) {
     auto existingMatches = ovms::libgit2::findLfsLikeFiles(downloadPath, true);
 
     // Use repository object only when interruption markers indicate a previous
@@ -1292,7 +1293,7 @@ bool resumeCheckSecondCondition(const std::string& downloadPath, const ResumeCan
     return true;
 }
 
-Status resumeCheckFirstCondition(const std::string& downloadPath, bool& gitEntryExists) {
+Status checkGitEntryExists(const std::string& downloadPath, bool& gitEntryExists) {
     std::error_code ec;
     gitEntryExists = fs::exists(fs::path(downloadPath) / ".git", ec);
     if (ec) {
@@ -1313,7 +1314,7 @@ Status checkSufficientResumeConditions(const std::string& downloadPath, ResumeCa
     candidates.shouldResume = false;
 
     bool gitEntryExists = false;
-    auto firstConditionStatus = resumeCheckFirstCondition(downloadPath, gitEntryExists);
+    auto firstConditionStatus = checkGitEntryExists(downloadPath, gitEntryExists);
     if (!firstConditionStatus.ok()) {
         return firstConditionStatus;
     }
@@ -1325,11 +1326,11 @@ Status checkSufficientResumeConditions(const std::string& downloadPath, ResumeCa
     candidates.hasWipMarker = libgit2::hasLfsWipMarker(downloadPath);
     candidates.hasLfsErrorFile = libgit2::hasLfsErrorFile(downloadPath);
 
-    candidates.shouldResume = resumeCheckSecondCondition(downloadPath, candidates);
+    candidates.shouldResume = hasResumableStateBasedOnFiles(downloadPath, candidates);
     return StatusCode::OK;
 }
 
-Status handleExistingRepositoryWithoutOverwrite(const std::string& downloadPath,
+Status handleExistingRepository(const std::string& downloadPath,
     const std::function<Status(bool)>& checkRepositoryStatusFn) {
     // If the directory does not contain a .git entry, treat it as a user-provided model directory.
     // The user has copied model files in by hand; skip the pull and let model loading proceed
@@ -1353,7 +1354,7 @@ Status handleExistingRepositoryWithoutOverwrite(const std::string& downloadPath,
         return mapRepositoryOpenFailureToStatus(repoGuard);
     }
 
-    candidates = buildResumeCandidates(repoGuard.get(), downloadPath, std::move(candidates));
+    buildResumeCandidates(repoGuard.get(), downloadPath, candidates);
     if (!candidates.interruptionLikely) {
         SPDLOG_WARN("Interruption marker(s) were found but no resumable candidates were detected for path: {}", downloadPath);
         SPDLOG_INFO("Path already exists on local filesystem. Skipping download to path: {}", downloadPath);
@@ -1510,7 +1511,7 @@ Status HfDownloader::downloadModel() {
 
     // Repository exists and we do not want to overwrite
     if (std::filesystem::is_directory(this->downloadPath) && !this->overwriteModels) {
-        return handleExistingRepositoryWithoutOverwrite(this->downloadPath, checkRepositoryStatusFn);
+        return handleExistingRepository(this->downloadPath, checkRepositoryStatusFn);
     }
 
     auto status = IModelDownloader::checkIfOverwriteAndRemove();
