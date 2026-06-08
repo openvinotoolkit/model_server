@@ -16,13 +16,21 @@
 #
 
 # Checks git diff for .md files and reports those where changes
-# fall inside ```bash, ```bat, or ```console fenced code blocks.
-# Usage: ./check_md_code_changes.sh [base_ref]
+# fall inside fenced code blocks.
+# Usage: ./check_md_code_changes.sh <platform> [base_ref]
+#   platform: "linux" (checks bash+console) or "windows" (checks bat+console)
 #   base_ref: optional git ref to diff against (default: HEAD~1)
 
 set -euo pipefail
 
-BASE_REF="${1:-HEAD~1}"
+PLATFORM="${1:-linux}"
+BASE_REF="${2:-HEAD~1}"
+
+case "$PLATFORM" in
+    linux)   BLOCK_PATTERN='^```(bash|console)' ;;
+    windows) BLOCK_PATTERN='^```(bat|console)' ;;
+    *)       echo "Error: platform must be 'linux' or 'windows'" >&2; exit 1 ;;
+esac
 
 # Get list of changed .md files
 changed_md_files=$(git diff --name-only "$BASE_REF" HEAD -- '*.md')
@@ -51,13 +59,13 @@ while IFS= read -r file; do
 
     # Use awk to find which lines are inside ```bash/bat/console blocks,
     # then check if any of those overlap with changed lines
-    hit=$(awk -v lines="$changed_lines" '
+    hit=$(awk -v lines="$changed_lines" -v pattern="$BLOCK_PATTERN" '
     BEGIN {
         n = split(lines, arr, "\n")
         for (i = 1; i <= n; i++) changed[arr[i]] = 1
     }
-    /^```(bash|bat|console)/ { in_block = 1; next }
-    /^```/                   { in_block = 0; next }
+    $0 ~ pattern            { in_block = 1; next }
+    /^```/                  { in_block = 0; next }
     in_block && (NR in changed) { print FILENAME; exit }
     ' "$file")
 

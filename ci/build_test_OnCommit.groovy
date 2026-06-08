@@ -2,13 +2,13 @@ def image_build_needed = "false"
 def win_image_build_needed = "false"
 def client_test_needed = "false"
 def export_models_changed = "false"
-def doc_changed_files = ""
-def doc_changed_files_str = ""
+def doc_changed_files_linux = ""
+def doc_changed_files_windows = ""
 def shortCommit = ""
 def agent_name_windows = ""
 def agent_name_windows_doc = "ovms_win_ptl"
 def agent_name_linux = ""
-def agent_name_linux_doc = "ovms_spr"
+def agent_name_linux_doc = "ovms_ptl"
 def disable_doc_tests_linux = false
 def disable_doc_tests_windows = false
 
@@ -76,15 +76,19 @@ pipeline {
                   agent_name_windows_doc = agentWindowsDocMatch[0][1]
                   println "Commit override: agent_name_windows_doc = ${agent_name_windows_doc}"
               }
-              def docChangedFilesMatch = (commitMsg =~ /\[doc_changed_files=([^\]]+)\]/)
-              if (docChangedFilesMatch) {
-                  doc_changed_files = docChangedFilesMatch[0][1].replaceAll(' ', '\n')
-                  println "Commit override: doc_changed_files = ${doc_changed_files}"
+              def docChangedFilesLinuxMatch = (commitMsg =~ /\[doc_changed_files_linux=([^\]]+)\]/)
+              if (docChangedFilesLinuxMatch) {
+                  doc_changed_files_linux = docChangedFilesLinuxMatch[0][1].replaceAll(' ', '\n')
+                  println "Commit override: doc_changed_files_linux = ${doc_changed_files_linux}"
               } else {
-                  doc_changed_files = sh (script: "./ci/check_md_code_changes.sh ${diffBase}", returnStdout: true).trim()
+                  doc_changed_files_linux = sh (script: "./ci/check_md_code_changes.sh linux ${diffBase}", returnStdout: true).trim()
               }
-              if (doc_changed_files) {
-                  doc_changed_files_str = doc_changed_files.split('\n').join(' or ')
+              def docChangedFilesWindowsMatch = (commitMsg =~ /\[doc_changed_files_windows=([^\]]+)\]/)
+              if (docChangedFilesWindowsMatch) {
+                  doc_changed_files_windows = docChangedFilesWindowsMatch[0][1].replaceAll(' ', '\n')
+                  println "Commit override: doc_changed_files_windows = ${doc_changed_files_windows}"
+              } else {
+                  doc_changed_files_windows = sh (script: "./ci/check_md_code_changes.sh windows ${diffBase}", returnStdout: true).trim()
               }
             }
           }
@@ -151,12 +155,12 @@ pipeline {
                     sh "echo build --remote_cache=${env.OVMS_BAZEL_REMOTE_CACHE_URL} > .user.bazelrc"
                     sh "echo test:linux --test_env https_proxy=${env.HTTPS_PROXY} >> .user.bazelrc"
                     sh "echo test:linux --test_env http_proxy=${env.HTTP_PROXY} >> .user.bazelrc"
-                    sh "make ovms_builder_image RUN_TESTS=${runTestsFlag} OPTIMIZE_BUILDING_TESTS=1 OV_USE_BINARY=0 BASE_OS=redhat OVMS_CPP_IMAGE_TAG=${shortCommit} BUILD_IMAGE=openvino/model_server-build:${shortCommit}"
+                    sh "make ovms_builder_image RUN_TESTS=${runTestsFlag} OPTIMIZE_BUILDING_TESTS=1 OVMS_CPP_IMAGE_TAG=${shortCommit} BUILD_IMAGE=openvino/model_server-build:${shortCommit}"
 
                     // release_image
-                    sh "make release_image RUN_TESTS=0 OV_USE_BINARY=0 BASE_OS=redhat OVMS_CPP_IMAGE_TAG=${shortCommit} BUILD_IMAGE=openvino/model_server-build:${shortCommit}"
-                    sh "make run_lib_files_test BASE_OS=redhat OVMS_CPP_IMAGE_TAG=${shortCommit}"
-                    if ( doc_changed_files ) {
+                    sh "make release_image RUN_TESTS=0 GPU=1 NPU=1 OVMS_CPP_IMAGE_TAG=${shortCommit} BUILD_IMAGE=openvino/model_server-build:${shortCommit}"
+                    // sh "make run_lib_files_test OVMS_CPP_IMAGE_TAG=${shortCommit}"
+                    if ( doc_changed_files_linux ) {
                         sh "docker save openvino/model_server:${shortCommit} | gzip > ovms_release_image.tar.gz"
                         stash name: 'ovms-release-image', includes: 'ovms_release_image.tar.gz'
                         sh "rm -f ovms_release_image.tar.gz"
@@ -191,7 +195,9 @@ pipeline {
                           windows.install_dependencies()
                           windows.clean()
                           windows.build()
-                          stash name: 'ovms-windows-package', includes: 'dist\\windows\\ovms.zip'
+                          if ( doc_changed_files_windows ) {
+                            stash name: 'ovms-windows-package', includes: 'dist\\windows\\ovms.zip'
+                          }
                         } finally {
                           windows.archive_build_artifacts()
                         }
@@ -217,7 +223,7 @@ pipeline {
               script {
               println "Running unit tests: NODE_NAME = ${env.NODE_NAME}"
               try {
-                  sh "make run_unit_tests TEST_LLM_PATH=${HOME}/ovms_models/llm_models_ovms/OVMS_C BASE_OS=redhat OVMS_CPP_IMAGE_TAG=${shortCommit}"
+                  sh "make run_unit_tests TEST_LLM_PATH=${HOME}/ovms_models/llm_models_ovms/OVMS_C OVMS_CPP_IMAGE_TAG=${shortCommit}"
               }
               finally {
                   archiveArtifacts allowEmptyArchive: true, artifacts: "test_logs.tar.gz"
@@ -236,8 +242,8 @@ pipeline {
                   dir ('internal_tests'){
                     checkout scmGit(branches: [[name: '20260605_test_fixes']], userRemoteConfigs: [[credentialsId: 'workflow-lab', url: 'https://github.com/intel-innersource/frameworks.ai.openvino.model-server.tests.git']])
                     sh "pwd"
-                    pwd = sh(returnStdout:true, script: "pwd").strip()
-                    sh "make create-venv && rm -f tests/functional && ln -s ${pwd}/../tests/functional tests/functional && TT_ON_COMMIT_TESTS=True TT_XDIST_WORKERS=10 TT_BASE_OS=redhat TT_OVMS_IMAGE_NAME=openvino/model_server:${shortCommit} TT_OVMS_IMAGE_LOCAL=True make tests"
+                    def pwd = sh(returnStdout:true, script: "pwd").strip()
+                    sh "make create-venv && rm -f tests/functional && ln -s ${pwd}/../tests/functional tests/functional && TT_ON_COMMIT_TESTS=True TT_XDIST_WORKERS=10 TT_OVMS_IMAGE_NAME=openvino/model_server:${shortCommit} TT_OVMS_IMAGE_LOCAL=True make tests"
                   }
                 }
               }            
@@ -245,7 +251,7 @@ pipeline {
             stage("Documentation tests") {
               agent none
               when {
-                expression { doc_changed_files && !disable_doc_tests_linux }
+                expression { doc_changed_files_linux && !disable_doc_tests_linux }
                 beforeAgent true
               }
               steps {
@@ -255,11 +261,12 @@ pipeline {
                     dir ('documentation_tests') {
                       checkout scmGit(branches: [[name: 'develop']], userRemoteConfigs: [[credentialsId: 'workflow-lab', url: 'https://github.com/intel-innersource/frameworks.ai.openvino.model-server.tests.git']])
                       sh "pwd"
-                      pwd = sh(returnStdout:true, script: "pwd").strip()
-                      ovms_c_repo_path = sh(returnStdout:true, script: "cd .. && pwd").strip()
+                      def pwd = sh(returnStdout:true, script: "pwd").strip()
+                      def ovms_c_repo_path = sh(returnStdout:true, script: "cd .. && pwd").strip()
+                      def doc_changed_files_str = doc_changed_files_linux.split('\n').join(' or ')
                       sh "make create-venv && rm -f tests/functional && ln -s ${pwd}/../tests/functional tests/functional"
                       def cmd_venv_activate = ". .venv/bin/activate"
-                      def cmd_export = "export TT_RUN_REGRESSION_TESTS=True && export TT_REGRESSION_WEEKLY_TESTS=True && export TT_TARGET_DEVICE=CPU && export TT_BASE_OS=redhat && export TT_ENABLE_UAT_TESTS=True && export TT_OVMS_C_REPO_PATH=${ovms_c_repo_path}"
+                      def cmd_export = "export TT_RUN_REGRESSION_TESTS=True && export TT_REGRESSION_WEEKLY_TESTS=True && export TT_TARGET_DEVICE=CPU,GPU,NPU && export TT_ENABLE_UAT_TESTS=True && export TT_OVMS_C_REPO_PATH=${ovms_c_repo_path} && export TT_WAIT_FOR_MESSAGES_TIMEOUT=1500"
                       def cmd_pytest = "pytest tests/non_functional/documentation -k '${doc_changed_files_str}' -n 0 --dist loadgroup"
                       def cmd = ""
                       if ( image_build_needed == "true" ) {
@@ -267,11 +274,7 @@ pipeline {
                           sh "gunzip -c ovms_release_image.tar.gz | docker load"
                           sh "rm -f ovms_release_image.tar.gz"
 
-                          unstash 'ovms-release-image-gpu'
-                          sh "gunzip -c ovms_release_image_gpu.tar.gz | docker load"
-                          sh "rm -f ovms_release_image_gpu.tar.gz"
-
-                          cmd = "${cmd_venv_activate} && ${cmd_export} && export TT_OVMS_IMAGE_NAME=openvino/model_server:${shortCommit} && export TT_OVMS_IMAGE_LOCAL=True && ${cmd_pytest}"
+                          cmd = "${cmd_venv_activate} && ${cmd_export} && export TT_OVMS_IMAGE_NAME=openvino/model_server:${shortCommit} && export TT_OVMS_IMAGE_LOCAL=True && export TT_FORCE_USE_OVMS_IMAGE=True && ${cmd_pytest}"
                       } else {
                           cmd = "${cmd_venv_activate} && ${cmd_export} && ${cmd_pytest}"
                       }
@@ -279,7 +282,7 @@ pipeline {
                         sh cmd
                       } finally {
                         // Always save artifacts
-                        zip zipFile: 'documentation_tests_linux_logs.zip', glob: 'test_log/**,test_log_build/**', allowEmpty: true
+                        zip zipFile: 'documentation_tests_linux_logs.zip', glob: 'test_log/**,test_log_build/**', overwrite: true
                         archiveArtifacts(artifacts: 'documentation_tests_linux_logs.zip', allowEmptyArchive: true)
                       }
                     }
@@ -315,7 +318,7 @@ pipeline {
             stage("Documentation tests windows") {
               agent none
               when {
-                expression { doc_changed_files && !disable_doc_tests_windows }
+                expression { doc_changed_files_windows && !disable_doc_tests_windows }
                 beforeAgent true
               }
               steps {
@@ -324,24 +327,28 @@ pipeline {
                   script {
                     dir ('documentation_tests') {
                       checkout scmGit(branches: [[name: '20260605_test_fixes']], userRemoteConfigs: [[credentialsId: 'workflow-lab', url: 'https://github.com/intel-innersource/frameworks.ai.openvino.model-server.tests.git']])
+                      def doc_changed_files_str = doc_changed_files_windows.split('\n').join(' or ')
                       def current_path = bat(returnStdout: true, script: 'cd').trim().split('\n').last().trim()
                       def ovms_c_repo_path = bat(returnStdout: true, script: 'cd .. && cd').trim().split('\n').last().trim()
-                      def cmd_link_ovms = "if exist ${current_path}\\tests\\functional rmdir ${current_path}\\tests\\functional && mklink /D ${current_path}\\tests\\functional ${ovms_c_repo_path}\\tests\\functional"
-                      def cmd_requirements = "virtualenv .venv --python=python3.12 && .venv\\Scripts\\activate.bat && pip install -r requirements.txt"
-                      def cmd_export = "set \"TT_RUN_REGRESSION_TESTS=True\" && set \"TT_REGRESSION_WEEKLY_TESTS=True\" && set \"TT_TARGET_DEVICE=CPU,GPU,NPU\" && set \"TT_BASE_OS=windows\" && set \"TT_OVMS_TYPE=BINARY\" && set \"TT_ENABLE_UAT_TESTS=True\" && set \"TT_ENABLE_SMOKE_TESTS=False\" && set \"TT_OVMS_C_REPO_PATH=${ovms_c_repo_path}\""
-                      def cmd_pytest = "pytest tests/non_functional/documentation -k \"${doc_changed_files_str}\" -n 3 --dist loadgroup --basetemp=\"C:\\tmp\\pytest-${BRANCH_NAME}-${BUILD_NUMBER}\""
+                      def cmd_link_ovms = "(if exist ${current_path}\\tests\\functional rmdir ${current_path}\\tests\\functional) && mklink /D ${current_path}\\tests\\functional ${ovms_c_repo_path}\\tests\\functional"
+                      def cmd_requirements = "(if not exist .venv virtualenv .venv --python=python3.12) && call .venv\\Scripts\\activate.bat && pip install -r requirements.txt"
+                      def cmd_export = "set \"TT_RUN_REGRESSION_TESTS=True\" && set \"TT_REGRESSION_WEEKLY_TESTS=True\" && set \"TT_TARGET_DEVICE=CPU,GPU,NPU\" && set \"TT_BASE_OS=windows\" && set \"TT_OVMS_TYPE=BINARY\" && set \"TT_ENABLE_UAT_TESTS=True\" && set \"TT_ENABLE_SMOKE_TESTS=False\" && set \"TT_OVMS_C_REPO_PATH=${ovms_c_repo_path}\" && set \"TT_WAIT_FOR_MESSAGES_TIMEOUT=1500\""
+                      def cmd_pytest = "pytest tests/non_functional/documentation -k \"${doc_changed_files_str}\" -n 0 --dist loadgroup --basetemp=\"C:\\tmp\\pytest-${BRANCH_NAME}-${BUILD_NUMBER}\""
                       def cmd = ""
                       if ( win_image_build_needed == "true" ) {
                           unstash 'ovms-windows-package'
-                          cmd = "${cmd_link_ovms} && ${cmd_requirements} && set TT_OVMS_C_RELEASE_ARTIFACTS_PATH=\"dist\\windows\\ovms.zip\" && ${cmd_export} && ${cmd_pytest}"
+                          cmd = "${cmd_link_ovms} && ${cmd_requirements} && ${cmd_export} && set \"TT_OVMS_C_RELEASE_ARTIFACTS_PATH=dist\\windows\\ovms.zip\" && ${cmd_pytest}"
                       } else {
                           cmd = "${cmd_link_ovms} && ${cmd_requirements} && ${cmd_export} && ${cmd_pytest}"
                       }
                       try {
-                        bat cmd
+                        def exitCode = bat(returnStatus: true, script: cmd)
+                        if (exitCode != 0) {
+                            error "Documentation tests windows command failed with exit code ${exitCode}"
+                        }
                       } finally {
                         // Always save artifacts
-                        zip zipFile: 'documentation_tests_windows_logs.zip', glob: 'test_log/**,test_log_build/**', allowEmpty: true
+                        zip zipFile: 'documentation_tests_windows_logs.zip', glob: 'test_log/**,test_log_build/**', overwrite: true
                         archiveArtifacts(artifacts: 'documentation_tests_windows_logs.zip', allowEmptyArchive: true)
                       }
                     }
