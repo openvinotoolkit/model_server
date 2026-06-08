@@ -125,6 +125,10 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
             vim && \
             apt-get clean && \
             rm -rf /var/lib/apt/lists/*
+# Level Zero development headers for NPU plugin build
+RUN curl -L -o /tmp/level-zero-devel.deb https://github.com/oneapi-src/level-zero/releases/download/v1.24.2/level-zero-devel_1.24.2+u22.04_amd64.deb && \
+    dpkg -i --force-depends /tmp/level-zero-devel.deb && \
+    rm /tmp/level-zero-devel.deb
 # on ubuntu 24.04 python3.12 is used as default python for ovms build and release
 # TF build needs python3.10 with numpy as it does not support python3.12
 RUN python3.10 -m pip install "numpy<2.0.0" --no-cache-dir
