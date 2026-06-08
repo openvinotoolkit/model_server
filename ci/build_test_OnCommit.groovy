@@ -167,7 +167,7 @@ pipeline {
 
                     // release_image
                     sh "make release_image RUN_TESTS=0 GPU=1 NPU=1 OVMS_CPP_IMAGE_TAG=${shortCommit} BUILD_IMAGE=openvino/model_server-build:${shortCommit}"
-                    // sh "make run_lib_files_test OVMS_CPP_IMAGE_TAG=${shortCommit}"
+                    sh "make run_lib_files_test OVMS_CPP_IMAGE_TAG=${shortCommit}"
                     if ( doc_changed_files_linux ) {
                         sh "docker save openvino/model_server:${shortCommit} | gzip > ovms_release_image.tar.gz"
                         stash name: 'ovms-release-image', includes: 'ovms_release_image.tar.gz'
