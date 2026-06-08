@@ -24,7 +24,7 @@ This procedure can be used to pull preconfigured models from OpenVINO organizati
 ```bash
 mkdir -p models
 docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --pull --model_repository_path /models --source_model OpenVINO/Qwen3-Embedding-0.6B-int8-ov --pooling LAST --task embeddings
-docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --add_to_config --config_path /models/config.json --model_name OpenVINO/Qwen3-Embedding-0.6B-int8-ov --model_path OpenVINO/Qwen3-Embedding-0.6B-int8-ov
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --add_to_config --config_path /models/config.json --model_name Qwen3-Embedding-0.6B-int8-ov --model_path OpenVINO/Qwen3-Embedding-0.6B-int8-ov
 ```
 
 **On Bare Metal (Windows/Linux)**
@@ -40,14 +40,14 @@ ovms --add_to_config --config_path /models/config.json --model_name OpenVINO/Qwe
 ```bash
 docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --pull --model_repository_path /models --source_model OpenVINO/bge-base-en-v1.5-int8-ov --pooling CLS --task embeddings
 
-docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --add_to_config --config_path /models/config.json --model_name OpenVINO/bge-base-en-v1.5-int8-ov --model_path OpenVINO/bge-base-en-v1.5-int8-ov
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --add_to_config --config_path /models/config.json --model_name bge-base-en-v1.5-int8-ov --model_path OpenVINO/bge-base-en-v1.5-int8-ov
 ```
 
 **On Bare Metal (Windows/Linux)**
 ```console
 ovms --pull --model_repository_path /models --source_model OpenVINO/bge-base-en-v1.5-int8-ov --pooling CLS --task embeddings
 
-ovms --add_to_config --config_path /models/config.json --model_name OpenVINO/bge-base-en-v1.5-int8-ov --model_path OpenVINO/bge-base-en-v1.5-int8-ov
+ovms --add_to_config --config_path /models/config.json --model_name bge-base-en-v1.5-int8-ov --model_path OpenVINO/bge-base-en-v1.5-int8-ov
 ```
 :::
 ::::
@@ -60,7 +60,7 @@ ovms --add_to_config --config_path /models/config.json --model_name OpenVINO/bge
 ```bash
 docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --pull --model_repository_path /models --source_model OpenVINO/Qwen3-Embedding-0.6B-int8-ov --pooling LAST --target_device GPU --task embeddings
 
-docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --add_to_config --config_path /models/config.json --model_name OpenVINO/Qwen3-Embedding-0.6B-int8-ov --model_path OpenVINO/Qwen3-Embedding-0.6B-int8-ov
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --add_to_config --config_path /models/config.json --model_name Qwen3-Embedding-0.6B-int8-ov --model_path OpenVINO/Qwen3-Embedding-0.6B-int8-ov
 ```
 
 **On Bare Metal (Windows/Linux)**
@@ -76,14 +76,14 @@ ovms --add_to_config --config_path /models/config.json --model_name OpenVINO/Qwe
 ```bash
 docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --pull --model_repository_path /models --source_model OpenVINO/bge-base-en-v1.5-int8-ov --pooling CLS --target_device GPU --task embeddings
 
-docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --add_to_config --config_path /models/config.json --model_name OpenVINO/bge-base-en-v1.5-int8-ov --model_path OpenVINO/bge-base-en-v1.5-int8-ov
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --add_to_config --config_path /models/config.json --model_name bge-base-en-v1.5-int8-ov --model_path OpenVINO/bge-base-en-v1.5-int8-ov
 ```
 
 **On Bare Metal (Windows/Linux)**
 ```console
 ovms --pull --model_repository_path /models --source_model OpenVINO/bge-base-en-v1.5-int8-ov --pooling CLS --target_device GPU --task embeddings
 
-ovms --add_to_config --config_path /models/config.json --model_name OpenVINO/bge-base-en-v1.5-int8-ov --model_path OpenVINO/bge-base-en-v1.5-int8-ov
+ovms --add_to_config --config_path /models/config.json --model_name bge-base-en-v1.5-int8-ov --model_path OpenVINO/bge-base-en-v1.5-int8-ov
 ```
 :::
 ::::
@@ -107,67 +107,68 @@ Run `export_model.py` script to download and quantize the model:
 :::{tab-item} BAAI/bge-large-en-v1.5
 :sync: bge-large-en-v1.5
 ```console
-python export_model.py embeddings_ov --source_model BAAI/bge-large-en-v1.5 --pooling CLS --weight-format int8 --config_file_path models/config.json --model_repository_path models
+python export_model.py embeddings_ov --source_model BAAI/bge-large-en-v1.5 --model_name bge-large-en-v1.5 --pooling CLS --weight-format int8 --config_file_path models/config.json --model_repository_path models
 ```
 :::
 :::{tab-item} BAAI/bge-large-zh-v1.5
 :sync: bge-large-zh-v1.5
 ```console
-python export_model.py embeddings_ov --source_model BAAI/bge-large-zh-v1.5 --pooling CLS --weight-format int8 --config_file_path models/config.json --model_repository_path models
+python export_model.py embeddings_ov --source_model BAAI/bge-large-zh-v1.5 --model_name bge-large-zh-v1.5 --pooling CLS --weight-format int8 --config_file_path models/config.json --model_repository_path models
 ```
 :::
 :::{tab-item} thenlper/gte-small
 :sync: gte-small
 ```console
-python export_model.py embeddings_ov --source_model thenlper/gte-small --pooling CLS --weight-format int8 --config_file_path models/config.json --model_repository_path models
+python export_model.py embeddings_ov --source_model thenlper/gte-small --model_name gte-small --pooling CLS --weight-format int8 --config_file_path models/config.json --model_repository_path models
 ```
 :::
 :::{tab-item} sentence-transformers/all-MiniLM-L12-v2
 :sync: all-MiniLM-L12-v2
 ```console
-python export_model.py embeddings_ov --source_model sentence-transformers/all-MiniLM-L12-v2 --pooling MEAN --weight-format int8 --config_file_path models/config.json --model_repository_path models
+python export_model.py embeddings_ov --source_model sentence-transformers/all-MiniLM-L12-v2 --model_name all-MiniLM-L12-v2 --pooling MEAN --weight-format int8 --config_file_path models/config.json --model_repository_path models
 ```
 :::
 :::{tab-item} sentence-transformers/all-distilroberta-v1
 :sync: all-distilroberta-v1
 ```console
-python export_model.py embeddings_ov --source_model sentence-transformers/all-distilroberta-v1 --pooling MEAN --weight-format int8 --config_file_path models/config.json --model_repository_path models
+python export_model.py embeddings_ov --source_model sentence-transformers/all-distilroberta-v1 --model_name all-distilroberta-v1 --pooling MEAN --weight-format int8 --config_file_path models/config.json --model_repository_path models
 ```
 :::
 :::{tab-item} mixedbread-ai/deepset-mxbai-embed-de-large-v1
 :sync: deepset-mxbai-embed-de-large-v1
 ```console
-python export_model.py embeddings_ov --source_model mixedbread-ai/deepset-mxbai-embed-de-large-v1 --pooling MEAN --weight-format int8 --config_file_path models/config.json --model_repository_path models
+python export_model.py embeddings_ov --source_model mixedbread-ai/deepset-mxbai-embed-de-large-v1 --model_name deepset-mxbai-embed-de-large-v1 --pooling MEAN --weight-format int8 --config_file_path models/config.json --model_repository_path models
 ```
 :::
 :::{tab-item} intfloat/multilingual-e5-large-instruct
 :sync: multilingual-e5-large-instruc
 ```console
-python export_model.py embeddings_ov --source_model intfloat/multilingual-e5-large-instruct --pooling MEAN --weight-format int8 --config_file_path models/config.json --model_repository_path models
+python export_model.py embeddings_ov --source_model intfloat/multilingual-e5-large-instruct --model_name multilingual-e5-large-instruct --pooling MEAN --weight-format int8 --config_file_path models/config.json --model_repository_path models
 ```
 :::
 :::{tab-item} intfloat/multilingual-e5-large
 :sync: multilingual-e5-large
 ```console
-python export_model.py embeddings_ov --source_model intfloat/multilingual-e5-large --pooling MEAN --weight-format int8 --config_file_path models/config.json --model_repository_path models
+python export_model.py embeddings_ov --source_model intfloat/multilingual-e5-large --model_name multilingual-e5-large --pooling MEAN --weight-format int8 --config_file_path models/config.json --model_repository_path models
 ```
 :::
 :::{tab-item} Alibaba-NLP/gte-large-en-v1.5
 :sync: gte-large-en-v1.5
-```console
-python export_model.py embeddings_ov --source_model Alibaba-NLP/gte-large-en-v1.5 --pooling CLS --extra_quantization_params "--library sentence_transformers"
+```text
+pip install "transformers<5"  # WA for optimum-intel and model support for new transformers
+python export_model.py embeddings_ov --source_model Alibaba-NLP/gte-large-en-v1.5 --model_name gte-large-en-v1.5 --pooling CLS --extra_quantization_params "--library sentence_transformers"
 ```
 :::
 :::{tab-item} nomic-ai/nomic-embed-text-v1.5
 :sync: nomic-embed-text-v1.5
 ```console
-python export_model.py embeddings_ov --source_model nomic-ai/nomic-embed-text-v1.5 --pooling MEAN --extra_quantization_params "--library sentence_transformers"
+python export_model.py embeddings_ov --source_model nomic-ai/nomic-embed-text-v1.5 --model_name nomic-embed-text-v1.5 --pooling MEAN --extra_quantization_params "--library sentence_transformers"
 ```
 :::
 :::{tab-item} sentence-transformers/all-mpnet-base-v2
 :sync: all-mpnet-base-v2
 ```console
-python export_model.py embeddings_ov --source_model sentence-transformers/all-mpnet-base-v2 --pooling MEAN
+python export_model.py embeddings_ov --source_model sentence-transformers/all-mpnet-base-v2 --model_name all-mpnet-base-v2 --pooling MEAN
 ```
 :::
 ::::
@@ -178,67 +179,68 @@ python export_model.py embeddings_ov --source_model sentence-transformers/all-mp
 :::{tab-item} BAAI/bge-large-en-v1.5
 :sync: bge-large-en-v1.5
 ```console
-python export_model.py embeddings_ov --source_model BAAI/bge-large-en-v1.5 --pooling CLS --weight-format int8 --target_device GPU --config_file_path models/config.json --model_repository_path models
+python export_model.py embeddings_ov --source_model BAAI/bge-large-en-v1.5 --model_name bge-large-en-v1.5 --pooling CLS --weight-format int8 --target_device GPU --config_file_path models/config.json --model_repository_path models
 ```
 :::
 :::{tab-item} BAAI/bge-large-zh-v1.5
 :sync: bge-large-zh-v1.5
 ```console
-python export_model.py embeddings_ov --source_model BAAI/bge-large-zh-v1.5 --pooling CLS --weight-format int8 --target_device GPU --config_file_path models/config.json --model_repository_path models
+python export_model.py embeddings_ov --source_model BAAI/bge-large-zh-v1.5 --model_name bge-large-zh-v1.5  --pooling CLS --weight-format int8 --target_device GPU --config_file_path models/config.json --model_repository_path models
 ```
 :::
 :::{tab-item} thenlper/gte-small
 :sync: gte-small
 ```console
-python export_model.py embeddings_ov --source_model thenlper/gte-small --pooling CLS --weight-format int8 --target_device GPU --config_file_path models/config.json --model_repository_path models
+python export_model.py embeddings_ov --source_model thenlper/gte-small --model_name gte-small --pooling CLS --weight-format int8 --target_device GPU --config_file_path models/config.json --model_repository_path models
 ```
 :::
 :::{tab-item} sentence-transformers/all-MiniLM-L12-v2
 :sync: all-MiniLM-L12-v2
 ```console
-python export_model.py embeddings_ov --source_model sentence-transformers/all-MiniLM-L12-v2 --pooling MEAN --weight-format int8 --target_device GPU --config_file_path models/config.json --model_repository_path models
+python export_model.py embeddings_ov --source_model sentence-transformers/all-MiniLM-L12-v2 --model_name all-MiniLM-L12-v2 --pooling MEAN --weight-format int8 --target_device GPU --config_file_path models/config.json --model_repository_path models
 ```
 :::
 :::{tab-item} sentence-transformers/all-distilroberta-v1
 :sync: all-distilroberta-v1
 ```console
-python export_model.py embeddings_ov --source_model sentence-transformers/all-distilroberta-v1 --pooling MEAN --weight-format int8 --target_device GPU --config_file_path models/config.json --model_repository_path models
+python export_model.py embeddings_ov --source_model sentence-transformers/all-distilroberta-v1 --model_name all-distilroberta-v1 --pooling MEAN --weight-format int8 --target_device GPU --config_file_path models/config.json --model_repository_path models
 ```
 :::
 :::{tab-item} mixedbread-ai/deepset-mxbai-embed-de-large-v1
 :sync: deepset-mxbai-embed-de-large-v1
 ```console
-python export_model.py embeddings_ov --source_model mixedbread-ai/deepset-mxbai-embed-de-large-v1 --pooling MEAN --weight-format int8 --target_device GPU --config_file_path models/config.json --model_repository_path models
+python export_model.py embeddings_ov --source_model mixedbread-ai/deepset-mxbai-embed-de-large-v1 --model_name deepset-mxbai-embed-de-large-v1 --pooling MEAN --weight-format int8 --target_device GPU --config_file_path models/config.json --model_repository_path models
 ```
 :::
 :::{tab-item} intfloat/multilingual-e5-large-instruct
 :sync: multilingual-e5-large-instruc
 ```console
-python export_model.py embeddings_ov --source_model intfloat/multilingual-e5-large-instruct --pooling MEAN --weight-format int8 --target_device GPU --config_file_path models/config.json --model_repository_path models
+python export_model.py embeddings_ov --source_model intfloat/multilingual-e5-large-instruct --model_name multilingual-e5-large-instruct --pooling MEAN --weight-format int8 --target_device GPU --config_file_path models/config.json --model_repository_path models
 ```
 :::
 :::{tab-item} intfloat/multilingual-e5-large
 :sync: multilingual-e5-large
 ```console
-python export_model.py embeddings_ov --source_model intfloat/multilingual-e5-large --pooling MEAN --weight-format int8 --target_device GPU --config_file_path models/config.json --model_repository_path models
+python export_model.py embeddings_ov --source_model intfloat/multilingual-e5-large --model_name multilingual-e5-large --pooling MEAN --weight-format int8 --target_device GPU --config_file_path models/config.json --model_repository_path models
 ```
 :::
 :::{tab-item} Alibaba-NLP/gte-large-en-v1.5
 :sync: gte-large-en-v1.5
-```console
-python export_model.py embeddings_ov --source_model Alibaba-NLP/gte-large-en-v1.5 --pooling CLS --weight-format int8 --target_device GPU --extra_quantization_params "--library sentence_transformers" --config_file_path models/config.json --model_repository_path models
+```text
+pip install "transformers<5"  # WA for optimum-intel and model support for new transformers
+python export_model.py embeddings_ov --source_model Alibaba-NLP/gte-large-en-v1.5 --model_name gte-large-en-v1.5 --pooling CLS --weight-format int8 --target_device GPU --extra_quantization_params "--library sentence_transformers" --config_file_path models/config.json --model_repository_path models
 ```
 :::
 :::{tab-item} nomic-ai/nomic-embed-text-v1.5
 :sync: nomic-embed-text-v1.5
 ```console
-python export_model.py embeddings_ov --source_model nomic-ai/nomic-embed-text-v1.5 --pooling MEAN --weight-format int8 --target_device GPU --extra_quantization_params "--library sentence_transformers" --config_file_path models/config.json --model_repository_path models
+python export_model.py embeddings_ov --source_model nomic-ai/nomic-embed-text-v1.5 --model_name nomic-embed-text-v1.5 --pooling MEAN --weight-format int8 --target_device GPU --extra_quantization_params "--library sentence_transformers" --config_file_path models/config.json --model_repository_path models
 ```
 :::
 :::{tab-item} sentence-transformers/all-mpnet-base-v2
 :sync: all-mpnet-base-v2
 ```console
-python export_model.py embeddings_ov --source_model sentence-transformers/all-mpnet-base-v2 --pooling MEAN --weight-format int8 --target_device GPU --config_file_path models/config.json --model_repository_path models
+python export_model.py embeddings_ov --source_model sentence-transformers/all-mpnet-base-v2 --model_name all-mpnet-base-v2 --pooling MEAN --weight-format int8 --target_device GPU --config_file_path models/config.json --model_repository_path models
 ```
 :::
 ::::
@@ -292,7 +294,7 @@ For example:
 
 > **Note:** By default OVMS returns first token embeddings as sequence embeddings (called CLS pooling). It can be changed using `--pooling` option if needed by the model. Supported values are CLS, MEAN and LAST. For example:
 ```console
-python export_model.py embeddings_ov --source_model Qwen/Qwen3-Embedding-0.6B --weight-format fp16 --pooling LAST --config_file_path models/config.json
+python export_model.py embeddings_ov --source_model Qwen/Qwen3-Embedding-0.6B --weight-format fp16 --pooling LAST --model_name Qwen3-Embedding-0.6B --config_file_path models/config.json
 ```
 
 ## Tested models
@@ -359,18 +361,18 @@ ovms --rest_port 8000 --config_path ./models/config.json
 
 ### Readiness Check
 
-Wait for the model to load. You can check the status with a simple command below. Note that the slash `/` in the model name needs to be escaped with `%2F`:
+Wait for the model to load. You can check the status with a simple command below:
 ```bash
-curl http://localhost:8000/v3/models/BAAI%2Fbge-large-en-v1.5
+curl http://localhost:8000/v3/models/bge-large-en-v1.5
 
-{"id":"BAAI/bge-large-en-v1.5","object":"model","created":1763997378,"owned_by":"OVMS"}
+{"id":"bge-large-en-v1.5","object":"model","created":1763997378,"owned_by":"OVMS"}
 ```
 
 ## Client code
 
 :::{dropdown} **Request embeddings with cURL**
 ```bash
-curl http://localhost:8000/v3/embeddings -H "Content-Type: application/json" -d "{ \"model\": \"BAAI/bge-large-en-v1.5\", \"input\": \"hello world\"}"
+curl http://localhost:8000/v3/embeddings -H "Content-Type: application/json" -d "{ \"model\": \"bge-large-en-v1.5\", \"input\": \"hello world\"}"
 ```
 ```json
 {
@@ -412,7 +414,7 @@ client = OpenAI(
   base_url="http://localhost:8000/v3",
   api_key="unused"
 )
-model = "BAAI/bge-large-en-v1.5"
+model = "bge-large-en-v1.5"
 embedding_responses = client.embeddings.create(
     input=[
         "That is a happy person",
@@ -439,7 +441,7 @@ git clone https://github.com/openvinotoolkit/model_server
 pushd .
 cd model_server/demos/benchmark/v3/
 pip install -r requirements.txt
-python benchmark.py --api_url http://localhost:8000/v3/embeddings --dataset synthetic --synthetic_length 5 --request_rate 10 --batch_size 1 --model BAAI/bge-large-en-v1.5
+python benchmark.py --api_url http://localhost:8000/v3/embeddings --dataset synthetic --synthetic_length 5 --request_rate 10 --batch_size 1 --model bge-large-en-v1.5 --tokenizer BAAI/bge-large-en-v1.5 
 Number of documents: 1000
 100%|██████████████████████████████████████| 1000/1000 [01:40<00:00,  9.92it/s]
 Tokens: 5000
@@ -450,7 +452,7 @@ Median latency: 12.43 ms
 Average document length: 5.0 tokens
 
 
-python benchmark.py --api_url http://localhost:8000/v3/embeddings --request_rate inf --batch_size 32 --dataset synthetic --synthetic_length 510 --model BAAI/bge-large-en-v1.5
+python benchmark.py --api_url http://localhost:8000/v3/embeddings --request_rate inf --batch_size 32 --dataset synthetic --synthetic_length 510 --model bge-large-en-v1.5 --tokenizer BAAI/bge-large-en-v1.5 
 Number of documents: 1000
 100%|██████████████████████████████████████| 32/32 [00:13<00:00,  2.43it/s]
 Tokens: 510000
@@ -461,7 +463,7 @@ Median latency: 6790.46 ms
 Average document length: 510.0 tokens
 
 
-python benchmark.py --api_url http://localhost:8000/v3/embeddings --request_rate inf --batch_size 1 --dataset Cohere/wikipedia-2023-11-embed-multilingual-v3 --hf-subset simple --model BAAI/bge-large-en-v1.5
+python benchmark.py --api_url http://localhost:8000/v3/embeddings --request_rate inf --batch_size 1 --dataset Cohere/wikipedia-2023-11-embed-multilingual-v3 --hf-subset simple --model bge-large-en-v1.5 --tokenizer BAAI/bge-large-en-v1.5
 Number of documents: 1000
 100%|██████████████████████████████████████| 1000/1000 [00:11<00:00, 89.84it/s]
 Tokens: 66568
@@ -486,7 +488,7 @@ The script [compare_results.py](https://raw.githubusercontent.com/openvinotoolki
 ```bash
 popd
 cd model_server/demos/embeddings
-python compare_results.py --model BAAI/bge-large-en-v1.5 --service_url http://localhost:8000/v3/embeddings --pooling CLS --input "hello world" --input "goodbye world"
+python compare_results.py --model_name bge-large-en-v1.5 --hf_model_name BAAI/bge-large-en-v1.5 --service_url http://localhost:8000/v3/embeddings --pooling CLS --input "hello world" --input "goodbye world"
 
 input ['hello world', 'goodbye world']
 HF Duration: 93.921 ms BertModel
@@ -516,75 +518,75 @@ Difference score with HF AutoModel: 0.020293646680283224
 
 It is easy also to run model evaluation using [MTEB](https://github.com/embeddings-benchmark/mteb) framework using a custom class based on openai model:
 ```console
-pip install "mteb<2" einops openai --extra-index-url "https://download.pytorch.org/whl/cpu"
+pip install mteb tiktoken einops openai --extra-index-url "https://download.pytorch.org/whl/cpu"
 curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/embeddings/ovms_mteb.py -o ovms_mteb.py
-python ovms_mteb.py --model BAAI/bge-large-en-v1.5 --service_url http://localhost:8000/v3/embeddings
+python ovms_mteb.py --model_name bge-large-en-v1.5 --service_url http://localhost:8000/v3
 ```
 Results will be stored in `results` folder:
 ```json
 {
   "dataset_revision": "0fd18e25b25c072e09e0d92ab615fda904d66300",
   "task_name": "Banking77Classification",
-  "mteb_version": "1.39.7",
+  "mteb_version": "2.12.30",
   "scores": {
     "test": [
       {
-        "accuracy": 0.848636,
-        "f1": 0.842405,
-        "f1_weighted": 0.842405,
         "scores_per_experiment": [
           {
+            "accuracy": 0.835065,
+            "f1": 0.826769,
+            "f1_weighted": 0.826769
+          },
+          {
+            "accuracy": 0.841883,
+            "f1": 0.834859,
+            "f1_weighted": 0.834859
+          },
+          {
+            "accuracy": 0.841234,
+            "f1": 0.833533,
+            "f1_weighted": 0.833533
+          },
+          {
+            "accuracy": 0.843182,
+            "f1": 0.838652,
+            "f1_weighted": 0.838652
+          },
+          {
+            "accuracy": 0.839935,
+            "f1": 0.833928,
+            "f1_weighted": 0.833928
+          },
+          {
+            "accuracy": 0.84513,
+            "f1": 0.840801,
+            "f1_weighted": 0.840801
+          },
+          {
+            "accuracy": 0.836688,
+            "f1": 0.83106,
+            "f1_weighted": 0.83106
+          },
+          {
+            "accuracy": 0.836039,
+            "f1": 0.828459,
+            "f1_weighted": 0.828459
+          },
+          {
             "accuracy": 0.842532,
-            "f1": 0.835091,
-            "f1_weighted": 0.835091
+            "f1": 0.834954,
+            "f1_weighted": 0.834954
           },
           {
-            "accuracy": 0.851299,
-            "f1": 0.844622,
-            "f1_weighted": 0.844622
-          },
-          {
-            "accuracy": 0.849026,
-            "f1": 0.842238,
-            "f1_weighted": 0.842238
-          },
-          {
-            "accuracy": 0.853571,
-            "f1": 0.849815,
-            "f1_weighted": 0.849815
-          },
-          {
-            "accuracy": 0.846104,
-            "f1": 0.839,
-            "f1_weighted": 0.839
-          },
-          {
-            "accuracy": 0.849675,
-            "f1": 0.844259,
-            "f1_weighted": 0.844259
-          },
-          {
-            "accuracy": 0.846104,
-            "f1": 0.840343,
-            "f1_weighted": 0.840343
-          },
-          {
-            "accuracy": 0.846753,
-            "f1": 0.8397,
-            "f1_weighted": 0.8397
-          },
-          {
-            "accuracy": 0.853571,
-            "f1": 0.848239,
-            "f1_weighted": 0.848239
-          },
-          {
-            "accuracy": 0.847727,
-            "f1": 0.84074,
-            "f1_weighted": 0.84074
+            "accuracy": 0.833766,
+            "f1": 0.827428,
+            "f1_weighted": 0.827428
           }
         ],
-        "main_score": 0.848636,
+        "accuracy": 0.839545,
+        "f1": 0.833044,
+        "f1_weighted": 0.833044,
+        "main_score": 0.839545,
         "hf_subset": "default",
         "languages": [
           "eng-Latn"
@@ -592,7 +594,7 @@ Results will be stored in `results` folder:
       }
     ]
   },
-  "evaluation_time": 3841.1886789798737,
+  "evaluation_time": 484.35,
   "kg_co2_emissions": null
 }
 ```

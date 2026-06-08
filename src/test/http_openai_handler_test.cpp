@@ -33,6 +33,7 @@
 #include "../servablemanagermodule.hpp"
 #include "../server.hpp"
 #include "environment.hpp"
+#include "src/utils/env_guard.hpp"
 #include "test_http_utils.hpp"
 #include "test_utils.hpp"
 #include "platform_utils.hpp"
@@ -4303,6 +4304,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, responseFormatNullValue) {
 // to verify the graph pool (GraphQueue) path works correctly.
 class HttpOpenAIHandlerWithQueueTest : public ::testing::Test {
 protected:
+    EnvGuard envGuard;
     ovms::Server& server = ovms::Server::instance();
     std::unique_ptr<ovms::HttpRestApiHandler> handler;
 
@@ -4324,6 +4326,7 @@ protected:
     }
 
     void SetUp() {
+        envGuard.set("OVMS_GRAPH_QUEUE_OFF", "0");
         writer = std::make_shared<MockedServerRequestInterface>();
         multiPartParser = std::make_shared<MockedMultiPartParser>();
         SetUpServer(getGenericFullPathForSrcTest("/ovms/src/test/mediapipe/config_mediapipe_openai_chat_completions_mock_with_queue.json").c_str());

@@ -18,8 +18,12 @@
 #define DR_MP3_IMPLEMENTATION
 #include "src/port/dr_audio.hpp"
 #include "audio_utils.hpp"
+#include "src/stringutils.hpp"
 #include "src/timer.hpp"
 #include "src/logging.hpp"
+#include <cstdlib>
+#include <limits>
+#include <stdexcept>
 #include <string>
 #include <vector>
 #include <random>
@@ -28,6 +32,8 @@
 #define PIPELINE_SUPPORTED_SAMPLE_RATE 16000
 
 using namespace ovms;
+
+static void validateAudioFileSizeAgainstMaxValue(size_t fileSize);
 
 bool isWavBuffer(const std::string buf) {
     // RIFF ref: https://en.wikipedia.org/wiki/Resource_Interchange_File_Format
@@ -73,7 +79,7 @@ enum : unsigned int {
     RESAMPLING,
     TIMER_END
 };
-
+static const size_t AUDIO_BUFFER_SIZE_LIMIT = std::numeric_limits<size_t>::max() / sizeof(float);
 std::vector<float> readWav(const std::string_view& wavData) {
     Timer<TIMER_END> timer;
     timer.start(TENSOR_PREPARATION);
@@ -86,11 +92,29 @@ std::vector<float> readWav(const std::string_view& wavData) {
         drwav_uninit(&wav);
         throw std::runtime_error("WAV file must be mono or stereo");
     }
+    // dr_wav accepts bitsPerSample in [1, 64]; reject anything that is not a
+    // whole-byte PCM width since the rest of this function and downstream
+    // pipeline assume drwav_read_pcm_frames_s16 produces well-formed samples.
+    if (wav.bitsPerSample < 8 || (wav.bitsPerSample % 8) != 0) {
+        drwav_uninit(&wav);
+        throw std::runtime_error("WAV file has unsupported bits per sample");
+    }
 
-    const uint64_t n =
-        wavData.empty() ? wav.totalPCMFrameCount : wavData.size() / (wav.channels * wav.bitsPerSample / 8ul);
+    const uint64_t blockAlign = wav.channels * (wav.bitsPerSample / 8);
+    const uint64_t maxPossibleFrames = blockAlign ? (wavData.size() / blockAlign) : 0;
+    if (wav.totalPCMFrameCount > maxPossibleFrames) {
+        drwav_uninit(&wav);
+        throw std::runtime_error("WAV file header claims more frames than possible from data chunk size");
+    }
+    // Validate decoded buffer size before resampling (float32 mono output)
+    validateAudioFileSize(wav.totalPCMFrameCount, wav.sampleRate, PIPELINE_SUPPORTED_SAMPLE_RATE, /*will be downmixed to mono*/ 1, sizeof(float));
 
+    const uint64_t n = wav.totalPCMFrameCount;
     std::vector<int16_t> pcm16;
+    if (n > AUDIO_BUFFER_SIZE_LIMIT / wav.channels) {
+        drwav_uninit(&wav);
+        throw std::overflow_error("Decoded audio buffer size overflow");
+    }
     pcm16.resize(n * wav.channels);
     drwav_read_pcm_frames_s16(&wav, n, pcm16.data());
     drwav_uninit(&wav);
@@ -138,10 +162,39 @@ std::vector<float> readMp3(const std::string_view& mp3Data) {
         drmp3_uninit(&mp3);
         throw std::runtime_error("MP3 file must be mono or stereo");
     }
-    const uint64_t n = mp3.totalPCMFrameCount;
+    // Validate expected output buffer size before any allocation or decoding, using metadata.
+    // dr_mp3 sets totalPCMFrameCount to UINT64_MAX when no Xing/VBRI tag is present (unknown length).
+    // In that case skip metadata-based validation; post-decode validation will guard against OOM.
+    if (mp3.totalPCMFrameCount != std::numeric_limits<uint64_t>::max()) {
+        try {
+            validateAudioFileSize(mp3.totalPCMFrameCount, mp3.sampleRate, PIPELINE_SUPPORTED_SAMPLE_RATE, mp3.channels, sizeof(float));
+        } catch (...) {
+            drmp3_uninit(&mp3);
+            throw;
+        }
+    }
+    constexpr size_t MP3_DECODE_CHUNK_FRAMES = 1152;  // 1152 is the maximum number of PCM samples per channel produced by a single MPEG-1 Layer III MP3 frame. Reference: ISO/IEC 11172-3
+    // We cannot know the decoded sample count up front, but we can check the maximum possible size based on file size and sample rate
+    // For safety, check the decoded buffer after filling
+    float tempBuffer[MP3_DECODE_CHUNK_FRAMES * 2];  // 2 is max channels we validated earlier
     std::vector<float> pcmf32;
-    pcmf32.resize(n * mp3.channels);
-    drmp3_read_pcm_frames_f32(&mp3, n, pcmf32.data());
+    try {
+        for (;;) {
+            drmp3_uint64 framesRead = drmp3_read_pcm_frames_f32(&mp3, MP3_DECODE_CHUNK_FRAMES, tempBuffer);
+            if (framesRead == 0) {
+                break;
+            }
+            if (pcmf32.size() > AUDIO_BUFFER_SIZE_LIMIT) {
+                drmp3_uninit(&mp3);
+                throw std::overflow_error("Decoded audio buffer size overflow");
+            }
+            pcmf32.insert(pcmf32.end(), tempBuffer, tempBuffer + framesRead * mp3.channels);
+            validateAudioFileSizeAgainstMaxValue(pcmf32.size() * sizeof(float));
+        }
+    } catch (...) {
+        drmp3_uninit(&mp3);
+        throw;
+    }
     drmp3_uninit(&mp3);
     timer.stop(TENSOR_PREPARATION);
     auto tensorPreparationTime = (timer.elapsed<std::chrono::microseconds>(TENSOR_PREPARATION)) / 1000;
@@ -151,6 +204,10 @@ std::vector<float> readMp3(const std::string_view& mp3Data) {
     }
     timer.start(RESAMPLING);
     size_t outputLength = (size_t)(pcmf32.size() * PIPELINE_SUPPORTED_SAMPLE_RATE / mp3.sampleRate);
+    if (outputLength > AUDIO_BUFFER_SIZE_LIMIT) {
+        throw std::overflow_error("Decoded audio buffer size overflow");
+    }
+    validateAudioFileSizeAgainstMaxValue(outputLength * sizeof(float));
     std::vector<float> output(outputLength);
     resample_audio(reinterpret_cast<float*>(pcmf32.data()), pcmf32.size(), mp3.sampleRate, PIPELINE_SUPPORTED_SAMPLE_RATE, output);
     timer.stop(RESAMPLING);
@@ -187,4 +244,52 @@ void prepareAudioOutput(void** ppData, size_t& pDataSize, uint16_t bitsPerSample
     timer.stop(OUTPUT_PREPARATION);
     auto outputPreparationTime = (timer.elapsed<std::chrono::microseconds>(OUTPUT_PREPARATION)) / 1000;
     SPDLOG_LOGGER_DEBUG(t2s_calculator_logger, "Output preparation time: {} ms", outputPreparationTime);
+}
+static void validateAudioFileSizeAgainstMaxValue(size_t fileSize) {
+    constexpr size_t DEFAULT_MAX_FILE_SIZE = 1024ull * 1024 * 1024;  // 1GB
+    size_t maxFileSize = DEFAULT_MAX_FILE_SIZE;
+    const char* env = std::getenv("OVMS_AUDIO_MAX_FILE_SIZE_BYTES");
+    if (env && *env) {
+        auto parsed = ovms::stou64(env);
+        if (parsed.has_value() && parsed.value() > 0) {
+            maxFileSize = parsed.value();
+        }
+    }
+    if (fileSize > maxFileSize) {
+        throw std::runtime_error("Audio file size " + std::to_string(fileSize) +
+                                 " exceeds maximum allowed size (" + std::to_string(maxFileSize) + ")");
+    }
+}
+
+// Throws if the estimated resampled audio buffer size would exceed the maximum allowed size
+void validateAudioFileSize(
+    size_t inputSamples,
+    uint32_t inputRate,
+    uint32_t targetRate,
+    uint32_t channels,
+    size_t bytesPerSample) {
+    if (inputRate <= 0) {
+        throw std::runtime_error("Audio file rate should be greater than 0");
+    }
+    // Detect overflow: if inputSamples is large enough that inputSamples * targetRate
+    // would overflow size_t, the output is certainly too large.
+    if (inputSamples > std::numeric_limits<size_t>::max() / targetRate) {
+        throw std::runtime_error("Audio file estimated output size overflows maximum representable value");
+    }
+    size_t product = inputSamples * targetRate;
+    // Guard the ceiling-division addition against overflow as well.
+    if (product > std::numeric_limits<size_t>::max() - (inputRate - 1)) {
+        throw std::runtime_error("Audio file estimated output size overflows maximum representable value");
+    }
+    // Estimate output samples after resampling (ceil division)
+    size_t outputSamples = (product + inputRate - 1) / inputRate;
+    if ((channels != 0) && (outputSamples > std::numeric_limits<size_t>::max() / channels)) {
+        throw std::runtime_error("Audio file estimated output size overflows maximum representable value");
+    }
+    size_t expectedSize = outputSamples * channels;
+    if ((bytesPerSample != 0) && (expectedSize > std::numeric_limits<size_t>::max() / bytesPerSample)) {
+        throw std::runtime_error("Audio file estimated output size overflows maximum representable value");
+    }
+    expectedSize *= bytesPerSample;
+    validateAudioFileSizeAgainstMaxValue(expectedSize);
 }

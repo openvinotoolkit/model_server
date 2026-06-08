@@ -195,7 +195,7 @@ OVMS_CPP_IMAGE_TAG ?= latest
 
 OVMS_PYTHON_IMAGE_TAG ?= py
 
-PRODUCT_VERSION ?= "2026.2.0"
+PRODUCT_VERSION ?= "2026.3.0"
 PROJECT_VER_PATCH =
 
 $(eval PROJECT_VER_PATCH:=`git rev-parse --short HEAD`)
@@ -608,15 +608,15 @@ test_functional: venv
 
 test_python_clients:
 	@echo "Prepare docker image"
-	@docker build . -f tests/python/Dockerfile -t python_client_test
+	@docker build --build-arg http_proxy="$(http_proxy)" --build-arg https_proxy="$(https_proxy)" . -f tests/python/Dockerfile -t python_client_test
 	@echo "Dropping test container if exist"
 	@docker rm --force $(PYTHON_CLIENT_TEST_CONTAINER_NAME) || true
 	@echo "Download models"
 	@if [ ! -d "tests/python/models" ]; then cd tests/python && \
 		mkdir models && \
-		docker run -u $(id -u):$(id -g) -v ${PWD}/tests/python/models:/models openvino/ubuntu20_dev:2024.6.0 omz_downloader --name resnet-50-tf --output_dir /models && \
-		docker run -u $(id -u):$(id -g) -v ${PWD}/tests/python/models:/models:rw openvino/ubuntu20_dev:2024.6.0 omz_converter --name resnet-50-tf --download_dir /models --output_dir /models --precisions FP32 && \
-		docker run -u $(id -u):$(id -g) -v ${PWD}/tests/python/models:/models:rw openvino/ubuntu20_dev:2024.6.0 mv /models/public/resnet-50-tf/FP32 /models/public/resnet-50-tf/1; fi
+		docker run -u $(id -u):$(id -g) -e http_proxy="$(http_proxy)" -e https_proxy="$(https_proxy)" -v ${PWD}/tests/python/models:/models openvino/ubuntu20_dev:2024.6.0 omz_downloader --name resnet-50-tf --output_dir /models && \
+		docker run -u $(id -u):$(id -g) -e http_proxy="$(http_proxy)" -e https_proxy="$(https_proxy)" -v ${PWD}/tests/python/models:/models:rw openvino/ubuntu20_dev:2024.6.0 omz_converter --name resnet-50-tf --download_dir /models --output_dir /models --precisions FP32 && \
+		docker run -u $(id -u):$(id -g) -e http_proxy="$(http_proxy)" -e https_proxy="$(https_proxy)" -v ${PWD}/tests/python/models:/models:rw openvino/ubuntu20_dev:2024.6.0 mv /models/public/resnet-50-tf/FP32 /models/public/resnet-50-tf/1; fi
 	@echo "Start test container"
 	@docker run -d --rm --name $(PYTHON_CLIENT_TEST_CONTAINER_NAME) -v ${PWD}/tests/python/models/public/resnet-50-tf:/models/public/resnet-50-tf -p $(PYTHON_CLIENT_TEST_REST_PORT):8000 -p $(PYTHON_CLIENT_TEST_GRPC_PORT):9000 openvino/model_server:latest --model_name resnet --model_path /models/public/resnet-50-tf --port 9000 --rest_port 8000 && \
 		sleep 10
