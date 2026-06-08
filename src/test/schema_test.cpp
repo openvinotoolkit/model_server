@@ -1155,7 +1155,6 @@ TEST(SchemaTest, ModelConfigPluginConfigPositive) {
         }
     ]
     })";
-
     rapidjson::Document modelConfigSeqNegativeDoc;
     modelConfigSeqNegativeDoc.Parse(modelConfigTimeoutNegative);
     auto result = ovms::validateJsonAgainstSchema(modelConfigSeqNegativeDoc, ovms::MODELS_CONFIG_SCHEMA.c_str());

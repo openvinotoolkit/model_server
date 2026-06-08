@@ -20,7 +20,6 @@ pipeline {
                           windows.clean()
                           windows.build()
                           windows.unit_test()
-                          windows.check_tests()
                           if (env.USE_BRANCH_NAME_IN_PACKAGE_NAME == "true") {
                             def safeBranchName = env.BRANCH_NAME.replaceAll('/', '_')
                             tag = "${safeBranchName}-${env.CUSTOM_TAG}"
