@@ -771,7 +771,7 @@ void EnsureServerStartedWithTimeout(ovms::Server& server, int timeoutSeconds);
 /*
  *  Waits until server downloads model
  */
-void EnsureServerModelDownloadFinishedWithTimeout(ovms::Server& server, int timeoutSeconds);
+void EnsureServerModelDownloadFinishedWithTimeout(ovms::Server& server, int startupTimeoutSeconds, int completionTimeoutSeconds);
 /*
  *  starts loading OVMS on separate thread but waits until it is shutdowned or model is downloaded
  * --pull --source_model OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov  --model_repository_path /models

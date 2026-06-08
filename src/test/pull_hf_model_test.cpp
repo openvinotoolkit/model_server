@@ -64,12 +64,12 @@
 
 namespace {
 
-constexpr std::uintmax_t MODEL_FULL_SIZE_BYTES = 52417240;
-constexpr std::uintmax_t MODEL_HALF_SIZE_BYTES = 26208620;
-constexpr std::uintmax_t MODEL2_FULL_SIZE_BYTES = 339125;
-constexpr std::uintmax_t MODEL3_FULL_SIZE_BYTES = 500292;
-constexpr std::uintmax_t MODEL4_FULL_SIZE_BYTES = 499723;
-constexpr std::uintmax_t DRAFT_MODEL_TOKENIZER_SIZE_BYTES = 2022483;
+constexpr std::uintmax_t OPENVINO_MODEL_BIN_FULL_SIZE_BYTES = 52417240;
+constexpr std::uintmax_t OPENVINO_MODEL_BIN_HALF_SIZE_BYTES = 26208620;
+constexpr std::uintmax_t OPENVINO_DETOKENIZER_BIN_FULL_SIZE_BYTES = 339125;
+constexpr std::uintmax_t OPENVINO_TOKENIZER_BIN_FULL_SIZE_BYTES = 500292;
+constexpr std::uintmax_t TOKENIZER_MODEL_FULL_SIZE_BYTES = 499723;
+constexpr std::uintmax_t DRAFT_OPENVINO_TOKENIZER_BIN_SIZE_BYTES = 2022483;
 
 struct ProbeErrorTracker {
     std::size_t consecutiveErrors = 0;
@@ -452,9 +452,9 @@ protected:
     std::string modelBasePath;
     std::string modelPath;
     std::string modelPartPath;
-    std::string model2Path;
-    std::string model3Path;
-    std::string model4Path;
+    std::string openvinoDetokenizerBinPath;
+    std::string openvinoTokenizerBinPath;
+    std::string tokenizerModelPath;
     std::string tokenizerJsonPath;
     std::string graphPath;
     std::string gitDirPath;
@@ -467,9 +467,9 @@ protected:
         modelBasePath = ovms::FileSystem::joinPath({downloadPath, MODEL_NAMESPACE, MODEL_ID});
         modelPath = ovms::FileSystem::appendSlash(modelBasePath) + "openvino_model.bin";
         modelPartPath = ovms::FileSystem::appendSlash(modelBasePath) + "openvino_model.binlfs_part";
-        model2Path = ovms::FileSystem::appendSlash(modelBasePath) + "openvino_detokenizer.bin";
-        model3Path = ovms::FileSystem::appendSlash(modelBasePath) + "openvino_tokenizer.bin";
-        model4Path = ovms::FileSystem::appendSlash(modelBasePath) + "tokenizer.model";
+        openvinoDetokenizerBinPath = ovms::FileSystem::appendSlash(modelBasePath) + "openvino_detokenizer.bin";
+        openvinoTokenizerBinPath = ovms::FileSystem::appendSlash(modelBasePath) + "openvino_tokenizer.bin";
+        tokenizerModelPath = ovms::FileSystem::appendSlash(modelBasePath) + "tokenizer.model";
         tokenizerJsonPath = ovms::FileSystem::appendSlash(modelBasePath) + "tokenizer.json";
         graphPath = ovms::FileSystem::appendSlash(modelBasePath) + "graph.pbtxt";
         gitDirPath = ovms::FileSystem::appendSlash(modelBasePath) + ".git";
@@ -646,13 +646,13 @@ TEST_F(HfPull, Download) {
 
     ASSERT_EQ(std::filesystem::exists(modelPath), true) << modelPath;
     ASSERT_EQ(std::filesystem::exists(graphPath), true) << graphPath;
-    ASSERT_EQ(std::filesystem::file_size(modelPath), MODEL_FULL_SIZE_BYTES);
+    ASSERT_EQ(std::filesystem::file_size(modelPath), OPENVINO_MODEL_BIN_FULL_SIZE_BYTES);
     std::string graphContents = GetFileContents(graphPath);
 
     ASSERT_EQ(expectedGraphContents, removeGeneratedGraphHeaders(graphContents)) << graphContents;
 }
 
-// Truncate the file to half its size (MODEL_FULL_SIZE_BYTES / 2), keeping the first half.
+// Truncate the file to half its size (OPENVINO_MODEL_BIN_FULL_SIZE_BYTES / 2), keeping the first half.
 bool removeSecondHalf(const std::string& fileStr) {
     const std::filesystem::path& file(fileStr);
     std::error_code ec;
@@ -682,7 +682,7 @@ bool createGitLfsPointerFile(const std::string& path) {
     file << "version https://git-lfs.github.com/spec/v1\n"
             "oid sha256:cecf0224201415144c00cf3a6cf3350306f9c78888d631eb590939a63722fefa\n"
             "size "
-         << MODEL_FULL_SIZE_BYTES << "\n";
+         << OPENVINO_MODEL_BIN_FULL_SIZE_BYTES << "\n";
 
     return true;
 }
@@ -769,7 +769,7 @@ TEST_F(HfPullCache, RePull) {
 TEST_F(HfPullCache, Resume) {
     ASSERT_EQ(std::filesystem::exists(modelPath), true) << modelPath;
     ASSERT_EQ(std::filesystem::exists(graphPath), true) << graphPath;
-    ASSERT_EQ(std::filesystem::file_size(modelPath), MODEL_FULL_SIZE_BYTES);
+    ASSERT_EQ(std::filesystem::file_size(modelPath), OPENVINO_MODEL_BIN_FULL_SIZE_BYTES);
     std::string graphContents = GetFileContents(graphPath);
 
     ASSERT_EQ(expectedGraphContents, removeGeneratedGraphHeaders(graphContents)) << graphContents;
@@ -790,11 +790,11 @@ TEST_F(HfPullCache, Resume) {
     ASSERT_EQ(ec, std::errc());
     // Prepare a git repository with a lfs_part file and lfs pointer file to simulate partial download error of a big model
     ASSERT_EQ(removeSecondHalf(modelPath), true);
-    ASSERT_EQ(std::filesystem::file_size(modelPath), MODEL_HALF_SIZE_BYTES);
+    ASSERT_EQ(std::filesystem::file_size(modelPath), OPENVINO_MODEL_BIN_HALF_SIZE_BYTES);
 
     std::filesystem::rename(modelPath, modelPartPath, ec);
     ASSERT_EQ(ec, std::errc());
-    ASSERT_EQ(std::filesystem::file_size(modelPartPath), MODEL_HALF_SIZE_BYTES);
+    ASSERT_EQ(std::filesystem::file_size(modelPartPath), OPENVINO_MODEL_BIN_HALF_SIZE_BYTES);
     ASSERT_EQ(createGitLfsPointerFile(modelPath), true);
 
     // Call ovms pull to resume the file
@@ -803,7 +803,7 @@ TEST_F(HfPullCache, Resume) {
     ASSERT_EQ(std::filesystem::exists(modelPartPath), false) << modelPath;
     ASSERT_EQ(std::filesystem::exists(modelPath), true) << modelPath;
     ASSERT_EQ(std::filesystem::exists(graphPath), true) << graphPath;
-    ASSERT_EQ(std::filesystem::file_size(modelPath), MODEL_FULL_SIZE_BYTES);
+    ASSERT_EQ(std::filesystem::file_size(modelPath), OPENVINO_MODEL_BIN_FULL_SIZE_BYTES);
     graphContents = GetFileContents(graphPath);
 
     ASSERT_EQ(expectedGraphContents, removeGeneratedGraphHeaders(graphContents)) << graphContents;
@@ -859,7 +859,7 @@ TEST_F(HfPull, ResumeShutdown) {
                     modelSize = 0;
                 }
             }
-            const bool modelInFlight = modelExists && (modelSize > 0) && (modelSize < MODEL_FULL_SIZE_BYTES);
+            const bool modelInFlight = modelExists && (modelSize > 0) && (modelSize < OPENVINO_MODEL_BIN_FULL_SIZE_BYTES);
             if (hasPartFile || modelInFlight) {
                 observedPartialDownload = true;
                 std::this_thread::sleep_for(std::chrono::milliseconds(200));
@@ -869,7 +869,7 @@ TEST_F(HfPull, ResumeShutdown) {
         }
     }
     server.setShutdownRequest(1);
-    EnsureServerModelDownloadFinishedWithTimeout(server, 120);
+    EnsureServerModelDownloadFinishedWithTimeout(server, 120, 120);
     if (t)
         t->join();
     server.setShutdownRequest(0);
@@ -890,16 +890,16 @@ TEST_F(HfPull, ResumeShutdown) {
 
     ASSERT_EQ(std::filesystem::exists(modelPath), true) << modelPath;
     ASSERT_EQ(std::filesystem::exists(graphPath), true) << graphPath;
-    ASSERT_EQ(std::filesystem::file_size(modelPath), MODEL_FULL_SIZE_BYTES);
-    ASSERT_EQ(std::filesystem::file_size(model2Path), MODEL2_FULL_SIZE_BYTES);
-    ASSERT_EQ(std::filesystem::file_size(model3Path), MODEL3_FULL_SIZE_BYTES);
-    ASSERT_EQ(std::filesystem::file_size(model4Path), MODEL4_FULL_SIZE_BYTES);
+    ASSERT_EQ(std::filesystem::file_size(modelPath), OPENVINO_MODEL_BIN_FULL_SIZE_BYTES);
+    ASSERT_EQ(std::filesystem::file_size(openvinoDetokenizerBinPath), OPENVINO_DETOKENIZER_BIN_FULL_SIZE_BYTES);
+    ASSERT_EQ(std::filesystem::file_size(openvinoTokenizerBinPath), OPENVINO_TOKENIZER_BIN_FULL_SIZE_BYTES);
+    ASSERT_EQ(std::filesystem::file_size(tokenizerModelPath), TOKENIZER_MODEL_FULL_SIZE_BYTES);
 }
 
 // PullAfterUserRemovedTrackedFileDoesNotRestoreIt
 TEST_F(HfPullCache, UserRemoved) {
     std::string preservedFilePath = modelPath;
-    std::string removedFilePath = model3Path;
+    std::string removedFilePath = openvinoTokenizerBinPath;
     std::string removedFilePath2 = tokenizerJsonPath;
 
     ASSERT_TRUE(std::filesystem::exists(preservedFilePath));
@@ -934,7 +934,7 @@ TEST_F(HfPullCache, UserRemoved) {
         secondRunCode = this->server.start(argc, argv);
     }));
 
-    EnsureServerModelDownloadFinishedWithTimeout(server, 120);
+    EnsureServerModelDownloadFinishedWithTimeout(server, 120, 120);
 
     EXPECT_EQ(secondRunCode, EXIT_SUCCESS);
     EXPECT_FALSE(std::filesystem::exists(removedFilePath));
@@ -947,7 +947,7 @@ TEST_F(HfPullCache, UserRemoved) {
 
 // PullAfterUserEditedTrackedFileDoesNotOverwriteIt
 TEST_F(HfPullCache, UserEdited) {
-    std::string editedFilePath = model3Path;
+    std::string editedFilePath = openvinoTokenizerBinPath;
     std::string editedFilePath2 = tokenizerJsonPath;
 
     ASSERT_TRUE(std::filesystem::exists(editedFilePath));
@@ -990,7 +990,7 @@ TEST_F(HfPullCache, UserEdited) {
         secondRunCode = this->server.start(argc, argv);
     }));
 
-    EnsureServerModelDownloadFinishedWithTimeout(server, HF_PULL_SHUTDOWN_TIMEOUT_SECONDS);
+    EnsureServerModelDownloadFinishedWithTimeout(server, HF_PULL_SHUTDOWN_TIMEOUT_SECONDS, HF_PULL_SHUTDOWN_TIMEOUT_SECONDS);
 
     EXPECT_EQ(secondRunCode, EXIT_SUCCESS);
     EXPECT_EQ(std::filesystem::file_size(editedFilePath), editedSize);
@@ -1022,7 +1022,7 @@ TEST_F(HfPullCache, UserEdited) {
 // graph.pbtxt, etc.) remain in place exactly as a user-supplied directory would.
 TEST_F(HfPullCache, PullNonGit) {
     std::string basePath = modelBasePath;
-    std::string tokenizerPath = model3Path;
+    std::string tokenizerPath = openvinoTokenizerBinPath;
     std::string gitDir = gitDirPath;
 
     ASSERT_TRUE(std::filesystem::exists(modelPath));
@@ -1095,7 +1095,7 @@ TEST_F(HfPullCache, PullNonGit) {
 // so the operator can act (re-clone, fix permissions, --overwrite_models, ...).
 TEST_F(HfPullCache, PullEmptyGitDir) {
     std::string basePath = modelBasePath;
-    std::string tokenizerPath = model3Path;
+    std::string tokenizerPath = openvinoTokenizerBinPath;
     std::string gitDir = gitDirPath;
 
     ASSERT_TRUE(std::filesystem::exists(modelPath));
@@ -1205,7 +1205,7 @@ TEST_F(HfPull, ResumeTerminate) {
         modelBasePath,
         modelPath,
         downloadPath,
-        MODEL_FULL_SIZE_BYTES,
+        OPENVINO_MODEL_BIN_FULL_SIZE_BYTES,
         "ResumeTerminate",
         HF_PULL_DETECT_TIMEOUT_SECONDS,
         HF_PULL_POLL_INTERVAL_MS,
@@ -1238,10 +1238,10 @@ TEST_F(HfPull, ResumeTerminate) {
 
     ASSERT_EQ(std::filesystem::exists(modelPath), true) << modelPath;
     ASSERT_EQ(std::filesystem::exists(graphPath), true) << graphPath;
-    ASSERT_EQ(std::filesystem::file_size(modelPath), MODEL_FULL_SIZE_BYTES);
-    ASSERT_EQ(std::filesystem::file_size(model2Path), MODEL2_FULL_SIZE_BYTES);
-    ASSERT_EQ(std::filesystem::file_size(model3Path), MODEL3_FULL_SIZE_BYTES);
-    ASSERT_EQ(std::filesystem::file_size(model4Path), MODEL4_FULL_SIZE_BYTES);
+    ASSERT_EQ(std::filesystem::file_size(modelPath), OPENVINO_MODEL_BIN_FULL_SIZE_BYTES);
+    ASSERT_EQ(std::filesystem::file_size(openvinoDetokenizerBinPath), OPENVINO_DETOKENIZER_BIN_FULL_SIZE_BYTES);
+    ASSERT_EQ(std::filesystem::file_size(openvinoTokenizerBinPath), OPENVINO_TOKENIZER_BIN_FULL_SIZE_BYTES);
+    ASSERT_EQ(std::filesystem::file_size(tokenizerModelPath), TOKENIZER_MODEL_FULL_SIZE_BYTES);
 }
 
 #ifdef _WIN32
@@ -1306,7 +1306,7 @@ TEST_F(HfPull, ResumeCtrlC) {
         modelBasePath,
         modelPath,
         downloadPath,
-        MODEL_FULL_SIZE_BYTES,
+        OPENVINO_MODEL_BIN_FULL_SIZE_BYTES,
         "ResumeCtrlC",
         HF_PULL_DETECT_TIMEOUT_SECONDS,
         HF_PULL_POLL_INTERVAL_MS,
@@ -1335,10 +1335,10 @@ TEST_F(HfPull, ResumeCtrlC) {
 
     ASSERT_EQ(std::filesystem::exists(modelPath), true) << modelPath;
     ASSERT_EQ(std::filesystem::exists(graphPath), true) << graphPath;
-    ASSERT_EQ(std::filesystem::file_size(modelPath), MODEL_FULL_SIZE_BYTES);
-    ASSERT_EQ(std::filesystem::file_size(model2Path), MODEL2_FULL_SIZE_BYTES);
-    ASSERT_EQ(std::filesystem::file_size(model3Path), MODEL3_FULL_SIZE_BYTES);
-    ASSERT_EQ(std::filesystem::file_size(model4Path), MODEL4_FULL_SIZE_BYTES);
+    ASSERT_EQ(std::filesystem::file_size(modelPath), OPENVINO_MODEL_BIN_FULL_SIZE_BYTES);
+    ASSERT_EQ(std::filesystem::file_size(openvinoDetokenizerBinPath), OPENVINO_DETOKENIZER_BIN_FULL_SIZE_BYTES);
+    ASSERT_EQ(std::filesystem::file_size(openvinoTokenizerBinPath), OPENVINO_TOKENIZER_BIN_FULL_SIZE_BYTES);
+    ASSERT_EQ(std::filesystem::file_size(tokenizerModelPath), TOKENIZER_MODEL_FULL_SIZE_BYTES);
 }
 
 TEST_F(HfPull, Start) {
@@ -1352,7 +1352,7 @@ TEST_F(HfPull, Start) {
 
     ASSERT_EQ(std::filesystem::exists(modelPath), true) << modelPath;
     ASSERT_EQ(std::filesystem::exists(graphPath), true) << graphPath;
-    ASSERT_EQ(std::filesystem::file_size(modelPath), MODEL_FULL_SIZE_BYTES);
+    ASSERT_EQ(std::filesystem::file_size(modelPath), OPENVINO_MODEL_BIN_FULL_SIZE_BYTES);
     std::string graphContents = GetFileContents(graphPath);
 
     ASSERT_EQ(expectedGraphContents, removeGeneratedGraphHeaders(graphContents)) << graphContents;
@@ -1378,7 +1378,7 @@ TEST_F(HfPull, OutOfOvOrg) {
 
     ASSERT_EQ(std::filesystem::exists(modelPath), true) << modelPath;
     ASSERT_EQ(std::filesystem::exists(graphPath), true) << graphPath;
-    ASSERT_EQ(std::filesystem::file_size(modelPath), MODEL_FULL_SIZE_BYTES);
+    ASSERT_EQ(std::filesystem::file_size(modelPath), OPENVINO_MODEL_BIN_FULL_SIZE_BYTES);
     std::string graphContents = GetFileContents(graphPath);
 
     ASSERT_EQ(expectedGraphContents, removeGeneratedGraphHeaders(graphContents)) << graphContents;
@@ -1435,7 +1435,7 @@ TEST_F(HfPull, DraftModel) {
 
     ASSERT_EQ(std::filesystem::exists(modelPath), true) << modelPath;
     ASSERT_EQ(std::filesystem::exists(graphPath), true) << graphPath;
-    ASSERT_EQ(std::filesystem::file_size(modelPath), MODEL_FULL_SIZE_BYTES);
+    ASSERT_EQ(std::filesystem::file_size(modelPath), OPENVINO_MODEL_BIN_FULL_SIZE_BYTES);
     std::string graphContents = GetFileContents(graphPath);
 
     ASSERT_EQ(expectedGraphContentsDraft, removeGeneratedGraphHeaders(graphContents)) << graphContents;
@@ -1444,7 +1444,7 @@ TEST_F(HfPull, DraftModel) {
     std::string modelPath2 = ovms::FileSystem::appendSlash(basePath2) + "openvino_tokenizer.bin";
 
     ASSERT_EQ(std::filesystem::exists(modelPath2), true) << modelPath2;
-    ASSERT_EQ(std::filesystem::file_size(modelPath2), DRAFT_MODEL_TOKENIZER_SIZE_BYTES);
+    ASSERT_EQ(std::filesystem::file_size(modelPath2), DRAFT_OPENVINO_TOKENIZER_BIN_SIZE_BYTES);
 }
 
 class TestOptimumDownloader : public ovms::OptimumDownloader {
