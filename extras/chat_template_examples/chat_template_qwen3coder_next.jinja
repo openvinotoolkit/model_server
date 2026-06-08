@@ -1,3 +1,8 @@
+{#-
+  Modifications to original chat template:
+    * Added "response" to handled_keys to remove the response descriptions from model input.
+    * Added "| from_json" to tool argument rendering to fix INVALID_ARGUMENT error in LLMExecutor caused by not being able to get item pairs from a mapping.
+#}
 {% macro render_extra_keys(json_dict, handled_keys) %}
     {%- if json_dict is mapping %}
         {%- for json_key in json_dict if json_key not in handled_keys %}
