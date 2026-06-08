@@ -15,4 +15,3 @@ sentence_transformers==5.3.0
 sentencepiece  # Required by: transformers`
 torchvision
 requests
-einops
