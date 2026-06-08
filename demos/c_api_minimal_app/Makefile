@@ -25,13 +25,13 @@ BASE_OS ?= ubuntu24
 
 ifeq ($(BASE_OS),ubuntu24)
   BASE_OS_TAG_UBUNTU ?= 24.04
-  PACKAGE_URL ?="https://github.com/openvinotoolkit/model_server/releases/download/v2026.1/ovms_ubuntu24_2026.1.0_python_off.tar.gz"
+  PACKAGE_URL ?="https://github.com/openvinotoolkit/model_server/releases/download/v2026.2/ovms_ubuntu24_2026.2.0_python_off.tar.gz"
   BASE_IMAGE ?= ubuntu:$(BASE_OS_TAG_UBUNTU)
   DIST_OS=ubuntu
 endif
 ifeq ($(BASE_OS),redhat)
   BASE_OS_TAG_REDHAT ?= 9.6
-  PACKAGE_URL ="https://github.com/openvinotoolkit/model_server/releases/download/v2026.1/ovms_redhat_2026.1.0_python_off.tar.gz"
+  PACKAGE_URL ="https://github.com/openvinotoolkit/model_server/releases/download/v2026.2/ovms_redhat_2026.2.0_python_off.tar.gz"
   BASE_IMAGE ?= registry.access.redhat.com/ubi9/ubi:$(BASE_OS_TAG_REDHAT)
   DIST_OS=redhat
 endif
@@ -39,12 +39,6 @@ endif
 clean:
 	rm -vrf capi/$(DIST_OS)
 	mkdir -vp capi/$(DIST_OS)/demos && cd capi/$(DIST_OS)
-
-from_docker:
-	mkdir -p capi/$(DIST_OS)
-	docker run $(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG) bash -c \
-			"tar -c -C /ovms_pkg/$(BASE_OS) ovms.tar.gz ; sleep 2" | tar -x -C capi/$(DIST_OS)/ && cd ../../
-	-docker rm -v $$(docker ps -a -q -f status=exited -f ancestor=$(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG))
 
 from_web:
 	wget -P capi/$(DIST_OS) ${PACKAGE_URL}
@@ -64,5 +58,3 @@ build_image:
 		-t $(OVMS_CPP_DOCKER_IMAGE)-capi:$(OVMS_CPP_IMAGE_TAG)
 
 all_web: clean from_web build_image
-	
-all_docker: clean from_docker build_image
