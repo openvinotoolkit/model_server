@@ -425,9 +425,9 @@ RUN apt-get update ; \
             tar -xf linux-npu-driver-v1.26.0.20251125-19665715237-ubuntu2204.tar.gz && \
             curl -L -O https://github.com/oneapi-src/level-zero/releases/download/v1.24.2/level-zero_1.24.2+u22.04_amd64.deb     ; \
         else \
-            curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.33.0/linux-npu-driver-v1.33.0.20260529-26625960453-ubuntu2404.tar.gz && \
+            curl -fL -O https://github.com/intel/linux-npu-driver/releases/download/v1.33.0/linux-npu-driver-v1.33.0.20260529-26625960453-ubuntu2404.tar.gz && \
             tar -xf linux-npu-driver-v1.33.0.20260529-26625960453-ubuntu2404.tar.gz && \
-            curl -L -O https://snapshot.ppa.launchpadcontent.net/kobuk-team/intel-graphics/ubuntu/20260324T100000Z/pool/main/l/level-zero-loader/libze1_1.27.0-1~24.04~ppa2_amd64.deb ; \
+            curl -fL -O https://snapshot.ppa.launchpadcontent.net/kobuk-team/intel-graphics/ubuntu/20260324T100000Z/pool/main/l/level-zero-loader/libze1_1.27.0-1~24.04~ppa2_amd64.deb ; \
         fi ; \
         dpkg -i ./*.deb && rm -Rf /tmp/npu_deps ; \
     fi ; \
