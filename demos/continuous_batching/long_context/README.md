@@ -6,6 +6,7 @@ Below optimizations can significantly boost performance :
 
 - Prefix caching
 - KV cache compression
+- Max prompt length (NPU)
 
 **Prefix caching**
 
@@ -28,12 +29,6 @@ mkdir models
 ```
 
 ::::{tab-set}
-:::{tab-item} CPU
-:sync:CPU
-```bash
-docker run --user $(id -u):$(id -g) -d --rm -v $(pwd)/models:/models:rw -p 8000:8000 openvino/model_server:latest --rest_port 8000 --model_repository_path /models --source_model OpenVINO/gpt-oss-20b-int4-ov  --tool_parser gptoss --reasoning_parser gptoss --task text_generation --enable_prefix_caching true
-```
-:::
 ::: {tab-item} GPU
 :sync: GPU
 ```bash
@@ -42,7 +37,7 @@ docker run --user $(id -u):$(id -g) -d --rm -v $(pwd)/models:/models:rw -p 8000:
 :::
 :::{tab-item} NPU
 ```bash
-docker run --user $(id -u):$(id -g) -d --rm -v $(pwd)/models:/models:rw -p 8000:8000 --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:latest-gpu --rest_port 8000 --model_repository_path /models --source_model OpenVINO/Qwen3-8B-int4-cw-ov  --target_device NPU --task text_generation --enable_prefix_caching true --max_prompt_len 16000 --tool_parser hermes3 --plugin_config "{\"NPUW_LLM_PREFILL_ATTENTION_HINT\": \"PYRAMID\"}"
+docker run --user $(id -u):$(id -g) -d --rm -v $(pwd)/models:/models:rw -p 8000:8000 --device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:latest-gpu --rest_port 8000 --model_repository_path /models --source_model OpenVINO/Qwen3-8B-int4-cw-ov  --target_device NPU --task text_generation --enable_prefix_caching true --max_prompt_len 16000 --tool_parser hermes3
 ```
 **Note:** It's recommended to set `--max_prompt_len` value to as low as possible. This will improve performence, but limit number of tokens model will accept.
 :::
@@ -50,52 +45,38 @@ docker run --user $(id -u):$(id -g) -d --rm -v $(pwd)/models:/models:rw -p 8000:
 
 ## Testing performance
 
-Using `vllm` benchmark it's possible to check performence of the model with desired context lenght. It's also available set prefix parameters check performence benefit from prefix caching.
+Using `vllm` benchmark it's possible to check performence of the model with desired context length. It's also available set prefix parameters check performence benefit from prefix caching.
 ```bash
 pip install vllm --extra-index-url https://wheels.vllm.ai/nightly/cpu
-vllm bench serve --backend  openai --base-url http://localhost:8000/ --endpoint v3/completions --model  OpenVINO/gpt-oss-20b-int4-ov --tokenizer openai/gpt-oss-20b --prefix-repetition-prefix-len 50000 --prefix-repetition-suffix-len 10 --prefix-repetition-output-len 20 --prefix-repetition-num-prefixes 1  --num-prompts 2 --max_concurrency 1 --dataset-name prefix_repetition --num-warmups 1 --seed 1
+vllm bench serve --backend  openai --base-url http://localhost:8000/ --endpoint v3/completions --model  OpenVINO/gpt-oss-20b-int4-ov --tokenizer openai/gpt-oss-20b --prefix-repetition-prefix-len 50000 --prefix-repetition-suffix-len 10 --prefix-repetition-output-len 20 --prefix-repetition-num-prefixes 1  --num-prompts 2 --max_concurrency 1 --dataset-name prefix_repetition --num-warmups 1 --seed 42
 ```
 
 ## Performance Comparison Table
 
 ::::{tab-set}
-:::{tab-item} CPU
-Platform: Intel(R) Xeon(R) Platinum 8480+
-| Context Length (tokens) | TTFT No Caching (ms) | TTFT Prefix Caching (ms) | KV Cache Usage (GB) |
-|------------------------|------------------|---------------------|-----------------------|
-| 1,000                  |  4 420          | 190.84                  |          0.03       |
-| 2,500                  |  9 627          | 272.56                  |          0.07       |
-| 5,000                  | 17 736          | 369.66                  |          0.1        |
-| 10,000                 | 36 684          | 680.28                  |          0.2        |
-| 25,000                 | 100 807         | 1570.07                 |         0.6         |
-| 50,000                 | 287 788         | 5133.87                 |          1.3        |
-NOT UPDATED
-:::
 :::{tab-item} iGPU
 :sync: GPU
 Platform: Intel(R) Core(TM) Ultra X7 368H
-| Context Length (tokens) | TTFT No Caching (ms) | TTFT Prefix Caching (ms) | KV Cache Usage (GB) |
-|------------------------|------------------|---------------------|-----------------------|
-| 1,000                  |  1 299          | 185.79                  |          0.03       |
-| 2,500                  |  3 606          | 235.13                  |          0.07       |
-| 5,000                  |  8 851          | 281.75                  |          0.1        |
-| 10,000                 | 23 098          | 654.88                  |          0.2        |
-| 25,000                 | 88 207          | 4 388                   |          0.6        |
-| 50,000                 | 261 835         | 17 348                  |          1.3        |
+| Context Length (tokens) | TTFT No Caching (ms) | TPOT No Caching (ms) | TTFT Prefix Caching (ms) | TPOT Prefix Caching (ms) | KV Cache Usage (GB) |
+|---------------|---------------|---------------|---------------|---------------|---------------|
+| 12,000        | 17 889        |   79.30       | 577           |        57.28  |          0.2  |
+| 25,000        | 54 280        |   90.81       | 2575          |        77.94  |          0.3  |
+| 50,000        | 121 360       |  123.44       | 6792          |        101.23 |          0.6  |
+| 100,000       | 122 068       |  127.04       | 6885          |        100.47 |          1.1  |
 
 :::
 :::{tab-item} NPU
 :sync: NPU
 Platform: Intel(R) Core(TM) Ultra X7 368H
-| Context Length (tokens) | TTFT No Caching (ms) | TTFT Prefix Caching (ms) |
-|------------------------|------------------|---------------------|
-| 500                    | 1521.75          | 1489.22                  |
-| 1,000                  | 3061.18          | 1729.39                  |
-| 2,000                  | 3072.92          | 1806.56                  |
-| 4,000                  | 6697.62          | 2421.26                  |
-| 8,000                  | 16046.92         | 3232.11                  |
-| 16,000                 | 53378.22         | 6585.93                  |
-NOT UPDATED
+| Context Length (tokens) | TTFT No Caching (ms) | TPOT No Caching (ms) | TTFT Prefix Caching (ms) | TPOT Prefix Caching (ms) |
+|---------------|---------------|---------------|---------------|---------------|
+| 500           | 1 514       |     76.62        | 1 491       |     77.36        |
+| 1,000         | 1 366       |     78.10        | 1 374       |     79.18        |
+| 2,000         | 2 662       |     79.74        | 1 518       |     80.09        |
+| 4,000         | 6 505       |     76.75        | 2 509       |     77.37        |
+| 8,000         | 15 432      |     76.74	     | 3 285       |     77.51        |
+| 16,000        | 43 117      |     80.30        | 5 356       |     80.97        |
+
 :::
 ::::
 
@@ -110,7 +91,24 @@ The only difference is that the configured testing task should include a relevan
 ## Cache Precision
 
 KV cache compression has minimal impact on accuracy and significantly reduces memory consumption and benchmark time.
-It's recommended to use default KV cache precision which is INT8.
+It's recommended to use default KV cache precision which is INT8, but it's possible to change it to INT4.To do it, use parameter `--kv_cache_precision u4`.
+
+| Context Length (tokens) | TTFT for precision u4 (ms) | Cache size for u4 (GB) | TTFT for precision u8 (ms) | Cache size for u8 |
+|-----------------|-----------------|-----------------|-----------------|-----------------|
+|     50,000      |      6812       |       0.6      |     6792        |       0.6       |
+|    100,000      |      7234       |       0.6      |     6885        |       1.1       |
+
+
+## Max prompt length for NPU
+
+Paramter `--max_prompt_len` has significant impact on performence for NPU. The lower parameter value is the faster request will be processed. 
+In a table below shows a comparision on prompt with 4K tokens with `--max_prompt_len` set to 16K and 4K.
+
+|     Max prompt length     |     TTFT (ms)    |     TPOT (ms)     |
+|---------------------------|------------------|-------------------|
+|           16K             |       2,514      |       77.17       |
+|            4K             |       2,183      |       53.19       |
+
 
 ## Recommendations
 
@@ -119,6 +117,8 @@ Enable prefix caching feature with `--enable_prefix_caching` parameter when you 
 Use KV cache compression as INT8 which is the default setting.
 
 Set the KV cache size via `--cache_size` parameter based on the available memory, expected concurrency and context length or use default value (`0`) to make it dynamic. It will improve the performance. 
+
+For NPU set parameter `--max_prompt_len` as low as possible. The lower `max_prompt_len` value, the performence will be better. 
 
 **Note** You can force reducing the concurrency on the server using a parameter `--rest_workers` which by default allows number of connections the same like number of CPU cores. Alternatively the limit can be set on the model level in `--max_num_seqs`.
 
