@@ -37,18 +37,18 @@ docker run --user $(id -u):$(id -g) -d --rm -v $(pwd)/models:/models:rw -p 8000:
 :::
 :::{tab-item} NPU
 ```bash
-docker run --user $(id -u):$(id -g) -d --rm -v $(pwd)/models:/models:rw -p 8000:8000 --device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:latest-gpu --rest_port 8000 --model_repository_path /models --source_model OpenVINO/Qwen3-8B-int4-cw-ov  --target_device NPU --task text_generation --enable_prefix_caching true --max_prompt_len 16000 --tool_parser hermes3
+docker run --user $(id -u):$(id -g) -d --rm -v $(pwd)/models:/models:rw -p 8000:8000 --device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:latest-gpu --rest_port 8000 --model_repository_path /models --source_model OpenVINO/Qwen3-8B-int4-cw-ov --max_prompt_len 16000 --tool_parser hermes3 --task text_generation --enable_prefix_caching true --target_device NPU
 ```
-**Note:** It's recommended to set `--max_prompt_len` value to as low as possible. This will improve performence, but limit number of tokens model will accept.
+**Note:** It's recommended to set `--max_prompt_len` value to as low as possible. This will improve performance, but limit number of tokens model will accept.
 :::
 ::::
 
 ## Testing performance
 
-Using `vllm` benchmark it's possible to check performence of the model with desired context length. It's also available set prefix parameters check performence benefit from prefix caching.
+Using `vllm` benchmark it's possible to check performance of the model with desired context length. It's also possible to set prefix parameters to check the performance benefit from prefix caching.
 ```bash
 pip install vllm --extra-index-url https://wheels.vllm.ai/nightly/cpu
-vllm bench serve --backend  openai --base-url http://localhost:8000/ --endpoint v3/completions --model  OpenVINO/gpt-oss-20b-int4-ov --tokenizer openai/gpt-oss-20b --prefix-repetition-prefix-len 50000 --prefix-repetition-suffix-len 10 --prefix-repetition-output-len 20 --prefix-repetition-num-prefixes 1  --num-prompts 2 --max_concurrency 1 --dataset-name prefix_repetition --num-warmups 1 --seed 42
+vllm bench serve --backend  openai --base-url http://localhost:8000/v3 --endpoint /completions --model  OpenVINO/gpt-oss-20b-int4-ov --tokenizer openai/gpt-oss-20b --prefix-repetition-prefix-len 50000 --prefix-repetition-suffix-len 10 --prefix-repetition-output-len 20 --prefix-repetition-num-prefixes 1  --num-prompts 2 --max_concurrency 1 --dataset-name prefix_repetition --num-warmups 1 --seed 42
 ```
 
 ## Performance Comparison Table
@@ -60,9 +60,9 @@ Platform: Intel(R) Core(TM) Ultra X7 368H
 | Context Length (tokens) | TTFT No Caching (ms) | TPOT No Caching (ms) | TTFT Prefix Caching (ms) | TPOT Prefix Caching (ms) | KV Cache Usage (GB) |
 |---------------|---------------|---------------|---------------|---------------|---------------|
 | 12,000        | 17 889        |   79.30       | 577           |        57.28  |          0.2  |
-| 25,000        | 54 280        |   90.81       | 2575          |        77.94  |          0.3  |
-| 50,000        | 121 360       |  123.44       | 6792          |        101.23 |          0.6  |
-| 100,000       | 122 068       |  127.04       | 6885          |        100.47 |          1.1  |
+| 25,000        | 54 280        |   90.81       | 2 575          |        77.94  |          0.3  |
+| 50,000        | 121 360       |  123.44       | 6 792          |        101.23 |          0.6  |
+| 100,000       | 122 068       |  127.04       | 6 885          |        100.47 |          1.1  |
 
 :::
 :::{tab-item} NPU
@@ -80,7 +80,7 @@ Platform: Intel(R) Core(TM) Ultra X7 368H
 :::
 ::::
 
-The results show that the cache usage grows exponentialy with the context length.
+The results show that the cache usage grows with the context length.
 Prefix caching is very effective in reducing the first token generation making the long context calls practical even on slower HW.
 
 ## Testing accuracy
@@ -94,20 +94,20 @@ KV cache compression has minimal impact on accuracy and significantly reduces me
 It's recommended to use default KV cache precision which is INT8, but it's possible to change it to INT4.To do it, use parameter `--kv_cache_precision u4`.
 
 | Context Length (tokens) | TTFT for precision u4 (ms) | Cache size for u4 (GB) | TTFT for precision u8 (ms) | Cache size for u8 |
-|-----------------|-----------------|-----------------|-----------------|-----------------|
-|     50,000      |      6812       |       0.6      |     6792        |       0.6       |
-|    100,000      |      7234       |       0.6      |     6885        |       1.1       |
+|-----------------|-----------------|----------------|-----------------|-----------------|
+|     50,000      |      6 812      |       0.6      |     6 792       |       0.6       |
+|    100,000      |      7 234      |       0.6      |     6 885       |       1.1       |
 
 
 ## Max prompt length for NPU
 
-Paramter `--max_prompt_len` has significant impact on performence for NPU. The lower parameter value is the faster request will be processed. 
+Parameter `--max_prompt_len` has significant impact on performance for NPU. The lower parameter value is the faster request will be processed. 
 In a table below shows a comparision on prompt with 4K tokens with `--max_prompt_len` set to 16K and 4K.
 
 |     Max prompt length     |     TTFT (ms)    |     TPOT (ms)     |
 |---------------------------|------------------|-------------------|
-|           16K             |       2,514      |       77.17       |
-|            4K             |       2,183      |       53.19       |
+|           16K             |       2 514      |       77.17       |
+|            4K             |       2 183      |       53.19       |
 
 
 ## Recommendations
@@ -118,7 +118,6 @@ Use KV cache compression as INT8 which is the default setting.
 
 Set the KV cache size via `--cache_size` parameter based on the available memory, expected concurrency and context length or use default value (`0`) to make it dynamic. It will improve the performance. 
 
-For NPU set parameter `--max_prompt_len` as low as possible. The lower `max_prompt_len` value, the performence will be better. 
+For NPU set parameter `--max_prompt_len` as low as possible. The lower `max_prompt_len` value, the better the performance will be. 
 
-**Note** You can force reducing the concurrency on the server using a parameter `--rest_workers` which by default allows number of connections the same like number of CPU cores. Alternatively the limit can be set on the model level in `--max_num_seqs`.
-
+**Note:** You can force reducing the concurrency on the server using a parameter `--rest_workers` which by default allows number of connections the same like number of CPU cores. Alternatively the limit can be set on the model level in `--max_num_seqs`.
