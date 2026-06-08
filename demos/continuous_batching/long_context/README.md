@@ -102,7 +102,7 @@ It's recommended to use default KV cache precision which is INT8, but it's possi
 ## Max prompt length for NPU
 
 Parameter `--max_prompt_len` has significant impact on performance for NPU. The lower parameter value is the faster request will be processed. 
-In a table below shows a comparision on prompt with 4K tokens with `--max_prompt_len` set to 16K and 4K.
+In a table below shows a comparison on prompt with 4K tokens with `--max_prompt_len` set to 16K and 4K.
 
 |     Max prompt length     |     TTFT (ms)    |     TPOT (ms)     |
 |---------------------------|------------------|-------------------|
