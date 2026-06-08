@@ -619,7 +619,7 @@ This section demonstrates how to serve multiple LoRA adapters with a single SDXL
 
 The following command starts OVMS with Stable Diffusion XL and 5 LoRA adapters for different artistic styles:
 
-### CPU
+#### CPU
 
 ::::{tab-set}
 :::{tab-item} Docker (Linux)
@@ -653,7 +653,7 @@ ovms --rest_port 8000 ^
 
 ::::
 
-### GPU
+#### GPU
 
 ::::{tab-set}
 :::{tab-item} Docker (Linux)
