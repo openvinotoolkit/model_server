@@ -92,11 +92,11 @@ ovms --model_path models/resnet/ --model_name resnet --port 9000 --rest_port 800
 ::::
 
 
-**Example using OpenVINO/gemma-4-E4B-it-int4-ov model :**
+**Example using OpenVINO/Qwen3-0.6B-int4-ov model from local folder :**
 
 ```bash
 pip install huggingface_hub
-hf download OpenVINO/gemma-4-E4B-it-int4-ov
+hf download OpenVINO/Qwen3-0.6B-int4-ov --local-dir Qwen3-0.6B-int4-ov
 ```
 
 ::::{tab-set}
@@ -105,8 +105,8 @@ hf download OpenVINO/gemma-4-E4B-it-int4-ov
 **Required:** Docker Engine installed
 
 ```bash
-docker run -d --rm -v ${PWD}/OpenVINO/gemma-4-E4B-it-int4-ov:/model -p 8000:8000 openvino/model_server:latest \
---model_path /model/ --model_name gemma4 --rest_port 8000 --task text_generation --target_device CPU
+docker run -d --rm -v ${PWD}/Qwen3-0.6B-int4-ov:/model -p 8000:8000 openvino/model_server:latest \
+--model_path /model/ --model_name qwen3-0.6 --rest_port 8000 --task text_generation --target_device CPU --tool_parser hermes3 --reasoning_parser qwen3
 ```
 
 - Expose the container ports to **open ports** on your host or virtual machine. 
@@ -115,7 +115,7 @@ docker run -d --rm -v ${PWD}/OpenVINO/gemma-4-E4B-it-int4-ov:/model -p 8000:8000
 :::{tab-item} On Baremetal Host
 :sync: baremetal
 ```text
-ovms --model_path OpenVINO/gemma-4-E4B-it-int4-ov --model_name gemma4 --rest_port 8000 --task text_generation --target_device CPU
+ovms --model_path Qwen3-0.6B-int4-ov --model_name qwen3-0.6 --rest_port 8000 --task text_generation --target_device CPU --tool_parser hermes3 --reasoning_parser qwen3
 ```
 :::
 ::::
