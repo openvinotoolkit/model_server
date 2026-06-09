@@ -2,13 +2,13 @@ def image_build_needed = "false"
 def win_image_build_needed = "false"
 def client_test_needed = "false"
 def export_models_changed = "false"
-def doc_changed_files_linux = ""
-def doc_changed_files_windows = ""
+def test_doc_files_linux = ""
+def test_doc_files_windows = ""
 def shortCommit = ""
 def agent_name_windows = ""
-def agent_name_windows_doc = "ovms_win_ptl"
+def test_agent_windows = "ovms_win_ptl"
 def agent_name_linux = ""
-def agent_name_linux_doc = "ovms_ptl"
+def test_agent_linux = "ovms_ptl"
 def disable_doc_tests_linux = false
 def disable_doc_tests_windows = false
 
@@ -19,12 +19,12 @@ def disable_doc_tests_windows = false
 //   [disable_doc_tests_windows]            - Skip the Windows documentation tests stage
 //
 // Override agent node:
-//   [agent_name_linux_doc=<node>]          - Run Linux doc tests on <node> (default: ovms_ptl)
-//   [agent_name_windows_doc=<node>]        - Run Windows doc tests on <node> (default: ovms_win_ptl)
+//   [test_agent_linux=<node>]          - Run Linux doc tests on <node> (default: ovms_ptl)
+//   [test_agent_windows=<node>]        - Run Windows doc tests on <node> (default: ovms_win_ptl)
 //
 // Override file list (space-separated, converted to pytest -k filter joined with ' or '):
-//   [doc_changed_files_linux=<files>]      - Use <files> instead of auto-detected list (Linux)
-//   [doc_changed_files_windows=<files>]    - Use <files> instead of auto-detected list (Windows)
+//   [test_doc_files_linux=<files>]      - Use <files> instead of auto-detected list (Linux)
+//   [test_doc_files_windows=<files>]    - Use <files> instead of auto-detected list (Windows)
 
 pipeline {
     agent {
@@ -80,62 +80,62 @@ pipeline {
                   disable_doc_tests_windows = true
                   println "Commit override: disable_doc_tests_windows = true"
               }
-              def agentLinuxDocMatcher = (commitMsg =~ /\[agent_name_linux_doc=([^\]]+)\]/)
+              def agentLinuxDocMatcher = (commitMsg =~ /\[test_agent_linux=([^\]]+)\]/)
               def agentLinuxDocValue = agentLinuxDocMatcher ? agentLinuxDocMatcher[0][1] : null
               agentLinuxDocMatcher = null // Matcher is not serializable; null it before CPS checkpoint
               if (agentLinuxDocValue) {
                   if (!(agentLinuxDocValue ==~ /[a-zA-Z0-9_-]+/)) {
-                      error "Invalid agent_name_linux_doc override: '${agentLinuxDocValue}'. Only alphanumeric, hyphens and underscores allowed."
+                      error "Invalid test_agent_linux override: '${agentLinuxDocValue}'. Only alphanumeric, hyphens and underscores allowed."
                   }
-                  agent_name_linux_doc = agentLinuxDocValue
-                  println "Commit override: agent_name_linux_doc = ${agent_name_linux_doc}"
+                  test_agent_linux = agentLinuxDocValue
+                  println "Commit override: test_agent_linux = ${test_agent_linux}"
               }
-              def agentWindowsDocMatcher = (commitMsg =~ /\[agent_name_windows_doc=([^\]]+)\]/)
+              def agentWindowsDocMatcher = (commitMsg =~ /\[test_agent_windows=([^\]]+)\]/)
               def agentWindowsDocValue = agentWindowsDocMatcher ? agentWindowsDocMatcher[0][1] : null
               agentWindowsDocMatcher = null // Matcher is not serializable; null it before CPS checkpoint
               if (agentWindowsDocValue) {
                   if (!(agentWindowsDocValue ==~ /[a-zA-Z0-9_-]+/)) {
-                      error "Invalid agent_name_windows_doc override: '${agentWindowsDocValue}'. Only alphanumeric, hyphens and underscores allowed."
+                      error "Invalid test_agent_windows override: '${agentWindowsDocValue}'. Only alphanumeric, hyphens and underscores allowed."
                   }
-                  agent_name_windows_doc = agentWindowsDocValue
-                  println "Commit override: agent_name_windows_doc = ${agent_name_windows_doc}"
+                  test_agent_windows = agentWindowsDocValue
+                  println "Commit override: test_agent_windows = ${test_agent_windows}"
               }
-              def docChangedFilesLinuxMatcher = (commitMsg =~ /\[doc_changed_files_linux=([^\]]+)\]/)
+              def docChangedFilesLinuxMatcher = (commitMsg =~ /\[test_doc_files_linux=([^\]]+)\]/)
               def docChangedFilesLinuxValue = docChangedFilesLinuxMatcher ? docChangedFilesLinuxMatcher[0][1] : null
               docChangedFilesLinuxMatcher = null // Matcher is not serializable; null it before CPS checkpoint
               if (docChangedFilesLinuxValue) {
                   // Validate each entry is a safe .md path (no shell metacharacters)
                   docChangedFilesLinuxValue.split(' ').each { entry ->
                       if (!(entry ==~ /[a-zA-Z0-9_\/.\-]+\.md/)) {
-                          error "Invalid doc_changed_files_linux entry: '${entry}'. Must be a .md file path with no special characters."
+                          error "Invalid test_doc_files_linux entry: '${entry}'. Must be a .md file path with no special characters."
                       }
                   }
-                  doc_changed_files_linux = docChangedFilesLinuxValue.replaceAll(' ', '\n')
-                  println "Commit override: doc_changed_files_linux = ${doc_changed_files_linux}"
+                  test_doc_files_linux = docChangedFilesLinuxValue.replaceAll(' ', '\n')
+                  println "Commit override: test_doc_files_linux = ${test_doc_files_linux}"
               } else {
-                  doc_changed_files_linux = sh (script: "./ci/check_md_code_changes.sh linux ${diffBase}", returnStdout: true).trim()
-                  if (doc_changed_files_linux) {
-                    println "doc_changed_files_linux = ${doc_changed_files_linux}"
+                  test_doc_files_linux = sh (script: "./ci/check_md_code_changes.sh linux ${diffBase}", returnStdout: true).trim()
+                  if (test_doc_files_linux) {
+                    println "test_doc_files_linux = ${test_doc_files_linux}"
                   } else {
                     println "No documentation files changed for linux"
                   }
               }
-              def docChangedFilesWindowsMatcher = (commitMsg =~ /\[doc_changed_files_windows=([^\]]+)\]/)
+              def docChangedFilesWindowsMatcher = (commitMsg =~ /\[test_doc_files_windows=([^\]]+)\]/)
               def docChangedFilesWindowsValue = docChangedFilesWindowsMatcher ? docChangedFilesWindowsMatcher[0][1] : null
               docChangedFilesWindowsMatcher = null // Matcher is not serializable; null it before CPS checkpoint
               if (docChangedFilesWindowsValue) {
                   // Validate each entry is a safe .md path (no shell metacharacters)
                   docChangedFilesWindowsValue.split(' ').each { entry ->
                       if (!(entry ==~ /[a-zA-Z0-9_\/.\-]+\.md/)) {
-                          error "Invalid doc_changed_files_windows entry: '${entry}'. Must be a .md file path with no special characters."
+                          error "Invalid test_doc_files_windows entry: '${entry}'. Must be a .md file path with no special characters."
                       }
                   }
-                  doc_changed_files_windows = docChangedFilesWindowsValue.replaceAll(' ', '\n')
-                  println "Commit override: doc_changed_files_windows = ${doc_changed_files_windows}"
+                  test_doc_files_windows = docChangedFilesWindowsValue.replaceAll(' ', '\n')
+                  println "Commit override: test_doc_files_windows = ${test_doc_files_windows}"
               } else {
-                  doc_changed_files_windows = sh (script: "./ci/check_md_code_changes.sh windows ${diffBase}", returnStdout: true).trim()
-                  if (doc_changed_files_windows) {
-                    println "doc_changed_files_windows = ${doc_changed_files_windows}"
+                  test_doc_files_windows = sh (script: "./ci/check_md_code_changes.sh windows ${diffBase}", returnStdout: true).trim()
+                  if (test_doc_files_windows) {
+                    println "test_doc_files_windows = ${test_doc_files_windows}"
                   } else {
                     println "No documentation files changed for windows"
                   }
@@ -210,7 +210,7 @@ pipeline {
                     // release_image
                     sh "make release_image RUN_TESTS=0 GPU=1 NPU=1 OVMS_CPP_IMAGE_TAG=${shortCommit} BUILD_IMAGE=openvino/model_server-build:${shortCommit}"
                     sh "make run_lib_files_test OVMS_CPP_IMAGE_TAG=${shortCommit}"
-                    if ( doc_changed_files_linux ) {
+                    if ( test_doc_files_linux ) {
                         sh "docker save openvino/model_server:${shortCommit} | gzip > ovms_release_image.tar.gz"
                         stash name: 'ovms-release-image', includes: 'ovms_release_image.tar.gz'
                         sh "rm -f ovms_release_image.tar.gz"
@@ -241,7 +241,7 @@ pipeline {
                           windows.install_dependencies()
                           windows.clean()
                           windows.build()
-                          if ( doc_changed_files_windows ) {
+                          if ( test_doc_files_windows ) {
                             stash name: 'ovms-windows-package', includes: 'dist\\windows\\ovms.zip'
                           }
                         } finally {
@@ -297,11 +297,11 @@ pipeline {
             stage("Documentation tests") {
               agent none
               when {
-                expression { doc_changed_files_linux && !disable_doc_tests_linux }
+                expression { test_doc_files_linux && !disable_doc_tests_linux }
                 beforeAgent true
               }
               steps {
-                node(agent_name_linux_doc) {
+                node(test_agent_linux) {
                   checkout scm
                   script {
                     dir ('documentation_tests') {
@@ -309,11 +309,11 @@ pipeline {
                       sh "pwd"
                       def pwd = sh(returnStdout:true, script: "pwd").strip()
                       def ovms_c_repo_path = sh(returnStdout:true, script: "cd .. && pwd").strip()
-                      def doc_changed_files_str = doc_changed_files_linux.split('\n').join(' or ')
+                      def test_doc_files_str = test_doc_files_linux.split('\n').join(' or ')
                       sh "make create-venv && rm -f tests/functional && ln -s ${pwd}/../tests/functional tests/functional"
                       def cmd_venv_activate = ". .venv/bin/activate"
                       def cmd_export = "export TT_RUN_REGRESSION_TESTS=True && export TT_REGRESSION_WEEKLY_TESTS=True && export TT_TARGET_DEVICE=CPU,GPU,NPU && export TT_ENABLE_UAT_TESTS=True && export TT_ENABLE_SMOKE_TESTS=False && export TT_OVMS_C_REPO_PATH=${ovms_c_repo_path} && export TT_WAIT_FOR_MESSAGES_TIMEOUT=1500"
-                      def cmd_pytest = "pytest tests/non_functional/documentation -k '${doc_changed_files_str}' -n 0 --dist loadgroup"
+                      def cmd_pytest = "pytest tests/non_functional/documentation -k '${test_doc_files_str}' -n 0 --dist loadgroup"
                       def cmd = ""
                       if ( image_build_needed == "true" ) {
                           unstash 'ovms-release-image'
@@ -364,22 +364,22 @@ pipeline {
             stage("Documentation tests windows") {
               agent none
               when {
-                expression { doc_changed_files_windows && !disable_doc_tests_windows }
+                expression { test_doc_files_windows && !disable_doc_tests_windows }
                 beforeAgent true
               }
               steps {
-                node(agent_name_windows_doc) {
+                node(test_agent_windows) {
                   checkout scm
                   script {
                     dir ('documentation_tests') {
                       checkout scmGit(branches: [[name: 'develop']], userRemoteConfigs: [[credentialsId: 'workflow-lab', url: 'https://github.com/intel-innersource/frameworks.ai.openvino.model-server.tests.git']])
-                      def doc_changed_files_str = doc_changed_files_windows.split('\n').join(' or ')
+                      def test_doc_files_str = test_doc_files_windows.split('\n').join(' or ')
                       def current_path = bat(returnStdout: true, script: 'cd').trim().split('\n').last().trim()
                       def ovms_c_repo_path = bat(returnStdout: true, script: 'cd .. && cd').trim().split('\n').last().trim()
                       def cmd_link_ovms = "(if exist ${current_path}\\tests\\functional rmdir ${current_path}\\tests\\functional) && mklink /D ${current_path}\\tests\\functional ${ovms_c_repo_path}\\tests\\functional"
                       def cmd_requirements = "(if not exist .venv virtualenv .venv --python=python3.12) && call .venv\\Scripts\\activate.bat && pip install -r requirements.txt"
                       def cmd_export = "set \"TT_RUN_REGRESSION_TESTS=True\" && set \"TT_REGRESSION_WEEKLY_TESTS=True\" && set \"TT_TARGET_DEVICE=CPU,GPU,NPU\" && set \"TT_BASE_OS=windows\" && set \"TT_OVMS_TYPE=BINARY\" && set \"TT_ENABLE_UAT_TESTS=True\" && set \"TT_ENABLE_SMOKE_TESTS=False\" && set \"TT_DISABLE_DMESG_LOG_MONITOR=True\" && set \"TT_OVMS_C_REPO_PATH=${ovms_c_repo_path}\" && set \"TT_WAIT_FOR_MESSAGES_TIMEOUT=1500\" && set \"PYTHONUTF8=1\" && set \"PYTHONIOENCODING=utf-8\""
-                      def cmd_pytest = "pytest tests/non_functional/documentation -k \"${doc_changed_files_str}\" -n 0 --dist loadgroup --basetemp=\"C:\\tmp\\pytest-${BRANCH_NAME}-${BUILD_NUMBER}\""
+                      def cmd_pytest = "pytest tests/non_functional/documentation -k \"${test_doc_files_str}\" -n 0 --dist loadgroup --basetemp=\"C:\\tmp\\pytest-${BRANCH_NAME}-${BUILD_NUMBER}\""
                       def cmd = ""
                       if ( win_image_build_needed == "true" ) {
                           unstash 'ovms-windows-package'
