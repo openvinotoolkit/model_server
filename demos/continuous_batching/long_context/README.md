@@ -93,7 +93,7 @@ The only difference is that the configured testing task should include a relevan
 KV cache compression has minimal impact on accuracy and significantly reduces memory consumption and benchmark time.
 It's recommended to use default KV cache precision which is INT8, but it's possible to change it to INT4. To do it, use parameter `--kv_cache_precision u4`.
 
-| Context Length (tokens) | TTFT for precision u4 (ms) | Cache size for u4 (GB) | TTFT for precision u8 (ms) | Cache size for u8 |
+| Context Length (tokens) | TTFT for precision u4 (ms) | Cache size for u4 (GB) | TTFT for precision u8 (ms) | Cache size for u8 (GB) |
 |-----------------|-----------------|----------------|-----------------|-----------------|
 |     50,000      |      6 812      |       0.6      |     6 792       |       0.6       |
 |    100,000      |      7 234      |       0.6      |     6 885       |       1.1       |
