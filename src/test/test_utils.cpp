@@ -758,8 +758,8 @@ void EnsureServerStartedWithTimeout(ovms::Server& server, int timeoutSeconds) {
     ASSERT_EQ(server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME), ovms::ModuleState::INITIALIZED) << "OVMS did not fully load until allowed time:" << timeoutSeconds << "s. Check machine load";
 }
 
-void EnsureServerModelDownloadFinishedWithTimeout(ovms::Server& server, int startupTimeoutSeconds, int completionTimeoutSeconds) {
-    const auto startupTimeout = std::chrono::seconds(startupTimeoutSeconds);
+void EnsureServerModelDownloadFinishedWithTimeout(ovms::Server& server, int completionTimeoutSeconds) {
+    const auto startupTimeout = std::chrono::seconds(10);
     const auto completionTimeout = std::chrono::seconds(completionTimeoutSeconds);
     const auto pollInterval = std::chrono::microseconds(200);
     auto state = server.getModuleState(ovms::HF_MODEL_PULL_MODULE_NAME);
@@ -775,7 +775,7 @@ void EnsureServerModelDownloadFinishedWithTimeout(ovms::Server& server, int star
         state = server.getModuleState(ovms::HF_MODEL_PULL_MODULE_NAME);
     }
     if (state == ovms::ModuleState::NOT_INITIALIZED) {
-        FAIL() << "HF pull module never started within " << startupTimeoutSeconds << "s. Check machine load and network load";
+        FAIL() << "HF pull module never started within 10s. Check machine load and network load";
         return;
     }
 
@@ -816,7 +816,7 @@ void SetUpServerForDownload(std::unique_ptr<std::thread>& t, ovms::Server& serve
         EXPECT_EQ(expected_code, server.start(argc, argv));
     }));
 
-    EnsureServerModelDownloadFinishedWithTimeout(server, timeoutSeconds, timeoutSeconds);
+    EnsureServerModelDownloadFinishedWithTimeout(server, timeoutSeconds);
 }
 
 void SetUpServerForDownload(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& source_model, std::string& download_path, std::string& task, const std::string& logPath, int expected_code, int timeoutSeconds) {
@@ -833,7 +833,7 @@ void SetUpServerForDownload(std::unique_ptr<std::thread>& t, ovms::Server& serve
         logPath};
     startServerWithArgs(t, server, std::move(args), expected_code);
 
-    EnsureServerModelDownloadFinishedWithTimeout(server, timeoutSeconds, timeoutSeconds);
+    EnsureServerModelDownloadFinishedWithTimeout(server, timeoutSeconds);
 }
 
 void SetUpServerForDownloadWithDraft(std::unique_ptr<std::thread>& t, ovms::Server& server,
@@ -855,7 +855,7 @@ void SetUpServerForDownloadWithDraft(std::unique_ptr<std::thread>& t, ovms::Serv
         EXPECT_EQ(expected_code, server.start(argc, argv));
     }));
 
-    EnsureServerModelDownloadFinishedWithTimeout(server, timeoutSeconds, timeoutSeconds);
+    EnsureServerModelDownloadFinishedWithTimeout(server, timeoutSeconds);
 }
 
 void SetUpServerForDownloadWithDraft(std::unique_ptr<std::thread>& t, ovms::Server& server,
@@ -875,7 +875,7 @@ void SetUpServerForDownloadWithDraft(std::unique_ptr<std::thread>& t, ovms::Serv
         logPath};
     startServerWithArgs(t, server, std::move(args), expected_code);
 
-    EnsureServerModelDownloadFinishedWithTimeout(server, timeoutSeconds, timeoutSeconds);
+    EnsureServerModelDownloadFinishedWithTimeout(server, timeoutSeconds);
 }
 
 void SetUpServerForDownloadWithLoras(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& source_model, std::string& download_path, std::string& task, std::string& source_loras, int expected_code, int timeoutSeconds) {
@@ -896,7 +896,7 @@ void SetUpServerForDownloadWithLoras(std::unique_ptr<std::thread>& t, ovms::Serv
         EXPECT_EQ(expected_code, server.start(argc, argv));
     }));
 
-    EnsureServerModelDownloadFinishedWithTimeout(server, timeoutSeconds, timeoutSeconds);
+    EnsureServerModelDownloadFinishedWithTimeout(server, timeoutSeconds);
 }
 
 void SetUpServerForDownloadAndStart(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& source_model, std::string& download_path, std::string& task, int timeoutSeconds) {

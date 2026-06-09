@@ -869,7 +869,7 @@ TEST_F(HfPull, ResumeShutdown) {
         }
     }
     server.setShutdownRequest(1);
-    EnsureServerModelDownloadFinishedWithTimeout(server, 120, 120);
+    EnsureServerModelDownloadFinishedWithTimeout(server, HF_PULL_SHUTDOWN_TIMEOUT_SECONDS);
     if (t)
         t->join();
     server.setShutdownRequest(0);
@@ -934,7 +934,7 @@ TEST_F(HfPullCache, UserRemoved) {
         secondRunCode = this->server.start(argc, argv);
     }));
 
-    EnsureServerModelDownloadFinishedWithTimeout(server, 120, 120);
+    EnsureServerModelDownloadFinishedWithTimeout(server, HF_PULL_SHUTDOWN_TIMEOUT_SECONDS);
 
     EXPECT_EQ(secondRunCode, EXIT_SUCCESS);
     EXPECT_FALSE(std::filesystem::exists(removedFilePath));
@@ -990,7 +990,7 @@ TEST_F(HfPullCache, UserEdited) {
         secondRunCode = this->server.start(argc, argv);
     }));
 
-    EnsureServerModelDownloadFinishedWithTimeout(server, HF_PULL_SHUTDOWN_TIMEOUT_SECONDS, HF_PULL_SHUTDOWN_TIMEOUT_SECONDS);
+    EnsureServerModelDownloadFinishedWithTimeout(server, HF_PULL_SHUTDOWN_TIMEOUT_SECONDS);
 
     EXPECT_EQ(secondRunCode, EXIT_SUCCESS);
     EXPECT_EQ(std::filesystem::file_size(editedFilePath), editedSize);
