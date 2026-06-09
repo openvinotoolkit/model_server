@@ -2,7 +2,7 @@
 
 Using LLM models with very long context and prompts might be particularly challenging. The key goals are to get maximum throughput, minimal latency and reasonable memory consumption.
 It is very common for applications using RAG chain, documents summarization, question answering and many more. 
-Below optimizations can significantly boost performance :
+Below optimizations can significantly boost performance:
 
 - Prefix caching
 - KV cache compression
