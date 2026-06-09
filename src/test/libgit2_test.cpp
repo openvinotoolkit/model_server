@@ -24,6 +24,7 @@
 #include <gtest/gtest.h>
 
 #include "src/pull_module/libgit2.hpp"
+#include "src/utils/env_guard.hpp"
 
 #include "environment.hpp"
 #include "test_utils.hpp"
@@ -887,6 +888,9 @@ TEST_F(Libgt2InitGuardTest, OwnerValidationIsDisabled) {
 // The guard must clear the config search paths for all host-level config
 // scopes so that no host gitconfig can interfere with OVMS's settings.
 TEST_F(Libgt2InitGuardTest, ConfigSearchPathsAreCleared) {
+    EnvGuard envGuard;
+    envGuard.unset("OVMS_GIT_ENABLE_SEARCH_PATH");
+
     ovms::Libgt2InitGuard guard(defaultOpts);
     ASSERT_GE(guard.status, 0);
 
@@ -901,6 +905,28 @@ TEST_F(Libgt2InitGuardTest, ConfigSearchPathsAreCleared) {
         EXPECT_EQ(rc, 0) << "GIT_OPT_GET_SEARCH_PATH failed for config level " << level;
         const char* path = (buf.ptr != nullptr) ? buf.ptr : "";
         EXPECT_STREQ(path, "") << "Config search path not cleared for level " << level;
+        git_buf_dispose(&buf);
+    }
+}
+
+TEST_F(Libgt2InitGuardTest, ConfigSearchPathsRemainWhenEnabledByEnv) {
+    EnvGuard envGuard;
+    envGuard.set("OVMS_GIT_ENABLE_SEARCH_PATH", "1");
+
+    ovms::Libgt2InitGuard guard(defaultOpts);
+    ASSERT_GE(guard.status, 0);
+
+    static const int levels[] = {
+        GIT_CONFIG_LEVEL_SYSTEM,
+        GIT_CONFIG_LEVEL_XDG,
+        GIT_CONFIG_LEVEL_GLOBAL,
+    };
+    for (int level : levels) {
+        git_buf buf = GIT_BUF_INIT;
+        int rc = git_libgit2_opts(GIT_OPT_GET_SEARCH_PATH, level, &buf);
+        EXPECT_EQ(rc, 0) << "GIT_OPT_GET_SEARCH_PATH failed for config level " << level;
+        const char* path = (buf.ptr != nullptr) ? buf.ptr : "";
+        EXPECT_STRNE(path, "") << "Config search path unexpectedly cleared for level " << level;
         git_buf_dispose(&buf);
     }
 }

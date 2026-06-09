@@ -260,22 +260,31 @@ Libgt2InitGuard::Libgt2InitGuard(const Libgit2Options& opts) {
     // container vs. a non-root serving user).
     this->status = git_libgit2_opts(GIT_OPT_SET_OWNER_VALIDATION, 0);
     IF_ERROR_SET_MSG_AND_RETURN();
-    // Redirect all git config search paths to an empty string so libgit2 never reads
-    // host-level git configuration (~/.gitconfig, /etc/gitconfig, etc.).  Without this,
-    // a host gitconfig that sets credential.helper, http.proxy, lfs.*, or safe.directory
-    // can silently override OVMS's intended proxy/token settings and cause spurious
-    // failures or credential leaks in multi-tenant environments.
-    // On Windows, GIT_CONFIG_LEVEL_PROGRAMDATA covers %PROGRAMDATA%\Git\config which is
-    // a machine-wide config that libgit2 reads before SYSTEM; it must be cleared as well.
-    this->status = git_libgit2_opts(GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_SYSTEM, "");
-    IF_ERROR_SET_MSG_AND_RETURN();
-    this->status = git_libgit2_opts(GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_XDG, "");
-    IF_ERROR_SET_MSG_AND_RETURN();
-    this->status = git_libgit2_opts(GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, "");
-    IF_ERROR_SET_MSG_AND_RETURN();
+    const char* enableSearchPathEnv = std::getenv("OVMS_GIT_ENABLE_SEARCH_PATH");
+    const bool enableGitSearchPath =
+        (enableSearchPathEnv != nullptr) && (std::string(enableSearchPathEnv) == "1");
+    // By default, redirect all git config search paths to an empty string so libgit2
+    // never reads host-level git configuration (~/.gitconfig, /etc/gitconfig, etc.).
+    // Without this, a host gitconfig that sets credential.helper, http.proxy, lfs.*, or
+    // safe.directory can silently override OVMS's intended proxy/token settings and cause
+    // spurious failures or credential leaks in multi-tenant environments.
+    // To preserve historic behaviour or troubleshoot host gitconfig interactions, set
+    // OVMS_GIT_ENABLE_SEARCH_PATH=1 and skip this isolation step.
+    if (!enableGitSearchPath) {
+        this->status = git_libgit2_opts(GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_SYSTEM, "");
+        IF_ERROR_SET_MSG_AND_RETURN();
+        this->status = git_libgit2_opts(GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_XDG, "");
+        IF_ERROR_SET_MSG_AND_RETURN();
+        this->status = git_libgit2_opts(GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, "");
+        IF_ERROR_SET_MSG_AND_RETURN();
+    }
 #if defined(_WIN32)
-    this->status = git_libgit2_opts(GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_PROGRAMDATA, "");
-    IF_ERROR_SET_MSG_AND_RETURN();
+    // On Windows, GIT_CONFIG_LEVEL_PROGRAMDATA covers %PROGRAMDATA%\Git\config.
+    // Keep it isolated unless explicit opt-in via OVMS_GIT_ENABLE_SEARCH_PATH=1.
+    if (!enableGitSearchPath) {
+        this->status = git_libgit2_opts(GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_PROGRAMDATA, "");
+        IF_ERROR_SET_MSG_AND_RETURN();
+    }
 #endif
     // Skip .keep file existence checks when reading packfiles.  libgit2 performs one
     // stat() per pack per operation to honour .keep files (which prevent gc from
