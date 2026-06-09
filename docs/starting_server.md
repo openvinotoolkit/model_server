@@ -92,7 +92,7 @@ ovms --model_path models/resnet/ --model_name resnet --port 9000 --rest_port 800
 ::::
 
 
-**Example using OpenVINO/Qwen3-0.6B-int4-ov model from local folder :**
+**Example using OpenVINO/Qwen3-0.6B-int4-ov model from a local folder:**
 
 ```bash
 pip install huggingface_hub
