@@ -141,19 +141,6 @@ ARG DLDT_PACKAGE_URL
 ARG ov_source_branch=master
 ARG CMAKE_BUILD_TYPE=Release
 
-# Level Zero development headers for NPU plugin build (only needed when building OV from source)
-RUN if [ "$ov_use_binary" == "0" ]; then \
-    if [[ "$BASE_IMAGE" == *"22.04"* ]] ; then \
-        curl -L -o /tmp/level-zero.deb https://github.com/oneapi-src/level-zero/releases/download/v1.24.2/level-zero_1.24.2+u22.04_amd64.deb && \
-        curl -L -o /tmp/level-zero-devel.deb https://github.com/oneapi-src/level-zero/releases/download/v1.24.2/level-zero-devel_1.24.2+u22.04_amd64.deb ; \
-    else \
-        curl -L -o /tmp/level-zero.deb https://snapshot.ppa.launchpadcontent.net/kobuk-team/intel-graphics/ubuntu/20260205T100000Z/pool/main/l/level-zero-loader/libze1_1.26.2-1~24.04~ppa1_amd64.deb && \
-        curl -L -o /tmp/level-zero-devel.deb https://snapshot.ppa.launchpadcontent.net/kobuk-team/intel-graphics/ubuntu/20260205T100000Z/pool/main/l/level-zero-loader/libze-dev_1.26.2-1~24.04~ppa1_amd64.deb ; \
-    fi && \
-    dpkg -i /tmp/level-zero.deb /tmp/level-zero-devel.deb && \
-    rm /tmp/level-zero.deb /tmp/level-zero-devel.deb ; \
-    fi
-
 ENV HDDL_INSTALL_DIR=/opt/intel/openvino/deployment_tools/inference_engine/external/hddl
 ENV TF_SYSTEM_LIBS="curl"
 
@@ -175,9 +162,9 @@ RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; git clone ht
 WORKDIR /openvino/build
 RUN if [ "$ov_use_binary" == "0" ]; then \
     if [[ $debug_bazel_flags == *"py_off"* ]]; then \
-        cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DENABLE_SAMPLES=0 -DCMAKE_CXX_FLAGS=" ${SDL_OPS} -Wno-error=parentheses " -DENABLE_CPPLINT=OFF -DENABLE_INTEL_NPU_PROTOPIPE=OFF .. ; \
+        cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DENABLE_SAMPLES=0 -DCMAKE_CXX_FLAGS=" ${SDL_OPS} -Wno-error=parentheses " -DENABLE_CPPLINT=OFF -DENABLE_INTEL_NPU_PROTOPIPE=OFF -DENABLE_SYSTEM_LEVEL_ZERO=OFF .. ; \
     else \
-        cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DENABLE_PYTHON=ON -DENABLE_SAMPLES=0 -DCMAKE_CXX_FLAGS=" ${SDL_OPS} -Wno-error=parentheses " -DENABLE_CPPLINT=OFF -DENABLE_INTEL_NPU_PROTOPIPE=OFF .. ; \
+        cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DENABLE_PYTHON=ON -DENABLE_SAMPLES=0 -DCMAKE_CXX_FLAGS=" ${SDL_OPS} -Wno-error=parentheses " -DENABLE_CPPLINT=OFF -DENABLE_INTEL_NPU_PROTOPIPE=OFF -DENABLE_SYSTEM_LEVEL_ZERO=OFF .. ; \
     fi && \
     make --jobs=$JOBS && \
     make install ; \
