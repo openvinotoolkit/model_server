@@ -84,6 +84,9 @@ pipeline {
               def agentLinuxDocValue = agentLinuxDocMatcher ? agentLinuxDocMatcher[0][1] : null
               agentLinuxDocMatcher = null // Matcher is not serializable; null it before CPS checkpoint
               if (agentLinuxDocValue) {
+                  if (!(agentLinuxDocValue ==~ /[a-zA-Z0-9_-]+/)) {
+                      error "Invalid agent_name_linux_doc override: '${agentLinuxDocValue}'. Only alphanumeric, hyphens and underscores allowed."
+                  }
                   agent_name_linux_doc = agentLinuxDocValue
                   println "Commit override: agent_name_linux_doc = ${agent_name_linux_doc}"
               }
@@ -91,6 +94,9 @@ pipeline {
               def agentWindowsDocValue = agentWindowsDocMatcher ? agentWindowsDocMatcher[0][1] : null
               agentWindowsDocMatcher = null // Matcher is not serializable; null it before CPS checkpoint
               if (agentWindowsDocValue) {
+                  if (!(agentWindowsDocValue ==~ /[a-zA-Z0-9_-]+/)) {
+                      error "Invalid agent_name_windows_doc override: '${agentWindowsDocValue}'. Only alphanumeric, hyphens and underscores allowed."
+                  }
                   agent_name_windows_doc = agentWindowsDocValue
                   println "Commit override: agent_name_windows_doc = ${agent_name_windows_doc}"
               }
@@ -98,6 +104,12 @@ pipeline {
               def docChangedFilesLinuxValue = docChangedFilesLinuxMatcher ? docChangedFilesLinuxMatcher[0][1] : null
               docChangedFilesLinuxMatcher = null // Matcher is not serializable; null it before CPS checkpoint
               if (docChangedFilesLinuxValue) {
+                  // Validate each entry is a safe .md path (no shell metacharacters)
+                  docChangedFilesLinuxValue.split(' ').each { entry ->
+                      if (!(entry ==~ /[a-zA-Z0-9_\/.\-]+\.md/)) {
+                          error "Invalid doc_changed_files_linux entry: '${entry}'. Must be a .md file path with no special characters."
+                      }
+                  }
                   doc_changed_files_linux = docChangedFilesLinuxValue.replaceAll(' ', '\n')
                   println "Commit override: doc_changed_files_linux = ${doc_changed_files_linux}"
               } else {
@@ -112,6 +124,12 @@ pipeline {
               def docChangedFilesWindowsValue = docChangedFilesWindowsMatcher ? docChangedFilesWindowsMatcher[0][1] : null
               docChangedFilesWindowsMatcher = null // Matcher is not serializable; null it before CPS checkpoint
               if (docChangedFilesWindowsValue) {
+                  // Validate each entry is a safe .md path (no shell metacharacters)
+                  docChangedFilesWindowsValue.split(' ').each { entry ->
+                      if (!(entry ==~ /[a-zA-Z0-9_\/.\-]+\.md/)) {
+                          error "Invalid doc_changed_files_windows entry: '${entry}'. Must be a .md file path with no special characters."
+                      }
+                  }
                   doc_changed_files_windows = docChangedFilesWindowsValue.replaceAll(' ', '\n')
                   println "Commit override: doc_changed_files_windows = ${doc_changed_files_windows}"
               } else {
