@@ -3,7 +3,7 @@
 The purpose of this demo is to show how to send data from multiple sources (cameras, video files) to a model served in OpenVINO Model Server.
 
 ## Prerequisites
-teststest
+
 **Model preparation**: Python 3.9 or higher with pip 
 
 **Model Server deployment**: Installed Docker Engine or OVMS binary package according to the [baremetal deployment guide](../../../docs/deploying_server_baremetal.md)

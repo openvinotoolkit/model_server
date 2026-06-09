@@ -14,7 +14,6 @@ rm universal-sentence-encoder-multilingual/1/3.tar.gz
 Make sure the downloaded model has right permissions
 ```bash
 chmod -R 755 universal-sentence-encoder-multilingual
-echo "TEST"
 ```
 
 The model setup should look like this

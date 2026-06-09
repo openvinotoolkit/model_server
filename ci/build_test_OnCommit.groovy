@@ -12,6 +12,20 @@ def agent_name_linux_doc = "ovms_ptl"
 def disable_doc_tests_linux = false
 def disable_doc_tests_windows = false
 
+// Documentation test commit message overrides:
+//
+// Disable tests:
+//   [disable_doc_tests_linux]              - Skip the Linux documentation tests stage
+//   [disable_doc_tests_windows]            - Skip the Windows documentation tests stage
+//
+// Override agent node:
+//   [agent_name_linux_doc=<node>]          - Run Linux doc tests on <node> (default: ovms_ptl)
+//   [agent_name_windows_doc=<node>]        - Run Windows doc tests on <node> (default: ovms_win_ptl)
+//
+// Override file list (space-separated, converted to pytest -k filter joined with ' or '):
+//   [doc_changed_files_linux=<files>]      - Use <files> instead of auto-detected list (Linux)
+//   [doc_changed_files_windows=<files>]    - Use <files> instead of auto-detected list (Windows)
+
 pipeline {
     agent {
       label 'ovmsbuilder'
@@ -88,6 +102,11 @@ pipeline {
                   println "Commit override: doc_changed_files_linux = ${doc_changed_files_linux}"
               } else {
                   doc_changed_files_linux = sh (script: "./ci/check_md_code_changes.sh linux ${diffBase}", returnStdout: true).trim()
+                  if (doc_changed_files_linux) {
+                    println "doc_changed_files_linux = ${doc_changed_files_linux}"
+                  } else {
+                    println "No documentation files changed for linux"
+                  }
               }
               def docChangedFilesWindowsMatcher = (commitMsg =~ /\[doc_changed_files_windows=([^\]]+)\]/)
               def docChangedFilesWindowsValue = docChangedFilesWindowsMatcher ? docChangedFilesWindowsMatcher[0][1] : null
@@ -97,6 +116,11 @@ pipeline {
                   println "Commit override: doc_changed_files_windows = ${doc_changed_files_windows}"
               } else {
                   doc_changed_files_windows = sh (script: "./ci/check_md_code_changes.sh windows ${diffBase}", returnStdout: true).trim()
+                  if (doc_changed_files_windows) {
+                    println "doc_changed_files_windows = ${doc_changed_files_windows}"
+                  } else {
+                    println "No documentation files changed for windows"
+                  }
               }
             }
           }
@@ -172,10 +196,6 @@ pipeline {
                         sh "docker save openvino/model_server:${shortCommit} | gzip > ovms_release_image.tar.gz"
                         stash name: 'ovms-release-image', includes: 'ovms_release_image.tar.gz'
                         sh "rm -f ovms_release_image.tar.gz"
-
-                        sh "docker save openvino/model_server-gpu:${shortCommit} | gzip > ovms_release_image_gpu.tar.gz"
-                        stash name: 'ovms-release-image-gpu', includes: 'ovms_release_image_gpu.tar.gz'
-                        sh "rm -f ovms_release_image_gpu.tar.gz"
                     }
                   }
               }
@@ -248,7 +268,7 @@ pipeline {
               steps {
                 script {
                   dir ('internal_tests'){
-                    checkout scmGit(branches: [[name: '20260605_test_fixes']], userRemoteConfigs: [[credentialsId: 'workflow-lab', url: 'https://github.com/intel-innersource/frameworks.ai.openvino.model-server.tests.git']])
+                    checkout scmGit(branches: [[name: 'develop']], userRemoteConfigs: [[credentialsId: 'workflow-lab', url: 'https://github.com/intel-innersource/frameworks.ai.openvino.model-server.tests.git']])
                     sh "pwd"
                     def pwd = sh(returnStdout:true, script: "pwd").strip()
                     sh "make create-venv && rm -f tests/functional && ln -s ${pwd}/../tests/functional tests/functional && TT_ON_COMMIT_TESTS=True TT_XDIST_WORKERS=10 TT_OVMS_IMAGE_NAME=openvino/model_server:${shortCommit} TT_OVMS_IMAGE_LOCAL=True make tests"
@@ -334,7 +354,7 @@ pipeline {
                   checkout scm
                   script {
                     dir ('documentation_tests') {
-                      checkout scmGit(branches: [[name: '20260605_test_fixes']], userRemoteConfigs: [[credentialsId: 'workflow-lab', url: 'https://github.com/intel-innersource/frameworks.ai.openvino.model-server.tests.git']])
+                      checkout scmGit(branches: [[name: 'develop']], userRemoteConfigs: [[credentialsId: 'workflow-lab', url: 'https://github.com/intel-innersource/frameworks.ai.openvino.model-server.tests.git']])
                       def doc_changed_files_str = doc_changed_files_windows.split('\n').join(' or ')
                       def current_path = bat(returnStdout: true, script: 'cd').trim().split('\n').last().trim()
                       def ovms_c_repo_path = bat(returnStdout: true, script: 'cd .. && cd').trim().split('\n').last().trim()

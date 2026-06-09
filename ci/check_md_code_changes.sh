@@ -27,8 +27,8 @@ PLATFORM="${1:-linux}"
 BASE_REF="${2:-HEAD~1}"
 
 case "$PLATFORM" in
-    linux)   BLOCK_PATTERN='^```(bash|console)' ;;
-    windows) BLOCK_PATTERN='^```(bat|console)' ;;
+    linux)   BLOCK_PATTERN='^```(bash|console)' ; FENCE_LANGS='bash|console' ;;
+    windows) BLOCK_PATTERN='^```(bat|console)' ; FENCE_LANGS='bat|console' ;;
     *)       echo "Error: platform must be 'linux' or 'windows'" >&2; exit 1 ;;
 esac
 
@@ -54,6 +54,16 @@ while IFS= read -r file; do
         }')
 
     if [ -z "$changed_lines" ]; then
+        continue
+    fi
+
+    # Check if a code block fence was added, removed, or changed type in the diff
+    # (e.g. ```->```bash, ```console->```, or entirely new/deleted fence)
+    fence_changed=$(git diff --unified=0 "$BASE_REF" HEAD -- "$file" \
+        | grep -qE "^[+-]\`\`\`($FENCE_LANGS)" && echo 1 || true)
+
+    if [ -n "$fence_changed" ]; then
+        matched_files+=("$file")
         continue
     fi
 

@@ -16,9 +16,6 @@ Text generation use case is exposed via OpenAI API `embeddings` endpoint.
 
 This procedure can be used to pull preconfigured models from OpenVINO organization in HuggingFace Hub
 
-test
-test
-
 **CPU**
 ::::{tab-set}
 :::{tab-item} OpenVINO/Qwen3-Embedding-0.6B-int8-ov
