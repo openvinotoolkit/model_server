@@ -131,16 +131,17 @@ Task specific parameters for different tasks (text generation/image generation/e
 | `--max_num_seqs`                      | `integer`    | The maximum number of sequences that can be processed together. Default: 256.                                              |
 | `--pipeline_type`                     | `string`     | Type of the pipeline to be used. Choices: `LM`, `LM_CB`, `VLM`, `VLM_CB`, `AUTO`. Default: `AUTO`.                         |
 | `--enable_prefix_caching`             | `bool`       | Enables algorithm to cache the prompt tokens. Default: true.                                                               |
-| `--max_num_batched_tokens`            | `integer`    | The maximum number of tokens that can be batched together.                                                                 |
+| `--max_num_batched_tokens`            | `integer`    | The maximum number of tokens that can be batched together. Default 256 is optimized for high concurrency. Increase the value to expected context length with single client to optimized for TTFT metric. |
 | `--cache_size`                        | `integer`    | KV Cache size in GB. Default: 0 which is a dynamic allocation.                              |
 | `--draft_source_model`                | `string`     | HF model name or path to the local folder with PyTorch or OpenVINO draft model.                                            |
 | `--dynamic_split_fuse`                | `bool`       | Enables dynamic split fuse algorithm. Default: true.                                                                       |
 | `--max_prompt_len`                    | `integer`    | Sets NPU specific property for maximum number of tokens in the prompt.                                                     |
-| `--kv_cache_precision`                | `string`     | Reduced kv cache precision to `u8` lowers the cache size consumption. Accepted values: `u8` or empty (default).            |
+| `--kv_cache_precision`                | `string`     | Reduced kv cache precision to `u8` lowers the cache size consumption. Accepted values: `u8`, `u4`, `f16`, `fp32` or empty (default).            |
 | `--model_distribution_policy`         | `string`     | TENSOR_PARALLEL distributes tensor to multiple sockets/devices and processes it in parallel. PIPELINE_PARALLEL distributes different tensors to process by each device. Accepted values: `TENSOR_PARALLEL`, `PIPELINE_PARALLEL` or empty (default). |
 | `--reasoning_parser`                  | `string`     | Type of parser to use for reasoning content extraction from model output. Currently supported: [qwen3, gptoss, gemma4]                     |
 | `--tool_parser`                       | `string`     | Type of parser to use for tool calls extraction from model output. Currently supported: [llama3, phi4, hermes3, mistral, qwen3coder, gptoss, devstral, lfm2, gemma4]            |
 | `--enable_tool_guided_generation`     | `bool`       | Enables enforcing tool schema during generation. Requires setting response parser. Default: false.                         |
+| `--cache_interval_multiplier`         | `integer`    | Applicable model models with linear attention and prefix caching enabled. Defines how to allocating one fixed state block per sequence. Default value 8 optimizes memory usage and performance for short prompts. For long prompts over 20k tokens, it is recommended to set value 64 to reduce kv cache usage.  |
 
 ### Image generation
 | option                            | Value format | Description                                                                                                         |
