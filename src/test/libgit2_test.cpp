@@ -889,7 +889,7 @@ TEST_F(Libgt2InitGuardTest, OwnerValidationIsDisabled) {
 // scopes so that no host gitconfig can interfere with OVMS's settings.
 TEST_F(Libgt2InitGuardTest, ConfigSearchPathsAreCleared) {
     EnvGuard envGuard;
-    envGuard.unset("OVMS_GIT_ENABLE_SEARCH_PATH");
+    envGuard.unset("GIT_OPT_SET_ENABLE_SEARCH_PATHS");
 
     ovms::Libgt2InitGuard guard(defaultOpts);
     ASSERT_GE(guard.status, 0);
@@ -911,7 +911,7 @@ TEST_F(Libgt2InitGuardTest, ConfigSearchPathsAreCleared) {
 
 TEST_F(Libgt2InitGuardTest, ConfigSearchPathsRemainWhenEnabledByEnv) {
     EnvGuard envGuard;
-    envGuard.set("OVMS_GIT_ENABLE_SEARCH_PATH", "1");
+    envGuard.set("GIT_OPT_SET_ENABLE_SEARCH_PATHS", "1");
 
     std::array<std::string, 3> baselinePaths;
     ASSERT_EQ(git_libgit2_init(), 1);

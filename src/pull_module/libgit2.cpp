@@ -260,7 +260,7 @@ Libgt2InitGuard::Libgt2InitGuard(const Libgit2Options& opts) {
     // container vs. a non-root serving user).
     this->status = git_libgit2_opts(GIT_OPT_SET_OWNER_VALIDATION, 0);
     IF_ERROR_SET_MSG_AND_RETURN();
-    const char* enableSearchPathEnv = std::getenv("OVMS_GIT_ENABLE_SEARCH_PATH");
+    const char* enableSearchPathEnv = std::getenv("GIT_OPT_SET_ENABLE_SEARCH_PATHS");
     const bool enableGitSearchPath =
         (enableSearchPathEnv != nullptr) && (std::string(enableSearchPathEnv) == "1");
     // By default, redirect all git config search paths to an empty string so libgit2
@@ -269,7 +269,7 @@ Libgt2InitGuard::Libgt2InitGuard(const Libgit2Options& opts) {
     // safe.directory can silently override OVMS's intended proxy/token settings and cause
     // spurious failures or credential leaks in multi-tenant environments.
     // To preserve historic behaviour or troubleshoot host gitconfig interactions, set
-    // OVMS_GIT_ENABLE_SEARCH_PATH=1 and skip this isolation step.
+    // GIT_OPT_SET_ENABLE_SEARCH_PATHS=1 and skip this isolation step.
     if (!enableGitSearchPath) {
         this->status = git_libgit2_opts(GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_SYSTEM, "");
         IF_ERROR_SET_MSG_AND_RETURN();
@@ -280,7 +280,7 @@ Libgt2InitGuard::Libgt2InitGuard(const Libgit2Options& opts) {
     }
 #if defined(_WIN32)
     // On Windows, GIT_CONFIG_LEVEL_PROGRAMDATA covers %PROGRAMDATA%\Git\config.
-    // Keep it isolated unless explicit opt-in via OVMS_GIT_ENABLE_SEARCH_PATH=1.
+    // Keep it isolated unless explicit opt-in via GIT_OPT_SET_ENABLE_SEARCH_PATHS=1.
     if (!enableGitSearchPath) {
         this->status = git_libgit2_opts(GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_PROGRAMDATA, "");
         IF_ERROR_SET_MSG_AND_RETURN();
