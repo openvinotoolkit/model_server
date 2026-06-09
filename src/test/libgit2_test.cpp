@@ -913,22 +913,43 @@ TEST_F(Libgt2InitGuardTest, ConfigSearchPathsRemainWhenEnabledByEnv) {
     EnvGuard envGuard;
     envGuard.set("OVMS_GIT_ENABLE_SEARCH_PATH", "1");
 
+    std::array<std::string, 3> baselinePaths;
+    ASSERT_EQ(git_libgit2_init(), 1);
+    {
+        git_buf systemBuf = GIT_BUF_INIT;
+        ASSERT_EQ(git_libgit2_opts(GIT_OPT_GET_SEARCH_PATH, GIT_CONFIG_LEVEL_SYSTEM, &systemBuf), 0);
+        baselinePaths[0] = (systemBuf.ptr != nullptr) ? systemBuf.ptr : "";
+        git_buf_dispose(&systemBuf);
+
+        git_buf xdgBuf = GIT_BUF_INIT;
+        ASSERT_EQ(git_libgit2_opts(GIT_OPT_GET_SEARCH_PATH, GIT_CONFIG_LEVEL_XDG, &xdgBuf), 0);
+        baselinePaths[1] = (xdgBuf.ptr != nullptr) ? xdgBuf.ptr : "";
+        git_buf_dispose(&xdgBuf);
+
+        git_buf globalBuf = GIT_BUF_INIT;
+        ASSERT_EQ(git_libgit2_opts(GIT_OPT_GET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, &globalBuf), 0);
+        baselinePaths[2] = (globalBuf.ptr != nullptr) ? globalBuf.ptr : "";
+        git_buf_dispose(&globalBuf);
+    }
+    git_libgit2_shutdown();
+
     ovms::Libgt2InitGuard guard(defaultOpts);
     ASSERT_GE(guard.status, 0);
 
-    static const int levels[] = {
-        GIT_CONFIG_LEVEL_SYSTEM,
-        GIT_CONFIG_LEVEL_XDG,
-        GIT_CONFIG_LEVEL_GLOBAL,
-    };
-    for (int level : levels) {
-        git_buf buf = GIT_BUF_INIT;
-        int rc = git_libgit2_opts(GIT_OPT_GET_SEARCH_PATH, level, &buf);
-        EXPECT_EQ(rc, 0) << "GIT_OPT_GET_SEARCH_PATH failed for config level " << level;
-        const char* path = (buf.ptr != nullptr) ? buf.ptr : "";
-        EXPECT_STRNE(path, "") << "Config search path unexpectedly cleared for level " << level;
-        git_buf_dispose(&buf);
-    }
+    git_buf systemBuf = GIT_BUF_INIT;
+    ASSERT_EQ(git_libgit2_opts(GIT_OPT_GET_SEARCH_PATH, GIT_CONFIG_LEVEL_SYSTEM, &systemBuf), 0);
+    EXPECT_EQ((systemBuf.ptr != nullptr) ? systemBuf.ptr : "", baselinePaths[0]);
+    git_buf_dispose(&systemBuf);
+
+    git_buf xdgBuf = GIT_BUF_INIT;
+    ASSERT_EQ(git_libgit2_opts(GIT_OPT_GET_SEARCH_PATH, GIT_CONFIG_LEVEL_XDG, &xdgBuf), 0);
+    EXPECT_EQ((xdgBuf.ptr != nullptr) ? xdgBuf.ptr : "", baselinePaths[1]);
+    git_buf_dispose(&xdgBuf);
+
+    git_buf globalBuf = GIT_BUF_INIT;
+    ASSERT_EQ(git_libgit2_opts(GIT_OPT_GET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, &globalBuf), 0);
+    EXPECT_EQ((globalBuf.ptr != nullptr) ? globalBuf.ptr : "", baselinePaths[2]);
+    git_buf_dispose(&globalBuf);
 }
 
 #if defined(_WIN32)
