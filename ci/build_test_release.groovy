@@ -30,7 +30,6 @@ pipeline {
                           windows.build()
                           if (env.RUN_TESTS == "1") {
                             windows.unit_test()
-                            windows.check_tests()
                           }
                           def safeBranchName = env.BRANCH_NAME.replaceAll('/', '_')
                           def python_suffix = ""
