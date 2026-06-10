@@ -39,6 +39,16 @@
 #include "stringutils.hpp"
 
 namespace ovms {
+namespace {
+bool isLocalRegularFileModelPath(const std::string& path) {
+    if (!FileSystem::isLocalFilesystem(path) || FileSystem::isPathEscaped(path)) {
+        return false;
+    }
+    std::error_code ec;
+    return std::filesystem::is_regular_file(path, ec);
+}
+}  // namespace
+
 ModelConfig::ModelConfig(const std::string& name,
     const std::string& basePath,
     const std::string& targetDevice,
@@ -487,6 +497,9 @@ Status ModelConfig::parseModelMapping() {
     mappingInputs.clear();
     mappingOutputs.clear();
     std::filesystem::path path = this->getPath();
+    if (isLocalRegularFileModelPath(path.string())) {
+        path = path.parent_path();
+    }
     path.append(MAPPING_CONFIG_JSON);
 
     std::ifstream ifs(path.c_str());
@@ -810,6 +823,9 @@ void ModelConfig::setBasePath(const std::string& basePath) {
     FileSystem::setPath(this->basePath, basePath, this->rootDirectoryPath);
 }
 const std::string ModelConfig::getPath() const {
+    if (isLocalRegularFileModelPath(getLocalPath())) {
+        return getLocalPath();
+    }
     return getLocalPath() + FileSystem::getOsSeparator() + std::to_string(version);
 }
 
