@@ -18,6 +18,7 @@
 #include <algorithm>
 #include <array>
 #include <cstdlib>
+#include <filesystem>
 #include <iostream>
 #include <memory>
 #include <optional>
@@ -42,6 +43,7 @@
 #include <sys/types.h>
 
 #include "anonymous_input_name.hpp"
+#include "cleaner_utils.hpp"
 #include "config.hpp"
 #include "customloaderinterface.hpp"
 #include "customloaders.hpp"
@@ -65,12 +67,6 @@
 #ifdef __linux__
 #include "opencltensorfactory.hpp"
 #include "vaapitensorfactory.hpp"
-#endif
-
-#ifdef _WIN32
-namespace ovms {
-bool malloc_trim_win();
-}  // namespace ovms
 #endif
 
 namespace {
@@ -1100,6 +1096,67 @@ Status ModelInstance::fetchModelFilepaths() {
     }
 
     SPDLOG_DEBUG("Getting model files from path: {}", path);
+
+    std::error_code ec;
+    if (FileSystem::isLocalFilesystem(path) && std::filesystem::is_regular_file(path, ec)) {
+        const auto modelFile = std::filesystem::path(path);
+        const auto extension = modelFile.extension().string();
+        const auto modelDirectory = modelFile.parent_path().string();
+        modelFiles.clear();
+
+        if (extension == ".xml") {
+            const auto stem = modelFile.stem().string();
+            const auto binFile = modelDirectory + FileSystem::getOsSeparator() + stem + ".bin";
+            if (!std::filesystem::is_regular_file(binFile, ec)) {
+                SPDLOG_ERROR("Error loading model. Missing .bin file for: {}", path);
+                return StatusCode::FILE_INVALID;
+            }
+            modelFiles.push_back(path);
+            modelFiles.push_back(binFile);
+            path = modelDirectory;
+            return StatusCode::OK;
+        }
+
+        if (extension == ".onnx") {
+            modelFiles.push_back(path);
+            return StatusCode::OK;
+        }
+
+        if (extension == ".pdmodel" || extension == ".pdiparams") {
+            const auto stem = modelFile.stem().string();
+            const auto pdmodelFile = modelDirectory + FileSystem::getOsSeparator() + stem + ".pdmodel";
+            const auto pdiparamsFile = modelDirectory + FileSystem::getOsSeparator() + stem + ".pdiparams";
+            if (!std::filesystem::is_regular_file(pdmodelFile, ec) || !std::filesystem::is_regular_file(pdiparamsFile, ec)) {
+                SPDLOG_ERROR("Error loading model. Missing .pdmodel or .pdiparams file for: {}", path);
+                return StatusCode::FILE_INVALID;
+            }
+            modelFiles.push_back(pdmodelFile);
+            modelFiles.push_back(pdiparamsFile);
+            path = modelDirectory;
+            return StatusCode::OK;
+        }
+
+        if (extension == ".pb") {
+            if (modelFile.filename().string() == "saved_model.pb") {
+                modelFiles.push_back(modelDirectory + FileSystem::getOsSeparator());
+            } else {
+                modelFiles.push_back(path);
+            }
+            return StatusCode::OK;
+        }
+
+        if (extension == ".tflite") {
+            modelFiles.push_back(path);
+            return StatusCode::OK;
+        }
+
+        SPDLOG_ERROR("Error loading model: no valid model file found for model: {}, version: {}, path: {}",
+            getName(),
+            getVersion(),
+            path);
+        return StatusCode::FILE_INVALID;
+    }
+
     if (!FileSystem::dirExists(path)) {
         SPDLOG_ERROR("Missing model directory {}", path);
         return StatusCode::PATH_INVALID;
@@ -1113,7 +1170,10 @@ Status ModelInstance::fetchModelFilepaths() {
     fetchModelFiles(found, TFLITE_MODEL_FILES_EXTENSIONS);
 
     if (!found) {
-        SPDLOG_ERROR("Could not find file for model: {} version: {} in path: {}", getName(), getVersion(), path);
+        SPDLOG_ERROR("Error loading model: no valid model file found for model: {}, version: {}, path: {}",
+            getName(),
+            getVersion(),
+            path);
         return StatusCode::FILE_INVALID;
     }
 

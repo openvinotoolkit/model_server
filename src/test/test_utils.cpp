@@ -733,6 +733,21 @@ void randomizeAndEnsureFrees(std::string& port1, std::string& port2) {
 
 const int64_t SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS = 60;
 
+namespace {
+
+void startServerWithArgs(std::unique_ptr<std::thread>& t, ovms::Server& server, std::vector<std::string> args, int expectedCode) {
+    t.reset(new std::thread([args = std::move(args), &server, expectedCode]() mutable {
+        std::vector<char*> argv;
+        argv.reserve(args.size());
+        for (auto& arg : args) {
+            argv.push_back(const_cast<char*>(arg.c_str()));
+        }
+        EXPECT_EQ(expectedCode, server.start(static_cast<int>(argv.size()), argv.data()));
+    }));
+}
+
+}  // namespace
+
 void EnsureServerStartedWithTimeout(ovms::Server& server, int timeoutSeconds) {
     auto start = std::chrono::high_resolution_clock::now();
     int timestepMs = 20;
@@ -743,13 +758,49 @@ void EnsureServerStartedWithTimeout(ovms::Server& server, int timeoutSeconds) {
     ASSERT_EQ(server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME), ovms::ModuleState::INITIALIZED) << "OVMS did not fully load until allowed time:" << timeoutSeconds << "s. Check machine load";
 }
 
-void EnsureServerModelDownloadFinishedWithTimeout(ovms::Server& server, int timeoutSeconds) {
-    auto start = std::chrono::high_resolution_clock::now();
-    while ((server.getModuleState(ovms::HF_MODEL_PULL_MODULE_NAME) != ovms::ModuleState::SHUTDOWN) &&
-           (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < timeoutSeconds)) {
+void EnsureServerModelDownloadFinishedWithTimeout(ovms::Server& server, int completionTimeoutSeconds) {
+    const auto startupTimeout = std::chrono::seconds(10);
+    const auto completionTimeout = std::chrono::seconds(completionTimeoutSeconds);
+    const auto pollInterval = std::chrono::microseconds(200);
+    auto state = server.getModuleState(ovms::HF_MODEL_PULL_MODULE_NAME);
+
+    // Phase 1: yield until the HF pull module appears in the server's module map.
+    // Use a dedicated timeout window for startup detection and throttle polling to avoid
+    // starving the server thread under scheduler pressure.
+    const auto phase1Start = std::chrono::high_resolution_clock::now();
+    while (state == ovms::ModuleState::NOT_INITIALIZED &&
+           (std::chrono::high_resolution_clock::now() - phase1Start) < startupTimeout) {
+        std::this_thread::yield();
+        std::this_thread::sleep_for(pollInterval);
+        state = server.getModuleState(ovms::HF_MODEL_PULL_MODULE_NAME);
+    }
+    if (state == ovms::ModuleState::NOT_INITIALIZED) {
+        FAIL() << "HF pull module never started within 10s. Check machine load and network load";
+        return;
     }
 
-    ASSERT_EQ(server.getModuleState(ovms::HF_MODEL_PULL_MODULE_NAME), ovms::ModuleState::SHUTDOWN) << "OVMS did not download model in allowed time:" << timeoutSeconds << "s. Check machine load and network load";
+    const auto phase1Elapsed = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - phase1Start);
+    const auto remainingCompletionTimeout =
+        (phase1Elapsed < completionTimeout) ? (completionTimeout - phase1Elapsed) : std::chrono::seconds::zero();
+
+    // Phase 2: wait for the module to finish.
+    // Accept SHUTDOWN (normal) or NOT_INITIALIZED — the latter happens when the pull is so
+    // fast (e.g. model already cached, no download needed) that server.start() returns and
+    // shutdownModules() calls modules.clear() before this thread re-enters the check, making
+    // getModuleState return NOT_INITIALIZED rather than SHUTDOWN.
+    // Use a second timeout window for completion and keep the poll loop cooperative.
+    const auto phase2Start = std::chrono::high_resolution_clock::now();
+    while (state != ovms::ModuleState::SHUTDOWN &&
+           state != ovms::ModuleState::NOT_INITIALIZED &&
+           (std::chrono::high_resolution_clock::now() - phase2Start) < remainingCompletionTimeout) {
+        std::this_thread::yield();
+        std::this_thread::sleep_for(pollInterval);
+        state = server.getModuleState(ovms::HF_MODEL_PULL_MODULE_NAME);
+    }
+
+    const auto finalState = state;
+    ASSERT_TRUE(finalState == ovms::ModuleState::SHUTDOWN || finalState == ovms::ModuleState::NOT_INITIALIZED)
+        << "OVMS did not download model in allowed time:" << completionTimeoutSeconds << "s. Check machine load and network load";
 }
 
 // --pull --source_model OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov --model_repository_path c:\download
@@ -772,6 +823,23 @@ void SetUpServerForDownload(std::unique_ptr<std::thread>& t, ovms::Server& serve
     EnsureServerModelDownloadFinishedWithTimeout(server, timeoutSeconds);
 }
 
+void SetUpServerForDownload(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& source_model, std::string& download_path, std::string& task, const std::string& logPath, int expected_code, int timeoutSeconds) {
+    server.setShutdownRequest(0);
+    std::vector<std::string> args = {"ovms",
+        "--pull",
+        "--source_model",
+        source_model,
+        "--model_repository_path",
+        download_path,
+        "--task",
+        task,
+        "--log_path",
+        logPath};
+    startServerWithArgs(t, server, std::move(args), expected_code);
+
+    EnsureServerModelDownloadFinishedWithTimeout(server, timeoutSeconds);
+}
+
 void SetUpServerForDownloadWithDraft(std::unique_ptr<std::thread>& t, ovms::Server& server,
     std::string& draftModel, std::string& source_model, std::string& download_path, std::string& task, int expected_code, int timeoutSeconds) {
     server.setShutdownRequest(0);
@@ -790,6 +858,26 @@ void SetUpServerForDownloadWithDraft(std::unique_ptr<std::thread>& t, ovms::Serv
     t.reset(new std::thread([&argc, &argv, &server, expected_code]() {
         EXPECT_EQ(expected_code, server.start(argc, argv));
     }));
+
+    EnsureServerModelDownloadFinishedWithTimeout(server, timeoutSeconds);
+}
+
+void SetUpServerForDownloadWithDraft(std::unique_ptr<std::thread>& t, ovms::Server& server,
+    std::string& draftModel, std::string& source_model, std::string& download_path, std::string& task, const std::string& logPath, int expected_code, int timeoutSeconds) {
+    server.setShutdownRequest(0);
+    std::vector<std::string> args = {"ovms",
+        "--pull",
+        "--source_model",
+        source_model,
+        "--model_repository_path",
+        download_path,
+        "--task",
+        task,
+        "--draft_source_model",
+        draftModel,
+        "--log_path",
+        logPath};
+    startServerWithArgs(t, server, std::move(args), expected_code);
 
     EnsureServerModelDownloadFinishedWithTimeout(server, timeoutSeconds);
 }

@@ -105,10 +105,12 @@ if !errorlevel! neq 0 exit /b !errorlevel!
 
 :: Run install_ovms_service.bat unit tests
 echo Running install_ovms_service.bat unit tests...
-python -m pytest tests\python\test_install_ovms_service_windows.py -v 2>&1 | tee win_install_service_test.log
-if !errorlevel! neq 0 (
+python -m pytest tests\python\test_install_ovms_service_windows.py -v > win_install_service_test.log 2>&1
+set "pytestExitCode=!errorlevel!"
+type win_install_service_test.log
+if !pytestExitCode! neq 0 (
     echo [ERROR] install_ovms_service.bat unit tests failed. See win_install_service_test.log.
-    exit /b !errorlevel!
+    exit /b !pytestExitCode!
 )
 echo [INFO] install_ovms_service.bat unit tests passed.
 
@@ -120,13 +122,34 @@ echo Running: %runTest%
 set regex="\[  .* ms"
 set sed_clean="s/ (.* ms)//g"
 C:\Windows\System32\tar.exe -a -c -f win_test_log.zip win_full_test.log
-grep -a %regex% win_full_test.log | sed %sed_clean% > win_test_summary.log
-grep -a %regex% win_full_test.log | sed %sed_clean% | grep -q " FAILED "
-if !errorlevel! equ 0 goto :exit_build_error
-:exit_build 
+
+:: Create summary log with filtered results, always create the file even if grep finds no matches
+ grep -a %regex% win_full_test.log > win_test_summary.tmp
+ if !errorlevel! equ 0 (
+     sed %sed_clean% win_test_summary.tmp > win_test_summary.log 2>&1
+ ) else (
+     echo No matching test results found > win_test_summary.log
+ )
+ if exist win_test_summary.tmp del /f /q win_test_summary.tmp
+
+:: Parse logs and decide final test status using dedicated parser script
+:: Skip expensive parsing only if PASSED summary exists AND no FAILED markers
+grep -a -q "\[  PASSED  \] " win_full_test.log
+set "hasPassed=!errorlevel!"
+grep -a -q "\[  FAILED  \] " win_full_test.log
+set "hasFailed=!errorlevel!"
+if !hasPassed! equ 0 if !hasFailed! neq 0 (
+    echo [INFO] Tests finished with no failures. Check the summary in win_test_summary.log.
+    exit /b 0
+)
+call %cd%\windows_parse_tests.bat win_full_test.log win_test_summary.log
+set "parseExitCode=!errorlevel!"
+if !parseExitCode! neq 0 exit /b !parseExitCode!
+
 echo [INFO] Tests finished with no failures. Check the summary in win_test_summary.log.
 exit /b 0
+
 :exit_build_error
-echo [ERROR] Check tests summary in 'win_test_summary.log' and tests logs in 'win_full_test.log'. Rerun failed test with: windows_setupvars.bat and %cd%\bazel-bin\src\ovms_test.exe --gtest_filter='*.*'
+echo [ERROR] windows_test.bat failed before test parsing stage.
 exit /b 1
 endlocal
