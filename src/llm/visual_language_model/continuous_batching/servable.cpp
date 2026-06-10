@@ -27,8 +27,11 @@
 #include "src/port/rapidjson_writer.hpp"
 
 #include "../../../logging.hpp"
-#include "../../text_utils.hpp"
 #include "../../../tokenize/tokenize_parser.hpp"
+#include "../../text_utils.hpp"
+#if (PYTHON_DISABLE == 0)
+#include "../../py_jinja_template_processor.hpp"
+#endif
 
 namespace ovms {
 
@@ -109,12 +112,12 @@ absl::Status VisualLanguageModelServable::prepareInputs(std::shared_ptr<GenAiSer
         if (!imageTags.empty()) {
             rapidjson::Document jsonDoc;
             jsonDoc.Parse(jsonForTemplate.c_str());
-            if (!jsonDoc.HasParseError() && jsonDoc.HasMember("messages") && jsonDoc["messages"].IsArray()) {
+            if (!jsonDoc.HasParseError() && jsonDoc.IsObject() && jsonDoc.HasMember("messages") && jsonDoc["messages"].IsArray()) {
                 auto& messages = jsonDoc["messages"];
                 for (const auto& [chatTurnIndex, imageTagString] : imageTags) {
                     if (chatTurnIndex < messages.Size()) {
                         auto& msg = messages[chatTurnIndex];
-                        if (msg.HasMember("content") && msg["content"].IsString()) {
+                        if (msg.IsObject() && msg.HasMember("content") && msg["content"].IsString()) {
                             std::string newContent = imageTagString + msg["content"].GetString();
                             msg["content"].SetString(newContent.c_str(), newContent.length(), jsonDoc.GetAllocator());
                         }
