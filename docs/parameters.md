@@ -141,7 +141,7 @@ Task specific parameters for different tasks (text generation/image generation/e
 | `--reasoning_parser`                  | `string`     | Type of parser to use for reasoning content extraction from model output. Currently supported: [qwen3, gptoss, gemma4]                     |
 | `--tool_parser`                       | `string`     | Type of parser to use for tool calls extraction from model output. Currently supported: [llama3, phi4, hermes3, mistral, qwen3coder, gptoss, devstral, lfm2, gemma4]            |
 | `--enable_tool_guided_generation`     | `bool`       | Enables enforcing tool schema during generation. Requires setting response parser. Default: false.                         |
-| `--cache_interval_multiplier`         | `integer`    | Applicable model models with linear attention and prefix caching enabled. Defines how to allocating one fixed state block per sequence. Default value 8 optimizes memory usage and performance for short prompts. For long prompts over 20k tokens, it is recommended to set value 64 to reduce kv cache usage.  |
+| `--cache_interval_multiplier`         | `integer`    | Applicable to models with linear attention and prefix caching enabled. Defines how to allocate one fixed state block per sequence. Default value 8 optimizes memory usage and performance for short prompts. For long prompts over 20k tokens, it is recommended to set value 64 to reduce kv cache usage.  |
 
 ### Image generation
 | option                            | Value format | Description                                                                                                         |
