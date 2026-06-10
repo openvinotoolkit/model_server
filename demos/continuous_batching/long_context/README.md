@@ -51,7 +51,6 @@ docker run --user $(id -u):$(id -g) -d --rm -v $(pwd)/models:/models:rw -p 8000:
 ```bash
 docker run --user $(id -u):$(id -g) -d --rm -v $(pwd)/models:/models:rw -p 8000:8000 --device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:latest-gpu --rest_port 8000 --model_repository_path /models --source_model OpenVINO/Qwen3-8B-int4-cw-ov --max_prompt_len 16000 --tool_parser hermes3 --task text_generation --target_device NPU
 ```
-**Note:** It's recommended to set `--max_prompt_len` value to as low as possible. This will improve performance, but limit number of tokens model will accept.
 :::
 ::::
 
