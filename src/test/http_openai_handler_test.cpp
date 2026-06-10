@@ -5680,7 +5680,10 @@ static std::shared_ptr<ovms::LegacyServableExecutionContext> makeLegacyResponses
         std::chrono::system_clock::now(), *tok);
     std::optional<uint32_t> maxTokensLimit;
     const absl::Status parseStatus = apiHandler->parseRequest(maxTokensLimit, 0, std::nullopt);
-    ASSERT_TRUE(parseStatus.ok()) << parseStatus;
+    EXPECT_TRUE(parseStatus.ok()) << parseStatus;
+    if (!parseStatus.ok()) {
+        return nullptr;
+    }
     ctx->apiHandler = apiHandler;
 
     ctx->results.finish_reasons.push_back(finishReason);
