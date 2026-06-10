@@ -2,7 +2,7 @@
 
 Using LLM models with very long context and prompts might be particularly challenging. The key goals are to get maximum throughput, minimal latency and reasonable memory consumption.
 It is very common for applications using RAG chain, documents summarization, question answering and many more. 
-The optimizations below can significantly boost performance :
+The optimizations below can significantly boost performance:
 
 - Prefix caching
 - KV cache compression
@@ -44,7 +44,7 @@ mkdir models
 ::: {tab-item} GPU
 :sync: GPU
 ```bash
-docker run --user $(id -u):$(id -g) -d --rm -v $(pwd)/models:/models:rw -p 8000:8000 --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:latest-gpu --rest_port 8000 --model_repository_path /models --source_model OpenVINO/gpt-oss-20b-int4-ov  --tool_parser gptoss --reasoning_parser gptoss --task=text_generation --kw_cache_precision=u4 --target_device=GPU --cache_size=5 --max_num_batched_tokens=4096
+docker run --user $(id -u):$(id -g) -d --rm -v $(pwd)/models:/models:rw -p 8000:8000 --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:latest-gpu --rest_port 8000 --model_repository_path /models --source_model OpenVINO/gpt-oss-20b-int4-ov  --tool_parser gptoss --reasoning_parser gptoss --task text_generation --kv_cache_precision u4 --target_device GPU --cache_size 5 --max_num_batched_tokens 4096
 ```
 :::
 :::{tab-item} NPU
