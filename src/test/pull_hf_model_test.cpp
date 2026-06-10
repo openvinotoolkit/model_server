@@ -1086,14 +1086,12 @@ TEST_F(HfPullCache, PullNonGit) {
     EXPECT_FALSE(std::filesystem::exists(gitDir));
 }
 
-// PullAgainstDirectoryWithEmptyDotGitSuccedsWithoutMarkers
+// PullAgainstDirectoryWithEmptyDotGitSucceedsWithoutMarkers
 //
 // Companion to HfPullCache.PullNonGit. Verifies that when .git IS present but is
-// empty (a corrupt / partially-initialized repository) handleExistingRepositoryWithoutOverwrite()
-// does NOT silently succeed: the .git probe passes, GitRepositoryGuard then fails to open
-// the repository and the real error is propagated via mapRepositoryOpenFailureToStatus()
-// so the operator can act (re-clone, fix permissions, --overwrite_models, ...).
-// Without file markers it will not check the git repository.
+// empty (a corrupt / partially-initialized repository) and no interruption markers
+// exist, handleExistingRepositoryWithoutOverwrite() skips the git repository check
+// and returns success, leaving existing files untouched.
 TEST_F(HfPullCache, PullEmptyGitDir) {
     std::string basePath = modelBasePath;
     std::string tokenizerPath = openvinoTokenizerBinPath;
@@ -1126,8 +1124,8 @@ TEST_F(HfPullCache, PullEmptyGitDir) {
     ASSERT_TRUE(std::filesystem::is_directory(gitDir));
     ASSERT_TRUE(std::filesystem::is_empty(gitDir));
 
-    // Pull will silently succeed: handleExistingRepositoryWithoutOverwrite should
-    // will not surface the libgit2 open failure because there are not interruption file markers present
+    // Pull will silently succeed: handleExistingRepositoryWithoutOverwrite will
+    // not surface the libgit2 open failure because there are no interruption file markers present
     this->ServerPullHfModel(modelName, downloadPath, task, EXIT_SUCCESS);
 
     // No work-in-progress marker should be created next to the model directory.
@@ -1152,14 +1150,14 @@ TEST_F(HfPullCache, PullEmptyGitDir) {
     EXPECT_TRUE(std::filesystem::is_empty(gitDir));
 }
 
-// PullAgainstDirectoryWithEmptyDotGitSuccedsWithMarkers
+// PullAgainstDirectoryWithEmptyDotGitFailsWithLfsWipMarker
 //
 // Companion to HfPullCache.PullNonGit. Verifies that when .git IS present but is
-// empty (a corrupt / partially-initialized repository) handleExistingRepositoryWithoutOverwrite()
-// does NOT silently succeed: the .git probe passes, GitRepositoryGuard then fails to open
-// the repository and the real error is propagated via mapRepositoryOpenFailureToStatus()
-// so the operator can act (re-clone, fix permissions, --overwrite_models, ...).
-// With file markers it will check the git repository and fail.
+// empty (a corrupt / partially-initialized repository) and an LFS WIP marker exists,
+// handleExistingRepositoryWithoutOverwrite() does NOT silently succeed: the .git probe
+// passes, GitRepositoryGuard then fails to open the repository and the real error is
+// propagated via mapRepositoryOpenFailureToStatus() so the operator can act
+// (re-clone, fix permissions, --overwrite_models, ...).
 TEST_F(HfPullCache, EmptyGitDirLfsMarker) {
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string downloadPath = ovms::FileSystem::joinPath({this->directoryPath, "repository"});
@@ -1202,8 +1200,8 @@ TEST_F(HfPullCache, EmptyGitDirLfsMarker) {
     const std::string lfsWipPath = ovms::libgit2::getLfsWipMarkerPath(basePath).string();
     ASSERT_TRUE(std::filesystem::exists(lfsWipPath));
 
-    // Pull will not silently succeed: handleExistingRepositoryWithoutOverwrite
-    // will  surface the libgit2 open failure because there are interruption file markers present
+    // Pull will not silently succeed: handleExistingRepositoryWithoutOverwrite will
+    // surface the libgit2 open failure because there are interruption file markers present
     this->ServerPullHfModel(modelName, downloadPath, task, EXIT_FAILURE);
 
     // Marker was pre-created and remains because resume did not complete successfully.
@@ -1227,14 +1225,14 @@ TEST_F(HfPullCache, EmptyGitDirLfsMarker) {
     EXPECT_TRUE(std::filesystem::is_empty(gitDir));
 }
 
-// PullAgainstDirectoryWithEmptyDotGitSuccedsWithMarkers
+// PullAgainstDirectoryWithEmptyDotGitFailsWithErrorMarker
 //
 // Companion to HfPullCache.PullNonGit. Verifies that when .git IS present but is
-// empty (a corrupt / partially-initialized repository) handleExistingRepositoryWithoutOverwrite()
-// does NOT silently succeed: the .git probe passes, GitRepositoryGuard then fails to open
-// the repository and the real error is propagated via mapRepositoryOpenFailureToStatus()
-// so the operator can act (re-clone, fix permissions, --overwrite_models, ...).
-// With file markers it will check the git repository and fail.
+// empty (a corrupt / partially-initialized repository) and an lfs_error.txt marker
+// exists, handleExistingRepositoryWithoutOverwrite() does NOT silently succeed: the
+// .git probe passes, GitRepositoryGuard then fails to open the repository and the
+// real error is propagated via mapRepositoryOpenFailureToStatus() so the operator
+// can act (re-clone, fix permissions, --overwrite_models, ...).
 TEST_F(HfPullCache, EmptyGitDirErrorMarker) {
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string downloadPath = ovms::FileSystem::joinPath({this->directoryPath, "repository"});
@@ -1281,8 +1279,8 @@ TEST_F(HfPullCache, EmptyGitDirErrorMarker) {
     }
     ASSERT_TRUE(std::filesystem::exists(lfsErrorPath));
 
-    // Pull will not silently succeed: handleExistingRepositoryWithoutOverwrite
-    // will  surface the libgit2 open failure because there are interruption file markers present
+    // Pull will not silently succeed: handleExistingRepositoryWithoutOverwrite will
+    // surface the libgit2 open failure because there are interruption file markers present
     this->ServerPullHfModel(modelName, downloadPath, task, EXIT_FAILURE);
 
     // Marker was pre-created and remains because repository open failed before resume cleanup.
@@ -1967,7 +1965,7 @@ public:
     EnvGuard guard;
 };
 
-TEST(Libgt2InitGuardLfsFilterTest, LfsFilterCaptureDefaultResumeOptions) {
+TEST(Libgt2InitGuardTest, LfsFilterCaptureDefaultResumeOptions) {
     // Need new process beacase we use INIT_ONCE in libgit2 lfs filter for env variables and once they are set they are set for the whole process lifetime
     EXPECT_EXIT({
         // Act: capture stdout during object construction
@@ -1987,7 +1985,7 @@ TEST(Libgt2InitGuardLfsFilterTest, LfsFilterCaptureDefaultResumeOptions) {
         exit(0); }, ::testing::ExitedWithCode(0), "");
 }
 
-TEST(Libgt2InitGuardLfsFilterTest, LfsFilterCaptureNonDefaultResumeOptions) {
+TEST(Libgt2InitGuardTest, LfsFilterCaptureNonDefaultResumeOptions) {
     // Need new process beacase we use INIT_ONCE in libgit2 lfs filter for env variables and once they are set they are set for the whole process lifetime
     EXPECT_EXIT({
         EnvGuard guard;
