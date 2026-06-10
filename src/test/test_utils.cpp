@@ -779,6 +779,10 @@ void EnsureServerModelDownloadFinishedWithTimeout(ovms::Server& server, int comp
         return;
     }
 
+    const auto phase1Elapsed = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - phase1Start);
+    const auto remainingCompletionTimeout =
+        (phase1Elapsed < completionTimeout) ? (completionTimeout - phase1Elapsed) : std::chrono::seconds::zero();
+
     // Phase 2: wait for the module to finish.
     // Accept SHUTDOWN (normal) or NOT_INITIALIZED — the latter happens when the pull is so
     // fast (e.g. model already cached, no download needed) that server.start() returns and
@@ -788,7 +792,7 @@ void EnsureServerModelDownloadFinishedWithTimeout(ovms::Server& server, int comp
     const auto phase2Start = std::chrono::high_resolution_clock::now();
     while (state != ovms::ModuleState::SHUTDOWN &&
            state != ovms::ModuleState::NOT_INITIALIZED &&
-           (std::chrono::high_resolution_clock::now() - phase2Start) < completionTimeout) {
+            (std::chrono::high_resolution_clock::now() - phase2Start) < remainingCompletionTimeout) {
         std::this_thread::yield();
         std::this_thread::sleep_for(pollInterval);
         state = server.getModuleState(ovms::HF_MODEL_PULL_MODULE_NAME);
