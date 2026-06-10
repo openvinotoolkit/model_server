@@ -3518,7 +3518,7 @@ class ModelWithDummyModelWithMockedMetadata : public ovms::Model {
 
 public:
     ModelWithDummyModelWithMockedMetadata(const std::string& name, std::shared_ptr<DummyModelWithMockedMetadata> modelInstance) :
-        Model(name, false, nullptr),
+        Model(name),
         modelInstance(modelInstance) {}
     std::shared_ptr<ovms::ModelInstance> modelInstanceFactory(const std::string& modelName, const ovms::model_version_t, ov::Core& ieCore, ovms::MetricRegistry* registry = nullptr, const ovms::MetricConfig* config = nullptr) override {
         return modelInstance;
@@ -3533,7 +3533,7 @@ class ModelManagerWithModelWithDummyModelWithMockedMetadata : public ovms::Model
 public:
     ModelManagerWithModelWithDummyModelWithMockedMetadata(std::shared_ptr<DummyModelWithMockedMetadata> modelInstance) :
         modelInstance(modelInstance) {}
-    std::shared_ptr<ovms::Model> modelFactory(const std::string& name, const bool isStateful) override {
+    std::shared_ptr<ovms::Model> modelFactory(const std::string& name) override {
         return std::make_shared<ModelWithDummyModelWithMockedMetadata>("dummy", modelInstance);
     }
 };

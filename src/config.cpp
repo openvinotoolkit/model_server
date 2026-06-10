@@ -389,11 +389,6 @@ bool Config::validate() {
         std::cerr << "log_level should be one of: TRACE, DEBUG, INFO, WARNING, ERROR" << std::endl;
         return false;
     }
-    // check stateful flags:
-    if ((this->modelsSettings.lowLatencyTransformation.has_value() || this->modelsSettings.maxSequenceNumber.has_value() || this->modelsSettings.idleSequenceCleanup.has_value()) && !stateful()) {
-        std::cerr << "Setting low_latency_transformation, max_sequence_number and idle_sequence_cleanup require setting stateful flag for the model." << std::endl;
-        return false;
-    }
     return true;
 }
 
@@ -426,12 +421,8 @@ const std::string& Config::targetDevice() const {
     return this->modelsSettings.targetDevice.empty() ? defaultTargetDevice : this->modelsSettings.targetDevice;
 }
 const std::string& Config::Config::pluginConfig() const { return this->modelsSettings.pluginConfig; }
-bool Config::stateful() const { return this->modelsSettings.stateful.value_or(false); }
 bool Config::metricsEnabled() const { return this->serverSettings.metricsEnabled; }
 std::string Config::metricsList() const { return this->serverSettings.metricsList; }
-bool Config::idleSequenceCleanup() const { return this->modelsSettings.idleSequenceCleanup.value_or(true); }
-uint32_t Config::maxSequenceNumber() const { return this->modelsSettings.maxSequenceNumber.value_or(DEFAULT_MAX_SEQUENCE_NUMBER); }
-bool Config::lowLatencyTransformation() const { return this->modelsSettings.lowLatencyTransformation.value_or(false); }
 const std::string& Config::logLevel() const { return this->serverSettings.logLevel; }
 const std::string& Config::logPath() const { return this->serverSettings.logPath; }
 #ifdef MTR_ENABLED
@@ -439,7 +430,6 @@ const std::string& Config::tracePath() const { return this->serverSettings.trace
 #endif
 const std::string& Config::grpcChannelArguments() const { return this->serverSettings.grpcChannelArguments; }
 uint32_t Config::filesystemPollWaitMilliseconds() const { return this->serverSettings.filesystemPollWaitMilliseconds; }
-uint32_t Config::sequenceCleanerPollWaitMinutes() const { return this->serverSettings.sequenceCleanerPollWaitMinutes; }
 uint32_t Config::resourcesCleanerPollWaitSeconds() const { return this->serverSettings.resourcesCleanerPollWaitSeconds; }
 bool Config::allowCredentials() const { return this->serverSettings.allowCredentials; }
 const std::string& Config::allowedOrigins() const { return this->serverSettings.allowedOrigins; }

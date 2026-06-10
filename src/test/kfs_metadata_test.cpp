@@ -46,7 +46,7 @@ class ModelMetadataResponseBuild : public ::testing::Test {
     class MockModel : public Model {
     public:
         MockModel(const std::string& name, std::shared_ptr<ModelInstance> instance) :
-            Model(name, false /*stateful*/, nullptr) {
+            Model(name) {
             modelVersions.insert({instance->getVersion(), instance});
         }
         void addOneVersion(model_version_t version, std::shared_ptr<ModelInstance> instance) {

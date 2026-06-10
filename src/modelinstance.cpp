@@ -43,6 +43,7 @@
 #include <sys/types.h>
 
 #include "anonymous_input_name.hpp"
+#include "cleaner_utils.hpp"
 #include "config.hpp"
 #include "customloaderinterface.hpp"
 #include "customloaders.hpp"
@@ -66,12 +67,6 @@
 #ifdef __linux__
 #include "opencltensorfactory.hpp"
 #include "vaapitensorfactory.hpp"
-#endif
-
-#ifdef _WIN32
-namespace ovms {
-bool malloc_trim_win();
-}  // namespace ovms
 #endif
 
 namespace {
