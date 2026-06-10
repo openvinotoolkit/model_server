@@ -2079,7 +2079,10 @@ TEST_F(HfDownloadModelModule, TestInvalidProxyTimeout) {
         const bool hostHadProxy = (hostHttpsProxy != nullptr) && (std::string(hostHttpsProxy) != "");
         eGuard.set("https_proxy", "");
         if (!hostHadProxy) {
+            SPDLOG_DEBUG("Host has no proxy configured, setting HF_ENDPOINT to an unroutable address to force timeout - https://192.0.2.1/");
             eGuard.set("HF_ENDPOINT", "https://192.0.2.1/");
+        } else {
+            SPDLOG_DEBUG("Host has proxy configured, keeping default HF_ENDPOINT and relying on proxy-only network to cause timeout");
         }
         const std::string timeoutConnectVal = "1000";
         eGuard.set(ovms::HfPullModelModule::GIT_SERVER_CONNECT_TIMEOUT_ENV, timeoutConnectVal);
