@@ -5679,7 +5679,7 @@ static std::shared_ptr<ovms::LegacyServableExecutionContext> makeLegacyResponses
         *ctx->payload.parsedJson, ovms::Endpoint::RESPONSES,
         std::chrono::system_clock::now(), *tok);
     std::optional<uint32_t> maxTokensLimit;
-    apiHandler->parseRequest(maxTokensLimit, 0, std::nullopt);
+    static_cast<void>(apiHandler->parseRequest(maxTokensLimit, 0, std::nullopt));
     ctx->apiHandler = apiHandler;
 
     ctx->results.finish_reasons.push_back(finishReason);
@@ -5744,7 +5744,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, vlmLegacyServablePreparePartialResponseResp
         *ctx->payload.parsedJson, ovms::Endpoint::RESPONSES,
         std::chrono::system_clock::now(), *tokenizer);
     std::optional<uint32_t> maxTokensLimit;
-    apiHandler->parseRequest(maxTokensLimit, 0, std::nullopt);
+    static_cast<void>(apiHandler->parseRequest(maxTokensLimit, 0, std::nullopt));
     ctx->apiHandler = apiHandler;
 
     ctx->results.finish_reasons.push_back(ov::genai::GenerationFinishReason::STOP);
@@ -5784,7 +5784,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, legacyServablePreparePartialResponseChatCom
         *ctx->payload.parsedJson, ovms::Endpoint::CHAT_COMPLETIONS,
         std::chrono::system_clock::now(), *tokenizer);
     uint32_t maxTokensLimit = 100;
-    apiHandler->parseRequest(maxTokensLimit, 0, std::nullopt);
+    static_cast<void>(apiHandler->parseRequest(maxTokensLimit, 0, std::nullopt));
     ctx->apiHandler = apiHandler;
 
     ctx->results.finish_reasons.push_back(ov::genai::GenerationFinishReason::STOP);
