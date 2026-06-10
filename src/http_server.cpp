@@ -107,8 +107,6 @@ static const ovms::HTTPStatusCode http(const ovms::Status& status) {
         {StatusCode::PIPELINE_DEMULTIPLEXER_NO_RESULTS, ovms::HTTPStatusCode::NO_CONTENT},
         {StatusCode::CANNOT_COMPILE_MODEL_INTO_TARGET_DEVICE, ovms::HTTPStatusCode::PRECOND_FAILED},
 
-        // Sequence management
-
         // Predict request validation
         {StatusCode::INVALID_NO_OF_INPUTS, ovms::HTTPStatusCode::BAD_REQUEST},
         {StatusCode::INVALID_MISSING_INPUT, ovms::HTTPStatusCode::BAD_REQUEST},

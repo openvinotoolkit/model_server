@@ -71,30 +71,14 @@ enum class StatusCode {
     OV_NO_OUTPUTS,
 
     // Model management
-    MODEL_MISSING,                                     /*!< Model with such name and/or version does not exist */
-    MODEL_CONFIG_INVALID,                              /*!< Model config is invalid */
-    MODEL_NAME_MISSING,                                /*!< Model with requested name is not found */
-    MODEL_NAME_OCCUPIED,                               /*!< Given model name is already occupied */
-    MODEL_VERSION_MISSING,                             /*!< Model with requested version is not found */
-    MODEL_VERSION_NOT_LOADED_ANYMORE,                  /*!< Model with requested version is retired */
-    MODEL_VERSION_NOT_LOADED_YET,                      /*!< Model with requested version is not loaded yet */
-    INVALID_NIREQ,                                     /*!< Invalid NIREQ requested */
-    REQUESTED_DYNAMIC_PARAMETERS_ON_STATEFUL_MODEL,    /*!< Deprecated/reserved to preserve StatusCode numeric values */
-    REQUESTED_STATEFUL_PARAMETERS_ON_SUBSCRIBED_MODEL, /*!< Deprecated/reserved to preserve StatusCode numeric values */
-    REQUESTED_MODEL_TYPE_CHANGE,                       /*!< Deprecated/reserved to preserve StatusCode numeric values */
-    INVALID_NON_STATEFUL_MODEL_PARAMETER,              /*!< Deprecated/reserved to preserve StatusCode numeric values */
-    INVALID_MAX_SEQUENCE_NUMBER,                       /*!< Deprecated/reserved to preserve StatusCode numeric values */
-
-    // Sequence management (deprecated/reserved)
-    SEQUENCE_MISSING,                /*!< Deprecated/reserved to preserve StatusCode numeric values */
-    SEQUENCE_ALREADY_EXISTS,         /*!< Deprecated/reserved to preserve StatusCode numeric values */
-    SEQUENCE_ID_NOT_PROVIDED,        /*!< Deprecated/reserved to preserve StatusCode numeric values */
-    SEQUENCE_ID_BAD_TYPE,            /*!< Deprecated/reserved to preserve StatusCode numeric values */
-    INVALID_SEQUENCE_CONTROL_INPUT,  /*!< Deprecated/reserved to preserve StatusCode numeric values */
-    SEQUENCE_CONTROL_INPUT_BAD_TYPE, /*!< Deprecated/reserved to preserve StatusCode numeric values */
-    SEQUENCE_TERMINATED,             /*!< Deprecated/reserved to preserve StatusCode numeric values */
-    SPECIAL_INPUT_NO_TENSOR_SHAPE,   /*!< Deprecated/reserved to preserve StatusCode numeric values */
-    MAX_SEQUENCE_NUMBER_REACHED,     /*!< Deprecated/reserved to preserve StatusCode numeric values */
+    MODEL_MISSING,                    /*!< Model with such name and/or version does not exist */
+    MODEL_CONFIG_INVALID,             /*!< Model config is invalid */
+    MODEL_NAME_MISSING,               /*!< Model with requested name is not found */
+    MODEL_NAME_OCCUPIED,              /*!< Given model name is already occupied */
+    MODEL_VERSION_MISSING,            /*!< Model with requested version is not found */
+    MODEL_VERSION_NOT_LOADED_ANYMORE, /*!< Model with requested version is retired */
+    MODEL_VERSION_NOT_LOADED_YET,     /*!< Model with requested version is not loaded yet */
+    INVALID_NIREQ,                    /*!< Invalid NIREQ requested */
 
     // Predict request validation
     INVALID_NO_OF_INPUTS,             /*!< Invalid number of inputs */
