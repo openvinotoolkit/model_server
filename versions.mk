@@ -19,9 +19,9 @@
 # Any variable can be overridden by the environment or command-line.
 
 # Source repository git commits / branches (used for source builds)
-OV_SOURCE_BRANCH ?= 90214e5be052438cec5617ed3ea7e37df1538f68
-OV_TOKENIZERS_BRANCH ?= f43dbd55981e8252f66e1c32d7e6fd2b4585c60e
-OV_GENAI_BRANCH ?= adf73e80e66629730f976d44cad6c09cf978deca
+OV_SOURCE_BRANCH ?= ede283a88e35465f0d680dabbf1f44080f8fc387
+OV_TOKENIZERS_BRANCH ?= 6da74a793f0fa5ca2f47a15af674cf715fccbf41
+OV_GENAI_BRANCH ?= 7dea0459b2ac7d8dfd877fd9df6737674fd8371d
 
 # Source repository organizations
 OV_SOURCE_ORG ?= openvinotoolkit
@@ -29,10 +29,10 @@ OV_GENAI_ORG ?= openvinotoolkit
 OV_TOKENIZERS_ORG ?= openvinotoolkit
 
 # Binary package URLs for each supported platform.
-DLDT_PACKAGE_URL_UBUNTU24 ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/pre-release/2026.2.0.0rc2/openvino_genai_ubuntu24_2026.2.0.0rc2_x86_64.tar.gz
-DLDT_PACKAGE_URL_UBUNTU22 ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/pre-release/2026.2.0.0rc2/openvino_genai_ubuntu22_2026.2.0.0rc2_x86_64.tar.gz
-DLDT_PACKAGE_URL_RHEL ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/pre-release/2026.2.0.0rc2/openvino_genai_rhel8_2026.2.0.0rc2_x86_64.tar.gz
-GENAI_PACKAGE_URL_WINDOWS ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/pre-release/2026.2.0.0rc2/openvino_genai_windows_2026.2.0.0rc2_x86_64.zip
+DLDT_PACKAGE_URL_UBUNTU24 ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/pre-release/2026.2.1.0rc1/openvino_genai_ubuntu24_2026.2.1.0rc1_x86_64.tar.gz
+DLDT_PACKAGE_URL_UBUNTU22 ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/pre-release/2026.2.1.0rc1/openvino_genai_ubuntu22_2026.2.1.0rc1_x86_64.tar.gz
+DLDT_PACKAGE_URL_RHEL ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/pre-release/2026.2.1.0rc1/openvino_genai_rhel8_2026.2.1.0rc1_x86_64.tar.gz
+GENAI_PACKAGE_URL_WINDOWS ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/pre-release/2026.2.1.0rc1/openvino_genai_windows_2026.2.1.0rc1_x86_64.zip
 
 # Third-party dependency versions (used for binary builds)
 OPENCV_VERSION ?= 4.13.0
