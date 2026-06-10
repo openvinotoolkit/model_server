@@ -1,3 +1,7 @@
+{#-
+  Modifications to original chat template:
+    * Whenever template renders tool_call arguments, those are converted from string to dictlike format using from_json
+#}
 {%- set image_count = namespace(value=0) %}
 {%- set video_count = namespace(value=0) %}
 {%- macro render_content(content, do_vision_count, is_system_content=false) %}
@@ -117,6 +121,7 @@
                     {{- '\n<tool_call>\n<function=' + tool_call.name + '>\n' }}
                 {%- endif %}
                 {%- if tool_call.arguments is defined %}
+                    {#- Patch: Convert to JSON before calling items, OVMS provides arguments as string #}
                     {%- for args_name, args_value in tool_call.arguments|from_json|items %}
                         {{- '<parameter=' + args_name + '>\n' }}
                         {%- set args_value = args_value | tojson | safe if args_value is mapping or (args_value is sequence and args_value is not string) else args_value | string %}

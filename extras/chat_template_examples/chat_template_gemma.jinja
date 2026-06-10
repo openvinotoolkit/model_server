@@ -1,3 +1,8 @@
+{#-
+  Modifications to original chat template:
+    * Ignoring "response" field from tool definition (it was broken, but also it is inline now with other servings)
+    * Whenever template renders tool_call arguments, those are converted from string to dictlike format using from_json
+#}
 {%- macro format_parameters(properties, required, filter_keys=false) -%}
     {%- set standard_keys = ['description', 'type', 'properties', 'required', 'nullable'] -%}
     {%- set ns = namespace(found_first=false) -%}
@@ -103,6 +108,7 @@
             type:<|"|>{{- params['type'] | upper -}}<|"|>}
         {%- endif -%}
     {%- endif -%}
+    {#- Patched out: Here was "response" field rendering for function declaration, however broken and not inline with other serving such as llama.cpp #}
     }
 {%- endmacro -%}
 {%- macro format_argument(argument, escape_keys=True) -%}
@@ -232,6 +238,7 @@
 
             {%- if message['tool_calls'] -%}
                 {%- for tool_call in message['tool_calls'] -%}
+                    {#- Patch: Usage of from_json to convert tool_call arguments from string to dictlike #}
                     {%- set function = tool_call['function'] -%}
                     {%- set args = function['arguments'] | from_json -%}
                     {{- '<|tool_call>call:' + function['name'] + '{' -}}

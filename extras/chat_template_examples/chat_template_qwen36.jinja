@@ -3,7 +3,9 @@
     * Expanded tool_call args serialization to handle booleans/None correctly —
       Jinja's tojson outputs JSON (true/false/null) but the model expects
       Python literals (True/False/None), so we patch them explicitly.
-#}{%- set image_count = namespace(value=0) %}
+    * Whenever template renders tool_call arguments, those are converted from string to dictlike format using from_json
+#}
+{%- set image_count = namespace(value=0) %}
 {%- set video_count = namespace(value=0) %}
 {%- macro render_content(content, do_vision_count, is_system_content=false) %}
     {%- if content is string %}
