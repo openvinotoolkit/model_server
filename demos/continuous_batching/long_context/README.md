@@ -99,7 +99,7 @@ This table shows the gain from prefix caching on NPU device and flat latency for
 KV cache compression has minimal impact on accuracy and significantly reduces memory consumption and benchmark time.
 The default value is  u8, but it's possible to change it to u4, f16 or f32.
 
-| Context Length (tokens) | TTFT for precision u4 (ms) | Cache size for u4 (GB) | TTFT for precision u8 (ms) | Cache size for u8 |
+| Context Length (tokens) | TTFT for precision u4 (ms) | Cache size for u4 (GB) | TTFT for precision u8 (ms) | Cache size for u8 (GB) |
 |-----------------|-----------------|----------------|-----------------|-----------------|
 |     50,000      |      945     |       0.7      |      985       |       1.5       |
 
