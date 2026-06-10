@@ -424,11 +424,11 @@ index 58cb4b424..00ddee9f3 100644
  	git_writestream **out,
 diff --git a/src/libgit2/lfs_filter.c b/src/libgit2/lfs_filter.c
 new file mode 100644
-index 000000000..c0e97d408
+index 000000000..18490e5ad
 --- /dev/null
 +++ b/src/libgit2/lfs_filter.c
-@@ -0,0 +1,1952 @@
-+﻿/*
+@@ -0,0 +1,2014 @@
++/*
 +/ Copyright 2025 Intel Corporation
 +/
 +/ Licensed under the Apache License, Version 2.0 (the "License");
@@ -467,6 +467,7 @@ index 000000000..c0e97d408
 +#include "regexp.h"
 +#include "thread.h"
 +#include "time.h"
++#include "ctype_compat.h"
 +
 +#if defined(__GNUC__) || defined(__clang__)
 +/* Optional host-provided cancellation probe.
@@ -1046,6 +1047,57 @@ index 000000000..c0e97d408
 +	return newBuffer;
 +}
 +
++static const char *lfs_last_path_sep(const char *path)
++{
++	const char *forward_sep_position = strrchr(path, '/');
++
++#ifdef _WIN32
++	const char *backward_sep_position = strrchr(path, '\\');
++	if (!forward_sep_position || (backward_sep_position && backward_sep_position > forward_sep_position))
++		forward_sep_position = backward_sep_position;
++#endif
++
++	return forward_sep_position;
++}
++
++static int lfs_parent_dir_exists(const char *path)
++{
++	const char *sep;
++	git_str dir = GIT_STR_INIT;
++	struct stat st;
++	int exists = 0;
++	size_t dir_len;
++
++	if (!path || !*path)
++		return 0;
++
++	sep = lfs_last_path_sep(path);
++	if (!sep)
++		return (p_stat(".", &st) == 0 && S_ISDIR(st.st_mode));
++
++	if (sep == path)
++		return (p_stat("/", &st) == 0 && S_ISDIR(st.st_mode));
++
++	dir_len = (size_t)(sep - path);
++
++#ifdef _WIN32
++	/* For drive-root paths like "C:\\file", keep the trailing separator so
++	 * p_stat checks "C:\\" instead of "C:". */
++	if (dir_len == 2 && git__isalpha(path[0]) && path[1] == ':')
++		dir_len = 3;
++#endif
++
++	if (git_str_set(&dir, path, dir_len) < 0)
++		goto done;
++
++	if (p_stat(dir.ptr, &st) == 0 && S_ISDIR(st.st_mode))
++		exists = 1;
++
++done:
++	git_str_dispose(&dir);
++	return exists;
++}
++
 +/*
 + * get_lfs_info_match
 + * -------------------
@@ -1602,6 +1654,11 @@ index 000000000..c0e97d408
 +	size_t written_bytes;
 +	uint64_t remaining = 0;
 +
++	/* Abort immediately on cancellation — returning 0 makes cURL emit
++	 * CURLE_WRITE_ERROR, which the caller treats as a failed download. */
++	if (lfs_shutdown_requested())
++		return 0;
++
 +	/* cURL invokes the write callback repeatedly, so guard cumulatively. */
 +	if (!out->stream) {
 +		/* open file for writing */
@@ -1955,7 +2012,7 @@ index 000000000..c0e97d408
 +			return CURLE_OK;
 +		}
 +
-+		lfs_log_error_with_state(ftpfile->log_state, "[WARN] Resume attempt %d/%d failed: %s\n",
++		printf("[WARN] Resume attempt %d/%d failed: %s\n",
 +		        attempt, max_retries, curl_easy_strerror(res));
 +
 +		if (attempt < max_retries) {
@@ -2225,9 +2282,7 @@ index 000000000..c0e97d408
 +
 +	/* Check for resume of partial download error */
 +	if (res == CURLE_PARTIAL_FILE) {
-+		lfs_log_error_with_state(
-+		        &la->log_state,
-+		        "[WARN] Got CURLE_PARTIAL_FILE, attempting resume sequence\n");
++		printf("[WARN] Got CURLE_PARTIAL_FILE, attempting resume sequence\n");
 +		res = download_with_resume(
 +		        dl_curl, &ftpfile, g_lfs_resume_attempts,
 +		        g_lfs_resume_interval_secs);
@@ -2258,30 +2313,37 @@ index 000000000..c0e97d408
 +		ftpfile.stream = NULL;
 +	}
 +
-+	/* If destination exists, unlink it before rename. This is independent
-+	 * from whether we resumed via a partial temp file. */
-+	if (p_access(la->full_path, F_OK) == 0) {
-+		if (p_unlink(la->full_path) < 0 && errno != ENOENT) {
-+			lfs_log_error_with_state(
-+			        &la->log_state,
-+			        "\n[ERROR] failed to delete existing destination file '%s' (errno=%d: %s)\n",
-+			        la->full_path, errno, strerror(errno));
-+			/* Ignore here and let rename produce the definitive failure. */
-+		}
-+	}
-+
 +	if (p_rename(tmp_out_file, la->full_path) < 0) {
++		int rename_errno = errno;
 +		lfs_log_error_with_state(
 +		        &la->log_state,
 +		        "\n[ERROR] failed to rename '%s' -> '%s' (errno=%d: %s)\n",
 +		        tmp_out_file ? tmp_out_file : "(null)", la->full_path,
-+		        errno, strerror(errno));
++		        rename_errno, strerror(rename_errno));
++
++		if (rename_errno == ENOENT) {
++			int src_exists =
++			        (tmp_out_file && p_access(tmp_out_file, F_OK) == 0);
++			int dst_exists =
++			        (la->full_path && p_access(la->full_path, F_OK) == 0);
++			int src_parent_exists =
++			        lfs_parent_dir_exists(tmp_out_file);
++			int dst_parent_exists =
++			        lfs_parent_dir_exists(la->full_path);
++
++			lfs_log_error_with_state(
++			        &la->log_state,
++			        "[ERROR] rename ENOENT diagnostics: src_exists=%d src_parent_exists=%d dst_exists=%d dst_parent_exists=%d cancel_requested=%d\n",
++			        src_exists, src_parent_exists, dst_exists,
++			        dst_parent_exists, lfs_shutdown_requested());
++		}
 +#ifdef _WIN32
 +		lfs_log_error_with_state(
 +		        &la->log_state,
 +		        "[ERROR] Win32 rename GetLastError=%lu\n",
 +		        (unsigned long)GetLastError());
 +#endif
++		errno = rename_errno;
 +		goto cleanup;
 +	}
 +

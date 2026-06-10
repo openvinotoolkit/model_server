@@ -29,5 +29,12 @@ demos/vlm_npu/README.md:157: mane ==> main, many, maine
 demos/vlm_npu/README.md:218: mane ==> main, many, maine
 demos/integration_with_OpenWebUI/README.md:423: Buildin ==> Building, Build in
 src/test/llm/output_parsers/lfm2_output_parser_test.cpp
+windows_parse_tests.bat:35: seh ==> she
+windows_parse_tests.bat:119: SEH ==> SHE
+windows_parse_tests.bat:123: SEH ==> SHE
+windows_parse_tests.bat:134: SEH ==> SHE
+windows_parse_tests.bat:136: SEH ==> SHE
+windows_parse_tests.bat:141: SEH ==> SHE
+windows_parse_tests.bat:144: SEH ==> SHE
 src/test/llm/output_parsers/gemma4_output_parser_test.cpp
 src/test/llm/output_parsers/qwen3_output_parser_test.cpp:719: thi ==> the, this
