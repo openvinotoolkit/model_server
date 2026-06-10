@@ -41,6 +41,7 @@
 #include "cmd_exec.hpp"
 #include "src/filesystem/filesystem.hpp"
 #include "src/filesystem/localfilesystem.hpp"
+#include "src/utils/env_guard.hpp"
 #include "../logging.hpp"
 #include "../shutdown_state.hpp"
 #include "../stringutils.hpp"
@@ -260,9 +261,7 @@ Libgt2InitGuard::Libgt2InitGuard(const Libgit2Options& opts) {
     // container vs. a non-root serving user).
     this->status = git_libgit2_opts(GIT_OPT_SET_OWNER_VALIDATION, 0);
     IF_ERROR_SET_MSG_AND_RETURN();
-    const char* enableSearchPathEnv = std::getenv("GIT_OPT_SET_ENABLE_SEARCH_PATHS");
-    const bool enableGitSearchPath =
-        (enableSearchPathEnv != nullptr) && (std::string(enableSearchPathEnv) == "1");
+    const bool enableGitSearchPath = (GetEnvVar("GIT_OPT_SET_ENABLE_SEARCH_PATHS") == "1");
     // By default, redirect all git config search paths to an empty string so libgit2
     // never reads host-level git configuration (~/.gitconfig, /etc/gitconfig, etc.).
     // Without this, a host gitconfig that sets credential.helper, http.proxy, lfs.*, or
@@ -277,15 +276,13 @@ Libgt2InitGuard::Libgt2InitGuard(const Libgit2Options& opts) {
         IF_ERROR_SET_MSG_AND_RETURN();
         this->status = git_libgit2_opts(GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, "");
         IF_ERROR_SET_MSG_AND_RETURN();
-    }
 #if defined(_WIN32)
-    // On Windows, GIT_CONFIG_LEVEL_PROGRAMDATA covers %PROGRAMDATA%\Git\config.
-    // Keep it isolated unless explicit opt-in via GIT_OPT_SET_ENABLE_SEARCH_PATHS=1.
-    if (!enableGitSearchPath) {
+        // On Windows, GIT_CONFIG_LEVEL_PROGRAMDATA covers %PROGRAMDATA%\Git\config.
+        // Keep it isolated unless explicit opt-in via GIT_OPT_SET_ENABLE_SEARCH_PATHS=1.
         this->status = git_libgit2_opts(GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_PROGRAMDATA, "");
         IF_ERROR_SET_MSG_AND_RETURN();
-    }
 #endif
+    }
     // Skip .keep file existence checks when reading packfiles.  libgit2 performs one
     // stat() per pack per operation to honour .keep files (which prevent gc from
     // collecting referenced packs).  In an OVMS deployment the model directory is
