@@ -226,6 +226,7 @@ struct ServerSettingsImpl {
     std::optional<std::vector<std::string>> allowedMediaDomains;
     std::string logLevel = "INFO";
     std::string logPath;
+    bool verboseResponse = false;
     bool allowCredentials = false;
     std::string allowedOrigins{"*"};
     std::string allowedMethods{"*"};
