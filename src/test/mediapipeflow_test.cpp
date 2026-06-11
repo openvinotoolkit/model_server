@@ -3855,6 +3855,7 @@ TEST(WhitelistRegistered, MediapipeCalculatorsList) {
         "EndLoopTensorCalculator",
         "EndLoopTfLiteTensorCalculator",
         "ErrorInProcessTestCalculator",
+        "ErrorOnNegativeTestCalculator",
         "ExceptionDuringCloseCalculator",
         "ExceptionDuringGetContractCalculator",
         "ExceptionDuringOpenCalculator",
@@ -4306,4 +4307,74 @@ TEST(MediapipeGraphQueueSizeDirective, EnvVarOVMS_GRAPH_QUEUE_OFF_NotSetDoesNotD
     auto status = def.validate(manager);
     ASSERT_EQ(status, ovms::StatusCode::OK);
     EXPECT_GT(def.getMediapipeGraphConfig().getInitialQueueSize(), 0);
+}
+
+// --- Graph queue reinit guard tests ---
+
+class UnaryQueueReinitTest : public ::testing::Test {
+protected:
+    const std::string name{"reinit_test_graph"};
+    const std::string version{"1"};
+    ExecutionContext executionContext{ExecutionContext::Interface::GRPC, ExecutionContext::Method::ModelInfer};
+    std::unique_ptr<MediapipeServableMetricReporter> reporter;
+    std::shared_ptr<GraphSidePackets> sidePackets;
+    std::shared_ptr<GraphQueue> queue;
+    ::mediapipe::CalculatorGraphConfig config;
+
+    void SetUp() override {
+        reporter = std::make_unique<MediapipeServableMetricReporter>(nullptr, nullptr, "");
+        sidePackets = std::make_shared<GraphSidePackets>();
+        const std::string pbTxt{R"(
+input_stream: "in"
+output_stream: "out"
+node {
+  calculator: "ErrorOnNegativeTestCalculator"
+  input_stream: "in"
+  output_stream: "out"
+}
+        )"};
+        ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
+        queue = std::make_shared<GraphQueue>(config, sidePackets, 1);
+    }
+
+    void prepareInferRequest(KFSRequest& request, float value) {
+        request.Clear();
+        *request.mutable_model_name() = "my_graph";
+        *request.mutable_model_version() = "1";
+        prepareKFSInferInputTensor(request, "in", std::tuple<ovms::signed_shape_t, const ovms::Precision>{{1}, ovms::Precision::FP32}, std::vector<float>{value}, false);
+        request.mutable_parameters()->operator[]("OVMS_MP_TIMESTAMP").set_int64_param(0);
+    }
+};
+
+TEST_F(UnaryQueueReinitTest, GraphIsReinitializedAfterCalculatorError) {
+    KFSRequest request;
+    KFSResponse response;
+    {
+        GraphIdGuard guard(queue);
+        MediapipeGraphExecutor executor{
+            name, version, config,
+            {{"in", mediapipe_packet_type_enum::OVTENSOR}},
+            {{"out", mediapipe_packet_type_enum::OVTENSOR}},
+            {"in"}, {"out"}, *sidePackets, nullptr, reporter.get(),
+            std::move(guard)};
+        prepareInferRequest(request, -1.0f);
+        auto status = executor.infer<KFSRequest, KFSResponse>(&request, &response, executionContext);
+        ASSERT_FALSE(status.ok());
+        EXPECT_EQ(status.getCode(), StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+    }
+    // Executor destroyed → GraphIdGuard returns graph to pool.
+    // The reinit guard rebuilt the graph before returning the error.
+    // Second request with valid (positive) input should succeed.
+    {
+        GraphIdGuard guard(queue);
+        MediapipeGraphExecutor executor{
+            name, version, config,
+            {{"in", mediapipe_packet_type_enum::OVTENSOR}},
+            {{"out", mediapipe_packet_type_enum::OVTENSOR}},
+            {"in"}, {"out"}, *sidePackets, nullptr, reporter.get(),
+            std::move(guard)};
+        prepareInferRequest(request, 2.0f);
+        auto status = executor.infer<KFSRequest, KFSResponse>(&request, &response, executionContext);
+        ASSERT_TRUE(status.ok());
+    }
 }
