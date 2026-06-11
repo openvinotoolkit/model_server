@@ -323,6 +323,8 @@ typedef struct {
     int64_t timeout_ms;                 // Read timeout, -1 = infinite
     const imp_video_branch_t* branches; // Array of output branches (NULL = single branch at source res) // TODO FIXME do we need more than one?
     uint32_t branch_count;              // Number of branches (0 = single branch at source res)
+    bool sync_appsink;                  // If true (file mode): force single-buffer queue+appsink (disable pre-buffering)
+    uint32_t queue_depth;               // If nonzero (file mode): bound queue + appsink max-buffers to N (overrides sync_appsink)
 } imp_video_decode_opts_t;
 
 /**
@@ -862,7 +864,7 @@ void imp_audio_encoder_close(imp_audio_encoder_t* encoder);
  * @param samples     Input float PCM samples (mono, interleaved if stereo)
  * @param num_samples Number of float values in @p samples
  * @param opts        Encode options (codec, sample_rate, channels, bitrate).
- *                    opts->output_path is ignored — output goes to memory.
+ *                    opts->output_path is ignored - output goes to memory.
  * @return IMP_OK on success
  */
 imp_status_t imp_encode_audio(void** data,
