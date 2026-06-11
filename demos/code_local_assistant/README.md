@@ -48,11 +48,11 @@ ovms --model_repository_path c:\models --source_model OpenVINO/Qwen3-8B-int4-cw-
 ```
 > **Note:** First model initialization might be long. With the compilation cache, sequential model loading will be fast.
 :::
-:::{tab-item} Junrui2021/Qwen3-VL-8B-Instruct-int4
-:sync: Junrui2021/Qwen3-VL-8B-Instruct-int4
+:::{tab-item} OpenVINO/Qwen3-VL-8B-Instruct-int4-ov
+:sync: OpenVINO/Qwen3-VL-8B-Instruct-int4-ov
 ```bat
 mkdir c:\models
-ovms --model_repository_path c:\models --source_model Junrui2021/Qwen3-VL-8B-Instruct-int4 --task text_generation --target_device GPU --pipeline_type VLM_CB --rest_port 8000 --cache_dir .ovcache --model_name Qwen3-VL-8B-Instruct
+ovms --model_repository_path c:\models --source_model OpenVINO/Qwen3-VL-8B-Instruct-int4-ov --task text_generation --target_device GPU --pipeline_type VLM_CB --rest_port 8000 --cache_dir .ovcache --model_name Qwen3-VL-8B-Instruct
 ```
 > **Note:** This is a Vision Language Model (VLM) that supports image inputs. For deployment, recommended 7GB+ of VRAM on the GPU.
 :::
@@ -105,13 +105,13 @@ docker run -d -p 8000:8000 --rm --user $(id -u):$(id -g) -v $(pwd)/models:/model
 ```
 > **Note:** First model initialization might be long. With the compilation cache, sequential model loading will be fast.
 :::
-:::{tab-item} Junrui2021/Qwen3-VL-8B-Instruct-int4
-:sync: Junrui2021/Qwen3-VL-8B-Instruct-int4
+:::{tab-item} OpenVINO/Qwen3-VL-8B-Instruct-int4-ov
+:sync: OpenVINO/Qwen3-VL-8B-Instruct-int4-ov
 ```bash
 mkdir -p models
 docker run -d -p 8000:8000 --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) \
     openvino/model_server:weekly \
-    --model_repository_path /models --source_model Junrui2021/Qwen3-VL-8B-Instruct-int4 --task text_generation --target_device GPU --pipeline_type VLM_CB --rest_port 8000 --model_name Qwen3-VL-8B-Instruct
+    --model_repository_path /models --source_model OpenVINO/Qwen3-VL-8B-Instruct-int4-ov --task text_generation --target_device GPU --pipeline_type VLM_CB --rest_port 8000 --model_name Qwen3-VL-8B-Instruct
 ```
 > **Note:** This is a Vision Language Model (VLM) that supports image inputs. For deployment, recommended 7GB+ of VRAM on the GPU.
 :::

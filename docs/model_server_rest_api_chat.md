@@ -219,8 +219,9 @@ Some parameters, especially related to sampling (like `temperature`, `top_p` etc
 | logprobs | ⚠️ | ✅ | ✅ | bool (default: `false`) | Include the log probabilities on the logprob of the returned output token. **_ in stream mode logprobs are not returned. Only info about selected tokens is returned _** |
 | tools | ✅ | ✅ | ✅ | array | A list of tools the model may call. Currently, only functions are supported as a tool. Use this to provide a list of functions the model may generate JSON inputs for. See [OpenAI API reference](https://platform.openai.com/docs/api-reference/chat/create#chat-create-tools) for more details. |
 | tool_choice | ✅ | ✅ | ✅ | string or object | Controls which (if any) tool is called by the model. `none` means the model will not call any tool and instead generates a message. `auto` means the model can pick between generating a message or calling one or more tools. `required` means that model should call at least one tool. Specifying a particular tool via `{"type": "function", "function": {"name": "my_function"}}` forces the model to call that tool. See [OpenAI API reference](https://platform.openai.com/docs/api-reference/chat/create#chat-create-tool_choice) for more details. |
-| response_format | ✅ | ✅ | ✅ | object | An object specifying the format that the model must output. Setting to `{ "type": "json_schema", "json_schema": {...} }` enables Structured Outputs which ensures the model will match your supplied JSON schema according to [OpenAI reference](https://platform.openai.com/docs/api-reference/chat/create#chat-create-response_format). Learn more in the [Structured Outputs demo](../demos/continuous_batching/structured_output/README.md). Additionally, `response_format` can accept [XGrammar structural tags format](https://github.com/mlc-ai/xgrammar/blob/main/docs/tutorials/structural_tag.md#format-types) (not part of OpenAI API). For example: `{ "type": "const_string", "value": "Hello World!" }`. **Note** that if model server fails to process the format, the request will still be processed, but the format will not be imposed. |
+| response_format | ✅ | ✅ | ✅ | object | An object specifying the format that the model must output. Setting to `{ "type": "json_schema", "json_schema": {...} }` enables Structured Outputs which ensures the model will match your supplied JSON schema according to [OpenAI reference](https://platform.openai.com/docs/api-reference/chat/create#chat-create-response_format). Learn more in the [Structured Outputs demo](../demos/continuous_batching/structured_output/README.md). Additionally, `response_format` can accept [XGrammar structural tags format](https://github.com/mlc-ai/xgrammar/blob/v0.1.26/docs/tutorials/structural_tag.md#format-types) (not part of OpenAI API). For example: `{ "type": "const_string", "value": "Hello World!" }`. **Note** that if model server fails to process the format, the request will still be processed, but the format will not be imposed. |
 | chat_template_kwargs | ✅ | ❌ | ✅ |  object | Enables passing additional parameters to chat template engine. Example `{"enable_thinking": false}`. Note that values like `messages`, `eos_token`, `bos_token` etc. are provided natively to the template engine, so including them in `chat_template_kwargs` will cause error. |
+| skip_special_tokens | ✅ | ❌ | ✅ | bool (default: `true`) | Whether to remove special tokens (e.g. `<\|endoftext\|>`, `<\|im_end\|>`) from the generated output. Set to `false` to include them, which is useful when the model uses special tokens to encode structured information (e.g. bounding boxes, reasoning markers). When `false`, any tool or reasoning parser configured on the endpoint is silently disabled for the request, so the raw token stream is returned. This option works with most detokenizers exported with OpenVINO Tokenizers 2024.5 or later, unless they are based on custom ops. |
 
 #### Beam search sampling specific
 | Param | OpenVINO Model Server | OpenAI /chat/completions API | vLLM Serving Sampling Params | Type | Description |
@@ -234,11 +235,12 @@ Some parameters, especially related to sampling (like `temperature`, `top_p` etc
 |-------|----------|----------|----------|---------|-----|
 | temperature | ✅ | ✅ | ✅ | float (default: `1.0`) | The value is used to modulate token probabilities for multinomial sampling. It enables multinomial sampling when set to `> 0.0`. |
 | top_p | ✅ | ✅ | ✅ | float (default: `1.0`) | Controls the cumulative probability of the top tokens to consider. Must be in (0, 1]. Set to 1 to consider all tokens. |
-| top_k | ✅ | ❌ | ✅ | int (default: all tokens) | Controls the number of top tokens to consider. Set to empty or -1 to consider all tokens. |
+| min_p | ✅ | ❌ | ✅ | float (default: `0.0`) | Minimum probability threshold relative to the most likely token. Tokens with probability below `min_p` × the top token probability are filtered out. `0.0` (default) disables the filter. Typical values: `0.05`–`0.1`. Must be in `[0.0, 1.0)`. |
+| top_k | ✅ | ❌ | ✅ | int (default: `40`) | Controls the number of top tokens to consider. When multinomial sampling is active, defaults to `40` if not set. Set to `-1` to consider all tokens. |
 | repetition_penalty | ✅ | ❌ | ✅ | float (default: `1.0`) | Penalizes new tokens based on whether they appear in the prompt and the generated text so far. Values > `1.0` encourage the model to use new tokens, while values < `1.0` encourage the model to repeat tokens. `1.0` means no penalty. |
 | frequency_penalty | ✅ | ✅ | ✅ | float (default: `0.0`) | Number between -2.0 and 2.0. Positive values penalize new tokens based on their existing frequency in the text so far, decreasing the model's likelihood to repeat the same line verbatim. |
 | presence_penalty | ✅ | ✅ | ✅ | float (default: `0.0`) | Number between -2.0 and 2.0. Positive values penalize new tokens based on whether they appear in the text so far, increasing the model's likelihood to talk about new topics. |
-| seed | ✅ | ✅ | ✅ | integer (default: `0`) | Random seed to use for the generation. |
+| seed | ✅ | ✅ | ✅ | integer (default: random) | Random seed for generation in range `[0, 4294967295]`. Omit to use a random seed (non-deterministic). Set explicitly to get reproducible output. Note: `rng_seed` set in `generation_config.json` is not honoured for multinomial sampling — only a per-request seed is applied. |
 
 #### Speculative decoding specific
 
@@ -249,7 +251,12 @@ Note that below parameters are valid only for speculative pipeline. See [specula
 | num_assistant_tokens | ✅ | ❌ | ⚠️ | int | This value defines how many tokens should a draft model generate before main model validates them. Equivalent of `num_speculative_tokens` in vLLM. Cannot be used with `assistant_confidence_threshold`. |
 | assistant_confidence_threshold | ✅ | ❌ | ❌ | float | This parameter determines confidence level for continuing generation. If draft model generates token with confidence below that threshold, it stops generation for the current cycle and main model starts validation. Cannot be used with `num_assistant_tokens`. |
 
-If none of those parameters are specified and request is made to Speculative Decoding pipeline, then the default `num_assistant_tokens = 5` is set.
+If neither parameter is specified in the request, the server resolves the value using the following priority order:
+1. **Request body** – `num_assistant_tokens` or `assistant_confidence_threshold` sent by the client.
+2. **`generation_config.json`** in the main model's directory – add `"num_assistant_tokens": N` (or `"assistant_confidence_threshold": F`) to set a deployment-level default that applies to all requests that do not specify it. This is the recommended way to persist a tuned value without requiring every client to send it.
+3. **Built-in fallback** – `num_assistant_tokens = 5` if neither of the above is present.
+
+> **Note:** `generation_config.json` is shipped alongside model weights from Hugging Face, but it is fully operator-editable. Changes take effect on the next server start.
 
 #### Prompt lookup decoding specific
 
@@ -274,14 +281,12 @@ If any of those parameters is not specified and request is made to Prompt Lookup
 - functions
 
 #### Unsupported params from vLLM:
-- min_p
 - use_beam_search (**In OpenVINO Model Server just simply increase _best_of_ param to enable beam search**)
 - early_stopping
 - stop_token_ids
 - min_tokens
 - prompt_logprobs
 - detokenize
-- skip_special_tokens
 - spaces_between_special_tokens
 - logits_processors
 - truncate_prompt_tokens

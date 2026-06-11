@@ -52,7 +52,6 @@ const grpc::Status grpc(const Status& status) {
         // can occur when using bs/shape: auto & config reload
         {StatusCode::RESHAPE_ERROR, grpc::StatusCode::FAILED_PRECONDITION},
         {StatusCode::CANNOT_COMPILE_MODEL_INTO_TARGET_DEVICE, grpc::StatusCode::FAILED_PRECONDITION},
-        {StatusCode::SEQUENCE_TERMINATED, grpc::StatusCode::FAILED_PRECONDITION},
         {StatusCode::MEDIAPIPE_DESERIALIZATION_ERROR, grpc::StatusCode::FAILED_PRECONDITION},
         {StatusCode::MEDIAPIPE_GRAPH_START_ERROR, grpc::StatusCode::FAILED_PRECONDITION},
         {StatusCode::MEDIAPIPE_GRAPH_ADD_OUTPUT_STREAM_ERROR, grpc::StatusCode::FAILED_PRECONDITION},
@@ -69,16 +68,10 @@ const grpc::Status grpc(const Status& status) {
         {StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE, grpc::StatusCode::NOT_FOUND},
         {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_ANYMORE, grpc::StatusCode::NOT_FOUND},
         {StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_ANYMORE, grpc::StatusCode::NOT_FOUND},
-        {StatusCode::SEQUENCE_MISSING, grpc::StatusCode::NOT_FOUND},
         // INVALID_ARGUMENT
         {StatusCode::MODEL_SPEC_MISSING, grpc::StatusCode::INVALID_ARGUMENT},
         {StatusCode::MODEL_VERSION_INVALID_FORMAT, grpc::StatusCode::INVALID_ARGUMENT},
         {StatusCode::INVALID_SIGNATURE_DEF, grpc::StatusCode::INVALID_ARGUMENT},
-        {StatusCode::SEQUENCE_ID_NOT_PROVIDED, grpc::StatusCode::INVALID_ARGUMENT},
-        {StatusCode::INVALID_SEQUENCE_CONTROL_INPUT, grpc::StatusCode::INVALID_ARGUMENT},
-        {StatusCode::SEQUENCE_ID_BAD_TYPE, grpc::StatusCode::INVALID_ARGUMENT},
-        {StatusCode::SEQUENCE_CONTROL_INPUT_BAD_TYPE, grpc::StatusCode::INVALID_ARGUMENT},
-        {StatusCode::SPECIAL_INPUT_NO_TENSOR_SHAPE, grpc::StatusCode::INVALID_ARGUMENT},
         {StatusCode::MEDIAPIPE_EXECUTION_ERROR, grpc::StatusCode::INVALID_ARGUMENT},
         {StatusCode::PATH_INVALID, grpc::StatusCode::INVALID_ARGUMENT},
         // Predict request validation
@@ -105,9 +98,7 @@ const grpc::Status grpc(const Status& status) {
         // ABORTED
         {StatusCode::PIPELINE_DEMULTIPLEXER_NO_RESULTS, grpc::StatusCode::ABORTED},
         // ALREADY_EXISTS
-        {StatusCode::SEQUENCE_ALREADY_EXISTS, grpc::StatusCode::ALREADY_EXISTS},
         // UNAVAILABLE
-        {StatusCode::MAX_SEQUENCE_NUMBER_REACHED, grpc::StatusCode::UNAVAILABLE},
         {StatusCode::MODEL_VERSION_NOT_LOADED_YET, grpc::StatusCode::UNAVAILABLE},
         {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET, grpc::StatusCode::UNAVAILABLE},
         {StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_YET, grpc::StatusCode::UNAVAILABLE},

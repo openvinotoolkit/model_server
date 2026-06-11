@@ -156,7 +156,7 @@ curl -s http://localhost:8000/v3/chat/completions -H "Content-Type: application/
 curl http://localhost:8000/v3/responses \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "meta-llama/Meta-Llama-3-8B-Instruct",
+    "model": "Qwen3-30B-A3B-Instruct-2507-int4-ov",
     "max_output_tokens":30,
     "input": "What is OpenVINO?"
   }'| jq .
@@ -169,12 +169,12 @@ Windows Powershell
 (Invoke-WebRequest -Uri "http://localhost:8000/v3/responses" `
  -Method POST `
  -Headers @{ "Content-Type" = "application/json" } `
- -Body '{"model": "meta-llama/Meta-Llama-3-8B-Instruct", "max_output_tokens": 30, "input": "What is OpenVINO?"}').Content
+ -Body '{"model": "Qwen3-30B-A3B-Instruct-2507-int4-ov", "max_output_tokens": 30, "input": "What is OpenVINO?"}').Content
 ```
 
 Windows Command Prompt
 ```bat
-curl -s http://localhost:8000/v3/responses -H "Content-Type: application/json" -d "{\"model\": \"meta-llama/Meta-Llama-3-8B-Instruct\", \"max_output_tokens\": 30, \"input\": \"What is OpenVINO?\"}"
+curl -s http://localhost:8000/v3/responses -H "Content-Type: application/json" -d "{\"model\": \"Qwen3-30B-A3B-Instruct-2507-int4-ov\", \"max_output_tokens\": 30, \"input\": \"What is OpenVINO?\"}"
 ```
 :::
 
@@ -186,7 +186,7 @@ curl -s http://localhost:8000/v3/responses -H "Content-Type: application/json" -
   "id": "resp-1724405400",
   "object": "response",
   "created_at": 1724405400,
-  "model": "meta-llama/Meta-Llama-3-8B-Instruct",
+  "model": "Qwen3-30B-A3B-Instruct-2507-int4-ov",
   "status": "completed",
   "output": [
     {
@@ -337,7 +337,7 @@ client = OpenAI(
 )
 
 stream = client.responses.create(
-    model="meta-llama/Meta-Llama-3-8B-Instruct",
+    model="Qwen3-30B-A3B-Instruct-2507-int4-ov",
     input="Say this is a test",
     stream=True,
 )

@@ -146,8 +146,9 @@ absl::Status GenAiServable::parseRequest(std::shared_ptr<GenAiServableExecutionC
             return ov::genai::StreamingStatus::RUNNING;
         };
         ov::AnyMap streamerConfig;
-        if (executionContext->apiHandler->getOutputParser() != nullptr &&
-            (executionContext->apiHandler->getOutputParser()->requiresStreamingWithSpecialTokens())) {
+        if ((executionContext->apiHandler->getOutputParser() != nullptr &&
+                executionContext->apiHandler->getOutputParser()->requiresStreamingWithSpecialTokens()) ||
+            !executionContext->apiHandler->getRequest().skipSpecialTokens) {
             streamerConfig.insert(ov::genai::skip_special_tokens(false));
         }
         executionContext->textStreamer = std::make_shared<ov::genai::TextStreamer>(getProperties()->tokenizer, callback, streamerConfig);
@@ -214,6 +215,9 @@ absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecution
         if (inputText.size() == 0) {
             return absl::Status(absl::StatusCode::kInvalidArgument, "Final prompt after applying chat template is empty");
         }
+        if (executionContext->apiHandler->getOutputParser() != nullptr) {
+            executionContext->apiHandler->getOutputParser()->detectAndSetImplicitReasoningStart(inputText);
+        }
         break;
     }
     case Endpoint::RESPONSES: {
@@ -245,6 +249,9 @@ absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecution
 #endif
             if (inputText.size() == 0) {
                 return absl::Status(absl::StatusCode::kInvalidArgument, "Final prompt after applying chat template is empty");
+            }
+            if (executionContext->apiHandler->getOutputParser() != nullptr) {
+                executionContext->apiHandler->getOutputParser()->detectAndSetImplicitReasoningStart(inputText);
             }
         } else {
             auto prompt = executionContext->apiHandler->getPrompt();
@@ -355,15 +362,6 @@ absl::Status GenAiServable::preparePartialResponse(std::shared_ptr<GenAiServable
     return absl::OkStatus();
 }
 
-#pragma warning(push)
-#pragma warning(disable : 4505)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-function";
-std::string wrapTextInServerSideEventMessage(const std::string& text) {
-    std::stringstream ss;
-    ss << "data: " << text << "\n\n";
-    return ss.str();
-}
 void logRequestDetails(const ovms::HttpPayload& payload) {
     auto parsedJson = payload.parsedJson;
     rapidjson::StringBuffer buffer;
@@ -372,7 +370,5 @@ void logRequestDetails(const ovms::HttpPayload& payload) {
     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Request body: {}", buffer.GetString());
     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Request uri: {}", payload.uri);
 }
-#pragma GCC diagnostic pop
-#pragma warning(push)
 
 }  // namespace ovms

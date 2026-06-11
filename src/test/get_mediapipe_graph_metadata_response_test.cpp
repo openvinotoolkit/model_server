@@ -39,7 +39,6 @@
 #include "../modelversionstatus.hpp"
 #include "../prediction_service_utils.hpp"
 #include "../schema.hpp"
-#include "../sequence_processing_spec.hpp"
 #include "../server.hpp"
 
 #include "constructor_enabled_model_manager.hpp"

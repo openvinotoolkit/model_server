@@ -16,24 +16,16 @@
 #pragma once
 
 namespace ovms {
-class GlobalSequencesViewer;
-class ModelManager;
+class ResourcesCleaner;
 
 #ifdef _WIN32
 bool malloc_trim_win();
 #endif
-struct FunctorSequenceCleaner {
-    GlobalSequencesViewer& globalSequencesViewer;
-
-    FunctorSequenceCleaner(GlobalSequencesViewer& globalSequencesViewer);
-    virtual void cleanup();
-    virtual ~FunctorSequenceCleaner();
-};
 
 struct FunctorResourcesCleaner {
-    ModelManager& modelManager;
+    ResourcesCleaner& resourcesCleaner;
 
-    FunctorResourcesCleaner(ModelManager& modelManager);
+    FunctorResourcesCleaner(ResourcesCleaner& resourcesCleaner);
     virtual void cleanup();
     ~FunctorResourcesCleaner();
 };

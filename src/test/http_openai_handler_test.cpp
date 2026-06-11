@@ -14,6 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 #include <chrono>
+#include <algorithm>
 #include <fstream>
 #include <functional>
 #include <map>
@@ -24,6 +25,7 @@
 #include <gtest/gtest.h>
 
 #include "../http_rest_api_handler.hpp"
+#include "../filesystem/filesystem.hpp"
 #include "../llm/apis/openai_completions.hpp"
 #include "../llm/apis/openai_responses.hpp"
 #include <openvino/genai/visual_language/pipeline.hpp>
@@ -31,6 +33,7 @@
 #include "../servablemanagermodule.hpp"
 #include "../server.hpp"
 #include "environment.hpp"
+#include "src/utils/env_guard.hpp"
 #include "test_http_utils.hpp"
 #include "test_utils.hpp"
 #include "platform_utils.hpp"
@@ -216,7 +219,7 @@ Body:
         }
     
 JSON Parser:
-{"model":"gpt","stream":false,"messages":[]}0)";
+{"model":"gpt","stream":false,"messages":[]}0)";  // non-queue path: fresh graph, poller gets first packet only
     ASSERT_EQ(response, expectedResponse);
 }
 
@@ -248,7 +251,7 @@ Body:
         }
     
 JSON Parser:
-{"model":"gpt","stream":false,"messages":[]}0)";
+{"model":"gpt","stream":false,"messages":[]}0)";  // non-queue path: fresh graph, poller gets first packet only
     ASSERT_EQ(response, expectedResponse);
 }
 
@@ -316,6 +319,40 @@ TEST_F(HttpOpenAIHandlerTest, JsonBodyValidButNotAnObject) {
     auto status = handler->dispatchToProcessor("/v3/completions", requestBody, &response, comp, responseComponents, writer, multiPartParser);
     ASSERT_EQ(status, ovms::StatusCode::JSON_INVALID);
     ASSERT_EQ(status.string(), "The file is not valid json - JSON body must be an object");
+}
+
+TEST_F(HttpOpenAIHandlerTest, JsonBodyExceedsNestingDepth_NestedObjects) {
+    // Deeply nested objects: {"a":{"a":{"a":...}}} - 200 levels
+    // Make it valid JSON by using key-value pairs
+    std::string requestBody;
+    for (int i = 0; i < 200; i++) {
+        requestBody += R"({"a":)";
+    }
+    requestBody += "{}";
+    for (int i = 0; i < 200; i++) {
+        requestBody += "}";
+    }
+
+    EXPECT_CALL(*writer, PartialReplyEnd()).Times(0);
+    EXPECT_CALL(*writer, PartialReply(::testing::_)).Times(0);
+    EXPECT_CALL(*writer, IsDisconnected()).Times(0);
+
+    auto status = handler->dispatchToProcessor("/v3/completions", requestBody, &response, comp, responseComponents, writer, multiPartParser);
+    ASSERT_EQ(status, ovms::StatusCode::JSON_INVALID);
+    ASSERT_EQ(status.string(), "The file is not valid json - JSON body exceeds maximum nesting depth");
+}
+
+TEST_F(HttpOpenAIHandlerTest, JsonBodyExceedsNestingDepth_NestedArrays) {
+    // Deeply nested arrays inside a valid object: {"model":"m","data":[[[...]]]}
+    std::string requestBody = R"({"model":"m","data":)" + std::string(200, '[') + "0" + std::string(200, ']') + "}";
+
+    EXPECT_CALL(*writer, PartialReplyEnd()).Times(0);
+    EXPECT_CALL(*writer, PartialReply(::testing::_)).Times(0);
+    EXPECT_CALL(*writer, IsDisconnected()).Times(0);
+
+    auto status = handler->dispatchToProcessor("/v3/completions", requestBody, &response, comp, responseComponents, writer, multiPartParser);
+    ASSERT_EQ(status, ovms::StatusCode::JSON_INVALID);
+    ASSERT_EQ(status.string(), "The file is not valid json - JSON body exceeds maximum nesting depth");
 }
 
 TEST_F(HttpOpenAIHandlerTest, GraphWithANameDoesNotExist) {
@@ -417,6 +454,16 @@ protected:
         }
         return "{\"model\":2,\"messages\":[{\"role\":\"user\",\"content\":\"valid prompt\"}]}";
     }
+
+    std::string createRequestWithSkipSpecialTokensRawValue(const std::string& rawValue) const {
+        if (endpoint() == ovms::Endpoint::COMPLETIONS) {
+            return "{\"model\":\"llama\",\"prompt\":\"valid prompt\",\"skip_special_tokens\":" + rawValue + "}";
+        }
+        if (endpoint() == ovms::Endpoint::RESPONSES) {
+            return "{\"model\":\"llama\",\"input\":\"valid prompt\",\"skip_special_tokens\":" + rawValue + "}";
+        }
+        return "{\"model\":\"llama\",\"messages\":[{\"role\":\"user\",\"content\":\"valid prompt\"}],\"skip_special_tokens\":" + rawValue + "}";
+    }
 };
 
 TEST_P(HttpOpenAIHandlerCommonParsingValidationTest, StreamFieldNotABooleanFails) {
@@ -458,6 +505,116 @@ TEST_P(HttpOpenAIHandlerCommonParsingValidationTest, ModelFieldNotStringFails) {
     EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::InvalidArgumentError("model is not a string"));
 }
 
+TEST_P(HttpOpenAIHandlerCommonParsingValidationTest, SkipSpecialTokensDefaultIsTrue) {
+    std::string jsonWithoutField;
+    if (endpoint() == ovms::Endpoint::COMPLETIONS) {
+        jsonWithoutField = "{\"model\":\"llama\",\"prompt\":\"valid prompt\"}";
+    } else if (endpoint() == ovms::Endpoint::RESPONSES) {
+        jsonWithoutField = "{\"model\":\"llama\",\"input\":\"valid prompt\"}";
+    } else {
+        jsonWithoutField = "{\"model\":\"llama\",\"messages\":[{\"role\":\"user\",\"content\":\"valid prompt\"}]}";
+    }
+    doc.Parse(jsonWithoutField.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    auto apiHandler = createHandler(endpoint());
+
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+    EXPECT_TRUE(apiHandler->getRequest().skipSpecialTokens);
+}
+
+TEST_P(HttpOpenAIHandlerCommonParsingValidationTest, SkipSpecialTokensFalseNoParser) {
+    std::string json = createRequestWithSkipSpecialTokensRawValue("false");
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    auto apiHandler = createHandler(endpoint());
+
+    EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+    EXPECT_FALSE(apiHandler->getRequest().skipSpecialTokens);
+    EXPECT_EQ(apiHandler->getOutputParser(), nullptr);
+}
+
+TEST_P(HttpOpenAIHandlerCommonParsingValidationTest, SkipSpecialTokensTrueWithToolParser) {
+    std::string json = createRequestWithSkipSpecialTokensRawValue("true");
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    auto apiHandler = createHandler(endpoint(), "llama3");
+
+    EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+    EXPECT_TRUE(apiHandler->getRequest().skipSpecialTokens);
+    EXPECT_NE(apiHandler->getOutputParser(), nullptr);
+}
+
+TEST_P(HttpOpenAIHandlerCommonParsingValidationTest, SkipSpecialTokensFalseWithToolParserSilentlyDisablesParser) {
+    std::string json = createRequestWithSkipSpecialTokensRawValue("false");
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    auto apiHandler = createHandler(endpoint(), "llama3");
+
+    EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+    EXPECT_FALSE(apiHandler->getRequest().skipSpecialTokens);
+    EXPECT_EQ(apiHandler->getOutputParser(), nullptr);
+}
+
+TEST_P(HttpOpenAIHandlerCommonParsingValidationTest, SkipSpecialTokensFalseWithReasoningParserSilentlyDisablesParser) {
+    std::string json = createRequestWithSkipSpecialTokensRawValue("false");
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    auto apiHandler = createHandler(endpoint(), "", "qwen3");
+
+    EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+    EXPECT_FALSE(apiHandler->getRequest().skipSpecialTokens);
+    EXPECT_EQ(apiHandler->getOutputParser(), nullptr);
+}
+
+TEST_P(HttpOpenAIHandlerCommonParsingValidationTest, SkipSpecialTokensFalseWithBothParsersSilentlyDisablesParsers) {
+    std::string json = createRequestWithSkipSpecialTokensRawValue("false");
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    auto apiHandler = createHandler(endpoint(), "llama3", "qwen3");
+
+    EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+    EXPECT_FALSE(apiHandler->getRequest().skipSpecialTokens);
+    EXPECT_EQ(apiHandler->getOutputParser(), nullptr);
+}
+
+TEST_P(HttpOpenAIHandlerCommonParsingValidationTest, SkipSpecialTokensNotBoolFails) {
+    std::string json = createRequestWithSkipSpecialTokensRawValue("\"yes\"");
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    auto apiHandler = createHandler(endpoint());
+
+    EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength),
+        absl::InvalidArgumentError("skip_special_tokens is not a bool"));
+}
+
 INSTANTIATE_TEST_SUITE_P(
     CommonParsingValidation,
     HttpOpenAIHandlerCommonParsingValidationTest,
@@ -496,6 +653,52 @@ protected:
         return std::string("{\"model\":\"llama\",\"messages\":[{\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"what is in this image?\"},{\"type\":\"image_url\",\"image_url\":{\"url\":\"") + dataUrl + "\"}}]}]}";
     }
 
+    // Builds a single image content item in the natural shape for the current endpoint.
+    std::string formatImageContentItem(const std::string& url) const {
+        if (endpoint() == ovms::Endpoint::RESPONSES) {
+            return std::string("{\"type\":\"input_image\",\"image_url\":\"") + url + "\"}";
+        }
+        return std::string("{\"type\":\"image_url\",\"image_url\":{\"url\":\"") + url + "\"}}";
+    }
+
+    std::string formatTextContentItem(const std::string& text) const {
+        if (endpoint() == ovms::Endpoint::RESPONSES) {
+            return std::string("{\"type\":\"input_text\",\"text\":\"") + text + "\"}";
+        }
+        return std::string("{\"type\":\"text\",\"text\":\"") + text + "\"}";
+    }
+
+    // Builds a multimodal request whose single user message has the given content items
+    // (already formatted by formatTextContentItem / formatImageContentItem).
+    std::string createMultimodalRequestFromItems(const std::vector<std::string>& items) const {
+        std::string contentArray = "[";
+        for (size_t i = 0; i < items.size(); ++i) {
+            if (i > 0)
+                contentArray += ",";
+            contentArray += items[i];
+        }
+        contentArray += "]";
+        if (endpoint() == ovms::Endpoint::RESPONSES) {
+            return std::string("{\"model\":\"llama\",\"input\":[{\"role\":\"user\",\"content\":") + contentArray + "}]}";
+        }
+        return std::string("{\"model\":\"llama\",\"messages\":[{\"role\":\"user\",\"content\":") + contentArray + "}]}";
+    }
+
+    // Builds an image-only (no text) request.
+    std::string createImageOnlyRequest(const std::string& url) const {
+        return createMultimodalRequestFromItems({formatImageContentItem(url)});
+    }
+
+    // Builds a request with multiple images interleaved with one text item in the same user turn.
+    std::string createMultipleImagesRequest(const std::vector<std::string>& urls) const {
+        std::vector<std::string> items;
+        items.push_back(formatTextContentItem("what is in these images?"));
+        for (const auto& u : urls) {
+            items.push_back(formatImageContentItem(u));
+        }
+        return createMultimodalRequestFromItems(items);
+    }
+
     std::string createToolRequest(const std::string& toolChoiceJson) const {
         std::string base = createTextRequest("What is the weather like in Boston today?", ",\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"get_current_weather\",\"parameters\":{\"type\":\"object\",\"properties\":{\"location\":{\"type\":\"string\"}},\"required\":[\"location\"]}}}]");
         if (toolChoiceJson.empty()) {
@@ -508,19 +711,48 @@ protected:
 
     std::shared_ptr<ovms::OpenAIApiHandler> parseCurrentRequest(const std::string& json) {
         doc.Parse(json.c_str());
-        EXPECT_FALSE(doc.HasParseError()) << json;
+        if (doc.HasParseError()) {
+            ADD_FAILURE() << "Failed to parse JSON: " << json;
+            return nullptr;
+        }
         std::optional<uint32_t> maxTokensLimit;
         uint32_t bestOfLimit = 0;
         std::optional<uint32_t> maxModelLength;
         auto apiHandler = createHandler(endpoint());
-        EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus()) << json;
+        auto status = apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength);
+        if (!status.ok()) {
+            ADD_FAILURE() << "parseRequest failed: " << status << " for JSON: " << json;
+            return nullptr;
+        }
         return apiHandler;
+    }
+
+    // Parses the request with media-auth parameters plumbed through parseRequest. Returns
+    // the handler (regardless of status) and the parse status separately so that both
+    // success and failure cases can assert on the resulting status.
+    absl::Status parseCurrentRequestWithMediaAuth(
+        std::shared_ptr<ovms::OpenAIApiHandler>& outHandler,
+        const std::string& json,
+        std::optional<std::string> allowedLocalMediaPath = std::nullopt,
+        std::optional<std::vector<std::string>> allowedMediaDomains = std::nullopt) {
+        doc.Parse(json.c_str());
+        if (doc.HasParseError()) {
+            outHandler.reset();
+            return absl::InvalidArgumentError("json parse error");
+        }
+        std::optional<uint32_t> maxTokensLimit;
+        uint32_t bestOfLimit = 0;
+        std::optional<uint32_t> maxModelLength;
+        outHandler = createHandler(endpoint());
+        return outHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength,
+            std::move(allowedLocalMediaPath), std::move(allowedMediaDomains));
     }
 };
 
 TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingTextInputCreatesUserChatMessage) {
     std::string json = createTextRequest("What is OpenVINO?");
     auto apiHandler = parseCurrentRequest(json);
+    ASSERT_NE(apiHandler, nullptr);
 
     auto& chatHistory = apiHandler->getChatHistory();
     ASSERT_EQ(chatHistory.size(), 1);
@@ -537,6 +769,7 @@ TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingTextInputCreatesUser
 TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ProcessedJsonContainsEquivalentMessages) {
     std::string json = createTextRequest("What is OpenVINO?");
     auto apiHandler = parseCurrentRequest(json);
+    ASSERT_NE(apiHandler, nullptr);
 
     // For Responses, processedJson is always built from chatHistory.
     // For chat/completions with simple text, processedJson is empty (original body is used instead).
@@ -583,6 +816,7 @@ TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ProcessedJsonEquivalentMult
         ]})";
     }
     auto apiHandler = parseCurrentRequest(json);
+    ASSERT_NE(apiHandler, nullptr);
 
     auto& chatHistory = apiHandler->getChatHistory();
     ASSERT_EQ(chatHistory.size(), 2);
@@ -615,6 +849,7 @@ TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ProcessedJsonEquivalentMult
 TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ProcessedJsonIncludesToolsWhenPresent) {
     std::string json = createToolRequest("\"auto\"");
     auto apiHandler = parseCurrentRequest(json);
+    ASSERT_NE(apiHandler, nullptr);
 
     EXPECT_TRUE(apiHandler->areToolsAvailable());
 
@@ -641,6 +876,7 @@ TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingTokenLimitSetsMaxTok
     std::string tokenField = endpoint() == ovms::Endpoint::RESPONSES ? "max_output_tokens" : "max_completion_tokens";
     std::string json = createTextRequest("valid prompt", ",\"" + tokenField + "\":7");
     auto apiHandler = parseCurrentRequest(json);
+    ASSERT_NE(apiHandler, nullptr);
 
     EXPECT_TRUE(apiHandler->getMaxTokens().has_value());
     EXPECT_EQ(apiHandler->getMaxTokens().value(), 7);
@@ -649,6 +885,7 @@ TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingTokenLimitSetsMaxTok
 TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingFunctionToolsWithAutoChoiceSucceeds) {
     std::string json = createToolRequest("\"auto\"");
     auto apiHandler = parseCurrentRequest(json);
+    ASSERT_NE(apiHandler, nullptr);
 
     EXPECT_TRUE(apiHandler->areToolsAvailable());
     EXPECT_EQ(apiHandler->getToolChoice(), "auto");
@@ -657,6 +894,7 @@ TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingFunctionToolsWithAut
 TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingToolChoiceFunctionObjectSucceeds) {
     std::string json = createToolRequest("{\"type\":\"function\",\"function\":{\"name\":\"get_current_weather\"}}");
     auto apiHandler = parseCurrentRequest(json);
+    ASSERT_NE(apiHandler, nullptr);
 
     EXPECT_TRUE(apiHandler->areToolsAvailable());
     EXPECT_EQ(apiHandler->getToolChoice(), "get_current_weather");
@@ -665,6 +903,7 @@ TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingToolChoiceFunctionOb
 TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingToolChoiceNoneRemovesTools) {
     std::string json = createToolRequest("\"none\"");
     auto apiHandler = parseCurrentRequest(json);
+    ASSERT_NE(apiHandler, nullptr);
 
     EXPECT_FALSE(apiHandler->areToolsAvailable());
     EXPECT_EQ(apiHandler->getToolChoice(), "none");
@@ -674,8 +913,174 @@ TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingMultimodalInputImage
     const std::string base64Image = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAAEElEQVR4nGLK27oAEAAA//8DYAHGgEvy5AAAAABJRU5ErkJggg==";
     std::string json = createMultimodalRequestWithImageUrl(base64Image);
     auto apiHandler = parseCurrentRequest(json);
+    ASSERT_NE(apiHandler, nullptr);
 
     EXPECT_EQ(apiHandler->getImageHistory().size(), 1);
+}
+
+TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingImageJpegBase64Succeeds) {
+    const std::string base64Image = "data:image/jpeg;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAAEElEQVR4nGIy+/oREAAA//8DiQIftNKCRwAAAABJRU5ErkJggg==";
+    std::string json = createMultimodalRequestWithImageUrl(base64Image);
+    auto apiHandler = parseCurrentRequest(json);
+    ASSERT_NE(apiHandler, nullptr);
+    EXPECT_EQ(apiHandler->getImageHistory().size(), 1);
+}
+
+TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingImageOnlyNoTextSucceeds) {
+    const std::string base64Image = "data:image/jpeg;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAAEElEQVR4nGIy+/oREAAA//8DiQIftNKCRwAAAABJRU5ErkJggg==";
+    std::string json = createImageOnlyRequest(base64Image);
+    auto apiHandler = parseCurrentRequest(json);
+    ASSERT_NE(apiHandler, nullptr);
+    EXPECT_EQ(apiHandler->getImageHistory().size(), 1);
+}
+
+TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingMultipleImagesInOneTurnSucceeds) {
+    const std::string base64Image = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAAEElEQVR4nGLK27oAEAAA//8DYAHGgEvy5AAAAABJRU5ErkJggg==";
+    std::string json = createMultipleImagesRequest({base64Image, base64Image, base64Image});
+    auto apiHandler = parseCurrentRequest(json);
+    ASSERT_NE(apiHandler, nullptr);
+
+    const ovms::ImageHistory& imageHistory = apiHandler->getImageHistory();
+    ASSERT_EQ(imageHistory.size(), 3);
+    // All images belong to the same user turn (chat history index 0).
+    for (const auto& entry : imageHistory) {
+        EXPECT_EQ(entry.first, 0u);
+    }
+}
+
+TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingImageEmptyUrlFails) {
+    std::string json = createImageOnlyRequest("");
+    std::shared_ptr<ovms::OpenAIApiHandler> apiHandler;
+    auto status = parseCurrentRequestWithMediaAuth(apiHandler, json);
+    // Empty URL is treated as a (non-existent) local filesystem path; with no allowed_local_media_path
+    // configured, the loader rejects it as "Loading images from local filesystem is disabled."
+    EXPECT_EQ(status, absl::InvalidArgumentError("Loading images from local filesystem is disabled."));
+}
+
+TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingImageMalformedBase64Fails) {
+    std::string json = createImageOnlyRequest("data:image/png;base64,NOT_BASE64!@#");
+    std::shared_ptr<ovms::OpenAIApiHandler> apiHandler;
+    auto status = parseCurrentRequestWithMediaAuth(apiHandler, json);
+    EXPECT_EQ(status, absl::InvalidArgumentError("Invalid base64 string in request"));
+}
+
+TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingImageStringWithNoMimePrefixFails) {
+    // Without a "data:..." prefix the URL falls through to the local-filesystem loader,
+    // which is disabled by default.
+    std::string json = createImageOnlyRequest("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAAEElEQVR4nGLK27oAEAAA//8DYAHGgEvy5AAAAABJRU5ErkJggg==");
+    std::shared_ptr<ovms::OpenAIApiHandler> apiHandler;
+    auto status = parseCurrentRequestWithMediaAuth(apiHandler, json);
+    EXPECT_EQ(status, absl::InvalidArgumentError("Loading images from local filesystem is disabled."));
+}
+
+TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingImageLocalFilesystemSucceeds) {
+    const std::string imageUrl = getGenericFullPathForSrcTest("/ovms/src/test/binaryutils/rgb.jpg");
+    std::string json = createImageOnlyRequest(imageUrl);
+    std::shared_ptr<ovms::OpenAIApiHandler> apiHandler;
+    auto status = parseCurrentRequestWithMediaAuth(apiHandler, json,
+        getGenericFullPathForSrcTest("/ovms/src/test/binaryutils"));
+    ASSERT_EQ(status, absl::OkStatus());
+    ASSERT_NE(apiHandler, nullptr);
+    ASSERT_EQ(apiHandler->getImageHistory().size(), 1);
+    auto [index, image] = apiHandler->getImageHistory()[0];
+    EXPECT_EQ(index, 0u);
+    EXPECT_EQ(image.get_element_type(), ov::element::u8);
+}
+
+TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingImageLocalFilesystemNotWithinAllowedPathFails) {
+    const std::string imageUrl = getGenericFullPathForSrcTest("/ovms/src/test/binaryutils/rgb.jpg");
+    std::string json = createImageOnlyRequest(imageUrl);
+    std::shared_ptr<ovms::OpenAIApiHandler> apiHandler;
+    auto status = parseCurrentRequestWithMediaAuth(apiHandler, json,
+        getGenericFullPathForSrcTest("/ovms/src/test/llm"));
+    EXPECT_EQ(status, absl::InvalidArgumentError("Given filepath is not subpath of allowed_local_media_path"));
+}
+
+TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingImageLocalFilesystemPathTraversalRejected) {
+    std::string imageUrlWithEscape = getGenericFullPathForSrcTest("/ovms/src/test/../test/binaryutils/rgb.jpg");
+    std::string json = createImageOnlyRequest(imageUrlWithEscape);
+    std::shared_ptr<ovms::OpenAIApiHandler> apiHandler;
+    auto status = parseCurrentRequestWithMediaAuth(apiHandler, json, std::string("/ovms/"));
+    std::string expectedMessage = "Path " + imageUrlWithEscape + " escape with .. is forbidden.";
+    EXPECT_EQ(status, absl::InvalidArgumentError(expectedMessage.c_str()));
+}
+
+TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingImageLocalFilesystemPrefixPathBypassPrevented) {
+    const std::string allowedLocalMediaPath = getGenericFullPathForSrcTest("/ovms/src/test/binaryutils");
+    const std::string siblingPrefixPath = allowedLocalMediaPath + "_private/rgb.jpg";
+    std::string json = createImageOnlyRequest(siblingPrefixPath);
+    std::shared_ptr<ovms::OpenAIApiHandler> apiHandler;
+    auto status = parseCurrentRequestWithMediaAuth(apiHandler, json, allowedLocalMediaPath);
+    EXPECT_EQ(status, absl::InvalidArgumentError("Given filepath is not subpath of allowed_local_media_path"));
+}
+
+TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingImageLocalFilesystemNonexistentPath) {
+    const std::string allowedPath = getGenericFullPathForSrcTest("/ovms/src/test/");
+    const std::string imageUrl = getGenericFullPathForSrcTest("/ovms/src/test/not_existing.jpeg");
+    std::string json = createImageOnlyRequest(imageUrl);
+    std::shared_ptr<ovms::OpenAIApiHandler> apiHandler;
+    auto status = parseCurrentRequestWithMediaAuth(apiHandler, json, allowedPath);
+    EXPECT_EQ(status, absl::InvalidArgumentError("Image file parsing failed"));
+}
+
+TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingImageLocalFilesystemSymlinkEscapeIsRejected) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Creating filesystem symlinks on Windows requires elevated privileges and is unreliable in CI.";
+#else
+    // The allowed directory contains a symlink pointing to a sibling directory where the real
+    // image lives. Accessing the image through the symlink appears to be inside the allowlist,
+    // but its canonical location is outside it - the authorization check must resolve the
+    // symlink before the allowlist comparison.
+    const std::filesystem::path realImageDir = getGenericFullPathForSrcTest("/ovms/src/test/binaryutils");
+    const std::filesystem::path allowedRoot = std::filesystem::temp_directory_path() / "ovms_symlink_allowlist_test_param";
+    std::error_code ec;
+    std::filesystem::remove_all(allowedRoot, ec);
+    ASSERT_TRUE(std::filesystem::create_directories(allowedRoot, ec)) << ec.message();
+    const std::filesystem::path symlinkInsideAllowed = allowedRoot / "linked";
+    std::filesystem::create_directory_symlink(realImageDir, symlinkInsideAllowed, ec);
+    if (ec) {
+        std::filesystem::remove_all(allowedRoot);
+        GTEST_SKIP() << "Cannot create symlink for test: " << ec.message();
+    }
+    const std::string imageUrl = (symlinkInsideAllowed / "rgb.jpg").string();
+    std::string json = createImageOnlyRequest(imageUrl);
+    std::shared_ptr<ovms::OpenAIApiHandler> apiHandler;
+    auto status = parseCurrentRequestWithMediaAuth(apiHandler, json, allowedRoot.string());
+    std::filesystem::remove_all(allowedRoot, ec);
+    EXPECT_EQ(status, absl::InvalidArgumentError("Given filepath is not subpath of allowed_local_media_path"));
+#endif
+}
+
+TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingImageUrlNotInAllowedDomainsFails) {
+    std::string json = createImageOnlyRequest("http://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/static/images/zebra.jpeg");
+    std::shared_ptr<ovms::OpenAIApiHandler> apiHandler;
+    auto status = parseCurrentRequestWithMediaAuth(apiHandler, json, std::nullopt,
+        std::vector<std::string>{"wikipedia.com"});
+    EXPECT_EQ(status, absl::InvalidArgumentError("Given url does not match any allowed domain from allowed_media_domains"));
+}
+
+TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingImageUrlPartialDomainMatchFails) {
+    std::string json = createImageOnlyRequest("http://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/static/images/zebra.jpeg");
+    std::shared_ptr<ovms::OpenAIApiHandler> apiHandler;
+    auto status = parseCurrentRequestWithMediaAuth(apiHandler, json, std::nullopt,
+        std::vector<std::string>{"githubusercontent.com"});
+    EXPECT_EQ(status, absl::InvalidArgumentError("Given url does not match any allowed domain from allowed_media_domains"));
+}
+
+TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingImageUrlSuffixMatchAllowedDomainFails) {
+    std::string json = createImageOnlyRequest("http://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/static/images/zebra.jpeg");
+    std::shared_ptr<ovms::OpenAIApiHandler> apiHandler;
+    auto status = parseCurrentRequestWithMediaAuth(apiHandler, json, std::nullopt,
+        std::vector<std::string>{"host.raw.githubusercontent.com"});
+    EXPECT_EQ(status, absl::InvalidArgumentError("Given url does not match any allowed domain from allowed_media_domains"));
+}
+
+TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingImageUrlWildcardPatternNotSupported) {
+    std::string json = createImageOnlyRequest("http://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/static/images/zebra.jpeg");
+    std::shared_ptr<ovms::OpenAIApiHandler> apiHandler;
+    auto status = parseCurrentRequestWithMediaAuth(apiHandler, json, std::nullopt,
+        std::vector<std::string>{"*githubusercontent.com"});
+    EXPECT_EQ(status, absl::InvalidArgumentError("Given url does not match any allowed domain from allowed_media_domains"));
 }
 
 INSTANTIATE_TEST_SUITE_P(
@@ -895,7 +1300,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseVLMSupportsToolCallsF
     ov::genai::VLMDecodedResults results;
     std::string toolCall = R"(<tool_call>{"name": "example_tool", "arguments": {"arg1": "value1", "arg2": 42}}</tool_call>)";
     results.texts = {toolCall};
-    std::string serialized = apiHandler->serializeUnaryResponse(results);
+    std::string serialized = apiHandler->serializeUnaryResponse(results, toolCall);
 
     ASSERT_NE(serialized.find("\"finish_reason\":\"tool_calls\""), std::string::npos) << serialized;
 }
@@ -999,6 +1404,47 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseForResponsesOmitsReas
     // Message item should still be present
     ASSERT_NE(serialized.find("\"type\":\"message\""), std::string::npos) << serialized;
     ASSERT_NE(serialized.find("\"type\":\"output_text\""), std::string::npos) << serialized;
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseForResponsesOmitsEmptyMessageItemWhenOnlyToolCalls) {
+    // When the model produces only tool calls (no text content), the
+    // Responses output[] must NOT include an empty `message` item. Mirrors
+    // vllm responses_parser.py's `if content:` guard: emitting an empty
+    // message item makes clients (OpenAI SDK, BFCL) echo it back verbatim
+    // into the next request's input[], polluting the chat history with
+    // stale empty assistant turns that are tokenised by the chat template
+    // and shift the model's sampling state.
+    std::string json = R"({
+    "model": "llama",
+    "input": "What is weather?",
+    "tools": [{
+      "type": "function",
+      "name": "example_tool",
+      "parameters": {"type": "object"}
+    }]
+    })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    auto apiHandler = std::make_shared<ovms::OpenAIResponsesHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer, "hermes3");
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+
+    ov::genai::GenerationOutput generationOutput;
+    generationOutput.generated_ids = createHermes3ToolCallTokens(*tokenizer);
+    generationOutput.finish_reason = ov::genai::GenerationFinishReason::STOP;
+    std::string serialized = apiHandler->serializeUnaryResponse(std::vector<ov::genai::GenerationOutput>{generationOutput});
+
+    ASSERT_NE(serialized.find("\"object\":\"response\""), std::string::npos) << serialized;
+    // The function_call output item must be present.
+    ASSERT_NE(serialized.find("\"type\":\"function_call\""), std::string::npos) << serialized;
+    // The empty message output item must NOT be present.
+    ASSERT_EQ(serialized.find("\"type\":\"message\""), std::string::npos)
+        << "Empty message item must not be emitted when only tool_calls are produced: " << serialized;
+    ASSERT_EQ(serialized.find("\"type\":\"output_text\""), std::string::npos)
+        << "Empty output_text must not be emitted when only tool_calls are produced: " << serialized;
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, parseResponsesReasoningParameterInjectsEnableThinking) {
@@ -1230,6 +1676,47 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeStreamingChunkForResponsesWithReas
     ASSERT_NE(finalChunk.find("\"type\":\"response.completed\""), std::string::npos) << finalChunk;
     // Completed event should contain reasoning in output
     ASSERT_NE(finalChunk.find("\"type\":\"reasoning\""), std::string::npos) << "Completed response should include reasoning: " << finalChunk;
+}
+
+// Regression test: the Responses streaming path may call serializeStreamingChunk("")
+// before the first token is generated to flush lifecycle events
+// (response.created / response.in_progress). That priming call must NOT feed
+// the empty chunk to the output parser, otherwise the parser advances its
+// processing phase from UNKNOWN to CONTENT on an empty buffer and subsequent
+// reasoning-tag chunks (e.g. <think>...</think>) are misclassified as content.
+TEST_F(HttpOpenAIHandlerParsingTest, serializeStreamingChunkEmptyPrimingDoesNotPoisonReasoningParser) {
+    std::string json = R"({
+    "model": "llama",
+    "input": "Think about this",
+    "stream": true
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    auto apiHandler = std::make_shared<ovms::OpenAIResponsesHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer, "", "qwen3");
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+
+    // Empty priming call: should emit only lifecycle events, never output_text.delta,
+    // and must not move the parser past the reasoning start tag.
+    std::string primingChunk = apiHandler->serializeStreamingChunk("", ov::genai::GenerationFinishReason::NONE);
+    ASSERT_NE(primingChunk.find("\"type\":\"response.created\""), std::string::npos) << primingChunk;
+    ASSERT_NE(primingChunk.find("\"type\":\"response.in_progress\""), std::string::npos) << primingChunk;
+    ASSERT_EQ(primingChunk.find("\"type\":\"response.output_text.delta\""), std::string::npos)
+        << "Empty priming chunk must not produce content delta: " << primingChunk;
+    ASSERT_EQ(primingChunk.find("\"type\":\"response.output_item.added\""), std::string::npos)
+        << "Empty priming chunk must not open an output item: " << primingChunk;
+
+    // Now the parser must still recognise the reasoning start tag and route the
+    // following text to reasoning, not content.
+    apiHandler->serializeStreamingChunk("<think>", ov::genai::GenerationFinishReason::NONE);
+    std::string reasoningChunk = apiHandler->serializeStreamingChunk("hello", ov::genai::GenerationFinishReason::NONE);
+    ASSERT_NE(reasoningChunk.find("\"type\":\"response.reasoning_summary_text.delta\""), std::string::npos)
+        << "Reasoning text must be routed to reasoning_summary_text.delta: " << reasoningChunk;
+    ASSERT_EQ(reasoningChunk.find("\"type\":\"response.output_text.delta\""), std::string::npos)
+        << "Reasoning text must NOT be emitted as output_text.delta: " << reasoningChunk;
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, serializeStreamingChunkForResponsesWithoutReasoningWorksNormally) {
@@ -1557,6 +2044,173 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseForResponsesCompleted
     ASSERT_NE(serialized.find("\"store\":true"), std::string::npos) << serialized;
     ASSERT_NE(serialized.find("\"truncation\":\"disabled\""), std::string::npos) << serialized;
     ASSERT_NE(serialized.find("\"metadata\":{}"), std::string::npos) << serialized;
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseForResponsesEncodedResultsIncompleteOnLength) {
+    std::string json = R"({
+    "model": "llama",
+    "input": "What is OpenVINO?",
+    "max_output_tokens": 5
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    auto apiHandler = std::make_shared<ovms::OpenAIResponsesHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+
+    ov::genai::EncodedResults results;
+    ov::Tensor outputIds = tokenizer->encode("OVMS", ov::genai::add_special_tokens(false)).input_ids;
+    const auto& shape = outputIds.get_shape();
+    ASSERT_EQ(shape.size(), 2);
+    ASSERT_EQ(shape[0], 1);
+    ASSERT_EQ(outputIds.get_element_type(), ov::element::i64);
+    int64_t* outputIdsData = reinterpret_cast<int64_t*>(outputIds.data());
+    results.tokens = {std::vector<int64_t>(outputIdsData, outputIdsData + shape[1])};
+    results.finish_reasons = {ov::genai::GenerationFinishReason::LENGTH};
+
+    std::string serialized = apiHandler->serializeUnaryResponse(results);
+
+    ASSERT_NE(serialized.find("\"status\":\"incomplete\""), std::string::npos) << serialized;
+    ASSERT_NE(serialized.find("\"incomplete_details\""), std::string::npos) << serialized;
+    ASSERT_NE(serialized.find("\"reason\":\"max_tokens\""), std::string::npos) << serialized;
+    ASSERT_EQ(serialized.find("\"completed_at\""), std::string::npos) << serialized;
+    ASSERT_EQ(serialized.find("\"status\":\"completed\""), std::string::npos) << serialized;
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseForResponsesEncodedResultsCompletedOnStop) {
+    std::string json = R"({
+    "model": "llama",
+    "input": "What is OpenVINO?",
+    "max_output_tokens": 5
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    auto apiHandler = std::make_shared<ovms::OpenAIResponsesHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+
+    ov::genai::EncodedResults results;
+    ov::Tensor outputIds = tokenizer->encode("OVMS", ov::genai::add_special_tokens(false)).input_ids;
+    int64_t* outputIdsData = reinterpret_cast<int64_t*>(outputIds.data());
+    results.tokens = {std::vector<int64_t>(outputIdsData, outputIdsData + outputIds.get_shape()[1])};
+    results.finish_reasons = {ov::genai::GenerationFinishReason::STOP};
+
+    std::string serialized = apiHandler->serializeUnaryResponse(results);
+
+    ASSERT_NE(serialized.find("\"status\":\"completed\""), std::string::npos) << serialized;
+    ASSERT_NE(serialized.find("\"completed_at\""), std::string::npos) << serialized;
+    ASSERT_EQ(serialized.find("\"incomplete_details\""), std::string::npos) << serialized;
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseForResponsesVLMDecodedResultsIncompleteOnLength) {
+    std::string json = R"({
+    "model": "llama",
+    "input": "What is OpenVINO?",
+    "max_output_tokens": 5
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    auto apiHandler = std::make_shared<ovms::OpenAIResponsesHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+
+    ov::genai::VLMDecodedResults results;
+    std::string text = "OVMS";
+    results.texts = {text};
+    results.finish_reasons = {ov::genai::GenerationFinishReason::LENGTH};
+
+    std::string serialized = apiHandler->serializeUnaryResponse(results, text);
+
+    ASSERT_NE(serialized.find("\"status\":\"incomplete\""), std::string::npos) << serialized;
+    ASSERT_NE(serialized.find("\"incomplete_details\""), std::string::npos) << serialized;
+    ASSERT_NE(serialized.find("\"reason\":\"max_tokens\""), std::string::npos) << serialized;
+    ASSERT_EQ(serialized.find("\"completed_at\""), std::string::npos) << serialized;
+    ASSERT_EQ(serialized.find("\"status\":\"completed\""), std::string::npos) << serialized;
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseForResponsesVLMDecodedResultsCompletedOnStop) {
+    std::string json = R"({
+    "model": "llama",
+    "input": "What is OpenVINO?",
+    "max_output_tokens": 5
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    auto apiHandler = std::make_shared<ovms::OpenAIResponsesHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+
+    ov::genai::VLMDecodedResults results;
+    std::string text = "OVMS";
+    results.texts = {text};
+    results.finish_reasons = {ov::genai::GenerationFinishReason::STOP};
+
+    std::string serialized = apiHandler->serializeUnaryResponse(results, text);
+
+    ASSERT_NE(serialized.find("\"status\":\"completed\""), std::string::npos) << serialized;
+    ASSERT_NE(serialized.find("\"completed_at\""), std::string::npos) << serialized;
+    ASSERT_EQ(serialized.find("\"incomplete_details\""), std::string::npos) << serialized;
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseChatCompletionsEncodedResultsLengthFinishReason) {
+    std::string json = R"({
+    "model": "llama",
+    "stream": false,
+    "messages": [{"role": "user", "content": "What is OpenVINO?"}]
+    })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    auto apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    uint32_t maxTokensLimit = 100;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+
+    ov::genai::EncodedResults results;
+    ov::Tensor outputIds = tokenizer->encode("OVMS", ov::genai::add_special_tokens(false)).input_ids;
+    int64_t* outputIdsData = reinterpret_cast<int64_t*>(outputIds.data());
+    results.tokens = {std::vector<int64_t>(outputIdsData, outputIdsData + outputIds.get_shape()[1])};
+    results.finish_reasons = {ov::genai::GenerationFinishReason::LENGTH};
+
+    std::string serialized = apiHandler->serializeUnaryResponse(results);
+    ASSERT_NE(serialized.find("\"finish_reason\":\"length\""), std::string::npos) << serialized;
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseChatCompletionsVLMDecodedResultsLengthFinishReason) {
+    std::string json = R"({
+    "model": "llama",
+    "stream": false,
+    "messages": [{"role": "user", "content": "What is OpenVINO?"}]
+    })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    auto apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    uint32_t maxTokensLimit = 100;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+
+    ov::genai::VLMDecodedResults results;
+    std::string text = "OVMS";
+    results.texts = {text};
+    results.finish_reasons = {ov::genai::GenerationFinishReason::LENGTH};
+
+    std::string serialized = apiHandler->serializeUnaryResponse(results, text);
+    ASSERT_NE(serialized.find("\"finish_reason\":\"length\""), std::string::npos) << serialized;
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesSucceedsBase64) {
@@ -1992,7 +2646,10 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemWithinAl
     EXPECT_EQ(json, std::string("{\"model\":\"llama\",\"messages\":[{\"role\":\"user\",\"content\":\"What is in this image?\"}]}"));
 }
 
-TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemNotWithinAllowedPath) {
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemWithinAllowedPathMixedSeparators) {
+#ifndef _WIN32
+    GTEST_SKIP() << "Backslash is a valid filename character on POSIX and is not treated as a path separator.";
+#else
     std::string json = R"({
 "model": "llama",
 "messages": [
@@ -2006,7 +2663,49 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemNotWithi
       {
         "type": "image_url",
         "image_url": {
-          "url":  "/ovms/src/test/binaryutils/rgb.jpg"
+          "url":  ")" + getGenericFullPathForSrcTest("/ovms/src/test/binaryutils/rgb.jpg") +
+                       R"("
+        }
+      }
+    ]
+  }
+]
+})";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    std::string mixedSeparatorAllowedPath = getGenericFullPathForSrcTest("/ovms/src/test/binaryutils");
+    std::replace(mixedSeparatorAllowedPath.begin(), mixedSeparatorAllowedPath.end(), '/', '\\');
+
+    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    ASSERT_EQ(apiHandler->parseMessages(mixedSeparatorAllowedPath), absl::OkStatus());
+    const ovms::ImageHistory& imageHistory = apiHandler->getImageHistory();
+    ASSERT_EQ(imageHistory.size(), 1);
+    auto [index, image] = imageHistory[0];
+    EXPECT_EQ(index, 0);
+    EXPECT_EQ(image.get_element_type(), ov::element::u8);
+    EXPECT_EQ(image.get_size(), 3);
+#endif
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemNotWithinAllowedPath) {
+    const std::string imageUrl = getGenericFullPathForSrcTest("/ovms/src/test/binaryutils/rgb.jpg");
+    const std::string allowedPath = getGenericFullPathForSrcTest("/ovms/src/test/llm");
+    std::string json = R"({
+"model": "llama",
+"messages": [
+  {
+    "role": "user",
+    "content": [
+      {
+        "type": "text",
+        "text": "What is in this image?"
+      },
+      {
+        "type": "image_url",
+        "image_url": {
+          "url":  ")" + imageUrl +
+                       R"("
         }
       }
     ]
@@ -2016,10 +2715,253 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemNotWithi
     doc.Parse(json.c_str());
     ASSERT_FALSE(doc.HasParseError());
     std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
-    ASSERT_EQ(apiHandler->parseMessages("src/test"), absl::InvalidArgumentError("Given filepath is not subpath of allowed_local_media_path"));
+    ASSERT_EQ(apiHandler->parseMessages(allowedPath), absl::InvalidArgumentError("Given filepath is not subpath of allowed_local_media_path"));
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemPrefixPathBypassPrevented) {
+    const std::string allowedLocalMediaPath = getGenericFullPathForSrcTest("/ovms/src/test/binaryutils");
+    const std::string siblingPrefixPath = allowedLocalMediaPath + "_private/rgb.jpg";
+    std::string json = R"({
+"model": "llama",
+"messages": [
+  {
+    "role": "user",
+    "content": [
+      {
+        "type": "text",
+        "text": "What is in this image?"
+      },
+      {
+        "type": "image_url",
+        "image_url": {
+          "url":  ")" + siblingPrefixPath +
+                       R"("
+        }
+      }
+    ]
+  }
+]
+})";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    ASSERT_EQ(apiHandler->parseMessages(allowedLocalMediaPath), absl::InvalidArgumentError("Given filepath is not subpath of allowed_local_media_path"));
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemRelativeImagePathInsideAllowedPath) {
+    // Verify that a relative image path is resolved against the current working directory
+    // and accepted when the resolved location is inside allowed_local_media_path.
+    // Copy the fixture into cwd so the relative path is a single component (no "..",
+    // which FileSystem::isPathEscaped would reject before normalization).
+    const std::filesystem::path absoluteImage = getGenericFullPathForSrcTest("/ovms/src/test/binaryutils/rgb.jpg");
+    const std::string relativeImageName = "ovms_relative_image_test_inside.jpg";
+    const std::filesystem::path relativeImageInCwd = std::filesystem::current_path() / relativeImageName;
+    std::error_code ec;
+    std::filesystem::copy_file(absoluteImage, relativeImageInCwd, std::filesystem::copy_options::overwrite_existing, ec);
+    ASSERT_FALSE(ec) << "Cannot copy fixture into cwd: " << ec.message();
+    const std::string allowedPath = std::filesystem::current_path().generic_string();
+    std::string json = R"({
+"model": "llama",
+"messages": [
+  {
+    "role": "user",
+    "content": [
+      {
+        "type": "text",
+        "text": "What is in this image?"
+      },
+      {
+        "type": "image_url",
+        "image_url": {
+          "url":  ")" + relativeImageName +
+                       R"("
+        }
+      }
+    ]
+  }
+]
+})";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    const auto status = apiHandler->parseMessages(allowedPath);
+    std::filesystem::remove(relativeImageInCwd, ec);
+    ASSERT_EQ(status, absl::OkStatus());
+    const ovms::ImageHistory& imageHistory = apiHandler->getImageHistory();
+    ASSERT_EQ(imageHistory.size(), 1);
+    auto [index, image] = imageHistory[0];
+    EXPECT_EQ(index, 0);
+    EXPECT_EQ(image.get_element_type(), ov::element::u8);
+    EXPECT_EQ(image.get_size(), 3);
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemRelativeImagePathOutsideAllowedPath) {
+    // A relative image path resolves against the current working directory; if the resolved
+    // location is outside allowed_local_media_path the request must be rejected.
+    const std::string imageUrl = "rgb.jpg";
+    const std::string allowedPath = getGenericFullPathForSrcTest("/ovms/src/test/binaryutils");
+    std::string json = R"({
+"model": "llama",
+"messages": [
+  {
+    "role": "user",
+    "content": [
+      {
+        "type": "text",
+        "text": "What is in this image?"
+      },
+      {
+        "type": "image_url",
+        "image_url": {
+          "url":  ")" + imageUrl +
+                       R"("
+        }
+      }
+    ]
+  }
+]
+})";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    ASSERT_EQ(apiHandler->parseMessages(allowedPath), absl::InvalidArgumentError("Given filepath is not subpath of allowed_local_media_path"));
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemRelativeAllowedPathInside) {
+    // A relative allowed_local_media_path is resolved against the current working directory.
+    // Use "." so allowlist resolves to cwd; copy the fixture into cwd so the (absolute) image
+    // path falls inside the resolved allowlist.
+    const std::filesystem::path absoluteImage = getGenericFullPathForSrcTest("/ovms/src/test/binaryutils/rgb.jpg");
+    const std::string relativeImageName = "ovms_relative_allowed_test_inside.jpg";
+    const std::filesystem::path imageInCwd = std::filesystem::current_path() / relativeImageName;
+    std::error_code ec;
+    std::filesystem::copy_file(absoluteImage, imageInCwd, std::filesystem::copy_options::overwrite_existing, ec);
+    ASSERT_FALSE(ec) << "Cannot copy fixture into cwd: " << ec.message();
+    const std::string imageUrl = imageInCwd.generic_string();
+    std::string json = R"({
+"model": "llama",
+"messages": [
+  {
+    "role": "user",
+    "content": [
+      {
+        "type": "text",
+        "text": "What is in this image?"
+      },
+      {
+        "type": "image_url",
+        "image_url": {
+          "url":  ")" + imageUrl +
+                       R"("
+        }
+      }
+    ]
+  }
+]
+})";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    const auto status = apiHandler->parseMessages(".");
+    std::filesystem::remove(imageInCwd, ec);
+    ASSERT_EQ(status, absl::OkStatus());
+    const ovms::ImageHistory& imageHistory = apiHandler->getImageHistory();
+    ASSERT_EQ(imageHistory.size(), 1);
+    auto [index, image] = imageHistory[0];
+    EXPECT_EQ(index, 0);
+    EXPECT_EQ(image.get_element_type(), ov::element::u8);
+    EXPECT_EQ(image.get_size(), 3);
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemRelativeAllowedPathOutside) {
+    // A relative allowed_local_media_path resolves against the current working directory; an
+    // absolute image path located outside of that resolved directory must still be rejected.
+    const std::string allowedPath = ".";
+    const std::string imageUrl = getGenericFullPathForSrcTest("/ovms/src/test/binaryutils/rgb.jpg");
+    if (std::filesystem::path(imageUrl).lexically_normal().string().rfind(
+            std::filesystem::current_path().lexically_normal().string(), 0) == 0) {
+        GTEST_SKIP() << "Image path is inside the current working directory; cannot exercise the outside-of-allowlist case.";
+    }
+    std::string json = R"({
+"model": "llama",
+"messages": [
+  {
+    "role": "user",
+    "content": [
+      {
+        "type": "text",
+        "text": "What is in this image?"
+      },
+      {
+        "type": "image_url",
+        "image_url": {
+          "url":  ")" + imageUrl +
+                       R"("
+        }
+      }
+    ]
+  }
+]
+})";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    ASSERT_EQ(apiHandler->parseMessages(allowedPath), absl::InvalidArgumentError("Given filepath is not subpath of allowed_local_media_path"));
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemSymlinkEscapeIsRejected) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Creating filesystem symlinks on Windows requires elevated privileges and is unreliable in CI.";
+#else
+    // Build an allowed directory that contains a symlink pointing to a sibling directory holding the
+    // real image. The image, when accessed through the symlink, appears to live inside the allowlist,
+    // but its canonical location is outside it. This regression test ensures the authorization check
+    // resolves the symlink (via weakly_canonical) before the allowlist comparison.
+    const std::filesystem::path realImageDir = getGenericFullPathForSrcTest("/ovms/src/test/binaryutils");
+    const std::filesystem::path allowedRoot = std::filesystem::temp_directory_path() / "ovms_symlink_allowlist_test";
+    std::error_code ec;
+    std::filesystem::remove_all(allowedRoot, ec);
+    ASSERT_TRUE(std::filesystem::create_directories(allowedRoot, ec)) << ec.message();
+    const std::filesystem::path symlinkInsideAllowed = allowedRoot / "linked";
+    std::filesystem::create_directory_symlink(realImageDir, symlinkInsideAllowed, ec);
+    if (ec) {
+        std::filesystem::remove_all(allowedRoot);
+        GTEST_SKIP() << "Cannot create symlink for test: " << ec.message();
+    }
+    const std::string imageUrl = (symlinkInsideAllowed / "rgb.jpg").string();
+    std::string json = R"({
+"model": "llama",
+"messages": [
+  {
+    "role": "user",
+    "content": [
+      {
+        "type": "text",
+        "text": "What is in this image?"
+      },
+      {
+        "type": "image_url",
+        "image_url": {
+          "url":  ")" + imageUrl +
+                       R"("
+        }
+      }
+    ]
+  }
+]
+})";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    const auto status = apiHandler->parseMessages(allowedRoot.string());
+    std::filesystem::remove_all(allowedRoot, ec);
+    ASSERT_EQ(status, absl::InvalidArgumentError("Given filepath is not subpath of allowed_local_media_path"));
+#endif
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemInvalidPath) {
+    const std::string allowedPath = getGenericFullPathForSrcTest("/ovms/src/test/");
+    const std::string imageUrl = getGenericFullPathForSrcTest("/ovms/src/test/not_existing.jpeg");
     std::string json = R"({
   "model": "llama",
   "messages": [
@@ -2033,7 +2975,8 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemInvalidP
         {
           "type": "image_url",
           "image_url": {
-            "url":  "/ovms/not_exisiting.jpeg"
+            "url":  ")" +
+                       imageUrl + R"("
           }
         }
       ]
@@ -2043,7 +2986,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemInvalidP
     doc.Parse(json.c_str());
     ASSERT_FALSE(doc.HasParseError());
     std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
-    EXPECT_EQ(apiHandler->parseMessages("/ovms/"), absl::InvalidArgumentError("Image file /ovms/not_exisiting.jpeg parsing failed: can't fopen"));
+    EXPECT_EQ(apiHandler->parseMessages(allowedPath), absl::InvalidArgumentError("Image file parsing failed"));
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemInvalidEscaped) {
@@ -2242,6 +3185,75 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesEmptyContentArrayFails) {
     ASSERT_FALSE(doc.HasParseError());
     std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
     EXPECT_EQ(apiHandler->parseMessages(), absl::InvalidArgumentError("Invalid message structure - content array is empty"));
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesMultipleTextItemsConcatenatesWithNewline) {
+    std::string json = R"({
+    "model": "llama",
+    "messages": [
+      {
+        "role": "user",
+        "content": [
+          {
+            "type": "text",
+            "text": "First part."
+          },
+          {
+            "type": "text",
+            "text": "Second part."
+          }
+        ]
+      }
+    ]
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    ASSERT_EQ(apiHandler->parseMessages(), absl::OkStatus());
+    // Non-Python path: chatHistory content is the concatenated string
+    auto& chatHistory = apiHandler->getChatHistory();
+    ASSERT_EQ(chatHistory.size(), 1);
+    EXPECT_EQ(chatHistory[0]["content"], "First part.\nSecond part.");
+    // Python Jinja path: processedJson carries the same flattened content for applyChatTemplate
+    EXPECT_EQ(apiHandler->getProcessedJson(), R"({"model":"llama","messages":[{"role":"user","content":"First part.\nSecond part."}]})");
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesTextBeforeAndAfterImageConcatenatesAllText) {
+    std::string json = R"({
+    "model": "llama",
+    "messages": [
+      {
+        "role": "user",
+        "content": [
+          {
+            "type": "text",
+            "text": "Before image."
+          },
+          {
+            "type": "image_url",
+            "image_url": {
+              "url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAAEElEQVR4nGLK27oAEAAA//8DYAHGgEvy5AAAAABJRU5ErkJggg=="
+            }
+          },
+          {
+            "type": "text",
+            "text": "After image."
+          }
+        ]
+      }
+    ]
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    ASSERT_EQ(apiHandler->parseMessages(), absl::OkStatus());
+    // Non-Python path: chatHistory content is the concatenated string
+    auto& chatHistory = apiHandler->getChatHistory();
+    ASSERT_EQ(chatHistory.size(), 1);
+    EXPECT_EQ(chatHistory[0]["content"], "Before image.\nAfter image.");
+    EXPECT_EQ(apiHandler->getImageHistory().size(), 1);
+    // Python Jinja path: processedJson carries the same flattened content for applyChatTemplate
+    EXPECT_EQ(apiHandler->getProcessedJson(), R"({"model":"llama","messages":[{"role":"user","content":"Before image.\nAfter image."}]})");
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, maxTokensValueDefaultToMaxTokensLimit) {
@@ -2699,6 +3711,63 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingResponsesInputImageUrlInvalidTypeFai
     EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::InvalidArgumentError("input_image.image_url must be a string or object"));
 }
 
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingResponsesUnsupportedContentTypeFails) {
+    std::string json = R"({
+    "model": "llama",
+    "input": [
+      {
+        "role": "user",
+        "content": [
+          {"type": "input_text", "text": "hi"},
+          {"type": "input_audio", "audio": "abc"}
+        ]
+      }
+    ]
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    std::shared_ptr<ovms::OpenAIResponsesHandler> apiHandler =
+        std::make_shared<ovms::OpenAIResponsesHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
+    EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::InvalidArgumentError("unsupported input content item type: input_audio"));
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingResponsesMissingContentFails) {
+    std::string json = R"({
+    "model": "llama",
+    "input": [
+      {"role": "user"}
+    ]
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    std::shared_ptr<ovms::OpenAIResponsesHandler> apiHandler =
+        std::make_shared<ovms::OpenAIResponsesHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
+    EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::InvalidArgumentError("input item is missing required content field"));
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingResponsesEmptyContentArrayFails) {
+    std::string json = R"({
+    "model": "llama",
+    "input": [
+      {"role": "user", "content": []}
+    ]
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    std::shared_ptr<ovms::OpenAIResponsesHandler> apiHandler =
+        std::make_shared<ovms::OpenAIResponsesHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
+    EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::InvalidArgumentError("input item content array must not be empty"));
+}
+
 TEST_F(HttpOpenAIHandlerParsingTest, ParsingResponsesUnsupportedToolTypeFails) {
     std::string json = R"({
     "model": "llama",
@@ -2807,6 +3876,28 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParseRequestWithTools_ParsesToolsJsonContai
     EXPECT_EQ((*tools)[0]["function"]["name"].as_string().value(), "get_weather");
 }
 
+TEST_F(HttpOpenAIHandlerParsingTest, ParseMessagesPreservesStringReasoningContentInChatHistory) {
+    std::string json = R"({
+    "model": "llama",
+    "messages": [
+      {"role": "user", "content": "Hello"},
+      {"role": "assistant", "reasoning_content": "thinking about greeting", "content": "Hi there!"}
+    ]
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler =
+        std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    ASSERT_EQ(apiHandler->parseMessages(), absl::OkStatus());
+
+    auto& chatHistory = apiHandler->getChatHistory();
+    ASSERT_EQ(chatHistory.size(), 2);
+    EXPECT_EQ(chatHistory[1]["role"], "assistant");
+    EXPECT_EQ(chatHistory[1]["content"], "Hi there!");
+    ASSERT_TRUE(chatHistory[1].contains("reasoning_content"));
+    EXPECT_EQ(chatHistory[1]["reasoning_content"], "thinking about greeting");
+}
+
 TEST_F(HttpOpenAIHandlerParsingTest, OutputParserInitializationDependsOnParserNames) {
     std::string json = R"({
     "model": "llama",
@@ -2869,10 +3960,11 @@ TEST_F(HttpOpenAIHandlerParsingTest, SerializeUnaryResponseVLMDecodedResultsWith
     ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
 
     ov::genai::VLMDecodedResults results;
-    results.texts.push_back(
-        "I will call a tool.<tool_call>{\"name\":\"get_weather\",\"arguments\":{\"location\":\"Paris\"}}</tool_call>");
+    std::string vlmText =
+        "I will call a tool.<tool_call>{\"name\":\"get_weather\",\"arguments\":{\"location\":\"Paris\"}}</tool_call>";
+    results.texts.push_back(vlmText);
 
-    std::string serialized = apiHandler->serializeUnaryResponse(results);
+    std::string serialized = apiHandler->serializeUnaryResponse(results, vlmText);
 
     rapidjson::Document responseDoc;
     responseDoc.Parse(serialized.c_str());
@@ -3207,6 +4299,100 @@ TEST_F(HttpOpenAIHandlerParsingTest, responseFormatNullValue) {
     EXPECT_FALSE(apiHandler->getResponseFormat().has_value());
 }
 
+// ==================== HttpOpenAIHandlerWithQueueTest ====================
+// Same as HttpOpenAIHandlerTest but uses config with graph_queue_size=1
+// to verify the graph pool (GraphQueue) path works correctly.
+class HttpOpenAIHandlerWithQueueTest : public ::testing::Test {
+protected:
+    EnvGuard envGuard;
+    ovms::Server& server = ovms::Server::instance();
+    std::unique_ptr<ovms::HttpRestApiHandler> handler;
+
+    std::unique_ptr<std::thread> t;
+    std::string port = "9173";
+
+    std::unordered_map<std::string, std::string> headers{{"content-type", "application/json"}};
+    ovms::HttpRequestComponents comp;
+    std::string endpoint = "/v3/chat/completions";
+    std::shared_ptr<MockedServerRequestInterface> writer;
+    std::shared_ptr<MockedMultiPartParser> multiPartParser;
+    std::string response;
+    ovms::HttpResponseComponents responseComponents;
+
+    void SetUpServer(const char* configPath) {
+        ::SetUpServer(this->t, this->server, this->port, configPath);
+        EnsureServerStartedWithTimeout(this->server, 5);
+        handler = std::make_unique<ovms::HttpRestApiHandler>(server, 5);
+    }
+
+    void SetUp() {
+        envGuard.set("OVMS_GRAPH_QUEUE_OFF", "0");
+        writer = std::make_shared<MockedServerRequestInterface>();
+        multiPartParser = std::make_shared<MockedMultiPartParser>();
+        SetUpServer(getGenericFullPathForSrcTest("/ovms/src/test/mediapipe/config_mediapipe_openai_chat_completions_mock_with_queue.json").c_str());
+        ASSERT_EQ(handler->parseRequestComponents(comp, "POST", endpoint, headers), ovms::StatusCode::OK);
+    }
+
+    void TearDown() {
+        handler.reset();
+        server.setShutdownRequest(1);
+        t->join();
+        server.setShutdownRequest(0);
+    }
+};
+
+TEST_F(HttpOpenAIHandlerWithQueueTest, UnaryWithQueue) {
+    std::string requestBody = R"(
+        {
+            "model": "gpt",
+            "stream": false,
+            "messages": []
+        }
+    )";
+
+    const std::string URI = "/v3/something";
+    ASSERT_EQ(
+        handler->dispatchToProcessor(URI, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK);
+
+    std::string expectedResponse = R"(URI: /v3/something
+Key: content-type; Value: application/json
+Body:
+
+        {
+            "model": "gpt",
+            "stream": false,
+            "messages": []
+        }
+    
+JSON Parser:
+{"model":"gpt","stream":false,"messages":[]}012345678)";
+    ASSERT_EQ(response, expectedResponse);
+}
+
+TEST_F(HttpOpenAIHandlerWithQueueTest, StreamWithQueue) {
+    std::string requestBody = R"(
+        {
+            "model": "gpt",
+            "stream": true,
+            "messages": []
+        }
+    )";
+
+    EXPECT_CALL(*writer, PartialReplyBegin(::testing::_)).WillOnce(testing::Invoke([](std::function<void()> fn) { fn(); }));
+    EXPECT_CALL(*writer, PartialReplyEnd()).Times(1);
+    // The calculator produces 9 packets (timestamps 0-8) via loopback,
+    // each containing the accumulated body + timestamp. The '8' in the body stops the loop.
+    EXPECT_CALL(*writer, PartialReply(::testing::_)).Times(9);
+    EXPECT_CALL(*writer, IsDisconnected()).Times(9);
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor("/v3/completions", requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::PARTIAL_END);
+
+    // For streaming, the response body stays empty (content goes through PartialReply callbacks)
+    ASSERT_EQ(response, "");
+}
 TEST_F(HttpOpenAIHandlerParsingTest, parseChatTemplateKwargsWithBooleanValue) {
     std::string json = R"({
     "model": "llama",
@@ -3609,4 +4795,860 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParseMessagesRegularMessageHasNoToolFields)
     EXPECT_FALSE(history[1].contains("tool_calls"));
     EXPECT_FALSE(history[1].contains("tool_call_id"));
     EXPECT_FALSE(history[1].contains("name"));
+}
+
+namespace {
+std::shared_ptr<ovms::OpenAIResponsesHandler> parseResponses(rapidjson::Document& doc, ov::genai::Tokenizer& tokenizer, const std::string& json) {
+    doc.Parse(json.c_str());
+    if (doc.HasParseError()) {
+        ADD_FAILURE() << "Failed to parse JSON: " << json;
+        return nullptr;
+    }
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    auto apiHandler = std::make_shared<ovms::OpenAIResponsesHandler>(
+        doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), tokenizer);
+    auto status = apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength);
+    if (!status.ok()) {
+        ADD_FAILURE() << "parseRequest failed: " << status << " for JSON: " << json;
+        return nullptr;
+    }
+    return apiHandler;
+}
+
+// Variant for negative tests: returns the parseRequest status without asserting
+// it is OK, so the caller can verify the failure mode.
+absl::Status tryParseResponses(rapidjson::Document& doc, ov::genai::Tokenizer& tokenizer, const std::string& json) {
+    doc.Parse(json.c_str());
+    if (doc.HasParseError())
+        return absl::InvalidArgumentError("Failed to parse JSON: " + json);
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    auto apiHandler = std::make_shared<ovms::OpenAIResponsesHandler>(
+        doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), tokenizer);
+    return apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength);
+}
+
+// Assert that parsing the given Responses API request produces a chat history
+// (and processedJson, when Python is enabled) equivalent to the expected
+// chat/completions request.
+//
+// The expected JSON is a chat/completions REQUEST body — an object with a
+// "messages" array and optionally a "tools" array. This makes each test read as
+// "given this Responses input, OVMS should produce this chat/completions
+// request" — which is exactly the contract of the Responses-to-chat/completions
+// translator.
+//
+// Comparison is structural via rapidjson Value::operator== (member order inside
+// objects is irrelevant).
+//
+// Both the chat-history path (used in the C++/non-Python build) and the
+// processedJson path (used by the Python Jinja template) are checked, so a
+// single test pins both downstream consumers.
+void expectResponsesEquivalentToChatCompletions(rapidjson::Document& doc, ov::genai::Tokenizer& tokenizer,
+    const std::string& responsesRequest, const std::string& expectedChatCompletions) {
+    auto handler = parseResponses(doc, tokenizer, responsesRequest);
+    ASSERT_NE(handler, nullptr);
+
+    rapidjson::Document expectedDoc;
+    expectedDoc.Parse(expectedChatCompletions.c_str());
+    ASSERT_FALSE(expectedDoc.HasParseError())
+        << "could not parse expected chat/completions: " << expectedChatCompletions;
+    ASSERT_TRUE(expectedDoc.HasMember("messages"))
+        << "expected chat/completions JSON must contain a 'messages' array";
+
+    // --- ChatHistory path (C++ / non-Python build) ---
+    const std::string actualHistoryJson = handler->getChatHistory().get_messages().to_json_string();
+    rapidjson::Document actualHistoryDoc;
+    actualHistoryDoc.Parse(actualHistoryJson.c_str());
+    ASSERT_FALSE(actualHistoryDoc.HasParseError()) << actualHistoryJson;
+    EXPECT_TRUE(actualHistoryDoc == expectedDoc["messages"])
+        << "ChatHistory messages mismatch.\n  actual:   " << actualHistoryJson
+        << "\n  expected: " << expectedChatCompletions;
+    // Tools on the C++ path are exposed via parseToolsToJsonContainer() — that
+    // is exactly what the non-Python servable forwards to GenAI. Compare its
+    // serialised JSON against the expected chat/completions tools.
+    if (expectedDoc.HasMember("tools")) {
+        auto toolsStatus = handler->parseToolsToJsonContainer();
+        ASSERT_TRUE(toolsStatus.ok()) << "parseToolsToJsonContainer failed: " << toolsStatus.status().message();
+        ASSERT_TRUE(toolsStatus.value().has_value()) << "parseToolsToJsonContainer returned nullopt";
+        const std::string actualToolsJson = toolsStatus.value()->to_json_string();
+        rapidjson::Document actualToolsDoc;
+        actualToolsDoc.Parse(actualToolsJson.c_str());
+        ASSERT_FALSE(actualToolsDoc.HasParseError()) << actualToolsJson;
+        EXPECT_TRUE(actualToolsDoc == expectedDoc["tools"])
+            << "parseToolsToJsonContainer mismatch.\n  actual:   " << actualToolsJson
+            << "\n  expected: " << expectedChatCompletions;
+    }
+
+#if (PYTHON_DISABLE == 0)
+    // --- processedJson path (Python Jinja chat template) ---
+    const std::string actualProcessedJson = handler->getProcessedJson();
+    rapidjson::Document actualProcessedDoc;
+    actualProcessedDoc.Parse(actualProcessedJson.c_str());
+    ASSERT_FALSE(actualProcessedDoc.HasParseError()) << actualProcessedJson;
+    ASSERT_TRUE(actualProcessedDoc.HasMember("messages")) << actualProcessedJson;
+    EXPECT_TRUE(actualProcessedDoc["messages"] == expectedDoc["messages"])
+        << "processedJson messages mismatch.\n  actual:   " << actualProcessedJson
+        << "\n  expected: " << expectedChatCompletions;
+    if (expectedDoc.HasMember("tools")) {
+        ASSERT_TRUE(actualProcessedDoc.HasMember("tools")) << actualProcessedJson;
+        EXPECT_TRUE(actualProcessedDoc["tools"] == expectedDoc["tools"])
+            << "processedJson tools mismatch.\n  actual:   " << actualProcessedJson
+            << "\n  expected: " << expectedChatCompletions;
+    }
+#endif
+}
+}  // namespace
+
+TEST_F(HttpOpenAIHandlerParsingTest, ResponsesFlatToolsNormaliseToChatCompletions) {
+    // Responses-flat tools shape ({type, name, parameters}) must be rewritten
+    // to chat/completions nested shape ({type, function:{...}}) before the
+    // request is forwarded to the chat template. Input is given as an array so
+    // both ChatHistory and processedJson sinks populate the messages array.
+    expectResponsesEquivalentToChatCompletions(doc, *tokenizer,
+        R"({
+            "model": "llama",
+            "input": [{"role":"user","content":[{"type":"input_text","text":"hello"}]}],
+            "tools": [{
+                "type": "function",
+                "name": "get_weather",
+                "description": "Get current weather",
+                "parameters": {"type":"object","properties":{"city":{"type":"string"}},"required":["city"]}
+            }]
+        })",
+        R"({
+            "messages": [{"role":"user","content":"hello"}],
+            "tools": [{
+                "type":"function",
+                "function":{
+                    "name":"get_weather",
+                    "description":"Get current weather",
+                    "parameters":{"type":"object","properties":{"city":{"type":"string"}},"required":["city"]}
+                }
+            }]
+        })");
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ResponsesAlreadyNestedToolsAreLeftIntact) {
+    // Tools already in chat/completions nested shape must pass through without
+    // double-wrapping. This is asserted directly on the (in-place mutated)
+    // request document because the equivalence helper would not detect a
+    // spurious unwrap+rewrap that nets to the same shape.
+    std::string json = R"({
+        "model": "llama",
+        "input": "hello",
+        "tools": [{
+            "type": "function",
+            "function": {
+                "name": "get_weather",
+                "parameters": {"type":"object","properties":{"city":{"type":"string"}},"required":["city"]}
+            }
+        }]
+    })";
+    auto apiHandler = parseResponses(doc, *tokenizer, json);
+    ASSERT_NE(apiHandler, nullptr);
+    EXPECT_TRUE(apiHandler->areToolsAvailable());
+    ASSERT_TRUE(doc["tools"][0].HasMember("function"));
+    EXPECT_STREQ(doc["tools"][0]["function"]["name"].GetString(), "get_weather");
+    EXPECT_FALSE(doc["tools"][0]["function"].HasMember("function"));
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ResponsesReasoningBufferedOntoNextAssistantMessage) {
+    // A bare reasoning item, then an assistant message: the reasoning text
+    // rides on the next assistant message as reasoning_content and does NOT
+    // produce its own message.
+    expectResponsesEquivalentToChatCompletions(doc, *tokenizer,
+        R"({
+            "model": "llama",
+            "input": [
+                {"role": "user", "content": [{"type":"input_text","text":"hi"}]},
+                {"type": "reasoning", "summary": [{"type":"summary_text","text":"think first"}]},
+                {"role": "assistant", "content": [{"type":"output_text","text":"hello"}]}
+            ]
+        })",
+        R"({
+            "messages": [
+                {"role":"user","content":"hi"},
+                {"role":"assistant","content":"hello","reasoning_content":"think first"}
+            ]
+        })");
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ResponsesStandaloneReasoningWithoutAssistantIsEmitted) {
+    // Reasoning followed by a non-assistant/non-function_call item is flushed
+    // as a standalone assistant turn carrying ONLY reasoning_content (no
+    // `content`, no `tool_calls`). This preserves the chain-of-thought across
+    // turns even when the prior turn produced no visible output.
+    expectResponsesEquivalentToChatCompletions(doc, *tokenizer,
+        R"({
+            "model": "llama",
+            "input": [
+                {"role": "user", "content": [{"type":"input_text","text":"hi"}]},
+                {"type": "reasoning", "summary": [{"type":"summary_text","text":"orphan"}]},
+                {"role": "user", "content": [{"type":"input_text","text":"again"}]}
+            ]
+        })",
+        R"({
+            "messages": [
+                {"role":"user","content":"hi"},
+                {"role":"assistant","content":"","reasoning_content":"orphan"},
+                {"role":"user","content":"again"}
+            ]
+        })");
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ResponsesTrailingStandaloneReasoningIsEmitted) {
+    // Input ending with a reasoning item — the buffered reasoning is flushed
+    // as a trailing standalone assistant turn rather than silently lost.
+    expectResponsesEquivalentToChatCompletions(doc, *tokenizer,
+        R"({
+            "model": "llama",
+            "input": [
+                {"role": "user", "content": [{"type":"input_text","text":"hi"}]},
+                {"type": "reasoning", "summary": [{"type":"summary_text","text":"trailing"}]}
+            ]
+        })",
+        R"({
+            "messages": [
+                {"role":"user","content":"hi"},
+                {"role":"assistant","content":"","reasoning_content":"trailing"}
+            ]
+        })");
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ResponsesFunctionCallMergedIntoAssistantToolCalls) {
+    // function_call followed by function_call_output should produce:
+    //   user -> assistant(content="", tool_calls=[...]) -> tool(tool_call_id=...)
+    // The synthesised assistant message MUST own a tool_calls field; otherwise
+    // gpt-oss raises "Message has tool role, but there was no previous
+    // assistant message with a tool call!".
+    expectResponsesEquivalentToChatCompletions(doc, *tokenizer,
+        R"({
+            "model": "llama",
+            "input": [
+                {"role": "user", "content": [{"type":"input_text","text":"weather?"}]},
+                {"type": "function_call", "id": "call_1", "call_id": "call_1",
+                 "name": "get_weather", "arguments": "{\"city\":\"Paris\"}"},
+                {"type": "function_call_output", "call_id": "call_1",
+                 "output": "{\"temp_c\":17}"}
+            ]
+        })",
+        R"({
+            "messages": [
+                {"role":"user","content":"weather?"},
+                {"role":"assistant","content":"","tool_calls":[
+                    {"id":"call_1","type":"function","function":{"name":"get_weather","arguments":"{\"city\":\"Paris\"}"}}
+                ]},
+                {"role":"tool","tool_call_id":"call_1","content":"{\"temp_c\":17}"}
+            ]
+        })");
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ResponsesReasoningPlusFunctionCallRidesOnAssistant) {
+    // reasoning + function_call should both attach to the synthesised assistant
+    // turn that owns the tool_calls.
+    expectResponsesEquivalentToChatCompletions(doc, *tokenizer,
+        R"({
+            "model": "llama",
+            "input": [
+                {"role": "user", "content": [{"type":"input_text","text":"weather?"}]},
+                {"type": "reasoning", "summary": [{"type":"summary_text","text":"need to call get_weather"}]},
+                {"type": "function_call", "id": "call_1", "call_id": "call_1",
+                 "name": "get_weather", "arguments": "{\"city\":\"Paris\"}"},
+                {"type": "function_call_output", "call_id": "call_1", "output": "ok"}
+            ]
+        })",
+        R"({
+            "messages": [
+                {"role":"user","content":"weather?"},
+                {"role":"assistant","content":"","reasoning_content":"need to call get_weather","tool_calls":[
+                    {"id":"call_1","type":"function","function":{"name":"get_weather","arguments":"{\"city\":\"Paris\"}"}}
+                ]},
+                {"role":"tool","tool_call_id":"call_1","content":"ok"}
+            ]
+        })");
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ResponsesMultipleFunctionCallsMergedInOneAssistant) {
+    // Two function_calls back-to-back must produce a single assistant message
+    // with two entries in tool_calls, not two assistant turns.
+    expectResponsesEquivalentToChatCompletions(doc, *tokenizer,
+        R"({
+            "model": "llama",
+            "input": [
+                {"role": "user", "content": [{"type":"input_text","text":"weather?"}]},
+                {"type": "function_call", "id": "call_1", "call_id": "call_1",
+                 "name": "get_weather", "arguments": "{\"city\":\"Paris\"}"},
+                {"type": "function_call", "id": "call_2", "call_id": "call_2",
+                 "name": "get_weather", "arguments": "{\"city\":\"London\"}"},
+                {"type": "function_call_output", "call_id": "call_1", "output": "15C"}
+            ]
+        })",
+        R"({
+            "messages": [
+                {"role":"user","content":"weather?"},
+                {"role":"assistant","content":"","tool_calls":[
+                    {"id":"call_1","type":"function","function":{"name":"get_weather","arguments":"{\"city\":\"Paris\"}"}},
+                    {"id":"call_2","type":"function","function":{"name":"get_weather","arguments":"{\"city\":\"London\"}"}}
+                ]},
+                {"role":"tool","tool_call_id":"call_1","content":"15C"}
+            ]
+        })");
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ResponsesTrailingFunctionCallFlushedAsAssistant) {
+    // Input ending with a function_call (no matching output) — the trailing
+    // function_call must still be flushed as an assistant turn rather than
+    // silently lost.
+    expectResponsesEquivalentToChatCompletions(doc, *tokenizer,
+        R"({
+            "model": "llama",
+            "input": [
+                {"role": "user", "content": [{"type":"input_text","text":"weather?"}]},
+                {"type": "function_call", "id": "call_1", "call_id": "call_1",
+                 "name": "get_weather", "arguments": "{\"city\":\"Paris\"}"}
+            ]
+        })",
+        R"({
+            "messages": [
+                {"role":"user","content":"weather?"},
+                {"role":"assistant","content":"","tool_calls":[
+                    {"id":"call_1","type":"function","function":{"name":"get_weather","arguments":"{\"city\":\"Paris\"}"}}
+                ]}
+            ]
+        })");
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ResponsesAssistantMessageAbsorbsBufferedFunctionCall) {
+    // If an assistant role item follows a function_call, its text content
+    // should ride on the same merged message (assistant-with-tool_calls), not
+    // produce a second assistant turn.
+    expectResponsesEquivalentToChatCompletions(doc, *tokenizer,
+        R"({
+            "model": "llama",
+            "input": [
+                {"role": "user", "content": [{"type":"input_text","text":"weather?"}]},
+                {"type": "function_call", "id": "call_1", "call_id": "call_1",
+                 "name": "get_weather", "arguments": "{\"city\":\"Paris\"}"},
+                {"role": "assistant", "content": "calling tool"}
+            ]
+        })",
+        R"({
+            "messages": [
+                {"role":"user","content":"weather?"},
+                {"role":"assistant","content":"calling tool","tool_calls":[
+                    {"id":"call_1","type":"function","function":{"name":"get_weather","arguments":"{\"city\":\"Paris\"}"}}
+                ]}
+            ]
+        })");
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ResponsesReasoningContentArrayShapeAccepted) {
+    // The newer reasoning shape: content[].text instead of summary[].text.
+    // OVMS accepts both and produces the same chat/completions output.
+    expectResponsesEquivalentToChatCompletions(doc, *tokenizer,
+        R"({
+            "model": "llama",
+            "input": [
+                {"role": "user", "content": [{"type":"input_text","text":"hi"}]},
+                {"type": "reasoning", "content": [{"type":"reasoning_text","text":"new shape"}]},
+                {"role": "assistant", "content": "ok"}
+            ]
+        })",
+        R"({
+            "messages": [
+                {"role":"user","content":"hi"},
+                {"role":"assistant","content":"ok","reasoning_content":"new shape"}
+            ]
+        })");
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ResponsesFunctionCallOutputWithoutCallIdAccepted) {
+    // function_call_output without call_id: the resulting tool message has no
+    // tool_call_id field rather than failing parsing or carrying an empty id.
+    expectResponsesEquivalentToChatCompletions(doc, *tokenizer,
+        R"({
+            "model": "llama",
+            "input": [
+                {"role": "user", "content": [{"type":"input_text","text":"weather?"}]},
+                {"type": "function_call", "id": "call_1", "call_id": "call_1",
+                 "name": "get_weather", "arguments": "{}"},
+                {"type": "function_call_output", "output": "ok"}
+            ]
+        })",
+        R"({
+            "messages": [
+                {"role":"user","content":"weather?"},
+                {"role":"assistant","content":"","tool_calls":[
+                    {"id":"call_1","type":"function","function":{"name":"get_weather","arguments":"{}"}}
+                ]},
+                {"role":"tool","content":"ok"}
+            ]
+        })");
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ResponsesFunctionCallPrefersCallIdOverId) {
+    // When id and call_id differ, the assistant.tool_calls[].id must use
+    // call_id so it matches the subsequent tool message's tool_call_id (which
+    // is built from function_call_output.call_id). Otherwise chat templates
+    // see a tool result with no matching call (e.g. gpt-oss raises "Message
+    // has tool role, but there was no previous assistant message with a tool
+    // call!").
+    expectResponsesEquivalentToChatCompletions(doc, *tokenizer,
+        R"({
+            "model": "llama",
+            "input": [
+                {"role": "user", "content": [{"type":"input_text","text":"weather?"}]},
+                {"type": "function_call", "id": "fc_abc", "call_id": "call_xyz",
+                 "name": "get_weather", "arguments": "{}"},
+                {"type": "function_call_output", "call_id": "call_xyz", "output": "ok"}
+            ]
+        })",
+        R"({
+            "messages": [
+                {"role":"user","content":"weather?"},
+                {"role":"assistant","content":"","tool_calls":[
+                    {"id":"call_xyz","type":"function","function":{"name":"get_weather","arguments":"{}"}}
+                ]},
+                {"role":"tool","tool_call_id":"call_xyz","content":"ok"}
+            ]
+        })");
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ResponsesFunctionCallOnlyCallIdSupplied) {
+    // call_id alone (no "id") is accepted; it is used as the tool_calls[].id.
+    expectResponsesEquivalentToChatCompletions(doc, *tokenizer,
+        R"({
+            "model": "llama",
+            "input": [
+                {"role": "user", "content": [{"type":"input_text","text":"weather?"}]},
+                {"type": "function_call", "call_id": "call_xyz",
+                 "name": "get_weather", "arguments": "{}"},
+                {"type": "function_call_output", "call_id": "call_xyz", "output": "ok"}
+            ]
+        })",
+        R"({
+            "messages": [
+                {"role":"user","content":"weather?"},
+                {"role":"assistant","content":"","tool_calls":[
+                    {"id":"call_xyz","type":"function","function":{"name":"get_weather","arguments":"{}"}}
+                ]},
+                {"role":"tool","tool_call_id":"call_xyz","content":"ok"}
+            ]
+        })");
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ResponsesFunctionCallMissingIdRejected) {
+    std::string json = R"({
+        "model": "llama",
+        "input": [
+            {"role": "user", "content": [{"type":"input_text","text":"weather?"}]},
+            {"type": "function_call", "name": "get_weather", "arguments": "{}"}
+        ]
+    })";
+    auto status = tryParseResponses(doc, *tokenizer, json);
+    EXPECT_EQ(status, absl::InvalidArgumentError("function_call item is missing required call_id (or id) field"));
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ResponsesFunctionCallMissingNameRejected) {
+    std::string json = R"({
+        "model": "llama",
+        "input": [
+            {"role": "user", "content": [{"type":"input_text","text":"weather?"}]},
+            {"type": "function_call", "call_id": "call_1", "arguments": "{}"}
+        ]
+    })";
+    auto status = tryParseResponses(doc, *tokenizer, json);
+    EXPECT_EQ(status, absl::InvalidArgumentError("function_call item is missing required name field"));
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ResponsesFunctionCallMissingArgumentsRejected) {
+    std::string json = R"({
+        "model": "llama",
+        "input": [
+            {"role": "user", "content": [{"type":"input_text","text":"weather?"}]},
+            {"type": "function_call", "call_id": "call_1", "name": "get_weather"}
+        ]
+    })";
+    auto status = tryParseResponses(doc, *tokenizer, json);
+    EXPECT_EQ(status, absl::InvalidArgumentError("function_call item is missing required arguments field"));
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ResponsesImageHistoryIndexMatchesChatHistoryTurn) {
+    // Regression test for the image-index drift bug: when an input item is
+    // merged (function_call buffered, then absorbed into the next assistant
+    // message), the Responses input-array index no longer matches the
+    // resulting chatHistory index. ChatHistorySink::appendInputImage must
+    // record the actual chatHistory turn index so the VLM servable can
+    // prepend the <ov_genai_image_*> tag to the correct message (and not
+    // index out-of-bounds).
+    const std::string base64Image = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAAEElEQVR4nGLK27oAEAAA//8DYAHGgEvy5AAAAABJRU5ErkJggg==";
+    std::string json = R"({
+        "model": "llama",
+        "input": [
+            {"role": "user", "content": [{"type":"input_text","text":"hi"}]},
+            {"type": "function_call", "call_id": "call_1", "name": "x", "arguments": "{}"},
+            {"role": "assistant", "content": [{"type":"output_text","text":"calling tool"}]},
+            {"role": "user", "content": [
+                {"type":"input_text","text":"and now?"},
+                {"type":"input_image","image_url":")" +
+                       base64Image + R"("}
+            ]}
+        ]
+    })";
+    auto apiHandler = parseResponses(doc, *tokenizer, json);
+    ASSERT_NE(apiHandler, nullptr);
+
+    // Input has 4 items but item [1] (function_call) is buffered and merged
+    // into item [2] (assistant) — chatHistory ends up with 3 entries:
+    //   [0] user "hi"
+    //   [1] assistant "calling tool" with tool_calls
+    //   [2] user "and now?" (image-bearing)
+    auto& chatHistory = apiHandler->getChatHistory();
+    ASSERT_EQ(chatHistory.size(), 3u);
+
+    const ovms::ImageHistory& imageHistory = apiHandler->getImageHistory();
+    ASSERT_EQ(imageHistory.size(), 1u);
+    auto [turnIndex, image] = imageHistory[0];
+    // Must point at the second user (chatHistory[2]) — NOT the input-array
+    // index 3, which would be out-of-bounds for chatHistory[3].
+    EXPECT_EQ(turnIndex, 2u);
+    EXPECT_LT(turnIndex, chatHistory.size());
+}
+
+// --- Tools normalisation edge cases ---
+
+TEST_F(HttpOpenAIHandlerParsingTest, ResponsesFlatToolWithoutParametersIsNormalised) {
+    // Flat Responses tools may omit `parameters` for zero-arg functions. The
+    // nested form should still be produced (with no `parameters` key under
+    // function), not fail or fabricate one. Input is given as an array so
+    // both ChatHistory and processedJson sinks populate the messages array.
+    expectResponsesEquivalentToChatCompletions(doc, *tokenizer,
+        R"({
+            "model": "llama",
+            "input": [{"role":"user","content":[{"type":"input_text","text":"hello"}]}],
+            "tools": [{"type": "function", "name": "ping", "description": "no args"}]
+        })",
+        R"({
+            "messages": [{"role":"user","content":"hello"}],
+            "tools": [{"type":"function","function":{"name":"ping","description":"no args"}}]
+        })");
+}
+
+// --- Error paths ---
+
+TEST_F(HttpOpenAIHandlerParsingTest, ResponsesInputItemMissingRoleIsRejected) {
+    // An input item with no recognised `type` and no `role` cannot be
+    // classified — the chat-history sink must surface this as an
+    // InvalidArgumentError rather than silently dropping the turn.
+    std::string json = R"({
+        "model": "llama",
+        "input": [
+            {"role": "user", "content": [{"type":"input_text","text":"hi"}]},
+            {"content": [{"type":"output_text","text":"orphaned"}]}
+        ]
+    })";
+    auto status = tryParseResponses(doc, *tokenizer, json);
+    EXPECT_EQ(status.code(), absl::StatusCode::kInvalidArgument);
+    EXPECT_THAT(std::string(status.message()), ::testing::HasSubstr("role"));
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ResponsesInputContentNotStringOrArrayIsRejected) {
+    std::string json = R"({
+        "model": "llama",
+        "input": [
+            {"role": "user", "content": 42}
+        ]
+    })";
+    auto status = tryParseResponses(doc, *tokenizer, json);
+    EXPECT_EQ(status.code(), absl::StatusCode::kInvalidArgument);
+    EXPECT_THAT(std::string(status.message()), ::testing::HasSubstr("content"));
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ResponsesInputContentItemMissingTypeIsRejected) {
+    std::string json = R"({
+        "model": "llama",
+        "input": [
+            {"role": "user", "content": [{"text":"no type field"}]}
+        ]
+    })";
+    auto status = tryParseResponses(doc, *tokenizer, json);
+    EXPECT_EQ(status.code(), absl::StatusCode::kInvalidArgument);
+    EXPECT_THAT(std::string(status.message()), ::testing::HasSubstr("type"));
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ResponsesInputTextMissingTextFieldIsRejected) {
+    std::string json = R"({
+        "model": "llama",
+        "input": [
+            {"role": "user", "content": [{"type":"input_text"}]}
+        ]
+    })";
+    auto status = tryParseResponses(doc, *tokenizer, json);
+    EXPECT_EQ(status.code(), absl::StatusCode::kInvalidArgument);
+    EXPECT_THAT(std::string(status.message()), ::testing::HasSubstr("text"));
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ResponsesInputArrayItemNotObjectIsRejected) {
+    std::string json = R"({
+        "model": "llama",
+        "input": ["not an object"]
+    })";
+    auto status = tryParseResponses(doc, *tokenizer, json);
+    EXPECT_EQ(status.code(), absl::StatusCode::kInvalidArgument);
+    EXPECT_THAT(std::string(status.message()), ::testing::HasSubstr("must be objects"));
+}
+
+// --- Multi-turn composite ---
+
+TEST_F(HttpOpenAIHandlerParsingTest, ResponsesMultiTurnReasoningFunctionCallAndFollowupAssistant) {
+    // End-to-end: user -> reasoning + function_call (merged on synthesised
+    // assistant) -> function_call_output -> reasoning + assistant final answer.
+    // Validates that buffering state is correctly reset between turns.
+    expectResponsesEquivalentToChatCompletions(doc, *tokenizer,
+        R"({
+            "model": "llama",
+            "input": [
+                {"role": "user", "content": [{"type":"input_text","text":"weather in Paris?"}]},
+                {"type": "reasoning", "summary": [{"type":"summary_text","text":"need to call get_weather"}]},
+                {"type": "function_call", "id": "call_1", "call_id": "call_1",
+                 "name": "get_weather", "arguments": "{\"city\":\"Paris\"}"},
+                {"type": "function_call_output", "call_id": "call_1", "output": "sunny, 22C"},
+                {"type": "reasoning", "summary": [{"type":"summary_text","text":"format the answer"}]},
+                {"role": "assistant", "content": [{"type":"output_text","text":"It is sunny and 22C in Paris."}]}
+            ]
+        })",
+        R"({
+            "messages": [
+                {"role":"user","content":"weather in Paris?"},
+                {"role":"assistant","content":"","reasoning_content":"need to call get_weather","tool_calls":[
+                    {"id":"call_1","type":"function","function":{"name":"get_weather","arguments":"{\"city\":\"Paris\"}"}}
+                ]},
+                {"role":"tool","tool_call_id":"call_1","content":"sunny, 22C"},
+                {"role":"assistant","content":"It is sunny and 22C in Paris.","reasoning_content":"format the answer"}
+            ]
+        })");
+}
+
+// Real BFCL replay shape: between every function_call and its function_call_output
+// the OpenAI SDK echoes back the empty assistant message that ovms returned in
+// `output[]`. With multiple turns this looks like:
+//   user -> fc1 -> {id:msg-0,role:assistant,type:message,content:[{type:output_text,text:""}]}
+//        -> fco1 -> fc2 -> msg-0 -> fco2 -> ...
+// The 4th request OVMS sees while running BFCL multi_turn_base_0 reports 128
+// MORE input_tokens on /responses than the equivalent /chat/completions call,
+// even though the message lists are structurally equivalent. This test
+// reproduces the exact shape so processedJson can be compared head-to-head.
+TEST_F(HttpOpenAIHandlerParsingTest, ResponsesBfclReplayShapeWithEchoedAssistantMessages) {
+    expectResponsesEquivalentToChatCompletions(doc, *tokenizer,
+        R"({
+            "model": "llama",
+            "input": [
+                {"role": "user", "content": "do work"},
+                {"type": "function_call", "id": "fc1", "call_id": "fc1",
+                 "name": "mkdir", "arguments": "{\"dir_name\":\"temp\"}",
+                 "namespace": null, "status": "completed"},
+                {"id": "msg-0", "type": "message", "role": "assistant", "status": "completed",
+                 "content": [{"type": "output_text", "text": "", "annotations": [], "logprobs": null}],
+                 "phase": null},
+                {"type": "function_call_output", "call_id": "fc1", "output": "None"},
+                {"type": "function_call", "id": "fc2", "call_id": "fc2",
+                 "name": "mv", "arguments": "{\"source\":\"a\",\"destination\":\"temp\"}",
+                 "namespace": null, "status": "completed"},
+                {"id": "msg-0", "type": "message", "role": "assistant", "status": "completed",
+                 "content": [{"type": "output_text", "text": "", "annotations": [], "logprobs": null}],
+                 "phase": null},
+                {"type": "function_call_output", "call_id": "fc2", "output": "{\"error\":\"no\"}"}
+            ]
+        })",
+        R"({
+            "messages": [
+                {"role":"user","content":"do work"},
+                {"role":"assistant","content":"","tool_calls":[
+                    {"id":"fc1","type":"function","function":{"name":"mkdir","arguments":"{\"dir_name\":\"temp\"}"}}
+                ]},
+                {"role":"tool","tool_call_id":"fc1","content":"None"},
+                {"role":"assistant","content":"","tool_calls":[
+                    {"id":"fc2","type":"function","function":{"name":"mv","arguments":"{\"source\":\"a\",\"destination\":\"temp\"}"}}
+                ]},
+                {"role":"tool","tool_call_id":"fc2","content":"{\"error\":\"no\"}"}
+            ]
+        })");
+}
+
+// ---------------------------------------------------------------------------
+// Responses-only input_image shape coverage. The OpenAI Responses API accepts
+// `image_url` either as a flat string or as an object `{"url": "..."}`. Both
+// shapes must produce identical behavior.
+// ---------------------------------------------------------------------------
+
+enum class ResponsesImageUrlShape {
+    FlatString,
+    ObjectWithUrl,
+};
+
+class HttpOpenAIHandlerResponsesImageUrlShapeTest : public HttpOpenAIHandlerParsingTest,
+                                                    public ::testing::WithParamInterface<ResponsesImageUrlShape> {
+protected:
+    // Formats one input_image content item with the parametrized image_url shape.
+    std::string formatInputImageItem(const std::string& url) const {
+        if (GetParam() == ResponsesImageUrlShape::FlatString) {
+            return std::string("{\"type\":\"input_image\",\"image_url\":\"") + url + "\"}";
+        }
+        return std::string("{\"type\":\"input_image\",\"image_url\":{\"url\":\"") + url + "\"}}";
+    }
+
+    std::string createResponsesRequest(const std::vector<std::string>& userTurnsContent) const {
+        std::string input = "[";
+        for (size_t i = 0; i < userTurnsContent.size(); ++i) {
+            if (i > 0)
+                input += ",";
+            input += std::string("{\"role\":\"user\",\"content\":") + userTurnsContent[i] + "}";
+        }
+        input += "]";
+        return std::string("{\"model\":\"llama\",\"input\":") + input + "}";
+    }
+
+    std::shared_ptr<ovms::OpenAIResponsesHandler> parseResponses(const std::string& json) {
+        doc.Parse(json.c_str());
+        if (doc.HasParseError()) {
+            ADD_FAILURE() << "Failed to parse JSON: " << json;
+            return nullptr;
+        }
+        std::optional<uint32_t> maxTokensLimit;
+        uint32_t bestOfLimit = 0;
+        std::optional<uint32_t> maxModelLength;
+        auto apiHandler = std::make_shared<ovms::OpenAIResponsesHandler>(
+            doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
+        auto status = apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength);
+        if (!status.ok()) {
+            ADD_FAILURE() << "parseRequest failed: " << status << " for JSON: " << json;
+            return nullptr;
+        }
+        return apiHandler;
+    }
+};
+
+TEST_P(HttpOpenAIHandlerResponsesImageUrlShapeTest, ValidBase64ImageSucceeds) {
+    const std::string base64Image = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAAEElEQVR4nGLK27oAEAAA//8DYAHGgEvy5AAAAABJRU5ErkJggg==";
+    std::string content = "[" + formatInputImageItem(base64Image) + "]";
+    std::string json = createResponsesRequest({content});
+    auto apiHandler = parseResponses(json);
+    ASSERT_NE(apiHandler, nullptr);
+    ASSERT_EQ(apiHandler->getImageHistory().size(), 1);
+    EXPECT_EQ(apiHandler->getImageHistory()[0].first, 0u);
+}
+
+TEST_P(HttpOpenAIHandlerResponsesImageUrlShapeTest, MultipleImagesAcrossTurnsHaveCorrectIndices) {
+    const std::string base64Image = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAAEElEQVR4nGLK27oAEAAA//8DYAHGgEvy5AAAAABJRU5ErkJggg==";
+    // Turn 0 (user): image + text
+    // Turn 1 (assistant) - skipped by the helper; we'll inline-build
+    // Turn 2 (user): another image
+    std::string json = std::string(R"({"model":"llama","input":[)") +
+                       R"({"role":"user","content":[)" + formatInputImageItem(base64Image) + R"(,{"type":"input_text","text":"first"}]},)" +
+                       R"({"role":"assistant","content":[{"type":"output_text","text":"ok"}]},)" +
+                       R"({"role":"user","content":[)" + formatInputImageItem(base64Image) + R"(]})" +
+                       R"(]})";
+    auto apiHandler = parseResponses(json);
+    ASSERT_NE(apiHandler, nullptr);
+    const ovms::ImageHistory& imageHistory = apiHandler->getImageHistory();
+    ASSERT_EQ(imageHistory.size(), 2);
+    EXPECT_EQ(imageHistory[0].first, 0u);
+    EXPECT_EQ(imageHistory[1].first, 2u);
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    ResponsesImageUrlShapes,
+    HttpOpenAIHandlerResponsesImageUrlShapeTest,
+    ::testing::Values(ResponsesImageUrlShape::FlatString, ResponsesImageUrlShape::ObjectWithUrl),
+    [](const testing::TestParamInfo<ResponsesImageUrlShape>& info) {
+        return info.param == ResponsesImageUrlShape::FlatString ? "FlatString" : "ObjectWithUrl";
+    });
+
+// ---------------------------------------------------------------------------
+// Responses-only structural / negative cases not covered by the parametrized
+// chat+responses fixture.
+// ---------------------------------------------------------------------------
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingResponsesInputImageObjectMissingUrlFieldFails) {
+    std::string json = R"({
+        "model": "llama",
+        "input": [
+          {"role": "user", "content": [{"type": "input_image", "image_url": {}}]}
+        ]
+    })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    auto apiHandler = std::make_shared<ovms::OpenAIResponsesHandler>(
+        doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
+    EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength),
+        absl::InvalidArgumentError("input_image.image_url.url is missing or invalid"));
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingResponsesInputImageObjectUrlNotStringFails) {
+    std::string json = R"({
+        "model": "llama",
+        "input": [
+          {"role": "user", "content": [{"type": "input_image", "image_url": {"url": 123}}]}
+        ]
+    })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    auto apiHandler = std::make_shared<ovms::OpenAIResponsesHandler>(
+        doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
+    EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength),
+        absl::InvalidArgumentError("input_image.image_url.url is missing or invalid"));
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingResponsesInputFileTypeRejected) {
+    // The Responses API may carry input_file items (e.g. PDFs) - OVMS does not yet
+    // support them and must reject with a clear "unsupported" error.
+    std::string json = R"({
+        "model": "llama",
+        "input": [
+          {"role": "user", "content": [
+            {"type": "input_text", "text": "summarize"},
+            {"type": "input_file", "file_id": "file-abc"}
+          ]}
+        ]
+    })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    auto apiHandler = std::make_shared<ovms::OpenAIResponsesHandler>(
+        doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
+    EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength),
+        absl::InvalidArgumentError("unsupported input content item type: input_file"));
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingResponsesStreamOptionsRejected) {
+    // Responses streams always include usage in the response.completed event, so
+    // stream_options is intentionally rejected to avoid silently ignoring the field.
+    std::string json = R"({
+        "model": "llama",
+        "stream": true,
+        "input": "hi",
+        "stream_options": {"include_usage": true}
+    })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    auto apiHandler = std::make_shared<ovms::OpenAIResponsesHandler>(
+        doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
+    auto status = apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength);
+    EXPECT_EQ(status,
+        absl::InvalidArgumentError("stream_options is not supported in Responses API."));
 }
