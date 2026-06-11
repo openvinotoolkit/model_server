@@ -17,6 +17,7 @@
 import os
 import re
 import shutil
+import stat
 import traceback
 
 import pytest
@@ -63,6 +64,7 @@ class FrameworkMessages:
     MACHINE_NOT_RESERVED_FOR_TEST_SESSION = "MACHINE NOT RESERVED FOR TEST SESSION"
     RUN_IN_PARALLEL= "RUN IN PARALLEL"
     TEST_IMAGE_NOT_BUILD = "TEST IMAGE NOT BUILD"
+    STRACE_IMAGE_NOT_BUILD = "STRACE IMAGE NOT BUILD"
     LANGUAGE_MODELS_DISABLED = "LANGUAGE MODELS DISABLED"
     MEDIAPIPE_DISABLED = "MEDIAPIPE DISABLED"
     PYTHON_DISABLED = "PYTHON DISABLED"
@@ -253,6 +255,8 @@ def create_venv_and_install_packages_from_git_repo(
 
 
 def change_dir_permissions(dir_path, permissions=0o777):
+    if os.path.exists(dir_path):
+        os.chmod(dir_path, permissions)
     for root, dirs, files in os.walk(dir_path):
         for d in dirs:
             os.chmod(os.path.join(root, d), permissions)
@@ -266,3 +270,59 @@ def remove_dir_contents(dir_path):
             os.unlink(os.path.join(root, f))
         for d in dirs:
             shutil.rmtree(os.path.join(root, d))
+
+
+def _make_path_writable_and_retry(func, path, _exc_info):
+    os.chmod(path, stat.S_IREAD | stat.S_IWRITE | stat.S_IEXEC)
+    func(path)
+
+
+def remove_dir_tree(dir_path, ignore_errors=False):
+    """Remove a directory tree, retrying failed paths after making them writable."""
+    try:
+        shutil.rmtree(dir_path, onexc=_make_path_writable_and_retry)
+    except OSError:
+        if not ignore_errors:
+            raise
+
+
+def swap_directory(target_path, staging_path, backup_path=None):
+    """Replace target_path with staging_path via rename. Previous version moved to backup_path or deleted."""
+    old_path = target_path + "_old"
+    if os.path.exists(old_path):
+        remove_dir_tree(old_path)
+    target_moved = False
+    if os.path.exists(target_path):
+        os.rename(target_path, old_path)
+        target_moved = True
+    try:
+        os.rename(staging_path, target_path)
+    except OSError:
+        if target_moved and os.path.exists(old_path) and not os.path.exists(target_path):
+            try:
+                os.rename(old_path, target_path)
+            except OSError:
+                pass
+        raise
+    if os.path.exists(old_path):
+        if backup_path:
+            if os.path.exists(backup_path):
+                remove_dir_tree(backup_path)
+            backup_dir = os.path.dirname(backup_path)
+            if backup_dir:
+                os.makedirs(backup_dir, exist_ok=True)
+            os.rename(old_path, backup_path)
+        else:
+            remove_dir_tree(old_path, ignore_errors=True)
+
+
+def get_dir_latest_mtime(dir_path):
+    """Get the latest mtime of any file in a directory tree. Returns 0 if empty/not found."""
+    latest_mtime = 0
+    try:
+        for root, _, files in os.walk(dir_path):
+            for f in files:
+                latest_mtime = max(latest_mtime, os.path.getmtime(os.path.join(root, f)))
+    except OSError:
+        pass
+    return latest_mtime

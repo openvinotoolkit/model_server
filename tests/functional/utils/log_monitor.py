@@ -21,7 +21,15 @@ from time import sleep
 
 from tests.functional.utils.assertions import LogMessageNotFoundException, OvmsCrashed, UnwantedMessageError
 from tests.functional.utils.logger import get_logger
-from tests.functional.config import artifacts_dir, wait_for_messages_timeout
+from tests.functional.config import (
+    artifacts_dir,
+    logging_level,
+    wait_for_messages_exception_max_lines,
+    wait_for_messages_log_flush,
+    wait_for_messages_log_flush_max_lines,
+    wait_for_messages_progress_interval,
+    wait_for_messages_timeout,
+    )
 
 logger = get_logger(__name__)
 
@@ -137,59 +145,104 @@ class LogMonitor(ABC):
 
             messages_to_find_vs_results_map = dict.fromkeys(messages_to_find, None)
             start = datetime.now()
-            while not messages_found and (datetime.now() - start).total_seconds() <= timeout:
-                log_line = self._read_log_line()
-                if log_line is None:
-                    if not check_ovms_running:
+            last_progress_log_time = start
+            try:
+                while not messages_found and (datetime.now() - start).total_seconds() <= timeout:
+                    log_line = self._read_log_line()
+                    if log_line is None:
+                        if check_ovms_running and not self.is_ovms_running():
+                            break
+                        for callback in callbacks:
+                            callback()
+                        now = datetime.now()
+                        if (now - last_progress_log_time).total_seconds() >= wait_for_messages_progress_interval:
+                            elapsed = (now - start).total_seconds()
+                            logger.debug(
+                                f"[wait_for_messages] Still waiting after {elapsed:.0f}s. "
+                                f"Read {len(found_lines)} OVMS log lines so far. "
+                                f"Waiting for: {messages_to_find}"
+                            )
+                            if found_lines:
+                                recent = found_lines[-5:]
+                                logger.debug(
+                                    f"[wait_for_messages] Last OVMS output:\n"
+                                    + "\n".join(f"  {line}" for line in recent)
+                                )
+                            last_progress_log_time = now
+                        sleep(1)
                         continue
+
+                    found_lines.append(log_line)
+
+                    for specific_msg in messages_to_find_vs_results_map:
+                        if messages_to_find_vs_results_map[specific_msg] is None:
+                            if isinstance(specific_msg, str):
+                                messages_to_find_vs_results_map[specific_msg] = log_line if specific_msg in log_line \
+                                    else None
+                            elif isinstance(specific_msg, tuple):
+                                for msg in specific_msg:
+                                    if msg in log_line:
+                                        messages_to_find_vs_results_map[specific_msg] = log_line
+                                        break
+                            else:
+                                raise NotImplementedError()
+
+                    if any(map(lambda break_msg: break_msg in log_line, break_msg_list)):
+                        ovms_log = self._truncate_lines_for_exception(self.get_all_logs())
+                        logger.info(ovms_log)
+                        raise UnwantedMessageError(
+                            f"Found message: '{log_line}'", ovms_log=ovms_log, context=self.context
+                        )
+
+                    if all_messages:
+                        messages_found = all(x for x in messages_to_find_vs_results_map.values())
                     else:
-                        if not self.is_ovms_running():
-                            break  # OVMS is not running, no new output is expected.
-                    # Run callbacks at idle.
-                    for callback in callbacks:
-                        callback()
-                    sleep(1)
-                    continue
+                        messages_found = any(x for x in messages_to_find_vs_results_map.values())
 
-                found_lines.append(log_line)
+                self._log_search_info(
+                    raise_exception_if_not_found,
+                    messages_found,
+                    found_lines,
+                    messages_to_find_vs_results_map,
+                    ovms_instance,
+                )
+            except BaseException:
+                self._flush_found_lines_on_wait_failure(start, found_lines)
+                raise
 
-                for specific_msg in messages_to_find_vs_results_map:
-                    if messages_to_find_vs_results_map[specific_msg] is None:
-                        if isinstance(specific_msg, str):
-                            messages_to_find_vs_results_map[specific_msg] = log_line if specific_msg in log_line \
-                                else None
-                        elif isinstance(specific_msg, tuple):
-                            for msg in specific_msg:
-                                if msg in log_line:
-                                    messages_to_find_vs_results_map[specific_msg] = log_line
-                                    break
-                        else:
-                            raise NotImplementedError()
-
-                if any(map(lambda break_msg: break_msg in log_line, break_msg_list)):
-                    ovms_log = self.get_logs_as_txt()
-                    logger.info(ovms_log)
-                    raise UnwantedMessageError(
-                        f"Found message: '{log_line}'", ovms_log=ovms_log, context=self.context
-                    )
-
-                if all_messages:
-                    messages_found = all(x for x in messages_to_find_vs_results_map.values())
-                else:
-                    messages_found = any(x for x in messages_to_find_vs_results_map.values())
-            self._log_search_info(
-                raise_exception_if_not_found,
-                messages_found,
-                found_lines,
-                messages_to_find_vs_results_map,
-                ovms_instance,
-            )
-
-        # Run all callbacks at end.
-        # Callbacks can be used to validate proper ovms load at many sources (ie: dmesg)
         for callback in callbacks:
             callback()
         return messages_found
+
+    @staticmethod
+    def _line_limit_for_logging_level(max_lines):
+        if logging_level.upper() == "DEBUG" and max_lines:
+            return max_lines * 4
+        return max_lines
+
+    @classmethod
+    def _flush_found_lines_on_wait_failure(cls, start, found_lines):
+        if not wait_for_messages_log_flush:
+            return
+
+        elapsed = (datetime.now() - start).total_seconds()
+        total = len(found_lines)
+        max_lines = cls._line_limit_for_logging_level(wait_for_messages_log_flush_max_lines)
+        if max_lines and total > max_lines:
+            logger.info(
+                f"[wait_for_messages] Interrupted after {elapsed:.0f}s. "
+                f"Collected {total} OVMS log lines (showing last {max_lines}):"
+            )
+            lines_to_log = found_lines[-max_lines:]
+        else:
+            logger.info(
+                f"[wait_for_messages] Interrupted after {elapsed:.0f}s. "
+                f"Collected {total} OVMS log lines. Dumping OVMS output:"
+            )
+            lines_to_log = found_lines
+
+        for line in lines_to_log:
+            logger.info(f"  [OVMS] {line}")
 
     def find_messages(self, messages_to_find, raise_exception_if_not_found=False):
         all_messages_found = False
@@ -231,7 +284,7 @@ class LogMonitor(ABC):
         else:
             if raise_exception_if_not_found:
                 missing_messages = [k for k, v in messages_to_find_vs_results_map.items() if v is None]
-                found_lines_str = "\n".join(found_lines)
+                found_lines_str = self._truncate_lines_for_exception(found_lines)
                 error_msg = (
                     f"Unable to find following messages in logs: {missing_messages}\n= Ovms logs {18 * '='}\n"
                     f"{found_lines_str}\n{30 * '='}"
@@ -242,7 +295,20 @@ class LogMonitor(ABC):
                     if ovms_instance is not None:
                         ovms_instance._dmesg_log.raise_on_unexpected_messages()
                         dmesg_log = ovms_instance._dmesg_log.get_logs_as_txt()
-                    raise exception(error_msg, ovms_log=self.get_logs_as_txt(), dmesg_log=dmesg_log)
+                    ovms_log = self._truncate_lines_for_exception(self.get_all_logs())
+                    raise exception(error_msg, ovms_log=ovms_log, dmesg_log=dmesg_log)
 
+    @staticmethod
+    def _truncate_lines_for_exception(found_lines):
+        max_lines = LogMonitor._line_limit_for_logging_level(wait_for_messages_exception_max_lines)
+        if not max_lines or len(found_lines) <= max_lines:
+            return "\n".join(found_lines)
+        head_count = max_lines // 5
+        tail_count = max_lines - head_count
+        omitted = len(found_lines) - max_lines
+        head = found_lines[:head_count]
+        tail = found_lines[-tail_count:]
+        return "\n".join(head + [f"\n... [{omitted} lines omitted] ...\n"] + tail)
+    
     def is_ovms_running(self):
         return True

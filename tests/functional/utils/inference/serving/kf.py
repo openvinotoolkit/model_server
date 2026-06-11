@@ -86,7 +86,7 @@ class KserveWrapper(AbstractServingWrapper):
             self.get_model_meta()
 
     def send_predict_grpc_request(self, request, timeout=GRPC_TIMEOUT):
-        return self.model_service_stub.ModelInfer(request)
+        return self.model_service_stub.ModelInfer(request, timeout=timeout)
 
     @staticmethod
     def process_predict_grpc_output(response, raw=False):

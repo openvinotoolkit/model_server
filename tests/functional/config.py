@@ -70,8 +70,11 @@ test_dir_cache = os.environ.get("TEST_DIR_CACHE", "/tmp/ovms_models_cache")
 test_dir_cleanup = os.environ.get("TEST_DIR_CLEANUP", "True")
 test_dir_cleanup = test_dir_cleanup.lower() == "true"
 
+""" TT_OVMS_C_REPO_PATH - path to ovms-c repository. Can be relative or absolute. """
+ovms_c_repo_path = get_path("TT_OVMS_C_REPO_PATH", get_path("PWD", "./"))
+
 """BUILD_LOGS -  path to dir where artifacts should be stored"""
-artifacts_dir = get_path("BUILD_LOGS", os.path.join("~", "ovms_test_logs"))
+artifacts_dir = get_path("BUILD_LOGS", os.path.join(ovms_c_repo_path, "tests", "functional", "test_log_build"))
 
 """ TT_NGNIX_CERTS_DIR - Custom nodes directory path"""
 nginx_certs_dir = get_path("TT_NGINX_CERTS_DIR", os.path.join("~", "ovms_nginx_certs"))
@@ -91,7 +94,7 @@ language_models_enabled = get_bool("TT_LANGUAGE_MODELS_ENABLED", True)
 """ MEDIAPIE_DISABLE - if OVMS image has mediapipe feature """
 mediapipe_disable = bool(get_int("MEDIAPIPE_DISABLE", 0))
 
-""" PYTHON_DISABLE - if OVMS image has python feature """
+""" PYTHON_DISABLE - if OVMS image has Python feature disabled"""
 python_disable = bool(get_int("PYTHON_DISABLE", 0))
 
 """ TT_WIN_PY_VERSION - Python version for virtualenv on Windows OS """
@@ -201,9 +204,6 @@ skip_nginx_test = skip_nginx_test and is_nginx_mtls
 """ TT_ENABLE_OVMS_C_PYTEST_PLUGINS - enable pytest plugins """
 enable_pytest_plugins = get_bool("TT_ENABLE_OVMS_C_PYTEST_PLUGINS", True)
 
-""" TT_OVMS_C_REPO_PATH - path to ovms-c repository. Can be relative or absolute. """
-ovms_c_repo_path = get_path("TT_OVMS_C_REPO_PATH", get_path("PWD", "./"))
-
 """ TT_REPOSITORY_NAME - repository name provided by user """
 repository_name = os.environ.get("TT_REPOSITORY_NAME", "ovms-c")
 
@@ -299,6 +299,18 @@ teardown_ovms_processes = get_bool("TT_TEARDOWN_OVMS_PROCESSES", False)
 """ TT_WAIT_FOR_MESSAGES_TIMEOUT - timeout for ovms.wait_for_messages(...) method """
 wait_for_messages_timeout = get_int("TT_WAIT_FOR_MESSAGES_TIMEOUT", 180)
 
+""" TT_WAIT_FOR_MESSAGES_LOG_FLUSH - dump collected OVMS output to logger on interrupt/timeout (default: True) """
+wait_for_messages_log_flush = get_bool("TT_WAIT_FOR_MESSAGES_LOG_FLUSH", True)
+
+""" TT_WAIT_FOR_MESSAGES_LOG_FLUSH_MAX_LINES - max OVMS lines to dump on interrupt (0 = unlimited) """
+wait_for_messages_log_flush_max_lines = get_int("TT_WAIT_FOR_MESSAGES_LOG_FLUSH_MAX_LINES", 500)
+
+""" TT_WAIT_FOR_MESSAGES_EXCEPTION_MAX_LINES - max OVMS lines included in exception message (0 = unlimited) """
+wait_for_messages_exception_max_lines = get_int("TT_WAIT_FOR_MESSAGES_EXCEPTION_MAX_LINES", 500)
+
+""" TT_WAIT_FOR_MESSAGES_PROGRESS_INTERVAL - interval in seconds for periodic progress logging (default: 60) """
+wait_for_messages_progress_interval = get_int("TT_WAIT_FOR_MESSAGES_PROGRESS_INTERVAL", 60)
+
 """ TT_AIRPLANE_MODE - disable connecting to remote resources, disable all downloads and docker pull/build commands and
                        expect that all required data is available locally. """
 airplane_mode = get_bool("TT_AIRPLANE_MODE", False)
@@ -310,7 +322,7 @@ ovms_image_local = get_bool("TT_OVMS_IMAGE_LOCAL", False)
         Possible options (case insensitive): 
         ubuntu22 - use default Ubuntu 22.04 image
         ubuntu24 - use default Ubuntu 24.04 image
-        redhat - use UBI 8.10 based
+        redhat - use UBI 9.7 based
         ubuntu22,ubuntu24,redhat - iterate all tests both for ubuntu and redhat   
         windows - can't iterate (supports only BINARY ovms type)
 """

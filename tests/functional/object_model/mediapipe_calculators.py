@@ -588,7 +588,9 @@ node: {{
     def _copy_model_tree(proc, src, dst):
         if "C:\\" in src:
             proc.run_and_check(
-                f"robocopy /J /E /NP /NFL /NJH \"{src}\" \"{dst}\"",
+                # /R:2 - retry 2 times
+                # /W:3 - wait 3 seconds between retries
+                f"robocopy /J /E /NP /NFL /NJH /R:2 /W:3 \"{src}\" \"{dst}\"",
                 env=os.environ.copy(),
                 exit_code_check=1,
                 exception_type=InvalidReturnCodeException,
@@ -682,10 +684,10 @@ class HttpLLMCalculator(LLMCalculator):
         pipeline_type_str = ""
         model_pipeline_type = getattr(self.model, "pipeline_type", None)
 
-        if model_pipeline_type is not None:
-            pipeline_type_str = f'pipeline_type: {model_pipeline_type},'
-        elif config_pipeline_type is not None:
+        if config_pipeline_type is not None:
             pipeline_type_str = f'pipeline_type: {config_pipeline_type},'
+        elif model_pipeline_type is not None:
+            pipeline_type_str = f'pipeline_type: {model_pipeline_type},'
 
         max_num_batched_tokens_str = ""
         model_max_num_batched_tokens = self.model.max_num_batched_tokens

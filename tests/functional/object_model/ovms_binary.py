@@ -16,6 +16,7 @@
 
 import json
 import os
+import subprocess
 import psutil
 from datetime import datetime
 from pathlib import Path
@@ -25,6 +26,7 @@ from tests.functional.utils.logger import get_logger
 from tests.functional.constants.os_type import OsType
 from tests.functional.utils.process import Process
 
+from tests.functional.config import artifacts_dir
 from tests.functional.constants.core import CONTAINER_STATUS_EXITED, CONTAINER_STATUS_RUNNING
 from ovms.constants.models import Muse
 from tests.functional.constants.ovms_binaries import get_ovms_binary_cmd_setup
@@ -307,7 +309,11 @@ class OvmsBinary(OvmsInstance):
                 environment=environment,
             )
             cmd = f"{pre_cmd} ./{self.cmd} 2>&1"
-        self.process.async_run(cmd, cwd=resource_dir, env=env)
+        stdout_file_path = os.path.join(artifacts_dir, f"ovms_{self.name}.log") if artifacts_dir else None
+        popen_kwargs = {}
+        if base_os == OsType.Windows:
+            popen_kwargs["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
+        self.process.async_run(cmd, cwd=resource_dir, env=env, stdout_file_path=stdout_file_path, **popen_kwargs)
 
     def ensure_status(self, status: str = CONTAINER_STATUS_RUNNING):
         self.process.is_alive()

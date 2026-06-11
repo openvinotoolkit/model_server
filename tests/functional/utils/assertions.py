@@ -371,6 +371,16 @@ class ConvertModelException(OvmsTestException):
     pass
 
 
+class UploadModelsUnstableException(OvmsTestException):
+    """Raised when upload/export restored models from backup."""
+    pass
+
+
+class ReloadModelsUnstableException(OvmsTestException):
+    """Raised when reload linked models from fallback (previous weeks)."""
+    pass
+
+
 class OVVPException(OvmsTestException):
     pass
 

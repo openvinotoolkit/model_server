@@ -162,6 +162,7 @@ class OvmsMessages:
         ERROR_COUNT_SHOULD_BE_FROM_1 = f"count should be from 1 to CPU core count : {CurrentOsInfo.get_cpu_amount()}"
         ERROR_REST_WORKERS_COUNT_SHOULD_BE_FROM_1 = f"rest workers {ERROR_COUNT_SHOULD_BE_FROM_1}"
         ERROR_GRPC_WORKERS_COUNT_SHOULD_BE_FROM_1 = f"grpc_workers {ERROR_COUNT_SHOULD_BE_FROM_1}"
+    INFO_WILL_START_2_REST_WORKERS = "Will start 2 REST workers"
     ERROR_WORKERS_COUNT_INFORMATION = "workers count should be from 2 to 10000"
     ERROR_SHAPES_INCONSISTENT = "OV does not support reshaping model: {} with provided shape"
     ERROR_WRONG_LAYER_NAME = "Config shape - {} not found in model"
@@ -355,8 +356,9 @@ class OvmsMessages:
     MEDIAPIPE_REQUEST_PROCESSING_FAILED = "Request processing failed, check its correctness"
     MEDIAPIPE_URL_IMAGE_INVALID_ARGUMENT_FILESYSTEM_DISABLED = "Loading images from local filesystem is disabled"
     MEDIAPIPE_URL_IMAGE_PARSING_FAILED = "Image parsing failed"
-    MEDIAPIPE_CANT_OPEN_URL_IMAGE = "parsing failed: can\\'t fopen"
-    MEDIAPIPE_UNKNOWN_IMAGE_TYPE = "parsing failed: unknown image type"
+    MEDIAPIPE_IMAGE_PARSING_FAILED = "Image file parsing failed"
+    MEDIAPIPE_IMAGE_NOT_SUBPATH_OF_ALLOWED_LOCAL_MEDIA_PATH = \
+        "Given filepath is not subpath of allowed_local_media_path"
     MEDIAPIPE_URL_DOES_NOT_MATCH_ALLOWED_DOMAIN = \
         "Given url does not match any allowed domain from allowed_media_domains"
 
@@ -457,21 +459,19 @@ class OvmsMessages:
 
     MODELS_ENDPOINT_MODEL_NOT_FOUND = "Model not found"
 
-    PULL_ERROR_FAILURE_WHEN_RECEIVING_DATA_FROM_PEER = \
-        "[ERROR] curl_easy_perform() failed: Failure when receiving data from the peer"
-    PULL_ERROR_COULD_NOT_RESOLVE_PROXY_NAME = "[ERROR] curl_easy_perform() failed: Could not resolve proxy name"
-    PULL_ERROR_TIMEOUT_WAS_REACHED = "[ERROR] curl_easy_perform() failed: Timeout was reached"
-    PULL_ERROR_COULD_NOT_CONNECT_TO_SERVER = "[ERROR] curl_easy_perform() failed: Couldn't connect to server"
+    PULL_ERROR_DOWNLOADING_OBJECT = "[ERROR] Error downloading object"
+    PULL_ERROR_LFS_OBJECT_DOWNLOAD_FAILED = "[ERROR] LFS object download failed"
     PULL_ERROR_LFS_DOWNLOAD_FAILED = "[ERROR] LFS download failed"
-    PULL_STATUS_UNCLEAN = "Status: Unclean status detected in libgit2 repository path"
-    PULL_STATUS_FAILED = "Status: Failed in libgit2 execution of status method"
     PULL_INFO_RESUME_DOWNLOAD = "[INFO] curl_easy_perform() trying to resume file download"
+    PULL_RESUME_PARTIAL_DOWNLOAD = "resume partial download"
+    PULL_RESUME_STATUS_CHECK_PASSED = "Model repository status check passed after resuming download."
 
     # Audio endpoints
     AUDIO_NOT_VALID_WAV_NOR_MP3 = "Received input file is not valid wav nor mp3 audio file"
     AUDIO_FILE_PARSING_FAILS = "File parsing fails"
     AUDIO_INVALID_LANGUAGE_CODE = "Invalid language code."
-    AUDIO_TEMPERATURE_OUT_OF_RANGE = "Temperature out of range(0.0, 2.0)"
+    AUDIO_INVALID_TEMPERATURE_TYPE = "Invalid temperature type."
+    AUDIO_NEGATIVE_TEMPERATURE = "temperature must be a strictly positive float"
     AUDIO_INVALID_TIMESTAMP_GRANULARITIES = 'Invalid timestamp_granularities type. Allowed types: "segment", "word"'
     AUDIO_VOICE_NOT_AVAILABLE = "Requested voice not available"
     AUDIO_STREAMING_NOT_SUPPORTED = "streaming is not supported"

@@ -212,7 +212,7 @@ class GenerativeAIValidationUtils:
                     if choice.delta.tool_calls is not None:
                         stream_content.append(choice.delta.tool_calls)
                 else:
-                    if choice.delta.content is not None:
+                    if choice.delta is not None and choice.delta.content is not None:
                         stream_content.append(choice.delta.content)
             else:
                 if not allow_empty_response:
@@ -317,14 +317,21 @@ class GenerativeAIValidationUtils:
         return outputs_content
 
     @classmethod
-    def validate_embeddings_outputs(cls, model_name, outputs, allow_empty_response=False):
+    def validate_embeddings_outputs(cls, model_name, outputs, allow_empty_response=False, concise_log=False):
         outputs_content = []
         assert outputs is not None and len(outputs.data) > 0, f"No output collected for node with model: {model_name}"
         for output in outputs.data:
             if not allow_empty_response:
                 output_embedding = output.embedding
                 assert len(output_embedding) > 0, f"Empty response content: {output_embedding}"
-                logger.info(output_embedding)
+                if concise_log:
+                    logger.info(
+                        f"Embedding for model '{model_name}': dim={len(output_embedding)}, "
+                        f"first_values={output_embedding[:3]}"
+                    )
+                    logger.debug(f"Full embedding vector: {output_embedding}")
+                else:
+                    logger.info(output_embedding)
                 outputs_content.append(output_embedding)
         return outputs_content
 
@@ -563,6 +570,7 @@ class GenerativeAIValidationUtils:
                 dataset=TextDataset,
                 input_data_type="list",
                 request_parameters=request_parameters,
+                concise_log=True,
             )
             return raw_outputs.data[0].embedding
 

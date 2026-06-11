@@ -790,12 +790,15 @@ def prepare_requests(
         port = inference_request.ovms.get_port(inference_request.api_type)
         inference_client = inference_request.api_type(port=port, model=inference_request.model)
         input_data = inference_client.create_client_data(inference_request)
+        effective_timeout = timeout
+        if inference_request.model.predict_timeout is not None:
+            effective_timeout = max(timeout, inference_request.model.predict_timeout)
         inference_info = InferenceInfo.create(
             inference_client,
             inference_request.model,
             input_data=input_data,
             inference_request=inference_request,
-            timeout=timeout,
+            timeout=effective_timeout,
         )
         inference_infos.append(inference_info)
     return inference_infos
@@ -1282,6 +1285,7 @@ def run_llm_inference(
                     model_name=model_name,
                     outputs=raw_outputs,
                     allow_empty_response=allow_empty_response,
+                    concise_log=kwargs.get("concise_log", False),
                 )
         elif endpoint == CohereWrapper.RERANK:
             input_content = RerankApi.prepare_rerank_input_content(input_objects)

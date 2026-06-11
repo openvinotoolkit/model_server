@@ -185,6 +185,8 @@ class CommonProcess(AbstractProcess):
     ):
         super().async_run(cmd, cwd, daemon_mode)
         stdin_redirect = PIPE if use_stdin else DEVNULL
+        stdout_file_path = kwargs.pop("stdout_file_path", None)
+        stderr_file_path = kwargs.pop("stderr_file_path", None)
 
         cmd_mode = self._get_cmd_mode(cmd, sudo)
 
@@ -200,8 +202,8 @@ class CommonProcess(AbstractProcess):
             **kwargs,
         )
 
-        self._err_stream = StreamReaderThread(self._proc.stderr)
-        self._std_stream = StreamReaderThread(self._proc.stdout)
+        self._err_stream = StreamReaderThread(self._proc.stderr, mirror_file_path=stderr_file_path)
+        self._std_stream = StreamReaderThread(self._proc.stdout, mirror_file_path=stdout_file_path)
         self._err_stream.run()
         self._std_stream.run()
 
@@ -392,12 +394,13 @@ Process = WindowsProcess if get_host_os() == OsType.Windows else UnixProcess
 
 
 class StreamReaderThread:
-    def __init__(self, stream, local_thread=True):
+    def __init__(self, stream, local_thread=True, mirror_file_path=None):
         self._queue = Queue()
         self._thread = None
         self._stream = stream
         self.timeout_detected = False
         self._local_thread = local_thread
+        self._mirror_file_path = mirror_file_path
 
     def run(self):
         self._thread = Thread(target=self._enqueue_output, args=(self._stream, ))
@@ -405,11 +408,24 @@ class StreamReaderThread:
         self._thread.start()
 
     def _enqueue_output(self, out):
+        mirror_fd = None
         try:
+            if self._mirror_file_path:
+                mirror_dir = os.path.dirname(self._mirror_file_path)
+                if mirror_dir:
+                    os.makedirs(mirror_dir, exist_ok=True)
+                mirror_fd = open(self._mirror_file_path, "a", encoding="utf-8", errors="ignore")
             for line in iter(out.readline, b'' if self._local_thread else ''):
-                self._queue.put(line.decode('utf8', 'ignore') if self._local_thread else line)
+                line = line.decode('utf8', 'ignore') if self._local_thread else line
+                self._queue.put(line)
+                if mirror_fd is not None:
+                    mirror_fd.write(line)
+                    mirror_fd.flush()
         except:
             self.timeout_detected = True
+        finally:
+            if mirror_fd is not None:
+                mirror_fd.close()
 
     def pop(self):
         result = ""
