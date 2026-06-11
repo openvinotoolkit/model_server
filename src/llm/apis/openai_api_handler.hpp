@@ -155,6 +155,7 @@ public:
     std::string getModel() const;
     std::string getToolChoice() const;
     const std::unique_ptr<OutputParser>& getOutputParser() const;
+    const CompletionUsageStatistics& getUsage() const { return usage; }
 
     // Usage tracking
     void setPromptTokensUsage(size_t promptTokens);
