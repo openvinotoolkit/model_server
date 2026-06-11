@@ -13,7 +13,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <set>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 
 #include <openvino/openvino.hpp>
@@ -31,6 +33,15 @@
 #include <pybind11/stl.h>
 #pragma warning(pop)
 
+#pragma warning(push)
+#pragma warning(disable : 6313)
+#include <rapidjson/document.h>
+#include <rapidjson/stringbuffer.h>
+#include <rapidjson/writer.h>
+#pragma warning(pop)
+
+#include "../http_payload.hpp"
+#include "../multi_part_parser.hpp"
 #include "../precision.hpp"
 #include "python_backend.hpp"
 #include "src/python/ovms_py_tensor.hpp"
@@ -95,24 +106,44 @@ class PyTensorOvTensorConverterCalculator : public CalculatorBase {
     mediapipe::Timestamp outputTimestamp;
     static const std::string OV_TENSOR_TAG_NAME;
     static const std::string OVMS_PY_TENSOR_TAG_NAME;
+    static const std::string HTTP_REQUEST_TAG_NAME;
+    static const std::string HTTP_RESPONSE_TAG_NAME;
 
 public:
     static absl::Status GetContract(CalculatorContract* cc) {
         LOG(INFO) << "PyTensorOvTensorConverterCalculator [Node: " << cc->GetNodeName() << "] GetContract start";
         RET_CHECK(cc->Inputs().GetTags().size() == 1);
         RET_CHECK(cc->Outputs().GetTags().size() == 1);
-        RET_CHECK((*(cc->Inputs().GetTags().begin()) == OV_TENSOR_TAG_NAME && *(cc->Outputs().GetTags().begin()) == OVMS_PY_TENSOR_TAG_NAME) || (*(cc->Inputs().GetTags().begin()) == OVMS_PY_TENSOR_TAG_NAME && *(cc->Outputs().GetTags().begin()) == OV_TENSOR_TAG_NAME));
-        if (*(cc->Inputs().GetTags().begin()) == OV_TENSOR_TAG_NAME) {
+        const std::string inputTag = *(cc->Inputs().GetTags().begin());
+        const std::string outputTag = *(cc->Outputs().GetTags().begin());
+        const bool ovToPy = (inputTag == OV_TENSOR_TAG_NAME && outputTag == OVMS_PY_TENSOR_TAG_NAME);
+        const bool pyToOv = (inputTag == OVMS_PY_TENSOR_TAG_NAME && outputTag == OV_TENSOR_TAG_NAME);
+        const bool httpToPy = (inputTag == HTTP_REQUEST_TAG_NAME && outputTag == OVMS_PY_TENSOR_TAG_NAME);
+        const bool pyToHttp = (inputTag == OVMS_PY_TENSOR_TAG_NAME && outputTag == HTTP_RESPONSE_TAG_NAME);
+        RET_CHECK(ovToPy || pyToOv || httpToPy || pyToHttp)
+            << "PyTensorOvTensorConverterCalculator supports only the following input/output tag pairings: "
+            << OV_TENSOR_TAG_NAME << "->" << OVMS_PY_TENSOR_TAG_NAME << ", "
+            << OVMS_PY_TENSOR_TAG_NAME << "->" << OV_TENSOR_TAG_NAME << ", "
+            << HTTP_REQUEST_TAG_NAME << "->" << OVMS_PY_TENSOR_TAG_NAME << ", "
+            << OVMS_PY_TENSOR_TAG_NAME << "->" << HTTP_RESPONSE_TAG_NAME
+            << ". Received: " << inputTag << "->" << outputTag;
+        if (ovToPy) {
             RET_CHECK(cc->Options<PyTensorOvTensorConverterCalculatorOptions>().tag_to_output_tensor_names().count(OVMS_PY_TENSOR_TAG_NAME) > 0);
             if (cc->Options<PyTensorOvTensorConverterCalculatorOptions>().tag_to_output_tensor_names().count(OVMS_PY_TENSOR_TAG_NAME) > 1)
                 LOG(INFO) << "PyTensorOvTensorConverterCalculator [Node: " << cc->GetNodeName() << "] tag_to_output_tensor_names map contains some keys that will be ignored";
             cc->Inputs().Tag(OV_TENSOR_TAG_NAME).Set<ov::Tensor>();
             cc->Outputs().Tag(OVMS_PY_TENSOR_TAG_NAME).Set<PyObjectWrapper<py::object>>();
-        } else {
+        } else if (pyToOv) {
             if (cc->Options<PyTensorOvTensorConverterCalculatorOptions>().tag_to_output_tensor_names().count(OVMS_PY_TENSOR_TAG_NAME) > 0)
                 LOG(INFO) << "PyTensorOvTensorConverterCalculator [Node: " << cc->GetNodeName() << "] tag_to_output_tensor_names map contains some keys that will be ignored";
             cc->Inputs().Tag(OVMS_PY_TENSOR_TAG_NAME).Set<PyObjectWrapper<py::object>>();
             cc->Outputs().Tag(OV_TENSOR_TAG_NAME).Set<ov::Tensor>();
+        } else if (httpToPy) {
+            cc->Inputs().Tag(HTTP_REQUEST_TAG_NAME).Set<ovms::HttpPayload>();
+            cc->Outputs().Tag(OVMS_PY_TENSOR_TAG_NAME).Set<PyObjectWrapper<py::object>>();
+        } else {  // pyToHttp
+            cc->Inputs().Tag(OVMS_PY_TENSOR_TAG_NAME).Set<PyObjectWrapper<py::object>>();
+            cc->Outputs().Tag(HTTP_RESPONSE_TAG_NAME).Set<std::string>();
         }
 
         LOG(INFO) << "PyTensorOvTensorConverterCalculator [Node: " << cc->GetNodeName() << "] GetContract end";
@@ -135,8 +166,6 @@ public:
         LOG(INFO) << "PyTensorOvTensorConverterCalculator [Node: " << cc->NodeName() << "] Process start";
         py::gil_scoped_acquire acquire;
         try {
-            PythonBackend pythonBackend;
-
             for (const std::string& tag : cc->Inputs().GetTags()) {
                 if (cc->Inputs().Tag(tag).IsEmpty()) {
                     LOG(INFO) << "PyTensorOvTensorConverterCalculator [Node: " << cc->NodeName() << "] Error occurred during reading inputs. Unexpected empty packet received on input: " << tag;
@@ -144,7 +173,58 @@ public:
                 }
             }
 
-            if (*(cc->Inputs().GetTags().begin()) == OV_TENSOR_TAG_NAME) {
+            const std::string inputTag = *(cc->Inputs().GetTags().begin());
+            const std::string outputTag = *(cc->Outputs().GetTags().begin());
+
+            if (inputTag == HTTP_REQUEST_TAG_NAME) {
+                const ovms::HttpPayload& payload = cc->Inputs().Tag(HTTP_REQUEST_TAG_NAME).Get<ovms::HttpPayload>();
+                py::object pyPayload;
+                if (payload.multipartParser && !payload.multipartParser->hasParseError() && !payload.multipartParser->getAllFieldNames().empty()) {
+                    py::module_ numpy = py::module_::import("numpy");
+                    py::object uint8 = numpy.attr("uint8");
+                    py::dict result;
+                    const std::set<std::string> fieldNames = payload.multipartParser->getAllFieldNames();
+                    for (const std::string& fieldName : fieldNames) {
+                        const std::vector<std::string_view> files = payload.multipartParser->getFilesArrayByFieldName(fieldName);
+                        if (!files.empty()) {
+                            const std::string_view fileContent = files.front();
+                            py::bytes raw(fileContent.data(), fileContent.size());
+                            result[py::str(fieldName)] = numpy.attr("frombuffer")(raw, "dtype"_a = uint8);
+                        } else {
+                            result[py::str(fieldName)] = py::str(payload.multipartParser->getFieldByName(fieldName));
+                        }
+                    }
+                    pyPayload = std::move(result);
+                } else if (payload.parsedJson && !payload.parsedJson->HasParseError()) {
+                    rapidjson::StringBuffer buffer;
+                    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+                    payload.parsedJson->Accept(writer);
+                    py::module_ jsonModule = py::module_::import("json");
+                    pyPayload = jsonModule.attr("loads")(py::str(buffer.GetString(), buffer.GetSize()));
+                } else {
+                    py::module_ jsonModule = py::module_::import("json");
+                    try {
+                        pyPayload = jsonModule.attr("loads")(py::str(payload.body));
+                    } catch (const pybind11::error_already_set&) {
+                        pyPayload = py::str(payload.body);
+                    }
+                }
+                std::unique_ptr<PyObjectWrapper<py::object>> outputPtr = std::make_unique<PyObjectWrapper<py::object>>(pyPayload);
+                cc->Outputs().Tag(OVMS_PY_TENSOR_TAG_NAME).Add(outputPtr.release(), cc->InputTimestamp());
+            } else if (outputTag == HTTP_RESPONSE_TAG_NAME) {
+                const py::object& pyInput = cc->Inputs().Tag(OVMS_PY_TENSOR_TAG_NAME).Get<PyObjectWrapper<py::object>>().getObject();
+                std::unique_ptr<std::string> response;
+                if (py::isinstance<py::str>(pyInput)) {
+                    response = std::make_unique<std::string>(pyInput.cast<std::string>());
+                } else if (py::isinstance<py::bytes>(pyInput)) {
+                    response = std::make_unique<std::string>(pyInput.cast<std::string>());
+                } else {
+                    py::module_ jsonModule = py::module_::import("json");
+                    py::object dumped = jsonModule.attr("dumps")(pyInput);
+                    response = std::make_unique<std::string>(dumped.cast<std::string>());
+                }
+                cc->Outputs().Tag(HTTP_RESPONSE_TAG_NAME).Add(response.release(), cc->InputTimestamp());
+            } else if (inputTag == OV_TENSOR_TAG_NAME) {
                 auto& inputTensor = cc->Inputs().Tag(OV_TENSOR_TAG_NAME).Get<ov::Tensor>();
 
                 std::unique_ptr<PyObjectWrapper<py::object>> outputPyTensor;
@@ -168,6 +248,7 @@ public:
                            << "Undefined precision in input tensor: " << inputTensor.get_element_type();
                 }
 
+                PythonBackend pythonBackend;
                 pythonBackend.createOvmsPyTensor(
                     outputName,
                     const_cast<void*>((const void*)inputTensor.data()),
@@ -180,6 +261,7 @@ public:
             } else {
                 if (*(cc->Inputs().GetTags().begin()) == OVMS_PY_TENSOR_TAG_NAME) {
                     auto& inputTensor = cc->Inputs().Tag(OVMS_PY_TENSOR_TAG_NAME).Get<PyObjectWrapper<py::object>>();
+                    PythonBackend pythonBackend;
                     pythonBackend.validateOvmsPyTensor(inputTensor.getObject());
                     const auto precision = ovmsPrecisionToIE2Precision(fromKfsString(inputTensor.getProperty<std::string>("datatype")));
                     if (precision == ov::element::Type_t::dynamic) {
@@ -223,6 +305,8 @@ public:
 
 const std::string PyTensorOvTensorConverterCalculator::OV_TENSOR_TAG_NAME{"OVTENSOR"};
 const std::string PyTensorOvTensorConverterCalculator::OVMS_PY_TENSOR_TAG_NAME{"OVMS_PY_TENSOR"};
+const std::string PyTensorOvTensorConverterCalculator::HTTP_REQUEST_TAG_NAME{"HTTP_REQUEST_PAYLOAD"};
+const std::string PyTensorOvTensorConverterCalculator::HTTP_RESPONSE_TAG_NAME{"HTTP_RESPONSE_PAYLOAD"};
 
 REGISTER_CALCULATOR(PyTensorOvTensorConverterCalculator);
 }  // namespace mediapipe
