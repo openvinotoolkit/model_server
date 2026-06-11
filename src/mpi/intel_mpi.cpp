@@ -140,7 +140,7 @@ imp_status_t imp_video_source_set(imp_video_source_t* source,
     std::string k(key), v(value);
     if (k == "path" || k == "url")  source->path = v;
     else if (k == "device")         source->device = v;
-    else if (k == "width")          source->width = std::stoi(v);
+    else if (k == "width")          source->width = std::stoi(v); // no error handling FIXME stoi
     else if (k == "height")         source->height = std::stoi(v);
     else if (k == "framerate")      source->framerate = std::stoi(v);
     else if (k == "format")         source->format = v;
@@ -294,6 +294,22 @@ imp_status_t imp_video_open(imp_video_stream_t** stream,
     std::string appsink_cam  = "emit-signals=false sync=false max-buffers=2 drop=true";
     std::string queue_str   = is_file ? queue_file : queue_cam;
     std::string sink_props  = is_file ? appsink_file : appsink_cam;
+
+    // Audit mode: force single-buffer, synchronous appsink (disable GStreamer
+    // pre-buffering to isolate the effect of pipeline parallelism).
+    if (is_file && opts && opts->sync_appsink) {
+        queue_str  = "queue max-size-buffers=1 max-size-time=0 max-size-bytes=0 leaky=no";
+        sink_props = "emit-signals=false sync=false max-buffers=1 drop=false";
+    }
+
+    // Audit mode: arbitrary bounded queue depth (overrides sync_appsink).
+    if (is_file && opts && opts->queue_depth > 0) {
+        uint32_t d = opts->queue_depth;
+        queue_str  = "queue max-size-buffers=" + std::to_string(d) +
+                     " max-size-time=0 max-size-bytes=0 leaky=no";
+        sink_props = "emit-signals=false sync=false max-buffers=" +
+                     std::to_string(d) + " drop=false";
+    }
 
     // Source + decode + NV12 convert
     if (is_file) {
@@ -738,128 +754,459 @@ imp_status_t imp_hw_encode_supported(imp_context_t* ctx, bool* supported) {
 }
 
 //////////////////////////////////////////////////////////////////////////////
-// Image decode / encode — stubs
+// Image decode / encode
 //////////////////////////////////////////////////////////////////////////////
 
-imp_status_t imp_decode_image(imp_tensor_t** t, const void* d, size_t s,
-                              imp_context_t* c, const imp_image_decode_opts_t* o,
-                              imp_decode_callback_t cb, void* ud) {
-    (void)t;(void)d;(void)s;(void)c;(void)o;(void)cb;(void)ud;
-    return IMP_ERROR_INTERNAL;
+// Map imp_pixel_format_t → GStreamer video format string
+static const char* imp_format_to_gst(imp_pixel_format_t fmt) {
+    switch (fmt) {
+        case IMP_FORMAT_RGB:  return "RGB";
+        case IMP_FORMAT_BGR:  return "BGR";
+        case IMP_FORMAT_RGBA: return "RGBA";
+        case IMP_FORMAT_BGRA: return "BGRA";
+        case IMP_FORMAT_NV12: return "NV12";
+        case IMP_FORMAT_I420: return "I420";
+        case IMP_FORMAT_GRAY: return "GRAY8";
+        default:              return "RGB";
+    }
+}
+
+// Channels for a given pixel format (planar formats return 0)
+static int imp_format_channels(imp_pixel_format_t fmt) {
+    switch (fmt) {
+        case IMP_FORMAT_RGB:  return 3;
+        case IMP_FORMAT_BGR:  return 3;
+        case IMP_FORMAT_RGBA: return 4;
+        case IMP_FORMAT_BGRA: return 4;
+        case IMP_FORMAT_GRAY: return 1;
+        default:              return 0;
+    }
+}
+
+// Internal: pull decoded image sample from appsink, populate tensor
+static imp_status_t imp_image_decode_pull(GstElement* pipeline,
+                                          GstElement* appsink,
+                                          imp_tensor_t** out_tensor,
+                                          imp_pixel_format_t fmt,
+                                          imp_layout_t layout,
+                                          imp_element_type_t elem_type) {
+    GstStateChangeReturn ret = gst_element_set_state(pipeline, GST_STATE_PLAYING);
+    if (ret == GST_STATE_CHANGE_FAILURE) {
+        gst_element_set_state(pipeline, GST_STATE_NULL);
+        return IMP_ERROR_DECODE_FAILED;
+    }
+
+    GstSample* sample = gst_app_sink_try_pull_sample(GST_APP_SINK(appsink), 10 * GST_SECOND);
+    if (!sample) {
+        gst_element_set_state(pipeline, GST_STATE_NULL);
+        return IMP_ERROR_DECODE_FAILED;
+    }
+
+    GstBuffer* buffer = gst_sample_get_buffer(sample);
+    GstCaps*   caps   = gst_sample_get_caps(sample);
+
+    GstVideoInfo info;
+    gst_video_info_from_caps(&info, caps);
+
+    int w = info.width;
+    int h = info.height;
+
+    auto* tensor = new imp_tensor_s();
+    tensor->width  = w;
+    tensor->height = h;
+    tensor->format = fmt;
+    tensor->device_type = IMP_DEVICE_CPU;
+    tensor->valid  = false;
+
+    GstVideoFrame vframe;
+    if (!gst_video_frame_map(&vframe, &info, buffer, GST_MAP_READ)) {
+        delete tensor;
+        gst_sample_unref(sample);
+        gst_element_set_state(pipeline, GST_STATE_NULL);
+        return IMP_ERROR_DECODE_FAILED;
+    }
+
+    if (fmt == IMP_FORMAT_NV12) {
+        size_t y_size  = (size_t)w * h;
+        size_t uv_size = (size_t)w * (h / 2);
+        uint8_t* y_buf  = (uint8_t*)malloc(y_size);
+        uint8_t* uv_buf = (uint8_t*)malloc(uv_size);
+        if (!y_buf || !uv_buf) {
+            free(y_buf); free(uv_buf);
+            gst_video_frame_unmap(&vframe);
+            delete tensor;
+            gst_sample_unref(sample);
+            gst_element_set_state(pipeline, GST_STATE_NULL);
+            return IMP_ERROR_OUT_OF_MEMORY;
+        }
+
+        uint8_t* y_src  = (uint8_t*)GST_VIDEO_FRAME_PLANE_DATA(&vframe, 0);
+        int y_stride    = GST_VIDEO_FRAME_PLANE_STRIDE(&vframe, 0);
+        for (int row = 0; row < h; row++)
+            memcpy(y_buf + row * w, y_src + row * y_stride, w);
+
+        uint8_t* uv_src = (uint8_t*)GST_VIDEO_FRAME_PLANE_DATA(&vframe, 1);
+        int uv_stride   = GST_VIDEO_FRAME_PLANE_STRIDE(&vframe, 1);
+        for (int row = 0; row < h / 2; row++)
+            memcpy(uv_buf + row * w, uv_src + row * uv_stride, w);
+
+        tensor->y_data  = y_buf;
+        tensor->uv_data = uv_buf;
+        tensor->valid   = true;
+    } else {
+        int channels = imp_format_channels(fmt);
+        if (channels == 0) channels = 3;
+
+        uint8_t* src_data = (uint8_t*)GST_VIDEO_FRAME_PLANE_DATA(&vframe, 0);
+        int stride = GST_VIDEO_FRAME_PLANE_STRIDE(&vframe, 0);
+
+        if (elem_type == IMP_TYPE_FP32) {
+            size_t fp32_size = (size_t)w * h * channels;
+            std::vector<float> fp32_data(fp32_size);
+            for (int row = 0; row < h; row++) {
+                uint8_t* row_ptr = src_data + row * stride;
+                for (int col = 0; col < w * channels; col++)
+                    fp32_data[row * w * channels + col] = row_ptr[col] / 255.0f;
+            }
+
+            if (layout == IMP_LAYOUT_NCHW) {
+                ov::Shape shape = {1, (size_t)channels, (size_t)h, (size_t)w};
+                tensor->ov_tensor = ov::Tensor(ov::element::f32, shape);
+                float* dst = tensor->ov_tensor.data<float>();
+                for (int c = 0; c < channels; c++)
+                    for (int row = 0; row < h; row++)
+                        for (int col = 0; col < w; col++)
+                            dst[c * h * w + row * w + col] = fp32_data[row * w * channels + col + c];
+            } else {
+                ov::Shape shape = {1, (size_t)h, (size_t)w, (size_t)channels};
+                tensor->ov_tensor = ov::Tensor(ov::element::f32, shape);
+                memcpy(tensor->ov_tensor.data<float>(), fp32_data.data(), fp32_size * sizeof(float));
+            }
+        } else {
+            if (layout == IMP_LAYOUT_NCHW) {
+                ov::Shape shape = {1, (size_t)channels, (size_t)h, (size_t)w};
+                tensor->ov_tensor = ov::Tensor(ov::element::u8, shape);
+                uint8_t* dst = tensor->ov_tensor.data<uint8_t>();
+                for (int c = 0; c < channels; c++)
+                    for (int row = 0; row < h; row++) {
+                        uint8_t* row_ptr = src_data + row * stride;
+                        for (int col = 0; col < w; col++)
+                            dst[c * h * w + row * w + col] = row_ptr[col * channels + c];
+                    }
+            } else {
+                ov::Shape shape = {1, (size_t)h, (size_t)w, (size_t)channels};
+                tensor->ov_tensor = ov::Tensor(ov::element::u8, shape);
+                uint8_t* dst = tensor->ov_tensor.data<uint8_t>();
+                int row_bytes = w * channels;
+                for (int row = 0; row < h; row++)
+                    memcpy(dst + row * row_bytes, src_data + row * stride, row_bytes);
+            }
+        }
+        tensor->valid = true;
+    }
+
+    gst_video_frame_unmap(&vframe);
+    gst_sample_unref(sample);
+    gst_element_set_state(pipeline, GST_STATE_NULL);
+
+    *out_tensor = tensor;
+    return IMP_OK;
 }
 
 imp_status_t imp_decode_image_file(imp_tensor_t** t, const char* f,
                                    imp_context_t* c, const imp_image_decode_opts_t* o,
                                    imp_decode_callback_t cb, void* ud) {
-    (void)t;(void)f;(void)c;(void)o;(void)cb;(void)ud;
-    return IMP_ERROR_INTERNAL;
-}
+    (void)cb; (void)ud;
 
-imp_status_t imp_decode_audio(imp_tensor_t** tensor, const void* data, size_t size,
-                              imp_context_t* ctx, const imp_audio_decode_opts_t* opts,
-                              imp_decode_callback_t callback, void* user_data) {
-    (void)callback; (void)user_data;  // async not yet implemented
-    if (!tensor || !data || size == 0) return IMP_ERROR_INVALID_ARGUMENT;
+    if (!t || !f) return IMP_ERROR_INVALID_ARGUMENT;
 
     gst_init(nullptr, nullptr);
 
-    // Resolve options
-    uint32_t target_rate = (opts && opts->sample_rate > 0) ? opts->sample_rate : 16000;
-    uint32_t target_channels = (opts && opts->channels > 0) ? opts->channels : 1;
-    bool normalize = opts ? opts->normalize : true;
-    (void)normalize;  // GStreamer F32LE is already [-1,1]
+    imp_pixel_format_t fmt     = (o && o->output_format) ? o->output_format : IMP_FORMAT_RGB;
+    imp_layout_t       layout  = (o) ? o->output_layout : IMP_LAYOUT_NHWC;
+    imp_element_type_t etype   = (o) ? o->output_type   : IMP_TYPE_U8;
+    uint32_t rw = (o) ? o->resize_width  : 0;
+    uint32_t rh = (o) ? o->resize_height : 0;
 
-    // Build pipeline: appsrc → decodebin → audioconvert → audioresample → caps → appsink
-    std::string capsStr =
-        "audio/x-raw,format=F32LE,channels=" + std::to_string(target_channels) +
-        ",rate=" + std::to_string(target_rate);
+    const char* gst_fmt = imp_format_to_gst(fmt);
 
-    std::string pipelineStr =
-        "appsrc name=src ! decodebin ! audioconvert ! audioresample ! "
-        + capsStr + " ! appsink name=sink sync=false";
+    // Normalize path (backslashes break gst_parse_launch)
+    std::string path(f);
+    for (auto& ch : path) if (ch == '\\') ch = '/';
+
+    std::string pipe = "filesrc location=\"" + path + "\" ! decodebin ! videoconvert ! "
+                       "video/x-raw,format=" + gst_fmt;
+    if (rw > 0 && rh > 0) {
+        pipe += " ! videoscale ! video/x-raw,width=" + std::to_string(rw) +
+                ",height=" + std::to_string(rh);
+    }
+    pipe += " ! appsink name=sink sync=false emit-signals=false";
 
     GError* error = nullptr;
-    GstElement* pipeline = gst_parse_launch(pipelineStr.c_str(), &error);
-    if (error || !pipeline) {
-        if (ctx) ctx->last_error = error ? error->message : "audio pipeline creation failed";
-        if (error) g_error_free(error);
+    GstElement* pipeline = gst_parse_launch(pipe.c_str(), &error);
+    if (error) {
+        if (c) c->last_error = error->message;
+        g_error_free(error);
+        if (pipeline) gst_object_unref(pipeline);
         return IMP_ERROR_DECODE_FAILED;
     }
 
-    GstElement* appsrc = gst_bin_get_by_name(GST_BIN(pipeline), "src");
+    GstElement* appsink = gst_bin_get_by_name(GST_BIN(pipeline), "sink");
+    if (!appsink) {
+        gst_object_unref(pipeline);
+        return IMP_ERROR_DECODE_FAILED;
+    }
+
+    imp_status_t status = imp_image_decode_pull(pipeline, appsink, t, fmt, layout, etype);
+
+    gst_object_unref(appsink);
+    gst_object_unref(pipeline);
+    return status;
+}
+
+imp_status_t imp_decode_image(imp_tensor_t** t, const void* d, size_t s,
+                              imp_context_t* c, const imp_image_decode_opts_t* o,
+                              imp_decode_callback_t cb, void* ud) {
+    (void)cb; (void)ud;
+
+    if (!t || !d || s == 0) return IMP_ERROR_INVALID_ARGUMENT;
+
+    gst_init(nullptr, nullptr);
+
+    imp_pixel_format_t fmt     = (o && o->output_format) ? o->output_format : IMP_FORMAT_RGB;
+    imp_layout_t       layout  = (o) ? o->output_layout : IMP_LAYOUT_NHWC;
+    imp_element_type_t etype   = (o) ? o->output_type   : IMP_TYPE_U8;
+    uint32_t rw = (o) ? o->resize_width  : 0;
+    uint32_t rh = (o) ? o->resize_height : 0;
+
+    const char* gst_fmt = imp_format_to_gst(fmt);
+
+    std::string pipe = "appsrc name=src ! decodebin ! videoconvert ! "
+                       "video/x-raw,format=" + std::string(gst_fmt);
+    if (rw > 0 && rh > 0) {
+        pipe += " ! videoscale ! video/x-raw,width=" + std::to_string(rw) +
+                ",height=" + std::to_string(rh);
+    }
+    pipe += " ! appsink name=sink sync=false emit-signals=false";
+
+    GError* error = nullptr;
+    GstElement* pipeline = gst_parse_launch(pipe.c_str(), &error);
+    if (error) {
+        if (c) c->last_error = error->message;
+        g_error_free(error);
+        if (pipeline) gst_object_unref(pipeline);
+        return IMP_ERROR_DECODE_FAILED;
+    }
+
+    GstElement* appsrc  = gst_bin_get_by_name(GST_BIN(pipeline), "src");
     GstElement* appsink = gst_bin_get_by_name(GST_BIN(pipeline), "sink");
     if (!appsrc || !appsink) {
         if (appsrc) gst_object_unref(appsrc);
         if (appsink) gst_object_unref(appsink);
         gst_object_unref(pipeline);
-        return IMP_ERROR_INTERNAL;
-    }
-
-    // Allocate GStreamer buffer and copy input data
-    GstBuffer* buf = gst_buffer_new_allocate(nullptr, size, nullptr);
-    GstMapInfo map;
-    if (gst_buffer_map(buf, &map, GST_MAP_WRITE)) {
-        memcpy(map.data, data, size);
-        gst_buffer_unmap(buf, &map);
+        return IMP_ERROR_DECODE_FAILED;
     }
 
     gst_element_set_state(pipeline, GST_STATE_PLAYING);
 
-    // Push buffer + EOS
-    gst_app_src_push_buffer(GST_APP_SRC(appsrc), buf);  // takes ownership of buf
+    GstBuffer* buf = gst_buffer_new_allocate(nullptr, s, nullptr);
+    GstMapInfo map;
+    if (gst_buffer_map(buf, &map, GST_MAP_WRITE)) {
+        memcpy(map.data, d, s);
+        gst_buffer_unmap(buf, &map);
+    }
+    gst_app_src_push_buffer(GST_APP_SRC(appsrc), buf);
     gst_app_src_end_of_stream(GST_APP_SRC(appsrc));
 
-    // Pull all decoded float samples
-    std::vector<float> samples;
-    while (true) {
-        GstSample* sample = gst_app_sink_try_pull_sample(GST_APP_SINK(appsink), 5 * GST_SECOND);
-        if (!sample) break;
+    GstSample* sample = gst_app_sink_try_pull_sample(GST_APP_SINK(appsink), 10 * GST_SECOND);
+    imp_status_t status;
+    if (!sample) {
+        status = IMP_ERROR_DECODE_FAILED;
+    } else {
+        GstBuffer* sbuf = gst_sample_get_buffer(sample);
+        GstCaps*   caps = gst_sample_get_caps(sample);
+        GstVideoInfo info;
+        gst_video_info_from_caps(&info, caps);
 
+        int w = info.width;
+        int h = info.height;
+        auto* tensor = new imp_tensor_s();
+        tensor->width  = w;
+        tensor->height = h;
+        tensor->format = fmt;
+        tensor->device_type = IMP_DEVICE_CPU;
+        tensor->valid  = false;
+
+        GstVideoFrame vframe;
+        if (gst_video_frame_map(&vframe, &info, sbuf, GST_MAP_READ)) {
+            if (fmt == IMP_FORMAT_NV12) {
+                size_t y_size  = (size_t)w * h;
+                size_t uv_size = (size_t)w * (h / 2);
+                uint8_t* y_buf  = (uint8_t*)malloc(y_size);
+                uint8_t* uv_buf = (uint8_t*)malloc(uv_size);
+                if (y_buf && uv_buf) {
+                    uint8_t* y_src = (uint8_t*)GST_VIDEO_FRAME_PLANE_DATA(&vframe, 0);
+                    int y_stride   = GST_VIDEO_FRAME_PLANE_STRIDE(&vframe, 0);
+                    for (int row = 0; row < h; row++)
+                        memcpy(y_buf + row * w, y_src + row * y_stride, w);
+                    uint8_t* uv_src = (uint8_t*)GST_VIDEO_FRAME_PLANE_DATA(&vframe, 1);
+                    int uv_stride   = GST_VIDEO_FRAME_PLANE_STRIDE(&vframe, 1);
+                    for (int row = 0; row < h / 2; row++)
+                        memcpy(uv_buf + row * w, uv_src + row * uv_stride, w);
+                    tensor->y_data  = y_buf;
+                    tensor->uv_data = uv_buf;
+                    tensor->valid   = true;
+                } else {
+                    free(y_buf); free(uv_buf);
+                }
+            } else {
+                int channels = imp_format_channels(fmt);
+                if (channels == 0) channels = 3;
+                uint8_t* src_data = (uint8_t*)GST_VIDEO_FRAME_PLANE_DATA(&vframe, 0);
+                int stride = GST_VIDEO_FRAME_PLANE_STRIDE(&vframe, 0);
+
+                if (etype == IMP_TYPE_FP32) {
+                    size_t fp32_count = (size_t)w * h * channels;
+                    std::vector<float> fp32_data(fp32_count);
+                    for (int row = 0; row < h; row++) {
+                        uint8_t* rp = src_data + row * stride;
+                        for (int col = 0; col < w * channels; col++)
+                            fp32_data[row * w * channels + col] = rp[col] / 255.0f;
+                    }
+                    if (layout == IMP_LAYOUT_NCHW) {
+                        ov::Shape shape = {1, (size_t)channels, (size_t)h, (size_t)w};
+                        tensor->ov_tensor = ov::Tensor(ov::element::f32, shape);
+                        float* dst = tensor->ov_tensor.data<float>();
+                        for (int ch = 0; ch < channels; ch++)
+                            for (int row = 0; row < h; row++)
+                                for (int col = 0; col < w; col++)
+                                    dst[ch * h * w + row * w + col] = fp32_data[row * w * channels + col + ch];
+                    } else {
+                        ov::Shape shape = {1, (size_t)h, (size_t)w, (size_t)channels};
+                        tensor->ov_tensor = ov::Tensor(ov::element::f32, shape);
+                        memcpy(tensor->ov_tensor.data<float>(), fp32_data.data(), fp32_count * sizeof(float));
+                    }
+                } else {
+                    if (layout == IMP_LAYOUT_NCHW) {
+                        ov::Shape shape = {1, (size_t)channels, (size_t)h, (size_t)w};
+                        tensor->ov_tensor = ov::Tensor(ov::element::u8, shape);
+                        uint8_t* dst = tensor->ov_tensor.data<uint8_t>();
+                        for (int ch = 0; ch < channels; ch++)
+                            for (int row = 0; row < h; row++) {
+                                uint8_t* rp = src_data + row * stride;
+                                for (int col = 0; col < w; col++)
+                                    dst[ch * h * w + row * w + col] = rp[col * channels + ch];
+                            }
+                    } else {
+                        ov::Shape shape = {1, (size_t)h, (size_t)w, (size_t)channels};
+                        tensor->ov_tensor = ov::Tensor(ov::element::u8, shape);
+                        uint8_t* dst = tensor->ov_tensor.data<uint8_t>();
+                        int row_bytes = w * channels;
+                        for (int row = 0; row < h; row++)
+                            memcpy(dst + row * row_bytes, src_data + row * stride, row_bytes);
+                    }
+                }
+                tensor->valid = true;
+            }
+            gst_video_frame_unmap(&vframe);
+        }
+
+        gst_sample_unref(sample);
+        if (tensor->valid) {
+            *t = tensor;
+            status = IMP_OK;
+        } else {
+            delete tensor;
+            status = IMP_ERROR_DECODE_FAILED;
+        }
+    }
+
+    gst_element_set_state(pipeline, GST_STATE_NULL);
+    gst_object_unref(appsrc);
+    gst_object_unref(appsink);
+    gst_object_unref(pipeline);
+    return status;
+}
+
+imp_status_t imp_decode_audio(imp_tensor_t** t, const void* d, size_t s,
+                              imp_context_t* c, const imp_audio_decode_opts_t* o,
+                              imp_decode_callback_t cb, void* ud) {
+    (void)c; (void)cb; (void)ud;
+    if (!t || !d || s == 0 || !o) return IMP_ERROR_INVALID_ARGUMENT;
+
+    gst_init(nullptr, nullptr);
+
+    uint32_t sampleRate = o->sample_rate > 0 ? o->sample_rate : 16000;
+    uint32_t channels   = o->channels   > 0 ? o->channels   : 1;
+
+    std::string pipeStr =
+        "appsrc name=src ! decodebin ! audioconvert ! audioresample ! "
+        "audio/x-raw,format=F32LE,channels=" + std::to_string(channels) +
+        ",rate=" + std::to_string(sampleRate) +
+        " ! appsink name=sink";
+
+    GError* error = nullptr;
+    GstElement* pipeline = gst_parse_launch(pipeStr.c_str(), &error);
+    if (error || !pipeline) {
+        if (error) g_error_free(error);
+        if (pipeline) gst_object_unref(pipeline);
+        return IMP_ERROR_DECODE_FAILED;
+    }
+
+    GstElement* appsrc  = gst_bin_get_by_name(GST_BIN(pipeline), "src");
+    GstElement* appsink = gst_bin_get_by_name(GST_BIN(pipeline), "sink");
+    if (!appsrc || !appsink) {
+        if (appsrc)  gst_object_unref(appsrc);
+        if (appsink) gst_object_unref(appsink);
+        gst_object_unref(pipeline);
+        return IMP_ERROR_INTERNAL;
+    }
+
+    g_object_set(appsrc, "is-live", FALSE, nullptr);
+    gst_element_set_state(pipeline, GST_STATE_PLAYING);
+
+    // Push input buffer
+    GstBuffer* buffer = gst_buffer_new_allocate(nullptr, s, nullptr);
+    GstMapInfo map;
+    gst_buffer_map(buffer, &map, GST_MAP_WRITE);
+    memcpy(map.data, d, s);
+    gst_buffer_unmap(buffer, &map);
+    gst_app_src_push_buffer(GST_APP_SRC(appsrc), buffer);
+    gst_app_src_end_of_stream(GST_APP_SRC(appsrc));
+
+    // Pull decoded samples
+    std::vector<float> samples;
+    for (;;) {
+        GstSample* sample = gst_app_sink_try_pull_sample(GST_APP_SINK(appsink), 10 * GST_SECOND);
+        if (!sample) {
+            if (gst_app_sink_is_eos(GST_APP_SINK(appsink))) break;
+            break;
+        }
         GstBuffer* outBuf = gst_sample_get_buffer(sample);
         GstMapInfo outMap;
         if (gst_buffer_map(outBuf, &outMap, GST_MAP_READ)) {
-            size_t numFloats = outMap.size / sizeof(float);
-            const float* fdata = reinterpret_cast<const float*>(outMap.data);
-            samples.insert(samples.end(), fdata, fdata + numFloats);
+            size_t nFloats = outMap.size / sizeof(float);
+            const float* fptr = reinterpret_cast<const float*>(outMap.data);
+            samples.insert(samples.end(), fptr, fptr + nFloats);
             gst_buffer_unmap(outBuf, &outMap);
         }
         gst_sample_unref(sample);
     }
-
-    // Check for pipeline errors
-    imp_status_t status = IMP_OK;
-    GstBus* bus = gst_element_get_bus(pipeline);
-    GstMessage* msg = gst_bus_pop_filtered(bus,
-        static_cast<GstMessageType>(GST_MESSAGE_ERROR));
-    if (msg) {
-        GError* err = nullptr;
-        gst_message_parse_error(msg, &err, nullptr);
-        if (ctx && err) ctx->last_error = err->message;
-        if (err) g_error_free(err);
-        gst_message_unref(msg);
-        status = IMP_ERROR_DECODE_FAILED;
-    }
-    gst_object_unref(bus);
 
     gst_element_set_state(pipeline, GST_STATE_NULL);
     gst_object_unref(appsrc);
     gst_object_unref(appsink);
     gst_object_unref(pipeline);
 
-    if (status != IMP_OK || samples.empty()) {
-        return status != IMP_OK ? status : IMP_ERROR_DECODE_FAILED;
-    }
+    if (samples.empty()) return IMP_ERROR_DECODE_FAILED;
 
-    // Wrap samples in an imp_tensor_t backed by ov::Tensor
-    auto* t = new imp_tensor_s();
-    t->ov_tensor = ov::Tensor(ov::element::f32, {1, samples.size()});
-    std::memcpy(t->ov_tensor.data<float>(), samples.data(), samples.size() * sizeof(float));
-    t->device_type = IMP_DEVICE_CPU;
-    t->device_name = "CPU";
-    t->format = IMP_FORMAT_GRAY;  // 1-D audio — not a pixel format, but marks non-NV12
-    t->valid = true;
-
-    *tensor = t;
+    // Wrap in ov::Tensor and return as imp_tensor_t
+    auto* tensor = new imp_tensor_t();
+    tensor->ov_tensor = ov::Tensor(ov::element::f32, {1, samples.size()});
+    memcpy(tensor->ov_tensor.data<float>(), samples.data(), samples.size() * sizeof(float));
+    tensor->device_type = IMP_DEVICE_CPU;
+    tensor->valid = true;
+    *t = tensor;
     return IMP_OK;
 }
 
@@ -1147,18 +1494,282 @@ void imp_audio_close(imp_audio_stream_t* stream) {
     delete stream;
 }
 
+// Internal: prepare raw pixel buffer from tensor for GStreamer encode.
+// Uses GstVideoInfo to compute correct stride-aligned buffer size.
+static GstBuffer* imp_image_prepare_encode_buffer(imp_tensor_t* t,
+                                                   imp_pixel_format_t src_fmt,
+                                                   int w, int h, int channels,
+                                                   std::string& caps_str) {
+    const char* gst_fmt = imp_format_to_gst(src_fmt);
+
+    GstVideoFormat vfmt = gst_video_format_from_string(gst_fmt);
+    GstVideoInfo vinfo;
+    gst_video_info_set_format(&vinfo, vfmt, w, h);
+    size_t data_size = vinfo.size;
+
+    GstBuffer* buffer = gst_buffer_new_allocate(nullptr, data_size, nullptr);
+    if (!buffer) return nullptr;
+
+    GstVideoFrame vframe;
+    if (!gst_video_frame_map(&vframe, &vinfo, buffer, GST_MAP_WRITE)) {
+        gst_buffer_unref(buffer);
+        return nullptr;
+    }
+
+    if (src_fmt == IMP_FORMAT_NV12) {
+        uint8_t* dst_y = (uint8_t*)GST_VIDEO_FRAME_PLANE_DATA(&vframe, 0);
+        int dst_y_stride = GST_VIDEO_FRAME_PLANE_STRIDE(&vframe, 0);
+        for (int row = 0; row < h; row++)
+            memcpy(dst_y + row * dst_y_stride, t->y_data + row * w, w);
+        uint8_t* dst_uv = (uint8_t*)GST_VIDEO_FRAME_PLANE_DATA(&vframe, 1);
+        int dst_uv_stride = GST_VIDEO_FRAME_PLANE_STRIDE(&vframe, 1);
+        for (int row = 0; row < h / 2; row++)
+            memcpy(dst_uv + row * dst_uv_stride, t->uv_data + row * w, w);
+    } else if (t->ov_tensor) {
+        uint8_t* dst = (uint8_t*)GST_VIDEO_FRAME_PLANE_DATA(&vframe, 0);
+        int dst_stride = GST_VIDEO_FRAME_PLANE_STRIDE(&vframe, 0);
+        int src_row_bytes = w * channels;
+
+        auto shape = t->ov_tensor.get_shape();
+        bool is_nchw = (shape.size() == 4 && shape[1] == (size_t)channels &&
+                        shape[2] == (size_t)h && shape[3] == (size_t)w);
+        bool is_fp32 = (t->ov_tensor.get_element_type() == ov::element::f32);
+
+        if (is_nchw) {
+            if (is_fp32) {
+                float* src = t->ov_tensor.data<float>();
+                for (int row = 0; row < h; row++)
+                    for (int col = 0; col < w; col++)
+                        for (int ch = 0; ch < channels; ch++)
+                            dst[row * dst_stride + col * channels + ch] =
+                                (uint8_t)(std::min(std::max(src[ch * h * w + row * w + col] * 255.0f, 0.0f), 255.0f));
+            } else {
+                uint8_t* src = t->ov_tensor.data<uint8_t>();
+                for (int row = 0; row < h; row++)
+                    for (int col = 0; col < w; col++)
+                        for (int ch = 0; ch < channels; ch++)
+                            dst[row * dst_stride + col * channels + ch] =
+                                src[ch * h * w + row * w + col];
+            }
+        } else {
+            if (is_fp32) {
+                float* src = t->ov_tensor.data<float>();
+                for (int row = 0; row < h; row++)
+                    for (int col = 0; col < src_row_bytes; col++)
+                        dst[row * dst_stride + col] =
+                            (uint8_t)(std::min(std::max(src[row * src_row_bytes + col] * 255.0f, 0.0f), 255.0f));
+            } else {
+                uint8_t* src = t->ov_tensor.data<uint8_t>();
+                for (int row = 0; row < h; row++)
+                    memcpy(dst + row * dst_stride, src + row * src_row_bytes, src_row_bytes);
+            }
+        }
+    }
+
+    gst_video_frame_unmap(&vframe);
+
+    caps_str = "video/x-raw,format=" + std::string(gst_fmt) +
+               ",width=" + std::to_string(w) +
+               ",height=" + std::to_string(h) +
+               ",framerate=1/1";
+
+    return buffer;
+}
+
 imp_status_t imp_encode_image(void** d, size_t* s, imp_tensor_t* t,
                               imp_context_t* c, const imp_image_encode_opts_t* o,
                               imp_encode_callback_t cb, void* ud) {
-    (void)d;(void)s;(void)t;(void)c;(void)o;(void)cb;(void)ud;
-    return IMP_ERROR_INTERNAL;
+    (void)cb; (void)ud;
+
+    if (!d || !s || !t || !t->valid) return IMP_ERROR_INVALID_ARGUMENT;
+
+    gst_init(nullptr, nullptr);
+
+    std::string format_str = (o && o->format) ? o->format : "jpeg";
+    std::string encoder_elem;
+    if (format_str == "jpeg" || format_str == "jpg")  encoder_elem = "jpegenc";
+    else if (format_str == "png")                      encoder_elem = "pngenc";
+    else return IMP_ERROR_UNSUPPORTED_FORMAT;
+
+    int quality = (o && o->quality > 0) ? o->quality : 90;
+
+    int w = t->width, h = t->height;
+    imp_pixel_format_t src_fmt = t->format;
+    int channels = imp_format_channels(src_fmt);
+    if (channels == 0 && src_fmt != IMP_FORMAT_NV12) channels = 3;
+
+    if ((w == 0 || h == 0) && t->ov_tensor) {
+        auto shape = t->ov_tensor.get_shape();
+        if (shape.size() == 4) {
+            if (shape[1] <= 4) { h = (int)shape[2]; w = (int)shape[3]; channels = (int)shape[1]; }
+            else { h = (int)shape[1]; w = (int)shape[2]; channels = (int)shape[3]; }
+        }
+    }
+    if (w == 0 || h == 0) return IMP_ERROR_INVALID_ARGUMENT;
+
+    std::string caps_str;
+    GstBuffer* buffer = imp_image_prepare_encode_buffer(t, src_fmt, w, h, channels, caps_str);
+    if (!buffer) return IMP_ERROR_OUT_OF_MEMORY;
+
+    GstElement* pipeline   = gst_pipeline_new("img-enc");
+    GstElement* appsrc     = gst_element_factory_make("appsrc", "src");
+    GstElement* convert    = gst_element_factory_make("videoconvert", "conv");
+    GstElement* encoder    = gst_element_factory_make(encoder_elem.c_str(), "enc");
+    GstElement* appsink    = gst_element_factory_make("appsink", "sink");
+
+    if (!pipeline || !appsrc || !convert || !encoder || !appsink) {
+        gst_buffer_unref(buffer);
+        if (pipeline) gst_object_unref(pipeline);
+        return IMP_ERROR_ENCODE_FAILED;
+    }
+
+    GstCaps* src_caps = gst_caps_from_string(caps_str.c_str());
+    g_object_set(appsrc, "caps", src_caps, "format", GST_FORMAT_TIME,
+                 "stream-type", 0, "is-live", FALSE, nullptr);
+    gst_caps_unref(src_caps);
+
+    if (encoder_elem == "jpegenc")
+        g_object_set(encoder, "quality", quality, nullptr);
+    g_object_set(appsink, "sync", FALSE, "emit-signals", FALSE, nullptr);
+
+    gst_bin_add_many(GST_BIN(pipeline), appsrc, convert, encoder, appsink, nullptr);
+    gst_element_link_many(appsrc, convert, encoder, appsink, nullptr);
+
+    GST_BUFFER_PTS(buffer) = 0;
+    GST_BUFFER_DURATION(buffer) = GST_CLOCK_TIME_NONE;
+
+    gst_element_set_state(pipeline, GST_STATE_PLAYING);
+    gst_app_src_push_buffer(GST_APP_SRC(appsrc), buffer);
+    gst_app_src_end_of_stream(GST_APP_SRC(appsrc));
+
+    GstSample* sample = gst_app_sink_try_pull_sample(GST_APP_SINK(appsink), 10 * GST_SECOND);
+    imp_status_t status;
+    if (!sample) {
+        status = IMP_ERROR_ENCODE_FAILED;
+    } else {
+        GstBuffer* enc_buf = gst_sample_get_buffer(sample);
+        GstMapInfo map;
+        if (gst_buffer_map(enc_buf, &map, GST_MAP_READ)) {
+            void* out = malloc(map.size);
+            if (out) {
+                memcpy(out, map.data, map.size);
+                *d = out;
+                *s = map.size;
+                status = IMP_OK;
+            } else {
+                status = IMP_ERROR_OUT_OF_MEMORY;
+            }
+            gst_buffer_unmap(enc_buf, &map);
+        } else {
+            status = IMP_ERROR_ENCODE_FAILED;
+        }
+        gst_sample_unref(sample);
+    }
+
+    gst_element_set_state(pipeline, GST_STATE_NULL);
+    gst_object_unref(pipeline);
+    return status;
 }
 
 imp_status_t imp_encode_image_file(const char* f, imp_tensor_t* t,
                                    imp_context_t* c, const imp_image_encode_opts_t* o,
                                    imp_encode_callback_t cb, void* ud) {
-    (void)f;(void)t;(void)c;(void)o;(void)cb;(void)ud;
-    return IMP_ERROR_INTERNAL;
+    (void)cb; (void)ud;
+
+    if (!f || !t || !t->valid) return IMP_ERROR_INVALID_ARGUMENT;
+
+    gst_init(nullptr, nullptr);
+
+    std::string format_str;
+    if (o && o->format) {
+        format_str = o->format;
+    } else {
+        std::string path(f);
+        auto dot = path.rfind('.');
+        if (dot != std::string::npos) {
+            std::string ext = path.substr(dot + 1);
+            std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+            if (ext == "jpg" || ext == "jpeg") format_str = "jpeg";
+            else if (ext == "png")             format_str = "png";
+        }
+    }
+    if (format_str.empty()) format_str = "jpeg";
+
+    std::string encoder_elem;
+    if (format_str == "jpeg" || format_str == "jpg")  encoder_elem = "jpegenc";
+    else if (format_str == "png")                      encoder_elem = "pngenc";
+    else return IMP_ERROR_UNSUPPORTED_FORMAT;
+
+    int quality = (o && o->quality > 0) ? o->quality : 90;
+
+    int w = t->width, h = t->height;
+    imp_pixel_format_t src_fmt = t->format;
+    int channels = imp_format_channels(src_fmt);
+    if (channels == 0 && src_fmt != IMP_FORMAT_NV12) channels = 3;
+
+    if ((w == 0 || h == 0) && t->ov_tensor) {
+        auto shape = t->ov_tensor.get_shape();
+        if (shape.size() == 4) {
+            if (shape[1] <= 4) { h = (int)shape[2]; w = (int)shape[3]; channels = (int)shape[1]; }
+            else { h = (int)shape[1]; w = (int)shape[2]; channels = (int)shape[3]; }
+        }
+    }
+    if (w == 0 || h == 0) return IMP_ERROR_INVALID_ARGUMENT;
+
+    std::string caps_str;
+    GstBuffer* buffer = imp_image_prepare_encode_buffer(t, src_fmt, w, h, channels, caps_str);
+    if (!buffer) return IMP_ERROR_OUT_OF_MEMORY;
+
+    std::string out_path(f);
+    for (auto& ch : out_path) if (ch == '\\') ch = '/';
+
+    GstElement* pipeline   = gst_pipeline_new("img-enc-file");
+    GstElement* appsrc     = gst_element_factory_make("appsrc", "src");
+    GstElement* convert    = gst_element_factory_make("videoconvert", "conv");
+    GstElement* encoder    = gst_element_factory_make(encoder_elem.c_str(), "enc");
+    GstElement* filesink   = gst_element_factory_make("filesink", "sink");
+
+    if (!pipeline || !appsrc || !convert || !encoder || !filesink) {
+        gst_buffer_unref(buffer);
+        if (pipeline) gst_object_unref(pipeline);
+        return IMP_ERROR_ENCODE_FAILED;
+    }
+
+    GstCaps* src_caps = gst_caps_from_string(caps_str.c_str());
+    g_object_set(appsrc, "caps", src_caps, "format", GST_FORMAT_TIME,
+                 "stream-type", 0, "is-live", FALSE, nullptr);
+    gst_caps_unref(src_caps);
+
+    if (encoder_elem == "jpegenc")
+        g_object_set(encoder, "quality", quality, nullptr);
+    g_object_set(filesink, "location", out_path.c_str(), nullptr);
+
+    gst_bin_add_many(GST_BIN(pipeline), appsrc, convert, encoder, filesink, nullptr);
+    gst_element_link_many(appsrc, convert, encoder, filesink, nullptr);
+
+    GST_BUFFER_PTS(buffer) = 0;
+    GST_BUFFER_DURATION(buffer) = GST_CLOCK_TIME_NONE;
+
+    gst_element_set_state(pipeline, GST_STATE_PLAYING);
+    gst_app_src_push_buffer(GST_APP_SRC(appsrc), buffer);
+    gst_app_src_end_of_stream(GST_APP_SRC(appsrc));
+
+    GstBus* bus = gst_element_get_bus(pipeline);
+    imp_status_t status = IMP_ERROR_ENCODE_FAILED;
+    if (bus) {
+        GstMessage* msg = gst_bus_timed_pop_filtered(bus, 10 * GST_SECOND,
+            (GstMessageType)(GST_MESSAGE_EOS | GST_MESSAGE_ERROR));
+        if (msg) {
+            if (GST_MESSAGE_TYPE(msg) == GST_MESSAGE_EOS)
+                status = IMP_OK;
+            gst_message_unref(msg);
+        }
+        gst_object_unref(bus);
+    }
+
+    gst_element_set_state(pipeline, GST_STATE_NULL);
+    gst_object_unref(pipeline);
+    return status;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -1336,7 +1947,6 @@ void imp_audio_encoder_close(imp_audio_encoder_t* encoder) {
 // One-shot audio encode (to memory)
 // ---------------------------------------------------------------------------
 
-// Internal: write a WAV file into a malloc'd buffer (no GStreamer)
 static imp_status_t imp_encode_audio_wav(void** data, size_t* data_size,
                                          const float* samples, size_t num_samples,
                                          uint32_t sampleRate, uint32_t channels) {
@@ -1381,13 +1991,10 @@ imp_status_t imp_encode_audio(void** data,
     uint32_t sampleRate = opts->sample_rate > 0 ? opts->sample_rate : 16000;
     uint32_t channels   = opts->channels   > 0 ? opts->channels   : 1;
 
-    // ----- WAV: built-in writer (fast, no GStreamer) -----
     if (codec == "wav") {
-        return imp_encode_audio_wav(data, data_size, samples, num_samples,
-                                    sampleRate, channels);
+        return imp_encode_audio_wav(data, data_size, samples, num_samples, sampleRate, channels);
     }
 
-    // ----- PCM: raw float bytes -----
     if (codec == "pcm") {
         size_t sz = num_samples * sizeof(float);
         *data = malloc(sz);
@@ -1397,7 +2004,7 @@ imp_status_t imp_encode_audio(void** data,
         return IMP_OK;
     }
 
-    // ----- Lossy / lossless codecs via GStreamer -----
+    // Lossy / lossless codecs via GStreamer
     gst_init(nullptr, nullptr);
 
     std::string encElement;
@@ -1409,15 +2016,13 @@ imp_status_t imp_encode_audio(void** data,
     } else if (codec == "flac") {
         encElement = "flacenc";
     } else if (codec == "opus") {
-        // Opus standard sample rates: 8k, 12k, 16k, 24k, 48k
         uint32_t opusRate = (sampleRate <= 8000) ? 8000 :
                             (sampleRate <= 12000) ? 12000 :
                             (sampleRate <= 16000) ? 16000 :
                             (sampleRate <= 24000) ? 24000 : 48000;
         encElement = "opusenc bitrate=" + std::to_string(bitrate * 1000);
-        // audioresample will convert to opusRate automatically via caps
         muxElement = "oggmux";
-        sampleRate = opusRate;  // override for caps
+        sampleRate = opusRate;
     } else if (codec == "aac") {
         encElement = "avenc_aac bitrate=" + std::to_string(bitrate * 1000);
         muxElement = "aacparse ! adtsmux";
@@ -1451,7 +2056,6 @@ imp_status_t imp_encode_audio(void** data,
         return IMP_ERROR_INTERNAL;
     }
 
-    // Configure appsrc for F32LE input
     GstCaps* caps = gst_caps_new_simple("audio/x-raw",
         "format",  G_TYPE_STRING, "F32LE",
         "rate",    G_TYPE_INT, (int)(opts->sample_rate > 0 ? opts->sample_rate : 16000),
@@ -1463,29 +2067,23 @@ imp_status_t imp_encode_audio(void** data,
 
     gst_element_set_state(pipeline, GST_STATE_PLAYING);
 
-    // Push float samples
     size_t byteSize = num_samples * sizeof(float);
     GstBuffer* buffer = gst_buffer_new_allocate(nullptr, byteSize, nullptr);
     GstMapInfo map;
     gst_buffer_map(buffer, &map, GST_MAP_WRITE);
     memcpy(map.data, samples, byteSize);
     gst_buffer_unmap(buffer, &map);
-
     GST_BUFFER_PTS(buffer)      = 0;
     GST_BUFFER_DURATION(buffer) = gst_util_uint64_scale(
         num_samples / channels, GST_SECOND, opts->sample_rate > 0 ? opts->sample_rate : 16000);
-
-    gst_app_src_push_buffer(GST_APP_SRC(appsrc), buffer);  // takes ownership
+    gst_app_src_push_buffer(GST_APP_SRC(appsrc), buffer);
     gst_app_src_end_of_stream(GST_APP_SRC(appsrc));
 
-    // Collect encoded output from appsink
     std::vector<uint8_t> encoded;
     for (;;) {
         GstSample* sample = gst_app_sink_try_pull_sample(GST_APP_SINK(appsink), 10 * GST_SECOND);
         if (!sample) {
-            // Check if EOS was reached (normal completion)
             if (gst_app_sink_is_eos(GST_APP_SINK(appsink))) break;
-            // Timeout — abort
             break;
         }
         GstBuffer* outBuf = gst_sample_get_buffer(sample);
@@ -1515,7 +2113,6 @@ imp_status_t imp_encode_audio_file(const char* file_path,
                                    const float* samples,
                                    size_t num_samples,
                                    const imp_audio_encode_opts_t* opts) {
-    // Encode to memory, then write to file
     void* data = nullptr;
     size_t data_size = 0;
     imp_status_t st = imp_encode_audio(&data, &data_size, samples, num_samples, opts);
