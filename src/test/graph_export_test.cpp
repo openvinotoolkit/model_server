@@ -842,7 +842,7 @@ TEST_F(GraphCreationTest, textToSpeechPositiveKokoro) {
     ASSERT_EQ(status, ovms::StatusCode::OK);
 
     std::string graphContents = GetFileContents(graphPath);
-    ASSERT_EQ(expectedTextToSpeechGraphContentsKokoro, removeVersionString(graphContents)) << graphContents;
+    ASSERT_EQ(expectedTextToSpeechGraphContentsKokoro, removeGeneratedGraphHeaders(graphContents)) << graphContents;
 }
 
 TEST_F(GraphCreationTest, textToSpeechCreatedPbtxtInvalid) {
