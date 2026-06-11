@@ -330,7 +330,7 @@ void Lfm2ToolParser::cutEOSFromContent(std::string& content) {
     }
 }
 
-std::optional<rapidjson::Document> Lfm2ToolParser::parseChunk(const std::string& chunk, ov::genai::GenerationFinishReason finishReason) {
+std::optional<rapidjson::Document> Lfm2ToolParser::parseChunk(const std::string& chunk, const std::vector<int64_t>& /*tokens*/, ov::genai::GenerationFinishReason finishReason) {
     if (chunk.empty()) {
         return std::nullopt;
     }

@@ -143,13 +143,13 @@ std::optional<rapidjson::Document> OutputParser::parseContentChunk(ProcessingPha
     return doc;
 }
 
-std::optional<rapidjson::Document> OutputParser::parseToolCallChunk(ov::genai::GenerationFinishReason finishReason, ProcessingPhase newPhase) {
+std::optional<rapidjson::Document> OutputParser::parseToolCallChunk(const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason, ProcessingPhase newPhase) {
     if (!toolParser) {
         throw std::runtime_error("Tool parser is not available, cannot parse tool call chunk");
     }
     std::optional<rapidjson::Document> result;
     try {
-        result = toolParser->parseChunk(streamOutputCache.getBuffer(), finishReason);
+        result = toolParser->parseChunk(streamOutputCache.getBuffer(), tokens, finishReason);
     } catch (...) {
         streamOutputCache.clear();
         throw;
@@ -159,13 +159,13 @@ std::optional<rapidjson::Document> OutputParser::parseToolCallChunk(ov::genai::G
     return result;
 }
 
-std::optional<rapidjson::Document> OutputParser::parseReasoningChunk(ov::genai::GenerationFinishReason finishReason, ProcessingPhase newPhase) {
+std::optional<rapidjson::Document> OutputParser::parseReasoningChunk(const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason, ProcessingPhase newPhase) {
     if (!reasoningParser) {
         throw std::runtime_error("Reasoning parser is not available, cannot parse reasoning chunk");
     }
     std::optional<rapidjson::Document> result;
     try {
-        result = reasoningParser->parseChunk(streamOutputCache.getBuffer(), finishReason);
+        result = reasoningParser->parseChunk(streamOutputCache.getBuffer(), tokens, finishReason);
     } catch (...) {
         streamOutputCache.clear();
         throw;
@@ -279,7 +279,7 @@ ParsedOutput OutputParser::parse(const std::vector<int64_t>& generatedTokens, co
     return parsedOutput;
 }
 
-std::optional<rapidjson::Document> OutputParser::parseChunk(const std::string& chunkResponse, const bool toolsAvailable, ov::genai::GenerationFinishReason finishReason) {
+std::optional<rapidjson::Document> OutputParser::parseChunk(const std::string& chunkResponse, const std::vector<int64_t>& tokens, const bool toolsAvailable, ov::genai::GenerationFinishReason finishReason) {
     /*
     Using appropriate parser based on the current processing phase
     Call to this method should return either result from parserContentChunk, parseToolCallChunk, parseReasoningChunk when we can determine the phase
@@ -305,7 +305,7 @@ std::optional<rapidjson::Document> OutputParser::parseChunk(const std::string& c
                 reasoningStartTagStatus = streamOutputCache.lookupTags(reasoningParser->getSpecialParsingStartTags());
             }
             if (reasoningStartTagStatus == TagLookupStatus::FOUND_COMPLETE) {
-                return parseReasoningChunk(finishReason);
+                return parseReasoningChunk(tokens, finishReason);
             }  // else startTagStatus is FOUND_INCOMPLETE or NOT_FOUND, we continue processing, so potential tool parser start tag is not missed
             anyStartTagStatus = reasoningStartTagStatus;
         }
@@ -318,7 +318,7 @@ std::optional<rapidjson::Document> OutputParser::parseChunk(const std::string& c
                 toolCallStartTagStatus = streamOutputCache.lookupTags(toolParser->getSpecialParsingStartTags());
             }
             if (toolCallStartTagStatus == TagLookupStatus::FOUND_COMPLETE) {
-                return parseToolCallChunk(finishReason);
+                return parseToolCallChunk(tokens, finishReason);
             }  // else startTagStatus is FOUND_INCOMPLETE or NOT_FOUND, we continue processing
             if (toolCallStartTagStatus == TagLookupStatus::FOUND_INCOMPLETE) {
                 anyStartTagStatus = toolCallStartTagStatus;  // We have at least one incomplete start tag
@@ -336,18 +336,18 @@ std::optional<rapidjson::Document> OutputParser::parseChunk(const std::string& c
         TagLookupStatus endTagStatus = streamOutputCache.lookupTag(reasoningParser->getParsingEndTag());
         if (endTagStatus == TagLookupStatus::FOUND_COMPLETE) {
             // Switch back to UNKNOWN phase (we can have either CONTENT or TOOL_CALLS next)
-            return parseReasoningChunk(finishReason, UNKNOWN);
+            return parseReasoningChunk(tokens, finishReason, UNKNOWN);
         } else if (endTagStatus == TagLookupStatus::FOUND_INCOMPLETE && finishReason == ov::genai::GenerationFinishReason::NONE) {
             return std::nullopt;  // Wait for more chunks to determine if end tag is complete
         }
-        return parseReasoningChunk(finishReason);
+        return parseReasoningChunk(tokens, finishReason);
     } else if (processingPhase == CONTENT) {
         // If we are in the CONTENT phase, we check if tool parser start tag is found and if so, switch to TOOL_CALLS phase.
         // TOOL_CALLS is the only phase that can be processed after CONTENT.
         if (applyToolParser) {
             TagLookupStatus toolStartTagStatus = streamOutputCache.lookupTags(toolParser->getParsingStartTags());
             if (toolStartTagStatus == TagLookupStatus::FOUND_COMPLETE) {
-                return parseToolCallChunk(finishReason);
+                return parseToolCallChunk(tokens, finishReason);
             } else if (toolStartTagStatus == TagLookupStatus::FOUND_INCOMPLETE && finishReason == ov::genai::GenerationFinishReason::NONE) {
                 return std::nullopt;  // Wait for more chunks to determine if end tag is complete
             }
@@ -363,9 +363,9 @@ std::optional<rapidjson::Document> OutputParser::parseChunk(const std::string& c
         if (toolEndTagStatus == TagLookupStatus::FOUND_COMPLETE) {
             // If tool call has finished, we switch to waiting for next tool call as tool calls in the last phase,
             // so we either get next tool call or finish processing.
-            return parseToolCallChunk(finishReason, TOOL_CALLS_WAITING_FOR_TOOL);
+            return parseToolCallChunk(tokens, finishReason, TOOL_CALLS_WAITING_FOR_TOOL);
         }
-        return parseToolCallChunk(finishReason);
+        return parseToolCallChunk(tokens, finishReason);
     } else if (processingPhase == TOOL_CALLS_WAITING_FOR_TOOL) {
         // In this phase we are waiting for next tool call or finish of generation.
         // If we get next tool call start tag, we switch to TOOL_CALLS phase, otherwise if generation finishes we switch to CONTENT phase to flush any remaining content.
@@ -375,9 +375,9 @@ std::optional<rapidjson::Document> OutputParser::parseChunk(const std::string& c
         }
         if (toolStartTagStatus == TagLookupStatus::FOUND_COMPLETE) {
             // If tool call has started, we switch back to processing tool phase.
-            return parseToolCallChunk(finishReason, TOOL_CALLS_PROCESSING_TOOL);
+            return parseToolCallChunk(tokens, finishReason, TOOL_CALLS_PROCESSING_TOOL);
         }
-        return parseToolCallChunk(finishReason);
+        return parseToolCallChunk(tokens, finishReason);
     } else {
         SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Unexpected processing phase: {}", static_cast<int>(processingPhase));
         throw std::runtime_error("Unexpected error during stream output parsing");
