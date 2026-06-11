@@ -234,13 +234,12 @@ absl::Status LegacyServable::preparePartialResponse(std::shared_ptr<GenAiServabl
         }
         // Legacy generation path always runs with batch=1, so we read the single finish reason at index 0.
         ov::genai::GenerationFinishReason finishReason = legacyExecutionContext->results.finish_reasons.empty() ? ov::genai::GenerationFinishReason::STOP : legacyExecutionContext->results.finish_reasons[0];
+        executionContext->apiHandler->setPromptTokensUsage(legacyExecutionContext->results.perf_metrics.get_num_input_tokens());
+        executionContext->apiHandler->setCompletionTokensUsage(legacyExecutionContext->results.perf_metrics.get_num_generated_tokens());
         std::string serializedChunk = executionContext->apiHandler->serializeStreamingChunk(lastTextChunk, finishReason);
         if (!serializedChunk.empty()) {
             executionContext->response = wrapTextInServerSideEventMessage(serializedChunk);
         }
-
-        executionContext->apiHandler->setPromptTokensUsage(legacyExecutionContext->results.perf_metrics.get_num_input_tokens());
-        executionContext->apiHandler->setCompletionTokensUsage(legacyExecutionContext->results.perf_metrics.get_num_generated_tokens());
         if (executionContext->apiHandler->getStreamOptions().includeUsage)
             executionContext->response += wrapTextInServerSideEventMessage(executionContext->apiHandler->serializeStreamingUsageChunk());
 
