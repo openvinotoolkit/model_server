@@ -100,10 +100,11 @@ protected:
     std::unique_ptr<OutputParser> outputParser = nullptr;
 
     // Verbose response support (enabled via --verbose_response). When set, the
-    // serialized unary response includes a "__verbose" object with the raw prompt
-    // (post chat template) and raw decoded model output (before tool/reasoning
-    // parsing). Inspired by llama.cpp -v.
+    // serialized response includes a "__verbose" object with the raw prompt
+    // (post chat template application) and raw decoded model output
+    // (before tool/reasoning parsing).
     bool verboseResponse = false;
+
     std::string verbosePrompt;
     // Streaming accumulators for raw model output.
     std::vector<int64_t> verboseRawTokens;

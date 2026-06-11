@@ -106,9 +106,8 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
                 "Optional path to the log file",
                 cxxopts::value<std::string>(), "LOG_PATH")
             ("verbose_response",
-                "When enabled, LLM chat/text completion unary responses include an extra "
-                "\"__verbose\" object with the raw prompt (after chat template) and the raw "
-                "model output (before tool/reasoning parsing). Useful for debugging.",
+                "When enabled, responses include an extra "
+                "\"__verbose\" object with additional debug information.",
                 cxxopts::value<bool>()->default_value("false"),
                 "VERBOSE_RESPONSE")
 #ifdef MTR_ENABLED
