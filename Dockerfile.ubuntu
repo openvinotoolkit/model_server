@@ -161,9 +161,9 @@ RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; git clone ht
 WORKDIR /openvino/build
 RUN if [ "$ov_use_binary" == "0" ]; then \
     if [[ $debug_bazel_flags == *"py_off"* ]]; then \
-        cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DENABLE_SAMPLES=0 -DCMAKE_CXX_FLAGS=" ${SDL_OPS} -Wno-error=parentheses " -DENABLE_CPPLINT=OFF -DENABLE_INTEL_NPU_PROTOPIPE=OFF .. ; \
+        cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DENABLE_SAMPLES=0 -DCMAKE_CXX_FLAGS=" ${SDL_OPS} -Wno-error=parentheses " -DENABLE_CPPLINT=OFF -DENABLE_INTEL_NPU_PROTOPIPE=OFF -DENABLE_SYSTEM_LEVEL_ZERO=OFF .. ; \
     else \
-        cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DENABLE_PYTHON=ON -DENABLE_SAMPLES=0 -DCMAKE_CXX_FLAGS=" ${SDL_OPS} -Wno-error=parentheses " -DENABLE_CPPLINT=OFF -DENABLE_INTEL_NPU_PROTOPIPE=OFF .. ; \
+        cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DENABLE_PYTHON=ON -DENABLE_SAMPLES=0 -DCMAKE_CXX_FLAGS=" ${SDL_OPS} -Wno-error=parentheses " -DENABLE_CPPLINT=OFF -DENABLE_INTEL_NPU_PROTOPIPE=OFF -DENABLE_SYSTEM_LEVEL_ZERO=OFF .. ; \
     fi && \
     make --jobs=$JOBS && \
     make install ; \
@@ -425,10 +425,10 @@ RUN apt-get update ; \
             tar -xf linux-npu-driver-v1.26.0.20251125-19665715237-ubuntu2204.tar.gz && \
             curl -L -O https://github.com/oneapi-src/level-zero/releases/download/v1.24.2/level-zero_1.24.2+u22.04_amd64.deb     ; \
         else \
-            curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.30.0/linux-npu-driver-v1.30.0.20260311-22963593310-ubuntu2404.tar.gz && \
-            tar -xf linux-npu-driver-v1.30.0.20260311-22963593310-ubuntu2404.tar.gz && \
-            curl -L -O https://snapshot.ppa.launchpadcontent.net/kobuk-team/intel-graphics/ubuntu/20260205T100000Z/pool/main/l/level-zero-loader/libze1_1.26.2-1~24.04~ppa1_amd64.deb ; \
-        fi ; \      
+            curl -fL -O https://github.com/intel/linux-npu-driver/releases/download/v1.33.0/linux-npu-driver-v1.33.0.20260529-26625960453-ubuntu2404.tar.gz && \
+            tar -xf linux-npu-driver-v1.33.0.20260529-26625960453-ubuntu2404.tar.gz && \
+            curl -fL -O https://snapshot.ppa.launchpadcontent.net/kobuk-team/intel-graphics/ubuntu/20260324T100000Z/pool/main/l/level-zero-loader/libze1_1.27.0-1~24.04~ppa2_amd64.deb ; \
+        fi ; \
         dpkg -i ./*.deb && rm -Rf /tmp/npu_deps ; \
     fi ; \
     apt-get clean ; \
