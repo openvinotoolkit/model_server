@@ -39,14 +39,33 @@ pipeline {
                               python_suffix = "off"
                           }
                           def packageName = "ovms_windows_${env.PRODUCT_VERSION}_${env.RELEASE_TAG}_${shortCommit}_python_${python_suffix}.zip"
-                          bat(returnStatus:true, script: "net use w: /delete /y 2>nul & net use w: \\\\10.102.76.118\\data\\cv_bench_cache\\OVMS_do_not_remove\\ovms_artefacts\\")
+                          def status = bat(returnStatus:true, script: "net use w: /delete /y 2>nul & net use w: \\\\10.102.76.118\\data\\cv_bench_cache\\OVMS_do_not_remove\\ovms_artefacts\\")
+                          if (status != 0) {
+                              error "Failed to map network drive. Status code: ${status}"
+                          }
                           def destPath = "w:\\${env.PRODUCT_VERSION}\\${env.RELEASE_TAG}\\windows"
                           def latestPath = "${destPath}\\latest"
-                          bat(returnStatus:true, script: "if not exist \"${destPath}\\${buildstamp}\" mkdir \"${destPath}\\${buildstamp}\"")
-                          bat(returnStatus:true, script: "copy /Y \"${env.WORKSPACE}\\dist\\windows\\ovms.zip\" \"${destPath}\\${buildstamp}\\${packageName}\"")
-                          bat(returnStatus:true, script: "if exist \"${latestPath}\" rmdir /S /Q \"${latestPath}\"")
-                          bat(returnStatus:true, script: "mkdir \"${latestPath}\"")
-                          bat(returnStatus:true, script: "copy /Y \"${env.WORKSPACE}\\dist\\windows\\ovms.zip\" \"${latestPath}\\${packageName}\"")
+                          
+                          status = bat(returnStatus:true, script: "if not exist \"${destPath}\\${buildstamp}\" mkdir \"${destPath}\\${buildstamp}\"")
+                          if (status != 0) {
+                              error "Failed to create directory. Status code: ${status}"
+                          }
+                          status = bat(returnStatus:true, script: "copy /Y \"${env.WORKSPACE}\\dist\\windows\\ovms.zip\" \"${destPath}\\${buildstamp}\\${packageName}\"")
+                          if (status != 0) {
+                              error "Failed to copy file. Status code: ${status}"
+                          }
+                          status = bat(returnStatus:true, script: "if exist \"${latestPath}\" rmdir /S /Q \"${latestPath}\"")
+                          if (status != 0) {
+                              error "Failed to remove directory. Status code: ${status}"
+                          }
+                          status = bat(returnStatus:true, script: "mkdir \"${latestPath}\"")
+                          if (status != 0) {
+                              error "Failed to create directory. Status code: ${status}"
+                          }
+                          status = bat(returnStatus:true, script: "copy /Y \"${env.WORKSPACE}\\dist\\windows\\ovms.zip\" \"${latestPath}\\${packageName}\"")
+                          if (status != 0) {
+                              error "Failed to copy file. Status code: ${status}"
+                          }
                         } finally {
                             windows.archive_build_artifacts()
                             windows.archive_test_artifacts()
