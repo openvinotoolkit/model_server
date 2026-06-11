@@ -27,7 +27,6 @@
 #include "deserialization.hpp"
 #include "../inference_executor.hpp"
 #include "../ovms.h"  // NOLINT
-#include "../statefulrequestprocessor.hpp"
 #include "../status.hpp"
 #include "validation.hpp"
 

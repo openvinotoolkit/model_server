@@ -107,17 +107,6 @@ static const ovms::HTTPStatusCode http(const ovms::Status& status) {
         {StatusCode::PIPELINE_DEMULTIPLEXER_NO_RESULTS, ovms::HTTPStatusCode::NO_CONTENT},
         {StatusCode::CANNOT_COMPILE_MODEL_INTO_TARGET_DEVICE, ovms::HTTPStatusCode::PRECOND_FAILED},
 
-        // Sequence management
-        {StatusCode::SEQUENCE_MISSING, ovms::HTTPStatusCode::NOT_FOUND},
-        {StatusCode::SEQUENCE_ALREADY_EXISTS, ovms::HTTPStatusCode::CONFLICT},
-        {StatusCode::SEQUENCE_ID_NOT_PROVIDED, ovms::HTTPStatusCode::BAD_REQUEST},
-        {StatusCode::INVALID_SEQUENCE_CONTROL_INPUT, ovms::HTTPStatusCode::BAD_REQUEST},
-        {StatusCode::SEQUENCE_ID_BAD_TYPE, ovms::HTTPStatusCode::BAD_REQUEST},
-        {StatusCode::SEQUENCE_CONTROL_INPUT_BAD_TYPE, ovms::HTTPStatusCode::BAD_REQUEST},
-        {StatusCode::SEQUENCE_TERMINATED, ovms::HTTPStatusCode::PRECOND_FAILED},
-        {StatusCode::SPECIAL_INPUT_NO_TENSOR_SHAPE, ovms::HTTPStatusCode::BAD_REQUEST},
-        {StatusCode::MAX_SEQUENCE_NUMBER_REACHED, ovms::HTTPStatusCode::SERVICE_UNAV},
-
         // Predict request validation
         {StatusCode::INVALID_NO_OF_INPUTS, ovms::HTTPStatusCode::BAD_REQUEST},
         {StatusCode::INVALID_MISSING_INPUT, ovms::HTTPStatusCode::BAD_REQUEST},
