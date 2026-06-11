@@ -1,0 +1,26 @@
+input_stream: "pipeline_input"
+output_stream: "pipeline_output"
+
+node {
+  calculator: "InferenceCalculator"
+  input_stream: "pipeline_input"
+  output_stream: "trained_model_path"
+  options: {
+    [type.googleapis.com/openvino.CalculatorOptions] {
+      model_name: "iris_pipeline"
+      signature_name: "serving_default"
+    }
+  }
+}
+
+node {
+  calculator: "InferenceCalculator"
+  input_stream: "trained_model_path"
+  output_stream: "pipeline_output"
+  options: {
+    [type.googleapis.com/openvino.CalculatorOptions] {
+      model_name: "iris_pipeline"
+      signature_name: "serving_default"
+    }
+  }
+}
