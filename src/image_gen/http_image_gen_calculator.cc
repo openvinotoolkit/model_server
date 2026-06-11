@@ -297,6 +297,9 @@ public:
         const std::string modelName = extractModelName(payload);
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "ImageGenCalculator [Node: {}] Request URI: {}", cc->NodeName(), payload.uri);
 
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Request body: {}", payload.body);
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Request uri: {}", payload.uri);
+
         std::unique_ptr<ov::Tensor> images;  // output
 
         if (absl::StartsWith(payload.uri, "/v3/images/generations")) {
