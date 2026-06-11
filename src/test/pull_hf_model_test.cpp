@@ -1642,6 +1642,20 @@ TEST_F(TestOptimumDownloaderSetup, TextToSpeechExportCmd) {
     ASSERT_EQ(optimumDownloader->getConvertCmd(), expectedCmd2);
 }
 
+TEST_F(TestOptimumDownloaderSetup, TextToSpeechKokoroExportCmd) {
+    inHfSettings.task = ovms::TEXT_TO_SPEECH_GRAPH;
+    inHfSettings.exportSettings.modelType = "kokoro";
+    std::unique_ptr<TestOptimumDownloader> optimumDownloader = std::make_unique<TestOptimumDownloader>(inHfSettings);
+    std::string expectedCmd = "optimum-cli export openvino --task text-to-audio --model model/name --trust-remote-code  --weight-format fp64 --someOptimumParam --anotherOptParam value \\path\\to\\Download\\model\\name";
+    std::string expectedCmd2 = "convert_tokenizer model/name -o \\path\\to\\Download\\model\\name";
+#ifdef __linux__
+    std::replace(expectedCmd.begin(), expectedCmd.end(), '\\', '/');
+    std::replace(expectedCmd2.begin(), expectedCmd2.end(), '\\', '/');
+#endif
+    ASSERT_EQ(optimumDownloader->getExportCmd(), expectedCmd);
+    ASSERT_EQ(optimumDownloader->getConvertCmd(), expectedCmd2);
+}
+
 TEST_F(TestOptimumDownloaderSetup, SpeechToTextExportCmd) {
     inHfSettings.task = ovms::SPEECH_TO_TEXT_GRAPH;
     std::unique_ptr<TestOptimumDownloader> optimumDownloader = std::make_unique<TestOptimumDownloader>(inHfSettings);

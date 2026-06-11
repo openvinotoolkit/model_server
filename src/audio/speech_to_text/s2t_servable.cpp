@@ -35,7 +35,6 @@ namespace ovms {
 namespace {
 constexpr size_t ISO_LANG_CODE_MAX = 3;
 }
-
 SttServable::SttServable(const ::mediapipe::S2tCalculatorOptions& nodeOptions, const std::string& graphPath) {
     auto fsModelsPath = std::filesystem::path(nodeOptions.models_path());
     if (fsModelsPath.is_relative()) {
