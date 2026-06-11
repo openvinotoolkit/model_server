@@ -70,13 +70,15 @@ ov::genai::StreamingStatus OVMSTextStreamer::write(int64_t token) {
     // 2. Incomplete UTF-8: decoded length did not advance — last bytes are a
     //    partial multibyte sequence. Mark this slot as -1 so the delay check
     //    skips it (matching TextStreamer's own handling).
-    const size_t n = m_decoded_lengths.size();
-    if (n >= 2 && m_decoded_lengths[n - 1] == m_decoded_lengths[n - 2]) {
+    const size_t text_size = text.size();
+    char replacement[] = "\xef\xbf\xbd";
+    if (text_size >= 3 && text.compare(text_size - 3, 3, replacement) == 0) {
         m_decoded_lengths.back() = -1;
         return ov::genai::StreamingStatus::RUNNING;
     }
 
     // 3. Delay buffer: need at least DELAY_N_TOKENS entries before flushing.
+    const size_t n = m_decoded_lengths.size();
     if (n < DELAY_N_TOKENS) {
         return ov::genai::StreamingStatus::RUNNING;
     }
