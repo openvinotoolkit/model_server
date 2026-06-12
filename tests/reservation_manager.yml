@@ -16,10 +16,15 @@
 #
 config:
   pool_range:
-    start: 10000
-    stop: 30000
-  pool_part_size: 600
+    start: 30000
+    stop: 60000
+  pool_part_size: 1000
   locks_dir: /tmp
   envs:
-    ports_prefix: PORTS_PREFIX
-    slices: 2
+    slices:
+      - start: TT_REST_OVMS_STARTING_PORT
+        size: TT_PORTS_POOL_SIZE
+      - start: TT_GRPC_OVMS_STARTING_PORT
+        size: TT_PORTS_POOL_SIZE
+      - start: TT_HAPROXY_STARTING_PORT
+        size: TT_HAPROXY_PORT_POOL_SIZE
