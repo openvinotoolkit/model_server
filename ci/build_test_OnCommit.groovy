@@ -11,6 +11,7 @@ def agent_name_linux = ""
 def test_agent_linux = "ovms_ptl"
 def disable_doc_tests_linux = false
 def disable_doc_tests_windows = false
+def validation_branch = "develop"
 
 // Documentation test commit message overrides:
 //
@@ -25,6 +26,10 @@ def disable_doc_tests_windows = false
 // Override file list (space-separated, converted to pytest -k filter joined with ' or '):
 //   [test_doc_files_linux=<files>]      - Use <files> instead of auto-detected list (Linux)
 //   [test_doc_files_windows=<files>]    - Use <files> instead of auto-detected list (Windows)
+//
+// Override validation branch:
+ //   [validation_branch=<branch>]       - Use <branch> instead of default 'develop' for test repo checkout
+//
 
 pipeline {
     agent {
@@ -99,6 +104,16 @@ pipeline {
                   }
                   test_agent_windows = agentWindowsDocValue
                   println "Commit override: test_agent_windows = ${test_agent_windows}"
+              }
+              def validationBranchMatcher = (commitMsg =~ /\[validation_branch=([^\]]+)\]/)
+              def validationBranchValue = validationBranchMatcher ? validationBranchMatcher[0][1] : null
+              validationBranchMatcher = null // Matcher is not serializable; null it before CPS checkpoint
+              if (validationBranchValue) {
+                  if (!(validationBranchValue ==~ /[a-zA-Z0-9_\/.\-]+/)) {
+                      error "Invalid validation_branch override: '${validationBranchValue}'. Only alphanumeric, hyphens, underscores, dots and slashes allowed."
+                  }
+                  validation_branch = validationBranchValue
+                  println "Commit override: validation_branch = ${validation_branch}"
               }
               def docChangedFilesLinuxMatcher = (commitMsg =~ /\[test_doc_files_linux=([^\]]+)\]/)
               def docChangedFilesLinuxValue = docChangedFilesLinuxMatcher ? docChangedFilesLinuxMatcher[0][1] : null
@@ -286,10 +301,10 @@ pipeline {
               steps {
                 script {
                   dir ('internal_tests'){
-                    checkout scmGit(branches: [[name: 'develop']], userRemoteConfigs: [[credentialsId: 'workflow-lab', url: 'https://github.com/intel-innersource/frameworks.ai.openvino.model-server.tests.git']])
+                    checkout scmGit(branches: [[name: validation_branch]], userRemoteConfigs: [[credentialsId: 'workflow-lab', url: 'https://github.com/intel-innersource/frameworks.ai.openvino.model-server.tests.git']])
                     sh "pwd"
                     def pwd = sh(returnStdout:true, script: "pwd").strip()
-                    sh "make create-venv && rm -f tests/functional && ln -s ${pwd}/../tests/functional tests/functional && TT_ON_COMMIT_TESTS=True TT_XDIST_WORKERS=10 TT_OVMS_IMAGE_NAME=openvino/model_server:${shortCommit} TT_OVMS_IMAGE_LOCAL=True make tests"
+                    sh "make create-venv && rm -f tests/functional && ln -s ${pwd}/../tests/functional tests/functional && TT_OVMS_C_REPO_PATH=../ TT_ON_COMMIT_TESTS=True TT_XDIST_WORKERS=10 TT_OVMS_IMAGE_NAME=openvino/model_server:${shortCommit} TT_OVMS_IMAGE_LOCAL=True make tests"
                   }
                 }
               }            
@@ -305,14 +320,14 @@ pipeline {
                   checkout scm
                   script {
                     dir ('documentation_tests') {
-                      checkout scmGit(branches: [[name: 'develop']], userRemoteConfigs: [[credentialsId: 'workflow-lab', url: 'https://github.com/intel-innersource/frameworks.ai.openvino.model-server.tests.git']])
+                      checkout scmGit(branches: [[name: validation_branch]], userRemoteConfigs: [[credentialsId: 'workflow-lab', url: 'https://github.com/intel-innersource/frameworks.ai.openvino.model-server.tests.git']])
                       sh "pwd"
                       def pwd = sh(returnStdout:true, script: "pwd").strip()
                       def ovms_c_repo_path = sh(returnStdout:true, script: "cd .. && pwd").strip()
                       def test_doc_files_str = test_doc_files_linux.split('\n').join(' or ')
                       sh "make create-venv && rm -f tests/functional && ln -s ${pwd}/../tests/functional tests/functional"
                       def cmd_venv_activate = ". .venv/bin/activate"
-                      def cmd_export = "export TT_RUN_REGRESSION_TESTS=True && export TT_REGRESSION_WEEKLY_TESTS=True && export TT_TARGET_DEVICE=CPU,GPU,NPU && export TT_ENABLE_UAT_TESTS=True && export TT_ENABLE_SMOKE_TESTS=False && export TT_OVMS_C_REPO_PATH=${ovms_c_repo_path} && export TT_WAIT_FOR_MESSAGES_TIMEOUT=1500"
+                      def cmd_export = "export TT_OVMS_C_REPO_PATH=../ && export TT_RUN_REGRESSION_TESTS=True && export TT_REGRESSION_WEEKLY_TESTS=True && export TT_TARGET_DEVICE=CPU,GPU,NPU && export TT_ENABLE_UAT_TESTS=True && export TT_ENABLE_SMOKE_TESTS=False && export TT_OVMS_C_REPO_PATH=${ovms_c_repo_path} && export TT_WAIT_FOR_MESSAGES_TIMEOUT=1500"
                       def cmd_pytest = "pytest tests/non_functional/documentation -k '${test_doc_files_str}' -n 0 --dist loadgroup"
                       def cmd = ""
                       if ( image_build_needed == "true" ) {
@@ -328,7 +343,7 @@ pipeline {
                         sh cmd
                       } finally {
                         // Always save artifacts
-                        zip zipFile: 'documentation_tests_linux_logs.zip', glob: 'test_log/**,test_log_build/**', overwrite: true
+                        zip zipFile: 'documentation_tests_linux_logs.zip', glob: 'test_log/**,tests/functional/test_log_build/**', overwrite: true
                         archiveArtifacts(artifacts: 'documentation_tests_linux_logs.zip', allowEmptyArchive: true)
                       }
                     }
@@ -371,13 +386,13 @@ pipeline {
                   checkout scm
                   script {
                     dir ('documentation_tests') {
-                      checkout scmGit(branches: [[name: 'develop']], userRemoteConfigs: [[credentialsId: 'workflow-lab', url: 'https://github.com/intel-innersource/frameworks.ai.openvino.model-server.tests.git']])
+                      checkout scmGit(branches: [[name: validation_branch]], userRemoteConfigs: [[credentialsId: 'workflow-lab', url: 'https://github.com/intel-innersource/frameworks.ai.openvino.model-server.tests.git']])
                       def test_doc_files_str = test_doc_files_windows.split('\n').join(' or ')
                       def current_path = bat(returnStdout: true, script: 'cd').trim().split('\n').last().trim()
                       def ovms_c_repo_path = bat(returnStdout: true, script: 'cd .. && cd').trim().split('\n').last().trim()
                       def cmd_link_ovms = "(if exist ${current_path}\\tests\\functional rmdir ${current_path}\\tests\\functional) && mklink /D ${current_path}\\tests\\functional ${ovms_c_repo_path}\\tests\\functional"
                       def cmd_requirements = "(if not exist .venv virtualenv .venv --python=python3.12) && call .venv\\Scripts\\activate.bat && pip install -r requirements.txt"
-                      def cmd_export = "set \"TT_RUN_REGRESSION_TESTS=True\" && set \"TT_REGRESSION_WEEKLY_TESTS=True\" && set \"TT_TARGET_DEVICE=CPU,GPU,NPU\" && set \"TT_BASE_OS=windows\" && set \"TT_OVMS_TYPE=BINARY\" && set \"TT_ENABLE_UAT_TESTS=True\" && set \"TT_ENABLE_SMOKE_TESTS=False\" && set \"TT_DISABLE_DMESG_LOG_MONITOR=True\" && set \"TT_OVMS_C_REPO_PATH=${ovms_c_repo_path}\" && set \"TT_WAIT_FOR_MESSAGES_TIMEOUT=1500\" && set \"PYTHONUTF8=1\" && set \"PYTHONIOENCODING=utf-8\""
+                      def cmd_export = "set \"TT_OVMS_C_REPO_PATH=../\" && set \"TT_RUN_REGRESSION_TESTS=True\" && set \"TT_REGRESSION_WEEKLY_TESTS=True\" && set \"TT_TARGET_DEVICE=CPU,GPU,NPU\" && set \"TT_BASE_OS=windows\" && set \"TT_OVMS_TYPE=BINARY\" && set \"TT_ENABLE_UAT_TESTS=True\" && set \"TT_ENABLE_SMOKE_TESTS=False\" && set \"TT_DISABLE_DMESG_LOG_MONITOR=True\" && set \"TT_OVMS_C_REPO_PATH=${ovms_c_repo_path}\" && set \"TT_WAIT_FOR_MESSAGES_TIMEOUT=1500\" && set \"PYTHONUTF8=1\" && set \"PYTHONIOENCODING=utf-8\""
                       def cmd_pytest = "pytest tests/non_functional/documentation -k \"${test_doc_files_str}\" -n 0 --dist loadgroup --basetemp=\"C:\\tmp\\pytest-${BRANCH_NAME}-${BUILD_NUMBER}\""
                       def cmd = ""
                       if ( win_image_build_needed == "true" ) {
@@ -393,7 +408,7 @@ pipeline {
                         }
                       } finally {
                         // Always save artifacts
-                        zip zipFile: 'documentation_tests_windows_logs.zip', glob: 'test_log/**,test_log_build/**', overwrite: true
+                        zip zipFile: 'documentation_tests_windows_logs.zip', glob: 'test_log/**,tests/functional/test_log_build/**', overwrite: true
                         archiveArtifacts(artifacts: 'documentation_tests_windows_logs.zip', allowEmptyArchive: true)
                       }
                     }
