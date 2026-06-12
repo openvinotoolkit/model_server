@@ -18,6 +18,7 @@
 namespace ovms {
 class Config;
 class Status;
+class PythonBackend;
 enum class ModuleState {
     NOT_INITIALIZED,
     STARTED_INITIALIZE,
@@ -34,6 +35,13 @@ protected:
 public:
     virtual Status start(const ovms::Config& config) = 0;
     virtual void shutdown() = 0;
+    virtual PythonBackend* getPythonBackend() const {
+        return nullptr;
+    }
+    virtual bool ownsPythonInterpreter() const {
+        return false;
+    }
+    virtual void releaseGILFromThisThread() const {}
     virtual ~Module() = default;
     ModuleState getState() const;
 };

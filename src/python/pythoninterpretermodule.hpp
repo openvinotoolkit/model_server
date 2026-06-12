@@ -39,9 +39,9 @@ public:
     ~PythonInterpreterModule();
     Status start(const ovms::Config& config) override;
     void shutdown() override;
-    PythonBackend* getPythonBackend() const;
-    void releaseGILFromThisThread() const;
+    PythonBackend* getPythonBackend() const override;
+    void releaseGILFromThisThread() const override;
     void reacquireGILForThisThread() const;
-    bool ownsPythonInterpreter() const;
+    bool ownsPythonInterpreter() const override;
 };
 }  // namespace ovms
