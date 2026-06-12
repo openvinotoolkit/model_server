@@ -27,7 +27,6 @@
 #include <vector>
 
 #include "dags/dag_resource_manager.hpp"
-#include "global_sequences_viewer.hpp"
 #include "metrics/metric_provider.hpp"
 #include "model_instance_provider.hpp"
 #include "modelconfig.hpp"
@@ -62,7 +61,6 @@ class ServableDefinition;
 class ModelInstanceUnloadGuard;
 class Pipeline;
 class PipelineFactory;
-struct FunctorSequenceCleaner;
 struct FunctorResourcesCleaner;
 class PythonBackend;
 /**
@@ -78,9 +76,7 @@ public:
 protected:
     void logPluginConfiguration();
 
-    Status checkStatefulFlagChange(const std::string& modelName, bool configStatefulFlag);
-
-    std::shared_ptr<ovms::Model> getModelIfExistCreateElse(const std::string& name, const bool isStateful);
+    std::shared_ptr<ovms::Model> getModelIfExistCreateElse(const std::string& name);
 
     /**
      * @brief A collection of models
@@ -95,7 +91,6 @@ protected:
 #endif
     std::unique_ptr<CustomNodeLibraryManager> customNodeLibraryManager;
     std::vector<std::shared_ptr<CNLIMWrapper>> resources = {};
-    GlobalSequencesViewer globalSequencesViewer;
     uint32_t waitForModelLoadedTimeoutMs;
 
 private:
@@ -134,9 +129,9 @@ private:
     void watcher(std::future<void> exitSignal, bool watchConfigFile);
 
     /**
-     * @brief Cleaner thread for sequence and resources cleanup
+     * @brief Cleaner thread for resources cleanup
      */
-    void cleanerRoutine(uint32_t resourcesCleanupIntervalMillisec, uint32_t sequenceCleanerIntervalMinutes, std::future<void> cleanerExitSignal);
+    void cleanerRoutine(uint32_t resourcesCleanupIntervalMillisec, std::future<void> cleanerExitSignal);
 
     /**
      * @brief Mutex for blocking concurrent add & remove of resources
@@ -204,12 +199,6 @@ protected:
      */
     uint32_t watcherIntervalMillisec = 1000;
     static const int WRONG_CONFIG_FILE_RETRY_DELAY_MS = 10;
-
-private:
-    /**
-     * Time interval between two consecutive sequence cleanup scans (in minutes)
-     */
-    uint32_t sequenceCleaupIntervalMinutes = 5;
 
 protected:
     /**
@@ -428,7 +417,7 @@ public:
      *
      * @return std::shared_ptr<Model>
      */
-    virtual std::shared_ptr<Model> modelFactory(const std::string& name, const bool isStateful);
+    virtual std::shared_ptr<Model> modelFactory(const std::string& name);
 
     /**
      * @brief Reads available versions from given filesystem
@@ -486,6 +475,7 @@ public:
     void cleanupResources() override;
 
     bool servableExists(const std::string& name, ServableQueryType check = ServableQueryType::All) const override;
+    bool aliasesConflict(const std::vector<std::string>& aliases, const std::string& ownGraphName) const override;
 
     ServableDefinition* findServableDefinition(const std::string& name) const;
 
@@ -494,6 +484,6 @@ public:
     MetricRegistry* getMetricRegistry() const override { return this->metricRegistry; }
 };
 
-void cleanerRoutine(uint32_t resourcesCleanupInterval, FunctorResourcesCleaner& functorResourcesCleaner, uint32_t sequenceCleanerInterval, FunctorSequenceCleaner& functorSequenceCleaner, std::future<void>& cleanerExitSignal);
+void cleanerRoutine(uint32_t resourcesCleanupInterval, FunctorResourcesCleaner& functorResourcesCleaner, std::future<void>& cleanerExitSignal);
 
 }  // namespace ovms

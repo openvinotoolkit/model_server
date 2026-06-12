@@ -466,7 +466,7 @@ if !errorlevel! neq 0 exit /b !errorlevel!
 %python_path%\python.exe -m pip install --upgrade pip
 if !errorlevel! neq 0 exit /b !errorlevel!
 :: setuptools<60.0 required for numpy1.23 on python311 to install
-%python_path%\python.exe -m pip install "numpy==2.2.5" "Jinja2==3.1.6" "MarkupSafe==3.0.2"
+%python_path%\python.exe -m pip install "numpy==2.2.5" "Jinja2==3.1.6" "MarkupSafe==3.0.2" "pytest==8.3.5"
 if !errorlevel! neq 0 exit /b !errorlevel!
 echo [INFO] Python %python_version% installed: %python_path%
 goto install_curl
@@ -515,10 +515,9 @@ exit /b 0
 :install_curl
 echo [INFO] Installing curl ...
 
-set "curl_version=8.19.0_4"
-set "curl_dir=curl-%curl_version%-win64-mingw"
+set "curl_dir=curl-%CURL_VERSION%-win64-mingw"
 set "curl_ver=%curl_dir%.zip"
-set "curl_http=https://curl.se/windows/dl-%curl_version%/"
+set "curl_http=https://curl.se/windows/dl-%CURL_VERSION%/"
 
 set "curl_zip=%opt_install_dir%\%curl_ver%"
 set "curl_path=%opt_install_dir%\%curl_dir%"
@@ -580,7 +579,7 @@ IF /I EXIST %curl_lib% (
 :install_opencv
 set "opencv_git=https://github.com/opencv/opencv.git"
 set "opencv_contrib=https://github.com/opencv/opencv_contrib.git"
-set "opencv_ver=4.12.0"
+set "opencv_ver=%OPENCV_VERSION%"
 set "opencv_dir=%opt_install_dir%\opencv_git_%opencv_ver%"
 set "opencv_contrib_dir=%opt_install_dir%\opencv_contrib_git_%opencv_ver%"
 set "opencv_install=%opt_install_dir%\opencv_%opencv_ver%"

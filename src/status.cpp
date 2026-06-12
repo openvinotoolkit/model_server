@@ -71,11 +71,6 @@ const std::unordered_map<StatusCode, std::string> Status::statusMessageMap = {
     {StatusCode::INVALID_NIREQ, "Nireq parameter too high"},
     {StatusCode::REQUESTED_DYNAMIC_PARAMETERS_ON_SUBSCRIBED_MODEL, "Requested dynamic parameters but model is used in pipeline"},
     {StatusCode::PIPELINE_STREAM_ID_NOT_READY_YET, "Node is not ready for execution"},
-    {StatusCode::REQUESTED_DYNAMIC_PARAMETERS_ON_STATEFUL_MODEL, "Dynamic shape and dynamic batch size are not supported for stateful models"},
-    {StatusCode::REQUESTED_STATEFUL_PARAMETERS_ON_SUBSCRIBED_MODEL, "Stateful model cannot be subscribed to pipeline"},
-    {StatusCode::REQUESTED_MODEL_TYPE_CHANGE, "Model type cannot be changed after it is loaded"},
-    {StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER, "Stateful model config parameter used for non stateful model"},
-    {StatusCode::INVALID_MAX_SEQUENCE_NUMBER, "Sequence max number parameter too high"},
     {StatusCode::CANNOT_CONVERT_FLAT_SHAPE, "Cannot convert flat shape to Shape object"},
     {StatusCode::INVALID_BATCH_DIMENSION, "Invalid batch dimension in shape"},
     {StatusCode::LAYOUT_INCOMPATIBLE_WITH_SHAPE, "Layout incompatible with given shape"},
@@ -84,17 +79,6 @@ const std::unordered_map<StatusCode, std::string> Status::statusMessageMap = {
     {StatusCode::OV_NO_OUTPUTS, "Cannot load model with no outputs"},
     {StatusCode::ALLOW_CACHE_WITH_CUSTOM_LOADER, "allow_cache is set to true with custom loader usage"},
     {StatusCode::UNKNOWN_ERROR, "Unknown error"},
-
-    // Sequence management
-    {StatusCode::SEQUENCE_MISSING, "Sequence with provided ID does not exist"},
-    {StatusCode::SEQUENCE_ALREADY_EXISTS, "Sequence with provided ID already exists"},
-    {StatusCode::SEQUENCE_ID_NOT_PROVIDED, "Sequence ID has not been provided in request inputs"},
-    {StatusCode::INVALID_SEQUENCE_CONTROL_INPUT, "Unexpected value of sequence control input"},
-    {StatusCode::SEQUENCE_ID_BAD_TYPE, "Could not find sequence id in expected tensor proto field uint64_val"},
-    {StatusCode::SEQUENCE_CONTROL_INPUT_BAD_TYPE, "Could not find sequence control input in expected tensor proto field uint32_val"},
-    {StatusCode::SEQUENCE_TERMINATED, "Sequence last request is being processed and it's not available anymore"},
-    {StatusCode::SPECIAL_INPUT_NO_TENSOR_SHAPE, "Special input proto does not contain tensor shape information"},
-    {StatusCode::MAX_SEQUENCE_NUMBER_REACHED, "Max sequence number has been reached. Could not create new sequence."},
 
     // Predict request validation
     {StatusCode::INVALID_NO_OF_INPUTS, "Invalid number of inputs"},
@@ -348,10 +332,12 @@ const std::unordered_map<StatusCode, std::string> Status::statusMessageMap = {
     {StatusCode::HF_FAILED_TO_INIT_OPTIMUM_CLI, "Failed to run optimum-cli executable"},
     {StatusCode::HF_RUN_OPTIMUM_CLI_EXPORT_FAILED, "Failed to run optimum-cli export command"},
     {StatusCode::HF_RUN_CONVERT_TOKENIZER_EXPORT_FAILED, "Failed to run convert-tokenizer export command"},
+    {StatusCode::HF_GIT_CLONE_CANCELLED, "Libgit2 clone cancelled due to shutdown request"},
     {StatusCode::HF_GIT_CLONE_FAILED, "Failed in libgit2 execution of clone method"},
     {StatusCode::HF_GIT_STATUS_FAILED, "Failed in libgit2 execution of status method"},
     {StatusCode::HF_GIT_STATUS_FAILED_TO_RESOLVE_PATH, "Failed in libgit2 to check repository status for a given path"},
     {StatusCode::HF_GIT_LIBGIT2_NOT_INITIALIZED, "Libgit2 was not initialized"},
+    {StatusCode::HF_GIT_LIBGIT2_LFS_DOWNLOAD_FAILED, "Libgit2 LFS download failed"},
     {StatusCode::HF_GIT_STATUS_UNCLEAN, "Unclean status detected in libgit2 repository path"},
 
     {StatusCode::PARTIAL_END, "Request has finished and no further communication is needed"},

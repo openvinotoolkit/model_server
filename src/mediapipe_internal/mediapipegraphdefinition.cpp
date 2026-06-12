@@ -18,14 +18,19 @@
 #include <algorithm>
 #include <iostream>
 #include <memory>
+#include <regex>
 #include <sstream>
 #include <string>
+#include <thread>
 #include <unordered_map>
 #include <utility>
 #include <vector>
 
 #include "../execution_context.hpp"
+#include "../config.hpp"
+#include "src/utils/env_guard.hpp"
 #include "src/filesystem/filesystem.hpp"
+#include "src/graph_export/graph_export.hpp"
 #include "src/metrics/metric.hpp"
 #include "../model_metric_reporter.hpp"
 #include "../ov_utils.hpp"
@@ -43,6 +48,7 @@
 #include "node_initializer.hpp"
 
 namespace ovms {
+
 MediapipeGraphConfig MediapipeGraphDefinition::MGC;
 
 const std::string MediapipeGraphDefinition::SCHEDULER_CLASS_NAME{"Mediapipe"};
@@ -60,6 +66,13 @@ const tensor_map_t MediapipeGraphDefinition::getOutputsInfo() const {
 }
 
 Status MediapipeGraphDefinition::validateForConfigFileExistence() {
+    if (GraphExport::hasInMemoryGraphContent() && ovms::Config::instance().getServerSettings().serverMode == IN_MEMORY_GRAPH_MODE) {
+        const std::string& content = GraphExport::getInMemoryGraphContent();
+        this->chosenConfig = content;
+        this->mgconfig.setCurrentGraphPbTxtMD5(ovms::FileSystem::getStringMD5(content));
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Using in-memory graph content for mediapipe graph definition: {}", this->getName());
+        return StatusCode::OK;
+    }
     std::ifstream ifs(this->mgconfig.getGraphPath());
     if (!ifs.is_open()) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to open mediapipe graph definition: {}, file: {}\n", this->getName(), this->mgconfig.getGraphPath());
@@ -76,13 +89,83 @@ Status MediapipeGraphDefinition::validateForConfigFileExistence() {
     return StatusCode::OK;
 }
 
+// Precondition: chosenConfig must be populated (call after validateForConfigFileExistence).
+// Uses this->chosenConfig to parse the directive and this->config (parsed protobuf) for node inspection.
+Status MediapipeGraphDefinition::resolveGraphQueueSize() {
+    if (this->chosenConfig.empty()) {
+        SPDLOG_ERROR("Internal error: resolveGraphQueueSize called with empty chosenConfig for mediapipe: {}", getName());
+        return StatusCode::INTERNAL_ERROR;
+    }
+    // 0. Runtime kill-switch: OVMS_GRAPH_QUEUE_OFF disables all graph pools.
+    if (GetEnvVar("OVMS_GRAPH_QUEUE_OFF") == "1") {
+        SPDLOG_INFO("Graph queue globally disabled via OVMS_GRAPH_QUEUE_OFF=1 for mediapipe: {}", getName());
+        return StatusCode::OK;
+    }
+    // 1. Explicit pbtxt directive: # OVMS_GRAPH_QUEUE_MAX_SIZE: <value>
+    //    Always honored regardless of calculator checks.
+    //    Value 0 disables the queue, AUTO or positive integer enables it.
+    //    Negative values are rejected as invalid.
+    static const std::regex directiveRegex(
+        R"((?:^|\n)\s*#\s*OVMS_GRAPH_QUEUE_MAX_SIZE\s*:\s*(\S+)\s*(?:\r?\n|$))");
+    std::smatch match;
+    if (std::regex_search(this->chosenConfig, match, directiveRegex)) {
+        std::string value = match[1].str();
+        if (value == "AUTO") {
+            this->mgconfig.setGraphQueueSizeAuto();
+        } else {
+            auto parsed = stoi32(value);
+            if (!parsed.has_value()) {
+                SPDLOG_ERROR("Invalid OVMS_GRAPH_QUEUE_MAX_SIZE value: '{}'. Expected integer or 'AUTO'.", value);
+                return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
+            }
+            int queueSize = parsed.value();
+            if (queueSize < 0) {
+                SPDLOG_ERROR("Invalid OVMS_GRAPH_QUEUE_MAX_SIZE value: {}. Must be 0 (disabled) or a positive integer.", queueSize);
+                return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
+            }
+            if (queueSize == 0) {
+                SPDLOG_DEBUG("Graph queue explicitly disabled (OVMS_GRAPH_QUEUE_MAX_SIZE=0) for mediapipe: {}", getName());
+                return StatusCode::OK;
+            }
+            unsigned int maxThreads = std::thread::hardware_concurrency();
+            if (maxThreads > 0 && queueSize > static_cast<int>(maxThreads)) {
+                SPDLOG_WARN("OVMS_GRAPH_QUEUE_MAX_SIZE value: {} exceeds available hardware threads: {}. Clamping to {}.", queueSize, maxThreads, maxThreads);
+                queueSize = static_cast<int>(maxThreads);
+            }
+            this->mgconfig.setGraphQueueSize(queueSize);
+        }
+        // 2. Reject PythonExecutorCalculator nodes using LOOPBACK with graph queue enabled.
+        //    Generative Python nodes hold per-request iterator state that cannot be shared
+        //    across pooled graph instances.
+        for (int i = 0; i < this->config.node_size(); ++i) {
+            const auto& node = this->config.node(i);
+            if (node.calculator() != "PythonExecutorCalculator") {
+                continue;
+            }
+            for (const auto& inputStream : node.input_stream()) {
+                if (inputStream.find("LOOPBACK") == 0) {
+                    SPDLOG_ERROR("PythonExecutorCalculator with LOOPBACK stream is incompatible with graph queue "
+                                 "(OVMS_GRAPH_QUEUE_MAX_SIZE) in mediapipe: {}. "
+                                 "Generative Python nodes hold per-request state that cannot be shared across pooled graphs. "
+                                 "Set OVMS_GRAPH_QUEUE_MAX_SIZE to 0 or remove the LOOPBACK stream.",
+                        getName());
+                    return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
+                }
+            }
+        }
+        return StatusCode::OK;
+    }
+    SPDLOG_DEBUG("Graph queue disabled by default for mediapipe: {}. Add '# OVMS_GRAPH_QUEUE_MAX_SIZE: <value>' directive in graph.pbtxt to enable.", getName());
+    return StatusCode::OK;
+}
+
 Status MediapipeGraphDefinition::validateForConfigLoadableness() {
-    if (chosenConfig.empty()) {
+    if (this->chosenConfig.empty()) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Trying to parse empty mediapipe graph definition: {} failed", this->getName(), this->chosenConfig);
         return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
     }
     SPDLOG_TRACE("Will try to load pbtxt config: {}", this->chosenConfig);
-    bool success = ::google::protobuf::TextFormat::ParseFromString(chosenConfig, &this->config);
+    bool success = ::google::protobuf::TextFormat::ParseFromString(this->chosenConfig, &this->config);
     if (!success) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Trying to parse mediapipe graph definition: {} failed", this->getName(), this->chosenConfig);
         return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
@@ -110,7 +193,7 @@ Status MediapipeGraphDefinition::dryInitializeTest() {
 }
 Status MediapipeGraphDefinition::validate(const ServableNameChecker& checker) {
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Started validation of mediapipe: {}", getName());
-    if (!this->sidePacketMaps.empty()) {
+    if (!this->sidePacketMaps->empty()) {
         SPDLOG_ERROR("Internal Error: MediaPipe definition is in unexpected state.");
         return StatusCode::INTERNAL_ERROR;
     }
@@ -124,6 +207,10 @@ Status MediapipeGraphDefinition::validate(const ServableNameChecker& checker) {
         return validationResult;
     }
     validationResult = validateForConfigLoadableness();
+    if (!validationResult.ok()) {
+        return validationResult;
+    }
+    validationResult = resolveGraphQueueSize();
     if (!validationResult.ok()) {
         return validationResult;
     }
@@ -158,6 +245,15 @@ Status MediapipeGraphDefinition::validate(const ServableNameChecker& checker) {
     if (!status.ok()) {
         return status;
     }
+    status = this->initializeQueueIfRequired();
+    if (!status.ok()) {
+        return status;
+    }
+
+    if (!this->loraAliases.empty() && checker.aliasesConflict(this->loraAliases, getName())) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "LoRA alias in graph '{}' conflicts with an existing servable", getName());
+        return StatusCode::MEDIAPIPE_GRAPH_NAME_OCCUPIED;
+    }
 
     lock.unlock();
     notifier.passed = true;
@@ -168,12 +264,32 @@ Status MediapipeGraphDefinition::validate(const ServableNameChecker& checker) {
     return StatusCode::OK;
 }
 
+Status MediapipeGraphDefinition::initializeQueueIfRequired() {
+    int initialQueueSize = this->mgconfig.getInitialQueueSize();
+    if (initialQueueSize <= 0) {
+        SPDLOG_DEBUG("Graph queue creation disabled for mediapipe: {} (graph_queue_size={})", getName(), initialQueueSize);
+        return StatusCode::OK;
+    }
+    try {
+        this->queue = std::make_shared<GraphQueue>(this->config, this->sidePacketMaps, initialQueueSize);
+    } catch (const std::exception& e) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to create graph queue for mediapipe: {} error: {}", getName(), e.what());
+        return StatusCode::INTERNAL_ERROR;
+    } catch (...) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to create graph queue for mediapipe: {} unknown error", getName());
+        return StatusCode::INTERNAL_ERROR;
+    }
+    SPDLOG_DEBUG("Created graph queue with size {} for mediapipe: {}", initialQueueSize, getName());
+    return StatusCode::OK;
+}
+
 MediapipeGraphDefinition::MediapipeGraphDefinition(const std::string name,
     const MediapipeGraphConfig& config,
     MetricRegistry* registry,
     const MetricConfig* metricConfig,
     PythonBackend* pythonBackend) :
     SingleVersionServableDefinition(name),
+    sidePacketMaps(std::make_shared<GraphSidePackets>()),
     status(SCHEDULER_CLASS_NAME, getName()),
     pythonBackend(pythonBackend),
     reporter(std::make_unique<MediapipeServableMetricReporter>(metricConfig, registry, name)) {
@@ -242,11 +358,19 @@ Status MediapipeGraphDefinition::create(std::unique_ptr<MediapipeGraphExecutor>&
         return status;
     }
     SPDLOG_DEBUG("Creating Mediapipe graph executor: {}", getName());
-
-    pipeline = std::make_unique<MediapipeGraphExecutor>(getName(), std::to_string(getVersion()),
-        this->config, this->inputTypes, this->outputTypes, this->inputNames, this->outputNames,
-        this->sidePacketMaps,
-        this->pythonBackend, this->reporter.get());
+    if (this->queue) {
+        GraphIdGuard graphIdGuard(this->queue);
+        pipeline = std::make_unique<MediapipeGraphExecutor>(getName(), std::to_string(getVersion()),
+            this->config, this->inputTypes, this->outputTypes, this->inputNames, this->outputNames,
+            *this->sidePacketMaps,
+            this->pythonBackend, this->reporter.get(), std::move(graphIdGuard));
+    } else {
+        pipeline = std::make_unique<MediapipeGraphExecutor>(getName(), std::to_string(getVersion()),
+            this->config, this->inputTypes, this->outputTypes, this->inputNames, this->outputNames,
+            *this->sidePacketMaps,
+            this->pythonBackend, this->reporter.get());
+    }
+    SPDLOG_DEBUG("Created Mediapipe graph executor: {}", getName());
     return status;
 }
 
@@ -320,13 +444,19 @@ Status MediapipeGraphDefinition::reload(const ServableNameChecker& checker, cons
         std::this_thread::sleep_for(std::chrono::microseconds(1));
     }
     this->mgconfig = config;
-    this->sidePacketMaps.clear();
+    this->queue.reset();
+    this->sidePacketMaps = std::make_shared<GraphSidePackets>();
     return validate(checker);
 }
 
 void MediapipeGraphDefinition::retire() {
-    this->sidePacketMaps.clear();
+    // Block creating new unloadGuards
     this->status.handle(RetireEvent());
+    while (requestsHandlesCounter > 0) {
+        std::this_thread::sleep_for(std::chrono::microseconds(1));
+    }
+    this->queue.reset();
+    this->sidePacketMaps.reset();
 }
 
 bool MediapipeGraphDefinition::isReloadRequired(const MediapipeGraphConfig& config) const {
@@ -355,19 +485,22 @@ Status MediapipeGraphDefinition::initializeNodes() {
             if (!success)
                 maps.clear();
         }
-    } guard{sidePacketMaps, success};
+    } guard{*sidePacketMaps, success};
 
     auto& registry = NodeInitializerRegistry::instance();
     for (int i = 0; i < config.node().size(); i++) {
         for (const auto& initializer : registry.all()) {
             if (initializer->matches(config.node(i).calculator())) {
-                Status status = initializer->initialize(config.node(i), getName(), mgconfig.getBasePath(), sidePacketMaps, pythonBackend);
+                Status status = initializer->initialize(config.node(i), getName(), mgconfig.getBasePath(), *sidePacketMaps, pythonBackend);
                 if (!status.ok()) {
                     return status;
                 }
             }
         }
     }
+    // Register LoRA aliases for routing from initialized image gen pipelines
+    this->loraAliases = sidePacketMaps->loraAliases;
+    this->hideBaseModelInRouting = sidePacketMaps->hideBaseModelInRouting;
     success = true;
     return StatusCode::OK;
 }

@@ -70,7 +70,8 @@ $(error PYTHON_DISABLE cannot be 0 when MEDIAPIPE_DISABLE is 1)
 endif
 endif
 FUZZER_BUILD ?= 0
-
+DOCKER_BUILDKIT ?= 1
+KONFLUX ?= 0
 # NOTE: when changing any value below, you'll need to adjust WORKSPACE file by hand:
 #         - uncomment source build section, comment binary section
 #         - adjust binary version path - version variable is not passed to WORKSPACE file!
@@ -194,7 +195,7 @@ OVMS_CPP_IMAGE_TAG ?= latest
 
 OVMS_PYTHON_IMAGE_TAG ?= py
 
-PRODUCT_VERSION ?= "2026.2.0"
+PRODUCT_VERSION ?= "2026.3.0"
 PROJECT_VER_PATCH =
 
 $(eval PROJECT_VER_PATCH:=`git rev-parse --short HEAD`)
@@ -233,6 +234,7 @@ BUILD_ARGS = --build-arg http_proxy=$(HTTP_PROXY)\
 	--build-arg minitrace_flags=$(MINITRACE_FLAGS) \
 	--build-arg CMAKE_BUILD_TYPE=$(CMAKE_BUILD_TYPE)\
 	--build-arg PROJECT_VERSION=$(PROJECT_VERSION)\
+	--build-arg OPENCV_VERSION=$(OPENCV_VERSION)\
 	--build-arg BASE_IMAGE=$(BASE_IMAGE)\
 	--build-arg BASE_OS=$(BASE_OS)\
 	--build-arg INSTALL_RPMS_FROM_URL=$(INSTALL_RPMS_FROM_URL)\
@@ -240,7 +242,8 @@ BUILD_ARGS = --build-arg http_proxy=$(HTTP_PROXY)\
 	--build-arg RELEASE_BASE_IMAGE=$(BASE_IMAGE_RELEASE)\
 	--build-arg JOBS=$(JOBS)\
 	--build-arg CAPI_FLAGS=$(CAPI_FLAGS)\
-	--build-arg VERBOSE_LOGS=$(VERBOSE_LOGS)
+	--build-arg VERBOSE_LOGS=$(VERBOSE_LOGS)\
+	--build-arg KONFLUX=$(KONFLUX)
 
 
 .PHONY: default docker_build \
@@ -355,13 +358,10 @@ ifeq ($(NO_DOCKER_CACHE),true)
 	@docker pull registry.access.redhat.com/ubi9/ubi-minimal:$(BASE_OS_TAG_REDHAT)
   endif
 endif
-ifeq ($(USE_BUILDX),true)
-	$(eval BUILDX:=buildx)
-endif
 
 ifeq ($(BUILD_CUSTOM_NODES),true)
 	@echo "Building custom nodes"
-	@cd src/custom_nodes && make USE_BUILDX=$(USE_BUILDX) NO_DOCKER_CACHE=$(NO_DOCKER_CACHE) BASE_OS=$(OS) BASE_IMAGE=$(BASE_IMAGE) 
+	@cd src/custom_nodes && make NO_DOCKER_CACHE=$(NO_DOCKER_CACHE) BASE_OS=$(OS) BASE_IMAGE=$(BASE_IMAGE) 
 endif
 	@echo "Building docker image $(BASE_OS)"
 	# Provide metadata information into image if defined
@@ -385,15 +385,23 @@ targz_package:
 		--target=pkg && \
 	rm -vrf dist/$(OS) && mkdir -p dist/$(OS) && \
 	ID=$$(docker create $(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG)) && \
-	docker cp $$ID:/ovms_pkg/$(OS) dist/ && \
+	docker cp $$ID:/ovms_pkg/$(OS)/ovms.tar dist/$(OS)/ && \
 	docker rm $$ID
-	cd dist/$(OS) && sha256sum --check ovms.tar.gz.sha256
+	docker $(BUILDX) build -f Dockerfile.$(DIST_OS) . \
+		$(BUILD_ARGS) \
+		--build-arg BUILD_IMAGE=$(BUILD_IMAGE) \
+		-t $(OVMS_CPP_DOCKER_IMAGE)-capi:$(OVMS_CPP_IMAGE_TAG) \
+		--target=capi-build && \
+	ID=$$(docker create $(OVMS_CPP_DOCKER_IMAGE)-capi:$(OVMS_CPP_IMAGE_TAG)) && \
+	docker cp $$ID:/ovms_release/lib/libovms_shared.so dist/$(OS)/ && \
+	docker rm $$ID
+	cd dist/$(OS) && \
+	tar rf ovms.tar --transform 's,^,ovms/lib/,' libovms_shared.so && \
+	gzip ovms.tar && \
+	rm -f libovms_shared.so && \
+	sha256sum ovms.tar.gz > ovms.tar.gz.sha256
 
 ovms_release_images:
-ifeq ($(USE_BUILDX),true)
-	$(eval BUILDX:=buildx)
-	$(eval NO_CACHE_OPTION:=--no-cache-filter release)
-endif
 ifeq ($(BASE_OS),redhat)
 	$(eval NPU:=0)
 else
@@ -441,10 +449,6 @@ ifeq ($(BASE_OS),redhat)
 endif
 
 release_image:
-ifeq ($(USE_BUILDX),true)
-	$(eval BUILDX:=buildx)
-	$(eval NO_CACHE_OPTION:=--no-cache-filter release)
-endif
 	docker $(BUILDX) build $(NO_CACHE_OPTION) -f Dockerfile.$(DIST_OS) . \
 		$(BUILD_ARGS) \
 		--build-arg BUILD_IMAGE=$(BUILD_IMAGE) \
@@ -604,15 +608,15 @@ test_functional: venv
 
 test_python_clients:
 	@echo "Prepare docker image"
-	@docker build . -f tests/python/Dockerfile -t python_client_test
+	@docker build --build-arg http_proxy="$(http_proxy)" --build-arg https_proxy="$(https_proxy)" . -f tests/python/Dockerfile -t python_client_test
 	@echo "Dropping test container if exist"
 	@docker rm --force $(PYTHON_CLIENT_TEST_CONTAINER_NAME) || true
 	@echo "Download models"
 	@if [ ! -d "tests/python/models" ]; then cd tests/python && \
 		mkdir models && \
-		docker run -u $(id -u):$(id -g) -v ${PWD}/tests/python/models:/models openvino/ubuntu20_dev:2024.6.0 omz_downloader --name resnet-50-tf --output_dir /models && \
-		docker run -u $(id -u):$(id -g) -v ${PWD}/tests/python/models:/models:rw openvino/ubuntu20_dev:2024.6.0 omz_converter --name resnet-50-tf --download_dir /models --output_dir /models --precisions FP32 && \
-		docker run -u $(id -u):$(id -g) -v ${PWD}/tests/python/models:/models:rw openvino/ubuntu20_dev:2024.6.0 mv /models/public/resnet-50-tf/FP32 /models/public/resnet-50-tf/1; fi
+		docker run -u $(id -u):$(id -g) -e http_proxy="$(http_proxy)" -e https_proxy="$(https_proxy)" -v ${PWD}/tests/python/models:/models openvino/ubuntu20_dev:2024.6.0 omz_downloader --name resnet-50-tf --output_dir /models && \
+		docker run -u $(id -u):$(id -g) -e http_proxy="$(http_proxy)" -e https_proxy="$(https_proxy)" -v ${PWD}/tests/python/models:/models:rw openvino/ubuntu20_dev:2024.6.0 omz_converter --name resnet-50-tf --download_dir /models --output_dir /models --precisions FP32 && \
+		docker run -u $(id -u):$(id -g) -e http_proxy="$(http_proxy)" -e https_proxy="$(https_proxy)" -v ${PWD}/tests/python/models:/models:rw openvino/ubuntu20_dev:2024.6.0 mv /models/public/resnet-50-tf/FP32 /models/public/resnet-50-tf/1; fi
 	@echo "Start test container"
 	@docker run -d --rm --name $(PYTHON_CLIENT_TEST_CONTAINER_NAME) -v ${PWD}/tests/python/models/public/resnet-50-tf:/models/public/resnet-50-tf -p $(PYTHON_CLIENT_TEST_REST_PORT):8000 -p $(PYTHON_CLIENT_TEST_GRPC_PORT):9000 openvino/model_server:latest --model_name resnet --model_path /models/public/resnet-50-tf --port 9000 --rest_port 8000 && \
 		sleep 10

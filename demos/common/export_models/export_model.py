@@ -21,6 +21,7 @@ import json
 import shutil
 import tempfile
 from pathlib import Path
+from huggingface_hub import snapshot_download
 
 def add_common_arguments(parser):
     parser.add_argument('--model_repository_path', required=False, default='models', help='Where the model should be exported to', dest='model_repository_path')
@@ -54,7 +55,7 @@ parser_text.add_argument('--max_prompt_len', required=False, type=int, default=N
                          'Not effective if target device is not NPU', dest='max_prompt_len')
 parser_text.add_argument('--prompt_lookup_decoding', action='store_true', help='Set pipeline to use prompt lookup decoding', dest='prompt_lookup_decoding')
 parser_text.add_argument('--reasoning_parser', choices=["qwen3", "gptoss"], help='Set the type of the reasoning parser for reasoning content extraction', dest='reasoning_parser')
-parser_text.add_argument('--tool_parser', choices=["llama3", "phi4", "hermes3", "mistral", "qwen3coder", "gptoss", "devstral"], help='Set the type of the tool parser for tool calls extraction', dest='tool_parser')
+parser_text.add_argument('--tool_parser', choices=["llama3", "phi4", "hermes3", "mistral", "qwen3coder", "gptoss", "devstral", "lfm2"], help='Set the type of the tool parser for tool calls extraction', dest='tool_parser')
 parser_text.add_argument('--enable_tool_guided_generation', action='store_true', help='Enables enforcing tool schema during generation. Requires setting tool_parser', dest='enable_tool_guided_generation')
 
 parser_embeddings_ov = subparsers.add_parser('embeddings_ov', help='export model for embeddings endpoint with directory structure aligned with OpenVINO tools')
@@ -63,12 +64,6 @@ parser_embeddings_ov.add_argument('--skip_normalize', default=True, action='stor
 parser_embeddings_ov.add_argument('--pooling', default="CLS", choices=["CLS", "LAST", "MEAN"], help='Embeddings pooling mode', dest='pooling')
 parser_embeddings_ov.add_argument('--truncate', default=False, action='store_true', help='Truncate the prompts to fit to the embeddings model', dest='truncate')
 parser_embeddings_ov.add_argument('--num_streams', default=1,type=int, help='The number of parallel execution streams to use for the model. Use at least 2 on 2 socket CPU systems.', dest='num_streams')
-
-parser_rerank = subparsers.add_parser('rerank', help='[deprecated] export model for rerank endpoint with models split into separate, versioned directories')
-add_common_arguments(parser_rerank)
-parser_rerank.add_argument('--num_streams', default=1, type=int, help='The number of parallel execution streams to use for the model. Use at least 2 on 2 socket CPU systems.', dest='num_streams')
-parser_rerank.add_argument('--max_doc_length', default=16000, type=int, help='Maximum length of input documents in tokens', dest='max_doc_length')
-parser_rerank.add_argument('--version', default="1", help='version of the model', dest='version')
 
 parser_rerank_ov = subparsers.add_parser('rerank_ov', help='export model for rerank endpoint with directory structure aligned with OpenVINO tools')
 add_common_arguments(parser_rerank_ov)
@@ -86,6 +81,13 @@ parser_image_generation.add_argument('--default_resolution', default="", help='D
 parser_image_generation.add_argument('--max_num_images_per_prompt', type=int, default=0, help='Max allowed number of images client is allowed to request for a given prompt', dest='max_num_images_per_prompt')
 parser_image_generation.add_argument('--default_num_inference_steps', type=int, default=0, help='Default number of inference steps when not specified by client', dest='default_num_inference_steps')
 parser_image_generation.add_argument('--max_num_inference_steps', type=int, default=0, help='Max allowed number of inference steps client is allowed to request for a given prompt', dest='max_num_inference_steps')
+parser_image_generation.add_argument('--source_loras', default=None,
+    help='LoRA adapters to apply. Format: alias1=org1/repo1[:alpha],alias2=org2/repo2[@file.safetensors][:alpha],'
+         'composite=@alias1:alpha+@alias2:alpha '
+         '@filename specifies which .safetensors file (auto-detected when repo has exactly one). '
+         ':alpha sets adapter alpha (default 1.0). '
+         'Composite entries (source starts with @) blend multiple adapters. Only for image_generation task.',
+    dest='source_loras')
 
 parser_text2speech = subparsers.add_parser('text2speech', help='export model for text2speech endpoint')
 add_common_arguments(parser_text2speech)
@@ -101,7 +103,7 @@ parser_speech2text.add_argument('--num_streams', default=0, type=int, help='The 
 parser_speech2text.add_argument('--enable_word_timestamps', default=False, action='store_true', help='Load model with word timestamps support.', dest='enable_word_timestamps')
 args = vars(parser.parse_args())
 
-t2s_graph_template = """
+t2s_graph_template = """# OVMS_GRAPH_QUEUE_MAX_SIZE: AUTO
 input_stream: "HTTP_REQUEST_PAYLOAD:input"
 output_stream: "HTTP_RESPONSE_PAYLOAD:output"
 node {
@@ -127,7 +129,7 @@ node {
 }
 """
 
-s2t_graph_template = """
+s2t_graph_template = """# OVMS_GRAPH_QUEUE_MAX_SIZE: AUTO
 input_stream: "HTTP_REQUEST_PAYLOAD:input"
 output_stream: "HTTP_RESPONSE_PAYLOAD:output"
 node {
@@ -163,7 +165,7 @@ node {
 }
 """
 
-embedding_graph_ov_template = """
+embedding_graph_ov_template = """# OVMS_GRAPH_QUEUE_MAX_SIZE: AUTO
 input_stream: "REQUEST_PAYLOAD:input"
 output_stream: "RESPONSE_PAYLOAD:output"
 node {
@@ -187,7 +189,7 @@ node {
 }
 """
 
-rerank_graph_ov_template = """
+rerank_graph_ov_template = """# OVMS_GRAPH_QUEUE_MAX_SIZE: AUTO
 input_stream: "REQUEST_PAYLOAD:input"
 output_stream: "RESPONSE_PAYLOAD:output"
 node {
@@ -206,36 +208,8 @@ node {
 }
 """
 
-rerank_graph_template = """input_stream: "REQUEST_PAYLOAD:input"
-output_stream: "RESPONSE_PAYLOAD:output"
-node {
-  calculator: "OpenVINOModelServerSessionCalculator"
-  output_side_packet: "SESSION:tokenizer"
-  node_options: {
-    [type.googleapis.com / mediapipe.OpenVINOModelServerSessionCalculatorOptions]: {
-      servable_name: "{{model_name}}_tokenizer_model"
-    }
-  }
-}
-node {
-  calculator: "OpenVINOModelServerSessionCalculator"
-  output_side_packet: "SESSION:rerank"
-  node_options: {
-    [type.googleapis.com / mediapipe.OpenVINOModelServerSessionCalculatorOptions]: {
-      servable_name: "{{model_name}}_rerank_model"
-    }
-  }
-}
-node {
-    input_side_packet: "TOKENIZER_SESSION:tokenizer"
-    input_side_packet: "RERANK_SESSION:rerank"
-    calculator: "RerankCalculator"
-    input_stream: "REQUEST_PAYLOAD:input"
-    output_stream: "RESPONSE_PAYLOAD:output"
-}
-"""
-
-text_generation_graph_template = """input_stream: "HTTP_REQUEST_PAYLOAD:input"
+text_generation_graph_template = """# OVMS_GRAPH_QUEUE_MAX_SIZE: AUTO
+input_stream: "HTTP_REQUEST_PAYLOAD:input"
 output_stream: "HTTP_RESPONSE_PAYLOAD:output"
 
 node: {
@@ -289,26 +263,8 @@ node: {
   }
 }"""
 
-rerank_subconfig_template = """{
-    "model_config_list": [
-    { "config": 
-	    {
-                "name": "{{model_name}}_tokenizer_model",
-                "base_path": "tokenizer"
-            }
-	},
-    { "config": 
-	    {
-                "name": "{{model_name}}_rerank_model",
-                "base_path": "rerank",
-                "target_device": "{{target_device|default("CPU", true)}}",
-                "plugin_config": { "NUM_STREAMS": "{{num_streams|default(1, true)}}" }
-            }
-	}
-   ]
-}"""
-
-image_generation_graph_template = """input_stream: "HTTP_REQUEST_PAYLOAD:input"
+image_generation_graph_template = """# OVMS_GRAPH_QUEUE_MAX_SIZE: AUTO
+input_stream: "HTTP_REQUEST_PAYLOAD:input"
 output_stream: "HTTP_RESPONSE_PAYLOAD:output"
 
 node: {
@@ -339,6 +295,17 @@ node: {
       default_num_inference_steps: {{default_num_inference_steps}},{% endif %}
       {%- if max_num_inference_steps > 0 %}
       max_num_inference_steps: {{max_num_inference_steps}},{% endif %}
+      {%- for lora in lora_adapters %}
+      lora_adapters { alias: "{{lora.alias}}" path: "{{lora.path}}"{% if lora.alpha is not none %} alpha: {{lora.alpha}}{% endif %} mode: DYNAMIC }
+      {%- endfor %}
+      {%- for composite in composite_lora_adapters %}
+      composite_lora_adapters {
+            alias: "{{composite.alias}}"
+      {%- for comp in composite.components %}
+            components { adapter_alias: "{{comp.adapter_alias}}"{% if comp.alpha != 1.0 %} alpha: {{comp.alpha}}{% endif %} }
+      {%- endfor %}
+          }
+      {%- endfor %}
     }
   }
 }"""
@@ -436,11 +403,13 @@ def export_text_generation_model(model_repository_path, source_model, model_name
                     print("Using default quantization parameters for NPU: --sym --ratio 1.0 --group-size -1")
                     task_parameters['extra_quantization_params'] = "--sym --ratio 1.0 --group-size -1"
             optimum_command = "optimum-cli export openvino --model {} --weight-format {} {} --trust-remote-code {}".format(source_model, precision, task_parameters['extra_quantization_params'], llm_model_path)
+            print('Running command: ', optimum_command)  # for debug purposes
             if os.system(optimum_command):
                 raise ValueError("Failed to export llm model", source_model)
             if not (os.path.isfile(os.path.join(llm_model_path, 'openvino_detokenizer.xml'))):
                 print("Tokenizer and detokenizer not found in the exported model. Exporting tokenizer and detokenizer from HF model")
                 convert_tokenizer_command = f"convert_tokenizer --with-detokenizer --trust-remote-code -o {llm_model_path} {source_model}"
+                print('Running command: ', convert_tokenizer_command)  # for debug purposes
                 if os.system(convert_tokenizer_command):
                     raise ValueError("Failed to export tokenizer and detokenizer", source_model)
     ### Export draft model for speculative decoding 
@@ -463,8 +432,9 @@ def export_text_generation_model(model_repository_path, source_model, model_name
                 additional_options = ""
                 if args["draft_eagle3_mode"]:
                     print("Using eagle3 option for the draft model export")
-                    additional_options += " --eagle3  --task text-generation-with-past"
+                    additional_options += " --task text-generation-with-past"
                 optimum_command = "optimum-cli export openvino --model {} --weight-format {} --trust-remote-code {} {}".format(draft_source_model, precision, additional_options, draft_llm_model_path)
+                print('Running command: ', optimum_command)  # for debug purposes
                 if os.system(optimum_command):
                     raise ValueError("Failed to export llm model", source_model)
 
@@ -515,12 +485,12 @@ def export_embeddings_model_ov(model_repository_path, source_model, model_name, 
     print("Exporting embeddings model to ",destination_path)
     if not os.path.isdir(destination_path) or args['overwrite_models']:
         optimum_command = "optimum-cli export openvino --model {} --disable-convert-tokenizer --task feature-extraction --weight-format {} {} --trust-remote-code {}".format(source_model, precision, task_parameters['extra_quantization_params'], destination_path)
-        print('Running command:', optimum_command)  # for debug purposes
+        print('Running command: ', optimum_command)  # for debug purposes
         if os.system(optimum_command):
             raise ValueError("Failed to export embeddings model", source_model)
         print("Exporting tokenizer to ", destination_path)
         convert_tokenizer_command = "convert_tokenizer -o {} {} {}".format(destination_path, source_model, set_max_context_length) 
-        print('Running command:', convert_tokenizer_command)  # for debug purposes
+        print('Running command: ', convert_tokenizer_command)  # for debug purposes
         if (os.system(convert_tokenizer_command)):
             raise ValueError("Failed to export tokenizer model", source_model)
     gtemplate = jinja2.Environment(loader=jinja2.BaseLoader).from_string(embedding_graph_ov_template)
@@ -535,6 +505,7 @@ def export_text2speech_model(model_repository_path, source_model, model_name, pr
     print("Exporting text2speech model to ",destination_path)
     if not os.path.isdir(destination_path) or args['overwrite_models']:
         optimum_command = "optimum-cli export openvino --model {} --weight-format {} --trust-remote-code --model-kwargs \"{{\\\"vocoder\\\": \\\"{}\\\"}}\" {}".format(source_model, precision, task_parameters['vocoder'], destination_path)
+        print('Running command: ', optimum_command)  # for debug purposes
         if os.system(optimum_command):
             raise ValueError("Failed to export text2speech model", source_model)
     gtemplate = jinja2.Environment(loader=jinja2.BaseLoader).from_string(t2s_graph_template)
@@ -549,6 +520,7 @@ def export_speech2text_model(model_repository_path, source_model, model_name, pr
     print("Exporting speech2text model to ",destination_path)
     if not os.path.isdir(destination_path) or args['overwrite_models']:
         optimum_command = "optimum-cli export openvino --model {} --weight-format {} --trust-remote-code {}".format(source_model, precision, destination_path)
+        print('Running command: ', optimum_command)  # for debug purposes
         if os.system(optimum_command):
             raise ValueError("Failed to export speech2text model", source_model)
     gtemplate = jinja2.Environment(loader=jinja2.BaseLoader).from_string(s2t_graph_template)
@@ -563,6 +535,7 @@ def export_rerank_model_ov(model_repository_path, source_model, model_name, prec
     print("Exporting rerank model to ",destination_path)
     if not os.path.isdir(destination_path) or args['overwrite_models']:
         optimum_command = "optimum-cli export openvino --model {} --disable-convert-tokenizer --task text-classification --weight-format {} {} --trust-remote-code {}".format(source_model, precision, task_parameters['extra_quantization_params'], destination_path)
+        print('Running command: ', optimum_command)  # for debug purposes
         if os.system(optimum_command):
             raise ValueError("Failed to export rerank model", source_model)
         print("Exporting tokenizer to ", destination_path)
@@ -574,49 +547,8 @@ def export_rerank_model_ov(model_repository_path, source_model, model_name, prec
     print("Created graph {}".format(os.path.join(model_repository_path, model_name, 'graph.pbtxt')))
     add_servable_to_config(config_file_path, model_name, os.path.relpath(os.path.join(model_repository_path, model_name), os.path.dirname(config_file_path)))
 
-def export_rerank_model(model_repository_path, source_model, model_name, precision, task_parameters, version, config_file_path, max_doc_length):
-    if os.path.isfile(os.path.join(model_name, 'openvino_model.xml')):
-        print("OV model is source folder. Skipping conversion.")
-        os.makedirs(os.path.join(model_repository_path, model_name, 'rerank', version), exist_ok=True)
-        os.makedirs(os.path.join(model_repository_path, model_name, 'tokenizer', version), exist_ok=True)
-        shutil.move(os.path.join(model_repository_path, model_name, 'openvino_tokenizer.xml'), os.path.join(model_repository_path, model_name, 'tokenizer', version, 'model.xml'))
-        shutil.move(os.path.join(model_repository_path, model_name, 'openvino_tokenizer.bin'), os.path.join(model_repository_path, model_name, 'tokenizer', version, 'model.bin'))
-        shutil.move(os.path.join(model_repository_path, model_name, 'openvino_model.xml'), os.path.join(model_repository_path, model_name, 'rerank', version, 'model.xml'))
-        shutil.move(os.path.join(model_repository_path, model_name, 'openvino_model.bin'), os.path.join(model_repository_path, model_name, 'rerank', version, 'model.bin'))
-    else: # assume HF model name
-        with tempfile.TemporaryDirectory() as tmpdirname:
-            embeddings_path = os.path.join(model_repository_path, model_name, 'rerank', version)
-            print("Exporting rerank model to ",embeddings_path)
-            if not os.path.isdir(embeddings_path) or args['overwrite_models']:
-                optimum_command = "optimum-cli export openvino --disable-convert-tokenizer --model {} --task text-classification --weight-format {} {} --trust-remote-code {}".format(source_model, precision, task_parameters['extra_quantization_params'], tmpdirname)
-                if os.system(optimum_command):
-                    raise ValueError("Failed to export rerank model", source_model)
-                set_rt_info(tmpdirname, 'openvino_model.xml', 'config.json')
-                os.makedirs(embeddings_path, exist_ok=True)
-                shutil.move(os.path.join(tmpdirname, 'openvino_model.xml'), os.path.join(embeddings_path, 'model.xml'))
-                shutil.move(os.path.join(tmpdirname, 'openvino_model.bin'), os.path.join(embeddings_path, 'model.bin'))
-            tokenizer_path = os.path.join(model_repository_path, model_name,'tokenizer', version)
-            print("Exporting tokenizer to ",tokenizer_path)
-            if not os.path.isdir(tokenizer_path) or args['overwrite_models']:
-                export_rerank_tokenizer(source_model, tmpdirname, max_doc_length)
-                set_rt_info(tmpdirname, 'openvino_tokenizer.xml', 'tokenizer_config.json')
-                os.makedirs(tokenizer_path, exist_ok=True)
-                shutil.move(os.path.join(tmpdirname, 'openvino_tokenizer.xml'), os.path.join(tokenizer_path, 'model.xml'))
-                shutil.move(os.path.join(tmpdirname, 'openvino_tokenizer.bin'), os.path.join(tokenizer_path, 'model.bin'))
-    gtemplate = jinja2.Environment(loader=jinja2.BaseLoader).from_string(rerank_graph_template)
-    graph_content = gtemplate.render(model_name=model_name, **task_parameters)
-    with open(os.path.join(model_repository_path, model_name, 'graph.pbtxt'), 'w') as f:
-        f.write(graph_content)
-    print("Created graph {}".format(os.path.join(model_repository_path, model_name, 'graph.pbtxt')))
-    stemplate = jinja2.Environment(loader=jinja2.BaseLoader).from_string(rerank_subconfig_template)
-    subconfig_content = stemplate.render(model_name=model_name, **task_parameters)
-    with open(os.path.join(model_repository_path, model_name, 'subconfig.json'), 'w') as f:
-        f.write(subconfig_content)
-    print("Created subconfig {}".format(os.path.join(model_repository_path, model_name, 'subconfig.json')))
-    add_servable_to_config(config_file_path, model_name, os.path.relpath(os.path.join(model_repository_path, model_name), os.path.dirname(config_file_path)))
 
-
-def export_image_generation_model(model_repository_path, source_model, model_name, precision, task_parameters, config_file_path, num_streams):
+def export_image_generation_model(model_repository_path, source_model, model_name, precision, task_parameters, config_file_path, num_streams, source_loras):
     model_path = "./"
     target_path = os.path.join(model_repository_path, model_name)
     model_index_path = os.path.join(target_path, 'model_index.json')
@@ -625,9 +557,76 @@ def export_image_generation_model(model_repository_path, source_model, model_nam
         print("Model index file already exists. Skipping conversion, re-generating graph only.")
     else:
         optimum_command = "optimum-cli export openvino --model {} --weight-format {} {} {}".format(source_model, precision, task_parameters['extra_quantization_params'], target_path)
-        print(f'optimum cli command: {optimum_command}')
+        print('Running command: ', optimum_command)  # for debug purposes
         if os.system(optimum_command):
             raise ValueError("Failed to export image generation model", source_model)
+
+    # Download and resolve LoRA adapters
+    lora_adapters = []
+    composite_lora_adapters = []
+    if source_loras:
+        entries = source_loras.split(',')
+        for entry in entries:
+            entry = entry.strip()
+            if '=' in entry:
+                alias, source = entry.split('=', 1)
+            else:
+                source = entry
+                alias = entry.split('/')[-1] if '/' in entry else entry
+
+            # Composite LoRA: source starts with @
+            if source.startswith('@'):
+                components = []
+                for comp_token in source.split('+'):
+                    comp_token = comp_token.strip().lstrip('@')
+                    if ':' in comp_token:
+                        ref, alpha_str = comp_token.rsplit(':', 1)
+                        alpha = float(alpha_str)
+                    else:
+                        ref = comp_token
+                        alpha = 1.0
+                    components.append({'adapter_alias': ref, 'alpha': alpha})
+                composite_lora_adapters.append({'alias': alias, 'components': components})
+                print(f"Composite LoRA: {alias} -> {components}")
+                continue
+
+            # Parse optional alpha (trailing :float after repo or filename)
+            alpha = None
+            repo_and_file = source
+            # Check for alpha suffix: alias=org/repo:0.8 or alias=org/repo@file.safetensors:0.8
+            if ':' in repo_and_file:
+                last_colon = repo_and_file.rfind(':')
+                potential_alpha = repo_and_file[last_colon + 1:]
+                try:
+                    alpha = float(potential_alpha)
+                    repo_and_file = repo_and_file[:last_colon]
+                except ValueError:
+                    pass  # Not an alpha suffix (could be part of URL)
+
+            safetensors_file = ''
+            if '@' in repo_and_file:
+                repo, safetensors_file = repo_and_file.rsplit('@', 1)
+            else:
+                repo = repo_and_file
+            lora_dir = os.path.join(target_path, 'loras', repo)
+            if not os.path.isdir(lora_dir):
+                print(f"Downloading LoRA adapter: {repo} to {lora_dir}")
+                snapshot_download(repo_id=repo, local_dir=lora_dir)
+            else:
+                print(f"LoRA adapter directory already exists: {lora_dir}")
+            if not safetensors_file:
+                st_files = [f for f in os.listdir(lora_dir) if f.endswith('.safetensors')]
+                if len(st_files) == 0:
+                    raise ValueError(f"No .safetensors files found in LoRA adapter: {repo}")
+                if len(st_files) > 1:
+                    raise ValueError(f"Multiple .safetensors files in LoRA adapter: {repo}. Use @filename to specify.")
+                safetensors_file = st_files[0]
+            lora_path = 'loras/' + repo + '/' + safetensors_file
+            lora_entry = {'alias': alias, 'path': lora_path, 'alpha': alpha}
+            lora_adapters.append(lora_entry)
+            print(f"LoRA adapter: {alias} -> {lora_path}" + (f" (alpha={alpha})" if alpha else ""))
+    task_parameters['lora_adapters'] = lora_adapters
+    task_parameters['composite_lora_adapters'] = composite_lora_adapters
 
     plugin_config = {}
     assert num_streams >= 0, "num_streams should be a non-negative integer"
@@ -686,9 +685,6 @@ if args['task'] == 'text_generation':
 elif args['task'] == 'embeddings_ov':
     export_embeddings_model_ov(args['model_repository_path'], args['source_model'], args['model_name'],  args['precision'], template_parameters, args['config_file_path'], args['truncate'])
 
-elif args['task'] == 'rerank':
-    export_rerank_model(args['model_repository_path'], args['source_model'], args['model_name'] ,args['precision'], template_parameters, str(args['version']), args['config_file_path'], args['max_doc_length'])
-
 elif args['task'] == 'rerank_ov':
     export_rerank_model_ov(args['model_repository_path'], args['source_model'], args['model_name'] ,args['precision'], template_parameters, args['config_file_path'], args['max_doc_length'])
 
@@ -711,4 +707,4 @@ elif args['task'] == 'image_generation':
         'max_num_inference_steps',
         'extra_quantization_params'
     ]}
-    export_image_generation_model(args['model_repository_path'], args['source_model'], args['model_name'], args['precision'], template_parameters, args['config_file_path'], args['num_streams'])
+    export_image_generation_model(args['model_repository_path'], args['source_model'], args['model_name'], args['precision'], template_parameters, args['config_file_path'], args['num_streams'], args['source_loras'])

@@ -14,8 +14,14 @@
 :: limitations under the License.
 ::
 @echo on
+setlocal EnableExtensions EnableDelayedExpansion
+:: Load chosen dependency versions from versions.mk
+for /f "usebackq eol=# tokens=1,3" %%A in ("%cd%\versions.mk") do (
+    if "%%A"=="OPENCV_VERSION" if "!opencv_version!"=="" set "opencv_version=%%B"
+    if "%%A"=="CURL_VERSION" if "!curl_version!"=="" set "curl_version=%%B"
+)
 :: Setting up default OVMS compilation environment variables
-set "setPath=C:\opt;C:\opt\Python312\;C:\opt\Python312\Scripts\;C:\opt\msys64\usr\bin\;C:\opt\curl-8.19.0_4-win64-mingw\bin;%PATH%;"
+set "setPath=C:\opt;C:\opt\Python312\;C:\opt\Python312\Scripts\;C:\opt\msys64\usr\bin\;C:\opt\curl-!curl_version!-win64-mingw\bin;%PATH%;"
 set "setPythonPath=%cd%\bazel-out\x64_windows-opt\bin\src\python\binding"
 set "BAZEL_SH=C:\opt\msys64\usr\bin\bash.exe"
 
@@ -42,7 +48,7 @@ set "BAZEL_SH=C:\opt\msys64\usr\bin\bash.exe"
 
 :: Set paths with libs for execution - affects PATH
 set "openvinoBatch=call C:\opt\openvino\setupvars.bat"
-set "opencvBatch=call C:\opt\opencv_4.12.0\setup_vars_opencv4.cmd"
+set "opencvBatch=call C:\opt\opencv_!opencv_version!\setup_vars_opencv4.cmd"
 
 :: Set required libraries paths
 %openvinoBatch%

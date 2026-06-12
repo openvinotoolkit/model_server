@@ -26,6 +26,7 @@
 #include "logging.hpp"
 #include "profiler.hpp"
 #include "status.hpp"
+#include "systeminfo.hpp"
 #include "tensorinfo.hpp"
 
 namespace ovms {
@@ -148,4 +149,55 @@ Status validatePluginConfiguration(const plugin_config_t& pluginConfig, const st
 
     return StatusCode::OK;
 }
+
+Status applyDefaultCpuProperties(ov::AnyMap& properties) {
+#ifdef __linux__
+    try {
+        if (!isRunningInDocker()) {
+            return StatusCode::OK;
+        }
+        const uint16_t coreCount = getCoreCount();
+
+        if (properties.find(ov::hint::enable_cpu_pinning.name()) == properties.end()) {
+            const bool cpuPinning = getDockerCpuQuota() <= 0;
+            properties[ov::hint::enable_cpu_pinning.name()] = cpuPinning;
+            SPDLOG_DEBUG("applyDefaultCpuProperties: setting enable_cpu_pinning to {}", cpuPinning);
+        }
+
+        bool isThroughput = false;
+        const auto perfIt = properties.find(ov::hint::performance_mode.name());
+        if (perfIt != properties.end()) {
+            try {
+                isThroughput = (perfIt->second.as<ov::hint::PerformanceMode>() == ov::hint::PerformanceMode::THROUGHPUT);
+            } catch (...) {
+                try {
+                    isThroughput = (perfIt->second.as<std::string>() == "THROUGHPUT");
+                } catch (...) {
+                }
+            }
+            if (isThroughput && properties.find(ov::num_streams.name()) == properties.end()) {
+                properties[ov::num_streams.name()] = static_cast<int>(coreCount);
+                SPDLOG_DEBUG("applyDefaultCpuProperties: setting num_streams to {} (THROUGHPUT hint active)", coreCount);
+            }
+        }
+
+        if (properties.find(ov::inference_num_threads.name()) == properties.end()) {
+            int numThreads;
+            if (isThroughput) {
+                numThreads = static_cast<int>(coreCount);
+            } else {
+                numThreads = std::min(static_cast<int>(coreCount), static_cast<int>(getPhysicalCoresPerSocket()));
+            }
+            properties[ov::inference_num_threads.name()] = numThreads;
+            SPDLOG_DEBUG("applyDefaultCpuProperties: setting inference_num_threads to {}", numThreads);
+        }
+    } catch (const std::exception& ex) {
+        SPDLOG_WARN("Exception while applying default CPU properties: {}", ex.what());
+    } catch (...) {
+        SPDLOG_WARN("Unknown exception while applying default CPU properties");
+    }
+#endif
+    return StatusCode::OK;
+}
+
 }  // namespace ovms

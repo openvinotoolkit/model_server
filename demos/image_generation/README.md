@@ -43,13 +43,13 @@ This command pulls the `OpenVINO/stable-diffusion-v1-5-int8-ov` quantized model 
 :sync: docker
 Start docker container:
 ```bash
-mkdir -p models
+mkdir -p ${HOME}/models
 
-docker run -d --rm --user $(id -u):$(id -g) -p 8000:8000 -v $(pwd)/models:/models/:rw \
+docker run -d --rm --user $(id -u):$(id -g) -p 8000:8000 -v ${HOME}/models:/models:rw \
   -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy=$no_proxy \
   openvino/model_server:latest \
     --rest_port 8000 \
-    --model_repository_path /models/ \
+    --model_repository_path /models \
     --task image_generation \
     --source_model OpenVINO/stable-diffusion-v1-5-int8-ov
 ```
@@ -67,10 +67,10 @@ as mentioned in [deployment guide](../../docs/deploying_server_baremetal.md), in
 
 
 ```bat
-mkdir models
+if not exist c:\models mkdir c:\models
 
 ovms --rest_port 8000 ^
-  --model_repository_path ./models/ ^
+  --model_repository_path c:\models ^
   --task image_generation ^
   --source_model OpenVINO/stable-diffusion-v1-5-int8-ov
 ```
@@ -86,14 +86,14 @@ ovms --rest_port 8000 ^
 In case you want to use Intel GPU device to run the generation, add extra docker parameters `--device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1)` to `docker run` command, use the docker image with GPU support. Export the models with precision matching the GPU capacity and adjust pipeline configuration.
 It can be applied using the commands below:
 ```bash
-mkdir -p models
+mkdir -p ${HOME}/models
 
-docker run -d --rm -p 8000:8000 -v $(pwd)/models:/models/:rw \
+docker run -d --rm -p 8000:8000 -v ${HOME}/models:/models:rw \
   --user $(id -u):$(id -g) --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) \
   -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy=$no_proxy \
   openvino/model_server:latest-gpu \
     --rest_port 8000 \
-    --model_repository_path /models/ \
+    --model_repository_path /models \
     --task image_generation \
     --source_model OpenVINO/stable-diffusion-v1-5-int8-ov \
     --target_device GPU
@@ -103,13 +103,13 @@ docker run -d --rm -p 8000:8000 -v $(pwd)/models:/models/:rw \
 :::{tab-item} Bare metal (Windows)
 :sync: bare-metal
 
-Depending on how you prepared models in the first step of this demo, they are deployed to either CPU or GPU (it's defined in `config.json`). If you run on GPU make sure to have appropriate drivers installed, so the device is accessible for the model server.
+If you run on GPU make sure to have appropriate drivers installed, so the device is accessible for the model server.
 
 ```bat
-mkdir models
+if not exist c:\models mkdir c:\models
 
 ovms --rest_port 8000 ^
-  --model_repository_path ./models/ ^
+  --model_repository_path c:\models ^
   --task image_generation ^
   --source_model OpenVINO/stable-diffusion-v1-5-int8-ov ^
   --target_device GPU
@@ -135,22 +135,21 @@ In this specific case, we also need to use `--device /dev/dri`, because we also 
 
 It can be applied using the commands below:
 ```bash
-mkdir -p models
-mkdir -p cache
+mkdir -p ${HOME}/models
+mkdir -p ${HOME}/models/cache
 
 docker run -d --rm -p 8000:8000 \
-  -v $(pwd)/models:/models/:rw \
-  -v $(pwd)/cache:/cache/:rw \
+  -v ${HOME}/models:/models:rw \
   --user $(id -u):$(id -g) --device /dev/accel --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) \
   -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy=$no_proxy \
   openvino/model_server:latest-gpu \
     --rest_port 8000 \
-    --model_repository_path /models/ \
+    --model_repository_path /models \
     --task image_generation \
     --source_model OpenVINO/stable-diffusion-v1-5-int8-ov \
     --target_device 'NPU NPU NPU' \
     --resolution 512x512 \
-    --cache_dir /cache
+    --cache_dir /models/cache
 ```
 :::
 
@@ -159,211 +158,95 @@ docker run -d --rm -p 8000:8000 \
 
 
 ```bat
-mkdir models
-mkdir cache
+if not exist c:\models mkdir c:\models
+if not exist c:\models\cache mkdir c:\models\cache
 
 ovms --rest_port 8000 ^
-  --model_repository_path ./models/ ^
+  --model_repository_path c:\models ^
   --task image_generation ^
   --source_model OpenVINO/stable-diffusion-v1-5-int8-ov ^
   --target_device "NPU NPU NPU" ^
   --resolution 512x512 ^
-  --cache_dir ./cache
+  --cache_dir C:/models/cache
 ```
 :::
 
 ::::
 
 
-## Option 2. Using export script to download, convert and quantize then start the serving
-Here, the original models in `safetensors` format and the tokenizers will be converted to OpenVINO IR format and optionally quantized to desired precision.
-Quantization ensures faster initialization time, better performance and lower memory consumption.
-Image generation pipeline parameters will be defined inside the `graph.pbtxt` file.
+### SDXL model deployment
 
-Download export script, install it's dependencies and create directory for the models:
-```console
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/export_model.py -o export_model.py
-pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
-mkdir models
-```
-
-Run `export_model.py` script to download and quantize the model:
-
-> **Note:** Before downloading the model, access must be requested. Follow the instructions on the [HuggingFace model page](https://huggingface.co/stable-diffusion-v1-5/stable-diffusion-v1-5) to request access. When access is granted, create an authentication token in the HuggingFace account -> Settings -> Access Tokens page. Issue the following command and enter the authentication token. Authenticate via `huggingface-cli login`. 
-
-> **Note:** The users in China need to set environment variable HF_ENDPOINT="https://hf-mirror.com" before running the export script to connect to the HF Hub.
-
-> **Note:** The `--extra_quantization_params` parameter is used to pass additional parameters to the optimum-cli. It may be required to set the `--group-size` parameter when quantizing the model when encountering errors like: `Channel size 64 should be divisible by size of group 128.`
-
-### Export model for CPU
-```console
-python export_model.py image_generation \
-  --source_model stable-diffusion-v1-5/stable-diffusion-v1-5 \
-  --weight-format int8 \
-  --config_file_path models/config.json \
-  --model_repository_path models \
-  --extra_quantization_params "--group-size 64" \
-  --overwrite_models
-```
-
-### Export model for GPU
-```console
-python export_model.py image_generation \
-  --source_model stable-diffusion-v1-5/stable-diffusion-v1-5 \
-  --weight-format int8 \
-  --target_device GPU \
-  --config_file_path models/config.json \
-  --model_repository_path models \
-  --extra_quantization_params "--group-size 64" \
-  --overwrite_models
-```
-
-### Export model for NPU or mixed device
-
-Image generation endpoints consist of 3 models: vae encoder, denoising and vae decoder. It is possible to select device for each step separately. In this example, we will use NPU for all the steps.
-
-> **NOTE:** The NPU device requires the pipeline to be reshaped to static shape, this is why the `--resolution` parameter is used to define the input resolution.
-
-> **NOTE:** In case the model loading phase takes too long, consider caching the model with `--cache_dir` parameter, as seen in example below.
-
-
-```console
-python export_model.py image_generation \
-  --source_model stable-diffusion-v1-5/stable-diffusion-v1-5 \
-  --weight-format int8 \
-  --target_device "NPU NPU NPU" \
-  --resolution 512x512 \
-  --ov_cache_dir /cache \
-  --config_file_path models/config.json \
-  --model_repository_path models \
-  --overwrite_models
-```
-
-> **Note:** Change the `--weight-format` to quantize the model to `int8`, `fp16` or `int4` precision to reduce memory consumption and improve performance, or omit this parameter to keep the original precision.
-
-> **Note:** You can change the model used in the demo, please verify [tested models](https://github.com/openvinotoolkit/openvino.genai/blob/master/tests/python_tests/models/real_models) list.
-
-
-The default configuration should work in most cases but the parameters can be tuned via `export_model.py` script arguments. Run the script with `--help` argument to check available parameters and see the [Image Generation calculator documentation](../../docs/image_generation/reference.md) to learn more about configuration options.
-
-### Server Deployment
-
-**Deploying with Docker**
-
-Select deployment option depending on how you prepared models in the previous step.
-
-**CPU**  
-
-Running this command starts the container with CPU only target device:
+To deploy an SDXL model (higher quality, 1024×1024 native resolution), use a different `--source_model`:
 
 ::::{tab-set}
-:::{tab-item} Docker (Linux)
+:::{tab-item} Docker (Linux) — GPU
 :sync: docker
 
 Start docker container:
 ```bash
-docker run -d --rm -p 8000:8000 -v $(pwd)/models:/models:rw \
+mkdir -p ${HOME}/models
+
+docker run -d --rm -p 8000:8000 -v ${HOME}/models:/models:rw \
+  --user $(id -u):$(id -g) --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) \
+  -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy=$no_proxy \
+  openvino/model_server:latest-gpu \
+    --rest_port 8000 \
+    --model_repository_path /models \
+    --task image_generation \
+    --source_model OpenVINO/stable-diffusion-xl-base-1.0-int8-ov \
+    --target_device GPU
+```
+:::
+
+:::{tab-item} Bare metal (Windows)
+:sync: bare-metal
+
+```bat
+if not exist c:\models mkdir c:\models
+
+ovms --rest_port 8000 ^
+  --model_repository_path c:\models ^
+  --task image_generation ^
+  --source_model OpenVINO/stable-diffusion-xl-base-1.0-int8-ov ^
+  --target_device GPU
+```
+:::
+
+::::
+
+> **NOTE:** SDXL models require more RAM/vRAM than SD 1.5. Use `--resolution 1024x1024` when deploying on NPU.
+
+
+## Option 2. Serving a pre-downloaded model
+
+If you already have a model on disk (downloaded via Option 1 with `--pull`, or via `huggingface-cli`, or converted with [Export Models Tool](../common/export_models/README.md)), you can start the server pointing directly to the model directory using `--model_name` and `--model_path`:
+
+::::{tab-set}
+:::{tab-item} Docker (Linux)
+:sync: docker
+
+```bash
+docker run -d --rm -p 8000:8000 -v ${HOME}/models:/models:rw \
   openvino/model_server:latest \
     --rest_port 8000 \
     --model_name OpenVINO/stable-diffusion-v1-5-int8-ov \
-    --model_path /models/stable-diffusion-v1-5/stable-diffusion-v1-5
+    --model_path /models/OpenVINO/stable-diffusion-v1-5-int8-ov
 ```
-:::
-
-
-:::{tab-item} Bare metal (Windows)
-:sync: bare-metal
-
-Assuming you have unpacked model server package, make sure to:
-
-- **On Windows**: run `setupvars` script
-- **On Linux**: set `LD_LIBRARY_PATH` and `PATH` environment variables
-
-as mentioned in [deployment guide](../../docs/deploying_server_baremetal.md), in every new shell that will start OpenVINO Model Server.
-
-```bat
-ovms --rest_port 8000 ^
-  --model_name OpenVINO/stable-diffusion-v1-5-int8-ov ^
-  --model_path ./models/stable-diffusion-v1-5/stable-diffusion-v1-5
-```
-:::
-
-::::
-
-**GPU**  
-
-::::{tab-set}
-:::{tab-item} Docker (Linux)
-:sync: docker
-
-In case you want to use GPU device to run the generation, add extra docker parameters `--device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1)`
-to `docker run` command, use the image with GPU support. Export the models with precision matching the GPU capacity and adjust pipeline configuration.
-It can be applied using the commands below:
-```bash
-docker run -d --rm -p 8000:8000 -v $(pwd)/models:/models:rw \
-  --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) \
-  openvino/model_server:latest-gpu \
-    --rest_port 8000 \
-    --model_name OpenVINO/stable-diffusion-v1-5-int8-ov \
-    --model_path /models/stable-diffusion-v1-5/stable-diffusion-v1-5
-```
-
 :::
 
 :::{tab-item} Bare metal (Windows)
 :sync: bare-metal
 
-Depending on how you prepared models in the first step of this demo, they are deployed to either CPU or GPU (it's defined in `config.json`). If you run on GPU make sure to have appropriate drivers installed, so the device is accessible for the model server.
-
 ```bat
 ovms --rest_port 8000 ^
   --model_name OpenVINO/stable-diffusion-v1-5-int8-ov ^
-  --model_path ./models/stable-diffusion-v1-5/stable-diffusion-v1-5
+  --model_path c:\models\OpenVINO\stable-diffusion-v1-5-int8-ov
 ```
 :::
 
 ::::
 
-**NPU or mixed device**  
-
-::::{tab-set}
-:::{tab-item} Docker (Linux)
-:sync: docker
-
-In case you want to use NPU device to run the generation, add extra docker parameters `--device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1)`
-to `docker run` command, use the image with NPU support. Export the models with precision matching the NPU capacity and adjust pipeline configuration.
-In this specific case, we also need to use `--device /dev/dri`, because we also use GPU.
-
-It can be applied using the commands below:
-```bash
-mkdir -p cache
-chmod -R 755 cache
-docker run -d --rm -p 8000:8000 \
-  -v $(pwd)/models:/models:rw \
-  -v $(pwd)/cache:/cache:rw \
-  -u $(id -u):$(id -g) \
-  --device /dev/accel --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) \
-  openvino/model_server:latest-gpu \
-    --rest_port 8000 \
-    --model_name OpenVINO/stable-diffusion-v1-5-int8-ov \
-    --model_path /models/stable-diffusion-v1-5/stable-diffusion-v1-5
-```
-
-:::
-
-:::{tab-item} Bare metal (Windows)
-:sync: bare-metal
-
-Depending on how you prepared models in the first step of this demo, they are deployed to either CPU or NPU (it's defined in `config.json`). If you run on NPU make sure to have appropriate drivers installed, so the device is accessible for the model server.
-
-```bat
-ovms --rest_port 8000 ^
-  --model_name OpenVINO/stable-diffusion-v1-5-int8-ov ^
-  --model_path ./models/stable-diffusion-v1-5/stable-diffusion-v1-5
-```
-:::
-
-::::
+> **NOTE:** The `graph.pbtxt` configuration file is auto-generated at runtime when using `--task image_generation`. You can also customize it manually — see [Image Generation calculator reference](../../docs/image_generation/reference.md) for all available options.
 
 
 ## Readiness Check
@@ -397,7 +280,7 @@ A single servable exposes the following endpoints:
 
 > **Note:** Inpainting/outpainting requests are processed sequentially — concurrent requests will be queued.
 
-> **Note:** For inpainting/outpainting, dedicated inpainting models (e.g. `stable-diffusion-v1-5/stable-diffusion-inpainting`) only support the `images/edits` endpoint. Check [supported models](https://openvinotoolkit.github.io/openvino.genai/docs/supported-models/#image-generation-models).
+> **Note:** Dedicated inpainting models (e.g. `stable-diffusion-v1-5/stable-diffusion-inpainting`) only support the `images/edits` endpoint — they cannot be used for text-to-image generation via `images/generations`. General-purpose models (e.g. SDXL) support both endpoints. Check [supported models](https://openvinotoolkit.github.io/openvino.genai/docs/supported-models/#image-generation-models).
 
 All requests are processed in unary format, with no streaming capabilities.
 
@@ -528,6 +411,12 @@ Output file (`edit_output.png`):
 
 Inpainting replaces a masked region in an image based on the prompt. The `mask` is a black-and-white image where white pixels mark the area to repaint.
 
+Download sample images:
+```console
+curl -O https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/image_generation/cat.png
+curl -O https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/image_generation/cat_mask.png
+```
+
 ![cat](./cat.png) ![cat_mask](./cat_mask.png)
 
 ::::{tab-set}
@@ -535,12 +424,12 @@ Inpainting replaces a masked region in an image based on the prompt. The `mask` 
 :sync: linux
 ```bash
 curl http://localhost:8000/v3/images/edits \
-  -F "model=diffusers/stable-diffusion-xl-1.0-inpainting-0.1" \
+  -F "model=OpenVINO/stable-diffusion-v1-5-int8-ov" \
   -F "prompt=a golden retriever dog sitting on a bench in a sunny park" \
   -F "image=@cat.png" \
   -F "mask=@cat_mask.png" \
   -F "num_inference_steps=50" \
-  -F "size=1024x1024" | jq -r '.data[0].b64_json' | base64 --decode > inpaint_output.png
+  -F "size=512x512" | jq -r '.data[0].b64_json' | base64 --decode > inpaint_output.png
 ```
 :::
 
@@ -548,12 +437,12 @@ curl http://localhost:8000/v3/images/edits \
 :sync: windows
 ```bat
 curl http://localhost:8000/v3/images/edits ^
-  -F "model=diffusers/stable-diffusion-xl-1.0-inpainting-0.1" ^
+  -F "model=OpenVINO/stable-diffusion-v1-5-int8-ov" ^
   -F "prompt=a golden retriever dog sitting on a bench in a sunny park" ^
   -F "image=@cat.png" ^
   -F "mask=@cat_mask.png" ^
   -F "num_inference_steps=50" ^
-  -F "size=1024x1024"
+  -F "size=512x512"
 ```
 :::
 
@@ -577,13 +466,13 @@ client = OpenAI(
 )
 
 response = client.images.edit(
-            model="diffusers/stable-diffusion-xl-1.0-inpainting-0.1",
+            model="OpenVINO/stable-diffusion-v1-5-int8-ov",
             image=open("cat.png", "rb"),
             mask=open("cat_mask.png", "rb"),
             prompt="a golden retriever dog sitting on a bench in a sunny park",
             extra_body={
                 "num_inference_steps": 50,
-                "size": "1024x1024"
+                "size": "512x512"
             }
         )
 base64_image = response.data[0].b64_json
@@ -599,6 +488,12 @@ Outpainting extends an image beyond its original borders. Prepare two images:
 - **outpaint_input.png** — the original image centered on a larger canvas (e.g. 768×768) with black borders
 - **outpaint_mask.png** — white where the new content should be generated (the borders), black where the original image is
 
+Download sample images:
+```console
+curl -O https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/image_generation/outpaint_input.png
+curl -O https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/image_generation/outpaint_mask.png
+```
+
 ![outpaint_input](./outpaint_input.png) ![outpaint_mask](./outpaint_mask.png)
 
 ::::{tab-set}
@@ -606,7 +501,7 @@ Outpainting extends an image beyond its original borders. Prepare two images:
 :sync: linux
 ```bash
 curl http://localhost:8000/v3/images/edits \
-  -F "model=stable-diffusion-v1-5/stable-diffusion-inpainting" \
+  -F "model=OpenVINO/stable-diffusion-v1-5-int8-ov" \
   -F "prompt=a cat sitting on a bench in a park" \
   -F "image=@outpaint_input.png" \
   -F "mask=@outpaint_mask.png" \
@@ -619,7 +514,7 @@ curl http://localhost:8000/v3/images/edits \
 :sync: windows
 ```bat
 curl http://localhost:8000/v3/images/edits ^
-  -F "model=stable-diffusion-v1-5/stable-diffusion-inpainting" ^
+  -F "model=OpenVINO/stable-diffusion-v1-5-int8-ov" ^
   -F "prompt=a cat sitting on a bench in a park" ^
   -F "image=@outpaint_input.png" ^
   -F "mask=@outpaint_mask.png" ^
@@ -648,7 +543,7 @@ client = OpenAI(
 )
 
 response = client.images.edit(
-            model="stable-diffusion-v1-5/stable-diffusion-inpainting",
+            model="OpenVINO/stable-diffusion-v1-5-int8-ov",
             image=open("outpaint_input.png", "rb"),
             mask=open("outpaint_mask.png", "rb"),
             prompt="a cat sitting on a bench in a park",
@@ -669,8 +564,8 @@ image.save('outpaint_output.png')
 For best inpainting/outpainting quality, use a dedicated inpainting model. These models have a 9-channel UNet specifically trained for masked generation.
 
 Example models for inpainting:
-- `stable-diffusion-v1-5/stable-diffusion-inpainting` — SD 1.5 based, 512×512 native resolution
-- `diffusers/stable-diffusion-xl-1.0-inpainting-0.1` — SDXL based, 1024×1024 native resolution
+- `OpenVINO/dreamshaper-8-inpainting-int8-ov` — SD 1.5 based, 512×512 native resolution
+- `OpenVINO/stable-diffusion-xl-base-1.0-int8-ov` — SDXL based, 1024×1024 native resolution (supports all endpoints including inpainting)
 
 For the full list see [supported image generation models](https://openvinotoolkit.github.io/openvino.genai/docs/supported-models/#image-generation-models).
 
@@ -680,17 +575,16 @@ For the full list see [supported image generation models](https://openvinotoolki
 :::{tab-item} Docker (Linux) — GPU
 :sync: docker-gpu
 ```bash
-mkdir -p models
+mkdir -p ${HOME}/models
 
-docker run -d --rm -p 8000:8000 -v $(pwd)/models:/models/:rw \
+docker run -d --rm -p 8000:8000 -v ${HOME}/models:/models:rw \
   --user $(id -u):$(id -g) --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) \
   -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy=$no_proxy \
   openvino/model_server:latest-gpu \
     --rest_port 8000 \
-    --model_repository_path /models/ \
+    --model_repository_path /models \
     --task image_generation \
-    --source_model stable-diffusion-v1-5/stable-diffusion-inpainting \
-    --weight-format int8 \
+    --source_model OpenVINO/dreamshaper-8-inpainting-int8-ov \
     --target_device GPU
 ```
 :::
@@ -698,13 +592,12 @@ docker run -d --rm -p 8000:8000 -v $(pwd)/models:/models/:rw \
 :::{tab-item} Bare metal (Windows)
 :sync: bare-metal
 ```bat
-mkdir models
+if not exist c:\models mkdir c:\models
 
 ovms --rest_port 8000 ^
-  --model_repository_path ./models/ ^
+  --model_repository_path c:\models ^
   --task image_generation ^
-  --source_model stable-diffusion-v1-5/stable-diffusion-inpainting ^
-  --weight-format int8 ^
+  --source_model OpenVINO/dreamshaper-8-inpainting-int8-ov ^
   --target_device GPU
 ```
 :::
@@ -712,11 +605,234 @@ ovms --rest_port 8000 ^
 ::::
 
 
-### Strength influence on final damage
+### Strength influence on final image
 
 ![strength](./strength.png)
 
 Please follow [OpenVINO notebook](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/image-to-image-genai/image-to-image-genai.ipynb) to understand how other parameters affect editing.
+
+## Multi-LoRA Image Generation
+
+This section demonstrates how to serve multiple LoRA adapters with a single SDXL base model, enabling per-request style selection. This replicates the [Multi LoRA Image Generation notebook](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/multilora-image-generation/multilora-image-generation.ipynb) but using OVMS for serving.
+
+### Start Server with Multiple LoRA Adapters
+
+The following command starts OVMS with Stable Diffusion XL and 5 LoRA adapters for different artistic styles:
+
+::::{tab-set}
+:::{tab-item} Docker (Linux)
+:sync: docker
+```bash
+mkdir -p models
+
+docker run -d --rm --user $(id -u):$(id -g) -p 8000:8000 -v $(pwd)/models:/models/:rw \
+  --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) \
+  -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy=$no_proxy \
+  openvino/model_server:latest-gpu \
+    --rest_port 8000 \
+    --model_repository_path /models/ \
+    --task image_generation \
+    --source_model OpenVINO/stable-diffusion-xl-base-1.0-int8-ov \
+    --target_device GPU \
+    --source_loras "xray=DoctorDiffusion/doctor-diffusion-s-xray-xl-lora@DD-xray-v1.safetensors,thepoint=alvdansen/the-point@araminta_k_the_point.safetensors,ukiyo=KappaNeuro/ukiyo-e-art@Ukiyo-e%20Art.safetensors,vector=DoctorDiffusion/doctor-diffusion-s-controllable-vector-art-xl-lora@DD-vector-v2.safetensors,chalk=Norod78/sdxl-chalkboarddrawing-lora@SDXL_ChalkBoardDrawing_LoRA_r8.safetensors"
+```
+:::
+
+:::{tab-item} Bare metal (Windows)
+:sync: bare-metal
+```bat
+if not exist c:\models mkdir c:\models
+
+ovms --rest_port 8000 ^
+  --model_repository_path c:\models ^
+  --task image_generation ^
+  --source_model OpenVINO/stable-diffusion-xl-base-1.0-int8-ov ^
+  --target_device GPU ^
+  --source_loras "xray=DoctorDiffusion/doctor-diffusion-s-xray-xl-lora@DD-xray-v1.safetensors,thepoint=alvdansen/the-point@araminta_k_the_point.safetensors,ukiyo=KappaNeuro/ukiyo-e-art@Ukiyo-e%20Art.safetensors,vector=DoctorDiffusion/doctor-diffusion-s-controllable-vector-art-xl-lora@DD-vector-v2.safetensors,chalk=Norod78/sdxl-chalkboarddrawing-lora@SDXL_ChalkBoardDrawing_LoRA_r8.safetensors"
+```
+:::
+
+::::
+
+The registered adapters and their recommended use:
+
+| Alias | Repository | Style | Recommended Alpha | Prompt Template |
+|-------|-----------|-------|-------------------|-----------------|
+| `xray` | DoctorDiffusion/doctor-diffusion-s-xray-xl-lora | X-Ray style | 1.0 | `xray <subject>` |
+| `thepoint` | alvdansen/the-point | Artistic illustration | 1.0 | `<subject>` |
+| `ukiyo` | KappaNeuro/ukiyo-e-art | Ukiyo-e Japanese art | 1.0 | `an illustration of <subject> in Ukiyo-e Art style` |
+| `vector` | DoctorDiffusion/doctor-diffusion-s-controllable-vector-art-xl-lora | Vector art | 1.0 | `vector <subject>` |
+| `chalk` | Norod78/sdxl-chalkboarddrawing-lora | Chalkboard drawing | 1.0 | `A colorful chalkboard drawing of <subject>` |
+
+### Generate Images with Different Styles
+
+Use the adapter alias as the `model` field to select which adapter to apply per request. The adapter is activated via **model name routing** — when the `model` field matches a registered LoRA alias, that adapter is automatically applied.
+
+**X-Ray style:**
+```bash
+curl http://localhost:8000/v3/images/generations \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "xray",
+    "prompt": "xray a cute cat in sunglasses",
+    "num_inference_steps": 40,
+    "guidance_scale": 7.5,
+    "size": "1024x1024"
+  }' | jq -r '.data[0].b64_json' | base64 --decode > xray_cat.png
+```
+
+![xray_cat](./xray_cat.png)
+
+**Artistic illustration (The Point):**
+```bash
+curl http://localhost:8000/v3/images/generations \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "thepoint",
+    "prompt": "a cute cat in sunglasses",
+    "num_inference_steps": 40,
+    "guidance_scale": 7.5,
+    "size": "1024x1024"
+  }' | jq -r '.data[0].b64_json' | base64 --decode > thepoint_cat.png
+```
+
+![thepoint_cat](./thepoint_cat.png)
+
+**Ukiyo-e Japanese art:**
+```bash
+curl http://localhost:8000/v3/images/generations \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "ukiyo",
+    "prompt": "an illustration of a cute cat in sunglasses in Ukiyo-e Art style",
+    "num_inference_steps": 40,
+    "guidance_scale": 7.5,
+    "size": "1024x1024"
+  }' | jq -r '.data[0].b64_json' | base64 --decode > ukiyo_cat.png
+```
+
+![ukiyo_cat](./ukiyo_cat.png)
+
+**Vector art:**
+```bash
+curl http://localhost:8000/v3/images/generations \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "vector",
+    "prompt": "vector a cute cat in sunglasses",
+    "num_inference_steps": 40,
+    "guidance_scale": 7.5,
+    "size": "1024x1024"
+  }' | jq -r '.data[0].b64_json' | base64 --decode > vector_cat.png
+```
+
+![vector_cat](./vector_cat.png)
+
+**Chalkboard drawing:**
+```bash
+curl http://localhost:8000/v3/images/generations \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "chalk",
+    "prompt": "A colorful chalkboard drawing of a cute cat in sunglasses",
+    "num_inference_steps": 40,
+    "guidance_scale": 7.5,
+    "size": "1024x1024"
+  }' | jq -r '.data[0].b64_json' | base64 --decode > chalk_cat.png
+```
+
+![chalk_cat](./chalk_cat.png)
+
+Optionally override the adapter alpha using `lora_alphas`:
+```bash
+curl http://localhost:8000/v3/images/generations \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "xray",
+    "prompt": "xray a cute cat in sunglasses",
+    "lora_alphas": {"xray": 0.5},
+    "num_inference_steps": 40,
+    "guidance_scale": 7.5,
+    "size": "1024x1024"
+  }' | jq -r '.data[0].b64_json' | base64 --decode > xray_cat_half_alpha.png
+```
+### Using OpenAI Python Client with LoRA
+
+```python
+from openai import OpenAI
+import base64
+from io import BytesIO
+from PIL import Image
+
+client = OpenAI(
+    base_url="http://localhost:8000/v3",
+    api_key="unused"
+)
+
+# Define LoRA styles — the adapter alias is used as the model name
+styles = {
+    "xray": {"prompt": "xray {subject}"},
+    "thepoint": {"prompt": "{subject}"},
+    "ukiyo": {"prompt": "an illustration of {subject} in Ukiyo-e Art style"},
+    "vector": {"prompt": "vector {subject}"},
+    "chalk": {"prompt": "A colorful chalkboard drawing of {subject}"},
+}
+
+subject = "a cute cat in sunglasses"
+
+for style_name, style_config in styles.items():
+    prompt = style_config["prompt"].format(subject=subject)
+    response = client.images.generate(
+        model=style_name,  # adapter alias activates the LoRA
+        prompt=prompt,
+        extra_body={
+            "num_inference_steps": 40,
+            "guidance_scale": 7.5,
+            "size": "1024x1024",
+        }
+    )
+    image_data = base64.b64decode(response.data[0].b64_json)
+    image = Image.open(BytesIO(image_data))
+    image.save(f'{style_name}_cat.png')
+    print(f"Saved {style_name}_cat.png")
+```
+
+### Blending Multiple Adapters
+
+To blend multiple adapters, define a **composite adapter** at startup using the `@alias:alpha` syntax:
+
+```bash
+--source_loras="xray=...,ukiyo=...,blend=@xray:0.5+@ukiyo:0.4"
+```
+
+Then use the composite alias as the model name:
+```python
+response = client.images.generate(
+    model="blend",  # activates both xray and ukiyo
+    prompt="a cute cat in sunglasses",
+    extra_body={
+        "num_inference_steps": 40,
+        "guidance_scale": 7.5,
+        "size": "1024x1024",
+    }
+)
+```
+
+You can override individual component alphas at request time:
+```python
+response = client.images.generate(
+    model="blend",
+    prompt="a cute cat in sunglasses",
+    extra_body={
+        "lora_alphas": {"xray": 0.8, "ukiyo": 0.2},
+        "num_inference_steps": 40,
+        "guidance_scale": 7.5,
+        "size": "1024x1024",
+    }
+)
+```
+
+> **Note:** For more details on LoRA adapter configuration, see the [Image Generation reference documentation](../../docs/image_generation/reference.md#lora-adapters).
 
 ## References
 - [Image Generation API](../../docs/model_server_rest_api_image_generation.md)

@@ -786,3 +786,19 @@ TEST_F(EmbeddingsTokenizeHttpTest, tokenizeBatchWithPadToMaxLen) {
         ovms::StatusCode::OK);
     AssertTokenizationResult(response, expectedTokens);
 }
+
+TEST_F(EmbeddingsTokenizeHttpTest, tokenizeEmptyNestedArray) {
+    assertTokenizeWithInvalidTextReturnsError(handler.get(), "embeddings_ov", "[[]]", response, comp, responseComponents, writer, multiPartParser);
+}
+
+TEST_F(EmbeddingsTokenizeHttpTest, tokenizeMultipleEmptyNestedArrays) {
+    assertTokenizeWithInvalidTextReturnsError(handler.get(), "embeddings_ov", "[[], [], []]", response, comp, responseComponents, writer, multiPartParser);
+}
+
+TEST_F(EmbeddingsTokenizeHttpTest, tokenizeMultipleEmptyNestedArraysAndOneNonEmpty) {
+    assertTokenizeWithInvalidTextReturnsError(handler.get(), "embeddings_ov", R"([[], ["hello world"], []])", response, comp, responseComponents, writer, multiPartParser);
+}
+
+TEST_F(EmbeddingsTokenizeHttpTest, tokenizeEmptyWithArrayMultipleLevelsOfNesting) {
+    assertTokenizeWithInvalidTextReturnsError(handler.get(), "embeddings_ov", "[[[[[]]]]]", response, comp, responseComponents, writer, multiPartParser);
+}

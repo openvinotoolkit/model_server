@@ -13,7 +13,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <filesystem>
+#include <fstream>
 #include <memory>
+#include <sstream>
 #include <string>
 
 #include <gmock/gmock.h>
@@ -536,10 +539,43 @@ protected:
         TestWithTempDir::TearDown();
     }
 
-    // Removes # OpenVINO Model Server REPLACE_PROJECT_VERSION comment added for debug purpose in graph export at the begging of graph.pbtxt
-    // This string differs per build and setup
-    std::string removeVersionString(std::string input) {
-        return input.erase(0, input.find("\n") + 1);
+    std::string getExpectedGraphQueueSizeDirective(const ovms::HFSettingsImpl& hfSettings) const {
+        (void)hfSettings;
+        return "AUTO";
+    }
+
+    std::string createGraphAndReadContents(const ovms::HFSettingsImpl& hfSettings) {
+        std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
+        std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
+        auto status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
+        if (status != ovms::StatusCode::OK) {
+            ADD_FAILURE() << status.string();
+            return "";
+        }
+        return GetFileContents(graphPath);
+    }
+
+    void assertGraphQueueHeader(const std::string& graphContents, const ovms::HFSettingsImpl& hfSettings) {
+        const std::string queueLinePrefix = "# OVMS_GRAPH_QUEUE_MAX_SIZE: ";
+        auto firstLineEnd = graphContents.find("\n");
+        ASSERT_NE(firstLineEnd, std::string::npos) << graphContents;
+        auto queueLineStart = firstLineEnd + 1;
+        auto queueLineEnd = graphContents.find("\n", queueLineStart);
+        ASSERT_NE(queueLineEnd, std::string::npos) << graphContents;
+
+        std::string actualQueueLine = graphContents.substr(queueLineStart, queueLineEnd - queueLineStart);
+        ASSERT_EQ(0, actualQueueLine.rfind(queueLinePrefix, 0)) << graphContents;
+        std::string expectedQueueLine = queueLinePrefix + getExpectedGraphQueueSizeDirective(hfSettings);
+        ASSERT_EQ(expectedQueueLine, actualQueueLine) << graphContents;
+    }
+
+    void assertCreatedGraphEquals(const ovms::HFSettingsImpl& hfSettings, const std::string& expectedGraphContents, bool assertVersion = false) {
+        std::string graphContents = createGraphAndReadContents(hfSettings);
+        if (assertVersion) {
+            ASSERT_EQ(0, graphContents.find(getVersionString())) << graphContents;
+        }
+        assertGraphQueueHeader(graphContents, hfSettings);
+        ASSERT_EQ(expectedGraphContents, removeGeneratedGraphHeaders(graphContents)) << graphContents;
     }
 
     std::string getVersionString() {
@@ -551,14 +587,8 @@ protected:
 
 TEST_F(GraphCreationTest, positiveDefaultWithVersionString) {
     ovms::HFSettingsImpl hfSettings;
-    std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
-    std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
-    auto status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
-    ASSERT_EQ(status, ovms::StatusCode::OK);
-
-    std::string graphContents = GetFileContents(graphPath);
-    std::string expected = getVersionString() + expectedDefaultGraphContents;
-    ASSERT_EQ(expected, graphContents) << graphContents;
+    hfSettings.task = ovms::TEXT_GENERATION_GRAPH;
+    assertCreatedGraphEquals(hfSettings, expectedDefaultGraphContents, true);
 }
 
 TEST_F(GraphCreationTest, positiveRerankWithVersionString) {
@@ -567,14 +597,7 @@ TEST_F(GraphCreationTest, positiveRerankWithVersionString) {
     hfSettings.task = ovms::RERANK_GRAPH;
     ovms::RerankGraphSettingsImpl rerankGraphSettings;
     hfSettings.graphSettings = std::move(rerankGraphSettings);
-    std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
-    std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
-    auto status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
-    ASSERT_EQ(status, ovms::StatusCode::OK);
-
-    std::string graphContents = GetFileContents(graphPath);
-    std::string expected = getVersionString() + expectedRerankGraphContentsDefault;
-    ASSERT_EQ(expected, graphContents) << graphContents;
+    assertCreatedGraphEquals(hfSettings, expectedRerankGraphContentsDefault, true);
 }
 
 TEST_F(GraphCreationTest, positiveEmbeddingsWithVersionString) {
@@ -583,14 +606,7 @@ TEST_F(GraphCreationTest, positiveEmbeddingsWithVersionString) {
     hfSettings.task = ovms::EMBEDDINGS_GRAPH;
     ovms::EmbeddingsGraphSettingsImpl embeddingsGraphSettings;
     hfSettings.graphSettings = std::move(embeddingsGraphSettings);
-    std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
-    std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
-    auto status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
-    ASSERT_EQ(status, ovms::StatusCode::OK);
-
-    std::string graphContents = GetFileContents(graphPath);
-    std::string expected = getVersionString() + expectedEmbeddingsGraphContentsDefault;
-    ASSERT_EQ(expected, graphContents) << graphContents;
+    assertCreatedGraphEquals(hfSettings, expectedEmbeddingsGraphContentsDefault, true);
 }
 
 TEST_F(GraphCreationTest, positiveTextToSpeechWithVersionString) {
@@ -598,14 +614,7 @@ TEST_F(GraphCreationTest, positiveTextToSpeechWithVersionString) {
     hfSettings.task = ovms::TEXT_TO_SPEECH_GRAPH;
     ovms::TextToSpeechGraphSettingsImpl textToSpeechGraphSettings;
     hfSettings.graphSettings = std::move(textToSpeechGraphSettings);
-    std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
-    std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
-    auto status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
-    ASSERT_EQ(status, ovms::StatusCode::OK);
-
-    std::string graphContents = GetFileContents(graphPath);
-    std::string expected = getVersionString() + expectedTextToSpeechGraphContentsDefault;
-    ASSERT_EQ(expected, graphContents) << graphContents;
+    assertCreatedGraphEquals(hfSettings, expectedTextToSpeechGraphContentsDefault, true);
 }
 
 TEST_F(GraphCreationTest, positiveSTTWithVersionString) {
@@ -613,14 +622,7 @@ TEST_F(GraphCreationTest, positiveSTTWithVersionString) {
     hfSettings.task = ovms::SPEECH_TO_TEXT_GRAPH;
     ovms::SpeechToTextGraphSettingsImpl speechToTextGraphSettings;
     hfSettings.graphSettings = std::move(speechToTextGraphSettings);
-    std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
-    std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
-    auto status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
-    ASSERT_EQ(status, ovms::StatusCode::OK);
-
-    std::string graphContents = GetFileContents(graphPath);
-    std::string expected = getVersionString() + expectedSpeechToTextGraphContentsDefault;
-    ASSERT_EQ(expected, graphContents) << graphContents;
+    assertCreatedGraphEquals(hfSettings, expectedSpeechToTextGraphContentsDefault, true);
 }
 
 TEST_F(GraphCreationTest, positiveImageGenWithVersionString) {
@@ -628,73 +630,43 @@ TEST_F(GraphCreationTest, positiveImageGenWithVersionString) {
     hfSettings.task = ovms::IMAGE_GENERATION_GRAPH;
     ovms::ImageGenerationGraphSettingsImpl imageGenerationGraphSettings;
     hfSettings.graphSettings = std::move(imageGenerationGraphSettings);
-    std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
-    std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
-    auto status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
-    ASSERT_EQ(status, ovms::StatusCode::OK);
-
-    std::string graphContents = GetFileContents(graphPath);
-    std::string expected = getVersionString() + expectedImageGenerationGraphContentsDefault;
-    ASSERT_EQ(expected, graphContents) << graphContents;
+    assertCreatedGraphEquals(hfSettings, expectedImageGenerationGraphContentsDefault, true);
 }
 
 TEST_F(GraphCreationTest, positiveDefault) {
     ovms::HFSettingsImpl hfSettings;
-    std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
-    std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
-    auto status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
-    ASSERT_EQ(status, ovms::StatusCode::OK);
-
-    std::string graphContents = GetFileContents(graphPath);
-    ASSERT_EQ(expectedDefaultGraphContents, removeVersionString(graphContents)) << graphContents;
+    hfSettings.task = ovms::TEXT_GENERATION_GRAPH;
+    assertCreatedGraphEquals(hfSettings, expectedDefaultGraphContents);
 }
 
 TEST_F(GraphCreationTest, positiveDraftAndFuse) {
     ovms::HFSettingsImpl hfSettings;
+    hfSettings.task = ovms::TEXT_GENERATION_GRAPH;
     ovms::TextGenGraphSettingsImpl graphSettings;
     graphSettings.draftModelDirName = "/ovms/src/test/llm_testing/facebook/opt-125m";
     graphSettings.dynamicSplitFuse = "false";
 
     hfSettings.graphSettings = std::move(graphSettings);
-    std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
-    std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
-    auto status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
-    ASSERT_EQ(status, ovms::StatusCode::OK);
-
-    std::string graphContents = GetFileContents(graphPath);
-    ASSERT_EQ(expectedDraftAndFuseGraphContents, removeVersionString(graphContents)) << graphContents;
+    assertCreatedGraphEquals(hfSettings, expectedDraftAndFuseGraphContents);
 }
 
 TEST_F(GraphCreationTest, positiveGGUF) {
     this->filesToPrintInCaseOfFailure.emplace_back("graph.pbtxt");
     ovms::HFSettingsImpl hfSettings;
+    hfSettings.task = ovms::TEXT_GENERATION_GRAPH;
     hfSettings.ggufFilename = "PRETTY_GOOD_GGUF_MODEL.gguf";
-    std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
-    std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
-    auto status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
-    ASSERT_EQ(status, ovms::StatusCode::OK);
-
-    std::string graphContents = GetFileContents(graphPath);
-    ASSERT_EQ(expectedGGUFGraphContents, removeVersionString(graphContents)) << graphContents;
+    assertCreatedGraphEquals(hfSettings, expectedGGUFGraphContents);
 }
 
 TEST_F(GraphCreationTest, WillOverwriteExistingGraphPbtxtGGUF) {
     this->filesToPrintInCaseOfFailure.emplace_back("graph.pbtxt");
     ovms::HFSettingsImpl hfSettings;
-    std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
-    std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
-
+    hfSettings.task = ovms::TEXT_GENERATION_GRAPH;
     hfSettings.ggufFilename = "PRETTY_GOOD_GGUF_MODEL.gguf";
-    auto status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
-    ASSERT_EQ(status, ovms::StatusCode::OK);
-    std::string graphContents = GetFileContents(graphPath);
-    ASSERT_EQ(expectedGGUFGraphContents, removeVersionString(graphContents)) << graphContents;
+    assertCreatedGraphEquals(hfSettings, expectedGGUFGraphContents);
 
     hfSettings.ggufFilename = "PRETTY_GOOD_GGUF_MODEL_Q8-00001-of-20000.gguf";
-    status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
-    ASSERT_EQ(status, ovms::StatusCode::OK);
-    graphContents = GetFileContents(graphPath);
-    ASSERT_EQ(expectedGGUFGraphContents2, removeVersionString(graphContents)) << graphContents;
+    assertCreatedGraphEquals(hfSettings, expectedGGUFGraphContents2);
 }
 
 TEST_F(GraphCreationTest, rerankPositiveNonDefault) {
@@ -709,13 +681,7 @@ TEST_F(GraphCreationTest, rerankPositiveNonDefault) {
     rerankGraphSettings.maxAllowedChunks = 18;
     hfSettings.graphSettings = std::move(rerankGraphSettings);
 
-    std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
-    std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
-    auto status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
-    ASSERT_EQ(status, ovms::StatusCode::OK);
-
-    std::string graphContents = GetFileContents(graphPath);
-    ASSERT_EQ(expectedRerankGraphContentsNonDefault, removeVersionString(graphContents)) << graphContents;
+    assertCreatedGraphEquals(hfSettings, expectedRerankGraphContentsNonDefault);
 }
 
 TEST_F(GraphCreationTest, rerankPositiveDefault) {
@@ -725,13 +691,7 @@ TEST_F(GraphCreationTest, rerankPositiveDefault) {
     ovms::RerankGraphSettingsImpl rerankGraphSettings;
     hfSettings.graphSettings = std::move(rerankGraphSettings);
 
-    std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
-    std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
-    auto status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
-    ASSERT_EQ(status, ovms::StatusCode::OK);
-
-    std::string graphContents = GetFileContents(graphPath);
-    ASSERT_EQ(expectedRerankGraphContentsDefault, removeVersionString(graphContents)) << graphContents;
+    assertCreatedGraphEquals(hfSettings, expectedRerankGraphContentsDefault);
 }
 
 TEST_F(GraphCreationTest, rerankCreatedPbtxtInvalid) {
@@ -765,13 +725,7 @@ TEST_F(GraphCreationTest, embeddingsPositiveNonDefault) {
     embeddingsGraphSettings.truncate = "true";
     embeddingsGraphSettings.pooling = "LAST";
     hfSettings.graphSettings = std::move(embeddingsGraphSettings);
-    std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
-    std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
-    auto status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
-    ASSERT_EQ(status, ovms::StatusCode::OK);
-
-    std::string graphContents = GetFileContents(graphPath);
-    ASSERT_EQ(expectedEmbeddingsGraphContents, removeVersionString(graphContents)) << graphContents;
+    assertCreatedGraphEquals(hfSettings, expectedEmbeddingsGraphContents);
 }
 
 TEST_F(GraphCreationTest, embeddingsPositiveDefault) {
@@ -780,13 +734,7 @@ TEST_F(GraphCreationTest, embeddingsPositiveDefault) {
     ovms::EmbeddingsGraphSettingsImpl embeddingsGraphSettings;
     hfSettings.graphSettings = std::move(embeddingsGraphSettings);
     hfSettings.exportSettings.pluginConfig.numStreams = 1;
-    std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
-    std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
-    auto status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
-    ASSERT_EQ(status, ovms::StatusCode::OK);
-
-    std::string graphContents = GetFileContents(graphPath);
-    ASSERT_EQ(expectedEmbeddingsGraphContentsDefault, removeVersionString(graphContents)) << graphContents;
+    assertCreatedGraphEquals(hfSettings, expectedEmbeddingsGraphContentsDefault);
 }
 
 TEST_F(GraphCreationTest, embeddingsCreatedPbtxtInvalid) {
@@ -840,13 +788,7 @@ TEST_F(GraphCreationTest, textToSpeechPositiveNonDefault) {
     hfSettings.exportSettings.modelPath = "/model1/path";
     hfSettings.exportSettings.pluginConfig.numStreams = 2;
     hfSettings.graphSettings = std::move(textToSpeechGraphSettings);
-    std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
-    std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
-    auto status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
-    ASSERT_EQ(status, ovms::StatusCode::OK);
-
-    std::string graphContents = GetFileContents(graphPath);
-    ASSERT_EQ(expectedTextToSpeechGraphContents, removeVersionString(graphContents)) << graphContents;
+    assertCreatedGraphEquals(hfSettings, expectedTextToSpeechGraphContents);
 }
 
 TEST_F(GraphCreationTest, textToSpeechPositiveDefault) {
@@ -854,13 +796,7 @@ TEST_F(GraphCreationTest, textToSpeechPositiveDefault) {
     hfSettings.task = ovms::TEXT_TO_SPEECH_GRAPH;
     ovms::TextToSpeechGraphSettingsImpl textToSpeechGraphSettings;
     hfSettings.graphSettings = std::move(textToSpeechGraphSettings);
-    std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
-    std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
-    auto status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
-    ASSERT_EQ(status, ovms::StatusCode::OK);
-
-    std::string graphContents = GetFileContents(graphPath);
-    ASSERT_EQ(expectedTextToSpeechGraphContentsDefault, removeVersionString(graphContents)) << graphContents;
+    assertCreatedGraphEquals(hfSettings, expectedTextToSpeechGraphContentsDefault);
 }
 
 TEST_F(GraphCreationTest, textToSpeechCreatedPbtxtInvalid) {
@@ -889,13 +825,7 @@ TEST_F(GraphCreationTest, speechToTextPositiveNonDefault) {
     hfSettings.exportSettings.modelPath = "/model1/path";
     hfSettings.exportSettings.pluginConfig.numStreams = 2;
     hfSettings.graphSettings = std::move(speechToTextGraphSettings);
-    std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
-    std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
-    auto status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
-    ASSERT_EQ(status, ovms::StatusCode::OK);
-
-    std::string graphContents = GetFileContents(graphPath);
-    ASSERT_EQ(expectedSpeechToTextGraphContents, removeVersionString(graphContents)) << graphContents;
+    assertCreatedGraphEquals(hfSettings, expectedSpeechToTextGraphContents);
 }
 
 TEST_F(GraphCreationTest, speechToTextPositiveDefault) {
@@ -903,13 +833,7 @@ TEST_F(GraphCreationTest, speechToTextPositiveDefault) {
     hfSettings.task = ovms::SPEECH_TO_TEXT_GRAPH;
     ovms::SpeechToTextGraphSettingsImpl speechToTextGraphSettings;
     hfSettings.graphSettings = std::move(speechToTextGraphSettings);
-    std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
-    std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
-    auto status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
-    ASSERT_EQ(status, ovms::StatusCode::OK);
-
-    std::string graphContents = GetFileContents(graphPath);
-    ASSERT_EQ(expectedSpeechToTextGraphContentsDefault, removeVersionString(graphContents)) << graphContents;
+    assertCreatedGraphEquals(hfSettings, expectedSpeechToTextGraphContentsDefault);
 }
 
 TEST_F(GraphCreationTest, speechToTextCreatedPbtxtInvalid) {
@@ -931,6 +855,7 @@ TEST_F(GraphCreationTest, speechToTextCreatedPbtxtInvalid) {
 
 TEST_F(GraphCreationTest, positivePluginConfigAll) {
     ovms::HFSettingsImpl hfSettings;
+    hfSettings.task = ovms::TEXT_GENERATION_GRAPH;
     ovms::TextGenGraphSettingsImpl graphSettings;
     hfSettings.exportSettings.pluginConfig.kvCachePrecision = "u8";
     hfSettings.exportSettings.pluginConfig.maxPromptLength = 123;
@@ -938,17 +863,12 @@ TEST_F(GraphCreationTest, positivePluginConfigAll) {
 
     hfSettings.graphSettings = std::move(graphSettings);
 
-    std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
-    std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
-    auto status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
-    ASSERT_EQ(status, ovms::StatusCode::OK);
-
-    std::string graphContents = GetFileContents(graphPath);
-    ASSERT_EQ(expectedFullPluginGraphContents, removeVersionString(graphContents)) << graphContents;
+    assertCreatedGraphEquals(hfSettings, expectedFullPluginGraphContents);
 }
 
 TEST_F(GraphCreationTest, positiveWithParsersAndToolGuidedGeneration) {
     ovms::HFSettingsImpl hfSettings;
+    hfSettings.task = ovms::TEXT_GENERATION_GRAPH;
     ovms::TextGenGraphSettingsImpl graphSettings;
     graphSettings.reasoningParser = "REASONING_PARSER";
     graphSettings.toolParser = "TOOL_PARSER";
@@ -956,28 +876,17 @@ TEST_F(GraphCreationTest, positiveWithParsersAndToolGuidedGeneration) {
 
     hfSettings.graphSettings = std::move(graphSettings);
 
-    std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
-    std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
-    auto status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
-    ASSERT_EQ(status, ovms::StatusCode::OK);
-
-    std::string graphContents = GetFileContents(graphPath);
-    ASSERT_EQ(expectedGraphContentsWithResponseParser, removeVersionString(graphContents)) << graphContents;
+    assertCreatedGraphEquals(hfSettings, expectedGraphContentsWithResponseParser);
 }
 
 TEST_F(GraphCreationTest, positivePluginConfigOne) {
     ovms::HFSettingsImpl hfSettings;
+    hfSettings.task = ovms::TEXT_GENERATION_GRAPH;
     ovms::TextGenGraphSettingsImpl graphSettings;
     hfSettings.exportSettings.pluginConfig.kvCachePrecision = "u8";
     hfSettings.graphSettings = std::move(graphSettings);
 
-    std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
-    std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
-    auto status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
-    ASSERT_EQ(status, ovms::StatusCode::OK);
-
-    std::string graphContents = GetFileContents(graphPath);
-    ASSERT_EQ(expectedOneSettingPluginGraphContents, removeVersionString(graphContents)) << graphContents;
+    assertCreatedGraphEquals(hfSettings, expectedOneSettingPluginGraphContents);
 }
 
 TEST_F(GraphCreationTest, negativeCreateFileWrongDirectoryPaths) {
@@ -1048,11 +957,8 @@ TEST_F(GraphCreationTest, positiveTextGeneration) {
     hfSettings.graphSettings = std::move(graphSettings);
     hfSettings.exportSettings.targetDevice = "NPU";
     hfSettings.exportSettings.pluginConfig.useNpuPrefixCaching = true;
-    std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
-    std::string subconfigPath = ovms::FileSystem::appendSlash(this->directoryPath) + "subconfig.json";
-    std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
-    auto status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
-    ASSERT_EQ(status, ovms::StatusCode::OK);
+    std::string graphContents = createGraphAndReadContents(hfSettings);
+    assertGraphQueueHeader(graphContents, hfSettings);
 }
 
 TEST_F(GraphCreationTest, imageGenerationPositiveDefault) {
@@ -1060,13 +966,7 @@ TEST_F(GraphCreationTest, imageGenerationPositiveDefault) {
     hfSettings.task = ovms::IMAGE_GENERATION_GRAPH;
     ovms::ImageGenerationGraphSettingsImpl imageGenerationGraphSettings;
     hfSettings.graphSettings = std::move(imageGenerationGraphSettings);
-    std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
-    std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
-    auto status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
-    ASSERT_EQ(status, ovms::StatusCode::OK);
-
-    std::string graphContents = GetFileContents(graphPath);
-    ASSERT_EQ(expectedImageGenerationGraphContentsDefault, removeVersionString(graphContents)) << graphContents;
+    assertCreatedGraphEquals(hfSettings, expectedImageGenerationGraphContentsDefault);
 }
 
 TEST_F(GraphCreationTest, imageGenerationPositiveFull) {
@@ -1082,14 +982,44 @@ TEST_F(GraphCreationTest, imageGenerationPositiveFull) {
     imageGenerationGraphSettings.defaultNumInferenceSteps = 2;
     imageGenerationGraphSettings.maxNumInferenceSteps = 3;
     hfSettings.graphSettings = std::move(imageGenerationGraphSettings);
+    assertCreatedGraphEquals(hfSettings, expectedImageGenerationGraphContents);
+}
+
+#ifdef _WIN32
+TEST_F(GraphCreationTest, windowsBackslashesInModelPathAreNormalized) {
+    // On Windows, model_path may contain backslashes. The graph parser expects forward slashes,
+    // so constructModelsPath must convert them. Verify the written pbtxt uses forward slashes.
+    ovms::HFSettingsImpl hfSettings;
+    hfSettings.task = ovms::TEXT_GENERATION_GRAPH;
+    ovms::TextGenGraphSettingsImpl graphSettings;
+    hfSettings.exportSettings.modelPath = "c:\\models\\Qwen3-35B";
+    hfSettings.graphSettings = std::move(graphSettings);
     std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
     std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
     auto status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
     ASSERT_EQ(status, ovms::StatusCode::OK);
 
     std::string graphContents = GetFileContents(graphPath);
-    ASSERT_EQ(expectedImageGenerationGraphContents, removeVersionString(graphContents)) << graphContents;
+    EXPECT_NE(std::string::npos, graphContents.find("models_path: \"c:/models/Qwen3-35B\"")) << graphContents;
+    EXPECT_EQ(std::string::npos, graphContents.find("models_path: \"c:\\models")) << "Backslashes must not appear in models_path";
 }
+
+TEST_F(GraphCreationTest, windowsBackslashesInGGUFModelPathAreNormalized) {
+    // Same as above but for GGUF paths, where a filename is joined to the model path.
+    ovms::HFSettingsImpl hfSettings;
+    hfSettings.task = ovms::TEXT_GENERATION_GRAPH;
+    hfSettings.exportSettings.modelPath = "c:\\models\\Qwen3-35B";
+    hfSettings.ggufFilename = "model.gguf";
+    std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
+    std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
+    auto status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
+    ASSERT_EQ(status, ovms::StatusCode::OK);
+
+    std::string graphContents = GetFileContents(graphPath);
+    EXPECT_NE(std::string::npos, graphContents.find("models_path: \"c:/models/Qwen3-35B/model.gguf\"")) << graphContents;
+    EXPECT_EQ(std::string::npos, graphContents.find("models_path: \"c:\\models")) << "Backslashes must not appear in models_path";
+}
+#endif  // _WIN32
 TEST_F(GraphCreationTest, pluginConfigAsString) {
     ovms::ExportSettings exportSettings;
 

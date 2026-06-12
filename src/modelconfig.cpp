@@ -39,15 +39,21 @@
 #include "stringutils.hpp"
 
 namespace ovms {
+namespace {
+bool isLocalRegularFileModelPath(const std::string& path) {
+    if (!FileSystem::isLocalFilesystem(path) || FileSystem::isPathEscaped(path)) {
+        return false;
+    }
+    std::error_code ec;
+    return std::filesystem::is_regular_file(path, ec);
+}
+}  // namespace
+
 ModelConfig::ModelConfig(const std::string& name,
     const std::string& basePath,
     const std::string& targetDevice,
     const std::string& configBatchSize,
     uint64_t nireq,
-    bool stateful,
-    bool idleSequenceCleanup,
-    bool lowLatencyTransformation,
-    uint32_t maxSequenceNumber,
     const std::string& cacheDir,
     model_version_t version,
     const std::string& localPath) :
@@ -57,10 +63,6 @@ ModelConfig::ModelConfig(const std::string& name,
     targetDevice(targetDevice),
     modelVersionPolicy(ModelVersionPolicy::getDefaultVersionPolicy()),
     nireq(nireq),
-    stateful(stateful),
-    idleSequenceCleanup(idleSequenceCleanup),
-    lowLatencyTransformation(lowLatencyTransformation),
-    maxSequenceNumber(maxSequenceNumber),
     cacheDir(cacheDir),
     version(version),
     pluginConfig({}),
@@ -87,22 +89,6 @@ bool ModelConfig::isDeviceUsed(const std::string& device) const {
 bool ModelConfig::isReloadRequired(const ModelConfig& rhs) const {
     if (this->name != rhs.name) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to name mismatch", this->name);
-        return true;
-    }
-    if (this->stateful != rhs.stateful) {
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to stateful mismatch", this->name);
-        return true;
-    }
-    if (this->idleSequenceCleanup != rhs.idleSequenceCleanup) {
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to idleSequenceCleanup mismatch", this->name);
-        return true;
-    }
-    if (this->maxSequenceNumber != rhs.maxSequenceNumber) {
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to maxSequenceNumber mismatch", this->name);
-        return true;
-    }
-    if (this->lowLatencyTransformation != rhs.lowLatencyTransformation) {
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to lowLatencyTransformation mismatch", this->name);
         return true;
     }
     if (this->basePath != rhs.basePath) {
@@ -487,6 +473,9 @@ Status ModelConfig::parseModelMapping() {
     mappingInputs.clear();
     mappingOutputs.clear();
     std::filesystem::path path = this->getPath();
+    if (isLocalRegularFileModelPath(path.string())) {
+        path = path.parent_path();
+    }
     path.append(MAPPING_CONFIG_JSON);
 
     std::ifstream ifs(path.c_str());
@@ -677,37 +666,6 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
         }
     }
 
-    if (v.HasMember("stateful"))
-        this->setStateful(v["stateful"].GetBool());
-
-    if (v.HasMember("low_latency_transformation")) {
-        if (!this->isStateful()) {
-            SPDLOG_ERROR("Low latency transformation parameter was set for non stateful model {}.", v["name"].GetString());
-            return StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER;
-        }
-        this->setLowLatencyTransformation(v["low_latency_transformation"].GetBool());
-    }
-
-    if (v.HasMember("idle_sequence_cleanup")) {
-        if (!this->isStateful()) {
-            SPDLOG_ERROR("Idle sequence cleanup parameter was set for non stateful model {}.", v["name"].GetString());
-            return StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER;
-        }
-        this->setIdleSequenceCleanup(v["idle_sequence_cleanup"].GetBool());
-    }
-
-    if (v.HasMember("max_sequence_number")) {
-        if (!this->isStateful()) {
-            SPDLOG_ERROR("Max sequence number parameter was set for non stateful model {}.", v["name"].GetString());
-            return StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER;
-        }
-        if (!v["max_sequence_number"].IsUint()) {
-            SPDLOG_ERROR("Sequence maximum number parameter was set above unsigned int value for model {}.", v["name"].GetString());
-            return StatusCode::INVALID_MAX_SEQUENCE_NUMBER;
-        }
-        this->setMaxSequenceNumber(v["max_sequence_number"].GetUint());
-    }
-
     if (v.HasMember("model_version_policy")) {
         rapidjson::StringBuffer buffer;
         buffer.Clear();
@@ -754,13 +712,6 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
         SPDLOG_WARN("Both shape and batch size have been defined. Batch size parameter will be ignored.");
         setBatchingMode(FIXED);
         setBatchSize(std::nullopt);
-    }
-
-    SPDLOG_DEBUG("stateful: {}", isStateful());
-    if (isStateful()) {
-        SPDLOG_DEBUG("idle_sequence_cleanup: {}", getIdleSequenceCleanup());
-        SPDLOG_DEBUG("max_sequence_number: {}", getMaxSequenceNumber());
-        SPDLOG_DEBUG("low_latency_transformation: {}", isLowLatencyTransformationUsed());
     }
 
     // Model Cache options
@@ -810,6 +761,9 @@ void ModelConfig::setBasePath(const std::string& basePath) {
     FileSystem::setPath(this->basePath, basePath, this->rootDirectoryPath);
 }
 const std::string ModelConfig::getPath() const {
+    if (isLocalRegularFileModelPath(getLocalPath())) {
+        return getLocalPath();
+    }
     return getLocalPath() + FileSystem::getOsSeparator() + std::to_string(version);
 }
 

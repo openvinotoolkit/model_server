@@ -232,19 +232,6 @@ const std::string MODEL_CONFIG_DEFINITION = R"(
 						{"type": "number"}
 					]}
 				},
-				"stateful": {
-					"type": "boolean"
-				},
-				"idle_sequence_cleanup": {
-					"type": "boolean"
-				},
-				"low_latency_transformation": {
-					"type": "boolean"
-				},
-				"max_sequence_number": {
-					"type": "integer",
-					"minimum": 0
-				},
 				"custom_loader_options": {
 					"type": "object",
 					"required": ["loader_name"],

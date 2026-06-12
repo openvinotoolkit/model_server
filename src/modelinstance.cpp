@@ -16,7 +16,9 @@
 #include "modelinstance.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cstdlib>
+#include <filesystem>
 #include <iostream>
 #include <memory>
 #include <optional>
@@ -41,6 +43,7 @@
 #include <sys/types.h>
 
 #include "anonymous_input_name.hpp"
+#include "cleaner_utils.hpp"
 #include "config.hpp"
 #include "customloaderinterface.hpp"
 #include "customloaders.hpp"
@@ -66,12 +69,6 @@
 #include "vaapitensorfactory.hpp"
 #endif
 
-#ifdef _WIN32
-namespace ovms {
-bool malloc_trim_win();
-}  // namespace ovms
-#endif
-
 namespace {
 enum : unsigned int {
     GET_INFER_REQUEST,
@@ -82,6 +79,111 @@ enum : unsigned int {
     POSTPROCESS,
     TIMER_END
 };
+
+enum class PluginConfigValueType {
+    INT64,
+    BOOL,
+};
+
+struct PluginConfigNormalizationRule {
+    const char* key;
+    PluginConfigValueType valueType;
+};
+
+const std::array<PluginConfigNormalizationRule, 3> TYPED_PLUGIN_CONFIG_NORMALIZATION_RULES{{
+    // NUM_STREAMS is intentionally NOT normalized to int64: OpenVINO's new strict
+    // plugin_config (e.g. intel_gpu) types NUM_STREAMS as ov::streams::Num and rejects
+    // int64_t via is_valid_value, while accepting the original "N" string form.
+    {"INFERENCE_NUM_THREADS", PluginConfigValueType::INT64},
+    {"AUTO_BATCH_TIMEOUT", PluginConfigValueType::INT64},
+    {"ENABLE_CPU_PINNING", PluginConfigValueType::BOOL},
+}};
+
+std::string pluginConfigValueToString(const ov::Any& value) {
+    if (value.is<std::string>()) {
+        return value.as<std::string>();
+    }
+    if (value.is<const char*>()) {
+        return value.as<const char*>();
+    }
+    if (value.is<int64_t>()) {
+        return std::to_string(value.as<int64_t>());
+    }
+    if (value.is<int>()) {
+        return std::to_string(value.as<int>());
+    }
+    if (value.is<uint32_t>()) {
+        return std::to_string(value.as<uint32_t>());
+    }
+    if (value.is<double>()) {
+        return std::to_string(value.as<double>());
+    }
+    if (value.is<bool>()) {
+        return value.as<bool>() ? "true" : "false";
+    }
+    return "<non-stringifiable>";
+}
+
+bool normalizePluginConfigValue(ov::Any& value, const PluginConfigNormalizationRule& rule) {
+    if (!value.is<std::string>()) {
+        return false;
+    }
+
+    const auto& stringValue = value.as<std::string>();
+    switch (rule.valueType) {
+    case PluginConfigValueType::INT64: {
+        auto parsedValue = ovms::stoi64(stringValue);
+        if (!parsedValue.has_value()) {
+            return false;
+        }
+        value = parsedValue.value();
+        return true;
+    }
+    case PluginConfigValueType::BOOL: {
+        auto normalized = ovms::toLower(stringValue);
+        if (normalized == "true") {
+            value = true;
+            return true;
+        }
+        if (normalized == "false") {
+            value = false;
+            return true;
+        }
+        return false;
+    }
+    }
+    return false;
+}
+
+template <typename MapType>
+void normalizeTypedPluginConfigValues(MapType& pluginConfig) {
+    for (const auto& rule : TYPED_PLUGIN_CONFIG_NORMALIZATION_RULES) {
+        auto it = pluginConfig.find(rule.key);
+        if (it == pluginConfig.end()) {
+            continue;
+        }
+        if (!normalizePluginConfigValue(it->second, rule) && it->second.template is<std::string>()) {
+            SPDLOG_LOGGER_DEBUG(ovms::modelmanager_logger, "Keeping plugin config key: {} as string value: {}", rule.key, it->second.template as<std::string>());
+        }
+    }
+
+    auto devicePropertiesIt = pluginConfig.find("DEVICE_PROPERTIES");
+    if (devicePropertiesIt == pluginConfig.end() || !devicePropertiesIt->second.template is<ov::AnyMap>()) {
+        return;
+    }
+
+    ov::AnyMap deviceProperties = devicePropertiesIt->second.template as<ov::AnyMap>();
+    for (auto& devicePropertiesEntry : deviceProperties) {
+        auto& devicePropertiesAny = devicePropertiesEntry.second;
+        if (!devicePropertiesAny.is<ov::AnyMap>()) {
+            continue;
+        }
+        ov::AnyMap nestedDeviceProperties = devicePropertiesAny.as<ov::AnyMap>();
+        normalizeTypedPluginConfigValues(nestedDeviceProperties);
+        devicePropertiesAny = nestedDeviceProperties;
+    }
+    devicePropertiesIt->second = deviceProperties;
+}
 }  // namespace
 
 namespace ov {
@@ -910,6 +1012,7 @@ void ModelInstance::loadCompiledModelPtr(const plugin_config_t& pluginConfig) {
 
 plugin_config_t ModelInstance::prepareDefaultPluginConfig(const ModelConfig& config) {
     plugin_config_t pluginConfig = config.getPluginConfig();
+    normalizeTypedPluginConfigValues(pluginConfig);
     if ((pluginConfig.count("NUM_STREAMS") == 1) || (pluginConfig.count("PERFORMANCE_HINT") == 1)) {
         return pluginConfig;
     } else {
@@ -958,7 +1061,7 @@ Status ModelInstance::loadOVCompiledModel(const ModelConfig& config) {
     for (const auto& pair : pluginConfig) {
         const auto& key = pair.first;
         const auto& value = pair.second;
-        SPDLOG_LOGGER_INFO(modelmanager_logger, "OVMS set plugin settings key: {}; value: {};", key, value.as<std::string>());
+        SPDLOG_LOGGER_INFO(modelmanager_logger, "OVMS set plugin settings key: {}; value: {};", key, pluginConfigValueToString(value));
     }
     logOVPluginConfig([this](const std::string& key) {
             OV_LOGGER("ov::CompiledModel:{} get_property({})", reinterpret_cast<void*>(this->model.get()), key);
@@ -993,6 +1096,67 @@ Status ModelInstance::fetchModelFilepaths() {
     }
 
     SPDLOG_DEBUG("Getting model files from path: {}", path);
+
+    std::error_code ec;
+    if (FileSystem::isLocalFilesystem(path) && std::filesystem::is_regular_file(path, ec)) {
+        const auto modelFile = std::filesystem::path(path);
+        const auto extension = modelFile.extension().string();
+        const auto modelDirectory = modelFile.parent_path().string();
+        modelFiles.clear();
+
+        if (extension == ".xml") {
+            const auto stem = modelFile.stem().string();
+            const auto binFile = modelDirectory + FileSystem::getOsSeparator() + stem + ".bin";
+            if (!std::filesystem::is_regular_file(binFile, ec)) {
+                SPDLOG_ERROR("Error loading model. Missing .bin file for: {}", path);
+                return StatusCode::FILE_INVALID;
+            }
+            modelFiles.push_back(path);
+            modelFiles.push_back(binFile);
+            path = modelDirectory;
+            return StatusCode::OK;
+        }
+
+        if (extension == ".onnx") {
+            modelFiles.push_back(path);
+            return StatusCode::OK;
+        }
+
+        if (extension == ".pdmodel" || extension == ".pdiparams") {
+            const auto stem = modelFile.stem().string();
+            const auto pdmodelFile = modelDirectory + FileSystem::getOsSeparator() + stem + ".pdmodel";
+            const auto pdiparamsFile = modelDirectory + FileSystem::getOsSeparator() + stem + ".pdiparams";
+            if (!std::filesystem::is_regular_file(pdmodelFile, ec) || !std::filesystem::is_regular_file(pdiparamsFile, ec)) {
+                SPDLOG_ERROR("Error loading model. Missing .pdmodel or .pdiparams file for: {}", path);
+                return StatusCode::FILE_INVALID;
+            }
+            modelFiles.push_back(pdmodelFile);
+            modelFiles.push_back(pdiparamsFile);
+            path = modelDirectory;
+            return StatusCode::OK;
+        }
+
+        if (extension == ".pb") {
+            if (modelFile.filename().string() == "saved_model.pb") {
+                modelFiles.push_back(modelDirectory + FileSystem::getOsSeparator());
+            } else {
+                modelFiles.push_back(path);
+            }
+            return StatusCode::OK;
+        }
+
+        if (extension == ".tflite") {
+            modelFiles.push_back(path);
+            return StatusCode::OK;
+        }
+
+        SPDLOG_ERROR("Error loading model: no valid model file found for model: {}, version: {}, path: {}",
+            getName(),
+            getVersion(),
+            path);
+        return StatusCode::FILE_INVALID;
+    }
+
     if (!FileSystem::dirExists(path)) {
         SPDLOG_ERROR("Missing model directory {}", path);
         return StatusCode::PATH_INVALID;
@@ -1006,7 +1170,10 @@ Status ModelInstance::fetchModelFilepaths() {
     fetchModelFiles(found, TFLITE_MODEL_FILES_EXTENSIONS);
 
     if (!found) {
-        SPDLOG_ERROR("Could not find file for model: {} version: {} in path: {}", getName(), getVersion(), path);
+        SPDLOG_ERROR("Error loading model: no valid model file found for model: {}, version: {}, path: {}",
+            getName(),
+            getVersion(),
+            path);
         return StatusCode::FILE_INVALID;
     }
 

@@ -62,6 +62,7 @@
 #include "servablemetadata.hpp"
 #include "server_settings.hpp"
 #include "serialization.hpp"
+#include "../filesystem/filesystem.hpp"
 
 using ovms::Buffer;
 using ovms::ExecutionContext;
@@ -491,12 +492,9 @@ DLL_PUBLIC OVMS_Status* OVMS_ServerSettingsSetFileSystemPollWaitSeconds(OVMS_Ser
 
 DLL_PUBLIC OVMS_Status* OVMS_ServerSettingsSetSequenceCleanerPollWaitMinutes(OVMS_ServerSettings* settings,
     uint32_t minutes) {
-    if (settings == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "server settings"));
-    }
-    ovms::ServerSettingsImpl* serverSettings = reinterpret_cast<ovms::ServerSettingsImpl*>(settings);
-    serverSettings->sequenceCleanerPollWaitMinutes = minutes;
-    return nullptr;
+    (void)settings;
+    (void)minutes;
+    return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NOT_IMPLEMENTED, "stateful models are no longer supported"));
 }
 
 DLL_PUBLIC OVMS_Status* OVMS_ServerSettingsSetCustomNodeResourcesCleanerIntervalSeconds(OVMS_ServerSettings* settings,
@@ -585,7 +583,7 @@ DLL_PUBLIC OVMS_Status* OVMS_ServerSettingsSetAllowedLocalMediaPath(OVMS_ServerS
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "log path"));
     }
     ovms::ServerSettingsImpl* serverSettings = reinterpret_cast<ovms::ServerSettingsImpl*>(settings);
-    serverSettings->allowedLocalMediaPath = allowed_local_media_path;
+    serverSettings->allowedLocalMediaPath = ovms::FileSystem::normalizeConfiguredPath(allowed_local_media_path);
     return nullptr;
 }
 
