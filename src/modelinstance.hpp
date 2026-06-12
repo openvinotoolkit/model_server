@@ -68,7 +68,6 @@ class InferenceResponse;
 class IOVTensorFactory;
 class OVInferRequestsQueue;
 struct NotifyReceiver;
-class SequenceManager;
 class Status;
 template <typename T1, typename T2>
 struct RequestProcessor;
@@ -135,11 +134,7 @@ public:
     const cl_context* getOclCContext() const { return &oclContextC; }
 #endif
 
-public:
-    virtual const std::shared_ptr<SequenceManager>& getSequenceManager() const { return this->sequenceManager; }
-
 protected:
-    std::shared_ptr<SequenceManager> sequenceManager;
 #ifdef __linux__
     std::unique_ptr<ov::intel_gpu::ocl::ClContext> oclContextCpp;
     std::unique_ptr<ov::intel_gpu::ocl::VAContext> vaContext;
