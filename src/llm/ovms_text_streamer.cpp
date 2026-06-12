@@ -23,6 +23,12 @@
 
 namespace ovms {
 
+bool is_incomplete(const std::string& text) {
+    // code point of the sign: � - replacement character used to replace invalid UTF-8 sequences
+    constexpr char replacement[] = "\xef\xbf\xbd";
+    return text.size() >= 3 && text.compare(text.size() - 3, 3, replacement) == 0;
+}
+
 // No-op callback passed to the base TextStreamer constructor.
 // OVMSTextStreamer overrides write(int64_t) and end() completely, so the base
 // callback is never invoked through the normal TextStreamer code path.
@@ -70,13 +76,13 @@ ov::genai::StreamingStatus OVMSTextStreamer::write(int64_t token) {
     // 2. Incomplete UTF-8: decoded length did not advance — last bytes are a
     //    partial multibyte sequence. Mark this slot as -1 so the delay check
     //    skips it (matching TextStreamer's own handling).
-    const size_t n = m_decoded_lengths.size();
-    if (n >= 2 && m_decoded_lengths[n - 1] == m_decoded_lengths[n - 2]) {
+    if (is_incomplete(text)) {
         m_decoded_lengths.back() = -1;
         return ov::genai::StreamingStatus::RUNNING;
     }
 
     // 3. Delay buffer: need at least DELAY_N_TOKENS entries before flushing.
+    const size_t n = m_decoded_lengths.size();
     if (n < DELAY_N_TOKENS) {
         return ov::genai::StreamingStatus::RUNNING;
     }
