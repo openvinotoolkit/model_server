@@ -359,19 +359,26 @@ Status RequestValidator<RequestType, InputTensorType, choice, IteratorType, Shap
     return finalStatus;
 }
 // This function is expected to be called with already validated shape that does not contain negative dimensions
-template <typename T>
-static bool computeExpectedElementCountReturnFalseIfOverflow(const std::vector<T>& shape, size_t& elementCount) {
+template <typename Iter, typename Projection>
+static bool computeExpectedElementCountReturnFalseIfOverflow(Iter begin, Iter end, Projection projection, size_t& elementCount) {
     elementCount = 1;
-    for (const T& dim : shape) {
+    for (; begin != end; ++begin) {
+        const auto dim = projection(*begin);
         if (dim == 0) {
             elementCount = 0;
             return true;
         }
-        if (elementCount > std::numeric_limits<size_t>::max() / dim)
+        if (elementCount > std::numeric_limits<size_t>::max() / static_cast<size_t>(dim))
             return false;
-        elementCount *= dim;
+        elementCount *= static_cast<size_t>(dim);
     }
     return true;
+}
+
+template <typename Container>
+static bool computeExpectedElementCountReturnFalseIfOverflow(const Container& shape, size_t& elementCount) {
+    return computeExpectedElementCountReturnFalseIfOverflow(
+        shape.begin(), shape.end(), [](const auto& d) { return d; }, elementCount);
 }
 
 static inline bool computeExpectedBufferSizeReturnFalseIfOverflow(size_t elementCount, size_t itemsize, size_t& bufferSize) {
@@ -385,8 +392,8 @@ static inline bool computeExpectedBufferSizeReturnFalseIfOverflow(size_t element
     return true;
 }
 
-template <typename T>
-static bool computeExpectedBufferSizeReturnFalseIfOverflow(const std::vector<T>& shape, const size_t& itemsize, size_t& expectedBufferSize) {
+template <typename Container>
+static bool computeExpectedBufferSizeReturnFalseIfOverflow(const Container& shape, const size_t& itemsize, size_t& expectedBufferSize) {
     size_t elementCount = 0;
     if (!computeExpectedElementCountReturnFalseIfOverflow(shape, elementCount))
         return false;

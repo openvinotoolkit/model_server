@@ -14,6 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 
+#include <limits>
 #include <string>
 
 #include <gmock/gmock.h>
@@ -2187,16 +2188,16 @@ TYPED_TEST(PredictValidationStringNativeTest, string_not_allowed_with_demultiple
     EXPECT_EQ(status, ovms::StatusCode::INVALID_NO_OF_SHAPE_DIMENSIONS);
 }
 
-#define VERIFY_COMPUTE_BUFFER_SIZE(SHAPE, ELEMENT_SIZE, WILL_NOT_OVERFLOW, EXPECTED_BYTES)                                                       \
-    {                                                                                                                                            \
-        size_t elementSize = ELEMENT_SIZE;                                                                                                       \
-        std::vector<int> rawShape SHAPE;                                                                                                         \
-        size_t expectedBytes = 12412412;                                                                                                         \
-        bool result = ovms::request_validation_utils::computeExpectedBufferSizeReturnFalseIfOverflow<int>(rawShape, elementSize, expectedBytes); \
-        EXPECT_EQ(WILL_NOT_OVERFLOW, result);                                                                                                    \
-        if (WILL_NOT_OVERFLOW) {                                                                                                                 \
-            EXPECT_EQ(EXPECTED_BYTES, expectedBytes);                                                                                            \
-        }                                                                                                                                        \
+#define VERIFY_COMPUTE_BUFFER_SIZE(SHAPE, ELEMENT_SIZE, WILL_NOT_OVERFLOW, EXPECTED_BYTES)                                                  \
+    {                                                                                                                                       \
+        size_t elementSize = ELEMENT_SIZE;                                                                                                  \
+        std::vector<int> rawShape SHAPE;                                                                                                    \
+        size_t expectedBytes = 12412412;                                                                                                    \
+        bool result = ovms::request_validation_utils::computeExpectedBufferSizeReturnFalseIfOverflow(rawShape, elementSize, expectedBytes); \
+        EXPECT_EQ(WILL_NOT_OVERFLOW, result);                                                                                               \
+        if (WILL_NOT_OVERFLOW) {                                                                                                            \
+            EXPECT_EQ(EXPECTED_BYTES, expectedBytes);                                                                                       \
+        }                                                                                                                                   \
     }
 
 TEST(PredictRequestUtilsTest, ComputeExpectedBufferSize) {

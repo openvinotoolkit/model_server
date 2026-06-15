@@ -161,13 +161,10 @@ Status RequestValidator<TFSRequestType, TFSInputTensorType, ValidationChoice::IN
 */
 
     // For POD types
-    std::vector<int64_t> shapeVec;
-    shapeVec.reserve(proto.tensor_shape().dim_size());
-    for (int i = 0; i < proto.tensor_shape().dim_size(); i++) {
-        shapeVec.push_back(proto.tensor_shape().dim(i).size());
-    }
     size_t expectedValueCount = 0;
-    if (!request_validation_utils::computeExpectedElementCountReturnFalseIfOverflow(shapeVec, expectedValueCount)) {
+    if (!request_validation_utils::computeExpectedElementCountReturnFalseIfOverflow(
+            proto.tensor_shape().dim().begin(), proto.tensor_shape().dim().end(),
+            [](const auto& d) { return d.size(); }, expectedValueCount)) {
         std::stringstream ss;
         ss << "Shape dimensions overflow size_t; input name: " << getCurrentlyValidatedTensorName();
         const std::string details = ss.str();

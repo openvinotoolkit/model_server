@@ -15,6 +15,7 @@
 //*****************************************************************************
 #include <chrono>
 #include <fstream>
+#include <limits>
 #include <memory>
 #include <set>
 #include <sstream>

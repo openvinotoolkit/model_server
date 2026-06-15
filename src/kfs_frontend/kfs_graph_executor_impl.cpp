@@ -400,7 +400,7 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
         SET_DATA_FROM_MP_TENSOR(outTensor, GetCpuWriteView);
         ov::element::Type precision = ovmsPrecisionToIE2Precision(KFSPrecisionToOvmsPrecision(requestInputItr->datatype()));
         size_t expectedBytes = 1;
-        bool expectedBufferSizeValid = computeExpectedBufferSizeReturnFalseIfOverflow<int>(rawShape, precision.size(), expectedBytes);
+        bool expectedBufferSizeValid = computeExpectedBufferSizeReturnFalseIfOverflow(rawShape, precision.size(), expectedBytes);
         if (!expectedBufferSizeValid) {
             const std::string details = "Provided shape and datatype declare too large buffer.";
             SPDLOG_DEBUG("[servable name: {} version: {}] {}", request.model_name(), request.model_version(), details);
@@ -477,7 +477,7 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
             return Status(StatusCode::UNKNOWN_ERROR, std::string{stringViewAbslMessage});
         }
         size_t expectedBytes = 1;
-        bool expectedBufferSizeValid = computeExpectedBufferSizeReturnFalseIfOverflow<int64_t>(rawShape, KFSDataTypeSize(requestInputItr->datatype()), expectedBytes);
+        bool expectedBufferSizeValid = computeExpectedBufferSizeReturnFalseIfOverflow(rawShape, KFSDataTypeSize(requestInputItr->datatype()), expectedBytes);
         if (!expectedBufferSizeValid) {
             const std::string details = "Provided shape and datatype declare too large buffer.";
             SPDLOG_DEBUG("[servable name: {} version: {}] {}", request.model_name(), request.model_version(), details);
@@ -560,7 +560,7 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
         }
         ov::element::Type precision = ovmsPrecisionToIE2Precision(KFSPrecisionToOvmsPrecision(requestInputItr->datatype()));
         size_t expectedBytes = 1;
-        bool expectedBufferSizeValid = computeExpectedBufferSizeReturnFalseIfOverflow<size_t>(shape, precision.size(), expectedBytes);
+        bool expectedBufferSizeValid = computeExpectedBufferSizeReturnFalseIfOverflow(shape, precision.size(), expectedBytes);
         if (!expectedBufferSizeValid) {
             const std::string details = "Provided shape and datatype declare too large buffer.";
             SPDLOG_DEBUG("[servable name: {} version: {}] {}", request.model_name(), request.model_version(), details);
@@ -782,7 +782,7 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
                 size_t itemsize = bufferFormatToItemsize.at(formatIt->second);
                 size_t expectedBufferSize = 1;
 
-                bool expectedBufferSizeValid = computeExpectedBufferSizeReturnFalseIfOverflow<py::ssize_t>(shape, itemsize, expectedBufferSize);
+                bool expectedBufferSizeValid = computeExpectedBufferSizeReturnFalseIfOverflow(shape, itemsize, expectedBufferSize);
                 if (!expectedBufferSizeValid) {
                     const std::string details = "Provided shape and datatype declare too large buffer.";
                     SPDLOG_DEBUG("[servable name: {} version: {}] {}", request.model_name(), request.model_version(), details);
@@ -824,7 +824,7 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
                 }
             } else {
                 expectedBytes = 1;
-                bool expectedBufferSizeValid = computeExpectedBufferSizeReturnFalseIfOverflow<py::ssize_t>(shape, precision.size(), expectedBytes);
+                bool expectedBufferSizeValid = computeExpectedBufferSizeReturnFalseIfOverflow(shape, precision.size(), expectedBytes);
                 if (!expectedBufferSizeValid) {
                     const std::string details = "Provided shape and datatype declare too large buffer.";
                     SPDLOG_DEBUG("[servable name: {} version: {}] {}", request.model_name(), request.model_version(), details);

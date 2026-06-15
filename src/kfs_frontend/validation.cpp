@@ -19,7 +19,6 @@
 #include <limits>
 #include <memory>
 #include <optional>
-#include <vector>
 #include <set>
 #include <sstream>
 #include <string>
@@ -143,9 +142,8 @@ int64_t getStringBatchSize(const KFSTensorInputProto& src) {
 }
 template <>
 Status RequestValidator<KFSRequest, KFSTensorInputProto, ValidationChoice::INPUT, KFSInputTensorIteratorType, KFSShapeType>::validateTensorContent(const KFSTensorInputProto& proto, ovms::Precision expectedPrecision, size_t bufferId) const {
-    const std::vector<int64_t> shapeVec(proto.shape().begin(), proto.shape().end());
     size_t expectedValueCount = 0;
-    if (!request_validation_utils::computeExpectedElementCountReturnFalseIfOverflow(shapeVec, expectedValueCount)) {
+    if (!request_validation_utils::computeExpectedElementCountReturnFalseIfOverflow(proto.shape(), expectedValueCount)) {
         std::stringstream ss;
         ss << "Shape dimensions overflow; input name: " << getCurrentlyValidatedTensorName();
         const std::string details = ss.str();
