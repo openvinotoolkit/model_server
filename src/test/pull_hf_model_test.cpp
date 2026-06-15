@@ -1907,23 +1907,14 @@ TEST_F(HfDownloadModelModule, TestInvalidProxyTimeout) {
         // GIT_OPT_SET_SERVER_CONNECT_TIMEOUT option when https_proxy is empty,
         // so we always clear https_proxy here.
         //
-        // To make the timeout actually fire we need the destination to be
-        // unreachable. The behavior depends on the host's network setup:
-        //   * Host originally used a proxy (https_proxy was set in the
-        //     environment): the host is on a proxy-only network where a
-        //     direct connection to huggingface.co will hang and hit the
-        //     timeout. Keep the default HF_ENDPOINT.
-        //   * Host has no proxy configured (direct internet access): a direct
-        //     connection to huggingface.co would succeed within the 1 s
-        //     timeout and the assertion below would fail. Redirect the clone
-        //     to an unroutable RFC 5737 TEST-NET-1 address so the connect
-        //     must time out.
-        const char* hostHttpsProxy = std::getenv("https_proxy");
-        const bool hostHadProxy = (hostHttpsProxy != nullptr) && (std::string(hostHttpsProxy) != "");
+        // Force deterministic timeout behavior across CI/dev environments.
+        // Using the real HF endpoint makes this test network-topology dependent
+        // (proxy-only hosts, direct internet hosts, DNS/load-balancer behavior).
+        // RFC 5737 TEST-NET-1 (192.0.2.0/24) is non-routable on the public
+        // internet, so clone must fail quickly and independently of external
+        // service availability.
         eGuard.set("https_proxy", "");
-        if (!hostHadProxy) {
-            eGuard.set("HF_ENDPOINT", "https://192.0.2.1/");
-        }
+        eGuard.set("HF_ENDPOINT", "https://192.0.2.1/");
         const std::string timeoutConnectVal = "1000";
         eGuard.set(ovms::HfPullModelModule::GIT_SERVER_CONNECT_TIMEOUT_ENV, timeoutConnectVal);
         config.parse(arg_count, const_cast<char**>(n_argv));
@@ -1936,7 +1927,7 @@ TEST_F(HfDownloadModelModule, TestInvalidProxyTimeout) {
         timer.stop(0);
         double timeSpentMs = timer.elapsed<std::chrono::microseconds>(0) / 1000;
         SPDLOG_DEBUG("Time spent:{} ms", timeSpentMs);
-        EXPECT_LE(timeSpentMs, 3 * ovms::stoi32(timeoutConnectVal).value()) << "We should timeout before 1ms has passed but clone worked for: " << timeSpentMs << "ms > " << timeoutConnectVal << "ms. Status: " << status.string();
+        EXPECT_LE(timeSpentMs, 3 * ovms::stoi32(timeoutConnectVal).value()) << "We should timeout before 1s has passed but clone worked for: " << timeSpentMs << "ms > " << timeoutConnectVal << "ms. Status: " << status.string();
     }
     SPDLOG_TRACE("After guard closure");
 }
