@@ -828,6 +828,34 @@ TEST_F(TfsPredictValidationDynamicModel, RequestDimensionInRangeWrongTensorConte
     EXPECT_EQ(status, ovms::StatusCode::INVALID_CONTENT_SIZE);
 }
 
+// Regression test: tensor buffer size validation must use overflow-safe arithmetic.
+// Both dimensions are near INT64_MAX/2; their product (~2^124) greatly exceeds SIZE_MAX.
+// The server must detect the overflow and reject the request with INVALID_CONTENT_SIZE.
+TEST_F(TfsPredictValidationDynamicModel, RequestContentSizeIntegerOverflowRejected) {
+    // Each dim ~2^62; product ~2^124 overflows size_t.
+    constexpr int64_t kOverflowDim0 = std::numeric_limits<int64_t>::max() / 2;
+    constexpr int64_t kOverflowDim1 = std::numeric_limits<int64_t>::max() / 2;
+    // What naive unchecked arithmetic produces (wraps around SIZE_MAX).
+    constexpr size_t kWrappedExpectedSize =
+        static_cast<size_t>(kOverflowDim0) * static_cast<size_t>(kOverflowDim1) * sizeof(float);
+
+    servableInputs = ovms::tensor_map_t({{"overflow_input",
+        std::make_shared<ovms::TensorInfo>("overflow_input", ovms::Precision::FP32,
+            ovms::Shape{ovms::Dimension::any(), ovms::Dimension::any()}, ovms::Layout{"NC"})}});
+    ON_CALL(*instance, getBatchSize()).WillByDefault(Return(ovms::Dimension::any()));
+
+    request.Clear();
+    auto& input = (*request.mutable_inputs())["overflow_input"];
+    input.set_dtype(tensorflow::DataType::DT_FLOAT);
+    auto* shape = input.mutable_tensor_shape();
+    shape->add_dim()->set_size(kOverflowDim0);
+    shape->add_dim()->set_size(kOverflowDim1);
+    *input.mutable_tensor_content() = std::string(kWrappedExpectedSize, '\x01');
+
+    auto status = instance->mockValidate(&request);
+    EXPECT_EQ(status, ovms::StatusCode::INVALID_CONTENT_SIZE) << status.string();
+}
+
 class TfsPredictValidationPrecision : public ::testing::TestWithParam<ovms::Precision> {
 protected:
     void SetUp() override {
@@ -1793,6 +1821,35 @@ TEST_F(KFSPredictValidationDynamicModel, RequestDimensionNotInRangeSecondPositio
 
 TEST_F(KFSPredictValidationDynamicModel, RequestDimensionInRangeWrongTensorContent) {
     findKFSInferInputTensorContentInRawInputs(request, "Input_U8_100:200_any_CN")->clear();
+    auto status = instance->mockValidate(&request);
+    EXPECT_EQ(status, ovms::StatusCode::INVALID_CONTENT_SIZE) << status.string();
+}
+
+// Regression test: tensor buffer size validation must use overflow-safe arithmetic.
+// Both dimensions are near INT64_MAX/2; their product (~2^124) greatly exceeds SIZE_MAX.
+// The server must detect the overflow and reject the request with INVALID_CONTENT_SIZE.
+TEST_F(KFSPredictValidationDynamicModel, RequestContentSizeIntegerOverflowRejected) {
+    // Each dim ~2^62; product ~2^124 overflows size_t.
+    constexpr int64_t kOverflowDim0 = std::numeric_limits<int64_t>::max() / 2;
+    constexpr int64_t kOverflowDim1 = std::numeric_limits<int64_t>::max() / 2;
+    // What naive unchecked arithmetic produces (wraps around SIZE_MAX).
+    constexpr size_t kWrappedExpectedSize =
+        static_cast<size_t>(kOverflowDim0) * static_cast<size_t>(kOverflowDim1) * sizeof(float);
+
+    servableInputs = ovms::tensor_map_t({{"overflow_input",
+        std::make_shared<ovms::TensorInfo>("overflow_input", ovms::Precision::FP32,
+            ovms::Shape{ovms::Dimension::any(), ovms::Dimension::any()}, ovms::Layout{"NC"})}});
+    ON_CALL(*instance, getBatchSize()).WillByDefault(Return(ovms::Dimension::any()));
+
+    request.Clear();
+    auto* input = request.add_inputs();
+    input->set_name("overflow_input");
+    input->set_datatype("FP32");
+    input->add_shape(kOverflowDim0);
+    input->add_shape(kOverflowDim1);
+    auto* content = request.add_raw_input_contents();
+    content->assign(kWrappedExpectedSize, '\x01');
+
     auto status = instance->mockValidate(&request);
     EXPECT_EQ(status, ovms::StatusCode::INVALID_CONTENT_SIZE) << status.string();
 }

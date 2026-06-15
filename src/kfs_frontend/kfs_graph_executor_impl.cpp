@@ -721,7 +721,12 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
         return Status(StatusCode::INVALID_SHAPE, details);
     }
     size_t elementSize = KFSDataTypeSize(requestInputItr->datatype());
-    size_t expectedSize = numberOfChannels * numberOfCols * numberOfRows * elementSize;
+    const std::vector<int64_t> hwcDims{numberOfRows, numberOfCols, numberOfChannels};
+    size_t expectedSize = 0;
+    if (!ovms::request_validation_utils::computeExpectedBufferSizeReturnFalseIfOverflow(hwcDims, elementSize, expectedSize)) {
+        SPDLOG_DEBUG("Invalid Mediapipe Image input: shape dimensions overflow size_t");
+        return Status(StatusCode::INVALID_CONTENT_SIZE, "Invalid Mediapipe Image input: shape dimensions overflow size_t");
+    }
     if (bufferLocation.size() != expectedSize) {
         std::stringstream ss;
         ss << "Invalid Mediapipe Image input buffer size. Actual: " << bufferLocation.size() << "; Expected: " << expectedSize;

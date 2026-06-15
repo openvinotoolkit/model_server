@@ -941,6 +941,38 @@ TEST_F(MediapipeFlowImageInput, Float32_4Channels) {
     ASSERT_EQ(0, memcmp(response.raw_output_contents()[0].data(), image.data, image.cols * image.rows * image.channels() * elementSize));
 }
 
+// Regression test: MediaPipe IMAGE path buffer size validation must use overflow-safe arithmetic.
+// kOverflowH * kChannels * sizeof(uint8_t) exceeds SIZE_MAX; the server must detect
+// the overflow and reject the request with INVALID_ARGUMENT.
+TEST_F(MediapipeFlowImageInput, OverflowShapeRejectedAsInvalidContentSize) {
+    constexpr int64_t kChannels = 3LL;
+    // kOverflowH > SIZE_MAX / (kChannels * sizeof(uint8_t)): H alone overflows size_t.
+    constexpr int64_t kOverflowH =
+        static_cast<int64_t>(std::numeric_limits<size_t>::max() / (kChannels * sizeof(uint8_t))) + 2;
+    constexpr int64_t kWidth = 1LL;
+    // What naive unchecked arithmetic produces (wraps around SIZE_MAX).
+    constexpr size_t kWrappedExpectedSize =
+        static_cast<size_t>(kOverflowH) * static_cast<size_t>(kWidth) * static_cast<size_t>(kChannels) * sizeof(uint8_t);
+
+    const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
+    KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
+    ::KFSRequest request;
+    ::KFSResponse response;
+    request.mutable_model_name()->assign("mediapipeImageInput");
+
+    auto* input = request.add_inputs();
+    input->set_name("in");
+    input->set_datatype("UINT8");
+    input->add_shape(kOverflowH);  // H
+    input->add_shape(kWidth);      // W
+    input->add_shape(kChannels);   // C
+
+    std::string* content = request.add_raw_input_contents();
+    content->assign(kWrappedExpectedSize, '\x01');
+
+    ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::INVALID_ARGUMENT);
+}
+
 class MediapipeFlowImageInputThreeChannels : public MediapipeFlowImageInput {};
 
 TEST_P(MediapipeFlowImageInputThreeChannels, Infer) {
