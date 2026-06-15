@@ -850,7 +850,7 @@ TEST_F(TfsPredictValidationDynamicModel, RequestContentSizeIntegerOverflowReject
     auto* shape = input.mutable_tensor_shape();
     shape->add_dim()->set_size(kOverflowDim0);
     shape->add_dim()->set_size(kOverflowDim1);
-    *input.mutable_tensor_content() = std::string(kWrappedExpectedSize, '\x01');
+    *input.mutable_tensor_content() = std::string(kWrappedExpectedSize, 'A');
 
     auto status = instance->mockValidate(&request);
     EXPECT_EQ(status, ovms::StatusCode::INVALID_CONTENT_SIZE) << status.string();
@@ -1848,7 +1848,7 @@ TEST_F(KFSPredictValidationDynamicModel, RequestContentSizeIntegerOverflowReject
     input->add_shape(kOverflowDim0);
     input->add_shape(kOverflowDim1);
     auto* content = request.add_raw_input_contents();
-    content->assign(kWrappedExpectedSize, '\x01');
+    content->assign(kWrappedExpectedSize, 'A');
 
     auto status = instance->mockValidate(&request);
     EXPECT_EQ(status, ovms::StatusCode::INVALID_CONTENT_SIZE) << status.string();

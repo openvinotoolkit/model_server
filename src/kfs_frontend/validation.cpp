@@ -19,6 +19,7 @@
 #include <limits>
 #include <memory>
 #include <optional>
+#include <vector>
 #include <set>
 #include <sstream>
 #include <string>
@@ -144,7 +145,7 @@ template <>
 Status RequestValidator<KFSRequest, KFSTensorInputProto, ValidationChoice::INPUT, KFSInputTensorIteratorType, KFSShapeType>::validateTensorContent(const KFSTensorInputProto& proto, ovms::Precision expectedPrecision, size_t bufferId) const {
     const std::vector<int64_t> shapeVec(proto.shape().begin(), proto.shape().end());
     size_t expectedValueCount = 0;
-    if (!ovms::request_validation_utils::computeExpectedElementCountReturnFalseIfOverflow(shapeVec, expectedValueCount)) {
+    if (!request_validation_utils::computeExpectedElementCountReturnFalseIfOverflow(shapeVec, expectedValueCount)) {
         std::stringstream ss;
         ss << "Shape dimensions overflow; input name: " << getCurrentlyValidatedTensorName();
         const std::string details = ss.str();
@@ -186,7 +187,7 @@ Status RequestValidator<KFSRequest, KFSTensorInputProto, ValidationChoice::INPUT
             // Plain old data
             size_t expectedContentSize = 0;
             const size_t elementByteSize = ov::element::Type(ovmsPrecisionToIE2Precision(expectedPrecision)).size();
-            if (!ovms::request_validation_utils::computeExpectedBufferSizeReturnFalseIfOverflow(expectedValueCount, elementByteSize, expectedContentSize)) {
+            if (!request_validation_utils::computeExpectedBufferSizeReturnFalseIfOverflow(expectedValueCount, elementByteSize, expectedContentSize)) {
                 std::stringstream ss;
                 ss << "Shape dimensions overflow size_t; input name: " << getCurrentlyValidatedTensorName();
                 const std::string details = ss.str();

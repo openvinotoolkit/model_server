@@ -358,14 +358,7 @@ Status RequestValidator<RequestType, InputTensorType, choice, IteratorType, Shap
     }
     return finalStatus;
 }
-// These functions are expected to be called with already validated shape that does not contain negative dimensions
-/**
- * @brief Computes the number of elements (product of all dimensions). Returns false if overflow occurs.
- *
- * @param shape Vector of dimensions of the tensor.
- * @param elementCount Output parameter to hold the computed element count.
- * @return True if the element count was computed successfully, false if an overflow occurred.
- */
+// This function is expected to be called with already validated shape that does not contain negative dimensions
 template <typename T>
 static bool computeExpectedElementCountReturnFalseIfOverflow(const std::vector<T>& shape, size_t& elementCount) {
     elementCount = 1;
@@ -381,14 +374,6 @@ static bool computeExpectedElementCountReturnFalseIfOverflow(const std::vector<T
     return true;
 }
 
-/**
- * @brief Computes expected buffer size as elementCount * itemsize. Returns false if overflow occurs.
- *
- * @param elementCount Number of elements (already validated, non-negative).
- * @param itemsize Size of a single element in bytes.
- * @param bufferSize Output parameter to hold the computed buffer size.
- * @return True if computed successfully, false if an overflow occurred.
- */
 static inline bool computeExpectedBufferSizeReturnFalseIfOverflow(size_t elementCount, size_t itemsize, size_t& bufferSize) {
     if (itemsize == 0 || elementCount == 0) {
         bufferSize = 0;
@@ -400,14 +385,6 @@ static inline bool computeExpectedBufferSizeReturnFalseIfOverflow(size_t element
     return true;
 }
 
-/**
- * @brief Computes expected buffer size from shape and itemsize. Returns false if overflow occurs.
- *
- * @param shape Vector of dimensions of the tensor.
- * @param itemsize Size of a single element in bytes.
- * @param expectedBufferSize Output parameter to hold the computed expected buffer size.
- * @return True if the expected buffer size was computed successfully, false if an overflow occurred.
- */
 template <typename T>
 static bool computeExpectedBufferSizeReturnFalseIfOverflow(const std::vector<T>& shape, const size_t& itemsize, size_t& expectedBufferSize) {
     size_t elementCount = 0;
