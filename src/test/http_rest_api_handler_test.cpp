@@ -468,13 +468,9 @@ TEST_F(ConfigReload, removeModelFromDiskWhenLoaded) {
     EXPECT_EQ(expectedJson1, response);
     EXPECT_EQ(status, ovms::StatusCode::OK_NOT_RELOADED);
 
-    // On windows, the test expects inability to remove model
-#ifdef _WIN32
-    EXPECT_THROW({ std::filesystem::remove_all(getGenericFullPathForTmp("/tmp/dummy")); }, std::filesystem::filesystem_error);
-#else
-    // On linux, removing the model should be possible even if ENABLE_MMAP=YES
-    std::filesystem::remove_all(getGenericFullPathForSrcTest("/tmp/dummy"));
-#endif
+    // On Linux and Windows, removing the model should be possible even if ENABLE_MMAP=YES
+    const auto removedCount = std::filesystem::remove_all(getGenericFullPathForTmp("/tmp/dummy"));
+    EXPECT_GT(removedCount, 0);
     this->UnloadConfig(t.getManager());
 }
 
