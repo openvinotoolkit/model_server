@@ -635,13 +635,14 @@ protected:
             int lastExitCode = EXIT_FAILURE;
             for (int attempt = 1; attempt <= CACHE_PULL_MAX_ATTEMPTS; ++attempt) {
                 lastExitCode = this->RunPullHfModelAndGetCode(sourceModelName, cacheDownloadPath, pullTask);
-                if ((lastExitCode == EXIT_SUCCESS) && hasCompleteCache(cacheDownloadPath)) {
+                const bool cacheComplete = hasCompleteCache(cacheDownloadPath);
+                if ((lastExitCode == EXIT_SUCCESS) && cacheComplete) {
                     cachedRepositoryPath = cacheDownloadPath;
                     ASSERT_TRUE(std::filesystem::exists(cachedRepositoryPath));
                     return;
                 }
 
-                const bool recoverable = looksLikeRecoverableNetworkFailure(cacheDownloadPath) || !hasCompleteCache(cacheDownloadPath);
+                const bool recoverable = looksLikeRecoverableNetworkFailure(cacheDownloadPath) || !cacheComplete;
                 if (!recoverable || (attempt == CACHE_PULL_MAX_ATTEMPTS)) {
                     FAIL() << "Failed to initialize shared HF cache after " << attempt
                            << " attempt(s). Last exit code: " << lastExitCode
@@ -654,6 +655,12 @@ protected:
     }
 
     void seedCurrentTestRepository() {
+        ASSERT_FALSE(cachedRepositoryPath.empty())
+            << "Shared HF cache was never successfully initialized (call_once completed with a failure). "
+               "All HfPullCache tests in this process will be unable to seed their working directory.";
+        ASSERT_TRUE(std::filesystem::exists(cachedRepositoryPath))
+            << "Shared HF cache path does not exist on disk: " << cachedRepositoryPath
+            << ". Cache initialization completed but left no usable directory.";
         std::error_code ec;
         std::filesystem::copy(cachedRepositoryPath,
             testRepositoryPath,
