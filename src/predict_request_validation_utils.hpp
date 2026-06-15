@@ -382,7 +382,26 @@ static bool computeExpectedElementCountReturnFalseIfOverflow(const std::vector<T
 }
 
 /**
- * @brief Computes expected buffer size (element count * itemsize). Returns false if overflow occurs.
+ * @brief Computes expected buffer size as elementCount * itemsize. Returns false if overflow occurs.
+ *
+ * @param elementCount Number of elements (already validated, non-negative).
+ * @param itemsize Size of a single element in bytes.
+ * @param bufferSize Output parameter to hold the computed buffer size.
+ * @return True if computed successfully, false if an overflow occurred.
+ */
+static inline bool computeExpectedBufferSizeReturnFalseIfOverflow(size_t elementCount, size_t itemsize, size_t& bufferSize) {
+    if (itemsize == 0 || elementCount == 0) {
+        bufferSize = 0;
+        return true;
+    }
+    if (elementCount > std::numeric_limits<size_t>::max() / itemsize)
+        return false;
+    bufferSize = elementCount * itemsize;
+    return true;
+}
+
+/**
+ * @brief Computes expected buffer size from shape and itemsize. Returns false if overflow occurs.
  *
  * @param shape Vector of dimensions of the tensor.
  * @param itemsize Size of a single element in bytes.
@@ -391,18 +410,10 @@ static bool computeExpectedElementCountReturnFalseIfOverflow(const std::vector<T
  */
 template <typename T>
 static bool computeExpectedBufferSizeReturnFalseIfOverflow(const std::vector<T>& shape, const size_t& itemsize, size_t& expectedBufferSize) {
-    if (itemsize == 0) {
-        expectedBufferSize = 0;
-        return true;
-    }
-    if (!computeExpectedElementCountReturnFalseIfOverflow(shape, expectedBufferSize))
+    size_t elementCount = 0;
+    if (!computeExpectedElementCountReturnFalseIfOverflow(shape, elementCount))
         return false;
-    if (expectedBufferSize == 0)
-        return true;
-    if (expectedBufferSize > std::numeric_limits<size_t>::max() / itemsize)
-        return false;
-    expectedBufferSize *= itemsize;
-    return true;
+    return computeExpectedBufferSizeReturnFalseIfOverflow(elementCount, itemsize, expectedBufferSize);
 }
 }  // namespace request_validation_utils
 }  // namespace ovms
