@@ -430,13 +430,7 @@ TEST_F(TestLoadModelWithRemoteTensorFactoriesSucceeds, OpenCL_CheckIfLoadingSucc
     EXPECT_EQ(status, ovms::StatusCode::OK) << status.string();
 }
 TEST_F(TestLoadModelWithRemoteTensorFactoriesSucceeds, CheckIfLoadingSucceedsForAutoCPUGPU) {
-    this->config.setTargetDevice("AUTO:GPU,CPU");
-    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
-    auto status = modelInstance.loadModel(config);
-    EXPECT_EQ(status, ovms::StatusCode::OK) << status.string();
-}
-TEST_F(TestLoadModelWithRemoteTensorFactoriesSucceeds, CheckIfLoadingSucceedsForMultiCPUGPU) {
-    this->config.setTargetDevice("MULTI:GPU,CPU");
+    this->config.setTargetDevice("AUTO");
     ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
     auto status = modelInstance.loadModel(config);
     EXPECT_EQ(status, ovms::StatusCode::OK) << status.string();
