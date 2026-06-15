@@ -144,9 +144,9 @@ template <>
 Status RequestValidator<KFSRequest, KFSTensorInputProto, ValidationChoice::INPUT, KFSInputTensorIteratorType, KFSShapeType>::validateTensorContent(const KFSTensorInputProto& proto, ovms::Precision expectedPrecision, size_t bufferId) const {
     const std::vector<int64_t> shapeVec(proto.shape().begin(), proto.shape().end());
     size_t expectedValueCount = 0;
-    if (!ovms::request_validation_utils::computeExpectedBufferSizeReturnFalseIfOverflow(shapeVec, 1, expectedValueCount)) {
+    if (!ovms::request_validation_utils::computeExpectedElementCountReturnFalseIfOverflow(shapeVec, expectedValueCount)) {
         std::stringstream ss;
-        ss << "Shape dimensions overflow size_t; input name: " << getCurrentlyValidatedTensorName();
+        ss << "Shape dimensions overflow; input name: " << getCurrentlyValidatedTensorName();
         const std::string details = ss.str();
         SPDLOG_DEBUG("[servable name: {} version: {}] Invalid content size of tensor proto - {}", servableName, servableVersion, details);
         return Status(StatusCode::INVALID_CONTENT_SIZE, details);

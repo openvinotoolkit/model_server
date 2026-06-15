@@ -358,23 +358,47 @@ Status RequestValidator<RequestType, InputTensorType, choice, IteratorType, Shap
     }
     return finalStatus;
 }
-// This function is expected to be called with already validated shape that does not contain negative dimensions
+// These functions are expected to be called with already validated shape that does not contain negative dimensions
+/**
+ * @brief Computes the number of elements (product of all dimensions). Returns false if overflow occurs.
+ *
+ * @param shape Vector of dimensions of the tensor.
+ * @param elementCount Output parameter to hold the computed element count.
+ * @return True if the element count was computed successfully, false if an overflow occurred.
+ */
+template <typename T>
+static bool computeExpectedElementCountReturnFalseIfOverflow(const std::vector<T>& shape, size_t& elementCount) {
+    elementCount = 1;
+    for (const T& dim : shape) {
+        if (dim == 0) {
+            elementCount = 0;
+            return true;
+        }
+        if (elementCount > std::numeric_limits<size_t>::max() / dim)
+            return false;
+        elementCount *= dim;
+    }
+    return true;
+}
+
+/**
+ * @brief Computes expected buffer size (element count * itemsize). Returns false if overflow occurs.
+ *
+ * @param shape Vector of dimensions of the tensor.
+ * @param itemsize Size of a single element in bytes.
+ * @param expectedBufferSize Output parameter to hold the computed expected buffer size.
+ * @return True if the expected buffer size was computed successfully, false if an overflow occurred.
+ */
 template <typename T>
 static bool computeExpectedBufferSizeReturnFalseIfOverflow(const std::vector<T>& shape, const size_t& itemsize, size_t& expectedBufferSize) {
-    expectedBufferSize = 1;
     if (itemsize == 0) {
         expectedBufferSize = 0;
         return true;
     }
-    for (const T& dim : shape) {
-        if (dim == 0) {
-            expectedBufferSize = 0;
-            return true;
-        }
-        if (expectedBufferSize > std::numeric_limits<size_t>::max() / dim)
-            return false;
-        expectedBufferSize *= dim;
-    }
+    if (!computeExpectedElementCountReturnFalseIfOverflow(shape, expectedBufferSize))
+        return false;
+    if (expectedBufferSize == 0)
+        return true;
     if (expectedBufferSize > std::numeric_limits<size_t>::max() / itemsize)
         return false;
     expectedBufferSize *= itemsize;

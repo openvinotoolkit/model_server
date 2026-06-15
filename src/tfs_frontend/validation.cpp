@@ -167,7 +167,7 @@ Status RequestValidator<TFSRequestType, TFSInputTensorType, ValidationChoice::IN
         shapeVec.push_back(proto.tensor_shape().dim(i).size());
     }
     size_t expectedValueCount = 0;
-    if (!ovms::request_validation_utils::computeExpectedBufferSizeReturnFalseIfOverflow(shapeVec, 1, expectedValueCount)) {
+    if (!ovms::request_validation_utils::computeExpectedElementCountReturnFalseIfOverflow(shapeVec, expectedValueCount)) {
         std::stringstream ss;
         ss << "Shape dimensions overflow size_t; input name: " << getCurrentlyValidatedTensorName();
         const std::string details = ss.str();
