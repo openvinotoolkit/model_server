@@ -962,9 +962,9 @@ TEST_F(MediapipeFlowImageInput, OverflowShapeRejectedAsInvalidContentSize) {
     auto* input = request.add_inputs();
     input->set_name("in");
     input->set_datatype("UINT8");
-    input->add_shape(kOverflowH);  // H
-    input->add_shape(kOverflowW);  // W
-    input->add_shape(kChannels);   // C
+    input->add_shape(kOverflowH);
+    input->add_shape(kOverflowW);
+    input->add_shape(kChannels);
 
     std::string* content = request.add_raw_input_contents();
     content->assign(kWrappedExpectedSize, 'A');
