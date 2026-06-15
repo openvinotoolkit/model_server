@@ -499,22 +499,28 @@ protected:
         ::SetUpServerForDownloadAndStart(this->t, this->server, sourceModel, downloadPath, task, timeoutSeconds);
     }
 
-    int RunPullHfModelAndGetCode(const std::string& sourceModel, const std::string& modelRepositoryPath, const std::string& pullTask) {
-        server.setShutdownRequest(0);
-        char* argv[] = {(char*)"ovms",
-            (char*)"--pull",
-            (char*)"--source_model",
-            (char*)sourceModel.c_str(),
-            (char*)"--model_repository_path",
-            (char*)modelRepositoryPath.c_str(),
-            (char*)"--task",
-            (char*)pullTask.c_str()};
-        int argc = 8;
-        int exitCode = server.start(argc, argv);
-        server.setShutdownRequest(1);
-        server.setShutdownRequest(0);
-        return exitCode;
+int RunPullHfModelAndGetCode(const std::string& sourceModel, const std::string& modelRepositoryPath, const std::string& pullTask) {
+    server.setShutdownRequest(0);
+    std::vector<std::string> args = {
+        "ovms",
+        "--pull",
+        "--source_model",
+        sourceModel,
+        "--model_repository_path",
+        modelRepositoryPath,
+        "--task",
+        pullTask,
+    };
+    std::vector<char*> argv;
+    argv.reserve(args.size());
+    for (auto& a : args) {
+        argv.push_back(a.data());
     }
+    const int exitCode = server.start(static_cast<int>(argv.size()), argv.data());
+    server.setShutdownRequest(1);
+    server.setShutdownRequest(0);
+    return exitCode;
+}
 
     void TearDown() {
         server.setShutdownRequest(1);
