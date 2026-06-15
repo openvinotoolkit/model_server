@@ -31,6 +31,7 @@ from tests.functional.config import (
     cleanup_env_on_startup,
     global_tmp_dir_default,
     ovms_c_repo_path,
+    machine_is_reserved_for_test_session,
     tmp_dir,
 )
 from tests.functional.constants.os_type import get_host_os, OsType
@@ -61,11 +62,14 @@ DEVICE_ID_TO_DETAILED_TARGET_DEVICE_NAME_MAP = defaultdict(lambda: ("", []), {})
 
 
 def init_environment(_config):
-    init_cleanup()
     global CURRENT_TARGET_DEVICE_DICT
     # additional constant CURRENT_TARGET_DEVICE_DICT needs to be used due to being unable to read
     # current_target_device_dict from config when using xdist=0
     _config.current_target_device_dict = CURRENT_TARGET_DEVICE_DICT
+
+    if not machine_is_reserved_for_test_session:
+        return
+    init_cleanup()
 
 
 def init_cleanup():
@@ -137,7 +141,7 @@ def cleanup_ovms_processes():
 
 
 def clear_ovms_capi_artifacts():
-    if not cleanup_env_on_startup:
+    if not (cleanup_env_on_startup and machine_is_reserved_for_test_session):
         return
     proc = Process()
     proc.disable_check_stderr()
