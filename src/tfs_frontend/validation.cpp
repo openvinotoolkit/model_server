@@ -166,7 +166,7 @@ Status RequestValidator<TFSRequestType, TFSInputTensorType, ValidationChoice::IN
             proto.tensor_shape().dim().begin(), proto.tensor_shape().dim().end(),
             [](const auto& d) { return d.size(); }, expectedValueCount)) {
         std::stringstream ss;
-        ss << "Shape dimensions overflow size_t; input name: " << getCurrentlyValidatedTensorName();
+        ss << "Shape dimensions are too large; input name: " << getCurrentlyValidatedTensorName();
         const std::string details = ss.str();
         SPDLOG_DEBUG("[servable name: {} version: {}] Invalid content size of tensor proto - {}", servableName, servableVersion, details);
         return Status(StatusCode::INVALID_CONTENT_SIZE, details);
