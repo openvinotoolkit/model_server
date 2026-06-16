@@ -244,11 +244,11 @@ This workflow preserves the OpenWebUI demo's documentation-first philosophy whil
 ## Implementation Roadmap
 
 ### Phase 1: Project Skeleton
-- [ ] Create upstream demo directory structure.
-- [ ] Create README skeleton.
-- [ ] Add .env.example.
-- [ ] Add .gitignore.
-- [ ] Create screenshots directory.
+- [x] Create upstream demo directory structure.
+- [x] Create README skeleton.
+- [x] Add .env.example.
+- [x] Add .gitignore.
+- [x] Create screenshots directory.
 
 ### Phase 2: Deployment
 - [ ] Port and simplify docker-compose.yml (service scaffolding, patch target).
@@ -293,3 +293,12 @@ This section will be updated after every future migration step.
 - Agreed on hybrid architecture: `docker-compose.yml` as clean scaffolding + `deploy_model_ovms.sh` as first-class deployment helper.
 - Documented component responsibilities and recommended user workflow.
 - Updated `INTEGRATION_PLAN.md` to reflect agreed design decisions. No implementation code added.
+
+### Phase 1: Project Skeleton (Completed)
+
+- Created upstream demo directory structure at `model_server/demos/integration_with_OpenHands/`.
+- Added `README.md` with skeleton section headings (no content yet).
+- Added `.env.example` with HF_TOKEN and optional MODEL_ID template.
+- Added `.gitignore` for `.env`, screenshots, and `*.log` files.
+- Initialized `scripts/` and `screenshots/` directories (with `.gitkeep`).
+- Marked Phase 1 checklist items as complete.
