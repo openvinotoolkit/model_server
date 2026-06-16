@@ -11,12 +11,44 @@ let a user:
 - verify the connection with a direct API request and an OpenHands agent task;
 - understand the model, context-window, tool-calling, networking, and resource
   requirements that affect agent behavior; and
-- reproduce the setup primarily through documented Docker configuration and
-  environment variables.
+- reproduce the setup primarily through clear documentation.
 
-The deliverable should follow the lightweight, task-oriented style of
-`integration_with_OpenWebUI`. It should not transplant the prototype repository
-or become a separate application or benchmark framework inside OVMS.
+## Core Philosophy: Documentation-First
+
+This demo is **documentation-first**. The README.md is the authoritative source
+of truth and must contain all instructions necessary for a user to understand and
+reproduce the setup manually.
+
+**Helper artifacts are provided for convenience only, not as dependencies:**
+
+- **docker-compose.yml** — A reference configuration showing the service
+  architecture. The README explains each section and maps it to manual Docker
+  commands so users understand every step independently of Compose.
+
+- **scripts/deploy_model_ovms.sh** — A convenience helper that automates
+  repetitive tasks (model selection, tool parser configuration, health checks).
+  The README documents exactly what the script does internally.
+
+**Long-term direction:** These helper artifacts may be removed if OVMS
+maintainers prefer a pure documentation-based demo. The README must remain
+complete and useful without them, but the artifacts are provided as helpful
+references for users who prefer them.
+
+**Model storage:** Models, OpenVINO IR files, and downloaded artifacts are stored
+externally to the Git repository. The recommended workspace is:
+
+```text
+${HOME}/ovms-openhands/
+└── models/
+    └── <model-id>/
+        ├── openvino_model.xml
+        ├── openvino_model.bin
+        └── graph.pbtxt
+```
+
+The repository should never contain model files. When using the OVMS `--source_model`
+workflow, OVMS handles model retrieval and graph generation automatically. The
+README explains where files are created and how they are mounted.
 
 ## Architecture of `integration_with_OpenWebUI`
 
@@ -167,16 +199,26 @@ copied verbatim into the OVMS demo.
   demo should prefer current OVMS-native model preparation and a small number of
   clearly documented configuration choices.
 
-## Initial Migration Direction
+## Updated Migration Direction
 
-The upstream demo follows a hybrid approach:
+The upstream demo follows a **documentation-first approach**:
 
-- **docker-compose.yml** provides clean service scaffolding and serves as a patch target
-- **deploy_model_ovms.sh** is a first-class deployment helper that encapsulates tool-parser resolution, model normalization, compose patching, and health-wait logic
-- **README.md** is the primary user interface, guiding users through the recommended workflow
+- **README.md** is the authoritative source of truth and primary deliverable (Section 1-4 implemented)
+- **docker-compose.yml** is a reference configuration showing the service architecture
+- **scripts/deploy_model_ovms.sh** is a convenience helper that automates repetitive tasks
+- Models are stored externally to the Git repository
 - Benchmarking, telemetry, and experimental tooling remain in the standalone prototype repository
 
-This balances upstream simplicity (clean, readable Compose) with operational knowledge preservation (script encodes hard-won lessons).
+**Key principle:** Users should be able to understand and reproduce the setup by
+following the README alone. Helper artifacts are provided for convenience and
+reference.
+
+**Long-term vision:** The helper artifacts (Compose and script) may be removed
+if OVMS maintainers prefer a pure documentation-based demo. The README must
+remain complete and useful without them, but the artifacts are helpful references
+for users who prefer them.
+
+**Current status:** README Sections 1-4 (Overview, Architecture, Prerequisites, Preparing the Model) have been implemented. The documentation now provides a complete foundation for understanding the integration and preparing models. Remaining sections (Quick Start, Verification, Troubleshooting, References) will be implemented in the next phase.
 
 ## Agreed Target Directory Structure
 
@@ -185,93 +227,164 @@ This is the current architectural target for the upstream demo.
 ```text
 demos/
 └── integration_with_OpenHands/
-  ├── README.md                    # Primary user documentation
-  ├── docker-compose.yml           # Infrastructure scaffolding & patch target
-  ├── .env.example                 # Configuration template (HF_TOKEN, etc.)
+  ├── README.md                    # Primary documentation (authoritative)
+  ├── docker-compose.yml           # Reference configuration (convenience)
   ├── scripts/
-  │   ├── deploy_model_ovms.sh    # First-class deployment helper
-  │   └── start_openhands.sh      # Optional lightweight helper (TBD in implementation)
-  ├── screenshots/                 # Visual verification guide
-  └── .gitignore
+  │   └── deploy_model_ovms.sh    # Convenience helper (not required)
+  └── screenshots/                 # Visual verification guide
 ```
 
-## Component Responsibilities
+**Model storage (external to Git repository):**
+```text
+${HOME}/ovms-openhands/
+└── models/
+    └── <model-id>/               # Downloaded/pulled OpenVINO models
+        ├── openvino_model.xml
+        ├── openvino_model.bin
+        └── graph.pbtxt
+```
 
-**docker-compose.yml:**
-- Service scaffolding (ovms-llm, openhands)
-- Image definitions, port publishing, network definition
-- Docker socket mount for OpenHands runtime sandboxes
-- Persistent volume for OpenHands settings
-- Serves as a patch target for `deploy_model_ovms.sh`
+**What is NOT included in upstream demo:**
+- Benchmarking code
+- Telemetry collection
+- Experimental configurations
+- Model caches or artifacts in the repository
+- Prototype-specific development tooling
+- `.env.example` or `.gitignore` (environment variables are used directly; models are external)
 
-**deploy_model_ovms.sh:**
-- Model family normalization (HF model ID → local name)
-- Tool parser resolution (model-family → parser mapping)
-- `ovms_config.json` generation with aligned paths
-- `docker-compose.yml` patching (command block, LLM_MODEL)
-- HF_TOKEN injection into OVMS container environment
-- Deployment orchestration (`docker compose up -d`)
-- Health-wait logic with dual signals (logs + REST endpoint)
-- Diagnostics on failure
+## Component Roles
 
-**README.md:**
-- Architecture overview and diagram
-- Prerequisites (Docker, HF_TOKEN)
-- Recommended workflow (step-by-step)
-- Verification and troubleshooting
-- Supported model families reference
+### README.md (Authoritative)
 
-**start_openhands.sh (optional, TBD during implementation):**
-- Lightweight OpenHands launcher
-- Must not duplicate deployment logic from `deploy_model_ovms.sh`
-- Exact responsibilities to be determined during implementation review
+The README is the primary deliverable and must be complete. It explains:
 
-**Prototype repository retains:**
+- Architecture overview with diagrams
+- How OVMS and OpenHands interact over the OpenAI API
+- Prerequisites (Docker, HF_TOKEN, hardware)
+- Model preparation options (OVMS `--pull` workflow)
+- Manual deployment steps (Docker commands without Compose)
+- docker-compose.yml reference (what each section does)
+- deploy_model_ovms.sh reference (what the script automates)
+- Verification workflow (curl tests, OpenHands agent task)
+- Troubleshooting common issues
+- Supported model families and tool parser requirements
+
+**Key principle:** A user should be able to set up the integration by reading
+the README alone, without using the helper artifacts.
+
+### docker-compose.yml (Static Reference Configuration)
+
+Provided as a static reference implementation showing the complete service
+architecture. The file:
+
+- Uses Docker Compose environment variable substitution for runtime configuration
+- Consumes environment variables exported by the helper script or set manually
+- Relies on OVMS `--source_model` workflow for model download and graph generation
+- Does NOT require runtime patching or placeholder replacement
+- Serves as a reference implementation of the manual Docker commands
+
+The README:
+- Explains each service (ovms-llm, openhands)
+- Maps Compose sections to equivalent Docker CLI commands
+- Documents the required environment variables and their purposes
+- Explains volume mounts and networking
+- Shows how to achieve the same result without Compose
+
+**Status:** Reference and convenience artifact. May be removed in favor of pure
+documentation without reducing the value of the README.
+
+### scripts/deploy_model_ovms.sh (Convenience Helper)
+
+Automates repetitive tasks for user convenience:
+
+- Parses model and deployment arguments (model_id, device, parser)
+- Validates prerequisites (Docker, docker compose, HF_TOKEN)
+- Normalizes model names for filesystem safety
+- Resolves tool parsers based on model family
+- Prepares external model workspace (`${HOME}/ovms-openhands/models`)
+- Exports runtime environment variables for docker-compose.yml
+- Launches `docker compose up -d` with the static compose file
+- Waits for OVMS health via `/v1/config` polling
+- Prints diagnostics and equivalent manual workflow
+
+The script:
+- Does NOT patch or modify docker-compose.yml at runtime
+- Does NOT rewrite configuration files
+- Is a thin wrapper around the manual README workflow
+- Serves as a reference for users who prefer automation
+
+The README documents exactly what this script does so users understand the
+automation or can perform steps manually.
+
+**Status:** Convenience and reference artifact. May be removed in favor of pure
+documentation without reducing the value of the README.
+
+### Prototype Repository Retains
+
+The standalone prototype repository continues to host:
+
 - Benchmark harness and comparison tools
 - Telemetry collection and log parsing
-- Historical experiments and alternative configurations
+- Historical experiments and configurations
+- Development/validation workflows
 
 ## Recommended User Workflow
 
-1. **Configure prerequisites** — Set `HF_TOKEN` in `.env` or environment
+The README should present two equivalent paths to the same result:
+
+### Path A: Using Helper Artifacts (Convenience)
+
+1. **Configure prerequisites** — Set `HF_TOKEN` in environment
 2. **Run deployment script** — `./scripts/deploy_model_ovms.sh <model_id>`
 3. **Wait for successful deployment** — Script confirms OVMS health
 4. **Verify OVMS** — Direct `curl` test to `/v3/chat/completions`
 5. **Use OpenHands** — Open web UI, create agent task
 
-This workflow preserves the OpenWebUI demo's documentation-first philosophy while using the deployment script to encapsulate non-trivial operational knowledge.
+### Path B: Manual Setup (Documentation-Driven)
+
+1. **Configure prerequisites** — Set `HF_TOKEN` in environment
+2. **Prepare model workspace** — Create external model directory
+3. **Deploy OVMS** — Use Docker CLI or modified Compose
+4. **Verify OVMS** — Direct `curl` test
+5. **Configure OpenHands** — Set LLM_BASE_URL and LLM_MODEL
+6. **Use OpenHands** — Open web UI, create agent task
+
+**Both paths achieve the same result.** The helper artifacts automate repetitive
+steps but are not required. The README must document both approaches.
 
 ## Implementation Roadmap
 
 ### Phase 1: Project Skeleton
 - [x] Create upstream demo directory structure.
 - [x] Create README skeleton.
-- [x] Add .env.example.
-- [x] Add .gitignore.
-- [x] Create screenshots directory.
+- [ ] Add placeholder for screenshots (to be captured during validation).
 
-### Phase 2: Deployment
-- [ ] Port and simplify docker-compose.yml (service scaffolding, patch target).
-- [ ] Port and simplify deploy_model_ovms.sh (tool parser logic, patching, health-wait).
-- [ ] Review start_openhands.sh responsibilities and simplify if included (optional, must not duplicate deploy_model_ovms.sh).
+### Phase 2: Helper Artifacts (Reference)
+- [x] Implement docker-compose.yml as static reference configuration.
+- [x] Implement scripts/deploy_model_ovms.sh as convenience helper.
 
-### Phase 3: Documentation
-- [ ] Expand README with architecture overview.
-- [ ] Add setup instructions.
-- [ ] Add verification workflow.
+### Phase 3: Documentation (Primary Deliverable)
+- [x] Expand README with architecture overview and diagrams.
+- [ ] Document manual setup workflow (Docker CLI commands).
+- [ ] Document docker-compose.yml reference (what each section does).
+- [x] Document deploy_model_ovms.sh reference (what the script does) - conceptual overview in Section 4
+- [x] Ensure README can standalone without helpers - reinforced in Overview and Section 4
+- [ ] Add verification workflow (curl tests, OpenHands agent task).
 - [ ] Add troubleshooting section.
-- [ ] Capture screenshots.
+- [x] Document model families and tool parser requirements - included in Section 4
+- [ ] Capture screenshots for visual verification.
 
 ### Phase 4: Validation
+- [ ] Test manual setup workflow (README-only, no helpers).
+- [ ] Test helper artifact workflow (Compose + script).
 - [ ] Fresh clone validation.
-- [ ] docker compose up validation.
 - [ ] OVMS API verification.
 - [ ] OpenHands agent task verification.
-- [ ] Final documentation review.
+- [ ] Final documentation review for completeness.
 
 ## Migration Log
 
-This section will be updated after every future migration step.
+This section tracks significant decisions and changes to the integration plan.
 
 ### Step 0: Architecture Inspection and Planning
 
@@ -286,19 +399,108 @@ This section will be updated after every future migration step.
 - Created this planning document. No implementation code or configuration was
   added.
 
-### Step 1: Architecture Re-evaluation After deploy_model_ovms.sh Review
+### Step 1: Architecture Re-evaluation (Initial Approach)
 
-- Reviewed `deploy_model_ovms.sh` and identified its encapsulation of non-trivial operational knowledge (tool parser resolution, model normalization, compose patching, health-wait logic).
-- Re-evaluated initial assumption of static `docker-compose.yml` approach.
-- Agreed on hybrid architecture: `docker-compose.yml` as clean scaffolding + `deploy_model_ovms.sh` as first-class deployment helper.
+- Reviewed `deploy_model_ovms.sh` and identified its encapsulation of non-trivial
+  operational knowledge (tool parser resolution, model normalization, health-wait
+  logic).
+- Agreed on hybrid architecture: `docker-compose.yml` as scaffolding +
+  `deploy_model_ovms.sh` as deployment helper.
 - Documented component responsibilities and recommended user workflow.
-- Updated `INTEGRATION_PLAN.md` to reflect agreed design decisions. No implementation code added.
+
+### Step 2: Philosophy Re-Alignment (OVMS Mentor Feedback)
+
+**Major directional change based on OVMS maintainer feedback:**
+
+- Shifted to **documentation-first philosophy** — README.md is the authoritative
+  source of truth, not the helper scripts.
+- **Downgraded helper artifacts:**
+  - `docker-compose.yml` → Reference configuration only
+  - `deploy_model_ovms.sh` → Convenience helper only
+- **Established external model storage:** Models stored in user-local directory
+  (e.g., `${HOME}/ovms-openhands/models`), never in the Git repository.
+- **Clarified long-term direction:** Helper artifacts may be removed; README must
+  be complete without them.
+- **Updated repository structure:** Simplified to README, reference configs,
+  convenience script, and screenshots only.
+- **No migration of:** Benchmarking code, telemetry, experiments, or model caches.
+
+**Implementation impact:**
+- README must document manual setup workflow equivalent to using helpers.
+- docker-compose.yml is reference material, not a required component.
+- deploy_model_ovms.sh is optional automation, not the primary interface.
+- Users should be able to succeed by following README documentation alone.
+
+### Step 3: Architectural Simplification
+
+Simplified the deployment workflow by removing runtime docker-compose patching:
+
+**Design changes:**
+- `docker-compose.yml` is now a static reference configuration.
+- Runtime configuration uses Docker Compose environment variable substitution.
+- The helper script exports environment variables rather than patching YAML.
+- OVMS `--source_model` handles model download and graph generation.
+
+**Rationale:**
+- Better aligns with the documentation-first philosophy.
+- Keeps helper artifacts as optional convenience implementations.
+- Makes the manual workflow more transparent (no hidden patching logic).
+- Leverages Docker Compose native capabilities instead of custom logic.
+
+**Implementation:**
+- Replaced compose placeholders with `${VAR}` environment variable references.
+- Updated `deploy_model_ovms.sh` to export runtime configuration.
+- Removed any in-place file modification or patching logic.
+- Script now prints the manual equivalent for user transparency.
 
 ### Phase 1: Project Skeleton (Completed)
 
+Architectural milestone:
 - Created upstream demo directory structure at `model_server/demos/integration_with_OpenHands/`.
-- Added `README.md` with skeleton section headings (no content yet).
-- Added `.env.example` with HF_TOKEN and optional MODEL_ID template.
-- Added `.gitignore` for `.env`, screenshots, and `*.log` files.
-- Initialized `scripts/` and `screenshots/` directories (with `.gitkeep`).
-- Marked Phase 1 checklist items as complete.
+- Established documentation-first philosophy and component roles.
+- Added `README.md` with skeleton section headings.
+- Prepared `scripts/` and `screenshots/` directories for later implementation.
+- Set foundation for Phase 2 (helper artifacts) and Phase 3 (documentation expansion).
+
+### Phase 2: Helper Artifacts (Completed)
+
+Implementation milestone:
+- Implemented `docker-compose.yml` as static reference configuration using environment
+  variable substitution for runtime configuration.
+- Implemented `scripts/deploy_model_ovms.sh` as optional convenience helper that exports
+  runtime configuration and launches the static compose file.
+- Adopted OVMS `--source_model` workflow for automatic model download and graph generation.
+- Removed runtime docker-compose patching in favor of Docker Compose native substitution.
+- Established external model storage at `${HOME}/ovms-openhands/models`.
+- Set foundation for Phase 3 (README documentation).
+
+### Phase 3: README Documentation - Sections 1-4 (Completed)
+
+Documentation milestone:
+- Implemented README Section 1 (Overview) with introduction to OpenHands, OVMS backend suitability,
+  and documentation-first philosophy statement.
+- Implemented README Section 2 (Architecture) with ASCII diagram, component descriptions,
+  request flow explanation, and OpenHands-specific configuration requirements.
+- Implemented README Section 3 (Prerequisites) with system requirements, network/port usage table,
+  and external model storage location documentation.
+- Implemented README Section 4 (Preparing the Model) with model selection guidance, tool parser
+  explanation, `--source_model` workflow documentation, and conceptual overview of helper script behavior.
+
+**Design principles preserved:**
+- README.md remains the authoritative source of truth; helper artifacts are documented as optional.
+- No new mandatory dependencies or unsupported workflows were introduced.
+- Helper scripts are presented as convenience tools rather than required setup mechanisms.
+- All commands, environment variables, and workflows are consistent with existing implementation.
+
+**Consistency with implementation:**
+- Environment variables (MODEL_ID, LOCAL_NAME, TARGET_DEVICE, TOOL_PARSER, MODEL_CACHE_DIR, HF_TOKEN)
+  match docker-compose.yml and deploy_model_ovms.sh.
+- Port documentation (8000, 9000, 3000) matches the compose configuration.
+- Model storage location (${HOME}/ovms-openhands/models) matches the helper script defaults.
+- Tool parser mappings (Qwen→qwen, Llama3/Mistral→hermes3) match the script resolution logic.
+- OVMS `--source_model` workflow is documented as the recommended approach.
+
+**Foundation for next phase:**
+- README structure is now substantially expanded beyond skeleton.
+- Architecture, prerequisites, and model preparation are fully documented.
+- Remaining sections (Quick Start, Verification, Troubleshooting, References) are ready for implementation.
