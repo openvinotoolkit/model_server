@@ -185,7 +185,7 @@ pipeline {
                 script {
                   dir ('internal_tests'){ 
                     checkout scmGit(
-                    branches: [[name: 'develop']],
+                    branches: [[name: '64f791fa3deb0591bd073a5a89c5aaedc1fc40ba']],
                     userRemoteConfigs: [[credentialsId: 'workflow-lab',
                     url: 'https://github.com/intel-innersource/frameworks.ai.openvino.model-server.tests.git']])
                     sh "pwd"
