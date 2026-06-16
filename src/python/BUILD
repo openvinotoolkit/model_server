@@ -336,11 +336,20 @@ cc_import(
 )
 
 alias(
-    name = "libovmspython",
+    name = "libovmspython_select",
     actual = select({
         "//src:windows": ":libovmspython_windows",
         "//conditions:default": ":libovmspython_unix",
     }),
+    visibility = ["//visibility:private"],
+)
+
+ovms_cc_library(
+    name = "libovmspython",
+    deps = select({
+        "//src:windows": [":libovmspython_windows"],
+        "//conditions:default": [":libovmspython_unix"],
+    }) + PYBIND_HEADERS_ONLY,
     visibility = ["//visibility:public"],
 )
 

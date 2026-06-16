@@ -42,17 +42,11 @@ enum class PipelineType {
 class Status;
 class GenAiServable;
 struct GenAiServableProperties;
-struct ExtraGenerationInfo;
 
 class GenAiServableInitializer {
 public:
     virtual ~GenAiServableInitializer() = default;
     static void loadChatTemplate(std::shared_ptr<GenAiServableProperties> properties, const std::string& chatTemplateDirectory);
-#if (PYTHON_DISABLE == 0)
-    // Use Python Jinja module for template processing
-    static void loadPyTemplateProcessor(std::shared_ptr<GenAiServableProperties> properties, const ExtraGenerationInfo& extraGenInfo);
-    static ExtraGenerationInfo readExtraGenerationInfo(std::shared_ptr<GenAiServableProperties> properties, const std::string& chatTemplateDirectory);
-#endif
     /*
     initialize method implementation MUST fill servable with all required properties i.e. pipeline, tokenizer, configs etc. based on mediapipe node options.
     It is strictly connected with the servable, so implementation of this method in a derived class should be aware of the specific servable class structure

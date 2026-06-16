@@ -18,13 +18,7 @@
 #include <string>
 #include <utility>
 
-#pragma warning(push)
-#pragma warning(disable : 4005 4309 6001 6385 6386 6326 6011 6246 4456)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#include "mediapipe/framework/calculator_framework.h"
-#pragma GCC diagnostic pop
-#pragma warning(pop)
+#include "src/logging.hpp"
 
 #pragma warning(push)
 #pragma warning(disable : 6326 28182 6011 28020)
@@ -79,10 +73,10 @@ bool PyJinjaTemplateProcessor::applyChatTemplate(PyJinjaTemplateProcessor& templ
         output = std::move(result);
         return true;
     } catch (const pybind11::error_already_set& e) {
-        LOG(INFO) << "Error occurred when applying chat template: " << e.what();
+        SPDLOG_INFO("Error occurred when applying chat template: {}", e.what());
         output = "Unexpected error occurred when applying chat template";
     } catch (...) {
-        LOG(INFO) << "Unexpected error occurred when applying chat template";
+        SPDLOG_INFO("Unexpected error occurred when applying chat template");
         output = "Unexpected error occurred when applying chat template";
     }
     return false;

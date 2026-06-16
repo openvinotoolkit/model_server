@@ -22,10 +22,7 @@ ovms_cc_library(
     srcs = ["http_llm_calculator.cc",
             "llm_node_initializer.cpp"],
     deps = select({
-            "//:not_disable_python": [
-                ":py_jinja_template_processor_header",
-                ":py_jinja_template_processor",
-            ],
+            "//:not_disable_python": [],
             "//:disable_python": []
         }) + [
         "//third_party:openvino",
@@ -319,9 +316,9 @@ ovms_cc_library(
             "language_model/legacy/legacy_executor.cpp",
             "visual_language_model/legacy/servable.cpp",
             "visual_language_model/legacy/servable_initializer.cpp",
-            "visual_language_model/legacy/legacy_executor.cpp"],
+                "visual_language_model/legacy/legacy_executor.cpp"],
     deps = select({
-            "//:not_disable_python": [":py_jinja_template_processor_header"],
+                "//:not_disable_python": [],
             "//:disable_python": []
         }) + [
         "//third_party:openvino",
@@ -347,6 +344,7 @@ ovms_cc_library(
         "//src:libovms_config",
         "//src:libovms_ov_utils",
         "//third_party:genai",
+        ":runtime_chat_template_loader",
     ],
     visibility = ["//visibility:public"],
 )
@@ -356,7 +354,7 @@ ovms_cc_library(
     hdrs = ["execution_context_utils.hpp"],
     srcs = ["execution_context_utils.cpp"],
     deps = select({
-            "//:not_disable_python": [":py_jinja_template_processor_header"],
+            "//:not_disable_python": [],
             "//:disable_python": []
         }) + [
         ":genai_servables",
@@ -365,6 +363,25 @@ ovms_cc_library(
         "//src:libovmsstatus",
     ],
     visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
+    name = "runtime_chat_template_loader",
+    hdrs = ["runtime_chat_template.hpp"],
+    srcs = ["runtime_chat_template.cpp"],
+    deps = [
+        "//src:libovmslogging",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+filegroup(
+    name = "py_jinja_srcs",
+    srcs = [
+        "py_jinja_template_processor.cpp",
+        "py_jinja_template_processor.hpp",
+    ],
+    visibility = ["//src/python:__pkg__"],
 )
 
 ovms_cc_library(
@@ -383,10 +400,9 @@ ovms_cc_library(
     name = "py_jinja_template_processor",
     hdrs = ["py_jinja_template_processor.hpp"],
     srcs = ["py_jinja_template_processor.cpp"],
-    deps = ["@mediapipe//mediapipe/framework:calculator_framework",
-            "//third_party:openvino",
-            "//src:libovmslogging",
-            "//src/python:utils",
+    deps = [
+        "//src:libovmslogging",
+        "//src/python:utils",
     ] + PYBIND_DEPS,
     visibility = ["//visibility:public"],
 )

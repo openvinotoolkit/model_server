@@ -33,9 +33,6 @@
 #include "../sse_utils.hpp"
 #include "apis/openai_api_handler.hpp"
 #include "io_processing/generation_config_builder.hpp"
-#if (PYTHON_DISABLE == 0)
-#include "py_jinja_template_processor.hpp"
-#endif
 
 namespace ovms {
 // Some pipelines internals rely on request_id, so for now we provide increasing ID
@@ -83,16 +80,6 @@ struct GenAiServableExecutionContext {
     GenerationPhase generationPhase = GenerationPhase::INPUT_TOKEN_PROCESSING;
 };
 
-struct ExtraGenerationInfo {
-    std::string bosTokenFromTokenizer;
-    std::string bosTokenIdFromTokenizer;
-    std::string eosTokenFromTokenizer;
-    std::string eosTokenIdFromTokenizer;
-    std::string chatTemplateFromTokenizer;
-    std::string chatTemplateDirectory;
-    bool isGgufModel;
-};
-
 struct GenAiServableProperties {
     // General configuration
     std::string modelsPath;
@@ -112,10 +99,6 @@ struct GenAiServableProperties {
     ov::genai::Tokenizer tokenizer;
     // Specific pipeline properties
     bool eagle3Mode = false;
-
-#if (PYTHON_DISABLE == 0)
-    PyJinjaTemplateProcessor templateProcessor;
-#endif
 };
 
 class GenAiServable {
