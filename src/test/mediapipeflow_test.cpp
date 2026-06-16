@@ -15,6 +15,7 @@
 //*****************************************************************************
 #include <chrono>
 #include <fstream>
+#include <limits>
 #include <memory>
 #include <set>
 #include <sstream>
@@ -939,6 +940,37 @@ TEST_F(MediapipeFlowImageInput, Float32_4Channels) {
     ASSERT_EQ(response.raw_output_contents_size(), 1);
     ASSERT_EQ(response.raw_output_contents()[0].size(), image.cols * image.rows * image.channels() * elementSize);
     ASSERT_EQ(0, memcmp(response.raw_output_contents()[0].data(), image.data, image.cols * image.rows * image.channels() * elementSize));
+}
+
+// Regression test: MediaPipe IMAGE path buffer size validation must use overflow-safe arithmetic.
+// kOverflowH * kChannels * sizeof(uint8_t) exceeds SIZE_MAX; the server must detect
+// the overflow and reject the request with INVALID_ARGUMENT.
+TEST_F(MediapipeFlowImageInput, OverflowShapeRejectedAsInvalidContentSize) {
+    constexpr int64_t kChannels = 2LL;
+    // Each dim ~2^62; product ~2^124 overflows size_t.
+    constexpr int64_t kOverflowH = std::numeric_limits<int64_t>::max() / 2;
+    constexpr int64_t kOverflowW = std::numeric_limits<int64_t>::max() / 2;
+    // What naive unchecked arithmetic produces (wraps around SIZE_MAX).
+    constexpr size_t kWrappedExpectedSize =
+        static_cast<size_t>(kOverflowH) * static_cast<size_t>(kOverflowW) * static_cast<size_t>(kChannels) * sizeof(uint8_t);
+
+    const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
+    KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
+    ::KFSRequest request;
+    ::KFSResponse response;
+    request.mutable_model_name()->assign("mediapipeImageInput");
+
+    auto* input = request.add_inputs();
+    input->set_name("in");
+    input->set_datatype("UINT8");
+    input->add_shape(kOverflowH);
+    input->add_shape(kOverflowW);
+    input->add_shape(kChannels);
+
+    std::string* content = request.add_raw_input_contents();
+    content->assign(kWrappedExpectedSize, 'A');
+
+    ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::INVALID_ARGUMENT);
 }
 
 class MediapipeFlowImageInputThreeChannels : public MediapipeFlowImageInput {};

@@ -13,6 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <limits>
 #include <memory>
 #include <optional>
 #include <string>
@@ -1672,4 +1673,61 @@ TEST_F(HttpRestApiHandlerTest, serverMetadata) {
     doc.Parse(response.c_str());
     ASSERT_EQ(std::string(doc["name"].GetString()), PROJECT_NAME);
     ASSERT_EQ(std::string(doc["version"].GetString()), PROJECT_VERSION);
+}
+
+// binary_data_size=-1 must be rejected. Without a sign check the int64_t value
+// is silently cast to SIZE_MAX, and the server would accept a request claiming
+// to carry SIZE_MAX bytes of binary data.
+TEST_F(HttpRestApiHandlerTest, binaryInputsNegativeBinaryDataSizeParameterRejected) {
+    // No trailing binary data — this is a pure parameter-validation test.
+    std::string request_body = "{\"inputs\":[{\"name\":\"b\",\"shape\":[1,4],\"datatype\":\"INT8\","
+                               "\"parameters\":{\"binary_data_size\":-1}}]}";
+
+    ::KFSRequest grpc_request;
+    int inferenceHeaderContentLength = static_cast<int>(request_body.size());
+    auto status = HttpRestApiHandler::prepareGrpcRequest(
+        modelName, modelVersion, request_body, grpc_request, inferenceHeaderContentLength);
+    EXPECT_EQ(status, ovms::StatusCode::REST_BINARY_DATA_SIZE_PARAMETER_INVALID) << status.string();
+}
+
+// Two inputs: first consumes 1 byte (offset becomes 1), second has binary_data_size=-1.
+// Without a sign check: offset(1) + SIZE_MAX wraps to 0, the bounds check passes,
+// and the server tries to allocate SIZE_MAX bytes — crash / std::bad_alloc.
+// A single input would not expose this because offset=0 and 0+SIZE_MAX > any_buffer
+// is always true, so 2 inputs are the minimum to trigger the wrap-around.
+TEST_F(HttpRestApiHandlerTest, binaryInputsOffsetAdditionOverflowRejected) {
+    std::string binaryData(1, 'A');  // 1 byte consumed by input 1; offset becomes 1
+    std::string request_body =
+        "{\"inputs\":["
+        "{\"name\":\"in1\",\"shape\":[1,1],\"datatype\":\"INT8\",\"parameters\":{\"binary_data_size\":1}},"
+        "{\"name\":\"in2\",\"shape\":[1,1],\"datatype\":\"INT8\",\"parameters\":{\"binary_data_size\":-1}}"
+        "]}";
+    request_body += binaryData;
+
+    ::KFSRequest grpc_request;
+    int inferenceHeaderContentLength = static_cast<int>(request_body.size() - binaryData.size());
+    auto status = HttpRestApiHandler::prepareGrpcRequest(
+        modelName, modelVersion, request_body, grpc_request, inferenceHeaderContentLength);
+    EXPECT_EQ(status, ovms::StatusCode::REST_BINARY_DATA_SIZE_PARAMETER_INVALID) << status.string();
+}
+
+// Shape [65536, 65536] with FP32 declares ~17 GB of data. Without overflow-safe
+// arithmetic the product 65536*65536 = 2^32 wraps the int32 accumulator to 0,
+// so the server silently accepts 0 bytes for a ~17 GB tensor.
+TEST_F(HttpRestApiHandlerTest, binaryInputsOverflowShapeRejected) {
+    // 65536 fits in int32, so the JSON parser accepts it as a shape dim.
+    constexpr int64_t kOverflowDim = 65536LL;
+    constexpr size_t kWrappedSize = 0;  // what naive int32 arithmetic produces
+    std::string binaryData(kWrappedSize, '\x01');
+    // No "binary_data_size" parameter → calculateBinaryDataSize() is invoked.
+    std::string request_body = "{\"inputs\":[{\"name\":\"b\",\"shape\":[" +
+                               std::to_string(kOverflowDim) + "," + std::to_string(kOverflowDim) +
+                               "],\"datatype\":\"FP32\"}]}";
+    request_body += binaryData;
+
+    ::KFSRequest grpc_request;
+    int inferenceHeaderContentLength = static_cast<int>(request_body.size() - binaryData.size());
+    auto status = HttpRestApiHandler::prepareGrpcRequest(
+        modelName, modelVersion, request_body, grpc_request, inferenceHeaderContentLength);
+    EXPECT_NE(status, ovms::StatusCode::OK) << status.string();
 }
