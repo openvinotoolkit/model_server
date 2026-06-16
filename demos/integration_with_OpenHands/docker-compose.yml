@@ -12,31 +12,29 @@ services:
       - "8000:8000"  # REST API
       - "9000:9000"  # gRPC API
     volumes:
-      # Model repository - OVMS will materialize models here on --source_model pull
-      - ./docker/models:/models:rw
-      # OVMS configuration file
-      - ./configs/ovms_config.json:/config/ovms_config.json:ro
+      # Model cache directory - OVMS will materialize models here on --source_model pull
+      # Defaults to ${HOME}/ovms-openhands/models if not set
+      - ${MODEL_CACHE_DIR:-./docker/models}:/models:rw
     environment:
       # Hugging Face token for gated models.
-      # Set via environment variable or patch with deploy_model_ovms.sh.
-      HF_TOKEN: ${HF_TOKEN:-PLACEHOLDER_HF_TOKEN}
+      HF_TOKEN: ${HF_TOKEN:-}
     command:
       - --model_repository_path
       - /models
       - --source_model
-      - PLACEHOLDER_MODEL_ID
+      - ${MODEL_ID}
       - --model_name
-      - PLACEHOLDER_LOCAL_NAME
+      - ${LOCAL_NAME}
       - --task
       - text_generation
       - --target_device
-      - PLACEHOLDER_DEVICE
+      - ${TARGET_DEVICE}
       - --port
       - "9000"
       - --rest_port
       - "8000"
       - --tool_parser
-      - PLACEHOLDER_PARSER
+      - ${TOOL_PARSER}
     networks:
       - ovms-net
     restart: unless-stopped
@@ -55,8 +53,7 @@ services:
       # OVMS OpenAI-compatible endpoint
       LLM_BASE_URL: http://ovms-llm:8000/v3
       # Model identifier - must include 'openai/' prefix for OpenHands.
-      # Patched by deploy_model_ovms.sh to: openai/<LOCAL_NAME>
-      LLM_MODEL: PLACEHOLDER_MODEL_NAME
+      LLM_MODEL: openai/${LOCAL_NAME}
       # OpenHands requires a non-empty API key even though OVMS doesn't authenticate
       LLM_API_KEY: unused
       # Generation parameters
