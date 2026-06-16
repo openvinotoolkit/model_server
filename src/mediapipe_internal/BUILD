@@ -71,12 +71,7 @@ ovms_cc_library(
     srcs = [
         "graphqueue.cpp",
     ],
-    deps = select({
-            "//:not_disable_python": [
-                "//src/python:libovmspythonmodule",
-            ],
-            "//:disable_python": []
-        }) + [
+    deps = [
         ":graph_executor_constants",
         ":graph_side_packets",
         ":mediapipe_utils",
@@ -157,12 +152,7 @@ ovms_cc_library(
         "mediapipegraphexecutor.cpp",
         "mediapipegraphexecutor.hpp",
     ],
-    deps = select({
-            "//:not_disable_python": [
-                "//src/python:libovmspythonmodule",
-            ],
-            "//:disable_python": []
-        }) + [
+    deps = [
         ":graphqueue",
         ":mediapipegraphconfig",
         ":node_initializer",

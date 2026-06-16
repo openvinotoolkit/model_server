@@ -20,7 +20,7 @@ load("@aspect_bazel_lib//:e2e/copy_action/copy.bzl", "simple_copy_file")
 load("//:common_settings.bzl",
      "COMMON_STATIC_LIBS_LINKOPTS",
      "COMMON_FUZZER_COPTS", "COMMON_FUZZER_LINKOPTS",
-     "COMMON_LOCAL_DEFINES", "PYBIND_DEPS", "ovms_cc_library")
+    "COMMON_LOCAL_DEFINES", "PYBIND_HEADERS_ONLY", "PYBIND_DEPS", "ovms_cc_library")
 
 # Copts for the python shared library.  Same hardening flags as
 # LINUX_COMMON_STATIC_LIBS_COPTS but WITHOUT -fvisibility=hidden.
@@ -157,7 +157,7 @@ ovms_cc_library(
     name = "pythonnoderesources",
     hdrs = ["pythonnoderesources.hpp",],
     srcs = ["pythonnoderesources.cpp",],
-    deps = PYBIND_DEPS + [
+    deps = PYBIND_HEADERS_ONLY + [
         "@mediapipe//mediapipe/framework:calculator_framework",
         "//src:libovmslogging",
         "//src:libovmsstatus",
@@ -173,7 +173,7 @@ ovms_cc_library(
 ovms_cc_library(
     name = "pytensorovtensorconvertercalculator",
     srcs = ["pytensor_ovtensor_converter_calculator.cc",],
-    deps = PYBIND_DEPS + [
+    deps = PYBIND_HEADERS_ONLY + [
         "//third_party:openvino",
         "@mediapipe//mediapipe/framework:calculator_framework",
         "//src:libovmsprecision",
@@ -190,7 +190,7 @@ ovms_cc_library(
     name = "pythonexecutorcalculator",
     srcs = ["python_executor_calculator.cc",
             "python_node_initializer.cpp",],
-    deps = PYBIND_DEPS + [
+    deps = PYBIND_HEADERS_ONLY + [
         "//third_party:openvino",
         "@mediapipe//mediapipe/framework:calculator_framework",
         "ovmspytensor",
@@ -209,11 +209,29 @@ ovms_cc_library(
     name = "ovmspytensor",
     hdrs = ["ovms_py_tensor.hpp",],
     srcs = ["ovms_py_tensor.cpp",],
-    deps = PYBIND_DEPS,
+    deps = PYBIND_HEADERS_ONLY,
     include_prefix = "binding/python",
     visibility = ["//visibility:public"],
     alwayslink = 1,
     #data = [":pyovms.so"], #todo split to header?
+)
+
+ovms_cc_library(
+    name = "python_headers_only",
+    hdrs = [
+        "ovms_py_tensor.hpp",
+        "python_backend.hpp",
+        "pythonnoderesources.hpp",
+        "utils.hpp",
+    ],
+    deps = PYBIND_HEADERS_ONLY + [
+        "//src:cpp_headers",
+        "//src:libovmsstatus",
+        "//src/mediapipe_internal:mediapipe_utils",
+        "@mediapipe//mediapipe/framework:calculator_framework",
+        "pythonexecutorcalculator_cc_proto",
+    ],
+    visibility = ["//visibility:public"],
 )
 
 ovms_cc_library(
@@ -227,6 +245,7 @@ ovms_cc_library(
         "//src/mediapipe_internal:mediapipe_utils",
         "ovmspytensor",
         "pytensorovtensorconvertercalculator",
+        "pythonnoderesources",
         "pythonbackend",
         "pythonexecutorcalculator",
         "utils",

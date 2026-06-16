@@ -15,13 +15,19 @@
 #
 
 load("@mediapipe//mediapipe/framework/port:build_config.bzl", "mediapipe_cc_proto_library", "mediapipe_proto_library")
-load("//:common_settings.bzl", "ovms_cc_library", "PYBIND_DEPS")
+load("//:common_settings.bzl", "ovms_cc_library", "PYBIND_DEPS", "PYBIND_HEADERS_ONLY")
 
 ovms_cc_library(
     name = "llmcalculator",
     srcs = ["http_llm_calculator.cc",
             "llm_node_initializer.cpp"],
-    deps = [
+    deps = select({
+            "//:not_disable_python": [
+                ":py_jinja_template_processor_header",
+                ":py_jinja_template_processor",
+            ],
+            "//:disable_python": []
+        }) + [
         "//third_party:openvino",
         "@mediapipe//mediapipe/framework:calculator_framework",
         "@com_github_tencent_rapidjson//:rapidjson",
@@ -314,7 +320,10 @@ ovms_cc_library(
             "visual_language_model/legacy/servable.cpp",
             "visual_language_model/legacy/servable_initializer.cpp",
             "visual_language_model/legacy/legacy_executor.cpp"],
-    deps = [
+    deps = select({
+            "//:not_disable_python": [":py_jinja_template_processor_header"],
+            "//:disable_python": []
+        }) + [
         "//third_party:openvino",
         "@mediapipe//mediapipe/framework:calculator_framework",
         "@com_github_tencent_rapidjson//:rapidjson",
@@ -337,10 +346,8 @@ ovms_cc_library(
         "//src:libovms_systeminfo",
         "//src:libovms_config",
         "//src:libovms_ov_utils",
-        "//third_party:genai",] + select({
-        "//:disable_python": [],
-        "//:not_disable_python" : [":py_jinja_template_processor"],
-    }),
+        "//third_party:genai",
+    ],
     visibility = ["//visibility:public"],
 )
 
@@ -348,11 +355,26 @@ ovms_cc_library(
     name = "execution_context_utils",
     hdrs = ["execution_context_utils.hpp"],
     srcs = ["execution_context_utils.cpp"],
-    deps = [
+    deps = select({
+            "//:not_disable_python": [":py_jinja_template_processor_header"],
+            "//:disable_python": []
+        }) + [
         ":genai_servables",
         "//src/mediapipe_internal:graph_side_packets",
         "//src:libovmslogging",
         "//src:libovmsstatus",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
+    name = "py_jinja_template_processor_header",
+    hdrs = ["py_jinja_template_processor.hpp"],
+    deps = select({
+            "//:not_disable_python": PYBIND_HEADERS_ONLY,
+            "//:disable_python": []
+        }) + [
+        "//src/python:utils",
     ],
     visibility = ["//visibility:public"],
 )
