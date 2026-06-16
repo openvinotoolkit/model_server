@@ -1,6 +1,7 @@
 def image_build_needed = "false"
 def win_image_build_needed = "false"
 def client_test_needed = "false"
+def functional_tests_changed = "false"
 def export_models_changed = "false"
 def test_doc_files_linux = ""
 def test_doc_files_windows = ""
@@ -67,6 +68,9 @@ pipeline {
               }
               if (git_diff =~ /(\n|^)client/) {
                   client_test_needed = "true"
+              }
+              if (git_diff =~ /(\n|^)tests\/functional/) {
+                  functional_tests_changed = "true"
               }
               if (git_diff =~ /(\n|^)(demos\/common\/export_models\/|prepare_llm_models\.sh$)/) {
                   export_models_changed = "true"
@@ -297,7 +301,7 @@ pipeline {
               agent {
                 label "${agent_name_linux}"
               }
-              when { expression { image_build_needed == "true" } }
+              when { expression { image_build_needed == "true" || functional_tests_changed == "true" } }
               steps {
                 script {
                   dir ('internal_tests'){
