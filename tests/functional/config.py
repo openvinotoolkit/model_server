@@ -147,8 +147,11 @@ os.makedirs(path_to_mount, exist_ok=True)
 
 path_to_mount_cache = os.path.join(test_dir_cache, "saved_models")
 
-"""TT_MINIO_IMAGE_NAME - Docker image for Minio"""
-minio_image = os.environ.get("TT_MINIO_IMAGE_NAME", "minio/minio:latest")
+""" TT_MINIO_IMAGE_NAME - Docker image for Minio"""
+minio_image = os.environ.get(
+    "TT_MINIO_IMAGE_NAME",
+    f"{docker_registry}/minio/minio:latest" if docker_registry is not None else "minio/minio:latest",
+)
 
 """ TT_TARGET_DEVICE - list of devices separated by a comma "CPU,GPU,NPU" """
 target_devices = get_target_devices()
@@ -166,6 +169,9 @@ ports_pool_size = get_int("TT_PORTS_POOL_SIZE", None)
 
 """ TT_IS_NGINX_MTLS - Specify if given image is OVSA nginx mtls image. """
 is_nginx_mtls = get_bool("TT_IS_NGINX_MTLS", False)
+
+""" TT_FORCE_GENERATE_NEW_SSL_CERTIFICATES """
+force_generate_new_ssl_certs = get_bool("TT_FORCE_GENERATE_NEW_SSL_CERTIFICATES", True)
 
 """ TT_SKIP_TEST_IF_IS_NGINX_MTLS """
 skip_nginx_test = get_bool("TT_SKIP_TEST_IF_IS_NGINX_MTLS", True)

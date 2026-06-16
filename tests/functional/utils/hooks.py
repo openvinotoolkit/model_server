@@ -14,6 +14,7 @@
 # limitations under the License.
 #
 
+import itertools
 import os
 import shutil
 import sys
@@ -31,11 +32,14 @@ from tests.functional.config import (
     build_test_image,
     c_api_wrapper_dir,
     cleanup_env_on_startup,
+    force_generate_new_ssl_certs,
     global_tmp_dir_default,
     http_proxy,
     https_proxy,
+    is_nginx_mtls,
     no_proxy,
     ovms_c_repo_path,
+    ovms_file_locks_dir,
     machine_is_reserved_for_test_session,
     tmp_dir,
 )
@@ -43,8 +47,10 @@ from tests.functional.constants.os_type import get_host_os, OsType, UBUNTU
 from tests.functional.constants.os_version import os_type_to_base_image_binary_docker
 from tests.functional.constants.ovms import (
     BASE_OS_PARAM_NAME,
+    CURRENT_TARGET_DEVICE_DICT_ARGUMENT,
     OVMS_TYPE_PARAM_NAME,
     TARGET_DEVICE_PARAM_NAME,
+    TMP_REPOS_DIR_ARGUMENT,
     USES_MAPPING_PARAM_NAME,
 )
 from tests.functional.constants.ovms_images import (
@@ -73,7 +79,8 @@ from tests.functional.utils.environment_info import EnvironmentInfo
 from tests.functional.utils.logger import get_logger
 from tests.functional.utils.marks import MarkTestParameters
 from tests.functional.utils.process import PID_STATE_ZOMBIE, Process, get_pid_name, get_pid_status
-from tests.functional.utils.test_framework import get_test_object_prefix
+from tests.functional.utils.test_framework import change_dir_permissions, get_test_object_prefix, is_xdist_master
+from tests.functional.object_model.ovsa import OvsaCerts
 
 logger = get_logger(__name__)
 
@@ -143,6 +150,15 @@ def cleanup_docker_images():
             if test_object_prefix in image_tag:
                 docker_client.images.remove(image=image.id, force=True, noprune=False)
                 logger.info(f"Removed docker image: {image.id}")
+
+
+def cleanup_tmp_repos_dir():
+    try:
+        shutil.rmtree(config.tmp_repos_dir)
+    except PermissionError as e:
+        if get_host_os() == OsType.Windows and type(e) == PermissionError:
+            change_dir_permissions(config.tmp_repos_dir)
+            shutil.rmtree(config.tmp_repos_dir)
 
 
 def teardown_environment():
@@ -362,8 +378,44 @@ def prepare_ovms_package():
         setup_capi_wrapper(package_content)
 
 
+def get_docker_images(images_to_download):
+    if OsType.Windows in config.base_os:
+        return
+    docker_ovms_types = [
+        OvmsType.DOCKER, OvmsType.DOCKER_CMD_LINE, OvmsType.BINARY_DOCKER, OvmsType.CAPI_DOCKER
+    ]
+    if not any(_ovms_type in docker_ovms_types for _ovms_type in config.ovms_types):
+        return
+
+    images_to_download.add(config.minio_image)
+    for target_device, base_os in itertools.product(config.target_devices, config.base_os):
+        ovms_image = calculate_ovms_image_name(target_device, base_os)
+        if config.ovms_image_local:
+            OvmsInfo.get_local_image(ovms_image)
+        else:
+            images_to_download.add(ovms_image)
+    return images_to_download
+
+
+def download_docker_images():
+    images_to_download = set()
+    images_to_download = get_docker_images(images_to_download)
+
+    for image in images_to_download:
+        if image:
+            OvmsInfo.pull_latest_image(image)
+
+
 def download_resources_master():
     print("Download required resources")
+
+    download_docker_images()
+
+
+def init_ovms_config_retrieved_from_master(pytest_config):
+    config.tmp_repos_dir = pytest_config.workerinput[TMP_REPOS_DIR_ARGUMENT]
+    global CURRENT_TARGET_DEVICE_DICT
+    CURRENT_TARGET_DEVICE_DICT = pytest_config.workerinput[CURRENT_TARGET_DEVICE_DICT_ARGUMENT]
 
 
 def build_local_resources():
@@ -647,3 +699,66 @@ def mute_warnings():
     warnings.filterwarnings(
         action="ignore", message="`np.bool8` is a deprecated alias for `np.bool_`", category=DeprecationWarning
     )
+
+
+def setup_nginx():
+    if not is_nginx_mtls:
+        return
+    print("Setup ngnix certificates")
+    if is_xdist_master():
+        OvsaCerts.generate_ovsa_certs(skip_if_valid=not force_generate_new_ssl_certs)
+    OvsaCerts.init_ovsa_certs()
+
+
+def remove_ports_reservation(_config):
+    reservation_manager = getattr(_config, "reservation_manager", None)
+    if reservation_manager is None:
+        return
+    logger.info("Removing self reserved ports")
+    reservation_manager.independent.remove()
+
+    if machine_is_reserved_for_test_session:
+        # If machine is reserved, no other test session should active
+        # So clean dangling reservations (if any occurs during previous fatal errors).
+        # If machine never be reserved exclusively (ie. builder0x)
+        # you can clean dangling reservation manually by deleting files:
+        # `/tmp/reservation_manager-*-*-independent`
+        # (after ensuring no test session is active)
+        reservation_manager.independent.cleanup()
+
+
+def clear_lockfiles():
+    if not Path(ovms_file_locks_dir).exists():
+        return
+    for file in Path(ovms_file_locks_dir).iterdir():
+        print(f"Delete hanging lock: {str(file)}")  # logger could be unavailable by now
+        file.unlink()
+
+
+def parametrize_tests(metafunc):
+    if OVMS_TYPE_PARAM_NAME in metafunc.fixturenames:
+        parametrize_ovms_type(metafunc)
+
+    if USES_MAPPING_PARAM_NAME in metafunc.fixturenames:
+        parametrize_uses_mapping(metafunc)
+
+    if BASE_OS_PARAM_NAME in metafunc.fixturenames:
+        parametrize_base_os(metafunc)
+
+    if MarkTestParameters.MODEL_TYPE in metafunc.fixturenames:
+        parametrize_model_type(metafunc)
+    elif MarkTestParameters.ALL_MODELS in metafunc.fixturenames:
+        parametrize_all_models(metafunc)
+    elif MarkTestParameters.MANY_MODELS in metafunc.fixturenames:
+        parametrize_many_models(metafunc)
+    elif MarkTestParameters.ITERATION_INFO in metafunc.fixturenames:
+        parametrize_iteration_info(metafunc)
+    elif MarkTestParameters.INPUT_SHAPE in metafunc.fixturenames:
+        parametrize_input_shape(metafunc)
+    elif MarkTestParameters.PLUGIN_CONFIG in metafunc.fixturenames:
+        parametrize_plugin_config(metafunc)
+    elif TARGET_DEVICE_PARAM_NAME in metafunc.fixturenames:
+        parametrize_target_device(metafunc)
+
+    if MarkTestParameters.MODEL_AUX_TYPE in metafunc.fixturenames:
+        parametrize_model_aux_type(metafunc)
