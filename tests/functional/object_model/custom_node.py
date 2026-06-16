@@ -27,7 +27,6 @@ from tests.functional.utils.process import Process
 from tests.functional.config import custom_nodes_path, ovms_c_repo_path
 from ovms.constants.models import ModelInfo
 from tests.functional.constants.ovms import CurrentOvmsType
-from tests.functional.constants.ovms_type import OvmsType
 from tests.functional.constants.paths import Paths
 
 logger = get_logger(__name__)
@@ -46,10 +45,7 @@ class CustomNode(ModelInfo):
             self.filename = f"libcustom_node_{self.name}.so"
 
         if self.path is None:
-            if self.ovms_type == OvmsType.KUBERNETES:
-                self.path = os.path.join("/config", self.filename)
-            else:
-                self.path = os.path.join(Paths.CUSTOM_NODE_LIBRARIES_PATH_INTERNAL, self.name, self.filename)
+            self.path = os.path.join(Paths.CUSTOM_NODE_LIBRARIES_PATH_INTERNAL, self.name, self.filename)
 
     def get_config(self):
         config = {"name": self.name, "base_path": self.path}

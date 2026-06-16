@@ -129,22 +129,6 @@ class AbstractServingWrapper(metaclass=abc.ABCMeta):
             input_data = self.model.prepare_input_data(inference_request.batch_size)
         return input_data
 
-    def prepare_and_predict_stateful_request(self, input_objects: dict, sequence_ctrl=None,
-                                             sequence_id=None, timeout=900):
-        """
-            Prepares and predicts stateful request.
-            Parameters:
-                input_objects (dict): model inputs
-                sequence_ctrl (int): inference sequence control
-                sequence_id (int): inference sequence id
-                timeout (int): timeout
-            Returns:
-                result (Predict): prediction result
-        """
-        request = self.prepare_stateful_request(input_objects, sequence_ctrl, sequence_id)
-        result = self.predict_stateful_request(request, timeout)
-        return result
-
     def get_and_validate_status(self, model):
         """
             Validates and returns model status.
