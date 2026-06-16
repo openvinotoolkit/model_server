@@ -16,41 +16,63 @@
 
 import os
 import shutil
+import sys
 import warnings
 
 from collections import defaultdict
 from docker import errors as docker_errors
 from pathlib import Path
-
 from tests.functional import config
 from ovms.constants.models_library import ModelsLib
+from tests.functional.utils.download import wget_file
 from tests.functional.utils.reservation_manager.args import parse_args
 from tests.functional.utils.reservation_manager.manager import Manager as ReservationManager
 from tests.functional.config import (
+    build_test_image,
     c_api_wrapper_dir,
     cleanup_env_on_startup,
     global_tmp_dir_default,
+    http_proxy,
+    https_proxy,
+    no_proxy,
     ovms_c_repo_path,
     machine_is_reserved_for_test_session,
     tmp_dir,
 )
-from tests.functional.constants.os_type import get_host_os, OsType
+from tests.functional.constants.os_type import get_host_os, OsType, UBUNTU
+from tests.functional.constants.os_version import os_type_to_base_image_binary_docker
 from tests.functional.constants.ovms import (
     BASE_OS_PARAM_NAME,
     OVMS_TYPE_PARAM_NAME,
     TARGET_DEVICE_PARAM_NAME,
     USES_MAPPING_PARAM_NAME,
 )
-from tests.functional.constants.ovms_images import calculate_ovms_image_name
+from tests.functional.constants.ovms_images import (
+    calculate_ovms_binary_image_name,
+    calculate_ovms_capi_image_name,
+    calculate_ovms_test_image_name,
+    calculate_ovms_image_name,
+    get_ovms_calculated_images,
+    GPU_INSTALL_DRIVER_VERSION,
+    GPU_INSTALL_SCRIPTS,
+)
+from tests.functional.constants.ovms_type import (
+    OvmsType,
+    OVMS_BINARY_DEPENDENCIES,
+    OVMS_BINARY_PACKAGE_EXTENSIONS,
+    OVMS_BINARY_PACKAGE_NAME,
+    OVMS_CAPI_DEPENDENCIES,
+    OVMS_CAPI_TOOLS_DEPENDENCIES,
+)
 from tests.functional.constants.paths import Paths
-from tests.functional.constants.target_device import TargetDevice
+from tests.functional.constants.target_device import MAX_WORKERS_PER_TARGET_DEVICE, TargetDevice
 from tests.functional.object_model.ovms_info import OvmsInfo
 from tests.functional.utils.core import TmpDir
-from tests.functional.utils.docker import DockerClient, DockerContainer
+from tests.functional.utils.docker import DockerClient, DockerContainer, DOCKER_CONTAINER_TMP_PATH
 from tests.functional.utils.environment_info import EnvironmentInfo
 from tests.functional.utils.logger import get_logger
 from tests.functional.utils.marks import MarkTestParameters
-from tests.functional.utils.process import Process
+from tests.functional.utils.process import PID_STATE_ZOMBIE, Process, get_pid_name, get_pid_status
 from tests.functional.utils.test_framework import get_test_object_prefix
 
 logger = get_logger(__name__)
@@ -167,6 +189,188 @@ def setup_artifacts_dir():
                 shutil.rmtree(file)
             else:
                 file.unlink()
+
+
+def setup_capi_wrapper(package_content):
+    if OvmsType.CAPI not in config.ovms_types:
+        return
+    for _src, _dst in [
+        (Paths.OVMS_TEST_CAPI_WRAPPER_PYX, Path(package_content, "include")),
+        (Paths.OVMS_TEST_CAPI_WRAPPER_MAKEFILE, package_content),
+        (Paths.OVMS_TEST_CAPI_WRAPPER_SETUP, package_content),
+        (Paths.OVMS_TEST_CAPI_AUTOPXD_PY, Path(package_content, "include")),
+    ]:
+        shutil.copy(_src, _dst)
+
+    proc = Process()
+    proc.disable_check_stderr()
+
+    # Example:
+    # >>> sys.executable
+    # '/usr/local/ovms-test/.venv/bin/python3'
+    # >>> venv_path
+    # '/usr/local/ovms-test/.venv'
+    venv_path = str(Path(*Path(sys.executable).parts[:-2]))
+    _stdout = proc.run_and_check(f"PYVENV={venv_path} make", cwd=package_content)
+
+
+def download_binary_package(binary_package_src_file_path, binary_package_dst_file_path):
+    wget_file(binary_package_src_file_path, binary_package_dst_file_path)
+
+
+def get_binary_artifacts(
+    binary_package_src_file_path, binary_package_dst_path, ovms_binary_name=OVMS_BINARY_PACKAGE_NAME
+):
+    proc = Process()
+    proc.disable_check_stderr()
+    print(f"Preparing OVMS package: {binary_package_src_file_path}")
+    used_extensions = [extension for extension in OVMS_BINARY_PACKAGE_EXTENSIONS
+                       if binary_package_src_file_path.endswith(extension)]
+    if not used_extensions:
+        raise NotImplementedError(
+            f"OVMS binary supported only with .tar.gz or .zip formats. "
+            f"Current package name: {binary_package_src_file_path}"
+        )
+    ovms_binary_full_name = f"{ovms_binary_name}{used_extensions[0]}"
+
+    if binary_package_src_file_path.startswith("http"):
+        binary_package_dst_file_path = os.path.join(binary_package_dst_path, ovms_binary_full_name)
+        download_binary_package(binary_package_src_file_path, binary_package_dst_file_path)
+    else:
+        ovms_binary_src_path = os.path.realpath(os.path.expanduser(binary_package_src_file_path))
+        if not os.path.exists(binary_package_dst_path):
+            os.makedirs(binary_package_dst_path)
+        shutil.copy(ovms_binary_src_path, os.path.join(binary_package_dst_path, ovms_binary_full_name))
+    proc.run_and_check(f"tar -xf {ovms_binary_full_name}", cwd=binary_package_dst_path)
+    setupvars_script_dst = os.path.join(binary_package_dst_path, "ovms", "setupvars.bat")
+    if not os.path.exists(setupvars_script_dst):
+        shutil.copy2(config.setupvars_script_path, setupvars_script_dst)
+
+
+def run_docker_build_ovms_image(cmd, ovms_image_name, cwd, timeout=None):
+    print(f"Building {ovms_image_name} image using cmd: {cmd}")
+    proc = Process()
+    proc.disable_check_stderr()
+    code, stdout, stderr = proc.run_and_check_return_all(cmd, cwd=cwd, timeout=timeout)
+    assert (f"naming to {ovms_image_name}" in stderr) or (
+        f"Successfully tagged {ovms_image_name}" in stdout
+    ), f"Image was not built successfully; stderr: {stderr}"
+    print(f"Ovms-test image {ovms_image_name} successfully created")
+
+
+def get_ovms_capi_docker_build_cmd(ovms_image, base_os, dockerfile, ovms_binary_image_name):
+    base_image = config.base_image if config.base_image else os_type_to_base_image_binary_docker[base_os]
+    ovms_test_image = calculate_ovms_test_image_name(ovms_image) if build_test_image else base_image
+    target_device = TargetDevice.GPU if TargetDevice.GPU.lower() in ovms_image else TargetDevice.CPU
+    cmd = (
+        f"docker build -f {dockerfile} -t {ovms_binary_image_name} . "
+        f"--build-arg BASE_IMAGE={base_image} "
+        f"--build-arg OVMS_IMAGE={ovms_image} "
+        f"--build-arg OVMS_TEST_IMAGE={ovms_test_image} "
+        f"--build-arg OVMS_DEPENDENCIES='{OVMS_CAPI_DEPENDENCIES[base_os]}' "
+        f"--build-arg TOOLS_DEPENDENCIES='{OVMS_CAPI_TOOLS_DEPENDENCIES[target_device][base_os]}' "
+        f"--build-arg INSTALL_DRIVER_VERSION='{GPU_INSTALL_DRIVER_VERSION[base_os]}' "
+        f"--build-arg http_proxy={http_proxy} "
+        f"--build-arg https_proxy={https_proxy} "
+        f"--build-arg no_proxy={no_proxy} "
+    )
+    return cmd
+
+
+def get_ovms_binary_docker_build_cmd(ovms_image, base_os, dockerfile, ovms_binary_image_name):
+    base_image = config.base_image if config.base_image else os_type_to_base_image_binary_docker[base_os]
+    ovms_test_image = calculate_ovms_test_image_name(ovms_image) if build_test_image else base_image
+    cpu_extensions_path = Paths.ROOT_PATH_CPU_EXTENSIONS if build_test_image else DOCKER_CONTAINER_TMP_PATH
+    custom_loader_path = Paths.CUSTOM_LOADER_LIBRARIES_PATH_INTERNAL if build_test_image else DOCKER_CONTAINER_TMP_PATH
+    custom_nodes_path = Paths.CUSTOM_NODE_LIBRARIES_PATH_INTERNAL if build_test_image else DOCKER_CONTAINER_TMP_PATH
+    cmd = (
+        f"docker build -f {dockerfile} -t {ovms_binary_image_name} . "
+        f"--build-arg BASE_IMAGE={base_image} "
+        f"--build-arg OVMS_IMAGE={ovms_image} "
+        f"--build-arg OVMS_TEST_IMAGE={ovms_test_image} "
+        f"--build-arg OVMS_DEPENDENCIES='{OVMS_BINARY_DEPENDENCIES[base_os]}' "
+        f"--build-arg CPU_EXTENSIONS_PATH={cpu_extensions_path} "
+        f"--build-arg CUSTOM_LOADER_PATH={custom_loader_path} "
+        f"--build-arg CUSTOM_NODES_PATH={custom_nodes_path} "
+        f"--build-arg http_proxy={http_proxy} "
+        f"--build-arg https_proxy={https_proxy} "
+        f"--build-arg no_proxy={no_proxy} "
+    )
+    return cmd
+
+
+def build_ovms_binary_image():
+    ovms_c_artifacts = {_base_os: config.ovms_c_release_artifacts_path[index] for index, _base_os in enumerate(config.base_os)}
+
+    for ovms_image, base_os in get_ovms_calculated_images():
+        ovms_binary_dst_path = os.path.join(tmp_dir, "ovms_binary", base_os)
+        get_binary_artifacts(ovms_c_artifacts[base_os], ovms_binary_dst_path)
+
+        dockerfile = f"Dockerfile.{UBUNTU if UBUNTU in base_os else base_os}"
+        shutil.copy(
+            os.path.join(os.path.dirname(__file__), "ovms_binary_image", dockerfile),
+            ovms_binary_dst_path,
+        )
+
+        ovms_binary_image_name = calculate_ovms_binary_image_name(ovms_image)
+        cmd = get_ovms_binary_docker_build_cmd(ovms_image, base_os, dockerfile, ovms_binary_image_name)
+        run_docker_build_ovms_image(cmd, ovms_binary_image_name, cwd=ovms_binary_dst_path, timeout=None)
+
+
+def build_ovms_capi_image():
+    ovms_c_artifacts = {_base_os: config.ovms_c_release_artifacts_path[index] for index, _base_os in enumerate(config.base_os)}
+
+    for ovms_image, base_os in get_ovms_calculated_images():
+        ovms_capi_dst_path = os.path.join(tmp_dir, "ovms_capi", base_os)
+        get_binary_artifacts(ovms_c_artifacts[base_os], ovms_capi_dst_path)
+        if TargetDevice.GPU.lower() in ovms_image:
+            for gpu_install_script in GPU_INSTALL_SCRIPTS[base_os]:
+                shutil.copy(os.path.join(ovms_c_repo_path, gpu_install_script), ovms_capi_dst_path)
+        else:
+            for gpu_install_script in GPU_INSTALL_SCRIPTS[base_os]:
+                with open(os.path.join(ovms_capi_dst_path, gpu_install_script), "a"):
+                    pass
+
+        dockerfile = f"Dockerfile.{UBUNTU if UBUNTU in base_os else base_os}"
+        shutil.copy(
+            os.path.join(os.path.dirname(__file__), "ovms_capi_image", dockerfile),
+            ovms_capi_dst_path,
+        )
+
+        ovms_capi_image_name = calculate_ovms_capi_image_name(ovms_image)
+        cmd = get_ovms_capi_docker_build_cmd(ovms_image, base_os, dockerfile, ovms_capi_image_name)
+        run_docker_build_ovms_image(cmd, ovms_capi_image_name, cwd=ovms_capi_dst_path, timeout=None)
+
+
+def prepare_ovms_package():
+    if all([
+        all([OvmsType.CAPI not in ovms_type for ovms_type in config.ovms_types]),
+        all([OvmsType.BINARY not in ovms_type for ovms_type in config.ovms_types]),
+    ]):
+        return
+
+    if any([OvmsType.CAPI in config.ovms_types, OvmsType.BINARY in config.ovms_types]):
+        assert (
+            len(config.base_os) == 1 and get_host_os() == config.base_os[0]
+        ), f"Mismatch between config base os: {config.base_os}; host os: {get_host_os()}"
+
+    for base_os in config.base_os:
+        ovms_binary_dst_path = os.path.join(c_api_wrapper_dir, base_os)
+        get_binary_artifacts(config.ovms_c_release_artifacts_path[0], ovms_binary_dst_path)
+
+        package_content = Path(Paths.CAPI_WRAPPER_PACKAGE_CONTENT_PATH(base_os))
+        setup_capi_wrapper(package_content)
+
+
+def download_resources_master():
+    print("Download required resources")
+
+
+def build_local_resources():
+    if OvmsType.BINARY_DOCKER in config.ovms_types:
+        build_ovms_binary_image()
+    if OvmsType.CAPI_DOCKER in config.ovms_types:
+        build_ovms_capi_image()
 
 
 def setup_tmp_repos_dir(config):
@@ -312,6 +516,35 @@ def parametrize_plugin_config(metafunc):
 def parametrize_target_device(metafunc):
     ids = [CURRENT_TARGET_DEVICE_DICT.get(x, x) for x in config.target_devices]
     metafunc.parametrize(TARGET_DEVICE_PARAM_NAME, config.target_devices, ids=ids)
+
+
+def validate_lock_files():
+    """Ensure that target_device locks files exists"""
+    if not config.machine_is_reserved_for_test_session:
+        return  # Cannot validate locks validity since other testing session could acquire device lock
+
+    locks = [value for key, value in vars(Paths).items() if "LOCK_FILE" in key]
+    for target_device in config.target_devices:
+        n = MAX_WORKERS_PER_TARGET_DEVICE[target_device]
+        locks += [Paths.get_target_device_lock_file(target_device, i) for i in range(n)]
+    for lock_path in [Path(x) for x in locks]:
+        if lock_path.exists():
+            logger.warning(f"Hanging lock file discovered:\n{lock_path.name}")
+            logger.warning(f"Deleting lock file:\n{lock_path.name}")
+            lock_path.unlink()
+
+
+def list_host_zombie_processes():
+    zombie_pids = []
+    if OsType.Windows in config.base_os:
+        return zombie_pids
+    all_pids = [x.name for x in Path("/proc").iterdir() if str(x.name).isnumeric()]
+    zombie_pids = [x for x in all_pids if get_pid_status(x) == PID_STATE_ZOMBIE]
+    if len(zombie_pids) > 0:
+        logger.warning(f"Found {len(zombie_pids)} zombie processes.")
+        for zombie in zombie_pids:
+            logger.warning(f"Zombie:\t{get_pid_name(zombie)}")
+    return zombie_pids
 
 
 def parametrize_ovms_type(metafunc):

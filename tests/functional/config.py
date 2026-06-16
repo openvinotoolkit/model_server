@@ -73,6 +73,11 @@ test_dir_cleanup = test_dir_cleanup.lower() == "true"
 """ TT_OVMS_C_REPO_PATH - path to ovms-c repository. Can be relative or absolute. """
 ovms_c_repo_path = get_path("TT_OVMS_C_REPO_PATH", get_path("PWD", "./"))
 
+""" TT_SETUPVARS_SCRIPT_PATH - path to setupvars.bat script """
+setupvars_script_path = os.environ.get(
+    "TT_SETUPVARS_SCRIPT_PATH", os.path.join(ovms_c_repo_path, "setupvars.bat")
+)
+
 """BUILD_LOGS -  path to dir where artifacts should be stored"""
 artifacts_dir = get_path("BUILD_LOGS", os.path.join(ovms_c_repo_path, "tests", "functional", "test_log_build"))
 
@@ -147,18 +152,6 @@ minio_image = os.environ.get("TT_MINIO_IMAGE_NAME", "minio/minio:latest")
 
 """ TT_TARGET_DEVICE - list of devices separated by a comma "CPU,GPU,NPU" """
 target_devices = get_target_devices()
-target_device = target_devices[0]
-
-"""IMAGE - docker image name which should be used to run tests"""
-if target_device == TargetDevice.GPU:
-    _default_image = "openvino/model_server-gpu"
-else:
-    _default_image = "openvino/model_server"
-image = os.environ.get("IMAGE", _default_image)
-
-start_minio_container_command = 'server --address ":{}" /data'
-
-container_minio_log_line = "Console endpoint is listening on a dynamic port"
 
 # Reservation manager values, for details study tests.functional.utils.reservation_manager
 """ TT_GRPC_OVMS_STARTING_PORT - Grpc port where ovms should be exposed"""
@@ -170,29 +163,6 @@ rest_ovms_starting_port = get_int("TT_REST_OVMS_STARTING_PORT", None)
 """ TT_PORTS_POOL_SIZE- Ports pool size"""
 ports_pool_size = get_int("TT_PORTS_POOL_SIZE", None)
 # NOTE: Above values will be validated and could be changed if invalid
-
-""" TT_CONVERTED_MODELS_EXPIRE_TIME - Time after converted models are not up-to-date and needs to be refreshed(s) """
-converted_models_expire_time = get_int("TT_CONVERTED_MODELS_EXPIRE_TIME", 7*24*3600)  # Set default to one week
-
-""" TT_DEFAULT_INFER_TIMEOUT - Timeout for CPU target device"""
-default_infer_timeout = get_int("TT_DEFAULT_INFER_TIMEOUT", 10)
-
-""" TT_DEFAULT_GPU_INFER_TIMEOUT - Timeout for GPU target device"""
-default_gpu_infer_timeout = get_int("TT_DEFAULT_GPU_INFER_TIMEOUT", 10*default_infer_timeout)
-
-""" TT_DEFAULT_NPU_INFER_TIMEOUT - Timeout for NPU target device"""
-default_npu_infer_timeout = get_int("TT_DEFAULT_NPU_INFER_TIMEOUT", 10*default_infer_timeout)
-
-""" INFER TIMEOUT """
-infer_timeouts = {
-    TargetDevice.CPU: default_infer_timeout,
-    TargetDevice.GPU: default_gpu_infer_timeout,
-    TargetDevice.NPU: default_npu_infer_timeout,
-    TargetDevice.AUTO: default_gpu_infer_timeout,
-    TargetDevice.HETERO: default_gpu_infer_timeout,
-    TargetDevice.AUTO_CPU_GPU: default_gpu_infer_timeout,
-}
-infer_timeout = infer_timeouts[target_device]
 
 """ TT_IS_NGINX_MTLS - Specify if given image is OVSA nginx mtls image. """
 is_nginx_mtls = get_bool("TT_IS_NGINX_MTLS", False)
