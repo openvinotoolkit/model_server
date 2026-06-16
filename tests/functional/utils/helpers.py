@@ -13,38 +13,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+
 import os
-from typing import Any
+import random
+
+from time import strftime
 
 from tests.functional.constants.target_device import TargetDevice
-
-
-class SingletonMeta(type):
-    """
-    Metaclass for defining Singleton Classes
-
-    src:
-    https://www.datacamp.com/community/tutorials/python-metaclasses
-
-    Singleton Design using a Metaclass
-
-    This is a design pattern that restricts the instantiation of a class to only one object.
-    This could prove useful for example when designing a class to connect to the database.
-    One might want to have just one instance of the connection class.
-    """
-    _instances = {}
-
-    def __call__(cls, *args: Any, **kwargs: Any) -> Any:
-        if cls not in cls._instances:
-            cls._instances[cls] = super().__call__(*args, **kwargs)
-        return cls._instances[cls]
 
 
 ALL_AVAILABLE_OPTIONS = "*"
 
 
-def get_int(key_name, fallback=None, environ=os.environ):
-    value = environ.get(key_name, fallback)
+def get_int(key_name, fallback=None):
+    value = os.environ.get(key_name, fallback)
     if value != fallback:
         try:
             value = int(value)
@@ -72,7 +54,7 @@ def get_bool(key_name, fallback=None):
         elif value == "false":
             value = False
         else:
-            raise ValueError("Value of {} env variable is '{}'. Should be 'True' or 'False'.".format(key_name, value))
+            raise ValueError(f"Value of {key_name} env variable is '{value}'. Should be 'True' or 'False'.")
     return value
 
 
@@ -142,3 +124,15 @@ def get_xdist_worker_nr():
     else:
         xdist_current_worker = int(xdist_current_worker.lstrip("gw"))
     return xdist_current_worker
+
+
+def get_short_date_string():
+    date_str = strftime("%Y%m%d%H%M%S")
+    return date_str
+
+
+def generate_test_object_name(separator="_", prefix=""):
+    date_str = get_short_date_string()
+    random_sha = hex(random.getrandbits(128))[2:8]
+    name = separator.join([item for item in (prefix, date_str, random_sha) if item])
+    return name

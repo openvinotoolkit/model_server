@@ -234,6 +234,9 @@ absl::Status LegacyServable::preparePartialResponse(std::shared_ptr<GenAiServabl
         }
         // Legacy generation path always runs with batch=1, so we read the single finish reason at index 0.
         ov::genai::GenerationFinishReason finishReason = legacyExecutionContext->results.finish_reasons.empty() ? ov::genai::GenerationFinishReason::STOP : legacyExecutionContext->results.finish_reasons[0];
+        if (executionContext->apiHandler->isVerboseResponse() && !legacyExecutionContext->results.tokens.empty()) {
+            executionContext->apiHandler->appendVerboseRawTokens(legacyExecutionContext->results.tokens[0]);
+        }
         std::string serializedChunk = executionContext->apiHandler->serializeStreamingChunk(lastTextChunk, finishReason);
         if (!serializedChunk.empty()) {
             executionContext->response = wrapTextInServerSideEventMessage(serializedChunk);

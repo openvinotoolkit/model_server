@@ -117,6 +117,7 @@ There are also additional environment variables that may change the behavior of 
 | `GIT_OPT_SET_SERVER_CONNECT_TIMEOUT`| `int`   | Timeout to attempt connections to a remote server. Default value 4000 ms.                                  |
 | `GIT_OPT_SET_SERVER_TIMEOUT`        | `int`   | Timeout for reading from and writing to a remote server. Default value 4000 ms.                            |
 | `GIT_OPT_SET_SSL_CERT_LOCATIONS`    | `string`| Path to check for ssl certificates.                                                                        |
+| `GIT_OPT_SET_ENABLE_SEARCH_PATHS`| `int`   | When set to 1, the pull functionality reads host-level git configuration locations like ~/.gitconfig. Default value 0.            |
 
 Task specific parameters for different tasks (text generation/image generation/embeddings/rerank) are listed below:
 
