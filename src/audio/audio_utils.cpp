@@ -26,7 +26,6 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
-#include <cmath>
 #include <random>
 #include <algorithm>
 #pragma warning(push)
