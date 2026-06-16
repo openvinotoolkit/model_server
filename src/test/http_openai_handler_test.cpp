@@ -2213,6 +2213,133 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseChatCompletionsVLMDec
     ASSERT_NE(serialized.find("\"finish_reason\":\"length\""), std::string::npos) << serialized;
 }
 
+TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseCompletionsIncludesVerbosePayloadWhenEnabled) {
+    std::string json = R"({
+    "model": "llama",
+    "stream": false,
+    "prompt": "What is OpenVINO?"
+    })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    auto apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    uint32_t maxTokensLimit = 100;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+
+    apiHandler->enableVerboseResponse("templated prompt");
+
+    ov::genai::EncodedResults results;
+    ov::Tensor outputIds = tokenizer->encode("OVMS", ov::genai::add_special_tokens(false)).input_ids;
+    int64_t* outputIdsData = reinterpret_cast<int64_t*>(outputIds.data());
+    results.tokens = {std::vector<int64_t>(outputIdsData, outputIdsData + outputIds.get_shape()[1])};
+
+    rapidjson::Document parsed;
+    parsed.Parse(apiHandler->serializeUnaryResponse(results).c_str());
+    ASSERT_FALSE(parsed.HasParseError());
+    ASSERT_TRUE(parsed.HasMember("__verbose"));
+    ASSERT_TRUE(parsed["__verbose"].IsObject());
+    ASSERT_STREQ(parsed["__verbose"]["prompt"].GetString(), "templated prompt");
+    ASSERT_STREQ(parsed["__verbose"]["content"].GetString(), "OVMS");
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseCompletionsGenerationOutputIncludesVerbosePayloadWhenEnabled) {
+    std::string json = R"({
+    "model": "llama",
+    "stream": false,
+    "prompt": "What is OpenVINO?"
+    })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    auto apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    uint32_t maxTokensLimit = 100;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+
+    apiHandler->enableVerboseResponse("templated prompt");
+
+    ov::Tensor outputIds = tokenizer->encode("OVMS", ov::genai::add_special_tokens(false)).input_ids;
+    int64_t* outputIdsData = reinterpret_cast<int64_t*>(outputIds.data());
+    ov::genai::GenerationOutput generationOutput;
+    generationOutput.generated_ids = std::vector<int64_t>(outputIdsData, outputIdsData + outputIds.get_shape()[1]);
+    generationOutput.finish_reason = ov::genai::GenerationFinishReason::STOP;
+
+    rapidjson::Document parsed;
+    parsed.Parse(apiHandler->serializeUnaryResponse(std::vector<ov::genai::GenerationOutput>{generationOutput}).c_str());
+    ASSERT_FALSE(parsed.HasParseError());
+    ASSERT_TRUE(parsed.HasMember("__verbose"));
+    ASSERT_TRUE(parsed["__verbose"].IsObject());
+    ASSERT_STREQ(parsed["__verbose"]["prompt"].GetString(), "templated prompt");
+    ASSERT_STREQ(parsed["__verbose"]["content"].GetString(), "OVMS");
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseCompletionsVLMDecodedResultsIncludesVerbosePayloadWhenEnabled) {
+    std::string json = R"({
+    "model": "llama",
+    "stream": false,
+    "prompt": "What is OpenVINO?"
+    })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    auto apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    uint32_t maxTokensLimit = 100;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+
+    apiHandler->enableVerboseResponse("templated prompt");
+
+    ov::genai::VLMDecodedResults results;
+    std::string text = "OVMS";
+    results.texts = {text};
+    results.finish_reasons = {ov::genai::GenerationFinishReason::STOP};
+
+    rapidjson::Document parsed;
+    parsed.Parse(apiHandler->serializeUnaryResponse(results, text).c_str());
+    ASSERT_FALSE(parsed.HasParseError());
+    ASSERT_TRUE(parsed.HasMember("__verbose"));
+    ASSERT_TRUE(parsed["__verbose"].IsObject());
+    ASSERT_STREQ(parsed["__verbose"]["prompt"].GetString(), "templated prompt");
+    ASSERT_STREQ(parsed["__verbose"]["content"].GetString(), "OVMS");
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, serializeStreamingChunkCompletionsIncludesVerbosePayloadOnlyOnFinalChunk) {
+    std::string json = R"({
+    "model": "llama",
+    "stream": true,
+    "prompt": "What is OpenVINO?"
+    })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    auto apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    uint32_t maxTokensLimit = 100;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+
+    apiHandler->enableVerboseResponse("templated prompt");
+
+    rapidjson::Document intermediate;
+    intermediate.Parse(apiHandler->serializeStreamingChunk("Hello", ov::genai::GenerationFinishReason::NONE).c_str());
+    ASSERT_FALSE(intermediate.HasParseError());
+    ASSERT_FALSE(intermediate.HasMember("__verbose"));
+
+    apiHandler->setVerboseRawText("Hello world");
+
+    rapidjson::Document finalChunk;
+    finalChunk.Parse(apiHandler->serializeStreamingChunk(" world", ov::genai::GenerationFinishReason::STOP).c_str());
+    ASSERT_FALSE(finalChunk.HasParseError());
+    ASSERT_TRUE(finalChunk.HasMember("__verbose"));
+    ASSERT_TRUE(finalChunk["__verbose"].IsObject());
+    ASSERT_STREQ(finalChunk["__verbose"]["prompt"].GetString(), "templated prompt");
+    ASSERT_STREQ(finalChunk["__verbose"]["content"].GetString(), "Hello world");
+}
+
 TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesSucceedsBase64) {
     std::string json = R"({
     "model": "llama",
