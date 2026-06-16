@@ -22,7 +22,7 @@ To successfully deploy face blur pipeline you need to have a workspace that cont
 
 Clone the repository and enter face_blur directory
 ```bash
-git clone https://github.com/openvinotoolkit/model_server.git
+git clone -b releases/2026/2 https://github.com/openvinotoolkit/model_server.git
 cd model_server/demos/face_blur/python
 ```
 

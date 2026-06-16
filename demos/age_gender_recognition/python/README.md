@@ -36,7 +36,7 @@ ovms --model_path model --model_name age_gender --port 9000 --rest_port 8000
 #### Requesting the Service
 Clone the repository
 ```console
-git clone https://github.com/openvinotoolkit/model_server.git
+git clone -b releases/2026/2 https://github.com/openvinotoolkit/model_server.git
 ```
 
 Enter age_gender_recognition python demo directory:

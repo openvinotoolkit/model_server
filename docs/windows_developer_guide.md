@@ -46,7 +46,7 @@ Run below commands in terminal to clone model server repository:
 ```bat
 mkdir C:\git
 cd C:\git\
-git clone https://github.com/openvinotoolkit/model_server.git
+git clone -b releases/2026/2 https://github.com/openvinotoolkit/model_server.git
 cd model_server
 ```
 

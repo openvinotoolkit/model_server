@@ -29,7 +29,7 @@ docker run -d -u $(id -u):$(id -g) -v $(pwd)/horizontal-text-detection-0001:/mod
 
 Clone the repository and enter horizontal_text_detection directory
 ```bash
-git clone https://github.com/openvinotoolkit/model_server.git
+git clone -b releases/2026/2 https://github.com/openvinotoolkit/model_server.git
 cd model_server/demos/horizontal_text_detection/python
 ```
 
@@ -84,7 +84,7 @@ To successfully deploy OCR pipeline you need to have a workspace that contains:
 
 Clone the repository and enter horizontal_text_detection directory
 ```bash
-git clone https://github.com/openvinotoolkit/model_server.git
+git clone -b releases/2026/2 https://github.com/openvinotoolkit/model_server.git
 cd model_server/demos/horizontal_text_detection/python
 ```
 

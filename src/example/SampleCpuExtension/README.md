@@ -13,7 +13,7 @@ Compile the library by running `make cpu_extension BASE_OS=ubuntu` in root direc
 Shared library will be generated in the `lib` folder. Such library can be used to run Model Server, using `--cpu_extension` argument.
 
 ```bash
-git clone https://github.com/openvinotoolkit/model_server.git
+git clone -b releases/2026/2 https://github.com/openvinotoolkit/model_server.git
 cd model_server
 # replace to 'redhat` if using UBI base image
 export BASE_OS=ubuntu24

@@ -26,7 +26,7 @@ In-case of problems, see [Debugging](#debugging).
 ## Prepare Environment to Use the Tests
 
    ```bash
-   git clone https://github.com/openvinotoolkit/model_server.git
+   git clone -b releases/2026/2 https://github.com/openvinotoolkit/model_server.git
    cd model_server
    ```
 

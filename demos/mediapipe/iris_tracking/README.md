@@ -16,7 +16,7 @@ The demo is based on the [Mediapipe Iris demo](https://github.com/google/mediapi
 
 Clone the repository and enter mediapipe object_detection directory
 ```console
-git clone https://github.com/openvinotoolkit/model_server.git
+git clone -b releases/2026/2 https://github.com/openvinotoolkit/model_server.git
 cd model_server/demos/mediapipe/iris_tracking
 
 curl https://storage.googleapis.com/mediapipe-assets/face_detection_short_range.tflite -o face_detection_short_range/1/face_detection_short_range.tflite --create-dirs

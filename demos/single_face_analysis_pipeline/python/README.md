@@ -22,7 +22,7 @@ In this example the following models are used:
 
 Clone the repository and enter single_face_analysis_pipeline directory
 ```console
-git clone https://github.com/openvinotoolkit/model_server.git
+git clone -b releases/2026/2 https://github.com/openvinotoolkit/model_server.git
 cd model_server/demos/single_face_analysis_pipeline/python
 ```
 

@@ -5,7 +5,7 @@ This client demonstrates how to interact with OpenVINO Model Server prediction e
 Clone the repository and enter directory:
 
 ```bash
-git clone https://github.com/openvinotoolkit/model_server.git
+git clone -b releases/2026/2 https://github.com/openvinotoolkit/model_server.git
 cd model_server/demos/image_classification/go
 ```
 

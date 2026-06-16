@@ -2,7 +2,7 @@
 
 Clone the OpenVINO Model Server repository and enter the NGINX directory:
 ```bash
-git clone https://github.com/openvinotoolkit/model_server.git
+git clone -b releases/2026/2 https://github.com/openvinotoolkit/model_server.git
 cd model_server/extras/nginx-mtls-auth
 ```
 

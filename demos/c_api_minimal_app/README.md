@@ -8,7 +8,7 @@ Check C API full documentation [here](../../docs/model_server_c_api.md).
 Enter the directory with the example and build the demo docker image with all dependencies and examples that will be named `openvino/model_server-capi`.
 The example image also contains dummy model and config.json required for the applications.
 ```bash
-git clone https://github.com/openvinotoolkit/model_server.git
+git clone -b releases/2026/2 https://github.com/openvinotoolkit/model_server.git
 cd model_server/demos/c_api_minimal_app
 make
 ```
@@ -90,7 +90,7 @@ make BASE_OS=redhat
 Alternative to getting `ovms.tar.gz` package from web you can build it yourself from sources. To build the capi docker image, you must first build the `ovms.tar.gz` package with the `libovms_shared.so` library and `ovms.h` header. 
 run `make` command in ovms git main directory.
 ```bash
-git clone https://github.com/openvinotoolkit/model_server.git
+git clone -b releases/2026/2 https://github.com/openvinotoolkit/model_server.git
 cd model_server
 make BASE_OS=ubuntu24
 ```
@@ -110,7 +110,7 @@ It can demonstrate expected throughput and latency for a specific model, configu
 
 Clone OpenVINO™ Model Server GitHub repository and go to the top directory.
 ```bash
-git clone https://github.com/openvinotoolkit/model_server.git
+git clone -b releases/2026/2 https://github.com/openvinotoolkit/model_server.git
 cd model_server/demos/c_api_minimal_app
 ```
 Build the tool

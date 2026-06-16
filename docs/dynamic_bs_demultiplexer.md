@@ -18,7 +18,7 @@ More information about this feature can be found in [dynamic batch size in demul
 ## Steps
 Clone OpenVINO&trade; Model Server GitHub repository and enter `model_server` directory.
 ```bash
-git clone https://github.com/openvinotoolkit/model_server.git
+git clone -b releases/2026/2 https://github.com/openvinotoolkit/model_server.git
 cd model_server
 ```
 #### Download the pretrained model

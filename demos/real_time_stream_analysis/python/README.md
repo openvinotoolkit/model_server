@@ -50,7 +50,7 @@ The model server with the holistic use case can be deployed using steps from [th
 
 Here is an example of the server deployment procedure:
 ```console
-git clone https://github.com/openvinotoolkit/model_server.git
+git clone -b releases/2026/2 https://github.com/openvinotoolkit/model_server.git
 cd model_server/demos/mediapipe/holistic_tracking
 curl --create-dirs https://raw.githubusercontent.com/openvinotoolkit/mediapipe/v2023.3/mediapipe/modules/hand_landmark/handedness.txt -o mediapipe/modules/hand_landmark/handedness.txt 
 curl https://storage.googleapis.com/mediapipe-assets/face_detection_short_range.tflite -o face_detection_short_range/1/face_detection_short_range.tflite --create-dirs

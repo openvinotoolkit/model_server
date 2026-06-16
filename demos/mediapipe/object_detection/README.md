@@ -14,7 +14,7 @@ Example usage of graph that accepts Mediapipe::ImageFrame as a input:
 
 Clone the repository and enter mediapipe object_detection directory
 ```console
-git clone https://github.com/openvinotoolkit/model_server.git
+git clone -b releases/2026/2 https://github.com/openvinotoolkit/model_server.git
 cd model_server/demos/mediapipe/object_detection
 ```
 

@@ -16,7 +16,7 @@ The demo is based on the [upstream Mediapipe holistic demo](https://github.com/g
 
 Clone the repository and enter mediapipe holistic_tracking directory
 ```console
-git clone https://github.com/openvinotoolkit/model_server.git
+git clone -b releases/2026/2 https://github.com/openvinotoolkit/model_server.git
 cd model_server/demos/mediapipe/holistic_tracking
 
 # copy a text file for hand landmark module

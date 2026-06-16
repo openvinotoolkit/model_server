@@ -31,7 +31,7 @@ apt-get update && apt-get install cmake build-essential libssl-dev zlib1g-dev gi
 
 ### Clone OpenVINO&trade; Model Server GitHub repository and go to the top directory.
 ```Bash
-git clone https://github.com/openvinotoolkit/model_server.git
+git clone -b releases/2026/2 https://github.com/openvinotoolkit/model_server.git
 cd model_server
 ```
 

@@ -16,7 +16,7 @@ As an example, we will use [MobileNetV3_large_x1_0_infer](https://paddle-imagene
 Clone the repository and enter classification_using_paddlepaddle_model directory
 
 ```console
-git clone https://github.com/openvinotoolkit/model_server.git
+git clone -b releases/2026/2 https://github.com/openvinotoolkit/model_server.git
 cd model_server/demos/classification_using_paddlepaddle_model/python
 ```
 

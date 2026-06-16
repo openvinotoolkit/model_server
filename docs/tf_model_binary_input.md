@@ -59,7 +59,7 @@ docker run -d -p 9000:9000 -v ${PWD}/resnet_v2/models:/models openvino/model_ser
 ### Running the inference requests from the client
 
 ```bash
-git clone https://github.com/openvinotoolkit/model_server.git
+git clone -b releases/2026/2 https://github.com/openvinotoolkit/model_server.git
 cd model_server/client/python/tensorflow-serving-api/samples
 virtualenv .venv
 . .venv/bin/activate

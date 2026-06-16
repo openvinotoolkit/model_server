@@ -10,7 +10,7 @@ This is a very handy functionality because it allows us to export the model with
 > **Note:** Preparing the model in this demo requires tensorflow2.13 or older. Because pip packages with such versions are not available in latest python editions, it is recommended to use Python3.10.
 
 ```console
-git clone https://github.com/openvinotoolkit/model_server.git
+git clone -b releases/2026/2 https://github.com/openvinotoolkit/model_server.git
 cd model_server/demos/image_classification_with_string_output
 pip install -r requirements.txt
 python download_model.py

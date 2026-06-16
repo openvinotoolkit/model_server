@@ -36,7 +36,7 @@ ovms --model_path model --model_name person-vehicle-detection --port 9000 --shap
 ## Running the client application
 
 ```console
-git clone https://github.com/openvinotoolkit/model_server.git
+git clone -b releases/2026/2 https://github.com/openvinotoolkit/model_server.git
 cd model_server/demos/person_vehicle_bike_detection/python
 pip3 install -r requirements.txt
 python person_vehicle_bike_detection.py --help
