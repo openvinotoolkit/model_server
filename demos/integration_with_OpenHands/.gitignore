@@ -1,0 +1,10 @@
+# Environment variables (local overrides)
+.env
+
+# Screenshots (generated locally)
+screenshots/*.png
+screenshots/*.jpg
+screenshots/*.jpeg
+
+# Log files
+*.log
