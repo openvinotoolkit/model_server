@@ -308,7 +308,13 @@ pipeline {
                     checkout scmGit(branches: [[name: validation_branch]], userRemoteConfigs: [[credentialsId: 'workflow-lab', url: 'https://github.com/intel-innersource/frameworks.ai.openvino.model-server.tests.git']])
                     sh "pwd"
                     def pwd = sh(returnStdout:true, script: "pwd").strip()
-                    sh "make create-venv && rm -f tests/functional && ln -s ${pwd}/../tests/functional tests/functional && TT_OVMS_C_REPO_PATH=../ TT_ON_COMMIT_TESTS=True TT_XDIST_WORKERS=10 TT_OVMS_IMAGE_NAME=openvino/model_server:${shortCommit} TT_OVMS_IMAGE_LOCAL=True make tests"
+                    def image_params = ""
+                    if (image_build_needed == "true") {
+                      image_params = "TT_OVMS_IMAGE_NAME=openvino/model_server:${shortCommit} TT_OVMS_IMAGE_LOCAL=True"
+                    } else {
+                      image_params = "TT_OVMS_IMAGE_NAME=registry.toolbox.iotg.sclab.intel.com/openvino/model_server:ubuntu24_main"
+                    }
+                    sh "make create-venv && rm -f tests/functional && ln -s ${pwd}/../tests/functional tests/functional && TT_OVMS_C_REPO_PATH=../ TT_ON_COMMIT_TESTS=True TT_XDIST_WORKERS=10 ${image_params} make tests"
                   }
                 }
               }            
