@@ -1086,13 +1086,12 @@ TEST_F(HfPullCache, PullNonGit) {
     EXPECT_FALSE(std::filesystem::exists(gitDir));
 }
 
-// PullAgainstDirectoryWithEmptyDotGitFailsWithRepositoryError
+// PullAgainstDirectoryWithEmptyDotGitSucceedsWithoutMarkers
 //
 // Companion to HfPullCache.PullNonGit. Verifies that when .git IS present but is
-// empty (a corrupt / partially-initialized repository) handleExistingRepositoryWithoutOverwrite()
-// does NOT silently succeed: the .git probe passes, GitRepositoryGuard then fails to open
-// the repository and the real error is propagated via mapRepositoryOpenFailureToStatus()
-// so the operator can act (re-clone, fix permissions, --overwrite_models, ...).
+// empty (a corrupt / partially-initialized repository) and no interruption markers
+// exist, handleExistingRepositoryWithoutOverwrite() skips the git repository check
+// and returns success, leaving existing files untouched.
 TEST_F(HfPullCache, PullEmptyGitDir) {
     std::string basePath = modelBasePath;
     std::string tokenizerPath = openvinoTokenizerBinPath;
@@ -1125,9 +1124,167 @@ TEST_F(HfPullCache, PullEmptyGitDir) {
     ASSERT_TRUE(std::filesystem::is_directory(gitDir));
     ASSERT_TRUE(std::filesystem::is_empty(gitDir));
 
-    // Pull must NOT silently succeed: handleExistingRepositoryWithoutOverwrite should
-    // surface the libgit2 open failure (mapRepositoryOpenFailureToStatus -> non-OK).
+    // Pull will silently succeed: handleExistingRepositoryWithoutOverwrite will
+    // not surface the libgit2 open failure because there are no interruption file markers present
+    this->ServerPullHfModel(modelName, downloadPath, task, EXIT_SUCCESS);
+
+    // No work-in-progress marker should be created next to the model directory.
+    const std::string lfsWipPath = ovms::libgit2::getLfsWipMarkerPath(basePath).string();
+    EXPECT_FALSE(std::filesystem::exists(lfsWipPath));
+
+    // Files must be left exactly as they were on disk.
+    ASSERT_TRUE(std::filesystem::exists(modelPath));
+    ASSERT_TRUE(std::filesystem::exists(tokenizerPath));
+    EXPECT_EQ(std::filesystem::file_size(modelPath), modelSizeBefore);
+    EXPECT_EQ(std::filesystem::file_size(tokenizerPath), tokenizerSizeBefore);
+
+    std::string modelDigestAfter = sha256File(modelPath, ec);
+    ASSERT_EQ(ec, std::errc());
+    std::string tokenizerDigestAfter = sha256File(tokenizerPath, ec);
+    ASSERT_EQ(ec, std::errc());
+    EXPECT_EQ(modelDigestBefore, modelDigestAfter);
+    EXPECT_EQ(tokenizerDigestBefore, tokenizerDigestAfter);
+
+    // .git is still present (we left an empty directory there); no fresh clone happened.
+    EXPECT_TRUE(std::filesystem::is_directory(gitDir));
+    EXPECT_TRUE(std::filesystem::is_empty(gitDir));
+}
+
+// PullAgainstDirectoryWithEmptyDotGitFailsWithLfsWipMarker
+//
+// Companion to HfPullCache.PullNonGit. Verifies that when .git IS present but is
+// empty (a corrupt / partially-initialized repository) and an LFS WIP marker exists,
+// handleExistingRepositoryWithoutOverwrite() does NOT silently succeed: the .git probe
+// passes, GitRepositoryGuard then fails to open the repository and the real error is
+// propagated via mapRepositoryOpenFailureToStatus() so the operator can act
+// (re-clone, fix permissions, --overwrite_models, ...).
+TEST_F(HfPullCache, EmptyGitDirLfsMarker) {
+    std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
+    std::string downloadPath = ovms::FileSystem::joinPath({this->directoryPath, "repository"});
+    std::string task = "text_generation";
+
+    std::string basePath = ovms::FileSystem::joinPath({downloadPath, "OpenVINO", "Phi-3-mini-FastDraft-50M-int8-ov"});
+    std::string modelPath = ovms::FileSystem::appendSlash(basePath) + "openvino_model.bin";
+    std::string tokenizerPath = ovms::FileSystem::appendSlash(basePath) + "openvino_tokenizer.bin";
+    std::string gitDir = ovms::FileSystem::appendSlash(basePath) + ".git";
+
+    ASSERT_TRUE(std::filesystem::exists(modelPath));
+    ASSERT_TRUE(std::filesystem::exists(tokenizerPath));
+    ASSERT_TRUE(std::filesystem::is_directory(gitDir));
+
+    // Capture pre-pull file fingerprints so we can confirm pull did not modify them.
+    std::error_code ec;
+    const std::uintmax_t modelSizeBefore = std::filesystem::file_size(modelPath, ec);
+    ASSERT_EQ(ec, std::errc());
+    const std::uintmax_t tokenizerSizeBefore = std::filesystem::file_size(tokenizerPath, ec);
+    ASSERT_EQ(ec, std::errc());
+    std::string modelDigestBefore = sha256File(modelPath, ec);
+    ASSERT_EQ(ec, std::errc());
+    std::string tokenizerDigestBefore = sha256File(tokenizerPath, ec);
+    ASSERT_EQ(ec, std::errc());
+
+    // Replace the cached .git with an empty directory to simulate corruption / partial init.
+    // Drop readonly attributes first so std::filesystem::remove_all succeeds on Windows.
+    RemoveReadonlyFileAttributeFromDir(gitDir);
+    ec.clear();
+    std::filesystem::remove_all(gitDir, ec);
+    ASSERT_EQ(ec, std::errc()) << "Failed to remove .git from cached repository: " << ec.message();
+    ec.clear();
+    std::filesystem::create_directory(gitDir, ec);
+    ASSERT_EQ(ec, std::errc()) << "Failed to recreate empty .git directory: " << ec.message();
+    ASSERT_TRUE(std::filesystem::is_directory(gitDir));
+    ASSERT_TRUE(std::filesystem::is_empty(gitDir));
+
+    // Add interruption marker so resume path is taken and repository open is validated.
+    ASSERT_TRUE(ovms::libgit2::createLfsWipMarker(basePath));
+    const std::string lfsWipPath = ovms::libgit2::getLfsWipMarkerPath(basePath).string();
+    ASSERT_TRUE(std::filesystem::exists(lfsWipPath));
+
+    // Pull will not silently succeed: handleExistingRepositoryWithoutOverwrite will
+    // surface the libgit2 open failure because there are interruption file markers present
     this->ServerPullHfModel(modelName, downloadPath, task, EXIT_FAILURE);
+
+    // Marker was pre-created and remains because resume did not complete successfully.
+    EXPECT_TRUE(std::filesystem::exists(lfsWipPath));
+
+    // Files must be left exactly as they were on disk.
+    ASSERT_TRUE(std::filesystem::exists(modelPath));
+    ASSERT_TRUE(std::filesystem::exists(tokenizerPath));
+    EXPECT_EQ(std::filesystem::file_size(modelPath), modelSizeBefore);
+    EXPECT_EQ(std::filesystem::file_size(tokenizerPath), tokenizerSizeBefore);
+
+    std::string modelDigestAfter = sha256File(modelPath, ec);
+    ASSERT_EQ(ec, std::errc());
+    std::string tokenizerDigestAfter = sha256File(tokenizerPath, ec);
+    ASSERT_EQ(ec, std::errc());
+    EXPECT_EQ(modelDigestBefore, modelDigestAfter);
+    EXPECT_EQ(tokenizerDigestBefore, tokenizerDigestAfter);
+
+    // .git is still present (we left an empty directory there); no fresh clone happened.
+    EXPECT_TRUE(std::filesystem::is_directory(gitDir));
+    EXPECT_TRUE(std::filesystem::is_empty(gitDir));
+}
+
+// PullAgainstDirectoryWithEmptyDotGitFailsWithErrorMarker
+//
+// Companion to HfPullCache.PullNonGit. Verifies that when .git IS present but is
+// empty (a corrupt / partially-initialized repository) and an lfs_error.txt marker
+// exists, handleExistingRepositoryWithoutOverwrite() does NOT silently succeed: the
+// .git probe passes, GitRepositoryGuard then fails to open the repository and the
+// real error is propagated via mapRepositoryOpenFailureToStatus() so the operator
+// can act (re-clone, fix permissions, --overwrite_models, ...).
+TEST_F(HfPullCache, EmptyGitDirErrorMarker) {
+    std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
+    std::string downloadPath = ovms::FileSystem::joinPath({this->directoryPath, "repository"});
+    std::string task = "text_generation";
+
+    std::string basePath = ovms::FileSystem::joinPath({downloadPath, "OpenVINO", "Phi-3-mini-FastDraft-50M-int8-ov"});
+    std::string modelPath = ovms::FileSystem::appendSlash(basePath) + "openvino_model.bin";
+    std::string tokenizerPath = ovms::FileSystem::appendSlash(basePath) + "openvino_tokenizer.bin";
+    std::string gitDir = ovms::FileSystem::appendSlash(basePath) + ".git";
+
+    ASSERT_TRUE(std::filesystem::exists(modelPath));
+    ASSERT_TRUE(std::filesystem::exists(tokenizerPath));
+    ASSERT_TRUE(std::filesystem::is_directory(gitDir));
+
+    // Capture pre-pull file fingerprints so we can confirm pull did not modify them.
+    std::error_code ec;
+    const std::uintmax_t modelSizeBefore = std::filesystem::file_size(modelPath, ec);
+    ASSERT_EQ(ec, std::errc());
+    const std::uintmax_t tokenizerSizeBefore = std::filesystem::file_size(tokenizerPath, ec);
+    ASSERT_EQ(ec, std::errc());
+    std::string modelDigestBefore = sha256File(modelPath, ec);
+    ASSERT_EQ(ec, std::errc());
+    std::string tokenizerDigestBefore = sha256File(tokenizerPath, ec);
+    ASSERT_EQ(ec, std::errc());
+
+    // Replace the cached .git with an empty directory to simulate corruption / partial init.
+    // Drop readonly attributes first so std::filesystem::remove_all succeeds on Windows.
+    RemoveReadonlyFileAttributeFromDir(gitDir);
+    ec.clear();
+    std::filesystem::remove_all(gitDir, ec);
+    ASSERT_EQ(ec, std::errc()) << "Failed to remove .git from cached repository: " << ec.message();
+    ec.clear();
+    std::filesystem::create_directory(gitDir, ec);
+    ASSERT_EQ(ec, std::errc()) << "Failed to recreate empty .git directory: " << ec.message();
+    ASSERT_TRUE(std::filesystem::is_directory(gitDir));
+    ASSERT_TRUE(std::filesystem::is_empty(gitDir));
+
+    // Add interruption error marker so resume path is taken and repository open is validated.
+    const std::string lfsErrorPath = ovms::FileSystem::appendSlash(basePath) + "lfs_error.txt";
+    {
+        std::ofstream errorFile(lfsErrorPath);
+        ASSERT_TRUE(errorFile.is_open()) << "Failed to create interruption marker: " << lfsErrorPath;
+        errorFile << "simulated lfs error";
+    }
+    ASSERT_TRUE(std::filesystem::exists(lfsErrorPath));
+
+    // Pull will not silently succeed: handleExistingRepositoryWithoutOverwrite will
+    // surface the libgit2 open failure because there are interruption file markers present
+    this->ServerPullHfModel(modelName, downloadPath, task, EXIT_FAILURE);
+
+    // Marker was pre-created and remains because repository open failed before resume cleanup.
+    EXPECT_TRUE(std::filesystem::exists(lfsErrorPath));
 
     // No work-in-progress marker should be created next to the model directory.
     const std::string lfsWipPath = ovms::libgit2::getLfsWipMarkerPath(basePath).string();
@@ -1808,7 +1965,7 @@ public:
     EnvGuard guard;
 };
 
-TEST(Libgt2InitGuardTest, LfsFilterCaptureDefaultResumeOptions) {
+TEST(Libgt2InitGuardTestResume, LfsFilterCaptureDefaultResumeOptions) {
     // Need new process beacase we use INIT_ONCE in libgit2 lfs filter for env variables and once they are set they are set for the whole process lifetime
     EXPECT_EXIT({
         // Act: capture stdout during object construction
@@ -1828,7 +1985,7 @@ TEST(Libgt2InitGuardTest, LfsFilterCaptureDefaultResumeOptions) {
         exit(0); }, ::testing::ExitedWithCode(0), "");
 }
 
-TEST(Libgt2InitGuardTest, LfsFilterCaptureNonDefaultResumeOptions) {
+TEST(Libgt2InitGuardTestResume, LfsFilterCaptureNonDefaultResumeOptions) {
     // Need new process beacase we use INIT_ONCE in libgit2 lfs filter for env variables and once they are set they are set for the whole process lifetime
     EXPECT_EXIT({
         EnvGuard guard;
@@ -1907,23 +2064,14 @@ TEST_F(HfDownloadModelModule, TestInvalidProxyTimeout) {
         // GIT_OPT_SET_SERVER_CONNECT_TIMEOUT option when https_proxy is empty,
         // so we always clear https_proxy here.
         //
-        // To make the timeout actually fire we need the destination to be
-        // unreachable. The behavior depends on the host's network setup:
-        //   * Host originally used a proxy (https_proxy was set in the
-        //     environment): the host is on a proxy-only network where a
-        //     direct connection to huggingface.co will hang and hit the
-        //     timeout. Keep the default HF_ENDPOINT.
-        //   * Host has no proxy configured (direct internet access): a direct
-        //     connection to huggingface.co would succeed within the 1 s
-        //     timeout and the assertion below would fail. Redirect the clone
-        //     to an unroutable RFC 5737 TEST-NET-1 address so the connect
-        //     must time out.
-        const char* hostHttpsProxy = std::getenv("https_proxy");
-        const bool hostHadProxy = (hostHttpsProxy != nullptr) && (std::string(hostHttpsProxy) != "");
+        // Force deterministic timeout behavior across CI/dev environments.
+        // Using the real HF endpoint makes this test network-topology dependent
+        // (proxy-only hosts, direct internet hosts, DNS/load-balancer behavior).
+        // RFC 5737 TEST-NET-1 (192.0.2.0/24) is non-routable on the public
+        // internet, so clone must fail quickly and independently of external
+        // service availability.
         eGuard.set("https_proxy", "");
-        if (!hostHadProxy) {
-            eGuard.set("HF_ENDPOINT", "https://192.0.2.1/");
-        }
+        eGuard.set("HF_ENDPOINT", "https://192.0.2.1/");
         const std::string timeoutConnectVal = "1000";
         eGuard.set(ovms::HfPullModelModule::GIT_SERVER_CONNECT_TIMEOUT_ENV, timeoutConnectVal);
         config.parse(arg_count, const_cast<char**>(n_argv));
@@ -1936,7 +2084,7 @@ TEST_F(HfDownloadModelModule, TestInvalidProxyTimeout) {
         timer.stop(0);
         double timeSpentMs = timer.elapsed<std::chrono::microseconds>(0) / 1000;
         SPDLOG_DEBUG("Time spent:{} ms", timeSpentMs);
-        EXPECT_LE(timeSpentMs, 3 * ovms::stoi32(timeoutConnectVal).value()) << "We should timeout before 1ms has passed but clone worked for: " << timeSpentMs << "ms > " << timeoutConnectVal << "ms. Status: " << status.string();
+        EXPECT_LE(timeSpentMs, 3 * ovms::stoi32(timeoutConnectVal).value()) << "We should timeout before 1s has passed but clone worked for: " << timeSpentMs << "ms > " << timeoutConnectVal << "ms. Status: " << status.string();
     }
     SPDLOG_TRACE("After guard closure");
 }

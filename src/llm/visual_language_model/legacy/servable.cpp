@@ -228,6 +228,9 @@ absl::Status VisualLanguageModelLegacyServable::preparePartialResponse(std::shar
         lastTextChunk = executionContext->lastStreamerCallbackOutput;
         executionContext->lastStreamerCallbackOutput = "";
     }
+    if (executionContext->apiHandler->isVerboseResponse() && !lastTextChunk.empty()) {
+        executionContext->apiHandler->appendVerboseRawText(lastTextChunk);
+    }
     if (generationStatus != std::future_status::ready) {  // continue
         // For RESPONSES endpoint, always call serializeStreamingChunk so that
         // output item initialization events are emitted even before the tokenizer produces text.
@@ -248,6 +251,9 @@ absl::Status VisualLanguageModelLegacyServable::preparePartialResponse(std::shar
         // if streamer::put returned a value, streamer::end() result will not contain it, so we add it manually
         if (!executionContext->lastStreamerCallbackOutput.empty()) {
             lastTextChunk = lastTextChunk + executionContext->lastStreamerCallbackOutput;
+            if (executionContext->apiHandler->isVerboseResponse()) {
+                executionContext->apiHandler->appendVerboseRawText(executionContext->lastStreamerCallbackOutput);
+            }
         }
         if (legacyExecutionContext->results.finish_reasons.empty()) {
             SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Missing finish reason in legacy VLM streaming generation result, defaulting to STOP");
@@ -361,6 +367,10 @@ absl::Status VisualLanguageModelLegacyServable::prepareInputs(std::shared_ptr<Ge
         }
     } else {
         return absl::InvalidArgumentError("Unsupported endpoint");
+    }
+
+    if (Config::instance().getServerSettings().verboseResponse) {
+        vlmExecutionContext->apiHandler->enableVerboseResponse(vlmExecutionContext->inputText);
     }
 
     // Below logic is used only for the statistics and debugging purposes and does not affect the model execution.

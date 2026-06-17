@@ -26,6 +26,7 @@
 #include "src/port/rapidjson_stringbuffer.hpp"
 #include "src/port/rapidjson_writer.hpp"
 
+#include "../../../config.hpp"
 #include "../../../logging.hpp"
 #include "../../../tokenize/tokenize_parser.hpp"
 #include "../../text_utils.hpp"
@@ -169,6 +170,10 @@ absl::Status VisualLanguageModelServable::prepareInputs(std::shared_ptr<GenAiSer
         }
     } else {
         return absl::InvalidArgumentError("Unsupported endpoint");
+    }
+
+    if (Config::instance().getServerSettings().verboseResponse) {
+        vlmExecutionContext->apiHandler->enableVerboseResponse(vlmExecutionContext->inputText);
     }
 
     // Below logic is used only for the statistics and debugging purposes and does not affect the model execution.

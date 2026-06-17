@@ -26,7 +26,6 @@
 #include "../deserialization_main.hpp"
 #include "../inference_executor.hpp"
 #include "../ovms.h"  // NOLINT
-#include "../statefulrequestprocessor.hpp"
 #include "serialization.hpp"
 #include "../serialization_common.hpp"
 #include "deserialization.hpp"

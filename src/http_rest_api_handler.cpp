@@ -78,6 +78,7 @@
 #include "tfs_frontend/tfs_request_utils.hpp"
 #include "tfs_frontend/deserialization.hpp"
 #include "kfs_frontend/kfs_request_utils.hpp"
+#include "predict_request_validation_utils.hpp"
 #include "deserialization_main.hpp"
 #include "inference_executor.hpp"
 
@@ -300,8 +301,10 @@ static bool isInputEmpty(const ::KFSRequest::InferInputTensor& input) {
     return true;
 }
 
-static Status handleBinaryInput(const int binary_input_size, size_t& binary_input_offset, const size_t binary_buffer_size, const char* binary_inputs_buffer, ::KFSRequest::InferInputTensor& input, std::string* rawInputContentsBuffer) {
-    if (binary_input_offset + binary_input_size > binary_buffer_size) {
+static Status handleBinaryInput(const size_t binary_input_size, size_t& binary_input_offset, const size_t binary_buffer_size, const char* binary_inputs_buffer, ::KFSRequest::InferInputTensor& input, std::string* rawInputContentsBuffer) {
+    // Subtraction is safe: binary_input_offset <= binary_buffer_size is maintained as an invariant —
+    // offset starts at 0 and is incremented only after this check passes, keeping it within bounds.
+    if (binary_input_size > binary_buffer_size - binary_input_offset) {
         SPDLOG_DEBUG("Binary inputs size exceeds provided buffer size {}, binary input offset {}, binary_input size {}",
             binary_buffer_size,
             binary_input_offset,
@@ -313,11 +316,17 @@ static Status handleBinaryInput(const int binary_input_size, size_t& binary_inpu
     return StatusCode::OK;
 }
 
-static size_t calculateBinaryDataSize(::KFSRequest::InferInputTensor& input) {
-    auto element_size = KFSDataTypeSize(input.datatype());
-    size_t elements_number = std::accumulate(std::begin(input.shape()), std::end(input.shape()), 1, std::multiplies<size_t>());
-    size_t binary_data_size = elements_number * element_size;
-    return binary_data_size;
+static Status calculateBinaryDataSize(::KFSRequest::InferInputTensor& input, size_t& binary_data_size) {
+    const auto element_size = KFSDataTypeSize(input.datatype());
+    const std::vector<int64_t> shapeVec(input.shape().begin(), input.shape().end());
+    size_t elements_number = 0;
+    if (!request_validation_utils::computeExpectedElementCountReturnFalseIfOverflow(shapeVec, elements_number)) {
+        return Status(StatusCode::INVALID_CONTENT_SIZE, "Binary input shape dimensions overflow size_t");
+    }
+    if (!request_validation_utils::computeExpectedBufferSizeReturnFalseIfOverflow(elements_number, element_size, binary_data_size)) {
+        return Status(StatusCode::INVALID_CONTENT_SIZE, "Binary input shape dimensions overflow size_t");
+    }
+    return StatusCode::OK;
 }
 
 static Status handleBinaryInputs(::KFSRequest& grpc_request, const std::string& request_body, size_t endOfJson) {
@@ -335,7 +344,12 @@ static Status handleBinaryInputs(::KFSRequest& grpc_request, const std::string& 
                 return StatusCode::REST_CONTENTS_FIELD_NOT_EMPTY;
             }
             if (binary_data_size_parameter->second.parameter_choice_case() == inference::InferParameter::ParameterChoiceCase::kInt64Param) {
-                binary_input_size = binary_data_size_parameter->second.int64_param();
+                const int64_t paramValue = binary_data_size_parameter->second.int64_param();
+                if (paramValue < 0) {
+                    SPDLOG_DEBUG("binary_data_size parameter must not be negative");
+                    return StatusCode::REST_BINARY_DATA_SIZE_PARAMETER_INVALID;
+                }
+                binary_input_size = static_cast<size_t>(paramValue);
             } else {
                 SPDLOG_DEBUG("binary_data_size parameter type should be int64");
                 return StatusCode::REST_BINARY_DATA_SIZE_PARAMETER_INVALID;
@@ -346,7 +360,10 @@ static Status handleBinaryInputs(::KFSRequest& grpc_request, const std::string& 
             if (grpc_request.mutable_inputs()->size() == 1 && input->datatype() == "BYTES") {
                 binary_input_size = binary_buffer_size;
             } else {
-                binary_input_size = calculateBinaryDataSize(*input);
+                auto calcStatus = calculateBinaryDataSize(*input, binary_input_size);
+                if (!calcStatus.ok()) {
+                    return calcStatus;
+                }
             }
         }
         auto status = handleBinaryInput(binary_input_size, binary_input_offset, binary_buffer_size, binary_inputs_buffer, *input, grpc_request.add_raw_input_contents());

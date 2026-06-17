@@ -142,9 +142,13 @@ int64_t getStringBatchSize(const KFSTensorInputProto& src) {
 }
 template <>
 Status RequestValidator<KFSRequest, KFSTensorInputProto, ValidationChoice::INPUT, KFSInputTensorIteratorType, KFSShapeType>::validateTensorContent(const KFSTensorInputProto& proto, ovms::Precision expectedPrecision, size_t bufferId) const {
-    size_t expectedValueCount = 1;
-    for (int i = 0; i < proto.shape().size(); i++) {
-        expectedValueCount *= proto.shape()[i];
+    size_t expectedValueCount = 0;
+    if (!request_validation_utils::computeExpectedElementCountReturnFalseIfOverflow(proto.shape(), expectedValueCount)) {
+        std::stringstream ss;
+        ss << "Shape dimensions overflow; input name: " << getCurrentlyValidatedTensorName();
+        const std::string details = ss.str();
+        SPDLOG_DEBUG("[servable name: {} version: {}] Invalid content size of tensor proto - {}", servableName, servableVersion, details);
+        return Status(StatusCode::INVALID_CONTENT_SIZE, details);
     }
     if (request.raw_input_contents().size()) {
         if (proto.datatype() == "BYTES") {
@@ -179,7 +183,12 @@ Status RequestValidator<KFSRequest, KFSTensorInputProto, ValidationChoice::INPUT
             }
         } else {
             // Plain old data
-            size_t expectedContentSize = expectedValueCount * ov::element::Type(ovmsPrecisionToIE2Precision(expectedPrecision)).size();
+            size_t expectedContentSize = 0;
+            const size_t elementByteSize = ov::element::Type(ovmsPrecisionToIE2Precision(expectedPrecision)).size();
+            if (!request_validation_utils::computeExpectedBufferSizeReturnFalseIfOverflow(expectedValueCount, elementByteSize, expectedContentSize)) {
+                SPDLOG_DEBUG("[servable name: {} version: {}] Shape dimensions overflow size_t; element count: {}; element byte size: {}; input name: {}", servableName, servableVersion, expectedValueCount, elementByteSize, getCurrentlyValidatedTensorName());
+                return Status(StatusCode::INVALID_CONTENT_SIZE, "Shape too large; " + getCurrentlyValidatedTensorName());
+            }
             if (expectedContentSize != request.raw_input_contents()[bufferId].size()) {
                 std::stringstream ss;
                 ss << "Expected: " << expectedContentSize << " bytes; Actual: " << request.raw_input_contents()[bufferId].size() << " bytes; input name: " << getCurrentlyValidatedTensorName();

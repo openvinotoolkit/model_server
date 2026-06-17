@@ -105,6 +105,11 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
             ("log_path",
                 "Optional path to the log file",
                 cxxopts::value<std::string>(), "LOG_PATH")
+            ("verbose_response",
+                "When enabled, responses include an extra "
+                "\"__verbose\" object with additional debug information.",
+                cxxopts::value<bool>()->default_value("false"),
+                "VERBOSE_RESPONSE")
 #ifdef MTR_ENABLED
             ("trace_path",
                 "Path to the trace file",
@@ -117,10 +122,6 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
                 "Time interval between config and model versions changes detection. Default is 1. Zero or negative value disables changes monitoring.",
                 cxxopts::value<uint32_t>()->default_value("1"),
                 "FILE_SYSTEM_POLL_WAIT_SECONDS")
-            ("sequence_cleaner_poll_wait_minutes",
-                "Time interval between two consecutive sequence cleanup scans. Default is 5. Zero value disables sequence cleaner. It also sets the schedule for releasing free memory from the heap.",
-                cxxopts::value<uint32_t>()->default_value("5"),
-                "SEQUENCE_CLEANER_POLL_WAIT_MINUTES")
             ("custom_node_resources_cleaner_interval_seconds",
                 "Time interval between two consecutive resources cleanup scans. Default is 300. Zero value disables resources cleaner.",
                 cxxopts::value<uint32_t>()->default_value("300"),
@@ -294,23 +295,7 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
             ("plugin_config",
                 "A dictionary of plugin configuration keys and their values, eg \"{\\\"NUM_STREAMS\\\": \\\"1\\\"}\". Default number of streams is optimized to optimal latency with low concurrency.",
                 cxxopts::value<std::string>(),
-                "PLUGIN_CONFIG")
-            ("stateful",
-                "Flag indicating model is stateful",
-                cxxopts::value<bool>()->default_value("false"),
-                "STATEFUL")
-            ("idle_sequence_cleanup",
-                "Flag indicating if model is subject to sequence cleaner scans",
-                cxxopts::value<bool>()->default_value("true"),
-                "IDLE_SEQUENCE_CLEANUP")
-            ("low_latency_transformation",
-                "Flag indicating that Model Server should perform low latency transformation on that model",
-                cxxopts::value<bool>()->default_value("false"),
-                "LOW_LATENCY_TRANSFORMATION")
-            ("max_sequence_number",
-                "Determines how many sequences can be processed concurrently by one model instance. When that value is reached, attempt to start a new sequence will result in error.",
-                cxxopts::value<uint32_t>(),
-                "MAX_SEQUENCE_NUMBER");
+                "PLUGIN_CONFIG");
 
         options->add_options("generative task (applies to: pull hf model, single model)")
             ("task",
@@ -514,7 +499,7 @@ void CLIParser::prepareServer(ServerSettingsImpl& serverSettings) {
     serverSettings.metricsEnabled = result->operator[]("metrics_enable").as<bool>();
     serverSettings.metricsList = result->operator[]("metrics_list").as<std::string>();
     serverSettings.filesystemPollWaitMilliseconds = result->operator[]("file_system_poll_wait_seconds").as<uint32_t>() * 1000;
-    serverSettings.sequenceCleanerPollWaitMinutes = result->operator[]("sequence_cleaner_poll_wait_minutes").as<uint32_t>();
+
     serverSettings.resourcesCleanerPollWaitSeconds = result->operator[]("custom_node_resources_cleaner_interval_seconds").as<uint32_t>();
     serverSettings.grpcWorkers = result->operator[]("grpc_workers").as<uint32_t>();
 
@@ -522,6 +507,8 @@ void CLIParser::prepareServer(ServerSettingsImpl& serverSettings) {
         serverSettings.logLevel = result->operator[]("log_level").as<std::string>();
     if (result->count("log_path"))
         serverSettings.logPath = result->operator[]("log_path").as<std::string>();
+    if (result->count("verbose_response"))
+        serverSettings.verboseResponse = result->operator[]("verbose_response").as<bool>();
 
     if (result->count("grpc_channel_arguments"))
         serverSettings.grpcChannelArguments = result->operator[]("grpc_channel_arguments").as<std::string>();
@@ -600,10 +587,7 @@ void CLIParser::prepareModel(ModelsSettingsImpl& modelsSettings, HFSettingsImpl&
         modelsSettings.modelPath = result->operator[]("model_path").as<std::string>();
         modelsSettings.userSetSingleModelArguments.push_back("model_path");
     }
-    if (result->count("max_sequence_number")) {
-        modelsSettings.maxSequenceNumber = result->operator[]("max_sequence_number").as<uint32_t>();
-        modelsSettings.userSetSingleModelArguments.push_back("max_sequence_number");
-    }
+
 
     if (result->count("batch_size")) {
         modelsSettings.batchSize = result->operator[]("batch_size").as<std::string>();
@@ -675,21 +659,6 @@ void CLIParser::prepareModel(ModelsSettingsImpl& modelsSettings, HFSettingsImpl&
         modelsSettings.pluginConfig = result->operator[]("plugin_config").as<std::string>();
         hfSettings.exportSettings.pluginConfig.manualString = modelsSettings.pluginConfig;
         modelsSettings.userSetSingleModelArguments.push_back("plugin_config");
-    }
-
-    if (result->count("stateful")) {
-        modelsSettings.stateful = result->operator[]("stateful").as<bool>();
-        modelsSettings.userSetSingleModelArguments.push_back("stateful");
-    }
-
-    if (result->count("idle_sequence_cleanup")) {
-        modelsSettings.idleSequenceCleanup = result->operator[]("idle_sequence_cleanup").as<bool>();
-        modelsSettings.userSetSingleModelArguments.push_back("idle_sequence_cleanup");
-    }
-
-    if (result->count("low_latency_transformation")) {
-        modelsSettings.lowLatencyTransformation = result->operator[]("low_latency_transformation").as<bool>();
-        modelsSettings.userSetSingleModelArguments.push_back("low_latency_transformation");
     }
     if (result->count("config_path")) {
             modelsSettings.configPath = result->operator[]("config_path").as<std::string>();
