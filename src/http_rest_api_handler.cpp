@@ -103,7 +103,7 @@ namespace ovms {
 const std::string HttpRestApiHandler::predictionRegexExp =
     R"((.?)\/v1\/models\/([^\/:]+)(?:(?:\/versions\/(\d+))|(?:\/labels\/(\w+)))?:(classify|regress|predict))";
 const std::string HttpRestApiHandler::modelstatusRegexExp =
-    R"((.?)\/v1\/models(?:\/([^\/:]+))?(?:(?:\/versions\/(\d+))|(?:\/labels\/(\w+)))?(?:\/(metadata))?)";
+    R"((.?)\/v1\/models\/([^\/:]+)(?:(?:\/versions\/(\d+))|(?:\/labels\/(\w+))|(?:\/(metadata))))";
 const std::string HttpRestApiHandler::configReloadRegexExp = R"((.?)\/v1\/config\/reload)";
 const std::string HttpRestApiHandler::configStatusRegexExp = R"((.?)\/v1\/config)";
 
@@ -121,11 +121,11 @@ const std::string HttpRestApiHandler::kfs_servermetadataRegexExp =
     R"(/v2)";
 
 const std::string HttpRestApiHandler::v3_ListModelsRegexExp =
-    R"(/v3/(v1/)?models)";
+    R"((?:/v3/|/v1/)(v1/)?models)";
 const std::string HttpRestApiHandler::v3_RetrieveModelRegexExp =
-    R"(/v3/(v1/)?models/(.+))";
+    R"((?:/v3/|/v1/)(v1/)?models/(.+))";
 const std::string HttpRestApiHandler::v3_RegexExp =
-    R"(/v3/.*?(/|$))";
+    R"((?:/v3/|/v1/).*?(/|$))";
 
 const std::string HttpRestApiHandler::metricsRegexExp = R"((.?)\/metrics(\?(.*))?)";
 
@@ -1022,16 +1022,16 @@ Status HttpRestApiHandler::parseRequestComponents(HttpRequestComponents& request
                 return status;
             return StatusCode::OK;
         }
+        if (std::regex_match(request_path, sm, configReloadRegex)) {
+            requestComponents.type = ConfigReload;
+            return StatusCode::OK;
+        }
         if (std::regex_match(request_path, sm, v3_Regex)) {
             requestComponents.type = V3;
             auto status = parseInferenceHeaderContentLength(requestComponents, headers);
             if (!status.ok())
                 return status;
             requestComponents.headers = headers;
-            return StatusCode::OK;
-        }
-        if (std::regex_match(request_path, sm, configReloadRegex)) {
-            requestComponents.type = ConfigReload;
             return StatusCode::OK;
         }
         return (std::regex_match(request_path, sm, modelstatusRegex) ||
