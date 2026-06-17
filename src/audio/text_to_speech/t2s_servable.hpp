@@ -35,7 +35,6 @@ class TtsServable {
 public:
     std::shared_ptr<ov::genai::Text2SpeechPipeline> ttsPipeline;
     std::unordered_map<std::string, ov::Tensor> voices;
-    bool isKokoroModel = false;
     std::mutex ttsPipelineMutex;
     std::filesystem::path parsedModelsPath;
 

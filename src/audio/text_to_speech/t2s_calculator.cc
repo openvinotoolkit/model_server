@@ -161,10 +161,9 @@ public:
                     if (speakerIt != pipe->voices.end()) {
                         speakerEmbedding = speakerIt->second;
                     } else {
-                        properties["voice"] = voiceName.value();
+                        // SpeechT5 and other models only support pre-loaded speaker embeddings
+                        return absl::InvalidArgumentError(absl::StrCat("Requested voice '", voiceName.value(), "' not found in available voices"));
                     }
-                } else if (pipe->isKokoroModel) {
-                    properties["voice"] = KOKORO_DEFAULT_VOICE;
                 }
                 generatedSpeech = pipe->ttsPipeline->generate(inputIt->value.GetString(), speakerEmbedding, properties);
                 auto speechSize = generatedSpeech.speeches[0].get_size();

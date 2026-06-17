@@ -97,7 +97,6 @@ TtsServable::TtsServable(const std::string& modelDir, const std::string& targetD
     }
     ttsPipeline = std::make_shared<ov::genai::Text2SpeechPipeline>(parsedModelsPath.string(), targetDevice, config);
     const ov::Shape speakerEmbeddingShape = ttsPipeline->get_speaker_embedding_shape();
-    isKokoroModel = (speakerEmbeddingShape == KOKORO_SPEAKER_EMBEDDING_SHAPE);
     for (auto voice : graphVoices) {
         std::filesystem::path voicePath(voice.path());
         if (voicePath.is_relative()) {
