@@ -108,7 +108,6 @@
             type:<|"|>{{- params['type'] | upper -}}<|"|>}
         {%- endif -%}
     {%- endif -%}
-    {#- Patched out: Here was "response" field rendering for function declaration, however broken and not inline with other serving such as llama.cpp #}
     }
 {%- endmacro -%}
 {%- macro format_argument(argument, escape_keys=True) -%}
