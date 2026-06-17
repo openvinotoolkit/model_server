@@ -306,52 +306,6 @@ class TensorFlowServingWrapper(AbstractServingWrapper):
 
         return response
 
-    def prepare_stateful_request_rest(self, input_objects: dict, sequence_ctrl=None, sequence_id=None,
-                                      ctrl_dtype=None, id_dtype=None):
-        data_obj = self.prepare_body_dict(
-            input_objects, request_format=Ovms.BINARY_IO_LAYOUT_COLUMN_NAME
-        )
-        if sequence_ctrl is not None:
-            data_obj['inputs']['sequence_control_input'] = [sequence_ctrl]
-        if sequence_id is not None:
-            data_obj['inputs']['sequence_id'] = [sequence_id]
-        return {'request': json.dumps(data_obj)}
-
-    def predict_stateful_request_rest(self, request, timeout=900):
-        result = self.send_predict_request(request, timeout)
-
-        output_json = json.loads(result.text)
-        sequence_id = output_json['outputs'].pop('sequence_id')[0] \
-            if 'outputs' in output_json else None
-        outputs = self.process_json_output(output_json)
-        return sequence_id, outputs
-
-    def prepare_stateful_request_grpc(self, input_objects: dict, sequence_ctrl=None, sequence_id=None,
-                                      ctrl_dtype=None, id_dtype=None):
-        sequence_id_dtype = id_dtype if id_dtype else 'uint64'
-        sequence_ctrl_dtype = ctrl_dtype if ctrl_dtype else 'uint32'
-        request = self.prepare_request(input_objects)
-        if sequence_ctrl is not None:
-            request['request'].inputs['sequence_control_input'].CopyFrom(
-                make_tensor_proto([sequence_ctrl], dtype=sequence_ctrl_dtype)
-            )
-        if sequence_id is not None:
-            request['request'].inputs['sequence_id'].CopyFrom(
-                make_tensor_proto([sequence_id], dtype=sequence_id_dtype)
-            )
-        return request
-
-    def predict_stateful_request_grpc(self, request, timeout=900):
-        result = self.predict_stub.Predict(
-            request, wait_for_ready=True, timeout=timeout
-        )
-        data = {}
-        sequence_id = result.outputs.pop('sequence_id').uint64_val[0]
-        for output_name, output in result.outputs.items():
-            data[output_name] = make_ndarray(output)
-        return sequence_id, data
-
-
     # KFS not supported API calls:
     def is_server_live_grpc(self):
         raise NotSupported("is_server_live is not available in TFS")
