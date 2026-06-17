@@ -16,22 +16,19 @@
 
 #include "cleaner_utils.hpp"
 
-#include <string>
-
-#ifdef __linux__
-#include <malloc.h>
-#elif _WIN32
+#ifdef _WIN32
 #include <crtdbg.h>
+#include <malloc.h>
+#include <windows.h>
+
+#include <string>
+#include <system_error>
 #endif
 
-#include "global_sequences_viewer.hpp"
 #include "logging.hpp"
 #include "resources_cleaner.hpp"
-#include "status.hpp"
 
 namespace ovms {
-FunctorSequenceCleaner::FunctorSequenceCleaner(GlobalSequencesViewer& globalSequencesViewer) :
-    globalSequencesViewer(globalSequencesViewer) {}
 
 #ifdef _WIN32
 bool malloc_trim_win() {
@@ -45,18 +42,6 @@ bool malloc_trim_win() {
     return true;
 }
 #endif
-
-void FunctorSequenceCleaner::cleanup() {
-    globalSequencesViewer.removeIdleSequences();
-    SPDLOG_TRACE("malloc_trim(0)");
-#ifdef __linux__
-    malloc_trim(0);
-#elif _WIN32
-    malloc_trim_win();
-#endif
-}
-
-FunctorSequenceCleaner::~FunctorSequenceCleaner() = default;
 
 FunctorResourcesCleaner::~FunctorResourcesCleaner() = default;
 

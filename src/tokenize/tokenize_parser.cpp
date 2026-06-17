@@ -84,6 +84,8 @@ std::variant<TokenizeRequest, std::string> TokenizeParser::validateTokenizeReque
         if (it->value.IsInt()) {
             size_t max_length = it->value.GetInt();
             request.parameters["max_length"] = max_length;
+            // Keep OVMS tokenize API contract: max_length implies truncation.
+            request.parameters["truncation"] = true;
         } else {
             return "max_length should be integer";
         }
