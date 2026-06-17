@@ -294,6 +294,25 @@ airplane_mode = get_bool("TT_AIRPLANE_MODE", False)
 """ TT_OVMS_IMAGE_LOCAL - ovms image can only be found locally """
 ovms_image_local = get_bool("TT_OVMS_IMAGE_LOCAL", False)
 
+""" TT_REQUIREMENTS - Requirements """
+req_ids = get_list("TT_REQUIREMENTS")
+
+""" TT_EXCLUDE_REQUIREMENTS - Requirements to exclude """
+exclude_req_ids = get_list("TT_EXCLUDE_REQUIREMENTS")
+
+""" TT_COMPONENTS - Components """
+components_ids = get_list("TT_COMPONENTS")
+
+""" TT_EXCLUDE_COMPONENTS - Components to exclude """
+exclude_components_ids = get_list("TT_EXCLUDE_COMPONENTS")
+
+""" TT_TESTS_PRIORITY_LIST - tests priority to run - high, medium or low """
+tests_priority_list_raw = get_list("TT_TESTS_PRIORITY_LIST", fallback=["high", "medium", "low"])
+tests_priority_list = [f"priority_{p}" for p in tests_priority_list_raw if "priority" not in p]
+
+""" TT_PERFORMANCE_TEST_TIMEOUT_MINUTES - timeout (in minutes) for each performance test """
+performance_test_timeout_minutes = get_int("TT_PERFORMANCE_TEST_TIMEOUT_MINUTES", 10)
+
 """ TT_BASE_OS - os type used for calculating ovms_image name (if not given explicitly). 
         Possible options (case insensitive): 
         ubuntu22 - use default Ubuntu 22.04 image
@@ -393,3 +412,9 @@ def get_ovms_types():
 """ TT_OVMS_TYPE - ovms type runtime to be executed:
 DOCKER, BINARY, BINARY_DOCKER, CAPI, CAPI_DOCKER, DOCKER_CMD_LINE """
 ovms_types = get_ovms_types()
+
+""" TT_DIVIDE_TARGET_DEVICE_PER_WORKER - spread tests across pytest workers based on target device """
+divide_target_device_per_worker = get_bool("TT_DIVIDE_TARGET_DEVICE_PER_WORKER", False)
+
+""" TT_PYTEST_KEYWORD_FILTER """
+pytest_keyword_filter = os.environ.get("TT_PYTEST_KEYWORD_FILTER", None)

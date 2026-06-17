@@ -280,7 +280,7 @@ def _make_path_writable_and_retry(func, path, _exc_info):
 def remove_dir_tree(dir_path, ignore_errors=False):
     """Remove a directory tree, retrying failed paths after making them writable."""
     try:
-        shutil.rmtree(dir_path, onexc=_make_path_writable_and_retry)
+        shutil.rmtree(dir_path, onerror=_make_path_writable_and_retry)
     except OSError:
         if not ignore_errors:
             raise

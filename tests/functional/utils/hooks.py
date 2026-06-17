@@ -16,13 +16,19 @@
 
 import itertools
 import os
+import re
 import shutil
 import sys
 import warnings
+import pytest
 
-from collections import defaultdict
+from collections import Counter, defaultdict, namedtuple
 from docker import errors as docker_errors
+from itertools import groupby
 from pathlib import Path
+from _pytest.mark import Mark, MarkDecorator
+from _pytest.python import Function
+
 from tests.functional import config
 from ovms.constants.models_library import ModelsLib
 from tests.functional.utils.download import wget_file
@@ -32,6 +38,9 @@ from tests.functional.config import (
     build_test_image,
     c_api_wrapper_dir,
     cleanup_env_on_startup,
+    components_ids,
+    exclude_components_ids,
+    exclude_req_ids,
     force_generate_new_ssl_certs,
     global_tmp_dir_default,
     http_proxy,
@@ -40,7 +49,12 @@ from tests.functional.config import (
     no_proxy,
     ovms_c_repo_path,
     ovms_file_locks_dir,
+    performance_test_timeout_minutes,
     machine_is_reserved_for_test_session,
+    req_ids,
+    run_ovms_with_opencl_trace,
+    run_ovms_with_valgrind,
+    tests_priority_list,
     tmp_dir,
 )
 from tests.functional.constants.os_type import get_host_os, OsType, UBUNTU
@@ -72,12 +86,19 @@ from tests.functional.constants.ovms_type import (
 )
 from tests.functional.constants.paths import Paths
 from tests.functional.constants.target_device import MAX_WORKERS_PER_TARGET_DEVICE, TargetDevice
+from tests.functional.constants.ovms_binaries import calculate_ovms_binary_name
 from tests.functional.object_model.ovms_info import OvmsInfo
 from tests.functional.utils.core import TmpDir
 from tests.functional.utils.docker import DockerClient, DockerContainer, DOCKER_CONTAINER_TMP_PATH
 from tests.functional.utils.environment_info import EnvironmentInfo
 from tests.functional.utils.logger import get_logger
-from tests.functional.utils.marks import MarkTestParameters
+from tests.functional.utils.marks import (
+    MarkConditionalRunType,
+    MarkGeneral,
+    MarkPriority,
+    MarkRunType,
+    MarkTestParameters,
+)
 from tests.functional.utils.process import PID_STATE_ZOMBIE, Process, get_pid_name, get_pid_status
 from tests.functional.utils.test_framework import change_dir_permissions, get_test_object_prefix, is_xdist_master
 from tests.functional.object_model.ovsa import OvsaCerts
@@ -85,9 +106,37 @@ from tests.functional.object_model.ovsa import OvsaCerts
 logger = get_logger(__name__)
 
 
+timeout_dict = defaultdict(
+    lambda: 5 * 60,
+    {
+        MarkRunType.TEST_MARK_ON_COMMIT: 3 * 60,
+        MarkRunType.TEST_MARK_REGRESSION: 5 * 60,
+        MarkRunType.TEST_MARK_REGRESSION_SINGLE: 5 * 60,
+        MarkRunType.TEST_MARK_REGRESSION_WEEKLY: 5 * 60,
+        MarkRunType.TEST_MARK_REGRESSION_WEEKLY_SINGLE: 5 * 60,
+        MarkRunType.TEST_MARK_ENABLING: 10 * 60,
+        MarkRunType.TEST_MARK_STRESS_AND_LOAD: 40 * 60,
+        MarkRunType.TEST_MARK_STRESS_AND_LOAD_SINGLE: 40 * 60,
+        MarkRunType.TEST_MARK_LONG: 48 * 60 * 60,
+        MarkRunType.TEST_MARK_SMOKE: 5 * 60,
+        MarkRunType.TEST_MARK_MANUAL: 5 * 60,
+        MarkRunType.TEST_MARK_PERFORMANCE: performance_test_timeout_minutes * 60,
+    },
+)
+
+TIMEOUT_MULTIPLIER: dict = {
+    TargetDevice.GPU: 1.5,
+    TargetDevice.NPU: 1.5,
+    "TRACE_TOOLS": 2,
+    "AUTO_HETERO_MULTI": 3,
+    OvmsType.KUBERNETES: 1.5,
+}
+
 CURRENT_TARGET_DEVICE_DICT = {}
 
 DEVICE_ID_TO_DETAILED_TARGET_DEVICE_NAME_MAP = defaultdict(lambda: ("", []), {})
+
+SkippedItem = namedtuple("SkippedItem", "test_name reason")
 
 
 def init_environment(_config):
@@ -152,7 +201,7 @@ def cleanup_docker_images():
                 logger.info(f"Removed docker image: {image.id}")
 
 
-def cleanup_tmp_repos_dir():
+def cleanup_tmp_repos_dir(config):
     try:
         shutil.rmtree(config.tmp_repos_dir)
     except PermissionError as e:
@@ -735,30 +784,315 @@ def clear_lockfiles():
         file.unlink()
 
 
-def parametrize_tests(metafunc):
-    if OVMS_TYPE_PARAM_NAME in metafunc.fixturenames:
-        parametrize_ovms_type(metafunc)
+def deselect_items(items, config, deselected):
+    config.hook.pytest_deselected(items=deselected)
+    for item in deselected:
+        test_name = item.parent.nodeid
+        # nodeid comes in a way:
+        # 1) test.py::TestClass::()
+        # 2) test.py::
+        if test_name[-2:] == "()":
+            test_name = test_name[:-2]
+        elif "::" not in test_name:
+            test_name += "::"
 
-    if USES_MAPPING_PARAM_NAME in metafunc.fixturenames:
-        parametrize_uses_mapping(metafunc)
+        test_name += item.name
+        logger.debug("Deselecting test: " + test_name)
+        items.remove(item)
 
-    if BASE_OS_PARAM_NAME in metafunc.fixturenames:
-        parametrize_base_os(metafunc)
 
-    if MarkTestParameters.MODEL_TYPE in metafunc.fixturenames:
-        parametrize_model_type(metafunc)
-    elif MarkTestParameters.ALL_MODELS in metafunc.fixturenames:
-        parametrize_all_models(metafunc)
-    elif MarkTestParameters.MANY_MODELS in metafunc.fixturenames:
-        parametrize_many_models(metafunc)
-    elif MarkTestParameters.ITERATION_INFO in metafunc.fixturenames:
-        parametrize_iteration_info(metafunc)
-    elif MarkTestParameters.INPUT_SHAPE in metafunc.fixturenames:
-        parametrize_input_shape(metafunc)
-    elif MarkTestParameters.PLUGIN_CONFIG in metafunc.fixturenames:
-        parametrize_plugin_config(metafunc)
-    elif TARGET_DEVICE_PARAM_NAME in metafunc.fixturenames:
-        parametrize_target_device(metafunc)
+def set_divide_target_device_per_worker(items):
+    # Assign xdist_group per target_device so --dist loadgroup routes
+    # all tests for a given device to the same worker.
+    # Must be done before yield so xdist sees the markers during scheduling.
+    if config.divide_target_device_per_worker:
+        num_devices = len(config.target_devices)
+        if num_devices and config.xdist_workers > 0 and config.xdist_workers % num_devices != 0:
+            raise ValueError(
+                f"xdist_workers ({config.xdist_workers}) must be a multiple of "
+                f"the number of target devices ({num_devices}): {config.target_devices}"
+            )
+        for item in items:
+            if hasattr(item, "callspec") and TARGET_DEVICE_PARAM_NAME in item.callspec.params:
+                td = item.callspec.params[TARGET_DEVICE_PARAM_NAME]
+                item.add_marker(pytest.mark.xdist_group(name=f"device_{td}"))
+                logger.debug(f"Assigned {item.nodeid} to xdist_group device_{td}")
 
-    if MarkTestParameters.MODEL_AUX_TYPE in metafunc.fixturenames:
-        parametrize_model_aux_type(metafunc)
+
+def preprocess_collected_items(items):
+    deselected = []
+    all_components = {}
+    all_requirements = {}
+    try:
+        required_marker_ids, excluded_marker_ids = get_marker_ids_for_test_run()
+        for item in items:
+            preprocess_collected_item(
+                item,
+                deselected,
+                all_components,
+                all_requirements,
+                required_marker_ids,
+                excluded_marker_ids,
+            )
+
+    except RuntimeError as e:
+        error_msg = str(e)
+        logger.exception(error_msg)
+        sys.exit(error_msg)
+
+    return deselected
+
+
+def get_marker_ids_for_test_run():
+    # requirements
+    if req_ids and exclude_req_ids:
+        raise RuntimeError("Can't both include and exclude requirements!")
+    # components
+    if components_ids and exclude_components_ids:
+        raise RuntimeError("Can't both include and exclude components!")
+
+    required_marker_ids = generate_marker_ids(req_ids, components_ids, tests_priority_list)
+    excluded_marker_ids = generate_marker_ids(exclude_req_ids, exclude_components_ids)
+    return required_marker_ids, excluded_marker_ids
+
+
+def generate_marker_ids(*args):
+    ids_lists = [ids_list for ids_list in args if ids_list]
+    marker_ids = []
+    if len(ids_lists) > 1:
+        marker_ids = list(itertools.product(*ids_lists))
+    elif len(ids_lists) == 1:
+        marker_ids = [(id_value,) for id_value in ids_lists[0]]
+    return marker_ids
+
+
+def preprocess_collected_item(
+        item, deselected, all_components, all_requirements, required_marker_ids, excluded_marker_ids
+):
+    set_item_image_parameter(item)
+    apply_conditional_run_type_marks(item)
+    test_type = MarkRunType.get_test_type_mark(item)
+    set_timeout_per_test_type(item, test_type)
+    update_parent_markers(
+        item, (
+            MarkGeneral.COMPONENTS.mark,
+            MarkGeneral.REQIDS.mark,
+            MarkPriority.HIGH.mark,
+            MarkPriority.MEDIUM.mark,
+            MarkPriority.LOW.mark,
+        )
+    )
+    if deselect(item, test_type, required_marker_ids, excluded_marker_ids):
+        deselected.append(item)
+    else:
+        update_markers(item, test_type, all_components, MarkGeneral.COMPONENTS.mark)
+        update_markers(item, test_type, all_requirements, MarkGeneral.REQIDS.mark)
+    return deselected
+
+
+def set_item_image_parameter(item):
+    if getattr(item, "callspec", None):
+        # Store calculated image for later use.
+        ovms_type = item.callspec.params.get(OVMS_TYPE_PARAM_NAME, OvmsType.DOCKER)
+        base_os = item.callspec.params.get(BASE_OS_PARAM_NAME, OsType.Ubuntu22)
+        if ovms_type == OvmsType.BINARY or ovms_type == OvmsType.CAPI:
+            item._image = calculate_ovms_binary_name(base_os=base_os)
+        else:
+            target_device = item.callspec.params.get(TARGET_DEVICE_PARAM_NAME, TargetDevice.CPU)
+            item._image = calculate_ovms_image_name(target_device=target_device, base_os=base_os)
+
+
+def apply_conditional_run_type_marks(item):
+    """Resolve conditional_run_type and conditional_run_type_by_model meta-markers.
+
+    conditional_run_type: assigns single_mark when device+OS match, default_mark otherwise.
+    conditional_run_type_by_model: assigns mark based on model_type membership in model collections.
+    """
+    params = getattr(getattr(item, 'callspec', None), 'params', {})
+
+    for marker in item.iter_markers(MarkConditionalRunType.CONDITIONAL_RUN_TYPE):
+        single_mark = marker.kwargs["single_mark"]
+        default_mark = marker.kwargs["default_mark"]
+        single_if_device = marker.kwargs.get("single_if_device")
+        single_if_os = marker.kwargs.get("single_if_os")
+
+        device = params.get(TARGET_DEVICE_PARAM_NAME, "")
+        base_os = str(params.get(BASE_OS_PARAM_NAME, "")).lower()
+
+        is_single = True
+        if single_if_device and device not in single_if_device:
+            is_single = False
+        if single_if_os and base_os not in single_if_os:
+            is_single = False
+
+        mark_name = single_mark if is_single else default_mark
+        item.add_marker(getattr(pytest.mark, mark_name))
+        return  # only first conditional_run_type marker is applied
+
+    for marker in item.iter_markers(MarkConditionalRunType.CONDITIONAL_RUN_TYPE_BY_MODEL):
+        model_type = params.get(MarkTestParameters.MODEL_TYPE)
+        if model_type is None:
+            continue
+        device = params.get(TARGET_DEVICE_PARAM_NAME, "")
+        for mark_name, model_collection in marker.kwargs.get("model_mark_map", {}).items():
+            device_models = set(model_collection.get(device, []))
+            if model_type in device_models:
+                item.add_marker(getattr(pytest.mark, mark_name))
+                return
+        default_mark = marker.kwargs.get("default_mark")
+        if default_mark:
+            item.add_marker(getattr(pytest.mark, default_mark))
+        return
+
+
+def set_timeout_per_test_type(item, test_type):
+    if item.get_closest_marker("timeout") is None:
+        ovms_type = item.callspec.params.get(OVMS_TYPE_PARAM_NAME, None)
+        value = timeout_dict[test_type]
+        if ovms_type == OvmsType.KUBERNETES:
+            value *= TIMEOUT_MULTIPLIER[OvmsType.KUBERNETES]
+        if any([test_type == MarkRunType.TEST_MARK_REGRESSION,
+                test_type == MarkRunType.TEST_MARK_ON_COMMIT,
+            ]):
+            if any(["AUTO" in item.name, "HETERO" in item.name, "MULTI" in item.name]):
+                value *= TIMEOUT_MULTIPLIER["AUTO_HETERO_MULTI"]
+            elif TargetDevice.GPU in item.name:
+                value *= TIMEOUT_MULTIPLIER[TargetDevice.GPU]
+            elif TargetDevice.NPU in item.name:
+                value *= TIMEOUT_MULTIPLIER[TargetDevice.NPU]
+        if run_ovms_with_valgrind or run_ovms_with_opencl_trace:
+            value *= TIMEOUT_MULTIPLIER["TRACE_TOOLS"]
+        item.add_marker(pytest.mark.timeout(value))
+
+
+def update_parent_markers(item, marker_types):
+    for marker_type in marker_types:
+        components = item.get_closest_marker(marker_type)
+        if components is not None:
+            current_components = next(
+                (component for component in item.own_markers if component.name == marker_type),
+                None,
+            )
+            if current_components is None:
+                item.own_markers.append(components)
+
+
+def deselect(item, test_type, required_marker_ids, excluded_marker_ids):
+    # Validate different scenarios where test should be deselected from execution during `collect` stage.
+    if isinstance(item, Function):
+        if test_type is None:
+            raise RuntimeError("Test do not have test_type: " + item.name)
+
+        if required_marker_ids:
+            for required_marker_id_list in required_marker_ids:
+                if _is_test_marker_id_is_matched_with_id(item, required_marker_id_list):
+                    # make sure that item is not deselected by other marker
+                    return deselect_by_excluded_marker_ids(item, excluded_marker_ids)
+            return True
+        elif excluded_marker_ids:
+            return deselect_by_excluded_marker_ids(item, excluded_marker_ids)
+
+    return False
+
+
+def deselect_by_excluded_marker_ids(item, excluded_marker_ids):
+    for excluded_marker_ids_list in excluded_marker_ids:
+        if _is_test_marker_id_is_matched_with_id(item, excluded_marker_ids_list):
+            return True
+    return False
+
+
+def _is_test_marker_id_is_matched_with_id(test, ids_to_check: list):
+    markers_to_check = []
+
+    for marker in test.own_markers:
+        if any([
+            marker.name is MarkGeneral.REQIDS.value,
+            marker.name is MarkGeneral.COMPONENTS.value,
+            marker.name is MarkPriority.HIGH.mark,
+            marker.name is MarkPriority.MEDIUM.mark,
+            marker.name is MarkPriority.LOW.mark,
+        ]):
+            if marker.args:
+                for marker_arg in marker.args:
+                    if isinstance(marker_arg, dict):
+                        for param in marker_arg:
+                            if param is None:
+                                markers_to_check.append(str(marker_arg.values))
+                            elif param in test.name:
+                                markers_to_check.append(str(marker_arg.values()))
+                    elif isinstance(marker_arg, str):
+                        markers_to_check.append(marker_arg)
+                    else:
+                        raise RuntimeError(
+                            f"Test {test.name} do not have mark in correct form. Form: {type(marker_arg)}"
+                        )
+            else:
+                markers_to_check.append(marker.name)
+
+    check_list = []
+    for id_to_check in ids_to_check:
+        check_list.append(any(id_to_check.lower() in marker_to_check.lower() for marker_to_check in markers_to_check))
+
+    return all(check_list)
+
+
+def update_markers(item, test_type, markers, marker_type):
+    marker = item.get_closest_marker(marker_type)
+    if marker is not None:
+        if test_type not in markers:
+            markers[test_type] = set()
+        markers[test_type].update(set(marker.args))
+
+
+def get_skipped_items(items):
+    skipped_items = [item for item in items if item.keywords.get("skip") is not None]
+    items = []
+    for item in skipped_items:
+        skip_info = item.keywords.get("skip")
+        if isinstance(skip_info, (Mark, MarkDecorator)):
+            if "reason" in skip_info.kwargs:
+                reason = skip_info.kwargs["reason"]
+            elif skip_info.args:
+                reason = skip_info.args[0]
+            else:
+                reason = ""
+            items.append(SkippedItem(item.nodeid, reason))
+    return items
+
+
+def calc_statistics(items):
+    skipped_items = get_skipped_items(items)
+    issue_numbers = []
+    other_tests = []
+    for item in skipped_items:
+        match = re.search(r"DPNG-\d+", item.reason)
+        if match:
+            issue_numbers.append(match.group(0))
+        else:
+            issue_numbers.append("others")
+            other_tests.append(item)
+    return Counter(issue_numbers), other_tests
+
+
+def log_labeled_stats(issues):
+    msg = ["Skipped tests statistic:"]
+    issues_sorted_by_quantity = sorted(issues.items(), key=lambda i: i[1], reverse=True)
+    for issue, quantity in issues_sorted_by_quantity:
+        msg.append("{:>11}: {:>6}".format(issue, quantity))
+    logger.info("\n".join(msg))
+
+
+def log_others(other_items):
+    msg = ["Skipped tests not labeled with issue:"]
+    items_grouped_by_reason = groupby(other_items, key=lambda i: i.reason)
+    for reason, items in list(items_grouped_by_reason):
+        msg.append("{}:".format(reason))
+        msg.extend("|---{}".format(item.test_name) for item in list(items))
+    logger.info("\n".join(msg))
+
+
+def log_skip_statistic(items):
+    issue_stats, other_tests = calc_statistics(items)
+    log_labeled_stats(issue_stats)
+    log_others(other_tests)
