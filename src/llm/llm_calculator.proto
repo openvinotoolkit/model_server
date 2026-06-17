@@ -137,4 +137,15 @@ message LLMCalculatorOptions {
     optional SparseAttentionConfig sparse_attention_config = 24;
 
     optional uint64 cache_interval_multiplier = 25;
+
+    enum ChatTemplateMode {
+      // Use GenAI's apply_chat_template (minja-based).
+      // Default for builds without Python. Also selectable in Python builds.
+      MINJA = 0;
+      // Use Python Jinja2 module for chat template processing.
+      // Default for builds with Python enabled.
+      JINJA = 1;
+    }
+
+    optional ChatTemplateMode chat_template_mode = 26;
 }

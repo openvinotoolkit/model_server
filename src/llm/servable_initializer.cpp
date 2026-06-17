@@ -55,13 +55,16 @@ static const std::string CHAT_TEMPLATE_WARNING_MESSAGE = "Warning: Chat template
 
 void GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServableProperties> properties, const std::string& chatTemplateDirectory) {
 #if (PYTHON_DISABLE == 0)
-    ExtraGenerationInfo extraGenInfo = readExtraGenerationInfo(properties, chatTemplateDirectory);
-    loadPyTemplateProcessor(properties, extraGenInfo);
-#else
-    if (properties->tokenizer.get_chat_template().empty()) {
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, CHAT_TEMPLATE_WARNING_MESSAGE);
-    }
+    if (properties->chatTemplateMode == ChatTemplateMode::JINJA) {
+        ExtraGenerationInfo extraGenInfo = readExtraGenerationInfo(properties, chatTemplateDirectory);
+        loadPyTemplateProcessor(properties, extraGenInfo);
+    } else
 #endif
+    {
+        if (properties->tokenizer.get_chat_template().empty()) {
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, CHAT_TEMPLATE_WARNING_MESSAGE);
+        }
+    }
 
     // In some cases we apply chat template by python's jinja, but in all other cases, when GenAI applies chat template
     // we ensure here that it is chat_template.jinja that is prioritized, rather than openvino_tokenizer.xml.
