@@ -431,7 +431,6 @@ node {
         [type.googleapis.com / mediapipe.T2sCalculatorOptions]: {
             models_path: "./"
             target_device: "CPU"
-            language: "en-us"
             voices: [
                 { name: "af_alloy", path: "./voices/af_alloy.bin" },
                 { name: "am_adam", path: "./voices/am_adam.bin" }
@@ -834,7 +833,6 @@ TEST_F(GraphCreationTest, textToSpeechPositiveKokoro) {
     hfSettings.exportSettings.modelName = "myModel";
     hfSettings.exportSettings.modelType = "kokoro";
     ovms::TextToSpeechGraphSettingsImpl textToSpeechGraphSettings;
-    textToSpeechGraphSettings.language = "en-us";
     hfSettings.graphSettings = std::move(textToSpeechGraphSettings);
     std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
     std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();

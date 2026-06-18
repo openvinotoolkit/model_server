@@ -134,7 +134,7 @@ struct EmbeddingsGraphSettingsImpl {
 };
 
 struct TextToSpeechGraphSettingsImpl {
-    std::optional<std::string> language;
+    uint32_t unused = 1;  // placeholder for future graph-level settings
 };
 
 struct SpeechToTextGraphSettingsImpl {
