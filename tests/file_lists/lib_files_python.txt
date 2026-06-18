@@ -5,6 +5,9 @@ libazurestorage.so.7->libazurestorage.so
 libazurestorage.so.7.5->libazurestorage.so
 libcpprest.so
 libcpprest.so.2.10->libcpprest.so
+libespeak-ng.so->libespeak-ng.so.1.52.0.1
+libespeak-ng.so.1->libespeak-ng.so.1.52.0.1
+libespeak-ng.so.1.52.0.1
 libopencv_calib3d.so->libopencv_calib3d.so.410
 libopencv_calib3d.so.4.10.0
 libopencv_calib3d.so.410->libopencv_calib3d.so.4.10.0
@@ -77,6 +80,3 @@ libtbb.so->libtbb.so.12
 libtbb.so.12->libtbb.so.12.13
 libtbb.so.12.13
 python
-libespeak-ng.so->libespeak-ng.so.1.52.0.1
-libespeak-ng.so.1->libespeak-ng.so.1.52.0.1
-libespeak-ng.so.1.52.0.1
