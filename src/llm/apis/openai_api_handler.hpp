@@ -166,6 +166,7 @@ public:
     std::string getModel() const;
     std::string getToolChoice() const;
     const std::unique_ptr<OutputParser>& getOutputParser() const;
+    const CompletionUsageStatistics& getUsage() const { return usage; }
 
     // Verbose response configuration
     void enableVerboseResponse(const std::string& promptAfterTemplate) {
