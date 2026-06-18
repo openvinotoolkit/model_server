@@ -763,8 +763,8 @@ TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingTextInputCreatesUser
     EXPECT_EQ(chatHistory[0]["role"], "user");
     EXPECT_EQ(chatHistory[0]["content"], "What is OpenVINO?");
     if (endpoint() == ovms::Endpoint::CHAT_COMPLETIONS) {
-        // Chat completions with simple text does not mutate the JSON, so processedJson is empty
-        EXPECT_TRUE(apiHandler->getProcessedJson().empty());
+      // Canonical PyPath should always provide a JSON payload for template processing.
+      EXPECT_FALSE(apiHandler->getProcessedJson().empty());
     }
 }
 
@@ -913,7 +913,7 @@ TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ProcessedJsonContainsEquiva
     }
 #else
     if (endpoint() == ovms::Endpoint::RESPONSES) {
-        EXPECT_TRUE(apiHandler->getProcessedJson().empty()) << "processedJson should be empty when Python is disabled";
+    EXPECT_FALSE(apiHandler->getProcessedJson().empty()) << "Canonical PyPath should provide JSON regardless of Python build mode";
     }
 #endif
 }
@@ -958,7 +958,7 @@ TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ProcessedJsonEquivalentMult
     }
 #else
     if (endpoint() == ovms::Endpoint::RESPONSES) {
-        EXPECT_TRUE(apiHandler->getProcessedJson().empty()) << "processedJson should be empty when Python is disabled";
+    EXPECT_FALSE(apiHandler->getProcessedJson().empty()) << "Canonical PyPath should provide JSON regardless of Python build mode";
     }
 #endif
 }
@@ -984,7 +984,7 @@ TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ProcessedJsonIncludesToolsW
     }
 #else
     if (endpoint() == ovms::Endpoint::RESPONSES) {
-        EXPECT_TRUE(apiHandler->getProcessedJson().empty()) << "processedJson should be empty when Python is disabled";
+    EXPECT_FALSE(apiHandler->getProcessedJson().empty()) << "Canonical PyPath should provide JSON regardless of Python build mode";
     }
 #endif
 }

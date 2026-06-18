@@ -510,8 +510,11 @@ absl::StatusOr<const CanonicalRequest*> OpenAIApiHandler::getCanonicalRequest(Re
 
 const std::string& OpenAIApiHandler::getProcessedJson() const {
     auto canonicalRequest = getCanonicalRequest(RendererType::PY_JINJA);
-    if (!canonicalRequest.ok()) {
-        return request.processedJson;
+    if (canonicalRequest.ok()) {
+        const auto* pyPath = std::get_if<PyPath>(*canonicalRequest.value());
+        if (pyPath != nullptr) {
+            return pyPath->processedJson.get();
+        }
     }
     return request.processedJson;
 }
