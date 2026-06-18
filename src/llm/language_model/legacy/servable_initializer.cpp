@@ -63,7 +63,8 @@ Status LegacyServableInitializer::initialize(std::shared_ptr<GenAiServable>& ser
     }
     if (nodeOptions.has_chat_template_mode()) {
         properties->chatTemplateMode = (nodeOptions.chat_template_mode() == mediapipe::LLMCalculatorOptions::JINJA)
-            ? ChatTemplateMode::JINJA : ChatTemplateMode::MINJA;
+                                           ? ChatTemplateMode::JINJA
+                                           : ChatTemplateMode::MINJA;
     }
 
     properties->schedulerConfig.max_num_batched_tokens = nodeOptions.max_num_batched_tokens();

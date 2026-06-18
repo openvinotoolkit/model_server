@@ -63,7 +63,8 @@ Status VisualLanguageModelLegacyServableInitializer::initialize(std::shared_ptr<
     }
     if (nodeOptions.has_chat_template_mode()) {
         properties->chatTemplateMode = (nodeOptions.chat_template_mode() == mediapipe::LLMCalculatorOptions::JINJA)
-            ? ChatTemplateMode::JINJA : ChatTemplateMode::MINJA;
+                                           ? ChatTemplateMode::JINJA
+                                           : ChatTemplateMode::MINJA;
     }
     properties->schedulerConfig.max_num_batched_tokens = nodeOptions.max_num_batched_tokens();
     properties->schedulerConfig.cache_size = nodeOptions.cache_size();
