@@ -749,64 +749,6 @@ absl::Status OpenAIResponsesHandler::parseResponsesPart(std::optional<uint32_t> 
         return toolsStatus;
     }
 
-#if (PYTHON_DISABLE == 0)
-    // Build processedJson with a "messages" array in chat/completions format so that
-    // the Python Jinja template path can consume Responses API input without a separate code path.
-    // Handles reasoning, function_call (merged into assistant tool_calls), and
-    // function_call_output (converted to role:tool messages).
-    //
-    // Built after parseTools() so any tool filtering (e.g. tool_choice removing
-    // unselected tools) is reflected here, and so parseTools()'s own write to
-    // request.processedJson (Responses-shaped doc with "input") does not
-    // clobber the chat/completions-shaped JSON the Python Jinja path expects.
-    {
-        Document processedDoc;
-        processedDoc.SetObject();
-        auto& alloc = processedDoc.GetAllocator();
-
-        Value messagesArray(kArrayType);
-
-        auto inputArrIt = doc.FindMember("input");
-        if (inputArrIt != doc.MemberEnd() && inputArrIt->value.IsArray()) {
-            ProcessedJsonSink sink(messagesArray, alloc);
-            ResponsesInputBuilder<ProcessedJsonSink> builder(sink);
-            auto processedStatus = builder.build(inputArrIt->value);
-            if (!processedStatus.ok()) {
-                return processedStatus;
-            }
-        } else if (inputArrIt != doc.MemberEnd() && inputArrIt->value.IsString()) {
-            // String input: emit a single user message so the Python Jinja path
-            // sees the same content the C++ chatHistory path does.
-            Value msgObj(kObjectType);
-            msgObj.AddMember("role", Value("user", alloc), alloc);
-            msgObj.AddMember("content", Value(inputArrIt->value.GetString(), alloc), alloc);
-            messagesArray.PushBack(msgObj, alloc);
-        }
-
-        processedDoc.AddMember("messages", messagesArray, alloc);
-
-        // Tools were already normalised to chat/completions nested format by
-        // convertResponsesToolsInPlace earlier in parseResponsesPart — just copy verbatim.
-        auto processedToolsIt = doc.FindMember("tools");
-        if (processedToolsIt != doc.MemberEnd() && !processedToolsIt->value.IsNull()) {
-            Value toolsCopy(processedToolsIt->value, alloc);
-            processedDoc.AddMember("tools", toolsCopy, alloc);
-        }
-
-        // Copy chat_template_kwargs from original doc if present
-        auto kwargsIt = doc.FindMember("chat_template_kwargs");
-        if (kwargsIt != doc.MemberEnd() && !kwargsIt->value.IsNull()) {
-            Value kwargsCopy(kwargsIt->value, alloc);
-            processedDoc.AddMember("chat_template_kwargs", kwargsCopy, alloc);
-        }
-
-        StringBuffer buffer;
-        Writer<StringBuffer> writer(buffer);
-        processedDoc.Accept(writer);
-        request.processedJson = buffer.GetString();
-    }
-#endif
-
     // max_output_tokens: uint; optional
     // OpenAI Responses API uses this field for output token limit.
     it = doc.FindMember("max_output_tokens");
@@ -849,17 +791,62 @@ absl::StatusOr<CanonicalRequest> OpenAIResponsesHandler::buildCanonicalRequestIm
         return CanonicalRequest(std::move(cppPath));
     }
 
-    if (request.processedJson.size() > 0) {
-        PyPath pyPath{std::cref(request.processedJson)};
-        return CanonicalRequest(std::move(pyPath));
+#if (PYTHON_DISABLE == 0)
+    Document processedDoc;
+    processedDoc.SetObject();
+    auto& alloc = processedDoc.GetAllocator();
+
+    Value messagesArray(kArrayType);
+
+    auto inputArrIt = doc.FindMember("input");
+    if (inputArrIt != doc.MemberEnd() && inputArrIt->value.IsArray()) {
+        ProcessedJsonSink sink(messagesArray, alloc);
+        ResponsesInputBuilder<ProcessedJsonSink> builder(sink);
+        auto processedStatus = builder.build(inputArrIt->value);
+        if (!processedStatus.ok()) {
+            return processedStatus;
+        }
+    } else if (inputArrIt != doc.MemberEnd() && inputArrIt->value.IsString()) {
+        // String input: emit a single user message so the Python Jinja path
+        // sees the same content the C++ chatHistory path does.
+        Value msgObj(kObjectType);
+        msgObj.AddMember("role", Value("user", alloc), alloc);
+        msgObj.AddMember("content", Value(inputArrIt->value.GetString(), alloc), alloc);
+        messagesArray.PushBack(msgObj, alloc);
     }
 
+    processedDoc.AddMember("messages", messagesArray, alloc);
+
+    // Tools were already normalised to chat/completions nested format by
+    // convertResponsesToolsInPlace in parseResponsesPart — just copy verbatim.
+    auto processedToolsIt = doc.FindMember("tools");
+    if (processedToolsIt != doc.MemberEnd() && !processedToolsIt->value.IsNull()) {
+        Value toolsCopy(processedToolsIt->value, alloc);
+        processedDoc.AddMember("tools", toolsCopy, alloc);
+    }
+
+    // Copy chat_template_kwargs from original doc if present.
+    auto kwargsIt = doc.FindMember("chat_template_kwargs");
+    if (kwargsIt != doc.MemberEnd() && !kwargsIt->value.IsNull()) {
+        Value kwargsCopy(kwargsIt->value, alloc);
+        processedDoc.AddMember("chat_template_kwargs", kwargsCopy, alloc);
+    }
+
+    StringBuffer buffer;
+    Writer<StringBuffer> writer(buffer);
+    processedDoc.Accept(writer);
+    synthesizedProcessedJson = buffer.GetString();
+    PyPath pyPath{std::cref(synthesizedProcessedJson.value())};
+    return CanonicalRequest(std::move(pyPath));
+#else
+    // When Python support is disabled, keep a best-effort canonical payload.
     StringBuffer buffer;
     Writer<StringBuffer> writer(buffer);
     doc.Accept(writer);
     synthesizedProcessedJson = buffer.GetString();
     PyPath pyPath{std::cref(synthesizedProcessedJson.value())};
     return CanonicalRequest(std::move(pyPath));
+#endif
 }
 
 // --- Serialization helpers ---

@@ -793,6 +793,15 @@ TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, CanonicalRequestPyPathIsAva
 
   const auto& pyPath = std::get<ovms::PyPath>(*canonicalRequest.value());
   EXPECT_FALSE(pyPath.processedJson.get().empty());
+
+  if (endpoint() == ovms::Endpoint::RESPONSES) {
+    rapidjson::Document processedDoc;
+    processedDoc.Parse(pyPath.processedJson.get().c_str());
+    ASSERT_FALSE(processedDoc.HasParseError());
+    ASSERT_TRUE(processedDoc.HasMember("messages"));
+    ASSERT_TRUE(processedDoc["messages"].IsArray());
+    ASSERT_GE(processedDoc["messages"].Size(), 1u);
+  }
 }
 
 TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, LegacyGettersRemainCompatibleWithCanonicalCache) {
