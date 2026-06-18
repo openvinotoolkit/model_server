@@ -300,7 +300,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJson) {
             ovms::StatusCode::OK);
         parsedResponse.Parse(response.c_str());
         ASSERT_TRUE(parsedResponse["choices"].IsArray());
-        ASSERT_EQ(parsedResponse["choices"].Capacity(), 1);
+        ASSERT_EQ(parsedResponse["choices"].Size(), 1);
         int i = 0;
         for (auto& choice : parsedResponse["choices"].GetArray()) {
             ASSERT_TRUE(choice["finish_reason"].IsString());
@@ -343,7 +343,7 @@ TEST_F(LLMFlowHttpQueueGraphTest, unaryCompletionsJsonQueueGraph) {
         ovms::StatusCode::OK);
     parsedResponse.Parse(response.c_str());
     ASSERT_TRUE(parsedResponse["choices"].IsArray());
-    ASSERT_EQ(parsedResponse["choices"].Capacity(), 1);
+    ASSERT_EQ(parsedResponse["choices"].Size(), 1);
     for (auto& choice : parsedResponse["choices"].GetArray()) {
         ASSERT_TRUE(choice["finish_reason"].IsString());
         ASSERT_FALSE(choice["logprobs"].IsObject());
@@ -380,7 +380,7 @@ TEST_F(LLMFlowHttpQueueGraphTest, unaryChatCompletionsJsonQueueGraph) {
         ovms::StatusCode::OK);
     parsedResponse.Parse(response.c_str());
     ASSERT_TRUE(parsedResponse["choices"].IsArray());
-    ASSERT_EQ(parsedResponse["choices"].Capacity(), 1);
+    ASSERT_EQ(parsedResponse["choices"].Size(), 1);
     for (auto& choice : parsedResponse["choices"].GetArray()) {
         ASSERT_TRUE(choice["finish_reason"].IsString());
         ASSERT_TRUE(choice["message"].IsObject());
@@ -422,7 +422,7 @@ TEST_F(LLMFlowHttpQueueGraphTest, streamChatCompletionsQueueGraph) {
         rapidjson::ParseResult parsingSucceeded = d.Parse(response.substr(dataPrefix.size(), (pos - dataPrefix.size())).c_str());
         ASSERT_EQ(parsingSucceeded.Code(), 0);
         ASSERT_TRUE(d["choices"].IsArray());
-        ASSERT_EQ(d["choices"].Capacity(), 1);
+        ASSERT_EQ(d["choices"].Size(), 1);
         int i = 0;
         for (auto& choice : d["choices"].GetArray()) {
             if (choice["finish_reason"].IsString()) {
@@ -462,7 +462,7 @@ TEST_F(LLMFlowHttpQueueGraphTest, queueGraphReuseTwoRequests) {
         ovms::StatusCode::OK);
     parsedResponse.Parse(response.c_str());
     ASSERT_TRUE(parsedResponse["choices"].IsArray());
-    ASSERT_EQ(parsedResponse["choices"].Capacity(), 1);
+    ASSERT_EQ(parsedResponse["choices"].Size(), 1);
     ASSERT_TRUE(parsedResponse["choices"].GetArray()[0]["text"].IsString());
 
     // Second request - reuses the same graph from the queue
@@ -473,7 +473,7 @@ TEST_F(LLMFlowHttpQueueGraphTest, queueGraphReuseTwoRequests) {
         ovms::StatusCode::OK);
     parsedResponse.Parse(response.c_str());
     ASSERT_TRUE(parsedResponse["choices"].IsArray());
-    ASSERT_EQ(parsedResponse["choices"].Capacity(), 1);
+    ASSERT_EQ(parsedResponse["choices"].Size(), 1);
     ASSERT_TRUE(parsedResponse["choices"].GetArray()[0]["text"].IsString());
     // Note: Responses may differ due to KV cache state despite same seed
 }
@@ -512,7 +512,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJsonEchoWithCompletion) {
         ovms::StatusCode::OK);
     parsedResponse.Parse(response.c_str());
     ASSERT_TRUE(parsedResponse["choices"].IsArray());
-    ASSERT_EQ(parsedResponse["choices"].Capacity(), 1);
+    ASSERT_EQ(parsedResponse["choices"].Size(), 1);
     int i = 0;
     for (auto& choice : parsedResponse["choices"].GetArray()) {
         if (params.checkFinishReason) {
@@ -580,7 +580,7 @@ TEST_P(LLMFlowHttpTestParameterized, streamCompletionsEchoWithCompletion) {
             rapidjson::ParseResult pr = d.Parse(body.c_str());
             ASSERT_EQ(pr.Code(), 0);
             ASSERT_TRUE(d["choices"].IsArray());
-            ASSERT_EQ(d["choices"].Capacity(), 1);
+            ASSERT_EQ(d["choices"].Size(), 1);
             int i = 0;
             for (auto& choice : d["choices"].GetArray()) {
                 ASSERT_EQ(choice["index"], i++);
@@ -630,7 +630,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJsonEchoOnly) {
         ovms::StatusCode::OK);
     parsedResponse.Parse(response.c_str());
     ASSERT_TRUE(parsedResponse["choices"].IsArray());
-    ASSERT_EQ(parsedResponse["choices"].Capacity(), 1);
+    ASSERT_EQ(parsedResponse["choices"].Size(), 1);
     int i = 0;
     for (auto& choice : parsedResponse["choices"].GetArray()) {
         if (params.checkFinishReason) {
@@ -714,7 +714,7 @@ TEST_P(LLMFlowHttpTestParameterized, streamCompletionsEchoOnly) {
                 rapidjson::ParseResult pr = d.Parse(body.c_str());
                 ASSERT_EQ(pr.Code(), 0);
                 ASSERT_TRUE(d["choices"].IsArray());
-                ASSERT_EQ(d["choices"].Capacity(), 1);
+                ASSERT_EQ(d["choices"].Size(), 1);
                 for (auto& choice : d["choices"].GetArray()) {
                     if (params.checkLogprobs) {
                         ASSERT_FALSE(choice["logprobs"].IsObject());
@@ -781,7 +781,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJsonFinishReasonLength) {
         ovms::StatusCode::OK);
     parsedResponse.Parse(response.c_str());
     ASSERT_TRUE(parsedResponse["choices"].IsArray());
-    ASSERT_EQ(parsedResponse["choices"].Capacity(), 1);
+    ASSERT_EQ(parsedResponse["choices"].Size(), 1);
     int i = 0;
     for (auto& choice : parsedResponse["choices"].GetArray()) {
         ASSERT_TRUE(choice["finish_reason"].IsString());
@@ -823,7 +823,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJsonSingleStopString) {
         ovms::StatusCode::OK);
     parsedResponse.Parse(response.c_str());
     ASSERT_TRUE(parsedResponse["choices"].IsArray());
-    ASSERT_EQ(parsedResponse["choices"].Capacity(), 1);
+    ASSERT_EQ(parsedResponse["choices"].Size(), 1);
     int i = 0;
     for (auto& choice : parsedResponse["choices"].GetArray()) {
         ASSERT_TRUE(choice["finish_reason"].IsString());
@@ -1098,7 +1098,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsJson) {
         ovms::StatusCode::OK);
     parsedResponse.Parse(response.c_str());
     ASSERT_TRUE(parsedResponse["choices"].IsArray());
-    ASSERT_EQ(parsedResponse["choices"].Capacity(), 1);
+    ASSERT_EQ(parsedResponse["choices"].Size(), 1);
     int i = 0;
     for (auto& choice : parsedResponse["choices"].GetArray()) {
         if (params.checkFinishReason) {
@@ -1149,7 +1149,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsSkipSpecialTokensFalse)
         ovms::StatusCode::OK);
     parsedResponse.Parse(response.c_str());
     ASSERT_TRUE(parsedResponse["choices"].IsArray());
-    ASSERT_EQ(parsedResponse["choices"].Capacity(), 1);
+    ASSERT_EQ(parsedResponse["choices"].Size(), 1);
     for (auto& choice : parsedResponse["choices"].GetArray()) {
         ASSERT_TRUE(choice["message"].IsObject());
         ASSERT_TRUE(choice["message"]["content"].IsString());
@@ -1183,7 +1183,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsJsonContentArray) {
         ovms::StatusCode::OK);
     parsedResponse.Parse(response.c_str());
     ASSERT_TRUE(parsedResponse["choices"].IsArray());
-    ASSERT_EQ(parsedResponse["choices"].Capacity(), 1);
+    ASSERT_EQ(parsedResponse["choices"].Size(), 1);
     int i = 0;
     for (auto& choice : parsedResponse["choices"].GetArray()) {
         if (params.checkFinishReason) {
@@ -1927,7 +1927,7 @@ TEST_P(LLMFlowHttpTestParameterized, inferCompletionsStream) {
         rapidjson::ParseResult parsingSucceeded = d.Parse(response.substr(dataPrefix.size(), (pos - dataPrefix.size())).c_str());
         ASSERT_EQ(parsingSucceeded.Code(), 0);
         ASSERT_TRUE(d["choices"].IsArray());
-        ASSERT_EQ(d["choices"].Capacity(), 1);
+        ASSERT_EQ(d["choices"].Size(), 1);
         int i = 0;
         for (auto& choice : d["choices"].GetArray()) {
             if (params.checkFinishReason) {
@@ -1989,7 +1989,7 @@ TEST_P(LLMFlowHttpTestParameterized, inferChatCompletionsStream) {
         rapidjson::ParseResult parsingSucceeded = d.Parse(response.substr(dataPrefix.size(), (pos - dataPrefix.size())).c_str());
         ASSERT_EQ(parsingSucceeded.Code(), 0);
         ASSERT_TRUE(d["choices"].IsArray());
-        ASSERT_EQ(d["choices"].Capacity(), 1);
+        ASSERT_EQ(d["choices"].Size(), 1);
         int i = 0;
         for (auto& choice : d["choices"].GetArray()) {
             if (params.checkFinishReason) {
@@ -2050,7 +2050,7 @@ TEST_P(LLMFlowHttpTestParameterized, inferChatCompletionsStreamSkipSpecialTokens
         rapidjson::ParseResult parsingSucceeded = d.Parse(response.substr(dataPrefix.size(), (pos - dataPrefix.size())).c_str());
         ASSERT_EQ(parsingSucceeded.Code(), 0);
         ASSERT_TRUE(d["choices"].IsArray());
-        ASSERT_EQ(d["choices"].Capacity(), 1);
+        ASSERT_EQ(d["choices"].Size(), 1);
         for (auto& choice : d["choices"].GetArray()) {
             if (choice.HasMember("delta")) {
                 ASSERT_TRUE(choice["delta"].IsObject());
