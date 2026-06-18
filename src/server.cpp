@@ -572,7 +572,7 @@ Status Server::startModules(ovms::Config& config) {
         // Load MediaPipe Python calculators from the plugin library
         // This is optional and won't fail if the plugin isn't available
         loadPythonCalculatorsPlugin();
-        
+
         auto pythonModule = this->createModule(PYTHON_INTERPRETER_MODULE_NAME);
         if (pythonModule == nullptr) {
             SPDLOG_WARN("Python requested in configuration, but runtime library could not be loaded. Continuing with Python features disabled.");

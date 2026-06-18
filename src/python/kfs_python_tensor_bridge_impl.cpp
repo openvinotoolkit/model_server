@@ -81,8 +81,8 @@ static int kfsBridgeDeserializeAndPush(
 
         auto* wrapper = new ovms::PyObjectWrapper<py::object>(tensor);
         auto packet = ::mediapipe::packet_internal::Create(
-                          new ::mediapipe::packet_internal::Holder<
-                              ovms::PyObjectWrapper<py::object>>(wrapper))
+            new ::mediapipe::packet_internal::Holder<
+                ovms::PyObjectWrapper<py::object>>(wrapper))
                           .At(mediapipe::Timestamp(timestampMicros));
 
         auto* graph = static_cast<mediapipe::CalculatorGraph*>(graphPtr);

@@ -836,9 +836,9 @@ static Status createPacketAndPushIntoGraph(const std::string& inputName, std::sh
                         requestInputItr->datatype().c_str(),
                         &graph, timestamp.Value());
                     status = (rc == 0)
-                        ? StatusCode::OK
-                        : Status(static_cast<StatusCode>(-rc),
-                              "KFS Python tensor bridge deserialization failed");
+                                 ? StatusCode::OK
+                                 : Status(static_cast<StatusCode>(-rc),
+                                       "KFS Python tensor bridge deserialization failed");
                 }
             }
         }

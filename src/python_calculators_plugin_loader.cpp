@@ -17,7 +17,6 @@
 #include "python_calculators_plugin_loader.hpp"
 #include "kfs_python_tensor_bridge.hpp"
 
-
 #include <memory>
 #include <vector>
 #include <string>
@@ -74,7 +73,7 @@ bool loadPythonCalculatorsPlugin() {
     if (pythonCalculatorsHandle == nullptr) {
         SPDLOG_WARN("Python calculators plugin libpython_calculators.so failed to load: {}. "
                     "MediaPipe Python calculators will not be available.",
-                    dlerror());
+            dlerror());
         return false;
     }
 
@@ -83,7 +82,7 @@ bool loadPythonCalculatorsPlugin() {
     if (registerPythonCalculatorsFn == nullptr) {
         SPDLOG_WARN("Python calculators plugin libpython_calculators.so missing symbol registerPythonCalculators: {}. "
                     "MediaPipe Python calculators will not be available.",
-                    dlerror());
+            dlerror());
         dlclose(pythonCalculatorsHandle);
         pythonCalculatorsHandle = nullptr;
         return false;
@@ -136,7 +135,7 @@ bool loadPythonCalculatorsPlugin() {
         DWORD error = GetLastError();
         SPDLOG_WARN("Python calculators plugin libpython_calculators.dll failed to load: {} ({}). "
                     "MediaPipe Python calculators will not be available.",
-                    error, std::system_category().message(error));
+            error, std::system_category().message(error));
         return false;
     }
 
@@ -146,7 +145,7 @@ bool loadPythonCalculatorsPlugin() {
         DWORD error = GetLastError();
         SPDLOG_WARN("Python calculators plugin libpython_calculators.dll missing symbol registerPythonCalculators: {} ({}). "
                     "MediaPipe Python calculators will not be available.",
-                    error, std::system_category().message(error));
+            error, std::system_category().message(error));
         FreeLibrary(pythonCalculatorsHandle);
         pythonCalculatorsHandle = nullptr;
         return false;
