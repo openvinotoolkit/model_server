@@ -51,11 +51,6 @@ class OvmsParams(object):
     create_config_method: Callable[[str], None] = None
     image: str = None
     shape: Any = None
-    is_stateful: bool = None
-    sequence_cleaner_poll_wait_minutes: int = None
-    max_sequence_number: int = None
-    low_latency_transformation: bool = None
-    idle_sequence_cleanup: bool = None
     model_version_policy: Any = None
     file_system_poll_wait_seconds: int = None
     cpu_extension: str = None
@@ -142,16 +137,6 @@ class OvmsParams(object):
             elif self.models is None:
                 result.append(ModelsLib.get_default_model(self.target_device)())
         return result
-
-    def is_stateful_model_present(self):
-        is_stateful = False
-        if self.models is not None:
-            is_stateful = any([x.is_stateful for x in self.models])
-        else:
-            if self.models:
-                model = self.models[0]
-                is_stateful = model.is_stateful
-        return is_stateful
 
     def to_str(self):
         dict_params = self.to_dict()

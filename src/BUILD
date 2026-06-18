@@ -353,7 +353,6 @@ ovms_cc_library(
         "libovms_cliparser",
         "libovms_systeminfo",
         "ovms_exit_codes",
-        "//src/utils:env_guard",
     ],
     visibility = ["//visibility:public",],
     additional_copts = COPTS_DROGON,
@@ -934,6 +933,7 @@ ovms_cc_library(
     hdrs = ["logging.hpp"],
     srcs = ["logging.cpp"],
     deps = [
+        "//src/utils:env_guard",
         "@com_github_gabime_spdlog//:spdlog",
         "@com_github_glog_glog//:glog", # used to manage Mediapipe logging
     ],
