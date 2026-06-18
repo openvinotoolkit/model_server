@@ -15,6 +15,7 @@
 //*****************************************************************************
 #include <chrono>
 #include <fstream>
+#include <limits>
 #include <memory>
 #include <set>
 #include <sstream>
@@ -941,6 +942,37 @@ TEST_F(MediapipeFlowImageInput, Float32_4Channels) {
     ASSERT_EQ(0, memcmp(response.raw_output_contents()[0].data(), image.data, image.cols * image.rows * image.channels() * elementSize));
 }
 
+// Regression test: MediaPipe IMAGE path buffer size validation must use overflow-safe arithmetic.
+// kOverflowH * kChannels * sizeof(uint8_t) exceeds SIZE_MAX; the server must detect
+// the overflow and reject the request with INVALID_ARGUMENT.
+TEST_F(MediapipeFlowImageInput, OverflowShapeRejectedAsInvalidContentSize) {
+    constexpr int64_t kChannels = 2LL;
+    // Each dim ~2^62; product ~2^124 overflows size_t.
+    constexpr int64_t kOverflowH = std::numeric_limits<int64_t>::max() / 2;
+    constexpr int64_t kOverflowW = std::numeric_limits<int64_t>::max() / 2;
+    // What naive unchecked arithmetic produces (wraps around SIZE_MAX).
+    constexpr size_t kWrappedExpectedSize =
+        static_cast<size_t>(kOverflowH) * static_cast<size_t>(kOverflowW) * static_cast<size_t>(kChannels) * sizeof(uint8_t);
+
+    const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
+    KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
+    ::KFSRequest request;
+    ::KFSResponse response;
+    request.mutable_model_name()->assign("mediapipeImageInput");
+
+    auto* input = request.add_inputs();
+    input->set_name("in");
+    input->set_datatype("UINT8");
+    input->add_shape(kOverflowH);
+    input->add_shape(kOverflowW);
+    input->add_shape(kChannels);
+
+    std::string* content = request.add_raw_input_contents();
+    content->assign(kWrappedExpectedSize, 'A');
+
+    ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::INVALID_ARGUMENT);
+}
+
 class MediapipeFlowImageInputThreeChannels : public MediapipeFlowImageInput {};
 
 TEST_P(MediapipeFlowImageInputThreeChannels, Infer) {
@@ -1848,7 +1880,7 @@ public:
 class MockModel : public ovms::Model {
 public:
     MockModel(const std::string& name) :
-        Model(name, false /*stateful*/, nullptr) {}
+        Model(name) {}
     std::shared_ptr<ovms::ModelInstance> modelInstanceFactory(const std::string& modelName, const ovms::model_version_t, ov::Core& ieCore, ovms::MetricRegistry* registry = nullptr, const ovms::MetricConfig* metricConfig = nullptr) override {
         return std::make_shared<MockModelInstance>(ieCore);
     }
@@ -1858,7 +1890,7 @@ class MockModelManager : public ovms::ModelManager {
     ovms::MetricRegistry registry;
 
 public:
-    std::shared_ptr<ovms::Model> modelFactory(const std::string& name, const bool isStateful) override {
+    std::shared_ptr<ovms::Model> modelFactory(const std::string& name) override {
         return std::make_shared<MockModel>(name);
     }
 
@@ -3855,6 +3887,7 @@ TEST(WhitelistRegistered, MediapipeCalculatorsList) {
         "EndLoopTensorCalculator",
         "EndLoopTfLiteTensorCalculator",
         "ErrorInProcessTestCalculator",
+        "ErrorOnNegativeTestCalculator",
         "ExceptionDuringCloseCalculator",
         "ExceptionDuringGetContractCalculator",
         "ExceptionDuringOpenCalculator",
@@ -4306,4 +4339,74 @@ TEST(MediapipeGraphQueueSizeDirective, EnvVarOVMS_GRAPH_QUEUE_OFF_NotSetDoesNotD
     auto status = def.validate(manager);
     ASSERT_EQ(status, ovms::StatusCode::OK);
     EXPECT_GT(def.getMediapipeGraphConfig().getInitialQueueSize(), 0);
+}
+
+// --- Graph queue reinit guard tests ---
+
+class UnaryQueueReinitTest : public ::testing::Test {
+protected:
+    const std::string name{"reinit_test_graph"};
+    const std::string version{"1"};
+    ExecutionContext executionContext{ExecutionContext::Interface::GRPC, ExecutionContext::Method::ModelInfer};
+    std::unique_ptr<MediapipeServableMetricReporter> reporter;
+    std::shared_ptr<GraphSidePackets> sidePackets;
+    std::shared_ptr<GraphQueue> queue;
+    ::mediapipe::CalculatorGraphConfig config;
+
+    void SetUp() override {
+        reporter = std::make_unique<MediapipeServableMetricReporter>(nullptr, nullptr, "");
+        sidePackets = std::make_shared<GraphSidePackets>();
+        const std::string pbTxt{R"(
+input_stream: "in"
+output_stream: "out"
+node {
+  calculator: "ErrorOnNegativeTestCalculator"
+  input_stream: "in"
+  output_stream: "out"
+}
+        )"};
+        ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
+        queue = std::make_shared<GraphQueue>(config, sidePackets, 1);
+    }
+
+    void prepareInferRequest(KFSRequest& request, float value) {
+        request.Clear();
+        *request.mutable_model_name() = "my_graph";
+        *request.mutable_model_version() = "1";
+        prepareKFSInferInputTensor(request, "in", std::tuple<ovms::signed_shape_t, const ovms::Precision>{{1}, ovms::Precision::FP32}, std::vector<float>{value}, false);
+        request.mutable_parameters()->operator[]("OVMS_MP_TIMESTAMP").set_int64_param(0);
+    }
+};
+
+TEST_F(UnaryQueueReinitTest, GraphIsReinitializedAfterCalculatorError) {
+    KFSRequest request;
+    KFSResponse response;
+    {
+        GraphIdGuard guard(queue);
+        MediapipeGraphExecutor executor{
+            name, version, config,
+            {{"in", mediapipe_packet_type_enum::OVTENSOR}},
+            {{"out", mediapipe_packet_type_enum::OVTENSOR}},
+            {"in"}, {"out"}, *sidePackets, nullptr, reporter.get(),
+            std::move(guard)};
+        prepareInferRequest(request, -1.0f);
+        auto status = executor.infer<KFSRequest, KFSResponse>(&request, &response, executionContext);
+        ASSERT_FALSE(status.ok());
+        EXPECT_EQ(status.getCode(), StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+    }
+    // Executor destroyed → GraphIdGuard returns graph to pool.
+    // The reinit guard rebuilt the graph before returning the error.
+    // Second request with valid (positive) input should succeed.
+    {
+        GraphIdGuard guard(queue);
+        MediapipeGraphExecutor executor{
+            name, version, config,
+            {{"in", mediapipe_packet_type_enum::OVTENSOR}},
+            {{"out", mediapipe_packet_type_enum::OVTENSOR}},
+            {"in"}, {"out"}, *sidePackets, nullptr, reporter.get(),
+            std::move(guard)};
+        prepareInferRequest(request, 2.0f);
+        auto status = executor.infer<KFSRequest, KFSResponse>(&request, &response, executionContext);
+        ASSERT_TRUE(status.ok());
+    }
 }

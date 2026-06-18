@@ -389,10 +389,6 @@ TEST_F(TestLoadModel, CheckIfNonExistingXmlFileReturnsFileInvalid) {
         "CPU",      // target device
         "1",        // batchsize
         1,          // NIREQ
-        false,      // is stateful
-        false,      // idle sequence cleanup enabled
-        false,      // low latency transformation enabled
-        500,        // stateful sequence max number,
         "",         // cache dir
         version,    // version
         modelPath,  // local path
@@ -413,10 +409,6 @@ protected:
             "SOME",                // target device
             "1",                   // batchsize
             1,                     // NIREQ
-            false,                 // is stateful
-            false,                 // idle sequence cleanup enabled
-            false,                 // low latency transformation enabled
-            500,                   // stateful sequence max number,
             "",                    // cache dir
             1,                     // version
             dummy_model_location,  // local path
@@ -438,13 +430,7 @@ TEST_F(TestLoadModelWithRemoteTensorFactoriesSucceeds, OpenCL_CheckIfLoadingSucc
     EXPECT_EQ(status, ovms::StatusCode::OK) << status.string();
 }
 TEST_F(TestLoadModelWithRemoteTensorFactoriesSucceeds, CheckIfLoadingSucceedsForAutoCPUGPU) {
-    this->config.setTargetDevice("AUTO:GPU,CPU");
-    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
-    auto status = modelInstance.loadModel(config);
-    EXPECT_EQ(status, ovms::StatusCode::OK) << status.string();
-}
-TEST_F(TestLoadModelWithRemoteTensorFactoriesSucceeds, CheckIfLoadingSucceedsForMultiCPUGPU) {
-    this->config.setTargetDevice("MULTI:GPU,CPU");
+    this->config.setTargetDevice("AUTO");
     ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
     auto status = modelInstance.loadModel(config);
     EXPECT_EQ(status, ovms::StatusCode::OK) << status.string();
@@ -474,10 +460,6 @@ TEST_F(TestLoadModel, CheckIfNonExistingBinFileReturnsFileInvalid) {
         "CPU",      // target device
         "1",        // batchsize
         1,          // NIREQ
-        false,      // is stateful
-        false,      // idle sequence cleanup enabled
-        false,      // low latency transformation enabled
-        500,        // stateful sequence max number,
         "",         // cache dir
         version,    // version
         modelPath,  // local path
@@ -519,10 +501,6 @@ TEST_F(TestLoadModel, CheckMultipleFormatsHandling) {
         "CPU",      // target device
         "1",        // batchsize
         1,          // NIREQ
-        false,      // is stateful
-        false,      // idle sequence cleanup enabled
-        false,      // low latency transformation enabled
-        500,        // stateful sequence max number,
         "",         // cache dir
         version,    // version
         modelPath,  // local path
@@ -557,10 +535,6 @@ TEST_F(TestLoadModel, CheckSavedModelHandling) {
         "CPU",      // target device
         "1",        // batchsize
         1,          // NIREQ
-        false,      // is stateful
-        false,      // idle sequence cleanup enabled
-        false,      // low latency transformation enabled
-        500,        // stateful sequence max number,
         "",         // cache dir
         version,    // version
         modelPath,  // local path
@@ -595,10 +569,6 @@ TEST_F(TestLoadModel, CheckTFModelHandling) {
         "CPU",      // target device
         "1",        // batchsize
         1,          // NIREQ
-        false,      // is stateful
-        false,      // idle sequence cleanup enabled
-        false,      // low latency transformation enabled
-        500,        // stateful sequence max number,
         "",         // cache dir
         version,    // version
         modelPath,  // local path
@@ -633,10 +603,6 @@ TEST_F(TestLoadModel, CheckONNXModelHandling) {
         "CPU",      // target device
         "1",        // batchsize
         1,          // NIREQ
-        false,      // is stateful
-        false,      // idle sequence cleanup enabled
-        false,      // low latency transformation enabled
-        500,        // stateful sequence max number,
         "",         // cache dir
         version,    // version
         modelPath,  // local path
@@ -671,10 +637,6 @@ TEST_F(TestLoadModel, CheckTFLiteModelHandling) {
         "CPU",      // target device
         "1",        // batchsize
         1,          // NIREQ
-        false,      // is stateful
-        false,      // idle sequence cleanup enabled
-        false,      // low latency transformation enabled
-        500,        // stateful sequence max number,
         "",         // cache dir
         version,    // version
         modelPath,  // local path

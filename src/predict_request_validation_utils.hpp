@@ -359,26 +359,45 @@ Status RequestValidator<RequestType, InputTensorType, choice, IteratorType, Shap
     return finalStatus;
 }
 // This function is expected to be called with already validated shape that does not contain negative dimensions
-template <typename T>
-static bool computeExpectedBufferSizeReturnFalseIfOverflow(const std::vector<T>& shape, const size_t& itemsize, size_t& expectedBufferSize) {
-    expectedBufferSize = 1;
-    if (itemsize == 0) {
-        expectedBufferSize = 0;
-        return true;
-    }
-    for (const T& dim : shape) {
+template <typename Iter, typename Projection>
+static bool computeExpectedElementCountReturnFalseIfOverflow(Iter begin, Iter end, Projection projection, size_t& elementCount) {
+    elementCount = 1;
+    for (; begin != end; ++begin) {
+        const auto dim = projection(*begin);
         if (dim == 0) {
-            expectedBufferSize = 0;
+            elementCount = 0;
             return true;
         }
-        if (expectedBufferSize > std::numeric_limits<size_t>::max() / dim)
+        if (elementCount > std::numeric_limits<size_t>::max() / static_cast<size_t>(dim))
             return false;
-        expectedBufferSize *= dim;
+        elementCount *= static_cast<size_t>(dim);
     }
-    if (expectedBufferSize > std::numeric_limits<size_t>::max() / itemsize)
-        return false;
-    expectedBufferSize *= itemsize;
     return true;
+}
+
+template <typename Container>
+static bool computeExpectedElementCountReturnFalseIfOverflow(const Container& shape, size_t& elementCount) {
+    return computeExpectedElementCountReturnFalseIfOverflow(
+        shape.begin(), shape.end(), [](const auto& d) { return d; }, elementCount);
+}
+
+static inline bool computeExpectedBufferSizeReturnFalseIfOverflow(size_t elementCount, size_t itemsize, size_t& bufferSize) {
+    if (itemsize == 0 || elementCount == 0) {
+        bufferSize = 0;
+        return true;
+    }
+    if (elementCount > std::numeric_limits<size_t>::max() / itemsize)
+        return false;
+    bufferSize = elementCount * itemsize;
+    return true;
+}
+
+template <typename Container>
+static bool computeExpectedBufferSizeReturnFalseIfOverflow(const Container& shape, const size_t& itemsize, size_t& expectedBufferSize) {
+    size_t elementCount = 0;
+    if (!computeExpectedElementCountReturnFalseIfOverflow(shape, elementCount))
+        return false;
+    return computeExpectedBufferSizeReturnFalseIfOverflow(elementCount, itemsize, expectedBufferSize);
 }
 }  // namespace request_validation_utils
 }  // namespace ovms

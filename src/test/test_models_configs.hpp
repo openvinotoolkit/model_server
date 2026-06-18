@@ -26,10 +26,6 @@ const ovms::ModelConfig DUMMY_MODEL_CONFIG{
     "CPU",                 // target device
     "1",                   // batchsize
     1,                     // NIREQ
-    false,                 // is stateful
-    true,                  // idle sequence cleanup enabled
-    false,                 // low latency transformation enabled
-    500,                   // stateful sequence max number
     "",                    // cache directory
     1,                     // model_version unused since version are read from path
     dummy_model_location,  // local path
@@ -41,10 +37,6 @@ const ovms::ModelConfig DUMMY_FP64_MODEL_CONFIG{
     "CPU",                      // target device
     "1",                        // batchsize
     1,                          // NIREQ
-    false,                      // is stateful
-    true,                       // idle sequence cleanup enabled
-    false,                      // low latency transformation enabled
-    500,                        // stateful sequence max number
     "",                         // cache directory
     1,                          // model_version unused since version are read from path
     dummy_fp64_model_location,  // local path
@@ -56,10 +48,6 @@ const ovms::ModelConfig SUM_MODEL_CONFIG{
     "CPU",               // target device
     "1",                 // batchsize
     1,                   // NIREQ
-    false,               // is stateful
-    true,                // idle sequence cleanup enabled
-    false,               // low latency transformation enabled
-    500,                 // stateful sequence max number
     "",                  // cache directory
     1,                   // model_version unused since version are read from path
     sum_model_location,  // local path
@@ -71,10 +59,6 @@ const ovms::ModelConfig INCREMENT_1x3x4x5_MODEL_CONFIG{
     "CPU",                             // target device
     "1",                               // batchsize
     1,                                 // NIREQ
-    false,                             // is stateful
-    true,                              // idle sequence cleanup enabled
-    false,                             // low latency transformation enabled
-    500,                               // stateful sequence max number
     "",                                // cache directory
     1,                                 // model_version unused since version are read from path
     increment_1x3x4x5_model_location,  // local path
@@ -86,10 +70,6 @@ const ovms::ModelConfig PASSTHROUGH_MODEL_CONFIG{
     "CPU",                       // target device
     "1",                         // batchsize
     1,                           // NIREQ
-    false,                       // is stateful
-    true,                        // idle sequence cleanup enabled
-    false,                       // low latency transformation enabled
-    500,                         // stateful sequence max number
     "",                          // cache directory
     1,                           // model_version unused since version are read from path
     passthrough_model_location,  // local path
@@ -101,10 +81,6 @@ const ovms::ModelConfig NATIVE_STRING_MODEL_CONFIG{
     "CPU",                              // target device
     "",                                 // batchsize
     1,                                  // NIREQ
-    false,                              // is stateful
-    true,                               // idle sequence cleanup enabled
-    false,                              // low latency transformation enabled
-    500,                                // stateful sequence max number
     "",                                 // cache directory
     1,                                  // model_version unused since version are read from path
     passthrough_string_model_location,  // local path
@@ -116,10 +92,6 @@ const ovms::ModelConfig DUMMY_SAVED_MODEL_CONFIG{
     "CPU",                       // target device
     "1",                         // batchsize
     1,                           // NIREQ
-    false,                       // is stateful
-    true,                        // idle sequence cleanup enabled
-    false,                       // low latency transformation enabled
-    500,                         // stateful sequence max number
     "",                          // cache directory
     1,                           // model_version unused since version are read from path
     dummy_saved_model_location,  // local path
@@ -131,10 +103,6 @@ const ovms::ModelConfig DUMMY_TFLITE_CONFIG{
     "CPU",                  // target device
     "1",                    // batchsize
     1,                      // NIREQ
-    false,                  // is stateful
-    true,                   // idle sequence cleanup enabled
-    false,                  // low latency transformation enabled
-    500,                    // stateful sequence max number
     "",                     // cache directory
     1,                      // model_version unused since version are read from path
     dummy_tflite_location,  // local path
@@ -146,10 +114,6 @@ const ovms::ModelConfig SCALAR_MODEL_CONFIG{
     "CPU",                  // target device
     "",                     // batchsize needs to be empty to emulate missing --batch_size param
     1,                      // NIREQ
-    false,                  // is stateful
-    true,                   // idle sequence cleanup enabled
-    false,                  // low latency transformation enabled
-    500,                    // stateful sequence max number
     "",                     // cache directory
     1,                      // model_version unused since version are read from path
     scalar_model_location,  // local path
@@ -161,10 +125,6 @@ const ovms::ModelConfig NO_NAME_MODEL_CONFIG{
     "CPU",                          // target device
     "1",                            // batchsize
     1,                              // NIREQ
-    false,                          // is stateful
-    true,                           // idle sequence cleanup enabled
-    false,                          // low latency transformation enabled
-    500,                            // stateful sequence max number
     "",                             // cache directory
     1,                              // model_version unused since version are read from path
     no_name_output_model_location,  // local path
