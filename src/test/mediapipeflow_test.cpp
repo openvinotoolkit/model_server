@@ -2859,6 +2859,19 @@ TEST_F(MediapipeSerialization, MPImageTensor) {
     EXPECT_EQ(mp_response.raw_output_contents().at(0).data()[2], 1);
 }
 
+TEST_F(MediapipeSerialization, OVMSPyTensorWithoutRuntimeBridge) {
+    // This test process does not load the runtime Python calculators plugin,
+    // therefore OVMS_PY_TENSOR serialization path must fail explicitly.
+    ::mediapipe::Packet packet = ::mediapipe::MakePacket<int>(1);
+    ASSERT_EQ(
+        onPacketReadySerializeImpl(
+            "1", "py_response", "1", "py_response",
+            mediapipe_packet_type_enum::OVMS_PY_TENSOR,
+            packet,
+            mp_response),
+        StatusCode::NOT_IMPLEMENTED);
+}
+
 TEST_F(MediapipeConfigChanges, ConfigWithNoBasePath) {
     std::string graphPbtxtFileContent = pbtxtContent;
     std::string configFileContent = configFileWithNoBasePath;

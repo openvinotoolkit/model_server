@@ -2546,7 +2546,9 @@ cc_test(
                 "serialization_common",
             ],
         }) + select({
-            "//:not_disable_python": [
+            "//:not_disable_python": PYBIND_HEADERS_ONLY + [
+                "//src/python:python_headers_only",
+                "//src/python:pythonnoderesources",
                 "//src/python:libovmspythonmodule",
             ],
             "//:disable_python": [],
@@ -2664,7 +2666,13 @@ cc_library(
         "test/c_api_test_utils.cpp",
         "test/test_utils.cpp",
         ],
-    deps = [
+    deps = select({
+        "//:not_disable_python": PYBIND_HEADERS_ONLY,
+        "//:disable_python": [],
+    }) + select({
+        "//:not_disable_python": ["//src/python:python_headers_only"],
+        "//:disable_python": [],
+    }) + [
         "test_test_models",
         "//src:ovms_lib",
         "//src:network_utils",

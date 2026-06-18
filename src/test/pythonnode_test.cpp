@@ -33,6 +33,7 @@
 #include "../grpcservermodule.hpp"
 #include "../kfs_frontend/kfs_graph_executor_impl.hpp"
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
+#include "../kfs_python_tensor_bridge.hpp"
 #include "../mediapipe_internal/mediapipefactory.hpp"
 #include "../mediapipe_internal/mediapipegraphdefinition.hpp"
 #include "../mediapipe_internal/mediapipegraphexecutor.hpp"
@@ -1057,6 +1058,21 @@ TEST_F(PythonFlowTest, SerializePyObjectWrapperToKServeResponse) {
     const float* outputDataPtr = reinterpret_cast<const float*>(response.raw_output_contents().at(0).data());
     outputData.assign(outputDataPtr, outputDataPtr + numElements);
     ASSERT_EQ(expectedOutputData, outputData);
+}
+
+TEST_F(PythonFlowTest, KfsPythonTensorBridgeVTableRegistration) {
+    const auto* original = getKfsPyTensorBridgeVTable();
+
+    const KfsPyTensorBridgeVTable testVtable{
+        nullptr,
+        nullptr,
+    };
+
+    setKfsPyTensorBridgeVTable(&testVtable);
+    ASSERT_EQ(getKfsPyTensorBridgeVTable(), &testVtable);
+
+    // Restore global state for the rest of the suite.
+    setKfsPyTensorBridgeVTable(original);
 }
 
 // ---------------------------------- PythonExecutorCalculcator tests
