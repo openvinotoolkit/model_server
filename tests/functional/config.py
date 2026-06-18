@@ -90,6 +90,11 @@ models_path = get_path("TT_MODELS_PATH", os.path.join("~", "ovms_models"))
 """ TT_DATASETS_PATH - Datasets local repo path"""
 datasets_path = get_path("TT_DATASETS_PATH", os.path.join("~", "ovms_datasets"))
 
+""" TT_GENERATIVE_MODELS_LOCAL_PATH - local path for converted generative models """
+generative_models_local_path = get_path(
+    "TT_GENERATIVE_MODELS_LOCAL_PATH", os.path.join(models_path, "generative_models_ovms")
+)
+
 """ TT_CLEAN_ARTIFACTS_DIR """
 clean_artifacts_dir = get_bool("TT_CLEAN_ARTIFACTS_DIR", False)
 

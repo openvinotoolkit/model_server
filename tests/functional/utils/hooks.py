@@ -30,7 +30,7 @@ from _pytest.mark import Mark, MarkDecorator
 from _pytest.python import Function
 
 from tests.functional import config
-from ovms.constants.models_library import ModelsLib
+from tests.functional.models.models_library import ModelsLib
 from tests.functional.utils.download import wget_file
 from tests.functional.utils.reservation_manager.args import parse_args
 from tests.functional.utils.reservation_manager.manager import Manager as ReservationManager
@@ -428,14 +428,6 @@ def prepare_ovms_package():
 
 
 def get_docker_images(images_to_download):
-    if OsType.Windows in config.base_os:
-        return
-    docker_ovms_types = [
-        OvmsType.DOCKER, OvmsType.DOCKER_CMD_LINE, OvmsType.BINARY_DOCKER, OvmsType.CAPI_DOCKER
-    ]
-    if not any(_ovms_type in docker_ovms_types for _ovms_type in config.ovms_types):
-        return
-
     images_to_download.add(config.minio_image)
     for target_device, base_os in itertools.product(config.target_devices, config.base_os):
         ovms_image = calculate_ovms_image_name(target_device, base_os)
@@ -447,6 +439,12 @@ def get_docker_images(images_to_download):
 
 
 def download_docker_images():
+    docker_ovms_types = [
+        OvmsType.DOCKER, OvmsType.DOCKER_CMD_LINE, OvmsType.KUBERNETES, OvmsType.BINARY_DOCKER, OvmsType.CAPI_DOCKER
+    ]
+    if not any(_ovms_type in docker_ovms_types for _ovms_type in config.ovms_types):
+        return
+
     images_to_download = set()
     images_to_download = get_docker_images(images_to_download)
 
@@ -621,7 +619,7 @@ def parametrize_target_device(metafunc):
 
 def validate_lock_files():
     """Ensure that target_device locks files exists"""
-    if not config.machine_is_reserved_for_test_session:
+    if not machine_is_reserved_for_test_session:
         return  # Cannot validate locks validity since other testing session could acquire device lock
 
     locks = [value for key, value in vars(Paths).items() if "LOCK_FILE" in key]
@@ -826,6 +824,7 @@ def preprocess_collected_items(items):
     try:
         required_marker_ids, excluded_marker_ids = get_marker_ids_for_test_run()
         for item in items:
+            set_item_image_parameter(item)
             preprocess_collected_item(
                 item,
                 deselected,
@@ -869,7 +868,6 @@ def generate_marker_ids(*args):
 def preprocess_collected_item(
         item, deselected, all_components, all_requirements, required_marker_ids, excluded_marker_ids
 ):
-    set_item_image_parameter(item)
     apply_conditional_run_type_marks(item)
     test_type = MarkRunType.get_test_type_mark(item)
     set_timeout_per_test_type(item, test_type)

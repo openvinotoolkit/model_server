@@ -28,6 +28,7 @@ from tests.functional.config import airplane_mode, base_os, ovms_image_local
 from tests.functional.config import tmp_dir
 from tests.functional.constants.ovms_binaries import get_binaries, get_ovms_binary_cmd_setup
 from tests.functional.constants.ovms_type import OvmsType, OVMS_BINARY_PACKAGE_EXTENSIONS
+from tests.functional.utils.docker import DockerClient
 
 logger = get_logger(__name__)
 
@@ -212,8 +213,6 @@ class OvmsInfo(BaseInfo):
     @classmethod
     def pull_latest_image(cls, image_to_pull, force_pull=False):
         cls.docker_pull_image_cli(image_to_pull)  # ensure image is available on host.
-
-        from tests.functional.utils.docker import DockerClient  # pylint: disable=import-outside-toplevel
 
         if image_to_pull not in cls.IMAGES or force_pull:
             repository, tag = image_to_pull.split(":")

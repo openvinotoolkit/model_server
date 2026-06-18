@@ -19,7 +19,7 @@ import sys
 import time
 import pytest
 
-from tests.functional.config import enable_pytest_plugins, pytest_keyword_filter
+from tests.functional.config import enable_pytest_plugins, machine_is_reserved_for_test_session, pytest_keyword_filter
 from tests.functional.constants.components import OvmsComponents
 from tests.functional.constants.ovms import (
     BASE_OS_PARAM_NAME,
@@ -114,7 +114,7 @@ if enable_pytest_plugins:
                 hooks.remove_ports_reservation(config)
                 hooks.cleanup_tmp_repos_dir(config)
                 hooks.teardown_environment()
-                if config.machine_is_reserved_for_test_session:
+                if machine_is_reserved_for_test_session:
                     hooks.clear_lockfiles()
         except Exception as e:
             error_msg = str(e)
