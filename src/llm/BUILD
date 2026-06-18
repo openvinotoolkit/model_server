@@ -403,7 +403,7 @@ ovms_cc_library(
     deps = [
         "//src:libovmslogging",
         "//src/python:utils",
-    ] + PYBIND_DEPS,
+    ] + PYBIND_HEADERS_ONLY,
     visibility = ["//visibility:public"],
 )
 

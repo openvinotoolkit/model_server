@@ -268,7 +268,7 @@ COMMON_LOCAL_DEFINES = ["SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE"]
 COMMON_DEFINES = DEFINES_PYTHON + DEFINES_MEDIAPIPE
 # Headers-only pybind11 for calculator targets - avoids linking python3 into ovms.exe
 PYBIND_HEADERS_ONLY = [
-    "@pybind11//:pybind11_embed",
+    "@pybind11//:pybind11",
 ]
 # Full pybind11 with Python linkage - only for libovmspython.so/dll
 PYBIND_DEPS = [

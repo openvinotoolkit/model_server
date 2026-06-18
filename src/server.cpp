@@ -69,6 +69,7 @@
 #include "profiler.hpp"
 #include "profilermodule.hpp"
 #include "pull_module/hf_pull_model_module.hpp"
+#include "python_calculators_plugin_loader.hpp"
 #include "servablemanagermodule.hpp"
 #include "shutdown_state.hpp"
 #include "servables_config_manager_module/servablesconfigmanagermodule.hpp"
@@ -568,6 +569,10 @@ Status Server::startModules(ovms::Config& config) {
 
 #if (PYTHON_DISABLE == 0)
     if (config.getServerSettings().withPython) {
+        // Load MediaPipe Python calculators from the plugin library
+        // This is optional and won't fail if the plugin isn't available
+        loadPythonCalculatorsPlugin();
+        
         auto pythonModule = this->createModule(PYTHON_INTERPRETER_MODULE_NAME);
         if (pythonModule == nullptr) {
             SPDLOG_WARN("Python requested in configuration, but runtime library could not be loaded. Continuing with Python features disabled.");

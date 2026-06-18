@@ -514,7 +514,7 @@ ovms_cc_library(
     deps = select({
             "//:not_disable_python": [
                 "//src/python:python_headers_only",
-                "//src/python:libovmspythonmodule",
+                "//src/python:python_tensor_runtime",
             ],
             "//:disable_python": []
         }) + [
@@ -714,6 +714,8 @@ ovms_cc_library(
         "model_service.cpp",
         "prediction_service.cpp",
         "prediction_service.hpp",
+        "python_calculators_plugin_loader.cpp",
+        "python_calculators_plugin_loader.hpp",
         "server.cpp",
         "server.hpp",
          ],
@@ -2170,7 +2172,12 @@ cc_binary(
     ] + select({
         "//conditions:default": [],
         "//src:windows" : ["main_windows.hpp", "main_windows.cpp",],}),
-    linkopts = LINKOPTS_ADJUSTED,
+    # Avoid inheriting transitive DT_NEEDED entries (for example libpython from runtime-loaded libs)
+    # while still allowing explicitly linked dependencies required by ovms.
+    linkopts = LINKOPTS_ADJUSTED + select({
+        "//conditions:default": ["-Wl,--no-copy-dt-needed-entries"],
+        "//src:windows": [],
+    }),
     copts = COMMON_STATIC_LIBS_COPTS,
     deps = [
         "//src:ovms_lib",
@@ -2202,10 +2209,17 @@ cc_binary(
     }) + select({
         "//:not_disable_python": [
             "//src/python:libovmspython",
+            "//src/python:libpython_calculators",
         ],
         "//:disable_python": [],
     }),
     # linkstatic = False,  # Use for dynamic linking when necessary
+)
+
+sh_test(
+    name = "ovms_no_libpython_smoke_test",
+    srcs = ["test/ovms_no_libpython_smoke.sh"],
+    data = [":ovms"],
 )
 
 cc_test(

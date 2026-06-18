@@ -166,7 +166,6 @@ ovms_cc_library(
         "utils",
     ],
     visibility = ["//src:__pkg__"],
-    alwayslink = 1,
     data = ["//src/python/binding:pyovms.so"],
 )
 
@@ -182,7 +181,6 @@ ovms_cc_library(
         "pythonbackend",
     ],
     visibility = ["//src:__pkg__"],
-    alwayslink = 1,
     data = ["//src/python/binding:pyovms.so"],
 )
 
@@ -201,7 +199,6 @@ ovms_cc_library(
         "//src:libovmslogging",
     ],
     visibility = ["//src:__pkg__"],
-    alwayslink = 1,
     data = ["//src/python/binding:pyovms.so"],
 )
 
@@ -226,6 +223,7 @@ ovms_cc_library(
     ],
     deps = PYBIND_HEADERS_ONLY + [
         "//src:cpp_headers",
+        "//src:libovmslogging",
         "//src:libovmsstatus",
         "//src/mediapipe_internal:mediapipe_utils",
         "@mediapipe//mediapipe/framework:calculator_framework",
@@ -243,11 +241,7 @@ ovms_cc_library(
         "//src:libovmslogging",
         "//src:libovms_module",
         "//src/mediapipe_internal:mediapipe_utils",
-        "ovmspytensor",
-        "pytensorovtensorconvertercalculator",
-        "pythonnoderesources",
         "pythonbackend",
-        "pythonexecutorcalculator",
         "utils",
     ],
     visibility = ["//visibility:public"],
@@ -349,7 +343,103 @@ ovms_cc_library(
     deps = select({
         "//src:windows": [":libovmspython_windows"],
         "//conditions:default": [":libovmspython_unix"],
-    }) + PYBIND_HEADERS_ONLY,
+    }),
+    visibility = ["//visibility:public"],
+)
+
+# Minimal implementation subset needed by KFS graph executor for Python tensor
+# conversion. This target avoids PYBIND_DEPS and keeps libpython linkage out of
+# the main ovms binary.
+ovms_cc_library(
+    name = "python_tensor_runtime",
+    srcs = [
+        "python_backend_tensor_runtime.cpp",
+        "python_backend.hpp",
+        "utils.hpp",
+    ],
+    deps = PYBIND_HEADERS_ONLY + [
+        "//src:libovmslogging",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+# Plugin shared library containing MediaPipe Python calculators
+# This library is loaded dynamically at runtime, making Python calculators
+# optional and keeping the main ovms binary free from direct Python dependencies
+cc_binary(
+    name = "libpython_calculators.so",
+    linkshared = True,
+    srcs = [
+        "python_calculators_plugin.cpp",
+        "python_executor_calculator.cc",
+        "python_node_initializer.cpp",
+        "pytensor_ovtensor_converter_calculator.cc",
+        "pythonnoderesources.cpp",
+        "pythonnoderesources.hpp",
+        "python_backend.hpp",
+        "utils.hpp",
+    ],
+    deps = PYBIND_HEADERS_ONLY + [
+        "//third_party:openvino",
+        "@mediapipe//mediapipe/framework:calculator_framework",
+        "//src:libovmslogging",
+        "//src:libovmsstatus",
+        "//src/mediapipe_internal:mediapipe_utils",
+        "//src/mediapipe_internal:node_initializer",
+        "//src:libovmsprecision",
+        "ovmspytensor",
+        "pythonexecutorcalculator_cc_proto",
+        "pytensorovtensorconvertercalculator_cc_proto",
+        "pythonbackend",
+        "utils",
+    ],
+    copts = COPTS_SO,
+    linkopts = LINKOPTS_SO + [
+        "-Wl,-z,nodlopen",  # Prevent dlopen on this library (pybind11 requirement)
+    ],
+    local_defines = COMMON_LOCAL_DEFINES,
+    visibility = ["//visibility:public"],
+)
+
+simple_copy_file(
+    name = "copy_libpython_calculators",
+    src = "libpython_calculators.so",
+    out = "libpython_calculators.dll",
+    visibility = ["//visibility:public"],
+)
+
+# cc_import wrapper for libpython_calculators.so (Unix/Linux)
+cc_import(
+    name = "libpython_calculators_unix",
+    shared_library = ":libpython_calculators.so",
+    hdrs = [],  # No public headers needed; loaded via dlopen
+    visibility = ["//visibility:private"],
+)
+
+# cc_import wrapper for libpython_calculators.so (Windows)
+cc_import(
+    name = "libpython_calculators_windows",
+    interface_library = ":libpython_calculators.so.if.lib",
+    shared_library = ":copy_libpython_calculators",
+    hdrs = [],
+    visibility = ["//visibility:private"],
+)
+
+alias(
+    name = "libpython_calculators_select",
+    actual = select({
+        "//src:windows": ":libpython_calculators_windows",
+        "//conditions:default": ":libpython_calculators_unix",
+    }),
+    visibility = ["//visibility:private"],
+)
+
+ovms_cc_library(
+    name = "libpython_calculators",
+    deps = select({
+        "//src:windows": [":libpython_calculators_windows"],
+        "//conditions:default": [":libpython_calculators_unix"],
+    }),
     visibility = ["//visibility:public"],
 )
 
