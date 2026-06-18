@@ -439,7 +439,7 @@ absl::Status OpenAIApiHandler::parseTools() {
     return absl::OkStatus();
 }
 
-absl::StatusOr<std::optional<ov::genai::JsonContainer>> OpenAIApiHandler::parseToolsToJsonContainer() {
+absl::StatusOr<std::optional<ov::genai::JsonContainer>> OpenAIApiHandler::parseToolsToJsonContainer() const {
     auto it = doc.FindMember("tools");
     if (it == doc.MemberEnd() || it->value.IsNull()) {
         return std::nullopt;
@@ -460,7 +460,7 @@ absl::StatusOr<std::optional<ov::genai::JsonContainer>> OpenAIApiHandler::parseT
     }
 }
 
-absl::StatusOr<std::optional<ov::genai::JsonContainer>> OpenAIApiHandler::parseChatTemplateKwargsToJsonContainer() {
+absl::StatusOr<std::optional<ov::genai::JsonContainer>> OpenAIApiHandler::parseChatTemplateKwargsToJsonContainer() const {
     auto it = doc.FindMember("chat_template_kwargs");
     if (it == doc.MemberEnd() || it->value.IsNull()) {
         return std::nullopt;
@@ -492,15 +492,63 @@ const OpenAIRequest& OpenAIApiHandler::getRequest() const {
     return request;
 }
 
+absl::StatusOr<CanonicalRequest> OpenAIApiHandler::buildCanonicalRequest(RendererType rendererType) const {
+    if (rendererType == RendererType::CPP_TOKENIZER) {
+        auto tools = parseToolsToJsonContainer();
+        if (!tools.ok()) {
+            return tools.status();
+        }
+        auto kwargs = parseChatTemplateKwargsToJsonContainer();
+        if (!kwargs.ok()) {
+            return kwargs.status();
+        }
+        CppPath cppPath{
+            std::cref(request.chatHistory),
+            std::cref(request.imageHistory),
+            std::move(tools.value()),
+            std::move(kwargs.value()),
+            request.prompt,
+            true};
+        return CanonicalRequest(std::move(cppPath));
+    }
+
+    PyPath pyPath{std::cref(request.processedJson)};
+    return CanonicalRequest(std::move(pyPath));
+}
+
+absl::StatusOr<const CanonicalRequest*> OpenAIApiHandler::getCanonicalRequest(RendererType rendererType) const {
+    auto& cache = (rendererType == RendererType::CPP_TOKENIZER) ? cachedCppCanonicalRequest : cachedPyCanonicalRequest;
+    if (!cache.has_value()) {
+        auto canonical = buildCanonicalRequest(rendererType);
+        if (!canonical.ok()) {
+            return canonical.status();
+        }
+        cache = std::move(canonical.value());
+    }
+    return &(*cache);
+}
+
 const std::string& OpenAIApiHandler::getProcessedJson() const {
+    auto canonicalRequest = getCanonicalRequest(RendererType::PY_JINJA);
+    if (!canonicalRequest.ok()) {
+        return request.processedJson;
+    }
     return request.processedJson;
 }
 
 const ImageHistory& OpenAIApiHandler::getImageHistory() const {
+    auto canonicalRequest = getCanonicalRequest(RendererType::CPP_TOKENIZER);
+    if (!canonicalRequest.ok()) {
+        return request.imageHistory;
+    }
     return request.imageHistory;
 }
 
 ov::genai::ChatHistory& OpenAIApiHandler::getChatHistory() {
+    auto canonicalRequest = getCanonicalRequest(RendererType::CPP_TOKENIZER);
+    if (!canonicalRequest.ok()) {
+        return request.chatHistory;
+    }
     return request.chatHistory;
 }
 

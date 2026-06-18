@@ -37,6 +37,7 @@
 #pragma warning(pop)
 #include "../io_processing/output_parser.hpp"
 #include "openai_request.hpp"
+#include "../preprocessing/canonical_request.hpp"
 
 // Forward declarations for types only used by reference in virtual method signatures
 namespace ov {
@@ -119,6 +120,11 @@ protected:
     // Shared VLM workaround: encode text to tokens using tokenizer, validates shape
     std::vector<int64_t> encodeTextToTokens(const std::string& text);
 
+    absl::StatusOr<CanonicalRequest> buildCanonicalRequest(RendererType rendererType) const;
+
+    mutable std::optional<CanonicalRequest> cachedCppCanonicalRequest;
+    mutable std::optional<CanonicalRequest> cachedPyCanonicalRequest;
+
 public:
     OpenAIApiHandler(Document& doc, Endpoint endpoint, std::chrono::time_point<std::chrono::system_clock> creationTime,
         ov::genai::Tokenizer tokenizer, const std::string& toolParserName = "", const std::string& reasoningParserName = "") :
@@ -147,8 +153,8 @@ public:
 
     // Shared parsing (non-virtual)
     absl::Status parseTools();
-    absl::StatusOr<std::optional<ov::genai::JsonContainer>> parseToolsToJsonContainer();
-    absl::StatusOr<std::optional<ov::genai::JsonContainer>> parseChatTemplateKwargsToJsonContainer();
+    absl::StatusOr<std::optional<ov::genai::JsonContainer>> parseToolsToJsonContainer() const;
+    absl::StatusOr<std::optional<ov::genai::JsonContainer>> parseChatTemplateKwargsToJsonContainer() const;
     const bool areToolsAvailable() const;
 
     // Accessors (non-virtual)
@@ -159,6 +165,7 @@ public:
     const std::string& getProcessedJson() const;
     const ImageHistory& getImageHistory() const;
     ov::genai::ChatHistory& getChatHistory();
+    absl::StatusOr<const CanonicalRequest*> getCanonicalRequest(RendererType rendererType) const;
     std::optional<int> getMaxTokens() const;
     std::optional<std::string> getResponseFormat() const;
     bool isStream() const;
