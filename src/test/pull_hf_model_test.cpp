@@ -499,7 +499,7 @@ protected:
         ::SetUpServerForDownloadAndStart(this->t, this->server, sourceModel, downloadPath, task, timeoutSeconds);
     }
 
-    static int RunPullHfModelAndGetCode(const std::string& sourceModel, const std::string& modelRepositoryPath, const std::string& pullTask) {
+    int RunPullHfModelAndGetCode(const std::string& sourceModel, const std::string& modelRepositoryPath, const std::string& pullTask) {
         server.setShutdownRequest(0);
         std::vector<std::string> args = {
             "ovms",
