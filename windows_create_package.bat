@@ -108,7 +108,7 @@ if exist %cd%\bazel-out\x64_windows-opt\bin\src\core_tokenizers.dll (
 
 :: Bundle espeak-ng DLL + data when it was built from source by Bazel
 :: (--//:espeak=on). Picked up from the rules_foreign_cc cmake output tree.
-for /f "delims=" %%D in ('dir /b /s /a:d %cd%\bazel-out\x64_windows-opt\bin\external\espeak_ng\espeak-ng.dll 2^>nul') do (
+for /f "delims=" %%D in ('dir /b /s /a:-d "%cd%\bazel-out\x64_windows-opt\bin\external\espeak_ng\espeak-ng.dll" 2^>nul') do (
     copy /Y "%%D" dist\windows\ovms
 )
 for /f "delims=" %%D in ('dir /b /s /a:d %cd%\bazel-out\x64_windows-opt\bin\external\espeak_ng 2^>nul ^| findstr /e "espeak-ng-data"') do (

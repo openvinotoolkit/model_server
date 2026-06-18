@@ -32,10 +32,6 @@
 
 namespace ovms {
 
-namespace {
-const ov::Shape KOKORO_SPEAKER_EMBEDDING_SHAPE{510, 1, 256};
-}
-
 static size_t getShapeElementsCount(const ov::Shape& shape) {
     size_t elementsCount = 1;
     for (const auto dim : shape) {
@@ -57,8 +53,18 @@ static ov::Tensor readSpeakerEmbedding(const std::filesystem::path& filePath, co
 
     // Get file size
     input.seekg(0, std::ios::end);
-    size_t bufferSize = static_cast<size_t>(input.tellg());
+    if (input.fail()) {
+        throw std::runtime_error("Failed to seek to the end of file.");
+    }
+    const std::streampos endPosition = input.tellg();
+    if (endPosition == std::streampos(-1)) {
+        throw std::runtime_error("Failed to determine file size.");
+    }
+    const size_t bufferSize = static_cast<size_t>(endPosition);
     input.seekg(0, std::ios::beg);
+    if (input.fail()) {
+        throw std::runtime_error("Failed to seek to the beginning of file.");
+    }
 
     // Check size is multiple of float
     if (bufferSize % sizeof(float) != 0) {
@@ -97,7 +103,7 @@ TtsServable::TtsServable(const std::string& modelDir, const std::string& targetD
     }
     ttsPipeline = std::make_shared<ov::genai::Text2SpeechPipeline>(parsedModelsPath.string(), targetDevice, config);
     const ov::Shape speakerEmbeddingShape = ttsPipeline->get_speaker_embedding_shape();
-    for (auto voice : graphVoices) {
+    for (const auto& voice : graphVoices) {
         std::filesystem::path voicePath(voice.path());
         if (voicePath.is_relative()) {
             voicePath = std::filesystem::path(graphPath) / voicePath;

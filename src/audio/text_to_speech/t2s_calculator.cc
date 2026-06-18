@@ -53,7 +53,6 @@ using namespace ovms;
 namespace mediapipe {
 
 const std::string TTS_SESSION_SIDE_PACKET_TAG = "TTS_NODE_RESOURCES";
-const std::string KOKORO_DEFAULT_VOICE = "af_alloy";
 
 static absl::Status checkClientDisconnected(const ovms::HttpPayload& payload, const std::string& nodeName, const char* context) {
     if (payload.client && payload.client->isDisconnected()) {
@@ -66,8 +65,6 @@ static absl::Status checkClientDisconnected(const ovms::HttpPayload& payload, co
 class T2sCalculator : public CalculatorBase {
     static const std::string INPUT_TAG_NAME;
     static const std::string OUTPUT_TAG_NAME;
-    std::string defaultLanguage = "en-us";
-    float defaultSpeed = 1.0f;
 
 public:
     static absl::Status GetContract(CalculatorContract* cc) {
@@ -86,13 +83,6 @@ public:
 
     absl::Status Open(CalculatorContext* cc) final {
         SPDLOG_LOGGER_DEBUG(t2s_calculator_logger, "T2sCalculator  [Node: {}] Open start", cc->NodeName());
-        const auto& options = cc->Options<mediapipe::T2sCalculatorOptions>();
-        if (options.has_language() && !options.language().empty()) {
-            defaultLanguage = options.language();
-        }
-        if (options.has_speed()) {
-            defaultSpeed = options.speed();
-        }
         return absl::OkStatus();
     }
 
@@ -133,7 +123,7 @@ public:
                     }
                     voiceName = voiceIt->value.GetString();
                 }
-                std::string language = defaultLanguage;
+                std::string language = "en-us";
                 auto languageIt = payload.parsedJson->FindMember("language");
                 if (languageIt != payload.parsedJson->MemberEnd()) {
                     if (!languageIt->value.IsString()) {
@@ -141,7 +131,7 @@ public:
                     }
                     language = languageIt->value.GetString();
                 }
-                float speed = defaultSpeed;
+                float speed = 1.0f;
                 auto speedIt = payload.parsedJson->FindMember("speed");
                 if (speedIt != payload.parsedJson->MemberEnd()) {
                     if (!speedIt->value.IsNumber()) {
@@ -185,7 +175,7 @@ public:
             }
         } catch (ov::AssertFailure& e) {
             return absl::InvalidArgumentError(e.what());
-        } catch (std::runtime_error& e) {
+        } catch (const std::runtime_error& e) {
             return absl::InvalidArgumentError(e.what());
         } catch (...) {
             return absl::InvalidArgumentError("Response generation failed");

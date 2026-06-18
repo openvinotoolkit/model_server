@@ -22,5 +22,3 @@ exports_files([
     "espeak_ng.bzl",
     "out_of_source_phsource.patch",
 ])
-
-exports_files(["espeak_ng.bzl"])
