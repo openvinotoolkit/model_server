@@ -118,43 +118,31 @@ pipeline {
             }
         }
         stage ("Signing files"){
-            when { expression { env.SIGN_FILES == "true" } }
+            when { expression { env.SIGN_FILES == "true" && env.SIGN_USER_PASSWORD != "" } }
             steps {
                 echo "OVMS_PYTHON_ENABLED: ${env.OVMS_PYTHON_ENABLED}"
-                withCredentials([
-                    usernamePassword(
-                        credentialsId: 'PRERELEASE_SIGN',
-                        usernameVariable: 'PRERELEASE_USER',
-                        passwordVariable: 'PRERELEASE_PASS'), 
-                    usernamePassword(
-                        credentialsId: 'RELEASE_SIGN',
-                        usernameVariable: 'RELEASE_USER',
-                        passwordVariable: 'RELEASE_PASS'),
-                    ]) {
-                    script {
-                        if (env.RELEASE_TYPE == "RELEASE") {
-                            env.SIGNING_USER = env.RELEASE_USER
-                            env.OVMS_PASS = env.RELEASE_PASS
-                        } else if (env.RELEASE_TYPE == "PRE-RELEASE") {
-                            env.SIGNING_USER = env.PRERELEASE_USER
-                            env.OVMS_PASS = env.PRERELEASE_PASS
-                        } else {
-                            error "Unknown RELEASE_TYPE: ${env.RELEASE_TYPE}"
+                script {
+                    if (env.RELEASE_TYPE == "RELEASE") {
+                        env.SIGNING_USER = "sys_ovms"
+                    } else if (env.RELEASE_TYPE == "PRE-RELEASE") {
+                        env.SIGNING_USER = "sys_ovms_amr"
+                    } else {
+                        error "Unknown RELEASE_TYPE: ${env.RELEASE_TYPE}"
+                    }
+                    env.OVMS_PASS = env.SIGN_USER_PASSWORD
+                    def windows = load 'ci/loadWin.groovy'
+                    if (windows != null) {
+                        try {
+                            windows.clone_sdl_repo()
+                            windows.sign()
+                        } finally {
+                            windows.archive_sign_results()
                         }
-                        def windows = load 'ci/loadWin.groovy'
-                        if (windows != null) {
-                            try {
-                                windows.clone_sdl_repo()
-                                windows.sign()
-                            } finally {
-                                windows.archive_sign_results()
-                            }
-                        } else {
-                            error "Cannot load ci/loadWin.groovy file."
-                        }
+                    } else {
+                        error "Cannot load ci/loadWin.groovy file."
                     }
                 }
-            }
+        }
         }
     }
 }
