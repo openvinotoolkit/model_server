@@ -1,4 +1,28 @@
 #!/usr/bin/env bash
+#*****************************************************************************
+# Copyright 2026 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http:#www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#*****************************************************************************
+#
+# KFS OVMS_PY_TENSOR bridge — compiled into libpython_calculators.so.
+#
+# Why this file lives in libpython_calculators.so (not libovmspython.so):
+#   Both PythonExecutorCalculator and this bridge must use the same RTTI for
+#   PyObjectWrapper<py::object> so that mediapipe's packet.Get<T>() succeeds
+#   across both the input (KFS→packet) and output (packet→KFS) paths.  Both
+#   DSOs are built without -fvisibility=hidden, so the dynamic linker
+#   deduplicates the typeinfo and typeid comparisons work correctly.
 set -euo pipefail
 
 find_ovms_binary() {
