@@ -126,9 +126,11 @@ Example model families that work well:
 
 | Model Family | Tool Parser | Notes                                  |
 |--------------|-------------|----------------------------------------|
-| Qwen 2.5     | `qwen`      | Strong coding performance, various sizes |
+| Qwen 3       | `hermes3`   | Strong coding performance, various sizes |
 | Llama 3      | `hermes3`   | Good general instruction following   |
 | Mistral      | `hermes3`   | Efficient inference                  |
+
+> **Note:** Documentation examples use OpenVINO-exported models from the OpenVINO Hugging Face organization. The documented workflow is validated using `OpenVINO/qwen3-0.6b-int8-ov`. Other compatible models may also be used. The example model is chosen because it provides a lightweight validation path.
 
 ### Why Tool Parser Selection Matters
 
@@ -144,9 +146,9 @@ OVMS provides native model retrieval and preparation through the `--source_model
 ```bash
 docker run --rm -v ${HOME}/ovms-openhands/models:/models \
     openvino/model_server:latest \
-    --source_model Qwen/Qwen2.5-0.5B-Instruct \
+    --source_model OpenVINO/qwen3-0.6b-int8-ov \
     --model_repository_path /models \
-    --model_name qwen2.5-0.5b-instruct \
+    --model_name qwen3-0.6b-int8-ov \
     --task text_generation \
     --target_device CPU
 ```
@@ -164,7 +166,7 @@ After running the `--source_model` workflow, the model directory contains:
 
 ```text
 ${HOME}/ovms-openhands/models/
-└── qwen2.5-0.5b-instruct/
+└── qwen3-0.6b-int8-ov/
     ├── openvino_model.xml       # OpenVINO model structure
     ├── openvino_model.bin       # Model weights
     └── graph.pbtxt              # MediaPipe LLM graph configuration
@@ -175,7 +177,7 @@ ${HOME}/ovms-openhands/models/
 The `scripts/deploy_model_ovms.sh` helper automates model preparation. Conceptually, it performs these steps:
 
 1. **Validates prerequisites** — Checks Docker, docker compose, and HF_TOKEN
-2. **Normalizes the model name** — Converts `Qwen/Qwen2.5-0.5B-Instruct` to `qwen2.5-0.5b-instruct`
+2. **Normalizes the model name** — Converts `OpenVINO/qwen3-0.6b-int8-ov` to `qwen3-0.6b-int8-ov`
 3. **Resolves the tool parser** — Maps model family to appropriate parser (e.g., Qwen → `qwen`)
 4. **Creates the model cache directory** — Ensures `${HOME}/ovms-openhands/models` exists
 5. **Exports runtime configuration** — Sets environment variables for docker-compose.yml
@@ -209,12 +211,12 @@ This approach uses the provided `docker-compose.yml` and `scripts/deploy_model_o
 2. **Run the deployment script** with your chosen model:
    ```bash
    cd /path/to/model_server/demos/integration_with_OpenHands
-   ./scripts/deploy_model_ovms.sh Qwen/Qwen2.5-0.5B-Instruct
+   ./scripts/deploy_model_ovms.sh OpenVINO/qwen3-0.6b-int8-ov
    ```
 
    The script will:
    - Validate Docker and docker compose availability
-   - Normalize the model name (e.g., `Qwen2.5-0.5B-Instruct` → `qwen2.5-0.5b-instruct`)
+   - Normalize the model name (e.g., `OpenVINO/qwen3-0.6b-int8-ov` → `qwen3-0.6b-int8-ov`)
    - Resolve the appropriate tool parser (Qwen models → `qwen`)
    - Create the model cache directory at `${HOME}/ovms-openhands/models`
    - Export runtime environment variables for docker-compose.yml
@@ -226,13 +228,13 @@ This approach uses the provided `docker-compose.yml` and `scripts/deploy_model_o
 **Optional script parameters:**
 ```bash
 # Specify device, parser, or cache directory
-./scripts/deploy_model_ovms.sh Qwen/Qwen2.5-0.5B-Instruct \
+./scripts/deploy_model_ovms.sh OpenVINO/qwen3-0.6b-int8-ov \
     --device CPU \
     --parser qwen \
     --cache-dir ~/custom-models
 
 # Skip health check for faster feedback
-./scripts/deploy_model_ovms.sh Qwen/Qwen2.5-0.5B-Instruct --skip-wait
+./scripts/deploy_model_ovms.sh OpenVINO/qwen3-0.6b-int8-ov --skip-wait
 ```
 
 ### Path B: Manual Deployment (Documentation-Driven)
@@ -245,10 +247,10 @@ This approach uses Docker commands directly. Understanding this workflow helps y
 
 ```bash
 # Model configuration
-export MODEL_ID="Qwen/Qwen2.5-0.5B-Instruct"
-export LOCAL_NAME="qwen2.5-0.5b-instruct"
+export MODEL_ID="OpenVINO/qwen3-0.6b-int8-ov"
+export LOCAL_NAME="qwen3-0.6b-int8-ov"
 export TARGET_DEVICE="CPU"
-export TOOL_PARSER="qwen"
+export TOOL_PARSER="hermes3"
 export MODEL_CACHE_DIR="${HOME}/ovms-openhands/models"
 export HF_TOKEN="${HF_TOKEN:-}"
 ```
@@ -258,6 +260,8 @@ export HF_TOKEN="${HF_TOKEN:-}"
 ```bash
 mkdir -p "$MODEL_CACHE_DIR"
 ```
+
+> **Note:** OVMS runs as a non-root user inside the container. The mounted model cache directory must be writable by the OVMS container user. If OVMS fails during startup with permission errors when creating model directories, verify permissions on the model cache directory.
 
 **Step 3: Deploy OVMS**
 
@@ -300,7 +304,7 @@ docker run -d \
     --name openhands \
     --network ovms-net \
     --publish 3000:3000 \
-    --extra-hosts host.docker.internal:host-gateway \
+    --add-host host.docker.internal:host-gateway \
     --volume /var/run/docker.sock:/var/run/docker.sock \
     --volume "$(pwd)/.openhands:/.openhands" \
     --env LLM_BASE_URL="http://ovms-llm:8000/v3" \
@@ -315,7 +319,7 @@ docker run -d \
     ghcr.io/all-hands-ai/openhands:latest
 ```
 
-The `--extra-hosts` mapping allows the OpenHands container to reach host services if needed. It is optional for basic OVMS communication.
+The `--add-host` mapping allows the OpenHands container to reach host services if needed. It is optional for basic OVMS communication.
 
 **Step 5: Wait for OVMS to be ready**
 
@@ -496,7 +500,7 @@ The `scripts/deploy_model_ovms.sh` script is a **convenience helper** that autom
 
 **2. Normalizes the model name**
 ```bash
-# "Qwen/Qwen2.5-0.5B-Instruct" → "qwen2.5-0.5b-instruct"
+# "OpenVINO/qwen3-0.6b-int8-ov" → "qwen3-0.6b-int8-ov"
 basename "$MODEL_ID" | tr '[:upper:]' '[:lower:]' | tr ' ' '-'
 ```
 
@@ -540,7 +544,7 @@ Shows the manual Docker commands equivalent to what the script just performed, f
 ```
 
 **Arguments:**
-- `model_id`: Hugging Face model ID (e.g., `Qwen/Qwen2.5-0.5B-Instruct`)
+- `model_id`: Hugging Face model ID (e.g., `OpenVINO/qwen3-0.6b-int8-ov`)
 
 **Options:**
 - `--device DEVICE`: Target device (`CPU` or `GPU`, default: `CPU`)
@@ -578,7 +582,7 @@ The response should include `"model_status": "AVAILABLE"` indicating the model i
 curl -X POST http://localhost:8000/v3/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "qwen2.5-0.5b-instruct",
+    "model": "qwen3-0.6b-int8-ov",
     "messages": [{"role": "user", "content": "Say hello"}],
     "max_tokens": 10
   }'
@@ -599,7 +603,26 @@ If this succeeds, OVMS is correctly serving the model. Proceed to Stage 2.
 
 Navigate to `http://localhost:3000` in your browser.
 
-**2. Create a simple agent task:**
+**2. Configure the OVMS-backed model:**
+
+Before starting a conversation, configure OpenHands to use the OVMS backend:
+
+1. Click the **Settings** icon (gear icon) in the OpenHands UI
+2. Navigate to the **LLM** configuration page
+3. Enable **Advanced** mode if the model field is not visible
+4. Enter the following values:
+   - **Custom Model:** `openai/qwen3-0.6b-int8-ov`
+   - **Base URL:** `http://ovms-llm:8000/v3`
+   - **API Key:** `unused`
+5. Click **Save** to apply the configuration
+
+The screenshot below shows the completed OpenHands LLM configuration:
+
+![OpenHands LLM Configuration](screenshots/Pasted%20image.png)
+
+*Example OpenHands LLM configuration for OVMS deployment.*
+
+**3. Create a simple agent task:**
 
 Enter a straightforward coding request, such as:
 
@@ -607,13 +630,13 @@ Enter a straightforward coding request, such as:
 Create a Python function that calculates the factorial of a number.
 ```
 
-**3. Observe the agent behavior:**
+**4. Observe the agent behavior:**
 
 - OpenHands should create a runtime sandbox container
 - The agent should write and test code
 - The conversation should show the LLM responses from OVMS
 
-**4. Check container logs for diagnostics:**
+**5. Check container logs for diagnostics:**
 
 ```bash
 # OpenHands logs
@@ -652,6 +675,7 @@ docker logs ovms-llm
 - Invalid model ID → Verify the model exists on Hugging Face
 - Device not available → Change `TARGET_DEVICE` to `CPU`
 - Volume mount error → Ensure `MODEL_CACHE_DIR` exists and is accessible
+- **Permission denied on `/models`** → The mounted model cache directory must be writable by the OVMS container user. Verify ownership and permissions on the directory mounted into `/models`.
 
 **Problem:** OVMS starts but model status is not `AVAILABLE`.
 
@@ -740,17 +764,24 @@ For additional help, consult:
 
 ## 10. Screenshots
 
-The following screenshots illustrate the integration. *(To be added during final validation)*
+The following screenshots illustrate the integration:
 
 **Figure 1: OpenHands web UI**
 - Shows the web interface at `http://localhost:3000`
-- Example agent task input
+![alt text](image.png)
+**Figure 2: OpenHands LLM Configuration**
+- Completed LLM configuration page showing:
+  - Custom Model: `openai/qwen3-0.6b-int8-ov`
+  - Base URL: `http://ovms-llm:8000/v3`
+  - API Key: `unused`
+- Refer to Section 8, Stage 2 for configuration instructions
+![alt text](<screenshots/Pasted image.png>)
 
-**Figure 2: OVMS health check**
+**Figure 3: OVMS health check**
 - Terminal output showing model status `AVAILABLE`
 - Successful `/v1/config` response
 
-**Figure 3: Successful agent task**
+**Figure 4: Successful agent task**
 - OpenHands conversation with code execution
 - Agent response and completed task
 

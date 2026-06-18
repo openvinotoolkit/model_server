@@ -12,7 +12,7 @@
 #   ./scripts/deploy_model_ovms.sh <model_id> [OPTIONS]
 #
 # Arguments:
-#   model_id          Hugging Face model ID (e.g., "Qwen/Qwen2.5-0.5B-Instruct")
+#   model_id          Hugging Face model ID (e.g., "OpenVINO/qwen3-0.6b-int8-ov")
 #
 # Options:
 #   --device DEVICE       Target device: CPU or GPU (default: CPU)
@@ -22,7 +22,7 @@
 #   --skip-wait           Skip health check and return immediately after deploy
 #
 # Example:
-#   ./scripts/deploy_model_ovms.sh Qwen/Qwen2.5-0.5B-Instruct --device CPU
+#   ./scripts/deploy_model_ovms.sh OpenVINO/qwen3-0.6b-int8-ov --device CPU
 #
 # Environment Variables:
 #   HF_TOKEN          Hugging Face token for gated models (required for some models)
@@ -51,8 +51,8 @@ OVMS_REST_PORT="8000"
 
 # Tool parser mapping: model family patterns to parser names
 declare -A TOOL_PARSERS=(
-    ["Qwen"]="qwen"
-    ["qwen"]="qwen"
+    ["Qwen"]="hermes3"
+    ["qwen"]="hermes3"
     ["Llama3"]="hermes3"
     ["llama3"]="hermes3"
     ["Mistral"]="hermes3"
@@ -174,7 +174,7 @@ normalize_model_name() {
     local model_id="$1"
 
     # Convert Hugging Face model ID to filesystem-safe local name
-    # e.g., "Qwen/Qwen2.5-0.5B-Instruct" → "qwen2.5-0.5b-instruct"
+    # e.g., "OpenVINO/qwen3-0.6b-int8-ov" → "qwen3-0.6b-int8-ov"
     basename "$model_id" | tr '[:upper:]' '[:lower:]' | tr ' ' '-'
 }
 
@@ -248,9 +248,6 @@ deploy_ovms() {
 
     echo "Deploying OVMS and OpenHands via Docker Compose..."
 
-    # Ensure the shared Docker network exists
-    docker network create "$DOCKER_NETWORK" >/dev/null 2>&1 || true
-
     # Stop existing containers if running
     if docker ps -a --format '{{.Names}}' | grep -q "^${OVMS_CONTAINER_NAME}$"; then
         echo "Stopping existing OVMS container: $OVMS_CONTAINER_NAME"
@@ -273,8 +270,8 @@ deploy_ovms() {
 ################################################################################
 
 wait_for_health() {
-    local max_retries=18  # 18 * 10s = 3 minutes
-    local retry_interval=10
+    local max_retries=36  # 36 * 100s = 60 minutes
+    local retry_interval=100
 
     echo "Waiting for OVMS LLM graph to initialize (this may take 30-60 seconds)..."
 
