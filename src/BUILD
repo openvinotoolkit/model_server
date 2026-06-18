@@ -506,18 +506,24 @@ ovms_cc_library(
     visibility = ["//visibility:public"],
 )
 ovms_cc_library(
+    name = "kfs_python_tensor_bridge_hdrs",
+    hdrs = ["kfs_python_tensor_bridge.hpp"],
+    visibility = ["//visibility:public"],
+)
+ovms_cc_library(
+    name = "kfs_python_tensor_bridge",
+    hdrs = ["kfs_python_tensor_bridge.hpp"],
+    srcs = ["kfs_python_tensor_bridge.cpp"],
+    visibility = ["//visibility:public"],
+)
+ovms_cc_library(
     name = "libovms_mediapipe_kfs_executor",
     srcs = [
         "kfs_frontend/kfs_graph_executor_impl.cpp",
         "kfs_frontend/kfs_graph_executor_impl.hpp",
     ],
-    deps = select({
-            "//:not_disable_python": [
-                "//src/python:python_headers_only",
-                "//src/python:python_tensor_runtime",
-            ],
-            "//:disable_python": []
-        }) + [
+    deps = [
+        "kfs_python_tensor_bridge",
         "//src/mediapipe_internal:libovms_mediapipe",
         "predict_request_validation_utils",
         "tfs_utils",
@@ -868,6 +874,7 @@ ovms_cc_library(
             "libovms_model_instance_provider",
             "libovms_servable_definition",
             "libovms_single_version_servable_definition",
+            "kfs_python_tensor_bridge",
             "copyable_object_wrapper",
          ] + select({
                 "//:not_disable_cloud": [

@@ -370,6 +370,7 @@ cc_binary(
     name = "libpython_calculators.so",
     linkshared = True,
     srcs = [
+        "kfs_python_tensor_bridge_impl.cpp",
         "python_calculators_plugin.cpp",
         "python_executor_calculator.cc",
         "python_node_initializer.cpp",
@@ -380,6 +381,7 @@ cc_binary(
         "utils.hpp",
     ],
     deps = PYBIND_HEADERS_ONLY + [
+        "//src:kfs_python_tensor_bridge_hdrs",
         "//third_party:openvino",
         "@mediapipe//mediapipe/framework:calculator_framework",
         "//src:libovmslogging",

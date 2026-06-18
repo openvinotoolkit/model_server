@@ -15,6 +15,8 @@
 //*****************************************************************************
 
 #include "python_calculators_plugin_loader.hpp"
+#include "kfs_python_tensor_bridge.hpp"
+
 
 #include <memory>
 #include <vector>
@@ -40,6 +42,7 @@ using PluginHandle = HMODULE;
 #endif
 
 using RegisterPythonCalculatorsFn = void (*)();
+using GetKfsPyTensorBridgeVTableFn = const KfsPyTensorBridgeVTable* (*)();
 
 static PluginHandle pythonCalculatorsHandle = nullptr;
 static RegisterPythonCalculatorsFn registerPythonCalculatorsFn = nullptr;
@@ -155,6 +158,23 @@ bool loadPythonCalculatorsPlugin() {
     registerPythonCalculatorsFn();
 
     SPDLOG_INFO("Python calculators plugin loaded successfully");
+    // Also load the KFS Python tensor bridge vtable from the same plugin.
+    // This enables OVMS_PY_TENSOR deserialization/serialization in the KFS
+    // graph executor without linking pybind11 into the main binary.
+#ifdef __linux__
+    auto getKfsBridgeFn = reinterpret_cast<GetKfsPyTensorBridgeVTableFn>(
+        dlsym(pythonCalculatorsHandle, "OVMS_getKfsPyTensorBridgeVTable"));
+#elif _WIN32
+    auto getKfsBridgeFn = reinterpret_cast<GetKfsPyTensorBridgeVTableFn>(
+        GetProcAddress(pythonCalculatorsHandle, "OVMS_getKfsPyTensorBridgeVTable"));
+#endif
+    if (getKfsBridgeFn != nullptr) {
+        auto* vtable = getKfsBridgeFn();
+        if (vtable != nullptr) {
+            setKfsPyTensorBridgeVTable(vtable);
+            SPDLOG_INFO("KFS Python tensor bridge activated from python calculators plugin");
+        }
+    }
     return true;
 }
 
