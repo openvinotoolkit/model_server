@@ -25,6 +25,7 @@
 #include "../../../config.hpp"
 #include "../../../logging.hpp"
 #include "../../text_utils.hpp"
+#include "../image_prompt_utils.hpp"
 #include "../../../tokenize/tokenize_parser.hpp"
 
 namespace ovms {
@@ -73,26 +74,15 @@ absl::Status VisualLanguageModelServable::prepareInputs(std::shared_ptr<GenAiSer
     if (executionContext->endpoint == Endpoint::CHAT_COMPLETIONS || executionContext->endpoint == Endpoint::RESPONSES) {
         ov::genai::ChatHistory& chatHistory = vlmExecutionContext->apiHandler->getChatHistory();
 
-        for (size_t i = 0; i < chatHistory.size(); i++) {
-            const auto& message = chatHistory[i];
-            if (message["content"].as_string().value_or("").find("<ov_genai_image_") != std::string::npos) {
-                return absl::InvalidArgumentError("Message contains restricted <ov_genai_image> tag");
-            }
+        auto restrictedTagStatus = vlm::rejectRestrictedImageTags(chatHistory);
+        if (!restrictedTagStatus.ok()) {
+            return restrictedTagStatus;
         }
 
         const ImageHistory& imageHistory = vlmExecutionContext->apiHandler->getImageHistory();
-        size_t imageIndex = 0;
-        std::unordered_map<size_t, std::string> imageTags;
-        for (const auto& image : imageHistory) {
-            const auto& [chatTurnIndex, imageTensor] = image;
-            std::string imageTag = "<ov_genai_image_" + std::to_string(imageIndex++) + ">\n";
-            imageTags[chatTurnIndex] = imageTags[chatTurnIndex] + imageTag;
-            vlmExecutionContext->inputImages.push_back(imageTensor);
-        }
-
-        for (const auto& [chatTurnIndex, imageTagString] : imageTags) {
-            std::string messageContent = chatHistory[chatTurnIndex]["content"].as_string().value_or("");
-            chatHistory[chatTurnIndex]["content"] = imageTagString + messageContent;
+        auto imagePlacementStatus = vlm::injectImageTagsAndCollectTensors(chatHistory, imageHistory, vlmExecutionContext->inputImages);
+        if (!imagePlacementStatus.ok()) {
+            return imagePlacementStatus;
         }
 
         constexpr bool addGenerationPrompt = true;  // confirm it should be hardcoded

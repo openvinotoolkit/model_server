@@ -29,6 +29,7 @@
 #include "../filesystem/filesystem.hpp"
 #include "../llm/apis/openai_completions.hpp"
 #include "../llm/apis/openai_responses.hpp"
+#include "../llm/visual_language_model/image_prompt_utils.hpp"
 #include <openvino/genai/visual_language/pipeline.hpp>
 #include "../module_names.hpp"
 #include "../servablemanagermodule.hpp"
@@ -791,7 +792,7 @@ TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, CanonicalRequestPyPathIsAva
   ASSERT_TRUE(std::holds_alternative<ovms::PyPath>(*canonicalRequest.value()));
 
   const auto& pyPath = std::get<ovms::PyPath>(*canonicalRequest.value());
-  EXPECT_EQ(&pyPath.processedJson.get(), &apiHandler->getProcessedJson());
+  EXPECT_FALSE(pyPath.processedJson.get().empty());
 }
 
 TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, LegacyGettersRemainCompatibleWithCanonicalCache) {
@@ -815,7 +816,11 @@ TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, LegacyGettersRemainCompatib
   const auto& pyPath = std::get<ovms::PyPath>(*pyCanonical.value());
   EXPECT_EQ(&cppPath.chatHistory.get(), &chatHistory);
   EXPECT_EQ(&cppPath.imageHistory.get(), &imageHistory);
-  EXPECT_EQ(&pyPath.processedJson.get(), &processedJson);
+  if (!processedJson.empty()) {
+    EXPECT_EQ(&pyPath.processedJson.get(), &processedJson);
+  } else {
+    EXPECT_FALSE(pyPath.processedJson.get().empty());
+  }
 }
 
 TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, CanonicalRequestCacheReturnsStableAddressPerRenderer) {
@@ -5557,6 +5562,62 @@ TEST_F(HttpOpenAIHandlerParsingTest, ResponsesImageHistoryIndexMatchesChatHistor
     EXPECT_EQ(turnIndex, 2u);
     EXPECT_LT(turnIndex, chatHistory.size());
 }
+
+  TEST_F(HttpOpenAIHandlerParsingTest, VlmImagePromptUtilsRejectsRestrictedImageTag) {
+    std::string json = R"({
+      "model": "llama",
+      "messages": [{"role": "user", "content": "prefix <ov_genai_image_0>"}]
+    })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    auto apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+
+    auto status = ovms::vlm::rejectRestrictedImageTags(apiHandler->getChatHistory());
+    EXPECT_EQ(status, absl::InvalidArgumentError("Message contains restricted <ov_genai_image> tag"));
+  }
+
+  TEST_F(HttpOpenAIHandlerParsingTest, VlmImagePromptUtilsInjectsImageTagsAndCollectsTensors) {
+    const std::string base64Image = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAAEElEQVR4nGLK27oAEAAA//8DYAHGgEvy5AAAAABJRU5ErkJggg==";
+      std::string json = R"({
+        "model": "llama",
+        "messages": [
+          {"role":"user","content":[
+            {"type":"text","text":"what is in these images?"},
+            {"type":"image_url","image_url":{"url":")" +
+          base64Image + R"("}},
+            {"type":"image_url","image_url":{"url":")" +
+          base64Image + R"("}}
+          ]}
+        ]
+      })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    auto apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+
+    auto& chatHistory = apiHandler->getChatHistory();
+    const auto& imageHistory = apiHandler->getImageHistory();
+    ASSERT_EQ(chatHistory.size(), 1u);
+    ASSERT_EQ(imageHistory.size(), 2u);
+
+    std::vector<ov::Tensor> inputImages;
+    auto status = ovms::vlm::injectImageTagsAndCollectTensors(chatHistory, imageHistory, inputImages);
+    EXPECT_EQ(status, absl::OkStatus());
+
+    ASSERT_EQ(inputImages.size(), 2u);
+    std::string content = chatHistory[0]["content"].as_string().value_or("");
+    EXPECT_THAT(content, ::testing::HasSubstr("<ov_genai_image_0>\n<ov_genai_image_1>\n"));
+    EXPECT_THAT(content, ::testing::HasSubstr("what is in these images?"));
+  }
 
 // --- Tools normalisation edge cases ---
 

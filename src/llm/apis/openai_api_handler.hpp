@@ -120,10 +120,12 @@ protected:
     // Shared VLM workaround: encode text to tokens using tokenizer, validates shape
     std::vector<int64_t> encodeTextToTokens(const std::string& text);
 
+    virtual absl::StatusOr<CanonicalRequest> buildCanonicalRequestImpl(RendererType rendererType) const = 0;
     absl::StatusOr<CanonicalRequest> buildCanonicalRequest(RendererType rendererType) const;
 
     mutable std::optional<CanonicalRequest> cachedCppCanonicalRequest;
     mutable std::optional<CanonicalRequest> cachedPyCanonicalRequest;
+    mutable std::optional<std::string> synthesizedProcessedJson;
 
 public:
     OpenAIApiHandler(Document& doc, Endpoint endpoint, std::chrono::time_point<std::chrono::system_clock> creationTime,

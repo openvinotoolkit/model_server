@@ -94,6 +94,7 @@ public:
 
     absl::Status parseRequest(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength,
         std::optional<std::string> allowedLocalMediaPath = std::nullopt, std::optional<std::vector<std::string>> allowedMediaDomains = std::nullopt) override;
+    absl::StatusOr<CanonicalRequest> buildCanonicalRequestImpl(RendererType rendererType) const override;
 
     std::string serializeUnaryResponse(const std::vector<ov::genai::GenerationOutput>& generationOutputs) override;
     std::string serializeUnaryResponse(ov::genai::EncodedResults& results) override;

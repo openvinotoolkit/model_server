@@ -829,6 +829,39 @@ absl::Status OpenAIResponsesHandler::parseResponsesPart(std::optional<uint32_t> 
     return parseResponseFormat();
 }
 
+absl::StatusOr<CanonicalRequest> OpenAIResponsesHandler::buildCanonicalRequestImpl(RendererType rendererType) const {
+    if (rendererType == RendererType::CPP_TOKENIZER) {
+        auto tools = parseToolsToJsonContainer();
+        if (!tools.ok()) {
+            return tools.status();
+        }
+        auto kwargs = parseChatTemplateKwargsToJsonContainer();
+        if (!kwargs.ok()) {
+            return kwargs.status();
+        }
+        CppPath cppPath{
+            std::cref(request.chatHistory),
+            std::cref(request.imageHistory),
+            std::move(tools.value()),
+            std::move(kwargs.value()),
+            request.prompt,
+            true};
+        return CanonicalRequest(std::move(cppPath));
+    }
+
+    if (request.processedJson.size() > 0) {
+        PyPath pyPath{std::cref(request.processedJson)};
+        return CanonicalRequest(std::move(pyPath));
+    }
+
+    StringBuffer buffer;
+    Writer<StringBuffer> writer(buffer);
+    doc.Accept(writer);
+    synthesizedProcessedJson = buffer.GetString();
+    PyPath pyPath{std::cref(synthesizedProcessedJson.value())};
+    return CanonicalRequest(std::move(pyPath));
+}
+
 // --- Serialization helpers ---
 
 void OpenAIResponsesHandler::serializeToolChoice(Writer<StringBuffer>& writer) const {

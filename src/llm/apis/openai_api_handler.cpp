@@ -493,27 +493,7 @@ const OpenAIRequest& OpenAIApiHandler::getRequest() const {
 }
 
 absl::StatusOr<CanonicalRequest> OpenAIApiHandler::buildCanonicalRequest(RendererType rendererType) const {
-    if (rendererType == RendererType::CPP_TOKENIZER) {
-        auto tools = parseToolsToJsonContainer();
-        if (!tools.ok()) {
-            return tools.status();
-        }
-        auto kwargs = parseChatTemplateKwargsToJsonContainer();
-        if (!kwargs.ok()) {
-            return kwargs.status();
-        }
-        CppPath cppPath{
-            std::cref(request.chatHistory),
-            std::cref(request.imageHistory),
-            std::move(tools.value()),
-            std::move(kwargs.value()),
-            request.prompt,
-            true};
-        return CanonicalRequest(std::move(cppPath));
-    }
-
-    PyPath pyPath{std::cref(request.processedJson)};
-    return CanonicalRequest(std::move(pyPath));
+    return buildCanonicalRequestImpl(rendererType);
 }
 
 absl::StatusOr<const CanonicalRequest*> OpenAIApiHandler::getCanonicalRequest(RendererType rendererType) const {

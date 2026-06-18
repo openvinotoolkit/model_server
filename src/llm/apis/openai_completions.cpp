@@ -275,6 +275,39 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
     return absl::OkStatus();
 }
 
+absl::StatusOr<CanonicalRequest> OpenAIChatCompletionsHandler::buildCanonicalRequestImpl(RendererType rendererType) const {
+    if (rendererType == RendererType::CPP_TOKENIZER) {
+        auto tools = parseToolsToJsonContainer();
+        if (!tools.ok()) {
+            return tools.status();
+        }
+        auto kwargs = parseChatTemplateKwargsToJsonContainer();
+        if (!kwargs.ok()) {
+            return kwargs.status();
+        }
+        CppPath cppPath{
+            std::cref(request.chatHistory),
+            std::cref(request.imageHistory),
+            std::move(tools.value()),
+            std::move(kwargs.value()),
+            request.prompt,
+            true};
+        return CanonicalRequest(std::move(cppPath));
+    }
+
+    if (request.processedJson.size() > 0) {
+        PyPath pyPath{std::cref(request.processedJson)};
+        return CanonicalRequest(std::move(pyPath));
+    }
+
+    StringBuffer buffer;
+    Writer<StringBuffer> writer(buffer);
+    doc.Accept(writer);
+    synthesizedProcessedJson = buffer.GetString();
+    PyPath pyPath{std::cref(synthesizedProcessedJson.value())};
+    return CanonicalRequest(std::move(pyPath));
+}
+
 // --- Unary response serialization ---
 
 std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const std::vector<ov::genai::GenerationOutput>& generationOutputs) {
