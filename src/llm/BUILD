@@ -60,9 +60,20 @@ ovms_cc_library(
         "//src:image_conversion",
         "//src/filesystem:libovmsfilesystem",
         "@stb//:image",
+        ":canonical_request",
         ":openai_request",
         ":output_parsers",
         "//third_party:genai",],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
+    name = "canonical_request",
+    hdrs = ["preprocessing/canonical_request.hpp"],
+    deps = [
+        "//third_party:genai",
+        ":openai_request",
+    ],
     visibility = ["//visibility:public"],
 )
 
