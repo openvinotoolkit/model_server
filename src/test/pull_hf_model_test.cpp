@@ -647,7 +647,7 @@ protected:
 class HfPullCache : public HfPull {
 protected:
     static constexpr int CACHE_PULL_MAX_ATTEMPTS = 3;
-    static constexpr int CACHE_PULL_RETRY_DELAY_MS = 1000;
+    static constexpr int CACHE_PULL_RETRY_DELAY_MS = 10000;
 
     static std::once_flag cacheInitFlag;
     static std::unique_ptr<TempDir> cacheDir;
