@@ -47,11 +47,7 @@ void TextToSpeechGraphCLIParser::createOptions() {
         ("model_type",
             "Type of the source TTS model: speecht5 (default) or kokoro.",
             cxxopts::value<std::string>()->default_value("speecht5"),
-            "MODEL_TYPE")
-        ("language",
-            "Default language code passed to the TTS calculator (e.g. en-us, zh). Used by kokoro.",
-            cxxopts::value<std::string>(),
-            "LANGUAGE");
+            "MODEL_TYPE");
     // clang-format on
 }
 
@@ -96,9 +92,6 @@ void TextToSpeechGraphCLIParser::prepare(OvmsServerMode serverMode, HFSettingsIm
             throw std::invalid_argument("--model_type must be one of: speecht5, kokoro");
         }
         hfSettings.exportSettings.modelType = modelType;
-        if (result->count("language")) {
-            textToSpeechGraphSettings.language = result->operator[]("language").as<std::string>();
-        }
     }
     hfSettings.graphSettings = std::move(textToSpeechGraphSettings);
 }

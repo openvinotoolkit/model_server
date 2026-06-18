@@ -378,10 +378,6 @@ node {
         oss << R"(plugin_config: ')" << pluginConfigOpt.value() << R"('
             )";
     }
-    if (graphSettings.language.has_value()) {
-        oss << R"(language: ")" << graphSettings.language.value() << R"("
-            )";
-    }
     if (!voiceNames.empty()) {
         oss << R"(voices: [)";
         for (size_t i = 0; i < voiceNames.size(); ++i) {

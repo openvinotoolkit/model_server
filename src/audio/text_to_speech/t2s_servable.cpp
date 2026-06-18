@@ -110,7 +110,7 @@ TtsServable::TtsServable(const std::string& modelDir, const std::string& targetD
         }
         if (!std::filesystem::exists(voicePath))
             throw std::runtime_error{"Requested voice speaker embeddings file does not exist: " + voicePath.string()};
-        voices[voice.name()] = readSpeakerEmbedding(voicePath.string(), speakerEmbeddingShape);
+        voices[voice.name()] = readSpeakerEmbedding(voicePath, speakerEmbeddingShape);
     }
 }
 }  // namespace ovms

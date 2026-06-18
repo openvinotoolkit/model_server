@@ -96,8 +96,6 @@ parser_text2speech.add_argument('--model_type', default='speecht5', choices=['sp
 parser_text2speech.add_argument('--vocoder', type=str, help='The vocoder model to use for speecht5. For example microsoft/speecht5_hifigan. Ignored for kokoro.', dest='vocoder')
 parser_text2speech.add_argument('--speaker_name', type=str, help='Name of the speaker (speecht5 only; for kokoro all voices from the HF repo are exported).', dest='speaker_name')
 parser_text2speech.add_argument('--speaker_path', type=str, help='Path to the speaker.bin file (speecht5 only; for kokoro all voices from the HF repo are exported).', dest='speaker_path')
-parser_text2speech.add_argument('--language', type=str, default=None, help='Default language code passed to the calculator (e.g. en-us, zh). Used mainly by kokoro.', dest='language')
-
 
 parser_speech2text = subparsers.add_parser('speech2text', help='export model for speech2text endpoint')
 add_common_arguments(parser_speech2text)
@@ -119,9 +117,6 @@ node {
       models_path: "{{model_path}}",
       plugin_config: '{ "NUM_STREAMS": "{{num_streams|default(1, true)}}" }',
       target_device: "{{target_device|default("CPU", true)}}",
-      {%- if language %}
-      language: "{{language}}",
-      {%- endif %}
       {%- if voices %}
       voices: [
         {%- for v in voices %}
