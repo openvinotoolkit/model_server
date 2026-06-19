@@ -96,7 +96,6 @@ ENV DEBIAN_FRONTEND=noninteractive
 SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
 
 ARG debug_bazel_flags="--strip=always  --config=mp_on_py_on --//:distro=ubuntu"
-ARG ESPEAK=1
 RUN if [ "$BASE_OS" == "ubuntu24" ] ; then apt-get update && \
     apt-get install -y software-properties-common --no-install-recommends; add-apt-repository 'ppa:deadsnakes/ppa' -y && \
     apt-get clean && rm -rf /var/lib/apt/lists/* ; fi
@@ -399,7 +398,6 @@ ARG INSTALL_RPMS_FROM_URL=
 ARG INSTALL_DRIVER_VERSION="24.26.30049"
 ARG GPU=0
 ARG NPU=0
-ARG ESPEAK=1
 ENV DEBIAN_FRONTEND=noninteractive
 ARG debug_bazel_flags=
 LABEL bazel-build-flags=${debug_bazel_flags}
@@ -419,7 +417,8 @@ COPY ./install_ubuntu_gpu_drivers.sh /tmp/install_gpu_drivers.sh
 RUN apt-get update ; \
     apt-get install -y --no-install-recommends curl ca-certificates libxml2 || exit 1; \
     # espeak-ng shared library + data are shipped inside /ovms by the Bazel
-    # build when $ESPEAK == "1"; no system package is required at runtime.
+    # build (controlled via --//:espeak=on/off in debug_bazel_flags);
+    # no system package is required at runtime.
     if [ "$GPU" == "1" ] ; then \
 	/tmp/install_gpu_drivers.sh ; \
     fi ; \

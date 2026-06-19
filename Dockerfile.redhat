@@ -110,7 +110,6 @@ SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
 ARG JOBS=40
 ARG VERBOSE_LOGS=OFF
 ARG LTO_ENABLE=OFF
-ARG ESPEAK=1
 
 # hadolint ignore=DL3041
 RUN dnf install -y -d6 \
@@ -385,7 +384,6 @@ LABEL "maintainer"="dariusz.trawinski@intel.com"
 ARG INSTALL_RPMS_FROM_URL=
 ARG INSTALL_DRIVER_VERSION="24.52.32224"
 ARG GPU=0
-ARG ESPEAK=1
 ARG debug_bazel_flags=
 LABEL bazel-build-flags=${debug_bazel_flags}
 LABEL supported-devices="CPU=1 GPU=${GPU}"
@@ -401,7 +399,8 @@ COPY ./install_redhat_gpu_drivers.sh /install_gpu_drivers.sh
 RUN if [ -f /usr/bin/dnf ] ; then export DNF_TOOL=dnf ; echo -e "max_parallel_downloads=8\nretries=50" >> /etc/dnf/dnf.conf ; else export DNF_TOOL=microdnf ; fi ; \
     $DNF_TOOL upgrade --setopt=install_weak_deps=0 --nodocs -y ; \
     # espeak-ng shared library + data are shipped inside /ovms by the Bazel
-    # build when $ESPEAK == "1"; no system package is required at runtime.
+    # build (controlled via --//:espeak=on/off in debug_bazel_flags);
+    # no system package is required at runtime.
     if [ "$GPU" == "1" ] ; then \
         source /install_gpu_drivers.sh && rm -rf /install_gpu_drivers.sh; \
     fi ; \
